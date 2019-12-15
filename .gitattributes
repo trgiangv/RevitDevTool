@@ -1,0 +1,2 @@
+*.exe !text !filter !merge !diff
+*.exe filter=lfs diff=lfs merge=lfs -text
