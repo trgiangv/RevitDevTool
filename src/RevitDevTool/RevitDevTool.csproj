@@ -3,15 +3,19 @@
   <PropertyGroup>
     <TargetFramework>net452</TargetFramework>
     <UseWPF>true</UseWPF>
+    <LangVersion>9.0</LangVersion>
   </PropertyGroup>
 
   <ItemGroup>
     <None Remove="Images\log.png" />
   </ItemGroup>
 
+
   <ItemGroup>
-    <PackageReference Include="MaterialDesignColors" Version="1.2.2-ci858" />
-    <PackageReference Include="MaterialDesignThemes" Version="3.0.1-ci858" />
+    <PackageReference Include="MaterialDesignColors" Version="2.0.1" />
+    <PackageReference Include="MaterialDesignThemes" Version="4.1.0" />
+    <PackageReference Include="Serilog.Sinks.RichTextBox.Wpf" Version="0.1.0-preview1" />
+    <PackageReference Include="SerilogTraceListener" Version="3.2.0" />
   </ItemGroup>
 
   <ItemGroup>
@@ -42,6 +46,14 @@
       <Generator>ResXFileCodeGenerator</Generator>
       <LastGenOutput>Resource.Designer.cs</LastGenOutput>
     </EmbeddedResource>
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="Revit\RevitDevTool.addin"/>
+    <ContentWithTargetPath Include="Revit\RevitDevTool.addin">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <TargetPath>RevitDevTool.addin</TargetPath>
+    </ContentWithTargetPath>
   </ItemGroup>
 
   <ItemGroup>
