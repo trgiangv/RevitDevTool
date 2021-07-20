@@ -17,11 +17,11 @@ using Autodesk.Revit.UI;
 namespace RevitDevTool.View
 {
     /// <summary>
-    /// TraceOutputPage.xaml 的交互逻辑
+    /// TraceLog.xaml 的交互逻辑
     /// </summary>
-    public partial class TraceOutputPage : Page, IDockablePaneProvider
+    public partial class TraceLog : Page, IDockablePaneProvider
     {
-        public TraceOutputPage()
+        public TraceLog()
         {
             InitializeComponent();
         }

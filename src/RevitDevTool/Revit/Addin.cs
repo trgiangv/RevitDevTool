@@ -12,13 +12,13 @@ using RevitDevTool.View;
 
 namespace RevitDevTool.Revit
 {
-    public class Ribbon : IExternalApplication
+    public class Addin : IExternalApplication
     {
         private static string _assemblyPath = System.Reflection.Assembly.GetExecutingAssembly().Location;
         public Result OnStartup(UIControlledApplication application)
         {
-            AppDomain.CurrentDomain.TypeResolve += CurrentDomain_TypeResolve;
-            AppDomain.CurrentDomain.AssemblyResolve += CurrentDomain_AssemblyResolve;
+            AppDomain.CurrentDomain.TypeResolve += CurrentDomain_Resolve;
+            AppDomain.CurrentDomain.AssemblyResolve += CurrentDomain_Resolve;
 
             AddButton(application);
             AddDockable(application);
@@ -39,10 +39,10 @@ namespace RevitDevTool.Revit
                 rvtRibbonPanel = application.CreateRibbonPanel("RevitDevTools");
             }
 
-            PushButtonData data = new PushButtonData("TraceOutput", "TraceOutput", Ribbon._assemblyPath, "RevitDevTool.Revit.Command.TraceCommand")
+            PushButtonData data = new PushButtonData("TraceLog", "TraceLog", Addin._assemblyPath, "RevitDevTool.Revit.Command.TraceCommand")
             {
                 LargeImage = ImageUtils.GetResourceImage("Images/log.png"),
-                LongDescription = "Display trace/debug data",
+                LongDescription = "Display trace data",
             };
 
             rvtRibbonPanel.AddItem(data);
@@ -50,28 +50,21 @@ namespace RevitDevTool.Revit
 
         private void AddDockable(UIControlledApplication application)
         {
-            DockablePaneRegisterUtils.Register<TraceOutputPage>(Resource.TraceGuid, application);
+            DockablePaneRegisterUtils.Register<TraceLog>(Resource.TraceGuid, application);
         }
 
-        private Assembly CurrentDomain_AssemblyResolve(object sender, ResolveEventArgs args)
+        private Assembly CurrentDomain_Resolve(object sender, ResolveEventArgs args)
         {
-            return GetAssembly(args.Name.Split(',').First());
-        }
-
-        private Assembly CurrentDomain_TypeResolve(object sender, ResolveEventArgs args)
-        {
-            return GetAssembly(args.Name.Split(',').First());
-        }
-
-        public Assembly GetAssembly(string name)
-        {
-            string path = Directory.GetFiles(Path.GetDirectoryName(_assemblyPath)).FirstOrDefault(x => x.Contains(name));
-            if (!string.IsNullOrEmpty(path))
+            AssemblyName assemblyName = new AssemblyName(args.Name);
+            if (assemblyName.Name.Split(',').First().EndsWith(".resources"))
             {
-                return Assembly.LoadFrom(path);
+                return null;
             }
-            return null;
+            
+            string filePath = Path.Combine(Path.GetDirectoryName(_assemblyPath), $"{assemblyName.Name}.dll");
+            return File.Exists(filePath) ? Assembly.LoadFile(filePath) : null;
         }
+
 
         public Result OnShutdown(UIControlledApplication application)
         {

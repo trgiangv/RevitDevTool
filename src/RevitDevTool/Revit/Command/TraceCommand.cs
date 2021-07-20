@@ -31,7 +31,7 @@ namespace RevitDevTool.Revit.Command
             }
             else
             {
-                DockablePaneRegisterUtils.Register<TraceOutputPage>(Resource.TraceGuid, commandData.Application);
+                DockablePaneRegisterUtils.Register<TraceLog>(Resource.TraceGuid, commandData.Application);
                 commandData.Application.GetDockablePane(dockablePaneId).Show();
             }
 

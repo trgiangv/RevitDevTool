@@ -1,4 +1,4 @@
-﻿<Page x:Class="RevitDevTool.View.TraceOutputPage"
+﻿<Page x:Class="RevitDevTool.View.TraceLog"
       xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
       xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
       xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
@@ -7,14 +7,13 @@
       xmlns:vm="clr-namespace:RevitDevTool.ViewModel"
       mc:Ignorable="d" 
       d:DesignHeight="600" d:DesignWidth="450"
-      Title="TraceOutputPage" 
+      Title="TraceLog" 
       TextElement.Foreground="{DynamicResource MaterialDesignBody}"
       TextElement.FontWeight="Regular"
       TextElement.FontSize="13"
       TextOptions.TextFormattingMode="Ideal" 
       TextOptions.TextRenderingMode="Auto"        
-      Background="{DynamicResource MaterialDesignPaper}"
-      FontFamily="{DynamicResource MaterialDesignFont}">
+      Background="{DynamicResource MaterialDesignPaper}">
 
     <Page.Resources>
         <ResourceDictionary Source="../Theme/Theme.xaml"/>
@@ -24,7 +23,7 @@
     </Page.DataContext>
     <DockPanel>
         <DockPanel DockPanel.Dock="Top" Margin="20,10,20,0">
-            <TextBlock  Text="Trace Output" Style="{StaticResource MaterialDesignHeadline5TextBlock}" VerticalAlignment="Center"/>
+            <TextBlock  Text="TraceLog" Style="{StaticResource MaterialDesignHeadline5TextBlock}" VerticalAlignment="Center"/>
             <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" HorizontalAlignment="Right" >
                 <Button Content="Clear" Style="{StaticResource WarningButton}" Margin="5,0"
                         Command="{Binding ClearCommand}"/>
@@ -32,9 +31,8 @@
                         Style="{StaticResource StatusButton}"/>
             </StackPanel>
         </DockPanel>
-        <md:Card Margin="20,15,20,20">
-            <TextBox Style="{StaticResource MaterialDesignTextBox}" Text="{Binding Data,Mode=TwoWay,NotifyOnSourceUpdated=True}"
-                                    AcceptsReturn="True" TextWrapping="Wrap" IsReadOnly="True"/>
+        <md:Card Margin="20,15,20,20" >
+            <ContentControl Content="{Binding LogTextBox}"></ContentControl>
         </md:Card>
     </DockPanel>
 </Page>
