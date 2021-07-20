@@ -4,7 +4,7 @@ A ToolSet for Revit Development and Debugging.
 
 ## Screenshots
 
-![TraceLog.png](.\images\tracelog.png)
+![TraceLog.png](./images/tracelog.png)
 
 ## FeatureList
 
