@@ -60,8 +60,14 @@ namespace RevitDevTool.Revit
             {
                 return null;
             }
-            
-            string filePath = Path.Combine(Path.GetDirectoryName(_assemblyPath), $"{assemblyName.Name}.dll");
+
+            if (args.RequestingAssembly != null)
+            {
+                string requestingFilePath = Path.Combine(Path.GetDirectoryName(args.RequestingAssembly.Location)!, $"{assemblyName.Name}.dll");
+                return File.Exists(requestingFilePath) ? Assembly.LoadFile(requestingFilePath) : null;
+            }
+
+            string filePath = Path.Combine(Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location)!, $"{assemblyName.Name}.dll");
             return File.Exists(filePath) ? Assembly.LoadFile(filePath) : null;
         }
 
