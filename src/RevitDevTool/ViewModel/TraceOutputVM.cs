@@ -13,8 +13,6 @@ using Serilog;
 using Serilog.Core;
 using Serilog.Events;
 using Serilog.Sinks.RichTextBox.Themes;
-using SerilogTraceListener = SerilogTraceListener.SerilogTraceListener;
-
 
 namespace RevitDevTool.ViewModel
 {
