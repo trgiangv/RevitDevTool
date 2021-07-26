@@ -14,16 +14,20 @@ namespace RevitDevTool.Revit
 {
     public class Addin : IExternalApplication
     {
-        private static string _assemblyPath = System.Reflection.Assembly.GetExecutingAssembly().Location;
+        private static string _assemblyPath = Assembly.GetExecutingAssembly().Location;
         public Result OnStartup(UIControlledApplication application)
         {
-            AppDomain.CurrentDomain.TypeResolve += CurrentDomain_Resolve;
-            AppDomain.CurrentDomain.AssemblyResolve += CurrentDomain_Resolve;
-
+            LoadDependencies();
             AddButton(application);
             AddDockable(application);
 
             return Result.Succeeded;
+        }
+
+        private void LoadDependencies()
+        {
+            foreach (var depend in Directory.GetFiles(Path.GetDirectoryName(_assemblyPath)!, "*.dll"))
+                Assembly.LoadFrom(depend);
         }
 
         private void AddButton(UIControlledApplication application)
@@ -52,25 +56,6 @@ namespace RevitDevTool.Revit
         {
             DockablePaneRegisterUtils.Register<TraceLog>(Resource.TraceGuid, application);
         }
-
-        private Assembly CurrentDomain_Resolve(object sender, ResolveEventArgs args)
-        {
-            AssemblyName assemblyName = new AssemblyName(args.Name);
-            if (assemblyName.Name.Split(',').First().EndsWith(".resources"))
-            {
-                return null;
-            }
-
-            if (args.RequestingAssembly != null)
-            {
-                string requestingFilePath = Path.Combine(Path.GetDirectoryName(args.RequestingAssembly.Location)!, $"{assemblyName.Name}.dll");
-                return File.Exists(requestingFilePath) ? Assembly.LoadFile(requestingFilePath) : null;
-            }
-
-            string filePath = Path.Combine(Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location)!, $"{assemblyName.Name}.dll");
-            return File.Exists(filePath) ? Assembly.LoadFile(filePath) : null;
-        }
-
 
         public Result OnShutdown(UIControlledApplication application)
         {

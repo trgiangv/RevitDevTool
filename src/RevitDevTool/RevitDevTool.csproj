@@ -4,6 +4,7 @@
     <TargetFramework>net452</TargetFramework>
     <UseWPF>true</UseWPF>
     <LangVersion>9.0</LangVersion>
+    <Version>0.1.1</Version>
   </PropertyGroup>
 
   <ItemGroup>
@@ -49,7 +50,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <None Include="Revit\RevitDevTool.addin"/>
+    <None Include="Revit\RevitDevTool.addin" />
     <ContentWithTargetPath Include="Revit\RevitDevTool.addin">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
       <TargetPath>RevitDevTool.addin</TargetPath>
