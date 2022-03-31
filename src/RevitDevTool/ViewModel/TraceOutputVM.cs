@@ -55,7 +55,7 @@ namespace RevitDevTool.ViewModel
                 .WriteTo.RichTextBox(LogTextBox, theme: RichTextBoxConsoleTheme.Literate)
                 .CreateLogger();
 
-            _listener = new global::SerilogTraceListener.SerilogTraceListener(_logger);
+            _listener = new global::SerilogTraceListener.SerilogTraceListener(_logger) { Name = "RevitDevTool" };
         }
 
         public DelegateCommand ClearCommand => new()
