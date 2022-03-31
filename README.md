@@ -9,4 +9,5 @@ A ToolSet for Revit Development and Debugging.
 ## FeatureList
 
 - [x] Trace Log
+- [x] Trace Geometry
 - [ ] Command Manager
