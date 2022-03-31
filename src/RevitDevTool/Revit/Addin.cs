@@ -6,6 +6,7 @@ using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
 using Autodesk.Revit.UI;
+using RevitDevTool.Revit.Command;
 using RevitDevTool.Theme;
 using RevitDevTool.Utils;
 using RevitDevTool.View;
@@ -18,6 +19,7 @@ namespace RevitDevTool.Revit
         public Result OnStartup(UIControlledApplication application)
         {
             LoadDependencies();
+
             AddButton(application);
             AddDockable(application);
 
@@ -43,13 +45,27 @@ namespace RevitDevTool.Revit
                 rvtRibbonPanel = application.CreateRibbonPanel("RevitDevTools");
             }
 
-            PushButtonData data = new PushButtonData("TraceLog", "TraceLog", Addin._assemblyPath, "RevitDevTool.Revit.Command.TraceCommand")
+            PushButtonData traceLogCmd = new PushButtonData("TraceLog", "TraceLog", Addin._assemblyPath, "RevitDevTool.Revit.Command.TraceCommand")
             {
                 LargeImage = ImageUtils.GetResourceImage("Images/log.png"),
                 LongDescription = "Display trace data",
             };
 
-            rvtRibbonPanel.AddItem(data);
+            PushButtonData traceGeometryCmd = new PushButtonData("TraceGeometry", "TraceGeometry", Addin._assemblyPath, "RevitDevTool.Revit.Command.TraceGeometryCommand")
+            {
+                LargeImage = ImageUtils.GetResourceImage("Images/switch-off.png"),
+                LongDescription = "Trace geometries data",
+            };
+
+            PushButtonData clearCmd = new PushButtonData("ClearTraceGeometry", "ClearTraceGeometry", Addin._assemblyPath, "RevitDevTool.Revit.Command.ClearTraceGeometryCommand")
+            {
+                LargeImage = ImageUtils.GetResourceImage("Images/eraser.png"),
+                LongDescription = "Clear current document trace geometries data",
+            };
+
+            rvtRibbonPanel.AddItem(traceLogCmd);
+            rvtRibbonPanel.AddItem(traceGeometryCmd);
+            rvtRibbonPanel.AddItem(clearCmd);
         }
 
         private void AddDockable(UIControlledApplication application)
