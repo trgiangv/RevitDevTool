@@ -1,0 +1,16 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<RevitAddIns>
+    <AddIn Type="Application">
+        <Name>RevitDevTool</Name>
+        <Assembly>RevitDevTool/RevitDevTool.dll</Assembly>
+        <ClientId>1773964F-5248-45E5-B893-55A2C89334E2</ClientId>
+        <FullClassName>RevitDevTool.Application</FullClassName>
+        <Text>RevitDevTool</Text>
+        <VendorId>Zhuangkh</VendorId>
+        <VendorDescription>Zhuangkh, zhuangkh.com</VendorDescription>
+    </AddIn>
+    <ManifestSettings>
+        <UseRevitContext>False</UseRevitContext>
+        <ContextName>RevitDevTool</ContextName>
+    </ManifestSettings>
+</RevitAddIns>
