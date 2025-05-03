@@ -4,7 +4,7 @@ using System.Windows.Media.Imaging;
 
 namespace RevitDevTool.Utils;
 
-public class ImageUtils
+public static class ImageUtils
 {
     public static ImageSource GetResourceImage(string path)
     {

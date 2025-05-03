@@ -8,7 +8,6 @@
     xmlns:md="http://materialdesigninxaml.net/winfx/xaml/themes"
     xmlns:sys="clr-namespace:System;assembly=mscorlib"
     xmlns:vm="clr-namespace:RevitDevTool.ViewModel"
-    Title="TraceLog"
     d:DesignHeight="600"
     d:DesignWidth="450"
     Background="{DynamicResource MaterialDesignPaper}"
@@ -18,13 +17,13 @@
     TextOptions.TextFormattingMode="Ideal"
     TextOptions.TextRenderingMode="Auto"
     mc:Ignorable="d">
-    
+
     <Page.Resources>
         <ResourceDictionary>
             <ResourceDictionary.MergedDictionaries>
                 <ResourceDictionary Source="../Theme/Theme.xaml" />
             </ResourceDictionary.MergedDictionaries>
-            
+
             <ObjectDataProvider
                 x:Key="LogLevelProvider"
                 MethodName="GetValues"
@@ -33,14 +32,14 @@
                     <x:Type TypeName="log:LogEventLevel" />
                 </ObjectDataProvider.MethodParameters>
             </ObjectDataProvider>
-            
+
         </ResourceDictionary>
     </Page.Resources>
-    
+
     <Page.DataContext>
         <vm:TraceOutputVm />
     </Page.DataContext>
-    
+
     <DockPanel>
         <DockPanel Margin="5" DockPanel.Dock="Top">
             <ComboBox
@@ -55,12 +54,26 @@
                 Orientation="Horizontal">
                 <Button
                     Margin="5,0"
+                    Padding="5 0"
                     Command="{Binding ClearCommand}"
-                    Content="Clear"/>
+                    Content="{md:PackIcon Kind=Backspace,
+                                          Size=25}"
+
+                    ToolTip="Clear Log" />
                 <Button
-                    Command="{Binding StatusCommand}"
-                    IsCancel="{Binding IsStarted}"
-                    Style="{StaticResource StatusButton}" />
+                    Margin="5,0"
+                    Padding="5 0"
+                    Command="{Binding ClearGeometryCommand}"
+                    Content="{md:PackIcon Kind=ShapePlus,
+                                          Size=25}"
+
+                    ToolTip="Clear Geometry" />
+                <ToggleButton
+                    md:ToggleButtonAssist.OnContent="{md:PackIcon Kind=AccessPoint}"
+                    Content="{md:PackIcon Kind=AccessPointOff}"
+                    IsChecked="{Binding IsStarted}"
+                    Style="{StaticResource MaterialDesignActionToggleButton}"
+                    ToolTip="Start/Stop Listener" />
             </StackPanel>
         </DockPanel>
         <md:Card Margin="5">
