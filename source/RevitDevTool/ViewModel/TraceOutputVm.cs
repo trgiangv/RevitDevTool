@@ -2,7 +2,8 @@
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
-using RevitDevTool.UI.Binding;
+using RevitDevTool.Geometry;
+using RevitDevTool.Handlers;
 using Serilog;
 using Serilog.Core;
 using Serilog.Events;
@@ -11,29 +12,31 @@ using Color = System.Windows.Media.Color;
 
 namespace RevitDevTool.ViewModel;
 
-public class TraceOutputVm : ObservableObject
+public partial class TraceOutputVm : ObservableObject
 {
-    public bool IsStarted
+    private readonly LoggingLevelSwitch _levelSwitch;
+    private readonly SerilogTraceListener.SerilogTraceListener _listener;
+    [ObservableProperty] private bool _isStarted;
+    [ObservableProperty] private LogEventLevel _logLevel = LogEventLevel.Debug;
+
+    partial void OnLogLevelChanging(LogEventLevel value)
     {
-        get => _isStarted;
-        private set => SetProperty(ref _isStarted, value);
+        _levelSwitch.MinimumLevel = value;
     }
 
-    public LogEventLevel LogLevel
+    partial void OnIsStartedChanged(bool value)
     {
-        get => _logLevel;
-        set
+        if (value)
         {
-            _logLevel = value;
-            _levelSwitch.MinimumLevel = value;
-            OnPropertyChanged();
+            Trace.Listeners.Add(_listener);
+            Trace.Listeners.Add(TraceGeometry.TraceListener);
+        }
+        else
+        {
+            Trace.Listeners.Remove(_listener);
+            Trace.Listeners.Remove(TraceGeometry.TraceListener);
         }
     }
-
-    private readonly LoggingLevelSwitch _levelSwitch;
-    private bool _isStarted;
-    private LogEventLevel _logLevel = LogEventLevel.Debug;
-    private readonly global::SerilogTraceListener.SerilogTraceListener _listener;
 
     public RichTextBox LogTextBox { get; }
 
@@ -51,29 +54,48 @@ public class TraceOutputVm : ObservableObject
         _levelSwitch = new LoggingLevelSwitch(_logLevel);
         var logger = new LoggerConfiguration()
             .MinimumLevel.ControlledBy(_levelSwitch)
-            .WriteTo.RichTextBox(LogTextBox, theme: RichTextBoxConsoleTheme.Literate)
+            .WriteTo.RichTextBox(LogTextBox, theme: RichTextBoxConsoleTheme.Colored)
             .CreateLogger();
-        _listener = new global::SerilogTraceListener.SerilogTraceListener(logger) { Name = "RevitDevTool" };
+        _listener = new SerilogTraceListener.SerilogTraceListener(logger) { Name = "RevitDevTool" };
     }
 
-    public DelegateCommand ClearCommand => new()
+    [RelayCommand] private void Clear()
     {
-        ExecuteCommand = _ => { LogTextBox.Document.Blocks.Clear(); }
-    };
-
-    public DelegateCommand StatusCommand => new()
+        LogTextBox.Document.Blocks.Clear();
+    }
+    
+    [RelayCommand] private static void ClearGeometry()
     {
-        ExecuteCommand = _ =>
+        ExternalEventController.ActionEventHandler.Raise(app =>
         {
-            IsStarted = !IsStarted;
-            if (IsStarted)
+            var doc = app.ActiveUIDocument.Document;
+            if (doc == null)
             {
-                Trace.Listeners.Add(_listener);
+                Trace.TraceWarning("No active document");
+                return;
             }
-            else
+            
+            var hashKey = doc.GetHashCode();
+
+            if (!TraceGeometry.DocGeometries.TryGetValue(hashKey, out var value)) 
+                return;
+        
+            var transaction = new Transaction(doc, "RemoveTransient");
+            try
             {
-                Trace.Listeners.Remove(_listener);
+                transaction.Start();
+                doc.Delete(value);
+                transaction.Commit();
             }
-        }
-    };
+            catch (Exception e)
+            {
+                Trace.TraceWarning($"Remove Transient Geometry Failed : [{e.Message}]");
+                transaction.RollBack();
+            }
+            finally
+            {
+                TraceGeometry.DocGeometries.Remove(hashKey);
+            }
+        });
+    }
 }

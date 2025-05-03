@@ -1,4 +1,5 @@
-﻿using Autodesk.Revit.UI;
+﻿using System.Windows.Controls;
+using Autodesk.Revit.UI;
 
 namespace RevitDevTool.View;
 
@@ -11,13 +12,10 @@ public partial class TraceLog : IDockablePaneProvider
 
     public void SetupDockablePane(DockablePaneProviderData data)
     {
-        data.FrameworkElement = this;
-
+        data.VisibleByDefault = true;
         data.InitialState = new DockablePaneState
         {
-            DockPosition = DockPosition.Right,
+            DockPosition = DockPosition.Left,
         };
-
-        data.FrameworkElement.MinWidth = 320;
     }
 }
