@@ -56,10 +56,7 @@
 	</ItemGroup>
 
 	<ItemGroup>
-		<Resource Include="Images\eraser.png" />
 		<Resource Include="Images\log.png" />
-		<Resource Include="Images\switch-off.png" />
-		<Resource Include="Images\switch-on.png" />
 	</ItemGroup>
 
 	<!-- Start Revit -->
