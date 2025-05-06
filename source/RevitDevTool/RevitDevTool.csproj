@@ -1,88 +1,91 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
-	<PropertyGroup>
-		<UseWPF>true</UseWPF>
-		<Nullable>enable</Nullable>
-		<LangVersion>latest</LangVersion>
-		<PlatformTarget>x64</PlatformTarget>
-		<ImplicitUsings>true</ImplicitUsings>
-		<Prefer32Bit>false</Prefer32Bit>
-		<DeployRevitAddin>true</DeployRevitAddin>
-		<CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
-		<Configurations>Debug R21;Debug R22;Debug R23;Debug R24;Debug R25;Debug R26</Configurations>
-		<Configurations>$(Configurations)Release R21;Release R22;Release R23;Release R24;Release R25;Release R26</Configurations>
-	</PropertyGroup>
+    <PropertyGroup>
+        <UseWPF>true</UseWPF>
+        <Nullable>enable</Nullable>
+        <LangVersion>latest</LangVersion>
+        <PlatformTarget>x64</PlatformTarget>
+        <ImplicitUsings>true</ImplicitUsings>
+        <Prefer32Bit>false</Prefer32Bit>
+        <DeployRevitAddin>true</DeployRevitAddin>
+        <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
+        <Configurations>Debug R21;Debug R22;Debug R23;Debug R24;Debug R25;Debug R26</Configurations>
+        <Configurations>$(Configurations)Release R21;Release R22;Release R23;Release R24;Release R25;Release R26</Configurations>
+    </PropertyGroup>
 
-  <PropertyGroup>
-    <IsRepackable>true</IsRepackable>
-    <RepackBinariesExcludes>$(AssemblyName).UI.dll;System*.dll;MaterialDesign*.dll;CommunityToolkit.Mvvm.dll</RepackBinariesExcludes>
-  </PropertyGroup>
+    <PropertyGroup>
+        <IsRepackable>true</IsRepackable>
+        <RepackBinariesExcludes>$(AssemblyName).UI.dll;System*.dll;MaterialDesign*.dll;CommunityToolkit.Mvvm.dll</RepackBinariesExcludes>
+    </PropertyGroup>
 
-	<!-- Revit Versions -->
-	<PropertyGroup Condition="$(Configuration.Contains('R21'))">
-		<RevitVersion>2021</RevitVersion>
-		<TargetFramework>net48</TargetFramework>
-	</PropertyGroup>
-	<PropertyGroup Condition="$(Configuration.Contains('R22'))">
-		<RevitVersion>2022</RevitVersion>
-		<TargetFramework>net48</TargetFramework>
-	</PropertyGroup>
-	<PropertyGroup Condition="$(Configuration.Contains('R23'))">
-		<RevitVersion>2023</RevitVersion>
-		<TargetFramework>net48</TargetFramework>
-	</PropertyGroup>
-	<PropertyGroup Condition="$(Configuration.Contains('R24'))">
-		<RevitVersion>2024</RevitVersion>
-		<TargetFramework>net48</TargetFramework>
-	</PropertyGroup>
-	<PropertyGroup Condition="$(Configuration.Contains('R25'))">
-		<RevitVersion>2025</RevitVersion>
-		<TargetFramework>net8.0-windows</TargetFramework>
-	</PropertyGroup>
-	<PropertyGroup Condition="$(Configuration.Contains('R26'))">
-		<RevitVersion>2026</RevitVersion>
-		<TargetFramework>net8.0-windows</TargetFramework>
-	</PropertyGroup>
+    <!-- Revit Versions -->
+    <PropertyGroup Condition="$(Configuration.Contains('R21'))">
+        <RevitVersion>2021</RevitVersion>
+        <TargetFramework>net48</TargetFramework>
+    </PropertyGroup>
+    <PropertyGroup Condition="$(Configuration.Contains('R22'))">
+        <RevitVersion>2022</RevitVersion>
+        <TargetFramework>net48</TargetFramework>
+    </PropertyGroup>
+    <PropertyGroup Condition="$(Configuration.Contains('R23'))">
+        <RevitVersion>2023</RevitVersion>
+        <TargetFramework>net48</TargetFramework>
+    </PropertyGroup>
+    <PropertyGroup Condition="$(Configuration.Contains('R24'))">
+        <RevitVersion>2024</RevitVersion>
+        <TargetFramework>net48</TargetFramework>
+    </PropertyGroup>
+    <PropertyGroup Condition="$(Configuration.Contains('R25'))">
+        <RevitVersion>2025</RevitVersion>
+        <TargetFramework>net8.0-windows</TargetFramework>
+    </PropertyGroup>
+    <PropertyGroup Condition="$(Configuration.Contains('R26'))">
+        <RevitVersion>2026</RevitVersion>
+        <TargetFramework>net8.0-windows</TargetFramework>
+    </PropertyGroup>
 
-	<ItemGroup>
-		<!-- Revit API-->
-		<PackageReference Include="Nice3point.Revit.Build.Tasks" Version="3.*" />
-		<PackageReference Include="Revit_All_Main_Versions_API_x64" Version="$(RevitVersion).*" IncludeAssets="build; compile" PrivateAssets="All" />
-		
-		<!-- MVVM -->
-		<PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.0" />
-		
-		<!-- Utils -->
-		<PackageReference Include="JetBrains.Annotations" Version="2024.3.0" />
-		<PackageReference Include="PolySharp" Version="*" PrivateAssets="All" IncludeAssets="runtime; build; native; contentfiles; analyzers; buildtransitive" />
-		<PackageReference Include="ILRepack" Version="2.0.41">
-		  <PrivateAssets>all</PrivateAssets>
-		  <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
-		</PackageReference>
+    <ItemGroup>
+        <!-- Revit API-->
+        <PackageReference Include="Nice3point.Revit.Build.Tasks" Version="3.*"/>
+        <PackageReference Include="Nice3point.Revit.Toolkit" Version="$(RevitVersion).*"/>
+        <PackageReference Include="Nice3point.Revit.Extensions" Version="$(RevitVersion).*"/>
+        <PackageReference Include="Nice3point.Revit.Api.RevitAPI" Version="$(RevitVersion).*"/>
+        <PackageReference Include="Nice3point.Revit.Api.RevitAPIUI" Version="$(RevitVersion).*"/>
+        <PackageReference Include="Nice3point.Revit.Api.UIFramework" Version="$(RevitVersion).*"/>
+        <PackageReference Include="Nice3point.Revit.Api.AdWindows" Version="$(RevitVersion).*"/>
 
-		<!--UI-->
-		<PackageReference Include="MaterialDesignColors" Version="5.2.1" />
-		<PackageReference Include="MaterialDesignThemes" Version="5.2.1" />
+        <!-- MVVM -->
+        <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.0"/>
 
-		<!--Logging-->
-		<PackageReference Include="Serilog.Sinks.RichTextBox.Wpf" Version="1.1.0" />
-	</ItemGroup>
+        <!-- Utils -->
+        <PackageReference Include="JetBrains.Annotations" Version="2024.3.0"/>
+        <PackageReference Include="PolySharp" Version="*" PrivateAssets="All" IncludeAssets="runtime; build; native; contentfiles; analyzers; buildtransitive"/>
+        <PackageReference Include="ILRepack" Version="2.0.41"/>
 
-	<ItemGroup>
-		<Resource Include="Images\log.png" />
-	</ItemGroup>
+        <!-- UI -->
+        <PackageReference Include="MaterialDesignColors" Version="5.2.1"/>
+        <PackageReference Include="MaterialDesignThemes" Version="5.2.1"/>
 
-	<!-- Start Revit -->
-	<PropertyGroup>
-		<StartAction>Program</StartAction>
-		<StartProgram>C:\Program Files\Autodesk\Revit $(RevitVersion)\Revit.exe</StartProgram>
-		<StartArguments>/language ENG</StartArguments>
-	</PropertyGroup>
+        <!-- Logging -->
+        <PackageReference Include="Serilog.Sinks.RichTextBox.Wpf" Version="1.1.0"/>
+    </ItemGroup>
 
-	<!-- Clean Files -->
-	<Target Name="DeleteFiles" AfterTargets="Clean">
-		<RemoveDir Directories="$(AppData)\Autodesk\Revit\Addins\$(RevitVersion)\$(ProjectName)" />
-		<Delete Files="$(AppData)\Autodesk\Revit\Addins\$(RevitVersion)\$(ProjectName).addin" />
-	</Target>
+    <ItemGroup>
+        <Resource Include="Resources\Icons\TraceCommand32_light.tiff" />
+        <Resource Include="Resources\Icons\TraceCommand32_dark.tiff" />
+    </ItemGroup>
+
+    <!-- Start Revit -->
+    <PropertyGroup>
+        <StartAction>Program</StartAction>
+        <StartProgram>C:\Program Files\Autodesk\Revit $(RevitVersion)\Revit.exe</StartProgram>
+        <StartArguments>/language ENG</StartArguments>
+    </PropertyGroup>
+
+    <!-- Clean Files -->
+    <Target Name="DeleteFiles" AfterTargets="Clean">
+        <RemoveDir Directories="$(AppData)\Autodesk\Revit\Addins\$(RevitVersion)\$(ProjectName)"/>
+        <Delete Files="$(AppData)\Autodesk\Revit\Addins\$(RevitVersion)\$(ProjectName).addin"/>
+    </Target>
 
 </Project>
