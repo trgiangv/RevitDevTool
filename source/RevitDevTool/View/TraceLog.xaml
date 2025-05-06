@@ -7,6 +7,7 @@
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     xmlns:md="http://materialdesigninxaml.net/winfx/xaml/themes"
     xmlns:sys="clr-namespace:System;assembly=mscorlib"
+    xmlns:theme="clr-namespace:RevitDevTool.Theme"
     xmlns:vm="clr-namespace:RevitDevTool.ViewModel"
     d:DesignHeight="600"
     d:DesignWidth="450"
@@ -21,7 +22,8 @@
     <Page.Resources>
         <ResourceDictionary>
             <ResourceDictionary.MergedDictionaries>
-                <ResourceDictionary Source="../Theme/Theme.xaml" />
+                <theme:ThemeBundle />
+                <ResourceDictionary Source="/MaterialDesignThemes.Wpf;component/Themes/MaterialDesign3.Defaults.xaml" />
             </ResourceDictionary.MergedDictionaries>
 
             <ObjectDataProvider
@@ -41,7 +43,9 @@
     </Page.DataContext>
 
     <DockPanel>
-        <DockPanel Margin="5" DockPanel.Dock="Top">
+        <DockPanel
+            Margin="5"
+            DockPanel.Dock="Top">
             <ComboBox
                 Width="85"
                 VerticalAlignment="Center"
@@ -54,19 +58,19 @@
                 Orientation="Horizontal">
                 <Button
                     Margin="5,0"
-                    Padding="5 0"
+                    Padding="5,0"
+                    md:ButtonAssist.CornerRadius="5"
                     Command="{Binding ClearCommand}"
                     Content="{md:PackIcon Kind=Backspace,
                                           Size=25}"
-
                     ToolTip="Clear Log" />
                 <Button
                     Margin="5,0"
-                    Padding="5 0"
+                    Padding="5,0"
+                    md:ButtonAssist.CornerRadius="5"
                     Command="{Binding ClearGeometryCommand}"
                     Content="{md:PackIcon Kind=ShapePlus,
                                           Size=25}"
-
                     ToolTip="Clear Geometry" />
                 <ToggleButton
                     md:ToggleButtonAssist.OnContent="{md:PackIcon Kind=AccessPoint}"
