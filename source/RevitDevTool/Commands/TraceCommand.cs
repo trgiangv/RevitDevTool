@@ -1,16 +1,34 @@
 ﻿using Autodesk.Revit.Attributes;
 using Autodesk.Revit.UI;
+using Nice3point.Revit.Toolkit.Decorators;
+using Nice3point.Revit.Toolkit.External;
 using RevitDevTool.View;
-using DockablePaneProvider = RevitDevTool.Utils.DockablePaneProvider;
 
 namespace RevitDevTool.Commands;
 
 [UsedImplicitly]
 [Transaction(TransactionMode.Manual)]
-public class TraceCommand : IExternalCommand
+public class TraceCommand : ExternalCommand
 {
     private const string CommandName = "TraceLog";
     private const string Guid = "43AE2B41-0BE6-425A-B27A-724B2CE17351";
+    
+    public override void Execute()
+    {
+        try
+        {
+            var id = new DockablePaneId(new Guid(Guid));
+            var dockableWindow = UiApplication.GetDockablePane(id);
+            if(!dockableWindow.IsShown())
+                dockableWindow.Show();
+            else
+                dockableWindow.Hide();
+        }
+        catch (Exception e)
+        {
+            TaskDialog.Show("Error", e.ToString());
+        }
+    }
     
     public static void RegisterDockablePane(UIControlledApplication application)
     {
@@ -27,24 +45,5 @@ public class TraceCommand : IExternalCommand
                     TabBehind = DockablePanes.BuiltInDockablePanes.PropertiesPalette
                 };
             });
-    }
-
-    public Result Execute(ExternalCommandData commandData, ref string message, ElementSet elements)
-    {
-        try
-        {
-            var id = new DockablePaneId(new Guid(Guid));
-            var dockableWindow = commandData.Application.GetDockablePane(id);
-            if(!dockableWindow.IsShown())
-                dockableWindow.Show();
-            else
-                dockableWindow.Hide();
-            return Result.Succeeded;
-        }
-        catch (Exception e)
-        {
-            TaskDialog.Show("Error", e.ToString());
-            return Result.Failed;
-        }
     }
 }
