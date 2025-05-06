@@ -4,19 +4,26 @@ using System.Windows.Controls;
 using System.Windows.Media;
 using RevitDevTool.Geometry;
 using RevitDevTool.Handlers;
+using RevitDevTool.Models;
 using Serilog;
 using Serilog.Core;
 using Serilog.Events;
 using Serilog.Sinks.RichTextBox.Themes;
-using Color = System.Windows.Media.Color;
+
+// ReSharper disable ConditionalAccessQualifierIsNonNullableAccordingToAPIContract
+// ReSharper disable NullCoalescingConditionIsAlwaysNotNullAccordingToAPIContract
 
 namespace RevitDevTool.ViewModel;
 
-public partial class TraceOutputVm : ObservableObject
+public partial class TraceOutputVm : ObservableObject, IDisposable
 {
+    public RichTextBox LogTextBox { get; }
+
     private readonly LoggingLevelSwitch _levelSwitch;
-    private readonly SerilogTraceListener.SerilogTraceListener _listener;
-    [ObservableProperty] private bool _isStarted;
+    private readonly SerilogTraceListener _traceListener;
+    private ConsoleRedirector _consoleRedirector;
+
+    [ObservableProperty] private bool _isStarted = true;
     [ObservableProperty] private LogEventLevel _logLevel = LogEventLevel.Debug;
 
     partial void OnLogLevelChanging(LogEventLevel value)
@@ -26,37 +33,43 @@ public partial class TraceOutputVm : ObservableObject
 
     partial void OnIsStartedChanged(bool value)
     {
-        if (value)
+        TraceStatus(value);
+    }
+    
+    private void TraceStatus(bool isStarted)
+    {
+        if (isStarted)
         {
-            Trace.Listeners.Add(_listener);
+            Trace.Listeners.Add(_traceListener);
             Trace.Listeners.Add(TraceGeometry.TraceListener);
         }
         else
         {
-            Trace.Listeners.Remove(_listener);
+            Trace.Listeners.Remove(_traceListener);
             Trace.Listeners.Remove(TraceGeometry.TraceListener);
         }
     }
-
-    public RichTextBox LogTextBox { get; }
 
     public TraceOutputVm()
     {
         LogTextBox = new RichTextBox
         {
-            Background = new SolidColorBrush(Color.FromRgb(29, 29, 31)),
-            Foreground = new SolidColorBrush(Color.FromRgb(245, 245, 247)),
             FontFamily = new FontFamily("Cascadia Mono, Consolas, Courier New, monospace"),
             VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
             VerticalContentAlignment = VerticalAlignment.Top,
             IsReadOnly = true,
         };
+
         _levelSwitch = new LoggingLevelSwitch(_logLevel);
+
         var logger = new LoggerConfiguration()
             .MinimumLevel.ControlledBy(_levelSwitch)
             .WriteTo.RichTextBox(LogTextBox, theme: RichTextBoxConsoleTheme.Colored)
             .CreateLogger();
-        _listener = new SerilogTraceListener.SerilogTraceListener(logger) { Name = "RevitDevTool" };
+        
+        _traceListener = new SerilogTraceListener(logger);
+        _consoleRedirector = new ConsoleRedirector();
+        TraceStatus(IsStarted);
     }
 
     [RelayCommand] private void Clear()
@@ -97,5 +110,11 @@ public partial class TraceOutputVm : ObservableObject
                 TraceGeometry.DocGeometries.Remove(hashKey);
             }
         });
+    }
+
+    public void Dispose()
+    {
+        _consoleRedirector?.Dispose();
+        GC.SuppressFinalize(this);
     }
 }
