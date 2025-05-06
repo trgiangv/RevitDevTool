@@ -10,9 +10,6 @@ using Serilog.Core;
 using Serilog.Events;
 using Serilog.Sinks.RichTextBox.Themes;
 
-// ReSharper disable ConditionalAccessQualifierIsNonNullableAccordingToAPIContract
-// ReSharper disable NullCoalescingConditionIsAlwaysNotNullAccordingToAPIContract
-
 namespace RevitDevTool.ViewModel;
 
 public partial class TraceOutputVm : ObservableObject, IDisposable
@@ -21,7 +18,7 @@ public partial class TraceOutputVm : ObservableObject, IDisposable
 
     private readonly LoggingLevelSwitch _levelSwitch;
     private readonly SerilogTraceListener _traceListener;
-    private ConsoleRedirector _consoleRedirector;
+    private readonly ConsoleRedirector _consoleRedirector;
 
     [ObservableProperty] private bool _isStarted = true;
     [ObservableProperty] private LogEventLevel _logLevel = LogEventLevel.Debug;
@@ -114,7 +111,7 @@ public partial class TraceOutputVm : ObservableObject, IDisposable
 
     public void Dispose()
     {
-        _consoleRedirector?.Dispose();
+        _consoleRedirector.Dispose();
         GC.SuppressFinalize(this);
     }
 }
