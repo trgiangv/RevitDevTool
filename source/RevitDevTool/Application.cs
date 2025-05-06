@@ -1,38 +1,19 @@
-﻿using System.IO;
-using System.Reflection;
-using Autodesk.Revit.UI;
-using Autodesk.Revit.UI.Events;
+﻿using Autodesk.Revit.UI;
+using Nice3point.Revit.Toolkit.External;
 using RevitDevTool.Commands;
-using RevitDevTool.Extensions;
-using RevitDevTool.Handlers;
 
 namespace RevitDevTool;
 
-[PublicAPI]
-public class Application : IExternalApplication
+[UsedImplicitly]
+public class Application : ExternalApplication
 {
-    public static UIControlledApplication RevitUiControlledApplication { get; private set; } = null!;
-    public static UIApplication RevitUiApplication => new RibbonItemEventArgs().Application;
-    public static Autodesk.Revit.ApplicationServices.Application RevitApplication => RevitUiApplication.Application;
-    public static UIDocument? RevitActiveUiDocument => RevitUiApplication.ActiveUIDocument;
-    public static Document? RevitActiveDocument => RevitActiveUiDocument?.Document;
-    public static bool IsInRevitApiMode => RevitUiApplication.ActiveAddInId is not null;
-
-    public Result OnStartup(UIControlledApplication application)
+    public override void OnStartup()
     {
-        ResolveAssemblies();
-        RevitUiControlledApplication = application;
         ExternalEventController.Register();
-        AddButton(application);
-        AddDockable(application);
-        return Result.Succeeded;
+        AddButton(Application);
+        AddDockable(Application);
     }
 
-    public Result OnShutdown(UIControlledApplication application)
-    {
-        return Result.Succeeded;
-    }
-    
     private static void AddDockable(UIControlledApplication application)
     {
         TraceCommand.RegisterDockablePane(application);
@@ -40,22 +21,10 @@ public class Application : IExternalApplication
     
     private static void AddButton(UIControlledApplication application)
     {
-        var panel = application.CreateRibbonPanel("DevTool");
+        var panel = application.CreatePanel("External Tools");
 
-        panel.AddPushButton<TraceCommand>("Trace\nPanel")
-            .SetLargeImage("/RevitDevTool;component/Images/log.png")
-            .SetLongDescription("Display trace data");
-    }
-
-    private static void ResolveAssemblies()
-    {
-        var currentAssemblyPath = Assembly.GetExecutingAssembly().Location;
-        var currentAssemblyDirectory = Path.GetDirectoryName(currentAssemblyPath);
-        if (currentAssemblyDirectory is null) return;
-        var assemblyFiles = Directory.GetFiles(currentAssemblyDirectory, "*.dll");
-        foreach (var assemblyFile in assemblyFiles)
-        {
-            Assembly.LoadFrom(assemblyFile);
-        }
+        panel.AddPushButton<TraceCommand>("Trace Panel")
+            .SetLargeImage("/RevitDevTool;component/Resources/Icons/TraceCommand32_light.tiff")
+            .SetLongDescription("Show/Hide Trace Panel");
     }
 }
