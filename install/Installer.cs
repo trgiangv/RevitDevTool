@@ -21,7 +21,7 @@ var project = new Project
     Version = Assembly.GetExecutingAssembly().GetName().Version.ClearRevision(),
     ControlPanelInfo =
     {
-        Manufacturer = Environment.UserName,
+        Manufacturer = projectName,
         ProductIcon = @"install\Resources\Icons\ShellIcon.ico"
     }
 };
