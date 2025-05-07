@@ -1,8 +1,10 @@
-﻿using System.ComponentModel;
+﻿#if REVIT2024_OR_GREATER
+using System.ComponentModel;
 using System.Windows;
 using Autodesk.Revit.UI;
 using MaterialDesignThemes.Wpf;
 using UIFramework;
+#endif
 
 namespace RevitDevTool.View;
 

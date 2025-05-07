@@ -39,7 +39,7 @@
     </Page.Resources>
 
     <Page.DataContext>
-        <vm:TraceOutputVm />
+        <vm:TraceLogViewModel />
     </Page.DataContext>
 
     <DockPanel>

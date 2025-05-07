@@ -39,21 +39,14 @@ public class ConsoleRedirector : IDisposable
         GC.SuppressFinalize(this);
     }
 
-    private class ConsoleTextWriter : TextWriter
+    private class ConsoleTextWriter(TraceEventType eventType) : TextWriter
     {
-        private readonly TraceEventType _eventType;
-
-        public ConsoleTextWriter(TraceEventType eventType)
-        {
-            _eventType = eventType;
-        }
-
         public override void Write(string? value)
         {
             if (string.IsNullOrEmpty(value))
                 return;
 
-            switch (_eventType)
+            switch (eventType)
             {
                 case TraceEventType.Error:
                 case TraceEventType.Critical:

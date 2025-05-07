@@ -3,6 +3,7 @@ using System.Diagnostics;
 using System.Globalization;
 using Serilog;
 using Serilog.Events;
+// ReSharper disable UnusedMember.Local
 
 namespace RevitDevTool.Models;
 
@@ -140,8 +141,7 @@ public class SerilogTraceListener : TraceListener
         if (!ShouldTrace(eventCache, source, eventType, id, format, args, null, null))
             return;
         var traceProperties = CreateTraceProperties(source, eventType, id);
-        Exception exception;
-        AddFormatArgs(traceProperties, args, out exception);
+        AddFormatArgs(traceProperties, args, out var exception);
         Write(eventType, exception, format, traceProperties);
     }
 
@@ -219,21 +219,21 @@ public class SerilogTraceListener : TraceListener
         }
     }
 
-    private IList<LogEventProperty> CreateFailProperties()
+    private List<LogEventProperty> CreateFailProperties()
     {
         var properties = CreateProperties();
         SafeAddProperty(properties, "TraceEventType", "Fail");
         return properties;
     }
 
-    private IList<LogEventProperty> CreateProperties()
+    private List<LogEventProperty> CreateProperties()
     {
         var properties = new List<LogEventProperty>();
         SafeAddProperty(properties, "ActivityId", Trace.CorrelationManager.ActivityId);
         return properties;
     }
 
-    private IList<LogEventProperty> CreateTraceProperties(
+    private List<LogEventProperty> CreateTraceProperties(
         string source,
         TraceEventType eventType,
         int id)
@@ -247,8 +247,7 @@ public class SerilogTraceListener : TraceListener
 
     private void SafeAddProperty(IList<LogEventProperty> properties, string name, object value)
     {
-        LogEventProperty property;
-        if (!(_logger ?? Log.Logger).BindProperty(name, value, false, out property))
+        if (!(_logger ?? Log.Logger).BindProperty(name, value, false, out var property))
             return;
         properties.Add(property);
     }
@@ -268,11 +267,9 @@ public class SerilogTraceListener : TraceListener
         string messageTemplate,
         IList<LogEventProperty> properties)
     {
-        if (messageTemplate == null)
-            messageTemplate = string.Empty;
+        messageTemplate ??= string.Empty;
         var logger = _logger ?? Log.Logger;
-        MessageTemplate parsedTemplate;
-        if (!logger.BindMessageTemplate(messageTemplate, null, out parsedTemplate, out var _))
+        if (!logger.BindMessageTemplate(messageTemplate, null, out var parsedTemplate, out _))
             return;
         var logEvent = new LogEvent(DateTimeOffset.Now, level, exception, parsedTemplate, properties);
         logger.Write(logEvent);

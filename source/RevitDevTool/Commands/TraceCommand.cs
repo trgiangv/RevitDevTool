@@ -41,7 +41,7 @@ public class TraceCommand : ExternalCommand
                 {
                     MinimumWidth = 300,
                     MinimumHeight = 400,
-                    DockPosition = DockPosition.Left,
+                    DockPosition = DockPosition.Right,
                     TabBehind = DockablePanes.BuiltInDockablePanes.PropertiesPalette
                 };
             });

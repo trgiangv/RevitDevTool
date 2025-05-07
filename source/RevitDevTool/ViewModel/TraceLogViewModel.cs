@@ -11,7 +11,7 @@ using Serilog.Sinks.RichTextBox.Themes;
 
 namespace RevitDevTool.ViewModel;
 
-public partial class TraceOutputVm : ObservableObject, IDisposable
+public partial class TraceLogViewModel : ObservableObject, IDisposable
 {
     public RichTextBox LogTextBox { get; }
 
@@ -46,7 +46,7 @@ public partial class TraceOutputVm : ObservableObject, IDisposable
         }
     }
 
-    public TraceOutputVm()
+    public TraceLogViewModel()
     {
         LogTextBox = new RichTextBox
         {
