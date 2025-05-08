@@ -118,22 +118,28 @@ public sealed class SolidVisualizationServer : VisualizationServer<Solid>
 
     private void MapGeometryBuffer()
     {
+        // Dispose and clear all previous buffers before remapping
+        foreach (var buffer in _faceBuffers) buffer.Dispose();
+        foreach (var buffer in _edgeBuffers) buffer.Dispose();
+        _faceBuffers.Clear();
+        _edgeBuffers.Clear();
+
         foreach (var solid in VisualizeGeometries)
         {
             var scaledSolid = RenderGeometryHelper.ScaleSolid(solid, _scale);
 
-            var faceIndex = 0;
             foreach (Face face in scaledSolid.Faces)
             {
-                var buffer = CreateOrUpdateBuffer(_faceBuffers, faceIndex++);
+                var buffer = new RenderingBufferStorage();
                 MapFaceBuffers(buffer, face);
+                _faceBuffers.Add(buffer);
             }
 
-            var edgeIndex = 0;
             foreach (Edge edge in scaledSolid.Edges)
             {
-                var buffer = CreateOrUpdateBuffer(_edgeBuffers, edgeIndex++);
+                var buffer = new RenderingBufferStorage();
                 MapEdgeBuffers(buffer, edge);
+                _edgeBuffers.Add(buffer);
             }
         }
     }
@@ -150,22 +156,6 @@ public sealed class SolidVisualizationServer : VisualizationServer<Solid>
         RenderHelper.MapCurveBuffer(buffer, mesh);
     }
 
-    private static RenderingBufferStorage CreateOrUpdateBuffer(List<RenderingBufferStorage> buffers, int index)
-    {
-        RenderingBufferStorage buffer;
-        if (buffers.Count > index)
-        {
-            buffer = buffers[index];
-        }
-        else
-        {
-            buffer = new RenderingBufferStorage();
-            buffers.Add(buffer);
-        }
-
-        return buffer;
-    }
-
     private void UpdateEffects()
     {
         foreach (var buffer in _faceBuffers)
@@ -180,5 +170,13 @@ public sealed class SolidVisualizationServer : VisualizationServer<Solid>
             buffer.EffectInstance ??= new EffectInstance(buffer.FormatBits);
             buffer.EffectInstance.SetColor(_edgeColor);
         }
+    }
+
+    protected override void DisposeBuffers()
+    {
+        foreach (var buffer in _faceBuffers) buffer.Dispose();
+        foreach (var buffer in _edgeBuffers) buffer.Dispose();
+        _faceBuffers.Clear();
+        _edgeBuffers.Clear();
     }
 }
