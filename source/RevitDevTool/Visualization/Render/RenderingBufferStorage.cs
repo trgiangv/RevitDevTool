@@ -16,8 +16,40 @@ public sealed class RenderingBufferStorage
     
     public bool IsValid()
     {
-        if (!VertexBuffer.IsValid()) return false;
-        if (!IndexBuffer.IsValid()) return false;
-        return VertexFormat.IsValid() && EffectInstance.IsValid();
+        try
+        {
+            if (VertexBuffer == null || !VertexBuffer.IsValid()) return false;
+            if (IndexBuffer == null || !IndexBuffer.IsValid()) return false;
+            if (VertexFormat == null || !VertexFormat.IsValid()) return false;
+            if (EffectInstance == null || !EffectInstance.IsValid()) return false;
+            if (PrimitiveCount <= 0 || VertexBufferCount <= 0 || IndexBufferCount <= 0) return false;
+            return true;
+        }
+        catch
+        {
+            return false;
+        }
+    }
+    
+    public void Dispose()
+    {
+        try
+        {
+            VertexBuffer?.Dispose();
+            IndexBuffer?.Dispose();
+            VertexFormat?.Dispose();
+            EffectInstance?.Dispose();
+        }
+        catch
+        {
+            // Ignore disposal exceptions
+        }
+        finally
+        {
+            VertexBuffer = null;
+            IndexBuffer = null;
+            VertexFormat = null;
+            EffectInstance = null;
+        }
     }
 }

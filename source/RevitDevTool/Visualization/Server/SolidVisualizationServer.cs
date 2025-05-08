@@ -1,4 +1,5 @@
-﻿using Autodesk.Revit.DB.DirectContext3D;
+﻿using System.Diagnostics;
+using Autodesk.Revit.DB.DirectContext3D;
 using RevitDevTool.Visualization.Helpers;
 using RevitDevTool.Visualization.Render;
 using RevitDevTool.Visualization.Server.Contracts;
@@ -8,28 +9,31 @@ namespace RevitDevTool.Visualization.Server;
 
 public sealed class SolidVisualizationServer : VisualizationServer<Solid>
 {
+    private readonly Guid _serverId = new("02B1803B-9008-427E-985F-4ED4DA839EF0");
+    public override Guid GetServerId() => _serverId;
     private readonly List<RenderingBufferStorage> _faceBuffers = new(4);
     private readonly List<RenderingBufferStorage> _edgeBuffers = new(8);
 
-    private double _transparency = SolidVisualizationSettings.Transparency;
-    private double _scale = SolidVisualizationSettings.Scale;
+    private readonly double _transparency = SolidVisualizationSettings.Transparency;
+    private readonly double _scale = SolidVisualizationSettings.Scale;
 
-    private Color _faceColor = new(
+    private readonly Color _faceColor = new(
         SolidVisualizationSettings.FaceColor.R,
         SolidVisualizationSettings.FaceColor.G,
         SolidVisualizationSettings.FaceColor.B);
-    private Color _edgeColor = new(
+    private readonly Color _edgeColor = new(
         SolidVisualizationSettings.EdgeColor.R,
         SolidVisualizationSettings.EdgeColor.G,
         SolidVisualizationSettings.EdgeColor.B);
 
-    private bool _drawFace = SolidVisualizationSettings.ShowFace;
-    private bool _drawEdge = SolidVisualizationSettings.ShowEdge;
+    private readonly bool _drawFace = SolidVisualizationSettings.ShowFace;
+    private readonly bool _drawEdge = SolidVisualizationSettings.ShowEdge;
     
     public override bool UseInTransparentPass(Autodesk.Revit.DB.View view) => _drawFace && _transparency > 0;
 
-    public override Outline GetBoundingBox(Autodesk.Revit.DB.View view)
+    public override Outline? GetBoundingBox(Autodesk.Revit.DB.View view)
     {
+        if (VisualizeGeometries.Count == 0) return null;
         List<XYZ> minPoints = [];
         List<XYZ> maxPoints = [];
         
@@ -107,10 +111,7 @@ public sealed class SolidVisualizationServer : VisualizationServer<Solid>
             }
             catch (Exception exception)
             {
-                RenderFailed?.Invoke(this, new RenderFailedEventArgs
-                {
-                    Exception = exception
-                });
+                Trace.TraceError($"Error in SolidVisualizationServer: {exception.Message}");
             }
         }
     }
@@ -180,92 +181,4 @@ public sealed class SolidVisualizationServer : VisualizationServer<Solid>
             buffer.EffectInstance.SetColor(_edgeColor);
         }
     }
-
-    public void UpdateFaceColor(Color value)
-    {
-        var uiDocument = Context.ActiveUiDocument;
-        if (uiDocument is null) return;
-
-        lock (RenderLock)
-        {
-            _faceColor = value;
-            HasEffectsUpdates = true;
-
-            uiDocument.UpdateAllOpenViews();
-        }
-    }
-
-    public void UpdateEdgeColor(Color value)
-    {
-        var uiDocument = Context.ActiveUiDocument;
-        if (uiDocument is null) return;
-
-        lock (RenderLock)
-        {
-            _edgeColor = value;
-            HasEffectsUpdates = true;
-
-            uiDocument.UpdateAllOpenViews();
-        }
-    }
-
-    public void UpdateTransparency(double value)
-    {
-        var uiDocument = Context.ActiveUiDocument;
-        if (uiDocument is null) return;
-
-        lock (RenderLock)
-        {
-            _transparency = value;
-            HasEffectsUpdates = true;
-
-            uiDocument.UpdateAllOpenViews();
-        }
-    }
-
-    public void UpdateScale(double value)
-    {
-        var uiDocument = Context.ActiveUiDocument;
-        if (uiDocument is null) return;
-
-        _scale = value;
-
-        lock (RenderLock)
-        {
-            HasGeometryUpdates = true;
-            HasEffectsUpdates = true;
-            _faceBuffers.Clear();
-            _edgeBuffers.Clear();
-
-            uiDocument.UpdateAllOpenViews();
-        }
-    }
-
-    public void UpdateFaceVisibility(bool value)
-    {
-        var uiDocument = Context.ActiveUiDocument;
-        if (uiDocument is null) return;
-
-        lock (RenderLock)
-        {
-            _drawFace = value;
-
-            uiDocument.UpdateAllOpenViews();
-        }
-    }
-
-    public void UpdateEdgeVisibility(bool value)
-    {
-        var uiDocument = Context.ActiveUiDocument;
-        if (uiDocument is null) return;
-
-        lock (RenderLock)
-        {
-            _drawEdge = value;
-
-            uiDocument.UpdateAllOpenViews();
-        }
-    }
-    
-    public event EventHandler<RenderFailedEventArgs>? RenderFailed;
 }
