@@ -148,8 +148,8 @@ public sealed class FaceVisualizationServer : VisualizationServer<Face>
             // Collect normal data from all faces
             var normalData = RenderHelper.CollectFaceNormalData(VisualizeGeometries, _extrusion);
             
-            // Map normal vectors
-            RenderHelper.MapNormalVectorsForFaces(_normalBuffer, normalData);
+            // Map normal vectors as arrows
+            RenderHelper.MapNormalArrowVectorsForFaces(_normalBuffer, normalData);
         }
         catch (Exception ex)
         {

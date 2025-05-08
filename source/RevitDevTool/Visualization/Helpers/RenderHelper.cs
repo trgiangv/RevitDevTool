@@ -943,4 +943,63 @@ public static class RenderHelper
         buffer.IndexBuffer.Unmap();
         buffer.VertexFormat = new VertexFormat(buffer.FormatBits);
     }
+
+    public static void MapNormalArrowVectorsForFaces(RenderingBufferStorage buffer, List<(XYZ Point, XYZ Normal, double Length)> normalData)
+    {
+        if (normalData.Count == 0) return;
+        
+        // Each arrow: 4 vertices (shaft start, shaft end, head left, head right), 3 lines (shaft, left head, right head)
+        int arrowVertexCount = 4;
+        int arrowLineCount = 3;
+        int totalVertexCount = normalData.Count * arrowVertexCount;
+        int totalLineCount = normalData.Count * arrowLineCount;
+
+        buffer.VertexBufferCount = totalVertexCount;
+        buffer.PrimitiveCount = totalLineCount;
+
+        var vertexBufferSizeInFloats = VertexPosition.GetSizeInFloats() * buffer.VertexBufferCount;
+        buffer.FormatBits = VertexFormatBits.Position;
+        buffer.VertexBuffer = new VertexBuffer(vertexBufferSizeInFloats);
+        buffer.VertexBuffer.Map(vertexBufferSizeInFloats);
+
+        var vertexStream = buffer.VertexBuffer.GetVertexStreamPosition();
+
+        // Store all arrow vertices
+        foreach (var (point, normal, length) in normalData)
+        {
+            var normalized = normal.Normalize();
+            var origin = point;
+            var endPoint = origin + normalized * length;
+            var headSize = length > 1 ? 0.2 : length * 0.2;
+            var arrowHeadBase = endPoint - normalized * headSize;
+            var basisVector = Math.Abs(normalized.Z).IsAlmostEqual(1) ? XYZ.BasisY : XYZ.BasisZ;
+            var perpendicular1 = normalized.CrossProduct(basisVector).Normalize().Multiply(headSize * 0.5);
+
+            // 0: origin, 1: endPoint, 2: head left, 3: head right
+            vertexStream.AddVertex(new VertexPosition(origin));
+            vertexStream.AddVertex(new VertexPosition(endPoint));
+            vertexStream.AddVertex(new VertexPosition(arrowHeadBase + perpendicular1));
+            vertexStream.AddVertex(new VertexPosition(arrowHeadBase - perpendicular1));
+        }
+
+        buffer.VertexBuffer.Unmap();
+
+        buffer.IndexBufferCount = totalLineCount * IndexLine.GetSizeInShortInts();
+        buffer.IndexBuffer = new IndexBuffer(buffer.IndexBufferCount);
+        buffer.IndexBuffer.Map(buffer.IndexBufferCount);
+
+        var indexStream = buffer.IndexBuffer.GetIndexStreamLine();
+        for (int i = 0; i < normalData.Count; i++)
+        {
+            int baseIdx = i * arrowVertexCount;
+            // Shaft
+            indexStream.AddLine(new IndexLine(baseIdx + 0, baseIdx + 1));
+            // Arrow head
+            indexStream.AddLine(new IndexLine(baseIdx + 1, baseIdx + 2));
+            indexStream.AddLine(new IndexLine(baseIdx + 1, baseIdx + 3));
+        }
+
+        buffer.IndexBuffer.Unmap();
+        buffer.VertexFormat = new VertexFormat(buffer.FormatBits);
+    }
 }
