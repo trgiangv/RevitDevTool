@@ -1,4 +1,5 @@
-﻿using Autodesk.Revit.DB.DirectContext3D;
+﻿using System.Diagnostics;
+using Autodesk.Revit.DB.DirectContext3D;
 using RevitDevTool.Visualization.Helpers;
 using RevitDevTool.Visualization.Render;
 using RevitDevTool.Visualization.Server.Contracts;
@@ -9,6 +10,8 @@ namespace RevitDevTool.Visualization.Server;
 
 public sealed class BoundingBoxVisualizationServer : VisualizationServer<BoundingBoxXYZ>
 {
+    private readonly Guid _serverId = new("5A67F8D4-30D2-414F-8387-8023C3DAF010");
+    public override Guid GetServerId() => _serverId;
     private readonly RenderingBufferStorage _surfaceBuffer = new();
     private readonly RenderingBufferStorage _edgeBuffer = new();
     private readonly List<RenderingBufferStorage> _axisBuffers = [];
@@ -19,30 +22,29 @@ public sealed class BoundingBoxVisualizationServer : VisualizationServer<Boundin
         XYZ.BasisZ
     ];
 
-    private double _transparency = BoundingBoxVisualizationSettings.Transparency;
-    private bool _drawSurface = BoundingBoxVisualizationSettings.ShowSurface;
-    private bool _drawEdge = BoundingBoxVisualizationSettings.ShowEdge;
-    private bool _drawAxis = BoundingBoxVisualizationSettings.ShowAxis;
+    private readonly double _transparency = BoundingBoxVisualizationSettings.Transparency;
+    private readonly bool _drawSurface = BoundingBoxVisualizationSettings.ShowSurface;
+    private readonly bool _drawEdge = BoundingBoxVisualizationSettings.ShowEdge;
+    private readonly bool _drawAxis = BoundingBoxVisualizationSettings.ShowAxis;
     
-    private Color _surfaceColor = new(
+    private readonly Color _surfaceColor = new(
         BoundingBoxVisualizationSettings.SurfaceColor.R,
         BoundingBoxVisualizationSettings.SurfaceColor.G, 
         BoundingBoxVisualizationSettings.SurfaceColor.B);
-    private Color _edgeColor = new(
+    private readonly Color _edgeColor = new(
         BoundingBoxVisualizationSettings.EdgeColor.R, 
         BoundingBoxVisualizationSettings.EdgeColor.G, 
         BoundingBoxVisualizationSettings.EdgeColor.B);
-    private Color _axisColor = new(
+    private readonly Color _axisColor = new(
         BoundingBoxVisualizationSettings.AxisColor.R, 
         BoundingBoxVisualizationSettings.AxisColor.G, 
         BoundingBoxVisualizationSettings.AxisColor.B);
 
     public override bool UseInTransparentPass(Autodesk.Revit.DB.View view) => _drawSurface && _transparency > 0;
 
-    public override Outline GetBoundingBox(Autodesk.Revit.DB.View view)
+    public override Outline? GetBoundingBox(Autodesk.Revit.DB.View view)
     {
-        if (VisualizeGeometries.Count == 0)
-            return new Outline(XYZ.Zero, XYZ.Zero);
+        if (VisualizeGeometries.Count == 0) return null;
 
         var minPoints = VisualizeGeometries
             .Select(box => box.Min)
@@ -68,6 +70,8 @@ public sealed class BoundingBoxVisualizationServer : VisualizationServer<Boundin
         {
             try
             {
+                if (VisualizeGeometries.Count == 0) return;
+                
                 if (HasGeometryUpdates || !_surfaceBuffer.IsValid() || !_edgeBuffer.IsValid())
                 {
                     MapGeometryBuffer();
@@ -80,7 +84,7 @@ public sealed class BoundingBoxVisualizationServer : VisualizationServer<Boundin
                     HasEffectsUpdates = false;
                 }
 
-                if (_drawSurface)
+                if (_drawSurface && _surfaceBuffer.IsValid())
                 {
                     var isTransparentPass = DrawContext.IsTransparentPass();
                     if (isTransparentPass && _transparency > 0 || !isTransparentPass && _transparency == 0)
@@ -95,7 +99,7 @@ public sealed class BoundingBoxVisualizationServer : VisualizationServer<Boundin
                     }
                 }
 
-                if (_drawEdge)
+                if (_drawEdge && _edgeBuffer.IsValid())
                 {
                     DrawContext.FlushBuffer(_edgeBuffer.VertexBuffer,
                         _edgeBuffer.VertexBufferCount,
@@ -110,167 +114,102 @@ public sealed class BoundingBoxVisualizationServer : VisualizationServer<Boundin
                 {
                     foreach (var buffer in _axisBuffers)
                     {
-                        DrawContext.FlushBuffer(buffer.VertexBuffer,
-                            buffer.VertexBufferCount,
-                            buffer.IndexBuffer,
-                            buffer.IndexBufferCount,
-                            buffer.VertexFormat,
-                            buffer.EffectInstance, PrimitiveType.LineList, 0,
-                            buffer.PrimitiveCount);
+                        if (buffer.IsValid())
+                        {
+                            DrawContext.FlushBuffer(buffer.VertexBuffer,
+                                buffer.VertexBufferCount,
+                                buffer.IndexBuffer,
+                                buffer.IndexBufferCount,
+                                buffer.VertexFormat,
+                                buffer.EffectInstance, PrimitiveType.LineList, 0,
+                                buffer.PrimitiveCount);
+                        }
                     }
                 }
             }
             catch (Exception exception)
             {
-                RenderFailed?.Invoke(this, new RenderFailedEventArgs
-                {
-                    Exception = exception
-                });
+                Trace.TraceError($"Error in BoundingBoxVisualizationServer: {exception}");
             }
         }
     }
 
     private void MapGeometryBuffer()
     {
-        foreach (var box in VisualizeGeometries)
+        if (VisualizeGeometries.Count == 0) return;
+        
+        try
         {
-            RenderHelper.MapBoundingBoxSurfaceBuffer(_surfaceBuffer, box);
-            RenderHelper.MapBoundingBoxEdgeBuffer(_edgeBuffer, box);
-            MapAxisBuffers(box);
+            RenderHelper.MapBoundingBoxSurfaceBuffer(_surfaceBuffer, VisualizeGeometries);
+            RenderHelper.MapBoundingBoxEdgeBuffer(_edgeBuffer, VisualizeGeometries);
+            
+            MapAxisBuffersForAllBoxes();
+        }
+        catch (Exception ex)
+        {
+            Trace.TraceError($"Error mapping geometry buffer in BoundingBoxVisualizationServer: {ex}");
         }
     }
 
-    private void MapAxisBuffers(BoundingBoxXYZ boundingBox)
+    private void MapAxisBuffersForAllBoxes()
     {
-        var unitVector = new XYZ(1, 1, 1);
-        var minPoint = boundingBox.Transform.OfPoint(boundingBox.Min);
-        var maxPoint = boundingBox.Transform.OfPoint(boundingBox.Max);
-        var axisLength = RenderGeometryHelper.InterpolateAxisLengthByPoints(minPoint, maxPoint);
-        
         _axisBuffers.Clear();
-        _axisBuffers.AddRange(_normals.Select(_ =>
-            new RenderingBufferStorage()));
-        for (var i = 0; i < _normals.Length; i++)
+        
+        foreach (var box in VisualizeGeometries)
         {
-            var normal = _normals[i];
-            var minBuffer = _axisBuffers[i];
-            var maxBuffer = _axisBuffers[i + _normals.Length];
-
-            RenderHelper.MapNormalVectorBuffer(minBuffer, minPoint - unitVector * Context.Application.ShortCurveTolerance, normal, axisLength);
-            RenderHelper.MapNormalVectorBuffer(maxBuffer, maxPoint + unitVector * Context.Application.ShortCurveTolerance, -normal, axisLength);
+            var unitVector = new XYZ(1, 1, 1);
+            var minPoint = box.Transform.OfPoint(box.Min);
+            var maxPoint = box.Transform.OfPoint(box.Max);
+            var axisLength = RenderGeometryHelper.InterpolateAxisLengthByPoints(minPoint, maxPoint);
+            
+            foreach (var normal in _normals)
+            {
+                var minBuffer = new RenderingBufferStorage();
+                var maxBuffer = new RenderingBufferStorage();
+                
+                RenderHelper.MapNormalVectorBuffer(minBuffer, minPoint - unitVector * Context.Application.ShortCurveTolerance, normal, axisLength);
+                RenderHelper.MapNormalVectorBuffer(maxBuffer, maxPoint + unitVector * Context.Application.ShortCurveTolerance, -normal, axisLength);
+                
+                _axisBuffers.Add(minBuffer);
+                _axisBuffers.Add(maxBuffer);
+            }
         }
     }
 
     private void UpdateEffects()
     {
+        if (_surfaceBuffer.FormatBits == 0)
+            _surfaceBuffer.FormatBits = VertexFormatBits.PositionNormal;
+            
         _surfaceBuffer.EffectInstance ??= new EffectInstance(_surfaceBuffer.FormatBits);
         _surfaceBuffer.EffectInstance.SetColor(_surfaceColor);
         _surfaceBuffer.EffectInstance.SetTransparency(_transparency);
 
+        if (_edgeBuffer.FormatBits == 0)
+            _edgeBuffer.FormatBits = VertexFormatBits.Position;
+            
         _edgeBuffer.EffectInstance ??= new EffectInstance(_edgeBuffer.FormatBits);
         _edgeBuffer.EffectInstance.SetColor(_edgeColor);
 
         foreach (var buffer in _axisBuffers)
         {
-            buffer.EffectInstance ??= new EffectInstance(_edgeBuffer.FormatBits);
+            if (buffer.FormatBits == 0)
+                buffer.FormatBits = VertexFormatBits.Position;
+                
+            buffer.EffectInstance ??= new EffectInstance(buffer.FormatBits);
             buffer.EffectInstance.SetColor(_axisColor);
         }
     }
 
-    public void UpdateSurfaceColor(Color color)
+    protected override void DisposeBuffers()
     {
-        var uiDocument = Context.ActiveUiDocument;
-        if (uiDocument is null) return;
-
-        lock (RenderLock)
+        _surfaceBuffer.Dispose();
+        _edgeBuffer.Dispose();
+        
+        foreach (var buffer in _axisBuffers)
         {
-            _surfaceColor = color;
-            HasEffectsUpdates = true;
-
-            uiDocument.UpdateAllOpenViews();
+            buffer.Dispose();
         }
+        _axisBuffers.Clear();
     }
-
-    public void UpdateEdgeColor(Color color)
-    {
-        var uiDocument = Context.ActiveUiDocument;
-        if (uiDocument is null) return;
-
-        lock (RenderLock)
-        {
-            _edgeColor = color;
-            HasEffectsUpdates = true;
-
-            uiDocument.UpdateAllOpenViews();
-        }
-    }
-
-    public void UpdateAxisColor(Color color)
-    {
-        var uiDocument = Context.ActiveUiDocument;
-        if (uiDocument is null) return;
-
-        lock (RenderLock)
-        {
-            _axisColor = color;
-            HasEffectsUpdates = true;
-
-            uiDocument.UpdateAllOpenViews();
-        }
-    }
-
-    public void UpdateTransparency(double value)
-    {
-        var uiDocument = Context.ActiveUiDocument;
-        if (uiDocument is null) return;
-
-        lock (RenderLock)
-        {
-            _transparency = value;
-            HasEffectsUpdates = true;
-
-            uiDocument.UpdateAllOpenViews();
-        }
-    }
-
-    public void UpdateSurfaceVisibility(bool visible)
-    {
-        var uiDocument = Context.ActiveUiDocument;
-        if (uiDocument is null) return;
-
-        lock (RenderLock)
-        {
-            _drawSurface = visible;
-
-            uiDocument.UpdateAllOpenViews();
-        }
-    }
-
-    public void UpdateEdgeVisibility(bool visible)
-    {
-        var uiDocument = Context.ActiveUiDocument;
-        if (uiDocument is null) return;
-
-        lock (RenderLock)
-        {
-            _drawEdge = visible;
-
-            uiDocument.UpdateAllOpenViews();
-        }
-    }
-
-    public void UpdateAxisVisibility(bool visible)
-    {
-        var uiDocument = Context.ActiveUiDocument;
-        if (uiDocument is null) return;
-
-        lock (RenderLock)
-        {
-            _drawAxis = visible;
-
-            uiDocument.UpdateAllOpenViews();
-        }
-    }
-
-    public event EventHandler<RenderFailedEventArgs>? RenderFailed;
 }

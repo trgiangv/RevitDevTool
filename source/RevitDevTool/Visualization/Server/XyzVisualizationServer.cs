@@ -1,4 +1,5 @@
-﻿using Autodesk.Revit.DB.DirectContext3D;
+﻿using System.Diagnostics;
+using Autodesk.Revit.DB.DirectContext3D;
 using RevitDevTool.Visualization.Helpers;
 using RevitDevTool.Visualization.Render;
 using RevitDevTool.Visualization.Server.Contracts;
@@ -8,6 +9,8 @@ namespace RevitDevTool.Visualization.Server;
 
 public sealed class XyzVisualizationServer : VisualizationServer<XYZ>
 {
+    private readonly Guid _serverId = new("A670E0BB-8B55-47CB-905C-7D94F0C8DF07");
+    public override Guid GetServerId() => _serverId;
     private readonly RenderingBufferStorage[] _planeBuffers = Enumerable.Range(0, 3)
         .Select(_ => new RenderingBufferStorage())
         .ToArray();
@@ -23,31 +26,32 @@ public sealed class XyzVisualizationServer : VisualizationServer<XYZ>
         XYZ.BasisZ
     ];
 
-    private double _transparency = XyzVisualizationSettings.Transparency;
-    private double _axisLength = XyzVisualizationSettings.AxisLength;
+    private readonly double _transparency = XyzVisualizationSettings.Transparency;
+    private readonly double _axisLength = XyzVisualizationSettings.AxisLength;
 
-    private Color _xColor = new(
+    private readonly Color _xColor = new(
         XyzVisualizationSettings.XColor.R,
         XyzVisualizationSettings.XColor.G,
         XyzVisualizationSettings.XColor.B);
-    private Color _yColor = new(
+    private readonly Color _yColor = new(
         XyzVisualizationSettings.YColor.R,
         XyzVisualizationSettings.YColor.G,
         XyzVisualizationSettings.YColor.B);
-    private Color _zColor = new(
+    private readonly Color _zColor = new(
         XyzVisualizationSettings.ZColor.R,
         XyzVisualizationSettings.ZColor.G,
         XyzVisualizationSettings.ZColor.B);
 
-    private bool _drawPlane = XyzVisualizationSettings.ShowPlane;
-    private bool _drawXAxis = XyzVisualizationSettings.ShowXAxis;
-    private bool _drawYAxis = XyzVisualizationSettings.ShowYAxis;
-    private bool _drawZAxis = XyzVisualizationSettings.ShowZAxis;
+    private readonly bool _drawPlane = XyzVisualizationSettings.ShowPlane;
+    private readonly bool _drawXAxis = XyzVisualizationSettings.ShowXAxis;
+    private readonly bool _drawYAxis = XyzVisualizationSettings.ShowYAxis;
+    private readonly bool _drawZAxis = XyzVisualizationSettings.ShowZAxis;
     
     public override bool UseInTransparentPass(Autodesk.Revit.DB.View view) => _drawPlane && _transparency > 0;
 
-    public override Outline GetBoundingBox(Autodesk.Revit.DB.View view)
+    public override Outline? GetBoundingBox(Autodesk.Revit.DB.View view)
     {
+        if (VisualizeGeometries.Count == 0) return null;
         var minPoint = new XYZ(VisualizeGeometries.Min(p => p.X) - _axisLength, VisualizeGeometries.Min(p => p.Y) - _axisLength, VisualizeGeometries.Min(p => p.Z) - _axisLength);
         var maxPoint = new XYZ(VisualizeGeometries.Max(p => p.X) + _axisLength, VisualizeGeometries.Max(p => p.Y) + _axisLength, VisualizeGeometries.Max(p => p.Z) + _axisLength);
 
@@ -60,6 +64,8 @@ public sealed class XyzVisualizationServer : VisualizationServer<XYZ>
         {
             try
             {
+                if (VisualizeGeometries.Count == 0) return;
+                
                 if (HasGeometryUpdates)
                 {
                     UpdateGeometryBuffer();
@@ -92,17 +98,14 @@ public sealed class XyzVisualizationServer : VisualizationServer<XYZ>
             }
             catch (Exception exception)
             {
-                RenderFailed?.Invoke(this, new RenderFailedEventArgs
-                {
-                    Exception = exception
-                });
+                Trace.TraceError($"Error in XyzVisualizationServer: {exception.Message}");
             }
         }
     }
 
     private void RenderPlaneBuffer(RenderingBufferStorage buffer)
     {
-        if (!_drawPlane) return;
+        if (!_drawPlane || !buffer.IsValid()) return;
 
         var isTransparentPass = DrawContext.IsTransparentPass();
         if (isTransparentPass && _transparency > 0 || !isTransparentPass && _transparency == 0)
@@ -119,6 +122,8 @@ public sealed class XyzVisualizationServer : VisualizationServer<XYZ>
 
     private void RenderAxisBuffer(RenderingBufferStorage buffer)
     {
+        if (!buffer.IsValid()) return;
+        
         DrawContext.FlushBuffer(buffer.VertexBuffer,
             buffer.VertexBufferCount,
             buffer.IndexBuffer,
@@ -130,34 +135,41 @@ public sealed class XyzVisualizationServer : VisualizationServer<XYZ>
 
     private void UpdateGeometryBuffer()
     {
-        MapNormalBuffer();
-        MapPlaneBuffer();
+        if (VisualizeGeometries.Count == 0) return;
+        
+        try
+        {
+            MapNormalBuffer();
+            MapPlaneBuffer();
+        }
+        catch (Exception ex)
+        {
+            Trace.TraceError($"Error updating geometry buffer in XyzVisualizationServer: {ex}");
+        }
     }
 
     private void MapNormalBuffer()
     {
-        foreach (var point in VisualizeGeometries)
+        if (VisualizeGeometries.Count == 0) return;
+        
+        var normalExtendLength = _axisLength > 1 ? 0.8 : _axisLength * 0.8;
+        for (var i = 0; i < _normals.Length; i++)
         {
-            var normalExtendLength = _axisLength > 1 ? 0.8 : _axisLength * 0.8;
-            for (var i = 0; i < _normals.Length; i++)
-            {
-                var normal = _normals[i];
-                var buffer = _axisBuffers[i];
-                RenderHelper.MapNormalVectorBuffer(buffer, point - normal * (_axisLength + normalExtendLength), normal, 2 * (_axisLength + normalExtendLength));
-            }
+            var normal = _normals[i];
+            var buffer = _axisBuffers[i];
+            RenderHelper.MapNormalVectorBufferForMultiplePoints(buffer, VisualizeGeometries, normal, 2 * (_axisLength + normalExtendLength));
         }
     }
 
     private void MapPlaneBuffer()
     {
-        foreach (var point in VisualizeGeometries)
+        if (VisualizeGeometries.Count == 0) return;
+        
+        for (var i = 0; i < _normals.Length; i++)
         {
-            for (var i = 0; i < _normals.Length; i++)
-            {
-                var normal = _normals[i];
-                var buffer = _planeBuffers[i];
-                RenderHelper.MapSideBuffer(buffer, point - normal * _axisLength, point + normal * _axisLength);
-            }
+            var normal = _normals[i];
+            var buffer = _planeBuffers[i];
+            RenderHelper.MapSideBufferForMultiplePoints(buffer, VisualizeGeometries, normal, _axisLength);
         }
     }
 
@@ -165,6 +177,9 @@ public sealed class XyzVisualizationServer : VisualizationServer<XYZ>
     {
         foreach (var buffer in _planeBuffers)
         {
+            if (buffer.FormatBits == 0)
+                buffer.FormatBits = VertexFormatBits.PositionNormal;
+                
             buffer.EffectInstance ??= new EffectInstance(buffer.FormatBits);
             buffer.EffectInstance.SetTransparency(_transparency);
         }
@@ -175,6 +190,9 @@ public sealed class XyzVisualizationServer : VisualizationServer<XYZ>
 
         foreach (var buffer in _axisBuffers)
         {
+            if (buffer.FormatBits == 0)
+                buffer.FormatBits = VertexFormatBits.Position;
+                
             buffer.EffectInstance ??= new EffectInstance(buffer.FormatBits);
         }
 
@@ -183,123 +201,16 @@ public sealed class XyzVisualizationServer : VisualizationServer<XYZ>
         _axisBuffers[2].EffectInstance!.SetColor(_zColor);
     }
 
-    public void UpdateXColor(Color value)
+    protected override void DisposeBuffers()
     {
-        var uiDocument = Context.ActiveUiDocument;
-        if (uiDocument is null) return;
-
-        lock (RenderLock)
+        foreach (var buffer in _planeBuffers)
         {
-            _xColor = value;
-            HasEffectsUpdates = true;
-
-            uiDocument.UpdateAllOpenViews();
+            buffer.Dispose();
+        }
+        
+        foreach (var buffer in _axisBuffers)
+        {
+            buffer.Dispose();
         }
     }
-
-    public void UpdateYColor(Color value)
-    {
-        var uiDocument = Context.ActiveUiDocument;
-        if (uiDocument is null) return;
-
-        lock (RenderLock)
-        {
-            _yColor = value;
-            HasEffectsUpdates = true;
-
-            uiDocument.UpdateAllOpenViews();
-        }
-    }
-
-    public void UpdateZColor(Color value)
-    {
-        var uiDocument = Context.ActiveUiDocument;
-        if (uiDocument is null) return;
-
-        lock (RenderLock)
-        {
-            _zColor = value;
-            HasEffectsUpdates = true;
-
-            uiDocument.UpdateAllOpenViews();
-        }
-    }
-
-    public void UpdateAxisLength(double value)
-    {
-        var uiDocument = Context.ActiveUiDocument;
-        if (uiDocument is null) return;
-
-        lock (RenderLock)
-        {
-            _axisLength = value;
-            HasGeometryUpdates = true;
-
-            uiDocument.UpdateAllOpenViews();
-        }
-    }
-
-    public void UpdateTransparency(double value)
-    {
-        var uiDocument = Context.ActiveUiDocument;
-        if (uiDocument is null) return;
-
-        lock (RenderLock)
-        {
-            _transparency = value;
-            HasEffectsUpdates = true;
-
-            uiDocument.UpdateAllOpenViews();
-        }
-    }
-
-    public void UpdatePlaneVisibility(bool visible)
-    {
-        var uiDocument = Context.ActiveUiDocument;
-        if (uiDocument is null) return;
-
-        lock (RenderLock)
-        {
-            _drawPlane = visible;
-            uiDocument.UpdateAllOpenViews();
-        }
-    }
-
-    public void UpdateXAxisVisibility(bool visible)
-    {
-        var uiDocument = Context.ActiveUiDocument;
-        if (uiDocument is null) return;
-
-        lock (RenderLock)
-        {
-            _drawXAxis = visible;
-            uiDocument.UpdateAllOpenViews();
-        }
-    }
-
-    public void UpdateYAxisVisibility(bool visible)
-    {
-        var uiDocument = Context.ActiveUiDocument;
-        if (uiDocument is null) return;
-
-        lock (RenderLock)
-        {
-            _drawYAxis = visible;
-            uiDocument.UpdateAllOpenViews();
-        }
-    }
-
-    public void UpdateZAxisVisibility(bool visible)
-    {
-        var uiDocument = Context.ActiveUiDocument;
-        if (uiDocument is null) return;
-
-        lock (RenderLock)
-        {
-            _drawZAxis = visible;
-            uiDocument.UpdateAllOpenViews();
-        }
-    }
-    
-    public event EventHandler<RenderFailedEventArgs>? RenderFailed;
 }

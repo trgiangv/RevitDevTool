@@ -603,4 +603,344 @@ public static class RenderHelper
         buffer.IndexBuffer.Unmap();
         buffer.VertexFormat = new VertexFormat(buffer.FormatBits);
     }
+
+    public static void MapNormalVectorBufferForMultiplePoints(RenderingBufferStorage buffer, IList<XYZ> points, XYZ direction, double length)
+    {
+        if (points.Count == 0) return;
+        
+        int totalLineCount = points.Count;
+        buffer.VertexBufferCount = totalLineCount * 2; // 2 points per line
+        buffer.PrimitiveCount = totalLineCount;
+        
+        var vertexBufferSizeInFloats = VertexPosition.GetSizeInFloats() * buffer.VertexBufferCount;
+        buffer.FormatBits = VertexFormatBits.Position;
+        buffer.VertexBuffer = new VertexBuffer(vertexBufferSizeInFloats);
+        buffer.VertexBuffer.Map(vertexBufferSizeInFloats);
+        
+        var vertexStream = buffer.VertexBuffer.GetVertexStreamPosition();
+        
+        // Add all start and end points for each normal vector
+        foreach (var point in points)
+        {
+            var normalizedDirection = direction.Normalize();
+            var startPoint = point;
+            var endPoint = point + normalizedDirection * length;
+            
+            vertexStream.AddVertex(new VertexPosition(startPoint));
+            vertexStream.AddVertex(new VertexPosition(endPoint));
+        }
+        
+        buffer.VertexBuffer.Unmap();
+        
+        // Create index buffer for lines
+        buffer.IndexBufferCount = totalLineCount * IndexLine.GetSizeInShortInts();
+        buffer.IndexBuffer = new IndexBuffer(buffer.IndexBufferCount);
+        buffer.IndexBuffer.Map(buffer.IndexBufferCount);
+        
+        var indexStream = buffer.IndexBuffer.GetIndexStreamLine();
+        
+        // Add lines connecting start and end points
+        for (var i = 0; i < totalLineCount; i++)
+        {
+            indexStream.AddLine(new IndexLine(i * 2, i * 2 + 1));
+        }
+        
+        buffer.IndexBuffer.Unmap();
+        buffer.VertexFormat = new VertexFormat(buffer.FormatBits);
+    }
+    
+    public static void MapSideBufferForMultiplePoints(RenderingBufferStorage buffer, IList<XYZ> points, XYZ normal, double axisLength)
+    {
+        if (points.Count == 0) return;
+        
+        int totalQuadCount = points.Count;
+        buffer.VertexBufferCount = totalQuadCount * 4; // 4 corners per quad
+        buffer.PrimitiveCount = totalQuadCount * 2; // 2 triangles per quad
+        
+        var vertexBufferSizeInFloats = VertexPosition.GetSizeInFloats() * buffer.VertexBufferCount;
+        buffer.FormatBits = VertexFormatBits.Position;
+        buffer.VertexBuffer = new VertexBuffer(vertexBufferSizeInFloats);
+        buffer.VertexBuffer.Map(vertexBufferSizeInFloats);
+        
+        var vertexStream = buffer.VertexBuffer.GetVertexStreamPosition();
+        
+        // Create quads for each point
+        foreach (var point in points)
+        {
+            var normalizedNormal = normal.Normalize();
+            
+            // Calculate perpendicular vectors to create a plane
+            XYZ perpendicular1;
+            if (Math.Abs(normalizedNormal.Z) < 0.9)
+                perpendicular1 = XYZ.BasisZ.CrossProduct(normalizedNormal).Normalize();
+            else
+                perpendicular1 = XYZ.BasisX.CrossProduct(normalizedNormal).Normalize();
+                
+            var perpendicular2 = normalizedNormal.CrossProduct(perpendicular1).Normalize();
+            
+            // Scale perpendicular vectors
+            perpendicular1 *= axisLength;
+            perpendicular2 *= axisLength;
+            
+            // Create quad corners
+            var corner1 = point + perpendicular1 + perpendicular2;
+            var corner2 = point + perpendicular1 - perpendicular2;
+            var corner3 = point - perpendicular1 - perpendicular2;
+            var corner4 = point - perpendicular1 + perpendicular2;
+            
+            // Add vertices
+            vertexStream.AddVertex(new VertexPosition(corner1));
+            vertexStream.AddVertex(new VertexPosition(corner2));
+            vertexStream.AddVertex(new VertexPosition(corner3));
+            vertexStream.AddVertex(new VertexPosition(corner4));
+        }
+        
+        buffer.VertexBuffer.Unmap();
+        
+        // Create index buffer for triangles
+        buffer.IndexBufferCount = totalQuadCount * 2 * IndexTriangle.GetSizeInShortInts();
+        buffer.IndexBuffer = new IndexBuffer(buffer.IndexBufferCount);
+        buffer.IndexBuffer.Map(buffer.IndexBufferCount);
+        
+        var indexStream = buffer.IndexBuffer.GetIndexStreamTriangle();
+        
+        // Add triangles for each quad
+        for (var i = 0; i < totalQuadCount; i++)
+        {
+            var baseIndex = i * 4;
+            
+            // First triangle
+            indexStream.AddTriangle(new IndexTriangle(baseIndex, baseIndex + 1, baseIndex + 2));
+            
+            // Second triangle
+            indexStream.AddTriangle(new IndexTriangle(baseIndex, baseIndex + 2, baseIndex + 3));
+        }
+        
+        buffer.IndexBuffer.Unmap();
+        buffer.VertexFormat = new VertexFormat(buffer.FormatBits);
+    }
+
+    // Add methods to handle multiple meshes
+    public static void MapSurfaceBuffer(RenderingBufferStorage buffer, List<Mesh> meshes, double offset)
+    {
+        if (meshes.Count == 0) return;
+        
+        // Calculate total vertex and triangle counts
+        int totalVertexCount = 0;
+        int totalTriangleCount = 0;
+        
+        foreach (var mesh in meshes)
+        {
+            totalVertexCount += mesh.Vertices.Count;
+            totalTriangleCount += mesh.NumTriangles;
+        }
+        
+        buffer.VertexBufferCount = totalVertexCount;
+        buffer.PrimitiveCount = totalTriangleCount;
+        
+        var vertexBufferSizeInFloats = VertexPosition.GetSizeInFloats() * buffer.VertexBufferCount;
+        buffer.FormatBits = VertexFormatBits.Position;
+        buffer.VertexBuffer = new VertexBuffer(vertexBufferSizeInFloats);
+        buffer.VertexBuffer.Map(vertexBufferSizeInFloats);
+        
+        var vertexStream = buffer.VertexBuffer.GetVertexStreamPosition();
+        
+        buffer.IndexBufferCount = totalTriangleCount * IndexTriangle.GetSizeInShortInts();
+        buffer.IndexBuffer = new IndexBuffer(buffer.IndexBufferCount);
+        buffer.IndexBuffer.Map(buffer.IndexBufferCount);
+        
+        var indexStream = buffer.IndexBuffer.GetIndexStreamTriangle();
+        
+        // Process each mesh and add to buffers with correct vertex offsets
+        int vertexOffset = 0;
+        
+        foreach (var mesh in meshes)
+        {
+            var normals = new List<XYZ>(mesh.NumberOfNormals);
+            
+            for (var i = 0; i < mesh.Vertices.Count; i++)
+            {
+                var normal = RenderGeometryHelper.GetMeshVertexNormal(mesh, i, mesh.DistributionOfNormals);
+                normals.Add(normal);
+            }
+            
+            // Add vertices
+            for (var i = 0; i < mesh.Vertices.Count; i++)
+            {
+                var vertex = mesh.Vertices[i];
+                var normal = normals[i];
+                var offsetVertex = vertex + normal * offset;
+                var vertexPosition = new VertexPosition(offsetVertex);
+                vertexStream.AddVertex(vertexPosition);
+            }
+            
+            // Add triangles with adjusted indices
+            for (var i = 0; i < mesh.NumTriangles; i++)
+            {
+                var meshTriangle = mesh.get_Triangle(i);
+                var index0 = (int)meshTriangle.get_Index(0) + vertexOffset;
+                var index1 = (int)meshTriangle.get_Index(1) + vertexOffset;
+                var index2 = (int)meshTriangle.get_Index(2) + vertexOffset;
+                indexStream.AddTriangle(new IndexTriangle(index0, index1, index2));
+            }
+            
+            vertexOffset += mesh.Vertices.Count;
+        }
+        
+        buffer.VertexBuffer.Unmap();
+        buffer.IndexBuffer.Unmap();
+        buffer.VertexFormat = new VertexFormat(buffer.FormatBits);
+    }
+    
+    public static void MapMeshGridBuffer(RenderingBufferStorage buffer, List<Mesh> meshes, double offset)
+    {
+        if (meshes.Count == 0) return;
+        
+        // Count total edges and vertices
+        int totalVertexCount = 0;
+        int totalEdgeCount = 0;
+        
+        foreach (var mesh in meshes)
+        {
+            totalVertexCount += mesh.Vertices.Count;
+            totalEdgeCount += mesh.NumTriangles * 3; // Each triangle has 3 edges
+        }
+        
+        buffer.VertexBufferCount = totalVertexCount;
+        buffer.PrimitiveCount = totalEdgeCount;
+        
+        var vertexBufferSizeInFloats = VertexPosition.GetSizeInFloats() * buffer.VertexBufferCount;
+        buffer.FormatBits = VertexFormatBits.Position;
+        buffer.VertexBuffer = new VertexBuffer(vertexBufferSizeInFloats);
+        buffer.VertexBuffer.Map(vertexBufferSizeInFloats);
+        
+        var vertexStream = buffer.VertexBuffer.GetVertexStreamPosition();
+        
+        buffer.IndexBufferCount = totalEdgeCount * IndexLine.GetSizeInShortInts();
+        buffer.IndexBuffer = new IndexBuffer(buffer.IndexBufferCount);
+        buffer.IndexBuffer.Map(buffer.IndexBufferCount);
+        
+        var indexStream = buffer.IndexBuffer.GetIndexStreamLine();
+        
+        // Process each mesh and add to buffers with correct vertex offsets
+        int vertexOffset = 0;
+        
+        foreach (var mesh in meshes)
+        {
+            var normals = new List<XYZ>(mesh.NumberOfNormals);
+            
+            for (var i = 0; i < mesh.Vertices.Count; i++)
+            {
+                var normal = RenderGeometryHelper.GetMeshVertexNormal(mesh, i, mesh.DistributionOfNormals);
+                normals.Add(normal);
+            }
+            
+            // Add vertices
+            for (var i = 0; i < mesh.Vertices.Count; i++)
+            {
+                var vertex = mesh.Vertices[i];
+                var normal = normals[i];
+                var offsetVertex = vertex + normal * offset;
+                var vertexPosition = new VertexPosition(offsetVertex);
+                vertexStream.AddVertex(vertexPosition);
+            }
+            
+            // Add edges with adjusted indices
+            for (var i = 0; i < mesh.NumTriangles; i++)
+            {
+                var meshTriangle = mesh.get_Triangle(i);
+                var index0 = (int)meshTriangle.get_Index(0) + vertexOffset;
+                var index1 = (int)meshTriangle.get_Index(1) + vertexOffset;
+                var index2 = (int)meshTriangle.get_Index(2) + vertexOffset;
+                
+                indexStream.AddLine(new IndexLine(index0, index1));
+                indexStream.AddLine(new IndexLine(index1, index2));
+                indexStream.AddLine(new IndexLine(index2, index0));
+            }
+            
+            vertexOffset += mesh.Vertices.Count;
+        }
+        
+        buffer.VertexBuffer.Unmap();
+        buffer.IndexBuffer.Unmap();
+        buffer.VertexFormat = new VertexFormat(buffer.FormatBits);
+    }
+
+    // Method to collect and combine meshes from multiple faces
+    public static List<Mesh> CollectMeshesFromFaces(IList<Face> faces)
+    {
+        var meshes = new List<Mesh>();
+        foreach (var face in faces)
+        {
+            var mesh = face.Triangulate();
+            meshes.Add(mesh);
+        }
+        return meshes;
+    }
+    
+    // Method to collect face normal data for visualization
+    public static List<(XYZ Point, XYZ Normal, double Length)> CollectFaceNormalData(IList<Face> faces, double extrusion)
+    {
+        var normalData = new List<(XYZ Point, XYZ Normal, double Length)>();
+        
+        foreach (var face in faces)
+        {
+            var faceBox = face.GetBoundingBox();
+            var center = (faceBox.Min + faceBox.Max) / 2;
+            var normal = face.ComputeNormal(center);
+            var offset = RenderGeometryHelper.InterpolateOffsetByArea(face.Area);
+            var normalLength = RenderGeometryHelper.InterpolateAxisLengthByArea(face.Area);
+            
+            var point = face.Evaluate(center) + normal * (offset + extrusion);
+            normalData.Add((point, normal, normalLength));
+        }
+        
+        return normalData;
+    }
+    
+    // Method to map normal vectors for multiple faces
+    public static void MapNormalVectorsForFaces(RenderingBufferStorage buffer, List<(XYZ Point, XYZ Normal, double Length)> normalData)
+    {
+        if (normalData.Count == 0) return;
+        
+        int totalLineCount = normalData.Count;
+        buffer.VertexBufferCount = totalLineCount * 2; // 2 points per line
+        buffer.PrimitiveCount = totalLineCount;
+        
+        var vertexBufferSizeInFloats = VertexPosition.GetSizeInFloats() * buffer.VertexBufferCount;
+        buffer.FormatBits = VertexFormatBits.Position;
+        buffer.VertexBuffer = new VertexBuffer(vertexBufferSizeInFloats);
+        buffer.VertexBuffer.Map(vertexBufferSizeInFloats);
+        
+        var vertexStream = buffer.VertexBuffer.GetVertexStreamPosition();
+        
+        // Add all start and end points for each normal vector
+        foreach (var (point, normal, length) in normalData)
+        {
+            var normalizedDirection = normal.Normalize();
+            var startPoint = point;
+            var endPoint = point + normalizedDirection * length;
+            
+            vertexStream.AddVertex(new VertexPosition(startPoint));
+            vertexStream.AddVertex(new VertexPosition(endPoint));
+        }
+        
+        buffer.VertexBuffer.Unmap();
+        
+        // Create index buffer for lines
+        buffer.IndexBufferCount = totalLineCount * IndexLine.GetSizeInShortInts();
+        buffer.IndexBuffer = new IndexBuffer(buffer.IndexBufferCount);
+        buffer.IndexBuffer.Map(buffer.IndexBufferCount);
+        
+        var indexStream = buffer.IndexBuffer.GetIndexStreamLine();
+        
+        // Add lines connecting start and end points
+        for (var i = 0; i < totalLineCount; i++)
+        {
+            indexStream.AddLine(new IndexLine(i * 2, i * 2 + 1));
+        }
+        
+        buffer.IndexBuffer.Unmap();
+        buffer.VertexFormat = new VertexFormat(buffer.FormatBits);
+    }
 }
