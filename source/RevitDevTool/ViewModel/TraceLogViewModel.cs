@@ -2,7 +2,6 @@
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
-using RevitDevTool.Geometry;
 using RevitDevTool.Models;
 using Serilog;
 using Serilog.Core;
@@ -75,37 +74,7 @@ public partial class TraceLogViewModel : ObservableObject, IDisposable
     
     [RelayCommand] private static void ClearGeometry()
     {
-        ExternalEventController.ActionEventHandler.Raise(app =>
-        {
-            var doc = app.ActiveUIDocument.Document;
-            if (doc == null)
-            {
-                Trace.TraceWarning("No active document");
-                return;
-            }
-            
-            var hashKey = doc.GetHashCode();
-
-            if (!TraceGeometry.DocGeometries.TryGetValue(hashKey, out var value)) 
-                return;
-        
-            var transaction = new Transaction(doc, "RemoveTransient");
-            try
-            {
-                transaction.Start();
-                doc.Delete(value);
-                transaction.Commit();
-            }
-            catch (Exception e)
-            {
-                Trace.TraceWarning($"Remove Transient Geometry Failed : [{e.Message}]");
-                transaction.RollBack();
-            }
-            finally
-            {
-                TraceGeometry.DocGeometries.Remove(hashKey);
-            }
-        });
+        VisualizationServerController.Clear();
     }
 
     public void Dispose()
