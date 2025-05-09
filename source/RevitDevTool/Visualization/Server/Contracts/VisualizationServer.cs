@@ -97,7 +97,7 @@ public abstract class VisualizationServer<T> : IDirectContext3DServer
             serverIds.Add(GetServerId());
             directContextService.SetActiveServers(serverIds);
             
-            Trace.TraceInformation("{0} visualization server registered", GetName());
+            Trace.TraceInformation("{0} registered", GetName());
         });
     }
     
