@@ -5,27 +5,16 @@
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:log="clr-namespace:Serilog.Events;assembly=Serilog"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-    xmlns:md="http://materialdesigninxaml.net/winfx/xaml/themes"
     xmlns:sys="clr-namespace:System;assembly=mscorlib"
-    xmlns:theme="clr-namespace:RevitDevTool.Theme"
+    xmlns:ui="http://revitdevtool.com/xaml"
     xmlns:vm="clr-namespace:RevitDevTool.ViewModel"
     d:DesignHeight="600"
     d:DesignWidth="450"
-    Background="{DynamicResource MaterialDesignPaper}"
-    TextElement.FontSize="13"
-    TextElement.FontWeight="Regular"
-    TextElement.Foreground="{DynamicResource MaterialDesignBody}"
-    TextOptions.TextFormattingMode="Ideal"
-    TextOptions.TextRenderingMode="Auto"
+    Background="{DynamicResource SolidBackgroundFillColorBaseBrush}"
     mc:Ignorable="d">
 
     <Page.Resources>
         <ResourceDictionary>
-            <ResourceDictionary.MergedDictionaries>
-                <theme:ThemeBundle />
-                <ResourceDictionary Source="/MaterialDesignThemes.Wpf;component/Themes/MaterialDesign3.Defaults.xaml" />
-            </ResourceDictionary.MergedDictionaries>
-
             <ObjectDataProvider
                 x:Key="LogLevelProvider"
                 MethodName="GetValues"
@@ -47,41 +36,32 @@
             Margin="5"
             DockPanel.Dock="Top">
             <ComboBox
-                Width="85"
                 VerticalAlignment="Center"
-                md:TextFieldAssist.UnderlineBrush="Chocolate"
                 ItemsSource="{Binding Source={StaticResource LogLevelProvider}}"
                 SelectedItem="{Binding LogLevel}" />
             <StackPanel
                 HorizontalAlignment="Right"
                 DockPanel.Dock="Right"
                 Orientation="Horizontal">
-                <Button
-                    Margin="5,0"
-                    Padding="5,0"
-                    md:ButtonAssist.CornerRadius="5"
+                <ui:Button
                     Command="{Binding ClearCommand}"
-                    Content="{md:PackIcon Kind=Backspace,
-                                          Size=25}"
+                    Content="ClearLog"
+                    Icon="{ui:SymbolIcon TextClearFormatting16}"
                     ToolTip="Clear Log" />
-                <Button
+                <ui:Button
                     Margin="5,0"
-                    Padding="5,0"
-                    md:ButtonAssist.CornerRadius="5"
                     Command="{Binding ClearGeometryCommand}"
-                    Content="{md:PackIcon Kind=ShapePlus,
-                                          Size=25}"
+                    Content="ClearGeometry"
+                    Icon="{ui:SymbolIcon Shapes16}"
                     ToolTip="Clear Geometry" />
-                <ToggleButton
-                    md:ToggleButtonAssist.OnContent="{md:PackIcon Kind=AccessPoint}"
-                    Content="{md:PackIcon Kind=AccessPointOff}"
+                <ui:ToggleSwitch
                     IsChecked="{Binding IsStarted}"
-                    Style="{StaticResource MaterialDesignActionToggleButton}"
                     ToolTip="Start/Stop Listener" />
             </StackPanel>
         </DockPanel>
-        <md:Card Margin="5">
-            <ContentControl Content="{Binding LogTextBox}" />
-        </md:Card>
+
+        <ContentControl
+            Margin="5"
+            Content="{Binding LogTextBox}" />
     </DockPanel>
 </Page>
