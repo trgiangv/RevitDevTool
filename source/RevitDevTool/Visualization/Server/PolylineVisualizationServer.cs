@@ -7,7 +7,7 @@ using Color = Autodesk.Revit.DB.Color;
 
 namespace RevitDevTool.Visualization.Server;
 
-public sealed class PolylineVisualizationServer : VisualizationServer<XYZ>
+public sealed class PolylineVisualizationServer : VisualizationServer<GeometryObject>
 {
     private readonly Guid _serverId = new("A1B2C3D4-E5F6-7890-ABCD-EF1234567890");
     public override Guid GetServerId() => _serverId;
@@ -15,8 +15,10 @@ public sealed class PolylineVisualizationServer : VisualizationServer<XYZ>
     private readonly RenderingBufferStorage _curveBuffer = new();
     private readonly List<RenderingBufferStorage> _normalsBuffers = new(1);
 
+    private List<XYZ> InputPoints => TessellationHelper.GetXyz(VisualizeGeometries);
+
     private readonly double _transparency = PolylineVisualizationSettings.Transparency;
-    private readonly double _diameter = PolylineVisualizationSettings.Diameter;
+    private readonly double _diameter = PolylineVisualizationSettings.Diameter.FromMillimeters();
 
     private readonly Color _surfaceColor = new(
         PolylineVisualizationSettings.SurfaceColor.R,
@@ -110,12 +112,13 @@ public sealed class PolylineVisualizationServer : VisualizationServer<XYZ>
 
     private void MapGeometryBuffer()
     {
-        if (VisualizeGeometries.Count == 0) return;
+        if (InputPoints.Count == 0) return;
         
         try
         {
-            RenderHelper.MapCurveSurfaceBuffer(_surfaceBuffer, VisualizeGeometries, _diameter);
-            RenderHelper.MapCurveBuffer(_curveBuffer, VisualizeGeometries, _diameter);
+            DisposeBuffers();
+            RenderHelper.MapCurveSurfaceBuffer(_surfaceBuffer, InputPoints, _diameter);
+            RenderHelper.MapCurveBuffer(_curveBuffer, InputPoints, _diameter);
             MapDirectionsBuffer();
         }
         catch (Exception ex)
@@ -130,15 +133,15 @@ public sealed class PolylineVisualizationServer : VisualizationServer<XYZ>
         _normalsBuffers.Clear();
         
         // Check if we have at least 2 points to create a direction
-        if (VisualizeGeometries.Count < 2)
+        if (InputPoints.Count < 2)
             return;
             
         var verticalOffset = 0d;
 
-        for (var i = 0; i < VisualizeGeometries.Count - 1; i++)
+        for (var i = 0; i < InputPoints.Count - 1; i++)
         {
-            var startPoint = VisualizeGeometries[i];
-            var endPoint = VisualizeGeometries[i + 1];
+            var startPoint = InputPoints[i];
+            var endPoint = InputPoints[i + 1];
             var centerPoint = (startPoint + endPoint) / 2;
             var buffer = new RenderingBufferStorage();
             _normalsBuffers.Add(buffer);

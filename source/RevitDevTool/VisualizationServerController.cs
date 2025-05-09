@@ -57,6 +57,12 @@ public static class VisualizationServerController
             case XYZ xyz:
                 XyzVisualizationServer.AddGeometry(xyz);
                 break;
+            case Curve curve:
+                PolylineVisualizationServer.AddGeometry(curve);
+                break;
+            case Edge edge:
+                PolylineVisualizationServer.AddGeometry(edge);
+                break;
             case Face face:
                 FaceVisualizationServer.AddGeometry(face);
                 break;
@@ -75,6 +81,8 @@ public static class VisualizationServerController
                     Solid => typeof(Solid),
                     XYZ => typeof(XYZ),
                     Face => typeof(Face),
+                    Curve => typeof(Curve),
+                    Edge => typeof(Edge),
                     _ => null
                 };
             });
@@ -100,6 +108,12 @@ public static class VisualizationServerController
                     break;
                 case not null when geometryType == typeof(Face):
                     FaceVisualizationServer.AddGeometries(group.Cast<Face>());
+                    break;
+                case not null when geometryType == typeof(Curve):
+                    PolylineVisualizationServer.AddGeometries(group.Cast<Curve>());
+                    break;
+                case not null when geometryType == typeof(Edge):
+                    PolylineVisualizationServer.AddGeometries(group.Cast<Edge>());
                     break;
             }
         }
