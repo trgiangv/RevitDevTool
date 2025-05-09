@@ -15,7 +15,7 @@
 
     <PropertyGroup>
         <IsRepackable>true</IsRepackable>
-        <RepackBinariesExcludes>$(AssemblyName).UI.dll;System*.dll;MaterialDesign*.dll;CommunityToolkit.Mvvm.dll</RepackBinariesExcludes>
+        <RepackBinariesExcludes>$(AssemblyName).UI*.dll;System*.dll;MaterialDesign*.dll;CommunityToolkit.Mvvm.dll</RepackBinariesExcludes>
     </PropertyGroup>
 
     <!-- Revit Versions -->
@@ -46,33 +46,36 @@
 
     <ItemGroup>
         <!-- Revit API-->
-        <PackageReference Include="Nice3point.Revit.Build.Tasks" Version="3.*"/>
-        <PackageReference Include="Nice3point.Revit.Toolkit" Version="$(RevitVersion).*"/>
-        <PackageReference Include="Nice3point.Revit.Extensions" Version="$(RevitVersion).*"/>
-        <PackageReference Include="Nice3point.Revit.Api.RevitAPI" Version="$(RevitVersion).*"/>
-        <PackageReference Include="Nice3point.Revit.Api.RevitAPIUI" Version="$(RevitVersion).*"/>
-        <PackageReference Include="Nice3point.Revit.Api.UIFramework" Version="$(RevitVersion).*"/>
-        <PackageReference Include="Nice3point.Revit.Api.AdWindows" Version="$(RevitVersion).*"/>
+        <PackageReference Include="Nice3point.Revit.Build.Tasks" Version="3.*" />
+        <PackageReference Include="Nice3point.Revit.Toolkit" Version="$(RevitVersion).*" />
+        <PackageReference Include="Nice3point.Revit.Extensions" Version="$(RevitVersion).*" />
+        <PackageReference Include="Nice3point.Revit.Api.RevitAPI" Version="$(RevitVersion).*" />
+        <PackageReference Include="Nice3point.Revit.Api.RevitAPIUI" Version="$(RevitVersion).*" />
+        <PackageReference Include="Nice3point.Revit.Api.UIFramework" Version="$(RevitVersion).*" />
+        <PackageReference Include="Nice3point.Revit.Api.AdWindows" Version="$(RevitVersion).*" />
 
         <!-- MVVM -->
-        <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.0"/>
+        <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.0" />
 
         <!-- Utils -->
-        <PackageReference Include="JetBrains.Annotations" Version="2024.3.0"/>
-        <PackageReference Include="PolySharp" Version="*" PrivateAssets="All" IncludeAssets="runtime; build; native; contentfiles; analyzers; buildtransitive"/>
-        <PackageReference Include="ILRepack" Version="2.0.41"/>
+        <PackageReference Include="JetBrains.Annotations" Version="2024.3.0" />
+        <PackageReference Include="PolySharp" Version="*" PrivateAssets="All" IncludeAssets="runtime; build; native; contentfiles; analyzers; buildtransitive" />
+        <PackageReference Include="ILRepack" Version="2.0.41" />
 
         <!-- UI -->
-        <PackageReference Include="MaterialDesignColors" Version="5.2.1"/>
-        <PackageReference Include="MaterialDesignThemes" Version="5.2.1"/>
+
 
         <!-- Logging -->
-        <PackageReference Include="Serilog.Sinks.RichTextBox.Wpf" Version="1.1.0"/>
+        <PackageReference Include="Serilog.Sinks.RichTextBox.Wpf" Version="1.1.0" />
     </ItemGroup>
 
     <ItemGroup>
         <Resource Include="Resources\Icons\TraceCommand32_light.tiff" />
         <Resource Include="Resources\Icons\TraceCommand32_dark.tiff" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <ProjectReference Include="..\RevitDevTool.UI\RevitDevTool.UI.csproj" />
     </ItemGroup>
 
     <!-- Start Revit -->
@@ -84,8 +87,8 @@
 
     <!-- Clean Files -->
     <Target Name="DeleteFiles" AfterTargets="Clean">
-        <RemoveDir Directories="$(AppData)\Autodesk\Revit\Addins\$(RevitVersion)\$(ProjectName)"/>
-        <Delete Files="$(AppData)\Autodesk\Revit\Addins\$(RevitVersion)\$(ProjectName).addin"/>
+        <RemoveDir Directories="$(AppData)\Autodesk\Revit\Addins\$(RevitVersion)\$(ProjectName)" />
+        <Delete Files="$(AppData)\Autodesk\Revit\Addins\$(RevitVersion)\$(ProjectName).addin" />
     </Target>
 
 </Project>
