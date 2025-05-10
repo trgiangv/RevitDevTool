@@ -15,7 +15,7 @@
 
     <PropertyGroup>
         <IsRepackable>true</IsRepackable>
-        <RepackBinariesExcludes>$(AssemblyName).UI*.dll;System*.dll;MaterialDesign*.dll;CommunityToolkit.Mvvm.dll</RepackBinariesExcludes>
+        <RepackBinariesExcludes>$(AssemblyName).UI*.dll;System*.dll</RepackBinariesExcludes>
     </PropertyGroup>
 
     <!-- Revit Versions -->
@@ -61,10 +61,7 @@
         <PackageReference Include="JetBrains.Annotations" Version="2024.3.0" />
         <PackageReference Include="PolySharp" Version="*" PrivateAssets="All" IncludeAssets="runtime; build; native; contentfiles; analyzers; buildtransitive" />
         <PackageReference Include="ILRepack" Version="2.0.41" />
-
-        <!-- UI -->
-
-
+        
         <!-- Logging -->
         <PackageReference Include="Serilog.Sinks.RichTextBox.Wpf" Version="1.1.0" />
     </ItemGroup>
