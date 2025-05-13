@@ -92,7 +92,11 @@ public abstract class VisualizationServer<T> : IDirectContext3DServer
             var directContextService = (MultiServerService) 
                 ExternalServiceRegistry.GetService(ExternalServices.BuiltInExternalServices.DirectContext3DService);
             var serverIds = directContextService.GetActiveServerIds();
-            
+            if (directContextService.IsRegisteredServerId(GetServerId()))
+            {
+                Trace.TraceInformation("{0} already registered", GetName());
+                return;
+            }
             directContextService.AddServer(this);
             serverIds.Add(GetServerId());
             directContextService.SetActiveServers(serverIds);
@@ -107,8 +111,15 @@ public abstract class VisualizationServer<T> : IDirectContext3DServer
         {
             var directContextService = (MultiServerService) 
                 ExternalServiceRegistry.GetService(ExternalServices.BuiltInExternalServices.DirectContext3DService);
+            if (!directContextService.IsRegisteredServerId(GetServerId()))
+            {
+                Trace.TraceInformation("{0} already unregistered", GetName());
+                return;
+            }
+            
             directContextService.RemoveServer(GetServerId());
-    
+            
+            Trace.TraceInformation("{0} unregistered", GetName());
             application.ActiveUIDocument?.UpdateAllOpenViews();
         });
     }
