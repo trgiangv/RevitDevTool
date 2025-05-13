@@ -2,7 +2,7 @@
 
 namespace RevitDevTool;
 
-public static class VisualizationServerController
+internal static class VisualizationController
 {
     private static BoundingBoxVisualizationServer BoundingBoxVisualizationServer { get; } = new();
     private static MeshVisualizationServer MeshVisualizationServer { get; } = new();

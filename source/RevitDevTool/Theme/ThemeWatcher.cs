@@ -29,9 +29,10 @@ public sealed class ThemeWatcher
 
     public void ApplyTheme()
     {
+#if !REVIT2024_OR_GREATER
         var theme = ApplicationTheme.Dark;
-#if REVIT2024_OR_GREATER
-        theme = GetRevitTheme();
+#else
+        var theme = GetRevitTheme();
 
         if (!_isWatching)
         {

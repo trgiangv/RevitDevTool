@@ -10,7 +10,7 @@ namespace RevitDevTool.Models;
 /// <summary>
 /// TraceListener implementation that directs all output to Serilog.
 /// </summary>
-public class SerilogTraceListener : TraceListener
+internal class SerilogTraceListener : TraceListener
 {
     private const string ActivityIdProperty = "ActivityId";
     private const string CategoryProperty = "Category";
