@@ -6,7 +6,7 @@ namespace RevitDevTool.Models;
 /// <summary>
 /// Redirects Console.WriteLine output to the Trace system
 /// </summary>
-public class ConsoleRedirector : IDisposable
+internal class ConsoleRedirector : IDisposable
 {
     private readonly TextWriter _originalOut;
     private readonly TextWriter _originalError;
@@ -19,7 +19,7 @@ public class ConsoleRedirector : IDisposable
         _originalOut = Console.Out;
         _originalError = Console.Error;
             
-        _consoleOutWriter = new ConsoleTextWriter(TraceEventType.Verbose);
+        _consoleOutWriter = new ConsoleTextWriter(TraceEventType.Information);
         _consoleErrorWriter = new ConsoleTextWriter(TraceEventType.Error);
             
         Console.SetOut(_consoleOutWriter);
