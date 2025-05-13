@@ -10,7 +10,7 @@ using Serilog.Sinks.RichTextBox.Themes;
 
 namespace RevitDevTool.ViewModel;
 
-public partial class TraceLogViewModel : ObservableObject, IDisposable
+internal partial class TraceLogViewModel : ObservableObject, IDisposable
 {
     public RichTextBox LogTextBox { get; }
 
@@ -19,14 +19,14 @@ public partial class TraceLogViewModel : ObservableObject, IDisposable
     private readonly ConsoleRedirector _consoleRedirector;
 
     [ObservableProperty] private bool _isStarted = true;
-    [ObservableProperty] private LogEventLevel _logLevel = LogEventLevel.Debug;
+    [ObservableProperty] private LogEventLevel _logLevel = LogEventLevel.Information;
 
     partial void OnLogLevelChanging(LogEventLevel value)
     {
         _levelSwitch.MinimumLevel = value;
     }
 
-    partial void OnIsStartedChanged(bool value)
+    partial void OnIsStartedChanging(bool value)
     {
         TraceStatus(value);
     }
@@ -37,11 +37,13 @@ public partial class TraceLogViewModel : ObservableObject, IDisposable
         {
             Trace.Listeners.Add(_traceListener);
             Trace.Listeners.Add(TraceGeometry.TraceListener);
+            VisualizationController.Start();
         }
         else
         {
             Trace.Listeners.Remove(_traceListener);
             Trace.Listeners.Remove(TraceGeometry.TraceListener);
+            VisualizationController.Stop();
         }
     }
 
@@ -54,7 +56,8 @@ public partial class TraceLogViewModel : ObservableObject, IDisposable
             VerticalContentAlignment = VerticalAlignment.Top,
             IsReadOnly = true,
         };
-
+        
+        PresentationTraceSources.ResourceDictionarySource.Switch.Level = SourceLevels.Critical;
         _levelSwitch = new LoggingLevelSwitch(_logLevel);
 
         var logger = new LoggerConfiguration()
@@ -74,7 +77,7 @@ public partial class TraceLogViewModel : ObservableObject, IDisposable
     
     [RelayCommand] private static void ClearGeometry()
     {
-        VisualizationServerController.Clear();
+        VisualizationController.Clear();
     }
 
     public void Dispose()
