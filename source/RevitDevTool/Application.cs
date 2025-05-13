@@ -12,12 +12,11 @@ public class Application : ExternalApplication
         ExternalEventController.Register();
         AddButton(Application);
         AddDockable(Application);
-        VisualizationServerController.Start();
     }
     
     public override void OnShutdown()
     {
-        VisualizationServerController.Stop();
+        VisualizationController.Stop();
     }
 
     private static void AddDockable(UIControlledApplication application)
