@@ -2,18 +2,18 @@ using System.Diagnostics;
 
 namespace RevitDevTool.Models;
 
-public static class TraceGeometry
+internal static class TraceGeometry
 {
     public static readonly TraceListener TraceListener = new TraceGeometryListener();
 
     private static void Trace(object geometryObject)
     {
-        VisualizationServerController.Add(geometryObject);
+        VisualizationController.Add(geometryObject);
     }
 
     private static void Trace(IEnumerable<object> geometries)
     {
-        VisualizationServerController.Add(geometries);
+        VisualizationController.Add(geometries);
     }
 
     private class TraceGeometryListener : TraceListener
@@ -27,6 +27,9 @@ public static class TraceGeometry
                     break;
                 case GeometryObject geometryObject:
                     Trace(geometryObject);
+                    break;
+                case IEnumerable<CurveLoop> curves:
+                    Trace(curves.SelectMany(x => x.ToList()));
                     break;
                 case XYZ xyz:
                     Trace(xyz);
