@@ -19,14 +19,14 @@ internal partial class TraceLogViewModel : ObservableObject, IDisposable
     private readonly ConsoleRedirector _consoleRedirector;
 
     [ObservableProperty] private bool _isStarted = true;
-    [ObservableProperty] private LogEventLevel _logLevel = LogEventLevel.Information;
+    [ObservableProperty] private LogEventLevel _logLevel = LogEventLevel.Debug;
 
-    partial void OnLogLevelChanging(LogEventLevel value)
+    partial void OnLogLevelChanged(LogEventLevel value)
     {
         _levelSwitch.MinimumLevel = value;
     }
 
-    partial void OnIsStartedChanging(bool value)
+    partial void OnIsStartedChanged(bool value)
     {
         TraceStatus(value);
     }
