@@ -5,6 +5,18 @@ namespace RevitDevTool.Visualization.Helpers;
 
 public static class RenderHelper
 {
+    /// <summary>
+    /// Maps the vertex and index data of a mesh to the specified rendering buffer, applying an offset to the vertex
+    /// positions.
+    /// </summary>
+    /// <remarks>This method processes the vertices and triangles of the provided <paramref name="mesh"/> and
+    /// maps them to the  <paramref name="buffer"/>. Each vertex position is adjusted by adding the specified <paramref
+    /// name="offset"/>  along its normal vector. The method also updates the rendering buffer's vertex and index
+    /// buffers, as well as  its format and primitive counts.</remarks>
+    /// <param name="buffer">The rendering buffer to which the mesh data will be mapped. This buffer will be updated with vertex and index
+    /// data.</param>
+    /// <param name="mesh">The mesh containing the vertex and triangle data to be mapped to the rendering buffer.</param>
+    /// <param name="offset">The offset to apply to each vertex position along its normal direction.</param>
     public static void MapSurfaceBuffer(RenderingBufferStorage buffer, Mesh mesh, double offset)
     {
         var vertexCount = mesh.Vertices.Count;
@@ -56,6 +68,15 @@ public static class RenderHelper
         buffer.VertexFormat = new VertexFormat(buffer.FormatBits);
     }
 
+    /// <summary>
+    /// Maps a curve defined by a list of vertices into the specified rendering buffer.
+    /// </summary>
+    /// <remarks>This method populates the provided rendering buffer with vertex and index data based on the
+    /// input vertices. The buffer's vertex and index buffers are initialized, mapped, populated, and then unmapped. The
+    /// method assumes that the vertices define a continuous curve, and it generates line indices connecting consecutive
+    /// vertices.</remarks>
+    /// <param name="buffer">The <see cref="RenderingBufferStorage"/> instance where the vertex and index data will be stored.</param>
+    /// <param name="vertices">A collection of <see cref="XYZ"/> objects representing the vertices of the curve to be mapped.</param>
     public static void MapCurveBuffer(RenderingBufferStorage buffer, IList<XYZ> vertices)
     {
         var vertexCount = vertices.Count;
@@ -92,6 +113,22 @@ public static class RenderHelper
         buffer.VertexFormat = new VertexFormat(buffer.FormatBits);
     }
 
+    /// <summary>
+    /// Maps a curve defined by a series of vertices into a rendering buffer, creating a tubular geometry with the
+    /// specified diameter.
+    /// </summary>
+    /// <remarks>This method generates a segmented tubular geometry around the provided curve, where each
+    /// segment corresponds to a portion of the curve. The method calculates the necessary vertex and index data to
+    /// represent the tubular geometry and maps this data into the provided rendering buffer.  The <paramref
+    /// name="buffer"/> is updated with the following: <list type="bullet"> <item><description>Vertex buffer containing
+    /// the positions of the tubular geometry's vertices.</description></item> <item><description>Index buffer defining
+    /// the connectivity of the vertices to form the geometry.</description></item> <item><description>Primitive count
+    /// and vertex format information for rendering.</description></item> </list>  The method assumes that the <paramref
+    /// name="vertices"/> list contains at least two points to define a valid curve. The generated geometry is segmented
+    /// based on the curve's vertices, and each segment is represented as a series of connected quads.</remarks>
+    /// <param name="buffer">The rendering buffer to populate with vertex and index data for the tubular geometry.</param>
+    /// <param name="vertices">A list of 3D points representing the curve to be mapped into the buffer.</param>
+    /// <param name="diameter">The diameter of the tubular geometry to be generated around the curve.</param>
     public static void MapCurveBuffer(RenderingBufferStorage buffer, IList<XYZ> vertices, double diameter)
     {
         var tubeSegments = RenderGeometryHelper.GetSegmentationTube(vertices, diameter);
@@ -148,6 +185,20 @@ public static class RenderHelper
         buffer.VertexFormat = new VertexFormat(buffer.FormatBits);
     }
 
+    /// <summary>
+    /// Maps a curve surface to the specified rendering buffer by generating vertex and index data based on the provided
+    /// vertices and diameter.
+    /// </summary>
+    /// <remarks>This method generates a segmented tube-like surface along the provided vertices, with the
+    /// specified diameter. The resulting geometry is stored in the provided rendering buffer, including vertex
+    /// positions and triangle indices for rendering. The method assumes that the vertices form a continuous path and
+    /// that the diameter is valid (greater than zero).  The rendering buffer's vertex and index buffers are mapped,
+    /// populated with the generated data, and then unmapped. The buffer's format and counts are updated
+    /// accordingly.</remarks>
+    /// <param name="buffer">The <see cref="RenderingBufferStorage"/> instance where the generated vertex and index data will be stored.</param>
+    /// <param name="vertices">A collection of <see cref="XYZ"/> points representing the curve's path. The vertices define the centerline of
+    /// the tube-like surface to be generated.</param>
+    /// <param name="diameter">The diameter of the tube-like surface to be generated. Must be a positive value.</param>
     public static void MapCurveSurfaceBuffer(RenderingBufferStorage buffer, IList<XYZ> vertices, double diameter)
     {
         var tubeSegments = RenderGeometryHelper.GetSegmentationTube(vertices, diameter);
@@ -202,6 +253,21 @@ public static class RenderHelper
         buffer.VertexFormat = new VertexFormat(buffer.FormatBits);
     }
 
+    /// <summary>
+    /// Maps the vertex and index data of a mesh to the specified rendering buffer,  applying an offset to the mesh
+    /// vertices to create a duplicate layer.
+    /// </summary>
+    /// <remarks>This method processes the mesh by calculating vertex normals, duplicating vertices with an
+    /// offset,  and generating index data for rendering both the original and offset layers. The resulting data is 
+    /// stored in the provided <paramref name="buffer"/> for use in rendering operations.  The method assumes that the
+    /// <paramref name="mesh"/> contains valid vertex and triangle data.  The <paramref name="buffer"/> will be
+    /// initialized and populated with the appropriate vertex and  index buffers, as well as format and size
+    /// metadata.</remarks>
+    /// <param name="buffer">The rendering buffer to which the mesh data will be mapped.  This buffer will be updated with vertex and index
+    /// data, as well as format and size information.</param>
+    /// <param name="mesh">The mesh whose vertex and triangle data will be used to populate the rendering buffer.</param>
+    /// <param name="offset">The offset distance to apply to the mesh vertices when creating the duplicate layer.  This is typically used to
+    /// create a visual effect, such as an extruded or layered appearance.</param>
     public static void MapMeshGridBuffer(RenderingBufferStorage buffer, Mesh mesh, double offset)
     {
         var vertexCount = mesh.Vertices.Count;
@@ -278,6 +344,21 @@ public static class RenderHelper
         buffer.VertexFormat = new VertexFormat(buffer.FormatBits);
     }
 
+    /// <summary>
+    /// Configures the specified <see cref="RenderingBufferStorage"/> to represent a rectangular buffer defined by the
+    /// given minimum and maximum points in 3D space.
+    /// </summary>
+    /// <remarks>The method calculates the vertices and indices required to represent a rectangle in 3D space
+    /// based on the provided <paramref name="min"/> and <paramref name="max"/> points. The rectangle is oriented
+    /// perpendicular to the axis determined by the normalized direction vector between the two points.  The <paramref
+    /// name="buffer"/> is updated with the following: <list type="bullet"> <item><description>Four vertices
+    /// representing the corners of the rectangle.</description></item> <item><description>Two triangles forming the
+    /// rectangle, defined by their vertex indices.</description></item> </list> The method assumes that the <paramref
+    /// name="buffer"/> is properly initialized before being passed in.</remarks>
+    /// <param name="buffer">The <see cref="RenderingBufferStorage"/> to be configured. This object will be updated with vertex and index
+    /// data.</param>
+    /// <param name="min">The minimum point of the rectangle in 3D space.</param>
+    /// <param name="max">The maximum point of the rectangle in 3D space.</param>
     public static void MapSideBuffer(RenderingBufferStorage buffer, XYZ min, XYZ max)
     {
         const int vertexCount = 4;
@@ -337,6 +418,22 @@ public static class RenderHelper
         buffer.VertexFormat = new VertexFormat(buffer.FormatBits);
     }
 
+    /// <summary>
+    /// Maps a collection of bounding boxes to a rendering buffer by generating vertex and index data for their
+    /// surfaces.
+    /// </summary>
+    /// <remarks>This method processes each bounding box in the provided collection, calculates its corner
+    /// points, and generates the necessary vertex and index data to represent the surfaces of the bounding boxes as
+    /// triangles. The resulting data is stored in the specified rendering buffer.  The method assumes that the bounding
+    /// boxes are defined in a coordinate space that can be transformed using the <see cref="BoundingBoxXYZ.Transform"/>
+    /// property. The generated vertex data includes the transformed corner points, and the index data defines the
+    /// triangles that form the surfaces of the bounding boxes.  The rendering buffer is updated with the following:
+    /// <list type="bullet"> <item><description>Vertex buffer containing the corner points of all bounding
+    /// boxes.</description></item> <item><description>Index buffer defining the triangles for rendering the
+    /// surfaces.</description></item> <item><description>Vertex format and primitive count for
+    /// rendering.</description></item> </list></remarks>
+    /// <param name="buffer">The <see cref="RenderingBufferStorage"/> instance where the vertex and index data will be stored.</param>
+    /// <param name="boxes">A collection of <see cref="BoundingBoxXYZ"/> objects representing the bounding boxes to be mapped.</param>
     public static void MapBoundingBoxSurfaceBuffer(RenderingBufferStorage buffer, List<BoundingBoxXYZ> boxes)
     {
         var allCorners = new List<XYZ>();
@@ -395,6 +492,21 @@ public static class RenderHelper
         buffer.VertexFormat = new VertexFormat(buffer.FormatBits);
     }
     
+    /// <summary>
+    /// Maps the vertices and indices of a 3D bounding box to the specified rendering buffer.
+    /// </summary>
+    /// <remarks>This method generates the vertex and index data required to render a 3D bounding box as a set
+    /// of triangles. The bounding box is defined by its minimum and maximum points, which are transformed using the
+    /// bounding box's transformation matrix. The resulting geometry includes the vertices for all eight corners of the
+    /// box and the indices for rendering its six faces as triangles.  The method updates the provided <paramref
+    /// name="buffer"/> with the following: <list type="bullet"> <item><description>The vertex buffer, containing the
+    /// transformed corner positions of the bounding box.</description></item> <item><description>The index buffer,
+    /// defining the triangles that make up the faces of the bounding box.</description></item>
+    /// <item><description>Metadata such as the vertex count, primitive count, and vertex format.</description></item>
+    /// </list></remarks>
+    /// <param name="buffer">The <see cref="RenderingBufferStorage"/> instance where the bounding box's vertex and index data will be stored.</param>
+    /// <param name="box">The <see cref="BoundingBoxXYZ"/> representing the 3D bounding box to be mapped. The bounding box is transformed
+    /// using its associated transformation matrix before being processed.</param>
     public static void MapBoundingBoxSurfaceBuffer(RenderingBufferStorage buffer, BoundingBoxXYZ box)
     {
         var minPoint = box.Transform.OfPoint(box.Min);
@@ -455,6 +567,16 @@ public static class RenderHelper
         buffer.VertexFormat = new VertexFormat(buffer.FormatBits);
     }
 
+    /// <summary>
+    /// Maps a collection of bounding boxes into a rendering buffer by generating vertex and edge data.
+    /// </summary>
+    /// <remarks>This method processes each bounding box by calculating its transformed corner points and
+    /// edges,  and then populates the provided rendering buffer with the corresponding vertex and index data.  The
+    /// method ensures that the buffer is properly mapped and unmapped during the operation.</remarks>
+    /// <param name="buffer">The rendering buffer to populate with vertex and edge data. This buffer will be updated with the  vertices and
+    /// edges representing the bounding boxes.</param>
+    /// <param name="boxes">A list of <see cref="BoundingBoxXYZ"/> objects representing the bounding boxes to be mapped into the buffer.
+    /// Each bounding box is transformed and its corners and edges are calculated.</param>
     public static void MapBoundingBoxEdgeBuffer(RenderingBufferStorage buffer, List<BoundingBoxXYZ> boxes)
     {
         var allCorners = new List<XYZ>();
@@ -510,6 +632,16 @@ public static class RenderHelper
         buffer.VertexFormat = new VertexFormat(buffer.FormatBits);
     }
     
+    /// <summary>
+    /// Maps the edges of a 3D bounding box to a rendering buffer for visualization or processing.
+    /// </summary>
+    /// <remarks>This method generates the vertices and edges of the bounding box in 3D space and populates
+    /// the provided rendering buffer with the corresponding vertex and index data. The buffer is configured with the
+    /// appropriate vertex format and primitive counts to represent the bounding box as a wireframe.</remarks>
+    /// <param name="buffer">The rendering buffer where the bounding box edges will be stored. This buffer will be updated with vertex and
+    /// index data.</param>
+    /// <param name="box">The 3D bounding box whose edges are to be mapped. The box's transformation is applied to determine the final
+    /// vertex positions.</param>
     public static void MapBoundingBoxEdgeBuffer(RenderingBufferStorage buffer, BoundingBoxXYZ box)
     {
         var minPoint = box.Transform.OfPoint(box.Min);
@@ -567,6 +699,19 @@ public static class RenderHelper
         buffer.VertexFormat = new VertexFormat(buffer.FormatBits);
     }
 
+    /// <summary>
+    /// Maps a normal vector to a rendering buffer, creating a visual representation of the vector as a line with an
+    /// arrowhead.
+    /// </summary>
+    /// <remarks>This method generates a line representing the vector from the specified <paramref
+    /// name="origin"/> in the direction of <paramref name="vector"/> with the given <paramref name="length"/>. An
+    /// arrowhead is added at the end of the line to indicate direction. The rendering buffer is configured with the
+    /// necessary vertex and index data to render the vector.</remarks>
+    /// <param name="buffer">The rendering buffer to which the vector representation will be mapped. This buffer will be updated with vertex
+    /// and index data.</param>
+    /// <param name="origin">The starting point of the vector in 3D space.</param>
+    /// <param name="vector">The direction and magnitude of the vector to be visualized.</param>
+    /// <param name="length">The length of the vector to be rendered. Determines the size of the arrowhead.</param>
     public static void MapNormalVectorBuffer(RenderingBufferStorage buffer, XYZ origin, XYZ vector, double length)
     {
         var headSize = length > 1 ? 0.2 : length * 0.2;
@@ -604,11 +749,25 @@ public static class RenderHelper
         buffer.VertexFormat = new VertexFormat(buffer.FormatBits);
     }
 
+    /// <summary>
+    /// Maps a buffer to represent normal vectors originating from multiple points in 3D space.
+    /// </summary>
+    /// <remarks>This method generates a set of line segments, where each line represents a normal vector
+    /// originating from a point in the <paramref name="points"/> collection. The direction and length of each normal
+    /// vector are determined by the <paramref name="direction"/> and <paramref name="length"/> parameters,
+    /// respectively. The resulting vertex and index data are stored in the provided <paramref name="buffer"/> for
+    /// rendering.</remarks>
+    /// <param name="buffer">The <see cref="RenderingBufferStorage"/> instance where the vertex and index data for the normal vectors will be
+    /// stored.</param>
+    /// <param name="points">A collection of <see cref="XYZ"/> points representing the starting positions of the normal vectors.</param>
+    /// <param name="direction">The <see cref="XYZ"/> direction vector that determines the orientation of the normal vectors. This vector will
+    /// be normalized.</param>
+    /// <param name="length">The length of each normal vector. Must be a positive value.</param>
     public static void MapNormalVectorBufferForMultiplePoints(RenderingBufferStorage buffer, IList<XYZ> points, XYZ direction, double length)
     {
         if (points.Count == 0) return;
         
-        int totalLineCount = points.Count;
+        var totalLineCount = points.Count;
         buffer.VertexBufferCount = totalLineCount * 2; // 2 points per line
         buffer.PrimitiveCount = totalLineCount;
         
@@ -623,10 +782,9 @@ public static class RenderHelper
         foreach (var point in points)
         {
             var normalizedDirection = direction.Normalize();
-            var startPoint = point;
             var endPoint = point + normalizedDirection * length;
             
-            vertexStream.AddVertex(new VertexPosition(startPoint));
+            vertexStream.AddVertex(new VertexPosition(point));
             vertexStream.AddVertex(new VertexPosition(endPoint));
         }
         
@@ -649,11 +807,29 @@ public static class RenderHelper
         buffer.VertexFormat = new VertexFormat(buffer.FormatBits);
     }
     
+    /// <summary>
+    /// Maps a rendering buffer to represent a series of quads, each centered at a specified point,  with a given normal
+    /// and axis-aligned dimensions.
+    /// </summary>
+    /// <remarks>This method generates vertex and index data for a series of quads, where each quad is 
+    /// centered at a point in the <paramref name="points"/> collection. The quads are oriented  based on the specified
+    /// <paramref name="normal"/> vector, and their size is determined by  the <paramref name="axisLength"/> parameter.
+    /// The resulting data is stored in the provided  <paramref name="buffer"/> for rendering purposes.  The method
+    /// ensures that the buffer is properly mapped and populated with the required  vertex and index data. Each quad is
+    /// represented by four vertices and two triangles,  resulting in a total of eight indices per quad.  If the
+    /// <paramref name="points"/> collection is empty, the method returns immediately  without modifying the
+    /// buffer.</remarks>
+    /// <param name="buffer">The <see cref="RenderingBufferStorage"/> instance to be populated with vertex and index data  for the quads.</param>
+    /// <param name="points">A collection of <see cref="XYZ"/> points, where each point represents the center of a quad.</param>
+    /// <param name="normal">The normal vector defining the orientation of the quads. This vector is used to calculate  the plane on which
+    /// the quads lie.</param>
+    /// <param name="axisLength">The length of the axes used to define the size of each quad. Each quad will have sides  proportional to twice
+    /// this length.</param>
     public static void MapSideBufferForMultiplePoints(RenderingBufferStorage buffer, IList<XYZ> points, XYZ normal, double axisLength)
     {
         if (points.Count == 0) return;
         
-        int totalQuadCount = points.Count;
+        var totalQuadCount = points.Count;
         buffer.VertexBufferCount = totalQuadCount * 4; // 4 corners per quad
         buffer.PrimitiveCount = totalQuadCount * 2; // 2 triangles per quad
         
@@ -670,11 +846,9 @@ public static class RenderHelper
             var normalizedNormal = normal.Normalize();
             
             // Calculate perpendicular vectors to create a plane
-            XYZ perpendicular1;
-            if (Math.Abs(normalizedNormal.Z) < 0.9)
-                perpendicular1 = XYZ.BasisZ.CrossProduct(normalizedNormal).Normalize();
-            else
-                perpendicular1 = XYZ.BasisX.CrossProduct(normalizedNormal).Normalize();
+            var perpendicular1 = Math.Abs(normalizedNormal.Z) < 0.9 
+                ? XYZ.BasisZ.CrossProduct(normalizedNormal).Normalize() 
+                : XYZ.BasisX.CrossProduct(normalizedNormal).Normalize();
                 
             var perpendicular2 = normalizedNormal.CrossProduct(perpendicular1).Normalize();
             
@@ -720,14 +894,27 @@ public static class RenderHelper
         buffer.VertexFormat = new VertexFormat(buffer.FormatBits);
     }
 
-    // Add methods to handle multiple meshes
+    /// <summary>
+    /// Maps the provided collection of meshes into the specified rendering buffer, applying a positional offset to each
+    /// vertex.
+    /// </summary>
+    /// <remarks>This method processes the provided meshes to calculate the total vertex and triangle counts,
+    /// allocates the necessary buffers,  and maps the vertex and index data into the rendering buffer. Each vertex is
+    /// adjusted by the specified offset along its normal direction. The method also ensures that triangle indices are
+    /// adjusted to account for the vertex offsets of preceding meshes in the collection.</remarks>
+    /// <param name="buffer">The rendering buffer where the vertex and index data will be stored. This buffer will be updated with the
+    /// calculated vertex and index data.</param>
+    /// <param name="meshes">A collection of meshes to be processed and added to the rendering buffer. Each mesh contributes its vertices and
+    /// triangles to the buffer.</param>
+    /// <param name="offset">The positional offset to apply to each vertex in the meshes. This offset is applied along the vertex normal
+    /// direction.</param>
     public static void MapSurfaceBuffer(RenderingBufferStorage buffer, List<Mesh> meshes, double offset)
     {
         if (meshes.Count == 0) return;
         
         // Calculate total vertex and triangle counts
-        int totalVertexCount = 0;
-        int totalTriangleCount = 0;
+        var totalVertexCount = 0;
+        var totalTriangleCount = 0;
         
         foreach (var mesh in meshes)
         {
@@ -752,7 +939,7 @@ public static class RenderHelper
         var indexStream = buffer.IndexBuffer.GetIndexStreamTriangle();
         
         // Process each mesh and add to buffers with correct vertex offsets
-        int vertexOffset = 0;
+        var vertexOffset = 0;
         
         foreach (var mesh in meshes)
         {
@@ -792,13 +979,29 @@ public static class RenderHelper
         buffer.VertexFormat = new VertexFormat(buffer.FormatBits);
     }
     
+    /// <summary>
+    /// Maps a collection of meshes into a rendering buffer, generating vertex and index data for rendering a grid of
+    /// mesh edges with an optional offset applied to the vertices.
+    /// </summary>
+    /// <remarks>This method processes each mesh in the provided list, calculating the total number of 
+    /// vertices and edges, and populates the rendering buffer with the corresponding vertex  and index data. The vertex
+    /// data includes positions adjusted by the specified offset,  and the index data represents the edges of the mesh
+    /// triangles. <para> The rendering buffer is initialized with the appropriate size and format to accommodate  the
+    /// combined data from all meshes. The method ensures that vertex indices are adjusted  correctly to account for the
+    /// offset between meshes in the buffer. </para> <para> If the <paramref name="meshes"/> list is empty, the method
+    /// returns immediately without  modifying the buffer. </para></remarks>
+    /// <param name="buffer">The rendering buffer where the vertex and index data will be stored.  This buffer will be initialized and
+    /// populated with the calculated data.</param>
+    /// <param name="meshes">A list of meshes to be processed. Each mesh contributes its vertices  and edges to the rendering buffer.</param>
+    /// <param name="offset">A value applied to offset each vertex along its normal direction.  This can be used to create a visual effect,
+    /// such as expanding the mesh outward.</param>
     public static void MapMeshGridBuffer(RenderingBufferStorage buffer, List<Mesh> meshes, double offset)
     {
         if (meshes.Count == 0) return;
         
         // Count total edges and vertices
-        int totalVertexCount = 0;
-        int totalEdgeCount = 0;
+        var totalVertexCount = 0;
+        var totalEdgeCount = 0;
         
         foreach (var mesh in meshes)
         {
@@ -823,7 +1026,7 @@ public static class RenderHelper
         var indexStream = buffer.IndexBuffer.GetIndexStreamLine();
         
         // Process each mesh and add to buffers with correct vertex offsets
-        int vertexOffset = 0;
+        var vertexOffset = 0;
         
         foreach (var mesh in meshes)
         {
@@ -866,19 +1069,24 @@ public static class RenderHelper
         buffer.VertexFormat = new VertexFormat(buffer.FormatBits);
     }
 
-    // Method to collect and combine meshes from multiple faces
     public static List<Mesh> CollectMeshesFromFaces(IList<Face> faces)
     {
-        var meshes = new List<Mesh>();
-        foreach (var face in faces)
-        {
-            var mesh = face.Triangulate();
-            meshes.Add(mesh);
-        }
-        return meshes;
+        return faces.Select(face => face.Triangulate()).ToList();
     }
     
-    // Method to collect face normal data for visualization
+    /// <summary>
+    /// Collects data about the normals of a set of faces, including their points, directions, and lengths.
+    /// </summary>
+    /// <remarks>The method calculates the center of each face's bounding box, computes the normal at that
+    /// center,  and adjusts the resulting point by applying an offset and the specified extrusion along the normal
+    /// direction.  The length of the normal vector is interpolated based on the area of the face.</remarks>
+    /// <param name="faces">A collection of <see cref="Face"/> objects for which normal data will be calculated.</param>
+    /// <param name="extrusion">An additional extrusion value applied to the calculated points along the normal direction.</param>
+    /// <returns>A list of tuples, where each tuple contains: <list type="bullet"> <item><description>An <see cref="XYZ"/> point
+    /// representing the evaluated position on the face, adjusted by the normal and extrusion.</description></item>
+    /// <item><description>An <see cref="XYZ"/> vector representing the normal direction at the evaluated
+    /// point.</description></item> <item><description>A <see cref="double"/> value representing the length of the
+    /// normal vector, interpolated based on the face's area.</description></item> </list></returns>
     public static List<(XYZ Point, XYZ Normal, double Length)> CollectFaceNormalData(IList<Face> faces, double extrusion)
     {
         var normalData = new List<(XYZ Point, XYZ Normal, double Length)>();
@@ -898,12 +1106,29 @@ public static class RenderHelper
         return normalData;
     }
     
-    // Method to map normal vectors for multiple faces
+    /// <summary>
+    /// Maps normal vectors to line segments in a rendering buffer for visualization purposes.
+    /// </summary>
+    /// <remarks>This method populates the provided <paramref name="buffer"/> with vertex and index data to
+    /// represent the normal vectors as line segments. Each normal vector is visualized as a line starting at the given
+    /// point and extending in the direction of the normalized vector, scaled by the specified length. <para> The method
+    /// updates the following properties of the <paramref name="buffer"/>: <list type="bullet">
+    /// <item><description><c>VertexBuffer</c>: Stores the start and end points of the line
+    /// segments.</description></item> <item><description><c>IndexBuffer</c>: Defines the line segments connecting the
+    /// start and end points.</description></item> <item><description><c>VertexBufferCount</c>, <c>PrimitiveCount</c>,
+    /// and <c>IndexBufferCount</c>: Reflect the number of vertices, primitives, and indices,
+    /// respectively.</description></item> </list> </para></remarks>
+    /// <param name="buffer">The rendering buffer where the vertex and index data for the normal vectors will be stored.</param>
+    /// <param name="normalData">A list of tuples containing the start point, normal vector, and length of each normal vector. Each tuple
+    /// consists of: <list type="bullet"> <item><description><see cref="XYZ"/> Point: The starting point of the normal
+    /// vector.</description></item> <item><description><see cref="XYZ"/> Normal: The direction of the normal vector,
+    /// which will be normalized.</description></item> <item><description><see cref="double"/> Length: The length of the
+    /// normal vector.</description></item> </list></param>
     public static void MapNormalVectorsForFaces(RenderingBufferStorage buffer, List<(XYZ Point, XYZ Normal, double Length)> normalData)
     {
         if (normalData.Count == 0) return;
         
-        int totalLineCount = normalData.Count;
+        var totalLineCount = normalData.Count;
         buffer.VertexBufferCount = totalLineCount * 2; // 2 points per line
         buffer.PrimitiveCount = totalLineCount;
         
@@ -944,15 +1169,26 @@ public static class RenderHelper
         buffer.VertexFormat = new VertexFormat(buffer.FormatBits);
     }
 
+    /// <summary>
+    /// Maps normal vectors to arrow representations and stores them in the specified rendering buffer.
+    /// </summary>
+    /// <remarks>This method generates arrow representations for a set of normal vectors, where each arrow
+    /// consists of a shaft and an arrowhead. The arrow's length and orientation are determined by the provided normal
+    /// vector and length. The generated vertices and indices are stored in the provided rendering buffer for use in
+    /// rendering pipelines.  The method ensures that the rendering buffer is properly configured with the required
+    /// vertex and index data, including mapping and unmapping the buffer resources.</remarks>
+    /// <param name="buffer">The <see cref="RenderingBufferStorage"/> instance where the arrow vertices and indices will be stored.</param>
+    /// <param name="normalData">A list of tuples containing the origin point, normal vector, and length for each arrow to be generated. Each
+    /// tuple represents a normal vector to be visualized as an arrow.</param>
     public static void MapNormalArrowVectorsForFaces(RenderingBufferStorage buffer, List<(XYZ Point, XYZ Normal, double Length)> normalData)
     {
         if (normalData.Count == 0) return;
         
         // Each arrow: 4 vertices (shaft start, shaft end, head left, head right), 3 lines (shaft, left head, right head)
-        int arrowVertexCount = 4;
-        int arrowLineCount = 3;
-        int totalVertexCount = normalData.Count * arrowVertexCount;
-        int totalLineCount = normalData.Count * arrowLineCount;
+        const int arrowVertexCount = 4;
+        const int arrowLineCount = 3;
+        var totalVertexCount = normalData.Count * arrowVertexCount;
+        var totalLineCount = normalData.Count * arrowLineCount;
 
         buffer.VertexBufferCount = totalVertexCount;
         buffer.PrimitiveCount = totalLineCount;
@@ -989,9 +1225,9 @@ public static class RenderHelper
         buffer.IndexBuffer.Map(buffer.IndexBufferCount);
 
         var indexStream = buffer.IndexBuffer.GetIndexStreamLine();
-        for (int i = 0; i < normalData.Count; i++)
+        for (var i = 0; i < normalData.Count; i++)
         {
-            int baseIdx = i * arrowVertexCount;
+            var baseIdx = i * arrowVertexCount;
             // Shaft
             indexStream.AddLine(new IndexLine(baseIdx + 0, baseIdx + 1));
             // Arrow head
