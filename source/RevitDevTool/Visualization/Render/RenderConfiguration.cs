@@ -76,7 +76,7 @@ public static class SolidVisualizationSettings
 public static class XyzVisualizationSettings
 {
     public const double Transparency = 20;
-    public const double AxisLength  = 6;
+    public static readonly double AxisLength  = 18.0.FromMillimeters();
     public const double MinAxisLength  = 0.1;
 
     public static readonly Color XColor  = Color.FromArgb(255, 30, 227, 255);
