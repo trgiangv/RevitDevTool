@@ -11,8 +11,8 @@ public sealed class SolidVisualizationServer : VisualizationServer<Solid>
 {
     private readonly Guid _serverId = new("02B1803B-9008-427E-985F-4ED4DA839EF0");
     public override Guid GetServerId() => _serverId;
-    private readonly List<RenderingBufferStorage> _faceBuffers = new(4);
-    private readonly List<RenderingBufferStorage> _edgeBuffers = new(8);
+    private readonly List<RenderingBufferStorage> _faceBuffers = [];
+    private readonly List<RenderingBufferStorage> _edgeBuffers = [];
 
     private readonly double _transparency = SolidVisualizationSettings.Transparency;
     private readonly double _scale = SolidVisualizationSettings.Scale;
@@ -80,9 +80,9 @@ public sealed class SolidVisualizationServer : VisualizationServer<Solid>
                 if (_drawFace)
                 {
                     var isTransparentPass = DrawContext.IsTransparentPass();
-                    if (isTransparentPass && _transparency > 0 || !isTransparentPass && _transparency == 0)
+                    if ((isTransparentPass && _transparency > 0) || (!isTransparentPass && _transparency == 0))
                     {
-                        foreach (var buffer in _faceBuffers)
+                        foreach (var buffer in _faceBuffers.Where(b=>b.IsValid()))
                         {
                             DrawContext.FlushBuffer(buffer.VertexBuffer,
                                 buffer.VertexBufferCount,
@@ -97,7 +97,7 @@ public sealed class SolidVisualizationServer : VisualizationServer<Solid>
 
                 if (_drawEdge)
                 {
-                    foreach (var buffer in _edgeBuffers)
+                    foreach (var buffer in _edgeBuffers.Where(b => b.IsValid()))
                     {
                         DrawContext.FlushBuffer(buffer.VertexBuffer,
                             buffer.VertexBufferCount,
@@ -118,12 +118,6 @@ public sealed class SolidVisualizationServer : VisualizationServer<Solid>
 
     private void MapGeometryBuffer()
     {
-        // Dispose and clear all previous buffers before remapping
-        foreach (var buffer in _faceBuffers) buffer.Dispose();
-        foreach (var buffer in _edgeBuffers) buffer.Dispose();
-        _faceBuffers.Clear();
-        _edgeBuffers.Clear();
-
         foreach (var solid in VisualizeGeometries)
         {
             var scaledSolid = RenderGeometryHelper.ScaleSolid(solid, _scale);
@@ -174,8 +168,6 @@ public sealed class SolidVisualizationServer : VisualizationServer<Solid>
 
     protected override void DisposeBuffers()
     {
-        foreach (var buffer in _faceBuffers) buffer.Dispose();
-        foreach (var buffer in _edgeBuffers) buffer.Dispose();
         _faceBuffers.Clear();
         _edgeBuffers.Clear();
     }

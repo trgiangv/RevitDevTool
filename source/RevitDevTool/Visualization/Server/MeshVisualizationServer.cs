@@ -11,9 +11,9 @@ public sealed class MeshVisualizationServer : VisualizationServer<Mesh>
 {
     private readonly Guid _serverId = new("FD6F0E82-26D9-485B-A6D8-5FA65B85442F");
     public override Guid GetServerId() => _serverId;
-    private RenderingBufferStorage[] _normalBuffers = [];
-    private readonly RenderingBufferStorage _surfaceBuffer = new();
-    private readonly RenderingBufferStorage _meshGridBuffer = new();
+    private readonly List<RenderingBufferStorage[]> _normalBuffers = [];
+    private readonly List<RenderingBufferStorage> _surfaceBuffers = [];
+    private readonly List<RenderingBufferStorage> _meshGridBuffers = [];
 
     private readonly double _extrusion = MeshVisualizationSettings.Extrusion;
     private readonly double _transparency = MeshVisualizationSettings.Transparency;
@@ -50,7 +50,7 @@ public sealed class MeshVisualizationServer : VisualizationServer<Mesh>
             {
                 if (VisualizeGeometries.Count == 0) return;
                 
-                if (HasGeometryUpdates || !_surfaceBuffer.IsValid() || !_meshGridBuffer.IsValid())
+                if (HasGeometryUpdates || _surfaceBuffers.Count == 0 || _meshGridBuffers.Count == 0)
                 {
                     MapGeometryBuffer();
                     HasGeometryUpdates = false;
@@ -62,37 +62,45 @@ public sealed class MeshVisualizationServer : VisualizationServer<Mesh>
                     HasEffectsUpdates = false;
                 }
 
-                if (_drawSurface && _surfaceBuffer.IsValid())
+                if (_drawSurface && _surfaceBuffers.Count != 0)
                 {
                     var isTransparentPass = DrawContext.IsTransparentPass();
-                    if (isTransparentPass && _transparency > 0 || !isTransparentPass && _transparency == 0)
+                    if ((isTransparentPass && _transparency > 0) || (!isTransparentPass && _transparency == 0))
                     {
-                        DrawContext.FlushBuffer(_surfaceBuffer.VertexBuffer,
-                            _surfaceBuffer.VertexBufferCount,
-                            _surfaceBuffer.IndexBuffer,
-                            _surfaceBuffer.IndexBufferCount,
-                            _surfaceBuffer.VertexFormat,
-                            _surfaceBuffer.EffectInstance, PrimitiveType.TriangleList, 0,
-                            _surfaceBuffer.PrimitiveCount);
+                        foreach (var surfaceBuffer in _surfaceBuffers)
+                        {
+                            DrawContext.FlushBuffer(surfaceBuffer.VertexBuffer,
+                                surfaceBuffer.VertexBufferCount,
+                                surfaceBuffer.IndexBuffer,
+                                surfaceBuffer.IndexBufferCount,
+                                surfaceBuffer.VertexFormat,
+                                surfaceBuffer.EffectInstance, PrimitiveType.TriangleList, 0,
+                                surfaceBuffer.PrimitiveCount);
+                        }
                     }
                 }
 
-                if (_drawMeshGrid && _meshGridBuffer.IsValid())
+                if (_drawMeshGrid && _meshGridBuffers.Count != 0)
                 {
-                    DrawContext.FlushBuffer(_meshGridBuffer.VertexBuffer,
-                        _meshGridBuffer.VertexBufferCount,
-                        _meshGridBuffer.IndexBuffer,
-                        _meshGridBuffer.IndexBufferCount,
-                        _meshGridBuffer.VertexFormat,
-                        _meshGridBuffer.EffectInstance, PrimitiveType.LineList, 0,
-                        _meshGridBuffer.PrimitiveCount);
+                    foreach (var meshGridBuffer in _meshGridBuffers)
+                    {
+                        DrawContext.FlushBuffer(meshGridBuffer.VertexBuffer,
+                            meshGridBuffer.VertexBufferCount,
+                            meshGridBuffer.IndexBuffer,
+                            meshGridBuffer.IndexBufferCount,
+                            meshGridBuffer.VertexFormat,
+                            meshGridBuffer.EffectInstance, PrimitiveType.LineList, 0,
+                            meshGridBuffer.PrimitiveCount);
+                    }
                 }
 
                 if (_drawNormalVector)
                 {
-                    foreach (var buffer in _normalBuffers)
+                    foreach (var buffers in _normalBuffers)
                     {
-                        if (buffer.IsValid())
+                        if (!buffers.Any()) continue;
+
+                        foreach (var buffer in buffers)
                         {
                             DrawContext.FlushBuffer(buffer.VertexBuffer,
                                 buffer.VertexBufferCount,
@@ -118,11 +126,17 @@ public sealed class MeshVisualizationServer : VisualizationServer<Mesh>
         
         try
         {
-            // Use the new methods that handle multiple meshes
-            RenderHelper.MapSurfaceBuffer(_surfaceBuffer, VisualizeGeometries, _extrusion);
-            RenderHelper.MapMeshGridBuffer(_meshGridBuffer, VisualizeGeometries, _extrusion);
-            
-            // Handle normal vectors for all meshes
+            foreach (var visualizeGeometry in VisualizeGeometries)
+            {
+                var surfaceBuffer = new RenderingBufferStorage();
+                RenderHelper.MapSurfaceBuffer(surfaceBuffer, visualizeGeometry, _extrusion);
+                _surfaceBuffers.Add(surfaceBuffer);
+
+                var meshGridBuffer = new RenderingBufferStorage();
+                RenderHelper.MapMeshGridBuffer(meshGridBuffer, visualizeGeometry, _extrusion);
+                _meshGridBuffers.Add(meshGridBuffer);
+            }
+
             MapNormalsBuffer();
         }
         catch (Exception ex)
@@ -133,62 +147,55 @@ public sealed class MeshVisualizationServer : VisualizationServer<Mesh>
 
     private void MapNormalsBuffer()
     {
-        // Clear existing normal buffers
-        _normalBuffers = [];
-        
-        // Create a buffer for each vertex of each mesh
         foreach (var mesh in VisualizeGeometries)
         {
             var area = RenderGeometryHelper.ComputeMeshSurfaceArea(mesh);
             var offset = RenderGeometryHelper.InterpolateOffsetByArea(area);
             var normalLength = RenderGeometryHelper.InterpolateAxisLengthByArea(area);
 
+            RenderingBufferStorage[] normals = [];
             for (var i = 0; i < mesh.Vertices.Count; i++)
             {
                 var vertex = mesh.Vertices[i];
-                var normal = RenderGeometryHelper.GetMeshVertexNormal(mesh, i, mesh.DistributionOfNormals);
-                
                 var buffer = new RenderingBufferStorage();
+                var normal = RenderGeometryHelper.GetMeshVertexNormal(mesh, i, mesh.DistributionOfNormals);
+
                 RenderHelper.MapNormalVectorBuffer(buffer, vertex + normal * (offset + _extrusion), normal, normalLength);
-                _normalBuffers = _normalBuffers.Append(buffer).ToArray();
+                normals = normals.Append(buffer).ToArray();
+                _normalBuffers.Add(normals);
             }
         }
     }
 
     private void UpdateEffects()
     {
-        if (_surfaceBuffer.FormatBits == 0)
-            _surfaceBuffer.FormatBits = VertexFormatBits.PositionNormal;
-            
-        if (_meshGridBuffer.FormatBits == 0)
-            _meshGridBuffer.FormatBits = VertexFormatBits.Position;
-            
-        _surfaceBuffer.EffectInstance ??= new EffectInstance(_surfaceBuffer.FormatBits);
-        _meshGridBuffer.EffectInstance ??= new EffectInstance(_meshGridBuffer.FormatBits);
+        foreach (var surfaceBuffer in _surfaceBuffers)
+        {
+            surfaceBuffer.EffectInstance ??= new EffectInstance(surfaceBuffer.FormatBits);
+            surfaceBuffer.EffectInstance.SetColor(_surfaceColor);
+            surfaceBuffer.EffectInstance.SetTransparency(_transparency);
+        }
 
-        _surfaceBuffer.EffectInstance.SetColor(_surfaceColor);
-        _meshGridBuffer.EffectInstance.SetColor(_meshColor);
-        _surfaceBuffer.EffectInstance.SetTransparency(_transparency);
+        foreach (var meshGridBuffer in _meshGridBuffers)
+        {
+            meshGridBuffer.EffectInstance ??= new EffectInstance(meshGridBuffer.FormatBits);
+            meshGridBuffer.EffectInstance.SetColor(_meshColor);
+        }
 
         foreach (var normalBuffer in _normalBuffers)
         {
-            if (normalBuffer.FormatBits == 0)
-                normalBuffer.FormatBits = VertexFormatBits.Position;
-                
-            normalBuffer.EffectInstance ??= new EffectInstance(normalBuffer.FormatBits);
-            normalBuffer.EffectInstance.SetColor(_normalColor);
+            foreach (var buffer in normalBuffer)
+            {
+                buffer.EffectInstance ??= new EffectInstance(buffer.FormatBits);
+                buffer.EffectInstance.SetColor(_normalColor);
+            }
         }
     }
 
     protected override void DisposeBuffers()
     {
-        _surfaceBuffer.Dispose();
-        _meshGridBuffer.Dispose();
-        
-        foreach (var buffer in _normalBuffers)
-        {
-            buffer.Dispose();
-        }
-        _normalBuffers = [];
+        _surfaceBuffers.Clear();
+        _meshGridBuffers.Clear();
+        _normalBuffers.Clear();
     }
 }

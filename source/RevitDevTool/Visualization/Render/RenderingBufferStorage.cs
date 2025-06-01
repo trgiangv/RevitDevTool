@@ -40,10 +40,6 @@ public sealed class RenderingBufferStorage
             VertexFormat?.Dispose();
             EffectInstance?.Dispose();
         }
-        catch
-        {
-            // Ignore disposal exceptions
-        }
         finally
         {
             VertexBuffer = null;

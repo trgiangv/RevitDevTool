@@ -2,6 +2,7 @@
 
     <PropertyGroup>
         <UseWPF>true</UseWPF>
+        <nullable>enable</nullable>
         <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
         <LangVersion>latest</LangVersion>
         <TargetFrameworks>net48;net8.0-windows</TargetFrameworks>
