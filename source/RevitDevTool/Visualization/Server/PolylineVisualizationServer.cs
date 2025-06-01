@@ -62,7 +62,7 @@ public sealed class PolylineVisualizationServer : VisualizationServer<GeometryOb
                 if (_drawSurface && _surfaceBuffers.Count != 0)
                 {
                     var isTransparentPass = DrawContext.IsTransparentPass();
-                    if (isTransparentPass && _transparency > 0 || !isTransparentPass && _transparency == 0)
+                    if ((isTransparentPass && _transparency > 0) || (!isTransparentPass && _transparency == 0))
                     {
                         foreach (var surfaceBuffer in _surfaceBuffers)
                         {
@@ -117,6 +117,19 @@ public sealed class PolylineVisualizationServer : VisualizationServer<GeometryOb
 
     private void MapGeometryBuffer()
     {
+        foreach (var buffer in _surfaceBuffers)
+        {
+            buffer.Dispose();
+        }
+
+        foreach (var buffer in _curveBuffers)
+        {
+            buffer.Dispose();
+        }
+
+        _surfaceBuffers.Clear();
+        _curveBuffers.Clear();
+
         if (VisualizeGeometries.Count == 0) return;
         
         try
@@ -150,6 +163,13 @@ public sealed class PolylineVisualizationServer : VisualizationServer<GeometryOb
 
     private void MapDirectionsBuffer()
     {
+        foreach (var buffer in _normalsBuffers)
+        {
+            buffer.Dispose();
+        }
+
+        _normalsBuffers.Clear();
+
         if (VisualizeGeometries.Count == 0) return;
         
         foreach (var visualizeGeometry in VisualizeGeometries)
@@ -225,6 +245,21 @@ public sealed class PolylineVisualizationServer : VisualizationServer<GeometryOb
 
     protected override void DisposeBuffers()
     {
+        foreach (var buffer in _surfaceBuffers)
+        {
+            buffer.Dispose();
+        }
+
+        foreach (var buffer in _curveBuffers)
+        {
+            buffer.Dispose();
+        }
+
+        foreach (var buffer in _normalsBuffers)
+        {
+            buffer.Dispose();
+        }
+
         _surfaceBuffers.Clear();
         _curveBuffers.Clear();
         _normalsBuffers.Clear();

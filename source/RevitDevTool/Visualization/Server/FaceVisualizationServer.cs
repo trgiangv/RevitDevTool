@@ -93,7 +93,7 @@ public sealed class FaceVisualizationServer : VisualizationServer<Face>
                     var isTransparentPass = DrawContext.IsTransparentPass();
                     if ((isTransparentPass && _transparency > 0) || (!isTransparentPass && _transparency == 0))
                     {
-                        foreach (var surfaceBuffer in _surfaceBuffers.Where(b=>b.IsValid()))
+                        foreach (var surfaceBuffer in _surfaceBuffers)
                         {
                             DrawContext.FlushBuffer(surfaceBuffer.VertexBuffer,
                                 surfaceBuffer.VertexBufferCount,
@@ -108,7 +108,7 @@ public sealed class FaceVisualizationServer : VisualizationServer<Face>
 
                 if (_drawMeshGrid && _meshGridBuffers.Count != 0)
                 {
-                    foreach (var meshGridBuffer in _meshGridBuffers.Where(b => b.IsValid()))
+                    foreach (var meshGridBuffer in _meshGridBuffers)
                     {
                         DrawContext.FlushBuffer(meshGridBuffer.VertexBuffer,
                             meshGridBuffer.VertexBufferCount,
@@ -122,7 +122,7 @@ public sealed class FaceVisualizationServer : VisualizationServer<Face>
 
                 if (_drawNormalVector && _normalBuffers.Count != 0)
                 {
-                    foreach (var normalBuffer in _normalBuffers.Where(b => b.IsValid()))
+                    foreach (var normalBuffer in _normalBuffers)
                     {
                         DrawContext.FlushBuffer(normalBuffer.VertexBuffer,
                             normalBuffer.VertexBufferCount,
@@ -143,6 +143,8 @@ public sealed class FaceVisualizationServer : VisualizationServer<Face>
 
     private void MapGeometryBuffer()
     {
+        DisposeBuffers();
+
         if (VisualizeGeometries.Count == 0) return;
         
         try
@@ -198,6 +200,21 @@ public sealed class FaceVisualizationServer : VisualizationServer<Face>
 
     protected override void DisposeBuffers()
     {
+        foreach (var buffer in _surfaceBuffers)
+        {
+            buffer.Dispose();
+        }
+
+        foreach (var buffer in _meshGridBuffers)
+        {
+            buffer.Dispose();
+        }
+
+        foreach (var buffer in _normalBuffers)
+        {
+            buffer.Dispose();
+        }
+
         _surfaceBuffers.Clear();
         _meshGridBuffers.Clear();
         _normalBuffers.Clear();
