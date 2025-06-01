@@ -120,7 +120,7 @@ public sealed class XyzVisualizationServer : VisualizationServer<XYZ>
         }
     }
 
-    private void RenderAxisBuffer(RenderingBufferStorage buffer)
+    private static void RenderAxisBuffer(RenderingBufferStorage buffer)
     {
         if (!buffer.IsValid()) return;
         
@@ -177,9 +177,6 @@ public sealed class XyzVisualizationServer : VisualizationServer<XYZ>
     {
         foreach (var buffer in _planeBuffers)
         {
-            if (buffer.FormatBits == 0)
-                buffer.FormatBits = VertexFormatBits.PositionNormal;
-                
             buffer.EffectInstance ??= new EffectInstance(buffer.FormatBits);
             buffer.EffectInstance.SetTransparency(_transparency);
         }
@@ -190,9 +187,6 @@ public sealed class XyzVisualizationServer : VisualizationServer<XYZ>
 
         foreach (var buffer in _axisBuffers)
         {
-            if (buffer.FormatBits == 0)
-                buffer.FormatBits = VertexFormatBits.Position;
-                
             buffer.EffectInstance ??= new EffectInstance(buffer.FormatBits);
         }
 

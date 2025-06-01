@@ -11,9 +11,9 @@ public sealed class FaceVisualizationServer : VisualizationServer<Face>
 {
     private readonly Guid _serverId = new("F67DFF33-B5A8-47AA-AB81-557A032C001E");
     public override Guid GetServerId() => _serverId;
-    private readonly RenderingBufferStorage _meshGridBuffer = new();
-    private readonly RenderingBufferStorage _normalBuffer = new();
-    private readonly RenderingBufferStorage _surfaceBuffer = new();
+    private readonly List<RenderingBufferStorage> _meshGridBuffers = [];
+    private readonly List<RenderingBufferStorage> _normalBuffers = [];
+    private readonly List<RenderingBufferStorage> _surfaceBuffers = [];
 
     private readonly double _extrusion = FaceVisualizationSettings.Extrusion;
     private readonly double _transparency = FaceVisualizationSettings.Transparency;
@@ -72,11 +72,11 @@ public sealed class FaceVisualizationServer : VisualizationServer<Face>
     {
         lock (RenderLock)
         {
+            if (VisualizeGeometries.Count == 0) return;
+
             try
             {
-                if (VisualizeGeometries.Count == 0) return;
-                
-                if (HasGeometryUpdates || !_surfaceBuffer.IsValid() || !_meshGridBuffer.IsValid() || !_normalBuffer.IsValid())
+                if (HasGeometryUpdates || _surfaceBuffers.Count == 0 || _meshGridBuffers.Count == 0 || _normalBuffers.Count == 0)
                 {
                     MapGeometryBuffer();
                     HasGeometryUpdates = false;
@@ -88,41 +88,50 @@ public sealed class FaceVisualizationServer : VisualizationServer<Face>
                     HasEffectsUpdates = false;
                 }
 
-                if (_drawSurface && _surfaceBuffer.IsValid())
+                if (_drawSurface && _surfaceBuffers.Count != 0)
                 {
                     var isTransparentPass = DrawContext.IsTransparentPass();
-                    if (isTransparentPass && _transparency > 0 || !isTransparentPass && _transparency == 0)
+                    if ((isTransparentPass && _transparency > 0) || (!isTransparentPass && _transparency == 0))
                     {
-                        DrawContext.FlushBuffer(_surfaceBuffer.VertexBuffer,
-                            _surfaceBuffer.VertexBufferCount,
-                            _surfaceBuffer.IndexBuffer,
-                            _surfaceBuffer.IndexBufferCount,
-                            _surfaceBuffer.VertexFormat,
-                            _surfaceBuffer.EffectInstance, PrimitiveType.TriangleList, 0,
-                            _surfaceBuffer.PrimitiveCount);
+                        foreach (var surfaceBuffer in _surfaceBuffers.Where(b=>b.IsValid()))
+                        {
+                            DrawContext.FlushBuffer(surfaceBuffer.VertexBuffer,
+                                surfaceBuffer.VertexBufferCount,
+                                surfaceBuffer.IndexBuffer,
+                                surfaceBuffer.IndexBufferCount,
+                                surfaceBuffer.VertexFormat,
+                                surfaceBuffer.EffectInstance, PrimitiveType.TriangleList, 0,
+                                surfaceBuffer.PrimitiveCount);
+                        }
                     }
                 }
 
-                if (_drawMeshGrid && _meshGridBuffer.IsValid())
+                if (_drawMeshGrid && _meshGridBuffers.Count != 0)
                 {
-                    DrawContext.FlushBuffer(_meshGridBuffer.VertexBuffer,
-                        _meshGridBuffer.VertexBufferCount,
-                        _meshGridBuffer.IndexBuffer,
-                        _meshGridBuffer.IndexBufferCount,
-                        _meshGridBuffer.VertexFormat,
-                        _meshGridBuffer.EffectInstance, PrimitiveType.LineList, 0,
-                        _meshGridBuffer.PrimitiveCount);
+                    foreach (var meshGridBuffer in _meshGridBuffers.Where(b => b.IsValid()))
+                    {
+                        DrawContext.FlushBuffer(meshGridBuffer.VertexBuffer,
+                            meshGridBuffer.VertexBufferCount,
+                            meshGridBuffer.IndexBuffer,
+                            meshGridBuffer.IndexBufferCount,
+                            meshGridBuffer.VertexFormat,
+                            meshGridBuffer.EffectInstance, PrimitiveType.LineList, 0,
+                            meshGridBuffer.PrimitiveCount);
+                    }
                 }
 
-                if (_drawNormalVector && _normalBuffer.IsValid())
+                if (_drawNormalVector && _normalBuffers.Count != 0)
                 {
-                    DrawContext.FlushBuffer(_normalBuffer.VertexBuffer,
-                        _normalBuffer.VertexBufferCount,
-                        _normalBuffer.IndexBuffer,
-                        _normalBuffer.IndexBufferCount,
-                        _normalBuffer.VertexFormat,
-                        _normalBuffer.EffectInstance, PrimitiveType.LineList, 0,
-                        _normalBuffer.PrimitiveCount);
+                    foreach (var normalBuffer in _normalBuffers.Where(b => b.IsValid()))
+                    {
+                        DrawContext.FlushBuffer(normalBuffer.VertexBuffer,
+                            normalBuffer.VertexBufferCount,
+                            normalBuffer.IndexBuffer,
+                            normalBuffer.IndexBufferCount,
+                            normalBuffer.VertexFormat,
+                            normalBuffer.EffectInstance, PrimitiveType.LineList, 0,
+                            normalBuffer.PrimitiveCount);
+                    }
                 }
             }
             catch (Exception exception)
@@ -138,18 +147,26 @@ public sealed class FaceVisualizationServer : VisualizationServer<Face>
         
         try
         {
-            // Collect meshes from all faces
-            var meshes = RenderHelper.CollectMeshesFromFaces(VisualizeGeometries);
-            
-            // Map surface and mesh grid buffers using the collected meshes
-            RenderHelper.MapSurfaceBuffer(_surfaceBuffer, meshes, _extrusion);
-            RenderHelper.MapMeshGridBuffer(_meshGridBuffer, meshes, _extrusion);
-            
-            // Collect normal data from all faces
-            var normalData = RenderHelper.CollectFaceNormalData(VisualizeGeometries, _extrusion);
-            
-            // Map normal vectors as arrows
-            RenderHelper.MapNormalArrowVectorsForFaces(_normalBuffer, normalData);
+            foreach (var face in VisualizeGeometries)
+            {
+                var mesh = face.Triangulate();
+                var faceBox = face.GetBoundingBox();
+                var center = (faceBox.Min + faceBox.Max) / 2;
+                var normal = face.ComputeNormal(center);
+                var offset = RenderGeometryHelper.InterpolateOffsetByArea(face.Area);
+                var normalLength = RenderGeometryHelper.InterpolateAxisLengthByArea(face.Area);
+
+                var surfaceBuffer = new RenderingBufferStorage();
+                var meshGridBuffer = new RenderingBufferStorage();
+                var normalBuffer = new RenderingBufferStorage();
+                RenderHelper.MapSurfaceBuffer(surfaceBuffer, mesh, _extrusion);
+                RenderHelper.MapMeshGridBuffer(meshGridBuffer, mesh, _extrusion);
+                RenderHelper.MapNormalVectorBuffer(normalBuffer, face.Evaluate(center) + normal * (offset + _extrusion), normal, normalLength);
+
+                _surfaceBuffers.Add(surfaceBuffer);
+                _meshGridBuffers.Add(meshGridBuffer);
+                _normalBuffers.Add(normalBuffer);
+            }
         }
         catch (Exception ex)
         {
@@ -159,29 +176,30 @@ public sealed class FaceVisualizationServer : VisualizationServer<Face>
 
     private void UpdateEffects()
     {
-        if (_surfaceBuffer.FormatBits == 0)
-            _surfaceBuffer.FormatBits = VertexFormatBits.PositionNormal;
-            
-        if (_meshGridBuffer.FormatBits == 0)
-            _meshGridBuffer.FormatBits = VertexFormatBits.Position;
-            
-        if (_normalBuffer.FormatBits == 0)
-            _normalBuffer.FormatBits = VertexFormatBits.Position;
-            
-        _surfaceBuffer.EffectInstance ??= new EffectInstance(_surfaceBuffer.FormatBits);
-        _meshGridBuffer.EffectInstance ??= new EffectInstance(_meshGridBuffer.FormatBits);
-        _normalBuffer.EffectInstance ??= new EffectInstance(_normalBuffer.FormatBits);
+        foreach (var surfaceBuffer in _surfaceBuffers)
+        {
+            surfaceBuffer.EffectInstance ??= new EffectInstance(surfaceBuffer.FormatBits);
+            surfaceBuffer.EffectInstance.SetColor(_surfaceColor);
+            surfaceBuffer.EffectInstance.SetTransparency(_transparency);
+        }
 
-        _surfaceBuffer.EffectInstance.SetColor(_surfaceColor);
-        _meshGridBuffer.EffectInstance.SetColor(_meshColor);
-        _normalBuffer.EffectInstance.SetColor(_normalColor);
-        _surfaceBuffer.EffectInstance.SetTransparency(_transparency);
+        foreach (var meshGridBuffer in _meshGridBuffers)
+        {
+            meshGridBuffer.EffectInstance ??= new EffectInstance(meshGridBuffer.FormatBits);
+            meshGridBuffer.EffectInstance.SetColor(_meshColor);
+        }
+
+        foreach (var normalBuffer in _normalBuffers)
+        {
+            normalBuffer.EffectInstance ??= new EffectInstance(normalBuffer.FormatBits);
+            normalBuffer.EffectInstance.SetColor(_normalColor);
+        }
     }
 
     protected override void DisposeBuffers()
     {
-        _surfaceBuffer.Dispose();
-        _meshGridBuffer.Dispose();
-        _normalBuffer.Dispose();
+        _surfaceBuffers.Clear();
+        _meshGridBuffers.Clear();
+        _normalBuffers.Clear();
     }
 }

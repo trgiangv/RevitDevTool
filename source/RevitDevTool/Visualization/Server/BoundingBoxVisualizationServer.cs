@@ -12,8 +12,8 @@ public sealed class BoundingBoxVisualizationServer : VisualizationServer<Boundin
 {
     private readonly Guid _serverId = new("5A67F8D4-30D2-414F-8387-8023C3DAF010");
     public override Guid GetServerId() => _serverId;
-    private readonly RenderingBufferStorage _surfaceBuffer = new();
-    private readonly RenderingBufferStorage _edgeBuffer = new();
+    private readonly List<RenderingBufferStorage> _surfaceBuffers = [];
+    private readonly List<RenderingBufferStorage> _edgeBuffers = [];
     private readonly List<RenderingBufferStorage> _axisBuffers = [];
     private readonly XYZ[] _normals =
     [
@@ -21,6 +21,7 @@ public sealed class BoundingBoxVisualizationServer : VisualizationServer<Boundin
         XYZ.BasisY,
         XYZ.BasisZ
     ];
+    private static readonly XYZ UnitVector = new(1, 1, 1);
 
     private readonly double _transparency = BoundingBoxVisualizationSettings.Transparency;
     private readonly bool _drawSurface = BoundingBoxVisualizationSettings.ShowSurface;
@@ -72,7 +73,7 @@ public sealed class BoundingBoxVisualizationServer : VisualizationServer<Boundin
             {
                 if (VisualizeGeometries.Count == 0) return;
                 
-                if (HasGeometryUpdates || !_surfaceBuffer.IsValid() || !_edgeBuffer.IsValid())
+                if (HasGeometryUpdates || _surfaceBuffers.Count == 0 || _edgeBuffers.Count == 0)
                 {
                     MapGeometryBuffer();
                     HasGeometryUpdates = false;
@@ -84,30 +85,36 @@ public sealed class BoundingBoxVisualizationServer : VisualizationServer<Boundin
                     HasEffectsUpdates = false;
                 }
 
-                if (_drawSurface && _surfaceBuffer.IsValid())
+                if (_drawSurface && _surfaceBuffers.Count != 0)
                 {
                     var isTransparentPass = DrawContext.IsTransparentPass();
-                    if (isTransparentPass && _transparency > 0 || !isTransparentPass && _transparency == 0)
+                    if ((isTransparentPass && _transparency > 0) || (!isTransparentPass && _transparency == 0))
                     {
-                        DrawContext.FlushBuffer(_surfaceBuffer.VertexBuffer,
-                            _surfaceBuffer.VertexBufferCount,
-                            _surfaceBuffer.IndexBuffer,
-                            _surfaceBuffer.IndexBufferCount,
-                            _surfaceBuffer.VertexFormat,
-                            _surfaceBuffer.EffectInstance, PrimitiveType.TriangleList, 0,
-                            _surfaceBuffer.PrimitiveCount);
+                        foreach (var surfaceBuffer in _surfaceBuffers.Where(b=>b.IsValid()))
+                        {
+                            DrawContext.FlushBuffer(surfaceBuffer.VertexBuffer,
+                                surfaceBuffer.VertexBufferCount,
+                                surfaceBuffer.IndexBuffer,
+                                surfaceBuffer.IndexBufferCount,
+                                surfaceBuffer.VertexFormat,
+                                surfaceBuffer.EffectInstance, PrimitiveType.TriangleList, 0,
+                                surfaceBuffer.PrimitiveCount);
+                        }
                     }
                 }
 
-                if (_drawEdge && _edgeBuffer.IsValid())
+                if (_drawEdge && _edgeBuffers.Count != 0)
                 {
-                    DrawContext.FlushBuffer(_edgeBuffer.VertexBuffer,
-                        _edgeBuffer.VertexBufferCount,
-                        _edgeBuffer.IndexBuffer,
-                        _edgeBuffer.IndexBufferCount,
-                        _edgeBuffer.VertexFormat,
-                        _edgeBuffer.EffectInstance, PrimitiveType.LineList, 0,
-                        _edgeBuffer.PrimitiveCount);
+                    foreach (var edgeBuffer in _edgeBuffers.Where(b=>b.IsValid()))
+                    {
+                        DrawContext.FlushBuffer(edgeBuffer.VertexBuffer,
+                            edgeBuffer.VertexBufferCount,
+                            edgeBuffer.IndexBuffer,
+                            edgeBuffer.IndexBufferCount,
+                            edgeBuffer.VertexFormat,
+                            edgeBuffer.EffectInstance, PrimitiveType.LineList, 0,
+                            edgeBuffer.PrimitiveCount);
+                    }
                 }
 
                 if (_drawAxis)
@@ -140,10 +147,18 @@ public sealed class BoundingBoxVisualizationServer : VisualizationServer<Boundin
         
         try
         {
-            RenderHelper.MapBoundingBoxSurfaceBuffer(_surfaceBuffer, VisualizeGeometries);
-            RenderHelper.MapBoundingBoxEdgeBuffer(_edgeBuffer, VisualizeGeometries);
-            
-            MapAxisBuffersForAllBoxes();
+            foreach (var geometry in VisualizeGeometries)
+            {
+                var surfaceBuffer = new RenderingBufferStorage();
+                RenderHelper.MapBoundingBoxSurfaceBuffer(surfaceBuffer, geometry);
+                _surfaceBuffers.Add(surfaceBuffer);
+
+                var edgeBuffer = new RenderingBufferStorage();
+                RenderHelper.MapBoundingBoxEdgeBuffer(edgeBuffer, geometry);
+                _edgeBuffers.Add(edgeBuffer);
+            }
+
+            MapAxisBuffers();
         }
         catch (Exception ex)
         {
@@ -151,51 +166,50 @@ public sealed class BoundingBoxVisualizationServer : VisualizationServer<Boundin
         }
     }
 
-    private void MapAxisBuffersForAllBoxes()
+    private void MapAxisBuffers()
     {
-        _axisBuffers.Clear();
+        //_axisBuffers.Clear();
         
         foreach (var box in VisualizeGeometries)
         {
-            var unitVector = new XYZ(1, 1, 1);
             var minPoint = box.Transform.OfPoint(box.Min);
             var maxPoint = box.Transform.OfPoint(box.Max);
             var axisLength = RenderGeometryHelper.InterpolateAxisLengthByPoints(minPoint, maxPoint);
-            
-            foreach (var normal in _normals)
+
+            var axisBuffer = Enumerable.Range(0, 6)
+                .Select(_ => new RenderingBufferStorage())
+                .ToArray();
+            for (var i = 0; i < _normals.Length; i++)
             {
-                var minBuffer = new RenderingBufferStorage();
-                var maxBuffer = new RenderingBufferStorage();
-                
-                RenderHelper.MapNormalVectorBuffer(minBuffer, minPoint - unitVector * Context.Application.ShortCurveTolerance, normal, axisLength);
-                RenderHelper.MapNormalVectorBuffer(maxBuffer, maxPoint + unitVector * Context.Application.ShortCurveTolerance, -normal, axisLength);
-                
-                _axisBuffers.Add(minBuffer);
-                _axisBuffers.Add(maxBuffer);
+                var normal = _normals[i];
+                var minBuffer = axisBuffer[i];
+                var maxBuffer = axisBuffer[i + _normals.Length];
+
+                RenderHelper.MapNormalVectorBuffer(minBuffer, minPoint - UnitVector * Context.Application.ShortCurveTolerance, normal, axisLength);
+                RenderHelper.MapNormalVectorBuffer(maxBuffer, maxPoint + UnitVector * Context.Application.ShortCurveTolerance, -normal, axisLength);
+
+                _axisBuffers.AddRange(axisBuffer);
             }
         }
     }
 
     private void UpdateEffects()
     {
-        if (_surfaceBuffer.FormatBits == 0)
-            _surfaceBuffer.FormatBits = VertexFormatBits.PositionNormal;
-            
-        _surfaceBuffer.EffectInstance ??= new EffectInstance(_surfaceBuffer.FormatBits);
-        _surfaceBuffer.EffectInstance.SetColor(_surfaceColor);
-        _surfaceBuffer.EffectInstance.SetTransparency(_transparency);
+        foreach (var surfaceBuffer in _surfaceBuffers)
+        {
+            surfaceBuffer.EffectInstance ??= new EffectInstance(surfaceBuffer.FormatBits);
+            surfaceBuffer.EffectInstance.SetColor(_surfaceColor);
+            surfaceBuffer.EffectInstance.SetTransparency(_transparency);
+        }
 
-        if (_edgeBuffer.FormatBits == 0)
-            _edgeBuffer.FormatBits = VertexFormatBits.Position;
-            
-        _edgeBuffer.EffectInstance ??= new EffectInstance(_edgeBuffer.FormatBits);
-        _edgeBuffer.EffectInstance.SetColor(_edgeColor);
+        foreach (var edgeBuffer in _edgeBuffers)
+        {
+            edgeBuffer.EffectInstance ??= new EffectInstance(edgeBuffer.FormatBits);
+            edgeBuffer.EffectInstance.SetColor(_edgeColor);
+        }
 
         foreach (var buffer in _axisBuffers)
         {
-            if (buffer.FormatBits == 0)
-                buffer.FormatBits = VertexFormatBits.Position;
-                
             buffer.EffectInstance ??= new EffectInstance(buffer.FormatBits);
             buffer.EffectInstance.SetColor(_axisColor);
         }
@@ -203,13 +217,8 @@ public sealed class BoundingBoxVisualizationServer : VisualizationServer<Boundin
 
     protected override void DisposeBuffers()
     {
-        _surfaceBuffer.Dispose();
-        _edgeBuffer.Dispose();
-        
-        foreach (var buffer in _axisBuffers)
-        {
-            buffer.Dispose();
-        }
+        _surfaceBuffers.Clear();
+        _edgeBuffers.Clear();
         _axisBuffers.Clear();
     }
 }
