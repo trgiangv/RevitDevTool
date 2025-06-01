@@ -122,6 +122,19 @@ public sealed class MeshVisualizationServer : VisualizationServer<Mesh>
 
     private void MapGeometryBuffer()
     {
+        foreach (var buffer in _surfaceBuffers)
+        {
+            buffer.Dispose();
+        }
+
+        foreach (var buffer in _meshGridBuffers)
+        {
+            buffer.Dispose();
+        }
+
+        _surfaceBuffers.Clear();
+        _meshGridBuffers.Clear();
+
         if (VisualizeGeometries.Count == 0) return;
         
         try
@@ -147,6 +160,12 @@ public sealed class MeshVisualizationServer : VisualizationServer<Mesh>
 
     private void MapNormalsBuffer()
     {
+        foreach (var buffer in _normalBuffers.SelectMany(bufferArray => bufferArray))
+        {
+            buffer.Dispose();
+        }
+        _normalBuffers.Clear();
+
         foreach (var mesh in VisualizeGeometries)
         {
             var area = RenderGeometryHelper.ComputeMeshSurfaceArea(mesh);
@@ -162,8 +181,9 @@ public sealed class MeshVisualizationServer : VisualizationServer<Mesh>
 
                 RenderHelper.MapNormalVectorBuffer(buffer, vertex + normal * (offset + _extrusion), normal, normalLength);
                 normals = normals.Append(buffer).ToArray();
-                _normalBuffers.Add(normals);
             }
+
+            _normalBuffers.Add(normals);
         }
     }
 
@@ -194,6 +214,21 @@ public sealed class MeshVisualizationServer : VisualizationServer<Mesh>
 
     protected override void DisposeBuffers()
     {
+        foreach (var buffer in _surfaceBuffers)
+        {
+            buffer.Dispose();
+        }
+
+        foreach (var buffer in _meshGridBuffers)
+        {
+            buffer.Dispose();
+        }
+
+        foreach (var buffer in _normalBuffers.SelectMany(bufferArray => bufferArray))
+        {
+            buffer.Dispose();
+        }
+
         _surfaceBuffers.Clear();
         _meshGridBuffers.Clear();
         _normalBuffers.Clear();

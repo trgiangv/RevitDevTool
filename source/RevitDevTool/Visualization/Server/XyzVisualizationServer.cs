@@ -135,6 +135,8 @@ public sealed class XyzVisualizationServer : VisualizationServer<XYZ>
 
     private void UpdateGeometryBuffer()
     {
+        DisposeBuffers();
+
         if (VisualizeGeometries.Count == 0) return;
         
         try
