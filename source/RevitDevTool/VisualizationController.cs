@@ -63,6 +63,9 @@ internal static class VisualizationController
             case Edge edge:
                 PolylineVisualizationServer.AddGeometry(edge);
                 break;
+            case PolyLine polyline:
+                PolylineVisualizationServer.AddGeometry(polyline);
+                break;
             case Face face:
                 FaceVisualizationServer.AddGeometry(face);
                 break;
@@ -83,6 +86,7 @@ internal static class VisualizationController
                     Face => typeof(Face),
                     Curve => typeof(Curve),
                     Edge => typeof(Edge),
+                    PolyLine => typeof(PolyLine),
                     _ => null
                 };
             });
@@ -114,6 +118,9 @@ internal static class VisualizationController
                     break;
                 case not null when geometryType == typeof(Edge):
                     PolylineVisualizationServer.AddGeometries(group.Cast<Edge>());
+                    break;
+                case not null when geometryType == typeof(PolyLine):
+                    PolylineVisualizationServer.AddGeometries(group.Cast<PolyLine>());
                     break;
             }
         }
