@@ -82,7 +82,7 @@ public sealed class SolidVisualizationServer : VisualizationServer<Solid>
                     var isTransparentPass = DrawContext.IsTransparentPass();
                     if ((isTransparentPass && _transparency > 0) || (!isTransparentPass && _transparency == 0))
                     {
-                        foreach (var buffer in _faceBuffers.Where(b=>b.IsValid()))
+                        foreach (var buffer in _faceBuffers)
                         {
                             DrawContext.FlushBuffer(buffer.VertexBuffer,
                                 buffer.VertexBufferCount,
@@ -97,7 +97,7 @@ public sealed class SolidVisualizationServer : VisualizationServer<Solid>
 
                 if (_drawEdge)
                 {
-                    foreach (var buffer in _edgeBuffers.Where(b => b.IsValid()))
+                    foreach (var buffer in _edgeBuffers)
                     {
                         DrawContext.FlushBuffer(buffer.VertexBuffer,
                             buffer.VertexBufferCount,
@@ -118,6 +118,8 @@ public sealed class SolidVisualizationServer : VisualizationServer<Solid>
 
     private void MapGeometryBuffer()
     {
+        DisposeBuffers();
+
         foreach (var solid in VisualizeGeometries)
         {
             var scaledSolid = RenderGeometryHelper.ScaleSolid(solid, _scale);
@@ -168,6 +170,16 @@ public sealed class SolidVisualizationServer : VisualizationServer<Solid>
 
     protected override void DisposeBuffers()
     {
+        foreach (var buffer in _faceBuffers)
+        {
+            buffer.Dispose();
+        }
+
+        foreach (var buffer in _edgeBuffers)
+        {
+            buffer.Dispose();
+        }
+
         _faceBuffers.Clear();
         _edgeBuffers.Clear();
     }

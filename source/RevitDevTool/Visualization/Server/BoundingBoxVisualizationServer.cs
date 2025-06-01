@@ -90,7 +90,7 @@ public sealed class BoundingBoxVisualizationServer : VisualizationServer<Boundin
                     var isTransparentPass = DrawContext.IsTransparentPass();
                     if ((isTransparentPass && _transparency > 0) || (!isTransparentPass && _transparency == 0))
                     {
-                        foreach (var surfaceBuffer in _surfaceBuffers.Where(b=>b.IsValid()))
+                        foreach (var surfaceBuffer in _surfaceBuffers)
                         {
                             DrawContext.FlushBuffer(surfaceBuffer.VertexBuffer,
                                 surfaceBuffer.VertexBufferCount,
@@ -105,7 +105,7 @@ public sealed class BoundingBoxVisualizationServer : VisualizationServer<Boundin
 
                 if (_drawEdge && _edgeBuffers.Count != 0)
                 {
-                    foreach (var edgeBuffer in _edgeBuffers.Where(b=>b.IsValid()))
+                    foreach (var edgeBuffer in _edgeBuffers)
                     {
                         DrawContext.FlushBuffer(edgeBuffer.VertexBuffer,
                             edgeBuffer.VertexBufferCount,
@@ -143,6 +143,19 @@ public sealed class BoundingBoxVisualizationServer : VisualizationServer<Boundin
 
     private void MapGeometryBuffer()
     {
+        foreach (var buffer in _surfaceBuffers)
+        {
+            buffer.Dispose();
+        }
+
+        foreach (var buffer in _edgeBuffers)
+        {
+            buffer.Dispose();
+        }
+
+        _surfaceBuffers.Clear();
+        _edgeBuffers.Clear();
+
         if (VisualizeGeometries.Count == 0) return;
         
         try
@@ -168,8 +181,12 @@ public sealed class BoundingBoxVisualizationServer : VisualizationServer<Boundin
 
     private void MapAxisBuffers()
     {
-        //_axisBuffers.Clear();
-        
+        foreach (var buffer in _axisBuffers)
+        {
+            buffer.Dispose();
+        }
+        _axisBuffers.Clear();
+
         foreach (var box in VisualizeGeometries)
         {
             var minPoint = box.Transform.OfPoint(box.Min);
@@ -188,8 +205,9 @@ public sealed class BoundingBoxVisualizationServer : VisualizationServer<Boundin
                 RenderHelper.MapNormalVectorBuffer(minBuffer, minPoint - UnitVector * Context.Application.ShortCurveTolerance, normal, axisLength);
                 RenderHelper.MapNormalVectorBuffer(maxBuffer, maxPoint + UnitVector * Context.Application.ShortCurveTolerance, -normal, axisLength);
 
-                _axisBuffers.AddRange(axisBuffer);
             }
+
+            _axisBuffers.AddRange(axisBuffer);
         }
     }
 
@@ -217,6 +235,21 @@ public sealed class BoundingBoxVisualizationServer : VisualizationServer<Boundin
 
     protected override void DisposeBuffers()
     {
+        foreach (var buffer in _surfaceBuffers)
+        {
+            buffer.Dispose();
+        }
+
+        foreach (var buffer in _edgeBuffers)
+        {
+            buffer.Dispose();
+        }
+
+        foreach (var buffer in _axisBuffers)
+        {
+            buffer.Dispose();
+        }
+
         _surfaceBuffers.Clear();
         _edgeBuffers.Clear();
         _axisBuffers.Clear();
