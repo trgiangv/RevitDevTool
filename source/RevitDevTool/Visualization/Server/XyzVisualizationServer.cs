@@ -11,13 +11,9 @@ public sealed class XyzVisualizationServer : VisualizationServer<XYZ>
 {
     private readonly Guid _serverId = new("A670E0BB-8B55-47CB-905C-7D94F0C8DF07");
     public override Guid GetServerId() => _serverId;
-    private readonly RenderingBufferStorage[] _planeBuffers = Enumerable.Range(0, 3)
-        .Select(_ => new RenderingBufferStorage())
-        .ToArray();
 
-    private readonly RenderingBufferStorage[] _axisBuffers = Enumerable.Range(0, 3)
-        .Select(_ => new RenderingBufferStorage())
-        .ToArray();
+    private readonly List<RenderingBufferStorage[]> _planeBufferArrays = [];
+    private readonly List<RenderingBufferStorage[]> _axisBufferArrays = [];
 
     private readonly XYZ[] _normals =
     [
@@ -80,20 +76,26 @@ public sealed class XyzVisualizationServer : VisualizationServer<XYZ>
 
                 if (_drawXAxis)
                 {
-                    RenderAxisBuffer(_axisBuffers[0]);
-                    RenderPlaneBuffer(_planeBuffers[0]);
+                    var renderAxisBuffers = _axisBufferArrays.Select(axisBufferArray => axisBufferArray[0]).ToArray();
+                    var renderPlaneBuffers = _planeBufferArrays.Select(planeBufferArray => planeBufferArray[0]).ToArray();
+                    RenderAxisBuffer(renderAxisBuffers);
+                    RenderPlaneBuffer(renderPlaneBuffers);
                 }
 
                 if (_drawYAxis)
                 {
-                    RenderAxisBuffer(_axisBuffers[1]);
-                    RenderPlaneBuffer(_planeBuffers[1]);
+                    var renderAxisBuffers = _axisBufferArrays.Select(axisBufferArray => axisBufferArray[1]).ToArray();
+                    var renderPlaneBuffers = _planeBufferArrays.Select(planeBufferArray => planeBufferArray[1]).ToArray();
+                    RenderAxisBuffer(renderAxisBuffers);
+                    RenderPlaneBuffer(renderPlaneBuffers);
                 }
 
                 if (_drawZAxis)
                 {
-                    RenderAxisBuffer(_axisBuffers[2]);
-                    RenderPlaneBuffer(_planeBuffers[2]);
+                    var renderAxisBuffers = _axisBufferArrays.Select(axisBufferArray => axisBufferArray[2]).ToArray();
+                    var renderPlaneBuffers = _planeBufferArrays.Select(planeBufferArray => planeBufferArray[2]).ToArray();
+                    RenderAxisBuffer(renderAxisBuffers);
+                    RenderPlaneBuffer(renderPlaneBuffers);
                 }
             }
             catch (Exception exception)
@@ -103,12 +105,14 @@ public sealed class XyzVisualizationServer : VisualizationServer<XYZ>
         }
     }
 
-    private void RenderPlaneBuffer(RenderingBufferStorage buffer)
+    private void RenderPlaneBuffer(RenderingBufferStorage[] bufferArray)
     {
-        if (!_drawPlane || !buffer.IsValid()) return;
+        if (!_drawPlane) return;
 
         var isTransparentPass = DrawContext.IsTransparentPass();
-        if (isTransparentPass && _transparency > 0 || !isTransparentPass && _transparency == 0)
+        if ((!isTransparentPass || !(_transparency > 0)) && (isTransparentPass || _transparency != 0)) return;
+
+        foreach (var buffer in bufferArray)
         {
             DrawContext.FlushBuffer(buffer.VertexBuffer,
                 buffer.VertexBufferCount,
@@ -120,17 +124,20 @@ public sealed class XyzVisualizationServer : VisualizationServer<XYZ>
         }
     }
 
-    private static void RenderAxisBuffer(RenderingBufferStorage buffer)
+    private static void RenderAxisBuffer(RenderingBufferStorage[] bufferArray)
     {
-        if (!buffer.IsValid()) return;
-        
-        DrawContext.FlushBuffer(buffer.VertexBuffer,
-            buffer.VertexBufferCount,
-            buffer.IndexBuffer,
-            buffer.IndexBufferCount,
-            buffer.VertexFormat,
-            buffer.EffectInstance, PrimitiveType.LineList, 0,
-            buffer.PrimitiveCount);
+        if (bufferArray.Length == 0) return;
+
+        foreach (var buffer in bufferArray)
+        {
+            DrawContext.FlushBuffer(buffer.VertexBuffer,
+                buffer.VertexBufferCount,
+                buffer.IndexBuffer,
+                buffer.IndexBufferCount,
+                buffer.VertexFormat,
+                buffer.EffectInstance, PrimitiveType.LineList, 0,
+                buffer.PrimitiveCount);
+        }
     }
 
     private void UpdateGeometryBuffer()
@@ -155,58 +162,91 @@ public sealed class XyzVisualizationServer : VisualizationServer<XYZ>
         if (VisualizeGeometries.Count == 0) return;
         
         var normalExtendLength = _axisLength > 1 ? 0.8 : _axisLength * 0.8;
-        for (var i = 0; i < _normals.Length; i++)
+        foreach (var visualizeGeometry in VisualizeGeometries)
         {
-            var normal = _normals[i];
-            var buffer = _axisBuffers[i];
-            RenderHelper.MapNormalVectorBufferForMultiplePoints(buffer, VisualizeGeometries, normal, 2 * (_axisLength + normalExtendLength));
+            var axisBuffers = Enumerable.Range(0, 3)
+                .Select(_ => new RenderingBufferStorage())
+                .ToArray();
+
+            for (var i = 0; i < _normals.Length; i++)
+            {
+                var normal = _normals[i];
+                var buffer = axisBuffers[i];
+                RenderHelper.MapNormalVectorBuffer(buffer, visualizeGeometry - normal * (_axisLength + normalExtendLength), normal, 2 * (_axisLength + normalExtendLength));
+            }
+
+            _axisBufferArrays.Add(axisBuffers);
         }
     }
 
     private void MapPlaneBuffer()
     {
         if (VisualizeGeometries.Count == 0) return;
-        
-        for (var i = 0; i < _normals.Length; i++)
+
+        foreach (var visualizeGeometry in VisualizeGeometries)
         {
-            var normal = _normals[i];
-            var buffer = _planeBuffers[i];
-            RenderHelper.MapSideBufferForMultiplePoints(buffer, VisualizeGeometries, normal, _axisLength);
+            var planeBuffers = Enumerable.Range(0, 3)
+                .Select(_ => new RenderingBufferStorage())
+                .ToArray();
+
+            for (var i = 0; i < _normals.Length; i++)
+            {
+                var normal = _normals[i];
+                var buffer = planeBuffers[i];
+                RenderHelper.MapSideBuffer(buffer, visualizeGeometry - normal * _axisLength, visualizeGeometry + normal * _axisLength);
+            }
+
+            _planeBufferArrays.Add(planeBuffers);
         }
     }
 
     private void UpdateEffects()
     {
-        foreach (var buffer in _planeBuffers)
+        foreach (var bufferArray in _planeBufferArrays)
         {
-            buffer.EffectInstance ??= new EffectInstance(buffer.FormatBits);
-            buffer.EffectInstance.SetTransparency(_transparency);
+            foreach (var buffer in bufferArray)
+            {
+                buffer.EffectInstance ??= new EffectInstance(buffer.FormatBits);
+                buffer.EffectInstance.SetTransparency(_transparency);
+            }
+
+            bufferArray[0].EffectInstance!.SetColor(_xColor);
+            bufferArray[1].EffectInstance!.SetColor(_yColor);
+            bufferArray[2].EffectInstance!.SetColor(_zColor);
         }
 
-        _planeBuffers[0].EffectInstance!.SetColor(_xColor);
-        _planeBuffers[1].EffectInstance!.SetColor(_yColor);
-        _planeBuffers[2].EffectInstance!.SetColor(_zColor);
-
-        foreach (var buffer in _axisBuffers)
+        foreach (var bufferArray in _axisBufferArrays)
         {
-            buffer.EffectInstance ??= new EffectInstance(buffer.FormatBits);
-        }
+            foreach (var buffer in bufferArray)
+            {
+                buffer.EffectInstance ??= new EffectInstance(buffer.FormatBits);
+            }
 
-        _axisBuffers[0].EffectInstance!.SetColor(_xColor);
-        _axisBuffers[1].EffectInstance!.SetColor(_yColor);
-        _axisBuffers[2].EffectInstance!.SetColor(_zColor);
+            bufferArray[0].EffectInstance!.SetColor(_xColor);
+            bufferArray[1].EffectInstance!.SetColor(_yColor);
+            bufferArray[2].EffectInstance!.SetColor(_zColor);
+        }
     }
 
     protected override void DisposeBuffers()
     {
-        foreach (var buffer in _planeBuffers)
+        foreach (var bufferArray in _planeBufferArrays)
         {
-            buffer.Dispose();
+            foreach (var buffer in bufferArray)
+            {
+                buffer.Dispose();
+            }
         }
         
-        foreach (var buffer in _axisBuffers)
+        foreach (var bufferArray in _axisBufferArrays)
         {
-            buffer.Dispose();
+            foreach (var buffer in bufferArray)
+            {
+                buffer.Dispose();
+            }
         }
+
+        _axisBufferArrays.Clear();
+        _planeBufferArrays.Clear();
     }
 }
