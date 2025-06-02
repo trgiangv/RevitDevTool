@@ -537,146 +537,74 @@ public static class RenderHelper
     }
 
     /// <summary>
-    /// Maps a buffer to represent normal vectors originating from multiple points in 3D space.
+    /// Configures the specified <see cref="RenderingBufferStorage"/> instance to represent a rectangular buffer defined
+    /// by the given minimum and maximum points in 3D space.
     /// </summary>
-    /// <remarks>This method generates a set of line segments, where each line represents a normal vector
-    /// originating from a point in the <paramref name="points"/> collection. The direction and length of each normal
-    /// vector are determined by the <paramref name="direction"/> and <paramref name="length"/> parameters,
-    /// respectively. The resulting vertex and index data are stored in the provided <paramref name="buffer"/> for
-    /// rendering.</remarks>
-    /// <param name="buffer">The <see cref="RenderingBufferStorage"/> instance where the vertex and index data for the normal vectors will be
-    /// stored.</param>
-    /// <param name="points">A collection of <see cref="XYZ"/> points representing the starting positions of the normal vectors.</param>
-    /// <param name="direction">The <see cref="XYZ"/> direction vector that determines the orientation of the normal vectors. This vector will
-    /// be normalized.</param>
-    /// <param name="length">The length of each normal vector. Must be a positive value.</param>
-    public static void MapNormalVectorBufferForMultiplePoints(RenderingBufferStorage buffer, IList<XYZ> points, XYZ direction, double length)
+    /// <remarks>This method calculates the vertices and indices required to represent a rectangular buffer in
+    /// 3D space based on the provided <paramref name="min"/> and <paramref name="max"/> points. The buffer is
+    /// configured with four vertices and two triangles, and the vertex and index buffers are populated accordingly. 
+    /// The orientation of the rectangle is determined by the direction of the vector from <paramref name="min"/> to
+    /// <paramref name="max"/>. The method adjusts the rectangle's dimensions and orientation based on whether the
+    /// vector aligns with the X, Y, or Z axis.  The caller is responsible for ensuring that the <paramref
+    /// name="buffer"/> instance is properly initialized before calling this method.</remarks>
+    /// <param name="buffer">The <see cref="RenderingBufferStorage"/> instance to be configured. This parameter cannot be null.</param>
+    /// <param name="min">The minimum point of the rectangular buffer in 3D space.</param>
+    /// <param name="max">The maximum point of the rectangular buffer in 3D space.</param>
+    public static void MapSideBuffer(RenderingBufferStorage buffer, XYZ min, XYZ max)
     {
-        if (points.Count == 0) return;
-        
-        var totalLineCount = points.Count;
-        buffer.VertexBufferCount = totalLineCount * 2; // 2 points per line
-        buffer.PrimitiveCount = totalLineCount;
-        
+        var vertexCount = 4;
+        var normal = (max - min).Normalize();
+        var length = (max - min).GetLength() / 2;
+
+        XYZ point1;
+        XYZ point2;
+        XYZ point3;
+        XYZ point4;
+        if (normal.IsAlmostEqualTo(XYZ.BasisX))
+        {
+            point1 = new XYZ(min.X, min.Y - length, min.Z);
+            point2 = new XYZ(min.X, min.Y + length, min.Z);
+            point3 = new XYZ(max.X, max.Y - length, max.Z);
+            point4 = new XYZ(max.X, max.Y + length, max.Z);
+        }
+        else if (normal.IsAlmostEqualTo(XYZ.BasisY))
+        {
+            point1 = new XYZ(min.X, min.Y, min.Z - length);
+            point2 = new XYZ(min.X, min.Y, min.Z + length);
+            point3 = new XYZ(max.X, max.Y, max.Z - length);
+            point4 = new XYZ(max.X, max.Y, max.Z + length);
+        }
+        else
+        {
+            point1 = new XYZ(min.X - length, min.Y, min.Z);
+            point2 = new XYZ(min.X + length, min.Y, min.Z);
+            point3 = new XYZ(max.X - length, max.Y, max.Z);
+            point4 = new XYZ(max.X + length, max.Y, max.Z);
+        }
+
+        buffer.VertexBufferCount = vertexCount;
+        buffer.PrimitiveCount = 2;
+
         var vertexBufferSizeInFloats = VertexPosition.GetSizeInFloats() * buffer.VertexBufferCount;
         buffer.FormatBits = VertexFormatBits.Position;
         buffer.VertexBuffer = new VertexBuffer(vertexBufferSizeInFloats);
         buffer.VertexBuffer.Map(vertexBufferSizeInFloats);
-        
+
         var vertexStream = buffer.VertexBuffer.GetVertexStreamPosition();
-        
-        // Add all start and end points for each normal vector
-        foreach (var point in points)
-        {
-            var normalizedDirection = direction.Normalize();
-            var endPoint = point + normalizedDirection * length;
-            
-            vertexStream.AddVertex(new VertexPosition(point));
-            vertexStream.AddVertex(new VertexPosition(endPoint));
-        }
-        
+        vertexStream.AddVertex(new VertexPosition(point1));
+        vertexStream.AddVertex(new VertexPosition(point2));
+        vertexStream.AddVertex(new VertexPosition(point3));
+        vertexStream.AddVertex(new VertexPosition(point4));
+
         buffer.VertexBuffer.Unmap();
-        
-        // Create index buffer for lines
-        buffer.IndexBufferCount = totalLineCount * IndexLine.GetSizeInShortInts();
+        buffer.IndexBufferCount = 2 * IndexTriangle.GetSizeInShortInts();
         buffer.IndexBuffer = new IndexBuffer(buffer.IndexBufferCount);
         buffer.IndexBuffer.Map(buffer.IndexBufferCount);
-        
-        var indexStream = buffer.IndexBuffer.GetIndexStreamLine();
-        
-        // Add lines connecting start and end points
-        for (var i = 0; i < totalLineCount; i++)
-        {
-            indexStream.AddLine(new IndexLine(i * 2, i * 2 + 1));
-        }
-        
-        buffer.IndexBuffer.Unmap();
-        buffer.VertexFormat = new VertexFormat(buffer.FormatBits);
-    }
-    
-    /// <summary>
-    /// Maps a rendering buffer to represent a series of quads, each centered at a specified point,  with a given normal
-    /// and axis-aligned dimensions.
-    /// </summary>
-    /// <remarks>This method generates vertex and index data for a series of quads, where each quad is 
-    /// centered at a point in the <paramref name="points"/> collection. The quads are oriented  based on the specified
-    /// <paramref name="normal"/> vector, and their size is determined by  the <paramref name="axisLength"/> parameter.
-    /// The resulting data is stored in the provided  <paramref name="buffer"/> for rendering purposes.  The method
-    /// ensures that the buffer is properly mapped and populated with the required  vertex and index data. Each quad is
-    /// represented by four vertices and two triangles,  resulting in a total of eight indices per quad.  If the
-    /// <paramref name="points"/> collection is empty, the method returns immediately  without modifying the
-    /// buffer.</remarks>
-    /// <param name="buffer">The <see cref="RenderingBufferStorage"/> instance to be populated with vertex and index data  for the quads.</param>
-    /// <param name="points">A collection of <see cref="XYZ"/> points, where each point represents the center of a quad.</param>
-    /// <param name="normal">The normal vector defining the orientation of the quads. This vector is used to calculate  the plane on which
-    /// the quads lie.</param>
-    /// <param name="axisLength">The length of the axes used to define the size of each quad. Each quad will have sides  proportional to twice
-    /// this length.</param>
-    public static void MapSideBufferForMultiplePoints(RenderingBufferStorage buffer, IList<XYZ> points, XYZ normal, double axisLength)
-    {
-        if (points.Count == 0) return;
-        
-        var totalQuadCount = points.Count;
-        buffer.VertexBufferCount = totalQuadCount * 4; // 4 corners per quad
-        buffer.PrimitiveCount = totalQuadCount * 2; // 2 triangles per quad
-        
-        var vertexBufferSizeInFloats = VertexPosition.GetSizeInFloats() * buffer.VertexBufferCount;
-        buffer.FormatBits = VertexFormatBits.Position;
-        buffer.VertexBuffer = new VertexBuffer(vertexBufferSizeInFloats);
-        buffer.VertexBuffer.Map(vertexBufferSizeInFloats);
-        
-        var vertexStream = buffer.VertexBuffer.GetVertexStreamPosition();
-        
-        // Create quads for each point
-        foreach (var point in points)
-        {
-            var normalizedNormal = normal.Normalize();
-            
-            // Calculate perpendicular vectors to create a plane
-            var perpendicular1 = Math.Abs(normalizedNormal.Z) < 0.9 
-                ? XYZ.BasisZ.CrossProduct(normalizedNormal).Normalize() 
-                : XYZ.BasisX.CrossProduct(normalizedNormal).Normalize();
-                
-            var perpendicular2 = normalizedNormal.CrossProduct(perpendicular1).Normalize();
-            
-            // Scale perpendicular vectors
-            perpendicular1 *= axisLength;
-            perpendicular2 *= axisLength;
-            
-            // Create quad corners
-            var corner1 = point + perpendicular1 + perpendicular2;
-            var corner2 = point + perpendicular1 - perpendicular2;
-            var corner3 = point - perpendicular1 - perpendicular2;
-            var corner4 = point - perpendicular1 + perpendicular2;
-            
-            // Add vertices
-            vertexStream.AddVertex(new VertexPosition(corner1));
-            vertexStream.AddVertex(new VertexPosition(corner2));
-            vertexStream.AddVertex(new VertexPosition(corner3));
-            vertexStream.AddVertex(new VertexPosition(corner4));
-        }
-        
-        buffer.VertexBuffer.Unmap();
-        
-        // Create index buffer for triangles
-        buffer.IndexBufferCount = totalQuadCount * 2 * IndexTriangle.GetSizeInShortInts();
-        buffer.IndexBuffer = new IndexBuffer(buffer.IndexBufferCount);
-        buffer.IndexBuffer.Map(buffer.IndexBufferCount);
-        
+
         var indexStream = buffer.IndexBuffer.GetIndexStreamTriangle();
-        
-        // Add triangles for each quad
-        for (var i = 0; i < totalQuadCount; i++)
-        {
-            var baseIndex = i * 4;
-            
-            // First triangle
-            indexStream.AddTriangle(new IndexTriangle(baseIndex, baseIndex + 1, baseIndex + 2));
-            
-            // Second triangle
-            indexStream.AddTriangle(new IndexTriangle(baseIndex, baseIndex + 2, baseIndex + 3));
-        }
-        
+        indexStream.AddTriangle(new IndexTriangle(0, 1, 2));
+        indexStream.AddTriangle(new IndexTriangle(1, 2, 3));
+
         buffer.IndexBuffer.Unmap();
         buffer.VertexFormat = new VertexFormat(buffer.FormatBits);
     }
