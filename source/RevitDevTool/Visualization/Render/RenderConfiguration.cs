@@ -79,9 +79,9 @@ public static class XyzVisualizationSettings
     public static readonly double AxisLength  = 18.0.FromMillimeters();
     public const double MinAxisLength  = 0.1;
 
-    public static readonly Color XColor  = Color.FromArgb(255, 30, 227, 255);
+    public static readonly Color XColor  = Color.FromArgb(255, 238, 65 , 54);
     public static readonly Color YColor  = Color.FromArgb(255, 30, 144, 255);
-    public static readonly Color ZColor  = Color.FromArgb(255, 30, 81, 255);
+    public static readonly Color ZColor  = Color.FromArgb(255, 54, 255, 30);
 
     public const bool ShowPlane  = true;
     public const bool ShowXAxis  = true;
