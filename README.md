@@ -5,38 +5,315 @@ Autodesk Revit plugin project organized into multiple solution files that target
 ## Table of content
 
 <!-- TOC -->
-* [Usage](#usage)
-  * [Trace Log](#trace-log)
-  * [Trace Geometry](#trace-geometry)
-* [Prerequisites](#prerequisites)
-* [Solution Structure](#solution-structure)
-* [Project Structure](#project-structure)
-* [Building](#building)
-  * [Building the MSI installer and the Autodesk bundle on local machine](#building-the-msi-installer-and-the-autodesk-bundle-on-local-machine)
-* [Publishing Releases](#publishing-releases)
-  * [Creating a new Release from the JetBrains Rider](#creating-a-new-release-from-the-jetbrains-rider)
-  * [Creating a new Release from the Terminal](#creating-a-new-release-from-the-terminal)
-  * [Creating a new Release on GitHub](#creating-a-new-release-on-github)
-* [Compiling a solution on GitHub](#compiling-a-solution-on-github)
-* [Conditional compilation for a specific Revit version](#conditional-compilation-for-a-specific-revit-version)
-* [Managing Supported Revit Versions](#managing-supported-revit-versions)
-  * [Solution configurations](#solution-configurations)
-  * [Project configurations](#project-configurations)
-* [API references](#api-references)
-* [Learn More](#learn-more)
+- [RevitDevTool](#revitdevtool)
+  - [Table of content](#table-of-content)
+  - [Usage](#usage)
+    - [🎯 Getting Started](#-getting-started)
+    - [📊 Trace Log](#-trace-log)
+      - [Features](#features)
+      - [How to Use](#how-to-use)
+      - [For Python/IronPython Users](#for-pythonironpython-users)
+    - [🎨 Trace Geometry - Beautiful 3D Visualization](#-trace-geometry---beautiful-3d-visualization)
+      - [Supported Geometry Types](#supported-geometry-types)
+      - [Key Features](#key-features)
+      - [How to Use Geometry Visualization](#how-to-use-geometry-visualization)
+      - [Python/IronPython Geometry Visualization](#pythonironpython-geometry-visualization)
+    - [🛠️ Advanced Usage Examples](#️-advanced-usage-examples)
+      - [Example 1: Debugging Element Geometry](#example-1-debugging-element-geometry)
+      - [Example 2: Visualizing Analysis Results](#example-2-visualizing-analysis-results)
+      - [Example 3: Python Script Integration](#example-3-python-script-integration)
+    - [🎛️ User Interface Features](#️-user-interface-features)
+    - [🔧 Language Support](#-language-support)
+    - [💡 Best Practices](#-best-practices)
+    - [🔍 Troubleshooting](#-troubleshooting)
+  - [Screenshots](#screenshots)
+  - [Prerequisites](#prerequisites)
+  - [Solution Structure](#solution-structure)
+  - [Project Structure](#project-structure)
+  - [Building](#building)
+    - [Building the MSI installer and the Autodesk bundle on local machine](#building-the-msi-installer-and-the-autodesk-bundle-on-local-machine)
+  - [Publishing Releases](#publishing-releases)
+    - [Updating the Changelog](#updating-the-changelog)
+    - [Creating a new Release from the JetBrains Rider](#creating-a-new-release-from-the-jetbrains-rider)
+    - [Creating a new Release from the Terminal](#creating-a-new-release-from-the-terminal)
+    - [Creating a new Release on GitHub](#creating-a-new-release-on-github)
+  - [Compiling a solution on GitHub](#compiling-a-solution-on-github)
+  - [Conditional compilation for a specific Revit version](#conditional-compilation-for-a-specific-revit-version)
+  - [Managing Supported Revit Versions](#managing-supported-revit-versions)
+    - [Solution configurations](#solution-configurations)
+    - [Project configurations](#project-configurations)
+  - [API references](#api-references)
+  - [Learn More](#learn-more)
 <!-- TOC -->
 
 ## Usage
 
-### Trace Log
+RevitDevTool is a comprehensive debugging and visualization toolkit for Autodesk Revit that helps developers and users trace, visualize, and debug their Revit applications. The tool provides two main capabilities: **Trace Logging** and **Geometry Visualization** with beautiful canvas rendering.
 
-Open `Trace Log` DockablePanel and `Enable` the logger. Then you can then use `Trace.TraceInformation()`, `Trace.TraceWarning()`, or `Trace.TraceError()` in your code to record debugging information and monitor the health of your application running.
+### 🎯 Getting Started
 
-### Trace Geometry
+1. **Install RevitDevTool**: Use the MSI installer or place the Autodesk bundle in your Revit add-ins folder
+2. **Launch Revit**: The tool will automatically register and appear in the **External Tools** panel
+3. **Open Trace Panel**: Click the **"Trace Panel"** button in the ribbon to show/hide the dockable panel
 
-Turn on the `TraceGeometry` switch in the `RevitDevTools` panel, and use `Trace.Write(GeometryObject)` or `Trace.Write(IEnumerable<GeometryObject>)` to generate transient geometry.
+### 📊 Trace Log
 
-`Transient Geometry` is a read-only temporary primitive that works like Dynamo's preview. `Transient Geometry` cannot be selected, so it cannot be deleted directly. It will be destroyed after the document is closed and will not be saved to the document. Alternatively, you can use `ClearTraceGeometry` to delete the it created by `TraceGeometry`.
+The Trace Log provides a real-time, color-coded logging interface directly within Revit, similar to Visual Studio's output window.
+
+#### Features
+
+- **Real-time logging** with configurable log levels (Debug, Information, Warning, Error, Fatal)
+- **Color-coded output** for easy identification of different log types
+- **Console redirection** - captures `Console.WriteLine()` output
+- **Auto-start listening** on Revit startup
+- **Cascadia Mono font** for better readability
+- **Clear function** to reset the log output
+
+#### How to Use
+
+1. **Enable Logging**: Open the `Trace Log` DockablePanel and ensure the logger is `enabled`
+2. **Configure Log Level**: Select your desired minimum log level from the dropdown (Debug, Information, Warning, Error, Fatal)
+3. **Start Logging**: Use any of the following methods in your C# code:
+
+```csharp
+// Information logging
+Trace.TraceInformation("Application started successfully");
+
+// Warning logging  
+Trace.TraceWarning("Element not found, using default values");
+
+// Error logging
+Trace.TraceError("Failed to process element: " + exception.Message);
+
+// Debug logging
+Trace.TraceData(TraceEventType.Verbose, 0, "Debug data: " + debugInfo);
+
+// Console output (automatically captured)
+Console.WriteLine("This will appear in the trace log");
+```
+
+#### For Python/IronPython Users
+
+```python
+import clr
+clr.AddReference("System")
+from System.Diagnostics import Trace
+
+# Use the same Trace methods
+Trace.TraceInformation("Python script executed")
+Trace.TraceWarning("Warning from Python")
+Trace.TraceError("Error in Python script")
+
+# Console output is also captured
+print("This will appear in the trace log")
+```
+
+### 🎨 Trace Geometry - Beautiful 3D Visualization
+
+The Geometry Visualization system allows you to display transient geometry directly in the Revit 3D view, similar to Dynamo's preview functionality but integrated into your development workflow.
+
+#### Supported Geometry Types
+
+- **Faces** - Surface geometry from Revit elements
+- **Curves** - Lines, arcs, splines, and complex curve geometry  
+- **Solids** - 3D solid geometry with volume
+- **Meshes** - Triangulated mesh geometry
+- **Points (XYZ)** - Individual points or point collections
+- **Bounding Boxes** - Element bounding box visualization
+- **Collections** - Multiple geometry objects at once
+
+#### Key Features
+
+- **Transient Display** - Geometry appears as temporary, non-selectable objects
+- **Automatic Cleanup** - Geometry is removed when document closes
+- **Manual Control** - Use `ClearTraceGeometry` to remove geometry on demand
+- **Document-specific** - Each document maintains its own geometry collection
+- **Performance Optimized** - Uses Revit's internal transient display methods
+
+#### How to Use Geometry Visualization
+
+1. **Enable Geometry Tracing**: Ensure the logger is started (geometry tracing is automatically enabled)
+
+2. **Trace Single Geometry Objects**:
+
+```csharp
+// Trace a face
+Face face = GetSomeFace();
+Trace.Write(face);
+
+// Trace a curve
+Curve curve = GetSomeCurve();
+Trace.Write(curve);
+
+// Trace a solid
+Solid solid = GetSomeSolid();
+Trace.Write(solid);
+
+// Trace a mesh
+Mesh mesh = GetSomeMesh();
+Trace.Write(mesh);
+
+// Trace a point
+XYZ point = new XYZ(10, 20, 30);
+Trace.Write(point);
+
+// Trace a bounding box
+BoundingBoxXYZ bbox = element.get_BoundingBox(null);
+Trace.Write(bbox);
+```
+
+3. **Trace Multiple Geometry Objects**:
+
+```csharp
+// Trace multiple faces
+var faces = new List<Face> { face1, face2, face3 };
+Trace.Write(faces);
+
+// Trace multiple curves
+var curves = selectedElements.SelectMany(e => GetCurvesFromElement(e));
+Trace.Write(curves);
+
+// Trace multiple solids
+var solids = elements.SelectMany(e => e.GetSolids());
+Trace.Write(solids);
+
+// Mixed geometry types
+var geometries = new List<GeometryObject> { face, curve, solid };
+Trace.Write(geometries);
+```
+
+4. **Clear Traced Geometry**:
+
+```csharp
+// Clear all traced geometry for the current document
+// Use the "Clear Geometry" button in the UI, or programmatically:
+// (This happens automatically via the UI button)
+```
+
+#### Python/IronPython Geometry Visualization
+
+```python
+import clr
+clr.AddReference("RevitAPI")
+clr.AddReference("System")
+
+from Autodesk.Revit.DB import *
+from System.Diagnostics import Trace
+from System.Collections.Generic import List
+
+# Trace individual geometry
+face = GetSomeFace()  # Your method to get a face
+Trace.Write(face)
+
+# Trace collections
+curves = List[Curve]()
+curves.Add(curve1)
+curves.Add(curve2)
+Trace.Write(curves)
+
+# Trace points
+point = XYZ(10, 20, 30)
+Trace.Write(point)
+```
+
+### 🛠️ Advanced Usage Examples
+
+#### Example 1: Debugging Element Geometry
+
+```csharp
+foreach (Element element in selectedElements)
+{
+    Trace.TraceInformation($"Processing element: {element.Id}");
+    
+    var solids = element.GetSolids();
+    if (solids.Any())
+    {
+        Trace.Write(solids);
+        Trace.TraceInformation($"Found {solids.Count} solids");
+    }
+    else
+    {
+        Trace.TraceWarning($"No solids found for element {element.Id}");
+    }
+}
+```
+
+#### Example 2: Visualizing Analysis Results
+
+```csharp
+// Visualize structural analysis results
+var analysisPoints = CalculateStressPoints(beam);
+Trace.Write(analysisPoints);
+
+// Show critical areas
+var criticalFaces = GetCriticalFaces(beam);
+Trace.Write(criticalFaces);
+
+Trace.TraceInformation($"Analysis complete: {analysisPoints.Count} points analyzed");
+```
+
+#### Example 3: Python Script Integration
+
+```python
+# Python script for geometry analysis
+import clr
+clr.AddReference("RevitAPI")
+from Autodesk.Revit.DB import *
+from System.Diagnostics import Trace
+
+def analyze_walls(walls):
+    Trace.TraceInformation("Starting wall analysis...")
+    
+    for wall in walls:
+        # Get wall geometry
+        geometry = wall.get_Geometry(Options())
+        
+        for geo_obj in geometry:
+            if isinstance(geo_obj, Solid) and geo_obj.Volume > 0:
+                # Visualize the solid
+                Trace.Write(geo_obj)
+                
+                # Log information
+                Trace.TraceInformation(f"Wall {wall.Id}: Volume = {geo_obj.Volume}")
+
+# Usage
+selected_walls = [doc.GetElement(id) for id in uidoc.Selection.GetElementIds()]
+analyze_walls(selected_walls)
+```
+
+### 🎛️ User Interface Features
+
+- **Dockable Panel**: Integrated seamlessly with Revit's interface
+- **Responsive Design**: Works with Revit's light and dark themes (2024+)
+- **Resizable**: Minimum 300x400 pixels, can be resized as needed
+- **Keyboard Shortcuts**: Standard copy/paste functionality in the log view
+- **Auto-scroll**: Automatically scrolls to show new log entries
+- **Log Level Filtering**: Real-time filtering of log messages
+
+### 🔧 Language Support
+
+RevitDevTool works with multiple programming languages and scripting environments:
+
+- **C#** - Full support through .NET Trace API
+- **VB.NET** - Full support through .NET Trace API  
+- **Python/IronPython** - Full support via pyRevit, RevitPythonShell, or IronPython scripts
+- **F#** - Support through .NET interop
+- **Any .NET Language** - Works with any language that can access System.Diagnostics.Trace
+
+### 💡 Best Practices
+
+1. **Use Appropriate Log Levels**: Use Information for general status, Warning for non-critical issues, Error for problems
+2. **Clear Geometry Regularly**: Use the Clear Geometry button to avoid cluttering the view
+3. **Meaningful Messages**: Include element IDs, counts, and relevant context in log messages  
+4. **Performance Considerations**: Large geometry collections may impact performance
+5. **Document Workflow**: Use logging to document your script's progress and results
+
+### 🔍 Troubleshooting
+
+- **No Geometry Visible**: Ensure the logger is enabled and you're viewing the correct 3D view
+- **Geometry Persists**: Use "Clear Geometry" button or close/reopen the document
+- **Missing Logs**: Check that the log level is set appropriately for your trace calls
+- **Performance Issues**: Reduce the number of geometry objects traced simultaneously
 
 ## Screenshots
 
@@ -76,7 +353,7 @@ After installation, clone this repository to your local machine and navigate to 
 ## Building
 
 We recommend JetBrains Rider as preferred IDE, since it has outstanding .NET support. If you don't have Rider installed, you can download it
-from [here](https://www.jetbrains.com/rider/).
+from [JetBrains Rider website](https://www.jetbrains.com/rider/).
 
 1. Open JetBrains Rider
 2. In the `Solutions Configuration` drop-down menu, select `Release R25` or `Debug R25`. Suffix `R25` means compiling for the Revit 2025.
@@ -85,7 +362,7 @@ from [here](https://www.jetbrains.com/rider/).
 
    ![image](https://github.com/user-attachments/assets/d209d863-a6d5-43a9-83e1-5eeb2b9fddac)
 
-Also, you can use Visual Studio. If you don't have Visual Studio installed, download it from [here](https://visualstudio.microsoft.com/downloads/).
+Also, you can use Visual Studio. If you don't have Visual Studio installed, download it from [Visual Studio Downloads](https://visualstudio.microsoft.com/downloads/).
 
 1. Open Visual Studio
 2. In the `Solutions Configuration` drop-down menu, select `Release R25` or `Debug R25`. Suffix `R25` means compiling for the Revit 2025.
@@ -106,19 +383,20 @@ To execute your NUKE build locally, you can follow these steps:
    You only need to do this once on your machine.
 
 2. **Navigate to your project directory**. Open a terminal / command prompt and navigate to your project's root directory.
-3. **Run the build**. Once you have navigated to your project's root directory, you can run the NUKE build by calling:
+3. **Run the build**. Once you have navigated to your project's root directory, you can run the NUKE build by calling:   Compile:
 
-   Compile:
    ```shell
    nuke
    ```
 
    Create installer:
+
    ```shell
    nuke createinstaller
    ```
 
    Create installer and bundle:
+
    ```shell
    nuke createinstaller createbundle
    ```
@@ -133,17 +411,17 @@ A tag in Git used to capture a snapshot of the project at a particular point in 
 Tags must follow the format `version` or `version-stage.n.date` for pre-releases, where:
 
 - **version** specifies the version of the release:
-    - `1.0.0`
-    - `2.3.0`
+  - `1.0.0`
+  - `2.3.0`
 - **stage** specifies the release stage:
-    - `alpha` - represents early iterations that may be unstable or incomplete.
-    - `beta` - represents a feature-complete version but may still contain some bugs.
+  - `alpha` - represents early iterations that may be unstable or incomplete.
+  - `beta` - represents a feature-complete version but may still contain some bugs.
 - **n** prerelease increment (optional):
-    - `1` - first alpha prerelease
-    - `2` - second alpha prerelease
+  - `1` - first alpha prerelease
+  - `2` - second alpha prerelease
 - **date** specifies the date of the pre-release (optional):
-    - `250101`
-    - `20250101`
+  - `250101`
+  - `20250101`
 
 For example:
 
@@ -191,12 +469,14 @@ Alternatively, you can create and push tags using the terminal:
 
 1. Navigate to the repository root and open the terminal.
 2. Use the following command to create a new tag:
+
    ```shell
    git tag 'version'
    ```
 
    Replace `version` with the desired version, e.g., `1.0.0`.
 3. Push the newly created tag to the remote repository using the following command:
+
    ```shell
    git push origin 'version'
    ```
@@ -211,14 +491,11 @@ To create releases directly on GitHub:
 1. Navigate to the **Actions** section on the repository page.
 2. Select **Publish Release** workflow.
 3. Click **Run workflow** button.
-4. Specify the release version and click **Run**.
-
-    ![image](https://github.com/user-attachments/assets/088388c1-6055-4d21-8d22-70f047d8f104)
-
+4. Specify the release version and click **Run**.    ![image](https://github.com/user-attachments/assets/088388c1-6055-4d21-8d22-70f047d8f104)
 
 ## Compiling a solution on GitHub
 
-Pushing commits to the remote repository will start a pipeline compiling the solution for all specified Revit versions. 
+Pushing commits to the remote repository will start a pipeline compiling the solution for all specified Revit versions.
 That way, you can check if the plugin is compatible with different API versions without having to spend time building it locally.
 
 ## Conditional compilation for a specific Revit version
@@ -272,6 +549,7 @@ To extend or reduce the range of supported Revit API versions, you need to updat
 Solution configurations determine which projects are built and how they are configured.
 
 To support multiple Revit versions:
+
 - Open the `.sln` file.
 - Add or remove configurations for each Revit version.
 
@@ -298,6 +576,7 @@ For example `Debug R26` is the Debug configuration for Revit 2026 version.
 Project configurations define build conditions for specific versions.
 
 To add or remove support:
+
 - Open `.csproj` file
 - Add or remove configurations for Debug and Release builds.
 
@@ -347,4 +626,4 @@ configuration.
 
 ## Learn More
 
-* You can explore more in the [RevitTemplates Wiki](https://github.com/Nice3point/RevitTemplates/wiki) page.
+- You can explore more in the [RevitTemplates Wiki](https://github.com/Nice3point/RevitTemplates/wiki) page.
