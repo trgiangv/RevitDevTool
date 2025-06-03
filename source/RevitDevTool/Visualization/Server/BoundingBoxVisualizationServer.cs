@@ -143,18 +143,8 @@ public sealed class BoundingBoxVisualizationServer : VisualizationServer<Boundin
 
     private void MapGeometryBuffer()
     {
-        foreach (var buffer in _surfaceBuffers)
-        {
-            buffer.Dispose();
-        }
-
-        foreach (var buffer in _edgeBuffers)
-        {
-            buffer.Dispose();
-        }
-
-        _surfaceBuffers.Clear();
-        _edgeBuffers.Clear();
+        _surfaceBuffers.Clear(true);
+        _edgeBuffers.Clear(true);
 
         if (VisualizeGeometries.Count == 0) return;
         
@@ -181,11 +171,7 @@ public sealed class BoundingBoxVisualizationServer : VisualizationServer<Boundin
 
     private void MapAxisBuffers()
     {
-        foreach (var buffer in _axisBuffers)
-        {
-            buffer.Dispose();
-        }
-        _axisBuffers.Clear();
+        _axisBuffers.Clear(true);
 
         foreach (var box in VisualizeGeometries)
         {
@@ -235,23 +221,8 @@ public sealed class BoundingBoxVisualizationServer : VisualizationServer<Boundin
 
     protected override void DisposeBuffers()
     {
-        foreach (var buffer in _surfaceBuffers)
-        {
-            buffer.Dispose();
-        }
-
-        foreach (var buffer in _edgeBuffers)
-        {
-            buffer.Dispose();
-        }
-
-        foreach (var buffer in _axisBuffers)
-        {
-            buffer.Dispose();
-        }
-
-        _surfaceBuffers.Clear();
-        _edgeBuffers.Clear();
-        _axisBuffers.Clear();
+        _surfaceBuffers.Clear(true);
+        _edgeBuffers.Clear(true);
+        _axisBuffers.Clear(true);
     }
 }

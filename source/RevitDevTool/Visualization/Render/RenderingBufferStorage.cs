@@ -3,7 +3,7 @@
 namespace RevitDevTool.Visualization.Render;
 
 #nullable disable
-public sealed class RenderingBufferStorage
+public sealed class RenderingBufferStorage : IDisposable
 {
     public VertexFormatBits FormatBits { get; set; }
     public int PrimitiveCount { get; set; }

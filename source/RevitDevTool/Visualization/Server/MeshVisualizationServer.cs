@@ -122,18 +122,8 @@ public sealed class MeshVisualizationServer : VisualizationServer<Mesh>
 
     private void MapGeometryBuffer()
     {
-        foreach (var buffer in _surfaceBuffers)
-        {
-            buffer.Dispose();
-        }
-
-        foreach (var buffer in _meshGridBuffers)
-        {
-            buffer.Dispose();
-        }
-
-        _surfaceBuffers.Clear();
-        _meshGridBuffers.Clear();
+        _surfaceBuffers.Clear(true);
+        _meshGridBuffers.Clear(true);
 
         if (VisualizeGeometries.Count == 0) return;
         
@@ -160,11 +150,7 @@ public sealed class MeshVisualizationServer : VisualizationServer<Mesh>
 
     private void MapNormalsBuffer()
     {
-        foreach (var buffer in _normalBuffers.SelectMany(bufferArray => bufferArray))
-        {
-            buffer.Dispose();
-        }
-        _normalBuffers.Clear();
+        _normalBuffers.Clear(true);
 
         foreach (var mesh in VisualizeGeometries)
         {
@@ -172,15 +158,16 @@ public sealed class MeshVisualizationServer : VisualizationServer<Mesh>
             var offset = RenderGeometryHelper.InterpolateOffsetByArea(area);
             var normalLength = RenderGeometryHelper.InterpolateAxisLengthByArea(area);
 
-            RenderingBufferStorage[] normals = [];
+            var normals = Enumerable.Range(0, mesh.Vertices.Count)
+                .Select(_ => new RenderingBufferStorage())
+                .ToArray();
+            
             for (var i = 0; i < mesh.Vertices.Count; i++)
             {
                 var vertex = mesh.Vertices[i];
-                var buffer = new RenderingBufferStorage();
+                var buffer = normals[i];
                 var normal = RenderGeometryHelper.GetMeshVertexNormal(mesh, i, mesh.DistributionOfNormals);
-
                 RenderHelper.MapNormalVectorBuffer(buffer, vertex + normal * (offset + _extrusion), normal, normalLength);
-                normals = normals.Append(buffer).ToArray();
             }
 
             _normalBuffers.Add(normals);
@@ -214,23 +201,8 @@ public sealed class MeshVisualizationServer : VisualizationServer<Mesh>
 
     protected override void DisposeBuffers()
     {
-        foreach (var buffer in _surfaceBuffers)
-        {
-            buffer.Dispose();
-        }
-
-        foreach (var buffer in _meshGridBuffers)
-        {
-            buffer.Dispose();
-        }
-
-        foreach (var buffer in _normalBuffers.SelectMany(bufferArray => bufferArray))
-        {
-            buffer.Dispose();
-        }
-
-        _surfaceBuffers.Clear();
-        _meshGridBuffers.Clear();
-        _normalBuffers.Clear();
+        _surfaceBuffers.Clear(true);
+        _meshGridBuffers.Clear(true);
+        _normalBuffers.Clear(true);
     }
 }
