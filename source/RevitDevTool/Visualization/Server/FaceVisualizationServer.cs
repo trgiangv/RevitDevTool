@@ -200,23 +200,8 @@ public sealed class FaceVisualizationServer : VisualizationServer<Face>
 
     protected override void DisposeBuffers()
     {
-        foreach (var buffer in _surfaceBuffers)
-        {
-            buffer.Dispose();
-        }
-
-        foreach (var buffer in _meshGridBuffers)
-        {
-            buffer.Dispose();
-        }
-
-        foreach (var buffer in _normalBuffers)
-        {
-            buffer.Dispose();
-        }
-
-        _surfaceBuffers.Clear();
-        _meshGridBuffers.Clear();
-        _normalBuffers.Clear();
+        _surfaceBuffers.Clear(true);
+        _meshGridBuffers.Clear(true);
+        _normalBuffers.Clear(true);
     }
 }
