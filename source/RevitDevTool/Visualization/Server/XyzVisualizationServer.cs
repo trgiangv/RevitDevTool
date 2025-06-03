@@ -230,23 +230,7 @@ public sealed class XyzVisualizationServer : VisualizationServer<XYZ>
 
     protected override void DisposeBuffers()
     {
-        foreach (var bufferArray in _planeBufferArrays)
-        {
-            foreach (var buffer in bufferArray)
-            {
-                buffer.Dispose();
-            }
-        }
-        
-        foreach (var bufferArray in _axisBufferArrays)
-        {
-            foreach (var buffer in bufferArray)
-            {
-                buffer.Dispose();
-            }
-        }
-
-        _axisBufferArrays.Clear();
-        _planeBufferArrays.Clear();
+        _axisBufferArrays.Clear(true);
+        _planeBufferArrays.Clear(true);
     }
 }

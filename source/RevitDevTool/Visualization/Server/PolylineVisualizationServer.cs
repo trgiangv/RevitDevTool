@@ -117,18 +117,8 @@ public sealed class PolylineVisualizationServer : VisualizationServer<GeometryOb
 
     private void MapGeometryBuffer()
     {
-        foreach (var buffer in _surfaceBuffers)
-        {
-            buffer.Dispose();
-        }
-
-        foreach (var buffer in _curveBuffers)
-        {
-            buffer.Dispose();
-        }
-
-        _surfaceBuffers.Clear();
-        _curveBuffers.Clear();
+        _surfaceBuffers.Clear(true);
+        _curveBuffers.Clear(true);
 
         if (VisualizeGeometries.Count == 0) return;
         
@@ -163,12 +153,7 @@ public sealed class PolylineVisualizationServer : VisualizationServer<GeometryOb
 
     private void MapDirectionsBuffer()
     {
-        foreach (var buffer in _normalsBuffers)
-        {
-            buffer.Dispose();
-        }
-
-        _normalsBuffers.Clear();
+        _normalsBuffers.Clear(true);
 
         if (VisualizeGeometries.Count == 0) return;
         
@@ -245,23 +230,8 @@ public sealed class PolylineVisualizationServer : VisualizationServer<GeometryOb
 
     protected override void DisposeBuffers()
     {
-        foreach (var buffer in _surfaceBuffers)
-        {
-            buffer.Dispose();
-        }
-
-        foreach (var buffer in _curveBuffers)
-        {
-            buffer.Dispose();
-        }
-
-        foreach (var buffer in _normalsBuffers)
-        {
-            buffer.Dispose();
-        }
-
-        _surfaceBuffers.Clear();
-        _curveBuffers.Clear();
-        _normalsBuffers.Clear();
+        _surfaceBuffers.Clear(true);
+        _curveBuffers.Clear(true);
+        _normalsBuffers.Clear(true);
     }
 }

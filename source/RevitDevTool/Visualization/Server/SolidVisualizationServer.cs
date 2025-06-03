@@ -170,17 +170,7 @@ public sealed class SolidVisualizationServer : VisualizationServer<Solid>
 
     protected override void DisposeBuffers()
     {
-        foreach (var buffer in _faceBuffers)
-        {
-            buffer.Dispose();
-        }
-
-        foreach (var buffer in _edgeBuffers)
-        {
-            buffer.Dispose();
-        }
-
-        _faceBuffers.Clear();
-        _edgeBuffers.Clear();
+        _faceBuffers.Clear(true);
+        _edgeBuffers.Clear(true);
     }
 }
