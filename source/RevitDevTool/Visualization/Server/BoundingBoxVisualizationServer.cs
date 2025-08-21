@@ -47,22 +47,37 @@ public sealed class BoundingBoxVisualizationServer : VisualizationServer<Boundin
     {
         if (VisualizeGeometries.Count == 0) return null;
 
-        var minPoints = VisualizeGeometries
-            .Select(box => box.Min)
-            .OrderBy(point => point.X)
-            .ThenBy(point => point.Y)
-            .ThenBy(point => point.Z);
-        var maxPoints = VisualizeGeometries
-            .Select(box => box.Max)
-            .OrderByDescending(point => point.X)
-            .ThenByDescending(point => point.Y)
-            .ThenByDescending(point => point.Z);
-        var minPoint = minPoints.FirstOrDefault();
-        var maxPoint = maxPoints.FirstOrDefault();
-        if (minPoint is null || maxPoint is null)
-            return new Outline(XYZ.Zero, XYZ.Zero);
+        var allTransformedPoints = new List<XYZ>();
         
-        return new Outline(minPoint, maxPoint);
+        foreach (var box in VisualizeGeometries)
+        {
+            // Generate all 8 corners in local coordinate system and transform them
+            XYZ[] localCorners =
+            [
+                new(box.Min.X, box.Min.Y, box.Min.Z),
+                new(box.Max.X, box.Min.Y, box.Min.Z),
+                new(box.Max.X, box.Max.Y, box.Min.Z),
+                new(box.Min.X, box.Max.Y, box.Min.Z),
+                new(box.Min.X, box.Min.Y, box.Max.Z),
+                new(box.Max.X, box.Min.Y, box.Max.Z),
+                new(box.Max.X, box.Max.Y, box.Max.Z),
+                new(box.Min.X, box.Max.Y, box.Max.Z)
+            ];
+            
+            var transformedCorners = localCorners
+                .Select(corner => box.Transform.OfPoint(corner));
+            allTransformedPoints.AddRange(transformedCorners);
+        }
+
+        // Find actual min/max from all transformed points
+        var minX = allTransformedPoints.Min(p => p.X);
+        var minY = allTransformedPoints.Min(p => p.Y);
+        var minZ = allTransformedPoints.Min(p => p.Z);
+        var maxX = allTransformedPoints.Max(p => p.X);
+        var maxY = allTransformedPoints.Max(p => p.Y);
+        var maxZ = allTransformedPoints.Max(p => p.Z);
+
+        return new Outline(new XYZ(minX, minY, minZ), new XYZ(maxX, maxY, maxZ));
     }
 
     public override void RenderScene(Autodesk.Revit.DB.View view, DisplayStyle displayStyle)
