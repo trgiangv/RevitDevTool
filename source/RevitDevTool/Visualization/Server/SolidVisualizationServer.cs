@@ -39,7 +39,15 @@ public sealed class SolidVisualizationServer : VisualizationServer<Solid>
         
         foreach (var solid in VisualizeGeometries)
         {
-            var boundingBox = solid.GetBoundingBox();
+            BoundingBoxXYZ boundingBox;
+            try
+            {
+                boundingBox = solid.GetBoundingBox();
+            }
+            catch
+            {
+                continue;
+            }
             var minPoint = boundingBox.Transform.OfPoint(boundingBox.Min);
             var maxPoint = boundingBox.Transform.OfPoint(boundingBox.Max);
             minPoints.Add(minPoint);
