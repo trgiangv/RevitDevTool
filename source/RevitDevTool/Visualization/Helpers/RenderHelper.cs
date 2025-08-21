@@ -361,20 +361,23 @@ public static class RenderHelper
     /// using its associated transformation matrix before being processed.</param>
     public static void MapBoundingBoxSurfaceBuffer(RenderingBufferStorage buffer, BoundingBoxXYZ box)
     {
-        var minPoint = box.Transform.OfPoint(box.Min);
-        var maxPoint = box.Transform.OfPoint(box.Max);
-
-        XYZ[] corners =
+        // Generate 8 corners in LOCAL coordinate system first
+        XYZ[] localCorners =
         [
-            new(minPoint.X, minPoint.Y, minPoint.Z),
-            new(maxPoint.X, minPoint.Y, minPoint.Z),
-            new(maxPoint.X, maxPoint.Y, minPoint.Z),
-            new(minPoint.X, maxPoint.Y, minPoint.Z),
-            new(minPoint.X, minPoint.Y, maxPoint.Z),
-            new(maxPoint.X, minPoint.Y, maxPoint.Z),
-            new(maxPoint.X, maxPoint.Y, maxPoint.Z),
-            new(minPoint.X, maxPoint.Y, maxPoint.Z)
+            new(box.Min.X, box.Min.Y, box.Min.Z),  // 0: min corner
+            new(box.Max.X, box.Min.Y, box.Min.Z),  // 1
+            new(box.Max.X, box.Max.Y, box.Min.Z),  // 2
+            new(box.Min.X, box.Max.Y, box.Min.Z),  // 3
+            new(box.Min.X, box.Min.Y, box.Max.Z),  // 4
+            new(box.Max.X, box.Min.Y, box.Max.Z),  // 5
+            new(box.Max.X, box.Max.Y, box.Max.Z),  // 6: max corner
+            new(box.Min.X, box.Max.Y, box.Max.Z)   // 7
         ];
+
+        // Transform each corner individually to world coordinates
+        XYZ[] corners = localCorners
+            .Select(corner => box.Transform.OfPoint(corner))
+            .ToArray();
 
         int[] triangles =
         [
@@ -431,20 +434,23 @@ public static class RenderHelper
     /// vertex positions.</param>
     public static void MapBoundingBoxEdgeBuffer(RenderingBufferStorage buffer, BoundingBoxXYZ box)
     {
-        var minPoint = box.Transform.OfPoint(box.Min);
-        var maxPoint = box.Transform.OfPoint(box.Max);
-
-        XYZ[] corners =
+        // Generate 8 corners in LOCAL coordinate system first
+        XYZ[] localCorners =
         [
-            new(minPoint.X, minPoint.Y, minPoint.Z),
-            new(maxPoint.X, minPoint.Y, minPoint.Z),
-            new(maxPoint.X, maxPoint.Y, minPoint.Z),
-            new(minPoint.X, maxPoint.Y, minPoint.Z),
-            new(minPoint.X, minPoint.Y, maxPoint.Z),
-            new(maxPoint.X, minPoint.Y, maxPoint.Z),
-            new(maxPoint.X, maxPoint.Y, maxPoint.Z),
-            new(minPoint.X, maxPoint.Y, maxPoint.Z)
+            new(box.Min.X, box.Min.Y, box.Min.Z),  // 0: min corner
+            new(box.Max.X, box.Min.Y, box.Min.Z),  // 1
+            new(box.Max.X, box.Max.Y, box.Min.Z),  // 2
+            new(box.Min.X, box.Max.Y, box.Min.Z),  // 3
+            new(box.Min.X, box.Min.Y, box.Max.Z),  // 4
+            new(box.Max.X, box.Min.Y, box.Max.Z),  // 5
+            new(box.Max.X, box.Max.Y, box.Max.Z),  // 6: max corner
+            new(box.Min.X, box.Max.Y, box.Max.Z)   // 7
         ];
+
+        // Transform each corner individually to world coordinates
+        var corners = localCorners
+            .Select(corner => box.Transform.OfPoint(corner))
+            .ToArray();
 
         int[] edges =
         [
