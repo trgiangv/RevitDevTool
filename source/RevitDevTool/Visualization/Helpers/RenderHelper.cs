@@ -375,7 +375,7 @@ public static class RenderHelper
         ];
 
         // Transform each corner individually to world coordinates
-        XYZ[] corners = localCorners
+        var corners = localCorners
             .Select(corner => box.Transform.OfPoint(corner))
             .ToArray();
 
