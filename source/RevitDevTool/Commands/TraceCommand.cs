@@ -26,7 +26,7 @@ public class TraceCommand : ExternalCommand
         }
         catch (Exception e)
         {
-            TaskDialog.Show("Error", e.ToString());
+            Autodesk.Revit.UI.TaskDialog.Show("Error", e.ToString());
         }
     }
     
