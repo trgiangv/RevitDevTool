@@ -1,4 +1,5 @@
 ﻿using RevitDevTool.Theme;
+using RevitDevTool.ViewModel;
 using ApplicationTheme = UIFramework.ApplicationTheme;
 #if REVIT2024_OR_GREATER
 using System.ComponentModel;
@@ -14,12 +15,18 @@ public partial class TraceLog : IDisposable
     public TraceLog()
     {
         InitializeComponent();
+        DataContext = new TraceLogViewModel(this);
 #if REVIT2024_OR_GREATER
         ApplicationTheme.CurrentTheme.PropertyChanged += ApplyTheme;
 #endif
         ThemeWatcher.Initialize();
         ThemeWatcher.Watch(this);
         ThemeWatcher.ApplyTheme();
+        Loaded += (_, _) =>
+        {
+            if (DataContext is TraceLogViewModel vm)
+                vm.RefreshTheme();
+        };
     }
 
 #if REVIT2024_OR_GREATER

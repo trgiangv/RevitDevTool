@@ -8,6 +8,7 @@
     xmlns:sys="clr-namespace:System;assembly=mscorlib"
     xmlns:ui="http://revitdevtool.com/xaml"
     xmlns:vm="clr-namespace:RevitDevTool.ViewModel"
+    d:DataContext="{d:DesignInstance vm:TraceLogViewModel}"
     d:DesignHeight="600"
     d:DesignWidth="450"
     Background="{DynamicResource SolidBackgroundFillColorBaseBrush}"
@@ -27,11 +28,9 @@
         </ResourceDictionary>
     </Page.Resources>
 
-    <Page.DataContext>
-        <vm:TraceLogViewModel />
-    </Page.DataContext>
-
-    <DockPanel>
+    <DockPanel
+        ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+        ScrollViewer.VerticalScrollBarVisibility="Disabled">
         <DockPanel
             Margin="5"
             DockPanel.Dock="Top">
@@ -60,8 +59,15 @@
             </StackPanel>
         </DockPanel>
 
-        <ContentControl
+        <Border
             Margin="5"
-            Content="{Binding LogTextBox}" />
+            Padding="2"
+            Background="{DynamicResource SolidBackgroundFillColorBaseBrush}"
+            BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}"
+            BorderThickness="1"
+            CornerRadius="6"
+            SnapsToDevicePixels="True">
+            <ContentControl Content="{Binding LogTextBox}" />
+        </Border>
     </DockPanel>
 </Page>
