@@ -15,7 +15,7 @@ public partial class TraceLog : IDisposable
     public TraceLog()
     {
         InitializeComponent();
-        DataContext = new TraceLogViewModel(this);
+        DataContext = new TraceLogViewModel();
 #if REVIT2024_OR_GREATER
         ApplicationTheme.CurrentTheme.PropertyChanged += ApplyTheme;
 #endif
