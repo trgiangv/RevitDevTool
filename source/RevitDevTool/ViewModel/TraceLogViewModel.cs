@@ -1,12 +1,14 @@
 ﻿using System.Diagnostics;
-using System.Windows;
-using System.Windows.Media;
+using System.Globalization;
 using RevitDevTool.Models;
 using Serilog;
 using Serilog.Core;
 using Serilog.Events;
 using System.Windows.Forms.Integration;
+using RevitDevTool.Theme;
+using Serilog.Sinks.RichTextBoxForms;
 using Wpf.Ui.Appearance;
+using Serilog.Sinks.RichTextBoxForms.Themes;
 
 namespace RevitDevTool.ViewModel;
 
@@ -18,13 +20,11 @@ internal partial class TraceLogViewModel : ObservableObject, IDisposable
     private readonly ConsoleRedirector _consoleRedirector;
     
     private SerilogTraceListener? _traceListener;
+    private RichTextBoxSink? _sink;
     private Logger? _logger;
     
     private readonly RichTextBox _winFormsTextBox;
-    private readonly FrameworkElement _resourceOwner;
-    private bool _forceMonoOnLight;
-    private System.Drawing.Color _currentForeColor = System.Drawing.Color.Black;
-    
+    private static bool IsDarkTheme => ApplicationThemeManager.GetAppTheme() == ApplicationTheme.Dark;
 
     [ObservableProperty] private bool _isStarted = true;
     [ObservableProperty] private LogEventLevel _logLevel = LogEventLevel.Debug;
@@ -37,6 +37,7 @@ internal partial class TraceLogViewModel : ObservableObject, IDisposable
     partial void OnIsStartedChanged(bool value)
     {
         TraceStatus(value);
+        _winFormsTextBox.Clear();
     }
     
     private void TraceStatus(bool isStarted)
@@ -44,13 +45,13 @@ internal partial class TraceLogViewModel : ObservableObject, IDisposable
         if (isStarted)
         {
             Initialized();
-            Trace.Listeners.Add(_traceListener!);
+            if (_traceListener != null) Trace.Listeners.Add(_traceListener);
             Trace.Listeners.Add(TraceGeometry.TraceListener);
             VisualizationController.Start();
         }
         else
         {
-            Trace.Listeners.Remove(_traceListener);
+            if (_traceListener != null) Trace.Listeners.Remove(_traceListener);
             Trace.Listeners.Remove(TraceGeometry.TraceListener);
             VisualizationController.Stop();
             CloseAndFlush();
@@ -59,27 +60,38 @@ internal partial class TraceLogViewModel : ObservableObject, IDisposable
 
     private void Initialized()
     {
-        _logger ??= new LoggerConfiguration()
+        var options = new RichTextBoxSinkOptions(
+            theme: ThemePresets.Colored,
+            outputTemplate: "[{Timestamp:HH:mm:ss} {Level:u3}] {Message:l}{NewLine}{Exception}",
+            formatProvider: CultureInfo.InvariantCulture);
+        
+        _sink = new RichTextBoxSink(_winFormsTextBox, options);
+        
+        var loggerConfig = new LoggerConfiguration()
             .MinimumLevel.ControlledBy(_levelSwitch)
-            .WriteTo.RichTextBox(_winFormsTextBox)
-            .CreateLogger();
+            .WriteTo.RichTextBox(_winFormsTextBox,
+                out _sink,
+                formatProvider: CultureInfo.InvariantCulture,
+                theme: IsDarkTheme ? AdaptiveThemePresets.EnhancedDark : AdaptiveThemePresets.EnhancedLight,
+                autoScroll: true);
+
+        _logger ??= loggerConfig.CreateLogger();
         _traceListener ??= new SerilogTraceListener(_logger);
     }
 
     private void CloseAndFlush()
     {
-        _winFormsTextBox.Clear();
         _logger?.Dispose();
+        _logger = null;
         _traceListener?.Dispose();
+        _traceListener = null;
     }
     
-
-    public TraceLogViewModel(FrameworkElement resourceOwner)
+    public TraceLogViewModel()
     {
-        _resourceOwner = resourceOwner;
         _winFormsTextBox = new RichTextBox
         {
-            Font = new Font("Cascadia Mono", 9f, System.Drawing.FontStyle.Regular, GraphicsUnit.Point),
+            Font = new Font("Cascadia Mono", 9f, FontStyle.Regular, GraphicsUnit.Point),
             ReadOnly = true,
             DetectUrls = true,
             WordWrap = true,
@@ -92,8 +104,6 @@ internal partial class TraceLogViewModel : ObservableObject, IDisposable
             Child = _winFormsTextBox
         };
         
-        _winFormsTextBox.TextChanged += OnWinFormsTextChanged;
-        
         PresentationTraceSources.ResourceDictionarySource.Switch.Level = SourceLevels.Critical;
         _levelSwitch = new LoggingLevelSwitch(_logLevel);
         _consoleRedirector = new ConsoleRedirector();
@@ -104,101 +114,36 @@ internal partial class TraceLogViewModel : ObservableObject, IDisposable
 
     private void OnThemeChanged(ApplicationTheme theme, System.Windows.Media.Color accent)
     {
-        LogTextBox.Dispatcher.Invoke(ApplyThemeToLogTextBox);
-    }
-
-    private void ApplyThemeToLogTextBox()
-    {
-        var bgBrush = _resourceOwner.TryFindResource("SolidBackgroundFillColorBaseBrush") as SolidColorBrush;
-        var fgBrush = _resourceOwner.TryFindResource("TextFillColorPrimaryBrush") as SolidColorBrush;
-
-        System.Drawing.Color? back = null;
-        System.Drawing.Color? fore = null;
-
-        if (bgBrush is not null)
+        LogTextBox.Dispatcher.Invoke(() =>
         {
-            var c = bgBrush.Color;
-            back = System.Drawing.Color.FromArgb(c.A, c.R, c.G, c.B);
-            _winFormsTextBox.BackColor = back.Value;
-        }
-        if (fgBrush is not null)
-        {
-            var c = fgBrush.Color;
-            fore = System.Drawing.Color.FromArgb(c.A, c.R, c.G, c.B);
-        }
-
-        // Improve readability for light themes: fallback to Black if the selected foreground is too light
-        if (back is { } b)
-        {
-            var isDark = IsDark(b);
-            if (fore is { } f)
+            ApplyLogTheme();
+            
+            if (IsStarted)
             {
-                if (!isDark && IsTooLight(f))
-                {
-                    f = System.Drawing.Color.Black;
-                }
-                _winFormsTextBox.ForeColor = f;
-                _currentForeColor = f;
-                // In light mode, enforce readable mono color over any fragment coloring produced by the sink
-                _forceMonoOnLight = !isDark;
-                if (_forceMonoOnLight)
-                {
-                    ForceRichTextForeColor(f);
-                }
-                else
-                {
-                    _forceMonoOnLight = false;
-                }
+                RestartLogging();
             }
-
-            // Try to match scrollbars to theme (Win11/10) via Immersive Dark Mode for dark;
-            // use Explorer theme in light for modern scrollbars (handled inside helper)
-            Win32DarkMode.SetImmersiveDarkMode(_winFormsTextBox.Handle, isDark);
-        }
-    }
-    
-    private static bool IsDark(System.Drawing.Color c)
-    {
-        var lum = (0.2126 * c.R + 0.7152 * c.G + 0.0722 * c.B) / 255.0;
-        return lum < 0.5;
+        });
     }
 
-    private static bool IsTooLight(System.Drawing.Color c)
+    private void RestartLogging()
     {
-        var lum = (0.2126 * c.R + 0.7152 * c.G + 0.0722 * c.B) / 255.0;
-        return lum > 0.75; // very light
-    }
-    
-    private void ForceRichTextForeColor(System.Drawing.Color color)
-    {
-        try
-        {
-            _winFormsTextBox.SuspendLayout();
-            var savedStart = _winFormsTextBox.SelectionStart;
-            var savedLength = _winFormsTextBox.SelectionLength;
-            _winFormsTextBox.SelectAll();
-            _winFormsTextBox.SelectionColor = color;
-            _winFormsTextBox.SelectionStart = savedStart;
-            _winFormsTextBox.SelectionLength = savedLength;
-        }
-        finally
-        {
-            _winFormsTextBox.ResumeLayout();
-        }
+        CloseAndFlush();
+        ApplyLogTheme();
+        TraceStatus(IsStarted);
     }
 
-    private void OnWinFormsTextChanged(object? sender, EventArgs e)
+    private void ApplyLogTheme()
     {
-        if (_forceMonoOnLight)
-        {
-            ForceRichTextForeColor(_currentForeColor);
-        }
+        _winFormsTextBox.BackColor = IsDarkTheme 
+            ? System.Drawing.Color.FromArgb(30, 30, 30) 
+            : System.Drawing.Color.FromArgb(250, 250, 250);
+        Win32DarkMode.SetImmersiveDarkMode(_winFormsTextBox.Handle, IsDarkTheme);
     }
 
     [RelayCommand] private void Clear()
     {
-        CloseAndFlush();
-        Initialized();
+        _winFormsTextBox.Clear();
+        _sink?.Clear();
     }
     
     [RelayCommand] private static void ClearGeometry()
@@ -209,19 +154,36 @@ internal partial class TraceLogViewModel : ObservableObject, IDisposable
     public void Dispose()
     {
         ApplicationThemeManager.Changed -= OnThemeChanged;
-        _winFormsTextBox.TextChanged -= OnWinFormsTextChanged;
+        
+        if (_traceListener != null)
+        {
+            Trace.Listeners.Remove(_traceListener);
+            Trace.Listeners.Remove(TraceGeometry.TraceListener);
+        }
+        
+        _logger?.Dispose();
+        _logger = null;
+        _traceListener?.Dispose();
+        _traceListener = null;
+        
         _consoleRedirector.Dispose();
         GC.SuppressFinalize(this);
     }
 
     public void RefreshTheme()
     {
-        ApplyThemeToLogTextBox();
+        ApplyLogTheme();
+        
+        if (IsStarted)
+        {
+            RestartLogging();
+        }
     }
 }
 
 internal static class Win32DarkMode
 {
+    // ReSharper disable InconsistentNaming
     private const int DWMWA_USE_IMMERSIVE_DARK_MODE_BEFORE_20H1 = 19;
     private const int DWMWA_USE_IMMERSIVE_DARK_MODE = 20;
 
@@ -229,7 +191,7 @@ internal static class Win32DarkMode
     private static extern int DwmSetWindowAttribute(IntPtr hwnd, int attr, ref int attrValue, int attrSize);
 
     [System.Runtime.InteropServices.DllImport("uxtheme.dll", CharSet = System.Runtime.InteropServices.CharSet.Unicode, SetLastError = true)]
-    private static extern int SetWindowTheme(IntPtr hWnd, string pszSubAppName, string pszSubIdList);
+    private static extern int SetWindowTheme(IntPtr hWnd, string? pszSubAppName, string? pszSubIdList);
 
     public static void SetImmersiveDarkMode(IntPtr hwnd, bool enable)
     {
@@ -239,14 +201,11 @@ internal static class Win32DarkMode
         _ = DwmSetWindowAttribute(hwnd, DWMWA_USE_IMMERSIVE_DARK_MODE_BEFORE_20H1, ref useDark, sizeof(int));
         try
         {
-            if (enable)
-                SetWindowTheme(hwnd, "DarkMode_Explorer", null);
-            else
-                SetWindowTheme(hwnd, "Explorer", null);
+            SetWindowTheme(hwnd, enable ? "DarkMode_Explorer" : "Explorer", null);
         }
         catch
         {
-            // ignore if not supported
+            // ignore
         }
     }
 }
