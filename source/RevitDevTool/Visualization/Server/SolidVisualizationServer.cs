@@ -39,15 +39,15 @@ public sealed class SolidVisualizationServer : VisualizationServer<Solid>
         
         foreach (var solid in VisualizeGeometries)
         {
-            BoundingBoxXYZ boundingBox;
-            try
+            if (solid.Volume == 0)
             {
-                boundingBox = solid.GetBoundingBox();
-            }
-            catch
-            {
+                Debug.WriteLine("Solid with zero volume skipped in bounding box calculation.");
                 continue;
             }
+            BoundingBoxXYZ boundingBox;
+            try { boundingBox = solid.GetBoundingBox(); }
+            catch { continue; }
+            
             var minPoint = boundingBox.Transform.OfPoint(boundingBox.Min);
             var maxPoint = boundingBox.Transform.OfPoint(boundingBox.Max);
             minPoints.Add(minPoint);
@@ -130,6 +130,7 @@ public sealed class SolidVisualizationServer : VisualizationServer<Solid>
 
         foreach (var solid in VisualizeGeometries)
         {
+            if (solid.Volume == 0) continue;
             var scaledSolid = RenderGeometryHelper.ScaleSolid(solid, _scale);
 
             foreach (Face face in scaledSolid.Faces)
