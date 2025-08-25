@@ -36,7 +36,12 @@ public class TraceCommand : ExternalCommand
             .Register(application, new Guid(Guid), CommandName)
             .SetConfiguration(data =>
             {
-                data.FrameworkElement = new TraceLog();
+                // Create a WPF host for the WinForms UserControl
+                var winFormsHost = new System.Windows.Forms.Integration.WindowsFormsHost
+                {
+                    Child = new TraceLogControl()
+                };
+                data.FrameworkElement = winFormsHost;
                 data.InitialState = new DockablePaneState
                 {
                     MinimumWidth = 300,

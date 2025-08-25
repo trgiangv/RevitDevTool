@@ -56,7 +56,6 @@
         <PackageReference Include="Nice3point.Revit.Api.AdWindows" Version="$(RevitVersion).*" />
 
         <!-- UI -->
-        <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.0" />
         <PackageReference Include="Serilog.Sinks.RichTextBox.WinForms.Colored" Version="3.1.3" />
 
         <!-- Utils -->
@@ -70,9 +69,7 @@
         <Resource Include="Resources\Icons\TraceGeometry32_light.tiff" />
     </ItemGroup>
 
-    <ItemGroup>
-      <ProjectReference Include="..\RevitDevTool.UI\RevitDevTool.UI.csproj" />
-    </ItemGroup>
+
 
     <!-- Start Revit -->
     <PropertyGroup>
