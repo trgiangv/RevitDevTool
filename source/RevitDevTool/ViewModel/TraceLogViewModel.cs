@@ -8,7 +8,6 @@ using System.Windows.Forms.Integration;
 using RevitDevTool.Theme;
 using Serilog.Sinks.RichTextBoxForms;
 using Wpf.Ui.Appearance;
-using Serilog.Sinks.RichTextBoxForms.Themes;
 
 namespace RevitDevTool.ViewModel;
 
@@ -60,17 +59,11 @@ internal partial class TraceLogViewModel : ObservableObject, IDisposable
 
     private void Initialized()
     {
-        var options = new RichTextBoxSinkOptions(
-            theme: ThemePresets.Colored,
-            outputTemplate: "[{Timestamp:HH:mm:ss} {Level:u3}] {Message:l}{NewLine}{Exception}",
-            formatProvider: CultureInfo.InvariantCulture);
-        
-        _sink = new RichTextBoxSink(_winFormsTextBox, options);
-        
         var loggerConfig = new LoggerConfiguration()
             .MinimumLevel.ControlledBy(_levelSwitch)
             .WriteTo.RichTextBox(_winFormsTextBox,
                 out _sink,
+                maxLogLines: int.MaxValue,
                 formatProvider: CultureInfo.InvariantCulture,
                 theme: IsDarkTheme ? AdaptiveThemePresets.EnhancedDark : AdaptiveThemePresets.EnhancedLight,
                 autoScroll: true);
