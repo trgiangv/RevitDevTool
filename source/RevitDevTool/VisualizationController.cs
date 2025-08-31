@@ -48,6 +48,14 @@ internal static class VisualizationController
             case BoundingBoxXYZ boundingBox:
                 BoundingBoxVisualizationServer.AddGeometry(boundingBox);
                 break;
+            case Outline outline:
+                var bbox = new BoundingBoxXYZ
+                {
+                    Min = outline.MinimumPoint,
+                    Max = outline.MaximumPoint
+                };
+                BoundingBoxVisualizationServer.AddGeometry(bbox);
+                break;
             case Mesh mesh:
                 MeshVisualizationServer.AddGeometry(mesh);
                 break;
@@ -80,6 +88,7 @@ internal static class VisualizationController
                 return geometry switch
                 {
                     BoundingBoxXYZ => typeof(BoundingBoxXYZ),
+                    Outline => typeof(Outline),
                     Mesh => typeof(Mesh),
                     Solid => typeof(Solid),
                     XYZ => typeof(XYZ),
@@ -100,6 +109,13 @@ internal static class VisualizationController
             {
                 case not null when geometryType == typeof(BoundingBoxXYZ):
                     BoundingBoxVisualizationServer.AddGeometries(group.Cast<BoundingBoxXYZ>());
+                    break;
+                case not null when geometryType == typeof(Outline):
+                    BoundingBoxVisualizationServer.AddGeometries(group.Cast<Outline>().Select(outline => 
+                    new BoundingBoxXYZ {
+                        Min = outline.MinimumPoint,
+                        Max = outline.MaximumPoint
+                    }));
                     break;
                 case not null when geometryType == typeof(Mesh):
                     MeshVisualizationServer.AddGeometries(group.Cast<Mesh>());
