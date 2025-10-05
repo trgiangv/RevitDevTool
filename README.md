@@ -26,6 +26,7 @@ Autodesk Revit plugin project organized into multiple solution files that target
     * [🔧 Language Support](#-language-support)
     * [💡 Best Practices](#-best-practices)
     * [🔍 Troubleshooting](#-troubleshooting)
+    * [Acknowledgments](#acknowledgments)
 <!-- TOC -->
 
 ## Usage
@@ -68,7 +69,7 @@ Trace.TraceWarning("Element not found, using default values");
 Trace.TraceError("Failed to process element: " + exception.Message);
 
 // Debug logging
-System.Diagnostics.Debug.WriteLine("Debug information: " + debugInfo);
+Debug.WriteLine("Debug information: " + debugInfo);
 
 // Console output (automatically captured)
 Console.WriteLine("This will appear in the trace log");
@@ -110,11 +111,11 @@ The Geometry Visualization system allows you to display transient geometry direc
 
 #### Key Features
 
-- **Transient Display** - Geometry appears as temporary, non-selectable objects
+- **Transient Display** - use Revit's DirectContext3D for rendering which inspired by RevitLookup
 - **Automatic Cleanup** - Geometry is removed when document closes
-- **Manual Control** - Use `ClearTraceGeometry` to remove geometry on demand
-- **Document-specific** - Each document maintains its own geometry collection
-- **Performance Optimized** - Uses Revit's internal transient display methods
+- **Manual Control** - Use `ClearGeometry` to remove geometry on demand, `Clear Log` to clear log messages
+- **Performance Optimized** - Efficient rendering/Disposal of geometry
+- **Supports Mixed Geometry Types** - Trace collections of different geometry types in one call
 
 #### How to Use Geometry Visualization
 
@@ -166,14 +167,6 @@ Trace.Write(solids);
 // Mixed geometry types
 var geometries = new List<GeometryObject> { face, curve, solid };
 Trace.Write(geometries);
-```
-
-4. **Clear Traced Geometry**:
-
-```csharp
-// Clear all traced geometry for the current document
-// Use the "Clear Geometry" button in the UI, or programmatically:
-// (This happens automatically via the UI button)
 ```
 
 #### Python/IronPython Geometry Visualization
@@ -301,7 +294,14 @@ RevitDevTool works with multiple programming languages and scripting environment
 
 ### 🔍 Troubleshooting
 
-- **No Geometry Visible**: Ensure the logger is enabled and you're viewing the correct 3D view
-- **Geometry Persists**: Use "Clear Geometry" button or close/reopen the document
+- **No Geometry Visible**: Ensure the logger is enabled and you can reset by toggling the `Start/Stop Listener`
+- **Geometry Persists**: Use "Clear Geometry" button
 - **Missing Logs**: Check that the log level is set appropriately for your trace calls
 - **Performance Issues**: Reduce the number of geometry objects traced simultaneously
+
+## Acknowledgments
+
+Special thanks to:
+
+- [**RevitLookup**](https://github.com/lookup-foundation/RevitLookup) - For the beautiful DirectContext3D implementation that powers our geometry visualization
+- [**RevitDevTool (Original)**](https://github.com/Zhuangkh/RevitDevTool) - For the original idea and inspiration for this project
