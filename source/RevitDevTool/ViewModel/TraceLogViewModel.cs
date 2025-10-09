@@ -143,6 +143,12 @@ internal partial class TraceLogViewModel : ObservableObject, IDisposable
     {
         VisualizationController.Clear();
     }
+    
+    [RelayCommand] private static void OpenSettings()
+    {
+        var settingsWindow = new View.Settings();
+        settingsWindow.ShowDialog();
+    }
 
     public void Dispose()
     {

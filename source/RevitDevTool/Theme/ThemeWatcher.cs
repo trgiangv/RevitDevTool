@@ -1,16 +1,20 @@
-﻿using System.Windows;
-#if REVIT2024_OR_GREATER
-using Autodesk.Revit.UI;
-using Autodesk.Revit.UI.Events;
-#endif
+﻿using System.ComponentModel ;
+using System.Windows;
 using Wpf.Ui;
 using Wpf.Ui.Appearance;
 using Wpf.Ui.Controls;
 using Color = System.Windows.Media.Color;
+#if REVIT2024_OR_GREATER
+using Autodesk.Revit.UI;
+using Autodesk.Revit.UI.Events;
+#endif
+
 namespace RevitDevTool.Theme;
 
 public sealed class ThemeWatcher
 {
+    public static readonly ThemeWatcher Instance = new();
+    
 #if REVIT2024_OR_GREATER
     private bool _isWatching;
 #endif
@@ -43,6 +47,16 @@ public sealed class ThemeWatcher
         ApplicationThemeManager.Apply(theme);
         UpdateBackground(theme);
     }
+    
+      
+#if REVIT2024_OR_GREATER
+    public static void ApplyTheme(object? sender, PropertyChangedEventArgs args)
+    {
+        if (args.PropertyName != nameof(UIFramework.ApplicationTheme.CurrentTheme.RibbonPanelBackgroundBrush)) return;
+        if (UIThemeManager.CurrentTheme.ToString() == UIFramework.ApplicationTheme.CurrentTheme.RibbonTheme.Name) return;
+        Instance.ApplyTheme();
+    }
+#endif
 
     public void Watch(FrameworkElement frameworkElement)
     {
