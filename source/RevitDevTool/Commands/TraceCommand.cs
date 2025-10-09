@@ -39,7 +39,7 @@ public class TraceCommand : ExternalCommand
                 data.FrameworkElement = new TraceLog();
                 data.InitialState = new DockablePaneState
                 {
-                    MinimumWidth = 300,
+                    MinimumWidth = 500,
                     MinimumHeight = 400,
                     DockPosition = DockPosition.Right,
                     TabBehind = DockablePanes.BuiltInDockablePanes.PropertiesPalette
