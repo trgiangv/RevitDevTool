@@ -259,8 +259,6 @@ public class TextBox : System.Windows.Controls.TextBox
     /// </summary>
     protected virtual void OnTemplateButtonClick(string? parameter)
     {
-        Debug.WriteLine($"INFO: {typeof(TextBox)} button clicked", "Wpf.Ui.TextBox");
-
         OnClearButtonClick();
     }
 

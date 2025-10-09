@@ -494,21 +494,11 @@ public class TitleBar : System.Windows.Controls.Control, IThemeControl
         Color systemAccent
     )
     {
-        Debug.WriteLine(
-            $"INFO | {typeof(TitleBar)} received theme -  {currentApplicationTheme}",
-            "Wpf.Ui.TitleBar"
-        );
-
         SetCurrentValue(ApplicationThemeProperty, currentApplicationTheme);
     }
 
     private void CloseWindow()
     {
-        Debug.WriteLine(
-            $"INFO | {typeof(TitleBar)}.CloseWindow:ForceShutdown -  {ForceShutdown}",
-            "Wpf.Ui.TitleBar"
-        );
-
         if (ForceShutdown)
         {
             UiApplication.Current.Shutdown();
