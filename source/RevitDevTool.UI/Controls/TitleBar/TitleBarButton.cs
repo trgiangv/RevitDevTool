@@ -181,7 +181,6 @@ public class TitleBarButton : Wpf.Ui.Controls.Button
             case User32.WM.NCHITTEST:
                 if (this.IsMouseOverElement(lParam))
                 {
-                    /*Debug.WriteLine($"Hitting {ButtonType} | return code {_returnValue}");*/
                     Hover();
                     returnIntPtr = (IntPtr)_returnValue;
                     return true;

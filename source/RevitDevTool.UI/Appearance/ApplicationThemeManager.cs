@@ -108,11 +108,6 @@ public static class ApplicationThemeManager
             new Uri(ThemesDictionaryPath + themeDictionaryName + ".xaml", UriKind.Absolute)
         );
 
-        System.Diagnostics.Debug.WriteLine(
-            $"INFO | {typeof(ApplicationThemeManager)} tries to update theme to {themeDictionaryName} ({applicationTheme}): {isUpdated}",
-            nameof(ApplicationThemeManager)
-        );
-
         if (!isUpdated)
         {
             return;
@@ -145,10 +140,6 @@ public static class ApplicationThemeManager
 
         foreach (System.Collections.DictionaryEntry resource in UiApplication.Current.Resources)
         {
-            System.Diagnostics.Debug.WriteLine(
-                $"INFO | {typeof(ApplicationThemeManager)} Copy Resource {resource.Key} - {resource.Value}",
-                "Wpf.Ui.Appearance"
-            );
             frameworkElement.Resources[resource.Key] = resource.Value;
         }
     }

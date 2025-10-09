@@ -34,11 +34,6 @@ public class UiApplication
         }
 
         _application = application;
-
-        System.Diagnostics.Debug.WriteLine(
-            $"INFO | {typeof(UiApplication)} application is {_application}",
-            "Wpf.Ui"
-        );
     }
 
     /// <summary>
