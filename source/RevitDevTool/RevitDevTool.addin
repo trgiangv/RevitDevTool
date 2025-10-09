@@ -10,8 +10,4 @@
         <VendorId>RevitDevTool</VendorId>
         <VendorDescription>RevitDevTool</VendorDescription>
     </AddIn>
-    <ManifestSettings>
-        <UseRevitContext>False</UseRevitContext>
-        <ContextName>RevitDevTool</ContextName>
-    </ManifestSettings>
 </RevitAddIns>
