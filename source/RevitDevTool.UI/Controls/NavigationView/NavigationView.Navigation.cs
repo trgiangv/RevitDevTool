@@ -203,15 +203,8 @@ public partial class NavigationView
 
         if (OnNavigating(pageInstance))
         {
-            System.Diagnostics.Debug.WriteLineIf(EnableDebugMessages, "Navigation canceled");
-
             return false;
         }
-
-        System.Diagnostics.Debug.WriteLineIf(
-            EnableDebugMessages,
-            $"DEBUG | {viewItem.Id} - {(string.IsNullOrEmpty(viewItem.TargetPageTag) ? "NO_TAG" : viewItem.TargetPageTag)} - {viewItem.TargetPageType} | NAVIGATED"
-        );
 
         OnNavigated(pageInstance);
 
@@ -244,8 +237,6 @@ public partial class NavigationView
         _currentIndexInJournal++;
 
         SetCurrentValue(IsBackEnabledProperty, CanGoBack);
-
-        Debug.WriteLineIf(EnableDebugMessages, $"JOURNAL INDEX {_currentIndexInJournal}");
 
         if (Journal.Count > 0)
         {
@@ -299,10 +290,6 @@ public partial class NavigationView
 
         if (_serviceProvider is not null)
         {
-            System.Diagnostics.Debug.WriteLine(
-                $"Getting {targetPageType} from cache using IServiceProvider."
-            );
-
             return _serviceProvider.GetService(targetPageType)
                 ?? throw new InvalidOperationException(
                     $"{nameof(_serviceProvider.GetService)} returned null"
@@ -311,16 +298,10 @@ public partial class NavigationView
 
         if (_pageService is not null)
         {
-            System.Diagnostics.Debug.WriteLine(
-                $"Getting {targetPageType} from cache using INavigationViewPageProvider."
-            );
-
             return _pageService.GetPage(targetPageType)
                 ?? throw new InvalidOperationException($"{nameof(_pageService.GetPage)} returned null");
         }
-
-        System.Diagnostics.Debug.WriteLine($"Getting {targetPageType} from cache using reflection.");
-
+        
         return NavigationViewActivator.CreateInstance(targetPageType)
             ?? throw new InvalidOperationException("Failed to create instance of the page");
     }

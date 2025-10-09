@@ -22,26 +22,16 @@ internal class NavigationCache
 
         if (cacheMode == NavigationCacheMode.Disabled)
         {
-            System.Diagnostics.Debug.WriteLine(
-                $"Cache for {entryType} is disabled. Generating instance using action..."
-            );
-
             return generate.Invoke();
         }
 
         if (!_entires.TryGetValue(entryType, out var value))
         {
-            System.Diagnostics.Debug.WriteLine(
-                $"{entryType} not found in cache, generating instance using action..."
-            );
-
             value = generate.Invoke();
 
             _entires.Add(entryType, value);
         }
-
-        System.Diagnostics.Debug.WriteLine($"{entryType} found in cache.");
-
+        
         return value;
     }
 }
