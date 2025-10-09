@@ -10,8 +10,6 @@ namespace RevitDevTool.View;
 
 public partial class TraceLog : IDisposable
 {
-    private static readonly ThemeWatcher ThemeWatcher = new();
-    
     public TraceLog()
     {
         InitializeComponent();
@@ -19,9 +17,9 @@ public partial class TraceLog : IDisposable
 #if REVIT2024_OR_GREATER
         ApplicationTheme.CurrentTheme.PropertyChanged += ApplyTheme;
 #endif
-        ThemeWatcher.Initialize();
-        ThemeWatcher.Watch(this);
-        ThemeWatcher.ApplyTheme();
+        ThemeWatcher.Instance.Initialize();
+        ThemeWatcher.Instance.Watch(this);
+        ThemeWatcher.Instance.ApplyTheme();
         Loaded += (_, _) =>
         {
             if (DataContext is TraceLogViewModel vm)
@@ -34,7 +32,7 @@ public partial class TraceLog : IDisposable
     {
         if (args.PropertyName != nameof(ApplicationTheme.CurrentTheme.RibbonPanelBackgroundBrush)) return;
         if (UIThemeManager.CurrentTheme.ToString() == ApplicationTheme.CurrentTheme.RibbonTheme.Name) return;
-        ThemeWatcher.ApplyTheme();
+        ThemeWatcher.Instance.ApplyTheme();
     }
 #endif
 
