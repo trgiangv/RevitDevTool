@@ -26,7 +26,7 @@ public partial class GeneralSettingsViewModel : ObservableObject
 #endif
     }
     
-    [ObservableProperty] private ApplicationTheme _theme = SettingsService.Instance.GeneralConfig.Theme;
+    [ObservableProperty] private ApplicationTheme _theme;
 
     partial void OnThemeChanged( ApplicationTheme value )
     {
@@ -37,5 +37,10 @@ public partial class GeneralSettingsViewModel : ObservableObject
     [RelayCommand] private static void ResetVisualizationSettings()
     {
         SettingsService.Instance.ResetVisualizationSettings();
+    }
+    
+    public GeneralSettingsViewModel()
+    {
+        Theme = SettingsService.Instance.GeneralConfig.Theme;
     }
 }

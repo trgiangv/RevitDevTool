@@ -117,32 +117,6 @@ public sealed class ThemeWatcher
         
         try
         {
-            var uiAppDictionaries = UiApplication.Current.Resources.MergedDictionaries;
-            if ( uiAppDictionaries.Count == 0 ) {
-                Debug.WriteLine("No merged dictionaries found in UiApplication.") ;
-                return ;
-            }
-            var uiAppFirstDictionary = uiAppDictionaries[0] ;
-            if ( uiAppFirstDictionary.Source == null ) {
-                Debug.WriteLine("First merged dictionary in UiApplication has no source.") ;
-                return ;
-            }
-            
-            Debug.WriteLine( uiAppFirstDictionary.Source.OriginalString );
-            
-            var dictionaries = element.Resources.MergedDictionaries;
-            if ( dictionaries.Count == 0 ) {
-                Debug.WriteLine("No merged dictionaries found.") ;
-                return ;
-            }
-            var firstDictionary = dictionaries[0] ;
-            if ( firstDictionary.Source == null ) {
-                Debug.WriteLine("First merged dictionary has no source.") ;
-                Debug.WriteLine( $"Valid source {dictionaries.FirstOrDefault( x => x.Source != null && x.Source.OriginalString.Contains( "RevitDevTool" ) )?.Source.OriginalString}" );
-                return;
-            }
-            
-            if ( firstDictionary.Source.OriginalString == uiAppFirstDictionary.Source.OriginalString ) return ;
             ApplicationThemeManager.Apply( element ) ;
             UpdateDictionary( element ) ;
         }
@@ -162,7 +136,7 @@ public sealed class ThemeWatcher
     private static void UpdateDictionary(FrameworkElement frameworkElement)
     {
         var themedResources = frameworkElement.Resources.MergedDictionaries
-            .Where(dictionary => dictionary.Source.OriginalString.Contains("RevitDevTool.UI;", StringComparison.OrdinalIgnoreCase))
+            .Where(dictionary => dictionary.Source is not null && dictionary.Source.OriginalString.Contains("RevitDevTool.UI;", StringComparison.OrdinalIgnoreCase))
             .ToArray();
 
         frameworkElement.Resources.MergedDictionaries.Insert(0, UiApplication.Current.Resources.MergedDictionaries[0]);
