@@ -1,5 +1,6 @@
 ﻿using System.Diagnostics;
 using Autodesk.Revit.DB.DirectContext3D;
+using RevitDevTool.Extensions ;
 using RevitDevTool.Visualization.Helpers;
 using RevitDevTool.Visualization.Render;
 using RevitDevTool.Visualization.Server.Contracts;
@@ -23,23 +24,15 @@ public sealed class BoundingBoxVisualizationServer : VisualizationServer<Boundin
     ];
     private static readonly XYZ UnitVector = new(1, 1, 1);
 
-    private readonly double _transparency = BoundingBoxVisualizationSettings.Transparency;
-    private readonly bool _drawSurface = BoundingBoxVisualizationSettings.ShowSurface;
-    private readonly bool _drawEdge = BoundingBoxVisualizationSettings.ShowEdge;
-    private readonly bool _drawAxis = BoundingBoxVisualizationSettings.ShowAxis;
-    
-    private readonly Color _surfaceColor = new(
-        BoundingBoxVisualizationSettings.SurfaceColor.R,
-        BoundingBoxVisualizationSettings.SurfaceColor.G, 
-        BoundingBoxVisualizationSettings.SurfaceColor.B);
-    private readonly Color _edgeColor = new(
-        BoundingBoxVisualizationSettings.EdgeColor.R, 
-        BoundingBoxVisualizationSettings.EdgeColor.G, 
-        BoundingBoxVisualizationSettings.EdgeColor.B);
-    private readonly Color _axisColor = new(
-        BoundingBoxVisualizationSettings.AxisColor.R, 
-        BoundingBoxVisualizationSettings.AxisColor.G, 
-        BoundingBoxVisualizationSettings.AxisColor.B);
+    private double _transparency;
+    private double _scale = 1.0;
+    private bool _drawSurface;
+    private bool _drawEdge;
+    private bool _drawAxis;
+
+    private Color _surfaceColor;
+    private Color _edgeColor;
+    private Color _axisColor;
 
     public override bool UseInTransparentPass(Autodesk.Revit.DB.View view) => _drawSurface && _transparency > 0;
 
@@ -212,7 +205,7 @@ public sealed class BoundingBoxVisualizationServer : VisualizationServer<Boundin
         }
     }
 
-    private void UpdateEffects()
+    public override void UpdateEffects()
     {
         foreach (var surfaceBuffer in _surfaceBuffers)
         {
@@ -231,6 +224,115 @@ public sealed class BoundingBoxVisualizationServer : VisualizationServer<Boundin
         {
             buffer.EffectInstance ??= new EffectInstance(buffer.FormatBits);
             buffer.EffectInstance.SetColor(_axisColor);
+        }
+    }
+    
+    public override void UpdateSurfaceColor(Color color)
+    {
+        var uiDocument = Context.ActiveUiDocument;
+        if (uiDocument is null) return;
+
+        lock (RenderLock)
+        {
+            _surfaceColor = color;
+            HasEffectsUpdates = true;
+
+            uiDocument.UpdateAllOpenViews();
+        }
+    }
+    
+    public override void UpdateEdgeColor(Color color)
+    {
+        var uiDocument = Context.ActiveUiDocument;
+        if (uiDocument is null) return;
+
+        lock (RenderLock)
+        {
+            _edgeColor = color;
+            HasEffectsUpdates = true;
+
+            uiDocument.UpdateAllOpenViews();
+        }
+    }
+
+    public override void UpdateAxisColor(Color color)
+    {
+        var uiDocument = Context.ActiveUiDocument;
+        if (uiDocument is null) return;
+
+        lock (RenderLock)
+        {
+            _axisColor = color;
+            HasEffectsUpdates = true;
+
+            uiDocument.UpdateAllOpenViews();
+        }
+    }
+    
+    public override void UpdateTransparency(double value)
+    {
+        var uiDocument = Context.ActiveUiDocument;
+        if (uiDocument is null) return;
+
+        lock (RenderLock)
+        {
+            _transparency = value;
+            HasEffectsUpdates = true;
+
+            uiDocument.UpdateAllOpenViews();
+        }
+    }
+    
+    public override void UpdateScale(double value)
+    {
+        var uiDocument = Context.ActiveUiDocument;
+        if (uiDocument is null) return;
+
+        lock (RenderLock)
+        {
+            _scale = value;
+            HasGeometryUpdates = true;
+
+            uiDocument.UpdateAllOpenViews();
+        }
+    }
+
+    public override void UpdateSurfaceVisibility(bool visible)
+    {
+        var uiDocument = Context.ActiveUiDocument;
+        if (uiDocument is null) return;
+
+        lock (RenderLock)
+        {
+            _drawSurface = visible;
+
+            uiDocument.UpdateAllOpenViews();
+        }
+    }
+
+    public override void UpdateEdgeVisibility(bool visible)
+    {
+        var uiDocument = Context.ActiveUiDocument;
+        if (uiDocument is null) return;
+
+        lock (RenderLock)
+        {
+            _drawEdge = visible;
+
+            uiDocument.UpdateAllOpenViews();
+        }
+    }
+
+    public override void UpdateAxisVisibility(bool visible)
+    {
+        var uiDocument = Context.ActiveUiDocument;
+        if (uiDocument is null) return;
+
+        lock (RenderLock)
+        {
+            _drawAxis = visible;
+
+            uiDocument.UpdateAllOpenViews();
         }
     }
 

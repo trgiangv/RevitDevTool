@@ -1,5 +1,4 @@
-﻿// ReSharper disable once CheckNamespace
-namespace RevitDevTool.Visualization.Server;
+﻿namespace RevitDevTool.Extensions;
 
 [PublicAPI]
 public static class EnumerableExtensions
