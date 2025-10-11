@@ -3,7 +3,6 @@
 // Copyright (C) Leszek Pomianowski and WPF UI Contributors.
 // All Rights Reserved.
 
-using System.Diagnostics;
 using System.Windows.Data;
 using System.Windows.Input;
 using Wpf.Ui.Designer;
@@ -419,6 +418,10 @@ public class TitleBar : System.Windows.Controls.Control, IThemeControl
             System.Windows.Controls.TextBlock.FontSizeProperty,
             new Binding(nameof(FontSize)) { Source = this }
         );
+        _ = _titleBlock.SetBinding(
+            System.Windows.Controls.TextBlock.FontWeightProperty,
+            new Binding(nameof(FontWeight)) { Source = this }
+        );
         Header = _titleBlock;
 
         Loaded += OnLoaded;
@@ -581,7 +584,7 @@ public class TitleBar : System.Windows.Controls.Control, IThemeControl
     }
 
     /// <summary>
-    ///     Listening window hooks after rendering window content to SizeToContent support
+    ///  Listening window hooks after rendering window content to SizeToContent support
     /// </summary>
     private void OnWindowContentRendered(object? sender, EventArgs e)
     {
@@ -593,8 +596,17 @@ public class TitleBar : System.Windows.Controls.Control, IThemeControl
         window.ContentRendered -= OnWindowContentRendered;
 
         IntPtr handle = new WindowInteropHelper(window).Handle;
-        HwndSource windowSource =
-            HwndSource.FromHwnd(handle) ?? throw new InvalidOperationException("Window source is null");
+        if (handle == IntPtr.Zero)
+        {
+            return;
+        }
+
+        HwndSource? windowSource = HwndSource.FromHwnd(handle);
+        if (windowSource == null)
+        {
+            return;
+        }
+
         windowSource.AddHook(HwndSourceHook);
     }
 

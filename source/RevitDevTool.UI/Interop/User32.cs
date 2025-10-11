@@ -1451,6 +1451,9 @@ internal static class User32
     [return: MarshalAs(UnmanagedType.Bool)]
     public static extern bool GetCursorPos([Out] out WinDef.POINT lpPoint);
 
+    [DllImport(Libraries.User32, SetLastError = true)]
+    public static extern bool GetCursorPos(out System.Drawing.Point lpPoint);
+
     [DllImport(Libraries.User32)]
     public static extern bool UnionRect(out WinDef.RECT rcDst, ref WinDef.RECT rc1, ref WinDef.RECT rc2);
 

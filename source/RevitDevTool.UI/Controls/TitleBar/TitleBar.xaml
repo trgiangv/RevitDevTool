@@ -138,7 +138,7 @@
                                 HorizontalAlignment="Left"
                                 Content="{TemplateBinding Header}" />
                         </Grid>
-                        
+
                         <Grid Grid.Column="1">
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="*" />
@@ -177,8 +177,8 @@
                                 <controls:TitleBarButton
                                     x:Name="PART_MaximizeButton"
                                     Grid.Column="2"
-                                    ButtonType="Maximize" 
-                                    IsHitTestVisible="False"/>
+                                    ButtonType="Maximize"
+                                    IsHitTestVisible="True" />
 
                                 <controls:TitleBarButton
                                     x:Name="PART_CloseButton"

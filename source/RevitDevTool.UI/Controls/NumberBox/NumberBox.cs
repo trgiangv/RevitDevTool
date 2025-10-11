@@ -346,6 +346,7 @@ public partial class NumberBox : Wpf.Ui.Controls.TextBox
         {
             button.Click += (s, e) =>
             {
+                Debug.InfoWriteLineForButtonClick(s);
                 action();
             };
         }
@@ -401,6 +402,8 @@ public partial class NumberBox : Wpf.Ui.Controls.TextBox
 
     private void StepValue(double? change)
     {
+        Debug.InfoWriteLine($"{typeof(NumberBox)} {nameof(StepValue)} raised, change {change}");
+
         // Before adjusting the value, validate the contents of the textbox so we don't override it.
         ValidateInput();
 
@@ -495,5 +498,41 @@ public partial class NumberBox : Wpf.Ui.Controls.TextBox
                 $"{nameof(NumberFormatter)} must implement {typeof(INumberParser)}"
             );
         }
+    }
+
+    private static partial class Debug
+    {
+        public static partial void InfoWriteLine(string debugLine);
+
+        public static partial void InfoWriteLineForButtonClick(object sender);
+
+#if DEBUG
+        public static partial void InfoWriteLine(string debugLine)
+        {
+            System.Diagnostics.Debug.WriteLine($"INFO: {debugLine}", "Wpf.Ui.NumberBox");
+        }
+
+        public static partial void InfoWriteLineForButtonClick(object sender)
+        {
+            var buttonName =
+                (sender is System.Windows.Controls.Primitives.ButtonBase element)
+                    ? element.Name
+                    : throw new InvalidCastException(nameof(sender));
+
+            InfoWriteLine($"{typeof(NumberBox)} {buttonName} clicked");
+        }
+
+#else
+        public static partial void InfoWriteLine(string debugLine)
+        {
+            // Do nothing in non-DEBUG builds
+        }
+
+        public static partial void InfoWriteLineForButtonClick(object sender)
+        {
+            // Do nothing in non-DEBUG builds
+        }
+
+#endif // DEBUG
     }
 }

@@ -22,7 +22,7 @@ public class FontIcon : IconElement
         nameof(FontFamily),
         typeof(FontFamily),
         typeof(FontIcon),
-        new FrameworkPropertyMetadata(new FontFamily("Segoe MDL2 Assets"), OnFontFamilyChanged)
+        new FrameworkPropertyMetadata(new FontFamily("Segoe Fluent Icons, Segoe MDL2 Assets"), OnFontFamilyChanged)
     );
 
     /// <summary>Identifies the <see cref="FontSize"/> dependency property.</summary>
@@ -110,22 +110,13 @@ public class FontIcon : IconElement
 
     protected TextBlock? TextBlock { get; set; }
 
+    public FontIcon()
+    {
+        SetCurrentValue(FontSizeProperty, UiApplication.Current.Resources["DefaultIconFontSize"]);
+    }
+
     protected override UIElement InitializeChildren()
     {
-        if (FontSize.Equals(SystemFonts.MessageFontSize))
-        {
-            // SetResourceReference(FontSizeProperty, "DefaultIconFontSize");
-
-            // If the FontSize is the default, set it to the parent's FontSize.
-            if (
-                VisualParent is not null
-                && TextElement.GetFontSize(VisualParent) != SystemFonts.MessageFontSize
-            )
-            {
-                SetCurrentValue(FontSizeProperty, TextElement.GetFontSize(VisualParent));
-            }
-        }
-
         TextBlock = new TextBlock
         {
             Style = null,
