@@ -208,8 +208,18 @@ public partial class NavigationView
 
         OnNavigated(pageInstance);
 
-        ApplyAttachedProperties(viewItem, pageInstance);
+        // Set up the association before setting DataContext
+        if (pageInstance is FrameworkElement frameworkElement)
+        {
+            // Set NavigationParent to allow HeaderContent property changes to find this NavigationView
+            frameworkElement.SetValue(NavigationParentProperty, this);
+        }
+
+        // Set DataContext first so bindings can resolve
         UpdateContent(pageInstance, dataContext);
+
+        // Apply properties after DataContext is set
+        ApplyAttachedProperties(viewItem, pageInstance);
 
         AddToNavigationStack(viewItem, addToNavigationStack, isBackwardsNavigated);
         AddToJournal(viewItem, isBackwardsNavigated);
@@ -237,6 +247,8 @@ public partial class NavigationView
         _currentIndexInJournal++;
 
         SetCurrentValue(IsBackEnabledProperty, CanGoBack);
+
+        Debug.WriteLineIf(EnableDebugMessages, $"JOURNAL INDEX {_currentIndexInJournal}");
 
         if (Journal.Count > 0)
         {
@@ -290,6 +302,10 @@ public partial class NavigationView
 
         if (_serviceProvider is not null)
         {
+            System.Diagnostics.Debug.WriteLine(
+                $"Getting {targetPageType} from cache using IServiceProvider."
+            );
+
             return _serviceProvider.GetService(targetPageType)
                 ?? throw new InvalidOperationException(
                     $"{nameof(_serviceProvider.GetService)} returned null"
@@ -298,22 +314,42 @@ public partial class NavigationView
 
         if (_pageService is not null)
         {
+            System.Diagnostics.Debug.WriteLine(
+                $"Getting {targetPageType} from cache using INavigationViewPageProvider."
+            );
+
             return _pageService.GetPage(targetPageType)
                 ?? throw new InvalidOperationException($"{nameof(_pageService.GetPage)} returned null");
         }
-        
+
+        System.Diagnostics.Debug.WriteLine($"Getting {targetPageType} from cache using reflection.");
+
         return NavigationViewActivator.CreateInstance(targetPageType)
             ?? throw new InvalidOperationException("Failed to create instance of the page");
     }
 
-    private static void ApplyAttachedProperties(INavigationViewItem viewItem, object pageInstance)
+    private void ApplyAttachedProperties(INavigationViewItem viewItem, object pageInstance)
     {
-        if (
-            pageInstance is FrameworkElement frameworkElement
-            && GetHeaderContent(frameworkElement) is { } headerContent
-        )
+        if (pageInstance is FrameworkElement frameworkElement)
         {
-            viewItem.Content = headerContent;
+            // Store the association between page and navigation item
+            PageToNavigationItemDictionary[frameworkElement] = viewItem;
+
+            // Apply HeaderContent if already available
+            if (GetHeaderContent(frameworkElement) is { } headerContent)
+            {
+                viewItem.Content = headerContent;
+                UpdateBreadcrumbContents();
+            }
+        }
+    }
+
+    internal void NotifyHeaderContentChanged(FrameworkElement page, object? headerContent)
+    {
+        if (PageToNavigationItemDictionary.TryGetValue(page, out INavigationViewItem? navItem))
+        {
+            navItem.Content = headerContent;
+            UpdateBreadcrumbContents();
         }
     }
 

@@ -43,7 +43,7 @@ public class FontIconExtension : MarkupExtension
     public string? Glyph { get; set; }
 
     [ConstructorArgument("fontFamily")]
-    public FontFamily FontFamily { get; set; } = new("FluentSystemIcons");
+    public FontFamily FontFamily { get; set; } = new("Segoe Fluent Icons, Segoe MDL2 Assets");
 
     public double FontSize { get; set; }
 
