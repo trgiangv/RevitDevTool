@@ -1,5 +1,6 @@
 ﻿using System.Diagnostics;
 using Autodesk.Revit.DB.DirectContext3D;
+using RevitDevTool.Extensions ;
 using RevitDevTool.Visualization.Helpers;
 using RevitDevTool.Visualization.Render;
 using RevitDevTool.Visualization.Server.Contracts;
@@ -15,25 +16,16 @@ public sealed class MeshVisualizationServer : VisualizationServer<Mesh>
     private readonly List<RenderingBufferStorage> _surfaceBuffers = [];
     private readonly List<RenderingBufferStorage> _meshGridBuffers = [];
 
-    private readonly double _extrusion = MeshVisualizationSettings.Extrusion;
-    private readonly double _transparency = MeshVisualizationSettings.Transparency;
+    private double _extrusion ;
+    private double _transparency ;
 
-    private readonly bool _drawMeshGrid = MeshVisualizationSettings.ShowMeshGrid;
-    private readonly bool _drawNormalVector = MeshVisualizationSettings.ShowNormalVector;
-    private readonly bool _drawSurface = MeshVisualizationSettings.ShowSurface;
+    private bool _drawMeshGrid ;
+    private bool _drawNormalVector ;
+    private bool _drawSurface ;
 
-    private readonly Color _meshColor = new(
-        MeshVisualizationSettings.MeshColor.R,
-        MeshVisualizationSettings.MeshColor.G, 
-        MeshVisualizationSettings.MeshColor.B);
-    private readonly Color _normalColor = new(
-        MeshVisualizationSettings.NormalVectorColor.R, 
-        MeshVisualizationSettings.NormalVectorColor.G, 
-        MeshVisualizationSettings.NormalVectorColor.B);
-    private readonly Color _surfaceColor = new(
-        MeshVisualizationSettings.SurfaceColor.R, 
-        MeshVisualizationSettings.SurfaceColor.G, 
-        MeshVisualizationSettings.SurfaceColor.B);
+    private Color _meshColor ;
+    private Color _normalColor ;
+    private Color _surfaceColor ;
 
     public override bool UseInTransparentPass(Autodesk.Revit.DB.View view) => _drawSurface && _transparency > 0;
     
@@ -174,7 +166,7 @@ public sealed class MeshVisualizationServer : VisualizationServer<Mesh>
         }
     }
 
-    private void UpdateEffects()
+    public override void UpdateEffects()
     {
         foreach (var surfaceBuffer in _surfaceBuffers)
         {
@@ -196,6 +188,113 @@ public sealed class MeshVisualizationServer : VisualizationServer<Mesh>
                 buffer.EffectInstance ??= new EffectInstance(buffer.FormatBits);
                 buffer.EffectInstance.SetColor(_normalColor);
             }
+        }
+    }
+    
+    public override void UpdateSurfaceColor(Color value)
+    {
+        var uiDocument = Context.ActiveUiDocument;
+        if (uiDocument is null) return;
+
+        lock (RenderLock)
+        {
+            _surfaceColor = value;
+            HasEffectsUpdates = true;
+
+            uiDocument.UpdateAllOpenViews();
+        }
+    }
+
+    public override void UpdateMeshGridColor(Color value)
+    {
+        var uiDocument = Context.ActiveUiDocument;
+        if (uiDocument is null) return;
+
+        lock (RenderLock)
+        {
+            _meshColor = value;
+            HasEffectsUpdates = true;
+
+            uiDocument.UpdateAllOpenViews();
+        }
+    }
+
+    public override void UpdateNormalVectorColor(Color value)
+    {
+        var uiDocument = Context.ActiveUiDocument;
+        if (uiDocument is null) return;
+
+        lock (RenderLock)
+        {
+            _normalColor = value;
+            HasEffectsUpdates = true;
+
+            uiDocument.UpdateAllOpenViews();
+        }
+    }
+
+    public override void UpdateExtrusion(double value)
+    {
+        var uiDocument = Context.ActiveUiDocument;
+        if (uiDocument is null) return;
+
+        lock (RenderLock)
+        {
+            _extrusion = value;
+            HasGeometryUpdates = true;
+
+            uiDocument.UpdateAllOpenViews();
+        }
+    }
+
+    public override void UpdateTransparency(double value)
+    {
+        var uiDocument = Context.ActiveUiDocument;
+        if (uiDocument is null) return;
+
+        lock (RenderLock)
+        {
+            _transparency = value;
+            HasEffectsUpdates = true;
+
+            uiDocument.UpdateAllOpenViews();
+        }
+    }
+
+
+    public override void UpdateSurfaceVisibility(bool visible)
+    {
+        var uiDocument = Context.ActiveUiDocument;
+        if (uiDocument is null) return;
+
+        lock (RenderLock)
+        {
+            _drawSurface = visible;
+            uiDocument.UpdateAllOpenViews();
+        }
+    }
+
+    public override void UpdateMeshGridVisibility(bool visible)
+    {
+        var uiDocument = Context.ActiveUiDocument;
+        if (uiDocument is null) return;
+
+        lock (RenderLock)
+        {
+            _drawMeshGrid = visible;
+            uiDocument.UpdateAllOpenViews();
+        }
+    }
+
+    public override void UpdateNormalVectorVisibility(bool visible)
+    {
+        var uiDocument = Context.ActiveUiDocument;
+        if (uiDocument is null) return;
+
+        lock (RenderLock)
+        {
+            _drawNormalVector = visible;
+            uiDocument.UpdateAllOpenViews();
         }
     }
 

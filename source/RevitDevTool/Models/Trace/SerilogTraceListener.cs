@@ -1,11 +1,11 @@
 ﻿#nullable disable
-using System.Diagnostics;
-using System.Globalization;
-using Serilog;
-using Serilog.Events;
+using System.Diagnostics ;
+using System.Globalization ;
+using Serilog ;
+using Serilog.Events ;
 // ReSharper disable UnusedMember.Local
 
-namespace RevitDevTool.Models;
+namespace RevitDevTool.Models.Trace;
 
 /// <summary>
 /// TraceListener implementation that directs all output to Serilog.
@@ -229,7 +229,7 @@ internal class SerilogTraceListener : TraceListener
     private List<LogEventProperty> CreateProperties()
     {
         var properties = new List<LogEventProperty>();
-        SafeAddProperty(properties, "ActivityId", Trace.CorrelationManager.ActivityId);
+        SafeAddProperty(properties, "ActivityId", System.Diagnostics.Trace.CorrelationManager.ActivityId);
         return properties;
     }
 

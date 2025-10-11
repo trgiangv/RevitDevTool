@@ -1,7 +1,7 @@
-using System.Diagnostics;
-using System.IO;
+using System.Diagnostics ;
+using System.IO ;
 
-namespace RevitDevTool.Models;
+namespace RevitDevTool.Models.Trace;
 
 /// <summary>
 /// Redirects Console.WriteLine output to the Trace system
@@ -50,13 +50,13 @@ internal class ConsoleRedirector : IDisposable
             {
                 case TraceEventType.Error:
                 case TraceEventType.Critical:
-                    Trace.TraceError(value);
+                    System.Diagnostics.Trace.TraceError(value);
                     break;
                 case TraceEventType.Warning:
-                    Trace.TraceWarning(value);
+                    System.Diagnostics.Trace.TraceWarning(value);
                     break;
                 case TraceEventType.Information:
-                    Trace.TraceInformation(value);
+                    System.Diagnostics.Trace.TraceInformation(value);
                     break;
                 case TraceEventType.Verbose:
                 case TraceEventType.Start:
@@ -65,7 +65,7 @@ internal class ConsoleRedirector : IDisposable
                 case TraceEventType.Resume:
                 case TraceEventType.Transfer:
                 default:
-                    Trace.WriteLine(value);
+                    System.Diagnostics.Trace.WriteLine(value);
                     break;
             }
         }

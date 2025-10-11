@@ -4,12 +4,12 @@ namespace RevitDevTool;
 
 internal static class VisualizationController
 {
-    private static BoundingBoxVisualizationServer BoundingBoxVisualizationServer { get; } = new();
-    private static MeshVisualizationServer MeshVisualizationServer { get; } = new();
-    private static PolylineVisualizationServer PolylineVisualizationServer { get; } = new();
-    private static SolidVisualizationServer SolidVisualizationServer { get; } = new();
-    private static XyzVisualizationServer XyzVisualizationServer { get; } = new();
-    private static FaceVisualizationServer FaceVisualizationServer { get; } = new();
+    public static BoundingBoxVisualizationServer BoundingBoxVisualizationServer { get; } = new();
+    public static MeshVisualizationServer MeshVisualizationServer { get; } = new();
+    public static PolylineVisualizationServer PolylineVisualizationServer { get; } = new();
+    public static SolidVisualizationServer SolidVisualizationServer { get; } = new();
+    public static XyzVisualizationServer XyzVisualizationServer { get; } = new();
+    public static FaceVisualizationServer FaceVisualizationServer { get; } = new();
     
     public static void Start()
     {

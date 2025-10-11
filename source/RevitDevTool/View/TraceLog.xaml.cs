@@ -19,7 +19,6 @@ public partial class TraceLog : IDisposable
 #endif
         ThemeWatcher.Instance.Initialize();
         ThemeWatcher.Instance.Watch(this);
-        ThemeWatcher.Instance.ApplyTheme();
         Loaded += (_, _) =>
         {
             if (DataContext is TraceLogViewModel vm)
