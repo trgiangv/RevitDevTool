@@ -1,0 +1,53 @@
+﻿<Page
+    x:Class="RevitDevTool.View.Settings.GeneralSettingsView"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    xmlns:settings="clr-namespace:RevitDevTool.ViewModel.Settings"
+    xmlns:ui="http://revitdevtool.com/xaml"
+    d:DataContext="{d:DesignInstance settings:GeneralSettingsViewModel}"
+    d:DesignHeight="300"
+    d:DesignWidth="300"
+    mc:Ignorable="d">
+
+    <StackPanel Margin="12">
+        <StackPanel>
+            <ui:CardControl
+                Margin="0,4,0,0"
+                Icon="{ui:SymbolIcon Color24}">
+                <ui:CardControl.Header>
+                    <StackPanel>
+                        <ui:TextBlock Text="Theme" />
+                        <ui:TextBlock
+                            Appearance="Secondary"
+                            FontTypography="Caption"
+                            Text="Customise the application theme"
+                            TextTrimming="CharacterEllipsis" />
+                    </StackPanel>
+                </ui:CardControl.Header>
+                <ComboBox
+                    MinWidth="150"
+                    IsEnabled="True"
+                    ItemsSource="{Binding Themes, Mode=OneTime}"
+                    SelectedItem="{Binding Theme}" />
+            </ui:CardControl>
+        </StackPanel>
+
+        <ui:CardAction
+            Margin="0,4,0,0"
+            Command="{Binding ResetVisualizationSettingsCommand}"
+            Icon="{ui:SymbolIcon ArrowReset24}">
+            <ui:CardAction.Content>
+                <StackPanel>
+                    <ui:TextBlock Text="Reset visualization settings" />
+                    <ui:TextBlock
+                        Appearance="Secondary"
+                        FontTypography="Caption"
+                        Text="Reset visualization settings to default"
+                        TextTrimming="CharacterEllipsis" />
+                </StackPanel>
+            </ui:CardAction.Content>
+        </ui:CardAction>
+    </StackPanel>
+</Page>

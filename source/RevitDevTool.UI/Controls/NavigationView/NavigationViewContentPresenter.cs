@@ -89,10 +89,10 @@ public class NavigationViewContentPresenter : Frame
             new FrameworkPropertyMetadata(JournalOwnership.UsesParentJournal)
         );
 
-        ScrollViewer.CanContentScrollProperty.OverrideMetadata(
-            typeof(Page),
-            new FrameworkPropertyMetadata(true)
-        );
+        // ScrollViewer.CanContentScrollProperty.OverrideMetadata(
+        //     typeof(Page),
+        //     new FrameworkPropertyMetadata(true)
+        // );
     }
 
     public NavigationViewContentPresenter()

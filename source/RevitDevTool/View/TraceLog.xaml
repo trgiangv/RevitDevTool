@@ -24,7 +24,6 @@
                     <x:Type TypeName="log:LogEventLevel" />
                 </ObjectDataProvider.MethodParameters>
             </ObjectDataProvider>
-
         </ResourceDictionary>
     </Page.Resources>
 

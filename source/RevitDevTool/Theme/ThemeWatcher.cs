@@ -1,10 +1,12 @@
-﻿using System.ComponentModel ;
+﻿using System.Diagnostics ;
 using System.Windows;
+using RevitDevTool.Services ;
 using Wpf.Ui;
 using Wpf.Ui.Appearance;
 using Wpf.Ui.Controls;
 using Color = System.Windows.Media.Color;
 #if REVIT2024_OR_GREATER
+using System.ComponentModel ;
 using Autodesk.Revit.UI;
 using Autodesk.Revit.UI.Events;
 #endif
@@ -34,9 +36,11 @@ public sealed class ThemeWatcher
     public void ApplyTheme()
     {
 #if !REVIT2024_OR_GREATER
-        var theme = ApplicationTheme.Dark;
+        var theme = SettingsService.Instance.GeneralConfig.Theme;
 #else
-        var theme = GetRevitTheme();
+        var theme = SettingsService.Instance.GeneralConfig.Theme == ApplicationTheme.Auto 
+            ? GetRevitTheme() 
+            : SettingsService.Instance.GeneralConfig.Theme;
 
         if (!_isWatching)
         {
@@ -110,11 +114,42 @@ public sealed class ThemeWatcher
     {
         var element = (FrameworkElement) sender;
         _observedElements.Add(element);
-
-        if (element.Resources.MergedDictionaries[0].Source.OriginalString != UiApplication.Current.Resources.MergedDictionaries[0].Source.OriginalString)
+        
+        try
         {
-            ApplicationThemeManager.Apply(element);
-            UpdateDictionary(element);
+            var uiAppDictionaries = UiApplication.Current.Resources.MergedDictionaries;
+            if ( uiAppDictionaries.Count == 0 ) {
+                Debug.WriteLine("No merged dictionaries found in UiApplication.") ;
+                return ;
+            }
+            var uiAppFirstDictionary = uiAppDictionaries[0] ;
+            if ( uiAppFirstDictionary.Source == null ) {
+                Debug.WriteLine("First merged dictionary in UiApplication has no source.") ;
+                return ;
+            }
+            
+            Debug.WriteLine( uiAppFirstDictionary.Source.OriginalString );
+            
+            var dictionaries = element.Resources.MergedDictionaries;
+            if ( dictionaries.Count == 0 ) {
+                Debug.WriteLine("No merged dictionaries found.") ;
+                return ;
+            }
+            var firstDictionary = dictionaries[0] ;
+            if ( firstDictionary.Source == null ) {
+                Debug.WriteLine("First merged dictionary has no source.") ;
+                Debug.WriteLine( $"Valid source {dictionaries.FirstOrDefault( x => x.Source != null && x.Source.OriginalString.Contains( "RevitDevTool" ) )?.Source.OriginalString}" );
+                return;
+            }
+            
+            if ( firstDictionary.Source.OriginalString == uiAppFirstDictionary.Source.OriginalString ) return ;
+            ApplicationThemeManager.Apply( element ) ;
+            UpdateDictionary( element ) ;
+        }
+        catch ( Exception exception)
+        {
+            Debug.WriteLine(exception.Message);
+            Debug.WriteLine(exception.StackTrace);
         }
     }
 

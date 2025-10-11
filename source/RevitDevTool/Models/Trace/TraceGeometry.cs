@@ -1,6 +1,6 @@
-using System.Diagnostics;
+using System.Diagnostics ;
 
-namespace RevitDevTool.Models;
+namespace RevitDevTool.Models.Trace;
 
 internal static class TraceGeometry
 {

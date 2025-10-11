@@ -1,10 +1,12 @@
 ﻿using System.Diagnostics;
 using Autodesk.Revit.DB.DirectContext3D;
 using Autodesk.Revit.DB.ExternalService;
+using RevitDevTool.Visualization.Contracts ;
+using Color = Autodesk.Revit.DB.Color ;
 
 namespace RevitDevTool.Visualization.Server.Contracts;
 
-public abstract class VisualizationServer<T> : IDirectContext3DServer
+public abstract class VisualizationServer<T> : IDirectContext3DServer, IVisualUpdate
 {
     protected readonly List<T> VisualizeGeometries = [];
     protected bool HasGeometryUpdates = true;
@@ -126,6 +128,118 @@ public abstract class VisualizationServer<T> : IDirectContext3DServer
 
     protected virtual void DisposeBuffers()
     {
-        // Override in derived classes to dispose specific buffers
+        
+    }
+    public virtual void UpdateEffects()
+    {
+        
+    }
+    public virtual void UpdateTransparency( double value )
+    {
+        
+    }
+    public virtual void UpdateSurfaceColor( Color color )
+    {
+        
+    }
+    public virtual void UpdateEdgeColor( Color color )
+    {
+        
+    }
+    public virtual void UpdateAxisColor( Color color )
+    {
+        
+    }
+    public virtual void UpdateCurveColor( Color color )
+    {
+        
+    }
+    public virtual void UpdateMeshGridColor( Color color )
+    {
+        
+    }
+    public virtual void UpdateNormalVectorColor( Color color )
+    {
+        
+    }
+    public virtual void UpdateDirectionColor( Color color )
+    {
+        
+    }
+    public virtual void UpdateXColor( Color color )
+    {
+        throw new NotImplementedException() ;
+    }
+    public virtual void UpdateYColor( Color color )
+    {
+        throw new NotImplementedException() ;
+    }
+    public virtual void UpdateZColor( Color color )
+    {
+        throw new NotImplementedException() ;
+    }
+    public virtual void UpdateScale( double value )
+    {
+        
+    }
+    public virtual void UpdateExtrusion( double value )
+    {
+        
+    }
+    public virtual void UpdateDiameter( double value )
+    {
+        
+    }
+    public virtual void UpdateAxisLength( double value )
+    {
+        
+    }
+    public virtual void UpdateSurfaceVisibility( bool visible )
+    {
+        
+    }
+    public virtual void UpdateEdgeVisibility( bool visible )
+    {
+        
+    }
+    public virtual void UpdateFaceVisibility( bool visible )
+    {
+        
+    }
+    public virtual void UpdateAxisVisibility( bool visible )
+    {
+        
+    }
+    public virtual void UpdateMeshGridVisibility( bool visible )
+    {
+        
+    }
+    public virtual void UpdateNormalVectorVisibility( bool visible )
+    {
+        
+    }
+    public virtual void UpdateCurveVisibility( bool visible )
+    {
+        
+    }
+    public virtual void UpdateDirectionVisibility( bool visible )
+    {
+        
+    }
+    public virtual void UpdatePlaneVisibility( bool visible )
+    {
+        
+    }
+    public virtual void UpdateXAxisVisibility( bool visible )
+    {
+        
+    }
+    public virtual void UpdateYAxisVisibility( bool visible )
+    {
+        
+    }
+    public virtual void UpdateZAxisVisibility( bool visible )
+    {
+        
     }
 }

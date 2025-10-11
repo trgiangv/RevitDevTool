@@ -1,5 +1,6 @@
 ﻿using System.Diagnostics;
 using Autodesk.Revit.DB.DirectContext3D;
+using RevitDevTool.Extensions ;
 using RevitDevTool.Visualization.Helpers;
 using RevitDevTool.Visualization.Render;
 using RevitDevTool.Visualization.Server.Contracts;
@@ -22,26 +23,17 @@ public sealed class XyzVisualizationServer : VisualizationServer<XYZ>
         XYZ.BasisZ
     ];
 
-    private readonly double _transparency = XyzVisualizationSettings.Transparency;
-    private readonly double _axisLength = XyzVisualizationSettings.AxisLength;
+    private double _transparency;
+    private double _axisLength;
 
-    private readonly Color _xColor = new(
-        XyzVisualizationSettings.XColor.R,
-        XyzVisualizationSettings.XColor.G,
-        XyzVisualizationSettings.XColor.B);
-    private readonly Color _yColor = new(
-        XyzVisualizationSettings.YColor.R,
-        XyzVisualizationSettings.YColor.G,
-        XyzVisualizationSettings.YColor.B);
-    private readonly Color _zColor = new(
-        XyzVisualizationSettings.ZColor.R,
-        XyzVisualizationSettings.ZColor.G,
-        XyzVisualizationSettings.ZColor.B);
+    private Color _xColor;
+    private Color _yColor;
+    private Color _zColor;
 
-    private readonly bool _drawPlane = XyzVisualizationSettings.ShowPlane;
-    private readonly bool _drawXAxis = XyzVisualizationSettings.ShowXAxis;
-    private readonly bool _drawYAxis = XyzVisualizationSettings.ShowYAxis;
-    private readonly bool _drawZAxis = XyzVisualizationSettings.ShowZAxis;
+    private bool _drawPlane;
+    private bool _drawXAxis;
+    private bool _drawYAxis;
+    private bool _drawZAxis;
     
     public override bool UseInTransparentPass(Autodesk.Revit.DB.View view) => _drawPlane && _transparency > 0;
 
@@ -200,7 +192,7 @@ public sealed class XyzVisualizationServer : VisualizationServer<XYZ>
         }
     }
 
-    private void UpdateEffects()
+    public override void UpdateEffects()
     {
         foreach (var bufferArray in _planeBufferArrays)
         {
@@ -225,6 +217,124 @@ public sealed class XyzVisualizationServer : VisualizationServer<XYZ>
             bufferArray[0].EffectInstance!.SetColor(_xColor);
             bufferArray[1].EffectInstance!.SetColor(_yColor);
             bufferArray[2].EffectInstance!.SetColor(_zColor);
+        }
+    }
+    
+    public override void UpdateXColor(Color value)
+    {
+        var uiDocument = Context.ActiveUiDocument;
+        if (uiDocument is null) return;
+
+        lock (RenderLock)
+        {
+            _xColor = value;
+            HasEffectsUpdates = true;
+
+            uiDocument.UpdateAllOpenViews();
+        }
+    }
+
+    public override void UpdateYColor(Color value)
+    {
+        var uiDocument = Context.ActiveUiDocument;
+        if (uiDocument is null) return;
+
+        lock (RenderLock)
+        {
+            _yColor = value;
+            HasEffectsUpdates = true;
+
+            uiDocument.UpdateAllOpenViews();
+        }
+    }
+
+    public override void UpdateZColor(Color value)
+    {
+        var uiDocument = Context.ActiveUiDocument;
+        if (uiDocument is null) return;
+
+        lock (RenderLock)
+        {
+            _zColor = value;
+            HasEffectsUpdates = true;
+
+            uiDocument.UpdateAllOpenViews();
+        }
+    }
+
+    public override void UpdateAxisLength(double value)
+    {
+        var uiDocument = Context.ActiveUiDocument;
+        if (uiDocument is null) return;
+
+        lock (RenderLock)
+        {
+            _axisLength = value;
+            HasGeometryUpdates = true;
+
+            uiDocument.UpdateAllOpenViews();
+        }
+    }
+
+    public override void UpdateTransparency(double value)
+    {
+        var uiDocument = Context.ActiveUiDocument;
+        if (uiDocument is null) return;
+
+        lock (RenderLock)
+        {
+            _transparency = value;
+            HasEffectsUpdates = true;
+
+            uiDocument.UpdateAllOpenViews();
+        }
+    }
+
+    public override void UpdatePlaneVisibility(bool visible)
+    {
+        var uiDocument = Context.ActiveUiDocument;
+        if (uiDocument is null) return;
+
+        lock (RenderLock)
+        {
+            _drawPlane = visible;
+            uiDocument.UpdateAllOpenViews();
+        }
+    }
+
+    public override void UpdateXAxisVisibility(bool visible)
+    {
+        var uiDocument = Context.ActiveUiDocument;
+        if (uiDocument is null) return;
+
+        lock (RenderLock)
+        {
+            _drawXAxis = visible;
+            uiDocument.UpdateAllOpenViews();
+        }
+    }
+
+    public override void UpdateYAxisVisibility(bool visible)
+    {
+        var uiDocument = Context.ActiveUiDocument;
+        if (uiDocument is null) return;
+
+        lock (RenderLock)
+        {
+            _drawYAxis = visible;
+            uiDocument.UpdateAllOpenViews();
+        }
+    }
+
+    public override void UpdateZAxisVisibility(bool visible)
+    {
+        var uiDocument = Context.ActiveUiDocument;
+        if (uiDocument is null) return;
+
+        lock (RenderLock)
+        {
+            _drawZAxis = visible;
+            uiDocument.UpdateAllOpenViews();
         }
     }
 

@@ -1,5 +1,6 @@
 ﻿using System.Diagnostics;
 using Autodesk.Revit.DB.DirectContext3D;
+using RevitDevTool.Extensions ;
 using RevitDevTool.Visualization.Helpers;
 using RevitDevTool.Visualization.Render;
 using RevitDevTool.Visualization.Server.Contracts;
@@ -16,25 +17,16 @@ public sealed class PolylineVisualizationServer : VisualizationServer<GeometryOb
     private readonly List<RenderingBufferStorage> _curveBuffers = [];
     private readonly List<RenderingBufferStorage> _normalsBuffers = [];
     
-    private readonly double _transparency = PolylineVisualizationSettings.Transparency;
-    private readonly double _diameter = PolylineVisualizationSettings.Diameter.FromMillimeters();
+    private double _transparency ;
+    private double _diameter ;
 
-    private readonly Color _surfaceColor = new(
-        PolylineVisualizationSettings.SurfaceColor.R,
-        PolylineVisualizationSettings.SurfaceColor.G,
-        PolylineVisualizationSettings.SurfaceColor.B);
-    private readonly Color _curveColor = new(
-        PolylineVisualizationSettings.CurveColor.R,
-        PolylineVisualizationSettings.CurveColor.G,
-        PolylineVisualizationSettings.CurveColor.B);
-    private readonly Color _directionColor = new(
-        PolylineVisualizationSettings.DirectionColor.R,
-        PolylineVisualizationSettings.DirectionColor.G,
-        PolylineVisualizationSettings.DirectionColor.B);
+    private Color _surfaceColor ;
+    private Color _curveColor ;
+    private Color _directionColor ;
 
-    private readonly bool _drawCurve = PolylineVisualizationSettings.ShowCurve;
-    private readonly bool _drawDirection = PolylineVisualizationSettings.ShowDirection;
-    private readonly bool _drawSurface = PolylineVisualizationSettings.ShowSurface;
+    private bool _drawCurve ;
+    private bool _drawDirection ;
+    private bool _drawSurface ;
     
     public override bool UseInTransparentPass(Autodesk.Revit.DB.View view) => _drawSurface && _transparency > 0;
     public override Outline? GetBoundingBox(Autodesk.Revit.DB.View view) => null;
@@ -206,7 +198,7 @@ public sealed class PolylineVisualizationServer : VisualizationServer<GeometryOb
         }
     }
 
-    private void UpdateEffects()
+    public override void UpdateEffects()
     {
         foreach (var surfaceBuffer in _surfaceBuffers)
         {
@@ -225,6 +217,113 @@ public sealed class PolylineVisualizationServer : VisualizationServer<GeometryOb
         {
             buffer.EffectInstance ??= new EffectInstance(buffer.FormatBits);
             buffer.EffectInstance.SetColor(_directionColor);
+        }
+    }
+    
+    public override void UpdateSurfaceColor(Color value)
+    {
+        var uiDocument = Context.ActiveUiDocument;
+        if (uiDocument is null) return;
+
+        lock (RenderLock)
+        {
+            _surfaceColor = value;
+            HasEffectsUpdates = true;
+
+            uiDocument.UpdateAllOpenViews();
+        }
+    }
+
+    public override void UpdateCurveColor(Color value)
+    {
+        var uiDocument = Context.ActiveUiDocument;
+        if (uiDocument is null) return;
+
+        lock (RenderLock)
+        {
+            _curveColor = value;
+            HasEffectsUpdates = true;
+
+            uiDocument.UpdateAllOpenViews();
+        }
+    }
+
+    public override void UpdateDirectionColor(Color value)
+    {
+        var uiDocument = Context.ActiveUiDocument;
+        if (uiDocument is null) return;
+
+        lock (RenderLock)
+        {
+            _directionColor = value;
+            HasEffectsUpdates = true;
+
+            uiDocument.UpdateAllOpenViews();
+        }
+    }
+
+    public override void UpdateDiameter(double value)
+    {
+        var uiDocument = Context.ActiveUiDocument;
+        if (uiDocument is null) return;
+
+        lock (RenderLock)
+        {
+            _diameter = value;
+            HasGeometryUpdates = true;
+
+            uiDocument.UpdateAllOpenViews();
+        }
+    }
+
+    public override void UpdateTransparency(double value)
+    {
+        var uiDocument = Context.ActiveUiDocument;
+        if (uiDocument is null) return;
+
+        lock (RenderLock)
+        {
+            _transparency = value;
+            HasEffectsUpdates = true;
+
+            uiDocument.UpdateAllOpenViews();
+        }
+    }
+
+
+    public override void UpdateSurfaceVisibility(bool visible)
+    {
+        var uiDocument = Context.ActiveUiDocument;
+        if (uiDocument is null) return;
+
+        lock (RenderLock)
+        {
+            _drawSurface = visible;
+            uiDocument.UpdateAllOpenViews();
+        }
+    }
+
+    public override void UpdateCurveVisibility(bool visible)
+    {
+        var uiDocument = Context.ActiveUiDocument;
+        if (uiDocument is null) return;
+
+        lock (RenderLock)
+        {
+            _drawCurve = visible;
+            uiDocument.UpdateAllOpenViews();
+        }
+    }
+
+    public override void UpdateDirectionVisibility(bool visible)
+    {
+        var uiDocument = Context.ActiveUiDocument;
+        if (uiDocument is null) return;
+
+        lock (RenderLock)
+        {
+            _drawDirection = visible;
+            uiDocument.UpdateAllOpenViews();
         }
     }
 

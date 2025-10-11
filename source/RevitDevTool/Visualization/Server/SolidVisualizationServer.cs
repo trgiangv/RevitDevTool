@@ -1,5 +1,6 @@
 ﻿using System.Diagnostics;
 using Autodesk.Revit.DB.DirectContext3D;
+using RevitDevTool.Extensions ;
 using RevitDevTool.Visualization.Helpers;
 using RevitDevTool.Visualization.Render;
 using RevitDevTool.Visualization.Server.Contracts;
@@ -14,20 +15,14 @@ public sealed class SolidVisualizationServer : VisualizationServer<Solid>
     private readonly List<RenderingBufferStorage> _faceBuffers = [];
     private readonly List<RenderingBufferStorage> _edgeBuffers = [];
 
-    private readonly double _transparency = SolidVisualizationSettings.Transparency;
-    private readonly double _scale = SolidVisualizationSettings.Scale;
+    private double _transparency;
+    private double _scale;
 
-    private readonly Color _faceColor = new(
-        SolidVisualizationSettings.FaceColor.R,
-        SolidVisualizationSettings.FaceColor.G,
-        SolidVisualizationSettings.FaceColor.B);
-    private readonly Color _edgeColor = new(
-        SolidVisualizationSettings.EdgeColor.R,
-        SolidVisualizationSettings.EdgeColor.G,
-        SolidVisualizationSettings.EdgeColor.B);
+    private Color _faceColor;
+    private Color _edgeColor;
 
-    private readonly bool _drawFace = SolidVisualizationSettings.ShowFace;
-    private readonly bool _drawEdge = SolidVisualizationSettings.ShowEdge;
+    private bool _drawFace;
+    private bool _drawEdge;
     
     public override bool UseInTransparentPass(Autodesk.Revit.DB.View view) => _drawFace && _transparency > 0;
 
@@ -161,7 +156,7 @@ public sealed class SolidVisualizationServer : VisualizationServer<Solid>
         RenderHelper.MapCurveBuffer(buffer, mesh);
     }
 
-    private void UpdateEffects()
+    public override void UpdateEffects()
     {
         foreach (var buffer in _faceBuffers)
         {
@@ -174,6 +169,92 @@ public sealed class SolidVisualizationServer : VisualizationServer<Solid>
         {
             buffer.EffectInstance ??= new EffectInstance(buffer.FormatBits);
             buffer.EffectInstance.SetColor(_edgeColor);
+        }
+    }
+    
+    public void UpdateFaceColor(Color value)
+    {
+        var uiDocument = Context.ActiveUiDocument;
+        if (uiDocument is null) return;
+
+        lock (RenderLock)
+        {
+            _faceColor = value;
+            HasEffectsUpdates = true;
+
+            uiDocument.UpdateAllOpenViews();
+        }
+    }
+
+    public override void UpdateEdgeColor(Color value)
+    {
+        var uiDocument = Context.ActiveUiDocument;
+        if (uiDocument is null) return;
+
+        lock (RenderLock)
+        {
+            _edgeColor = value;
+            HasEffectsUpdates = true;
+
+            uiDocument.UpdateAllOpenViews();
+        }
+    }
+
+    public override void UpdateTransparency(double value)
+    {
+        var uiDocument = Context.ActiveUiDocument;
+        if (uiDocument is null) return;
+
+        lock (RenderLock)
+        {
+            _transparency = value;
+            HasEffectsUpdates = true;
+
+            uiDocument.UpdateAllOpenViews();
+        }
+    }
+
+    public override void UpdateScale(double value)
+    {
+        var uiDocument = Context.ActiveUiDocument;
+        if (uiDocument is null) return;
+
+        _scale = value;
+
+        lock (RenderLock)
+        {
+            HasGeometryUpdates = true;
+            HasEffectsUpdates = true;
+            _faceBuffers.Clear();
+            _edgeBuffers.Clear();
+
+            uiDocument.UpdateAllOpenViews();
+        }
+    }
+
+    public override void UpdateFaceVisibility(bool value)
+    {
+        var uiDocument = Context.ActiveUiDocument;
+        if (uiDocument is null) return;
+
+        lock (RenderLock)
+        {
+            _drawFace = value;
+
+            uiDocument.UpdateAllOpenViews();
+        }
+    }
+
+    public override void UpdateEdgeVisibility(bool value)
+    {
+        var uiDocument = Context.ActiveUiDocument;
+        if (uiDocument is null) return;
+
+        lock (RenderLock)
+        {
+            _drawEdge = value;
+
+            uiDocument.UpdateAllOpenViews();
         }
     }
 
