@@ -66,7 +66,7 @@
                 Height="32"
                 DockPanel.Dock="Right">
                 <colorPicker:PortableColorPicker
-                    SelectedColor="{Binding XColor}"
+                    SelectedColor="{Binding XColor, Mode=TwoWay, Delay=10}"
                     ShowAlpha="False"
                     ShowFractionalPart="False"
                     SmallChange="5"
@@ -84,7 +84,7 @@
                 Height="32"
                 DockPanel.Dock="Right">
                 <colorPicker:PortableColorPicker
-                    SelectedColor="{Binding YColor}"
+                    SelectedColor="{Binding YColor, Mode=TwoWay, Delay=10}"
                     ShowAlpha="False"
                     ShowFractionalPart="False"
                     SmallChange="5"
@@ -102,7 +102,7 @@
                 Height="32"
                 DockPanel.Dock="Right">
                 <colorPicker:PortableColorPicker
-                    SelectedColor="{Binding ZColor}"
+                    SelectedColor="{Binding ZColor, Mode=TwoWay, Delay=10}"
                     ShowAlpha="False"
                     ShowFractionalPart="False"
                     SmallChange="5"

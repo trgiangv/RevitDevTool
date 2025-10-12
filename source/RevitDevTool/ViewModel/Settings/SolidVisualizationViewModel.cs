@@ -4,7 +4,7 @@ using Color = Autodesk.Revit.DB.Color;
 
 namespace RevitDevTool.ViewModel.Settings;
 
-public sealed partial class SolidVisualizationViewModel: ObservableObject, IInitialized
+public sealed partial class SolidVisualizationViewModel: ObservableObject, IVisualizationViewModel
 {
     public static readonly SolidVisualizationViewModel Instance = new();
     
@@ -28,7 +28,17 @@ public sealed partial class SolidVisualizationViewModel: ObservableObject, IInit
         UpdateTransparency(Transparency);
         UpdateScale(Scale);
     }
-    
+
+    public void Refresh()
+    {
+        Scale = SettingsService.Instance.VisualizationConfig.SolidSettings.Scale;
+        Transparency = SettingsService.Instance.VisualizationConfig.SolidSettings.Transparency;
+        FaceColor = SettingsService.Instance.VisualizationConfig.SolidSettings.FaceColor;
+        EdgeColor = SettingsService.Instance.VisualizationConfig.SolidSettings.EdgeColor;
+        ShowFace = SettingsService.Instance.VisualizationConfig.SolidSettings.ShowFace;
+        ShowEdge = SettingsService.Instance.VisualizationConfig.SolidSettings.ShowEdge;
+    }
+
     partial void OnFaceColorChanged(System.Windows.Media.Color value)
     {
         SettingsService.Instance.VisualizationConfig.SolidSettings.FaceColor = value;
@@ -65,33 +75,33 @@ public sealed partial class SolidVisualizationViewModel: ObservableObject, IInit
         UpdateShowEdge(value);
     }
 
-    private void UpdateFaceColor(System.Windows.Media.Color value)
+    private static void UpdateFaceColor(System.Windows.Media.Color value)
     {
-        VisualizationController.SolidVisualizationServer.UpdateFaceColor(new Color(value.R, value.G, value.B));
+        VisualizationController.SolidVisualizationServerServer.UpdateFaceColor(new Color(value.R, value.G, value.B));
     }
 
-    private void UpdateEdgeColor(System.Windows.Media.Color value)
+    private static void UpdateEdgeColor(System.Windows.Media.Color value)
     {
-        VisualizationController.SolidVisualizationServer.UpdateEdgeColor(new Color(value.R, value.G, value.B));
+        VisualizationController.SolidVisualizationServerServer.UpdateEdgeColor(new Color(value.R, value.G, value.B));
     }
 
-    private void UpdateTransparency(double value)
+    private static void UpdateTransparency(double value)
     {
-        VisualizationController.SolidVisualizationServer.UpdateTransparency(value / 100);
+        VisualizationController.SolidVisualizationServerServer.UpdateTransparency(value / 100);
     }
 
-    private void UpdateScale(double value)
+    private static void UpdateScale(double value)
     {
-        VisualizationController.SolidVisualizationServer.UpdateScale(value / 100);
+        VisualizationController.SolidVisualizationServerServer.UpdateScale(value / 100);
     }
 
-    private void UpdateShowFace(bool value)
+    private static void UpdateShowFace(bool value)
     {
-        VisualizationController.SolidVisualizationServer.UpdateFaceVisibility(value);
+        VisualizationController.SolidVisualizationServerServer.UpdateFaceVisibility(value);
     }
 
-    private void UpdateShowEdge(bool value)
+    private static void UpdateShowEdge(bool value)
     {
-        VisualizationController.SolidVisualizationServer.UpdateEdgeVisibility(value);
+        VisualizationController.SolidVisualizationServerServer.UpdateEdgeVisibility(value);
     }
 }
