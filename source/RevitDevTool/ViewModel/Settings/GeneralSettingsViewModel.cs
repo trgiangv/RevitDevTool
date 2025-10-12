@@ -37,6 +37,7 @@ public partial class GeneralSettingsViewModel : ObservableObject
     [RelayCommand] private static void ResetVisualizationSettings()
     {
         SettingsService.Instance.ResetVisualizationSettings();
+        VisualizationController.Refresh();
     }
     
     public GeneralSettingsViewModel()

@@ -1,28 +1,37 @@
 ﻿using System.Diagnostics;
 using Autodesk.Revit.DB.DirectContext3D;
 using RevitDevTool.Extensions ;
+using RevitDevTool.Models.Config ;
+using RevitDevTool.Visualization.Contracts ;
 using RevitDevTool.Visualization.Helpers;
 using RevitDevTool.Visualization.Render;
-using RevitDevTool.Visualization.Server.Contracts;
 using Color = Autodesk.Revit.DB.Color;
 
 namespace RevitDevTool.Visualization.Server;
 
-public sealed class SolidVisualizationServer : VisualizationServer<Solid>
+public sealed class SolidVisualizationServerServer : VisualizationServerServer<Solid>
 {
     private readonly Guid _serverId = new("02B1803B-9008-427E-985F-4ED4DA839EF0");
     public override Guid GetServerId() => _serverId;
     private readonly List<RenderingBufferStorage> _faceBuffers = [];
     private readonly List<RenderingBufferStorage> _edgeBuffers = [];
 
-    private double _transparency;
-    private double _scale;
+    private double _transparency = SolidVisualizationSettings.Default.Transparency;
+    private double _scale = SolidVisualizationSettings.Default.Scale;
 
-    private Color _faceColor;
-    private Color _edgeColor;
+    private Color _faceColor = new(
+        SolidVisualizationSettings.Default.FaceColor.R,
+        SolidVisualizationSettings.Default.FaceColor.G,
+        SolidVisualizationSettings.Default.FaceColor.B
+        );
+    private Color _edgeColor = new(
+        SolidVisualizationSettings.Default.EdgeColor.R,
+        SolidVisualizationSettings.Default.EdgeColor.G,
+        SolidVisualizationSettings.Default.EdgeColor.B
+        );
 
-    private bool _drawFace;
-    private bool _drawEdge;
+    private bool _drawFace = SolidVisualizationSettings.Default.ShowFace;
+    private bool _drawEdge = SolidVisualizationSettings.Default.ShowEdge;
     
     public override bool UseInTransparentPass(Autodesk.Revit.DB.View view) => _drawFace && _transparency > 0;
 

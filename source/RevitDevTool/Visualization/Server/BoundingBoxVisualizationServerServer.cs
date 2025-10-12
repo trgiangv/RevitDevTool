@@ -1,15 +1,16 @@
 ﻿using System.Diagnostics;
 using Autodesk.Revit.DB.DirectContext3D;
 using RevitDevTool.Extensions ;
+using RevitDevTool.Models.Config ;
+using RevitDevTool.Visualization.Contracts ;
 using RevitDevTool.Visualization.Helpers;
 using RevitDevTool.Visualization.Render;
-using RevitDevTool.Visualization.Server.Contracts;
 using Color = Autodesk.Revit.DB.Color;
 
 namespace RevitDevTool.Visualization.Server;
 
 
-public sealed class BoundingBoxVisualizationServer : VisualizationServer<BoundingBoxXYZ>
+public sealed class BoundingBoxVisualizationServerServer : VisualizationServerServer<BoundingBoxXYZ>
 {
     private readonly Guid _serverId = new("5A67F8D4-30D2-414F-8387-8023C3DAF010");
     public override Guid GetServerId() => _serverId;
@@ -24,15 +25,24 @@ public sealed class BoundingBoxVisualizationServer : VisualizationServer<Boundin
     ];
     private static readonly XYZ UnitVector = new(1, 1, 1);
 
-    private double _transparency;
+    private double _transparency = BoundingBoxVisualizationSettings.Default.Transparency;
     private double _scale = 1.0;
-    private bool _drawSurface;
-    private bool _drawEdge;
-    private bool _drawAxis;
+    private bool _drawSurface = BoundingBoxVisualizationSettings.Default.ShowSurface;
+    private bool _drawEdge = BoundingBoxVisualizationSettings.Default.ShowEdge;
+    private bool _drawAxis = BoundingBoxVisualizationSettings.Default.ShowAxis;
 
-    private Color _surfaceColor;
-    private Color _edgeColor;
-    private Color _axisColor;
+    private Color _surfaceColor = new(
+        BoundingBoxVisualizationSettings.Default.SurfaceColor.R,
+        BoundingBoxVisualizationSettings.Default.SurfaceColor.G, 
+        BoundingBoxVisualizationSettings.Default.SurfaceColor.B);
+    private Color _edgeColor = new(
+        BoundingBoxVisualizationSettings.Default.EdgeColor.R, 
+        BoundingBoxVisualizationSettings.Default.EdgeColor.G, 
+        BoundingBoxVisualizationSettings.Default.EdgeColor.B);
+    private Color _axisColor = new(
+        BoundingBoxVisualizationSettings.Default.AxisColor.R, 
+        BoundingBoxVisualizationSettings.Default.AxisColor.G, 
+        BoundingBoxVisualizationSettings.Default.AxisColor.B);
 
     public override bool UseInTransparentPass(Autodesk.Revit.DB.View view) => _drawSurface && _transparency > 0;
 

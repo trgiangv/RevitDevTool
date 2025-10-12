@@ -30,7 +30,7 @@
                 Height="32"
                 DockPanel.Dock="Right">
                 <colorPicker:PortableColorPicker
-                    SelectedColor="{Binding SurfaceColor}"
+                    SelectedColor="{Binding SurfaceColor, Mode=TwoWay, Delay=10}"
                     ShowAlpha="False"
                     ShowFractionalPart="False"
                     SmallChange="5"
@@ -80,7 +80,7 @@
                 Height="32"
                 DockPanel.Dock="Right">
                 <colorPicker:PortableColorPicker
-                    SelectedColor="{Binding CurveColor}"
+                    SelectedColor="{Binding CurveColor, Mode=TwoWay, Delay=10}"
                     ShowAlpha="False"
                     ShowFractionalPart="False"
                     SmallChange="5"
@@ -98,7 +98,7 @@
                 Height="32"
                 DockPanel.Dock="Right">
                 <colorPicker:PortableColorPicker
-                    SelectedColor="{Binding DirectionColor}"
+                    SelectedColor="{Binding DirectionColor, Mode=TwoWay, Delay=10}"
                     ShowAlpha="False"
                     ShowFractionalPart="False"
                     SmallChange="5"
