@@ -1,12 +1,10 @@
-﻿using System.Diagnostics ;
-using System.Windows;
+﻿using System.Windows;
 using RevitDevTool.Services ;
 using Wpf.Ui;
 using Wpf.Ui.Appearance;
 using Wpf.Ui.Controls;
 using Color = System.Windows.Media.Color;
 #if REVIT2024_OR_GREATER
-using System.ComponentModel ;
 using Autodesk.Revit.UI;
 using Autodesk.Revit.UI.Events;
 #endif
@@ -17,10 +15,6 @@ public sealed class ThemeWatcher
 {
     public static readonly ThemeWatcher Instance = new();
     
-#if REVIT2024_OR_GREATER
-    private bool _isWatching;
-#endif
-
     private readonly List<FrameworkElement> _observedElements = [];
 
     public void Initialize()
@@ -30,53 +24,17 @@ public sealed class ThemeWatcher
             Source = new Uri("pack://application:,,,/RevitDevTool;component/Theme/Theme.xaml", UriKind.Absolute)
         };
 
+#if REVIT2024_OR_GREATER
+        Context.UiApplication.ThemeChanged += Instance.OnRevitThemeChanged;
+#endif
         ApplicationThemeManager.Changed += OnApplicationThemeManagerChanged;
     }
-
-    public void ApplyTheme()
-    {
-#if !REVIT2024_OR_GREATER
-        var theme = SettingsService.Instance.GeneralConfig.Theme;
-#else
-        var theme = SettingsService.Instance.GeneralConfig.Theme == ApplicationTheme.Auto 
-            ? GetRevitTheme() 
-            : SettingsService.Instance.GeneralConfig.Theme;
-
-        if (!_isWatching)
-        {
-            ExternalEventController.ActionEventHandler.Raise(application => application.ThemeChanged += OnRevitThemeChanged);
-            _isWatching = true;
-        }
-#endif
-        ApplicationThemeManager.Apply(theme);
-        UpdateBackground(theme);
-    }
-    
-      
-#if REVIT2024_OR_GREATER
-    public static void ApplyTheme(object? sender, PropertyChangedEventArgs args)
-    {
-        if (args.PropertyName != nameof(UIFramework.ApplicationTheme.CurrentTheme.RibbonPanelBackgroundBrush)) return;
-        if (UIThemeManager.CurrentTheme.ToString() == UIFramework.ApplicationTheme.CurrentTheme.RibbonTheme.Name) return;
-        Instance.ApplyTheme();
-    }
-#endif
 
     public void Watch(FrameworkElement frameworkElement)
     {
         ApplicationThemeManager.Apply(frameworkElement);
         frameworkElement.Loaded += OnWatchedElementLoaded;
         frameworkElement.Unloaded += OnWatchedElementUnloaded;
-    }
-
-    public void Unwatch()
-    {
-#if REVIT2024_OR_GREATER
-        if (!_isWatching) return;
-
-        ExternalEventController.ActionEventHandler.Raise(application => application.ThemeChanged -= OnRevitThemeChanged);
-        _isWatching = false;
-#endif
     }
 
 #if REVIT2024_OR_GREATER
@@ -100,7 +58,7 @@ public sealed class ThemeWatcher
         }
     }
 #endif
-
+    
     private void OnApplicationThemeManagerChanged(ApplicationTheme applicationTheme, Color accent)
     {
         foreach (var frameworkElement in _observedElements)
@@ -115,22 +73,27 @@ public sealed class ThemeWatcher
         var element = (FrameworkElement) sender;
         _observedElements.Add(element);
         
-        try
+        var requiredTheme = GetRequiredTheme();
+        if (GetFrameworkElementTheme(element) == requiredTheme)
         {
-            ApplicationThemeManager.Apply( element ) ;
-            UpdateDictionary( element ) ;
+            return;
         }
-        catch ( Exception exception)
-        {
-            Debug.WriteLine(exception.Message);
-            Debug.WriteLine(exception.StackTrace);
-        }
+        
+        ApplicationThemeManager.Apply(element);
+        ApplicationThemeManager.Apply(requiredTheme);
     }
 
     private void OnWatchedElementUnloaded(object sender, RoutedEventArgs e)
     {
         var element = (FrameworkElement) sender;
         _observedElements.Remove(element);
+    }
+
+    public void ApplyTheme()
+    {
+        var theme = GetRequiredTheme();
+        ApplicationThemeManager.Apply(theme);
+        UpdateBackground(theme);
     }
 
     private static void UpdateDictionary(FrameworkElement frameworkElement)
@@ -154,5 +117,25 @@ public sealed class ThemeWatcher
         {
             WindowBackgroundManager.UpdateBackground(window, theme, WindowBackdropType.Mica);
         }
+    }
+    
+    public static ApplicationTheme GetRequiredTheme()
+    {
+#if !REVIT2024_OR_GREATER
+        var theme = SettingsService.Instance.GeneralConfig.Theme;
+#else
+        var theme = SettingsService.Instance.GeneralConfig.Theme == ApplicationTheme.Auto 
+            ? GetRevitTheme() 
+            : SettingsService.Instance.GeneralConfig.Theme;
+#endif
+        return theme;
+    }
+    
+    private static ApplicationTheme GetFrameworkElementTheme(FrameworkElement frameworkElement)
+    {
+        var resource = frameworkElement.Resources.MergedDictionaries ;
+        return resource.Any(dictionary => dictionary.Source is not null && dictionary.Source.OriginalString.Contains("Dark", StringComparison.OrdinalIgnoreCase))
+            ? ApplicationTheme.Dark
+            : ApplicationTheme.Light;
     }
 }

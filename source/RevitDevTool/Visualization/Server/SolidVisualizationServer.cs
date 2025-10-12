@@ -1,7 +1,7 @@
 ﻿using System.Diagnostics;
 using Autodesk.Revit.DB.DirectContext3D;
 using RevitDevTool.Extensions ;
-using RevitDevTool.Models.Config ;
+using RevitDevTool.Services ;
 using RevitDevTool.Visualization.Contracts ;
 using RevitDevTool.Visualization.Helpers;
 using RevitDevTool.Visualization.Render;
@@ -9,29 +9,29 @@ using Color = Autodesk.Revit.DB.Color;
 
 namespace RevitDevTool.Visualization.Server;
 
-public sealed class SolidVisualizationServerServer : VisualizationServerServer<Solid>
+public sealed class SolidVisualizationServer : VisualizationServer<Solid>
 {
     private readonly Guid _serverId = new("02B1803B-9008-427E-985F-4ED4DA839EF0");
     public override Guid GetServerId() => _serverId;
     private readonly List<RenderingBufferStorage> _faceBuffers = [];
     private readonly List<RenderingBufferStorage> _edgeBuffers = [];
 
-    private double _transparency = SolidVisualizationSettings.Default.Transparency;
-    private double _scale = SolidVisualizationSettings.Default.Scale;
+    private double _transparency = SettingsService.Instance.VisualizationConfig.SolidSettings.Transparency;
+    private double _scale = SettingsService.Instance.VisualizationConfig.SolidSettings.Scale;
 
     private Color _faceColor = new(
-        SolidVisualizationSettings.Default.FaceColor.R,
-        SolidVisualizationSettings.Default.FaceColor.G,
-        SolidVisualizationSettings.Default.FaceColor.B
+        SettingsService.Instance.VisualizationConfig.SolidSettings.FaceColor.R,
+        SettingsService.Instance.VisualizationConfig.SolidSettings.FaceColor.G,
+        SettingsService.Instance.VisualizationConfig.SolidSettings.FaceColor.B
         );
     private Color _edgeColor = new(
-        SolidVisualizationSettings.Default.EdgeColor.R,
-        SolidVisualizationSettings.Default.EdgeColor.G,
-        SolidVisualizationSettings.Default.EdgeColor.B
+        SettingsService.Instance.VisualizationConfig.SolidSettings.EdgeColor.R,
+        SettingsService.Instance.VisualizationConfig.SolidSettings.EdgeColor.G,
+        SettingsService.Instance.VisualizationConfig.SolidSettings.EdgeColor.B
         );
 
-    private bool _drawFace = SolidVisualizationSettings.Default.ShowFace;
-    private bool _drawEdge = SolidVisualizationSettings.Default.ShowEdge;
+    private bool _drawFace = SettingsService.Instance.VisualizationConfig.SolidSettings.ShowFace;
+    private bool _drawEdge = SettingsService.Instance.VisualizationConfig.SolidSettings.ShowEdge;
     
     public override bool UseInTransparentPass(Autodesk.Revit.DB.View view) => _drawFace && _transparency > 0;
 
@@ -71,59 +71,50 @@ public sealed class SolidVisualizationServerServer : VisualizationServerServer<S
         return new Outline(newMinPoint, newMaxPoint);
     }
 
-    public override void RenderScene(Autodesk.Revit.DB.View view, DisplayStyle displayStyle)
+    // ReSharper disable once CognitiveComplexity
+    protected override void RenderScene()
     {
-        lock (RenderLock)
+        if (HasGeometryUpdates)
         {
-            try
+            MapGeometryBuffer();
+            HasGeometryUpdates = false;
+        }
+
+        if (HasEffectsUpdates)
+        {
+            UpdateEffects();
+            HasEffectsUpdates = false;
+        }
+
+        if (_drawFace)
+        {
+            var isTransparentPass = DrawContext.IsTransparentPass();
+            if ((isTransparentPass && _transparency > 0) || (!isTransparentPass && _transparency == 0))
             {
-                if (HasGeometryUpdates)
+                foreach (var buffer in _faceBuffers)
                 {
-                    MapGeometryBuffer();
-                    HasGeometryUpdates = false;
-                }
-
-                if (HasEffectsUpdates)
-                {
-                    UpdateEffects();
-                    HasEffectsUpdates = false;
-                }
-
-                if (_drawFace)
-                {
-                    var isTransparentPass = DrawContext.IsTransparentPass();
-                    if ((isTransparentPass && _transparency > 0) || (!isTransparentPass && _transparency == 0))
-                    {
-                        foreach (var buffer in _faceBuffers)
-                        {
-                            DrawContext.FlushBuffer(buffer.VertexBuffer,
-                                buffer.VertexBufferCount,
-                                buffer.IndexBuffer,
-                                buffer.IndexBufferCount,
-                                buffer.VertexFormat,
-                                buffer.EffectInstance, PrimitiveType.TriangleList, 0,
-                                buffer.PrimitiveCount);
-                        }
-                    }
-                }
-
-                if (_drawEdge)
-                {
-                    foreach (var buffer in _edgeBuffers)
-                    {
-                        DrawContext.FlushBuffer(buffer.VertexBuffer,
-                            buffer.VertexBufferCount,
-                            buffer.IndexBuffer,
-                            buffer.IndexBufferCount,
-                            buffer.VertexFormat,
-                            buffer.EffectInstance, PrimitiveType.LineList, 0,
-                            buffer.PrimitiveCount);
-                    }
+                    DrawContext.FlushBuffer(buffer.VertexBuffer,
+                        buffer.VertexBufferCount,
+                        buffer.IndexBuffer,
+                        buffer.IndexBufferCount,
+                        buffer.VertexFormat,
+                        buffer.EffectInstance, PrimitiveType.TriangleList, 0,
+                        buffer.PrimitiveCount);
                 }
             }
-            catch (Exception exception)
+        }
+
+        if (_drawEdge)
+        {
+            foreach (var buffer in _edgeBuffers)
             {
-                Trace.TraceError($"Error in SolidVisualizationServer: {exception.Message}");
+                DrawContext.FlushBuffer(buffer.VertexBuffer,
+                    buffer.VertexBufferCount,
+                    buffer.IndexBuffer,
+                    buffer.IndexBufferCount,
+                    buffer.VertexFormat,
+                    buffer.EffectInstance, PrimitiveType.LineList, 0,
+                    buffer.PrimitiveCount);
             }
         }
     }

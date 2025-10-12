@@ -8,7 +8,7 @@ public static class SettingsLocation
     {
         var appdata = Environment
             .GetFolderPath( Environment.SpecialFolder.ApplicationData )
-            .AppendPath( "RevitLookup" )
+            .AppendPath( "RevitDevTool" )
             .AppendPath( Context.Application.VersionNumber );
         
         var settingsDir = appdata.AppendPath("Settings");

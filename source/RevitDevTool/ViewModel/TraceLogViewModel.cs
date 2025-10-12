@@ -5,12 +5,12 @@ using Serilog.Core;
 using Serilog.Events;
 using System.Windows.Forms.Integration;
 using RevitDevTool.Models.Trace ;
-using RevitDevTool.Services ;
 using RevitDevTool.Theme;
+using RevitDevTool.View.Settings ;
 using ricaun.Revit.UI ;
 using Serilog.Sinks.RichTextBoxForms;
-using Wpf.Ui ;
 using Wpf.Ui.Appearance;
+using FontStyle = System.Drawing.FontStyle ;
 
 namespace RevitDevTool.ViewModel;
 
@@ -26,7 +26,12 @@ internal partial class TraceLogViewModel : ObservableObject, IDisposable
     private Logger? _logger;
 
     private readonly RichTextBox _winFormsTextBox;
-    private static bool IsDarkTheme => ApplicationThemeManager.GetAppTheme() == ApplicationTheme.Dark;
+    
+    private ApplicationTheme _logTextBoxTheme;
+    private static bool IsDarkTheme
+    {
+        get => ThemeWatcher.GetRequiredTheme() == ApplicationTheme.Dark ;
+    }
 
     [ObservableProperty] private bool _isStarted = true;
     [ObservableProperty] private LogEventLevel _logLevel = LogEventLevel.Debug;
@@ -109,9 +114,11 @@ internal partial class TraceLogViewModel : ObservableObject, IDisposable
 
     private void OnThemeChanged(ApplicationTheme theme, System.Windows.Media.Color accent)
     {
+        if (_logTextBoxTheme == theme) return;
         LogTextBox.Dispatcher.Invoke(() =>
         {
             ApplyLogTheme();
+            _logTextBoxTheme = theme;
 
             if (IsStarted)
             {
@@ -131,6 +138,7 @@ internal partial class TraceLogViewModel : ObservableObject, IDisposable
     {
         _winFormsTextBox.BackColor = IsDarkTheme ? System.Drawing.Color.FromArgb(30, 30, 30) : System.Drawing.Color.FromArgb(250, 250, 250);
         Win32DarkMode.SetImmersiveDarkMode(_winFormsTextBox.Handle, IsDarkTheme);
+        _logTextBoxTheme = ThemeWatcher.GetRequiredTheme();
     }
 
     [RelayCommand]
@@ -152,6 +160,7 @@ internal partial class TraceLogViewModel : ObservableObject, IDisposable
         var settingsWindow = new View.SettingsView();
         settingsWindow.SetAutodeskOwner();
         settingsWindow.Show();
+        settingsWindow.NavigationService.Navigate(typeof(GeneralSettingsView));
     }
 
     public void RefreshTheme()

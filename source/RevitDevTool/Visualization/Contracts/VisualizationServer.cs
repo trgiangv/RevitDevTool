@@ -6,7 +6,7 @@ using Color = Autodesk.Revit.DB.Color ;
 
 namespace RevitDevTool.Visualization.Contracts;
 
-public abstract class VisualizationServerServer<TG> : IDirectContext3DServer, IVisualUpdate, IVisualizationServerLifeCycle
+public abstract class VisualizationServer<TG> : IDirectContext3DServer, IVisualUpdate, IVisualizationServerLifeCycle
 {
     protected readonly List<TG> VisualizeGeometries = [];
     protected bool HasGeometryUpdates = true;
@@ -25,7 +25,24 @@ public abstract class VisualizationServerServer<TG> : IDirectContext3DServer, IV
     public abstract Guid GetServerId();
     public abstract Outline? GetBoundingBox(Autodesk.Revit.DB.View dBView);
     public abstract bool UseInTransparentPass(Autodesk.Revit.DB.View dBView);
-    public abstract void RenderScene(Autodesk.Revit.DB.View dBView, DisplayStyle displayStyle);
+    protected abstract void RenderScene();
+
+    public void RenderScene(Autodesk.Revit.DB.View dBView, DisplayStyle displayStyle)
+    {
+        lock (RenderLock) 
+        {
+            try 
+            {
+                RenderScene();
+            }
+            catch (Exception e) 
+            {
+                Trace.TraceError($"Error in {GetName()} RenderScene: {e}");
+                ClearGeometry();
+            }
+        }
+    }
+    
     
     public void ClearGeometry()
     {
@@ -46,7 +63,6 @@ public abstract class VisualizationServerServer<TG> : IDirectContext3DServer, IV
             }
         }
     }
-    
 
     public void AddGeometries(IEnumerable<TG> geometries)
     {
@@ -88,7 +104,7 @@ public abstract class VisualizationServerServer<TG> : IDirectContext3DServer, IV
         }
     }
 
-    public void Register()
+    public void Register(IVisualizationViewModel visualizationViewModel)
     {
         ExternalEventController.ActionEventHandler.Raise(_ =>
         {
@@ -104,6 +120,7 @@ public abstract class VisualizationServerServer<TG> : IDirectContext3DServer, IV
             serverIds.Add(GetServerId());
             directContextService.SetActiveServers(serverIds);
             
+            visualizationViewModel.Initialize();
             Trace.TraceInformation("{0} registered", GetName());
         });
     }
