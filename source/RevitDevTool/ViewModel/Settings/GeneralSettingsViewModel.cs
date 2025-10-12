@@ -1,4 +1,5 @@
-﻿using RevitDevTool.Services ;
+﻿using System.Diagnostics ;
+using RevitDevTool.Services ;
 using RevitDevTool.Theme ;
 using Wpf.Ui.Appearance ;
 
@@ -34,14 +35,17 @@ public partial class GeneralSettingsViewModel : ObservableObject
         ThemeWatcher.Instance.ApplyTheme();
     }
     
-    [RelayCommand] private static void ResetVisualizationSettings()
-    {
-        SettingsService.Instance.ResetVisualizationSettings();
-        VisualizationController.Refresh();
-    }
-    
-    public GeneralSettingsViewModel()
+    private GeneralSettingsViewModel()
     {
         Theme = SettingsService.Instance.GeneralConfig.Theme;
+    }
+    
+    [RelayCommand] private void ResetSettings()
+    {
+        SettingsService.Instance.ResetVisualizationSettings();
+        SettingsService.Instance.ResetGeneralSettings();
+        Theme = SettingsService.Instance.GeneralConfig.Theme;
+        VisualizationController.Refresh();
+        Trace.TraceInformation("Reset settings to default");
     }
 }

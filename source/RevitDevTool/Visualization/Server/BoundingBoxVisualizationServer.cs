@@ -1,7 +1,7 @@
 ﻿using System.Diagnostics;
 using Autodesk.Revit.DB.DirectContext3D;
 using RevitDevTool.Extensions ;
-using RevitDevTool.Models.Config ;
+using RevitDevTool.Services ;
 using RevitDevTool.Visualization.Contracts ;
 using RevitDevTool.Visualization.Helpers;
 using RevitDevTool.Visualization.Render;
@@ -10,7 +10,7 @@ using Color = Autodesk.Revit.DB.Color;
 namespace RevitDevTool.Visualization.Server;
 
 
-public sealed class BoundingBoxVisualizationServerServer : VisualizationServerServer<BoundingBoxXYZ>
+public sealed class BoundingBoxVisualizationServer : VisualizationServer<BoundingBoxXYZ>
 {
     private readonly Guid _serverId = new("5A67F8D4-30D2-414F-8387-8023C3DAF010");
     public override Guid GetServerId() => _serverId;
@@ -25,24 +25,24 @@ public sealed class BoundingBoxVisualizationServerServer : VisualizationServerSe
     ];
     private static readonly XYZ UnitVector = new(1, 1, 1);
 
-    private double _transparency = BoundingBoxVisualizationSettings.Default.Transparency;
+    private double _transparency = SettingsService.Instance.VisualizationConfig.BoundingBoxSettings.Transparency;
     private double _scale = 1.0;
-    private bool _drawSurface = BoundingBoxVisualizationSettings.Default.ShowSurface;
-    private bool _drawEdge = BoundingBoxVisualizationSettings.Default.ShowEdge;
-    private bool _drawAxis = BoundingBoxVisualizationSettings.Default.ShowAxis;
+    private bool _drawSurface = SettingsService.Instance.VisualizationConfig.BoundingBoxSettings.ShowSurface;
+    private bool _drawEdge = SettingsService.Instance.VisualizationConfig.BoundingBoxSettings.ShowEdge;
+    private bool _drawAxis = SettingsService.Instance.VisualizationConfig.BoundingBoxSettings.ShowAxis;
 
     private Color _surfaceColor = new(
-        BoundingBoxVisualizationSettings.Default.SurfaceColor.R,
-        BoundingBoxVisualizationSettings.Default.SurfaceColor.G, 
-        BoundingBoxVisualizationSettings.Default.SurfaceColor.B);
+        SettingsService.Instance.VisualizationConfig.BoundingBoxSettings.SurfaceColor.R,
+        SettingsService.Instance.VisualizationConfig.BoundingBoxSettings.SurfaceColor.G, 
+        SettingsService.Instance.VisualizationConfig.BoundingBoxSettings.SurfaceColor.B);
     private Color _edgeColor = new(
-        BoundingBoxVisualizationSettings.Default.EdgeColor.R, 
-        BoundingBoxVisualizationSettings.Default.EdgeColor.G, 
-        BoundingBoxVisualizationSettings.Default.EdgeColor.B);
+        SettingsService.Instance.VisualizationConfig.BoundingBoxSettings.EdgeColor.R, 
+        SettingsService.Instance.VisualizationConfig.BoundingBoxSettings.EdgeColor.G, 
+        SettingsService.Instance.VisualizationConfig.BoundingBoxSettings.EdgeColor.B);
     private Color _axisColor = new(
-        BoundingBoxVisualizationSettings.Default.AxisColor.R, 
-        BoundingBoxVisualizationSettings.Default.AxisColor.G, 
-        BoundingBoxVisualizationSettings.Default.AxisColor.B);
+        SettingsService.Instance.VisualizationConfig.BoundingBoxSettings.AxisColor.R, 
+        SettingsService.Instance.VisualizationConfig.BoundingBoxSettings.AxisColor.G, 
+        SettingsService.Instance.VisualizationConfig.BoundingBoxSettings.AxisColor.B);
 
     public override bool UseInTransparentPass(Autodesk.Revit.DB.View view) => _drawSurface && _transparency > 0;
 
@@ -83,78 +83,69 @@ public sealed class BoundingBoxVisualizationServerServer : VisualizationServerSe
         return new Outline(new XYZ(minX, minY, minZ), new XYZ(maxX, maxY, maxZ));
     }
 
-    public override void RenderScene(Autodesk.Revit.DB.View view, DisplayStyle displayStyle)
+    // ReSharper disable once CognitiveComplexity
+    protected override void RenderScene()
     {
-        lock (RenderLock)
+        if (VisualizeGeometries.Count == 0) return;
+        
+        if (HasGeometryUpdates || _surfaceBuffers.Count == 0 || _edgeBuffers.Count == 0)
         {
-            try
+            MapGeometryBuffer();
+            HasGeometryUpdates = false;
+        }
+
+        if (HasEffectsUpdates)
+        {
+            UpdateEffects();
+            HasEffectsUpdates = false;
+        }
+
+        if (_drawSurface && _surfaceBuffers.Count != 0)
+        {
+            var isTransparentPass = DrawContext.IsTransparentPass();
+            if ((isTransparentPass && _transparency > 0) || (!isTransparentPass && _transparency == 0))
             {
-                if (VisualizeGeometries.Count == 0) return;
-                
-                if (HasGeometryUpdates || _surfaceBuffers.Count == 0 || _edgeBuffers.Count == 0)
+                foreach (var surfaceBuffer in _surfaceBuffers)
                 {
-                    MapGeometryBuffer();
-                    HasGeometryUpdates = false;
-                }
-
-                if (HasEffectsUpdates)
-                {
-                    UpdateEffects();
-                    HasEffectsUpdates = false;
-                }
-
-                if (_drawSurface && _surfaceBuffers.Count != 0)
-                {
-                    var isTransparentPass = DrawContext.IsTransparentPass();
-                    if ((isTransparentPass && _transparency > 0) || (!isTransparentPass && _transparency == 0))
-                    {
-                        foreach (var surfaceBuffer in _surfaceBuffers)
-                        {
-                            DrawContext.FlushBuffer(surfaceBuffer.VertexBuffer,
-                                surfaceBuffer.VertexBufferCount,
-                                surfaceBuffer.IndexBuffer,
-                                surfaceBuffer.IndexBufferCount,
-                                surfaceBuffer.VertexFormat,
-                                surfaceBuffer.EffectInstance, PrimitiveType.TriangleList, 0,
-                                surfaceBuffer.PrimitiveCount);
-                        }
-                    }
-                }
-
-                if (_drawEdge && _edgeBuffers.Count != 0)
-                {
-                    foreach (var edgeBuffer in _edgeBuffers)
-                    {
-                        DrawContext.FlushBuffer(edgeBuffer.VertexBuffer,
-                            edgeBuffer.VertexBufferCount,
-                            edgeBuffer.IndexBuffer,
-                            edgeBuffer.IndexBufferCount,
-                            edgeBuffer.VertexFormat,
-                            edgeBuffer.EffectInstance, PrimitiveType.LineList, 0,
-                            edgeBuffer.PrimitiveCount);
-                    }
-                }
-
-                if (_drawAxis)
-                {
-                    foreach (var buffer in _axisBuffers)
-                    {
-                        if (buffer.IsValid())
-                        {
-                            DrawContext.FlushBuffer(buffer.VertexBuffer,
-                                buffer.VertexBufferCount,
-                                buffer.IndexBuffer,
-                                buffer.IndexBufferCount,
-                                buffer.VertexFormat,
-                                buffer.EffectInstance, PrimitiveType.LineList, 0,
-                                buffer.PrimitiveCount);
-                        }
-                    }
+                    DrawContext.FlushBuffer(surfaceBuffer.VertexBuffer,
+                        surfaceBuffer.VertexBufferCount,
+                        surfaceBuffer.IndexBuffer,
+                        surfaceBuffer.IndexBufferCount,
+                        surfaceBuffer.VertexFormat,
+                        surfaceBuffer.EffectInstance, PrimitiveType.TriangleList, 0,
+                        surfaceBuffer.PrimitiveCount);
                 }
             }
-            catch (Exception exception)
+        }
+
+        if (_drawEdge && _edgeBuffers.Count != 0)
+        {
+            foreach (var edgeBuffer in _edgeBuffers)
             {
-                Trace.TraceError($"Error in BoundingBoxVisualizationServer: {exception}");
+                DrawContext.FlushBuffer(edgeBuffer.VertexBuffer,
+                    edgeBuffer.VertexBufferCount,
+                    edgeBuffer.IndexBuffer,
+                    edgeBuffer.IndexBufferCount,
+                    edgeBuffer.VertexFormat,
+                    edgeBuffer.EffectInstance, PrimitiveType.LineList, 0,
+                    edgeBuffer.PrimitiveCount);
+            }
+        }
+
+        if (_drawAxis)
+        {
+            foreach (var buffer in _axisBuffers)
+            {
+                if (buffer.IsValid())
+                {
+                    DrawContext.FlushBuffer(buffer.VertexBuffer,
+                        buffer.VertexBufferCount,
+                        buffer.IndexBuffer,
+                        buffer.IndexBufferCount,
+                        buffer.VertexFormat,
+                        buffer.EffectInstance, PrimitiveType.LineList, 0,
+                        buffer.PrimitiveCount);
+                }
             }
         }
     }
@@ -183,7 +174,7 @@ public sealed class BoundingBoxVisualizationServerServer : VisualizationServerSe
         }
         catch (Exception ex)
         {
-            Trace.TraceError($"Error mapping geometry buffer in BoundingBoxVisualizationServer: {ex}");
+            Trace.TraceError( $"Error mapping geometry buffer in BoundingBoxVisualizationServer: {ex}" ) ;
         }
     }
 

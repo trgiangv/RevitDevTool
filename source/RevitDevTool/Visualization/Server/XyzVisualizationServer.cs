@@ -1,7 +1,7 @@
 ﻿using System.Diagnostics;
 using Autodesk.Revit.DB.DirectContext3D;
 using RevitDevTool.Extensions ;
-using RevitDevTool.Models.Config ;
+using RevitDevTool.Services ;
 using RevitDevTool.Visualization.Contracts ;
 using RevitDevTool.Visualization.Helpers;
 using RevitDevTool.Visualization.Render;
@@ -9,7 +9,7 @@ using Color = Autodesk.Revit.DB.Color;
 
 namespace RevitDevTool.Visualization.Server;
 
-public sealed class XyzVisualizationServerServer : VisualizationServerServer<XYZ>
+public sealed class XyzVisualizationServer : VisualizationServer<XYZ>
 {
     private readonly Guid _serverId = new("A670E0BB-8B55-47CB-905C-7D94F0C8DF07");
     public override Guid GetServerId() => _serverId;
@@ -24,29 +24,29 @@ public sealed class XyzVisualizationServerServer : VisualizationServerServer<XYZ
         XYZ.BasisZ
     ];
 
-    private double _transparency = XyzVisualizationSettings.Default.Transparency;
-    private double _axisLength = XyzVisualizationSettings.Default.AxisLength;
+    private double _transparency = SettingsService.Instance.VisualizationConfig.XyzSettings.Transparency;
+    private double _axisLength = SettingsService.Instance.VisualizationConfig.XyzSettings.AxisLength;
 
     private Color _xColor = new(
-        XyzVisualizationSettings.Default.XColor.R,
-        XyzVisualizationSettings.Default.XColor.G,
-        XyzVisualizationSettings.Default.XColor.B
+        SettingsService.Instance.VisualizationConfig.XyzSettings.XColor.R,
+        SettingsService.Instance.VisualizationConfig.XyzSettings.XColor.G,
+        SettingsService.Instance.VisualizationConfig.XyzSettings.XColor.B
         );
     private Color _yColor = new(
-        XyzVisualizationSettings.Default.YColor.R,
-        XyzVisualizationSettings.Default.YColor.G,
-        XyzVisualizationSettings.Default.YColor.B
+        SettingsService.Instance.VisualizationConfig.XyzSettings.YColor.R,
+        SettingsService.Instance.VisualizationConfig.XyzSettings.YColor.G,
+        SettingsService.Instance.VisualizationConfig.XyzSettings.YColor.B
         );
     private Color _zColor = new(
-        XyzVisualizationSettings.Default.ZColor.R,
-        XyzVisualizationSettings.Default.ZColor.G,
-        XyzVisualizationSettings.Default.ZColor.B
+        SettingsService.Instance.VisualizationConfig.XyzSettings.ZColor.R,
+        SettingsService.Instance.VisualizationConfig.XyzSettings.ZColor.G,
+        SettingsService.Instance.VisualizationConfig.XyzSettings.ZColor.B
         );
 
-    private bool _drawPlane = XyzVisualizationSettings.Default.ShowPlane;
-    private bool _drawXAxis = XyzVisualizationSettings.Default.ShowXAxis;
-    private bool _drawYAxis = XyzVisualizationSettings.Default.ShowYAxis;
-    private bool _drawZAxis = XyzVisualizationSettings.Default.ShowZAxis;
+    private bool _drawPlane = SettingsService.Instance.VisualizationConfig.XyzSettings.ShowPlane;
+    private bool _drawXAxis = SettingsService.Instance.VisualizationConfig.XyzSettings.ShowXAxis;
+    private bool _drawYAxis = SettingsService.Instance.VisualizationConfig.XyzSettings.ShowYAxis;
+    private bool _drawZAxis = SettingsService.Instance.VisualizationConfig.XyzSettings.ShowZAxis;
     
     public override bool UseInTransparentPass(Autodesk.Revit.DB.View view) => _drawPlane && _transparency > 0;
 
@@ -59,54 +59,44 @@ public sealed class XyzVisualizationServerServer : VisualizationServerServer<XYZ
         return new Outline(minPoint, maxPoint);
     }
 
-    public override void RenderScene(Autodesk.Revit.DB.View view, DisplayStyle displayStyle)
+    protected override void RenderScene()
     {
-        lock (RenderLock)
+        if (VisualizeGeometries.Count == 0) return;
+        
+        if (HasGeometryUpdates)
         {
-            try
-            {
-                if (VisualizeGeometries.Count == 0) return;
-                
-                if (HasGeometryUpdates)
-                {
-                    UpdateGeometryBuffer();
-                    HasGeometryUpdates = false;
-                }
+            MapGeometryBuffer();
+            HasGeometryUpdates = false;
+        }
 
-                if (HasEffectsUpdates)
-                {
-                    UpdateEffects();
-                    HasEffectsUpdates = false;
-                }
+        if (HasEffectsUpdates)
+        {
+            UpdateEffects();
+            HasEffectsUpdates = false;
+        }
 
-                if (_drawXAxis)
-                {
-                    var renderAxisBuffers = _axisBufferArrays.Select(axisBufferArray => axisBufferArray[0]).ToArray();
-                    var renderPlaneBuffers = _planeBufferArrays.Select(planeBufferArray => planeBufferArray[0]).ToArray();
-                    RenderAxisBuffer(renderAxisBuffers);
-                    RenderPlaneBuffer(renderPlaneBuffers);
-                }
+        if (_drawXAxis)
+        {
+            var renderAxisBuffers = _axisBufferArrays.Select(axisBufferArray => axisBufferArray[0]).ToArray();
+            var renderPlaneBuffers = _planeBufferArrays.Select(planeBufferArray => planeBufferArray[0]).ToArray();
+            RenderAxisBuffer(renderAxisBuffers);
+            RenderPlaneBuffer(renderPlaneBuffers);
+        }
 
-                if (_drawYAxis)
-                {
-                    var renderAxisBuffers = _axisBufferArrays.Select(axisBufferArray => axisBufferArray[1]).ToArray();
-                    var renderPlaneBuffers = _planeBufferArrays.Select(planeBufferArray => planeBufferArray[1]).ToArray();
-                    RenderAxisBuffer(renderAxisBuffers);
-                    RenderPlaneBuffer(renderPlaneBuffers);
-                }
+        if (_drawYAxis)
+        {
+            var renderAxisBuffers = _axisBufferArrays.Select(axisBufferArray => axisBufferArray[1]).ToArray();
+            var renderPlaneBuffers = _planeBufferArrays.Select(planeBufferArray => planeBufferArray[1]).ToArray();
+            RenderAxisBuffer(renderAxisBuffers);
+            RenderPlaneBuffer(renderPlaneBuffers);
+        }
 
-                if (_drawZAxis)
-                {
-                    var renderAxisBuffers = _axisBufferArrays.Select(axisBufferArray => axisBufferArray[2]).ToArray();
-                    var renderPlaneBuffers = _planeBufferArrays.Select(planeBufferArray => planeBufferArray[2]).ToArray();
-                    RenderAxisBuffer(renderAxisBuffers);
-                    RenderPlaneBuffer(renderPlaneBuffers);
-                }
-            }
-            catch (Exception exception)
-            {
-                Trace.TraceError($"Error in XyzVisualizationServer: {exception.Message}");
-            }
+        if (_drawZAxis)
+        {
+            var renderAxisBuffers = _axisBufferArrays.Select(axisBufferArray => axisBufferArray[2]).ToArray();
+            var renderPlaneBuffers = _planeBufferArrays.Select(planeBufferArray => planeBufferArray[2]).ToArray();
+            RenderAxisBuffer(renderAxisBuffers);
+            RenderPlaneBuffer(renderPlaneBuffers);
         }
     }
 
@@ -145,7 +135,7 @@ public sealed class XyzVisualizationServerServer : VisualizationServerServer<XYZ
         }
     }
 
-    private void UpdateGeometryBuffer()
+    private void MapGeometryBuffer()
     {
         DisposeBuffers();
 

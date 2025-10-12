@@ -7,55 +7,37 @@ namespace RevitDevTool;
 
 internal static class VisualizationController
 {
-    public static BoundingBoxVisualizationServerServer BoundingBoxVisualizationServerServer { get; } = new();
-    public static MeshVisualizationServerServer MeshVisualizationServerServer { get; } = new();
-    public static PolylineVisualizationServerServer PolylineVisualizationServerServer { get; } = new();
-    public static SolidVisualizationServerServer SolidVisualizationServerServer { get; } = new();
-    public static XyzVisualizationServerServer XyzVisualizationServerServer { get; } = new();
-    public static FaceVisualizationServerServer FaceVisualizationServerServer { get; } = new();
+    public static BoundingBoxVisualizationServer BoundingBoxVisualizationServer { get; } = new();
+    public static MeshVisualizationServer MeshVisualizationServer { get; } = new();
+    public static PolylineVisualizationServer PolylineVisualizationServer { get; } = new();
+    public static SolidVisualizationServer SolidVisualizationServer { get; } = new();
+    public static XyzVisualizationServer XyzVisualizationServer { get; } = new();
+    public static FaceVisualizationServer FaceVisualizationServer { get; } = new();
     
-    private static List<IVisualizationViewModel> VisualizationViewModels
+    private static Dictionary<IVisualizationServerLifeCycle, IVisualizationViewModel> ServerViewModelMapping
     {
-        get =>
-        [
-            BoundingBoxVisualizationViewModel.Instance,
-            MeshVisualizationViewModel.Instance,
-            PolylineVisualizationViewModel.Instance,
-            SolidVisualizationViewModel.Instance,
-            XyzVisualizationViewModel.Instance,
-            FaceVisualizationViewModel.Instance
-        ] ;
-    }
-    
-    private static List<IVisualizationServerLifeCycle> VisualizationServers
-    {
-        get =>
-        [
-            BoundingBoxVisualizationServerServer,
-            MeshVisualizationServerServer,
-            PolylineVisualizationServerServer,
-            SolidVisualizationServerServer,
-            XyzVisualizationServerServer,
-            FaceVisualizationServerServer
-        ] ;
+        get => new()
+        {
+            { BoundingBoxVisualizationServer, BoundingBoxVisualizationViewModel.Instance },
+            { MeshVisualizationServer, MeshVisualizationViewModel.Instance },
+            { PolylineVisualizationServer, PolylineVisualizationViewModel.Instance },
+            { SolidVisualizationServer, SolidVisualizationViewModel.Instance },
+            { XyzVisualizationServer, XyzVisualizationViewModel.Instance },
+            { FaceVisualizationServer, FaceVisualizationViewModel.Instance }
+        } ;
     }
 
     public static void Start()
     {
-        foreach (var server in VisualizationServers)
+        foreach (var server in ServerViewModelMapping)
         {
-            server.Register();
-        }
-
-        foreach ( var viewModel in VisualizationViewModels ) 
-        {
-            viewModel.Initialize();
+            server.Key.Register(server.Value);
         }
     }
     
     public static void Stop()
     {
-        foreach (var server in VisualizationServers)
+        foreach (var server in ServerViewModelMapping.Keys)
         {
             server.Unregister();
         }
@@ -63,7 +45,7 @@ internal static class VisualizationController
     
     public static void Clear()
     {
-        foreach (var server in VisualizationServers)
+        foreach (var server in ServerViewModelMapping.Keys)
         {
             server.ClearGeometry();
         }
@@ -71,10 +53,13 @@ internal static class VisualizationController
     
     public static void Refresh()
     {
-        foreach (var server in VisualizationViewModels)
+        foreach (var viewModel in ServerViewModelMapping.Values)
         {
-            server.Refresh();
+            viewModel.Refresh();
+            viewModel.Initialize();
         }
+        
+        Context.ActiveUiDocument?.UpdateAllOpenViews();
     }
     
     public static void Add<T> (T geometry)
@@ -82,7 +67,7 @@ internal static class VisualizationController
         switch (geometry)
         {
             case BoundingBoxXYZ boundingBox:
-                BoundingBoxVisualizationServerServer.AddGeometry(boundingBox);
+                BoundingBoxVisualizationServer.AddGeometry(boundingBox);
                 break;
             case Outline outline:
                 var bbox = new BoundingBoxXYZ
@@ -90,32 +75,33 @@ internal static class VisualizationController
                     Min = outline.MinimumPoint,
                     Max = outline.MaximumPoint
                 };
-                BoundingBoxVisualizationServerServer.AddGeometry(bbox);
+                BoundingBoxVisualizationServer.AddGeometry(bbox);
                 break;
             case Mesh mesh:
-                MeshVisualizationServerServer.AddGeometry(mesh);
+                MeshVisualizationServer.AddGeometry(mesh);
                 break;
             case Solid solid:
-                SolidVisualizationServerServer.AddGeometry(solid);
+                SolidVisualizationServer.AddGeometry(solid);
                 break;
             case XYZ xyz:
-                XyzVisualizationServerServer.AddGeometry(xyz);
+                XyzVisualizationServer.AddGeometry(xyz);
                 break;
             case Curve curve:
-                PolylineVisualizationServerServer.AddGeometry(curve);
+                PolylineVisualizationServer.AddGeometry(curve);
                 break;
             case Edge edge:
-                PolylineVisualizationServerServer.AddGeometry(edge);
+                PolylineVisualizationServer.AddGeometry(edge);
                 break;
             case PolyLine polyline:
-                PolylineVisualizationServerServer.AddGeometry(polyline);
+                PolylineVisualizationServer.AddGeometry(polyline);
                 break;
             case Face face:
-                FaceVisualizationServerServer.AddGeometry(face);
+                FaceVisualizationServer.AddGeometry(face);
                 break;
         }
     }
     
+    // ReSharper disable once CognitiveComplexity
     public static void Add<T> (IEnumerable<T> geometries)
     {
         var groupedGeometries = geometries
@@ -144,35 +130,35 @@ internal static class VisualizationController
             switch (geometryType)
             {
                 case not null when geometryType == typeof(BoundingBoxXYZ):
-                    BoundingBoxVisualizationServerServer.AddGeometries(group.Cast<BoundingBoxXYZ>());
+                    BoundingBoxVisualizationServer.AddGeometries(group.Cast<BoundingBoxXYZ>());
                     break;
                 case not null when geometryType == typeof(Outline):
-                    BoundingBoxVisualizationServerServer.AddGeometries(group.Cast<Outline>().Select(outline => 
+                    BoundingBoxVisualizationServer.AddGeometries(group.Cast<Outline>().Select(outline => 
                     new BoundingBoxXYZ {
                         Min = outline.MinimumPoint,
                         Max = outline.MaximumPoint
                     }));
                     break;
                 case not null when geometryType == typeof(Mesh):
-                    MeshVisualizationServerServer.AddGeometries(group.Cast<Mesh>());
+                    MeshVisualizationServer.AddGeometries(group.Cast<Mesh>());
                     break;
                 case not null when geometryType == typeof(Solid):
-                    SolidVisualizationServerServer.AddGeometries(group.Cast<Solid>());
+                    SolidVisualizationServer.AddGeometries(group.Cast<Solid>());
                     break;
                 case not null when geometryType == typeof(XYZ):
-                    XyzVisualizationServerServer.AddGeometries(group.Cast<XYZ>());
+                    XyzVisualizationServer.AddGeometries(group.Cast<XYZ>());
                     break;
                 case not null when geometryType == typeof(Face):
-                    FaceVisualizationServerServer.AddGeometries(group.Cast<Face>());
+                    FaceVisualizationServer.AddGeometries(group.Cast<Face>());
                     break;
                 case not null when geometryType == typeof(Curve):
-                    PolylineVisualizationServerServer.AddGeometries(group.Cast<Curve>());
+                    PolylineVisualizationServer.AddGeometries(group.Cast<Curve>());
                     break;
                 case not null when geometryType == typeof(Edge):
-                    PolylineVisualizationServerServer.AddGeometries(group.Cast<Edge>());
+                    PolylineVisualizationServer.AddGeometries(group.Cast<Edge>());
                     break;
                 case not null when geometryType == typeof(PolyLine):
-                    PolylineVisualizationServerServer.AddGeometries(group.Cast<PolyLine>());
+                    PolylineVisualizationServer.AddGeometries(group.Cast<PolyLine>());
                     break;
             }
         }

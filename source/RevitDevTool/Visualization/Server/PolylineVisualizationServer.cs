@@ -1,7 +1,7 @@
 ﻿using System.Diagnostics;
 using Autodesk.Revit.DB.DirectContext3D;
 using RevitDevTool.Extensions ;
-using RevitDevTool.Models.Config ;
+using RevitDevTool.Services ;
 using RevitDevTool.Visualization.Contracts ;
 using RevitDevTool.Visualization.Helpers;
 using RevitDevTool.Visualization.Render;
@@ -9,7 +9,7 @@ using Color = Autodesk.Revit.DB.Color;
 
 namespace RevitDevTool.Visualization.Server;
 
-public sealed class PolylineVisualizationServerServer : VisualizationServerServer<GeometryObject>
+public sealed class PolylineVisualizationServer : VisualizationServer<GeometryObject>
 {
     private readonly Guid _serverId = new("A1B2C3D4-E5F6-7890-ABCD-EF1234567890");
     public override Guid GetServerId() => _serverId;
@@ -18,104 +18,95 @@ public sealed class PolylineVisualizationServerServer : VisualizationServerServe
     private readonly List<RenderingBufferStorage> _curveBuffers = [];
     private readonly List<RenderingBufferStorage> _normalsBuffers = [];
     
-    private double _transparency = PolylineVisualizationSettings.Default.Transparency;
-    private double _diameter = PolylineVisualizationSettings.Default.Diameter;
+    private double _transparency = SettingsService.Instance.VisualizationConfig.PolylineSettings.Transparency;
+    private double _diameter = SettingsService.Instance.VisualizationConfig.PolylineSettings.Diameter;
 
     private Color _surfaceColor = new(
-        PolylineVisualizationSettings.Default.SurfaceColor.R,
-        PolylineVisualizationSettings.Default.SurfaceColor.G,
-        PolylineVisualizationSettings.Default.SurfaceColor.B
+        SettingsService.Instance.VisualizationConfig.PolylineSettings.SurfaceColor.R,
+        SettingsService.Instance.VisualizationConfig.PolylineSettings.SurfaceColor.G,
+        SettingsService.Instance.VisualizationConfig.PolylineSettings.SurfaceColor.B
         );
     private Color _curveColor = new(
-        PolylineVisualizationSettings.Default.CurveColor.R,
-        PolylineVisualizationSettings.Default.CurveColor.G,
-        PolylineVisualizationSettings.Default.CurveColor.B
+        SettingsService.Instance.VisualizationConfig.PolylineSettings.CurveColor.R,
+        SettingsService.Instance.VisualizationConfig.PolylineSettings.CurveColor.G,
+        SettingsService.Instance.VisualizationConfig.PolylineSettings.CurveColor.B
         );
     private Color _directionColor = new(
-        PolylineVisualizationSettings.Default.DirectionColor.R,
-        PolylineVisualizationSettings.Default.DirectionColor.G,
-        PolylineVisualizationSettings.Default.DirectionColor.B
+        SettingsService.Instance.VisualizationConfig.PolylineSettings.DirectionColor.R,
+        SettingsService.Instance.VisualizationConfig.PolylineSettings.DirectionColor.G,
+        SettingsService.Instance.VisualizationConfig.PolylineSettings.DirectionColor.B
         );
 
-    private bool _drawCurve = PolylineVisualizationSettings.Default.ShowCurve;
-    private bool _drawDirection = PolylineVisualizationSettings.Default.ShowDirection;
-    private bool _drawSurface = PolylineVisualizationSettings.Default.ShowSurface;
+    private bool _drawCurve = SettingsService.Instance.VisualizationConfig.PolylineSettings.ShowCurve;
+    private bool _drawDirection = SettingsService.Instance.VisualizationConfig.PolylineSettings.ShowDirection;
+    private bool _drawSurface = SettingsService.Instance.VisualizationConfig.PolylineSettings.ShowSurface;
     
     public override bool UseInTransparentPass(Autodesk.Revit.DB.View view) => _drawSurface && _transparency > 0;
     public override Outline? GetBoundingBox(Autodesk.Revit.DB.View view) => null;
 
-    public override void RenderScene(Autodesk.Revit.DB.View view, DisplayStyle displayStyle)
+    // ReSharper disable once CognitiveComplexity
+    protected override void RenderScene()
     {
-        lock (RenderLock)
+        if (VisualizeGeometries.Count == 0) return;
+        
+        if (HasGeometryUpdates || _surfaceBuffers.Count == 0 || _curveBuffers.Count == 0)
         {
-            try
+            MapGeometryBuffer();
+            HasGeometryUpdates = false;
+        }
+
+        if (HasEffectsUpdates)
+        {
+            UpdateEffects();
+            HasEffectsUpdates = false;
+        }
+
+        if (_drawSurface && _surfaceBuffers.Count != 0)
+        {
+            var isTransparentPass = DrawContext.IsTransparentPass();
+            if (isTransparentPass && _transparency > 0 || (!isTransparentPass && _transparency == 0))
             {
-                if (VisualizeGeometries.Count == 0) return;
-                
-                if (HasGeometryUpdates || _surfaceBuffers.Count == 0 || _curveBuffers.Count == 0)
+                foreach (var surfaceBuffer in _surfaceBuffers)
                 {
-                    MapGeometryBuffer();
-                    HasGeometryUpdates = false;
-                }
-
-                if (HasEffectsUpdates)
-                {
-                    UpdateEffects();
-                    HasEffectsUpdates = false;
-                }
-
-                if (_drawSurface && _surfaceBuffers.Count != 0)
-                {
-                    var isTransparentPass = DrawContext.IsTransparentPass();
-                    if ((isTransparentPass && _transparency > 0) || (!isTransparentPass && _transparency == 0))
-                    {
-                        foreach (var surfaceBuffer in _surfaceBuffers)
-                        {
-                            DrawContext.FlushBuffer(surfaceBuffer.VertexBuffer,
-                                surfaceBuffer.VertexBufferCount,
-                                surfaceBuffer.IndexBuffer,
-                                surfaceBuffer.IndexBufferCount,
-                                surfaceBuffer.VertexFormat,
-                                surfaceBuffer.EffectInstance, PrimitiveType.TriangleList, 0,
-                                surfaceBuffer.PrimitiveCount);
-                        }
-                    }
-                }
-
-                if (_drawCurve && _curveBuffers.Count != 0)
-                {
-                    foreach (var curveBuffer in _curveBuffers)
-                    {
-                        DrawContext.FlushBuffer(curveBuffer.VertexBuffer,
-                            curveBuffer.VertexBufferCount,
-                            curveBuffer.IndexBuffer,
-                            curveBuffer.IndexBufferCount,
-                            curveBuffer.VertexFormat,
-                            curveBuffer.EffectInstance, PrimitiveType.LineList, 0,
-                            curveBuffer.PrimitiveCount);
-                    }
-                }
-
-                if (_drawDirection)
-                {
-                    foreach (var buffer in _normalsBuffers)
-                    {
-                        if (buffer.IsValid())
-                        {
-                            DrawContext.FlushBuffer(buffer.VertexBuffer,
-                                buffer.VertexBufferCount,
-                                buffer.IndexBuffer,
-                                buffer.IndexBufferCount,
-                                buffer.VertexFormat,
-                                buffer.EffectInstance, PrimitiveType.LineList, 0,
-                                buffer.PrimitiveCount);
-                        }
-                    }
+                    DrawContext.FlushBuffer(surfaceBuffer.VertexBuffer,
+                        surfaceBuffer.VertexBufferCount,
+                        surfaceBuffer.IndexBuffer,
+                        surfaceBuffer.IndexBufferCount,
+                        surfaceBuffer.VertexFormat,
+                        surfaceBuffer.EffectInstance, PrimitiveType.TriangleList, 0,
+                        surfaceBuffer.PrimitiveCount);
                 }
             }
-            catch (Exception exception)
+        }
+
+        if (_drawCurve && _curveBuffers.Count != 0)
+        {
+            foreach (var curveBuffer in _curveBuffers)
             {
-                Trace.TraceError($"Error in PolylineVisualizationServer: {exception.Message}");
+                DrawContext.FlushBuffer(curveBuffer.VertexBuffer,
+                    curveBuffer.VertexBufferCount,
+                    curveBuffer.IndexBuffer,
+                    curveBuffer.IndexBufferCount,
+                    curveBuffer.VertexFormat,
+                    curveBuffer.EffectInstance, PrimitiveType.LineList, 0,
+                    curveBuffer.PrimitiveCount);
+            }
+        }
+
+        if (_drawDirection)
+        {
+            foreach (var buffer in _normalsBuffers)
+            {
+                if (buffer.IsValid())
+                {
+                    DrawContext.FlushBuffer(buffer.VertexBuffer,
+                        buffer.VertexBufferCount,
+                        buffer.IndexBuffer,
+                        buffer.IndexBufferCount,
+                        buffer.VertexFormat,
+                        buffer.EffectInstance, PrimitiveType.LineList, 0,
+                        buffer.PrimitiveCount);
+                }
             }
         }
     }

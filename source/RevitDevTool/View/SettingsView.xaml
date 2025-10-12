@@ -40,11 +40,11 @@
                     TargetPageType="{x:Type settings:BoundingBoxVisualizationSettingsView}" />
                 <ui:NavigationViewItem
                     Content="Face"
-                    Icon="{ui:SymbolIcon SurfaceHub24}"
+                    Icon="{ui:SymbolIcon RectangleLandscape24}"
                     TargetPageType="{x:Type settings:FaceVisualizationSettingsView}" />
                 <ui:NavigationViewItem
                     Content="Mesh"
-                    Icon="{ui:SymbolIcon ShapeExclude24}"
+                    Icon="{ui:SymbolIcon ShapeUnion24}"
                     TargetPageType="{x:Type settings:MeshVisualizationSettingsView}" />
                 <ui:NavigationViewItem
                     Content="Curve"
@@ -52,7 +52,7 @@
                     TargetPageType="{x:Type settings:PolylineVisualizationSettingsView}" />
                 <ui:NavigationViewItem
                     Content="Solid"
-                    Icon="{ui:SymbolIcon Cube24}"
+                    Icon="{ui:SymbolIcon Box24, Filled=True}"
                     TargetPageType="{x:Type settings:SolidVisualizationSettingsView}" />
                 <ui:NavigationViewItem
                     Content="Point"

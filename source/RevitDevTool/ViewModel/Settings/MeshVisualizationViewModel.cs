@@ -99,41 +99,41 @@ public sealed partial class MeshVisualizationViewModel: ObservableObject, IVisua
     
     private static void UpdateSurfaceColor(System.Windows.Media.Color value)
     {
-        VisualizationController.MeshVisualizationServerServer.UpdateSurfaceColor(new Color(value.R, value.G, value.B));
+        VisualizationController.MeshVisualizationServer.UpdateSurfaceColor(new Color(value.R, value.G, value.B));
     }
     
     private static void UpdateMeshColor(System.Windows.Media.Color value)
     {
-        VisualizationController.MeshVisualizationServerServer.UpdateMeshGridColor(new Color(value.R, value.G, value.B));
+        VisualizationController.MeshVisualizationServer.UpdateMeshGridColor(new Color(value.R, value.G, value.B));
     }
     
     private static void UpdateNormalVectorColor(System.Windows.Media.Color value)
     {
-        VisualizationController.MeshVisualizationServerServer.UpdateNormalVectorColor(new Color(value.R, value.G, value.B));
+        VisualizationController.MeshVisualizationServer.UpdateNormalVectorColor(new Color(value.R, value.G, value.B));
     }
     
     private static void UpdateExtrusion(double value)
     {
-        VisualizationController.MeshVisualizationServerServer.UpdateExtrusion(value / 12);
+        VisualizationController.MeshVisualizationServer.UpdateExtrusion(value / 12);
     }
     
     private static void UpdateTransparency(double value)
     {
-        VisualizationController.MeshVisualizationServerServer.UpdateTransparency(value / 100);
+        VisualizationController.MeshVisualizationServer.UpdateTransparency(value / 100);
     }
     
     private static void UpdateShowSurface(bool value)
     {
-        VisualizationController.MeshVisualizationServerServer.UpdateSurfaceVisibility(value);
+        VisualizationController.MeshVisualizationServer.UpdateSurfaceVisibility(value);
     }
     
     private static void UpdateShowMeshGrid(bool value)
     {
-        VisualizationController.MeshVisualizationServerServer.UpdateMeshGridVisibility(value);
+        VisualizationController.MeshVisualizationServer.UpdateMeshGridVisibility(value);
     }
     
     private static void UpdateShowNormalVector(bool value)
     {
-        VisualizationController.MeshVisualizationServerServer.UpdateNormalVectorVisibility(value);
+        VisualizationController.MeshVisualizationServer.UpdateNormalVectorVisibility(value);
     }
 }

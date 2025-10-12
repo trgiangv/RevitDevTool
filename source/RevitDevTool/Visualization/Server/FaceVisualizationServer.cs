@@ -1,7 +1,7 @@
 ﻿using System.Diagnostics;
 using Autodesk.Revit.DB.DirectContext3D;
 using RevitDevTool.Extensions ;
-using RevitDevTool.Models.Config ;
+using RevitDevTool.Services ;
 using RevitDevTool.Visualization.Contracts ;
 using RevitDevTool.Visualization.Helpers;
 using RevitDevTool.Visualization.Render;
@@ -9,7 +9,7 @@ using Color = Autodesk.Revit.DB.Color;
 
 namespace RevitDevTool.Visualization.Server;
 
-public sealed class FaceVisualizationServerServer : VisualizationServerServer<Face>
+public sealed class FaceVisualizationServer : VisualizationServer<Face>
 {
     private readonly Guid _serverId = new("F67DFF33-B5A8-47AA-AB81-557A032C001E");
     public override Guid GetServerId() => _serverId;
@@ -17,25 +17,25 @@ public sealed class FaceVisualizationServerServer : VisualizationServerServer<Fa
     private readonly List<RenderingBufferStorage> _normalBuffers = [];
     private readonly List<RenderingBufferStorage> _surfaceBuffers = [];
 
-    private double _extrusion = FaceVisualizationSettings.Default.Extrusion;
-    private double _transparency = FaceVisualizationSettings.Default.Transparency;
+    private double _extrusion = SettingsService.Instance.VisualizationConfig.FaceSettings.Extrusion;
+    private double _transparency = SettingsService.Instance.VisualizationConfig.FaceSettings.Transparency;
 
     private Color _meshColor = new( 
-        FaceVisualizationSettings.Default.MeshColor.R, 
-        FaceVisualizationSettings.Default.MeshColor.G, 
-        FaceVisualizationSettings.Default.MeshColor.B ) ;
+        SettingsService.Instance.VisualizationConfig.FaceSettings.MeshColor.R, 
+        SettingsService.Instance.VisualizationConfig.FaceSettings.MeshColor.G, 
+        SettingsService.Instance.VisualizationConfig.FaceSettings.MeshColor.B ) ;
     private Color _normalColor = new( 
-        FaceVisualizationSettings.Default.NormalVectorColor.R, 
-        FaceVisualizationSettings.Default.NormalVectorColor.G, 
-        FaceVisualizationSettings.Default.NormalVectorColor.B ) ;
+        SettingsService.Instance.VisualizationConfig.FaceSettings.NormalVectorColor.R, 
+        SettingsService.Instance.VisualizationConfig.FaceSettings.NormalVectorColor.G, 
+        SettingsService.Instance.VisualizationConfig.FaceSettings.NormalVectorColor.B ) ;
     private Color _surfaceColor = new( 
-        FaceVisualizationSettings.Default.SurfaceColor.R, 
-        FaceVisualizationSettings.Default.SurfaceColor.G, 
-        FaceVisualizationSettings.Default.SurfaceColor.B );
+        SettingsService.Instance.VisualizationConfig.FaceSettings.SurfaceColor.R, 
+        SettingsService.Instance.VisualizationConfig.FaceSettings.SurfaceColor.G, 
+        SettingsService.Instance.VisualizationConfig.FaceSettings.SurfaceColor.B );
 
-    private bool _drawMeshGrid = FaceVisualizationSettings.Default.ShowMeshGrid;
-    private bool _drawNormalVector = FaceVisualizationSettings.Default.ShowNormalVector;
-    private bool _drawSurface = FaceVisualizationSettings.Default.ShowSurface;
+    private bool _drawMeshGrid = SettingsService.Instance.VisualizationConfig.FaceSettings.ShowMeshGrid;
+    private bool _drawNormalVector = SettingsService.Instance.VisualizationConfig.FaceSettings.ShowNormalVector;
+    private bool _drawSurface = SettingsService.Instance.VisualizationConfig.FaceSettings.ShowSurface;
     
     public override bool UseInTransparentPass(Autodesk.Revit.DB.View view) => _drawSurface && _transparency > 0;
 
@@ -70,75 +70,66 @@ public sealed class FaceVisualizationServerServer : VisualizationServerServer<Fa
         return new Outline(newMinPoint, newMaxPoint);
     }
 
-    public override void RenderScene(Autodesk.Revit.DB.View view, DisplayStyle displayStyle)
+    // ReSharper disable once CognitiveComplexity
+    protected override void RenderScene()
     {
-        lock (RenderLock)
+        if (VisualizeGeometries.Count == 0) return;
+        
+        if (HasGeometryUpdates || _surfaceBuffers.Count == 0 || _meshGridBuffers.Count == 0 || _normalBuffers.Count == 0)
         {
-            if (VisualizeGeometries.Count == 0) return;
+            MapGeometryBuffer();
+            HasGeometryUpdates = false;
+        }
 
-            try
+        if (HasEffectsUpdates)
+        {
+            UpdateEffects();
+            HasEffectsUpdates = false;
+        }
+
+        if (_drawSurface && _surfaceBuffers.Count != 0)
+        {
+            var isTransparentPass = DrawContext.IsTransparentPass();
+            if ((isTransparentPass && _transparency > 0) || (!isTransparentPass && _transparency == 0))
             {
-                if (HasGeometryUpdates || _surfaceBuffers.Count == 0 || _meshGridBuffers.Count == 0 || _normalBuffers.Count == 0)
+                foreach (var surfaceBuffer in _surfaceBuffers)
                 {
-                    MapGeometryBuffer();
-                    HasGeometryUpdates = false;
-                }
-
-                if (HasEffectsUpdates)
-                {
-                    UpdateEffects();
-                    HasEffectsUpdates = false;
-                }
-
-                if (_drawSurface && _surfaceBuffers.Count != 0)
-                {
-                    var isTransparentPass = DrawContext.IsTransparentPass();
-                    if ((isTransparentPass && _transparency > 0) || (!isTransparentPass && _transparency == 0))
-                    {
-                        foreach (var surfaceBuffer in _surfaceBuffers)
-                        {
-                            DrawContext.FlushBuffer(surfaceBuffer.VertexBuffer,
-                                surfaceBuffer.VertexBufferCount,
-                                surfaceBuffer.IndexBuffer,
-                                surfaceBuffer.IndexBufferCount,
-                                surfaceBuffer.VertexFormat,
-                                surfaceBuffer.EffectInstance, PrimitiveType.TriangleList, 0,
-                                surfaceBuffer.PrimitiveCount);
-                        }
-                    }
-                }
-
-                if (_drawMeshGrid && _meshGridBuffers.Count != 0)
-                {
-                    foreach (var meshGridBuffer in _meshGridBuffers)
-                    {
-                        DrawContext.FlushBuffer(meshGridBuffer.VertexBuffer,
-                            meshGridBuffer.VertexBufferCount,
-                            meshGridBuffer.IndexBuffer,
-                            meshGridBuffer.IndexBufferCount,
-                            meshGridBuffer.VertexFormat,
-                            meshGridBuffer.EffectInstance, PrimitiveType.LineList, 0,
-                            meshGridBuffer.PrimitiveCount);
-                    }
-                }
-
-                if (_drawNormalVector && _normalBuffers.Count != 0)
-                {
-                    foreach (var normalBuffer in _normalBuffers)
-                    {
-                        DrawContext.FlushBuffer(normalBuffer.VertexBuffer,
-                            normalBuffer.VertexBufferCount,
-                            normalBuffer.IndexBuffer,
-                            normalBuffer.IndexBufferCount,
-                            normalBuffer.VertexFormat,
-                            normalBuffer.EffectInstance, PrimitiveType.LineList, 0,
-                            normalBuffer.PrimitiveCount);
-                    }
+                    DrawContext.FlushBuffer(surfaceBuffer.VertexBuffer,
+                        surfaceBuffer.VertexBufferCount,
+                        surfaceBuffer.IndexBuffer,
+                        surfaceBuffer.IndexBufferCount,
+                        surfaceBuffer.VertexFormat,
+                        surfaceBuffer.EffectInstance, PrimitiveType.TriangleList, 0,
+                        surfaceBuffer.PrimitiveCount);
                 }
             }
-            catch (Exception exception)
+        }
+
+        if (_drawMeshGrid && _meshGridBuffers.Count != 0)
+        {
+            foreach (var meshGridBuffer in _meshGridBuffers)
             {
-                Trace.TraceError($"Error in FaceVisualizationServer: {exception.Message}");
+                DrawContext.FlushBuffer(meshGridBuffer.VertexBuffer,
+                    meshGridBuffer.VertexBufferCount,
+                    meshGridBuffer.IndexBuffer,
+                    meshGridBuffer.IndexBufferCount,
+                    meshGridBuffer.VertexFormat,
+                    meshGridBuffer.EffectInstance, PrimitiveType.LineList, 0,
+                    meshGridBuffer.PrimitiveCount);
+            }
+        }
+
+        if (_drawNormalVector && _normalBuffers.Count != 0)
+        {
+            foreach (var normalBuffer in _normalBuffers)
+            {
+                DrawContext.FlushBuffer(normalBuffer.VertexBuffer,
+                    normalBuffer.VertexBufferCount,
+                    normalBuffer.IndexBuffer,
+                    normalBuffer.IndexBufferCount,
+                    normalBuffer.VertexFormat,
+                    normalBuffer.EffectInstance, PrimitiveType.LineList, 0,
+                    normalBuffer.PrimitiveCount);
             }
         }
     }

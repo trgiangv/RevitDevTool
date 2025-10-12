@@ -36,7 +36,7 @@
 
         <ui:CardAction
             Margin="0,4,0,0"
-            Command="{Binding ResetVisualizationSettingsCommand}"
+            Command="{Binding ResetSettingsCommand}"
             Icon="{ui:SymbolIcon ArrowReset24}">
             <ui:CardAction.Content>
                 <StackPanel>

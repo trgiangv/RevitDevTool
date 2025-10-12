@@ -108,46 +108,46 @@ public sealed partial class XyzVisualizationViewModel: ObservableObject, IVisual
     
     private static void UpdateXColor(System.Windows.Media.Color value)
     {
-        VisualizationController.XyzVisualizationServerServer.UpdateXColor(new Color(value.R, value.G, value.B));
+        VisualizationController.XyzVisualizationServer.UpdateXColor(new Color(value.R, value.G, value.B));
     }
     
     private static void UpdateYColor(System.Windows.Media.Color value)
     {
-        VisualizationController.XyzVisualizationServerServer.UpdateYColor(new Color(value.R, value.G, value.B));
+        VisualizationController.XyzVisualizationServer.UpdateYColor(new Color(value.R, value.G, value.B));
     }
     
     private static void UpdateZColor(System.Windows.Media.Color value)
     {
-        VisualizationController.XyzVisualizationServerServer.UpdateZColor(new Color(value.R, value.G, value.B));
+        VisualizationController.XyzVisualizationServer.UpdateZColor(new Color(value.R, value.G, value.B));
     }
     
     private static void UpdateAxisLength(double value)
     {
-        VisualizationController.XyzVisualizationServerServer.UpdateAxisLength(value / 12);
+        VisualizationController.XyzVisualizationServer.UpdateAxisLength(value / 12);
     }
     
     private static void UpdateTransparency(double value)
     {
-        VisualizationController.XyzVisualizationServerServer.UpdateTransparency(value / 100);
+        VisualizationController.XyzVisualizationServer.UpdateTransparency(value / 100);
     }
     
     private static void UpdateShowPlane(bool value)
     {
-        VisualizationController.XyzVisualizationServerServer.UpdatePlaneVisibility(value);
+        VisualizationController.XyzVisualizationServer.UpdatePlaneVisibility(value);
     }
     
     private static void UpdateShowXAxis(bool value)
     {
-        VisualizationController.XyzVisualizationServerServer.UpdateXAxisVisibility(value);
+        VisualizationController.XyzVisualizationServer.UpdateXAxisVisibility(value);
     }
     
     private static void UpdateShowYAxis(bool value)
     {
-        VisualizationController.XyzVisualizationServerServer.UpdateYAxisVisibility(value);
+        VisualizationController.XyzVisualizationServer.UpdateYAxisVisibility(value);
     }
     
     private static void UpdateShowZAxis(bool value)
     {
-        VisualizationController.XyzVisualizationServerServer.UpdateZAxisVisibility(value);
+        VisualizationController.XyzVisualizationServer.UpdateZAxisVisibility(value);
     }
 }
