@@ -1,14 +1,14 @@
-﻿using System.Diagnostics;
-using Autodesk.Revit.DB.DirectContext3D;
-using Autodesk.Revit.DB.ExternalService;
-using RevitDevTool.Visualization.Contracts ;
+﻿using System.Diagnostics ;
+using Autodesk.Revit.DB.DirectContext3D ;
+using Autodesk.Revit.DB.ExternalService ;
+using RevitDevTool.ViewModel.Contracts ;
 using Color = Autodesk.Revit.DB.Color ;
 
-namespace RevitDevTool.Visualization.Server.Contracts;
+namespace RevitDevTool.Visualization.Contracts;
 
-public abstract class VisualizationServer<T> : IDirectContext3DServer, IVisualUpdate
+public abstract class VisualizationServerServer<TG> : IDirectContext3DServer, IVisualUpdate, IVisualizationServerLifeCycle
 {
-    protected readonly List<T> VisualizeGeometries = [];
+    protected readonly List<TG> VisualizeGeometries = [];
     protected bool HasGeometryUpdates = true;
     protected bool HasEffectsUpdates = true;
     protected readonly object RenderLock = new();
@@ -19,8 +19,8 @@ public abstract class VisualizationServer<T> : IDirectContext3DServer, IVisualUp
     public string GetSourceId() => string.Empty;
     public bool UsesHandles() => false;
     public ExternalServiceId GetServiceId() => ExternalServices.BuiltInExternalServices.DirectContext3DService;
-    public string GetName() => $"{typeof(T).Name} Visualization Server";
-    public string GetDescription() => $"Visualize and debug geometry of {typeof(T).Name}";
+    public string GetName() => $"{typeof(TG).Name} Visualization Server";
+    public string GetDescription() => $"Visualize and debug geometry of {typeof(TG).Name}";
     
     public abstract Guid GetServerId();
     public abstract Outline? GetBoundingBox(Autodesk.Revit.DB.View dBView);
@@ -47,7 +47,8 @@ public abstract class VisualizationServer<T> : IDirectContext3DServer, IVisualUp
         }
     }
     
-    public void AddGeometries(IEnumerable<T> geometries)
+
+    public void AddGeometries(IEnumerable<TG> geometries)
     {
         var uiDocument = Context.ActiveUiDocument;
         if (uiDocument is null) return;
@@ -67,7 +68,7 @@ public abstract class VisualizationServer<T> : IDirectContext3DServer, IVisualUp
         }
     }
     
-    public void AddGeometry(T geometry)
+    public void AddGeometry(TG geometry)
     {
         var uiDocument = Context.ActiveUiDocument;
         if (uiDocument is null) return;
@@ -168,15 +169,15 @@ public abstract class VisualizationServer<T> : IDirectContext3DServer, IVisualUp
     }
     public virtual void UpdateXColor( Color color )
     {
-        throw new NotImplementedException() ;
+        
     }
     public virtual void UpdateYColor( Color color )
     {
-        throw new NotImplementedException() ;
+        
     }
     public virtual void UpdateZColor( Color color )
     {
-        throw new NotImplementedException() ;
+        
     }
     public virtual void UpdateScale( double value )
     {

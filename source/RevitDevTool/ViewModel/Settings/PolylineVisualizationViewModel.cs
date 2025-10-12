@@ -4,7 +4,7 @@ using Color = Autodesk.Revit.DB.Color;
 
 namespace RevitDevTool.ViewModel.Settings;
 
-public sealed partial class PolylineVisualizationViewModel: ObservableObject, IInitialized
+public sealed partial class PolylineVisualizationViewModel: ObservableObject, IVisualizationViewModel
 {
     public static readonly PolylineVisualizationViewModel Instance = new();
     
@@ -34,7 +34,21 @@ public sealed partial class PolylineVisualizationViewModel: ObservableObject, II
         UpdateTransparency(Transparency);
         UpdateDiameter(Diameter);
     }
-    
+
+    public void Refresh()
+    {
+        Diameter = SettingsService.Instance.VisualizationConfig.PolylineSettings.Diameter;
+        Transparency = SettingsService.Instance.VisualizationConfig.PolylineSettings.Transparency;
+        
+        SurfaceColor = SettingsService.Instance.VisualizationConfig.PolylineSettings.SurfaceColor;
+        CurveColor = SettingsService.Instance.VisualizationConfig.PolylineSettings.CurveColor;
+        DirectionColor = SettingsService.Instance.VisualizationConfig.PolylineSettings.DirectionColor;
+        
+        ShowSurface = SettingsService.Instance.VisualizationConfig.PolylineSettings.ShowSurface;
+        ShowCurve = SettingsService.Instance.VisualizationConfig.PolylineSettings.ShowCurve;
+        ShowDirection = SettingsService.Instance.VisualizationConfig.PolylineSettings.ShowDirection;
+    }
+
     partial void OnSurfaceColorChanged(System.Windows.Media.Color value)
     {
         SettingsService.Instance.VisualizationConfig.PolylineSettings.SurfaceColor = value;
@@ -83,43 +97,43 @@ public sealed partial class PolylineVisualizationViewModel: ObservableObject, II
         UpdateShowDirection(value);
     }
     
-    private void UpdateSurfaceColor(System.Windows.Media.Color value)
+    private static void UpdateSurfaceColor(System.Windows.Media.Color value)
     {
-        VisualizationController.PolylineVisualizationServer.UpdateSurfaceColor(new Color(value.R, value.G, value.B));
+        VisualizationController.PolylineVisualizationServerServer.UpdateSurfaceColor(new Color(value.R, value.G, value.B));
     }
     
-    private void UpdateCurveColor(System.Windows.Media.Color value)
+    private static void UpdateCurveColor(System.Windows.Media.Color value)
     {
-        VisualizationController.PolylineVisualizationServer.UpdateCurveColor(new Color(value.R, value.G, value.B));
+        VisualizationController.PolylineVisualizationServerServer.UpdateCurveColor(new Color(value.R, value.G, value.B));
     }
     
-    private void UpdateDirectionColor(System.Windows.Media.Color value)
+    private static void UpdateDirectionColor(System.Windows.Media.Color value)
     {
-        VisualizationController.PolylineVisualizationServer.UpdateDirectionColor(new Color(value.R, value.G, value.B));
+        VisualizationController.PolylineVisualizationServerServer.UpdateDirectionColor(new Color(value.R, value.G, value.B));
     }
     
-    private void UpdateDiameter(double value)
+    private static void UpdateDiameter(double value)
     {
-        VisualizationController.PolylineVisualizationServer.UpdateDiameter(value / 12);
+        VisualizationController.PolylineVisualizationServerServer.UpdateDiameter(value / 12);
     }
     
-    private void UpdateTransparency(double value)
+    private static void UpdateTransparency(double value)
     {
-        VisualizationController.PolylineVisualizationServer.UpdateTransparency(value / 100);
+        VisualizationController.PolylineVisualizationServerServer.UpdateTransparency(value / 100);
     }
     
-    private void UpdateShowSurface(bool value)
+    private static void UpdateShowSurface(bool value)
     {
-        VisualizationController.PolylineVisualizationServer.UpdateSurfaceVisibility(value);
+        VisualizationController.PolylineVisualizationServerServer.UpdateSurfaceVisibility(value);
     }
     
-    private void UpdateShowCurve(bool value)
+    private static void UpdateShowCurve(bool value)
     {
-        VisualizationController.PolylineVisualizationServer.UpdateCurveVisibility(value);
+        VisualizationController.PolylineVisualizationServerServer.UpdateCurveVisibility(value);
     }
     
-    private void UpdateShowDirection(bool value)
+    private static void UpdateShowDirection(bool value)
     {
-        VisualizationController.PolylineVisualizationServer.UpdateDirectionVisibility(value);
+        VisualizationController.PolylineVisualizationServerServer.UpdateDirectionVisibility(value);
     }
 }

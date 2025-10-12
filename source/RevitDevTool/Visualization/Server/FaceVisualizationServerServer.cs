@@ -1,14 +1,15 @@
 ﻿using System.Diagnostics;
 using Autodesk.Revit.DB.DirectContext3D;
 using RevitDevTool.Extensions ;
+using RevitDevTool.Models.Config ;
+using RevitDevTool.Visualization.Contracts ;
 using RevitDevTool.Visualization.Helpers;
 using RevitDevTool.Visualization.Render;
-using RevitDevTool.Visualization.Server.Contracts;
 using Color = Autodesk.Revit.DB.Color;
 
 namespace RevitDevTool.Visualization.Server;
 
-public sealed class FaceVisualizationServer : VisualizationServer<Face>
+public sealed class FaceVisualizationServerServer : VisualizationServerServer<Face>
 {
     private readonly Guid _serverId = new("F67DFF33-B5A8-47AA-AB81-557A032C001E");
     public override Guid GetServerId() => _serverId;
@@ -16,16 +17,25 @@ public sealed class FaceVisualizationServer : VisualizationServer<Face>
     private readonly List<RenderingBufferStorage> _normalBuffers = [];
     private readonly List<RenderingBufferStorage> _surfaceBuffers = [];
 
-    private double _extrusion;
-    private double _transparency;
+    private double _extrusion = FaceVisualizationSettings.Default.Extrusion;
+    private double _transparency = FaceVisualizationSettings.Default.Transparency;
 
-    private Color _meshColor ;
-    private Color _normalColor ;
-    private Color _surfaceColor ;
+    private Color _meshColor = new( 
+        FaceVisualizationSettings.Default.MeshColor.R, 
+        FaceVisualizationSettings.Default.MeshColor.G, 
+        FaceVisualizationSettings.Default.MeshColor.B ) ;
+    private Color _normalColor = new( 
+        FaceVisualizationSettings.Default.NormalVectorColor.R, 
+        FaceVisualizationSettings.Default.NormalVectorColor.G, 
+        FaceVisualizationSettings.Default.NormalVectorColor.B ) ;
+    private Color _surfaceColor = new( 
+        FaceVisualizationSettings.Default.SurfaceColor.R, 
+        FaceVisualizationSettings.Default.SurfaceColor.G, 
+        FaceVisualizationSettings.Default.SurfaceColor.B );
 
-    private bool _drawMeshGrid ;
-    private bool _drawNormalVector ;
-    private bool _drawSurface ;
+    private bool _drawMeshGrid = FaceVisualizationSettings.Default.ShowMeshGrid;
+    private bool _drawNormalVector = FaceVisualizationSettings.Default.ShowNormalVector;
+    private bool _drawSurface = FaceVisualizationSettings.Default.ShowSurface;
     
     public override bool UseInTransparentPass(Autodesk.Revit.DB.View view) => _drawSurface && _transparency > 0;
 

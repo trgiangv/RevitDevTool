@@ -1,14 +1,15 @@
 ﻿using System.Diagnostics;
 using Autodesk.Revit.DB.DirectContext3D;
 using RevitDevTool.Extensions ;
+using RevitDevTool.Models.Config ;
+using RevitDevTool.Visualization.Contracts ;
 using RevitDevTool.Visualization.Helpers;
 using RevitDevTool.Visualization.Render;
-using RevitDevTool.Visualization.Server.Contracts;
 using Color = Autodesk.Revit.DB.Color;
 
 namespace RevitDevTool.Visualization.Server;
 
-public sealed class MeshVisualizationServer : VisualizationServer<Mesh>
+public sealed class MeshVisualizationServerServer : VisualizationServerServer<Mesh>
 {
     private readonly Guid _serverId = new("FD6F0E82-26D9-485B-A6D8-5FA65B85442F");
     public override Guid GetServerId() => _serverId;
@@ -16,16 +17,28 @@ public sealed class MeshVisualizationServer : VisualizationServer<Mesh>
     private readonly List<RenderingBufferStorage> _surfaceBuffers = [];
     private readonly List<RenderingBufferStorage> _meshGridBuffers = [];
 
-    private double _extrusion ;
-    private double _transparency ;
+    private double _extrusion = MeshVisualizationSettings.Default.Extrusion;
+    private double _transparency = MeshVisualizationSettings.Default.Transparency;
 
-    private bool _drawMeshGrid ;
-    private bool _drawNormalVector ;
-    private bool _drawSurface ;
+    private bool _drawMeshGrid = MeshVisualizationSettings.Default.ShowMeshGrid;
+    private bool _drawNormalVector = MeshVisualizationSettings.Default.ShowNormalVector;
+    private bool _drawSurface = MeshVisualizationSettings.Default.ShowSurface;
 
-    private Color _meshColor ;
-    private Color _normalColor ;
-    private Color _surfaceColor ;
+    private Color _meshColor = new(
+        MeshVisualizationSettings.Default.MeshColor.R,
+        MeshVisualizationSettings.Default.MeshColor.G,
+        MeshVisualizationSettings.Default.MeshColor.B
+        );
+    private Color _normalColor = new(
+        MeshVisualizationSettings.Default.NormalVectorColor.R,
+        MeshVisualizationSettings.Default.NormalVectorColor.G,
+        MeshVisualizationSettings.Default.NormalVectorColor.B
+        );
+    private Color _surfaceColor = new(
+        MeshVisualizationSettings.Default.SurfaceColor.R,
+        MeshVisualizationSettings.Default.SurfaceColor.G,
+        MeshVisualizationSettings.Default.SurfaceColor.B
+        );
 
     public override bool UseInTransparentPass(Autodesk.Revit.DB.View view) => _drawSurface && _transparency > 0;
     

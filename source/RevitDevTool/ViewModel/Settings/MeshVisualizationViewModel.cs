@@ -4,7 +4,7 @@ using Color = Autodesk.Revit.DB.Color;
 
 namespace RevitDevTool.ViewModel.Settings;
 
-public sealed partial class MeshVisualizationViewModel: ObservableObject, IInitialized
+public sealed partial class MeshVisualizationViewModel: ObservableObject, IVisualizationViewModel
 {
     public static readonly MeshVisualizationViewModel Instance = new();
     
@@ -34,7 +34,21 @@ public sealed partial class MeshVisualizationViewModel: ObservableObject, IIniti
         UpdateExtrusion(Extrusion);
         UpdateTransparency(Transparency);
     }
-    
+
+    public void Refresh()
+    {
+        Extrusion = SettingsService.Instance.VisualizationConfig.MeshSettings.Extrusion;
+        Transparency = SettingsService.Instance.VisualizationConfig.MeshSettings.Transparency;
+        
+        SurfaceColor = SettingsService.Instance.VisualizationConfig.MeshSettings.SurfaceColor;
+        MeshColor = SettingsService.Instance.VisualizationConfig.MeshSettings.MeshColor;
+        NormalVectorColor = SettingsService.Instance.VisualizationConfig.MeshSettings.NormalVectorColor;
+        
+        ShowSurface = SettingsService.Instance.VisualizationConfig.MeshSettings.ShowSurface;
+        ShowMeshGrid = SettingsService.Instance.VisualizationConfig.MeshSettings.ShowMeshGrid;
+        ShowNormalVector = SettingsService.Instance.VisualizationConfig.MeshSettings.ShowNormalVector;
+    }
+
     partial void OnSurfaceColorChanged(System.Windows.Media.Color value)
     {
         SettingsService.Instance.VisualizationConfig.MeshSettings.SurfaceColor = value;
@@ -83,43 +97,43 @@ public sealed partial class MeshVisualizationViewModel: ObservableObject, IIniti
         UpdateShowNormalVector(value);
     }
     
-    private void UpdateSurfaceColor(System.Windows.Media.Color value)
+    private static void UpdateSurfaceColor(System.Windows.Media.Color value)
     {
-        VisualizationController.MeshVisualizationServer.UpdateSurfaceColor(new Color(value.R, value.G, value.B));
+        VisualizationController.MeshVisualizationServerServer.UpdateSurfaceColor(new Color(value.R, value.G, value.B));
     }
     
-    private void UpdateMeshColor(System.Windows.Media.Color value)
+    private static void UpdateMeshColor(System.Windows.Media.Color value)
     {
-        VisualizationController.MeshVisualizationServer.UpdateMeshGridColor(new Color(value.R, value.G, value.B));
+        VisualizationController.MeshVisualizationServerServer.UpdateMeshGridColor(new Color(value.R, value.G, value.B));
     }
     
-    private void UpdateNormalVectorColor(System.Windows.Media.Color value)
+    private static void UpdateNormalVectorColor(System.Windows.Media.Color value)
     {
-        VisualizationController.MeshVisualizationServer.UpdateNormalVectorColor(new Color(value.R, value.G, value.B));
+        VisualizationController.MeshVisualizationServerServer.UpdateNormalVectorColor(new Color(value.R, value.G, value.B));
     }
     
-    private void UpdateExtrusion(double value)
+    private static void UpdateExtrusion(double value)
     {
-        VisualizationController.MeshVisualizationServer.UpdateExtrusion(value / 12);
+        VisualizationController.MeshVisualizationServerServer.UpdateExtrusion(value / 12);
     }
     
-    private void UpdateTransparency(double value)
+    private static void UpdateTransparency(double value)
     {
-        VisualizationController.MeshVisualizationServer.UpdateTransparency(value / 100);
+        VisualizationController.MeshVisualizationServerServer.UpdateTransparency(value / 100);
     }
     
-    private void UpdateShowSurface(bool value)
+    private static void UpdateShowSurface(bool value)
     {
-        VisualizationController.MeshVisualizationServer.UpdateSurfaceVisibility(value);
+        VisualizationController.MeshVisualizationServerServer.UpdateSurfaceVisibility(value);
     }
     
-    private void UpdateShowMeshGrid(bool value)
+    private static void UpdateShowMeshGrid(bool value)
     {
-        VisualizationController.MeshVisualizationServer.UpdateMeshGridVisibility(value);
+        VisualizationController.MeshVisualizationServerServer.UpdateMeshGridVisibility(value);
     }
     
-    private void UpdateShowNormalVector(bool value)
+    private static void UpdateShowNormalVector(bool value)
     {
-        VisualizationController.MeshVisualizationServer.UpdateNormalVectorVisibility(value);
+        VisualizationController.MeshVisualizationServerServer.UpdateNormalVectorVisibility(value);
     }
 }

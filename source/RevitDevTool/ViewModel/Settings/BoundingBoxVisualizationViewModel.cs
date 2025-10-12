@@ -4,7 +4,7 @@ using Color = Autodesk.Revit.DB.Color;
 
 namespace RevitDevTool.ViewModel.Settings;
 
-public sealed partial class BoundingBoxVisualizationViewModel : ObservableObject, IInitialized
+public sealed partial class BoundingBoxVisualizationViewModel : ObservableObject, IVisualizationViewModel
 {
     public static readonly BoundingBoxVisualizationViewModel Instance = new();
     
@@ -31,6 +31,18 @@ public sealed partial class BoundingBoxVisualizationViewModel : ObservableObject
         
         UpdateTransparency(Transparency);
         UpdateScale(Scale);
+    }
+
+    public void Refresh()
+    {
+        Transparency = SettingsService.Instance.VisualizationConfig.BoundingBoxSettings.Transparency;
+        Scale = 100; // Default scale to 100%
+        SurfaceColor = SettingsService.Instance.VisualizationConfig.BoundingBoxSettings.SurfaceColor;
+        EdgeColor = SettingsService.Instance.VisualizationConfig.BoundingBoxSettings.EdgeColor;
+        AxisColor = SettingsService.Instance.VisualizationConfig.BoundingBoxSettings.AxisColor;
+        ShowSurface = SettingsService.Instance.VisualizationConfig.BoundingBoxSettings.ShowSurface;
+        ShowEdge = SettingsService.Instance.VisualizationConfig.BoundingBoxSettings.ShowEdge;
+        ShowAxis = SettingsService.Instance.VisualizationConfig.BoundingBoxSettings.ShowAxis;
     }
     
     partial void OnTransparencyChanged(double value)
@@ -80,43 +92,43 @@ public sealed partial class BoundingBoxVisualizationViewModel : ObservableObject
         UpdateShowAxis(value);
     }
     
-    private void UpdateSurfaceColor(System.Windows.Media.Color value)
+    private static void UpdateSurfaceColor(System.Windows.Media.Color value)
     {
-        VisualizationController.BoundingBoxVisualizationServer.UpdateSurfaceColor(new Color(value.R, value.G, value.B));
+        VisualizationController.BoundingBoxVisualizationServerServer.UpdateSurfaceColor(new Color(value.R, value.G, value.B));
     }
     
-    private void UpdateEdgeColor(System.Windows.Media.Color value)
+    private static void UpdateEdgeColor(System.Windows.Media.Color value)
     {
-        VisualizationController.BoundingBoxVisualizationServer.UpdateEdgeColor(new Color(value.R, value.G, value.B));
+        VisualizationController.BoundingBoxVisualizationServerServer.UpdateEdgeColor(new Color(value.R, value.G, value.B));
     }
     
-    private void UpdateAxisColor(System.Windows.Media.Color value)
+    private static void UpdateAxisColor(System.Windows.Media.Color value)
     {
-        VisualizationController.BoundingBoxVisualizationServer.UpdateAxisColor(new Color(value.R, value.G, value.B));
+        VisualizationController.BoundingBoxVisualizationServerServer.UpdateAxisColor(new Color(value.R, value.G, value.B));
     }
     
-    private void UpdateTransparency(double value)
+    private static void UpdateTransparency(double value)
     {
-        VisualizationController.BoundingBoxVisualizationServer.UpdateTransparency(value / 100);
+        VisualizationController.BoundingBoxVisualizationServerServer.UpdateTransparency(value / 100);
     }
     
-    private void UpdateScale(double value)
+    private static void UpdateScale(double value)
     {
-        VisualizationController.BoundingBoxVisualizationServer.UpdateScale(value / 100);
+        VisualizationController.BoundingBoxVisualizationServerServer.UpdateScale(value / 100);
     }
     
-    private void UpdateShowSurface(bool value)
+    private static void UpdateShowSurface(bool value)
     {
-        VisualizationController.BoundingBoxVisualizationServer.UpdateSurfaceVisibility(value);
+        VisualizationController.BoundingBoxVisualizationServerServer.UpdateSurfaceVisibility(value);
     }
     
-    private void UpdateShowEdge(bool value)
+    private static void UpdateShowEdge(bool value)
     {
-        VisualizationController.BoundingBoxVisualizationServer.UpdateEdgeVisibility(value);
+        VisualizationController.BoundingBoxVisualizationServerServer.UpdateEdgeVisibility(value);
     }
     
-    private void UpdateShowAxis(bool value)
+    private static void UpdateShowAxis(bool value)
     {
-        VisualizationController.BoundingBoxVisualizationServer.UpdateAxisVisibility(value);
+        VisualizationController.BoundingBoxVisualizationServerServer.UpdateAxisVisibility(value);
     }
 }

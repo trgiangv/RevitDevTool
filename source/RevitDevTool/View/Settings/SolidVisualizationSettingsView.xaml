@@ -30,7 +30,7 @@
                 Height="32"
                 DockPanel.Dock="Right">
                 <colorPicker:PortableColorPicker
-                    SelectedColor="{Binding FaceColor}"
+                    SelectedColor="{Binding FaceColor, Mode=TwoWay, Delay=10}"
                     ShowAlpha="False"
                     ShowFractionalPart="False"
                     SmallChange="5"
@@ -80,7 +80,7 @@
                 Height="32"
                 DockPanel.Dock="Right">
                 <colorPicker:PortableColorPicker
-                    SelectedColor="{Binding EdgeColor}"
+                    SelectedColor="{Binding EdgeColor, Mode=TwoWay, Delay=10}"
                     ShowAlpha="False"
                     ShowFractionalPart="False"
                     SmallChange="5"

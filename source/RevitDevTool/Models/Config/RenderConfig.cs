@@ -21,6 +21,7 @@ public sealed class VisualizationConfig
 [Serializable]
 public class BoundingBoxVisualizationSettings
 {
+    public static BoundingBoxVisualizationSettings Default { get; } = new();
     [JsonPropertyName("Transparency")] public double Transparency { get; set; } = 60;
 
     [JsonPropertyName("SurfaceColor")] public Color SurfaceColor { get; set; } = Colors.DodgerBlue;
@@ -35,6 +36,7 @@ public class BoundingBoxVisualizationSettings
 [Serializable]
 public class FaceVisualizationSettings
 {
+    public static FaceVisualizationSettings Default { get; } = new();
     [JsonPropertyName("Transparency")] public double Transparency { get; set; } = 20;
     [JsonPropertyName("Extrusion")] public double Extrusion { get; set; } = Context.Application.VertexTolerance * 12;
     [JsonPropertyName("MinExtrusion")] public double MinExtrusion { get; set; } = Context.Application.VertexTolerance * 12;
@@ -51,6 +53,7 @@ public class FaceVisualizationSettings
 [Serializable]
 public class MeshVisualizationSettings
 {
+    public static MeshVisualizationSettings Default { get; } = new();
     [JsonPropertyName("Transparency")] public double Transparency { get; set; } = 20;
     [JsonPropertyName("Extrusion")] public double Extrusion { get; set; } = Context.Application.VertexTolerance * 12;
     [JsonPropertyName("MinExtrusion")] public double MinExtrusion { get; set; } = Context.Application.VertexTolerance * 12;
@@ -67,6 +70,7 @@ public class MeshVisualizationSettings
 [Serializable]
 public class PolylineVisualizationSettings
 {
+    public static PolylineVisualizationSettings Default { get; } = new();
     [JsonPropertyName("Transparency")] public double Transparency { get; set; } = 20;
     [JsonPropertyName("Diameter")] public double Diameter { get; set; } = 2;
     [JsonPropertyName("MinThickness")] public double MinThickness { get; set; } = 0.1;
@@ -83,6 +87,7 @@ public class PolylineVisualizationSettings
 [Serializable]
 public sealed class SolidVisualizationSettings
 {
+    public static SolidVisualizationSettings Default { get; } = new();
     [JsonPropertyName("Transparency")] public double Transparency { get; set; } = 20;
     [JsonPropertyName("Scale")] public double Scale { get; set; } = 1;
 
@@ -96,6 +101,7 @@ public sealed class SolidVisualizationSettings
 [Serializable]
 public class XyzVisualizationSettings
 {
+    public static XyzVisualizationSettings Default { get; } = new();
     [JsonPropertyName("Transparency")] public double Transparency { get; set; }
     [JsonPropertyName("AxisLength")] public double AxisLength { get; set; } = 6;
     [JsonPropertyName("MinAxisLength")] public double MinAxisLength { get; set; } = 0.1;

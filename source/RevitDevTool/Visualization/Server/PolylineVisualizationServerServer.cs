@@ -1,14 +1,15 @@
 ﻿using System.Diagnostics;
 using Autodesk.Revit.DB.DirectContext3D;
 using RevitDevTool.Extensions ;
+using RevitDevTool.Models.Config ;
+using RevitDevTool.Visualization.Contracts ;
 using RevitDevTool.Visualization.Helpers;
 using RevitDevTool.Visualization.Render;
-using RevitDevTool.Visualization.Server.Contracts;
 using Color = Autodesk.Revit.DB.Color;
 
 namespace RevitDevTool.Visualization.Server;
 
-public sealed class PolylineVisualizationServer : VisualizationServer<GeometryObject>
+public sealed class PolylineVisualizationServerServer : VisualizationServerServer<GeometryObject>
 {
     private readonly Guid _serverId = new("A1B2C3D4-E5F6-7890-ABCD-EF1234567890");
     public override Guid GetServerId() => _serverId;
@@ -17,16 +18,28 @@ public sealed class PolylineVisualizationServer : VisualizationServer<GeometryOb
     private readonly List<RenderingBufferStorage> _curveBuffers = [];
     private readonly List<RenderingBufferStorage> _normalsBuffers = [];
     
-    private double _transparency ;
-    private double _diameter ;
+    private double _transparency = PolylineVisualizationSettings.Default.Transparency;
+    private double _diameter = PolylineVisualizationSettings.Default.Diameter;
 
-    private Color _surfaceColor ;
-    private Color _curveColor ;
-    private Color _directionColor ;
+    private Color _surfaceColor = new(
+        PolylineVisualizationSettings.Default.SurfaceColor.R,
+        PolylineVisualizationSettings.Default.SurfaceColor.G,
+        PolylineVisualizationSettings.Default.SurfaceColor.B
+        );
+    private Color _curveColor = new(
+        PolylineVisualizationSettings.Default.CurveColor.R,
+        PolylineVisualizationSettings.Default.CurveColor.G,
+        PolylineVisualizationSettings.Default.CurveColor.B
+        );
+    private Color _directionColor = new(
+        PolylineVisualizationSettings.Default.DirectionColor.R,
+        PolylineVisualizationSettings.Default.DirectionColor.G,
+        PolylineVisualizationSettings.Default.DirectionColor.B
+        );
 
-    private bool _drawCurve ;
-    private bool _drawDirection ;
-    private bool _drawSurface ;
+    private bool _drawCurve = PolylineVisualizationSettings.Default.ShowCurve;
+    private bool _drawDirection = PolylineVisualizationSettings.Default.ShowDirection;
+    private bool _drawSurface = PolylineVisualizationSettings.Default.ShowSurface;
     
     public override bool UseInTransparentPass(Autodesk.Revit.DB.View view) => _drawSurface && _transparency > 0;
     public override Outline? GetBoundingBox(Autodesk.Revit.DB.View view) => null;

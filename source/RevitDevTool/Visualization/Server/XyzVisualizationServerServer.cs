@@ -1,14 +1,15 @@
 ﻿using System.Diagnostics;
 using Autodesk.Revit.DB.DirectContext3D;
 using RevitDevTool.Extensions ;
+using RevitDevTool.Models.Config ;
+using RevitDevTool.Visualization.Contracts ;
 using RevitDevTool.Visualization.Helpers;
 using RevitDevTool.Visualization.Render;
-using RevitDevTool.Visualization.Server.Contracts;
 using Color = Autodesk.Revit.DB.Color;
 
 namespace RevitDevTool.Visualization.Server;
 
-public sealed class XyzVisualizationServer : VisualizationServer<XYZ>
+public sealed class XyzVisualizationServerServer : VisualizationServerServer<XYZ>
 {
     private readonly Guid _serverId = new("A670E0BB-8B55-47CB-905C-7D94F0C8DF07");
     public override Guid GetServerId() => _serverId;
@@ -23,17 +24,29 @@ public sealed class XyzVisualizationServer : VisualizationServer<XYZ>
         XYZ.BasisZ
     ];
 
-    private double _transparency;
-    private double _axisLength;
+    private double _transparency = XyzVisualizationSettings.Default.Transparency;
+    private double _axisLength = XyzVisualizationSettings.Default.AxisLength;
 
-    private Color _xColor;
-    private Color _yColor;
-    private Color _zColor;
+    private Color _xColor = new(
+        XyzVisualizationSettings.Default.XColor.R,
+        XyzVisualizationSettings.Default.XColor.G,
+        XyzVisualizationSettings.Default.XColor.B
+        );
+    private Color _yColor = new(
+        XyzVisualizationSettings.Default.YColor.R,
+        XyzVisualizationSettings.Default.YColor.G,
+        XyzVisualizationSettings.Default.YColor.B
+        );
+    private Color _zColor = new(
+        XyzVisualizationSettings.Default.ZColor.R,
+        XyzVisualizationSettings.Default.ZColor.G,
+        XyzVisualizationSettings.Default.ZColor.B
+        );
 
-    private bool _drawPlane;
-    private bool _drawXAxis;
-    private bool _drawYAxis;
-    private bool _drawZAxis;
+    private bool _drawPlane = XyzVisualizationSettings.Default.ShowPlane;
+    private bool _drawXAxis = XyzVisualizationSettings.Default.ShowXAxis;
+    private bool _drawYAxis = XyzVisualizationSettings.Default.ShowYAxis;
+    private bool _drawZAxis = XyzVisualizationSettings.Default.ShowZAxis;
     
     public override bool UseInTransparentPass(Autodesk.Revit.DB.View view) => _drawPlane && _transparency > 0;
 
