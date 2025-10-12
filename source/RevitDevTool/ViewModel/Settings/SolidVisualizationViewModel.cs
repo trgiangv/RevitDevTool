@@ -77,31 +77,31 @@ public sealed partial class SolidVisualizationViewModel: ObservableObject, IVisu
 
     private static void UpdateFaceColor(System.Windows.Media.Color value)
     {
-        VisualizationController.SolidVisualizationServerServer.UpdateFaceColor(new Color(value.R, value.G, value.B));
+        VisualizationController.SolidVisualizationServer.UpdateFaceColor(new Color(value.R, value.G, value.B));
     }
 
     private static void UpdateEdgeColor(System.Windows.Media.Color value)
     {
-        VisualizationController.SolidVisualizationServerServer.UpdateEdgeColor(new Color(value.R, value.G, value.B));
+        VisualizationController.SolidVisualizationServer.UpdateEdgeColor(new Color(value.R, value.G, value.B));
     }
 
     private static void UpdateTransparency(double value)
     {
-        VisualizationController.SolidVisualizationServerServer.UpdateTransparency(value / 100);
+        VisualizationController.SolidVisualizationServer.UpdateTransparency(value / 100);
     }
 
     private static void UpdateScale(double value)
     {
-        VisualizationController.SolidVisualizationServerServer.UpdateScale(value / 100);
+        VisualizationController.SolidVisualizationServer.UpdateScale(value / 100);
     }
 
     private static void UpdateShowFace(bool value)
     {
-        VisualizationController.SolidVisualizationServerServer.UpdateFaceVisibility(value);
+        VisualizationController.SolidVisualizationServer.UpdateFaceVisibility(value);
     }
 
     private static void UpdateShowEdge(bool value)
     {
-        VisualizationController.SolidVisualizationServerServer.UpdateEdgeVisibility(value);
+        VisualizationController.SolidVisualizationServer.UpdateEdgeVisibility(value);
     }
 }
