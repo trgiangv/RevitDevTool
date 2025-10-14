@@ -12,17 +12,24 @@ public class TraceCommand : ExternalCommand
 {
     private const string CommandName = "TraceLog";
     private const string Guid = "43AE2B41-0BE6-425A-B27A-724B2CE17351";
-    
+    private static DockablePaneId PaneId { get; } = new(new Guid(Guid));
+    private static bool IsForceHide { get; set; } 
+
     public override void Execute()
     {
         try
         {
-            var id = new DockablePaneId(new Guid(Guid));
-            var dockableWindow = UiApplication.GetDockablePane(id);
-            if(!dockableWindow.IsShown())
-                dockableWindow.Show();
-            else
+            var dockableWindow = UiApplication.GetDockablePane(PaneId);
+            if (dockableWindow.IsShown()) 
+            {
                 dockableWindow.Hide();
+                IsForceHide = true;
+            }
+            else 
+            {
+                dockableWindow.Show();
+                IsForceHide = false;
+            }
         }
         catch (Exception e)
         {
@@ -45,5 +52,18 @@ public class TraceCommand : ExternalCommand
                     TabBehind = DockablePanes.BuiltInDockablePanes.PropertiesPalette
                 };
             });
+        
+        application.ControlledApplication.DocumentOpened += ( _, _ ) =>
+        {
+            var dockableWindow = application.GetDockablePane(PaneId);
+            if (IsForceHide) 
+            {
+                dockableWindow.Hide();
+            }
+            else if (!dockableWindow.IsShown() && !IsForceHide)
+            {
+                dockableWindow.Show();
+            }
+        };
     }
 }
