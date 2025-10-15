@@ -14,8 +14,8 @@ namespace RevitDevTool.Theme;
 public sealed class ThemeWatcher
 {
     public static readonly ThemeWatcher Instance = new();
-    
     private readonly List<FrameworkElement> _observedElements = [];
+    private readonly HashSet<FrameworkElement> _uniqueObservedElements = [];
 
     public void Initialize()
     {
@@ -23,7 +23,6 @@ public sealed class ThemeWatcher
         {
             Source = new Uri("pack://application:,,,/RevitDevTool;component/Theme/Theme.xaml", UriKind.Absolute)
         };
-
 #if REVIT2024_OR_GREATER
         Context.UiApplication.ThemeChanged += Instance.OnRevitThemeChanged;
 #endif
@@ -74,11 +73,7 @@ public sealed class ThemeWatcher
         _observedElements.Add(element);
         
         var requiredTheme = GetRequiredTheme();
-        if (GetFrameworkElementTheme(element) == requiredTheme)
-        {
-            return;
-        }
-        
+        if (GetFrameworkElementTheme(element) == requiredTheme && !_uniqueObservedElements.Add(element)) return;
         ApplicationThemeManager.Apply(element);
         ApplicationThemeManager.Apply(requiredTheme);
     }
@@ -87,6 +82,10 @@ public sealed class ThemeWatcher
     {
         var element = (FrameworkElement) sender;
         _observedElements.Remove(element);
+        if (element is Window) 
+        {
+            _uniqueObservedElements.Clear();
+        }
     }
 
     public void ApplyTheme()
