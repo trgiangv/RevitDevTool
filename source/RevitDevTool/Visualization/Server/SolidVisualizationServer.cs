@@ -74,7 +74,7 @@ public sealed class SolidVisualizationServer : VisualizationServer<Solid>
     // ReSharper disable once CognitiveComplexity
     protected override void RenderScene()
     {
-        if (HasGeometryUpdates)
+        if (HasGeometryUpdates || _faceBuffers.Count == 0 || _edgeBuffers.Count == 0)
         {
             MapGeometryBuffer();
             HasGeometryUpdates = false;
@@ -89,7 +89,7 @@ public sealed class SolidVisualizationServer : VisualizationServer<Solid>
         if (_drawFace)
         {
             var isTransparentPass = DrawContext.IsTransparentPass();
-            if ((isTransparentPass && _transparency > 0) || (!isTransparentPass && _transparency == 0))
+            if (isTransparentPass && _transparency > 0 || !isTransparentPass && _transparency == 0)
             {
                 foreach (var buffer in _faceBuffers)
                 {
@@ -172,7 +172,7 @@ public sealed class SolidVisualizationServer : VisualizationServer<Solid>
         }
     }
     
-    public void UpdateFaceColor(Color value)
+    public override void UpdateSurfaceColor(Color value)
     {
         var uiDocument = Context.ActiveUiDocument;
         if (uiDocument is null) return;

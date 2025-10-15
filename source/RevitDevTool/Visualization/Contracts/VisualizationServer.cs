@@ -63,6 +63,11 @@ public abstract class VisualizationServer<TG> : IDirectContext3DServer, IVisualU
             }
         }
     }
+    public void TriggerReRender()
+    {
+        HasEffectsUpdates = true;
+        HasGeometryUpdates = true;
+    }
 
     public void AddGeometries(IEnumerable<TG> geometries)
     {

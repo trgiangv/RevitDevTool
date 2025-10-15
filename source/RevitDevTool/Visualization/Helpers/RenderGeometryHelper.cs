@@ -30,7 +30,39 @@ public static class RenderGeometryHelper
 
         return points;
     }
+    
+    public static BoundingBoxXYZ GetScaledBoundingBox(BoundingBoxXYZ box, double scale)
+    {
+        var min = box.Min;
+        var max = box.Max;
 
+        var center = new XYZ(
+            (min.X + max.X) / 2,
+            (min.Y + max.Y) / 2,
+            (min.Z + max.Z) / 2
+        );
+
+        var scaledMin = new XYZ(
+            center.X + (min.X - center.X) * scale,
+            center.Y + (min.Y - center.Y) * scale,
+            center.Z + (min.Z - center.Z) * scale
+        );
+
+        var scaledMax = new XYZ(
+            center.X + (max.X - center.X) * scale,
+            center.Y + (max.Y - center.Y) * scale,
+            center.Z + (max.Z - center.Z) * scale
+        );
+
+        return new BoundingBoxXYZ
+        {
+            Min = scaledMin,
+            Max = scaledMax,
+            Transform = box.Transform
+        };
+    }
+
+    // ReSharper disable once CognitiveComplexity
     public static XYZ GetMeshVertexNormal(Mesh mesh, int index, DistributionOfNormals normalDistribution)
     {
         switch (normalDistribution)
@@ -49,7 +81,6 @@ public static class RenderGeometryHelper
                     triangleVertex = triangle.get_Vertex(2);
                     if (triangleVertex.IsAlmostEqualTo(vertex)) return mesh.GetNormal(i);
                 }
-
                 return XYZ.Zero;
             case DistributionOfNormals.OnePerFace:
                 return mesh.GetNormal(0);
@@ -58,7 +89,7 @@ public static class RenderGeometryHelper
         }
     }
 
-    public static List<XYZ> TessellateCircle(XYZ center, XYZ normal, double radius)
+    private static List<XYZ> TessellateCircle(XYZ center, XYZ normal, double radius)
     {
         var vertices = new List<XYZ>();
         var segmentCount = InterpolateSegmentsCount(radius);
@@ -92,7 +123,7 @@ public static class RenderGeometryHelper
         return SolidUtils.CreateTransformed(solid, combinedTransform);
     }
 
-    public static int InterpolateSegmentsCount(double diameter)
+    private static int InterpolateSegmentsCount(double diameter)
     {
         const int minSegments = 6;
         const int maxSegments = 33;
