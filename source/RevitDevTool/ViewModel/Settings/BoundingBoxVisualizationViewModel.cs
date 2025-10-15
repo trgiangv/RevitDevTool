@@ -9,7 +9,7 @@ public sealed partial class BoundingBoxVisualizationViewModel : ObservableObject
     public static readonly BoundingBoxVisualizationViewModel Instance = new();
     
     [ObservableProperty] private double _transparency = SettingsService.Instance.VisualizationConfig.BoundingBoxSettings.Transparency;
-    [ObservableProperty] private double _scale = 100; // Default scale to 100%
+    [ObservableProperty] private double _scale = SettingsService.Instance.VisualizationConfig.BoundingBoxSettings.Scale;
     
     [ObservableProperty] private System.Windows.Media.Color _surfaceColor = SettingsService.Instance.VisualizationConfig.BoundingBoxSettings.SurfaceColor;
     [ObservableProperty] private System.Windows.Media.Color _edgeColor = SettingsService.Instance.VisualizationConfig.BoundingBoxSettings.EdgeColor;
@@ -36,7 +36,7 @@ public sealed partial class BoundingBoxVisualizationViewModel : ObservableObject
     public void Refresh()
     {
         Transparency = SettingsService.Instance.VisualizationConfig.BoundingBoxSettings.Transparency;
-        Scale = 100; // Default scale to 100%
+        Scale = SettingsService.Instance.VisualizationConfig.BoundingBoxSettings.Scale;
         SurfaceColor = SettingsService.Instance.VisualizationConfig.BoundingBoxSettings.SurfaceColor;
         EdgeColor = SettingsService.Instance.VisualizationConfig.BoundingBoxSettings.EdgeColor;
         AxisColor = SettingsService.Instance.VisualizationConfig.BoundingBoxSettings.AxisColor;
@@ -53,6 +53,7 @@ public sealed partial class BoundingBoxVisualizationViewModel : ObservableObject
     
     partial void OnScaleChanged(double value)
     {
+        SettingsService.Instance.VisualizationConfig.BoundingBoxSettings.Scale = value;
         UpdateScale(value);
     }
     
