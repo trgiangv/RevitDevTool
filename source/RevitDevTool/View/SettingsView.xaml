@@ -7,7 +7,7 @@
     xmlns:settings="clr-namespace:RevitDevTool.View.Settings"
     xmlns:ui="http://revitdevtool.com/xaml"
     Title="Settings"
-    Width="600"
+    Width="500"
     Height="450"
     ui:Design.Background="{DynamicResource ApplicationBackgroundBrush}"
     ui:Design.Foreground="{DynamicResource TextFillColorPrimaryBrush}"
