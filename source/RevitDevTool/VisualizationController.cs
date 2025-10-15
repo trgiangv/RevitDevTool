@@ -58,7 +58,6 @@ internal static class VisualizationController
             viewModel.Refresh();
             viewModel.Initialize();
         }
-        
         Context.ActiveUiDocument?.UpdateAllOpenViews();
     }
     

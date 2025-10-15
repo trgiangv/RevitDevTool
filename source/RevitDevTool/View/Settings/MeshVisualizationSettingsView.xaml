@@ -35,7 +35,7 @@
                 <TextBlock Text="Extrusion" />
                 <TextBlock
                     HorizontalAlignment="Right"
-                    Text="{Binding Extrusion, StringFormat={}{0:F0} inch, Mode=OneWay, FallbackValue='12 inch'}" />
+                    Text="{Binding Extrusion, StringFormat={}{0:F0} inch, FallbackValue='12 inch'}" />
             </DockPanel>
             <Slider
                 Margin="0,4,0,0"
@@ -51,7 +51,7 @@
                 <TextBlock Text="Transparency" />
                 <TextBlock
                     HorizontalAlignment="Right"
-                    Text="{Binding Transparency, StringFormat={}{0} %, Mode=OneWay, FallbackValue='12 %'}" />
+                    Text="{Binding Transparency, StringFormat={}{0} %, FallbackValue='12 %'}" />
             </DockPanel>
             <Slider
                 Margin="0,4,0,0"

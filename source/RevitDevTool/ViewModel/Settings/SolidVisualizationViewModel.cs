@@ -77,7 +77,7 @@ public sealed partial class SolidVisualizationViewModel: ObservableObject, IVisu
 
     private static void UpdateFaceColor(System.Windows.Media.Color value)
     {
-        VisualizationController.SolidVisualizationServer.UpdateFaceColor(new Color(value.R, value.G, value.B));
+        VisualizationController.SolidVisualizationServer.UpdateSurfaceColor(new Color(value.R, value.G, value.B));
     }
 
     private static void UpdateEdgeColor(System.Windows.Media.Color value)

@@ -26,7 +26,7 @@ public sealed class BoundingBoxVisualizationServer : VisualizationServer<Boundin
     private static readonly XYZ UnitVector = new(1, 1, 1);
 
     private double _transparency = SettingsService.Instance.VisualizationConfig.BoundingBoxSettings.Transparency;
-    private double _scale = 1.0;
+    private double _scale = SettingsService.Instance.VisualizationConfig.BoundingBoxSettings.Scale;
     private bool _drawSurface = SettingsService.Instance.VisualizationConfig.BoundingBoxSettings.ShowSurface;
     private bool _drawEdge = SettingsService.Instance.VisualizationConfig.BoundingBoxSettings.ShowEdge;
     private bool _drawAxis = SettingsService.Instance.VisualizationConfig.BoundingBoxSettings.ShowAxis;
@@ -103,7 +103,7 @@ public sealed class BoundingBoxVisualizationServer : VisualizationServer<Boundin
         if (_drawSurface && _surfaceBuffers.Count != 0)
         {
             var isTransparentPass = DrawContext.IsTransparentPass();
-            if ((isTransparentPass && _transparency > 0) || (!isTransparentPass && _transparency == 0))
+            if (isTransparentPass && _transparency > 0 || !isTransparentPass && _transparency == 0)
             {
                 foreach (var surfaceBuffer in _surfaceBuffers)
                 {
@@ -154,6 +154,7 @@ public sealed class BoundingBoxVisualizationServer : VisualizationServer<Boundin
     {
         _surfaceBuffers.Clear(true);
         _edgeBuffers.Clear(true);
+        _axisBuffers.Clear(true);
 
         if (VisualizeGeometries.Count == 0) return;
         
@@ -161,16 +162,17 @@ public sealed class BoundingBoxVisualizationServer : VisualizationServer<Boundin
         {
             foreach (var geometry in VisualizeGeometries)
             {
+                var scaledBox = RenderGeometryHelper.GetScaledBoundingBox(geometry, _scale);
                 var surfaceBuffer = new RenderingBufferStorage();
-                RenderHelper.MapBoundingBoxSurfaceBuffer(surfaceBuffer, geometry);
+                RenderHelper.MapBoundingBoxSurfaceBuffer(surfaceBuffer, scaledBox);
                 _surfaceBuffers.Add(surfaceBuffer);
 
                 var edgeBuffer = new RenderingBufferStorage();
-                RenderHelper.MapBoundingBoxEdgeBuffer(edgeBuffer, geometry);
+                RenderHelper.MapBoundingBoxEdgeBuffer(edgeBuffer, scaledBox);
                 _edgeBuffers.Add(edgeBuffer);
+                
+                MapAxisBuffers(scaledBox);
             }
-
-            MapAxisBuffers();
         }
         catch (Exception ex)
         {
@@ -178,32 +180,26 @@ public sealed class BoundingBoxVisualizationServer : VisualizationServer<Boundin
         }
     }
 
-    private void MapAxisBuffers()
+    private void MapAxisBuffers(BoundingBoxXYZ box)
     {
-        _axisBuffers.Clear(true);
+        var minPoint = box.Transform.OfPoint(box.Min);
+        var maxPoint = box.Transform.OfPoint(box.Max);
+        var axisLength = RenderGeometryHelper.InterpolateAxisLengthByPoints(minPoint, maxPoint);
 
-        foreach (var box in VisualizeGeometries)
+        var axisBuffer = Enumerable.Range(0, 6)
+            .Select(_ => new RenderingBufferStorage())
+            .ToArray();
+        for (var i = 0; i < _normals.Length; i++)
         {
-            var minPoint = box.Transform.OfPoint(box.Min);
-            var maxPoint = box.Transform.OfPoint(box.Max);
-            var axisLength = RenderGeometryHelper.InterpolateAxisLengthByPoints(minPoint, maxPoint);
+            var normal = _normals[i];
+            var minBuffer = axisBuffer[i];
+            var maxBuffer = axisBuffer[i + _normals.Length];
 
-            var axisBuffer = Enumerable.Range(0, 6)
-                .Select(_ => new RenderingBufferStorage())
-                .ToArray();
-            for (var i = 0; i < _normals.Length; i++)
-            {
-                var normal = _normals[i];
-                var minBuffer = axisBuffer[i];
-                var maxBuffer = axisBuffer[i + _normals.Length];
-
-                RenderHelper.MapNormalVectorBuffer(minBuffer, minPoint - UnitVector * Context.Application.ShortCurveTolerance, normal, axisLength);
-                RenderHelper.MapNormalVectorBuffer(maxBuffer, maxPoint + UnitVector * Context.Application.ShortCurveTolerance, -normal, axisLength);
-
-            }
-
-            _axisBuffers.AddRange(axisBuffer);
+            RenderHelper.MapNormalVectorBuffer(minBuffer, minPoint - UnitVector * Context.Application.ShortCurveTolerance, normal, axisLength);
+            RenderHelper.MapNormalVectorBuffer(maxBuffer, maxPoint + UnitVector * Context.Application.ShortCurveTolerance, -normal, axisLength);
         }
+
+        _axisBuffers.AddRange(axisBuffer);
     }
 
     public override void UpdateEffects()
@@ -289,10 +285,15 @@ public sealed class BoundingBoxVisualizationServer : VisualizationServer<Boundin
         var uiDocument = Context.ActiveUiDocument;
         if (uiDocument is null) return;
 
+        _scale = value;
+        
         lock (RenderLock)
         {
-            _scale = value;
             HasGeometryUpdates = true;
+            HasEffectsUpdates = true;
+            _axisBuffers.Clear();
+            _surfaceBuffers.Clear();
+            _edgeBuffers.Clear();
 
             uiDocument.UpdateAllOpenViews();
         }

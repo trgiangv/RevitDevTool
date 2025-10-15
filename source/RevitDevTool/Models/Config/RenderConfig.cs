@@ -23,6 +23,7 @@ public class BoundingBoxVisualizationSettings
 {
     public static BoundingBoxVisualizationSettings Default { get; } = new();
     [JsonPropertyName("Transparency")] public double Transparency { get; set; } = 60;
+    [JsonPropertyName("Scale")] public double Scale { get; set; } = 1;
 
     [JsonPropertyName("SurfaceColor")] public Color SurfaceColor { get; set; } = Colors.DodgerBlue;
     [JsonPropertyName("EdgeColor")] public Color EdgeColor { get; set; } = Color.FromArgb(255, 30, 81, 255);

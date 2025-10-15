@@ -90,7 +90,7 @@ public sealed class FaceVisualizationServer : VisualizationServer<Face>
         if (_drawSurface && _surfaceBuffers.Count != 0)
         {
             var isTransparentPass = DrawContext.IsTransparentPass();
-            if ((isTransparentPass && _transparency > 0) || (!isTransparentPass && _transparency == 0))
+            if (isTransparentPass && _transparency > 0 || !isTransparentPass && _transparency == 0)
             {
                 foreach (var surfaceBuffer in _surfaceBuffers)
                 {

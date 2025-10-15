@@ -46,6 +46,22 @@
                 TickPlacement="BottomRight"
                 Value="{Binding Transparency}" />
         </StackPanel>
+        <StackPanel Margin="0,8,0,0">
+            <DockPanel>
+                <TextBlock Text="Scale" />
+                <TextBlock
+                    HorizontalAlignment="Right"
+                    Text="{Binding Scale, StringFormat={}{0} %, Mode=OneWay, FallbackValue='12 %'}" />
+            </DockPanel>
+            <Slider
+                Margin="0,4,0,0"
+                IsSnapToTickEnabled="True"
+                Maximum="400"
+                Minimum="100"
+                TickFrequency="25"
+                TickPlacement="BottomRight"
+                Value="{Binding Scale}" />
+        </StackPanel>
         <DockPanel Margin="0,8,0,0">
             <Grid
                 Width="150"
