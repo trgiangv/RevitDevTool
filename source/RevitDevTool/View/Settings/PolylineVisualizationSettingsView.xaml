@@ -11,22 +11,10 @@
     d:DesignWidth="600"
     mc:Ignorable="d">
 
-    <Page.Resources>
-        <ResourceDictionary>
-            <ResourceDictionary.MergedDictionaries>
-                <ResourceDictionary>
-                    <ResourceDictionary.MergedDictionaries>
-                        <ResourceDictionary Source="pack://application:,,,/ColorPicker;component/Styles/DefaultColorPickerStyle.xaml" />
-                    </ResourceDictionary.MergedDictionaries>
-                </ResourceDictionary>
-            </ResourceDictionary.MergedDictionaries>
-        </ResourceDictionary>
-    </Page.Resources>
-
     <StackPanel Margin="20">
         <DockPanel>
             <Grid
-                Width="300"
+                Width="150"
                 Height="32"
                 DockPanel.Dock="Right">
                 <colorPicker:PortableColorPicker
@@ -34,7 +22,7 @@
                     ShowAlpha="False"
                     ShowFractionalPart="False"
                     SmallChange="5"
-                    Style="{StaticResource DefaultColorPickerStyle}"
+                    Style="{DynamicResource DefaultColorPickerStyle}"
                     UseHintColor="False" />
             </Grid>
             <CheckBox
@@ -76,7 +64,7 @@
         </StackPanel>
         <DockPanel Margin="0,8,0,0">
             <Grid
-                Width="300"
+                Width="150"
                 Height="32"
                 DockPanel.Dock="Right">
                 <colorPicker:PortableColorPicker
@@ -84,7 +72,7 @@
                     ShowAlpha="False"
                     ShowFractionalPart="False"
                     SmallChange="5"
-                    Style="{StaticResource DefaultColorPickerStyle}"
+                    Style="{DynamicResource DefaultColorPickerStyle}"
                     UseHintColor="False" />
             </Grid>
             <CheckBox
@@ -94,7 +82,7 @@
         </DockPanel>
         <DockPanel Margin="0,8,0,0">
             <Grid
-                Width="300"
+                Width="150"
                 Height="32"
                 DockPanel.Dock="Right">
                 <colorPicker:PortableColorPicker
@@ -102,7 +90,7 @@
                     ShowAlpha="False"
                     ShowFractionalPart="False"
                     SmallChange="5"
-                    Style="{StaticResource DefaultColorPickerStyle}"
+                    Style="{DynamicResource DefaultColorPickerStyle}"
                     UseHintColor="False" />
             </Grid>
             <CheckBox
