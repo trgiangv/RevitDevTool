@@ -14,6 +14,7 @@ public sealed class RenderingBufferStorage : IDisposable
     public VertexFormat VertexFormat { get; set; }
     public EffectInstance EffectInstance { get; set; }
     
+    // ReSharper disable once CognitiveComplexity
     public bool IsValid()
     {
         try

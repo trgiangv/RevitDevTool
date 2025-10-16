@@ -56,7 +56,6 @@ internal static class VisualizationController
         foreach (var viewModel in ServerViewModelMapping.Values)
         {
             viewModel.Refresh();
-            viewModel.Initialize();
         }
         Context.ActiveUiDocument?.UpdateAllOpenViews();
     }

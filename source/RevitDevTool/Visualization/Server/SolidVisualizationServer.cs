@@ -16,8 +16,8 @@ public sealed class SolidVisualizationServer : VisualizationServer<Solid>
     private readonly List<RenderingBufferStorage> _faceBuffers = [];
     private readonly List<RenderingBufferStorage> _edgeBuffers = [];
 
-    private double _transparency = SettingsService.Instance.VisualizationConfig.SolidSettings.Transparency;
-    private double _scale = SettingsService.Instance.VisualizationConfig.SolidSettings.Scale;
+    private double _transparency = SettingsService.Instance.VisualizationConfig.SolidSettings.Transparency / 100;
+    private double _scale = SettingsService.Instance.VisualizationConfig.SolidSettings.Scale / 100;
 
     private Color _faceColor = new(
         SettingsService.Instance.VisualizationConfig.SolidSettings.FaceColor.R,

@@ -122,12 +122,12 @@ public sealed class SettingsService : ISettingsService
     {
         _visualizationConfig = new VisualizationConfig
         {
-            BoundingBoxSettings = BoundingBoxVisualizationSettings.Default,
-            FaceSettings = FaceVisualizationSettings.Default,
-            MeshSettings = MeshVisualizationSettings.Default,
-            PolylineSettings = PolylineVisualizationSettings.Default,
-            SolidSettings = SolidVisualizationSettings.Default,
-            XyzSettings = XyzVisualizationSettings.Default
+            BoundingBoxSettings = new BoundingBoxVisualizationSettings(),
+            FaceSettings = new FaceVisualizationSettings(),
+            MeshSettings = new MeshVisualizationSettings(),
+            PolylineSettings = new PolylineVisualizationSettings(),
+            SolidSettings = new SolidVisualizationSettings(),
+            XyzSettings = new XyzVisualizationSettings()
         };
     }
 }
