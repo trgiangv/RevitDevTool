@@ -25,8 +25,8 @@ public sealed class BoundingBoxVisualizationServer : VisualizationServer<Boundin
     ];
     private static readonly XYZ UnitVector = new(1, 1, 1);
 
-    private double _transparency = SettingsService.Instance.VisualizationConfig.BoundingBoxSettings.Transparency;
-    private double _scale = SettingsService.Instance.VisualizationConfig.BoundingBoxSettings.Scale;
+    private double _transparency = SettingsService.Instance.VisualizationConfig.BoundingBoxSettings.Transparency / 100;
+    private double _scale = SettingsService.Instance.VisualizationConfig.BoundingBoxSettings.Scale / 100;
     private bool _drawSurface = SettingsService.Instance.VisualizationConfig.BoundingBoxSettings.ShowSurface;
     private bool _drawEdge = SettingsService.Instance.VisualizationConfig.BoundingBoxSettings.ShowEdge;
     private bool _drawAxis = SettingsService.Instance.VisualizationConfig.BoundingBoxSettings.ShowAxis;
