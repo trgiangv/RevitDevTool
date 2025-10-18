@@ -11,23 +11,18 @@ public partial class GeneralSettingsViewModel : ObservableObject
     
     public static List<ApplicationTheme> Themes
     {
-#if REVIT2024_OR_GREATER
         get =>
         [
             ApplicationTheme.Light,
             ApplicationTheme.Dark,
+#if REVIT2024_OR_GREATER
             ApplicationTheme.Auto
-        ];
-#else
-        get =>
-        [
-            ApplicationTheme.Light,
-            ApplicationTheme.Dark
-        ];
 #endif
+        ];
     }
     
     [ObservableProperty] private ApplicationTheme _theme;
+    [ObservableProperty] private bool _useHardwareRendering;
 
     partial void OnThemeChanged( ApplicationTheme value )
     {
@@ -35,9 +30,17 @@ public partial class GeneralSettingsViewModel : ObservableObject
         ThemeWatcher.Instance.ApplyTheme();
     }
     
+    partial void OnUseHardwareRenderingChanged(bool value)
+    {
+        SettingsService.Instance.GeneralConfig.UseHardwareRendering = value;
+        if (value) Application.EnableHardwareRendering();
+        else Application.DisableHardwareRendering();
+    }
+    
     private GeneralSettingsViewModel()
     {
         Theme = SettingsService.Instance.GeneralConfig.Theme;
+        UseHardwareRendering = SettingsService.Instance.GeneralConfig.UseHardwareRendering;
     }
     
     [RelayCommand] private void ResetSettings()
@@ -45,6 +48,7 @@ public partial class GeneralSettingsViewModel : ObservableObject
         SettingsService.Instance.ResetVisualizationSettings();
         SettingsService.Instance.ResetGeneralSettings();
         Theme = SettingsService.Instance.GeneralConfig.Theme;
+        UseHardwareRendering = SettingsService.Instance.GeneralConfig.UseHardwareRendering;
         VisualizationController.Refresh();
         Trace.TraceInformation("Reset settings to default");
     }

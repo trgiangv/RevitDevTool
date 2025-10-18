@@ -1,4 +1,6 @@
-﻿using Autodesk.Revit.UI;
+﻿using System.Windows.Interop ;
+using System.Windows.Media ;
+using Autodesk.Revit.UI;
 using Nice3point.Revit.Toolkit.External;
 using RevitDevTool.Commands;
 using RevitDevTool.Services ;
@@ -14,6 +16,7 @@ public class Application : ExternalApplication
         ExternalEventController.Register();
         SettingsService.Instance.LoadSettings();
         ThemeWatcher.Instance.Initialize();
+        EnableHardwareRendering();
         AddButton(Application);
         AddDockable(Application);
     }
@@ -22,6 +25,18 @@ public class Application : ExternalApplication
     {
         SettingsService.Instance.SaveSettings();
         VisualizationController.Stop();
+    }
+
+    public static void EnableHardwareRendering()
+    {
+        if (!SettingsService.Instance.GeneralConfig.UseHardwareRendering) return;
+        ExternalEventController.ActionEventHandler.Raise(_ => RenderOptions.ProcessRenderMode = RenderMode.Default);
+    }
+
+    public static void DisableHardwareRendering()
+    {
+        if (SettingsService.Instance.GeneralConfig.UseHardwareRendering) return;
+        RenderOptions.ProcessRenderMode = RenderMode.SoftwareOnly;
     }
 
     private static void AddDockable(UIControlledApplication application)
