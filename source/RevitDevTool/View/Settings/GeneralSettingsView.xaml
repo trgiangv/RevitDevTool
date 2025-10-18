@@ -33,7 +33,21 @@
                     SelectedItem="{Binding Theme}" />
             </ui:CardControl>
         </StackPanel>
-
+        <ui:CardControl
+            Margin="0,4,0,0"
+            Icon="{ui:SymbolIcon TopSpeed24}">
+            <ui:CardControl.Header>
+                <StackPanel>
+                    <ui:TextBlock Text="Hardware graphics acceleration" />
+                    <ui:TextBlock
+                        Appearance="Secondary"
+                        FontTypography="Caption"
+                        Text="Offloads graphic rendering from the CPU to the GPU"
+                        TextTrimming="CharacterEllipsis" />
+                </StackPanel>
+            </ui:CardControl.Header>
+            <ui:ToggleSwitch IsChecked="{Binding UseHardwareRendering}" />
+        </ui:CardControl>
         <ui:CardAction
             Margin="0,4,0,0"
             Command="{Binding ResetSettingsCommand}"
