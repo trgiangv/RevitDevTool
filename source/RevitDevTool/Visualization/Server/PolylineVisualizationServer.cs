@@ -147,6 +147,7 @@ public sealed class PolylineVisualizationServer : VisualizationServer<GeometryOb
         }
     }
 
+    // ReSharper disable once CognitiveComplexity
     private void MapDirectionsBuffer()
     {
         _normalsBuffers.Clear(true);
@@ -202,7 +203,7 @@ public sealed class PolylineVisualizationServer : VisualizationServer<GeometryOb
         }
     }
 
-    public override void UpdateEffects()
+    private void UpdateEffects()
     {
         foreach (var surfaceBuffer in _surfaceBuffers)
         {
@@ -224,7 +225,7 @@ public sealed class PolylineVisualizationServer : VisualizationServer<GeometryOb
         }
     }
     
-    public override void UpdateSurfaceColor(Color value)
+    public void UpdateSurfaceColor(Color value)
     {
         var uiDocument = Context.ActiveUiDocument;
         if (uiDocument is null) return;
@@ -238,7 +239,7 @@ public sealed class PolylineVisualizationServer : VisualizationServer<GeometryOb
         }
     }
 
-    public override void UpdateCurveColor(Color value)
+    public void UpdateCurveColor(Color value)
     {
         var uiDocument = Context.ActiveUiDocument;
         if (uiDocument is null) return;
@@ -252,7 +253,7 @@ public sealed class PolylineVisualizationServer : VisualizationServer<GeometryOb
         }
     }
 
-    public override void UpdateDirectionColor(Color value)
+    public void UpdateDirectionColor(Color value)
     {
         var uiDocument = Context.ActiveUiDocument;
         if (uiDocument is null) return;
@@ -266,7 +267,7 @@ public sealed class PolylineVisualizationServer : VisualizationServer<GeometryOb
         }
     }
 
-    public override void UpdateDiameter(double value)
+    public void UpdateDiameter(double value)
     {
         var uiDocument = Context.ActiveUiDocument;
         if (uiDocument is null) return;
@@ -280,7 +281,7 @@ public sealed class PolylineVisualizationServer : VisualizationServer<GeometryOb
         }
     }
 
-    public override void UpdateTransparency(double value)
+    public void UpdateTransparency(double value)
     {
         var uiDocument = Context.ActiveUiDocument;
         if (uiDocument is null) return;
@@ -295,7 +296,7 @@ public sealed class PolylineVisualizationServer : VisualizationServer<GeometryOb
     }
 
 
-    public override void UpdateSurfaceVisibility(bool visible)
+    public void UpdateSurfaceVisibility(bool visible)
     {
         var uiDocument = Context.ActiveUiDocument;
         if (uiDocument is null) return;
@@ -307,7 +308,7 @@ public sealed class PolylineVisualizationServer : VisualizationServer<GeometryOb
         }
     }
 
-    public override void UpdateCurveVisibility(bool visible)
+    public void UpdateCurveVisibility(bool visible)
     {
         var uiDocument = Context.ActiveUiDocument;
         if (uiDocument is null) return;
@@ -319,7 +320,7 @@ public sealed class PolylineVisualizationServer : VisualizationServer<GeometryOb
         }
     }
 
-    public override void UpdateDirectionVisibility(bool visible)
+    public void UpdateDirectionVisibility(bool visible)
     {
         var uiDocument = Context.ActiveUiDocument;
         if (uiDocument is null) return;
