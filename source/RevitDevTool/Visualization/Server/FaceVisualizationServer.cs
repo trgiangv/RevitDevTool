@@ -169,7 +169,7 @@ public sealed class FaceVisualizationServer : VisualizationServer<Face>
         }
     }
 
-    public override void UpdateEffects()
+    private void UpdateEffects()
     {
         foreach (var surfaceBuffer in _surfaceBuffers)
         {
@@ -191,7 +191,7 @@ public sealed class FaceVisualizationServer : VisualizationServer<Face>
         }
     }
     
-    public override void UpdateSurfaceColor(Color value)
+    public void UpdateSurfaceColor(Color value)
     {
         var uiDocument = Context.ActiveUiDocument;
         if (uiDocument is null) return;
@@ -205,7 +205,7 @@ public sealed class FaceVisualizationServer : VisualizationServer<Face>
         }
     }
 
-    public override void UpdateMeshGridColor(Color value)
+    public void UpdateMeshGridColor(Color value)
     {
         var uiDocument = Context.ActiveUiDocument;
         if (uiDocument is null) return;
@@ -219,7 +219,7 @@ public sealed class FaceVisualizationServer : VisualizationServer<Face>
         }
     }
 
-    public override void UpdateNormalVectorColor(Color value)
+    public void UpdateNormalVectorColor(Color value)
     {
         var uiDocument = Context.ActiveUiDocument;
         if (uiDocument is null) return;
@@ -233,7 +233,7 @@ public sealed class FaceVisualizationServer : VisualizationServer<Face>
         }
     }
 
-    public override void UpdateExtrusion(double value)
+    public void UpdateExtrusion(double value)
     {
         var uiDocument = Context.ActiveUiDocument;
         if (uiDocument is null) return;
@@ -247,7 +247,7 @@ public sealed class FaceVisualizationServer : VisualizationServer<Face>
         }
     }
 
-    public override void UpdateTransparency(double value)
+    public void UpdateTransparency(double value)
     {
         var uiDocument = Context.ActiveUiDocument;
         if (uiDocument is null) return;
@@ -261,7 +261,7 @@ public sealed class FaceVisualizationServer : VisualizationServer<Face>
         }
     }
 
-    public override void UpdateSurfaceVisibility(bool visible)
+    public void UpdateSurfaceVisibility(bool visible)
     {
         var uiDocument = Context.ActiveUiDocument;
         if (uiDocument is null) return;
@@ -273,7 +273,7 @@ public sealed class FaceVisualizationServer : VisualizationServer<Face>
         }
     }
 
-    public override void UpdateMeshGridVisibility(bool visible)
+    public void UpdateMeshGridVisibility(bool visible)
     {
         var uiDocument = Context.ActiveUiDocument;
         if (uiDocument is null) return;
@@ -285,7 +285,7 @@ public sealed class FaceVisualizationServer : VisualizationServer<Face>
         }
     }
 
-    public override void UpdateNormalVectorVisibility(bool visible)
+    public void UpdateNormalVectorVisibility(bool visible)
     {
         var uiDocument = Context.ActiveUiDocument;
         if (uiDocument is null) return;

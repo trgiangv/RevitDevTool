@@ -156,7 +156,7 @@ public sealed class SolidVisualizationServer : VisualizationServer<Solid>
         RenderHelper.MapCurveBuffer(buffer, mesh);
     }
 
-    public override void UpdateEffects()
+    public void UpdateEffects()
     {
         foreach (var buffer in _faceBuffers)
         {
@@ -172,7 +172,7 @@ public sealed class SolidVisualizationServer : VisualizationServer<Solid>
         }
     }
     
-    public override void UpdateSurfaceColor(Color value)
+    public void UpdateSurfaceColor(Color value)
     {
         var uiDocument = Context.ActiveUiDocument;
         if (uiDocument is null) return;
@@ -186,7 +186,7 @@ public sealed class SolidVisualizationServer : VisualizationServer<Solid>
         }
     }
 
-    public override void UpdateEdgeColor(Color value)
+    public void UpdateEdgeColor(Color value)
     {
         var uiDocument = Context.ActiveUiDocument;
         if (uiDocument is null) return;
@@ -200,7 +200,7 @@ public sealed class SolidVisualizationServer : VisualizationServer<Solid>
         }
     }
 
-    public override void UpdateTransparency(double value)
+    public void UpdateTransparency(double value)
     {
         var uiDocument = Context.ActiveUiDocument;
         if (uiDocument is null) return;
@@ -214,7 +214,7 @@ public sealed class SolidVisualizationServer : VisualizationServer<Solid>
         }
     }
 
-    public override void UpdateScale(double value)
+    public void UpdateScale(double value)
     {
         var uiDocument = Context.ActiveUiDocument;
         if (uiDocument is null) return;
@@ -232,7 +232,7 @@ public sealed class SolidVisualizationServer : VisualizationServer<Solid>
         }
     }
 
-    public override void UpdateFaceVisibility(bool value)
+    public void UpdateFaceVisibility(bool value)
     {
         var uiDocument = Context.ActiveUiDocument;
         if (uiDocument is null) return;
@@ -245,7 +245,7 @@ public sealed class SolidVisualizationServer : VisualizationServer<Solid>
         }
     }
 
-    public override void UpdateEdgeVisibility(bool value)
+    public void UpdateEdgeVisibility(bool value)
     {
         var uiDocument = Context.ActiveUiDocument;
         if (uiDocument is null) return;

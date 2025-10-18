@@ -6,7 +6,7 @@ using Color = Autodesk.Revit.DB.Color ;
 
 namespace RevitDevTool.Visualization.Contracts;
 
-public abstract class VisualizationServer<TG> : IDirectContext3DServer, IVisualUpdate, IVisualizationServerLifeCycle
+public abstract class VisualizationServer<TG> : IDirectContext3DServer, IVisualizationServerLifeCycle
 {
     protected readonly List<TG> VisualizeGeometries = [];
     protected bool HasGeometryUpdates = true;
@@ -26,6 +26,7 @@ public abstract class VisualizationServer<TG> : IDirectContext3DServer, IVisualU
     public abstract Outline? GetBoundingBox(Autodesk.Revit.DB.View dBView);
     public abstract bool UseInTransparentPass(Autodesk.Revit.DB.View dBView);
     protected abstract void RenderScene();
+    protected abstract void DisposeBuffers();
 
     public void RenderScene(Autodesk.Revit.DB.View dBView, DisplayStyle displayStyle)
     {
@@ -42,7 +43,6 @@ public abstract class VisualizationServer<TG> : IDirectContext3DServer, IVisualU
             }
         }
     }
-    
     
     public void ClearGeometry()
     {
@@ -147,122 +147,5 @@ public abstract class VisualizationServer<TG> : IDirectContext3DServer, IVisualU
             Trace.TraceInformation("{0} unregistered", GetName());
             application.ActiveUIDocument?.UpdateAllOpenViews();
         });
-    }
-
-    protected virtual void DisposeBuffers()
-    {
-        
-    }
-    public virtual void UpdateEffects()
-    {
-        
-    }
-    public virtual void UpdateTransparency( double value )
-    {
-        
-    }
-    public virtual void UpdateSurfaceColor( Color color )
-    {
-        
-    }
-    public virtual void UpdateEdgeColor( Color color )
-    {
-        
-    }
-    public virtual void UpdateAxisColor( Color color )
-    {
-        
-    }
-    public virtual void UpdateCurveColor( Color color )
-    {
-        
-    }
-    public virtual void UpdateMeshGridColor( Color color )
-    {
-        
-    }
-    public virtual void UpdateNormalVectorColor( Color color )
-    {
-        
-    }
-    public virtual void UpdateDirectionColor( Color color )
-    {
-        
-    }
-    public virtual void UpdateXColor( Color color )
-    {
-        
-    }
-    public virtual void UpdateYColor( Color color )
-    {
-        
-    }
-    public virtual void UpdateZColor( Color color )
-    {
-        
-    }
-    public virtual void UpdateScale( double value )
-    {
-        
-    }
-    public virtual void UpdateExtrusion( double value )
-    {
-        
-    }
-    public virtual void UpdateDiameter( double value )
-    {
-        
-    }
-    public virtual void UpdateAxisLength( double value )
-    {
-        
-    }
-    public virtual void UpdateSurfaceVisibility( bool visible )
-    {
-        
-    }
-    public virtual void UpdateEdgeVisibility( bool visible )
-    {
-        
-    }
-    public virtual void UpdateFaceVisibility( bool visible )
-    {
-        
-    }
-    public virtual void UpdateAxisVisibility( bool visible )
-    {
-        
-    }
-    public virtual void UpdateMeshGridVisibility( bool visible )
-    {
-        
-    }
-    public virtual void UpdateNormalVectorVisibility( bool visible )
-    {
-        
-    }
-    public virtual void UpdateCurveVisibility( bool visible )
-    {
-        
-    }
-    public virtual void UpdateDirectionVisibility( bool visible )
-    {
-        
-    }
-    public virtual void UpdatePlaneVisibility( bool visible )
-    {
-        
-    }
-    public virtual void UpdateXAxisVisibility( bool visible )
-    {
-        
-    }
-    public virtual void UpdateYAxisVisibility( bool visible )
-    {
-        
-    }
-    public virtual void UpdateZAxisVisibility( bool visible )
-    {
-        
     }
 }

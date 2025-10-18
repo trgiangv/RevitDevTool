@@ -195,7 +195,7 @@ public sealed class XyzVisualizationServer : VisualizationServer<XYZ>
         }
     }
 
-    public override void UpdateEffects()
+    private void UpdateEffects()
     {
         foreach (var bufferArray in _planeBufferArrays)
         {
@@ -223,7 +223,7 @@ public sealed class XyzVisualizationServer : VisualizationServer<XYZ>
         }
     }
     
-    public override void UpdateXColor(Color value)
+    public void UpdateXColor(Color value)
     {
         var uiDocument = Context.ActiveUiDocument;
         if (uiDocument is null) return;
@@ -237,7 +237,7 @@ public sealed class XyzVisualizationServer : VisualizationServer<XYZ>
         }
     }
 
-    public override void UpdateYColor(Color value)
+    public void UpdateYColor(Color value)
     {
         var uiDocument = Context.ActiveUiDocument;
         if (uiDocument is null) return;
@@ -251,7 +251,7 @@ public sealed class XyzVisualizationServer : VisualizationServer<XYZ>
         }
     }
 
-    public override void UpdateZColor(Color value)
+    public void UpdateZColor(Color value)
     {
         var uiDocument = Context.ActiveUiDocument;
         if (uiDocument is null) return;
@@ -265,7 +265,7 @@ public sealed class XyzVisualizationServer : VisualizationServer<XYZ>
         }
     }
 
-    public override void UpdateAxisLength(double value)
+    public void UpdateAxisLength(double value)
     {
         var uiDocument = Context.ActiveUiDocument;
         if (uiDocument is null) return;
@@ -279,7 +279,7 @@ public sealed class XyzVisualizationServer : VisualizationServer<XYZ>
         }
     }
 
-    public override void UpdateTransparency(double value)
+    public void UpdateTransparency(double value)
     {
         var uiDocument = Context.ActiveUiDocument;
         if (uiDocument is null) return;
@@ -293,7 +293,7 @@ public sealed class XyzVisualizationServer : VisualizationServer<XYZ>
         }
     }
 
-    public override void UpdatePlaneVisibility(bool visible)
+    public void UpdatePlaneVisibility(bool visible)
     {
         var uiDocument = Context.ActiveUiDocument;
         if (uiDocument is null) return;
@@ -305,7 +305,7 @@ public sealed class XyzVisualizationServer : VisualizationServer<XYZ>
         }
     }
 
-    public override void UpdateXAxisVisibility(bool visible)
+    public void UpdateXAxisVisibility(bool visible)
     {
         var uiDocument = Context.ActiveUiDocument;
         if (uiDocument is null) return;
@@ -317,7 +317,7 @@ public sealed class XyzVisualizationServer : VisualizationServer<XYZ>
         }
     }
 
-    public override void UpdateYAxisVisibility(bool visible)
+    public void UpdateYAxisVisibility(bool visible)
     {
         var uiDocument = Context.ActiveUiDocument;
         if (uiDocument is null) return;
@@ -329,7 +329,7 @@ public sealed class XyzVisualizationServer : VisualizationServer<XYZ>
         }
     }
 
-    public override void UpdateZAxisVisibility(bool visible)
+    public void UpdateZAxisVisibility(bool visible)
     {
         var uiDocument = Context.ActiveUiDocument;
         if (uiDocument is null) return;
