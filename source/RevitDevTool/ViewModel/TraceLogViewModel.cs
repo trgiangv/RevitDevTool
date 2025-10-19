@@ -17,17 +17,18 @@ namespace RevitDevTool.ViewModel;
 internal partial class TraceLogViewModel : ObservableObject, IDisposable
 {
     public WindowsFormsHost LogTextBox { get; }
+    private readonly RichTextBox _winFormsTextBox;
 
     private readonly LoggingLevelSwitch _levelSwitch;
-    private readonly ConsoleRedirector _consoleRedirector;
-
-    private SerilogTraceListener? _traceListener;
     private RichTextBoxSink? _sink;
     private Logger? _logger;
 
-    private readonly RichTextBox _winFormsTextBox;
+    private SerilogTraceListener? _traceListener;
+    private TraceGeometry.TraceGeometryListener? _geometryListener;
+    private readonly ConsoleRedirector _consoleRedirector;
     
     private ApplicationTheme _logTextBoxTheme;
+    
     private static bool IsDarkTheme
     {
         get => ThemeWatcher.GetRequiredTheme() == ApplicationTheme.Dark ;
@@ -53,13 +54,13 @@ internal partial class TraceLogViewModel : ObservableObject, IDisposable
         {
             Initialized();
             if (_traceListener != null) Trace.Listeners.Add(_traceListener);
-            Trace.Listeners.Add(TraceGeometry.TraceListener);
+            if (_geometryListener != null) Trace.Listeners.Add(_geometryListener);
             VisualizationController.Start();
         }
         else
         {
             if (_traceListener != null) Trace.Listeners.Remove(_traceListener);
-            Trace.Listeners.Remove(TraceGeometry.TraceListener);
+            if (_geometryListener != null) Trace.Listeners.Remove(_geometryListener);
             VisualizationController.Stop();
             CloseAndFlush();
         }
@@ -77,6 +78,7 @@ internal partial class TraceLogViewModel : ObservableObject, IDisposable
 
         _logger ??= loggerConfig.CreateLogger();
         _traceListener ??= new SerilogTraceListener(_logger);
+        _geometryListener ??= new TraceGeometry.TraceGeometryListener();
     }
 
     private void CloseAndFlush()
@@ -108,8 +110,19 @@ internal partial class TraceLogViewModel : ObservableObject, IDisposable
         _levelSwitch = new LoggingLevelSwitch(_logLevel);
         _consoleRedirector = new ConsoleRedirector();
 
-        ApplicationThemeManager.Changed += OnThemeChanged;
         TraceStatus(IsStarted);
+        Context.UiApplication.Idling += OnIdling;
+        ApplicationThemeManager.Changed += OnThemeChanged;
+    }
+    
+    private void OnIdling(object? sender, Autodesk.Revit.UI.Events.IdlingEventArgs e)
+    {
+        var listeners = Trace.Listeners;
+        if (_traceListener != null && !listeners.Contains( _traceListener)) 
+            listeners.Add( _traceListener );
+
+        if (_geometryListener != null && !listeners.Contains(_geometryListener))
+            listeners.Add( _geometryListener );
     }
 
     private void OnThemeChanged(ApplicationTheme theme, System.Windows.Media.Color accent)
@@ -136,7 +149,9 @@ internal partial class TraceLogViewModel : ObservableObject, IDisposable
 
     private void ApplyLogTheme()
     {
-        _winFormsTextBox.BackColor = IsDarkTheme ? System.Drawing.Color.FromArgb(30, 30, 30) : System.Drawing.Color.FromArgb(250, 250, 250);
+        _winFormsTextBox.BackColor = IsDarkTheme 
+            ? System.Drawing.Color.FromArgb(30, 30, 30) 
+            : System.Drawing.Color.FromArgb(250, 250, 250);
         Win32DarkMode.SetImmersiveDarkMode(_winFormsTextBox.Handle, IsDarkTheme);
         _logTextBoxTheme = ThemeWatcher.GetRequiredTheme();
     }
@@ -176,12 +191,10 @@ internal partial class TraceLogViewModel : ObservableObject, IDisposable
     public void Dispose()
     {
         ApplicationThemeManager.Changed -= OnThemeChanged;
+        Context.UiApplication.Idling -= OnIdling;
 
-        if (_traceListener != null)
-        {
-            Trace.Listeners.Remove(_traceListener);
-            Trace.Listeners.Remove(TraceGeometry.TraceListener);
-        }
+        if (_traceListener != null) Trace.Listeners.Remove(_traceListener);
+        if (_geometryListener != null) Trace.Listeners.Remove(_geometryListener);
 
         _logger?.Dispose();
         _logger = null;
