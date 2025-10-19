@@ -1,3 +1,17 @@
+# 1.3.0
+
+## Added
+
+- Settings integration 
+  - Visualization options
+  - Theme management options
+- Suppor `Outline` object
+
+## Fixed
+
+- Revit 2026 context isolation
+- Ensure Trace.Listeners are re-added if removed by other add-ins
+
 # 1.2.0
 
 ## Added
