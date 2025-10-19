@@ -2,7 +2,6 @@
 using Autodesk.Revit.DB.DirectContext3D ;
 using Autodesk.Revit.DB.ExternalService ;
 using RevitDevTool.ViewModel.Contracts ;
-using Color = Autodesk.Revit.DB.Color ;
 
 namespace RevitDevTool.Visualization.Contracts;
 
@@ -62,11 +61,6 @@ public abstract class VisualizationServer<TG> : IDirectContext3DServer, IVisuali
                 Trace.TraceError($"Error in {GetName()} ClearGeometry: {ex}");
             }
         }
-    }
-    public void TriggerReRender()
-    {
-        HasEffectsUpdates = true;
-        HasGeometryUpdates = true;
     }
 
     public void AddGeometries(IEnumerable<TG> geometries)
