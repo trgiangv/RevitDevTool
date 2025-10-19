@@ -131,11 +131,8 @@ internal static class VisualizationController
                     BoundingBoxVisualizationServer.AddGeometries(group.Cast<BoundingBoxXYZ>());
                     break;
                 case not null when geometryType == typeof(Outline):
-                    BoundingBoxVisualizationServer.AddGeometries(group.Cast<Outline>().Select(outline => 
-                    new BoundingBoxXYZ {
-                        Min = outline.MinimumPoint,
-                        Max = outline.MaximumPoint
-                    }));
+                    BoundingBoxVisualizationServer.AddGeometries(group.Cast<Outline>()
+                        .Select(outline =>  new BoundingBoxXYZ {Min = outline.MinimumPoint, Max = outline.MaximumPoint}));
                     break;
                 case not null when geometryType == typeof(Mesh):
                     MeshVisualizationServer.AddGeometries(group.Cast<Mesh>());
