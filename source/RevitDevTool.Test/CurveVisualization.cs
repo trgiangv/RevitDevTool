@@ -13,7 +13,7 @@ public class CurveVisualization : ExternalCommand
     {
         try
         {
-            var curveRef = UiDocument.Selection.PickObject(ObjectType.Element,
+            var curveRef = UiDocument.Selection.PickObject(ObjectType.Edge,
                 "Select Curve Element");
             var curve =
                 Document.GetElement(curveRef)?.GetGeometryObjectFromReference(curveRef) as Curve;
@@ -34,14 +34,13 @@ public class CurvesVisualization : ExternalCommand
     {
         try
         {
-            var curveRefs = UiDocument.Selection.PickObjects(ObjectType.Element,
+            var curveRefs = UiDocument.Selection.PickObjects(ObjectType.Edge,
                 "Select Curve Elements");
             
             var curves = new List<Curve>();
-            foreach (var curveRef in curveRefs)
-            {
+            foreach (var curveRef in curveRefs) {
                 var curve = Document.GetElement(curveRef)?.GetGeometryObjectFromReference(curveRef) as Curve;
-                curves.Add(curve);
+                if ( curve != null ) curves.Add( curve ) ;
             }
 
             Trace.Write(curves);

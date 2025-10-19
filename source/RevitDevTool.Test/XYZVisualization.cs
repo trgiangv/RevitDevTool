@@ -13,8 +13,9 @@ public class XyzVisualization : ExternalCommand
     {
         try
         {
-            var xyz = UiDocument.Selection.PickPoint();
-            Trace.Write(xyz);
+            var xyz = UiDocument.Selection.PickObject(ObjectType.PointOnElement);
+            var xyzPoint = xyz.GlobalPoint;
+            Trace.Write(xyzPoint);
         }
         catch (Exception e)
         {
