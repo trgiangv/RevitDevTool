@@ -118,8 +118,7 @@ public sealed class MeshVisualizationServer : VisualizationServer<Mesh>
 
     private void MapGeometryBuffer()
     {
-        _surfaceBuffers.Clear(true);
-        _meshGridBuffers.Clear(true);
+        DisposeBuffers();
 
         if (VisualizeGeometries.Count == 0) return;
         
@@ -246,6 +245,8 @@ public sealed class MeshVisualizationServer : VisualizationServer<Mesh>
         {
             _extrusion = value;
             HasGeometryUpdates = true;
+            HasEffectsUpdates = true;
+            DisposeBuffers();
 
             uiDocument.UpdateAllOpenViews();
         }

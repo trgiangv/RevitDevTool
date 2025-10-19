@@ -274,6 +274,8 @@ public sealed class XyzVisualizationServer : VisualizationServer<XYZ>
         {
             _axisLength = value;
             HasGeometryUpdates = true;
+            HasEffectsUpdates = true;
+            DisposeBuffers();
 
             uiDocument.UpdateAllOpenViews();
         }

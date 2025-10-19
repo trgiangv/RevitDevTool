@@ -225,8 +225,7 @@ public sealed class SolidVisualizationServer : VisualizationServer<Solid>
         {
             HasGeometryUpdates = true;
             HasEffectsUpdates = true;
-            _faceBuffers.Clear();
-            _edgeBuffers.Clear();
+            DisposeBuffers();
 
             uiDocument.UpdateAllOpenViews();
         }

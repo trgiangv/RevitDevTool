@@ -242,6 +242,8 @@ public sealed class FaceVisualizationServer : VisualizationServer<Face>
         {
             _extrusion = value;
             HasGeometryUpdates = true;
+            HasEffectsUpdates = true;
+            DisposeBuffers();
 
             uiDocument.UpdateAllOpenViews();
         }

@@ -152,9 +152,7 @@ public sealed class BoundingBoxVisualizationServer : VisualizationServer<Boundin
 
     private void MapGeometryBuffer()
     {
-        _surfaceBuffers.Clear(true);
-        _edgeBuffers.Clear(true);
-        _axisBuffers.Clear(true);
+        DisposeBuffers();
 
         if (VisualizeGeometries.Count == 0) return;
         
@@ -291,9 +289,7 @@ public sealed class BoundingBoxVisualizationServer : VisualizationServer<Boundin
         {
             HasGeometryUpdates = true;
             HasEffectsUpdates = true;
-            _axisBuffers.Clear();
-            _surfaceBuffers.Clear();
-            _edgeBuffers.Clear();
+            DisposeBuffers();
 
             uiDocument.UpdateAllOpenViews();
         }
