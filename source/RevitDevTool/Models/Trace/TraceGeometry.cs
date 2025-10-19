@@ -4,8 +4,6 @@ namespace RevitDevTool.Models.Trace;
 
 internal static class TraceGeometry
 {
-    public static readonly TraceListener TraceListener = new TraceGeometryListener();
-
     private static void Trace(object geometryObject)
     {
         VisualizationController.Add(geometryObject);
@@ -16,8 +14,9 @@ internal static class TraceGeometry
         VisualizationController.Add(geometries);
     }
 
-    private class TraceGeometryListener : TraceListener
+    public class TraceGeometryListener : TraceListener
     {
+        // ReSharper disable once CognitiveComplexity
         public override void Write(object? o)
         {
             switch (o)
@@ -25,6 +24,7 @@ internal static class TraceGeometry
                 case ICollection<object> geometries:
                     List<GeometryObject>? geometryObjects = null;
                     List<BoundingBoxXYZ>? boundingBoxes = null;
+                    List<Outline>? outlines = null;
                     List<XYZ>? xyZs = null;
 
                     foreach (var geometry in geometries)
@@ -32,32 +32,28 @@ internal static class TraceGeometry
                         switch (geometry)
                         {
                             case GeometryObject geometryObject:
-                                geometryObjects ??= [];
-                                geometryObjects.Add(geometryObject);
+                                (geometryObjects ??= []).Add(geometryObject);
                                 break;
                             case BoundingBoxXYZ boundingBox:
-                                boundingBoxes ??= [];
-                                boundingBoxes.Add(boundingBox);
+                                (boundingBoxes ??= []).Add(boundingBox);
+                                break;
+                            case Outline outline:
+                                (outlines ??= []).Add(outline);
                                 break;
                             case XYZ xyz:
-                                xyZs ??= [];
-                                xyZs.Add(xyz);
+                                (xyZs ??= []).Add(xyz);
                                 break;
                             case CurveLoop curveLoop:
-                                geometryObjects ??= [];
-                                geometryObjects.AddRange(curveLoop);
+                                (geometryObjects ??= []).AddRange(curveLoop);
                                 break;
                             case CurveArray curveArray:
-                                geometryObjects ??= [];
-                                geometryObjects.AddRange(curveArray.Cast<Curve>());
+                                (geometryObjects ??= []).AddRange(curveArray.Cast<Curve>());
                                 break;
                             case EdgeArray edgeArray:
-                                geometryObjects ??= [];
-                                geometryObjects.AddRange(edgeArray.Cast<Edge>());
+                                (geometryObjects ??= []).AddRange(edgeArray.Cast<Edge>());
                                 break;
                             case FaceArray faceArray:
-                                geometryObjects ??= [];
-                                geometryObjects.AddRange(faceArray.Cast<Face>());
+                                (geometryObjects ??= []).AddRange(faceArray.Cast<Face>());
                                 break;
                             default:
                                 base.Write(geometry);
@@ -67,6 +63,7 @@ internal static class TraceGeometry
                     
                     if (geometryObjects?.Count > 0) Trace(geometryObjects);
                     if (boundingBoxes?.Count > 0) Trace(boundingBoxes);
+                    if (outlines?.Count > 0) Trace(outlines);
                     if (xyZs?.Count > 0) Trace(xyZs);
                     break;
                 case GeometryObject geometryObject:
@@ -77,6 +74,9 @@ internal static class TraceGeometry
                     break;
                 case BoundingBoxXYZ boundingBoxXyz:
                     Trace(boundingBoxXyz);
+                    break;
+                case Outline outline:
+                    Trace(outline);
                     break;
                 case FaceArray faceArray:
                     Trace(faceArray.Cast<Face>());
