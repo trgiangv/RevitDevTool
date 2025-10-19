@@ -113,8 +113,7 @@ public sealed class PolylineVisualizationServer : VisualizationServer<GeometryOb
 
     private void MapGeometryBuffer()
     {
-        _surfaceBuffers.Clear(true);
-        _curveBuffers.Clear(true);
+        DisposeBuffers();
 
         if (VisualizeGeometries.Count == 0) return;
         
@@ -276,6 +275,8 @@ public sealed class PolylineVisualizationServer : VisualizationServer<GeometryOb
         {
             _diameter = value;
             HasGeometryUpdates = true;
+            HasEffectsUpdates = true;
+            DisposeBuffers();
 
             uiDocument.UpdateAllOpenViews();
         }
