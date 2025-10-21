@@ -5,6 +5,5 @@
     <ResourceDictionary.MergedDictionaries>
         <ui:ThemesDictionary />
         <ui:ControlsDictionary />
-        <ResourceDictionary Source="pack://application:,,,/ColorPicker;component/styles/defaultcolorpickerstyle.xaml" />
     </ResourceDictionary.MergedDictionaries>
 </ResourceDictionary>
