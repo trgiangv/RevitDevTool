@@ -1,3 +1,9 @@
+# 1.3.1
+
+## Fixed
+
+- Removed `PixiEditor.ColorPicker` to avoid conflicts between `Microsoft.Xaml.Behaviors.Wpf` and other add-ins.
+
 # 1.3.0
 
 ## Added
