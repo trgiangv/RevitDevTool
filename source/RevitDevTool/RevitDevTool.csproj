@@ -16,7 +16,7 @@
 
     <PropertyGroup>
         <IsRepackable>true</IsRepackable>
-        <RepackBinariesExcludes>$(AssemblyName).UI*.dll;System*.dll;ColorPicker*.dll;Microsoft*.dll</RepackBinariesExcludes>
+        <RepackBinariesExcludes>$(AssemblyName).UI*.dll;System*.dll</RepackBinariesExcludes>
     </PropertyGroup>
 
     <!-- Revit Versions -->
@@ -57,8 +57,6 @@
 
         <!-- UI -->
         <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.0" />
-        <PackageReference Include="PixiEditor.ColorPicker" Version="3.4.2" />
-        <PackageReference Include="Microsoft.Xaml.Behaviors.Wpf" Version="1.1.135" ExcludeAssets="runtime" PrivateAssets="all" Condition="$(RevitVersion) &gt;= '2025'"/>
         <PackageReference Include="ricaun.Revit.UI" Version="0.8.0" />
         <PackageReference Include="Serilog.Sinks.RichTextBox.WinForms.Colored" Version="3.1.3" />
 
