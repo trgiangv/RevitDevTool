@@ -98,7 +98,7 @@ public sealed class SolidVisualizationSettings
 public class XyzVisualizationSettings
 {
     [JsonPropertyName("Transparency")] public double Transparency { get; set; }
-    [JsonPropertyName("AxisLength")] public double AxisLength { get; set; } = 6;
+    [JsonPropertyName("AxisLength")] public double AxisLength { get; set; } = 2;
     [JsonPropertyName("MinAxisLength")] public double MinAxisLength { get; set; } = 0.1;
 
     [JsonPropertyName("XColor")] public Color XColor { get; set; } = Color.FromArgb(255, 238, 65 , 54);

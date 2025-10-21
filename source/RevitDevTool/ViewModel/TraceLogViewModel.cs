@@ -34,6 +34,7 @@ internal partial class TraceLogViewModel : ObservableObject, IDisposable
         get => ThemeWatcher.GetRequiredTheme() == ApplicationTheme.Dark ;
     }
 
+    [ObservableProperty] [NotifyCanExecuteChangedFor(nameof(OpenSettingsCommand))] private bool _isSettingOpened;
     [ObservableProperty] private bool _isStarted = true;
     [ObservableProperty] private LogEventLevel _logLevel = LogEventLevel.Debug;
 
@@ -169,14 +170,18 @@ internal partial class TraceLogViewModel : ObservableObject, IDisposable
         VisualizationController.Clear();
     }
 
-    [RelayCommand]
-    private static void OpenSettings()
+    [RelayCommand(CanExecute = nameof(CanOpenSettings))]
+    private void OpenSettings()
     {
         var settingsWindow = new View.SettingsView();
         settingsWindow.SetAutodeskOwner();
         settingsWindow.Show();
         settingsWindow.NavigationService.Navigate(typeof(GeneralSettingsView));
+        IsSettingOpened = true;
+        settingsWindow.Closed += (_, _) => { IsSettingOpened = false ; };
     }
+
+    private bool CanOpenSettings() => !IsSettingOpened;
 
     public void RefreshTheme()
     {
