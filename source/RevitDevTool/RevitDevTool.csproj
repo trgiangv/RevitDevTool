@@ -16,7 +16,7 @@
 
     <PropertyGroup>
         <IsRepackable>true</IsRepackable>
-        <RepackBinariesExcludes>$(AssemblyName).UI*.dll;System*.dll</RepackBinariesExcludes>
+        <RepackBinariesExcludes>$(AssemblyName).UI*.dll</RepackBinariesExcludes>
     </PropertyGroup>
 
     <!-- Revit Versions -->
