@@ -10,10 +10,5 @@ public partial class TraceLog
         ThemeWatcher.Instance.Watch(this);
         InitializeComponent();
         DataContext = new TraceLogViewModel();
-        Loaded += (_, _) =>
-        {
-            if (DataContext is TraceLogViewModel vm)
-                vm.RefreshTheme();
-        };
     }
 }
