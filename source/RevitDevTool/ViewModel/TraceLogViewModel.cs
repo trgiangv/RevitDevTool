@@ -55,8 +55,6 @@ internal partial class TraceLogViewModel : ObservableObject, IDisposable
             StartTracing();
         else
             StopTracing();
-        
-        _winFormsTextBox.Clear();
     }
 
     private void StartTracing()
@@ -146,14 +144,10 @@ internal partial class TraceLogViewModel : ObservableObject, IDisposable
                 RestartLogging();
             }
         });
-        
-        Trace.TraceInformation("Theme changed to {0}", theme);
     }
 
     private void RestartLogging()
     {
-        _winFormsTextBox.Clear();
-        
         UnregisterTraceListeners();
         DisposeLogger();
         InitializeLogger();
