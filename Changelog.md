@@ -1,3 +1,26 @@
+# 1.3.2
+
+## Added
+
+- DockablePane visibility tracking to automatically subscribe/unsubscribe TraceLog when panel is shown/hidden
+- Proper lifecycle management for TraceLog with subscription state tracking
+
+## Changed
+
+- Changed default `AxisLength` in `XyzVisualizationSettings` from 6 to 2 for better default visualization scale
+- Changed Settings window startup location from `CenterScreen` to `CenterOwner`
+- Improved TraceLog initialization and disposal flow with better state management
+- Refactored TraceLog to completely unsubscribe when panel is not visible
+- Enhanced theme change handling with proper dispatcher invocation
+- Removed unused external event handlers (`AsyncEventHandler`, `AsyncCollectionEventHandler`, `IdlingEventHandler`)
+- Updated `.csproj` repack configuration to exclude only UI assemblies
+
+## Fixed
+
+- Prevented multiple Settings windows from opening simultaneously by controlling `OpenSettings` command execution state
+- TraceLog resource cleanup and memory management
+- Trace listeners registration to ensure persistence across application lifecycle
+
 # 1.3.1
 
 ## Fixed
@@ -8,7 +31,7 @@
 
 ## Added
 
-- Settings integration 
+- Settings integration
   - Visualization options
   - Theme management options
 - Suppor `Outline` object
@@ -24,7 +47,7 @@
 
 - DirectContext3D visualization support for geometry rendering
 - Support for visualizing multiple geometry types (Solid, Face, Curve, XYZ, CurveLoop, Outline)
-- Trace support for ICollection`<object>` and IEnumerable`<CurveLoop>`
+- Trace support for ICollection `<object>` and IEnumerable `<CurveLoop>`
 - Serilog sink for WinForms RichTextBox with theme support
 - Nice3Point packages integration
 - New designed icons and button icons
