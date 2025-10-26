@@ -4,7 +4,7 @@
 
 using Color = System.Windows.Media.Color;
 
-namespace RevitLookup.UI.Framework.Controls.ColorPicker;
+namespace RevitDevTool.Controls;
 
 public static class HsvColor
 {

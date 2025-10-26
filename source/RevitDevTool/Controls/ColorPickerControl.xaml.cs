@@ -8,7 +8,6 @@ using System.Windows.Controls ;
 using System.Windows.Input ;
 using System.Windows.Media ;
 using System.Windows.Media.Animation ;
-using RevitLookup.UI.Framework.Controls.ColorPicker ;
 using Wpf.Ui.Controls ;
 using Button = System.Windows.Controls.Button;
 using Color = System.Windows.Media.Color;
