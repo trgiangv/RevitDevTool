@@ -32,13 +32,13 @@ internal partial class TraceLogViewModel : ObservableObject, IDisposable
     
     public WindowsFormsHost LogTextBox { get; }
 
-    [ObservableProperty] [NotifyCanExecuteChangedFor(nameof(OpenSettingsCommand))] 
+    [ObservableProperty] 
+    [NotifyCanExecuteChangedFor(nameof(OpenSettingsCommand))] 
     private bool _isSettingOpened;
     
     [ObservableProperty] 
     private bool _isStarted = true;
     
-    [ObservableProperty] 
     private bool _isSubcribe;
     
     [ObservableProperty] 
@@ -134,12 +134,16 @@ internal partial class TraceLogViewModel : ObservableObject, IDisposable
     private void OnThemeChanged(ApplicationTheme theme, System.Windows.Media.Color accent)
     {
         if (_currentTheme == theme) return;
-        
+        UpdateTheme(theme, IsStarted);
+    }
+
+    private void UpdateTheme(ApplicationTheme theme, bool shouldRestart)
+    {
         LogTextBox.Dispatcher.Invoke(() =>
         {
             _currentTheme = theme;
             ApplyTextBoxTheme();
-            if (IsStarted)
+            if (shouldRestart)
             {
                 RestartLogging();
             }
@@ -156,29 +160,27 @@ internal partial class TraceLogViewModel : ObservableObject, IDisposable
 
     public void Subcribe()
     {
-        if (IsSubcribe) return;
+        if (_isSubcribe) return;
         
-        Debug.WriteLine("TraceLogViewModel Subscribe");
-        
-        IsStarted = true;
         _consoleRedirector ??= new ConsoleRedirector();
+        
+        UpdateTheme(ThemeWatcher.GetRequiredTheme(), true);
+        IsStarted = true;
 
         Context.UiApplication.Idling += _onIdlingHandler;
         ApplicationThemeManager.Changed += _onThemeChangedHandler;
         
-        IsSubcribe = true;
+        _isSubcribe = true;
     }
     
     private void Unsubscribe()
     {
-        if (!IsSubcribe) return;
-        
-        Debug.WriteLine("TraceLogViewModel Unsubscribe");
-        
+        if (!_isSubcribe) return;
+
         Context.UiApplication.Idling -= _onIdlingHandler;
         ApplicationThemeManager.Changed -= _onThemeChangedHandler;
-        
-        IsSubcribe = false;
+
+        _isSubcribe = false;
     }
 
     private void OnIdling(object? sender, IdlingEventArgs e)
@@ -206,13 +208,17 @@ internal partial class TraceLogViewModel : ObservableObject, IDisposable
             Child = _winFormsTextBox
         };
         
+        LogTextBox.Loaded += (_, _) =>
+        {
+            ApplyTextBoxTheme();
+        };
+
         PresentationTraceSources.ResourceDictionarySource.Switch.Level = SourceLevels.Critical;
         _levelSwitch = new LoggingLevelSwitch(_logLevel);
         _onThemeChangedHandler = OnThemeChanged;
         _onIdlingHandler = OnIdling;
         _currentTheme = ThemeWatcher.GetRequiredTheme();
 
-        ApplyTextBoxTheme();
         Subcribe();
         StartTracing();
     }
@@ -238,7 +244,7 @@ internal partial class TraceLogViewModel : ObservableObject, IDisposable
         settingsWindow.Show();
         settingsWindow.NavigationService.Navigate(typeof(GeneralSettingsView));
         IsSettingOpened = true;
-        settingsWindow.Closed += (_, _) => { IsSettingOpened = false ; };
+        settingsWindow.Closed += (_, _) => { IsSettingOpened = false; };
     }
 
     private bool CanOpenSettings() => !IsSettingOpened;
@@ -246,14 +252,14 @@ internal partial class TraceLogViewModel : ObservableObject, IDisposable
     public void Dispose()
     {
         Debug.WriteLine("TraceLogViewModel Dispose");
-        
+
         IsStarted = false;
         StopTracing();
         Unsubscribe();
-        
+
         _consoleRedirector?.Dispose();
         _consoleRedirector = null;
-        
+
         GC.SuppressFinalize(this);
     }
 }
