@@ -14,7 +14,7 @@ public class FaceVisualization : ExternalCommand
         try
         {
             var faceRef = UiDocument.Selection.PickObject(ObjectType.Face, "Select Face");
-            var face = Document.GetElement(faceRef)?.GetGeometryObjectFromReference(faceRef) as Autodesk.Revit.DB.Face;
+            var face = Document.GetElement(faceRef)?.GetGeometryObjectFromReference(faceRef) as Face;
             Trace.Write(face);
         }
         catch (Exception e)
@@ -36,8 +36,7 @@ public class FacesVisualization : ExternalCommand
             var faces = new List<Face>();
             foreach (var faceRef in faceRefs)
             {
-                var face =
-                    Document.GetElement(faceRef)?.GetGeometryObjectFromReference(faceRef) as Face;
+                var face = Document.GetElement(faceRef)?.GetGeometryObjectFromReference(faceRef) as Face;
                 if (face != null)
                 {
                     faces.Add(face);

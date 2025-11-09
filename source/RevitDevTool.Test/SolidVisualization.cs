@@ -16,7 +16,7 @@ public class SolidVisualization : ExternalCommand
         {
             var solidRef = UiDocument.Selection.PickObject(ObjectType.Element, "Select Solid Element");
             var solid = Document.GetElement(solidRef).GetSolids();
-            if (solid.Any())
+            if (solid.Count != 0)
             {
                 Trace.Write(solid.First());
             }
@@ -43,7 +43,7 @@ public class SolidsVisualization : ExternalCommand
         {
             var solidRefs = UiDocument.Selection.PickObjects(ObjectType.Element, "Select Solid Elements");
             var solids = solidRefs.SelectMany(sRef => Document.GetElement(sRef).GetSolids()).ToList();
-            if (solids.Any())
+            if (solids.Count != 0)
             {
                 Trace.Write(solids);
             }
