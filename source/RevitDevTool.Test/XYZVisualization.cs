@@ -33,7 +33,7 @@ public class XyzsVisualization : ExternalCommand
         try
         {
             var xyzRefs = UiDocument.Selection.PickObjects(ObjectType.PointOnElement);
-            var xyzs = xyzRefs.Select(x=>x.GlobalPoint).ToList();
+            var xyzs = xyzRefs.Select(x => x.GlobalPoint).ToList();
             if (xyzs.Count == 0)
             {
                 Trace.TraceWarning("No points selected.");

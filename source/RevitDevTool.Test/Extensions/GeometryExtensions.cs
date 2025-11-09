@@ -1,6 +1,4 @@
-﻿using Autodesk.Revit.DB;
-
-namespace RevitDevTool.Test.Extensions;
+﻿namespace RevitDevTool.Test.Extensions;
 
 [PublicAPI]
 public static class GeometryExtensions
@@ -108,12 +106,12 @@ public static class GeometryExtensions
     public static List<Edge> GetEdges(this Face face)
     {
         var edgeArrays = face.EdgeLoops.Cast<EdgeArray>();
-        return edgeArrays?.SelectMany(edgeLoop => edgeLoop.Cast<Edge>()).ToList() ?? [];
+        return edgeArrays.SelectMany(edgeLoop => edgeLoop.Cast<Edge>()).ToList();
     }
 
     public static List<Curve> GetCurves(this Face face)
     {
         var curveLoops = face.GetEdgesAsCurveLoops();
-        return curveLoops?.SelectMany(loop => loop.Cast<Curve>()).ToList() ?? [];
+        return curveLoops?.SelectMany(loop => loop).ToList() ?? [];
     }
 }
