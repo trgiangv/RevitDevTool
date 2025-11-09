@@ -1,3 +1,14 @@
+# 1.3.3
+
+## Changed
+
+- Updated manual test case: batch log
+
+## Fixed
+
+- `Clear` method in TraceLog - text not actually clearing and reappearing on next trace event due to `OnIdling` event handler interference
+- Curve Test case - cast to `Edge` instead of `Curve`
+
 # 1.3.2
 
 ## Added
