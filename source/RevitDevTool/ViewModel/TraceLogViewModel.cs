@@ -5,13 +5,13 @@ using Serilog.Core;
 using Serilog.Events;
 using System.Windows.Forms.Integration;
 using Autodesk.Revit.UI.Events;
-using RevitDevTool.Models.Trace ;
+using RevitDevTool.Models.Trace;
 using RevitDevTool.Theme;
-using RevitDevTool.View.Settings ;
-using ricaun.Revit.UI ;
+using RevitDevTool.View.Settings;
+using ricaun.Revit.UI;
 using Serilog.Sinks.RichTextBoxForms;
 using Wpf.Ui.Appearance;
-using FontStyle = System.Drawing.FontStyle ;
+using FontStyle = System.Drawing.FontStyle;
 
 namespace RevitDevTool.ViewModel;
 
@@ -27,21 +27,22 @@ internal partial class TraceLogViewModel : ObservableObject, IDisposable
     private SerilogTraceListener? _traceListener;
     private TraceGeometry.TraceGeometryListener? _geometryListener;
     private ConsoleRedirector? _consoleRedirector;
-    
+
     private ApplicationTheme _currentTheme;
-    
+
     public WindowsFormsHost LogTextBox { get; }
 
-    [ObservableProperty] 
-    [NotifyCanExecuteChangedFor(nameof(OpenSettingsCommand))] 
+    [ObservableProperty]
+    [NotifyCanExecuteChangedFor(nameof(OpenSettingsCommand))]
     private bool _isSettingOpened;
-    
-    [ObservableProperty] 
+
+    [ObservableProperty]
     private bool _isStarted = true;
-    
+
     private bool _isSubcribe;
-    
-    [ObservableProperty] 
+    private bool _isClearing;
+
+    [ObservableProperty]
     private LogEventLevel _logLevel = LogEventLevel.Debug;
 
     partial void OnLogLevelChanged(LogEventLevel value)
@@ -51,10 +52,8 @@ internal partial class TraceLogViewModel : ObservableObject, IDisposable
 
     partial void OnIsStartedChanged(bool value)
     {
-        if (value)
-            StartTracing();
-        else
-            StopTracing();
+        if (value) StartTracing();
+        else StopTracing();
     }
 
     private void StartTracing()
@@ -74,17 +73,9 @@ internal partial class TraceLogViewModel : ObservableObject, IDisposable
 
     private void InitializeLogger()
     {
-        var textTheme = _currentTheme == ApplicationTheme.Dark 
-            ? AdaptiveThemePresets.EnhancedDark 
-            : AdaptiveThemePresets.EnhancedLight;
+        var textTheme = _currentTheme == ApplicationTheme.Dark ? AdaptiveThemePresets.EnhancedDark : AdaptiveThemePresets.EnhancedLight;
 
-        var loggerConfig = new LoggerConfiguration()
-            .MinimumLevel.ControlledBy(_levelSwitch)
-            .WriteTo.RichTextBox(_winFormsTextBox, out _sink, 
-                maxLogLines: int.MaxValue, 
-                formatProvider: CultureInfo.InvariantCulture, 
-                theme: textTheme, 
-                autoScroll: true);
+        var loggerConfig = new LoggerConfiguration().MinimumLevel.ControlledBy(_levelSwitch).WriteTo.RichTextBox(_winFormsTextBox, out _sink, maxLogLines: int.MaxValue, formatProvider: CultureInfo.InvariantCulture, theme: textTheme, autoScroll: true);
 
         _logger ??= loggerConfig.CreateLogger();
         _traceListener ??= new SerilogTraceListener(_logger);
@@ -93,6 +84,7 @@ internal partial class TraceLogViewModel : ObservableObject, IDisposable
 
     private void DisposeLogger()
     {
+        _winFormsTextBox.Clear();
         _sink?.Dispose();
         _sink = null;
         _logger?.Dispose();
@@ -107,7 +99,7 @@ internal partial class TraceLogViewModel : ObservableObject, IDisposable
     {
         if (_traceListener != null && !Trace.Listeners.Contains(_traceListener))
             Trace.Listeners.Add(_traceListener);
-        
+
         if (_geometryListener != null && !Trace.Listeners.Contains(_geometryListener))
             Trace.Listeners.Add(_geometryListener);
     }
@@ -116,7 +108,7 @@ internal partial class TraceLogViewModel : ObservableObject, IDisposable
     {
         if (_traceListener != null)
             Trace.Listeners.Remove(_traceListener);
-        
+
         if (_geometryListener != null)
             Trace.Listeners.Remove(_geometryListener);
     }
@@ -124,10 +116,8 @@ internal partial class TraceLogViewModel : ObservableObject, IDisposable
     private void ApplyTextBoxTheme()
     {
         var isDark = _currentTheme == ApplicationTheme.Dark;
-        _winFormsTextBox.BackColor = isDark
-            ? System.Drawing.Color.FromArgb(30, 30, 30) 
-            : System.Drawing.Color.FromArgb(250, 250, 250);
-        
+        _winFormsTextBox.BackColor = isDark ? System.Drawing.Color.FromArgb(30, 30, 30) : System.Drawing.Color.FromArgb(250, 250, 250);
+
         Win32DarkMode.SetImmersiveDarkMode(_winFormsTextBox.Handle, isDark);
     }
 
@@ -161,18 +151,18 @@ internal partial class TraceLogViewModel : ObservableObject, IDisposable
     public void Subcribe()
     {
         if (_isSubcribe) return;
-        
+
         _consoleRedirector ??= new ConsoleRedirector();
-        
+
         UpdateTheme(ThemeWatcher.GetRequiredTheme(), true);
         IsStarted = true;
 
         Context.UiApplication.Idling += _onIdlingHandler;
         ApplicationThemeManager.Changed += _onThemeChangedHandler;
-        
+
         _isSubcribe = true;
     }
-    
+
     private void Unsubscribe()
     {
         if (!_isSubcribe) return;
@@ -185,7 +175,7 @@ internal partial class TraceLogViewModel : ObservableObject, IDisposable
 
     private void OnIdling(object? sender, IdlingEventArgs e)
     {
-        if (IsStarted)
+        if (IsStarted && !_isClearing)
         {
             RegisterTraceListeners();
         }
@@ -207,7 +197,7 @@ internal partial class TraceLogViewModel : ObservableObject, IDisposable
         {
             Child = _winFormsTextBox
         };
-        
+
         LogTextBox.Loaded += (_, _) =>
         {
             ApplyTextBoxTheme();
@@ -226,8 +216,15 @@ internal partial class TraceLogViewModel : ObservableObject, IDisposable
     [RelayCommand]
     private void Clear()
     {
-        _winFormsTextBox.Clear();
-        _sink?.Clear();
+        _isClearing = true;
+        if (IsStarted)
+        {
+            UnregisterTraceListeners();
+            DisposeLogger();
+            InitializeLogger();
+            RegisterTraceListeners();
+        }
+        _isClearing = false;
     }
 
     [RelayCommand]
@@ -251,8 +248,6 @@ internal partial class TraceLogViewModel : ObservableObject, IDisposable
 
     public void Dispose()
     {
-        Debug.WriteLine("TraceLogViewModel Dispose");
-
         IsStarted = false;
         StopTracing();
         Unsubscribe();
