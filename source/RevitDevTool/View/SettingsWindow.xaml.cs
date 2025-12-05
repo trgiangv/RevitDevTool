@@ -9,11 +9,11 @@ using Wpf.Ui.Controls ;
 
 namespace RevitDevTool.View ;
 
-public partial class SettingsView
+public partial class SettingsWindow
 {
     public NavigationService NavigationService { get ; private set ; } = null! ;
     
-    public SettingsView()
+    public SettingsWindow()
     {
         ThemeWatcher.Instance.Watch(this);
         InitializeComponent() ;

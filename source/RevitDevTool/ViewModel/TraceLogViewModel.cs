@@ -5,6 +5,7 @@ using Serilog.Core;
 using Serilog.Events;
 using System.Windows.Forms.Integration;
 using Autodesk.Revit.UI.Events;
+using RevitDevTool.Commands;
 using RevitDevTool.Models.Trace;
 using RevitDevTool.Theme;
 using RevitDevTool.View.Settings;
@@ -26,6 +27,7 @@ internal partial class TraceLogViewModel : ObservableObject, IDisposable
     private Logger? _logger;
     private SerilogTraceListener? _traceListener;
     private TraceGeometry.TraceGeometryListener? _geometryListener;
+    private TraceEventNotifier? _traceEventNotifier;
     private ConsoleRedirector? _consoleRedirector;
 
     private ApplicationTheme _currentTheme;
@@ -80,6 +82,7 @@ internal partial class TraceLogViewModel : ObservableObject, IDisposable
         _logger ??= loggerConfig.CreateLogger();
         _traceListener ??= new SerilogTraceListener(_logger);
         _geometryListener ??= new TraceGeometry.TraceGeometryListener();
+        _traceEventNotifier ??= new TraceEventNotifier();
     }
 
     private void DisposeLogger()
@@ -93,6 +96,8 @@ internal partial class TraceLogViewModel : ObservableObject, IDisposable
         _traceListener = null;
         _geometryListener?.Dispose();
         _geometryListener = null;
+        _traceEventNotifier?.Dispose();
+        _traceEventNotifier = null;
     }
 
     private void RegisterTraceListeners()
@@ -102,6 +107,9 @@ internal partial class TraceLogViewModel : ObservableObject, IDisposable
 
         if (_geometryListener != null && !Trace.Listeners.Contains(_geometryListener))
             Trace.Listeners.Add(_geometryListener);
+        
+        if (_traceEventNotifier != null && !Trace.Listeners.Contains(_traceEventNotifier))
+            Trace.Listeners.Add(_traceEventNotifier);
     }
 
     private void UnregisterTraceListeners()
@@ -111,6 +119,9 @@ internal partial class TraceLogViewModel : ObservableObject, IDisposable
 
         if (_geometryListener != null)
             Trace.Listeners.Remove(_geometryListener);
+        
+        if (_traceEventNotifier != null)
+            Trace.Listeners.Remove(_traceEventNotifier);
     }
 
     private void ApplyTextBoxTheme()
@@ -236,8 +247,15 @@ internal partial class TraceLogViewModel : ObservableObject, IDisposable
     [RelayCommand(CanExecute = nameof(CanOpenSettings))]
     private void OpenSettings()
     {
-        var settingsWindow = new View.SettingsView();
-        settingsWindow.SetAutodeskOwner();
+        var settingsWindow = new View.SettingsWindow();
+        if (TraceCommand.FloatingWindow != null)
+        {
+            settingsWindow.Owner = TraceCommand.FloatingWindow;
+        }
+        else
+        {
+            settingsWindow.SetAutodeskOwner();
+        }
         settingsWindow.Show();
         settingsWindow.NavigationService.Navigate(typeof(GeneralSettingsView));
         IsSettingOpened = true;
