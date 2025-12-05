@@ -7,10 +7,10 @@ namespace RevitDevTool.Visualization.Contracts;
 
 public abstract class VisualizationServer<TG> : IDirectContext3DServer, IVisualizationServerLifeCycle
 {
-    protected readonly List<TG> VisualizeGeometries = [];
-    protected bool HasGeometryUpdates = true;
-    protected bool HasEffectsUpdates = true;
-    protected readonly object RenderLock = new();
+    protected readonly List<TG> visualizeGeometries = [];
+    protected bool hasGeometryUpdates = true;
+    protected bool hasEffectsUpdates = true;
+    protected readonly object renderLock = new();
     
     public string GetVendorId() => "RevitDevTool";
     public bool CanExecute(Autodesk.Revit.DB.View dBView) => true;
@@ -27,9 +27,15 @@ public abstract class VisualizationServer<TG> : IDirectContext3DServer, IVisuali
     protected abstract void RenderScene();
     protected abstract void DisposeBuffers();
 
+    protected static bool ShouldRenderTransparentPass(double transparency)
+    {
+        var isTransparentPass = DrawContext.IsTransparentPass();
+        return isTransparentPass && transparency > 0 || !isTransparentPass && transparency == 0;
+    }
+
     public void RenderScene(Autodesk.Revit.DB.View dBView, DisplayStyle displayStyle)
     {
-        lock (RenderLock) 
+        lock (renderLock) 
         {
             try 
             {
@@ -47,12 +53,12 @@ public abstract class VisualizationServer<TG> : IDirectContext3DServer, IVisuali
     {
         var uiDocument = Context.ActiveUiDocument;
         if (uiDocument is null) return;
-        lock (RenderLock)
+        lock (renderLock)
         {
             try
             {
-                VisualizeGeometries.Clear();
-                HasGeometryUpdates = true;
+                visualizeGeometries.Clear();
+                hasGeometryUpdates = true;
                 DisposeBuffers();
                 uiDocument.UpdateAllOpenViews();
             }
@@ -67,13 +73,13 @@ public abstract class VisualizationServer<TG> : IDirectContext3DServer, IVisuali
     {
         var uiDocument = Context.ActiveUiDocument;
         if (uiDocument is null) return;
-        lock (RenderLock)
+        lock (renderLock)
         {
             try
             {
-                VisualizeGeometries.AddRange(geometries);
-                HasGeometryUpdates = true;
-                HasEffectsUpdates = true;
+                visualizeGeometries.AddRange(geometries);
+                hasGeometryUpdates = true;
+                hasEffectsUpdates = true;
                 uiDocument.UpdateAllOpenViews();
             }
             catch (Exception ex)
@@ -87,13 +93,13 @@ public abstract class VisualizationServer<TG> : IDirectContext3DServer, IVisuali
     {
         var uiDocument = Context.ActiveUiDocument;
         if (uiDocument is null) return;
-        lock (RenderLock)
+        lock (renderLock)
         {
             try
             {
-                VisualizeGeometries.Add(geometry);
-                HasGeometryUpdates = true;
-                HasEffectsUpdates = true;
+                visualizeGeometries.Add(geometry);
+                hasGeometryUpdates = true;
+                hasEffectsUpdates = true;
                 uiDocument.UpdateAllOpenViews();
             }
             catch (Exception ex)
