@@ -1,9 +1,13 @@
 ﻿using Autodesk.Revit.Attributes;
+using Autodesk.Revit.DB.Events;
 using Autodesk.Revit.UI;
+using Autodesk.Windows;
 using Nice3point.Revit.Toolkit.Decorators;
 using Nice3point.Revit.Toolkit.External;
+using RevitDevTool.Models.Trace;
 using RevitDevTool.View;
 using RevitDevTool.ViewModel;
+using ricaun.Revit.UI;
 
 namespace RevitDevTool.Commands;
 
@@ -13,13 +17,32 @@ public class TraceCommand : ExternalCommand
 {
     private const string CommandName = "TraceLog";
     private const string Guid = "43AE2B41-0BE6-425A-B27A-724B2CE17351";
+    private static readonly Action TraceReceivedHandler = OnTraceReceived;
     private static DockablePaneId PaneId { get; } = new(new Guid(Guid));
     private static bool IsForceHide { get; set; }
+    private static TraceLogViewModel? SharedViewModel { get; set; }
+    public static TraceLogWindow? FloatingWindow { get; private set; }
+    private static bool HasDocumentOpend => Context.Application.Documents.Size > 0;
 
     public override void Execute()
     {
         try
         {
+            if (!HasDocumentOpend)
+            {
+                if (FloatingWindow != null)
+                {
+                    CloseFloatingWindow();
+                }
+                else
+                {
+                    SharedViewModel ??= new TraceLogViewModel();
+                    SharedViewModel.Subcribe();
+                    ShowFloatingWindow();
+                }
+                return;
+            }
+            
             var dockableWindow = UiApplication.GetDockablePane(PaneId);
             if (dockableWindow.IsShown())
             {
@@ -28,24 +51,27 @@ public class TraceCommand : ExternalCommand
             }
             else
             {
+                SharedViewModel ??= new TraceLogViewModel();
+                SharedViewModel.Subcribe();
                 dockableWindow.Show();
                 IsForceHide = false;
             }
         }
         catch (Exception e)
         {
-            Autodesk.Revit.UI.TaskDialog.Show("Error", e.ToString());
+           ErrorMessage = e.Message + "\n" + e.StackTrace;
         }
     }
     
     public static void RegisterDockablePane(UIControlledApplication application)
     {
-        var frameworkElement = new TraceLog();
+        SharedViewModel = new TraceLogViewModel();
+        var frameworkElement = new TraceLogPage(SharedViewModel);
         RegisterPane(application, frameworkElement);
-        SubscribeEvents(application, frameworkElement);
+        SubscribeEvents(application);
     }
 
-    private static void RegisterPane(UIControlledApplication application, TraceLog frameworkElement)
+    private static void RegisterPane(UIControlledApplication application, TraceLogPage frameworkElement)
     {
         DockablePaneProvider
             .Register(application, new Guid(Guid), CommandName)
@@ -67,28 +93,115 @@ public class TraceCommand : ExternalCommand
         };
     }
 
-    private static void SubscribeEvents(UIControlledApplication application, TraceLog frameworkElement)
+    private static void SubscribeEvents(UIControlledApplication application)
     {
         application.DockableFrameVisibilityChanged += (_, args) =>
         {
             if (args.PaneId != PaneId) return;
-            if (frameworkElement.DataContext is not TraceLogViewModel vm) return;
+            if (SharedViewModel is null) return;
 
             if (args.DockableFrameShown)
-                vm.Subcribe();
+            {
+                SharedViewModel.Subcribe();
+            }
             else
-                vm.Dispose();
+            {
+                if (FloatingWindow is null)
+                    SharedViewModel.Dispose();
+            }
         };
-        application.ControlledApplication.DocumentOpened += (_, _) => OnDocumentOpened(application);
+        
+        application.ControlledApplication.DocumentOpened += OnDocumentOpened;
+        application.ControlledApplication.DocumentClosed += OnDocumentClosed;
+        TraceEventNotifier.TraceReceived += TraceReceivedHandler;
+    }
+    
+    private static void OnTraceReceived()
+    {
+        TraceEventNotifier.TraceReceived -= TraceReceivedHandler;
+        
+        if (HasDocumentOpend)
+        {
+            return;
+        }
+        
+        if (SharedViewModel is not { IsStarted: true })
+        {
+            TraceEventNotifier.TraceReceived += TraceReceivedHandler;
+            return;
+        }
+        
+        if (FloatingWindow != null)
+        {
+            return;
+        }
+        
+        SharedViewModel.Subcribe();
+        ShowFloatingWindow();
     }
 
-    private static void OnDocumentOpened(UIControlledApplication application)
+    private static void OnDocumentOpened(object? sender, DocumentOpenedEventArgs args)
     {
-        var dockableWindow = application.GetDockablePane(PaneId);
+        CloseFloatingWindow();
+        TraceEventNotifier.TraceReceived -= TraceReceivedHandler;
+        
+        if (IsForceHide)
+        {
+            SharedViewModel?.Dispose();
+        }
+        
+        var dockableWindow = Context.UiControlledApplication.GetDockablePane(PaneId);
         
         if (IsForceHide)
             dockableWindow.Hide();
         else if (!dockableWindow.IsShown())
             dockableWindow.Show();
+    }
+    
+    private static void ShowFloatingWindow()
+    {
+        if (FloatingWindow != null) return;
+        if (SharedViewModel is null) return;
+        
+        ComponentManager.Ribbon.Dispatcher.Invoke(() =>
+        {
+            FloatingWindow = new TraceLogWindow(SharedViewModel);
+            FloatingWindow.Closed += OnFloatingWindowClosed;
+            FloatingWindow.SetAutodeskOwner();
+            FloatingWindow.Show();
+        });
+    }
+    
+    private static void CloseFloatingWindow()
+    {
+        if (FloatingWindow is null) return;
+        
+        ComponentManager.Ribbon.Dispatcher.Invoke(() =>
+        {
+            FloatingWindow.Closed -= OnFloatingWindowClosed;
+            FloatingWindow.Close();
+            FloatingWindow = null;
+        });
+    }
+    
+    private static void OnFloatingWindowClosed(object? sender, EventArgs e)
+    {
+        if (FloatingWindow == null) return;
+        FloatingWindow.Closed -= OnFloatingWindowClosed;
+        FloatingWindow = null;
+        if (HasDocumentOpend) return;
+        TraceEventNotifier.TraceReceived += TraceReceivedHandler;
+    }
+    
+    private static void OnDocumentClosed(object? sender, DocumentClosedEventArgs args)
+    {
+        if (HasDocumentOpend) return;
+        
+        if (SharedViewModel is null or { IsStarted: false })
+        {
+            SharedViewModel = new TraceLogViewModel();
+        }
+        
+        TraceEventNotifier.TraceReceived += TraceReceivedHandler;
     }
 }
