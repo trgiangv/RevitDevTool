@@ -25,7 +25,7 @@ public sealed class XyzVisualizationServer : VisualizationServer<XYZ>
     ];
 
     private double _transparency = SettingsService.Instance.VisualizationConfig.XyzSettings.Transparency;
-    private double _axisLength = SettingsService.Instance.VisualizationConfig.XyzSettings.AxisLength;
+    private double _axisLength = SettingsService.Instance.VisualizationConfig.XyzSettings.AxisLength / 12;
 
     private Color _xColor = new(
         SettingsService.Instance.VisualizationConfig.XyzSettings.XColor.R,
