@@ -1,8 +1,8 @@
 ﻿using System.Diagnostics;
 using Autodesk.Revit.DB.DirectContext3D;
-using RevitDevTool.Extensions ;
-using RevitDevTool.Services ;
-using RevitDevTool.Visualization.Contracts ;
+using RevitDevTool.Extensions;
+using RevitDevTool.Services;
+using RevitDevTool.Visualization.Contracts;
 using RevitDevTool.Visualization.Helpers;
 using RevitDevTool.Visualization.Render;
 using Color = Autodesk.Revit.DB.Color;
@@ -44,70 +44,73 @@ public sealed class PolylineVisualizationServer : VisualizationServer<GeometryOb
     public override bool UseInTransparentPass(Autodesk.Revit.DB.View view) => _drawSurface && _transparency > 0;
     public override Outline? GetBoundingBox(Autodesk.Revit.DB.View view) => null;
 
-    // ReSharper disable once CognitiveComplexity
     protected override void RenderScene()
     {
-        if (VisualizeGeometries.Count == 0) return;
+        if (visualizeGeometries.Count == 0) return;
         
-        if (HasGeometryUpdates || _surfaceBuffers.Count == 0 || _curveBuffers.Count == 0)
+        if (hasGeometryUpdates || _surfaceBuffers.Count == 0 || _curveBuffers.Count == 0)
         {
             MapGeometryBuffer();
-            HasGeometryUpdates = false;
+            hasGeometryUpdates = false;
         }
 
-        if (HasEffectsUpdates)
+        if (hasEffectsUpdates)
         {
             UpdateEffects();
-            HasEffectsUpdates = false;
+            hasEffectsUpdates = false;
         }
 
-        if (_drawSurface && _surfaceBuffers.Count != 0)
-        {
-            var isTransparentPass = DrawContext.IsTransparentPass();
-            if (isTransparentPass && _transparency > 0 || !isTransparentPass && _transparency == 0)
-            {
-                foreach (var surfaceBuffer in _surfaceBuffers)
-                {
-                    DrawContext.FlushBuffer(surfaceBuffer.VertexBuffer,
-                        surfaceBuffer.VertexBufferCount,
-                        surfaceBuffer.IndexBuffer,
-                        surfaceBuffer.IndexBufferCount,
-                        surfaceBuffer.VertexFormat,
-                        surfaceBuffer.EffectInstance, PrimitiveType.TriangleList, 0,
-                        surfaceBuffer.PrimitiveCount);
-                }
-            }
-        }
+        RenderSurfaceBuffers();
+        RenderCurveBuffers();
+        RenderDirectionBuffers();
+    }
 
-        if (_drawCurve && _curveBuffers.Count != 0)
-        {
-            foreach (var curveBuffer in _curveBuffers)
-            {
-                DrawContext.FlushBuffer(curveBuffer.VertexBuffer,
-                    curveBuffer.VertexBufferCount,
-                    curveBuffer.IndexBuffer,
-                    curveBuffer.IndexBufferCount,
-                    curveBuffer.VertexFormat,
-                    curveBuffer.EffectInstance, PrimitiveType.LineList, 0,
-                    curveBuffer.PrimitiveCount);
-            }
-        }
+    private void RenderSurfaceBuffers()
+    {
+        if (!_drawSurface || _surfaceBuffers.Count == 0) return;
+        if (!ShouldRenderTransparentPass(_transparency)) return;
 
-        if (_drawDirection)
+        foreach (var surfaceBuffer in _surfaceBuffers)
         {
-            foreach (var buffer in _normalsBuffers)
-            {
-                if (buffer.IsValid())
-                {
-                    DrawContext.FlushBuffer(buffer.VertexBuffer,
-                        buffer.VertexBufferCount,
-                        buffer.IndexBuffer,
-                        buffer.IndexBufferCount,
-                        buffer.VertexFormat,
-                        buffer.EffectInstance, PrimitiveType.LineList, 0,
-                        buffer.PrimitiveCount);
-                }
-            }
+            DrawContext.FlushBuffer(surfaceBuffer.VertexBuffer,
+                surfaceBuffer.VertexBufferCount,
+                surfaceBuffer.IndexBuffer,
+                surfaceBuffer.IndexBufferCount,
+                surfaceBuffer.VertexFormat,
+                surfaceBuffer.EffectInstance, PrimitiveType.TriangleList, 0,
+                surfaceBuffer.PrimitiveCount);
+        }
+    }
+
+    private void RenderCurveBuffers()
+    {
+        if (!_drawCurve || _curveBuffers.Count == 0) return;
+
+        foreach (var curveBuffer in _curveBuffers)
+        {
+            DrawContext.FlushBuffer(curveBuffer.VertexBuffer,
+                curveBuffer.VertexBufferCount,
+                curveBuffer.IndexBuffer,
+                curveBuffer.IndexBufferCount,
+                curveBuffer.VertexFormat,
+                curveBuffer.EffectInstance, PrimitiveType.LineList, 0,
+                curveBuffer.PrimitiveCount);
+        }
+    }
+
+    private void RenderDirectionBuffers()
+    {
+        if (!_drawDirection) return;
+
+        foreach (var buffer in _normalsBuffers.Where(b => b.IsValid()))
+        {
+            DrawContext.FlushBuffer(buffer.VertexBuffer,
+                buffer.VertexBufferCount,
+                buffer.IndexBuffer,
+                buffer.IndexBufferCount,
+                buffer.VertexFormat,
+                buffer.EffectInstance, PrimitiveType.LineList, 0,
+                buffer.PrimitiveCount);
         }
     }
 
@@ -115,20 +118,13 @@ public sealed class PolylineVisualizationServer : VisualizationServer<GeometryOb
     {
         DisposeBuffers();
 
-        if (VisualizeGeometries.Count == 0) return;
+        if (visualizeGeometries.Count == 0) return;
         
         try
         {
-            foreach (var visualizeGeometry in VisualizeGeometries)
+            foreach (var visualizeGeometry in visualizeGeometries)
             {
-                var vertices = visualizeGeometry switch
-                {
-                    Edge edge => edge.Tessellate(),
-                    Curve curve => curve.Tessellate(),
-                    PolyLine polyLine => polyLine.GetCoordinates(),
-                    _ => throw new ArgumentException("Unsupported geometry type for polyline visualization",
-                        nameof(visualizeGeometry))
-                };
+                var vertices = GetVertices(visualizeGeometry);
                 
                 var surfaceBuffer = new RenderingBufferStorage();
                 RenderHelper.MapCurveSurfaceBuffer(surfaceBuffer, vertices, _diameter);
@@ -146,60 +142,69 @@ public sealed class PolylineVisualizationServer : VisualizationServer<GeometryOb
         }
     }
 
-    // ReSharper disable once CognitiveComplexity
     private void MapDirectionsBuffer()
     {
         _normalsBuffers.Clear(true);
 
-        if (VisualizeGeometries.Count == 0) return;
+        if (visualizeGeometries.Count == 0) return;
         
-        foreach (var visualizeGeometry in VisualizeGeometries)
+        foreach (var visualizeGeometry in visualizeGeometries)
         {
-            var vertices = visualizeGeometry switch
-            {
-                Edge edge => edge.Tessellate(),
-                Curve curve => curve.Tessellate(),
-                PolyLine polyLine => polyLine.GetCoordinates(),
-                _ => throw new ArgumentException("Unsupported geometry type for polyline visualization",
-                    nameof(visualizeGeometry))
-            };
-            
+            var vertices = GetVertices(visualizeGeometry);
             if (vertices.Count < 2) continue;
 
-            var verticalOffset = 0d;
-            for (var i = 0; i < vertices.Count - 1; i++)
-            {
-                var startPoint = vertices[i];
-                var endPoint = vertices[i + 1];
-                var centerPoint = (startPoint + endPoint) / 2;
-                var buffer = new RenderingBufferStorage();
-
-                var segmentVector = endPoint - startPoint;
-                var segmentLength = segmentVector.GetLength();
-                var segmentDirection = segmentVector.Normalize();
-                if (verticalOffset == 0)
-                {
-                    verticalOffset = RenderGeometryHelper.InterpolateOffsetByDiameter(_diameter) + _diameter / 2d;
-                }
-
-                var offsetVector = XYZ.BasisX.CrossProduct(segmentDirection).Normalize() * verticalOffset;
-                if (offsetVector.IsZeroLength())
-                {
-                    offsetVector = XYZ.BasisY.CrossProduct(segmentDirection).Normalize() * verticalOffset;
-                }
-
-                if (offsetVector.Z < 0)
-                {
-                    offsetVector = -offsetVector;
-                }
-
-                var arrowLength = segmentLength > 1 ? 1d : segmentLength * 0.6;
-                var arrowOrigin = centerPoint + offsetVector - segmentDirection * (arrowLength / 2);
-
-                RenderHelper.MapNormalVectorBuffer(buffer, arrowOrigin, segmentDirection, arrowLength);
-                _normalsBuffers.Add(buffer);
-            }
+            MapDirectionBuffersForVertices(vertices);
         }
+    }
+
+    private void MapDirectionBuffersForVertices(IList<XYZ> vertices)
+    {
+        var verticalOffset = RenderGeometryHelper.InterpolateOffsetByDiameter(_diameter) + _diameter / 2d;
+        
+        for (var i = 0; i < vertices.Count - 1; i++)
+        {
+            var startPoint = vertices[i];
+            var endPoint = vertices[i + 1];
+            var buffer = CreateDirectionBuffer(startPoint, endPoint, verticalOffset);
+            _normalsBuffers.Add(buffer);
+        }
+    }
+
+    private static RenderingBufferStorage CreateDirectionBuffer(XYZ startPoint, XYZ endPoint, double verticalOffset)
+    {
+        var buffer = new RenderingBufferStorage();
+        var centerPoint = (startPoint + endPoint) / 2;
+        var segmentVector = endPoint - startPoint;
+        var segmentLength = segmentVector.GetLength();
+        var segmentDirection = segmentVector.Normalize();
+
+        var offsetVector = ComputeOffsetVector(segmentDirection, verticalOffset);
+        var arrowLength = segmentLength > 1 ? 1d : segmentLength * 0.6;
+        var arrowOrigin = centerPoint + offsetVector - segmentDirection * (arrowLength / 2);
+
+        RenderHelper.MapNormalVectorBuffer(buffer, arrowOrigin, segmentDirection, arrowLength);
+        return buffer;
+    }
+
+    private static XYZ ComputeOffsetVector(XYZ segmentDirection, double verticalOffset)
+    {
+        var offsetVector = XYZ.BasisX.CrossProduct(segmentDirection).Normalize() * verticalOffset;
+        
+        if (offsetVector.IsZeroLength())
+            offsetVector = XYZ.BasisY.CrossProduct(segmentDirection).Normalize() * verticalOffset;
+
+        return offsetVector.Z < 0 ? -offsetVector : offsetVector;
+    }
+
+    private static IList<XYZ> GetVertices(GeometryObject geometry)
+    {
+        return geometry switch
+        {
+            Edge edge => edge.Tessellate(),
+            Curve curve => curve.Tessellate(),
+            PolyLine polyLine => polyLine.GetCoordinates(),
+            _ => throw new ArgumentException("Unsupported geometry type for polyline visualization", nameof(geometry))
+        };
     }
 
     private void UpdateEffects()
@@ -229,10 +234,10 @@ public sealed class PolylineVisualizationServer : VisualizationServer<GeometryOb
         var uiDocument = Context.ActiveUiDocument;
         if (uiDocument is null) return;
 
-        lock (RenderLock)
+        lock (renderLock)
         {
             _surfaceColor = value;
-            HasEffectsUpdates = true;
+            hasEffectsUpdates = true;
 
             uiDocument.UpdateAllOpenViews();
         }
@@ -243,10 +248,10 @@ public sealed class PolylineVisualizationServer : VisualizationServer<GeometryOb
         var uiDocument = Context.ActiveUiDocument;
         if (uiDocument is null) return;
 
-        lock (RenderLock)
+        lock (renderLock)
         {
             _curveColor = value;
-            HasEffectsUpdates = true;
+            hasEffectsUpdates = true;
 
             uiDocument.UpdateAllOpenViews();
         }
@@ -257,10 +262,10 @@ public sealed class PolylineVisualizationServer : VisualizationServer<GeometryOb
         var uiDocument = Context.ActiveUiDocument;
         if (uiDocument is null) return;
 
-        lock (RenderLock)
+        lock (renderLock)
         {
             _directionColor = value;
-            HasEffectsUpdates = true;
+            hasEffectsUpdates = true;
 
             uiDocument.UpdateAllOpenViews();
         }
@@ -271,11 +276,11 @@ public sealed class PolylineVisualizationServer : VisualizationServer<GeometryOb
         var uiDocument = Context.ActiveUiDocument;
         if (uiDocument is null) return;
 
-        lock (RenderLock)
+        lock (renderLock)
         {
             _diameter = value;
-            HasGeometryUpdates = true;
-            HasEffectsUpdates = true;
+            hasGeometryUpdates = true;
+            hasEffectsUpdates = true;
             DisposeBuffers();
 
             uiDocument.UpdateAllOpenViews();
@@ -287,22 +292,21 @@ public sealed class PolylineVisualizationServer : VisualizationServer<GeometryOb
         var uiDocument = Context.ActiveUiDocument;
         if (uiDocument is null) return;
 
-        lock (RenderLock)
+        lock (renderLock)
         {
             _transparency = value;
-            HasEffectsUpdates = true;
+            hasEffectsUpdates = true;
 
             uiDocument.UpdateAllOpenViews();
         }
     }
-
 
     public void UpdateSurfaceVisibility(bool visible)
     {
         var uiDocument = Context.ActiveUiDocument;
         if (uiDocument is null) return;
 
-        lock (RenderLock)
+        lock (renderLock)
         {
             _drawSurface = visible;
             uiDocument.UpdateAllOpenViews();
@@ -314,7 +318,7 @@ public sealed class PolylineVisualizationServer : VisualizationServer<GeometryOb
         var uiDocument = Context.ActiveUiDocument;
         if (uiDocument is null) return;
 
-        lock (RenderLock)
+        lock (renderLock)
         {
             _drawCurve = visible;
             uiDocument.UpdateAllOpenViews();
@@ -326,7 +330,7 @@ public sealed class PolylineVisualizationServer : VisualizationServer<GeometryOb
         var uiDocument = Context.ActiveUiDocument;
         if (uiDocument is null) return;
 
-        lock (RenderLock)
+        lock (renderLock)
         {
             _drawDirection = visible;
             uiDocument.UpdateAllOpenViews();

@@ -41,10 +41,10 @@ public sealed class FaceVisualizationServer : VisualizationServer<Face>
 
     public override Outline? GetBoundingBox(Autodesk.Revit.DB.View view)
     {
-        if (VisualizeGeometries.Count == 0) return null;
+        if (visualizeGeometries.Count == 0) return null;
         List<XYZ> minPoints = [];
         List<XYZ> maxPoints = [];
-        foreach (var face in VisualizeGeometries)
+        foreach (var face in visualizeGeometries)
         {
             if (face.Reference is null) return null;
 
@@ -70,67 +70,73 @@ public sealed class FaceVisualizationServer : VisualizationServer<Face>
         return new Outline(newMinPoint, newMaxPoint);
     }
 
-    // ReSharper disable once CognitiveComplexity
     protected override void RenderScene()
     {
-        if (VisualizeGeometries.Count == 0) return;
+        if (visualizeGeometries.Count == 0) return;
         
-        if (HasGeometryUpdates || _surfaceBuffers.Count == 0 || _meshGridBuffers.Count == 0 || _normalBuffers.Count == 0)
+        if (hasGeometryUpdates || _surfaceBuffers.Count == 0 || _meshGridBuffers.Count == 0 || _normalBuffers.Count == 0)
         {
             MapGeometryBuffer();
-            HasGeometryUpdates = false;
+            hasGeometryUpdates = false;
         }
 
-        if (HasEffectsUpdates)
+        if (hasEffectsUpdates)
         {
             UpdateEffects();
-            HasEffectsUpdates = false;
+            hasEffectsUpdates = false;
         }
 
-        if (_drawSurface && _surfaceBuffers.Count != 0)
-        {
-            var isTransparentPass = DrawContext.IsTransparentPass();
-            if (isTransparentPass && _transparency > 0 || !isTransparentPass && _transparency == 0)
-            {
-                foreach (var surfaceBuffer in _surfaceBuffers)
-                {
-                    DrawContext.FlushBuffer(surfaceBuffer.VertexBuffer,
-                        surfaceBuffer.VertexBufferCount,
-                        surfaceBuffer.IndexBuffer,
-                        surfaceBuffer.IndexBufferCount,
-                        surfaceBuffer.VertexFormat,
-                        surfaceBuffer.EffectInstance, PrimitiveType.TriangleList, 0,
-                        surfaceBuffer.PrimitiveCount);
-                }
-            }
-        }
+        RenderSurfaceBuffers();
+        RenderMeshGridBuffers();
+        RenderNormalBuffers();
+    }
 
-        if (_drawMeshGrid && _meshGridBuffers.Count != 0)
-        {
-            foreach (var meshGridBuffer in _meshGridBuffers)
-            {
-                DrawContext.FlushBuffer(meshGridBuffer.VertexBuffer,
-                    meshGridBuffer.VertexBufferCount,
-                    meshGridBuffer.IndexBuffer,
-                    meshGridBuffer.IndexBufferCount,
-                    meshGridBuffer.VertexFormat,
-                    meshGridBuffer.EffectInstance, PrimitiveType.LineList, 0,
-                    meshGridBuffer.PrimitiveCount);
-            }
-        }
+    private void RenderSurfaceBuffers()
+    {
+        if (!_drawSurface || _surfaceBuffers.Count == 0) return;
+        if (!ShouldRenderTransparentPass(_transparency)) return;
 
-        if (_drawNormalVector && _normalBuffers.Count != 0)
+        foreach (var surfaceBuffer in _surfaceBuffers)
         {
-            foreach (var normalBuffer in _normalBuffers)
-            {
-                DrawContext.FlushBuffer(normalBuffer.VertexBuffer,
-                    normalBuffer.VertexBufferCount,
-                    normalBuffer.IndexBuffer,
-                    normalBuffer.IndexBufferCount,
-                    normalBuffer.VertexFormat,
-                    normalBuffer.EffectInstance, PrimitiveType.LineList, 0,
-                    normalBuffer.PrimitiveCount);
-            }
+            DrawContext.FlushBuffer(surfaceBuffer.VertexBuffer,
+                surfaceBuffer.VertexBufferCount,
+                surfaceBuffer.IndexBuffer,
+                surfaceBuffer.IndexBufferCount,
+                surfaceBuffer.VertexFormat,
+                surfaceBuffer.EffectInstance, PrimitiveType.TriangleList, 0,
+                surfaceBuffer.PrimitiveCount);
+        }
+    }
+
+    private void RenderMeshGridBuffers()
+    {
+        if (!_drawMeshGrid || _meshGridBuffers.Count == 0) return;
+
+        foreach (var meshGridBuffer in _meshGridBuffers)
+        {
+            DrawContext.FlushBuffer(meshGridBuffer.VertexBuffer,
+                meshGridBuffer.VertexBufferCount,
+                meshGridBuffer.IndexBuffer,
+                meshGridBuffer.IndexBufferCount,
+                meshGridBuffer.VertexFormat,
+                meshGridBuffer.EffectInstance, PrimitiveType.LineList, 0,
+                meshGridBuffer.PrimitiveCount);
+        }
+    }
+
+    private void RenderNormalBuffers()
+    {
+        if (!_drawNormalVector || _normalBuffers.Count == 0) return;
+
+        foreach (var normalBuffer in _normalBuffers)
+        {
+            DrawContext.FlushBuffer(normalBuffer.VertexBuffer,
+                normalBuffer.VertexBufferCount,
+                normalBuffer.IndexBuffer,
+                normalBuffer.IndexBufferCount,
+                normalBuffer.VertexFormat,
+                normalBuffer.EffectInstance, PrimitiveType.LineList, 0,
+                normalBuffer.PrimitiveCount);
         }
     }
 
@@ -138,11 +144,11 @@ public sealed class FaceVisualizationServer : VisualizationServer<Face>
     {
         DisposeBuffers();
 
-        if (VisualizeGeometries.Count == 0) return;
+        if (visualizeGeometries.Count == 0) return;
         
         try
         {
-            foreach (var face in VisualizeGeometries)
+            foreach (var face in visualizeGeometries)
             {
                 var mesh = face.Triangulate();
                 var faceBox = face.GetBoundingBox();
@@ -196,10 +202,10 @@ public sealed class FaceVisualizationServer : VisualizationServer<Face>
         var uiDocument = Context.ActiveUiDocument;
         if (uiDocument is null) return;
 
-        lock (RenderLock)
+        lock (renderLock)
         {
             _surfaceColor = value;
-            HasEffectsUpdates = true;
+            hasEffectsUpdates = true;
 
             uiDocument.UpdateAllOpenViews();
         }
@@ -210,10 +216,10 @@ public sealed class FaceVisualizationServer : VisualizationServer<Face>
         var uiDocument = Context.ActiveUiDocument;
         if (uiDocument is null) return;
 
-        lock (RenderLock)
+        lock (renderLock)
         {
             _meshColor = value;
-            HasEffectsUpdates = true;
+            hasEffectsUpdates = true;
 
             uiDocument.UpdateAllOpenViews();
         }
@@ -224,10 +230,10 @@ public sealed class FaceVisualizationServer : VisualizationServer<Face>
         var uiDocument = Context.ActiveUiDocument;
         if (uiDocument is null) return;
 
-        lock (RenderLock)
+        lock (renderLock)
         {
             _normalColor = value;
-            HasEffectsUpdates = true;
+            hasEffectsUpdates = true;
 
             uiDocument.UpdateAllOpenViews();
         }
@@ -238,11 +244,11 @@ public sealed class FaceVisualizationServer : VisualizationServer<Face>
         var uiDocument = Context.ActiveUiDocument;
         if (uiDocument is null) return;
 
-        lock (RenderLock)
+        lock (renderLock)
         {
             _extrusion = value;
-            HasGeometryUpdates = true;
-            HasEffectsUpdates = true;
+            hasGeometryUpdates = true;
+            hasEffectsUpdates = true;
             DisposeBuffers();
 
             uiDocument.UpdateAllOpenViews();
@@ -254,10 +260,10 @@ public sealed class FaceVisualizationServer : VisualizationServer<Face>
         var uiDocument = Context.ActiveUiDocument;
         if (uiDocument is null) return;
 
-        lock (RenderLock)
+        lock (renderLock)
         {
             _transparency = value;
-            HasEffectsUpdates = true;
+            hasEffectsUpdates = true;
 
             uiDocument.UpdateAllOpenViews();
         }
@@ -268,7 +274,7 @@ public sealed class FaceVisualizationServer : VisualizationServer<Face>
         var uiDocument = Context.ActiveUiDocument;
         if (uiDocument is null) return;
 
-        lock (RenderLock)
+        lock (renderLock)
         {
             _drawSurface = visible;
             uiDocument.UpdateAllOpenViews();
@@ -280,7 +286,7 @@ public sealed class FaceVisualizationServer : VisualizationServer<Face>
         var uiDocument = Context.ActiveUiDocument;
         if (uiDocument is null) return;
 
-        lock (RenderLock)
+        lock (renderLock)
         {
             _drawMeshGrid = visible;
             uiDocument.UpdateAllOpenViews();
@@ -292,7 +298,7 @@ public sealed class FaceVisualizationServer : VisualizationServer<Face>
         var uiDocument = Context.ActiveUiDocument;
         if (uiDocument is null) return;
 
-        lock (RenderLock)
+        lock (renderLock)
         {
             _drawNormalVector = visible;
             uiDocument.UpdateAllOpenViews();

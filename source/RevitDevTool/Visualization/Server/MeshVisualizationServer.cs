@@ -47,72 +47,73 @@ public sealed class MeshVisualizationServer : VisualizationServer<Mesh>
         return null;
     }
 
-    // ReSharper disable once CognitiveComplexity
     protected override void RenderScene()
     {
-        if (VisualizeGeometries.Count == 0) return;
+        if (visualizeGeometries.Count == 0) return;
         
-        if (HasGeometryUpdates || _surfaceBuffers.Count == 0 || _meshGridBuffers.Count == 0)
+        if (hasGeometryUpdates || _surfaceBuffers.Count == 0 || _meshGridBuffers.Count == 0)
         {
             MapGeometryBuffer();
-            HasGeometryUpdates = false;
+            hasGeometryUpdates = false;
         }
 
-        if (HasEffectsUpdates)
+        if (hasEffectsUpdates)
         {
             UpdateEffects();
-            HasEffectsUpdates = false;
+            hasEffectsUpdates = false;
         }
 
-        if (_drawSurface && _surfaceBuffers.Count != 0)
+        RenderSurfaceBuffers();
+        RenderMeshGridBuffers();
+        RenderNormalBuffers();
+    }
+
+    private void RenderSurfaceBuffers()
+    {
+        if (!_drawSurface || _surfaceBuffers.Count == 0) return;
+        if (!ShouldRenderTransparentPass(_transparency)) return;
+
+        foreach (var surfaceBuffer in _surfaceBuffers)
         {
-            var isTransparentPass = DrawContext.IsTransparentPass();
-            if (isTransparentPass && _transparency > 0 || !isTransparentPass && _transparency == 0)
-            {
-                foreach (var surfaceBuffer in _surfaceBuffers)
-                {
-                    DrawContext.FlushBuffer(surfaceBuffer.VertexBuffer,
-                        surfaceBuffer.VertexBufferCount,
-                        surfaceBuffer.IndexBuffer,
-                        surfaceBuffer.IndexBufferCount,
-                        surfaceBuffer.VertexFormat,
-                        surfaceBuffer.EffectInstance, PrimitiveType.TriangleList, 0,
-                        surfaceBuffer.PrimitiveCount);
-                }
-            }
+            DrawContext.FlushBuffer(surfaceBuffer.VertexBuffer,
+                surfaceBuffer.VertexBufferCount,
+                surfaceBuffer.IndexBuffer,
+                surfaceBuffer.IndexBufferCount,
+                surfaceBuffer.VertexFormat,
+                surfaceBuffer.EffectInstance, PrimitiveType.TriangleList, 0,
+                surfaceBuffer.PrimitiveCount);
         }
+    }
 
-        if (_drawMeshGrid && _meshGridBuffers.Count != 0)
+    private void RenderMeshGridBuffers()
+    {
+        if (!_drawMeshGrid || _meshGridBuffers.Count == 0) return;
+
+        foreach (var meshGridBuffer in _meshGridBuffers)
         {
-            foreach (var meshGridBuffer in _meshGridBuffers)
-            {
-                DrawContext.FlushBuffer(meshGridBuffer.VertexBuffer,
-                    meshGridBuffer.VertexBufferCount,
-                    meshGridBuffer.IndexBuffer,
-                    meshGridBuffer.IndexBufferCount,
-                    meshGridBuffer.VertexFormat,
-                    meshGridBuffer.EffectInstance, PrimitiveType.LineList, 0,
-                    meshGridBuffer.PrimitiveCount);
-            }
+            DrawContext.FlushBuffer(meshGridBuffer.VertexBuffer,
+                meshGridBuffer.VertexBufferCount,
+                meshGridBuffer.IndexBuffer,
+                meshGridBuffer.IndexBufferCount,
+                meshGridBuffer.VertexFormat,
+                meshGridBuffer.EffectInstance, PrimitiveType.LineList, 0,
+                meshGridBuffer.PrimitiveCount);
         }
+    }
 
-        if (_drawNormalVector)
+    private void RenderNormalBuffers()
+    {
+        if (!_drawNormalVector || _normalBuffers.Count == 0) return;
+
+        foreach (var buffer in _normalBuffers.SelectMany(buffers => buffers))
         {
-            foreach (var buffers in _normalBuffers)
-            {
-                if (!buffers.Any()) continue;
-
-                foreach (var buffer in buffers)
-                {
-                    DrawContext.FlushBuffer(buffer.VertexBuffer,
-                        buffer.VertexBufferCount,
-                        buffer.IndexBuffer,
-                        buffer.IndexBufferCount,
-                        buffer.VertexFormat,
-                        buffer.EffectInstance, PrimitiveType.LineList, 0,
-                        buffer.PrimitiveCount);
-                }
-            }
+            DrawContext.FlushBuffer(buffer.VertexBuffer,
+                buffer.VertexBufferCount,
+                buffer.IndexBuffer,
+                buffer.IndexBufferCount,
+                buffer.VertexFormat,
+                buffer.EffectInstance, PrimitiveType.LineList, 0,
+                buffer.PrimitiveCount);
         }
     }
 
@@ -120,11 +121,11 @@ public sealed class MeshVisualizationServer : VisualizationServer<Mesh>
     {
         DisposeBuffers();
 
-        if (VisualizeGeometries.Count == 0) return;
+        if (visualizeGeometries.Count == 0) return;
         
         try
         {
-            foreach (var visualizeGeometry in VisualizeGeometries)
+            foreach (var visualizeGeometry in visualizeGeometries)
             {
                 var surfaceBuffer = new RenderingBufferStorage();
                 RenderHelper.MapSurfaceBuffer(surfaceBuffer, visualizeGeometry, _extrusion);
@@ -147,7 +148,7 @@ public sealed class MeshVisualizationServer : VisualizationServer<Mesh>
     {
         _normalBuffers.Clear(true);
 
-        foreach (var mesh in VisualizeGeometries)
+        foreach (var mesh in visualizeGeometries)
         {
             var area = RenderGeometryHelper.ComputeMeshSurfaceArea(mesh);
             var offset = RenderGeometryHelper.InterpolateOffsetByArea(area);
@@ -199,10 +200,10 @@ public sealed class MeshVisualizationServer : VisualizationServer<Mesh>
         var uiDocument = Context.ActiveUiDocument;
         if (uiDocument is null) return;
 
-        lock (RenderLock)
+        lock (renderLock)
         {
             _surfaceColor = value;
-            HasEffectsUpdates = true;
+            hasEffectsUpdates = true;
 
             uiDocument.UpdateAllOpenViews();
         }
@@ -213,10 +214,10 @@ public sealed class MeshVisualizationServer : VisualizationServer<Mesh>
         var uiDocument = Context.ActiveUiDocument;
         if (uiDocument is null) return;
 
-        lock (RenderLock)
+        lock (renderLock)
         {
             _meshColor = value;
-            HasEffectsUpdates = true;
+            hasEffectsUpdates = true;
 
             uiDocument.UpdateAllOpenViews();
         }
@@ -227,10 +228,10 @@ public sealed class MeshVisualizationServer : VisualizationServer<Mesh>
         var uiDocument = Context.ActiveUiDocument;
         if (uiDocument is null) return;
 
-        lock (RenderLock)
+        lock (renderLock)
         {
             _normalColor = value;
-            HasEffectsUpdates = true;
+            hasEffectsUpdates = true;
 
             uiDocument.UpdateAllOpenViews();
         }
@@ -241,11 +242,11 @@ public sealed class MeshVisualizationServer : VisualizationServer<Mesh>
         var uiDocument = Context.ActiveUiDocument;
         if (uiDocument is null) return;
 
-        lock (RenderLock)
+        lock (renderLock)
         {
             _extrusion = value;
-            HasGeometryUpdates = true;
-            HasEffectsUpdates = true;
+            hasGeometryUpdates = true;
+            hasEffectsUpdates = true;
             DisposeBuffers();
 
             uiDocument.UpdateAllOpenViews();
@@ -257,10 +258,10 @@ public sealed class MeshVisualizationServer : VisualizationServer<Mesh>
         var uiDocument = Context.ActiveUiDocument;
         if (uiDocument is null) return;
 
-        lock (RenderLock)
+        lock (renderLock)
         {
             _transparency = value;
-            HasEffectsUpdates = true;
+            hasEffectsUpdates = true;
 
             uiDocument.UpdateAllOpenViews();
         }
@@ -272,7 +273,7 @@ public sealed class MeshVisualizationServer : VisualizationServer<Mesh>
         var uiDocument = Context.ActiveUiDocument;
         if (uiDocument is null) return;
 
-        lock (RenderLock)
+        lock (renderLock)
         {
             _drawSurface = visible;
             uiDocument.UpdateAllOpenViews();
@@ -284,7 +285,7 @@ public sealed class MeshVisualizationServer : VisualizationServer<Mesh>
         var uiDocument = Context.ActiveUiDocument;
         if (uiDocument is null) return;
 
-        lock (RenderLock)
+        lock (renderLock)
         {
             _drawMeshGrid = visible;
             uiDocument.UpdateAllOpenViews();
@@ -296,7 +297,7 @@ public sealed class MeshVisualizationServer : VisualizationServer<Mesh>
         var uiDocument = Context.ActiveUiDocument;
         if (uiDocument is null) return;
 
-        lock (RenderLock)
+        lock (renderLock)
         {
             _drawNormalVector = visible;
             uiDocument.UpdateAllOpenViews();

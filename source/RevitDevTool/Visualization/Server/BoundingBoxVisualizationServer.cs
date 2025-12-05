@@ -48,11 +48,11 @@ public sealed class BoundingBoxVisualizationServer : VisualizationServer<Boundin
 
     public override Outline? GetBoundingBox(Autodesk.Revit.DB.View view)
     {
-        if (VisualizeGeometries.Count == 0) return null;
+        if (visualizeGeometries.Count == 0) return null;
 
         var allTransformedPoints = new List<XYZ>();
         
-        foreach (var box in VisualizeGeometries)
+        foreach (var box in visualizeGeometries)
         {
             // Generate all 8 corners in local coordinate system and transform them
             XYZ[] localCorners =
@@ -83,70 +83,73 @@ public sealed class BoundingBoxVisualizationServer : VisualizationServer<Boundin
         return new Outline(new XYZ(minX, minY, minZ), new XYZ(maxX, maxY, maxZ));
     }
 
-    // ReSharper disable once CognitiveComplexity
     protected override void RenderScene()
     {
-        if (VisualizeGeometries.Count == 0) return;
+        if (visualizeGeometries.Count == 0) return;
         
-        if (HasGeometryUpdates || _surfaceBuffers.Count == 0 || _edgeBuffers.Count == 0)
+        if (hasGeometryUpdates || _surfaceBuffers.Count == 0 || _edgeBuffers.Count == 0)
         {
             MapGeometryBuffer();
-            HasGeometryUpdates = false;
+            hasGeometryUpdates = false;
         }
 
-        if (HasEffectsUpdates)
+        if (hasEffectsUpdates)
         {
             UpdateEffects();
-            HasEffectsUpdates = false;
+            hasEffectsUpdates = false;
         }
 
-        if (_drawSurface && _surfaceBuffers.Count != 0)
-        {
-            var isTransparentPass = DrawContext.IsTransparentPass();
-            if (isTransparentPass && _transparency > 0 || !isTransparentPass && _transparency == 0)
-            {
-                foreach (var surfaceBuffer in _surfaceBuffers)
-                {
-                    DrawContext.FlushBuffer(surfaceBuffer.VertexBuffer,
-                        surfaceBuffer.VertexBufferCount,
-                        surfaceBuffer.IndexBuffer,
-                        surfaceBuffer.IndexBufferCount,
-                        surfaceBuffer.VertexFormat,
-                        surfaceBuffer.EffectInstance, PrimitiveType.TriangleList, 0,
-                        surfaceBuffer.PrimitiveCount);
-                }
-            }
-        }
+        RenderSurfaceBuffers();
+        RenderEdgeBuffers();
+        RenderAxisBuffers();
+    }
 
-        if (_drawEdge && _edgeBuffers.Count != 0)
-        {
-            foreach (var edgeBuffer in _edgeBuffers)
-            {
-                DrawContext.FlushBuffer(edgeBuffer.VertexBuffer,
-                    edgeBuffer.VertexBufferCount,
-                    edgeBuffer.IndexBuffer,
-                    edgeBuffer.IndexBufferCount,
-                    edgeBuffer.VertexFormat,
-                    edgeBuffer.EffectInstance, PrimitiveType.LineList, 0,
-                    edgeBuffer.PrimitiveCount);
-            }
-        }
+    private void RenderSurfaceBuffers()
+    {
+        if (!_drawSurface || _surfaceBuffers.Count == 0) return;
+        if (!ShouldRenderTransparentPass(_transparency)) return;
 
-        if (_drawAxis)
+        foreach (var surfaceBuffer in _surfaceBuffers)
         {
-            foreach (var buffer in _axisBuffers)
-            {
-                if (buffer.IsValid())
-                {
-                    DrawContext.FlushBuffer(buffer.VertexBuffer,
-                        buffer.VertexBufferCount,
-                        buffer.IndexBuffer,
-                        buffer.IndexBufferCount,
-                        buffer.VertexFormat,
-                        buffer.EffectInstance, PrimitiveType.LineList, 0,
-                        buffer.PrimitiveCount);
-                }
-            }
+            DrawContext.FlushBuffer(surfaceBuffer.VertexBuffer,
+                surfaceBuffer.VertexBufferCount,
+                surfaceBuffer.IndexBuffer,
+                surfaceBuffer.IndexBufferCount,
+                surfaceBuffer.VertexFormat,
+                surfaceBuffer.EffectInstance, PrimitiveType.TriangleList, 0,
+                surfaceBuffer.PrimitiveCount);
+        }
+    }
+
+    private void RenderEdgeBuffers()
+    {
+        if (!_drawEdge || _edgeBuffers.Count == 0) return;
+
+        foreach (var edgeBuffer in _edgeBuffers)
+        {
+            DrawContext.FlushBuffer(edgeBuffer.VertexBuffer,
+                edgeBuffer.VertexBufferCount,
+                edgeBuffer.IndexBuffer,
+                edgeBuffer.IndexBufferCount,
+                edgeBuffer.VertexFormat,
+                edgeBuffer.EffectInstance, PrimitiveType.LineList, 0,
+                edgeBuffer.PrimitiveCount);
+        }
+    }
+
+    private void RenderAxisBuffers()
+    {
+        if (!_drawAxis) return;
+
+        foreach (var buffer in _axisBuffers.Where(b => b.IsValid()))
+        {
+            DrawContext.FlushBuffer(buffer.VertexBuffer,
+                buffer.VertexBufferCount,
+                buffer.IndexBuffer,
+                buffer.IndexBufferCount,
+                buffer.VertexFormat,
+                buffer.EffectInstance, PrimitiveType.LineList, 0,
+                buffer.PrimitiveCount);
         }
     }
 
@@ -154,11 +157,11 @@ public sealed class BoundingBoxVisualizationServer : VisualizationServer<Boundin
     {
         DisposeBuffers();
 
-        if (VisualizeGeometries.Count == 0) return;
+        if (visualizeGeometries.Count == 0) return;
         
         try
         {
-            foreach (var geometry in VisualizeGeometries)
+            foreach (var geometry in visualizeGeometries)
             {
                 var scaledBox = RenderGeometryHelper.GetScaledBoundingBox(geometry, _scale);
                 var surfaceBuffer = new RenderingBufferStorage();
@@ -227,10 +230,10 @@ public sealed class BoundingBoxVisualizationServer : VisualizationServer<Boundin
         var uiDocument = Context.ActiveUiDocument;
         if (uiDocument is null) return;
 
-        lock (RenderLock)
+        lock (renderLock)
         {
             _surfaceColor = color;
-            HasEffectsUpdates = true;
+            hasEffectsUpdates = true;
 
             uiDocument.UpdateAllOpenViews();
         }
@@ -241,10 +244,10 @@ public sealed class BoundingBoxVisualizationServer : VisualizationServer<Boundin
         var uiDocument = Context.ActiveUiDocument;
         if (uiDocument is null) return;
 
-        lock (RenderLock)
+        lock (renderLock)
         {
             _edgeColor = color;
-            HasEffectsUpdates = true;
+            hasEffectsUpdates = true;
 
             uiDocument.UpdateAllOpenViews();
         }
@@ -255,10 +258,10 @@ public sealed class BoundingBoxVisualizationServer : VisualizationServer<Boundin
         var uiDocument = Context.ActiveUiDocument;
         if (uiDocument is null) return;
 
-        lock (RenderLock)
+        lock (renderLock)
         {
             _axisColor = color;
-            HasEffectsUpdates = true;
+            hasEffectsUpdates = true;
 
             uiDocument.UpdateAllOpenViews();
         }
@@ -269,10 +272,10 @@ public sealed class BoundingBoxVisualizationServer : VisualizationServer<Boundin
         var uiDocument = Context.ActiveUiDocument;
         if (uiDocument is null) return;
 
-        lock (RenderLock)
+        lock (renderLock)
         {
             _transparency = value;
-            HasEffectsUpdates = true;
+            hasEffectsUpdates = true;
 
             uiDocument.UpdateAllOpenViews();
         }
@@ -285,10 +288,10 @@ public sealed class BoundingBoxVisualizationServer : VisualizationServer<Boundin
 
         _scale = value;
         
-        lock (RenderLock)
+        lock (renderLock)
         {
-            HasGeometryUpdates = true;
-            HasEffectsUpdates = true;
+            hasGeometryUpdates = true;
+            hasEffectsUpdates = true;
             DisposeBuffers();
 
             uiDocument.UpdateAllOpenViews();
@@ -300,7 +303,7 @@ public sealed class BoundingBoxVisualizationServer : VisualizationServer<Boundin
         var uiDocument = Context.ActiveUiDocument;
         if (uiDocument is null) return;
 
-        lock (RenderLock)
+        lock (renderLock)
         {
             _drawSurface = visible;
 
@@ -313,7 +316,7 @@ public sealed class BoundingBoxVisualizationServer : VisualizationServer<Boundin
         var uiDocument = Context.ActiveUiDocument;
         if (uiDocument is null) return;
 
-        lock (RenderLock)
+        lock (renderLock)
         {
             _drawEdge = visible;
 
@@ -326,7 +329,7 @@ public sealed class BoundingBoxVisualizationServer : VisualizationServer<Boundin
         var uiDocument = Context.ActiveUiDocument;
         if (uiDocument is null) return;
 
-        lock (RenderLock)
+        lock (renderLock)
         {
             _drawAxis = visible;
 
