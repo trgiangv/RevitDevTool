@@ -52,60 +52,48 @@ public sealed class XyzVisualizationServer : VisualizationServer<XYZ>
 
     public override Outline? GetBoundingBox(Autodesk.Revit.DB.View view)
     {
-        if (VisualizeGeometries.Count == 0) return null;
-        var minPoint = new XYZ(VisualizeGeometries.Min(p => p.X) - _axisLength, VisualizeGeometries.Min(p => p.Y) - _axisLength, VisualizeGeometries.Min(p => p.Z) - _axisLength);
-        var maxPoint = new XYZ(VisualizeGeometries.Max(p => p.X) + _axisLength, VisualizeGeometries.Max(p => p.Y) + _axisLength, VisualizeGeometries.Max(p => p.Z) + _axisLength);
+        if (visualizeGeometries.Count == 0) return null;
+        var minPoint = new XYZ(visualizeGeometries.Min(p => p.X) - _axisLength, visualizeGeometries.Min(p => p.Y) - _axisLength, visualizeGeometries.Min(p => p.Z) - _axisLength);
+        var maxPoint = new XYZ(visualizeGeometries.Max(p => p.X) + _axisLength, visualizeGeometries.Max(p => p.Y) + _axisLength, visualizeGeometries.Max(p => p.Z) + _axisLength);
 
         return new Outline(minPoint, maxPoint);
     }
 
     protected override void RenderScene()
     {
-        if (VisualizeGeometries.Count == 0) return;
+        if (visualizeGeometries.Count == 0) return;
         
-        if (HasGeometryUpdates)
+        if (hasGeometryUpdates)
         {
             MapGeometryBuffer();
-            HasGeometryUpdates = false;
+            hasGeometryUpdates = false;
         }
 
-        if (HasEffectsUpdates)
+        if (hasEffectsUpdates)
         {
             UpdateEffects();
-            HasEffectsUpdates = false;
+            hasEffectsUpdates = false;
         }
 
-        if (_drawXAxis)
-        {
-            var renderAxisBuffers = _axisBufferArrays.Select(axisBufferArray => axisBufferArray[0]).ToArray();
-            var renderPlaneBuffers = _planeBufferArrays.Select(planeBufferArray => planeBufferArray[0]).ToArray();
-            RenderAxisBuffer(renderAxisBuffers);
-            RenderPlaneBuffer(renderPlaneBuffers);
-        }
+        RenderAxisByIndex(0, _drawXAxis);
+        RenderAxisByIndex(1, _drawYAxis);
+        RenderAxisByIndex(2, _drawZAxis);
+    }
 
-        if (_drawYAxis)
-        {
-            var renderAxisBuffers = _axisBufferArrays.Select(axisBufferArray => axisBufferArray[1]).ToArray();
-            var renderPlaneBuffers = _planeBufferArrays.Select(planeBufferArray => planeBufferArray[1]).ToArray();
-            RenderAxisBuffer(renderAxisBuffers);
-            RenderPlaneBuffer(renderPlaneBuffers);
-        }
+    private void RenderAxisByIndex(int index, bool shouldDraw)
+    {
+        if (!shouldDraw) return;
 
-        if (_drawZAxis)
-        {
-            var renderAxisBuffers = _axisBufferArrays.Select(axisBufferArray => axisBufferArray[2]).ToArray();
-            var renderPlaneBuffers = _planeBufferArrays.Select(planeBufferArray => planeBufferArray[2]).ToArray();
-            RenderAxisBuffer(renderAxisBuffers);
-            RenderPlaneBuffer(renderPlaneBuffers);
-        }
+        var renderAxisBuffers = _axisBufferArrays.Select(axisBufferArray => axisBufferArray[index]).ToArray();
+        var renderPlaneBuffers = _planeBufferArrays.Select(planeBufferArray => planeBufferArray[index]).ToArray();
+        RenderAxisBuffer(renderAxisBuffers);
+        RenderPlaneBuffer(renderPlaneBuffers);
     }
 
     private void RenderPlaneBuffer(RenderingBufferStorage[] bufferArray)
     {
         if (!_drawPlane) return;
-
-        var isTransparentPass = DrawContext.IsTransparentPass();
-        if ((!isTransparentPass || !(_transparency > 0)) && (isTransparentPass || _transparency != 0)) return;
+        if (!ShouldRenderTransparentPass(_transparency)) return;
 
         foreach (var buffer in bufferArray)
         {
@@ -139,7 +127,7 @@ public sealed class XyzVisualizationServer : VisualizationServer<XYZ>
     {
         DisposeBuffers();
 
-        if (VisualizeGeometries.Count == 0) return;
+        if (visualizeGeometries.Count == 0) return;
         
         try
         {
@@ -154,10 +142,10 @@ public sealed class XyzVisualizationServer : VisualizationServer<XYZ>
 
     private void MapNormalBuffer()
     {
-        if (VisualizeGeometries.Count == 0) return;
+        if (visualizeGeometries.Count == 0) return;
         
         var normalExtendLength = _axisLength > 1 ? 0.8 : _axisLength * 0.8;
-        foreach (var visualizeGeometry in VisualizeGeometries)
+        foreach (var visualizeGeometry in visualizeGeometries)
         {
             var axisBuffers = Enumerable.Range(0, 3)
                 .Select(_ => new RenderingBufferStorage())
@@ -176,9 +164,9 @@ public sealed class XyzVisualizationServer : VisualizationServer<XYZ>
 
     private void MapPlaneBuffer()
     {
-        if (VisualizeGeometries.Count == 0) return;
+        if (visualizeGeometries.Count == 0) return;
 
-        foreach (var visualizeGeometry in VisualizeGeometries)
+        foreach (var visualizeGeometry in visualizeGeometries)
         {
             var planeBuffers = Enumerable.Range(0, 3)
                 .Select(_ => new RenderingBufferStorage())
@@ -228,10 +216,10 @@ public sealed class XyzVisualizationServer : VisualizationServer<XYZ>
         var uiDocument = Context.ActiveUiDocument;
         if (uiDocument is null) return;
 
-        lock (RenderLock)
+        lock (renderLock)
         {
             _xColor = value;
-            HasEffectsUpdates = true;
+            hasEffectsUpdates = true;
 
             uiDocument.UpdateAllOpenViews();
         }
@@ -242,10 +230,10 @@ public sealed class XyzVisualizationServer : VisualizationServer<XYZ>
         var uiDocument = Context.ActiveUiDocument;
         if (uiDocument is null) return;
 
-        lock (RenderLock)
+        lock (renderLock)
         {
             _yColor = value;
-            HasEffectsUpdates = true;
+            hasEffectsUpdates = true;
 
             uiDocument.UpdateAllOpenViews();
         }
@@ -256,10 +244,10 @@ public sealed class XyzVisualizationServer : VisualizationServer<XYZ>
         var uiDocument = Context.ActiveUiDocument;
         if (uiDocument is null) return;
 
-        lock (RenderLock)
+        lock (renderLock)
         {
             _zColor = value;
-            HasEffectsUpdates = true;
+            hasEffectsUpdates = true;
 
             uiDocument.UpdateAllOpenViews();
         }
@@ -270,11 +258,11 @@ public sealed class XyzVisualizationServer : VisualizationServer<XYZ>
         var uiDocument = Context.ActiveUiDocument;
         if (uiDocument is null) return;
 
-        lock (RenderLock)
+        lock (renderLock)
         {
             _axisLength = value;
-            HasGeometryUpdates = true;
-            HasEffectsUpdates = true;
+            hasGeometryUpdates = true;
+            hasEffectsUpdates = true;
             DisposeBuffers();
 
             uiDocument.UpdateAllOpenViews();
@@ -286,10 +274,10 @@ public sealed class XyzVisualizationServer : VisualizationServer<XYZ>
         var uiDocument = Context.ActiveUiDocument;
         if (uiDocument is null) return;
 
-        lock (RenderLock)
+        lock (renderLock)
         {
             _transparency = value;
-            HasEffectsUpdates = true;
+            hasEffectsUpdates = true;
 
             uiDocument.UpdateAllOpenViews();
         }
@@ -300,7 +288,7 @@ public sealed class XyzVisualizationServer : VisualizationServer<XYZ>
         var uiDocument = Context.ActiveUiDocument;
         if (uiDocument is null) return;
 
-        lock (RenderLock)
+        lock (renderLock)
         {
             _drawPlane = visible;
             uiDocument.UpdateAllOpenViews();
@@ -312,7 +300,7 @@ public sealed class XyzVisualizationServer : VisualizationServer<XYZ>
         var uiDocument = Context.ActiveUiDocument;
         if (uiDocument is null) return;
 
-        lock (RenderLock)
+        lock (renderLock)
         {
             _drawXAxis = visible;
             uiDocument.UpdateAllOpenViews();
@@ -324,7 +312,7 @@ public sealed class XyzVisualizationServer : VisualizationServer<XYZ>
         var uiDocument = Context.ActiveUiDocument;
         if (uiDocument is null) return;
 
-        lock (RenderLock)
+        lock (renderLock)
         {
             _drawYAxis = visible;
             uiDocument.UpdateAllOpenViews();
@@ -336,7 +324,7 @@ public sealed class XyzVisualizationServer : VisualizationServer<XYZ>
         var uiDocument = Context.ActiveUiDocument;
         if (uiDocument is null) return;
 
-        lock (RenderLock)
+        lock (renderLock)
         {
             _drawZAxis = visible;
             uiDocument.UpdateAllOpenViews();

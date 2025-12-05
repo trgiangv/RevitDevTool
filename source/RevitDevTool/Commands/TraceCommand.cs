@@ -40,44 +40,55 @@ public class TraceCommand : ExternalCommand
     
     public static void RegisterDockablePane(UIControlledApplication application)
     {
+        var frameworkElement = new TraceLog();
+        RegisterPane(application, frameworkElement);
+        SubscribeEvents(application, frameworkElement);
+    }
+
+    private static void RegisterPane(UIControlledApplication application, TraceLog frameworkElement)
+    {
         DockablePaneProvider
             .Register(application, new Guid(Guid), CommandName)
             .SetConfiguration(data =>
             {
-                var frameworkElement = new TraceLog();
                 data.FrameworkElement = frameworkElement;
-                data.InitialState = new DockablePaneState
-                {
-                    MinimumWidth = 500,
-                    MinimumHeight = 400,
-                    DockPosition = DockPosition.Right,
-                    TabBehind = DockablePanes.BuiltInDockablePanes.PropertiesPalette
-                };
-                
-                application.DockableFrameVisibilityChanged += (_, args) =>
-                {
-                    if (args.PaneId != PaneId) return;
-
-                    if (frameworkElement.DataContext is not TraceLogViewModel vm) return;
-                    
-                    if (args.DockableFrameShown)
-                        vm.Subcribe();
-                    else
-                        vm.Dispose();
-                };
+                data.InitialState = CreateInitialState();
             });
-        
-        application.ControlledApplication.DocumentOpened += (_, _) =>
+    }
+
+    private static DockablePaneState CreateInitialState()
+    {
+        return new DockablePaneState
         {
-            var dockableWindow = application.GetDockablePane(PaneId);
-            if (IsForceHide)
-            {
-                dockableWindow.Hide();
-            }
-            else if (!dockableWindow.IsShown() && !IsForceHide)
-            {
-                dockableWindow.Show();
-            }
+            MinimumWidth = 500,
+            MinimumHeight = 400,
+            DockPosition = DockPosition.Right,
+            TabBehind = DockablePanes.BuiltInDockablePanes.PropertiesPalette
         };
+    }
+
+    private static void SubscribeEvents(UIControlledApplication application, TraceLog frameworkElement)
+    {
+        application.DockableFrameVisibilityChanged += (_, args) =>
+        {
+            if (args.PaneId != PaneId) return;
+            if (frameworkElement.DataContext is not TraceLogViewModel vm) return;
+
+            if (args.DockableFrameShown)
+                vm.Subcribe();
+            else
+                vm.Dispose();
+        };
+        application.ControlledApplication.DocumentOpened += (_, _) => OnDocumentOpened(application);
+    }
+
+    private static void OnDocumentOpened(UIControlledApplication application)
+    {
+        var dockableWindow = application.GetDockablePane(PaneId);
+        
+        if (IsForceHide)
+            dockableWindow.Hide();
+        else if (!dockableWindow.IsShown())
+            dockableWindow.Show();
     }
 }

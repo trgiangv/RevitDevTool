@@ -37,11 +37,11 @@ public sealed class SolidVisualizationServer : VisualizationServer<Solid>
 
     public override Outline? GetBoundingBox(Autodesk.Revit.DB.View view)
     {
-        if (VisualizeGeometries.Count == 0) return null;
+        if (visualizeGeometries.Count == 0) return null;
         List<XYZ> minPoints = [];
         List<XYZ> maxPoints = [];
         
-        foreach (var solid in VisualizeGeometries)
+        foreach (var solid in visualizeGeometries)
         {
             if (solid.Volume == 0)
             {
@@ -71,51 +71,54 @@ public sealed class SolidVisualizationServer : VisualizationServer<Solid>
         return new Outline(newMinPoint, newMaxPoint);
     }
 
-    // ReSharper disable once CognitiveComplexity
     protected override void RenderScene()
     {
-        if (HasGeometryUpdates || _faceBuffers.Count == 0 || _edgeBuffers.Count == 0)
+        if (hasGeometryUpdates || _faceBuffers.Count == 0 || _edgeBuffers.Count == 0)
         {
             MapGeometryBuffer();
-            HasGeometryUpdates = false;
+            hasGeometryUpdates = false;
         }
 
-        if (HasEffectsUpdates)
+        if (hasEffectsUpdates)
         {
             UpdateEffects();
-            HasEffectsUpdates = false;
+            hasEffectsUpdates = false;
         }
 
-        if (_drawFace)
-        {
-            var isTransparentPass = DrawContext.IsTransparentPass();
-            if (isTransparentPass && _transparency > 0 || !isTransparentPass && _transparency == 0)
-            {
-                foreach (var buffer in _faceBuffers)
-                {
-                    DrawContext.FlushBuffer(buffer.VertexBuffer,
-                        buffer.VertexBufferCount,
-                        buffer.IndexBuffer,
-                        buffer.IndexBufferCount,
-                        buffer.VertexFormat,
-                        buffer.EffectInstance, PrimitiveType.TriangleList, 0,
-                        buffer.PrimitiveCount);
-                }
-            }
-        }
+        RenderFaceBuffers();
+        RenderEdgeBuffers();
+    }
 
-        if (_drawEdge)
+    private void RenderFaceBuffers()
+    {
+        if (!_drawFace || _faceBuffers.Count == 0) return;
+        if (!ShouldRenderTransparentPass(_transparency)) return;
+
+        foreach (var buffer in _faceBuffers)
         {
-            foreach (var buffer in _edgeBuffers)
-            {
-                DrawContext.FlushBuffer(buffer.VertexBuffer,
-                    buffer.VertexBufferCount,
-                    buffer.IndexBuffer,
-                    buffer.IndexBufferCount,
-                    buffer.VertexFormat,
-                    buffer.EffectInstance, PrimitiveType.LineList, 0,
-                    buffer.PrimitiveCount);
-            }
+            DrawContext.FlushBuffer(buffer.VertexBuffer,
+                buffer.VertexBufferCount,
+                buffer.IndexBuffer,
+                buffer.IndexBufferCount,
+                buffer.VertexFormat,
+                buffer.EffectInstance, PrimitiveType.TriangleList, 0,
+                buffer.PrimitiveCount);
+        }
+    }
+
+    private void RenderEdgeBuffers()
+    {
+        if (!_drawEdge || _edgeBuffers.Count == 0) return;
+
+        foreach (var buffer in _edgeBuffers)
+        {
+            DrawContext.FlushBuffer(buffer.VertexBuffer,
+                buffer.VertexBufferCount,
+                buffer.IndexBuffer,
+                buffer.IndexBufferCount,
+                buffer.VertexFormat,
+                buffer.EffectInstance, PrimitiveType.LineList, 0,
+                buffer.PrimitiveCount);
         }
     }
 
@@ -123,7 +126,7 @@ public sealed class SolidVisualizationServer : VisualizationServer<Solid>
     {
         DisposeBuffers();
 
-        foreach (var solid in VisualizeGeometries)
+        foreach (var solid in visualizeGeometries)
         {
             if (solid.Volume == 0) continue;
             var scaledSolid = RenderGeometryHelper.ScaleSolid(solid, _scale);
@@ -156,7 +159,7 @@ public sealed class SolidVisualizationServer : VisualizationServer<Solid>
         RenderHelper.MapCurveBuffer(buffer, mesh);
     }
 
-    public void UpdateEffects()
+    private void UpdateEffects()
     {
         foreach (var buffer in _faceBuffers)
         {
@@ -177,10 +180,10 @@ public sealed class SolidVisualizationServer : VisualizationServer<Solid>
         var uiDocument = Context.ActiveUiDocument;
         if (uiDocument is null) return;
 
-        lock (RenderLock)
+        lock (renderLock)
         {
             _faceColor = value;
-            HasEffectsUpdates = true;
+            hasEffectsUpdates = true;
 
             uiDocument.UpdateAllOpenViews();
         }
@@ -191,10 +194,10 @@ public sealed class SolidVisualizationServer : VisualizationServer<Solid>
         var uiDocument = Context.ActiveUiDocument;
         if (uiDocument is null) return;
 
-        lock (RenderLock)
+        lock (renderLock)
         {
             _edgeColor = value;
-            HasEffectsUpdates = true;
+            hasEffectsUpdates = true;
 
             uiDocument.UpdateAllOpenViews();
         }
@@ -205,10 +208,10 @@ public sealed class SolidVisualizationServer : VisualizationServer<Solid>
         var uiDocument = Context.ActiveUiDocument;
         if (uiDocument is null) return;
 
-        lock (RenderLock)
+        lock (renderLock)
         {
             _transparency = value;
-            HasEffectsUpdates = true;
+            hasEffectsUpdates = true;
 
             uiDocument.UpdateAllOpenViews();
         }
@@ -221,10 +224,10 @@ public sealed class SolidVisualizationServer : VisualizationServer<Solid>
 
         _scale = value;
 
-        lock (RenderLock)
+        lock (renderLock)
         {
-            HasGeometryUpdates = true;
-            HasEffectsUpdates = true;
+            hasGeometryUpdates = true;
+            hasEffectsUpdates = true;
             DisposeBuffers();
 
             uiDocument.UpdateAllOpenViews();
@@ -236,7 +239,7 @@ public sealed class SolidVisualizationServer : VisualizationServer<Solid>
         var uiDocument = Context.ActiveUiDocument;
         if (uiDocument is null) return;
 
-        lock (RenderLock)
+        lock (renderLock)
         {
             _drawFace = value;
 
@@ -249,7 +252,7 @@ public sealed class SolidVisualizationServer : VisualizationServer<Solid>
         var uiDocument = Context.ActiveUiDocument;
         if (uiDocument is null) return;
 
-        lock (RenderLock)
+        lock (renderLock)
         {
             _drawEdge = value;
 
