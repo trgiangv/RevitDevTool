@@ -1,5 +1,5 @@
 ﻿<Page
-    x:Class="RevitDevTool.View.TraceLog"
+    x:Class="RevitDevTool.View.TraceLogPage"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
@@ -42,11 +42,13 @@
                 DockPanel.Dock="Right"
                 Orientation="Horizontal">
                 <ui:Button
+                    Height="{Binding ElementName=ClearLogButton, Path=ActualHeight}"
                     Margin="0,0,5,0"
                     Command="{Binding OpenSettingsCommand}"
                     Icon="{ui:SymbolIcon Settings32}"
                     ToolTip="Open Settings" />
                 <ui:Button
+                    x:Name="ClearLogButton"
                     Command="{Binding ClearCommand}"
                     Content="ClearLog"
                     Icon="{ui:SymbolIcon TextClearFormatting16}"

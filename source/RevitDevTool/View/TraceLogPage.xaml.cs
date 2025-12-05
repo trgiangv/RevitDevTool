@@ -3,12 +3,12 @@ using RevitDevTool.ViewModel;
 
 namespace RevitDevTool.View;
 
-public partial class TraceLog
+public partial class TraceLogPage
 {
-    public TraceLog()
+    internal TraceLogPage(TraceLogViewModel viewModel)
     {
         ThemeWatcher.Instance.Watch(this);
         InitializeComponent();
-        DataContext = new TraceLogViewModel();
+        DataContext = viewModel;
     }
 }
