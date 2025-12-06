@@ -65,6 +65,10 @@
         <PackageReference Include="PolySharp" Version="*" PrivateAssets="All" IncludeAssets="runtime; build; native; contentfiles; analyzers; buildtransitive" />
         <PackageReference Include="ILRepack" Version="2.0.41" />
         <PackageReference Include="System.Text.Json" Version="8.0.6" Condition="$(DefineConstants.Contains('NETFRAMEWORK'))" />
+
+        <!-- FileSystem net48 -->
+        <PackageReference Include="Microsoft-WindowsAPICodePack-Core" Version="1.1.5" Condition="!$(DefineConstants.Contains('NETCORE'))"/>
+        <PackageReference Include="Microsoft-WindowsAPICodePack-Shell" Version="1.1.5" Condition="!$(DefineConstants.Contains('NETCORE'))"/>
     </ItemGroup>
 
     <ItemGroup>

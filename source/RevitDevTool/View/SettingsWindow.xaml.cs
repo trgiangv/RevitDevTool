@@ -12,13 +12,24 @@ namespace RevitDevTool.View ;
 public partial class SettingsWindow
 {
     public NavigationService NavigationService { get ; private set ; } = null! ;
+    public ContentDialogService ContentDialogService { get; private set; } = null!;
+    
+    public static SettingsWindow? Instance { get; private set; }
     
     public SettingsWindow()
     {
+        Instance = this;
         ThemeWatcher.Instance.Watch(this);
         InitializeComponent() ;
         NavigationSetup();
+        ContentDialogSetup();
         FixComponentsTheme();
+        Closed += OnClosed;
+    }
+
+    private static void OnClosed(object? sender, EventArgs e)
+    {
+        Instance = null;
     }
 
     private void NavigationSetup()
@@ -27,6 +38,12 @@ public partial class SettingsWindow
         var navService = new NavigationService(pageProvider);
         navService.SetNavigationControl(RootNavigation);
         NavigationService = navService;
+    }
+    
+    private void ContentDialogSetup()
+    {
+        ContentDialogService = new ContentDialogService();
+        ContentDialogService.SetDialogHost(RootContentDialogPresenter);
     }
     
     private void FixComponentsTheme()

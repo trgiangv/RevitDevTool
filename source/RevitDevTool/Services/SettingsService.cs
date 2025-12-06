@@ -114,7 +114,8 @@ public sealed class SettingsService : ISettingsService
 #else
             Theme = ApplicationTheme.Light,
 #endif
-            UseHardwareRendering = true
+            UseHardwareRendering = true,
+            LogConfig = new LogConfig()
         };
     }
 
