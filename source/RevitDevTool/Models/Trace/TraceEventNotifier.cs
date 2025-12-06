@@ -1,24 +1,37 @@
 using System.Diagnostics;
+using Autodesk.Windows;
 
 namespace RevitDevTool.Models.Trace;
 
 /// <summary>
 /// A TraceListener that raises an event whenever a trace message is received.
 /// Used to trigger actions like showing the floating TraceLog window.
-/// The event is raised only once per trace operation (not for each Write/WriteLine call).
+/// Only responds to trace events when Revit is fully initialized and ready.
 /// </summary>
 internal class TraceEventNotifier : TraceListener
 {
     /// <summary>
-    /// Event raised when any trace output is received.
+    /// Event raised when any trace output is received (only when Revit is active).
     /// </summary>
     public static event Action? TraceReceived;
 
     public override bool IsThreadSafe => true;
     
+    /// <summary>
+    /// Checks if we should respond to trace events.
+    /// Only responds when Revit application frame is enabled.
+    /// </summary>
+    private static bool ShouldRespondToTraceEvent()
+    {
+        return ComponentManager.IsApplicationFrameEnabled;
+    }
+    
     private static void RaiseTraceReceived()
     {
-        TraceReceived?.Invoke();
+        if (ShouldRespondToTraceEvent())
+        {
+            TraceReceived?.Invoke();
+        }
     }
 
     public override void Write(string? message)

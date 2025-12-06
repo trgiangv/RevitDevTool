@@ -1,7 +1,6 @@
 ﻿using Autodesk.Revit.Attributes;
 using Autodesk.Revit.DB.Events;
 using Autodesk.Revit.UI;
-using Autodesk.Windows;
 using Nice3point.Revit.Toolkit.Decorators;
 using Nice3point.Revit.Toolkit.External;
 using RevitDevTool.Models.Trace;
@@ -15,10 +14,10 @@ namespace RevitDevTool.Commands;
 [Transaction(TransactionMode.Manual)]
 public class TraceCommand : ExternalCommand
 {
-    private const string CommandName = "TraceLog";
+    public const string CommandName = "TraceLog";
     private const string Guid = "43AE2B41-0BE6-425A-B27A-724B2CE17351";
     private static readonly Action TraceReceivedHandler = OnTraceReceived;
-    private static DockablePaneId PaneId { get; } = new(new Guid(Guid));
+    private static readonly DockablePaneId PaneId = new(new Guid(Guid));
     private static bool IsForceHide { get; set; }
     private static TraceLogViewModel? SharedViewModel { get; set; }
     public static TraceLogWindow? FloatingWindow { get; private set; }
@@ -162,26 +161,18 @@ public class TraceCommand : ExternalCommand
     {
         if (FloatingWindow != null) return;
         if (SharedViewModel is null) return;
-        
-        ComponentManager.Ribbon.Dispatcher.Invoke(() =>
-        {
-            FloatingWindow = new TraceLogWindow(SharedViewModel);
-            FloatingWindow.Closed += OnFloatingWindowClosed;
-            FloatingWindow.SetAutodeskOwner();
-            FloatingWindow.Show();
-        });
+        FloatingWindow = new TraceLogWindow(SharedViewModel);
+        FloatingWindow.Closed += OnFloatingWindowClosed;
+        FloatingWindow.SetAutodeskOwner();
+        FloatingWindow.Show();
     }
     
     private static void CloseFloatingWindow()
     {
         if (FloatingWindow is null) return;
-        
-        ComponentManager.Ribbon.Dispatcher.Invoke(() =>
-        {
-            FloatingWindow.Closed -= OnFloatingWindowClosed;
-            FloatingWindow.Close();
-            FloatingWindow = null;
-        });
+        FloatingWindow.Closed -= OnFloatingWindowClosed;
+        FloatingWindow.Close();
+        FloatingWindow = null;
     }
     
     private static void OnFloatingWindowClosed(object? sender, EventArgs e)

@@ -7,9 +7,18 @@
     xmlns:settings="clr-namespace:RevitDevTool.ViewModel.Settings"
     xmlns:ui="http://revitdevtool.com/xaml"
     d:DataContext="{d:DesignInstance settings:GeneralSettingsViewModel}"
-    d:DesignHeight="300"
-    d:DesignWidth="300"
+    d:DesignHeight="600"
+    d:DesignWidth="600"
     mc:Ignorable="d">
+
+    <!-- <FrameworkElement.Resources> -->
+    <!--     <ResourceDictionary> -->
+    <!--         <ResourceDictionary.MergedDictionaries> -->
+    <!--             <ui:ThemesDictionary Theme="Light" /> -->
+    <!--             <ui:ControlsDictionary /> -->
+    <!--         </ResourceDictionary.MergedDictionaries> -->
+    <!--     </ResourceDictionary> -->
+    <!-- </FrameworkElement.Resources> -->
 
     <StackPanel Margin="12">
         <StackPanel>
@@ -48,6 +57,21 @@
             </ui:CardControl.Header>
             <ui:ToggleSwitch IsChecked="{Binding UseHardwareRendering}" />
         </ui:CardControl>
+        <ui:CardAction
+            Margin="0,4,0,0"
+            Command="{Binding SaveLogSettingsCommand}"
+            Icon="{ui:SymbolIcon DocumentTextClock24}">
+            <ui:CardAction.Content>
+                <StackPanel>
+                    <ui:TextBlock Text="Save log" />
+                    <ui:TextBlock
+                        Appearance="Secondary"
+                        FontTypography="Caption"
+                        Text="automatically save log entries to an external file"
+                        TextTrimming="CharacterEllipsis" />
+                </StackPanel>
+            </ui:CardAction.Content>
+        </ui:CardAction>
         <ui:CardAction
             Margin="0,4,0,0"
             Command="{Binding ResetSettingsCommand}"

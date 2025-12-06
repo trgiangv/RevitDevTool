@@ -8,15 +8,25 @@
     xmlns:ui="http://revitdevtool.com/xaml"
     Title="Settings"
     Width="650"
-    Height="450"
+    Height="650"
     ui:Design.Background="{DynamicResource ApplicationBackgroundBrush}"
     ui:Design.Foreground="{DynamicResource TextFillColorPrimaryBrush}"
     ExtendsContentIntoTitleBar="True"
     Foreground="{DynamicResource TextFillColorPrimaryBrush}"
+    ShowInTaskbar="False"
     WindowBackdropType="Mica"
     WindowCornerPreference="Round"
     WindowStartupLocation="CenterOwner"
     mc:Ignorable="d">
+
+    <!-- <FrameworkElement.Resources> -->
+    <!--     <ResourceDictionary> -->
+    <!--         <ResourceDictionary.MergedDictionaries> -->
+    <!--             <ui:ThemesDictionary Theme="Light" /> -->
+    <!--             <ui:ControlsDictionary /> -->
+    <!--         </ResourceDictionary.MergedDictionaries> -->
+    <!--     </ResourceDictionary> -->
+    <!-- </FrameworkElement.Resources> -->
 
     <Grid>
         <ui:TitleBar
@@ -80,5 +90,6 @@
                 </ui:BreadcrumbBar>
             </ui:NavigationView.Header>
         </ui:NavigationView>
+        <ContentPresenter x:Name="RootContentDialogPresenter" />
     </Grid>
 </ui:FluentWindow>
