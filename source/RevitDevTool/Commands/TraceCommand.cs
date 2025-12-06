@@ -16,7 +16,7 @@ public class TraceCommand : ExternalCommand
 {
     public const string CommandName = "TraceLog";
     private const string Guid = "43AE2B41-0BE6-425A-B27A-724B2CE17351";
-    private static readonly Action TraceReceivedHandler = OnTraceReceived;
+    public static readonly Action TraceReceivedHandler = OnTraceReceived;
     private static readonly DockablePaneId PaneId = new(new Guid(Guid));
     private static bool IsForceHide { get; set; }
     private static TraceLogViewModel? SharedViewModel { get; set; }
@@ -119,21 +119,13 @@ public class TraceCommand : ExternalCommand
     {
         TraceEventNotifier.TraceReceived -= TraceReceivedHandler;
         
-        if (HasDocumentOpend)
-        {
-            return;
-        }
-        
+        if (HasDocumentOpend)  return;
         if (SharedViewModel is not { IsStarted: true })
         {
             TraceEventNotifier.TraceReceived += TraceReceivedHandler;
             return;
         }
-        
-        if (FloatingWindow != null)
-        {
-            return;
-        }
+        if (FloatingWindow != null) return; 
         
         SharedViewModel.Subcribe();
         ShowFloatingWindow();

@@ -3,6 +3,7 @@ using System.Windows.Media ;
 using Autodesk.Revit.UI;
 using Nice3point.Revit.Toolkit.External;
 using RevitDevTool.Commands;
+using RevitDevTool.Models.Trace;
 using RevitDevTool.Services ;
 using RevitDevTool.Theme ;
 
@@ -23,6 +24,7 @@ public class Application : ExternalApplication
     
     public override void OnShutdown()
     {
+        TraceEventNotifier.TraceReceived -= TraceCommand.TraceReceivedHandler;
         SettingsService.Instance.SaveSettings();
         VisualizationController.Stop();
     }
