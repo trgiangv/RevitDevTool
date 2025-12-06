@@ -4,6 +4,7 @@
 // All Rights Reserved.
 
 using System.Windows.Shell;
+using Wpf.Ui.Appearance;
 using Wpf.Ui.Interop;
 
 // ReSharper disable once CheckNamespace
@@ -82,6 +83,23 @@ public class FluentWindow : System.Windows.Window
     public FluentWindow()
     {
         SetResourceReference(StyleProperty, typeof(FluentWindow));
+        ApplicationThemeManager.Changed += OnThemeChanged;
+    }
+    
+    private void OnThemeChanged(ApplicationTheme theme, Color accent)
+    {
+        Dispatcher.BeginInvoke(new Action(() =>
+        {
+            Style = null;
+            SetResourceReference(StyleProperty, typeof(FluentWindow));
+            OnExtendsContentIntoTitleBarChanged(false, ExtendsContentIntoTitleBar);
+        }), System.Windows.Threading.DispatcherPriority.Render);
+    }
+
+    protected override void OnClosed(EventArgs e)
+    {
+        ApplicationThemeManager.Changed -= OnThemeChanged;
+        base.OnClosed(e);
     }
 
     /// <summary>
@@ -239,7 +257,7 @@ public class FluentWindow : System.Windows.Window
             {
                 CaptionHeight = 0,
                 CornerRadius = default,
-                GlassFrameThickness = new Thickness(-1),
+                GlassFrameThickness = new Thickness(0),
                 ResizeBorderThickness = ResizeMode == ResizeMode.NoResize ? default : new Thickness(4),
                 UseAeroCaptionButtons = false,
             }
