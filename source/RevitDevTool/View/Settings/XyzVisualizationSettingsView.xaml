@@ -12,6 +12,15 @@
     d:DesignWidth="600"
     mc:Ignorable="d">
 
+    <!-- <FrameworkElement.Resources> -->
+    <!--     <ResourceDictionary> -->
+    <!--         <ResourceDictionary.MergedDictionaries> -->
+    <!--             <ui:ThemesDictionary Theme="Light" /> -->
+    <!--             <ui:ControlsDictionary /> -->
+    <!--         </ResourceDictionary.MergedDictionaries> -->
+    <!--     </ResourceDictionary> -->
+    <!-- </FrameworkElement.Resources> -->
+
     <StackPanel Margin="20">
         <CheckBox
             Content="Planes"

@@ -127,6 +127,7 @@ internal partial class TraceLogViewModel : ObservableObject, IDisposable
     private void ApplyTextBoxTheme()
     {
         var isDark = _currentTheme == ApplicationTheme.Dark;
+        
         _winFormsTextBox.BackColor = isDark ? System.Drawing.Color.FromArgb(30, 30, 30) : System.Drawing.Color.FromArgb(250, 250, 250);
 
         Win32DarkMode.SetImmersiveDarkMode(_winFormsTextBox.Handle, isDark);
