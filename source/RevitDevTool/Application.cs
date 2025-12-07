@@ -1,4 +1,5 @@
-﻿using System.Windows.Interop ;
+﻿using System.Reflection;
+using System.Windows.Interop ;
 using System.Windows.Media ;
 using Autodesk.Revit.UI;
 using Nice3point.Revit.Toolkit.External;
@@ -6,6 +7,7 @@ using RevitDevTool.Commands;
 using RevitDevTool.Models.Trace;
 using RevitDevTool.Services ;
 using RevitDevTool.Theme ;
+using RevitDevTool.ViewModel;
 
 namespace RevitDevTool;
 
@@ -25,6 +27,7 @@ public class Application : ExternalApplication
     public override void OnShutdown()
     {
         TraceEventNotifier.TraceReceived -= TraceCommand.TraceReceivedHandler;
+        TraceCommand.SharedViewModel?.IsStarted = false;
         SettingsService.Instance.SaveSettings();
         VisualizationController.Stop();
     }

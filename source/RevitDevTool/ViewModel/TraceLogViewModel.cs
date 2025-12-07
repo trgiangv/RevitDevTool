@@ -1,17 +1,18 @@
 ﻿using System.Diagnostics;
-using System.Globalization;
-using Serilog;
 using Serilog.Core;
 using Serilog.Events;
 using System.Windows.Forms.Integration;
 using Autodesk.Revit.UI.Events;
 using RevitDevTool.Commands;
 using RevitDevTool.Models.Trace;
+using RevitDevTool.Services;
 using RevitDevTool.Theme;
+using RevitDevTool.Utils;
 using RevitDevTool.View.Settings;
 using ricaun.Revit.UI;
 using Serilog.Sinks.RichTextBoxForms;
 using Wpf.Ui.Appearance;
+using Color = System.Windows.Media.Color;
 using FontStyle = System.Drawing.FontStyle;
 
 namespace RevitDevTool.ViewModel;
@@ -22,6 +23,7 @@ internal partial class TraceLogViewModel : ObservableObject, IDisposable
     private readonly LoggingLevelSwitch _levelSwitch;
     private readonly ThemeChangedEvent _onThemeChangedHandler;
     private readonly EventHandler<IdlingEventArgs> _onIdlingHandler;
+    private readonly Action _onSettingsChangedHandler;
 
     private RichTextBoxSink? _sink;
     private Logger? _logger;
@@ -41,7 +43,7 @@ internal partial class TraceLogViewModel : ObservableObject, IDisposable
     [ObservableProperty]
     private bool _isStarted = true;
 
-    private bool _isSubcribe;
+    private bool _isSubscribe;
     private bool _isClearing;
 
     [ObservableProperty]
@@ -57,6 +59,8 @@ internal partial class TraceLogViewModel : ObservableObject, IDisposable
         if (value) StartTracing();
         else StopTracing();
     }
+
+    #region Tracing Management
 
     private void StartTracing()
     {
@@ -76,11 +80,11 @@ internal partial class TraceLogViewModel : ObservableObject, IDisposable
     private void InitializeLogger()
     {
         var textTheme = _currentTheme == ApplicationTheme.Dark ? AdaptiveThemePresets.EnhancedDark : AdaptiveThemePresets.EnhancedLight;
-
-        var loggerConfig = new LoggerConfiguration().MinimumLevel.ControlledBy(_levelSwitch).WriteTo.RichTextBox(_winFormsTextBox, out _sink, maxLogLines: int.MaxValue, formatProvider: CultureInfo.InvariantCulture, theme: textTheme, autoScroll: true);
+        var logConfig = SettingsService.Instance.LogConfig;
+        var loggerConfig = LoggerConfigUtils.BuildLoggerConfiguration(_levelSwitch, _winFormsTextBox, textTheme, logConfig, out _sink);
 
         _logger ??= loggerConfig.CreateLogger();
-        _traceListener ??= new SerilogTraceListener(_logger);
+        _traceListener ??= new SerilogTraceListener(_logger, logConfig.IncludeStackTrace, logConfig.StackTraceDepth);
         _geometryListener ??= new TraceGeometry.TraceGeometryListener();
         _traceEventNotifier ??= new TraceEventNotifier();
     }
@@ -124,19 +128,25 @@ internal partial class TraceLogViewModel : ObservableObject, IDisposable
             Trace.Listeners.Remove(_traceEventNotifier);
     }
 
+    private void RestartLogging()
+    {
+        UnregisterTraceListeners();
+        DisposeLogger();
+        InitializeLogger();
+        RegisterTraceListeners();
+    }
+
+    #endregion
+
+    #region Theme Management
+
     private void ApplyTextBoxTheme()
     {
         var isDark = _currentTheme == ApplicationTheme.Dark;
         
         _winFormsTextBox.BackColor = isDark ? System.Drawing.Color.FromArgb(30, 30, 30) : System.Drawing.Color.FromArgb(250, 250, 250);
 
-        Win32DarkMode.SetImmersiveDarkMode(_winFormsTextBox.Handle, isDark);
-    }
-
-    private void OnThemeChanged(ApplicationTheme theme, System.Windows.Media.Color accent)
-    {
-        if (_currentTheme == theme) return;
-        UpdateTheme(theme, IsStarted);
+        Win32Utils.SetImmersiveDarkMode(_winFormsTextBox.Handle, isDark);
     }
 
     private void UpdateTheme(ApplicationTheme theme, bool shouldRestart)
@@ -152,17 +162,13 @@ internal partial class TraceLogViewModel : ObservableObject, IDisposable
         });
     }
 
-    private void RestartLogging()
-    {
-        UnregisterTraceListeners();
-        DisposeLogger();
-        InitializeLogger();
-        RegisterTraceListeners();
-    }
+    #endregion
 
-    public void Subcribe()
+    #region Event Subscription
+
+    public void Subscribe()
     {
-        if (_isSubcribe) return;
+        if (_isSubscribe) return;
 
         _consoleRedirector ??= new ConsoleRedirector();
 
@@ -171,20 +177,22 @@ internal partial class TraceLogViewModel : ObservableObject, IDisposable
 
         Context.UiApplication.Idling += _onIdlingHandler;
         ApplicationThemeManager.Changed += _onThemeChangedHandler;
+        SettingsService.Instance.LogSettingsChanged += _onSettingsChangedHandler;
 
-        _isSubcribe = true;
+        _isSubscribe = true;
     }
 
     private void Unsubscribe()
     {
-        if (!_isSubcribe) return;
+        if (!_isSubscribe) return;
 
         Context.UiApplication.Idling -= _onIdlingHandler;
         ApplicationThemeManager.Changed -= _onThemeChangedHandler;
+        SettingsService.Instance.LogSettingsChanged -= _onSettingsChangedHandler;
 
-        _isSubcribe = false;
+        _isSubscribe = false;
     }
-
+    
     private void OnIdling(object? sender, IdlingEventArgs e)
     {
         if (IsStarted && !_isClearing)
@@ -192,6 +200,20 @@ internal partial class TraceLogViewModel : ObservableObject, IDisposable
             RegisterTraceListeners();
         }
     }
+    
+    private void OnThemeChanged(ApplicationTheme theme, Color accent)
+    {
+        if (_currentTheme == theme) return;
+        UpdateTheme(theme, IsStarted);
+    }
+    
+    private void OnSettingsChanged()
+    {
+        if (!IsStarted) return;
+        RestartLogging();
+    }
+
+    #endregion
 
     public TraceLogViewModel()
     {
@@ -219,9 +241,10 @@ internal partial class TraceLogViewModel : ObservableObject, IDisposable
         _levelSwitch = new LoggingLevelSwitch(_logLevel);
         _onThemeChangedHandler = OnThemeChanged;
         _onIdlingHandler = OnIdling;
+        _onSettingsChangedHandler = OnSettingsChanged;
         _currentTheme = ThemeWatcher.GetRequiredTheme();
 
-        Subcribe();
+        Subscribe();
         StartTracing();
     }
 

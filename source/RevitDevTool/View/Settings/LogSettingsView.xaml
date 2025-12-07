@@ -3,9 +3,9 @@
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:config="clr-namespace:RevitDevTool.Models.Config"
-    xmlns:converter="clr-namespace:RevitDevTool.View.Converter"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    xmlns:serilog="clr-namespace:Serilog;assembly=Serilog.Sinks.File"
     xmlns:settings="clr-namespace:RevitDevTool.ViewModel.Settings"
     xmlns:settingsDialog="clr-namespace:RevitDevTool.View.Settings"
     xmlns:sys="clr-namespace:System;assembly=mscorlib"
@@ -31,7 +31,8 @@
                 BasedOn="{StaticResource DefaultContentDialogStyle}"
                 TargetType="{x:Type settingsDialog:LogSettingsView}" />
 
-            <converter:BoolToVisibilityConverter x:Key="BoolToVisibility" />
+            <BooleanToVisibilityConverter x:Key="BoolToVisibility" />
+            <sys:Int32 x:Key="ContentMinWidth">130</sys:Int32>
 
             <ObjectDataProvider
                 x:Key="LogSaveFormats"
@@ -47,13 +48,43 @@
                 MethodName="GetValues"
                 ObjectType="{x:Type sys:Enum}">
                 <ObjectDataProvider.MethodParameters>
-                    <x:Type TypeName="config:LogTimeInterval" />
+                    <x:Type TypeName="serilog:RollingInterval" />
                 </ObjectDataProvider.MethodParameters>
             </ObjectDataProvider>
         </ResourceDictionary>
     </ui:ContentDialog.Resources>
 
-    <StackPanel Margin="0">
+    <StackPanel>
+        <!--  StackTrace  -->
+        <ui:CardControl
+            Margin="0,4,0,0"
+            Icon="{ui:SymbolIcon Stack24}">
+            <ui:CardControl.Header>
+                <StackPanel>
+                    <ui:TextBlock Text="Stack Trace" />
+                    <ui:TextBlock
+                        Appearance="Secondary"
+                        FontTypography="Caption"
+                        Text="Include stack trace frame information"
+                        TextTrimming="CharacterEllipsis" />
+                </StackPanel>
+            </ui:CardControl.Header>
+            <Grid MinWidth="{Binding Source={StaticResource ContentMinWidth}}">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <ComboBox
+                    Margin="0,0,8,0"
+                    ItemsSource="{Binding StackTraceDepths, Mode=OneTime}"
+                    SelectedItem="{Binding StackTraceDepth}"
+                    Visibility="{Binding IncludeStackTrace, Converter={StaticResource BoolToVisibility}}" />
+                <ui:ToggleSwitch
+                    Grid.Column="1"
+                    IsChecked="{Binding IncludeStackTrace}" />
+            </Grid>
+        </ui:CardControl>
+
         <!--  Save Format  -->
         <ui:CardControl
             Margin="0,4,0,0"
@@ -64,55 +95,31 @@
                     <ui:TextBlock
                         Appearance="Secondary"
                         FontTypography="Caption"
-                        Text="Select output format for log entries"
+                        Text="Output format for log entries"
                         TextTrimming="CharacterEllipsis" />
                 </StackPanel>
             </ui:CardControl.Header>
-            <ComboBox
-                MinWidth="120"
-                ItemsSource="{Binding Source={StaticResource LogSaveFormats}}"
-                SelectedItem="{Binding SaveFormat}" />
+            <Grid MinWidth="{Binding Source={StaticResource ContentMinWidth}}">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <ComboBox
+                    Margin="0,0,8,0"
+                    ItemsSource="{Binding Source={StaticResource LogSaveFormats}}"
+                    SelectedItem="{Binding SaveFormat}"
+                    Visibility="{Binding IsSaveLogEnabled, Converter={StaticResource BoolToVisibility}}" />
+                <ui:ToggleSwitch
+                    Grid.Column="1"
+                    IsChecked="{Binding IsSaveLogEnabled}" />
+            </Grid>
         </ui:CardControl>
 
-        <!--  Include StackTrace  -->
-        <ui:CardControl
-            Margin="0,4,0,0"
-            Icon="{ui:SymbolIcon TextBulletListTree24}">
-            <ui:CardControl.Header>
-                <StackPanel>
-                    <ui:TextBlock Text="Include Stack Trace" />
-                    <ui:TextBlock
-                        Appearance="Secondary"
-                        FontTypography="Caption"
-                        Text="Include class name and method in log entries"
-                        TextTrimming="CharacterEllipsis" />
-                </StackPanel>
-            </ui:CardControl.Header>
-            <ui:ToggleSwitch IsChecked="{Binding IncludeStackTrace}" />
-        </ui:CardControl>
-
-        <!--  Multiple Files Option  -->
-        <ui:CardControl
-            Margin="0,4,0,0"
-            Icon="{ui:SymbolIcon DocumentMultiple24}">
-            <ui:CardControl.Header>
-                <StackPanel>
-                    <ui:TextBlock Text="Multiple Files" />
-                    <ui:TextBlock
-                        Appearance="Secondary"
-                        FontTypography="Caption"
-                        Text="Split log entries into multiple files by time interval"
-                        TextTrimming="CharacterEllipsis" />
-                </StackPanel>
-            </ui:CardControl.Header>
-            <ui:ToggleSwitch IsChecked="{Binding UseMultipleFiles}" />
-        </ui:CardControl>
-
-        <!--  Time Interval (visible when Multiple Files is checked)  -->
+        <!--  Time Interval  -->
         <ui:CardControl
             Margin="0,4,0,0"
             Icon="{ui:SymbolIcon Clock24}"
-            Visibility="{Binding UseMultipleFiles, Converter={StaticResource BoolToVisibility}}">
+            Visibility="{Binding IsSaveLogEnabled, Converter={StaticResource BoolToVisibility}}">
             <ui:CardControl.Header>
                 <StackPanel>
                     <ui:TextBlock Text="Time Interval" />
@@ -124,19 +131,19 @@
                 </StackPanel>
             </ui:CardControl.Header>
             <ComboBox
-                MinWidth="120"
+                MinWidth="{Binding Source={StaticResource ContentMinWidth}}"
                 ItemsSource="{Binding Source={StaticResource LogTimeIntervals}}"
                 SelectedItem="{Binding TimeInterval}" />
         </ui:CardControl>
 
-        <!--  File Path (visible when Multiple Files is NOT checked)  -->
+        <!--  File Path  -->
         <ui:CardControl
             Margin="0,4,0,0"
             Icon="{ui:SymbolIcon Document24}"
-            Visibility="{Binding UseMultipleFiles, Converter={StaticResource BoolToVisibility}, ConverterParameter=Inverse}">
+            Visibility="{Binding IsSaveLogEnabled, Converter={StaticResource BoolToVisibility}}">
             <ui:CardControl.Header>
                 <StackPanel>
-                    <ui:TextBlock Text="Log File" />
+                    <ui:TextBlock Text="Log Folder" />
                     <ui:TextBlock
                         Appearance="Secondary"
                         FontTypography="Caption"
@@ -146,29 +153,8 @@
                 </StackPanel>
             </ui:CardControl.Header>
             <ui:Button
+                MinWidth="{Binding Source={StaticResource ContentMinWidth}}"
                 Command="{Binding BrowseFileCommand}"
-                Content="Browse..."
-                Icon="{ui:SymbolIcon FolderOpen24}" />
-        </ui:CardControl>
-
-        <!--  Folder Path (visible when Multiple Files IS checked)  -->
-        <ui:CardControl
-            Margin="0,4,0,0"
-            Icon="{ui:SymbolIcon Folder24}"
-            Visibility="{Binding UseMultipleFiles, Converter={StaticResource BoolToVisibility}}">
-            <ui:CardControl.Header>
-                <StackPanel>
-                    <ui:TextBlock Text="Log Folder" />
-                    <ui:TextBlock
-                        Appearance="Secondary"
-                        FontTypography="Caption"
-                        Text="{Binding FolderPath}"
-                        TextTrimming="CharacterEllipsis"
-                        ToolTip="{Binding FolderPath}" />
-                </StackPanel>
-            </ui:CardControl.Header>
-            <ui:Button
-                Command="{Binding BrowseFolderCommand}"
                 Content="Browse..."
                 Icon="{ui:SymbolIcon FolderOpen24}" />
         </ui:CardControl>

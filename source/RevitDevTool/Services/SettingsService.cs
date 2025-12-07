@@ -1,15 +1,18 @@
 ﻿using System.IO ;
 using System.Text.Json ;
 using RevitDevTool.Models.Config ;
+using RevitDevTool.ViewModel.Settings;
 using Serilog ;
 using Wpf.Ui.Appearance ;
 
 namespace RevitDevTool.Services;
 
-public sealed class SettingsService : ISettingsService
+public sealed class SettingsService
 {
+    public event Action? LogSettingsChanged;
     public static readonly SettingsService Instance = new();
     private GeneralConfig? _generalConfig;
+    private LogConfig? _logConfig;
     private VisualizationConfig? _visualizationConfig;
 
     public GeneralConfig GeneralConfig
@@ -20,6 +23,16 @@ public sealed class SettingsService : ISettingsService
             return _generalConfig ;
         }
     }
+    
+    public LogConfig LogConfig
+    {
+        get
+        {
+            _logConfig ??= new LogConfig() ;
+            return _logConfig ;
+        }
+    }
+    
     public VisualizationConfig VisualizationConfig
     {
         get
@@ -33,12 +46,21 @@ public sealed class SettingsService : ISettingsService
     {
         SaveApplicationSettings();
         SaveVisualizationSettings();
+        SaveLogSettings();
     }
 
     public void LoadSettings()
     {
         LoadApplicationSettings();
         LoadVisualizationSettings();
+        LoadLogSettings();
+    }
+
+    public void ResetSettings()
+    {
+        ResetGeneralSettings();
+        ResetVisualizationSettings();
+        ResetLogSettings();
     }
 
     private void SaveApplicationSettings()
@@ -46,6 +68,14 @@ public sealed class SettingsService : ISettingsService
         var path = SettingsLocation.GetSettingsPath("GeneralConfig.json" );
         var json = JsonSerializer.Serialize(_generalConfig);
         File.WriteAllText(path, json);
+    }
+    
+    private void SaveLogSettings()
+    {
+        var path = SettingsLocation.GetSettingsPath("LogConfig.json" );
+        var json = JsonSerializer.Serialize(_logConfig);
+        File.WriteAllText(path, json);
+        LogSettingsChanged?.Invoke();
     }
 
     private void SaveVisualizationSettings()
@@ -104,6 +134,31 @@ public sealed class SettingsService : ISettingsService
             ResetVisualizationSettings();
         }
     }
+    
+    private void LoadLogSettings()
+    {
+        var path = SettingsLocation.GetSettingsPath("LogConfig.json" );
+        if (!File.Exists(path))
+        {
+            ResetLogSettings();
+            return;
+        }
+
+        try
+        {
+            using var config = File.OpenRead(path);
+            _logConfig = JsonSerializer.Deserialize<LogConfig>(config);
+        }
+        catch (Exception exception)
+        {
+            Log.Logger.Error(exception, "Log settings loading error");
+        }
+
+        if (_logConfig is null)
+        {
+            ResetLogSettings();
+        }
+    }
 
     public void ResetGeneralSettings()
     {
@@ -115,8 +170,21 @@ public sealed class SettingsService : ISettingsService
             Theme = ApplicationTheme.Light,
 #endif
             UseHardwareRendering = true,
-            LogConfig = new LogConfig()
         };
+    }
+
+    private void ResetLogSettings()
+    {
+        _logConfig = new LogConfig
+        {
+            IsSaveLogEnabled = false,
+            SaveFormat = LogSaveFormat.Text,
+            IncludeStackTrace = false,
+            StackTraceDepth = 5,
+            TimeInterval = RollingInterval.Infinite,
+            FilePath = SettingsLocation.GetDefaultLogPath("log")
+        };
+        LogSettingsChanged?.Invoke();
     }
 
     public void ResetVisualizationSettings()
