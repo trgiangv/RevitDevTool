@@ -1,60 +1,31 @@
 ﻿#nullable disable
-using System.Diagnostics ;
-using System.Globalization ;
-using Serilog ;
-using Serilog.Events ;
-// ReSharper disable UnusedMember.Local
+using System.Diagnostics;
+using System.Globalization;
+using RevitDevTool.Utils;
+using Serilog;
+using Serilog.Events;
 
 namespace RevitDevTool.Models.Trace;
 
 /// <summary>
 /// TraceListener implementation that directs all output to Serilog.
 /// </summary>
-internal class SerilogTraceListener : TraceListener
+internal sealed class SerilogTraceListener(ILogger logger, bool includeStackTrace, int stackTraceDepth) : TraceListener
 {
-    private const string ActivityIdProperty = "ActivityId";
+    private const string RevitVersionProperty = "RevitVersion";
+    private const string ActiveDocumentProperty = "ActiveDocument";
     private const string CategoryProperty = "Category";
+    private const string StackTraceProperty = "StackTrace";
+    private const string StackTraceDepthProperty = "StackTraceDepth";
     private const string EventIdProperty = "TraceEventId";
     private const string FailDetailMessageProperty = "FailDetails";
     private const string RelatedActivityIdProperty = "RelatedActivityId";
     private const string SourceProperty = "TraceSource";
     private const string TraceDataProperty = "TraceData";
     private const string TraceEventTypeProperty = "TraceEventType";
-    private const LogEventLevel DefaultLogLevel = LogEventLevel.Debug;
-    private const LogEventLevel FailLevel = LogEventLevel.Fatal;
     private const string NoMessageTraceEventMessageTemplate = "{TraceSource:l} {TraceEventType}: {TraceEventId}";
     private const string TraceDataMessageTemplate = "{TraceData}";
-    private readonly ILogger _logger;
-
-    /// <summary>
-    ///     Creates a SerilogTraceListener that sets logger to null so we can still use Serilog's Logger.Log
-    /// </summary>
-    /// <remarks>
-    ///     This is needed because TraceListeners are often configured through XML
-    ///     where there would be no opportunity for constructor injection
-    /// </remarks>
-    public SerilogTraceListener() => _logger = null;
-
-    /// <summary>
-    ///     Creates a SerilogTraceListener that uses the specified logger
-    /// </summary>
-    public SerilogTraceListener(ILogger logger)
-    {
-        _logger = logger.ForContext<SerilogTraceListener>();
-    }
-
-    /// <summary>
-    ///     Creates a SerilogTraceListener for the context specified.
-    /// </summary>
-    /// <example>
-    ///     &lt;listeners&gt;
-    ///         &lt;add name="Serilog" type="SerilogTraceListener.SerilogTraceListener, SerilogTraceListener" initializeData="MyContext" /&gt;
-    ///     &lt;/listeners&gt;
-    /// </example>
-    public SerilogTraceListener(string context)
-    {
-        _logger = Log.Logger.ForContext("SourceContext", context);
-    }
+    private readonly ILogger _logger = logger?.ForContext<SerilogTraceListener>();
 
     /// <inheritdoc />
     public override bool IsThreadSafe => true;
@@ -70,7 +41,7 @@ internal class SerilogTraceListener : TraceListener
     public override void Fail(string message, string detailMessage)
     {
         var failProperties = CreateFailProperties();
-        SafeAddProperty(failProperties, "FailDetails", detailMessage);
+        SafeAddProperty(failProperties, FailDetailMessageProperty, detailMessage);
         Write(LogEventLevel.Fatal, null, message, failProperties);
     }
 
@@ -84,7 +55,7 @@ internal class SerilogTraceListener : TraceListener
     {
         if (!ShouldTrace(eventCache, source, eventType, id, "", null, data, null))
             return;
-        var traceProperties = CreateTraceProperties(source, eventType, id);
+        var traceProperties = CreateTraceProperties(source, eventType, id, eventCache);
         WriteData(eventType, traceProperties, data);
     }
 
@@ -98,7 +69,7 @@ internal class SerilogTraceListener : TraceListener
     {
         if (!ShouldTrace(eventCache, source, eventType, id, "", null, null, data))
             return;
-        var traceProperties = CreateTraceProperties(source, eventType, id);
+        var traceProperties = CreateTraceProperties(source, eventType, id, eventCache);
         WriteData(eventType, traceProperties, data);
     }
 
@@ -111,8 +82,8 @@ internal class SerilogTraceListener : TraceListener
     {
         if (!ShouldTrace(eventCache, source, eventType, id, "", null, null, null))
             return;
-        var traceProperties = CreateTraceProperties(source, eventType, id);
-        Write(eventType, null, "{TraceSource:l} {TraceEventType}: {TraceEventId}", traceProperties);
+        var traceProperties = CreateTraceProperties(source, eventType, id, eventCache);
+        Write(eventType, null, NoMessageTraceEventMessageTemplate, traceProperties);
     }
 
     /// <inheritdoc />
@@ -125,7 +96,7 @@ internal class SerilogTraceListener : TraceListener
     {
         if (!ShouldTrace(eventCache, source, eventType, id, message, null, null, null))
             return;
-        var traceProperties = CreateTraceProperties(source, eventType, id);
+        var traceProperties = CreateTraceProperties(source, eventType, id, eventCache);
         Write(eventType, null, message, traceProperties);
     }
 
@@ -140,7 +111,7 @@ internal class SerilogTraceListener : TraceListener
     {
         if (!ShouldTrace(eventCache, source, eventType, id, format, args, null, null))
             return;
-        var traceProperties = CreateTraceProperties(source, eventType, id);
+        var traceProperties = CreateTraceProperties(source, eventType, id, eventCache);
         AddFormatArgs(traceProperties, args, out var exception);
         Write(eventType, exception, format, traceProperties);
     }
@@ -153,9 +124,9 @@ internal class SerilogTraceListener : TraceListener
         string message,
         Guid relatedActivityId)
     {
-        var eventType = TraceEventType.Transfer;
-        var traceProperties = CreateTraceProperties(source, eventType, id);
-        SafeAddProperty(traceProperties, "RelatedActivityId", relatedActivityId);
+        const TraceEventType eventType = TraceEventType.Transfer;
+        var traceProperties = CreateTraceProperties(source, eventType, id, eventCache);
+        SafeAddProperty(traceProperties, RelatedActivityIdProperty, relatedActivityId);
         Write(eventType, null, message, traceProperties);
     }
 
@@ -163,8 +134,8 @@ internal class SerilogTraceListener : TraceListener
     public override void Write(object data)
     {
         var properties = CreateProperties();
-        SafeAddProperty(properties, "TraceData", data);
-        Write(LogEventLevel.Debug, null, "{TraceData}", properties);
+        SafeAddProperty(properties, TraceDataProperty, data);
+        Write(LogEventLevel.Debug, null, TraceDataMessageTemplate, properties);
     }
 
     /// <inheritdoc />
@@ -178,16 +149,16 @@ internal class SerilogTraceListener : TraceListener
     public override void Write(object data, string category)
     {
         var properties = CreateProperties();
-        SafeAddProperty(properties, "TraceData", data);
-        SafeAddProperty(properties, "Category", category);
-        Write(LogEventLevel.Debug, null, "{TraceData}", properties);
+        SafeAddProperty(properties, TraceDataProperty, data);
+        SafeAddProperty(properties, CategoryProperty, category);
+        Write(LogEventLevel.Debug, null, TraceDataMessageTemplate, properties);
     }
 
     /// <inheritdoc />
     public override void Write(string message, string category)
     {
         var properties = CreateProperties();
-        SafeAddProperty(properties, "Category", category);
+        SafeAddProperty(properties, CategoryProperty, category);
         Write(LogEventLevel.Debug, null, message, properties);
     }
 
@@ -222,26 +193,49 @@ internal class SerilogTraceListener : TraceListener
     private List<LogEventProperty> CreateFailProperties()
     {
         var properties = CreateProperties();
-        SafeAddProperty(properties, "TraceEventType", "Fail");
+        SafeAddProperty(properties, TraceEventTypeProperty, "Fail");
         return properties;
     }
 
-    private List<LogEventProperty> CreateProperties()
+    private List<LogEventProperty> CreateProperties([CanBeNull] TraceEventCache eventCache = null)
     {
         var properties = new List<LogEventProperty>();
-        SafeAddProperty(properties, "ActivityId", System.Diagnostics.Trace.CorrelationManager.ActivityId);
+        AddRevitContextProperties(properties);
+        AddCallStackProperty(properties, eventCache);
         return properties;
+    }
+
+    private void AddRevitContextProperties(IList<LogEventProperty> properties)
+    {
+        SafeAddProperty(properties, RevitVersionProperty, $"Revit {Context.Application.VersionNumber}");
+        SafeAddProperty(properties, ActiveDocumentProperty,  Context.ActiveDocument?.Title ?? "No Active Document");
+    }
+    
+    private void AddCallStackProperty(IList<LogEventProperty> properties, [CanBeNull] TraceEventCache eventCache)
+    {
+        if (!includeStackTrace || stackTraceDepth <= 0 || eventCache is null)
+            return;
+
+        SafeAddProperty(properties, StackTraceDepthProperty, stackTraceDepth);
+        
+        var formattedStack = StackTraceUtils.BuildStackTrace(
+            eventCache, 
+            stackTraceDepth);
+            
+        if (!string.IsNullOrWhiteSpace(formattedStack))
+            SafeAddProperty(properties, StackTraceProperty, formattedStack);
     }
 
     private List<LogEventProperty> CreateTraceProperties(
         string source,
         TraceEventType eventType,
-        int id)
+        int id,
+        TraceEventCache eventCache)
     {
-        var properties = CreateProperties();
-        SafeAddProperty(properties, "TraceSource", source);
-        SafeAddProperty(properties, "TraceEventType", eventType);
-        SafeAddProperty(properties, "TraceEventId", id);
+        var properties = CreateProperties(eventCache);
+        SafeAddProperty(properties, SourceProperty, source);
+        SafeAddProperty(properties, TraceEventTypeProperty, eventType);
+        SafeAddProperty(properties, EventIdProperty, id);
         return properties;
     }
 
@@ -269,6 +263,7 @@ internal class SerilogTraceListener : TraceListener
     {
         messageTemplate ??= string.Empty;
         var logger = _logger ?? Log.Logger;
+        // ReSharper disable once TemplateIsNotCompileTimeConstantProblem
         if (!logger.BindMessageTemplate(messageTemplate, null, out var parsedTemplate, out _))
             return;
         var logEvent = new LogEvent(DateTimeOffset.Now, level, exception, parsedTemplate, properties);
@@ -292,8 +287,8 @@ internal class SerilogTraceListener : TraceListener
     private void WriteData(TraceEventType eventType, IList<LogEventProperty> properties, object data)
     {
         var logEventLevel = LevelMapping.ToLogEventLevel(eventType);
-        SafeAddProperty(properties, "TraceData", data);
-        Write(logEventLevel, null, "{TraceData}", properties);
+        SafeAddProperty(properties, TraceDataProperty, data);
+        Write(logEventLevel, null, TraceDataMessageTemplate, properties);
     }
 }
 

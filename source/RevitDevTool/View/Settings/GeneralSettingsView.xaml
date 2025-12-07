@@ -63,11 +63,11 @@
             Icon="{ui:SymbolIcon DocumentTextClock24}">
             <ui:CardAction.Content>
                 <StackPanel>
-                    <ui:TextBlock Text="Save log" />
+                    <ui:TextBlock Text="Log Settings" />
                     <ui:TextBlock
                         Appearance="Secondary"
                         FontTypography="Caption"
-                        Text="automatically save log entries to an external file"
+                        Text="Configure logging settings"
                         TextTrimming="CharacterEllipsis" />
                 </StackPanel>
             </ui:CardAction.Content>
@@ -78,11 +78,11 @@
             Icon="{ui:SymbolIcon ArrowReset24}">
             <ui:CardAction.Content>
                 <StackPanel>
-                    <ui:TextBlock Text="Reset visualization settings" />
+                    <ui:TextBlock Text="Reset settings" />
                     <ui:TextBlock
                         Appearance="Secondary"
                         FontTypography="Caption"
-                        Text="Reset visualization settings to default"
+                        Text="Reset settings to default"
                         TextTrimming="CharacterEllipsis" />
                 </StackPanel>
             </ui:CardAction.Content>
