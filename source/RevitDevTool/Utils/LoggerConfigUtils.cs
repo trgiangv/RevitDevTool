@@ -52,7 +52,7 @@ public static class LoggerConfigUtils
         RollingInterval interval = RollingInterval.Day, 
         bool rollOnFileSizeLimit = false, 
         long fileSizeLimitBytes = 0, 
-        bool shared = false, 
+        bool shared = true, 
         LogEventLevel restrictedToMinimumLevel = LogEventLevel.Verbose)
     {
         const string template =
@@ -81,7 +81,7 @@ public static class LoggerConfigUtils
         this LoggerConfiguration config,
         string path,
         RollingInterval rollingInterval = RollingInterval.Day,
-        bool shared = false,
+        bool shared = true,
         bool renderMessage = true)
     {
          config.WriteTo.File(
@@ -101,7 +101,7 @@ public static class LoggerConfigUtils
     /// <param name="rollingInterval">log rolling interval</param>
     /// <param name="shared">whether the log file is shared between multiple processes</param>
     /// <returns>LoggerConfiguration</returns>
-    private static void WithClefFile(this LoggerConfiguration config, string path, RollingInterval rollingInterval = RollingInterval.Day, bool shared = false)
+    private static void WithClefFile(this LoggerConfiguration config, string path, RollingInterval rollingInterval = RollingInterval.Day, bool shared = true)
     {
         config.WriteTo.File(
             formatter: new CompactJsonFormatter(),
