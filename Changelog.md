@@ -1,3 +1,51 @@
+# 1.4.0
+
+## Added
+
+- **Automatic Floating Window on Trace Events**
+  - Floating trace log window automatically opens when trace events occur and no document is open
+  - Listener monitors document open/close events to manage window visibility
+  - Auto-hides when document is opened to avoid interference
+
+- **External File Logging System**
+  - Multiple log file format support:
+    - **Plain Text (.log)** - Human-readable format with timestamps
+    - **JSON (.json)** - Structured JSON format for parsing
+    - **CLEF (.clef)** - Compact Log Event Format for analysis tools like Seq
+    - **SQLite (.db)** - Database format for querying and data analysis
+  - Configurable rolling intervals (daily, hourly, etc.)
+  - File size limit controls
+  - Shared file access support for multi-process logging
+
+- **Log Configuration UI**
+  - Settings panel for managing log output preferences
+  - Enable/disable external file logging
+  - Select log format and output path
+  - Configure rolling intervals and file management
+  - Stack trace inclusion toggle with depth control
+
+- **Enhanced Stack Trace in Logs**
+  - Stack traces now show actual caller location (method, file, line number)
+  - Automatic filtering of framework and system internals
+  - Configurable stack trace depth
+  - Displays call chain in readable format (e.g., `MyClass.Execute:42 > Helper.Process:18`)
+  - Includes Revit version and active document name in structured log context
+
+## Changed
+
+- **Visualization System**
+  - Adjusted default axis length for better scale
+  - Optimized geometry rendering pipeline
+
+- **UI Adjustments**
+  - Disabled window backdrop (mica/acrylic) to fix RichTextBox overlay issues
+  - Adjusted glass frame thickness for better WinForms control integration
+
+## Fixed
+
+- Proper cleanup of trace listener when Revit closes
+- Window theme subscription leaks on close
+
 # 1.3.3
 
 ## Changed
