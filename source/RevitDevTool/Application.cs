@@ -1,5 +1,4 @@
-﻿using System.Reflection;
-using System.Windows.Interop ;
+﻿using System.Windows.Interop ;
 using System.Windows.Media ;
 using Autodesk.Revit.UI;
 using Nice3point.Revit.Toolkit.External;
@@ -7,7 +6,6 @@ using RevitDevTool.Commands;
 using RevitDevTool.Models.Trace;
 using RevitDevTool.Services ;
 using RevitDevTool.Theme ;
-using RevitDevTool.ViewModel;
 
 namespace RevitDevTool;
 
