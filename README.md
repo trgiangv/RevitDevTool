@@ -7,6 +7,11 @@ Autodesk Revit plugin project organized into multiple solution files that target
 <!-- TOC -->
 * [RevitDevTool](#revitdevtool)
   * [Table of content](#table-of-content)
+  * [Overview](#overview)
+    * [📊 Real-Time Trace Logging](#-real-time-trace-logging)
+    * [🎨 3D Geometry Visualization](#-3d-geometry-visualization)
+    * [📁 External File Logging](#-external-file-logging)
+    * [🚀 Auto-Open Floating Window](#-auto-open-floating-window)
   * [Usage](#usage)
     * [🎯 Getting Started](#-getting-started)
     * [📊 Trace Log](#-trace-log)
@@ -26,12 +31,40 @@ Autodesk Revit plugin project organized into multiple solution files that target
     * [🔧 Language Support](#-language-support)
     * [💡 Best Practices](#-best-practices)
     * [🔍 Troubleshooting](#-troubleshooting)
-    * [Acknowledgments](#acknowledgments)
+  * [Acknowledgments](#acknowledgments)
 <!-- TOC -->
 
-## Usage
+## Overview
 
 RevitDevTool is a comprehensive debugging and visualization toolkit for Autodesk Revit that helps developers and users trace, visualize, and debug their Revit applications. The tool provides two main capabilities: **Trace Logging** and **Geometry Visualization** with beautiful canvas rendering.
+
+### 📊 Real-Time Trace Logging
+Capture and view all trace output with color-coded log levels directly in Revit
+![Trace Logging in Action](images/RevitDevTool_StackTrace.gif)
+
+Watch as all `Trace.TraceInfomation()`, `Trace.TraceWarning()`, and `Trace.TraceError` calls appear in real-time with color-coded severity levels.
+
+### 🎨 3D Geometry Visualization
+Visualize any Revit geometry (curves, faces, solids, meshes) in real-time
+![Geometry Visualization](images/RevitDevTool_TraceGeometry.gif)
+
+Simply call `Trace.Write(geometry)` to visualize any Revit geometry object - curves, faces, solids, meshes, and bounding boxes rendered directly in your 3D view.
+
+### 📁 External File Logging
+Export logs to multiple formats: Plain Text, JSON, CLEF, SQLite Database
+![File Logging Configuration](images/RevitDevTool_SaveLog.gif)
+
+Configure and export your logs to multiple formats including plain text (.log), JSON (.json), CLEF (.clef) for Seq integration, or SQLite database (.db) for advanced querying.
+
+### 🚀 Auto-Open Floating Window
+Automatically shows trace window when events occur with no document open
+![Auto-Open Floating Window](images/RevitDevTool_WindowBehavior.gif)
+
+The trace window automatically opens when trace events occur and no document is open, helping you catch startup issues and initialization problems.
+
+---
+
+## Usage
 
 ### 🎯 Getting Started
 
