@@ -76,19 +76,17 @@
         <PackageReference Include="System.Text.Json" Version="8.0.6" Condition="$(DefineConstants.Contains('NETFRAMEWORK'))" />
     </ItemGroup>
 
-    <ItemGroup Condition="!$(DefineConstants.Contains('NETFRAMEWORK'))">
-        <Content Include="bin\$(Configuration)\runtimes\win-x64\native\SQLite.Interop.dll">
-            <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-            <Link>SQLite.Interop.dll</Link>
-        </Content>
-    </ItemGroup>
-
-    <ItemGroup Condition="$(DefineConstants.Contains('NETFRAMEWORK'))">
-        <Content Include="bin\$(Configuration)\x64\SQLite.Interop.dll">
-            <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-            <Link>SQLite.Interop.dll</Link>
-        </Content>
-    </ItemGroup>
+    <!-- Copy SQLite.Interop.dll -->
+    <Target Name="CopySQLiteInterop" AfterTargets="Build">
+        <Copy Condition="!$(DefineConstants.Contains('NETFRAMEWORK')) AND Exists('$(OutputPath)runtimes\win-x64\native\SQLite.Interop.dll')"
+              SourceFiles="$(OutputPath)runtimes\win-x64\native\SQLite.Interop.dll"
+              DestinationFiles="$(OutputPath)SQLite.Interop.dll"
+              SkipUnchangedFiles="true" />
+        <Copy Condition="$(DefineConstants.Contains('NETFRAMEWORK')) AND Exists('$(OutputPath)x64\SQLite.Interop.dll')"
+              SourceFiles="$(OutputPath)x64\SQLite.Interop.dll"
+              DestinationFiles="$(OutputPath)SQLite.Interop.dll"
+              SkipUnchangedFiles="true" />
+    </Target>
 
     <ItemGroup>
         <Resource Include="Resources\Icons\TraceGeometry32_dark.tiff" />
