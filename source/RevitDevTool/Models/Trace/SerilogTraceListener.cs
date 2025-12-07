@@ -255,6 +255,12 @@ internal sealed class SerilogTraceListener(ILogger logger, bool includeStackTrac
         Write(LevelMapping.ToLogEventLevel(eventType), exception, messageTemplate, properties);
     }
 
+    private static string EnrichMessageWithStackTrace(string messageTemplate, IList<LogEventProperty> properties)
+    {
+        var stackTraceProp = properties.FirstOrDefault(p => p.Name == StackTraceProperty);
+        return stackTraceProp != null ? $"{messageTemplate}\n at {{StackTrace}}" : messageTemplate;
+    }
+    
     private void Write(
         LogEventLevel level,
         Exception exception,
@@ -262,6 +268,7 @@ internal sealed class SerilogTraceListener(ILogger logger, bool includeStackTrac
         IList<LogEventProperty> properties)
     {
         messageTemplate ??= string.Empty;
+        if (includeStackTrace) messageTemplate = EnrichMessageWithStackTrace(messageTemplate, properties);
         var logger = _logger ?? Log.Logger;
         // ReSharper disable once TemplateIsNotCompileTimeConstantProblem
         if (!logger.BindMessageTemplate(messageTemplate, null, out var parsedTemplate, out _))

@@ -14,6 +14,7 @@ public static class StackTraceUtils
         "Microsoft",
         "Serilog",
         "RevitDevTool",
+        "IronPython",
         "Autodesk.Revit.UI",
         "revitAPIStartupFromSingleManifest"
     ];
