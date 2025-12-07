@@ -1,6 +1,7 @@
 ﻿using Autodesk.Revit.Attributes;
 using Autodesk.Revit.DB.Events;
 using Autodesk.Revit.UI;
+using Autodesk.Windows;
 using Nice3point.Revit.Toolkit.Decorators;
 using Nice3point.Revit.Toolkit.External;
 using RevitDevTool.Models.Trace;
@@ -19,15 +20,15 @@ public class TraceCommand : ExternalCommand
     public static readonly Action TraceReceivedHandler = OnTraceReceived;
     private static readonly DockablePaneId PaneId = new(new Guid(Guid));
     private static bool IsForceHide { get; set; }
-    private static TraceLogViewModel? SharedViewModel { get; set; }
+    internal static TraceLogViewModel? SharedViewModel { get; private set; }
     public static TraceLogWindow? FloatingWindow { get; private set; }
-    private static bool HasDocumentOpend => Context.Application.Documents.Size > 0;
+    private static bool HasDocumentOpened => Context.Application.Documents.Size > 0;
 
     public override void Execute()
     {
         try
         {
-            if (!HasDocumentOpend)
+            if (!HasDocumentOpened)
             {
                 if (FloatingWindow != null)
                 {
@@ -36,7 +37,7 @@ public class TraceCommand : ExternalCommand
                 else
                 {
                     SharedViewModel ??= new TraceLogViewModel();
-                    SharedViewModel.Subcribe();
+                    SharedViewModel.Subscribe();
                     ShowFloatingWindow();
                 }
                 return;
@@ -51,7 +52,7 @@ public class TraceCommand : ExternalCommand
             else
             {
                 SharedViewModel ??= new TraceLogViewModel();
-                SharedViewModel.Subcribe();
+                SharedViewModel.Subscribe();
                 dockableWindow.Show();
                 IsForceHide = false;
             }
@@ -101,7 +102,7 @@ public class TraceCommand : ExternalCommand
 
             if (args.DockableFrameShown)
             {
-                SharedViewModel.Subcribe();
+                SharedViewModel.Subscribe();
             }
             else
             {
@@ -119,7 +120,7 @@ public class TraceCommand : ExternalCommand
     {
         TraceEventNotifier.TraceReceived -= TraceReceivedHandler;
         
-        if (HasDocumentOpend)  return;
+        if (HasDocumentOpened)  return;
         if (SharedViewModel is not { IsStarted: true })
         {
             TraceEventNotifier.TraceReceived += TraceReceivedHandler;
@@ -127,7 +128,7 @@ public class TraceCommand : ExternalCommand
         }
         if (FloatingWindow != null) return; 
         
-        SharedViewModel.Subcribe();
+        SharedViewModel.Subscribe();
         ShowFloatingWindow();
     }
 
@@ -153,18 +154,24 @@ public class TraceCommand : ExternalCommand
     {
         if (FloatingWindow != null) return;
         if (SharedViewModel is null) return;
-        FloatingWindow = new TraceLogWindow(SharedViewModel);
-        FloatingWindow.Closed += OnFloatingWindowClosed;
-        FloatingWindow.SetAutodeskOwner();
-        FloatingWindow.Show();
+        ComponentManager.Ribbon.Dispatcher.BeginInvoke(new Action(() =>
+        {
+            FloatingWindow = new TraceLogWindow(SharedViewModel);
+            FloatingWindow.Closed += OnFloatingWindowClosed;
+            FloatingWindow.SetAutodeskOwner();
+            FloatingWindow.Show();
+        }));
     }
     
     private static void CloseFloatingWindow()
     {
         if (FloatingWindow is null) return;
-        FloatingWindow.Closed -= OnFloatingWindowClosed;
-        FloatingWindow.Close();
-        FloatingWindow = null;
+        ComponentManager.Ribbon.Dispatcher.BeginInvoke(new Action(() =>
+        {
+            FloatingWindow.Closed -= OnFloatingWindowClosed;
+            FloatingWindow.Close();
+            FloatingWindow = null;
+        }));
     }
     
     private static void OnFloatingWindowClosed(object? sender, EventArgs e)
@@ -172,13 +179,13 @@ public class TraceCommand : ExternalCommand
         if (FloatingWindow == null) return;
         FloatingWindow.Closed -= OnFloatingWindowClosed;
         FloatingWindow = null;
-        if (HasDocumentOpend) return;
+        if (HasDocumentOpened) return;
         TraceEventNotifier.TraceReceived += TraceReceivedHandler;
     }
     
     private static void OnDocumentClosed(object? sender, DocumentClosedEventArgs args)
     {
-        if (HasDocumentOpend) return;
+        if (HasDocumentOpened) return;
         
         if (SharedViewModel is null or { IsStarted: false })
         {

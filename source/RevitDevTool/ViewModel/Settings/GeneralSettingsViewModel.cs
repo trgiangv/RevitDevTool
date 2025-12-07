@@ -48,8 +48,7 @@ public partial class GeneralSettingsViewModel : ObservableObject
     
     [RelayCommand] private void ResetSettings()
     {
-        SettingsService.Instance.ResetVisualizationSettings();
-        SettingsService.Instance.ResetGeneralSettings();
+        SettingsService.Instance.ResetSettings();
         Theme = SettingsService.Instance.GeneralConfig.Theme;
         UseHardwareRendering = SettingsService.Instance.GeneralConfig.UseHardwareRendering;
         VisualizationController.Refresh();
@@ -60,14 +59,12 @@ public partial class GeneralSettingsViewModel : ObservableObject
     private static async Task SaveLogSettingsAsync()
     {
         var settingsWindow = SettingsWindow.Instance;
-
+        
         var dialogHost = settingsWindow?.ContentDialogService.GetDialogHost();
         if (dialogHost == null) return;
-
         var dialog = new LogSettingsView(dialogHost);
-
         var result = await dialog.ShowAsync(CancellationToken.None).ConfigureAwait(true);
-
+        
         if (result == ContentDialogResult.Primary)
         {
             Trace.TraceInformation("Log settings saved");

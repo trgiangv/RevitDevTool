@@ -6,15 +6,17 @@ public static class SettingsLocation
 {
     public static string GetSettingsPath(string configName)
     {
-        var appdata = Environment
-            .GetFolderPath( Environment.SpecialFolder.ApplicationData )
-            .AppendPath( "RevitDevTool" )
-            .AppendPath( Context.Application.VersionNumber );
-        
+        var appdata = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData).AppendPath("RevitDevTool").AppendPath(Context.Application.VersionNumber);
         var settingsDir = appdata.AppendPath("Settings");
-        if (!Directory.Exists(settingsDir))
-            Directory.CreateDirectory(settingsDir);
-        
-        return appdata.AppendPath("Settings").AppendPath(configName) ;
+        Directory.CreateDirectory(settingsDir);
+        return appdata.AppendPath("Settings").AppendPath(configName);
+    }
+
+    public static string GetDefaultLogPath(string extension)
+    {
+        var appdata = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData).AppendPath("RevitDevTool").AppendPath(Context.Application.VersionNumber);
+        var logsDir = appdata.AppendPath("Logs");
+        Directory.CreateDirectory(logsDir);
+        return Path.Combine(logsDir, $"log.{extension}");
     }
 }

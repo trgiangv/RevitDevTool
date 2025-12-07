@@ -1,10 +1,11 @@
-﻿namespace RevitDevTool.Theme;
+using System.Runtime.InteropServices;
+namespace RevitDevTool.Utils;
 
-internal static class Win32DarkMode
+public static class Win32Utils
 {
-    [System.Runtime.InteropServices.DllImport("uxtheme.dll", CharSet = System.Runtime.InteropServices.CharSet.Unicode, SetLastError = true)]
+    [DllImport("uxtheme.dll", CharSet = CharSet.Unicode, SetLastError = true)]
     private static extern int SetWindowTheme(IntPtr hWnd, string? pszSubAppName, string? pszSubIdList);
-
+    
     public static void SetImmersiveDarkMode(IntPtr hwnd, bool isDark)
     {
         if (hwnd == IntPtr.Zero) return;

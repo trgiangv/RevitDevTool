@@ -8,14 +8,11 @@
     xmlns:ui="http://revitdevtool.com/xaml"
     Title="Settings"
     Width="650"
-    Height="650"
+    Height="550"
     ui:Design.Background="{DynamicResource ApplicationBackgroundBrush}"
     ui:Design.Foreground="{DynamicResource TextFillColorPrimaryBrush}"
-    ExtendsContentIntoTitleBar="True"
     Foreground="{DynamicResource TextFillColorPrimaryBrush}"
     ShowInTaskbar="False"
-    WindowBackdropType="Mica"
-    WindowCornerPreference="Round"
     WindowStartupLocation="CenterOwner"
     mc:Ignorable="d">
 
