@@ -28,7 +28,7 @@ public static class LoggerConfigUtils
         RichTextBox richTextBox,
         Serilog.Sinks.RichTextBoxForms.Themes.Theme textTheme,
         out RichTextBoxSink sink,
-        int maxLogLines = int.MaxValue,
+        int maxLogLines = 1000,
         bool autoScroll = true)
     {
         return config.WriteTo.RichTextBox(
