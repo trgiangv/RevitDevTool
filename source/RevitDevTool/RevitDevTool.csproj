@@ -89,8 +89,7 @@
     </Target>
 
     <ItemGroup>
-        <Resource Include="Resources\Icons\TraceGeometry32_dark.tiff" />
-        <Resource Include="Resources\Icons\TraceGeometry32_light.tiff" />
+        <Resource Include="Resources\Icons\*.*" />
     </ItemGroup>
 
     <ItemGroup>

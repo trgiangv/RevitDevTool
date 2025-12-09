@@ -1,4 +1,5 @@
-﻿using System.IO;
+﻿using System.Diagnostics;
+using System.IO;
 using RevitDevTool.Models.Config;
 using RevitDevTool.Services;
 using Serilog;
@@ -13,6 +14,8 @@ public partial class LogSettingsViewModel : ObservableObject
     [ObservableProperty] private bool _isSaveLogEnabled;
     [ObservableProperty] private LogSaveFormat _saveFormat;
     [ObservableProperty] private bool _includeStackTrace;
+    [ObservableProperty] private SourceLevels _wpfTraceLevel;
+    [ObservableProperty] private bool _includeWpfTrace;
     [ObservableProperty] private RollingInterval _timeInterval;
     [ObservableProperty] private int _stackTraceDepth;
     [ObservableProperty] private string _filePath = string.Empty;
@@ -45,6 +48,8 @@ public partial class LogSettingsViewModel : ObservableObject
         IsSaveLogEnabled = config.IsSaveLogEnabled;
         SaveFormat = config.SaveFormat;
         IncludeStackTrace = config.IncludeStackTrace;
+        IncludeWpfTrace = config.IncludeWpfTrace;
+        WpfTraceLevel = config.WpfTraceLevel;
         StackTraceDepth = config.StackTraceDepth;
         TimeInterval = config.TimeInterval;
         FilePath = CorrectFilePath(config.FilePath, FileExtension);
@@ -56,6 +61,8 @@ public partial class LogSettingsViewModel : ObservableObject
         config.IsSaveLogEnabled = IsSaveLogEnabled;
         config.SaveFormat = SaveFormat;
         config.IncludeStackTrace = IncludeStackTrace;
+        config.IncludeWpfTrace = IncludeWpfTrace;
+        config.WpfTraceLevel = WpfTraceLevel;
         config.StackTraceDepth = StackTraceDepth;
         config.TimeInterval = TimeInterval;
         config.FilePath = CorrectFilePath(FilePath, FileExtension);

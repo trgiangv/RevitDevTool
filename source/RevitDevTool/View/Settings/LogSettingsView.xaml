@@ -4,6 +4,7 @@
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:config="clr-namespace:RevitDevTool.Models.Config"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:diagnostics="clr-namespace:System.Diagnostics;assembly=System.Diagnostics.TraceSource"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     xmlns:serilog="clr-namespace:Serilog;assembly=Serilog.Sinks.File"
     xmlns:settings="clr-namespace:RevitDevTool.ViewModel.Settings"
@@ -12,7 +13,7 @@
     xmlns:ui="http://revitdevtool.com/xaml"
     Title="Log Settings"
     d:DataContext="{d:DesignInstance settings:LogSettingsViewModel}"
-    d:DesignHeight="600"
+    d:DesignHeight="650"
     d:DesignWidth="600"
     CloseButtonText="Cancel"
     DefaultButton="Primary"
@@ -51,6 +52,15 @@
                     <x:Type TypeName="serilog:RollingInterval" />
                 </ObjectDataProvider.MethodParameters>
             </ObjectDataProvider>
+
+            <ObjectDataProvider
+                x:Key="SourceLevels"
+                MethodName="GetValues"
+                ObjectType="{x:Type sys:Enum}">
+                <ObjectDataProvider.MethodParameters>
+                    <x:Type TypeName="diagnostics:SourceLevels" />
+                </ObjectDataProvider.MethodParameters>
+            </ObjectDataProvider>
         </ResourceDictionary>
     </ui:ContentDialog.Resources>
 
@@ -82,6 +92,37 @@
                 <ui:ToggleSwitch
                     Grid.Column="1"
                     IsChecked="{Binding IncludeStackTrace}" />
+            </Grid>
+        </ui:CardControl>
+
+        <ui:CardControl
+            Margin="0,4,0,0"
+            Icon="{ui:ImageIcon 'pack://application:,,,/RevitDevTool;component/Resources/Icons/wpf.png',
+                                Height=24,
+                                Width=24}">
+            <ui:CardControl.Header>
+                <StackPanel>
+                    <ui:TextBlock Text="WPF Trace" />
+                    <ui:TextBlock
+                        Appearance="Secondary"
+                        FontTypography="Caption"
+                        Text="Include binding and layout trace information"
+                        TextTrimming="CharacterEllipsis" />
+                </StackPanel>
+            </ui:CardControl.Header>
+            <Grid MinWidth="{Binding Source={StaticResource ContentMinWidth}}">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <ComboBox
+                    Margin="0,0,8,0"
+                    ItemsSource="{Binding Source={StaticResource SourceLevels}}"
+                    SelectedItem="{Binding WpfTraceLevel}"
+                    Visibility="{Binding IncludeWpfTrace, Converter={StaticResource BoolToVisibility}}" />
+                <ui:ToggleSwitch
+                    Grid.Column="1"
+                    IsChecked="{Binding IncludeWpfTrace}" />
             </Grid>
         </ui:CardControl>
 
@@ -143,7 +184,7 @@
             Visibility="{Binding IsSaveLogEnabled, Converter={StaticResource BoolToVisibility}}">
             <ui:CardControl.Header>
                 <StackPanel>
-                    <ui:TextBlock Text="Log Folder" />
+                    <ui:TextBlock Text="Log File" />
                     <ui:TextBlock
                         Appearance="Secondary"
                         FontTypography="Caption"

@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.Text.Json.Serialization;
 using Serilog;
 namespace RevitDevTool.Models.Config;
@@ -16,15 +17,21 @@ public sealed class LogConfig
     
     [JsonPropertyName("IncludeStackTrace")] 
     public bool IncludeStackTrace { get; set; }
+    
+    [JsonPropertyName("IncludeWpfTrace")]
+    public bool IncludeWpfTrace { get; set; }
+    
+    [JsonPropertyName("WpfTraceLevel")]
+    public SourceLevels WpfTraceLevel { get; set; } = SourceLevels.Warning;
 
     [JsonPropertyName("StackTraceDepth")]
     public int StackTraceDepth { get; set; } = 3;
     
     [JsonPropertyName("TimeInterval")] 
-    public RollingInterval TimeInterval { get; set; } = RollingInterval.Infinite;
+    public RollingInterval TimeInterval { get; set; } = RollingInterval.Day;
     
     [JsonPropertyName("FilePath")] 
-    public string FilePath { get; set; } = string.Empty;
+    public string FilePath { get; set; } = SettingsLocation.GetDefaultLogPath("log");
 }
 
 public enum LogSaveFormat

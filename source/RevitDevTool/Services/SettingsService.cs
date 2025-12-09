@@ -1,7 +1,7 @@
-﻿using System.IO ;
+﻿using System.Diagnostics;
+using System.IO ;
 using System.Text.Json ;
 using RevitDevTool.Models.Config ;
-using RevitDevTool.ViewModel.Settings;
 using Serilog ;
 using Wpf.Ui.Appearance ;
 
@@ -75,6 +75,7 @@ public sealed class SettingsService
         var path = SettingsLocation.GetSettingsPath("LogConfig.json" );
         var json = JsonSerializer.Serialize(_logConfig);
         File.WriteAllText(path, json);
+        PresentationTraceSources.DataBindingSource.Switch.Level = _logConfig?.WpfTraceLevel ?? SourceLevels.Warning;
         LogSettingsChanged?.Invoke();
     }
 
@@ -158,9 +159,13 @@ public sealed class SettingsService
         {
             ResetLogSettings();
         }
+        else
+        {
+            PresentationTraceSources.DataBindingSource.Switch.Level = _logConfig.WpfTraceLevel;
+        }
     }
 
-    public void ResetGeneralSettings()
+    private void ResetGeneralSettings()
     {
         _generalConfig = new GeneralConfig
         {
@@ -175,19 +180,12 @@ public sealed class SettingsService
 
     private void ResetLogSettings()
     {
-        _logConfig = new LogConfig
-        {
-            IsSaveLogEnabled = false,
-            SaveFormat = LogSaveFormat.Text,
-            IncludeStackTrace = false,
-            StackTraceDepth = 5,
-            TimeInterval = RollingInterval.Infinite,
-            FilePath = SettingsLocation.GetDefaultLogPath("log")
-        };
+        _logConfig = new LogConfig();
+        PresentationTraceSources.DataBindingSource.Switch.Level = _logConfig.WpfTraceLevel;
         LogSettingsChanged?.Invoke();
     }
 
-    public void ResetVisualizationSettings()
+    private void ResetVisualizationSettings()
     {
         _visualizationConfig = new VisualizationConfig
         {
