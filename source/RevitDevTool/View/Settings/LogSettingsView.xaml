@@ -4,7 +4,6 @@
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:config="clr-namespace:RevitDevTool.Models.Config"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
-    xmlns:diagnostics="clr-namespace:System.Diagnostics;assembly=System.Diagnostics.TraceSource"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     xmlns:serilog="clr-namespace:Serilog;assembly=Serilog.Sinks.File"
     xmlns:settings="clr-namespace:RevitDevTool.ViewModel.Settings"
@@ -53,14 +52,6 @@
                 </ObjectDataProvider.MethodParameters>
             </ObjectDataProvider>
 
-            <ObjectDataProvider
-                x:Key="SourceLevels"
-                MethodName="GetValues"
-                ObjectType="{x:Type sys:Enum}">
-                <ObjectDataProvider.MethodParameters>
-                    <x:Type TypeName="diagnostics:SourceLevels" />
-                </ObjectDataProvider.MethodParameters>
-            </ObjectDataProvider>
         </ResourceDictionary>
     </ui:ContentDialog.Resources>
 
@@ -117,7 +108,7 @@
                 </Grid.ColumnDefinitions>
                 <ComboBox
                     Margin="0,0,8,0"
-                    ItemsSource="{Binding Source={StaticResource SourceLevels}}"
+                    ItemsSource="{Binding SourceLevels, Mode=OneTime}"
                     SelectedItem="{Binding WpfTraceLevel}"
                     Visibility="{Binding IncludeWpfTrace, Converter={StaticResource BoolToVisibility}}" />
                 <ui:ToggleSwitch

@@ -10,6 +10,7 @@ public partial class LogSettingsViewModel : ObservableObject
 {
     public static readonly LogSettingsViewModel Instance = new();
     public static int[] StackTraceDepths { get; } = [1, 2, 3, 4, 5]; // allowed maximum 5 levels
+    public static SourceLevels[] SourceLevels { get; } = Enum.GetValues(typeof(SourceLevels)).Cast<SourceLevels>().ToArray();
     
     [ObservableProperty] private bool _isSaveLogEnabled;
     [ObservableProperty] private LogSaveFormat _saveFormat;
