@@ -24,7 +24,7 @@ public class Application : ExternalApplication
     
     public override void OnShutdown()
     {
-        TraceEventNotifier.TraceReceived -= TraceCommand.TraceReceivedHandler;
+        NotifyListener.TraceReceived -= TraceCommand.TraceReceivedHandler;
         if (TraceCommand.SharedViewModel is not null) TraceCommand.SharedViewModel.IsStarted = false;
         SettingsService.Instance.SaveSettings();
         VisualizationController.Stop();

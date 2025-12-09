@@ -1,5 +1,4 @@
-﻿using System.Diagnostics;
-using Serilog.Core;
+﻿using Serilog.Core;
 using Serilog.Events;
 using System.Windows.Forms.Integration;
 using Autodesk.Revit.UI.Events;
@@ -28,11 +27,12 @@ internal partial class TraceLogViewModel : ObservableObject, IDisposable
     private RichTextBoxSink? _sink;
     private Logger? _logger;
     private SerilogTraceListener? _traceListener;
-    private TraceGeometry.TraceGeometryListener? _geometryListener;
-    private TraceEventNotifier? _traceEventNotifier;
+    private GeometryListener? _geometryListener;
+    private NotifyListener? _traceEventNotifier;
     private ConsoleRedirector? _consoleRedirector;
-
     private ApplicationTheme _currentTheme;
+    private bool _isSubscribe;
+    private bool _isClearing;
 
     public WindowsFormsHost LogTextBox { get; }
 
@@ -42,9 +42,6 @@ internal partial class TraceLogViewModel : ObservableObject, IDisposable
 
     [ObservableProperty]
     private bool _isStarted = true;
-
-    private bool _isSubscribe;
-    private bool _isClearing;
 
     [ObservableProperty]
     private LogEventLevel _logLevel = LogEventLevel.Debug;
@@ -85,8 +82,8 @@ internal partial class TraceLogViewModel : ObservableObject, IDisposable
 
         _logger ??= loggerConfig.CreateLogger();
         _traceListener ??= new SerilogTraceListener(_logger, logConfig.IncludeStackTrace, logConfig.StackTraceDepth);
-        _geometryListener ??= new TraceGeometry.TraceGeometryListener();
-        _traceEventNotifier ??= new TraceEventNotifier();
+        _geometryListener ??= new GeometryListener();
+        _traceEventNotifier ??= new NotifyListener();
     }
 
     private void DisposeLogger()
@@ -106,26 +103,12 @@ internal partial class TraceLogViewModel : ObservableObject, IDisposable
 
     private void RegisterTraceListeners()
     {
-        if (_traceListener != null && !Trace.Listeners.Contains(_traceListener))
-            Trace.Listeners.Add(_traceListener);
-
-        if (_geometryListener != null && !Trace.Listeners.Contains(_geometryListener))
-            Trace.Listeners.Add(_geometryListener);
-        
-        if (_traceEventNotifier != null && !Trace.Listeners.Contains(_traceEventNotifier))
-            Trace.Listeners.Add(_traceEventNotifier);
+        TraceUtils.RegisterTraceListeners(_traceListener, _geometryListener, _traceEventNotifier);
     }
 
     private void UnregisterTraceListeners()
     {
-        if (_traceListener != null)
-            Trace.Listeners.Remove(_traceListener);
-
-        if (_geometryListener != null)
-            Trace.Listeners.Remove(_geometryListener);
-        
-        if (_traceEventNotifier != null)
-            Trace.Listeners.Remove(_traceEventNotifier);
+        TraceUtils.UnregisterTraceListeners(_traceListener, _geometryListener, _traceEventNotifier);
     }
 
     private void RestartLogging()
@@ -237,7 +220,6 @@ internal partial class TraceLogViewModel : ObservableObject, IDisposable
             ApplyTextBoxTheme();
         };
 
-        PresentationTraceSources.ResourceDictionarySource.Switch.Level = SourceLevels.Critical;
         _levelSwitch = new LoggingLevelSwitch(_logLevel);
         _onThemeChangedHandler = OnThemeChanged;
         _onIdlingHandler = OnIdling;

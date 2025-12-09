@@ -10,11 +10,13 @@ public static class StackTraceUtils
     /// </summary>
     private static readonly string[] DefaultIgnoredNamespacePrefixes =
     [
-        "System",
-        "Microsoft",
         "Serilog",
+        "Nlog",
+        "Microsoft.Extensions.Logging",
+        "MS.Internal",
+        "System.Environment.get_StackTrace",
+        "System.Diagnostics",
         "RevitDevTool",
-        "IronPython",
         "Autodesk.Revit.UI",
         "revitAPIStartupFromSingleManifest"
     ];

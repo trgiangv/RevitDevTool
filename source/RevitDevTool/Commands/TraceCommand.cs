@@ -113,17 +113,17 @@ public class TraceCommand : ExternalCommand
         
         application.ControlledApplication.DocumentOpened += OnDocumentOpened;
         application.ControlledApplication.DocumentClosed += OnDocumentClosed;
-        TraceEventNotifier.TraceReceived += TraceReceivedHandler;
+        NotifyListener.TraceReceived += TraceReceivedHandler;
     }
     
     private static void OnTraceReceived()
     {
-        TraceEventNotifier.TraceReceived -= TraceReceivedHandler;
+        NotifyListener.TraceReceived -= TraceReceivedHandler;
         
         if (HasDocumentOpened)  return;
         if (SharedViewModel is not { IsStarted: true })
         {
-            TraceEventNotifier.TraceReceived += TraceReceivedHandler;
+            NotifyListener.TraceReceived += TraceReceivedHandler;
             return;
         }
         if (FloatingWindow != null) return; 
@@ -135,7 +135,7 @@ public class TraceCommand : ExternalCommand
     private static void OnDocumentOpened(object? sender, DocumentOpenedEventArgs args)
     {
         CloseFloatingWindow();
-        TraceEventNotifier.TraceReceived -= TraceReceivedHandler;
+        NotifyListener.TraceReceived -= TraceReceivedHandler;
         
         if (IsForceHide)
         {
@@ -180,7 +180,7 @@ public class TraceCommand : ExternalCommand
         FloatingWindow.Closed -= OnFloatingWindowClosed;
         FloatingWindow = null;
         if (HasDocumentOpened) return;
-        TraceEventNotifier.TraceReceived += TraceReceivedHandler;
+        NotifyListener.TraceReceived += TraceReceivedHandler;
     }
     
     private static void OnDocumentClosed(object? sender, DocumentClosedEventArgs args)
@@ -192,6 +192,6 @@ public class TraceCommand : ExternalCommand
             SharedViewModel = new TraceLogViewModel();
         }
         
-        TraceEventNotifier.TraceReceived += TraceReceivedHandler;
+        NotifyListener.TraceReceived += TraceReceivedHandler;
     }
 }

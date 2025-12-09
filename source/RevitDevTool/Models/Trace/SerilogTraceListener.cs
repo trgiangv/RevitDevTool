@@ -252,13 +252,27 @@ internal sealed class SerilogTraceListener(ILogger logger, bool includeStackTrac
         string messageTemplate,
         IList<LogEventProperty> properties)
     {
-        Write(LevelMapping.ToLogEventLevel(eventType), exception, messageTemplate, properties);
+        Write(GetLogEventLevel(eventType), exception, messageTemplate, properties);
     }
 
-    private static string EnrichMessageWithStackTrace(string messageTemplate, IList<LogEventProperty> properties)
+    private string EnrichMessage([CanBeNull] string messageTemplate, IList<LogEventProperty> properties)
     {
         var stackTraceProp = properties.FirstOrDefault(p => p.Name == StackTraceProperty);
-        return stackTraceProp != null ? $"{messageTemplate}\n at {{StackTrace}}" : messageTemplate;
+        var categoryProp = properties.FirstOrDefault(p => p.Name == CategoryProperty);
+
+        messageTemplate ??= string.Empty;
+
+        if (categoryProp != null)
+        {
+            var isEmptyStringCategory = categoryProp.Value is ScalarValue { Value: string s } && string.IsNullOrWhiteSpace(s);
+            if (!isEmptyStringCategory) 
+                messageTemplate = $"[{{Category}}] {messageTemplate}";
+        }
+
+        if (stackTraceProp != null && includeStackTrace)
+            messageTemplate = $"{messageTemplate}\n at {{StackTrace}}";
+        
+        return messageTemplate;
     }
     
     private void Write(
@@ -267,11 +281,12 @@ internal sealed class SerilogTraceListener(ILogger logger, bool includeStackTrac
         string messageTemplate,
         IList<LogEventProperty> properties)
     {
-        messageTemplate ??= string.Empty;
-        if (includeStackTrace) messageTemplate = EnrichMessageWithStackTrace(messageTemplate, properties);
+        messageTemplate = EnrichMessage(messageTemplate, properties);
         var logger = _logger ?? Log.Logger;
+#pragma warning disable CA2254
         // ReSharper disable once TemplateIsNotCompileTimeConstantProblem
         if (!logger.BindMessageTemplate(messageTemplate, null, out var parsedTemplate, out _))
+#pragma warning restore CA2254
             return;
         var logEvent = new LogEvent(DateTimeOffset.Now, level, exception, parsedTemplate, properties);
         logger.Write(logEvent);
@@ -293,15 +308,12 @@ internal sealed class SerilogTraceListener(ILogger logger, bool includeStackTrac
 
     private void WriteData(TraceEventType eventType, IList<LogEventProperty> properties, object data)
     {
-        var logEventLevel = LevelMapping.ToLogEventLevel(eventType);
+        var logEventLevel = GetLogEventLevel(eventType);
         SafeAddProperty(properties, TraceDataProperty, data);
         Write(logEventLevel, null, TraceDataMessageTemplate, properties);
     }
-}
 
-internal static class LevelMapping
-{
-    public static LogEventLevel ToLogEventLevel(TraceEventType eventType)
+    private static LogEventLevel GetLogEventLevel(TraceEventType eventType)
     {
         return eventType switch
         {
