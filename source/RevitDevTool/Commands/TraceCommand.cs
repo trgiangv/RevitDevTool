@@ -154,13 +154,22 @@ public class TraceCommand : ExternalCommand
     {
         if (FloatingWindow != null) return;
         if (SharedViewModel is null) return;
-        ComponentManager.Ribbon.Dispatcher.BeginInvoke(new Action(() =>
+        
+        // It is what it is, just let it go
+        if (ComponentManager.IsApplicationButtonVisible) 
+            ComponentManager.Ribbon.Dispatcher.BeginInvoke(new Action(Show));
+        else 
+            Show();
+
+        return;
+        
+        void Show()
         {
-            FloatingWindow = new TraceLogWindow(SharedViewModel);
+            FloatingWindow = new TraceLogWindow(SharedViewModel!);
             FloatingWindow.Closed += OnFloatingWindowClosed;
             FloatingWindow.SetAutodeskOwner();
             FloatingWindow.Show();
-        }));
+        }
     }
     
     private static void CloseFloatingWindow()
