@@ -1,4 +1,4 @@
-﻿using Autodesk.Revit.Attributes;
+using Autodesk.Revit.Attributes;
 using Autodesk.Revit.DB.Events;
 using Autodesk.Revit.UI;
 using Autodesk.Windows;
@@ -21,7 +21,7 @@ public class TraceCommand : ExternalCommand
     private static readonly DockablePaneId PaneId = new(new Guid(Guid));
     private static bool IsForceHide { get; set; }
     internal static TraceLogViewModel? SharedViewModel { get; private set; }
-    public static TraceLogWindow? FloatingWindow { get; private set; }
+    private static TraceLogWindow? FloatingWindow { get; set; }
     private static bool HasDocumentOpened => Context.Application.Documents.Size > 0;
 
     public override void Execute()
@@ -36,7 +36,7 @@ public class TraceCommand : ExternalCommand
                 }
                 else
                 {
-                    SharedViewModel ??= new TraceLogViewModel();
+                    SharedViewModel ??= Host.GetService<TraceLogViewModel>();
                     SharedViewModel.Subscribe();
                     ShowFloatingWindow();
                 }
@@ -51,7 +51,7 @@ public class TraceCommand : ExternalCommand
             }
             else
             {
-                SharedViewModel ??= new TraceLogViewModel();
+                SharedViewModel ??= Host.GetService<TraceLogViewModel>();
                 SharedViewModel.Subscribe();
                 dockableWindow.Show();
                 IsForceHide = false;
@@ -65,8 +65,9 @@ public class TraceCommand : ExternalCommand
     
     public static void RegisterDockablePane(UIControlledApplication application)
     {
-        SharedViewModel = new TraceLogViewModel();
-        var frameworkElement = new TraceLogPage(SharedViewModel);
+        SharedViewModel = Host.GetService<TraceLogViewModel>();
+        var pageViewModel = Host.GetService<TraceLogPageViewModel>();
+        var frameworkElement = new TraceLogPage(pageViewModel);
         RegisterPane(application, frameworkElement);
         SubscribeEvents(application);
     }
@@ -100,14 +101,12 @@ public class TraceCommand : ExternalCommand
             if (args.PaneId != PaneId) return;
             if (SharedViewModel is null) return;
 
-            if (args.DockableFrameShown)
+            // Keep trace listeners registered even when pane is hidden
+            // Only dispose when floating window is also closed
+            if (!args.DockableFrameShown && FloatingWindow is null)
             {
-                SharedViewModel.Subscribe();
-            }
-            else
-            {
-                if (FloatingWindow is null)
-                    SharedViewModel.Dispose();
+                // Don't dispose, just keep running in background
+                // SharedViewModel.Dispose();
             }
         };
         
@@ -165,7 +164,7 @@ public class TraceCommand : ExternalCommand
         
         void Show()
         {
-            FloatingWindow = new TraceLogWindow(SharedViewModel!);
+            FloatingWindow = new TraceLogWindow();
             FloatingWindow.Closed += OnFloatingWindowClosed;
             FloatingWindow.SetAutodeskOwner();
             FloatingWindow.Show();
@@ -198,7 +197,7 @@ public class TraceCommand : ExternalCommand
         
         if (SharedViewModel is null or { IsStarted: false })
         {
-            SharedViewModel = new TraceLogViewModel();
+            SharedViewModel = Host.GetService<TraceLogViewModel>();
         }
         
         NotifyListener.TraceReceived += TraceReceivedHandler;

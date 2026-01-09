@@ -1,6 +1,6 @@
-﻿using RevitDevTool.ViewModel.Contracts ;
-using RevitDevTool.ViewModel.Settings ;
-using RevitDevTool.Visualization.Contracts ;
+﻿using RevitDevTool.ViewModel.Contracts;
+using RevitDevTool.ViewModel.Settings.Visualization;
+using RevitDevTool.Visualization.Contracts;
 using RevitDevTool.Visualization.Server;
 
 namespace RevitDevTool;
@@ -14,30 +14,27 @@ internal static class VisualizationController
     public static XyzVisualizationServer XyzVisualizationServer { get; } = new();
     public static FaceVisualizationServer FaceVisualizationServer { get; } = new();
     
-    private static Dictionary<IVisualizationServerLifeCycle, IVisualizationViewModel> ServerViewModelMapping
+    private static IEnumerable<(IVisualizationServerLifeCycle Server, IVisualizationViewModel ViewModel)> GetMappings()
     {
-        get => new()
-        {
-            { BoundingBoxVisualizationServer, BoundingBoxVisualizationViewModel.Instance },
-            { MeshVisualizationServer, MeshVisualizationViewModel.Instance },
-            { PolylineVisualizationServer, PolylineVisualizationViewModel.Instance },
-            { SolidVisualizationServer, SolidVisualizationViewModel.Instance },
-            { XyzVisualizationServer, XyzVisualizationViewModel.Instance },
-            { FaceVisualizationServer, FaceVisualizationViewModel.Instance }
-        } ;
+        yield return (BoundingBoxVisualizationServer, Host.GetService<BoundingBoxVisualizationViewModel>());
+        yield return (MeshVisualizationServer, Host.GetService<MeshVisualizationViewModel>());
+        yield return (PolylineVisualizationServer, Host.GetService<PolylineVisualizationViewModel>());
+        yield return (SolidVisualizationServer, Host.GetService<SolidVisualizationViewModel>());
+        yield return (XyzVisualizationServer, Host.GetService<XyzVisualizationViewModel>());
+        yield return (FaceVisualizationServer, Host.GetService<FaceVisualizationViewModel>());
     }
 
     public static void Start()
     {
-        foreach (var server in ServerViewModelMapping)
+        foreach (var (server, viewModel) in GetMappings())
         {
-            server.Key.Register(server.Value);
+            server.Register(viewModel);
         }
     }
     
     public static void Stop()
     {
-        foreach (var server in ServerViewModelMapping.Keys)
+        foreach (var (server, _) in GetMappings())
         {
             server.Unregister();
         }
@@ -45,7 +42,7 @@ internal static class VisualizationController
     
     public static void Clear()
     {
-        foreach (var server in ServerViewModelMapping.Keys)
+        foreach (var (server, _) in GetMappings())
         {
             server.ClearGeometry();
         }
@@ -53,14 +50,14 @@ internal static class VisualizationController
     
     public static void Refresh()
     {
-        foreach (var viewModel in ServerViewModelMapping.Values)
+        foreach (var (_, viewModel) in GetMappings())
         {
             viewModel.Refresh();
         }
         Context.ActiveUiDocument?.UpdateAllOpenViews();
     }
     
-    public static void Add<T> (T geometry)
+    public static void Add<T>(T? geometry)
     {
         switch (geometry)
         {
@@ -68,12 +65,7 @@ internal static class VisualizationController
                 BoundingBoxVisualizationServer.AddGeometry(boundingBox);
                 break;
             case Outline outline:
-                var bbox = new BoundingBoxXYZ
-                {
-                    Min = outline.MinimumPoint,
-                    Max = outline.MaximumPoint
-                };
-                BoundingBoxVisualizationServer.AddGeometry(bbox);
+                AddOutline(outline);
                 break;
             case Mesh mesh:
                 MeshVisualizationServer.AddGeometry(mesh);
@@ -98,64 +90,84 @@ internal static class VisualizationController
                 break;
         }
     }
-    
-    // ReSharper disable once CognitiveComplexity
-    public static void Add<T> (IEnumerable<T> geometries)
-    {
-        var groupedGeometries = geometries
-            .GroupBy(geometry =>
-            {
-                return geometry switch
-                {
-                    BoundingBoxXYZ => typeof(BoundingBoxXYZ),
-                    Outline => typeof(Outline),
-                    Mesh => typeof(Mesh),
-                    Solid => typeof(Solid),
-                    XYZ => typeof(XYZ),
-                    Face => typeof(Face),
-                    Curve => typeof(Curve),
-                    Edge => typeof(Edge),
-                    PolyLine => typeof(PolyLine),
-                    _ => null
-                };
-            });
-        
-        foreach (var group in groupedGeometries)
-        {
-            var geometryType = group.Key;
-            if (geometryType is null) continue;
 
-            switch (geometryType)
+    public static void Add<T>(IEnumerable<T> geometries)
+    {
+        if (geometries is ICollection<T> collection)
+        {
+            switch (collection.Count)
             {
-                case not null when geometryType == typeof(BoundingBoxXYZ):
-                    BoundingBoxVisualizationServer.AddGeometries(group.Cast<BoundingBoxXYZ>());
-                    break;
-                case not null when geometryType == typeof(Outline):
-                    BoundingBoxVisualizationServer.AddGeometries(group.Cast<Outline>()
-                        .Select(outline =>  new BoundingBoxXYZ {Min = outline.MinimumPoint, Max = outline.MaximumPoint}));
-                    break;
-                case not null when geometryType == typeof(Mesh):
-                    MeshVisualizationServer.AddGeometries(group.Cast<Mesh>());
-                    break;
-                case not null when geometryType == typeof(Solid):
-                    SolidVisualizationServer.AddGeometries(group.Cast<Solid>());
-                    break;
-                case not null when geometryType == typeof(XYZ):
-                    XyzVisualizationServer.AddGeometries(group.Cast<XYZ>());
-                    break;
-                case not null when geometryType == typeof(Face):
-                    FaceVisualizationServer.AddGeometries(group.Cast<Face>());
-                    break;
-                case not null when geometryType == typeof(Curve):
-                    PolylineVisualizationServer.AddGeometries(group.Cast<Curve>());
-                    break;
-                case not null when geometryType == typeof(Edge):
-                    PolylineVisualizationServer.AddGeometries(group.Cast<Edge>());
-                    break;
-                case not null when geometryType == typeof(PolyLine):
-                    PolylineVisualizationServer.AddGeometries(group.Cast<PolyLine>());
-                    break;
+                case 0:
+                    return;
+                case 1:
+                    Add(collection.First());
+                    return;
             }
         }
+
+        var grouped = geometries
+            .GroupBy(GetGeometryType)
+            .Where(g => g.Key is not null);
+        
+        foreach (var group in grouped)
+        {
+            AddGroupedGeometries(group.Key!, group);
+        }
+    }
+
+    private static Type? GetGeometryType<T>(T geometry) => geometry switch
+    {
+        BoundingBoxXYZ => typeof(BoundingBoxXYZ),
+        Outline => typeof(Outline),
+        Mesh => typeof(Mesh),
+        Solid => typeof(Solid),
+        XYZ => typeof(XYZ),
+        Face => typeof(Face),
+        Curve => typeof(Curve),
+        Edge => typeof(Edge),
+        PolyLine => typeof(PolyLine),
+        _ => null
+    };
+
+    private static void AddGroupedGeometries<T>(Type geometryType, IEnumerable<T> geometries)
+    {
+        if (geometryType == typeof(BoundingBoxXYZ))
+            BoundingBoxVisualizationServer.AddGeometries(geometries.Cast<BoundingBoxXYZ>());
+        else if (geometryType == typeof(Outline))
+            AddOutlines(geometries.Cast<Outline>());
+        else if (geometryType == typeof(Mesh))
+            MeshVisualizationServer.AddGeometries(geometries.Cast<Mesh>());
+        else if (geometryType == typeof(Solid))
+            SolidVisualizationServer.AddGeometries(geometries.Cast<Solid>());
+        else if (geometryType == typeof(XYZ))
+            XyzVisualizationServer.AddGeometries(geometries.Cast<XYZ>());
+        else if (geometryType == typeof(Face))
+            FaceVisualizationServer.AddGeometries(geometries.Cast<Face>());
+        else if (geometryType == typeof(Curve))
+            PolylineVisualizationServer.AddGeometries(geometries.Cast<Curve>());
+        else if (geometryType == typeof(Edge))
+            PolylineVisualizationServer.AddGeometries(geometries.Cast<Edge>());
+        else if (geometryType == typeof(PolyLine))
+            PolylineVisualizationServer.AddGeometries(geometries.Cast<PolyLine>());
+    }
+
+    private static void AddOutline(Outline outline)
+    {
+        var bbox = new BoundingBoxXYZ
+        {
+            Min = outline.MinimumPoint,
+            Max = outline.MaximumPoint
+        };
+        BoundingBoxVisualizationServer.AddGeometry(bbox);
+    }
+
+    private static void AddOutlines(IEnumerable<Outline> outlines)
+    {
+        var boxes = outlines.Select(outline => new BoundingBoxXYZ
+        {
+            Min = outline.MinimumPoint,
+            Max = outline.MaximumPoint
+        });
+        BoundingBoxVisualizationServer.AddGeometries(boxes);
     }
 }

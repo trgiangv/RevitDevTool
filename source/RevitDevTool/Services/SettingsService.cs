@@ -2,14 +2,14 @@
 using System.IO ;
 using System.Text.Json ;
 using RevitDevTool.Models.Config ;
+using RevitDevTool.Utils;
 using Serilog ;
 using Wpf.Ui.Appearance ;
 
 namespace RevitDevTool.Services;
 
-public sealed class SettingsService
+public sealed class SettingsService : ISettingsService
 {
-    public event Action? LogSettingsChanged;
     public static readonly SettingsService Instance = new();
     private GeneralConfig? _generalConfig;
     private LogConfig? _logConfig;
@@ -65,30 +65,29 @@ public sealed class SettingsService
 
     private void SaveApplicationSettings()
     {
-        var path = SettingsLocation.GetSettingsPath("GeneralConfig.json" );
+        var path = SettingsUtils.GetSettingsPath("GeneralConfig.json" );
         var json = JsonSerializer.Serialize(_generalConfig);
         File.WriteAllText(path, json);
     }
     
     private void SaveLogSettings()
     {
-        var path = SettingsLocation.GetSettingsPath("LogConfig.json" );
+        var path = SettingsUtils.GetSettingsPath("LogConfig.json" );
         var json = JsonSerializer.Serialize(_logConfig);
         File.WriteAllText(path, json);
         PresentationTraceSources.DataBindingSource.Switch.Level = _logConfig?.WpfTraceLevel ?? SourceLevels.Warning;
-        LogSettingsChanged?.Invoke();
     }
 
     private void SaveVisualizationSettings()
     {
-        var path = SettingsLocation.GetSettingsPath("VisualizationConfig.json" );
+        var path = SettingsUtils.GetSettingsPath("VisualizationConfig.json" );
         var json = JsonSerializer.Serialize(_visualizationConfig);
         File.WriteAllText(path, json);
     }
 
     private void LoadApplicationSettings()
     {
-        var path = SettingsLocation.GetSettingsPath("GeneralConfig.json" );
+        var path = SettingsUtils.GetSettingsPath("GeneralConfig.json" );
         if (!File.Exists(path))
         {
             ResetGeneralSettings();
@@ -113,7 +112,7 @@ public sealed class SettingsService
 
     private void LoadVisualizationSettings()
     {
-        var path = SettingsLocation.GetSettingsPath("VisualizationConfig.json" );
+        var path = SettingsUtils.GetSettingsPath("VisualizationConfig.json" );
         if (!File.Exists(path))
         {
             ResetVisualizationSettings();
@@ -138,7 +137,7 @@ public sealed class SettingsService
     
     private void LoadLogSettings()
     {
-        var path = SettingsLocation.GetSettingsPath("LogConfig.json" );
+        var path = SettingsUtils.GetSettingsPath("LogConfig.json" );
         if (!File.Exists(path))
         {
             ResetLogSettings();
@@ -182,7 +181,6 @@ public sealed class SettingsService
     {
         _logConfig = new LogConfig();
         PresentationTraceSources.DataBindingSource.Switch.Level = _logConfig.WpfTraceLevel;
-        LogSettingsChanged?.Invoke();
     }
 
     private void ResetVisualizationSettings()

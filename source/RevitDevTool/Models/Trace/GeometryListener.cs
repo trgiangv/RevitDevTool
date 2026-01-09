@@ -1,122 +1,95 @@
-using System.Diagnostics ;
+using System.Diagnostics;
 
 namespace RevitDevTool.Models.Trace;
 
 public class GeometryListener : TraceListener
 {
-    // ReSharper disable once CognitiveComplexity
     public override void Write(object? o)
     {
-        switch (o)
-        {
-            case ICollection<object> geometries:
-                List<GeometryObject>? geometryObjects = null;
-                List<BoundingBoxXYZ>? boundingBoxes = null;
-                List<Outline>? outlines = null;
-                List<XYZ>? xyZs = null;
-
-                foreach (var geometry in geometries)
-                {
-                    switch (geometry)
-                    {
-                        case GeometryObject geometryObject:
-                            (geometryObjects ??= []).Add(geometryObject);
-                            break;
-                        case BoundingBoxXYZ boundingBox:
-                            (boundingBoxes ??= []).Add(boundingBox);
-                            break;
-                        case Outline outline:
-                            (outlines ??= []).Add(outline);
-                            break;
-                        case XYZ xyz:
-                            (xyZs ??= []).Add(xyz);
-                            break;
-                        case CurveLoop curveLoop:
-                            (geometryObjects ??= []).AddRange(curveLoop);
-                            break;
-                        case CurveArray curveArray:
-                            (geometryObjects ??= []).AddRange(curveArray.Cast<Curve>());
-                            break;
-                        case EdgeArray edgeArray:
-                            (geometryObjects ??= []).AddRange(edgeArray.Cast<Edge>());
-                            break;
-                        case FaceArray faceArray:
-                            (geometryObjects ??= []).AddRange(faceArray.Cast<Face>());
-                            break;
-                        default:
-                            base.Write(geometry);
-                            break;
-                    }
-                }
-
-                if (geometryObjects?.Count > 0) Trace(geometryObjects);
-                if (boundingBoxes?.Count > 0) Trace(boundingBoxes);
-                if (outlines?.Count > 0) Trace(outlines);
-                if (xyZs?.Count > 0) Trace(xyZs);
-                break;
-            case GeometryObject geometryObject:
-                Trace(geometryObject);
-                break;
-            case XYZ xyz:
-                Trace(xyz);
-                break;
-            case BoundingBoxXYZ boundingBoxXyz:
-                Trace(boundingBoxXyz);
-                break;
-            case Outline outline:
-                Trace(outline);
-                break;
-            case FaceArray faceArray:
-                Trace(faceArray.Cast<Face>());
-                break;
-            case CurveArray curveArray:
-                Trace(curveArray.Cast<Curve>());
-                break;
-            case EdgeArray edgeArray:
-                Trace(edgeArray.Cast<Edge>());
-                break;
-            case IEnumerable<GeometryObject> geometries:
-                Trace(geometries);
-                break;
-            case IEnumerable<CurveLoop> curves:
-                Trace(curves.SelectMany(x => x));
-                break;
-            case IEnumerable<CurveArray> curveArrays:
-                Trace(curveArrays.SelectMany(x => x.Cast<Curve>()));
-                break;
-            case IEnumerable<EdgeArray> edgeArrays:
-                Trace(edgeArrays.SelectMany(x => x.Cast<Edge>()));
-                break;
-            case IEnumerable<FaceArray> faceArrays:
-                Trace(faceArrays.SelectMany(x => x.Cast<Face>()));
-                break;
-            case IEnumerable<XYZ> xyzs:
-                Trace(xyzs);
-                break;
-            case IEnumerable<BoundingBoxXYZ> boundingBoxXyzs:
-                Trace(boundingBoxXyzs);
-                break;
-            default:
-                base.Write(o);
-                break;
-        }
+        var processed = ProcessGeometry(o);
+        if (!processed)
+            base.Write(o);
     }
 
-    public override void Write(string? message)
+    public override void Write(string? message) { }
+
+    public override void WriteLine(string? message) { }
+
+    private static bool ProcessGeometry(object? geometry) => geometry switch
     {
-    }
+        // Single geometry object
+        GeometryObject g => Trace(g),
+        XYZ xyz => Trace(xyz),
+        BoundingBoxXYZ bbox => Trace(bbox),
+        Outline outline => Trace(outline),
+        
+        // Revit array types
+        FaceArray faceArray => Trace(faceArray.Cast<Face>()),
+        CurveArray curveArray => Trace(curveArray.Cast<Curve>()),
+        EdgeArray edgeArray => Trace(edgeArray.Cast<Edge>()),
+        
+        // Enumerable collections
+        IEnumerable<CurveLoop> curveLoops => Trace(curveLoops.SelectMany(x => x)),
+        IEnumerable<CurveArray> curveArrays => Trace(curveArrays.SelectMany(x => x.Cast<Curve>())),
+        IEnumerable<EdgeArray> edgeArrays => Trace(edgeArrays.SelectMany(x => x.Cast<Edge>())),
+        IEnumerable<FaceArray> faceArrays => Trace(faceArrays.SelectMany(x => x.Cast<Face>())),
+        IEnumerable<GeometryObject> geometries => Trace(geometries),
+        IEnumerable<XYZ> xyz => Trace(xyz),
+        IEnumerable<BoundingBoxXYZ> boxes => Trace(boxes),
+        
+        // Mixed object collection (typically IronPython output)
+        ICollection<object> objects => ProcessMixedCollection(objects),
+        
+        _ => false
+    };
 
-    public override void WriteLine(string? message)
+    private static bool Trace<T>(T geometry)
     {
+        VisualizationController.Add(geometry);
+        return true;
     }
 
-    private static void Trace(object geometryObject)
-    {
-        VisualizationController.Add(geometryObject);
-    }
-
-    private static void Trace(IEnumerable<object> geometries)
+    private static bool Trace<T>(IEnumerable<T> geometries)
     {
         VisualizationController.Add(geometries);
+        return true;
+    }
+
+    private static bool ProcessMixedCollection(ICollection<object> objects)
+    {
+        var geometries = objects
+            .SelectMany(ConvertToGeometryObjects)
+            .ToLookup(GetGeometryType);
+
+        TraceGroupedGeometries(geometries);
+        return true;
+    }
+
+    private static IEnumerable<object> ConvertToGeometryObjects(object geometry) => geometry switch
+    {
+        GeometryObject or BoundingBoxXYZ or Outline or XYZ => [geometry],
+        CurveLoop curveLoop => curveLoop,
+        CurveArray curveArray => curveArray.Cast<Curve>(),
+        EdgeArray edgeArray => edgeArray.Cast<Edge>(),
+        FaceArray faceArray => faceArray.Cast<Face>(),
+        _ => []
+    };
+
+    private static Type GetGeometryType(object geometry) => geometry switch
+    {
+        GeometryObject => typeof(GeometryObject),
+        BoundingBoxXYZ => typeof(BoundingBoxXYZ),
+        Outline => typeof(Outline),
+        XYZ => typeof(XYZ),
+        _ => typeof(object)
+    };
+
+    private static void TraceGroupedGeometries(ILookup<Type, object> grouped)
+    {
+        foreach (var group in grouped)
+        {
+            if (group.Key == typeof(object)) continue;
+            VisualizationController.Add(group);
+        }
     }
 }

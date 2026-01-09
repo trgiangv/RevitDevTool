@@ -120,43 +120,48 @@ public partial class NavigationView : System.Windows.Controls.Control, INavigati
     /// </summary>
     protected virtual void OnUnloaded(object sender, RoutedEventArgs e)
     {
-        Loaded -= OnLoaded;
-        Unloaded -= OnUnloaded;
-        SizeChanged -= OnSizeChanged;
-
-        NavigationStack.CollectionChanged -= NavigationStackOnCollectionChanged;
-
-        PageIdOrTargetTagNavigationViewsDictionary.Clear();
-        PageTypeNavigationViewsDictionary.Clear();
-        PageToNavigationItemDictionary.Clear();
-
-        ClearJournal();
-
-        if (AutoSuggestBox is not null)
-        {
-            AutoSuggestBox.SuggestionChosen -= AutoSuggestBoxOnSuggestionChosen;
-            AutoSuggestBox.QuerySubmitted -= AutoSuggestBoxOnQuerySubmitted;
-        }
-
-        if (Header is BreadcrumbBar breadcrumbBar)
-        {
-            breadcrumbBar.ItemClicked -= BreadcrumbBarOnItemClicked;
-        }
-
-        if (ToggleButton is not null)
-        {
-            ToggleButton.Click -= OnToggleButtonClick;
-        }
-
-        if (BackButton is not null)
-        {
-            BackButton.Click -= OnToggleButtonClick;
-        }
-
-        if (AutoSuggestBoxSymbolButton is not null)
-        {
-            AutoSuggestBoxSymbolButton.Click -= AutoSuggestBoxSymbolButtonOnClick;
-        }
+        // IMPORTANT:
+        // NavigationView can be unloaded/reloaded repeatedly when hosted inside a TabControl.
+        // Doing full teardown here breaks future interactions (pane toggle, navigation, etc.).
+        // We intentionally keep handlers/state so the same instance remains functional when reloaded.
+        
+        // Loaded -= OnLoaded;
+        // Unloaded -= OnUnloaded;
+        // SizeChanged -= OnSizeChanged;
+        //
+        // NavigationStack.CollectionChanged -= NavigationStackOnCollectionChanged;
+        //
+        // PageIdOrTargetTagNavigationViewsDictionary.Clear();
+        // PageTypeNavigationViewsDictionary.Clear();
+        // PageToNavigationItemDictionary.Clear();
+        //
+        // ClearJournal();
+        //
+        // if (AutoSuggestBox is not null)
+        // {
+        //     AutoSuggestBox.SuggestionChosen -= AutoSuggestBoxOnSuggestionChosen;
+        //     AutoSuggestBox.QuerySubmitted -= AutoSuggestBoxOnQuerySubmitted;
+        // }
+        //
+        // if (Header is BreadcrumbBar breadcrumbBar)
+        // {
+        //     breadcrumbBar.ItemClicked -= BreadcrumbBarOnItemClicked;
+        // }
+        //
+        // if (ToggleButton is not null)
+        // {
+        //     ToggleButton.Click -= OnToggleButtonClick;
+        // }
+        //
+        // if (BackButton is not null)
+        // {
+        //     BackButton.Click -= OnToggleButtonClick;
+        // }
+        //
+        // if (AutoSuggestBoxSymbolButton is not null)
+        // {
+        //     AutoSuggestBoxSymbolButton.Click -= AutoSuggestBoxSymbolButtonOnClick;
+        // }
     }
 
     protected override void OnMouseDown(MouseButtonEventArgs e)

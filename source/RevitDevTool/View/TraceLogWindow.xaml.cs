@@ -5,12 +5,13 @@ namespace RevitDevTool.View;
 
 public partial class TraceLogWindow
 {
-    internal TraceLogWindow(TraceLogViewModel viewModel)
+    public TraceLogWindow()
     {
-        ThemeWatcher.Instance.Watch(this);
+        Host.GetService<IThemeWatcherService>().Watch(this);
         InitializeComponent();
         
-        var traceLog = new TraceLogPage(viewModel);
+        var pageViewModel = Host.GetService<TraceLogPageViewModel>();
+        var traceLog = new TraceLogPage(pageViewModel);
         ContentFrame.Navigate(traceLog);
     }
 }

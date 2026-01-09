@@ -50,6 +50,7 @@
 
     <ItemGroup>
         <!-- Revit API-->
+        <PackageReference Include="Microsoft.Extensions.Hosting" Version="10.0.1" />
         <PackageReference Include="Nice3point.Revit.Build.Tasks" Version="3.*" />
         <PackageReference Include="Nice3point.Revit.Toolkit" Version="$(RevitVersion).*" />
         <PackageReference Include="Nice3point.Revit.Extensions" Version="$(RevitVersion).*" />
@@ -74,6 +75,7 @@
         <PackageReference Include="PolySharp" Version="*" PrivateAssets="All" IncludeAssets="runtime; build; native; contentfiles; analyzers; buildtransitive" />
         <PackageReference Include="ILRepack" Version="2.0.41" />
         <PackageReference Include="System.Text.Json" Version="8.0.6" Condition="$(DefineConstants.Contains('NETFRAMEWORK'))" />
+        <PackageReference Include="ZLogger" Version="2.5.10" />
     </ItemGroup>
 
     <!-- Copy SQLite.Interop.dll -->

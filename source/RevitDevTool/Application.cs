@@ -5,7 +5,7 @@ using Nice3point.Revit.Toolkit.External;
 using RevitDevTool.Commands;
 using RevitDevTool.Models.Trace;
 using RevitDevTool.Services ;
-using RevitDevTool.Theme ;
+using RevitDevTool.Theme;
 
 namespace RevitDevTool;
 
@@ -14,9 +14,16 @@ public class Application : ExternalApplication
 {
     public override void OnStartup()
     {
+        Host.Start();
         ExternalEventController.Register();
-        SettingsService.Instance.LoadSettings();
-        ThemeWatcher.Instance.Initialize();
+        
+        var settingsService = Host.GetService<ISettingsService>();
+        settingsService.LoadSettings();
+        
+        var themeWatcherService = Host.GetService<IThemeWatcherService>();
+        themeWatcherService.Initialize();
+        themeWatcherService.ApplyTheme();
+        
         EnableHardwareRendering();
         AddButton(Application);
         AddDockable(Application);
@@ -26,19 +33,22 @@ public class Application : ExternalApplication
     {
         NotifyListener.TraceReceived -= TraceCommand.TraceReceivedHandler;
         if (TraceCommand.SharedViewModel is not null) TraceCommand.SharedViewModel.IsStarted = false;
-        SettingsService.Instance.SaveSettings();
+        Host.GetService<ISettingsService>().SaveSettings();
         VisualizationController.Stop();
+        Host.Stop();
     }
 
     public static void EnableHardwareRendering()
     {
-        if (!SettingsService.Instance.GeneralConfig.UseHardwareRendering) return;
+        var settingsService = Host.GetService<ISettingsService>();
+        if (!settingsService.GeneralConfig.UseHardwareRendering) return;
         ExternalEventController.ActionEventHandler.Raise(_ => RenderOptions.ProcessRenderMode = RenderMode.Default);
     }
 
     public static void DisableHardwareRendering()
     {
-        if (SettingsService.Instance.GeneralConfig.UseHardwareRendering) return;
+        var settingsService = Host.GetService<ISettingsService>();
+        if (settingsService.GeneralConfig.UseHardwareRendering) return;
         RenderOptions.ProcessRenderMode = RenderMode.SoftwareOnly;
     }
 

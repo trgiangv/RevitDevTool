@@ -1,4 +1,4 @@
-﻿using RevitDevTool.Theme ;
+﻿using RevitDevTool.Theme;
 using RevitDevTool.ViewModel.Settings ;
 
 namespace RevitDevTool.View.Settings ;
@@ -7,8 +7,8 @@ public partial class GeneralSettingsView
 {
     public GeneralSettingsView()
     {
-        ThemeWatcher.Instance.Watch(this);
-        DataContext = GeneralSettingsViewModel.Instance ;
+        Host.GetService<IThemeWatcherService>().Watch(this);
+        DataContext = Host.GetService<GeneralSettingsViewModel>();
         InitializeComponent() ;
     }
 }

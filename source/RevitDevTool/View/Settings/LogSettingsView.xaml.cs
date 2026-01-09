@@ -1,29 +1,14 @@
-﻿using System.Windows.Controls;
-using RevitDevTool.Theme;
+﻿using RevitDevTool.Theme;
 using RevitDevTool.ViewModel.Settings;
-using Wpf.Ui.Controls;
 
 namespace RevitDevTool.View.Settings;
 
-public sealed partial class LogSettingsView
+public partial class LogSettingsView
 {
-    private readonly LogSettingsViewModel _viewModel;
-
-    public LogSettingsView(ContentPresenter dialogHost) : base(dialogHost)
+    public LogSettingsView()
     {
-        _viewModel = LogSettingsViewModel.Instance;
-        DataContext = _viewModel;
-        
+        DataContext = Host.GetService<LogSettingsViewModel>();
         InitializeComponent();
-        ThemeWatcher.Instance.Watch(this);
-        ButtonClicked += OnButtonClicked;
-    }
-
-    private void OnButtonClicked(ContentDialog sender, ContentDialogButtonClickEventArgs args)
-    {
-        if (args.Button == ContentDialogButton.Primary)
-        {
-            _viewModel.SaveToConfig();
-        }
+        Host.GetService<IThemeWatcherService>().Watch(this);
     }
 }

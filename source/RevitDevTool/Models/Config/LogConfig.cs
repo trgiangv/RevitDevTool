@@ -1,6 +1,8 @@
 using System.Diagnostics;
 using System.Text.Json.Serialization;
+using RevitDevTool.Utils;
 using Serilog;
+using Serilog.Events;
 namespace RevitDevTool.Models.Config;
 
 /// <summary>
@@ -9,8 +11,14 @@ namespace RevitDevTool.Models.Config;
 [Serializable]
 public sealed class LogConfig
 {
+    [JsonPropertyName("LogLevel")] 
+    public LogEventLevel LogLevel { get; set; } = LogEventLevel.Debug;
+
     [JsonPropertyName("IsSaveLogEnabled")] 
     public bool IsSaveLogEnabled { get; set; }
+    
+    [JsonPropertyName("UseExternalFileOnly")]
+    public bool UseExternalFileOnly { get; set; }
     
     [JsonPropertyName("SaveFormat")] 
     public LogSaveFormat SaveFormat { get; set; } = LogSaveFormat.Text;
@@ -31,7 +39,7 @@ public sealed class LogConfig
     public RollingInterval TimeInterval { get; set; } = RollingInterval.Day;
     
     [JsonPropertyName("FilePath")] 
-    public string FilePath { get; set; } = SettingsLocation.GetDefaultLogPath("log");
+    public string FilePath { get; set; } = SettingsUtils.GetDefaultLogPath("log");
 }
 
 public enum LogSaveFormat

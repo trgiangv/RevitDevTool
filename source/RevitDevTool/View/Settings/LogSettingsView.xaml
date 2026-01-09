@@ -1,38 +1,33 @@
-﻿<ui:ContentDialog
+﻿<UserControl
     x:Class="RevitDevTool.View.Settings.LogSettingsView"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:config="clr-namespace:RevitDevTool.Models.Config"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:log="clr-namespace:Serilog.Events;assembly=Serilog"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     xmlns:serilog="clr-namespace:Serilog;assembly=Serilog.Sinks.File"
     xmlns:settings="clr-namespace:RevitDevTool.ViewModel.Settings"
-    xmlns:settingsDialog="clr-namespace:RevitDevTool.View.Settings"
     xmlns:sys="clr-namespace:System;assembly=mscorlib"
     xmlns:ui="http://revitdevtool.com/xaml"
-    Title="Log Settings"
     d:DataContext="{d:DesignInstance settings:LogSettingsViewModel}"
-    d:DesignHeight="650"
+    d:DesignHeight="750"
     d:DesignWidth="600"
-    CloseButtonText="Cancel"
-    DefaultButton="Primary"
-    PrimaryButtonText="Save"
     mc:Ignorable="d">
 
-    <ui:ContentDialog.Resources>
+    <UserControl.Resources>
         <ResourceDictionary>
-            <ResourceDictionary.MergedDictionaries>
-                <!-- <ui:ThemesDictionary Theme="Light" /> -->
-                <ui:ControlsDictionary />
-            </ResourceDictionary.MergedDictionaries>
-
-            <!--  ReSharper disable once Xaml.StaticResourceNotResolved  -->
-            <Style
-                BasedOn="{StaticResource DefaultContentDialogStyle}"
-                TargetType="{x:Type settingsDialog:LogSettingsView}" />
-
             <BooleanToVisibilityConverter x:Key="BoolToVisibility" />
-            <sys:Int32 x:Key="ContentMinWidth">130</sys:Int32>
+            <sys:Int32 x:Key="ContentMinWidth">100</sys:Int32>
+
+            <ObjectDataProvider
+                x:Key="LogLevelProvider"
+                MethodName="GetValues"
+                ObjectType="{x:Type sys:Enum}">
+                <ObjectDataProvider.MethodParameters>
+                    <x:Type TypeName="log:LogEventLevel" />
+                </ObjectDataProvider.MethodParameters>
+            </ObjectDataProvider>
 
             <ObjectDataProvider
                 x:Key="LogSaveFormats"
@@ -53,9 +48,30 @@
             </ObjectDataProvider>
 
         </ResourceDictionary>
-    </ui:ContentDialog.Resources>
+    </UserControl.Resources>
 
-    <StackPanel>
+    <ScrollViewer HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
+        <StackPanel>
+        <!--  Log Level  -->
+        <ui:CardControl
+            Margin="0,4,0,0"
+            Icon="{ui:SymbolIcon Filter24}">
+            <ui:CardControl.Header>
+                <StackPanel>
+                    <ui:TextBlock Text="Log level" />
+                    <ui:TextBlock
+                        Appearance="Secondary"
+                        FontTypography="Caption"
+                        Text="Minimum level for displaying logs"
+                        TextTrimming="CharacterEllipsis" />
+                </StackPanel>
+            </ui:CardControl.Header>
+            <ComboBox
+                MinWidth="{Binding Source={StaticResource ContentMinWidth}}"
+                ItemsSource="{Binding Source={StaticResource LogLevelProvider}}"
+                SelectedItem="{Binding LogLevel}" />
+        </ui:CardControl>
+
         <!--  StackTrace  -->
         <ui:CardControl
             Margin="0,4,0,0"
@@ -70,20 +86,33 @@
                         TextTrimming="CharacterEllipsis" />
                 </StackPanel>
             </ui:CardControl.Header>
-            <Grid MinWidth="{Binding Source={StaticResource ContentMinWidth}}">
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="*" />
-                    <ColumnDefinition Width="Auto" />
-                </Grid.ColumnDefinitions>
+            <StackPanel MinWidth="{Binding Source={StaticResource ContentMinWidth}}">
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                    <TextBlock Margin="0,0,8,0" VerticalAlignment="Center">
+                        <TextBlock.Style>
+                            <Style TargetType="TextBlock">
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding IsChecked, ElementName=ToggleStackTrace}" Value="True">
+                                        <Setter Property="Text" Value="On" />
+                                    </DataTrigger>
+                                    <DataTrigger Binding="{Binding IsChecked, ElementName=ToggleStackTrace}" Value="False">
+                                        <Setter Property="Text" Value="Off" />
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </TextBlock.Style>
+                    </TextBlock>
+                    <ui:ToggleSwitch
+                        x:Name="ToggleStackTrace"
+                        HorizontalAlignment="Right"
+                        IsChecked="{Binding IncludeStackTrace}" />
+                </StackPanel>
                 <ComboBox
-                    Margin="0,0,8,0"
+                    Margin="0,8,0,0"
                     ItemsSource="{Binding StackTraceDepths, Mode=OneTime}"
                     SelectedItem="{Binding StackTraceDepth}"
                     Visibility="{Binding IncludeStackTrace, Converter={StaticResource BoolToVisibility}}" />
-                <ui:ToggleSwitch
-                    Grid.Column="1"
-                    IsChecked="{Binding IncludeStackTrace}" />
-            </Grid>
+            </StackPanel>
         </ui:CardControl>
 
         <ui:CardControl
@@ -97,33 +126,52 @@
                     <ui:TextBlock
                         Appearance="Secondary"
                         FontTypography="Caption"
-                        Text="Include binding and layout trace information"
+                        Text="Include presentation trace information"
                         TextTrimming="CharacterEllipsis" />
                 </StackPanel>
             </ui:CardControl.Header>
-            <Grid MinWidth="{Binding Source={StaticResource ContentMinWidth}}">
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="*" />
-                    <ColumnDefinition Width="Auto" />
-                </Grid.ColumnDefinitions>
+            <StackPanel MinWidth="{Binding Source={StaticResource ContentMinWidth}}">
+                <!-- <Grid.ColumnDefinitions> -->
+                <!--     <ColumnDefinition Width="*" /> -->
+                <!--     <ColumnDefinition Width="Auto" /> -->
+                <!-- </Grid.ColumnDefinitions> -->
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                    <TextBlock Margin="0,0,8,0" VerticalAlignment="Center">
+                        <TextBlock.Style>
+                            <Style TargetType="TextBlock">
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding IsChecked, ElementName=ToggleWpfTrace}" Value="True">
+                                        <Setter Property="Text" Value="On" />
+                                    </DataTrigger>
+                                    <DataTrigger Binding="{Binding IsChecked, ElementName=ToggleWpfTrace}" Value="False">
+                                        <Setter Property="Text" Value="Off" />
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </TextBlock.Style>
+                    </TextBlock>
+                    <ui:ToggleSwitch
+                        x:Name="ToggleWpfTrace"
+                        HorizontalAlignment="Right"
+                        IsChecked="{Binding IncludeWpfTrace}" />
+                </StackPanel>
+                
                 <ComboBox
-                    Margin="0,0,8,0"
+                    Margin="0,8,0,0"
                     ItemsSource="{Binding SourceLevels, Mode=OneTime}"
                     SelectedItem="{Binding WpfTraceLevel}"
                     Visibility="{Binding IncludeWpfTrace, Converter={StaticResource BoolToVisibility}}" />
-                <ui:ToggleSwitch
-                    Grid.Column="1"
-                    IsChecked="{Binding IncludeWpfTrace}" />
-            </Grid>
+
+            </StackPanel>
         </ui:CardControl>
 
-        <!--  Save Format  -->
+        <!--  Save Log  -->
         <ui:CardControl
             Margin="0,4,0,0"
             Icon="{ui:SymbolIcon DocumentDatabase24}">
             <ui:CardControl.Header>
                 <StackPanel>
-                    <ui:TextBlock Text="Save Format" />
+                    <ui:TextBlock Text="Save Log" />
                     <ui:TextBlock
                         Appearance="Secondary"
                         FontTypography="Caption"
@@ -131,20 +179,71 @@
                         TextTrimming="CharacterEllipsis" />
                 </StackPanel>
             </ui:CardControl.Header>
-            <Grid MinWidth="{Binding Source={StaticResource ContentMinWidth}}">
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="*" />
-                    <ColumnDefinition Width="Auto" />
-                </Grid.ColumnDefinitions>
+            <StackPanel MinWidth="{Binding Source={StaticResource ContentMinWidth}}">
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                    <TextBlock Margin="0,0,8,0" VerticalAlignment="Center">
+                        <TextBlock.Style>
+                            <Style TargetType="TextBlock">
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding IsChecked, ElementName=ToggleSaveLog}" Value="True">
+                                        <Setter Property="Text" Value="On" />
+                                    </DataTrigger>
+                                    <DataTrigger Binding="{Binding IsChecked, ElementName=ToggleSaveLog}" Value="False">
+                                        <Setter Property="Text" Value="Off" />
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </TextBlock.Style>
+                    </TextBlock>
+                    <ui:ToggleSwitch
+                        x:Name="ToggleSaveLog"
+                        HorizontalAlignment="Right"
+                        IsChecked="{Binding IsSaveLogEnabled}" />
+                </StackPanel>
                 <ComboBox
-                    Margin="0,0,8,0"
+                    Margin="0,8,0,0"
                     ItemsSource="{Binding Source={StaticResource LogSaveFormats}}"
                     SelectedItem="{Binding SaveFormat}"
                     Visibility="{Binding IsSaveLogEnabled, Converter={StaticResource BoolToVisibility}}" />
+
+            </StackPanel>
+        </ui:CardControl>
+
+        <!--  External File Only  -->
+        <ui:CardControl
+            Margin="0,4,0,0"
+            Icon="{ui:SymbolIcon DocumentArrowRight24}"
+            Visibility="{Binding IsSaveLogEnabled, Converter={StaticResource BoolToVisibility}}">
+            <ui:CardControl.Header>
+                <StackPanel>
+                    <ui:TextBlock Text="External File Only" />
+                    <ui:TextBlock
+                        Appearance="Secondary"
+                        FontTypography="Caption"
+                        Text="Log only to file, disable UI logging"
+                        TextTrimming="CharacterEllipsis" />
+                </StackPanel>
+            </ui:CardControl.Header>
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                <TextBlock Margin="0,0,8,0" VerticalAlignment="Center">
+                    <TextBlock.Style>
+                        <Style TargetType="TextBlock">
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding IsChecked, ElementName=ToggleExternalFileOnly}" Value="True">
+                                    <Setter Property="Text" Value="On" />
+                                </DataTrigger>
+                                <DataTrigger Binding="{Binding IsChecked, ElementName=ToggleExternalFileOnly}" Value="False">
+                                    <Setter Property="Text" Value="Off" />
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </TextBlock.Style>
+                </TextBlock>
                 <ui:ToggleSwitch
-                    Grid.Column="1"
-                    IsChecked="{Binding IsSaveLogEnabled}" />
-            </Grid>
+                    x:Name="ToggleExternalFileOnly"
+                    HorizontalAlignment="Right"
+                    IsChecked="{Binding UseExternalFileOnly}" />
+            </StackPanel>
         </ui:CardControl>
 
         <!--  Time Interval  -->
@@ -190,5 +289,6 @@
                 Content="Browse..."
                 Icon="{ui:SymbolIcon FolderOpen24}" />
         </ui:CardControl>
-    </StackPanel>
-</ui:ContentDialog>
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>

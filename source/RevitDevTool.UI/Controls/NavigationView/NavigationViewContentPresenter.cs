@@ -88,14 +88,16 @@ public class NavigationViewContentPresenter : Frame
             typeof(NavigationViewContentPresenter),
             new FrameworkPropertyMetadata(JournalOwnership.UsesParentJournal)
         );
+        
+        // Fix issue within RevitLookup
 
-        if (ScrollViewer.CanContentScrollProperty.GetMetadata(typeof(Page)) == ScrollViewer.CanContentScrollProperty.DefaultMetadata)
-        {
-            ScrollViewer.CanContentScrollProperty.OverrideMetadata(
-                typeof(Page),
-                new FrameworkPropertyMetadata(true)
-            );
-        }
+        // if (ScrollViewer.CanContentScrollProperty.GetMetadata(typeof(Page)) == ScrollViewer.CanContentScrollProperty.DefaultMetadata)
+        // {
+        //     ScrollViewer.CanContentScrollProperty.OverrideMetadata(
+        //         typeof(Page),
+        //         new FrameworkPropertyMetadata(true)
+        //     );
+        // }
     }
 
     public NavigationViewContentPresenter()
@@ -179,6 +181,16 @@ public class NavigationViewContentPresenter : Frame
         if (eventArgs.Content is not DependencyObject dependencyObject)
         {
             return;
+        }
+
+        // NOTE:
+        // Do NOT use DependencyProperty.OverrideMetadata(typeof(Page), ...) here.
+        // When multiple add-ins ship their own Wpf.Ui fork, only one assembly can register metadata for Page.
+        // If RevitDevTool registers first, a stock RevitLookup build can crash while loading (duplicate metadata).
+        // Instead, set the attached property at runtime only when it wasn't explicitly set by the page/control.
+        if (dependencyObject.ReadLocalValue(ScrollViewer.CanContentScrollProperty) == DependencyProperty.UnsetValue)
+        {
+            ScrollViewer.SetCanContentScroll(dependencyObject, true);
         }
 
         SetCurrentValue(

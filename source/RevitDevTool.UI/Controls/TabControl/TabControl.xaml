@@ -76,10 +76,10 @@
                     <Grid x:Name="Root">
                         <Border
                             x:Name="Border"
-                            MinWidth="180"
-                            MinHeight="36"
+                            MinWidth="{TemplateBinding MinWidth}"
+                            MinHeight="{TemplateBinding MinHeight}"
                             Margin="0"
-                            Padding="6"
+                            Padding="{TemplateBinding Padding}"
                             Background="{TemplateBinding Background}"
                             BorderBrush="{TemplateBinding BorderBrush}"
                             BorderThickness="1,1,1,0"

@@ -1,13 +1,14 @@
 ﻿using RevitDevTool.Theme;
 using RevitDevTool.ViewModel;
+using Wpf.Ui.Controls;
 
 namespace RevitDevTool.View;
 
 public partial class TraceLogPage
 {
-    internal TraceLogPage(TraceLogViewModel viewModel)
+    public TraceLogPage(TraceLogPageViewModel viewModel)
     {
-        ThemeWatcher.Instance.Watch(this);
+        Host.GetService<IThemeWatcherService>().Watch(this);
         InitializeComponent();
         DataContext = viewModel;
     }
