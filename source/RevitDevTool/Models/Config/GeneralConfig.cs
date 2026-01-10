@@ -1,6 +1,5 @@
-﻿using System.Text.Json.Serialization ;
-using Serilog;
-using Wpf.Ui.Appearance ;
+using System.Text.Json.Serialization;
+using RevitDevTool.Theme;
 
 namespace RevitDevTool.Models.Config;
 
@@ -10,6 +9,6 @@ namespace RevitDevTool.Models.Config;
 [Serializable]
 public sealed class GeneralConfig
 {
-    [JsonPropertyName("Theme")] public ApplicationTheme Theme { get; set; } = ApplicationTheme.Light;
+    [JsonPropertyName("Theme")] public AppTheme Theme { get; set; } = AppTheme.Light;
     [JsonPropertyName("UseHardwareRendering")] public bool UseHardwareRendering { get; set; } = true;
 }

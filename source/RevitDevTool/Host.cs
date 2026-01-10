@@ -5,14 +5,11 @@ using Microsoft.Extensions.Hosting;
 using RevitDevTool.Logging;
 using RevitDevTool.Logging.Serilog;
 using RevitDevTool.Services;
-using RevitDevTool.Theme;
 using RevitDevTool.View.Settings;
 using RevitDevTool.View.Settings.Visualization;
 using RevitDevTool.ViewModel;
 using RevitDevTool.ViewModel.Settings;
 using RevitDevTool.ViewModel.Settings.Visualization;
-using Wpf.Ui;
-using Wpf.Ui.Abstractions;
 
 namespace RevitDevTool;
 
@@ -42,15 +39,9 @@ public static class Host
     private static void ConfigureServices(IServiceCollection services)
     {
         services.AddSingleton<ISettingsService, SettingsService>();
-        services.AddSingleton<IThemeWatcherService, ThemeWatcherService>();
         
         services.AddSingleton<ILoggerFactory, SerilogLoggerFactory>();
         services.AddSingleton<ITraceListenerFactory, SerilogTraceListenerFactory>();
-        
-        services.AddSingleton<INavigationViewPageProvider, PageProvider>();
-        services.AddSingleton<INavigationServiceFactory, NavigationServiceFactory>();
-        services.AddScoped<INavigationService, NavigationService>();
-        services.AddScoped<IContentDialogService, ContentDialogService>();
 
         services.AddSingleton<TraceLogViewModel>();
         services.AddTransient<TraceLogPageViewModel>();

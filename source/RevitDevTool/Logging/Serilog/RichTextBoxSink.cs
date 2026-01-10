@@ -19,7 +19,7 @@ internal sealed class RichTextBoxSink : ILogOutputSink
     private LibrarySink? _librarySink;
     private bool _disposed;
 
-    public RichTextBoxSink(IThemeWatcherService themeWatcherService)
+    public RichTextBoxSink()
     {
         _richTextBox = new RichTextBox
         {
@@ -32,7 +32,7 @@ internal sealed class RichTextBoxSink : ILogOutputSink
         };
 
         _host = new WindowsFormsHost { Child = _richTextBox };
-        _host.Loaded += (_, _) => ApplyTheme(themeWatcherService.GetEffectiveTheme() == Wpf.Ui.Appearance.ApplicationTheme.Dark);
+        _host.Loaded += (_, _) => ApplyTheme(ThemeManager.Current.ActualApplicationTheme == AppTheme.Dark);
     }
 
     /// <summary>
@@ -71,7 +71,7 @@ internal sealed class RichTextBoxSink : ILogOutputSink
     internal LoggerConfiguration ConfigureSerilog(LoggerConfiguration config, bool isDarkTheme)
     {
         DisposeSink();
-        var theme = isDarkTheme ? AdaptiveThemePresets.EnhancedDark : AdaptiveThemePresets.EnhancedLight;
+        var theme = isDarkTheme ? ThemePresets.EnhancedDark : ThemePresets.EnhancedLight;
         var result = config.WriteTo.RichTextBox(
             _richTextBox,
             out var sink,
@@ -100,7 +100,7 @@ internal sealed class RichTextBoxSink : ILogOutputSink
     private void ApplyTheme(bool isDarkTheme)
     {
         _richTextBox.BackColor = isDarkTheme 
-            ? System.Drawing.Color.FromArgb(30, 30, 30) 
+            ? System.Drawing.Color.FromArgb(37, 37, 37) 
             : System.Drawing.Color.FromArgb(250, 250, 250);
         
         Win32Utils.SetImmersiveDarkMode(_richTextBox.Handle, isDarkTheme);
@@ -115,5 +115,3 @@ internal sealed class RichTextBoxSink : ILogOutputSink
         _disposed = true;
     }
 }
-
-

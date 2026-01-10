@@ -1,10 +1,10 @@
-﻿using System.Diagnostics;
-using System.IO ;
-using System.Text.Json ;
-using RevitDevTool.Models.Config ;
+using System.Diagnostics;
+using System.IO;
+using System.Text.Json;
+using RevitDevTool.Models.Config;
+using RevitDevTool.Theme;
 using RevitDevTool.Utils;
-using Serilog ;
-using Wpf.Ui.Appearance ;
+using Serilog;
 
 namespace RevitDevTool.Services;
 
@@ -169,9 +169,9 @@ public sealed class SettingsService : ISettingsService
         _generalConfig = new GeneralConfig
         {
 #if REVIT2024_OR_GREATER
-            Theme = ApplicationTheme.Auto,
+            Theme = AppTheme.Auto,
 #else
-            Theme = ApplicationTheme.Light,
+            Theme = AppTheme.Light,
 #endif
             UseHardwareRendering = true,
         };

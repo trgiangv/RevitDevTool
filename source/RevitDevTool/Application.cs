@@ -1,10 +1,10 @@
-﻿using System.Windows.Interop ;
-using System.Windows.Media ;
+using System.Windows.Interop;
+using System.Windows.Media;
 using Autodesk.Revit.UI;
 using Nice3point.Revit.Toolkit.External;
 using RevitDevTool.Commands;
 using RevitDevTool.Models.Trace;
-using RevitDevTool.Services ;
+using RevitDevTool.Services;
 using RevitDevTool.Theme;
 
 namespace RevitDevTool;
@@ -20,9 +20,8 @@ public class Application : ExternalApplication
         var settingsService = Host.GetService<ISettingsService>();
         settingsService.LoadSettings();
         
-        var themeWatcherService = Host.GetService<IThemeWatcherService>();
-        themeWatcherService.Initialize();
-        themeWatcherService.ApplyTheme();
+        // Initialize theme from settings
+        ThemeManager.Current.ApplicationTheme = settingsService.GeneralConfig.Theme;
         
         EnableHardwareRendering();
         AddButton(Application);

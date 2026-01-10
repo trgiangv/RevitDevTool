@@ -1,15 +1,16 @@
-﻿<UserControl
+<UserControl
     x:Class="RevitDevTool.View.Settings.LogSettingsView"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:config="clr-namespace:RevitDevTool.Models.Config"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:design="clr-namespace:RevitDevTool.Theme.Design"
     xmlns:log="clr-namespace:Serilog.Events;assembly=Serilog"
+    xmlns:mah="http://metro.mahapps.com/winfx/xaml/controls"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     xmlns:serilog="clr-namespace:Serilog;assembly=Serilog.Sinks.File"
     xmlns:settings="clr-namespace:RevitDevTool.ViewModel.Settings"
     xmlns:sys="clr-namespace:System;assembly=mscorlib"
-    xmlns:ui="http://revitdevtool.com/xaml"
     d:DataContext="{d:DesignInstance settings:LogSettingsViewModel}"
     d:DesignHeight="750"
     d:DesignWidth="600"
@@ -17,8 +18,13 @@
 
     <UserControl.Resources>
         <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="/RevitDevTool;component/Theme/Theme.xaml" />
+                <design:IntellisenseResources Source="/RevitDevTool;component/Theme/Design/DesignTimeResources.xaml" />
+            </ResourceDictionary.MergedDictionaries>
             <BooleanToVisibilityConverter x:Key="BoolToVisibility" />
-            <sys:Int32 x:Key="ContentMinWidth">100</sys:Int32>
+            <sys:Double x:Key="ContentMinWidth">100</sys:Double>
+            <sys:Double x:Key="ToggleSwitchMinWidth">60</sys:Double>
 
             <ObjectDataProvider
                 x:Key="LogLevelProvider"
@@ -46,249 +52,302 @@
                     <x:Type TypeName="serilog:RollingInterval" />
                 </ObjectDataProvider.MethodParameters>
             </ObjectDataProvider>
-
         </ResourceDictionary>
     </UserControl.Resources>
 
-    <ScrollViewer HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
-        <StackPanel>
-        <!--  Log Level  -->
-        <ui:CardControl
-            Margin="0,4,0,0"
-            Icon="{ui:SymbolIcon Filter24}">
-            <ui:CardControl.Header>
+    <ScrollViewer
+        HorizontalScrollBarVisibility="Disabled"
+        VerticalScrollBarVisibility="Auto">
+        <StackPanel Margin="8">
+            <!--  Log Level  -->
+            <GroupBox
+                Margin="0,0,0,8"
+                Header="Log Level">
+                <Grid Margin="8">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <Path
+                        Width="20"
+                        Height="20"
+                        VerticalAlignment="Center"
+                        Data="{StaticResource LogLevel}"
+                        Fill="{DynamicResource MahApps.Brushes.ThemeForeground}"
+                        Stretch="Uniform" />
+                    <StackPanel
+                        Grid.Column="1"
+                        Margin="12,0"
+                        VerticalAlignment="Center">
+                        <TextBlock
+                            FontWeight="SemiBold"
+                            Text="Minimum Level" />
+                        <TextBlock
+                            FontSize="11"
+                            Foreground="{DynamicResource MahApps.Brushes.Gray}"
+                            Text="Minimum level for displaying logs" />
+                    </StackPanel>
+                    <ComboBox
+                        Grid.Column="2"
+                        Width="{StaticResource ContentMinWidth}"
+                        VerticalAlignment="Center"
+                        ItemsSource="{Binding Source={StaticResource LogLevelProvider}}"
+                        SelectedItem="{Binding LogLevel}" />
+                </Grid>
+            </GroupBox>
+
+            <!--  Stack Trace  -->
+            <GroupBox
+                Margin="0,0,0,8"
+                Header="Stack Trace">
+                <StackPanel Margin="8">
+                    <!--  Stack Trace  -->
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <Path
+                            Width="20"
+                            Height="20"
+                            VerticalAlignment="Center"
+                            Data="{StaticResource Stack}"
+                            Fill="{DynamicResource MahApps.Brushes.ThemeForeground}"
+                            Stretch="Uniform" />
+                        <StackPanel
+                            Grid.Column="1"
+                            Margin="12,0"
+                            VerticalAlignment="Center">
+                            <TextBlock
+                                FontWeight="SemiBold"
+                                Text="Include Stack Trace" />
+                            <TextBlock
+                                FontSize="11"
+                                Foreground="{DynamicResource MahApps.Brushes.Gray}"
+                                Text="Include stack trace frame information" />
+                        </StackPanel>
+                        <StackPanel
+                            Grid.Column="2"
+                            Orientation="Vertical">
+                            <mah:ToggleSwitch
+                                MinWidth="{StaticResource ToggleSwitchMinWidth}"
+                                HorizontalAlignment="Right"
+                                VerticalAlignment="Bottom"
+                                IsOn="{Binding IncludeStackTrace}" />
+                            <ComboBox
+                                Width="{StaticResource ContentMinWidth}"
+                                Margin="0,8,0,0"
+                                HorizontalAlignment="Right"
+                                VerticalAlignment="Center"
+                                ItemsSource="{Binding StackTraceDepths, Mode=OneTime}"
+                                SelectedItem="{Binding StackTraceDepth}"
+                                Visibility="{Binding IncludeStackTrace, Converter={StaticResource BoolToVisibility}}" />
+                        </StackPanel>
+                    </Grid>
+
+                    <!--  WPF Trace  -->
+                    <Grid Margin="0,8">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <Image
+                            Width="20"
+                            Height="20"
+                            VerticalAlignment="Center"
+                            Source="pack://application:,,,/RevitDevTool;component/Resources/Icons/wpf.png" />
+                        <StackPanel
+                            Grid.Column="1"
+                            Margin="12,0"
+                            VerticalAlignment="Center">
+                            <TextBlock
+                                FontWeight="SemiBold"
+                                Text="Include WPF Trace" />
+                            <TextBlock
+                                FontSize="11"
+                                Foreground="{DynamicResource MahApps.Brushes.Gray}"
+                                Text="Include presentation trace information" />
+                        </StackPanel>
+                        <StackPanel
+                            Grid.Column="2"
+                            Orientation="Vertical">
+                            <mah:ToggleSwitch
+                                MinWidth="{StaticResource ToggleSwitchMinWidth}"
+                                HorizontalAlignment="Right"
+                                IsOn="{Binding IncludeWpfTrace}" />
+                            <ComboBox
+                                Width="{StaticResource ContentMinWidth}"
+                                Margin="0,8,0,0"
+                                HorizontalAlignment="Right"
+                                ItemsSource="{Binding SourceLevels, Mode=OneTime}"
+                                SelectedItem="{Binding WpfTraceLevel}"
+                                Visibility="{Binding IncludeWpfTrace, Converter={StaticResource BoolToVisibility}}" />
+                        </StackPanel>
+                    </Grid>
+                </StackPanel>
+            </GroupBox>
+
+            <!--  Save Log  -->
+            <GroupBox
+                Margin="0,0,0,8"
+                Header="Save Log">
                 <StackPanel>
-                    <ui:TextBlock Text="Log level" />
-                    <ui:TextBlock
-                        Appearance="Secondary"
-                        FontTypography="Caption"
-                        Text="Minimum level for displaying logs"
-                        TextTrimming="CharacterEllipsis" />
-                </StackPanel>
-            </ui:CardControl.Header>
-            <ComboBox
-                MinWidth="{Binding Source={StaticResource ContentMinWidth}}"
-                ItemsSource="{Binding Source={StaticResource LogLevelProvider}}"
-                SelectedItem="{Binding LogLevel}" />
-        </ui:CardControl>
+                    <!--  Save Log  -->
+                    <StackPanel Margin="8">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <Path
+                                Width="20"
+                                Height="20"
+                                VerticalAlignment="Center"
+                                Data="{StaticResource FileLog}"
+                                Fill="{DynamicResource MahApps.Brushes.ThemeForeground}"
+                                Stretch="Uniform" />
+                            <StackPanel
+                                Grid.Column="1"
+                                Margin="12,0"
+                                VerticalAlignment="Center">
+                                <TextBlock
+                                    FontWeight="SemiBold"
+                                    Text="Enable Save Log" />
+                                <TextBlock
+                                    FontSize="11"
+                                    Foreground="{DynamicResource MahApps.Brushes.Gray}"
+                                    Text="Output format for log entries" />
+                            </StackPanel>
+                            <StackPanel
+                                Grid.Column="2"
+                                Orientation="Vertical">
+                                <mah:ToggleSwitch
+                                    MinWidth="{StaticResource ToggleSwitchMinWidth}"
+                                    HorizontalAlignment="Right"
+                                    IsOn="{Binding IsSaveLogEnabled}" />
+                                <ComboBox
+                                    Width="{StaticResource ContentMinWidth}"
+                                    Margin="0,8,0,0"
+                                    HorizontalAlignment="Right"
+                                    ItemsSource="{Binding Source={StaticResource LogSaveFormats}}"
+                                    SelectedItem="{Binding SaveFormat}"
+                                    Visibility="{Binding IsSaveLogEnabled, Converter={StaticResource BoolToVisibility}}" />
+                            </StackPanel>
+                        </Grid>
+                    </StackPanel>
 
-        <!--  StackTrace  -->
-        <ui:CardControl
-            Margin="0,4,0,0"
-            Icon="{ui:SymbolIcon Stack24}">
-            <ui:CardControl.Header>
-                <StackPanel>
-                    <ui:TextBlock Text="Stack Trace" />
-                    <ui:TextBlock
-                        Appearance="Secondary"
-                        FontTypography="Caption"
-                        Text="Include stack trace frame information"
-                        TextTrimming="CharacterEllipsis" />
-                </StackPanel>
-            </ui:CardControl.Header>
-            <StackPanel MinWidth="{Binding Source={StaticResource ContentMinWidth}}">
-                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
-                    <TextBlock Margin="0,0,8,0" VerticalAlignment="Center">
-                        <TextBlock.Style>
-                            <Style TargetType="TextBlock">
-                                <Style.Triggers>
-                                    <DataTrigger Binding="{Binding IsChecked, ElementName=ToggleStackTrace}" Value="True">
-                                        <Setter Property="Text" Value="On" />
-                                    </DataTrigger>
-                                    <DataTrigger Binding="{Binding IsChecked, ElementName=ToggleStackTrace}" Value="False">
-                                        <Setter Property="Text" Value="Off" />
-                                    </DataTrigger>
-                                </Style.Triggers>
-                            </Style>
-                        </TextBlock.Style>
-                    </TextBlock>
-                    <ui:ToggleSwitch
-                        x:Name="ToggleStackTrace"
-                        HorizontalAlignment="Right"
-                        IsChecked="{Binding IncludeStackTrace}" />
-                </StackPanel>
-                <ComboBox
-                    Margin="0,8,0,0"
-                    ItemsSource="{Binding StackTraceDepths, Mode=OneTime}"
-                    SelectedItem="{Binding StackTraceDepth}"
-                    Visibility="{Binding IncludeStackTrace, Converter={StaticResource BoolToVisibility}}" />
-            </StackPanel>
-        </ui:CardControl>
+                    <!--  External File Only  -->
+                    <Grid
+                        Margin="8"
+                        Visibility="{Binding IsSaveLogEnabled, Converter={StaticResource BoolToVisibility}}">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <Path
+                            Width="20"
+                            Height="20"
+                            VerticalAlignment="Center"
+                            Data="{StaticResource MonitorLog}"
+                            Fill="{DynamicResource MahApps.Brushes.ThemeForeground}"
+                            Stretch="Uniform" />
+                        <StackPanel
+                            Grid.Column="1"
+                            Margin="12,0"
+                            VerticalAlignment="Center">
+                            <TextBlock
+                                FontWeight="SemiBold"
+                                Text="Log only to file" />
+                            <TextBlock
+                                FontSize="11"
+                                Foreground="{DynamicResource MahApps.Brushes.Gray}"
+                                Text="Disable UI logging" />
+                        </StackPanel>
+                        <mah:ToggleSwitch
+                            Grid.Column="2"
+                            MinWidth="{StaticResource ToggleSwitchMinWidth}"
+                            VerticalAlignment="Bottom"
+                            IsOn="{Binding UseExternalFileOnly}" />
+                    </Grid>
 
-        <ui:CardControl
-            Margin="0,4,0,0"
-            Icon="{ui:ImageIcon 'pack://application:,,,/RevitDevTool;component/Resources/Icons/wpf.png',
-                                Height=24,
-                                Width=24}">
-            <ui:CardControl.Header>
-                <StackPanel>
-                    <ui:TextBlock Text="WPF Trace" />
-                    <ui:TextBlock
-                        Appearance="Secondary"
-                        FontTypography="Caption"
-                        Text="Include presentation trace information"
-                        TextTrimming="CharacterEllipsis" />
-                </StackPanel>
-            </ui:CardControl.Header>
-            <StackPanel MinWidth="{Binding Source={StaticResource ContentMinWidth}}">
-                <!-- <Grid.ColumnDefinitions> -->
-                <!--     <ColumnDefinition Width="*" /> -->
-                <!--     <ColumnDefinition Width="Auto" /> -->
-                <!-- </Grid.ColumnDefinitions> -->
-                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
-                    <TextBlock Margin="0,0,8,0" VerticalAlignment="Center">
-                        <TextBlock.Style>
-                            <Style TargetType="TextBlock">
-                                <Style.Triggers>
-                                    <DataTrigger Binding="{Binding IsChecked, ElementName=ToggleWpfTrace}" Value="True">
-                                        <Setter Property="Text" Value="On" />
-                                    </DataTrigger>
-                                    <DataTrigger Binding="{Binding IsChecked, ElementName=ToggleWpfTrace}" Value="False">
-                                        <Setter Property="Text" Value="Off" />
-                                    </DataTrigger>
-                                </Style.Triggers>
-                            </Style>
-                        </TextBlock.Style>
-                    </TextBlock>
-                    <ui:ToggleSwitch
-                        x:Name="ToggleWpfTrace"
-                        HorizontalAlignment="Right"
-                        IsChecked="{Binding IncludeWpfTrace}" />
-                </StackPanel>
-                
-                <ComboBox
-                    Margin="0,8,0,0"
-                    ItemsSource="{Binding SourceLevels, Mode=OneTime}"
-                    SelectedItem="{Binding WpfTraceLevel}"
-                    Visibility="{Binding IncludeWpfTrace, Converter={StaticResource BoolToVisibility}}" />
+                    <!--  Time Interval  -->
+                    <Grid
+                        Margin="8"
+                        Visibility="{Binding IsSaveLogEnabled, Converter={StaticResource BoolToVisibility}}">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <Path
+                            Width="20"
+                            Height="20"
+                            VerticalAlignment="Center"
+                            Data="{StaticResource Clock}"
+                            Fill="{DynamicResource MahApps.Brushes.ThemeForeground}"
+                            Stretch="Uniform" />
+                        <StackPanel
+                            Grid.Column="1"
+                            Margin="12,0"
+                            VerticalAlignment="Center">
+                            <TextBlock
+                                FontWeight="SemiBold"
+                                Text="Rolling Interval" />
+                            <TextBlock
+                                FontSize="11"
+                                Foreground="{DynamicResource MahApps.Brushes.Gray}"
+                                Text="Create new file every" />
+                        </StackPanel>
+                        <ComboBox
+                            Grid.Column="2"
+                            Width="{StaticResource ContentMinWidth}"
+                            VerticalAlignment="Center"
+                            ItemsSource="{Binding Source={StaticResource LogTimeIntervals}}"
+                            SelectedItem="{Binding TimeInterval}" />
+                    </Grid>
 
-            </StackPanel>
-        </ui:CardControl>
-
-        <!--  Save Log  -->
-        <ui:CardControl
-            Margin="0,4,0,0"
-            Icon="{ui:SymbolIcon DocumentDatabase24}">
-            <ui:CardControl.Header>
-                <StackPanel>
-                    <ui:TextBlock Text="Save Log" />
-                    <ui:TextBlock
-                        Appearance="Secondary"
-                        FontTypography="Caption"
-                        Text="Output format for log entries"
-                        TextTrimming="CharacterEllipsis" />
+                    <!--  File Path  -->
+                    <Grid
+                        Margin="8"
+                        Visibility="{Binding IsSaveLogEnabled, Converter={StaticResource BoolToVisibility}}">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <Path
+                            Width="20"
+                            Height="20"
+                            VerticalAlignment="Center"
+                            Data="{StaticResource Folder}"
+                            Fill="{DynamicResource MahApps.Brushes.ThemeForeground}"
+                            Stretch="Uniform" />
+                        <StackPanel
+                            Grid.Column="1"
+                            Margin="12,0">
+                            <TextBlock
+                                FontWeight="SemiBold"
+                                Text="File Location" />
+                            <TextBlock
+                                FontSize="11"
+                                Foreground="{DynamicResource MahApps.Brushes.Gray}"
+                                Text="{Binding FilePath}"
+                                TextTrimming="CharacterEllipsis"
+                                ToolTip="{Binding FilePath}" />
+                        </StackPanel>
+                        <Button
+                            Grid.Column="2"
+                            Padding="8,4"
+                            Command="{Binding BrowseFileCommand}"
+                            Content="Browse..." />
+                    </Grid>
                 </StackPanel>
-            </ui:CardControl.Header>
-            <StackPanel MinWidth="{Binding Source={StaticResource ContentMinWidth}}">
-                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
-                    <TextBlock Margin="0,0,8,0" VerticalAlignment="Center">
-                        <TextBlock.Style>
-                            <Style TargetType="TextBlock">
-                                <Style.Triggers>
-                                    <DataTrigger Binding="{Binding IsChecked, ElementName=ToggleSaveLog}" Value="True">
-                                        <Setter Property="Text" Value="On" />
-                                    </DataTrigger>
-                                    <DataTrigger Binding="{Binding IsChecked, ElementName=ToggleSaveLog}" Value="False">
-                                        <Setter Property="Text" Value="Off" />
-                                    </DataTrigger>
-                                </Style.Triggers>
-                            </Style>
-                        </TextBlock.Style>
-                    </TextBlock>
-                    <ui:ToggleSwitch
-                        x:Name="ToggleSaveLog"
-                        HorizontalAlignment="Right"
-                        IsChecked="{Binding IsSaveLogEnabled}" />
-                </StackPanel>
-                <ComboBox
-                    Margin="0,8,0,0"
-                    ItemsSource="{Binding Source={StaticResource LogSaveFormats}}"
-                    SelectedItem="{Binding SaveFormat}"
-                    Visibility="{Binding IsSaveLogEnabled, Converter={StaticResource BoolToVisibility}}" />
-
-            </StackPanel>
-        </ui:CardControl>
-
-        <!--  External File Only  -->
-        <ui:CardControl
-            Margin="0,4,0,0"
-            Icon="{ui:SymbolIcon DocumentArrowRight24}"
-            Visibility="{Binding IsSaveLogEnabled, Converter={StaticResource BoolToVisibility}}">
-            <ui:CardControl.Header>
-                <StackPanel>
-                    <ui:TextBlock Text="External File Only" />
-                    <ui:TextBlock
-                        Appearance="Secondary"
-                        FontTypography="Caption"
-                        Text="Log only to file, disable UI logging"
-                        TextTrimming="CharacterEllipsis" />
-                </StackPanel>
-            </ui:CardControl.Header>
-            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
-                <TextBlock Margin="0,0,8,0" VerticalAlignment="Center">
-                    <TextBlock.Style>
-                        <Style TargetType="TextBlock">
-                            <Style.Triggers>
-                                <DataTrigger Binding="{Binding IsChecked, ElementName=ToggleExternalFileOnly}" Value="True">
-                                    <Setter Property="Text" Value="On" />
-                                </DataTrigger>
-                                <DataTrigger Binding="{Binding IsChecked, ElementName=ToggleExternalFileOnly}" Value="False">
-                                    <Setter Property="Text" Value="Off" />
-                                </DataTrigger>
-                            </Style.Triggers>
-                        </Style>
-                    </TextBlock.Style>
-                </TextBlock>
-                <ui:ToggleSwitch
-                    x:Name="ToggleExternalFileOnly"
-                    HorizontalAlignment="Right"
-                    IsChecked="{Binding UseExternalFileOnly}" />
-            </StackPanel>
-        </ui:CardControl>
-
-        <!--  Time Interval  -->
-        <ui:CardControl
-            Margin="0,4,0,0"
-            Icon="{ui:SymbolIcon Clock24}"
-            Visibility="{Binding IsSaveLogEnabled, Converter={StaticResource BoolToVisibility}}">
-            <ui:CardControl.Header>
-                <StackPanel>
-                    <ui:TextBlock Text="Time Interval" />
-                    <ui:TextBlock
-                        Appearance="Secondary"
-                        FontTypography="Caption"
-                        Text="Create new file every"
-                        TextTrimming="CharacterEllipsis" />
-                </StackPanel>
-            </ui:CardControl.Header>
-            <ComboBox
-                MinWidth="{Binding Source={StaticResource ContentMinWidth}}"
-                ItemsSource="{Binding Source={StaticResource LogTimeIntervals}}"
-                SelectedItem="{Binding TimeInterval}" />
-        </ui:CardControl>
-
-        <!--  File Path  -->
-        <ui:CardControl
-            Margin="0,4,0,0"
-            Icon="{ui:SymbolIcon Document24}"
-            Visibility="{Binding IsSaveLogEnabled, Converter={StaticResource BoolToVisibility}}">
-            <ui:CardControl.Header>
-                <StackPanel>
-                    <ui:TextBlock Text="Log File" />
-                    <ui:TextBlock
-                        Appearance="Secondary"
-                        FontTypography="Caption"
-                        Text="{Binding FilePath}"
-                        TextTrimming="CharacterEllipsis"
-                        ToolTip="{Binding FilePath}" />
-                </StackPanel>
-            </ui:CardControl.Header>
-            <ui:Button
-                MinWidth="{Binding Source={StaticResource ContentMinWidth}}"
-                Command="{Binding BrowseFileCommand}"
-                Content="Browse..."
-                Icon="{ui:SymbolIcon FolderOpen24}" />
-        </ui:CardControl>
+            </GroupBox>
         </StackPanel>
     </ScrollViewer>
 </UserControl>

@@ -1,34 +1,28 @@
-﻿<Page
+<Page
     x:Class="RevitDevTool.View.TraceLogPage"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:converters="clr-namespace:RevitDevTool.Converters"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:design="clr-namespace:RevitDevTool.Theme.Design"
+    xmlns:mah="http://metro.mahapps.com/winfx/xaml/controls"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-    xmlns:ui="http://revitdevtool.com/xaml"
     xmlns:view="clr-namespace:RevitDevTool.View"
     xmlns:vm="clr-namespace:RevitDevTool.ViewModel"
     d:DataContext="{d:DesignInstance vm:TraceLogPageViewModel}"
     d:DesignHeight="600"
     d:DesignWidth="450"
-    Background="{DynamicResource SolidBackgroundFillColorBaseBrush}"
+    Background="{DynamicResource MahApps.Brushes.ThemeBackground}"
     mc:Ignorable="d">
 
     <Page.Resources>
         <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="/RevitDevTool;component/Theme/Theme.xaml" />
+                <design:IntellisenseResources Source="/RevitDevTool;component/Theme/Design/DesignTimeResources.xaml" />
+            </ResourceDictionary.MergedDictionaries>
             <BooleanToVisibilityConverter x:Key="BoolToVisibility" />
             <converters:InverseBooleanToVisibilityConverter x:Key="InverseBoolToVisibility" />
-            
-            <!-- <Style TargetType="ui:Button" x:Key="ToggleSettingsButtonStyle"> -->
-            <!--     <Setter Property="Icon" Value="{ui:SymbolIcon Settings32}" /> -->
-            <!--     <Style.Triggers> -->
-            <!--         <DataTrigger -->
-            <!--             Binding="{Binding IsSettingsVisible}" -->
-            <!--             Value="True"> -->
-            <!--             <Setter Property="Icon" Value="{ui:SymbolIcon ArrowLeft32}" /> -->
-            <!--         </DataTrigger> -->
-            <!--     </Style.Triggers> -->
-            <!-- </Style> -->
         </ResourceDictionary>
     </Page.Resources>
 
@@ -37,47 +31,51 @@
             <RowDefinition Height="Auto" />
             <RowDefinition Height="*" />
         </Grid.RowDefinitions>
-        
+
         <DockPanel
             Grid.Row="0"
             Margin="5"
             LastChildFill="False">
-            <ui:Button
-                Icon="{ui:SymbolIcon Settings32}"
+            <Button
                 Height="{Binding ElementName=ClearLogButton, Path=ActualHeight}"
-                Margin="0,0,8,0"
+                Padding="8,4"
                 Command="{Binding ToggleSettingsCommand}"
+                Content="Settings"
                 ToolTip="Settings" />
             <StackPanel
                 HorizontalAlignment="Right"
                 DockPanel.Dock="Right"
                 Orientation="Horizontal">
-                <ui:Button
+                <Button
                     x:Name="ClearLogButton"
+                    Padding="8,4"
                     Command="{Binding TraceLogViewModel.ClearCommand}"
-                    Content="ClearLog"
-                    Icon="{ui:SymbolIcon TextClearFormatting16}"
+                    Content="Clear Log"
                     ToolTip="Clear Log" />
-                <ui:Button
+                <Button
                     Margin="5,0"
+                    Padding="8,4"
                     Command="{Binding TraceLogViewModel.ClearGeometryCommand}"
-                    Content="ClearGeometry"
-                    Icon="{ui:SymbolIcon Shapes16}"
+                    Content="Clear Geometry"
                     ToolTip="Clear Geometry" />
-                <ui:ToggleSwitch
+                <mah:ToggleSwitch
+                    MinWidth="30"
                     DataContext="{Binding TraceLogViewModel}"
-                    IsChecked="{Binding IsStarted}"
+                    FlowDirection="RightToLeft"
+                    IsOn="{Binding IsStarted}"
+                    OffContent=""
+                    OnContent=""
                     ToolTip="Start/Stop Listener" />
             </StackPanel>
         </DockPanel>
 
-        <!-- Content -->
+        <!--  Content  -->
         <Grid Grid.Row="1">
             <Border
                 Margin="5"
                 Padding="2"
-                Background="{DynamicResource SolidBackgroundFillColorBaseBrush}"
-                BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}"
+                Background="{DynamicResource MahApps.Brushes.ThemeBackground}"
+                BorderBrush="{DynamicResource MahApps.Brushes.Gray8}"
                 BorderThickness="1"
                 CornerRadius="6"
                 SnapsToDevicePixels="True"

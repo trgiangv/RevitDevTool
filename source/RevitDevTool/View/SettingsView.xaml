@@ -3,47 +3,37 @@
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:design="clr-namespace:RevitDevTool.Theme.Design"
+    xmlns:mah="http://metro.mahapps.com/winfx/xaml/controls"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     xmlns:settings="clr-namespace:RevitDevTool.View.Settings"
-    xmlns:ui="http://revitdevtool.com/xaml"
     d:DesignHeight="630"
     d:DesignWidth="600"
-    Background="{DynamicResource SolidBackgroundFillColorBaseBrush}"
+    Background="{DynamicResource MahApps.Brushes.ThemeBackground}"
     mc:Ignorable="d">
 
-    <Grid Margin="5">
-        <Grid.Resources>
-            <ResourceDictionary>
-                <DataTemplate x:Key="TabHeaderTemplate">
-                    <TextBlock
-                        Width="80"
-                        HorizontalAlignment="Center"
-                        Text="{Binding}"
-                        TextAlignment="Center"
-                        TextTrimming="CharacterEllipsis" />
-                </DataTemplate>
+    <UserControl.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="/RevitDevTool;component/Theme/Theme.xaml" />
+                <design:IntellisenseResources Source="/RevitDevTool;component/Theme/Design/DesignTimeResources.xaml" />
+            </ResourceDictionary.MergedDictionaries>
+        </ResourceDictionary>
+    </UserControl.Resources>
 
-                <Style
-                    BasedOn="{StaticResource {x:Type TabItem}}"
-                    TargetType="{x:Type TabItem}">
-                    <Setter Property="MinWidth" Value="50" />
-                    <Setter Property="MinHeight" Value="30" />
-                    <Setter Property="Padding" Value="6" />
-                    <Setter Property="HeaderTemplate" Value="{StaticResource TabHeaderTemplate}" />
-                </Style>
-            </ResourceDictionary>
-        </Grid.Resources>
-
-        <TabControl>
-            <TabItem Header="General">
+    <Grid Margin="0,5">
+        <mah:MetroTabControl
+            mah:HeaderedControlHelper.HeaderFontSize="16"
+            mah:HeaderedControlHelper.HeaderFontWeight="SemiBold">
+            <mah:MetroTabItem Header="General">
                 <settings:GeneralSettingsView />
-            </TabItem>
-            <TabItem Header="Visualization">
+            </mah:MetroTabItem>
+            <mah:MetroTabItem Header="Visualization">
                 <settings:VisualizationSettingsView />
-            </TabItem>
-            <TabItem Header="Log">
+            </mah:MetroTabItem>
+            <mah:MetroTabItem Header="Log">
                 <settings:LogSettingsView />
-            </TabItem>
-        </TabControl>
+            </mah:MetroTabItem>
+        </mah:MetroTabControl>
     </Grid>
 </UserControl>

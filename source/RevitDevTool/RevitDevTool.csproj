@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
     <PropertyGroup>
         <UseWPF>true</UseWPF>
@@ -17,8 +17,10 @@
     <PropertyGroup>
         <IsRepackable>true</IsRepackable>
         <RepackBinariesExcludes>
-            $(AssemblyName).UI*.dll
-            ;SQLite.Interop.dll
+            SQLite.Interop.dll;
+            MahApps.Metro.dll;
+            ControlzEx.dll;
+            Microsoft.Xaml.Behaviors.dll
         </RepackBinariesExcludes>
     </PropertyGroup>
 
@@ -50,7 +52,6 @@
 
     <ItemGroup>
         <!-- Revit API-->
-        <PackageReference Include="Microsoft.Extensions.Hosting" Version="10.0.1" />
         <PackageReference Include="Nice3point.Revit.Build.Tasks" Version="3.*" />
         <PackageReference Include="Nice3point.Revit.Toolkit" Version="$(RevitVersion).*" />
         <PackageReference Include="Nice3point.Revit.Extensions" Version="$(RevitVersion).*" />
@@ -62,6 +63,7 @@
         <!-- UI -->
         <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.0" />
         <PackageReference Include="ricaun.Revit.UI" Version="0.8.0" />
+        <PackageReference Include="MahApps.Metro" Version="3.0.0-rc0529" />
         
         <!-- Serilog -->
         <PackageReference Include="Serilog" Version="4.3.1-dev-02395" />
@@ -69,12 +71,14 @@
         <PackageReference Include="Serilog.Sinks.File" Version="7.0.1-dev-02315" />
         <PackageReference Include="Serilog.Sinks.SQLite" Version="6.0.0" />
         <PackageReference Include="Serilog.Sinks.RichTextBox.WinForms.Colored" Version="3.2.0" />
+        
+        <!--Hosting-->
+        <PackageReference Include="Microsoft.Extensions.Hosting" Version="10.0.1" />
 
         <!-- Utils -->
         <PackageReference Include="JetBrains.Annotations" Version="2025.2.4" />
         <PackageReference Include="PolySharp" Version="*" PrivateAssets="All" IncludeAssets="runtime; build; native; contentfiles; analyzers; buildtransitive" />
         <PackageReference Include="ILRepack" Version="2.0.41" />
-        <PackageReference Include="System.Text.Json" Version="8.0.6" Condition="$(DefineConstants.Contains('NETFRAMEWORK'))" />
         <PackageReference Include="ZLogger" Version="2.5.10" />
     </ItemGroup>
 
@@ -95,8 +99,18 @@
     </ItemGroup>
 
     <ItemGroup>
-      <ProjectReference Include="..\RevitDevTool.UI\RevitDevTool.UI.csproj" />
+      <Page Update="Theme\Design\DesignTimeResources.xaml">
+        <Generator>MSBuild:Compile</Generator>
+        <XamlRuntime>Wpf</XamlRuntime>
+        <SubType>Designer</SubType>
+      </Page>
+      <Page Update="Theme\Styles\Icons.xaml">
+        <Generator>MSBuild:Compile</Generator>
+        <XamlRuntime>Wpf</XamlRuntime>
+        <SubType>Designer</SubType>
+      </Page>
     </ItemGroup>
+
 
     <!-- Start Revit -->
     <PropertyGroup>

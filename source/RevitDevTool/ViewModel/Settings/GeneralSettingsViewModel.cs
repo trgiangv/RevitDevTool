@@ -1,34 +1,32 @@
-﻿using System.Diagnostics ;
-using RevitDevTool.Services ;
-using RevitDevTool.Theme ;
-using Wpf.Ui.Appearance ;
+using System.Diagnostics;
+using RevitDevTool.Services;
+using RevitDevTool.Theme;
 
-namespace RevitDevTool.ViewModel.Settings ;
+namespace RevitDevTool.ViewModel.Settings;
 
 public partial class GeneralSettingsViewModel : ObservableObject
 {
     private readonly ISettingsService _settingsService;
-    private readonly IThemeWatcherService _themeWatcherService;
-    
-    public static List<ApplicationTheme> Themes
+
+    public static List<AppTheme> Themes
     {
         get =>
         [
-            ApplicationTheme.Light,
-            ApplicationTheme.Dark,
+            AppTheme.Light,
+            AppTheme.Dark,
 #if REVIT2024_OR_GREATER
-            ApplicationTheme.Auto
+            AppTheme.Auto
 #endif
         ];
     }
-    
-    [ObservableProperty] private ApplicationTheme _theme;
+
+    [ObservableProperty] private AppTheme _theme;
     [ObservableProperty] private bool _useHardwareRendering;
 
-    partial void OnThemeChanged( ApplicationTheme value )
+    partial void OnThemeChanged(AppTheme value)
     {
         _settingsService.GeneralConfig.Theme = value;
-        _themeWatcherService.ApplyTheme();
+        ThemeManager.Current.ApplicationTheme = value;
     }
     
     partial void OnUseHardwareRenderingChanged(bool value)
@@ -38,10 +36,9 @@ public partial class GeneralSettingsViewModel : ObservableObject
         else Application.DisableHardwareRendering();
     }
     
-    public GeneralSettingsViewModel(ISettingsService settingsService, IThemeWatcherService themeWatcherService)
+    public GeneralSettingsViewModel(ISettingsService settingsService)
     {
         _settingsService = settingsService;
-        _themeWatcherService = themeWatcherService;
         Theme = _settingsService.GeneralConfig.Theme;
         UseHardwareRendering = _settingsService.GeneralConfig.UseHardwareRendering;
     }

@@ -8,8 +8,6 @@ using RevitDevTool.Models.Trace;
 using RevitDevTool.Services;
 using RevitDevTool.Theme;
 using Serilog.Events;
-using Wpf.Ui.Appearance;
-using Color = System.Windows.Media.Color;
 
 namespace RevitDevTool.ViewModel;
 
@@ -18,13 +16,12 @@ public partial class TraceLogViewModel : ObservableObject, IDisposable
     private readonly ISettingsService _settingsService;
     private readonly ILoggingService _loggingService;
     private readonly RichTextBoxSink _outputSink;
-    private readonly IThemeWatcherService _themeWatcherService;
     private readonly WeakReferenceMessenger _messenger;
-    private readonly ThemeChangedEvent _onThemeChangedHandler;
+    private readonly EventHandler<EventArgs> _onThemeChangedHandler;
     private readonly EventHandler<IdlingEventArgs> _onIdlingHandler;
 
     private ConsoleRedirector? _consoleRedirector;
-    private ApplicationTheme _currentTheme;
+    private AppTheme _currentTheme;
     private bool _isSubscribed;
     private bool _isClearing;
 
@@ -47,16 +44,15 @@ public partial class TraceLogViewModel : ObservableObject, IDisposable
         else StopTracing();
     }
 
-    public TraceLogViewModel(ISettingsService settingsService, IThemeWatcherService themeWatcherService, ITraceListenerFactory traceListenerFactory, ILoggerFactory loggerFactory)
+    public TraceLogViewModel(ISettingsService settingsService, ITraceListenerFactory traceListenerFactory, ILoggerFactory loggerFactory)
     {
         _settingsService = settingsService;
-        _themeWatcherService = themeWatcherService;
         _messenger = WeakReferenceMessenger.Default;
-        _outputSink = new RichTextBoxSink(_themeWatcherService);
+        _outputSink = new RichTextBoxSink();
         _loggingService = new LoggingService(settingsService, loggerFactory, traceListenerFactory, _outputSink);
         _onThemeChangedHandler = OnThemeChanged;
         _onIdlingHandler = OnIdling;
-        _currentTheme = _themeWatcherService.GetEffectiveTheme();
+        _currentTheme = ThemeManager.Current.ActualApplicationTheme;
         Subscribe();
         StartTracing();
     }
@@ -76,7 +72,7 @@ public partial class TraceLogViewModel : ObservableObject, IDisposable
         ClearGeometry();
     }
 
-    private void UpdateTheme(ApplicationTheme theme, bool shouldRestart)
+    private void UpdateTheme(AppTheme theme, bool shouldRestart)
     {
         LogTextBox.Dispatcher.Invoke(() =>
         {
@@ -89,7 +85,7 @@ public partial class TraceLogViewModel : ObservableObject, IDisposable
         });
     }
 
-    private bool IsDarkTheme => _currentTheme == ApplicationTheme.Dark;
+    private bool IsDarkTheme => _currentTheme == AppTheme.Dark;
 
     public void Subscribe()
     {
@@ -97,11 +93,11 @@ public partial class TraceLogViewModel : ObservableObject, IDisposable
 
         _consoleRedirector ??= new ConsoleRedirector();
 
-        UpdateTheme(_themeWatcherService.GetEffectiveTheme(), true);
+        UpdateTheme(ThemeManager.Current.ActualApplicationTheme, true);
         IsStarted = true;
 
         Context.UiApplication.Idling += _onIdlingHandler;
-        ApplicationThemeManager.Changed += _onThemeChangedHandler;
+        ThemeManager.Current.ActualApplicationThemeChanged += _onThemeChangedHandler;
         _messenger.Register<TraceLogViewModel, LogSettingsAppliedMessage>(
             this,
             static (r, _) => r.OnSettingsApplied()
@@ -115,7 +111,7 @@ public partial class TraceLogViewModel : ObservableObject, IDisposable
         if (!_isSubscribed) return;
 
         Context.UiApplication.Idling -= _onIdlingHandler;
-        ApplicationThemeManager.Changed -= _onThemeChangedHandler;
+        ThemeManager.Current.ActualApplicationThemeChanged -= _onThemeChangedHandler;
         _messenger.UnregisterAll(this);
 
         _isSubscribed = false;
@@ -129,8 +125,9 @@ public partial class TraceLogViewModel : ObservableObject, IDisposable
         }
     }
 
-    private void OnThemeChanged(ApplicationTheme theme, Color accent)
+    private void OnThemeChanged(object? sender, EventArgs e)
     {
+        var theme = ThemeManager.Current.ActualApplicationTheme;
         if (_currentTheme == theme) return;
         UpdateTheme(theme, IsStarted);
     }
