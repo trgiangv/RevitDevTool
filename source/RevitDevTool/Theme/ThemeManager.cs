@@ -1,4 +1,3 @@
-using System.Diagnostics;
 using System.Windows;
 using System.Windows.Threading;
 #if REVIT2024_OR_GREATER
@@ -12,9 +11,6 @@ namespace RevitDevTool.Theme;
 /// </summary>
 public class ThemeManager : DependencyObject
 {
-    private bool _isInitialized;
-    private bool _applicationInitialized;
-
     private ThemeManager()
     {
 #if REVIT2024_OR_GREATER
@@ -24,29 +20,7 @@ public class ThemeManager : DependencyObject
 
     #region RevitTheme
 
-    private bool _useRevitTheme;
-
-    public bool UseRevitTheme
-    {
-        get => _useRevitTheme;
-        set
-        {
-            if (_useRevitTheme == value) return;
-            _useRevitTheme = value;
-            if (value)
-                InitRevitTheme();
-        }
-    }
-
-    private void InitRevitTheme()
-    {
-#if REVIT2024_OR_GREATER
-        var currentTheme = UIThemeManager.CurrentTheme == UITheme.Dark
-            ? AppTheme.Dark
-            : AppTheme.Light;
-        ApplicationTheme = currentTheme;
-#endif
-    }
+    private bool UseRevitTheme { get; set; }
 
 #if REVIT2024_OR_GREATER
     private static AppTheme GetRevitTheme()
@@ -64,8 +38,8 @@ public class ThemeManager : DependencyObject
         Dispatcher.CurrentDispatcher.BeginInvoke(() =>
         {
             if (!UseRevitTheme) return;
-            var changedTheme = GetRevitTheme();
-            ApplicationTheme = changedTheme;
+            ActualApplicationTheme = GetRevitTheme();
+            ApplyThemeToResources();
         });
     }
 #endif
@@ -121,19 +95,31 @@ public class ThemeManager : DependencyObject
     private static void OnActualApplicationThemeChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
     {
         var tm = (ThemeManager)d;
-        tm.ApplyApplicationTheme();
         tm.ActualApplicationThemeChanged?.Invoke(tm, EventArgs.Empty);
     }
 
     private void UpdateActualApplicationTheme()
     {
-        ActualApplicationTheme = ApplicationTheme ?? AppTheme.Light;
+        var theme = ApplicationTheme ?? AppTheme.Auto;
+        if (theme == AppTheme.Auto)
+        {
+#if REVIT2024_OR_GREATER
+            UseRevitTheme = true;
+            ActualApplicationTheme = GetRevitTheme();
+#else
+            ActualApplicationTheme = AppTheme.Light;
+#endif
+        }
+        else
+        {
+            UseRevitTheme = false;
+            ActualApplicationTheme = theme;
+        }
     }
 
-    private void ApplyApplicationTheme()
+    private void ApplyThemeToResources()
     {
-        if (!_applicationInitialized) return;
-        Debug.Assert(ThemeResources.Current != null);
+        if (ThemeResources.Current == null) return;
         ThemeResources.Current.ApplyApplicationTheme(ActualApplicationTheme);
     }
 
@@ -141,13 +127,15 @@ public class ThemeManager : DependencyObject
 
     public static ThemeManager Current { get; } = new();
     public event EventHandler<EventArgs>? ActualApplicationThemeChanged;
-
-    internal void Initialize()
+    
+    /// <summary>
+    /// Called after settings are loaded to apply the saved theme.
+    /// Use to apply theme changes at runtime.
+    /// </summary>
+    public void ApplySettingsTheme(AppTheme theme)
     {
-        if (_isInitialized) return;
+        ApplicationTheme = theme;
         UpdateActualApplicationTheme();
-        _applicationInitialized = true;
-        ApplyApplicationTheme();
-        _isInitialized = true;
+        ApplyThemeToResources();
     }
 }

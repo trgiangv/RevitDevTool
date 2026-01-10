@@ -5,8 +5,8 @@ namespace RevitDevTool.Theme;
 
 public static class ThemePresets
 {
-    private static readonly Color LightBackground = Color.FromArgb(250, 250, 250);
-    private static readonly Color DarkBackground = Color.FromArgb(30, 30, 30);
+    public static readonly Color LightBackground = Color.FromArgb(250, 250, 250);
+    public static readonly Color DarkBackground = Color.FromArgb(37, 37, 37);
     
     /// <summary>
     /// Enhanced dark theme with better contrast and readability - foreground colors only

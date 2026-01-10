@@ -100,8 +100,8 @@ internal sealed class RichTextBoxSink : ILogOutputSink
     private void ApplyTheme(bool isDarkTheme)
     {
         _richTextBox.BackColor = isDarkTheme 
-            ? System.Drawing.Color.FromArgb(37, 37, 37) 
-            : System.Drawing.Color.FromArgb(250, 250, 250);
+            ? ThemePresets.DarkBackground
+            : ThemePresets.LightBackground;
         
         Win32Utils.SetImmersiveDarkMode(_richTextBox.Handle, isDarkTheme);
     }

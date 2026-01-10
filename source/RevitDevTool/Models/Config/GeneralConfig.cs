@@ -9,6 +9,10 @@ namespace RevitDevTool.Models.Config;
 [Serializable]
 public sealed class GeneralConfig
 {
+#if REVIT2024_OR_GREATER
+    [JsonPropertyName("Theme")] public AppTheme Theme { get; set; } = AppTheme.Auto;
+#else
     [JsonPropertyName("Theme")] public AppTheme Theme { get; set; } = AppTheme.Light;
+#endif
     [JsonPropertyName("UseHardwareRendering")] public bool UseHardwareRendering { get; set; } = true;
 }

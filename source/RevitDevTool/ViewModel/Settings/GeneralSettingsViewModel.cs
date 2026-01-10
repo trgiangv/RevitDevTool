@@ -26,7 +26,7 @@ public partial class GeneralSettingsViewModel : ObservableObject
     partial void OnThemeChanged(AppTheme value)
     {
         _settingsService.GeneralConfig.Theme = value;
-        ThemeManager.Current.ApplicationTheme = value;
+        ThemeManager.Current.ApplySettingsTheme(value);
     }
     
     partial void OnUseHardwareRenderingChanged(bool value)

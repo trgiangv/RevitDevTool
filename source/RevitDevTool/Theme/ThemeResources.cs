@@ -2,10 +2,7 @@ using System.ComponentModel;
 using System.Diagnostics;
 using System.Windows;
 using RevitDevTool.Theme.Design;
-#if REVIT2024_OR_GREATER
-using Autodesk.Revit.UI;
 // ReSharper disable ReplaceWithFieldKeyword
-#endif
 
 namespace RevitDevTool.Theme;
 
@@ -18,9 +15,8 @@ public class ThemeResources : ResourceDictionary, ISupportInitialize
 {
     #region Fields
 
-    private ResourceDictionary? _lightResources;
-    private ResourceDictionary? _darkResources;
-    private bool _usingRevitTheme;
+    private static ResourceDictionary? _lightResources;
+    private static ResourceDictionary? _darkResources;
 
     #endregion
 
@@ -30,7 +26,6 @@ public class ThemeResources : ResourceDictionary, ISupportInitialize
     {
         if (Current != null)
         {
-            // Add reference to the singleton instance so all views share the same theme
             MergedDictionaries.Add(Current);
             return;
         }
@@ -60,18 +55,6 @@ public class ThemeResources : ResourceDictionary, ISupportInitialize
         }
     }
 
-    public bool UsingRevitTheme
-    {
-        get => _usingRevitTheme;
-        set
-        {
-            _usingRevitTheme = value;
-            if (ThemeManager.Current.UseRevitTheme != value)
-            {
-                ThemeManager.Current.UseRevitTheme = value;
-            }
-        }
-    }
 
     #endregion
 
@@ -120,27 +103,25 @@ public class ThemeResources : ResourceDictionary, ISupportInitialize
 
     #region ISupportInitialize
 
-    private bool IsInitialized { get; set; }
     private bool IsInitializePending { get; set; }
 
     private new void BeginInit()
     {
         base.BeginInit();
         IsInitializePending = true;
-        IsInitialized = false;
     }
 
     private new void EndInit()
     {
         IsInitializePending = false;
-        IsInitialized = true;
         if (DesignMode.IsDesignModeEnabled)
         {
             DesignTimeInit();
         }
-        else
+        else if (this == Current)
         {
-            ThemeManager.Current.Initialize();
+            // Apply default Light theme to ensure resources are loaded
+            ApplyApplicationTheme(AppTheme.Light);
         }
         base.EndInit();
     }
@@ -175,7 +156,6 @@ public class ThemeResources : ResourceDictionary, ISupportInitialize
                 MergedDictionaries.RemoveIfNotNull(_lightResources);
                 break;
             default:
-                // For Auto, default to Light (actual theme determined by ThemeManager)
                 EnsureLightResources();
                 MergedDictionaries.InsertOrReplace(targetIndex, _lightResources!);
                 MergedDictionaries.RemoveIfNotNull(_darkResources);
@@ -187,12 +167,12 @@ public class ThemeResources : ResourceDictionary, ISupportInitialize
 
     #region Theme Dictionary Initialization
 
-    private void EnsureLightResources()
+    private static void EnsureLightResources()
     {
         _lightResources ??= ResourceHelper.GetMahAppsLightTheme();
     }
 
-    private void EnsureDarkResources()
+    private static void EnsureDarkResources()
     {
         _darkResources ??= ResourceHelper.GetMahAppsDarkTheme();
     }

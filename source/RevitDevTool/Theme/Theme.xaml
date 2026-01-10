@@ -4,7 +4,7 @@
     xmlns:theme="clr-namespace:RevitDevTool.Theme">
 
     <ResourceDictionary.MergedDictionaries>
-        <theme:ThemeResources UsingRevitTheme="True" />
+        <theme:ThemeResources />
         <theme:ControlsResources />
         <ResourceDictionary Source="/RevitDevTool;component/Theme/Styles/Icons.xaml" />
         <ResourceDictionary Source="/RevitDevTool;component/Theme/Styles/Constants.xaml" />

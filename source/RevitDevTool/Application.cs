@@ -21,7 +21,7 @@ public class Application : ExternalApplication
         settingsService.LoadSettings();
         
         // Initialize theme from settings
-        ThemeManager.Current.ApplicationTheme = settingsService.GeneralConfig.Theme;
+        ThemeManager.Current.ApplySettingsTheme(settingsService.GeneralConfig.Theme);
         
         EnableHardwareRendering();
         AddButton(Application);
