@@ -1,6 +1,6 @@
 using Nice3point.Revit.Toolkit.External.Handlers;
-
-namespace RevitDevTool;
+// ReSharper disable ReplaceWithFieldKeyword
+namespace RevitDevTool.Controllers;
 
 public static class ExternalEventController
 {

@@ -13,7 +13,7 @@ namespace RevitDevTool.Commands;
 
 [UsedImplicitly]
 [Transaction(TransactionMode.Manual)]
-public class TraceCommand : ExternalCommand
+public class TraceCommand : ExternalCommand, IExternalCommandAvailability
 {
     public const string CommandName = "TraceLog";
     private const string Guid = "43AE2B41-0BE6-425A-B27A-724B2CE17351";
@@ -40,7 +40,6 @@ public class TraceCommand : ExternalCommand
                     SharedViewModel.Subscribe();
                     ShowFloatingWindow();
                 }
-                return;
             }
             
             var dockableWindow = UiApplication.GetDockablePane(PaneId);
@@ -201,5 +200,10 @@ public class TraceCommand : ExternalCommand
         }
         
         NotifyListener.TraceReceived += TraceReceivedHandler;
+    }
+
+    public bool IsCommandAvailable(UIApplication applicationData, CategorySet selectedCategories)
+    {
+        return true;
     }
 }

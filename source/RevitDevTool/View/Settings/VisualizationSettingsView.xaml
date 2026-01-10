@@ -51,7 +51,7 @@
         ItemTemplate="{StaticResource MenuItemTemplate}"
         OpenPaneLength="150"
         SelectedIndex="0"
-        Style="{StaticResource MahApps.Styles.HamburgerMenu.CreatorsUpdate}">
+        Style="{DynamicResource MahApps.Styles.HamburgerMenu.CreatorsUpdate}">
         <mah:HamburgerMenu.ItemsSource>
             <mah:HamburgerMenuItemCollection>
                 <mah:HamburgerMenuIconItem

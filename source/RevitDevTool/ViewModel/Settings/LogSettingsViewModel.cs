@@ -7,6 +7,7 @@ using RevitDevTool.Services;
 using RevitDevTool.Utils;
 using Serilog;
 using Serilog.Events;
+// ReSharper disable UnusedParameterInPartialMethod
 
 namespace RevitDevTool.ViewModel.Settings;
 
@@ -203,23 +204,12 @@ public partial class LogSettingsViewModel : ObservableObject
             _ => "All Files (*.*)|*.*"
         };
         
-        var date = TimeInterval switch
-        {
-            RollingInterval.Infinite => "",
-            RollingInterval.Year => DateTime.Now.ToString("yyyy"),
-            RollingInterval.Month => DateTime.Now.ToString("yyyyMM"),
-            RollingInterval.Day => DateTime.Now.ToString("yyyyMMdd"),
-            RollingInterval.Hour => DateTime.Now.ToString("yyyyMMdd_HH"),
-            RollingInterval.Minute => DateTime.Now.ToString("yyyyMMdd_HHmm"),
-            _ => ""
-        };
-        
         var extension= FileExtension;
         var dialog = new Microsoft.Win32.SaveFileDialog
         {
             Filter = filter,
             DefaultExt = extension,
-            FileName = $"log.{extension}"
+            FileName = "log"
         };
 
         if (dialog.ShowDialog() == true)

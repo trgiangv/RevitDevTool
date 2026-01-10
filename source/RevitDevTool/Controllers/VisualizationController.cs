@@ -2,8 +2,7 @@
 using RevitDevTool.ViewModel.Settings.Visualization;
 using RevitDevTool.Visualization.Contracts;
 using RevitDevTool.Visualization.Server;
-
-namespace RevitDevTool;
+namespace RevitDevTool.Controllers;
 
 internal static class VisualizationController
 {

@@ -1,4 +1,5 @@
 using System.Windows;
+using RevitDevTool.Utils;
 
 namespace RevitDevTool.Theme;
 
@@ -17,5 +18,5 @@ public class ControlsResources : ResourceDictionary
     /// <summary>
     /// Gets the static MahApps.Metro controls resource dictionary.
     /// </summary>
-    public static ResourceDictionary Controls => _controls ??= ResourceHelper.GetMahAppsControls();
+    private static ResourceDictionary Controls => _controls ??= ResourceHelper.GetMahAppsControls();
 }
