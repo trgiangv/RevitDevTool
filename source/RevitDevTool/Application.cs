@@ -6,6 +6,7 @@ using RevitDevTool.Controllers;
 using RevitDevTool.Models.Trace;
 using RevitDevTool.Services;
 using RevitDevTool.Theme;
+using RevitDevTool.Utils;
 
 namespace RevitDevTool;
 
@@ -14,6 +15,7 @@ public class Application : ExternalApplication
 {
     public override void OnStartup()
     {
+        AssemblyLoader.Initialize();
         Host.Start();
         ExternalEventController.Register();
         

@@ -82,6 +82,38 @@
         <PackageReference Include="ZLogger" Version="2.5.10" />
     </ItemGroup>
 
+<!--    <ItemGroup Condition="'$(TargetFramework)' == 'net48' ">-->
+<!--        <EmbeddedResource Include="$(PkgMahApps_Metro)\lib\net462\MahApps.Metro.dll">-->
+<!--            <LogicalName>RevitDevTool.Libs.MahApps.Metro.dll</LogicalName>-->
+<!--        </EmbeddedResource>-->
+
+<!--        <EmbeddedResource Include="$(PkgControlzEx)\lib\net462\ControlzEx.dll">-->
+<!--            <LogicalName>RevitDevTool.Libs.ControlzEx.dll</LogicalName>-->
+<!--        </EmbeddedResource>-->
+
+<!--        <EmbeddedResource Include="$(PkgMicrosoft_Xaml_Behaviors_Wpf)\lib\net462\Microsoft.Xaml.Behaviors.dll">-->
+<!--            <LogicalName>RevitDevTool.Libs.Microsoft.Xaml.Behaviors.dll</LogicalName>-->
+<!--        </EmbeddedResource>-->
+<!--    </ItemGroup>-->
+
+<!--    <ItemGroup Condition="'$(TargetFramework)' == 'net8.0-windows'">-->
+<!--        <EmbeddedResource Include="$(PkgMahApps_Metro)\lib\net8.0-windows7.0\MahApps.Metro.dll">-->
+<!--            <LogicalName>RevitDevTool.Libs.MahApps.Metro.dll</LogicalName>-->
+<!--        </EmbeddedResource>-->
+
+<!--        <EmbeddedResource Include="$(PkgControlzEx)\lib\net8.0-windows7.0\ControlzEx.dll">-->
+<!--            <LogicalName>RevitDevTool.Libs.ControlzEx.dll</LogicalName>-->
+<!--        </EmbeddedResource>-->
+
+<!--        <EmbeddedResource Include="$(PkgMicrosoft_Xaml_Behaviors_Wpf)\lib\net6.0-windows7.0\Microsoft.Xaml.Behaviors.dll">-->
+<!--            <LogicalName>RevitDevTool.Libs.Microsoft.Xaml.Behaviors.dll</LogicalName>-->
+<!--        </EmbeddedResource>-->
+<!--    </ItemGroup>-->
+
+<!--    <PropertyGroup>-->
+<!--        <GenerateRuntimeConfigurationFiles>true</GenerateRuntimeConfigurationFiles>-->
+<!--    </PropertyGroup>-->
+
     <!-- Copy SQLite.Interop.dll -->
     <Target Name="CopySQLiteInterop" AfterTargets="Build">
         <Copy Condition="!$(DefineConstants.Contains('NETFRAMEWORK')) AND Exists('$(OutputPath)runtimes\win-x64\native\SQLite.Interop.dll')"

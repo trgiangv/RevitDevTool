@@ -22,9 +22,7 @@
     </UserControl.Resources>
 
     <Grid Margin="0,5">
-        <mah:MetroTabControl
-            mah:HeaderedControlHelper.HeaderFontSize="16"
-            mah:HeaderedControlHelper.HeaderFontWeight="SemiBold">
+        <mah:MetroTabControl>
             <mah:MetroTabItem Header="General">
                 <settings:GeneralSettingsView />
             </mah:MetroTabItem>

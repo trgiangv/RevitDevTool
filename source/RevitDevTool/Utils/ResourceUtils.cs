@@ -21,7 +21,7 @@ public static class ResourceHelper
     {
         try
         {
-            var uri = new Uri($"/{assemblyName};component/{resourcePath}", UriKind.RelativeOrAbsolute);
+            var uri = new Uri($"pack://application:,,,/{assemblyName};component/{resourcePath}", UriKind.Absolute);
             return new ResourceDictionary { Source = uri };
         }
         catch
