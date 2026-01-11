@@ -14,22 +14,12 @@ public partial class TraceLogPageViewModel(TraceLogViewModel traceLogViewModel, 
 
     public TraceLogViewModel TraceLogViewModel { get; } = traceLogViewModel;
 
-    [RelayCommand]
-    private void ToggleSettings()
+    partial void OnIsSettingsVisibleChanged(bool value)
     {
-        if (IsSettingsVisible)
+        if (!value)
         {
             logSettingsViewModel.ApplyIfPendingChanges();
         }
-
-        IsSettingsVisible = !IsSettingsVisible;
-    }
-
-    [RelayCommand]
-    private void NavigateBack()
-    {
-        logSettingsViewModel.ApplyIfPendingChanges();
-        IsSettingsVisible = false;
     }
 }
 

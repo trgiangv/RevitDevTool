@@ -22,7 +22,7 @@ public class TraceCommand : ExternalCommand, IExternalCommandAvailability
     private static bool IsForceHide { get; set; }
     internal static TraceLogViewModel? SharedViewModel { get; private set; }
     private static TraceLogWindow? FloatingWindow { get; set; }
-    private static bool HasDocumentOpened => Context.Application.Documents.Size > 0;
+    private static bool HasDocumentOpened => Context.UiApplication.ActiveUIDocument is not null;
 
     public override void Execute()
     {
@@ -65,19 +65,17 @@ public class TraceCommand : ExternalCommand, IExternalCommandAvailability
     public static void RegisterDockablePane(UIControlledApplication application)
     {
         SharedViewModel = Host.GetService<TraceLogViewModel>();
-        var pageViewModel = Host.GetService<TraceLogPageViewModel>();
-        var frameworkElement = new TraceLogPage(pageViewModel);
-        RegisterPane(application, frameworkElement);
+        RegisterPane(application);
         SubscribeEvents(application);
     }
 
-    private static void RegisterPane(UIControlledApplication application, TraceLogPage frameworkElement)
+    private static void RegisterPane(UIControlledApplication application)
     {
         DockablePaneProvider
             .Register(application, new Guid(Guid), CommandName)
             .SetConfiguration(data =>
             {
-                data.FrameworkElement = frameworkElement;
+                data.FrameworkElement = Host.GetService<TraceLogPage>();
                 data.InitialState = CreateInitialState();
             });
     }
@@ -95,20 +93,6 @@ public class TraceCommand : ExternalCommand, IExternalCommandAvailability
 
     private static void SubscribeEvents(UIControlledApplication application)
     {
-        application.DockableFrameVisibilityChanged += (_, args) =>
-        {
-            if (args.PaneId != PaneId) return;
-            if (SharedViewModel is null) return;
-
-            // Keep trace listeners registered even when pane is hidden
-            // Only dispose when floating window is also closed
-            if (!args.DockableFrameShown && FloatingWindow is null)
-            {
-                // Don't dispose, just keep running in background
-                // SharedViewModel.Dispose();
-            }
-        };
-        
         application.ControlledApplication.DocumentOpened += OnDocumentOpened;
         application.ControlledApplication.DocumentClosed += OnDocumentClosed;
         NotifyListener.TraceReceived += TraceReceivedHandler;
@@ -141,11 +125,15 @@ public class TraceCommand : ExternalCommand, IExternalCommandAvailability
         }
         
         var dockableWindow = Context.UiControlledApplication.GetDockablePane(PaneId);
-        
+
         if (IsForceHide)
+        {
             dockableWindow.Hide();
+        }
         else if (!dockableWindow.IsShown())
+        {
             dockableWindow.Show();
+        }
     }
     
     private static void ShowFloatingWindow()
@@ -153,17 +141,21 @@ public class TraceCommand : ExternalCommand, IExternalCommandAvailability
         if (FloatingWindow != null) return;
         if (SharedViewModel is null) return;
         
-        // It is what it is, just let it go
-        if (ComponentManager.IsApplicationButtonVisible) 
+        // Ensure UI thread
+        if (ComponentManager.IsApplicationButtonVisible)
+        {
             ComponentManager.Ribbon.Dispatcher.BeginInvoke(new Action(Show));
-        else 
+        }
+        else
+        {
             Show();
+        }
 
         return;
         
         void Show()
         {
-            FloatingWindow = new TraceLogWindow();
+            FloatingWindow = Host.GetService<TraceLogWindow>();
             FloatingWindow.Closed += OnFloatingWindowClosed;
             FloatingWindow.SetAutodeskOwner();
             FloatingWindow.Show();

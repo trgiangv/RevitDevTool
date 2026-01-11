@@ -13,19 +13,19 @@ internal static class VisualizationController
     public static XyzVisualizationServer XyzVisualizationServer { get; } = new();
     public static FaceVisualizationServer FaceVisualizationServer { get; } = new();
     
-    private static IEnumerable<(IVisualizationServerLifeCycle Server, IVisualizationViewModel ViewModel)> GetMappings()
-    {
-        yield return (BoundingBoxVisualizationServer, Host.GetService<BoundingBoxVisualizationViewModel>());
-        yield return (MeshVisualizationServer, Host.GetService<MeshVisualizationViewModel>());
-        yield return (PolylineVisualizationServer, Host.GetService<PolylineVisualizationViewModel>());
-        yield return (SolidVisualizationServer, Host.GetService<SolidVisualizationViewModel>());
-        yield return (XyzVisualizationServer, Host.GetService<XyzVisualizationViewModel>());
-        yield return (FaceVisualizationServer, Host.GetService<FaceVisualizationViewModel>());
-    }
+    private static readonly List<(IVisualizationServerLifeCycle Server, IVisualizationViewModel ViewModel)> ServerViewModelPairs =
+        [
+            (BoundingBoxVisualizationServer, Host.GetService<BoundingBoxVisualizationViewModel>()),
+            (MeshVisualizationServer, Host.GetService<MeshVisualizationViewModel>()),
+            (PolylineVisualizationServer, Host.GetService<PolylineVisualizationViewModel>()),
+            (SolidVisualizationServer, Host.GetService<SolidVisualizationViewModel>()),
+            (XyzVisualizationServer, Host.GetService<XyzVisualizationViewModel>()),
+            (FaceVisualizationServer, Host.GetService<FaceVisualizationViewModel>())
+        ];
 
     public static void Start()
     {
-        foreach (var (server, viewModel) in GetMappings())
+        foreach (var (server, viewModel) in ServerViewModelPairs)
         {
             server.Register(viewModel);
         }
@@ -33,7 +33,7 @@ internal static class VisualizationController
     
     public static void Stop()
     {
-        foreach (var (server, _) in GetMappings())
+        foreach (var (server, _) in ServerViewModelPairs)
         {
             server.Unregister();
         }
@@ -41,7 +41,7 @@ internal static class VisualizationController
     
     public static void Clear()
     {
-        foreach (var (server, _) in GetMappings())
+        foreach (var (server, _) in ServerViewModelPairs)
         {
             server.ClearGeometry();
         }
@@ -49,7 +49,7 @@ internal static class VisualizationController
     
     public static void Refresh()
     {
-        foreach (var (_, viewModel) in GetMappings())
+        foreach (var (_, viewModel) in ServerViewModelPairs)
         {
             viewModel.Refresh();
         }

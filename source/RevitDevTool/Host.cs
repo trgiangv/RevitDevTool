@@ -2,10 +2,11 @@ using System.IO;
 using System.Reflection;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using RevitDevTool.Controllers;
 using RevitDevTool.Logging;
-using RevitDevTool.Logging.Serilog;
 using RevitDevTool.Logging.ZLogger;
 using RevitDevTool.Services;
+using RevitDevTool.View;
 using RevitDevTool.View.Settings;
 using RevitDevTool.View.Settings.Visualization;
 using RevitDevTool.ViewModel;
@@ -40,6 +41,7 @@ public static class Host
     private static void ConfigureServices(IServiceCollection services)
     {
         services.AddSingleton<ISettingsService, SettingsService>();
+        services.AddHostedService<HostBackgroundController>();
         
         // Serilog
         // services.AddSingleton<ILoggerFactory, SerilogLoggerFactory>();
@@ -54,13 +56,7 @@ public static class Host
         // Logging service
         services.AddSingleton<ILoggingService, LoggingService>();
 
-        services.AddSingleton<TraceLogViewModel>();
-        services.AddTransient<TraceLogPageViewModel>();
-
-        services.AddTransient<GeneralSettingsViewModel>();
-        services.AddTransient<GeneralSettingsView>();
-        services.AddSingleton<LogSettingsViewModel>();
-        
+        // Visualization
         services.AddSingleton<BoundingBoxVisualizationViewModel>();
         services.AddSingleton<FaceVisualizationViewModel>();
         services.AddSingleton<MeshVisualizationViewModel>();
@@ -74,6 +70,17 @@ public static class Host
         services.AddSingleton<PolylineVisualizationSettingsView>();
         services.AddSingleton<SolidVisualizationSettingsView>();
         services.AddSingleton<XyzVisualizationSettingsView>();
+
+        // Settings
+        services.AddSingleton<GeneralSettingsViewModel>();
+        services.AddSingleton<GeneralSettingsView>();
+        services.AddSingleton<LogSettingsViewModel>();
+        
+        // Root
+        services.AddSingleton<TraceLogViewModel>();
+        services.AddSingleton<TraceLogPageViewModel>();
+        services.AddTransient<TraceLogPage>();
+        services.AddTransient<TraceLogWindow>();
     }
 
     public static void Stop()

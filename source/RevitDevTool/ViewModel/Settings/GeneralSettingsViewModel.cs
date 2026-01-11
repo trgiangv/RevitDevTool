@@ -33,8 +33,7 @@ public partial class GeneralSettingsViewModel : ObservableObject
     partial void OnUseHardwareRenderingChanged(bool value)
     {
         _settingsService.GeneralConfig.UseHardwareRendering = value;
-        if (value) Application.EnableHardwareRendering();
-        else Application.DisableHardwareRendering();
+        HostBackgroundController.ToggleHardwareRendering(_settingsService);
     }
     
     public GeneralSettingsViewModel(ISettingsService settingsService)
