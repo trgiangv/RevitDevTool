@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using System.Globalization;
+using Microsoft.Extensions.Logging;
 using RevitDevTool.Utils;
 
 namespace RevitDevTool.Logging;
@@ -177,11 +178,11 @@ internal sealed class AdapterTraceListener(ILoggerAdapter logger, bool includeSt
 
     private static LogLevel GetLogLevel(TraceEventType eventType) => eventType switch
     {
-        TraceEventType.Critical => LogLevel.Fatal,
+        TraceEventType.Critical => LogLevel.Critical,
         TraceEventType.Error => LogLevel.Error,
         TraceEventType.Information => LogLevel.Information,
         TraceEventType.Warning => LogLevel.Warning,
-        TraceEventType.Verbose => LogLevel.Verbose,
+        TraceEventType.Verbose => LogLevel.Trace,
         _ => LogLevel.Debug
     };
 

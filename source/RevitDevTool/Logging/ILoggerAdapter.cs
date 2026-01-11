@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Logging;
 namespace RevitDevTool.Logging;
 
 /// <summary>
@@ -19,15 +20,5 @@ public interface ILoggerAdapter : IDisposable
     
     ILoggerAdapter ForContext(string propertyName, object? value);
     ILoggerAdapter ForContext<T>() where T : class;
-}
-
-public enum LogLevel
-{
-    Verbose = 0,
-    Debug = 1,
-    Information = 2,
-    Warning = 3,
-    Error = 4,
-    Fatal = 5
 }
 

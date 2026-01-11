@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Logging;
 using RevitDevTool.Models.Config;
 using Serilog;
 using Serilog.Core;
@@ -36,16 +37,7 @@ internal sealed class SerilogLoggerFactory : ILoggerFactory
 
     public void SetMinimumLevel(LogLevel level)
     {
-        _levelSwitch.MinimumLevel = level switch
-        {
-            LogLevel.Verbose => LogEventLevel.Verbose,
-            LogLevel.Debug => LogEventLevel.Debug,
-            LogLevel.Information => LogEventLevel.Information,
-            LogLevel.Warning => LogEventLevel.Warning,
-            LogLevel.Error => LogEventLevel.Error,
-            LogLevel.Fatal => LogEventLevel.Fatal,
-            _ => LogEventLevel.Debug
-        };
+        _levelSwitch.MinimumLevel = level.ToSerilog();
     }
 
     private static LoggerConfiguration ConfigureFileSink(LoggerConfiguration config, LogConfig logConfig)

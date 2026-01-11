@@ -1,12 +1,12 @@
 ﻿using System.Diagnostics;
 using System.IO;
 using CommunityToolkit.Mvvm.Messaging;
+using Microsoft.Extensions.Logging;
 using RevitDevTool.Models.Config;
 using RevitDevTool.Messages;
 using RevitDevTool.Services;
 using RevitDevTool.Utils;
 using Serilog;
-using Serilog.Events;
 // ReSharper disable UnusedParameterInPartialMethod
 
 namespace RevitDevTool.ViewModel.Settings;
@@ -19,7 +19,7 @@ public partial class LogSettingsViewModel : ObservableObject
     public static int[] StackTraceDepths { get; } = [1, 2, 3, 4, 5]; // allowed maximum 5 levels
     public static SourceLevels[] SourceLevels { get; } = Enum.GetValues(typeof(SourceLevels)).Cast<SourceLevels>().ToArray();
     
-    [ObservableProperty] private LogEventLevel _logLevel;
+    [ObservableProperty] private LogLevel _logLevel;
     [ObservableProperty] private bool _hasPendingChanges;
     [ObservableProperty] private bool _isSaveLogEnabled;
     [ObservableProperty] private bool _useExternalFileOnly;
@@ -42,7 +42,7 @@ public partial class LogSettingsViewModel : ObservableObject
         SetBaselineFromCurrent();
     }
 
-    partial void OnLogLevelChanged(LogEventLevel value) => UpdateHasPendingChanges();
+    partial void OnLogLevelChanged(LogLevel value) => UpdateHasPendingChanges();
     partial void OnIsSaveLogEnabledChanged(bool value) => UpdateHasPendingChanges();
     partial void OnUseExternalFileOnlyChanged(bool value) => UpdateHasPendingChanges();
     partial void OnSaveFormatChanged(LogSaveFormat value)
@@ -137,7 +137,7 @@ public partial class LogSettingsViewModel : ObservableObject
     }
 
     private readonly record struct Snapshot(
-        LogEventLevel LogLevel,
+        LogLevel LogLevel,
         bool IsSaveLogEnabled,
         bool UseExternalFileOnly,
         LogSaveFormat SaveFormat,

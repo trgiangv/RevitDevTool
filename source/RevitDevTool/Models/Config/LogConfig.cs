@@ -1,8 +1,8 @@
 using System.Diagnostics;
 using System.Text.Json.Serialization;
+using Microsoft.Extensions.Logging;
 using RevitDevTool.Utils;
 using Serilog;
-using Serilog.Events;
 namespace RevitDevTool.Models.Config;
 
 /// <summary>
@@ -12,7 +12,7 @@ namespace RevitDevTool.Models.Config;
 public sealed class LogConfig
 {
     [JsonPropertyName("LogLevel")] 
-    public LogEventLevel LogLevel { get; set; } = LogEventLevel.Debug;
+    public LogLevel LogLevel { get; set; } = LogLevel.Debug;
 
     [JsonPropertyName("IsSaveLogEnabled")] 
     public bool IsSaveLogEnabled { get; set; }

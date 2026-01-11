@@ -26,10 +26,17 @@ public static class SettingsUtils
     /// </summary>
     public static bool CheckWriteAccess(string path)
     {
-        var identity = WindowsIdentity.GetCurrent();
-        var principal = new WindowsPrincipal(identity);
-        var accessControl = new DirectoryInfo(path).GetAccessControl();
-        var accessRules = accessControl.GetAccessRules(true, true, typeof(NTAccount));
-        return accessRules.Cast<FileSystemAccessRule>().Any(rule => principal.IsInRole(rule.IdentityReference.Value) && (rule.FileSystemRights & FileSystemRights.WriteData) == FileSystemRights.WriteData);
+        try
+        {
+            var identity = WindowsIdentity.GetCurrent();
+            var principal = new WindowsPrincipal(identity);
+            var accessControl = new DirectoryInfo(path).GetAccessControl();
+            var accessRules = accessControl.GetAccessRules(true, true, typeof(NTAccount));
+            return accessRules.Cast<FileSystemAccessRule>().Any(rule => principal.IsInRole(rule.IdentityReference.Value) && (rule.FileSystemRights & FileSystemRights.WriteData) == FileSystemRights.WriteData);
+        }
+        catch
+        {
+            return false;
+        }
     }
 }

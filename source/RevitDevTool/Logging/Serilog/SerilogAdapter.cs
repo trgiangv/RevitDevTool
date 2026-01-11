@@ -1,4 +1,4 @@
-using Serilog.Events;
+using Microsoft.Extensions.Logging;
 using ILogger = Serilog.ILogger;
 // ReSharper disable TemplateIsNotCompileTimeConstantProblem
 // ReSharper disable ContextualLoggerProblem
@@ -38,27 +38,16 @@ internal sealed class SerilogAdapter(ILogger logger) : ILoggerAdapter
         => _logger.Fatal(exception, messageTemplate, propertyValues);
 
     public void Write(LogLevel level, string messageTemplate, params object?[] propertyValues)
-        => _logger.Write(ToSerilogLevel(level), messageTemplate, propertyValues);
+        => _logger.Write(level.ToSerilog(), messageTemplate, propertyValues);
 
     public void Write(LogLevel level, Exception? exception, string messageTemplate, params object[] propertyValues)
-        => _logger.Write(ToSerilogLevel(level), exception, messageTemplate, propertyValues);
+        => _logger.Write(level.ToSerilog(), exception, messageTemplate, propertyValues);
 
     public ILoggerAdapter ForContext(string propertyName, object? value)
         => new SerilogAdapter(_logger.ForContext(propertyName, value));
 
     public ILoggerAdapter ForContext<T>() where T : class
         => new SerilogAdapter(_logger.ForContext<T>());
-
-    private static LogEventLevel ToSerilogLevel(LogLevel level) => level switch
-    {
-        LogLevel.Verbose => LogEventLevel.Verbose,
-        LogLevel.Debug => LogEventLevel.Debug,
-        LogLevel.Information => LogEventLevel.Information,
-        LogLevel.Warning => LogEventLevel.Warning,
-        LogLevel.Error => LogEventLevel.Error,
-        LogLevel.Fatal => LogEventLevel.Fatal,
-        _ => LogEventLevel.Debug
-    };
 
     public void Dispose()
     {

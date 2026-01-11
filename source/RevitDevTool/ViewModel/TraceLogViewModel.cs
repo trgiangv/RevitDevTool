@@ -1,6 +1,7 @@
 using System.Windows.Forms.Integration;
 using Autodesk.Revit.UI.Events;
 using CommunityToolkit.Mvvm.Messaging;
+using Microsoft.Extensions.Logging;
 using RevitDevTool.Controllers;
 using RevitDevTool.Logging;
 using RevitDevTool.Logging.Serilog;
@@ -8,7 +9,7 @@ using RevitDevTool.Messages;
 using RevitDevTool.Models.Trace;
 using RevitDevTool.Services;
 using RevitDevTool.Theme;
-using Serilog.Events;
+using ILoggerFactory = RevitDevTool.Logging.ILoggerFactory;
 
 namespace RevitDevTool.ViewModel;
 
@@ -32,11 +33,11 @@ public partial class TraceLogViewModel : ObservableObject, IDisposable
     private bool _isStarted = true;
 
     [ObservableProperty]
-    private LogEventLevel _logLevel = LogEventLevel.Debug;
+    private LogLevel _logLevel = LogLevel.Debug;
 
-    partial void OnLogLevelChanged(LogEventLevel value)
+    partial void OnLogLevelChanged(LogLevel value)
     {
-        _loggingService.SetMinimumLevel(ToLogLevel(value));
+        _loggingService.SetMinimumLevel(value);
     }
 
     partial void OnIsStartedChanged(bool value)
@@ -168,15 +169,4 @@ public partial class TraceLogViewModel : ObservableObject, IDisposable
 
         GC.SuppressFinalize(this);
     }
-
-    private static LogLevel ToLogLevel(LogEventLevel serilogLevel) => serilogLevel switch
-    {
-        LogEventLevel.Verbose => Logging.LogLevel.Verbose,
-        LogEventLevel.Debug => Logging.LogLevel.Debug,
-        LogEventLevel.Information => Logging.LogLevel.Information,
-        LogEventLevel.Warning => Logging.LogLevel.Warning,
-        LogEventLevel.Error => Logging.LogLevel.Error,
-        LogEventLevel.Fatal => Logging.LogLevel.Fatal,
-        _ => Logging.LogLevel.Debug
-    };
 }

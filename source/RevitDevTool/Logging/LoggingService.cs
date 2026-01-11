@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using Microsoft.Extensions.Logging;
 using RevitDevTool.Models.Trace;
 using RevitDevTool.Services;
 using RevitDevTool.Utils;

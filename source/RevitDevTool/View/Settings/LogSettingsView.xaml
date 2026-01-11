@@ -5,7 +5,7 @@
     xmlns:config="clr-namespace:RevitDevTool.Models.Config"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:design="clr-namespace:RevitDevTool.Theme.Design"
-    xmlns:log="clr-namespace:Serilog.Events;assembly=Serilog"
+    xmlns:logging="clr-namespace:Microsoft.Extensions.Logging;assembly=Microsoft.Extensions.Logging.Abstractions"
     xmlns:mah="http://metro.mahapps.com/winfx/xaml/controls"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     xmlns:serilog="clr-namespace:Serilog;assembly=Serilog.Sinks.File"
@@ -31,7 +31,7 @@
                 MethodName="GetValues"
                 ObjectType="{x:Type sys:Enum}">
                 <ObjectDataProvider.MethodParameters>
-                    <x:Type TypeName="log:LogEventLevel" />
+                    <x:Type TypeName="logging:LogLevel" />
                 </ObjectDataProvider.MethodParameters>
             </ObjectDataProvider>
 
