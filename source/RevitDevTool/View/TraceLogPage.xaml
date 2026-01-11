@@ -7,6 +7,7 @@
     xmlns:design="clr-namespace:RevitDevTool.Theme.Design"
     xmlns:mah="http://metro.mahapps.com/winfx/xaml/controls"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    xmlns:system="clr-namespace:System;assembly=System.Runtime"
     xmlns:view="clr-namespace:RevitDevTool.View"
     xmlns:vm="clr-namespace:RevitDevTool.ViewModel"
     d:DataContext="{d:DesignInstance vm:TraceLogPageViewModel}"
@@ -28,7 +29,7 @@
 
     <Grid>
         <Grid.RowDefinitions>
-            <RowDefinition Height="Auto" />
+            <RowDefinition Height="40" />
             <RowDefinition Height="*" />
         </Grid.RowDefinitions>
 
@@ -36,43 +37,98 @@
             Grid.Row="0"
             Margin="5"
             LastChildFill="False">
-            <Button
-                Height="{Binding ElementName=ClearLogButton, Path=ActualHeight}"
-                Padding="8,4"
-                Command="{Binding ToggleSettingsCommand}"
-                Content="Settings"
-                ToolTip="Settings" />
+            <ToggleButton
+                Padding="7,4"
+                BorderThickness="0.5"
+                IsChecked="{Binding IsSettingsVisible, UpdateSourceTrigger=PropertyChanged}"
+                Style="{DynamicResource MahApps.Styles.ToggleButton.Circle}">
+                <Path
+                    Width="16"
+                    Height="16"
+                    Fill="{DynamicResource MahApps.Brushes.ThemeForeground}"
+                    Stretch="Uniform">
+                    <Path.Style>
+                        <Style TargetType="Path">
+                            <Setter Property="Data" Value="{StaticResource Settings}" />
+                            <Style.Triggers>
+                                <DataTrigger
+                                    Binding="{Binding Path=IsChecked, RelativeSource={RelativeSource AncestorType=ToggleButton}}"
+                                    Value="True">
+                                    <Setter Property="Data" Value="{StaticResource ArrowLeft}" />
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </Path.Style>
+                </Path>
+            </ToggleButton>
             <StackPanel
                 HorizontalAlignment="Right"
                 DockPanel.Dock="Right"
                 Orientation="Horizontal">
                 <Button
-                    x:Name="ClearLogButton"
-                    Padding="8,4"
+                    Padding="0"
+                    BorderThickness="0.5"
                     Command="{Binding TraceLogViewModel.ClearCommand}"
-                    Content="Clear Log"
-                    ToolTip="Clear Log" />
+                    ToolTip="Clear Log">
+                    <StackPanel
+                        Margin="0"
+                        Orientation="Horizontal">
+                        <Path
+                            Width="14"
+                            Height="14"
+                            Margin="5,0,0,0"
+                            Data="{StaticResource ClearLog}"
+                            Fill="{DynamicResource MahApps.Brushes.ThemeForeground}"
+                            Stretch="Uniform" />
+                        <Label
+                            Margin="0"
+                            Content="Clear Log" />
+                    </StackPanel>
+                </Button>
                 <Button
                     Margin="5,0"
-                    Padding="8,4"
+                    Padding="0"
+                    BorderThickness="0.5"
                     Command="{Binding TraceLogViewModel.ClearGeometryCommand}"
-                    Content="Clear Geometry"
-                    ToolTip="Clear Geometry" />
+                    ToolTip="Clear Geometry">
+                    <StackPanel
+                        Margin="0"
+                        Orientation="Horizontal">
+                        <Path
+                            Width="14"
+                            Height="14"
+                            Margin="5,0,0,0"
+                            Data="{StaticResource ClearGeometry}"
+                            Fill="{DynamicResource MahApps.Brushes.ThemeForeground}"
+                            Stretch="Uniform" />
+                        <Label
+                            Margin="0"
+                            Content="Clear Geometry" />
+                    </StackPanel>
+                </Button>
                 <mah:ToggleSwitch
-                    MinWidth="30"
+                    MinWidth="0"
+                    ContentPadding="0"
                     DataContext="{Binding TraceLogViewModel}"
-                    FlowDirection="RightToLeft"
                     IsOn="{Binding IsStarted}"
-                    OffContent=""
-                    OnContent=""
-                    ToolTip="Start/Stop Listener" />
+                    OffContent="{x:Null}"
+                    OnContent="{x:Null}">
+                    <mah:ToggleSwitch.Resources>
+                        <!--  ReSharper disable Xaml.RedundantResource  -->
+                        <GridLength x:Key="ToggleSwitchContentSpaceMargin">0</GridLength>
+                        <system:Double x:Key="ToggleSwitchThemeMinWidth">0</system:Double>
+                        <GridLength x:Key="ToggleSwitchPreContentMargin">0</GridLength>
+                        <GridLength x:Key="ToggleSwitchPostContentMargin">0</GridLength>
+                        <!--  ReSharper restore Xaml.RedundantResource  -->
+                    </mah:ToggleSwitch.Resources>
+                </mah:ToggleSwitch>
             </StackPanel>
         </DockPanel>
 
         <!--  Content  -->
         <Grid Grid.Row="1">
             <Border
-                Margin="5"
+                Margin="5,0,5,5"
                 Padding="2"
                 Background="{DynamicResource MahApps.Brushes.ThemeBackground}"
                 BorderBrush="{DynamicResource MahApps.Brushes.Gray8}"
