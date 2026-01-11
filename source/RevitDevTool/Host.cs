@@ -4,6 +4,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using RevitDevTool.Logging;
 using RevitDevTool.Logging.Serilog;
+using RevitDevTool.Logging.ZLogger;
 using RevitDevTool.Services;
 using RevitDevTool.View.Settings;
 using RevitDevTool.View.Settings.Visualization;
@@ -40,8 +41,18 @@ public static class Host
     {
         services.AddSingleton<ISettingsService, SettingsService>();
         
-        services.AddSingleton<ILoggerFactory, SerilogLoggerFactory>();
-        services.AddSingleton<ITraceListenerFactory, SerilogTraceListenerFactory>();
+        // Serilog
+        // services.AddSingleton<ILoggerFactory, SerilogLoggerFactory>();
+        // services.AddSingleton<ITraceListenerFactory, SerilogTraceListenerFactory>();
+        // services.AddSingleton<ILogOutputSink, SerilogRichTextBoxSink>();
+        
+        // ZLogger
+        services.AddSingleton<ILoggerFactory, ZLoggerLoggerFactory>();
+        services.AddSingleton<ITraceListenerFactory, ZLoggerTraceListenerFactory>();
+        services.AddSingleton<ILogOutputSink, ZloggerRichTextBoxSink>();
+        
+        // Logging service
+        services.AddSingleton<ILoggingService, LoggingService>();
 
         services.AddSingleton<TraceLogViewModel>();
         services.AddTransient<TraceLogPageViewModel>();

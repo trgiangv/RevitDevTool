@@ -1,12 +1,11 @@
 ﻿using System.Diagnostics;
-using System.IO;
 using CommunityToolkit.Mvvm.Messaging;
 using Microsoft.Extensions.Logging;
 using RevitDevTool.Models.Config;
 using RevitDevTool.Messages;
 using RevitDevTool.Services;
 using RevitDevTool.Utils;
-using Serilog;
+
 // ReSharper disable UnusedParameterInPartialMethod
 
 namespace RevitDevTool.ViewModel.Settings;
@@ -151,7 +150,7 @@ public partial class LogSettingsViewModel : ObservableObject
     private void CorrectFilePath()
     {
         var isReadOnly = SettingsUtils.CheckWriteAccess(FilePath);
-        var isNotValidPath = Path.GetPathRoot(FilePath) is null || string.IsNullOrWhiteSpace(FilePath);
+        var isNotValidPath = SettingsUtils.CheckValidPath(FilePath);
         if (isNotValidPath || isReadOnly)
         {
             FilePath = SettingsUtils.GetDefaultLogPath(FileExtension);

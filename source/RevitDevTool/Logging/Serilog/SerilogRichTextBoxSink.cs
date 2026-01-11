@@ -1,5 +1,6 @@
 using System.Globalization;
 using System.Windows.Forms.Integration;
+using RevitDevTool.Logging.Theme;
 using RevitDevTool.Theme;
 using RevitDevTool.Utils;
 using Serilog;
@@ -12,16 +13,17 @@ namespace RevitDevTool.Logging.Serilog;
 /// RichTextBox sink implementation for Serilog.
 /// Provides themed log output to a WinForms RichTextBox control.
 /// </summary>
-internal sealed class RichTextBoxSink : ILogOutputSink
+[UsedImplicitly]
+internal sealed class SerilogRichTextBoxSink : ILogOutputSink
 {
-    private readonly RichTextBox _richTextBox;
+    private readonly System.Windows.Forms.RichTextBox _richTextBox;
     private readonly WindowsFormsHost _host;
     private LibrarySink? _librarySink;
     private bool _disposed;
 
-    public RichTextBoxSink()
+    public SerilogRichTextBoxSink()
     {
-        _richTextBox = new RichTextBox
+        _richTextBox = new System.Windows.Forms.RichTextBox
         {
             Font = new Font("Cascadia Mono", 9f, FontStyle.Regular, GraphicsUnit.Point),
             ReadOnly = true,
@@ -71,7 +73,8 @@ internal sealed class RichTextBoxSink : ILogOutputSink
     internal LoggerConfiguration ConfigureSerilog(LoggerConfiguration config, bool isDarkTheme)
     {
         DisposeSink();
-        var theme = isDarkTheme ? ThemePresets.EnhancedDark : ThemePresets.EnhancedLight;
+        var logTheme = isDarkTheme ? LogThemePresets.EnhancedDark : LogThemePresets.EnhancedLight;
+        var theme = logTheme.ToSerilogTheme();
         var result = config.WriteTo.RichTextBox(
             _richTextBox,
             out var sink,
@@ -100,8 +103,8 @@ internal sealed class RichTextBoxSink : ILogOutputSink
     private void ApplyTheme(bool isDarkTheme)
     {
         _richTextBox.BackColor = isDarkTheme 
-            ? ThemePresets.DarkBackground
-            : ThemePresets.LightBackground;
+            ? LogThemePresets.DarkBackground
+            : LogThemePresets.LightBackground;
         
         Win32Utils.SetImmersiveDarkMode(_richTextBox.Handle, isDarkTheme);
     }

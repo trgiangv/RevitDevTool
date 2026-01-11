@@ -48,11 +48,11 @@ public partial class VisualizationSettingsView
 
         if (viewType == null) return;
 
-        if (!_viewCache.TryGetValue(tag, out var view))
+        if (!_viewCache.TryGetValue(tag!, out var view))
         {
             view = Host.GetService(viewType) ?? Activator.CreateInstance(viewType);
             if (view != null)
-                _viewCache[tag] = view;
+                _viewCache[tag!] = view;
         }
 
         HamburgerMenuControl.Content = view;

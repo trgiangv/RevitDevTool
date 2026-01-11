@@ -39,4 +39,16 @@ public static class SettingsUtils
             return false;
         }
     }
+    
+    public static bool CheckValidPath(string path)
+    {
+        try
+        {
+            return Path.GetPathRoot(path) is null || string.IsNullOrWhiteSpace(path);
+        }
+        catch
+        {
+            return false;
+        }
+    }
 }

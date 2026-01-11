@@ -1,7 +1,7 @@
 using Microsoft.Extensions.Logging;
 using ILogger = Serilog.ILogger;
 // ReSharper disable TemplateIsNotCompileTimeConstantProblem
-// ReSharper disable ContextualLoggerProblem
+#pragma warning disable CA2254
 
 namespace RevitDevTool.Logging.Serilog;
 
@@ -47,7 +47,7 @@ internal sealed class SerilogAdapter(ILogger logger) : ILoggerAdapter
         => new SerilogAdapter(_logger.ForContext(propertyName, value));
 
     public ILoggerAdapter ForContext<T>() where T : class
-        => new SerilogAdapter(_logger.ForContext<T>());
+        => new SerilogAdapter(_logger.ForContext(typeof(T)));
 
     public void Dispose()
     {

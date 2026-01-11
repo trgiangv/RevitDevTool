@@ -12,6 +12,7 @@ namespace RevitDevTool.Logging.Serilog;
 /// Factory for creating Serilog-based logger adapters.
 /// Configures Serilog with appropriate sinks based on LogConfig settings.
 /// </summary>
+[UsedImplicitly]
 internal sealed class SerilogLoggerFactory : ILoggerFactory
 {
     private readonly LoggingLevelSwitch _levelSwitch = new(LogEventLevel.Debug);
@@ -22,7 +23,7 @@ internal sealed class SerilogLoggerFactory : ILoggerFactory
             .MinimumLevel.ControlledBy(_levelSwitch)
             .Enrich.FromLogContext();
 
-        if (outputSink is RichTextBoxSink richTextBoxSink && !config.UseExternalFileOnly)
+        if (outputSink is SerilogRichTextBoxSink richTextBoxSink && !config.UseExternalFileOnly)
         {
             loggerConfig = richTextBoxSink.ConfigureSerilog(loggerConfig, isDarkTheme);
         }
@@ -47,13 +48,13 @@ internal sealed class SerilogLoggerFactory : ILoggerFactory
             LogSaveFormat.Json => config.WriteTo.File(
                 formatter: new JsonFormatter(renderMessage: true),
                 path: logConfig.FilePath,
-                rollingInterval: logConfig.TimeInterval,
+                rollingInterval: logConfig.TimeInterval.ToSerilog(),
                 shared: true),
             
             LogSaveFormat.Clef => config.WriteTo.File(
                 formatter: new CompactJsonFormatter(),
                 path: logConfig.FilePath,
-                rollingInterval: logConfig.TimeInterval,
+                rollingInterval: logConfig.TimeInterval.ToSerilog(),
                 shared: true),
             
             LogSaveFormat.Sqlite => config.WriteTo.SQLite(
@@ -64,7 +65,7 @@ internal sealed class SerilogLoggerFactory : ILoggerFactory
             _ => config.WriteTo.File(
                 path: logConfig.FilePath,
                 outputTemplate: "{Timestamp:yyyy-MM-dd HH:mm:ss.fff} [{Level:u3}] {Message:lj}{NewLine}{Exception}",
-                rollingInterval: logConfig.TimeInterval,
+                rollingInterval: logConfig.TimeInterval.ToSerilog(),
                 shared: true)
         };
     }

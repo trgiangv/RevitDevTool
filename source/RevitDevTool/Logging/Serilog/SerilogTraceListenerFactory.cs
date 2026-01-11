@@ -6,6 +6,7 @@ namespace RevitDevTool.Logging.Serilog;
 /// <summary>
 /// Factory for creating Serilog-based TraceListeners.
 /// </summary>
+[UsedImplicitly]
 internal sealed class SerilogTraceListenerFactory : ITraceListenerFactory
 {
     public TraceListener CreateTraceListener(ILoggerAdapter logger, LogConfig config)

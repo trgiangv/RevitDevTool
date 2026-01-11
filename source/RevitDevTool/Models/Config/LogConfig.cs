@@ -2,7 +2,7 @@ using System.Diagnostics;
 using System.Text.Json.Serialization;
 using Microsoft.Extensions.Logging;
 using RevitDevTool.Utils;
-using Serilog;
+
 namespace RevitDevTool.Models.Config;
 
 /// <summary>
@@ -48,4 +48,14 @@ public enum LogSaveFormat
     Json,
     Clef,
     Text
+}
+
+public enum RollingInterval 
+{
+    Infinite,
+    Year,
+    Month,
+    Day,
+    Hour,
+    Minute
 }

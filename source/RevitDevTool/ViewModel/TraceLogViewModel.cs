@@ -4,12 +4,10 @@ using CommunityToolkit.Mvvm.Messaging;
 using Microsoft.Extensions.Logging;
 using RevitDevTool.Controllers;
 using RevitDevTool.Logging;
-using RevitDevTool.Logging.Serilog;
 using RevitDevTool.Messages;
 using RevitDevTool.Models.Trace;
 using RevitDevTool.Services;
 using RevitDevTool.Theme;
-using ILoggerFactory = RevitDevTool.Logging.ILoggerFactory;
 
 namespace RevitDevTool.ViewModel;
 
@@ -17,7 +15,6 @@ public partial class TraceLogViewModel : ObservableObject, IDisposable
 {
     private readonly ISettingsService _settingsService;
     private readonly ILoggingService _loggingService;
-    private readonly RichTextBoxSink _outputSink;
     private readonly WeakReferenceMessenger _messenger;
     private readonly EventHandler<EventArgs> _onThemeChangedHandler;
     private readonly EventHandler<IdlingEventArgs> _onIdlingHandler;
@@ -27,7 +24,7 @@ public partial class TraceLogViewModel : ObservableObject, IDisposable
     private bool _isSubscribed;
     private bool _isClearing;
 
-    public WindowsFormsHost LogTextBox => (WindowsFormsHost)_outputSink.GetHostControl();
+    public WindowsFormsHost? LogTextBox => _loggingService.OutputSink?.GetHostControl() as WindowsFormsHost;
 
     [ObservableProperty]
     private bool _isStarted = true;
@@ -46,12 +43,11 @@ public partial class TraceLogViewModel : ObservableObject, IDisposable
         else StopTracing();
     }
 
-    public TraceLogViewModel(ISettingsService settingsService, ITraceListenerFactory traceListenerFactory, ILoggerFactory loggerFactory)
+    public TraceLogViewModel(ISettingsService settingsService, ILoggingService loggingService)
     {
         _settingsService = settingsService;
+        _loggingService = loggingService;
         _messenger = WeakReferenceMessenger.Default;
-        _outputSink = new RichTextBoxSink();
-        _loggingService = new LoggingService(settingsService, loggerFactory, traceListenerFactory, _outputSink);
         _onThemeChangedHandler = OnThemeChanged;
         _onIdlingHandler = OnIdling;
         _currentTheme = ThemeManager.Current.ActualApplicationTheme;
@@ -76,10 +72,10 @@ public partial class TraceLogViewModel : ObservableObject, IDisposable
 
     private void UpdateTheme(AppTheme theme, bool shouldRestart)
     {
-        LogTextBox.Dispatcher.Invoke(() =>
+        LogTextBox?.Dispatcher.Invoke(() =>
         {
             _currentTheme = theme;
-            _outputSink.SetTheme(IsDarkTheme);
+            _loggingService.OutputSink?.SetTheme(IsDarkTheme);
             if (shouldRestart && IsStarted)
             {
                 _loggingService.Restart(IsDarkTheme);
