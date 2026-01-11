@@ -47,20 +47,7 @@ public partial class LogSettingsViewModel : ObservableObject
     partial void OnUseExternalFileOnlyChanged(bool value) => UpdateHasPendingChanges();
     partial void OnSaveFormatChanged(LogSaveFormat value)
     {
-        if (!string.IsNullOrWhiteSpace(FilePath))
-        {
-            try
-            {
-                var directory = Path.GetDirectoryName(FilePath);
-                var filenameWithoutExtension = Path.GetFileNameWithoutExtension(FilePath);
-                FilePath = Path.Combine(directory ?? string.Empty, $"{filenameWithoutExtension}.{FileExtension}");
-            }
-            catch
-            {
-                FilePath = SettingsUtils.GetDefaultLogPath(FileExtension);
-            }
-        }
-
+        CorrectFilePath();
         UpdateHasPendingChanges();
     }
     partial void OnIncludeStackTraceChanged(bool value) => UpdateHasPendingChanges();
@@ -82,7 +69,8 @@ public partial class LogSettingsViewModel : ObservableObject
         WpfTraceLevel = config.WpfTraceLevel;
         StackTraceDepth = config.StackTraceDepth;
         TimeInterval = config.TimeInterval;
-        FilePath = CorrectFilePath(config.FilePath, FileExtension);
+        FilePath = config.FilePath;
+        CorrectFilePath();
     }
 
     private void SaveToConfig()
@@ -97,7 +85,8 @@ public partial class LogSettingsViewModel : ObservableObject
         config.WpfTraceLevel = WpfTraceLevel;
         config.StackTraceDepth = StackTraceDepth;
         config.TimeInterval = TimeInterval;
-        config.FilePath = CorrectFilePath(FilePath, FileExtension);
+        CorrectFilePath();
+        config.FilePath = FilePath;
         _settingsService.SaveSettings();
     }
 
@@ -159,29 +148,13 @@ public partial class LogSettingsViewModel : ObservableObject
         int StackTraceDepth,
         string FilePath);
     
-    private static string CorrectFilePath(string originalFilePath, string fileExtension)
+    private void CorrectFilePath()
     {
-        if (string.IsNullOrWhiteSpace(originalFilePath)) return SettingsUtils.GetDefaultLogPath(fileExtension);
-        if (File.Exists(originalFilePath)) return originalFilePath;
-        
-        try
+        var isReadOnly = SettingsUtils.CheckWriteAccess(FilePath);
+        var isNotValidPath = Path.GetPathRoot(FilePath) is null || string.IsNullOrWhiteSpace(FilePath);
+        if (isNotValidPath || isReadOnly)
         {
-            var directory = Path.GetDirectoryName(originalFilePath);
-            var filenameWithoutExtension = Path.GetFileNameWithoutExtension(originalFilePath);
-            var extension = Path.GetExtension(originalFilePath);
-            
-            if (!File.Exists(originalFilePath) && Directory.Exists(Path.GetDirectoryName(originalFilePath)))
-            {
-                return Path.Combine(Path.GetDirectoryName(originalFilePath)!,
-                    $"{filenameWithoutExtension}.{extension}");
-            }
-            
-            Directory.CreateDirectory(directory!);
-            return Path.Combine(directory!, $"{filenameWithoutExtension}.{extension}");
-        }
-        catch
-        {
-            return SettingsUtils.GetDefaultLogPath(fileExtension);
+            FilePath = SettingsUtils.GetDefaultLogPath(FileExtension);
         }
     }
     

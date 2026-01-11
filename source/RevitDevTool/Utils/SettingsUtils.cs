@@ -1,4 +1,6 @@
 ﻿using System.IO;
+using System.Security.AccessControl;
+using System.Security.Principal;
 namespace RevitDevTool.Utils ;
 
 public static class SettingsUtils
@@ -17,5 +19,17 @@ public static class SettingsUtils
         var logsDir = appdata.AppendPath("Logs");
         Directory.CreateDirectory(logsDir);
         return Path.Combine(logsDir, $"log.{extension}");
+    }
+    
+    /// <summary>
+    ///     Check if the current user has write access to the specified path
+    /// </summary>
+    public static bool CheckWriteAccess(string path)
+    {
+        var identity = WindowsIdentity.GetCurrent();
+        var principal = new WindowsPrincipal(identity);
+        var accessControl = new DirectoryInfo(path).GetAccessControl();
+        var accessRules = accessControl.GetAccessRules(true, true, typeof(NTAccount));
+        return accessRules.Cast<FileSystemAccessRule>().Any(rule => principal.IsInRole(rule.IdentityReference.Value) && (rule.FileSystemRights & FileSystemRights.WriteData) == FileSystemRights.WriteData);
     }
 }
