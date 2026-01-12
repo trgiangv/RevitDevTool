@@ -5,9 +5,9 @@ using Autodesk.Windows;
 using Nice3point.Revit.Toolkit.Decorators;
 using Nice3point.Revit.Toolkit.External;
 using RevitDevTool.Models.Trace;
+using RevitDevTool.Utils;
 using RevitDevTool.View;
 using RevitDevTool.ViewModel;
-using ricaun.Revit.UI;
 
 namespace RevitDevTool.Commands;
 
@@ -157,7 +157,7 @@ public class TraceCommand : ExternalCommand, IExternalCommandAvailability
         {
             FloatingWindow = Host.GetService<TraceLogWindow>();
             FloatingWindow.Closed += OnFloatingWindowClosed;
-            FloatingWindow.SetAutodeskOwner();
+            FloatingWindow.SetRevitOwner();
             FloatingWindow.Show();
         }
     }

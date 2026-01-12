@@ -1,5 +1,5 @@
 using System.Windows;
-using System.Windows.Threading;
+using RevitDevTool.Utils;
 #if REVIT2024_OR_GREATER
 using Autodesk.Revit.UI;
 #endif
@@ -35,7 +35,7 @@ public class ThemeManager : DependencyObject
         if (e.PropertyName != nameof(UIFramework.ApplicationTheme.CurrentTheme.RibbonPanelBackgroundBrush)) return;
         if (UIThemeManager.CurrentTheme.ToString() == UIFramework.ApplicationTheme.CurrentTheme.RibbonTheme.Name) return;
 
-        Dispatcher.CurrentDispatcher.BeginInvoke(() =>
+        DispatcherHelper.RunOnMainThread(() =>
         {
             if (!UseRevitTheme) return;
             ActualApplicationTheme = GetRevitTheme();
@@ -127,7 +127,7 @@ public class ThemeManager : DependencyObject
 
     public static ThemeManager Current { get; } = new();
     public event EventHandler<EventArgs>? ActualApplicationThemeChanged;
-    
+
     /// <summary>
     /// Called after settings are loaded to apply the saved theme.
     /// Use to apply theme changes at runtime.

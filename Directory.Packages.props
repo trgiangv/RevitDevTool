@@ -19,7 +19,6 @@
         <PackageVersion Include="PolySharp" Version="1.15.0"/>
         <!--UI-->
         <PackageVersion Include="MahApps.Metro" Version="3.0.0-rc0529"/>
-        <PackageVersion Include="ricaun.Revit.UI" Version="0.8.0"/>
         <PackageVersion Include="CommunityToolkit.Mvvm" Version="8.4.0"/>
         <!--Build Tools-->
         <PackageVersion Include="ILRepack" Version="2.0.41"/>

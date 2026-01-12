@@ -18,5 +18,5 @@ public class ControlsResources : ResourceDictionary
     /// <summary>
     /// Gets the static MahApps.Metro controls resource dictionary.
     /// </summary>
-    private static ResourceDictionary Controls => _controls ??= ResourceHelper.GetMahAppsControls();
+    private static ResourceDictionary Controls => _controls ??= ResourceUtils.GetMahAppsControls();
 }

@@ -1,16 +1,16 @@
-<UserControl
-    x:Class="RevitDevTool.View.Settings.GeneralSettingsView"
-    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
-    xmlns:design="clr-namespace:RevitDevTool.Theme.Design"
-    xmlns:mah="http://metro.mahapps.com/winfx/xaml/controls"
-    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-    xmlns:settings="clr-namespace:RevitDevTool.ViewModel.Settings"
-    d:DataContext="{d:DesignInstance settings:GeneralSettingsViewModel}"
-    d:DesignHeight="600"
-    d:DesignWidth="600"
-    mc:Ignorable="d">
+<UserControl x:Class="RevitDevTool.View.Settings.GeneralSettingsView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:design="clr-namespace:RevitDevTool.Theme.Design"
+             xmlns:mah="http://metro.mahapps.com/winfx/xaml/controls"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:settings="clr-namespace:RevitDevTool.ViewModel.Settings"
+             d:Background="{DynamicResource MahApps.Brushes.ThemeBackground}"
+             d:DataContext="{d:DesignInstance settings:GeneralSettingsViewModel}"
+             d:DesignHeight="600"
+             d:DesignWidth="600"
+             mc:Ignorable="d">
 
     <UserControl.Resources>
         <ResourceDictionary>
@@ -21,71 +21,61 @@
         </ResourceDictionary>
     </UserControl.Resources>
 
-    <ScrollViewer
-        HorizontalScrollBarVisibility="Disabled"
-        VerticalScrollBarVisibility="Auto">
+    <ScrollViewer HorizontalScrollBarVisibility="Disabled"
+                  VerticalScrollBarVisibility="Auto">
         <StackPanel Margin="8">
             <!--  Theme  -->
-            <GroupBox
-                Margin="0,0,0,8"
-                Header="Theme">
+            <GroupBox Margin="0,0,0,8"
+                      Header="Theme">
                 <Grid Margin="8">
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="*" />
                         <ColumnDefinition Width="Auto" />
                     </Grid.ColumnDefinitions>
                     <StackPanel VerticalAlignment="Center">
-                        <TextBlock
-                            FontWeight="SemiBold"
-                            Text="Application Theme" />
-                        <TextBlock
-                            FontSize="11"
-                            Foreground="{DynamicResource MahApps.Brushes.Gray}"
-                            Text="Customise the application theme" />
+                        <TextBlock FontWeight="SemiBold"
+                                   Text="Application Theme" />
+                        <TextBlock FontSize="11"
+                                   Foreground="{DynamicResource MahApps.Brushes.Gray}"
+                                   Text="Customise the application theme" />
                     </StackPanel>
-                    <ComboBox
-                        Grid.Column="1"
-                        Width="120"
-                        VerticalAlignment="Center"
-                        ItemsSource="{Binding Themes, Mode=OneTime}"
-                        SelectedItem="{Binding Theme}" />
+                    <ComboBox Grid.Column="1"
+                              Width="120"
+                              VerticalAlignment="Center"
+                              ItemsSource="{Binding Themes, Mode=OneTime}"
+                              SelectedItem="{Binding Theme}" />
                 </Grid>
             </GroupBox>
 
             <!--  Hardware Acceleration  -->
-            <GroupBox
-                Margin="0,0,0,8"
-                Header="Performance">
+            <GroupBox Margin="0,0,0,8"
+                      Header="Performance">
                 <Grid Margin="8">
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="*" />
                         <ColumnDefinition Width="Auto" />
                     </Grid.ColumnDefinitions>
                     <StackPanel VerticalAlignment="Center">
-                        <TextBlock
-                            FontWeight="SemiBold"
-                            Text="Hardware graphics acceleration" />
-                        <TextBlock
-                            FontSize="11"
-                            Foreground="{DynamicResource MahApps.Brushes.Gray}"
-                            Text="Offloads graphic rendering from the CPU to the GPU" />
+                        <TextBlock FontWeight="SemiBold"
+                                   Text="Hardware graphics acceleration" />
+                        <TextBlock FontSize="11"
+                                   Foreground="{DynamicResource MahApps.Brushes.Gray}"
+                                   Text="Offloads graphic rendering from the CPU to the GPU" />
                     </StackPanel>
-                    <mah:ToggleSwitch
-                        Grid.Column="1"
-                        MinWidth="60"
-                        IsOn="{Binding UseHardwareRendering}" />
+                    <mah:ToggleSwitch Grid.Column="1"
+                                      MinWidth="60"
+                                      IsOn="{Binding UseHardwareRendering}" />
                 </Grid>
             </GroupBox>
 
             <!--  Reset  -->
-            <Button
-                Width="100"
-                Margin="0,8,0,0"
-                HorizontalAlignment="Right"
-                HorizontalContentAlignment="Center"
-                Command="{Binding ResetSettingsCommand}"
-                Content="Reset settings"
-                ToolTip="Reset settings to default" />
+            <Button Width="100"
+                    Margin="0,8,0,0"
+                    HorizontalAlignment="Right"
+                    HorizontalContentAlignment="Center"
+                    Command="{Binding ResetSettingsCommand}"
+                    Content="Reset settings"
+                    ToolTip="Reset settings to default" />
         </StackPanel>
     </ScrollViewer>
 </UserControl>

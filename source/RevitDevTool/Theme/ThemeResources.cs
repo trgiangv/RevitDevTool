@@ -16,6 +16,7 @@ public class ThemeResources : ResourceDictionary, ISupportInitialize
 {
     #region Fields
 
+    private bool _canBeAccessedAcrossThreads;
     private static ResourceDictionary? _lightResources;
     private static ResourceDictionary? _darkResources;
 
@@ -56,6 +57,19 @@ public class ThemeResources : ResourceDictionary, ISupportInitialize
         }
     }
 
+    public bool CanBeAccessedAcrossThreads
+    {
+        get => _canBeAccessedAcrossThreads;
+        set
+        {
+            if (DesignMode.IsDesignModeEnabled) return;
+            if (IsInitialized)
+            {
+                throw new InvalidOperationException();
+            }
+            _canBeAccessedAcrossThreads = value;
+        }
+    }
 
     #endregion
 
@@ -104,25 +118,41 @@ public class ThemeResources : ResourceDictionary, ISupportInitialize
 
     #region ISupportInitialize
 
+    private bool IsInitialized { get; set; }
     private bool IsInitializePending { get; set; }
 
     private new void BeginInit()
     {
         base.BeginInit();
         IsInitializePending = true;
+        IsInitialized = false;
     }
 
     private new void EndInit()
     {
         IsInitializePending = false;
+        IsInitialized = true;
         if (DesignMode.IsDesignModeEnabled)
         {
             DesignTimeInit();
         }
         else if (this == Current)
         {
+            // Remove any IntellisenseResources that were loaded at design time
+            // to avoid duplicate resources at runtime
+            MergedDictionaries.RemoveAll<IntellisenseResourcesBase>();
+
             // Apply default Light theme to ensure resources are loaded
             ApplyApplicationTheme(AppTheme.Light);
+
+            if (CanBeAccessedAcrossThreads)
+            {
+                // Preload and seal both theme dictionaries for thread-safe access
+                EnsureLightResources();
+                EnsureDarkResources();
+                _lightResources?.SealValues();
+                _darkResources?.SealValues();
+            }
         }
         base.EndInit();
     }
@@ -170,12 +200,12 @@ public class ThemeResources : ResourceDictionary, ISupportInitialize
 
     private static void EnsureLightResources()
     {
-        _lightResources ??= ResourceHelper.GetMahAppsLightTheme();
+        _lightResources ??= ResourceUtils.GetMahAppsLightTheme();
     }
 
     private static void EnsureDarkResources()
     {
-        _darkResources ??= ResourceHelper.GetMahAppsDarkTheme();
+        _darkResources ??= ResourceUtils.GetMahAppsDarkTheme();
     }
 
     #endregion

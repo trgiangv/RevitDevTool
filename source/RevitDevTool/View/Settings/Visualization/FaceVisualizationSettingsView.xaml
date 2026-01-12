@@ -8,6 +8,7 @@
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     xmlns:visualization="clr-namespace:RevitDevTool.ViewModel.Settings.Visualization"
     d:DataContext="{d:DesignInstance visualization:FaceVisualizationViewModel}"
+    d:Background="{DynamicResource MahApps.Brushes.ThemeBackground}"
     d:DesignHeight="540"
     d:DesignWidth="600"
     mc:Ignorable="d">

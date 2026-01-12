@@ -28,7 +28,6 @@
 
         <!-- UI -->
         <PackageReference Include="CommunityToolkit.Mvvm"/>
-        <PackageReference Include="ricaun.Revit.UI"/>
         <PackageReference Include="MahApps.Metro"/>
         
         <!-- Serilog -->
