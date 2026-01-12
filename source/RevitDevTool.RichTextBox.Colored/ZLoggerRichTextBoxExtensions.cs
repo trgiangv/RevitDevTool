@@ -44,7 +44,7 @@ public static class ZLoggerRichTextBoxExtensions
     {
         var options = new ZLoggerRichTextBoxOptions();
         configure?.Invoke(options);
-        
+
         provider = new ZLoggerRichTextBoxLoggerProvider(richTextBox, options);
         builder.Services.AddSingleton<ILoggerProvider>(provider);
 

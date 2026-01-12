@@ -1,9 +1,9 @@
-using System.Buffers;
-using System.Text;
 using RevitDevTool.RichTextBox.Colored.Collections;
 using RevitDevTool.RichTextBox.Colored.Extensions;
 using RevitDevTool.RichTextBox.Colored.Rendering;
 using RevitDevTool.RichTextBox.Colored.Rtf;
+using System.Buffers;
+using System.Text;
 using ZLogger;
 
 namespace RevitDevTool.RichTextBox.Colored;

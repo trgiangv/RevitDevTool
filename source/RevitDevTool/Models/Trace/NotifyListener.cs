@@ -1,5 +1,5 @@
-using System.Diagnostics;
 using Autodesk.Windows;
+using System.Diagnostics;
 
 namespace RevitDevTool.Models.Trace;
 
@@ -16,7 +16,7 @@ internal class NotifyListener : TraceListener
     public static event Action? TraceReceived;
 
     public override bool IsThreadSafe => true;
-    
+
     /// <summary>
     /// Checks if we should respond to trace events.
     /// Only responds when Revit application frame is enabled.
@@ -25,7 +25,7 @@ internal class NotifyListener : TraceListener
     {
         return ComponentManager.IsApplicationFrameEnabled;
     }
-    
+
     private static void RaiseTraceReceived()
     {
         if (ShouldRespondToTraceEvent())

@@ -1,7 +1,7 @@
 ﻿using Microsoft.Extensions.Logging;
 using Serilog.Events;
-using SerilogTimeInterval = Serilog.RollingInterval;
 using InternalTimeInterval = RevitDevTool.Models.Config.RollingInterval;
+using SerilogTimeInterval = Serilog.RollingInterval;
 namespace RevitDevTool.Logging.Serilog;
 
 public static class SerilogUtils
@@ -19,7 +19,7 @@ public static class SerilogUtils
             _ => LogEventLevel.Debug
         };
     }
-    
+
     public static SerilogTimeInterval ToSerilog(this InternalTimeInterval interval)
     {
         return interval switch

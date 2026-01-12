@@ -1,5 +1,3 @@
-using System.IO;
-using System.Reflection;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using RevitDevTool.Controllers;
@@ -12,6 +10,8 @@ using RevitDevTool.View.Settings.Visualization;
 using RevitDevTool.ViewModel;
 using RevitDevTool.ViewModel.Settings;
 using RevitDevTool.ViewModel.Settings.Visualization;
+using System.IO;
+using System.Reflection;
 
 namespace RevitDevTool;
 
@@ -42,17 +42,17 @@ public static class Host
     {
         services.AddSingleton<ISettingsService, SettingsService>();
         services.AddHostedService<HostBackgroundController>();
-        
+
         // Serilog
         // services.AddSingleton<ILoggerFactory, SerilogLoggerFactory>();
         // services.AddSingleton<ITraceListenerFactory, SerilogTraceListenerFactory>();
         // services.AddSingleton<ILogOutputSink, SerilogRichTextBoxSink>();
-        
+
         // ZLogger
         services.AddSingleton<ILoggerFactory, ZLoggerLoggerFactory>();
         services.AddSingleton<ITraceListenerFactory, ZLoggerTraceListenerFactory>();
         services.AddSingleton<ILogOutputSink, ZloggerRichTextBoxSink>();
-        
+
         // Logging service
         services.AddSingleton<ILoggingService, LoggingService>();
 
@@ -63,7 +63,7 @@ public static class Host
         services.AddSingleton<PolylineVisualizationViewModel>();
         services.AddSingleton<SolidVisualizationViewModel>();
         services.AddSingleton<XyzVisualizationViewModel>();
-        
+
         services.AddSingleton<BoundingBoxVisualizationSettingsView>();
         services.AddSingleton<FaceVisualizationSettingsView>();
         services.AddSingleton<MeshVisualizationSettingsView>();
@@ -75,7 +75,7 @@ public static class Host
         services.AddSingleton<GeneralSettingsViewModel>();
         services.AddSingleton<GeneralSettingsView>();
         services.AddSingleton<LogSettingsViewModel>();
-        
+
         // Root
         services.AddSingleton<TraceLogViewModel>();
         services.AddSingleton<TraceLogPageViewModel>();

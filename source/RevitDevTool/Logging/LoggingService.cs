@@ -1,8 +1,8 @@
-using System.Diagnostics;
 using Microsoft.Extensions.Logging;
 using RevitDevTool.Models.Trace;
 using RevitDevTool.Services;
 using RevitDevTool.Utils;
+using System.Diagnostics;
 
 namespace RevitDevTool.Logging;
 
@@ -24,11 +24,11 @@ internal sealed class LoggingService(ISettingsService settingsService, ILoggerFa
     public void Initialize(bool isDarkTheme)
     {
         var config = settingsService.LogConfig;
-        
+
         OutputSink?.SetTheme(isDarkTheme);
         _logger = loggerFactory.CreateLogger(config, OutputSink, isDarkTheme);
         TraceListener = traceListenerFactory.CreateTraceListener(_logger, config);
-        
+
         _geometryListener ??= new GeometryListener();
         _notifyListener ??= new NotifyListener();
     }

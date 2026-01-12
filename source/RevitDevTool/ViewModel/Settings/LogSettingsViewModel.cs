@@ -1,10 +1,10 @@
-﻿using System.Diagnostics;
-using CommunityToolkit.Mvvm.Messaging;
+﻿using CommunityToolkit.Mvvm.Messaging;
 using Microsoft.Extensions.Logging;
-using RevitDevTool.Models.Config;
 using RevitDevTool.Messages;
+using RevitDevTool.Models.Config;
 using RevitDevTool.Services;
 using RevitDevTool.Utils;
+using System.Diagnostics;
 
 // ReSharper disable UnusedParameterInPartialMethod
 
@@ -17,7 +17,7 @@ public partial class LogSettingsViewModel : ObservableObject
 
     public static int[] StackTraceDepths { get; } = [1, 2, 3, 4, 5]; // allowed maximum 5 levels
     public static SourceLevels[] SourceLevels { get; } = Enum.GetValues(typeof(SourceLevels)).Cast<SourceLevels>().ToArray();
-    
+
     [ObservableProperty] private LogLevel _logLevel;
     [ObservableProperty] private bool _hasPendingChanges;
     [ObservableProperty] private bool _isSaveLogEnabled;
@@ -146,7 +146,7 @@ public partial class LogSettingsViewModel : ObservableObject
         RollingInterval TimeInterval,
         int StackTraceDepth,
         string FilePath);
-    
+
     private void CorrectFilePath()
     {
         var isReadOnly = SettingsUtils.CheckWriteAccess(FilePath);
@@ -156,7 +156,7 @@ public partial class LogSettingsViewModel : ObservableObject
             FilePath = SettingsUtils.GetDefaultLogPath(FileExtension);
         }
     }
-    
+
     private string FileExtension => SaveFormat switch
     {
         LogSaveFormat.Sqlite => "db",
@@ -175,8 +175,8 @@ public partial class LogSettingsViewModel : ObservableObject
             LogSaveFormat.Clef => "CLEF Files (*.clef)|*.clef",
             _ => "All Files (*.*)|*.*"
         };
-        
-        var extension= FileExtension;
+
+        var extension = FileExtension;
         var dialog = new Microsoft.Win32.SaveFileDialog
         {
             Filter = filter,

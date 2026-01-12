@@ -15,7 +15,7 @@ public static class AssemblyLoader
 {
     private static bool _initialized;
     private static string? _pluginDirectory;
-    
+
     private static readonly string[] IsolatedAssemblies =
     [
         "MahApps.Metro",

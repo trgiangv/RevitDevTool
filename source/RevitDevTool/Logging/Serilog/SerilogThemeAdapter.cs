@@ -1,7 +1,7 @@
 using RevitDevTool.Logging.Theme;
-using SerilogTheme = Serilog.Sinks.RichTextBoxForms.Themes.Theme;
 using SerilogStyle = Serilog.Sinks.RichTextBoxForms.Themes.Style;
 using SerilogStyleToken = Serilog.Sinks.RichTextBoxForms.Themes.StyleToken;
+using SerilogTheme = Serilog.Sinks.RichTextBoxForms.Themes.Theme;
 
 namespace RevitDevTool.Logging.Serilog;
 
@@ -13,9 +13,9 @@ internal static class SerilogThemeAdapter
     public static SerilogTheme ToSerilogTheme(this LogTheme logTheme)
     {
         var defaultStyle = new SerilogStyle(logTheme.DefaultStyle.Foreground, logTheme.DefaultStyle.Background);
-        
+
         var styles = new Dictionary<SerilogStyleToken, SerilogStyle>();
-        
+
         foreach (var kvp in logTheme.Styles)
         {
             var serilogToken = MapToken(kvp.Key);

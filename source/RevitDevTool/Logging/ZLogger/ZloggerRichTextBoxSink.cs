@@ -1,9 +1,9 @@
-using System.Windows.Forms.Integration;
 using Microsoft.Extensions.Logging;
 using RevitDevTool.Logging.Theme;
 using RevitDevTool.RichTextBox.Colored;
 using RevitDevTool.Theme;
 using RevitDevTool.Utils;
+using System.Windows.Forms.Integration;
 using FontStyle = System.Drawing.FontStyle;
 
 namespace RevitDevTool.Logging.ZLogger;
@@ -71,10 +71,10 @@ internal sealed class ZloggerRichTextBoxSink : ILogOutputSink
     internal void ConfigureZLogger(ILoggingBuilder builder, bool isDarkTheme)
     {
         DisposeProvider();
-        
+
         var logTheme = isDarkTheme ? LogThemePresets.EnhancedDark : LogThemePresets.EnhancedLight;
         var theme = logTheme.ToZLoggerTheme();
-        
+
         builder.AddZLoggerRichTextBox(_richTextBox, out var provider, options =>
         {
             options.Theme = theme;

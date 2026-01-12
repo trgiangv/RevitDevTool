@@ -1,5 +1,5 @@
-﻿using System.Text.Json.Serialization ;
-using System.Windows.Media ;
+﻿using System.Text.Json.Serialization;
+using System.Windows.Media;
 using Color = System.Windows.Media.Color;
 
 namespace RevitDevTool.Models.Config;
@@ -101,7 +101,7 @@ public class XyzVisualizationSettings
     [JsonPropertyName("AxisLength")] public double AxisLength { get; set; } = 2;
     [JsonPropertyName("MinAxisLength")] public double MinAxisLength { get; set; } = 0.1;
 
-    [JsonPropertyName("XColor")] public Color XColor { get; set; } = Color.FromArgb(255, 238, 65 , 54);
+    [JsonPropertyName("XColor")] public Color XColor { get; set; } = Color.FromArgb(255, 238, 65, 54);
     [JsonPropertyName("YColor")] public Color YColor { get; set; } = Color.FromArgb(255, 30, 144, 255);
     [JsonPropertyName("ZColor")] public Color ZColor { get; set; } = Color.FromArgb(255, 54, 255, 30);
 

@@ -1,10 +1,10 @@
-﻿using System.Diagnostics;
-using Autodesk.Revit.DB.DirectContext3D;
+﻿using Autodesk.Revit.DB.DirectContext3D;
 using RevitDevTool.Extensions;
 using RevitDevTool.Services;
 using RevitDevTool.Visualization.Contracts;
 using RevitDevTool.Visualization.Helpers;
 using RevitDevTool.Visualization.Render;
+using System.Diagnostics;
 using Color = Autodesk.Revit.DB.Color;
 
 namespace RevitDevTool.Visualization.Server;
@@ -13,11 +13,11 @@ public sealed class PolylineVisualizationServer : VisualizationServer<GeometryOb
 {
     private readonly Guid _serverId = new("A1B2C3D4-E5F6-7890-ABCD-EF1234567890");
     public override Guid GetServerId() => _serverId;
-    
+
     private readonly List<RenderingBufferStorage> _surfaceBuffers = [];
     private readonly List<RenderingBufferStorage> _curveBuffers = [];
     private readonly List<RenderingBufferStorage> _normalsBuffers = [];
-    
+
     private double _transparency = SettingsService.Instance.VisualizationConfig.PolylineSettings.Transparency;
     private double _diameter = SettingsService.Instance.VisualizationConfig.PolylineSettings.Diameter;
 
@@ -40,14 +40,14 @@ public sealed class PolylineVisualizationServer : VisualizationServer<GeometryOb
     private bool _drawCurve = SettingsService.Instance.VisualizationConfig.PolylineSettings.ShowCurve;
     private bool _drawDirection = SettingsService.Instance.VisualizationConfig.PolylineSettings.ShowDirection;
     private bool _drawSurface = SettingsService.Instance.VisualizationConfig.PolylineSettings.ShowSurface;
-    
+
     public override bool UseInTransparentPass(Autodesk.Revit.DB.View view) => _drawSurface && _transparency > 0;
     public override Outline? GetBoundingBox(Autodesk.Revit.DB.View view) => null;
 
     protected override void RenderScene()
     {
         if (visualizeGeometries.Count == 0) return;
-        
+
         if (hasGeometryUpdates || _surfaceBuffers.Count == 0 || _curveBuffers.Count == 0)
         {
             MapGeometryBuffer();
@@ -119,24 +119,24 @@ public sealed class PolylineVisualizationServer : VisualizationServer<GeometryOb
         DisposeBuffers();
 
         if (visualizeGeometries.Count == 0) return;
-        
+
         try
         {
             foreach (var visualizeGeometry in visualizeGeometries)
             {
                 var vertices = GetVertices(visualizeGeometry);
-                
+
                 var surfaceBuffer = new RenderingBufferStorage();
                 RenderHelper.MapCurveSurfaceBuffer(surfaceBuffer, vertices, _diameter);
                 _surfaceBuffers.Add(surfaceBuffer);
-                
+
                 var curveBuffer = new RenderingBufferStorage();
                 RenderHelper.MapCurveBuffer(curveBuffer, vertices, _diameter);
                 _curveBuffers.Add(curveBuffer);
             }
             MapDirectionsBuffer();
         }
-        catch (Exception ex)    
+        catch (Exception ex)
         {
             Trace.TraceError($"Error mapping geometry buffer in PolylineVisualizationServer: {ex}");
         }
@@ -147,7 +147,7 @@ public sealed class PolylineVisualizationServer : VisualizationServer<GeometryOb
         _normalsBuffers.Clear(true);
 
         if (visualizeGeometries.Count == 0) return;
-        
+
         foreach (var visualizeGeometry in visualizeGeometries)
         {
             var vertices = GetVertices(visualizeGeometry);
@@ -159,8 +159,8 @@ public sealed class PolylineVisualizationServer : VisualizationServer<GeometryOb
 
     private void MapDirectionBuffersForVertices(IList<XYZ> vertices)
     {
-        var verticalOffset = RenderGeometryHelper.InterpolateOffsetByDiameter(_diameter) + _diameter / 2d;
-        
+        var verticalOffset = RenderGeometryHelper.InterpolateOffsetByDiameter(_diameter) + (_diameter / 2d);
+
         for (var i = 0; i < vertices.Count - 1; i++)
         {
             var startPoint = vertices[i];
@@ -180,7 +180,7 @@ public sealed class PolylineVisualizationServer : VisualizationServer<GeometryOb
 
         var offsetVector = ComputeOffsetVector(segmentDirection, verticalOffset);
         var arrowLength = segmentLength > 1 ? 1d : segmentLength * 0.6;
-        var arrowOrigin = centerPoint + offsetVector - segmentDirection * (arrowLength / 2);
+        var arrowOrigin = centerPoint + offsetVector - (segmentDirection * (arrowLength / 2));
 
         RenderHelper.MapNormalVectorBuffer(buffer, arrowOrigin, segmentDirection, arrowLength);
         return buffer;
@@ -189,7 +189,7 @@ public sealed class PolylineVisualizationServer : VisualizationServer<GeometryOb
     private static XYZ ComputeOffsetVector(XYZ segmentDirection, double verticalOffset)
     {
         var offsetVector = XYZ.BasisX.CrossProduct(segmentDirection).Normalize() * verticalOffset;
-        
+
         if (offsetVector.IsZeroLength())
             offsetVector = XYZ.BasisY.CrossProduct(segmentDirection).Normalize() * verticalOffset;
 
@@ -228,7 +228,7 @@ public sealed class PolylineVisualizationServer : VisualizationServer<GeometryOb
             buffer.EffectInstance.SetColor(_directionColor);
         }
     }
-    
+
     public void UpdateSurfaceColor(Color value)
     {
         var uiDocument = Context.ActiveUiDocument;

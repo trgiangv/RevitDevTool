@@ -1,7 +1,7 @@
-using System.Diagnostics;
-using System.Globalization;
 using Microsoft.Extensions.Logging;
 using RevitDevTool.RichTextBox.Colored.Themes;
+using System.Diagnostics;
+using System.Globalization;
 
 namespace RevitDevTool.RichTextBox.Colored.Demo;
 

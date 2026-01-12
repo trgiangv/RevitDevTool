@@ -1,5 +1,5 @@
-using System.Text;
 using RevitDevTool.RichTextBox.Colored.Themes;
+using System.Text;
 
 namespace RevitDevTool.RichTextBox.Colored.Rtf;
 

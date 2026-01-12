@@ -1,5 +1,5 @@
-using System.Text.RegularExpressions;
 using RevitDevTool.RichTextBox.Colored.Rtf;
+using System.Text.RegularExpressions;
 
 namespace RevitDevTool.RichTextBox.Colored.Rendering;
 

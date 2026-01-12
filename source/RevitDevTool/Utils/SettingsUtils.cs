@@ -1,7 +1,7 @@
 ﻿using System.IO;
 using System.Security.AccessControl;
 using System.Security.Principal;
-namespace RevitDevTool.Utils ;
+namespace RevitDevTool.Utils;
 
 public static class SettingsUtils
 {
@@ -20,7 +20,7 @@ public static class SettingsUtils
         Directory.CreateDirectory(logsDir);
         return Path.Combine(logsDir, $"log.{extension}");
     }
-    
+
     /// <summary>
     ///     Check if the current user has write access to the specified path
     /// </summary>
@@ -39,7 +39,7 @@ public static class SettingsUtils
             return false;
         }
     }
-    
+
     public static bool CheckValidPath(string path)
     {
         try

@@ -1,6 +1,6 @@
-using System.IO;
 using Microsoft.Extensions.Logging;
 using RevitDevTool.Models.Config;
+using System.IO;
 using ZLogger;
 using MsLoggerFactory = Microsoft.Extensions.Logging.LoggerFactory;
 
@@ -15,7 +15,7 @@ internal sealed class ZLoggerLoggerFactory : ILoggerFactory
 {
     private const int DefaultBufferCapacity = 10_000;
     private const int DefaultRollingSizeKb = 10 * 1024; // 10MB
-    
+
     private Microsoft.Extensions.Logging.ILoggerFactory? _loggerFactory;
     private LogLevel _minimumLevel = LogLevel.Debug;
 
@@ -53,14 +53,14 @@ internal sealed class ZLoggerLoggerFactory : ILoggerFactory
     private static void ConfigureFileSink(ILoggingBuilder builder, LogConfig logConfig)
     {
         // SQLite not supported by ZLogger - fallback to Json format
-        var saveFormat = logConfig.SaveFormat == LogSaveFormat.Sqlite 
-            ? LogSaveFormat.Json 
+        var saveFormat = logConfig.SaveFormat == LogSaveFormat.Sqlite
+            ? LogSaveFormat.Json
             : logConfig.SaveFormat;
-        
+
         var directory = Path.GetDirectoryName(logConfig.FilePath) ?? ".";
         var fileNameWithoutExt = Path.GetFileNameWithoutExtension(logConfig.FilePath);
         var extension = Path.GetExtension(logConfig.FilePath);
-        
+
         // Use RollingFile for time-based and size-based rotation (matching Serilog behavior)
         builder.AddZLoggerRollingFile(options =>
         {
@@ -72,7 +72,7 @@ internal sealed class ZLoggerLoggerFactory : ILoggerFactory
             options.FileShared = true;
             options.FullMode = BackgroundBufferFullMode.Drop;
             options.BackgroundBufferCapacity = DefaultBufferCapacity;
-            
+
             // Configure formatter based on save format
             ConfigureFormatter(options, saveFormat);
         });
@@ -102,7 +102,7 @@ internal sealed class ZLoggerLoggerFactory : ILoggerFactory
                 break;
         }
     }
-    
+
     private static void FormatPrefix(in MessageTemplate template, in LogInfo info)
     {
         template.Format(info.Timestamp, info.LogLevel);

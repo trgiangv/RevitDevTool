@@ -1,10 +1,10 @@
-﻿using System.Diagnostics;
-using Autodesk.Revit.DB.DirectContext3D;
-using RevitDevTool.Extensions ;
-using RevitDevTool.Services ;
-using RevitDevTool.Visualization.Contracts ;
+﻿using Autodesk.Revit.DB.DirectContext3D;
+using RevitDevTool.Extensions;
+using RevitDevTool.Services;
+using RevitDevTool.Visualization.Contracts;
 using RevitDevTool.Visualization.Helpers;
 using RevitDevTool.Visualization.Render;
+using System.Diagnostics;
 using Color = Autodesk.Revit.DB.Color;
 
 namespace RevitDevTool.Visualization.Server;
@@ -20,23 +20,23 @@ public sealed class FaceVisualizationServer : VisualizationServer<Face>
     private double _extrusion = SettingsService.Instance.VisualizationConfig.FaceSettings.Extrusion;
     private double _transparency = SettingsService.Instance.VisualizationConfig.FaceSettings.Transparency;
 
-    private Color _meshColor = new( 
-        SettingsService.Instance.VisualizationConfig.FaceSettings.MeshColor.R, 
-        SettingsService.Instance.VisualizationConfig.FaceSettings.MeshColor.G, 
-        SettingsService.Instance.VisualizationConfig.FaceSettings.MeshColor.B ) ;
-    private Color _normalColor = new( 
-        SettingsService.Instance.VisualizationConfig.FaceSettings.NormalVectorColor.R, 
-        SettingsService.Instance.VisualizationConfig.FaceSettings.NormalVectorColor.G, 
-        SettingsService.Instance.VisualizationConfig.FaceSettings.NormalVectorColor.B ) ;
-    private Color _surfaceColor = new( 
-        SettingsService.Instance.VisualizationConfig.FaceSettings.SurfaceColor.R, 
-        SettingsService.Instance.VisualizationConfig.FaceSettings.SurfaceColor.G, 
-        SettingsService.Instance.VisualizationConfig.FaceSettings.SurfaceColor.B );
+    private Color _meshColor = new(
+        SettingsService.Instance.VisualizationConfig.FaceSettings.MeshColor.R,
+        SettingsService.Instance.VisualizationConfig.FaceSettings.MeshColor.G,
+        SettingsService.Instance.VisualizationConfig.FaceSettings.MeshColor.B);
+    private Color _normalColor = new(
+        SettingsService.Instance.VisualizationConfig.FaceSettings.NormalVectorColor.R,
+        SettingsService.Instance.VisualizationConfig.FaceSettings.NormalVectorColor.G,
+        SettingsService.Instance.VisualizationConfig.FaceSettings.NormalVectorColor.B);
+    private Color _surfaceColor = new(
+        SettingsService.Instance.VisualizationConfig.FaceSettings.SurfaceColor.R,
+        SettingsService.Instance.VisualizationConfig.FaceSettings.SurfaceColor.G,
+        SettingsService.Instance.VisualizationConfig.FaceSettings.SurfaceColor.B);
 
     private bool _drawMeshGrid = SettingsService.Instance.VisualizationConfig.FaceSettings.ShowMeshGrid;
     private bool _drawNormalVector = SettingsService.Instance.VisualizationConfig.FaceSettings.ShowNormalVector;
     private bool _drawSurface = SettingsService.Instance.VisualizationConfig.FaceSettings.ShowSurface;
-    
+
     public override bool UseInTransparentPass(Autodesk.Revit.DB.View view) => _drawSurface && _transparency > 0;
 
     public override Outline? GetBoundingBox(Autodesk.Revit.DB.View view)
@@ -73,7 +73,7 @@ public sealed class FaceVisualizationServer : VisualizationServer<Face>
     protected override void RenderScene()
     {
         if (visualizeGeometries.Count == 0) return;
-        
+
         if (hasGeometryUpdates || _surfaceBuffers.Count == 0 || _meshGridBuffers.Count == 0 || _normalBuffers.Count == 0)
         {
             MapGeometryBuffer();
@@ -145,7 +145,7 @@ public sealed class FaceVisualizationServer : VisualizationServer<Face>
         DisposeBuffers();
 
         if (visualizeGeometries.Count == 0) return;
-        
+
         try
         {
             foreach (var face in visualizeGeometries)
@@ -162,7 +162,7 @@ public sealed class FaceVisualizationServer : VisualizationServer<Face>
                 var normalBuffer = new RenderingBufferStorage();
                 RenderHelper.MapSurfaceBuffer(surfaceBuffer, mesh, _extrusion);
                 RenderHelper.MapMeshGridBuffer(meshGridBuffer, mesh, _extrusion);
-                RenderHelper.MapNormalVectorBuffer(normalBuffer, face.Evaluate(center) + normal * (offset + _extrusion), normal, normalLength);
+                RenderHelper.MapNormalVectorBuffer(normalBuffer, face.Evaluate(center) + (normal * (offset + _extrusion)), normal, normalLength);
 
                 _surfaceBuffers.Add(surfaceBuffer);
                 _meshGridBuffers.Add(meshGridBuffer);
@@ -196,7 +196,7 @@ public sealed class FaceVisualizationServer : VisualizationServer<Face>
             normalBuffer.EffectInstance.SetColor(_normalColor);
         }
     }
-    
+
     public void UpdateSurfaceColor(Color value)
     {
         var uiDocument = Context.ActiveUiDocument;

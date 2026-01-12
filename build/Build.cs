@@ -1,5 +1,5 @@
-using System.IO.Enumeration;
 using JetBrains.Annotations;
+using System.IO.Enumeration;
 
 [PublicAPI]
 sealed partial class Build : NukeBuild

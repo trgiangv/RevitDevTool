@@ -8,7 +8,7 @@ namespace RevitDevTool.ViewModel.Settings.Visualization;
 public sealed partial class FaceVisualizationViewModel : ObservableObject, IVisualizationViewModel
 {
     private readonly ISettingsService _settingsService;
-    
+
     public FaceVisualizationViewModel(ISettingsService settingsService)
     {
         _settingsService = settingsService;
@@ -22,30 +22,30 @@ public sealed partial class FaceVisualizationViewModel : ObservableObject, IVisu
         _showMeshGrid = _settingsService.VisualizationConfig.FaceSettings.ShowMeshGrid;
         _showNormalVector = _settingsService.VisualizationConfig.FaceSettings.ShowNormalVector;
     }
-    
+
     [ObservableProperty] private double _extrusion;
     [ObservableProperty] private double _transparency;
-    
+
     [ObservableProperty] private System.Windows.Media.Color _surfaceColor;
     [ObservableProperty] private System.Windows.Media.Color _meshColor;
     [ObservableProperty] private System.Windows.Media.Color _normalVectorColor;
-    
+
     [ObservableProperty] private bool _showSurface;
     [ObservableProperty] private bool _showMeshGrid;
     [ObservableProperty] private bool _showNormalVector;
-    
+
     public double MinExtrusion => _settingsService.VisualizationConfig.FaceSettings.MinExtrusion;
-    
+
     public void Initialize()
     {
         UpdateShowSurface(ShowSurface);
         UpdateShowMeshGrid(ShowMeshGrid);
         UpdateShowNormalVector(ShowNormalVector);
-        
+
         UpdateSurfaceColor(SurfaceColor);
         UpdateMeshColor(MeshColor);
         UpdateNormalVectorColor(NormalVectorColor);
-        
+
         UpdateExtrusion(Extrusion);
         UpdateTransparency(Transparency);
     }
@@ -67,84 +67,84 @@ public sealed partial class FaceVisualizationViewModel : ObservableObject, IVisu
         _settingsService.VisualizationConfig.FaceSettings.SurfaceColor = value;
         UpdateSurfaceColor(value);
     }
-    
+
     partial void OnMeshColorChanged(System.Windows.Media.Color value)
     {
         _settingsService.VisualizationConfig.FaceSettings.MeshColor = value;
         UpdateMeshColor(value);
     }
-    
+
     partial void OnNormalVectorColorChanged(System.Windows.Media.Color value)
     {
         _settingsService.VisualizationConfig.FaceSettings.NormalVectorColor = value;
         UpdateNormalVectorColor(value);
     }
-    
+
     partial void OnExtrusionChanged(double value)
     {
         _settingsService.VisualizationConfig.FaceSettings.Extrusion = value;
         UpdateExtrusion(value);
     }
-    
+
     partial void OnTransparencyChanged(double value)
     {
         _settingsService.VisualizationConfig.FaceSettings.Transparency = value;
         UpdateTransparency(value);
     }
-    
+
     partial void OnShowSurfaceChanged(bool value)
     {
         _settingsService.VisualizationConfig.FaceSettings.ShowSurface = value;
         UpdateShowSurface(value);
     }
-    
+
     partial void OnShowMeshGridChanged(bool value)
     {
         _settingsService.VisualizationConfig.FaceSettings.ShowMeshGrid = value;
         UpdateShowMeshGrid(value);
     }
-    
+
     partial void OnShowNormalVectorChanged(bool value)
     {
         _settingsService.VisualizationConfig.FaceSettings.ShowNormalVector = value;
         UpdateShowNormalVector(value);
     }
-    
+
     private static void UpdateSurfaceColor(System.Windows.Media.Color value)
     {
         VisualizationController.FaceVisualizationServer.UpdateSurfaceColor(new Color(value.R, value.G, value.B));
     }
-    
+
     private static void UpdateMeshColor(System.Windows.Media.Color value)
     {
         VisualizationController.FaceVisualizationServer.UpdateMeshGridColor(new Color(value.R, value.G, value.B));
     }
-    
+
     private static void UpdateNormalVectorColor(System.Windows.Media.Color value)
     {
         VisualizationController.FaceVisualizationServer.UpdateNormalVectorColor(new Color(value.R, value.G, value.B));
     }
-    
+
     private static void UpdateExtrusion(double value)
     {
         VisualizationController.FaceVisualizationServer.UpdateExtrusion(value / 12);
     }
-    
+
     private static void UpdateTransparency(double value)
     {
         VisualizationController.FaceVisualizationServer.UpdateTransparency(value / 100);
     }
-    
+
     private static void UpdateShowSurface(bool value)
     {
         VisualizationController.FaceVisualizationServer.UpdateSurfaceVisibility(value);
     }
-    
+
     private static void UpdateShowMeshGrid(bool value)
     {
         VisualizationController.FaceVisualizationServer.UpdateMeshGridVisibility(value);
     }
-    
+
     private static void UpdateShowNormalVector(bool value)
     {
         VisualizationController.FaceVisualizationServer.UpdateNormalVectorVisibility(value);

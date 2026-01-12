@@ -12,9 +12,9 @@ internal static class ZLoggerThemeAdapter
     public static ZLoggerTheme ToZLoggerTheme(this LogTheme logTheme)
     {
         var defaultStyle = new Style(logTheme.DefaultStyle.Foreground, logTheme.DefaultStyle.Background);
-        
+
         var styles = new Dictionary<StyleToken, Style>();
-        
+
         foreach (var kvp in logTheme.Styles)
         {
             var zloggerToken = MapToken(kvp.Key);

@@ -1,8 +1,8 @@
+using RevitDevTool.Theme.Design;
+using RevitDevTool.Utils;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.Windows;
-using RevitDevTool.Theme.Design;
-using RevitDevTool.Utils;
 // ReSharper disable ReplaceWithFieldKeyword
 
 namespace RevitDevTool.Theme;

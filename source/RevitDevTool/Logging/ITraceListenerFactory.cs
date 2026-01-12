@@ -1,5 +1,5 @@
-using System.Diagnostics;
 using RevitDevTool.Models.Config;
+using System.Diagnostics;
 
 namespace RevitDevTool.Logging;
 

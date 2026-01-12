@@ -14,10 +14,10 @@ public interface ILoggerAdapter : IDisposable
     void Error(Exception exception, string messageTemplate, params object?[] propertyValues);
     void Fatal(string messageTemplate, params object?[] propertyValues);
     void Fatal(Exception exception, string messageTemplate, params object?[] propertyValues);
-    
+
     void Write(LogLevel level, string messageTemplate, params object?[] propertyValues);
     void Write(LogLevel level, Exception? exception, string messageTemplate, params object[] propertyValues);
-    
+
     ILoggerAdapter ForContext(string propertyName, object? value);
     ILoggerAdapter ForContext<T>() where T : class;
 }

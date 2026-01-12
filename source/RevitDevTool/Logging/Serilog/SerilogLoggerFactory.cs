@@ -48,25 +48,25 @@ internal sealed class SerilogLoggerFactory : ILoggerFactory
             LogSaveFormat.Json => config.WriteTo.File(
                 formatter: new JsonFormatter(renderMessage: true),
                 path: logConfig.FilePath,
-                rollingInterval: logConfig.TimeInterval.ToSerilog(),
-                shared: true),
-            
+                shared: true,
+                rollingInterval: logConfig.TimeInterval.ToSerilog()),
+
             LogSaveFormat.Clef => config.WriteTo.File(
                 formatter: new CompactJsonFormatter(),
                 path: logConfig.FilePath,
-                rollingInterval: logConfig.TimeInterval.ToSerilog(),
-                shared: true),
-            
+                shared: true,
+                rollingInterval: logConfig.TimeInterval.ToSerilog()),
+
             LogSaveFormat.Sqlite => config.WriteTo.SQLite(
                 sqliteDbPath: logConfig.FilePath,
                 tableName: "Logs",
                 storeTimestampInUtc: true),
-            
+
             _ => config.WriteTo.File(
                 path: logConfig.FilePath,
                 outputTemplate: "{Timestamp:yyyy-MM-dd HH:mm:ss.fff} [{Level:u3}] {Message:lj}{NewLine}{Exception}",
-                rollingInterval: logConfig.TimeInterval.ToSerilog(),
-                shared: true)
+                shared: true,
+                rollingInterval: logConfig.TimeInterval.ToSerilog())
         };
     }
 }

@@ -16,7 +16,7 @@ public class Application : ExternalApplication
         AddButton();
         AddDockable();
     }
-    
+
     public override void OnShutdown()
     {
         Host.Stop();
@@ -26,7 +26,7 @@ public class Application : ExternalApplication
     {
         TraceCommand.RegisterDockablePane(Application);
     }
-    
+
     private void AddButton()
     {
         var panel = Application.CreatePanel("External Tools");

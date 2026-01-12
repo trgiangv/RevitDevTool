@@ -1,7 +1,7 @@
-using System.Diagnostics;
 using RevitDevTool.Controllers;
 using RevitDevTool.Services;
 using RevitDevTool.Theme;
+using System.Diagnostics;
 
 namespace RevitDevTool.ViewModel.Settings;
 
@@ -29,21 +29,22 @@ public partial class GeneralSettingsViewModel : ObservableObject
         _settingsService.GeneralConfig.Theme = value;
         ThemeManager.Current.ApplySettingsTheme(value);
     }
-    
+
     partial void OnUseHardwareRenderingChanged(bool value)
     {
         _settingsService.GeneralConfig.UseHardwareRendering = value;
         HostBackgroundController.ToggleHardwareRendering(_settingsService);
     }
-    
+
     public GeneralSettingsViewModel(ISettingsService settingsService)
     {
         _settingsService = settingsService;
         Theme = _settingsService.GeneralConfig.Theme;
         UseHardwareRendering = _settingsService.GeneralConfig.UseHardwareRendering;
     }
-    
-    [RelayCommand] private void ResetSettings()
+
+    [RelayCommand]
+    private void ResetSettings()
     {
         _settingsService.ResetSettings();
         Theme = _settingsService.GeneralConfig.Theme;

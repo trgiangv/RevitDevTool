@@ -41,7 +41,7 @@ public class TraceCommand : ExternalCommand, IExternalCommandAvailability
                     ShowFloatingWindow();
                 }
             }
-            
+
             var dockableWindow = UiApplication.GetDockablePane(PaneId);
             if (dockableWindow.IsShown())
             {
@@ -58,10 +58,10 @@ public class TraceCommand : ExternalCommand, IExternalCommandAvailability
         }
         catch (Exception e)
         {
-           ErrorMessage = e.Message + "\n" + e.StackTrace;
+            ErrorMessage = e.Message + "\n" + e.StackTrace;
         }
     }
-    
+
     public static void RegisterDockablePane(UIControlledApplication application)
     {
         SharedViewModel = Host.GetService<TraceLogViewModel>();
@@ -97,19 +97,19 @@ public class TraceCommand : ExternalCommand, IExternalCommandAvailability
         application.ControlledApplication.DocumentClosed += OnDocumentClosed;
         NotifyListener.TraceReceived += TraceReceivedHandler;
     }
-    
+
     private static void OnTraceReceived()
     {
         NotifyListener.TraceReceived -= TraceReceivedHandler;
-        
-        if (HasDocumentOpened)  return;
+
+        if (HasDocumentOpened) return;
         if (SharedViewModel is not { IsStarted: true })
         {
             NotifyListener.TraceReceived += TraceReceivedHandler;
             return;
         }
-        if (FloatingWindow != null) return; 
-        
+        if (FloatingWindow != null) return;
+
         SharedViewModel.Subscribe();
         ShowFloatingWindow();
     }
@@ -118,12 +118,12 @@ public class TraceCommand : ExternalCommand, IExternalCommandAvailability
     {
         CloseFloatingWindow();
         NotifyListener.TraceReceived -= TraceReceivedHandler;
-        
+
         if (IsForceHide)
         {
             SharedViewModel?.Dispose();
         }
-        
+
         var dockableWindow = Context.UiControlledApplication.GetDockablePane(PaneId);
 
         if (IsForceHide)
@@ -135,12 +135,12 @@ public class TraceCommand : ExternalCommand, IExternalCommandAvailability
             dockableWindow.Show();
         }
     }
-    
+
     private static void ShowFloatingWindow()
     {
         if (FloatingWindow != null) return;
         if (SharedViewModel is null) return;
-        
+
         // Ensure UI thread
         if (ComponentManager.IsApplicationButtonVisible)
         {
@@ -152,7 +152,7 @@ public class TraceCommand : ExternalCommand, IExternalCommandAvailability
         }
 
         return;
-        
+
         void Show()
         {
             FloatingWindow = Host.GetService<TraceLogWindow>();
@@ -161,7 +161,7 @@ public class TraceCommand : ExternalCommand, IExternalCommandAvailability
             FloatingWindow.Show();
         }
     }
-    
+
     private static void CloseFloatingWindow()
     {
         if (FloatingWindow is null) return;
@@ -172,7 +172,7 @@ public class TraceCommand : ExternalCommand, IExternalCommandAvailability
             FloatingWindow = null;
         }));
     }
-    
+
     private static void OnFloatingWindowClosed(object? sender, EventArgs e)
     {
         if (FloatingWindow == null) return;
@@ -181,16 +181,16 @@ public class TraceCommand : ExternalCommand, IExternalCommandAvailability
         if (HasDocumentOpened) return;
         NotifyListener.TraceReceived += TraceReceivedHandler;
     }
-    
+
     private static void OnDocumentClosed(object? sender, DocumentClosedEventArgs args)
     {
         if (HasDocumentOpened) return;
-        
+
         if (SharedViewModel is null or { IsStarted: false })
         {
             SharedViewModel = Host.GetService<TraceLogViewModel>();
         }
-        
+
         NotifyListener.TraceReceived += TraceReceivedHandler;
     }
 

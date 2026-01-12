@@ -13,16 +13,16 @@ public sealed class RenderingBufferStorage : IDisposable
     public IndexBuffer IndexBuffer { get; set; }
     public VertexFormat VertexFormat { get; set; }
     public EffectInstance EffectInstance { get; set; }
-    
+
     // ReSharper disable once CognitiveComplexity
     public bool IsValid()
     {
         try
         {
-            if (VertexBuffer == null || !VertexBuffer.IsValid()) return false;
-            if (IndexBuffer == null || !IndexBuffer.IsValid()) return false;
-            if (VertexFormat == null || !VertexFormat.IsValid()) return false;
-            if (EffectInstance == null || !EffectInstance.IsValid()) return false;
+            if (VertexBuffer?.IsValid() != true) return false;
+            if (IndexBuffer?.IsValid() != true) return false;
+            if (VertexFormat?.IsValid() != true) return false;
+            if (EffectInstance?.IsValid() != true) return false;
             if (PrimitiveCount <= 0 || VertexBufferCount <= 0 || IndexBufferCount <= 0) return false;
             return true;
         }
@@ -31,7 +31,7 @@ public sealed class RenderingBufferStorage : IDisposable
             return false;
         }
     }
-    
+
     public void Dispose()
     {
         try

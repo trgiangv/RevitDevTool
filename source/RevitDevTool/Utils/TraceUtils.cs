@@ -1,6 +1,6 @@
-using System.Diagnostics;
 using RevitDevTool.Logging;
 using RevitDevTool.Services;
+using System.Diagnostics;
 
 namespace RevitDevTool.Utils;
 
@@ -16,7 +16,7 @@ public static class TraceUtils
                 PresentationTraceSources.DataBindingSource.Listeners.Add(listener);
         }
     }
-    
+
     public static void UnregisterTraceListeners(params TraceListener?[] listeners)
     {
         foreach (var listener in listeners)

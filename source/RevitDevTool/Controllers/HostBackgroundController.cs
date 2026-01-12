@@ -1,10 +1,10 @@
-using System.Windows.Interop;
-using System.Windows.Media;
 using Microsoft.Extensions.Hosting;
 using RevitDevTool.Commands;
 using RevitDevTool.Models.Trace;
 using RevitDevTool.Services;
 using RevitDevTool.Theme;
+using System.Windows.Interop;
+using System.Windows.Media;
 
 namespace RevitDevTool.Controllers;
 
@@ -24,7 +24,7 @@ public sealed class HostBackgroundController(ISettingsService settingsService) :
         Shutdown();
         return Task.CompletedTask;
     }
-    
+
     private void SaveSettings()
     {
         settingsService.SaveSettings();
@@ -34,7 +34,7 @@ public sealed class HostBackgroundController(ISettingsService settingsService) :
     {
         settingsService.LoadSettings();
     }
-    
+
     private void LoadTheme()
     {
         ThemeManager.Current.ApplySettingsTheme(settingsService.GeneralConfig.Theme);

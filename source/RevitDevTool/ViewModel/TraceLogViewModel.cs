@@ -1,4 +1,3 @@
-using System.Windows.Forms.Integration;
 using Autodesk.Revit.UI.Events;
 using CommunityToolkit.Mvvm.Messaging;
 using Microsoft.Extensions.Logging;
@@ -8,6 +7,7 @@ using RevitDevTool.Messages;
 using RevitDevTool.Models.Trace;
 using RevitDevTool.Services;
 using RevitDevTool.Theme;
+using System.Windows.Forms.Integration;
 
 namespace RevitDevTool.ViewModel;
 
@@ -158,7 +158,7 @@ public partial class TraceLogViewModel : ObservableObject, IDisposable
     {
         IsStarted = false;
         Unsubscribe();
-        
+
         _loggingService.Dispose();
         _consoleRedirector?.Dispose();
         _consoleRedirector = null;

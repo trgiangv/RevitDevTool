@@ -1,7 +1,7 @@
-using System.Xml.Linq;
 using Autodesk.PackageBuilder;
 using Nuke.Common.ProjectModel;
 using Nuke.Common.Utilities;
+using System.Xml.Linq;
 
 sealed partial class Build
 {

@@ -1,5 +1,5 @@
-﻿using Nuke.Common.Tools.DotNet;
-using Nuke.Common.ProjectModel;
+﻿using Nuke.Common.ProjectModel;
+using Nuke.Common.Tools.DotNet;
 using static Nuke.Common.Tools.DotNet.DotNetTasks;
 
 sealed partial class Build

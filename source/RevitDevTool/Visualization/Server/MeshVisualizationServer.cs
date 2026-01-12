@@ -1,10 +1,10 @@
-﻿using System.Diagnostics;
-using Autodesk.Revit.DB.DirectContext3D;
-using RevitDevTool.Extensions ;
-using RevitDevTool.Services ;
-using RevitDevTool.Visualization.Contracts ;
+﻿using Autodesk.Revit.DB.DirectContext3D;
+using RevitDevTool.Extensions;
+using RevitDevTool.Services;
+using RevitDevTool.Visualization.Contracts;
 using RevitDevTool.Visualization.Helpers;
 using RevitDevTool.Visualization.Render;
+using System.Diagnostics;
 using Color = Autodesk.Revit.DB.Color;
 
 namespace RevitDevTool.Visualization.Server;
@@ -41,7 +41,7 @@ public sealed class MeshVisualizationServer : VisualizationServer<Mesh>
         );
 
     public override bool UseInTransparentPass(Autodesk.Revit.DB.View view) => _drawSurface && _transparency > 0;
-    
+
     public override Outline? GetBoundingBox(Autodesk.Revit.DB.View view)
     {
         return null;
@@ -50,7 +50,7 @@ public sealed class MeshVisualizationServer : VisualizationServer<Mesh>
     protected override void RenderScene()
     {
         if (visualizeGeometries.Count == 0) return;
-        
+
         if (hasGeometryUpdates || _surfaceBuffers.Count == 0 || _meshGridBuffers.Count == 0)
         {
             MapGeometryBuffer();
@@ -122,7 +122,7 @@ public sealed class MeshVisualizationServer : VisualizationServer<Mesh>
         DisposeBuffers();
 
         if (visualizeGeometries.Count == 0) return;
-        
+
         try
         {
             foreach (var visualizeGeometry in visualizeGeometries)
@@ -157,13 +157,13 @@ public sealed class MeshVisualizationServer : VisualizationServer<Mesh>
             var normals = Enumerable.Range(0, mesh.Vertices.Count)
                 .Select(_ => new RenderingBufferStorage())
                 .ToArray();
-            
+
             for (var i = 0; i < mesh.Vertices.Count; i++)
             {
                 var vertex = mesh.Vertices[i];
                 var buffer = normals[i];
                 var normal = RenderGeometryHelper.GetMeshVertexNormal(mesh, i, mesh.DistributionOfNormals);
-                RenderHelper.MapNormalVectorBuffer(buffer, vertex + normal * (offset + _extrusion), normal, normalLength);
+                RenderHelper.MapNormalVectorBuffer(buffer, vertex + (normal * (offset + _extrusion)), normal, normalLength);
             }
 
             _normalBuffers.Add(normals);
@@ -194,7 +194,7 @@ public sealed class MeshVisualizationServer : VisualizationServer<Mesh>
             }
         }
     }
-    
+
     public void UpdateSurfaceColor(Color value)
     {
         var uiDocument = Context.ActiveUiDocument;

@@ -1,10 +1,10 @@
-﻿using System.Diagnostics;
-using Autodesk.Revit.DB.DirectContext3D;
-using RevitDevTool.Extensions ;
-using RevitDevTool.Services ;
-using RevitDevTool.Visualization.Contracts ;
+﻿using Autodesk.Revit.DB.DirectContext3D;
+using RevitDevTool.Extensions;
+using RevitDevTool.Services;
+using RevitDevTool.Visualization.Contracts;
 using RevitDevTool.Visualization.Helpers;
 using RevitDevTool.Visualization.Render;
+using System.Diagnostics;
 using Color = Autodesk.Revit.DB.Color;
 
 namespace RevitDevTool.Visualization.Server;
@@ -32,7 +32,7 @@ public sealed class SolidVisualizationServer : VisualizationServer<Solid>
 
     private bool _drawFace = SettingsService.Instance.VisualizationConfig.SolidSettings.ShowFace;
     private bool _drawEdge = SettingsService.Instance.VisualizationConfig.SolidSettings.ShowEdge;
-    
+
     public override bool UseInTransparentPass(Autodesk.Revit.DB.View view) => _drawFace && _transparency > 0;
 
     public override Outline? GetBoundingBox(Autodesk.Revit.DB.View view)
@@ -40,7 +40,7 @@ public sealed class SolidVisualizationServer : VisualizationServer<Solid>
         if (visualizeGeometries.Count == 0) return null;
         List<XYZ> minPoints = [];
         List<XYZ> maxPoints = [];
-        
+
         foreach (var solid in visualizeGeometries)
         {
             if (solid.Volume == 0)
@@ -51,13 +51,13 @@ public sealed class SolidVisualizationServer : VisualizationServer<Solid>
             BoundingBoxXYZ boundingBox;
             try { boundingBox = solid.GetBoundingBox(); }
             catch { continue; }
-            
+
             var minPoint = boundingBox.Transform.OfPoint(boundingBox.Min);
             var maxPoint = boundingBox.Transform.OfPoint(boundingBox.Max);
             minPoints.Add(minPoint);
             maxPoints.Add(maxPoint);
         }
-        
+
         var newMinPoint = minPoints
             .OrderBy(point => point.X)
             .ThenBy(point => point.Y)
@@ -174,7 +174,7 @@ public sealed class SolidVisualizationServer : VisualizationServer<Solid>
             buffer.EffectInstance.SetColor(_edgeColor);
         }
     }
-    
+
     public void UpdateSurfaceColor(Color value)
     {
         var uiDocument = Context.ActiveUiDocument;

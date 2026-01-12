@@ -1,5 +1,5 @@
-using System.Diagnostics;
 using RevitDevTool.Controllers;
+using System.Diagnostics;
 
 namespace RevitDevTool.Models.Trace;
 
@@ -23,12 +23,12 @@ public class GeometryListener : TraceListener
         XYZ xyz => Trace(xyz),
         BoundingBoxXYZ bbox => Trace(bbox),
         Outline outline => Trace(outline),
-        
+
         // Revit array types
         FaceArray faceArray => Trace(faceArray.Cast<Face>()),
         CurveArray curveArray => Trace(curveArray.Cast<Curve>()),
         EdgeArray edgeArray => Trace(edgeArray.Cast<Edge>()),
-        
+
         // Enumerable collections
         IEnumerable<CurveLoop> curveLoops => Trace(curveLoops.SelectMany(x => x)),
         IEnumerable<CurveArray> curveArrays => Trace(curveArrays.SelectMany(x => x.Cast<Curve>())),
@@ -37,10 +37,10 @@ public class GeometryListener : TraceListener
         IEnumerable<GeometryObject> geometries => Trace(geometries),
         IEnumerable<XYZ> xyz => Trace(xyz),
         IEnumerable<BoundingBoxXYZ> boxes => Trace(boxes),
-        
+
         // Mixed object collection (typically IronPython output)
         ICollection<object> objects => ProcessMixedCollection(objects),
-        
+
         _ => false
     };
 

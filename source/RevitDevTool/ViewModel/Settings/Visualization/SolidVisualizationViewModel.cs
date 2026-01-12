@@ -5,10 +5,10 @@ using Color = Autodesk.Revit.DB.Color;
 
 namespace RevitDevTool.ViewModel.Settings.Visualization;
 
-public sealed partial class SolidVisualizationViewModel: ObservableObject, IVisualizationViewModel
+public sealed partial class SolidVisualizationViewModel : ObservableObject, IVisualizationViewModel
 {
     private readonly ISettingsService _settingsService;
-    
+
     public SolidVisualizationViewModel(ISettingsService settingsService)
     {
         _settingsService = settingsService;
@@ -20,7 +20,7 @@ public sealed partial class SolidVisualizationViewModel: ObservableObject, IVisu
         _showFace = _settingsService.VisualizationConfig.SolidSettings.ShowFace;
         _showEdge = _settingsService.VisualizationConfig.SolidSettings.ShowEdge;
     }
-    
+
     [ObservableProperty] private double _scale;
     [ObservableProperty] private double _transparency;
 

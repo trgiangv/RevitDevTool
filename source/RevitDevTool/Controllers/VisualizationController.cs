@@ -12,7 +12,7 @@ internal static class VisualizationController
     public static SolidVisualizationServer SolidVisualizationServer { get; } = new();
     public static XyzVisualizationServer XyzVisualizationServer { get; } = new();
     public static FaceVisualizationServer FaceVisualizationServer { get; } = new();
-    
+
     private static readonly List<(IVisualizationServerLifeCycle Server, IVisualizationViewModel ViewModel)> ServerViewModelPairs =
         [
             (BoundingBoxVisualizationServer, Host.GetService<BoundingBoxVisualizationViewModel>()),
@@ -30,7 +30,7 @@ internal static class VisualizationController
             server.Register(viewModel);
         }
     }
-    
+
     public static void Stop()
     {
         foreach (var (server, _) in ServerViewModelPairs)
@@ -38,7 +38,7 @@ internal static class VisualizationController
             server.Unregister();
         }
     }
-    
+
     public static void Clear()
     {
         foreach (var (server, _) in ServerViewModelPairs)
@@ -46,7 +46,7 @@ internal static class VisualizationController
             server.ClearGeometry();
         }
     }
-    
+
     public static void Refresh()
     {
         foreach (var (_, viewModel) in ServerViewModelPairs)
@@ -55,7 +55,7 @@ internal static class VisualizationController
         }
         Context.ActiveUiDocument?.UpdateAllOpenViews();
     }
-    
+
     public static void Add<T>(T? geometry)
     {
         switch (geometry)
@@ -107,7 +107,7 @@ internal static class VisualizationController
         var grouped = geometries
             .GroupBy(GetGeometryType)
             .Where(g => g.Key is not null);
-        
+
         foreach (var group in grouped)
         {
             AddGroupedGeometries(group.Key!, group);

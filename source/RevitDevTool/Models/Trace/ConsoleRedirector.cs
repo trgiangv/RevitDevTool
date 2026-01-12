@@ -1,5 +1,5 @@
-using System.Diagnostics ;
-using System.IO ;
+using System.Diagnostics;
+using System.IO;
 
 namespace RevitDevTool.Models.Trace;
 
@@ -18,10 +18,10 @@ internal class ConsoleRedirector : IDisposable
     {
         _originalOut = Console.Out;
         _originalError = Console.Error;
-            
+
         _consoleOutWriter = new ConsoleTextWriter(TraceEventType.Information);
         _consoleErrorWriter = new ConsoleTextWriter(TraceEventType.Error);
-            
+
         Console.SetOut(_consoleOutWriter);
         Console.SetError(_consoleErrorWriter);
     }

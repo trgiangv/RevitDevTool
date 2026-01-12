@@ -1,7 +1,7 @@
-using System.Diagnostics;
-using System.Globalization;
 using Microsoft.Extensions.Logging;
 using RevitDevTool.Utils;
+using System.Diagnostics;
+using System.Globalization;
 
 namespace RevitDevTool.Logging;
 
@@ -43,7 +43,7 @@ internal sealed class AdapterTraceListener(ILoggerAdapter logger, bool includeSt
     {
         if (!ShouldTrace(eventCache, source, eventType, id, "", null, data, null))
             return;
-        
+
         var enrichedLogger = EnrichTraceContext(source, eventType, id, eventCache);
         WriteData(enrichedLogger, eventType, data);
     }
@@ -52,7 +52,7 @@ internal sealed class AdapterTraceListener(ILoggerAdapter logger, bool includeSt
     {
         if (!ShouldTrace(eventCache, source, eventType, id, "", null, null, data))
             return;
-        
+
         var enrichedLogger = EnrichTraceContext(source, eventType, id, eventCache);
         WriteData(enrichedLogger, eventType, data);
     }
@@ -61,7 +61,7 @@ internal sealed class AdapterTraceListener(ILoggerAdapter logger, bool includeSt
     {
         if (!ShouldTrace(eventCache, source, eventType, id, "", null, null, null))
             return;
-        
+
         var enrichedLogger = EnrichTraceContext(source, eventType, id, eventCache);
         Write(enrichedLogger, eventType, "{TraceSource:l} {TraceEventType}: {TraceEventId}", source, eventType, id);
     }
@@ -70,7 +70,7 @@ internal sealed class AdapterTraceListener(ILoggerAdapter logger, bool includeSt
     {
         if (!ShouldTrace(eventCache, source, eventType, id, message, null, null, null))
             return;
-        
+
         var enrichedLogger = EnrichTraceContext(source, eventType, id, eventCache);
         Write(enrichedLogger, eventType, message ?? string.Empty);
     }
@@ -79,12 +79,12 @@ internal sealed class AdapterTraceListener(ILoggerAdapter logger, bool includeSt
     {
         if (!ShouldTrace(eventCache, source, eventType, id, format, args, null, null))
             return;
-        
+
         var enrichedLogger = EnrichTraceContext(source, eventType, id, eventCache);
-        var message = args is { Length: > 0 } 
-            ? string.Format(CultureInfo.InvariantCulture, format ?? string.Empty, args) 
+        var message = args is { Length: > 0 }
+            ? string.Format(CultureInfo.InvariantCulture, format ?? string.Empty, args)
             : format ?? string.Empty;
-        
+
         var exception = args?.OfType<Exception>().FirstOrDefault();
         Write(enrichedLogger, eventType, exception, message);
     }
@@ -114,7 +114,7 @@ internal sealed class AdapterTraceListener(ILoggerAdapter logger, bool includeSt
         var enrichedLogger = EnrichWithRevitContext(_logger)
             .ForContext(TraceDataProperty, data)
             .ForContext(CategoryProperty, category);
-        
+
         if (!string.IsNullOrWhiteSpace(category))
             enrichedLogger.Debug("[{Category}] {TraceData}", category, data);
         else
@@ -125,7 +125,7 @@ internal sealed class AdapterTraceListener(ILoggerAdapter logger, bool includeSt
     {
         var enrichedLogger = EnrichWithRevitContext(_logger)
             .ForContext(CategoryProperty, category);
-        
+
         if (!string.IsNullOrWhiteSpace(category))
             enrichedLogger.Debug("[{Category}] {Message}", category, message);
         else

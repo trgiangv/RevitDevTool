@@ -1,6 +1,6 @@
-using System.Windows;
 using MahApps.Metro.Controls;
 using RevitDevTool.View.Settings.Visualization;
+using System.Windows;
 
 namespace RevitDevTool.View.Settings;
 

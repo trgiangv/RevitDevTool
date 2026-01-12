@@ -1,11 +1,11 @@
-using System.Globalization;
-using System.Windows.Forms.Integration;
 using RevitDevTool.Logging.Theme;
 using RevitDevTool.Theme;
 using RevitDevTool.Utils;
 using Serilog;
-using LibrarySink = Serilog.Sinks.RichTextBoxForms.RichTextBoxSink;
+using System.Globalization;
+using System.Windows.Forms.Integration;
 using FontStyle = System.Drawing.FontStyle;
+using LibrarySink = Serilog.Sinks.RichTextBoxForms.RichTextBoxSink;
 
 namespace RevitDevTool.Logging.Serilog;
 
@@ -78,13 +78,13 @@ internal sealed class SerilogRichTextBoxSink : ILogOutputSink
         var result = config.WriteTo.RichTextBox(
             _richTextBox,
             out var sink,
+            theme: theme,
+            autoScroll: true
+,
             maxLogLines: 1000,
             formatProvider: CultureInfo.InvariantCulture,
-            theme: theme,
-            prettyPrintJson: true,
-            autoScroll: true
-        );
-        
+            prettyPrintJson: true);
+
         _librarySink = sink;
         return result;
     }
@@ -102,10 +102,10 @@ internal sealed class SerilogRichTextBoxSink : ILogOutputSink
 
     private void ApplyTheme(bool isDarkTheme)
     {
-        _richTextBox.BackColor = isDarkTheme 
+        _richTextBox.BackColor = isDarkTheme
             ? LogThemePresets.DarkBackground
             : LogThemePresets.LightBackground;
-        
+
         Win32Utils.SetImmersiveDarkMode(_richTextBox.Handle, isDarkTheme);
     }
 

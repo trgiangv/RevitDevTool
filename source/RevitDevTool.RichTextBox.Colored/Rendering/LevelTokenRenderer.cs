@@ -8,44 +8,44 @@ namespace RevitDevTool.RichTextBox.Colored.Rendering;
 public class LevelTokenRenderer : ITokenRenderer
 {
     private static readonly StyleToken[] LevelStyles =
-    {
+    [
         StyleToken.LevelVerbose,     // Trace
         StyleToken.LevelDebug,       // Debug
         StyleToken.LevelInformation, // Information
         StyleToken.LevelWarning,     // Warning
         StyleToken.LevelError,       // Error
         StyleToken.LevelFatal        // Critical
-    };
+    ];
 
     private static readonly string[][] LowercaseLevelMap =
-    {
-        new[] { "t", "tr", "trc", "trce" },  // Trace
-        new[] { "d", "de", "dbg", "dbug" },  // Debug
-        new[] { "i", "in", "inf", "info" },  // Information
-        new[] { "w", "wn", "wrn", "warn" },  // Warning
-        new[] { "e", "er", "err", "eror" },  // Error
-        new[] { "c", "cr", "crt", "crit" }   // Critical
-    };
+    [
+        ["t", "tr", "trc", "trce"],  // Trace
+        ["d", "de", "dbg", "dbug"],  // Debug
+        ["i", "in", "inf", "info"],  // Information
+        ["w", "wn", "wrn", "warn"],  // Warning
+        ["e", "er", "err", "eror"],  // Error
+        ["c", "cr", "crt", "crit"]   // Critical
+    ];
 
     private static readonly string[][] TitleCaseLevelMap =
-    {
-        new[] { "T", "Tr", "Trc", "Trce" },  // Trace
-        new[] { "D", "De", "Dbg", "Dbug" },  // Debug
-        new[] { "I", "In", "Inf", "Info" },  // Information
-        new[] { "W", "Wn", "Wrn", "Warn" },  // Warning
-        new[] { "E", "Er", "Err", "Eror" },  // Error
-        new[] { "C", "Cr", "Crt", "Crit" }   // Critical
-    };
+    [
+        ["T", "Tr", "Trc", "Trce"],  // Trace
+        ["D", "De", "Dbg", "Dbug"],  // Debug
+        ["I", "In", "Inf", "Info"],  // Information
+        ["W", "Wn", "Wrn", "Warn"],  // Warning
+        ["E", "Er", "Err", "Eror"],  // Error
+        ["C", "Cr", "Crt", "Crit"]   // Critical
+    ];
 
     private static readonly string[][] UppercaseLevelMap =
-    {
-        new[] { "T", "TR", "TRC", "TRCE" },  // Trace
-        new[] { "D", "DE", "DBG", "DBUG" },  // Debug
-        new[] { "I", "IN", "INF", "INFO" },  // Information
-        new[] { "W", "WN", "WRN", "WARN" },  // Warning
-        new[] { "E", "ER", "ERR", "EROR" },  // Error
-        new[] { "C", "CR", "CRT", "CRIT" }   // Critical
-    };
+    [
+        ["T", "TR", "TRC", "TRCE"],  // Trace
+        ["D", "DE", "DBG", "DBUG"],  // Debug
+        ["I", "IN", "INF", "INFO"],  // Information
+        ["W", "WN", "WRN", "WARN"],  // Warning
+        ["E", "ER", "ERR", "EROR"],  // Error
+        ["C", "CR", "CRT", "CRIT"]   // Critical
+    ];
 
     private readonly Theme _theme;
     private readonly string _format;
@@ -56,7 +56,7 @@ public class LevelTokenRenderer : ITokenRenderer
         _theme = theme;
         _format = format;
         _monikers = new string[LevelStyles.Length];
-        
+
         for (var i = 0; i < _monikers.Length; i++)
         {
             _monikers[i] = GetLevelMoniker((LogLevel)i, format);
@@ -98,15 +98,15 @@ public class LevelTokenRenderer : ITokenRenderer
                 return string.Empty;
 
             case > 4:
-            {
-                var stringValue = value.ToString();
-                if (stringValue.Length > width)
                 {
-                    stringValue = stringValue.Substring(0, width);
-                }
+                    var stringValue = value.ToString();
+                    if (stringValue.Length > width)
+                    {
+                        stringValue = stringValue.Substring(0, width);
+                    }
 
-                return TextFormatter.Format(stringValue, format);
-            }
+                    return TextFormatter.Format(stringValue, format);
+                }
         }
 
         var index = (int)value;
