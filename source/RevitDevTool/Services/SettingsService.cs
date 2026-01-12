@@ -27,7 +27,7 @@ public sealed class SettingsService(IFileConfig<PathOptions> fileConfig) : ISett
         get
         {
             _logConfig ??= new LogConfig();
-            EnsureLogFilePath(_logConfig);
+            EnsureLogFolder(_logConfig);
             return _logConfig;
         }
     }
@@ -132,7 +132,7 @@ public sealed class SettingsService(IFileConfig<PathOptions> fileConfig) : ISett
         }
         else
         {
-            EnsureLogFilePath(_logConfig);
+            EnsureLogFolder(_logConfig);
             PresentationTraceSources.DataBindingSource.Switch.Level = _logConfig.WpfTraceLevel;
         }
     }
@@ -153,7 +153,7 @@ public sealed class SettingsService(IFileConfig<PathOptions> fileConfig) : ISett
     private void ResetLogSettings()
     {
         _logConfig = new LogConfig();
-        EnsureLogFilePath(_logConfig);
+        EnsureLogFolder(_logConfig);
         PresentationTraceSources.DataBindingSource.Switch.Level = _logConfig.WpfTraceLevel;
     }
 
@@ -170,10 +170,9 @@ public sealed class SettingsService(IFileConfig<PathOptions> fileConfig) : ISett
         };
     }
 
-    private void EnsureLogFilePath(LogConfig config)
+    private void EnsureLogFolder(LogConfig config)
     {
-        if (SettingsUtils.IsValidPath(config.FilePath)) return;
-        var extension = config.SaveFormat.ToFileExtension();
-        config.FilePath = fileConfig.Options.GetDefaultLogPath(extension);
+        if (SettingsUtils.IsValidPath(config.LogFolder)) return;
+        config.LogFolder = fileConfig.Options.LogsDirectory;
     }
 }

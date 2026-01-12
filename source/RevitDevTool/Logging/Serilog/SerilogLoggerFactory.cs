@@ -1,10 +1,12 @@
 using Microsoft.Extensions.Logging;
 using RevitDevTool.Models.Config;
+using RevitDevTool.Utils;
 using Serilog;
 using Serilog.Core;
 using Serilog.Events;
 using Serilog.Formatting.Compact;
 using Serilog.Formatting.Json;
+using System.IO;
 
 namespace RevitDevTool.Logging.Serilog;
 
@@ -43,31 +45,33 @@ internal sealed class SerilogLoggerFactory : ILoggerFactory
 
     private static LoggerConfiguration ConfigureFileSink(LoggerConfiguration config, LogConfig logConfig)
     {
+        var extension = logConfig.SaveFormat.ToFileExtension();
+        var logFilePath = Path.Combine(logConfig.LogFolder, $"log.{extension}");
+
         return logConfig.SaveFormat switch
         {
             LogSaveFormat.Json => config.WriteTo.File(
                 formatter: new JsonFormatter(renderMessage: true),
-                path: logConfig.FilePath,
+                path: logFilePath,
                 shared: true,
                 rollingInterval: logConfig.TimeInterval.ToSerilog()),
 
             LogSaveFormat.Clef => config.WriteTo.File(
                 formatter: new CompactJsonFormatter(),
-                path: logConfig.FilePath,
+                path: logFilePath,
                 shared: true,
                 rollingInterval: logConfig.TimeInterval.ToSerilog()),
 
             LogSaveFormat.Sqlite => config.WriteTo.SQLite(
-                sqliteDbPath: logConfig.FilePath,
+                sqliteDbPath: logFilePath,
                 tableName: "Logs",
                 storeTimestampInUtc: true),
 
             _ => config.WriteTo.File(
-                path: logConfig.FilePath,
+                path: logFilePath,
                 outputTemplate: "{Timestamp:yyyy-MM-dd HH:mm:ss.fff} [{Level:u3}] {Message:lj}{NewLine}{Exception}",
                 shared: true,
                 rollingInterval: logConfig.TimeInterval.ToSerilog())
         };
     }
 }
-

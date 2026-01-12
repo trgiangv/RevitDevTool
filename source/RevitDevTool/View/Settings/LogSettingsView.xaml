@@ -265,7 +265,7 @@
                                   SelectedItem="{Binding TimeInterval}" />
                     </Grid>
 
-                    <!--  File Path  -->
+                    <!--  Log Folder  -->
                     <Grid Margin="8"
                           Visibility="{Binding IsSaveLogEnabled, Converter={StaticResource BoolToVisibility}}">
                         <Grid.ColumnDefinitions>
@@ -282,16 +282,16 @@
                         <StackPanel Grid.Column="1"
                                     Margin="12,0">
                             <TextBlock FontWeight="SemiBold"
-                                       Text="File Location" />
+                                       Text="Log Folder" />
                             <TextBlock FontSize="11"
                                        Foreground="{DynamicResource MahApps.Brushes.Gray}"
-                                       Text="{Binding FilePath}"
+                                       Text="{Binding LogFolder}"
                                        TextTrimming="CharacterEllipsis"
-                                       ToolTip="{Binding FilePath}" />
+                                       ToolTip="{Binding LogFolder}" />
                         </StackPanel>
                         <Button Grid.Column="2"
                                 Padding="8,4"
-                                Command="{Binding BrowseFileCommand}"
+                                Command="{Binding BrowseFolderCommand}"
                                 Content="Browse..." />
                     </Grid>
                 </StackPanel>

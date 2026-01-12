@@ -37,8 +37,8 @@ public sealed class LogConfig
     [JsonPropertyName("TimeInterval")]
     public RollingInterval TimeInterval { get; set; } = RollingInterval.Day;
 
-    [JsonPropertyName("FilePath")]
-    public string FilePath { get; set; } = string.Empty;
+    [JsonPropertyName("LogFolder")]
+    public string LogFolder { get; set; } = string.Empty;
 }
 
 public enum LogSaveFormat

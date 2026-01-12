@@ -39,37 +39,6 @@ public static class SettingsUtils
     }
 
     /// <summary>
-    /// Check if the directory of the path is writable.
-    /// Returns false if the path is invalid or not writable.
-    /// </summary>
-    public static bool IsWritablePath(string? path)
-    {
-        try
-        {
-            if (!IsValidPath(path)) return false;
-
-            var directory = Path.GetDirectoryName(path);
-            if (string.IsNullOrEmpty(directory))
-                return false;
-
-            if (!Directory.Exists(directory))
-            {
-                Directory.CreateDirectory(directory);
-            }
-
-            // Test write access by creating a temp file
-            var testFile = Path.Combine(directory, $".write_test_{Guid.NewGuid():N}");
-            File.WriteAllText(testFile, string.Empty);
-            File.Delete(testFile);
-            return true;
-        }
-        catch
-        {
-            return false;
-        }
-    }
-
-    /// <summary>
     /// Get the file extension for the given log save format.
     /// </summary>
     /// <param name="format"></param>

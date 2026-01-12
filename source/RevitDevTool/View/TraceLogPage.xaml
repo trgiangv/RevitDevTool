@@ -94,6 +94,23 @@
                                Content="Clear Geometry" />
                     </StackPanel>
                 </Button>
+                <Button Margin="0,0,5,0"
+                        Padding="0"
+                        BorderThickness="0.5"
+                        Command="{Binding OpenLogFolderCommand}"
+                        ToolTip="Open log folder">
+                    <StackPanel Margin="0"
+                                Orientation="Horizontal">
+                        <Path Width="14"
+                              Height="14"
+                              Margin="5,0,0,0"
+                              Data="{StaticResource Folder}"
+                              Fill="{DynamicResource MahApps.Brushes.ThemeForeground}"
+                              Stretch="Uniform" />
+                        <Label Margin="0"
+                               Content="Log Folder" />
+                    </StackPanel>
+                </Button>
                 <mah:ToggleSwitch MinWidth="0"
                                   ContentPadding="0"
                                   DataContext="{Binding TraceLogViewModel}"

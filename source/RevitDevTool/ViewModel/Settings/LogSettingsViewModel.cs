@@ -3,7 +3,6 @@ using Microsoft.Extensions.Logging;
 using RevitDevTool.Messages;
 using RevitDevTool.Models.Config;
 using RevitDevTool.Services;
-using RevitDevTool.Utils;
 using System.Diagnostics;
 
 // ReSharper disable UnusedParameterInPartialMethod
@@ -28,7 +27,7 @@ public partial class LogSettingsViewModel : ObservableObject
     [ObservableProperty] private bool _includeWpfTrace;
     [ObservableProperty] private RollingInterval _timeInterval;
     [ObservableProperty] private int _stackTraceDepth;
-    [ObservableProperty] private string _filePath = string.Empty;
+    [ObservableProperty] private string _logFolder = string.Empty;
 
     private Snapshot _baseline;
 
@@ -42,7 +41,11 @@ public partial class LogSettingsViewModel : ObservableObject
     }
 
     partial void OnLogLevelChanged(LogLevel value) => UpdateHasPendingChanges();
-    partial void OnIsSaveLogEnabledChanged(bool value) => UpdateHasPendingChanges();
+    partial void OnIsSaveLogEnabledChanged(bool value)
+    {
+        WeakReferenceMessenger.Default.Send(new IsSaveLogChangedMessage(value));
+        UpdateHasPendingChanges();
+    }
     partial void OnUseExternalFileOnlyChanged(bool value) => UpdateHasPendingChanges();
     partial void OnSaveFormatChanged(LogSaveFormat value) => UpdateHasPendingChanges();
     partial void OnIncludeStackTraceChanged(bool value) => UpdateHasPendingChanges();
@@ -50,7 +53,7 @@ public partial class LogSettingsViewModel : ObservableObject
     partial void OnIncludeWpfTraceChanged(bool value) => UpdateHasPendingChanges();
     partial void OnTimeIntervalChanged(RollingInterval value) => UpdateHasPendingChanges();
     partial void OnStackTraceDepthChanged(int value) => UpdateHasPendingChanges();
-    partial void OnFilePathChanged(string value) => UpdateHasPendingChanges();
+    partial void OnLogFolderChanged(string value) => UpdateHasPendingChanges();
 
     private void LoadFromConfig()
     {
@@ -64,7 +67,7 @@ public partial class LogSettingsViewModel : ObservableObject
         WpfTraceLevel = config.WpfTraceLevel;
         StackTraceDepth = config.StackTraceDepth;
         TimeInterval = config.TimeInterval;
-        FilePath = config.FilePath;
+        LogFolder = config.LogFolder;
     }
 
     private void SaveToConfig()
@@ -79,7 +82,7 @@ public partial class LogSettingsViewModel : ObservableObject
         config.WpfTraceLevel = WpfTraceLevel;
         config.StackTraceDepth = StackTraceDepth;
         config.TimeInterval = TimeInterval;
-        config.FilePath = FilePath;
+        config.LogFolder = LogFolder;
         _settingsService.SaveSettings();
     }
 
@@ -108,7 +111,7 @@ public partial class LogSettingsViewModel : ObservableObject
             IncludeWpfTrace,
             TimeInterval,
             StackTraceDepth,
-            FilePath
+            LogFolder
         );
 
         HasPendingChanges = false;
@@ -126,7 +129,7 @@ public partial class LogSettingsViewModel : ObservableObject
             || _baseline.IncludeWpfTrace != IncludeWpfTrace
             || _baseline.TimeInterval != TimeInterval
             || _baseline.StackTraceDepth != StackTraceDepth
-            || !string.Equals(_baseline.FilePath, FilePath, StringComparison.OrdinalIgnoreCase);
+            || !string.Equals(_baseline.LogFolder, LogFolder, StringComparison.OrdinalIgnoreCase);
     }
 
     private readonly record struct Snapshot(
@@ -139,31 +142,30 @@ public partial class LogSettingsViewModel : ObservableObject
         bool IncludeWpfTrace,
         RollingInterval TimeInterval,
         int StackTraceDepth,
-        string FilePath);
+        string LogFolder);
 
     [RelayCommand]
-    private void BrowseFile()
+    private void BrowseFolder()
     {
-        var filter = SaveFormat switch
+#if NET8_0_OR_GREATER
+        var dialog = new Microsoft.Win32.OpenFolderDialog
         {
-            LogSaveFormat.Sqlite => "SQLite Database (*.db)|*.db",
-            LogSaveFormat.Json => "JSON Files (*.json)|*.json",
-            LogSaveFormat.Clef => "CLEF Files (*.clef)|*.clef",
-            _ => "All Files (*.*)|*.*"
+            Title = "Select log folder",
+            Multiselect = false
         };
-
-        var dialog = new Microsoft.Win32.SaveFileDialog
-        {
-            Filter = filter,
-            DefaultExt = SaveFormat.ToFileExtension(),
-            FileName = "log"
-        };
-
         if (dialog.ShowDialog() == true)
         {
-            FilePath = dialog.FileName;
+            LogFolder = dialog.FolderName;
         }
+#else
+        using var dialog = new Microsoft.WindowsAPICodePack.Dialogs.CommonOpenFileDialog();
+        dialog.Title = "Select log folder";
+        dialog.IsFolderPicker = true;
+        dialog.Multiselect = false;
+        if (dialog.ShowDialog() == Microsoft.WindowsAPICodePack.Dialogs.CommonFileDialogResult.Ok)
+        {
+            LogFolder = dialog.FileName;
+        }
+#endif
     }
 }
-
-

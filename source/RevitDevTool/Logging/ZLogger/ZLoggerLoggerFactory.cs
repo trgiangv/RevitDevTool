@@ -1,5 +1,6 @@
 using Microsoft.Extensions.Logging;
 using RevitDevTool.Models.Config;
+using RevitDevTool.Utils;
 using System.IO;
 using ZLogger;
 using MsLoggerFactory = Microsoft.Extensions.Logging.LoggerFactory;
@@ -57,16 +58,13 @@ internal sealed class ZLoggerLoggerFactory : ILoggerFactory
             ? LogSaveFormat.Json
             : logConfig.SaveFormat;
 
-        var directory = Path.GetDirectoryName(logConfig.FilePath) ?? ".";
-        var fileNameWithoutExt = Path.GetFileNameWithoutExtension(logConfig.FilePath);
-        var extension = Path.GetExtension(logConfig.FilePath);
-
-        // Use RollingFile for time-based and size-based rotation (matching Serilog behavior)
+        var extension = saveFormat.ToFileExtension();
+        var directory = logConfig.LogFolder;
+        
         builder.AddZLoggerRollingFile(options =>
         {
-            // File path pattern: {filename}_{date}_{sequence}.{ext}
             options.FilePathSelector = (timestamp, seq) =>
-                Path.Combine(directory, $"{fileNameWithoutExt}_{timestamp.ToLocalTime():yyyyMMdd}_{seq:000}{extension}");
+                Path.Combine(directory, $"log_{timestamp.ToLocalTime():yyyyMMdd}_{seq:000}.{extension}");
             options.RollingInterval = logConfig.TimeInterval.ToZlogger();
             options.RollingSizeKB = DefaultRollingSizeKb;
             options.FileShared = true;
