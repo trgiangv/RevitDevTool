@@ -33,7 +33,7 @@ internal sealed class ZloggerRichTextBoxSink : ILogOutputSink
         };
 
         _host = new WindowsFormsHost { Child = _richTextBox };
-        _host.Loaded += (_, _) => ApplyTheme(ThemeManager.Current.ActualApplicationTheme == AppTheme.Dark);
+        _host.Loaded += (_, _) => _richTextBox.SetRichTextBoxTheme(ThemeManager.Current.ActualApplicationTheme == AppTheme.Dark);
     }
 
     /// <summary>
@@ -57,9 +57,9 @@ internal sealed class ZloggerRichTextBoxSink : ILogOutputSink
     public void SetTheme(bool isDarkTheme)
     {
         if (_host.Dispatcher.CheckAccess())
-            ApplyTheme(isDarkTheme);
+            _richTextBox.SetRichTextBoxTheme(isDarkTheme);
         else
-            _host.Dispatcher.Invoke(() => ApplyTheme(isDarkTheme));
+            _host.Dispatcher.Invoke(() => _richTextBox.SetRichTextBoxTheme(isDarkTheme));
     }
 
     public object GetHostControl() => _host;
@@ -95,15 +95,6 @@ internal sealed class ZloggerRichTextBoxSink : ILogOutputSink
         if (_provider == null) return;
         _provider.Dispose();
         _provider = null;
-    }
-
-    private void ApplyTheme(bool isDarkTheme)
-    {
-        _richTextBox.BackColor = isDarkTheme
-            ? LogThemePresets.DarkBackground
-            : LogThemePresets.LightBackground;
-
-        Win32Utils.SetImmersiveDarkMode(_richTextBox.Handle, isDarkTheme);
     }
 
     public void Dispose()

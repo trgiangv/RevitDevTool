@@ -3,7 +3,7 @@ using RevitDevTool.Models.Config;
 namespace RevitDevTool.Services;
 
 /// <summary>
-/// Interface for settings service
+/// Interface for settings service.
 /// </summary>
 public interface ISettingsService
 {

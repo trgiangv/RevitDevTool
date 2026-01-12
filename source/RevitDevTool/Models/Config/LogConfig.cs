@@ -1,5 +1,4 @@
 using Microsoft.Extensions.Logging;
-using RevitDevTool.Utils;
 using System.Diagnostics;
 using System.Text.Json.Serialization;
 
@@ -39,7 +38,7 @@ public sealed class LogConfig
     public RollingInterval TimeInterval { get; set; } = RollingInterval.Day;
 
     [JsonPropertyName("FilePath")]
-    public string FilePath { get; set; } = SettingsUtils.GetDefaultLogPath("log");
+    public string FilePath { get; set; } = string.Empty;
 }
 
 public enum LogSaveFormat

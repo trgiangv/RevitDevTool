@@ -6,14 +6,30 @@ namespace RevitDevTool.Controllers;
 
 internal static class VisualizationController
 {
-    public static BoundingBoxVisualizationServer BoundingBoxVisualizationServer { get; } = new();
-    public static MeshVisualizationServer MeshVisualizationServer { get; } = new();
-    public static PolylineVisualizationServer PolylineVisualizationServer { get; } = new();
-    public static SolidVisualizationServer SolidVisualizationServer { get; } = new();
-    public static XyzVisualizationServer XyzVisualizationServer { get; } = new();
-    public static FaceVisualizationServer FaceVisualizationServer { get; } = new();
+    private static BoundingBoxVisualizationServer? _boundingBoxVisualizationServer;
+    private static MeshVisualizationServer? _meshVisualizationServer;
+    private static PolylineVisualizationServer? _polylineVisualizationServer;
+    private static SolidVisualizationServer? _solidVisualizationServer;
+    private static XyzVisualizationServer? _xyzVisualizationServer;
+    private static FaceVisualizationServer? _faceVisualizationServer;
 
-    private static readonly List<(IVisualizationServerLifeCycle Server, IVisualizationViewModel ViewModel)> ServerViewModelPairs =
+    public static BoundingBoxVisualizationServer BoundingBoxVisualizationServer =>
+        _boundingBoxVisualizationServer ??= Host.GetService<BoundingBoxVisualizationServer>();
+    public static MeshVisualizationServer MeshVisualizationServer =>
+        _meshVisualizationServer ??= Host.GetService<MeshVisualizationServer>();
+    public static PolylineVisualizationServer PolylineVisualizationServer =>
+        _polylineVisualizationServer ??= Host.GetService<PolylineVisualizationServer>();
+    public static SolidVisualizationServer SolidVisualizationServer =>
+        _solidVisualizationServer ??= Host.GetService<SolidVisualizationServer>();
+    public static XyzVisualizationServer XyzVisualizationServer =>
+        _xyzVisualizationServer ??= Host.GetService<XyzVisualizationServer>();
+    public static FaceVisualizationServer FaceVisualizationServer =>
+        _faceVisualizationServer ??= Host.GetService<FaceVisualizationServer>();
+
+    private static List<(IVisualizationServerLifeCycle Server, IVisualizationViewModel ViewModel)>? _serverViewModelPairs;
+
+    private static List<(IVisualizationServerLifeCycle Server, IVisualizationViewModel ViewModel)> ServerViewModelPairs =>
+        _serverViewModelPairs ??=
         [
             (BoundingBoxVisualizationServer, Host.GetService<BoundingBoxVisualizationViewModel>()),
             (MeshVisualizationServer, Host.GetService<MeshVisualizationViewModel>()),

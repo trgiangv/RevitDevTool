@@ -16,22 +16,23 @@ public sealed class SolidVisualizationServer : VisualizationServer<Solid>
     private readonly List<RenderingBufferStorage> _faceBuffers = [];
     private readonly List<RenderingBufferStorage> _edgeBuffers = [];
 
-    private double _transparency = SettingsService.Instance.VisualizationConfig.SolidSettings.Transparency / 100;
-    private double _scale = SettingsService.Instance.VisualizationConfig.SolidSettings.Scale / 100;
+    private double _transparency;
+    private double _scale;
+    private Color _faceColor;
+    private Color _edgeColor;
+    private bool _drawFace;
+    private bool _drawEdge;
 
-    private Color _faceColor = new(
-        SettingsService.Instance.VisualizationConfig.SolidSettings.FaceColor.R,
-        SettingsService.Instance.VisualizationConfig.SolidSettings.FaceColor.G,
-        SettingsService.Instance.VisualizationConfig.SolidSettings.FaceColor.B
-        );
-    private Color _edgeColor = new(
-        SettingsService.Instance.VisualizationConfig.SolidSettings.EdgeColor.R,
-        SettingsService.Instance.VisualizationConfig.SolidSettings.EdgeColor.G,
-        SettingsService.Instance.VisualizationConfig.SolidSettings.EdgeColor.B
-        );
-
-    private bool _drawFace = SettingsService.Instance.VisualizationConfig.SolidSettings.ShowFace;
-    private bool _drawEdge = SettingsService.Instance.VisualizationConfig.SolidSettings.ShowEdge;
+    public SolidVisualizationServer(ISettingsService settingsService)
+    {
+        var settings = settingsService.VisualizationConfig.SolidSettings;
+        _transparency = settings.Transparency / 100;
+        _scale = settings.Scale / 100;
+        _faceColor = new Color(settings.FaceColor.R, settings.FaceColor.G, settings.FaceColor.B);
+        _edgeColor = new Color(settings.EdgeColor.R, settings.EdgeColor.G, settings.EdgeColor.B);
+        _drawFace = settings.ShowFace;
+        _drawEdge = settings.ShowEdge;
+    }
 
     public override bool UseInTransparentPass(Autodesk.Revit.DB.View view) => _drawFace && _transparency > 0;
 

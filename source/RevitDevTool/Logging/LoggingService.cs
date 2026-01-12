@@ -10,7 +10,11 @@ namespace RevitDevTool.Logging;
 /// Core logging service implementation.
 /// Manages the complete logging lifecycle including initialization, trace listeners, and output.
 /// </summary>
-internal sealed class LoggingService(ISettingsService settingsService, ILoggerFactory loggerFactory, ITraceListenerFactory traceListenerFactory, ILogOutputSink outputSink) : ILoggingService
+internal sealed class LoggingService(
+    ISettingsService settingsService,
+    ILoggerFactory loggerFactory,
+    ITraceListenerFactory traceListenerFactory,
+    ILogOutputSink outputSink) : ILoggingService
 {
     private ILoggerAdapter? _logger;
     private GeometryListener? _geometryListener;
@@ -48,12 +52,16 @@ internal sealed class LoggingService(ISettingsService settingsService, ILoggerFa
 
     public void RegisterTraceListeners()
     {
-        TraceUtils.RegisterTraceListeners(TraceListener, _geometryListener, _notifyListener);
+        TraceUtils.RegisterTraceListeners(
+            settingsService.LogConfig.IncludeStackTrace,
+            TraceListener, _geometryListener, _notifyListener);
     }
 
     public void UnregisterTraceListeners()
     {
-        TraceUtils.UnregisterTraceListeners(TraceListener, _geometryListener, _notifyListener);
+        TraceUtils.UnregisterTraceListeners(
+            settingsService.LogConfig.IncludeStackTrace,
+            TraceListener, _geometryListener, _notifyListener);
     }
 
     public void ClearOutput()

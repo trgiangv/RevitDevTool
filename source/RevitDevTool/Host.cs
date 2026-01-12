@@ -4,14 +4,16 @@ using RevitDevTool.Controllers;
 using RevitDevTool.Logging;
 using RevitDevTool.Logging.ZLogger;
 using RevitDevTool.Services;
+using RevitDevTool.Services.Configuration;
+using RevitDevTool.Utils;
 using RevitDevTool.View;
 using RevitDevTool.View.Settings;
 using RevitDevTool.View.Settings.Visualization;
 using RevitDevTool.ViewModel;
 using RevitDevTool.ViewModel.Settings;
 using RevitDevTool.ViewModel.Settings.Visualization;
+using RevitDevTool.Visualization.Server;
 using System.IO;
-using System.Reflection;
 
 namespace RevitDevTool;
 
@@ -21,9 +23,10 @@ public static class Host
 
     public static void Start()
     {
+        var contentRoot = SettingsUtils.GetContentRootPath();
         var builder = Microsoft.Extensions.Hosting.Host.CreateApplicationBuilder(new HostApplicationBuilderSettings
         {
-            ContentRootPath = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location),
+            ContentRootPath = contentRoot,
             DisableDefaults = true,
 #if RELEASE
             EnvironmentName = Environments.Production
@@ -32,14 +35,28 @@ public static class Host
 #endif
         });
 
+        ConfigureOptions(builder.Services, contentRoot);
         ConfigureServices(builder.Services);
 
         _host = builder.Build();
         _host.Start();
     }
 
+    private static void ConfigureOptions(IServiceCollection services, string contentRoot)
+    {
+        services.Configure<PathOptions>(options =>
+        {
+            options.RootDirectory = contentRoot;
+            options.SettingsDirectory = Path.Combine(contentRoot, "Settings");
+            options.LogsDirectory = Path.Combine(contentRoot, "Logs");
+            options.EnsureDirectoriesExist();
+        });
+    }
+
     private static void ConfigureServices(IServiceCollection services)
     {
+        // Core services
+        services.AddSingleton<IFileConfig<PathOptions>, FileConfig>();
         services.AddSingleton<ISettingsService, SettingsService>();
         services.AddHostedService<HostBackgroundController>();
 
@@ -56,7 +73,15 @@ public static class Host
         // Logging service
         services.AddSingleton<ILoggingService, LoggingService>();
 
-        // Visualization
+        // Visualization Servers
+        services.AddSingleton<BoundingBoxVisualizationServer>();
+        services.AddSingleton<FaceVisualizationServer>();
+        services.AddSingleton<MeshVisualizationServer>();
+        services.AddSingleton<PolylineVisualizationServer>();
+        services.AddSingleton<SolidVisualizationServer>();
+        services.AddSingleton<XyzVisualizationServer>();
+
+        // Visualization ViewModels
         services.AddSingleton<BoundingBoxVisualizationViewModel>();
         services.AddSingleton<FaceVisualizationViewModel>();
         services.AddSingleton<MeshVisualizationViewModel>();
@@ -64,6 +89,7 @@ public static class Host
         services.AddSingleton<SolidVisualizationViewModel>();
         services.AddSingleton<XyzVisualizationViewModel>();
 
+        // Visualization Views
         services.AddSingleton<BoundingBoxVisualizationSettingsView>();
         services.AddSingleton<FaceVisualizationSettingsView>();
         services.AddSingleton<MeshVisualizationSettingsView>();
@@ -99,3 +125,4 @@ public static class Host
         return _host!.Services.GetService(serviceType);
     }
 }
+

@@ -8,7 +8,7 @@ namespace RevitDevTool.Models.Trace;
 /// Used to trigger actions like showing the floating TraceLog window.
 /// Only responds to trace events when Revit is fully initialized and ready.
 /// </summary>
-internal class NotifyListener : TraceListener
+internal sealed class NotifyListener : TraceListener
 {
     /// <summary>
     /// Event raised when any trace output is received (only when Revit is active).

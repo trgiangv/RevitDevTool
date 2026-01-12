@@ -1,4 +1,5 @@
 using Autodesk.Windows;
+using RevitDevTool.Logging.Theme;
 using System.Runtime.InteropServices;
 using System.Windows;
 using System.Windows.Interop;
@@ -41,9 +42,6 @@ public static class Win32Utils
     private const int WS_MAXIMIZEBOX = 0x10000;
     private const int WS_MINIMIZEBOX = 0x20000;
 
-    public static bool IsImmersiveDarkModeSupported { get; } =
-        Environment.OSVersion.Version.Build >= 19041;
-
     public static void SetImmersiveDarkMode(this Window window, bool enable)
     {
         var helper = new WindowInteropHelper(window);
@@ -51,15 +49,10 @@ public static class Win32Utils
         SetImmersiveDarkMode(helper.Handle, enable);
     }
 
-    public static void SetImmersiveDarkMode(IntPtr hwnd, bool isDark)
+    private static void SetImmersiveDarkMode(IntPtr hwnd, bool isDark)
     {
         if (hwnd == IntPtr.Zero) return;
         _ = SetWindowTheme(hwnd, isDark ? "DarkMode_Explorer" : "Explorer", null);
-        if (!IsImmersiveDarkModeSupported)
-        {
-            return;
-        }
-
         var useDarkMode = isDark ? 1 : 0;
         _ = DwmSetWindowAttribute(hwnd, DWMWA_USE_IMMERSIVE_DARK_MODE, ref useDarkMode, sizeof(int));
     }
@@ -77,5 +70,13 @@ public static class Win32Utils
     {
         window.Owner = MainWindow.getMainWnd();
         window.Closed += (EventHandler)((_, _) => SetForegroundWindow(ComponentManager.ApplicationWindow));
+    }
+
+    public static void SetRichTextBoxTheme(this System.Windows.Forms.RichTextBox richTextBox, bool isDarkTheme)
+    {
+        richTextBox.BackColor = isDarkTheme
+            ? LogThemePresets.DarkBackground
+            : LogThemePresets.LightBackground;
+        SetImmersiveDarkMode(richTextBox.Handle, isDarkTheme);
     }
 }

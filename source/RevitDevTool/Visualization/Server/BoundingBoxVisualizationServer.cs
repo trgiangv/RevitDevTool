@@ -25,24 +25,27 @@ public sealed class BoundingBoxVisualizationServer : VisualizationServer<Boundin
     ];
     private static readonly XYZ UnitVector = new(1, 1, 1);
 
-    private double _transparency = SettingsService.Instance.VisualizationConfig.BoundingBoxSettings.Transparency / 100;
-    private double _scale = SettingsService.Instance.VisualizationConfig.BoundingBoxSettings.Scale / 100;
-    private bool _drawSurface = SettingsService.Instance.VisualizationConfig.BoundingBoxSettings.ShowSurface;
-    private bool _drawEdge = SettingsService.Instance.VisualizationConfig.BoundingBoxSettings.ShowEdge;
-    private bool _drawAxis = SettingsService.Instance.VisualizationConfig.BoundingBoxSettings.ShowAxis;
+    private double _transparency;
+    private double _scale;
+    private bool _drawSurface;
+    private bool _drawEdge;
+    private bool _drawAxis;
+    private Color _surfaceColor;
+    private Color _edgeColor;
+    private Color _axisColor;
 
-    private Color _surfaceColor = new(
-        SettingsService.Instance.VisualizationConfig.BoundingBoxSettings.SurfaceColor.R,
-        SettingsService.Instance.VisualizationConfig.BoundingBoxSettings.SurfaceColor.G,
-        SettingsService.Instance.VisualizationConfig.BoundingBoxSettings.SurfaceColor.B);
-    private Color _edgeColor = new(
-        SettingsService.Instance.VisualizationConfig.BoundingBoxSettings.EdgeColor.R,
-        SettingsService.Instance.VisualizationConfig.BoundingBoxSettings.EdgeColor.G,
-        SettingsService.Instance.VisualizationConfig.BoundingBoxSettings.EdgeColor.B);
-    private Color _axisColor = new(
-        SettingsService.Instance.VisualizationConfig.BoundingBoxSettings.AxisColor.R,
-        SettingsService.Instance.VisualizationConfig.BoundingBoxSettings.AxisColor.G,
-        SettingsService.Instance.VisualizationConfig.BoundingBoxSettings.AxisColor.B);
+    public BoundingBoxVisualizationServer(ISettingsService settingsService)
+    {
+        var settings = settingsService.VisualizationConfig.BoundingBoxSettings;
+        _transparency = settings.Transparency / 100;
+        _scale = settings.Scale / 100;
+        _drawSurface = settings.ShowSurface;
+        _drawEdge = settings.ShowEdge;
+        _drawAxis = settings.ShowAxis;
+        _surfaceColor = new Color(settings.SurfaceColor.R, settings.SurfaceColor.G, settings.SurfaceColor.B);
+        _edgeColor = new Color(settings.EdgeColor.R, settings.EdgeColor.G, settings.EdgeColor.B);
+        _axisColor = new Color(settings.AxisColor.R, settings.AxisColor.G, settings.AxisColor.B);
+    }
 
     public override bool UseInTransparentPass(Autodesk.Revit.DB.View view) => _drawSurface && _transparency > 0;
 

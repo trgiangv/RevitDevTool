@@ -18,28 +18,27 @@ public sealed class PolylineVisualizationServer : VisualizationServer<GeometryOb
     private readonly List<RenderingBufferStorage> _curveBuffers = [];
     private readonly List<RenderingBufferStorage> _normalsBuffers = [];
 
-    private double _transparency = SettingsService.Instance.VisualizationConfig.PolylineSettings.Transparency;
-    private double _diameter = SettingsService.Instance.VisualizationConfig.PolylineSettings.Diameter;
+    private double _transparency;
+    private double _diameter;
+    private Color _surfaceColor;
+    private Color _curveColor;
+    private Color _directionColor;
+    private bool _drawCurve;
+    private bool _drawDirection;
+    private bool _drawSurface;
 
-    private Color _surfaceColor = new(
-        SettingsService.Instance.VisualizationConfig.PolylineSettings.SurfaceColor.R,
-        SettingsService.Instance.VisualizationConfig.PolylineSettings.SurfaceColor.G,
-        SettingsService.Instance.VisualizationConfig.PolylineSettings.SurfaceColor.B
-        );
-    private Color _curveColor = new(
-        SettingsService.Instance.VisualizationConfig.PolylineSettings.CurveColor.R,
-        SettingsService.Instance.VisualizationConfig.PolylineSettings.CurveColor.G,
-        SettingsService.Instance.VisualizationConfig.PolylineSettings.CurveColor.B
-        );
-    private Color _directionColor = new(
-        SettingsService.Instance.VisualizationConfig.PolylineSettings.DirectionColor.R,
-        SettingsService.Instance.VisualizationConfig.PolylineSettings.DirectionColor.G,
-        SettingsService.Instance.VisualizationConfig.PolylineSettings.DirectionColor.B
-        );
-
-    private bool _drawCurve = SettingsService.Instance.VisualizationConfig.PolylineSettings.ShowCurve;
-    private bool _drawDirection = SettingsService.Instance.VisualizationConfig.PolylineSettings.ShowDirection;
-    private bool _drawSurface = SettingsService.Instance.VisualizationConfig.PolylineSettings.ShowSurface;
+    public PolylineVisualizationServer(ISettingsService settingsService)
+    {
+        var settings = settingsService.VisualizationConfig.PolylineSettings;
+        _transparency = settings.Transparency;
+        _diameter = settings.Diameter;
+        _surfaceColor = new Color(settings.SurfaceColor.R, settings.SurfaceColor.G, settings.SurfaceColor.B);
+        _curveColor = new Color(settings.CurveColor.R, settings.CurveColor.G, settings.CurveColor.B);
+        _directionColor = new Color(settings.DirectionColor.R, settings.DirectionColor.G, settings.DirectionColor.B);
+        _drawCurve = settings.ShowCurve;
+        _drawDirection = settings.ShowDirection;
+        _drawSurface = settings.ShowSurface;
+    }
 
     public override bool UseInTransparentPass(Autodesk.Revit.DB.View view) => _drawSurface && _transparency > 0;
     public override Outline? GetBoundingBox(Autodesk.Revit.DB.View view) => null;

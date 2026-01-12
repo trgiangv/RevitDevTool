@@ -3,7 +3,7 @@ using System.Diagnostics;
 
 namespace RevitDevTool.Models.Trace;
 
-public class GeometryListener : TraceListener
+public sealed class GeometryListener : TraceListener
 {
     public override void Write(object? o)
     {

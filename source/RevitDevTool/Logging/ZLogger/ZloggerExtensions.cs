@@ -1,14 +1,27 @@
-using RevitDevTool.Logging.Theme;
+﻿using RevitDevTool.Logging.Theme;
 using RevitDevTool.RichTextBox.Colored.Themes;
+using InternalTimeInterval = RevitDevTool.Models.Config.RollingInterval;
 using ZLoggerTheme = RevitDevTool.RichTextBox.Colored.Themes.Theme;
+using ZloggerTimeInterval = ZLogger.Providers.RollingInterval;
 
 namespace RevitDevTool.Logging.ZLogger;
 
-/// <summary>
-/// Converts library-agnostic LogTheme to ZLogger RichTextBox-specific Theme.
-/// </summary>
-internal static class ZLoggerThemeAdapter
+public static class ZloggerUtils
 {
+    public static ZloggerTimeInterval ToZlogger(this InternalTimeInterval interval)
+    {
+        return interval switch
+        {
+            InternalTimeInterval.Infinite => ZloggerTimeInterval.Infinite,
+            InternalTimeInterval.Year => ZloggerTimeInterval.Year,
+            InternalTimeInterval.Month => ZloggerTimeInterval.Month,
+            InternalTimeInterval.Day => ZloggerTimeInterval.Day,
+            InternalTimeInterval.Hour => ZloggerTimeInterval.Hour,
+            InternalTimeInterval.Minute => ZloggerTimeInterval.Minute,
+            _ => ZloggerTimeInterval.Day
+        };
+    }
+
     public static ZLoggerTheme ToZLoggerTheme(this LogTheme logTheme)
     {
         var defaultStyle = new Style(logTheme.DefaultStyle.Foreground, logTheme.DefaultStyle.Background);

@@ -1,15 +1,43 @@
+﻿using Microsoft.Extensions.Logging;
 using RevitDevTool.Logging.Theme;
+using Serilog.Events;
+using InternalTimeInterval = RevitDevTool.Models.Config.RollingInterval;
 using SerilogStyle = Serilog.Sinks.RichTextBoxForms.Themes.Style;
 using SerilogStyleToken = Serilog.Sinks.RichTextBoxForms.Themes.StyleToken;
 using SerilogTheme = Serilog.Sinks.RichTextBoxForms.Themes.Theme;
-
+using SerilogTimeInterval = Serilog.RollingInterval;
 namespace RevitDevTool.Logging.Serilog;
 
-/// <summary>
-/// Converts library-agnostic LogTheme to Serilog-specific Theme.
-/// </summary>
-internal static class SerilogThemeAdapter
+public static class SerilogUtils
 {
+    public static LogEventLevel ToSerilog(this LogLevel level)
+    {
+        return level switch
+        {
+            LogLevel.Trace => LogEventLevel.Verbose,
+            LogLevel.Debug => LogEventLevel.Debug,
+            LogLevel.Information => LogEventLevel.Information,
+            LogLevel.Warning => LogEventLevel.Warning,
+            LogLevel.Error => LogEventLevel.Error,
+            LogLevel.Critical => LogEventLevel.Fatal,
+            _ => LogEventLevel.Debug
+        };
+    }
+
+    public static SerilogTimeInterval ToSerilog(this InternalTimeInterval interval)
+    {
+        return interval switch
+        {
+            InternalTimeInterval.Infinite => SerilogTimeInterval.Infinite,
+            InternalTimeInterval.Year => SerilogTimeInterval.Year,
+            InternalTimeInterval.Month => SerilogTimeInterval.Month,
+            InternalTimeInterval.Day => SerilogTimeInterval.Day,
+            InternalTimeInterval.Hour => SerilogTimeInterval.Hour,
+            InternalTimeInterval.Minute => SerilogTimeInterval.Minute,
+            _ => SerilogTimeInterval.Day
+        };
+    }
+
     public static SerilogTheme ToSerilogTheme(this LogTheme logTheme)
     {
         var defaultStyle = new SerilogStyle(logTheme.DefaultStyle.Foreground, logTheme.DefaultStyle.Background);

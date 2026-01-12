@@ -44,11 +44,7 @@ public partial class LogSettingsViewModel : ObservableObject
     partial void OnLogLevelChanged(LogLevel value) => UpdateHasPendingChanges();
     partial void OnIsSaveLogEnabledChanged(bool value) => UpdateHasPendingChanges();
     partial void OnUseExternalFileOnlyChanged(bool value) => UpdateHasPendingChanges();
-    partial void OnSaveFormatChanged(LogSaveFormat value)
-    {
-        CorrectFilePath();
-        UpdateHasPendingChanges();
-    }
+    partial void OnSaveFormatChanged(LogSaveFormat value) => UpdateHasPendingChanges();
     partial void OnIncludeStackTraceChanged(bool value) => UpdateHasPendingChanges();
     partial void OnWpfTraceLevelChanged(SourceLevels value) => UpdateHasPendingChanges();
     partial void OnIncludeWpfTraceChanged(bool value) => UpdateHasPendingChanges();
@@ -69,7 +65,6 @@ public partial class LogSettingsViewModel : ObservableObject
         StackTraceDepth = config.StackTraceDepth;
         TimeInterval = config.TimeInterval;
         FilePath = config.FilePath;
-        CorrectFilePath();
     }
 
     private void SaveToConfig()
@@ -84,7 +79,6 @@ public partial class LogSettingsViewModel : ObservableObject
         config.WpfTraceLevel = WpfTraceLevel;
         config.StackTraceDepth = StackTraceDepth;
         config.TimeInterval = TimeInterval;
-        CorrectFilePath();
         config.FilePath = FilePath;
         _settingsService.SaveSettings();
     }
@@ -147,24 +141,6 @@ public partial class LogSettingsViewModel : ObservableObject
         int StackTraceDepth,
         string FilePath);
 
-    private void CorrectFilePath()
-    {
-        var isReadOnly = SettingsUtils.CheckWriteAccess(FilePath);
-        var isNotValidPath = SettingsUtils.CheckValidPath(FilePath);
-        if (isNotValidPath || isReadOnly)
-        {
-            FilePath = SettingsUtils.GetDefaultLogPath(FileExtension);
-        }
-    }
-
-    private string FileExtension => SaveFormat switch
-    {
-        LogSaveFormat.Sqlite => "db",
-        LogSaveFormat.Json => "json",
-        LogSaveFormat.Clef => "clef",
-        _ => "log"
-    };
-
     [RelayCommand]
     private void BrowseFile()
     {
@@ -176,11 +152,10 @@ public partial class LogSettingsViewModel : ObservableObject
             _ => "All Files (*.*)|*.*"
         };
 
-        var extension = FileExtension;
         var dialog = new Microsoft.Win32.SaveFileDialog
         {
             Filter = filter,
-            DefaultExt = extension,
+            DefaultExt = SaveFormat.ToFileExtension(),
             FileName = "log"
         };
 

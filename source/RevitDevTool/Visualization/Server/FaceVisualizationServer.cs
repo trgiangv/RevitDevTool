@@ -17,25 +17,27 @@ public sealed class FaceVisualizationServer : VisualizationServer<Face>
     private readonly List<RenderingBufferStorage> _normalBuffers = [];
     private readonly List<RenderingBufferStorage> _surfaceBuffers = [];
 
-    private double _extrusion = SettingsService.Instance.VisualizationConfig.FaceSettings.Extrusion;
-    private double _transparency = SettingsService.Instance.VisualizationConfig.FaceSettings.Transparency;
+    private double _extrusion;
+    private double _transparency;
+    private Color _meshColor;
+    private Color _normalColor;
+    private Color _surfaceColor;
+    private bool _drawMeshGrid;
+    private bool _drawNormalVector;
+    private bool _drawSurface;
 
-    private Color _meshColor = new(
-        SettingsService.Instance.VisualizationConfig.FaceSettings.MeshColor.R,
-        SettingsService.Instance.VisualizationConfig.FaceSettings.MeshColor.G,
-        SettingsService.Instance.VisualizationConfig.FaceSettings.MeshColor.B);
-    private Color _normalColor = new(
-        SettingsService.Instance.VisualizationConfig.FaceSettings.NormalVectorColor.R,
-        SettingsService.Instance.VisualizationConfig.FaceSettings.NormalVectorColor.G,
-        SettingsService.Instance.VisualizationConfig.FaceSettings.NormalVectorColor.B);
-    private Color _surfaceColor = new(
-        SettingsService.Instance.VisualizationConfig.FaceSettings.SurfaceColor.R,
-        SettingsService.Instance.VisualizationConfig.FaceSettings.SurfaceColor.G,
-        SettingsService.Instance.VisualizationConfig.FaceSettings.SurfaceColor.B);
-
-    private bool _drawMeshGrid = SettingsService.Instance.VisualizationConfig.FaceSettings.ShowMeshGrid;
-    private bool _drawNormalVector = SettingsService.Instance.VisualizationConfig.FaceSettings.ShowNormalVector;
-    private bool _drawSurface = SettingsService.Instance.VisualizationConfig.FaceSettings.ShowSurface;
+    public FaceVisualizationServer(ISettingsService settingsService)
+    {
+        var settings = settingsService.VisualizationConfig.FaceSettings;
+        _extrusion = settings.Extrusion;
+        _transparency = settings.Transparency;
+        _meshColor = new Color(settings.MeshColor.R, settings.MeshColor.G, settings.MeshColor.B);
+        _normalColor = new Color(settings.NormalVectorColor.R, settings.NormalVectorColor.G, settings.NormalVectorColor.B);
+        _surfaceColor = new Color(settings.SurfaceColor.R, settings.SurfaceColor.G, settings.SurfaceColor.B);
+        _drawMeshGrid = settings.ShowMeshGrid;
+        _drawNormalVector = settings.ShowNormalVector;
+        _drawSurface = settings.ShowSurface;
+    }
 
     public override bool UseInTransparentPass(Autodesk.Revit.DB.View view) => _drawSurface && _transparency > 0;
 
