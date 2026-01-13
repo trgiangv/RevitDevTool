@@ -24,13 +24,13 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RevitDevTool", "source\Revi
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RevitDevTool.Test", "source\RevitDevTool.Test\RevitDevTool.Test.csproj", "{33C90C02-CA4E-4C48-B60D-D8F0EB44A8EB}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RevitDevTool.RichTextBox.Colored", "source\RevitDevTool.RichTextBox.Colored\RevitDevTool.RichTextBox.Colored.csproj", "{88E2CD4B-C261-481F-9107-12A39E604858}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ZLogger.RichTextBox.Winforms", "source\ZLogger.RichTextBox.Winforms\ZLogger.RichTextBox.Winforms.csproj", "{88E2CD4B-C261-481F-9107-12A39E604858}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "RichTextBox", "RichTextBox", "{B8EFCA5F-814F-285C-A8CB-F00F14650265}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RevitDevTool.RichTextBox.Colored.Demo", "source\RevitDevTool.RichTextBox.Colored.Demo\RevitDevTool.RichTextBox.Colored.Demo.csproj", "{506A15B9-E4A1-49E7-8B6C-E528C0BE855B}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ZLogger.RichTextBox.Winforms.Demo", "source\ZLogger.RichTextBox.Winforms.Demo\ZLogger.RichTextBox.Winforms.Demo.csproj", "{506A15B9-E4A1-49E7-8B6C-E528C0BE855B}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RevitDevTool.RichTextBox.Colored.Test", "source\RevitDevTool.RichTextBox.Colored.Test\RevitDevTool.RichTextBox.Colored.Test.csproj", "{4F28080D-268B-42CB-B36D-C25B61E6631C}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ZLogger.RichTextBox.Winforms.Test", "source\ZLogger.RichTextBox.Winforms.Test\ZLogger.RichTextBox.Winforms.Test.csproj", "{4F28080D-268B-42CB-B36D-C25B61E6631C}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
