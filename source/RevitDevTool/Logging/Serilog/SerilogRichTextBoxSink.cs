@@ -16,14 +16,14 @@ namespace RevitDevTool.Logging.Serilog;
 [UsedImplicitly]
 internal sealed class SerilogRichTextBoxSink : ILogOutputSink
 {
-    private readonly System.Windows.Forms.RichTextBox _richTextBox;
+    private readonly RichTextBox _richTextBox;
     private readonly WindowsFormsHost _host;
     private LibrarySink? _librarySink;
     private bool _disposed;
 
     public SerilogRichTextBoxSink()
     {
-        _richTextBox = new System.Windows.Forms.RichTextBox
+        _richTextBox = new RichTextBox
         {
             Font = new Font("Cascadia Mono", 9f, FontStyle.Regular, GraphicsUnit.Point),
             ReadOnly = true,
@@ -79,8 +79,7 @@ internal sealed class SerilogRichTextBoxSink : ILogOutputSink
             _richTextBox,
             out var sink,
             theme: theme,
-            autoScroll: true
-,
+            autoScroll: true,
             maxLogLines: 1000,
             formatProvider: CultureInfo.InvariantCulture,
             prettyPrintJson: true);

@@ -4,7 +4,6 @@ using RevitDevTool.Utils;
 using Serilog;
 using Serilog.Core;
 using Serilog.Events;
-using Serilog.Formatting.Compact;
 using Serilog.Formatting.Json;
 using System.IO;
 
@@ -55,18 +54,6 @@ internal sealed class SerilogLoggerFactory : ILoggerFactory
                 path: logFilePath,
                 shared: true,
                 rollingInterval: logConfig.TimeInterval.ToSerilog()),
-
-            LogSaveFormat.Clef => config.WriteTo.File(
-                formatter: new CompactJsonFormatter(),
-                path: logFilePath,
-                shared: true,
-                rollingInterval: logConfig.TimeInterval.ToSerilog()),
-
-            LogSaveFormat.Sqlite => config.WriteTo.SQLite(
-                sqliteDbPath: logFilePath,
-                tableName: "Logs",
-                storeTimestampInUtc: true),
-
             _ => config.WriteTo.File(
                 path: logFilePath,
                 outputTemplate: "{Timestamp:yyyy-MM-dd HH:mm:ss.fff} [{Level:u3}] {Message:lj}{NewLine}{Exception}",

@@ -27,6 +27,12 @@ internal sealed class LoggingService(
 
     public void Initialize(bool isDarkTheme)
     {
+        if (_logger != null)
+        {
+            Restart(isDarkTheme);
+            return;
+        }
+
         var config = settingsService.LogConfig;
 
         OutputSink?.SetTheme(isDarkTheme);

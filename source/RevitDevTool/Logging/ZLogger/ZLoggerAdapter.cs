@@ -1,6 +1,5 @@
 using Microsoft.Extensions.Logging;
 // ReSharper disable TemplateIsNotCompileTimeConstantProblem
-// ReSharper disable ConvertToPrimaryConstructor
 #pragma warning disable CA2254
 
 namespace RevitDevTool.Logging.ZLogger;
@@ -10,17 +9,10 @@ namespace RevitDevTool.Logging.ZLogger;
 /// Wraps Microsoft.Extensions.Logging.ILogger with ZLogger extensions.
 /// </summary>
 [UsedImplicitly]
-internal sealed class ZLoggerAdapter : ILoggerAdapter
+internal sealed class ZLoggerAdapter(ILogger logger) : ILoggerAdapter
 {
-    private readonly ILogger _logger;
-    private readonly Microsoft.Extensions.Logging.ILoggerFactory? _loggerFactory;
+    private readonly ILogger _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     private bool _disposed;
-
-    public ZLoggerAdapter(ILogger logger, Microsoft.Extensions.Logging.ILoggerFactory? loggerFactory = null)
-    {
-        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
-        _loggerFactory = loggerFactory;
-    }
 
     public void Verbose(string messageTemplate, params object?[] propertyValues)
         => _logger.Log(LogLevel.Trace, messageTemplate, propertyValues);
@@ -55,22 +47,19 @@ internal sealed class ZLoggerAdapter : ILoggerAdapter
     public ILoggerAdapter ForContext(string propertyName, object? value)
     {
         // ZLogger doesn't have built-in context like Serilog
-        // We can use BeginScope for similar functionality, but for simplicity
-        // we return the same adapter since ZLogger handles this differently
+        // Return same adapter since ZLogger handles this differently
         return this;
     }
 
     public ILoggerAdapter ForContext<T>() where T : class
     {
-        if (_loggerFactory == null) return this;
-        var typedLogger = _loggerFactory.CreateLogger<T>();
-        return new ZLoggerAdapter(typedLogger, _loggerFactory);
+        // ZLogger doesn't have built-in typed context like Serilog
+        return this;
     }
 
     public void Dispose()
     {
         if (_disposed) return;
-        _loggerFactory?.Dispose();
         _disposed = true;
     }
 }

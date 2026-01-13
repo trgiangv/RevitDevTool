@@ -13,7 +13,7 @@ public partial class TraceLogPageViewModel : ObservableObject, IRecipient<IsSave
 {
     private readonly LogSettingsViewModel _logSettingsViewModel;
     private readonly ISettingsService _settingsService;
-    
+
     public TraceLogViewModel TraceLogViewModel { get; }
     [ObservableProperty] private object? _currentPage;
     [ObservableProperty] private bool _isSettingsVisible;
@@ -51,8 +51,8 @@ public partial class TraceLogPageViewModel : ObservableObject, IRecipient<IsSave
     }
 
     public TraceLogPageViewModel(
-        TraceLogViewModel traceLogViewModel, 
-        LogSettingsViewModel logSettingsViewModel, 
+        TraceLogViewModel traceLogViewModel,
+        LogSettingsViewModel logSettingsViewModel,
         ISettingsService settingsService)
     {
         TraceLogViewModel = traceLogViewModel;

@@ -1,3 +1,4 @@
+using Cysharp.Text;
 using Microsoft.Extensions.Logging;
 using RevitDevTool.Models.Config;
 using RevitDevTool.Utils;
@@ -22,20 +23,15 @@ internal sealed class ZLoggerLoggerFactory : ILoggerFactory
 
     public ILoggerAdapter CreateLogger(LogConfig config, ILogOutputSink? outputSink, bool isDarkTheme)
     {
-        // Dispose previous factory if exists
-        _loggerFactory?.Dispose();
-
         _loggerFactory = MsLoggerFactory.Create(builder =>
         {
             builder.SetMinimumLevel(_minimumLevel);
 
-            // Add RichTextBox sink if available and not using external file only
             if (outputSink is ZloggerRichTextBoxSink richTextBoxSink && !config.UseExternalFileOnly)
             {
                 richTextBoxSink.ConfigureZLogger(builder, isDarkTheme);
             }
 
-            // Add file sink if save log is enabled
             if (config.IsSaveLogEnabled)
             {
                 ConfigureFileSink(builder, config);
@@ -43,7 +39,7 @@ internal sealed class ZLoggerLoggerFactory : ILoggerFactory
         });
 
         var logger = _loggerFactory.CreateLogger("RevitDevTool");
-        return new ZLoggerAdapter(logger, _loggerFactory);
+        return new ZLoggerAdapter(logger);
     }
 
     public void SetMinimumLevel(LogLevel level)
@@ -53,25 +49,30 @@ internal sealed class ZLoggerLoggerFactory : ILoggerFactory
 
     private static void ConfigureFileSink(ILoggingBuilder builder, LogConfig logConfig)
     {
-        // SQLite not supported by ZLogger - fallback to Json format
-        var saveFormat = logConfig.SaveFormat == LogSaveFormat.Sqlite
-            ? LogSaveFormat.Json
-            : logConfig.SaveFormat;
-
-        var extension = saveFormat.ToFileExtension();
+        var saveFormat = logConfig.SaveFormat;
+        var extension = logConfig.SaveFormat.ToFileExtension();
         var directory = logConfig.LogFolder;
-        
+
         builder.AddZLoggerRollingFile(options =>
         {
             options.FilePathSelector = (timestamp, seq) =>
-                Path.Combine(directory, $"log_{timestamp.ToLocalTime():yyyyMMdd}_{seq:000}.{extension}");
+            {
+                using var sb = ZString.CreateStringBuilder();
+                sb.Append(directory);
+                sb.Append(Path.DirectorySeparatorChar);
+                sb.Append("log_");
+                sb.Append(timestamp.ToLocalTime().ToString("yyyyMMdd"));
+                sb.Append('_');
+                sb.AppendFormat("{0:000}", seq);
+                sb.Append('.');
+                sb.Append(extension);
+                return sb.ToString();
+            };
             options.RollingInterval = logConfig.TimeInterval.ToZlogger();
             options.RollingSizeKB = DefaultRollingSizeKb;
             options.FileShared = true;
-            options.FullMode = BackgroundBufferFullMode.Drop;
+            options.FullMode = BackgroundBufferFullMode.Block;
             options.BackgroundBufferCapacity = DefaultBufferCapacity;
-
-            // Configure formatter based on save format
             ConfigureFormatter(options, saveFormat);
         });
     }
@@ -81,9 +82,6 @@ internal sealed class ZLoggerLoggerFactory : ILoggerFactory
         switch (format)
         {
             case LogSaveFormat.Json:
-                options.UseJsonFormatter();
-                break;
-            case LogSaveFormat.Clef:
                 options.UseJsonFormatter(formatter =>
                 {
                     formatter.IncludeProperties = IncludeProperties.Timestamp |
@@ -92,7 +90,8 @@ internal sealed class ZLoggerLoggerFactory : ILoggerFactory
                                                   IncludeProperties.ParameterKeyValues;
                 });
                 break;
-            default: // Text format
+            case LogSaveFormat.Text:
+            default:
                 options.UsePlainTextFormatter(formatter =>
                 {
                     formatter.SetPrefixFormatter($"{0:local-longdate} [{1:short}] ", FormatPrefix);

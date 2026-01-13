@@ -45,9 +45,7 @@ public static class SettingsUtils
     /// <returns></returns>
     public static string ToFileExtension(this LogSaveFormat format) => format switch
     {
-        LogSaveFormat.Sqlite => "db",
         LogSaveFormat.Json => "json",
-        LogSaveFormat.Clef => "clef",
         _ => "log"
     };
 }

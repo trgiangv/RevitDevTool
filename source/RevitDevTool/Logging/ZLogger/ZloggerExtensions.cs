@@ -1,7 +1,7 @@
 ﻿using RevitDevTool.Logging.Theme;
-using RevitDevTool.RichTextBox.Colored.Themes;
+using ZLogger.RichTextBox.Winforms.Themes;
 using InternalTimeInterval = RevitDevTool.Models.Config.RollingInterval;
-using ZLoggerTheme = RevitDevTool.RichTextBox.Colored.Themes.Theme;
+using ZLoggerTheme = ZLogger.RichTextBox.Winforms.Themes.Theme;
 using ZloggerTimeInterval = ZLogger.Providers.RollingInterval;
 
 namespace RevitDevTool.Logging.ZLogger;

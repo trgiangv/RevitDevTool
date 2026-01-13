@@ -22,13 +22,13 @@ public class TraceCommand : ExternalCommand, IExternalCommandAvailability
     private static bool IsForceHide { get; set; }
     internal static TraceLogViewModel? SharedViewModel { get; private set; }
     private static TraceLogWindow? FloatingWindow { get; set; }
-    private static bool HasDocumentOpened => Context.UiApplication.ActiveUIDocument is not null;
+    private static bool HasUiDocumentOpened => Context.UiApplication.ActiveUIDocument is not null;
 
     public override void Execute()
     {
         try
         {
-            if (!HasDocumentOpened)
+            if (!HasUiDocumentOpened)
             {
                 if (FloatingWindow != null)
                 {
@@ -102,7 +102,7 @@ public class TraceCommand : ExternalCommand, IExternalCommandAvailability
     {
         NotifyListener.TraceReceived -= TraceReceivedHandler;
 
-        if (HasDocumentOpened) return;
+        if (HasUiDocumentOpened) return;
         if (SharedViewModel is not { IsStarted: true })
         {
             NotifyListener.TraceReceived += TraceReceivedHandler;
@@ -124,15 +124,15 @@ public class TraceCommand : ExternalCommand, IExternalCommandAvailability
             SharedViewModel?.Dispose();
         }
 
-        var dockableWindow = Context.UiControlledApplication.GetDockablePane(PaneId);
+        var dockablePane = Context.UiControlledApplication.GetDockablePane(PaneId);
 
         if (IsForceHide)
         {
-            dockableWindow.Hide();
+            dockablePane.Hide();
         }
-        else if (!dockableWindow.IsShown())
+        else if (!dockablePane.IsShown())
         {
-            dockableWindow.Show();
+            dockablePane.Show();
         }
     }
 
@@ -153,7 +153,7 @@ public class TraceCommand : ExternalCommand, IExternalCommandAvailability
 
         return;
 
-        void Show()
+        static void Show()
         {
             FloatingWindow = Host.GetService<TraceLogWindow>();
             FloatingWindow.Closed += OnFloatingWindowClosed;
@@ -178,13 +178,13 @@ public class TraceCommand : ExternalCommand, IExternalCommandAvailability
         if (FloatingWindow == null) return;
         FloatingWindow.Closed -= OnFloatingWindowClosed;
         FloatingWindow = null;
-        if (HasDocumentOpened) return;
+        if (HasUiDocumentOpened) return;
         NotifyListener.TraceReceived += TraceReceivedHandler;
     }
 
     private static void OnDocumentClosed(object? sender, DocumentClosedEventArgs args)
     {
-        if (HasDocumentOpened) return;
+        if (HasUiDocumentOpened) return;
 
         if (SharedViewModel is null or { IsStarted: false })
         {

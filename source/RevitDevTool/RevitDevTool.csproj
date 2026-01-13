@@ -32,9 +32,7 @@
         
         <!-- Serilog -->
         <PackageReference Include="Serilog"/>
-        <PackageReference Include="Serilog.Formatting.Compact"/>
         <PackageReference Include="Serilog.Sinks.File"/>
-        <PackageReference Include="Serilog.Sinks.SQLite"/>
         <PackageReference Include="Serilog.Sinks.RichTextBox.WinForms.Colored"/>
         
         <!--Hosting-->
@@ -48,7 +46,7 @@
     </ItemGroup>
 
     <ItemGroup>
-        <ProjectReference Include="..\RevitDevTool.RichTextBox.Colored\RevitDevTool.RichTextBox.Colored.csproj" />
+        <ProjectReference Include="..\ZLogger.RichTextBox.Winforms\ZLogger.RichTextBox.Winforms.csproj" />
     </ItemGroup>
 
     <!-- Copy SQLite.Interop.dll -->

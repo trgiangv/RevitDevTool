@@ -45,13 +45,11 @@
                       Stretch="Uniform">
                     <Path.Style>
                         <Style TargetType="Path">
-                            <Setter Property="Data"
-                                    Value="{StaticResource Settings}" />
+                            <Setter Property="Data" Value="{StaticResource Settings}" />
                             <Style.Triggers>
                                 <DataTrigger Binding="{Binding Path=IsChecked, RelativeSource={RelativeSource AncestorType=ToggleButton}}"
                                              Value="True">
-                                    <Setter Property="Data"
-                                            Value="{StaticResource ArrowLeft}" />
+                                    <Setter Property="Data" Value="{StaticResource ArrowLeft}" />
                                 </DataTrigger>
                             </Style.Triggers>
                         </Style>
@@ -73,8 +71,8 @@
                               Data="{StaticResource ClearLog}"
                               Fill="{DynamicResource MahApps.Brushes.ThemeForeground}"
                               Stretch="Uniform" />
-                        <Label Margin="0"
-                               Content="Clear Log" />
+                        <TextBlock Margin="5"
+                                   Text="Clear Log" />
                     </StackPanel>
                 </Button>
                 <Button Margin="5,0"
@@ -90,8 +88,8 @@
                               Data="{StaticResource ClearGeometry}"
                               Fill="{DynamicResource MahApps.Brushes.ThemeForeground}"
                               Stretch="Uniform" />
-                        <Label Margin="0"
-                               Content="Clear Geometry" />
+                        <TextBlock Margin="5"
+                                   Text="Clear Geometry" />
                     </StackPanel>
                 </Button>
                 <Button Margin="0,0,5,0"
@@ -107,8 +105,8 @@
                               Data="{StaticResource Folder}"
                               Fill="{DynamicResource MahApps.Brushes.ThemeForeground}"
                               Stretch="Uniform" />
-                        <Label Margin="0"
-                               Content="Log Folder" />
+                        <TextBlock Margin="5,0"
+                                   Text="Log Folder" />
                     </StackPanel>
                 </Button>
                 <mah:ToggleSwitch MinWidth="0"

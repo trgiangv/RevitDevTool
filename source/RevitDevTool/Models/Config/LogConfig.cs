@@ -43,9 +43,7 @@ public sealed class LogConfig
 
 public enum LogSaveFormat
 {
-    Sqlite,
     Json,
-    Clef,
     Text
 }
 
