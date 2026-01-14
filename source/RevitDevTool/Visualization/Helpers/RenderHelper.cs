@@ -32,7 +32,7 @@ public static class RenderHelper
 
         var vertexStream = buffer.VertexBuffer.GetVertexStreamPosition();
         var normals = new List<XYZ>(mesh.NumberOfNormals);
-        
+
         for (var i = 0; i < mesh.Vertices.Count; i++)
         {
             var normal = RenderGeometryHelper.GetMeshVertexNormal(mesh, i, mesh.DistributionOfNormals);
@@ -43,7 +43,7 @@ public static class RenderHelper
         {
             var vertex = mesh.Vertices[i];
             var normal = normals[i];
-            var offsetVertex = vertex + normal * offset;
+            var offsetVertex = vertex + (normal * offset);
             var vertexPosition = new VertexPosition(offsetVertex);
             vertexStream.AddVertex(vertexPosition);
         }
@@ -58,9 +58,9 @@ public static class RenderHelper
         for (var i = 0; i < triangleCount; i++)
         {
             var meshTriangle = mesh.get_Triangle(i);
-            var index0 = (int) meshTriangle.get_Index(0);
-            var index1 = (int) meshTriangle.get_Index(1);
-            var index2 = (int) meshTriangle.get_Index(2);
+            var index0 = (int)meshTriangle.get_Index(0);
+            var index1 = (int)meshTriangle.get_Index(1);
+            var index2 = (int)meshTriangle.get_Index(2);
             indexStream.AddTriangle(new IndexTriangle(index0, index1, index2));
         }
 
@@ -166,10 +166,10 @@ public static class RenderHelper
         {
             for (var j = 0; j < segmentVerticesCount; j++)
             {
-                var currentStart = i * segmentVerticesCount + j;
-                var nextStart = (i + 1) * segmentVerticesCount + j;
-                var currentEnd = i * segmentVerticesCount + (j + 1) % segmentVerticesCount;
-                var nextEnd = (i + 1) * segmentVerticesCount + (j + 1) % segmentVerticesCount;
+                var currentStart = (i * segmentVerticesCount) + j;
+                var nextStart = ((i + 1) * segmentVerticesCount) + j;
+                var currentEnd = (i * segmentVerticesCount) + ((j + 1) % segmentVerticesCount);
+                var nextEnd = ((i + 1) * segmentVerticesCount) + ((j + 1) % segmentVerticesCount);
 
                 // First triangle
                 indexStream.AddLine(new IndexLine(currentStart, nextStart));
@@ -236,10 +236,10 @@ public static class RenderHelper
         {
             for (var j = 0; j < segmentVerticesCount; j++)
             {
-                var currentStart = i * segmentVerticesCount + j;
-                var nextStart = (i + 1) * segmentVerticesCount + j;
-                var currentEnd = i * segmentVerticesCount + (j + 1) % segmentVerticesCount;
-                var nextEnd = (i + 1) * segmentVerticesCount + (j + 1) % segmentVerticesCount;
+                var currentStart = (i * segmentVerticesCount) + j;
+                var nextStart = ((i + 1) * segmentVerticesCount) + j;
+                var currentEnd = (i * segmentVerticesCount) + ((j + 1) % segmentVerticesCount);
+                var nextEnd = ((i + 1) * segmentVerticesCount) + ((j + 1) % segmentVerticesCount);
 
                 // First triangle
                 indexStream.AddTriangle(new IndexTriangle(currentStart, nextStart, nextEnd));
@@ -274,7 +274,7 @@ public static class RenderHelper
         var triangleCount = mesh.NumTriangles;
 
         buffer.VertexBufferCount = vertexCount * 2;
-        buffer.PrimitiveCount = 3 * triangleCount * 2 + mesh.Vertices.Count;
+        buffer.PrimitiveCount = (3 * triangleCount * 2) + mesh.Vertices.Count;
 
         var vertexBufferSizeInFloats = VertexPosition.GetSizeInFloats() * buffer.VertexBufferCount;
         buffer.FormatBits = VertexFormatBits.Position;
@@ -299,13 +299,13 @@ public static class RenderHelper
         {
             var vertex = mesh.Vertices[i];
             var normal = normals[i];
-            var offsetVertex = vertex + normal * offset;
+            var offsetVertex = vertex + (normal * offset);
             var vertexPosition = new VertexPosition(offsetVertex);
             vertexStream.AddVertex(vertexPosition);
         }
 
         buffer.VertexBuffer.Unmap();
-        buffer.IndexBufferCount = (3 * triangleCount * 2 + mesh.Vertices.Count) * IndexLine.GetSizeInShortInts();
+        buffer.IndexBufferCount = ((3 * triangleCount * 2) + mesh.Vertices.Count) * IndexLine.GetSizeInShortInts();
         buffer.IndexBuffer = new IndexBuffer(buffer.IndexBufferCount);
         buffer.IndexBuffer.Map(buffer.IndexBufferCount);
 
@@ -314,9 +314,9 @@ public static class RenderHelper
         for (var i = 0; i < triangleCount; i++)
         {
             var meshTriangle = mesh.get_Triangle(i);
-            var index0 = (int) meshTriangle.get_Index(0);
-            var index1 = (int) meshTriangle.get_Index(1);
-            var index2 = (int) meshTriangle.get_Index(2);
+            var index0 = (int)meshTriangle.get_Index(0);
+            var index1 = (int)meshTriangle.get_Index(1);
+            var index2 = (int)meshTriangle.get_Index(2);
 
             indexStream.AddLine(new IndexLine(index0, index1));
             indexStream.AddLine(new IndexLine(index1, index2));
@@ -326,9 +326,9 @@ public static class RenderHelper
         for (var i = 0; i < triangleCount; i++)
         {
             var meshTriangle = mesh.get_Triangle(i);
-            var index0 = (int) meshTriangle.get_Index(0) + vertexCount;
-            var index1 = (int) meshTriangle.get_Index(1) + vertexCount;
-            var index2 = (int) meshTriangle.get_Index(2) + vertexCount;
+            var index0 = (int)meshTriangle.get_Index(0) + vertexCount;
+            var index1 = (int)meshTriangle.get_Index(1) + vertexCount;
+            var index2 = (int)meshTriangle.get_Index(2) + vertexCount;
 
             indexStream.AddLine(new IndexLine(index0, index1));
             indexStream.AddLine(new IndexLine(index1, index2));
@@ -421,7 +421,7 @@ public static class RenderHelper
         buffer.IndexBuffer.Unmap();
         buffer.VertexFormat = new VertexFormat(buffer.FormatBits);
     }
-    
+
     /// <summary>
     /// Maps the edges of a 3D bounding box to a rendering buffer for visualization or processing.
     /// </summary>
@@ -509,8 +509,8 @@ public static class RenderHelper
     {
         var headSize = length > 1 ? 0.2 : length * 0.2;
 
-        var endPoint = origin + vector * length;
-        var arrowHeadBase = endPoint - vector * headSize;
+        var endPoint = origin + (vector * length);
+        var arrowHeadBase = endPoint - (vector * headSize);
         var basisVector = Math.Abs(vector.Z).IsAlmostEqual(1) ? XYZ.BasisY : XYZ.BasisZ;
         var perpendicular1 = vector.CrossProduct(basisVector).Normalize().Multiply(headSize * 0.5);
 
@@ -614,5 +614,5 @@ public static class RenderHelper
         buffer.IndexBuffer.Unmap();
         buffer.VertexFormat = new VertexFormat(buffer.FormatBits);
     }
-    
+
 }

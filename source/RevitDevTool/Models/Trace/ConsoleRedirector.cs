@@ -1,12 +1,12 @@
-using System.Diagnostics ;
-using System.IO ;
+using System.Diagnostics;
+using System.IO;
 
 namespace RevitDevTool.Models.Trace;
 
 /// <summary>
 /// Redirects Console.WriteLine output to the Trace system
 /// </summary>
-internal class ConsoleRedirector : IDisposable
+internal sealed class ConsoleRedirector : IDisposable
 {
     private readonly TextWriter _originalOut;
     private readonly TextWriter _originalError;
@@ -18,25 +18,22 @@ internal class ConsoleRedirector : IDisposable
     {
         _originalOut = Console.Out;
         _originalError = Console.Error;
-            
+
         _consoleOutWriter = new ConsoleTextWriter(TraceEventType.Information);
         _consoleErrorWriter = new ConsoleTextWriter(TraceEventType.Error);
-            
+
         Console.SetOut(_consoleOutWriter);
         Console.SetError(_consoleErrorWriter);
     }
 
     public void Dispose()
     {
-        if (!_disposed)
-        {
-            Console.SetOut(_originalOut);
-            Console.SetError(_originalError);
-            _consoleOutWriter.Dispose();
-            _consoleErrorWriter.Dispose();
-            _disposed = true;
-        }
-        GC.SuppressFinalize(this);
+        if (_disposed) return;
+        Console.SetOut(_originalOut);
+        Console.SetError(_originalError);
+        _consoleOutWriter.Dispose();
+        _consoleErrorWriter.Dispose();
+        _disposed = true;
     }
 
     private class ConsoleTextWriter(TraceEventType eventType) : TextWriter
@@ -49,15 +46,11 @@ internal class ConsoleRedirector : IDisposable
             switch (eventType)
             {
                 case TraceEventType.Error:
-                case TraceEventType.Critical:
                     System.Diagnostics.Trace.TraceError(value);
                     break;
+                case TraceEventType.Critical:
                 case TraceEventType.Warning:
-                    System.Diagnostics.Trace.TraceWarning(value);
-                    break;
                 case TraceEventType.Information:
-                    System.Diagnostics.Trace.TraceInformation(value);
-                    break;
                 case TraceEventType.Verbose:
                 case TraceEventType.Start:
                 case TraceEventType.Stop:
@@ -65,7 +58,7 @@ internal class ConsoleRedirector : IDisposable
                 case TraceEventType.Resume:
                 case TraceEventType.Transfer:
                 default:
-                    System.Diagnostics.Trace.WriteLine(value);
+                    Debug.WriteLine(value);
                     break;
             }
         }

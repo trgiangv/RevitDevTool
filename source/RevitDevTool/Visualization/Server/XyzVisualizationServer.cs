@@ -1,10 +1,10 @@
-﻿using System.Diagnostics;
-using Autodesk.Revit.DB.DirectContext3D;
-using RevitDevTool.Extensions ;
-using RevitDevTool.Services ;
-using RevitDevTool.Visualization.Contracts ;
+﻿using Autodesk.Revit.DB.DirectContext3D;
+using RevitDevTool.Extensions;
+using RevitDevTool.Services;
+using RevitDevTool.Visualization.Contracts;
 using RevitDevTool.Visualization.Helpers;
 using RevitDevTool.Visualization.Render;
+using System.Diagnostics;
 using Color = Autodesk.Revit.DB.Color;
 
 namespace RevitDevTool.Visualization.Server;
@@ -24,30 +24,30 @@ public sealed class XyzVisualizationServer : VisualizationServer<XYZ>
         XYZ.BasisZ
     ];
 
-    private double _transparency = SettingsService.Instance.VisualizationConfig.XyzSettings.Transparency;
-    private double _axisLength = SettingsService.Instance.VisualizationConfig.XyzSettings.AxisLength / 12;
+    private double _transparency;
+    private double _axisLength;
+    private Color _xColor;
+    private Color _yColor;
+    private Color _zColor;
+    private bool _drawPlane;
+    private bool _drawXAxis;
+    private bool _drawYAxis;
+    private bool _drawZAxis;
 
-    private Color _xColor = new(
-        SettingsService.Instance.VisualizationConfig.XyzSettings.XColor.R,
-        SettingsService.Instance.VisualizationConfig.XyzSettings.XColor.G,
-        SettingsService.Instance.VisualizationConfig.XyzSettings.XColor.B
-        );
-    private Color _yColor = new(
-        SettingsService.Instance.VisualizationConfig.XyzSettings.YColor.R,
-        SettingsService.Instance.VisualizationConfig.XyzSettings.YColor.G,
-        SettingsService.Instance.VisualizationConfig.XyzSettings.YColor.B
-        );
-    private Color _zColor = new(
-        SettingsService.Instance.VisualizationConfig.XyzSettings.ZColor.R,
-        SettingsService.Instance.VisualizationConfig.XyzSettings.ZColor.G,
-        SettingsService.Instance.VisualizationConfig.XyzSettings.ZColor.B
-        );
+    public XyzVisualizationServer(ISettingsService settingsService)
+    {
+        var settings = settingsService.VisualizationConfig.XyzSettings;
+        _transparency = settings.Transparency;
+        _axisLength = settings.AxisLength / 12;
+        _xColor = new Color(settings.XColor.R, settings.XColor.G, settings.XColor.B);
+        _yColor = new Color(settings.YColor.R, settings.YColor.G, settings.YColor.B);
+        _zColor = new Color(settings.ZColor.R, settings.ZColor.G, settings.ZColor.B);
+        _drawPlane = settings.ShowPlane;
+        _drawXAxis = settings.ShowXAxis;
+        _drawYAxis = settings.ShowYAxis;
+        _drawZAxis = settings.ShowZAxis;
+    }
 
-    private bool _drawPlane = SettingsService.Instance.VisualizationConfig.XyzSettings.ShowPlane;
-    private bool _drawXAxis = SettingsService.Instance.VisualizationConfig.XyzSettings.ShowXAxis;
-    private bool _drawYAxis = SettingsService.Instance.VisualizationConfig.XyzSettings.ShowYAxis;
-    private bool _drawZAxis = SettingsService.Instance.VisualizationConfig.XyzSettings.ShowZAxis;
-    
     public override bool UseInTransparentPass(Autodesk.Revit.DB.View view) => _drawPlane && _transparency > 0;
 
     public override Outline? GetBoundingBox(Autodesk.Revit.DB.View view)
@@ -62,7 +62,7 @@ public sealed class XyzVisualizationServer : VisualizationServer<XYZ>
     protected override void RenderScene()
     {
         if (visualizeGeometries.Count == 0) return;
-        
+
         if (hasGeometryUpdates)
         {
             MapGeometryBuffer();
@@ -128,7 +128,7 @@ public sealed class XyzVisualizationServer : VisualizationServer<XYZ>
         DisposeBuffers();
 
         if (visualizeGeometries.Count == 0) return;
-        
+
         try
         {
             MapNormalBuffer();
@@ -143,7 +143,7 @@ public sealed class XyzVisualizationServer : VisualizationServer<XYZ>
     private void MapNormalBuffer()
     {
         if (visualizeGeometries.Count == 0) return;
-        
+
         var normalExtendLength = _axisLength > 1 ? 0.8 : _axisLength * 0.8;
         foreach (var visualizeGeometry in visualizeGeometries)
         {
@@ -155,7 +155,7 @@ public sealed class XyzVisualizationServer : VisualizationServer<XYZ>
             {
                 var normal = _normals[i];
                 var buffer = axisBuffers[i];
-                RenderHelper.MapNormalVectorBuffer(buffer, visualizeGeometry - normal * (_axisLength + normalExtendLength), normal, 2 * (_axisLength + normalExtendLength));
+                RenderHelper.MapNormalVectorBuffer(buffer, visualizeGeometry - (normal * (_axisLength + normalExtendLength)), normal, 2 * (_axisLength + normalExtendLength));
             }
 
             _axisBufferArrays.Add(axisBuffers);
@@ -176,7 +176,7 @@ public sealed class XyzVisualizationServer : VisualizationServer<XYZ>
             {
                 var normal = _normals[i];
                 var buffer = planeBuffers[i];
-                RenderHelper.MapSideBuffer(buffer, visualizeGeometry - normal * _axisLength, visualizeGeometry + normal * _axisLength);
+                RenderHelper.MapSideBuffer(buffer, visualizeGeometry - (normal * _axisLength), visualizeGeometry + (normal * _axisLength));
             }
 
             _planeBufferArrays.Add(planeBuffers);
@@ -210,7 +210,7 @@ public sealed class XyzVisualizationServer : VisualizationServer<XYZ>
             bufferArray[2].EffectInstance!.SetColor(_zColor);
         }
     }
-    
+
     public void UpdateXColor(Color value)
     {
         var uiDocument = Context.ActiveUiDocument;
