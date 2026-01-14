@@ -1,16 +1,14 @@
-﻿using System.IO ;
-using System.Text.Json ;
-using RevitDevTool.Models.Config ;
-using RevitDevTool.ViewModel.Settings;
-using Serilog ;
-using Wpf.Ui.Appearance ;
+using RevitDevTool.Models.Config;
+using RevitDevTool.Services.Configuration;
+using RevitDevTool.Theme;
+using RevitDevTool.Utils;
+using Serilog;
+using System.Diagnostics;
 
 namespace RevitDevTool.Services;
 
-public sealed class SettingsService
+public sealed class SettingsService(IFileConfig<PathOptions> fileConfig) : ISettingsService
 {
-    public event Action? LogSettingsChanged;
-    public static readonly SettingsService Instance = new();
     private GeneralConfig? _generalConfig;
     private LogConfig? _logConfig;
     private VisualizationConfig? _visualizationConfig;
@@ -19,29 +17,30 @@ public sealed class SettingsService
     {
         get
         {
-            _generalConfig ??= new GeneralConfig() ;
-            return _generalConfig ;
+            _generalConfig ??= new GeneralConfig();
+            return _generalConfig;
         }
     }
-    
+
     public LogConfig LogConfig
     {
         get
         {
-            _logConfig ??= new LogConfig() ;
-            return _logConfig ;
+            _logConfig ??= new LogConfig();
+            EnsureLogFolder(_logConfig);
+            return _logConfig;
         }
     }
-    
+
     public VisualizationConfig VisualizationConfig
     {
         get
         {
-            _visualizationConfig ??= new VisualizationConfig() ;
-            return _visualizationConfig ;
+            _visualizationConfig ??= new VisualizationConfig();
+            return _visualizationConfig;
         }
     }
-    
+
     public void SaveSettings()
     {
         SaveApplicationSettings();
@@ -65,45 +64,34 @@ public sealed class SettingsService
 
     private void SaveApplicationSettings()
     {
-        var path = SettingsLocation.GetSettingsPath("GeneralConfig.json" );
-        var json = JsonSerializer.Serialize(_generalConfig);
-        File.WriteAllText(path, json);
+        if (_generalConfig is null) return;
+        fileConfig.Save(_generalConfig);
     }
-    
+
     private void SaveLogSettings()
     {
-        var path = SettingsLocation.GetSettingsPath("LogConfig.json" );
-        var json = JsonSerializer.Serialize(_logConfig);
-        File.WriteAllText(path, json);
-        LogSettingsChanged?.Invoke();
+        if (_logConfig is null) return;
+        fileConfig.Save(_logConfig);
+        PresentationTraceSources.DataBindingSource.Switch.Level = _logConfig.WpfTraceLevel;
     }
 
     private void SaveVisualizationSettings()
     {
-        var path = SettingsLocation.GetSettingsPath("VisualizationConfig.json" );
-        var json = JsonSerializer.Serialize(_visualizationConfig);
-        File.WriteAllText(path, json);
+        if (_visualizationConfig is null) return;
+        fileConfig.Save(_visualizationConfig);
     }
 
     private void LoadApplicationSettings()
     {
-        var path = SettingsLocation.GetSettingsPath("GeneralConfig.json" );
-        if (!File.Exists(path))
-        {
-            ResetGeneralSettings();
-            return;
-        }
-
         try
         {
-            using var config = File.OpenRead(path);
-            _generalConfig = JsonSerializer.Deserialize<GeneralConfig>(config);
+            _generalConfig = fileConfig.Load<GeneralConfig>();
         }
         catch (Exception exception)
         {
             Log.Logger.Error(exception, "Application settings loading error");
         }
-        
+
         if (_generalConfig is null)
         {
             ResetGeneralSettings();
@@ -112,21 +100,13 @@ public sealed class SettingsService
 
     private void LoadVisualizationSettings()
     {
-        var path = SettingsLocation.GetSettingsPath("VisualizationConfig.json" );
-        if (!File.Exists(path))
-        {
-            ResetVisualizationSettings();
-            return;
-        }
-
         try
         {
-            using var config = File.OpenRead(path);
-            _visualizationConfig = JsonSerializer.Deserialize<VisualizationConfig>(config);
+            _visualizationConfig = fileConfig.Load<VisualizationConfig>();
         }
         catch (Exception exception)
         {
-            Log.Logger.Error(exception, "Application settings loading error");
+            Log.Logger.Error(exception, "Visualization settings loading error");
         }
 
         if (_visualizationConfig is null)
@@ -134,20 +114,12 @@ public sealed class SettingsService
             ResetVisualizationSettings();
         }
     }
-    
+
     private void LoadLogSettings()
     {
-        var path = SettingsLocation.GetSettingsPath("LogConfig.json" );
-        if (!File.Exists(path))
-        {
-            ResetLogSettings();
-            return;
-        }
-
         try
         {
-            using var config = File.OpenRead(path);
-            _logConfig = JsonSerializer.Deserialize<LogConfig>(config);
+            _logConfig = fileConfig.Load<LogConfig>();
         }
         catch (Exception exception)
         {
@@ -158,16 +130,21 @@ public sealed class SettingsService
         {
             ResetLogSettings();
         }
+        else
+        {
+            EnsureLogFolder(_logConfig);
+            PresentationTraceSources.DataBindingSource.Switch.Level = _logConfig.WpfTraceLevel;
+        }
     }
 
-    public void ResetGeneralSettings()
+    private void ResetGeneralSettings()
     {
         _generalConfig = new GeneralConfig
         {
 #if REVIT2024_OR_GREATER
-            Theme = ApplicationTheme.Auto,
+            Theme = AppTheme.Auto,
 #else
-            Theme = ApplicationTheme.Light,
+            Theme = AppTheme.Light,
 #endif
             UseHardwareRendering = true,
         };
@@ -175,19 +152,12 @@ public sealed class SettingsService
 
     private void ResetLogSettings()
     {
-        _logConfig = new LogConfig
-        {
-            IsSaveLogEnabled = false,
-            SaveFormat = LogSaveFormat.Text,
-            IncludeStackTrace = false,
-            StackTraceDepth = 5,
-            TimeInterval = RollingInterval.Infinite,
-            FilePath = SettingsLocation.GetDefaultLogPath("log")
-        };
-        LogSettingsChanged?.Invoke();
+        _logConfig = new LogConfig();
+        EnsureLogFolder(_logConfig);
+        PresentationTraceSources.DataBindingSource.Switch.Level = _logConfig.WpfTraceLevel;
     }
 
-    public void ResetVisualizationSettings()
+    private void ResetVisualizationSettings()
     {
         _visualizationConfig = new VisualizationConfig
         {
@@ -198,5 +168,11 @@ public sealed class SettingsService
             SolidSettings = new SolidVisualizationSettings(),
             XyzSettings = new XyzVisualizationSettings()
         };
+    }
+
+    private void EnsureLogFolder(LogConfig config)
+    {
+        if (SettingsUtils.IsValidPath(config.LogFolder)) return;
+        config.LogFolder = fileConfig.Options.LogsDirectory;
     }
 }

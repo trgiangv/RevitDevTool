@@ -1,5 +1,7 @@
+using Microsoft.Extensions.Logging;
+using System.Diagnostics;
 using System.Text.Json.Serialization;
-using Serilog;
+
 namespace RevitDevTool.Models.Config;
 
 /// <summary>
@@ -8,29 +10,49 @@ namespace RevitDevTool.Models.Config;
 [Serializable]
 public sealed class LogConfig
 {
-    [JsonPropertyName("IsSaveLogEnabled")] 
+    [JsonPropertyName("LogLevel")]
+    public LogLevel LogLevel { get; set; } = LogLevel.Debug;
+
+    [JsonPropertyName("IsSaveLogEnabled")]
     public bool IsSaveLogEnabled { get; set; }
-    
-    [JsonPropertyName("SaveFormat")] 
+
+    [JsonPropertyName("UseExternalFileOnly")]
+    public bool UseExternalFileOnly { get; set; }
+
+    [JsonPropertyName("SaveFormat")]
     public LogSaveFormat SaveFormat { get; set; } = LogSaveFormat.Text;
-    
-    [JsonPropertyName("IncludeStackTrace")] 
+
+    [JsonPropertyName("IncludeStackTrace")]
     public bool IncludeStackTrace { get; set; }
+
+    [JsonPropertyName("IncludeWpfTrace")]
+    public bool IncludeWpfTrace { get; set; }
+
+    [JsonPropertyName("WpfTraceLevel")]
+    public SourceLevels WpfTraceLevel { get; set; } = SourceLevels.Warning;
 
     [JsonPropertyName("StackTraceDepth")]
     public int StackTraceDepth { get; set; } = 3;
-    
-    [JsonPropertyName("TimeInterval")] 
-    public RollingInterval TimeInterval { get; set; } = RollingInterval.Infinite;
-    
-    [JsonPropertyName("FilePath")] 
-    public string FilePath { get; set; } = string.Empty;
+
+    [JsonPropertyName("TimeInterval")]
+    public RollingInterval TimeInterval { get; set; } = RollingInterval.Day;
+
+    [JsonPropertyName("LogFolder")]
+    public string LogFolder { get; set; } = string.Empty;
 }
 
 public enum LogSaveFormat
 {
-    Sqlite,
     Json,
-    Clef,
     Text
+}
+
+public enum RollingInterval
+{
+    Infinite,
+    Year,
+    Month,
+    Day,
+    Hour,
+    Minute
 }

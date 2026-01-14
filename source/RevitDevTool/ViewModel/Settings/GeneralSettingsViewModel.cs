@@ -1,73 +1,55 @@
-﻿using System.Diagnostics ;
-using RevitDevTool.Services ;
-using RevitDevTool.Theme ;
-using RevitDevTool.View ;
-using RevitDevTool.View.Settings ;
-using Wpf.Ui.Appearance ;
-using Wpf.Ui.Controls ;
+using RevitDevTool.Controllers;
+using RevitDevTool.Services;
+using RevitDevTool.Theme;
+using System.Diagnostics;
 
-namespace RevitDevTool.ViewModel.Settings ;
+namespace RevitDevTool.ViewModel.Settings;
 
 public partial class GeneralSettingsViewModel : ObservableObject
 {
-    public static readonly GeneralSettingsViewModel Instance = new();
-    
-    public static List<ApplicationTheme> Themes
+    private readonly ISettingsService _settingsService;
+
+    public static List<AppTheme> Themes
     {
         get =>
         [
-            ApplicationTheme.Light,
-            ApplicationTheme.Dark,
+            AppTheme.Light,
+            AppTheme.Dark,
 #if REVIT2024_OR_GREATER
-            ApplicationTheme.Auto
+            AppTheme.Auto
 #endif
         ];
     }
-    
-    [ObservableProperty] private ApplicationTheme _theme;
+
+    [ObservableProperty] private AppTheme _theme;
     [ObservableProperty] private bool _useHardwareRendering;
 
-    partial void OnThemeChanged( ApplicationTheme value )
+    partial void OnThemeChanged(AppTheme value)
     {
-        SettingsService.Instance.GeneralConfig.Theme = value;
-        ThemeWatcher.Instance.ApplyTheme();
+        _settingsService.GeneralConfig.Theme = value;
+        ThemeManager.Current.ApplySettingsTheme(value);
     }
-    
+
     partial void OnUseHardwareRenderingChanged(bool value)
     {
-        SettingsService.Instance.GeneralConfig.UseHardwareRendering = value;
-        if (value) Application.EnableHardwareRendering();
-        else Application.DisableHardwareRendering();
+        _settingsService.GeneralConfig.UseHardwareRendering = value;
+        HostBackgroundController.ToggleHardwareRendering(_settingsService);
     }
-    
-    private GeneralSettingsViewModel()
+
+    public GeneralSettingsViewModel(ISettingsService settingsService)
     {
-        Theme = SettingsService.Instance.GeneralConfig.Theme;
-        UseHardwareRendering = SettingsService.Instance.GeneralConfig.UseHardwareRendering;
+        _settingsService = settingsService;
+        Theme = _settingsService.GeneralConfig.Theme;
+        UseHardwareRendering = _settingsService.GeneralConfig.UseHardwareRendering;
     }
-    
-    [RelayCommand] private void ResetSettings()
+
+    [RelayCommand]
+    private void ResetSettings()
     {
-        SettingsService.Instance.ResetSettings();
-        Theme = SettingsService.Instance.GeneralConfig.Theme;
-        UseHardwareRendering = SettingsService.Instance.GeneralConfig.UseHardwareRendering;
+        _settingsService.ResetSettings();
+        Theme = _settingsService.GeneralConfig.Theme;
+        UseHardwareRendering = _settingsService.GeneralConfig.UseHardwareRendering;
         VisualizationController.Refresh();
         Trace.TraceInformation("Reset settings to default");
-    }
-    
-    [RelayCommand] 
-    private static async Task SaveLogSettingsAsync()
-    {
-        var settingsWindow = SettingsWindow.Instance;
-        
-        var dialogHost = settingsWindow?.ContentDialogService.GetDialogHost();
-        if (dialogHost == null) return;
-        var dialog = new LogSettingsView(dialogHost);
-        var result = await dialog.ShowAsync(CancellationToken.None).ConfigureAwait(true);
-        
-        if (result == ContentDialogResult.Primary)
-        {
-            Trace.TraceInformation("Log settings saved");
-        }
     }
 }

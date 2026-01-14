@@ -1,4 +1,4 @@
-﻿namespace RevitDevTool.ViewModel.Contracts ;
+﻿namespace RevitDevTool.ViewModel.Contracts;
 
 public interface IVisualizationViewModel
 {
