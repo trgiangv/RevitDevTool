@@ -99,6 +99,7 @@ public class ThemeResources : ResourceDictionary, ISupportInitialize
                 EnsureDarkResources();
                 UpdateTo(_darkResources!);
                 break;
+            case AppTheme.Auto:
             default:
                 EnsureLightResources();
                 UpdateTo(_lightResources!);

@@ -23,7 +23,7 @@ public class BatchDebugLogCmd : ExternalCommand
                 Debug.WriteLine($"Critical failure in Step {stepNumber:000}");
             }
             stopwatch.Stop();
-            Debug.WriteLine($"Total processing time: {stopwatch.ElapsedMilliseconds} ms");
+            Trace.TraceWarning($"Total processing time: {stopwatch.ElapsedMilliseconds} ms");
         });
     }
 }
@@ -48,7 +48,7 @@ public class BatchTraceLogCmd : ExternalCommand
                 Trace.WriteLine($"Critical failure in Step {stepNumber:000}");
             }
             stopwatch.Stop();
-            Trace.WriteLine($"Total processing time: {stopwatch.ElapsedMilliseconds} ms");
+            Trace.TraceWarning($"Total processing time: {stopwatch.ElapsedMilliseconds} ms");
         });
     }
 }
@@ -73,19 +73,40 @@ public class BatchConsoleLogCmd : ExternalCommand
                 Console.WriteLine($"Critical failure in Step {stepNumber:000}");
             }
             stopwatch.Stop();
-            Console.WriteLine($"Total processing time: {stopwatch.ElapsedMilliseconds} ms");
+            Trace.TraceWarning($"Total processing time: {stopwatch.ElapsedMilliseconds} ms");
         });
     }
 }
 
 [UsedImplicitly]
 [Transaction(TransactionMode.Manual)]
-public class TraceColoredCmd : ExternalCommand
+public class BatchTraceColoredCmd : ExternalCommand
 {
     public override void Execute()
     {
         Trace.TraceInformation("This is an informational message.");
         Trace.TraceWarning("This is a warning message.");
         Trace.TraceError("This is an error message.");
+    }
+}
+
+[UsedImplicitly]
+[Transaction(TransactionMode.Manual)]
+public class BatchDebugLargeStringCmd : ExternalCommand
+{
+    public override void Execute()
+    {
+        Task.Run(() =>
+        {
+            var stopwatch = Stopwatch.StartNew();
+            stopwatch.Start();
+            var largeString = new string('X', 1000);
+            for (var i = 0; i < 1000; i++)
+            {
+                Debug.WriteLine(largeString);
+            }
+            stopwatch.Stop();
+            Trace.TraceWarning($"Total time for large string logging: {stopwatch.ElapsedMilliseconds} ms");
+        });
     }
 }

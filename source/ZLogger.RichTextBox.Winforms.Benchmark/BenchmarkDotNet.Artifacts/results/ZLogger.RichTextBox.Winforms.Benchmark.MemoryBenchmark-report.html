@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang='en'>
+<head>
+<meta charset='utf-8' />
+<title>ZLogger.RichTextBox.Winforms.Benchmark.MemoryBenchmark-20260114-024846</title>
+
+<style type="text/css">
+	table { border-collapse: collapse; display: block; width: 100%; overflow: auto; }
+	td, th { padding: 6px 13px; border: 1px solid #ddd; text-align: right; }
+	tr { background-color: #fff; border-top: 1px solid #ccc; }
+	tr:nth-child(even) { background: #f8f8f8; }
+</style>
+</head>
+<body>
+<pre><code>
+BenchmarkDotNet v0.15.8, Windows 11 (10.0.26200.7462/25H2/2025Update/HudsonValley2)
+Intel Core Ultra 7 265K 3.90GHz, 1 CPU, 20 logical and 20 physical cores
+.NET SDK 9.0.307
+  [Host] : .NET 8.0.22 (8.0.22, 8.0.2225.52707), X64 RyuJIT x86-64-v3
+</code></pre>
+<pre><code>Runtime=.NET 8.0  
+</code></pre>
+
+<table>
+<thead><tr><th>Method                    </th><th>Job</th><th>Toolchain       </th><th>Mean</th><th>Error</th><th>StdDev</th><th>Ratio</th><th>RatioSD</th><th>Rank</th><th>Gen0</th><th>Gen1</th><th>Allocated</th><th>Alloc Ratio</th>
+</tr>
+</thead><tbody><tr><td>&#39;Serilog - String Interpolation&#39;</td><td>.NET 8.0</td><td>Default</td><td>NA</td><td>NA</td><td>NA</td><td>?</td><td>?</td><td>?</td><td>NA</td><td>NA</td><td>NA</td><td>?</td>
+</tr><tr><td>&#39;ZLogger - String Interpolation&#39;</td><td>.NET 8.0</td><td>Default</td><td>NA</td><td>NA</td><td>NA</td><td>?</td><td>?</td><td>?</td><td>NA</td><td>NA</td><td>NA</td><td>?</td>
+</tr><tr><td>&#39;Serilog - Value Types Only&#39;</td><td>.NET 8.0</td><td>Default</td><td>NA</td><td>NA</td><td>NA</td><td>?</td><td>?</td><td>?</td><td>NA</td><td>NA</td><td>NA</td><td>?</td>
+</tr><tr><td>&#39;ZLogger - Value Types Only&#39;</td><td>.NET 8.0</td><td>Default</td><td>NA</td><td>NA</td><td>NA</td><td>?</td><td>?</td><td>?</td><td>NA</td><td>NA</td><td>NA</td><td>?</td>
+</tr><tr><td>&#39;Serilog - Large String&#39;</td><td>.NET 8.0</td><td>Default</td><td>NA</td><td>NA</td><td>NA</td><td>?</td><td>?</td><td>?</td><td>NA</td><td>NA</td><td>NA</td><td>?</td>
+</tr><tr><td>&#39;ZLogger - Large String&#39;</td><td>.NET 8.0</td><td>Default</td><td>NA</td><td>NA</td><td>NA</td><td>?</td><td>?</td><td>?</td><td>NA</td><td>NA</td><td>NA</td><td>?</td>
+</tr><tr><td>&#39;Serilog - Dictionary&#39;</td><td>.NET 8.0</td><td>Default</td><td>NA</td><td>NA</td><td>NA</td><td>?</td><td>?</td><td>?</td><td>NA</td><td>NA</td><td>NA</td><td>?</td>
+</tr><tr><td>&#39;ZLogger - Dictionary&#39;</td><td>.NET 8.0</td><td>Default</td><td>NA</td><td>NA</td><td>NA</td><td>?</td><td>?</td><td>?</td><td>NA</td><td>NA</td><td>NA</td><td>?</td>
+</tr><tr><td>&#39;Serilog - Nested Exception&#39;</td><td>.NET 8.0</td><td>Default</td><td>NA</td><td>NA</td><td>NA</td><td>?</td><td>?</td><td>?</td><td>NA</td><td>NA</td><td>NA</td><td>?</td>
+</tr><tr><td>&#39;ZLogger - Nested Exception&#39;</td><td>.NET 8.0</td><td>Default</td><td>NA</td><td>NA</td><td>NA</td><td>?</td><td>?</td><td>?</td><td>NA</td><td>NA</td><td>NA</td><td>?</td>
+</tr><tr><td>&#39;Serilog - String Interpolation&#39;</td><td>InProcess</td><td>InProcessEmitToolchain</td><td>319.2 &mu;s</td><td>2.56 &mu;s</td><td>2.40 &mu;s</td><td>1.00</td><td>0.01</td><td>4</td><td>33.2031</td><td>16.6016</td><td>515.63 KB</td><td>1.00</td>
+</tr><tr><td>&#39;ZLogger - String Interpolation&#39;</td><td>InProcess</td><td>InProcessEmitToolchain</td><td>523.0 &mu;s</td><td>4.79 &mu;s</td><td>4.00 &mu;s</td><td>1.64</td><td>0.02</td><td>6</td><td>56.6406</td><td>28.3203</td><td>874.92 KB</td><td>1.70</td>
+</tr><tr><td>&#39;Serilog - Value Types Only&#39;</td><td>InProcess</td><td>InProcessEmitToolchain</td><td>252.4 &mu;s</td><td>1.74 &mu;s</td><td>1.62 &mu;s</td><td>0.79</td><td>0.01</td><td>3</td><td>32.2266</td><td>16.1133</td><td>500 KB</td><td>0.97</td>
+</tr><tr><td>&#39;ZLogger - Value Types Only&#39;</td><td>InProcess</td><td>InProcessEmitToolchain</td><td>563.7 &mu;s</td><td>3.73 &mu;s</td><td>3.49 &mu;s</td><td>1.77</td><td>0.02</td><td>7</td><td>55.6641</td><td>27.3438</td><td>866.41 KB</td><td>1.68</td>
+</tr><tr><td>&#39;Serilog - Large String&#39;</td><td>InProcess</td><td>InProcessEmitToolchain</td><td>207.8 &mu;s</td><td>1.48 &mu;s</td><td>1.38 &mu;s</td><td>0.65</td><td>0.01</td><td>1</td><td>22.9492</td><td>11.4746</td><td>353.54 KB</td><td>0.69</td>
+</tr><tr><td>&#39;ZLogger - Large String&#39;</td><td>InProcess</td><td>InProcessEmitToolchain</td><td>718.2 &mu;s</td><td>13.67 &mu;s</td><td>13.43 &mu;s</td><td>2.25</td><td>0.04</td><td>9</td><td>221.6797</td><td>220.7031</td><td>3408.23 KB</td><td>6.61</td>
+</tr><tr><td>&#39;Serilog - Dictionary&#39;</td><td>InProcess</td><td>InProcessEmitToolchain</td><td>603.5 &mu;s</td><td>7.17 &mu;s</td><td>6.70 &mu;s</td><td>1.89</td><td>0.02</td><td>8</td><td>83.9844</td><td>41.9922</td><td>1297.41 KB</td><td>2.52</td>
+</tr><tr><td>&#39;ZLogger - Dictionary&#39;</td><td>InProcess</td><td>InProcessEmitToolchain</td><td>739.5 &mu;s</td><td>7.32 &mu;s</td><td>6.85 &mu;s</td><td>2.32</td><td>0.03</td><td>9</td><td>92.7734</td><td>45.8984</td><td>1422.4 KB</td><td>2.76</td>
+</tr><tr><td>&#39;Serilog - Nested Exception&#39;</td><td>InProcess</td><td>InProcessEmitToolchain</td><td>214.8 &mu;s</td><td>0.92 &mu;s</td><td>0.77 &mu;s</td><td>0.67</td><td>0.01</td><td>2</td><td>24.4141</td><td>12.2070</td><td>375.38 KB</td><td>0.73</td>
+</tr><tr><td>&#39;ZLogger - Nested Exception&#39;</td><td>InProcess</td><td>InProcessEmitToolchain</td><td>398.3 &mu;s</td><td>1.34 &mu;s</td><td>1.25 &mu;s</td><td>1.25</td><td>0.01</td><td>5</td><td>48.8281</td><td>24.4141</td><td>750.38 KB</td><td>1.46</td>
+</tr></tbody></table>
+</body>
+</html>

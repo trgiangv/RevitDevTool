@@ -46,15 +46,11 @@ internal sealed class ConsoleRedirector : IDisposable
             switch (eventType)
             {
                 case TraceEventType.Error:
-                case TraceEventType.Critical:
                     System.Diagnostics.Trace.TraceError(value);
                     break;
+                case TraceEventType.Critical:
                 case TraceEventType.Warning:
-                    System.Diagnostics.Trace.TraceWarning(value);
-                    break;
                 case TraceEventType.Information:
-                    System.Diagnostics.Trace.TraceInformation(value);
-                    break;
                 case TraceEventType.Verbose:
                 case TraceEventType.Start:
                 case TraceEventType.Stop:
@@ -62,7 +58,7 @@ internal sealed class ConsoleRedirector : IDisposable
                 case TraceEventType.Resume:
                 case TraceEventType.Transfer:
                 default:
-                    System.Diagnostics.Trace.WriteLine(value);
+                    Debug.WriteLine(value);
                     break;
             }
         }

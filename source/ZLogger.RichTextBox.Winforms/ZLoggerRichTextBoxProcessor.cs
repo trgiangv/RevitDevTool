@@ -9,6 +9,7 @@ namespace ZLogger.RichTextBox.Winforms;
 
 /// <summary>
 /// ZLogger log processor that outputs to a RichTextBox control with RTF formatting.
+/// Uses immediate formatting to avoid holding ZLogger entry references.
 /// </summary>
 public sealed class ZLoggerRichTextBoxProcessor : IAsyncLogProcessor, IDisposable
 {
@@ -20,6 +21,7 @@ public sealed class ZLoggerRichTextBoxProcessor : IAsyncLogProcessor, IDisposabl
     private readonly System.Windows.Forms.RichTextBox _richTextBox;
     private readonly CancellationTokenSource _tokenSource;
     private readonly Task _processingTask;
+    
     private bool _disposed;
 
     public ZLoggerRichTextBoxProcessor(
@@ -64,40 +66,66 @@ public sealed class ZLoggerRichTextBoxProcessor : IAsyncLogProcessor, IDisposabl
     {
         if (_disposed) return;
 
-        try
-        {
-            var logInfo = log.LogInfo;
-            var buffer = new ArrayBufferWriter<byte>();
-            log.ToString(buffer);
-#if NET5_0_OR_GREATER
-            var message = Encoding.UTF8.GetString(buffer.WrittenSpan);
-#else
-            var message = Encoding.UTF8.GetString(buffer.WrittenSpan.ToArray());
-#endif
-            var properties = new Dictionary<string, object?>();
-            for (var i = 0; i < log.ParameterCount; i++)
-            {
-                var key = log.GetParameterKeyAsString(i);
-                var value = log.GetParameterValue(i);
-                properties[key] = value;
-            }
+        var logInfo = log.LogInfo;
+        
+        // Format message immediately and release entry
+        var message = FormatMessage(log, _options.MaxMessageLength);
+        
+        var entry = new ZLoggerLogEntry(
+            logInfo.LogLevel,
+            logInfo.Timestamp.Local,
+            logInfo.Category.Name,
+            message,
+            logInfo.Exception);
 
-            var entry = new ZLoggerLogEntry(
-                logInfo.LogLevel,
-                logInfo.Timestamp.Local,
-                logInfo.Category.Name,
-                message,
-                logInfo.Exception,
-                properties);
-
-            _buffer.Add(entry);
-            _signal.Set();
-        }
-        finally
-        {
-            log.Return();
-        }
+        _buffer.Add(entry);
+        _signal.Set();
+        
+        // Return entry to ZLogger pool immediately
+        log.Return();
     }
+    
+    private static string FormatMessage(IZLoggerEntry entry, int maxLength)
+    {
+        var buffer = new ArrayBufferWriter<byte>(256);
+        entry.ToString(buffer);
+        
+#if NET5_0_OR_GREATER
+        var written = buffer.WrittenSpan;
+        if (maxLength > 0 && written.Length > maxLength)
+        {
+            var truncateAt = FindUtf8SafeBoundary(written, maxLength - 20);
+            return Encoding.UTF8.GetString(written.Slice(0, truncateAt)) + "... [truncated]";
+        }
+        return Encoding.UTF8.GetString(written);
+#else
+        var writtenArray = buffer.WrittenMemory.ToArray();
+        if (maxLength > 0 && writtenArray.Length > maxLength)
+        {
+            var truncateAt = FindUtf8SafeBoundaryArray(writtenArray, maxLength - 20);
+            return Encoding.UTF8.GetString(writtenArray, 0, truncateAt) + "... [truncated]";
+        }
+        return Encoding.UTF8.GetString(writtenArray);
+#endif
+    }
+    
+#if NET5_0_OR_GREATER
+    private static int FindUtf8SafeBoundary(ReadOnlySpan<byte> data, int targetLength)
+    {
+        if (targetLength >= data.Length) return data.Length;
+        var pos = targetLength;
+        while (pos > 0 && (data[pos] & 0xC0) == 0x80) pos--;
+        return pos;
+    }
+#else
+    private static int FindUtf8SafeBoundaryArray(byte[] data, int targetLength)
+    {
+        if (targetLength >= data.Length) return data.Length;
+        var pos = targetLength;
+        while (pos > 0 && (data[pos] & 0xC0) == 0x80) pos--;
+        return pos;
+    }
+#endif
 
     public void Clear()
     {
@@ -115,7 +143,7 @@ public sealed class ZLoggerRichTextBoxProcessor : IAsyncLogProcessor, IDisposabl
 
     private void ProcessMessages(CancellationToken token)
     {
-        var builder = new RtfBuilder(_options.Theme);
+        using var builder = new RtfBuilder(_options.Theme);
         var snapshot = new List<ZLoggerLogEntry>(_options.MaxLogLines);
         var flushInterval = TimeSpan.FromMilliseconds(FlushIntervalMs);
         var lastFlush = DateTime.MinValue;
