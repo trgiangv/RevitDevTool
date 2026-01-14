@@ -27,7 +27,7 @@ internal sealed class SerilogRichTextBoxSink : ILogOutputSink
         {
             Font = new Font("Cascadia Mono", 9f, FontStyle.Regular, GraphicsUnit.Point),
             ReadOnly = true,
-            DetectUrls = true,
+            DetectUrls = false,
             WordWrap = true,
             ScrollBars = RichTextBoxScrollBars.Vertical,
             BorderStyle = BorderStyle.None
@@ -70,7 +70,7 @@ internal sealed class SerilogRichTextBoxSink : ILogOutputSink
     /// Configures Serilog with a RichTextBox sink and stores the reference
     /// to the library's sink for proper lifecycle management.
     /// </summary>
-    internal LoggerConfiguration ConfigureSerilog(LoggerConfiguration config, bool isDarkTheme)
+    internal LoggerConfiguration ConfigureSerilog(LoggerConfiguration config, bool isDarkTheme, bool prettyPrintJson)
     {
         DisposeSink();
         var logTheme = isDarkTheme ? LogThemePresets.EnhancedDark : LogThemePresets.EnhancedLight;
@@ -82,7 +82,7 @@ internal sealed class SerilogRichTextBoxSink : ILogOutputSink
             autoScroll: true,
             maxLogLines: 1000,
             formatProvider: CultureInfo.InvariantCulture,
-            prettyPrintJson: true);
+            prettyPrintJson: prettyPrintJson);
 
         _librarySink = sink;
         return result;

@@ -9,9 +9,9 @@
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:settings="clr-namespace:RevitDevTool.ViewModel.Settings"
              xmlns:sys="clr-namespace:System;assembly=mscorlib"
-             d:DataContext="{d:DesignInstance settings:LogSettingsViewModel}"
              d:Background="{DynamicResource MahApps.Brushes.ThemeBackground}"
-             d:DesignHeight="750"
+             d:DataContext="{d:DesignInstance settings:LogSettingsViewModel}"
+             d:DesignHeight="850"
              d:DesignWidth="600"
              mc:Ignorable="d">
 
@@ -54,36 +54,102 @@
     <ScrollViewer HorizontalScrollBarVisibility="Disabled"
                   VerticalScrollBarVisibility="Auto">
         <StackPanel Margin="8">
-            <!--  Log Level  -->
+            <!--  Log Filter  -->
             <GroupBox Margin="0,0,0,8"
-                      Header="Log Level">
-                <Grid Margin="8">
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="Auto" />
-                        <ColumnDefinition Width="*" />
-                        <ColumnDefinition Width="Auto" />
-                    </Grid.ColumnDefinitions>
-                    <Path Width="20"
-                          Height="20"
-                          VerticalAlignment="Center"
-                          Data="{StaticResource LogLevel}"
-                          Fill="{DynamicResource MahApps.Brushes.ThemeForeground}"
-                          Stretch="Uniform" />
-                    <StackPanel Grid.Column="1"
-                                Margin="12,0"
-                                VerticalAlignment="Center">
-                        <TextBlock FontWeight="SemiBold"
-                                   Text="Minimum Level" />
-                        <TextBlock FontSize="11"
-                                   Foreground="{DynamicResource MahApps.Brushes.Gray}"
-                                   Text="Minimum level for displaying logs" />
-                    </StackPanel>
-                    <ComboBox Grid.Column="2"
-                              Width="{StaticResource ContentMinWidth}"
+                      Header="Log Filter">
+                <StackPanel Margin="8">
+                    <!--  Minimum Level  -->
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <Path Width="20"
+                              Height="20"
                               VerticalAlignment="Center"
-                              ItemsSource="{Binding Source={StaticResource LogLevelProvider}}"
-                              SelectedItem="{Binding LogLevel}" />
-                </Grid>
+                              Data="{StaticResource LogLevel}"
+                              Fill="{DynamicResource MahApps.Brushes.ThemeForeground}"
+                              Stretch="Uniform" />
+                        <StackPanel Grid.Column="1"
+                                    Margin="12,0"
+                                    VerticalAlignment="Center">
+                            <TextBlock FontWeight="SemiBold"
+                                       Text="Minimum Level" />
+                            <TextBlock FontSize="11"
+                                       Foreground="{DynamicResource MahApps.Brushes.Gray}"
+                                       Text="Minimum level for displaying logs" />
+                        </StackPanel>
+                        <ComboBox Grid.Column="2"
+                                  Width="{StaticResource ContentMinWidth}"
+                                  VerticalAlignment="Center"
+                                  ItemsSource="{Binding Source={StaticResource LogLevelProvider}}"
+                                  SelectedItem="{Binding LogLevel}" />
+                    </Grid>
+
+                    <!--  Pretty JSON  -->
+                    <Grid Margin="0,12,0,0">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <Path Width="20"
+                              Height="20"
+                              VerticalAlignment="Center"
+                              Data="{StaticResource PrettyJson}"
+                              Fill="{DynamicResource MahApps.Brushes.ThemeForeground}"
+                              Stretch="Uniform" />
+                        <StackPanel Grid.Column="1"
+                                    Margin="12,0"
+                                    VerticalAlignment="Center">
+                            <TextBlock FontWeight="SemiBold"
+                                       Text="Pretty JSON" />
+                            <TextBlock FontSize="11"
+                                       Foreground="{DynamicResource MahApps.Brushes.Gray}"
+                                       Text="Format objects as indented JSON" />
+                        </StackPanel>
+                        <mah:ToggleSwitch Grid.Column="2"
+                                          MinWidth="{StaticResource ToggleSwitchMinWidth}"
+                                          HorizontalAlignment="Right"
+                                          IsOn="{Binding EnablePrettyJson}" />
+                    </Grid>
+
+                    <Expander Header="Level Detection Keywords"
+                              IsExpanded="False"
+                              Margin="0,16,0,8">
+                        <StackPanel>
+                            <TextBlock Margin="0,4"
+                                       FontSize="11"
+                                       Foreground="{DynamicResource MahApps.Brushes.Gray}"
+                                       Text="comma-separated, max 5 keywords for each level" />
+                            <!--  Information Keywords  -->
+                            <TextBox Margin="0,4"
+                                     mah:TextBoxHelper.UseFloatingWatermark="True"
+                                     mah:TextBoxHelper.Watermark="Information"
+                                     mah:ValidationHelper.ShowValidationErrorOnMouseOver="True"
+                                     Text="{Binding InformationKeywords, ValidatesOnDataErrors=True, UpdateSourceTrigger=PropertyChanged, NotifyOnValidationError=True}" />
+                            <!--  Warning Keywords  -->
+                            <TextBox Margin="0,4"
+                                     mah:TextBoxHelper.UseFloatingWatermark="True"
+                                     mah:TextBoxHelper.Watermark="Warning"
+                                     mah:ValidationHelper.ShowValidationErrorOnMouseOver="True"
+                                     Text="{Binding WarningKeywords, ValidatesOnDataErrors=True, UpdateSourceTrigger=PropertyChanged, NotifyOnValidationError=True}" />
+                            <!--  Error Keywords  -->
+                            <TextBox Margin="0,4"
+                                     mah:TextBoxHelper.UseFloatingWatermark="True"
+                                     mah:TextBoxHelper.Watermark="Error"
+                                     mah:ValidationHelper.ShowValidationErrorOnMouseOver="True"
+                                     Text="{Binding ErrorKeywords, ValidatesOnDataErrors=True, UpdateSourceTrigger=PropertyChanged, NotifyOnValidationError=True}" />
+                            <!--  Critical Keywords  -->
+                            <TextBox Margin="0,4"
+                                     mah:TextBoxHelper.UseFloatingWatermark="True"
+                                     mah:TextBoxHelper.Watermark="Critical"
+                                     mah:ValidationHelper.ShowValidationErrorOnMouseOver="True"
+                                     Text="{Binding CriticalKeywords, ValidatesOnDataErrors=True, UpdateSourceTrigger=PropertyChanged, NotifyOnValidationError=True}" />
+                        </StackPanel>
+                    </Expander>
+                </StackPanel>
             </GroupBox>
 
             <!--  Stack Trace  -->

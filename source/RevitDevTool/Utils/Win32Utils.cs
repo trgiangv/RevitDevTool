@@ -72,7 +72,7 @@ public static class Win32Utils
         window.Closed += (EventHandler)((_, _) => SetForegroundWindow(ComponentManager.ApplicationWindow));
     }
 
-    public static void SetRichTextBoxTheme(this System.Windows.Forms.RichTextBox richTextBox, bool isDarkTheme)
+    public static void SetRichTextBoxTheme(this RichTextBox richTextBox, bool isDarkTheme)
     {
         richTextBox.BackColor = isDarkTheme
             ? LogThemePresets.DarkBackground
