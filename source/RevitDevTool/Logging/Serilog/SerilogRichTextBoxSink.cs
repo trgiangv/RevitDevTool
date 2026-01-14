@@ -66,21 +66,27 @@ internal sealed class SerilogRichTextBoxSink : ILogOutputSink
 
     public object GetHostControl() => _host;
 
+    private const string DefaultOutputTemplate = "[{Timestamp:HH:mm:ss} {Level:u3}] {Message:lj}{NewLine}{Exception}";
+    private const string StackTraceOutputTemplate = "[{Timestamp:HH:mm:ss} {Level:u3}] {Message:lj}{NewLine}{StackTrace}{NewLine}{Exception}";
+
     /// <summary>
     /// Configures Serilog with a RichTextBox sink and stores the reference
     /// to the library's sink for proper lifecycle management.
     /// </summary>
-    internal LoggerConfiguration ConfigureSerilog(LoggerConfiguration config, bool isDarkTheme, bool prettyPrintJson)
+    internal LoggerConfiguration ConfigureSerilog(LoggerConfiguration config, bool isDarkTheme, bool prettyPrintJson, bool includeStackTrace)
     {
         DisposeSink();
         var logTheme = isDarkTheme ? LogThemePresets.EnhancedDark : LogThemePresets.EnhancedLight;
         var theme = logTheme.ToSerilogTheme();
+        var outputTemplate = includeStackTrace ? StackTraceOutputTemplate : DefaultOutputTemplate;
+
         var result = config.WriteTo.RichTextBox(
             _richTextBox,
             out var sink,
             theme: theme,
             autoScroll: true,
             maxLogLines: 1000,
+            outputTemplate: outputTemplate,
             formatProvider: CultureInfo.InvariantCulture,
             prettyPrintJson: prettyPrintJson);
 

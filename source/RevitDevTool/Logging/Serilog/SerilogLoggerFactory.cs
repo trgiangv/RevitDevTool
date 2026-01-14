@@ -28,7 +28,11 @@ internal sealed class SerilogLoggerFactory : ILoggerFactory
 
         if (outputSink is SerilogRichTextBoxSink richTextBoxSink && !config.UseExternalFileOnly)
         {
-            loggerConfig = richTextBoxSink.ConfigureSerilog(loggerConfig, isDarkTheme, config.EnablePrettyJson);
+            loggerConfig = richTextBoxSink.ConfigureSerilog(
+                loggerConfig,
+                isDarkTheme,
+                config.EnablePrettyJson,
+                config.IncludeStackTrace);
         }
 
         if (config.IsSaveLogEnabled)
@@ -72,7 +76,7 @@ internal sealed class SerilogLoggerFactory : ILoggerFactory
         var uiApp = Context.UiApplication;
         if (uiApp == null!)
             return config;
-        
+
         if (enrichers.HasFlag(RevitEnricher.RevitVersion))
             config = config.Enrich.WithRevitVersion(uiApp);
 

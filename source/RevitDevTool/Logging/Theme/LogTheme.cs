@@ -3,7 +3,7 @@ namespace RevitDevTool.Logging.Theme;
 
 /// <summary>
 /// Represents a complete log theme with default style and token-specific styles.
-/// Library-agnostic representation that can be converted to Serilog or ZLogger themes.
+/// Library-agnostic representation that can be converted to specific logging library themes.
 /// </summary>
 public sealed class LogTheme
 {

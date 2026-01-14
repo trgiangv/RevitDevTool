@@ -1,78 +1,67 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
-    <PropertyGroup>
-        <UseWPF>true</UseWPF>
-        <UseWindowsForms>true</UseWindowsForms>
-        <DeployRevitAddin>true</DeployRevitAddin>
-    </PropertyGroup>
+  <PropertyGroup>
+    <UseWPF>true</UseWPF>
+    <UseWindowsForms>true</UseWindowsForms>
+    <DeployRevitAddin>true</DeployRevitAddin>
+  </PropertyGroup>
 
-    <PropertyGroup>
-        <IsRepackable>true</IsRepackable>
-        <RepackBinariesExcludes>
-            SQLite.Interop.dll;
-            MahApps.Metro.dll;
-            ControlzEx.dll;
-            Microsoft.Xaml.Behaviors.dll
-        </RepackBinariesExcludes>
-    </PropertyGroup>
+  <PropertyGroup>
+    <IsRepackable>true</IsRepackable>
+    <RepackBinariesExcludes>
+      MahApps.Metro.dll;
+      ControlzEx.dll;
+      Microsoft.Xaml.Behaviors.dll
+    </RepackBinariesExcludes>
+  </PropertyGroup>
 
-    <ItemGroup>
-        <!-- Revit API-->
-        <PackageReference Include="Nice3point.Revit.Build.Tasks"/>
-        <PackageReference Include="Nice3point.Revit.Toolkit" VersionOverride="$(RevitVersion).*" />
-        <PackageReference Include="Nice3point.Revit.Extensions" VersionOverride="$(RevitVersion).*" />
-        <PackageReference Include="Nice3point.Revit.Api.RevitAPI" VersionOverride="$(RevitVersion).*" />
-        <PackageReference Include="Nice3point.Revit.Api.RevitAPIUI" VersionOverride="$(RevitVersion).*" />
-        <PackageReference Include="Nice3point.Revit.Api.UIFramework" VersionOverride="$(RevitVersion).*" />
-        <PackageReference Include="Nice3point.Revit.Api.AdWindows" VersionOverride="$(RevitVersion).*" />
+  <ItemGroup>
+    <!-- Revit API-->
+    <PackageReference Include="Nice3point.Revit.Build.Tasks"/>
+    <PackageReference Include="Nice3point.Revit.Toolkit" VersionOverride="$(RevitVersion).*" />
+    <PackageReference Include="Nice3point.Revit.Extensions" VersionOverride="$(RevitVersion).*" />
+    <PackageReference Include="Nice3point.Revit.Api.RevitAPI" VersionOverride="$(RevitVersion).*" />
+    <PackageReference Include="Nice3point.Revit.Api.RevitAPIUI" VersionOverride="$(RevitVersion).*" />
+    <PackageReference Include="Nice3point.Revit.Api.UIFramework" VersionOverride="$(RevitVersion).*" />
+    <PackageReference Include="Nice3point.Revit.Api.AdWindows" VersionOverride="$(RevitVersion).*" />
 
-        <!-- UI -->
-        <PackageReference Include="CommunityToolkit.Mvvm"/>
-        <PackageReference Include="MahApps.Metro"/>
-        
-        <!-- Serilog -->
-        <PackageReference Include="Serilog"/>
-        <PackageReference Include="Serilog.Enrichers.Autodesk.Revit" />
-        <PackageReference Include="Serilog.Sinks.File"/>
-        <PackageReference Include="Serilog.Sinks.RichTextBox.WinForms.Colored"/>
-        
-        <!--Hosting-->
-        <PackageReference Include="Microsoft.Extensions.Hosting"/>
+    <!-- UI -->
+    <PackageReference Include="CommunityToolkit.Mvvm"/>
+    <PackageReference Include="MahApps.Metro"/>
 
-        <!-- Utils -->
-        <PackageReference Include="JetBrains.Annotations" />
-        <PackageReference Include="PolySharp" PrivateAssets="All" IncludeAssets="runtime; build; native; contentfiles; analyzers; buildtransitive" />
-        <PackageReference Include="ILRepack" />
-        <PackageReference Include="Microsoft-WindowsAPICodePack-Shell" Condition="$(DefineConstants.Contains('NETFRAMEWORK'))"/>
-    </ItemGroup>
+    <!-- Serilog -->
+    <PackageReference Include="Serilog"/>
+    <PackageReference Include="Serilog.Sinks.Seq"/>
+    <PackageReference Include="Sentry.Serilog"/>
+    <PackageReference Include="Serilog.Enrichers.Autodesk.Revit" />
+    <PackageReference Include="Serilog.Sinks.File"/>
+    <PackageReference Include="Serilog.Sinks.RichTextBox.WinForms.Colored"/>
 
-    <!-- Copy SQLite.Interop.dll -->
-    <Target Name="CopySQLiteInterop" AfterTargets="Build">
-        <Copy Condition="!$(DefineConstants.Contains('NETFRAMEWORK')) AND Exists('$(OutputPath)runtimes\win-x64\native\SQLite.Interop.dll')"
-              SourceFiles="$(OutputPath)runtimes\win-x64\native\SQLite.Interop.dll"
-              DestinationFiles="$(OutputPath)SQLite.Interop.dll"
-              SkipUnchangedFiles="true" />
-        <Copy Condition="$(DefineConstants.Contains('NETFRAMEWORK')) AND Exists('$(OutputPath)x64\SQLite.Interop.dll')"
-              SourceFiles="$(OutputPath)x64\SQLite.Interop.dll"
-              DestinationFiles="$(OutputPath)SQLite.Interop.dll"
-              SkipUnchangedFiles="true" />
-    </Target>
+    <!--Hosting-->
+    <PackageReference Include="Microsoft.Extensions.Hosting"/>
 
-    <ItemGroup>
-        <Resource Include="Resources\Icons\*.*" />
-    </ItemGroup>
+    <!-- Utils -->
+    <PackageReference Include="JetBrains.Annotations" />
+    <PackageReference Include="PolySharp" PrivateAssets="All" IncludeAssets="runtime; build; native; contentfiles; analyzers; buildtransitive" />
+    <PackageReference Include="ILRepack" />
+    <PackageReference Include="Microsoft-WindowsAPICodePack-Shell" Condition="$(DefineConstants.Contains('NETFRAMEWORK'))"/>
+  </ItemGroup>
 
-    <!-- Start Revit -->
-    <PropertyGroup>
-        <StartAction>Program</StartAction>
-        <StartProgram>C:\Program Files\Autodesk\Revit $(RevitVersion)\Revit.exe</StartProgram>
-        <StartArguments>/language ENG</StartArguments>
-    </PropertyGroup>
+  <ItemGroup>
+    <Resource Include="Resources\Icons\*.*" />
+  </ItemGroup>
 
-    <!-- Clean Files -->
-    <Target Name="DeleteFiles" AfterTargets="Clean">
-        <RemoveDir Directories="$(AppData)\Autodesk\Revit\Addins\$(RevitVersion)\$(ProjectName)" />
-        <Delete Files="$(AppData)\Autodesk\Revit\Addins\$(RevitVersion)\$(ProjectName).addin" />
-    </Target>
+  <!-- Start Revit -->
+  <PropertyGroup>
+    <StartAction>Program</StartAction>
+    <StartProgram>C:\Program Files\Autodesk\Revit $(RevitVersion)\Revit.exe</StartProgram>
+    <StartArguments>/language ENG</StartArguments>
+  </PropertyGroup>
+
+  <!-- Clean Files -->
+  <Target Name="DeleteFiles" AfterTargets="Clean">
+    <RemoveDir Directories="$(AppData)\Autodesk\Revit\Addins\$(RevitVersion)\$(ProjectName)" />
+    <Delete Files="$(AppData)\Autodesk\Revit\Addins\$(RevitVersion)\$(ProjectName).addin" />
+  </Target>
 
 </Project>

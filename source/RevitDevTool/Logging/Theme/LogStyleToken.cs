@@ -3,7 +3,6 @@ namespace RevitDevTool.Logging.Theme;
 /// <summary>
 /// Defines the different style tokens used in log output formatting.
 /// This is a library-agnostic representation that can be mapped to
-/// Serilog or ZLogger specific tokens.
 /// </summary>
 public enum LogStyleToken
 {

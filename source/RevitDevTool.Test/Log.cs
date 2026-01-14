@@ -92,31 +92,31 @@ public class SerilogFormattingTestCmd : ExternalCommand
         // SECTION 0: LOG LEVEL DETECTION (via keywords in message)
         // ═══════════════════════════════════════════════════════════════════
         Trace.WriteLine("═══ LOG LEVEL DETECTION TESTS ═══");
-        
+
         // Prefix detection (highest priority)
         Trace.WriteLine("[INFO] This should be Information level");
         Trace.WriteLine("[WARN] This should be Warning level");
         Trace.WriteLine("[ERROR] This should be Error level");
         Trace.WriteLine("[FATAL] This should be Critical level");
         Trace.WriteLine("[DEBUG] This should be Debug level");
-        
+
         // Keyword detection (fallback)
         Trace.WriteLine("Operation completed successfully");  // contains "completed" -> Info
         Trace.WriteLine("Warning: Memory usage is high");     // contains "warning" -> Warning
         Trace.WriteLine("Error occurred during processing");  // contains "error" -> Error
         Trace.WriteLine("Fatal crash detected in system");    // contains "fatal" -> Critical
         Trace.WriteLine("Just a regular debug message");      // no keywords -> Debug
-        
+
         // ═══════════════════════════════════════════════════════════════════
         // SECTION 1: TRACE - All Log Levels (explicit)
         // ═══════════════════════════════════════════════════════════════════
         Trace.WriteLine("═══ TRACE TESTS ═══");
-        
+
         // 1.1 Plain messages - different levels
         Trace.TraceInformation("Plain INFO message");
         Trace.TraceWarning("Plain WARNING message");
         Trace.TraceError("Plain ERROR message");
-        
+
         // 1.2 Scalar values with placeholders
         Trace.TraceInformation("Cache hit ratio: {0:P2}", 0.856);
         Trace.TraceInformation("Response time: {0}", DateTime.Now);
@@ -124,11 +124,11 @@ public class SerilogFormattingTestCmd : ExternalCommand
         Trace.TraceInformation("API version: {0}", "2.1.0");
         Trace.TraceWarning("Memory usage: {0} MB (threshold: {1} MB)", 1024, 2048);
         Trace.TraceError("Failed order {0} with code {1}", "ORD-12345", "E500");
-        
+
         // 1.3 Simple object via WriteLine (BEST for objects)
         var simpleMetrics = new { CPU = 85.5, Memory = 1024, Connections = 42 };
         Trace.WriteLine(simpleMetrics);
-        
+
         // 1.4 Complex nested object
         var apiRequest = new
         {
@@ -138,7 +138,7 @@ public class SerilogFormattingTestCmd : ExternalCommand
             Headers = new { ContentType = "application/json", Authorization = "Bearer ***" }
         };
         Trace.WriteLine(apiRequest);
-        
+
         // 1.5 User activity object
         var userAction = new
         {
@@ -149,7 +149,7 @@ public class SerilogFormattingTestCmd : ExternalCommand
             Timestamp = DateTime.UtcNow
         };
         Trace.WriteLine(userAction);
-        
+
         // 1.6 Dictionary-like config
         var config = new
         {
@@ -159,7 +159,7 @@ public class SerilogFormattingTestCmd : ExternalCommand
             AllowedOrigins = new[] { "https://api.example.com", "https://admin.example.com" }
         };
         Trace.WriteLine(config);
-        
+
         // 1.7 Deep nested structure (audit log)
         var auditLog = new
         {
@@ -174,7 +174,7 @@ public class SerilogFormattingTestCmd : ExternalCommand
             }
         };
         Trace.WriteLine(auditLog);
-        
+
         // 1.8 Deployment info (very complex)
         var deploymentInfo = new
         {
@@ -205,15 +205,15 @@ public class SerilogFormattingTestCmd : ExternalCommand
             }
         };
         Trace.WriteLine(deploymentInfo);
-        
+
         // ═══════════════════════════════════════════════════════════════════
         // SECTION 2: DEBUG - Same patterns
         // ═══════════════════════════════════════════════════════════════════
         Debug.WriteLine("═══ DEBUG TESTS ═══");
-        
+
         // 2.1 Plain message
         Debug.WriteLine("Plain debug message");
-        
+
         // 2.2 Object via WriteLine
         var debugQuery = new
         {
@@ -222,19 +222,19 @@ public class SerilogFormattingTestCmd : ExternalCommand
             ExecutionTime = 150
         };
         Debug.WriteLine(debugQuery);
-        
+
         // ═══════════════════════════════════════════════════════════════════
         // SECTION 3: CONSOLE - Same patterns
         // ═══════════════════════════════════════════════════════════════════
         Console.WriteLine("═══ CONSOLE TESTS ═══");
-        
+
         // 3.1 Plain message
         Console.WriteLine("Plain console message");
-        
+
         // 3.2 Object via WriteLine
         var consoleMetrics = new { Uptime = TimeSpan.FromHours(48.5), Requests = 1000000 };
         Console.WriteLine(consoleMetrics);
-        
+
         // ═══════════════════════════════════════════════════════════════════
         // SECTION 4: EXCEPTION HANDLING
         // ═══════════════════════════════════════════════════════════════════
@@ -315,7 +315,7 @@ public class BatchDebugPrettyJsonCmd : ExternalCommand
                 new { Property = "Timeout", OldValue = 30, NewValue = 60 }
             } as object[]
         };
-        
+
         Trace.WriteLine(auditLog);
     }
 }
