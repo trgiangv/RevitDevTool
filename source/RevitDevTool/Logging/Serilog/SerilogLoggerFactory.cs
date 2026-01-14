@@ -26,7 +26,7 @@ internal sealed class SerilogLoggerFactory : ILoggerFactory
 
         if (outputSink is SerilogRichTextBoxSink richTextBoxSink && !config.UseExternalFileOnly)
         {
-            loggerConfig = richTextBoxSink.ConfigureSerilog(loggerConfig, isDarkTheme);
+            loggerConfig = richTextBoxSink.ConfigureSerilog(loggerConfig, isDarkTheme, config.EnablePrettyJson);
         }
 
         if (config.IsSaveLogEnabled)
