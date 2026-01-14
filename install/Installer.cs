@@ -1,5 +1,5 @@
-﻿using System;
-using Installer;
+﻿using Installer;
+using System;
 using WixSharp;
 using WixSharp.CommonTasks;
 using WixSharp.Controls;
