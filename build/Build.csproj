@@ -13,8 +13,8 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <PackageReference Include="Nuke.Common" Version="9.0.4"/>
-        <PackageReference Include="Autodesk.PackageBuilder" Version="1.0.6"/>
+        <PackageReference Include="Nuke.Common"/>
+        <PackageReference Include="Autodesk.PackageBuilder"/>
     </ItemGroup>
 
     <ItemGroup>
