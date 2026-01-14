@@ -10,8 +10,8 @@ namespace RevitDevTool.Logging;
 /// Framework-agnostic trace listener that works with any logging backend.
 /// </summary>
 internal sealed class AdapterTraceListener(
-    ILoggerAdapter logger, 
-    bool includeStackTrace, 
+    ILoggerAdapter logger,
+    bool includeStackTrace,
     int stackTraceDepth,
     LogFilterKeywords? filterKeywords = null) : TraceListener
 {
@@ -119,10 +119,14 @@ internal sealed class AdapterTraceListener(
         var level = DetectLogLevel(data?.ToString());
 
         if (!string.IsNullOrWhiteSpace(category))
+        {
             _logger.ForContext(CategoryProperty, category)
                 .Write(level, "[{Category}] {@TraceData:j}", category, data);
+        }
         else
+        {
             _logger.Write(level, "{@TraceData:j}", data);
+        }
     }
 
     public override void Write(string? message, string? category)
@@ -130,10 +134,14 @@ internal sealed class AdapterTraceListener(
         var level = DetectLogLevel(message);
 
         if (!string.IsNullOrWhiteSpace(category))
+        {
             _logger.ForContext(CategoryProperty, category)
-                .Write(level, "[{Category}] {Message}", category, message);
+                        .Write(level, "[{Category}] {Message}", category, message);
+        }
         else
+        {
             _logger.Write(level, message ?? string.Empty);
+        }
     }
 
     public override void WriteLine(string? message) => Write(message);
@@ -149,7 +157,7 @@ internal sealed class AdapterTraceListener(
             .ForContext(TraceEventTypeProperty, eventType)
             .ForContext(EventIdProperty, id);
 
-        if (!includeStackTrace || stackTraceDepth <= 0 || eventCache == null) 
+        if (!includeStackTrace || stackTraceDepth <= 0 || eventCache == null)
             return enrichedLogger;
 
         var stackTrace = StackTraceUtils.BuildStackTrace(eventCache, stackTraceDepth);
@@ -210,7 +218,7 @@ internal sealed class AdapterTraceListener(
             {
                 var formatEndIndex = template.IndexOf('}', formatStartIndex);
                 if (formatEndIndex <= formatStartIndex) continue;
-                var formatSpec = template.Substring(formatStartIndex + formatPlaceholderPrefix.Length, 
+                var formatSpec = template.Substring(formatStartIndex + formatPlaceholderPrefix.Length,
                     formatEndIndex - formatStartIndex - formatPlaceholderPrefix.Length);
                 var originalPlaceholder = template.Substring(formatStartIndex, formatEndIndex - formatStartIndex + 1);
                 var structuredPlaceholder = $"{{Arg{i}:{formatSpec}}}";
@@ -248,7 +256,7 @@ internal sealed class AdapterTraceListener(
 
         return true;
     }
-    
+
     private static LogLevel GetLogLevel(TraceEventType eventType) => eventType switch
     {
         TraceEventType.Critical => LogLevel.Critical,
@@ -275,6 +283,6 @@ internal sealed class AdapterTraceListener(
         object?[]? data)
     {
         var filter = Filter;
-        return filter == null || filter.ShouldTrace(cache, source, eventType, id, formatOrMessage, args, data1, data);
+        return filter?.ShouldTrace(cache, source, eventType, id, formatOrMessage, args, data1, data) != false;
     }
 }

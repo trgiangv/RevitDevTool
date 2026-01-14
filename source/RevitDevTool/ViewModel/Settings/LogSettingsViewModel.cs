@@ -19,7 +19,7 @@ public partial class LogSettingsViewModel : ObservableObject, IDataErrorInfo
 
     public static int[] StackTraceDepths { get; } = [1, 2, 3, 4, 5]; // allowed maximum 5 levels
     public static SourceLevels[] SourceLevels { get; } = Enum.GetValues(typeof(SourceLevels)).Cast<SourceLevels>().ToArray();
-    public static RevitEnricher[] AvailableRevitEnrichers { get; } = 
+    public static RevitEnricher[] AvailableRevitEnrichers { get; } =
     [
         RevitEnricher.RevitVersion,
         RevitEnricher.RevitBuild,
@@ -57,7 +57,7 @@ public partial class LogSettingsViewModel : ObservableObject, IDataErrorInfo
         _messenger = WeakReferenceMessenger.Default;
 
         SelectedRevitEnrichers.CollectionChanged += (_, _) => UpdateHasPendingChanges();
-        
+
         LoadFromConfig();
         SetBaselineFromCurrent();
     }
@@ -72,7 +72,7 @@ public partial class LogSettingsViewModel : ObservableObject, IDataErrorInfo
         nameof(CriticalKeywords) => TraceUtils.ValidateKeywords(CriticalKeywords) ?? string.Empty,
         _ => string.Empty
     };
-    
+
     partial void OnLogLevelChanged(LogLevel value) => UpdateHasPendingChanges();
     partial void OnIsSaveLogEnabledChanged(bool value)
     {
@@ -96,7 +96,7 @@ public partial class LogSettingsViewModel : ObservableObject, IDataErrorInfo
     private void LoadFromConfig()
     {
         var config = _settingsService.LogConfig;
-        
+
         LogLevel = config.LogLevel;
         EnablePrettyJson = config.EnablePrettyJson;
         InformationKeywords = config.FilterKeywords.Information;
@@ -185,7 +185,7 @@ public partial class LogSettingsViewModel : ObservableObject, IDataErrorInfo
     private void UpdateHasPendingChanges()
     {
         var currentEnrichers = SelectedRevitEnrichers.Aggregate(RevitEnricher.None, (current, e) => current | e);
-        
+
         HasPendingChanges =
             _baseline.LogLevel != LogLevel
             || _baseline.IsSaveLogEnabled != IsSaveLogEnabled
