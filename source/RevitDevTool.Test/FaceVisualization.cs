@@ -1,7 +1,7 @@
-﻿using System.Diagnostics;
-using Autodesk.Revit.Attributes;
+﻿using Autodesk.Revit.Attributes;
 using Autodesk.Revit.UI.Selection;
 using Nice3point.Revit.Toolkit.External;
+using System.Diagnostics;
 
 namespace RevitDevTool.Test;
 

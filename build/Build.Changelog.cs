@@ -1,6 +1,6 @@
-using System.Text;
 using Nuke.Common.Tools.Git;
 using Nuke.Common.Tools.GitHub;
+using System.Text;
 
 sealed partial class Build
 {

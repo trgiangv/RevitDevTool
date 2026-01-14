@@ -1,8 +1,8 @@
-using System.Diagnostics.CodeAnalysis;
-using Serilog.Events;
 using Nuke.Common.Tooling;
-using Nuke.Common.Utilities;
 using Nuke.Common.Tools.DotNet;
+using Nuke.Common.Utilities;
+using Serilog.Events;
+using System.Diagnostics.CodeAnalysis;
 using static Nuke.Common.Tools.DotNet.DotNetTasks;
 
 sealed partial class Build
