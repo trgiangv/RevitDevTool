@@ -4,6 +4,7 @@ using RevitDevTool.Messages;
 using RevitDevTool.Models.Config;
 using RevitDevTool.Services;
 using RevitDevTool.Utils;
+using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Diagnostics;
 
@@ -18,6 +19,16 @@ public partial class LogSettingsViewModel : ObservableObject, IDataErrorInfo
 
     public static int[] StackTraceDepths { get; } = [1, 2, 3, 4, 5]; // allowed maximum 5 levels
     public static SourceLevels[] SourceLevels { get; } = Enum.GetValues(typeof(SourceLevels)).Cast<SourceLevels>().ToArray();
+    public static RevitEnricher[] AvailableRevitEnrichers { get; } = 
+    [
+        RevitEnricher.RevitVersion,
+        RevitEnricher.RevitBuild,
+        RevitEnricher.RevitUserName,
+        RevitEnricher.RevitLanguage,
+        RevitEnricher.RevitDocumentTitle,
+        RevitEnricher.RevitDocumentPathName,
+        RevitEnricher.RevitDocumentModelPath
+    ];
 
     [ObservableProperty] private LogLevel _logLevel;
     [ObservableProperty] private bool _enablePrettyJson;
@@ -36,6 +47,8 @@ public partial class LogSettingsViewModel : ObservableObject, IDataErrorInfo
     [ObservableProperty] private int _stackTraceDepth;
     [ObservableProperty] private string _logFolder = string.Empty;
 
+    public ObservableCollection<RevitEnricher> SelectedRevitEnrichers { get; } = [];
+
     private Snapshot _baseline;
 
     public LogSettingsViewModel(ISettingsService settingsService)
@@ -43,6 +56,8 @@ public partial class LogSettingsViewModel : ObservableObject, IDataErrorInfo
         _settingsService = settingsService;
         _messenger = WeakReferenceMessenger.Default;
 
+        SelectedRevitEnrichers.CollectionChanged += (_, _) => UpdateHasPendingChanges();
+        
         LoadFromConfig();
         SetBaselineFromCurrent();
     }
@@ -97,6 +112,12 @@ public partial class LogSettingsViewModel : ObservableObject, IDataErrorInfo
         StackTraceDepth = config.StackTraceDepth;
         TimeInterval = config.TimeInterval;
         LogFolder = config.LogFolder;
+        SelectedRevitEnrichers.Clear();
+        foreach (var enricher in AvailableRevitEnrichers)
+        {
+            if (config.RevitEnrichers.HasFlag(enricher))
+                SelectedRevitEnrichers.Add(enricher);
+        }
     }
 
     private void SaveToConfig()
@@ -118,6 +139,8 @@ public partial class LogSettingsViewModel : ObservableObject, IDataErrorInfo
         config.StackTraceDepth = StackTraceDepth;
         config.TimeInterval = TimeInterval;
         config.LogFolder = LogFolder;
+        config.RevitEnrichers = SelectedRevitEnrichers
+            .Aggregate(RevitEnricher.None, (current, enricher) => current | enricher);
 
         _settingsService.SaveSettings();
     }
@@ -152,7 +175,8 @@ public partial class LogSettingsViewModel : ObservableObject, IDataErrorInfo
             InformationKeywords,
             WarningKeywords,
             ErrorKeywords,
-            CriticalKeywords
+            CriticalKeywords,
+            SelectedRevitEnrichers.Aggregate(RevitEnricher.None, (current, e) => current | e)
         );
 
         HasPendingChanges = false;
@@ -160,6 +184,8 @@ public partial class LogSettingsViewModel : ObservableObject, IDataErrorInfo
 
     private void UpdateHasPendingChanges()
     {
+        var currentEnrichers = SelectedRevitEnrichers.Aggregate(RevitEnricher.None, (current, e) => current | e);
+        
         HasPendingChanges =
             _baseline.LogLevel != LogLevel
             || _baseline.IsSaveLogEnabled != IsSaveLogEnabled
@@ -171,6 +197,7 @@ public partial class LogSettingsViewModel : ObservableObject, IDataErrorInfo
             || _baseline.TimeInterval != TimeInterval
             || _baseline.StackTraceDepth != StackTraceDepth
             || _baseline.EnablePrettyJson != EnablePrettyJson
+            || _baseline.RevitEnrichers != currentEnrichers
             || !string.Equals(_baseline.LogFolder, LogFolder, StringComparison.OrdinalIgnoreCase)
             || !string.Equals(_baseline.InformationKeywords, InformationKeywords, StringComparison.Ordinal)
             || !string.Equals(_baseline.WarningKeywords, WarningKeywords, StringComparison.Ordinal)
@@ -193,7 +220,8 @@ public partial class LogSettingsViewModel : ObservableObject, IDataErrorInfo
         string InformationKeywords,
         string WarningKeywords,
         string ErrorKeywords,
-        string CriticalKeywords);
+        string CriticalKeywords,
+        RevitEnricher RevitEnrichers);
 
     [RelayCommand]
     private void BrowseFolder()

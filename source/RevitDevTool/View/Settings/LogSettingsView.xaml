@@ -331,6 +331,38 @@
                                   SelectedItem="{Binding TimeInterval}" />
                     </Grid>
 
+                    <!--  Revit Enrichers  -->
+                    <Grid Margin="8"
+                          Visibility="{Binding IsSaveLogEnabled, Converter={StaticResource BoolToVisibility}}">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <Path Width="20"
+                              Height="20"
+                              VerticalAlignment="Center"
+                              Data="{StaticResource RevitEnricher}"
+                              Fill="{DynamicResource MahApps.Brushes.ThemeForeground}"
+                              Stretch="Uniform" />
+                        <StackPanel Grid.Column="1"
+                                    Margin="12,0"
+                                    VerticalAlignment="Center">
+                            <TextBlock FontWeight="SemiBold"
+                                       Text="Revit Enrichers" />
+                            <TextBlock FontSize="11"
+                                       Foreground="{DynamicResource MahApps.Brushes.Gray}"
+                                       Text="Add Revit context to JSON logs" />
+                        </StackPanel>
+                        <mah:MultiSelectionComboBox Grid.Column="2"
+                                                    Width="300"
+                                                    VerticalAlignment="Center"
+                                                    mah:MultiSelectorHelper.SelectedItems="{Binding SelectedRevitEnrichers}"
+                                                    ItemContainerStyle="{StaticResource MahApps.Styles.MultiSelectionComboBoxItem.CheckBox}"
+                                                    ItemsSource="{Binding AvailableRevitEnrichers, Mode=OneTime}"
+                                                    SelectionMode="Multiple" />
+                    </Grid>
+
                     <!--  Log Folder  -->
                     <Grid Margin="8"
                           Visibility="{Binding IsSaveLogEnabled, Converter={StaticResource BoolToVisibility}}">
