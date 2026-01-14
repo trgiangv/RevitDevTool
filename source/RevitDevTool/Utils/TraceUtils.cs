@@ -72,7 +72,7 @@ public static class TraceUtils
     {
         if (string.IsNullOrWhiteSpace(message))
             return LogLevel.Debug;
-        
+
         var prefixLevel = DetectFromPrefix(message!);
         if (prefixLevel != LogLevel.Debug)
             return prefixLevel;

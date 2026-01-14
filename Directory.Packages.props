@@ -5,10 +5,12 @@
   </PropertyGroup>
   <ItemGroup>
     <!--Ioc-->
-    <PackageVersion Include="Microsoft.Extensions.Hosting" Version="10.0.1" />
+    <PackageVersion Include="Microsoft.Extensions.Hosting" Version="10.0.2" />
     <!--Logging-->
+    <PackageVersion Include="Sentry.Serilog" Version="6.0.0" />
     <PackageVersion Include="Serilog" Version="4.3.1-dev-02395" />
     <PackageVersion Include="Serilog.Enrichers.Autodesk.Revit" Version="2.0.1" />
+    <PackageVersion Include="Serilog.Sinks.Seq" Version="9.0.0" />
     <PackageVersion Include="Serilog.Sinks.File" Version="7.0.1-dev-02315" />
     <PackageVersion Include="Serilog.Sinks.RichTextBox.WinForms.Colored" Version="3.2.0" />
     <!--Utilities-->
@@ -25,15 +27,5 @@
     <PackageVersion Include="Autodesk.PackageBuilder" Version="2.0.2" />
     <PackageVersion Include="WixSharp.bin" Version="1.26.0" />
     <PackageVersion Include="WixSharp.wix.bin" Version="3.14.1" />
-    <!--Test-->
-    <PackageVersion Include="xunit" Version="2.9.3" />
-    <PackageVersion Include="xunit.runner.visualstudio" Version="3.1.5" />
-    <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="18.0.1" />
-    <PackageVersion Include="Moq" Version="4.20.72" />
-    <PackageVersion Include="coverlet.collector" Version="6.0.4" />
-    <!--Benchmark-->
-    <PackageVersion Include="BenchmarkDotNet" Version="0.15.8" />
-    <PackageVersion Include="BenchmarkDotNet.Diagnostics.Windows" Version="0.15.8" />
-    <PackageVersion Include="Microsoft.Extensions.Logging" Version="10.0.1" />
   </ItemGroup>
 </Project>
