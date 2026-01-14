@@ -15,8 +15,6 @@ internal sealed class AdapterTraceListener(
     int stackTraceDepth,
     LogFilterKeywords? filterKeywords = null) : TraceListener
 {
-    private const string RevitVersionProperty = "RevitVersion";
-    private const string ActiveDocumentProperty = "ActiveDocument";
     private const string CategoryProperty = "Category";
     private const string StackTraceProperty = "StackTrace";
     private const string EventIdProperty = "TraceEventId";
@@ -32,15 +30,13 @@ internal sealed class AdapterTraceListener(
 
     public override void Fail(string? message)
     {
-        var enrichedLogger = EnrichWithRevitContext(_logger);
-        enrichedLogger.Fatal(message ?? string.Empty);
+        _logger.Fatal(message ?? string.Empty);
     }
 
     public override void Fail(string? message, string? detailMessage)
     {
-        var enrichedLogger = EnrichWithRevitContext(_logger)
-            .ForContext(FailDetailMessageProperty, detailMessage);
-        enrichedLogger.Fatal(message ?? string.Empty);
+        _logger.ForContext(FailDetailMessageProperty, detailMessage)
+            .Fatal(message ?? string.Empty);
     }
 
     public override void TraceData(TraceEventCache? eventCache, string source, TraceEventType eventType, int id, object? data)
@@ -108,40 +104,36 @@ internal sealed class AdapterTraceListener(
 
     public override void Write(object? data)
     {
-        var enrichedLogger = EnrichWithRevitContext(_logger);
         var level = DetectLogLevel(data?.ToString());
-        enrichedLogger.Write(level, "{@TraceData:j}", data);
+        _logger.Write(level, "{@TraceData:j}", data);
     }
 
     public override void Write(string? message)
     {
-        var enrichedLogger = EnrichWithRevitContext(_logger);
         var level = DetectLogLevel(message);
-        enrichedLogger.Write(level, message ?? string.Empty);
+        _logger.Write(level, message ?? string.Empty);
     }
 
     public override void Write(object? data, string? category)
     {
-        var enrichedLogger = EnrichWithRevitContext(_logger)
-            .ForContext(CategoryProperty, category);
         var level = DetectLogLevel(data?.ToString());
 
         if (!string.IsNullOrWhiteSpace(category))
-            enrichedLogger.Write(level, "[{Category}] {@TraceData:j}", category, data);
+            _logger.ForContext(CategoryProperty, category)
+                .Write(level, "[{Category}] {@TraceData:j}", category, data);
         else
-            enrichedLogger.Write(level, "{@TraceData:j}", data);
+            _logger.Write(level, "{@TraceData:j}", data);
     }
 
     public override void Write(string? message, string? category)
     {
-        var enrichedLogger = EnrichWithRevitContext(_logger)
-            .ForContext(CategoryProperty, category);
         var level = DetectLogLevel(message);
 
         if (!string.IsNullOrWhiteSpace(category))
-            enrichedLogger.Write(level, "[{Category}] {Message}", category, message);
+            _logger.ForContext(CategoryProperty, category)
+                .Write(level, "[{Category}] {Message}", category, message);
         else
-            enrichedLogger.Write(level, message ?? string.Empty);
+            _logger.Write(level, message ?? string.Empty);
     }
 
     public override void WriteLine(string? message) => Write(message);
@@ -150,16 +142,9 @@ internal sealed class AdapterTraceListener(
     public override void WriteLine(object? data, string? category) => Write(data, category);
 
 
-    private static ILoggerAdapter EnrichWithRevitContext(ILoggerAdapter logger)
-    {
-        return logger
-            .ForContext(RevitVersionProperty, $"Revit {Context.Application.VersionNumber}")
-            .ForContext(ActiveDocumentProperty, Context.ActiveDocument?.Title ?? "No Active Document");
-    }
-
     private ILoggerAdapter EnrichTraceContext(string source, TraceEventType eventType, int id, TraceEventCache? eventCache)
     {
-        var enrichedLogger = EnrichWithRevitContext(_logger)
+        var enrichedLogger = _logger
             .ForContext(SourceProperty, source)
             .ForContext(TraceEventTypeProperty, eventType)
             .ForContext(EventIdProperty, id);

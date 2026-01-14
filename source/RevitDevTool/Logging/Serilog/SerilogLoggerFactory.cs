@@ -24,6 +24,8 @@ internal sealed class SerilogLoggerFactory : ILoggerFactory
             .MinimumLevel.ControlledBy(_levelSwitch)
             .Enrich.FromLogContext();
 
+        loggerConfig = ConfigureRevitEnrichers(loggerConfig, config.RevitEnrichers);
+
         if (outputSink is SerilogRichTextBoxSink richTextBoxSink && !config.UseExternalFileOnly)
         {
             loggerConfig = richTextBoxSink.ConfigureSerilog(loggerConfig, isDarkTheme, config.EnablePrettyJson);
@@ -60,5 +62,38 @@ internal sealed class SerilogLoggerFactory : ILoggerFactory
                 shared: true,
                 rollingInterval: logConfig.TimeInterval.ToSerilog())
         };
+    }
+
+    private static LoggerConfiguration ConfigureRevitEnrichers(LoggerConfiguration config, RevitEnricher enrichers)
+    {
+        if (enrichers == RevitEnricher.None)
+            return config;
+
+        var uiApp = Context.UiApplication;
+        if (uiApp == null!)
+            return config;
+        
+        if (enrichers.HasFlag(RevitEnricher.RevitVersion))
+            config = config.Enrich.WithRevitVersion(uiApp);
+
+        if (enrichers.HasFlag(RevitEnricher.RevitBuild))
+            config = config.Enrich.WithRevitBuild(uiApp);
+
+        if (enrichers.HasFlag(RevitEnricher.RevitUserName))
+            config = config.Enrich.WithRevitUserName(uiApp);
+
+        if (enrichers.HasFlag(RevitEnricher.RevitLanguage))
+            config = config.Enrich.WithRevitLanguage(uiApp);
+
+        if (enrichers.HasFlag(RevitEnricher.RevitDocumentTitle))
+            config = config.Enrich.WithRevitDocumentTitle(uiApp);
+
+        if (enrichers.HasFlag(RevitEnricher.RevitDocumentPathName))
+            config = config.Enrich.WithRevitDocumentPathName(uiApp);
+
+        if (enrichers.HasFlag(RevitEnricher.RevitDocumentModelPath))
+            config = config.Enrich.WithRevitDocumentModelPath(uiApp);
+
+        return config;
     }
 }
