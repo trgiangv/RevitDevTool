@@ -1,10 +1,10 @@
-﻿using System.Diagnostics;
-using Autodesk.Revit.DB.DirectContext3D;
-using RevitDevTool.Extensions ;
-using RevitDevTool.Services ;
-using RevitDevTool.Visualization.Contracts ;
+﻿using Autodesk.Revit.DB.DirectContext3D;
+using RevitDevTool.Extensions;
+using RevitDevTool.Services;
+using RevitDevTool.Visualization.Contracts;
 using RevitDevTool.Visualization.Helpers;
 using RevitDevTool.Visualization.Render;
+using System.Diagnostics;
 using Color = Autodesk.Revit.DB.Color;
 
 namespace RevitDevTool.Visualization.Server;
@@ -16,23 +16,24 @@ public sealed class SolidVisualizationServer : VisualizationServer<Solid>
     private readonly List<RenderingBufferStorage> _faceBuffers = [];
     private readonly List<RenderingBufferStorage> _edgeBuffers = [];
 
-    private double _transparency = SettingsService.Instance.VisualizationConfig.SolidSettings.Transparency / 100;
-    private double _scale = SettingsService.Instance.VisualizationConfig.SolidSettings.Scale / 100;
+    private double _transparency;
+    private double _scale;
+    private Color _faceColor;
+    private Color _edgeColor;
+    private bool _drawFace;
+    private bool _drawEdge;
 
-    private Color _faceColor = new(
-        SettingsService.Instance.VisualizationConfig.SolidSettings.FaceColor.R,
-        SettingsService.Instance.VisualizationConfig.SolidSettings.FaceColor.G,
-        SettingsService.Instance.VisualizationConfig.SolidSettings.FaceColor.B
-        );
-    private Color _edgeColor = new(
-        SettingsService.Instance.VisualizationConfig.SolidSettings.EdgeColor.R,
-        SettingsService.Instance.VisualizationConfig.SolidSettings.EdgeColor.G,
-        SettingsService.Instance.VisualizationConfig.SolidSettings.EdgeColor.B
-        );
+    public SolidVisualizationServer(ISettingsService settingsService)
+    {
+        var settings = settingsService.VisualizationConfig.SolidSettings;
+        _transparency = settings.Transparency / 100;
+        _scale = settings.Scale / 100;
+        _faceColor = new Color(settings.FaceColor.R, settings.FaceColor.G, settings.FaceColor.B);
+        _edgeColor = new Color(settings.EdgeColor.R, settings.EdgeColor.G, settings.EdgeColor.B);
+        _drawFace = settings.ShowFace;
+        _drawEdge = settings.ShowEdge;
+    }
 
-    private bool _drawFace = SettingsService.Instance.VisualizationConfig.SolidSettings.ShowFace;
-    private bool _drawEdge = SettingsService.Instance.VisualizationConfig.SolidSettings.ShowEdge;
-    
     public override bool UseInTransparentPass(Autodesk.Revit.DB.View view) => _drawFace && _transparency > 0;
 
     public override Outline? GetBoundingBox(Autodesk.Revit.DB.View view)
@@ -40,7 +41,7 @@ public sealed class SolidVisualizationServer : VisualizationServer<Solid>
         if (visualizeGeometries.Count == 0) return null;
         List<XYZ> minPoints = [];
         List<XYZ> maxPoints = [];
-        
+
         foreach (var solid in visualizeGeometries)
         {
             if (solid.Volume == 0)
@@ -51,13 +52,13 @@ public sealed class SolidVisualizationServer : VisualizationServer<Solid>
             BoundingBoxXYZ boundingBox;
             try { boundingBox = solid.GetBoundingBox(); }
             catch { continue; }
-            
+
             var minPoint = boundingBox.Transform.OfPoint(boundingBox.Min);
             var maxPoint = boundingBox.Transform.OfPoint(boundingBox.Max);
             minPoints.Add(minPoint);
             maxPoints.Add(maxPoint);
         }
-        
+
         var newMinPoint = minPoints
             .OrderBy(point => point.X)
             .ThenBy(point => point.Y)
@@ -174,7 +175,7 @@ public sealed class SolidVisualizationServer : VisualizationServer<Solid>
             buffer.EffectInstance.SetColor(_edgeColor);
         }
     }
-    
+
     public void UpdateSurfaceColor(Color value)
     {
         var uiDocument = Context.ActiveUiDocument;

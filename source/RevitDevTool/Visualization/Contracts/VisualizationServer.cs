@@ -1,7 +1,8 @@
-﻿using System.Diagnostics ;
-using Autodesk.Revit.DB.DirectContext3D ;
-using Autodesk.Revit.DB.ExternalService ;
-using RevitDevTool.ViewModel.Contracts ;
+﻿using Autodesk.Revit.DB.DirectContext3D;
+using Autodesk.Revit.DB.ExternalService;
+using RevitDevTool.Controllers;
+using RevitDevTool.ViewModel.Contracts;
+using System.Diagnostics;
 
 namespace RevitDevTool.Visualization.Contracts;
 
@@ -11,7 +12,7 @@ public abstract class VisualizationServer<TG> : IDirectContext3DServer, IVisuali
     protected bool hasGeometryUpdates = true;
     protected bool hasEffectsUpdates = true;
     protected readonly object renderLock = new();
-    
+
     public string GetVendorId() => "RevitDevTool";
     public bool CanExecute(Autodesk.Revit.DB.View dBView) => true;
     public string GetApplicationId() => string.Empty;
@@ -20,7 +21,7 @@ public abstract class VisualizationServer<TG> : IDirectContext3DServer, IVisuali
     public ExternalServiceId GetServiceId() => ExternalServices.BuiltInExternalServices.DirectContext3DService;
     public string GetName() => $"{typeof(TG).Name} Visualization Server";
     public string GetDescription() => $"Visualize and debug geometry of {typeof(TG).Name}";
-    
+
     public abstract Guid GetServerId();
     public abstract Outline? GetBoundingBox(Autodesk.Revit.DB.View dBView);
     public abstract bool UseInTransparentPass(Autodesk.Revit.DB.View dBView);
@@ -35,20 +36,20 @@ public abstract class VisualizationServer<TG> : IDirectContext3DServer, IVisuali
 
     public void RenderScene(Autodesk.Revit.DB.View dBView, DisplayStyle displayStyle)
     {
-        lock (renderLock) 
+        lock (renderLock)
         {
-            try 
+            try
             {
                 RenderScene();
             }
-            catch (Exception e) 
+            catch (Exception e)
             {
                 Trace.TraceError($"Error in {GetName()} RenderScene: {e}");
                 ClearGeometry();
             }
         }
     }
-    
+
     public void ClearGeometry()
     {
         var uiDocument = Context.ActiveUiDocument;
@@ -88,7 +89,7 @@ public abstract class VisualizationServer<TG> : IDirectContext3DServer, IVisuali
             }
         }
     }
-    
+
     public void AddGeometry(TG geometry)
     {
         var uiDocument = Context.ActiveUiDocument;
@@ -113,7 +114,7 @@ public abstract class VisualizationServer<TG> : IDirectContext3DServer, IVisuali
     {
         ExternalEventController.ActionEventHandler.Raise(_ =>
         {
-            var directContextService = (MultiServerService) 
+            var directContextService = (MultiServerService)
                 ExternalServiceRegistry.GetService(ExternalServices.BuiltInExternalServices.DirectContext3DService);
             var serverIds = directContextService.GetActiveServerIds();
             if (directContextService.IsRegisteredServerId(GetServerId()))
@@ -124,26 +125,26 @@ public abstract class VisualizationServer<TG> : IDirectContext3DServer, IVisuali
             directContextService.AddServer(this);
             serverIds.Add(GetServerId());
             directContextService.SetActiveServers(serverIds);
-            
+
             visualizationViewModel.Initialize();
             Trace.TraceInformation("{0} registered", GetName());
         });
     }
-    
+
     public void Unregister()
     {
         ExternalEventController.ActionEventHandler.Raise(application =>
         {
-            var directContextService = (MultiServerService) 
+            var directContextService = (MultiServerService)
                 ExternalServiceRegistry.GetService(ExternalServices.BuiltInExternalServices.DirectContext3DService);
             if (!directContextService.IsRegisteredServerId(GetServerId()))
             {
                 Trace.TraceInformation("{0} already unregistered", GetName());
                 return;
             }
-            
+
             directContextService.RemoveServer(GetServerId());
-            
+
             Trace.TraceInformation("{0} unregistered", GetName());
             application.ActiveUIDocument?.UpdateAllOpenViews();
         });

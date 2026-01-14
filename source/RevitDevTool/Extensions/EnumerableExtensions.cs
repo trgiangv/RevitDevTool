@@ -11,7 +11,7 @@ public static class EnumerableExtensions
             item?.Dispose();
         }
     }
-    
+
     public static void Dispose<T>(this T?[]? items) where T : IDisposable
     {
         if (items is null) return;
@@ -20,7 +20,7 @@ public static class EnumerableExtensions
             item?.Dispose();
         }
     }
-    
+
     public static void Clear<T>(this ICollection<T>? items, bool dispose = false) where T : IDisposable
     {
         if (items is null) return;
@@ -32,7 +32,7 @@ public static class EnumerableExtensions
 
         items.Clear();
     }
-    
+
     public static void Clear<T>(this ICollection<T[]> items, bool dispose = false) where T : IDisposable
     {
         if (dispose)

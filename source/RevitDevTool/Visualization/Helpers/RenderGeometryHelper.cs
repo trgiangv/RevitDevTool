@@ -30,7 +30,7 @@ public static class RenderGeometryHelper
 
         return points;
     }
-    
+
     public static BoundingBoxXYZ GetScaledBoundingBox(BoundingBoxXYZ box, double scale)
     {
         var min = box.Min;
@@ -130,11 +130,18 @@ public static class RenderGeometryHelper
         const double minDiameter = 0.1 / 12d;
         const double maxDiameter = 3 / 12d;
 
-        if (diameter <= minDiameter) return minSegments;
-        if (diameter >= maxDiameter) return maxSegments;
-
-        var normalDiameter = (diameter - minDiameter) / (maxDiameter - minDiameter);
-        return (int) (minSegments + normalDiameter * (maxSegments - minSegments));
+        switch (diameter)
+        {
+            case <= minDiameter:
+                return minSegments;
+            case >= maxDiameter:
+                return maxSegments;
+            default:
+                {
+                    var normalDiameter = (diameter - minDiameter) / (maxDiameter - minDiameter);
+                    return (int)(minSegments + (normalDiameter * (maxSegments - minSegments)));
+                }
+        }
     }
 
     public static double InterpolateOffsetByDiameter(double diameter)
@@ -158,11 +165,18 @@ public static class RenderGeometryHelper
         const double minArea = 0.01d;
         const double maxArea = 1d;
 
-        if (area <= minArea) return minOffset;
-        if (area >= maxArea) return maxOffset;
-
-        var normalOffset = (area - minArea) / (maxArea - minArea);
-        return minOffset + normalOffset * (maxOffset - minOffset);
+        switch (area)
+        {
+            case <= minArea:
+                return minOffset;
+            case >= maxArea:
+                return maxOffset;
+            default:
+                {
+                    var normalOffset = (area - minArea) / (maxArea - minArea);
+                    return minOffset + (normalOffset * (maxOffset - minOffset));
+                }
+        }
     }
 
     public static double InterpolateAxisLengthByArea(double area)
@@ -172,11 +186,18 @@ public static class RenderGeometryHelper
         const double minArea = 0.01d;
         const double maxArea = 1d;
 
-        if (area <= minArea) return minLength;
-        if (area >= maxArea) return maxLength;
-
-        var normalOffset = (area - minArea) / (maxArea - minArea);
-        return minLength + normalOffset * (maxLength - minLength);
+        switch (area)
+        {
+            case <= minArea:
+                return minLength;
+            case >= maxArea:
+                return maxLength;
+            default:
+                {
+                    var normalOffset = (area - minArea) / (maxArea - minArea);
+                    return minLength + (normalOffset * (maxLength - minLength));
+                }
+        }
     }
 
     public static double InterpolateAxisLengthByPoints(XYZ min, XYZ max)

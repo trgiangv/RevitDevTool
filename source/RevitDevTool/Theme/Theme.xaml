@@ -1,9 +1,13 @@
-﻿<ResourceDictionary
+<ResourceDictionary
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-    xmlns:ui="http://revitdevtool.com/xaml">
+    xmlns:theme="clr-namespace:RevitDevTool.Theme">
+
     <ResourceDictionary.MergedDictionaries>
-        <ui:ThemesDictionary />
-        <ui:ControlsDictionary />
+        <theme:ThemeResources />
+        <theme:ControlsResources />
+        <ResourceDictionary Source="/RevitDevTool;component/Theme/Styles/Icons.xaml" />
+        <ResourceDictionary Source="/RevitDevTool;component/Theme/Styles/Constants.xaml" />
     </ResourceDictionary.MergedDictionaries>
+
 </ResourceDictionary>

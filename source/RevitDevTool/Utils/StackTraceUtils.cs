@@ -10,11 +10,13 @@ public static class StackTraceUtils
     /// </summary>
     private static readonly string[] DefaultIgnoredNamespacePrefixes =
     [
-        "System",
-        "Microsoft",
         "Serilog",
+        "Nlog",
+        "Microsoft.Extensions.Logging",
+        "MS.Internal",
+        "System.Environment.get_StackTrace",
+        "System.Diagnostics",
         "RevitDevTool",
-        "IronPython",
         "Autodesk.Revit.UI",
         "revitAPIStartupFromSingleManifest"
     ];
@@ -229,7 +231,15 @@ public static class StackTraceUtils
         if (inIndex >= 0)
             text = text.Substring(0, inIndex).Trim();
 
-        return ignoredNamespacePrefixes.Any(prefix => text.StartsWith(prefix, StringComparison.Ordinal));
+        // Use for loop instead of LINQ for hot path performance
+        // ReSharper disable once ForCanBeConvertedToForeach
+        // ReSharper disable once LoopCanBeConvertedToQuery
+        for (var i = 0; i < ignoredNamespacePrefixes.Count; i++)
+        {
+            if (text.StartsWith(ignoredNamespacePrefixes[i], StringComparison.Ordinal))
+                return true;
+        }
+        return false;
     }
 
     /// <summary>
@@ -238,6 +248,14 @@ public static class StackTraceUtils
     /// </summary>
     private static bool ShouldSkipByClassPattern(string methodInfo, IReadOnlyList<string> ignoredClassPatterns)
     {
-        return ignoredClassPatterns.Any(pattern => methodInfo.Contains(pattern, StringComparison.OrdinalIgnoreCase));
+        // Use for loop instead of LINQ for hot path performance
+        // ReSharper disable once ForCanBeConvertedToForeach
+        // ReSharper disable once LoopCanBeConvertedToQuery
+        for (var i = 0; i < ignoredClassPatterns.Count; i++)
+        {
+            if (methodInfo.Contains(ignoredClassPatterns[i], StringComparison.OrdinalIgnoreCase))
+                return true;
+        }
+        return false;
     }
 }

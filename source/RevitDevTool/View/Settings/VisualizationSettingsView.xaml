@@ -1,0 +1,123 @@
+<UserControl x:Class="RevitDevTool.View.Settings.VisualizationSettingsView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:design="clr-namespace:RevitDevTool.Theme.Design"
+             xmlns:mah="http://metro.mahapps.com/winfx/xaml/controls"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             Margin="0,5,0,0"
+             d:DesignHeight="630"
+             d:DesignWidth="600"
+             Background="{DynamicResource MahApps.Brushes.ThemeBackground}"
+             mc:Ignorable="d">
+
+    <UserControl.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="/RevitDevTool;component/Theme/Theme.xaml" />
+                <design:IntellisenseResources Source="/RevitDevTool;component/Theme/Design/DesignTimeResources.xaml" />
+            </ResourceDictionary.MergedDictionaries>
+
+            <DataTemplate x:Key="MenuItemTemplate"
+                          DataType="{x:Type mah:HamburgerMenuIconItem}">
+                <Grid Height="48">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="48" />
+                        <ColumnDefinition />
+                    </Grid.ColumnDefinitions>
+                    <ContentControl Grid.Column="0"
+                                    HorizontalAlignment="Center"
+                                    VerticalAlignment="Center"
+                                    Content="{Binding Icon}"
+                                    Focusable="False" />
+                    <TextBlock Grid.Column="1"
+                               VerticalAlignment="Center"
+                               FontSize="14"
+                               Text="{Binding Label}" />
+                </Grid>
+            </DataTemplate>
+        </ResourceDictionary>
+    </UserControl.Resources>
+
+    <mah:HamburgerMenu x:Name="HamburgerMenuControl"
+                       DisplayMode="CompactInline"
+                       IsPaneOpen="False"
+                       ItemInvoked="OnMenuItemInvoked"
+                       ItemTemplate="{StaticResource MenuItemTemplate}"
+                       OpenPaneLength="150"
+                       SelectedIndex="0"
+                       Style="{DynamicResource MahApps.Styles.HamburgerMenu.CreatorsUpdate}">
+        <mah:HamburgerMenu.ItemsSource>
+            <mah:HamburgerMenuItemCollection>
+                <mah:HamburgerMenuIconItem Label="BoundingBox"
+                                           Tag="BoundingBox">
+                    <mah:HamburgerMenuIconItem.Icon>
+                        <Path Width="20"
+                              Height="20"
+                              Data="{StaticResource Box}"
+                              Fill="{DynamicResource MahApps.Brushes.ThemeForeground}"
+                              Stretch="Uniform" />
+                    </mah:HamburgerMenuIconItem.Icon>
+                </mah:HamburgerMenuIconItem>
+                <mah:HamburgerMenuIconItem Label="Face"
+                                           Tag="Face">
+                    <mah:HamburgerMenuIconItem.Icon>
+                        <Path Width="20"
+                              Height="20"
+                              Data="{StaticResource Face}"
+                              Fill="{DynamicResource MahApps.Brushes.ThemeForeground}"
+                              Stretch="Uniform" />
+                    </mah:HamburgerMenuIconItem.Icon>
+                </mah:HamburgerMenuIconItem>
+                <mah:HamburgerMenuIconItem Label="Mesh"
+                                           Tag="Mesh">
+                    <mah:HamburgerMenuIconItem.Icon>
+                        <Path Width="20"
+                              Height="20"
+                              Data="{StaticResource Mesh}"
+                              Fill="{DynamicResource MahApps.Brushes.ThemeForeground}"
+                              Stretch="Uniform" />
+                    </mah:HamburgerMenuIconItem.Icon>
+                </mah:HamburgerMenuIconItem>
+                <mah:HamburgerMenuIconItem Label="Curve"
+                                           Tag="Curve">
+                    <mah:HamburgerMenuIconItem.Icon>
+                        <Path Width="20"
+                              Height="20"
+                              Data="{StaticResource Line}"
+                              Fill="{DynamicResource MahApps.Brushes.ThemeForeground}"
+                              Stretch="Uniform" />
+                    </mah:HamburgerMenuIconItem.Icon>
+                </mah:HamburgerMenuIconItem>
+                <mah:HamburgerMenuIconItem Label="Solid"
+                                           Tag="Solid">
+                    <mah:HamburgerMenuIconItem.Icon>
+                        <Path Width="20"
+                              Height="20"
+                              Data="{StaticResource Solid}"
+                              Fill="{DynamicResource MahApps.Brushes.ThemeForeground}"
+                              Stretch="Uniform" />
+                    </mah:HamburgerMenuIconItem.Icon>
+                </mah:HamburgerMenuIconItem>
+                <mah:HamburgerMenuIconItem Label="Point"
+                                           Tag="Point">
+                    <mah:HamburgerMenuIconItem.Icon>
+                        <Path Width="20"
+                              Height="20"
+                              Data="{StaticResource Point}"
+                              Fill="{DynamicResource MahApps.Brushes.ThemeForeground}"
+                              Stretch="Uniform" />
+                    </mah:HamburgerMenuIconItem.Icon>
+                </mah:HamburgerMenuIconItem>
+            </mah:HamburgerMenuItemCollection>
+        </mah:HamburgerMenu.ItemsSource>
+
+        <mah:HamburgerMenu.ContentTemplate>
+            <DataTemplate>
+                <ContentControl x:Name="ContentArea"
+                                Margin="8,5"
+                                Content="{Binding}" />
+            </DataTemplate>
+        </mah:HamburgerMenu.ContentTemplate>
+    </mah:HamburgerMenu>
+</UserControl>

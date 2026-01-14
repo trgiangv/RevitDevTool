@@ -1,0 +1,116 @@
+<UserControl x:Class="RevitDevTool.View.Settings.Visualization.XyzVisualizationSettingsView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:design="clr-namespace:RevitDevTool.Theme.Design"
+             xmlns:mah="http://metro.mahapps.com/winfx/xaml/controls"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:visualization="clr-namespace:RevitDevTool.ViewModel.Settings.Visualization"
+             d:Background="{DynamicResource MahApps.Brushes.ThemeBackground}"
+             d:DataContext="{d:DesignInstance visualization:XyzVisualizationViewModel}"
+             d:DesignHeight="540"
+             d:DesignWidth="600"
+             mc:Ignorable="d">
+
+    <UserControl.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="/RevitDevTool;component/Theme/Theme.xaml" />
+                <design:IntellisenseResources Source="/RevitDevTool;component/Theme/Design/DesignTimeResources.xaml" />
+            </ResourceDictionary.MergedDictionaries>
+        </ResourceDictionary>
+    </UserControl.Resources>
+
+    <ScrollViewer HorizontalScrollBarVisibility="Disabled"
+                  VerticalScrollBarVisibility="Auto">
+        <StackPanel>
+            <!--  Planes  -->
+            <GroupBox Margin="0,0,0,8"
+                      Header="Planes">
+                <StackPanel Margin="8">
+                    <CheckBox Content="Show Planes"
+                              IsChecked="{Binding ShowPlane}" />
+                    <StackPanel Margin="0,12,0,0">
+                        <DockPanel>
+                            <TextBlock Text="Transparency" />
+                            <TextBlock HorizontalAlignment="Right"
+                                       Text="{Binding Transparency, StringFormat={}{0} %}" />
+                        </DockPanel>
+                        <Slider Margin="0,4,0,0"
+                                IsSnapToTickEnabled="True"
+                                Maximum="100"
+                                Minimum="0"
+                                TickFrequency="10"
+                                TickPlacement="BottomRight"
+                                Value="{Binding Transparency}" />
+                    </StackPanel>
+                    <StackPanel Margin="0,12,0,0">
+                        <DockPanel>
+                            <TextBlock Text="Axis Length" />
+                            <TextBlock HorizontalAlignment="Right"
+                                       Text="{Binding AxisLength, StringFormat={}{0:F0} inch}" />
+                        </DockPanel>
+                        <Slider Margin="0,4,0,0"
+                                IsSnapToTickEnabled="True"
+                                Maximum="24"
+                                Minimum="{Binding MinAxisLength, Mode=OneTime}"
+                                TickFrequency="2"
+                                TickPlacement="BottomRight"
+                                Value="{Binding AxisLength}" />
+                    </StackPanel>
+                </StackPanel>
+            </GroupBox>
+
+            <!--  X Axis  -->
+            <GroupBox Margin="0,0,0,8"
+                      Header="X Axis">
+                <Grid Margin="8">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <CheckBox VerticalAlignment="Center"
+                              Content="Show X Axis"
+                              IsChecked="{Binding ShowXAxis}" />
+                    <mah:ColorPicker Grid.Column="1"
+                                     Width="{StaticResource ColorPickerWidth}"
+                                     SelectedColor="{Binding XColor}" />
+                </Grid>
+            </GroupBox>
+
+            <!--  Y Axis  -->
+            <GroupBox Margin="0,0,0,8"
+                      Header="Y Axis">
+                <Grid Margin="8">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <CheckBox VerticalAlignment="Center"
+                              Content="Show Y Axis"
+                              IsChecked="{Binding ShowYAxis}" />
+                    <mah:ColorPicker Grid.Column="1"
+                                     Width="{StaticResource ColorPickerWidth}"
+                                     SelectedColor="{Binding YColor}" />
+                </Grid>
+            </GroupBox>
+
+            <!--  Z Axis  -->
+            <GroupBox Margin="0,0,0,8"
+                      Header="Z Axis">
+                <Grid Margin="8">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <CheckBox VerticalAlignment="Center"
+                              Content="Show Z Axis"
+                              IsChecked="{Binding ShowZAxis}" />
+                    <mah:ColorPicker Grid.Column="1"
+                                     Width="{StaticResource ColorPickerWidth}"
+                                     SelectedColor="{Binding ZColor}" />
+                </Grid>
+            </GroupBox>
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>
