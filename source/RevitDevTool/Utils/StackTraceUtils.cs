@@ -231,7 +231,6 @@ public static class StackTraceUtils
         if (inIndex >= 0)
             text = text.Substring(0, inIndex).Trim();
 
-        // Use for loop instead of LINQ for hot path performance
         // ReSharper disable once ForCanBeConvertedToForeach
         // ReSharper disable once LoopCanBeConvertedToQuery
         for (var i = 0; i < ignoredNamespacePrefixes.Count; i++)
@@ -248,7 +247,6 @@ public static class StackTraceUtils
     /// </summary>
     private static bool ShouldSkipByClassPattern(string methodInfo, IReadOnlyList<string> ignoredClassPatterns)
     {
-        // Use for loop instead of LINQ for hot path performance
         // ReSharper disable once ForCanBeConvertedToForeach
         // ReSharper disable once LoopCanBeConvertedToQuery
         for (var i = 0; i < ignoredClassPatterns.Count; i++)

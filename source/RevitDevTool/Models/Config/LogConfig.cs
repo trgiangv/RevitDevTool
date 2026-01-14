@@ -39,6 +39,44 @@ public sealed class LogConfig
 
     [JsonPropertyName("LogFolder")]
     public string LogFolder { get; set; } = string.Empty;
+
+    [JsonPropertyName("EnablePrettyJson")]
+    public bool EnablePrettyJson { get; set; } = true;
+
+    [JsonPropertyName("FilterKeywords")]
+    public LogFilterKeywords FilterKeywords { get; set; } = new();
+}
+
+/// <summary>
+/// Keywords for detecting LogLevel from message content.
+/// Each property contains comma-separated keywords (max 5 per level).
+/// </summary>
+[Serializable]
+public sealed class LogFilterKeywords
+{
+    /// <summary>
+    /// Keywords for Information level (e.g., "info,success,completed")
+    /// </summary>
+    [JsonPropertyName("Information")]
+    public string Information { get; set; } = "info,success,completed";
+
+    /// <summary>
+    /// Keywords for Warning level (e.g., "warning,warn,caution")
+    /// </summary>
+    [JsonPropertyName("Warning")]
+    public string Warning { get; set; } = "warning,warn,caution";
+
+    /// <summary>
+    /// Keywords for Error level (e.g., "error,failed,exception")
+    /// </summary>
+    [JsonPropertyName("Error")]
+    public string Error { get; set; } = "error,failed,exception";
+
+    /// <summary>
+    /// Keywords for Critical level (e.g., "fatal,critical,crash")
+    /// </summary>
+    [JsonPropertyName("Critical")]
+    public string Critical { get; set; } = "fatal,critical,crash";
 }
 
 public enum LogSaveFormat

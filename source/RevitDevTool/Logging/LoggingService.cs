@@ -59,14 +59,14 @@ internal sealed class LoggingService(
     public void RegisterTraceListeners()
     {
         TraceUtils.RegisterTraceListeners(
-            settingsService.LogConfig.IncludeStackTrace,
+            settingsService.LogConfig.IncludeWpfTrace,
             TraceListener, _geometryListener, _notifyListener);
     }
 
     public void UnregisterTraceListeners()
     {
         TraceUtils.UnregisterTraceListeners(
-            settingsService.LogConfig.IncludeStackTrace,
+            settingsService.LogConfig.IncludeWpfTrace,
             TraceListener, _geometryListener, _notifyListener);
     }
 

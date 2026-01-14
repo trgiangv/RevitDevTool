@@ -1,15 +1,17 @@
-﻿using CommunityToolkit.Mvvm.Messaging;
+using CommunityToolkit.Mvvm.Messaging;
 using Microsoft.Extensions.Logging;
 using RevitDevTool.Messages;
 using RevitDevTool.Models.Config;
 using RevitDevTool.Services;
+using RevitDevTool.Utils;
+using System.ComponentModel;
 using System.Diagnostics;
 
 // ReSharper disable UnusedParameterInPartialMethod
 
 namespace RevitDevTool.ViewModel.Settings;
 
-public partial class LogSettingsViewModel : ObservableObject
+public partial class LogSettingsViewModel : ObservableObject, IDataErrorInfo
 {
     private readonly ISettingsService _settingsService;
     private readonly IMessenger _messenger;
@@ -18,6 +20,11 @@ public partial class LogSettingsViewModel : ObservableObject
     public static SourceLevels[] SourceLevels { get; } = Enum.GetValues(typeof(SourceLevels)).Cast<SourceLevels>().ToArray();
 
     [ObservableProperty] private LogLevel _logLevel;
+    [ObservableProperty] private bool _enablePrettyJson;
+    [ObservableProperty] private string _informationKeywords = string.Empty;
+    [ObservableProperty] private string _warningKeywords = string.Empty;
+    [ObservableProperty] private string _errorKeywords = string.Empty;
+    [ObservableProperty] private string _criticalKeywords = string.Empty;
     [ObservableProperty] private bool _hasPendingChanges;
     [ObservableProperty] private bool _isSaveLogEnabled;
     [ObservableProperty] private bool _useExternalFileOnly;
@@ -40,6 +47,17 @@ public partial class LogSettingsViewModel : ObservableObject
         SetBaselineFromCurrent();
     }
 
+    public string Error => string.Empty;
+
+    public string this[string columnName] => columnName switch
+    {
+        nameof(InformationKeywords) => TraceUtils.ValidateKeywords(InformationKeywords) ?? string.Empty,
+        nameof(WarningKeywords) => TraceUtils.ValidateKeywords(WarningKeywords) ?? string.Empty,
+        nameof(ErrorKeywords) => TraceUtils.ValidateKeywords(ErrorKeywords) ?? string.Empty,
+        nameof(CriticalKeywords) => TraceUtils.ValidateKeywords(CriticalKeywords) ?? string.Empty,
+        _ => string.Empty
+    };
+    
     partial void OnLogLevelChanged(LogLevel value) => UpdateHasPendingChanges();
     partial void OnIsSaveLogEnabledChanged(bool value)
     {
@@ -54,11 +72,22 @@ public partial class LogSettingsViewModel : ObservableObject
     partial void OnTimeIntervalChanged(RollingInterval value) => UpdateHasPendingChanges();
     partial void OnStackTraceDepthChanged(int value) => UpdateHasPendingChanges();
     partial void OnLogFolderChanged(string value) => UpdateHasPendingChanges();
+    partial void OnEnablePrettyJsonChanged(bool value) => UpdateHasPendingChanges();
+    partial void OnInformationKeywordsChanged(string value) => UpdateHasPendingChanges();
+    partial void OnWarningKeywordsChanged(string value) => UpdateHasPendingChanges();
+    partial void OnErrorKeywordsChanged(string value) => UpdateHasPendingChanges();
+    partial void OnCriticalKeywordsChanged(string value) => UpdateHasPendingChanges();
 
     private void LoadFromConfig()
     {
         var config = _settingsService.LogConfig;
+        
         LogLevel = config.LogLevel;
+        EnablePrettyJson = config.EnablePrettyJson;
+        InformationKeywords = config.FilterKeywords.Information;
+        WarningKeywords = config.FilterKeywords.Warning;
+        ErrorKeywords = config.FilterKeywords.Error;
+        CriticalKeywords = config.FilterKeywords.Critical;
         IsSaveLogEnabled = config.IsSaveLogEnabled;
         UseExternalFileOnly = config.UseExternalFileOnly;
         SaveFormat = config.SaveFormat;
@@ -73,7 +102,13 @@ public partial class LogSettingsViewModel : ObservableObject
     private void SaveToConfig()
     {
         var config = _settingsService.LogConfig;
+
         config.LogLevel = LogLevel;
+        config.EnablePrettyJson = EnablePrettyJson;
+        config.FilterKeywords.Information = InformationKeywords;
+        config.FilterKeywords.Warning = WarningKeywords;
+        config.FilterKeywords.Error = ErrorKeywords;
+        config.FilterKeywords.Critical = CriticalKeywords;
         config.IsSaveLogEnabled = IsSaveLogEnabled;
         config.UseExternalFileOnly = UseExternalFileOnly;
         config.SaveFormat = SaveFormat;
@@ -83,6 +118,7 @@ public partial class LogSettingsViewModel : ObservableObject
         config.StackTraceDepth = StackTraceDepth;
         config.TimeInterval = TimeInterval;
         config.LogFolder = LogFolder;
+
         _settingsService.SaveSettings();
     }
 
@@ -111,7 +147,12 @@ public partial class LogSettingsViewModel : ObservableObject
             IncludeWpfTrace,
             TimeInterval,
             StackTraceDepth,
-            LogFolder
+            LogFolder,
+            EnablePrettyJson,
+            InformationKeywords,
+            WarningKeywords,
+            ErrorKeywords,
+            CriticalKeywords
         );
 
         HasPendingChanges = false;
@@ -129,7 +170,12 @@ public partial class LogSettingsViewModel : ObservableObject
             || _baseline.IncludeWpfTrace != IncludeWpfTrace
             || _baseline.TimeInterval != TimeInterval
             || _baseline.StackTraceDepth != StackTraceDepth
-            || !string.Equals(_baseline.LogFolder, LogFolder, StringComparison.OrdinalIgnoreCase);
+            || _baseline.EnablePrettyJson != EnablePrettyJson
+            || !string.Equals(_baseline.LogFolder, LogFolder, StringComparison.OrdinalIgnoreCase)
+            || !string.Equals(_baseline.InformationKeywords, InformationKeywords, StringComparison.Ordinal)
+            || !string.Equals(_baseline.WarningKeywords, WarningKeywords, StringComparison.Ordinal)
+            || !string.Equals(_baseline.ErrorKeywords, ErrorKeywords, StringComparison.Ordinal)
+            || !string.Equals(_baseline.CriticalKeywords, CriticalKeywords, StringComparison.Ordinal);
     }
 
     private readonly record struct Snapshot(
@@ -142,7 +188,12 @@ public partial class LogSettingsViewModel : ObservableObject
         bool IncludeWpfTrace,
         RollingInterval TimeInterval,
         int StackTraceDepth,
-        string LogFolder);
+        string LogFolder,
+        bool EnablePrettyJson,
+        string InformationKeywords,
+        string WarningKeywords,
+        string ErrorKeywords,
+        string CriticalKeywords);
 
     [RelayCommand]
     private void BrowseFolder()
