@@ -13,6 +13,7 @@ public sealed class HostBackgroundController(ISettingsService settingsService) :
     public Task StartAsync(CancellationToken cancellationToken)
     {
         LoadSettings();
+        CleanLogFolder();
         LoadTheme();
         ToggleHardwareRendering(settingsService);
         return Task.CompletedTask;
@@ -21,6 +22,7 @@ public sealed class HostBackgroundController(ISettingsService settingsService) :
     public Task StopAsync(CancellationToken cancellationToken)
     {
         SaveSettings();
+        CleanLogFolder();
         Shutdown();
         return Task.CompletedTask;
     }
@@ -33,6 +35,37 @@ public sealed class HostBackgroundController(ISettingsService settingsService) :
     private void LoadSettings()
     {
         settingsService.LoadSettings();
+    }
+
+    private void CleanLogFolder()
+    {
+        var config = settingsService.LogConfig;
+        if (!config.IsSaveLogEnabled || !config.AutoClean) return;
+
+        var logFolder = config.LogFolder;
+        if (string.IsNullOrEmpty(logFolder) || !System.IO.Directory.Exists(logFolder)) return;
+
+        try
+        {
+            var logFiles = System.IO.Directory.EnumerateFiles(logFolder, "*.log");
+            var jsonFiles = System.IO.Directory.EnumerateFiles(logFolder, "*.json");
+
+            foreach (var file in logFiles.Concat(jsonFiles))
+            {
+                try
+                {
+                    System.IO.File.Delete(file);
+                }
+                catch
+                {
+                    // Ignore files that cannot be deleted (e.g., in use)
+                }
+            }
+        }
+        catch
+        {
+            // Ignore errors when accessing the folder
+        }
     }
 
     private void LoadTheme()

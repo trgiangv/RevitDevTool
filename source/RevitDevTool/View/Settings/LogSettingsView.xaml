@@ -331,6 +331,35 @@
                                   SelectedItem="{Binding TimeInterval}" />
                     </Grid>
 
+                    <!--  Auto Clean  -->
+                    <Grid Margin="8"
+                          Visibility="{Binding IsSaveLogEnabled, Converter={StaticResource BoolToVisibility}}">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <Path Width="20"
+                              Height="20"
+                              VerticalAlignment="Center"
+                              Data="{StaticResource Clear}"
+                              Fill="{DynamicResource MahApps.Brushes.ThemeForeground}"
+                              Stretch="Uniform" />
+                        <StackPanel Grid.Column="1"
+                                    Margin="12,0"
+                                    VerticalAlignment="Center">
+                            <TextBlock FontWeight="SemiBold"
+                                       Text="Auto Clean" />
+                            <TextBlock FontSize="11"
+                                       Foreground="{DynamicResource MahApps.Brushes.Gray}"
+                                       Text="Delete old log files when Revit startup or shutdown" />
+                        </StackPanel>
+                        <mah:ToggleSwitch Grid.Column="2"
+                                          MinWidth="{StaticResource ToggleSwitchMinWidth}"
+                                          VerticalAlignment="Bottom"
+                                          IsOn="{Binding AutoClean}" />
+                    </Grid>
+
                     <!--  Revit Enrichers  -->
                     <Grid Margin="8"
                           Visibility="{Binding IsSaveLogEnabled, Converter={StaticResource BoolToVisibility}}">
