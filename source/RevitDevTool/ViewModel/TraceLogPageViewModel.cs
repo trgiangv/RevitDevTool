@@ -1,5 +1,6 @@
 using CommunityToolkit.Mvvm.Messaging;
 using RevitDevTool.Settings;
+using RevitDevTool.Utils;
 using RevitDevTool.ViewModel.Messages;
 using RevitDevTool.ViewModel.Settings;
 using System.Diagnostics;
@@ -15,6 +16,7 @@ public partial class TraceLogPageViewModel : ObservableObject, IRecipient<IsSave
     private readonly ISettingsService _settingsService;
 
     public TraceLogViewModel TraceLogViewModel { get; }
+    public int ProcessId { get; } = SettingsUtils.CurrentProcessId;
     [ObservableProperty] private object? _currentPage;
     [ObservableProperty] private bool _isSettingsVisible;
     [ObservableProperty] private bool _isSaveLogEnabled;

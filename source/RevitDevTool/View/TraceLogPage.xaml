@@ -59,6 +59,11 @@
             <StackPanel HorizontalAlignment="Right"
                         DockPanel.Dock="Right"
                         Orientation="Horizontal">
+                <TextBlock Margin="5,0"
+                           VerticalAlignment="Center"
+                           FontSize="11"
+                           Foreground="{DynamicResource MahApps.Brushes.Gray}"
+                           Text="{Binding ProcessId, Mode=OneTime, StringFormat='PID: {0}'}" />
                 <Button Padding="0"
                         BorderThickness="0.5"
                         Command="{Binding TraceLogViewModel.ClearCommand}"

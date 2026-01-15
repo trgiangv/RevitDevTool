@@ -48,4 +48,14 @@ public static class SettingsUtils
         LogSaveFormat.Json => "json",
         _ => "log"
     };
+
+    /// <summary>
+    /// Get the current process ID in a cross-platform manner.
+    /// </summary>
+    public static int CurrentProcessId =>
+#if NET8_0_OR_GREATER
+        Environment.ProcessId;
+#else
+        Process.GetCurrentProcess().Id;
+#endif
 }
