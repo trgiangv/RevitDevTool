@@ -53,7 +53,8 @@ internal sealed class SerilogLoggerFactory : ILoggerFactory
     private static LoggerConfiguration ConfigureFileSink(LoggerConfiguration config, LogConfig logConfig)
     {
         var extension = logConfig.SaveFormat.ToFileExtension();
-        var logFilePath = Path.Combine(logConfig.LogFolder, $"log.{extension}");
+        var pid = SettingsUtils.CurrentProcessId;
+        var logFilePath = Path.Combine(logConfig.LogFolder, $"log_{pid}_.{extension}");
 
         return logConfig.SaveFormat switch
         {
