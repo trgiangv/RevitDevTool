@@ -1,15 +1,16 @@
 using Microsoft.Extensions.Logging;
-using RevitDevTool.Models.Config;
+using RevitDevTool.Logging;
+using RevitDevTool.Settings.Config;
 using RevitDevTool.Utils;
 using System.Diagnostics;
 
-namespace RevitDevTool.Logging;
+namespace RevitDevTool.Listeners;
 
 /// <summary>
 /// TraceListener implementation that directs output to ILoggerAdapter.
 /// Framework-agnostic trace listener that works with any logging backend.
 /// </summary>
-internal sealed class AdapterTraceListener(
+public sealed class LoggerTraceListener(
     ILoggerAdapter logger,
     bool includeStackTrace,
     int stackTraceDepth,
@@ -23,7 +24,7 @@ internal sealed class AdapterTraceListener(
     private const string SourceProperty = "TraceSource";
     private const string TraceEventTypeProperty = "TraceEventType";
 
-    private readonly ILoggerAdapter _logger = logger.ForContext<AdapterTraceListener>();
+    private readonly ILoggerAdapter _logger = logger.ForContext<LoggerTraceListener>();
     private readonly LogFilterKeywords _filterKeywords = filterKeywords ?? new LogFilterKeywords();
 
     public override bool IsThreadSafe => true;

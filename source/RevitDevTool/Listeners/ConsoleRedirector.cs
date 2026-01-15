@@ -1,7 +1,5 @@
-using System.Diagnostics;
 using System.IO;
-
-namespace RevitDevTool.Models.Trace;
+namespace RevitDevTool.Listeners;
 
 /// <summary>
 /// Redirects Console.WriteLine output to the Trace system
@@ -19,8 +17,8 @@ internal sealed class ConsoleRedirector : IDisposable
         _originalOut = Console.Out;
         _originalError = Console.Error;
 
-        _consoleOutWriter = new ConsoleTextWriter(TraceEventType.Information);
-        _consoleErrorWriter = new ConsoleTextWriter(TraceEventType.Error);
+        _consoleOutWriter = new ConsoleTextWriter();
+        _consoleErrorWriter = new ConsoleTextWriter();
 
         Console.SetOut(_consoleOutWriter);
         Console.SetError(_consoleErrorWriter);
@@ -36,31 +34,14 @@ internal sealed class ConsoleRedirector : IDisposable
         _disposed = true;
     }
 
-    private class ConsoleTextWriter(TraceEventType eventType) : TextWriter
+    private class ConsoleTextWriter : TextWriter
     {
         public override void Write(string? value)
         {
             if (string.IsNullOrEmpty(value))
                 return;
 
-            switch (eventType)
-            {
-                case TraceEventType.Error:
-                    System.Diagnostics.Trace.TraceError(value);
-                    break;
-                case TraceEventType.Critical:
-                case TraceEventType.Warning:
-                case TraceEventType.Information:
-                case TraceEventType.Verbose:
-                case TraceEventType.Start:
-                case TraceEventType.Stop:
-                case TraceEventType.Suspend:
-                case TraceEventType.Resume:
-                case TraceEventType.Transfer:
-                default:
-                    Debug.WriteLine(value);
-                    break;
-            }
+            System.Diagnostics.Trace.WriteLine(value);
         }
 
         public override void WriteLine(string? value)

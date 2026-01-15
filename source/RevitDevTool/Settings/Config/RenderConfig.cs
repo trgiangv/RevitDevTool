@@ -2,7 +2,7 @@
 using System.Windows.Media;
 using Color = System.Windows.Media.Color;
 
-namespace RevitDevTool.Models.Config;
+namespace RevitDevTool.Settings.Config;
 
 /// <summary>
 ///     Settings options saved on disk

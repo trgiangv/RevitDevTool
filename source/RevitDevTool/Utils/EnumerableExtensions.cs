@@ -1,4 +1,4 @@
-﻿namespace RevitDevTool.Extensions;
+﻿namespace RevitDevTool.Utils;
 
 [PublicAPI]
 public static class EnumerableExtensions

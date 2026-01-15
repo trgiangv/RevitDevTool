@@ -1,8 +1,8 @@
 using Microsoft.Extensions.Logging;
+using RevitDevTool.Logging.Enums;
 using System.Diagnostics;
 using System.Text.Json.Serialization;
-
-namespace RevitDevTool.Models.Config;
+namespace RevitDevTool.Settings.Config;
 
 /// <summary>
 ///     Log save settings
@@ -80,33 +80,4 @@ public sealed class LogFilterKeywords
     /// </summary>
     [JsonPropertyName("Critical")]
     public string Critical { get; set; } = "fatal,critical,crash";
-}
-
-public enum LogSaveFormat
-{
-    Json,
-    Text
-}
-
-public enum RollingInterval
-{
-    Infinite,
-    Year,
-    Month,
-    Day,
-    Hour,
-    Minute
-}
-
-[Flags]
-public enum RevitEnricher
-{
-    None = 0,
-    RevitVersion = 1 << 0,
-    RevitBuild = 1 << 1,
-    RevitUserName = 1 << 2,
-    RevitLanguage = 1 << 3,
-    RevitDocumentTitle = 1 << 4,
-    RevitDocumentPathName = 1 << 5,
-    RevitDocumentModelPath = 1 << 6
 }

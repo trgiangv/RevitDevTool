@@ -1,6 +1,5 @@
 using System.IO;
-
-namespace RevitDevTool.Services.Configuration;
+namespace RevitDevTool.Settings.Options;
 
 /// <summary>
 /// Configuration options for application paths.

@@ -1,5 +1,5 @@
-using RevitDevTool.Models.Config;
-using System.Diagnostics;
+using RevitDevTool.Listeners;
+using RevitDevTool.Settings.Config;
 
 namespace RevitDevTool.Logging;
 
@@ -8,6 +8,6 @@ namespace RevitDevTool.Logging;
 /// </summary>
 public interface ITraceListenerFactory
 {
-    TraceListener CreateTraceListener(ILoggerAdapter logger, LogConfig config);
+    LoggerTraceListener CreateTraceListener(ILoggerAdapter logger, LogConfig config);
 }
 

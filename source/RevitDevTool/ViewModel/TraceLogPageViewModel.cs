@@ -1,6 +1,6 @@
 using CommunityToolkit.Mvvm.Messaging;
-using RevitDevTool.Messages;
-using RevitDevTool.Services;
+using RevitDevTool.Settings;
+using RevitDevTool.ViewModel.Messages;
 using RevitDevTool.ViewModel.Settings;
 using System.Diagnostics;
 

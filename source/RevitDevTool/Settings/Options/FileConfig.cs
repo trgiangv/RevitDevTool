@@ -1,8 +1,7 @@
 using Microsoft.Extensions.Options;
 using System.IO;
 using System.Text.Json;
-
-namespace RevitDevTool.Services.Configuration;
+namespace RevitDevTool.Settings.Options;
 
 /// <summary>
 /// Stores configurations as JSON files in the settings directory.
