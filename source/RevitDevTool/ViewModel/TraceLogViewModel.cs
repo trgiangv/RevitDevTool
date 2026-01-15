@@ -2,11 +2,11 @@ using Autodesk.Revit.UI.Events;
 using CommunityToolkit.Mvvm.Messaging;
 using Microsoft.Extensions.Logging;
 using RevitDevTool.Controllers;
+using RevitDevTool.Listeners;
 using RevitDevTool.Logging;
-using RevitDevTool.Messages;
-using RevitDevTool.Models.Trace;
-using RevitDevTool.Services;
+using RevitDevTool.Settings;
 using RevitDevTool.Theme;
+using RevitDevTool.ViewModel.Messages;
 using System.Windows.Forms.Integration;
 
 namespace RevitDevTool.ViewModel;

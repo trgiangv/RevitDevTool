@@ -1,5 +1,5 @@
-using RevitDevTool.Models.Config;
-using System.Diagnostics;
+using RevitDevTool.Listeners;
+using RevitDevTool.Settings.Config;
 
 namespace RevitDevTool.Logging.Serilog;
 
@@ -9,11 +9,11 @@ namespace RevitDevTool.Logging.Serilog;
 [UsedImplicitly]
 internal sealed class SerilogTraceListenerFactory : ITraceListenerFactory
 {
-    public TraceListener CreateTraceListener(ILoggerAdapter logger, LogConfig config)
+    public LoggerTraceListener CreateTraceListener(ILoggerAdapter logger, LogConfig config)
     {
         return logger is not SerilogAdapter
             ? throw new ArgumentException("Logger must be a SerilogAdapter for SerilogTraceListenerFactory", nameof(logger))
-            : new AdapterTraceListener(logger, config.IncludeStackTrace, config.StackTraceDepth, config.FilterKeywords);
+            : new LoggerTraceListener(logger, config.IncludeStackTrace, config.StackTraceDepth, config.FilterKeywords);
     }
 }
 

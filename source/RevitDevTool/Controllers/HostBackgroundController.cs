@@ -1,7 +1,7 @@
 using Microsoft.Extensions.Hosting;
 using RevitDevTool.Commands;
-using RevitDevTool.Models.Trace;
-using RevitDevTool.Services;
+using RevitDevTool.Listeners;
+using RevitDevTool.Settings;
 using RevitDevTool.Theme;
 using System.Windows.Interop;
 using System.Windows.Media;

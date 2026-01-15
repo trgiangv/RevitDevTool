@@ -1,6 +1,5 @@
-using RevitDevTool.Models.Config;
-
-namespace RevitDevTool.Services;
+using RevitDevTool.Settings.Config;
+namespace RevitDevTool.Settings;
 
 /// <summary>
 /// Interface for settings service.

@@ -1,7 +1,6 @@
 using Autodesk.Windows;
 using System.Diagnostics;
-
-namespace RevitDevTool.Models.Trace;
+namespace RevitDevTool.Listeners;
 
 /// <summary>
 /// A TraceListener that raises an event whenever a trace message is received.

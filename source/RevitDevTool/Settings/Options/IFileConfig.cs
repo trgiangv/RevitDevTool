@@ -1,4 +1,4 @@
-namespace RevitDevTool.Services.Configuration;
+namespace RevitDevTool.Settings.Options;
 
 /// <summary>
 /// Abstraction for configuration persistence operations.
