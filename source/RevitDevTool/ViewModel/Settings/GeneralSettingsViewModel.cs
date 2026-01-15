@@ -1,11 +1,12 @@
+using CommunityToolkit.Mvvm.Messaging;
 using RevitDevTool.Controllers;
 using RevitDevTool.Settings;
 using RevitDevTool.Theme;
-using System.Diagnostics;
+using RevitDevTool.ViewModel.Messages;
 
 namespace RevitDevTool.ViewModel.Settings;
 
-public partial class GeneralSettingsViewModel : ObservableObject
+public partial class GeneralSettingsViewModel : ObservableObject, IRecipient<ResetSettingsMessage>
 {
     private readonly ISettingsService _settingsService;
 
@@ -39,17 +40,18 @@ public partial class GeneralSettingsViewModel : ObservableObject
     public GeneralSettingsViewModel(ISettingsService settingsService)
     {
         _settingsService = settingsService;
-        Theme = _settingsService.GeneralConfig.Theme;
-        UseHardwareRendering = _settingsService.GeneralConfig.UseHardwareRendering;
+        LoadFromConfig();
+        WeakReferenceMessenger.Default.Register(this);
     }
 
-    [RelayCommand]
-    private void ResetSettings()
+    public void Receive(ResetSettingsMessage message)
     {
-        _settingsService.ResetSettings();
+        LoadFromConfig();
+    }
+
+    private void LoadFromConfig()
+    {
         Theme = _settingsService.GeneralConfig.Theme;
         UseHardwareRendering = _settingsService.GeneralConfig.UseHardwareRendering;
-        VisualizationController.Refresh();
-        Trace.TraceInformation("Reset settings to default");
     }
 }

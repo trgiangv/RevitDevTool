@@ -12,7 +12,7 @@ using System.Diagnostics;
 
 namespace RevitDevTool.ViewModel.Settings;
 
-public partial class LogSettingsViewModel : ObservableObject, IDataErrorInfo
+public partial class LogSettingsViewModel : ObservableObject, IDataErrorInfo, IRecipient<ResetSettingsMessage>
 {
     private readonly ISettingsService _settingsService;
     private readonly IMessenger _messenger;
@@ -60,6 +60,7 @@ public partial class LogSettingsViewModel : ObservableObject, IDataErrorInfo
 
         LoadFromConfig();
         SetBaselineFromCurrent();
+        _messenger.Register<ResetSettingsMessage>(this);
     }
 
     public string Error => string.Empty;
@@ -118,6 +119,12 @@ public partial class LogSettingsViewModel : ObservableObject, IDataErrorInfo
             if (config.RevitEnrichers.HasFlag(enricher))
                 SelectedRevitEnrichers.Add(enricher);
         }
+    }
+
+    public void Receive(ResetSettingsMessage message)
+    {
+        LoadFromConfig();
+        SetBaselineFromCurrent();
     }
 
     private void SaveToConfig()
