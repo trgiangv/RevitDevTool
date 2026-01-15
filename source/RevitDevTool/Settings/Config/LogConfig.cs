@@ -48,6 +48,9 @@ public sealed class LogConfig
 
     [JsonPropertyName("RevitEnrichers")]
     public RevitEnricher RevitEnrichers { get; set; } = RevitEnricher.RevitVersion | RevitEnricher.RevitBuild;
+
+    [JsonPropertyName("AutoClean")]
+    public bool AutoClean { get; set; } = true;
 }
 
 /// <summary>
