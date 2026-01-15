@@ -93,6 +93,7 @@ public static class Host
         services.AddSingleton<XyzVisualizationSettingsView>();
 
         // Settings
+        services.AddSingleton<SettingsViewModel>();
         services.AddSingleton<GeneralSettingsViewModel>();
         services.AddSingleton<GeneralSettingsView>();
         services.AddSingleton<LogSettingsViewModel>();

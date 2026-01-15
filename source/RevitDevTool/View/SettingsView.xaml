@@ -6,8 +6,10 @@
              xmlns:mah="http://metro.mahapps.com/winfx/xaml/controls"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:settings="clr-namespace:RevitDevTool.View.Settings"
+             xmlns:vm="clr-namespace:RevitDevTool.ViewModel.Settings"
              d:DesignHeight="630"
              d:DesignWidth="600"
+             d:DataContext="{d:DesignInstance vm:SettingsViewModel}"
              Background="{DynamicResource MahApps.Brushes.ThemeBackground}"
              mc:Ignorable="d">
 
@@ -20,8 +22,13 @@
         </ResourceDictionary>
     </UserControl.Resources>
 
-    <Grid Margin="0,5">
-        <mah:MetroTabControl>
+    <Grid Margin="5">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+
+        <mah:MetroTabControl Grid.Row="0">
             <mah:MetroTabItem Header="General">
                 <settings:GeneralSettingsView />
             </mah:MetroTabItem>
@@ -32,5 +39,15 @@
                 <settings:LogSettingsView />
             </mah:MetroTabItem>
         </mah:MetroTabControl>
+
+        <!--  Reset  -->
+        <Button Grid.Row="1"
+                Width="100"
+                Margin="8 0 8 8"
+                HorizontalAlignment="Right"
+                HorizontalContentAlignment="Center"
+                Command="{Binding ResetSettingsCommand}"
+                Content="Reset settings"
+                ToolTip="Reset all settings to default" />
     </Grid>
 </UserControl>

@@ -68,14 +68,6 @@
                 </Grid>
             </GroupBox>
 
-            <!--  Reset  -->
-            <Button Width="100"
-                    Margin="0,8,0,0"
-                    HorizontalAlignment="Right"
-                    HorizontalContentAlignment="Center"
-                    Command="{Binding ResetSettingsCommand}"
-                    Content="Reset settings"
-                    ToolTip="Reset settings to default" />
         </StackPanel>
     </ScrollViewer>
 </UserControl>
