@@ -1,7 +1,6 @@
 using RevitDevTool.Theme;
 using System.Text.Json.Serialization;
-
-namespace RevitDevTool.Models.Config;
+namespace RevitDevTool.Settings.Config;
 
 /// <summary>
 ///     Settings options saved on disk

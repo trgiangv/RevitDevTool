@@ -1,5 +1,5 @@
 using Microsoft.Extensions.Logging;
-using RevitDevTool.Models.Config;
+using RevitDevTool.Settings.Config;
 
 namespace RevitDevTool.Logging;
 

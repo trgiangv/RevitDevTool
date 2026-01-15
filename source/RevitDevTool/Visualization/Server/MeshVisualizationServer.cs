@@ -1,6 +1,6 @@
 ﻿using Autodesk.Revit.DB.DirectContext3D;
-using RevitDevTool.Extensions;
-using RevitDevTool.Services;
+using RevitDevTool.Settings;
+using RevitDevTool.Utils;
 using RevitDevTool.Visualization.Contracts;
 using RevitDevTool.Visualization.Helpers;
 using RevitDevTool.Visualization.Render;

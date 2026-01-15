@@ -1,8 +1,7 @@
 using Microsoft.Extensions.Logging;
-using RevitDevTool.Models.Trace;
-using RevitDevTool.Services;
+using RevitDevTool.Listeners;
+using RevitDevTool.Settings;
 using RevitDevTool.Utils;
-using System.Diagnostics;
 
 namespace RevitDevTool.Logging;
 
@@ -10,20 +9,20 @@ namespace RevitDevTool.Logging;
 /// Core logging service implementation.
 /// Manages the complete logging lifecycle including initialization, trace listeners, and output.
 /// </summary>
-internal sealed class LoggingService(
+public sealed class LoggingService(
     ISettingsService settingsService,
     ILoggerFactory loggerFactory,
     ITraceListenerFactory traceListenerFactory,
     ILogOutputSink outputSink) : ILoggingService
 {
-    private ILoggerAdapter? _logger;
-    private GeometryListener? _geometryListener;
-    private NotifyListener? _notifyListener;
     private bool _disposed;
 
-    public ILoggerAdapter Logger => _logger ?? throw new InvalidOperationException("Logger not initialized. Call Initialize first.");
+    private ILoggerAdapter? _logger;
     public ILogOutputSink? OutputSink { get; } = outputSink;
-    public TraceListener? TraceListener { get; private set; }
+
+    private GeometryListener? _geometryListener;
+    private NotifyListener? _notifyListener;
+    private LoggerTraceListener? _loggerTraceListener;
 
     public void Initialize(bool isDarkTheme)
     {
@@ -37,8 +36,7 @@ internal sealed class LoggingService(
 
         OutputSink?.SetTheme(isDarkTheme);
         _logger = loggerFactory.CreateLogger(config, OutputSink, isDarkTheme);
-        TraceListener = traceListenerFactory.CreateTraceListener(_logger, config);
-
+        _loggerTraceListener = traceListenerFactory.CreateTraceListener(_logger, config);
         _geometryListener ??= new GeometryListener();
         _notifyListener ??= new NotifyListener();
     }
@@ -60,14 +58,14 @@ internal sealed class LoggingService(
     {
         TraceUtils.RegisterTraceListeners(
             settingsService.LogConfig.IncludeWpfTrace,
-            TraceListener, _geometryListener, _notifyListener);
+            _loggerTraceListener, _geometryListener, _notifyListener);
     }
 
     public void UnregisterTraceListeners()
     {
         TraceUtils.UnregisterTraceListeners(
             settingsService.LogConfig.IncludeWpfTrace,
-            TraceListener, _geometryListener, _notifyListener);
+            _loggerTraceListener, _geometryListener, _notifyListener);
     }
 
     public void ClearOutput()
@@ -78,10 +76,10 @@ internal sealed class LoggingService(
 
     private void DisposeLogger()
     {
-        TraceListener?.Dispose();
-        TraceListener = null;
         _logger?.Dispose();
         _logger = null;
+        _loggerTraceListener?.Dispose();
+        _loggerTraceListener = null;
         _geometryListener?.Dispose();
         _geometryListener = null;
         _notifyListener?.Dispose();

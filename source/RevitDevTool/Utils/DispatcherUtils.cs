@@ -7,7 +7,7 @@ namespace RevitDevTool.Utils;
 /// Helper class for dispatching actions to the Revit UI thread.
 /// Uses ComponentManager.Ribbon.Dispatcher which is the official Revit UI dispatcher.
 /// </summary>
-public static class DispatcherHelper
+public static class DispatcherUtils
 {
     /// <summary>
     /// Gets the Revit UI thread dispatcher.

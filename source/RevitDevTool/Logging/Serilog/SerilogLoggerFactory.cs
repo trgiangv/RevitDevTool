@@ -1,11 +1,13 @@
 using Microsoft.Extensions.Logging;
-using RevitDevTool.Models.Config;
+using RevitDevTool.Logging.Enums;
+using RevitDevTool.Settings.Config;
 using RevitDevTool.Utils;
 using Serilog;
 using Serilog.Core;
 using Serilog.Events;
 using Serilog.Formatting.Json;
 using System.IO;
+using RevitEnricher = RevitDevTool.Logging.Enums.RevitEnricher;
 
 namespace RevitDevTool.Logging.Serilog;
 

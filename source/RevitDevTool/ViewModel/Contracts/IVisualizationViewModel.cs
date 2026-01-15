@@ -2,6 +2,6 @@
 
 public interface IVisualizationViewModel
 {
-    public void Initialize();
-    public void Refresh();
+    void Initialize();
+    void Refresh();
 }

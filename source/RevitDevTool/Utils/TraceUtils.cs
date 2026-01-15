@@ -1,6 +1,6 @@
 using Microsoft.Extensions.Logging;
-using RevitDevTool.Logging;
-using RevitDevTool.Models.Config;
+using RevitDevTool.Listeners;
+using RevitDevTool.Settings.Config;
 using System.Diagnostics;
 // ReSharper disable LoopCanBeConvertedToQuery
 // ReSharper disable RedundantSuppressNullableWarningExpression
@@ -25,7 +25,7 @@ public static class TraceUtils
         {
             if (listener == null || Trace.Listeners.Contains(listener)) continue;
             Trace.Listeners.Add(listener);
-            if (includeWpfTrace && listener is AdapterTraceListener)
+            if (includeWpfTrace && listener is LoggerTraceListener)
                 PresentationTraceSources.DataBindingSource.Listeners.Add(listener);
         }
     }
@@ -36,7 +36,7 @@ public static class TraceUtils
         {
             if (listener == null || !Trace.Listeners.Contains(listener)) continue;
             Trace.Listeners.Remove(listener);
-            if (includeWpfTrace && listener is AdapterTraceListener)
+            if (includeWpfTrace && listener is LoggerTraceListener)
                 PresentationTraceSources.DataBindingSource.Listeners.Remove(listener);
         }
     }

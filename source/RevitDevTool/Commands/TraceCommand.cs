@@ -4,7 +4,7 @@ using Autodesk.Revit.UI;
 using Autodesk.Windows;
 using Nice3point.Revit.Toolkit.Decorators;
 using Nice3point.Revit.Toolkit.External;
-using RevitDevTool.Models.Trace;
+using RevitDevTool.Listeners;
 using RevitDevTool.Utils;
 using RevitDevTool.View;
 using RevitDevTool.ViewModel;

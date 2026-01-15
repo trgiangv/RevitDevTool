@@ -1,14 +1,14 @@
 ﻿using Microsoft.Extensions.Logging;
 using RevitDevTool.Logging.Theme;
 using Serilog.Events;
-using InternalTimeInterval = RevitDevTool.Models.Config.RollingInterval;
+using InternalTimeInterval = RevitDevTool.Logging.Enums.RollingInterval;
 using SerilogStyle = Serilog.Sinks.RichTextBoxForms.Themes.Style;
 using SerilogStyleToken = Serilog.Sinks.RichTextBoxForms.Themes.StyleToken;
 using SerilogTheme = Serilog.Sinks.RichTextBoxForms.Themes.Theme;
 using SerilogTimeInterval = Serilog.RollingInterval;
 namespace RevitDevTool.Logging.Serilog;
 
-public static class SerilogUtils
+public static class SerilogExtensions
 {
     public static LogEventLevel ToSerilog(this LogLevel level)
     {

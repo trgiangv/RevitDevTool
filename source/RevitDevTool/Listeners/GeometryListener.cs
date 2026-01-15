@@ -1,7 +1,6 @@
 using RevitDevTool.Controllers;
 using System.Diagnostics;
-
-namespace RevitDevTool.Models.Trace;
+namespace RevitDevTool.Listeners;
 
 public sealed class GeometryListener : TraceListener
 {

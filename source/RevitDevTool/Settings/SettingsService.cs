@@ -1,11 +1,10 @@
-using RevitDevTool.Models.Config;
-using RevitDevTool.Services.Configuration;
+using RevitDevTool.Settings.Config;
+using RevitDevTool.Settings.Options;
 using RevitDevTool.Theme;
 using RevitDevTool.Utils;
 using Serilog;
 using System.Diagnostics;
-
-namespace RevitDevTool.Services;
+namespace RevitDevTool.Settings;
 
 public sealed class SettingsService(IFileConfig<PathOptions> fileConfig) : ISettingsService
 {

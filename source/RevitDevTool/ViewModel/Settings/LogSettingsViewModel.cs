@@ -1,9 +1,9 @@
 using CommunityToolkit.Mvvm.Messaging;
 using Microsoft.Extensions.Logging;
-using RevitDevTool.Messages;
-using RevitDevTool.Models.Config;
-using RevitDevTool.Services;
+using RevitDevTool.Logging.Enums;
+using RevitDevTool.Settings;
 using RevitDevTool.Utils;
+using RevitDevTool.ViewModel.Messages;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Diagnostics;

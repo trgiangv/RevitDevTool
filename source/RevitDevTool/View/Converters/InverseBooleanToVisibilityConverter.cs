@@ -1,7 +1,7 @@
 using System.Globalization;
 using System.Windows.Data;
 
-namespace RevitDevTool.Converters;
+namespace RevitDevTool.View.Converters;
 
 /// <summary>
 /// Converts a boolean value to a Visibility value (inverted - true becomes Collapsed)
