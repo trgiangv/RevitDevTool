@@ -53,11 +53,11 @@
 
     <ScrollViewer HorizontalScrollBarVisibility="Disabled"
                   VerticalScrollBarVisibility="Auto">
-        <StackPanel Margin="8">
+        <StackPanel Margin="5">
             <!--  Log Filter  -->
             <GroupBox Margin="0,0,0,8"
                       Header="Log Filter">
-                <StackPanel Margin="8">
+                <StackPanel Margin="8 5 8 8">
                     <!--  Minimum Level  -->
                     <Grid>
                         <Grid.ColumnDefinitions>
@@ -115,7 +115,7 @@
                                           IsOn="{Binding EnablePrettyJson}" />
                     </Grid>
 
-                    <Expander Margin="0,16,0,8"
+                    <Expander Margin="0,12,0,0"
                               Header="Level Detection Keywords"
                               IsExpanded="False">
                         <StackPanel>
@@ -195,7 +195,7 @@
                     </Grid>
 
                     <!--  WPF Trace  -->
-                    <Grid Margin="0,8">
+                    <Grid Margin="0 8 0 0">
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="Auto" />
                             <ColumnDefinition Width="*" />

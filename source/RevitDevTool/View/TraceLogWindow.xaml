@@ -9,7 +9,7 @@
         MinWidth="600"
         Width="600"
         MinHeight="400"
-        Height="800"
+        Height="850"
         d:DesignHeight="700"
         d:DesignWidth="600"
         Background="{DynamicResource MahApps.Brushes.ThemeBackground}"
