@@ -11,7 +11,7 @@ using System.Windows.Forms.Integration;
 
 namespace RevitDevTool.ViewModel;
 
-public partial class TraceLogViewModel : ObservableObject, IDisposable
+public sealed partial class TraceLogViewModel : ObservableObject, IDisposable
 {
     private readonly ISettingsService _settingsService;
     private readonly ILoggingService _loggingService;
@@ -162,7 +162,5 @@ public partial class TraceLogViewModel : ObservableObject, IDisposable
         _loggingService.Dispose();
         _consoleRedirector?.Dispose();
         _consoleRedirector = null;
-
-        GC.SuppressFinalize(this);
     }
 }
