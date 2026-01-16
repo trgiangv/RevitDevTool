@@ -45,11 +45,13 @@
                       Stretch="Uniform">
                     <Path.Style>
                         <Style TargetType="Path">
-                            <Setter Property="Data" Value="{StaticResource Settings}" />
+                            <Setter Property="Data"
+                                    Value="{StaticResource Settings}" />
                             <Style.Triggers>
                                 <DataTrigger Binding="{Binding Path=IsChecked, RelativeSource={RelativeSource AncestorType=ToggleButton}}"
                                              Value="True">
-                                    <Setter Property="Data" Value="{StaticResource ArrowLeft}" />
+                                    <Setter Property="Data"
+                                            Value="{StaticResource ArrowLeft}" />
                                 </DataTrigger>
                             </Style.Triggers>
                         </Style>
@@ -145,7 +147,15 @@
                 <ContentControl Content="{Binding TraceLogViewModel.LogTextBox}" />
             </Border>
 
-            <view:SettingsView Visibility="{Binding IsSettingsVisible, Converter={StaticResource BoolToVisibility}}" />
+            <Border Margin="5,0,5,5"
+                    Padding="2"
+                    Background="{DynamicResource MahApps.Brushes.ThemeBackground}"
+                    BorderBrush="{DynamicResource MahApps.Brushes.Gray8}"
+                    BorderThickness="1"
+                    CornerRadius="6"
+                    Visibility="{Binding IsSettingsVisible, Converter={StaticResource BoolToVisibility}}">
+                <view:SettingsView />
+            </Border>
         </Grid>
     </Grid>
 </Page>
