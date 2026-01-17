@@ -35,11 +35,7 @@ public partial class TraceLogPageViewModel : ObservableObject, IRecipient<IsSave
         var logFolder = _settingsService.LogConfig.LogFolder;
         try
         {
-            Process.Start(new ProcessStartInfo
-            {
-                FileName = logFolder,
-                UseShellExecute = true
-            });
+            Process.Start("explorer.exe", logFolder);
         }
         catch
         {

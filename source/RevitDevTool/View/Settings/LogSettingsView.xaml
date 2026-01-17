@@ -184,13 +184,13 @@
                                               HorizontalAlignment="Right"
                                               VerticalAlignment="Bottom"
                                               IsOn="{Binding IncludeStackTrace}" />
-                            <ComboBox Width="{StaticResource ContentMinWidth}"
-                                      Margin="0,8,0,0"
-                                      HorizontalAlignment="Right"
-                                      VerticalAlignment="Center"
-                                      ItemsSource="{Binding StackTraceDepths, Mode=OneTime}"
-                                      SelectedItem="{Binding StackTraceDepth}"
-                                      Visibility="{Binding IncludeStackTrace, Converter={StaticResource BoolToVisibility}}" />
+                            <mah:NumericUpDown Width="{StaticResource ContentMinWidth}"
+                                               Margin="0,8,0,0"
+                                               HorizontalAlignment="Right"
+                                               VerticalAlignment="Center"
+                                               Minimum="1"
+                                               Value="{Binding StackTraceDepth, UpdateSourceTrigger=PropertyChanged}"
+                                               Visibility="{Binding IncludeStackTrace, Converter={StaticResource BoolToVisibility}}" />
                         </StackPanel>
                     </Grid>
 

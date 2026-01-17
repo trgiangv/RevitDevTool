@@ -19,7 +19,6 @@ public partial class LogSettingsViewModel : ObservableObject, IDataErrorInfo, IR
     private readonly ILoggingService _loggingService;
     private readonly IMessenger _messenger;
 
-    public static int[] StackTraceDepths { get; } = [1, 2, 3, 4, 5]; // allowed maximum 5 levels
     public static SourceLevels[] SourceLevels { get; } = Enum.GetValues(typeof(SourceLevels)).Cast<SourceLevels>().ToArray();
     public static RevitEnricher[] AvailableRevitEnrichers { get; } =
     [
@@ -38,7 +37,7 @@ public partial class LogSettingsViewModel : ObservableObject, IDataErrorInfo, IR
     [ObservableProperty] private string _warningKeywords = string.Empty;
     [ObservableProperty] private string _errorKeywords = string.Empty;
     [ObservableProperty] private string _criticalKeywords = string.Empty;
-    [ObservableProperty] private bool _hasPendingChanges;
+    [ObservableProperty] private bool _restartRequired;
     [ObservableProperty] private bool _isSaveLogEnabled;
     [ObservableProperty] private bool _useExternalFileOnly;
     [ObservableProperty] private LogSaveFormat _saveFormat;
@@ -64,7 +63,7 @@ public partial class LogSettingsViewModel : ObservableObject, IDataErrorInfo, IR
 
         LoadFromConfig();
         SetBaselineFromCurrent();
-        _messenger.Register<ResetSettingsMessage>(this);
+        _messenger.Register(this);
     }
 
     public string Error => string.Empty;
@@ -177,8 +176,8 @@ public partial class LogSettingsViewModel : ObservableObject, IDataErrorInfo, IR
     /// </summary>
     public void ApplyIfPendingChanges()
     {
-        if (!HasPendingChanges) return;
         SaveToConfig();
+        if (!RestartRequired) return;
         SetBaselineFromCurrent();
         _messenger.Send(new LogSettingsAppliedMessage());
     }
@@ -186,10 +185,12 @@ public partial class LogSettingsViewModel : ObservableObject, IDataErrorInfo, IR
     private void SetBaselineFromCurrent()
     {
         _baseline = new Snapshot(
+            LogLevel,
             IsSaveLogEnabled,
             UseExternalFileOnly,
             SaveFormat,
             IncludeStackTrace,
+            StackTraceDepth,
             IncludeWpfTrace,
             TimeInterval,
             LogFolder,
@@ -197,18 +198,20 @@ public partial class LogSettingsViewModel : ObservableObject, IDataErrorInfo, IR
             SelectedRevitEnrichers.Aggregate(RevitEnricher.None, (current, e) => current | e)
         );
 
-        HasPendingChanges = false;
+        RestartRequired = false;
     }
 
     private void UpdateHasPendingChanges()
     {
         var currentEnrichers = SelectedRevitEnrichers.Aggregate(RevitEnricher.None, (current, e) => current | e);
 
-        HasPendingChanges =
-            _baseline.IsSaveLogEnabled != IsSaveLogEnabled
+        RestartRequired =
+            _baseline.LogLevel != LogLevel
+            || _baseline.IsSaveLogEnabled != IsSaveLogEnabled
             || _baseline.UseExternalFileOnly != UseExternalFileOnly
             || _baseline.SaveFormat != SaveFormat
             || _baseline.IncludeStackTrace != IncludeStackTrace
+            || _baseline.StackTraceDepth != StackTraceDepth
             || _baseline.IncludeWpfTrace != IncludeWpfTrace
             || _baseline.TimeInterval != TimeInterval
             || _baseline.EnablePrettyJson != EnablePrettyJson
@@ -217,10 +220,12 @@ public partial class LogSettingsViewModel : ObservableObject, IDataErrorInfo, IR
     }
 
     private readonly record struct Snapshot(
+        LogLevel LogLevel,
         bool IsSaveLogEnabled,
         bool UseExternalFileOnly,
         LogSaveFormat SaveFormat,
         bool IncludeStackTrace,
+        int StackTraceDepth,
         bool IncludeWpfTrace,
         RollingInterval TimeInterval,
         string LogFolder,
