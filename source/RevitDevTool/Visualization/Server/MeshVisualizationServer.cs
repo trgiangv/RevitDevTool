@@ -29,8 +29,8 @@ public sealed class MeshVisualizationServer : VisualizationServer<Mesh>
     public MeshVisualizationServer(ISettingsService settingsService)
     {
         var settings = settingsService.VisualizationConfig.MeshSettings;
-        _extrusion = settings.Extrusion;
-        _transparency = settings.Transparency;
+        _extrusion = settings.Extrusion / 12;
+        _transparency = settings.Transparency / 100;
         _drawMeshGrid = settings.ShowMeshGrid;
         _drawNormalVector = settings.ShowNormalVector;
         _drawSurface = settings.ShowSurface;
