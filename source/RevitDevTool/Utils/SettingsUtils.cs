@@ -56,6 +56,6 @@ public static class SettingsUtils
 #if NET8_0_OR_GREATER
         Environment.ProcessId;
 #else
-        Process.GetCurrentProcess().Id;
+        System.Diagnostics.Process.GetCurrentProcess().Id;
 #endif
 }

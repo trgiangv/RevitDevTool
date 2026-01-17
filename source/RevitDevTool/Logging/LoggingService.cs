@@ -1,5 +1,6 @@
 using Microsoft.Extensions.Logging;
 using RevitDevTool.Listeners;
+using RevitDevTool.Logging.Python;
 using RevitDevTool.Settings;
 using RevitDevTool.Utils;
 
@@ -39,6 +40,7 @@ public sealed class LoggingService(
         _loggerTraceListener = traceListenerFactory.CreateTraceListener(_logger, config);
         _geometryListener ??= new GeometryListener();
         _notifyListener ??= new NotifyListener();
+        PyTrace.Initialize(settingsService);
     }
 
     public void Restart(bool isDarkTheme)

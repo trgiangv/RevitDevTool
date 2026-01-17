@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <UseWPF>true</UseWPF>
@@ -17,7 +17,7 @@
 
   <ItemGroup>
     <!-- Revit API-->
-    <PackageReference Include="Nice3point.Revit.Build.Tasks"/>
+    <PackageReference Include="Nice3point.Revit.Build.Tasks" />
     <PackageReference Include="Nice3point.Revit.Toolkit" VersionOverride="$(RevitVersion).*" />
     <PackageReference Include="Nice3point.Revit.Extensions" VersionOverride="$(RevitVersion).*" />
     <PackageReference Include="Nice3point.Revit.Api.RevitAPI" VersionOverride="$(RevitVersion).*" />
@@ -26,25 +26,23 @@
     <PackageReference Include="Nice3point.Revit.Api.AdWindows" VersionOverride="$(RevitVersion).*" />
 
     <!-- UI -->
-    <PackageReference Include="CommunityToolkit.Mvvm"/>
-    <PackageReference Include="MahApps.Metro"/>
+    <PackageReference Include="CommunityToolkit.Mvvm" />
+    <PackageReference Include="MahApps.Metro" />
 
     <!-- Serilog -->
-    <PackageReference Include="Serilog"/>
-    <PackageReference Include="Serilog.Sinks.Seq"/>
-    <PackageReference Include="Sentry.Serilog"/>
+    <PackageReference Include="Serilog" />
     <PackageReference Include="Serilog.Enrichers.Autodesk.Revit" />
-    <PackageReference Include="Serilog.Sinks.File"/>
-    <PackageReference Include="Serilog.Sinks.RichTextBox.WinForms.Colored"/>
+    <PackageReference Include="Serilog.Sinks.File" />
+    <PackageReference Include="Serilog.Sinks.RichTextBox.WinForms.Colored" />
 
     <!--Hosting-->
-    <PackageReference Include="Microsoft.Extensions.Hosting"/>
+    <PackageReference Include="Microsoft.Extensions.Hosting" />
 
     <!-- Utils -->
     <PackageReference Include="JetBrains.Annotations" />
     <PackageReference Include="PolySharp" PrivateAssets="All" IncludeAssets="runtime; build; native; contentfiles; analyzers; buildtransitive" />
     <PackageReference Include="ILRepack" />
-    <PackageReference Include="Microsoft-WindowsAPICodePack-Shell" Condition="$(DefineConstants.Contains('NETFRAMEWORK'))"/>
+    <PackageReference Include="Microsoft-WindowsAPICodePack-Shell" Condition="$(DefineConstants.Contains('NETFRAMEWORK'))" />
   </ItemGroup>
 
   <ItemGroup>
