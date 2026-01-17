@@ -37,7 +37,7 @@ public sealed class XyzVisualizationServer : VisualizationServer<XYZ>
     public XyzVisualizationServer(ISettingsService settingsService)
     {
         var settings = settingsService.VisualizationConfig.XyzSettings;
-        _transparency = settings.Transparency;
+        _transparency = settings.Transparency / 100;
         _axisLength = settings.AxisLength / 12;
         _xColor = new Color(settings.XColor.R, settings.XColor.G, settings.XColor.B);
         _yColor = new Color(settings.YColor.R, settings.YColor.G, settings.YColor.B);

@@ -30,8 +30,8 @@ public sealed class PolylineVisualizationServer : VisualizationServer<GeometryOb
     public PolylineVisualizationServer(ISettingsService settingsService)
     {
         var settings = settingsService.VisualizationConfig.PolylineSettings;
-        _transparency = settings.Transparency;
-        _diameter = settings.Diameter;
+        _transparency = settings.Transparency / 100;
+        _diameter = settings.Diameter / 12;
         _surfaceColor = new Color(settings.SurfaceColor.R, settings.SurfaceColor.G, settings.SurfaceColor.B);
         _curveColor = new Color(settings.CurveColor.R, settings.CurveColor.G, settings.CurveColor.B);
         _directionColor = new Color(settings.DirectionColor.R, settings.DirectionColor.G, settings.DirectionColor.B);
