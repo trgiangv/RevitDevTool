@@ -1,5 +1,7 @@
 using System.Diagnostics;
 using System.Text;
+// ReSharper disable ReplaceSubstringWithRangeIndexer
+#pragma warning disable IDE0057
 
 namespace RevitDevTool.Utils;
 
@@ -18,7 +20,12 @@ public static class StackTraceUtils
         "System.Diagnostics",
         "RevitDevTool",
         "Autodesk.Revit.UI",
-        "revitAPIStartupFromSingleManifest"
+        "revitAPIStartupFromSingleManifest",
+        "IronPython.Runtime.Operations",
+        "IronPython.Runtime.Binding",
+        "IronPython.Compiler",
+        "Microsoft.Scripting.Runtime",
+        "Microsoft.Scripting.Interpreter"
     ];
 
     /// <summary>
@@ -35,8 +42,15 @@ public static class StackTraceUtils
         "RestrictedSink",
         "AsyncSink",
         "SafeAggregateSink",
-        "StackTraceUtils"
+        "StackTraceUtils",
+        "CallSite",
+        "UpdateDelegates",
+        "LightLambda"
     ];
+
+
+
+
 
     /// <summary>
     /// Builds a formatted stack trace string from TraceEventCache callstack.
@@ -74,7 +88,7 @@ public static class StackTraceUtils
     /// </summary>
     /// <param name="callstack">Raw callstack string from TraceEventCache.</param>
     /// <param name="maxDepth">Maximum number of stack frames to include.</param>
-    /// <param name="ignoredNamespacePrefixes">
+    /// <param name="ignoredNamespacePrefixes"> 
     ///   Namespace prefixes to ignore (checked against raw line after "at ").
     /// </param>
     /// <param name="ignoredClassPatterns">
@@ -183,17 +197,6 @@ public static class StackTraceUtils
                     : line.Substring(lineNumStart);
             }
         }
-
-        // Simplify from Namespace.SubNamespace.Class.Method -> Class.Method
-        // var lastDot = methodPart.LastIndexOf('.');
-        // if (lastDot > 0)
-        // {
-        //     var beforeLastDot = methodPart.LastIndexOf('.', lastDot - 1);
-        //     if (beforeLastDot >= 0 && beforeLastDot + 1 < methodPart.Length)
-        //     {
-        //         methodPart = methodPart.Substring(beforeLastDot + 1);
-        //     }
-        // }
 
         // Remove parameter list
         var parenIndex = methodPart.IndexOf('(');
