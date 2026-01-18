@@ -12,9 +12,7 @@ namespace RevitDevTool.Listeners;
 /// </summary>
 public sealed class LoggerTraceListener(
     ILoggerAdapter logger,
-    bool includeStackTrace,
-    int stackTraceDepth,
-    LogFilterKeywords? filterKeywords = null) : TraceListener
+    LogConfig config) : TraceListener
 {
     private const string CategoryProperty = "Category";
     private const string StackTraceProperty = "StackTrace";
@@ -25,7 +23,8 @@ public sealed class LoggerTraceListener(
     private const string TraceEventTypeProperty = "TraceEventType";
 
     private readonly ILoggerAdapter _logger = logger.ForContext<LoggerTraceListener>();
-    private readonly LogFilterKeywords _filterKeywords = filterKeywords ?? new LogFilterKeywords();
+    private readonly LogFilterKeywords _filterKeywords = config.FilterKeywords;
+    private readonly bool _enableJsonSerialization = config.EnablePrettyJson;
 
     public override bool IsThreadSafe => true;
 
@@ -106,7 +105,8 @@ public sealed class LoggerTraceListener(
     public override void Write(object? data)
     {
         var level = DetectLogLevel(data?.ToString());
-        _logger.Write(level, "{@TraceData:j}", data);
+        // @ = destructure to JSON, $ = stringify with ToString()
+        _logger.Write(level, _enableJsonSerialization ? "{@TraceData:j}" : "{$TraceData}", data);
     }
 
     public override void Write(string? message)
@@ -122,11 +122,11 @@ public sealed class LoggerTraceListener(
         if (!string.IsNullOrWhiteSpace(category))
         {
             _logger.ForContext(CategoryProperty, category)
-                .Write(level, "[{Category}] {@TraceData:j}", category, data);
+                .Write(level, _enableJsonSerialization ? "[{Category}] {@TraceData:j}" : "[{Category}] {$TraceData}", category, data);
         }
         else
         {
-            _logger.Write(level, "{@TraceData:j}", data);
+            _logger.Write(level, _enableJsonSerialization ? "{@TraceData:j}" : "{$TraceData}", data);
         }
     }
 
@@ -158,19 +158,19 @@ public sealed class LoggerTraceListener(
             .ForContext(TraceEventTypeProperty, eventType)
             .ForContext(EventIdProperty, id);
 
-        if (!includeStackTrace || stackTraceDepth <= 0 || eventCache == null)
+        if (!config.IncludeStackTrace || config.StackTraceDepth <= 0 || eventCache == null)
             return enrichedLogger;
 
-        var stackTrace = StackTraceUtils.BuildStackTrace(eventCache, stackTraceDepth);
+        var stackTrace = StackTraceUtils.BuildStackTrace(eventCache, config.StackTraceDepth);
         if (!string.IsNullOrWhiteSpace(stackTrace))
             enrichedLogger = enrichedLogger.ForContext(StackTraceProperty, stackTrace);
 
         return enrichedLogger;
     }
 
-    private static void WriteData(ILoggerAdapter logger, TraceEventType eventType, object? data)
+    private void WriteData(ILoggerAdapter logger, TraceEventType eventType, object? data)
     {
-        logger.Write(GetLogLevel(eventType), "{@TraceData:j}", data);
+        logger.Write(GetLogLevel(eventType), _enableJsonSerialization ? "{@TraceData:j}" : "{$TraceData}", data);
     }
 
     private static void Write(ILoggerAdapter logger, TraceEventType eventType, string messageTemplate, params object[] args)
@@ -197,9 +197,9 @@ public sealed class LoggerTraceListener(
     /// <summary>
     /// Converts .NET string.Format style placeholders to structured logging placeholders.
     /// Preserves format specifiers: "{0:P2}" → "{Arg0:P2}", "{0}" → "{Arg0}"
-    /// Complex objects use destructuring: "{@Arg0:j}"
+    /// Complex objects: "{@Arg0:j}" when enableJsonSerialization is true (JSON), "{$Arg0}" otherwise (ToString)
     /// </summary>
-    private static (string template, object[] args) ConvertToStructuredFormat(string format, object?[] args)
+    private (string template, object[] args) ConvertToStructuredFormat(string format, object?[] args)
     {
         var template = format;
         var convertedArgs = new List<object>();
@@ -229,8 +229,9 @@ public sealed class LoggerTraceListener(
             else if (template.Contains(simplePlaceholder))
             {
                 // Simple placeholder without format specifier
+                // @ = destructure to JSON with :j for pretty print, $ = stringify with ToString()
                 var structuredPlaceholder = IsComplexObject(arg)
-                    ? $"{{@Arg{i}:j}}"
+                    ? _enableJsonSerialization ? $"{{@Arg{i}:j}}" : $"{{$Arg{i}}}"
                     : $"{{Arg{i}}}";
                 template = template.Replace(simplePlaceholder, structuredPlaceholder);
                 convertedArgs.Add(arg ?? "null");

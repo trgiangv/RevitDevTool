@@ -1,4 +1,6 @@
-﻿using RevitDevTool.ViewModel.Contracts;
+using CommunityToolkit.Mvvm.Messaging;
+using RevitDevTool.ViewModel.Contracts;
+using RevitDevTool.ViewModel.Messages;
 using RevitDevTool.ViewModel.Settings.Visualization;
 using RevitDevTool.Visualization.Contracts;
 using RevitDevTool.Visualization.Server;
@@ -61,6 +63,14 @@ internal static class VisualizationController
         {
             server.ClearGeometry();
         }
+        NotifyGeometryCountChanged();
+    }
+
+    public static int TotalGeometryCount => ServerViewModelPairs.Sum(pair => pair.Server.GeometryCount);
+
+    public static void NotifyGeometryCountChanged()
+    {
+        WeakReferenceMessenger.Default.Send(new GeometryCountChangedMessage(TotalGeometryCount));
     }
 
     public static void Refresh()

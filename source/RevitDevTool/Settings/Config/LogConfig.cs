@@ -41,13 +41,13 @@ public sealed class LogConfig
     public string LogFolder { get; set; } = string.Empty;
 
     [JsonPropertyName("EnablePrettyJson")]
-    public bool EnablePrettyJson { get; set; } = true;
+    public bool EnablePrettyJson { get; set; }
 
     [JsonPropertyName("FilterKeywords")]
     public LogFilterKeywords FilterKeywords { get; set; } = new();
 
     [JsonPropertyName("RevitEnrichers")]
-    public RevitEnricher RevitEnrichers { get; set; } = RevitEnricher.RevitVersion | RevitEnricher.RevitBuild;
+    public RevitEnricher RevitEnrichers { get; set; } = RevitEnricher.RevitVersion | RevitEnricher.RevitDocumentTitle;
 
     [JsonPropertyName("AutoClean")]
     public bool AutoClean { get; set; } = true;

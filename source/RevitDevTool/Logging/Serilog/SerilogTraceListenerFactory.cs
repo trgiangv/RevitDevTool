@@ -13,7 +13,7 @@ internal sealed class SerilogTraceListenerFactory : ITraceListenerFactory
     {
         return logger is not SerilogAdapter
             ? throw new ArgumentException("Logger must be a SerilogAdapter for SerilogTraceListenerFactory", nameof(logger))
-            : new LoggerTraceListener(logger, config.IncludeStackTrace, config.StackTraceDepth, config.FilterKeywords);
+            : new LoggerTraceListener(logger, config);
     }
 }
 
