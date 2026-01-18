@@ -1,7 +1,6 @@
 using Autodesk.Revit.Attributes;
 using Autodesk.Revit.DB.Events;
 using Autodesk.Revit.UI;
-using Autodesk.Windows;
 using Nice3point.Revit.Toolkit.Decorators;
 using Nice3point.Revit.Toolkit.External;
 using RevitDevTool.Listeners;
@@ -141,36 +140,25 @@ public class TraceCommand : ExternalCommand, IExternalCommandAvailability
         if (FloatingWindow != null) return;
         if (SharedViewModel is null) return;
 
-        // Ensure UI thread
-        if (ComponentManager.IsApplicationButtonVisible)
-        {
-            ComponentManager.Ribbon.Dispatcher.BeginInvoke(new Action(Show));
-        }
-        else
-        {
-            Show();
-        }
-
-        return;
-
-        static void Show()
+        DispatcherHelper.RunOnMainThread(() =>
         {
             FloatingWindow = Host.GetService<TraceLogWindow>();
             FloatingWindow.Closed += OnFloatingWindowClosed;
             FloatingWindow.SetRevitOwner();
             FloatingWindow.Show();
-        }
+        });
     }
 
     private static void CloseFloatingWindow()
     {
         if (FloatingWindow is null) return;
-        ComponentManager.Ribbon.Dispatcher.BeginInvoke(new Action(() =>
+        
+        DispatcherHelper.RunOnMainThread(() =>
         {
-            FloatingWindow.Closed -= OnFloatingWindowClosed;
+            FloatingWindow!.Closed -= OnFloatingWindowClosed;
             FloatingWindow.Close();
             FloatingWindow = null;
-        }));
+        });
     }
 
     private static void OnFloatingWindowClosed(object? sender, EventArgs e)

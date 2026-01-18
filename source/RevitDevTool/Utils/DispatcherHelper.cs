@@ -7,12 +7,13 @@ namespace RevitDevTool.Utils;
 /// Helper class for dispatching actions to the Revit UI thread.
 /// Uses ComponentManager.Ribbon.Dispatcher which is the official Revit UI dispatcher.
 /// </summary>
-public static class DispatcherUtils
+[PublicAPI]
+public static class DispatcherHelper
 {
     /// <summary>
     /// Gets the Revit UI thread dispatcher.
     /// </summary>
-    private static Dispatcher Dispatcher => ComponentManager.Ribbon.Dispatcher;
+    private static Dispatcher RevitDispatcher => ComponentManager.Ribbon.Dispatcher;
 
     /// <summary>
     /// Executes an action on the Revit main UI thread.
@@ -20,10 +21,10 @@ public static class DispatcherUtils
     /// </summary>
     public static void RunOnMainThread(Action action)
     {
-        if (Dispatcher.CheckAccess())
+        if (RevitDispatcher.CheckAccess())
             action();
         else
-            Dispatcher.BeginInvoke(action);
+            RevitDispatcher.BeginInvoke(action);
     }
 
     /// <summary>
@@ -31,9 +32,9 @@ public static class DispatcherUtils
     /// </summary>
     public static void RunOnMainThread(Action action, DispatcherPriority priority)
     {
-        if (Dispatcher.CheckAccess())
+        if (RevitDispatcher.CheckAccess())
             action();
         else
-            Dispatcher.BeginInvoke(action, priority);
+            RevitDispatcher.BeginInvoke(action, priority);
     }
 }
