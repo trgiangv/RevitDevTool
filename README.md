@@ -18,6 +18,8 @@ Autodesk Revit plugin project organized into multiple solution files that target
       * [Features](#features)
       * [How to Use](#how-to-use)
       * [For Python/IronPython Users](#for-pythonironpython-users)
+      * [Colored Log Output with Keywords](#colored-log-output-with-keywords)
+      * [Pretty JSON Output](#pretty-json-output)
     * [🎨 Trace Geometry - Beautiful 3D Visualization](#-trace-geometry---beautiful-3d-visualization)
       * [Supported Geometry Types](#supported-geometry-types)
       * [Key Features](#key-features)
@@ -27,6 +29,12 @@ Autodesk Revit plugin project organized into multiple solution files that target
       * [Example 1: Debugging Element Geometry](#example-1-debugging-element-geometry)
       * [Example 2: Visualizing Analysis Results](#example-2-visualizing-analysis-results)
       * [Example 3: Python Script Integration](#example-3-python-script-integration)
+    * [🐍 Python Stack Trace with pyRevit](#-python-stack-trace-with-pyrevit)
+      * [Setup](#setup)
+      * [Usage](#usage-1)
+      * [Output Example](#output-example)
+      * [How It Works](#how-it-works)
+      * [Configuration](#configuration)
     * [🎛️ User Interface Features](#-user-interface-features)
     * [🔧 Language Support](#-language-support)
     * [💡 Best Practices](#-best-practices)
@@ -126,6 +134,70 @@ Trace.TraceError("Error in Python script")
 # Console output is also captured
 print("This will appear in the trace log")
 Console.WriteLine("Direct console output from Python")
+```
+
+#### Colored Log Output with Keywords
+
+RevitDevTool automatically detects log levels from message content using configurable keywords. This enables colored output even when using `Trace.WriteLine()`:
+
+**Prefix Detection (Highest Priority)**
+```csharp
+Trace.WriteLine("[INFO] This will be Information level (blue)");
+Trace.WriteLine("[WARN] This will be Warning level (yellow)");
+Trace.WriteLine("[ERROR] This will be Error level (red)");
+Trace.WriteLine("[FATAL] This will be Critical level (dark red)");
+Trace.WriteLine("[DEBUG] This will be Debug level (gray)");
+```
+
+**Keyword Detection (Fallback)**
+```csharp
+Trace.WriteLine("Operation completed successfully");  // "completed" → Info
+Trace.WriteLine("Warning: Memory usage is high");     // "warning" → Warning
+Trace.WriteLine("Error occurred during processing");  // "error" → Error
+Trace.WriteLine("Fatal crash detected in system");    // "fatal" → Critical
+```
+
+**Default Keywords (Customizable in Settings)**
+| Level | Default Keywords |
+|-------|-----------------|
+| Information | `info`, `success`, `completed` |
+| Warning | `warning`, `warn`, `caution` |
+| Error | `error`, `failed`, `exception` |
+| Critical | `fatal`, `critical`, `crash` |
+
+#### Pretty JSON Output
+
+Enable **Pretty JSON** in settings to automatically format complex objects as indented JSON:
+
+```csharp
+// Log complex objects with automatic JSON formatting
+var auditLog = new
+{
+    EventId = Guid.NewGuid(),
+    Timestamp = DateTime.UtcNow,
+    User = new { Id = "user456", Role = "Administrator" },
+    Changes = new[]
+    {
+        new { Property = "MaxConnections", OldValue = 100, NewValue = 200 }
+    }
+};
+
+Trace.WriteLine(auditLog);  // Outputs formatted JSON when Pretty JSON is enabled
+```
+
+**Output with Pretty JSON enabled:**
+```json
+{
+  "EventId": "a1b2c3d4-...",
+  "Timestamp": "2026-01-18T10:30:00Z",
+  "User": {
+    "Id": "user456",
+    "Role": "Administrator"
+  },
+  "Changes": [
+    { "Property": "MaxConnections", "OldValue": 100, "NewValue": 200 }
+  ]
+}
 ```
 
 ### 🎨 Trace Geometry - Beautiful 3D Visualization
@@ -298,11 +370,95 @@ selected_walls = [doc.GetElement(id) for id in uidoc.Selection.GetElementIds()]
 analyze_walls(selected_walls)
 ```
 
+### 🐍 Python Stack Trace with pyRevit
+
+RevitDevTool provides enhanced Python logging with full stack trace support for pyRevit scripts. This feature captures the Python call stack and displays it alongside your log messages.
+
+> **Note**: This feature currently supports **pyRevit** only. Support for RevitPythonShell and standalone IronPython can be added by modifying the `trace.py` helper.
+
+#### Setup
+
+1. Copy [`trace.py`](source/RevitDevTool/Logging/Python/trace.py) from RevitDevTool to your pyRevit extension folder or script directory
+2. Import the `trace` function in your script
+
+#### Usage
+
+```python
+# trace.py should be in the same folder or in your pyRevit lib folder
+from trace import trace
+
+def process_elements(elements):
+    trace("Starting element processing")
+    
+    for element in elements:
+        trace("Processing element: {}".format(element.Id))
+        # Your processing logic here
+        
+    trace("Completed processing {} elements".format(len(elements)))
+
+def main():
+    trace("Script started")
+    elements = get_selected_elements()
+    process_elements(elements)
+    trace("Script finished")
+
+main()
+```
+
+#### Output Example
+
+When stack trace is enabled in settings, the output includes the Python call chain:
+
+```
+Script started
+Traceback (Last call first):
+  File "C:\Users\...\MyScript.pushbutton\script.py", in main
+  File "C:\Users\...\MyScript.pushbutton\script.py", in <module>
+```
+
+#### How It Works
+
+The `trace.py` helper:
+1. Captures the Python traceback using `traceback.extract_stack()`
+2. Formats the stack frames with file paths and function names
+3. Sends the message and traceback to `PyTrace.Write()` if RevitDevTool is loaded
+4. Falls back to standard `Trace.Write()` if RevitDevTool is not available
+
+```python
+# trace.py internals (simplified)
+import traceback
+from pyrevit.compat import NETCORE
+from pyrevit import EXEC_PARAMS
+
+def trace(message):
+    stack = traceback.extract_stack()
+    clean_stack = stack[:-1]  # Remove this function call
+    clean_stack.reverse()     # Most recent call first
+    
+    formatted_lines = []
+    for frame in clean_stack:
+        file_path = getattr(frame, 'filename', frame[0])
+        func_name = getattr(frame, 'name', frame[2])
+        if file_path == "<string>":
+            file_path = EXEC_PARAMS.command_path
+        formatted_lines.append('  File "{}", in {}'.format(file_path, func_name))
+    
+    stack_str = "\n".join(formatted_lines)
+    
+    # PyTrace.Write respects IncludeStackTrace and StackTraceDepth settings
+    PyTrace.Write(message, stack_str)
+```
+
+#### Configuration
+
+Stack trace behavior is controlled by settings:
+- **Include Stack Trace**: Enable/disable stack trace in output
+- **Stack Trace Depth**: Number of stack frames to display (default: 3)
+
 ### 🎛️ User Interface Features
 
 - **Dockable Panel**: Integrated seamlessly with Revit's interface
 - **Responsive Design**: Works with Revit's light and dark themes (2024+)
-- **Resizable**: Minimum 300x400 pixels, can be resized as needed
 - **Keyboard Shortcuts**: Standard copy/paste functionality in the log view
 - **Auto-scroll**: Automatically scrolls to show new log entries
 - **Log Level Filtering**: Real-time filtering of log messages
@@ -312,9 +468,7 @@ analyze_walls(selected_walls)
 RevitDevTool works with multiple programming languages and scripting environments:
 
 - **C#** - Full support through .NET Trace API
-- **VB.NET** - Full support through .NET Trace API  
 - **Python/IronPython** - Full support via pyRevit, RevitPythonShell, or IronPython scripts
-- **F#** - Support through .NET interop
 - **Any .NET Language** - Works with any language that can access System.Diagnostics.Trace
 
 ### 💡 Best Practices

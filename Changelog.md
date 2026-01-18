@@ -1,3 +1,76 @@
+# 2.0.0
+
+## Breaking Changes
+
+- **Dropped Revit 2021 Support** - Minimum supported version is now Revit 2022
+- **Removed SQLite Log Format** - SQLite (.db) logging format has been removed. Use JSON or CLEF formats for structured logging
+- **Removed CLEF Log Format** - CLEF (.clef) format has been removed. Use JSON format for Seq integration
+
+## Added
+
+- **WPF Trace Listener**
+  - Capture WPF binding errors and trace output directly in the log panel
+  - Configurable WPF trace level (Off, Error, Warning, Information, Verbose)
+  - Helps debug XAML binding issues without external tools
+
+- **Filter Keywords for Log Level Detection**
+  - Automatic log level detection based on message content
+  - Customizable keywords for each log level (Information, Warning, Error, Critical)
+  - Default keywords: `info,success,completed` for Info, `warning,warn,caution` for Warning, etc.
+  - Supports prefix detection: `[INFO]`, `[WARN]`, `[ERROR]`, `[FATAL]`, `[DEBUG]`
+
+- **Pretty JSON Output**
+  - Enable formatted JSON output for complex objects in trace logs
+  - Objects logged via `Trace.WriteLine(object)` are automatically serialized
+  - Configurable via settings UI
+
+- **Revit Enrichers**
+  - Add Revit context to every log entry automatically
+  - Available enrichers: Revit Version, Document Title, Document Path, Model Path, Addin ID
+  - Configurable via settings UI
+
+- **New Single-Page Settings UI**
+  - All settings now accessible in a single integrated panel
+  - No more separate settings window - everything in the dockable panel
+  - Cleaner, more intuitive configuration experience
+
+- **Live Geometry Count Badge**
+  - Real-time badge showing count of geometry objects currently visualized
+  - Visual feedback for geometry pool status
+  - Helps track visualization state at a glance
+
+- **Python Stack Trace Support**
+  - Enhanced logging for Python/pyRevit scripts with full traceback
+  - `PyTrace.Write(message, traceback)` bridge for Python integration
+  - Respects stack trace depth settings
+  - Helper script: [`source/RevitDevTool/Logging/Python/trace.py`](source/RevitDevTool/Logging/Python/trace.py)
+
+- **Auto-Clean Log Files**
+  - Automatically clean old log files based on rolling interval
+  - Prevents log folder from growing indefinitely
+
+- **Process ID in Log Files**
+  - Log file names now include process ID for multi-instance scenarios
+  - Easier identification of logs from different Revit sessions
+
+## Changed
+
+- **Logging Architecture Refactored**
+  - Complete reorganization of logging infrastructure
+  - Improved separation of concerns between trace listener and logger adapter
+  - Better extensibility for future logging backends
+
+- **UI Enhancements**
+  - Improved settings panel layout and organization
+  - Better visual feedback for pending changes
+  - Enhanced theme consistency
+
+## Fixed
+
+- Stack trace now properly included in UI output
+- Settings reset functionality improved
+- geometry rendering ratio calculations
+
 # 1.4.0
 
 ## Added
