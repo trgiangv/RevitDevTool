@@ -1,4 +1,4 @@
-﻿using Autodesk.Revit.DB.DirectContext3D;
+using Autodesk.Revit.DB.DirectContext3D;
 using Autodesk.Revit.DB.ExternalService;
 using RevitDevTool.Controllers;
 using RevitDevTool.ViewModel.Contracts;
@@ -12,6 +12,8 @@ public abstract class VisualizationServer<TG> : IDirectContext3DServer, IVisuali
     protected bool hasGeometryUpdates = true;
     protected bool hasEffectsUpdates = true;
     protected readonly object renderLock = new();
+
+    public int GeometryCount => visualizeGeometries.Count;
 
     public string GetVendorId() => "RevitDevTool";
     public bool CanExecute(Autodesk.Revit.DB.View dBView) => true;
@@ -31,7 +33,7 @@ public abstract class VisualizationServer<TG> : IDirectContext3DServer, IVisuali
     protected static bool ShouldRenderTransparentPass(double transparency)
     {
         var isTransparentPass = DrawContext.IsTransparentPass();
-        return isTransparentPass && transparency > 0 || !isTransparentPass && transparency == 0;
+        return (isTransparentPass && transparency > 0) || (!isTransparentPass && transparency == 0);
     }
 
     public void RenderScene(Autodesk.Revit.DB.View dBView, DisplayStyle displayStyle)
@@ -82,6 +84,7 @@ public abstract class VisualizationServer<TG> : IDirectContext3DServer, IVisuali
                 hasGeometryUpdates = true;
                 hasEffectsUpdates = true;
                 uiDocument.UpdateAllOpenViews();
+                VisualizationController.NotifyGeometryCountChanged();
             }
             catch (Exception ex)
             {
@@ -102,6 +105,7 @@ public abstract class VisualizationServer<TG> : IDirectContext3DServer, IVisuali
                 hasGeometryUpdates = true;
                 hasEffectsUpdates = true;
                 uiDocument.UpdateAllOpenViews();
+                VisualizationController.NotifyGeometryCountChanged();
             }
             catch (Exception ex)
             {

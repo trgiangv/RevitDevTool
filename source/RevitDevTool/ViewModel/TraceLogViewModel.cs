@@ -11,7 +11,7 @@ using System.Windows.Forms.Integration;
 
 namespace RevitDevTool.ViewModel;
 
-public sealed partial class TraceLogViewModel : ObservableObject, IDisposable
+public sealed partial class TraceLogViewModel : ObservableObject, IDisposable, IRecipient<GeometryCountChangedMessage>
 {
     private readonly ISettingsService _settingsService;
     private readonly ILoggingService _loggingService;
@@ -31,6 +31,9 @@ public sealed partial class TraceLogViewModel : ObservableObject, IDisposable
 
     [ObservableProperty]
     private LogLevel _logLevel = LogLevel.Debug;
+
+    [ObservableProperty]
+    private int _geometryCount;
 
     partial void OnLogLevelChanged(LogLevel value)
     {
@@ -100,8 +103,14 @@ public sealed partial class TraceLogViewModel : ObservableObject, IDisposable
             this,
             static (r, _) => r.OnSettingsApplied()
         );
+        _messenger.Register(this);
 
         _isSubscribed = true;
+    }
+
+    public void Receive(GeometryCountChangedMessage message)
+    {
+        GeometryCount = message.Value;
     }
 
     private void Unsubscribe()
