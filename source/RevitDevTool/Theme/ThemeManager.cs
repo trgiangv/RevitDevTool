@@ -35,7 +35,7 @@ public class ThemeManager : DependencyObject
         if (e.PropertyName != nameof(UIFramework.ApplicationTheme.CurrentTheme.RibbonPanelBackgroundBrush)) return;
         if (UIThemeManager.CurrentTheme.ToString() == UIFramework.ApplicationTheme.CurrentTheme.RibbonTheme.Name) return;
 
-        DispatcherUtils.RunOnMainThread(() =>
+        DispatcherHelper.RunOnMainThread(() =>
         {
             if (!UseRevitTheme) return;
             ActualApplicationTheme = GetRevitTheme();
