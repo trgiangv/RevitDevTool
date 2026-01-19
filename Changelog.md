@@ -1,3 +1,14 @@
+# 2.0.1
+
+## Fixed
+
+- Ensure UI thread handling for open/close FloatingWindow
+
+## Documentation
+
+- Updated usage instructions in README
+- Clarified `Trace` methods support for Geometry and Pretty JSON
+
 # 2.0.0
 
 ## Breaking Changes
