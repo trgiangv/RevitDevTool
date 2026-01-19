@@ -59,10 +59,11 @@ Visualize any Revit geometry (curves, faces, solids, meshes) in real-time
 Simply call `Trace.Write(geometry)` to visualize any Revit geometry object - curves, faces, solids, meshes, and bounding boxes rendered directly in your 3D view.
 
 ### 📁 External File Logging
-Export logs to multiple formats: Plain Text, JSON, CLEF, SQLite Database
+Export logs to plain text (.log) or JSON (.json)
 ![File Logging Configuration](images/RevitDevTool_SaveLog.gif)
 
-Configure and export your logs to multiple formats including plain text (.log), JSON (.json), CLEF (.clef) for Seq integration, or SQLite database (.db) for advanced querying.
+This use full when you need to keep persistent logs for auditing or debugging outside of Revit, within AI-assisted development workflows to keep track of application behavior over time. 
+Configure file logging options in the settings panel.
 
 ### 🚀 Auto-Open Floating Window
 Automatically shows trace window when events occur with no document open
@@ -96,18 +97,20 @@ The Trace Log provides a real-time, color-coded logging interface directly withi
 #### How to Use
 
 1. **Enable Logging**: Open the `Trace Log` DockablePanel and ensure the logger is `enabled`
-2. **Configure Log Level**: Select your desired minimum log level from the dropdown (Debug, Information, Warning, Error, Fatal)
+2. **Configure Log Level**: Select your desired minimum log level settings
 3. **Start Logging**: Use any of the following methods in your C# code:
 
 ```csharp
 // Information logging
 Trace.TraceInformation("Application started successfully");
+Trace.TraceInformation("Processed {0} items in {1}ms", items.Count, stopwatch.ElapsedMilliseconds); // Supports string formatting
 
 // Warning logging  
 Trace.TraceWarning("Element not found, using default values");
 
 // Error logging
 Trace.TraceError("Failed to process element: " + exception.Message);
+Trace.TraceError("Error processing element {0}: {1}", element.Id, exception.Message); // Supports string formatting
 
 // Debug logging
 Debug.WriteLine("Debug information: " + debugInfo);
@@ -115,6 +118,26 @@ Debug.WriteLine("Debug information: " + debugInfo);
 // Console output (automatically captured)
 Console.WriteLine("This will appear in the trace log");
 ```
+
+> [!IMPORTANT]
+> To utilize **Trace Geometry** or **Pretty JSON**, you must use `Trace` methods that accept `object` parameters directly (not string formatting).
+> 
+> **Supported both [Trace Geometry](#-trace-geometry---beautiful-3d-visualization) or [PrettyJson](#pretty-json-output)**
+> - `Trace.Write(object value)`
+> - `Trace.WriteLine(object value)`
+> - `Trace.WriteIf(bool condition, object value)`
+> - `Trace.WriteLineIf(bool condition, object value)`
+> 
+> **Supported [PrettyJson](#pretty-json-output)**
+> - `Trace.Write(object value, string category)`
+> - `Trace.WriteLine(object value, string category)`
+> - `Trace.WriteIf(bool condition, object value, string category)`
+> - `Trace.WriteLineIf(bool condition, object value, string category)`
+> - `Trace.TraceInformation(string format, params object[] args)`
+> - `Trace.TraceWarning(string format, params object[] args)`
+> - `Trace.TraceError(string format, params object[] args)`
+> 
+> Methods from `Console` and `Debug` will convert objects to strings using `.ToString()` before reaching the tool, effectively disabling these visualization features.
 
 #### For Python/IronPython Users
 
@@ -132,13 +155,13 @@ Trace.TraceWarning("Warning from Python")
 Trace.TraceError("Error in Python script")
 
 # Console output is also captured
-print("This will appear in the trace log")
+print("This will not appear in the python console instead trace log")
 Console.WriteLine("Direct console output from Python")
 ```
 
 #### Colored Log Output with Keywords
 
-RevitDevTool automatically detects log levels from message content using configurable keywords. This enables colored output even when using `Trace.WriteLine()`:
+RevitDevTool automatically detects log levels from message content using configurable keywords:
 
 **Prefix Detection (Highest Priority)**
 ```csharp
@@ -147,6 +170,8 @@ Trace.WriteLine("[WARN] This will be Warning level (yellow)");
 Trace.WriteLine("[ERROR] This will be Error level (red)");
 Trace.WriteLine("[FATAL] This will be Critical level (dark red)");
 Trace.WriteLine("[DEBUG] This will be Debug level (gray)");
+Console.WriteLine("[INFO] Console output as Information level");
+Debug.WriteLine("[DEBUG] Debug output as Debug level");
 ```
 
 **Keyword Detection (Fallback)**
@@ -155,15 +180,18 @@ Trace.WriteLine("Operation completed successfully");  // "completed" → Info
 Trace.WriteLine("Warning: Memory usage is high");     // "warning" → Warning
 Trace.WriteLine("Error occurred during processing");  // "error" → Error
 Trace.WriteLine("Fatal crash detected in system");    // "fatal" → Critical
+Console.WriteLine("Task succeeded without issues"); // "succeeded" → Info
+Debug.WriteLine("This is just a debug message");    // "debug" → Debug
 ```
 
 **Default Keywords (Customizable in Settings)**
-| Level | Default Keywords |
-|-------|-----------------|
+
+| Level       | Default Keywords               |
+|-------------|--------------------------------|
 | Information | `info`, `success`, `completed` |
-| Warning | `warning`, `warn`, `caution` |
-| Error | `error`, `failed`, `exception` |
-| Critical | `fatal`, `critical`, `crash` |
+| Warning     | `warning`, `warn`, `caution`   |
+| Error       | `error`, `failed`, `exception` |
+| Critical    | `fatal`, `critical`, `crash`   |
 
 #### Pretty JSON Output
 
@@ -217,10 +245,10 @@ The Geometry Visualization system allows you to display transient geometry direc
 #### Key Features
 
 - **Transient Display** - use Revit's DirectContext3D for rendering which inspired by RevitLookup
-- **Automatic Cleanup** - Geometry is removed when document closes
 - **Manual Control** - Use `ClearGeometry` to remove geometry on demand, `Clear Log` to clear log messages
 - **Performance Optimized** - Efficient rendering/Disposal of geometry
 - **Supports Mixed Geometry Types** - Trace collections of different geometry types in one call
+- **Number of Objects Displayed** - shows in realtime the count of geometry objects displayed in the `ClearGeometry` button
 
 #### How to Use Geometry Visualization
 
@@ -384,8 +412,11 @@ RevitDevTool provides enhanced Python logging with full stack trace support for 
 #### Usage
 
 ```python
-# trace.py should be in the same folder or in your pyRevit lib folder
+ # if trace.py be in the same folder if your pyRevit script, the import works directly like this
 from trace import trace
+
+# if trace.py be in a module named your_module
+from your_module.trace import trace
 
 def process_elements(elements):
     trace("Starting element processing")
@@ -424,31 +455,6 @@ The `trace.py` helper:
 3. Sends the message and traceback to `PyTrace.Write()` if RevitDevTool is loaded
 4. Falls back to standard `Trace.Write()` if RevitDevTool is not available
 
-```python
-# trace.py internals (simplified)
-import traceback
-from pyrevit.compat import NETCORE
-from pyrevit import EXEC_PARAMS
-
-def trace(message):
-    stack = traceback.extract_stack()
-    clean_stack = stack[:-1]  # Remove this function call
-    clean_stack.reverse()     # Most recent call first
-    
-    formatted_lines = []
-    for frame in clean_stack:
-        file_path = getattr(frame, 'filename', frame[0])
-        func_name = getattr(frame, 'name', frame[2])
-        if file_path == "<string>":
-            file_path = EXEC_PARAMS.command_path
-        formatted_lines.append('  File "{}", in {}'.format(file_path, func_name))
-    
-    stack_str = "\n".join(formatted_lines)
-    
-    # PyTrace.Write respects IncludeStackTrace and StackTraceDepth settings
-    PyTrace.Write(message, stack_str)
-```
-
 #### Configuration
 
 Stack trace behavior is controlled by settings:
@@ -469,7 +475,7 @@ RevitDevTool works with multiple programming languages and scripting environment
 
 - **C#** - Full support through .NET Trace API
 - **Python/IronPython** - Full support via pyRevit, RevitPythonShell, or IronPython scripts
-- **Any .NET Language** - Works with any language that can access System.Diagnostics.Trace
+- **Any .NET Language** - Works with any language that can access System.Diagnostics
 
 ### 💡 Best Practices
 
