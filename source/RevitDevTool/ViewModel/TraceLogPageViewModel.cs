@@ -1,6 +1,7 @@
 using CommunityToolkit.Mvvm.Messaging;
 using RevitDevTool.Settings;
 using RevitDevTool.Utils;
+using RevitDevTool.View;
 using RevitDevTool.ViewModel.Messages;
 using RevitDevTool.ViewModel.Settings;
 using System.Diagnostics;
@@ -16,9 +17,11 @@ public partial class TraceLogPageViewModel : ObservableObject, IRecipient<IsSave
     private readonly ISettingsService _settingsService;
 
     public TraceLogViewModel TraceLogViewModel { get; }
+    public AddinLoadView AddinLoadView { get; }
     public int ProcessId { get; } = SettingsUtils.CurrentProcessId;
     [ObservableProperty] private object? _currentPage;
     [ObservableProperty] private bool _isSettingsVisible;
+    [ObservableProperty] private bool _isAddinLoadVisible = true;
     [ObservableProperty] private bool _isSaveLogEnabled;
 
     partial void OnIsSettingsVisibleChanged(bool value)
@@ -37,9 +40,9 @@ public partial class TraceLogPageViewModel : ObservableObject, IRecipient<IsSave
         {
             Process.Start("explorer.exe", logFolder);
         }
-        catch
+        catch (Exception ex)
         {
-            // Ignore
+            Trace.TraceError($"Failed to open log folder: {ex.Message}");
         }
     }
 
@@ -50,13 +53,15 @@ public partial class TraceLogPageViewModel : ObservableObject, IRecipient<IsSave
 
     public TraceLogPageViewModel(
         TraceLogViewModel traceLogViewModel,
+        AddinLoadView addinLoadView,
         LogSettingsViewModel logSettingsViewModel,
         ISettingsService settingsService)
     {
         TraceLogViewModel = traceLogViewModel;
+        AddinLoadView = addinLoadView;
+        IsSaveLogEnabled = settingsService.LogConfig.IsSaveLogEnabled;
         _logSettingsViewModel = logSettingsViewModel;
         _settingsService = settingsService;
-        IsSaveLogEnabled = settingsService.LogConfig.IsSaveLogEnabled;
         WeakReferenceMessenger.Default.Register(this);
     }
 

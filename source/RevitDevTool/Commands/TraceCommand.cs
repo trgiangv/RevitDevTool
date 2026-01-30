@@ -83,8 +83,8 @@ public class TraceCommand : ExternalCommand, IExternalCommandAvailability
     {
         return new DockablePaneState
         {
-            MinimumWidth = 500,
-            MinimumHeight = 400,
+            MinimumWidth = 550,
+            MinimumHeight = 600,
             DockPosition = DockPosition.Right,
             TabBehind = DockablePanes.BuiltInDockablePanes.PropertiesPalette
         };

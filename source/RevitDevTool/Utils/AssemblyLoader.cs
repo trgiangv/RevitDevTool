@@ -107,4 +107,42 @@ public static class AssemblyLoader
     {
         return IsolatedAssemblies.Any(isolated => string.Equals(isolated, name, StringComparison.OrdinalIgnoreCase));
     }
+        
+    // Source - https://stackoverflow.com/a/367798
+    // Posted by lubos hasko, modified by community. See post 'Timeline' for change history
+    // Retrieved 2026-01-30, License - CC BY-SA 4.0
+    public static bool IsManagedAssembly(string fileName)
+    {
+        try
+        {
+            using var fs = new FileStream(fileName, FileMode.Open, FileAccess.Read, FileShare.Read);
+            using var reader = new BinaryReader(fs);
+
+            // 1. DOS Header (MZ)
+            if (fs.Length < 64) return false;
+            if (reader.ReadUInt16() != 0x5A4D) return false; // "MZ"
+
+            // 2. PE Header
+            fs.Position = 0x3C;
+            var peHeaderOffset = reader.ReadUInt32();
+            if (peHeaderOffset > fs.Length) return false;
+
+            fs.Position = peHeaderOffset;
+            if (reader.ReadUInt32() != 0x00004550) return false; // "PE\0\0"
+            
+            fs.Position = peHeaderOffset + 20;
+            var optionalHeaderSize = reader.ReadUInt16();
+            
+            fs.Position = peHeaderOffset + 24 + 96;
+
+            if (optionalHeaderSize < 112 + 8) return false;
+
+            var clrHeaderRva = reader.ReadUInt32();
+            return clrHeaderRva != 0;
+        }
+        catch
+        {
+            return false;
+        }
+    }
 }

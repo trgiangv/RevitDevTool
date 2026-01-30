@@ -101,6 +101,11 @@ public static class Host
         // Root
         services.AddSingleton<TraceLogViewModel>();
         services.AddSingleton<TraceLogPageViewModel>();
+
+        // AddinManager
+        services.AddSingleton<AddinLoadView>();
+        services.AddSingleton<AddinLoadViewModel>();
+
         services.AddTransient<TraceLogPage>();
         services.AddTransient<TraceLogWindow>();
     }

@@ -43,6 +43,7 @@
     <PackageReference Include="PolySharp" PrivateAssets="All" IncludeAssets="runtime; build; native; contentfiles; analyzers; buildtransitive" />
     <PackageReference Include="ILRepack" />
     <PackageReference Include="Microsoft-WindowsAPICodePack-Shell" Condition="$(DefineConstants.Contains('NETFRAMEWORK'))" />
+    <PackageReference Include="System.Reflection.MetadataLoadContext" />
   </ItemGroup>
 
   <ItemGroup>

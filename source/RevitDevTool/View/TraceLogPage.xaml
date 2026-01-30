@@ -46,18 +46,28 @@
                       Stretch="Uniform">
                     <Path.Style>
                         <Style TargetType="Path">
-                            <Setter Property="Data"
-                                    Value="{StaticResource Settings}" />
+                            <Setter Property="Data" Value="{StaticResource Settings}" />
                             <Style.Triggers>
                                 <DataTrigger Binding="{Binding Path=IsChecked, RelativeSource={RelativeSource AncestorType=ToggleButton}}"
                                              Value="True">
-                                    <Setter Property="Data"
-                                            Value="{StaticResource ArrowLeft}" />
+                                    <Setter Property="Data" Value="{StaticResource ArrowLeft}" />
                                 </DataTrigger>
                             </Style.Triggers>
                         </Style>
                     </Path.Style>
                 </Path>
+            </ToggleButton>
+            <ToggleButton Margin="5,0,0,0"
+                          Padding="7,4"
+                          BorderThickness="0.5"
+                          IsChecked="{Binding IsAddinLoadVisible}"
+                          Style="{DynamicResource MahApps.Styles.ToggleButton.Circle}"
+                          ToolTip="Hot Reload">
+                <Path Width="16"
+                      Height="16"
+                      Data="{StaticResource Code}"
+                      Fill="{DynamicResource MahApps.Brushes.ThemeForeground}"
+                      Stretch="Uniform" />
             </ToggleButton>
             <StackPanel HorizontalAlignment="Right"
                         DockPanel.Dock="Right"
@@ -98,22 +108,22 @@
                               Stretch="Uniform" />
                         <TextBlock Margin="5"
                                    Text="Clear Geometry" />
-                        <Grid HorizontalAlignment="Stretch"
-                              Height="20"
-                              Margin="0 0 5 0"
-                              Visibility="{Binding TraceLogViewModel.GeometryCount, Converter={StaticResource IntToVisibility}}"
-                              VerticalAlignment="Center">
+                        <Grid Height="20"
+                              Margin="0,0,5,0"
+                              HorizontalAlignment="Stretch"
+                              VerticalAlignment="Center"
+                              Visibility="{Binding TraceLogViewModel.GeometryCount, Converter={StaticResource IntToVisibility}}">
                             <Rectangle Fill="{DynamicResource MahApps.Brushes.Accent}"
                                        RadiusX="3"
                                        RadiusY="3" />
-                            <TextBlock Text="{Binding TraceLogViewModel.GeometryCount}"
-                                       FontSize="10"
-                                       FontWeight="SemiBold"
+                            <TextBlock Margin="3"
                                        Padding="0"
-                                       Margin="3"
                                        HorizontalAlignment="Center"
                                        VerticalAlignment="Center"
-                                       IsHitTestVisible="False" />
+                                       FontSize="10"
+                                       FontWeight="SemiBold"
+                                       IsHitTestVisible="False"
+                                       Text="{Binding TraceLogViewModel.GeometryCount}" />
                         </Grid>
                     </StackPanel>
                 </Button>
@@ -153,21 +163,68 @@
         </DockPanel>
 
         <!--  Content  -->
-        <Grid Grid.Row="1">
-            <Border Margin="5,0,5,5"
-                    Padding="2"
-                    Background="{DynamicResource MahApps.Brushes.ThemeBackground}"
-                    BorderBrush="{DynamicResource MahApps.Brushes.Gray8}"
-                    BorderThickness="1"
-                    CornerRadius="6"
-                    SnapsToDevicePixels="True"
-                    Visibility="{Binding IsSettingsVisible, Converter={StaticResource InverseBoolToVisibility}}">
-                <ContentControl Content="{Binding TraceLogViewModel.LogTextBox}" />
-            </Border>
+        <Grid Grid.Row="1"
+              Background="{DynamicResource MahApps.Brushes.ThemeBackground}">
 
+            <!--  Log and Addin Load View  -->
+            <Grid Margin="5,0,5,5"
+                  Visibility="{Binding IsSettingsVisible, Converter={StaticResource InverseBoolToVisibility}}">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="*" />
+                    <RowDefinition>
+                        <RowDefinition.Style>
+                            <Style TargetType="RowDefinition">
+                                <Setter Property="Height" Value="Auto" />
+                                <Setter Property="MaxHeight" Value="999" />
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding IsAddinLoadVisible}"
+                                                 Value="False">
+                                        <Setter Property="MaxHeight" Value="0" />
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </RowDefinition.Style>
+                    </RowDefinition>
+                    <RowDefinition>
+                        <RowDefinition.Style>
+                            <Style TargetType="RowDefinition">
+                                <Setter Property="Height" Value="200" />
+                                <Setter Property="MaxHeight" Value="999" />
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding IsAddinLoadVisible}"
+                                                 Value="False">
+                                        <Setter Property="MaxHeight" Value="0" />
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </RowDefinition.Style>
+                    </RowDefinition>
+                </Grid.RowDefinitions>
+
+                <Border Grid.Row="0"
+                        Padding="2"
+                        BorderBrush="{DynamicResource MahApps.Brushes.Gray8}"
+                        BorderThickness="1"
+                        CornerRadius="6"
+                        SnapsToDevicePixels="True">
+                    <ContentControl Content="{Binding TraceLogViewModel.LogTextBox}" />
+                </Border>
+
+                <GridSplitter Grid.Row="1"
+                              Height="2"
+                              Margin="0 5"
+                              Background="{DynamicResource MahApps.Brushes.Gray8}"
+                              ShowsPreview="False"
+                              Visibility="{Binding IsAddinLoadVisible, Converter={StaticResource BoolToVisibility}}" />
+
+                <ContentControl Grid.Row="2"
+                                Content="{Binding AddinLoadView}"
+                                Visibility="{Binding IsAddinLoadVisible, Converter={StaticResource BoolToVisibility}}" />
+            </Grid>
+
+            <!--  Setting  -->
             <Border Margin="5,0,5,5"
                     Padding="2"
-                    Background="{DynamicResource MahApps.Brushes.ThemeBackground}"
                     BorderBrush="{DynamicResource MahApps.Brushes.Gray8}"
                     BorderThickness="1"
                     CornerRadius="6"
