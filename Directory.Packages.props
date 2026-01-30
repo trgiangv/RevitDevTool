@@ -23,6 +23,7 @@
     <PackageVersion Include="ILRepack" Version="2.0.41" />
     <PackageVersion Include="Nuke.Common" Version="9.0.4" />
     <PackageVersion Include="Autodesk.PackageBuilder" Version="2.0.2" />
+    <PackageVersion Include="System.Reflection.MetadataLoadContext" Version="10.0.2" />
     <PackageVersion Include="WixSharp.bin" Version="1.26.0" />
     <PackageVersion Include="WixSharp.wix.bin" Version="3.14.1" />
   </ItemGroup>

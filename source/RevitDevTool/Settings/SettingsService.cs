@@ -11,6 +11,7 @@ public sealed class SettingsService(IFileConfig<PathOptions> fileConfig) : ISett
     private GeneralConfig? _generalConfig;
     private LogConfig? _logConfig;
     private VisualizationConfig? _visualizationConfig;
+    private AddinLoadConfig? _addinLoadConfig;
 
     public GeneralConfig GeneralConfig
     {
@@ -40,11 +41,21 @@ public sealed class SettingsService(IFileConfig<PathOptions> fileConfig) : ISett
         }
     }
 
+    public AddinLoadConfig AddinLoadConfig
+    {
+        get
+        {
+            _addinLoadConfig ??= new AddinLoadConfig();
+            return _addinLoadConfig;
+        }
+    }
+
     public void SaveSettings()
     {
         SaveApplicationSettings();
         SaveVisualizationSettings();
         SaveLogSettings();
+        SaveAddinLoadSettings();
     }
 
     public void LoadSettings()
@@ -52,6 +63,7 @@ public sealed class SettingsService(IFileConfig<PathOptions> fileConfig) : ISett
         LoadApplicationSettings();
         LoadVisualizationSettings();
         LoadLogSettings();
+        LoadAddinLoadSettings();
     }
 
     public void ResetSettings()
@@ -173,5 +185,25 @@ public sealed class SettingsService(IFileConfig<PathOptions> fileConfig) : ISett
     {
         if (SettingsUtils.IsValidPath(config.LogFolder)) return;
         config.LogFolder = fileConfig.Options.LogsDirectory;
+    }
+
+    private void SaveAddinLoadSettings()
+    {
+        if (_addinLoadConfig is null) return;
+        fileConfig.Save(_addinLoadConfig);
+    }
+
+    private void LoadAddinLoadSettings()
+    {
+        try
+        {
+            _addinLoadConfig = fileConfig.Load<AddinLoadConfig>();
+        }
+        catch (Exception exception)
+        {
+            Trace.TraceError($"Add-in load settings loading error: {exception.Message}");
+        }
+
+        _addinLoadConfig ??= new AddinLoadConfig();
     }
 }
