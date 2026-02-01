@@ -32,6 +32,7 @@ public class Application : ExternalApplication
         var panel = Application.CreatePanel("External Tools");
 
         panel.AddPushButton<TraceCommand>("Trace Panel")
+            .AddShortcuts("AD")
             .SetAvailabilityController<TraceCommand>()
             .SetLargeImage("/RevitDevTool;component/Resources/Icons/TraceGeometry32_light.tiff")
             .SetLongDescription("Show/Hide Trace Panel");

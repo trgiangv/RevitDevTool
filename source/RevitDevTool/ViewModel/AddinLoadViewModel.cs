@@ -30,6 +30,8 @@ public partial class AddinLoadViewModel : ObservableObject
 
     [ObservableProperty]
     private object? _selectedItem;
+    
+    public AddinItem? LastExecutedItem { get; private set; }
 
     public AddinLoadViewModel(ISettingsService settingsService)
     {
@@ -111,7 +113,7 @@ public partial class AddinLoadViewModel : ObservableObject
         RunActiveCommand(addinItem);
     }
 
-    private static void RunActiveCommand(AddinItem addinItem)
+    private void RunActiveCommand(AddinItem addinItem)
     {
         var filePath = addinItem.AssemblyPath;
         if (!File.Exists(filePath))
@@ -121,6 +123,7 @@ public partial class AddinLoadViewModel : ObservableObject
         }
 
         var message = string.Empty;
+        LastExecutedItem = addinItem;
         CommandExecutor.RunCommand(addinItem, AddinLoadHelper.ExternalCommandData, ref message, AddinLoadHelper.ElementSet);
     }
 
@@ -139,6 +142,11 @@ public partial class AddinLoadViewModel : ObservableObject
                 return;
             case TreeNodeBase currentNode:
                 currentNode.IsSelected = false;
+                if (currentNode is CommandNode cmd 
+                    && cmd.AddinItem == LastExecutedItem)
+                {
+                    LastExecutedItem = null;
+                }
                 break;
         }
 
@@ -501,7 +509,7 @@ public partial class AddinLoadViewModel : ObservableObject
         var savedPaths = _settingsService.AddinLoadConfig.AssemblyPaths;
         if (savedPaths.Count == 0) return;
 
-        foreach (var path in savedPaths)
+        foreach (var path in savedPaths.ToList())  // ToList to avoid modification during iteration
         {
             if (File.Exists(path))
             {
