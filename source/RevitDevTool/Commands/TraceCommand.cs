@@ -1,8 +1,11 @@
+using System.Diagnostics;
+using System.Windows.Input;
 using Autodesk.Revit.Attributes;
 using Autodesk.Revit.DB.Events;
 using Autodesk.Revit.UI;
 using Nice3point.Revit.Toolkit.Decorators;
 using Nice3point.Revit.Toolkit.External;
+using RevitDevTool.AddinManager;
 using RevitDevTool.Listeners;
 using RevitDevTool.Utils;
 using RevitDevTool.View;
@@ -15,9 +18,10 @@ namespace RevitDevTool.Commands;
 public class TraceCommand : ExternalCommand, IExternalCommandAvailability
 {
     public const string CommandName = "TraceLog";
-    private const string Guid = "43AE2B41-0BE6-425A-B27A-724B2CE17351";
+    private static readonly Guid PaneGuid = new("43AE2B41-0BE6-425A-B27A-724B2CE17351");
+    private static readonly DockablePaneId PaneId = new(PaneGuid);
     public static readonly Action TraceReceivedHandler = OnTraceReceived;
-    private static readonly DockablePaneId PaneId = new(new Guid(Guid));
+
     private static bool IsForceHide { get; set; }
     internal static TraceLogViewModel? SharedViewModel { get; private set; }
     private static TraceLogWindow? FloatingWindow { get; set; }
@@ -25,73 +29,84 @@ public class TraceCommand : ExternalCommand, IExternalCommandAvailability
 
     public override void Execute()
     {
-        try
+        if (Keyboard.IsKeyDown(Key.LeftCtrl) 
+            || Keyboard.IsKeyDown(Key.RightCtrl))
         {
-            if (!HasUiDocumentOpened)
+            if (HasUiDocumentOpened)
             {
-                if (FloatingWindow != null)
-                {
-                    CloseFloatingWindow();
-                }
-                else
-                {
-                    SharedViewModel ??= Host.GetService<TraceLogViewModel>();
-                    SharedViewModel.Subscribe();
-                    ShowFloatingWindow();
-                }
-            }
-
-            var dockableWindow = UiApplication.GetDockablePane(PaneId);
-            if (dockableWindow.IsShown())
-            {
-                dockableWindow.Hide();
-                IsForceHide = true;
+                ExecutePaneVisibility();
             }
             else
             {
-                SharedViewModel ??= Host.GetService<TraceLogViewModel>();
-                SharedViewModel.Subscribe();
-                dockableWindow.Show();
-                IsForceHide = false;
+                ExecuteFloatingWindow();
             }
+            return;
         }
-        catch (Exception e)
+        
+        ExecuteLastAddin();
+    }
+    
+    private static void ExecuteFloatingWindow()
+    {
+        if (FloatingWindow != null)
         {
-            ErrorMessage = e.Message + "\n" + e.StackTrace;
+            CloseFloatingWindow();
         }
+        else
+        {
+            SharedViewModel ??= Host.GetService<TraceLogViewModel>();
+            SharedViewModel.Subscribe();
+            ShowFloatingWindow();
+        }
+    }
+    
+    private void ExecutePaneVisibility()
+    {
+        var dockableWindow = UiApplication.GetDockablePane(PaneId);
+        if (dockableWindow.IsShown())
+        {
+            dockableWindow.Hide();
+            IsForceHide = true;
+        }
+        else
+        {
+            SharedViewModel ??= Host.GetService<TraceLogViewModel>();
+            SharedViewModel.Subscribe();
+            dockableWindow.Show();
+            IsForceHide = false;
+        }
+    }
+    
+    private void ExecuteLastAddin()
+    {
+        var addinVm = Host.GetService<AddinLoadViewModel>();
+        if (addinVm.LastExecutedItem is null)
+        {
+            Trace.TraceWarning("No last executed add-in found.");
+            return;
+        }
+        var message = string.Empty;
+        CommandExecutor.RunCommand(addinVm.LastExecutedItem, ExternalCommandData, ref message, ElementSet);
+        ErrorMessage = message;
     }
 
     public static void RegisterDockablePane(UIControlledApplication application)
     {
         SharedViewModel = Host.GetService<TraceLogViewModel>();
-        RegisterPane(application);
-        SubscribeEvents(application);
-    }
-
-    private static void RegisterPane(UIControlledApplication application)
-    {
         DockablePaneProvider
-            .Register(application, new Guid(Guid), CommandName)
+            .Register(application, PaneGuid, CommandName)
             .SetConfiguration(data =>
             {
                 data.FrameworkElement = Host.GetService<TraceLogPage>();
-                data.InitialState = CreateInitialState();
+                data.InitialState = new DockablePaneState
+                {
+                    MinimumWidth = 550,
+                    MinimumHeight = 600,
+                    DockPosition = DockPosition.Right,
+                    TabBehind = DockablePanes.BuiltInDockablePanes.PropertiesPalette
+                };
             });
-    }
 
-    private static DockablePaneState CreateInitialState()
-    {
-        return new DockablePaneState
-        {
-            MinimumWidth = 550,
-            MinimumHeight = 600,
-            DockPosition = DockPosition.Right,
-            TabBehind = DockablePanes.BuiltInDockablePanes.PropertiesPalette
-        };
-    }
-
-    private static void SubscribeEvents(UIControlledApplication application)
-    {
         application.ControlledApplication.DocumentOpened += OnDocumentOpened;
         application.ControlledApplication.DocumentClosed += OnDocumentClosed;
         NotifyListener.TraceReceived += TraceReceivedHandler;
