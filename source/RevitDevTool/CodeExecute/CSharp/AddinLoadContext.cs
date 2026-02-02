@@ -4,7 +4,7 @@ using System.IO;
 using System.Reflection;
 using System.Runtime.Loader;
 
-namespace RevitDevTool.AddinManager;
+namespace RevitDevTool.CodeExecute.CSharp;
 
 /// <summary>
 /// Custom AssemblyLoadContext for loading add-in assemblies in isolation (Revit 2025 onward only).
@@ -40,21 +40,21 @@ internal class AddinLoadContext : AssemblyLoadContext
 
     protected override Assembly? Load(AssemblyName assemblyName)
     {
-        if (assemblyName.Name != null && (assemblyName.Name.StartsWith("RevitAPI") 
+        if (assemblyName.Name != null && (assemblyName.Name.StartsWith("RevitAPI")
                                           || assemblyName.Name.Contains("AdWindows")
                                           || assemblyName.Name.Contains("UIFramework")))
             return null;
-        
+
         var assemblyPath = _resolver.ResolveAssemblyToPath(assemblyName);
         return assemblyPath != null ? LoadFromAssemblyPathStream(assemblyPath) : null;
     }
-    
+
     private static void PreloadAssemblies(AddinLoadContext context, string pluginDirectory)
     {
         if (string.IsNullOrEmpty(pluginDirectory) || !Directory.Exists(pluginDirectory)) return;
-        
+
         var dllPaths = Directory.GetFiles(pluginDirectory, "*.dll");
-    
+
         foreach (var dllPath in dllPaths)
         {
             context.LoadFromAssemblyPathStream(dllPath);

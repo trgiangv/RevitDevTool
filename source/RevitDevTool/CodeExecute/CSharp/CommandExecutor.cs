@@ -1,10 +1,10 @@
 ﻿using System.Diagnostics;
 using Autodesk.Revit.UI;
-using RevitDevTool.AddinManager.Models;
+using RevitDevTool.CodeExecute.CSharp.Models;
 using System.IO;
 using System.Reflection;
 
-namespace RevitDevTool.AddinManager;
+namespace RevitDevTool.CodeExecute.CSharp;
 
 internal static class CommandExecutor
 {
@@ -14,9 +14,9 @@ internal static class CommandExecutor
         var filePath = addinItem.AssemblyPath;
         var alc = new AddinLoadContext(filePath);
         var alcWeakRef = new WeakReference(alc, trackResurrection: true);
-        
+
         try
-        {   
+        {
             ExecuteInIsolatedContext(alc, addinItem, data, ref message, elements);
         }
         catch (Exception ex)
@@ -31,7 +31,7 @@ internal static class CommandExecutor
             Context.Application.PurgeReleasedAPIObjects();
             GC.Collect();
             GC.WaitForPendingFinalizers();
-        
+
             // static class still holds reference to ALC - can not unload 100%
             if (alcWeakRef.IsAlive)
                 Debug.WriteLine("ALC still alive. Check for leaked references (Events, Static fields, WPF).");
@@ -88,7 +88,7 @@ internal static class CommandExecutor
         }
 #endif
     }
-    
+
 #if NETFRAMEWORK
     [System.Runtime.InteropServices.DllImport("kernel32.dll", CharSet = System.Runtime.InteropServices.CharSet.Auto, SetLastError = true)]
     private static extern IntPtr LoadLibrary(string lpFileName);
@@ -129,19 +129,19 @@ internal static class CommandExecutor
         }
     }
 #endif
-    
+
 #if NETCOREAPP
     [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.NoInlining)]
     private static void ExecuteInIsolatedContext(
-        AddinLoadContext alc, 
-        AddinItem item, 
-        ExternalCommandData data, 
-        ref string message, 
+        AddinLoadContext alc,
+        AddinItem item,
+        ExternalCommandData data,
+        ref string message,
         ElementSet elements)
     {
         using var stream = new FileStream(item.AssemblyPath, FileMode.Open, FileAccess.Read);
         var pdbPath = Path.ChangeExtension(item.AssemblyPath, ".pdb");
-    
+
         Assembly assembly;
         if (File.Exists(pdbPath))
         {
@@ -152,7 +152,7 @@ internal static class CommandExecutor
         {
             assembly = alc.LoadFromStream(stream);
         }
-        
+
         var instance = assembly.CreateInstance(item.FullClassName);
         switch (instance)
         {
@@ -162,13 +162,13 @@ internal static class CommandExecutor
                 command.Execute(data, ref message, elements);
                 break;
             default:
-            {
-                var method = instance.GetType().GetMethod("Execute");
-                object[] parameters = [data, message, elements];
-                method?.Invoke(instance, parameters);
-                message = (string)parameters[1];
-                break;
-            }
+                {
+                    var method = instance.GetType().GetMethod("Execute");
+                    object[] parameters = [data, message, elements];
+                    method?.Invoke(instance, parameters);
+                    message = (string)parameters[1];
+                    break;
+                }
         }
     }
 #endif

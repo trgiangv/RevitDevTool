@@ -3,6 +3,9 @@ using TreeView = System.Windows.Controls.TreeView;
 
 namespace RevitDevTool.View.Controls;
 
+/// <summary>
+/// https://github.com/chuongmep/RevitAddInManager
+/// </summary>
 public class ExtendedTreeView : TreeView
 {
     public ExtendedTreeView()

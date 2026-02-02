@@ -1,66 +1,67 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
-  <PropertyGroup>
-    <UseWPF>true</UseWPF>
-    <UseWindowsForms>true</UseWindowsForms>
-    <DeployRevitAddin>true</DeployRevitAddin>
-  </PropertyGroup>
+    <PropertyGroup>
+        <UseWPF>true</UseWPF>
+        <UseWindowsForms>true</UseWindowsForms>
+        <DeployRevitAddin>true</DeployRevitAddin>
+    </PropertyGroup>
 
-  <PropertyGroup>
-    <IsRepackable>true</IsRepackable>
-    <RepackBinariesExcludes>
-      MahApps.Metro.dll;
-      ControlzEx.dll;
-      Microsoft.Xaml.Behaviors.dll
-    </RepackBinariesExcludes>
-  </PropertyGroup>
+    <PropertyGroup>
+        <IsRepackable>true</IsRepackable>
+        <RepackBinariesExcludes>
+            MahApps.Metro.dll;
+            ControlzEx.dll;
+            Microsoft.Xaml.Behaviors.dll
+        </RepackBinariesExcludes>
+    </PropertyGroup>
 
-  <ItemGroup>
-    <!-- Revit API-->
-    <PackageReference Include="Nice3point.Revit.Build.Tasks" />
-    <PackageReference Include="Nice3point.Revit.Toolkit" VersionOverride="$(RevitVersion).*" />
-    <PackageReference Include="Nice3point.Revit.Extensions" VersionOverride="$(RevitVersion).*" />
-    <PackageReference Include="Nice3point.Revit.Api.RevitAPI" VersionOverride="$(RevitVersion).*" />
-    <PackageReference Include="Nice3point.Revit.Api.RevitAPIUI" VersionOverride="$(RevitVersion).*" />
-    <PackageReference Include="Nice3point.Revit.Api.UIFramework" VersionOverride="$(RevitVersion).*" />
-    <PackageReference Include="Nice3point.Revit.Api.AdWindows" VersionOverride="$(RevitVersion).*" />
+    <ItemGroup>
+        <!-- Revit API-->
+        <PackageReference Include="Nice3point.Revit.Build.Tasks"/>
+        <PackageReference Include="Nice3point.Revit.Toolkit" VersionOverride="$(RevitVersion).*"/>
+        <PackageReference Include="Nice3point.Revit.Extensions" VersionOverride="$(RevitVersion).*"/>
+        <PackageReference Include="Nice3point.Revit.Api.RevitAPI" VersionOverride="$(RevitVersion).*"/>
+        <PackageReference Include="Nice3point.Revit.Api.RevitAPIUI" VersionOverride="$(RevitVersion).*"/>
+        <PackageReference Include="Nice3point.Revit.Api.UIFramework" VersionOverride="$(RevitVersion).*"/>
+        <PackageReference Include="Nice3point.Revit.Api.AdWindows" VersionOverride="$(RevitVersion).*"/>
 
-    <!-- UI -->
-    <PackageReference Include="CommunityToolkit.Mvvm" />
-    <PackageReference Include="MahApps.Metro" />
+        <!-- UI -->
+        <PackageReference Include="CommunityToolkit.Mvvm"/>
+        <PackageReference Include="MahApps.Metro"/>
 
-    <!-- Serilog -->
-    <PackageReference Include="Serilog" />
-    <PackageReference Include="Serilog.Enrichers.Autodesk.Revit" />
-    <PackageReference Include="Serilog.Sinks.File" />
-    <PackageReference Include="Serilog.Sinks.RichTextBox.WinForms.Colored" />
+        <!-- Serilog -->
+        <PackageReference Include="Serilog"/>
+        <PackageReference Include="Serilog.Enrichers.Autodesk.Revit"/>
+        <PackageReference Include="Serilog.Sinks.File"/>
+        <PackageReference Include="Serilog.Sinks.RichTextBox.WinForms.Colored"/>
 
-    <!--Hosting-->
-    <PackageReference Include="Microsoft.Extensions.Hosting" />
+        <!--Hosting-->
+        <PackageReference Include="Microsoft.Extensions.Hosting"/>
 
-    <!-- Utils -->
-    <PackageReference Include="JetBrains.Annotations" />
-    <PackageReference Include="PolySharp" PrivateAssets="All" IncludeAssets="runtime; build; native; contentfiles; analyzers; buildtransitive" />
-    <PackageReference Include="ILRepack" />
-    <PackageReference Include="Microsoft-WindowsAPICodePack-Shell" Condition="$(DefineConstants.Contains('NETFRAMEWORK'))" />
-    <PackageReference Include="System.Reflection.MetadataLoadContext" />
-  </ItemGroup>
+        <!-- Utils -->
+        <PackageReference Include="JetBrains.Annotations"/>
+        <PackageReference Include="PolySharp" PrivateAssets="All" IncludeAssets="runtime; build; native; contentfiles; analyzers; buildtransitive"/>
+        <PackageReference Include="ILRepack"/>
+        <PackageReference Include="Microsoft-WindowsAPICodePack-Shell" Condition="$(TargetFramework.StartsWith('net4'))"/>
+        <PackageReference Include="System.Reflection.MetadataLoadContext"/>
+        <PackageReference Include="Microsoft.VisualBasic" Condition="$(TargetFramework.StartsWith('net4'))"/>
+    </ItemGroup>
 
-  <ItemGroup>
-    <Resource Include="Resources\Icons\*.*" />
-  </ItemGroup>
+    <ItemGroup>
+        <Resource Include="Resources\Icons\*.*"/>
+    </ItemGroup>
 
-  <!-- Start Revit -->
-  <PropertyGroup>
-    <StartAction>Program</StartAction>
-    <StartProgram>C:\Program Files\Autodesk\Revit $(RevitVersion)\Revit.exe</StartProgram>
-    <StartArguments>/language ENG</StartArguments>
-  </PropertyGroup>
+    <!-- Start Revit -->
+    <PropertyGroup>
+        <StartAction>Program</StartAction>
+        <StartProgram>C:\Program Files\Autodesk\Revit $(RevitVersion)\Revit.exe</StartProgram>
+        <StartArguments>/language ENG</StartArguments>
+    </PropertyGroup>
 
-  <!-- Clean Files -->
-  <Target Name="DeleteFiles" AfterTargets="Clean">
-    <RemoveDir Directories="$(AppData)\Autodesk\Revit\Addins\$(RevitVersion)\$(ProjectName)" />
-    <Delete Files="$(AppData)\Autodesk\Revit\Addins\$(RevitVersion)\$(ProjectName).addin" />
-  </Target>
+    <!-- Clean Files -->
+    <Target Name="DeleteFiles" AfterTargets="Clean">
+        <RemoveDir Directories="$(AppData)\Autodesk\Revit\Addins\$(RevitVersion)\$(ProjectName)"/>
+        <Delete Files="$(AppData)\Autodesk\Revit\Addins\$(RevitVersion)\$(ProjectName).addin"/>
+    </Target>
 
 </Project>

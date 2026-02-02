@@ -11,7 +11,7 @@ public sealed class SettingsService(IFileConfig<PathOptions> fileConfig) : ISett
     private GeneralConfig? _generalConfig;
     private LogConfig? _logConfig;
     private VisualizationConfig? _visualizationConfig;
-    private AddinLoadConfig? _addinLoadConfig;
+    private CodeExecuteConfig? _codeExecuteConfig;
 
     public GeneralConfig GeneralConfig
     {
@@ -41,21 +41,23 @@ public sealed class SettingsService(IFileConfig<PathOptions> fileConfig) : ISett
         }
     }
 
-    public AddinLoadConfig AddinLoadConfig
+    public CodeExecuteConfig CodeExecuteConfig
     {
         get
         {
-            _addinLoadConfig ??= new AddinLoadConfig();
-            return _addinLoadConfig;
+            _codeExecuteConfig ??= new CodeExecuteConfig();
+            return _codeExecuteConfig;
         }
     }
+
+
 
     public void SaveSettings()
     {
         SaveApplicationSettings();
         SaveVisualizationSettings();
         SaveLogSettings();
-        SaveAddinLoadSettings();
+        SaveCodeExecuteSettings();
     }
 
     public void LoadSettings()
@@ -63,7 +65,7 @@ public sealed class SettingsService(IFileConfig<PathOptions> fileConfig) : ISett
         LoadApplicationSettings();
         LoadVisualizationSettings();
         LoadLogSettings();
-        LoadAddinLoadSettings();
+        LoadCodeExecuteSettings();
     }
 
     public void ResetSettings()
@@ -187,23 +189,23 @@ public sealed class SettingsService(IFileConfig<PathOptions> fileConfig) : ISett
         config.LogFolder = fileConfig.Options.LogsDirectory;
     }
 
-    private void SaveAddinLoadSettings()
+    private void SaveCodeExecuteSettings()
     {
-        if (_addinLoadConfig is null) return;
-        fileConfig.Save(_addinLoadConfig);
+        if (_codeExecuteConfig is null) return;
+        fileConfig.Save(_codeExecuteConfig);
     }
 
-    private void LoadAddinLoadSettings()
+    private void LoadCodeExecuteSettings()
     {
         try
         {
-            _addinLoadConfig = fileConfig.Load<AddinLoadConfig>();
+            _codeExecuteConfig = fileConfig.Load<CodeExecuteConfig>();
         }
         catch (Exception exception)
         {
-            Trace.TraceError($"Add-in load settings loading error: {exception.Message}");
+            Trace.TraceError($"Code execute settings loading error: {exception.Message}");
         }
 
-        _addinLoadConfig ??= new AddinLoadConfig();
+        _codeExecuteConfig ??= new CodeExecuteConfig();
     }
 }

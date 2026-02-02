@@ -1,11 +1,11 @@
 using Autodesk.Revit.Attributes;
-using RevitDevTool.AddinManager.Models;
+using RevitDevTool.CodeExecute.CSharp.Models;
 using System.Diagnostics;
 using System.IO;
 using System.Reflection;
 using Autodesk.Revit.UI;
 
-namespace RevitDevTool.AddinManager;
+namespace RevitDevTool.CodeExecute.CSharp;
 
 /// <summary>
 /// Service for loading Revit add-in assemblies with automatic dependency resolution.
@@ -15,9 +15,7 @@ public static class AddinLoaderService
 {
     private static readonly string CommandFullName = typeof(IExternalCommand).FullName!;
     private static readonly string TransactionAttributeFullName = typeof(TransactionAttribute).FullName!;
-    private static readonly string RegenerationAttributeFullName = typeof(RegenerationAttribute).FullName!;
-    private static readonly string JournalingAttributeFullName = typeof(JournalingAttribute).FullName!;
-    
+
     /// <summary>
     /// Parses IExternalCommand implementations from a given assembly file using MetadataLoadContext
     /// </summary>
@@ -32,18 +30,18 @@ public static class AddinLoaderService
         }
 
         var commands = new List<AddinItem>();
-        
+
         try
         {
             var paths = CollectAssemblyPaths(originalFilePath);
             var resolver = new PathAssemblyResolver(paths);
             using var mlc = new MetadataLoadContext(resolver);
-            
+
             var assembly = mlc.LoadFromAssemblyPath(originalFilePath);
             var revitApiAssembly = typeof(IExternalCommand).Assembly;
             var revitApiInContext = mlc.LoadFromAssemblyPath(revitApiAssembly.Location);
             var iExternalCommandType = revitApiInContext.GetType(CommandFullName);
-            
+
             if (iExternalCommandType == null)
             {
                 Trace.TraceError($"Could not find {CommandFullName} in metadata context");
@@ -73,7 +71,7 @@ public static class AddinLoaderService
     private static List<Type> GetMetadataTypes(Assembly assembly)
     {
         var types = new List<Type>();
-        
+
         try
         {
             types.AddRange(assembly.GetTypes());
@@ -96,10 +94,10 @@ public static class AddinLoaderService
     /// <summary>
     /// Loads types one by one, skipping any that fail
     /// </summary>
-    private static IEnumerable<Type> GetTypesIndividually(Assembly assembly)
+    private static List<Type> GetTypesIndividually(Assembly assembly)
     {
         var types = new List<Type>();
-        
+
         foreach (var typeInfo in assembly.DefinedTypes)
         {
             try
@@ -121,7 +119,7 @@ public static class AddinLoaderService
     /// <summary>
     /// Collects all assembly paths needed for MetadataLoadContext resolution
     /// </summary>
-    private static IEnumerable<string> CollectAssemblyPaths(string targetAssemblyPath)
+    private static List<string> CollectAssemblyPaths(string targetAssemblyPath)
     {
         var paths = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
@@ -140,26 +138,26 @@ public static class AddinLoaderService
         var frameworkDir = Path.GetDirectoryName(typeof(object).Assembly.Location);
         if (!string.IsNullOrEmpty(frameworkDir))
             AddDllsFromDirectory(paths, frameworkDir);
-        
+
         // 4. WPF assemblies
         var presentationFrameworkPath = typeof(System.Windows.Window).Assembly.Location;
         var wpfDir = Path.GetDirectoryName(presentationFrameworkPath);
         if (!string.IsNullOrEmpty(wpfDir))
             AddDllsFromDirectory(paths, wpfDir);
-        
+
         // 5. WPF Media assemblies
         var presentationCorePath = typeof(System.Windows.Media.Visual).Assembly.Location;
         var wpfCoreDir = Path.GetDirectoryName(presentationCorePath);
         if (!string.IsNullOrEmpty(wpfCoreDir))
             AddDllsFromDirectory(paths, wpfCoreDir);
-        
+
         // 6. WindowsBase assembly
         var windowsBasePath = typeof(System.Windows.DependencyObject).Assembly.Location;
         var windowsBaseDir = Path.GetDirectoryName(windowsBasePath);
         if (!string.IsNullOrEmpty(windowsBaseDir))
             AddDllsFromDirectory(paths, windowsBaseDir);
 
-        return paths;
+        return paths.ToList();
     }
 
     private static void AddDllsFromDirectory(HashSet<string> paths, string directory)
@@ -175,7 +173,7 @@ public static class AddinLoaderService
             // Ignore errors scanning directories
         }
     }
-    
+
     /// <summary>
     /// Attempts to parse a command type using MetadataLoadContext and create an AddinItem
     /// </summary>
@@ -189,21 +187,17 @@ public static class AddinLoaderService
             // Check if type implements IExternalCommand by comparing FullName strings
             var implementsInterface = type.GetInterfaces()
                 .Any(i => i.FullName == iExternalCommandType.FullName);
-            
+
             if (!implementsInterface)
                 return null;
 
-            var (transactionMode, regenerationOption, journalingMode) = ExtractAttributes(type);
+            var transactionMode = ExtractAttributes(type);
 
             if (transactionMode != null)
             {
                 return new AddinItem(
                     originalFilePath,
-                    type.FullName ?? string.Empty,
-                    AddinType.Command,
-                    transactionMode,
-                    regenerationOption,
-                    journalingMode);
+                    type.FullName ?? string.Empty);
             }
 
             Trace.TraceWarning($"{type.FullName} implements IExternalCommand but missing TransactionAttribute");
@@ -219,11 +213,9 @@ public static class AddinLoaderService
     /// <summary>
     /// Extracts Revit attributes from a metadata type
     /// </summary>
-    private static (TransactionMode?, RegenerationOption?, JournalingMode?) ExtractAttributes(Type type)
+    private static TransactionMode? ExtractAttributes(Type type)
     {
         TransactionMode? transactionMode = null;
-        RegenerationOption? regenerationOption = null;
-        JournalingMode? journalingMode = null;
 
         foreach (var attrData in type.GetCustomAttributesData())
         {
@@ -232,12 +224,8 @@ public static class AddinLoaderService
 
             if (attrTypeName == TransactionAttributeFullName && firstArg is int transVal)
                 transactionMode = (TransactionMode)transVal;
-            else if (attrTypeName == RegenerationAttributeFullName && firstArg is int regenVal)
-                regenerationOption = (RegenerationOption)regenVal;
-            else if (attrTypeName == JournalingAttributeFullName && firstArg is int journalVal)
-                journalingMode = (JournalingMode)journalVal;
         }
 
-        return (transactionMode, regenerationOption, journalingMode);
+        return transactionMode;
     }
 }

@@ -14,6 +14,7 @@ using RevitDevTool.ViewModel.Settings;
 using RevitDevTool.ViewModel.Settings.Visualization;
 using RevitDevTool.Visualization.Server;
 using System.IO;
+using RevitDevTool.ViewModel.Execute;
 
 namespace RevitDevTool;
 
@@ -102,9 +103,11 @@ public static class Host
         services.AddSingleton<TraceLogViewModel>();
         services.AddSingleton<TraceLogPageViewModel>();
 
-        // AddinManager
-        services.AddSingleton<AddinLoadView>();
-        services.AddSingleton<AddinLoadViewModel>();
+        // CodeExecute
+        services.AddSingleton<CSharpExecuteViewModel>();
+        services.AddSingleton<PythonExecuteViewModel>();
+        services.AddSingleton<CodeExecuteViewModel>();
+        services.AddSingleton<CodeExecuteView>();
 
         services.AddTransient<TraceLogPage>();
         services.AddTransient<TraceLogWindow>();
@@ -126,4 +129,3 @@ public static class Host
         return _host!.Services.GetService(serviceType);
     }
 }
-

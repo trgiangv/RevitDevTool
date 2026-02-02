@@ -1,7 +1,7 @@
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
-using RevitDevTool.AddinManager.Models;
+using RevitDevTool.CodeExecute.Shared.Models;
 using Brush = System.Windows.Media.Brush;
 using TextElement = System.Windows.Documents.TextElement;
 using TextRange = System.Windows.Documents.TextRange;
@@ -57,13 +57,13 @@ public static class HighlightTextBlockBehavior
         try
         {
             Brush selectionBackground = new SolidColorBrush(range.SelectionBackground);
-            
+
             var startPos = txtBlock.ContentStart.GetPositionAtOffset(range.Start + 1);
             var endPos = txtBlock.ContentStart.GetPositionAtOffset(range.End + 1);
-            
+
             if (startPos == null || endPos == null)
                 return;
-            
+
             var highlightRange = new TextRange(startPos, endPos);
             highlightRange.ApplyPropertyValue(TextElement.BackgroundProperty, selectionBackground);
         }

@@ -1,13 +1,13 @@
 ﻿using System.Diagnostics;
-using RevitDevTool.ViewModel;
+using RevitDevTool.ViewModel.Execute;
 using DataFormats = System.Windows.DataFormats;
 using DragEventArgs = System.Windows.DragEventArgs;
 
 namespace RevitDevTool.View;
 
-public partial class AddinLoadView
+public partial class CodeExecuteView
 {
-    public AddinLoadView(AddinLoadViewModel viewModel)
+    public CodeExecuteView(CodeExecuteViewModel viewModel)
     {
         DataContext = viewModel;
         InitializeComponent();
@@ -15,25 +15,30 @@ public partial class AddinLoadView
 
     private void AddinTreeView_Drop(object sender, DragEventArgs e)
     {
-        if (DataContext is not AddinLoadViewModel viewModel) return;
+        if (DataContext is not CodeExecuteViewModel coordinator) return;
         if (!e.Data.GetDataPresent(DataFormats.FileDrop)) return;
         var droppedObject = e.Data.GetData(DataFormats.FileDrop);
         if (droppedObject is not string[] files || files.Length == 0) return;
 
         foreach (var filePath in files)
         {
-            try 
+            try
             {
-                ParseAssembly(filePath, viewModel);
+                // Only handle CSharp mode for now - delegate to active ViewModel
+                if (coordinator.ActiveViewModel is CSharpExecuteViewModel csharpVm)
+                {
+                    ParseAssembly(filePath, csharpVm);
+                }
+                // TODO: Handle Python .py file drops when in Python mode
             }
             catch (Exception ex)
             {
-                Trace.TraceError($"Failed to load assembly from {filePath}: {ex.Message}");
+                Trace.TraceError($"Failed to load file from {filePath}: {ex.Message}");
             }
         }
     }
 
-    private static void ParseAssembly(string filePath, AddinLoadViewModel viewModel)
+    private static void ParseAssembly(string filePath, CSharpExecuteViewModel viewModel)
     {
         if (Utils.AssemblyLoader.IsManagedAssembly(filePath))
         {

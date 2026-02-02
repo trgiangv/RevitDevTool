@@ -1,15 +1,14 @@
-using System.Diagnostics;
 using System.Windows.Input;
 using Autodesk.Revit.Attributes;
 using Autodesk.Revit.DB.Events;
 using Autodesk.Revit.UI;
 using Nice3point.Revit.Toolkit.Decorators;
 using Nice3point.Revit.Toolkit.External;
-using RevitDevTool.AddinManager;
 using RevitDevTool.Listeners;
 using RevitDevTool.Utils;
 using RevitDevTool.View;
 using RevitDevTool.ViewModel;
+using RevitDevTool.ViewModel.Execute;
 
 namespace RevitDevTool.Commands;
 
@@ -29,7 +28,7 @@ public class TraceCommand : ExternalCommand, IExternalCommandAvailability
 
     public override void Execute()
     {
-        if (Keyboard.IsKeyDown(Key.LeftCtrl) 
+        if (Keyboard.IsKeyDown(Key.LeftCtrl)
             || Keyboard.IsKeyDown(Key.RightCtrl))
         {
             if (HasUiDocumentOpened)
@@ -42,10 +41,10 @@ public class TraceCommand : ExternalCommand, IExternalCommandAvailability
             }
             return;
         }
-        
-        ExecuteLastAddin();
+
+        ExecuteLastCode();
     }
-    
+
     private static void ExecuteFloatingWindow()
     {
         if (FloatingWindow != null)
@@ -59,7 +58,7 @@ public class TraceCommand : ExternalCommand, IExternalCommandAvailability
             ShowFloatingWindow();
         }
     }
-    
+
     private void ExecutePaneVisibility()
     {
         var dockableWindow = UiApplication.GetDockablePane(PaneId);
@@ -76,18 +75,11 @@ public class TraceCommand : ExternalCommand, IExternalCommandAvailability
             IsForceHide = false;
         }
     }
-    
-    private void ExecuteLastAddin()
+
+    private static void ExecuteLastCode()
     {
-        var addinVm = Host.GetService<AddinLoadViewModel>();
-        if (addinVm.LastExecutedItem is null)
-        {
-            Trace.TraceWarning("No last executed add-in found.");
-            return;
-        }
-        var message = string.Empty;
-        CommandExecutor.RunCommand(addinVm.LastExecutedItem, ExternalCommandData, ref message, ElementSet);
-        ErrorMessage = message;
+        var codeExecuteVm = Host.GetService<CodeExecuteViewModel>();
+        codeExecuteVm.ExecuteLastItem();
     }
 
     public static void RegisterDockablePane(UIControlledApplication application)
@@ -167,7 +159,7 @@ public class TraceCommand : ExternalCommand, IExternalCommandAvailability
     private static void CloseFloatingWindow()
     {
         if (FloatingWindow is null) return;
-        
+
         DispatcherHelper.RunOnMainThread(() =>
         {
             FloatingWindow!.Closed -= OnFloatingWindowClosed;

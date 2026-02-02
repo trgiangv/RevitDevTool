@@ -5,6 +5,8 @@ using RevitDevTool.Settings;
 using RevitDevTool.Theme;
 using System.Windows.Interop;
 using System.Windows.Media;
+using RevitDevTool.CodeExecute.Python.Models;
+using RevitDevTool.ViewModel.Execute;
 
 namespace RevitDevTool.Controllers;
 
@@ -23,6 +25,7 @@ public sealed class HostBackgroundController(ISettingsService settingsService) :
     {
         SaveSettings();
         CleanLogFolder();
+        CleanupTempDynamoFiles();
         Shutdown();
         return Task.CompletedTask;
     }
@@ -67,6 +70,20 @@ public sealed class HostBackgroundController(ISettingsService settingsService) :
             // Ignore errors when accessing the folder
         }
     }
+    
+    private static void CleanupTempDynamoFiles()
+    {
+        var pythonExecuteVm = Host.GetService<PythonExecuteViewModel>();
+        foreach (var groupNode in pythonExecuteVm.AllGroups)
+        {
+            foreach (var node in groupNode.Children)
+            {
+                if (node is not ScriptNode scriptNode) continue;
+
+                scriptNode.DynamoScriptItem.Cleanup();
+            }
+        }
+    }
 
     private void LoadTheme()
     {
@@ -83,7 +100,6 @@ public sealed class HostBackgroundController(ISettingsService settingsService) :
         else
         {
             RenderOptions.ProcessRenderMode = RenderMode.SoftwareOnly;
-
         }
     }
 
