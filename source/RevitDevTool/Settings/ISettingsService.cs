@@ -9,7 +9,7 @@ public interface ISettingsService
     GeneralConfig GeneralConfig { get; }
     LogConfig LogConfig { get; }
     VisualizationConfig VisualizationConfig { get; }
-    AddinLoadConfig AddinLoadConfig { get; }
+    CodeExecuteConfig CodeExecuteConfig { get; }
 
     void SaveSettings();
     void LoadSettings();

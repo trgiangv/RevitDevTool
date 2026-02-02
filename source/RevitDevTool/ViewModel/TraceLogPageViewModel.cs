@@ -17,7 +17,7 @@ public partial class TraceLogPageViewModel : ObservableObject, IRecipient<IsSave
     private readonly ISettingsService _settingsService;
 
     public TraceLogViewModel TraceLogViewModel { get; }
-    public AddinLoadView AddinLoadView { get; }
+    public CodeExecuteView CodeExecuteView { get; }
     public int ProcessId { get; } = SettingsUtils.CurrentProcessId;
     [ObservableProperty] private object? _currentPage;
     [ObservableProperty] private bool _isSettingsVisible;
@@ -53,12 +53,12 @@ public partial class TraceLogPageViewModel : ObservableObject, IRecipient<IsSave
 
     public TraceLogPageViewModel(
         TraceLogViewModel traceLogViewModel,
-        AddinLoadView addinLoadView,
+        CodeExecuteView addinLoadView,
         LogSettingsViewModel logSettingsViewModel,
         ISettingsService settingsService)
     {
         TraceLogViewModel = traceLogViewModel;
-        AddinLoadView = addinLoadView;
+        CodeExecuteView = addinLoadView;
         IsSaveLogEnabled = settingsService.LogConfig.IsSaveLogEnabled;
         _logSettingsViewModel = logSettingsViewModel;
         _settingsService = settingsService;

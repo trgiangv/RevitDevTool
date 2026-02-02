@@ -4,6 +4,7 @@ namespace RevitDevTool.View.Controls;
 
 /// <summary>
 /// Event check double click in tree view item
+/// https://github.com/chuongmep/RevitAddInManager
 /// </summary>
 public class MouseDoubleClick
 {

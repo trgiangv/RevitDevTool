@@ -1,6 +1,6 @@
 using System.Collections.ObjectModel;
 
-namespace RevitDevTool.AddinManager.Models;
+namespace RevitDevTool.CodeExecute.Shared.Models;
 
 /// <summary>
 /// Base class for all tree nodes in the Add-in hierarchy
@@ -9,13 +9,13 @@ public abstract partial class TreeNodeBase : ObservableObject
 {
     [ObservableProperty]
     private bool _isExpanded;
-    
+
     [ObservableProperty]
     private bool _isSelected;
-    
+
     [ObservableProperty]
     private ISelectionRange? _highlightRange;
-    
+
     /// <summary>
     /// Display name shown in the tree
     /// </summary>
@@ -25,7 +25,7 @@ public abstract partial class TreeNodeBase : ObservableObject
     /// Child nodes
     /// </summary>
     public abstract ObservableCollection<TreeNodeBase> Children { get; }
-    
+
     /// <summary>
     /// Whether this node has children
     /// </summary>

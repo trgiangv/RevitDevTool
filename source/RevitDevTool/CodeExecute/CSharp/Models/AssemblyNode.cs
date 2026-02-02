@@ -1,7 +1,8 @@
 using System.Collections.ObjectModel;
 using System.IO;
+using RevitDevTool.CodeExecute.Shared.Models;
 
-namespace RevitDevTool.AddinManager.Models;
+namespace RevitDevTool.CodeExecute.CSharp.Models;
 
 /// <summary>
 /// Represents a DLL assembly in the tree hierarchy
@@ -11,7 +12,7 @@ public class AssemblyNode(string filePath) : TreeNodeBase
     public string FilePath { get; } = filePath;
 
     public override string DisplayName => Path.GetFileName(FilePath);
-    
+
     public override ObservableCollection<TreeNodeBase> Children { get; } = [];
 
     /// <summary>
@@ -20,19 +21,19 @@ public class AssemblyNode(string filePath) : TreeNodeBase
     public void GroupByNamespace(IEnumerable<AddinItem> items)
     {
         Children.Clear();
-        
+
         var grouped = items.GroupBy(i => GetNamespace(i.FullClassName))
                           .OrderBy(g => g.Key);
-        
+
         foreach (var group in grouped)
         {
             var namespaceNode = new NamespaceNode(group.Key);
-            
+
             foreach (var item in group.OrderBy(i => i.Name))
             {
                 namespaceNode.AddCommand(item);
             }
-            
+
             Children.Add(namespaceNode);
         }
     }
