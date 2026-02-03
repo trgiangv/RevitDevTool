@@ -16,7 +16,7 @@ public static class DynamoEngine
     private const string DynamoPlayer = "DYNAMOPLAYER";
     private const string DynamoRevitDs = "DynamoRevitDS";
     private const string DynamoRevit = "Dynamo.Applications.DynamoRevit";
-    private const int DynamoModelStateRunning = 2; // DynamoModel.DynamoModelState
+    private const int DynamoModelStateRunning = 2; // DynamoModel.DynamoModelState.StartedUI
     private const string ModelState = "ModelState";
     private const string DynamoRevitCommandData = "Dynamo.Applications.DynamoRevitCommandData";
 
@@ -25,6 +25,8 @@ public static class DynamoEngine
     private const string ExecuteCommand = "ExecuteCommand";
     private const string RevitDynamoModel = "RevitDynamoModel";
     private const string ForceRun = "ForceRun";
+    private const string Logger = "Logger";
+    private const string CliMode = "cliMode";
 
     private static Assembly? _cachedAssembly;
     private static object? _cachedDynamoRevitInstance;
@@ -56,6 +58,39 @@ public static class DynamoEngine
             Trace.TraceError($"[RevitDevTool] DynamoEngine.IsDynamoUiRunning: {ex.Message}");
         }
         return false;
+    }
+
+    private static void DisableDynamoLogger(object? revitDynamoModel)
+    {
+        if (revitDynamoModel == null) return;
+
+        try
+        {
+            var loggerField = revitDynamoModel.GetType().GetField(Logger,
+                BindingFlags.Public | BindingFlags.Instance);
+
+            if (loggerField == null)
+            {
+                loggerField = revitDynamoModel.GetType().BaseType?
+                    .GetField(Logger, BindingFlags.Public | BindingFlags.Instance);
+            }
+
+            if (loggerField == null) return;
+            var logger = loggerField.GetValue(revitDynamoModel);
+
+            if (logger == null) return;
+            var cliModeField = logger.GetType().GetField(CliMode,
+                BindingFlags.NonPublic | BindingFlags.Instance);
+
+            if (cliModeField != null)
+            {
+                cliModeField.SetValue(logger, true);
+            }
+        }
+        catch
+        {
+            // ignore
+        }
     }
 
     private static void SetToAutomatic(string filePath)
@@ -105,29 +140,40 @@ public static class DynamoEngine
                 { ModelShutDownKey, true.ToString() },
             };
 
-            // Cache assembly lookup
+            // DynamoRevitDs assembly
             _cachedAssembly ??= AppDomain.CurrentDomain.GetAssemblies()
                 .FirstOrDefault(a => a.FullName != null && a.FullName.Contains(DynamoRevitDs));
 
-            if (_cachedAssembly == null)
-            {
-                Trace.TraceError("[RevitDevTool] DynamoEngine: DynamoRevitDS assembly not found");
-                return;
-            }
-
-            // Cache DynamoRevit instance - only create once!
-            _cachedDynamoRevitInstance ??= _cachedAssembly.CreateInstance(DynamoRevit);
+            // DynamoRevit instance
+            _cachedDynamoRevitInstance ??= _cachedAssembly?.CreateInstance(DynamoRevit);
 
             // Create command data (new each time - journal data changes)
-            var dta = _cachedAssembly.CreateInstance(DynamoRevitCommandData);
+            var dta = _cachedAssembly?.CreateInstance(DynamoRevitCommandData);
             dta?.GetType().GetProperty(Application)?.SetValue(dta, Context.UiApplication, null);
             dta?.GetType().GetProperty(JournalData)?.SetValue(dta, journalData, null);
 
-            // Execute
-            _cachedDynamoRevitInstance?.GetType().GetMethod(ExecuteCommand)?.Invoke(_cachedDynamoRevitInstance, [dta]);
+            // Initialized Dynamo
+            var originalOut = Console.Out;
+            var originalError = Console.Error;
+            
+            using (var nullWriter = TextWriter.Null)
+            {
+                try
+                {
+                    Console.SetOut(nullWriter);
+                    Console.SetError(nullWriter);
+                    _cachedDynamoRevitInstance?.GetType().GetMethod(ExecuteCommand)?.Invoke(_cachedDynamoRevitInstance, [dta]);
+                }
+                finally
+                {
+                    Console.SetOut(originalOut);
+                    Console.SetError(originalError);
+                }
+            }
 
             // Force run
             var rdm = _cachedDynamoRevitInstance?.GetType().GetProperty(RevitDynamoModel)?.GetValue(_cachedDynamoRevitInstance);
+            DisableDynamoLogger(rdm);
             rdm?.GetType().GetMethod(ForceRun)?.Invoke(rdm, []);
         }
         catch (Exception e)
