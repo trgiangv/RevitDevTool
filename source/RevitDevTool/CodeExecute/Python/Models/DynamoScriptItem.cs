@@ -3,14 +3,15 @@ namespace RevitDevTool.CodeExecute.Python.Models;
 
 public class DynamoScriptItem
 {
-    private string ScriptPath { get; set; } = string.Empty;
+    private string PythonScriptPath { get; set; } = string.Empty;
 
-    private string ScriptTempPath { get; set; } = string.Empty;
+    private string? DynamoScriptTempPath { get; set; }
 
+    private string? PythonScriptTempPath { get; set; }
 
     public DynamoScriptItem(string pythonScriptPath)
     {
-        ScriptPath = pythonScriptPath;
+        PythonScriptPath = pythonScriptPath;
     }
 
     public DynamoScriptItem()
@@ -32,7 +33,7 @@ public class DynamoScriptItem
         try
         {
             System.IO.File.WriteAllText(filePath, DynamoTemplate.TemplatePythonScript);
-            ScriptPath = filePath;
+            PythonScriptPath = filePath;
             return filePath;
         }
         catch (Exception ex)
@@ -44,39 +45,37 @@ public class DynamoScriptItem
 
     private string GetScriptTemplate()
     {
-        if (!string.IsNullOrEmpty(ScriptPath) && System.IO.File.Exists(ScriptPath))
+        if (!string.IsNullOrEmpty(PythonScriptTempPath) && System.IO.File.Exists(PythonScriptTempPath))
         {
             return DynamoTemplate.TemplateDyn
-                .Replace($"{{{DynamoTemplate.TemplateName}}}", System.IO.Path.GetFileNameWithoutExtension(ScriptPath))
-                .Replace($"{{{DynamoTemplate.TemplateScripPath}}}", ScriptPath.Replace(@"\", @"\\"));
+                .Replace($"{{{DynamoTemplate.TemplateName}}}", System.IO.Path.GetFileNameWithoutExtension(PythonScriptPath))
+                .Replace($"{{{DynamoTemplate.TemplateScripPath}}}", PythonScriptTempPath!.Replace(@"\", @"\\"));
         }
 
-        Trace.TraceError($"DynamoScriptItem: Script path is invalid or file does not exist: {ScriptPath}.");
+        Trace.TraceError($"DynamoScriptItem: Script path is invalid or file does not exist: {PythonScriptPath}.");
         return string.Empty;
     }
 
     public string Create()
     {
-        if (!string.IsNullOrEmpty(ScriptTempPath) && System.IO.File.Exists(ScriptTempPath))
+        CreateTempPythonFile();
+
+        if (!string.IsNullOrEmpty(DynamoScriptTempPath) && System.IO.File.Exists(DynamoScriptTempPath))
         {
-            return ScriptTempPath;
+            return DynamoScriptTempPath!;
         }
 
         try
         {
-            var tempDynPath = System.IO.Path.Combine(System.IO.Path.GetTempPath(), $"{System.IO.Path.GetFileNameWithoutExtension(ScriptPath)}_{Guid.NewGuid()}.dyn");
+            var tempDynPath = DynamoScriptTempPath ??= System.IO.Path.Combine(System.IO.Path.GetTempPath(), $"{System.IO.Path.GetFileNameWithoutExtension(PythonScriptPath)}_{Guid.NewGuid()}.dyn");
             var dynContent = GetScriptTemplate();
             if (!string.IsNullOrEmpty(dynContent))
             {
                 System.IO.File.WriteAllText(tempDynPath, dynContent);
-                ScriptTempPath = tempDynPath;
                 Debug.WriteLine($"DynamoScriptItem: Created temp .dyn file at: {tempDynPath}");
                 return tempDynPath;
             }
-            else
-            {
-                Trace.TraceError($"DynamoScriptItem: GetScriptTemplate returned empty content for: {ScriptPath}");
-            }
+            Trace.TraceError($"DynamoScriptItem: GetScriptTemplate returned empty content for: {PythonScriptPath}");
         }
         catch (Exception ex)
         {
@@ -85,13 +84,44 @@ public class DynamoScriptItem
         return string.Empty;
     }
 
+    private void CreateTempPythonFile()
+    {
+        if (string.IsNullOrEmpty(PythonScriptPath) || !System.IO.File.Exists(PythonScriptPath))
+        {
+            Trace.TraceError($"DynamoScriptItem: Script path is invalid or file does not exist: {PythonScriptPath}.");
+            return;
+        }
+
+        try
+        {
+            var scriptContent = System.IO.File.ReadAllText(PythonScriptPath);
+            var tempScriptPath = PythonScriptTempPath ??= System.IO.Path.Combine(System.IO.Path.GetTempPath(), $"{System.IO.Path.GetFileNameWithoutExtension(PythonScriptPath)}_{Guid.NewGuid()}.py");
+            
+            var modifiedContent = $"__file__ = r\"{PythonScriptPath}\"\n{scriptContent}";
+            System.IO.File.WriteAllText(tempScriptPath, modifiedContent);
+            
+            Debug.WriteLine($"DynamoScriptItem: Created temp script file with __file__ at: {tempScriptPath}");
+        }
+        catch (Exception ex)
+        {
+            Trace.TraceError($"DynamoScriptItem: Failed to create temp script file with path. Exception: {ex.Message}");
+        }
+    }
+
     public void Cleanup()
     {
         try
         {
-            if (string.IsNullOrEmpty(ScriptTempPath) || !System.IO.File.Exists(ScriptTempPath)) return;
-            System.IO.File.Delete(ScriptTempPath);
-            ScriptTempPath = string.Empty;
+            if (!string.IsNullOrEmpty(DynamoScriptTempPath) && System.IO.File.Exists(DynamoScriptTempPath)) 
+            {
+                System.IO.File.Delete(DynamoScriptTempPath!);
+                DynamoScriptTempPath = null;
+            }
+            if (!string.IsNullOrEmpty(PythonScriptTempPath) && System.IO.File.Exists(PythonScriptTempPath)) 
+            {
+                System.IO.File.Delete(PythonScriptTempPath!);
+                PythonScriptTempPath = null;
+            }
         }
         catch (Exception ex)
         {
