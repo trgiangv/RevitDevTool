@@ -4,6 +4,7 @@ using System.IO;
 using RevitDevTool.CodeExecute.CSharp;
 using RevitDevTool.CodeExecute.CSharp.Models;
 using RevitDevTool.CodeExecute.Shared.Models;
+using RevitDevTool.Controllers;
 using RevitDevTool.Settings;
 using RevitDevTool.Utils;
 using UIFramework;
@@ -113,7 +114,10 @@ public partial class CSharpExecuteViewModel : Contracts.ExecuteViewModelBase
 
         var message = string.Empty;
         LastExecutedItem = addinItem;
-        CommandExecutor.RunCommand(addinItem, AddinLoadHelper.ExternalCommandData, ref message, AddinLoadHelper.ElementSet);
+        ExternalEventController.ActionEventHandler.Raise(_ =>
+        {
+            CommandExecutor.RunCommand(addinItem, AddinLoadHelper.ExternalCommandData, ref message, AddinLoadHelper.ElementSet);
+        });
     }
 
     private bool CanExecute(object? parameter = null)
