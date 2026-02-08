@@ -188,7 +188,7 @@
                     <RowDefinition>
                         <RowDefinition.Style>
                             <Style TargetType="RowDefinition">
-                                <Setter Property="Height" Value="200" />
+                                <Setter Property="Height" Value="300" />
                                 <Setter Property="MaxHeight" Value="999" />
                                 <Style.Triggers>
                                     <DataTrigger Binding="{Binding IsAddinLoadVisible}"

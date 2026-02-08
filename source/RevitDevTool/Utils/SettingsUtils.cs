@@ -1,4 +1,4 @@
-﻿using RevitDevTool.Logging.Enums;
+using RevitDevTool.Logging.Enums;
 using System.IO;
 
 namespace RevitDevTool.Utils;
@@ -58,4 +58,28 @@ public static class SettingsUtils
 #else
         System.Diagnostics.Process.GetCurrentProcess().Id;
 #endif
+
+    /// <summary>
+    /// Show a folder selection dialog and return the selected folder path. Use modern dialog on .NET 8+
+    /// </summary>
+    /// <param name="title">Dialog description</param>
+    /// <returns>Selected folder path or empty string if cancelled</returns>
+    public static string SelectFolder(string title)
+    {
+        var owner = UIFramework.MainWindow.getMainWnd();
+#if NET8_0_OR_GREATER
+        var dialog = new Microsoft.Win32.OpenFolderDialog
+        {
+            Title = title,
+            Multiselect = false
+        };
+        return dialog.ShowDialog(owner) == true ? dialog.FolderName : string.Empty;
+#else
+        using var dialog = new Microsoft.WindowsAPICodePack.Dialogs.CommonOpenFileDialog();
+        dialog.Title = title;
+        dialog.IsFolderPicker = true;
+        dialog.Multiselect = false;
+        return dialog.ShowDialog(owner) == Microsoft.WindowsAPICodePack.Dialogs.CommonFileDialogResult.Ok ? dialog.FileName : string.Empty;
+#endif
+    }
 }

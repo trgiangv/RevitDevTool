@@ -2,16 +2,18 @@ using Autodesk.Revit.UI.Events;
 using CommunityToolkit.Mvvm.Messaging;
 using Microsoft.Extensions.Logging;
 using RevitDevTool.Controllers;
-using RevitDevTool.Listeners;
 using RevitDevTool.Logging;
 using RevitDevTool.Settings;
 using RevitDevTool.Theme;
 using RevitDevTool.ViewModel.Messages;
 using System.Windows.Forms.Integration;
+using RevitDevTool.Logging.Listeners;
 
 namespace RevitDevTool.ViewModel;
 
-public sealed partial class TraceLogViewModel : ObservableObject, IDisposable, IRecipient<GeometryCountChangedMessage>
+public sealed partial class TraceLogViewModel : ObservableObject, IDisposable,
+    IRecipient<GeometryCountChangedMessage>,
+    IRecipient<LogSettingsAppliedMessage>
 {
     private readonly ISettingsService _settingsService;
     private readonly ILoggingService _loggingService;
@@ -99,11 +101,7 @@ public sealed partial class TraceLogViewModel : ObservableObject, IDisposable, I
 
         Context.UiApplication.Idling += _onIdlingHandler;
         ThemeManager.Current.ActualApplicationThemeChanged += _onThemeChangedHandler;
-        _messenger.Register<TraceLogViewModel, LogSettingsAppliedMessage>(
-            this,
-            static (r, _) => r.OnSettingsApplied()
-        );
-        _messenger.Register(this);
+        _messenger.RegisterAll(this);
 
         _isSubscribed = true;
     }
@@ -111,6 +109,13 @@ public sealed partial class TraceLogViewModel : ObservableObject, IDisposable, I
     public void Receive(GeometryCountChangedMessage message)
     {
         GeometryCount = message.Value;
+    }
+
+    public void Receive(LogSettingsAppliedMessage message)
+    {
+        if (!IsStarted) return;
+        LogLevel = _settingsService.LogConfig.LogLevel;
+        _loggingService.Restart(IsDarkTheme);
     }
 
     private void Unsubscribe()
@@ -138,14 +143,7 @@ public sealed partial class TraceLogViewModel : ObservableObject, IDisposable, I
         if (_currentTheme == theme) return;
         UpdateTheme(theme, IsStarted);
     }
-
-    private void OnSettingsApplied()
-    {
-        if (!IsStarted) return;
-        LogLevel = _settingsService.LogConfig.LogLevel;
-        _loggingService.Restart(IsDarkTheme);
-    }
-
+    
     [RelayCommand]
     private void Clear()
     {

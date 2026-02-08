@@ -14,7 +14,11 @@ using RevitDevTool.ViewModel.Settings;
 using RevitDevTool.ViewModel.Settings.Visualization;
 using RevitDevTool.Visualization.Server;
 using System.IO;
-using RevitDevTool.ViewModel.Execute;
+using RevitDevTool.CodeExecute.Interfaces;
+using RevitDevTool.CodeExecute.Models;
+using RevitDevTool.CodeExecute.Services;
+using RevitDevTool.CodeExecute.Providers.DotNet;
+using RevitDevTool.CodeExecute.Providers.Python;
 
 namespace RevitDevTool;
 
@@ -99,16 +103,22 @@ public static class Host
         services.AddSingleton<GeneralSettingsView>();
         services.AddSingleton<LogSettingsViewModel>();
 
-        // Root
-        services.AddSingleton<TraceLogViewModel>();
-        services.AddSingleton<TraceLogPageViewModel>();
+        // CodeExecute Services
+        services.AddSingleton<ITreeStateManager, TreeStateManager>();
+        services.AddSingleton<IFileWatcherService, FileWatcherService>();
+        services.AddSingleton<IExecutionOrchestrator, ExecutionOrchestrator>();
+
+        // CodeExecute Providers
+        services.AddKeyedSingleton<IExecutionProvider, DotNetExecutionProvider>(nameof(ExecutionMode.DotNet));
+        services.AddKeyedSingleton<IExecutionProvider, PythonExecutionProvider>(nameof(ExecutionMode.Python));
 
         // CodeExecute
-        services.AddSingleton<CSharpExecuteViewModel>();
-        services.AddSingleton<PythonExecuteViewModel>();
         services.AddSingleton<CodeExecuteViewModel>();
         services.AddSingleton<CodeExecuteView>();
 
+        // Root
+        services.AddSingleton<TraceLogViewModel>();
+        services.AddSingleton<TraceLogPageViewModel>();
         services.AddTransient<TraceLogPage>();
         services.AddTransient<TraceLogWindow>();
     }

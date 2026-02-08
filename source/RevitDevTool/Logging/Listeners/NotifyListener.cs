@@ -1,6 +1,6 @@
-using Autodesk.Windows;
 using System.Diagnostics;
-namespace RevitDevTool.Listeners;
+using Autodesk.Windows;
+namespace RevitDevTool.Logging.Listeners;
 
 /// <summary>
 /// A TraceListener that raises an event whenever a trace message is received.
@@ -74,4 +74,3 @@ internal sealed class NotifyListener : TraceListener
         RaiseTraceReceived();
     }
 }
-
