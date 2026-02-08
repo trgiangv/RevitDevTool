@@ -324,6 +324,12 @@ public sealed class ExecutionOrchestrator : IExecutionOrchestrator, IDisposable
 
     private void OnFileChanged(object? sender, FileChangedEventArgs e)
     {
+        // Reload only on structural changes: Created, Deleted, Renamed.
+        if (e.ChangeType == FileChangeType.Modified)
+        {
+            return;
+        }
+
         Utils.DispatcherHelper.RunOnMainThread(async void () =>
         {
             try

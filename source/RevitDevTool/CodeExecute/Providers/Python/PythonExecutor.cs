@@ -2,6 +2,7 @@ using Python.Included;
 using Python.Runtime;
 using System.Diagnostics;
 using System.IO;
+using System.Text;
 using System.Text.RegularExpressions;
 
 namespace RevitDevTool.CodeExecute.Providers.Python;
@@ -44,8 +45,6 @@ public static class PythonExecutor
                 PythonEngine.ProgramName = "RevitDevTool";
                 PythonEngine.Initialize();
                 PythonEngine.BeginAllowThreads();
-
-                Trace.TraceInformation("Python runtime initialized successfully.");
             }
 
             _isInitialized = true;
@@ -59,13 +58,12 @@ public static class PythonExecutor
     /// <summary>
     /// Install a Python module using pip.
     /// </summary>
-    /// <param name="moduleName">Name of the module to install (e.g., "spacy")</param>
-    public static async Task InstallModuleAsync(string moduleName)
+    public static async Task InstallModuleAsync(string moduleName, string version = "")
     {
         if (!Installer.IsModuleInstalled(moduleName))
         {
             Trace.TraceInformation($"Installing Python module: {moduleName}");
-            await Installer.PipInstallModule(moduleName).ConfigureAwait(false);
+            await Installer.PipInstallModule(moduleName, version).ConfigureAwait(false);
             Trace.TraceInformation($"Module installed: {moduleName}");
         }
     }
@@ -73,19 +71,9 @@ public static class PythonExecutor
     /// <summary>
     /// Execute a Python script file with Revit context.
     /// </summary>
-    /// <param name="scriptPath">Full path to the .py script file</param>
-    /// <param name="rootFolder">Root folder to add to sys.path (optional)</param>
     public static void ExecuteScript(string scriptPath, string? rootFolder = null)
     {
-        if (!File.Exists(scriptPath))
-        {
-            throw new FileNotFoundException($"Python script not found: {scriptPath}");
-        }
-
-        if (!_isInitialized)
-        {
-            throw new InvalidOperationException("Python runtime not initialized. Call InitializeAsync() first.");
-        }
+        ValidateRuntime(scriptPath);
 
         var code = File.ReadAllText(scriptPath);
         rootFolder ??= Path.GetDirectoryName(scriptPath) ?? string.Empty;
@@ -94,142 +82,188 @@ public static class PythonExecutor
         {
             using (var scope = Py.CreateScope("__main__"))
             {
-                // Setup logging callback
-                Action<object> logFunction = obj => Trace.Write(obj);
-
-                // Setup scope variables
-                scope.Set("__file__", scriptPath);
-                scope.Set("__root__", rootFolder);
-                scope.Set("__revit__", Context.UiApplication);
-                scope.Set("__log_func__", logFunction.ToPython());
-
-                // Execute setup code to override print and redirect stdout
-                const string setupCode = """
-                                         import sys
-                                         import builtins
-                                         if __root__ not in sys.path:
-                                             sys.path.append(__root__)
-
-                                         def custom_print(*args, sep=' ', end='\n'):
-                                             for arg in args:
-                                                 __log_func__(arg)
-                                             if end:
-                                                 __log_func__(end)
-
-                                         # Override built-in print
-                                         builtins.print = custom_print
-
-                                         # Redirect stdout
-                                         class StdOutRedirector:
-                                             def __init__(self, log_func):
-                                                 self.text = ''
-                                                 self.log_func = log_func
-                                             def write(self, text):
-                                                 if text == '\n':
-                                                     self.log_func(self.text)
-                                                     self.text = ''
-                                                 else:
-                                                     self.text += text
-
-                                         sys.stdout = StdOutRedirector(__log_func__)
-                                         """;
-
-                scope.Exec(setupCode);
+                SetupScopeVariables(scope, scriptPath, rootFolder);
+                SetupOutputRedirection(scope);
 
                 try
                 {
                     scope.Exec(code);
-                    Trace.TraceInformation($"Python script executed successfully: {scriptPath}");
                 }
                 catch (PythonException ex)
                 {
-                    var traceMessage = BuildPythonStackTrace(ex, scriptPath, code);
+                    var traceMessage = StackTraceBuilder.Build(ex, scriptPath, code);
                     Trace.TraceError(traceMessage);
-                    throw;
                 }
             }
         }
     }
 
-    #region Private Helpers
-
-    private static string BuildPythonStackTrace(PythonException cpythonException, string sourceFile, string sourceContent)
+    private static void ValidateRuntime(string scriptPath)
     {
-        var cleanedPyTraceback = string.Empty;
-        var pyNetTraceback = string.Empty;
+        if (!File.Exists(scriptPath))
+            throw new FileNotFoundException($"Python script not found: {scriptPath}");
 
-        if (!string.IsNullOrWhiteSpace(cpythonException.StackTrace))
-        {
-            var traceBackParts = cpythonException.StackTrace.Split(']');
-            var nextIdx = 0;
-
-            // If stack trace contains file info, clean it up
-            if (traceBackParts.Length == 2)
-            {
-                nextIdx = 1;
-                var pyTraceback = traceBackParts[0].Trim() + "]";
-                cleanedPyTraceback = string.Empty;
-
-                foreach (var tbLine in pyTraceback.ConvertFromTomlListString())
-                {
-                    if (tbLine.Contains("File \"<string>\""))
-                    {
-                        var fixedTbLine = tbLine.Replace("File \"<string>\"", $"File \"{sourceFile}\"");
-                        cleanedPyTraceback += fixedTbLine;
-
-                        var lineNo = new Regex(@",\s*line\s*(?<lineno>\d+),").Match(tbLine).Groups["lineno"].Value;
-                        if (!string.IsNullOrEmpty(lineNo))
-                        {
-                            var lines = sourceContent.Split('\n');
-                            var lineIndex = int.Parse(lineNo.Trim()) - 1;
-                            if (lineIndex >= 0 && lineIndex < lines.Length)
-                            {
-                                cleanedPyTraceback += lines[lineIndex] + "\n";
-                            }
-                        }
-                    }
-                    else
-                    {
-                        cleanedPyTraceback += tbLine;
-                    }
-                }
-            }
-
-            // Grab the dotnet cpython stack trace
-            if (nextIdx < traceBackParts.Length)
-            {
-                pyNetTraceback = traceBackParts[nextIdx].Trim();
-            }
-        }
-
-        var traceMessage = string.Join("\n", cpythonException.Message, cleanedPyTraceback, cpythonException.Source, pyNetTraceback);
-
-        return traceMessage.NormalizeNewLine();
+        if (!_isInitialized)
+            throw new InvalidOperationException("Python runtime not initialized. Call InitializeAsync() first.");
     }
 
-    private static List<string> ConvertFromTomlListString(this string tomlListString)
+    private static void SetupScopeVariables(PyModule scope, string scriptPath, string rootFolder)
     {
-        var text = tomlListString.Replace("[", "").Replace("]", "");
-        var list = new List<string>(text.Split(','));
-        var list2 = new List<string>();
-        var regex = new Regex("'(?<value>.+)'");
+        Action<object> logFunction = obj => Trace.Write(obj);
+        
+        scope.Set("__file__", scriptPath);
+        scope.Set("__root__", rootFolder);
+        scope.Set("__revit__", Context.UiApplication);
+        scope.Set("__log_func__", logFunction.ToPython());
+    }
 
-        foreach (var item in list)
+    private static void SetupOutputRedirection(PyModule scope)
+    {
+        // Improved redirection:
+        // 1. Appends rootFolder to sys.path
+        // 2. Overrides print to join args correctly and send to log_func in one go
+        // 3. Redirects stdout/stderr to log_func directly
+        const string setupCode = """
+                                 import sys
+                                 import builtins
+                                 
+                                 if __root__ not in sys.path:
+                                     sys.path.append(__root__)
+                                 
+                                 def custom_print(*args, sep=' ', end='\n'):
+                                     # To use Trace Visualization, pass objects as separate arguments: print("Label", obj)
+                                 
+                                     # Case 1: Single Argument -> Pass Raw Object (Enable Trace)
+                                     if len(args) == 1:
+                                         __log_func__(args[0])
+                                         if end != '\n': 
+                                             __log_func__(end)
+                                         return
+                                 
+                                     # Case 2: Mixed Content containing Complex Objects
+                                     # If we just str(obj), we lose Trace ability. 
+                                     # If using default separator, we split them into separate logs to preserve objects.
+                                     has_complex = any(not isinstance(a, (str, int, float, bool, type(None))) for a in args)
+                                     
+                                     if has_complex and sep == ' ':
+                                         for arg in args:
+                                             __log_func__(arg)
+                                         if end != '\n': 
+                                             __log_func__(end)
+                                         return
+                                 
+                                     # Case 3: Simple Text or Custom Separator -> Standard Join
+                                     text = sep.join(str(arg) for arg in args) + end
+                                     __log_func__(text)
+                                 
+                                 # Override built-in print
+                                 builtins.print = custom_print
+                                 
+                                 # Redirect stdout/stderr
+                                 class StdOutRedirector:
+                                     def __init__(self, log_func):
+                                         self.log_func = log_func
+                                     def write(self, text):
+                                         # Avoid empty newlines from being logged separately if possible
+                                         if text != '\n':
+                                             self.log_func(text)
+                                     def flush(self):
+                                         pass
+                                 
+                                 sys.stdout = StdOutRedirector(__log_func__)
+                                 sys.stderr = StdOutRedirector(__log_func__)
+                                 """;
+        scope.Exec(setupCode);
+    }
+}
+
+/// <summary>
+/// Helper class to build clean python stack traces
+/// </summary>
+file static class StackTraceBuilder
+{
+    private static readonly Regex LineNumberRegex = new(@",\s*line\s*(?<lineno>\d+),", RegexOptions.Compiled);
+    private static readonly Regex TomlValueRegex = new("'(?<value>.+)'", RegexOptions.Compiled);
+
+    public static string Build(PythonException ex, string sourceFile, string sourceContent)
+    {
+        var (pyTraceback, dotNetTraceback) = SplitTraceback(ex.StackTrace);
+        var cleanedPyTraceback = CleanPythonTraceback(pyTraceback, sourceFile, sourceContent);
+        
+        return string.Join("\n", ex.Message, cleanedPyTraceback, ex.Source, dotNetTraceback).NormalizeNewLine();
+    }
+
+    private static (string PyTraceback, string DotNetTraceback) SplitTraceback(string? stackTrace)
+    {
+        if (string.IsNullOrWhiteSpace(stackTrace)) 
+            return (string.Empty, string.Empty);
+
+        var parts = stackTrace!.Split(']');
+        if (parts.Length < 2) 
+            return (stackTrace, string.Empty);
+
+        // Python trace is usually the first part enclosed in brackets if it's a list string
+        var pyTracepart = parts[0].Trim() + "]"; 
+        var dotNetPart = parts.Length > 1 ? parts[1].Trim() : string.Empty;
+        
+        return (pyTracepart, dotNetPart);
+    }
+
+    private static string CleanPythonTraceback(string rawTraceback, string sourceFile, string sourceContent)
+    {
+        var sb = new StringBuilder();
+        var lines = ParseTomlListString(rawTraceback);
+
+        foreach (var line in lines)
         {
-            var match = regex.Match(item);
-            if (match.Success)
+            if (line.Contains("File \"<string>\""))
             {
-                list2.Add(match.Groups["value"].Value);
+                ProcessSourceLine(sb, line, sourceFile, sourceContent);
+            }
+            else
+            {
+                sb.AppendLine(line);
             }
         }
 
-        return list2;
+        return sb.ToString();
+    }
+
+    private static void ProcessSourceLine(StringBuilder sb, string line, string sourceFile, string sourceContent)
+    {
+        var fixedLine = line.Replace("File \"<string>\"", $"File \"{sourceFile}\"");
+        sb.Append(fixedLine);
+
+        var match = LineNumberRegex.Match(line);
+        if (!match.Success) return;
+
+        if (!int.TryParse(match.Groups["lineno"].Value, out var lineNo)) return;
+        var sourceLines = sourceContent.Split('\n');
+        var index = lineNo - 1;
+        if (index < 0 || index >= sourceLines.Length) return;
+        sb.AppendLine(); // Add newline after the File line
+        sb.AppendLine(sourceLines[index].Trim()); // Add the actual code line
+    }
+
+    private static IEnumerable<string> ParseTomlListString(string tomlListString)
+    {
+        // Simple manual parsing to avoid heavy dependencies for just this string format
+        // Expected format: ['line 1', 'line 2', ...]
+        var content = tomlListString.Trim('[', ']');
+        if (string.IsNullOrWhiteSpace(content))
+            yield break;
+
+        // Split by comma but respect quotes is hard with simple split. 
+        // Assuming standard python list repr format, we can try matching quotes.
+        var matches = TomlValueRegex.Matches(content);
+        foreach (Match match in matches)
+        {
+            yield return match.Groups["value"].Value;
+        }
     }
 
     private static string NormalizeNewLine(this string input)
     {
         return input.Replace("\r\n", "\n");
     }
-
-    #endregion
 }

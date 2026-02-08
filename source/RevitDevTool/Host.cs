@@ -109,8 +109,8 @@ public static class Host
         services.AddSingleton<IExecutionOrchestrator, ExecutionOrchestrator>();
 
         // CodeExecute Providers
-        services.AddKeyedSingleton<IExecutionProvider, DotNetExecutionProvider>(nameof(ExecutionMode.DotNet));
-        services.AddKeyedSingleton<IExecutionProvider, PythonExecutionProvider>(nameof(ExecutionMode.Python));
+        services.AddSingleton<IExecutionProvider, DotNetExecutionProvider>();
+        services.AddSingleton<IExecutionProvider, PythonExecutionProvider>();
 
         // CodeExecute
         services.AddSingleton<CodeExecuteViewModel>();
