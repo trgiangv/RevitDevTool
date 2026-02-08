@@ -1,11 +1,11 @@
 using Autodesk.Revit.Attributes;
-using RevitDevTool.CodeExecute.CSharp.Models;
+using Autodesk.Revit.UI;
+using RevitDevTool.CodeExecute.Providers.DotNet.Models;
 using System.Diagnostics;
 using System.IO;
 using System.Reflection;
-using Autodesk.Revit.UI;
 
-namespace RevitDevTool.CodeExecute.CSharp;
+namespace RevitDevTool.CodeExecute.Providers.DotNet;
 
 /// <summary>
 /// Service for loading Revit add-in assemblies with automatic dependency resolution.
@@ -184,9 +184,7 @@ public static class AddinLoaderService
             if (type.IsAbstract || type.IsInterface)
                 return null;
 
-            // Check if type implements IExternalCommand by comparing FullName strings
-            var implementsInterface = type.GetInterfaces()
-                .Any(i => i.FullName == iExternalCommandType.FullName);
+            var implementsInterface = type.GetInterfaces().Any(i => i.FullName == iExternalCommandType.FullName);
 
             if (!implementsInterface)
                 return null;
@@ -195,9 +193,7 @@ public static class AddinLoaderService
 
             if (transactionMode != null)
             {
-                return new AddinItem(
-                    originalFilePath,
-                    type.FullName ?? string.Empty);
+                return new AddinItem(originalFilePath, type.FullName ?? string.Empty);
             }
 
             Trace.TraceWarning($"{type.FullName} implements IExternalCommand but missing TransactionAttribute");
@@ -223,7 +219,7 @@ public static class AddinLoaderService
             var firstArg = attrData.ConstructorArguments.FirstOrDefault().Value;
 
             if (attrTypeName == TransactionAttributeFullName && firstArg is int transVal)
-                transactionMode = (TransactionMode)transVal;
+                transactionMode = (TransactionMode) transVal;
         }
 
         return transactionMode;

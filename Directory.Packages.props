@@ -1,31 +1,33 @@
 <?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
-  <PropertyGroup>
-    <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
-  </PropertyGroup>
-  <ItemGroup>
-    <!--Ioc-->
-    <PackageVersion Include="Microsoft.Extensions.Hosting" Version="10.0.2" />
-    <!--Logging-->
-    <PackageVersion Include="Serilog" Version="4.3.1-dev-02395" />
-    <PackageVersion Include="Serilog.Enrichers.Autodesk.Revit" Version="2.0.1" />
-    <PackageVersion Include="Serilog.Sinks.File" Version="7.0.1-dev-02315" />
-    <PackageVersion Include="Serilog.Sinks.RichTextBox.WinForms.Colored" Version="3.2.0" />
-    <!--Utilities-->
-    <PackageVersion Include="Nice3point.Revit.Build.Tasks" Version="3.0.1" />
-    <PackageVersion Include="JetBrains.Annotations" Version="2025.2.4" />
-    <PackageVersion Include="PolySharp" Version="1.15.0" />
-    <PackageVersion Include="Microsoft-WindowsAPICodePack-Shell" Version="1.1.5" />
-    <PackageVersion Include="Microsoft.VisualBasic" Version="10.3.0" />
-    <!--UI-->
-    <PackageVersion Include="MahApps.Metro" Version="3.0.0-rc0529" />
-    <PackageVersion Include="CommunityToolkit.Mvvm" Version="8.4.0" />
-    <!--Build Tools-->
-    <PackageVersion Include="ILRepack" Version="2.0.41" />
-    <PackageVersion Include="Nuke.Common" Version="9.0.4" />
-    <PackageVersion Include="Autodesk.PackageBuilder" Version="2.0.2" />
-    <PackageVersion Include="System.Reflection.MetadataLoadContext" Version="10.0.2" />
-    <PackageVersion Include="WixSharp.bin" Version="1.26.0" />
-    <PackageVersion Include="WixSharp.wix.bin" Version="3.14.1" />
-  </ItemGroup>
+    <PropertyGroup>
+        <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
+    </PropertyGroup>
+    <ItemGroup>
+        <!--Ioc-->
+        <PackageVersion Include="Microsoft.Extensions.Hosting" Version="10.0.2"/>
+        <!--Python-->
+        <PackageVersion Include="Python.Included" Version="3.13.0"/>
+        <PackageVersion Include="pythonnet" Version="3.0.5"/>
+        <!--Logging-->
+        <PackageVersion Include="Serilog" Version="4.3.1-dev-02395"/>
+        <PackageVersion Include="Serilog.Enrichers.Autodesk.Revit" Version="2.0.1"/>
+        <PackageVersion Include="Serilog.Sinks.File" Version="7.0.1-dev-02315"/>
+        <PackageVersion Include="Serilog.Sinks.RichTextBox.WinForms.Colored" Version="3.2.0"/>
+        <!--Utilities-->
+        <PackageVersion Include="Nice3point.Revit.Build.Tasks" Version="3.0.1"/>
+        <PackageVersion Include="JetBrains.Annotations" Version="2025.2.4"/>
+        <PackageVersion Include="PolySharp" Version="1.15.0"/>
+        <PackageVersion Include="Microsoft-WindowsAPICodePack-Shell" Version="1.1.5"/>
+        <PackageVersion Include="System.Reflection.MetadataLoadContext" Version="10.0.2"/>
+        <!--UI-->
+        <PackageVersion Include="MahApps.Metro" Version="3.0.0-rc0529"/>
+        <PackageVersion Include="CommunityToolkit.Mvvm" Version="8.4.0"/>
+        <!--Build Tools-->
+        <PackageVersion Include="ILRepack" Version="2.0.41"/>
+        <PackageVersion Include="Nuke.Common" Version="9.0.4"/>
+        <PackageVersion Include="Autodesk.PackageBuilder" Version="2.0.2"/>
+        <PackageVersion Include="WixSharp.bin" Version="1.26.0"/>
+        <PackageVersion Include="WixSharp.wix.bin" Version="3.14.1"/>
+    </ItemGroup>
 </Project>

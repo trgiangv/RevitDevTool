@@ -1,4 +1,4 @@
-namespace RevitDevTool.CodeExecute.Shared.Models;
+namespace RevitDevTool.CodeExecute.Interfaces;
 
 /// <summary>
 /// Interface for text selection range used for highlighting search matches
@@ -29,18 +29,4 @@ public interface ISelectionRange
     /// Whether to use dark skin highlighting colors
     /// </summary>
     bool DarkSkin { get; }
-}
-
-/// <summary>
-/// Default implementation of ISelectionRange for text highlighting
-/// </summary>
-public class HighlightRange(int start, int end) : ISelectionRange
-{
-    public int Start { get; } = start;
-    public int End { get; } = end;
-    public System.Windows.Media.Color SelectionBackground => DarkSkin
-        ? System.Windows.Media.Colors.DarkOrange
-        : System.Windows.Media.Colors.Yellow;
-    public System.Windows.Media.Color NormalBackground { get; } = System.Windows.Media.Colors.Transparent;
-    public bool DarkSkin { get; init; }
 }

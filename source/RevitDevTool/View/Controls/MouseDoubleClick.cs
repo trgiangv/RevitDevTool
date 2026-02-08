@@ -50,6 +50,7 @@ public class MouseDoubleClick
 
     private static void OnMouseDoubleClick(object sender, RoutedEventArgs e)
     {
+        e.Handled = true;
         var control = sender as System.Windows.Controls.Control;
         var command = (ICommand)control!.GetValue(CommandProperty);
         var commandParameter = control.GetValue(CommandParameterProperty);

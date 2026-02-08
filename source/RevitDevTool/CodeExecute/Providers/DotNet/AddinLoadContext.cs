@@ -4,7 +4,7 @@ using System.IO;
 using System.Reflection;
 using System.Runtime.Loader;
 
-namespace RevitDevTool.CodeExecute.CSharp;
+namespace RevitDevTool.CodeExecute.Providers.DotNet;
 
 /// <summary>
 /// Custom AssemblyLoadContext for loading add-in assemblies in isolation (Revit 2025 onward only).
@@ -12,39 +12,16 @@ namespace RevitDevTool.CodeExecute.CSharp;
 internal class AddinLoadContext : AssemblyLoadContext
 {
     private readonly AssemblyDependencyResolver _resolver;
-    private readonly List<string> _nativeTempFiles = [];
 
     public AddinLoadContext(string pluginPath) : base(name: nameof(AddinLoadContext), isCollectible: true)
     {
         _resolver = new AssemblyDependencyResolver(pluginPath);
         var pluginDirectory = Path.GetDirectoryName(pluginPath) ?? string.Empty;
         PreloadAssemblies(this, pluginDirectory);
-
-        // Try to clean up native temp files when the ALC starts unloading
-        Unloading += _ =>
-        {
-            foreach (var temp in _nativeTempFiles)
-            {
-                try
-                {
-                    if (File.Exists(temp)) File.Delete(temp);
-                }
-                catch
-                {
-                    //ignore
-                }
-            }
-            _nativeTempFiles.Clear();
-        };
     }
 
     protected override Assembly? Load(AssemblyName assemblyName)
     {
-        if (assemblyName.Name != null && (assemblyName.Name.StartsWith("RevitAPI")
-                                          || assemblyName.Name.Contains("AdWindows")
-                                          || assemblyName.Name.Contains("UIFramework")))
-            return null;
-
         var assemblyPath = _resolver.ResolveAssemblyToPath(assemblyName);
         return assemblyPath != null ? LoadFromAssemblyPathStream(assemblyPath) : null;
     }
@@ -64,21 +41,7 @@ internal class AddinLoadContext : AssemblyLoadContext
     protected override IntPtr LoadUnmanagedDll(string unmanagedDllName)
     {
         var libraryPath = _resolver.ResolveUnmanagedDllToPath(unmanagedDllName);
-        if (libraryPath == null) return IntPtr.Zero;
-
-        try
-        {
-            var ext = Path.GetExtension(libraryPath);
-            var tempFile = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N") + ext);
-            File.Copy(libraryPath, tempFile, overwrite: true);
-            _nativeTempFiles.Add(tempFile);
-            return LoadUnmanagedDllFromPath(tempFile);
-        }
-        catch (Exception ex)
-        {
-            Trace.TraceError($"{nameof(AddinLoadContext)} Failed to load unmanaged DLL '{unmanagedDllName}': {ex.Message}");
-            return IntPtr.Zero;
-        }
+        return libraryPath != null ? LoadUnmanagedDllFromPath(libraryPath) : IntPtr.Zero;
     }
 
     /// <summary>

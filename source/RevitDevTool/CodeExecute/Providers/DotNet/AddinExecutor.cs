@@ -1,19 +1,18 @@
-﻿using System.Diagnostics;
 using Autodesk.Revit.UI;
-using RevitDevTool.CodeExecute.CSharp.Models;
+using RevitDevTool.CodeExecute.Providers.DotNet.Models;
+using System.Diagnostics;
 using System.IO;
 using System.Reflection;
 
-namespace RevitDevTool.CodeExecute.CSharp;
+namespace RevitDevTool.CodeExecute.Providers.DotNet;
 
-internal static class CommandExecutor
+internal static class AddinExecutor
 {
     public static void RunCommand(AddinItem addinItem, ExternalCommandData data, ref string message, ElementSet elements)
     {
 #if NETCOREAPP
         var filePath = addinItem.AssemblyPath;
         var alc = new AddinLoadContext(filePath);
-        var alcWeakRef = new WeakReference(alc, trackResurrection: true);
 
         try
         {
@@ -27,14 +26,9 @@ internal static class CommandExecutor
         {
             alc.Unload();
 
-            // TODO: check if this is needed to purge Revit API objects
             Context.Application.PurgeReleasedAPIObjects();
             GC.Collect();
             GC.WaitForPendingFinalizers();
-
-            // static class still holds reference to ALC - can not unload 100%
-            if (alcWeakRef.IsAlive)
-                Debug.WriteLine("ALC still alive. Check for leaked references (Events, Static fields, WPF).");
         }
 #else
         var targetDir = Path.GetDirectoryName(addinItem.AssemblyPath);
@@ -132,12 +126,7 @@ internal static class CommandExecutor
 
 #if NETCOREAPP
     [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.NoInlining)]
-    private static void ExecuteInIsolatedContext(
-        AddinLoadContext alc,
-        AddinItem item,
-        ExternalCommandData data,
-        ref string message,
-        ElementSet elements)
+    private static void ExecuteInIsolatedContext(AddinLoadContext alc, AddinItem item, ExternalCommandData data, ref string message, ElementSet elements)
     {
         using var stream = new FileStream(item.AssemblyPath, FileMode.Open, FileAccess.Read);
         var pdbPath = Path.ChangeExtension(item.AssemblyPath, ".pdb");
@@ -162,13 +151,13 @@ internal static class CommandExecutor
                 command.Execute(data, ref message, elements);
                 break;
             default:
-                {
-                    var method = instance.GetType().GetMethod("Execute");
-                    object[] parameters = [data, message, elements];
-                    method?.Invoke(instance, parameters);
-                    message = (string)parameters[1];
-                    break;
-                }
+            {
+                var method = instance.GetType().GetMethod("Execute");
+                object[] parameters = [data, message, elements];
+                method?.Invoke(instance, parameters);
+                message = (string) parameters[1];
+                break;
+            }
         }
     }
 #endif
