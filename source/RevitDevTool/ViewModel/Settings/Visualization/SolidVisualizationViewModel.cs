@@ -1,6 +1,5 @@
-﻿using RevitDevTool.Controllers;
+using RevitDevTool.Controllers;
 using RevitDevTool.Settings;
-using RevitDevTool.ViewModel.Contracts;
 using Color = Autodesk.Revit.DB.Color;
 
 namespace RevitDevTool.ViewModel.Settings.Visualization;

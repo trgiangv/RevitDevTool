@@ -163,8 +163,7 @@ public partial class LogSettingsViewModel : ObservableObject, IDataErrorInfo, IR
         config.TimeInterval = TimeInterval;
         config.LogFolder = LogFolder;
         config.AutoClean = AutoClean;
-        config.RevitEnrichers = SelectedRevitEnrichers
-            .Aggregate(RevitEnricher.None, (current, enricher) => current | enricher);
+        config.RevitEnrichers = SelectedRevitEnrichers.Aggregate(RevitEnricher.None, (current, enricher) => current | enricher);
 
         _settingsService.SaveSettings();
     }
@@ -235,25 +234,10 @@ public partial class LogSettingsViewModel : ObservableObject, IDataErrorInfo, IR
     [RelayCommand]
     private void BrowseFolder()
     {
-#if NET8_0_OR_GREATER
-        var dialog = new Microsoft.Win32.OpenFolderDialog
+        var selectedFolder = SettingsUtils.SelectFolder("Select Log Folder");
+        if (!string.IsNullOrEmpty(selectedFolder))
         {
-            Title = "Select log folder",
-            Multiselect = false
-        };
-        if (dialog.ShowDialog() == true)
-        {
-            LogFolder = dialog.FolderName;
+            LogFolder = selectedFolder;
         }
-#else
-        using var dialog = new Microsoft.WindowsAPICodePack.Dialogs.CommonOpenFileDialog();
-        dialog.Title = "Select log folder";
-        dialog.IsFolderPicker = true;
-        dialog.Multiselect = false;
-        if (dialog.ShowDialog() == Microsoft.WindowsAPICodePack.Dialogs.CommonFileDialogResult.Ok)
-        {
-            LogFolder = dialog.FileName;
-        }
-#endif
     }
 }

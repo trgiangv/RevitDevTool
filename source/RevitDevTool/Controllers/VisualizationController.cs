@@ -1,5 +1,4 @@
 using CommunityToolkit.Mvvm.Messaging;
-using RevitDevTool.ViewModel.Contracts;
 using RevitDevTool.ViewModel.Messages;
 using RevitDevTool.ViewModel.Settings.Visualization;
 using RevitDevTool.Visualization.Contracts;

@@ -1,7 +1,7 @@
 using Microsoft.Extensions.Logging;
-using RevitDevTool.Listeners;
 using RevitDevTool.Settings.Config;
 using System.Diagnostics;
+using RevitDevTool.Logging.Listeners;
 // ReSharper disable LoopCanBeConvertedToQuery
 // ReSharper disable RedundantSuppressNullableWarningExpression
 

@@ -1,5 +1,5 @@
 using System.IO;
-namespace RevitDevTool.Listeners;
+namespace RevitDevTool.Logging.Listeners;
 
 /// <summary>
 /// Redirects Console.WriteLine output to the Trace system

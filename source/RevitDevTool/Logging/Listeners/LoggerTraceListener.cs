@@ -1,18 +1,14 @@
+using System.Diagnostics;
 using Microsoft.Extensions.Logging;
-using RevitDevTool.Logging;
 using RevitDevTool.Settings.Config;
 using RevitDevTool.Utils;
-using System.Diagnostics;
-
-namespace RevitDevTool.Listeners;
+namespace RevitDevTool.Logging.Listeners;
 
 /// <summary>
 /// TraceListener implementation that directs output to ILoggerAdapter.
 /// Framework-agnostic trace listener that works with any logging backend.
 /// </summary>
-public sealed class LoggerTraceListener(
-    ILoggerAdapter logger,
-    LogConfig config) : TraceListener
+public sealed class LoggerTraceListener(ILoggerAdapter logger, LogConfig config) : TraceListener
 {
     private const string CategoryProperty = "Category";
     private const string StackTraceProperty = "StackTrace";
@@ -35,8 +31,7 @@ public sealed class LoggerTraceListener(
 
     public override void Fail(string? message, string? detailMessage)
     {
-        _logger.ForContext(FailDetailMessageProperty, detailMessage)
-            .Fatal(message ?? string.Empty);
+        _logger.ForContext(FailDetailMessageProperty, detailMessage).Fatal(message ?? string.Empty);
     }
 
     public override void TraceData(TraceEventCache? eventCache, string source, TraceEventType eventType, int id, object? data)
@@ -97,8 +92,7 @@ public sealed class LoggerTraceListener(
 
     public override void TraceTransfer(TraceEventCache? eventCache, string source, int id, string? message, Guid relatedActivityId)
     {
-        var enrichedLogger = EnrichTraceContext(source, TraceEventType.Transfer, id, eventCache)
-            .ForContext(RelatedActivityIdProperty, relatedActivityId);
+        var enrichedLogger = EnrichTraceContext(source, TraceEventType.Transfer, id, eventCache).ForContext(RelatedActivityIdProperty, relatedActivityId);
         Write(enrichedLogger, TraceEventType.Transfer, message ?? string.Empty);
     }
 
@@ -121,8 +115,7 @@ public sealed class LoggerTraceListener(
 
         if (!string.IsNullOrWhiteSpace(category))
         {
-            _logger.ForContext(CategoryProperty, category)
-                .Write(level, _enableJsonSerialization ? "[{Category}] {@TraceData:j}" : "[{Category}] {$TraceData}", category, data);
+            _logger.ForContext(CategoryProperty, category).Write(level, _enableJsonSerialization ? "[{Category}] {@TraceData:j}" : "[{Category}] {$TraceData}", category, data);
         }
         else
         {
@@ -136,8 +129,7 @@ public sealed class LoggerTraceListener(
 
         if (!string.IsNullOrWhiteSpace(category))
         {
-            _logger.ForContext(CategoryProperty, category)
-                        .Write(level, "[{Category}] {Message}", category, message);
+            _logger.ForContext(CategoryProperty, category).Write(level, "[{Category}] {Message}", category, message);
         }
         else
         {
@@ -153,10 +145,7 @@ public sealed class LoggerTraceListener(
 
     private ILoggerAdapter EnrichTraceContext(string source, TraceEventType eventType, int id, TraceEventCache? eventCache)
     {
-        var enrichedLogger = _logger
-            .ForContext(SourceProperty, source)
-            .ForContext(TraceEventTypeProperty, eventType)
-            .ForContext(EventIdProperty, id);
+        var enrichedLogger = _logger.ForContext(SourceProperty, source).ForContext(TraceEventTypeProperty, eventType).ForContext(EventIdProperty, id);
 
         if (!config.IncludeStackTrace || config.StackTraceDepth <= 0 || eventCache == null)
             return enrichedLogger;
@@ -219,8 +208,7 @@ public sealed class LoggerTraceListener(
             {
                 var formatEndIndex = template.IndexOf('}', formatStartIndex);
                 if (formatEndIndex <= formatStartIndex) continue;
-                var formatSpec = template.Substring(formatStartIndex + formatPlaceholderPrefix.Length,
-                    formatEndIndex - formatStartIndex - formatPlaceholderPrefix.Length);
+                var formatSpec = template.Substring(formatStartIndex + formatPlaceholderPrefix.Length, formatEndIndex - formatStartIndex - formatPlaceholderPrefix.Length);
                 var originalPlaceholder = template.Substring(formatStartIndex, formatEndIndex - formatStartIndex + 1);
                 var structuredPlaceholder = $"{{Arg{i}:{formatSpec}}}";
                 template = template.Replace(originalPlaceholder, structuredPlaceholder);
@@ -230,9 +218,7 @@ public sealed class LoggerTraceListener(
             {
                 // Simple placeholder without format specifier
                 // @ = destructure to JSON with :j for pretty print, $ = stringify with ToString()
-                var structuredPlaceholder = IsComplexObject(arg)
-                    ? _enableJsonSerialization ? $"{{@Arg{i}:j}}" : $"{{$Arg{i}}}"
-                    : $"{{Arg{i}}}";
+                var structuredPlaceholder = IsComplexObject(arg) ? _enableJsonSerialization ? $"{{@Arg{i}:j}}" : $"{{$Arg{i}}}" : $"{{Arg{i}}}";
                 template = template.Replace(simplePlaceholder, structuredPlaceholder);
                 convertedArgs.Add(arg ?? "null");
             }
@@ -274,15 +260,7 @@ public sealed class LoggerTraceListener(
         return TraceUtils.DetectLogLevel(message, _filterKeywords);
     }
 
-    private bool ShouldTrace(
-        TraceEventCache? cache,
-        string source,
-        TraceEventType eventType,
-        int id,
-        string? formatOrMessage,
-        object?[]? args,
-        object? data1,
-        object?[]? data)
+    private bool ShouldTrace(TraceEventCache? cache, string source, TraceEventType eventType, int id, string? formatOrMessage, object?[]? args, object? data1, object?[]? data)
     {
         var filter = Filter;
         return filter?.ShouldTrace(cache, source, eventType, id, formatOrMessage, args, data1, data) != false;

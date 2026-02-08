@@ -1,5 +1,4 @@
-using RevitDevTool.ViewModel.Contracts;
-
+using RevitDevTool.ViewModel.Settings.Visualization;
 namespace RevitDevTool.Visualization.Contracts;
 
 public interface IVisualizationServerLifeCycle

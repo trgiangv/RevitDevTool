@@ -1,6 +1,6 @@
-using RevitDevTool.Controllers;
 using System.Diagnostics;
-namespace RevitDevTool.Listeners;
+using RevitDevTool.Controllers;
+namespace RevitDevTool.Logging.Listeners;
 
 public sealed class GeometryListener : TraceListener
 {
@@ -57,9 +57,7 @@ public sealed class GeometryListener : TraceListener
 
     private static bool ProcessMixedCollection(ICollection<object> objects)
     {
-        var geometries = objects
-            .SelectMany(ConvertToGeometryObjects)
-            .ToLookup(GetGeometryType);
+        var geometries = objects.SelectMany(ConvertToGeometryObjects).ToLookup(GetGeometryType);
 
         TraceGroupedGeometries(geometries);
         return true;

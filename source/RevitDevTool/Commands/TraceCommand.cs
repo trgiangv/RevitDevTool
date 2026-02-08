@@ -4,11 +4,10 @@ using Autodesk.Revit.DB.Events;
 using Autodesk.Revit.UI;
 using Nice3point.Revit.Toolkit.Decorators;
 using Nice3point.Revit.Toolkit.External;
-using RevitDevTool.Listeners;
+using RevitDevTool.Logging.Listeners;
 using RevitDevTool.Utils;
 using RevitDevTool.View;
 using RevitDevTool.ViewModel;
-using RevitDevTool.ViewModel.Execute;
 
 namespace RevitDevTool.Commands;
 

@@ -1,8 +1,8 @@
 using Autodesk.Revit.DB.DirectContext3D;
 using Autodesk.Revit.DB.ExternalService;
 using RevitDevTool.Controllers;
-using RevitDevTool.ViewModel.Contracts;
 using System.Diagnostics;
+using RevitDevTool.ViewModel.Settings.Visualization;
 
 namespace RevitDevTool.Visualization.Contracts;
 
