@@ -1,7 +1,6 @@
-﻿using Autodesk.Revit.UI;
 using System.Reflection;
-
-namespace RevitDevTool.Utils;
+using Autodesk.Revit.UI;
+namespace RevitDevTool.CodeExecute.Providers.DotNet;
 
 internal static class AddinLoadHelper
 {
@@ -20,7 +19,7 @@ internal static class AddinLoadHelper
         }
         var type = typeof(ExternalCommandData);
         var constructorInfos = type.GetConstructors(BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public);
-        var instance = (ExternalCommandData)constructorInfos[0].Invoke(null);
+        var instance = (ExternalCommandData) constructorInfos[0].Invoke(null);
         instance.Application = Context.UiApplication;
         instance.JournalData ??= new Dictionary<string, string>();
         instance.View = Context.UiApplication.ActiveUIDocument?.ActiveView;

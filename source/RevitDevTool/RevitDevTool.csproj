@@ -29,6 +29,10 @@
         <PackageReference Include="CommunityToolkit.Mvvm"/>
         <PackageReference Include="MahApps.Metro"/>
 
+        <!-- Python Integration -->
+        <PackageReference Include="Python.Included"/>
+        <PackageReference Include="pythonnet"/>
+
         <!-- Serilog -->
         <PackageReference Include="Serilog"/>
         <PackageReference Include="Serilog.Enrichers.Autodesk.Revit"/>
@@ -44,7 +48,6 @@
         <PackageReference Include="ILRepack"/>
         <PackageReference Include="Microsoft-WindowsAPICodePack-Shell" Condition="$(TargetFramework.StartsWith('net4'))"/>
         <PackageReference Include="System.Reflection.MetadataLoadContext"/>
-        <PackageReference Include="Microsoft.VisualBasic" Condition="$(TargetFramework.StartsWith('net4'))"/>
     </ItemGroup>
 
     <ItemGroup>
