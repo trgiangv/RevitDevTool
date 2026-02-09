@@ -20,6 +20,7 @@
         <PackageVersion Include="PolySharp" Version="1.15.0"/>
         <PackageVersion Include="Microsoft-WindowsAPICodePack-Shell" Version="1.1.5"/>
         <PackageVersion Include="System.Reflection.MetadataLoadContext" Version="10.0.2"/>
+        <PackageVersion Include="CliWrap" Version="3.10.0"/>
         <!--UI-->
         <PackageVersion Include="MahApps.Metro" Version="3.0.0-rc0529"/>
         <PackageVersion Include="CommunityToolkit.Mvvm" Version="8.4.0"/>

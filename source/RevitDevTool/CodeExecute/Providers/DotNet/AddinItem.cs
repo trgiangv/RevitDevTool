@@ -1,4 +1,4 @@
-namespace RevitDevTool.CodeExecute.Providers.DotNet.Models;
+namespace RevitDevTool.CodeExecute.Providers.DotNet;
 
 /// <summary>
 /// Represents a single Command add-in item

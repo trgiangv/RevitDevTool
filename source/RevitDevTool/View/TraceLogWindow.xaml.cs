@@ -18,7 +18,7 @@ public partial class TraceLogWindow
 
     private void OnLoaded(object sender, RoutedEventArgs e)
     {
-        this.DisableMinimizeMaximizeButtons();
+        this.DisableWindowButtons();
         ApplyTheme(ThemeManager.Current.ActualApplicationTheme);
     }
 

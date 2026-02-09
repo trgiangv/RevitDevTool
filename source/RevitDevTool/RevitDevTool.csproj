@@ -17,6 +17,7 @@
 
     <ItemGroup>
         <!-- Revit API-->
+        <PackageReference Include="CliWrap" />
         <PackageReference Include="Nice3point.Revit.Build.Tasks"/>
         <PackageReference Include="Nice3point.Revit.Toolkit" VersionOverride="$(RevitVersion).*"/>
         <PackageReference Include="Nice3point.Revit.Extensions" VersionOverride="$(RevitVersion).*"/>
@@ -51,7 +52,8 @@
     </ItemGroup>
 
     <ItemGroup>
-        <Resource Include="Resources\Icons\*.*"/>
+        <Resource Include="resources\icons\*.*"/>
+        <EmbeddedResource Include="resources\uv\*.*"/>
     </ItemGroup>
 
     <!-- Start Revit -->

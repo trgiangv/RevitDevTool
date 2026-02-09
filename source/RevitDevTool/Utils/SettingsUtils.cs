@@ -11,9 +11,17 @@ public static class SettingsUtils
     /// <returns></returns>
     public static string GetContentRootPath()
     {
-        var appData = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
+        var appData = GetApplicationDataPath();
         var revitVersion = Context.Application.VersionNumber;
-        var rootPath = Path.Combine(appData, "RevitDevTool", revitVersion);
+        var rootPath = Path.Combine(appData, revitVersion);
+        Directory.CreateDirectory(rootPath);
+        return rootPath;
+    }
+
+    public static string GetApplicationDataPath()
+    {
+        var appData = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
+        var rootPath = Path.Combine(appData, "RevitDevTool");
         Directory.CreateDirectory(rootPath);
         return rootPath;
     }
