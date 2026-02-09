@@ -2,52 +2,45 @@ using Python.Included;
 using Python.Runtime;
 using System.Diagnostics;
 using System.IO;
-using System.Text;
-using System.Text.RegularExpressions;
 
 namespace RevitDevTool.CodeExecute.Providers.Python;
 
 /// <summary>
 /// Manages Python runtime initialization and script execution using Python.NET.
-/// Replaces Dynamo-based Python execution with direct PythonNet integration.
 /// </summary>
 public static class PythonExecutor
 {
-    private static bool _isInitialized;
     private static readonly SemaphoreSlim InitLock = new(1, 1);
 
-    /// <summary>
-    /// Initialize Python runtime. Safe to call multiple times (idempotent).
-    /// </summary>
+    private static bool IsInitialized => PythonEngine.IsInitialized 
+                                         && Installer.IsPythonInstalled() 
+                                         && UvInstaller.IsUvInstalled();
+
     public static async Task InitializeAsync()
     {
-        if (_isInitialized) return;
+        if (IsInitialized) return;
 
         await InitLock.WaitAsync().ConfigureAwait(false);
         try
         {
-            if (_isInitialized) return;
-
             if (!Installer.IsPythonInstalled())
             {
                 await Installer.SetupPython().ConfigureAwait(false);
             }
 
-            if (!Installer.IsPipInstalled())
+            if (!UvInstaller.IsUvInstalled())
             {
-                await Installer.TryInstallPip().ConfigureAwait(false);
+                await UvInstaller.SetupUvAsync().ConfigureAwait(false);
             }
-
+            
             if (!PythonEngine.IsInitialized)
             {
-                Runtime.PythonDLL = Path.Combine(Installer.EmbeddedPythonHome, "python313.dll");
+                Runtime.PythonDLL = Path.Combine(Installer.EmbeddedPythonHome, $"{Installer.PYTHON_VERSION}.dll");
                 PythonEngine.PythonHome = Installer.EmbeddedPythonHome;
                 PythonEngine.ProgramName = "RevitDevTool";
                 PythonEngine.Initialize();
                 PythonEngine.BeginAllowThreads();
             }
-
-            _isInitialized = true;
         }
         finally
         {
@@ -55,22 +48,6 @@ public static class PythonExecutor
         }
     }
 
-    /// <summary>
-    /// Install a Python module using pip.
-    /// </summary>
-    public static async Task InstallModuleAsync(string moduleName, string version = "")
-    {
-        if (!Installer.IsModuleInstalled(moduleName))
-        {
-            Trace.TraceInformation($"Installing Python module: {moduleName}");
-            await Installer.PipInstallModule(moduleName, version).ConfigureAwait(false);
-            Trace.TraceInformation($"Module installed: {moduleName}");
-        }
-    }
-
-    /// <summary>
-    /// Execute a Python script file with Revit context.
-    /// </summary>
     public static void ExecuteScript(string scriptPath, string? rootFolder = null)
     {
         ValidateRuntime(scriptPath);
@@ -89,10 +66,9 @@ public static class PythonExecutor
                 {
                     scope.Exec(code);
                 }
-                catch (PythonException ex)
+                catch (Exception ex)
                 {
-                    var traceMessage = StackTraceBuilder.Build(ex, scriptPath, code);
-                    Trace.TraceError(traceMessage);
+                    Trace.TraceError(ex.Message + Environment.NewLine + ex.StackTrace);
                 }
             }
         }
@@ -103,7 +79,7 @@ public static class PythonExecutor
         if (!File.Exists(scriptPath))
             throw new FileNotFoundException($"Python script not found: {scriptPath}");
 
-        if (!_isInitialized)
+        if (!IsInitialized)
             throw new InvalidOperationException("Python runtime not initialized. Call InitializeAsync() first.");
     }
 
@@ -119,10 +95,6 @@ public static class PythonExecutor
 
     private static void SetupOutputRedirection(PyModule scope)
     {
-        // Improved redirection:
-        // 1. Appends rootFolder to sys.path
-        // 2. Overrides print to join args correctly and send to log_func in one go
-        // 3. Redirects stdout/stderr to log_func directly
         const string setupCode = """
                                  import sys
                                  import builtins
@@ -174,96 +146,5 @@ public static class PythonExecutor
                                  sys.stderr = StdOutRedirector(__log_func__)
                                  """;
         scope.Exec(setupCode);
-    }
-}
-
-/// <summary>
-/// Helper class to build clean python stack traces
-/// </summary>
-file static class StackTraceBuilder
-{
-    private static readonly Regex LineNumberRegex = new(@",\s*line\s*(?<lineno>\d+),", RegexOptions.Compiled);
-    private static readonly Regex TomlValueRegex = new("'(?<value>.+)'", RegexOptions.Compiled);
-
-    public static string Build(PythonException ex, string sourceFile, string sourceContent)
-    {
-        var (pyTraceback, dotNetTraceback) = SplitTraceback(ex.StackTrace);
-        var cleanedPyTraceback = CleanPythonTraceback(pyTraceback, sourceFile, sourceContent);
-        
-        return string.Join("\n", ex.Message, cleanedPyTraceback, ex.Source, dotNetTraceback).NormalizeNewLine();
-    }
-
-    private static (string PyTraceback, string DotNetTraceback) SplitTraceback(string? stackTrace)
-    {
-        if (string.IsNullOrWhiteSpace(stackTrace)) 
-            return (string.Empty, string.Empty);
-
-        var parts = stackTrace!.Split(']');
-        if (parts.Length < 2) 
-            return (stackTrace, string.Empty);
-
-        // Python trace is usually the first part enclosed in brackets if it's a list string
-        var pyTracepart = parts[0].Trim() + "]"; 
-        var dotNetPart = parts.Length > 1 ? parts[1].Trim() : string.Empty;
-        
-        return (pyTracepart, dotNetPart);
-    }
-
-    private static string CleanPythonTraceback(string rawTraceback, string sourceFile, string sourceContent)
-    {
-        var sb = new StringBuilder();
-        var lines = ParseTomlListString(rawTraceback);
-
-        foreach (var line in lines)
-        {
-            if (line.Contains("File \"<string>\""))
-            {
-                ProcessSourceLine(sb, line, sourceFile, sourceContent);
-            }
-            else
-            {
-                sb.AppendLine(line);
-            }
-        }
-
-        return sb.ToString();
-    }
-
-    private static void ProcessSourceLine(StringBuilder sb, string line, string sourceFile, string sourceContent)
-    {
-        var fixedLine = line.Replace("File \"<string>\"", $"File \"{sourceFile}\"");
-        sb.Append(fixedLine);
-
-        var match = LineNumberRegex.Match(line);
-        if (!match.Success) return;
-
-        if (!int.TryParse(match.Groups["lineno"].Value, out var lineNo)) return;
-        var sourceLines = sourceContent.Split('\n');
-        var index = lineNo - 1;
-        if (index < 0 || index >= sourceLines.Length) return;
-        sb.AppendLine(); // Add newline after the File line
-        sb.AppendLine(sourceLines[index].Trim()); // Add the actual code line
-    }
-
-    private static IEnumerable<string> ParseTomlListString(string tomlListString)
-    {
-        // Simple manual parsing to avoid heavy dependencies for just this string format
-        // Expected format: ['line 1', 'line 2', ...]
-        var content = tomlListString.Trim('[', ']');
-        if (string.IsNullOrWhiteSpace(content))
-            yield break;
-
-        // Split by comma but respect quotes is hard with simple split. 
-        // Assuming standard python list repr format, we can try matching quotes.
-        var matches = TomlValueRegex.Matches(content);
-        foreach (Match match in matches)
-        {
-            yield return match.Groups["value"].Value;
-        }
-    }
-
-    private static string NormalizeNewLine(this string input)
-    {
-        return input.Replace("\r\n", "\n");
     }
 }
