@@ -5,6 +5,7 @@ using RevitDevTool.Theme;
 using System.Windows.Interop;
 using System.Windows.Media;
 using RevitDevTool.Logging.Listeners;
+using RevitDevTool.CodeExecute.Providers.Python;
 
 namespace RevitDevTool.Controllers;
 
@@ -94,5 +95,6 @@ public sealed class HostBackgroundController(ISettingsService settingsService) :
             TraceCommand.SharedViewModel.IsStarted = false;
         }
         VisualizationController.Stop();
+        PythonExecutor.Shutdown();
     }
 }

@@ -35,11 +35,11 @@ public class Application : ExternalApplication
             .AddShortcuts("AD")
             .SetAvailabilityController<TraceCommand>()
             .SetLargeImage("/RevitDevTool;component/Resources/Icons/TraceGeometry32_light.tiff")
-            .SetLongDescription("Execute last command\nCtrl + click to Show/Hide Trace Panel");
+            .SetToolTip("Execute last command\nCtrl + click to Show/Hide Trace Panel");
 
         panel.AddPushButton<StubBuilderCommand>("StubBuilder")
             .SetAvailabilityController<StubBuilderCommand>()
             .SetLargeImage("/RevitDevTool;component/Resources/Icons/python32.png")
-            .SetLongDescription("Generate Python .pyi stub files from .NET assemblies");
+            .SetToolTip("Generate Python .pyi stub files from .NET assemblies");
     }
 }
