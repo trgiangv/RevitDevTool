@@ -14,4 +14,5 @@ public sealed class GeneralConfig
     [JsonPropertyName("Theme")] public AppTheme Theme { get; set; } = AppTheme.Light;
 #endif
     [JsonPropertyName("UseHardwareRendering")] public bool UseHardwareRendering { get; set; } = true;
+    [JsonPropertyName("IsTraceEnabled")] public bool IsTraceEnabled { get; set; } = true;
 }

@@ -29,7 +29,7 @@ public sealed partial class TraceLogViewModel : ObservableObject, IDisposable,
     public WindowsFormsHost? LogTextBox => _loggingService.OutputSink?.GetHostControl() as WindowsFormsHost;
 
     [ObservableProperty]
-    private bool _isStarted = true;
+    private bool _isStarted;
 
     [ObservableProperty]
     private LogLevel _logLevel = LogLevel.Debug;
@@ -44,6 +44,7 @@ public sealed partial class TraceLogViewModel : ObservableObject, IDisposable,
 
     partial void OnIsStartedChanged(bool value)
     {
+        _settingsService.GeneralConfig.IsTraceEnabled = value;
         if (value) StartTracing();
         else StopTracing();
     }
@@ -56,8 +57,9 @@ public sealed partial class TraceLogViewModel : ObservableObject, IDisposable,
         _onThemeChangedHandler = OnThemeChanged;
         _onIdlingHandler = OnIdling;
         _currentTheme = ThemeManager.Current.ActualApplicationTheme;
+        _isStarted = _settingsService.GeneralConfig.IsTraceEnabled;
         Subscribe();
-        StartTracing();
+        if (_isStarted) StartTracing();
     }
 
     private void StartTracing()
@@ -97,7 +99,6 @@ public sealed partial class TraceLogViewModel : ObservableObject, IDisposable,
         _consoleRedirector ??= new ConsoleRedirector();
 
         UpdateTheme(ThemeManager.Current.ActualApplicationTheme, true);
-        IsStarted = true;
 
         Context.UiApplication.Idling += _onIdlingHandler;
         ThemeManager.Current.ActualApplicationThemeChanged += _onThemeChangedHandler;
