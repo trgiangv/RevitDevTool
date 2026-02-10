@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
     <PropertyGroup>
         <UseWPF>true</UseWPF>
@@ -17,7 +17,6 @@
 
     <ItemGroup>
         <!-- Revit API-->
-        <PackageReference Include="CliWrap" />
         <PackageReference Include="Nice3point.Revit.Build.Tasks"/>
         <PackageReference Include="Nice3point.Revit.Toolkit" VersionOverride="$(RevitVersion).*"/>
         <PackageReference Include="Nice3point.Revit.Extensions" VersionOverride="$(RevitVersion).*"/>
@@ -33,6 +32,7 @@
         <!-- Python Integration -->
         <PackageReference Include="Python.Included"/>
         <PackageReference Include="pythonnet"/>
+        <PackageReference Include="CliWrap" />
 
         <!-- Serilog -->
         <PackageReference Include="Serilog"/>
@@ -49,6 +49,10 @@
         <PackageReference Include="ILRepack"/>
         <PackageReference Include="Microsoft-WindowsAPICodePack-Shell" Condition="$(TargetFramework.StartsWith('net4'))"/>
         <PackageReference Include="System.Reflection.MetadataLoadContext"/>
+    </ItemGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\PythonNetStubGenerator\PythonNetStubGenerator.csproj" />
     </ItemGroup>
 
     <ItemGroup>
