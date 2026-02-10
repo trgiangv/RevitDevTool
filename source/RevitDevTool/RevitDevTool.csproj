@@ -11,7 +11,8 @@
         <RepackBinariesExcludes>
             MahApps.Metro.dll;
             ControlzEx.dll;
-            Microsoft.Xaml.Behaviors.dll
+            Microsoft.Xaml.Behaviors.dll;
+            Revit.Async.dll;
         </RepackBinariesExcludes>
     </PropertyGroup>
 
@@ -33,6 +34,7 @@
         <PackageReference Include="Python.Included"/>
         <PackageReference Include="pythonnet"/>
         <PackageReference Include="CliWrap" />
+        <PackageReference Include="Revit.Async" />
 
         <!-- Serilog -->
         <PackageReference Include="Serilog"/>

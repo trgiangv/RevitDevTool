@@ -7,6 +7,7 @@ clr.AddReference('RevitAPIUI')
 clr.AddReference("AdWindows")
 clr.AddReference("UIFramework")
 clr.AddReference("UIFrameworkServices")
+clr.AddReference("Revit.Async")
 
 if int(__revit__.Application.VersionNumber) >= 2024:
     clr.AddReference("Microsoft.Web.WebView2.Wpf")

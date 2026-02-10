@@ -18,19 +18,26 @@ public sealed class PythonExecutionStrategy(string scriptPath, string rootPath) 
     {
         Task.Run(async () =>
         {
-            await PythonExecutor.InitializeAsync().ConfigureAwait(true);
-            
-            var success = await ResolveDependenciesAsync().ConfigureAwait(true);
-            if (!success)
+            try
             {
-                Trace.TraceWarning("Execution cancelled: Dependency resolution failed or was cancelled by user.");
-                return;
+                await PythonExecutor.InitializeAsync().ConfigureAwait(true);
+                
+                var success = await ResolveDependenciesAsync().ConfigureAwait(true);
+                if (!success)
+                {
+                    Trace.TraceWarning("Execution cancelled: Dependency resolution failed or was cancelled by user.");
+                    return;
+                }
+        
+                ExternalEventController.ActionEventHandler.Raise(_ =>
+                {
+                    PythonExecutor.ExecuteScript(scriptPath, rootPath);
+                });
             }
-    
-            ExternalEventController.ActionEventHandler.Raise(_ =>
+            catch (Exception ex)
             {
-                PythonExecutor.ExecuteScript(scriptPath, rootPath);
-            });
+                Trace.TraceError($"Python execution pipeline failed: {ex.Message}{Environment.NewLine}{ex.StackTrace}");
+            }
         });
     }
 

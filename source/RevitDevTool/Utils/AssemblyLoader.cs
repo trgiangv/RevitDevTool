@@ -20,7 +20,8 @@ public static class AssemblyLoader
     [
         "MahApps.Metro",
         "ControlzEx",
-        "Microsoft.Xaml.Behaviors"
+        "Microsoft.Xaml.Behaviors",
+        "Revit.Async",
     ];
 
 #if !NETFRAMEWORK

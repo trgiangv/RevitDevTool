@@ -1,4 +1,5 @@
 using Nice3point.Revit.Toolkit.External.Handlers;
+using Revit.Async;
 // ReSharper disable ReplaceWithFieldKeyword
 namespace RevitDevTool.Controllers;
 
@@ -16,6 +17,7 @@ public static class ExternalEventController
 
     public static void Register()
     {
+        RevitTask.Initialize(Context.UiApplication);
         ActionEventHandler = new ActionEventHandler();
     }
 }
