@@ -60,17 +60,17 @@ public class TraceCommand : ExternalCommand, IExternalCommandAvailability
 
     private void ExecutePaneVisibility()
     {
-        var dockableWindow = UiApplication.GetDockablePane(PaneId);
-        if (dockableWindow.IsShown())
+        var dockablePane = UiApplication.GetDockablePane(PaneId);
+        if (dockablePane.IsShown())
         {
-            dockableWindow.Hide();
+            dockablePane.Hide();
             IsForceHide = true;
         }
         else
         {
             SharedViewModel ??= Host.GetService<TraceLogViewModel>();
             SharedViewModel.Subscribe();
-            dockableWindow.Show();
+            dockablePane.Show();
             IsForceHide = false;
         }
     }
@@ -105,9 +105,18 @@ public class TraceCommand : ExternalCommand, IExternalCommandAvailability
 
     private static void OnTraceReceived()
     {
+        if (HasUiDocumentOpened)
+        {
+            var dockablePane = Context.UiControlledApplication.GetDockablePane(PaneId);
+            if (!dockablePane.IsShown() && !IsForceHide)
+            {
+                dockablePane.Show();
+            }
+            return;
+        }
+
         NotifyListener.TraceReceived -= TraceReceivedHandler;
 
-        if (HasUiDocumentOpened) return;
         if (SharedViewModel is not { IsStarted: true })
         {
             NotifyListener.TraceReceived += TraceReceivedHandler;
@@ -122,22 +131,21 @@ public class TraceCommand : ExternalCommand, IExternalCommandAvailability
     private static void OnDocumentOpened(object? sender, DocumentOpenedEventArgs args)
     {
         CloseFloatingWindow();
-        NotifyListener.TraceReceived -= TraceReceivedHandler;
-
-        if (IsForceHide)
-        {
-            SharedViewModel?.Dispose();
-        }
 
         var dockablePane = Context.UiControlledApplication.GetDockablePane(PaneId);
 
         if (IsForceHide)
         {
+            NotifyListener.TraceReceived -= TraceReceivedHandler;
+            SharedViewModel?.Dispose();
             dockablePane.Hide();
         }
-        else if (!dockablePane.IsShown())
+        else
         {
-            dockablePane.Show();
+            if (!dockablePane.IsShown())
+            {
+                dockablePane.Show();
+            }
         }
     }
 
