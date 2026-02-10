@@ -27,14 +27,14 @@ from Microsoft.Web.WebView2.Core import CoreWebView2Environment, CoreWebView2Hos
 
 
 # Global Context
-uiapp = __revit__  # type: UI.UIApplication  # noqa: F821
-doc = uiapp.ActiveUIDocument.Document
+uiapp : UI.UIApplication = __revit__  # type: ignore
+doc : DB.Document = uiapp.ActiveUIDocument.Document
 
 
 def collect_elements_by_category_and_level():
-    """Thu thập dữ liệu elements từ Revit, phân loại theo category và level"""
+    """Collect element data from Revit, grouped by category and level."""
     
-    # Lấy tất cả levels trong project
+    # Get all levels in the project
     collector_levels = DB.FilteredElementCollector(doc)\
         .OfCategory(DB.BuiltInCategory.OST_Levels)\
         .WhereElementIsNotElementType()
@@ -46,7 +46,7 @@ def collect_elements_by_category_and_level():
             'elevation': level.Elevation
         }
     
-    # Định nghĩa các categories quan trọng để phân tích
+    # Define key categories to analyze
     categories_to_analyze = [
         (DB.BuiltInCategory.OST_Walls, "Walls"),
         (DB.BuiltInCategory.OST_Floors, "Floors"),
@@ -69,7 +69,7 @@ def collect_elements_by_category_and_level():
     data_structure = {}
     total_elements = 0
     
-    # Thu thập elements cho mỗi category
+    # Collect elements for each category
     for builtin_cat, cat_name in categories_to_analyze:
         try:
             collector = DB.FilteredElementCollector(doc)\
@@ -87,17 +87,17 @@ def collect_elements_by_category_and_level():
                 'no_level': 0
             }
             
-            # Phân loại theo level
+            # Group by level
             for elem in elements_list:
                 total_elements += 1
                 
-                # Lấy level của element
+                # Get element level
                 level_id = None
-                level_param = elem.get_Parameter(DB.BuiltInParameter.FAMILY_LEVEL_PARAM)
+                level_param : DB.Parameter = elem.get_Parameter(DB.BuiltInParameter.FAMILY_LEVEL_PARAM)
                 if level_param and level_param.HasValue:
                     level_id = level_param.AsElementId().IntegerValue
                 else:
-                    # Thử lấy level từ các parameters khác
+                    # Try alternative level sources
                     level_param = elem.LevelId
                     if level_param and level_param.IntegerValue > 0:
                         level_id = level_param.IntegerValue
@@ -122,7 +122,7 @@ def collect_elements_by_category_and_level():
 
 
 def create_advanced_plotly_visualizations(data_dict):
-    """Tạo nhiều loại visualization phức tạp với Plotly"""
+    """Create multiple advanced Plotly visualizations."""
     import plotly.graph_objects as go
     from plotly.subplots import make_subplots
     import plotly.express as px
@@ -130,7 +130,7 @@ def create_advanced_plotly_visualizations(data_dict):
     data_structure = data_dict['data']
     total_elements = data_dict['total_elements']
     
-    # === 1. Tạo dữ liệu cho các charts ===
+    # === 1. Prepare data for charts ===
     
     # Chuẩn bị dữ liệu cho grouped bar chart
     categories = []
@@ -152,7 +152,7 @@ def create_advanced_plotly_visualizations(data_dict):
             row.append(count)
         matrix_data.append(row)
     
-    # === 2. Tạo subplot với nhiều visualization ===
+    # === 2. Create subplots with multiple visualizations ===
     
     fig = make_subplots(
         rows=3, cols=2,
@@ -309,17 +309,17 @@ def create_advanced_plotly_visualizations(data_dict):
     
     fig.update_xaxes(title_text="Element Count", row=3, col=1)
     
-    # Tạo thêm một figure riêng cho Sunburst chart (hierarchical)
+    # Build a separate figure for the hierarchical Sunburst chart
     sunburst_fig = create_sunburst_chart(data_structure)
     
-    # Tạo thêm một figure riêng cho Treemap
+    # Build a separate figure for the Treemap
     treemap_fig = create_treemap_chart(data_structure)
     
     return fig, sunburst_fig, treemap_fig
 
 
 def create_sunburst_chart(data_structure):
-    """Tạo Sunburst chart để hiển thị hierarchy"""
+    """Create a Sunburst chart to display hierarchy."""
     import plotly.graph_objects as go
     
     labels = ["All Elements"]
@@ -379,7 +379,7 @@ def create_sunburst_chart(data_structure):
 
 
 def create_treemap_chart(data_structure):
-    """Tạo Treemap chart"""
+    """Create a Treemap chart."""
     import plotly.graph_objects as go
     
     labels = []
@@ -438,7 +438,7 @@ def create_treemap_chart(data_structure):
 
 
 def create_html_dashboard(main_fig, sunburst_fig, treemap_fig):
-    """Tạo HTML dashboard với nhiều charts"""
+    """Create an HTML dashboard containing multiple charts."""
     
     # Convert figures to HTML
     main_html = main_fig.to_html(include_plotlyjs='cdn', div_id='main-dashboard')
@@ -619,10 +619,10 @@ def create_html_dashboard(main_fig, sunburst_fig, treemap_fig):
 
 
 def show_visualization_in_webview(html_content):
-    """Hiển thị visualization trong WebView2 (Modeless pattern)"""
+    """Display visualization in WebView2 (modeless pattern)."""
     
     try:
-        # Tạo temp file cho HTML
+        # Create a temporary HTML file
         temp_dir = tempfile.mkdtemp()
         html_file = os.path.join(temp_dir, "dashboard.html")
         
@@ -631,7 +631,7 @@ def show_visualization_in_webview(html_content):
         
         Console.WriteLine("[Dashboard] HTML saved to: {}".format(html_file))
         
-        # Tạo WPF Window
+        # Create WPF window
         window = Window()
         window.Title = "Revit Elements Analysis - Plotly Dashboard"
         window.Width = 1920
@@ -639,15 +639,15 @@ def show_visualization_in_webview(html_content):
         window.WindowStartupLocation = WindowStartupLocation.CenterOwner
         window.Owner = UIFramework.MainWindow.getMainWnd()
         
-        # Tạo WebView2
+        # Create WebView2 control
         webview = WebView2()
         window.Content = webview
         
-        # Async initialization của WebView2
+        # Async WebView2 initialization
         def on_window_loaded(sender, e):
             Console.WriteLine("[Dashboard] Window loaded, initializing WebView2...")
             
-            # Tạo user data folder
+            # Create user data folder
             user_data = os.path.join(tempfile.gettempdir(), "Revit_Plotly_WV2_Cache")
             if not os.path.exists(user_data):
                 os.makedirs(user_data)
@@ -660,7 +660,7 @@ def show_visualization_in_webview(html_content):
                     try:
                         env = env_task.Result
                         
-                        # Dùng Dispatcher.BeginInvoke cho WPF
+                        # Use Dispatcher.BeginInvoke for WPF thread
                         action = Action(lambda: webview.EnsureCoreWebView2Async(env))
                         window.Dispatcher.BeginInvoke(DispatcherPriority.Normal, action)
                         
@@ -668,10 +668,10 @@ def show_visualization_in_webview(html_content):
                     except Exception as ex:
                         Console.WriteLine("[Error] Environment task failed: {}".format(str(ex)))
             
-            # Đăng ký callback khi task complete
+            # Register callback when task completes
             env_task.GetAwaiter().OnCompleted(Action(check_task))
         
-        # Handler khi WebView2 core sẵn sàng
+        # Handler when WebView2 core is ready
         def on_webview_ready(sender, args):
             if not args.IsSuccess:
                 Console.WriteLine("[Error] WebView2 Init Failed: {}".format(
@@ -681,21 +681,21 @@ def show_visualization_in_webview(html_content):
             
             Console.WriteLine("[Dashboard] WebView2 Core initialized, navigating to HTML...")
             
-            # Navigate đến HTML file
+            # Navigate to local HTML file
             webview.CoreWebView2.Navigate(html_file)
         
-        # Handler khi window đóng
+        # Handler when window closes
         def on_window_closing(sender, args):
             Console.WriteLine("[Dashboard] Window closing, disposing WebView2...")
             if webview:
                 webview.Dispose()
         
-        # Đăng ký events
+        # Register events
         window.Loaded += on_window_loaded
         webview.CoreWebView2InitializationCompleted += on_webview_ready
         window.Closing += on_window_closing
         
-        # Show modeless window (không block)
+        # Show modeless window (non-blocking)
         window.Show()
         
         Console.WriteLine("[Dashboard] Modeless WPF window shown successfully")
@@ -713,7 +713,7 @@ def main():
     try:
         Console.WriteLine("Starting Revit Elements Analysis...")
         
-        # 1. Thu thập dữ liệu từ Revit
+        # 1. Collect data from Revit
         Console.WriteLine("Collecting data from Revit...")
         data_dict = collect_elements_by_category_and_level()
         
@@ -723,15 +723,15 @@ def main():
         
         Console.WriteLine("Total elements collected: {}".format(data_dict['total_elements']))
         
-        # 2. Tạo visualizations
+        # 2. Create visualizations
         Console.WriteLine("Creating Plotly visualizations...")
         main_fig, sunburst_fig, treemap_fig = create_advanced_plotly_visualizations(data_dict)
         
-        # 3. Tạo HTML dashboard
+        # 3. Generate HTML dashboard
         Console.WriteLine("Generating HTML dashboard...")
         html_content = create_html_dashboard(main_fig, sunburst_fig, treemap_fig)
         
-        # 4. Hiển thị trong WebView
+        # 4. Display in WebView
         Console.WriteLine("Launching visualization...")
         show_visualization_in_webview(html_content)
         

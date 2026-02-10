@@ -24,6 +24,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RevitDevTool", "source\Revi
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RevitDevTool.Test", "source\RevitDevTool.Test\RevitDevTool.Test.csproj", "{33C90C02-CA4E-4C48-B60D-D8F0EB44A8EB}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PythonNetStubGenerator", "source\PythonNetStubGenerator\PythonNetStubGenerator.csproj", "{7366EE36-0B1D-4E55-A444-7E3C77866DAF}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug R22|x64 = Debug R22|x64
@@ -118,6 +120,26 @@ Global
 		{33C90C02-CA4E-4C48-B60D-D8F0EB44A8EB}.Release R25|x64.Build.0 = Release R25|Any CPU
 		{33C90C02-CA4E-4C48-B60D-D8F0EB44A8EB}.Release R26|x64.ActiveCfg = Release R26|Any CPU
 		{33C90C02-CA4E-4C48-B60D-D8F0EB44A8EB}.Release R26|x64.Build.0 = Release R26|Any CPU
+		{7366EE36-0B1D-4E55-A444-7E3C77866DAF}.Debug R22|x64.ActiveCfg = Debug R22|Any CPU
+		{7366EE36-0B1D-4E55-A444-7E3C77866DAF}.Debug R22|x64.Build.0 = Debug R22|Any CPU
+		{7366EE36-0B1D-4E55-A444-7E3C77866DAF}.Debug R23|x64.ActiveCfg = Debug R23|Any CPU
+		{7366EE36-0B1D-4E55-A444-7E3C77866DAF}.Debug R23|x64.Build.0 = Debug R23|Any CPU
+		{7366EE36-0B1D-4E55-A444-7E3C77866DAF}.Debug R24|x64.ActiveCfg = Debug R24|Any CPU
+		{7366EE36-0B1D-4E55-A444-7E3C77866DAF}.Debug R24|x64.Build.0 = Debug R24|Any CPU
+		{7366EE36-0B1D-4E55-A444-7E3C77866DAF}.Debug R25|x64.ActiveCfg = Debug R25|Any CPU
+		{7366EE36-0B1D-4E55-A444-7E3C77866DAF}.Debug R25|x64.Build.0 = Debug R25|Any CPU
+		{7366EE36-0B1D-4E55-A444-7E3C77866DAF}.Debug R26|x64.ActiveCfg = Debug R26|Any CPU
+		{7366EE36-0B1D-4E55-A444-7E3C77866DAF}.Debug R26|x64.Build.0 = Debug R26|Any CPU
+		{7366EE36-0B1D-4E55-A444-7E3C77866DAF}.Release R22|x64.ActiveCfg = Release R22|Any CPU
+		{7366EE36-0B1D-4E55-A444-7E3C77866DAF}.Release R22|x64.Build.0 = Release R22|Any CPU
+		{7366EE36-0B1D-4E55-A444-7E3C77866DAF}.Release R23|x64.ActiveCfg = Release R23|Any CPU
+		{7366EE36-0B1D-4E55-A444-7E3C77866DAF}.Release R23|x64.Build.0 = Release R23|Any CPU
+		{7366EE36-0B1D-4E55-A444-7E3C77866DAF}.Release R24|x64.ActiveCfg = Release R24|Any CPU
+		{7366EE36-0B1D-4E55-A444-7E3C77866DAF}.Release R24|x64.Build.0 = Release R24|Any CPU
+		{7366EE36-0B1D-4E55-A444-7E3C77866DAF}.Release R25|x64.ActiveCfg = Release R25|Any CPU
+		{7366EE36-0B1D-4E55-A444-7E3C77866DAF}.Release R25|x64.Build.0 = Release R25|Any CPU
+		{7366EE36-0B1D-4E55-A444-7E3C77866DAF}.Release R26|x64.ActiveCfg = Release R26|Any CPU
+		{7366EE36-0B1D-4E55-A444-7E3C77866DAF}.Release R26|x64.Build.0 = Release R26|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
