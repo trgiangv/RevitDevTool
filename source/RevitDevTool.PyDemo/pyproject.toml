@@ -1,0 +1,18 @@
+[project]
+name = "revitdevtool-pydemo"
+version = "0.1.0"
+description = "RevitDevTool Python Demo"
+readme = "README.md"
+requires-python = ">=3.13"
+dependencies = [
+    "polars==1.38.1",
+    "numpy==2.4.2",
+    "openpyxl==3.1.5",
+    "plotly==6.5.2",
+    "scipy==1.17.0",
+    "shapely==2.1.2",
+    "trimesh==4.11.1",
+    "vedo==2025.5.4",
+    "networkx==3.6.1",
+    "modelcontextprotocol>=1.0.1",
+]
