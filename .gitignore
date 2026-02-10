@@ -22,3 +22,11 @@ riderModule.iml
 
 #User-specific files
 *.user
+
+#Python
+__pycache__/
+mypy_cache/
+pytest_cache/
+.pytest_cache/
+.mypy_cache/
+.venv/
