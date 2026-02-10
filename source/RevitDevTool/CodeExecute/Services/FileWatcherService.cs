@@ -10,9 +10,10 @@ namespace RevitDevTool.CodeExecute.Services;
 /// </summary>
 public sealed class FileWatcherService : IFileWatcherService
 {
-    private readonly ConcurrentDictionary<string, FileSystemWatcher> _watchers = new();
-    private readonly ConcurrentDictionary<string, System.Threading.Timer> _debounceTimers = new();
-    private readonly TimeSpan _debounceDelay = TimeSpan.FromMilliseconds(500);
+    private readonly ConcurrentDictionary<string, FileSystemWatcher> _registeredWatchers = new();
+    private readonly ConcurrentDictionary<string, System.Threading.Timer> _notificationTimers = new();
+    private readonly ConcurrentDictionary<string, FileChangeType> _pendingChanges = new();
+    private readonly TimeSpan _notificationDelay = TimeSpan.FromMilliseconds(500);
     private bool _disposed;
 
     public event EventHandler<FileChangedEventArgs>? FileChanged;
@@ -22,11 +23,10 @@ public sealed class FileWatcherService : IFileWatcherService
         if (_disposed) throw new ObjectDisposedException(nameof(FileWatcherService));
         if (string.IsNullOrWhiteSpace(path)) return;
 
-        var directoryPath = File.Exists(path) ? Path.GetDirectoryName(path) : path;
+        var directoryPath = ResolveDirectoryPath(path);
         if (string.IsNullOrEmpty(directoryPath) || !Directory.Exists(directoryPath))
             return;
 
-        // Stop existing watcher if any
         Unwatch(path);
 
         foreach (var pattern in patterns)
@@ -39,12 +39,12 @@ public sealed class FileWatcherService : IFileWatcherService
                 IncludeSubdirectories = true
             };
 
-            watcher.Changed += OnFileSystemChanged;
-            watcher.Created += OnFileSystemChanged;
-            watcher.Deleted += OnFileSystemChanged;
-            watcher.Renamed += OnFileSystemRenamed;
+            watcher.Changed += HandleFileSystemChanged;
+            watcher.Created += HandleFileSystemChanged;
+            watcher.Deleted += HandleFileSystemChanged;
+            watcher.Renamed += HandleFileSystemRenamed;
 
-            _watchers[key] = watcher;
+            _registeredWatchers[key] = watcher;
         }
     }
 
@@ -52,17 +52,24 @@ public sealed class FileWatcherService : IFileWatcherService
     {
         if (_disposed) return;
 
-        var keysToRemove = _watchers.Keys.Where(k => k.StartsWith(path, StringComparison.OrdinalIgnoreCase)).ToList();
+        var directoryPath = ResolveDirectoryPath(path);
+        if (string.IsNullOrEmpty(directoryPath))
+            return;
+
+        var watchKeyPrefix = $"{directoryPath}|";
+        var keysToRemove = _registeredWatchers.Keys
+            .Where(k => k.StartsWith(watchKeyPrefix, StringComparison.OrdinalIgnoreCase))
+            .ToList();
 
         foreach (var key in keysToRemove)
         {
-            if (_watchers.TryRemove(key, out var watcher))
+            if (_registeredWatchers.TryRemove(key, out var watcher))
             {
                 watcher.EnableRaisingEvents = false;
                 watcher.Dispose();
             }
 
-            if (_debounceTimers.TryRemove(key, out var timer))
+            if (_notificationTimers.TryRemove(key, out var timer))
             {
                 timer.Dispose();
             }
@@ -73,66 +80,70 @@ public sealed class FileWatcherService : IFileWatcherService
     {
         if (_disposed) return;
 
-        foreach (var watcher in _watchers.Values)
+        foreach (var watcher in _registeredWatchers.Values)
         {
             watcher.EnableRaisingEvents = false;
             watcher.Dispose();
         }
-        _watchers.Clear();
+        _registeredWatchers.Clear();
 
-        foreach (var timer in _debounceTimers.Values)
+        foreach (var timer in _notificationTimers.Values)
         {
             timer.Dispose();
         }
-        _debounceTimers.Clear();
+        _notificationTimers.Clear();
+        _pendingChanges.Clear();
     }
 
     public void Dispose()
     {
         if (_disposed) return;
 
-        _disposed = true;
         UnwatchAll();
+        _disposed = true;
     }
 
-    private void OnFileSystemChanged(object sender, FileSystemEventArgs e)
+    private void HandleFileSystemChanged(object sender, FileSystemEventArgs e)
     {
-        DebouncedRaiseEvent(e.FullPath, MapChangeType(e.ChangeType));
+        ScheduleChangeNotification(e.FullPath, MapWatcherChangeType(e.ChangeType));
     }
 
-    private void OnFileSystemRenamed(object sender, RenamedEventArgs e)
+    private void HandleFileSystemRenamed(object sender, RenamedEventArgs e)
     {
-        DebouncedRaiseEvent(e.FullPath, FileChangeType.Renamed);
+        ScheduleChangeNotification(e.FullPath, FileChangeType.Renamed);
     }
 
-    private void DebouncedRaiseEvent(string path, FileChangeType changeType)
+    private void ScheduleChangeNotification(string path, FileChangeType changeType)
     {
         var key = path;
+        _pendingChanges.AddOrUpdate(key, changeType, (_, existing) => MergePendingChangeType(existing, changeType));
 
-        // Cancel existing timer if any
-        if (_debounceTimers.TryRemove(key, out var existingTimer))
+        if (_notificationTimers.TryRemove(key, out var existingTimer))
         {
             existingTimer.Dispose();
         }
 
         var timer = new System.Threading.Timer(_ =>
         {
-            FileChanged?.Invoke(this, new FileChangedEventArgs
+            if (_pendingChanges.TryRemove(key, out var finalChangeType))
             {
-                Path = path,
-                ChangeType = changeType
-            });
+                FileChanged?.Invoke(this, new FileChangedEventArgs
+                {
+                    Path = path,
+                    ChangeType = finalChangeType
+                });
+            }
 
-            if (_debounceTimers.TryRemove(key, out var removedTimer))
+            if (_notificationTimers.TryRemove(key, out var removedTimer))
             {
                 removedTimer.Dispose();
             }
-        }, null, _debounceDelay, Timeout.InfiniteTimeSpan);
+        }, null, _notificationDelay, Timeout.InfiniteTimeSpan);
 
-        _debounceTimers[key] = timer;
+        _notificationTimers[key] = timer;
     }
 
-    private static FileChangeType MapChangeType(WatcherChangeTypes changeType)
+    private static FileChangeType MapWatcherChangeType(WatcherChangeTypes changeType)
     {
         return changeType switch
         {
@@ -142,5 +153,26 @@ public sealed class FileWatcherService : IFileWatcherService
             WatcherChangeTypes.Renamed => FileChangeType.Renamed,
             _ => FileChangeType.Modified
         };
+    }
+
+    private static string? ResolveDirectoryPath(string path)
+    {
+        if (Directory.Exists(path))
+            return path;
+
+        return Path.GetDirectoryName(path);
+    }
+
+    private static bool IsStructuralFileChange(FileChangeType changeType)
+    {
+        return changeType != FileChangeType.Modified;
+    }
+
+    private static FileChangeType MergePendingChangeType(FileChangeType existing, FileChangeType incoming)
+    {
+        if (IsStructuralFileChange(existing) && incoming == FileChangeType.Modified)
+            return existing;
+
+        return incoming;
     }
 }
