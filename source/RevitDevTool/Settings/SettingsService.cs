@@ -160,6 +160,7 @@ public sealed class SettingsService(IFileConfig<PathOptions> fileConfig) : ISett
             Theme = AppTheme.Light,
 #endif
             UseHardwareRendering = true,
+            IsTraceEnabled = true,
         };
     }
 
