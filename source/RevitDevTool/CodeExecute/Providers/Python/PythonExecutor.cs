@@ -85,7 +85,17 @@ public static class PythonExecutor
 
     private static void SetupScopeVariables(PyModule scope, string scriptPath, string rootFolder)
     {
-        Action<object> logFunction = obj => Trace.Write(obj);
+        Action<object> logFunction = obj =>
+        {
+            if (obj is string str)
+            {
+                Trace.Write(str);
+            }
+            else
+            {
+                Trace.Write(obj);
+            }
+        };
         
         scope.Set("__file__", scriptPath);
         scope.Set("__root__", rootFolder);
@@ -98,7 +108,22 @@ public static class PythonExecutor
         const string setupCode = """
                                  import sys
                                  import builtins
-                                 
+                                 import clr
+
+                                 clr.AddReference("RevitAPI")
+                                 clr.AddReference('RevitAPIUI')
+                                 clr.AddReference("AdWindows")
+                                 clr.AddReference("UIFramework")
+                                 clr.AddReference("UIFrameworkServices")
+
+                                 if int(__revit__.Application.VersionNumber) >= 2024:
+                                     clr.AddReference("Microsoft.Web.WebView2.Wpf")
+                                     clr.AddReference("Microsoft.Web.WebView2.Core")
+
+                                 if int(__revit__.Application.VersionNumber) >= 2025:
+                                     clr.AddReference("System.Console")
+                                     clr.AddReference("System.Diagnostics.TraceSource") 
+
                                  if __root__ not in sys.path:
                                      sys.path.append(__root__)
                                  
