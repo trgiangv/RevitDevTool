@@ -15,6 +15,7 @@ public sealed class ExecutionOrchestrator : IExecutionOrchestrator, IDisposable
     private readonly ITreeStateManager _stateManager;
     private readonly IFileWatcherService _fileWatcher;
     private readonly ObservableCollection<BaseNode> _treeRoot = [];
+    private readonly SemaphoreSlim _reloadGate = new(1, 1);
     private BaseNode? _lastExecutedNode;
 
     public IEnumerable<BaseNode> TreeRoot => _treeRoot;
@@ -31,8 +32,10 @@ public sealed class ExecutionOrchestrator : IExecutionOrchestrator, IDisposable
 
     public async Task LoadFromPathAsync(string path, CancellationToken cancellationToken = default)
     {
-        // Auto-detect provider using CanHandle + Priority
-        var provider = _serviceProvider.GetServices<IExecutionProvider>().Where(p => p.CanHandle(path)).OrderByDescending(p => p.Priority).FirstOrDefault();
+        var provider = _serviceProvider.GetServices<IExecutionProvider>()
+            .Where(p => p.CanHandle(path))
+            .OrderByDescending(p => p.Priority)
+            .FirstOrDefault();
 
         if (provider == null)
             throw new ArgumentException($"No suitable provider found for path: {path}");
@@ -42,15 +45,9 @@ public sealed class ExecutionOrchestrator : IExecutionOrchestrator, IDisposable
 
         var state = _stateManager.CaptureState(_treeRoot);
         var discoveredNodes = await provider.DiscoverAsync(path, cancellationToken).ConfigureAwait(true);
-        PatchTree(discoveredNodes);
-
-        // Restore state (with auto-expand for new nodes)
+        TreeNodeOperations.MergeNodesIntoTree(_treeRoot, discoveredNodes);
         _stateManager.RestoreState(_treeRoot, state, autoExpandNew: true);
-
-        // Setup file watching
-        var watchPatterns = provider.GetWatchPatterns();
-        _fileWatcher.Watch(path, watchPatterns);
-
+        _fileWatcher.Watch(path, provider.GetWatchPatterns());
         TreeChanged?.Invoke(this, EventArgs.Empty);
     }
 
@@ -71,74 +68,55 @@ public sealed class ExecutionOrchestrator : IExecutionOrchestrator, IDisposable
 
     public async Task ReloadAsync(CancellationToken cancellationToken = default)
     {
-        if (_treeRoot.Count == 0)
-            return;
-
-        var state = _stateManager.CaptureState(_treeRoot);
-        var newExecutables = new List<BaseNode>();
-
-        // Collect all root nodes with their paths and provider types
-        var rootInfos = _treeRoot.OfType<RootNode>().Select(n => new { Path = n.RootPath, n.ProviderType }).Distinct().ToList();
-
-        _treeRoot.Clear();
-
-        // Reload each path with appropriate provider
-        foreach (var rootInfo in rootInfos)
+        await _reloadGate.WaitAsync(cancellationToken).ConfigureAwait(true);
+        try
         {
-            try
-            {
-                var providerKey = rootInfo.ProviderType.ToString();
-                var provider = _serviceProvider.GetKeyedService<IExecutionProvider>(providerKey);
+            if (_treeRoot.Count == 0)
+                return;
 
-                if (provider == null) continue;
-                var nodes = await provider.DiscoverAsync(rootInfo.Path, cancellationToken).ConfigureAwait(true);
-                PatchTree(nodes, newExecutables);
-            }
-            catch (Exception ex)
+            var state = _stateManager.CaptureState(_treeRoot);
+            var previousExecutableIds = TreeNodeOperations.CollectExecutableIdSet(_treeRoot);
+            var currentRoots = _treeRoot.OfType<RootNode>().ToList();
+            var reloadedRoots = new List<RootNode>(currentRoots.Count);
+
+            foreach (var currentRoot in currentRoots)
             {
-                Trace.TraceError($"Failed to reload path '{rootInfo.Path}': {ex.Message}");
+                var result = await ReloadRootAsync(currentRoot, cancellationToken).ConfigureAwait(true);
+
+                if (result.RootNode != null)
+                {
+                    reloadedRoots.Add(result.RootNode);
+                    continue;
+                }
+
+                if (result.KeepExistingRoot)
+                {
+                    reloadedRoots.Add(currentRoot);
+                }
+                else
+                {
+                    _fileWatcher.Unwatch(currentRoot.RootPath);
+                }
             }
+
+            TreeNodeOperations.ReplaceRootSnapshot(_treeRoot, reloadedRoots);
+            _stateManager.RestoreState(_treeRoot, state, autoExpandNew: false);
+            _lastExecutedNode = TreeNodeOperations.PromoteLatestNewExecutable(_treeRoot, previousExecutableIds) ?? _lastExecutedNode;
+            TreeChanged?.Invoke(this, EventArgs.Empty);
         }
-
-        _stateManager.RestoreState(_treeRoot, state, autoExpandNew: false);
-        MarkLastNewExecutable(newExecutables);
-        TreeChanged?.Invoke(this, EventArgs.Empty);
+        finally
+        {
+            _reloadGate.Release();
+        }
     }
 
-    /// <summary>
-    /// Remove a node from the tree.
-    /// Returns the next sibling for selection, or null if none available.
-    /// Also removes empty parent containers and unwatches the path if removing a RootNode.
-    /// </summary>
     public BaseNode? RemoveNode(BaseNode node)
     {
-        // If removing a RootNode, unwatch its path
-        if (node is RootNode rootNode)
-        {
-            _fileWatcher.Unwatch(rootNode.RootPath);
-        }
-
-        // Try to remove from root level
-        var rootIndex = _treeRoot.IndexOf(node);
-        if (rootIndex >= 0)
-        {
-            // Find next sibling at root level
-            var nextSelection = GetNextSibling(_treeRoot, rootIndex);
-            _treeRoot.RemoveAt(rootIndex);
+        var result = TreeNodeOperations.RemoveNodeWithCascade(_treeRoot, node, rootPath => _fileWatcher.Unwatch(rootPath));
+        if (result.Removed)
             TreeChanged?.Invoke(this, EventArgs.Empty);
-            return nextSelection;
-        }
 
-        // Search in children
-        foreach (var root in _treeRoot.ToList())
-        {
-            var result = RemoveNodeRecursive(root, node, _treeRoot);
-            if (!result.Removed) continue;
-            TreeChanged?.Invoke(this, EventArgs.Empty);
-            return result.NextSelection;
-        }
-
-        return null;
+        return result.NextSelection;
     }
 
     public void ClearAll()
@@ -153,11 +131,8 @@ public sealed class ExecutionOrchestrator : IExecutionOrchestrator, IDisposable
         if (!node.IsExecutable)
             return;
 
-        // Clear previous executed node's indicator
         if (_lastExecutedNode != null && _lastExecutedNode != node)
-        {
             _lastExecutedNode.IsLastExecuted = false;
-        }
 
         node.Execute();
         _lastExecutedNode = node;
@@ -167,168 +142,39 @@ public sealed class ExecutionOrchestrator : IExecutionOrchestrator, IDisposable
     {
         _fileWatcher.FileChanged -= OnFileChanged;
         _fileWatcher.Dispose();
+        _reloadGate.Dispose();
     }
 
     #region Private Helpers
 
-    private void PatchTree(IEnumerable<BaseNode> newNodes, List<BaseNode>? newExecutables = null)
+    private async Task<ReloadRootResult> ReloadRootAsync(RootNode currentRoot, CancellationToken cancellationToken)
     {
-        foreach (var newNode in newNodes)
+        try
         {
-            // Find existing node with same Id
-            var existingNode = _treeRoot.FirstOrDefault(n => n.Id == newNode.Id);
-
-            if (existingNode == null)
+            var provider = _serviceProvider.GetKeyedService<IExecutionProvider>(currentRoot.ProviderType);
+            if (provider == null)
             {
-                _treeRoot.Add(newNode);
-
-                // Track new executables
-                if (newExecutables != null)
-                {
-                    CollectExecutables(newNode, newExecutables);
-                }
+                Trace.TraceWarning($"No keyed provider found for execution mode '{currentRoot.ProviderType}'");
+                return ReloadRootResult.KeepCurrent();
             }
-            else
-            {
-                // Update existing node (preserve state, update children)
-                PatchNodeRecursive(existingNode, newNode, newExecutables);
-            }
-        }
-    }
 
-    private static void CollectExecutables(BaseNode node, List<BaseNode> executables)
-    {
-        if (node.IsExecutable)
+            var nodes = await provider.DiscoverAsync(currentRoot.RootPath, cancellationToken).ConfigureAwait(true);
+            var discoveredRoot = nodes.OfType<RootNode>().FirstOrDefault();
+            return discoveredRoot != null
+                ? ReloadRootResult.UseDiscovered(discoveredRoot)
+                : ReloadRootResult.RemoveCurrent();
+        }
+        catch (Exception ex)
         {
-            executables.Add(node);
+            Trace.TraceError($"Failed to reload path '{currentRoot.RootPath}': {ex.Message}");
+            return ReloadRootResult.KeepCurrent();
         }
-
-        foreach (var child in node.Children)
-        {
-            CollectExecutables(child, executables);
-        }
-    }
-
-    private void MarkLastNewExecutable(List<BaseNode> newExecutables)
-    {
-        if (newExecutables.Count == 0) return;
-
-        // Get the last new executable
-        var lastNew = newExecutables[^1];
-
-        // Clear previous LastExecuted
-        if (_lastExecutedNode != null && _lastExecutedNode != lastNew)
-        {
-            _lastExecutedNode.IsLastExecuted = false;
-        }
-
-        // Mark new one
-        lastNew.IsLastExecuted = true;
-        _lastExecutedNode = lastNew;
-    }
-
-    private static void PatchNodeRecursive(BaseNode existing, BaseNode updated, List<BaseNode>? newExecutables = null)
-    {
-        // Patch children
-        foreach (var updatedChild in updated.Children)
-        {
-            var existingChild = existing.Children.FirstOrDefault(c => c.Id == updatedChild.Id);
-
-            if (existingChild == null)
-            {
-                existing.Children.Add(updatedChild);
-
-                // Track new executables
-                if (newExecutables != null)
-                {
-                    CollectExecutables(updatedChild, newExecutables);
-                }
-            }
-            else
-            {
-                PatchNodeRecursive(existingChild, updatedChild, newExecutables);
-            }
-        }
-
-        // Remove children that no longer exist
-        var childrenToRemove = existing.Children.Where(c => updated.Children.All(uc => uc.Id != c.Id)).ToList();
-
-        foreach (var child in childrenToRemove)
-        {
-            existing.Children.Remove(child);
-        }
-    }
-
-    private (bool Removed, BaseNode? NextSelection) RemoveNodeRecursive(BaseNode parent, BaseNode nodeToRemove, IList<BaseNode> parentCollection)
-    {
-        var childIndex = parent.Children.IndexOf(nodeToRemove);
-        return childIndex >= 0 ? RemoveChildAtIndex(parent, childIndex, parentCollection) : RemoveFromChildrenRecursive(parent, nodeToRemove, parentCollection);
-    }
-
-    private (bool Removed, BaseNode? NextSelection) RemoveChildAtIndex(BaseNode parent, int childIndex, IList<BaseNode> parentCollection)
-    {
-        var nextSelection = GetNextSibling(parent.Children, childIndex);
-        parent.Children.RemoveAt(childIndex);
-        return TryCascadeDeleteEmptyParent(parent, parentCollection, nextSelection);
-    }
-
-    private (bool Removed, BaseNode? NextSelection) RemoveFromChildrenRecursive(BaseNode parent, BaseNode nodeToRemove, IList<BaseNode> parentCollection)
-    {
-        foreach (var child in parent.Children.ToList())
-        {
-            var result = RemoveNodeRecursive(child, nodeToRemove, parent.Children);
-            if (!result.Removed) continue;
-
-            // Check cascade after child removal
-            if (parent.Children.Count == 0 && parent.NodeType == NodeType.Container)
-            {
-                return TryCascadeDeleteEmptyParent(parent, parentCollection, result.NextSelection);
-            }
-            return result;
-        }
-        return (false, null);
-    }
-
-    private (bool Removed, BaseNode? NextSelection) TryCascadeDeleteEmptyParent(BaseNode parent, IList<BaseNode> parentCollection, BaseNode? currentNextSelection)
-    {
-        if (parent.Children.Count > 0 || parent.NodeType != NodeType.Container)
-        {
-            return (true, currentNextSelection);
-        }
-
-        var parentIndex = parentCollection.IndexOf(parent);
-        if (parentIndex < 0)
-        {
-            return (true, currentNextSelection);
-        }
-
-        // Unwatch if cascade-deleting a RootNode
-        if (parent is RootNode rootNode)
-        {
-            _fileWatcher.Unwatch(rootNode.RootPath);
-        }
-
-        var nextSelection = GetNextSibling(parentCollection, parentIndex);
-        parentCollection.RemoveAt(parentIndex);
-        return (true, nextSelection);
-    }
-
-    private static BaseNode? GetNextSibling(IList<BaseNode> siblings, int removedIndex)
-    {
-        if (siblings.Count <= 1)
-            return null;
-
-        // Prefer next sibling, fallback to previous
-        return removedIndex < siblings.Count - 1 ? siblings[removedIndex + 1] : siblings[removedIndex - 1];
     }
 
     private void OnFileChanged(object? sender, FileChangedEventArgs e)
     {
-        // Reload only on structural changes: Created, Deleted, Renamed.
         if (e.ChangeType == FileChangeType.Modified)
-        {
             return;
-        }
 
         Utils.DispatcherHelper.RunOnMainThread(async void () =>
         {
@@ -344,4 +190,11 @@ public sealed class ExecutionOrchestrator : IExecutionOrchestrator, IDisposable
     }
 
     #endregion
+
+    private readonly record struct ReloadRootResult(RootNode? RootNode, bool KeepExistingRoot)
+    {
+        public static ReloadRootResult UseDiscovered(RootNode rootNode) => new(rootNode, false);
+        public static ReloadRootResult KeepCurrent() => new(null, true);
+        public static ReloadRootResult RemoveCurrent() => new(null, false);
+    }
 }

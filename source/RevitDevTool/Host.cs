@@ -15,6 +15,7 @@ using RevitDevTool.ViewModel.Settings.Visualization;
 using RevitDevTool.Visualization.Server;
 using System.IO;
 using RevitDevTool.CodeExecute.Interfaces;
+using RevitDevTool.CodeExecute.Models;
 using RevitDevTool.CodeExecute.Services;
 using RevitDevTool.CodeExecute.Providers.DotNet;
 using RevitDevTool.CodeExecute.Providers.Python;
@@ -110,6 +111,8 @@ public static class Host
         // CodeExecute Providers
         services.AddSingleton<IExecutionProvider, DotNetExecutionProvider>();
         services.AddSingleton<IExecutionProvider, PythonExecutionProvider>();
+        services.AddKeyedSingleton<IExecutionProvider, DotNetExecutionProvider>(ExecutionMode.DotNet);
+        services.AddKeyedSingleton<IExecutionProvider, PythonExecutionProvider>(ExecutionMode.Python);
 
         // CodeExecute
         services.AddSingleton<CodeExecuteViewModel>();
