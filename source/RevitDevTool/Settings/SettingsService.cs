@@ -4,6 +4,7 @@ using RevitDevTool.Theme;
 using RevitDevTool.Utils;
 using Serilog;
 using System.Diagnostics;
+using System.IO;
 namespace RevitDevTool.Settings;
 
 public sealed class SettingsService(IFileConfig<PathOptions> fileConfig) : ISettingsService
@@ -193,6 +194,8 @@ public sealed class SettingsService(IFileConfig<PathOptions> fileConfig) : ISett
     private void SaveCodeExecuteSettings()
     {
         if (_codeExecuteConfig is null) return;
+        _codeExecuteConfig.DotnetAssemblyPaths.RemoveAll(path => !File.Exists(path));
+        _codeExecuteConfig.PythonFolderPaths.RemoveAll(path => !Directory.Exists(path));
         fileConfig.Save(_codeExecuteConfig);
     }
 
