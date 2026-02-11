@@ -1,4 +1,5 @@
 using System.Reflection;
+// ReSharper disable ConvertToExtensionBlock
 
 namespace PythonNetStubGenerator;
 
@@ -141,8 +142,13 @@ public static class PythonTypes
     }
 
 
+    /// <summary>
+    /// Maps .NET primitive types to their Python equivalents.
+    /// Only includes types that Python.NET actually converts at runtime.
+    /// </summary>
     private static readonly Dictionary<Type, string> PrimitiveTypeMap = new()
     {
+        // These are the ONLY types that Python.NET actually converts to Python primitives
         [typeof(void)] = "None",
         [typeof(object)] = "typing.Any",
         [typeof(string)] = "str",
@@ -162,30 +168,181 @@ public static class PythonTypes
         [typeof(Type)] = "typing.Type[typing.Any]",
     };
 
+    /// <summary>
+    /// Set of delegate types that should be converted to typing.Callable.
+    /// This is the main improvement for Python developer experience - 
+    /// allows passing Python functions directly where .NET expects delegates.
+    /// </summary>
+    private static readonly HashSet<Type> CallableDelegateTypes =
+    [
+        typeof(Action),
+        typeof(Action<>),
+        typeof(Action<,>),
+        typeof(Action<,,>),
+        typeof(Action<,,,>),
+        typeof(Action<,,,,>),
+        typeof(Action<,,,,,>),
+        typeof(Action<,,,,,,>),
+        typeof(Action<,,,,,,,>),
+        typeof(Func<>),
+        typeof(Func<,>),
+        typeof(Func<,,>),
+        typeof(Func<,,,>),
+        typeof(Func<,,,,>),
+        typeof(Func<,,,,,>),
+        typeof(Func<,,,,,,>),
+        typeof(Func<,,,,,,,>),
+        typeof(Func<,,,,,,,,>),
+        typeof(Predicate<>),
+        typeof(Comparison<>),
+        typeof(Converter<,>),
+        typeof(EventHandler),
+        typeof(EventHandler<>),
+    ];
+
     public static string ToPythonType(this Type? t, bool withGenericParams = true)
     {
         if (t == null) return "None";
-        if (PrimitiveTypeMap.TryGetValue(t, out var primitive)) return primitive;
-        if (t == typeof(Array)) { AddArrayDependency(false); return "Array"; }
-
-        if (t.IsByRef || t.IsPointer)
-            return !withGenericParams ? "clr.Reference" : $"clr.Reference[{t.GetElementType().ToPythonType()}]";
-
-        if (t.IsArray)
-        {
-            AddArrayDependency(true);
-            return !withGenericParams ? "Array_1" : $"Array_1[{t.GetElementType().ToPythonType()}]";
+        
+        // 1. Check primitive types (types Python.NET actually converts)
+        if (PrimitiveTypeMap.TryGetValue(t, out var primitive)) 
+            return primitive;
+        
+        // 2. Handle Array base type
+        if (t == typeof(Array)) 
+        { 
+            AddArrayDependency(false); 
+            return "Array"; 
         }
 
+        // 3. Handle by-ref and pointer types
+        if (t.IsByRef || t.IsPointer)
+            return ConvertByRefOrPointer(t, withGenericParams);
+
+        // 4. Handle array types (T[])
+        if (t.IsArray)
+            return ConvertArrayType(t, withGenericParams);
+
+        // 5. Handle generic parameters (T, TResult, etc.)
         if (t.IsGenericParameter)
             return GetGenericTypeParameterName(t);
 
+        // 6. Convert delegate types to Callable (improves Python DX for callbacks)
+        if (withGenericParams && TryGetCallableType(t, out var callableType))
+            return callableType;
+
+        // 7. Default: use .NET type name with scope (preserve .NET types!)
+        return BuildDefaultTypeName(t, withGenericParams);
+    }
+
+    private static string ConvertByRefOrPointer(Type t, bool withGenericParams)
+    {
+        if (!withGenericParams) return "clr.Reference";
+        return $"clr.Reference[{t.GetElementType().ToPythonType()}]";
+    }
+
+    private static string ConvertArrayType(Type t, bool withGenericParams)
+    {
+        AddArrayDependency(true);
+        if (!withGenericParams) return "Array_1";
+        return $"Array_1[{t.GetElementType().ToPythonType()}]";
+    }
+
+    private static string BuildDefaultTypeName(Type t, bool withGenericParams)
+    {
         var cleanName = BuildCleanNameWithGenerics(t, withGenericParams);
         var scope = GetScope(t);
         if (string.IsNullOrEmpty(scope))
             AddDependency(t.IsGenericType ? t.GetGenericTypeDefinition() : t);
-
         return scope + cleanName;
+    }
+
+    /// <summary>
+    /// Try to convert a delegate type to Python's typing.Callable format.
+    /// This is the ONLY .NET -> Python type conversion we do (besides primitives),
+    /// because it allows Python functions to be passed where .NET expects delegates.
+    /// </summary>
+    private static bool TryGetCallableType(Type t, out string callableType)
+    {
+        callableType = "";
+
+        // Non-generic Action
+        if (t == typeof(Action))
+        {
+            callableType = "typing.Callable[[], None]";
+            return true;
+        }
+
+        // Non-generic EventHandler
+        if (t == typeof(EventHandler))
+        {
+            callableType = "typing.Callable[[typing.Any, System.EventArgs], None]";
+            return true;
+        }
+
+        if (!t.IsGenericType)
+            return false;
+
+        var genericDef = t.GetGenericTypeDefinition();
+        if (!CallableDelegateTypes.Contains(genericDef))
+            return false;
+
+        var genericArgs = t.GetGenericArguments();
+        var typeName = genericDef.Name.Split('`')[0];
+
+        callableType = typeName switch
+        {
+            "Action" => BuildActionCallable(genericArgs),
+            "Func" => BuildFuncCallable(genericArgs),
+            "Predicate" => BuildPredicateCallable(genericArgs),
+            "Comparison" => BuildComparisonCallable(genericArgs),
+            "Converter" => BuildConverterCallable(genericArgs),
+            "EventHandler" => BuildEventHandlerCallable(genericArgs),
+            _ => ""
+        };
+
+        return !string.IsNullOrEmpty(callableType);
+    }
+
+    private static string BuildActionCallable(Type[] genericArgs)
+    {
+        var paramTypes = genericArgs.Select(arg => arg.ToPythonType());
+        return $"typing.Callable[[{string.Join(", ", paramTypes)}], None]";
+    }
+
+    private static string BuildFuncCallable(Type[] genericArgs)
+    {
+        var paramTypes = genericArgs.Take(genericArgs.Length - 1).Select(arg => arg.ToPythonType());
+        var returnType = genericArgs.Last().ToPythonType();
+        return $"typing.Callable[[{string.Join(", ", paramTypes)}], {returnType}]";
+    }
+
+    private static string BuildPredicateCallable(Type[] genericArgs)
+    {
+        var paramType = genericArgs[0].ToPythonType();
+        return $"typing.Callable[[{paramType}], bool]";
+    }
+
+    private static string BuildComparisonCallable(Type[] genericArgs)
+    {
+        var paramType = genericArgs[0].ToPythonType();
+        return $"typing.Callable[[{paramType}, {paramType}], int]";
+    }
+
+    private static string BuildConverterCallable(Type[] genericArgs)
+    {
+        var inputType = genericArgs[0].ToPythonType();
+        var outputType = genericArgs[1].ToPythonType();
+        return $"typing.Callable[[{inputType}], {outputType}]";
+    }
+
+    private static string BuildEventHandlerCallable(Type[] genericArgs)
+    {
+        if (genericArgs.Length == 0)
+            return "typing.Callable[[typing.Any, System.EventArgs], None]";
+        
+        var eventArgsType = genericArgs[0].ToPythonType();
+        return $"typing.Callable[[typing.Any, {eventArgsType}], None]";
     }
 
     private static string BuildCleanNameWithGenerics(Type t, bool withGenericParams)
@@ -212,9 +369,7 @@ public static class PythonTypes
         if (!SymbolScope.Scopes.Any(it => it.HasConflict(cleanName, type.Namespace))) return "";
         AddNamespaceDependency(type.Namespace);
         return $"{type.Namespace}.";
-
     }
-
 
 
     private static List<Type> GetGenerics(Type type)
@@ -247,4 +402,38 @@ public static class PythonTypes
 
     public static bool IsReservedWord(string propertyName)
         => ReservedNameMap.ContainsKey(propertyName);
+
+    /// <summary>
+    /// Gets Python type for parameter, handling nullable default values.
+    /// </summary>
+    public static string ToPythonType(this ParameterInfo param)
+    {
+        var baseType = param.ParameterType.ToPythonType();
+        if (param is { HasDefaultValue: true, DefaultValue: null } && baseType != "None")
+            return $"{baseType} | None";
+        return baseType;
+    }
+
+    /// <summary>
+    /// Gets Python representation of parameter's default value.
+    /// </summary>
+    public static string? ToPythonDefault(this ParameterInfo param)
+    {
+        if (!param.HasDefaultValue) return null;
+        
+        return param.DefaultValue switch
+        {
+            null => "None",
+            true => "True",
+            false => "False",
+            string s => $"\"{s.Replace("\\", "\\\\").Replace("\"", "\\\"")}\"",
+            char c => $"\"{c}\"",
+            Enum e => $"{param.ParameterType.Name}.{e}",
+            float f => f.ToString(System.Globalization.CultureInfo.InvariantCulture),
+            double d => d.ToString(System.Globalization.CultureInfo.InvariantCulture),
+            decimal m => m.ToString(System.Globalization.CultureInfo.InvariantCulture),
+            int or long or short or byte or uint or ulong or ushort or sbyte => param.DefaultValue.ToString()!,
+            _ => "..."
+        };
+    }
 }
