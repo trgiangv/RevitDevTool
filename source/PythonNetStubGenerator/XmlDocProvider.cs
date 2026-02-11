@@ -188,7 +188,7 @@ public sealed class XmlDocProvider(Action<string>? logger = null)
     private static DocComment GenerateEventDoc(EventInfo evt)
     {
         var handlerType = evt.EventHandlerType;
-        var typeName = FormatTypeName(handlerType);
+        var typeName = handlerType != null ? FormatTypeName(handlerType) : "unknown";
         return new DocComment { Summary = $"Event with handler type {typeName}." };
     }
 
@@ -219,22 +219,30 @@ public sealed class XmlDocProvider(Action<string>? logger = null)
     /// </summary>
     private static string FormatTypeName(Type type)
     {
-        if (type == typeof(void)) return "None";
-        if (type == typeof(string)) return "str";
-        if (type == typeof(bool)) return "bool";
-        if (type == typeof(int)) return "int";
-        if (type == typeof(long)) return "int";
-        if (type == typeof(double)) return "float";
-        if (type == typeof(float)) return "float";
-        if (type == typeof(object)) return "object";
-
+        if (PrimitiveTypeNames.TryGetValue(type, out var name)) return name;
         if (type.IsByRef) return FormatTypeName(type.GetElementType()!);
         if (type.IsArray) return $"Array[{FormatTypeName(type.GetElementType()!)}]";
-
         if (!type.IsGenericType) return type.Name;
+        
+        return FormatGenericTypeName(type);
+    }
+
+    private static string FormatGenericTypeName(Type type)
+    {
         var name = type.Name.Split('`')[0];
         var args = string.Join(", ", type.GetGenericArguments().Select(FormatTypeName));
         return $"{name}[{args}]";
-
     }
+
+    private static readonly Dictionary<Type, string> PrimitiveTypeNames = new()
+    {
+        [typeof(void)] = "None",
+        [typeof(string)] = "str",
+        [typeof(bool)] = "bool",
+        [typeof(int)] = "int",
+        [typeof(long)] = "int",
+        [typeof(double)] = "float",
+        [typeof(float)] = "float",
+        [typeof(object)] = "object"
+    };
 }

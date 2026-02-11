@@ -262,7 +262,7 @@ public sealed class XmlDocReader
     private static string ExtractShortName(string? cref)
     {
         if (string.IsNullOrEmpty(cref)) return "";
-        var name = cref.Contains(':') ? cref![(cref.IndexOf(':') + 1)..] : cref;
+        var name = cref.Contains(':') ? cref![(cref!.IndexOf(':') + 1)..] : cref!;
         var lastDot = name!.LastIndexOf('.');
         return lastDot >= 0 ? name[(lastDot + 1)..] : name;
     }

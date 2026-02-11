@@ -241,6 +241,14 @@ public static class StubWriter
             return;
         }
 
+        // Handle delegate types specially
+        if (IsDelegate(type))
+        {
+            WriteDelegate(sb, type, classNameOverride);
+            sb.AppendLine();
+            return;
+        }
+
         var className = classNameOverride ?? type.CleanName();
         
         var typeArguments = new List<Type>();
@@ -263,6 +271,7 @@ public static class StubWriter
             wroteMember |= WriteConstructors(type, sb);
             wroteMember |= WriteFields(type, sb);
             wroteMember |= WriteProperties(type, sb);
+            wroteMember |= WriteEvents(type, sb);
             wroteMember |= WriteMethods(type, sb);
             wroteMember |= WriteNestedTypes(sb, type);
 
@@ -270,6 +279,74 @@ public static class StubWriter
         }
 
         sb.AppendLine();
+    }
+
+    private static bool IsDelegate(Type type)
+    {
+        return type.BaseType == typeof(MulticastDelegate) || type.BaseType == typeof(Delegate);
+    }
+
+    private static void WriteDelegate(StringBuilder sb, Type delegateType, string? classNameOverride = null)
+    {
+        var className = classNameOverride ?? delegateType.CleanName();
+
+        var typeArguments = new List<Type>();
+        if (delegateType.IsGenericTypeDefinition)
+        {
+            typeArguments.AddRange(delegateType.GetGenericArguments());
+        }
+
+        using var classScope = new ClassScope(className, typeArguments, typeArguments.Any());
+        var args = GetClassArguments(delegateType);
+        WriteClassHeader(classScope, sb, className, args);
+
+        // Write delegate docstring
+        var classDoc = DocProvider?.GetDoc(delegateType);
+        WriteDocstring(sb, classDoc);
+
+        // Get the Invoke method to determine the delegate signature
+        var invokeMethod = delegateType.GetMethod("Invoke");
+        if (invokeMethod != null)
+        {
+            var invokeParams = invokeMethod.GetParameters();
+            var parameters = GetParameters(invokeMethod, true);
+            var returnType = invokeMethod.ReturnType.ToPythonType();
+
+            // Build Callable type for __init__ parameter
+            // Use typing.Any for return type to allow lambdas that return different types
+            // Python.NET ignores return values for Action delegates anyway
+            var paramTypes = invokeParams.Select(p => p.ParameterType.ToPythonType());
+            var callableType = $"typing.Callable[[{string.Join(", ", paramTypes)}], typing.Any]";
+
+            // Write __init__ to allow creating delegate from Python callable
+            // This is how Python.NET works: Action(lambda: ...) or Action(my_func)
+            sb.Indent().AppendLine($"def __init__(self, func: {callableType}) -> None: ...");
+
+            // Write __call__ method for delegate invocation
+            sb.Indent().AppendLine($"def __call__({parameters}) -> {returnType}: ...");
+
+            // Write Invoke method explicitly as well
+            sb.Indent().AppendLine($"def Invoke({parameters}) -> {returnType}: ...");
+
+            // Write BeginInvoke/EndInvoke for async pattern (if they exist)
+            var beginInvoke = delegateType.GetMethod("BeginInvoke");
+            if (beginInvoke != null)
+            {
+                var beginParams = GetParameters(beginInvoke, true);
+                sb.Indent().AppendLine($"def BeginInvoke({beginParams}) -> System.IAsyncResult: ...");
+            }
+
+            var endInvoke = delegateType.GetMethod("EndInvoke");
+            if (endInvoke != null)
+            {
+                var endParams = GetParameters(endInvoke, true);
+                sb.Indent().AppendLine($"def EndInvoke({endParams}) -> {returnType}: ...");
+            }
+        }
+        else
+        {
+            sb.Indent().AppendLine("pass");
+        }
     }
 
     private static bool WriteNestedTypes(StringBuilder sb, Type stubType)
@@ -404,8 +481,38 @@ public static class StubWriter
     {
         if (type.IsInterface)
             args.Add("typing.Protocol");
-        else if (type.IsAbstract && type.BaseType?.IsAbstract != true)
+        else if (IsAbstractClass(type) && type.BaseType?.IsAbstract != true)
             args.Add("abc.ABC");
+    }
+
+    /// <summary>
+    /// Check if a type is truly an abstract class (cannot be instantiated).
+    /// In .NET, Type.IsAbstract returns true for:
+    /// - Abstract classes (what we want)
+    /// - Static classes (IsAbstract && IsSealed)
+    /// - Interfaces (handled separately)
+    /// We need to distinguish abstract classes from classes that just have virtual members.
+    /// </summary>
+    private static bool IsAbstractClass(Type type)
+    {
+        // Not abstract at all
+        if (!type.IsAbstract) return false;
+        
+        // Static class (abstract + sealed) - not what we're looking for
+        if (type.IsSealed) return false;
+        
+        // Interface - handled separately
+        if (type.IsInterface) return false;
+        
+        // Check if THIS class declares any abstract members
+        // Only methods declared in this class (DeclaringType == type) count
+        // Inherited abstract methods that are not overridden don't make this class abstract
+        // (the parent class is already marked abstract)
+        var hasOwnAbstractMembers = type
+            .GetMethods(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.DeclaredOnly)
+            .Any(m => m.IsAbstract);
+        
+        return hasOwnAbstractMembers;
     }
 
     private static string FormatTypeArgument(Type type)
@@ -551,17 +658,24 @@ public static class StubWriter
 
     private static bool WriteProperties(Type stubType, StringBuilder sb)
     {
-        var properties = stubType.GetProperties(BindingFlags.Public | BindingFlags.Static | BindingFlags.Instance)
+        var allProperties = stubType.GetProperties(BindingFlags.Public | BindingFlags.Static | BindingFlags.Instance)
             .OrderBy(it => it.Name)
             .ToArray();
 
-        foreach (var property in properties)
+        // Separate regular properties from indexers
+        var regularProperties = allProperties.Where(p => p.GetIndexParameters().Length == 0).ToArray();
+        var indexers = allProperties.Where(p => p.GetIndexParameters().Length > 0).ToArray();
+
+        foreach (var property in regularProperties)
         {
             if (ShouldSkipProperty(property, sb)) continue;
             WriteProperty(property, sb);
         }
 
-        return properties.Length > 0;
+        // Write indexers as __getitem__/__setitem__
+        WriteIndexers(indexers, sb);
+
+        return allProperties.Length > 0;
     }
 
     private static bool ShouldSkipProperty(PropertyInfo property, StringBuilder sb)
@@ -577,6 +691,47 @@ public static class StubWriter
         WritePropertyGetter(property, context, sb);
         if (property.CanWrite)
             WritePropertySetter(property, context, sb);
+    }
+
+    private static void WriteIndexers(PropertyInfo[] indexers, StringBuilder sb)
+    {
+        if (indexers.Length == 0) return;
+
+        // Group indexers by parameter signature for overloading
+        var getters = indexers.Where(p => p.CanRead).ToList();
+        var setters = indexers.Where(p => p.CanWrite).ToList();
+
+        // Write __getitem__ overloads
+        foreach (var indexer in getters)
+        {
+            var indexParams = indexer.GetIndexParameters();
+            var keyType = GetIndexerKeyType(indexParams);
+            var valueType = indexer.PropertyType.ToPythonType();
+
+            if (getters.Count > 1) sb.Indent().AppendLine("@typing.overload");
+            sb.Indent().AppendLine($"def __getitem__(self, key: {keyType}) -> {valueType}: ...");
+        }
+
+        // Write __setitem__ overloads
+        foreach (var indexer in setters)
+        {
+            var indexParams = indexer.GetIndexParameters();
+            var keyType = GetIndexerKeyType(indexParams);
+            var valueType = indexer.PropertyType.ToPythonType();
+
+            if (setters.Count > 1) sb.Indent().AppendLine("@typing.overload");
+            sb.Indent().AppendLine($"def __setitem__(self, key: {keyType}, value: {valueType}) -> None: ...");
+        }
+    }
+
+    private static string GetIndexerKeyType(ParameterInfo[] indexParams)
+    {
+        if (indexParams.Length == 1)
+            return indexParams[0].ParameterType.ToPythonType();
+
+        // Multiple index parameters -> tuple
+        var types = indexParams.Select(p => p.ParameterType.ToPythonType()).CommaJoin();
+        return $"typing.Tuple[{types}]";
     }
 
     private static (bool IsStatic, string FirstParam, string PropertyType, string GetterType) GetPropertyContext(PropertyInfo property)
@@ -638,6 +793,55 @@ public static class StubWriter
         }
 
         return fields.Length > 0;
+    }
+
+    private static bool WriteEvents(Type stubType, StringBuilder sb)
+    {
+        var events = stubType.GetEvents(BindingFlags.Public | BindingFlags.Static | BindingFlags.Instance)
+            .Where(it => it.DeclaringType == stubType)
+            .OrderBy(it => it.Name)
+            .ToArray();
+
+        foreach (var evt in events)
+        {
+            if (ShouldSkipEvent(evt, sb)) continue;
+            WriteEvent(evt, sb);
+        }
+
+        return events.Length > 0;
+    }
+
+    private static bool ShouldSkipEvent(EventInfo evt, StringBuilder sb)
+    {
+        if (!PythonTypes.IsReservedWord(evt.Name)) return false;
+        sb.Indent().AppendLine($"# Skipped event {evt.Name} since it is a reserved python word. Use reflection to access.");
+        return true;
+    }
+
+    private static void WriteEvent(EventInfo evt, StringBuilder sb)
+    {
+        var handlerType = evt.EventHandlerType?.ToPythonType() ?? "typing.Any";
+        var addMethod = evt.GetAddMethod();
+        var isStatic = addMethod?.IsStatic ?? false;
+        var firstParam = isStatic ? "cls" : "self";
+
+        // Write event documentation
+        var doc = DocProvider?.GetDoc(evt);
+        if (doc is { IsEmpty: false })
+            sb.Indent().AppendLine($"# {doc.Summary}");
+
+        // In Python.NET, events are exposed as properties that return an EventBinding
+        // which supports += and -= operators for add/remove handlers
+        // We model this as a property returning a callable that accepts the handler type
+
+        if (isStatic) sb.Indent().AppendLine("@classmethod");
+        sb.Indent().AppendLine("@property");
+        sb.Indent().AppendLine($"def {evt.Name}({firstParam}) -> {handlerType}: ...");
+
+        // Write setter for event (allows += syntax in Python.NET)
+        if (isStatic) sb.Indent().AppendLine("@classmethod");
+        sb.Indent().AppendLine($"@{evt.Name}.setter");
+        sb.Indent().AppendLine($"def {evt.Name}({firstParam}, value: {handlerType}) -> None: ...");
     }
 
     private static void WriteMethodGroup(StringBuilder sb, IEnumerable<MethodInfo> methodGroup, string methodName)
@@ -800,54 +1004,72 @@ public static class StubWriter
         sb.AppendLine();
 
     }
-
-
+    
     private static bool WriteSimpleMethod(StringBuilder sb, MethodBase method, bool isOverload = false)
     {
+        var methodName = GetMethodName(method, sb, out var shouldSkip);
+        if (shouldSkip || methodName == null) return false;
+
         var isOperator = IsOperator(method);
         var isStatic = method.IsStatic && !isOperator;
-
-
-        var methodName = method.IsConstructor ? "__init__" : method.Name;
-        if (methodName == "<Clone>$") return false;
-        if (isOperator)
-        {
-            methodName = ConvertOperatorName(method.Name);
-            if (methodName == null)
-            {
-                var signature = method.GetParameters().Select(it => it.Name + ": " + it.ParameterType.Name).CommaJoin();
-                sb.Indent().AppendLine($"# Operator not supported {method.Name}({signature})");
-                return false;
-            }
-        }
-
         var returnType = method is MethodInfo mi ? mi.ReturnType.ToPythonType() : "None";
-
         var parameters = GetParameters(method, !isStatic);
 
+        WriteMethodDecorators(sb, method, isOverload, isStatic);
+        WriteMethodSignature(sb, method, methodName, parameters, returnType);
+        return true;
+    }
 
-        // ReSharper disable StringLiteralTypo - python decorator
+    private static string? GetMethodName(MethodBase method, StringBuilder sb, out bool shouldSkip)
+    {
+        shouldSkip = false;
+        
+        if (method.IsConstructor) return "__init__";
+        if (method.Name == "<Clone>$") { shouldSkip = true; return null; }
+        
+        if (!IsOperator(method)) return method.Name;
+
+        var pythonName = ConvertOperatorName(method.Name);
+        if (pythonName != null) return pythonName;
+        
+        // Unsupported operator
+        var signature = method.GetParameters().Select(it => it.Name + ": " + it.ParameterType.Name).CommaJoin();
+        sb.Indent().AppendLine($"# Operator not supported {method.Name}({signature})");
+        shouldSkip = true;
+        return null;
+    }
+
+    private static void WriteMethodDecorators(StringBuilder sb, MethodBase method, bool isOverload, bool isStatic)
+    {
         if (isOverload) sb.Indent().AppendLine("@typing.overload");
         if (isStatic) sb.Indent().AppendLine("@staticmethod");
-        if (method.IsAbstract) sb.Indent().AppendLine("@abc.abstractmethod");
-        // ReSharper enable StringLiteralTypo - python decorator
+        if (ShouldMarkAbstract(method)) sb.Indent().AppendLine("@abc.abstractmethod");
+    }
 
-        // Try to get documentation for this method/constructor
+    private static bool ShouldMarkAbstract(MethodBase method)
+    {
+        // Don't use @abc.abstractmethod for interfaces (typing.Protocol)
+        // In Python.NET, interface methods are implemented on the .NET side
+        return method.IsAbstract 
+               && method.DeclaringType == method.ReflectedType 
+               && method.DeclaringType is { IsInterface: false };
+    }
+
+    private static void WriteMethodSignature(StringBuilder sb, MethodBase method, string methodName, string parameters, string returnType)
+    {
         var doc = DocProvider?.GetDoc(method);
-        if (doc is { IsEmpty: false })
-        {
-            sb.Indent().AppendLine($"def {methodName}({parameters}) -> {returnType}:");
-            using (new IndentScope())
-            {
-                WriteMethodDocstring(sb, doc, method.GetParameters());
-                sb.Indent().AppendLine("...");
-            }
-        }
-        else
+        if (doc is not { IsEmpty: false })
         {
             sb.Indent().AppendLine($"def {methodName}({parameters}) -> {returnType}: ...");
+            return;
         }
-        return true;
+
+        sb.Indent().AppendLine($"def {methodName}({parameters}) -> {returnType}:");
+        using (new IndentScope())
+        {
+            WriteMethodDocstring(sb, doc, method.GetParameters());
+            sb.Indent().AppendLine("...");
+        }
     }
 
     private static readonly Dictionary<string, string> OperatorNameMap = new()
@@ -879,16 +1101,16 @@ public static class StubWriter
     private static string GetParameters(MethodBase method, bool includeSelf)
     {
         var parameters = method.GetParameters();
-        var pythonParams = parameters.Select(GetParameter);
+        var pythonParams = parameters.Select(FormatParameter);
         if (includeSelf) pythonParams = pythonParams.Prepend("self");
         return pythonParams.CommaJoin();
 
-        string GetParameter(ParameterInfo it)
+        static string FormatParameter(ParameterInfo p)
         {
-            var name = PythonTypes.SafePythonName(it.Name);
-            var type = it.ParameterType.ToPythonType();
-            var defaultValue = it.HasDefaultValue ? " = ..." : "";
-            return $"{name}: {type}{defaultValue}";
+            var name = PythonTypes.SafePythonName(p.Name);
+            var type = p.ToPythonType();
+            var defaultValue = p.ToPythonDefault();
+            return defaultValue != null ? $"{name}: {type} = {defaultValue}" : $"{name}: {type}";
         }
     }
 
@@ -937,14 +1159,14 @@ public static class StubWriter
 
         // Single-line docstring for short summaries without extras
         if (doc.Remarks == null && doc.Parameters.Count == 0 && doc.Exceptions.Count == 0
-            && summary.Length < 80 && !summary.Contains('\n'))
+            && summary!.Length < 80 && !summary.Contains('\n'))
         {
             sb.Indent().AppendLine($"\"\"\"{EscapeDocstring(summary)}\"\"\"");
             return true;
         }
 
         // Multi-line docstring
-        sb.Indent().AppendLine($"\"\"\"{EscapeDocstring(summary)}");
+        sb.Indent().AppendLine($"\"\"\"{EscapeDocstring(summary!)}");
 
         if (doc.Remarks != null)
         {
