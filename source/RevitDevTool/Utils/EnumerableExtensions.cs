@@ -1,4 +1,5 @@
-﻿namespace RevitDevTool.Utils;
+﻿using Python.Runtime;
+namespace RevitDevTool.Utils;
 
 [PublicAPI]
 public static class EnumerableExtensions
@@ -43,5 +44,33 @@ public static class EnumerableExtensions
             }
         }
         items.Clear();
+    }
+
+    public static List<object> AsObjectCollection(this PyObject pyObject)
+    {
+        if (!pyObject.IsIterable()) throw new ArgumentException("PyObject is not iterable", nameof(pyObject));
+        var netList = new List<object>();
+        using (Py.GIL())
+        {
+            dynamic pyList = pyObject;
+            foreach (dynamic item in pyList)
+            {
+                var managedItem = item.AsManagedObject(typeof(object));
+                if (managedItem is null) continue;
+                switch (managedItem)
+                {
+                    case PyObject nestedPyObj when nestedPyObj.IsIterable():
+                        netList.AddRange(nestedPyObj.AsObjectCollection());
+                        break;
+                    case IEnumerable<object> enumerable when managedItem is not string:
+                        netList.AddRange(enumerable);
+                        break;
+                    default:
+                        netList.Add(managedItem);
+                        break;
+                }
+            }
+        }
+        return netList;
     }
 }
