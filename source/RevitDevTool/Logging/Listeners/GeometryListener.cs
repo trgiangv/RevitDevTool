@@ -1,5 +1,7 @@
 using System.Diagnostics;
+using Python.Runtime;
 using RevitDevTool.Controllers;
+using RevitDevTool.Utils;
 namespace RevitDevTool.Logging.Listeners;
 
 public sealed class GeometryListener : TraceListener
@@ -37,8 +39,9 @@ public sealed class GeometryListener : TraceListener
         IEnumerable<XYZ> xyz => Trace(xyz),
         IEnumerable<BoundingBoxXYZ> boxes => Trace(boxes),
 
-        // Mixed object collection (typically IronPython output)
+        // Mixed object collection (typically IronPython/Cpython lists)
         ICollection<object> objects => ProcessMixedCollection(objects),
+        PyObject pyObject when pyObject.IsIterable() => ProcessMixedCollection(pyObject.AsObjectCollection()),
 
         _ => false
     };
@@ -87,7 +90,7 @@ public sealed class GeometryListener : TraceListener
         foreach (var group in grouped)
         {
             if (group.Key == typeof(object)) continue;
-            VisualizationController.Add(group);
+            VisualizationController.Add(group.AsEnumerable());
         }
     }
 }
