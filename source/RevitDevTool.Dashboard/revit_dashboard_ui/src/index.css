@@ -1,0 +1,54 @@
+/**
+ * Minimal global styles.
+ * All component styling is handled by Semi Design.
+ * Semi dark mode: body[theme-mode='dark'] — toggled by ThemeProvider.
+ */
+
+:root {
+  font-family: "Inter", "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  line-height: 1.5;
+  font-weight: 400;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+/* Semi Design recommended body defaults — auto-adapts light/dark */
+body {
+  margin: 0;
+  min-width: 320px;
+  min-height: 100vh;
+  color: var(--semi-color-text-0);
+  background-color: var(--semi-color-bg-0);
+}
+
+/* Minimal scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--semi-color-fill-2);
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--semi-color-fill-1);
+}
+
+/* Semi Layout Sider: prevent flex stretch */
+.semi-layout-sider {
+  flex: none !important;
+}

@@ -1,0 +1,33 @@
+[project]
+name = "RevitDevTool.Dashboard"
+version = "0.2.0"
+description = "BIM data analytics dashboard for Revit — PythonNet + WebView2 + React"
+readme = "README.md"
+requires-python = ">=3.13"
+dependencies = [
+    "polars==1.38.1",
+    "numpy==2.4.2",
+    "openpyxl==3.1.5",
+    "pydantic==2.12.5",
+    "shapely==2.1.2",
+    "trimesh==4.11.2",
+    "scikit-learn==1.8.0",
+]
+
+[tool.ruff]
+line-length = 120
+target-version = "py313"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "B", "I", "C90"]
+ignore = ["E501", "E712"]
+
+[tool.ruff.lint.mccabe]
+max-complexity = 15
+
+[tool.mypy]
+python_version = "3.13"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = false
+ignore_missing_imports = true
