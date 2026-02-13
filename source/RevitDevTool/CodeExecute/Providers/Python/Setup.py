@@ -1,6 +1,8 @@
 import sys
+import os
 import builtins
 import clr
+import site
 
 clr.AddReference("RevitAPI")
 clr.AddReference('RevitAPIUI')
@@ -12,13 +14,18 @@ clr.AddReference("Revit.Async")
 if int(__revit__.Application.VersionNumber) >= 2024:
     clr.AddReference("Microsoft.Web.WebView2.Wpf")
     clr.AddReference("Microsoft.Web.WebView2.Core")
-    
+
 if int(__revit__.Application.VersionNumber) >= 2025:
     clr.AddReference("System.Console")
-    clr.AddReference("System.Diagnostics.TraceSource")
+    clr.AddReference("System.Diagnostics.TraceSource") 
 
 if __root__ not in sys.path:
     sys.path.append(__root__)
+
+# Ensure newly-installed packages are importable in the same runtime session.
+site_packages = os.path.join(sys.prefix, "Lib", "site-packages")
+if site_packages and os.path.isdir(site_packages) and site_packages not in sys.path:
+    site.addsitedir(site_packages)
 
 def custom_print(*args, sep=' ', end='\n'):
     # To use Trace Visualization, pass objects as separate arguments: print("Label", obj)
