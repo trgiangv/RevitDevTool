@@ -51,6 +51,7 @@
         <PackageReference Include="ILRepack"/>
         <PackageReference Include="Microsoft-WindowsAPICodePack-Shell" Condition="$(TargetFramework.StartsWith('net4'))"/>
         <PackageReference Include="System.Reflection.MetadataLoadContext"/>
+        <PackageReference Include="System.Net.Http" Condition="$(TargetFramework.StartsWith('net4'))"/>
     </ItemGroup>
 
     <ItemGroup>
@@ -59,7 +60,6 @@
 
     <ItemGroup>
         <Resource Include="resources\icons\*.*"/>
-        <EmbeddedResource Include="resources\uv\*.*"/>
     </ItemGroup>
 
     <!-- Start Revit -->
