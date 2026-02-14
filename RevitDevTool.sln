@@ -22,7 +22,7 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Installer", "install\Instal
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RevitDevTool", "source\RevitDevTool\RevitDevTool.csproj", "{DD53351A-AD4D-48A0-897F-EA44F84A6A52}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RevitDevTool.Test", "source\RevitDevTool.Test\RevitDevTool.Test.csproj", "{33C90C02-CA4E-4C48-B60D-D8F0EB44A8EB}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RevitDevTool.DotnetDemo", "source\RevitDevTool.DotnetDemo\RevitDevTool.DotnetDemo.csproj", "{33C90C02-CA4E-4C48-B60D-D8F0EB44A8EB}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PythonNetStubGenerator", "source\PythonNetStubGenerator\PythonNetStubGenerator.csproj", "{7366EE36-0B1D-4E55-A444-7E3C77866DAF}"
 EndProject
