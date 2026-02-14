@@ -219,7 +219,6 @@ public static class PythonExecutor
         const string resetCode = """
                                 import os
                                 import sys
-                                import gc
                                 import importlib
 
                                 root = os.path.abspath(__root__) if __root__ else ""
@@ -242,31 +241,16 @@ public static class PythonExecutor
                                             continue
 
                                         for target in normalized_targets:
-                                            if mod_path.startswith(target):
-                                                to_remove.append(name)
-                                                break
-
-                                    before_count = len(to_remove)
+                                            try:
+                                                if os.path.commonpath([mod_path, target]) == target:
+                                                    to_remove.append(name)
+                                                    break
+                                            except Exception:
+                                                continue
                                     for name in to_remove:
                                         sys.modules.pop(name, None)
 
-                                    # Also clear path importer cache for affected roots
-                                    cache_keys_to_remove = []
-                                    for key in sys.path_importer_cache.keys():
-                                        try:
-                                            cache_path = os.path.normcase(os.path.abspath(key))
-                                        except Exception:
-                                            continue
-                                        for target in normalized_targets:
-                                            if cache_path.startswith(target):
-                                                cache_keys_to_remove.append(key)
-                                                break
-
-                                    for key in cache_keys_to_remove:
-                                        sys.path_importer_cache.pop(key, None)
-
                                 importlib.invalidate_caches()
-                                gc.collect()
                                 """;
         scope.Exec(resetCode);
     }
