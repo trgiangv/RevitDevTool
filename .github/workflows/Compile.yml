@@ -6,10 +6,42 @@ on:
       - '*'
   pull_request:
 
+concurrency:
+  group: ci-build-release-lock
+  cancel-in-progress: true
+
 jobs:
-  compile:
-    name: Compile
+  prepare:
+    name: Prepare compile matrix
     runs-on: windows-2022
+    outputs:
+      versions: ${{ steps.versions.outputs.versions }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Read versions from Directory.Build.props
+        id: versions
+        shell: pwsh
+        run: |
+          $propsContent = Get-Content "source/Directory.Build.props" -Raw
+          $matches = [regex]::Matches($propsContent, 'Release\s+(R\d+)', [System.Text.RegularExpressions.RegexOptions]::IgnoreCase)
+          $versions = @($matches | ForEach-Object { $_.Groups[1].Value.ToUpperInvariant() } | Sort-Object -Unique)
+          if ($versions.Count -eq 0) {
+            throw "No Release Rxx configurations found in source/Directory.Build.props"
+          }
+
+          $versionsJson = $versions | ConvertTo-Json -Compress
+          "versions=$versionsJson" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
+
+  compile:
+    needs: prepare
+    name: Compile ${{ matrix.version }}
+    runs-on: windows-2022
+    strategy:
+      fail-fast: false
+      matrix:
+        version: ${{ fromJson(needs.prepare.outputs.versions) }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -20,7 +52,7 @@ jobs:
           path: |
             .nuke/temp
             ~/.nuget/packages
-          key: ${{ runner.os }}-${{ hashFiles('**/global.json', '**/*.csproj', '**/Directory.Packages.props') }}
+          key: ${{ runner.os }}-${{ matrix.version }}-${{ hashFiles('**/global.json', '**/*.csproj', '**/Directory.Packages.props') }}
 
       - name: Compile solution
-        run: ./.nuke/build.cmd
+        run: ./.nuke/build.cmd --configurations "Release ${{ matrix.version }}"

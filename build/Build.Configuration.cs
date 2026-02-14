@@ -1,4 +1,4 @@
-﻿using Nuke.Common.Git;
+using Nuke.Common.Git;
 using Nuke.Common.ProjectModel;
 using Nuke.Common.Tools.Git;
 
@@ -7,6 +7,7 @@ sealed partial class Build
     /// <summary>
     ///     Patterns of solution configurations for compiling.
     /// </summary>
+    [Parameter]
     string[] Configurations =
     [
         "Release*"

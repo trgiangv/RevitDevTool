@@ -11,6 +11,10 @@ on:
         required: true
         type: string
 
+concurrency:
+  group: ci-build-release-lock
+  cancel-in-progress: true
+
 jobs:
   release:
     name: Publish release
