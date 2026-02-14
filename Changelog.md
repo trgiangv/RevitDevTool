@@ -1,3 +1,171 @@
+# 2.1.0
+
+## 🚀 Major Features
+
+### Python Ecosystem Integration
+
+A complete Python runtime environment with professional package management and development tools:
+
+- **Python Script Execution**
+  - Execute Python scripts directly in Revit with native Python runtime
+  - Support for PEP 723 inline script metadata for dependency declarations
+  - Built-in `__file__` variable for script file path access
+  - Enhanced stdout/stderr redirection for better debugging
+  - Support for processing Python iterable objects (lists, tuples, generators) in GeometryListener
+
+- **Python Dependency Management**
+  - Integrated `uv` package manager for fast, reliable Python package installation
+  - Professional dependency resolution and conflict management
+  - UI for installing and managing Python packages
+  - Automatic detection of newly-installed packages for immediate use
+  - Support for `pyproject.toml` dependency specifications
+
+  ![Python Dependency Management](https://github.com/trgiangv/RevitDevTool/wiki/images/RevitDevTool_PythonDependencyResolve.gif)
+
+- **Python Stub Generator (PythonNetStubGenerator)**
+  - Generate Python type stubs (.pyi) from .NET assemblies for IntelliSense support
+  - Complete support for methods, properties, events, and nested types
+  - XML documentation comments extraction and conversion
+  - Enhanced IDE experience with autocomplete and type hints
+
+  ![Python Stubs](https://github.com/trgiangv/RevitDevTool/wiki/images/RevitDevTool_PythonStubs.png)
+
+- **Enhanced Python Type System**
+  - Improved type conversion for delegates and indexers
+  - Better handling of Python-to-.NET type conversions
+  - Support for complex Python data structures
+
+### Code Execution System (NEW)
+
+Brand new code execution infrastructure built from scratch with modern design patterns:
+
+- **Unified Execution System**
+  - Strategy Pattern implementation for DotNet and Python execution
+  - Centralized ExecutionOrchestrator for managing execution workflows
+  - Clean separation between execution providers and strategies
+  - Support for multiple execution modes (File, Selection, Addin)
+
+- **Tree-Based Code Structure**
+  - New tree model for representing directory and file hierarchies
+  - Efficient tree state management with caching
+  - Smart file watching with debouncing for hot reload
+  - Enhanced tree operations (expand, collapse, refresh)
+  - Visual feedback with highlight ranges for executed code
+
+  ![Code Execute Hot Reload](https://github.com/trgiangv/RevitDevTool/wiki/images/RevitDevTool_CodeExecuteHotReload.gif)
+
+- **Add-in Manager**
+  - Load and execute external Revit add-ins (.dll) dynamically
+  - Assembly Load Context isolation for proper unloading
+  - Track last executed add-in for quick re-execution
+  - Support for IExternalCommand implementations
+
+### Python Dashboard Demo
+
+Professional-grade Python analytics dashboard showcasing advanced integration:
+
+- **Modern Web-Based UI**
+  - Built with React, TypeScript, and TailwindCSS
+  - Hosted in WebView2 with seamless Revit integration
+  - Real-time bidirectional communication bridge
+  - Support for light/dark themes
+
+  ![Python Dashboard](https://github.com/trgiangv/RevitDevTool/wiki/images/RevitDevTool_PythonDashboard.png)
+
+- **Comprehensive Analytics**
+  - Project metrics and statistics dashboard
+  - Family and category inventory analysis
+  - Health monitoring with warnings matrix
+  - Heavy families tracker for performance optimization
+  - Schedule data explorer with export to Excel
+
+- **Advanced Features**
+  - Element filtering and selection synchronization
+  - Keyboard shortcuts for power users
+  - Session history tracking
+  - Automatic data refresh with progress indicators
+
+  ![Python Demo](https://github.com/trgiangv/RevitDevTool/wiki/images/RevitDevTool_PythonDemo.gif)
+
+## 🎯 New Features
+
+- **Code Execute View**
+  - New dockable panel for code execution interface
+  - Tree view with directory and file browsing
+  - Syntax highlighting for selected code regions
+  - Double-click to execute files or selections
+
+- **Trace Toggle Setting**
+  - New `IsTraceEnabled` setting to enable/disable trace listener
+  - Improves performance when tracing is not needed
+  - Configurable via settings UI
+
+- **CSharp Execution Thread Safety**
+  - Wrapped command execution in external event handler
+  - Prevents threading issues when executing code from UI
+
+- **Python Package Imports**
+  - Ensured newly-installed packages are immediately importable
+  - Fixed module path resolution after package installation
+
+## 📚 Documentation
+
+- **Comprehensive Architecture Documentation**
+  - Added architecture guides for all major modules:
+    - Code Execution (Strategy Pattern, Tree Model)
+    - Logging System (Listeners, Theme System, Python Integration)
+    - Visualization System (Geometry Processing)
+    - Python Demo (Dashboard, WebView2 Integration)
+    - PythonNetStubGenerator (Stub Generation Process)
+  - Developer guides for extending functionality
+  - Detailed README files with diagrams and examples
+
+## 🔧 Improvements
+
+- **Refactored Logging Infrastructure**
+  - Reorganized listeners for better modularity
+  - Improved separation between LoggerTraceListener and NotifyListener
+  - Enhanced GeometryListener with Python iterable support
+  - Better error handling and diagnostics
+
+- **Optimized File Operations**
+  - Enhanced file watching with better performance
+  - Debouncing for file change events
+  - Reduced unnecessary tree refreshes
+
+- **Code Quality**
+  - Cleaned up invalid assembly and directory paths
+  - Simplified module removal logic in PythonExecutor
+  - Better script execution and output handling
+  - More robust error handling throughout
+
+- **Settings Management**
+  - Added CodeExecuteConfig for execution-related settings
+  - Improved settings persistence and loading
+  - Better validation for configuration values
+
+## 🐛 Fixes
+
+- **Dockable Pane Visibility**
+  - Streamlined visibility handling for trace command
+  - Better state management for floating vs docked windows
+
+## 🛠️ Technical Changes
+
+- **Build System**
+  - Added Git LFS filters for executable and archive files (.exe, .dll, .msi, .zip)
+  - Updated global.json for SDK compatibility
+  - Enhanced project dependencies management
+
+- **Resources**
+  - Added Python icon (python32.png) for UI consistency
+  - Bundled uv executables (uv.exe, uvw.exe, uvx.exe) for offline package management
+  - Moved and reorganized image assets
+
+---
+
+**Stats**: 236 files changed, 32,835 insertions(+), 773 deletions(-)
+
 # 2.0.1
 
 ## Fixed
