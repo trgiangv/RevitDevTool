@@ -1,9 +1,16 @@
 # RevitDevTool
 
-**Comprehensive developer toolkit for Autodesk Revit with code execution, visualization, and logging.**
+<p align="left">
+Comprehensive developer toolkit for Autodesk Revit with code execution, visualization, and logging.
+</p>
 
-[![Revit Versions](https://img.shields.io/badge/Revit-2022--2026-blue.svg)](https://www.autodesk.com/products/revit)
-[![License](https://img.shields.io/badge/License-GNU-green.svg)](LICENSE)
+<div align="center">
+    <a href="https://github.com/trgiangv/RevitDevTool/releases/latest"><img src="https://img.shields.io/badge/Revit-2022--2026-blue.svg?style=for-the-badge" alt="RevitVersion"></a>
+    <a href="https://github.com/trgiangv/RevitDevTool/releases/latest"><img src="https://img.shields.io/github/v/release/trgiangv/RevitDevTool?style=for-the-badge" alt="Badge"></a>
+    <a href="https://github.com/trgiangv/RevitDevTool/releases/latest"><img src="https://img.shields.io/github/downloads/trgiangv/RevitDevTool/total?style=for-the-badge" alt="Badge"></a>
+    <a href="https://github.com/trgiangv/RevitDevTool/commits/develop"><img src="https://img.shields.io/github/last-commit/trgiangv/RevitDevTool/develop?style=for-the-badge" alt="Badge"></a>
+    <a href="https://github.com/trgiangv/RevitDevTool/actions?query=branch%3Adevelop"><img src="https://img.shields.io/github/check-runs/trgiangv/RevitDevTool/develop?style=for-the-badge&logo=github&label=Build" alt="Badge"></a>
+</div>
 
 ---
 
@@ -23,8 +30,8 @@ RevitDevTool provides three integrated modules for Revit development:
 
 ## 📸 Visual Demos
 
-### Logging with Syntax Highlighting
-![Logging Demo](https://github.com/trgiangv/RevitDevTool/wiki/images/RevitDevTool_MonitorLogging.gif)
+### Montior Logging
+![Montior Logging](https://github.com/trgiangv/RevitDevTool/wiki/images/RevitDevTool_MonitorLogging.gif)
 
 ### Stack Traces
 ![Stack Trace](https://github.com/trgiangv/RevitDevTool/wiki/images/RevitDevTool_StackTrace.gif)
@@ -32,11 +39,11 @@ RevitDevTool provides three integrated modules for Revit development:
 ### Geometry Visualization
 ![Geometry Visualization](https://github.com/trgiangv/RevitDevTool/wiki/images/RevitDevTool_TraceGeometry.gif)
 
-### Save Log Output
-![Save Log](https://github.com/trgiangv/RevitDevTool/wiki/images/RevitDevTool_FileLogging.gif)
+### File Logging
+![File Logging](https://github.com/trgiangv/RevitDevTool/wiki/images/RevitDevTool_FileLogging.gif)
 
-### Window Behavior
-![Window Behavior](https://github.com/trgiangv/RevitDevTool/wiki/images/RevitDevTool_AutoFloating.gif)
+### Floating Window
+![Floating Window](https://github.com/trgiangv/RevitDevTool/wiki/images/RevitDevTool_AutoFloating.gif)
 
 ---
 
@@ -153,7 +160,8 @@ RevitDevTool/
 │   ├── RevitDevTool.DotnetDemo/   # .NET demo: Basic examples (logging, geometry)
 │   └── PythonNetStubGenerator/    # Type stub generator for Revit API
 ├── docs/                          # Architecture documentation
-└── install/                       # Installer scripts
+├── install/                       # Installer scripts
+└── build/                         # Nuke build
 ```
 
 ### Contributing
@@ -164,12 +172,12 @@ Contributions are welcome! See [GitHub Discussions](https://github.com/trgiangv/
 
 ## 🙏 Acknowledgments
 
-Special thanks to:
-
-- [**RevitLookup**](https://github.com/lookup-foundation/RevitLookup) - DirectContext3D implementation reference
-- [**RevitDevTool (Original)**](https://github.com/Zhuangkh/RevitDevTool) - Original project inspiration
-- [**RevitAddinManager**](https://github.com/chuongmep/RevitAddinManager) - Add-in hot reload patterns
-- [**pyRevit**](https://github.com/pyrevitlabs/pyRevit) - Python integration inspiration
+- [RevitDevTool](https://github.com/trgiangv/RevitDevTool) - DirectContext3D implementation reference
+- [RevitDevTool (Original)](https://github.com/Zhuangkh/RevitDevTool) - Original project inspiration
+- [RevitAddinManager](https://github.com/chuongmep/RevitAddinManager) - Add-in hot reload patterns
+- [pyRevit](https://github.com/pyrevitlabs/pyRevit) - Python integration inspiration
+- [Dynamo](https://github.com/DynamoDS/Dynamo) - Visual programming
+- [RevitPythonShell](https://github.com/architecture-building-systems/revitpythonshell) - IronPython REPL
 
 ---
 
@@ -184,18 +192,3 @@ This project is licensed under the MIT License - see [LICENSE](LICENSE) file for
 - **Issues**: [GitHub Issues](https://github.com/trgiangv/RevitDevTool/issues)
 - **Discussions**: [GitHub Discussions](https://github.com/trgiangv/RevitDevTool/discussions)
 - **Wiki**: [Documentation Wiki](https://github.com/trgiangv/RevitDevTool/wiki)
-
----
-
-## 🔖 Related Projects
-
-- [pyRevit](https://github.com/pyrevitlabs/pyRevit) - IronPython scripting for Revit
-- [RevitLookup](https://github.com/lookup-foundation/RevitLookup) - Revit database exploration
-- [RevitPythonShell](https://github.com/architecture-building-systems/revitpythonshell) - IronPython REPL
-- [Dynamo](https://github.com/DynamoDS/Dynamo) - Visual programming for Revit
-
----
-
-**Revit Versions:** 2022 • 2023 • 2024 • 2025 • 2026  
-**Python:** CPython 3.x (via Python.NET) or IronPython 2.7+  
-**Last Updated:** February 14, 2026
