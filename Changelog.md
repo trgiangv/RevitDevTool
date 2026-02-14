@@ -1,3 +1,32 @@
+# 2.1.1
+
+## 🎯 New Features
+
+- **Python UV Installer Improvements**
+  - Added robust UV installation and update management flow
+  - Improved detection and handling for local UV binaries
+  - Enhanced reliability for Python package tooling bootstrap
+
+## 🔧 Improvements
+
+- **CI Workflow Enhancements**
+  - Compile workflow now builds per-Revit version via dynamic matrix
+  - Matrix versions are derived from `source/Directory.Build.props` to avoid hardcoded values
+  - Added workflow concurrency controls with auto-cancel on newer runs
+  - Added cross-workflow lock so compile and release do not run in parallel
+
+- **Build Configuration Flexibility**
+  - Exposed build configuration patterns as Nuke parameter for targeted CI builds
+
+## 🛠️ Technical Changes
+
+- Updated dependency definitions for Python/UV execution path
+- Refined UV resource handling in project configuration
+
+---
+
+**Stats**: 9 files changed, 221 insertions(+), 34 deletions(-)
+
 # 2.1.0
 
 ## 🚀 Major Features
