@@ -45,7 +45,7 @@ RevitDevTool provides three integrated modules for Revit development:
 ### CodeExecute
 - ✅ Execute Python 3.13 scripts with CPython + PythonNet3
 - ✅ PEP 723 inline dependency declaration
-- ✅ Automatic package installation with UV resolver
+- ✅ Automatic package installation with [UV](https://github.com/astral-sh/uv) resolver
 - ✅ .NET hot-reload (no temp folder copying)
 - ✅ File watcher for instant reload
 
@@ -126,7 +126,8 @@ Technical documentation for developers and contributors:
 ### Building from Source
 
 ```bash
-# Clone repository
+# Clone repository with Git LFS support
+git lfs install
 git clone https://github.com/trgiangv/RevitDevTool.git
 cd RevitDevTool
 
@@ -136,6 +137,8 @@ dotnet restore
 # Build for specific Revit version (R22, R23, R24, R25, R26)
 dotnet build RevitDevTool.sln -c "Release R25"
 ```
+
+**Note:** This project uses [Git LFS](https://git-lfs.com/) for binary files. Make sure you have Git LFS installed before cloning.
 
 ### Project Structure
 
@@ -165,7 +168,8 @@ Special thanks to:
 
 - [**RevitLookup**](https://github.com/lookup-foundation/RevitLookup) - DirectContext3D implementation reference
 - [**RevitDevTool (Original)**](https://github.com/Zhuangkh/RevitDevTool) - Original project inspiration
-- **Autodesk Revit Team** - For the comprehensive Revit API
+- [**RevitAddinManager**](https://github.com/chuongmep/RevitAddinManager) - Add-in hot reload patterns
+- [**pyRevit**](https://github.com/pyrevitlabs/pyRevit) - Python integration inspiration
 
 ---
 
