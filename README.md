@@ -172,7 +172,7 @@ Contributions are welcome! See [GitHub Discussions](https://github.com/trgiangv/
 
 ## 🙏 Acknowledgments
 
-- [RevitDevTool](https://github.com/trgiangv/RevitDevTool) - DirectContext3D implementation reference
+- [RevitLookup](https://github.com/lookup-foundation/RevitLookup) - DirectContext3D implementation reference
 - [RevitDevTool (Original)](https://github.com/Zhuangkh/RevitDevTool) - Original project inspiration
 - [RevitAddinManager](https://github.com/chuongmep/RevitAddinManager) - Add-in hot reload patterns
 - [pyRevit](https://github.com/pyrevitlabs/pyRevit) - Python integration inspiration
