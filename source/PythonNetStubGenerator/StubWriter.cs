@@ -614,8 +614,28 @@ public static class StubWriter
     }
 
     private static bool IsPropertyAccessor(MethodInfo it)
-        => it.IsSpecialName && (it.Name.StartsWith("set_") || it.Name.StartsWith("get_")
-                                || it.Name.StartsWith("add_") || it.Name.StartsWith("remove_"));
+    {
+        if (!it.IsSpecialName) return false;
+        return IsPropertyGetterOrSetter(it) || IsEventAccessor(it);
+    }
+
+    private static bool IsPropertyGetterOrSetter(MethodInfo method)
+    {
+        // Property getters have zero parameters: get_PropertyName()
+        // Property setters have exactly one parameter: set_PropertyName(value)
+        // Regular methods like get_Parameter(BuiltInParameter) should NOT be filtered
+        var paramCount = method.GetParameters().Length;
+        var isGetter = method.Name.StartsWith("get_") && paramCount == 0;
+        var isSetter = method.Name.StartsWith("set_") && paramCount == 1;
+        return isGetter || isSetter;
+    }
+
+    private static bool IsEventAccessor(MethodInfo method)
+    {
+        // Event accessors (add_/remove_) always have exactly 1 parameter (the handler)
+        var isEventMethod = method.Name.StartsWith("add_") || method.Name.StartsWith("remove_");
+        return isEventMethod && method.GetParameters().Length == 1;
+    }
 
     private static bool NeedsMethodGroup(List<MethodInfo> methods)
         => (!methods.Any(IsOperator) && methods.Count > 1) || methods.Any(it => it.IsGenericMethodDefinition);
