@@ -589,17 +589,29 @@ public static class StubWriter
         StringBuilder sb, Type stubType, IGrouping<string, MethodInfo> methodGroup)
     {
         var methods = methodGroup.ToList();
-        if (!NeedsMethodGroup(methods))
+        var genericMethods = methods.Where(m => m.IsGenericMethodDefinition).ToList();
+        var nonGenericMethods = methods.Where(m => !m.IsGenericMethodDefinition).ToList();
+
+        var didWrite = false;
+
+        // Write non-generic overloads as standard methods with @typing.overload
+        var useOverload = nonGenericMethods.Count > 1 || genericMethods.Count > 0;
+        foreach (var method in nonGenericMethods)
         {
-            return methods.Aggregate(false, (current, method) => current | WriteSimpleMethod(sb, method, methods.Count > 1));
+            didWrite |= WriteSimpleMethod(sb, method, useOverload);
         }
 
-        if (stubType.IsInterface && methods.Any(it => it is { IsStatic: true, IsAbstract: true }))
-            return false;
+        // Write generic methods in a _MethodGroup (hidden with _ prefix)
+        if (genericMethods.Count > 0)
+        {
+            if (stubType.IsInterface && genericMethods.Any(it => it is { IsStatic: true, IsAbstract: true }))
+                return didWrite;
 
-        sb.Indent().AppendLine($"# Skipped {methodGroup.Key} due to it being static, abstract and generic.");
-        WriteMethodGroup(sb, methodGroup, methodGroup.Key);
-        return true;
+            WriteMethodGroup(sb, genericMethods, methodGroup.Key);
+            didWrite = true;
+        }
+
+        return didWrite;
     }
 
     private static void WriteIEnumerableIterator(StringBuilder sb, Type stubType)
@@ -638,7 +650,7 @@ public static class StubWriter
     }
 
     private static bool NeedsMethodGroup(List<MethodInfo> methods)
-        => (!methods.Any(IsOperator) && methods.Count > 1) || methods.Any(it => it.IsGenericMethodDefinition);
+        => methods.Any(it => it.IsGenericMethodDefinition);
 
     private static bool IsOperator(MethodBase method) => method.IsSpecialName && method.Name.StartsWith("op_");
 
@@ -871,7 +883,7 @@ public static class StubWriter
         sb.AppendLine();
 
 
-        var className = $"{methodName}_MethodGroup";
+        var className = $"_{methodName}_MethodGroup";
 
         var currentGenerics = ClassScope.AccessibleGenerics.Select(it => it.ToPythonType()).CommaJoin();
 
@@ -980,7 +992,7 @@ public static class StubWriter
         // use first method to get info
         var templateMethod = methodInfos[0];
         var templateArguments = templateMethod.GetGenericArguments();
-        var methodClassName = templateMethod.CleanName();
+        var methodClassName = $"_{templateMethod.CleanName()}";
 
         var aliasDictionary = new Dictionary<Type, string>();
         var aliases = new List<string>();
