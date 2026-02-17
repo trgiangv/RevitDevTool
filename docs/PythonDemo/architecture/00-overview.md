@@ -49,42 +49,37 @@ RevitDevTool.PythonDemo/
 
 ### Dashboard Application Components
 
-```
-┌─────────────────────────────────────────────────────────────┐
-│                       Revit Host                            │
-│                                                             │
-│  ┌──────────────────────────────────────────────────────┐  │
-│  │      Python Backend (revit_dashboard/)               │  │
-│  │                                                      │  │
-│  │  ┌──────────────┐    ┌─────────────────────────┐   │  │
-│  │  │  Collector   │───▶│  Analytics Engine       │   │  │
-│  │  │  (Revit API) │    │  (Polars)               │   │  │
-│  │  └──────────────┘    └─────────────┬───────────┘   │  │
-│  │                                     │               │  │
-│  │                                     ▼               │  │
-│  │  ┌──────────────────────────────────────────────┐  │  │
-│  │  │         Presentation Layer                   │  │  │
-│  │  │  ┌────────────────────────────────────────┐  │  │
-│  │  │  │  WebView2 Host (C# + Python.NET)      │  │  │
-│  │  │  │  ┌──────────────────────────────────┐ │  │  │
-│  │  │  │  │  React Frontend (dashboard-ui)   │ │  │  │
-│  │  │  │  │  - Data visualization            │ │  │  │
-│  │  │  │  │  - Dynamic filters               │ │  │  │
-│  │  │  │  │  - Export triggers               │ │  │  │
-│  │  │  │  └──────────────────────────────────┘ │  │  │
-│  │  │  └────────────────────────────────────────┘  │  │
-│  │  └──────────────────────────────────────────────┘  │  │
-│  │                       ▲            │                │  │
-│  └───────────────────────┼────────────┼────────────────┘  │
-│                          │            ▼                   │
-│                    Data Injection   postMessage           │
-│                                      │                    │
-│  ┌──────────────────────────────────┼────────────────┐   │
-│  │  Excel Exporter                  │                │   │
-│  │  (openpyxl)                      └────────────────┼──▶│
-│  └────────────────────────────────────────────────────┘   │
-│                                                            │
-└────────────────────────────────────────────────────────────┘
+```mermaid
+flowchart TB
+    subgraph Revit["Revit Host"]
+        subgraph Backend["Python Backend (revit_dashboard/)"]
+            Collector["Collector<br/>(Revit API)"]
+            Analytics["Analytics Engine<br/>(Polars)"]
+            
+            Collector -->|Element data| Analytics
+            
+            subgraph Presentation["Presentation Layer"]
+                WebView["WebView2 Host<br/>(C# + Python.NET)"]
+                
+                subgraph Frontend["React Frontend (dashboard-ui)"]
+                    Viz["Data visualization"]
+                    Filters["Dynamic filters"]
+                    Export["Export triggers"]
+                end
+                
+                WebView --> Frontend
+            end
+            
+            Analytics -->|Payload| Presentation
+        end
+        
+        Exporter["Excel Exporter<br/>(openpyxl)"]
+        
+        Presentation -->|Data Injection| WebView
+        Frontend -->|postMessage| Backend
+        Frontend -->|Export request| Exporter
+        Exporter -->|Excel file| Frontend
+    end
 ```
 
 ---
@@ -94,6 +89,34 @@ RevitDevTool.PythonDemo/
 ### A. Demo Scripts (`commands/*.py`)
 
 Each script demonstrates specific RevitDevTool features:
+
+#### Debugging Scripts
+- **`debugpy_script.py`** - Demonstrates VSCode debugger integration with breakpoints
+
+**Pattern:**
+```python
+# /// script
+# dependencies = ["numpy"]
+# ///
+
+from Autodesk.Revit import UI
+
+uidoc : UI.UIDocument = __revit__.ActiveUIDocument
+sel_ids = uidoc.Selection.GetElementIds()
+
+# Set breakpoint here in VSCode
+for eid in sel_ids:
+    el = uidoc.Document.GetElement(eid)
+    print(el.Id, el.Name)  # Inspect variables in debugger
+```
+
+**Debugging workflow:**
+1. Set breakpoints in VSCode
+2. Press F5 → Attach to Revit Python (port 5678)
+3. Execute script in RevitDevTool
+4. Debugger pauses at breakpoints
+5. Inspect variables, step through code
+6. Shift + F5 -> Disconnect debugger
 
 #### Visualization Scripts
 - **`visualization_xyz_script.py`** - Point picking and display
@@ -340,6 +363,7 @@ RevitDevTool.PythonDemo/
 
 ### Demo Scripts
 Each script declares dependencies via PEP 723:
+- **Debugging scripts:** `debugpy==1.8.20` (for VSCode debugger integration)
 - **Visualization scripts:** No dependencies (pure Revit API)
 - **Logging scripts:** No dependencies
 - **Data analysis:** `polars==1.38.1`

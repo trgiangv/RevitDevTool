@@ -2,7 +2,7 @@
 
 This folder contains **internal architecture documentation** for developers contributing to RevitDevTool.
 
-**For user guides and tutorials, see:** [RevitDevTool.Wiki](../../RevitDevTool.Wiki/)
+**For user guides and tutorials, see:** [RevitDevTool.Wiki](https://github.com/trgiangv/RevitDevTool/wiki)
 
 ---
 
@@ -82,7 +82,7 @@ Internal design documentation:
 ## 🎯 For Different Audiences
 
 ### I want to **use** RevitDevTool
-👉 See: [RevitDevTool.Wiki](../../RevitDevTool.Wiki/)
+👉 See: [RevitDevTool.Wiki](https://github.com/trgiangv/RevitDevTool/wiki)
 - User guides and tutorials
 - API usage examples
 - Comparison with other tools
@@ -127,7 +127,7 @@ Internal design documentation:
 
 ## 🔗 Related Documentation
 
-- **User Documentation:** [../RevitDevTool.Wiki/](../../RevitDevTool.Wiki/)
+- **User Documentation:** [RevitDevTool.Wiki](https://github.com/trgiangv/RevitDevTool/wiki)
 - **Source Code:** [../source/](../source/)
 - **Demo Commands (.NET):** [../source/RevitDevTool.DotnetDemo/](../source/RevitDevTool.DotnetDemo/)
 - **Demo Scripts (Python):** [../source/RevitDevTool.PythonDemo/commands/](../source/RevitDevTool.PythonDemo/commands/)
