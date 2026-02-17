@@ -9,7 +9,7 @@ targets = [p for p in (root, script_dir) if p]
 
 if targets:
     normalized_targets = [os.path.normcase(p) for p in targets]
-    to_remove = []
+    to_remove = set()
 
     for name, mod in sys.modules.items():
         path = getattr(mod, "__file__", None)
@@ -24,7 +24,7 @@ if targets:
         for target in normalized_targets:
             try:
                 if os.path.commonpath([mod_path, target]) == target:
-                    to_remove.append(name)
+                    to_remove.add(name)
                     break
             except Exception:
                 continue

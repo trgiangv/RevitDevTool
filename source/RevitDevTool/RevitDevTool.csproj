@@ -60,6 +60,7 @@
 
     <ItemGroup>
         <Resource Include="resources\icons\*.*"/>
+        <EmbeddedResource Include="CodeExecute\Providers\Python\Setup.py" />
     </ItemGroup>
 
     <!-- Start Revit -->

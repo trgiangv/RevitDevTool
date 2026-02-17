@@ -8,6 +8,8 @@ namespace RevitDevTool.CodeExecute.Providers.Python;
 public static class PythonInitializer
 {
     private static readonly SemaphoreSlim InitLock = new(1, 1);
+    public static PyModule? GlobalScope { get; private set; }
+
     public static bool IsInitialized => PythonEngine.IsInitialized 
                                          && Installer.IsPythonInstalled() 
                                          && UvInstaller.IsUvInstalled();
@@ -36,12 +38,45 @@ public static class PythonInitializer
                 PythonEngine.ProgramName = "RevitDevTool";
                 PythonEngine.Initialize();
                 PythonEngine.BeginAllowThreads();
+
+                using (Py.GIL())
+                {
+                    SetupGlobalScope();
+                }
             }
         }
         finally
         {
             InitLock.Release();
         }
+    }
+
+    private static void SetupGlobalScope()
+    {
+        GlobalScope ??= Py.CreateScope("__main__");
+        
+        Action<object> logFunction = obj =>
+        {
+            if (obj is string str)
+            {
+                Trace.Write(str);
+            }
+            else
+            {
+                Trace.Write(obj);
+            }
+        };
+        
+        dynamic builtins = Py.Import("builtins");
+        builtins.__log_func__ = logFunction.ToPython();
+        builtins.__revit__ = Context.UiApplication;
+
+        var assembly = typeof(PythonInitializer).Assembly;
+        var resourceName = assembly.GetManifestResourceNames().FirstOrDefault(name => name.EndsWith("Setup.py", StringComparison.OrdinalIgnoreCase))!;
+        using var stream = assembly.GetManifestResourceStream(resourceName)!;
+        using var reader = new StreamReader(stream);
+        var setupCode = reader.ReadToEnd();
+        GlobalScope.Exec(setupCode);
     }
 
     /// <summary>
@@ -55,10 +90,12 @@ public static class PythonInitializer
         InitLock.Wait();
         try
         {
-            if (PythonEngine.IsInitialized)
+            using (Py.GIL())
             {
-                PythonEngine.Shutdown();
+                GlobalScope?.Dispose();
+                GlobalScope = null;
             }
+            PythonEngine.Shutdown();
         }
         catch (Exception ex)
         {
@@ -125,12 +162,12 @@ public static class PythonInitializer
     public static bool IsDebuggerConnected()
     {
         if (!IsInitialized) return false;
-
-        try
+        
+        using (Py.GIL())
         {
-            using (Py.GIL())
+            using (var scope = Py.CreateScope())
             {
-                using (var scope = Py.CreateScope())
+                try
                 {
                     scope.Exec("""
                                import sys
@@ -139,16 +176,15 @@ public static class PythonInitializer
                                    import debugpy
                                    __is_connected__ = debugpy.is_client_connected()
                                """);
-                    
                     dynamic isConnected = scope.Get("__is_connected__");
                     return (bool)isConnected;
                 }
+                catch (Exception ex)
+                {
+                    Trace.TraceWarning($"Failed to check debugger connection: {ex.Message}");
+                    return false;
+                }
             }
-        }
-        catch (Exception ex)
-        {
-            Trace.TraceWarning($"Failed to check debugger connection: {ex.Message}");
-            return false;
         }
     }
 }
