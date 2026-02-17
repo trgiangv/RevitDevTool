@@ -1,3 +1,90 @@
+# 2.2.0
+
+## 🚀 Major Features
+
+### Python Debugging with VSCode
+
+Full IDE debugging support for Python scripts in Revit:
+
+- **VSCode Debugger Integration**
+  - Set breakpoints directly in VSCode
+  - Step through code execution (F10, F11)
+  - Inspect variables and Revit API objects
+  - Debug console for expression evaluation
+  - Conditional breakpoints support
+  - Visual connection status indicator (🔴/🟢)
+
+  ![Python Debugger](https://github.com/trgiangv/RevitDevTool/wiki/images/RevitDevTool_PythonDebugger.gif)
+
+- **Technical Implementation**
+  - `debugpy` integration via PEP 723 automatic installation
+  - Configurable debug port (default: 5678)
+  - In-process debug adapter for seamless integration
+  - Connection status monitoring in UI
+  - Non-blocking - scripts run normally without debugger attached
+
+- **New Components**
+  - `PythonInitializer` - Manages Python runtime and debugpy listener
+  - `IsDebuggerConnected` property - Real-time connection status
+  - Debug port configuration in General Settings
+  - Status indicator in Trace panel
+
+**Documentation:**
+- [Python Debugging Guide](https://github.com/trgiangv/RevitDevTool/wiki/CodeExecute-PythonDebugging)
+- Demo script: `debugpy_script.py`
+
+## 🎯 New Features
+
+### PythonNet3 Interface Implementation Demo
+
+- **Interface Implementation Workaround**
+  - Added `selectionfilter_script.py` demonstrating `__namespace__` pattern
+  - Shows how to implement .NET interfaces (e.g., `ISelectionFilter`) in PythonNet3
+  - Documents runtime overhead trade-off for dynamic type checking
+
+## 🔧 Improvements
+
+### Python Execution
+
+- **Streamlined Script Execution**
+  - Refactored `PythonExecutor` for cleaner scope management
+  - Improved script content execution flow
+  - Better separation of concerns between initialization and execution
+  - Enhanced error handling and cleanup
+
+### Stub Generation
+
+- **Enhanced Method Writing**
+  - Improved generic type handling in stub generation
+  - Better overload detection and signature writing
+  - More accurate property accessor detection
+  - Enhanced type mapping for complex .NET types
+
+## 📚 Documentation
+
+### Comprehensive Documentation Updates
+
+- **README Enhancements**
+  - Redesigned for better first impression
+  - Visual-first approach with demos and context
+  - Clear value proposition and target audience
+  - Improved structure and navigation
+  - Added comparison tables (vs pyRevit, Python ecosystems)
+
+- **Wiki Updates**
+  - New dedicated [Python Debugging](https://github.com/trgiangv/RevitDevTool/wiki/CodeExecute-PythonDebugging) page
+  - Updated [Python Execution](https://github.com/trgiangv/RevitDevTool/wiki/CodeExecute-PythonExecution) with debugger info
+  - Revised [vs pyRevit](https://github.com/trgiangv/RevitDevTool/wiki/CodeExecute-VsPyRevit) to focus on target audiences
+  - Updated [Python Ecosystems](https://github.com/trgiangv/RevitDevTool/wiki/CodeExecute-PythonEcosystems) with objective analysis
+  - Simplified [CodeExecute Overview](https://github.com/trgiangv/RevitDevTool/wiki/CodeExecute-Overview) to be true overview
+  - Enhanced [Dashboard Example](https://github.com/trgiangv/RevitDevTool/wiki/Examples-Dashboard) with accurate architecture
+
+- **Architecture Documentation**
+  - Converted text diagrams to Mermaid charts for better readability
+  - Updated PythonDemo architecture with debugging workflow
+  - Improved cross-repo link handling (relative paths → URLs)
+  - Removed architecture details from Wiki (moved to docs/)
+
 # 2.1.1
 
 ## 🎯 New Features
