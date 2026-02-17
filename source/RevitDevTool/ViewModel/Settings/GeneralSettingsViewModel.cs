@@ -3,6 +3,7 @@ using CommunityToolkit.Mvvm.Messaging;
 using RevitDevTool.CodeExecute.Providers.Python;
 using RevitDevTool.Controllers;
 using RevitDevTool.Settings;
+using RevitDevTool.Settings.Config;
 using RevitDevTool.Theme;
 using RevitDevTool.ViewModel.Messages;
 // ReSharper disable ReplaceWithFieldKeyword
@@ -13,7 +14,6 @@ public partial class GeneralSettingsViewModel : ObservableValidator, IRecipient<
 {
     private readonly ISettingsService _settingsService;
     
-    private const int DefaultDebugPort = 5678;
     private const int MinAllowedPort = 1024;
     private const int MaxAllowedPort = 65535;
 
@@ -69,7 +69,7 @@ public partial class GeneralSettingsViewModel : ObservableValidator, IRecipient<
     public void RevertIfInvalid()
     {
         if (!GetErrors(nameof(DebugPort)).Any()) return;
-        DebugPort = DefaultDebugPort;
+        DebugPort = GeneralConfig.DefaultDebugPort;
         ClearErrors(nameof(DebugPort));
         OnPropertyChanged(nameof(DebugPort));
     }
@@ -92,7 +92,6 @@ public partial class GeneralSettingsViewModel : ObservableValidator, IRecipient<
         UseHardwareRendering = _settingsService.GeneralConfig.UseHardwareRendering;
         DebugPort = _settingsService.GeneralConfig.DebugPort is >= MinAllowedPort and <= MaxAllowedPort
             ? _settingsService.GeneralConfig.DebugPort
-            : DefaultDebugPort;
-         PythonInitializer.ListenToDebugger();
+            : GeneralConfig.DefaultDebugPort;
     }
 }

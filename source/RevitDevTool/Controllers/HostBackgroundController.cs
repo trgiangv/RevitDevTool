@@ -17,7 +17,6 @@ public sealed class HostBackgroundController(ISettingsService settingsService) :
         CleanLogFolder();
         LoadTheme();
         ToggleHardwareRendering(settingsService);
-        PythonInitializer.ListenToDebugger();
         return Task.CompletedTask;
     }
 
