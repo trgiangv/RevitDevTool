@@ -1,10 +1,10 @@
 # RevitDevTool
 
-<p align="left">
+<p style="vertical-align: center;">
 Comprehensive developer toolkit for Autodesk Revit with code execution, visualization, and logging.
 </p>
 
-<div align="center">
+<div style="vertical-align: center;">
     <a href="https://github.com/trgiangv/RevitDevTool/releases/latest"><img src="https://img.shields.io/badge/Revit-2022--2026-blue.svg?style=for-the-badge" alt="RevitVersion"></a>
     <a href="https://github.com/trgiangv/RevitDevTool/releases/latest"><img src="https://img.shields.io/github/v/release/trgiangv/RevitDevTool?style=for-the-badge" alt="Badge"></a>
     <a href="https://github.com/trgiangv/RevitDevTool/releases/latest"><img src="https://img.shields.io/github/downloads/trgiangv/RevitDevTool/total?style=for-the-badge" alt="Badge"></a>
@@ -14,181 +14,305 @@ Comprehensive developer toolkit for Autodesk Revit with code execution, visualiz
 
 ---
 
-## 🚀 Quick Start
+## 🎯 Why RevitDevTool?
 
-RevitDevTool provides three integrated modules for Revit development:
+**For developers and researchers who need:**
 
-| Module | Description | Documentation |
-|--------|-------------|---------------|
-| **🐍 CodeExecute** | Multi-language code execution with auto dependency management | [User Guide](https://github.com/trgiangv/RevitDevTool/wiki/CodeExecute-Overview) • [Architecture](docs/CodeExecute/architecture/) |
-| **📊 Logging** | Real-time log capture with color coding and JSON formatting | [User Guide](https://github.com/trgiangv/RevitDevTool/wiki/Logging-Overview) • [Architecture](docs/Logging/architecture/) |
-| **🎨 Visualization** | 3D geometry rendering using DirectContext3D | [User Guide](https://github.com/trgiangv/RevitDevTool/wiki/Visualization-Overview) • [Architecture](docs/Visualization/architecture/) |
+- 🐍 **Modern Python** - CPython 3.13 with full ecosystem (pandas, numpy, scikit-learn, AI/ML libraries)
+- 🐛 **VSCode Debugging** - Set breakpoints, step through code, inspect Revit API objects
+- 📦 **Zero-friction dependencies** - Declare packages inline, auto-install with UV (10-15x faster than pip)
+- 🎨 **3D Visualization** - Render geometry directly in Revit view (no model elements)
+- 📊 **Real-time logging** - Color-coded output with stack traces and JSON formatting
 
-**📚 [Full Documentation](https://github.com/trgiangv/RevitDevTool/wiki)** • **🎓 [Getting Started](https://github.com/trgiangv/RevitDevTool/wiki/Home)**
-
----
-
-## 📸 Visual Demos
-
-### Montior Logging
-![Montior Logging](https://github.com/trgiangv/RevitDevTool/wiki/images/RevitDevTool_MonitorLogging.gif)
-
-### Stack Traces
-![Stack Trace](https://github.com/trgiangv/RevitDevTool/wiki/images/RevitDevTool_StackTrace.gif)
-
-### Geometry Visualization
-![Geometry Visualization](https://github.com/trgiangv/RevitDevTool/wiki/images/RevitDevTool_TraceGeometry.gif)
-
-### File Logging
-![File Logging](https://github.com/trgiangv/RevitDevTool/wiki/images/RevitDevTool_FileLogging.gif)
-
-### Floating Window
-![Floating Window](https://github.com/trgiangv/RevitDevTool/wiki/images/RevitDevTool_AutoFloating.gif)
+**Not another Revit add-in loader.** RevitDevTool is a complete development environment focused on **rapid prototyping, computational design, and data science workflows**.
 
 ---
 
-## ✨ Key Features
+## 🎬 See It In Action
 
-### CodeExecute
-- ✅ Execute Python 3.13 scripts with CPython + PythonNet3
-- ✅ PEP 723 inline dependency declaration
-- ✅ Automatic package installation with [UV](https://github.com/astral-sh/uv) resolver
-- ✅ .NET hot-reload (no temp folder copying)
-- ✅ File watcher for instant reload
+### Python Debugging with VSCode
 
-### Logging  
-- ✅ Multi-source capture (Trace, Console, Debug, Python print)
-- ✅ Syntax highlighting with keyword detection
-- ✅ Pretty JSON formatting
-- ✅ Geometry interception → automatic visualization
-- ✅ Python stack trace formatting
+Set breakpoints, inspect variables, step through Revit API calls in real-time.
 
-### Visualization
-- ✅ Real-time 3D geometry display (no model elements)
-- ✅ Support for curves, faces, solids, meshes, points, bounding boxes
-- ✅ DirectContext3D transient rendering
-- ✅ Thread-safe buffering
-- ✅ Performance optimization with caching
+![Python Debugger](https://raw.githubusercontent.com/trgiangv/RevitDevTool/wiki/images/RevitDevTool_PythonDebugger.gif)
+
+**[→ Python Debugging Guide](https://github.com/trgiangv/RevitDevTool/wiki/CodeExecute-PythonDebugging)**
+
+---
+
+### Automatic Dependency Management
+
+Declare packages inline. System auto-installs. No manual pip, no venv setup.
+
+![Python Dependency Resolve](https://raw.githubusercontent.com/trgiangv/RevitDevTool/wiki/images/RevitDevTool_PythonDependencyResolve.gif)
+
+```python
+# /// script
+# dependencies = ["pandas==2.1.0", "numpy>=1.24"]
+# ///
+
+import pandas as pd
+from Autodesk.Revit import DB
+
+doc = __revit__.ActiveUIDocument.Document
+walls = DB.FilteredElementCollector(doc).OfClass(DB.Wall)
+
+data = [{"Name": w.Name, "Area": w.Area} for w in walls]
+df = pd.DataFrame(data)
+print(df.groupby("Level").agg({"Area": ["sum", "mean"]}))
+```
+
+**[→ Python Execution Guide](https://github.com/trgiangv/RevitDevTool/wiki/CodeExecute-PythonExecution)**
+
+---
+
+### Real-time Logging with Stack Traces
+
+Monitor output with color coding, JSON formatting, and Python stack traces.
+
+![Monitor Logging](https://raw.githubusercontent.com/trgiangv/RevitDevTool/wiki/images/RevitDevTool_MonitorLogging.gif)
+
+![Stack Trace](https://raw.githubusercontent.com/trgiangv/RevitDevTool/wiki/images/RevitDevTool_StackTrace.gif)
+
+**[→ Logging Guide](https://github.com/trgiangv/RevitDevTool/wiki/Logging-Overview)**
+
+---
+
+### 3D Geometry Visualization
+
+Render curves, faces, solids directly in Revit view without creating model elements.
+
+![Geometry Visualization](https://raw.githubusercontent.com/trgiangv/RevitDevTool/wiki/images/RevitDevTool_TraceGeometry.gif)
+
+```python
+# Pick edge, visualize automatically
+ref = uidoc.Selection.PickObject(ObjectType.Edge)
+edge = elem.GetGeometryObjectFromReference(ref)
+print(edge)  # Renders in 3D view
+```
+
+**[→ Visualization Guide](https://github.com/trgiangv/RevitDevTool/wiki/Visualization-Overview)**
+
+---
+
+## ⚡ Quick Start
+
+### 1. Install
+
+Download and run the MSI installer from [Releases](https://github.com/trgiangv/RevitDevTool/releases/latest).
+
+### 2. Write Your First Script
+
+Create `hello.script.py`:
+
+```python
+# /// script
+# dependencies = []
+# ///
+
+from Autodesk.Revit import DB
+
+doc = __revit__.ActiveUIDocument.Document
+walls = DB.FilteredElementCollector(doc).OfClass(DB.Wall)
+
+print(f"Found {walls.GetElementCount()} walls")
+```
+
+### 3. Execute
+
+1. Open RevitDevTool panel in Revit
+2. Load folder containing your script
+3. Click Execute
+4. See output in Trace panel
+
+**[→ Complete Getting Started Guide](https://github.com/trgiangv/RevitDevTool/wiki/Home#getting-started)**
+
+---
+
+## 🌟 Key Features
+
+### 🐍 Python Execution
+
+- **CPython 3.13** - Latest Python with full ecosystem access
+- **PEP 723 inline dependencies** - No separate requirements.txt
+- **UV resolver** - Automatic package installation (10-15x faster than pip)
+- **VSCode debugger** - Full IDE debugging with breakpoints
+- **Module isolation** - Clean cache between runs
+- **Type stubs** - Full Revit API autocomplete in IDE
+
+### 🔧 .NET Execution
+
+- **IExternalCommand discovery** - Automatic command detection
+- **FileWatcher** - Auto-reload on assembly changes
+- **Dependency loading** - All DLLs loaded automatically
+- **No temp folder** - Direct execution for Revit 2024- (.NET 4.8)
+
+### 📊 Logging System
+
+- **Multi-source capture** - Trace, Console, Debug, Python print
+- **Syntax highlighting** - Automatic color coding by keywords
+- **JSON formatting** - Pretty-print with syntax highlighting
+- **Stack traces** - Python exception formatting with file links
+- **Geometry interception** - Auto-visualize printed geometry
+
+### 🎨 Visualization
+
+- **DirectContext3D** - Transient rendering (no model elements)
+- **Multiple geometry types** - Curves, faces, solids, meshes, points, bounding boxes
+- **Thread-safe** - Buffered rendering from any thread
+- **Performance optimized** - Caching and batch updates
+
+---
+
+## 🆚 Comparisons
+
+### vs pyRevit
+
+| Aspect                 | RevitDevTool                          | pyRevit                     |
+| ---------------------- | ------------------------------------- | --------------------------- |
+| **Target User**  | Developers & researchers              | End users                   |
+| **Python**       | CPython 3.13                          | IronPython 2.7 (default)    |
+| **Packages**     | Full ecosystem (pandas, numpy, AI/ML) | Limited (Revit API only)    |
+| **Dependencies** | Automatic (PEP 723 + UV)              | Manual pip install          |
+| **Debugging**    | VSCode (full IDE)                     | pdb (command-line)          |
+| **Best For**     | Development, research, data science   | Ribbon automation for teams |
+
+**[→ Detailed Comparison](https://github.com/trgiangv/RevitDevTool/wiki/CodeExecute-VsPyRevit)**
+
+### Python Ecosystem Options
+
+| Tool                   | Python         | Auto-dependencies | VSCode Debugger | Best For               |
+| ---------------------- | -------------- | ----------------- | --------------- | ---------------------- |
+| **pyRevit**      | IronPython 2.7 | ❌                | ❌              | End-user automation    |
+| **Dynamo**       | CPython 3.9    | ❌                | ❌              | Visual programming     |
+| **RevitDevTool** | CPython 3.13   | ✅ UV             | ✅ debugpy      | Development & research |
+
+**[→ Complete Ecosystem Analysis](https://github.com/trgiangv/RevitDevTool/wiki/CodeExecute-PythonEcosystems)**
 
 ---
 
 ## 📦 Installation
 
-1. **Download** the latest release from [GitHub Releases](https://github.com/trgiangv/RevitDevTool/releases)
-2. **Run** the MSI installer
-3. **Launch** Revit (2022-2026)
-4. **Open** the RevitDevTool panel from External Tools ribbon
+### Requirements
+
+- Autodesk Revit 2022-2026
+- Windows 10/11
+
+### Install Steps
+
+1. Download MSI installer from [Releases](https://github.com/trgiangv/RevitDevTool/releases/latest)
+2. Run installer (admin rights required)
+3. Launch Revit
+4. Find RevitDevTool in External Tools ribbon
+
+**[→ Installation Guide](https://github.com/trgiangv/RevitDevTool/wiki/Home#installation)**
 
 ---
 
 ## 📖 Documentation
 
-### 📚 User Guides
-**Location:** [GitHub Wiki](https://github.com/trgiangv/RevitDevTool/wiki)
+<table>
+<tr>
+<td style="vertical-align: top;width: 50%;">
 
-Step-by-step guides for using RevitDevTool features:
+## 🎓 Python Scripts
+**[source/RevitDevTool.PythonDemo/commands/](source/RevitDevTool.PythonDemo/commands)**
 
-- **[Home](https://github.com/trgiangv/RevitDevTool/wiki/Home)** - Overview and quick links
-- **[Getting Started](https://github.com/trgiangv/RevitDevTool/wiki/Home#getting-started)** - Your first script
+- `dashboard_script.py` - Production BIM dashboard
+- `data_analysis_script.py` - Polars data analysis
+- `debugpy_script.py` - VSCode debugger integration
+- `visualization_curve_script.py` - 3D geometry rendering
+- `logging_format_script.py` - Log formatting examples
+- `sklearn_script.py` - ML with scikit-learn
+- `shapely_script.py` - Geometric operations
+- `trimesh_script.py` - 3D mesh processing
 
-**Module Documentation:**
-- **[CodeExecute](https://github.com/trgiangv/RevitDevTool/wiki/CodeExecute-Overview)** - Python & .NET execution
-- **[Logging](https://github.com/trgiangv/RevitDevTool/wiki/Logging-Overview)** - Logging system
-- **[Visualization](https://github.com/trgiangv/RevitDevTool/wiki/Visualization-Overview)** - Geometry visualization
+**[→ All Examples](https://github.com/trgiangv/RevitDevTool/wiki/Examples-Overview)**
 
-**Comparisons:**
-- [vs pyRevit](https://github.com/trgiangv/RevitDevTool/wiki/CodeExecute-VsPyRevit) - Python execution comparison
-- [vs RevitAddinManager](https://github.com/trgiangv/RevitDevTool/wiki/CodeExecute-VsRevitAddinManager) - Add-in development comparison
-- [Python Ecosystems](https://github.com/trgiangv/RevitDevTool/wiki/CodeExecute-PythonEcosystems) - IronPython vs CPython vs PythonNet3
+</td>
+<td style="vertical-align: top;width: 50%;">
 
-### 🏗️ Architecture Documentation
-**Location:** [docs/](docs/)
+## 🛠️ .NET Commands
+**[source/RevitDevTool.DotnetDemo/](source/RevitDevTool.DotnetDemo)**
 
-Technical documentation for developers and contributors:
+- **Basic IExternalCommand**: Các ví dụ cơ bản về thực thi lệnh.
+- **Logging**: Trình diễn hệ thống ghi log.
+- **Geometry**: Các pattern hiển thị hình học trực quan.
 
-- **[docs/README.md](docs/README.md)** - Architecture overview
-- **[CodeExecute/architecture/](docs/CodeExecute/architecture/)** - Execution framework design
-- **[Logging/architecture/](docs/Logging/architecture/)** - Logging infrastructure
-- **[Visualization/architecture/](docs/Visualization/architecture/)** - Rendering system
-
----
-
-## 🎯 Common Use Cases
-
-| I want to... | Go to... |
-|-------------|----------|
-| Execute a Python script | [CodeExecute Overview](https://github.com/trgiangv/RevitDevTool/wiki/CodeExecute-Overview) |
-| Auto-install packages | [Python Runtime](https://github.com/trgiangv/RevitDevTool/wiki/CodeExecute-PythonRuntime) |
-| Compare Python options | [Python Ecosystems](https://github.com/trgiangv/RevitDevTool/wiki/CodeExecute-PythonEcosystems) |
-| See trace output with colors | [Logging Overview](https://github.com/trgiangv/RevitDevTool/wiki/Logging-Overview) |
-| Visualize geometry in 3D | [Visualization Overview](https://github.com/trgiangv/RevitDevTool/wiki/Visualization-Overview) |
-| Generate type stubs | [Stub Generation](https://github.com/trgiangv/RevitDevTool/wiki/CodeExecute-StubGeneration) |
-| Understand hot reload | [.NET Runtime](https://github.com/trgiangv/RevitDevTool/wiki/CodeExecute-DotNetRuntime) |
-| Build custom providers | [CodeExecute Architecture](docs/CodeExecute/architecture/) |
+</td>
+</tr>    
+</table>
 
 ---
 
-## 🛠️ Development
+## 🛠️ Building from Source
 
-### Building from Source
+### Prerequisites
+
+- .NET 8.0 SDK
+- Visual Studio 2022 or Rider
+- Git with Git LFS
+
+### Build Steps
 
 ```bash
-# Clone repository with Git LFS support
-git lfs install
 git clone https://github.com/trgiangv/RevitDevTool.git
 cd RevitDevTool
 
-# Restore packages
+# Restore and build for Revit 2025
 dotnet restore
-
-# Build for specific Revit version (R22, R23, R24, R25, R26)
 dotnet build RevitDevTool.sln -c "Release R25"
 ```
 
-**Note:** This project uses [Git LFS](https://git-lfs.com/) for binary files. Make sure you have Git LFS installed before cloning.
+**Available configurations:** `Release R22`, `Release R23`, `Release R24`, `Release R25`, `Release R26`
 
-### Project Structure
+**[→ Build Guide](docs/README.md#🤝 Contributing)**
 
-```
-RevitDevTool/
-├── source/
-│   ├── RevitDevTool/              # Main plugin
-│   │   ├── CodeExecute/           # Execution framework
-│   │   ├── Logging/               # Logging infrastructure
-│   │   └── Visualization/         # Rendering system
-│   ├── RevitDevTool.PythonDemo/   # Python demo: 12+ scripts + dashboard (data analysis, visualization)
-│   ├── RevitDevTool.DotnetDemo/   # .NET demo: Basic examples (logging, geometry)
-│   └── PythonNetStubGenerator/    # Type stub generator for Revit API
-├── docs/                          # Architecture documentation
-├── install/                       # Installer scripts
-└── build/                         # Nuke build
-```
+---
 
-### Contributing
+## 🤝 Contributing
 
-Contributions are welcome! See [GitHub Discussions](https://github.com/trgiangv/RevitDevTool/discussions) for ideas or [GitHub Issues](https://github.com/trgiangv/RevitDevTool/issues) for bugs to fix.
+Contributions welcome! Here's how to get started:
+
+1. **Read architecture docs** - [docs/](docs) for module you're modifying
+2. **Follow design patterns** - Provider, Strategy, Composite patterns
+3. **Add tests** - Demo scripts or unit tests
+4. **Update docs** - Architecture docs + Wiki if user-facing
+
+**[→ GitHub Discussions](https://github.com/trgiangv/RevitDevTool/discussions)** for ideas
+**[→ GitHub Issues](https://github.com/trgiangv/RevitDevTool/issues)** for bugs
 
 ---
 
 ## 🙏 Acknowledgments
+
+Built on the shoulders of giants:
 
 - [RevitLookup](https://github.com/lookup-foundation/RevitLookup) - DirectContext3D implementation reference
 - [RevitDevTool (Original)](https://github.com/Zhuangkh/RevitDevTool) - Original project inspiration
 - [RevitAddinManager](https://github.com/chuongmep/RevitAddinManager) - Add-in hot reload patterns
 - [pyRevit](https://github.com/pyrevitlabs/pyRevit) - Python integration inspiration
 - [Dynamo](https://github.com/DynamoDS/Dynamo) - Visual programming
-- [RevitPythonShell](https://github.com/architecture-building-systems/revitpythonshell) - IronPython REPL
+- [RevitPythonShell](https://github.com/architecture-building-systems/revitpythonshell) - IronPython scripting environment
+- [UV](https://github.com/astral-sh/uv) - Fast Python package resolver
+- [PythonNet](https://github.com/pythonnet/pythonnet) - Python.NET bridge
 
 ---
 
 ## 📜 License
 
-This project is licensed under the MIT License - see [LICENSE](LICENSE) file for details.
+MIT License - see [LICENSE](LICENSE) for details.
 
 ---
 
-## 💬 Support & Community
+## 💬 Get Help
 
-- **Issues**: [GitHub Issues](https://github.com/trgiangv/RevitDevTool/issues)
-- **Discussions**: [GitHub Discussions](https://github.com/trgiangv/RevitDevTool/discussions)
-- **Wiki**: [Documentation Wiki](https://github.com/trgiangv/RevitDevTool/wiki)
+- 📖 **Documentation** - [GitHub Wiki](https://github.com/trgiangv/RevitDevTool/wiki)
+- 🐛 **Bug Reports** - [GitHub Issues](https://github.com/trgiangv/RevitDevTool/issues)
+- 💡 **Feature Requests** - [GitHub Discussions](https://github.com/trgiangv/RevitDevTool/discussions)
+- ❓ **Questions** - [GitHub Discussions](https://github.com/trgiangv/RevitDevTool/discussions)
+
+---
+
+**Made with ❤️ for the Revit developer community**
+⭐ Star this repo if you find it useful!
