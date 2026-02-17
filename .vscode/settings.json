@@ -9,6 +9,7 @@
         "~/AppData/Roaming/pyRevit-Master/pyrevitlib",
         "~/AppData/Roaming/pyRevit-Master/site-packages"
     ],
+    "python.testing.pytestEnabled": true,
     "cursorpyright.analysis.extraPaths": [
         "~/AppData/Roaming/RevitDevTool/2025/Stubs",
         "~/AppData/Roaming/pyRevit-Master/pyrevitlib",

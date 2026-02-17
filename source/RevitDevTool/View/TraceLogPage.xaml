@@ -69,6 +69,27 @@
                       Fill="{DynamicResource MahApps.Brushes.ThemeForeground}"
                       Stretch="Uniform" />
             </ToggleButton>
+            
+            <!--  Debug Status Indicator  -->
+            <Ellipse Width="12"
+                     Height="12"
+                     Margin="5,0,0,0"
+                     VerticalAlignment="Center">
+                <Ellipse.Style>
+                    <Style TargetType="Ellipse">
+                        <Setter Property="Fill" Value="#FF6B6B" />
+                        <Setter Property="ToolTip" Value="Debugger Not Connected"/>
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding IsDebuggerConnected}"
+                                         Value="True">
+                                <Setter Property="Fill" Value="#4CAF50" />
+                                <Setter Property="ToolTip" Value="Debugger Connected"/>
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </Ellipse.Style>
+            </Ellipse>
+            
             <StackPanel HorizontalAlignment="Right"
                         DockPanel.Dock="Right"
                         Orientation="Horizontal">

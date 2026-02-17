@@ -1,4 +1,3 @@
-using Python.Included;
 using Python.Runtime;
 using System.Diagnostics;
 using System.IO;
@@ -10,87 +9,25 @@ namespace RevitDevTool.CodeExecute.Providers.Python;
 /// </summary>
 public static class PythonExecutor
 {
-    private static readonly SemaphoreSlim InitLock = new(1, 1);
-
-    private static bool IsInitialized => PythonEngine.IsInitialized 
-                                         && Installer.IsPythonInstalled() 
-                                         && UvInstaller.IsUvInstalled();
-
-    public static async Task InitializeAsync()
+    public static void ExecuteScript(string scriptPath, string scriptContent, string? rootFolder = null)
     {
-        if (IsInitialized) return;
+        if (!PythonInitializer.IsInitialized)
+            throw new InvalidOperationException("Python runtime not initialized. Call InitializeAsync() first.");
 
-        await InitLock.WaitAsync().ConfigureAwait(false);
-        try
-        {
-            if (!Installer.IsPythonInstalled())
-            {
-                await Installer.SetupPython().ConfigureAwait(false);
-            }
-
-            if (!UvInstaller.IsUvInstalled())
-            {
-                await UvInstaller.SetupUvAsync().ConfigureAwait(false);
-            }
-            
-            if (!PythonEngine.IsInitialized)
-            {
-                Runtime.PythonDLL = Path.Combine(Installer.EmbeddedPythonHome, $"{Installer.PYTHON_VERSION}.dll");
-                PythonEngine.PythonHome = Installer.EmbeddedPythonHome;
-                PythonEngine.ProgramName = "RevitDevTool";
-                PythonEngine.Initialize();
-                PythonEngine.BeginAllowThreads();
-            }
-        }
-        finally
-        {
-            InitLock.Release();
-        }
-    }
-
-    /// <summary>
-    /// Shutdown Python runtime on host/application shutdown.
-    /// Do not call this per-script execution.
-    /// </summary>
-    public static void Shutdown()
-    {
-        if (!PythonEngine.IsInitialized) return;
-
-        InitLock.Wait();
-        try
-        {
-            if (PythonEngine.IsInitialized)
-            {
-                PythonEngine.Shutdown();
-            }
-        }
-        catch (Exception ex)
-        {
-            Trace.TraceWarning($"Python shutdown warning: {ex.Message}");
-        }
-        finally
-        {
-            InitLock.Release();
-        }
-    }
-
-    public static void ExecuteScript(string scriptPath, string? rootFolder = null)
-    {
-        ValidateRuntime(scriptPath);
-
-        var code = File.ReadAllText(scriptPath);
         rootFolder ??= Path.GetDirectoryName(scriptPath) ?? string.Empty;
-
         using (Py.GIL())
         {
             using (var scope = Py.CreateScope("__main__"))
             {
                 try
                 {
-                    SetupScopeVariables(scope, scriptPath, rootFolder);
+                    SetupScopeVariables(scope, scriptPath, scriptContent, rootFolder);
                     ResetExecutionModuleCache(scope);
                     SetupOutputRedirection(scope);
-                    scope.Exec(code);
+                    scope.Exec("""
+                               compiled_code = compile(__source__, __file__, 'exec')
+                               exec(compiled_code, globals())
+                               """);
                 }
                 catch (Exception ex)
                 {
@@ -100,16 +37,7 @@ public static class PythonExecutor
         }
     }
 
-    private static void ValidateRuntime(string scriptPath)
-    {
-        if (!File.Exists(scriptPath))
-            throw new FileNotFoundException($"Python script not found: {scriptPath}");
-
-        if (!IsInitialized)
-            throw new InvalidOperationException("Python runtime not initialized. Call InitializeAsync() first.");
-    }
-
-    private static void SetupScopeVariables(PyModule scope, string scriptPath, string rootFolder)
+    private static void SetupScopeVariables(PyModule scope, string scriptPath, string scriptContent, string rootFolder)
     {
         Action<object> logFunction = obj =>
         {
@@ -126,8 +54,9 @@ public static class PythonExecutor
         dynamic builtins = Py.Import("builtins");
         builtins.__revit__ = Context.UiApplication;
         
-        scope.Set("__file__", scriptPath);
-        scope.Set("__root__", rootFolder);
+        scope.Set("__source__", new PyString(scriptContent));
+        scope.Set("__file__", new PyString(scriptPath));
+        scope.Set("__root__", new PyString(rootFolder));
         scope.Set("__log_func__", logFunction.ToPython());
     }
 

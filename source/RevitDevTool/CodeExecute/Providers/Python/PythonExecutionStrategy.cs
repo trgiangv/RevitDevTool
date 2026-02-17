@@ -20,9 +20,24 @@ public sealed class PythonExecutionStrategy(string scriptPath, string rootPath) 
         {
             try
             {
-                await PythonExecutor.InitializeAsync().ConfigureAwait(true);
+                await PythonInitializer.InitializeAsync().ConfigureAwait(true);
                 
-                var success = await ResolveDependenciesAsync().ConfigureAwait(true);
+                string scriptContent;
+                try
+                {
+#if NETCOREAPP
+                    scriptContent = await File.ReadAllTextAsync(scriptPath).ConfigureAwait(true);
+#else
+                    scriptContent = File.ReadAllText(scriptPath);
+#endif
+                }
+                catch (IOException ex)
+                {
+                    Trace.TraceError($"Failed to read script file: {ex.Message}");
+                    return;
+                }
+                
+                var success = await ResolveDependenciesAsync(scriptContent).ConfigureAwait(true);
                 if (!success)
                 {
                     Trace.TraceWarning("Execution cancelled: Dependency resolution failed or was cancelled by user.");
@@ -31,7 +46,7 @@ public sealed class PythonExecutionStrategy(string scriptPath, string rootPath) 
         
                 ExternalEventController.ActionEventHandler.Raise(_ =>
                 {
-                    PythonExecutor.ExecuteScript(scriptPath, rootPath);
+                    PythonExecutor.ExecuteScript(scriptPath, scriptContent, rootPath);
                 });
             }
             catch (Exception ex)
@@ -41,26 +56,13 @@ public sealed class PythonExecutionStrategy(string scriptPath, string rootPath) 
         });
     }
 
-    private async Task<bool> ResolveDependenciesAsync()
+    public static async Task<bool> ResolveDependenciesAsync(string scriptContent)
     {
-        if (!File.Exists(scriptPath)) return false;
-
-        string content;
-        try
-        {
-            content = File.ReadAllText(scriptPath);
-        }
-        catch (IOException ex)
-        {
-            Trace.TraceError($"Failed to read script file: {ex.Message}");
-            return false;
-        }
-
         // 1. Parse PEP 723 metadata
         List<string> dependencies;
         try
         {
-            dependencies = Pep723Parser.ParseDependencies(content);
+            dependencies = Pep723Parser.ParseDependencies(scriptContent);
         }
         catch (Exception ex)
         {

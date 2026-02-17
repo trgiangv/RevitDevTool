@@ -12,6 +12,9 @@ dependencies = [
     "shapely==2.1.2",
     "trimesh==4.11.2",
     "scikit-learn==1.8.0",
+    "debugpy==1.8.20",
+    "pytest==9.0.2",
+    "pywin32==311",
 ]
 
 [tool.ruff]

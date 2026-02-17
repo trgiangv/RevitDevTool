@@ -17,6 +17,7 @@ public sealed class HostBackgroundController(ISettingsService settingsService) :
         CleanLogFolder();
         LoadTheme();
         ToggleHardwareRendering(settingsService);
+        PythonInitializer.ListenToDebugger();
         return Task.CompletedTask;
     }
 
@@ -95,6 +96,6 @@ public sealed class HostBackgroundController(ISettingsService settingsService) :
             TraceCommand.SharedViewModel.IsStarted = false;
         }
         VisualizationController.Stop();
-        PythonExecutor.Shutdown();
+        PythonInitializer.Shutdown();
     }
 }

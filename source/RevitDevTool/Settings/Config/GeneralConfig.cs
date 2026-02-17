@@ -15,4 +15,5 @@ public sealed class GeneralConfig
 #endif
     [JsonPropertyName("UseHardwareRendering")] public bool UseHardwareRendering { get; set; } = true;
     [JsonPropertyName("IsTraceEnabled")] public bool IsTraceEnabled { get; set; } = true;
+    [JsonPropertyName("DebugPort")] public int DebugPort { get; set; } = 5678;
 }

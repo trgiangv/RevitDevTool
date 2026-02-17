@@ -1,14 +1,21 @@
+using System.ComponentModel.DataAnnotations;
 using CommunityToolkit.Mvvm.Messaging;
+using RevitDevTool.CodeExecute.Providers.Python;
 using RevitDevTool.Controllers;
 using RevitDevTool.Settings;
 using RevitDevTool.Theme;
 using RevitDevTool.ViewModel.Messages;
+// ReSharper disable ReplaceWithFieldKeyword
 
 namespace RevitDevTool.ViewModel.Settings;
 
-public partial class GeneralSettingsViewModel : ObservableObject, IRecipient<ResetSettingsMessage>
+public partial class GeneralSettingsViewModel : ObservableValidator, IRecipient<ResetSettingsMessage>
 {
     private readonly ISettingsService _settingsService;
+    
+    private const int DefaultDebugPort = 5678;
+    private const int MinAllowedPort = 1024;
+    private const int MaxAllowedPort = 65535;
 
     public static List<AppTheme> Themes
     {
@@ -24,6 +31,21 @@ public partial class GeneralSettingsViewModel : ObservableObject, IRecipient<Res
 
     [ObservableProperty] private AppTheme _theme;
     [ObservableProperty] private bool _useHardwareRendering;
+    [ObservableProperty] private bool _isDebuggerConnected;
+    
+    private int _debugPort;
+    [Range(MinAllowedPort, MaxAllowedPort, ErrorMessage = "Port number must be between 1024 and 65535.")]
+    public int DebugPort
+    {
+        get => _debugPort;
+        set
+        {
+            if (SetProperty(ref _debugPort, value, true))
+            {
+                OnDebugPortChanged(value);
+            }
+        }
+    }
 
     partial void OnThemeChanged(AppTheme value)
     {
@@ -35,6 +57,21 @@ public partial class GeneralSettingsViewModel : ObservableObject, IRecipient<Res
     {
         _settingsService.GeneralConfig.UseHardwareRendering = value;
         HostBackgroundController.ToggleHardwareRendering(_settingsService);
+    }
+
+    private void OnDebugPortChanged(int value)
+    {
+        _settingsService.GeneralConfig.DebugPort = value;
+        PythonInitializer.ListenToDebugger();
+    }
+    
+    [UsedImplicitly]
+    public void RevertIfInvalid()
+    {
+        if (!GetErrors(nameof(DebugPort)).Any()) return;
+        DebugPort = DefaultDebugPort;
+        ClearErrors(nameof(DebugPort));
+        OnPropertyChanged(nameof(DebugPort));
     }
 
     public GeneralSettingsViewModel(ISettingsService settingsService)
@@ -53,5 +90,9 @@ public partial class GeneralSettingsViewModel : ObservableObject, IRecipient<Res
     {
         Theme = _settingsService.GeneralConfig.Theme;
         UseHardwareRendering = _settingsService.GeneralConfig.UseHardwareRendering;
+        DebugPort = _settingsService.GeneralConfig.DebugPort is >= MinAllowedPort and <= MaxAllowedPort
+            ? _settingsService.GeneralConfig.DebugPort
+            : DefaultDebugPort;
+         PythonInitializer.ListenToDebugger();
     }
 }

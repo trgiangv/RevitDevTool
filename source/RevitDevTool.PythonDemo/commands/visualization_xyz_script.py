@@ -11,7 +11,7 @@ Similar to RevitDevTool.DotnetDemo/XYZVisualization.cs
 from Autodesk.Revit.DB import XYZ
 from Autodesk.Revit.UI.Selection import ObjectType
 
-uiapp = __revit__  # type: ignore
+uiapp = __revit__  # type: ignore  # noqa: F821
 uidoc = uiapp.ActiveUIDocument
 doc = uidoc.Document
 
