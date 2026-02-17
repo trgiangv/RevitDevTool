@@ -1,10 +1,35 @@
-﻿from System import Action
-from System.Windows import Window, Controls, WindowStartupLocation
+﻿from Autodesk.Revit import DB, UI
+from Revit.Async import RevitTask  # noqa: F401
+from System import Action, Guid
+from System.Windows import Controls, Window, WindowStartupLocation
 from UIFramework import MainWindow
-from Revit.Async import RevitTask
-from Autodesk.Revit import DB, UI
 
-uiapp : UI.UIApplication = __revit__ # type: ignore
+uiapp: UI.UIApplication = __revit__  # type: ignore  # noqa: F821
+
+
+class RevitExternalEventHandler(UI.IExternalEventHandler):
+    __namespace__ = str(Guid.NewGuid())  # must be unique for each execution (pythonnet3 limitation)
+
+    def __init__(self):
+        self.action = None
+        self.external_event = UI.ExternalEvent.Create(self)
+
+    def Execute(self, app):
+        self.action.Invoke()
+
+    def GetName(self):
+        return "Revit DevTool Modeless External Event Handler"
+
+    def Dispose(self):
+        if self.external_event is not None:
+            self.external_event.Dispose()
+
+    def Raise(self, action : Action):
+        self.action = action
+        self.external_event.Raise()
+
+event_handler = RevitExternalEventHandler()  # create an instance of the event handler in Revit API Context
+
 
 class MyModelessForm(Window):
     def __init__(self):
@@ -36,7 +61,7 @@ class MyModelessForm(Window):
                 return
 
             line = DB.Line.CreateBound(DB.XYZ(0, 0, 0), DB.XYZ(10, 0, 0))
-            t = DB.Transaction(doc, "Create Wall Async")
+            t = DB.Transaction(doc, "Create Wall Async") # with statement is not supported in pythonnet3, so we need to manually start and commit/rollback the transaction
             try:
                 t.Start()
                 DB.Wall.Create(doc, line, wall_type.Id, level.Id, 10, 0, False, False)
@@ -48,9 +73,14 @@ class MyModelessForm(Window):
             finally:
                 if t.HasEnded:
                     t.Dispose()
+        # 1. use Revit.Async package (best practice for modeless form) to run the wall creation code in Revit API context
+        # RevitTask.RunAsync(Action(create_wall_action))
 
-        RevitTask.RunAsync(Action(create_wall_action))
+        # 2. use ExternalEvent to run the wall creation code in Revit API context (alternative approach, not recommended for modeless form)
+        event_handler.Raise(Action(create_wall_action))
+
 
 # modeless form
 form = MyModelessForm()
 form.Show()
+form.Closed += lambda sender, args: event_handler.Dispose()  # dispose the event handler when the form is closed
