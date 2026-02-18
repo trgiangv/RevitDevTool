@@ -209,39 +209,38 @@ print(f"Found {walls.GetElementCount()} walls")
 
 ---
 
-## 📖 Documentation
+## 📖 Examples
 
 <table>
 <tr>
-<td style="vertical-align: top;width: 50%;">
+<td valign="top">
 
-## 🎓 Python Scripts
-**[source/RevitDevTool.PythonDemo/commands/](source/RevitDevTool.PythonDemo/commands)**
+## Python
+**[source/RevitDevTool.PythonDemo/](source/RevitDevTool.PythonDemo)**
 
 - `dashboard_script.py` - Production BIM dashboard
 - `data_analysis_script.py` - Polars data analysis
-- `debugpy_script.py` - VSCode debugger integration
 - `visualization_curve_script.py` - 3D geometry rendering
 - `logging_format_script.py` - Log formatting examples
 - `sklearn_script.py` - ML with scikit-learn
 - `shapely_script.py` - Geometric operations
 - `trimesh_script.py` - 3D mesh processing
 
-**[→ All Examples](https://github.com/trgiangv/RevitDevTool/wiki/Examples-Overview)**
 
 </td>
-<td style="vertical-align: top;width: 50%;">
+<td valign="top">
 
-## 🛠️ .NET Commands
+## .NET
 **[source/RevitDevTool.DotnetDemo/](source/RevitDevTool.DotnetDemo)**
 
-- **Basic IExternalCommand**: Các ví dụ cơ bản về thực thi lệnh.
-- **Logging**: Trình diễn hệ thống ghi log.
-- **Geometry**: Các pattern hiển thị hình học trực quan.
+- **Logging**: logging sample with stack trace and JSON formatting.
+- **Geometry**: visualized geometry sample.
 
 </td>
-</tr>    
+</tr>
 </table>
+
+**[→ All Examples](https://github.com/trgiangv/RevitDevTool/wiki/Examples-Overview)**
 
 ---
 
@@ -249,9 +248,7 @@ print(f"Found {walls.GetElementCount()} walls")
 
 ### Prerequisites
 
-- .NET 8.0 SDK
-- Visual Studio 2022 or Rider
-- Git with Git LFS
+- .NET 10.0 SDK
 
 ### Build Steps
 
@@ -265,8 +262,6 @@ dotnet build RevitDevTool.sln -c "Release R25"
 ```
 
 **Available configurations:** `Release R22`, `Release R23`, `Release R24`, `Release R25`, `Release R26`
-
-**[→ Build Guide](docs/README.md#🤝 Contributing)**
 
 ---
 
