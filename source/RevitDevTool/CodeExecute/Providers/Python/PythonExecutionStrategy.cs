@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using System.IO;
+using Python.Runtime;
 using RevitDevTool.CodeExecute.Interfaces;
 using RevitDevTool.Controllers;
 using RevitDevTool.Utils;
@@ -37,7 +38,7 @@ public sealed class PythonExecutionStrategy(string scriptPath, string rootPath) 
                     return;
                 }
                 
-                var success = await ResolveDependenciesAsync(scriptContent).ConfigureAwait(true);
+                var success = await ResolveDependenciesAsync(scriptPath).ConfigureAwait(true);
                 if (!success)
                 {
                     Trace.TraceWarning("Execution cancelled: Dependency resolution failed or was cancelled by user.");
@@ -56,13 +57,13 @@ public sealed class PythonExecutionStrategy(string scriptPath, string rootPath) 
         });
     }
 
-    public static async Task<bool> ResolveDependenciesAsync(string scriptContent)
+    public static async Task<bool> ResolveDependenciesAsync(string scriptPath)
     {
         // 1. Parse PEP 723 metadata
         List<string> dependencies;
         try
         {
-            dependencies = Pep723Parser.ParseDependencies(scriptContent);
+            dependencies = await PythonDepsManager.ResolveDependenciesAsync(scriptPath).ConfigureAwait(true);
         }
         catch (Exception ex)
         {
@@ -71,28 +72,55 @@ public sealed class PythonExecutionStrategy(string scriptPath, string rootPath) 
         }
 
         // 2. No dependencies or empty list -> success
-        if (dependencies.Count == 0) 
+        if (dependencies.Count == 0)
             return true;
 
-        // 3. Check if installation is needed
-        bool needsInstall;
-        try 
+        Trace.TraceInformation($"Installing {dependencies.Count} dependency(s) via pixi...");
+        var installed = await ShowInstallDialogAsync(dependencies).ConfigureAwait(true);
+        
+        if (installed)
         {
-            needsInstall = await PythonDependencyManager.NeedsInstallationAsync(dependencies).ConfigureAwait(true);
+            RefreshImportCache();
+        }
+        
+        return installed;
+    }
+
+    /// <summary>
+    /// After uv installs new packages on disk, Python's PathFinder caches
+    /// the directory listings from sys.path entries. invalidate_caches()
+    /// forces it to rescan on the next import.
+    /// </summary>
+    private static void RefreshImportCache()
+    {
+        if (!PythonInitializer.IsInitialized) return;
+        
+        try
+        {
+            using (Py.GIL())
+            {
+                using var scope = Py.CreateScope();
+                scope.Exec("""
+                            import importlib
+                            import site
+                            import sys
+                            
+                            importlib.invalidate_caches()
+                            
+                            for sp in site.getsitepackages():
+                                if sp not in sys.path:
+                                    sys.path.insert(0, sp)
+                            
+                            user_site = site.getusersitepackages()
+                            if isinstance(user_site, str) and user_site not in sys.path:
+                                sys.path.insert(0, user_site)
+                            """);
+            }
         }
         catch (Exception ex)
         {
-            Trace.TraceWarning($"Failed to check dependencies status, will attempt install. Error: {ex.Message}");
-            needsInstall = true;
+            Trace.TraceWarning($"Failed to refresh Python import cache: {ex.Message}");
         }
-        
-        if (!needsInstall)
-        {
-            return true;
-        }
-
-        Trace.TraceInformation("Started installation/upgrade dependencies.");
-        return await ShowInstallDialogAsync(dependencies).ConfigureAwait(true);
     }
 
     private static Task<bool> ShowInstallDialogAsync(List<string> packages)
@@ -113,7 +141,7 @@ public sealed class PythonExecutionStrategy(string scriptPath, string rootPath) 
                 {
                     var progress = new Progress<string>(msg => vm.UpdateProgress(msg));
 
-                    await PythonDependencyManager.InstallDependenciesAsync(
+                    await PythonDepsManager.InstallDependenciesAsync(
                         packages, 
                         progress, 
                         CancellationToken.None).ConfigureAwait(true);

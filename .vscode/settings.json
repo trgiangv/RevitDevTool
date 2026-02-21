@@ -20,5 +20,6 @@
         "~/AppData/Roaming/pyRevit-Master/pyrevitlib",
         "~/AppData/Roaming/pyRevit-Master/site-packages"
     ],
-    "basedpyright.importStrategy": "useBundled"
+    "basedpyright.importStrategy": "useBundled",
+    "basedpyright.analysis.typeCheckingMode": "off"
 }

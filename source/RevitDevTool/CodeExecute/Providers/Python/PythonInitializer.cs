@@ -1,6 +1,5 @@
-﻿using System.Diagnostics;
+using System.Diagnostics;
 using System.IO;
-using Python.Included;
 using Python.Runtime;
 using RevitDevTool.Settings;
 namespace RevitDevTool.CodeExecute.Providers.Python;
@@ -10,9 +9,9 @@ public static class PythonInitializer
     private static readonly SemaphoreSlim InitLock = new(1, 1);
     public static PyModule? GlobalScope { get; private set; }
 
-    public static bool IsInitialized => PythonEngine.IsInitialized 
-                                         && Installer.IsPythonInstalled() 
-                                         && UvInstaller.IsUvInstalled();
+    public static bool IsInitialized => PythonEngine.IsInitialized
+                                         && PixiInstaller.IsPixiInstalled()
+                                         && PixiEnvironment.IsEnvironmentReady();
 
     public static async Task InitializeAsync()
     {
@@ -21,20 +20,22 @@ public static class PythonInitializer
         await InitLock.WaitAsync().ConfigureAwait(false);
         try
         {
-            if (!Installer.IsPythonInstalled())
+            if (!PixiInstaller.IsPixiInstalled())
             {
-                await Installer.SetupPython().ConfigureAwait(false);
-            }
-
-            if (!UvInstaller.IsUvInstalled())
-            {
-                await UvInstaller.SetupUvAsync().ConfigureAwait(false);
+                await PixiInstaller.SetupPixiAsync().ConfigureAwait(false);
             }
             
+            if (!PixiEnvironment.IsEnvironmentReady())
+            {
+                await PixiEnvironment.SetupEnvironmentAsync().ConfigureAwait(false);
+            }
+
+            PixiEnvironment.ExtractParserScript();
+
             if (!PythonEngine.IsInitialized)
             {
-                Runtime.PythonDLL = Path.Combine(Installer.EmbeddedPythonHome, $"{Installer.PYTHON_VERSION}.dll");
-                PythonEngine.PythonHome = Installer.EmbeddedPythonHome;
+                Runtime.PythonDLL = PixiEnvironment.GetPythonDllPath();
+                PythonEngine.PythonHome = PixiEnvironment.PythonHome;
                 PythonEngine.ProgramName = "RevitDevTool";
                 PythonEngine.Initialize();
                 PythonEngine.BeginAllowThreads();
@@ -72,7 +73,8 @@ public static class PythonInitializer
         builtins.__revit__ = Context.UiApplication;
 
         var assembly = typeof(PythonInitializer).Assembly;
-        var resourceName = assembly.GetManifestResourceNames().FirstOrDefault(name => name.EndsWith("Setup.py", StringComparison.OrdinalIgnoreCase))!;
+        var resourceName = assembly.GetManifestResourceNames()
+                                   .FirstOrDefault(name => name.EndsWith("Setup.py", StringComparison.OrdinalIgnoreCase))!;
         using var stream = assembly.GetManifestResourceStream(resourceName)!;
         using var reader = new StreamReader(stream);
         var setupCode = reader.ReadToEnd();
@@ -116,12 +118,6 @@ public static class PythonInitializer
             var port = settingsService.GeneralConfig.DebugPort;
             
             const string debugpySetup = """
-                                        # /// script
-                                        # dependencies = [
-                                        #     "debugpy",
-                                        # ]
-                                        # ///
-
                                         import os
                                         import debugpy
                                         os.environ["PYDEVD_DISABLE_FILE_VALIDATION"] = "1"
@@ -129,14 +125,7 @@ public static class PythonInitializer
                                         if not debugpy.is_client_connected():
                                             debugpy.listen(("localhost", __port__), in_process_debug_adapter=True)
                                         """;
-            var success = await PythonExecutionStrategy.ResolveDependenciesAsync(debugpySetup).ConfigureAwait(true);
 
-            if (!success)
-            {
-                Trace.TraceWarning("Debugpy setup cancelled: Dependency resolution failed or was cancelled by user.");
-                return;
-            }
-            
             using (Py.GIL())
             {
                 using (var scope = Py.CreateScope())
