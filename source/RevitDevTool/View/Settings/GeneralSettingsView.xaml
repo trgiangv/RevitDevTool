@@ -6,7 +6,6 @@
              xmlns:mah="http://metro.mahapps.com/winfx/xaml/controls"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:settings="clr-namespace:RevitDevTool.ViewModel.Settings"
-             xmlns:i="http://schemas.microsoft.com/xaml/behaviors"
              d:Background="{DynamicResource MahApps.Brushes.ThemeBackground}"
              d:DataContext="{d:DesignInstance settings:GeneralSettingsViewModel}"
              d:DesignHeight="600"
@@ -68,35 +67,6 @@
                                       IsOn="{Binding UseHardwareRendering}" />
                 </Grid>
             </GroupBox>
-
-            <!--  Python Debug Port  -->
-            <GroupBox Margin="0,0,0,8"
-                      Header="Debugging">
-                <Grid Margin="8">
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="*" />
-                        <ColumnDefinition Width="Auto" />
-                    </Grid.ColumnDefinitions>
-                    <StackPanel VerticalAlignment="Center">
-                        <TextBlock FontWeight="SemiBold"
-                                   Text="Debug Port" />
-                        <TextBlock FontSize="11"
-                                   Foreground="{DynamicResource MahApps.Brushes.Gray}"
-                                   Text="Port for Python debugpy adapter (1024-65535)" />
-                    </StackPanel>
-                    <mah:NumericUpDown Grid.Column="1"
-                                       Width="120"
-                                       NumericInputMode="Numbers"
-                                       Value="{Binding DebugPort, UpdateSourceTrigger=LostFocus}" >
-                        <i:Interaction.Triggers>
-                            <i:EventTrigger EventName="LostFocus">
-                                <i:CallMethodAction TargetObject="{Binding}" MethodName="RevertIfInvalid"/>
-                            </i:EventTrigger>
-                        </i:Interaction.Triggers>
-                    </mah:NumericUpDown>
-                </Grid>
-            </GroupBox>
-
         </StackPanel>
     </ScrollViewer>
 </UserControl>

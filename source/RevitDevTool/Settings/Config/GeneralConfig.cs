@@ -8,7 +8,6 @@ namespace RevitDevTool.Settings.Config;
 [Serializable]
 public sealed class GeneralConfig
 {
-    public const int DefaultDebugPort = 5678;
 #if REVIT2024_OR_GREATER
     [JsonPropertyName("Theme")] public AppTheme Theme { get; set; } = AppTheme.Auto;
 #else
@@ -16,5 +15,4 @@ public sealed class GeneralConfig
 #endif
     [JsonPropertyName("UseHardwareRendering")] public bool UseHardwareRendering { get; set; } = true;
     [JsonPropertyName("IsTraceEnabled")] public bool IsTraceEnabled { get; set; } = true;
-    [JsonPropertyName("DebugPort")] public int DebugPort { get; set; } = DefaultDebugPort;
 }

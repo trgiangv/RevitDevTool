@@ -1,10 +1,11 @@
-using Microsoft.Extensions.Hosting;
-using RevitDevTool.Commands;
-using RevitDevTool.Settings;
-using RevitDevTool.Theme;
+using System.IO;
 using System.Windows.Interop;
 using System.Windows.Media;
+using Microsoft.Extensions.Hosting;
+using RevitDevTool.Commands;
 using RevitDevTool.Logging.Listeners;
+using RevitDevTool.Settings;
+using RevitDevTool.Theme;
 using RevitDevTool.CodeExecute.Providers.Python;
 
 namespace RevitDevTool.Controllers;
@@ -17,7 +18,7 @@ public sealed class HostBackgroundController(ISettingsService settingsService) :
         CleanLogFolder();
         LoadTheme();
         ToggleHardwareRendering(settingsService);
-        return Task.CompletedTask;
+        return PythonInitializer.InitializeAsync();
     }
 
     public Task StopAsync(CancellationToken cancellationToken)
@@ -44,28 +45,21 @@ public sealed class HostBackgroundController(ISettingsService settingsService) :
         if (!config.IsSaveLogEnabled || !config.AutoClean) return;
 
         var logFolder = config.LogFolder;
-        if (string.IsNullOrEmpty(logFolder) || !System.IO.Directory.Exists(logFolder)) return;
+        if (string.IsNullOrEmpty(logFolder) || !Directory.Exists(logFolder)) return;
 
-        try
+        var logFiles = Directory.EnumerateFiles(logFolder, "*.log");
+        var jsonFiles = Directory.EnumerateFiles(logFolder, "*.json");
+
+        foreach (var file in logFiles.Concat(jsonFiles))
         {
-            var logFiles = System.IO.Directory.EnumerateFiles(logFolder, "*.log");
-            var jsonFiles = System.IO.Directory.EnumerateFiles(logFolder, "*.json");
-
-            foreach (var file in logFiles.Concat(jsonFiles))
+            try
             {
-                try
-                {
-                    System.IO.File.Delete(file);
-                }
-                catch
-                {
-                    // Ignore files that cannot be deleted (e.g., in use)
-                }
+                File.Delete(file);
             }
-        }
-        catch
-        {
-            // Ignore errors when accessing the folder
+            catch
+            {
+                // Ignore
+            }
         }
     }
 

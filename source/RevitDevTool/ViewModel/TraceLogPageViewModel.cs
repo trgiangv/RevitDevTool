@@ -22,6 +22,7 @@ public partial class TraceLogPageViewModel : ObservableObject, IRecipient<IsSave
     public TraceLogViewModel TraceLogViewModel { get; }
     public CodeExecuteView CodeExecuteView { get; }
     public int ProcessId { get; } = SettingsUtils.CurrentProcessId;
+    public static int DebugPort => PythonInitializer.DebugPort;
     [ObservableProperty] private object? _currentPage;
     [ObservableProperty] private bool _isSettingsVisible;
     [ObservableProperty] private bool _isAddinLoadVisible = true;

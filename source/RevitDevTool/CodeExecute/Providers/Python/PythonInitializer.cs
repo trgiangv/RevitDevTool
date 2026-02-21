@@ -1,13 +1,16 @@
 using System.Diagnostics;
 using System.IO;
+using System.Net;
+using System.Net.Sockets;
 using Python.Runtime;
-using RevitDevTool.Settings;
+
 namespace RevitDevTool.CodeExecute.Providers.Python;
 
 public static class PythonInitializer
 {
     private static readonly SemaphoreSlim InitLock = new(1, 1);
     public static PyModule? GlobalScope { get; private set; }
+    public static int DebugPort { get; private set; }
 
     public static bool IsInitialized => PythonEngine.IsInitialized
                                          && PixiInstaller.IsPixiInstalled()
@@ -43,6 +46,7 @@ public static class PythonInitializer
                 using (Py.GIL())
                 {
                     SetupGlobalScope();
+                    ListenToDebugger();
                 }
             }
         }
@@ -108,41 +112,49 @@ public static class PythonInitializer
             InitLock.Release();
         }
     }
-    
-    public static void ListenToDebugger()
+
+    private static void ListenToDebugger()
     {
-        Task.Run(async () =>
+        DebugPort = FindAvailablePort();
+
+        const string debugpySetup = """
+                                    import os
+                                    import debugpy
+                                    os.environ["PYDEVD_DISABLE_FILE_VALIDATION"] = "1"
+
+                                    if not debugpy.is_client_connected():
+                                        debugpy.listen(("localhost", __port__), in_process_debug_adapter=True)
+                                    """;
+
+        using var scope = Py.CreateScope();
+        try
         {
-            await InitializeAsync().ConfigureAwait(true);
-            var settingsService = Host.GetService<ISettingsService>();
-            var port = settingsService.GeneralConfig.DebugPort;
-            
-            const string debugpySetup = """
-                                        import os
-                                        import debugpy
-                                        os.environ["PYDEVD_DISABLE_FILE_VALIDATION"] = "1"
+            scope.Set("__port__", DebugPort);
+            scope.Exec(debugpySetup);
+        }
+        catch (Exception e)
+        {
+            Trace.TraceError($"Failed to initialize debugpy: {e.Message}{Environment.NewLine}{e.StackTrace}");
+        }
+    }
 
-                                        if not debugpy.is_client_connected():
-                                            debugpy.listen(("localhost", __port__), in_process_debug_adapter=True)
-                                        """;
-
-            using (Py.GIL())
-            {
-                using (var scope = Py.CreateScope())
-                {
-                    try
-                    {
-                        scope.Set("__port__", new PyInt(port));
-                        scope.Exec(debugpySetup);
-                        Trace.TraceInformation($"Debugpy listening on port {port}");
-                    }
-                    catch (Exception e)
-                    {
-                        Trace.TraceError($"Failed to initialize debugpy: {e.Message}{Environment.NewLine}{e.StackTrace}");
-                    }
-                }
-            }
-        });
+    private static int FindAvailablePort(int preferredPort = 5678)
+    {
+        try
+        {
+            var tester = new TcpListener(IPAddress.Loopback, preferredPort);
+            tester.Start();
+            tester.Stop();
+            return preferredPort;
+        }
+        catch (SocketException)
+        {
+            var fallback = new TcpListener(IPAddress.Loopback, 0);
+            fallback.Start();
+            var port = ((IPEndPoint) fallback.LocalEndpoint).Port;
+            fallback.Stop();
+            return port;
+        }
     }
 
     /// <summary>

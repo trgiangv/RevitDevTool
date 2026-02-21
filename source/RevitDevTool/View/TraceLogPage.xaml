@@ -69,27 +69,34 @@
                       Fill="{DynamicResource MahApps.Brushes.ThemeForeground}"
                       Stretch="Uniform" />
             </ToggleButton>
-            
+
             <!--  Debug Status Indicator  -->
-            <Ellipse Width="12"
-                     Height="12"
-                     Margin="5,0,0,0"
-                     VerticalAlignment="Center">
-                <Ellipse.Style>
-                    <Style TargetType="Ellipse">
+            <Path Width="12"
+                  Height="12"
+                  Margin="5,0,0,0"
+                  VerticalAlignment="Center"
+                  Data="{StaticResource Bug}"
+                  Stretch="Uniform">
+                <Path.Style>
+                    <Style TargetType="Path">
                         <Setter Property="Fill" Value="#FF6B6B" />
-                        <Setter Property="ToolTip" Value="Debugger Not Connected"/>
+                        <Setter Property="ToolTip" Value="Debugger Not Connected" />
                         <Style.Triggers>
                             <DataTrigger Binding="{Binding IsDebuggerConnected}"
                                          Value="True">
                                 <Setter Property="Fill" Value="#4CAF50" />
-                                <Setter Property="ToolTip" Value="Debugger Connected"/>
+                                <Setter Property="ToolTip" Value="Debugger Connected" />
                             </DataTrigger>
                         </Style.Triggers>
                     </Style>
-                </Ellipse.Style>
-            </Ellipse>
-            
+                </Path.Style>
+            </Path>
+            <TextBlock Margin="3,0,0,0"
+                       VerticalAlignment="Center"
+                       FontSize="11"
+                       Foreground="{DynamicResource MahApps.Brushes.Gray}"
+                       Text="{Binding DebugPort, Mode=OneTime, StringFormat=': {0}'}"
+                       ToolTip="debugpy port" />
             <StackPanel HorizontalAlignment="Right"
                         DockPanel.Dock="Right"
                         Orientation="Horizontal">
@@ -233,7 +240,7 @@
 
                 <GridSplitter Grid.Row="1"
                               Height="2"
-                              Margin="0 5"
+                              Margin="0,5"
                               Background="{DynamicResource MahApps.Brushes.Gray8}"
                               ShowsPreview="False"
                               Visibility="{Binding IsAddinLoadVisible, Converter={StaticResource BoolToVisibility}}" />
