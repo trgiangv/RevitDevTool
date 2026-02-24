@@ -2,12 +2,11 @@ using Autodesk.Revit.UI.Events;
 using CommunityToolkit.Mvvm.Messaging;
 using Microsoft.Extensions.Logging;
 using RevitDevTool.Controllers;
-using RevitDevTool.Logging;
 using RevitDevTool.Settings;
-using RevitDevTool.Theme;
 using RevitDevTool.ViewModel.Messages;
 using System.Windows.Forms.Integration;
-using RevitDevTool.Logging.Listeners;
+using RevitDevTool.Logger.Contracts;
+using RevitDevTool.Logger.Listeners;
 
 namespace RevitDevTool.ViewModel;
 
@@ -18,11 +17,9 @@ public sealed partial class TraceLogViewModel : ObservableObject, IDisposable,
     private readonly ISettingsService _settingsService;
     private readonly ILoggingService _loggingService;
     private readonly WeakReferenceMessenger _messenger;
-    private readonly EventHandler<EventArgs> _onThemeChangedHandler;
     private readonly EventHandler<IdlingEventArgs> _onIdlingHandler;
 
     private ConsoleRedirector? _consoleRedirector;
-    private AppTheme _currentTheme;
     private bool _isSubscribed;
     private bool _isClearing;
 
@@ -54,9 +51,7 @@ public sealed partial class TraceLogViewModel : ObservableObject, IDisposable,
         _settingsService = settingsService;
         _loggingService = loggingService;
         _messenger = WeakReferenceMessenger.Default;
-        _onThemeChangedHandler = OnThemeChanged;
         _onIdlingHandler = OnIdling;
-        _currentTheme = ThemeManager.Current.ActualApplicationTheme;
         _isStarted = _settingsService.GeneralConfig.IsTraceEnabled;
         Subscribe();
         if (_isStarted) StartTracing();
@@ -64,7 +59,7 @@ public sealed partial class TraceLogViewModel : ObservableObject, IDisposable,
 
     private void StartTracing()
     {
-        _loggingService.Initialize(IsDarkTheme);
+        _loggingService.Initialize();
         _loggingService.RegisterTraceListeners();
         VisualizationController.Start();
     }
@@ -77,31 +72,13 @@ public sealed partial class TraceLogViewModel : ObservableObject, IDisposable,
         ClearGeometry();
     }
 
-    private void UpdateTheme(AppTheme theme, bool shouldRestart)
-    {
-        LogTextBox?.Dispatcher.Invoke(() =>
-        {
-            _currentTheme = theme;
-            _loggingService.OutputSink?.SetTheme(IsDarkTheme);
-            if (shouldRestart && IsStarted)
-            {
-                _loggingService.Restart(IsDarkTheme);
-            }
-        });
-    }
-
-    private bool IsDarkTheme => _currentTheme == AppTheme.Dark;
-
     public void Subscribe()
     {
         if (_isSubscribed) return;
 
         _consoleRedirector ??= new ConsoleRedirector();
 
-        UpdateTheme(ThemeManager.Current.ActualApplicationTheme, true);
-
         Context.UiApplication.Idling += _onIdlingHandler;
-        ThemeManager.Current.ActualApplicationThemeChanged += _onThemeChangedHandler;
         _messenger.RegisterAll(this);
 
         _isSubscribed = true;
@@ -116,7 +93,7 @@ public sealed partial class TraceLogViewModel : ObservableObject, IDisposable,
     {
         if (!IsStarted) return;
         LogLevel = _settingsService.LogConfig.LogLevel;
-        _loggingService.Restart(IsDarkTheme);
+        _loggingService.Restart();
     }
 
     private void Unsubscribe()
@@ -124,7 +101,6 @@ public sealed partial class TraceLogViewModel : ObservableObject, IDisposable,
         if (!_isSubscribed) return;
 
         Context.UiApplication.Idling -= _onIdlingHandler;
-        ThemeManager.Current.ActualApplicationThemeChanged -= _onThemeChangedHandler;
         _messenger.UnregisterAll(this);
 
         _isSubscribed = false;
@@ -137,13 +113,6 @@ public sealed partial class TraceLogViewModel : ObservableObject, IDisposable,
             _loggingService.RegisterTraceListeners();
         }
     }
-
-    private void OnThemeChanged(object? sender, EventArgs e)
-    {
-        var theme = ThemeManager.Current.ActualApplicationTheme;
-        if (_currentTheme == theme) return;
-        UpdateTheme(theme, IsStarted);
-    }
     
     [RelayCommand]
     private void Clear()
@@ -151,7 +120,7 @@ public sealed partial class TraceLogViewModel : ObservableObject, IDisposable,
         _isClearing = true;
         if (IsStarted)
         {
-            _loggingService.Restart(IsDarkTheme);
+            _loggingService.Restart();
         }
         _isClearing = false;
     }

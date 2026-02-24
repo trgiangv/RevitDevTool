@@ -1,4 +1,3 @@
-using RevitDevTool.Logging.Enums;
 using System.IO;
 
 namespace RevitDevTool.Utils;
@@ -45,17 +44,6 @@ public static class SettingsUtils
             return false;
         }
     }
-
-    /// <summary>
-    /// Get the file extension for the given log save format.
-    /// </summary>
-    /// <param name="format"></param>
-    /// <returns></returns>
-    public static string ToFileExtension(this LogSaveFormat format) => format switch
-    {
-        LogSaveFormat.Json => "json",
-        _ => "log"
-    };
 
     /// <summary>
     /// Get the current process ID in a cross-platform manner.

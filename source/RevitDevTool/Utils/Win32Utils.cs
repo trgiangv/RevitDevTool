@@ -1,5 +1,4 @@
 using Autodesk.Windows;
-using RevitDevTool.Logging.Theme;
 using System.Runtime.InteropServices;
 using System.Windows;
 using System.Windows.Interop;
@@ -83,13 +82,11 @@ public static class Win32Utils
         
         _ = SetWindowLong(helper.Handle, GWL_STYLE, currentStyle);
 
-        if (disableClose)
+        if (!disableClose) return;
+        var hMenu = GetSystemMenu(helper.Handle, false);
+        if (hMenu != IntPtr.Zero)
         {
-            IntPtr hMenu = GetSystemMenu(helper.Handle, false);
-            if (hMenu != IntPtr.Zero)
-            {
-                EnableMenuItem(hMenu, SC_CLOSE, MF_BYCOMMAND | MF_GRAYED | MF_DISABLED);
-            }
+            EnableMenuItem(hMenu, SC_CLOSE, MF_BYCOMMAND | MF_GRAYED | MF_DISABLED);
         }
     }
 
@@ -97,13 +94,5 @@ public static class Win32Utils
     {
         window.Owner = MainWindow.getMainWnd();
         window.Closed += (EventHandler)((_, _) => SetForegroundWindow(ComponentManager.ApplicationWindow));
-    }
-
-    public static void SetRichTextBoxTheme(this RichTextBox richTextBox, bool isDarkTheme)
-    {
-        richTextBox.BackColor = isDarkTheme
-            ? LogThemePresets.DarkBackground
-            : LogThemePresets.LightBackground;
-        SetImmersiveDarkMode(richTextBox.Handle, isDarkTheme);
     }
 }

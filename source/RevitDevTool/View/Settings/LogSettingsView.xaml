@@ -3,12 +3,10 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:design="clr-namespace:RevitDevTool.Theme.Design"
-             xmlns:logging="clr-namespace:Microsoft.Extensions.Logging;assembly=Microsoft.Extensions.Logging.Abstractions"
              xmlns:mah="http://metro.mahapps.com/winfx/xaml/controls"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:settings="clr-namespace:RevitDevTool.ViewModel.Settings"
              xmlns:sys="clr-namespace:System;assembly=mscorlib"
-             xmlns:enums="clr-namespace:RevitDevTool.Logging.Enums"
              d:Background="{DynamicResource MahApps.Brushes.ThemeBackground}"
              d:DataContext="{d:DesignInstance settings:LogSettingsViewModel}"
              d:DesignHeight="850"
@@ -24,30 +22,6 @@
             <BooleanToVisibilityConverter x:Key="BoolToVisibility" />
             <sys:Double x:Key="ContentMinWidth">100</sys:Double>
             <sys:Double x:Key="ToggleSwitchMinWidth">60</sys:Double>
-
-            <ObjectDataProvider x:Key="LogLevelProvider"
-                                MethodName="GetValues"
-                                ObjectType="{x:Type sys:Enum}">
-                <ObjectDataProvider.MethodParameters>
-                    <x:Type TypeName="logging:LogLevel" />
-                </ObjectDataProvider.MethodParameters>
-            </ObjectDataProvider>
-
-            <ObjectDataProvider x:Key="LogSaveFormats"
-                                MethodName="GetValues"
-                                ObjectType="{x:Type sys:Enum}">
-                <ObjectDataProvider.MethodParameters>
-                    <x:Type TypeName="enums:LogSaveFormat" />
-                </ObjectDataProvider.MethodParameters>
-            </ObjectDataProvider>
-
-            <ObjectDataProvider x:Key="LogTimeIntervals"
-                                MethodName="GetValues"
-                                ObjectType="{x:Type sys:Enum}">
-                <ObjectDataProvider.MethodParameters>
-                    <x:Type TypeName="enums:RollingInterval" />
-                </ObjectDataProvider.MethodParameters>
-            </ObjectDataProvider>
         </ResourceDictionary>
     </UserControl.Resources>
 
@@ -57,7 +31,7 @@
             <!--  Log Filter  -->
             <GroupBox Margin="0,0,0,8"
                       Header="Log Filter">
-                <StackPanel Margin="8 5 8 8">
+                <StackPanel Margin="8,5,8,8">
                     <!--  Minimum Level  -->
                     <Grid>
                         <Grid.ColumnDefinitions>
@@ -83,7 +57,7 @@
                         <ComboBox Grid.Column="2"
                                   Width="{StaticResource ContentMinWidth}"
                                   VerticalAlignment="Center"
-                                  ItemsSource="{Binding Source={StaticResource LogLevelProvider}}"
+                                  ItemsSource="{Binding LogLevels, Mode=OneTime}"
                                   SelectedItem="{Binding LogLevel}" />
                     </Grid>
 
@@ -195,7 +169,7 @@
                     </Grid>
 
                     <!--  WPF Trace  -->
-                    <Grid Margin="0 8 0 0">
+                    <Grid Margin="0,8,0,0">
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="Auto" />
                             <ColumnDefinition Width="*" />
@@ -265,7 +239,7 @@
                                 <ComboBox Width="{StaticResource ContentMinWidth}"
                                           Margin="0,8,0,0"
                                           HorizontalAlignment="Right"
-                                          ItemsSource="{Binding Source={StaticResource LogSaveFormats}}"
+                                          ItemsSource="{Binding LogSaveFormats, Mode=OneTime}"
                                           SelectedItem="{Binding SaveFormat}"
                                           Visibility="{Binding IsSaveLogEnabled, Converter={StaticResource BoolToVisibility}}" />
                             </StackPanel>
@@ -327,7 +301,7 @@
                         <ComboBox Grid.Column="2"
                                   Width="{StaticResource ContentMinWidth}"
                                   VerticalAlignment="Center"
-                                  ItemsSource="{Binding Source={StaticResource LogTimeIntervals}}"
+                                  ItemsSource="{Binding LogTimeIntervals, Mode=OneTime}"
                                   SelectedItem="{Binding TimeInterval}" />
                     </Grid>
 

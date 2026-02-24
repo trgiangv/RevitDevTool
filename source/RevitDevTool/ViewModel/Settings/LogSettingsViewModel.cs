@@ -1,13 +1,15 @@
 using CommunityToolkit.Mvvm.Messaging;
 using Microsoft.Extensions.Logging;
+using RevitDevTool.Logger.Enums;
 using RevitDevTool.Logging;
-using RevitDevTool.Logging.Enums;
 using RevitDevTool.Settings;
 using RevitDevTool.Utils;
 using RevitDevTool.ViewModel.Messages;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Diagnostics;
+using RevitDevTool.Logger.Contracts;
+using RevitDevTool.Logger.Listeners;
 
 // ReSharper disable UnusedParameterInPartialMethod
 
@@ -19,6 +21,9 @@ public partial class LogSettingsViewModel : ObservableObject, IDataErrorInfo, IR
     private readonly ILoggingService _loggingService;
     private readonly IMessenger _messenger;
 
+    public static LogLevel[] LogLevels { get; } = Enum.GetValues(typeof(LogLevel)).Cast<LogLevel>().ToArray();
+    public static LogSaveFormat[] LogSaveFormats { get; } = Enum.GetValues(typeof(LogSaveFormat)).Cast<LogSaveFormat>().ToArray();
+    public static RollingInterval[] LogTimeIntervals { get; } = Enum.GetValues(typeof(RollingInterval)).Cast<RollingInterval>().ToArray();
     public static SourceLevels[] SourceLevels { get; } = Enum.GetValues(typeof(SourceLevels)).Cast<SourceLevels>().ToArray();
     public static RevitEnricher[] AvailableRevitEnrichers { get; } =
     [
@@ -70,10 +75,10 @@ public partial class LogSettingsViewModel : ObservableObject, IDataErrorInfo, IR
 
     public string this[string columnName] => columnName switch
     {
-        nameof(InformationKeywords) => TraceUtils.ValidateKeywords(InformationKeywords) ?? string.Empty,
-        nameof(WarningKeywords) => TraceUtils.ValidateKeywords(WarningKeywords) ?? string.Empty,
-        nameof(ErrorKeywords) => TraceUtils.ValidateKeywords(ErrorKeywords) ?? string.Empty,
-        nameof(CriticalKeywords) => TraceUtils.ValidateKeywords(CriticalKeywords) ?? string.Empty,
+        nameof(InformationKeywords) => LogLevelDetector.ValidateKeywords(InformationKeywords) ?? string.Empty,
+        nameof(WarningKeywords) => LogLevelDetector.ValidateKeywords(WarningKeywords) ?? string.Empty,
+        nameof(ErrorKeywords) => LogLevelDetector.ValidateKeywords(ErrorKeywords) ?? string.Empty,
+        nameof(CriticalKeywords) => LogLevelDetector.ValidateKeywords(CriticalKeywords) ?? string.Empty,
         _ => string.Empty
     };
 

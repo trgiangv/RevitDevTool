@@ -1,10 +1,14 @@
-using RevitDevTool.Logging.Theme;
 using RevitDevTool.Theme;
-using RevitDevTool.Utils;
 using Serilog;
+using Serilog.Sinks.RichTextBoxForms.Tokens;
+using System;
+using System.Collections.Generic;
 using System.Globalization;
 using System.Windows.Forms.Integration;
+using RevitDevTool.Logger.Contracts;
+using Serilog.Sinks.RichTextBoxForms.Themes;
 using FontStyle = System.Drawing.FontStyle;
+using SerilogTheme = Serilog.Sinks.RichTextBoxForms.Themes.Theme;
 using LibrarySink = Serilog.Sinks.RichTextBoxForms.RichTextBoxSink;
 
 namespace RevitDevTool.Logging.Serilog;
@@ -18,6 +22,7 @@ internal sealed class SerilogRichTextBoxSink : ILogOutputSink
 {
     private readonly RichTextBox _richTextBox;
     private readonly WindowsFormsHost _host;
+    private readonly Dictionary<string, DetectedToken> _detectedTokens = new(StringComparer.Ordinal);
     private LibrarySink? _librarySink;
     private bool _disposed;
 
@@ -34,7 +39,6 @@ internal sealed class SerilogRichTextBoxSink : ILogOutputSink
         };
 
         _host = new WindowsFormsHost { Child = _richTextBox };
-        _host.Loaded += (_, _) => _richTextBox.SetRichTextBoxTheme(ThemeManager.Current.ActualApplicationTheme == AppTheme.Dark);
     }
 
     /// <summary>
@@ -56,14 +60,6 @@ internal sealed class SerilogRichTextBoxSink : ILogOutputSink
         }
     }
 
-    public void SetTheme(bool isDarkTheme)
-    {
-        if (_host.Dispatcher.CheckAccess())
-            _richTextBox.SetRichTextBoxTheme(isDarkTheme);
-        else
-            _host.Dispatcher.Invoke(() => _richTextBox.SetRichTextBoxTheme(isDarkTheme));
-    }
-
     public object GetHostControl() => _host;
 
     private const string DefaultOutputTemplate = "[{Timestamp:HH:mm:ss} {Level:u3}] {Message:lj}{NewLine}{Exception}";
@@ -72,12 +68,12 @@ internal sealed class SerilogRichTextBoxSink : ILogOutputSink
     /// <summary>
     /// Configures Serilog with a RichTextBox sink and stores the reference
     /// to the library's sink for proper lifecycle management.
+    /// The sink automatically subscribes to ThemeManager theme changes.
     /// </summary>
     internal LoggerConfiguration ConfigureSerilog(LoggerConfiguration config, bool isDarkTheme, bool prettyPrintJson, bool includeStackTrace)
     {
         DisposeSink();
-        var logTheme = isDarkTheme ? LogThemePresets.EnhancedDark : LogThemePresets.EnhancedLight;
-        var theme = logTheme.ToSerilogTheme();
+        var theme = isDarkTheme ? ThemePresets.EnhancedDark : ThemePresets.EnhancedLight;
         var outputTemplate = includeStackTrace ? StackTraceOutputTemplate : DefaultOutputTemplate;
 
         var result = config.WriteTo.RichTextBox(
@@ -88,10 +84,72 @@ internal sealed class SerilogRichTextBoxSink : ILogOutputSink
             maxLogLines: 1000,
             outputTemplate: outputTemplate,
             formatProvider: CultureInfo.InvariantCulture,
-            prettyPrintJson: prettyPrintJson);
+            prettyPrintJson: prettyPrintJson,
+            enableTokenLinks: true,
+            enableAutoTokenDetection: true,
+            onTokensDetected: OnTokensDetected,
+            onTokenClicked: OnTokenClicked,
+            onThemeChanged: SubscribeToThemeChanges);
 
         _librarySink = sink;
         return result;
+    }
+
+    private static Action SubscribeToThemeChanges(Action<SerilogTheme> setTheme)
+    {
+        EventHandler<EventArgs> handler = (_, _) =>
+        {
+            var isDark = ThemeManager.Current.ActualApplicationTheme == AppTheme.Dark;
+            var newTheme = isDark ? ThemePresets.EnhancedDark : ThemePresets.EnhancedLight;
+            setTheme(newTheme);
+        };
+
+        ThemeManager.Current.ActualApplicationThemeChanged += handler;
+        return () => ThemeManager.Current.ActualApplicationThemeChanged -= handler;
+    }
+
+    private void OnTokensDetected(DetectedTokenBatch batch)
+    {
+        if (batch.Tokens.Count == 0)
+        {
+            return;
+        }
+
+        if (_host.Dispatcher.CheckAccess())
+        {
+            CacheSearchableTokens(batch);
+        }
+        else
+        {
+            _host.Dispatcher.BeginInvoke(() => CacheSearchableTokens(batch));
+        }
+    }
+
+    private void CacheSearchableTokens(DetectedTokenBatch batch)
+    {
+        lock (_detectedTokens)
+        {
+            foreach (var token in batch.Tokens)
+            {
+                if (RevitTokenSearchService.SearchActiveDocument(token).Count > 0)
+                {
+                    _detectedTokens[$"{token.Kind}:{token.NormalizedValue}"] = token;
+                }
+            }
+        }
+    }
+
+    private void OnTokenClicked(DetectedToken token)
+    {
+        // Callbacks can be invoked from the sink processing thread; marshal to UI/Revit thread.
+        if (_host.Dispatcher.CheckAccess())
+        {
+            _ = RevitTokenSearchService.TrySearchAndSelectInActiveDocument(token);
+        }
+        else
+        {
+            _host.Dispatcher.BeginInvoke(() => _ = RevitTokenSearchService.TrySearchAndSelectInActiveDocument(token));
+        }
     }
 
     /// <summary>

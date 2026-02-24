@@ -1,8 +1,15 @@
 using Microsoft.Extensions.Logging;
+using RevitDevTool.Bridge.IPC;
+using RevitDevTool.Engine;
 using RevitDevTool.Logging.Listeners;
 using RevitDevTool.Logging.Python;
+using RevitDevTool.Logger.Contracts;
+using RevitDevTool.Logger.Listeners;
+using RevitDevTool.Logger.Transport;
 using RevitDevTool.Settings;
+using RevitDevTool.Theme;
 using RevitDevTool.Utils;
+using ILoggerFactory = RevitDevTool.Logger.Contracts.ILoggerFactory;
 
 namespace RevitDevTool.Logging;
 
@@ -16,6 +23,8 @@ public sealed class LoggingService(
     ITraceListenerFactory traceListenerFactory,
     ILogOutputSink outputSink) : ILoggingService
 {
+    private static bool IsDarkTheme => ThemeManager.Current.ActualApplicationTheme == AppTheme.Dark;
+
     private bool _disposed;
 
     private ILoggerAdapter? _logger;
@@ -24,30 +33,46 @@ public sealed class LoggingService(
     private GeometryListener? _geometryListener;
     private NotifyListener? _notifyListener;
     private LoggerTraceListener? _loggerTraceListener;
+    private PipeLogTraceListener? _pipeLogListener;
 
-    public void Initialize(bool isDarkTheme)
+    public void Initialize()
     {
         if (_logger != null)
         {
-            Restart(isDarkTheme);
+            Restart();
             return;
         }
 
         var config = settingsService.LogConfig;
 
-        OutputSink?.SetTheme(isDarkTheme);
-        _logger = loggerFactory.CreateLogger(config, OutputSink, isDarkTheme);
+        _logger = loggerFactory.CreateLogger(config, OutputSink, IsDarkTheme);
         _loggerTraceListener = traceListenerFactory.CreateTraceListener(_logger, config);
         _geometryListener ??= new GeometryListener();
         _notifyListener ??= new NotifyListener();
+        if (config.EnablePipeLogBridge)
+        {
+            var sink = new PipeLogSink(async (logEvent, ct) =>
+            {
+                var payload = new PipeLogEntry
+                {
+                    TimestampUtc = logEvent.TimestampUtc.ToString("O"),
+                    Level = logEvent.Level,
+                    Message = logEvent.Message,
+                    Source = logEvent.Source,
+                    Exception = logEvent.Exception
+                };
+                await EngineHost.Instance.PublishLogAsync(payload, ct).ConfigureAwait(false);
+            });
+            _pipeLogListener = new PipeLogTraceListener(sink, msg => TraceUtils.DetectLogLevel(msg, config.FilterKeywords).ToString());
+        }
         PyTrace.Initialize(settingsService);
     }
 
-    public void Restart(bool isDarkTheme)
+    public void Restart()
     {
         UnregisterTraceListeners();
         DisposeLogger();
-        Initialize(isDarkTheme);
+        Initialize();
         RegisterTraceListeners();
     }
 
@@ -60,14 +85,14 @@ public sealed class LoggingService(
     {
         TraceUtils.RegisterTraceListeners(
             settingsService.LogConfig.IncludeWpfTrace,
-            _loggerTraceListener, _geometryListener, _notifyListener);
+            _loggerTraceListener, _geometryListener, _notifyListener, _pipeLogListener);
     }
 
     public void UnregisterTraceListeners()
     {
         TraceUtils.UnregisterTraceListeners(
             settingsService.LogConfig.IncludeWpfTrace,
-            _loggerTraceListener, _geometryListener, _notifyListener);
+            _loggerTraceListener, _geometryListener, _notifyListener, _pipeLogListener);
     }
 
     public void ClearOutput()
@@ -86,6 +111,8 @@ public sealed class LoggingService(
         _geometryListener = null;
         _notifyListener?.Dispose();
         _notifyListener = null;
+        _pipeLogListener?.Dispose();
+        _pipeLogListener = null;
     }
 
     public void Dispose()

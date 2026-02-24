@@ -1,5 +1,8 @@
 using Microsoft.Extensions.Logging;
-using RevitDevTool.Logging.Enums;
+using RevitDevTool.Logger.Config;
+using RevitDevTool.Logger.Contracts;
+using RevitDevTool.Logger.Enums;
+using RevitDevTool.Logger.Serilog;
 using RevitDevTool.Settings.Config;
 using RevitDevTool.Utils;
 using Serilog;
@@ -7,7 +10,8 @@ using Serilog.Core;
 using Serilog.Events;
 using Serilog.Formatting.Json;
 using System.IO;
-using RevitEnricher = RevitDevTool.Logging.Enums.RevitEnricher;
+using ILoggerFactory = RevitDevTool.Logger.Contracts.ILoggerFactory;
+using RevitEnricher = RevitDevTool.Logger.Enums.RevitEnricher;
 
 namespace RevitDevTool.Logging.Serilog;
 
@@ -20,26 +24,29 @@ internal sealed class SerilogLoggerFactory : ILoggerFactory
 {
     private readonly LoggingLevelSwitch _levelSwitch = new(LogEventLevel.Debug);
 
-    public ILoggerAdapter CreateLogger(LogConfig config, ILogOutputSink? outputSink, bool isDarkTheme)
+    public ILoggerAdapter CreateLogger(LogConfigCore config, ILogOutputSink? outputSink, bool isDarkTheme)
     {
+        var hostConfig = config as LogConfig
+                         ?? throw new InvalidOperationException("Host logging requires RevitDevTool.Settings.Config.LogConfig.");
+
         var loggerConfig = new LoggerConfiguration()
             .MinimumLevel.ControlledBy(_levelSwitch)
             .Enrich.FromLogContext();
 
-        loggerConfig = ConfigureRevitEnrichers(loggerConfig, config.RevitEnrichers);
+        loggerConfig = ConfigureRevitEnrichers(loggerConfig, hostConfig.RevitEnrichers);
 
-        if (outputSink is SerilogRichTextBoxSink richTextBoxSink && !config.UseExternalFileOnly)
+        if (outputSink is SerilogRichTextBoxSink richTextBoxSink && !hostConfig.UseExternalFileOnly)
         {
             loggerConfig = richTextBoxSink.ConfigureSerilog(
                 loggerConfig,
                 isDarkTheme,
-                config.EnablePrettyJson,
-                config.IncludeStackTrace);
+                hostConfig.EnablePrettyJson,
+                hostConfig.IncludeStackTrace);
         }
 
-        if (config.IsSaveLogEnabled)
+        if (hostConfig.IsSaveLogEnabled)
         {
-            loggerConfig = ConfigureFileSink(loggerConfig, config);
+            loggerConfig = ConfigureFileSink(loggerConfig, hostConfig);
         }
 
         return new SerilogAdapter(loggerConfig.CreateLogger());
