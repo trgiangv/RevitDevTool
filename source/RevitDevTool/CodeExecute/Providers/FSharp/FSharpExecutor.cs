@@ -52,11 +52,9 @@ internal static class FSharpExecutor
 
             using (session)
             {
-                var result = session.EvalScriptNonThrowing(scriptPath);
-                var choice = result.Item1;
-                // var diagnostics = result.Item2;
-                // FlushOutput(sbOut, sbErr);
-                // ReportDiagnostics(diagnostics);
+                var (choice, diagnostics) = session.EvalScriptNonThrowing(scriptPath);
+                FlushOutput(sbOut, sbErr);
+                ReportDiagnostics(diagnostics);
 
                 if (choice.IsChoice2Of2)
                 {
@@ -91,13 +89,13 @@ internal static class FSharpExecutor
         }
     }
 
-    public static Result ExecuteCommand(
+    public static void ExecuteCommand(
         IExternalCommand command,
         ExternalCommandData commandData,
         ref string message,
         ElementSet elements)
     {
-        return command.Execute(commandData, ref message, elements);
+        command.Execute(commandData, ref message, elements);
     }
 
     private static string[] BuildSessionArgs()
@@ -129,10 +127,6 @@ internal static class FSharpExecutor
         var adWindowsLocation = typeof(Autodesk.Windows.RibbonButton).Assembly.Location;
         if (!string.IsNullOrEmpty(adWindowsLocation))
             args.Add($"--reference:{adWindowsLocation}");
-        
-        var traceSourceLocation = typeof(Trace).Assembly.Location;
-        if (!string.IsNullOrEmpty(traceSourceLocation))
-            args.Add($"--reference:{traceSourceLocation}");
 
         return args.ToArray();
     }
@@ -187,8 +181,10 @@ internal static class FSharpExecutor
                 Trace.TraceError(msg);
             else if (diag.Severity.IsWarning)
                 Trace.TraceWarning(msg);
+#if DEBUG
             else
                 Trace.TraceInformation(msg);
+#endif
         }
     }
 

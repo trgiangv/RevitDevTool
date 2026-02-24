@@ -2,25 +2,27 @@ using System.Diagnostics;
 using System.IO;
 using RevitDevTool.CodeExecute.Interfaces;
 using RevitDevTool.CodeExecute.Models;
+using RevitDevTool.CodeExecute.Providers.FSharp;
+using RevitDevTool.CodeExecute.Providers.Python;
 
-namespace RevitDevTool.CodeExecute.Providers.Python;
+namespace RevitDevTool.CodeExecute.Providers;
 
-/// <summary>
-/// Provider for discovering and executing Python scripts.
-/// Uses unified node model: RootNode (RootFolder) → IntermediateNode (SubFolder) → ExecuteNode (Script ending with "script")
-/// </summary>
-public sealed class PythonExecutionProvider : IExecutionProvider
+public sealed class ScriptExecutionProvider : IExecutionProvider
 {
-    public string Name => "Python";
+    private static readonly string[] ScriptSearchPatterns = ["*.py", "*.fsx"];
 
-    /// <summary>
-    /// Low priority - folders are generic, should be checked after specific file types
-    /// </summary>
+    private static readonly HashSet<string> IgnoredFolders = new(StringComparer.OrdinalIgnoreCase)
+    {
+        ".git", ".github", ".vs", ".idea", ".vscode",
+        "bin", "obj", "packages", "node_modules", "output",
+        "venv", ".venv", "env", ".env", "virtualenv",
+        "__pycache__", "dist", "build", ".mypy_cache", ".pytest_cache"
+    };
+
+    public string Name => "Script";
+
     public int Priority => -100;
 
-    /// <summary>
-    /// Check if this is a directory (folder-based provider)
-    /// </summary>
     public bool CanHandle(string path) => Directory.Exists(path);
 
     public Task<IEnumerable<BaseNode>> DiscoverAsync(string path, CancellationToken cancellationToken = default)
@@ -35,13 +37,12 @@ public sealed class PythonExecutionProvider : IExecutionProvider
 
             var rootNode = BuildFolderTree(path, path);
             return rootNode is not null ? [rootNode] : [];
-
         }, cancellationToken);
     }
 
     public IEnumerable<string> GetWatchPatterns()
     {
-        return ["*.py"];
+        return ScriptSearchPatterns;
     }
 
     public bool ValidatePath(string path)
@@ -49,22 +50,12 @@ public sealed class PythonExecutionProvider : IExecutionProvider
         return Directory.Exists(path);
     }
 
-    #region Private Helpers
-
-    private static readonly HashSet<string> IgnoredFolders = new(StringComparer.OrdinalIgnoreCase)
+    private BaseNode? BuildFolderTree(string rootPath, string currentPath)
     {
-        ".git", ".github", ".vs", ".idea", ".vscode", 
-        "bin", "obj", "packages", "node_modules", "output",
-        "venv", ".venv", "env", ".env", "virtualenv",
-        "__pycache__", "dist", "build", ".mypy_cache", ".pytest_cache"
-    };
-
-    private static bool IsIgnoredFolder(string folderName) => IgnoredFolders.Contains(folderName);
-
-
-    private static BaseNode? BuildFolderTree(string rootPath, string currentPath)
-    {
-        if (ShouldSkipRootFolder(rootPath, currentPath)) return null;
+        if (ShouldSkipRootFolder(rootPath, currentPath))
+        {
+            return null;
+        }
 
         var folderNode = CreateFolderNode(rootPath, currentPath);
 
@@ -82,11 +73,11 @@ public sealed class PythonExecutionProvider : IExecutionProvider
 
     private static bool ShouldSkipRootFolder(string rootPath, string currentPath)
     {
-        if (!currentPath.Equals(rootPath, StringComparison.OrdinalIgnoreCase)) return false;
+        if (!currentPath.Equals(rootPath, StringComparison.OrdinalIgnoreCase))
+            return false;
 
-        var allScripts = Directory.GetFiles(rootPath, "*script.py", SearchOption.AllDirectories);
-        if (allScripts.Length != 0) return false;
-        Trace.TraceWarning($"No valid python scripts (*script.py) found in: {rootPath}");
+        if (HasAnyEntryScript(rootPath)) return false;
+        Trace.TraceWarning($"No valid entry script found (*script.py or *script.fsx) in: {rootPath}");
         return true;
     }
 
@@ -98,7 +89,7 @@ public sealed class PythonExecutionProvider : IExecutionProvider
             folderName = currentPath;
         }
 
-        var folderId = $"python://{currentPath}";
+        var folderId = $"script://{currentPath}";
         var isRoot = currentPath.Equals(rootPath, StringComparison.OrdinalIgnoreCase);
 
         if (isRoot)
@@ -108,12 +99,12 @@ public sealed class PythonExecutionProvider : IExecutionProvider
                 Id = folderId,
                 Name = folderName,
                 RootPath = currentPath,
-                ProviderType = ExecutionMode.Python,
+                ProviderType = ExecutionMode.Script,
                 NodeType = NodeType.Container,
                 IsExpanded = true
             };
         }
-        
+
         return new IntermediateNode
         {
             Id = folderId,
@@ -126,7 +117,8 @@ public sealed class PythonExecutionProvider : IExecutionProvider
 
     private static void PopulateScripts(BaseNode folderNode, string currentPath, string rootPath)
     {
-        var scriptFiles = Directory.GetFiles(currentPath, "*.py", SearchOption.TopDirectoryOnly)
+        var scriptFiles = ScriptSearchPatterns
+            .SelectMany(pattern => Directory.GetFiles(currentPath, pattern, SearchOption.TopDirectoryOnly))
             .Where(f => Path.GetFileNameWithoutExtension(f).EndsWith("script", StringComparison.OrdinalIgnoreCase))
             .OrderBy(Path.GetFileName);
 
@@ -137,7 +129,38 @@ public sealed class PythonExecutionProvider : IExecutionProvider
         }
     }
 
-    private static void PopulateSubFolders(BaseNode folderNode, string rootPath, string currentPath)
+    private static ExecuteNode BuildScriptNode(string scriptPath, string rootPath)
+    {
+        var fileName = Path.GetFileName(scriptPath);
+        var extension = Path.GetExtension(scriptPath);
+
+        return extension.ToLowerInvariant() switch
+        {
+            ".py" => new ExecuteNode
+            {
+                Id = $"python://{scriptPath}",
+                Name = fileName,
+                ExecutablePath = scriptPath,
+                SourceFilePath = scriptPath,
+                ProviderType = ExecutionMode.Python,
+                NodeType = NodeType.Executable,
+                ExecutionStrategy = new PythonExecutionStrategy(scriptPath, rootPath)
+            },
+            ".fsx" => new ExecuteNode
+            {
+                Id = $"fsharp://{scriptPath}",
+                Name = fileName,
+                ExecutablePath = scriptPath,
+                SourceFilePath = scriptPath,
+                ProviderType = ExecutionMode.FSharp,
+                NodeType = NodeType.Executable,
+                ExecutionStrategy = new FSharpExecutionStrategy(scriptPath)
+            },
+            _ => throw new NotSupportedException($"Unsupported script extension '{extension}' for file '{scriptPath}'.")
+        };
+    }
+
+    private void PopulateSubFolders(BaseNode folderNode, string rootPath, string currentPath)
     {
         var subFolders = Directory.GetDirectories(currentPath)
             .Where(d => !IsIgnoredFolder(Path.GetFileName(d)))
@@ -153,22 +176,14 @@ public sealed class PythonExecutionProvider : IExecutionProvider
         }
     }
 
-    private static ExecuteNode BuildScriptNode(string scriptPath, string rootPath)
+    private static bool IsIgnoredFolder(string folderName)
     {
-        var fileName = Path.GetFileName(scriptPath);
-        var scriptId = $"python://{scriptPath}";
-
-        return new ExecuteNode
-        {
-            Id = scriptId,
-            Name = fileName,
-            ExecutablePath = scriptPath,
-            SourceFilePath = scriptPath,
-            ProviderType = ExecutionMode.Python,
-            NodeType = NodeType.Executable,
-            ExecutionStrategy = new PythonExecutionStrategy(scriptPath, rootPath)
-        };
+        return IgnoredFolders.Contains(folderName);
     }
 
-    #endregion
+    private static bool HasAnyEntryScript(string rootPath)
+    {
+        return Directory.GetFiles(rootPath, "*script.py", SearchOption.AllDirectories).Length != 0
+               || Directory.GetFiles(rootPath, "*script.fsx", SearchOption.AllDirectories).Length != 0;
+    }
 }

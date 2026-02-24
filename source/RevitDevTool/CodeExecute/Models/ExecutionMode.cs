@@ -2,22 +2,26 @@ namespace RevitDevTool.CodeExecute.Models;
 
 /// <summary>
 /// Execution mode for code execution.
-/// Changed from "Dotnet" to "DotNet" to better represent the .NET ecosystem.
 /// </summary>
 public enum ExecutionMode
 {
     /// <summary>
-    /// .NET assembly execution (was "Dotnet")
+    /// Script execution (Python or F#)
     /// </summary>
-    DotNet,
+    Script,
 
     /// <summary>
-    /// Python script execution (directly via PythonNet, no Dynamo)
+    /// .NET assembly execution
+    /// </summary>
+    Assembly,
+
+    /// <summary>
+    /// Python script execution (directly via PythonNet)
     /// </summary>
     Python,
 
     /// <summary>
-    /// F# script execution (via FSharp.Compiler.Service FsiEvaluationSession)
+    /// F# script execution (via FSharp.Compiler.Service)
     /// </summary>
     FSharp
 }

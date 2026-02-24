@@ -1,10 +1,9 @@
-using Autodesk.Revit.Attributes;
-using Autodesk.Revit.UI;
 using System.Diagnostics;
 using System.IO;
 using System.Reflection;
-
-namespace RevitDevTool.CodeExecute.Providers.DotNet;
+using Autodesk.Revit.Attributes;
+using Autodesk.Revit.UI;
+namespace RevitDevTool.CodeExecute.Providers.Dotnet;
 
 /// <summary>
 /// Service for loading Revit add-in assemblies with automatic dependency resolution.

@@ -2,7 +2,7 @@
 using System.IO;
 using Autodesk.Revit.UI;
 using RevitDevTool.Bridge;
-using RevitDevTool.CodeExecute.Providers.DotNet;
+using RevitDevTool.CodeExecute.Providers.Dotnet;
 using RevitDevTool.CodeExecute.Providers.Python;
 
 namespace RevitDevTool.Controllers;
@@ -89,7 +89,7 @@ public static class JobController
             var items = AddinLoaderService.ParseCommands(job.Script);
             if (items.Count <= 0) return;
             var message = "";
-            AddinExecutor.RunCommand(items[0], AddinLoadHelper.ExternalCommandData, ref message, AddinLoadHelper.ElementSet);
+            AddinExecutor.RunCommand(items[0], AddinCommandData.ExternalCommandData, ref message, AddinCommandData.ElementSet);
         }
         else
         {

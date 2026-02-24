@@ -36,6 +36,7 @@ public partial class CodeExecuteViewModel : ObservableObject
         _orchestrator = orchestrator;
         _settingsService = settingsService;
         _orchestrator.TreeChanged += OnTreeChanged;
+        _orchestrator.RootRemoved += OnRootRemoved;
         ThemeManager.Current.ActualApplicationThemeChanged += OnThemeChanged;
 
         _searchDebounceTimer = new DispatcherTimer
@@ -63,9 +64,9 @@ public partial class CodeExecuteViewModel : ObservableObject
     }
 
     [RelayCommand]
-    private Task LoadDotNetAsync()
+    private Task LoadAssemblyAsync()
     {
-        return LoadDotNetFromPathAsync(null);
+        return LoadAssemblyFromPathAsync(null);
     }
 
     [RelayCommand]
@@ -77,7 +78,7 @@ public partial class CodeExecuteViewModel : ObservableObject
     /// <summary>
     /// Load DotNet assembly from path (for drag-drop support)
     /// </summary>
-    private async Task LoadDotNetFromPathAsync(string? path)
+    private async Task LoadAssemblyFromPathAsync(string? path)
     {
         if (string.IsNullOrEmpty(path))
         {
@@ -98,9 +99,7 @@ public partial class CodeExecuteViewModel : ObservableObject
 
         await _orchestrator.LoadFromPathAsync(path!).ConfigureAwait(true);
 
-        // Save to settings for next startup
-        SavePathToSettings(path!, ExecutionMode.DotNet);
-
+        SavePathToSettings(path!, ExecutionMode.Assembly);
         UpdateTreeRoot();
     }
 
@@ -122,7 +121,7 @@ public partial class CodeExecuteViewModel : ObservableObject
 
         await _orchestrator.LoadFromPathAsync(path!).ConfigureAwait(true);
 
-        SavePathToSettings(path!, ExecutionMode.Python);
+        SavePathToSettings(path!, ExecutionMode.Script);
         UpdateTreeRoot();
     }
 
@@ -136,7 +135,7 @@ public partial class CodeExecuteViewModel : ObservableObject
 
         if (File.Exists(path) && path!.EndsWith(".dll", StringComparison.OrdinalIgnoreCase))
         {
-            await LoadDotNetFromPathAsync(path).ConfigureAwait(true);
+            await LoadAssemblyFromPathAsync(path).ConfigureAwait(true);
         }
         else if (Directory.Exists(path))
         {
@@ -287,6 +286,16 @@ public partial class CodeExecuteViewModel : ObservableObject
         UpdateTreeRoot();
     }
 
+    private void OnRootRemoved(object? sender, RootRemovedEventArgs e)
+    {
+        RemovePathFromSettings(e.RootPath);
+
+        if (e.IsRename)
+        {
+            SavePathToSettings(e.NewPath!, ExecutionMode.Script);
+        }
+    }
+
     private void OnThemeChanged(object? sender, EventArgs e)
     {
         if (!string.IsNullOrWhiteSpace(SearchText))
@@ -435,8 +444,8 @@ public partial class CodeExecuteViewModel : ObservableObject
 
         var list = mode switch
         {
-            ExecutionMode.DotNet => config.DotnetAssemblyPaths,
-            ExecutionMode.Python or ExecutionMode.FSharp => config.ScriptFolderPaths,
+            ExecutionMode.Assembly => config.DotnetAssemblyPaths,
+            ExecutionMode.Script => config.ScriptFolderPaths,
             _ => throw new ArgumentOutOfRangeException(nameof(mode), mode, null)
         };
 

@@ -1,8 +1,8 @@
 using System.Reflection;
 using Autodesk.Revit.UI;
-namespace RevitDevTool.CodeExecute.Providers.DotNet;
+namespace RevitDevTool.CodeExecute.Providers.Dotnet;
 
-internal static class AddinLoadHelper
+internal static class AddinCommandData
 {
     private static ExternalCommandData? _externalCommandData;
     private static ElementSet? _elementSet;

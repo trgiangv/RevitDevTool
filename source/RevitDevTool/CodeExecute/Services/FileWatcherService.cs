@@ -5,15 +5,20 @@ using RevitDevTool.CodeExecute.Interfaces;
 namespace RevitDevTool.CodeExecute.Services;
 
 /// <summary>
-/// Implementation of IFileWatcherService.
 /// Watches file system changes with debouncing.
+/// Two layers of watchers:
+///   - File watchers: track script file changes inside the root (*.py, *.fsx, *.dll)
+///   - Parent watcher: track rename/delete of the root folder itself from its parent directory
 /// </summary>
 public sealed class FileWatcherService : IFileWatcherService
 {
-    private readonly ConcurrentDictionary<string, FileSystemWatcher> _registeredWatchers = new();
-    private readonly ConcurrentDictionary<string, System.Threading.Timer> _notificationTimers = new();
-    private readonly ConcurrentDictionary<string, FileChangeType> _pendingChanges = new();
-    private readonly TimeSpan _notificationDelay = TimeSpan.FromMilliseconds(500);
+    private const string ParentWatcherSuffix = "|__parent__";
+    private const string DirectoryWatcherSuffix = "|__dir__";
+
+    private readonly ConcurrentDictionary<string, FileSystemWatcher> _watchers = new(StringComparer.OrdinalIgnoreCase);
+    private readonly ConcurrentDictionary<string, System.Threading.Timer> _debounceTimers = new(StringComparer.OrdinalIgnoreCase);
+    private readonly ConcurrentDictionary<string, PendingChange> _pendingChanges = new(StringComparer.OrdinalIgnoreCase);
+    private readonly TimeSpan _debounceDelay = TimeSpan.FromMilliseconds(500);
     private bool _disposed;
 
     public event EventHandler<FileChangedEventArgs>? FileChanged;
@@ -23,15 +28,19 @@ public sealed class FileWatcherService : IFileWatcherService
         if (_disposed) throw new ObjectDisposedException(nameof(FileWatcherService));
         if (string.IsNullOrWhiteSpace(path)) return;
 
-        var directoryPath = ResolveDirectoryPath(path);
+        var rootPath = NormalizePath(path);
+        if (string.IsNullOrEmpty(rootPath))
+            return;
+
+        var directoryPath = ResolveDirectoryPath(rootPath);
         if (string.IsNullOrEmpty(directoryPath) || !Directory.Exists(directoryPath))
             return;
 
-        Unwatch(path);
+        Unwatch(rootPath);
 
         foreach (var pattern in patterns)
         {
-            var key = $"{directoryPath}|{pattern}";
+            var key = $"{rootPath}|{pattern}";
             var watcher = new FileSystemWatcher(directoryPath, pattern)
             {
                 NotifyFilter = NotifyFilters.FileName | NotifyFilters.LastWrite | NotifyFilters.CreationTime,
@@ -39,40 +48,51 @@ public sealed class FileWatcherService : IFileWatcherService
                 IncludeSubdirectories = true
             };
 
-            watcher.Changed += HandleFileSystemChanged;
-            watcher.Created += HandleFileSystemChanged;
-            watcher.Deleted += HandleFileSystemChanged;
-            watcher.Renamed += HandleFileSystemRenamed;
+            watcher.Changed += OnFileContentChanged;
+            watcher.Created += OnFileContentChanged;
+            watcher.Deleted += OnFileContentChanged;
+            watcher.Renamed += OnFileContentRenamed;
 
-            _registeredWatchers[key] = watcher;
+            _watchers[key] = watcher;
         }
+
+        WatchRootLifecycle(rootPath);
+        WatchDirectoryStructure(rootPath);
     }
 
     public void Unwatch(string path)
     {
         if (_disposed) return;
 
-        var directoryPath = ResolveDirectoryPath(path);
-        if (string.IsNullOrEmpty(directoryPath))
+        var rootPath = NormalizePath(path);
+        if (string.IsNullOrEmpty(rootPath))
             return;
 
-        var watchKeyPrefix = $"{directoryPath}|";
-        var keysToRemove = _registeredWatchers.Keys
-            .Where(k => k.StartsWith(watchKeyPrefix, StringComparison.OrdinalIgnoreCase))
+        var prefix = $"{rootPath}|";
+
+        var keysToRemove = _watchers.Keys
+            .Where(k => k.StartsWith(prefix, StringComparison.OrdinalIgnoreCase)
+                        || k.Equals($"{rootPath}{ParentWatcherSuffix}", StringComparison.OrdinalIgnoreCase)
+                        || k.Equals($"{rootPath}{DirectoryWatcherSuffix}", StringComparison.OrdinalIgnoreCase))
             .ToList();
 
         foreach (var key in keysToRemove)
         {
-            if (_registeredWatchers.TryRemove(key, out var watcher))
-            {
-                watcher.EnableRaisingEvents = false;
-                watcher.Dispose();
-            }
+            DisposeWatcher(key);
+        }
 
-            if (_notificationTimers.TryRemove(key, out var timer))
+        var debounceKeysToRemove = _debounceTimers.Keys
+            .Where(k => IsDebounceKeyUnderRoot(k, rootPath))
+            .ToList();
+
+        foreach (var debounceKey in debounceKeysToRemove)
+        {
+            if (_debounceTimers.TryRemove(debounceKey, out var timer))
             {
                 timer.Dispose();
             }
+
+            _pendingChanges.TryRemove(debounceKey, out _);
         }
     }
 
@@ -80,70 +100,217 @@ public sealed class FileWatcherService : IFileWatcherService
     {
         if (_disposed) return;
 
-        foreach (var watcher in _registeredWatchers.Values)
+        foreach (var key in _watchers.Keys.ToList())
         {
-            watcher.EnableRaisingEvents = false;
-            watcher.Dispose();
+            DisposeWatcher(key);
         }
-        _registeredWatchers.Clear();
 
-        foreach (var timer in _notificationTimers.Values)
-        {
-            timer.Dispose();
-        }
-        _notificationTimers.Clear();
         _pendingChanges.Clear();
     }
 
     public void Dispose()
     {
         if (_disposed) return;
-
         UnwatchAll();
         _disposed = true;
     }
 
-    private void HandleFileSystemChanged(object sender, FileSystemEventArgs e)
+    #region File content watchers
+
+    private void OnFileContentChanged(object sender, FileSystemEventArgs e)
     {
-        ScheduleChangeNotification(e.FullPath, MapWatcherChangeType(e.ChangeType));
+        ScheduleDebouncedNotification(
+            path: e.FullPath,
+            changeType: MapChangeType(e.ChangeType),
+            scope: FileWatcherScope.FileContent);
     }
 
-    private void HandleFileSystemRenamed(object sender, RenamedEventArgs e)
+    private void OnFileContentRenamed(object sender, RenamedEventArgs e)
     {
-        ScheduleChangeNotification(e.FullPath, FileChangeType.Renamed);
+        ScheduleDebouncedNotification(
+            path: e.FullPath,
+            changeType: FileChangeType.Renamed,
+            scope: FileWatcherScope.FileContent,
+            oldPath: e.OldFullPath);
     }
 
-    private void ScheduleChangeNotification(string path, FileChangeType changeType)
-    {
-        var key = path;
-        _pendingChanges.AddOrUpdate(key, changeType, (_, existing) => MergePendingChangeType(existing, changeType));
+    #endregion
 
-        if (_notificationTimers.TryRemove(key, out var existingTimer))
+    #region Root lifecycle watcher
+
+    private void WatchRootLifecycle(string rootPath)
+    {
+        var parentDir = Path.GetDirectoryName(rootPath);
+        if (string.IsNullOrEmpty(parentDir) || !Directory.Exists(parentDir))
+            return;
+
+        var itemName = Path.GetFileName(rootPath);
+        if (string.IsNullOrEmpty(itemName))
+            return;
+
+        var parentKey = $"{rootPath}{ParentWatcherSuffix}";
+        var watcher = new FileSystemWatcher(parentDir, itemName)
+        {
+            NotifyFilter = NotifyFilters.FileName | NotifyFilters.DirectoryName,
+            EnableRaisingEvents = true,
+            IncludeSubdirectories = false
+        };
+
+        watcher.Deleted += OnRootDeleted;
+        watcher.Renamed += OnRootRenamed;
+
+        _watchers[parentKey] = watcher;
+    }
+
+    private void OnRootDeleted(object sender, FileSystemEventArgs e)
+    {
+        FireImmediate(new FileChangedEventArgs
+        {
+            Path = e.FullPath,
+            ChangeType = FileChangeType.Deleted,
+            Scope = FileWatcherScope.RootLifecycle
+        });
+    }
+
+    private void OnRootRenamed(object sender, RenamedEventArgs e)
+    {
+        FireImmediate(new FileChangedEventArgs
+        {
+            Path = e.FullPath,
+            OldPath = e.OldFullPath,
+            ChangeType = FileChangeType.Renamed,
+            Scope = FileWatcherScope.RootLifecycle
+        });
+    }
+
+    private void FireImmediate(FileChangedEventArgs args)
+    {
+        FileChanged?.Invoke(this, args);
+    }
+
+    #endregion
+
+    #region Intermediate directory watcher
+
+    private void WatchDirectoryStructure(string rootPath)
+    {
+        if (!Directory.Exists(rootPath))
+            return;
+
+        var key = $"{rootPath}{DirectoryWatcherSuffix}";
+        var watcher = new FileSystemWatcher(rootPath, "*")
+        {
+            NotifyFilter = NotifyFilters.DirectoryName,
+            EnableRaisingEvents = true,
+            IncludeSubdirectories = true
+        };
+
+        watcher.Created += OnDirectoryStructureChanged;
+        watcher.Deleted += OnDirectoryStructureChanged;
+        watcher.Renamed += OnDirectoryStructureRenamed;
+
+        _watchers[key] = watcher;
+    }
+
+    private void OnDirectoryStructureChanged(object sender, FileSystemEventArgs e)
+    {
+        ScheduleDebouncedNotification(
+            path: e.FullPath,
+            changeType: MapChangeType(e.ChangeType),
+            scope: FileWatcherScope.DirectoryStructure);
+    }
+
+    private void OnDirectoryStructureRenamed(object sender, RenamedEventArgs e)
+    {
+        ScheduleDebouncedNotification(
+            path: e.FullPath,
+            changeType: FileChangeType.Renamed,
+            scope: FileWatcherScope.DirectoryStructure,
+            oldPath: e.OldFullPath);
+    }
+
+    #endregion
+
+    #region Debounce
+
+    private void ScheduleDebouncedNotification(string path, FileChangeType changeType, FileWatcherScope scope, string? oldPath = null)
+    {
+        var key = BuildDebounceKey(scope, path);
+        var incoming = new PendingChange(path, oldPath, changeType, scope);
+        _pendingChanges.AddOrUpdate(key, incoming, (_, existing) => MergeChange(existing, incoming));
+
+        if (_debounceTimers.TryRemove(key, out var existingTimer))
         {
             existingTimer.Dispose();
         }
 
         var timer = new System.Threading.Timer(_ =>
         {
-            if (_pendingChanges.TryRemove(key, out var finalChangeType))
+            if (_pendingChanges.TryRemove(key, out var finalChange))
             {
                 FileChanged?.Invoke(this, new FileChangedEventArgs
                 {
-                    Path = path,
-                    ChangeType = finalChangeType
+                    Path = finalChange.Path,
+                    OldPath = finalChange.OldPath,
+                    ChangeType = finalChange.ChangeType,
+                    Scope = finalChange.Scope
                 });
             }
 
-            if (_notificationTimers.TryRemove(key, out var removedTimer))
+            if (_debounceTimers.TryRemove(key, out var t))
             {
-                removedTimer.Dispose();
+                t.Dispose();
             }
-        }, null, _notificationDelay, Timeout.InfiniteTimeSpan);
+        }, null, _debounceDelay, Timeout.InfiniteTimeSpan);
 
-        _notificationTimers[key] = timer;
+        _debounceTimers[key] = timer;
     }
 
-    private static FileChangeType MapWatcherChangeType(WatcherChangeTypes changeType)
+    private static PendingChange MergeChange(PendingChange existing, PendingChange incoming)
+    {
+        if (existing.ChangeType != FileChangeType.Modified && incoming.ChangeType == FileChangeType.Modified)
+            return existing;
+
+        return incoming with
+        {
+            OldPath = incoming.OldPath ?? existing.OldPath
+        };
+    }
+
+    #endregion
+
+    #region Helpers
+
+    private void DisposeWatcher(string key)
+    {
+        if (_watchers.TryRemove(key, out var watcher))
+        {
+            watcher.EnableRaisingEvents = false;
+            watcher.Dispose();
+        }
+
+        if (_debounceTimers.TryRemove(key, out var timer))
+        {
+            timer.Dispose();
+        }
+    }
+
+    private static string BuildDebounceKey(FileWatcherScope scope, string path)
+    {
+        return $"{scope}|{path}";
+    }
+
+    private static bool IsDebounceKeyUnderRoot(string debounceKey, string rootPath)
+    {
+        var separatorIndex = debounceKey.IndexOf('|');
+        if (separatorIndex < 0 || separatorIndex >= debounceKey.Length - 1)
+            return false;
+
+        var eventPath = debounceKey[(separatorIndex + 1)..];
+        return IsPathUnderRoot(eventPath, rootPath);
+    }
+
+    private static FileChangeType MapChangeType(WatcherChangeTypes changeType)
     {
         return changeType switch
         {
@@ -157,22 +324,25 @@ public sealed class FileWatcherService : IFileWatcherService
 
     private static string? ResolveDirectoryPath(string path)
     {
-        if (Directory.Exists(path))
-            return path;
-
-        return Path.GetDirectoryName(path);
+        return Directory.Exists(path) ? path : Path.GetDirectoryName(path);
     }
 
-    private static bool IsStructuralFileChange(FileChangeType changeType)
+    private static string? NormalizePath(string path)
     {
-        return changeType != FileChangeType.Modified;
+        return string.IsNullOrWhiteSpace(path) ? null : Path.TrimEndingDirectorySeparator(path);
     }
 
-    private static FileChangeType MergePendingChangeType(FileChangeType existing, FileChangeType incoming)
+    private static bool IsPathUnderRoot(string path, string rootPath)
     {
-        if (IsStructuralFileChange(existing) && incoming == FileChangeType.Modified)
-            return existing;
+        var normalizedPath = Path.GetFullPath(path).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+        var normalizedRoot = Path.GetFullPath(rootPath).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
 
-        return incoming;
+        return normalizedPath.Equals(normalizedRoot, StringComparison.OrdinalIgnoreCase)
+               || normalizedPath.StartsWith($"{normalizedRoot}{Path.DirectorySeparatorChar}", StringComparison.OrdinalIgnoreCase)
+               || normalizedPath.StartsWith($"{normalizedRoot}{Path.AltDirectorySeparatorChar}", StringComparison.OrdinalIgnoreCase);
     }
+
+    private readonly record struct PendingChange(string Path, string? OldPath, FileChangeType ChangeType, FileWatcherScope Scope);
+
+    #endregion
 }

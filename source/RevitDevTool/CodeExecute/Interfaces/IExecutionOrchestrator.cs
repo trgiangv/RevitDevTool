@@ -19,6 +19,12 @@ public interface IExecutionOrchestrator
     event EventHandler? TreeChanged;
 
     /// <summary>
+    /// Event raised when a root node is automatically removed (e.g. folder renamed/deleted externally).
+    /// Consumers should use this to clean up persisted settings.
+    /// </summary>
+    event EventHandler<RootRemovedEventArgs>? RootRemoved;
+
+    /// <summary>
     /// Load nodes from a path using the current provider
     /// </summary>
     /// <param name="path">Path to load from</param>
@@ -58,4 +64,16 @@ public interface IExecutionOrchestrator
     /// </summary>
     /// <param name="node">Node to execute</param>
     void Execute(BaseNode node);
+}
+
+public sealed class RootRemovedEventArgs(string rootPath, string? newPath = null) : EventArgs
+{
+    public string RootPath { get; } = rootPath;
+
+    /// <summary>
+    /// New path after rename (null if deleted)
+    /// </summary>
+    public string? NewPath { get; } = newPath;
+
+    public bool IsRename => NewPath != null;
 }

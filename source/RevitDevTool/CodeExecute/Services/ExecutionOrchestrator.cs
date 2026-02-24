@@ -1,6 +1,7 @@
 using Microsoft.Extensions.DependencyInjection;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
+using System.IO;
 using RevitDevTool.CodeExecute.Interfaces;
 using RevitDevTool.CodeExecute.Models;
 
@@ -21,6 +22,7 @@ public sealed class ExecutionOrchestrator : IExecutionOrchestrator, IDisposable
     public IEnumerable<BaseNode> TreeRoot => _treeRoot;
 
     public event EventHandler? TreeChanged;
+    public event EventHandler<RootRemovedEventArgs>? RootRemoved;
 
     public ExecutionOrchestrator(IServiceProvider serviceProvider, ITreeStateManager stateManager, IFileWatcherService fileWatcher)
     {
@@ -85,6 +87,8 @@ public sealed class ExecutionOrchestrator : IExecutionOrchestrator, IDisposable
             var currentRoots = _treeRoot.OfType<RootNode>().ToList();
             var reloadedRoots = new List<RootNode>(currentRoots.Count);
 
+            var removedRootPaths = new List<string>();
+
             foreach (var currentRoot in currentRoots)
             {
                 var result = await ReloadRootAsync(currentRoot, cancellationToken).ConfigureAwait(true);
@@ -102,6 +106,7 @@ public sealed class ExecutionOrchestrator : IExecutionOrchestrator, IDisposable
                 else
                 {
                     _fileWatcher.Unwatch(currentRoot.RootPath);
+                    removedRootPaths.Add(currentRoot.RootPath);
                 }
             }
 
@@ -109,6 +114,11 @@ public sealed class ExecutionOrchestrator : IExecutionOrchestrator, IDisposable
             _stateManager.RestoreState(_treeRoot, state, autoExpandNew: false);
             _lastExecutedNode = TreeNodeOperations.PromoteLatestNewExecutable(_treeRoot, previousExecutableIds) ?? _lastExecutedNode;
             TreeChanged?.Invoke(this, EventArgs.Empty);
+
+            foreach (var rootPath in removedRootPaths)
+            {
+                RootRemoved?.Invoke(this, new RootRemovedEventArgs(rootPath));
+            }
         }
         finally
         {
@@ -186,13 +196,169 @@ public sealed class ExecutionOrchestrator : IExecutionOrchestrator, IDisposable
         {
             try
             {
-                await ReloadAsync().ConfigureAwait(true);
+                await HandleFileChangeAsync(e).ConfigureAwait(true);
             }
             catch (Exception ex)
             {
                 Trace.TraceError($"Error reloading after file change: {ex.Message}");
             }
         });
+    }
+
+    private async Task HandleFileChangeAsync(FileChangedEventArgs e)
+    {
+        await _reloadGate.WaitAsync().ConfigureAwait(true);
+        try
+        {
+            var changed = e.Scope switch
+            {
+                FileWatcherScope.RootLifecycle => await HandleRootLifecycleEventAsync(e).ConfigureAwait(true),
+                FileWatcherScope.FileContent or FileWatcherScope.DirectoryStructure => await ReloadAffectedRootAsync(e).ConfigureAwait(true),
+                _ => false
+            };
+
+            if (changed)
+            {
+                TreeChanged?.Invoke(this, EventArgs.Empty);
+            }
+        }
+        finally
+        {
+            _reloadGate.Release();
+        }
+    }
+
+    private async Task<bool> HandleRootLifecycleEventAsync(FileChangedEventArgs e)
+    {
+        if (e.ChangeType == FileChangeType.Renamed && !string.IsNullOrEmpty(e.OldPath))
+        {
+            return await HandleRootRenameAsync(e.OldPath!, e.Path).ConfigureAwait(true);
+        }
+
+        if (e.ChangeType == FileChangeType.Deleted)
+        {
+            var deletedRoot = FindRootByPath(e.Path);
+            if (deletedRoot == null)
+                return false;
+
+            _fileWatcher.Unwatch(deletedRoot.RootPath);
+            TreeNodeOperations.RemoveNodeWithCascade(_treeRoot, deletedRoot, _ => { });
+            RootRemoved?.Invoke(this, new RootRemovedEventArgs(deletedRoot.RootPath));
+            return true;
+        }
+
+        return false;
+    }
+
+    private async Task<bool> HandleRootRenameAsync(string oldPath, string newPath)
+    {
+        var renamedRoot = FindRootByPath(oldPath);
+
+        if (renamedRoot == null)
+        {
+            return false;
+        }
+
+        _fileWatcher.Unwatch(oldPath);
+        TreeNodeOperations.RemoveNodeWithCascade(_treeRoot, renamedRoot, _ => { });
+
+        var provider = _serviceProvider.GetKeyedService<IExecutionProvider>(renamedRoot.ProviderType);
+        if (provider == null)
+        {
+            Trace.TraceWarning($"No keyed provider found for execution mode '{renamedRoot.ProviderType}'");
+            RootRemoved?.Invoke(this, new RootRemovedEventArgs(oldPath));
+            return true;
+        }
+
+        var loadedRenamedRoot = false;
+        if (provider.ValidatePath(newPath))
+        {
+            var discoveredNodes = await provider.DiscoverAsync(newPath).ConfigureAwait(true);
+            var incomingNodes = discoveredNodes as BaseNode[] ?? discoveredNodes.ToArray();
+            TreeNodeOperations.MergeNodesIntoTree(_treeRoot, incomingNodes);
+            _fileWatcher.Watch(newPath, provider.GetWatchPatterns());
+            loadedRenamedRoot = incomingNodes.OfType<RootNode>().Any();
+        }
+
+        RootRemoved?.Invoke(this, loadedRenamedRoot
+            ? new RootRemovedEventArgs(oldPath, newPath)
+            : new RootRemovedEventArgs(oldPath));
+        return true;
+    }
+
+    private async Task<bool> ReloadAffectedRootAsync(FileChangedEventArgs e)
+    {
+        var affectedRoot = FindAffectedRoot(e);
+        if (affectedRoot == null)
+            return false;
+
+        var state = _stateManager.CaptureState(_treeRoot);
+        var previousExecutableIds = TreeNodeOperations.CollectExecutableIdSet(_treeRoot);
+
+        var result = await ReloadRootAsync(affectedRoot, CancellationToken.None).ConfigureAwait(true);
+        var changed = ApplyRootReloadResult(affectedRoot, result);
+
+        if (!changed)
+            return false;
+
+        _stateManager.RestoreState(_treeRoot, state, autoExpandNew: false);
+        _lastExecutedNode = TreeNodeOperations.PromoteLatestNewExecutable(_treeRoot, previousExecutableIds) ?? _lastExecutedNode;
+        return true;
+    }
+
+    private bool ApplyRootReloadResult(RootNode currentRoot, ReloadRootResult result)
+    {
+        if (result.RootNode == null && result.KeepExistingRoot)
+            return false;
+
+        var rootIndex = _treeRoot.IndexOf(currentRoot);
+        if (rootIndex < 0)
+            return false;
+
+        if (result.RootNode != null)
+        {
+            _treeRoot[rootIndex] = result.RootNode;
+            return true;
+        }
+
+        _fileWatcher.Unwatch(currentRoot.RootPath);
+        _treeRoot.RemoveAt(rootIndex);
+        RootRemoved?.Invoke(this, new RootRemovedEventArgs(currentRoot.RootPath));
+        return true;
+    }
+
+    private RootNode? FindAffectedRoot(FileChangedEventArgs e)
+    {
+        return _treeRoot
+            .OfType<RootNode>()
+            .FirstOrDefault(root =>
+                IsPathUnderRoot(e.Path, root.RootPath) ||
+                (!string.IsNullOrEmpty(e.OldPath) && IsPathUnderRoot(e.OldPath, root.RootPath)));
+    }
+
+    private RootNode? FindRootByPath(string path)
+    {
+        return _treeRoot
+            .OfType<RootNode>()
+            .FirstOrDefault(root => AreSamePath(root.RootPath, path));
+    }
+
+    private static bool IsPathUnderRoot(string path, string rootPath)
+    {
+        var normalizedPath = Path.GetFullPath(path).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+        var normalizedRoot = Path.GetFullPath(rootPath).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+
+        return normalizedPath.Equals(normalizedRoot, StringComparison.OrdinalIgnoreCase)
+               || normalizedPath.StartsWith($"{normalizedRoot}{Path.DirectorySeparatorChar}", StringComparison.OrdinalIgnoreCase)
+               || normalizedPath.StartsWith($"{normalizedRoot}{Path.AltDirectorySeparatorChar}", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static bool AreSamePath(string left, string right)
+    {
+        return string.Equals(
+            Path.TrimEndingDirectorySeparator(left),
+            Path.TrimEndingDirectorySeparator(right),
+            StringComparison.OrdinalIgnoreCase);
     }
 
     #endregion

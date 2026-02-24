@@ -2,14 +2,13 @@ using System.Diagnostics;
 using System.IO;
 using RevitDevTool.CodeExecute.Interfaces;
 using RevitDevTool.CodeExecute.Models;
-
-namespace RevitDevTool.CodeExecute.Providers.DotNet;
+namespace RevitDevTool.CodeExecute.Providers.Dotnet;
 
 /// <summary>
 /// Provider for discovering and executing .NET assemblies.
 /// Uses unified node model: RootNode (Assembly) → IntermediateNode (Namespace) → ExecuteNode (Command)
 /// </summary>
-public sealed class DotNetExecutionProvider : IExecutionProvider
+public sealed class AssemblyExecutionProvider : IExecutionProvider
 {
     public string Name => "DotNet";
 
@@ -72,7 +71,7 @@ public sealed class DotNetExecutionProvider : IExecutionProvider
             Id = assemblyId,
             Name = assemblyName,
             RootPath = assemblyPath,
-            ProviderType = ExecutionMode.DotNet,
+            ProviderType = ExecutionMode.Assembly,
             NodeType = NodeType.Container
         };
 
@@ -118,9 +117,9 @@ public sealed class DotNetExecutionProvider : IExecutionProvider
             Name = addinItem.Name,
             ExecutablePath = addinItem.FullClassName,
             SourceFilePath = addinItem.AssemblyPath,
-            ProviderType = ExecutionMode.DotNet,
+            ProviderType = ExecutionMode.Assembly,
             NodeType = NodeType.Executable,
-            ExecutionStrategy = new DotNetExecutionStrategy(addinItem)
+            ExecutionStrategy = new AssemblyExecutionStrategy(addinItem)
         };
     }
 

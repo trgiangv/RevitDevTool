@@ -29,3 +29,4 @@ pytest_cache/
 .pytest_cache/
 .mypy_cache/
 .venv/
+.fake

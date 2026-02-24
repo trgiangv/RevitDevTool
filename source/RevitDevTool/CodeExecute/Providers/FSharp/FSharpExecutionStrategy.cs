@@ -1,8 +1,8 @@
 ﻿using Autodesk.Revit.UI;
 using RevitDevTool.CodeExecute.Interfaces;
-using RevitDevTool.CodeExecute.Providers.DotNet;
 using RevitDevTool.Controllers;
 using System.Diagnostics;
+using RevitDevTool.CodeExecute.Providers.Dotnet;
 
 namespace RevitDevTool.CodeExecute.Providers.FSharp;
 
@@ -41,14 +41,11 @@ public sealed class FSharpExecutionStrategy(string scriptPath) : IExecutionStrat
             var message = string.Empty;
             ExternalEventController.ActionEventHandler.Raise(_ =>
             {
-                var result = FSharpExecutor.ExecuteCommand(
+                FSharpExecutor.ExecuteCommand(
                     command,
-                    AddinLoadHelper.ExternalCommandData,
+                    AddinCommandData.ExternalCommandData,
                     ref message,
-                    AddinLoadHelper.ElementSet);
-
-                if (result != Result.Succeeded)
-                    Trace.TraceWarning($"F# command returned {result}.");
+                    AddinCommandData.ElementSet);
             });
         }
         catch (Exception ex)

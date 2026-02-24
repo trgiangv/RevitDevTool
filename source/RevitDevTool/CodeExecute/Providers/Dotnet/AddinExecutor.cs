@@ -1,9 +1,8 @@
-using Autodesk.Revit.UI;
 using System.Diagnostics;
 using System.IO;
 using System.Reflection;
-
-namespace RevitDevTool.CodeExecute.Providers.DotNet;
+using Autodesk.Revit.UI;
+namespace RevitDevTool.CodeExecute.Providers.Dotnet;
 
 internal static class AddinExecutor
 {

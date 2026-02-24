@@ -51,7 +51,7 @@
                             <Style TargetType="Image">
                                 <Style.Triggers>
                                     <DataTrigger Binding="{Binding ProviderType}"
-                                                 Value="{x:Static models:ExecutionMode.DotNet}">
+                                                 Value="{x:Static models:ExecutionMode.Assembly}">
                                         <Setter Property="Source" Value="{StaticResource DotnetIcon}" />
                                     </DataTrigger>
                                     <DataTrigger Binding="{Binding ProviderType}"
@@ -193,7 +193,7 @@
             <Button Height="30"
                     Margin="0,0,5,0"
                     HorizontalAlignment="Stretch"
-                    Command="{Binding LoadDotNetCommand}"
+                    Command="{Binding LoadAssemblyCommand}"
                     ToolTip="Load .NET Assembly">
                 <StackPanel Orientation="Horizontal">
                     <Image Source="{StaticResource DotnetIcon}"

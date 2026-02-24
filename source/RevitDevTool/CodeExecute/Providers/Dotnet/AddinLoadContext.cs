@@ -3,8 +3,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Reflection;
 using System.Runtime.Loader;
-
-namespace RevitDevTool.CodeExecute.Providers.DotNet;
+namespace RevitDevTool.CodeExecute.Providers.Dotnet;
 
 /// <summary>
 /// Custom AssemblyLoadContext for loading add-in assemblies in isolation (Revit 2025 onward only).

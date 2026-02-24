@@ -1,12 +1,11 @@
 using RevitDevTool.CodeExecute.Interfaces;
 using RevitDevTool.Controllers;
-
-namespace RevitDevTool.CodeExecute.Providers.DotNet;
+namespace RevitDevTool.CodeExecute.Providers.Dotnet;
 
 /// <summary>
 /// Execution strategy for .NET commands.
 /// </summary>
-public sealed class DotNetExecutionStrategy(AddinItem addinItem) : IExecutionStrategy
+public sealed class AssemblyExecutionStrategy(AddinItem addinItem) : IExecutionStrategy
 {
     public void Execute()
     {
@@ -14,7 +13,7 @@ public sealed class DotNetExecutionStrategy(AddinItem addinItem) : IExecutionStr
 
         ExternalEventController.ActionEventHandler.Raise(_ =>
         {
-            AddinExecutor.RunCommand(addinItem, AddinLoadHelper.ExternalCommandData, ref message, AddinLoadHelper.ElementSet);
+            AddinExecutor.RunCommand(addinItem, AddinCommandData.ExternalCommandData, ref message, AddinCommandData.ElementSet);
         });
     }
 }

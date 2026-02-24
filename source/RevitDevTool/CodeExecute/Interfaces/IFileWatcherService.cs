@@ -36,14 +36,25 @@ public interface IFileWatcherService : IDisposable
 public sealed class FileChangedEventArgs : EventArgs
 {
     /// <summary>
-    /// Path that changed
+    /// Path that changed (new path for Renamed)
     /// </summary>
     public required string Path { get; init; }
+
+    /// <summary>
+    /// Previous path before rename (only set for Renamed events)
+    /// </summary>
+    public string? OldPath { get; init; }
 
     /// <summary>
     /// Type of change (Created, Modified, Deleted, Renamed)
     /// </summary>
     public required FileChangeType ChangeType { get; init; }
+
+    /// <summary>
+    /// Which watcher raised this event.
+    /// Used by orchestrator to route reload logic without guessing by path.
+    /// </summary>
+    public required FileWatcherScope Scope { get; init; }
 }
 
 /// <summary>
@@ -55,4 +66,22 @@ public enum FileChangeType
     Modified,
     Deleted,
     Renamed
+}
+
+public enum FileWatcherScope
+{
+    /// <summary>
+    /// File pattern watcher (*.py, *.fsx, *.dll)
+    /// </summary>
+    FileContent,
+
+    /// <summary>
+    /// Intermediate folder create/rename/delete inside a watched root.
+    /// </summary>
+    DirectoryStructure,
+
+    /// <summary>
+    /// Root folder lifecycle changes from parent folder (rename/delete).
+    /// </summary>
+    RootLifecycle
 }

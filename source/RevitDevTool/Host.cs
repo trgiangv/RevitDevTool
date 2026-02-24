@@ -16,10 +16,9 @@ using RevitDevTool.Visualization.Server;
 using System.IO;
 using RevitDevTool.CodeExecute.Interfaces;
 using RevitDevTool.CodeExecute.Models;
+using RevitDevTool.CodeExecute.Providers;
+using RevitDevTool.CodeExecute.Providers.Dotnet;
 using RevitDevTool.CodeExecute.Services;
-using RevitDevTool.CodeExecute.Providers.DotNet;
-using RevitDevTool.CodeExecute.Providers.FSharp;
-using RevitDevTool.CodeExecute.Providers.Python;
 using RevitDevTool.Logger.Contracts;
 using RevitDevTool.Logger.Serilog;
 
@@ -112,12 +111,10 @@ public static class Host
         services.AddSingleton<IExecutionOrchestrator, ExecutionOrchestrator>();
 
         // CodeExecute Providers
-        services.AddSingleton<IExecutionProvider, DotNetExecutionProvider>();
-        services.AddSingleton<IExecutionProvider, PythonExecutionProvider>();
-        services.AddSingleton<IExecutionProvider, FSharpExecutionProvider>();
-        services.AddKeyedSingleton<IExecutionProvider, DotNetExecutionProvider>(ExecutionMode.DotNet);
-        services.AddKeyedSingleton<IExecutionProvider, PythonExecutionProvider>(ExecutionMode.Python);
-        services.AddKeyedSingleton<IExecutionProvider, FSharpExecutionProvider>(ExecutionMode.FSharp);
+        services.AddSingleton<IExecutionProvider, AssemblyExecutionProvider>();
+        services.AddSingleton<IExecutionProvider, ScriptExecutionProvider>();
+        services.AddKeyedSingleton<IExecutionProvider, AssemblyExecutionProvider>(ExecutionMode.Assembly);
+        services.AddKeyedSingleton<IExecutionProvider, ScriptExecutionProvider>(ExecutionMode.Script);
 
         // CodeExecute
         services.AddSingleton<CodeExecuteViewModel>();
