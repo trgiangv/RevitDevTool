@@ -56,7 +56,7 @@ public partial class CodeExecuteViewModel : ObservableObject
     public async Task LoadSavedPathsAsync()
     {
         var config = _settingsService.CodeExecuteConfig;
-        var allPaths = config.DotnetAssemblyPaths.Concat(config.PythonFolderPaths);
+        var allPaths = config.DotnetAssemblyPaths.Concat(config.ScriptFolderPaths);
 
         await _orchestrator.LoadSavedPathsAsync(allPaths).ConfigureAwait(true);
         UpdateTreeRoot();
@@ -69,9 +69,9 @@ public partial class CodeExecuteViewModel : ObservableObject
     }
 
     [RelayCommand]
-    private Task LoadPythonAsync()
+    private Task LoadScriptsAsync()
     {
-        return LoadPythonFromPathAsync(null);
+        return LoadScriptsFromPathAsync(null);
     }
 
     /// <summary>
@@ -105,13 +105,13 @@ public partial class CodeExecuteViewModel : ObservableObject
     }
 
     /// <summary>
-    /// Load Python scripts folder from path (for drag-drop support)
+    /// Load script folder from path (Python .py and F# .fsx, for drag-drop support)
     /// </summary>
-    private async Task LoadPythonFromPathAsync(string? path)
+    private async Task LoadScriptsFromPathAsync(string? path)
     {
         if (string.IsNullOrEmpty(path))
         {
-            var selectedFolder = SettingsUtils.SelectFolder("Select Python Scripts Folder");
+            var selectedFolder = SettingsUtils.SelectFolder("Select Scripts Folder");
             if (!string.IsNullOrEmpty(selectedFolder))
             {
                 path = selectedFolder;
@@ -140,7 +140,7 @@ public partial class CodeExecuteViewModel : ObservableObject
         }
         else if (Directory.Exists(path))
         {
-            await LoadPythonFromPathAsync(path).ConfigureAwait(true);
+            await LoadScriptsFromPathAsync(path).ConfigureAwait(true);
         }
     }
 
@@ -436,7 +436,7 @@ public partial class CodeExecuteViewModel : ObservableObject
         var list = mode switch
         {
             ExecutionMode.DotNet => config.DotnetAssemblyPaths,
-            ExecutionMode.Python => config.PythonFolderPaths,
+            ExecutionMode.Python or ExecutionMode.FSharp => config.ScriptFolderPaths,
             _ => throw new ArgumentOutOfRangeException(nameof(mode), mode, null)
         };
 
@@ -450,14 +450,14 @@ public partial class CodeExecuteViewModel : ObservableObject
     {
         var config = _settingsService.CodeExecuteConfig;
         config.DotnetAssemblyPaths.RemoveAll(p => p.Equals(path, StringComparison.OrdinalIgnoreCase));
-        config.PythonFolderPaths.RemoveAll(p => p.Equals(path, StringComparison.OrdinalIgnoreCase));
+        config.ScriptFolderPaths.RemoveAll(p => p.Equals(path, StringComparison.OrdinalIgnoreCase));
     }
 
     private void ClearAllPathsFromSettings()
     {
         var config = _settingsService.CodeExecuteConfig;
         config.DotnetAssemblyPaths.Clear();
-        config.PythonFolderPaths.Clear();
+        config.ScriptFolderPaths.Clear();
     }
 
     #endregion

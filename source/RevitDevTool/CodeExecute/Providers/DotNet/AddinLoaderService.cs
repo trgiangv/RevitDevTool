@@ -155,6 +155,12 @@ public static class AddinLoaderService
         var windowsBaseDir = Path.GetDirectoryName(windowsBasePath);
         if (!string.IsNullOrEmpty(windowsBaseDir))
             AddDllsFromDirectory(paths, windowsBaseDir);
+        
+        // 7. Current executing assembly
+        var currentAssemblyPath = Assembly.GetExecutingAssembly().Location;
+        var currentAssemblyDir = Path.GetDirectoryName(currentAssemblyPath);
+        if (!string.IsNullOrEmpty(currentAssemblyDir))
+            AddDllsFromDirectory(paths, currentAssemblyDir);
 
         return paths.ToList();
     }

@@ -1,0 +1,32 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <IsRepackable>true</IsRepackable>
+        <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <!-- Revit References -->
+        <!--Nice3point.Revit.Build.Tasks not work here due to some implicit using behind-->
+        <!--<PackageReference Include="Nice3point.Revit.Build.Tasks"/>-->  
+        <PackageReference Include="Nice3point.Revit.Toolkit" VersionOverride="$(RevitVersion).*" />
+        <PackageReference Include="Nice3point.Revit.Extensions" VersionOverride="$(RevitVersion).*" />
+        <PackageReference Include="Nice3point.Revit.Api.RevitAPI" VersionOverride="$(RevitVersion).*" />
+        <PackageReference Include="Nice3point.Revit.Api.RevitAPIUI" VersionOverride="$(RevitVersion).*" />
+
+        <!-- ILRepack -->
+        <PackageReference Include="ILRepack"/>
+    </ItemGroup>
+
+    <ItemGroup>
+      <Compile Include="Extensions\GeometryExtensions.fs" />
+      <Compile Include="BoundingBoxVisualization.fs" />
+      <Compile Include="CurveVisualization.fs" />
+      <Compile Include="FaceVisualization.fs" />
+      <Compile Include="MeshVisualization.fs" />
+      <Compile Include="SolidVisualization.fs" />
+      <Compile Include="XYZVisualization.fs" />
+      <Compile Include="Log.fs" />
+    </ItemGroup>
+
+</Project>

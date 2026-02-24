@@ -12,7 +12,7 @@
             MahApps.Metro.dll;
             ControlzEx.dll;
             Microsoft.Xaml.Behaviors.dll;
-            Revit.Async.dll;
+            FSharp.Core.dll;
         </RepackBinariesExcludes>
     </PropertyGroup>
 
@@ -20,7 +20,7 @@
         <!--Build-->
         <PackageReference Include="Nice3point.Revit.Build.Tasks"/>
         <PackageReference Include="ILRepack"/>
-        
+
         <!--Revit API-->
         <PackageReference Include="Nice3point.Revit.Toolkit" VersionOverride="$(RevitVersion).*"/>
         <PackageReference Include="Nice3point.Revit.Extensions" VersionOverride="$(RevitVersion).*"/>
@@ -28,7 +28,6 @@
         <PackageReference Include="Nice3point.Revit.Api.RevitAPIUI" VersionOverride="$(RevitVersion).*"/>
         <PackageReference Include="Nice3point.Revit.Api.UIFramework" VersionOverride="$(RevitVersion).*"/>
         <PackageReference Include="Nice3point.Revit.Api.AdWindows" VersionOverride="$(RevitVersion).*"/>
-        <PackageReference Include="Revit.Async" />
 
         <!--UI-->
         <PackageReference Include="CommunityToolkit.Mvvm"/>
@@ -36,15 +35,21 @@
 
         <!--Python-->
         <PackageReference Include="pythonnet"/>
+        
+        <!--FSharp-->
+        <PackageReference Include="FSharp.Core"/>
+        <PackageReference Include="FSharp.Compiler.Service"/>
 
         <!--Serilog-->
         <PackageReference Include="Serilog"/>
         <PackageReference Include="Serilog.Enrichers.Autodesk.Revit"/>
         <PackageReference Include="Serilog.Sinks.File"/>
-        <PackageReference Include="Serilog.Sinks.RichTextBox.WinForms.Colored"/>
 
         <!--Ioc-->
         <PackageReference Include="Microsoft.Extensions.Hosting"/>
+
+        <!--Ipc-->
+        <PackageReference Include="H.Pipes" />
 
         <!-- Utils -->
         <PackageReference Include="JetBrains.Annotations"/>
@@ -52,11 +57,15 @@
         <PackageReference Include="Microsoft-WindowsAPICodePack-Shell" Condition="$(TargetFramework.StartsWith('net4'))"/>
         <PackageReference Include="System.Reflection.MetadataLoadContext"/>
         <PackageReference Include="System.Net.Http" Condition="$(TargetFramework.StartsWith('net4'))"/>
+        <PackageReference Include="System.Diagnostics.DiagnosticSource"/>
         <PackageReference Include="CliWrap"/>
     </ItemGroup>
-
+    
     <ItemGroup>
         <ProjectReference Include="..\PythonNetStubGenerator\PythonNetStubGenerator.csproj" />
+        <ProjectReference Include="..\RevitDevTool.Engine\RevitDevTool.Engine.csproj" />
+        <ProjectReference Include="..\RevitDevTool.Logger\RevitDevTool.Logger.csproj" />
+        <ProjectReference Include="..\Serilog.Sinks.RichTextBox.WinForms.Colored\Serilog.Sinks.RichTextBox.WinForms.Colored.csproj" />
     </ItemGroup>
 
     <ItemGroup>

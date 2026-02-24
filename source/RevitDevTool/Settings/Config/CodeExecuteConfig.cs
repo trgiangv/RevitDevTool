@@ -3,7 +3,7 @@ using System.Text.Json.Serialization;
 namespace RevitDevTool.Settings.Config;
 
 /// <summary>
-/// Configuration for persisting code execution settings (Dotnet assemblies and Python scripts)
+/// Configuration for persisting code execution settings (DotNet assemblies and script folders)
 /// </summary>
 [Serializable]
 public sealed class CodeExecuteConfig
@@ -15,8 +15,8 @@ public sealed class CodeExecuteConfig
     public List<string> DotnetAssemblyPaths { get; set; } = [];
 
     /// <summary>
-    /// List of folders to load Python scripts from
+    /// List of folders to load scripts from (Python .py and F# .fsx)
     /// </summary>
-    [JsonPropertyName("PythonFolderPaths")]
-    public List<string> PythonFolderPaths { get; set; } = [];
+    [JsonPropertyName("ScriptFolderPaths")]
+    public List<string> ScriptFolderPaths { get; set; } = [];
 }

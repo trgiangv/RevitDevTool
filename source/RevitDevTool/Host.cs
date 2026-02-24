@@ -18,7 +18,10 @@ using RevitDevTool.CodeExecute.Interfaces;
 using RevitDevTool.CodeExecute.Models;
 using RevitDevTool.CodeExecute.Services;
 using RevitDevTool.CodeExecute.Providers.DotNet;
+using RevitDevTool.CodeExecute.Providers.FSharp;
 using RevitDevTool.CodeExecute.Providers.Python;
+using RevitDevTool.Logger.Contracts;
+using RevitDevTool.Logger.Serilog;
 
 namespace RevitDevTool;
 
@@ -111,8 +114,10 @@ public static class Host
         // CodeExecute Providers
         services.AddSingleton<IExecutionProvider, DotNetExecutionProvider>();
         services.AddSingleton<IExecutionProvider, PythonExecutionProvider>();
+        services.AddSingleton<IExecutionProvider, FSharpExecutionProvider>();
         services.AddKeyedSingleton<IExecutionProvider, DotNetExecutionProvider>(ExecutionMode.DotNet);
         services.AddKeyedSingleton<IExecutionProvider, PythonExecutionProvider>(ExecutionMode.Python);
+        services.AddKeyedSingleton<IExecutionProvider, FSharpExecutionProvider>(ExecutionMode.FSharp);
 
         // CodeExecute
         services.AddSingleton<CodeExecuteViewModel>();

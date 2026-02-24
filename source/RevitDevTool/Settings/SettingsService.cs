@@ -195,7 +195,7 @@ public sealed class SettingsService(IFileConfig<PathOptions> fileConfig) : ISett
     {
         if (_codeExecuteConfig is null) return;
         _codeExecuteConfig.DotnetAssemblyPaths.RemoveAll(path => !File.Exists(path));
-        _codeExecuteConfig.PythonFolderPaths.RemoveAll(path => !Directory.Exists(path));
+        _codeExecuteConfig.ScriptFolderPaths.RemoveAll(path => !Directory.Exists(path));
         fileConfig.Save(_codeExecuteConfig);
     }
 

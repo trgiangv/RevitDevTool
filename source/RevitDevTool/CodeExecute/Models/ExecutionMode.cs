@@ -14,5 +14,10 @@ public enum ExecutionMode
     /// <summary>
     /// Python script execution (directly via PythonNet, no Dynamo)
     /// </summary>
-    Python
+    Python,
+
+    /// <summary>
+    /// F# script execution (via FSharp.Compiler.Service FsiEvaluationSession)
+    /// </summary>
+    FSharp
 }
