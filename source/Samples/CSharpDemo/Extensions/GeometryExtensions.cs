@@ -1,4 +1,4 @@
-﻿namespace RevitDevTool.DotnetDemo.Extensions;
+﻿namespace CSharpDemo.Extensions;
 
 [PublicAPI]
 public static class GeometryExtensions

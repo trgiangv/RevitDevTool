@@ -1,7 +1,7 @@
 using Autodesk.Revit.Attributes;
 using Nice3point.Revit.Toolkit.External;
 using System.Diagnostics;
-namespace RevitDevTool.DotnetDemo;
+namespace CSharpDemo;
 
 [UsedImplicitly]
 [Transaction(TransactionMode.Manual)]

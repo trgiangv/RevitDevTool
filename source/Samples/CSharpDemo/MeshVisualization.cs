@@ -1,10 +1,10 @@
 ﻿using Autodesk.Revit.Attributes;
 using Autodesk.Revit.UI.Selection;
 using Nice3point.Revit.Toolkit.External;
-using RevitDevTool.DotnetDemo.Extensions;
+using CSharpDemo.Extensions;
 using System.Diagnostics;
 
-namespace RevitDevTool.DotnetDemo;
+namespace CSharpDemo;
 
 [Transaction(TransactionMode.Manual)]
 [UsedImplicitly]

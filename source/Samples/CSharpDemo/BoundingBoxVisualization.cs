@@ -3,7 +3,7 @@ using Autodesk.Revit.UI.Selection;
 using Nice3point.Revit.Toolkit.External;
 using System.Diagnostics;
 
-namespace RevitDevTool.DotnetDemo;
+namespace CSharpDemo;
 
 [Transaction(TransactionMode.Manual)]
 [UsedImplicitly]
@@ -15,6 +15,9 @@ public class BoundingBoxVisualization : ExternalCommand
         {
             var elementRef = UiDocument.Selection.PickObject(ObjectType.Element, "Select Element");
             var element = Document.GetElement(elementRef);
+            Trace.Write(elementRef.ElementId);
+            Trace.Write(element.get_Parameter(BuiltInParameter.IFC_GUID)?.AsString());
+            Trace.Write(element.UniqueId);
 
             var bbox = element.get_BoundingBox(ActiveView);
             Trace.Write(bbox);
