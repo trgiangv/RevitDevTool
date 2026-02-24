@@ -1,6 +1,7 @@
 using System.IO;
 using System.Reflection;
-#if !NETFRAMEWORK
+#if NETCOREAPP
+using System.Collections.Concurrent;
 using System.Runtime.Loader;
 #endif
 
@@ -16,16 +17,9 @@ public static class AssemblyLoader
     private static bool _initialized;
     private static string? _pluginDirectory;
 
-    private static readonly string[] IsolatedAssemblies =
-    [
-        "MahApps.Metro",
-        "ControlzEx",
-        "Microsoft.Xaml.Behaviors",
-        "Revit.Async",
-    ];
-
-#if !NETFRAMEWORK
-    private static AssemblyLoadContext? _context;
+#if NETCOREAPP
+    private static PluginLoadContext _context = null!;
+    private static readonly ConcurrentDictionary<string, Assembly?> Cache = new(StringComparer.OrdinalIgnoreCase);
 #endif
 
     public static void Initialize()
@@ -39,9 +33,8 @@ public static class AssemblyLoader
 #if NETFRAMEWORK
         AppDomain.CurrentDomain.AssemblyResolve += OnAssemblyResolve;
 #else
-        _context = new AssemblyLoadContext("RevitDevTool", isCollectible: false);
+        _context = new PluginLoadContext(_pluginDirectory!);
         AssemblyLoadContext.Default.Resolving += OnResolving;
-        PreloadAssemblies();
 #endif
     }
 
@@ -51,7 +44,7 @@ public static class AssemblyLoader
         if (string.IsNullOrEmpty(_pluginDirectory)) return null;
 
         var name = new AssemblyName(args.Name).Name;
-        if (name == null || !IsIsolated(name)) return null;
+        if (name == null) return null;
 
         var path = Path.Combine(_pluginDirectory, $"{name}.dll");
         if (!File.Exists(path)) return null;
@@ -66,52 +59,48 @@ public static class AssemblyLoader
         }
     }
 #else
-    private static void PreloadAssemblies()
+    private sealed class PluginLoadContext(string directory) : AssemblyLoadContext("RevitDevTool", isCollectible: false)
     {
-        if (string.IsNullOrEmpty(_pluginDirectory) || _context == null) return;
-
-        foreach (var name in IsolatedAssemblies)
+        protected override Assembly? Load(AssemblyName assemblyName)
         {
-            var path = Path.Combine(_pluginDirectory, $"{name}.dll");
-            if (!File.Exists(path)) continue;
-            try
-            {
-                _context.LoadFromAssemblyPath(path);
-            }
-            catch
-            {
-                // Ignore - may already be loaded
-            }
+            var name = assemblyName.Name;
+            if (name == null) return null;
+            var path = Path.Combine(directory, $"{name}.dll");
+            return !File.Exists(path) ? null : LoadFromPathCached(path);
+        }
+
+        protected override IntPtr LoadUnmanagedDll(string unmanagedDllName)
+        {
+            var path = Path.Combine(directory, $"{unmanagedDllName}.dll");
+            return File.Exists(path) ? LoadUnmanagedDllFromPath(path) : IntPtr.Zero;
         }
     }
 
     private static Assembly? OnResolving(AssemblyLoadContext context, AssemblyName assemblyName)
     {
-        if (string.IsNullOrEmpty(_pluginDirectory) || _context == null) return null;
-        if (assemblyName.Name == null || !IsIsolated(assemblyName.Name)) return null;
-
-        var path = Path.Combine(_pluginDirectory, $"{assemblyName.Name}.dll");
-        if (!File.Exists(path)) return null;
-
-        try
-        {
-            return _context.LoadFromAssemblyPath(path);
-        }
-        catch
-        {
-            return null;
-        }
+        if (assemblyName.Name == null) return null;
+        var path = Path.Combine(_pluginDirectory!, $"{assemblyName.Name}.dll");
+        return !File.Exists(path) ? null : LoadFromPathCached(path);
     }
+
+    private static Assembly? LoadFromPathCached(string path)
+    {
+        return Cache.GetOrAdd(path, p =>
+        {
+            try
+            {
+                return _context.LoadFromAssemblyPath(p);
+            }
+            catch
+            {
+                return null;
+            }
+        });
+    }
+
 #endif
 
-    private static bool IsIsolated(string name)
-    {
-        return IsolatedAssemblies.Any(isolated => string.Equals(isolated, name, StringComparison.OrdinalIgnoreCase));
-    }
-        
     // Source - https://stackoverflow.com/a/367798
-    // Posted by lubos hasko, modified by community. See post 'Timeline' for change history
-    // Retrieved 2026-01-30, License - CC BY-SA 4.0
     public static bool IsManagedAssembly(string fileName)
     {
         try
