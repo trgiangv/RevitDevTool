@@ -6,14 +6,22 @@
     <ItemGroup>
         <!--Ioc-->
         <PackageVersion Include="Microsoft.Extensions.Hosting" Version="10.0.3"/>
+        <PackageVersion Include="Microsoft.Extensions.Logging.Abstractions" Version="10.0.3"/>
+        <!--Pipes-->
+        <PackageVersion Include="H.Pipes" Version="15.0.1-dev.3"/>
+        <PackageVersion Include="H.Formatters.System.Text.Json" Version="15.0.1-dev.3"/>
+        <PackageVersion Include="H.Formatters.MessagePack" Version="15.0.1-dev.3"/>
+        <PackageVersion Include="MessagePack" Version="3.1.4"/>
+        <PackageVersion Include="System.Text.Json" Version="10.0.3"/>
         <!--Python-->
         <PackageVersion Include="pythonnet" Version="3.0.5"/>
-        <PackageVersion Include="Revit.Async" Version="2.1.1"/>
+        <!--FSharp-->
+        <PackageVersion Include="FSharp.Core" Version="11.0.100-preview1.26104.118"/>
+        <PackageVersion Include="FSharp.Compiler.Service" Version="43.12.100-preview1.26104.118"/>
         <!--Logging-->
         <PackageVersion Include="Serilog" Version="4.3.1-dev-02395"/>
         <PackageVersion Include="Serilog.Enrichers.Autodesk.Revit" Version="2.0.1"/>
         <PackageVersion Include="Serilog.Sinks.File" Version="7.0.1-dev-02315"/>
-        <PackageVersion Include="Serilog.Sinks.RichTextBox.WinForms.Colored" Version="3.2.0"/>
         <!--Utilities-->
         <PackageVersion Include="Nice3point.Revit.Build.Tasks" Version="3.0.1"/>
         <PackageVersion Include="JetBrains.Annotations" Version="2025.2.4"/>
@@ -21,11 +29,23 @@
         <PackageVersion Include="Microsoft-WindowsAPICodePack-Shell" Version="1.1.5"/>
         <PackageVersion Include="System.Reflection.MetadataLoadContext" Version="10.0.3"/>
         <PackageVersion Include="System.Net.Http" Version="4.3.4"/>
+        <PackageVersion Include="System.Diagnostics.DiagnosticSource" Version="10.0.3"/>
         <!--Console-->
+        <PackageVersion Include="ConsoleAppFramework" Version="5.7.13"/>
+        <PackageVersion Include="OpenMcdf" Version="3.1.0"/>
         <PackageVersion Include="CliWrap" Version="3.10.0"/>
         <!--UI-->
         <PackageVersion Include="MahApps.Metro" Version="3.0.0-rc0529"/>
         <PackageVersion Include="CommunityToolkit.Mvvm" Version="8.4.0"/>
+        <!--Avalonia-->
+        <PackageVersion Include="Avalonia" Version="11.3.12"/>
+        <PackageVersion Include="Avalonia.Desktop" Version="11.3.12"/>
+        <PackageVersion Include="Avalonia.Themes.Fluent" Version="11.3.12"/>
+        <PackageVersion Include="Avalonia.Fonts.Inter" Version="11.3.12"/>
+        <PackageVersion Include="Avalonia.Diagnostics" Version="11.3.12"/>
+        <PackageVersion Include="AvaloniaUI.DiagnosticsSupport" Version="2.2.0-beta2"/>
+        <PackageVersion Include="IconPacks.Avalonia" Version="1.3.1"/>
+        <PackageVersion Include="SukiUI" Version="6.0.4-nightly20260219"/>
         <!--Build Tools-->
         <PackageVersion Include="ILRepack" Version="2.0.41"/>
         <PackageVersion Include="Nuke.Common" Version="9.0.4"/>

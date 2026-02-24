@@ -9,7 +9,11 @@ namespace RevitDevTool.CodeExecute.Providers.Python;
 /// </summary>
 public static class PythonExecutor
 {
-    public static void ExecuteScript(string scriptPath, string scriptContent, string? rootFolder = null)
+    public static void ExecuteScript(string scriptPath, 
+        string scriptContent,
+        string? rootFolder = null,
+        Document? document = null,
+        bool throwOnError = false)
     {
         if (!PythonInitializer.IsInitialized)
             throw new InvalidOperationException("Python runtime not initialized. Call InitializeAsync() first.");
@@ -28,6 +32,11 @@ public static class PythonExecutor
                     scope.Set("__file__", new PyString(scriptPath));
                     scope.Set("__root__", new PyString(rootFolder));
                     
+                    if (document != null)
+                    {
+                        scope.Set("__doc__", document.ToPython());
+                    }
+                    
                     ResetModuleCache(scope);
                     SetupScriptRoot(scope);
                     scope.Exec("""
@@ -38,6 +47,7 @@ public static class PythonExecutor
                 catch (Exception ex)
                 {
                     Trace.TraceError(ex.Message + Environment.NewLine + ex.StackTrace);
+                    if (throwOnError) throw;
                 }
             }
         }

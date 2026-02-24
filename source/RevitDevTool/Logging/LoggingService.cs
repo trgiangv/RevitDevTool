@@ -63,7 +63,7 @@ public sealed class LoggingService(
                 };
                 await EngineHost.Instance.PublishLogAsync(payload, ct).ConfigureAwait(false);
             });
-            _pipeLogListener = new PipeLogTraceListener(sink, msg => TraceUtils.DetectLogLevel(msg, config.FilterKeywords).ToString());
+            _pipeLogListener = new PipeLogTraceListener(sink, msg => LogLevelDetector.DetectLogLevel(msg, config.FilterKeywords).ToString());
         }
         PyTrace.Initialize(settingsService);
     }

@@ -1,0 +1,19 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+    <ItemGroup>
+        <PackageReference Include="H.Pipes" />
+        <PackageReference Include="H.Formatters.MessagePack" />
+        <PackageReference Include="Nice3point.Revit.Build.Tasks"/>
+        <PackageReference Include="Nice3point.Revit.Toolkit" VersionOverride="$(RevitVersion).*"/>
+        <PackageReference Include="Nice3point.Revit.Extensions" VersionOverride="$(RevitVersion).*"/>
+        <PackageReference Include="Nice3point.Revit.Api.RevitAPI" VersionOverride="$(RevitVersion).*"/>
+        <PackageReference Include="Nice3point.Revit.Api.RevitAPIUI" VersionOverride="$(RevitVersion).*"/>
+        <PackageReference Include="Nice3point.Revit.Api.RevitNET" VersionOverride="$(RevitVersion).*"/>
+        <PackageReference Include="JetBrains.Annotations"/>
+    </ItemGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\RevitDevTool.Bridge\RevitDevTool.Bridge.csproj" />
+    </ItemGroup>
+
+</Project>

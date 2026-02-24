@@ -32,22 +32,28 @@ public sealed class ExecutionOrchestrator : IExecutionOrchestrator, IDisposable
 
     public async Task LoadFromPathAsync(string path, CancellationToken cancellationToken = default)
     {
-        var provider = _serviceProvider.GetServices<IExecutionProvider>()
+        var providers = _serviceProvider.GetServices<IExecutionProvider>()
             .Where(p => p.CanHandle(path))
             .OrderByDescending(p => p.Priority)
-            .FirstOrDefault();
+            .ToList();
 
-        if (provider == null)
+        if (providers.Count == 0)
             throw new ArgumentException($"No suitable provider found for path: {path}");
 
-        if (!provider.ValidatePath(path))
-            throw new ArgumentException($"Invalid path for provider '{provider.Name}': {path}");
-
         var state = _stateManager.CaptureState(_treeRoot);
-        var discoveredNodes = await provider.DiscoverAsync(path, cancellationToken).ConfigureAwait(true);
-        TreeNodeOperations.MergeNodesIntoTree(_treeRoot, discoveredNodes);
+        var allWatchPatterns = new List<string>();
+
+        foreach (var provider in providers)
+        {
+            if (!provider.ValidatePath(path)) continue;
+
+            var discoveredNodes = await provider.DiscoverAsync(path, cancellationToken).ConfigureAwait(true);
+            TreeNodeOperations.MergeNodesIntoTree(_treeRoot, discoveredNodes);
+            allWatchPatterns.AddRange(provider.GetWatchPatterns());
+        }
+
         _stateManager.RestoreState(_treeRoot, state, autoExpandNew: true);
-        _fileWatcher.Watch(path, provider.GetWatchPatterns());
+        _fileWatcher.Watch(path, allWatchPatterns);
         TreeChanged?.Invoke(this, EventArgs.Empty);
     }
 

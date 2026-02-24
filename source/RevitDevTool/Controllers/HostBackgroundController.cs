@@ -3,9 +3,11 @@ using System.Windows.Interop;
 using System.Windows.Media;
 using Microsoft.Extensions.Hosting;
 using RevitDevTool.Commands;
+using RevitDevTool.Engine;
 using RevitDevTool.Logging.Listeners;
 using RevitDevTool.Settings;
 using RevitDevTool.Theme;
+using RevitDevTool.Utils;
 using RevitDevTool.CodeExecute.Providers.Python;
 
 namespace RevitDevTool.Controllers;
@@ -18,7 +20,9 @@ public sealed class HostBackgroundController(ISettingsService settingsService) :
         CleanLogFolder();
         LoadTheme();
         ToggleHardwareRendering(settingsService);
-        return PythonInitializer.InitializeAsync();
+        PythonInitializer.InitializeAsync().ConfigureAwait(true);
+        StartEngineHostAsync().ConfigureAwait(true);
+        return Task.CompletedTask;
     }
 
     public Task StopAsync(CancellationToken cancellationToken)
@@ -26,6 +30,7 @@ public sealed class HostBackgroundController(ISettingsService settingsService) :
         SaveSettings();
         CleanLogFolder();
         Shutdown();
+        EngineHost.Instance.Dispose();
         return Task.CompletedTask;
     }
 
@@ -79,6 +84,16 @@ public sealed class HostBackgroundController(ISettingsService settingsService) :
         {
             RenderOptions.ProcessRenderMode = RenderMode.SoftwareOnly;
         }
+    }
+    
+    private static Task StartEngineHostAsync()
+    {
+        var engine = EngineHost.Instance;
+        engine.ExecuteJobHandler = JobController.ExecuteAsync;
+
+        var version = Context.Application.VersionNumber;
+        var pid = SettingsUtils.CurrentProcessId;
+        return engine.StartAsync("revit", version, pid);
     }
 
     private static void Shutdown()
