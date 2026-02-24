@@ -123,7 +123,7 @@ public abstract class VisualizationServer<TG> : IDirectContext3DServer, IVisuali
             var serverIds = directContextService.GetActiveServerIds();
             if (directContextService.IsRegisteredServerId(GetServerId()))
             {
-                Trace.TraceInformation("{0} already registered", GetName());
+                Debug.WriteLine($"{GetName()} already registered");
                 return;
             }
             directContextService.AddServer(this);
@@ -131,7 +131,7 @@ public abstract class VisualizationServer<TG> : IDirectContext3DServer, IVisuali
             directContextService.SetActiveServers(serverIds);
 
             visualizationViewModel.Initialize();
-            Trace.TraceInformation("{0} registered", GetName());
+            Debug.WriteLine($"{GetName()} registered");
         });
     }
 
@@ -143,13 +143,13 @@ public abstract class VisualizationServer<TG> : IDirectContext3DServer, IVisuali
                 ExternalServiceRegistry.GetService(ExternalServices.BuiltInExternalServices.DirectContext3DService);
             if (!directContextService.IsRegisteredServerId(GetServerId()))
             {
-                Trace.TraceInformation("{0} already unregistered", GetName());
+                Debug.WriteLine($"{GetName()} already unregistered");
                 return;
             }
 
             directContextService.RemoveServer(GetServerId());
 
-            Trace.TraceInformation("{0} unregistered", GetName());
+            Debug.WriteLine($"{GetName()} unregistered");
             application.ActiveUIDocument?.UpdateAllOpenViews();
         });
     }
