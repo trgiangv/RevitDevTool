@@ -23,14 +23,14 @@ public class TraceCommand : ExternalCommand, IExternalCommandAvailability
     private static bool IsForceHide { get; set; }
     internal static TraceLogViewModel? SharedViewModel { get; private set; }
     private static TraceLogWindow? FloatingWindow { get; set; }
-    private static bool HasUiDocumentOpened => Context.UiApplication.ActiveUIDocument is not null;
+    private static bool HasUiDocument => Context.UiApplication.HasActiveUiDocument();
 
     public override void Execute()
     {
         if (Keyboard.IsKeyDown(Key.LeftCtrl)
             || Keyboard.IsKeyDown(Key.RightCtrl))
         {
-            if (HasUiDocumentOpened)
+            if (HasUiDocument)
             {
                 ExecutePaneVisibility();
             }
@@ -105,7 +105,7 @@ public class TraceCommand : ExternalCommand, IExternalCommandAvailability
 
     private static void OnTraceReceived()
     {
-        if (HasUiDocumentOpened)
+        if (HasUiDocument)
         {
             var dockablePane = Context.UiControlledApplication.GetDockablePane(PaneId);
             if (!dockablePane.IsShown() && !IsForceHide)
@@ -130,6 +130,7 @@ public class TraceCommand : ExternalCommand, IExternalCommandAvailability
 
     private static void OnDocumentOpened(object? sender, DocumentOpenedEventArgs args)
     {
+        if (!HasUiDocument) return;
         CloseFloatingWindow();
 
         var dockablePane = Context.UiControlledApplication.GetDockablePane(PaneId);
@@ -180,13 +181,13 @@ public class TraceCommand : ExternalCommand, IExternalCommandAvailability
         if (FloatingWindow == null) return;
         FloatingWindow.Closed -= OnFloatingWindowClosed;
         FloatingWindow = null;
-        if (HasUiDocumentOpened) return;
+        if (HasUiDocument) return;
         NotifyListener.TraceReceived += TraceReceivedHandler;
     }
 
     private static void OnDocumentClosed(object? sender, DocumentClosedEventArgs args)
     {
-        if (HasUiDocumentOpened) return;
+        if (HasUiDocument) return;
 
         if (SharedViewModel is null or { IsStarted: false })
         {
