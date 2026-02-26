@@ -56,7 +56,7 @@ public static class PythonDepsManager
 
         EnsureEnvironmentReady();
 
-        await PixiEnvironment.InstallPackagesAsync(depList, progress, cancellationToken).ConfigureAwait(true);
+        await PixiEnvironment.InstallPackagesAsync(depList, progress, cancellationToken).ConfigureAwait(false);
 
         progress.Report($"All {depList.Count} package(s) installed.");
     }

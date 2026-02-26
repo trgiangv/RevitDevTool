@@ -83,20 +83,30 @@ public abstract partial class BaseNode : ObservableObject
     /// <summary>
     /// Execute this node if executable
     /// </summary>
-    public void Execute()
+    public async Task<ExecutionResult> ExecuteAsync(IProgress<string>? progress = null, CancellationToken cancellationToken = default)
     {
         if (!IsExecutable)
-            return;
+            return ExecutionResult.Skipped();
 
         try
         {
-            ExecutionStrategy!.Execute();
-            IsLastExecuted = true;
-            LastExecutedTime = DateTime.Now;
+            progress?.Report($"Executing '{Name}'...");
+            var result = await ExecutionStrategy!.ExecuteAsync(progress, cancellationToken);
+            IsLastExecuted = result.Success;
+            return result;
         }
-        catch
+        catch (OperationCanceledException)
         {
             IsLastExecuted = false;
+            return ExecutionResult.Cancelled("Execution cancelled by user.");
+        }
+        catch (Exception ex)
+        {
+            IsLastExecuted = false;
+            return ExecutionResult.Failed(ex.Message, ex);
+        }
+        finally
+        {
             LastExecutedTime = DateTime.Now;
         }
     }

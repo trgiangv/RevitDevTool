@@ -1,4 +1,5 @@
 using System.Collections.ObjectModel;
+using System.Diagnostics;
 using System.IO;
 using RevitDevTool.Settings;
 using RevitDevTool.Theme;
@@ -16,6 +17,7 @@ public partial class CodeExecuteViewModel : ObservableObject
     private readonly IExecutionOrchestrator _orchestrator;
     private readonly ISettingsService _settingsService;
     private readonly DispatcherTimer _searchDebounceTimer;
+    private int _busyDepth;
 
     [ObservableProperty]
     private ObservableCollection<BaseNode> _treeRoot = [];
@@ -25,6 +27,15 @@ public partial class CodeExecuteViewModel : ObservableObject
 
     [ObservableProperty]
     private string _searchText = string.Empty;
+
+    [ObservableProperty]
+    private bool _isBusy;
+
+    [ObservableProperty]
+    private string _busyMessage = string.Empty;
+
+    [ObservableProperty]
+    private ExecutionMode? _busyProviderType;
 
     /// <summary>
     /// Filtered items for display in TreeView
@@ -37,6 +48,7 @@ public partial class CodeExecuteViewModel : ObservableObject
         _settingsService = settingsService;
         _orchestrator.TreeChanged += OnTreeChanged;
         _orchestrator.RootRemoved += OnRootRemoved;
+        _orchestrator.ExecutionProgressChanged += OnExecutionProgressChanged;
         ThemeManager.Current.ActualApplicationThemeChanged += OnThemeChanged;
 
         _searchDebounceTimer = new DispatcherTimer
@@ -59,7 +71,8 @@ public partial class CodeExecuteViewModel : ObservableObject
         var config = _settingsService.CodeExecuteConfig;
         var allPaths = config.DotnetAssemblyPaths.Concat(config.ScriptFolderPaths);
 
-        await _orchestrator.LoadSavedPathsAsync(allPaths).ConfigureAwait(true);
+        using var _ = BeginBusy("Loading saved paths...");
+        await _orchestrator.LoadSavedPathsAsync(allPaths);
         UpdateTreeRoot();
     }
 
@@ -97,7 +110,8 @@ public partial class CodeExecuteViewModel : ObservableObject
         if (string.IsNullOrEmpty(path))
             return;
 
-        await _orchestrator.LoadFromPathAsync(path!).ConfigureAwait(true);
+        using var _ = BeginBusy("Loading assembly...");
+        await _orchestrator.LoadFromPathAsync(path!);
 
         SavePathToSettings(path!, ExecutionMode.Assembly);
         UpdateTreeRoot();
@@ -119,7 +133,8 @@ public partial class CodeExecuteViewModel : ObservableObject
 
         if (string.IsNullOrEmpty(path)) return;
 
-        await _orchestrator.LoadFromPathAsync(path!).ConfigureAwait(true);
+        using var _ = BeginBusy("Loading scripts...");
+        await _orchestrator.LoadFromPathAsync(path!);
 
         SavePathToSettings(path!, ExecutionMode.Script);
         UpdateTreeRoot();
@@ -135,33 +150,55 @@ public partial class CodeExecuteViewModel : ObservableObject
 
         if (File.Exists(path) && path!.EndsWith(".dll", StringComparison.OrdinalIgnoreCase))
         {
-            await LoadAssemblyFromPathAsync(path).ConfigureAwait(true);
+            await LoadAssemblyFromPathAsync(path);
         }
         else if (Directory.Exists(path))
         {
-            await LoadScriptsFromPathAsync(path).ConfigureAwait(true);
+            await LoadScriptsFromPathAsync(path);
         }
     }
 
     [RelayCommand(CanExecute = nameof(CanExecute))]
-    private void Execute(object? parameter)
+    private async Task Execute(object? parameter)
     {
         var node = parameter as BaseNode ?? SelectedNode;
         if (node is not { NodeType: NodeType.Executable }) return;
-        _orchestrator.Execute(node);
+        using var _ = BeginBusy($"Executing '{node.Name}'...", (node as ExecuteNode)?.ProviderType);
+        var result = await _orchestrator.ExecuteAsync(node);
+        if (!result.Success)
+        {
+            Trace.TraceWarning($"Execution failed: {result.Message}");
+        }
     }
 
-    private bool CanExecute() => SelectedNode?.NodeType == NodeType.Executable;
+    private bool CanExecute() => !IsBusy && SelectedNode?.NodeType == NodeType.Executable;
 
     /// <summary>
     /// Execute the last executed item (for TraceCommand shortcut)
     /// </summary>
     public void ExecuteLastItem()
     {
+        _ = ExecuteLastItemAsync();
+    }
+
+    public async Task ExecuteLastItemAsync()
+    {
         var lastExecuted = FindLastExecutedNode(TreeRoot);
         if (lastExecuted != null)
         {
-            _orchestrator.Execute(lastExecuted);
+            try
+            {
+                using var _ = BeginBusy($"Executing '{lastExecuted.Name}'...", (lastExecuted as ExecuteNode)?.ProviderType);
+                var result = await _orchestrator.ExecuteAsync(lastExecuted);
+                if (!result.Success)
+                {
+                    Trace.TraceWarning($"Execution failed: {result.Message}");
+                }
+            }
+            catch (Exception ex)
+            {
+                Trace.TraceError($"Failed to execute last item: {ex.Message}");
+            }
         }
     }
 
@@ -182,7 +219,8 @@ public partial class CodeExecuteViewModel : ObservableObject
     [RelayCommand]
     private async Task ReloadAsync()
     {
-        await _orchestrator.ReloadAsync().ConfigureAwait(true);
+        using var _ = BeginBusy("Reloading nodes...");
+        await _orchestrator.ReloadAsync();
         UpdateTreeRoot();
     }
 
@@ -263,7 +301,7 @@ public partial class CodeExecuteViewModel : ObservableObject
     {
         var filePath = GetFilePathFromSelectedNode();
         if (string.IsNullOrEmpty(filePath)) return;
-        System.Diagnostics.Process.Start("explorer.exe", $"/select, \"{filePath}\"");
+        Process.Start("explorer.exe", $"/select, \"{filePath}\"");
     }
 
     private bool CanOpenLocation() => !string.IsNullOrEmpty(GetFilePathFromSelectedNode());
@@ -302,6 +340,13 @@ public partial class CodeExecuteViewModel : ObservableObject
         {
             RefreshFilteredItems();
         }
+    }
+
+    private void OnExecutionProgressChanged(object? sender, ExecutionProgressEventArgs e)
+    {
+        if (!IsBusy) return;
+        if (string.IsNullOrWhiteSpace(e.Message)) return;
+        BusyMessage = e.Message;
     }
 
     private void UpdateTreeRoot()
@@ -430,6 +475,11 @@ public partial class CodeExecuteViewModel : ObservableObject
         OpenLocationCommand.NotifyCanExecuteChanged();
     }
 
+    partial void OnIsBusyChanged(bool value)
+    {
+        ExecuteCommand.NotifyCanExecuteChanged();
+    }
+
     partial void OnSearchTextChanged(string value)
     {
         _searchDebounceTimer.Stop();
@@ -470,4 +520,34 @@ public partial class CodeExecuteViewModel : ObservableObject
     }
 
     #endregion
+
+    private BusyScope BeginBusy(string message, ExecutionMode? providerType = null)
+    {
+        _busyDepth++;
+        IsBusy = true;
+        BusyMessage = message;
+        BusyProviderType = providerType;
+        return new BusyScope(this);
+    }
+
+    private void EndBusy()
+    {
+        _busyDepth = Math.Max(0, _busyDepth - 1);
+        if (_busyDepth != 0) return;
+
+        IsBusy = false;
+        BusyMessage = string.Empty;
+        BusyProviderType = null;
+    }
+
+    private sealed class BusyScope(CodeExecuteViewModel owner) : IDisposable
+    {
+        private CodeExecuteViewModel? _owner = owner;
+
+        public void Dispose()
+        {
+            _owner?.EndBusy();
+            _owner = null;
+        }
+    }
 }

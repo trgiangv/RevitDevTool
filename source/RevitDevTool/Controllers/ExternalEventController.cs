@@ -20,30 +20,29 @@ public static class ExternalEventController
     public static AsyncEventHandler AsyncEventHandler =>
         _asyncHandler ?? throw new InvalidOperationException(HandlerNotSetMessage);
     
-    public static AsyncEventHandler<T> AsyncGenericEventHandler<T>()
+    public static async Task<AsyncEventHandler<T>> AsyncGenericEventHandler<T>()
     {
-        IExternalEventHandler handler = null!;
-        
         if (AsyncGenericHandlers.TryGetValue(typeof(T), out var existing))
             return (AsyncEventHandler<T>)existing;
-        
+
         if (Context.IsRevitInApiMode)
         {
-            handler = AsyncGenericHandlers.GetOrAdd(
+            var handler = AsyncGenericHandlers.GetOrAdd(
                 typeof(T),
                 _ => new AsyncEventHandler<T>());
 
             return (AsyncEventHandler<T>)handler;
         }
-        
-        AsyncEventHandler.RaiseAsync(_ =>
+
+        IExternalEventHandler? initializedHandler = null;
+        await AsyncEventHandler.RaiseAsync(_ =>
         {
-            handler = AsyncGenericHandlers.GetOrAdd(
+            initializedHandler = AsyncGenericHandlers.GetOrAdd(
                 typeof(T),
                 _ => new AsyncEventHandler<T>());
-        }).GetAwaiter().GetResult();
+        }).ConfigureAwait(false);
 
-        return (AsyncEventHandler<T>)handler;
+        return (AsyncEventHandler<T>)initializedHandler!;
     }
 
     public static void Register()

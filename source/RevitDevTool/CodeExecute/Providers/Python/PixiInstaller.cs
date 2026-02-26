@@ -27,7 +27,8 @@ public static partial class PixiInstaller
     [GeneratedRegex(VersionPattern)]
     private static partial Regex VersionRegex();
 #else
-    private static Regex VersionRegex() => new(VersionPattern, RegexOptions.Compiled);
+    private static readonly Regex VersionRx = new(VersionPattern, RegexOptions.Compiled);
+    private static Regex VersionRegex() => VersionRx;
 #endif
 
     private static string GetBinPath() => Path.Combine(SettingsUtils.GetApplicationDataPath(), "bin");
@@ -126,7 +127,7 @@ public static partial class PixiInstaller
         try
         {
             var zipBytes = await HttpClient.GetByteArrayAsync(downloadUrl).ConfigureAwait(false);
-#if NET48
+#if NETFRAMEWORK
             await Task.Run(() => File.WriteAllBytes(tempZip, zipBytes)).ConfigureAwait(false);
 #else
             await File.WriteAllBytesAsync(tempZip, zipBytes).ConfigureAwait(false);

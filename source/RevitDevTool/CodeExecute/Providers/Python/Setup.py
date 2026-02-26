@@ -10,6 +10,7 @@ clr.AddReference("RevitAPIUI")
 clr.AddReference("AdWindows")
 clr.AddReference("UIFramework")
 clr.AddReference("UIFrameworkServices")
+clr.AddReference("RevitDevTool")
 
 # Version specific references
 if int(__revit__.Application.VersionNumber) >= 2024:  # pyright: ignore[reportUndefinedVariable] # noqa: F821

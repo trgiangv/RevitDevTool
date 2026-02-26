@@ -2,10 +2,8 @@ using System.Diagnostics;
 using System.IO;
 using Python.Runtime;
 using RevitDevTool.CodeExecute.Interfaces;
+using RevitDevTool.CodeExecute.Models;
 using RevitDevTool.Controllers;
-using RevitDevTool.Utils;
-using RevitDevTool.View;
-using RevitDevTool.ViewModel;
 
 namespace RevitDevTool.CodeExecute.Providers.Python;
 
@@ -15,55 +13,89 @@ namespace RevitDevTool.CodeExecute.Providers.Python;
 /// </summary>
 public sealed class PythonExecutionStrategy(string scriptPath, string rootPath) : IExecutionStrategy
 {
-    public void Execute()
+    public async Task<ExecutionResult> ExecuteAsync(IProgress<string>? progress = null, CancellationToken cancellationToken = default)
     {
-        Task.Run(async () =>
+        var stopwatch = Stopwatch.StartNew();
+        var scriptName = Path.GetFileName(scriptPath);
+        try
         {
+            progress?.Report($"Initializing {scriptName}...");
+            await PythonInitializer.InitializeAsync().ConfigureAwait(false);
+
+            string scriptContent;
             try
             {
-                await PythonInitializer.InitializeAsync().ConfigureAwait(true);
-                
-                string scriptContent;
-                try
-                {
 #if NETCOREAPP
-                    scriptContent = await File.ReadAllTextAsync(scriptPath).ConfigureAwait(true);
+                scriptContent = await File.ReadAllTextAsync(scriptPath, cancellationToken).ConfigureAwait(false);
 #else
-                    scriptContent = File.ReadAllText(scriptPath);
+                scriptContent = File.ReadAllText(scriptPath);
 #endif
-                }
-                catch (IOException ex)
-                {
-                    Trace.TraceError($"Failed to read script file: {ex.Message}");
-                    return;
-                }
-                
-                var success = await ResolveDependenciesAsync(scriptPath).ConfigureAwait(true);
-                if (!success)
-                {
-                    Trace.TraceWarning("Execution cancelled: Dependency resolution failed or was cancelled by user.");
-                    return;
-                }
-        
-                ExternalEventController.ActionEventHandler.Raise(_ =>
-                {
-                    PythonExecutor.ExecuteScript(scriptPath, scriptContent, rootPath);
-                });
             }
-            catch (Exception ex)
+            catch (IOException ex)
             {
-                Trace.TraceError($"Python execution pipeline failed: {ex.Message}{Environment.NewLine}{ex.StackTrace}");
+                Trace.TraceError($"Failed to read script file: {ex.Message}");
+                throw;
             }
-        });
+
+            var success = await ResolveDependenciesAsync(scriptPath, progress, cancellationToken).ConfigureAwait(false);
+            if (!success)
+            {
+                stopwatch.Stop();
+                return ExecutionResult.Failed("Dependency resolution failed.", durationMs: stopwatch.ElapsedMilliseconds);
+            }
+
+            progress?.Report($"Running {scriptName}...");
+            var handler = await ExternalEventController
+                .AsyncGenericEventHandler<ExecutionResult>()
+                .ConfigureAwait(false);
+
+            var result = await handler
+                .RaiseAsync(_ =>
+                {
+                    try
+                    {
+                        PythonExecutor.ExecuteScript(scriptPath, scriptContent, rootPath, throwOnError: true);
+                        stopwatch.Stop();
+                        return ExecutionResult.Succeeded("Python script completed successfully.", stopwatch.ElapsedMilliseconds);
+                    }
+                    catch (Exception ex)
+                    {
+                        stopwatch.Stop();
+                        return ExecutionResult.Failed($"Python script failed: {ex.Message}", ex, stopwatch.ElapsedMilliseconds);
+                    }
+                })
+                .ConfigureAwait(false);
+
+            progress?.Report(result.Success
+                ? $"Completed {scriptName}."
+                : result.Message);
+
+            return result;
+        }
+        catch (OperationCanceledException)
+        {
+            stopwatch.Stop();
+            return ExecutionResult.Cancelled("Python execution cancelled.", stopwatch.ElapsedMilliseconds);
+        }
+        catch (Exception ex)
+        {
+            stopwatch.Stop();
+            Trace.TraceError($"Python execution pipeline failed: {ex.Message}{Environment.NewLine}{ex.StackTrace}");
+            return ExecutionResult.Failed($"Python execution pipeline failed: {ex.Message}", ex, stopwatch.ElapsedMilliseconds);
+        }
     }
 
-    public static async Task<bool> ResolveDependenciesAsync(string scriptPath)
+    public static async Task<bool> ResolveDependenciesAsync(
+        string scriptPath,
+        IProgress<string>? progress = null,
+        CancellationToken cancellationToken = default)
     {
         // 1. Parse PEP 723 metadata
         List<string> dependencies;
         try
         {
-            dependencies = await PythonDepsManager.ResolveDependenciesAsync(scriptPath).ConfigureAwait(true);
+            progress?.Report("Resolving Python dependencies...");
+            dependencies = await PythonDepsManager.ResolveDependenciesAsync(scriptPath, cancellationToken).ConfigureAwait(false);
         }
         catch (Exception ex)
         {
@@ -75,15 +107,13 @@ public sealed class PythonExecutionStrategy(string scriptPath, string rootPath) 
         if (dependencies.Count == 0)
             return true;
 
+        var reporter = progress ?? new Progress<string>(_ => { });
         Trace.TraceInformation($"Installing {dependencies.Count} dependency(s) via pixi...");
-        var installed = await ShowInstallDialogAsync(dependencies).ConfigureAwait(true);
+        reporter.Report($"Installing {dependencies.Count} dependency(s) via pixi...");
+        await PythonDepsManager.InstallDependenciesAsync(dependencies, reporter, cancellationToken).ConfigureAwait(false);
         
-        if (installed)
-        {
-            RefreshImportCache();
-        }
-        
-        return installed;
+        RefreshImportCache();
+        return true;
     }
 
     /// <summary>
@@ -123,46 +153,4 @@ public sealed class PythonExecutionStrategy(string scriptPath, string rootPath) 
         }
     }
 
-    private static Task<bool> ShowInstallDialogAsync(List<string> packages)
-    {
-        var tcs = new TaskCompletionSource<bool>();
-
-        DispatcherHelper.RunOnMainThread(() =>
-        {
-            var vm = new PackageInstallViewModel();
-            var window = new PackageInstallWindow(vm)
-            {
-                Owner = UIFramework.MainWindow.getMainWnd()
-            };
-
-            window.Loaded += async (_, _) =>
-            {
-                try
-                {
-                    var progress = new Progress<string>(msg => vm.UpdateProgress(msg));
-
-                    await PythonDepsManager.InstallDependenciesAsync(
-                        packages, 
-                        progress, 
-                        CancellationToken.None).ConfigureAwait(true);
-                    
-                    vm.OnInstallationComplete(true);
-                }
-                catch (Exception ex)
-                {
-                    vm.UpdateProgress($"Error: {ex.Message}");
-                    vm.OnInstallationComplete(false);
-                }
-            };
-            
-            window.Closed += (_, _) =>
-            {
-                tcs.TrySetResult(window.DialogResult == true);
-            };
-
-            window.ShowDialog();
-        });
-
-        return tcs.Task;
-    }
 }

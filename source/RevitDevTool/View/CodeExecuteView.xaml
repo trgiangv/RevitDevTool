@@ -7,8 +7,8 @@
              xmlns:design="clr-namespace:RevitDevTool.Theme.Design"
              xmlns:mah="http://metro.mahapps.com/winfx/xaml/controls"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-             xmlns:viewModel="clr-namespace:RevitDevTool.ViewModel"
              xmlns:models="clr-namespace:RevitDevTool.CodeExecute.Models"
+             xmlns:viewModel="clr-namespace:RevitDevTool.ViewModel"
              d:DataContext="{d:DesignInstance viewModel:CodeExecuteViewModel}"
              d:DesignHeight="500"
              d:DesignWidth="400"
@@ -25,19 +25,19 @@
             <!--  RootNode: Assembly or Root Folder  -->
             <HierarchicalDataTemplate DataType="{x:Type models:RootNode}"
                                       ItemsSource="{Binding Children}">
-                <TextBlock VerticalAlignment="Center"
-                           Margin="2"
+                <TextBlock Margin="2"
+                           VerticalAlignment="Center"
                            behav:HighlightTextBlockBehavior.Range="{Binding HighlightRange}"
+                           FontWeight="Bold"
                            Text="{Binding Name}"
-                           ToolTip="{Binding RootPath}"
-                           FontWeight="Bold" />
+                           ToolTip="{Binding RootPath}" />
             </HierarchicalDataTemplate>
 
             <!--  IntermediateNode: Namespace or SubFolder  -->
             <HierarchicalDataTemplate DataType="{x:Type models:IntermediateNode}"
                                       ItemsSource="{Binding Children}">
-                <TextBlock VerticalAlignment="Center"
-                           Margin="2"
+                <TextBlock Margin="2"
+                           VerticalAlignment="Center"
                            behav:HighlightTextBlockBehavior.Range="{Binding HighlightRange}"
                            Text="{Binding Name}"
                            ToolTip="{Binding FullPath}" />
@@ -45,8 +45,11 @@
 
             <!--  ExecuteNode: Command or Script  -->
             <DataTemplate DataType="{x:Type models:ExecuteNode}">
-                <StackPanel Margin="2" Orientation="Horizontal">
-                    <Image Width="15" Height="15" Margin="0,0,5,0">
+                <StackPanel Margin="2"
+                            Orientation="Horizontal">
+                    <Image Width="15"
+                           Height="15"
+                           Margin="0,0,5,0">
                         <Image.Style>
                             <Style TargetType="Image">
                                 <Style.Triggers>
@@ -79,17 +82,14 @@
                 </StackPanel>
             </DataTemplate>
             <Style x:Key="ExtendedTreeViewItemStyle"
-                   BasedOn="{StaticResource MahApps.Styles.TreeViewItem}"
                    d:DataContext="{d:DesignInstance models:BaseNode}"
+                   BasedOn="{StaticResource MahApps.Styles.TreeViewItem}"
                    TargetType="{x:Type TreeViewItem}">
                 <Setter Property="IsExpanded" Value="{Binding IsExpanded, Mode=TwoWay}" />
                 <Setter Property="IsSelected" Value="{Binding IsSelected, Mode=TwoWay}" />
-                <Setter Property="Visibility"
-                        Value="{Binding IsVisible, Converter={StaticResource BooleanToVisibilityConverter}}" />
+                <Setter Property="Visibility" Value="{Binding IsVisible, Converter={StaticResource BooleanToVisibilityConverter}}" />
                 <Setter Property="control:MouseDoubleClick.CommandParameter" Value="{Binding}" />
-                <Setter Property="control:MouseDoubleClick.Command"
-                        Value="{Binding Path=DataContext.(viewModel:CodeExecuteViewModel.ExecuteCommand),
-                        RelativeSource={RelativeSource FindAncestor, AncestorType={x:Type control:ExtendedTreeView}}}" />
+                <Setter Property="control:MouseDoubleClick.Command" Value="{Binding Path=DataContext.(viewModel:CodeExecuteViewModel.ExecuteCommand), RelativeSource={RelativeSource FindAncestor, AncestorType={x:Type control:ExtendedTreeView}}}" />
             </Style>
 
         </ResourceDictionary>
@@ -99,6 +99,7 @@
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
             <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
             <RowDefinition Height="Auto" />
         </Grid.RowDefinitions>
 
@@ -131,8 +132,7 @@
                           Height="7"
                           Data="{StaticResource Expand}"
                           Fill="{DynamicResource MahApps.Brushes.ThemeForeground}"
-                          Stretch="Uniform">
-                    </Path>
+                          Stretch="Uniform" />
                 </Button>
                 <Button Margin="0,0,5,0"
                         Command="{Binding CollapseAllCommand}"
@@ -141,8 +141,7 @@
                           Height="7"
                           Data="{StaticResource Collapse}"
                           Fill="{DynamicResource MahApps.Brushes.ThemeForeground}"
-                          Stretch="Uniform">
-                    </Path>
+                          Stretch="Uniform" />
                 </Button>
                 <Button Command="{Binding ToggleAllCommand}"
                         ToolTip="Toggle expand/collapse">
@@ -150,40 +149,114 @@
                           Height="11"
                           Data="{StaticResource Toggle}"
                           Fill="{DynamicResource MahApps.Brushes.ThemeForeground}"
-                          Stretch="Uniform">
-                    </Path>
+                          Stretch="Uniform" />
                 </Button>
             </StackPanel>
         </Grid>
 
-        <!--  Tree View  -->
-        <control:ExtendedTreeView Grid.Row="1"
-                                  AllowDrop="True"
-                                  Drop="AddinTreeView_Drop"
-                                  ItemContainerStyle="{StaticResource ExtendedTreeViewItemStyle}"
-                                  ItemsSource="{Binding FilteredItems}"
-                                  SelectedTreeItem="{Binding SelectedNode, Mode=TwoWay}">
-            <control:ExtendedTreeView.InputBindings>
-                <KeyBinding Key="Delete"
-                            Command="{Binding RemoveCommand}" />
-            </control:ExtendedTreeView.InputBindings>
-            <control:ExtendedTreeView.ContextMenu>
-                <ContextMenu>
-                    <MenuItem Command="{Binding ExecuteCommand}"
-                              Header="Execute" />
-                    <MenuItem Command="{Binding OpenLocationCommand}"
-                              Header="Open Location" />
-                    <Separator />
-                    <MenuItem Command="{Binding RemoveCommand}"
-                              Header="Remove Selected" />
-                    <MenuItem Command="{Binding ClearCommand}"
-                              Header="Clear All" />
-                </ContextMenu>
-            </control:ExtendedTreeView.ContextMenu>
-        </control:ExtendedTreeView>
+        <Grid Grid.Row="1">
+            <!--  Tree View  -->
+            <control:ExtendedTreeView AllowDrop="True"
+                                      DragEnter="AddinTreeView_DragEnter"
+                                      DragLeave="AddinTreeView_DragLeave"
+                                      DragOver="AddinTreeView_DragOver"
+                                      Drop="AddinTreeView_Drop"
+                                      ItemContainerStyle="{StaticResource ExtendedTreeViewItemStyle}"
+                                      ItemsSource="{Binding FilteredItems}"
+                                      SelectedTreeItem="{Binding SelectedNode, Mode=TwoWay}">
+                <control:ExtendedTreeView.InputBindings>
+                    <KeyBinding Key="Delete"
+                                Command="{Binding RemoveCommand}" />
+                </control:ExtendedTreeView.InputBindings>
+                <control:ExtendedTreeView.ContextMenu>
+                    <ContextMenu>
+                        <MenuItem Command="{Binding ExecuteCommand}"
+                                  Header="Execute" />
+                        <MenuItem Command="{Binding OpenLocationCommand}"
+                                  Header="Open Location" />
+                        <Separator />
+                        <MenuItem Command="{Binding RemoveCommand}"
+                                  Header="Remove Selected" />
+                        <MenuItem Command="{Binding ClearCommand}"
+                                  Header="Clear All" />
+                    </ContextMenu>
+                </control:ExtendedTreeView.ContextMenu>
+            </control:ExtendedTreeView>
+
+            <!-- Drag-and-drop Mask -->
+            <Border x:Name="DropMask"
+                    Panel.ZIndex="10"
+                    Background="#AA1E1E1E"
+                    IsHitTestVisible="False"
+                    Visibility="Collapsed">
+                <StackPanel HorizontalAlignment="Center"
+                            VerticalAlignment="Center">
+                    <TextBlock x:Name="DropMaskTitle"
+                               HorizontalAlignment="Center"
+                               FontSize="14"
+                               FontWeight="SemiBold"
+                               Foreground="White"
+                               Text="Drop to load" />
+                    <TextBlock x:Name="DropMaskHint"
+                               Margin="0,6,0,0"
+                               HorizontalAlignment="Center"
+                               FontSize="11"
+                               Foreground="#FFD0D0D0"
+                               Text=".dll files and folders are supported" />
+                </StackPanel>
+            </Border>
+        </Grid>
+
+        <!-- Progress -->
+        <Border Grid.Row="2"
+                Margin="0,5,0,0"
+                Padding="10,6"
+                Background="{DynamicResource MahApps.Brushes.ThemeBackground}"
+                BorderThickness="1"
+                Visibility="{Binding IsBusy, Converter={StaticResource BooleanToVisibilityConverter}}">
+            <StackPanel>
+                <StackPanel Orientation="Horizontal"
+                            HorizontalAlignment="Center"
+                            Margin="0,0,0,6">
+                    <Image Width="14"
+                           Height="14"
+                           Margin="0,0,6,0">
+                        <Image.Style>
+                            <Style TargetType="Image">
+                                <Setter Property="Visibility" Value="Collapsed" />
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding BusyProviderType}"
+                                                 Value="{x:Static models:ExecutionMode.Assembly}">
+                                        <Setter Property="Source" Value="{StaticResource DotnetIcon}" />
+                                        <Setter Property="Visibility" Value="Visible" />
+                                    </DataTrigger>
+                                    <DataTrigger Binding="{Binding BusyProviderType}"
+                                                 Value="{x:Static models:ExecutionMode.Python}">
+                                        <Setter Property="Source" Value="{StaticResource PythonIcon}" />
+                                        <Setter Property="Visibility" Value="Visible" />
+                                    </DataTrigger>
+                                    <DataTrigger Binding="{Binding BusyProviderType}"
+                                                 Value="{x:Static models:ExecutionMode.FSharp}">
+                                        <Setter Property="Source" Value="{StaticResource FsharpIcon}" />
+                                        <Setter Property="Visibility" Value="Visible" />
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </Image.Style>
+                    </Image>
+                    <TextBlock FontSize="9"
+                               Foreground="{DynamicResource MahApps.Brushes.ThemeForeground}"
+                               Text="{Binding BusyMessage}"
+                               TextAlignment="Center"
+                               TextTrimming="CharacterEllipsis" />
+                </StackPanel>
+                <mah:MetroProgressBar Height="6"
+                                      IsIndeterminate="True" />
+            </StackPanel>
+        </Border>
 
         <!--  Load Buttons  -->
-        <Grid Grid.Row="2"
+        <Grid Grid.Row="3"
               Margin="0,5,0,0">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="*" />
@@ -196,31 +269,32 @@
                     Command="{Binding LoadAssemblyCommand}"
                     ToolTip="Load .NET Assembly">
                 <StackPanel Orientation="Horizontal">
-                    <Image Source="{StaticResource DotnetIcon}"
-                           Width="16"
+                    <Image Width="16"
                            Height="16"
-                           Margin="0,0,5,0" />
-                    <TextBlock Text="Load .NET Assembly"
-                               VerticalAlignment="Center" />
+                           Margin="0,0,5,0"
+                           Source="{StaticResource DotnetIcon}" />
+                    <TextBlock VerticalAlignment="Center"
+                               Text="Load .NET Assembly" />
                 </StackPanel>
             </Button>
-            <Button Grid.Column="1" Height="30"
+            <Button Grid.Column="1"
+                    Height="30"
                     HorizontalAlignment="Stretch"
                     Command="{Binding LoadScriptsCommand}"
                     ToolTip="Load Script (F# / Python)">
                 <StackPanel Orientation="Horizontal">
-                    <Image Source="{StaticResource FsharpIcon}"
-                           Width="16"
-                           Height="16"/>
-                    <TextBlock Text="/"
-                               VerticalAlignment="Center"
-                               Margin="2 0" />
-                    <Image Source="{StaticResource PythonIcon}"
-                           Width="16"
+                    <Image Width="16"
                            Height="16"
-                           Margin="0,0,5,0" />
-                    <TextBlock Text="Load Scripts"
-                               VerticalAlignment="Center" />
+                           Source="{StaticResource FsharpIcon}" />
+                    <TextBlock Margin="2,0"
+                               VerticalAlignment="Center"
+                               Text="/" />
+                    <Image Width="16"
+                           Height="16"
+                           Margin="0,0,5,0"
+                           Source="{StaticResource PythonIcon}" />
+                    <TextBlock VerticalAlignment="Center"
+                               Text="Load Scripts" />
                 </StackPanel>
             </Button>
         </Grid>

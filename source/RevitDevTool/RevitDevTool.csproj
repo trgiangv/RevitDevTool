@@ -60,6 +60,10 @@
         <PackageReference Include="System.Diagnostics.DiagnosticSource"/>
         <PackageReference Include="CliWrap"/>
     </ItemGroup>
+
+    <ItemGroup Condition="$(TargetFramework.StartsWith('net4'))">
+        <Reference Include="System.IO.Compression" />
+    </ItemGroup>
     
     <ItemGroup>
         <ProjectReference Include="..\PythonNetStubGenerator\PythonNetStubGenerator.csproj" />

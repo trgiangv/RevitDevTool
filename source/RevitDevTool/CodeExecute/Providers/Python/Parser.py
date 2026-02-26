@@ -43,7 +43,12 @@ _STRIP_COMMENT_RE = re.compile(r"^#\s?", re.MULTILINE)
 
 def _parse_script(script_path: Path) -> tuple[str, list[Requirement]]:
     """Extract (requires_python, [Requirement]) from a PEP 723 inline script."""
-    source = script_path.read_text(encoding="utf-8")
+    try:
+        source = script_path.read_text(encoding="utf-8-sig")
+    except UnicodeDecodeError as e:
+        raise RuntimeError(
+            f"{script_path} must be UTF-8 encoded (PEP 723 requirement)"
+        ) from e
     m = _BLOCK_RE.search(source)
     if not m:
         return "", []

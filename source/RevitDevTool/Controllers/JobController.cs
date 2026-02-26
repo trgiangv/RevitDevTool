@@ -1,4 +1,4 @@
-﻿using System.Diagnostics;
+using System.Diagnostics;
 using System.IO;
 using Autodesk.Revit.UI;
 using RevitDevTool.Bridge;
@@ -17,7 +17,8 @@ public static class JobController
         var prepResult = await PreparePythonIfNeededAsync(job).ConfigureAwait(false);
         if (prepResult != null) return prepResult;
 
-        return await ExternalEventController.AsyncGenericEventHandler<JobResult>().RaiseAsync(app =>
+        var handler = await ExternalEventController.AsyncGenericEventHandler<JobResult>().ConfigureAwait(false);
+        return await handler.RaiseAsync(app =>
         {
             var sw = Stopwatch.StartNew();
             Document? openedDoc = null;

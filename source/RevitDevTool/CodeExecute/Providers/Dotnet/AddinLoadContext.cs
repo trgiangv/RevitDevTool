@@ -12,7 +12,7 @@ internal class AddinLoadContext : AssemblyLoadContext
 {
     private readonly AssemblyDependencyResolver _resolver;
 
-    public AddinLoadContext(string pluginPath) : base(name: "RevitDevTool_AddinLoadContext", isCollectible: true)
+    public AddinLoadContext(string pluginPath) : base(name: $"RevitDevTool_{Guid.NewGuid():N}", isCollectible: true)
     {
         _resolver = new AssemblyDependencyResolver(pluginPath);
         var pluginDirectory = Path.GetDirectoryName(pluginPath) ?? string.Empty;

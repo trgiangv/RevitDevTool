@@ -1,6 +1,6 @@
 using System.Diagnostics;
 using System.IO;
-using CodeExecuteViewModel = RevitDevTool.ViewModel.CodeExecuteViewModel;
+using RevitDevTool.ViewModel;
 using DataFormats = System.Windows.DataFormats;
 using DragEventArgs = System.Windows.DragEventArgs;
 
@@ -8,6 +8,11 @@ namespace RevitDevTool.View;
 
 public partial class CodeExecuteView
 {
+    private const string ValidDropTitle = "Drop to load";
+    private const string ValidDropHint = ".dll files and folders are supported";
+    private const string InvalidDropTitle = "Unsupported drop";
+    private const string InvalidDropHint = "Only .dll files and folders are supported";
+
     public CodeExecuteView(CodeExecuteViewModel viewModel)
     {
         DataContext = viewModel;
@@ -18,16 +23,34 @@ public partial class CodeExecuteView
         Dispatcher.BeginInvoke(System.Windows.Threading.DispatcherPriority.Loaded, viewModel.LoadSavedPathsAsync);
     }
 
+    private void AddinTreeView_DragEnter(object sender, DragEventArgs e)
+    {
+        UpdateDropMaskState(e);
+    }
+
+    private void AddinTreeView_DragOver(object sender, DragEventArgs e)
+    {
+        UpdateDropMaskState(e);
+        e.Handled = true;
+    }
+
+    private void AddinTreeView_DragLeave(object sender, DragEventArgs e)
+    {
+        HideDropMask();
+    }
+
     private async void AddinTreeView_Drop(object sender, DragEventArgs e)
     {
         try
         {
-            if (!TryGetDroppedFiles(e, out var files) || DataContext is not CodeExecuteViewModel viewModel)
+            HideDropMask();
+
+            if (!TryGetDroppedPaths(e, out var droppedPaths) || DataContext is not CodeExecuteViewModel viewModel)
                 return;
 
-            foreach (var filePath in files)
+            foreach (var droppedPath in droppedPaths)
             {
-                await ProcessDroppedItemAsync(filePath, viewModel).ConfigureAwait(true);
+                await ProcessDroppedItemAsync(droppedPath, viewModel);
             }
         }
         catch (Exception ex)
@@ -36,9 +59,9 @@ public partial class CodeExecuteView
         }
     }
 
-    private static bool TryGetDroppedFiles(DragEventArgs e, out string[] files)
+    private static bool TryGetDroppedPaths(DragEventArgs e, out string[] paths)
     {
-        files = [];
+        paths = [];
 
         if (!e.Data.GetDataPresent(DataFormats.FileDrop))
             return false;
@@ -47,55 +70,65 @@ public partial class CodeExecuteView
         if (droppedObject is not string[] droppedFiles || droppedFiles.Length == 0)
             return false;
 
-        files = droppedFiles;
+        paths = droppedFiles;
         return true;
     }
 
-    private static async Task ProcessDroppedItemAsync(string filePath, CodeExecuteViewModel viewModel)
+    private void UpdateDropMaskState(DragEventArgs e)
     {
-        if (File.Exists(filePath))
+        var isValid = IsValidDropData(e);
+        e.Effects = isValid ? System.Windows.DragDropEffects.Copy : System.Windows.DragDropEffects.None;
+
+        DropMaskTitle.Text = isValid ? ValidDropTitle : InvalidDropTitle;
+        DropMaskHint.Text = isValid ? ValidDropHint : InvalidDropHint;
+        DropMask.Visibility = System.Windows.Visibility.Visible;
+    }
+
+    private static bool IsValidDropData(DragEventArgs e)
+    {
+        return TryGetDroppedPaths(e, out var droppedPaths) && droppedPaths.All(IsSupportedPath);
+    }
+
+    private static bool IsSupportedPath(string path)
+    {
+        if (Directory.Exists(path))
+            return true;
+
+        return File.Exists(path) && string.Equals(Path.GetExtension(path), ".dll", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private void HideDropMask()
+    {
+        DropMask.Visibility = System.Windows.Visibility.Collapsed;
+    }
+
+    private static async Task ProcessDroppedItemAsync(string path, CodeExecuteViewModel viewModel)
+    {
+        if (!IsSupportedPath(path))
         {
-            await ProcessDroppedFileAsync(filePath, viewModel).ConfigureAwait(false);
+            Trace.TraceWarning($"Unsupported drop item: {path}. Only .dll files and folders are supported.");
+            return;
         }
-        else if (Directory.Exists(filePath))
+
+        if (File.Exists(path))
         {
-            await viewModel.LoadFromPathAsync(filePath).ConfigureAwait(false);
+            await ProcessDroppedDllFileAsync(path, viewModel);
+        }
+        else if (Directory.Exists(path))
+        {
+            await viewModel.LoadFromPathAsync(path);
         }
     }
 
-    private static async Task ProcessDroppedFileAsync(string filePath, CodeExecuteViewModel viewModel)
-    {
-        var ext = Path.GetExtension(filePath).ToLowerInvariant();
-
-        switch (ext)
-        {
-            case ".dll":
-                await ProcessDllFileAsync(filePath, viewModel).ConfigureAwait(false);
-                break;
-            case ".py":
-                await ProcessPythonFileAsync(filePath, viewModel).ConfigureAwait(false);
-                break;
-        }
-    }
-
-    private static async Task ProcessDllFileAsync(string filePath, CodeExecuteViewModel viewModel)
+    private static async Task ProcessDroppedDllFileAsync(string filePath, CodeExecuteViewModel viewModel)
     {
         if (Utils.AssemblyLoader.IsManagedAssembly(filePath))
         {
-            await viewModel.LoadFromPathAsync(filePath).ConfigureAwait(false);
+            await viewModel.LoadFromPathAsync(filePath);
         }
         else
         {
             Trace.TraceWarning($"File {filePath} is not a valid managed assembly.");
-        }
-    }
-
-    private static async Task ProcessPythonFileAsync(string filePath, CodeExecuteViewModel viewModel)
-    {
-        var folderPath = Path.GetDirectoryName(filePath);
-        if (!string.IsNullOrEmpty(folderPath))
-        {
-            await viewModel.LoadFromPathAsync(folderPath).ConfigureAwait(false);
         }
     }
 }

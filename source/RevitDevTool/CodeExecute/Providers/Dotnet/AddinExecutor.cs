@@ -6,19 +6,21 @@ namespace RevitDevTool.CodeExecute.Providers.Dotnet;
 
 internal static class AddinExecutor
 {
-    public static void RunCommand(AddinItem addinItem, ExternalCommandData data, ref string message, ElementSet elements)
+    public static Result RunCommand(AddinItem addinItem, ExternalCommandData data, ref string message, ElementSet elements)
     {
+        var commandResult = Result.Failed;
 #if NETCOREAPP
         var filePath = addinItem.AssemblyPath;
         var alc = new AddinLoadContext(filePath);
 
         try
         {
-            ExecuteInIsolatedContext(alc, addinItem, data, ref message, elements);
+            commandResult = ExecuteInIsolatedContext(alc, addinItem, data, ref message, elements);
         }
         catch (Exception ex)
         {
             Trace.TraceError($"Execute Error: {ex}");
+            commandResult = Result.Failed;
         }
         finally
         {
@@ -59,11 +61,12 @@ internal static class AddinExecutor
 
             AppDomain.CurrentDomain.AssemblyResolve += assemblyResolver;
 
-            ExecuteInCurrentAppDomain(addinItem, data, ref message, elements);
+            commandResult = ExecuteInCurrentAppDomain(addinItem, data, ref message, elements);
         }
         catch (Exception ex)
         {
             Trace.TraceError($"NetFramework Load Error: {ex}");
+            commandResult = Result.Failed;
         }
         finally
         {
@@ -79,6 +82,7 @@ internal static class AddinExecutor
             }
         }
 #endif
+        return commandResult;
     }
 
 #if NETFRAMEWORK
@@ -101,7 +105,7 @@ internal static class AddinExecutor
         }
     }
     
-    private static void ExecuteInCurrentAppDomain(
+    private static Result ExecuteInCurrentAppDomain(
         AddinItem addinItem, 
         ExternalCommandData data, 
         ref string message, 
@@ -113,18 +117,17 @@ internal static class AddinExecutor
 
         if (instance is IExternalCommand externalCommand)
         {
-            externalCommand.Execute(data, ref message, elements);
+            return externalCommand.Execute(data, ref message, elements);
         }
-        else
-        {
-            Trace.TraceError($"Failed to create instance of {addinItem.FullClassName}. Instance type: {instance?.GetType().FullName ?? "null"}");
-        }
+
+        Trace.TraceError($"Failed to create instance of {addinItem.FullClassName}. Instance type: {instance?.GetType().FullName ?? "null"}");
+        return Result.Failed;
     }
 #endif
 
 #if NETCOREAPP
     [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.NoInlining)]
-    private static void ExecuteInIsolatedContext(AddinLoadContext alc, AddinItem item, ExternalCommandData data, ref string message, ElementSet elements)
+    private static Result ExecuteInIsolatedContext(AddinLoadContext alc, AddinItem item, ExternalCommandData data, ref string message, ElementSet elements)
     {
         using var stream = new FileStream(item.AssemblyPath, FileMode.Open, FileAccess.Read);
         var pdbPath = Path.ChangeExtension(item.AssemblyPath, ".pdb");
@@ -146,15 +149,19 @@ internal static class AddinExecutor
             case null:
                 throw new Exception($"Could not create instance of {item.FullClassName}");
             case IExternalCommand command:
-                command.Execute(data, ref message, elements);
-                break;
+                return command.Execute(data, ref message, elements);
             default:
             {
                 var method = instance.GetType().GetMethod("Execute");
                 object[] parameters = [data, message, elements];
-                method?.Invoke(instance, parameters);
+                var invocationResult = method?.Invoke(instance, parameters);
                 message = (string) parameters[1];
-                break;
+
+                return invocationResult switch
+                {
+                    Result revitResult => revitResult,
+                    _ => Result.Succeeded
+                };
             }
         }
     }

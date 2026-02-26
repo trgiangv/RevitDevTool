@@ -32,11 +32,11 @@ public sealed class FileWatcherService : IFileWatcherService
         if (string.IsNullOrEmpty(rootPath))
             return;
 
-        var directoryPath = ResolveDirectoryPath(rootPath);
+        var directoryPath = ResolveDirectoryPath(rootPath!);
         if (string.IsNullOrEmpty(directoryPath) || !Directory.Exists(directoryPath))
             return;
 
-        Unwatch(rootPath);
+        Unwatch(rootPath!);
 
         foreach (var pattern in patterns)
         {
@@ -56,8 +56,8 @@ public sealed class FileWatcherService : IFileWatcherService
             _watchers[key] = watcher;
         }
 
-        WatchRootLifecycle(rootPath);
-        WatchDirectoryStructure(rootPath);
+        WatchRootLifecycle(rootPath!);
+        WatchDirectoryStructure(rootPath!);
     }
 
     public void Unwatch(string path)
@@ -82,7 +82,7 @@ public sealed class FileWatcherService : IFileWatcherService
         }
 
         var debounceKeysToRemove = _debounceTimers.Keys
-            .Where(k => IsDebounceKeyUnderRoot(k, rootPath))
+            .Where(k => IsDebounceKeyUnderRoot(k, rootPath!))
             .ToList();
 
         foreach (var debounceKey in debounceKeysToRemove)
@@ -329,7 +329,12 @@ public sealed class FileWatcherService : IFileWatcherService
 
     private static string? NormalizePath(string path)
     {
-        return string.IsNullOrWhiteSpace(path) ? null : Path.TrimEndingDirectorySeparator(path);
+        return string.IsNullOrWhiteSpace(path) ? null : 
+#if NET
+            Path.TrimEndingDirectorySeparator(path);
+#else
+            Path.GetFullPath(path).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+#endif
     }
 
     private static bool IsPathUnderRoot(string path, string rootPath)

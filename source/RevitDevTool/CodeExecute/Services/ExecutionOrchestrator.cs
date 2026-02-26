@@ -23,6 +23,7 @@ public sealed class ExecutionOrchestrator : IExecutionOrchestrator, IDisposable
 
     public event EventHandler? TreeChanged;
     public event EventHandler<RootRemovedEventArgs>? RootRemoved;
+    public event EventHandler<ExecutionProgressEventArgs>? ExecutionProgressChanged;
 
     public ExecutionOrchestrator(IServiceProvider serviceProvider, ITreeStateManager stateManager, IFileWatcherService fileWatcher)
     {
@@ -142,16 +143,34 @@ public sealed class ExecutionOrchestrator : IExecutionOrchestrator, IDisposable
         TreeChanged?.Invoke(this, EventArgs.Empty);
     }
 
-    public void Execute(BaseNode node)
+    public async Task<ExecutionResult> ExecuteAsync(BaseNode node, CancellationToken cancellationToken = default)
     {
         if (!node.IsExecutable)
-            return;
+            return ExecutionResult.Skipped();
 
         if (_lastExecutedNode != null && _lastExecutedNode != node)
             _lastExecutedNode.IsLastExecuted = false;
 
-        node.Execute();
-        _lastExecutedNode = node;
+        var progress = new Progress<string>(message =>
+        {
+            if (string.IsNullOrWhiteSpace(message))
+                return;
+
+            ExecutionProgressChanged?.Invoke(this, new ExecutionProgressEventArgs(message));
+        });
+
+        var result = await node.ExecuteAsync(progress, cancellationToken);
+        if (result.Success)
+        {
+            _lastExecutedNode = node;
+        }
+
+        if (!string.IsNullOrWhiteSpace(result.Message))
+        {
+            ExecutionProgressChanged?.Invoke(this, new ExecutionProgressEventArgs(result.Message));
+        }
+
+        return result;
     }
 
     public void Dispose()
@@ -333,7 +352,7 @@ public sealed class ExecutionOrchestrator : IExecutionOrchestrator, IDisposable
             .OfType<RootNode>()
             .FirstOrDefault(root =>
                 IsPathUnderRoot(e.Path, root.RootPath) ||
-                (!string.IsNullOrEmpty(e.OldPath) && IsPathUnderRoot(e.OldPath, root.RootPath)));
+                !string.IsNullOrEmpty(e.OldPath) && IsPathUnderRoot(e.OldPath!, root.RootPath));
     }
 
     private RootNode? FindRootByPath(string path)
@@ -356,8 +375,13 @@ public sealed class ExecutionOrchestrator : IExecutionOrchestrator, IDisposable
     private static bool AreSamePath(string left, string right)
     {
         return string.Equals(
+#if NET
             Path.TrimEndingDirectorySeparator(left),
             Path.TrimEndingDirectorySeparator(right),
+#else
+            Path.GetFullPath(left).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar),
+            Path.GetFullPath(right).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar),
+#endif
             StringComparison.OrdinalIgnoreCase);
     }
 

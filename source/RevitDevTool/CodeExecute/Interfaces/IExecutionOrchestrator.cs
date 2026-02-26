@@ -25,6 +25,11 @@ public interface IExecutionOrchestrator
     event EventHandler<RootRemovedEventArgs>? RootRemoved;
 
     /// <summary>
+    /// Event raised to publish execution progress text for UI feedback.
+    /// </summary>
+    event EventHandler<ExecutionProgressEventArgs>? ExecutionProgressChanged;
+
+    /// <summary>
     /// Load nodes from a path using the current provider
     /// </summary>
     /// <param name="path">Path to load from</param>
@@ -63,7 +68,8 @@ public interface IExecutionOrchestrator
     /// Execute a node
     /// </summary>
     /// <param name="node">Node to execute</param>
-    void Execute(BaseNode node);
+    /// <param name="cancellationToken">Cancellation token</param>
+    Task<ExecutionResult> ExecuteAsync(BaseNode node, CancellationToken cancellationToken = default);
 }
 
 public sealed class RootRemovedEventArgs(string rootPath, string? newPath = null) : EventArgs
@@ -76,4 +82,9 @@ public sealed class RootRemovedEventArgs(string rootPath, string? newPath = null
     public string? NewPath { get; } = newPath;
 
     public bool IsRename => NewPath != null;
+}
+
+public sealed class ExecutionProgressEventArgs(string message) : EventArgs
+{
+    public string Message { get; } = message;
 }
