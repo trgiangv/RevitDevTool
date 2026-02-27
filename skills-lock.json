@@ -1,0 +1,20 @@
+{
+  "version": 1,
+  "skills": {
+    "find-skills": {
+      "source": "vercel-labs/skills",
+      "sourceType": "github",
+      "computedHash": "25872a21881a950edc3db1f3329664d60405d539660ce05b3265db2de06a7dfd"
+    },
+    "skill-creator": {
+      "source": "anthropics/skills",
+      "sourceType": "github",
+      "computedHash": "1a2f4694384cb90d19d75354975dfb654d5c4ad230041667cb4b5b898474d7df"
+    },
+    "wpf-mvvm-generator": {
+      "source": "jeongheonk/c-sharp-custom-marketplace",
+      "sourceType": "github",
+      "computedHash": "cc08a400ad01dea3d1cf824bfca13adc45e59c1460a97a229130903a221a9bba"
+    }
+  }
+}
