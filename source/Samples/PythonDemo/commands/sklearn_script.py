@@ -4,8 +4,8 @@
 #     "numpy==2.4.2",
 #     "openpyxl==3.1.5",
 #     "pydantic==2.12.5",
-#     "scikit-learn==1.8.0"
-#     "polars==1.38.1"
+#     "scikit-learn==1.8.0",
+#     "polars==1.38.1",
 # ]
 # ///
 

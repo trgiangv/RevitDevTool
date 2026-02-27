@@ -8,22 +8,18 @@ Demonstrates complex geometry visualization (solids, faces, meshes).
 Similar to RevitDevTool.DotnetDemo/SolidVisualization.cs and FaceVisualization.cs
 """
 
-from Autodesk.Revit.DB import BoundingBoxXYZ, Face, FilteredElementCollector, GeometryInstance, Options, Solid
+from Autodesk.Revit import UI, DB
 from Autodesk.Revit.UI.Selection import ObjectType
 
-uiapp = __revit__  # type: ignore  # noqa: F821
-uidoc = uiapp.ActiveUIDocument
-doc = uidoc.Document
 
-
-def test_element_solid():
+def test_element_solid(uidoc: UI.UIDocument):
     """Pick an element and visualize its solid geometry"""
     try:
         print("Select an element...")
         ref = uidoc.Selection.PickObject(ObjectType.Element, "Select an element")
 
-        elem = doc.GetElement(ref)
-        options = Options()
+        elem = uidoc.Document.GetElement(ref)
+        options = DB.Options()
         geom = elem.get_Geometry(options)
 
         if not geom:
@@ -35,12 +31,12 @@ def test_element_solid():
         # Extract solids
         solids = []
         for geo_obj in geom:
-            if isinstance(geo_obj, Solid) and geo_obj.Volume > 0:
+            if isinstance(geo_obj, DB.Solid) and geo_obj.Volume > 0:
                 solids.append(geo_obj)
-            elif isinstance(geo_obj, GeometryInstance):
+            elif isinstance(geo_obj, DB.GeometryInstance):
                 inst_geom = geo_obj.GetInstanceGeometry()
                 for inst_obj in inst_geom:
-                    if isinstance(inst_obj, Solid) and inst_obj.Volume > 0:
+                    if isinstance(inst_obj, DB.Solid) and inst_obj.Volume > 0:
                         solids.append(inst_obj)
 
         print(f"Found {len(solids)} solid(s)")
@@ -54,14 +50,14 @@ def test_element_solid():
         print(f"ERROR: {e}")
 
 
-def test_element_faces():
+def test_element_faces(uidoc: UI.UIDocument):
     """Pick an element and visualize its faces"""
     try:
         print("Select an element...")
         ref = uidoc.Selection.PickObject(ObjectType.Element, "Select an element")
 
-        elem = doc.GetElement(ref)
-        options = Options()
+        elem = uidoc.Document.GetElement(ref)
+        options = DB.Options()
         geom = elem.get_Geometry(options)
 
         if not geom:
@@ -73,13 +69,13 @@ def test_element_faces():
         # Extract faces from solids
         faces = []
         for geo_obj in geom:
-            if isinstance(geo_obj, Solid) and geo_obj.Volume > 0:
+            if isinstance(geo_obj, DB.Solid) and geo_obj.Volume > 0:
                 for face in geo_obj.Faces:
                     faces.append(face)
-            elif isinstance(geo_obj, GeometryInstance):
+            elif isinstance(geo_obj, DB.GeometryInstance):
                 inst_geom = geo_obj.GetInstanceGeometry()
                 for inst_obj in inst_geom:
-                    if isinstance(inst_obj, Solid) and inst_obj.Volume > 0:
+                    if isinstance(inst_obj, DB.Solid) and inst_obj.Volume > 0:
                         for face in inst_obj.Faces:
                             faces.append(face)
 
@@ -94,13 +90,13 @@ def test_element_faces():
         print(f"ERROR: {e}")
 
 
-def test_picked_face():
+def test_picked_face(uidoc: UI.UIDocument):
     """Pick a face directly and visualize it"""
     try:
         print("Select a face...")
         ref = uidoc.Selection.PickObject(ObjectType.Face, "Select a face")
 
-        elem = doc.GetElement(ref)
+        elem = uidoc.Document.GetElement(ref)
         face = elem.GetGeometryObjectFromReference(ref)
 
         if face:
@@ -113,7 +109,7 @@ def test_picked_face():
         print(f"ERROR: {e}")
 
 
-def test_bounding_boxes():
+def test_bounding_boxes(uidoc: UI.UIDocument):
     """Visualize bounding boxes of selected elements"""
     try:
         print("Select elements (ESC when done)...")
@@ -126,7 +122,7 @@ def test_bounding_boxes():
         print(f"Selected {len(refs)} element(s)")
 
         for i, ref in enumerate(refs):
-            elem = doc.GetElement(ref)
+            elem = uidoc.Document.GetElement(ref)
             bbox = elem.get_BoundingBox(None)
 
             if bbox:
@@ -139,19 +135,19 @@ def test_bounding_boxes():
         print(f"ERROR: {e}")
 
 
-def test_all_element_solids():
+def test_all_element_solids(uidoc: UI.UIDocument):
     """Visualize solids of all visible elements (warning: may be slow)"""
     try:
         print("WARNING: This will visualize all element solids in the view")
         print("Collecting elements...")
 
-        collector = FilteredElementCollector(doc, uidoc.ActiveView.Id)
+        collector = DB.FilteredElementCollector(uidoc.Document, uidoc.ActiveView.Id)
         elements = collector.WhereElementIsNotElementType().ToElements()
 
         print(f"Found {len(elements)} elements")
 
         count = 0
-        options = Options()
+        options = DB.Options()
 
         for elem in elements:
             geom = elem.get_Geometry(options)
@@ -159,7 +155,7 @@ def test_all_element_solids():
                 continue
 
             for geo_obj in geom:
-                if isinstance(geo_obj, Solid) and geo_obj.Volume > 0:
+                if isinstance(geo_obj, DB.Solid) and geo_obj.Volume > 0:
                     print(geo_obj)
                     count += 1
 
@@ -173,13 +169,19 @@ def test_all_element_solids():
         print(f"ERROR: {e}")
 
 
-if __name__ == "__main__":
+def main():
     print("=== Solid and Face Visualization Test ===")
     print()
 
+    uidoc: UI.UIDocument = __revit__.ActiveUIDocument  # type: ignore  # noqa: F821
+
     # Uncomment the test you want to run:
-    test_element_solid()
-    # test_element_faces()
-    # test_picked_face()
-    # test_bounding_boxes()
-    # test_all_element_solids()
+    test_element_solid(uidoc)
+    # test_element_faces(uidoc)
+    # test_picked_face(uidoc)
+    # test_bounding_boxes(uidoc)
+    # test_all_element_solids(uidoc)
+
+
+if __name__ == "__main__":
+    main()

@@ -13,15 +13,11 @@ Practical example combining all three modules: CodeExecute, Logging, Visualizati
 """
 
 import polars as pl
-from Autodesk.Revit import UI
+from Autodesk.Revit import UI, DB
 from Autodesk.Revit.DB import BuiltInParameter, ElementId, FilteredElementCollector, Wall
 
-uiapp : UI.UIApplication = __revit__  # type: ignore  # noqa: F821
-uidoc = uiapp.ActiveUIDocument
-doc = uidoc.Document
 
-
-def collect_wall_data():
+def collect_wall_data(doc: DB.Document):
     """Collect wall data from active document"""
     print("Collecting wall data...")
 
@@ -84,7 +80,7 @@ def analyze_walls(data):
     return df, summary
 
 
-def visualize_long_walls(df, threshold_percentile=0.9):
+def visualize_long_walls(df: pl.DataFrame, doc: DB.Document, threshold_percentile=0.9):
     """Visualize walls above length threshold"""
     print()
     print("=== Visualizing Long Walls ===")
@@ -134,13 +130,13 @@ def find_outliers(df):
         print(extreme_ratio.select(["Id", "Name", "Height", "Length", "HeightLengthRatio"]))
 
 
-if __name__ == "__main__":
+def main(doc: DB.Document):
     print("=== Revit Wall Analysis Test ===")
     print()
 
     try:
         # 1. Collect data
-        data = collect_wall_data()
+        data = collect_wall_data(doc)
 
         if len(data) == 0:
             print("WARNING: No walls found in active document")
@@ -152,7 +148,7 @@ if __name__ == "__main__":
             find_outliers(df)
 
             # 4. Visualize long walls
-            visualize_long_walls(df, threshold_percentile=0.9)
+            visualize_long_walls(df, doc, threshold_percentile=0.9)
 
             print()
             print("Analysis complete ✓")
@@ -162,3 +158,6 @@ if __name__ == "__main__":
         import traceback
 
         print(traceback.format_exc())
+
+if __name__ == "__main__":
+    main(__revit__.ActiveUIDocument.Document) # type: ignore

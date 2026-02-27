@@ -45,13 +45,6 @@ from Autodesk.Revit.UI.Selection import ObjectType
 from System.Collections.Generic import List
 
 # ---------------------------------------------------------------------------
-# Revit application handles — available when run inside RevitDevTool
-# ---------------------------------------------------------------------------
-uiapp : UI.UIApplication = __revit__  # type: ignore  # noqa: F821
-uidoc = uiapp.ActiveUIDocument
-doc = uidoc.Document
-
-# ---------------------------------------------------------------------------
 # Helper: extract first valid solid from a Revit element
 # ---------------------------------------------------------------------------
 def extract_solids(element: DB.Element) -> list[Solid]:
@@ -188,12 +181,15 @@ def trimesh_intersection_mesh(
 # Helper: visualize a trimesh.Trimesh as a DirectShape (TessellatedShapeBuilder)
 # ---------------------------------------------------------------------------
 def visualize_mesh_as_directshape(
-    mesh: trimesh.Trimesh, name: str = "FCL Intersection"
+    uiapp: UI.UIApplication,
+    mesh: trimesh.Trimesh,
+    name: str = "FCL Intersection"
 ) -> DirectShape | None:
     """
     Create a DirectShape from *mesh* using TessellatedShapeBuilder.
     Must be called inside an active Transaction.
     """
+    doc = uiapp.ActiveUIDocument.Document
     category_id = ElementId(DB.BuiltInCategory.OST_GenericModel)
 
     builder = TessellatedShapeBuilder()
@@ -228,7 +224,7 @@ def visualize_mesh_as_directshape(
 # ---------------------------------------------------------------------------
 # Main workflow
 # ---------------------------------------------------------------------------
-def check_collision_and_visualize():
+def check_collision_and_visualize(uiapp: UI.UIApplication):
     """
     Pick 2 elements → FCL collision check → visualize the intersection Solid
     as a DirectShape in the Revit model.
@@ -236,6 +232,9 @@ def check_collision_and_visualize():
     print("=" * 60)
     print("FCL Collision Detection + Solid Visualization")
     print("=" * 60)
+
+    uidoc = uiapp.ActiveUIDocument
+    doc = uidoc.Document
 
     # ── 1. Pick element A ──────────────────────────────────────────────────
     try:
@@ -306,7 +305,7 @@ def check_collision_and_visualize():
     tx = Transaction(doc, "FCL Intersection Visualization")
     tx.Start()
     try:
-        ds = visualize_mesh_as_directshape(inter_mesh, "FCL Intersection")
+        ds = visualize_mesh_as_directshape(uiapp, inter_mesh, "FCL Intersection")
         tx.Commit()
         print(f"  ✓ DirectShape created: ID={ds.Id.IntegerValue}")
     except Exception as exc:
@@ -324,4 +323,4 @@ def check_collision_and_visualize():
 # Entry point
 # ---------------------------------------------------------------------------
 if __name__ == "__main__":
-    check_collision_and_visualize()
+    check_collision_and_visualize(__revit__) # type: ignore

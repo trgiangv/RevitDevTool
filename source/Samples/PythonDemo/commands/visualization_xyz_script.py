@@ -8,15 +8,11 @@ Demonstrates geometry visualization in 3D view.
 Similar to RevitDevTool.DotnetDemo/XYZVisualization.cs
 """
 
-from Autodesk.Revit.DB import XYZ
+from Autodesk.Revit import UI, DB
 from Autodesk.Revit.UI.Selection import ObjectType
 
-uiapp = __revit__  # type: ignore  # noqa: F821
-uidoc = uiapp.ActiveUIDocument
-doc = uidoc.Document
 
-
-def test_single_point():
+def test_single_point(uidoc: UI.UIDocument):
     """Pick a point and visualize it"""
     try:
         print("Select a point on an element...")
@@ -30,7 +26,7 @@ def test_single_point():
         print(f"ERROR: {e}")
 
 
-def test_multiple_points():
+def test_multiple_points(uidoc: UI.UIDocument):
     """Pick multiple points and visualize them"""
     try:
         print("Select multiple points (ESC when done)...")
@@ -60,7 +56,7 @@ def test_generated_points():
         points = []
         for x in range(5):
             for y in range(5):
-                point = XYZ(x * 10.0, y * 10.0, 0.0)
+                point = DB.XYZ(x * 10.0, y * 10.0, 0.0)
                 points.append(point)
                 print(point)  # Visualize each point
 
@@ -70,11 +66,14 @@ def test_generated_points():
         print(f"ERROR: {e}")
 
 
-if __name__ == "__main__":
+def main():
     print("=== XYZ Visualization Test ===")
-    print()
 
-    # Uncomment the test you want to run:
-    test_single_point()
-    # test_multiple_points()
+    uidoc: UI.UIDocument = __revit__.ActiveUIDocument  # type: ignore  # noqa: F821
+    test_single_point(uidoc)
+    # test_multiple_points(uidoc)
     # test_generated_points()
+
+
+if __name__ == "__main__":
+    main()

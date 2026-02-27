@@ -1,10 +1,8 @@
 ﻿from Autodesk.Revit import DB, UI
-from Revit.Async import RevitTask  # noqa: F401
+from RevitDevTool.Controllers import ExternalEventController
 from System import Action, Guid
 from System.Windows import Controls, Window, WindowStartupLocation
 from UIFramework import MainWindow
-
-uiapp: UI.UIApplication = __revit__  # type: ignore  # noqa: F821
 
 
 class RevitExternalEventHandler(UI.IExternalEventHandler):
@@ -28,11 +26,9 @@ class RevitExternalEventHandler(UI.IExternalEventHandler):
         self.action = action
         self.external_event.Raise()
 
-event_handler = RevitExternalEventHandler()  # create an instance of the event handler in Revit API Context
-
 
 class MyModelessForm(Window):
-    def __init__(self):
+    def __init__(self, event_handler: UI.IExternalEventHandler):
         super(MyModelessForm, self).__init__()
         self.Text = "Revit DevTool Modeless"
         self.Width = 300
@@ -40,6 +36,7 @@ class MyModelessForm(Window):
         self.Title = "Revit DevTool Modeless"
         self.WindowStartupLocation = WindowStartupLocation.CenterOwner
         self.Owner = MainWindow.getMainWnd()
+        self.event_handler = event_handler
 
         # create a grid to hold the button
         grid = Controls.Grid()
@@ -52,7 +49,7 @@ class MyModelessForm(Window):
         grid.Children.Add(button)
 
     def on_click(self, sender, args):
-        def create_wall_action():
+        def create_wall_action(uiapp: UI.UIApplication):
             doc = uiapp.ActiveUIDocument.Document
             level = DB.FilteredElementCollector(doc).OfClass(DB.Level).FirstElement()
             wall_type = DB.FilteredElementCollector(doc).OfClass(DB.WallType).FirstElement()
@@ -73,14 +70,20 @@ class MyModelessForm(Window):
             finally:
                 if t.HasEnded:
                     t.Dispose()
-        # 1. use Revit.Async package (best practice for modeless form) to run the wall creation code in Revit API context
-        # RevitTask.RunAsync(Action(create_wall_action))
+        # 2. use ActionEventHandler to run the wall creation code in Revit API context (preffer)
+        ExternalEventController.ActionEventHandler.Raise(Action[UI.UIApplication](create_wall_action))
 
-        # 2. use ExternalEvent to run the wall creation code in Revit API context (alternative approach, not recommended for modeless form)
-        event_handler.Raise(Action(create_wall_action))
+        # 1. use ExternalEvent to run the wall creation code in Revit API context (alternative approach, not recommended due to small memory leak)
+        # event_handler.Raise(Action(create_wall_action))
+
+def main():
+    event_handler = RevitExternalEventHandler()  # create an instance of the event handler in Revit API Context
+
+    # modeless form
+    form = MyModelessForm(event_handler)
+    form.Show()
+    form.Closed += lambda sender, args: event_handler.Dispose()  # dispose the event handler when the form is closed
 
 
-# modeless form
-form = MyModelessForm()
-form.Show()
-form.Closed += lambda sender, args: event_handler.Dispose()  # dispose the event handler when the form is closed
+if __name__ == "__main__":
+    main()

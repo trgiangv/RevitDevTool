@@ -8,21 +8,17 @@ Demonstrates curve and edge visualization in 3D view.
 Similar to RevitDevTool.DotnetDemo/CurveVisualization.cs
 """
 
-from Autodesk.Revit.DB import XYZ, Arc, FilteredElementCollector, Line, Wall
+from Autodesk.Revit import UI, DB
 from Autodesk.Revit.UI.Selection import ObjectType
 
-uiapp = __revit__  # type: ignore  # noqa: F821
-uidoc = uiapp.ActiveUIDocument
-doc = uidoc.Document
 
-
-def test_single_edge():
+def test_single_edge(uidoc: UI.UIDocument):
     """Pick an edge and visualize it"""
     try:
         print("Select an edge...")
         ref = uidoc.Selection.PickObject(ObjectType.Edge, "Select an edge")
 
-        elem = doc.GetElement(ref)
+        elem = uidoc.Document.GetElement(ref)
         edge = elem.GetGeometryObjectFromReference(ref)
 
         if edge:
@@ -35,7 +31,7 @@ def test_single_edge():
         print(f"ERROR: {e}")
 
 
-def test_multiple_edges():
+def test_multiple_edges(uidoc: UI.UIDocument):
     """Pick multiple edges and visualize them"""
     try:
         print("Select multiple edges (ESC when done)...")
@@ -49,7 +45,7 @@ def test_multiple_edges():
 
         # Visualize each edge
         for i, ref in enumerate(refs):
-            elem = doc.GetElement(ref)
+            elem = uidoc.Document.GetElement(ref)
             edge = elem.GetGeometryObjectFromReference(ref)
             if edge:
                 print(f"Edge {i + 1}: {edge.GetType().Name}")
@@ -59,12 +55,12 @@ def test_multiple_edges():
         print(f"ERROR: {e}")
 
 
-def test_wall_curves():
+def test_wall_curves(uidoc: UI.UIDocument):
     """Visualize all wall location curves"""
     try:
         print("Collecting wall curves...")
 
-        walls = FilteredElementCollector(doc).OfClass(Wall).ToElements()
+        walls = DB.FilteredElementCollector(uidoc.Document).OfClass(DB.Wall).ToElements()
         count = 0
 
         for wall in walls:
@@ -86,15 +82,15 @@ def test_generated_lines():
 
         # Create a square
         points = [
-            XYZ(0, 0, 0),
-            XYZ(10, 0, 0),
-            XYZ(10, 10, 0),
-            XYZ(0, 10, 0),
-            XYZ(0, 0, 0),  # Close the square
+            DB.XYZ(0, 0, 0),
+            DB.XYZ(10, 0, 0),
+            DB.XYZ(10, 10, 0),
+            DB.XYZ(0, 10, 0),
+            DB.XYZ(0, 0, 0),  # Close the square
         ]
 
         for i in range(len(points) - 1):
-            line = Line.CreateBound(points[i], points[i + 1])
+            line = DB.Line.CreateBound(points[i], points[i + 1])
             print(f"Line {i + 1}: {points[i]} -> {points[i + 1]}")
             print(line)  # Visualize in 3D view
 
@@ -109,11 +105,11 @@ def test_arc():
     try:
         print("Generating arc...")
 
-        start = XYZ(0, 0, 0)
-        end = XYZ(10, 0, 0)
-        mid = XYZ(5, 5, 0)
+        start = DB.XYZ(0, 0, 0)
+        end = DB.XYZ(10, 0, 0)
+        mid = DB.XYZ(5, 5, 0)
 
-        arc = Arc.Create(start, end, mid)
+        arc = DB.Arc.Create(start, end, mid)
         print(f"Arc: radius={arc.Radius:.2f}, length={arc.Length:.2f}")
         print(arc)  # Visualize in 3D view
 
@@ -121,13 +117,19 @@ def test_arc():
         print(f"ERROR: {e}")
 
 
-if __name__ == "__main__":
+def main():
     print("=== Curve Visualization Test ===")
     print()
 
+    uidoc: UI.UIDocument = __revit__.ActiveUIDocument  # type: ignore  # noqa: F821
+
     # Uncomment the test you want to run:
-    # test_single_edge()
-    # test_multiple_edges()
-    # test_wall_curves()
+    # test_single_edge(uidoc)
+    # test_multiple_edges(uidoc)
+    # test_wall_curves(uidoc)
     test_generated_lines()
     # test_arc()
+
+
+if __name__ == "__main__":
+    main()
