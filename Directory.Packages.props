@@ -6,13 +6,16 @@
     <ItemGroup>
         <!--Ioc-->
         <PackageVersion Include="Microsoft.Extensions.Hosting" Version="10.0.3"/>
+        <PackageVersion Include="Microsoft.Extensions.Logging" Version="10.0.3"/>
         <PackageVersion Include="Microsoft.Extensions.Logging.Abstractions" Version="10.0.3"/>
+        <PackageVersion Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="10.0.3"/>
         <!--Pipes-->
         <PackageVersion Include="H.Pipes" Version="15.0.1-dev.3"/>
         <PackageVersion Include="H.Formatters.System.Text.Json" Version="15.0.1-dev.3"/>
         <PackageVersion Include="H.Formatters.MessagePack" Version="15.0.1-dev.3"/>
         <PackageVersion Include="MessagePack" Version="3.1.4"/>
         <PackageVersion Include="System.Text.Json" Version="10.0.3"/>
+        <PackageVersion Include="System.Threading.Channels" Version="10.0.3"/>
         <!--Python-->
         <PackageVersion Include="pythonnet" Version="3.0.5"/>
         <!--FSharp-->
@@ -22,6 +25,9 @@
         <PackageVersion Include="Serilog" Version="4.3.1-dev-02395"/>
         <PackageVersion Include="Serilog.Enrichers.Autodesk.Revit" Version="2.0.1"/>
         <PackageVersion Include="Serilog.Sinks.File" Version="7.0.1-dev-02315"/>
+        <PackageVersion Include="Scintilla5.NET" Version="6.1.1"/>
+        <PackageVersion Include="Zlogger" Version="2.5.10"/>
+        <PackageVersion Include="ZLogger.MessagePack" Version="2.5.10"/>
         <!--Utilities-->
         <PackageVersion Include="Nice3point.Revit.Build.Tasks" Version="3.0.1"/>
         <PackageVersion Include="JetBrains.Annotations" Version="2025.2.4"/>
