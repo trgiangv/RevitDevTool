@@ -29,4 +29,9 @@ pytest_cache/
 .pytest_cache/
 .mypy_cache/
 .venv/
+
+#FSharp
 .fake
+
+# Skills
+skills
