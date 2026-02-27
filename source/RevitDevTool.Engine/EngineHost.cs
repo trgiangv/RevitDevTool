@@ -155,10 +155,7 @@ public sealed class EngineHost : IDisposable
 
         Trace.TraceInformation("[EngineHost] Shutdown acknowledged, closing Revit gracefully...");
 
-        _ = Task.Run(async () =>
-        {
-            await TryShutdownProcessAsync().ConfigureAwait(false);
-        });
+        await TryShutdownProcessAsync().ConfigureAwait(false);
     }
 
     private static async Task TryShutdownProcessAsync()
@@ -235,7 +232,7 @@ public sealed class EngineHost : IDisposable
     /// Publishes a log payload to the connected orchestrator client.
     /// This is best-effort and ignored when no client is connected yet.
     /// </summary>
-    public async ValueTask PublishLogAsync(PipeLogEntry entry, CancellationToken cancellationToken = default)
+    public async ValueTask PublishLogAsync(PipeLogEntry? entry, CancellationToken cancellationToken = default)
     {
         if (entry == null) return;
         var connection = _lastConnection;
@@ -246,7 +243,7 @@ public sealed class EngineHost : IDisposable
             var message = new PipeMessage
             {
                 Type = PipeMessageType.LogChunk,
-                Payload = MessagePackSerializer.Serialize(entry)
+                Payload = MessagePackSerializer.Serialize(entry, cancellationToken: cancellationToken)
             };
             await connection.WriteAsync(message, cancellationToken).ConfigureAwait(false);
         }

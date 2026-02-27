@@ -1,0 +1,230 @@
+<UserControl x:Class="RevitDevTool.Desktop.Views.Pages.AssistantPageView"
+             xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:avalonia="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
+             xmlns:objectModel="clr-namespace:System.Collections.ObjectModel;assembly=System.ObjectModel"
+             xmlns:suki="https://github.com/kikipoulet/SukiUI"
+             xmlns:vm="using:RevitDevTool.Desktop.ViewModels"
+             x:DataType="vm:AssistantPageViewModel">
+
+    <suki:SettingsLayout>
+        <suki:SettingsLayout.Items>
+            <objectModel:ObservableCollection x:TypeArguments="suki:SettingsLayoutItem">
+
+                <!--  MCP Provider  -->
+                <suki:SettingsLayoutItem Header="MCP Provider">
+                    <suki:SettingsLayoutItem.Content>
+                        <StackPanel>
+                            <suki:GlassCard Margin="0,25,0,0"
+                                            Padding="25">
+                                <StackPanel Spacing="24">
+                                    <!--  Status Row  -->
+                                    <DockPanel>
+                                        <Border Padding="12,6"
+                                                Background="{Binding IsMcpServerConnected, Converter={StaticResource BoolToStatusBrushConverter}}"
+                                                CornerRadius="20"
+                                                DockPanel.Dock="Right">
+                                            <StackPanel Orientation="Horizontal"
+                                                        Spacing="6">
+                                                <Ellipse Width="6"
+                                                         Height="6"
+                                                         Fill="White" />
+                                                <TextBlock FontSize="12"
+                                                           FontWeight="Medium"
+                                                           Foreground="White"
+                                                           Text="{Binding McpServerStatus}" />
+                                            </StackPanel>
+                                        </Border>
+                                        <StackPanel HorizontalAlignment="Left">
+                                            <TextBlock FontSize="16"
+                                                       FontWeight="DemiBold"
+                                                       Text="AI Provider Connection" />
+                                            <TextBlock Margin="0,6,70,0"
+                                                       Foreground="{DynamicResource SukiLowText}"
+                                                       Text="Configure the AI provider used for MCP-based assistant features."
+                                                       TextWrapping="Wrap" />
+                                        </StackPanel>
+                                    </DockPanel>
+
+                                    <Separator />
+
+                                    <!--  Provider / Model / Test row  -->
+                                    <Grid ColumnDefinitions="*,*,Auto"
+                                          ColumnSpacing="16">
+                                        <StackPanel Grid.Column="0"
+                                                    Spacing="6">
+                                            <TextBlock Foreground="{DynamicResource SukiLowText}"
+                                                       Text="Provider" />
+                                            <ComboBox HorizontalAlignment="Stretch"
+                                                      ItemsSource="{Binding McpProviders}"
+                                                      SelectedItem="{Binding SelectedMcpProvider}" />
+                                        </StackPanel>
+                                        <StackPanel Grid.Column="1"
+                                                    Spacing="6">
+                                            <TextBlock Foreground="{DynamicResource SukiLowText}"
+                                                       Text="Model" />
+                                            <TextBox Text="{Binding McpProviderModel}"
+                                                     Watermark="gpt-4o" />
+                                        </StackPanel>
+                                        <StackPanel Grid.Column="2"
+                                                    VerticalAlignment="Bottom"
+                                                    Spacing="6">
+                                            <Button Command="{Binding TestConnectionCommand}"
+                                                    IsEnabled="{Binding !IsTestingConnection}">
+                                                <StackPanel Orientation="Horizontal"
+                                                            Spacing="8">
+                                                    <avalonia:MaterialIcon Width="16"
+                                                                           Height="16"
+                                                                           Kind="Connection" />
+                                                    <TextBlock Text="Test Connection" />
+                                                </StackPanel>
+                                            </Button>
+                                        </StackPanel>
+                                    </Grid>
+
+                                    <!--  Endpoint / API Key row  -->
+                                    <Grid ColumnDefinitions="*,*"
+                                          ColumnSpacing="16">
+                                        <StackPanel Grid.Column="0"
+                                                    Spacing="6">
+                                            <TextBlock Foreground="{DynamicResource SukiLowText}"
+                                                       Text="Endpoint URL" />
+                                            <TextBox Text="{Binding McpProviderEndpoint}"
+                                                     Watermark="https://api.openai.com/v1" />
+                                        </StackPanel>
+                                        <StackPanel Grid.Column="1"
+                                                    Spacing="6">
+                                            <TextBlock Foreground="{DynamicResource SukiLowText}"
+                                                       Text="API Key" />
+                                            <TextBox PasswordChar="*"
+                                                     Text="{Binding McpProviderApiKey}"
+                                                     Watermark="sk-..." />
+                                        </StackPanel>
+                                    </Grid>
+
+                                    <!--  Connection result  -->
+                                    <Border Padding="12,8"
+                                            Background="{DynamicResource SystemControlBackgroundChromeMediumLowBrush}"
+                                            CornerRadius="6"
+                                            IsVisible="{Binding ConnectionTestResult, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
+                                        <StackPanel Orientation="Horizontal"
+                                                    Spacing="8">
+                                            <avalonia:MaterialIcon Width="14"
+                                                                   Height="14"
+                                                                   VerticalAlignment="Center"
+                                                                   Foreground="{DynamicResource SystemAccentColor}"
+                                                                   Kind="InformationOutline" />
+                                            <TextBlock VerticalAlignment="Center"
+                                                       Foreground="{DynamicResource SystemAccentColor}"
+                                                       Text="{Binding ConnectionTestResult}" />
+                                        </StackPanel>
+                                    </Border>
+
+                                    <!--  Save  -->
+                                    <StackPanel HorizontalAlignment="Right"
+                                                Orientation="Horizontal"
+                                                Spacing="12">
+                                        <Button Classes="Flat"
+                                                Command="{Binding SaveConfigurationCommand}">
+                                            <StackPanel Orientation="Horizontal"
+                                                        Spacing="8">
+                                                <avalonia:MaterialIcon Width="16"
+                                                                       Height="16"
+                                                                       Kind="ContentSave" />
+                                                <TextBlock Text="Save Configuration" />
+                                            </StackPanel>
+                                        </Button>
+                                    </StackPanel>
+                                </StackPanel>
+                            </suki:GlassCard>
+                        </StackPanel>
+                    </suki:SettingsLayoutItem.Content>
+                </suki:SettingsLayoutItem>
+
+                <!--  MCP Servers  -->
+                <suki:SettingsLayoutItem Header="MCP Servers">
+                    <suki:SettingsLayoutItem.Content>
+                        <StackPanel>
+                            <suki:GlassCard Margin="0,25,0,0"
+                                            Padding="25">
+                                <StackPanel Spacing="20">
+                                    <DockPanel>
+                                        <Button Command="{Binding AddMcpServerCommand}"
+                                                DockPanel.Dock="Right">
+                                            <StackPanel Orientation="Horizontal"
+                                                        Spacing="6">
+                                                <avalonia:MaterialIcon Width="14"
+                                                                       Height="14"
+                                                                       Kind="Plus" />
+                                                <TextBlock Text="Add Server" />
+                                            </StackPanel>
+                                        </Button>
+                                        <StackPanel HorizontalAlignment="Left">
+                                            <TextBlock FontSize="16"
+                                                       FontWeight="DemiBold"
+                                                       Text="Model Context Protocol Servers" />
+                                            <TextBlock Margin="0,6,70,0"
+                                                       Foreground="{DynamicResource SukiLowText}"
+                                                       Text="Configure MCP server executables that the assistant can use as tools."
+                                                       TextWrapping="Wrap" />
+                                        </StackPanel>
+                                    </DockPanel>
+
+                                    <Separator />
+
+                                    <ItemsControl ItemsSource="{Binding McpServers}">
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate>
+                                                <Border Margin="0,0,0,10"
+                                                        Padding="16"
+                                                        Background="{DynamicResource SystemControlBackgroundChromeMediumLowBrush}"
+                                                        CornerRadius="8">
+                                                    <Grid ColumnDefinitions="Auto,*,Auto"
+                                                          ColumnSpacing="12">
+                                                        <CheckBox Grid.Column="0"
+                                                                  VerticalAlignment="Center"
+                                                                  IsChecked="{Binding IsEnabled}" />
+                                                        <StackPanel Grid.Column="1"
+                                                                    Spacing="8">
+                                                            <TextBox FontWeight="Medium"
+                                                                     Text="{Binding Name}"
+                                                                     Watermark="Server name" />
+                                                            <Grid ColumnDefinitions="*,*"
+                                                                  ColumnSpacing="8">
+                                                                <TextBox Text="{Binding Path}"
+                                                                         Watermark="Path to executable" />
+                                                                <TextBox Grid.Column="1"
+                                                                         Text="{Binding Args}"
+                                                                         Watermark="Arguments (optional)" />
+                                                            </Grid>
+                                                        </StackPanel>
+                                                        <Button Grid.Column="2"
+                                                                Padding="8"
+                                                                VerticalAlignment="Center"
+                                                                Command="{Binding $parent[ItemsControl].((vm:AssistantPageViewModel)DataContext).RemoveMcpServerCommand}"
+                                                                CommandParameter="{Binding}"
+                                                                ToolTip.Tip="Remove server">
+                                                            <avalonia:MaterialIcon Width="16"
+                                                                                   Height="16"
+                                                                                   Kind="Delete" />
+                                                        </Button>
+                                                    </Grid>
+                                                </Border>
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+
+                                    <TextBlock HorizontalAlignment="Center"
+                                               Foreground="{DynamicResource SukiLowText}"
+                                               IsVisible="{Binding McpServers.Count, Converter={x:Static ObjectConverters.IsNull}}"
+                                               Text="No MCP servers configured. Click Add Server to get started." />
+                                </StackPanel>
+                            </suki:GlassCard>
+                        </StackPanel>
+                    </suki:SettingsLayoutItem.Content>
+                </suki:SettingsLayoutItem>
+
+            </objectModel:ObservableCollection>
+        </suki:SettingsLayout.Items>
+    </suki:SettingsLayout>
+</UserControl>

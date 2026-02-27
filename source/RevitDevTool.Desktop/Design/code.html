@@ -1,0 +1,733 @@
+﻿<!DOCTYPE html>
+<html lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>RBP Next - Mature Production UI</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,typography"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script>
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        primary: "#0064C8",
+                        secondary: "#E6F7FF",
+                        "background-light": "#F4F5F7",
+                        "background-dark": "#16161A",
+                        "surface-light": "#FFFFFF",
+                        "surface-dark": "#232329",
+                        "text-light": "#1C1F23",
+                        "text-dark": "#F4F5F7",
+                        "border-light": "#E1E3E6",
+                        "border-dark": "#3A3A42",
+                        "muted-light": "#8F959E",
+                        "muted-dark": "#737882",
+                    },
+                    fontFamily: {
+                        sans: ["Inter", "sans-serif"],
+                    },
+                    borderRadius: {
+                        DEFAULT: "4px",
+                        "lg": "8px",
+                        "xl": "12px",
+                    },
+                    boxShadow: {
+                        'soft': '0 2px 8px rgba(0, 0, 0, 0.04)',
+                        'hover': '0 4px 12px rgba(0, 0, 0, 0.08)',
+                        'card': '0 1px 3px rgba(0,0,0,0.05)',
+                        'float': '0 8px 24px rgba(0,0,0,0.12)',
+                    }
+                },
+            },
+        };
+    </script>
+<style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #D1D5DB;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #9CA3AF;
+        }
+        .dark ::-webkit-scrollbar-thumb {
+            background: #4B5563;
+        }
+        .semi-switch {
+            position: relative;
+            display: inline-block;
+            width: 32px;height: 18px;
+        }
+        .semi-switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+        .semi-slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #ccc;
+            transition: .4s;
+            border-radius: 34px;
+        }
+        .semi-slider:before {
+            position: absolute;
+            content: "";
+            height: 14px;
+            width: 14px;
+            left: 2px;
+            bottom: 2px;
+            background-color: white;
+            transition: .4s;
+            border-radius: 50%;
+        }
+        input:checked + .semi-slider {
+            background-color: #0064C8;
+        }
+        input:checked + .semi-slider:before {
+            transform: translateX(14px);
+        }
+        .progress-circle {
+            position: relative;
+            width: 44px;
+            height: 44px;
+            border-radius: 50%;
+            background: conic-gradient(var(--gauge-color, #0064C8) var(--percent), #E5E7EB 0deg);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .dark .progress-circle {
+            background: conic-gradient(var(--gauge-color, #3B82F6) var(--percent), #374151 0deg);
+        }
+        .progress-circle::before {
+            content: "";
+            position: absolute;
+            width: 34px;
+            height: 34px;
+            border-radius: 50%;
+            background-color: white;
+        }
+        .dark .progress-circle::before {
+            background-color: #232329;}
+        .progress-value {
+            position: relative;
+            font-size: 10px;
+            font-weight: 700;
+        }
+        .gauge-danger {
+            --gauge-color: #EF4444;
+        }
+        .gauge-warning {
+            --gauge-color: #F59E0B;
+        }
+        @keyframes pulse-slow {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.6; }
+        }
+        .animate-pulse-slow {
+            animation: pulse-slow 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+        }
+        .status-pill {
+            display: inline-flex;
+            align-items: center;
+            padding: 2px 8px;
+            border-radius: 9999px;
+            font-size: 10px;
+            font-weight: 600;
+            line-height: 1.2;
+            white-space: nowrap;
+        }
+        .status-processing {
+            background-color: rgba(0, 100, 200, 0.1);
+            color: #0064C8;
+            border: 1px solid rgba(0, 100, 200, 0.2);
+        }
+        .dark .status-processing {
+            background-color: rgba(59, 130, 246, 0.15);
+            color: #60A5FA;
+            border-color: rgba(59, 130, 246, 0.3);
+        }
+        .status-success {
+            background-color: rgba(16, 185, 129, 0.1);
+            color: #059669;
+            border: 1px solid rgba(16, 185, 129, 0.2);
+        }
+        .dark .status-success {
+            background-color: rgba(16, 185, 129, 0.15);
+            color: #34D399;
+            border-color: rgba(16, 185, 129, 0.3);
+        }
+        .status-failed {
+            background-color: rgba(239, 68, 68, 0.1);
+            color: #DC2626;
+            border: 1px solid rgba(239, 68, 68, 0.2);
+        }
+        .dark .status-failed {
+            background-color: rgba(239, 68, 68, 0.15);
+            color: #F87171;
+            border-color: rgba(239, 68, 68, 0.3);
+        }.console-line {
+            font-family: 'JetBrains Mono', 'Fira Code', monospace;
+            display: flex;
+            gap: 8px;
+        }
+        .console-time {
+            color: #6B7280;
+            flex-shrink: 0;
+        }.tooltip-container {
+            position: relative;
+        }
+        .tooltip-text {
+            visibility: hidden;
+            background-color: #333;
+            color: #fff;
+            text-align: center;
+            border-radius: 4px;
+            padding: 4px 8px;
+            position: absolute;
+            z-index: 50;
+            bottom: 125%;
+            left: 50%;
+            margin-left: -60px;
+            opacity: 0;
+            transition: opacity 0.3s;
+            font-size: 10px;
+            width: max-content;
+            max-width: 200px;
+            pointer-events: none;
+        }
+        .tooltip-container:hover .tooltip-text {
+            visibility: visible;
+            opacity: 1;
+        }
+        .dark .tooltip-text {
+            background-color: #eee;
+            color: #111;
+        }
+    </style>
+</head>
+<body class="bg-background-light dark:bg-background-dark text-text-light dark:text-text-dark antialiased h-screen flex overflow-hidden selection:bg-primary selection:text-white">
+<aside class="w-64 bg-surface-light dark:bg-surface-dark border-r border-border-light dark:border-border-dark flex flex-col flex-shrink-0 z-20 transition-all duration-300">
+<div class="h-14 flex items-center px-5 border-b border-border-light dark:border-border-dark">
+<div class="flex items-center gap-2">
+<div class="w-7 h-7 rounded bg-primary flex items-center justify-center text-white shadow-sm">
+<span class="material-symbols-outlined text-lg">layers</span>
+</div>
+<h1 class="font-bold text-base tracking-tight text-primary dark:text-blue-400">RBP <span class="text-text-light dark:text-text-dark font-normal">Next</span></h1>
+</div>
+</div>
+<div class="p-4 border-b border-border-light dark:border-border-dark bg-gradient-to-b from-transparent to-gray-50/50 dark:to-white/5">
+<div class="flex justify-between items-center mb-3">
+<h3 class="text-xs font-bold text-muted-light dark:text-muted-dark uppercase tracking-wider flex items-center gap-1">
+<span class="material-symbols-outlined text-sm">monitor_heart</span> System Health
+            </h3>
+<span class="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
+</div>
+<div class="flex justify-between gap-3">
+<div class="flex flex-col items-center gap-2 bg-white dark:bg-black/20 p-2.5 rounded-lg w-full border border-border-light dark:border-border-dark shadow-sm">
+<div class="progress-circle" style="--percent: 45%;">
+<span class="progress-value text-text-light dark:text-text-dark">45%</span>
+</div>
+<div class="flex flex-col items-center">
+<span class="text-[10px] text-muted-light dark:text-muted-dark font-medium uppercase tracking-wide">CPU</span>
+<span class="text-[9px] text-muted-light dark:text-muted-dark opacity-75">1.2 GHz</span>
+</div>
+</div>
+<div class="flex flex-col items-center gap-2 bg-white dark:bg-black/20 p-2.5 rounded-lg w-full border border-red-200 dark:border-red-900 shadow-sm">
+<div class="progress-circle gauge-danger" style="--percent: 92%;">
+<span class="progress-value text-text-light dark:text-text-dark text-red-600 dark:text-red-400">92%</span>
+</div>
+<div class="flex flex-col items-center">
+<span class="text-[10px] text-red-600 dark:text-red-400 font-bold uppercase tracking-wide">RAM</span>
+<span class="text-[9px] text-muted-light dark:text-muted-dark opacity-75">30/32 GB</span>
+</div>
+</div>
+</div>
+<div class="mt-3 pt-3 border-t border-border-light dark:border-border-dark">
+<div class="flex justify-between items-center mb-1">
+<label class="text-[10px] font-semibold text-red-500 uppercase tracking-wide flex items-center gap-1">
+<span class="material-symbols-outlined text-sm">warning</span> Parallel Limit
+                </label>
+<span class="text-xs font-bold text-red-500">2 Max</span>
+</div>
+<input class="w-full h-1.5 bg-red-200 rounded-lg appearance-none cursor-pointer accent-red-500 dark:bg-red-900/30" max="8" min="1" type="range" value="2"/>
+</div>
+</div>
+<nav class="flex-1 overflow-y-auto py-3 px-2 space-y-1 text-sm">
+<a class="flex items-center gap-3 px-3 py-2 rounded-lg bg-primary/10 text-primary font-medium dark:bg-primary/20 dark:text-blue-300 shadow-sm border border-primary/10 dark:border-primary/20" href="#">
+<span class="material-symbols-outlined text-[20px]">dashboard</span>
+            Orchestration
+        </a>
+<a class="flex items-center gap-3 px-3 py-2 rounded-lg text-muted-light dark:text-muted-dark hover:bg-gray-100 dark:hover:bg-white/5 transition-colors" href="#">
+<span class="material-symbols-outlined text-[20px]">queue_play_next</span>
+            Queue Manager
+        </a>
+<a class="flex items-center gap-3 px-3 py-2 rounded-lg text-muted-light dark:text-muted-dark hover:bg-gray-100 dark:hover:bg-white/5 transition-colors" href="#">
+<span class="material-symbols-outlined text-[20px]">history</span>
+            Audit Logs
+        </a>
+<a class="flex items-center gap-3 px-3 py-2 rounded-lg text-muted-light dark:text-muted-dark hover:bg-gray-100 dark:hover:bg-white/5 transition-colors" href="#">
+<span class="material-symbols-outlined text-[20px]">settings</span>
+            Global Config
+        </a>
+</nav>
+<div class="p-4 text-xs text-muted-light dark:text-muted-dark border-t border-border-light dark:border-border-dark bg-gray-50/30 dark:bg-black/10">
+<div class="flex justify-between items-center">
+<span class="font-medium">Orchestrator v3.0.1</span>
+<span class="flex items-center gap-1 text-[10px] text-green-600 dark:text-green-400 bg-green-100 dark:bg-green-900/30 px-1.5 py-0.5 rounded-full border border-green-200 dark:border-green-800">
+<span class="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse"></span> Online
+            </span>
+</div>
+</div>
+</aside>
+<main class="flex-1 flex flex-col min-w-0 bg-background-light dark:bg-background-dark overflow-hidden relative">
+<div class="absolute bottom-60 left-1/2 transform -translate-x-1/2 z-50 bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark shadow-float rounded-full px-4 py-2 flex items-center gap-4 animate-bounce-in" style="animation: fadein 0.3s ease-out forwards;">
+<span class="text-xs font-semibold text-text-light dark:text-white border-r border-border-light dark:border-border-dark pr-4 flex items-center gap-2">
+<span class="bg-primary text-white text-[10px] rounded-full w-5 h-5 flex items-center justify-center">2</span>
+            Selected
+        </span>
+<button class="flex items-center gap-1.5 text-xs text-muted-light hover:text-primary dark:text-muted-dark dark:hover:text-blue-400 transition-colors">
+<span class="material-symbols-outlined text-lg">edit_note</span> Change Version
+        </button>
+<button class="flex items-center gap-1.5 text-xs text-muted-light hover:text-primary dark:text-muted-dark dark:hover:text-blue-400 transition-colors">
+<span class="material-symbols-outlined text-lg">code</span> Assign Script
+        </button>
+<button class="flex items-center gap-1.5 text-xs text-red-500 hover:text-red-700 transition-colors border-l border-border-light dark:border-border-dark pl-4">
+<span class="material-symbols-outlined text-lg">delete</span> Remove
+        </button>
+<button class="ml-2 p-1 rounded-full hover:bg-gray-100 dark:hover:bg-white/10">
+<span class="material-symbols-outlined text-sm">close</span>
+</button>
+</div>
+<header class="h-14 bg-surface-light dark:bg-surface-dark border-b border-border-light dark:border-border-dark flex items-center justify-between px-6 flex-shrink-0 z-10 shadow-sm">
+<div class="flex items-center gap-4">
+<h2 class="text-base font-semibold text-text-light dark:text-white">Batch Processor Dashboard</h2>
+<div class="h-6 w-px bg-border-light dark:bg-border-dark mx-2"></div>
+<button class="flex items-center gap-2 px-3 py-1.5 text-xs font-medium text-primary bg-primary/5 hover:bg-primary/10 border border-primary/20 rounded transition-colors" onclick="document.querySelector('#row-precheck-fail').classList.remove('hidden'); document.querySelector('#start-btn').classList.add('opacity-50', 'cursor-not-allowed', 'pointer-events-none');">
+<span class="material-symbols-outlined text-sm">flight_takeoff</span>
+                Run Pre-Check
+            </button>
+</div>
+<div class="flex items-center gap-3">
+<button class="p-1.5 rounded-full hover:bg-gray-100 dark:hover:bg-white/10 text-muted-light dark:text-muted-dark transition-colors" title="Toggle Theme">
+<span class="material-symbols-outlined text-xl">dark_mode</span>
+</button>
+<div class="h-5 w-px bg-border-light dark:bg-border-dark mx-2"></div>
+<button class="flex items-center gap-2 px-3 py-1.5 text-xs font-medium text-muted-light dark:text-muted-dark border border-border-light dark:border-border-dark rounded bg-white dark:bg-surface-dark hover:bg-gray-50 dark:hover:bg-white/5 transition-colors">
+<span class="material-symbols-outlined text-sm">upload</span>
+                Load Profile
+            </button>
+<button class="flex items-center gap-2 px-3 py-1.5 text-xs font-medium text-muted-light dark:text-muted-dark border border-border-light dark:border-border-dark rounded bg-white dark:bg-surface-dark hover:bg-gray-50 dark:hover:bg-white/5 transition-colors">
+<span class="material-symbols-outlined text-sm">save</span>
+                Save
+            </button>
+</div>
+</header>
+<div class="flex-1 overflow-y-auto p-4 pb-0 flex flex-col relative z-0">
+<div class="max-w-full mx-auto space-y-3 w-full flex-grow">
+<section class="bg-surface-light dark:bg-surface-dark rounded-lg shadow-card border border-border-light dark:border-border-dark overflow-hidden">
+<div class="px-5 py-3 flex items-center gap-3">
+<div class="flex-shrink-0 w-8 h-8 rounded bg-blue-50 dark:bg-blue-900/20 flex items-center justify-center text-primary dark:text-blue-400">
+<span class="material-symbols-outlined text-lg">terminal</span>
+</div>
+<div class="flex-grow flex items-center gap-4">
+<div class="flex-grow">
+<label class="block text-[10px] font-bold text-muted-light dark:text-muted-dark mb-1 uppercase tracking-wider">Master Task Script</label>
+<div class="flex items-center gap-2">
+<div class="relative flex-grow">
+<span class="absolute inset-y-0 left-0 flex items-center pl-2 text-muted-light dark:text-muted-dark">
+<span class="material-symbols-outlined text-base">folder_open</span>
+</span>
+<input class="w-full pl-8 pr-2 py-1 rounded border border-border-light dark:border-border-dark bg-background-light dark:bg-background-dark text-text-light dark:text-text-dark text-xs focus:ring-1 focus:ring-primary focus:border-primary font-mono" placeholder="Select script..." type="text" value="C:\Standards\Scripts\Enterprise_Audit_v4.py"/>
+</div>
+<button class="px-3 py-1 bg-white dark:bg-surface-dark border border-border-light dark:border-border-dark rounded font-medium text-xs hover:bg-gray-50 dark:hover:bg-white/5 transition-colors text-text-light dark:text-text-dark shadow-sm">
+                                    Browse
+                                </button>
+</div>
+</div>
+</div>
+</div>
+</section>
+<div class="grid grid-cols-12 gap-3 h-full">
+<div class="col-span-12 lg:col-span-3 space-y-3">
+<section class="bg-surface-light dark:bg-surface-dark rounded-lg shadow-card border border-border-light dark:border-border-dark flex flex-col">
+<div class="px-4 py-2 border-b border-border-light dark:border-border-dark bg-gray-50/50 dark:bg-white/5 flex justify-between items-center">
+<h4 class="font-semibold text-xs text-text-light dark:text-white flex items-center gap-1.5">
+<span class="material-symbols-outlined text-gray-500 text-sm">settings_applications</span>
+                                Execution Logic
+                            </h4>
+</div>
+<div class="p-4 space-y-4">
+<div>
+<label class="block text-[10px] font-medium text-muted-light dark:text-muted-dark mb-1">Target Version</label>
+<select class="w-full text-xs border-border-light dark:border-border-dark bg-white dark:bg-surface-dark rounded py-1 px-2 focus:ring-primary focus:border-primary shadow-sm">
+<option>Revit 2024.1</option>
+<option>Revit 2023.1</option>
+<option>Revit 2022.1</option>
+</select>
+</div>
+<div class="grid grid-cols-1 gap-3">
+<div class="flex items-center justify-between">
+<span class="text-xs text-text-light dark:text-text-dark font-medium">Audit File</span>
+<label class="semi-switch">
+<input checked="" type="checkbox"/>
+<span class="semi-slider"></span>
+</label>
+</div>
+<div class="flex items-center justify-between">
+<span class="text-xs text-text-light dark:text-text-dark font-medium">Headless Mode</span>
+<label class="semi-switch">
+<input type="checkbox"/>
+<span class="semi-slider"></span>
+</label>
+</div>
+<div class="flex items-center justify-between border-t border-dashed border-gray-200 dark:border-gray-700 pt-2">
+<span class="text-xs text-text-light dark:text-text-dark font-medium">Dialog Suppression</span>
+<label class="semi-switch">
+<input checked="" type="checkbox"/>
+<span class="semi-slider"></span>
+</label>
+</div>
+<div class="flex items-center justify-between pt-1">
+<div class="flex flex-col">
+<span class="text-xs text-red-600 dark:text-red-400 font-medium">Auto-Abort</span>
+<span class="text-[9px] text-muted-light">Stop if 3+ errors</span>
+</div>
+<label class="semi-switch">
+<input checked="" type="checkbox"/>
+<span class="semi-slider bg-red-200" style="background-color: #FECACA;"></span>
+<style>
+                                            input:checked + .semi-slider.bg-red-200 { background-color: #DC2626 !important; }
+                                        </style>
+</label>
+</div>
+</div>
+</div>
+</section>
+</div>
+<div class="col-span-12 lg:col-span-9 flex flex-col gap-3">
+<section class="bg-surface-light dark:bg-surface-dark rounded-lg shadow-card border border-border-light dark:border-border-dark flex flex-col h-full overflow-hidden">
+<div class="px-4 py-3 border-b border-border-light dark:border-border-dark flex flex-col gap-3">
+<div class="flex items-center justify-between">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-primary dark:text-blue-400">topic</span>
+<h3 class="font-semibold text-text-light dark:text-white">Task Queue</h3>
+<span class="bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 text-xs px-2 py-0.5 rounded-full font-medium border border-gray-200 dark:border-gray-700">4 Active</span>
+</div>
+<div class="flex gap-2">
+<button class="px-3 py-1.5 bg-primary text-white text-xs font-medium rounded hover:bg-blue-700 transition-colors shadow-sm flex items-center gap-1 shadow-blue-500/20">
+<span class="material-symbols-outlined text-sm">add</span> Add Files
+                                    </button>
+</div>
+</div>
+<div class="flex items-center gap-2">
+<div class="relative flex-grow max-w-md">
+<span class="absolute inset-y-0 left-0 flex items-center pl-2 text-muted-light dark:text-muted-dark">
+<span class="material-symbols-outlined text-base">search</span>
+</span>
+<input class="w-full pl-8 pr-2 py-1.5 rounded border border-border-light dark:border-border-dark bg-gray-50 dark:bg-black/20 text-text-light dark:text-text-dark text-xs focus:ring-1 focus:ring-primary focus:border-primary transition-shadow" placeholder="Filter files..." type="text"/>
+</div>
+<div class="flex items-center gap-2 ml-auto">
+<span class="text-xs text-muted-light dark:text-muted-dark">Filter by:</span>
+<select class="text-xs border-border-light dark:border-border-dark bg-white dark:bg-surface-dark rounded py-1 px-2 focus:ring-primary focus:border-primary">
+<option>Status: All</option>
+<option>Status: Ready</option>
+<option>Status: Error</option>
+</select>
+</div>
+</div>
+</div>
+<div class="flex-grow overflow-auto">
+<table class="w-full text-left border-collapse">
+<thead class="bg-gray-50 dark:bg-white/5 sticky top-0 z-10 shadow-sm backdrop-blur-sm">
+<tr>
+<th class="px-4 py-2 w-8">
+<input class="rounded border-gray-300 text-primary focus:ring-primary dark:bg-gray-700 dark:border-gray-600 w-3.5 h-3.5" type="checkbox"/>
+</th>
+<th class="px-4 py-2 text-[10px] font-bold text-muted-light dark:text-muted-dark uppercase tracking-wider w-16 text-center">Source</th>
+<th class="px-4 py-2 text-[10px] font-bold text-muted-light dark:text-muted-dark uppercase tracking-wider">File Details</th>
+<th class="px-4 py-2 text-[10px] font-bold text-muted-light dark:text-muted-dark uppercase tracking-wider w-20">Size</th>
+<th class="px-4 py-2 text-[10px] font-bold text-muted-light dark:text-muted-dark uppercase tracking-wider w-16">Ver.</th>
+<th class="px-4 py-2 text-[10px] font-bold text-muted-light dark:text-muted-dark uppercase tracking-wider w-40">Status</th>
+<th class="px-4 py-2 text-[10px] font-bold text-muted-light dark:text-muted-dark uppercase tracking-wider w-24">Instance</th>
+<th class="px-4 py-2 text-[10px] font-bold text-muted-light dark:text-muted-dark uppercase tracking-wider w-10 text-right"></th>
+</tr>
+</thead>
+<tbody class="divide-y divide-border-light dark:divide-border-dark">
+<tr class="hover:bg-gray-50 dark:hover:bg-white/5 group transition-colors cursor-pointer text-xs">
+<td class="px-4 py-2">
+<input class="rounded border-gray-300 text-primary focus:ring-primary dark:bg-gray-700 dark:border-gray-600 w-3.5 h-3.5" type="checkbox"/>
+</td>
+<td class="px-4 py-2 text-center">
+<span class="material-symbols-outlined text-gray-400 dark:text-gray-500 text-lg" title="Local Drive">hard_drive</span>
+</td>
+<td class="px-4 py-2">
+<div class="flex flex-col">
+<span class="font-semibold text-text-light dark:text-text-dark">Hospital_Architecture_L1.rvt</span>
+<span class="text-[10px] text-muted-light dark:text-muted-dark truncate max-w-xs">C:\Projects\Hospital\Revit\Arch\</span>
+</div>
+</td>
+<td class="px-4 py-2 text-[11px] text-muted-light">145 MB</td>
+<td class="px-4 py-2 text-[11px]">2023</td>
+<td class="px-4 py-2">
+<span class="status-pill status-success">
+<span class="material-symbols-outlined text-sm mr-1">check_circle</span> Completed
+                                        </span>
+</td>
+<td class="px-4 py-2">
+<span class="font-mono bg-gray-100 dark:bg-gray-800 px-1.5 py-0.5 rounded text-[10px] text-text-light dark:text-text-dark border border-gray-200 dark:border-gray-700">PID 8821</span>
+</td>
+<td class="px-4 py-2 text-right">
+<button class="text-muted-light hover:text-primary dark:hover:text-blue-400 opacity-0 group-hover:opacity-100 transition-opacity">
+<span class="material-symbols-outlined text-base">more_vert</span>
+</button>
+</td>
+</tr>
+<tr class="hidden bg-amber-50/50 dark:bg-yellow-900/10 border-l-2 border-l-amber-500 cursor-pointer text-xs" id="row-precheck-fail">
+<td class="px-4 py-2">
+<input class="rounded border-gray-300 text-amber-500 focus:ring-amber-500 dark:bg-gray-700 dark:border-gray-600 w-3.5 h-3.5" type="checkbox"/>
+</td>
+<td class="px-4 py-2 text-center">
+<div class="tooltip-container inline-block">
+<span class="material-symbols-outlined text-amber-500 text-lg animate-pulse">warning</span>
+<span class="tooltip-text">Pre-check Failed: Version Mismatch (2020 vs Target 2024)</span>
+</div>
+</td>
+<td class="px-4 py-2">
+<div class="flex flex-col">
+<span class="font-semibold text-text-light dark:text-text-dark">Library_Pod_A.rvt</span>
+<span class="text-[10px] text-amber-700 dark:text-amber-500 truncate max-w-xs flex items-center gap-1">
+                                            Missing texture folder detected
+                                        </span>
+</div>
+</td>
+<td class="px-4 py-2 text-[11px] text-muted-light">42 MB</td>
+<td class="px-4 py-2 text-[11px] text-amber-600 font-bold">2020</td>
+<td class="px-4 py-2">
+<span class="status-pill bg-amber-100 text-amber-800 border-amber-200 dark:bg-amber-900/30 dark:text-amber-200 dark:border-amber-800 border">
+<span class="material-symbols-outlined text-sm mr-1">rule</span> Check Failed
+                                        </span>
+</td>
+<td class="px-4 py-2">
+<span class="font-mono text-muted-light dark:text-muted-dark text-[10px]">--</span>
+</td>
+<td class="px-4 py-2 text-right">
+<button class="text-amber-500 hover:text-amber-700">
+<span class="material-symbols-outlined text-base">info</span>
+</button>
+</td>
+</tr>
+<tr class="bg-blue-50/40 dark:bg-blue-900/10 border-l-2 border-l-primary cursor-pointer text-xs relative overflow-hidden">
+<td class="px-4 py-2 relative z-10">
+<input checked="" class="rounded border-gray-300 text-primary focus:ring-primary dark:bg-gray-700 dark:border-gray-600 w-3.5 h-3.5" type="checkbox"/>
+</td>
+<td class="px-4 py-2 text-center relative z-10">
+<span class="material-symbols-outlined text-blue-500 dark:text-blue-400 text-lg" title="BIM 360 / ACC">cloud</span>
+</td>
+<td class="px-4 py-2 relative z-10">
+<div class="flex flex-col">
+<span class="font-semibold text-primary dark:text-blue-300">Hospital_Structure_Central.rvt</span>
+<span class="text-[10px] text-muted-light dark:text-muted-dark truncate max-w-xs">BIM360://Accounts/ACME/Projects/Hospital...</span>
+</div>
+</td>
+<td class="px-4 py-2 text-[11px] text-muted-light relative z-10">320 MB</td>
+<td class="px-4 py-2 text-[11px] relative z-10">2024</td>
+<td class="px-4 py-2 relative z-10">
+<div class="flex flex-col gap-1.5 w-32">
+<span class="status-pill status-processing w-fit animate-pulse-slow">
+<span class="material-symbols-outlined text-sm mr-1 animate-spin">sync</span> Syncing...
+                                            </span>
+<div class="w-full h-1 bg-blue-100 dark:bg-blue-900 rounded-full overflow-hidden">
+<div class="h-full bg-blue-500 w-2/3 animate-pulse"></div>
+</div>
+</div>
+</td>
+<td class="px-4 py-2 relative z-10">
+<span class="font-mono bg-blue-100 dark:bg-blue-900/40 px-1.5 py-0.5 rounded text-[10px] text-blue-700 dark:text-blue-200 border border-blue-200 dark:border-blue-800">PID 14092</span>
+</td>
+<td class="px-4 py-2 text-right relative z-10">
+<button class="text-primary dark:text-blue-400">
+<span class="material-symbols-outlined text-base">stop_circle</span>
+</button>
+</td>
+<td class="absolute bottom-0 left-0 h-0.5 bg-primary w-2/3 z-10 transition-all duration-500"></td>
+</tr>
+<tr class="hover:bg-gray-50 dark:hover:bg-white/5 group transition-colors cursor-pointer text-xs">
+<td class="px-4 py-2">
+<input checked="" class="rounded border-gray-300 text-primary focus:ring-primary dark:bg-gray-700 dark:border-gray-600 w-3.5 h-3.5" type="checkbox"/>
+</td>
+<td class="px-4 py-2 text-center">
+<span class="material-symbols-outlined text-purple-500 dark:text-purple-400 text-lg" title="Revit Server">dns</span>
+</td>
+<td class="px-4 py-2">
+<div class="flex flex-col gap-1">
+<div class="flex items-center gap-2">
+<span class="font-semibold text-text-light dark:text-text-dark">Hospital_MEP_EastWing.rvt</span>
+<span class="text-[9px] font-bold text-amber-600 bg-amber-50 dark:bg-amber-900/20 px-1.5 rounded border border-amber-200 dark:border-amber-800">OVERRIDE</span>
+</div>
+<div class="flex items-center gap-1.5 text-amber-600 dark:text-amber-500 text-[10px]">
+<span class="font-mono bg-amber-100 dark:bg-amber-900/40 text-[9px] px-1 rounded text-amber-700 dark:text-amber-300">[PY]</span>
+<span class="truncate max-w-xs font-medium">Custom_MEP_Audit_v2.py</span>
+</div>
+</div>
+</td>
+<td class="px-4 py-2 text-[11px] text-muted-light">89 MB</td>
+<td class="px-4 py-2 text-[11px]">2024</td>
+<td class="px-4 py-2">
+<span class="status-pill status-processing">
+<span class="material-symbols-outlined text-sm mr-1">terminal</span> Script (45s)
+                                        </span>
+</td>
+<td class="px-4 py-2">
+<span class="font-mono bg-blue-100 dark:bg-blue-900/40 px-1.5 py-0.5 rounded text-[10px] text-blue-700 dark:text-blue-200 border border-blue-200 dark:border-blue-800">PID 11021</span>
+</td>
+<td class="px-4 py-2 text-right">
+<button class="text-muted-light hover:text-primary dark:hover:text-blue-400 opacity-0 group-hover:opacity-100 transition-opacity">
+<span class="material-symbols-outlined text-base">more_vert</span>
+</button>
+</td>
+</tr>
+<tr class="bg-red-50/30 dark:bg-red-900/10 hover:bg-red-50/50 dark:hover:bg-red-900/20 group transition-colors cursor-pointer text-xs">
+<td class="px-4 py-2">
+<input class="rounded border-gray-300 text-primary focus:ring-primary dark:bg-gray-700 dark:border-gray-600 w-3.5 h-3.5" type="checkbox"/>
+</td>
+<td class="px-4 py-2 text-center">
+<span class="material-symbols-outlined text-gray-400 dark:text-gray-500 text-lg" title="Local Drive">hard_drive</span>
+</td>
+<td class="px-4 py-2">
+<div class="flex flex-col gap-1">
+<div class="flex items-center gap-2">
+<span class="font-semibold text-text-light dark:text-text-dark">Hospital_Facade_Detail.rvt</span>
+<span class="text-[9px] font-bold text-amber-600 bg-amber-50 dark:bg-amber-900/20 px-1.5 rounded border border-amber-200 dark:border-amber-800">OVERRIDE</span>
+</div>
+<div class="flex items-center gap-1.5 text-amber-600 dark:text-amber-500 text-[10px]">
+<span class="font-mono bg-blue-100 dark:bg-blue-900/40 text-[9px] px-1 rounded text-blue-700 dark:text-blue-300">[.NET]</span>
+<span class="truncate max-w-xs font-medium">FacadeCheck.dll</span>
+</div>
+</div>
+</td>
+<td class="px-4 py-2 text-[11px] text-muted-light">12 MB</td>
+<td class="px-4 py-2 text-[11px]">2021</td>
+<td class="px-4 py-2">
+<span class="status-pill status-failed" title="Failed to open document. Corruption detected.">
+<span class="material-symbols-outlined text-sm mr-1">error</span> Error
+                                        </span>
+</td>
+<td class="px-4 py-2">
+<span class="font-mono text-muted-light dark:text-muted-dark text-[10px]">--</span>
+</td>
+<td class="px-4 py-2 text-right">
+<button class="text-red-500 hover:text-red-700">
+<span class="material-symbols-outlined text-base">restart_alt</span>
+</button>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+</section>
+</div>
+</div>
+</div>
+<section class="mt-3 flex-shrink-0 z-20 transition-all duration-300 relative group">
+<div class="h-1 w-full cursor-ns-resize hover:bg-primary/50 absolute -top-1 z-30"></div>
+<div class="bg-[#1E1E1E] text-gray-200 rounded-t-xl border-t border-l border-r border-gray-700 overflow-hidden shadow-[0_-8px_30px_rgba(0,0,0,0.12)]">
+<div class="flex items-center justify-between px-4 py-2 bg-[#2D2D2D] border-b border-gray-700 cursor-pointer">
+<div class="flex items-center gap-3">
+<div class="flex gap-1.5">
+<div class="w-2.5 h-2.5 rounded-full bg-red-500"></div>
+<div class="w-2.5 h-2.5 rounded-full bg-yellow-500"></div>
+<div class="w-2.5 h-2.5 rounded-full bg-green-500"></div>
+</div>
+<span class="text-gray-400 mx-2">|</span>
+<span class="material-symbols-outlined text-xs text-blue-400">terminal</span>
+<h4 class="text-xs font-bold uppercase tracking-wider text-gray-300 select-none">Live Console Output (ZLogger)</h4>
+<span class="text-[10px] bg-gray-700 px-1.5 rounded text-gray-400">PID 14092</span>
+</div>
+<div class="flex items-center gap-4">
+<div class="flex items-center gap-2 text-[10px] text-gray-400">
+<label class="flex items-center gap-1 cursor-pointer hover:text-white">
+<input checked="" class="rounded border-gray-600 bg-gray-800 text-primary w-3 h-3 focus:ring-0 focus:ring-offset-0" type="checkbox"/>
+                                Auto-Scroll
+                            </label>
+<label class="flex items-center gap-1 cursor-pointer hover:text-white">
+<input class="rounded border-gray-600 bg-gray-800 text-primary w-3 h-3 focus:ring-0 focus:ring-offset-0" type="checkbox"/>
+                                Wrap Text
+                            </label>
+</div>
+<span class="material-symbols-outlined text-sm text-gray-400 hover:text-white transition-colors">keyboard_arrow_down</span>
+</div>
+</div>
+<div class="h-40 p-3 overflow-y-auto font-mono text-[11px] leading-relaxed space-y-0.5 bg-[#1E1E1E] scroll-smooth">
+<div class="console-line text-gray-400 border-l-2 border-transparent hover:bg-white/5 pl-2"><span class="console-time">[10:42:01]</span> [SYSTEM] Orchestrator initialized. 2 Worker nodes detected.</div>
+<div class="console-line text-blue-300 border-l-2 border-blue-500/50 hover:bg-white/5 pl-2"><span class="console-time">[10:42:02]</span> [AUTH]   Connected to Autodesk Construction Cloud. Token refreshed (Exp: 55m).</div>
+<div class="console-line text-gray-300 border-l-2 border-transparent hover:bg-white/5 pl-2"><span class="console-time">[10:42:05]</span> [WORKER] PID 14092 Assigned.</div>
+<div class="console-line text-white border-l-2 border-transparent hover:bg-white/5 pl-2"><span class="console-time">[10:42:05]</span> [SCRIPT] &gt; Loading "Hospital_Structure_Central.rvt"...</div>
+<div class="console-line text-yellow-400 border-l-2 border-yellow-500/50 hover:bg-white/5 pl-2"><span class="console-time">[10:42:12]</span> [WARN]   &gt; Detaching from Central. User worksets will be discarded.</div>
+<div class="console-line text-white border-l-2 border-transparent hover:bg-white/5 pl-2"><span class="console-time">[10:42:15]</span> [SCRIPT] &gt; Audit started. Checking 4500 elements.</div>
+<div class="console-line text-red-400 border-l-2 border-red-500/50 bg-red-900/10 hover:bg-red-900/20 pl-2"><span class="console-time">[10:42:16]</span> [ERROR]  &gt; Family "M_Door_Single" is corrupt. ID: 44210. Attempting repair...</div>
+<div class="console-line text-green-400 border-l-2 border-green-500/50 hover:bg-white/5 pl-2"><span class="console-time">[10:42:18]</span> [INFO]   &gt; Repair successful. Continuing audit.</div>
+<div class="console-line text-blue-300 border-l-2 border-transparent hover:bg-white/5 pl-2 animate-pulse"><span class="console-time">[10:42:19]</span> [SYNC]   &gt; Syncing to Central... (15%)</div>
+</div>
+</div>
+</section>
+</div>
+<footer class="bg-surface-light dark:bg-surface-dark border-t border-border-light dark:border-border-dark px-6 py-3 flex-shrink-0 z-20 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)]">
+<div class="max-w-full mx-auto flex items-center justify-between">
+<div class="flex items-center gap-6">
+<div class="flex flex-col">
+<span class="text-[10px] text-muted-light dark:text-muted-dark uppercase tracking-wider font-semibold">Overall Progress</span>
+<div class="flex items-center gap-3">
+<div class="w-48 h-2 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
+<div class="h-full bg-primary w-[35%] rounded-full"></div>
+</div>
+<span class="text-xs font-medium text-text-light dark:text-text-dark">35%</span>
+</div>
+</div>
+</div>
+<div class="flex items-center gap-3">
+<button class="px-4 py-2 border border-border-light dark:border-border-dark text-text-light dark:text-text-dark font-medium rounded hover:bg-gray-100 dark:hover:bg-white/5 transition-colors focus:ring-2 focus:ring-gray-200 text-sm">
+                    Dry Run
+                </button>
+<div class="relative">
+<button class="px-5 py-2 bg-primary text-white font-medium rounded hover:bg-blue-700 transition-colors shadow-lg shadow-blue-500/30 flex items-center gap-2 focus:ring-2 focus:ring-offset-2 focus:ring-primary text-sm animate-pulse-slow" id="start-btn">
+<span class="material-symbols-outlined text-lg">play_arrow</span>
+                    Start Processing
+                </button>
+<span class="absolute -top-2 -right-2 bg-red-500 text-white text-[10px] w-5 h-5 rounded-full flex items-center justify-center font-bold hidden border-2 border-white dark:border-surface-dark" id="start-badge">!</span>
+</div>
+</div>
+</div>
+</footer>
+</main>
+<script>
+    // Simple script to toggle dark mode
+    const themeToggleBtn = document.querySelector('button[title="Toggle Theme"]');
+    const htmlElement = document.documentElement;
+    themeToggleBtn.addEventListener('click', () => {
+        htmlElement.classList.toggle('dark');
+        const icon = themeToggleBtn.querySelector('.material-symbols-outlined');
+        if (htmlElement.classList.contains('dark')) {
+            icon.textContent = 'light_mode';
+        } else {
+            icon.textContent = 'dark_mode';
+        }
+    });
+</script>
+</body></html>

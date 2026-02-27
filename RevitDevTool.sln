@@ -26,7 +26,7 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CSharpDemo", "source\Sample
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PythonNetStubGenerator", "source\PythonNetStubGenerator\PythonNetStubGenerator.csproj", "{7366EE36-0B1D-4E55-A444-7E3C77866DAF}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RevitDevTool.Processor", "source\RevitDevTool.Processor\RevitDevTool.Processor.csproj", "{E745C8C5-44C2-4537-AE28-8A8EFBA830D3}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RevitDevTool.Desktop", "source\RevitDevTool.Desktop\RevitDevTool.Desktop.csproj", "{E745C8C5-44C2-4537-AE28-8A8EFBA830D3}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RevitDevTool.Bridge", "source\RevitDevTool.Bridge\RevitDevTool.Bridge.csproj", "{8FBA36F1-481C-4F9C-A259-58113B71BE5B}"
 EndProject

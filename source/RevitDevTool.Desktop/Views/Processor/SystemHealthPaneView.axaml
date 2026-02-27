@@ -1,0 +1,193 @@
+<UserControl x:Class="RevitDevTool.Desktop.Views.Processor.SystemHealthPaneView"
+             xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:avalonia="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
+             xmlns:suki="https://github.com/kikipoulet/SukiUI"
+             xmlns:vm="using:RevitDevTool.Desktop.ViewModels"
+             x:DataType="vm:ProcessorPageViewModel">
+    <ScrollViewer>
+        <StackPanel Spacing="16">
+
+            <!--  System Health  -->
+            <StackPanel Spacing="8">
+                <StackPanel Orientation="Horizontal"
+                            Spacing="6">
+                    <avalonia:MaterialIcon Width="12"
+                                           Height="12"
+                                           VerticalAlignment="Center"
+                                           Foreground="{DynamicResource SukiLowText}"
+                                           Kind="CheckboxMarkedCirclePlusOutline" />
+                    <TextBlock VerticalAlignment="Center"
+                               FontSize="10"
+                               FontWeight="Bold"
+                               Foreground="{DynamicResource SukiLowText}"
+                               Text="SYSTEM HEALTH" />
+                </StackPanel>
+
+                <suki:GlassCard Padding="12">
+                    <StackPanel Spacing="6">
+                        <Grid ColumnDefinitions="*,Auto">
+                            <StackPanel Orientation="Horizontal"
+                                        Spacing="6">
+                                <avalonia:MaterialIcon Width="12"
+                                                       Height="12"
+                                                       VerticalAlignment="Center"
+                                                       Kind="Cpu64Bit" />
+                                <TextBlock FontSize="11"
+                                           FontWeight="Medium"
+                                           Text="CPU" />
+                            </StackPanel>
+                            <TextBlock Grid.Column="1"
+                                       FontSize="11"
+                                       FontWeight="Bold"
+                                       Text="{Binding CpuUsageText}" />
+                        </Grid>
+                        <ProgressBar Height="6"
+                                     Maximum="100"
+                                     Minimum="0"
+                                     Value="{Binding CpuUsagePercent}" />
+                    </StackPanel>
+                </suki:GlassCard>
+
+                <suki:GlassCard Padding="12">
+                    <StackPanel Spacing="6">
+                        <Grid ColumnDefinitions="*,Auto">
+                            <StackPanel Orientation="Horizontal"
+                                        Spacing="6">
+                                <avalonia:MaterialIcon Width="12"
+                                                       Height="12"
+                                                       VerticalAlignment="Center"
+                                                       Kind="Memory" />
+                                <TextBlock FontSize="11"
+                                           FontWeight="Medium"
+                                           Text="Memory" />
+                            </StackPanel>
+                            <TextBlock Grid.Column="1"
+                                       FontSize="11"
+                                       FontWeight="Bold"
+                                       Text="{Binding RamUsageText}" />
+                        </Grid>
+                        <ProgressBar Height="6"
+                                     Maximum="100"
+                                     Minimum="0"
+                                     Value="{Binding RamUsagePercent}" />
+                    </StackPanel>
+                </suki:GlassCard>
+
+                <suki:GlassCard Padding="12">
+                    <StackPanel Spacing="6">
+                        <Grid ColumnDefinitions="*,Auto">
+                            <TextBlock FontSize="11"
+                                       FontWeight="Medium"
+                                       Text="Parallel Limit" />
+                            <TextBlock Grid.Column="1"
+                                       FontSize="11"
+                                       FontWeight="Bold"
+                                       Text="{Binding ParallelCount}" />
+                        </Grid>
+                        <Slider Maximum="12"
+                                Minimum="1"
+                                Value="{Binding ParallelCount}" />
+                    </StackPanel>
+                </suki:GlassCard>
+            </StackPanel>
+
+            <!--  Revit Instances  -->
+            <StackPanel Spacing="8">
+                <Grid ColumnDefinitions="*,Auto">
+                    <StackPanel Orientation="Horizontal"
+                                Spacing="6">
+                        <avalonia:MaterialIcon Width="12"
+                                               Height="12"
+                                               VerticalAlignment="Center"
+                                               Foreground="{DynamicResource SukiLowText}"
+                                               Kind="Dns" />
+                        <TextBlock VerticalAlignment="Center"
+                                   FontSize="10"
+                                   FontWeight="Bold"
+                                   Foreground="{DynamicResource SukiLowText}"
+                                   Text="REVIT INSTANCES" />
+                    </StackPanel>
+                    <Border Grid.Column="1"
+                            Padding="8,2"
+                            Background="{DynamicResource SystemAccentColorLight2}"
+                            CornerRadius="10">
+                        <TextBlock FontSize="10"
+                                   FontWeight="Bold"
+                                   Text="{Binding ConnectedInstances.Count}" />
+                    </Border>
+                </Grid>
+
+                <suki:GlassCard Padding="10">
+                    <ItemsControl ItemsSource="{Binding ConnectedInstances}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Border Margin="0,3"
+                                        Padding="8,6"
+                                        Background="{DynamicResource SystemControlBackgroundChromeMediumLowBrush}"
+                                        CornerRadius="6">
+                                    <Grid ColumnDefinitions="*,Auto">
+                                        <StackPanel Spacing="2">
+                                            <TextBlock FontSize="11"
+                                                       FontWeight="Medium"
+                                                       Text="{Binding HostVersion}" />
+                                            <TextBlock FontFamily="Consolas"
+                                                       FontSize="9"
+                                                       Foreground="{DynamicResource SukiLowText}"
+                                                       Text="{Binding ProcessId, StringFormat='PID {0}'}" />
+                                        </StackPanel>
+                                        <avalonia:MaterialIcon Grid.Column="1"
+                                                               Width="14"
+                                                               Height="14"
+                                                               VerticalAlignment="Center"
+                                                               Foreground="#10B981"
+                                                               Kind="CheckCircle" />
+                                    </Grid>
+                                </Border>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </suki:GlassCard>
+
+                <TextBlock FontSize="10"
+                           Foreground="{DynamicResource SukiLowText}"
+                           IsVisible="{Binding !ConnectedInstances.Count}"
+                           Text="No hosts connected."
+                           TextWrapping="Wrap" />
+
+                <Button HorizontalAlignment="Stretch"
+                        HorizontalContentAlignment="Center"
+                        Command="{Binding RefreshInstancesCommand}">
+                    <StackPanel Orientation="Horizontal"
+                                Spacing="6">
+                        <avalonia:MaterialIcon Width="12"
+                                               Height="12"
+                                               Kind="Refresh" />
+                        <TextBlock FontSize="11"
+                                   Text="Refresh" />
+                    </StackPanel>
+                </Button>
+            </StackPanel>
+
+            <!--  Version badge  -->
+            <suki:GlassCard Padding="10">
+                <Grid ColumnDefinitions="*,Auto">
+                    <TextBlock FontSize="10"
+                               Foreground="{DynamicResource SukiLowText}"
+                               Text="v3.0.1" />
+                    <StackPanel Grid.Column="1"
+                                Orientation="Horizontal"
+                                Spacing="5">
+                        <Ellipse Width="7"
+                                 Height="7"
+                                 VerticalAlignment="Center"
+                                 Fill="#10B981" />
+                        <TextBlock FontSize="10"
+                                   Text="Online" />
+                    </StackPanel>
+                </Grid>
+            </suki:GlassCard>
+
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>

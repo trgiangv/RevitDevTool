@@ -1,0 +1,104 @@
+<UserControl x:Class="RevitDevTool.Desktop.Views.Processor.LiveConsoleView"
+             xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:avalonia="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
+             xmlns:models="using:RevitDevTool.Desktop.Models"
+             xmlns:suki="https://github.com/kikipoulet/SukiUI"
+             xmlns:vm="using:RevitDevTool.Desktop.ViewModels"
+             x:DataType="vm:ProcessorPageViewModel">
+    <suki:GlassCard Padding="0">
+        <Grid RowDefinitions="Auto,*">
+
+            <!--  Console header  -->
+            <Border Padding="14,10"
+                    CornerRadius="8,8,0,0">
+                <Grid ColumnDefinitions="*,Auto,Auto,Auto">
+                    <StackPanel Orientation="Horizontal"
+                                Spacing="10">
+                        <StackPanel Orientation="Horizontal"
+                                    Spacing="5">
+                            <Ellipse Width="10"
+                                     Height="10"
+                                     Fill="#FF5F56" />
+                            <Ellipse Width="10"
+                                     Height="10"
+                                     Fill="#FFBD2E" />
+                            <Ellipse Width="10"
+                                     Height="10"
+                                     Fill="#27C93F" />
+                        </StackPanel>
+                        <TextBlock VerticalAlignment="Center"
+                                   Foreground="{DynamicResource SukiLowText}"
+                                   Text="|" />
+                        <avalonia:MaterialIcon Width="13"
+                                               Height="13"
+                                               VerticalAlignment="Center"
+                                               Foreground="#60A5FA"
+                                               Kind="Console" />
+                        <TextBlock VerticalAlignment="Center"
+                                   FontSize="12"
+                                   FontWeight="SemiBold"
+                                   Text="Output" />
+                    </StackPanel>
+
+                    <CheckBox Grid.Column="1"
+                              Margin="0,0,12,0"
+                              VerticalAlignment="Center"
+                              Content="Auto-scroll"
+                              FontSize="11"
+                              IsChecked="{Binding AutoScrollLogs}" />
+                    <Button Grid.Column="2"
+                            Padding="10,4"
+                            Command="{Binding ClearLogsCommand}"
+                            Content="Clear"
+                            FontSize="11" />
+                    <TextBlock Grid.Column="3"
+                               Margin="12,0,0,0"
+                               VerticalAlignment="Center"
+                               FontSize="11"
+                               Foreground="{DynamicResource SukiLowText}"
+                               Text="{Binding LogItems.Count, StringFormat='{}{0} lines'}" />
+                </Grid>
+            </Border>
+
+            <!--  Log output  -->
+            <Border Grid.Row="1"
+                    Padding="14,8">
+                <ListBox BorderThickness="0"
+                         ItemsSource="{Binding LogItems}"
+                         ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+                    <ListBox.ItemsPanel>
+                        <ItemsPanelTemplate>
+                            <VirtualizingStackPanel CacheLength="1.0" />
+                        </ItemsPanelTemplate>
+                    </ListBox.ItemsPanel>
+                    <ListBox.ItemTemplate>
+                        <DataTemplate x:DataType="models:HostLogItem">
+                            <Grid ColumnDefinitions="80,70,*">
+                                <TextBlock FontFamily="Consolas"
+                                           FontSize="11"
+                                           Text="{Binding Timestamp}" />
+                                <Border Grid.Column="1"
+                                        Margin="4,0,0,0"
+                                        Padding="6,1"
+                                        HorizontalAlignment="Left"
+                                        BorderThickness="1"
+                                        CornerRadius="3">
+                                    <TextBlock FontFamily="Consolas"
+                                               FontSize="10"
+                                               Text="{Binding Level}" />
+                                </Border>
+                                <TextBlock Grid.Column="2"
+                                           Margin="8,0,0,0"
+                                           FontFamily="Consolas"
+                                           FontSize="11"
+                                           Text="{Binding Message}"
+                                           TextWrapping="Wrap" />
+                            </Grid>
+                        </DataTemplate>
+                    </ListBox.ItemTemplate>
+                </ListBox>
+            </Border>
+        </Grid>
+    </suki:GlassCard>
+</UserControl>

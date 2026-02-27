@@ -1,0 +1,168 @@
+<UserControl x:Class="RevitDevTool.Desktop.Views.Processor.ExecutionLogicPaneView"
+             xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:automation="clr-namespace:Avalonia.Automation;assembly=Avalonia.Controls"
+             xmlns:avalonia="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
+             xmlns:converters="using:RevitDevTool.Desktop.Converters"
+             xmlns:suki="https://github.com/kikipoulet/SukiUI"
+             xmlns:vm="using:RevitDevTool.Desktop.ViewModels"
+             x:DataType="vm:ProcessorPageViewModel">
+    <suki:GlassCard Padding="16">
+        <StackPanel Spacing="14">
+
+            <!--  Header  -->
+            <StackPanel Orientation="Horizontal"
+                        Spacing="8">
+                <avalonia:MaterialIcon Width="16"
+                                       Height="16"
+                                       VerticalAlignment="Center"
+                                       Kind="Settings" />
+                <TextBlock VerticalAlignment="Center"
+                           FontSize="14"
+                           FontWeight="SemiBold"
+                           Text="Execution" />
+            </StackPanel>
+
+            <Separator />
+
+            <!--  Config path  -->
+            <StackPanel Spacing="6">
+                <TextBlock FontSize="11"
+                           Foreground="{DynamicResource SukiLowText}"
+                           Text="Configuration File" />
+                <Grid ColumnDefinitions="*,Auto"
+                      ColumnSpacing="8">
+                    <TextBox automation:AutomationProperties.AutomationId="ConfigPathTextBox"
+                             Text="{Binding ConfigPath}"
+                             Watermark="Select batch config json..." />
+                    <Button Grid.Column="1"
+                            automation:AutomationProperties.AutomationId="BrowseConfigButton"
+                            Click="OnBrowseConfigClick"
+                            Content="Browse" />
+                </Grid>
+                <TextBlock FontSize="10"
+                           Foreground="{DynamicResource SukiLowText}"
+                           IsVisible="{Binding HasConfigValidation}"
+                           Text="{Binding ConfigValidationMessage}" />
+            </StackPanel>
+
+            <!--  Revit Version / Process Mode  -->
+            <Grid ColumnDefinitions="*,*"
+                  ColumnSpacing="12">
+                <StackPanel Spacing="6">
+                    <TextBlock FontSize="11"
+                               Foreground="{DynamicResource SukiLowText}"
+                               Text="Target Revit Version" />
+                    <ComboBox HorizontalAlignment="Stretch"
+                              ItemsSource="{Binding RevitVersions}"
+                              SelectedItem="{Binding SelectedRevitVersion}" />
+                </StackPanel>
+                <StackPanel Grid.Column="1"
+                            Spacing="6">
+                    <TextBlock FontSize="11"
+                               Foreground="{DynamicResource SukiLowText}"
+                               Text="Process Mode" />
+                    <ComboBox HorizontalAlignment="Stretch"
+                              automation:AutomationProperties.AutomationId="ProcessingModeCombo"
+                              ItemsSource="{Binding Modes}"
+                              SelectedItem="{Binding SelectedMode}">
+                        <ComboBox.ItemTemplate>
+                            <DataTemplate>
+                                <TextBlock Text="{Binding Converter={StaticResource EnumDisplayConverter}}" />
+                            </DataTemplate>
+                        </ComboBox.ItemTemplate>
+                    </ComboBox>
+                </StackPanel>
+            </Grid>
+
+            <!--  Open Mode  -->
+            <StackPanel Spacing="6">
+                <TextBlock FontSize="11"
+                           Foreground="{DynamicResource SukiLowText}"
+                           Text="Open Mode" />
+                <StackPanel Orientation="Horizontal"
+                            Spacing="16">
+                    <RadioButton GroupName="HeadlessUI"
+                                 IsChecked="{Binding IsHeadlessMode, Mode=TwoWay}">
+                        <StackPanel Orientation="Horizontal"
+                                    Spacing="6">
+                            <avalonia:MaterialIcon Width="14"
+                                                   Height="14"
+                                                   VerticalAlignment="Center"
+                                                   Kind="Console" />
+                            <TextBlock Text="Headless" />
+                        </StackPanel>
+                    </RadioButton>
+                    <RadioButton GroupName="HeadlessUI"
+                                 IsChecked="{Binding IsHeadlessMode, Mode=TwoWay, Converter={x:Static BoolConverters.Not}}">
+                        <StackPanel Orientation="Horizontal"
+                                    Spacing="6">
+                            <avalonia:MaterialIcon Width="14"
+                                                   Height="14"
+                                                   VerticalAlignment="Center"
+                                                   Kind="Application" />
+                            <TextBlock Text="UI Mode" />
+                        </StackPanel>
+                    </RadioButton>
+                </StackPanel>
+            </StackPanel>
+
+            <!--  Options — checkboxes vertical  -->
+            <suki:GlassCard Padding="12">
+                <StackPanel Spacing="6">
+                    <CheckBox Content="Attach Existing"
+                              IsChecked="{Binding ForceLaunch}" />
+                    <CheckBox Content="Dialog Suppression"
+                              IsChecked="{Binding SuppressDialogs}" />
+                    <CheckBox Content="Audit"
+                              IsChecked="{Binding Audit}" />
+                    <CheckBox Content="Close Document"
+                              IsChecked="{Binding CloseDocument}" />
+                    <CheckBox Content="Close Host"
+                              IsChecked="{Binding CloseHost}" />
+                    <CheckBox Content="Open Worksets"
+                              IsChecked="{Binding OpenWorksets}" />
+                    <CheckBox Content="Close Worksets"
+                              IsChecked="{Binding CloseWorksets}" />
+                </StackPanel>
+            </suki:GlassCard>
+
+            <!--  Detach / Workset — vertical  -->
+            <StackPanel Spacing="8">
+                <StackPanel Spacing="6">
+                    <TextBlock FontSize="11"
+                               Foreground="{DynamicResource SukiLowText}"
+                               Text="Detach From Central" />
+                    <ComboBox HorizontalAlignment="Stretch"
+                              ItemsSource="{Binding DetachOptions}"
+                              SelectedItem="{Binding DetachFromCentral}">
+                        <ComboBox.ItemTemplate>
+                            <DataTemplate>
+                                <TextBlock Text="{Binding Converter={StaticResource EnumDisplayConverter}}" />
+                            </DataTemplate>
+                        </ComboBox.ItemTemplate>
+                    </ComboBox>
+                </StackPanel>
+                <StackPanel Spacing="6">
+                    <TextBlock FontSize="11"
+                               Foreground="{DynamicResource SukiLowText}"
+                               Text="Workset" />
+                    <ComboBox HorizontalAlignment="Stretch"
+                              ItemsSource="{Binding WorksetOptions}"
+                              SelectedItem="{Binding Workset}">
+                        <ComboBox.ItemTemplate>
+                            <DataTemplate>
+                                <TextBlock Text="{Binding Converter={StaticResource EnumDisplayConverter}}" />
+                            </DataTemplate>
+                        </ComboBox.ItemTemplate>
+                    </ComboBox>
+                </StackPanel>
+            </StackPanel>
+
+            <TextBlock FontSize="10"
+                       Foreground="{DynamicResource SukiLowText}"
+                       IsVisible="{Binding HasExecutionValidation}"
+                       Text="{Binding ExecutionValidationMessage}" />
+        </StackPanel>
+    </suki:GlassCard>
+</UserControl>

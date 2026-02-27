@@ -1,0 +1,34 @@
+{
+	"strategy": {
+		"connectionMode": "launch",
+		"mode": "sequentialMulti",
+		"parallelCount": 2,
+		"launchTimeoutSeconds": 120,
+		"timeoutPerFileSeconds": 1800
+	},
+	"defaults": {
+		"hostVersion": "2025",
+		"script": "F:/batch_process_script.py",
+		"audit": false,
+		"detachFromCentral": "detachAndPreserveWorksets",
+		"workset": "openAllWorksets",
+		"openWorksets": [],
+		"closeWorksets": [],
+		"allowOpeningLocalByWrongUser": true,
+		"ignoreExtensibleStorageSchemaConflict": true,
+		"headless": true,
+		"closeDocument": true,
+		"closeHost": false
+	},
+	"files": [
+		{
+			"path": "F:/Project1.rvt"
+		},
+		{
+			"path": "F:/Project1_space.rvt",
+			"script": "F:/batch_process_script.py",
+			"headless": false,
+			"closeDocument": false
+		}
+	]
+}

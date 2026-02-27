@@ -43,8 +43,7 @@
         <PackageVersion Include="Avalonia.Themes.Fluent" Version="11.3.12"/>
         <PackageVersion Include="Avalonia.Fonts.Inter" Version="11.3.12"/>
         <PackageVersion Include="Avalonia.Diagnostics" Version="11.3.12"/>
-        <PackageVersion Include="AvaloniaUI.DiagnosticsSupport" Version="2.2.0-beta2"/>
-        <PackageVersion Include="IconPacks.Avalonia" Version="1.3.1"/>
+        <PackageVersion Include="Material.Icons.Avalonia" Version="3.0.0"/>
         <PackageVersion Include="SukiUI" Version="6.0.4-nightly20260219"/>
         <!--Build Tools-->
         <PackageVersion Include="ILRepack" Version="2.0.41"/>

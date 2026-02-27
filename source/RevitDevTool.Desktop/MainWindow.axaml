@@ -1,0 +1,92 @@
+<suki:SukiWindow x:Class="RevitDevTool.Desktop.MainWindow"
+                 xmlns="https://github.com/avaloniaui"
+                 xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                 xmlns:avalonia="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
+                 xmlns:common="using:RevitDevTool.Desktop.Common"
+                 xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+                 xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+                 xmlns:suki="https://github.com/kikipoulet/SukiUI"
+                 xmlns:vm="using:RevitDevTool.Desktop.ViewModels"
+                 Title="RevitDevTool Processor"
+                 MinWidth="1200"
+                 MinHeight="720"
+                 d:DesignHeight="860"
+                 d:DesignWidth="1400"
+                 x:DataType="vm:MainWindowViewModel"
+                 WindowStartupLocation="CenterScreen"
+                 mc:Ignorable="d">
+    <suki:SukiWindow.Hosts>
+        <suki:SukiToastHost />
+        <suki:SukiDialogHost />
+    </suki:SukiWindow.Hosts>
+
+    <suki:SukiSideMenu IsSearchEnabled="False"
+                       ItemsSource="{Binding MenuPages}"
+                       SelectedItem="{Binding ActivePage}">
+        <suki:SukiSideMenu.ItemTemplate>
+            <DataTemplate x:DataType="vm:PageViewModelBase">
+                <suki:SukiSideMenuItem Header="{Binding DisplayName}">
+                    <suki:SukiSideMenuItem.Icon>
+                        <avalonia:MaterialIcon Kind="{Binding Icon}" />
+                    </suki:SukiSideMenuItem.Icon>
+                </suki:SukiSideMenuItem>
+            </DataTemplate>
+        </suki:SukiSideMenu.ItemTemplate>
+
+        <suki:SukiSideMenu.FooterContent>
+            <StackPanel HorizontalAlignment="Center"
+                        x:CompileBindings="False"
+                        Orientation="Horizontal"
+                        Spacing="5">
+                <!--  Back button — only visible when on Settings  -->
+                <Button Classes="Icon"
+                        Command="{Binding NavigateBackCommand}"
+                        IsVisible="{Binding ActivePage.CanGoBack}"
+                        ToolTip.Tip="Back">
+                    <avalonia:MaterialIcon Width="25"
+                                           Height="25"
+                                           Kind="ArrowLeft" />
+                </Button>
+                <Button Classes="Icon"
+                        Command="{Binding NavigateToSettingsCommand}"
+                        ToolTip.Tip="Settings">
+                    <avalonia:MaterialIcon Width="25"
+                                           Height="25"
+                                           Kind="Cog" />
+                </Button>
+                <Button Classes="Icon"
+                        ToolTip.Tip="About RevitDevTool">
+                    <Button.Flyout>
+                        <MenuFlyout>
+                            <MenuItem Header="About RevitDevTool">
+                                <MenuItem.Icon>
+                                    <avalonia:MaterialIcon Kind="InformationOutline" />
+                                </MenuItem.Icon>
+                            </MenuItem>
+                            <MenuItem Header="GitHub">
+                                <MenuItem.Icon>
+                                    <avalonia:MaterialIcon Kind="Github" />
+                                </MenuItem.Icon>
+                            </MenuItem>
+                            <Separator />
+                            <MenuItem Header="Report an issue">
+                                <MenuItem.Icon>
+                                    <avalonia:MaterialIcon Kind="BugOutline" />
+                                </MenuItem.Icon>
+                            </MenuItem>
+                        </MenuFlyout>
+                    </Button.Flyout>
+                    <avalonia:MaterialIcon Width="25"
+                                           Height="25"
+                                           Kind="Lifebuoy" />
+                </Button>
+            </StackPanel>
+        </suki:SukiSideMenu.FooterContent>
+
+        <ContentControl Content="{Binding ActivePage}">
+            <ContentControl.ContentTemplate>
+                <common:ViewLocator />
+            </ContentControl.ContentTemplate>
+        </ContentControl>
+    </suki:SukiSideMenu>
+</suki:SukiWindow>
