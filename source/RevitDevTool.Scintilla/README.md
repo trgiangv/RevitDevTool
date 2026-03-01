@@ -1,66 +1,113 @@
 # RevitDevTool.Scintilla
 
-High-throughput log viewer core for WinForms `Scintilla` with logger-agnostic ingest contracts.
+Standalone high-throughput log viewer built on `Scintilla.NET`, optimized for `ZLogger` + UTF-8 direct pipeline.
 
-## What this project provides
+## Projects
 
-- `LogEntry` model and ingest contract (`ILogIngress`) independent from Serilog/ZLogger.
-- Bounded channel pipeline with periodic UI flush in `ScintillaLogViewerController`.
-- `MaxLines` retention with chunk trimming to avoid unbounded memory growth.
-- Basic level/text filtering and next-match search.
-- WinForms host wrapper (`ScintillaLogViewerHost`) for fast integration.
+- `RevitDevTool.Scintilla`: core library (`net48`, `net8.0-windows`).
+- `RevitDevTool.Scintilla.Demo`: WinForms demo.
+- `RevitDevTool.Scintilla.Wpf.Demo`: WPF demo.
+- `RevitDevTool.Scintilla.Benchmarks`: throughput/allocation benchmarks.
 
-## Quick integration
+## Benchmark Methodology
+
+- `FullPipeline`: ingest + filter/search + forced pixel draw hash.
+- `Core`: ingest/filter/search logic without paint cost.
+- `Pixel`: draw-only cost for prepared controls.
+- Benchmark datasets are seed-based deterministic to keep regression comparisons stable.
+
+## Design Constraints
+
+- Public ingest path is **ZLogger only** through `AddZLoggerScintilla(...)`.
+- No public direct `LogEntry` post API.
+- Public `ILogRenderStrategy` surface is intentionally minimal (style mapping/config only).
+- UTF-8 is first-class in ingest/filter/render hot paths.
+- URL detection uses shared `UrlScanner` span scanner (no regex in production hot path).
+
+## Module Layout
+
+- `Core`: shared models/options/themes (`LogEntry`, `RenderSegment`, `ScintillaTheme`, `ScintillaLogViewerOptions`).
+- `Control`: public viewer surface (`ScintillaLogViewer`, `ScintillaLogViewerWpf`, controller/event contracts).
+- `Logger`: ingest pump, controller runtime, ZLogger processor bridge.
+- `Formatting`: UTF-8/token/json formatting pipeline.
+- `Render`: style/theme provider and render strategy contracts/implementation.
+- `Services`: Scintilla document append/search/style/interaction internals.
+- `Search`: filter/search engine + models.
+- `Extensions`: DI and logging registration extensions.
+- `Helpers` + `Internal`: shared utilities and internal keys.
+
+## Formatting Pipeline
+
+- `RenderOrchestrator`: entry orchestration for line rewrite and segment rendering.
+- `JsonValueFormatter`: pretty-json parse + semantic JSON token styling.
+- `DisplayValueFormatter`: non-json tokenization and object-like message styling.
+- `TokenResolutionEngine`: centralized callbacks/classifier token resolution.
+- `PayloadFormattingHelpers`: shared structured payload metadata + URL payload helpers.
+
+## DI Wiring (WinForms)
 
 ```csharp
-var host = new ScintillaLogViewerHost(new ScintillaLogViewerOptions
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
+using RevitDevTool.Scintilla.Contracts.Core;
+using RevitDevTool.Scintilla.Control;
+using RevitDevTool.Scintilla.Logger;
+using RevitDevTool.Scintilla.Render;
+using ZLogger;
+
+var builder = Host.CreateApplicationBuilder();
+
+builder.Services.AddScintillaLogViewerWinForms(_ => new ScintillaLogViewerOptions
 {
+    Theme = ScintillaTheme.EnhancedDark,
     ChannelCapacity = 50_000,
-    FlushIntervalMs = 50,
+    MaxLines = 50_000,
+    MaxHistoryEntries = 50_000,
     MaxBatchSize = 800,
-    MaxLines = 100_000
+    FlushIntervalMs = 50
 });
 
-parentPanel.Controls.Add(host.HostControl);
-host.Controller.Start();
-```
-
-Push logs from any logger adapter:
-
-```csharp
-host.Controller.TryPost(new LogEntry
+builder.Logging.ClearProviders();
+builder.Logging.SetMinimumLevel(LogLevel.Trace);
+builder.Logging.AddZLoggerScintilla(zlogger =>
 {
-    TimestampUtc = DateTime.UtcNow,
-    Level = LogSeverity.Information,
-    Message = "Hello from adapter",
-    Source = "Demo"
+    zlogger.IncludeScopes = true;
+    zlogger.UsePlainTextFormatter(formatter =>
+    {
+        formatter.SetPrefixFormatter(
+            $"[{0:local-timeonly} {1:short}] ",
+            (in template, in info) => template.Format(info.Timestamp, info.LogLevel));
+    });
 });
+
+using var host = builder.Build();
+var logger = host.Services.GetRequiredService<ILoggerFactory>().CreateLogger("Demo");
+logger.ZLogInformation($"Viewer ready");
 ```
 
-Or register directly into `Microsoft.Extensions.Logging`:
+`AddZLoggerScintilla()` resolves `IScintillaLogViewHost` and `ILogViewerControlEvents` from DI by default. Register `AddScintillaLogViewerWinForms(...)` or `AddScintillaLogViewerWpf(...)` first. Available overloads:
 
-```csharp
-builder.Logging
-    .ClearProviders()
-    .AddZLoggerScintilla(
-        sp => sp.GetRequiredService<ScintillaLogViewerHost>().Controller,
-        options => options.MinimumLevel = LogLevel.Information)
-    .AddZLoggerRollingFile((date, index) => $"logs/{date:yyyyMMdd}-{index}.log", RollingInterval.Day);
-```
+- `AddZLoggerScintilla()`
+- `AddZLoggerScintilla(Action<ZLoggerOptions> configureZLogger)`
+- `AddZLoggerScintilla(Action<ScintillaRegistrationOptions> configure)` for advanced custom binding.
 
-## Performance defaults
+Host registration helpers:
 
-- `FlushIntervalMs = 75`
-- `MaxBatchSize = 500`
-- `ChannelCapacity = 20_000`
-- `DropPolicy = DropOldest`
-- `MaxLines = 50_000`
-- `TrimChunkLines = 1_000`
+- `AddScintillaLogViewerWinForms(...)`
+- `AddScintillaLogViewerWpf(...)`
 
-## Benchmark checklist
+## WPF Host
 
-- Flood test 1-5 minutes with mixed `Information/Warning/Error`.
-- Verify UI remains responsive while writing.
-- Confirm dropped message metric behavior under pressure.
-- Confirm line count never exceeds `MaxLines` for long runs.
-- Validate search/filter latency on large documents.
+Use `ScintillaLogViewerWpf` as `IScintillaLogViewHost` and register `ILogViewerControlEvents` the same way as WinForms.
+
+## Runtime Control Without Reset
+
+Use `ILogViewerControlEvents` (`RequestStart`, `RequestStop`, `RequestClear`, `RequestSetAutoScroll`, `RequestFilter`, `RequestSearch`, `RequestTheme`, `RequestRenderMode`) to control UI behavior while keeping the same logger/provider pipeline alive. Subscribe in your host UI to `StartRequested`, `StopRequested`, `ClearRequested`, `AutoScrollChanged`, `FilterRequested`, `SearchRequested`, `ThemeChanged`, and `RenderModeChanged` as needed.
+
+## Runtime Checklist
+
+- Flood logging for 1-5 minutes and verify UI responsiveness.
+- Verify bounded memory with `MaxLines`, `MaxHistoryEntries`, `TrimChunkLines`.
+- Test `Stop`, `Clear(Fast/Aggressive)`, `Filter`, `FindNext`.
+- Test pretty-json toggle + URL clickable behavior + multi-object interpolation.
