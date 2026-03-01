@@ -1,5 +1,6 @@
 using System.Drawing;
 using System.Reflection;
+using System.Windows;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
@@ -10,19 +11,19 @@ using RevitDevTool.Scintilla.Formatting;
 using RevitDevTool.Scintilla.Render;
 using ThemeStyle = RevitDevTool.Scintilla.Core.Style;
 
-namespace RevitDevTool.Scintilla.Demo;
+namespace RevitDevTool.Scintilla.Wpf.Demo;
 
-internal static class Program
+public partial class App : System.Windows.Application
 {
-    [STAThread]
-    private static void Main(string[] args)
+    private IHost? _host;
+
+    protected override void OnStartup(StartupEventArgs e)
     {
-        ApplicationConfiguration.Initialize();
+        base.OnStartup(e);
 
         var builder = Host.CreateApplicationBuilder();
-
         builder.Services.AddSingleton<DemoEnrichmentCallbacks>();
-        builder.Services.AddScintillaLogViewerWinForms(sp => new ScintillaLogViewerOptions
+        builder.Services.AddScintillaLogViewerWpf(sp => new ScintillaLogViewerOptions
         {
             ChannelCapacity = 50_000,
             MaxLines = 50_000,
@@ -42,7 +43,7 @@ internal static class Program
             {
                 if (token is DemoTokenPayload payload)
                 {
-                    System.Diagnostics.Debug.WriteLine($"Token clicked: {payload.Kind} => {payload.TargetUri}");
+                    System.Diagnostics.Debug.WriteLine($"WPF token clicked: {payload.Kind} => {payload.TargetUri}");
                     return;
                 }
 
@@ -50,7 +51,7 @@ internal static class Program
                     TryOpenExternalUri(targetUri);
             }
         });
-        builder.Services.AddSingleton<MainForm>();
+        builder.Services.AddSingleton<MainWindow>();
         builder.Logging.ClearProviders();
         builder.Logging.SetMinimumLevel(LogLevel.Trace);
         builder.Logging.AddZLoggerScintilla(zlogger =>
@@ -64,11 +65,17 @@ internal static class Program
             });
         });
 
-        using var host = builder.Build();
-        var mainForm = host.Services.GetRequiredService<MainForm>();
-        if (args.Any(static x => string.Equals(x, "--smoke", StringComparison.OrdinalIgnoreCase)))
-            mainForm.EnableSmokeMode();
-        Application.Run(mainForm);
+        _host = builder.Build();
+        var mainWindow = _host.Services.GetRequiredService<MainWindow>();
+        MainWindow = mainWindow;
+        mainWindow.Show();
+    }
+
+    protected override void OnExit(ExitEventArgs e)
+    {
+        _host?.Dispose();
+        _host = null;
+        base.OnExit(e);
     }
 
     private static bool TryGetHttpTargetUri(ILogTokenPayload payload, out string targetUri)

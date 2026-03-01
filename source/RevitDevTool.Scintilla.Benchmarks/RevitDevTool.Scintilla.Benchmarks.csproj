@@ -1,0 +1,36 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <OutputType>Exe</OutputType>
+        <TargetFramework>net8.0-windows</TargetFramework>
+        <UseWindowsForms>true</UseWindowsForms>
+        <Nullable>enable</Nullable>
+        <ImplicitUsings>enable</ImplicitUsings>
+        <Configurations>Debug;Release</Configurations>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\RevitDevTool.Scintilla\RevitDevTool.Scintilla.csproj" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <Reference Include="Serilog.Sinks.RichTextBox.WinForms.Colored">
+            <HintPath>..\Serilog.Sinks.RichTextBox.WinForms.Colored\bin\Release\net8.0-windows\Serilog.Sinks.RichTextBox.WinForms.Colored.dll</HintPath>
+            <Private>true</Private>
+        </Reference>
+    </ItemGroup>
+
+    <ItemGroup>
+        <PackageReference Include="BenchmarkDotNet" />
+        <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" />
+        <PackageReference Include="Microsoft.Extensions.Logging" />
+        <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" />
+        <PackageReference Include="Serilog" />
+        <PackageReference Include="Zlogger" />
+    </ItemGroup>
+
+    <Target Name="EnsureSerilogSinkBuilt" BeforeTargets="ResolveReferences">
+        <Exec Command="dotnet build &quot;$(MSBuildProjectDirectory)\..\Serilog.Sinks.RichTextBox.WinForms.Colored\Serilog.Sinks.RichTextBox.WinForms.Colored.csproj&quot; -c Release -f net8.0-windows" />
+    </Target>
+
+</Project>
