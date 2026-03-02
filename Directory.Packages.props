@@ -25,14 +25,6 @@
         <PackageVersion Include="Serilog" Version="4.3.1-dev-02395"/>
         <PackageVersion Include="Serilog.Enrichers.Autodesk.Revit" Version="2.0.1"/>
         <PackageVersion Include="Serilog.Sinks.File" Version="7.0.1-dev-02315"/>
-        <PackageVersion Include="Scintilla5.NET" Version="6.1.1"/>
-        <PackageVersion Include="Zlogger" Version="2.5.10"/>
-        <PackageVersion Include="ZLogger.MessagePack" Version="2.5.10"/>
-        <PackageVersion Include="BenchmarkDotNet" Version="0.15.8"/>
-        <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="17.14.1"/>
-        <PackageVersion Include="xunit" Version="2.9.3"/>
-        <PackageVersion Include="xunit.runner.visualstudio" Version="3.1.4"/>
-        <PackageVersion Include="coverlet.collector" Version="6.0.4"/>
         <!--Utilities-->
         <PackageVersion Include="Nice3point.Revit.Build.Tasks" Version="3.0.1"/>
         <PackageVersion Include="JetBrains.Annotations" Version="2025.2.4"/>
