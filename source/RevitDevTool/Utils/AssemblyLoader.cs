@@ -1,5 +1,7 @@
 using System.IO;
 using System.Reflection;
+using Autodesk.Revit.UI;
+using RevitDevTool.Execution.Models;
 #if NETCOREAPP
 using System.Collections.Concurrent;
 using System.Runtime.Loader;
@@ -134,5 +136,19 @@ public static class AssemblyLoader
         {
             return false;
         }
+    }
+    
+    public static ExecutionResult ToExecutionResult(this Result result, string message, long durationMs)
+    {
+        return result switch
+        {
+            Result.Succeeded => ExecutionResult.Succeeded("Command completed successfully.", durationMs),
+            Result.Cancelled => ExecutionResult.Cancelled(
+                string.IsNullOrWhiteSpace(message) ? "Command cancelled." : message,
+                durationMs),
+            _ => ExecutionResult.Failed(
+                string.IsNullOrWhiteSpace(message) ? "Command failed." : message,
+                durationMs: durationMs)
+        };
     }
 }

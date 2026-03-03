@@ -28,7 +28,7 @@ internal static class FSharpNugetResolver
                 references.Add(dllPath);
 
             Debug.WriteLine(
-                $"[NuGetResolver] {request.PackageId} {request.Version ?? "latest"} -> {packageDlls.Length} dll(s)");
+                $"[NuGetResolver] {request.PackageId} {request.Version ?? "latest"}");
         }
 
         progress?.Report($"NuGet resolution completed for {entryScriptName}.");

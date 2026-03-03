@@ -1,4 +1,3 @@
-using System.Diagnostics;
 using System.IO;
 using System.Reflection;
 using Autodesk.Revit.UI;
@@ -8,24 +7,17 @@ internal static class AddinExecutor
 {
     public static Result RunCommand(AddinItem addinItem, ExternalCommandData data, ref string message, ElementSet elements)
     {
-        var commandResult = Result.Failed;
 #if NETCOREAPP
         var filePath = addinItem.AssemblyPath;
         var alc = new AddinLoadContext(filePath);
 
         try
         {
-            commandResult = ExecuteInIsolatedContext(alc, addinItem, data, ref message, elements);
-        }
-        catch (Exception ex)
-        {
-            Trace.TraceError($"Execute Error: {ex}");
-            commandResult = Result.Failed;
+            return ExecuteInIsolatedContext(alc, addinItem, data, ref message, elements);
         }
         finally
         {
             alc.Unload();
-
             Context.Application.PurgeReleasedAPIObjects();
             GC.Collect();
             GC.WaitForPendingFinalizers();
@@ -39,7 +31,6 @@ internal static class AddinExecutor
         {
             LoadUnmanagedDependencies(targetDir!, ref loadedNativeHandles);
 
-            // dependency resolver
             assemblyResolver = (_, args) =>
             {
                 try
@@ -54,19 +45,14 @@ internal static class AddinExecutor
                 }
                 catch (Exception ex)
                 {
-                    Trace.TraceWarning($"Failed to resolve dependency {args.Name}: {ex.Message}");
+                    System.Diagnostics.Trace.TraceWarning($"Failed to resolve dependency {args.Name}: {ex.Message}");
                 }
                 return null;
             };
 
             AppDomain.CurrentDomain.AssemblyResolve += assemblyResolver;
 
-            commandResult = ExecuteInCurrentAppDomain(addinItem, data, ref message, elements);
-        }
-        catch (Exception ex)
-        {
-            Trace.TraceError($"NetFramework Load Error: {ex}");
-            commandResult = Result.Failed;
+            return ExecuteInCurrentAppDomain(addinItem, data, ref message, elements);
         }
         finally
         {
@@ -78,11 +64,9 @@ internal static class AddinExecutor
             foreach (var hModule in loadedNativeHandles)
             {
                 while (FreeLibrary(hModule)) { }
-                Debug.WriteLine("[AddinManager] Released Native DLL handle.");
             }
         }
 #endif
-        return commandResult;
     }
 
 #if NETFRAMEWORK
@@ -101,7 +85,6 @@ internal static class AddinExecutor
             var hModule = LoadLibrary(file);
             if (hModule == IntPtr.Zero) continue;
             loadedHandles.Add(hModule);
-            Debug.WriteLine($"[AddinManager] Loaded Native DLL: {Path.GetFileName(file)}");
         }
     }
     
@@ -120,8 +103,8 @@ internal static class AddinExecutor
             return externalCommand.Execute(data, ref message, elements);
         }
 
-        Trace.TraceError($"Failed to create instance of {addinItem.FullClassName}. Instance type: {instance?.GetType().FullName ?? "null"}");
-        return Result.Failed;
+        throw new InvalidOperationException(
+            $"Failed to create an executable command from '{addinItem.FullClassName}'. Instance type: {instance?.GetType().FullName ?? "null"}");
     }
 #endif
 

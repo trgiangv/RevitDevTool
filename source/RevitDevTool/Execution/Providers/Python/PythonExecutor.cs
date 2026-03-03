@@ -1,4 +1,3 @@
-using System.Diagnostics;
 using System.IO;
 using Python.Runtime;
 namespace RevitDevTool.Execution.Providers.Python;
@@ -10,9 +9,7 @@ public static class PythonExecutor
 {
     public static void ExecuteScript(string scriptPath, 
         string scriptContent,
-        string? rootFolder = null,
-        Document? document = null,
-        bool throwOnError = false)
+        string? rootFolder = null)
     {
         if (!PythonInitializer.IsInitialized)
             throw new InvalidOperationException("Python runtime not initialized. Call InitializeAsync() first.");
@@ -25,29 +22,16 @@ public static class PythonExecutor
 
             using (var scope = PythonInitializer.GlobalScope.NewScope())
             {
-                try
-                {
-                    scope.Set("__source__", new PyString(scriptContent));
-                    scope.Set("__file__", new PyString(scriptPath));
-                    scope.Set("__root__", new PyString(rootFolder));
-                    
-                    if (document != null)
-                    {
-                        scope.Set("__doc__", document.ToPython());
-                    }
-                    
-                    ResetModuleCache(scope);
-                    SetupScriptRoot(scope);
-                    scope.Exec("""
-                               compiled_code = compile(__source__, __file__, 'exec')
-                               exec(compiled_code, globals())
-                               """);
-                }
-                catch (Exception ex)
-                {
-                    Trace.TraceError(ex.Message + Environment.NewLine + ex.StackTrace);
-                    if (throwOnError) throw;
-                }
+                scope.Set("__source__", new PyString(scriptContent));
+                scope.Set("__file__", new PyString(scriptPath));
+                scope.Set("__root__", new PyString(rootFolder));
+                
+                ResetModuleCache(scope);
+                SetupScriptRoot(scope);
+                scope.Exec("""
+                           compiled_code = compile(__source__, __file__, 'exec')
+                           exec(compiled_code, globals())
+                           """);
             }
         }
     }

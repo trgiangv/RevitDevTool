@@ -5,6 +5,7 @@ using RevitDevTool.Controllers;
 using RevitDevTool.Execution.Interfaces;
 using RevitDevTool.Execution.Models;
 using RevitDevTool.Execution.Providers.Dotnet;
+using RevitDevTool.Utils;
 namespace RevitDevTool.Execution.Providers.FSharp;
 
 /// <summary>
@@ -37,7 +38,7 @@ public sealed class FSharpExecutionStrategy(string scriptPath) : IExecutionStrat
                     var message = string.Empty;
                     var commandResult = FSharpExecutor.ExecuteCommand(command, AddinCommandData.ExternalCommandData, ref message, AddinCommandData.ElementSet);
                     stopwatch.Stop();
-                    return MapRevitResult(commandResult, message, stopwatch.ElapsedMilliseconds);
+                    return commandResult.ToExecutionResult(message, stopwatch.ElapsedMilliseconds);
                 })
                 .ConfigureAwait(false);
 
@@ -47,7 +48,7 @@ public sealed class FSharpExecutionStrategy(string scriptPath) : IExecutionStrat
 
             return result;
         }
-        catch (OperationCanceledException)
+        catch (Autodesk.Revit.Exceptions.OperationCanceledException)
         {
             stopwatch.Stop();
             return ExecutionResult.Cancelled("F# execution cancelled.", stopwatch.ElapsedMilliseconds);
@@ -55,27 +56,13 @@ public sealed class FSharpExecutionStrategy(string scriptPath) : IExecutionStrat
         catch (Exception ex)
         {
             stopwatch.Stop();
-            Trace.TraceError($"F# async execution failed: {ex}");
+            Trace.TraceError($"F# execution failed: {ex}");
             return ExecutionResult.Failed($"F# execution failed: {ex.Message}", ex, stopwatch.ElapsedMilliseconds);
         }
         finally
         {
             Context.Application.PurgeReleasedAPIObjects();
         }
-    }
-
-    private static ExecutionResult MapRevitResult(Result result, string message, long durationMs)
-    {
-        return result switch
-        {
-            Result.Succeeded => ExecutionResult.Succeeded("F# command completed successfully.", durationMs),
-            Result.Cancelled => ExecutionResult.Cancelled(
-                string.IsNullOrWhiteSpace(message) ? "F# command cancelled." : message,
-                durationMs),
-            _ => ExecutionResult.Failed(
-                string.IsNullOrWhiteSpace(message) ? "F# command failed." : message,
-                durationMs: durationMs)
-        };
     }
 
     private static async Task<IExternalCommand?> CompileAsync(

@@ -12,10 +12,17 @@ public sealed class ScriptExecutionProvider : IExecutionProvider
 
     private static readonly HashSet<string> IgnoredFolders = new(StringComparer.OrdinalIgnoreCase)
     {
-        ".git", ".github", ".vs", ".idea", ".vscode",
+        // Ide/git
+        ".git", ".github", ".vs", ".idea", ".vscode", ".cursor",
+        // Docs
+        "docs", "doc", "img", "assets", "resources",
+        // Agents
+        ".agent", ".agents", ".claude",
+        // Build
         "bin", "obj", "packages", "node_modules", "output",
-        "venv", ".venv", "env", ".env", "virtualenv",
-        "__pycache__", "dist", "build", ".mypy_cache", ".pytest_cache"
+        "__pycache__", "dist", "build", ".mypy_cache", ".pytest_cache",
+        // Virtual envs
+        "venv", ".venv", "env", ".env", "virtualenv", ".pixi", 
     };
 
     public string Name => "Script";

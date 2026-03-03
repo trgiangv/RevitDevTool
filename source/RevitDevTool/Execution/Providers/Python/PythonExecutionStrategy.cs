@@ -27,7 +27,7 @@ public sealed class PythonExecutionStrategy(string scriptPath, string rootPath) 
 #if NETCOREAPP
                 scriptContent = await File.ReadAllTextAsync(scriptPath, cancellationToken).ConfigureAwait(false);
 #else
-                scriptContent = File.ReadAllText(scriptPath);
+                scriptContent = await Task.Run(() => File.ReadAllText(scriptPath), cancellationToken).ConfigureAwait(false);
 #endif
             }
             catch (IOException ex)
@@ -51,17 +51,9 @@ public sealed class PythonExecutionStrategy(string scriptPath, string rootPath) 
             var result = await handler
                 .RaiseAsync(_ =>
                 {
-                    try
-                    {
-                        PythonExecutor.ExecuteScript(scriptPath, scriptContent, rootPath, throwOnError: true);
-                        stopwatch.Stop();
-                        return ExecutionResult.Succeeded("Python script completed successfully.", stopwatch.ElapsedMilliseconds);
-                    }
-                    catch (Exception ex)
-                    {
-                        stopwatch.Stop();
-                        return ExecutionResult.Failed($"Python script failed: {ex.Message}", ex, stopwatch.ElapsedMilliseconds);
-                    }
+                    PythonExecutor.ExecuteScript(scriptPath, scriptContent, rootPath);
+                    stopwatch.Stop();
+                    return ExecutionResult.Succeeded("Python script completed successfully.", stopwatch.ElapsedMilliseconds);
                 })
                 .ConfigureAwait(false);
 
@@ -71,7 +63,7 @@ public sealed class PythonExecutionStrategy(string scriptPath, string rootPath) 
 
             return result;
         }
-        catch (OperationCanceledException)
+        catch (Autodesk.Revit.Exceptions.OperationCanceledException)
         {
             stopwatch.Stop();
             return ExecutionResult.Cancelled("Python execution cancelled.", stopwatch.ElapsedMilliseconds);
@@ -84,7 +76,7 @@ public sealed class PythonExecutionStrategy(string scriptPath, string rootPath) 
         }
     }
 
-    public static async Task<bool> ResolveDependenciesAsync(
+    private static async Task<bool> ResolveDependenciesAsync(
         string scriptPath,
         IProgress<string>? progress = null,
         CancellationToken cancellationToken = default)
