@@ -115,6 +115,8 @@ public static class Host
         // Execution
         services.AddSingleton<ExecutionViewModel>();
         services.AddSingleton<ExecutionView>();
+        services.AddSingleton<MemoryViewModel>();
+        services.AddSingleton<MemoryView>();
 
         // Root
         services.AddSingleton<TraceLogViewModel>();

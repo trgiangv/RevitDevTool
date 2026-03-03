@@ -70,33 +70,6 @@
                       Stretch="Uniform" />
             </ToggleButton>
 
-            <!--  Debug Status Indicator  -->
-            <Path Width="12"
-                  Height="12"
-                  Margin="5,0,0,0"
-                  VerticalAlignment="Center"
-                  Data="{StaticResource Bug}"
-                  Stretch="Uniform">
-                <Path.Style>
-                    <Style TargetType="Path">
-                        <Setter Property="Fill" Value="#FF6B6B" />
-                        <Setter Property="ToolTip" Value="Debugger Not Connected" />
-                        <Style.Triggers>
-                            <DataTrigger Binding="{Binding IsDebuggerConnected}"
-                                         Value="True">
-                                <Setter Property="Fill" Value="#4CAF50" />
-                                <Setter Property="ToolTip" Value="Debugger Connected" />
-                            </DataTrigger>
-                        </Style.Triggers>
-                    </Style>
-                </Path.Style>
-            </Path>
-            <TextBlock Margin="3,0,0,0"
-                       VerticalAlignment="Center"
-                       FontSize="11"
-                       Foreground="{DynamicResource MahApps.Brushes.Gray}"
-                       Text="{Binding DebugPort, Mode=OneTime, StringFormat=': {0}'}"
-                       ToolTip="debugpy port" />
             <StackPanel HorizontalAlignment="Right"
                         DockPanel.Dock="Right"
                         Orientation="Horizontal">
@@ -198,6 +171,7 @@
             <Grid Margin="5,0,5,5"
                   Visibility="{Binding IsSettingsVisible, Converter={StaticResource InverseBoolToVisibility}}">
                 <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
                     <RowDefinition Height="*" />
                     <RowDefinition>
                         <RowDefinition.Style>
@@ -229,7 +203,11 @@
                     </RowDefinition>
                 </Grid.RowDefinitions>
 
-                <Border Grid.Row="0"
+                <ContentControl Grid.Row="0"
+                                Margin="0,0,0,5"
+                                Content="{Binding MemoryView}" />
+
+                <Border Grid.Row="1"
                         Padding="2"
                         BorderBrush="{DynamicResource MahApps.Brushes.Gray8}"
                         BorderThickness="1"
@@ -238,14 +216,14 @@
                     <ContentControl Content="{Binding TraceLogViewModel.LogTextBox}" />
                 </Border>
 
-                <GridSplitter Grid.Row="1"
+                <GridSplitter Grid.Row="2"
                               Height="2"
                               Margin="0,5"
                               Background="{DynamicResource MahApps.Brushes.Gray8}"
                               ShowsPreview="False"
                               Visibility="{Binding IsAddinLoadVisible, Converter={StaticResource BoolToVisibility}}" />
 
-                <ContentControl Grid.Row="2"
+                <ContentControl Grid.Row="3"
                                 Content="{Binding ExecutionView}"
                                 Visibility="{Binding IsAddinLoadVisible, Converter={StaticResource BoolToVisibility}}" />
             </Grid>

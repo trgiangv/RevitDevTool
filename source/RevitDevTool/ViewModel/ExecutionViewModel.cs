@@ -6,6 +6,7 @@ using RevitDevTool.Theme;
 using System.Windows.Threading;
 using RevitDevTool.Execution.Interfaces;
 using RevitDevTool.Execution.Models;
+using RevitDevTool.Execution.Providers.Python;
 using RevitDevTool.Utils;
 // ReSharper disable UnusedParameterInPartialMethod
 // ReSharper disable RedundantSuppressNullableWarningExpression
@@ -16,7 +17,9 @@ public partial class ExecutionViewModel : ObservableObject
 {
     private readonly IExecutionOrchestrator _orchestrator;
     private readonly ISettingsService _settingsService;
+    private readonly MemoryViewModel _memoryViewModel;
     private readonly DispatcherTimer _searchDebounceTimer;
+    private readonly DispatcherTimer _debugStatusTimer;
     private int _busyDepth;
 
     [ObservableProperty]
@@ -37,15 +40,24 @@ public partial class ExecutionViewModel : ObservableObject
     [ObservableProperty]
     private ExecutionMode? _busyProviderType;
 
+    public static int DebugPort => PythonInitializer.DebugPort;
+
+    [ObservableProperty]
+    private bool _isDebuggerConnected;
+
     /// <summary>
     /// Filtered items for display in TreeView
     /// </summary>
     public ObservableCollection<BaseNode> FilteredItems { get; } = [];
 
-    public ExecutionViewModel(IExecutionOrchestrator orchestrator, ISettingsService settingsService)
+    public ExecutionViewModel(
+        IExecutionOrchestrator orchestrator,
+        ISettingsService settingsService,
+        MemoryViewModel memoryViewModel)
     {
         _orchestrator = orchestrator;
         _settingsService = settingsService;
+        _memoryViewModel = memoryViewModel;
         _orchestrator.TreeChanged += OnTreeChanged;
         _orchestrator.RootRemoved += OnRootRemoved;
         _orchestrator.ExecutionProgressChanged += OnExecutionProgressChanged;
@@ -60,6 +72,19 @@ public partial class ExecutionViewModel : ObservableObject
             _searchDebounceTimer.Stop();
             PerformSearch();
         };
+
+        _debugStatusTimer = new DispatcherTimer
+        {
+            Interval = TimeSpan.FromSeconds(2)
+        };
+        _debugStatusTimer.Tick += (_, _) => UpdateDebuggerStatus();
+        _debugStatusTimer.Start();
+        UpdateDebuggerStatus();
+    }
+
+    private void UpdateDebuggerStatus()
+    {
+        IsDebuggerConnected = PythonInitializer.IsDebuggerConnected();
     }
 
     /// <summary>
@@ -163,8 +188,11 @@ public partial class ExecutionViewModel : ObservableObject
     {
         var node = parameter as BaseNode ?? SelectedNode;
         if (node is not { NodeType: NodeType.Executable }) return;
+        var provider = (node as ExecuteNode)?.ProviderType.ToString() ?? "Unknown";
+        using var memoryScope = _memoryViewModel.BeginOperation(provider, node.Name);
         using var _ = BeginBusy($"Executing '{node.Name}'...", (node as ExecuteNode)?.ProviderType);
         var result = await _orchestrator.ExecuteAsync(node);
+        memoryScope.Complete(success: result.Success);
         if (!result.Success)
         {
             Trace.TraceWarning($"Execution failed: {result.Message}");
@@ -188,8 +216,11 @@ public partial class ExecutionViewModel : ObservableObject
         {
             try
             {
+                var provider = (lastExecuted as ExecuteNode)?.ProviderType.ToString() ?? "Unknown";
+                using var memoryScope = _memoryViewModel.BeginOperation(provider, lastExecuted.Name);
                 using var _ = BeginBusy($"Executing '{lastExecuted.Name}'...", (lastExecuted as ExecuteNode)?.ProviderType);
                 var result = await _orchestrator.ExecuteAsync(lastExecuted);
+                memoryScope.Complete(success: result.Success);
                 if (!result.Success)
                 {
                     Trace.TraceWarning($"Execution failed: {result.Message}");
