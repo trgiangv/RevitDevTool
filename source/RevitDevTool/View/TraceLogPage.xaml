@@ -246,7 +246,7 @@
                               Visibility="{Binding IsAddinLoadVisible, Converter={StaticResource BoolToVisibility}}" />
 
                 <ContentControl Grid.Row="2"
-                                Content="{Binding CodeExecuteView}"
+                                Content="{Binding ExecutionView}"
                                 Visibility="{Binding IsAddinLoadVisible, Converter={StaticResource BoolToVisibility}}" />
             </Grid>
 

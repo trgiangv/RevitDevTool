@@ -77,7 +77,7 @@ public class TraceCommand : ExternalCommand, IExternalCommandAvailability
 
     private static void ExecuteLastCode()
     {
-        var codeExecuteVm = Host.GetService<CodeExecuteViewModel>();
+        var codeExecuteVm = Host.GetService<ExecutionViewModel>();
         codeExecuteVm.ExecuteLastItem();
     }
 

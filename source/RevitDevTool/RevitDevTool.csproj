@@ -69,8 +69,8 @@
 
     <ItemGroup>
         <Resource Include="resources\icons\*.*"/>
-        <EmbeddedResource Include="CodeExecute\Providers\Python\Setup.py" />
-        <EmbeddedResource Include="CodeExecute\Providers\Python\Parser.py" />
+        <EmbeddedResource Include="Execution\Providers\Python\Setup.py" />
+        <EmbeddedResource Include="Execution\Providers\Python\Parser.py" />
     </ItemGroup>
 
     <!-- Start Revit -->

@@ -13,11 +13,11 @@ using RevitDevTool.ViewModel.Settings;
 using RevitDevTool.ViewModel.Settings.Visualization;
 using RevitDevTool.Visualization.Server;
 using System.IO;
-using RevitDevTool.CodeExecute.Interfaces;
-using RevitDevTool.CodeExecute.Models;
-using RevitDevTool.CodeExecute.Providers;
-using RevitDevTool.CodeExecute.Providers.Dotnet;
-using RevitDevTool.CodeExecute.Services;
+using RevitDevTool.Execution.Interfaces;
+using RevitDevTool.Execution.Models;
+using RevitDevTool.Execution.Providers;
+using RevitDevTool.Execution.Providers.Dotnet;
+using RevitDevTool.Execution.Services;
 
 namespace RevitDevTool;
 
@@ -101,20 +101,20 @@ public static class Host
         services.AddSingleton<GeneralSettingsView>();
         services.AddSingleton<LogSettingsViewModel>();
 
-        // CodeExecute Services
+        // Execution Services
         services.AddSingleton<ITreeStateManager, TreeStateManager>();
         services.AddSingleton<IFileWatcherService, FileWatcherService>();
         services.AddSingleton<IExecutionOrchestrator, ExecutionOrchestrator>();
 
-        // CodeExecute Providers
+        // Execution Providers
         services.AddSingleton<IExecutionProvider, AssemblyExecutionProvider>();
         services.AddSingleton<IExecutionProvider, ScriptExecutionProvider>();
         services.AddKeyedSingleton<IExecutionProvider, AssemblyExecutionProvider>(ExecutionMode.Assembly);
         services.AddKeyedSingleton<IExecutionProvider, ScriptExecutionProvider>(ExecutionMode.Script);
 
-        // CodeExecute
-        services.AddSingleton<CodeExecuteViewModel>();
-        services.AddSingleton<CodeExecuteView>();
+        // Execution
+        services.AddSingleton<ExecutionViewModel>();
+        services.AddSingleton<ExecutionView>();
 
         // Root
         services.AddSingleton<TraceLogViewModel>();

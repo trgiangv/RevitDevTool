@@ -1,5 +1,4 @@
 using CommunityToolkit.Mvvm.Messaging;
-using RevitDevTool.CodeExecute.Providers.Python;
 using RevitDevTool.Settings;
 using RevitDevTool.Utils;
 using RevitDevTool.View;
@@ -7,6 +6,7 @@ using RevitDevTool.ViewModel.Messages;
 using RevitDevTool.ViewModel.Settings;
 using System.Diagnostics;
 using System.Windows.Threading;
+using RevitDevTool.Execution.Providers.Python;
 
 namespace RevitDevTool.ViewModel;
 
@@ -20,7 +20,7 @@ public partial class TraceLogPageViewModel : ObservableObject, IRecipient<IsSave
     private readonly DispatcherTimer _debugStatusTimer;
 
     public TraceLogViewModel TraceLogViewModel { get; }
-    public CodeExecuteView CodeExecuteView { get; }
+    public ExecutionView ExecutionView { get; }
     public int ProcessId { get; } = SettingsUtils.CurrentProcessId;
     public static int DebugPort => PythonInitializer.DebugPort;
     [ObservableProperty] private object? _currentPage;
@@ -58,12 +58,12 @@ public partial class TraceLogPageViewModel : ObservableObject, IRecipient<IsSave
 
     public TraceLogPageViewModel(
         TraceLogViewModel traceLogViewModel,
-        CodeExecuteView addinLoadView,
+        ExecutionView addinLoadView,
         LogSettingsViewModel logSettingsViewModel,
         ISettingsService settingsService)
     {
         TraceLogViewModel = traceLogViewModel;
-        CodeExecuteView = addinLoadView;
+        ExecutionView = addinLoadView;
         IsSaveLogEnabled = settingsService.LogConfig.IsSaveLogEnabled;
         _logSettingsViewModel = logSettingsViewModel;
         _settingsService = settingsService;

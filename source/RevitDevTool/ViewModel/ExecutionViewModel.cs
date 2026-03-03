@@ -1,0 +1,553 @@
+using System.Collections.ObjectModel;
+using System.Diagnostics;
+using System.IO;
+using RevitDevTool.Settings;
+using RevitDevTool.Theme;
+using System.Windows.Threading;
+using RevitDevTool.Execution.Interfaces;
+using RevitDevTool.Execution.Models;
+using RevitDevTool.Utils;
+// ReSharper disable UnusedParameterInPartialMethod
+// ReSharper disable RedundantSuppressNullableWarningExpression
+
+namespace RevitDevTool.ViewModel;
+
+public partial class ExecutionViewModel : ObservableObject
+{
+    private readonly IExecutionOrchestrator _orchestrator;
+    private readonly ISettingsService _settingsService;
+    private readonly DispatcherTimer _searchDebounceTimer;
+    private int _busyDepth;
+
+    [ObservableProperty]
+    private ObservableCollection<BaseNode> _treeRoot = [];
+
+    [ObservableProperty]
+    private BaseNode? _selectedNode;
+
+    [ObservableProperty]
+    private string _searchText = string.Empty;
+
+    [ObservableProperty]
+    private bool _isBusy;
+
+    [ObservableProperty]
+    private string _busyMessage = string.Empty;
+
+    [ObservableProperty]
+    private ExecutionMode? _busyProviderType;
+
+    /// <summary>
+    /// Filtered items for display in TreeView
+    /// </summary>
+    public ObservableCollection<BaseNode> FilteredItems { get; } = [];
+
+    public ExecutionViewModel(IExecutionOrchestrator orchestrator, ISettingsService settingsService)
+    {
+        _orchestrator = orchestrator;
+        _settingsService = settingsService;
+        _orchestrator.TreeChanged += OnTreeChanged;
+        _orchestrator.RootRemoved += OnRootRemoved;
+        _orchestrator.ExecutionProgressChanged += OnExecutionProgressChanged;
+        ThemeManager.Current.ActualApplicationThemeChanged += OnThemeChanged;
+
+        _searchDebounceTimer = new DispatcherTimer
+        {
+            Interval = TimeSpan.FromMilliseconds(300)
+        };
+        _searchDebounceTimer.Tick += (_, _) =>
+        {
+            _searchDebounceTimer.Stop();
+            PerformSearch();
+        };
+    }
+
+    /// <summary>
+    /// Load assemblies and folders from saved settings.
+    /// Called from View after render to avoid XAML parsing race conditions.
+    /// </summary>
+    public async Task LoadSavedPathsAsync()
+    {
+        var config = _settingsService.CodeExecuteConfig;
+        var allPaths = config.DotnetAssemblyPaths.Concat(config.ScriptFolderPaths);
+
+        using var _ = BeginBusy("Loading saved paths...");
+        await _orchestrator.LoadSavedPathsAsync(allPaths);
+        UpdateTreeRoot();
+    }
+
+    [RelayCommand]
+    private Task LoadAssemblyAsync()
+    {
+        return LoadAssemblyFromPathAsync(null);
+    }
+
+    [RelayCommand]
+    private Task LoadScriptsAsync()
+    {
+        return LoadScriptsFromPathAsync(null);
+    }
+
+    /// <summary>
+    /// Load DotNet assembly from path (for drag-drop support)
+    /// </summary>
+    private async Task LoadAssemblyFromPathAsync(string? path)
+    {
+        if (string.IsNullOrEmpty(path))
+        {
+            var dialog = new Microsoft.Win32.OpenFileDialog
+            {
+                Filter = "DLL files (*.dll)|*.dll|All files (*.*)|*.*",
+                Title = "Select Assembly DLL"
+            };
+
+            if (dialog.ShowDialog() == true)
+            {
+                path = dialog.FileName;
+            }
+        }
+
+        if (string.IsNullOrEmpty(path))
+            return;
+
+        using var _ = BeginBusy("Loading assembly...");
+        await _orchestrator.LoadFromPathAsync(path!);
+
+        SavePathToSettings(path!, ExecutionMode.Assembly);
+        UpdateTreeRoot();
+    }
+
+    /// <summary>
+    /// Load script folder from path (Python .py and F# .fsx, for drag-drop support)
+    /// </summary>
+    private async Task LoadScriptsFromPathAsync(string? path)
+    {
+        if (string.IsNullOrEmpty(path))
+        {
+            var selectedFolder = SettingsUtils.SelectFolder("Select Scripts Folder");
+            if (!string.IsNullOrEmpty(selectedFolder))
+            {
+                path = selectedFolder;
+            }
+        }
+
+        if (string.IsNullOrEmpty(path)) return;
+
+        using var _ = BeginBusy("Loading scripts...");
+        await _orchestrator.LoadFromPathAsync(path!);
+
+        SavePathToSettings(path!, ExecutionMode.Script);
+        UpdateTreeRoot();
+    }
+
+    /// <summary>
+    /// Load from path - auto-detect type (for drag-drop support)
+    /// </summary>
+    public async Task LoadFromPathAsync(string? path)
+    {
+        if (string.IsNullOrEmpty(path))
+            return;
+
+        if (File.Exists(path) && path!.EndsWith(".dll", StringComparison.OrdinalIgnoreCase))
+        {
+            await LoadAssemblyFromPathAsync(path);
+        }
+        else if (Directory.Exists(path))
+        {
+            await LoadScriptsFromPathAsync(path);
+        }
+    }
+
+    [RelayCommand(CanExecute = nameof(CanExecute))]
+    private async Task Execute(object? parameter)
+    {
+        var node = parameter as BaseNode ?? SelectedNode;
+        if (node is not { NodeType: NodeType.Executable }) return;
+        using var _ = BeginBusy($"Executing '{node.Name}'...", (node as ExecuteNode)?.ProviderType);
+        var result = await _orchestrator.ExecuteAsync(node);
+        if (!result.Success)
+        {
+            Trace.TraceWarning($"Execution failed: {result.Message}");
+        }
+    }
+
+    private bool CanExecute() => !IsBusy && SelectedNode?.NodeType == NodeType.Executable;
+
+    /// <summary>
+    /// Execute the last executed item (for TraceCommand shortcut)
+    /// </summary>
+    public void ExecuteLastItem()
+    {
+        _ = ExecuteLastItemAsync();
+    }
+
+    private async Task ExecuteLastItemAsync()
+    {
+        var lastExecuted = FindLastExecutedNode(TreeRoot);
+        if (lastExecuted != null)
+        {
+            try
+            {
+                using var _ = BeginBusy($"Executing '{lastExecuted.Name}'...", (lastExecuted as ExecuteNode)?.ProviderType);
+                var result = await _orchestrator.ExecuteAsync(lastExecuted);
+                if (!result.Success)
+                {
+                    Trace.TraceWarning($"Execution failed: {result.Message}");
+                }
+            }
+            catch (Exception ex)
+            {
+                Trace.TraceError($"Failed to execute last item: {ex.Message}");
+            }
+        }
+    }
+
+    private static BaseNode? FindLastExecutedNode(IEnumerable<BaseNode> nodes)
+    {
+        foreach (var node in nodes)
+        {
+            if (node.IsLastExecuted)
+                return node;
+
+            var childResult = FindLastExecutedNode(node.Children);
+            if (childResult != null)
+                return childResult;
+        }
+        return null;
+    }
+
+    [RelayCommand]
+    private async Task ReloadAsync()
+    {
+        using var _ = BeginBusy("Reloading nodes...");
+        await _orchestrator.ReloadAsync();
+        UpdateTreeRoot();
+    }
+
+    [RelayCommand(CanExecute = nameof(CanRemove))]
+    private void Remove()
+    {
+        switch (SelectedNode)
+        {
+            case null:
+                return;
+            case RootNode rootNode:
+                RemovePathFromSettings(rootNode.RootPath);
+                break;
+        }
+
+        var nextSelection = _orchestrator.RemoveNode(SelectedNode);
+
+        UpdateTreeRoot();
+
+        if (nextSelection == null) return;
+        SelectedNode = nextSelection;
+        nextSelection.IsSelected = true;
+    }
+
+    private bool CanRemove() => SelectedNode != null;
+
+    [RelayCommand]
+    private void Clear()
+    {
+        _orchestrator.ClearAll();
+        ClearAllPathsFromSettings();
+        UpdateTreeRoot();
+    }
+
+    [RelayCommand]
+    private void ExpandAll()
+    {
+        foreach (var node in TreeRoot)
+        {
+            ExpandNodeRecursive(node);
+        }
+    }
+
+    [RelayCommand]
+    private void CollapseAll()
+    {
+        foreach (var node in TreeRoot)
+        {
+            CollapseNodeRecursive(node);
+        }
+    }
+
+    [RelayCommand]
+    private void ToggleAll()
+    {
+        if (FilteredItems.Count == 0) return;
+        foreach (var node in FilteredItems)
+        {
+            ToggleNodeRecursive(node);
+        }
+    }
+
+    private static void ToggleNodeRecursive(BaseNode node)
+    {
+        if (node.NodeType == NodeType.Container)
+        {
+            node.IsExpanded = !node.IsExpanded;
+        }
+
+        foreach (var child in node.Children)
+        {
+            ToggleNodeRecursive(child);
+        }
+    }
+
+    [RelayCommand(CanExecute = nameof(CanOpenLocation))]
+    private void OpenLocation()
+    {
+        var filePath = GetFilePathFromSelectedNode();
+        if (string.IsNullOrEmpty(filePath)) return;
+        Process.Start("explorer.exe", $"/select, \"{filePath}\"");
+    }
+
+    private bool CanOpenLocation() => !string.IsNullOrEmpty(GetFilePathFromSelectedNode());
+
+    private string? GetFilePathFromSelectedNode()
+    {
+        if (SelectedNode == null) return null;
+
+        return SelectedNode switch
+        {
+            RootNode root => root.RootPath,
+            IntermediateNode intermediate => intermediate.FullPath,
+            ExecuteNode execute => execute.SourceFilePath,
+            _ => null
+        };
+    }
+
+    private void OnTreeChanged(object? sender, EventArgs e)
+    {
+        UpdateTreeRoot();
+    }
+
+    private void OnRootRemoved(object? sender, RootRemovedEventArgs e)
+    {
+        RemovePathFromSettings(e.RootPath);
+
+        if (e.IsRename)
+        {
+            SavePathToSettings(e.NewPath!, ExecutionMode.Script);
+        }
+    }
+
+    private void OnThemeChanged(object? sender, EventArgs e)
+    {
+        if (!string.IsNullOrWhiteSpace(SearchText))
+        {
+            RefreshFilteredItems();
+        }
+    }
+
+    private void OnExecutionProgressChanged(object? sender, ExecutionProgressEventArgs e)
+    {
+        if (!IsBusy) return;
+        if (string.IsNullOrWhiteSpace(e.Message)) return;
+        BusyMessage = e.Message;
+    }
+
+    private void UpdateTreeRoot()
+    {
+        TreeRoot.Clear();
+        foreach (var node in _orchestrator.TreeRoot)
+        {
+            TreeRoot.Add(node);
+        }
+
+        RefreshFilteredItems();
+    }
+
+    private void RefreshFilteredItems()
+    {
+        FilteredItems.Clear();
+
+        if (string.IsNullOrWhiteSpace(SearchText))
+        {
+            foreach (var node in TreeRoot)
+            {
+                SetAllVisible(node, true);
+                ClearHighlightsRecursive([node]);
+                FilteredItems.Add(node);
+            }
+        }
+        else
+        {
+            PerformSearch();
+        }
+    }
+
+    private void PerformSearch()
+    {
+        FilteredItems.Clear();
+
+        foreach (var node in TreeRoot)
+        {
+            if (FilterNodeRecursive(node, SearchText))
+            {
+                FilteredItems.Add(node);
+            }
+        }
+    }
+
+    private static bool FilterNodeRecursive(BaseNode node, string searchText)
+    {
+        var searchLower = searchText.ToLowerInvariant();
+        var nodeTextLower = node.Name.ToLowerInvariant();
+
+        var currentMatches = nodeTextLower.Contains(searchLower);
+
+        if (currentMatches)
+        {
+            var index = nodeTextLower.IndexOf(searchLower, StringComparison.Ordinal);
+            var isDarkTheme = ThemeManager.Current.ActualApplicationTheme == AppTheme.Dark;
+            node.HighlightRange = new HighlightRange(index, index + searchText.Length)
+            {
+                DarkSkin = isDarkTheme
+            };
+            node.IsExpanded = true;
+            node.IsVisible = true;
+        }
+        else
+        {
+            node.HighlightRange = null;
+        }
+
+        var childrenMatch = false;
+        foreach (var child in node.Children)
+        {
+            if (!FilterNodeRecursive(child, searchText)) continue;
+            childrenMatch = true;
+            node.IsExpanded = true;
+        }
+
+        var shouldBeVisible = currentMatches || childrenMatch;
+        node.IsVisible = shouldBeVisible;
+
+        return shouldBeVisible;
+    }
+
+    private static void SetAllVisible(BaseNode node, bool visible)
+    {
+        node.IsVisible = visible;
+        foreach (var child in node.Children)
+        {
+            SetAllVisible(child, visible);
+        }
+    }
+
+    private static void ClearHighlightsRecursive(IEnumerable<BaseNode> nodes)
+    {
+        foreach (var node in nodes)
+        {
+            node.HighlightRange = null;
+            if (node.Children.Any())
+            {
+                ClearHighlightsRecursive(node.Children);
+            }
+        }
+    }
+
+    private static void ExpandNodeRecursive(BaseNode node)
+    {
+        node.IsExpanded = true;
+        foreach (var child in node.Children)
+        {
+            ExpandNodeRecursive(child);
+        }
+    }
+
+    private static void CollapseNodeRecursive(BaseNode node)
+    {
+        node.IsExpanded = false;
+        foreach (var child in node.Children)
+        {
+            CollapseNodeRecursive(child);
+        }
+    }
+
+    partial void OnSelectedNodeChanged(BaseNode? value)
+    {
+        ExecuteCommand.NotifyCanExecuteChanged();
+        RemoveCommand.NotifyCanExecuteChanged();
+        OpenLocationCommand.NotifyCanExecuteChanged();
+    }
+
+    partial void OnIsBusyChanged(bool value)
+    {
+        ExecuteCommand.NotifyCanExecuteChanged();
+    }
+
+    partial void OnSearchTextChanged(string value)
+    {
+        _searchDebounceTimer.Stop();
+        _searchDebounceTimer.Start();
+    }
+
+    #region Settings Helpers
+
+    private void SavePathToSettings(string path, ExecutionMode mode)
+    {
+        var config = _settingsService.CodeExecuteConfig;
+
+        var list = mode switch
+        {
+            ExecutionMode.Assembly => config.DotnetAssemblyPaths,
+            ExecutionMode.Script => config.ScriptFolderPaths,
+            _ => throw new ArgumentOutOfRangeException(nameof(mode), mode, null)
+        };
+
+        if (!list.Contains(path, StringComparer.OrdinalIgnoreCase))
+        {
+            list.Add(path);
+        }
+    }
+
+    private void RemovePathFromSettings(string path)
+    {
+        var config = _settingsService.CodeExecuteConfig;
+        config.DotnetAssemblyPaths.RemoveAll(p => p.Equals(path, StringComparison.OrdinalIgnoreCase));
+        config.ScriptFolderPaths.RemoveAll(p => p.Equals(path, StringComparison.OrdinalIgnoreCase));
+    }
+
+    private void ClearAllPathsFromSettings()
+    {
+        var config = _settingsService.CodeExecuteConfig;
+        config.DotnetAssemblyPaths.Clear();
+        config.ScriptFolderPaths.Clear();
+    }
+
+    #endregion
+
+    private BusyScope BeginBusy(string message, ExecutionMode? providerType = null)
+    {
+        _busyDepth++;
+        IsBusy = true;
+        BusyMessage = message;
+        BusyProviderType = providerType;
+        return new BusyScope(this);
+    }
+
+    private void EndBusy()
+    {
+        _busyDepth = Math.Max(0, _busyDepth - 1);
+        if (_busyDepth != 0) return;
+
+        IsBusy = false;
+        BusyMessage = string.Empty;
+        BusyProviderType = null;
+    }
+
+    private sealed class BusyScope(ExecutionViewModel owner) : IDisposable
+    {
+        private ExecutionViewModel? _owner = owner;
+
+        public void Dispose()
+        {
+            _owner?.EndBusy();
+            _owner = null;
+        }
+    }
+}
