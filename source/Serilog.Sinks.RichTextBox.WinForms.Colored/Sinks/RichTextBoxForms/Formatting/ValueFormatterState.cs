@@ -20,24 +20,14 @@ using Serilog.Sinks.RichTextBoxForms.Rtf;
 
 namespace Serilog.Sinks.RichTextBoxForms.Formatting;
 
-public readonly struct ValueFormatterState
+public readonly struct ValueFormatterState(IRtfCanvas canvas, string format, bool isLiteral, int indentLevel = 0, int spacesPerIndent = 2, bool isTopLevel = true)
 {
-    public ValueFormatterState(IRtfCanvas canvas, string format, bool isLiteral, int indentLevel = 0, int spacesPerIndent = 2, bool isTopLevel = true)
-    {
-        Canvas = canvas;
-        Format = format;
-        IsLiteral = isLiteral;
-        IndentLevel = indentLevel;
-        SpacesPerIndent = spacesPerIndent;
-        IsTopLevel = isTopLevel;
-    }
-
-    public string Format { get; }
-    public bool IsLiteral { get; }
-    public IRtfCanvas Canvas { get; }
-    public int IndentLevel { get; }
-    public int SpacesPerIndent { get; }
-    public bool IsTopLevel { get; }
+    public string Format { get; } = format;
+    public bool IsLiteral { get; } = isLiteral;
+    public IRtfCanvas Canvas { get; } = canvas;
+    public int IndentLevel { get; } = indentLevel;
+    public int SpacesPerIndent { get; } = spacesPerIndent;
+    public bool IsTopLevel { get; } = isTopLevel;
 
     public ValueFormatterState Next(string? format = null)
     {

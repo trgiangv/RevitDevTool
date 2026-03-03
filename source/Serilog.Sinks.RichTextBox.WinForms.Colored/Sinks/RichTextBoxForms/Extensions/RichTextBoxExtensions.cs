@@ -17,9 +17,12 @@
 #endregion
 
 using System.Runtime.InteropServices;
+// ReSharper disable InconsistentNaming
+// ReSharper disable ConvertToExtensionBlock
 
 namespace Serilog.Sinks.RichTextBoxForms.Extensions;
 
+// ReSharper disable once PartialTypeWithSinglePart
 public static partial class RichTextBoxExtensions
 {
     [StructLayout(LayoutKind.Sequential)]
@@ -34,31 +37,50 @@ public static partial class RichTextBoxExtensions
     private const int EM_SETSCROLLPOS = WM_USER + 222;
     private const int WM_VSCROLL = 277;
     private const int SB_PAGEBOTTOM = 7;
+    private const int DWMWA_USE_IMMERSIVE_DARK_MODE = 20;
 
 #if NET7_0_OR_GREATER
-        // Use source-generated P/Invoke for newer target frameworks to avoid the startup
-        // penalty of runtime marshalling stub generation.
-        [LibraryImport("user32.dll", EntryPoint = "SendMessageW")]
-        private static partial IntPtr SendMessage(IntPtr hWnd, int wMsg, IntPtr wParam, IntPtr lParam);
+    [LibraryImport("user32.dll", EntryPoint = "SendMessageW")]
+    private static partial IntPtr SendMessage(IntPtr hWnd, int wMsg, IntPtr wParam, IntPtr lParam);
 
-        [LibraryImport("user32.dll", EntryPoint = "SendMessageW")]
-        private static partial IntPtr SendMessage(IntPtr hWnd, int wMsg, int wParam, ref Point lParam);
+    [LibraryImport("user32.dll", EntryPoint = "SendMessageW")]
+    private static partial IntPtr SendMessage(IntPtr hWnd, int wMsg, int wParam, ref Point lParam);
+
+    [LibraryImport("dwmapi.dll")]
+    private static partial int DwmSetWindowAttribute(IntPtr hwnd, int attr, ref int attrValue, int attrSize);
+
+    [LibraryImport("uxtheme.dll", StringMarshalling = StringMarshalling.Utf16)]
+    private static partial int SetWindowTheme(IntPtr hWnd, string? pszSubAppName, string? pszSubIdList);
 #else
-    // Fallback for older target frameworks that do not support source-generated P/Invokes.
     [DllImport("user32.dll", CharSet = CharSet.Auto)]
     private static extern IntPtr SendMessage(IntPtr hWnd, int wMsg, IntPtr wParam, IntPtr lParam);
 
     [DllImport("user32.dll", CharSet = CharSet.Auto)]
     private static extern IntPtr SendMessage(IntPtr hWnd, int wMsg, int wParam, ref Point lParam);
+    
+    [DllImport("dwmapi.dll", CharSet = CharSet.Unicode, SetLastError = true)]
+    private static extern int DwmSetWindowAttribute(IntPtr hwnd, int attr, ref int attrValue, int attrSize);
+
+    [DllImport("uxtheme.dll", CharSet = CharSet.Unicode, SetLastError = true)]
+    private static extern int SetWindowTheme(IntPtr hWnd, string? pszSubAppName, string? pszSubIdList);
 #endif
 
-    public static void SetRtf(this RichTextBox richTextBox, string rtf, bool autoScroll, CancellationToken token)
+    internal static void SetTheme(this RichTextBox richTextBox, bool isDark)
+    {
+        var hwnd = richTextBox.Handle;
+        if (hwnd == IntPtr.Zero) return;
+        _ = SetWindowTheme(hwnd, isDark ? "DarkMode_Explorer" : "Explorer", null);
+        var useDarkMode = isDark ? 1 : 0;
+        _ = DwmSetWindowAttribute(hwnd, DWMWA_USE_IMMERSIVE_DARK_MODE, ref useDarkMode, sizeof(int));
+    }
+
+    internal static void SetRtf(this RichTextBox richTextBox, string rtf, bool autoScroll, CancellationToken token)
     {
         //Wait for richTextBox.Handle to be created
         if (!richTextBox.IsHandleCreated)
         {
             var mre = new ManualResetEventSlim();
-            EventHandler eh = (sender, args) => mre.Set();
+            EventHandler eh = (_, _) => mre.Set();
             richTextBox.HandleCreated += eh;
             try
             {

@@ -45,7 +45,7 @@ Configure the logger to use the sink using the `RichTextBox` extension method:
 
 ```csharp
 Log.Logger = new LoggerConfiguration()
-    .WriteTo.RichTextBox(richTextBox1, theme: ThemePresets.Literate)
+    .WriteTo.RichTextBox(richTextBox1, new RichTextBoxSinkOptions { Theme = ThemePresets.Literate })
     .CreateLogger();
 
 Log.Information("Hello, world!");
@@ -64,6 +64,7 @@ See the [Extension Method](Serilog.Sinks.RichTextBox.WinForms.Colored/RichTextBo
 | `formatProvider`  | Optional culture-specific or custom formatting provider used when rendering scalar values; `null` for the invariant culture. | `CultureInfo.InvariantCulture`                                       |
 | `prettyPrintJson` | When `true`, formats JSON values with indentation and line breaks for better readability.                                    | `false`                                                              |
 | `spacesPerIndent` | Number of spaces per indentation level when pretty printing JSON.                                                            | `2`                                                                  |
+| `tokenDetector`   | Optional token detection strategy used for token extraction, URI generation, and URI parsing.                            | `NullTokenDetector.Instance`                                         |
 
 ## Themes
 

@@ -18,12 +18,7 @@
 
 namespace Serilog.Sinks.RichTextBoxForms.Tokens;
 
-public sealed class DetectedTokenBatch
+public sealed class DetectedTokenBatch(IReadOnlyList<DetectedToken> tokens)
 {
-    public DetectedTokenBatch(IReadOnlyList<DetectedToken> tokens)
-    {
-        Tokens = tokens;
-    }
-
-    public IReadOnlyList<DetectedToken> Tokens { get; }
+    public IReadOnlyList<DetectedToken> Tokens { get; } = tokens;
 }

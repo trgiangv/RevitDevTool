@@ -20,20 +20,11 @@ using Serilog.Sinks.RichTextBoxForms.Rtf;
 
 namespace Serilog.Sinks.RichTextBoxForms.Themes;
 
-public class Theme
+public class Theme(Style defaultStyle, Dictionary<StyleToken, Style> styles)
 {
-    private readonly Dictionary<StyleToken, Style> _styles;
+    public Style DefaultStyle { get; } = defaultStyle;
 
-    public Theme(Style defaultStyle, Dictionary<StyleToken, Style> styles)
-    {
-        DefaultStyle = defaultStyle;
-        IsDarkTheme = defaultStyle.Background.GetBrightness() < 0.5f;
-        _styles = styles;
-    }
-
-    public Style DefaultStyle { get; }
-
-    public bool IsDarkTheme { get; }
+    public bool IsDarkTheme { get; } = defaultStyle.Background.GetBrightness() < 0.5f;
 
     public IEnumerable<Color> Colors
     {
@@ -42,7 +33,7 @@ public class Theme
             yield return DefaultStyle.Foreground;
             yield return DefaultStyle.Background;
 
-            foreach (var style in _styles.Values)
+            foreach (var style in styles.Values)
             {
                 yield return style.Foreground;
                 yield return style.Background;
@@ -66,6 +57,6 @@ public class Theme
 
     public Style GetStyle(StyleToken styleToken)
     {
-        return _styles[styleToken];
+        return styles[styleToken];
     }
 }

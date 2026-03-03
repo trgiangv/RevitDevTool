@@ -25,18 +25,9 @@ using Serilog.Sinks.RichTextBoxForms.Tokens;
 
 namespace Serilog.Sinks.RichTextBoxForms.Rendering;
 
-public class MessageTemplateRenderer
+public class MessageTemplateRenderer(RichTextBoxSinkOptions options, ValueFormatter valueFormatter, bool isLiteral)
 {
-    private readonly bool _isLiteral;
-    private readonly RichTextBoxSinkOptions _options;
-    private readonly ValueFormatter _valueFormatter;
-
-    public MessageTemplateRenderer(RichTextBoxSinkOptions options, ValueFormatter valueFormatter, bool isLiteral)
-    {
-        _options = options ?? throw new ArgumentNullException(nameof(options));
-        _valueFormatter = valueFormatter;
-        _isLiteral = isLiteral;
-    }
+    private readonly RichTextBoxSinkOptions _options = options ?? throw new ArgumentNullException(nameof(options));
 
     public void Render(MessageTemplate template, IReadOnlyDictionary<string, LogEventPropertyValue> properties, IRtfCanvas canvas)
     {
@@ -61,11 +52,11 @@ public class MessageTemplateRenderer
             return;
         }
 
-        RenderValue(_valueFormatter, propertyValue, canvas, propertyToken.Format ?? "");
+        RenderValue(propertyValue, canvas, propertyToken.Format ?? "");
     }
 
-    private void RenderValue(ValueFormatter valueFormatter, LogEventPropertyValue propertyValue, IRtfCanvas canvas, string format)
+    private void RenderValue(LogEventPropertyValue propertyValue, IRtfCanvas canvas, string format)
     {
-        valueFormatter.Format(propertyValue, canvas, format, _isLiteral);
+        valueFormatter.Format(propertyValue, canvas, format, isLiteral);
     }
 }

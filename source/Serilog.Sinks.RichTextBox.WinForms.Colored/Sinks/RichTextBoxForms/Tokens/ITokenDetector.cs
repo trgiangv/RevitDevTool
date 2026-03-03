@@ -1,4 +1,4 @@
-﻿#region Copyright 2025 Simon Vonhoff & Contributors
+#region Copyright 2025 Simon Vonhoff & Contributors
 
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -17,15 +17,20 @@
 #endregion
 
 using Serilog.Events;
-using Serilog.Sinks.RichTextBoxForms.Rtf;
-using Serilog.Sinks.RichTextBoxForms.Themes;
 
-namespace Serilog.Sinks.RichTextBoxForms.Rendering;
+namespace Serilog.Sinks.RichTextBoxForms.Tokens;
 
-public class TextTokenRenderer(Theme theme, string text) : ITokenRenderer
+public interface ITokenDetector
 {
-    public void Render(LogEvent logEvent, IRtfCanvas canvas)
-    {
-        theme.Render(canvas, StyleToken.TertiaryText, text);
-    }
+    bool TryCreateToken(object? rawValue, out DetectedToken token);
+
+    bool TryCreateTokenFromString(string rawValue, out DetectedToken token);
+
+    bool TryBuildUri(DetectedToken token, out string uri);
+
+    bool TryParseUri(string uriText, out DetectedToken token);
+
+    IReadOnlyList<DetectedToken> Extract(LogEvent logEvent);
+
+    string BuildUniqueKey(DetectedToken token);
 }

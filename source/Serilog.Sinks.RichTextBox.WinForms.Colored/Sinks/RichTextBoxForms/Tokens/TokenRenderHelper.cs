@@ -33,8 +33,8 @@ internal static class TokenRenderHelper
             return;
         }
 
-        if (TryCreateToken(rawValue, renderedText, out var token) &&
-            RevitTokenParser.TryBuildUri(token, out var uri))
+        if (options.TokenDetector.TryCreateToken(rawValue, out var token) &&
+            options.TokenDetector.TryBuildUri(token, out var uri))
         {
             AppendStyledHyperlink(canvas, options.Theme, LinkStyleToken, renderedText, uri);
             return;
@@ -51,42 +51,14 @@ internal static class TokenRenderHelper
             return;
         }
 
-        if (RevitTokenParser.TryParseTokenString(value, out var kind, out var normalized))
+        if (options.TokenDetector.TryCreateTokenFromString(value, out var token) &&
+            options.TokenDetector.TryBuildUri(token, out var uri))
         {
-            var token = new DetectedToken(kind, value, normalized, value);
-            if (RevitTokenParser.TryBuildUri(token, out var uri))
-            {
-                AppendStyledHyperlink(canvas, options.Theme, LinkStyleToken, value, uri);
-                return;
-            }
+            AppendStyledHyperlink(canvas, options.Theme, LinkStyleToken, value, uri);
+            return;
         }
 
         options.Theme.Render(canvas, styleToken, displayText);
-    }
-
-    private static bool TryCreateToken(object? rawValue, string displayText, out DetectedToken? token)
-    {
-        if (rawValue is null)
-        {
-            token = null;
-            return false;
-        }
-
-        if (RevitTokenParser.TryParseElementIdObject(rawValue, out var elementId))
-        {
-            token = new DetectedToken(RevitTokenKind.ElementId, elementId, elementId, displayText);
-            return true;
-        }
-
-        if (rawValue is string str &&
-            RevitTokenParser.TryParseTokenString(str, out var kind, out var normalized))
-        {
-            token = new DetectedToken(kind, str, normalized, displayText);
-            return true;
-        }
-
-        token = null;
-        return false;
     }
 
     private static void AppendStyledHyperlink(IRtfCanvas canvas, Theme theme, StyleToken styleToken, string displayText, string uri)

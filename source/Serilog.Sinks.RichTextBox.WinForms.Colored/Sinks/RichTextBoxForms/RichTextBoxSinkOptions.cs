@@ -16,6 +16,8 @@
 
 #endregion
 
+using Serilog.Core;
+using Serilog.Events;
 using Serilog.Sinks.RichTextBoxForms.Themes;
 using Serilog.Sinks.RichTextBoxForms.Tokens;
 using System.Globalization;
@@ -25,54 +27,11 @@ namespace Serilog.Sinks.RichTextBoxForms;
 public class RichTextBoxSinkOptions
 {
     private const string DefaultOutputTemplate = "[{Timestamp:HH:mm:ss} {Level:u3}] {Message:lj}{NewLine}{Exception}";
-    private int _maxLogLines;
-    private int _spacesPerIndent;
-
-    /// <summary>
-    /// Creates a new collection of options that control the behavior and appearance of a
-    /// <see cref="RichTextBoxSink"/> instance.
-    /// </summary>
-    /// <param name="theme">The color theme applied when rendering individual message tokens.</param>
-    /// <param name="autoScroll">When <c>true</c> (default) the target control scrolls automatically to the most recent log line.</param>
-    /// <param name="maxLogLines">Maximum number of log events retained in the in-memory circular buffer and rendered in the control.</param>
-    /// <param name="outputTemplate">Serilog output template that controls textual formatting of each log event.</param>
-    /// <param name="formatProvider">Optional culture-specific or custom formatting provider used when rendering scalar values; <c>null</c> for the invariant culture.</param>
-    /// <param name="prettyPrintJson">When <c>true</c>, formats JSON values with indentation and line breaks for better readability. Defaults to <c>false</c>.</param>
-    /// <param name="spacesPerIndent">Number of spaces per indentation level when pretty printing JSON. Defaults to 2.</param>
-    public RichTextBoxSinkOptions(
-        Theme theme,
-        bool autoScroll = true,
-        int maxLogLines = 256,
-        string outputTemplate = DefaultOutputTemplate,
-        IFormatProvider? formatProvider = null,
-        bool prettyPrintJson = false,
-        int spacesPerIndent = 2,
-        bool enableTokenLinks = true,
-        bool enableAutoTokenDetection = true,
-        Action<DetectedTokenBatch>? onTokensDetected = null,
-        Action<DetectedToken>? onTokenClicked = null)
-    {
-        AutoScroll = autoScroll;
-        Theme = theme;
-        MaxLogLines = maxLogLines;
-        OutputTemplate = outputTemplate;
-        FormatProvider = formatProvider ?? CultureInfo.InvariantCulture;
-        PrettyPrintJson = prettyPrintJson;
-        SpacesPerIndent = spacesPerIndent;
-        EnableTokenLinks = enableTokenLinks;
-        EnableAutoTokenDetection = enableAutoTokenDetection;
-        OnTokensDetected = onTokensDetected;
-        OnTokenClicked = onTokenClicked;
-    }
-
-    public bool AutoScroll { get; set; }
-
-    public Theme Theme { get; internal set; }
 
     public int MaxLogLines
     {
-        get => _maxLogLines;
-        private set => _maxLogLines = value switch
+        get;
+        set => field = value switch
         {
             < 1 => 1,
             > 2048 => 2048,
@@ -80,16 +39,10 @@ public class RichTextBoxSinkOptions
         };
     }
 
-    public string OutputTemplate { get; }
-
-    public IFormatProvider? FormatProvider { get; }
-
-    public bool PrettyPrintJson { get; }
-
     public int SpacesPerIndent
     {
-        get => _spacesPerIndent;
-        private set => _spacesPerIndent = value switch
+        get;
+        private set => field = value switch
         {
             < 0 => 0,
             > 16 => 16,
@@ -97,11 +50,67 @@ public class RichTextBoxSinkOptions
         };
     }
 
-    public bool EnableTokenLinks { get; }
+    public string OutputTemplate
+    {
+        get;
+        set => field = string.IsNullOrWhiteSpace(value) ? DefaultOutputTemplate : value;
+    }
 
-    public bool EnableAutoTokenDetection { get; }
+    public RichTextBoxSinkOptions()
+    {
+        Theme = ThemePresets.EnhancedDark;
+        AutoScroll = true;
+        MaxLogLines = 256;
+        OutputTemplate = DefaultOutputTemplate;
+        FormatProvider = CultureInfo.InvariantCulture;
+        SpacesPerIndent = 2;
+        EnableTokenLinks = true;
+        MinimumLogEventLevel = LogEventLevel.Verbose;
+        TokenDetector = NullTokenDetector.Instance;
+    }
 
-    public Action<DetectedTokenBatch>? OnTokensDetected { get; }
+    private RichTextBoxSinkOptions(RichTextBoxSinkOptions source)
+    {
+        Theme = source.Theme;
+        AutoScroll = source.AutoScroll;
+        MaxLogLines = source.MaxLogLines;
+        OutputTemplate = source.OutputTemplate;
+        FormatProvider = source.FormatProvider ?? CultureInfo.InvariantCulture;
+        PrettyPrintJson = source.PrettyPrintJson;
+        SpacesPerIndent = source.SpacesPerIndent;
+        MinimumLogEventLevel = source.MinimumLogEventLevel;
+        LevelSwitch = source.LevelSwitch;
 
-    public Action<DetectedToken>? OnTokenClicked { get; }
+        var detector = source.TokenDetector;
+        var hasDetector = detector is not NullTokenDetector;
+        EnableTokenLinks = source is { EnableTokenLinks: true, OnTokenClicked: not null } && hasDetector;
+        OnTokensDetected = hasDetector ? source.OnTokensDetected : null;
+        OnTokenClicked = EnableTokenLinks ? source.OnTokenClicked : null;
+        TokenDetector = detector;
+    }
+
+    public bool AutoScroll { get; set; }
+
+    public Theme Theme { get; set; }
+
+    public IFormatProvider? FormatProvider { get; set; }
+
+    public LogEventLevel MinimumLogEventLevel { get; set; }
+
+    public LoggingLevelSwitch? LevelSwitch { get; }
+
+    public bool PrettyPrintJson { get; set; }
+
+    public bool EnableTokenLinks { get; set; }
+
+    public Action<DetectedTokenBatch>? OnTokensDetected { get; set; }
+
+    public Action<DetectedToken>? OnTokenClicked { get; set; }
+
+    public ITokenDetector TokenDetector { get; set; }
+
+    internal RichTextBoxSinkOptions ToRuntimeOptions()
+    {
+        return new RichTextBoxSinkOptions(this);
+    }
 }

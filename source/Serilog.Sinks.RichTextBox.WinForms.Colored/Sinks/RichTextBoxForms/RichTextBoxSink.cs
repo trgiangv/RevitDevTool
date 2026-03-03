@@ -20,7 +20,6 @@ using Serilog.Core;
 using Serilog.Events;
 using Serilog.Sinks.RichTextBoxForms.Collections;
 using Serilog.Sinks.RichTextBoxForms.Extensions;
-using Serilog.Sinks.RichTextBoxForms.Native;
 using Serilog.Sinks.RichTextBoxForms.Rendering;
 using Serilog.Sinks.RichTextBoxForms.Rtf;
 using Serilog.Sinks.RichTextBoxForms.Themes;
@@ -150,13 +149,13 @@ public class RichTextBoxSink : ILogEventSink, IDisposable
         if (_richTextBox.IsDisposed || _richTextBox.Disposing) return;
         _richTextBox.ForeColor = _options.Theme.DefaultStyle.Foreground;
         _richTextBox.BackColor = _options.Theme.DefaultStyle.Background;
-        NativeThemeHelper.ApplyNativeTheme(_richTextBox.Handle, _options.Theme.IsDarkTheme);
+        _richTextBox.SetTheme(_options.Theme.IsDarkTheme);
     }
 
     private void ApplyNativeThemeToControl()
     {
         if (_richTextBox.IsHandleCreated)
-            NativeThemeHelper.ApplyNativeTheme(_richTextBox.Handle, _options.Theme.IsDarkTheme);
+            _richTextBox.SetTheme(_options.Theme.IsDarkTheme);
         else
             _richTextBox.HandleCreated += OnHandleCreatedApplyTheme;
     }
@@ -164,7 +163,7 @@ public class RichTextBoxSink : ILogEventSink, IDisposable
     private void OnHandleCreatedApplyTheme(object? sender, EventArgs e)
     {
         _richTextBox.HandleCreated -= OnHandleCreatedApplyTheme;
-        NativeThemeHelper.ApplyNativeTheme(_richTextBox.Handle, _options.Theme.IsDarkTheme);
+        _richTextBox.SetTheme(_options.Theme.IsDarkTheme);
     }
 
     private void ProcessMessages(CancellationToken token)
@@ -236,7 +235,7 @@ public class RichTextBoxSink : ILogEventSink, IDisposable
 
     private void EmitDetectedTokens(List<LogEvent> snapshot)
     {
-        if (!_options.EnableAutoTokenDetection || _options.OnTokensDetected == null)
+        if (_options.OnTokensDetected == null)
         {
             return;
         }
@@ -244,10 +243,10 @@ public class RichTextBoxSink : ILogEventSink, IDisposable
         var uniqueTokens = new Dictionary<string, DetectedToken>(StringComparer.Ordinal);
         foreach (var logEvent in snapshot)
         {
-            var tokens = RevitTokenExtractor.Extract(logEvent);
+            var tokens = _options.TokenDetector.Extract(logEvent);
             foreach (var token in tokens)
             {
-                var key = RevitTokenParser.BuildUniqueKey(token);
+                var key = _options.TokenDetector.BuildUniqueKey(token);
                 if (!uniqueTokens.ContainsKey(key))
                 {
                     uniqueTokens.Add(key, token);
@@ -276,12 +275,10 @@ public class RichTextBoxSink : ILogEventSink, IDisposable
             return;
         }
 
-        if (!RevitTokenParser.TryParseUri(linkText, out var kind, out var normalizedValue))
+        if (!_options.TokenDetector.TryParseUri(linkText, out var token))
         {
             return;
         }
-
-        var token = new DetectedToken(kind, normalizedValue, normalizedValue, linkText);
         _options.OnTokenClicked(token);
     }
 }

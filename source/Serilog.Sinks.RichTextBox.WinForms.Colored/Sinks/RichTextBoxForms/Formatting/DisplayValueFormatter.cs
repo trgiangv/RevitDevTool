@@ -41,8 +41,8 @@ public class DisplayValueFormatter(RichTextBoxSinkOptions options) : ValueFormat
                 Options.Theme.Render(canvas, StyleToken.Null, "null");
                 return;
 
-            case not null when RevitTokenParser.TryParseElementIdObject(value, out var elementIdText):
-                TokenRenderHelper.RenderObject(canvas, Options, StyleToken.Number, value, elementIdText);
+            case not null when value is not string && Options.TokenDetector.TryCreateToken(value, out var token):
+                TokenRenderHelper.RenderObject(canvas, Options, StyleToken.Number, value, token.NormalizedValue);
                 return;
 
             case string text:

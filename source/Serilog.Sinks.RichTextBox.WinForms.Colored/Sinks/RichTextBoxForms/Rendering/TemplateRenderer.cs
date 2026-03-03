@@ -35,7 +35,7 @@ public class TemplateRenderer : ITokenRenderer
         }
 
         var template = new MessageTemplateParser().Parse(options.OutputTemplate);
-        _renderers = new List<ITokenRenderer>();
+        _renderers = [];
         foreach (var token in template.Tokens)
         {
             if (token is TextToken textToken)

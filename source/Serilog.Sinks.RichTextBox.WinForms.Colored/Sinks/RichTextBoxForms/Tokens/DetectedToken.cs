@@ -16,35 +16,10 @@
 
 #endregion
 
-using Serilog.Events;
-
 namespace Serilog.Sinks.RichTextBoxForms.Tokens;
 
-public sealed class DetectedToken
+public sealed class DetectedToken(string kind, string normalizedValue)
 {
-    public DetectedToken(
-        RevitTokenKind kind,
-        string rawValue,
-        string normalizedValue,
-        string displayText,
-        string? propertyPath = null,
-        DateTimeOffset? timestamp = null,
-        LogEventLevel? level = null)
-    {
-        Kind = kind;
-        RawValue = rawValue;
-        NormalizedValue = normalizedValue;
-        DisplayText = displayText;
-        PropertyPath = propertyPath;
-        Timestamp = timestamp;
-        Level = level;
-    }
-
-    public RevitTokenKind Kind { get; }
-    public string RawValue { get; }
-    public string NormalizedValue { get; }
-    public string DisplayText { get; }
-    public string? PropertyPath { get; }
-    public DateTimeOffset? Timestamp { get; }
-    public LogEventLevel? Level { get; }
+    public string Kind { get; } = kind;
+    public string NormalizedValue { get; } = normalizedValue;
 }

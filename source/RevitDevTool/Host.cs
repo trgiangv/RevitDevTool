@@ -2,7 +2,6 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using RevitDevTool.Controllers;
 using RevitDevTool.Logging;
-using RevitDevTool.Logging.Serilog;
 using RevitDevTool.Settings;
 using RevitDevTool.Settings.Options;
 using RevitDevTool.Utils;
@@ -19,8 +18,6 @@ using RevitDevTool.CodeExecute.Models;
 using RevitDevTool.CodeExecute.Providers;
 using RevitDevTool.CodeExecute.Providers.Dotnet;
 using RevitDevTool.CodeExecute.Services;
-using RevitDevTool.Logger.Contracts;
-using RevitDevTool.Logger.Serilog;
 
 namespace RevitDevTool;
 
@@ -68,9 +65,8 @@ public static class Host
         services.AddHostedService<HostBackgroundController>();
 
         // Serilog
-        services.AddSingleton<ILoggerFactory, SerilogLoggerFactory>();
-        services.AddSingleton<ITraceListenerFactory, SerilogTraceListenerFactory>();
-        services.AddSingleton<ILogOutputSink, SerilogRichTextBoxSink>();
+        services.AddSingleton<LoggerFactory>();
+        services.AddSingleton<ILoggingMonitor, RichTextBoxMonitor>();
 
         // Logging service
         services.AddSingleton<ILoggingService, LoggingService>();

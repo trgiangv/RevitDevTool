@@ -1,12 +1,12 @@
 using Autodesk.Revit.UI.Events;
 using CommunityToolkit.Mvvm.Messaging;
-using Microsoft.Extensions.Logging;
 using RevitDevTool.Controllers;
 using RevitDevTool.Settings;
 using RevitDevTool.ViewModel.Messages;
 using System.Windows.Forms.Integration;
-using RevitDevTool.Logger.Contracts;
-using RevitDevTool.Logger.Listeners;
+using RevitDevTool.Logging;
+using RevitDevTool.Logging.Listeners;
+using Serilog.Events;
 
 namespace RevitDevTool.ViewModel;
 
@@ -23,18 +23,18 @@ public sealed partial class TraceLogViewModel : ObservableObject, IDisposable,
     private bool _isSubscribed;
     private bool _isClearing;
 
-    public WindowsFormsHost? LogTextBox => _loggingService.OutputSink?.GetHostControl() as WindowsFormsHost;
+    public WindowsFormsHost? LogTextBox => _loggingService.Monitor?.GetHostControl() as WindowsFormsHost;
 
     [ObservableProperty]
     private bool _isStarted;
 
     [ObservableProperty]
-    private LogLevel _logLevel = LogLevel.Debug;
+    private LogEventLevel _logLevel = LogEventLevel.Debug;
 
     [ObservableProperty]
     private int _geometryCount;
 
-    partial void OnLogLevelChanged(LogLevel value)
+    partial void OnLogLevelChanged(LogEventLevel value)
     {
         _loggingService.SetMinimumLevel(value);
     }

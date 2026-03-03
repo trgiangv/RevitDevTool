@@ -22,15 +22,9 @@ using Serilog.Sinks.RichTextBoxForms.Themes;
 
 namespace Serilog.Sinks.RichTextBoxForms.Rendering;
 
-public class ExceptionTokenRenderer : ITokenRenderer
+public class ExceptionTokenRenderer(Theme theme) : ITokenRenderer
 {
     private const string StackFrameLinePrefix = "   ";
-    private readonly Theme _theme;
-
-    public ExceptionTokenRenderer(Theme theme)
-    {
-        _theme = theme;
-    }
 
     public void Render(LogEvent logEvent, IRtfCanvas canvas)
     {
@@ -43,7 +37,7 @@ public class ExceptionTokenRenderer : ITokenRenderer
         while (lines.ReadLine() is { } nextLine)
         {
             var style = nextLine.StartsWith(StackFrameLinePrefix) ? StyleToken.SecondaryText : StyleToken.Text;
-            _theme.Render(canvas, style, nextLine);
+            theme.Render(canvas, style, nextLine);
             canvas.AppendText(Environment.NewLine);
         }
     }

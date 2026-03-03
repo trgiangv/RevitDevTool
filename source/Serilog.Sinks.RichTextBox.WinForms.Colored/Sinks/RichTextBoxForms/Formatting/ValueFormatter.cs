@@ -24,16 +24,11 @@ using System.Text;
 
 namespace Serilog.Sinks.RichTextBoxForms.Formatting;
 
-public abstract class ValueFormatter : LogEventPropertyValueVisitor<ValueFormatterState, bool>
+public abstract class ValueFormatter(RichTextBoxSinkOptions options) : LogEventPropertyValueVisitor<ValueFormatterState, bool>
 {
     private readonly StringBuilder _formatBuilder = new();
 
-    protected ValueFormatter(RichTextBoxSinkOptions options)
-    {
-        Options = options;
-    }
-
-    protected RichTextBoxSinkOptions Options { get; }
+    protected RichTextBoxSinkOptions Options { get; } = options;
 
     public void Format(LogEventPropertyValue value, IRtfCanvas canvas, string format, bool isLiteral)
     {

@@ -26,29 +26,21 @@ using System.Text;
 
 namespace Serilog.Sinks.RichTextBoxForms.Rendering;
 
-public class EventPropertyTokenRenderer : ITokenRenderer
+public class EventPropertyTokenRenderer(PropertyToken token, RichTextBoxSinkOptions options) : ITokenRenderer
 {
-    private readonly RichTextBoxSinkOptions _options;
-    private readonly PropertyToken _token;
     private readonly StringBuilder _stringBuilder = new();
-
-    public EventPropertyTokenRenderer(PropertyToken token, RichTextBoxSinkOptions options)
-    {
-        _token = token;
-        _options = options;
-    }
 
     public void Render(LogEvent logEvent, IRtfCanvas canvas)
     {
-        if (!logEvent.Properties.TryGetValue(_token.PropertyName, out var propertyValue))
+        if (!logEvent.Properties.TryGetValue(token.PropertyName, out var propertyValue))
         {
             return;
         }
 
         if (propertyValue is ScalarValue { Value: string literalString })
         {
-            var cased = TextFormatter.Format(literalString, _token.Format);
-            TokenRenderHelper.RenderString(canvas, _options, StyleToken.SecondaryText, literalString, cased);
+            var cased = TextFormatter.Format(literalString, token.Format);
+            TokenRenderHelper.RenderString(canvas, options, StyleToken.SecondaryText, literalString, cased);
         }
         else
         {
@@ -56,12 +48,12 @@ public class EventPropertyTokenRenderer : ITokenRenderer
 
             using (var writer = new StringWriter(_stringBuilder))
             {
-                propertyValue.Render(writer, _token.Format, _options.FormatProvider);
+                propertyValue.Render(writer, token.Format, options.FormatProvider);
             }
 
             var rendered = _stringBuilder.ToString();
             var raw = propertyValue is ScalarValue scalar ? scalar.Value : null;
-            TokenRenderHelper.RenderObject(canvas, _options, StyleToken.SecondaryText, raw, rendered);
+            TokenRenderHelper.RenderObject(canvas, options, StyleToken.SecondaryText, raw, rendered);
         }
     }
 }

@@ -48,9 +48,6 @@
         <!--Ioc-->
         <PackageReference Include="Microsoft.Extensions.Hosting"/>
 
-        <!--Ipc-->
-        <PackageReference Include="H.Pipes" />
-
         <!-- Utils -->
         <PackageReference Include="JetBrains.Annotations"/>
         <PackageReference Include="PolySharp" PrivateAssets="All" IncludeAssets="runtime; build; native; contentfiles; analyzers; buildtransitive"/>
@@ -67,8 +64,6 @@
     
     <ItemGroup>
         <ProjectReference Include="..\PythonNetStubGenerator\PythonNetStubGenerator.csproj" />
-        <ProjectReference Include="..\RevitDevTool.Engine\RevitDevTool.Engine.csproj" />
-        <ProjectReference Include="..\RevitDevTool.Logger\RevitDevTool.Logger.csproj" />
         <ProjectReference Include="..\Serilog.Sinks.RichTextBox.WinForms.Colored\Serilog.Sinks.RichTextBox.WinForms.Colored.csproj" />
     </ItemGroup>
 

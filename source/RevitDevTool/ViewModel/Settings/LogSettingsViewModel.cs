@@ -1,15 +1,14 @@
 using CommunityToolkit.Mvvm.Messaging;
-using Microsoft.Extensions.Logging;
-using RevitDevTool.Logger.Enums;
-using RevitDevTool.Logging;
 using RevitDevTool.Settings;
 using RevitDevTool.Utils;
 using RevitDevTool.ViewModel.Messages;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Diagnostics;
-using RevitDevTool.Logger.Contracts;
-using RevitDevTool.Logger.Listeners;
+using RevitDevTool.Logging;
+using RevitDevTool.Logging.Enums;
+using Serilog;
+using Serilog.Events;
 
 // ReSharper disable UnusedParameterInPartialMethod
 
@@ -21,8 +20,8 @@ public partial class LogSettingsViewModel : ObservableObject, IDataErrorInfo, IR
     private readonly ILoggingService _loggingService;
     private readonly IMessenger _messenger;
 
-    public static LogLevel[] LogLevels { get; } = Enum.GetValues(typeof(LogLevel)).Cast<LogLevel>().ToArray();
-    public static LogSaveFormat[] LogSaveFormats { get; } = Enum.GetValues(typeof(LogSaveFormat)).Cast<LogSaveFormat>().ToArray();
+    public static LogEventLevel[] LogLevels { get; } = Enum.GetValues(typeof(LogEventLevel)).Cast<LogEventLevel>().ToArray();
+    public static SaveFormat[] LogSaveFormats { get; } = Enum.GetValues(typeof(SaveFormat)).Cast<SaveFormat>().ToArray();
     public static RollingInterval[] LogTimeIntervals { get; } = Enum.GetValues(typeof(RollingInterval)).Cast<RollingInterval>().ToArray();
     public static SourceLevels[] SourceLevels { get; } = Enum.GetValues(typeof(SourceLevels)).Cast<SourceLevels>().ToArray();
     public static RevitEnricher[] AvailableRevitEnrichers { get; } =
@@ -36,7 +35,7 @@ public partial class LogSettingsViewModel : ObservableObject, IDataErrorInfo, IR
         RevitEnricher.RevitDocumentModelPath
     ];
 
-    [ObservableProperty] private LogLevel _logLevel;
+    [ObservableProperty] private LogEventLevel _logLevel;
     [ObservableProperty] private bool _enablePrettyJson;
     [ObservableProperty] private string _informationKeywords = string.Empty;
     [ObservableProperty] private string _warningKeywords = string.Empty;
@@ -45,7 +44,7 @@ public partial class LogSettingsViewModel : ObservableObject, IDataErrorInfo, IR
     [ObservableProperty] private bool _restartRequired;
     [ObservableProperty] private bool _isSaveLogEnabled;
     [ObservableProperty] private bool _useExternalFileOnly;
-    [ObservableProperty] private LogSaveFormat _saveFormat;
+    [ObservableProperty] private SaveFormat _saveFormat;
     [ObservableProperty] private bool _includeStackTrace;
     [ObservableProperty] private SourceLevels _wpfTraceLevel;
     [ObservableProperty] private bool _includeWpfTrace;
@@ -82,7 +81,7 @@ public partial class LogSettingsViewModel : ObservableObject, IDataErrorInfo, IR
         _ => string.Empty
     };
 
-    partial void OnLogLevelChanged(LogLevel value)
+    partial void OnLogLevelChanged(LogEventLevel value)
     {
         _settingsService.LogConfig.LogLevel = value;
         _loggingService.SetMinimumLevel(value);
@@ -94,7 +93,7 @@ public partial class LogSettingsViewModel : ObservableObject, IDataErrorInfo, IR
         UpdateHasPendingChanges();
     }
     partial void OnUseExternalFileOnlyChanged(bool value) => UpdateHasPendingChanges();
-    partial void OnSaveFormatChanged(LogSaveFormat value) => UpdateHasPendingChanges();
+    partial void OnSaveFormatChanged(SaveFormat value) => UpdateHasPendingChanges();
     partial void OnIncludeStackTraceChanged(bool value) => UpdateHasPendingChanges();
 
     partial void OnWpfTraceLevelChanged(SourceLevels value)
@@ -224,10 +223,10 @@ public partial class LogSettingsViewModel : ObservableObject, IDataErrorInfo, IR
     }
 
     private readonly record struct Snapshot(
-        LogLevel LogLevel,
+        LogEventLevel LogLevel,
         bool IsSaveLogEnabled,
         bool UseExternalFileOnly,
-        LogSaveFormat SaveFormat,
+        SaveFormat SaveFormat,
         bool IncludeStackTrace,
         int StackTraceDepth,
         bool IncludeWpfTrace,
