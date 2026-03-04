@@ -32,6 +32,7 @@
         <!--UI-->
         <PackageReference Include="CommunityToolkit.Mvvm"/>
         <PackageReference Include="MahApps.Metro"/>
+        <PackageReference Include="Microsoft.Web.WebView2" Condition="'$(RevitVersion)' == '2022' OR '$(RevitVersion)' == '2023'"/>
 
         <!--Python-->
         <PackageReference Include="pythonnet"/>

@@ -28,6 +28,7 @@
         <!--UI-->
         <PackageVersion Include="MahApps.Metro" Version="3.0.0-rc0529"/>
         <PackageVersion Include="CommunityToolkit.Mvvm" Version="8.4.0"/>
+        <PackageVersion Include="Microsoft.Web.WebView2" Version="1.0.3800.47"/>
         <!--Build Tools-->
         <PackageVersion Include="ILRepack" Version="2.0.41"/>
         <PackageVersion Include="Nuke.Common" Version="9.0.4"/>
