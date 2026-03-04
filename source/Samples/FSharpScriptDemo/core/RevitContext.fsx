@@ -1,5 +1,5 @@
-﻿#r "C:/Program Files/Autodesk/Revit 2024/RevitAPI.dll"
-#r "C:/Program Files/Autodesk/Revit 2024/RevitAPIUI.dll"
+﻿#r "C:/Program Files/Autodesk/Revit 2025/RevitAPI.dll"
+#r "C:/Program Files/Autodesk/Revit 2025/RevitAPIUI.dll"
 
 namespace Demo
 

@@ -56,7 +56,7 @@ internal static class FSharpCompilationCache
                 Debug.WriteLine($"[FSharpCache] Miss (first compile) for '{Path.GetFileName(canonicalPath)}'");
             }
 
-            var resolution = await FSharpNugetResolver.ResolveAsync(canonicalPath, graph, progress, ct).ConfigureAwait(false);
+            var resolution = await FSharpDependencyResolver.ResolveAsync(canonicalPath, graph, progress, ct).ConfigureAwait(false);
             progress?.Report($"Compiling {scriptName}...");
 
             var result = FSharpExecutor.CreateSessionAndEvaluate(resolution.ScriptPath, resolution.References);

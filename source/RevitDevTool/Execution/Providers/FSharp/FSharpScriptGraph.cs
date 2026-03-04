@@ -8,20 +8,26 @@ namespace RevitDevTool.Execution.Providers.FSharp;
 internal static partial class FSharpScriptGraph
 {
     private const string NugetDirectivePattern = """^\s*#r\s+"nuget:\s*(?<id>[A-Za-z0-9._\-]+)(?:\s*,\s*(?<ver>[^"]+))?"\s*$""";
+    private const string RevitReferenceDirectivePattern = """^\s*#r\s+@?"(?<ref>[^"]*Revit\s+\d{4}[^"]*)"\s*$""";
     private const string LoadDirectivePattern = """
                                                 ^\s*#load\s+@?"(?<path>[^"]+)"
                                                 """;
     private const string VersionPrefixPattern = @"^[><=~^*\s]+";
 #if NETFRAMEWORK
     private static readonly Regex NugetDirectiveRx = new(NugetDirectivePattern, RegexOptions.IgnoreCase | RegexOptions.Compiled);
+    private static readonly Regex RevitReferenceDirectiveRx = new(RevitReferenceDirectivePattern, RegexOptions.IgnoreCase | RegexOptions.Compiled);
     private static readonly Regex LoadDirectiveRx = new(LoadDirectivePattern, RegexOptions.IgnoreCase | RegexOptions.Compiled);
     private static readonly Regex VersionPrefixRx = new(VersionPrefixPattern, RegexOptions.Compiled);
     private static Regex NugetDirectiveRegex() => NugetDirectiveRx;
+    private static Regex RevitReferenceDirectiveRegex() => RevitReferenceDirectiveRx;
     private static Regex LoadDirectiveRegex() => LoadDirectiveRx;
     private static Regex VersionPrefixRegex() => VersionPrefixRx;
 #else
     [GeneratedRegex(NugetDirectivePattern, RegexOptions.IgnoreCase)]
     private static partial Regex NugetDirectiveRegex();
+
+    [GeneratedRegex(RevitReferenceDirectivePattern, RegexOptions.IgnoreCase)]
+    private static partial Regex RevitReferenceDirectiveRegex();
 
     [GeneratedRegex(LoadDirectivePattern, RegexOptions.IgnoreCase)]
     private static partial Regex LoadDirectiveRegex();
@@ -37,6 +43,7 @@ internal static partial class FSharpScriptGraph
     {
         var nodes = new Dictionary<string, ScriptNode>(StringComparer.OrdinalIgnoreCase);
         var packages = new List<PackageDirective>();
+        var fileReferences = new List<ReferenceDirective>();
         var queue = new Queue<string>();
         queue.Enqueue(entryScript);
 
@@ -54,9 +61,10 @@ internal static partial class FSharpScriptGraph
                 queue.Enqueue(target);
 
             CollectPackageDirectives(filePath, node.Lines, packages);
+            CollectFileReferenceDirectives(filePath, node.Lines, fileReferences);
         }
 
-        return new LoadGraph(nodes, packages);
+        return new LoadGraph(nodes, packages, fileReferences);
     }
 
     public static string ComputeGraphHash(LoadGraph graph)
@@ -75,6 +83,7 @@ internal static partial class FSharpScriptGraph
     public static async Task<RewriteResult> RewriteGraphAsync(
         string entryScript,
         IReadOnlyDictionary<string, ScriptNode> nodes,
+        IReadOnlyDictionary<string, IReadOnlyDictionary<int, string>>? resolvedReferenceLines,
         CancellationToken ct)
     {
         var pathMap = BuildTempPathMap(entryScript, nodes.Keys);
@@ -84,7 +93,7 @@ internal static partial class FSharpScriptGraph
             ct.ThrowIfCancellationRequested();
             var rewritten = new List<string>(node.Lines.Length);
             for (var i = 0; i < node.Lines.Length; i++)
-                rewritten.Add(TransformLine(node, i, pathMap));
+                rewritten.Add(TransformLine(node, i, pathMap, resolvedReferenceLines));
 
             await WriteAllLinesAsync(pathMap[node.Path], rewritten, ct).ConfigureAwait(false);
         }
@@ -123,6 +132,21 @@ internal static partial class FSharpScriptGraph
         }
     }
 
+    private static void CollectFileReferenceDirectives(string filePath, IReadOnlyList<string> lines, ICollection<ReferenceDirective> target)
+    {
+        for (var i = 0; i < lines.Count; i++)
+        {
+            var line = lines[i];
+            if (NugetDirectiveRegex().IsMatch(line))
+                continue;
+
+            var match = RevitReferenceDirectiveRegex().Match(line);
+            if (!match.Success) continue;
+
+            target.Add(new ReferenceDirective(filePath, i + 1, match.Groups["ref"].Value.Trim()));
+        }
+    }
+
     private static Dictionary<string, string> BuildTempPathMap(string entryScript, IEnumerable<string> originalPaths)
     {
         var entryHash = ComputeShortHash(entryScript);
@@ -147,12 +171,20 @@ internal static partial class FSharpScriptGraph
         return BitConverter.ToString(bytes, 0, 8).Replace("-", "").ToLowerInvariant();
     }
 
-    private static string TransformLine(ScriptNode node, int index, IReadOnlyDictionary<string, string> pathMap)
+    private static string TransformLine(
+        ScriptNode node,
+        int index,
+        IReadOnlyDictionary<string, string> pathMap,
+        IReadOnlyDictionary<string, IReadOnlyDictionary<int, string>>? resolvedReferenceLines)
     {
         var line = node.Lines[index];
+        if (resolvedReferenceLines != null &&
+            resolvedReferenceLines.TryGetValue(node.Path, out var lineMap) &&
+            lineMap.TryGetValue(index + 1, out var resolvedPath))
+            return $"// #r \"{resolvedPath.Replace('\\', '/')}\"";
 
         if (NugetDirectiveRegex().IsMatch(line))
-            return $"// {line.Trim()} // resolved by FSharpNugetResolver";
+            return $"// {line.Trim()} // resolved by FSharpDependencyResolver";
 
         if (node.LoadTargets.TryGetValue(index, out var originalTarget) &&
             pathMap.TryGetValue(originalTarget, out var mappedTarget))
@@ -206,6 +238,10 @@ internal sealed class TempFileCollection(IEnumerable<string> files) : IDisposabl
 }
 
 internal readonly record struct PackageDirective(string FilePath, int LineNumber, string OriginalLine, string PackageId, string? Version);
+internal readonly record struct ReferenceDirective(string FilePath, int LineNumber, string Reference);
 internal readonly record struct ScriptNode(string Path, string[] Lines, IReadOnlyDictionary<int, string> LoadTargets);
-internal readonly record struct LoadGraph(IReadOnlyDictionary<string, ScriptNode> Nodes, IReadOnlyList<PackageDirective> Packages);
+internal readonly record struct LoadGraph(
+    IReadOnlyDictionary<string, ScriptNode> Nodes,
+    IReadOnlyList<PackageDirective> Packages,
+    IReadOnlyList<ReferenceDirective> FileReferences);
 internal readonly record struct RewriteResult(string EntryScriptPath, IDisposable Cleanup);
