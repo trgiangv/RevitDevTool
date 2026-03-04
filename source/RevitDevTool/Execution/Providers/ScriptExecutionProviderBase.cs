@@ -31,14 +31,14 @@ public sealed class ScriptExecutionProvider : IExecutionProvider
 
     public bool CanHandle(string path) => Directory.Exists(path);
 
-    public Task<IEnumerable<BaseNode>> DiscoverAsync(string path, CancellationToken cancellationToken = default)
+    public Task<IEnumerable<ExecutionNodeBase>> DiscoverAsync(string path, CancellationToken cancellationToken = default)
     {
         return Task.Run(() =>
         {
             if (!Directory.Exists(path))
             {
                 Trace.TraceWarning($"Invalid directory path: {path}");
-                return Enumerable.Empty<BaseNode>();
+                return Enumerable.Empty<ExecutionNodeBase>();
             }
 
             var rootNode = BuildFolderTree(path, path);
@@ -56,7 +56,7 @@ public sealed class ScriptExecutionProvider : IExecutionProvider
         return Directory.Exists(path);
     }
 
-    private BaseNode? BuildFolderTree(string rootPath, string currentPath)
+    private ExecutionNodeBase? BuildFolderTree(string rootPath, string currentPath)
     {
         if (ShouldSkipRootFolder(rootPath, currentPath))
         {
@@ -87,7 +87,7 @@ public sealed class ScriptExecutionProvider : IExecutionProvider
         return true;
     }
 
-    private static BaseNode CreateFolderNode(string rootPath, string currentPath)
+    private static ExecutionNodeBase CreateFolderNode(string rootPath, string currentPath)
     {
         var folderName = Path.GetFileName(currentPath);
         if (string.IsNullOrEmpty(folderName))
@@ -100,7 +100,7 @@ public sealed class ScriptExecutionProvider : IExecutionProvider
 
         if (isRoot)
         {
-            return new RootNode
+            return new ExecutionNodeRoot
             {
                 Id = folderId,
                 Name = folderName,
@@ -111,7 +111,7 @@ public sealed class ScriptExecutionProvider : IExecutionProvider
             };
         }
 
-        return new IntermediateNode
+        return new ExecutionNodeIntermediate
         {
             Id = folderId,
             Name = folderName,
@@ -121,7 +121,7 @@ public sealed class ScriptExecutionProvider : IExecutionProvider
         };
     }
 
-    private static void PopulateScripts(BaseNode folderNode, string currentPath, string rootPath)
+    private static void PopulateScripts(ExecutionNodeBase folder, string currentPath, string rootPath)
     {
         var scriptFiles = ScriptSearchPatterns
             .SelectMany(pattern => Directory.GetFiles(currentPath, pattern, SearchOption.TopDirectoryOnly))
@@ -131,18 +131,18 @@ public sealed class ScriptExecutionProvider : IExecutionProvider
         foreach (var scriptFile in scriptFiles)
         {
             var scriptNode = BuildScriptNode(scriptFile, rootPath);
-            folderNode.Children.Add(scriptNode);
+            folder.Children.Add(scriptNode);
         }
     }
 
-    private static ExecuteNode BuildScriptNode(string scriptPath, string rootPath)
+    private static ExecutionNode BuildScriptNode(string scriptPath, string rootPath)
     {
         var fileName = Path.GetFileName(scriptPath);
         var extension = Path.GetExtension(scriptPath);
 
         return extension.ToLowerInvariant() switch
         {
-            ".py" => new ExecuteNode
+            ".py" => new ExecutionNode
             {
                 Id = $"python://{scriptPath}",
                 Name = fileName,
@@ -152,7 +152,7 @@ public sealed class ScriptExecutionProvider : IExecutionProvider
                 NodeType = NodeType.Executable,
                 ExecutionStrategy = new PythonExecutionStrategy(scriptPath, rootPath)
             },
-            ".fsx" => new ExecuteNode
+            ".fsx" => new ExecutionNode
             {
                 Id = $"fsharp://{scriptPath}",
                 Name = fileName,
@@ -166,7 +166,7 @@ public sealed class ScriptExecutionProvider : IExecutionProvider
         };
     }
 
-    private void PopulateSubFolders(BaseNode folderNode, string rootPath, string currentPath)
+    private void PopulateSubFolders(ExecutionNodeBase folder, string rootPath, string currentPath)
     {
         var subFolders = Directory.GetDirectories(currentPath)
             .Where(d => !IsIgnoredFolder(Path.GetFileName(d)))
@@ -177,7 +177,7 @@ public sealed class ScriptExecutionProvider : IExecutionProvider
             var subFolderNode = BuildFolderTree(rootPath, subFolder);
             if (subFolderNode != null)
             {
-                folderNode.Children.Add(subFolderNode);
+                folder.Children.Add(subFolderNode);
             }
         }
     }

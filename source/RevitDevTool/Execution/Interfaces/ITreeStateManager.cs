@@ -12,7 +12,7 @@ public interface ITreeStateManager
     /// </summary>
     /// <param name="nodes">Root nodes of the tree</param>
     /// <returns>Captured state</returns>
-    TreeState CaptureState(IEnumerable<BaseNode> nodes);
+    TreeState CaptureState(IEnumerable<ExecutionNodeBase> nodes);
 
     /// <summary>
     /// Restore state to the tree
@@ -20,5 +20,5 @@ public interface ITreeStateManager
     /// <param name="nodes">Root nodes of the tree</param>
     /// <param name="state">State to restore</param>
     /// <param name="autoExpandNew">Whether to auto-expand new nodes not in the state</param>
-    void RestoreState(IEnumerable<BaseNode> nodes, TreeState state, bool autoExpandNew = false);
+    void RestoreState(IEnumerable<ExecutionNodeBase> nodes, TreeState state, bool autoExpandNew = false);
 }

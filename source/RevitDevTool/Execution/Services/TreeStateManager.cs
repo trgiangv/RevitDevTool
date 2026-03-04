@@ -7,21 +7,21 @@ namespace RevitDevTool.Execution.Services;
 /// </summary>
 public sealed class TreeStateManager : ITreeStateManager
 {
-    public TreeState CaptureState(IEnumerable<BaseNode> nodes)
+    public TreeState CaptureState(IEnumerable<ExecutionNodeBase> nodes)
     {
         var state = new TreeState();
         CaptureRecursive(nodes, state);
         return state;
     }
 
-    public void RestoreState(IEnumerable<BaseNode> nodes, TreeState state, bool autoExpandNew = false)
+    public void RestoreState(IEnumerable<ExecutionNodeBase> nodes, TreeState state, bool autoExpandNew = false)
     {
         RestoreRecursive(nodes, state, autoExpandNew);
     }
 
     #region Private Helpers
 
-    private static void CaptureRecursive(IEnumerable<BaseNode> nodes, TreeState state)
+    private static void CaptureRecursive(IEnumerable<ExecutionNodeBase> nodes, TreeState state)
     {
         foreach (var node in nodes)
         {
@@ -48,7 +48,7 @@ public sealed class TreeStateManager : ITreeStateManager
         }
     }
 
-    private static bool RestoreRecursive(IEnumerable<BaseNode> nodes, TreeState state, bool autoExpandNew)
+    private static bool RestoreRecursive(IEnumerable<ExecutionNodeBase> nodes, TreeState state, bool autoExpandNew)
     {
         var hasAnyNewDescendants = false;
 
@@ -69,7 +69,7 @@ public sealed class TreeStateManager : ITreeStateManager
         return hasAnyNewDescendants;
     }
 
-    private static void RestoreNodeProperties(BaseNode node, TreeState state, bool autoExpandNew, ref bool hasAnyNewDescendants)
+    private static void RestoreNodeProperties(ExecutionNodeBase node, TreeState state, bool autoExpandNew, ref bool hasAnyNewDescendants)
     {
         // Restore expand state
         if (state.ExpandedStates.TryGetValue(node.Id, out var isExpanded))
@@ -95,12 +95,12 @@ public sealed class TreeStateManager : ITreeStateManager
         }
     }
 
-    private static bool ShouldExpandNewNode(BaseNode node)
+    private static bool ShouldExpandNewNode(ExecutionNodeBase node)
     {
         return node is { NodeType: NodeType.Container, Children.Count: > 0 };
     }
 
-    private static void HandleAncestorExpansion(BaseNode node, bool hasNewDescendants, bool isNewNode, bool autoExpandNew)
+    private static void HandleAncestorExpansion(ExecutionNodeBase node, bool hasNewDescendants, bool isNewNode, bool autoExpandNew)
     {
         // If this container has new descendants anywhere in its subtree, force expand it
         // This ensures all ancestors of new nodes are expanded so user can see them

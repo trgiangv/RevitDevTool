@@ -11,7 +11,7 @@ public interface IExecutionOrchestrator
     /// <summary>
     /// Root nodes of the current tree
     /// </summary>
-    IEnumerable<BaseNode> TreeRoot { get; }
+    IEnumerable<ExecutionNodeBase> TreeRoot { get; }
 
     /// <summary>
     /// Event raised when tree changes (reload, add, remove)
@@ -57,7 +57,7 @@ public interface IExecutionOrchestrator
     /// </summary>
     /// <param name="node">Node to remove</param>
     /// <returns>Next sibling to select, or null</returns>
-    BaseNode? RemoveNode(BaseNode node);
+    ExecutionNodeBase? RemoveNode(ExecutionNodeBase node);
 
     /// <summary>
     /// Clear all nodes
@@ -69,7 +69,7 @@ public interface IExecutionOrchestrator
     /// </summary>
     /// <param name="node">Node to execute</param>
     /// <param name="cancellationToken">Cancellation token</param>
-    Task<ExecutionResult> ExecuteAsync(BaseNode node, CancellationToken cancellationToken = default);
+    Task<ExecutionResult> ExecuteAsync(ExecutionNodeBase node, CancellationToken cancellationToken = default);
 }
 
 public sealed class RootRemovedEventArgs(string rootPath, string? newPath = null) : EventArgs

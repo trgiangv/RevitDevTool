@@ -35,7 +35,7 @@ public interface IExecutionProvider
     /// <param name="path">Path to discover (file, folder, assembly, etc.)</param>
     /// <param name="cancellationToken">Cancellation token</param>
     /// <returns>Discovered nodes</returns>
-    Task<IEnumerable<BaseNode>> DiscoverAsync(string path, CancellationToken cancellationToken = default);
+    Task<IEnumerable<ExecutionNodeBase>> DiscoverAsync(string path, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Get file watch patterns for auto-reload

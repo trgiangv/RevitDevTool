@@ -14,11 +14,11 @@ public sealed class ExecutionOrchestrator : IExecutionOrchestrator, IDisposable
     private readonly IServiceProvider _serviceProvider;
     private readonly ITreeStateManager _stateManager;
     private readonly IFileWatcherService _fileWatcher;
-    private readonly ObservableCollection<BaseNode> _treeRoot = [];
+    private readonly ObservableCollection<ExecutionNodeBase> _treeRoot = [];
     private readonly SemaphoreSlim _reloadGate = new(1, 1);
-    private BaseNode? _lastExecutedNode;
+    private ExecutionNodeBase? _lastExecutedNode;
 
-    public IEnumerable<BaseNode> TreeRoot => _treeRoot;
+    public IEnumerable<ExecutionNodeBase> TreeRoot => _treeRoot;
 
     public event EventHandler? TreeChanged;
     public event EventHandler<RootRemovedEventArgs>? RootRemoved;
@@ -84,8 +84,8 @@ public sealed class ExecutionOrchestrator : IExecutionOrchestrator, IDisposable
 
             var state = _stateManager.CaptureState(_treeRoot);
             var previousExecutableIds = TreeNodeOperations.CollectExecutableIdSet(_treeRoot);
-            var currentRoots = _treeRoot.OfType<RootNode>().ToList();
-            var reloadedRoots = new List<RootNode>(currentRoots.Count);
+            var currentRoots = _treeRoot.OfType<ExecutionNodeRoot>().ToList();
+            var reloadedRoots = new List<ExecutionNodeRoot>(currentRoots.Count);
 
             var removedRootPaths = new List<string>();
 
@@ -126,7 +126,7 @@ public sealed class ExecutionOrchestrator : IExecutionOrchestrator, IDisposable
         }
     }
 
-    public BaseNode? RemoveNode(BaseNode node)
+    public ExecutionNodeBase? RemoveNode(ExecutionNodeBase node)
     {
         var result = TreeNodeOperations.RemoveNodeWithCascade(_treeRoot, node, rootPath => _fileWatcher.Unwatch(rootPath));
         if (result.Removed)
@@ -142,7 +142,7 @@ public sealed class ExecutionOrchestrator : IExecutionOrchestrator, IDisposable
         TreeChanged?.Invoke(this, EventArgs.Empty);
     }
 
-    public async Task<ExecutionResult> ExecuteAsync(BaseNode node, CancellationToken cancellationToken = default)
+    public async Task<ExecutionResult> ExecuteAsync(ExecutionNodeBase node, CancellationToken cancellationToken = default)
     {
         if (!node.IsExecutable)
             return ExecutionResult.Skipped();
@@ -181,26 +181,26 @@ public sealed class ExecutionOrchestrator : IExecutionOrchestrator, IDisposable
 
     #region Private Helpers
 
-    private async Task<ReloadRootResult> ReloadRootAsync(RootNode currentRoot, CancellationToken cancellationToken)
+    private async Task<ReloadRootResult> ReloadRootAsync(ExecutionNodeRoot currentExecutionNodeRoot, CancellationToken cancellationToken)
     {
         try
         {
-            var provider = _serviceProvider.GetKeyedService<IExecutionProvider>(currentRoot.ProviderType);
+            var provider = _serviceProvider.GetKeyedService<IExecutionProvider>(currentExecutionNodeRoot.ProviderType);
             if (provider == null)
             {
-                Trace.TraceWarning($"No keyed provider found for execution mode '{currentRoot.ProviderType}'");
+                Trace.TraceWarning($"No keyed provider found for execution mode '{currentExecutionNodeRoot.ProviderType}'");
                 return ReloadRootResult.KeepCurrent();
             }
 
-            var nodes = await provider.DiscoverAsync(currentRoot.RootPath, cancellationToken).ConfigureAwait(true);
-            var discoveredRoot = nodes.OfType<RootNode>().FirstOrDefault();
+            var nodes = await provider.DiscoverAsync(currentExecutionNodeRoot.RootPath, cancellationToken).ConfigureAwait(true);
+            var discoveredRoot = nodes.OfType<ExecutionNodeRoot>().FirstOrDefault();
             return discoveredRoot != null
                 ? ReloadRootResult.UseDiscovered(discoveredRoot)
                 : ReloadRootResult.RemoveCurrent();
         }
         catch (Exception ex)
         {
-            Trace.TraceError($"Failed to reload path '{currentRoot.RootPath}': {ex.Message}");
+            Trace.TraceError($"Failed to reload path '{currentExecutionNodeRoot.RootPath}': {ex.Message}");
             return ReloadRootResult.KeepCurrent();
         }
     }
@@ -292,10 +292,10 @@ public sealed class ExecutionOrchestrator : IExecutionOrchestrator, IDisposable
         if (provider.ValidatePath(newPath))
         {
             var discoveredNodes = await provider.DiscoverAsync(newPath).ConfigureAwait(true);
-            var incomingNodes = discoveredNodes as BaseNode[] ?? discoveredNodes.ToArray();
+            var incomingNodes = discoveredNodes as ExecutionNodeBase[] ?? discoveredNodes.ToArray();
             TreeNodeOperations.MergeNodesIntoTree(_treeRoot, incomingNodes);
             _fileWatcher.Watch(newPath, provider.GetWatchPatterns());
-            loadedRenamedRoot = incomingNodes.OfType<RootNode>().Any();
+            loadedRenamedRoot = incomingNodes.OfType<ExecutionNodeRoot>().Any();
         }
 
         RootRemoved?.Invoke(this, loadedRenamedRoot
@@ -324,12 +324,12 @@ public sealed class ExecutionOrchestrator : IExecutionOrchestrator, IDisposable
         return true;
     }
 
-    private bool ApplyRootReloadResult(RootNode currentRoot, ReloadRootResult result)
+    private bool ApplyRootReloadResult(ExecutionNodeRoot currentExecutionNodeRoot, ReloadRootResult result)
     {
         if (result.RootNode == null && result.KeepExistingRoot)
             return false;
 
-        var rootIndex = _treeRoot.IndexOf(currentRoot);
+        var rootIndex = _treeRoot.IndexOf(currentExecutionNodeRoot);
         if (rootIndex < 0)
             return false;
 
@@ -339,25 +339,25 @@ public sealed class ExecutionOrchestrator : IExecutionOrchestrator, IDisposable
             return true;
         }
 
-        _fileWatcher.Unwatch(currentRoot.RootPath);
+        _fileWatcher.Unwatch(currentExecutionNodeRoot.RootPath);
         _treeRoot.RemoveAt(rootIndex);
-        RootRemoved?.Invoke(this, new RootRemovedEventArgs(currentRoot.RootPath));
+        RootRemoved?.Invoke(this, new RootRemovedEventArgs(currentExecutionNodeRoot.RootPath));
         return true;
     }
 
-    private RootNode? FindAffectedRoot(FileChangedEventArgs e)
+    private ExecutionNodeRoot? FindAffectedRoot(FileChangedEventArgs e)
     {
         return _treeRoot
-            .OfType<RootNode>()
+            .OfType<ExecutionNodeRoot>()
             .FirstOrDefault(root =>
                 IsPathUnderRoot(e.Path, root.RootPath) ||
                 !string.IsNullOrEmpty(e.OldPath) && IsPathUnderRoot(e.OldPath!, root.RootPath));
     }
 
-    private RootNode? FindRootByPath(string path)
+    private ExecutionNodeRoot? FindRootByPath(string path)
     {
         return _treeRoot
-            .OfType<RootNode>()
+            .OfType<ExecutionNodeRoot>()
             .FirstOrDefault(root => AreSamePath(root.RootPath, path));
     }
 
@@ -386,9 +386,9 @@ public sealed class ExecutionOrchestrator : IExecutionOrchestrator, IDisposable
 
     #endregion
 
-    private readonly record struct ReloadRootResult(RootNode? RootNode, bool KeepExistingRoot)
+    private readonly record struct ReloadRootResult(ExecutionNodeRoot? RootNode, bool KeepExistingRoot)
     {
-        public static ReloadRootResult UseDiscovered(RootNode rootNode) => new(rootNode, false);
+        public static ReloadRootResult UseDiscovered(ExecutionNodeRoot executionNodeRoot) => new(executionNodeRoot, false);
         public static ReloadRootResult KeepCurrent() => new(null, true);
         public static ReloadRootResult RemoveCurrent() => new(null, false);
     }

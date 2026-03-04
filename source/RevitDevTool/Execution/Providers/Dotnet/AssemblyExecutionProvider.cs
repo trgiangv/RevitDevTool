@@ -23,7 +23,7 @@ public sealed class AssemblyExecutionProvider : IExecutionProvider
     public bool CanHandle(string path)
         => File.Exists(path) && path.EndsWith(".dll", StringComparison.OrdinalIgnoreCase);
 
-    public Task<IEnumerable<BaseNode>> DiscoverAsync(string path, CancellationToken cancellationToken = default)
+    public Task<IEnumerable<ExecutionNodeBase>> DiscoverAsync(string path, CancellationToken cancellationToken = default)
     {
         return Task.Run(() =>
         {
@@ -39,7 +39,7 @@ public sealed class AssemblyExecutionProvider : IExecutionProvider
             if (addinItems.Count == 0)
             {
                 Trace.TraceWarning($"No commands found in assembly: {path}");
-                return Enumerable.Empty<BaseNode>();
+                return Enumerable.Empty<ExecutionNodeBase>();
             }
 
             // Build tree: Assembly -> Namespace -> Command
@@ -61,12 +61,12 @@ public sealed class AssemblyExecutionProvider : IExecutionProvider
 
     #region Private Helpers
 
-    private static RootNode BuildAssemblyNode(string assemblyPath, List<AddinItem> commands)
+    private static ExecutionNodeRoot BuildAssemblyNode(string assemblyPath, List<AddinItem> commands)
     {
         var assemblyName = Path.GetFileNameWithoutExtension(assemblyPath);
         var assemblyId = $"dotnet://{assemblyPath}";
 
-        var assemblyNode = new RootNode
+        var assemblyNode = new ExecutionNodeRoot
         {
             Id = assemblyId,
             Name = assemblyName,
@@ -86,11 +86,11 @@ public sealed class AssemblyExecutionProvider : IExecutionProvider
         return assemblyNode;
     }
 
-    private static IntermediateNode BuildNamespaceNode(string namespaceName, IEnumerable<AddinItem> commands, string assemblyPath)
+    private static ExecutionNodeIntermediate BuildNamespaceNode(string namespaceName, IEnumerable<AddinItem> commands, string assemblyPath)
     {
         var namespaceId = $"dotnet://{assemblyPath}|{namespaceName}";
 
-        var namespaceNode = new IntermediateNode
+        var namespaceNode = new ExecutionNodeIntermediate
         {
             Id = namespaceId,
             Name = namespaceName,
@@ -107,11 +107,11 @@ public sealed class AssemblyExecutionProvider : IExecutionProvider
         return namespaceNode;
     }
 
-    private static ExecuteNode BuildCommandNode(AddinItem addinItem)
+    private static ExecutionNode BuildCommandNode(AddinItem addinItem)
     {
         var commandId = $"dotnet://{addinItem.AssemblyPath}|{addinItem.FullClassName}";
 
-        return new ExecuteNode
+        return new ExecutionNode
         {
             Id = commandId,
             Name = addinItem.Name,

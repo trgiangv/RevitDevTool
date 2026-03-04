@@ -4,7 +4,7 @@ namespace RevitDevTool.Execution.Services;
 
 internal static class TreeNodeOperations
 {
-    public static void MergeNodesIntoTree(ObservableCollection<BaseNode> treeRoot, IEnumerable<BaseNode> incomingNodes)
+    public static void MergeNodesIntoTree(ObservableCollection<ExecutionNodeBase> treeRoot, IEnumerable<ExecutionNodeBase> incomingNodes)
     {
         foreach (var incomingNode in incomingNodes)
         {
@@ -20,7 +20,7 @@ internal static class TreeNodeOperations
         }
     }
 
-    public static void ReplaceRootSnapshot(ObservableCollection<BaseNode> treeRoot, IReadOnlyCollection<RootNode> roots)
+    public static void ReplaceRootSnapshot(ObservableCollection<ExecutionNodeBase> treeRoot, IReadOnlyCollection<ExecutionNodeRoot> roots)
     {
         treeRoot.Clear();
         foreach (var root in roots)
@@ -29,16 +29,16 @@ internal static class TreeNodeOperations
         }
     }
 
-    public static HashSet<string> CollectExecutableIdSet(IEnumerable<BaseNode> nodes)
+    public static HashSet<string> CollectExecutableIdSet(IEnumerable<ExecutionNodeBase> nodes)
     {
         var ids = new HashSet<string>(StringComparer.Ordinal);
         CollectExecutableIdsRecursive(nodes, ids);
         return ids;
     }
 
-    public static BaseNode? PromoteLatestNewExecutable(IEnumerable<BaseNode> nodes, HashSet<string> previousExecutableIds)
+    public static ExecutionNodeBase? PromoteLatestNewExecutable(IEnumerable<ExecutionNodeBase> nodes, HashSet<string> previousExecutableIds)
     {
-        var nodeSnapshot = nodes as IReadOnlyList<BaseNode> ?? nodes.ToList();
+        var nodeSnapshot = nodes as IReadOnlyList<ExecutionNodeBase> ?? nodes.ToList();
         var lastNewExecutable = FindLatestNewExecutableRecursive(nodeSnapshot, previousExecutableIds);
         if (lastNewExecutable == null) return null;
 
@@ -47,12 +47,12 @@ internal static class TreeNodeOperations
         return lastNewExecutable;
     }
 
-    public static (bool Removed, BaseNode? NextSelection) RemoveNodeWithCascade(
-        ObservableCollection<BaseNode> treeRoot,
-        BaseNode node,
+    public static (bool Removed, ExecutionNodeBase? NextSelection) RemoveNodeWithCascade(
+        ObservableCollection<ExecutionNodeBase> treeRoot,
+        ExecutionNodeBase node,
         Action<string> onRootRemoved)
     {
-        if (node is RootNode rootNode)
+        if (node is ExecutionNodeRoot rootNode)
             onRootRemoved(rootNode.RootPath);
 
         var rootIndex = treeRoot.IndexOf(node);
@@ -72,7 +72,7 @@ internal static class TreeNodeOperations
         return (false, null);
     }
 
-    private static void MergeChildrenRecursive(BaseNode existing, BaseNode incoming)
+    private static void MergeChildrenRecursive(ExecutionNodeBase existing, ExecutionNodeBase incoming)
     {
         foreach (var incomingChild in incoming.Children)
         {
@@ -94,7 +94,7 @@ internal static class TreeNodeOperations
         }
     }
 
-    private static void CollectExecutableIdsRecursive(IEnumerable<BaseNode> nodes, HashSet<string> ids)
+    private static void CollectExecutableIdsRecursive(IEnumerable<ExecutionNodeBase> nodes, HashSet<string> ids)
     {
         foreach (var node in nodes)
         {
@@ -103,9 +103,9 @@ internal static class TreeNodeOperations
         }
     }
 
-    private static BaseNode? FindLatestNewExecutableRecursive(IEnumerable<BaseNode> nodes, HashSet<string> previousExecutableIds)
+    private static ExecutionNodeBase? FindLatestNewExecutableRecursive(IEnumerable<ExecutionNodeBase> nodes, HashSet<string> previousExecutableIds)
     {
-        BaseNode? last = null;
+        ExecutionNodeBase? last = null;
 
         foreach (var node in nodes)
         {
@@ -122,7 +122,7 @@ internal static class TreeNodeOperations
         return last;
     }
 
-    private static void ClearLastExecutedFlagRecursive(IEnumerable<BaseNode> nodes)
+    private static void ClearLastExecutedFlagRecursive(IEnumerable<ExecutionNodeBase> nodes)
     {
         foreach (var node in nodes)
         {
@@ -131,22 +131,22 @@ internal static class TreeNodeOperations
         }
     }
 
-    private static (bool Removed, BaseNode? NextSelection) RemoveNodeRecursive(
-        BaseNode parent,
-        BaseNode nodeToRemove,
-        IList<BaseNode> parentCollection,
+    private static (bool Removed, ExecutionNodeBase? NextSelection) RemoveNodeRecursive(
+        ExecutionNodeBase parent,
+        ExecutionNodeBase toRemove,
+        IList<ExecutionNodeBase> parentCollection,
         Action<string> onRootRemoved)
     {
-        var childIndex = parent.Children.IndexOf(nodeToRemove);
+        var childIndex = parent.Children.IndexOf(toRemove);
         return childIndex >= 0
             ? RemoveChildAtIndex(parent, childIndex, parentCollection, onRootRemoved)
-            : RemoveFromChildrenRecursive(parent, nodeToRemove, parentCollection, onRootRemoved);
+            : RemoveFromChildrenRecursive(parent, toRemove, parentCollection, onRootRemoved);
     }
 
-    private static (bool Removed, BaseNode? NextSelection) RemoveChildAtIndex(
-        BaseNode parent,
+    private static (bool Removed, ExecutionNodeBase? NextSelection) RemoveChildAtIndex(
+        ExecutionNodeBase parent,
         int childIndex,
-        IList<BaseNode> parentCollection,
+        IList<ExecutionNodeBase> parentCollection,
         Action<string> onRootRemoved)
     {
         var nextSelection = GetNextSibling(parent.Children, childIndex);
@@ -154,15 +154,15 @@ internal static class TreeNodeOperations
         return TryCascadeDeleteEmptyParent(parent, parentCollection, nextSelection, onRootRemoved);
     }
 
-    private static (bool Removed, BaseNode? NextSelection) RemoveFromChildrenRecursive(
-        BaseNode parent,
-        BaseNode nodeToRemove,
-        IList<BaseNode> parentCollection,
+    private static (bool Removed, ExecutionNodeBase? NextSelection) RemoveFromChildrenRecursive(
+        ExecutionNodeBase parent,
+        ExecutionNodeBase toRemove,
+        IList<ExecutionNodeBase> parentCollection,
         Action<string> onRootRemoved)
     {
         foreach (var child in parent.Children.ToList())
         {
-            var result = RemoveNodeRecursive(child, nodeToRemove, parent.Children, onRootRemoved);
+            var result = RemoveNodeRecursive(child, toRemove, parent.Children, onRootRemoved);
             if (!result.Removed) continue;
 
             if (parent.Children.Count == 0 && parent.NodeType == NodeType.Container)
@@ -174,10 +174,10 @@ internal static class TreeNodeOperations
         return (false, null);
     }
 
-    private static (bool Removed, BaseNode? NextSelection) TryCascadeDeleteEmptyParent(
-        BaseNode parent,
-        IList<BaseNode> parentCollection,
-        BaseNode? currentNextSelection,
+    private static (bool Removed, ExecutionNodeBase? NextSelection) TryCascadeDeleteEmptyParent(
+        ExecutionNodeBase parent,
+        IList<ExecutionNodeBase> parentCollection,
+        ExecutionNodeBase? currentNextSelection,
         Action<string> onRootRemoved)
     {
         if (parent.Children.Count > 0 || parent.NodeType != NodeType.Container)
@@ -187,7 +187,7 @@ internal static class TreeNodeOperations
         if (parentIndex < 0)
             return (true, currentNextSelection);
 
-        if (parent is RootNode rootNode)
+        if (parent is ExecutionNodeRoot rootNode)
             onRootRemoved(rootNode.RootPath);
 
         var nextSelection = GetNextSibling(parentCollection, parentIndex);
@@ -195,7 +195,7 @@ internal static class TreeNodeOperations
         return (true, nextSelection);
     }
 
-    private static BaseNode? GetNextSibling(IList<BaseNode> siblings, int removedIndex)
+    private static ExecutionNodeBase? GetNextSibling(IList<ExecutionNodeBase> siblings, int removedIndex)
     {
         if (siblings.Count <= 1) return null;
         return removedIndex < siblings.Count - 1 ? siblings[removedIndex + 1] : siblings[removedIndex - 1];

@@ -3,7 +3,7 @@
 /// <summary>
 /// Root node - represents an Assembly (.dll) or Root Folder for scripts
 /// </summary>
-public sealed class RootNode : BaseNode
+public sealed class ExecutionNodeRoot : ExecutionNodeBase
 {
     /// <summary>
     /// Path to the root (assembly file or folder)
@@ -19,7 +19,7 @@ public sealed class RootNode : BaseNode
 /// <summary>
 /// Intermediate node - represents a Namespace or SubFolder
 /// </summary>
-public sealed class IntermediateNode : BaseNode
+public sealed class ExecutionNodeIntermediate : ExecutionNodeBase
 {
     /// <summary>
     /// Full path to namespace or folder
@@ -30,7 +30,7 @@ public sealed class IntermediateNode : BaseNode
 /// <summary>
 /// Execute node - represents an IExternalCommand or Python Script
 /// </summary>
-public sealed class ExecuteNode : BaseNode
+public sealed class ExecutionNode : ExecutionNodeBase
 {
     /// <summary>
     /// Full path to the executable (class name or script path)

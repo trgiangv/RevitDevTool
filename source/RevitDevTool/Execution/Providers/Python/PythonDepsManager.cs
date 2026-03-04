@@ -68,7 +68,7 @@ public static class PythonDepsManager
     /// </summary>
     private static async Task<string> ReadPixiTomlAsync(CancellationToken cancellationToken)
     {
-        var tomlPath = Path.Combine(PixiEnvironment.ProjectDir, "pixi.toml");
+        var tomlPath = Path.Combine(PixiEnvironment.PixiProjectDir, "pixi.toml");
         if (!File.Exists(tomlPath)) return string.Empty;
 #if NETCOREAPP
         return await File.ReadAllTextAsync(tomlPath, cancellationToken).ConfigureAwait(false);
@@ -91,7 +91,7 @@ public static class PythonDepsManager
 
         var cmd = await Cli.Wrap(PixiInstaller.PixiExePath)
             .WithArguments(["run", "python", PixiEnvironment.ParserScriptPath, scriptPath])
-            .WithWorkingDirectory(PixiEnvironment.ProjectDir)
+            .WithWorkingDirectory(PixiEnvironment.PixiProjectDir)
             .WithStandardInputPipe(PipeSource.FromString(pixiTomlContent))
             .WithStandardOutputPipe(PipeTarget.ToStringBuilder(stdout))
             .WithStandardErrorPipe(PipeTarget.ToStringBuilder(stderr))

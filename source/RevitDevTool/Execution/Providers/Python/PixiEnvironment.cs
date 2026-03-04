@@ -13,11 +13,36 @@ public static class PixiEnvironment
     private const string PythonConstraint = "3.13.*";
     private const string PythonDllName = "python313.dll";
     private const string PixiEnvDirName = "pixi-env";
-    private const string DefaultEnvSubDir = @".pixi\envs\default";
-    public static string ProjectDir => Path.Combine(SettingsUtils.GetApplicationDataPath(), PixiEnvDirName);
-    public static string PythonHome => Path.Combine(ProjectDir, DefaultEnvSubDir);
+    public static IReadOnlyCollection<string> RequirePackages =>
+    [
+        "modelcontextprotocol",
+        "debugpy",
+        "pytest",
+        "pywin32",
+        "packaging"
+    ];
+    private const string PixiTomlTemplate = $"""
+                                             [workspace]
+                                             name = "revitdevtool-runtime"
+                                             version = "0.1.0"
+                                             channels = ["conda-forge"]
+                                             platforms = ["win-64"]
+
+                                             [dependencies]
+                                             python = "{PythonConstraint}"
+                                             packaging = "*"
+                                             debugpy = "*"
+                                             pytest = "*"
+                                             pywin32 = "*"
+
+                                             [pypi-dependencies]
+                                             modelcontextprotocol = "*"
+                                             """;
+    private const string PixiEnvDir = @".pixi\envs\default";
+    public static string PixiProjectDir => Path.Combine(SettingsUtils.GetApplicationDataPath(), PixiEnvDirName);
+    public static string PythonHome => Path.Combine(PixiProjectDir, PixiEnvDir);
     public static string PythonExe => Path.Combine(PythonHome, "python.exe");
-    public static string ParserScriptPath => Path.Combine(ProjectDir, "parser.py");
+    public static string ParserScriptPath => Path.Combine(PixiProjectDir, "parser.py");
 
     public static void EnsureParserScript()
     {
@@ -27,7 +52,7 @@ public static class PixiEnvironment
 
     public static void ExtractParserScript()
     {
-        Directory.CreateDirectory(ProjectDir);
+        Directory.CreateDirectory(PixiProjectDir);
 
         var assembly = typeof(PixiEnvironment).Assembly;
         var resourceName = assembly.GetManifestResourceNames()
@@ -44,7 +69,7 @@ public static class PixiEnvironment
 
     public static Task SetupEnvironmentAsync()
     {
-        Directory.CreateDirectory(ProjectDir);
+        Directory.CreateDirectory(PixiProjectDir);
         EnsurePixiToml();
         return RunPixiInstallAsync();
     }
@@ -104,24 +129,9 @@ public static class PixiEnvironment
 
     private static void EnsurePixiToml()
     {
-        var tomlPath = Path.Combine(ProjectDir, "pixi.toml");
+        var tomlPath = Path.Combine(PixiProjectDir, "pixi.toml");
         if (File.Exists(tomlPath)) return;
-
-        const string template = $"""
-                                 [workspace]
-                                 name = "revitdevtool-runtime"
-                                 version = "0.1.0"
-                                 channels = ["conda-forge"]
-                                 platforms = ["win-64"]
-
-                                 [dependencies]
-                                 python = "{PythonConstraint}"
-                                 packaging = "*"
-                                 debugpy = "*"
-                                 pytest = "*"
-                                 """;
-
-        File.WriteAllText(tomlPath, template);
+        File.WriteAllText(tomlPath, PixiTomlTemplate);
         Debug.WriteLine($"Created pixi.toml at: {tomlPath}");
     }
 
@@ -131,7 +141,7 @@ public static class PixiEnvironment
 
         var result = await Cli.Wrap(PixiInstaller.PixiExePath)
             .WithArguments("install")
-            .WithWorkingDirectory(ProjectDir)
+            .WithWorkingDirectory(PixiProjectDir)
             .WithStandardOutputPipe(PipeTarget.ToDelegate(line => Trace.TraceInformation($"[pixi] {line}")))
             .WithStandardErrorPipe(PipeTarget.ToDelegate(line => Trace.TraceWarning($"[pixi] {line}")))
             .WithValidation(CommandResultValidation.None)
@@ -152,7 +162,7 @@ public static class PixiEnvironment
     {
         var batchResult = await Cli.Wrap(pixiExe)
             .WithArguments(BuildPixiAddArgs(pkgs, pypi))
-            .WithWorkingDirectory(ProjectDir)
+            .WithWorkingDirectory(PixiProjectDir)
             .WithStandardOutputPipe(PipeTarget.ToDelegate(line => progress.Report($"  {line}")))
             .WithStandardErrorPipe(PipeTarget.ToDelegate(line => progress.Report($"  {line}")))
             .WithValidation(CommandResultValidation.None)
@@ -172,7 +182,7 @@ public static class PixiEnvironment
             var singleArgs = BuildPixiAddArgs([pkg], pypi);
             var singleResult = await Cli.Wrap(pixiExe)
                 .WithArguments(singleArgs)
-                .WithWorkingDirectory(ProjectDir)
+                .WithWorkingDirectory(PixiProjectDir)
                 .WithStandardOutputPipe(PipeTarget.ToDelegate(line => progress.Report($"  {line}")))
                 .WithStandardErrorPipe(PipeTarget.ToDelegate(line => progress.Report($"  {line}")))
                 .WithValidation(CommandResultValidation.None)

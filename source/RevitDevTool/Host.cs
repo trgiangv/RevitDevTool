@@ -105,6 +105,7 @@ public static class Host
         services.AddSingleton<ITreeStateManager, TreeStateManager>();
         services.AddSingleton<IFileWatcherService, FileWatcherService>();
         services.AddSingleton<IExecutionOrchestrator, ExecutionOrchestrator>();
+        services.AddSingleton<IPackageService, PackageService>();
 
         // Execution Providers
         services.AddSingleton<IExecutionProvider, AssemblyExecutionProvider>();
@@ -113,7 +114,11 @@ public static class Host
         services.AddKeyedSingleton<IExecutionProvider, ScriptExecutionProvider>(ExecutionMode.Script);
 
         // Execution
+        services.AddSingleton<CommandViewModel>();
+        services.AddSingleton<PackageViewModel>();
         services.AddSingleton<ExecutionViewModel>();
+        services.AddSingleton<CommandView>();
+        services.AddSingleton<PackageView>();
         services.AddSingleton<ExecutionView>();
         services.AddSingleton<MemoryViewModel>();
         services.AddSingleton<MemoryView>();

@@ -4,10 +4,32 @@ namespace RevitDevTool.Execution.Models;
 
 /// <summary>
 /// Base class for all nodes in the tree structure.
-/// Unified model that replaces multiple node hierarchies (AssemblyNode, NamespaceNode, CommandNode, GroupNode, ScriptNode).
-/// Implements Composite Pattern for tree structure.
 /// </summary>
-public abstract partial class BaseNode : ObservableObject
+public abstract partial class TreeNodeBase : ObservableObject
+{
+    [ObservableProperty]
+    private string _name = string.Empty;
+
+    [ObservableProperty]
+    private bool _isExpanded;
+
+    [ObservableProperty]
+    private bool _isSelected;
+
+    [ObservableProperty]
+    private bool _isVisible = true;
+
+    [ObservableProperty]
+    private ISelectionRange? _highlightRange;
+
+    public abstract IEnumerable<TreeNodeBase> ChildNodes { get; }
+}
+
+
+/// <summary>
+/// Unified model that replaces multiple node hierarchies (ExecutionRootNode, ExecutionIntermediateNode, ExecutionNode)
+/// </summary>
+public abstract partial class ExecutionNodeBase : TreeNodeBase
 {
     /// <summary>
     /// Unique path-based identifier that survives object recreation.
@@ -20,37 +42,11 @@ public abstract partial class BaseNode : ObservableObject
     /// <summary>
     /// Internal name (file name, class name, etc.) - also used as display name
     /// </summary>
-    public required string Name { get; init; }
-
-
     /// <summary>
     /// Child nodes (Composite Pattern)
     /// </summary>
-    public ObservableCollection<BaseNode> Children { get; } = [];
-
-    /// <summary>
-    /// Whether the node is expanded in the tree
-    /// </summary>
-    [ObservableProperty]
-    private bool _isExpanded;
-
-    /// <summary>
-    /// Whether the node is selected in the tree
-    /// </summary>
-    [ObservableProperty]
-    private bool _isSelected;
-
-    /// <summary>
-    /// Whether the node is visible (used for search filtering)
-    /// </summary>
-    [ObservableProperty]
-    private bool _isVisible = true;
-
-    /// <summary>
-    /// Highlight range for search results
-    /// </summary>
-    [ObservableProperty]
-    private ISelectionRange? _highlightRange;
+    public ObservableCollection<ExecutionNodeBase> Children { get; } = [];
+    public override IEnumerable<TreeNodeBase> ChildNodes => Children;
 
     /// <summary>
     /// Whether this node is the last executed item (for UI indicator)
