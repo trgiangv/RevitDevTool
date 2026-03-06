@@ -9,20 +9,24 @@ using System.Diagnostics;
 namespace RevitDevTool.ViewModel;
 
 /// <summary>
-/// ViewModel for the main TraceLogPage that handles navigation
+/// ViewModel for the main MainPage that handles navigation
 /// </summary>
-public partial class TraceLogPageViewModel : ObservableObject, IRecipient<IsSaveLogChangedMessage>
+public partial class MainViewModel : ObservableObject, IRecipient<IsSaveLogChangedMessage>
 {
     private readonly LogSettingsViewModel _logSettingsViewModel;
     private readonly ISettingsService _settingsService;
+    private bool _isInterlockingVisibility;
 
-    public TraceLogViewModel TraceLogViewModel { get; }
+    public LogViewModel LogViewModel { get; }
     public ExecutionView ExecutionView { get; }
+    public McpRegistryView McpRegistryView { get; }
     public MemoryView MemoryView { get; }
     public int ProcessId { get; } = SettingsUtils.CurrentProcessId;
+    public bool ShowLogMonitorOnly => !IsExecutionVisible && !IsMcpVisible;
     [ObservableProperty] private object? _currentPage;
     [ObservableProperty] private bool _isSettingsVisible;
-    [ObservableProperty] private bool _isAddinLoadVisible = true;
+    [ObservableProperty] private bool _isExecutionVisible = true;
+    [ObservableProperty] private bool _isMcpVisible;
     [ObservableProperty] private bool _isSaveLogEnabled;
 
     partial void OnIsSettingsVisibleChanged(bool value)
@@ -31,6 +35,40 @@ public partial class TraceLogPageViewModel : ObservableObject, IRecipient<IsSave
         {
             _logSettingsViewModel.ApplyIfPendingChanges();
         }
+    }
+
+    partial void OnIsExecutionVisibleChanged(bool value)
+    {
+        OnPropertyChanged(nameof(ShowLogMonitorOnly));
+        if (_isInterlockingVisibility || !value) return;
+
+        try
+        {
+            _isInterlockingVisibility = true;
+            IsMcpVisible = false;
+        }
+        finally
+        {
+            _isInterlockingVisibility = false;
+        }
+
+    }
+
+    partial void OnIsMcpVisibleChanged(bool value)
+    {
+        OnPropertyChanged(nameof(ShowLogMonitorOnly));
+        if (_isInterlockingVisibility || !value) return;
+
+        try
+        {
+            _isInterlockingVisibility = true;
+            IsExecutionVisible = false;
+        }
+        finally
+        {
+            _isInterlockingVisibility = false;
+        }
+
     }
 
     [RelayCommand(CanExecute = nameof(CanOpenLogFolder))]
@@ -52,15 +90,17 @@ public partial class TraceLogPageViewModel : ObservableObject, IRecipient<IsSave
         return IsSaveLogEnabled;
     }
 
-    public TraceLogPageViewModel(
-        TraceLogViewModel traceLogViewModel,
+    public MainViewModel(
+        LogViewModel logViewModel,
         ExecutionView addinLoadView,
+        McpRegistryView mcpRegistryView,
         MemoryView memoryView,
         LogSettingsViewModel logSettingsViewModel,
         ISettingsService settingsService)
     {
-        TraceLogViewModel = traceLogViewModel;
+        LogViewModel = logViewModel;
         ExecutionView = addinLoadView;
+        McpRegistryView = mcpRegistryView;
         MemoryView = memoryView;
         IsSaveLogEnabled = settingsService.LogConfig.IsSaveLogEnabled;
         _logSettingsViewModel = logSettingsViewModel;

@@ -9,6 +9,7 @@ using RevitDevTool.Execution.Models;
 using RevitDevTool.Execution.Providers.FSharp;
 using RevitDevTool.Execution.Providers.Python;
 using RevitDevTool.Utils;
+// ReSharper disable RedundantSuppressNullableWarningExpression
 
 namespace RevitDevTool.Execution.Services;
 
@@ -232,7 +233,7 @@ public sealed class PackageService : IPackageService
 
         try
         {
-            return ParsePixiExplicitPackages(output);
+            return ParsePixiExplicitPackages(output!);
         }
         catch
         {
@@ -313,7 +314,7 @@ public sealed class PackageService : IPackageService
         if (string.IsNullOrWhiteSpace(declaredVersion))
             return packageId;
 
-        var version = declaredVersion.Trim();
+        var version = declaredVersion!.Trim();
         if (version.Length == 0 || version == "*")
             return packageId;
 
@@ -359,7 +360,7 @@ public sealed class PackageService : IPackageService
         if (string.IsNullOrWhiteSpace(text))
             return false;
 
-        value = text;
+        value = text!;
         return true;
     }
 
@@ -368,7 +369,7 @@ public sealed class PackageService : IPackageService
         if (string.IsNullOrWhiteSpace(requestedSpec))
             return null;
 
-        var normalized = requestedSpec.Trim();
+        var normalized = requestedSpec!.Trim();
         while (normalized.Length >= 2 && normalized[0] == '"' && normalized[^1] == '"')
             normalized = normalized[1..^1].Trim();
 
@@ -427,7 +428,7 @@ public sealed class PackageService : IPackageService
     {
         if (string.IsNullOrWhiteSpace(current) || string.IsNullOrWhiteSpace(latest))
             return false;
-        return current.Trim().Equals(latest.Trim(), StringComparison.OrdinalIgnoreCase);
+        return current!.Trim().Equals(latest!.Trim(), StringComparison.OrdinalIgnoreCase);
     }
 
     private async Task<string?> FetchLatestNuGetVersionAsync(string packageId, CancellationToken cancellationToken)
@@ -438,7 +439,7 @@ public sealed class PackageService : IPackageService
             if (string.IsNullOrWhiteSpace(baseUrl))
                 return null;
 
-            var url = $"{baseUrl.TrimEnd('/')}/{packageId.ToLowerInvariant()}/index.json";
+            var url = $"{baseUrl!.TrimEnd('/')}/{packageId.ToLowerInvariant()}/index.json";
             using var response = await Http.GetAsync(url, cancellationToken).ConfigureAwait(false);
             if (!response.IsSuccessStatusCode)
                 return null;

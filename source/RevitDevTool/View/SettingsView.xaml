@@ -28,17 +28,17 @@
             <RowDefinition Height="Auto" />
         </Grid.RowDefinitions>
 
-        <mah:MetroTabControl Grid.Row="0">
-            <mah:MetroTabItem Header="General">
+        <TabControl Grid.Row="0">
+            <TabItem Header="General">
                 <settings:GeneralSettingsView />
-            </mah:MetroTabItem>
-            <mah:MetroTabItem Header="Visualization">
+            </TabItem>
+            <TabItem Header="Visualization">
                 <settings:VisualizationSettingsView />
-            </mah:MetroTabItem>
-            <mah:MetroTabItem Header="Log">
+            </TabItem>
+            <TabItem Header="Log">
                 <settings:LogSettingsView />
-            </mah:MetroTabItem>
-        </mah:MetroTabControl>
+            </TabItem>
+        </TabControl>
 
         <!--  Reset  -->
         <Button Grid.Row="1"

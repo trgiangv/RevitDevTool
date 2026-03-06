@@ -4,12 +4,12 @@ using System.Windows;
 
 namespace RevitDevTool.View;
 
-public partial class TraceLogWindow
+public partial class MainWindow
 {
-    public TraceLogWindow(TraceLogPage traceLog)
+    public MainWindow(MainPage main)
     {
         InitializeComponent();
-        ContentFrame.Navigate(traceLog);
+        ContentFrame.Navigate(main);
 
         Loaded += OnLoaded;
         ThemeManager.Current.ActualApplicationThemeChanged += OnThemeChanged;

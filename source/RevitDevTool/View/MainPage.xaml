@@ -1,4 +1,4 @@
-<Page x:Class="RevitDevTool.View.TraceLogPage"
+<Page x:Class="RevitDevTool.View.MainPage"
       xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
       xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
       xmlns:converters="clr-namespace:RevitDevTool.View.Converters"
@@ -9,7 +9,7 @@
       xmlns:system="clr-namespace:System;assembly=System.Runtime"
       xmlns:view="clr-namespace:RevitDevTool.View"
       xmlns:vm="clr-namespace:RevitDevTool.ViewModel"
-      d:DataContext="{d:DesignInstance vm:TraceLogPageViewModel}"
+      d:DataContext="{d:DesignInstance vm:MainViewModel}"
       d:DesignHeight="600"
       d:DesignWidth="450"
       Background="{DynamicResource MahApps.Brushes.ThemeBackground}"
@@ -36,6 +36,7 @@
         <DockPanel Grid.Row="0"
                    Margin="5"
                    LastChildFill="False">
+            <!--  Toggle Buttons  -->
             <ToggleButton Padding="7,4"
                           BorderThickness="0.5"
                           IsChecked="{Binding IsSettingsVisible, UpdateSourceTrigger=PropertyChanged}"
@@ -60,16 +61,29 @@
             <ToggleButton Margin="5,0,0,0"
                           Padding="7,4"
                           BorderThickness="0.5"
-                          IsChecked="{Binding IsAddinLoadVisible}"
+                          IsChecked="{Binding IsExecutionVisible}"
                           Style="{DynamicResource MahApps.Styles.ToggleButton.Circle}"
-                          ToolTip="Hot Reload">
+                          ToolTip="Execution">
                 <Path Width="16"
                       Height="16"
                       Data="{StaticResource Code}"
                       Fill="{DynamicResource MahApps.Brushes.ThemeForeground}"
                       Stretch="Uniform" />
             </ToggleButton>
+            <ToggleButton Margin="5,0"
+                          Padding="7,4"
+                          BorderThickness="0.5"
+                          IsChecked="{Binding IsMcpVisible}"
+                          Style="{DynamicResource MahApps.Styles.ToggleButton.Circle}"
+                          ToolTip="MCP">
+                <Path Width="16"
+                      Height="16"
+                      Data="{StaticResource Mcp}"
+                      Fill="{DynamicResource MahApps.Brushes.ThemeForeground}"
+                      Stretch="Uniform" />
+            </ToggleButton>
 
+            <!--  Action Buttons  -->
             <StackPanel HorizontalAlignment="Right"
                         DockPanel.Dock="Right"
                         Orientation="Horizontal">
@@ -80,7 +94,7 @@
                            Text="{Binding ProcessId, Mode=OneTime, StringFormat='PID: {0}'}" />
                 <Button Padding="0"
                         BorderThickness="0.5"
-                        Command="{Binding TraceLogViewModel.ClearCommand}"
+                        Command="{Binding LogViewModel.ClearCommand}"
                         ToolTip="Clear Log">
                     <StackPanel Margin="0"
                                 Orientation="Horizontal">
@@ -97,7 +111,7 @@
                 <Button Margin="5,0"
                         Padding="0"
                         BorderThickness="0.5"
-                        Command="{Binding TraceLogViewModel.ClearGeometryCommand}"
+                        Command="{Binding LogViewModel.ClearGeometryCommand}"
                         ToolTip="Clear Geometry">
                     <StackPanel Margin="0"
                                 Orientation="Horizontal">
@@ -113,7 +127,7 @@
                               Margin="0,0,5,0"
                               HorizontalAlignment="Stretch"
                               VerticalAlignment="Center"
-                              Visibility="{Binding TraceLogViewModel.GeometryCount, Converter={StaticResource IntToVisibility}}">
+                              Visibility="{Binding LogViewModel.GeometryCount, Converter={StaticResource IntToVisibility}}">
                             <Rectangle Fill="{DynamicResource MahApps.Brushes.Accent}"
                                        RadiusX="3"
                                        RadiusY="3" />
@@ -124,7 +138,7 @@
                                        FontSize="10"
                                        FontWeight="SemiBold"
                                        IsHitTestVisible="False"
-                                       Text="{Binding TraceLogViewModel.GeometryCount}" />
+                                       Text="{Binding LogViewModel.GeometryCount}" />
                         </Grid>
                     </StackPanel>
                 </Button>
@@ -147,7 +161,7 @@
                 </Button>
                 <mah:ToggleSwitch MinWidth="0"
                                   ContentPadding="0"
-                                  DataContext="{Binding TraceLogViewModel}"
+                                  DataContext="{Binding LogViewModel}"
                                   IsOn="{Binding IsStarted}"
                                   OffContent=""
                                   OnContent="">
@@ -167,7 +181,7 @@
         <Grid Grid.Row="1"
               Background="{DynamicResource MahApps.Brushes.ThemeBackground}">
 
-            <!--  Log and Addin Load View  -->
+            <!--  Control Grid Splitter Height  -->
             <Grid Margin="5,0,5,5"
                   Visibility="{Binding IsSettingsVisible, Converter={StaticResource InverseBoolToVisibility}}">
                 <Grid.RowDefinitions>
@@ -179,8 +193,8 @@
                                 <Setter Property="Height" Value="Auto" />
                                 <Setter Property="MaxHeight" Value="999" />
                                 <Style.Triggers>
-                                    <DataTrigger Binding="{Binding IsAddinLoadVisible}"
-                                                 Value="False">
+                                    <DataTrigger Binding="{Binding ShowLogMonitorOnly}"
+                                                 Value="True">
                                         <Setter Property="MaxHeight" Value="0" />
                                     </DataTrigger>
                                 </Style.Triggers>
@@ -193,8 +207,8 @@
                                 <Setter Property="Height" Value="300" />
                                 <Setter Property="MaxHeight" Value="999" />
                                 <Style.Triggers>
-                                    <DataTrigger Binding="{Binding IsAddinLoadVisible}"
-                                                 Value="False">
+                                    <DataTrigger Binding="{Binding ShowLogMonitorOnly}"
+                                                 Value="True">
                                         <Setter Property="MaxHeight" Value="0" />
                                     </DataTrigger>
                                 </Style.Triggers>
@@ -203,17 +217,19 @@
                     </RowDefinition>
                 </Grid.RowDefinitions>
 
+                <!--  Memory  -->
                 <ContentControl Grid.Row="0"
                                 Margin="0,0,0,5"
                                 Content="{Binding MemoryView}" />
 
+                <!--  LogMonitor  -->
                 <Border Grid.Row="1"
                         Padding="2"
                         BorderBrush="{DynamicResource MahApps.Brushes.Gray8}"
                         BorderThickness="1"
                         CornerRadius="6"
                         SnapsToDevicePixels="True">
-                    <ContentControl Content="{Binding TraceLogViewModel.LogTextBox}" />
+                    <ContentControl Content="{Binding LogViewModel.LogTextBox}" />
                 </Border>
 
                 <GridSplitter Grid.Row="2"
@@ -221,11 +237,17 @@
                               Margin="0,5"
                               Background="{DynamicResource MahApps.Brushes.Gray8}"
                               ShowsPreview="False"
-                              Visibility="{Binding IsAddinLoadVisible, Converter={StaticResource BoolToVisibility}}" />
+                              Visibility="{Binding ShowLogMonitorOnly, Converter={StaticResource InverseBoolToVisibility}}" />
 
+                <!--  Execution  -->
                 <ContentControl Grid.Row="3"
                                 Content="{Binding ExecutionView}"
-                                Visibility="{Binding IsAddinLoadVisible, Converter={StaticResource BoolToVisibility}}" />
+                                Visibility="{Binding IsExecutionVisible, Converter={StaticResource BoolToVisibility}}" />
+
+                <!--  MCP  -->
+                <ContentControl Grid.Row="3"
+                                Content="{Binding McpRegistryView}"
+                                Visibility="{Binding IsMcpVisible, Converter={StaticResource BoolToVisibility}}" />
             </Grid>
 
             <!--  Setting  -->

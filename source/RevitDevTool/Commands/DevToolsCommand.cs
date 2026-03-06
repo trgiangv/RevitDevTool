@@ -13,16 +13,16 @@ namespace RevitDevTool.Commands;
 
 [UsedImplicitly]
 [Transaction(TransactionMode.Manual)]
-public class TraceCommand : ExternalCommand, IExternalCommandAvailability
+public class DevToolsCommand : ExternalCommand, IExternalCommandAvailability
 {
-    public const string CommandName = "TraceLog";
+    public const string CommandName = "DevTools";
     private static readonly Guid PaneGuid = new("43AE2B41-0BE6-425A-B27A-724B2CE17351");
     private static readonly DockablePaneId PaneId = new(PaneGuid);
     public static readonly Action TraceReceivedHandler = OnTraceReceived;
 
     private static bool IsForceHide { get; set; }
-    internal static TraceLogViewModel? SharedViewModel { get; private set; }
-    private static TraceLogWindow? FloatingWindow { get; set; }
+    internal static LogViewModel? SharedViewModel { get; private set; }
+    private static MainWindow? FloatingWindow { get; set; }
     private static bool HasUiDocument => Context.UiApplication.HasActiveUiDocument();
 
     public override void Execute()
@@ -52,7 +52,7 @@ public class TraceCommand : ExternalCommand, IExternalCommandAvailability
         }
         else
         {
-            SharedViewModel ??= Host.GetService<TraceLogViewModel>();
+            SharedViewModel ??= Host.GetService<LogViewModel>();
             SharedViewModel.Subscribe();
             ShowFloatingWindow();
         }
@@ -68,7 +68,7 @@ public class TraceCommand : ExternalCommand, IExternalCommandAvailability
         }
         else
         {
-            SharedViewModel ??= Host.GetService<TraceLogViewModel>();
+            SharedViewModel ??= Host.GetService<LogViewModel>();
             SharedViewModel.Subscribe();
             dockablePane.Show();
             IsForceHide = false;
@@ -83,12 +83,12 @@ public class TraceCommand : ExternalCommand, IExternalCommandAvailability
 
     public static void RegisterDockablePane(UIControlledApplication application)
     {
-        SharedViewModel = Host.GetService<TraceLogViewModel>();
+        SharedViewModel = Host.GetService<LogViewModel>();
         DockablePaneProvider
             .Register(application, PaneGuid, CommandName)
             .SetConfiguration(data =>
             {
-                data.FrameworkElement = Host.GetService<TraceLogPage>();
+                data.FrameworkElement = Host.GetService<MainPage>();
                 data.InitialState = new DockablePaneState
                 {
                     MinimumWidth = 550,
@@ -157,7 +157,7 @@ public class TraceCommand : ExternalCommand, IExternalCommandAvailability
 
         DispatcherHelper.RunOnMainThread(() =>
         {
-            FloatingWindow = Host.GetService<TraceLogWindow>();
+            FloatingWindow = Host.GetService<MainWindow>();
             FloatingWindow.Closed += OnFloatingWindowClosed;
             FloatingWindow.SetRevitOwner();
             FloatingWindow.Show();
@@ -191,7 +191,7 @@ public class TraceCommand : ExternalCommand, IExternalCommandAvailability
 
         if (SharedViewModel is null or { IsStarted: false })
         {
-            SharedViewModel = Host.GetService<TraceLogViewModel>();
+            SharedViewModel = Host.GetService<LogViewModel>();
         }
 
         NotifyListener.TraceReceived += TraceReceivedHandler;

@@ -10,7 +10,7 @@ using Serilog.Events;
 
 namespace RevitDevTool.ViewModel;
 
-public sealed partial class TraceLogViewModel : ObservableObject, IDisposable,
+public sealed partial class LogViewModel : ObservableObject, IDisposable,
     IRecipient<GeometryCountChangedMessage>,
     IRecipient<LogSettingsAppliedMessage>
 {
@@ -46,7 +46,7 @@ public sealed partial class TraceLogViewModel : ObservableObject, IDisposable,
         else StopTracing();
     }
 
-    public TraceLogViewModel(ISettingsService settingsService, ILoggingService loggingService)
+    public LogViewModel(ISettingsService settingsService, ILoggingService loggingService)
     {
         _settingsService = settingsService;
         _loggingService = loggingService;

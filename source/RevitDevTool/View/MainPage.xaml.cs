@@ -2,9 +2,9 @@ using RevitDevTool.ViewModel;
 
 namespace RevitDevTool.View;
 
-public partial class TraceLogPage
+public partial class MainPage
 {
-    public TraceLogPage(TraceLogPageViewModel viewModel)
+    public MainPage(MainViewModel viewModel)
     {
         InitializeComponent();
         DataContext = viewModel;

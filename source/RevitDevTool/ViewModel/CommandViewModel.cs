@@ -8,6 +8,8 @@ using RevitDevTool.Execution.Interfaces;
 using RevitDevTool.Execution.Models;
 using RevitDevTool.Execution.Providers.Python;
 using RevitDevTool.Utils;
+// ReSharper disable UnusedParameterInPartialMethod
+// ReSharper disable RedundantSuppressNullableWarningExpression
 
 namespace RevitDevTool.ViewModel;
 
@@ -155,7 +157,7 @@ public partial class CommandViewModel : ObservableObject
         if (string.IsNullOrEmpty(path))
             return;
 
-        if (File.Exists(path) && path.EndsWith(".dll", StringComparison.OrdinalIgnoreCase))
+        if (File.Exists(path) && path!.EndsWith(".dll", StringComparison.OrdinalIgnoreCase))
         {
             await LoadAssemblyFromPathAsync(path);
         }

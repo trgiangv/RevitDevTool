@@ -14,9 +14,8 @@ public sealed class HostBackgroundController(ISettingsService settingsService) :
 {
     public Task StartAsync(CancellationToken cancellationToken)
     {
-        LoadSettings();
-        CleanLogFolder();
-        LoadTheme();
+        settingsService.LoadSettings();
+        ThemeManager.Current.ApplySettingsTheme(settingsService.GeneralConfig.Theme);
         ToggleHardwareRendering(settingsService);
         PythonInitializer.InitializeAsync().ConfigureAwait(true);
         return Task.CompletedTask;
@@ -24,20 +23,12 @@ public sealed class HostBackgroundController(ISettingsService settingsService) :
 
     public Task StopAsync(CancellationToken cancellationToken)
     {
-        SaveSettings();
-        CleanLogFolder();
-        Shutdown();
-        return Task.CompletedTask;
-    }
-
-    private void SaveSettings()
-    {
         settingsService.SaveSettings();
-    }
-
-    private void LoadSettings()
-    {
-        settingsService.LoadSettings();
+        CleanLogFolder();
+        NotifyListener.TraceReceived -= DevToolsCommand.TraceReceivedHandler;
+        DevToolsCommand.SharedViewModel?.IsStarted = false;
+        VisualizationController.Stop();
+        return Task.CompletedTask;
     }
 
     private void CleanLogFolder()
@@ -53,20 +44,9 @@ public sealed class HostBackgroundController(ISettingsService settingsService) :
 
         foreach (var file in logFiles.Concat(jsonFiles))
         {
-            try
-            {
-                File.Delete(file);
-            }
-            catch
-            {
-                // Ignore
-            }
+            try { File.Delete(file); }
+            catch { /* ignore */ }
         }
-    }
-
-    private void LoadTheme()
-    {
-        ThemeManager.Current.ApplySettingsTheme(settingsService.GeneralConfig.Theme);
     }
 
     public static void ToggleHardwareRendering(ISettingsService settingsService)
@@ -80,16 +60,5 @@ public sealed class HostBackgroundController(ISettingsService settingsService) :
         {
             RenderOptions.ProcessRenderMode = RenderMode.SoftwareOnly;
         }
-    }
-
-    private static void Shutdown()
-    {
-        NotifyListener.TraceReceived -= TraceCommand.TraceReceivedHandler;
-        if (TraceCommand.SharedViewModel is not null)
-        {
-            TraceCommand.SharedViewModel.IsStarted = false;
-        }
-        VisualizationController.Stop();
-        PythonInitializer.Shutdown();
     }
 }

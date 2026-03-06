@@ -6,8 +6,6 @@ namespace RevitDevTool.View.Settings;
 
 public partial class VisualizationSettingsView
 {
-    private readonly Dictionary<string, object> _viewCache = new();
-
     public VisualizationSettingsView()
     {
         InitializeComponent();
@@ -47,14 +45,7 @@ public partial class VisualizationSettingsView
         };
 
         if (viewType == null) return;
-
-        if (!_viewCache.TryGetValue(tag!, out var view))
-        {
-            view = Host.GetService(viewType) ?? Activator.CreateInstance(viewType);
-            if (view != null)
-                _viewCache[tag!] = view;
-        }
-
+        var view = Host.GetService(viewType);
         HamburgerMenuControl.Content = view;
     }
 }

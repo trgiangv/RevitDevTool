@@ -1,7 +1,6 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
     <PropertyGroup>
-        <UseWindowsForms>true</UseWindowsForms>
         <Authors>Simon Vonhoff</Authors>
         <Company>github.com/vonhoff</Company>
         <Copyright>Copyright © 2025 Simon Vonhoff - Provided under the Apache License, Version 2.0.</Copyright>
