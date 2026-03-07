@@ -2,6 +2,7 @@ using System.Diagnostics;
 using System.IO;
 using Autodesk.Revit.UI;
 using RevitDevTool.Controllers;
+using RevitDevTool.Core;
 using RevitDevTool.Execution.Interfaces;
 using RevitDevTool.Execution.Models;
 using RevitDevTool.Execution.Providers.Dotnet;
@@ -61,7 +62,7 @@ public sealed class FSharpExecutionStrategy(string scriptPath) : IExecutionStrat
         }
         finally
         {
-            Context.Application.PurgeReleasedAPIObjects();
+            RevitContext.Application.PurgeReleasedAPIObjects();
         }
     }
 

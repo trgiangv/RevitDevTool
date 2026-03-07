@@ -1,5 +1,6 @@
 using System.Reflection;
 using Autodesk.Revit.UI;
+using RevitDevTool.Core;
 namespace RevitDevTool.Execution.Providers.Dotnet;
 
 internal static class AddinCommandData
@@ -14,15 +15,15 @@ internal static class AddinCommandData
     {
         if (_externalCommandData != null)
         {
-            _externalCommandData.View = Context.UiApplication.ActiveUIDocument?.ActiveView;
+            _externalCommandData.View = RevitContext.UiApplication.ActiveUIDocument?.ActiveView;
             return _externalCommandData;
         }
         var type = typeof(ExternalCommandData);
         var constructorInfos = type.GetConstructors(BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public);
         var instance = (ExternalCommandData) constructorInfos[0].Invoke(null);
-        instance.Application = Context.UiApplication;
+        instance.Application = RevitContext.UiApplication;
         instance.JournalData ??= new Dictionary<string, string>();
-        instance.View = Context.UiApplication.ActiveUIDocument?.ActiveView;
+        instance.View = RevitContext.UiApplication.ActiveUIDocument?.ActiveView;
 
         _externalCommandData = instance;
         return instance;
@@ -31,17 +32,17 @@ internal static class AddinCommandData
     private static ElementSet CreateElementSet()
     {
         _elementSet ??= new ElementSet();
-        if (Context.UiApplication.ActiveUIDocument == null)
+        if (RevitContext.UiApplication.ActiveUIDocument == null)
         {
             _elementSet.Clear();
             return _elementSet;
         }
 
         _elementSet.Clear();
-        var ids = Context.UiApplication.ActiveUIDocument.Selection.GetElementIds();
+        var ids = RevitContext.UiApplication.ActiveUIDocument.Selection.GetElementIds();
         foreach (var id in ids)
         {
-            var elem = Context.UiApplication.ActiveUIDocument.Document.GetElement(id);
+            var elem = RevitContext.UiApplication.ActiveUIDocument.Document.GetElement(id);
             if (elem != null) _elementSet.Insert(elem);
         }
 

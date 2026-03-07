@@ -5,6 +5,7 @@ using RevitDevTool.Visualization.Contracts;
 using RevitDevTool.Visualization.Helpers;
 using RevitDevTool.Visualization.Render;
 using System.Diagnostics;
+using RevitDevTool.Core;
 using Color = Autodesk.Revit.DB.Color;
 
 namespace RevitDevTool.Visualization.Server;
@@ -45,18 +46,18 @@ public sealed class PolylineVisualizationServer : VisualizationServer<GeometryOb
 
     protected override void RenderScene()
     {
-        if (visualizeGeometries.Count == 0) return;
+        if (VisualizeGeometries.Count == 0) return;
 
-        if (hasGeometryUpdates || _surfaceBuffers.Count == 0 || _curveBuffers.Count == 0)
+        if (HasGeometryUpdates || _surfaceBuffers.Count == 0 || _curveBuffers.Count == 0)
         {
             MapGeometryBuffer();
-            hasGeometryUpdates = false;
+            HasGeometryUpdates = false;
         }
 
-        if (hasEffectsUpdates)
+        if (HasEffectsUpdates)
         {
             UpdateEffects();
-            hasEffectsUpdates = false;
+            HasEffectsUpdates = false;
         }
 
         RenderSurfaceBuffers();
@@ -117,11 +118,11 @@ public sealed class PolylineVisualizationServer : VisualizationServer<GeometryOb
     {
         DisposeBuffers();
 
-        if (visualizeGeometries.Count == 0) return;
+        if (VisualizeGeometries.Count == 0) return;
 
         try
         {
-            foreach (var visualizeGeometry in visualizeGeometries)
+            foreach (var visualizeGeometry in VisualizeGeometries)
             {
                 var vertices = GetVertices(visualizeGeometry);
 
@@ -145,9 +146,9 @@ public sealed class PolylineVisualizationServer : VisualizationServer<GeometryOb
     {
         _normalsBuffers.Clear(true);
 
-        if (visualizeGeometries.Count == 0) return;
+        if (VisualizeGeometries.Count == 0) return;
 
-        foreach (var visualizeGeometry in visualizeGeometries)
+        foreach (var visualizeGeometry in VisualizeGeometries)
         {
             var vertices = GetVertices(visualizeGeometry);
             if (vertices.Count < 2) continue;
@@ -230,13 +231,13 @@ public sealed class PolylineVisualizationServer : VisualizationServer<GeometryOb
 
     public void UpdateSurfaceColor(Color value)
     {
-        var uiDocument = Context.ActiveUiDocument;
+        var uiDocument = RevitContext.ActiveUiDocument;
         if (uiDocument is null) return;
 
-        lock (renderLock)
+        lock (RenderLock)
         {
             _surfaceColor = value;
-            hasEffectsUpdates = true;
+            HasEffectsUpdates = true;
 
             uiDocument.UpdateAllOpenViews();
         }
@@ -244,13 +245,13 @@ public sealed class PolylineVisualizationServer : VisualizationServer<GeometryOb
 
     public void UpdateCurveColor(Color value)
     {
-        var uiDocument = Context.ActiveUiDocument;
+        var uiDocument = RevitContext.ActiveUiDocument;
         if (uiDocument is null) return;
 
-        lock (renderLock)
+        lock (RenderLock)
         {
             _curveColor = value;
-            hasEffectsUpdates = true;
+            HasEffectsUpdates = true;
 
             uiDocument.UpdateAllOpenViews();
         }
@@ -258,13 +259,13 @@ public sealed class PolylineVisualizationServer : VisualizationServer<GeometryOb
 
     public void UpdateDirectionColor(Color value)
     {
-        var uiDocument = Context.ActiveUiDocument;
+        var uiDocument = RevitContext.ActiveUiDocument;
         if (uiDocument is null) return;
 
-        lock (renderLock)
+        lock (RenderLock)
         {
             _directionColor = value;
-            hasEffectsUpdates = true;
+            HasEffectsUpdates = true;
 
             uiDocument.UpdateAllOpenViews();
         }
@@ -272,14 +273,14 @@ public sealed class PolylineVisualizationServer : VisualizationServer<GeometryOb
 
     public void UpdateDiameter(double value)
     {
-        var uiDocument = Context.ActiveUiDocument;
+        var uiDocument = RevitContext.ActiveUiDocument;
         if (uiDocument is null) return;
 
-        lock (renderLock)
+        lock (RenderLock)
         {
             _diameter = value;
-            hasGeometryUpdates = true;
-            hasEffectsUpdates = true;
+            HasGeometryUpdates = true;
+            HasEffectsUpdates = true;
             DisposeBuffers();
 
             uiDocument.UpdateAllOpenViews();
@@ -288,13 +289,13 @@ public sealed class PolylineVisualizationServer : VisualizationServer<GeometryOb
 
     public void UpdateTransparency(double value)
     {
-        var uiDocument = Context.ActiveUiDocument;
+        var uiDocument = RevitContext.ActiveUiDocument;
         if (uiDocument is null) return;
 
-        lock (renderLock)
+        lock (RenderLock)
         {
             _transparency = value;
-            hasEffectsUpdates = true;
+            HasEffectsUpdates = true;
 
             uiDocument.UpdateAllOpenViews();
         }
@@ -302,10 +303,10 @@ public sealed class PolylineVisualizationServer : VisualizationServer<GeometryOb
 
     public void UpdateSurfaceVisibility(bool visible)
     {
-        var uiDocument = Context.ActiveUiDocument;
+        var uiDocument = RevitContext.ActiveUiDocument;
         if (uiDocument is null) return;
 
-        lock (renderLock)
+        lock (RenderLock)
         {
             _drawSurface = visible;
             uiDocument.UpdateAllOpenViews();
@@ -314,10 +315,10 @@ public sealed class PolylineVisualizationServer : VisualizationServer<GeometryOb
 
     public void UpdateCurveVisibility(bool visible)
     {
-        var uiDocument = Context.ActiveUiDocument;
+        var uiDocument = RevitContext.ActiveUiDocument;
         if (uiDocument is null) return;
 
-        lock (renderLock)
+        lock (RenderLock)
         {
             _drawCurve = visible;
             uiDocument.UpdateAllOpenViews();
@@ -326,10 +327,10 @@ public sealed class PolylineVisualizationServer : VisualizationServer<GeometryOb
 
     public void UpdateDirectionVisibility(bool visible)
     {
-        var uiDocument = Context.ActiveUiDocument;
+        var uiDocument = RevitContext.ActiveUiDocument;
         if (uiDocument is null) return;
 
-        lock (renderLock)
+        lock (RenderLock)
         {
             _drawDirection = visible;
             uiDocument.UpdateAllOpenViews();

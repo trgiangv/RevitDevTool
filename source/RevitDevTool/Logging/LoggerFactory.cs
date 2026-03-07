@@ -1,4 +1,5 @@
 using System.IO;
+using RevitDevTool.Core;
 using RevitDevTool.Logging.Enums;
 using RevitDevTool.Settings.Config;
 using RevitDevTool.Utils;
@@ -76,7 +77,7 @@ public sealed class LoggerFactory
         if (enrichers == RevitEnricher.None)
             return config;
 
-        var uiApp = Context.UiApplication;
+        var uiApp = RevitContext.UiApplication;
         if (uiApp == null!)
             return config;
 

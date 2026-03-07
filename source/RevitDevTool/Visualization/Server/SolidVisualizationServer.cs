@@ -5,6 +5,7 @@ using RevitDevTool.Visualization.Contracts;
 using RevitDevTool.Visualization.Helpers;
 using RevitDevTool.Visualization.Render;
 using System.Diagnostics;
+using RevitDevTool.Core;
 using Color = Autodesk.Revit.DB.Color;
 
 namespace RevitDevTool.Visualization.Server;
@@ -38,11 +39,11 @@ public sealed class SolidVisualizationServer : VisualizationServer<Solid>
 
     public override Outline? GetBoundingBox(Autodesk.Revit.DB.View view)
     {
-        if (visualizeGeometries.Count == 0) return null;
+        if (VisualizeGeometries.Count == 0) return null;
         List<XYZ> minPoints = [];
         List<XYZ> maxPoints = [];
 
-        foreach (var solid in visualizeGeometries)
+        foreach (var solid in VisualizeGeometries)
         {
             if (solid.Volume == 0)
             {
@@ -74,16 +75,16 @@ public sealed class SolidVisualizationServer : VisualizationServer<Solid>
 
     protected override void RenderScene()
     {
-        if (hasGeometryUpdates || _faceBuffers.Count == 0 || _edgeBuffers.Count == 0)
+        if (HasGeometryUpdates || _faceBuffers.Count == 0 || _edgeBuffers.Count == 0)
         {
             MapGeometryBuffer();
-            hasGeometryUpdates = false;
+            HasGeometryUpdates = false;
         }
 
-        if (hasEffectsUpdates)
+        if (HasEffectsUpdates)
         {
             UpdateEffects();
-            hasEffectsUpdates = false;
+            HasEffectsUpdates = false;
         }
 
         RenderFaceBuffers();
@@ -127,7 +128,7 @@ public sealed class SolidVisualizationServer : VisualizationServer<Solid>
     {
         DisposeBuffers();
 
-        foreach (var solid in visualizeGeometries)
+        foreach (var solid in VisualizeGeometries)
         {
             if (solid.Volume == 0) continue;
             var scaledSolid = RenderGeometryHelper.ScaleSolid(solid, _scale);
@@ -178,13 +179,13 @@ public sealed class SolidVisualizationServer : VisualizationServer<Solid>
 
     public void UpdateSurfaceColor(Color value)
     {
-        var uiDocument = Context.ActiveUiDocument;
+        var uiDocument = RevitContext.ActiveUiDocument;
         if (uiDocument is null) return;
 
-        lock (renderLock)
+        lock (RenderLock)
         {
             _faceColor = value;
-            hasEffectsUpdates = true;
+            HasEffectsUpdates = true;
 
             uiDocument.UpdateAllOpenViews();
         }
@@ -192,13 +193,13 @@ public sealed class SolidVisualizationServer : VisualizationServer<Solid>
 
     public void UpdateEdgeColor(Color value)
     {
-        var uiDocument = Context.ActiveUiDocument;
+        var uiDocument = RevitContext.ActiveUiDocument;
         if (uiDocument is null) return;
 
-        lock (renderLock)
+        lock (RenderLock)
         {
             _edgeColor = value;
-            hasEffectsUpdates = true;
+            HasEffectsUpdates = true;
 
             uiDocument.UpdateAllOpenViews();
         }
@@ -206,13 +207,13 @@ public sealed class SolidVisualizationServer : VisualizationServer<Solid>
 
     public void UpdateTransparency(double value)
     {
-        var uiDocument = Context.ActiveUiDocument;
+        var uiDocument = RevitContext.ActiveUiDocument;
         if (uiDocument is null) return;
 
-        lock (renderLock)
+        lock (RenderLock)
         {
             _transparency = value;
-            hasEffectsUpdates = true;
+            HasEffectsUpdates = true;
 
             uiDocument.UpdateAllOpenViews();
         }
@@ -220,15 +221,15 @@ public sealed class SolidVisualizationServer : VisualizationServer<Solid>
 
     public void UpdateScale(double value)
     {
-        var uiDocument = Context.ActiveUiDocument;
+        var uiDocument = RevitContext.ActiveUiDocument;
         if (uiDocument is null) return;
 
         _scale = value;
 
-        lock (renderLock)
+        lock (RenderLock)
         {
-            hasGeometryUpdates = true;
-            hasEffectsUpdates = true;
+            HasGeometryUpdates = true;
+            HasEffectsUpdates = true;
             DisposeBuffers();
 
             uiDocument.UpdateAllOpenViews();
@@ -237,10 +238,10 @@ public sealed class SolidVisualizationServer : VisualizationServer<Solid>
 
     public void UpdateFaceVisibility(bool value)
     {
-        var uiDocument = Context.ActiveUiDocument;
+        var uiDocument = RevitContext.ActiveUiDocument;
         if (uiDocument is null) return;
 
-        lock (renderLock)
+        lock (RenderLock)
         {
             _drawFace = value;
 
@@ -250,10 +251,10 @@ public sealed class SolidVisualizationServer : VisualizationServer<Solid>
 
     public void UpdateEdgeVisibility(bool value)
     {
-        var uiDocument = Context.ActiveUiDocument;
+        var uiDocument = RevitContext.ActiveUiDocument;
         if (uiDocument is null) return;
 
-        lock (renderLock)
+        lock (RenderLock)
         {
             _drawEdge = value;
 

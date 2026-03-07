@@ -1,8 +1,7 @@
 using System.Collections.Concurrent;
-using System.ComponentModel;
 using Autodesk.Revit.UI;
-using Nice3point.Revit.Toolkit.External;
-using Nice3point.Revit.Toolkit.External.Handlers;
+using RevitDevTool.Core;
+
 // ReSharper disable ReplaceWithFieldKeyword
 namespace RevitDevTool.Controllers;
 
@@ -27,7 +26,7 @@ public static class ExternalEventController
         if (AsyncGenericHandlers.TryGetValue(typeof(T), out var existing))
             return (AsyncEventHandler<T>)existing;
 
-        if (Context.IsRevitInApiMode)
+        if (RevitContext.IsRevitInApiMode)
         {
             var handler = AsyncGenericHandlers.GetOrAdd(
                 typeof(T),
@@ -53,92 +52,5 @@ public static class ExternalEventController
         _actionHandler = new ActionEventHandler();
         _asyncHandler = new AsyncEventHandler();
         _isRegistered = true;
-    }
-}
-
-/// <summary>
-///     Handler, to provide access to modify the Revit document with the ability to queue calls to Raise methods.
-/// </summary>
-[PublicAPI]
-public class ActionEventHandler : ExternalEventHandler
-{
-    private Action<UIApplication>? _action;
-    private Action? _simpleAction;
-
-    /// <summary>Callback invoked by Revit. Not used to be called in user code.</summary>
-    [EditorBrowsable(EditorBrowsableState.Never)]
-    public override void Execute(UIApplication uiApplication)
-    {
-        if (_action is null && _simpleAction is null) return;
-
-        try
-        {
-            _action?.Invoke(uiApplication);
-            _simpleAction?.Invoke();
-        }
-        finally
-        {
-            _action = null;
-            _simpleAction = null;
-        }
-    }
-
-    /// <summary>
-    ///     Instructing Revit to queue a handler and raise (signal) the external event.
-    /// </summary>
-    /// <remarks>
-    ///     Revit will wait until it is ready to process the event and then
-    ///     it will execute its event handler by calling the Execute method.
-    ///     Revit processes external events only when no other commands or
-    ///     edit modes are currently active in Revit, which is the same policy
-    ///     like the one that applies to evoking external commands.<br/><br/>
-    ///     Executes the handler out of queue if Revit is in API mode.
-    /// </remarks>
-    public void Raise(Action<UIApplication> action)
-    {
-        if (Context.IsRevitInApiMode)
-        {
-            action(Context.UiApplication);
-            return;
-        }
-        
-        if (_action is null) _action = action;
-        else _action += action;
-
-        Raise();
-    }
-    
-    /// <summary>
-    ///     Instructing Revit to queue a handler and raise (signal) the external event.
-    /// </summary>
-    /// <remarks>
-    ///     Revit will wait until it is ready to process the event and then
-    ///     it will execute its event handler by calling the Execute method.
-    ///     Revit processes external events only when no other commands or
-    ///     edit modes are currently active in Revit, which is the same policy
-    ///     like the one that applies to evoking external commands.<br/><br/>
-    ///     Executes the handler out of queue if Revit is in API mode.
-    /// </remarks>
-    public void Raise(Action action)
-    {
-        if (Context.IsRevitInApiMode)
-        {
-            action();
-            return;
-        }
-        
-        if (_simpleAction is null) _simpleAction = action;
-        else _simpleAction += action;
-
-        Raise();
-    }
-
-    /// <summary>
-    ///     Clears the call queue of subscribed delegates.
-    /// </summary>
-    /// <remarks>The queue can be cleaned up before the first delegate is invoked.</remarks>
-    public void Cancel()
-    {
-        _action = null;
     }
 }

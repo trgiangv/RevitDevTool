@@ -4,6 +4,7 @@ using RevitDevTool.Controllers;
 using RevitDevTool.Settings;
 using RevitDevTool.ViewModel.Messages;
 using System.Windows.Forms.Integration;
+using RevitDevTool.Core;
 using RevitDevTool.Logging;
 using RevitDevTool.Logging.Listeners;
 using Serilog.Events;
@@ -78,7 +79,7 @@ public sealed partial class LogViewModel : ObservableObject, IDisposable,
 
         _consoleRedirector ??= new ConsoleRedirector();
 
-        Context.UiApplication.Idling += _onIdlingHandler;
+        RevitContext.UiApplication.Idling += _onIdlingHandler;
         _messenger.RegisterAll(this);
 
         _isSubscribed = true;
@@ -100,7 +101,7 @@ public sealed partial class LogViewModel : ObservableObject, IDisposable,
     {
         if (!_isSubscribed) return;
 
-        Context.UiApplication.Idling -= _onIdlingHandler;
+        RevitContext.UiApplication.Idling -= _onIdlingHandler;
         _messenger.UnregisterAll(this);
 
         _isSubscribed = false;

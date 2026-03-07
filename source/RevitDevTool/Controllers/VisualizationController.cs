@@ -1,4 +1,5 @@
 using CommunityToolkit.Mvvm.Messaging;
+using RevitDevTool.Core;
 using RevitDevTool.ViewModel.Messages;
 using RevitDevTool.ViewModel.Settings.Visualization;
 using RevitDevTool.Visualization.Contracts;
@@ -65,11 +66,10 @@ internal static class VisualizationController
         NotifyGeometryCountChanged();
     }
 
-    public static int TotalGeometryCount => ServerViewModelPairs.Sum(pair => pair.Server.GeometryCount);
-
     public static void NotifyGeometryCountChanged()
     {
-        WeakReferenceMessenger.Default.Send(new GeometryCountChangedMessage(TotalGeometryCount));
+        var totalGeometryCount = ServerViewModelPairs.Sum(pair => pair.Server.GeometryCount);
+        WeakReferenceMessenger.Default.Send(new GeometryCountChangedMessage(totalGeometryCount));
     }
 
     public static void Refresh()
@@ -78,7 +78,7 @@ internal static class VisualizationController
         {
             viewModel.Refresh();
         }
-        Context.ActiveUiDocument?.UpdateAllOpenViews();
+        RevitContext.ActiveUiDocument?.UpdateAllOpenViews();
     }
 
     public static void Add<T>(T? geometry)

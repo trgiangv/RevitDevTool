@@ -1,3 +1,4 @@
+using RevitDevTool.Core;
 using RevitDevTool.Logging.Enums;
 using Serilog.Sinks.RichTextBoxForms.Tokens;
 namespace RevitDevTool.Logging;
@@ -6,7 +7,7 @@ internal static class RevitSearchService
 {
     internal static void TrySearchAndSelectInActiveDocument(DetectedToken token)
     {
-        var uiDocument = Context.UiApplication.ActiveUIDocument;
+        var uiDocument = RevitContext.UiApplication.ActiveUIDocument;
         if (uiDocument?.Document == null) return;
         var id = SearchDocument(uiDocument.Document, token);
         if (id == ElementId.InvalidElementId) return;

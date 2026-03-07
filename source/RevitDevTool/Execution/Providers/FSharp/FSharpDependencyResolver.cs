@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using System.IO;
 using System.Text.RegularExpressions;
+using RevitDevTool.Core;
 namespace RevitDevTool.Execution.Providers.FSharp;
 
 // ReSharper disable once PartialTypeWithSinglePart
@@ -24,7 +25,7 @@ internal static partial class FSharpDependencyResolver
     {
         var entryScript = Path.GetFullPath(entryScriptPath);
         var entryScriptName = Path.GetFileName(entryScript);
-        var hostRevitVersion = Context.Application.VersionNumber;
+        var hostRevitVersion = RevitContext.Application.VersionNumber;
         var references = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         var resolvedReferenceLines = ResolveFileReferences(graph.FileReferences, hostRevitVersion, references);
         var requiresRewrite = graph.Packages.Count > 0 || resolvedReferenceLines.Count > 0;

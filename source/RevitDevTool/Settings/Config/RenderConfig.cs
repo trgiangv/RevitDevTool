@@ -1,5 +1,6 @@
 ﻿using System.Text.Json.Serialization;
 using System.Windows.Media;
+using RevitDevTool.Core;
 using Color = System.Windows.Media.Color;
 
 namespace RevitDevTool.Settings.Config;
@@ -37,8 +38,8 @@ public class BoundingBoxVisualizationSettings
 public class FaceVisualizationSettings
 {
     [JsonPropertyName("Transparency")] public double Transparency { get; set; } = 20;
-    [JsonPropertyName("Extrusion")] public double Extrusion { get; set; } = Context.Application.VertexTolerance * 12;
-    [JsonPropertyName("MinExtrusion")] public double MinExtrusion { get; set; } = Context.Application.VertexTolerance * 12;
+    [JsonPropertyName("Extrusion")] public double Extrusion { get; set; } = RevitContext.Application.VertexTolerance * 12;
+    [JsonPropertyName("MinExtrusion")] public double MinExtrusion { get; set; } = RevitContext.Application.VertexTolerance * 12;
 
     [JsonPropertyName("SurfaceColor")] public Color SurfaceColor { get; set; } = Colors.DodgerBlue;
     [JsonPropertyName("MeshColor")] public Color MeshColor { get; set; } = Color.FromArgb(255, 30, 81, 255);
@@ -53,8 +54,8 @@ public class FaceVisualizationSettings
 public class MeshVisualizationSettings
 {
     [JsonPropertyName("Transparency")] public double Transparency { get; set; } = 20;
-    [JsonPropertyName("Extrusion")] public double Extrusion { get; set; } = Context.Application.VertexTolerance * 12;
-    [JsonPropertyName("MinExtrusion")] public double MinExtrusion { get; set; } = Context.Application.VertexTolerance * 12;
+    [JsonPropertyName("Extrusion")] public double Extrusion { get; set; } = RevitContext.Application.VertexTolerance * 12;
+    [JsonPropertyName("MinExtrusion")] public double MinExtrusion { get; set; } = RevitContext.Application.VertexTolerance * 12;
 
     [JsonPropertyName("SurfaceColor")] public Color SurfaceColor { get; set; } = Colors.DodgerBlue;
     [JsonPropertyName("MeshColor")] public Color MeshColor { get; set; } = Color.FromArgb(255, 30, 81, 255);

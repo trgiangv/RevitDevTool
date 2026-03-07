@@ -3,6 +3,7 @@ using System.IO;
 using System.Net;
 using System.Net.Sockets;
 using Python.Runtime;
+using RevitDevTool.Core;
 namespace RevitDevTool.Execution.Providers.Python;
 
 public static class PythonInitializer
@@ -73,7 +74,7 @@ public static class PythonInitializer
         
         dynamic builtins = Py.Import("builtins");
         builtins.__log_func__ = logFunction.ToPython();
-        builtins.__revit__ = Context.UiApplication;
+        builtins.__revit__ = RevitContext.UiApplication;
 
         var assembly = typeof(PythonInitializer).Assembly;
         var resourceName = assembly.GetManifestResourceNames()

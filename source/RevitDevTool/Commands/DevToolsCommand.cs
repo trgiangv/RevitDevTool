@@ -2,8 +2,7 @@ using System.Windows.Input;
 using Autodesk.Revit.Attributes;
 using Autodesk.Revit.DB.Events;
 using Autodesk.Revit.UI;
-using Nice3point.Revit.Toolkit.Decorators;
-using Nice3point.Revit.Toolkit.External;
+using RevitDevTool.Core;
 using RevitDevTool.Logging.Listeners;
 using RevitDevTool.Utils;
 using RevitDevTool.View;
@@ -13,7 +12,7 @@ namespace RevitDevTool.Commands;
 
 [UsedImplicitly]
 [Transaction(TransactionMode.Manual)]
-public class DevToolsCommand : ExternalCommand, IExternalCommandAvailability
+public class DevToolsCommand : IExternalCommand, IExternalCommandAvailability
 {
     public const string CommandName = "DevTools";
     private static readonly Guid PaneGuid = new("43AE2B41-0BE6-425A-B27A-724B2CE17351");
@@ -23,9 +22,9 @@ public class DevToolsCommand : ExternalCommand, IExternalCommandAvailability
     private static bool IsForceHide { get; set; }
     internal static LogViewModel? SharedViewModel { get; private set; }
     private static MainWindow? FloatingWindow { get; set; }
-    private static bool HasUiDocument => Context.UiApplication.HasActiveUiDocument();
+    private static bool HasUiDocument => RevitContext.UiApplication.HasActiveUiDocument();
 
-    public override void Execute()
+    public Result Execute(ExternalCommandData commandData, ref string message, ElementSet elements)
     {
         if (Keyboard.IsKeyDown(Key.LeftCtrl)
             || Keyboard.IsKeyDown(Key.RightCtrl))
@@ -38,10 +37,11 @@ public class DevToolsCommand : ExternalCommand, IExternalCommandAvailability
             {
                 ExecuteFloatingWindow();
             }
-            return;
+            return Result.Succeeded;
         }
 
         ExecuteLastCode();
+        return Result.Succeeded;
     }
 
     private static void ExecuteFloatingWindow()
@@ -58,9 +58,9 @@ public class DevToolsCommand : ExternalCommand, IExternalCommandAvailability
         }
     }
 
-    private void ExecutePaneVisibility()
+    private static void ExecutePaneVisibility()
     {
-        var dockablePane = UiApplication.GetDockablePane(PaneId);
+        var dockablePane = RevitContext.UiApplication.GetDockablePane(PaneId);
         if (dockablePane.IsShown())
         {
             dockablePane.Hide();
@@ -107,7 +107,7 @@ public class DevToolsCommand : ExternalCommand, IExternalCommandAvailability
     {
         if (HasUiDocument)
         {
-            var dockablePane = Context.UiControlledApplication.GetDockablePane(PaneId);
+            var dockablePane = RevitContext.UiControlledApplication.GetDockablePane(PaneId);
             if (!dockablePane.IsShown() && !IsForceHide)
             {
                 dockablePane.Show();
@@ -133,7 +133,7 @@ public class DevToolsCommand : ExternalCommand, IExternalCommandAvailability
         if (!HasUiDocument) return;
         CloseFloatingWindow();
 
-        var dockablePane = Context.UiControlledApplication.GetDockablePane(PaneId);
+        var dockablePane = RevitContext.UiControlledApplication.GetDockablePane(PaneId);
 
         if (IsForceHide)
         {

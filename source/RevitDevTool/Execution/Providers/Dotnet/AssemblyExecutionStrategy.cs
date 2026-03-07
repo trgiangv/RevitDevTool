@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using RevitDevTool.Controllers;
+using RevitDevTool.Core;
 using RevitDevTool.Execution.Interfaces;
 using RevitDevTool.Execution.Models;
 using RevitDevTool.Utils;
@@ -50,7 +51,7 @@ public sealed class AssemblyExecutionStrategy(AddinItem addinItem) : IExecutionS
         }
         finally
         {
-            Context.Application.PurgeReleasedAPIObjects();
+            RevitContext.Application.PurgeReleasedAPIObjects();
         }
     }
 }

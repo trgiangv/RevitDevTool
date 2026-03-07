@@ -1,6 +1,7 @@
 using System.IO;
 using System.Reflection;
 using Autodesk.Revit.UI;
+using RevitDevTool.Core;
 namespace RevitDevTool.Execution.Providers.Dotnet;
 
 internal static class AddinExecutor
@@ -18,7 +19,7 @@ internal static class AddinExecutor
         finally
         {
             alc.Unload();
-            Context.Application.PurgeReleasedAPIObjects();
+            RevitContext.Application.PurgeReleasedAPIObjects();
             GC.Collect();
             GC.WaitForPendingFinalizers();
         }

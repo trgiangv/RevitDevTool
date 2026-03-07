@@ -1,0 +1,17 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <IsRepackable>true</IsRepackable>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <!-- Revit References -->
+        <PackageReference Include="Nice3point.Revit.Build.Tasks"/>
+        <PackageReference Include="Revit_All_Main_Versions_API_x64" VersionOverride="$(RevitVersion).*" ExcludeAssets="runtime"/>
+
+        <!-- ILRepack -->
+        <PackageReference Include="ILRepack"/>
+        <PackageReference Include="JetBrains.Annotations" ExcludeAssets="runtime"/>
+    </ItemGroup>
+
+</Project>

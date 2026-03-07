@@ -5,6 +5,7 @@ using RevitDevTool.Visualization.Contracts;
 using RevitDevTool.Visualization.Helpers;
 using RevitDevTool.Visualization.Render;
 using System.Diagnostics;
+using RevitDevTool.Core;
 using Color = Autodesk.Revit.DB.Color;
 
 namespace RevitDevTool.Visualization.Server;
@@ -52,27 +53,27 @@ public sealed class XyzVisualizationServer : VisualizationServer<XYZ>
 
     public override Outline? GetBoundingBox(Autodesk.Revit.DB.View view)
     {
-        if (visualizeGeometries.Count == 0) return null;
-        var minPoint = new XYZ(visualizeGeometries.Min(p => p.X) - _axisLength, visualizeGeometries.Min(p => p.Y) - _axisLength, visualizeGeometries.Min(p => p.Z) - _axisLength);
-        var maxPoint = new XYZ(visualizeGeometries.Max(p => p.X) + _axisLength, visualizeGeometries.Max(p => p.Y) + _axisLength, visualizeGeometries.Max(p => p.Z) + _axisLength);
+        if (VisualizeGeometries.Count == 0) return null;
+        var minPoint = new XYZ(VisualizeGeometries.Min(p => p.X) - _axisLength, VisualizeGeometries.Min(p => p.Y) - _axisLength, VisualizeGeometries.Min(p => p.Z) - _axisLength);
+        var maxPoint = new XYZ(VisualizeGeometries.Max(p => p.X) + _axisLength, VisualizeGeometries.Max(p => p.Y) + _axisLength, VisualizeGeometries.Max(p => p.Z) + _axisLength);
 
         return new Outline(minPoint, maxPoint);
     }
 
     protected override void RenderScene()
     {
-        if (visualizeGeometries.Count == 0) return;
+        if (VisualizeGeometries.Count == 0) return;
 
-        if (hasGeometryUpdates)
+        if (HasGeometryUpdates)
         {
             MapGeometryBuffer();
-            hasGeometryUpdates = false;
+            HasGeometryUpdates = false;
         }
 
-        if (hasEffectsUpdates)
+        if (HasEffectsUpdates)
         {
             UpdateEffects();
-            hasEffectsUpdates = false;
+            HasEffectsUpdates = false;
         }
 
         RenderAxisByIndex(0, _drawXAxis);
@@ -127,7 +128,7 @@ public sealed class XyzVisualizationServer : VisualizationServer<XYZ>
     {
         DisposeBuffers();
 
-        if (visualizeGeometries.Count == 0) return;
+        if (VisualizeGeometries.Count == 0) return;
 
         try
         {
@@ -142,10 +143,10 @@ public sealed class XyzVisualizationServer : VisualizationServer<XYZ>
 
     private void MapNormalBuffer()
     {
-        if (visualizeGeometries.Count == 0) return;
+        if (VisualizeGeometries.Count == 0) return;
 
         var normalExtendLength = _axisLength > 1 ? 0.8 : _axisLength * 0.8;
-        foreach (var visualizeGeometry in visualizeGeometries)
+        foreach (var visualizeGeometry in VisualizeGeometries)
         {
             var axisBuffers = Enumerable.Range(0, 3)
                 .Select(_ => new RenderingBufferStorage())
@@ -164,9 +165,9 @@ public sealed class XyzVisualizationServer : VisualizationServer<XYZ>
 
     private void MapPlaneBuffer()
     {
-        if (visualizeGeometries.Count == 0) return;
+        if (VisualizeGeometries.Count == 0) return;
 
-        foreach (var visualizeGeometry in visualizeGeometries)
+        foreach (var visualizeGeometry in VisualizeGeometries)
         {
             var planeBuffers = Enumerable.Range(0, 3)
                 .Select(_ => new RenderingBufferStorage())
@@ -213,13 +214,13 @@ public sealed class XyzVisualizationServer : VisualizationServer<XYZ>
 
     public void UpdateXColor(Color value)
     {
-        var uiDocument = Context.ActiveUiDocument;
+        var uiDocument = RevitContext.ActiveUiDocument;
         if (uiDocument is null) return;
 
-        lock (renderLock)
+        lock (RenderLock)
         {
             _xColor = value;
-            hasEffectsUpdates = true;
+            HasEffectsUpdates = true;
 
             uiDocument.UpdateAllOpenViews();
         }
@@ -227,13 +228,13 @@ public sealed class XyzVisualizationServer : VisualizationServer<XYZ>
 
     public void UpdateYColor(Color value)
     {
-        var uiDocument = Context.ActiveUiDocument;
+        var uiDocument = RevitContext.ActiveUiDocument;
         if (uiDocument is null) return;
 
-        lock (renderLock)
+        lock (RenderLock)
         {
             _yColor = value;
-            hasEffectsUpdates = true;
+            HasEffectsUpdates = true;
 
             uiDocument.UpdateAllOpenViews();
         }
@@ -241,13 +242,13 @@ public sealed class XyzVisualizationServer : VisualizationServer<XYZ>
 
     public void UpdateZColor(Color value)
     {
-        var uiDocument = Context.ActiveUiDocument;
+        var uiDocument = RevitContext.ActiveUiDocument;
         if (uiDocument is null) return;
 
-        lock (renderLock)
+        lock (RenderLock)
         {
             _zColor = value;
-            hasEffectsUpdates = true;
+            HasEffectsUpdates = true;
 
             uiDocument.UpdateAllOpenViews();
         }
@@ -255,14 +256,14 @@ public sealed class XyzVisualizationServer : VisualizationServer<XYZ>
 
     public void UpdateAxisLength(double value)
     {
-        var uiDocument = Context.ActiveUiDocument;
+        var uiDocument = RevitContext.ActiveUiDocument;
         if (uiDocument is null) return;
 
-        lock (renderLock)
+        lock (RenderLock)
         {
             _axisLength = value;
-            hasGeometryUpdates = true;
-            hasEffectsUpdates = true;
+            HasGeometryUpdates = true;
+            HasEffectsUpdates = true;
             DisposeBuffers();
 
             uiDocument.UpdateAllOpenViews();
@@ -271,13 +272,13 @@ public sealed class XyzVisualizationServer : VisualizationServer<XYZ>
 
     public void UpdateTransparency(double value)
     {
-        var uiDocument = Context.ActiveUiDocument;
+        var uiDocument = RevitContext.ActiveUiDocument;
         if (uiDocument is null) return;
 
-        lock (renderLock)
+        lock (RenderLock)
         {
             _transparency = value;
-            hasEffectsUpdates = true;
+            HasEffectsUpdates = true;
 
             uiDocument.UpdateAllOpenViews();
         }
@@ -285,10 +286,10 @@ public sealed class XyzVisualizationServer : VisualizationServer<XYZ>
 
     public void UpdatePlaneVisibility(bool visible)
     {
-        var uiDocument = Context.ActiveUiDocument;
+        var uiDocument = RevitContext.ActiveUiDocument;
         if (uiDocument is null) return;
 
-        lock (renderLock)
+        lock (RenderLock)
         {
             _drawPlane = visible;
             uiDocument.UpdateAllOpenViews();
@@ -297,10 +298,10 @@ public sealed class XyzVisualizationServer : VisualizationServer<XYZ>
 
     public void UpdateXAxisVisibility(bool visible)
     {
-        var uiDocument = Context.ActiveUiDocument;
+        var uiDocument = RevitContext.ActiveUiDocument;
         if (uiDocument is null) return;
 
-        lock (renderLock)
+        lock (RenderLock)
         {
             _drawXAxis = visible;
             uiDocument.UpdateAllOpenViews();
@@ -309,10 +310,10 @@ public sealed class XyzVisualizationServer : VisualizationServer<XYZ>
 
     public void UpdateYAxisVisibility(bool visible)
     {
-        var uiDocument = Context.ActiveUiDocument;
+        var uiDocument = RevitContext.ActiveUiDocument;
         if (uiDocument is null) return;
 
-        lock (renderLock)
+        lock (RenderLock)
         {
             _drawYAxis = visible;
             uiDocument.UpdateAllOpenViews();
@@ -321,10 +322,10 @@ public sealed class XyzVisualizationServer : VisualizationServer<XYZ>
 
     public void UpdateZAxisVisibility(bool visible)
     {
-        var uiDocument = Context.ActiveUiDocument;
+        var uiDocument = RevitContext.ActiveUiDocument;
         if (uiDocument is null) return;
 
-        lock (renderLock)
+        lock (RenderLock)
         {
             _drawZAxis = visible;
             uiDocument.UpdateAllOpenViews();

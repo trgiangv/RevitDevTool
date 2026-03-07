@@ -1,4 +1,5 @@
 using System.IO;
+using RevitDevTool.Core;
 
 namespace RevitDevTool.Utils;
 
@@ -11,7 +12,7 @@ public static class SettingsUtils
     public static string GetContentRootPath()
     {
         var appData = GetApplicationDataPath();
-        var revitVersion = Context.Application.VersionNumber;
+        var revitVersion = RevitContext.Application.VersionNumber;
         var rootPath = Path.Combine(appData, revitVersion);
         Directory.CreateDirectory(rootPath);
         return rootPath;

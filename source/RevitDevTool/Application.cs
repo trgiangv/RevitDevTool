@@ -1,4 +1,4 @@
-using Nice3point.Revit.Toolkit.External;
+using Autodesk.Revit.UI;
 using RevitDevTool.Commands;
 using RevitDevTool.Controllers;
 using RevitDevTool.Utils;
@@ -6,30 +6,32 @@ using RevitDevTool.Utils;
 namespace RevitDevTool;
 
 [UsedImplicitly]
-public class Application : ExternalApplication
+public class Application : IExternalApplication
 {
-    public override void OnStartup()
+    public Result OnStartup(UIControlledApplication application)
     {
         AssemblyLoader.Initialize();
         ExternalEventController.Register();
         Host.Start();
-        AddButton();
-        AddDockable();
+        AddButton(application);
+        AddDockable(application);
+        return Result.Succeeded;
     }
 
-    public override void OnShutdown()
+    public Result OnShutdown(UIControlledApplication application)
     {
         Host.Stop();
+        return Result.Succeeded;
     }
 
-    private void AddDockable()
+    private static void AddDockable(UIControlledApplication application)
     {
-        DevToolsCommand.RegisterDockablePane(Application);
+        DevToolsCommand.RegisterDockablePane(application);
     }
 
-    private void AddButton()
+    private static void AddButton(UIControlledApplication application)
     {
-        var panel = Application.CreatePanel("External Tools");
+        var panel = application.CreatePanel("External Tools");
 
         panel.AddPushButton<DevToolsCommand>(DevToolsCommand.CommandName)
             .AddShortcuts("AD")

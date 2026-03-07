@@ -1,6 +1,5 @@
 using Autodesk.Revit.Attributes;
 using Autodesk.Revit.UI;
-using Nice3point.Revit.Toolkit.External;
 using RevitDevTool.Utils;
 using RevitDevTool.View;
 using RevitDevTool.ViewModel;
@@ -9,14 +8,15 @@ namespace RevitDevTool.Commands;
 
 [UsedImplicitly]
 [Transaction(TransactionMode.Manual)]
-public class StubBuilderCommand : ExternalCommand, IExternalCommandAvailability
+public class StubBuilderCommand : IExternalCommand, IExternalCommandAvailability
 {
-    public override void Execute()
+    public Result Execute(ExternalCommandData commandData, ref string message, ElementSet elements)
     {
         var vm = new StubBuilderViewModel();
         var window = new StubBuilderWindow(vm);
         window.SetRevitOwner();
         window.ShowDialog();
+        return Result.Succeeded;
     }
 
     public bool IsCommandAvailable(UIApplication applicationData, CategorySet selectedCategories)
