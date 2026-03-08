@@ -10,6 +10,7 @@ public interface ISettingsService
     LogConfig LogConfig { get; }
     VisualizationConfig VisualizationConfig { get; }
     CodeExecuteConfig CodeExecuteConfig { get; }
+    McpRegistryConfig McpRegistryConfig { get; }
 
     void SaveSettings();
     void LoadSettings();

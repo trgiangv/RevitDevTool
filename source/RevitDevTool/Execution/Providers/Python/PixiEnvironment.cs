@@ -10,44 +10,62 @@ namespace RevitDevTool.Execution.Providers.Python;
 /// </summary>
 public static class PixiEnvironment
 {
-    private const string PythonConstraint = "3.13.*";
     private const string PythonDllName = "python313.dll";
     private const string PixiEnvDirName = "pixi-env";
     public static IReadOnlyCollection<string> RequirePackages =>
     [
         "modelcontextprotocol",
+        "anyio",
         "debugpy",
-        "pytest",
         "pywin32",
+        "pydantic",
         "packaging"
     ];
-    private const string PixiTomlTemplate = $"""
-                                             [workspace]
-                                             name = "revitdevtool-runtime"
-                                             version = "0.1.0"
-                                             channels = ["conda-forge"]
-                                             platforms = ["win-64"]
+    private const string PixiTomlTemplate = """
+                                            [workspace]
+                                            name = "revitdevtool-runtime"
+                                            version = "0.1.0"
+                                            channels = ["conda-forge"]
+                                            platforms = ["win-64"]
 
-                                             [dependencies]
-                                             python = "{PythonConstraint}"
-                                             packaging = "*"
-                                             debugpy = "*"
-                                             pytest = "*"
-                                             pywin32 = "*"
+                                            [dependencies]
+                                            python = "3.13.*"
+                                            packaging = "*"
+                                            debugpy = "*"
+                                            pywin32 = "*"
+                                            pydantic = "*"
 
-                                             [pypi-dependencies]
-                                             modelcontextprotocol = "*"
-                                             """;
+                                            [pypi-dependencies]
+                                            modelcontextprotocol = "*"
+                                            anyio = "*"
+                                            """;
     private const string PixiEnvDir = @".pixi\envs\default";
     public static string PixiProjectDir => Path.Combine(SettingsUtils.GetApplicationDataPath(), PixiEnvDirName);
     public static string PythonHome => Path.Combine(PixiProjectDir, PixiEnvDir);
     public static string PythonExe => Path.Combine(PythonHome, "python.exe");
     public static string ParserScriptPath => Path.Combine(PixiProjectDir, "parser.py");
+    public static string McpServerDir => Path.Combine(PixiProjectDir, "mcp_server");
+    private static string McpServerSchemasDir => Path.Combine(McpServerDir, "schemas");
+    public static string FastMcpParserPath => Path.Combine(McpServerDir, "tools_parser.py");
 
     public static void EnsureParserScript()
     {
         if (File.Exists(ParserScriptPath)) return;
         ExtractParserScript();
+    }
+
+    public static void EnsureMcpServerFiles()
+    {
+        Directory.CreateDirectory(McpServerDir);
+        Directory.CreateDirectory(McpServerSchemasDir);
+        ExtractEmbeddedPython("MCP.Server.app.py", Path.Combine(McpServerDir, "app.py"));
+        ExtractEmbeddedPython("MCP.Server.schemas.py", Path.Combine(McpServerDir, "schemas.py"));
+        ExtractEmbeddedPython("MCP.Server.tools_parser.py", Path.Combine(McpServerDir, "tools_parser.py"));
+        ExtractEmbeddedPython("MCP.Server.__init__.py", Path.Combine(McpServerDir, "__init__.py"));
+        ExtractEmbeddedPython("MCP.Server.schemas.__init__.py", Path.Combine(McpServerSchemasDir, "__init__.py"));
+        ExtractEmbeddedPython("MCP.Server.schemas.protocol.py", Path.Combine(McpServerSchemasDir, "protocol.py"));
+        ExtractEmbeddedPython("MCP.Server.schemas.models.py", Path.Combine(McpServerSchemasDir, "models.py"));
+        ExtractEmbeddedPython("MCP.Server.schema_mirror.json", Path.Combine(McpServerDir, "schema_mirror.json"));
     }
 
     public static void ExtractParserScript()
@@ -63,6 +81,17 @@ public static class PixiEnvironment
         using var file   = File.Create(ParserScriptPath);
         stream.CopyTo(file);
         Debug.WriteLine($"Extracted Parser.py to: {ParserScriptPath}");
+    }
+
+    private static void ExtractEmbeddedPython(string suffix, string destinationPath)
+    {
+        var assembly = typeof(PixiEnvironment).Assembly;
+        var resourceName = assembly.GetManifestResourceNames()
+                               .FirstOrDefault(name => name.EndsWith(suffix, StringComparison.OrdinalIgnoreCase))
+                           ?? throw new InvalidOperationException($"Embedded resource '{suffix}' not found.");
+        using var stream = assembly.GetManifestResourceStream(resourceName)!;
+        using var file = File.Create(destinationPath);
+        stream.CopyTo(file);
     }
 
     public static bool IsEnvironmentReady() => File.Exists(PythonExe);

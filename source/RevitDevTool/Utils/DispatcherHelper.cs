@@ -13,7 +13,7 @@ public static class DispatcherHelper
     /// <summary>
     /// Gets the Revit UI thread dispatcher.
     /// </summary>
-    private static Dispatcher RevitDispatcher => ComponentManager.Ribbon.Dispatcher;
+    private static Dispatcher? RevitDispatcher => ComponentManager.Ribbon?.Dispatcher;
 
     /// <summary>
     /// Executes an action on the Revit main UI thread.
@@ -21,6 +21,7 @@ public static class DispatcherHelper
     /// </summary>
     public static void RunOnMainThread(Action action)
     {
+        if (RevitDispatcher is null) return;
         if (RevitDispatcher.CheckAccess())
             action();
         else
@@ -32,6 +33,7 @@ public static class DispatcherHelper
     /// </summary>
     public static void RunOnMainThread(Action action, DispatcherPriority priority)
     {
+        if (RevitDispatcher is null) return;
         if (RevitDispatcher.CheckAccess())
             action();
         else

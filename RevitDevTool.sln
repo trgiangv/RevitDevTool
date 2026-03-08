@@ -34,44 +34,20 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Supports", "Supports", "{44
 EndProject
 Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "FSharpDemo", "source\Samples\FSharpDemo\FSharpDemo.fsproj", "{CAB1E6AA-974C-4A41-AF01-4D39CA3B9FFC}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RevitDevTool.Core", "source\RevitDevTool.Core\RevitDevTool.Core.csproj", "{6F6281C5-4AE6-4CBF-8B9D-425BE2D242FD}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug R22|x64 = Debug R22|x64
-		Debug R22|Any CPU = Debug R22|Any CPU
-		Debug R22|x86 = Debug R22|x86
 		Debug R23|x64 = Debug R23|x64
-		Debug R23|Any CPU = Debug R23|Any CPU
-		Debug R23|x86 = Debug R23|x86
 		Debug R24|x64 = Debug R24|x64
-		Debug R24|Any CPU = Debug R24|Any CPU
-		Debug R24|x86 = Debug R24|x86
 		Debug R25|x64 = Debug R25|x64
-		Debug R25|Any CPU = Debug R25|Any CPU
-		Debug R25|x86 = Debug R25|x86
 		Debug R26|x64 = Debug R26|x64
-		Debug R26|Any CPU = Debug R26|Any CPU
-		Debug R26|x86 = Debug R26|x86
 		Release R22|x64 = Release R22|x64
-		Release R22|Any CPU = Release R22|Any CPU
-		Release R22|x86 = Release R22|x86
 		Release R23|x64 = Release R23|x64
-		Release R23|Any CPU = Release R23|Any CPU
-		Release R23|x86 = Release R23|x86
 		Release R24|x64 = Release R24|x64
-		Release R24|Any CPU = Release R24|Any CPU
-		Release R24|x86 = Release R24|x86
 		Release R25|x64 = Release R25|x64
-		Release R25|Any CPU = Release R25|Any CPU
-		Release R25|x86 = Release R25|x86
 		Release R26|x64 = Release R26|x64
-		Release R26|Any CPU = Release R26|Any CPU
-		Release R26|x86 = Release R26|x86
-		Debug|x64 = Debug|x64
-		Debug|Any CPU = Debug|Any CPU
-		Debug|x86 = Debug|x86
-		Release|x64 = Release|x64
-		Release|Any CPU = Release|Any CPU
-		Release|x86 = Release|x86
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
 		{7895EAFA-9A58-42C5-A1D5-2D38B54357FA}.Debug R22|x64.ActiveCfg = Debug|Any CPU
@@ -568,6 +544,26 @@ Global
 		{CAB1E6AA-974C-4A41-AF01-4D39CA3B9FFC}.Release|Any CPU.Build.0 = Release|Any CPU
 		{CAB1E6AA-974C-4A41-AF01-4D39CA3B9FFC}.Release|x86.ActiveCfg = Release|Any CPU
 		{CAB1E6AA-974C-4A41-AF01-4D39CA3B9FFC}.Release|x86.Build.0 = Release|Any CPU
+		{6F6281C5-4AE6-4CBF-8B9D-425BE2D242FD}.Debug R22|x64.ActiveCfg = Debug R22|Any CPU
+		{6F6281C5-4AE6-4CBF-8B9D-425BE2D242FD}.Debug R22|x64.Build.0 = Debug R22|Any CPU
+		{6F6281C5-4AE6-4CBF-8B9D-425BE2D242FD}.Debug R23|x64.ActiveCfg = Debug R23|Any CPU
+		{6F6281C5-4AE6-4CBF-8B9D-425BE2D242FD}.Debug R23|x64.Build.0 = Debug R23|Any CPU
+		{6F6281C5-4AE6-4CBF-8B9D-425BE2D242FD}.Debug R24|x64.ActiveCfg = Debug R24|Any CPU
+		{6F6281C5-4AE6-4CBF-8B9D-425BE2D242FD}.Debug R24|x64.Build.0 = Debug R24|Any CPU
+		{6F6281C5-4AE6-4CBF-8B9D-425BE2D242FD}.Debug R25|x64.ActiveCfg = Debug R25|Any CPU
+		{6F6281C5-4AE6-4CBF-8B9D-425BE2D242FD}.Debug R25|x64.Build.0 = Debug R25|Any CPU
+		{6F6281C5-4AE6-4CBF-8B9D-425BE2D242FD}.Debug R26|x64.ActiveCfg = Debug R26|Any CPU
+		{6F6281C5-4AE6-4CBF-8B9D-425BE2D242FD}.Debug R26|x64.Build.0 = Debug R26|Any CPU
+		{6F6281C5-4AE6-4CBF-8B9D-425BE2D242FD}.Release R22|x64.ActiveCfg = Release R22|Any CPU
+		{6F6281C5-4AE6-4CBF-8B9D-425BE2D242FD}.Release R22|x64.Build.0 = Release R22|Any CPU
+		{6F6281C5-4AE6-4CBF-8B9D-425BE2D242FD}.Release R23|x64.ActiveCfg = Release R23|Any CPU
+		{6F6281C5-4AE6-4CBF-8B9D-425BE2D242FD}.Release R23|x64.Build.0 = Release R23|Any CPU
+		{6F6281C5-4AE6-4CBF-8B9D-425BE2D242FD}.Release R24|x64.ActiveCfg = Release R24|Any CPU
+		{6F6281C5-4AE6-4CBF-8B9D-425BE2D242FD}.Release R24|x64.Build.0 = Release R24|Any CPU
+		{6F6281C5-4AE6-4CBF-8B9D-425BE2D242FD}.Release R25|x64.ActiveCfg = Release R25|Any CPU
+		{6F6281C5-4AE6-4CBF-8B9D-425BE2D242FD}.Release R25|x64.Build.0 = Release R25|Any CPU
+		{6F6281C5-4AE6-4CBF-8B9D-425BE2D242FD}.Release R26|x64.ActiveCfg = Release R26|Any CPU
+		{6F6281C5-4AE6-4CBF-8B9D-425BE2D242FD}.Release R26|x64.Build.0 = Release R26|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

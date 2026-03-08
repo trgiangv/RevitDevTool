@@ -1,7 +1,5 @@
 using System.Diagnostics;
 using System.IO;
-using System.Net;
-using System.Net.Sockets;
 using Python.Runtime;
 using RevitDevTool.Core;
 namespace RevitDevTool.Execution.Providers.Python;
@@ -10,7 +8,6 @@ public static class PythonInitializer
 {
     private static readonly SemaphoreSlim InitLock = new(1, 1);
     public static PyModule? GlobalScope { get; private set; }
-    public static int DebugPort { get; private set; }
 
     public static bool IsInitialized => PythonEngine.IsInitialized
                                          && PixiInstaller.IsPixiInstalled()
@@ -27,7 +24,7 @@ public static class PythonInitializer
             {
                 await PixiInstaller.SetupPixiAsync().ConfigureAwait(false);
             }
-            
+
             if (!PixiEnvironment.IsEnvironmentReady())
             {
                 await PixiEnvironment.SetupEnvironmentAsync().ConfigureAwait(false);
@@ -46,7 +43,7 @@ public static class PythonInitializer
                 using (Py.GIL())
                 {
                     SetupGlobalScope();
-                    ListenToDebugger();
+                    PythonDebugger.StartListening();
                 }
             }
         }
@@ -54,35 +51,6 @@ public static class PythonInitializer
         {
             InitLock.Release();
         }
-    }
-
-    private static void SetupGlobalScope()
-    {
-        GlobalScope ??= Py.CreateScope("__main__");
-        
-        Action<object> logFunction = obj =>
-        {
-            if (obj is string str)
-            {
-                Trace.Write(str);
-            }
-            else
-            {
-                Trace.Write(obj);
-            }
-        };
-        
-        dynamic builtins = Py.Import("builtins");
-        builtins.__log_func__ = logFunction.ToPython();
-        builtins.__revit__ = RevitContext.UiApplication;
-
-        var assembly = typeof(PythonInitializer).Assembly;
-        var resourceName = assembly.GetManifestResourceNames()
-                                   .FirstOrDefault(name => name.EndsWith("Setup.py", StringComparison.OrdinalIgnoreCase))!;
-        using var stream = assembly.GetManifestResourceStream(resourceName)!;
-        using var reader = new StreamReader(stream);
-        var setupCode = reader.ReadToEnd();
-        GlobalScope.Exec(setupCode);
     }
 
     /// <summary>
@@ -113,79 +81,28 @@ public static class PythonInitializer
         }
     }
 
-    private static void ListenToDebugger()
+    private static void SetupGlobalScope()
     {
-        DebugPort = FindAvailablePort();
+        GlobalScope ??= Py.CreateScope("__main__");
 
-        const string debugpySetup = """
-                                    import os
-                                    import debugpy
-                                    os.environ["PYDEVD_DISABLE_FILE_VALIDATION"] = "1"
+        Action<object> logFunction = obj =>
+        {
+            if (obj is string str)
+                Trace.Write(str);
+            else
+                Trace.Write(obj);
+        };
 
-                                    if not debugpy.is_client_connected():
-                                        debugpy.listen(("localhost", __port__), in_process_debug_adapter=True)
-                                    """;
+        dynamic builtins = Py.Import("builtins");
+        builtins.__log_func__ = logFunction.ToPython();
+        builtins.__revit__ = RevitContext.UiApplication;
 
-        using var scope = Py.CreateScope();
-        try
-        {
-            scope.Set("__port__", DebugPort);
-            scope.Exec(debugpySetup);
-        }
-        catch (Exception e)
-        {
-            Trace.TraceError($"Failed to initialize debugpy: {e.Message}{Environment.NewLine}{e.StackTrace}");
-        }
-    }
-
-    private static int FindAvailablePort(int preferredPort = 5678)
-    {
-        try
-        {
-            var tester = new TcpListener(IPAddress.Loopback, preferredPort);
-            tester.Start();
-            tester.Stop();
-            return preferredPort;
-        }
-        catch (SocketException)
-        {
-            var fallback = new TcpListener(IPAddress.Loopback, 0);
-            fallback.Start();
-            var port = ((IPEndPoint) fallback.LocalEndpoint).Port;
-            fallback.Stop();
-            return port;
-        }
-    }
-
-    /// <summary>
-    /// Check if debugpy is connected to a debug adapter
-    /// </summary>
-    public static bool IsDebuggerConnected()
-    {
-        if (!IsInitialized) return false;
-        
-        using (Py.GIL())
-        {
-            using (var scope = Py.CreateScope())
-            {
-                try
-                {
-                    scope.Exec("""
-                               import sys
-                               __is_connected__ = False
-                               if 'debugpy' in sys.modules:
-                                   import debugpy
-                                   __is_connected__ = debugpy.is_client_connected()
-                               """);
-                    dynamic isConnected = scope.Get("__is_connected__");
-                    return (bool)isConnected;
-                }
-                catch (Exception ex)
-                {
-                    Trace.TraceWarning($"Failed to check debugger connection: {ex.Message}");
-                    return false;
-                }
-            }
-        }
+        var assembly = typeof(PythonInitializer).Assembly;
+        var resourceName = assembly.GetManifestResourceNames()
+                                   .FirstOrDefault(name => name.EndsWith("Setup.py", StringComparison.OrdinalIgnoreCase))!;
+        using var stream = assembly.GetManifestResourceStream(resourceName)!;
+        using var reader = new StreamReader(stream);
+        var setupCode = reader.ReadToEnd();
+        GlobalScope.Exec(setupCode);
     }
 }

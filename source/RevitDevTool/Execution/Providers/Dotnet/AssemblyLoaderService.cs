@@ -9,7 +9,7 @@ namespace RevitDevTool.Execution.Providers.Dotnet;
 /// Service for loading Revit add-in assemblies with automatic dependency resolution.
 /// Uses MetadataLoadContext for metadata-only inspection to avoid AppDomain type identity issues.
 /// </summary>
-public static class AddinLoaderService
+public static class AssemblyLoaderService
 {
     private static readonly string CommandFullName = typeof(IExternalCommand).FullName!;
     private static readonly string TransactionAttributeFullName = typeof(TransactionAttribute).FullName!;
@@ -63,9 +63,6 @@ public static class AddinLoaderService
         return commands;
     }
 
-    /// <summary>
-    /// Gets all types from a metadata assembly, handling reflection errors
-    /// </summary>
     private static List<Type> GetMetadataTypes(Assembly assembly)
     {
         var types = new List<Type>();
@@ -76,22 +73,17 @@ public static class AddinLoaderService
         }
         catch (ReflectionTypeLoadException ex)
         {
-            // Some types failed - get what we can
             // ReSharper disable once RedundantSuppressNullableWarningExpression
             types.AddRange(ex.Types.Where(t => t != null)!);
         }
         catch
         {
-            // try individual type loading as fallback
             types.AddRange(GetTypesIndividually(assembly));
         }
 
         return types;
     }
 
-    /// <summary>
-    /// Loads types one by one, skipping any that fail
-    /// </summary>
     private static List<Type> GetTypesIndividually(Assembly assembly)
     {
         var types = new List<Type>();
@@ -101,7 +93,6 @@ public static class AddinLoaderService
             try
             {
                 var type = typeInfo.AsType();
-                // Try to trigger type loading
                 _ = type.BaseType;
                 types.Add(type);
             }
@@ -117,7 +108,7 @@ public static class AddinLoaderService
     /// <summary>
     /// Collects all assembly paths needed for MetadataLoadContext resolution
     /// </summary>
-    private static List<string> CollectAssemblyPaths(string targetAssemblyPath)
+    public static List<string> CollectAssemblyPaths(string targetAssemblyPath)
     {
         var paths = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
@@ -210,9 +201,6 @@ public static class AddinLoaderService
         }
     }
 
-    /// <summary>
-    /// Extracts Revit attributes from a metadata type
-    /// </summary>
     private static TransactionMode? ExtractAttributes(Type type)
     {
         TransactionMode? transactionMode = null;

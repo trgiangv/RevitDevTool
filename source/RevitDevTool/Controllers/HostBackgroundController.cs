@@ -28,6 +28,7 @@ public sealed class HostBackgroundController(ISettingsService settingsService) :
         NotifyListener.TraceReceived -= DevToolsCommand.TraceReceivedHandler;
         DevToolsCommand.SharedViewModel?.IsStarted = false;
         VisualizationController.Stop();
+        PythonInitializer.Shutdown();
         return Task.CompletedTask;
     }
 

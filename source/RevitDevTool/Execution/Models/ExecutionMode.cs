@@ -1,8 +1,11 @@
+using System.Text.Json.Serialization;
+
 namespace RevitDevTool.Execution.Models;
 
 /// <summary>
 /// Execution mode for code execution.
 /// </summary>
+[JsonConverter(typeof(JsonStringEnumConverter))]
 public enum ExecutionMode
 {
     /// <summary>
@@ -16,7 +19,7 @@ public enum ExecutionMode
     Assembly,
 
     /// <summary>
-    /// Python script execution (directly via PythonNet)
+    /// Python tool execution
     /// </summary>
     Python,
 

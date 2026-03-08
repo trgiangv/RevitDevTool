@@ -32,9 +32,7 @@ public sealed class AssemblyExecutionProvider : IExecutionProvider
                 Trace.TraceWarning($"Invalid assembly path: {path}");
                 return [];
             }
-
-            // Use existing logic to parse commands
-            var addinItems = AddinLoaderService.ParseCommands(path);
+            var addinItems = AssemblyLoaderService.ParseCommands(path);
 
             if (addinItems.Count == 0)
             {
@@ -42,7 +40,6 @@ public sealed class AssemblyExecutionProvider : IExecutionProvider
                 return Enumerable.Empty<ExecutionNodeBase>();
             }
 
-            // Build tree: Assembly -> Namespace -> Command
             var assemblyNode = BuildAssemblyNode(path, addinItems);
             return [assemblyNode];
 

@@ -19,7 +19,7 @@ public sealed class PythonExecutionStrategy(string scriptPath, string rootPath) 
         try
         {
             progress?.Report($"Initializing {scriptName}...");
-            await PythonInitializer.InitializeAsync().ConfigureAwait(false);
+            await PythonBootstrap.EnsureExecutorReadyAsync(cancellationToken).ConfigureAwait(false);
 
             string scriptContent;
             try

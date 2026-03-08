@@ -23,17 +23,23 @@ public static class PythonExecutor
             using (var scope = PythonInitializer.GlobalScope.NewScope())
             {
                 scope.Set("__source__", new PyString(scriptContent));
-                scope.Set("__file__", new PyString(scriptPath));
-                scope.Set("__root__", new PyString(rootFolder));
-                
-                ResetModuleCache(scope);
-                SetupScriptRoot(scope);
+                PrepareExecutionScope(scope, scriptPath, rootFolder);
                 scope.Exec("""
                            compiled_code = compile(__source__, __file__, 'exec')
                            exec(compiled_code, globals())
                            """);
             }
         }
+    }
+    
+    public static void PrepareExecutionScope(PyModule scope, string scriptPath, string? rootFolder = null)
+    {
+        rootFolder ??= Path.GetDirectoryName(scriptPath) ?? string.Empty;
+        scope.Set("__file__", new PyString(scriptPath));
+        scope.Set("__root__", new PyString(rootFolder));
+
+        ResetModuleCache(scope);
+        SetupScriptRoot(scope);
     }
 
     /// <summary>

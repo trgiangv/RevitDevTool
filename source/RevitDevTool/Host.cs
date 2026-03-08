@@ -18,6 +18,11 @@ using RevitDevTool.Execution.Models;
 using RevitDevTool.Execution.Providers;
 using RevitDevTool.Execution.Providers.Dotnet;
 using RevitDevTool.Execution.Services;
+using RevitDevTool.Mcp;
+using RevitDevTool.Mcp.Dotnet;
+using RevitDevTool.Mcp.Interfaces;
+using RevitDevTool.Mcp.Models;
+using RevitDevTool.Mcp.Python;
 
 namespace RevitDevTool;
 
@@ -64,12 +69,11 @@ public static class Host
         services.AddSingleton<ISettingsService, SettingsService>();
         services.AddHostedService<HostBackgroundController>();
 
-        // Serilog
+        // Logging
         services.AddSingleton<LoggerFactory>();
         services.AddSingleton<ILoggingMonitor, RichTextBoxMonitor>();
-
-        // Logging service
         services.AddSingleton<ILoggingService, LoggingService>();
+        services.AddSingleton<LogViewModel>();
 
         // Visualization Servers
         services.AddSingleton<BoundingBoxVisualizationServer>();
@@ -113,21 +117,38 @@ public static class Host
         services.AddKeyedSingleton<IExecutionProvider, AssemblyExecutionProvider>(ExecutionMode.Assembly);
         services.AddKeyedSingleton<IExecutionProvider, ScriptExecutionProvider>(ExecutionMode.Script);
 
-        // Execution
+        // Execution ViewModels
         services.AddSingleton<CommandViewModel>();
         services.AddSingleton<PackageViewModel>();
+        services.AddSingleton<MemoryViewModel>();
         services.AddSingleton<ExecutionViewModel>();
         services.AddSingleton<CommandView>();
         services.AddSingleton<PackageView>();
-        services.AddSingleton<ExecutionView>();
-        services.AddSingleton<MemoryViewModel>();
         services.AddSingleton<MemoryView>();
+        services.AddSingleton<ExecutionView>();
+        
+        // MCP
+        services.AddSingleton<McpRegistryView>();
+        services.AddSingleton<McpRegistryViewModel>();
+        services.AddSingleton<McpBridgeState>();
+        services.AddSingleton<DotnetToolMethodResolver>();
+        services.AddSingleton<PythonToolsetParser>();
+        services.AddSingleton<DotnetMcpToolRegistryProvider>();
+        services.AddSingleton<PythonMcpToolRegistryProvider>();
+        services.AddSingleton<IMcpToolRegistryProvider>(sp => sp.GetRequiredService<DotnetMcpToolRegistryProvider>());
+        services.AddSingleton<IMcpToolRegistryProvider>(sp => sp.GetRequiredService<PythonMcpToolRegistryProvider>());
+        services.AddSingleton<IMcpToolInvoker, McpDotnetToolInvoker>();
+        services.AddSingleton<IMcpToolInvoker, McpPythonToolInvoker>();
+        services.AddSingleton<McpToolExecutionDispatcher>();
+        services.AddSingleton<McpToolRegistry>();
+        services.AddSingleton<McpRegistryService>();
+        services.AddSingleton<McpExecutionQueue>();
+        services.AddHostedService<McpTcpServerService>();
 
-        // Root
-        services.AddSingleton<TraceLogViewModel>();
-        services.AddSingleton<TraceLogPageViewModel>();
-        services.AddTransient<TraceLogPage>();
-        services.AddTransient<TraceLogWindow>();
+        // Main
+        services.AddSingleton<MainViewModel>();
+        services.AddTransient<MainPage>();
+        services.AddTransient<MainWindow>();
     }
 
     public static void Stop()

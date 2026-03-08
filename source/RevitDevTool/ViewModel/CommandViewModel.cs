@@ -40,7 +40,7 @@ public partial class CommandViewModel : ObservableObject
     [ObservableProperty]
     private ExecutionMode? _busyProviderType;
 
-    public int DebugPort => PythonInitializer.DebugPort;
+    public static int DebugPort => PythonDebugger.DebugPort;
 
     [ObservableProperty]
     private bool _isDebuggerConnected;
@@ -81,7 +81,7 @@ public partial class CommandViewModel : ObservableObject
 
     private void UpdateDebuggerStatus()
     {
-        IsDebuggerConnected = PythonInitializer.IsDebuggerConnected();
+        IsDebuggerConnected = PythonDebugger.IsConnected();
     }
 
     public async Task LoadSavedPathsAsync()

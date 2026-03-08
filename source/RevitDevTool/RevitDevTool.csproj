@@ -49,7 +49,7 @@
         <PackageReference Include="Microsoft.Extensions.Hosting"/>
 
         <!-- Utils -->
-        <PackageReference Include="JetBrains.Annotations" ExcludeAssets="runtime"/>
+        <PackageReference Include="JetBrains.Annotations"/>
         <PackageReference Include="PolySharp" PrivateAssets="All" IncludeAssets="runtime; build; native; contentfiles; analyzers; buildtransitive"/>
         <PackageReference Include="Microsoft-WindowsAPICodePack-Shell" Condition="$(TargetFramework.StartsWith('net4'))"/>
         <PackageReference Include="System.Reflection.MetadataLoadContext"/>

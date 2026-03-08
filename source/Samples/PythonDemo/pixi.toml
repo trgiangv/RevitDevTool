@@ -23,5 +23,7 @@ networkx = "==3.6.1"
 olefile = "==0.47"
 
 [pypi-dependencies]
+modelcontextprotocol = "==1.0.1"
 manifold3d = "==3.4"
 python-fcl = "==0.7.0.10"
+dotenv = ">=0.9.9, <0.10"

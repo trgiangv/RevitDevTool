@@ -13,6 +13,7 @@ public sealed class SettingsService(IFileConfig<PathOptions> fileConfig) : ISett
     private LogConfig? _logConfig;
     private VisualizationConfig? _visualizationConfig;
     private CodeExecuteConfig? _codeExecuteConfig;
+    private McpRegistryConfig? _mcpRegistryConfig;
 
     public GeneralConfig GeneralConfig
     {
@@ -51,6 +52,15 @@ public sealed class SettingsService(IFileConfig<PathOptions> fileConfig) : ISett
         }
     }
 
+    public McpRegistryConfig McpRegistryConfig
+    {
+        get
+        {
+            _mcpRegistryConfig ??= new McpRegistryConfig();
+            return _mcpRegistryConfig;
+        }
+    }
+
 
 
     public void SaveSettings()
@@ -59,6 +69,7 @@ public sealed class SettingsService(IFileConfig<PathOptions> fileConfig) : ISett
         SaveVisualizationSettings();
         SaveLogSettings();
         SaveCodeExecuteSettings();
+        SaveMcpRegistrySettings();
     }
 
     public void LoadSettings()
@@ -67,6 +78,7 @@ public sealed class SettingsService(IFileConfig<PathOptions> fileConfig) : ISett
         LoadVisualizationSettings();
         LoadLogSettings();
         LoadCodeExecuteSettings();
+        LoadMcpRegistrySettings();
     }
 
     public void ResetSettings()
@@ -211,5 +223,34 @@ public sealed class SettingsService(IFileConfig<PathOptions> fileConfig) : ISett
         }
 
         _codeExecuteConfig ??= new CodeExecuteConfig();
+    }
+
+    private void SaveMcpRegistrySettings()
+    {
+        if (_mcpRegistryConfig is null)
+            return;
+
+        _mcpRegistryConfig.DotnetPaths.RemoveAll(path =>
+            string.IsNullOrWhiteSpace(path) ||
+            !File.Exists(path) ||
+            !string.Equals(Path.GetExtension(path), ".dll", StringComparison.OrdinalIgnoreCase));
+        _mcpRegistryConfig.PythonToolsetPaths.RemoveAll(path =>
+            string.IsNullOrWhiteSpace(path) || !Directory.Exists(path));
+
+        fileConfig.Save(_mcpRegistryConfig);
+    }
+
+    private void LoadMcpRegistrySettings()
+    {
+        try
+        {
+            _mcpRegistryConfig = fileConfig.Load<McpRegistryConfig>();
+        }
+        catch (Exception exception)
+        {
+            Trace.TraceError($"MCP registry settings loading error: {exception.Message}");
+        }
+
+        _mcpRegistryConfig ??= new McpRegistryConfig();
     }
 }

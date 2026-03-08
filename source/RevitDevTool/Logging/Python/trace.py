@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 RevitDevTool Python Helper
 Utility functions for enhanced logging with Python stack trace support.
