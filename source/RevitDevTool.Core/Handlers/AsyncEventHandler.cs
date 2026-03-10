@@ -14,7 +14,7 @@ public sealed class AsyncEventHandler : ExternalEventHandler
     private Action<UIApplication>? _contextAction;
     private Action? _action;
 
-#if NETCOREAPP
+#if NET
     private TaskCompletionSource? _resultTask;
 #else
     private TaskCompletionSource<bool>? _resultTask;
@@ -31,7 +31,7 @@ public sealed class AsyncEventHandler : ExternalEventHandler
         {
             _contextAction?.Invoke(uiApplication);
             _action?.Invoke();
-#if NETCOREAPP
+#if NET
             _resultTask.SetResult();
 #else
             _resultTask.SetResult(false);
@@ -69,7 +69,7 @@ public sealed class AsyncEventHandler : ExternalEventHandler
         if (_contextAction is null) _contextAction = action;
         else _contextAction += action;
 
-#if NETCOREAPP
+#if NET
         _resultTask ??= new TaskCompletionSource();
 #else
         _resultTask ??= new TaskCompletionSource<bool>();
@@ -100,7 +100,7 @@ public sealed class AsyncEventHandler : ExternalEventHandler
         if (_action is null) _action = action;
         else _action += action;
 
-#if NETCOREAPP
+#if NET
         _resultTask ??= new TaskCompletionSource();
 #else
         _resultTask ??= new TaskCompletionSource<bool>();

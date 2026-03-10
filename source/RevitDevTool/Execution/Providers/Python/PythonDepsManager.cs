@@ -8,16 +8,12 @@ namespace RevitDevTool.Execution.Providers.Python;
 
 public static class PythonDepsManager
 {
-    // ── JSON model ──────────────────────────────────────────────────────────
-
     private sealed record ParseResult(
         [property: JsonPropertyName("requires_python")] string       RequiresPython,
         [property: JsonPropertyName("to_install")]      List<string> ToInstall)
     {
         public static readonly ParseResult Empty = new(string.Empty, []);
     }
-
-    // ── Public API ──────────────────────────────────────────────────────────
 
     /// <summary>
     /// Resolves which packages from the PEP 723 metadata in <paramref name="scriptPath"/>
@@ -28,8 +24,6 @@ public static class PythonDepsManager
         string scriptPath,
         CancellationToken cancellationToken = default)
     {
-        PixiEnvironment.EnsureParserScript();
-
         // 1. Read explicitly managed packages from pixi.toml (not 'pixi list' — avoids transitive deps noise)
         var pixiTomlContent = await ReadPixiTomlAsync(cancellationToken).ConfigureAwait(false);
 
@@ -55,12 +49,10 @@ public static class PythonDepsManager
 
         EnsureEnvironmentReady();
 
-        await PixiEnvironment.InstallPackagesAsync(depList, progress, cancellationToken).ConfigureAwait(false);
+        await PythonEnvironment.InstallPackagesAsync(depList, progress, cancellationToken).ConfigureAwait(false);
 
         progress.Report($"All {depList.Count} package(s) installed.");
     }
-
-    // ── Private ─────────────────────────────────────────────────────────────
 
     /// <summary>
     /// Reads pixi.toml as text. Returns empty string when not yet created.
@@ -68,9 +60,9 @@ public static class PythonDepsManager
     /// </summary>
     private static async Task<string> ReadPixiTomlAsync(CancellationToken cancellationToken)
     {
-        var tomlPath = Path.Combine(PixiEnvironment.PixiProjectDir, "pixi.toml");
+        var tomlPath = PythonEnvironment.PixiTomlPath;
         if (!File.Exists(tomlPath)) return string.Empty;
-#if NETCOREAPP
+#if NET
         return await File.ReadAllTextAsync(tomlPath, cancellationToken).ConfigureAwait(false);
 #else
         return await Task.Run(() => File.ReadAllText(tomlPath), cancellationToken).ConfigureAwait(false);
@@ -89,9 +81,9 @@ public static class PythonDepsManager
         var stdout = new StringBuilder();
         var stderr = new StringBuilder();
 
-        var cmd = await Cli.Wrap(PixiInstaller.PixiExePath)
-            .WithArguments(["run", "python", PixiEnvironment.ParserScriptPath, scriptPath])
-            .WithWorkingDirectory(PixiEnvironment.PixiProjectDir)
+        var cmd = await Cli.Wrap(PythonInstaller.PixiExePath)
+            .WithArguments(["run", "python", PythonEnvironment.ParserScriptPath, scriptPath])
+            .WithWorkingDirectory(PythonEnvironment.PixiProjectDir)
             .WithStandardInputPipe(PipeSource.FromString(pixiTomlContent))
             .WithStandardOutputPipe(PipeTarget.ToStringBuilder(stdout))
             .WithStandardErrorPipe(PipeTarget.ToStringBuilder(stderr))
@@ -113,16 +105,16 @@ public static class PythonDepsManager
 
     private static void EnsureEnvironmentReady()
     {
-        if (!PixiInstaller.IsPixiInstalled())
+        if (!PythonInstaller.IsPixiInstalled())
             throw new FileNotFoundException(
                 "pixi.exe not found. Python runtime must be initialised before installing packages.",
-                PixiInstaller.PixiExePath);
+                PythonInstaller.PixiExePath);
 
-        if (!PixiEnvironment.IsEnvironmentReady())
+        if (!PythonEnvironment.IsEnvironmentReady())
             throw new DirectoryNotFoundException(
-                $"Pixi Python environment is not ready at {PixiEnvironment.PythonHome}. " +
+                $"Pixi Python environment is not ready at {PythonEnvironment.PythonHome}. " +
                 "Call PythonInitializer.InitializeAsync() first.");
 
-        Trace.TraceInformation($"Pixi environment ready: {PixiEnvironment.PythonExe}");
+        Trace.TraceInformation($"Pixi environment ready: {PythonEnvironment.PythonExe}");
     }
 }

@@ -37,7 +37,7 @@ public sealed class FSharpExecutionStrategy(string scriptPath) : IExecutionStrat
                 .RaiseAsync(_ =>
                 {
                     var message = string.Empty;
-                    var commandResult = FSharpExecutor.ExecuteCommand(command, AddinCommandData.ExternalCommandData, ref message, AddinCommandData.ElementSet);
+                    var commandResult = FSharpExecutor.ExecuteCommand(command, CommandData.ExternalCommandData, ref message, CommandData.ElementSet);
                     stopwatch.Stop();
                     return commandResult.ToExecutionResult(message, stopwatch.ElapsedMilliseconds);
                 })

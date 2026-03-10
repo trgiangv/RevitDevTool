@@ -63,18 +63,15 @@
     </ItemGroup>
     
     <ItemGroup>
-        <ProjectReference Include="..\PythonNetStubGenerator\PythonNetStubGenerator.csproj" />
+        <ProjectReference Include="..\RevitDevTool.Contracts\RevitDevTool.Contracts.csproj" />
+        <ProjectReference Include="..\Supports\PythonNetStubGenerator\PythonNetStubGenerator.csproj" />
         <ProjectReference Include="..\RevitDevTool.Core\RevitDevTool.Core.csproj" />
-        <ProjectReference Include="..\Serilog.Sinks.RichTextBox.WinForms.Colored\Serilog.Sinks.RichTextBox.WinForms.Colored.csproj" />
+        <ProjectReference Include="..\Supports\Serilog.Sinks.RichTextBox.WinForms.Colored\Serilog.Sinks.RichTextBox.WinForms.Colored.csproj" />
     </ItemGroup>
 
     <ItemGroup>
+        <EmbeddedResource Include="Resources\scripts\*.*" />
         <Resource Include="resources\icons\*.*"/>
-        <EmbeddedResource Include="Execution\Providers\Python\Setup.py" />
-        <EmbeddedResource Include="Execution\Providers\Python\Parser.py" />
-        <EmbeddedResource Include="MCP\Server\**\*.py" />
-        <EmbeddedResource Include="MCP\Server\*.json" />
-        <EmbeddedResource Include="Mcp\Python\ToolSet\**\*.py" />
     </ItemGroup>
 
     <!-- Start Revit -->

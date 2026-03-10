@@ -60,7 +60,7 @@
                     ToolTip="Reload tool registry">
                 <Path Width="12"
                       Height="12"
-                      Data="{StaticResource Toggle}"
+                      Data="{StaticResource Refresh}"
                       Fill="{DynamicResource MahApps.Brushes.ThemeForeground}"
                       Stretch="Uniform" />
             </Button>
@@ -70,7 +70,7 @@
                      Margin="0,0,0,8"
                      Columns="5"
                      Rows="1">
-            <Border Margin="0,0,4,0"
+            <Border Margin="0,0,5,0"
                     Padding="6"
                     BorderBrush="{DynamicResource MahApps.Brushes.Gray8}"
                     BorderThickness="1"
@@ -210,7 +210,7 @@
                                 <TextBlock behav:HighlightTextBlockBehavior.Range="{Binding NameHighlight}"
                                            FontWeight="SemiBold"
                                            Style="{StaticResource InfoBlock}"
-                                           Text="{Binding Name}"
+                                           Text="{Binding DisplayName}"
                                            TextTrimming="CharacterEllipsis" />
                                 <Border Margin="6,0,0,0"
                                         Padding="5,1"
@@ -306,7 +306,7 @@
                     Height="30"
                     HorizontalAlignment="Stretch"
                     Command="{Binding LoadPythonToolsetCommand}"
-                    ToolTip="Load Python Toolset Folder">
+                    ToolTip="Load Python Folder">
                 <StackPanel Orientation="Horizontal">
                     <Image Width="16"
                            Height="16"

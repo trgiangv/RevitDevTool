@@ -1,19 +1,15 @@
 using System.Diagnostics;
 using System.IO;
-using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
-using CliWrap;
-using RevitDevTool.Execution.Models;
+using Python.Runtime;
+using RevitDevTool.Contracts;
 using RevitDevTool.Execution.Providers.Python;
-using RevitDevTool.Mcp.Schemas;
 
 namespace RevitDevTool.Mcp.Python;
 
 public sealed class PythonToolsetParser
 {
-    private const int LogPreviewLength = 400;
-
     private static readonly JsonSerializerOptions JsonOptions = new()
     {
         PropertyNameCaseInsensitive = true,
@@ -22,7 +18,9 @@ public sealed class PythonToolsetParser
 
     public static IReadOnlyList<McpToolDefinition> ParseDirectory(string toolsetDirectory)
     {
-        var parserOutput = RunParserProcess(toolsetDirectory);
+        PythonInitializer.InitializeAsync().GetAwaiter().GetResult();
+
+        var parserOutput = RunInProcess(toolsetDirectory);
         if (parserOutput is null)
             return [];
 
@@ -34,35 +32,40 @@ public sealed class PythonToolsetParser
         return tools;
     }
 
-    private static string? RunParserProcess(string directory)
+    private static string? RunInProcess(string directory)
     {
-        var stdout = new StringBuilder();
-        var stderr = new StringBuilder();
-
-        var result = Cli.Wrap(PixiEnvironment.PythonExe)
-            .WithWorkingDirectory(PixiEnvironment.McpServerDir)
-            .WithArguments([PixiEnvironment.FastMcpParserPath, directory])
-            .WithStandardOutputPipe(PipeTarget.ToStringBuilder(stdout))
-            .WithStandardErrorPipe(PipeTarget.ToStringBuilder(stderr))
-            .WithValidation(CommandResultValidation.None)
-            .ExecuteAsync()
-            .ConfigureAwait(false)
-            .GetAwaiter()
-            .GetResult();
-
-        var output = stdout.ToString().Trim();
-        var errorOutput = stderr.ToString().Trim();
-
-        if (result.ExitCode != 0 || string.IsNullOrWhiteSpace(output))
+        try
         {
-            Trace.TraceWarning(
-                $"[MCP] FastMCP parser failed for '{directory}'. exitCode={result.ExitCode}, stdout='{Preview(output)}', stderr='{Preview(errorOutput)}'");
+            using (Py.GIL())
+            {
+                if (PythonInitializer.GlobalScope is null)
+                {
+                    Trace.TraceWarning("[MCP] Python global scope not initialized. Cannot parse tools.");
+                    return null;
+                }
+
+                using var scope = PythonInitializer.GlobalScope.NewScope();
+                PythonExecutor.PrepareExecutionScope(scope, directory, directory);
+
+                scope.Exec(PythonEmbedded.ToolParserScript);
+
+                scope.Set("__toolset_dir__", new PyString(directory));
+                scope.Exec("__parser_result__ = parse_directory(__toolset_dir__)");
+
+                var result = scope.Get("__parser_result__").As<string>();
+                return result;
+            }
+        }
+        catch (PythonException ex)
+        {
+            Trace.TraceWarning($"[MCP] In-process Python parser failed for '{directory}': {ex.Message}\n{ex.StackTrace}");
             return null;
         }
-
-        Trace.TraceInformation(
-            $"[MCP] FastMCP parser succeeded for '{directory}'. exitCode={result.ExitCode}, stderr='{Preview(errorOutput)}'");
-        return output;
+        catch (Exception ex)
+        {
+            Trace.TraceWarning($"[MCP] In-process Python parser error for '{directory}': {ex.Message}");
+            return null;
+        }
     }
 
     private static List<McpToolDefinition>? DeserializeTools(string json, string directory)
@@ -72,15 +75,13 @@ public sealed class PythonToolsetParser
             var items = JsonSerializer.Deserialize<List<McpToolDefinition>>(json, JsonOptions);
             if (items is null)
             {
-                Trace.TraceWarning(
-                    $"[MCP] FastMCP parser returned null tool list for '{directory}'. stdout='{Preview(json)}'");
+                Trace.TraceWarning($"[MCP] Parser returned null tool list for '{directory}'.");
             }
             return items;
         }
         catch (JsonException ex)
         {
-            Trace.TraceWarning(
-                $"[MCP] FastMCP parser JSON deserialize failed for '{directory}': {ex.Message}. stdout='{Preview(json)}'");
+            Trace.TraceWarning($"[MCP] Parser JSON deserialize failed for '{directory}': {ex.Message}.");
             return null;
         }
     }
@@ -95,7 +96,7 @@ public sealed class PythonToolsetParser
             item.ContainerType = string.IsNullOrWhiteSpace(item.ContainerType) ? "PythonToolSet" : item.ContainerType;
             var relativeModulePath = TrimPythonExtension(GetRelativeModulePath(directory, item.SourcePath)
                 .Replace('\\', '/'));
-            var toolsetName = Path.GetFileName(Path.GetFullPath(directory).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar)) ?? directory;
+            var toolsetName = Path.GetFileName(Path.GetFullPath(directory).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar));
 
             item.SourceAddress = $"{item.ContainerType}:{relativeModulePath}";
             item.GroupKey = $"{Path.GetFullPath(directory)}::{item.ContainerType}";
@@ -109,8 +110,8 @@ public sealed class PythonToolsetParser
     {
         var normalizedRoot = AppendDirectorySeparator(Path.GetFullPath(rootDirectory));
         var normalizedSource = Path.GetFullPath(sourcePath);
-        return normalizedSource.StartsWith(normalizedRoot, StringComparison.OrdinalIgnoreCase) 
-            ? normalizedSource[normalizedRoot.Length..] 
+        return normalizedSource.StartsWith(normalizedRoot, StringComparison.OrdinalIgnoreCase)
+            ? normalizedSource[normalizedRoot.Length..]
             : Path.GetFileName(normalizedSource);
     }
 
@@ -127,17 +128,5 @@ public sealed class PythonToolsetParser
         return path.EndsWith(".py", StringComparison.OrdinalIgnoreCase)
             ? path[..^3]
             : path;
-    }
-
-    private static string Preview(string? text)
-    {
-        if (string.IsNullOrWhiteSpace(text))
-            return string.Empty;
-
-        // ReSharper disable once RedundantSuppressNullableWarningExpression
-        var normalized = text!.Replace("\r", " ").Replace("\n", " ").Trim();
-        return normalized.Length <= LogPreviewLength
-            ? normalized
-            : normalized[..LogPreviewLength] + "...";
     }
 }

@@ -3,9 +3,8 @@ using System.Diagnostics;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using Microsoft.Extensions.DependencyInjection;
-using RevitDevTool.Execution.Models;
+using RevitDevTool.Contracts;
 using RevitDevTool.Mcp.Interfaces;
-using RevitDevTool.Mcp.Schemas;
 namespace RevitDevTool.Mcp.Dotnet;
 
 public sealed class McpDotnetToolInvoker(

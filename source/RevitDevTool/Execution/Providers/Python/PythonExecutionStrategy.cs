@@ -19,12 +19,12 @@ public sealed class PythonExecutionStrategy(string scriptPath, string rootPath) 
         try
         {
             progress?.Report($"Initializing {scriptName}...");
-            await PythonBootstrap.EnsureExecutorReadyAsync(cancellationToken).ConfigureAwait(false);
+            await PythonInitializer.InitializeAsync().ConfigureAwait(true);
 
             string scriptContent;
             try
             {
-#if NETCOREAPP
+#if NET
                 scriptContent = await File.ReadAllTextAsync(scriptPath, cancellationToken).ConfigureAwait(false);
 #else
                 scriptContent = await Task.Run(() => File.ReadAllText(scriptPath), cancellationToken).ConfigureAwait(false);

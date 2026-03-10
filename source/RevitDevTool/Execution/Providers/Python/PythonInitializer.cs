@@ -10,8 +10,8 @@ public static class PythonInitializer
     public static PyModule? GlobalScope { get; private set; }
 
     public static bool IsInitialized => PythonEngine.IsInitialized
-                                         && PixiInstaller.IsPixiInstalled()
-                                         && PixiEnvironment.IsEnvironmentReady();
+                                         && PythonInstaller.IsPixiInstalled()
+                                         && PythonEnvironment.IsEnvironmentReady();
 
     public static async Task InitializeAsync()
     {
@@ -20,22 +20,24 @@ public static class PythonInitializer
         await InitLock.WaitAsync().ConfigureAwait(false);
         try
         {
-            if (!PixiInstaller.IsPixiInstalled())
+            if (IsInitialized) return;
+
+            if (!PythonInstaller.IsPixiInstalled())
             {
-                await PixiInstaller.SetupPixiAsync().ConfigureAwait(false);
+                await PythonInstaller.SetupPixiAsync().ConfigureAwait(false);
             }
 
-            if (!PixiEnvironment.IsEnvironmentReady())
+            if (!PythonEnvironment.IsEnvironmentReady())
             {
-                await PixiEnvironment.SetupEnvironmentAsync().ConfigureAwait(false);
+                await PythonEnvironment.SetupEnvironmentAsync().ConfigureAwait(false);
             }
-
-            PixiEnvironment.ExtractParserScript();
 
             if (!PythonEngine.IsInitialized)
             {
-                Runtime.PythonDLL = PixiEnvironment.GetPythonDllPath();
-                PythonEngine.PythonHome = PixiEnvironment.PythonHome;
+                PrependPixiEnvToPath();
+
+                Runtime.PythonDLL = PythonEnvironment.GetPythonDllPath();
+                PythonEngine.PythonHome = PythonEnvironment.PythonHome;
                 PythonEngine.ProgramName = "RevitDevTool";
                 PythonEngine.Initialize();
                 PythonEngine.BeginAllowThreads();
@@ -46,6 +48,17 @@ public static class PythonInitializer
                     PythonDebugger.StartListening();
                 }
             }
+        }
+        catch (TypeInitializationException ex)
+        {
+            Trace.TraceError(
+                $"[Python] Fatal init failure (pythonnet DLL load). " +
+                $"Cause: {ex.InnerException?.Message ?? ex.Message}\n" +
+                $"{ex.InnerException?.StackTrace ?? ex.StackTrace}");
+        }
+        catch (Exception ex)
+        {
+            Trace.TraceError($"[Python] Fatal init failure: {ex.Message}\n{ex.StackTrace}");
         }
         finally
         {
@@ -81,6 +94,31 @@ public static class PythonInitializer
         }
     }
 
+    /// <summary>
+    /// Prepend the pixi Python env directory (and Library/bin) to the process PATH
+    /// so that Windows DLL loader can find python313.dll's native dependencies
+    /// (vcruntime140.dll, python3.dll, etc.) which live alongside the interpreter.
+    /// Must be called before Runtime.PythonDLL and PythonEngine.PythonHome are set.
+    /// </summary>
+    private static void PrependPixiEnvToPath()
+    {
+        var pythonHome = PythonEnvironment.PythonHome;
+        var libraryBin = Path.Combine(pythonHome, "Library", "bin");
+
+        var current = Environment.GetEnvironmentVariable("PATH") ?? string.Empty;
+
+        var toAdd = new[] { pythonHome, libraryBin }
+            .Where(Directory.Exists)
+            .Where(d => current.IndexOf(d, StringComparison.OrdinalIgnoreCase) < 0)
+            .ToList();
+
+        if (toAdd.Count == 0) return;
+
+        var newPath = string.Join(";", toAdd) + ";" + current;
+        Environment.SetEnvironmentVariable("PATH", newPath);
+        Trace.TraceInformation($"[Python] Prepended to PATH: {string.Join("; ", toAdd)}");
+    }
+
     private static void SetupGlobalScope()
     {
         GlobalScope ??= Py.CreateScope("__main__");
@@ -97,12 +135,6 @@ public static class PythonInitializer
         builtins.__log_func__ = logFunction.ToPython();
         builtins.__revit__ = RevitContext.UiApplication;
 
-        var assembly = typeof(PythonInitializer).Assembly;
-        var resourceName = assembly.GetManifestResourceNames()
-                                   .FirstOrDefault(name => name.EndsWith("Setup.py", StringComparison.OrdinalIgnoreCase))!;
-        using var stream = assembly.GetManifestResourceStream(resourceName)!;
-        using var reader = new StreamReader(stream);
-        var setupCode = reader.ReadToEnd();
-        GlobalScope.Exec(setupCode);
+        GlobalScope.Exec(PythonEmbedded.SetupScript);
     }
 }

@@ -1,0 +1,102 @@
+using System.Collections.Concurrent;
+using System.Diagnostics;
+using System.IO;
+
+namespace RevitDevTool.Execution.Providers.Python;
+
+public static class PythonEmbedded
+{
+    private const string ParserSourcePath = "RevitDevTool.Resources.scripts.Parser.py";
+    private const string ToolParserSourcePath = "RevitDevTool.Resources.scripts.ToolParser.py";
+    private const string ToolInvokeSourcePath = "RevitDevTool.Resources.scripts.ToolInvoke.py";
+    private const string SetupSourcePath = "RevitDevTool.Resources.scripts.Setup.py";
+    private const string ResetSourcePath = "RevitDevTool.Resources.scripts.Reset.py";
+    private const string PixiTomlSourcePath = "RevitDevTool.Resources.scripts.pixi.toml";
+    
+    public static string ToolParserScript => ScriptCache.TryGetValue(ToolParserSourcePath, out var toolParser) 
+        ? toolParser 
+        : throw new InvalidOperationException("Tool parser script not found in cache. Ensure it is embedded and loaded correctly.");
+    public static string ToolInvokeScript => ScriptCache.TryGetValue(ToolInvokeSourcePath, out var toolInvoke) 
+        ? toolInvoke 
+        : throw new InvalidOperationException("Tool invoke script not found in cache. Ensure it is embedded and loaded correctly.");
+    public static string SetupScript => ScriptCache.TryGetValue(SetupSourcePath, out var setupScript) 
+        ? setupScript 
+        : throw new InvalidOperationException("Setup script not found in cache. Ensure it is embedded and loaded correctly.");
+    public static string ResetScript => ScriptCache.TryGetValue(ResetSourcePath, out var resetScript) 
+        ? resetScript 
+        : throw new InvalidOperationException("Reset script not found in cache. Ensure it is embedded and loaded correctly.");
+
+    private static readonly string[] CachePaths =
+    [
+        ToolParserSourcePath,
+        ToolInvokeSourcePath,
+        SetupSourcePath,
+        ResetSourcePath
+    ];
+    
+    private static readonly string[] CopyPaths =
+    [
+        ParserSourcePath,
+        PixiTomlSourcePath
+    ];
+    
+    private static readonly ConcurrentDictionary<string, string> ScriptCache = new();
+    
+    static PythonEmbedded()
+    {
+        EnsureCacheScripts();
+        EnsureCopyScripts(PythonEnvironment.PixiProjectDir);
+    }
+    
+    private static void EnsureCacheScripts()
+    {
+        foreach (var path in CachePaths)
+        {
+            if (ScriptCache.ContainsKey(path)) continue;
+            try
+            {
+                using var stream = OpenResourceStreamByPath(path);
+                using var reader = new StreamReader(stream);
+                ScriptCache[path] = reader.ReadToEnd();
+            }
+            catch (Exception ex)
+            {
+                Trace.TraceError($"Failed to load embedded script '{path}': {ex.Message}");
+            }
+        }
+    }
+    
+    private static void EnsureCopyScripts(string targetDirectory)
+    {
+        Directory.CreateDirectory(targetDirectory);
+        foreach (var path in CopyPaths)
+        {
+            try
+            {
+                using var stream = OpenResourceStreamByPath(path);
+                var fileName = GetFileName(path);
+                var targetPath = Path.Combine(targetDirectory, fileName);
+                using var fileStream = new FileStream(targetPath, FileMode.Create, FileAccess.Write);
+                stream.CopyTo(fileStream);
+            }
+            catch (Exception ex)
+            {
+                Trace.TraceError($"Failed to copy embedded script '{path}' to '{targetDirectory}': {ex.Message}");
+            }
+        }
+    }
+    
+    private static Stream OpenResourceStreamByPath(string resourcePath)
+    {
+        var stream = typeof(PythonEmbedded).Assembly.GetManifestResourceStream(resourcePath);
+        return stream ?? throw new InvalidOperationException($"Embedded resource '{resourcePath}' was not found.");
+    }
+
+    private static string GetFileName(string resourcePath)
+    {
+        var parts = resourcePath.Split('.');
+        return parts.Length < 2 
+            ? throw new ArgumentOutOfRangeException(nameof(resourcePath), resourcePath, "Invalid embedded resource path.") 
+            : $"{parts[^2]}.{parts[^1]}";
+    }
+}

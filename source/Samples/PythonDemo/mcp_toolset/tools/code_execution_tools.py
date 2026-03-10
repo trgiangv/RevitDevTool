@@ -1,9 +1,10 @@
 """Code execution tools."""
 
-from typing import Any
+from typing import Annotated, Any
 
 from mcp.server.fastmcp import Context, FastMCP
 from mcp.types import ToolAnnotations
+from pydantic import Field
 
 from services.code_execution_service import CodeExecutionService
 from utils import try_log
@@ -19,8 +20,8 @@ def register_code_execution_tools(mcp: FastMCP, code_execution_service: CodeExec
         structured_output=True,
     )
     async def execute_revit_code(
-        code: str,
-        description: str = "Code execution",
+        code: Annotated[str, Field(description="Python code to execute in the Revit context. Has access to 'doc', 'app', 'uidoc' globals.")],
+        description: Annotated[str, Field(description="Short human-readable label for this execution, used in logs")] = "Code execution",
         ctx: Context | None = None,
     ) -> dict[str, Any]:
         """Execute arbitrary Python code in the Revit context."""

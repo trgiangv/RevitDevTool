@@ -1,7 +1,8 @@
 using System.Collections.Concurrent;
 using System.Diagnostics;
+using RevitDevTool.Contracts;
 using RevitDevTool.Controllers;
-using RevitDevTool.Mcp.Schemas;
+// ReSharper disable RedundantSuppressNullableWarningExpression
 namespace RevitDevTool.Mcp;
 
 public sealed class McpExecutionQueue : IDisposable
@@ -407,14 +408,7 @@ public sealed class McpExecutionQueue : IDisposable
 
         _disposed = true;
         _cts.Cancel();
-        try
-        {
-            _workerTask.GetAwaiter().GetResult();
-        }
-        catch
-        {
-            // no-op
-        }
+        _workerTask.GetAwaiter().GetResult();
         _cts.Dispose();
         _signal.Dispose();
     }

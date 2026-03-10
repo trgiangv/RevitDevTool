@@ -4,6 +4,7 @@ using System.IO;
 using RevitDevTool.Settings;
 using RevitDevTool.Theme;
 using System.Windows.Threading;
+using RevitDevTool.Contracts;
 using RevitDevTool.Execution.Interfaces;
 using RevitDevTool.Execution.Models;
 using RevitDevTool.Execution.Providers.Python;

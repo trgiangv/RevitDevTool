@@ -2,8 +2,7 @@ using System.IO;
 using System.Reflection;
 using System.Text.Json;
 using ModelContextProtocol.Server;
-using RevitDevTool.Execution.Models;
-using RevitDevTool.Mcp.Schemas;
+using RevitDevTool.Contracts;
 using RevitDevTool.Execution.Providers.Dotnet;
 namespace RevitDevTool.Mcp.Dotnet;
 
@@ -75,10 +74,6 @@ public static class DotnetMcpAssemblyParser
                 Name = metadata.Name,
                 Description = description,
                 InputSchemaJson = JsonSerializer.Serialize(schema),
-                OutputSchemaJson = null,
-                AnnotationsJson = null,
-                MetaJson = null,
-                StructuredOutput = true,
                 SourceKind = ExecutionMode.Assembly,
                 ContainerType = type.FullName ?? string.Empty,
                 MethodName = method.Name,

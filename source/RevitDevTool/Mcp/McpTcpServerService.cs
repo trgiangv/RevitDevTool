@@ -1,4 +1,5 @@
 using System.Buffers.Binary;
+using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.IO;
 using System.Net;
@@ -7,13 +8,15 @@ using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using Microsoft.Extensions.Hosting;
-using RevitDevTool.Mcp.Schemas;
+using RevitDevTool.Contracts;
+
 namespace RevitDevTool.Mcp;
 
+[UsedImplicitly]
 public sealed class McpTcpServerService(
-    McpRegistryService registryService,
-    McpExecutionQueue executionQueue, 
-    Models.McpBridgeState state, 
+    McpToolStore toolStore,
+    McpExecutionQueue executionQueue,
+    Models.McpBridgeState state,
     McpToolExecutionDispatcher dispatcher) : IHostedService, IDisposable
 {
     private const int DefaultPort = 18080;
@@ -29,7 +32,7 @@ public sealed class McpTcpServerService(
     private CancellationTokenSource? _serverCts;
     private Task? _acceptLoopTask;
 
-    private int _connectedClients;
+    private readonly ConcurrentDictionary<string, NetworkStream> _clients = new();
     private int _port;
     private bool _disposed;
 
@@ -45,9 +48,11 @@ public sealed class McpTcpServerService(
 
         _listener = new TcpListener(IPAddress.Loopback, _port);
         _listener.Start();
-        
+
         state.SetEndpoint(_port.ToString());
         Trace.TraceInformation($"[MCP/TCP] Listening on {_port}");
+
+        toolStore.ToolsChanged += OnToolsChanged;
 
         _serverCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
         _acceptLoopTask = RunAcceptLoopAsync(_serverCts.Token);
@@ -59,7 +64,11 @@ public sealed class McpTcpServerService(
         if (_listener is null)
             return;
 
-        Interlocked.Exchange(ref _connectedClients, 0);
+        toolStore.ToolsChanged -= OnToolsChanged;
+
+        foreach (var key in _clients.Keys.ToList())
+            _clients.TryRemove(key, out _);
+
         state.SetConnectedState(0);
         state.SetQueueDepth(0);
 
@@ -91,6 +100,34 @@ public sealed class McpTcpServerService(
         _listener = null;
     }
 
+    private void OnToolsChanged(object? sender, EventArgs e)
+    {
+        _ = BroadcastToolsChangedAsync();
+    }
+
+    private async Task BroadcastToolsChangedAsync()
+    {
+        var envelope = new Envelope
+        {
+            Kind = McpMessageKinds.Event,
+            Action = McpActions.ToolsChanged
+        };
+
+        foreach (var kvp in _clients.ToArray())
+        {
+            try
+            {
+                await WriteEnvelopeAsync(kvp.Value, envelope, CancellationToken.None).ConfigureAwait(false);
+            }
+            catch (Exception ex)
+            {
+                Trace.TraceWarning($"[MCP/TCP] Failed to push tools.changed to client {kvp.Key}: {ex.Message}");
+                _clients.TryRemove(kvp.Key, out _);
+                state.SetConnectedState(_clients.Count);
+            }
+        }
+    }
+
     private async Task RunAcceptLoopAsync(CancellationToken cancellationToken)
     {
         if (_listener is null)
@@ -103,10 +140,13 @@ public sealed class McpTcpServerService(
             {
                 client = await _listener.AcceptTcpClientAsync().ConfigureAwait(false);
                 var acceptedClient = client;
-                var count = Interlocked.Increment(ref _connectedClients);
-                state.SetConnectedState(count);
-                Trace.TraceInformation($"[MCP/TCP] Client connected. Active clients: {count}");
-                _ = HandleClientAsync(acceptedClient, cancellationToken);
+                var clientId = Guid.NewGuid().ToString("N");
+                var stream = acceptedClient.GetStream();
+                _clients[clientId] = stream;
+
+                state.SetConnectedState(_clients.Count);
+                Trace.TraceInformation($"[MCP/TCP] Client connected. Active clients: {_clients.Count}");
+                _ = HandleClientAsync(clientId, acceptedClient, stream, cancellationToken);
             }
             catch (OperationCanceledException)
             {
@@ -124,11 +164,10 @@ public sealed class McpTcpServerService(
         }
     }
 
-    private async Task HandleClientAsync(TcpClient client, CancellationToken cancellationToken)
+    private async Task HandleClientAsync(string clientId, TcpClient client, NetworkStream stream, CancellationToken cancellationToken)
     {
         try
         {
-            using var stream = client.GetStream();
             while (!cancellationToken.IsCancellationRequested && client.Connected)
             {
                 var request = await ReadEnvelopeAsync(stream, cancellationToken).ConfigureAwait(false);
@@ -142,11 +181,13 @@ public sealed class McpTcpServerService(
         catch (OperationCanceledException)
         {
         }
-        catch (IOException)
+        catch (IOException ex)
         {
+            Trace.TraceWarning($"[MCP/TCP] Client {clientId} connection lost: {ex.Message}");
         }
-        catch (SocketException)
+        catch (SocketException ex)
         {
+            Trace.TraceWarning($"[MCP/TCP] Client {clientId} socket error: {ex.Message}");
         }
         catch (Exception ex)
         {
@@ -154,18 +195,11 @@ public sealed class McpTcpServerService(
         }
         finally
         {
-            try
-            {
-                client.Close();
-            }
-            catch
-            {
-                // ignored
-            }
+            _clients.TryRemove(clientId, out _);
+            try { client.Close(); } catch { /* ignored */ }
 
-            var count = Math.Max(0, Interlocked.Decrement(ref _connectedClients));
-            state.SetConnectedState(count);
-            Trace.TraceInformation($"[MCP/TCP] Client disconnected. Active clients: {count}");
+            state.SetConnectedState(_clients.Count);
+            Trace.TraceInformation($"[MCP/TCP] Client disconnected. Active clients: {_clients.Count}");
         }
     }
 
@@ -254,8 +288,7 @@ public sealed class McpTcpServerService(
 
     private Envelope HandleListTools(Envelope message)
     {
-        var tools = registryService.EnsureToolsLoaded();
-        Trace.TraceInformation($"[MCP/TCP] tools.list returning {tools.Count} tool(s) on port {_port}.");
+        var tools = toolStore.EnsureLoaded();
 
         return BuildOk(message, McpActions.ListTools, JsonSerializer.Serialize(new
         {
@@ -271,16 +304,15 @@ public sealed class McpTcpServerService(
 
     private async Task<Envelope> HandleToolCallAsync(Envelope message, CancellationToken cancellationToken)
     {
-        // ReSharper disable once RedundantSuppressNullableWarningExpression
-        var requestId = string.IsNullOrWhiteSpace(message.Id) ? "<no-id>" : message.Id!;
+        var requestId = string.IsNullOrWhiteSpace(message.Id) ? "<no-id>" : message.Id;
         if (string.IsNullOrWhiteSpace(message.ToolId) && string.IsNullOrWhiteSpace(message.ToolName))
             return BuildError(message, "tool.missing_name", "ToolId or ToolName is required.");
 
-        registryService.EnsureToolsLoaded();
+        toolStore.EnsureLoaded();
 
         var requestedTool = !string.IsNullOrWhiteSpace(message.ToolId) ? message.ToolId! : message.ToolName!;
         Trace.TraceInformation($"[MCP/TCP] Tool call received. requestId={requestId}, tool={requestedTool}");
-        if (!registryService.TryGetTool(message.ToolId, message.ToolName, out var definition) || definition is null)
+        if (!toolStore.TryGetTool(message.ToolId, message.ToolName, out var definition) || definition is null)
             return BuildError(message, "tool.not_found", $"Tool '{requestedTool}' is not registered.");
 
         var executionId = string.IsNullOrWhiteSpace(message.ExecutionId)
@@ -459,6 +491,7 @@ public sealed class McpTcpServerService(
             return;
 
         _disposed = true;
+        toolStore.ToolsChanged -= OnToolsChanged;
         _listener?.Stop();
         _serverCts?.Cancel();
         _serverCts?.Dispose();

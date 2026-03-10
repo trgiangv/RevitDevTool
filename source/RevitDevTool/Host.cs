@@ -13,6 +13,7 @@ using RevitDevTool.ViewModel.Settings;
 using RevitDevTool.ViewModel.Settings.Visualization;
 using RevitDevTool.Visualization.Server;
 using System.IO;
+using RevitDevTool.Contracts;
 using RevitDevTool.Execution.Interfaces;
 using RevitDevTool.Execution.Models;
 using RevitDevTool.Execution.Providers;
@@ -140,8 +141,7 @@ public static class Host
         services.AddSingleton<IMcpToolInvoker, McpDotnetToolInvoker>();
         services.AddSingleton<IMcpToolInvoker, McpPythonToolInvoker>();
         services.AddSingleton<McpToolExecutionDispatcher>();
-        services.AddSingleton<McpToolRegistry>();
-        services.AddSingleton<McpRegistryService>();
+        services.AddSingleton<McpToolStore>();
         services.AddSingleton<McpExecutionQueue>();
         services.AddHostedService<McpTcpServerService>();
 

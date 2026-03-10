@@ -1,5 +1,4 @@
 using RevitDevTool.Logging.Listeners;
-using RevitDevTool.Logging.Python;
 using RevitDevTool.Settings;
 using RevitDevTool.Theme;
 using RevitDevTool.Utils;
@@ -42,7 +41,6 @@ public sealed class LoggingService(
         _loggerTraceListener = new LoggerTraceListener(_logger, config);
         _geometryListener ??= new GeometryListener();
         _notifyListener ??= new NotifyListener();
-        PyTrace.Initialize(settingsService);
     }
 
     public void Restart()

@@ -1,4 +1,5 @@
-﻿namespace RevitDevTool.Execution.Models;
+﻿using RevitDevTool.Contracts;
+namespace RevitDevTool.Execution.Models;
 
 /// <summary>
 /// Root node - represents an Assembly (.dll) or Root Folder for scripts

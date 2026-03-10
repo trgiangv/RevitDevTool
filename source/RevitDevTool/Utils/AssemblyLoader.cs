@@ -2,7 +2,7 @@ using System.IO;
 using System.Reflection;
 using Autodesk.Revit.UI;
 using RevitDevTool.Execution.Models;
-#if NETCOREAPP
+#if NET
 using System.Collections.Concurrent;
 using System.Runtime.Loader;
 #endif
@@ -19,7 +19,7 @@ public static class AssemblyLoader
     private static bool _initialized;
     private static string? _pluginDirectory;
 
-#if NETCOREAPP
+#if NET
     private static PluginLoadContext _context = null!;
     private static readonly ConcurrentDictionary<string, Assembly?> Cache = new(StringComparer.OrdinalIgnoreCase);
 #endif

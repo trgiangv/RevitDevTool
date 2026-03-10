@@ -1,0 +1,51 @@
+using System.Reflection;
+using Autodesk.Revit.UI;
+using RevitDevTool.Core;
+namespace RevitDevTool.Execution.Providers.Dotnet;
+
+internal static class CommandData
+{
+    private static ExternalCommandData? _externalCommandData;
+    private static ElementSet? _elementSet;
+
+    public static ElementSet ElementSet => CreateElementSet();
+    public static ExternalCommandData ExternalCommandData => CreateExternalCommandData();
+
+    private static ExternalCommandData CreateExternalCommandData()
+    {
+        if (_externalCommandData != null)
+        {
+            _externalCommandData.View = RevitContext.UiApplication.ActiveUIDocument?.ActiveView;
+            return _externalCommandData;
+        }
+        var type = typeof(ExternalCommandData);
+        var constructorInfos = type.GetConstructors(BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public);
+        var instance = (ExternalCommandData) constructorInfos[0].Invoke(null);
+        instance.Application = RevitContext.UiApplication;
+        instance.JournalData ??= new Dictionary<string, string>();
+        instance.View = RevitContext.UiApplication.ActiveUIDocument?.ActiveView;
+
+        _externalCommandData = instance;
+        return instance;
+    }
+
+    private static ElementSet CreateElementSet()
+    {
+        _elementSet ??= new ElementSet();
+        if (RevitContext.UiApplication.ActiveUIDocument == null)
+        {
+            _elementSet.Clear();
+            return _elementSet;
+        }
+
+        _elementSet.Clear();
+        var ids = RevitContext.UiApplication.ActiveUIDocument.Selection.GetElementIds();
+        foreach (var id in ids)
+        {
+            var elem = RevitContext.UiApplication.ActiveUIDocument.Document.GetElement(id);
+            if (elem != null) _elementSet.Insert(elem);
+        }
+
+        return _elementSet;
+    }
+}

@@ -1,9 +1,7 @@
 using System.Diagnostics;
 using System.IO;
-using RevitDevTool.Execution.Models;
-using RevitDevTool.Execution.Providers.Python;
+using RevitDevTool.Contracts;
 using RevitDevTool.Mcp.Interfaces;
-using RevitDevTool.Mcp.Schemas;
 namespace RevitDevTool.Mcp.Python;
 
 public sealed class PythonMcpToolRegistryProvider : IMcpToolRegistryProvider
@@ -22,12 +20,6 @@ public sealed class PythonMcpToolRegistryProvider : IMcpToolRegistryProvider
     {
         if (ToolsetDirectories.Count == 0)
             return [];
-
-        PythonBootstrap.EnsureEnvironmentReadyAsync()
-            .ConfigureAwait(false).GetAwaiter().GetResult();
-
-        Trace.TraceInformation(
-            $"[MCP] Python registry load starting. toolsetDirs={ToolsetDirectories.Count}, pythonExe='{PixiEnvironment.PythonExe}', parser='{PixiEnvironment.FastMcpParserPath}'");
 
         var all = new List<McpToolDefinition>();
 

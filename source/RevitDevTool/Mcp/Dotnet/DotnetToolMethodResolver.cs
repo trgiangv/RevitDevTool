@@ -1,7 +1,7 @@
 using System.IO;
 using System.Reflection;
 using ModelContextProtocol.Server;
-using RevitDevTool.Mcp.Schemas;
+using RevitDevTool.Contracts;
 
 namespace RevitDevTool.Mcp.Dotnet;
 

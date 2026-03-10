@@ -1,10 +1,11 @@
 """Launch and discovery tools for Revit instances."""
 
 import anyio
-from typing import Any
+from typing import Annotated, Any
 
 from mcp.server.fastmcp import Context, FastMCP
 from mcp.types import ToolAnnotations
+from pydantic import Field
 
 from services.launch_service import LaunchService
 from shared.responses import ToolError
@@ -36,10 +37,10 @@ def register_launch_tools(mcp: FastMCP, launch_service: LaunchService) -> None:
     )
     async def launch_revit(
         ctx: Context,
-        file_path: str | None = None,
-        version: str | None = None,
-        language: str | None = None,
-        launch_timeout_seconds: int = 120,
+        file_path: Annotated[str | None, Field(description="Absolute path to a .rvt file to open on launch; launches empty session if omitted")] = None,
+        version: Annotated[str | None, Field(description="Revit version year to launch, e.g. '2025'; uses latest installed if omitted")] = None,
+        language: Annotated[str | None, Field(description="UI language code, e.g. 'ENU' for English; uses system default if omitted")] = None,
+        launch_timeout_seconds: Annotated[int, Field(description="Seconds to wait for Revit to become ready before timing out", ge=10, le=600)] = 120,
     ) -> dict[str, Any]:
         """Launch Revit, optionally opening a file."""
         timeout_seconds = launch_timeout_seconds

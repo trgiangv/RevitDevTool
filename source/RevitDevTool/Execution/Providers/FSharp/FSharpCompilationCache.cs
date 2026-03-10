@@ -89,7 +89,7 @@ internal static class FSharpCompilationCache
     {
         entry.Dispose();
 
-#if NETCOREAPP
+#if NET
         GC.Collect();
         GC.WaitForPendingFinalizers();
         GC.Collect();

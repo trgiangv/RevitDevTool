@@ -1,9 +1,10 @@
 """View-related tools."""
 
-from typing import Any
+from typing import Annotated, Any
 
 from mcp.server.fastmcp import Context, FastMCP
 from mcp.types import ToolAnnotations
+from pydantic import Field
 
 from services.view_service import ViewService
 from utils import try_log
@@ -19,7 +20,10 @@ def register_view_tools(mcp: FastMCP, view_service: ViewService) -> None:
         ),
         structured_output=True,
     )
-    async def get_revit_view(view_name: str, ctx: Context | None = None) -> dict[str, Any]:
+    async def get_revit_view(
+        view_name: Annotated[str, Field(description="Exact name of the Revit view to export as PNG")],
+        ctx: Context | None = None,
+    ) -> dict[str, Any]:
         """Export a named Revit view as a PNG payload."""
         _ = ctx
         return view_service.get_view_image(view_name)
@@ -62,9 +66,9 @@ def register_view_tools(mcp: FastMCP, view_service: ViewService) -> None:
         structured_output=True,
     )
     async def get_current_view_elements(
-        limit: int = 5000,
-        include_levels: bool = False,
-        include_location: bool = False,
+        limit: Annotated[int, Field(description="Maximum number of elements to return", ge=1, le=10000)] = 5000,
+        include_levels: Annotated[bool, Field(description="Include level assignment for each element")] = False,
+        include_location: Annotated[bool, Field(description="Include XYZ location point for each element")] = False,
         ctx: Context | None = None,
     ) -> dict[str, Any]:
         """List elements visible in the current view, optionally including levels and locations."""

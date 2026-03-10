@@ -16,7 +16,7 @@ namespace RevitDevTool.Execution.Services;
 public sealed class PackageService : IPackageService
 {
     private static readonly string NuGetCacheRoot = Path.Combine(SettingsUtils.GetApplicationDataPath(), "nuget");
-    private static readonly string PixiTomlPath = Path.Combine(PixiEnvironment.PixiProjectDir, "pixi.toml");
+    private static readonly string PixiTomlPath = Path.Combine(PythonEnvironment.PixiProjectDir, "pixi.toml");
     private const string NuGetServiceIndexUrl = "https://api.nuget.org/v3/index.json";
     private static readonly HttpClient Http = new() { Timeout = TimeSpan.FromSeconds(30) };
     private static string? _nugetPackageBaseUrl;
@@ -181,7 +181,7 @@ public sealed class PackageService : IPackageService
         if (string.IsNullOrWhiteSpace(packageId))
             return;
 
-        if (!PixiInstaller.IsPixiInstalled() || !Directory.Exists(PixiEnvironment.PixiProjectDir))
+        if (!PythonInstaller.IsPixiInstalled() || !Directory.Exists(PythonEnvironment.PixiProjectDir))
         {
             Trace.TraceWarning("Pixi runtime is unavailable. Skip package removal.");
             return;
@@ -192,9 +192,9 @@ public sealed class PackageService : IPackageService
             args.Add("--pypi");
         args.Add(packageId);
 
-        await Cli.Wrap(PixiInstaller.PixiExePath)
+        await Cli.Wrap(PythonInstaller.PixiExePath)
             .WithArguments(args)
-            .WithWorkingDirectory(PixiEnvironment.PixiProjectDir)
+            .WithWorkingDirectory(PythonEnvironment.PixiProjectDir)
             .WithValidation(CommandResultValidation.None)
             .ExecuteAsync(cancellationToken).ConfigureAwait(false);
     }
@@ -204,7 +204,7 @@ public sealed class PackageService : IPackageService
         if (string.IsNullOrWhiteSpace(packageId))
             return;
 
-        if (!PixiInstaller.IsPixiInstalled() || !Directory.Exists(PixiEnvironment.PixiProjectDir))
+        if (!PythonInstaller.IsPixiInstalled() || !Directory.Exists(PythonEnvironment.PixiProjectDir))
         {
             Trace.TraceWarning("Pixi runtime is unavailable. Skip package install/update.");
             return;
@@ -215,16 +215,16 @@ public sealed class PackageService : IPackageService
             args.Add("--pypi");
         args.Add(BuildPixiSpec(packageId, declaredVersion));
 
-        await Cli.Wrap(PixiInstaller.PixiExePath)
+        await Cli.Wrap(PythonInstaller.PixiExePath)
             .WithArguments(args)
-            .WithWorkingDirectory(PixiEnvironment.PixiProjectDir)
+            .WithWorkingDirectory(PythonEnvironment.PixiProjectDir)
             .WithValidation(CommandResultValidation.None)
             .ExecuteAsync(cancellationToken).ConfigureAwait(false);
     }
 
     private static async Task<IReadOnlyList<Package>> ReadPixiExplicitPackagesAsync(CancellationToken cancellationToken)
     {
-        if (!File.Exists(PixiTomlPath) || !PixiInstaller.IsPixiInstalled() || !Directory.Exists(PixiEnvironment.PixiProjectDir))
+        if (!File.Exists(PixiTomlPath) || !PythonInstaller.IsPixiInstalled() || !Directory.Exists(PythonEnvironment.PixiProjectDir))
             return [];
 
         var output = await ExecutePixiListExplicitJsonAsync(cancellationToken).ConfigureAwait(false);
@@ -243,9 +243,9 @@ public sealed class PackageService : IPackageService
 
     private static async Task<string?> ExecutePixiListExplicitJsonAsync(CancellationToken cancellationToken)
     {
-        var result = await Cli.Wrap(PixiInstaller.PixiExePath)
+        var result = await Cli.Wrap(PythonInstaller.PixiExePath)
             .WithArguments(["list", "--explicit", "--json"])
-            .WithWorkingDirectory(PixiEnvironment.PixiProjectDir)
+            .WithWorkingDirectory(PythonEnvironment.PixiProjectDir)
             .WithValidation(CommandResultValidation.None)
             .ExecuteBufferedAsync(cancellationToken)
             .ConfigureAwait(false);
@@ -306,7 +306,7 @@ public sealed class PackageService : IPackageService
 
     private static bool IsRequiredPythonPackage(string packageId)
     {
-        return PixiEnvironment.RequirePackages.Contains(packageId, StringComparer.OrdinalIgnoreCase);
+        return PythonEnvironment.RequirePackages.Contains(packageId, StringComparer.OrdinalIgnoreCase);
     }
 
     private static string BuildPixiSpec(string packageId, string? declaredVersion)

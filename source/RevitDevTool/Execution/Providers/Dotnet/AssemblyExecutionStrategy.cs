@@ -9,31 +9,31 @@ namespace RevitDevTool.Execution.Providers.Dotnet;
 /// <summary>
 /// Execution strategy for .NET commands.
 /// </summary>
-public sealed class AssemblyExecutionStrategy(AddinItem addinItem) : IExecutionStrategy
+public sealed class AssemblyExecutionStrategy(CommandItem commandItem) : IExecutionStrategy
 {
     public async Task<ExecutionResult> ExecuteAsync(IProgress<string>? progress = null, CancellationToken cancellationToken = default)
     {
         var stopwatch = Stopwatch.StartNew();
         try
         {
-            progress?.Report($"Running {addinItem.Name}...");
+            progress?.Report($"Running {commandItem.Name}...");
 
             var handler = await ExternalEventController
                 .AsyncGenericEventHandler<ExecutionResult>()
                 .ConfigureAwait(false);
 
             var result = await handler
-                .RaiseAsync(_ =>
+                .RaiseAsync(() =>
                 {
                     var message = string.Empty;
-                    var commandResult = AddinExecutor.RunCommand(addinItem, AddinCommandData.ExternalCommandData, ref message, AddinCommandData.ElementSet);
+                    var commandResult = CommandExecutor.RunCommand(commandItem, CommandData.ExternalCommandData, ref message, CommandData.ElementSet);
                     stopwatch.Stop();
                     return commandResult.ToExecutionResult(message, stopwatch.ElapsedMilliseconds);
                 })
                 .ConfigureAwait(false);
 
             progress?.Report(result.Success
-                ? $"Completed {addinItem.Name}."
+                ? $"Completed {commandItem.Name}."
                 : result.Message);
 
             return result;

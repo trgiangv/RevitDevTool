@@ -18,8 +18,8 @@ public static class AssemblyLoaderService
     /// Parses IExternalCommand implementations from a given assembly file using MetadataLoadContext
     /// </summary>
     /// <param name="originalFilePath">Original file path of the assembly</param>
-    /// <returns>List of AddinItem representing commands found</returns>
-    public static List<AddinItem> ParseCommands(string originalFilePath)
+    /// <returns>List of CommandItem representing commands found</returns>
+    public static List<CommandItem> ParseCommands(string originalFilePath)
     {
         if (!File.Exists(originalFilePath))
         {
@@ -27,7 +27,7 @@ public static class AssemblyLoaderService
             return [];
         }
 
-        var commands = new List<AddinItem>();
+        var commands = new List<CommandItem>();
 
         try
         {
@@ -170,9 +170,9 @@ public static class AssemblyLoaderService
     }
 
     /// <summary>
-    /// Attempts to parse a command type using MetadataLoadContext and create an AddinItem
+    /// Attempts to parse a command type using MetadataLoadContext and create an CommandItem
     /// </summary>
-    private static AddinItem? TryParseCommandType(Type type, Type iExternalCommandType, string originalFilePath)
+    private static CommandItem? TryParseCommandType(Type type, Type iExternalCommandType, string originalFilePath)
     {
         try
         {
@@ -188,7 +188,7 @@ public static class AssemblyLoaderService
 
             if (transactionMode != null)
             {
-                return new AddinItem(originalFilePath, type.FullName ?? string.Empty);
+                return new CommandItem(originalFilePath, type.FullName ?? string.Empty);
             }
 
             Trace.TraceWarning($"{type.FullName} implements IExternalCommand but missing TransactionAttribute");

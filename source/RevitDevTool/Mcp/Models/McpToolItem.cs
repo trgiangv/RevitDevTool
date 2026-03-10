@@ -1,3 +1,4 @@
+using RevitDevTool.Contracts;
 using RevitDevTool.Execution.Models;
 namespace RevitDevTool.Mcp.Models;
 
@@ -5,6 +6,7 @@ public partial class McpToolItem : ObservableObject
 {
     [ObservableProperty] private string _toolId = string.Empty;
     [ObservableProperty] private string _name = string.Empty;
+    [ObservableProperty] private string _displayName = string.Empty;
     [ObservableProperty] private string _sourceAddress = string.Empty;
     [ObservableProperty] private string _groupName = string.Empty;
     [ObservableProperty] private string _description = string.Empty;

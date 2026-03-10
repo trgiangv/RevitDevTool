@@ -1,6 +1,5 @@
 using System.Text.Json;
-using RevitDevTool.Execution.Models;
-using RevitDevTool.Mcp.Schemas;
+using RevitDevTool.Contracts;
 namespace RevitDevTool.Mcp.Interfaces;
 
 public abstract class McpToolInvokerBase : IMcpToolInvoker

@@ -7,10 +7,10 @@ using System.Text.Json;
 using RevitDevTool.Utils;
 using RevitDevTool.Theme;
 using System.Windows.Threading;
+using RevitDevTool.Contracts;
 using RevitDevTool.Execution.Models;
 using RevitDevTool.Mcp;
 using RevitDevTool.Mcp.Models;
-using RevitDevTool.Mcp.Schemas;
 // ReSharper disable UnusedParameterInPartialMethod
 // ReSharper disable RedundantSuppressNullableWarningExpression
 
@@ -18,7 +18,7 @@ namespace RevitDevTool.ViewModel;
 
 public sealed partial class McpRegistryViewModel : ObservableObject, IDisposable
 {
-    private readonly McpRegistryService _registryService;
+    private readonly McpToolStore _toolStore;
     private readonly McpBridgeState _bridgeState;
     private readonly DispatcherTimer _searchDebounceTimer;
     private readonly Dictionary<string, int> _callCounts = new(StringComparer.OrdinalIgnoreCase);
@@ -43,9 +43,9 @@ public sealed partial class McpRegistryViewModel : ObservableObject, IDisposable
     public bool ShowStatusPanel => IsBusy || IsExecuting;
     public string StatusPanelText => IsBusy ? BusyMessage : ExecutionStatusText;
 
-    public McpRegistryViewModel(McpRegistryService registryService, McpBridgeState bridgeState)
+    public McpRegistryViewModel(McpToolStore toolStore, McpBridgeState bridgeState)
     {
-        _registryService = registryService;
+        _toolStore = toolStore;
         _bridgeState = bridgeState;
 
         _searchDebounceTimer = new DispatcherTimer
@@ -58,7 +58,7 @@ public sealed partial class McpRegistryViewModel : ObservableObject, IDisposable
             ApplyFilter();
         };
 
-        _registryService.RegistryChanged += OnRegistryChanged;
+        _toolStore.ToolsChanged += OnRegistryChanged;
         _bridgeState.PropertyChanged += OnBridgeStateChanged;
         _bridgeState.ToolCalls.CollectionChanged += OnToolCallsCollectionChanged;
         ThemeManager.Current.ActualApplicationThemeChanged += OnThemeChanged;
@@ -79,7 +79,7 @@ public sealed partial class McpRegistryViewModel : ObservableObject, IDisposable
     public async Task InitializeAsync()
     {
         using var _ = BeginBusy("Loading MCP tools...");
-        await _registryService.InitializeAsync().ConfigureAwait(true);
+        await _toolStore.ReloadAsync().ConfigureAwait(true);
         RebuildToolList();
     }
 
@@ -87,13 +87,13 @@ public sealed partial class McpRegistryViewModel : ObservableObject, IDisposable
     private async Task ReloadAsync()
     {
         using var _ = BeginBusy("Reloading MCP tools...");
-        await _registryService.ReloadAsync().ConfigureAwait(true);
+        await _toolStore.ReloadAsync().ConfigureAwait(true);
     }
 
     public async Task AddDroppedPathAsync(string path)
     {
         using var _ = BeginBusy($"Parsing MCP toolset from '{Path.GetFileName(path)}'...");
-        await _registryService.AddPathAsync(path).ConfigureAwait(true);
+        await _toolStore.AddPathAsync(path).ConfigureAwait(true);
     }
 
     [RelayCommand]
@@ -108,7 +108,7 @@ public sealed partial class McpRegistryViewModel : ObservableObject, IDisposable
         if (dialog.ShowDialog() == true)
         {
             using var _ = BeginBusy($"Loading MCP assembly '{Path.GetFileName(dialog.FileName)}'...");
-            await _registryService.AddPathAsync(dialog.FileName).ConfigureAwait(true);
+            await _toolStore.AddPathAsync(dialog.FileName).ConfigureAwait(true);
         }
     }
 
@@ -119,25 +119,32 @@ public sealed partial class McpRegistryViewModel : ObservableObject, IDisposable
         if (!string.IsNullOrWhiteSpace(selectedFolder))
         {
             using var _ = BeginBusy($"Parsing MCP toolset from '{Path.GetFileName(selectedFolder)}'...");
-            await _registryService.AddPathAsync(selectedFolder).ConfigureAwait(true);
+            await _toolStore.AddPathAsync(selectedFolder).ConfigureAwait(true);
         }
     }
 
     private void OnRegistryChanged(object? sender, EventArgs e)
     {
+        if (!_searchDebounceTimer.Dispatcher.CheckAccess())
+        {
+            _searchDebounceTimer.Dispatcher.Invoke(RebuildToolList);
+            return;
+        }
+
         RebuildToolList();
     }
 
     private void RebuildToolList()
     {
         Tools.Clear();
-        foreach (var definition in _registryService.Tools)
+        foreach (var definition in _toolStore.Tools)
         {
             _callCounts.TryGetValue(definition.ToolId, out var count);
             var toolItem = new McpToolItem
             {
                 ToolId = definition.ToolId,
                 Name = definition.Name,
+                DisplayName = definition.DisplayName,
                 SourceAddress = definition.SourceAddress,
                 GroupName = definition.GroupName,
                 Description = definition.Description,
@@ -343,24 +350,18 @@ public sealed partial class McpRegistryViewModel : ObservableObject, IDisposable
 
         try
         {
-            using var document = JsonDocument.Parse(inputSchemaJson!);
-            if (!document.RootElement.TryGetProperty("properties", out var properties) ||
-                properties.ValueKind != JsonValueKind.Object)
-            {
+            var schema = JsonSerializer.Deserialize<InputSchema>(inputSchemaJson!);
+            if (schema?.Properties is not { Count: > 0 })
                 return string.Empty;
-            }
 
-            var lines = new List<string>();
-            foreach (var property in properties.EnumerateObject())
+            var lines = schema.Properties.Select(kvp =>
             {
-                var type = property.Value.TryGetProperty("type", out var typeElement)
-                    ? typeElement.ToString()
-                    : "any";
-                var title = property.Value.TryGetProperty("title", out var titleElement)
-                    ? titleElement.ToString()
-                    : property.Name;
-                lines.Add($"- {property.Name}: {title} ({type})");
-            }
+                var prop = kvp.Value;
+                var type = prop.Type ?? "any";
+                var title = prop.Title ?? kvp.Key;
+                var desc = string.IsNullOrWhiteSpace(prop.Description) ? string.Empty : $" — {prop.Description}";
+                return $"- {kvp.Key}: {title} ({type}){desc}";
+            });
 
             return string.Join(Environment.NewLine, lines);
         }
@@ -405,7 +406,7 @@ public sealed partial class McpRegistryViewModel : ObservableObject, IDisposable
             return;
 
         _disposed = true;
-        _registryService.RegistryChanged -= OnRegistryChanged;
+        _toolStore.ToolsChanged -= OnRegistryChanged;
         _bridgeState.PropertyChanged -= OnBridgeStateChanged;
         _bridgeState.ToolCalls.CollectionChanged -= OnToolCallsCollectionChanged;
         ThemeManager.Current.ActualApplicationThemeChanged -= OnThemeChanged;

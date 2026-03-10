@@ -1,5 +1,4 @@
-using RevitDevTool.Execution.Models;
-using RevitDevTool.Mcp.Schemas;
+using RevitDevTool.Contracts;
 namespace RevitDevTool.Mcp.Interfaces;
 
 public interface IMcpToolRegistryProvider

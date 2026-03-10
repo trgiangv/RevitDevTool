@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using System.IO;
+using RevitDevTool.Contracts;
 using RevitDevTool.Execution.Interfaces;
 using RevitDevTool.Execution.Models;
 namespace RevitDevTool.Execution.Providers.Dotnet;
@@ -58,7 +59,7 @@ public sealed class AssemblyExecutionProvider : IExecutionProvider
 
     #region Private Helpers
 
-    private static ExecutionNodeRoot BuildAssemblyNode(string assemblyPath, List<AddinItem> commands)
+    private static ExecutionNodeRoot BuildAssemblyNode(string assemblyPath, List<CommandItem> commands)
     {
         var assemblyName = Path.GetFileNameWithoutExtension(assemblyPath);
         var assemblyId = $"dotnet://{assemblyPath}";
@@ -83,7 +84,7 @@ public sealed class AssemblyExecutionProvider : IExecutionProvider
         return assemblyNode;
     }
 
-    private static ExecutionNodeIntermediate BuildNamespaceNode(string namespaceName, IEnumerable<AddinItem> commands, string assemblyPath)
+    private static ExecutionNodeIntermediate BuildNamespaceNode(string namespaceName, IEnumerable<CommandItem> commands, string assemblyPath)
     {
         var namespaceId = $"dotnet://{assemblyPath}|{namespaceName}";
 
@@ -104,19 +105,19 @@ public sealed class AssemblyExecutionProvider : IExecutionProvider
         return namespaceNode;
     }
 
-    private static ExecutionNode BuildCommandNode(AddinItem addinItem)
+    private static ExecutionNode BuildCommandNode(CommandItem commandItem)
     {
-        var commandId = $"dotnet://{addinItem.AssemblyPath}|{addinItem.FullClassName}";
+        var commandId = $"dotnet://{commandItem.AssemblyPath}|{commandItem.FullClassName}";
 
         return new ExecutionNode
         {
             Id = commandId,
-            Name = addinItem.Name,
-            ExecutablePath = addinItem.FullClassName,
-            SourceFilePath = addinItem.AssemblyPath,
+            Name = commandItem.Name,
+            ExecutablePath = commandItem.FullClassName,
+            SourceFilePath = commandItem.AssemblyPath,
             ProviderType = ExecutionMode.Assembly,
             NodeType = NodeType.Executable,
-            ExecutionStrategy = new AssemblyExecutionStrategy(addinItem)
+            ExecutionStrategy = new AssemblyExecutionStrategy(commandItem)
         };
     }
 

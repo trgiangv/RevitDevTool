@@ -1,7 +1,6 @@
 using System.Diagnostics;
-using RevitDevTool.Execution.Models;
+using RevitDevTool.Contracts;
 using RevitDevTool.Mcp.Interfaces;
-using RevitDevTool.Mcp.Schemas;
 namespace RevitDevTool.Mcp.Dotnet;
 
 public sealed class DotnetMcpToolRegistryProvider : IMcpToolRegistryProvider

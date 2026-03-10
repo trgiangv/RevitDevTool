@@ -24,17 +24,21 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RevitDevTool", "source\Revi
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CSharpDemo", "source\Samples\CSharpDemo\CSharpDemo.csproj", "{33C90C02-CA4E-4C48-B60D-D8F0EB44A8EB}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PythonNetStubGenerator", "source\PythonNetStubGenerator\PythonNetStubGenerator.csproj", "{7366EE36-0B1D-4E55-A444-7E3C77866DAF}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PythonNetStubGenerator", "source\Supports\PythonNetStubGenerator\PythonNetStubGenerator.csproj", "{7366EE36-0B1D-4E55-A444-7E3C77866DAF}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Samples", "Samples", "{3AF33D8D-7818-4C55-9901-7074C2CBDB74}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Serilog.Sinks.RichTextBox.WinForms.Colored", "source\Serilog.Sinks.RichTextBox.WinForms.Colored\Serilog.Sinks.RichTextBox.WinForms.Colored.csproj", "{4774219E-D54B-4740-8CA9-C7B653243F38}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Serilog.Sinks.RichTextBox.WinForms.Colored", "source\Supports\Serilog.Sinks.RichTextBox.WinForms.Colored\Serilog.Sinks.RichTextBox.WinForms.Colored.csproj", "{4774219E-D54B-4740-8CA9-C7B653243F38}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Supports", "Supports", "{44D2DCF6-7C87-403C-90ED-74A56F311540}"
 EndProject
 Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "FSharpDemo", "source\Samples\FSharpDemo\FSharpDemo.fsproj", "{CAB1E6AA-974C-4A41-AF01-4D39CA3B9FFC}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RevitDevTool.Core", "source\RevitDevTool.Core\RevitDevTool.Core.csproj", "{6F6281C5-4AE6-4CBF-8B9D-425BE2D242FD}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RevitDevTool.Server", "source\RevitDevTool.Server\RevitDevTool.Server.csproj", "{73A12557-B088-4668-B7A7-BEE1FCFFB9C7}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RevitDevTool.Contracts", "source\RevitDevTool.Contracts\RevitDevTool.Contracts.csproj", "{C03CBF6D-8E01-4DB4-AFA8-21CB5C77228B}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -564,6 +568,46 @@ Global
 		{6F6281C5-4AE6-4CBF-8B9D-425BE2D242FD}.Release R25|x64.Build.0 = Release R25|Any CPU
 		{6F6281C5-4AE6-4CBF-8B9D-425BE2D242FD}.Release R26|x64.ActiveCfg = Release R26|Any CPU
 		{6F6281C5-4AE6-4CBF-8B9D-425BE2D242FD}.Release R26|x64.Build.0 = Release R26|Any CPU
+		{73A12557-B088-4668-B7A7-BEE1FCFFB9C7}.Debug R22|x64.ActiveCfg = Debug|Any CPU
+		{73A12557-B088-4668-B7A7-BEE1FCFFB9C7}.Debug R22|x64.Build.0 = Debug|Any CPU
+		{73A12557-B088-4668-B7A7-BEE1FCFFB9C7}.Debug R23|x64.ActiveCfg = Debug|Any CPU
+		{73A12557-B088-4668-B7A7-BEE1FCFFB9C7}.Debug R23|x64.Build.0 = Debug|Any CPU
+		{73A12557-B088-4668-B7A7-BEE1FCFFB9C7}.Debug R24|x64.ActiveCfg = Debug|Any CPU
+		{73A12557-B088-4668-B7A7-BEE1FCFFB9C7}.Debug R24|x64.Build.0 = Debug|Any CPU
+		{73A12557-B088-4668-B7A7-BEE1FCFFB9C7}.Debug R25|x64.ActiveCfg = Debug|Any CPU
+		{73A12557-B088-4668-B7A7-BEE1FCFFB9C7}.Debug R25|x64.Build.0 = Debug|Any CPU
+		{73A12557-B088-4668-B7A7-BEE1FCFFB9C7}.Debug R26|x64.ActiveCfg = Debug|Any CPU
+		{73A12557-B088-4668-B7A7-BEE1FCFFB9C7}.Debug R26|x64.Build.0 = Debug|Any CPU
+		{73A12557-B088-4668-B7A7-BEE1FCFFB9C7}.Release R22|x64.ActiveCfg = Release|Any CPU
+		{73A12557-B088-4668-B7A7-BEE1FCFFB9C7}.Release R22|x64.Build.0 = Release|Any CPU
+		{73A12557-B088-4668-B7A7-BEE1FCFFB9C7}.Release R23|x64.ActiveCfg = Release|Any CPU
+		{73A12557-B088-4668-B7A7-BEE1FCFFB9C7}.Release R23|x64.Build.0 = Release|Any CPU
+		{73A12557-B088-4668-B7A7-BEE1FCFFB9C7}.Release R24|x64.ActiveCfg = Release|Any CPU
+		{73A12557-B088-4668-B7A7-BEE1FCFFB9C7}.Release R24|x64.Build.0 = Release|Any CPU
+		{73A12557-B088-4668-B7A7-BEE1FCFFB9C7}.Release R25|x64.ActiveCfg = Release|Any CPU
+		{73A12557-B088-4668-B7A7-BEE1FCFFB9C7}.Release R25|x64.Build.0 = Release|Any CPU
+		{73A12557-B088-4668-B7A7-BEE1FCFFB9C7}.Release R26|x64.ActiveCfg = Release|Any CPU
+		{73A12557-B088-4668-B7A7-BEE1FCFFB9C7}.Release R26|x64.Build.0 = Release|Any CPU
+		{C03CBF6D-8E01-4DB4-AFA8-21CB5C77228B}.Debug R22|x64.ActiveCfg = Debug|Any CPU
+		{C03CBF6D-8E01-4DB4-AFA8-21CB5C77228B}.Debug R22|x64.Build.0 = Debug|Any CPU
+		{C03CBF6D-8E01-4DB4-AFA8-21CB5C77228B}.Debug R23|x64.ActiveCfg = Debug|Any CPU
+		{C03CBF6D-8E01-4DB4-AFA8-21CB5C77228B}.Debug R23|x64.Build.0 = Debug|Any CPU
+		{C03CBF6D-8E01-4DB4-AFA8-21CB5C77228B}.Debug R24|x64.ActiveCfg = Debug|Any CPU
+		{C03CBF6D-8E01-4DB4-AFA8-21CB5C77228B}.Debug R24|x64.Build.0 = Debug|Any CPU
+		{C03CBF6D-8E01-4DB4-AFA8-21CB5C77228B}.Debug R25|x64.ActiveCfg = Debug|Any CPU
+		{C03CBF6D-8E01-4DB4-AFA8-21CB5C77228B}.Debug R25|x64.Build.0 = Debug|Any CPU
+		{C03CBF6D-8E01-4DB4-AFA8-21CB5C77228B}.Debug R26|x64.ActiveCfg = Debug|Any CPU
+		{C03CBF6D-8E01-4DB4-AFA8-21CB5C77228B}.Debug R26|x64.Build.0 = Debug|Any CPU
+		{C03CBF6D-8E01-4DB4-AFA8-21CB5C77228B}.Release R22|x64.ActiveCfg = Release|Any CPU
+		{C03CBF6D-8E01-4DB4-AFA8-21CB5C77228B}.Release R22|x64.Build.0 = Release|Any CPU
+		{C03CBF6D-8E01-4DB4-AFA8-21CB5C77228B}.Release R23|x64.ActiveCfg = Release|Any CPU
+		{C03CBF6D-8E01-4DB4-AFA8-21CB5C77228B}.Release R23|x64.Build.0 = Release|Any CPU
+		{C03CBF6D-8E01-4DB4-AFA8-21CB5C77228B}.Release R24|x64.ActiveCfg = Release|Any CPU
+		{C03CBF6D-8E01-4DB4-AFA8-21CB5C77228B}.Release R24|x64.Build.0 = Release|Any CPU
+		{C03CBF6D-8E01-4DB4-AFA8-21CB5C77228B}.Release R25|x64.ActiveCfg = Release|Any CPU
+		{C03CBF6D-8E01-4DB4-AFA8-21CB5C77228B}.Release R25|x64.Build.0 = Release|Any CPU
+		{C03CBF6D-8E01-4DB4-AFA8-21CB5C77228B}.Release R26|x64.ActiveCfg = Release|Any CPU
+		{C03CBF6D-8E01-4DB4-AFA8-21CB5C77228B}.Release R26|x64.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
