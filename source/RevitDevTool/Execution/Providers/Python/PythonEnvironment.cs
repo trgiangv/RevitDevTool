@@ -26,8 +26,6 @@ public static class PythonEnvironment
     public static readonly string PixiProjectDir = Path.Combine(SettingsUtils.GetApplicationDataPath(), PixiEnvDirName);
     public static readonly string PythonHome = Path.Combine(PixiProjectDir, PixiEnvDir);
     public static readonly string PythonExe = Path.Combine(PythonHome, "python.exe");
-    public static readonly string ParserScriptPath = Path.Combine(PixiProjectDir, "parser.py");
-    public static readonly string PixiTomlPath = Path.Combine(PixiProjectDir, "pixi.toml");
 
     public static bool IsEnvironmentReady() => File.Exists(PythonExe);
 

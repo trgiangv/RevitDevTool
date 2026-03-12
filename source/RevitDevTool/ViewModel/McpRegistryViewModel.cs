@@ -11,6 +11,7 @@ using RevitDevTool.Contracts;
 using RevitDevTool.Execution.Models;
 using RevitDevTool.Mcp;
 using RevitDevTool.Mcp.Models;
+using RevitDevTool.Mcp.Parser.Models;
 // ReSharper disable UnusedParameterInPartialMethod
 // ReSharper disable RedundantSuppressNullableWarningExpression
 
@@ -137,21 +138,23 @@ public sealed partial class McpRegistryViewModel : ObservableObject, IDisposable
     private void RebuildToolList()
     {
         Tools.Clear();
-        foreach (var definition in _toolStore.Tools)
+        foreach (var tool in _toolStore.ToolCatalog)
         {
-            _callCounts.TryGetValue(definition.ToolId, out var count);
+            var protocolTool = tool.ProtocolTool;
+            var binding = tool.Binding;
+            _callCounts.TryGetValue(tool.Id, out var count);
             var toolItem = new McpToolItem
             {
-                ToolId = definition.ToolId,
-                Name = definition.Name,
-                DisplayName = definition.DisplayName,
-                SourceAddress = definition.SourceAddress,
-                GroupName = definition.GroupName,
-                Description = definition.Description,
-                ToolTipText = BuildToolTipText(definition),
-                SourceKind = definition.SourceKind,
+                ToolId = tool.Id,
+                Name = protocolTool.Name,
+                DisplayName = protocolTool.Title ?? protocolTool.Name,
+                SourceAddress = binding.SourceAddress,
+                GroupName = binding.GroupName,
+                Description = protocolTool.Description ?? string.Empty,
+                ToolTipText = BuildToolTipText(tool),
+                SourceKind = binding.SourceKind,
                 CallCount = count,
-                InputSchemaJson = definition.InputSchemaJson,
+                InputSchemaJson = protocolTool.InputSchema.GetRawText(),
             };
             Tools.Add(toolItem);
         }
@@ -321,18 +324,20 @@ public sealed partial class McpRegistryViewModel : ObservableObject, IDisposable
         return _bridgeState.IsConnected ? "Connected" : "Disconnected";
     }
 
-    private static string BuildToolTipText(McpToolDefinition definition)
+    private static string BuildToolTipText(McpRegisteredTool tool)
     {
+        var protocolTool = tool.ProtocolTool;
+        var binding = tool.Binding;
         var builder = new StringBuilder();
-        builder.AppendLine(definition.Name);
-        if (!string.IsNullOrWhiteSpace(definition.SourceAddress))
+        builder.AppendLine(protocolTool.Name);
+        if (!string.IsNullOrWhiteSpace(binding.SourceAddress))
         {
-            builder.AppendLine(definition.SourceAddress);
+            builder.AppendLine(binding.SourceAddress);
         }
         builder.AppendLine();
-        builder.AppendLine(string.IsNullOrWhiteSpace(definition.Description) ? "No description." : definition.Description.Trim());
+        builder.AppendLine(string.IsNullOrWhiteSpace(protocolTool.Description) ? "No description." : protocolTool.Description!.Trim());
 
-        var arguments = BuildArgumentSummary(definition.InputSchemaJson);
+        var arguments = BuildArgumentSummary(protocolTool.InputSchema.GetRawText());
         if (!string.IsNullOrWhiteSpace(arguments))
         {
             builder.AppendLine();
@@ -350,18 +355,20 @@ public sealed partial class McpRegistryViewModel : ObservableObject, IDisposable
 
         try
         {
-            var schema = JsonSerializer.Deserialize<InputSchema>(inputSchemaJson!);
-            if (schema?.Properties is not { Count: > 0 })
+            using var doc = JsonDocument.Parse(inputSchemaJson!);
+            if (!doc.RootElement.TryGetProperty("properties", out var properties) ||
+                properties.ValueKind != JsonValueKind.Object)
                 return string.Empty;
 
-            var lines = schema.Properties.Select(kvp =>
+            var lines = new List<string>();
+            foreach (var prop in properties.EnumerateObject())
             {
-                var prop = kvp.Value;
-                var type = prop.Type ?? "any";
-                var title = prop.Title ?? kvp.Key;
-                var desc = string.IsNullOrWhiteSpace(prop.Description) ? string.Empty : $" — {prop.Description}";
-                return $"- {kvp.Key}: {title} ({type}){desc}";
-            });
+                var type = prop.Value.TryGetProperty("type", out var typeEl) ? typeEl.GetString() ?? "any" : "any";
+                var title = prop.Value.TryGetProperty("title", out var titleEl) ? titleEl.GetString() ?? prop.Name : prop.Name;
+                var desc = prop.Value.TryGetProperty("description", out var descEl) ? descEl.GetString() : null;
+                var descSuffix = string.IsNullOrWhiteSpace(desc) ? string.Empty : $" — {desc}";
+                lines.Add($"- {prop.Name}: {title} ({type}){descSuffix}");
+            }
 
             return string.Join(Environment.NewLine, lines);
         }

@@ -11,7 +11,7 @@
 
         <!-- ILRepack -->
         <PackageReference Include="ILRepack"/>
-        <PackageReference Include="JetBrains.Annotations" ExcludeAssets="runtime"/>
+        <PackageReference Include="JetBrains.Annotations" PrivateAssets="All" ExcludeAssets="runtime; build; native; contentfiles; analyzers; buildtransitive"/>
     </ItemGroup>
 
 </Project>

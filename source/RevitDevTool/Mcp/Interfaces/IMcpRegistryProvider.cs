@@ -1,10 +1,12 @@
 using RevitDevTool.Contracts;
+using RevitDevTool.Mcp.Parser.Models;
+
 namespace RevitDevTool.Mcp.Interfaces;
 
-public interface IMcpToolRegistryProvider
+public interface IMcpRegistryProvider
 {
     string Name { get; }
     ExecutionMode SourceKind { get; }
     void ConfigurePaths(IReadOnlyList<string> paths);
-    IReadOnlyList<McpToolDefinition> LoadTools();
+    McpRegistryCatalog LoadCatalog();
 }

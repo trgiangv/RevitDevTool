@@ -1,14 +1,15 @@
-using System.Buffers.Binary;
 using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.IO;
 using System.Net;
 using System.Net.Sockets;
-using System.Text;
 using System.Text.Json;
-using System.Text.Json.Serialization;
 using Microsoft.Extensions.Hosting;
+using ModelContextProtocol.Protocol;
 using RevitDevTool.Contracts;
+using RevitDevTool.Controllers;
+using RevitDevTool.Mcp.Models;
+using RevitDevTool.Mcp.Parser.Models;
 
 namespace RevitDevTool.Mcp;
 
@@ -16,18 +17,11 @@ namespace RevitDevTool.Mcp;
 public sealed class McpTcpServerService(
     McpToolStore toolStore,
     McpExecutionQueue executionQueue,
-    Models.McpBridgeState state,
-    McpToolExecutionDispatcher dispatcher) : IHostedService, IDisposable
+    McpBridgeState state,
+    McpToolExecutionDispatcher dispatcher,
+    McpPrimitiveExecutionDispatcher primitiveDispatcher) : IHostedService, IDisposable
 {
     private const int DefaultPort = 18080;
-    private static readonly JsonSerializerOptions BridgeJsonOptions = new()
-    {
-        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-        PropertyNameCaseInsensitive = true,
-        DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
-        Converters = { new JsonStringEnumConverter() }
-    };
-
     private TcpListener? _listener;
     private CancellationTokenSource? _serverCts;
     private Task? _acceptLoopTask;
@@ -40,6 +34,12 @@ public sealed class McpTcpServerService(
     {
         if (_listener is not null)
             return Task.CompletedTask;
+
+        _ = Task.Run(() =>
+        {
+            try { toolStore.EnsureLoaded(); }
+            catch (Exception ex) { Trace.TraceWarning($"[MCP] Catalog preload failed: {ex.Message}"); }
+        }, cancellationToken);
 
         state.SetConnectedState(0);
         state.SetQueueDepth(0);
@@ -109,15 +109,16 @@ public sealed class McpTcpServerService(
     {
         var envelope = new Envelope
         {
-            Kind = McpMessageKinds.Event,
-            Action = McpActions.ToolsChanged
+            Kind = BridgeMessageKinds.Event,
+            Action = BridgeActions.ToolsChanged,
+            Body = BridgeFrameCodec.SerializeBody(new McpToolsChangedEventBody())
         };
 
         foreach (var kvp in _clients.ToArray())
         {
             try
             {
-                await WriteEnvelopeAsync(kvp.Value, envelope, CancellationToken.None).ConfigureAwait(false);
+                await BridgeFrameCodec.WriteEnvelopeAsync(kvp.Value, envelope, CancellationToken.None).ConfigureAwait(false);
             }
             catch (Exception ex)
             {
@@ -138,7 +139,11 @@ public sealed class McpTcpServerService(
             TcpClient? client = null;
             try
             {
+#if NET           
+                client = await _listener.AcceptTcpClientAsync(cancellationToken).ConfigureAwait(false);
+#else
                 client = await _listener.AcceptTcpClientAsync().ConfigureAwait(false);
+#endif
                 var acceptedClient = client;
                 var clientId = Guid.NewGuid().ToString("N");
                 var stream = acceptedClient.GetStream();
@@ -170,12 +175,12 @@ public sealed class McpTcpServerService(
         {
             while (!cancellationToken.IsCancellationRequested && client.Connected)
             {
-                var request = await ReadEnvelopeAsync(stream, cancellationToken).ConfigureAwait(false);
+                var request = await BridgeFrameCodec.ReadEnvelopeAsync(stream, cancellationToken).ConfigureAwait(false);
                 if (request is null)
                     break;
 
                 var response = await HandleRequestAsync(request, cancellationToken).ConfigureAwait(false);
-                await WriteEnvelopeAsync(stream, response, cancellationToken).ConfigureAwait(false);
+                await BridgeFrameCodec.WriteEnvelopeAsync(stream, response, cancellationToken).ConfigureAwait(false);
             }
         }
         catch (OperationCanceledException)
@@ -203,117 +208,82 @@ public sealed class McpTcpServerService(
         }
     }
 
-    private static async Task<Envelope?> ReadEnvelopeAsync(NetworkStream stream, CancellationToken cancellationToken)
-    {
-        var header = await ReadExactAsync(stream, 4, cancellationToken).ConfigureAwait(false);
-        if (header is null)
-            return null;
-
-        var payloadLength = BinaryPrimitives.ReadInt32LittleEndian(header);
-        if (payloadLength <= 0 || payloadLength > 4 * 1024 * 1024)
-            throw new InvalidDataException($"Invalid payload length: {payloadLength}");
-
-        var payloadBytes = await ReadExactAsync(stream, payloadLength, cancellationToken).ConfigureAwait(false);
-        if (payloadBytes is null)
-            return null;
-
-        var payloadJson = Encoding.UTF8.GetString(payloadBytes);
-        return JsonSerializer.Deserialize<Envelope>(payloadJson, BridgeJsonOptions);
-    }
-
-    private static async Task<byte[]?> ReadExactAsync(NetworkStream stream, int length, CancellationToken cancellationToken)
-    {
-        var buffer = new byte[length];
-        var offset = 0;
-        while (offset < length)
-        {
-#if NET
-            var read = await stream.ReadAsync(buffer.AsMemory(offset, length - offset), cancellationToken).ConfigureAwait(false);
-#else
-            var read = await stream.ReadAsync(buffer, offset, length - offset, cancellationToken).ConfigureAwait(false);
-#endif
-            if (read == 0)
-                return offset == 0 ? null : throw new EndOfStreamException("Socket closed mid-frame.");
-            offset += read;
-        }
-
-        return buffer;
-    }
-
-    private static async Task WriteEnvelopeAsync(NetworkStream stream, Envelope envelope, CancellationToken cancellationToken)
-    {
-        var json = JsonSerializer.Serialize(envelope, BridgeJsonOptions);
-        var payload = Encoding.UTF8.GetBytes(json);
-        var header = new byte[4];
-        BinaryPrimitives.WriteInt32LittleEndian(header, payload.Length);
-#if NET
-        await stream.WriteAsync(header, cancellationToken).ConfigureAwait(false);
-        await stream.WriteAsync(payload, cancellationToken).ConfigureAwait(false);
-#else
-        await stream.WriteAsync(header, 0, header.Length, cancellationToken).ConfigureAwait(false);
-        await stream.WriteAsync(payload, 0, payload.Length, cancellationToken).ConfigureAwait(false);
-#endif
-        await stream.FlushAsync(cancellationToken).ConfigureAwait(false);
-    }
 
     private async Task<Envelope> HandleRequestAsync(Envelope message, CancellationToken cancellationToken)
     {
-        if (!string.Equals(message.SchemaVersion, McpProtocol.SchemaVersion, StringComparison.Ordinal) ||
-            !string.Equals(message.SchemaChecksum, McpProtocol.SchemaChecksum, StringComparison.OrdinalIgnoreCase))
-        {
-            return BuildError(
-                message,
-                "bridge.schema_mismatch",
-                $"Schema mismatch. expected={McpProtocol.SchemaVersion}/{McpProtocol.SchemaChecksum}, got={message.SchemaVersion}/{message.SchemaChecksum}");
-        }
-
         return message.Action switch
         {
-            McpActions.Ping => BuildOk(message, McpActions.Pong, JsonSerializer.Serialize(new
+            BridgeActions.Ping => BuildOk(message, BridgeActions.Pong, new McpBridgePongBody
             {
-                protocol = McpProtocol.Version,
-                schemaVersion = McpProtocol.SchemaVersion,
-                schemaChecksum = McpProtocol.SchemaChecksum,
-                endpoint = state.Endpoint,
-                port = _port
-            }, BridgeJsonOptions)),
-            McpActions.ListTools => HandleListTools(message),
-            McpActions.ToolCall => await HandleToolCallAsync(message, cancellationToken).ConfigureAwait(false),
-            McpActions.GetExecution => HandleGetExecution(message),
-            McpActions.CancelExecution => HandleCancelExecution(message),
-            McpActions.Shutdown => HandleShutdown(message),
-            _ => BuildError(message, "bridge.unknown_action", $"Unknown action '{message.Action}'")
+                Endpoint = state.Endpoint,
+                Port = _port
+            }),
+            BridgeActions.ListTools => HandleListTools(message),
+            BridgeActions.ListPrompts => HandleListPrompts(message),
+            BridgeActions.ListResources => HandleListResources(message),
+            BridgeActions.ToolCall => await HandleToolCallAsync(message, cancellationToken).ConfigureAwait(false),
+            BridgeActions.GetPrompt => await HandlePromptGetAsync(message, cancellationToken).ConfigureAwait(false),
+            BridgeActions.ReadResource => await HandleResourceReadAsync(message, cancellationToken).ConfigureAwait(false),
+            BridgeActions.GetExecution => HandleGetExecution(message),
+            BridgeActions.CancelExecution => HandleCancelExecution(message),
+            BridgeActions.Shutdown => HandleShutdown(message),
+            _ => BuildError(message, BridgeErrorCodes.UnknownAction, $"Unknown action '{message.Action}'")
         };
     }
 
     private Envelope HandleListTools(Envelope message)
     {
-        var tools = toolStore.EnsureLoaded();
+        toolStore.EnsureLoaded();
 
-        return BuildOk(message, McpActions.ListTools, JsonSerializer.Serialize(new
+        return BuildOk(message, BridgeActions.ListTools, new McpToolsListResponseBody
         {
-            tools
-        }, BridgeJsonOptions));
+            Tools = toolStore.Tools.ToList()
+        });
+    }
+
+    private Envelope HandleListPrompts(Envelope message)
+    {
+        toolStore.EnsureLoaded();
+
+        return BuildOk(message, BridgeActions.ListPrompts, new McpPromptsListResponseBody
+        {
+            Prompts = toolStore.Prompts.ToList()
+        });
+    }
+
+    private Envelope HandleListResources(Envelope message)
+    {
+        toolStore.EnsureLoaded();
+
+        return BuildOk(message, BridgeActions.ListResources, new McpResourcesListResponseBody
+        {
+            Resources = toolStore.DirectResources.ToList(),
+            ResourceTemplates = toolStore.ResourceTemplates.ToList()
+        });
     }
 
     private Envelope HandleShutdown(Envelope message)
     {
         state.SetQueueDepth(0);
-        return BuildOk(message, McpActions.Shutdown, "{\"shutdown\":\"detached\"}");
+        return BuildOk(message, BridgeActions.Shutdown, new McpShutdownResponseBody());
     }
 
     private async Task<Envelope> HandleToolCallAsync(Envelope message, CancellationToken cancellationToken)
     {
         var requestId = string.IsNullOrWhiteSpace(message.Id) ? "<no-id>" : message.Id;
-        if (string.IsNullOrWhiteSpace(message.ToolId) && string.IsNullOrWhiteSpace(message.ToolName))
-            return BuildError(message, "tool.missing_name", "ToolId or ToolName is required.");
+        var requestBody = BridgeFrameCodec.ReadBody<McpToolCallRequestBody>(message);
+        if (requestBody is null)
+            return BuildError(message, BridgeErrorCodes.ToolInvalidRequest, "Tool call body is required.");
+
+        if (string.IsNullOrWhiteSpace(requestBody.ToolId) && string.IsNullOrWhiteSpace(requestBody.ToolName))
+            return BuildError(message, BridgeErrorCodes.ToolMissingName, "ToolId or ToolName is required.");
 
         toolStore.EnsureLoaded();
 
-        var requestedTool = !string.IsNullOrWhiteSpace(message.ToolId) ? message.ToolId! : message.ToolName!;
+        var requestedTool = !string.IsNullOrWhiteSpace(requestBody.ToolId) ? requestBody.ToolId! : requestBody.ToolName!;
         Trace.TraceInformation($"[MCP/TCP] Tool call received. requestId={requestId}, tool={requestedTool}");
-        if (!toolStore.TryGetTool(message.ToolId, message.ToolName, out var definition) || definition is null)
-            return BuildError(message, "tool.not_found", $"Tool '{requestedTool}' is not registered.");
+        if (!toolStore.TryGetTool(requestBody.ToolId, requestBody.ToolName, out var tool) || tool is null)
+            return BuildError(message, BridgeErrorCodes.ToolNotFound, $"Tool '{requestedTool}' is not registered.");
 
         var executionId = string.IsNullOrWhiteSpace(message.ExecutionId)
             ? Guid.NewGuid().ToString("N")
@@ -321,150 +291,204 @@ public sealed class McpTcpServerService(
 
         var result = await executionQueue.EnqueueAsync(
             executionId,
-            definition.ToolId,
-            definition.Name,
-            (progress, token) => ExecuteOnRevitThreadAsync(message, definition, progress, token),
+            tool.Id,
+            tool.ProtocolTool.Name,
+            (progress, token) => ExecuteOnRevitThreadAsync(requestBody, tool, progress, token),
             cancellationToken).ConfigureAwait(false);
 
-        if (result.Success)
+        if (result.State == ExecutionState.Completed)
         {
-            state.RecordCall(definition.ToolId, definition.Name);
-            Trace.TraceInformation($"[MCP/TCP] Tool call succeeded. requestId={requestId}, tool={definition.ToolId}");
-            return BuildOk(message, McpActions.ToolCall, result, executionId, definition);
+            state.RecordCall(tool.Id, tool.ProtocolTool.Name);
+            Trace.TraceInformation($"[MCP/TCP] Tool call succeeded. requestId={requestId}, tool={tool.Id}");
+            return BuildOk(message, BridgeActions.ToolCall, new McpToolCallResponseBody
+            {
+                ToolId = tool.Id,
+                ToolName = tool.ProtocolTool.Name,
+                State = result.State,
+                Detail = result.Detail,
+                Result = result.Result,
+            }, executionId);
         }
 
         Trace.TraceWarning(
-            $"[MCP/TCP] Tool call failed. requestId={requestId}, tool={definition.ToolId}, code={result.Error?.Code}, message={result.Error?.Message}");
-        return new Envelope
+            $"[MCP/TCP] Tool call failed. requestId={requestId}, tool={tool.Id}, code={result.Error?.Code}, message={result.Error?.Message}");
+        return BuildError(message, result.Error?.Code ?? BridgeErrorCodes.ToolFailed, result.Error?.Message ?? result.Detail, executionId, result.Error?.Details);
+    }
+
+    private async Task<Envelope> HandlePromptGetAsync(Envelope message, CancellationToken cancellationToken)
+    {
+        var requestBody = BridgeFrameCodec.ReadBody<McpPromptGetRequestBody>(message);
+        if (requestBody is null)
+            return BuildError(message, BridgeErrorCodes.PromptInvalidRequest, "Prompt get body is required.");
+
+        if (string.IsNullOrWhiteSpace(requestBody.PromptId) && string.IsNullOrWhiteSpace(requestBody.PromptName))
+            return BuildError(message, BridgeErrorCodes.PromptMissingName, "PromptId or PromptName is required.");
+
+        toolStore.EnsureLoaded();
+        if (!toolStore.TryGetPrompt(requestBody.PromptId, requestBody.PromptName, out var prompt) || prompt is null)
         {
-            Id = message.Id,
-            ExecutionId = executionId,
-            Kind = McpMessageKinds.Response,
-            Action = McpActions.ToolCall,
-            ToolId = definition.ToolId,
-            ToolName = definition.Name,
-            Version = McpProtocol.Version,
-            Message = result.Message,
-            ResultKind = result.ResultKind,
-            Metadata = result.Metadata,
-            ProgressUpdates = result.ProgressUpdates.ToList(),
-            Error = result.Error
-        };
+            var requestedPrompt = !string.IsNullOrWhiteSpace(requestBody.PromptId) ? requestBody.PromptId! : requestBody.PromptName!;
+            return BuildError(message, BridgeErrorCodes.PromptNotFound, $"Prompt '{requestedPrompt}' is not registered.");
+        }
+
+        try
+        {
+            var result = await ExecutePromptOnRevitThreadAsync(prompt, requestBody.Arguments, cancellationToken).ConfigureAwait(false);
+            return BuildOk(message, BridgeActions.GetPrompt, new McpPromptGetResponseBody
+            {
+                PromptId = prompt.Id,
+                PromptName = prompt.ProtocolPrompt.Name,
+                Result = result,
+            });
+        }
+        catch (Exception ex)
+        {
+            Trace.TraceWarning($"[MCP/TCP] Prompt get failed for '{prompt.ProtocolPrompt.Name}': {ex.Message}");
+            return BuildError(message, BridgeErrorCodes.PromptInvokeFailed, ex.Message, details: ex.StackTrace);
+        }
+    }
+
+    private async Task<Envelope> HandleResourceReadAsync(Envelope message, CancellationToken cancellationToken)
+    {
+        var requestBody = BridgeFrameCodec.ReadBody<McpResourceReadRequestBody>(message);
+        if (requestBody is null)
+            return BuildError(message, BridgeErrorCodes.ResourceInvalidRequest, "Resource read body is required.");
+        if (string.IsNullOrWhiteSpace(requestBody.Uri))
+            return BuildError(message, BridgeErrorCodes.ResourceMissingUri, "Resource URI is required.");
+
+        toolStore.EnsureLoaded();
+        if (!TryResolveResource(requestBody, out var resource) || resource is null)
+            return BuildError(message, BridgeErrorCodes.ResourceNotFound, $"Resource '{requestBody.Uri}' is not registered.");
+
+        try
+        {
+            var result = await ExecuteResourceOnRevitThreadAsync(resource, requestBody.Uri, cancellationToken).ConfigureAwait(false);
+            var resourceName = resource.ProtocolResource?.Name ?? resource.ProtocolTemplate?.Name ?? string.Empty;
+            return BuildOk(message, BridgeActions.ReadResource, new McpResourceReadResponseBody
+            {
+                ResourceId = resource.Id,
+                ResourceName = resourceName,
+                Result = result,
+            });
+        }
+        catch (Exception ex)
+        {
+            var resourceName = resource.ProtocolResource?.Name ?? resource.ProtocolTemplate?.Name ?? string.Empty;
+            Trace.TraceWarning($"[MCP/TCP] Resource read failed for '{resourceName}': {ex.Message}");
+            return BuildError(message, BridgeErrorCodes.ResourceReadFailed, ex.Message, details: ex.StackTrace);
+        }
     }
 
     private Envelope HandleGetExecution(Envelope message)
     {
         if (string.IsNullOrWhiteSpace(message.ExecutionId))
-            return BuildError(message, "execution.missing_id", "ExecutionId is required.");
+            return BuildError(message, BridgeErrorCodes.ExecutionMissingId, "ExecutionId is required.");
 
         var snapshot = executionQueue.GetExecutionSnapshot(message.ExecutionId);
         if (snapshot is null)
-            return BuildError(message, "execution.not_found", $"Execution '{message.ExecutionId}' was not found.");
+            return BuildError(message, BridgeErrorCodes.ExecutionNotFound, $"Execution '{message.ExecutionId}' was not found.");
 
-        return BuildExecutionEnvelope(message, McpActions.GetExecution, snapshot);
+        return BuildExecutionEnvelope(message, BridgeActions.GetExecution, snapshot);
     }
 
     private Envelope HandleCancelExecution(Envelope message)
     {
         if (string.IsNullOrWhiteSpace(message.ExecutionId))
-            return BuildError(message, "execution.missing_id", "ExecutionId is required.");
+            return BuildError(message, BridgeErrorCodes.ExecutionMissingId, "ExecutionId is required.");
 
         if (!executionQueue.TryCancel(message.ExecutionId))
-            return BuildError(message, "execution.not_found", $"Execution '{message.ExecutionId}' was not found or cannot be cancelled.");
+            return BuildError(message, BridgeErrorCodes.ExecutionNotFound, $"Execution '{message.ExecutionId}' was not found or cannot be cancelled.");
 
         var snapshot = executionQueue.GetExecutionSnapshot(message.ExecutionId);
         if (snapshot is null)
-            return BuildError(message, "execution.not_found", $"Execution '{message.ExecutionId}' was not found.");
+            return BuildError(message, BridgeErrorCodes.ExecutionNotFound, $"Execution '{message.ExecutionId}' was not found.");
 
-        return BuildExecutionEnvelope(message, McpActions.CancelExecution, snapshot);
+        return BuildExecutionEnvelope(message, BridgeActions.CancelExecution, snapshot);
     }
 
     private Task<McpToolExecutionResult> ExecuteOnRevitThreadAsync(
-        Envelope message,
-        McpToolDefinition definition,
+        McpToolCallRequestBody requestBody,
+        McpRegisteredTool tool,
         IProgress<McpProgressUpdate>? progress,
         CancellationToken cancellationToken)
     {
-        return dispatcher.DispatchAsync(definition, message.PayloadJson, progress, cancellationToken);
+        return dispatcher.DispatchAsync(tool, requestBody.PayloadJson, progress, cancellationToken);
     }
 
-    private static Envelope BuildOk(
+    private async Task<GetPromptResult> ExecutePromptOnRevitThreadAsync(
+        McpRegisteredPrompt prompt,
+        IReadOnlyDictionary<string, JsonElement>? arguments,
+        CancellationToken cancellationToken)
+    {
+        var handler = await ExternalEventController
+            .AsyncGenericEventHandler<GetPromptResult>()
+            .ConfigureAwait(false);
+        return await handler
+            .RaiseAsync(() => primitiveDispatcher.GetPromptAsync(prompt, arguments, cancellationToken).ConfigureAwait(false).GetAwaiter().GetResult())
+            .ConfigureAwait(false);
+    }
+
+    private async Task<ReadResourceResult> ExecuteResourceOnRevitThreadAsync(
+        McpRegisteredResource resource,
+        string uri,
+        CancellationToken cancellationToken)
+    {
+        var handler = await ExternalEventController
+            .AsyncGenericEventHandler<ReadResourceResult>()
+            .ConfigureAwait(false);
+        return await handler
+            .RaiseAsync(() => primitiveDispatcher.ReadResourceAsync(resource, uri, cancellationToken).ConfigureAwait(false).GetAwaiter().GetResult())
+            .ConfigureAwait(false);
+    }
+
+    private bool TryResolveResource(McpResourceReadRequestBody requestBody, out McpRegisteredResource? resource)
+    {
+        if (toolStore.TryGetResource(requestBody.ResourceId, requestBody.ResourceName, out resource) && resource is not null)
+            return true;
+
+        var requestUri = requestBody.Uri;
+        resource = toolStore.ResourceCatalog.FirstOrDefault(candidate =>
+        {
+            var candidateUri = candidate.ProtocolTemplate?.UriTemplate ?? candidate.ProtocolResource?.Uri ?? string.Empty;
+            return string.Equals(candidateUri, requestUri, StringComparison.OrdinalIgnoreCase);
+        });
+        return resource is not null;
+    }
+
+    private static Envelope BuildOk<TBody>(
         Envelope message,
         string action,
-        McpToolExecutionResult result,
-        string executionId,
-        McpToolDefinition definition)
+        TBody body,
+        string? executionId = null)
     {
         return new Envelope
         {
             Id = message.Id,
-            ExecutionId = executionId,
-            Kind = McpMessageKinds.Response,
+            ExecutionId = executionId ?? message.ExecutionId,
+            Kind = BridgeMessageKinds.Response,
             Action = action,
-            ToolId = definition.ToolId,
-            ToolName = definition.Name,
-            Version = McpProtocol.Version,
-            PayloadJson = result.PayloadJson,
-            Message = result.Message,
-            ResultKind = result.ResultKind,
-            Metadata = result.Metadata,
-            ProgressUpdates = result.ProgressUpdates.ToList()
+            Body = BridgeFrameCodec.SerializeBody(body)
         };
     }
 
-    private static Envelope BuildOk(Envelope message, string action, string payloadJson)
+    private static Envelope BuildError(Envelope message, string code, string reason, string? executionId = null, string? details = null)
     {
         return new Envelope
         {
             Id = message.Id,
-            ExecutionId = message.ExecutionId,
-            Kind = McpMessageKinds.Response,
-            Action = action,
-            ToolId = message.ToolId,
-            ToolName = message.ToolName,
-            Version = McpProtocol.Version,
-            PayloadJson = payloadJson,
-            ResultKind = McpResultKinds.Json
-        };
-    }
-
-    private static Envelope BuildError(Envelope message, string code, string reason)
-    {
-        return new Envelope
-        {
-            Id = message.Id,
-            ExecutionId = message.ExecutionId,
-            Kind = McpMessageKinds.Response,
+            ExecutionId = executionId ?? message.ExecutionId,
+            Kind = BridgeMessageKinds.Response,
             Action = message.Action,
-            ToolId = message.ToolId,
-            ToolName = message.ToolName,
-            Version = McpProtocol.Version,
-            Error = new McpException
-            {
-                Code = code,
-                Message = reason
-            }
+            IsError = true,
+            Body = BridgeFrameCodec.SerializeBody(new McpErrorBody { Code = code, Message = reason, Details = details })
         };
     }
 
     private static Envelope BuildExecutionEnvelope(Envelope message, string action, McpExecutionSnapshot snapshot)
     {
-        return new Envelope
-        {
-            Id = message.Id,
-            ExecutionId = snapshot.ExecutionId,
-            Kind = McpMessageKinds.Response,
-            Action = action,
-            ToolId = snapshot.ToolId,
-            ToolName = snapshot.ToolName,
-            Version = McpProtocol.Version,
-            Message = snapshot.Message,
-            ResultKind = snapshot.ResultKind,
-            Execution = snapshot,
-            ProgressUpdates = snapshot.ProgressUpdates.ToList(),
-            Error = snapshot.Error
-        };
+        return BuildOk(message, action, new McpExecutionResponseBody { Execution = snapshot }, snapshot.ExecutionId);
     }
+
 
     private static int FindAvailablePort(int preferredPort)
     {

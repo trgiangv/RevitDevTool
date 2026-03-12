@@ -2,12 +2,13 @@ using System.Collections.Concurrent;
 using System.Diagnostics;
 using RevitDevTool.Contracts;
 using RevitDevTool.Controllers;
+using RevitDevTool.Mcp.Models;
 // ReSharper disable RedundantSuppressNullableWarningExpression
 namespace RevitDevTool.Mcp;
 
 public sealed class McpExecutionQueue : IDisposable
 {
-    private readonly Models.McpBridgeState _state;
+    private readonly McpBridgeState _state;
     private readonly ConcurrentQueue<QueuedExecution> _queue = new();
     private readonly ConcurrentDictionary<string, McpExecutionSnapshot> _executions = new(StringComparer.OrdinalIgnoreCase);
     private readonly ConcurrentDictionary<string, QueuedExecution> _jobsByExecutionId = new(StringComparer.OrdinalIgnoreCase);
@@ -17,7 +18,7 @@ public sealed class McpExecutionQueue : IDisposable
     private int _queueDepth;
     private bool _disposed;
 
-    public McpExecutionQueue(Models.McpBridgeState state)
+    public McpExecutionQueue(McpBridgeState state)
     {
         _state = state;
         _workerTask = Task.Run(ProcessLoopAsync);
@@ -68,11 +69,11 @@ public sealed class McpExecutionQueue : IDisposable
         job.Cancellation.Cancel();
         UpdateSnapshot(executionId, snapshot => CloneSnapshot(
             snapshot,
-            state: snapshot.State == McpExecutionStates.Queued ? McpExecutionStates.Cancelled : snapshot.State,
-            message: string.IsNullOrWhiteSpace(snapshot.Message) ? "Cancellation requested." : snapshot.Message,
+            state: snapshot.State == ExecutionState.Queued ? ExecutionState.Cancelled : snapshot.State,
+            detail: string.IsNullOrWhiteSpace(snapshot.Detail) ? "Cancellation requested." : snapshot.Detail,
             canCancel: false,
             updatedAtUtc: DateTime.UtcNow,
-            completedAtUtc: snapshot.State == McpExecutionStates.Queued ? DateTime.UtcNow : snapshot.CompletedAtUtc));
+            completedAtUtc: snapshot.State == ExecutionState.Queued ? DateTime.UtcNow : snapshot.CompletedAtUtc));
         return true;
     }
 
@@ -122,11 +123,10 @@ public sealed class McpExecutionQueue : IDisposable
             if (TryCompleteCancelledBeforeStart(job))
                 return;
 
-            var progressEvents = new List<McpProgressUpdate>();
-            var progress = CreateProgressReporter(job, progressEvents);
+            var progress = CreateProgressReporter(job);
             MarkExecutionStarted(job);
 
-            await ExecuteAndCompleteJobAsync(job, progress, progressEvents).ConfigureAwait(false);
+            await ExecuteAndCompleteJobAsync(job, progress).ConfigureAwait(false);
         }
         finally
         {
@@ -149,8 +149,8 @@ public sealed class McpExecutionQueue : IDisposable
         var startedAtUtc = DateTime.UtcNow;
         UpdateSnapshot(job.ExecutionId, snapshot => CloneSnapshot(
             snapshot,
-            state: McpExecutionStates.Running,
-            message: $"Starting '{job.ToolName}'...",
+            state: ExecutionState.Preparing,
+            detail: $"Starting '{job.ToolName}'...",
             canCancel: true,
             startedAtUtc: startedAtUtc,
             updatedAtUtc: startedAtUtc,
@@ -159,40 +159,30 @@ public sealed class McpExecutionQueue : IDisposable
 
     private async Task ExecuteAndCompleteJobAsync(
         QueuedExecution job,
-        IProgress<McpProgressUpdate> progress,
-        IReadOnlyList<McpProgressUpdate> progressEvents)
+        IProgress<McpProgressUpdate> progress)
     {
         try
         {
             var result = await ExecuteJobOnRevitThreadAsync(job, progress).ConfigureAwait(false);
-            var normalizedResult = EnsureProgressUpdates(result, progressEvents);
-
-            Trace.TraceInformation($"[MCP] Tool '{job.ToolName}' ({job.ExecutionId}) executed. Success={normalizedResult.Success}");
-            CompleteJob(job, normalizedResult);
+            Trace.TraceInformation($"[MCP] Tool '{job.ToolName}' ({job.ExecutionId}) executed. State={result.State}");
+            CompleteJob(job, result);
         }
         catch (OperationCanceledException) when (job.CancellationToken.IsCancellationRequested)
         {
-            CompleteCancelledJob(job, "Execution cancelled.", progressEvents);
+            CompleteCancelledJob(job, "Execution cancelled.");
         }
         catch (Exception ex)
         {
-            HandleExecutionFailure(job, ex, progressEvents);
+            HandleExecutionFailure(job, ex);
         }
     }
 
     private void HandleExecutionFailure(
         QueuedExecution job,
-        Exception ex,
-        IReadOnlyList<McpProgressUpdate> progressEvents)
+        Exception ex)
     {
         Trace.TraceError($"[MCP] Queue execution failed for '{job.ToolName}' ({job.ExecutionId}): {ex.Message}");
-        _executions.TryGetValue(job.ExecutionId, out var snapshot);
-        var failedResult = McpToolExecutionResult.Failed(
-            "queue.execution_failed",
-            ex.Message,
-            ex.StackTrace,
-            CreateMetadata(job, snapshot?.StartedAtUtc ?? DateTime.UtcNow, DateTime.UtcNow),
-            progressEvents);
+        var failedResult = McpToolExecutionResult.Failed(BridgeErrorCodes.QueueExecutionFailed, ex.Message, ex.StackTrace);
         CompleteJob(job, failedResult);
     }
 
@@ -210,30 +200,24 @@ public sealed class McpExecutionQueue : IDisposable
             ExecutionId = job.ExecutionId,
             ToolId = job.ToolId,
             ToolName = job.ToolName,
-            State = McpExecutionStates.Queued,
-            Message = $"Queued '{job.ToolName}'.",
+            State = ExecutionState.Queued,
+            Detail = $"Queued '{job.ToolName}'.",
             CanCancel = true,
             StartedAtUtc = now,
             UpdatedAtUtc = now
         };
     }
 
-    private IProgress<McpProgressUpdate> CreateProgressReporter(QueuedExecution job, List<McpProgressUpdate> progressEvents)
+    private IProgress<McpProgressUpdate> CreateProgressReporter(QueuedExecution job)
     {
         return new Progress<McpProgressUpdate>(update =>
         {
-            lock (progressEvents)
-            {
-                progressEvents.Add(update);
-            }
-
             _state.ReportProgress(update);
             UpdateSnapshot(job.ExecutionId, snapshot => CloneSnapshot(
                 snapshot,
-                state: McpExecutionStates.Running,
-                message: update.Message,
-                updatedAtUtc: DateTime.UtcNow,
-                progressUpdates: snapshot.ProgressUpdates.Concat([update]).ToList()));
+                state: update.State,
+                detail: update.Detail,
+                updatedAtUtc: DateTime.UtcNow));
         });
     }
 
@@ -252,116 +236,22 @@ public sealed class McpExecutionQueue : IDisposable
     private void CompleteJob(QueuedExecution job, McpToolExecutionResult result)
     {
         var completedAt = DateTime.UtcNow;
-        _executions.TryGetValue(job.ExecutionId, out var snapshot);
-        var normalizedResult = EnsureExecutionMetadata(job, result, snapshot, completedAt);
-        _state.CompleteExecution(job.ToolName, normalizedResult);
-        UpdateSnapshot(job.ExecutionId, snapshotDto => CloneSnapshot(
-            snapshotDto,
-            state: normalizedResult.IsCancelled
-                ? McpExecutionStates.Cancelled
-                : normalizedResult.Success
-                    ? McpExecutionStates.Completed
-                    : McpExecutionStates.Failed,
-            message: normalizedResult.Message,
-            resultKind: normalizedResult.ResultKind,
+        _state.CompleteExecution(job.ToolName, result);
+        UpdateSnapshot(job.ExecutionId, snapshot => CloneSnapshot(
+            snapshot,
+            state: result.State,
+            detail: result.Detail,
             canCancel: false,
             updatedAtUtc: completedAt,
             completedAtUtc: completedAt,
-            error: normalizedResult.Error,
-            progressUpdates: normalizedResult.ProgressUpdates.ToList()));
-        job.Completion.TrySetResult(normalizedResult);
+            error: result.Error));
+        job.Completion.TrySetResult(result);
     }
 
-    private void CompleteCancelledJob(QueuedExecution job, string message, IReadOnlyList<McpProgressUpdate>? progressEvents = null)
+    private void CompleteCancelledJob(QueuedExecution job, string detail)
     {
-        _executions.TryGetValue(job.ExecutionId, out var snapshot);
-        var cancelledResult = McpToolExecutionResult.Cancelled(
-            message,
-            CreateMetadata(job, snapshot?.StartedAtUtc ?? DateTime.UtcNow, DateTime.UtcNow),
-            progressEvents ?? []);
+        var cancelledResult = McpToolExecutionResult.Cancelled(detail);
         CompleteJob(job, cancelledResult);
-    }
-
-    private static McpToolExecutionResult EnsureProgressUpdates(
-        McpToolExecutionResult result,
-        IReadOnlyList<McpProgressUpdate> progressEvents)
-    {
-        if (result.ProgressUpdates.Count != 0 || progressEvents.Count == 0)
-            return result;
-
-        return result.Success
-            ? McpToolExecutionResult.Succeeded(
-                result.PayloadJson,
-                result.Message,
-                result.ResultKind,
-                result.Metadata,
-                progressEvents)
-            : result.IsCancelled
-                ? McpToolExecutionResult.Cancelled(result.Message, result.Metadata, progressEvents)
-                : McpToolExecutionResult.Failed(
-                    result.Error?.Code ?? "tool.failed",
-                    result.Message,
-                    result.Error?.Details,
-                    result.Metadata,
-                    progressEvents);
-    }
-
-    private static McpToolExecutionResult EnsureExecutionMetadata(
-        QueuedExecution job,
-        McpToolExecutionResult result,
-        McpExecutionSnapshot? snapshot,
-        DateTime completedAtUtc)
-    {
-        var existingMetadata = result.Metadata;
-        var startedAtUtc = existingMetadata?.StartedAtUtc ?? snapshot?.StartedAtUtc ?? completedAtUtc;
-
-        if (existingMetadata is not null &&
-            string.Equals(existingMetadata.ExecutionId, job.ExecutionId, StringComparison.OrdinalIgnoreCase) &&
-            string.Equals(existingMetadata.ToolId, job.ToolId, StringComparison.OrdinalIgnoreCase) &&
-            string.Equals(existingMetadata.ToolName, job.ToolName, StringComparison.Ordinal) &&
-            existingMetadata.CompletedAtUtc != default)
-        {
-            return result;
-        }
-
-        var metadata = new McpToolExecutionMetadata
-        {
-            ExecutionId = string.IsNullOrWhiteSpace(existingMetadata?.ExecutionId) ? job.ExecutionId : existingMetadata!.ExecutionId,
-            ToolId = string.IsNullOrWhiteSpace(existingMetadata?.ToolId) ? job.ToolId : existingMetadata!.ToolId,
-            ToolName = string.IsNullOrWhiteSpace(existingMetadata?.ToolName) ? job.ToolName : existingMetadata!.ToolName,
-            DurationMs = existingMetadata?.DurationMs ?? (int)Math.Max(0, (completedAtUtc - startedAtUtc).TotalMilliseconds),
-            StartedAtUtc = startedAtUtc,
-            CompletedAtUtc = completedAtUtc
-        };
-
-        return result.Success
-            ? McpToolExecutionResult.Succeeded(
-                result.PayloadJson,
-                result.Message,
-                result.ResultKind,
-                metadata,
-                result.ProgressUpdates)
-            : result.IsCancelled
-                ? McpToolExecutionResult.Cancelled(result.Message, metadata, result.ProgressUpdates)
-                : McpToolExecutionResult.Failed(
-                    result.Error?.Code ?? "tool.failed",
-                    result.Message,
-                    result.Error?.Details,
-                    metadata,
-                    result.ProgressUpdates);
-    }
-
-    private static McpToolExecutionMetadata CreateMetadata(QueuedExecution job, DateTime startedAtUtc, DateTime completedAtUtc)
-    {
-        return new McpToolExecutionMetadata
-        {
-            ExecutionId = job.ExecutionId,
-            ToolId = job.ToolId,
-            ToolName = job.ToolName,
-            StartedAtUtc = startedAtUtc,
-            CompletedAtUtc = completedAtUtc,
-            DurationMs = (int)Math.Max(0, (completedAtUtc - startedAtUtc).TotalMilliseconds)
-        };
     }
 
     private void UpdateSnapshot(string executionId, Func<McpExecutionSnapshot, McpExecutionSnapshot> update)
@@ -374,15 +264,13 @@ public sealed class McpExecutionQueue : IDisposable
 
     private static McpExecutionSnapshot CloneSnapshot(
         McpExecutionSnapshot snapshot,
-        string? state = null,
-        string? message = null,
-        string? resultKind = null,
+        ExecutionState? state = null,
+        string? detail = null,
         bool? canCancel = null,
         DateTime? startedAtUtc = null,
         DateTime? updatedAtUtc = null,
         DateTime? completedAtUtc = null,
-        McpException? error = null,
-        IReadOnlyList<McpProgressUpdate>? progressUpdates = null)
+        McpException? error = null)
     {
         return new McpExecutionSnapshot
         {
@@ -390,14 +278,12 @@ public sealed class McpExecutionQueue : IDisposable
             ToolId = snapshot.ToolId,
             ToolName = snapshot.ToolName,
             State = state ?? snapshot.State,
-            Message = message ?? snapshot.Message,
-            ResultKind = resultKind ?? snapshot.ResultKind,
+            Detail = detail ?? snapshot.Detail,
             CanCancel = canCancel ?? snapshot.CanCancel,
             StartedAtUtc = startedAtUtc ?? snapshot.StartedAtUtc,
             UpdatedAtUtc = updatedAtUtc ?? snapshot.UpdatedAtUtc,
             CompletedAtUtc = completedAtUtc ?? snapshot.CompletedAtUtc,
-            Error = error ?? snapshot.Error,
-            ProgressUpdates = progressUpdates ?? snapshot.ProgressUpdates
+            Error = error ?? snapshot.Error
         };
     }
 

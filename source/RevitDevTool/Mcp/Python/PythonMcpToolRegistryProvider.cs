@@ -1,10 +1,13 @@
 using System.Diagnostics;
 using System.IO;
 using RevitDevTool.Contracts;
+using RevitDevTool.Execution.Providers.Python;
 using RevitDevTool.Mcp.Interfaces;
+using RevitDevTool.Mcp.Parser.Models;
+using RevitDevTool.Mcp.Parser.Python;
 namespace RevitDevTool.Mcp.Python;
 
-public sealed class PythonMcpToolRegistryProvider : IMcpToolRegistryProvider
+public sealed class PythonMcpToolRegistryProvider : IMcpRegistryProvider
 {
     public string Name => "python-mcp";
     public ExecutionMode SourceKind => ExecutionMode.Python;
@@ -16,12 +19,18 @@ public sealed class PythonMcpToolRegistryProvider : IMcpToolRegistryProvider
         ToolsetDirectories = paths;
     }
 
-    public IReadOnlyList<McpToolDefinition> LoadTools()
+    public McpRegistryCatalog LoadCatalog()
     {
         if (ToolsetDirectories.Count == 0)
-            return [];
+            return McpRegistryCatalog.Empty;
 
-        var all = new List<McpToolDefinition>();
+        if (!PythonEnvironment.IsEnvironmentReady())
+        {
+            Trace.TraceWarning("[MCP] Python environment is not ready. Skipping Python MCP registry discovery.");
+            return McpRegistryCatalog.Empty;
+        }
+
+        var all = McpRegistryCatalog.Empty;
 
         foreach (var dir in ToolsetDirectories
                      .Where(Directory.Exists)
@@ -30,7 +39,7 @@ public sealed class PythonMcpToolRegistryProvider : IMcpToolRegistryProvider
         {
             try
             {
-                all.AddRange(PythonToolsetParser.ParseDirectory(dir));
+                all = all.Merge(PythonToolsetParser.ParseDirectoryCatalog(dir, PythonEnvironment.PythonExe, PythonEmbedded.ToolParserScriptPath));
             }
             catch (Exception ex)
             {

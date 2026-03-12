@@ -41,19 +41,19 @@ public sealed partial class McpBridgeState : ObservableObject
         {
             IsExecuting = true;
             CurrentToolName = toolName;
-            CurrentStage = "Queued";
+            CurrentStage = ExecutionState.Queued.ToString().ToLowerInvariant();
             CurrentStatusMessage = $"Queued '{toolName}'...";
         });
     }
 
-    public void StartExecution(string toolName, string message)
+    public void StartExecution(string toolName, string detail)
     {
         UpdateUiState(() =>
         {
             IsExecuting = true;
             CurrentToolName = toolName;
-            CurrentStage = "Running";
-            CurrentStatusMessage = message;
+            CurrentStage = nameof(ExecutionState.Preparing).ToLowerInvariant();
+            CurrentStatusMessage = detail;
         });
     }
 
@@ -61,8 +61,8 @@ public sealed partial class McpBridgeState : ObservableObject
     {
         UpdateUiState(() =>
         {
-            CurrentStage = progress.Stage;
-            CurrentStatusMessage = progress.Message;
+            CurrentStage = progress.State.ToString().ToLowerInvariant();
+            CurrentStatusMessage = progress.Detail;
         });
     }
 
@@ -76,15 +76,12 @@ public sealed partial class McpBridgeState : ObservableObject
             CurrentStatusMessage = string.Empty;
         });
 
-        var durationText = result.Metadata?.DurationMs > 0
-            ? $" ({result.Metadata.DurationMs} ms)"
-            : string.Empty;
-        var message = !string.IsNullOrWhiteSpace(result.Message)
-            ? result.Message
+        var detail = !string.IsNullOrWhiteSpace(result.Detail)
+            ? result.Detail
             : result.Error?.Message ?? string.Empty;
-        var traceMessage = $"[MCP] Tool '{toolName}' completed. Success={result.Success}. Message={message}{durationText}";
+        var traceMessage = $"[MCP] Tool '{toolName}' completed. State={result.State}. Detail={detail}";
 
-        if (result.Success)
+        if (result.State == ExecutionState.Completed)
         {
             Trace.TraceInformation(traceMessage);
             return;

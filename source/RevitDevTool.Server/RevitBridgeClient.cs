@@ -1,22 +1,17 @@
 using System.Buffers.Binary;
+using System.Diagnostics;
 using System.Net.Sockets;
 using System.Text;
 using System.Text.Json;
-using System.Text.Json.Serialization;
+using System.Linq;
+using ModelContextProtocol;
+using ModelContextProtocol.Protocol;
 using RevitDevTool.Contracts;
 
 namespace RevitDevTool.Server;
 
 public sealed class RevitBridgeClient : IAsyncDisposable
 {
-    private static readonly JsonSerializerOptions JsonOptions = new()
-    {
-        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-        PropertyNameCaseInsensitive = true,
-        DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
-        Converters = { new JsonStringEnumConverter() }
-    };
-
     private TcpClient? _tcp;
     private NetworkStream? _stream;
     private readonly SemaphoreSlim _writeLock = new(1, 1);
@@ -40,7 +35,7 @@ public sealed class RevitBridgeClient : IAsyncDisposable
         }
     }
 
-    public async Task<IReadOnlyList<McpToolDefinition>> ListToolsAsync(CancellationToken cancellationToken = default)
+    public async Task<IReadOnlyList<Tool>> ListToolsAsync(CancellationToken cancellationToken = default)
     {
         if (!IsConnected)
         {
@@ -49,16 +44,58 @@ public sealed class RevitBridgeClient : IAsyncDisposable
 
         var request = new Envelope
         {
-            Kind = McpMessageKinds.Request,
-            Action = McpActions.ListTools
+            Kind = BridgeMessageKinds.Request,
+            Action = BridgeActions.ListTools
         };
 
         var response = await SendAndReceiveAsync(request, cancellationToken).ConfigureAwait(false);
-        if (response is null || response.Error is not null)
+        if (response is null || response.IsError)
             return [];
 
-        var toolsWrapper = JsonSerializer.Deserialize<ToolsListPayload>(response.PayloadJson, JsonOptions);
+        var toolsWrapper = BridgeFrameCodec.ReadBody<McpToolsListResponseBody>(response);
         return toolsWrapper?.Tools ?? [];
+    }
+
+    public async Task<IReadOnlyList<Prompt>> ListPromptsAsync(CancellationToken cancellationToken = default)
+    {
+        if (!IsConnected)
+        {
+            return [];
+        }
+
+        var request = new Envelope
+        {
+            Kind = BridgeMessageKinds.Request,
+            Action = BridgeActions.ListPrompts
+        };
+
+        var response = await SendAndReceiveAsync(request, cancellationToken).ConfigureAwait(false);
+        if (response is null || response.IsError)
+            return [];
+
+        var promptsWrapper = BridgeFrameCodec.ReadBody<McpPromptsListResponseBody>(response);
+        return promptsWrapper?.Prompts ?? [];
+    }
+
+    public async Task<(IReadOnlyList<Resource> Resources, IReadOnlyList<ResourceTemplate> Templates)> ListResourcesAsync(CancellationToken cancellationToken = default)
+    {
+        if (!IsConnected)
+        {
+            return ([], []);
+        }
+
+        var request = new Envelope
+        {
+            Kind = BridgeMessageKinds.Request,
+            Action = BridgeActions.ListResources
+        };
+
+        var response = await SendAndReceiveAsync(request, cancellationToken).ConfigureAwait(false);
+        if (response is null || response.IsError)
+            return ([], []);
+
+        var body = BridgeFrameCodec.ReadBody<McpResourcesListResponseBody>(response);
+        return (body?.Resources ?? [], body?.ResourceTemplates ?? []);
     }
 
     public async Task<McpToolExecutionResult> CallToolAsync(
@@ -69,34 +106,116 @@ public sealed class RevitBridgeClient : IAsyncDisposable
     {
         if (!IsConnected)
         {
-            return McpToolExecutionResult.Failed("bridge.disconnected", "Revit bridge is not connected.");
+            return McpToolExecutionResult.Failed(BridgeErrorCodes.Disconnected, "Revit bridge is not connected.");
         }
 
         var request = new Envelope
         {
-            Kind = McpMessageKinds.Request,
-            Action = McpActions.ToolCall,
-            ToolId = toolId,
-            ToolName = toolName,
-            PayloadJson = payloadJson
+            Kind = BridgeMessageKinds.Request,
+            Action = BridgeActions.ToolCall,
+            Body = BridgeFrameCodec.SerializeBody(new McpToolCallRequestBody
+            {
+                ToolId = toolId,
+                ToolName = toolName,
+                PayloadJson = payloadJson
+            })
         };
 
         var response = await SendAndReceiveAsync(request, cancellationToken).ConfigureAwait(false);
         if (response is null)
-            return McpToolExecutionResult.Failed("bridge.disconnected", "Revit bridge connection lost during tool call.");
+            return McpToolExecutionResult.Failed(BridgeErrorCodes.Disconnected, "Revit bridge connection lost during tool call.");
 
-        if (response.Error is not null)
+        if (response.IsError)
         {
+            var errorBody = BridgeFrameCodec.ReadBody<McpErrorBody>(response);
             return McpToolExecutionResult.Failed(
-                response.Error.Code,
-                response.Error.Message,
-                response.Error.Details);
+                errorBody?.Code ?? BridgeErrorCodes.ToolFailed,
+                errorBody?.Message ?? "Unknown bridge error.",
+                errorBody?.Details);
         }
 
-        return McpToolExecutionResult.Succeeded(
-            response.PayloadJson,
-            response.Message ?? string.Empty,
-            response.ResultKind ?? McpResultKinds.Json);
+        var responseBody = BridgeFrameCodec.ReadBody<McpToolCallResponseBody>(response);
+        if (responseBody is null)
+            return McpToolExecutionResult.Failed(BridgeErrorCodes.InvalidResponse, "Bridge returned an empty tool response.");
+
+        if (responseBody.State == ExecutionState.Completed)
+            return McpToolExecutionResult.Completed(responseBody.Result, responseBody.Detail);
+
+        return McpToolExecutionResult.Failed(
+            responseBody.State == ExecutionState.Cancelled ? BridgeErrorCodes.ToolCancelled : BridgeErrorCodes.ToolFailed,
+            responseBody.Detail);
+    }
+
+    public async Task<GetPromptResult> GetPromptAsync(
+        string promptId,
+        string promptName,
+        IReadOnlyDictionary<string, JsonElement>? arguments,
+        CancellationToken cancellationToken = default)
+    {
+        if (!IsConnected)
+            throw new InvalidOperationException("Revit bridge is not connected.");
+
+        var request = new Envelope
+        {
+            Kind = BridgeMessageKinds.Request,
+            Action = BridgeActions.GetPrompt,
+            Body = BridgeFrameCodec.SerializeBody(new McpPromptGetRequestBody
+            {
+                PromptId = promptId,
+                PromptName = promptName,
+                Arguments = arguments,
+            })
+        };
+
+        var response = await SendAndReceiveAsync(request, cancellationToken).ConfigureAwait(false);
+        if (response is null)
+            throw new InvalidOperationException("Revit bridge connection lost during prompt execution.");
+
+        if (response.IsError)
+        {
+            var errorBody = BridgeFrameCodec.ReadBody<McpErrorBody>(response);
+            throw new InvalidOperationException(errorBody?.Message ?? "Unknown bridge error.");
+        }
+
+        var responseBody = BridgeFrameCodec.ReadBody<McpPromptGetResponseBody>(response)
+                           ?? throw new InvalidOperationException("Bridge returned an empty prompt response.");
+        return responseBody.Result;
+    }
+
+    public async Task<ReadResourceResult> ReadResourceAsync(
+        string resourceId,
+        string resourceName,
+        string uri,
+        CancellationToken cancellationToken = default)
+    {
+        if (!IsConnected)
+            throw new InvalidOperationException("Revit bridge is not connected.");
+
+        var request = new Envelope
+        {
+            Kind = BridgeMessageKinds.Request,
+            Action = BridgeActions.ReadResource,
+            Body = BridgeFrameCodec.SerializeBody(new McpResourceReadRequestBody
+            {
+                ResourceId = resourceId,
+                ResourceName = resourceName,
+                Uri = uri,
+            })
+        };
+
+        var response = await SendAndReceiveAsync(request, cancellationToken).ConfigureAwait(false);
+        if (response is null)
+            throw new InvalidOperationException("Revit bridge connection lost during resource read.");
+
+        if (response.IsError)
+        {
+            var errorBody = BridgeFrameCodec.ReadBody<McpErrorBody>(response);
+            throw new InvalidOperationException(errorBody?.Message ?? "Unknown bridge error.");
+        }
+
+        var responseBody = BridgeFrameCodec.ReadBody<McpResourceReadResponseBody>(response)
+                           ?? throw new InvalidOperationException("Bridge returned an empty resource response.");
+        return responseBody.Result;
     }
 
     private async Task<Envelope?> SendAndReceiveAsync(Envelope request, CancellationToken cancellationToken)
@@ -111,7 +230,7 @@ public sealed class RevitBridgeClient : IAsyncDisposable
             await _writeLock.WaitAsync(cancellationToken).ConfigureAwait(false);
             try
             {
-                await WriteEnvelopeAsync(_stream, request, cancellationToken).ConfigureAwait(false);
+                await BridgeFrameCodec.WriteEnvelopeAsync(_stream, request, cancellationToken).ConfigureAwait(false);
             }
             finally
             {
@@ -120,15 +239,18 @@ public sealed class RevitBridgeClient : IAsyncDisposable
 
             while (true)
             {
-                var response = await ReadEnvelopeAsync(_stream, cancellationToken).ConfigureAwait(false);
+                var response = await BridgeFrameCodec.ReadEnvelopeAsync(_stream, cancellationToken).ConfigureAwait(false);
                 if (response is null)
                 {
                     Cleanup();
                     return null;
                 }
 
-                if (response.Kind == McpMessageKinds.Event)
+                if (response.Kind == BridgeMessageKinds.Event)
                     continue;
+
+                if (!string.IsNullOrEmpty(request.Id) && response.Id != request.Id)
+                    Trace.TraceWarning($"[MCP] Response ID mismatch: expected '{request.Id}', got '{response.Id}'");
 
                 return response;
             }
@@ -147,50 +269,6 @@ public sealed class RevitBridgeClient : IAsyncDisposable
         _tcp = null;
     }
 
-    private static async Task WriteEnvelopeAsync(NetworkStream stream, Envelope envelope, CancellationToken cancellationToken)
-    {
-        var json = JsonSerializer.Serialize(envelope, JsonOptions);
-        var payload = Encoding.UTF8.GetBytes(json);
-        var header = new byte[4];
-        BinaryPrimitives.WriteInt32LittleEndian(header, payload.Length);
-        await stream.WriteAsync(header, cancellationToken).ConfigureAwait(false);
-        await stream.WriteAsync(payload, cancellationToken).ConfigureAwait(false);
-        await stream.FlushAsync(cancellationToken).ConfigureAwait(false);
-    }
-
-    private static async Task<Envelope?> ReadEnvelopeAsync(NetworkStream stream, CancellationToken cancellationToken)
-    {
-        var header = await ReadExactAsync(stream, 4, cancellationToken).ConfigureAwait(false);
-        if (header is null)
-            return null;
-
-        var payloadLength = BinaryPrimitives.ReadInt32LittleEndian(header);
-        if (payloadLength is <= 0 or > 4 * 1024 * 1024)
-            throw new InvalidDataException($"Invalid payload length: {payloadLength}");
-
-        var payloadBytes = await ReadExactAsync(stream, payloadLength, cancellationToken).ConfigureAwait(false);
-        if (payloadBytes is null)
-            return null;
-
-        var payloadJson = Encoding.UTF8.GetString(payloadBytes);
-        return JsonSerializer.Deserialize<Envelope>(payloadJson, JsonOptions);
-    }
-
-    private static async Task<byte[]?> ReadExactAsync(NetworkStream stream, int length, CancellationToken cancellationToken)
-    {
-        var buffer = new byte[length];
-        var offset = 0;
-        while (offset < length)
-        {
-            var read = await stream.ReadAsync(buffer.AsMemory(offset, length - offset), cancellationToken).ConfigureAwait(false);
-            if (read == 0)
-                return offset == 0 ? null : throw new EndOfStreamException("Socket closed mid-frame.");
-            offset += read;
-        }
-
-        return buffer;
-    }
-
     public ValueTask DisposeAsync()
     {
         _stream?.Dispose();
@@ -198,8 +276,4 @@ public sealed class RevitBridgeClient : IAsyncDisposable
         return ValueTask.CompletedTask;
     }
 
-    private sealed record ToolsListPayload
-    {
-        public List<McpToolDefinition> Tools { get; init; } = [];
-    }
 }

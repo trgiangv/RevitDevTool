@@ -13,22 +13,15 @@ public static class PythonEmbedded
     private const string ResetSourcePath = "RevitDevTool.Resources.scripts.Reset.py";
     private const string PixiTomlSourcePath = "RevitDevTool.Resources.scripts.pixi.toml";
     
-    public static string ToolParserScript => ScriptCache.TryGetValue(ToolParserSourcePath, out var toolParser) 
-        ? toolParser 
-        : throw new InvalidOperationException("Tool parser script not found in cache. Ensure it is embedded and loaded correctly.");
-    public static string ToolInvokeScript => ScriptCache.TryGetValue(ToolInvokeSourcePath, out var toolInvoke) 
-        ? toolInvoke 
-        : throw new InvalidOperationException("Tool invoke script not found in cache. Ensure it is embedded and loaded correctly.");
-    public static string SetupScript => ScriptCache.TryGetValue(SetupSourcePath, out var setupScript) 
-        ? setupScript 
-        : throw new InvalidOperationException("Setup script not found in cache. Ensure it is embedded and loaded correctly.");
-    public static string ResetScript => ScriptCache.TryGetValue(ResetSourcePath, out var resetScript) 
-        ? resetScript 
-        : throw new InvalidOperationException("Reset script not found in cache. Ensure it is embedded and loaded correctly.");
+    public static string ToolParserScriptPath => TryGetCached(ToolParserSourcePath, ScripPathCache);
+    public static string ParserScriptPath => TryGetCached(ParserSourcePath, ScripPathCache);
+    public static string PixiTomlPath => TryGetCached(PixiTomlSourcePath, ScripPathCache);
+    public static string ToolInvokeScript => TryGetCached(ToolInvokeSourcePath, ScriptCache);
+    public static string SetupScript => TryGetCached(SetupSourcePath, ScriptCache);
+    public static string ResetScript => TryGetCached(ResetSourcePath, ScriptCache);
 
     private static readonly string[] CachePaths =
     [
-        ToolParserSourcePath,
         ToolInvokeSourcePath,
         SetupSourcePath,
         ResetSourcePath
@@ -36,11 +29,13 @@ public static class PythonEmbedded
     
     private static readonly string[] CopyPaths =
     [
+        ToolParserSourcePath,
         ParserSourcePath,
         PixiTomlSourcePath
     ];
     
     private static readonly ConcurrentDictionary<string, string> ScriptCache = new();
+    private static readonly ConcurrentDictionary<string, string> ScripPathCache = new();
     
     static PythonEmbedded()
     {
@@ -78,12 +73,25 @@ public static class PythonEmbedded
                 var targetPath = Path.Combine(targetDirectory, fileName);
                 using var fileStream = new FileStream(targetPath, FileMode.Create, FileAccess.Write);
                 stream.CopyTo(fileStream);
+                ScripPathCache[path] = targetPath;
             }
             catch (Exception ex)
             {
                 Trace.TraceError($"Failed to copy embedded script '{path}' to '{targetDirectory}': {ex.Message}");
             }
         }
+    }
+    
+    private static string TryGetCached(string resourcePath, IDictionary<string, string> cache)
+    {
+        if (cache.TryGetValue(resourcePath, out var value))
+            return value;
+        
+        EnsureCacheScripts();
+        EnsureCopyScripts(PythonEnvironment.PixiProjectDir);
+        return cache.TryGetValue(resourcePath, out var cachedValue)
+            ? cachedValue
+            : throw new InvalidOperationException($"Resource '{resourcePath}' was not found in cache after loading. Ensure it is embedded and loaded correctly.");
     }
     
     private static Stream OpenResourceStreamByPath(string resourcePath)

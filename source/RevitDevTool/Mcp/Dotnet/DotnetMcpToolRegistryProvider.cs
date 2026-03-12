@@ -1,9 +1,11 @@
 using System.Diagnostics;
 using RevitDevTool.Contracts;
 using RevitDevTool.Mcp.Interfaces;
+using RevitDevTool.Mcp.Parser.Dotnet;
+using RevitDevTool.Mcp.Parser.Models;
 namespace RevitDevTool.Mcp.Dotnet;
 
-public sealed class DotnetMcpToolRegistryProvider : IMcpToolRegistryProvider
+public sealed class DotnetMcpToolRegistryProvider : IMcpRegistryProvider
 {
     public string Name => "dotnet-mcp";
     public ExecutionMode SourceKind => ExecutionMode.Assembly;
@@ -14,14 +16,14 @@ public sealed class DotnetMcpToolRegistryProvider : IMcpToolRegistryProvider
         AssemblyPaths = paths;
     }
 
-    public IReadOnlyList<McpToolDefinition> LoadTools()
+    public McpRegistryCatalog LoadCatalog()
     {
-        var tools = new List<McpToolDefinition>();
+        var catalog = McpRegistryCatalog.Empty;
         foreach (var assemblyPath in AssemblyPaths)
         {
             try
             {
-                tools.AddRange(DotnetMcpAssemblyParser.ParseToolsFromAssembly(assemblyPath));
+                catalog = catalog.Merge(DotnetMcpAssemblyParser.ParseCatalogFromAssembly(assemblyPath));
             }
             catch (Exception ex)
             {
@@ -29,6 +31,6 @@ public sealed class DotnetMcpToolRegistryProvider : IMcpToolRegistryProvider
             }
         }
 
-        return tools;
+        return catalog;
     }
 }

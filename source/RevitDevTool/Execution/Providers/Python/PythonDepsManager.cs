@@ -9,8 +9,8 @@ namespace RevitDevTool.Execution.Providers.Python;
 public static class PythonDepsManager
 {
     private sealed record ParseResult(
-        [property: JsonPropertyName("requires_python")] string       RequiresPython,
-        [property: JsonPropertyName("to_install")]      List<string> ToInstall)
+        [property: JsonPropertyName("requires_python")] string RequiresPython, 
+        [property: JsonPropertyName("to_install")] List<string> ToInstall)
     {
         public static readonly ParseResult Empty = new(string.Empty, []);
     }
@@ -24,12 +24,8 @@ public static class PythonDepsManager
         string scriptPath,
         CancellationToken cancellationToken = default)
     {
-        // 1. Read explicitly managed packages from pixi.toml (not 'pixi list' — avoids transitive deps noise)
         var pixiTomlContent = await ReadPixiTomlAsync(cancellationToken).ConfigureAwait(false);
-
-        // 2. Run Parser.py: parse PEP 723 + compare against pixi.toml declarations (Python-side, correct canonicalisation)
         var result = await RunParserAsync(scriptPath, pixiTomlContent, cancellationToken).ConfigureAwait(false);
-
         return result.ToInstall;
     }
 
@@ -60,7 +56,7 @@ public static class PythonDepsManager
     /// </summary>
     private static async Task<string> ReadPixiTomlAsync(CancellationToken cancellationToken)
     {
-        var tomlPath = PythonEnvironment.PixiTomlPath;
+        var tomlPath = PythonEmbedded.PixiTomlPath;
         if (!File.Exists(tomlPath)) return string.Empty;
 #if NET
         return await File.ReadAllTextAsync(tomlPath, cancellationToken).ConfigureAwait(false);
@@ -81,8 +77,8 @@ public static class PythonDepsManager
         var stdout = new StringBuilder();
         var stderr = new StringBuilder();
 
-        var cmd = await Cli.Wrap(PythonInstaller.PixiExePath)
-            .WithArguments(["run", "python", PythonEnvironment.ParserScriptPath, scriptPath])
+        var cmd = await Cli.Wrap(PythonEnvironment.PythonExe)
+            .WithArguments([PythonEmbedded.ParserScriptPath, scriptPath])
             .WithWorkingDirectory(PythonEnvironment.PixiProjectDir)
             .WithStandardInputPipe(PipeSource.FromString(pixiTomlContent))
             .WithStandardOutputPipe(PipeTarget.ToStringBuilder(stdout))

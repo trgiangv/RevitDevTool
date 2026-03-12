@@ -3,7 +3,6 @@ using System.Windows;
 using System.Windows.Data;
 using System.Windows.Media;
 using RevitDevTool.Contracts;
-using RevitDevTool.Execution.Models;
 using Visibility = System.Windows.Visibility;
 
 namespace RevitDevTool.View.Converters;

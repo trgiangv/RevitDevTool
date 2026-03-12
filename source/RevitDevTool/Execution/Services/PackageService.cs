@@ -460,7 +460,7 @@ public sealed class PackageService : IPackageService
         }
     }
 
-    private async Task<string?> GetNuGetPackageBaseUrlAsync(CancellationToken cancellationToken)
+    private static async Task<string?> GetNuGetPackageBaseUrlAsync(CancellationToken cancellationToken)
     {
         if (!string.IsNullOrWhiteSpace(_nugetPackageBaseUrl))
             return _nugetPackageBaseUrl;

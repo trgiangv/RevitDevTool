@@ -92,7 +92,7 @@ public partial class StubBuilderViewModel : ObservableObject
             .Select(a => new AssemblyItem
             {
                 Name = a.GetName().Name ?? Path.GetFileNameWithoutExtension(a.Location),
-                FullName = a.FullName ?? a.Location,
+                FullName = a.FullName!,
                 Location = a.Location,
                 Assembly = a
             });

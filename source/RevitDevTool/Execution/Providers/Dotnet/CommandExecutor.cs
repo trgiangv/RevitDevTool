@@ -57,6 +57,8 @@ internal static class CommandExecutor
         }
         finally
         {
+            RevitContext.Application.PurgeReleasedAPIObjects();
+
             if (assemblyResolver != null)
             {
                 AppDomain.CurrentDomain.AssemblyResolve -= assemblyResolver;
