@@ -38,6 +38,8 @@
         <PackageVersion Include="Autodesk.PackageBuilder" Version="2.0.2"/>
         <PackageVersion Include="WixSharp.bin" Version="1.26.0"/>
         <PackageVersion Include="WixSharp.wix.bin" Version="3.14.1"/>
+        <!--File IO-->
+        <PackageVersion Include="OpenMcdf" Version="3.1.0"/>
         <!--Tests-->
         <PackageVersion Include="coverlet.collector" Version="8.0.0"/>
         <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="18.3.0"/>
