@@ -35,5 +35,5 @@ public sealed record McpToolExecutionResult
 
     public static McpToolExecutionResult Cancelled(string detail)
         => new(ExecutionState.Cancelled, detail, new CallToolResult(),
-            new McpException { Code = BridgeErrorCodes.ToolCancelled, Message = detail });
+            new McpException { Code = ExecutionErrorCodes.ToolCancelled, Message = detail });
 }

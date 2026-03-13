@@ -14,42 +14,45 @@ using RevitDevTool.Mcp.Parser.Models;
 
 namespace RevitDevTool.Mcp;
 
-public sealed class McpPrimitiveExecutionDispatcher(IServiceProvider serviceProvider)
+public sealed class PrimitiveExecutionDispatcher(IServiceProvider serviceProvider)
 {
     private static readonly JsonSerializerOptions JsonOptions = McpJsonUtilities.DefaultOptions;
     private readonly ConcurrentDictionary<string, McpServerPrompt> _cachedPrompts = new(StringComparer.OrdinalIgnoreCase);
     private readonly ConcurrentDictionary<string, McpServerResource> _cachedResources = new(StringComparer.OrdinalIgnoreCase);
 
-    public Task<GetPromptResult> GetPromptAsync(
+    /// <summary>
+    /// Runs inside Revit's <c>IExternalEventHandler.Execute()</c> — synchronous by design.
+    /// </summary>
+    public GetPromptResult GetPrompt(
         McpRegisteredPrompt prompt,
-        IReadOnlyDictionary<string, JsonElement>? arguments,
-        CancellationToken cancellationToken = default)
+        IReadOnlyDictionary<string, JsonElement>? arguments)
     {
         return prompt.Binding.SourceKind switch
         {
-            ExecutionMode.Assembly => InvokeDotnetPromptAsync(prompt, arguments, cancellationToken),
-            ExecutionMode.Python => Task.FromResult(InvokePythonPrompt(prompt, arguments)),
+            ExecutionMode.Assembly => InvokeDotnetPrompt(prompt, arguments),
+            ExecutionMode.Python => InvokePythonPrompt(prompt, arguments),
             _ => throw new InvalidOperationException($"Unsupported prompt execution source '{prompt.Binding.SourceKind}'.")
         };
     }
 
-    public Task<ReadResourceResult> ReadResourceAsync(
+    /// <summary>
+    /// Runs inside Revit's <c>IExternalEventHandler.Execute()</c> — synchronous by design.
+    /// </summary>
+    public ReadResourceResult ReadResource(
         McpRegisteredResource resource,
-        string uri,
-        CancellationToken cancellationToken = default)
+        string uri)
     {
         return resource.Binding.SourceKind switch
         {
-            ExecutionMode.Assembly => InvokeDotnetResourceAsync(resource, uri, cancellationToken),
-            ExecutionMode.Python => Task.FromResult(InvokePythonResource(resource, uri)),
+            ExecutionMode.Assembly => InvokeDotnetResource(resource, uri),
+            ExecutionMode.Python => InvokePythonResource(resource, uri),
             _ => throw new InvalidOperationException($"Unsupported resource execution source '{resource.Binding.SourceKind}'.")
         };
     }
 
-    private async Task<GetPromptResult> InvokeDotnetPromptAsync(
+    private GetPromptResult InvokeDotnetPrompt(
         McpRegisteredPrompt prompt,
-        IReadOnlyDictionary<string, JsonElement>? arguments,
-        CancellationToken cancellationToken)
+        IReadOnlyDictionary<string, JsonElement>? arguments)
     {
         var serverPrompt = GetOrCreateServerPrompt(prompt);
         if (serverPrompt is null)
@@ -61,14 +64,13 @@ public sealed class McpPrimitiveExecutionDispatcher(IServiceProvider serviceProv
             Arguments = arguments?.ToDictionary(kv => kv.Key, kv => kv.Value)
         };
         var requestContext = RequestContextFactory.Create(requestParams, RequestMethods.PromptsGet);
-        var result = await serverPrompt.GetAsync(requestContext, cancellationToken).ConfigureAwait(false);
-        return result;
+        return serverPrompt.GetAsync(requestContext, CancellationToken.None)
+            .ConfigureAwait(false).GetAwaiter().GetResult();
     }
 
-    private async Task<ReadResourceResult> InvokeDotnetResourceAsync(
+    private ReadResourceResult InvokeDotnetResource(
         McpRegisteredResource resource,
-        string uri,
-        CancellationToken cancellationToken)
+        string uri)
     {
         var serverResource = GetOrCreateServerResource(resource);
         if (serverResource is null)
@@ -76,8 +78,8 @@ public sealed class McpPrimitiveExecutionDispatcher(IServiceProvider serviceProv
 
         var requestParams = new ReadResourceRequestParams { Uri = uri };
         var requestContext = RequestContextFactory.Create(requestParams, RequestMethods.ResourcesRead);
-        var result = await serverResource.ReadAsync(requestContext, cancellationToken).ConfigureAwait(false);
-        return result;
+        return serverResource.ReadAsync(requestContext, CancellationToken.None)
+            .ConfigureAwait(false).GetAwaiter().GetResult();
     }
 
     private McpServerPrompt? GetOrCreateServerPrompt(McpRegisteredPrompt prompt)

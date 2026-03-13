@@ -1,6 +1,6 @@
 namespace RevitDevTool.Contracts;
 
-public static class BridgeErrorCodes
+public static class ExecutionErrorCodes
 {
     public const string UnknownAction = "bridge.unknown_action";
     public const string Disconnected = "bridge.disconnected";

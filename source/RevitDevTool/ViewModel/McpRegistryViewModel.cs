@@ -19,8 +19,8 @@ namespace RevitDevTool.ViewModel;
 
 public sealed partial class McpRegistryViewModel : ObservableObject, IDisposable
 {
-    private readonly McpToolStore _toolStore;
-    private readonly McpBridgeState _bridgeState;
+    private readonly ToolRegistryStore _toolStore;
+    private readonly BridgeConnectionState _bridgeState;
     private readonly DispatcherTimer _searchDebounceTimer;
     private readonly Dictionary<string, int> _callCounts = new(StringComparer.OrdinalIgnoreCase);
     private int _busyDepth;
@@ -44,7 +44,7 @@ public sealed partial class McpRegistryViewModel : ObservableObject, IDisposable
     public bool ShowStatusPanel => IsBusy || IsExecuting;
     public string StatusPanelText => IsBusy ? BusyMessage : ExecutionStatusText;
 
-    public McpRegistryViewModel(McpToolStore toolStore, McpBridgeState bridgeState)
+    public McpRegistryViewModel(ToolRegistryStore toolStore, BridgeConnectionState bridgeState)
     {
         _toolStore = toolStore;
         _bridgeState = bridgeState;
@@ -243,19 +243,19 @@ public sealed partial class McpRegistryViewModel : ObservableObject, IDisposable
 
         switch (e.PropertyName)
         {
-            case nameof(McpBridgeState.IsConnected) or nameof(McpBridgeState.Endpoint):
+            case nameof(BridgeConnectionState.IsConnected) or nameof(BridgeConnectionState.Endpoint):
                 IsConnected = _bridgeState.IsConnected;
                 ConnectedText = BuildConnectedText();
                 Port = string.IsNullOrWhiteSpace(_bridgeState.Endpoint) ? "N/A" : _bridgeState.Endpoint;
                 break;
-            case nameof(McpBridgeState.TotalToolCalls):
+            case nameof(BridgeConnectionState.TotalToolCalls):
                 TotalCalled = _bridgeState.TotalToolCalls;
                 break;
-            case nameof(McpBridgeState.QueueDepth):
-            case nameof(McpBridgeState.IsExecuting):
-            case nameof(McpBridgeState.CurrentToolName):
-            case nameof(McpBridgeState.CurrentStage):
-            case nameof(McpBridgeState.CurrentStatusMessage):
+            case nameof(BridgeConnectionState.QueueDepth):
+            case nameof(BridgeConnectionState.IsExecuting):
+            case nameof(BridgeConnectionState.CurrentToolName):
+            case nameof(BridgeConnectionState.CurrentStage):
+            case nameof(BridgeConnectionState.CurrentStatusMessage):
                 RefreshExecutionState();
                 break;
         }

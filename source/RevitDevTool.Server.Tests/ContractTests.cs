@@ -52,18 +52,6 @@ public class ContractTests
     }
 
     [Fact]
-    public void BridgeBodies_DefaultsStayWireSafe()
-    {
-        var before = DateTime.UtcNow;
-        var shutdown = new McpShutdownResponseBody();
-        var changed = new McpToolsChangedEventBody();
-        var after = DateTime.UtcNow;
-
-        Assert.Equal("detached", shutdown.Shutdown);
-        Assert.InRange(changed.ChangedAtUtc, before.AddSeconds(-1), after.AddSeconds(1));
-    }
-
-    [Fact]
     public void McpPrimitiveBinding_CreatePrimitiveId_ForPromptsAndResources()
     {
         var promptId = McpPrimitiveBinding.CreatePrimitiveId("summarize_demo", "sample.dll:McpToolsetDemo.McpSamplePrompts.SummarizeDemo");

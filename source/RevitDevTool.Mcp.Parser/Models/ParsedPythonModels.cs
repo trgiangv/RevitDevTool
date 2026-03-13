@@ -15,7 +15,7 @@ internal sealed record PythonBindingInfo
 internal sealed record PythonParsedToolEntry
 {
     public JsonElement Protocol { get; init; }
-    public PythonBindingInfo Binding { get; } = new();
+    public PythonBindingInfo Binding { get; init; } = new();
 }
 
 internal sealed record PythonParsedPromptEntry

@@ -2,26 +2,27 @@ using System.Text.Json;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
-using ModelContextProtocol;
 using ModelContextProtocol.Protocol;
 using ModelContextProtocol.Server;
+using RevitDevTool.Contracts;
 using RevitDevTool.Server;
+using RevitDevTool.Server.Tools;
 
-var port = 18080;
-for (var i = 0; i < args.Length - 1; i++)
+var instanceManager = new InstanceManager();
+var refreshPending = 0;
+
+var localTools = new McpServerTool[]
 {
-    if (args[i] is "--port" or "-p" && int.TryParse(args[i + 1], out var parsed))
-    {
-        port = parsed;
-        break;
-    }
-}
+    new ListRevitInstancesTool(instanceManager),
+    new LaunchRevitTool(),
+    new ReadRevitFileInfoTool(),
+    new OpenRevitModelTool(instanceManager)
+};
 
-var bridgeClient = new RevitBridgeClient();
 var toolCollection = new McpServerPrimitiveCollection<McpServerTool>();
 var promptCollection = new McpServerPrimitiveCollection<McpServerPrompt>();
 var resourceCollection = new McpServerResourceCollection();
-string? catalogSignature = null;
+foreach (var tool in localTools) toolCollection.TryAdd(tool);
 
 var builder = Host.CreateApplicationBuilder(args);
 builder.Logging.ClearProviders();
@@ -29,95 +30,102 @@ builder.Logging.AddConsole(options =>
 {
     options.LogToStandardErrorThreshold = LogLevel.Trace;
 });
-builder.Services.AddSingleton(bridgeClient);
-builder.Services
-    .AddMcpServer(options =>
-    {
-        options.ToolCollection = toolCollection;
-        options.PromptCollection = promptCollection;
-        options.ResourceCollection = resourceCollection;
-    })
-    .WithStdioServerTransport();
+builder.Services.AddMcpServer(options =>
+{
+    options.ToolCollection = toolCollection;
+    options.PromptCollection = promptCollection;
+    options.ResourceCollection = resourceCollection;
+}).WithStdioServerTransport();
 
 var host = builder.Build();
-
 var appLifetime = host.Services.GetRequiredService<IHostApplicationLifetime>();
+var ct = appLifetime.ApplicationStopping;
 
-await bridgeClient.ConnectAsync(port).ConfigureAwait(false);
-await RefreshCatalogAsync().ConfigureAwait(false);
+instanceManager.Changed += RequestCatalogRefresh;
 
-var pollingToken = appLifetime.ApplicationStopping;
-var pollingTask = Task.Run(() => RunPollingAsync(pollingToken), pollingToken);
+var discoveryTask = Task.Run(() => instanceManager.RunDiscoveryAsync(ct), ct);
 
 await host.RunAsync().ConfigureAwait(false);
-await pollingTask.ConfigureAwait(false);
+await discoveryTask.ConfigureAwait(false);
+await instanceManager.DisposeAsync().ConfigureAwait(false);
+
 return;
 
-async Task RunPollingAsync(CancellationToken cancellationToken)
+void RequestCatalogRefresh()
 {
-    try
-    {
-        using var pollTimer = new PeriodicTimer(TimeSpan.FromSeconds(2));
-        while (await pollTimer.WaitForNextTickAsync(cancellationToken).ConfigureAwait(false))
-        {
-            try
-            {
-                if (!bridgeClient.IsConnected)
-                {
-                    var reconnected = await bridgeClient.ConnectAsync(port, cancellationToken).ConfigureAwait(false);
-                    if (!reconnected)
-                        continue;
-                }
+    if (Interlocked.Exchange(ref refreshPending, 1) == 0)
+        _ = RefreshLoopAsync();
+}
 
-                await RefreshCatalogAsync().ConfigureAwait(false);
-            }
-            catch
-            {
-                // ignored
-            }
+async Task RefreshLoopAsync()
+{
+    while (Interlocked.Exchange(ref refreshPending, 0) != 0)
+    {
+        try
+        {
+            await RebuildCatalogAsync().ConfigureAwait(false);
+        }
+        catch (Exception ex)
+        {
+            await Console.Error.WriteLineAsync($"[Catalog] Refresh error: {ex.Message}").ConfigureAwait(false);
         }
     }
-    catch (OperationCanceledException)
-    {
-        // shutdown
-    }
 }
 
-async Task RefreshCatalogAsync()
+async Task RebuildCatalogAsync()
 {
-    var tools = await bridgeClient.ListToolsAsync().ConfigureAwait(false);
-    var prompts = await bridgeClient.ListPromptsAsync().ConfigureAwait(false);
-    var (resources, templates) = await bridgeClient.ListResourcesAsync().ConfigureAwait(false);
+    var newTools = new Dictionary<string, McpServerTool>(StringComparer.OrdinalIgnoreCase);
+    var newPrompts = new Dictionary<string, McpServerPrompt>(StringComparer.OrdinalIgnoreCase);
+    var newResources = new List<McpServerResource>();
 
-    var nextSignature = BuildCatalogSignature(tools, prompts, resources, templates);
-    if (string.Equals(catalogSignature, nextSignature, StringComparison.Ordinal))
-        return;
+    foreach (var local in localTools)
+        newTools[local.ProtocolTool.Name] = local;
 
-    catalogSignature = nextSignature;
+    foreach (var client in instanceManager.GetClients())
+    {
+        if (!client.IsConnected) continue;
+        try
+        {
+            var toolsResponse = await client.RequestAsync(BridgeMethods.ToolsList, ct: ct).ConfigureAwait(false);
+            if (toolsResponse is { IsError: false, Result: { } toolsResult })
+            {
+                foreach (var tool in JsonSerializer.Deserialize<List<Tool>>(toolsResult.GetRawText()) ?? [])
+                    newTools.TryAdd(tool.Name, new RoutingMcpServerTool(instanceManager, tool));
+            }
+
+            var promptsResponse = await client.RequestAsync(BridgeMethods.PromptsList, ct: ct).ConfigureAwait(false);
+            if (promptsResponse is { IsError: false, Result: { } promptsResult })
+            {
+                foreach (var prompt in JsonSerializer.Deserialize<List<Prompt>>(promptsResult.GetRawText()) ?? [])
+                    newPrompts.TryAdd(prompt.Name, new RoutingMcpServerPrompt(instanceManager, prompt));
+            }
+
+            var resourcesResponse = await client.RequestAsync(BridgeMethods.ResourcesList, ct: ct).ConfigureAwait(false);
+            if (resourcesResponse is { IsError: false, Result: { } resourcesResult })
+            {
+                foreach (var resource in JsonSerializer.Deserialize<List<Resource>>(resourcesResult.GetRawText()) ?? [])
+                    newResources.Add(new RoutingMcpServerResource(instanceManager, resource, null));
+            }
+
+            var templatesResponse = await client.RequestAsync(BridgeMethods.ResourceTemplatesList, ct: ct).ConfigureAwait(false);
+            if (templatesResponse is { IsError: false, Result: { } templatesResult })
+            {
+                foreach (var template in JsonSerializer.Deserialize<List<ResourceTemplate>>(templatesResult.GetRawText()) ?? [])
+                    newResources.Add(new RoutingMcpServerResource(instanceManager, null, template));
+            }
+        }
+        catch (Exception ex)
+        {
+            await Console.Error.WriteLineAsync($"[Catalog] Error fetching from {client.PipeName}: {ex.Message}").ConfigureAwait(false);
+        }
+    }
+
     toolCollection.Clear();
-    foreach (var tool in tools)
-        toolCollection.TryAdd(RevitToolAdapter.ToMcpServerTool(tool, tool.Name, bridgeClient));
+    foreach (var t in newTools.Values) toolCollection.TryAdd(t);
 
     promptCollection.Clear();
-    foreach (var prompt in prompts)
-        promptCollection.TryAdd(RevitPromptAdapter.ToMcpServerPrompt(prompt, prompt.Name, bridgeClient));
+    foreach (var p in newPrompts.Values) promptCollection.TryAdd(p);
 
     resourceCollection.Clear();
-    foreach (var resource in resources)
-        resourceCollection.TryAdd(RevitResourceAdapter.ToMcpServerResource(resource, null, resource.Name, bridgeClient));
-    foreach (var template in templates)
-        resourceCollection.TryAdd(RevitResourceAdapter.ToMcpServerResource(null, template, template.Name, bridgeClient));
-}
-
-static string BuildCatalogSignature(
-    IReadOnlyList<Tool> tools,
-    IReadOnlyList<Prompt> prompts,
-    IReadOnlyList<Resource> resources,
-    IReadOnlyList<ResourceTemplate> templates)
-{
-    var toolParts = tools.Select(t => $"tool:{t.Name}:{JsonSerializer.Serialize(t.InputSchema, McpJsonUtilities.DefaultOptions)}");
-    var promptParts = prompts.Select(p => $"prompt:{p.Name}:{p.Description}");
-    var resourceParts = resources.Select(r => $"resource:{r.Name}:{r.Uri}");
-    var templateParts = templates.Select(t => $"template:{t.Name}:{t.UriTemplate}");
-    return string.Join("|", toolParts.Concat(promptParts).Concat(resourceParts).Concat(templateParts));
+    foreach (var r in newResources) resourceCollection.TryAdd(r);
 }

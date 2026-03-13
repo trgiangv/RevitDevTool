@@ -4,7 +4,7 @@ using RevitDevTool.Contracts;
 using RevitDevTool.Utils;
 namespace RevitDevTool.Mcp.Models;
 
-public sealed partial class McpBridgeState : ObservableObject
+public sealed partial class BridgeConnectionState : ObservableObject
 {
     [ObservableProperty] private bool _isConnected;
     [ObservableProperty] private string _endpoint = string.Empty;
@@ -41,7 +41,7 @@ public sealed partial class McpBridgeState : ObservableObject
         {
             IsExecuting = true;
             CurrentToolName = toolName;
-            CurrentStage = ExecutionState.Queued.ToString().ToLowerInvariant();
+            CurrentStage = nameof(ExecutionState.Queued).ToLowerInvariant();
             CurrentStatusMessage = $"Queued '{toolName}'...";
         });
     }

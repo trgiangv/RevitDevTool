@@ -9,7 +9,7 @@ using RevitDevTool.Settings;
 
 namespace RevitDevTool.Mcp;
 
-public sealed class McpToolStore(IEnumerable<IMcpRegistryProvider> providers, ISettingsService settingsService)
+public sealed class ToolRegistryStore(IEnumerable<IMcpRegistryProvider> providers, ISettingsService settingsService)
 {
     private const string PythonToolPattern = "*mcp.py";
     private readonly IReadOnlyList<IMcpRegistryProvider> _providers = providers.ToList();

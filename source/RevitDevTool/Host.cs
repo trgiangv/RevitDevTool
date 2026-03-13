@@ -130,16 +130,15 @@ public static class Host
         // MCP
         services.AddSingleton<McpRegistryView>();
         services.AddSingleton<McpRegistryViewModel>();
-        services.AddSingleton<McpBridgeState>();
+        services.AddSingleton<BridgeConnectionState>();
         services.AddSingleton<DotnetMcpToolRegistryProvider>();
         services.AddSingleton<PythonMcpToolRegistryProvider>();
         services.AddSingleton<IMcpRegistryProvider>(sp => sp.GetRequiredService<DotnetMcpToolRegistryProvider>());
         services.AddSingleton<IMcpRegistryProvider>(sp => sp.GetRequiredService<PythonMcpToolRegistryProvider>());
-        services.AddSingleton<McpToolExecutionDispatcher>();
-        services.AddSingleton<McpPrimitiveExecutionDispatcher>();
-        services.AddSingleton<McpToolStore>();
-        services.AddSingleton<McpExecutionQueue>();
-        services.AddHostedService<McpTcpServerService>();
+        services.AddSingleton<ToolExecutionDispatcher>();
+        services.AddSingleton<PrimitiveExecutionDispatcher>();
+        services.AddSingleton<ToolRegistryStore>();
+        services.AddHostedService<RevitPipeServer>();
 
         // Main
         services.AddSingleton<MainViewModel>();
