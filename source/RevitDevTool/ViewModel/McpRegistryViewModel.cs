@@ -7,11 +7,11 @@ using System.Text.Json;
 using RevitDevTool.Utils;
 using RevitDevTool.Theme;
 using System.Windows.Threading;
-using RevitDevTool.Contracts;
 using RevitDevTool.Execution.Models;
 using RevitDevTool.Mcp;
 using RevitDevTool.Mcp.Models;
-using RevitDevTool.Mcp.Parser.Models;
+using RevitDevTool.McpParser.Models;
+using RevitDevTool.ViewModel.Models;
 // ReSharper disable UnusedParameterInPartialMethod
 // ReSharper disable RedundantSuppressNullableWarningExpression
 
@@ -22,6 +22,7 @@ public sealed partial class McpRegistryViewModel : ObservableObject, IDisposable
     private readonly ToolRegistryStore _toolStore;
     private readonly BridgeConnectionState _bridgeState;
     private readonly DispatcherTimer _searchDebounceTimer;
+    private readonly DispatcherTimer _elapsedTimer;
     private readonly Dictionary<string, int> _callCounts = new(StringComparer.OrdinalIgnoreCase);
     private int _busyDepth;
     private bool _disposed;
@@ -58,6 +59,12 @@ public sealed partial class McpRegistryViewModel : ObservableObject, IDisposable
             _searchDebounceTimer.Stop();
             ApplyFilter();
         };
+
+        _elapsedTimer = new DispatcherTimer
+        {
+            Interval = TimeSpan.FromMilliseconds(500)
+        };
+        _elapsedTimer.Tick += (_, _) => UpdateElapsedDisplay();
 
         _toolStore.ToolsChanged += OnRegistryChanged;
         _bridgeState.PropertyChanged += OnBridgeStateChanged;
@@ -251,12 +258,12 @@ public sealed partial class McpRegistryViewModel : ObservableObject, IDisposable
             case nameof(BridgeConnectionState.TotalToolCalls):
                 TotalCalled = _bridgeState.TotalToolCalls;
                 break;
-            case nameof(BridgeConnectionState.QueueDepth):
             case nameof(BridgeConnectionState.IsExecuting):
-            case nameof(BridgeConnectionState.CurrentToolName):
-            case nameof(BridgeConnectionState.CurrentStage):
-            case nameof(BridgeConnectionState.CurrentStatusMessage):
                 RefreshExecutionState();
+                break;
+            case nameof(BridgeConnectionState.CurrentToolName):
+            case nameof(BridgeConnectionState.CurrentStatusMessage):
+                UpdateElapsedDisplay();
                 break;
         }
     }
@@ -275,13 +282,7 @@ public sealed partial class McpRegistryViewModel : ObservableObject, IDisposable
                 item.PropertyChanged -= OnToolCallMetricChanged;
         }
 
-        RebuildCallCountCache();
-        foreach (var tool in Tools)
-        {
-            _callCounts.TryGetValue(tool.ToolId, out var count);
-            tool.CallCount = count;
-        }
-
+        SyncCallCounts();
     }
 
     private void OnToolCallMetricChanged(object? sender, PropertyChangedEventArgs e)
@@ -289,6 +290,11 @@ public sealed partial class McpRegistryViewModel : ObservableObject, IDisposable
         if (e.PropertyName != nameof(McpToolCallMetric.Count))
             return;
 
+        SyncCallCounts();
+    }
+
+    private void SyncCallCounts()
+    {
         RebuildCallCountCache();
         foreach (var tool in Tools)
         {
@@ -296,7 +302,6 @@ public sealed partial class McpRegistryViewModel : ObservableObject, IDisposable
             tool.CallCount = count;
         }
     }
-
 
     private void RebuildCallCountCache()
     {
@@ -308,9 +313,37 @@ public sealed partial class McpRegistryViewModel : ObservableObject, IDisposable
     private void RefreshExecutionState()
     {
         IsExecuting = _bridgeState.IsExecuting;
-        ExecutionStatusText = _bridgeState.IsExecuting
-            ? string.IsNullOrWhiteSpace(_bridgeState.CurrentStatusMessage) ? "Running MCP tool..." : _bridgeState.CurrentStatusMessage
-            : "Idle";
+        if (_bridgeState.IsExecuting)
+        {
+            UpdateElapsedDisplay();
+            _elapsedTimer.Start();
+        }
+        else
+        {
+            _elapsedTimer.Stop();
+            ExecutionStatusText = "Idle";
+        }
+    }
+
+    private void UpdateElapsedDisplay()
+    {
+        if (!_bridgeState.IsExecuting)
+            return;
+
+        var started = _bridgeState.ExecutionStartedAtUtc;
+        var elapsed = started == default ? TimeSpan.Zero : DateTime.UtcNow - started;
+        var toolName = _bridgeState.CurrentToolName;
+        var status = _bridgeState.CurrentStatusMessage;
+
+        var timeText = elapsed.TotalSeconds < 1
+            ? string.Empty
+            : elapsed.TotalMinutes >= 1
+                ? $" ({elapsed.Minutes}m {elapsed.Seconds}s)"
+                : $" ({elapsed.TotalSeconds:F0}s)";
+
+        ExecutionStatusText = string.IsNullOrWhiteSpace(status)
+            ? $"Running '{toolName}'...{timeText}"
+            : $"{status}{timeText}";
     }
 
     private void RaiseStatusComputedProperties()
@@ -413,6 +446,7 @@ public sealed partial class McpRegistryViewModel : ObservableObject, IDisposable
             return;
 
         _disposed = true;
+        _elapsedTimer.Stop();
         _toolStore.ToolsChanged -= OnRegistryChanged;
         _bridgeState.PropertyChanged -= OnBridgeStateChanged;
         _bridgeState.ToolCalls.CollectionChanged -= OnToolCallsCollectionChanged;

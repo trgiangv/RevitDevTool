@@ -13,7 +13,6 @@ using RevitDevTool.ViewModel.Settings;
 using RevitDevTool.ViewModel.Settings.Visualization;
 using RevitDevTool.Visualization.Server;
 using System.IO;
-using RevitDevTool.Contracts;
 using RevitDevTool.Execution.Interfaces;
 using RevitDevTool.Execution.Providers;
 using RevitDevTool.Execution.Providers.Dotnet;
@@ -23,6 +22,7 @@ using RevitDevTool.Mcp.Dotnet;
 using RevitDevTool.Mcp.Interfaces;
 using RevitDevTool.Mcp.Models;
 using RevitDevTool.Mcp.Python;
+using RevitDevTool.McpParser.Models;
 
 namespace RevitDevTool;
 

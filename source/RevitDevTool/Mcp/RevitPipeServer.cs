@@ -5,10 +5,10 @@ using System.Security.Principal;
 using System.Text.Json;
 using Microsoft.Extensions.Hosting;
 using ModelContextProtocol.Protocol;
-using RevitDevTool.Contracts;
 using RevitDevTool.Controllers;
 using RevitDevTool.Core;
 using RevitDevTool.Mcp.Models;
+using RevitDevTool.McpParser.Models;
 using RevitDevTool.Utils;
 
 namespace RevitDevTool.Mcp;
@@ -20,6 +20,21 @@ public sealed class RevitPipeServer(
     ToolExecutionDispatcher dispatcher,
     PrimitiveExecutionDispatcher primitiveDispatcher) : IHostedService, IDisposable
 {
+    private Dictionary<string, Func<string, JsonElement?, Task<BridgeMessage>>>? _handlers;
+
+    private Dictionary<string, Func<string, JsonElement?, Task<BridgeMessage>>> Handlers =>
+        _handlers ??= new Dictionary<string, Func<string, JsonElement?, Task<BridgeMessage>>>(StringComparer.OrdinalIgnoreCase)
+        {
+            [BridgeMethods.ToolsList] = (id, _) => Task.FromResult(HandleToolsList(id)),
+            [BridgeMethods.ToolsCall] = HandleToolsCallAsync,
+            [BridgeMethods.PromptsList] = (id, _) => Task.FromResult(HandlePromptsList(id)),
+            [BridgeMethods.PromptsGet] = HandlePromptsGetAsync,
+            [BridgeMethods.ResourcesList] = (id, _) => Task.FromResult(HandleResourcesList(id)),
+            [BridgeMethods.ResourceTemplatesList] = (id, _) => Task.FromResult(HandleResourceTemplatesList(id)),
+            [BridgeMethods.ResourcesRead] = HandleResourcesReadAsync,
+            [BridgeMethods.InstanceInfo] = (id, _) => Task.FromResult(HandleInstanceInfo(id)),
+        };
+
     private CancellationTokenSource? _cts;
     private volatile BridgePipeConnection? _connection;
     private string? _pipeName;
@@ -129,44 +144,42 @@ public sealed class RevitPipeServer(
 
     private async void OnMessageReceived(BridgePipeConnection conn, BridgeMessage msg)
     {
-        if (msg is not { Type: BridgeMessage.TypeRequest, Id: not null, Method: not null })
-            return;
-
-        BridgeMessage response;
         try
         {
-            response = await HandleRequestAsync(msg).ConfigureAwait(false);
+            if (msg is not { Type: BridgeMessage.TypeRequest, Id: not null, Method: not null })
+                return;
+
+            BridgeMessage response;
+            try
+            {
+                response = await HandleRequestAsync(msg).ConfigureAwait(false);
+            }
+            catch (Exception ex)
+            {
+                response = BridgeMessage.Error(msg.Id, ex.Message);
+            }
+
+            try
+            {
+                await conn.WriteAsync(response).ConfigureAwait(false);
+            }
+            catch (Exception ex)
+            {
+                Trace.TraceWarning($"[MCP/PIPE] Failed to send response: {ex.Message}");
+            }
         }
         catch (Exception ex)
         {
-            response = BridgeMessage.Error(msg.Id, ex.Message);
-        }
-
-        try
-        {
-            await conn.WriteAsync(response).ConfigureAwait(false);
-        }
-        catch (Exception ex)
-        {
-            Trace.TraceWarning($"[MCP/PIPE] Failed to send response: {ex.Message}");
+            Trace.TraceError($"[MCP/PIPE] Unhandled error in message handler: {ex}");
         }
     }
 
     private async Task<BridgeMessage> HandleRequestAsync(BridgeMessage request)
     {
         var id = request.Id!;
-        return request.Method switch
-        {
-            BridgeMethods.ToolsList => HandleToolsList(id),
-            BridgeMethods.ToolsCall => await HandleToolsCallAsync(id, request.Params).ConfigureAwait(false),
-            BridgeMethods.PromptsList => HandlePromptsList(id),
-            BridgeMethods.PromptsGet => await HandlePromptsGetAsync(id, request.Params).ConfigureAwait(false),
-            BridgeMethods.ResourcesList => HandleResourcesList(id),
-            BridgeMethods.ResourceTemplatesList => HandleResourceTemplatesList(id),
-            BridgeMethods.ResourcesRead => await HandleResourcesReadAsync(id, request.Params).ConfigureAwait(false),
-            BridgeMethods.InstanceInfo => HandleInstanceInfo(id),
-            _ => BridgeMessage.Error(id, $"Unknown method: {request.Method}")
-        };
+        if (Handlers.TryGetValue(request.Method!, out var handler))
+            return await handler(id, request.Params).ConfigureAwait(false);
+        return BridgeMessage.Error(id, $"Unknown method: {request.Method}");
     }
 
     private BridgeMessage HandleToolsList(string id)
@@ -191,13 +204,19 @@ public sealed class RevitPipeServer(
         if (@params?.TryGetProperty("arguments", out var argsElement) == true)
             payloadJson = argsElement.GetRawText();
 
+        using var scope = state.BeginExecution(toolName!);
+
         var handler = await ExternalEventController
             .AsyncGenericEventHandler<McpToolExecutionResult>()
             .ConfigureAwait(false);
 
+        scope.MarkRunning();
+
         var result = await handler
             .RaiseAsync(() => dispatcher.Dispatch(tool, payloadJson))
             .ConfigureAwait(false);
+
+        scope.Complete(result);
 
         if (result is { State: ExecutionState.Completed })
         {
@@ -303,24 +322,33 @@ public sealed class RevitPipeServer(
 
     private void OnToolsChanged(object? sender, EventArgs e)
     {
+        dispatcher.ClearCache();
+        primitiveDispatcher.ClearCache();
         SendNotification(BridgeMethods.NotifyToolsChanged);
     }
 
     private async void SendNotification(string method, object? data = null)
     {
-        var conn = _connection;
-        if (conn is null) return;
-
-        var @params = data is not null ? JsonSerializer.SerializeToElement(data) : (JsonElement?)null;
-        var notification = BridgeMessage.Notification(method, @params);
-
         try
         {
-            await conn.WriteAsync(notification).ConfigureAwait(false);
+            var conn = _connection;
+            if (conn is null) return;
+
+            var @params = data is not null ? JsonSerializer.SerializeToElement(data) : (JsonElement?)null;
+            var notification = BridgeMessage.Notification(method, @params);
+
+            try
+            {
+                await conn.WriteAsync(notification).ConfigureAwait(false);
+            }
+            catch (Exception ex)
+            {
+                Trace.TraceWarning($"[MCP/PIPE] Notification '{method}' failed: {ex.Message}");
+            }
         }
         catch (Exception ex)
         {
-            Trace.TraceWarning($"[MCP/PIPE] Notification '{method}' failed: {ex.Message}");
+            Trace.TraceError($"[MCP/PIPE] Unhandled error in SendNotification: {ex}");
         }
     }
 

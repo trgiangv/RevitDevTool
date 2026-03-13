@@ -1,5 +1,4 @@
-using RevitDevTool.Contracts;
-using RevitDevTool.Mcp.Parser.Models;
+using RevitDevTool.McpParser.Models;
 
 namespace RevitDevTool.Mcp.Interfaces;
 

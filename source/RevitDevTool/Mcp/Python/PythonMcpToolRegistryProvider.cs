@@ -1,10 +1,9 @@
 using System.Diagnostics;
 using System.IO;
-using RevitDevTool.Contracts;
 using RevitDevTool.Execution.Providers.Python;
 using RevitDevTool.Mcp.Interfaces;
-using RevitDevTool.Mcp.Parser.Models;
-using RevitDevTool.Mcp.Parser.Python;
+using RevitDevTool.McpParser.Models;
+using RevitDevTool.McpParser.Python;
 namespace RevitDevTool.Mcp.Python;
 
 public sealed class PythonMcpToolRegistryProvider : IMcpRegistryProvider

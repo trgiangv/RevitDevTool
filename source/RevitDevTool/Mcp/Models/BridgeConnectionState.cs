@@ -1,6 +1,6 @@
 using System.Collections.ObjectModel;
 using System.Diagnostics;
-using RevitDevTool.Contracts;
+using RevitDevTool.McpParser.Models;
 using RevitDevTool.Utils;
 namespace RevitDevTool.Mcp.Models;
 
@@ -12,8 +12,8 @@ public sealed partial class BridgeConnectionState : ObservableObject
     [ObservableProperty] private int _totalToolCalls;
     [ObservableProperty] private bool _isExecuting;
     [ObservableProperty] private string _currentToolName = string.Empty;
-    [ObservableProperty] private string _currentStage = string.Empty;
     [ObservableProperty] private string _currentStatusMessage = string.Empty;
+    [ObservableProperty] private DateTime _executionStartedAtUtc;
 
     public ObservableCollection<McpToolCallMetric> ToolCalls { get; } = [];
 
@@ -32,62 +32,36 @@ public sealed partial class BridgeConnectionState : ObservableObject
         UpdateUiState(() => QueueDepth = Math.Max(0, depth));
     }
 
-    public void RecordQueued(string toolName)
+    public ExecutionScope BeginExecution(string toolName)
     {
-        if (string.IsNullOrWhiteSpace(toolName))
-            return;
-
         UpdateUiState(() =>
         {
             IsExecuting = true;
             CurrentToolName = toolName;
-            CurrentStage = nameof(ExecutionState.Queued).ToLowerInvariant();
             CurrentStatusMessage = $"Queued '{toolName}'...";
+            ExecutionStartedAtUtc = DateTime.UtcNow;
         });
+        return new ExecutionScope(this, toolName);
     }
 
-    public void StartExecution(string toolName, string detail)
+    internal void UpdateExecution(string toolName, string statusMessage)
     {
         UpdateUiState(() =>
         {
-            IsExecuting = true;
             CurrentToolName = toolName;
-            CurrentStage = nameof(ExecutionState.Preparing).ToLowerInvariant();
-            CurrentStatusMessage = detail;
+            CurrentStatusMessage = statusMessage;
         });
     }
 
-    public void ReportProgress(McpProgressUpdate progress)
-    {
-        UpdateUiState(() =>
-        {
-            CurrentStage = progress.State.ToString().ToLowerInvariant();
-            CurrentStatusMessage = progress.Detail;
-        });
-    }
-
-    public void CompleteExecution(string toolName, McpToolExecutionResult result)
+    internal void ResetExecution()
     {
         UpdateUiState(() =>
         {
             IsExecuting = false;
             CurrentToolName = string.Empty;
-            CurrentStage = string.Empty;
             CurrentStatusMessage = string.Empty;
+            ExecutionStartedAtUtc = default;
         });
-
-        var detail = !string.IsNullOrWhiteSpace(result.Detail)
-            ? result.Detail
-            : result.Error?.Message ?? string.Empty;
-        var traceMessage = $"[MCP] Tool '{toolName}' completed. State={result.State}. Detail={detail}";
-
-        if (result.State == ExecutionState.Completed)
-        {
-            Trace.TraceInformation(traceMessage);
-            return;
-        }
-
-        Trace.TraceWarning(traceMessage);
     }
 
     public void RecordCall(string toolId, string toolName)
@@ -114,5 +88,55 @@ public sealed partial class BridgeConnectionState : ObservableObject
     private static void UpdateUiState(Action updateAction)
     {
         DispatcherHelper.RunOnMainThread(updateAction);
+    }
+}
+
+public sealed class ExecutionScope : IDisposable
+{
+    private readonly BridgeConnectionState _state;
+    private readonly string _toolName;
+    private readonly Stopwatch _stopwatch;
+    private bool _completed;
+
+    internal ExecutionScope(BridgeConnectionState state, string toolName)
+    {
+        _state = state;
+        _toolName = toolName;
+        _stopwatch = Stopwatch.StartNew();
+    }
+
+    public void MarkRunning()
+    {
+        _state.UpdateExecution(_toolName, $"Running '{_toolName}'...");
+    }
+
+    public void Complete(McpToolExecutionResult result)
+    {
+        if (_completed) return;
+        _completed = true;
+        _stopwatch.Stop();
+
+        var elapsed = _stopwatch.Elapsed;
+        var detail = !string.IsNullOrWhiteSpace(result.Detail)
+            ? result.Detail
+            : result.Error?.Message ?? string.Empty;
+
+        var traceMessage = $"[MCP] Tool '{_toolName}' {result.State} in {elapsed.TotalSeconds:F1}s. {detail}";
+        if (result.State == ExecutionState.Completed)
+            Trace.TraceInformation(traceMessage);
+        else
+            Trace.TraceWarning(traceMessage);
+
+        _state.ResetExecution();
+    }
+
+    public void Dispose()
+    {
+        if (_completed) return;
+        _stopwatch.Stop();
+
+        Trace.TraceWarning(
+            $"[MCP] Tool '{_toolName}' scope disposed without completion after {_stopwatch.Elapsed.TotalSeconds:F1}s.");
+        _state.ResetExecution();
     }
 }

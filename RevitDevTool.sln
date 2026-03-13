@@ -36,15 +36,13 @@ Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "FSharpDemo", "source\Sample
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RevitDevTool.Core", "source\RevitDevTool.Core\RevitDevTool.Core.csproj", "{6F6281C5-4AE6-4CBF-8B9D-425BE2D242FD}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RevitDevTool.Server", "source\RevitDevTool.Server\RevitDevTool.Server.csproj", "{73A12557-B088-4668-B7A7-BEE1FCFFB9C7}"
-EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RevitDevTool.Contracts", "source\RevitDevTool.Contracts\RevitDevTool.Contracts.csproj", "{C03CBF6D-8E01-4DB4-AFA8-21CB5C77228B}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RevitDevTool.McpServer", "source\RevitDevTool.McpServer\RevitDevTool.McpServer.csproj", "{73A12557-B088-4668-B7A7-BEE1FCFFB9C7}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RevitDevTool.Server.Tests", "source\RevitDevTool.Server.Tests\RevitDevTool.Server.Tests.csproj", "{BF23F61B-36D3-4BE4-9D8A-6F705E33A17A}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "McpToolsetDemo", "source\Samples\McpToolsetDemo\McpToolsetDemo.csproj", "{AB7C59DC-B70C-42DF-97C0-90F717BB0CD9}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RevitDevTool.Mcp.Parser", "source\RevitDevTool.Mcp.Parser\RevitDevTool.Mcp.Parser.csproj", "{0613B303-F859-4B4A-A2F2-183C43A47374}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RevitDevTool.McpParser", "source\RevitDevTool.McpParser\RevitDevTool.McpParser.csproj", "{0613B303-F859-4B4A-A2F2-183C43A47374}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -594,26 +592,6 @@ Global
 		{73A12557-B088-4668-B7A7-BEE1FCFFB9C7}.Release R25|x64.Build.0 = Release|Any CPU
 		{73A12557-B088-4668-B7A7-BEE1FCFFB9C7}.Release R26|x64.ActiveCfg = Release|Any CPU
 		{73A12557-B088-4668-B7A7-BEE1FCFFB9C7}.Release R26|x64.Build.0 = Release|Any CPU
-		{C03CBF6D-8E01-4DB4-AFA8-21CB5C77228B}.Debug R22|x64.ActiveCfg = Debug|Any CPU
-		{C03CBF6D-8E01-4DB4-AFA8-21CB5C77228B}.Debug R22|x64.Build.0 = Debug|Any CPU
-		{C03CBF6D-8E01-4DB4-AFA8-21CB5C77228B}.Debug R23|x64.ActiveCfg = Debug|Any CPU
-		{C03CBF6D-8E01-4DB4-AFA8-21CB5C77228B}.Debug R23|x64.Build.0 = Debug|Any CPU
-		{C03CBF6D-8E01-4DB4-AFA8-21CB5C77228B}.Debug R24|x64.ActiveCfg = Debug|Any CPU
-		{C03CBF6D-8E01-4DB4-AFA8-21CB5C77228B}.Debug R24|x64.Build.0 = Debug|Any CPU
-		{C03CBF6D-8E01-4DB4-AFA8-21CB5C77228B}.Debug R25|x64.ActiveCfg = Debug|Any CPU
-		{C03CBF6D-8E01-4DB4-AFA8-21CB5C77228B}.Debug R25|x64.Build.0 = Debug|Any CPU
-		{C03CBF6D-8E01-4DB4-AFA8-21CB5C77228B}.Debug R26|x64.ActiveCfg = Debug|Any CPU
-		{C03CBF6D-8E01-4DB4-AFA8-21CB5C77228B}.Debug R26|x64.Build.0 = Debug|Any CPU
-		{C03CBF6D-8E01-4DB4-AFA8-21CB5C77228B}.Release R22|x64.ActiveCfg = Release|Any CPU
-		{C03CBF6D-8E01-4DB4-AFA8-21CB5C77228B}.Release R22|x64.Build.0 = Release|Any CPU
-		{C03CBF6D-8E01-4DB4-AFA8-21CB5C77228B}.Release R23|x64.ActiveCfg = Release|Any CPU
-		{C03CBF6D-8E01-4DB4-AFA8-21CB5C77228B}.Release R23|x64.Build.0 = Release|Any CPU
-		{C03CBF6D-8E01-4DB4-AFA8-21CB5C77228B}.Release R24|x64.ActiveCfg = Release|Any CPU
-		{C03CBF6D-8E01-4DB4-AFA8-21CB5C77228B}.Release R24|x64.Build.0 = Release|Any CPU
-		{C03CBF6D-8E01-4DB4-AFA8-21CB5C77228B}.Release R25|x64.ActiveCfg = Release|Any CPU
-		{C03CBF6D-8E01-4DB4-AFA8-21CB5C77228B}.Release R25|x64.Build.0 = Release|Any CPU
-		{C03CBF6D-8E01-4DB4-AFA8-21CB5C77228B}.Release R26|x64.ActiveCfg = Release|Any CPU
-		{C03CBF6D-8E01-4DB4-AFA8-21CB5C77228B}.Release R26|x64.Build.0 = Release|Any CPU
 		{BF23F61B-36D3-4BE4-9D8A-6F705E33A17A}.Debug R22|x64.ActiveCfg = Debug R22|Any CPU
 		{BF23F61B-36D3-4BE4-9D8A-6F705E33A17A}.Debug R22|x64.Build.0 = Debug R22|Any CPU
 		{BF23F61B-36D3-4BE4-9D8A-6F705E33A17A}.Debug R23|x64.ActiveCfg = Debug R23|Any CPU

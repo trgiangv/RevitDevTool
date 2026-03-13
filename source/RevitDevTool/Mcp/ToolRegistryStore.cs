@@ -1,9 +1,8 @@
 using System.Diagnostics;
 using System.IO;
 using ModelContextProtocol.Protocol;
-using RevitDevTool.Contracts;
 using RevitDevTool.Mcp.Interfaces;
-using RevitDevTool.Mcp.Parser.Models;
+using RevitDevTool.McpParser.Models;
 using RevitDevTool.Settings;
 // ReSharper disable RedundantSuppressNullableWarningExpression
 
@@ -11,7 +10,6 @@ namespace RevitDevTool.Mcp;
 
 public sealed class ToolRegistryStore(IEnumerable<IMcpRegistryProvider> providers, ISettingsService settingsService)
 {
-    private const string PythonToolPattern = "*mcp.py";
     private readonly IReadOnlyList<IMcpRegistryProvider> _providers = providers.ToList();
     private readonly SemaphoreSlim _gate = new(1, 1);
     private readonly Dictionary<string, McpRegisteredTool> _byToolId = new(StringComparer.OrdinalIgnoreCase);
@@ -42,7 +40,7 @@ public sealed class ToolRegistryStore(IEnumerable<IMcpRegistryProvider> provider
                     settingsService.McpRegistryConfig.DotnetPaths,
                     settingsService.McpRegistryConfig.PythonToolsetPaths);
 
-                PruneInvalidConfiguredPaths(catalog);
+                McpPathValidator.PruneInvalidConfiguredPaths(settingsService.McpRegistryConfig, catalog);
                 return catalog;
             }).ConfigureAwait(false);
 
@@ -62,8 +60,8 @@ public sealed class ToolRegistryStore(IEnumerable<IMcpRegistryProvider> provider
             return;
 
         var normalizedPath = Path.GetFullPath(path);
-        var inputKind = ClassifyInputPath(normalizedPath);
-        if (inputKind == InputKind.Unsupported)
+        var inputKind = McpPathValidator.ClassifyInputPath(normalizedPath);
+        if (inputKind == McpPathValidator.InputKind.Unsupported)
             return;
 
         await _gate.WaitAsync().ConfigureAwait(false);
@@ -72,16 +70,16 @@ public sealed class ToolRegistryStore(IEnumerable<IMcpRegistryProvider> provider
             var dotnetCandidates = settingsService.McpRegistryConfig.DotnetPaths.ToList();
             var pythonCandidates = settingsService.McpRegistryConfig.PythonToolsetPaths.ToList();
 
-            if (inputKind == InputKind.DotnetAssembly)
-                AddDistinct(dotnetCandidates, normalizedPath);
-            else if (inputKind == InputKind.PythonToolset)
-                AddDistinct(pythonCandidates, normalizedPath);
+            if (inputKind == McpPathValidator.InputKind.DotnetAssembly)
+                McpPathValidator.AddDistinct(dotnetCandidates, normalizedPath);
+            else if (inputKind == McpPathValidator.InputKind.PythonToolset)
+                McpPathValidator.AddDistinct(pythonCandidates, normalizedPath);
 
             var loaded = await Task.Run(() => LoadFromProviders(dotnetCandidates, pythonCandidates)).ConfigureAwait(false);
             ApplyCatalog(loaded);
 
             PersistAcceptedPath(inputKind, normalizedPath, loaded);
-            PruneInvalidConfiguredPaths(loaded);
+            McpPathValidator.PruneInvalidConfiguredPaths(settingsService.McpRegistryConfig, loaded);
         }
         finally
         {
@@ -94,60 +92,39 @@ public sealed class ToolRegistryStore(IEnumerable<IMcpRegistryProvider> provider
     public bool TryGetTool(string? toolId, string? toolName, out McpRegisteredTool? tool)
     {
         EnsureLoaded();
-
-        if (!string.IsNullOrWhiteSpace(toolId) && _byToolId.TryGetValue(toolId!, out var byId))
-        {
-            tool = byId;
-            return true;
-        }
-
-        if (!string.IsNullOrWhiteSpace(toolName) && _byToolName.TryGetValue(toolName!, out var byName) && byName.Count > 0)
-        {
-            tool = byName[0];
-            return true;
-        }
-
-        tool = null;
-        return false;
+        return TryGet(toolId, toolName, _byToolId, _byToolName, out tool);
     }
 
     public bool TryGetPrompt(string? promptId, string? promptName, out McpRegisteredPrompt? prompt)
     {
         EnsureLoaded();
-
-        if (!string.IsNullOrWhiteSpace(promptId) && _byPromptId.TryGetValue(promptId!, out var byId))
-        {
-            prompt = byId;
-            return true;
-        }
-
-        if (!string.IsNullOrWhiteSpace(promptName) && _byPromptName.TryGetValue(promptName!, out var byName) && byName.Count > 0)
-        {
-            prompt = byName[0];
-            return true;
-        }
-
-        prompt = null;
-        return false;
+        return TryGet(promptId, promptName, _byPromptId, _byPromptName, out prompt);
     }
 
     public bool TryGetResource(string? resourceId, string? resourceName, out McpRegisteredResource? resource)
     {
         EnsureLoaded();
+        return TryGet(resourceId, resourceName, _byResourceId, _byResourceName, out resource);
+    }
 
-        if (!string.IsNullOrWhiteSpace(resourceId) && _byResourceId.TryGetValue(resourceId!, out var byId))
+    private static bool TryGet<T>(
+        string? id,
+        string? name,
+        Dictionary<string, T> byId,
+        Dictionary<string, List<T>> byName,
+        out T? result)
+    {
+        if (!string.IsNullOrWhiteSpace(id) && byId.TryGetValue(id!, out var byIdResult))
         {
-            resource = byId;
+            result = byIdResult;
             return true;
         }
-
-        if (!string.IsNullOrWhiteSpace(resourceName) && _byResourceName.TryGetValue(resourceName!, out var byName) && byName.Count > 0)
+        if (!string.IsNullOrWhiteSpace(name) && byName.TryGetValue(name!, out var byNameList) && byNameList.Count > 0)
         {
-            resource = byName[0];
+            result = byNameList[0];
             return true;
         }
-
-        resource = null;
+        result = default;
         return false;
     }
 
@@ -164,7 +141,7 @@ public sealed class ToolRegistryStore(IEnumerable<IMcpRegistryProvider> provider
                 settingsService.McpRegistryConfig.PythonToolsetPaths);
 
             ApplyCatalog(catalog);
-            PruneInvalidConfiguredPaths(catalog);
+            McpPathValidator.PruneInvalidConfiguredPaths(settingsService.McpRegistryConfig, catalog);
             return ToolCatalog;
         }
         finally
@@ -230,8 +207,8 @@ public sealed class ToolRegistryStore(IEnumerable<IMcpRegistryProvider> provider
 
     private void ConfigureProviderPaths(IEnumerable<string> dotnetPaths, IEnumerable<string> pythonPaths)
     {
-        var resolvedDotnet = ResolvePaths(dotnetPaths, IsValidDotnetAssemblyPath);
-        var resolvedPython = ResolvePaths(pythonPaths, IsValidPythonToolsetPath);
+        var resolvedDotnet = McpPathValidator.ResolvePaths(dotnetPaths, McpPathValidator.IsValidDotnetAssemblyPath);
+        var resolvedPython = McpPathValidator.ResolvePaths(pythonPaths, McpPathValidator.IsValidPythonToolsetPath);
 
         var pathsByMode = new Dictionary<ExecutionMode, IReadOnlyList<string>>
         {
@@ -270,217 +247,88 @@ public sealed class ToolRegistryStore(IEnumerable<IMcpRegistryProvider> provider
 
     private void CollectToolsFromProvider(string providerName, IReadOnlyList<McpRegisteredTool> candidates)
     {
-        foreach (var tool in candidates
-                     .OrderBy(d => d.Binding.SourcePath, StringComparer.OrdinalIgnoreCase)
-                     .ThenBy(d => d.Binding.ContainerType, StringComparer.OrdinalIgnoreCase)
-                     .ThenBy(d => d.Binding.MethodName, StringComparer.OrdinalIgnoreCase))
-        {
-            TryRegisterTool(providerName, tool);
-        }
+        CollectFromProvider(candidates,
+            t => t.Binding.SourcePath,
+            t => t.Binding.ContainerType,
+            t => t.Binding.MethodName,
+            t => TryRegister(providerName, t, t.Id, t.ProtocolTool.Name, _byToolId, _byToolName, "tool"));
     }
 
     private void CollectPromptsFromProvider(string providerName, IReadOnlyList<McpRegisteredPrompt> candidates)
     {
-        foreach (var prompt in candidates
-                     .OrderBy(d => d.Binding.SourcePath, StringComparer.OrdinalIgnoreCase)
-                     .ThenBy(d => d.Binding.ContainerType, StringComparer.OrdinalIgnoreCase)
-                     .ThenBy(d => d.Binding.MethodName, StringComparer.OrdinalIgnoreCase))
-        {
-            TryRegisterPrompt(providerName, prompt);
-        }
+        CollectFromProvider(candidates,
+            p => p.Binding.SourcePath,
+            p => p.Binding.ContainerType,
+            p => p.Binding.MethodName,
+            p => TryRegister(providerName, p, p.Id, p.ProtocolPrompt.Name, _byPromptId, _byPromptName, "prompt"));
     }
 
     private void CollectResourcesFromProvider(string providerName, IReadOnlyList<McpRegisteredResource> candidates)
     {
-        foreach (var resource in candidates
-                     .OrderBy(d => d.Binding.SourcePath, StringComparer.OrdinalIgnoreCase)
-                     .ThenBy(d => d.Binding.ContainerType, StringComparer.OrdinalIgnoreCase)
-                     .ThenBy(d => d.Binding.MethodName, StringComparer.OrdinalIgnoreCase))
+        CollectFromProvider(candidates,
+            r => r.Binding.SourcePath,
+            r => r.Binding.ContainerType,
+            r => r.Binding.MethodName,
+            r => TryRegister(providerName, r, r.Id, r.ProtocolResource?.Name ?? r.ProtocolTemplate?.Name ?? string.Empty, _byResourceId, _byResourceName, "resource"));
+    }
+
+    private static void CollectFromProvider<T>(
+        IReadOnlyList<T> candidates,
+        Func<T, string> sourcePathKey,
+        Func<T, string> containerTypeKey,
+        Func<T, string> methodNameKey,
+        Action<T> register)
+    {
+        foreach (var item in candidates
+            .OrderBy(sourcePathKey, StringComparer.OrdinalIgnoreCase)
+            .ThenBy(containerTypeKey, StringComparer.OrdinalIgnoreCase)
+            .ThenBy(methodNameKey, StringComparer.OrdinalIgnoreCase))
         {
-            TryRegisterResource(providerName, resource);
+            register(item);
         }
     }
 
-    private void TryRegisterTool(string providerName, McpRegisteredTool tool)
+    private void TryRegister<T>(
+        string providerName,
+        T item,
+        string id,
+        string name,
+        Dictionary<string, T> byId,
+        Dictionary<string, List<T>> byName,
+        string kind)
     {
-        if (string.IsNullOrWhiteSpace(tool.ProtocolTool.Name))
-        {
-            Trace.TraceWarning($"[MCP] Skip tool with empty name from provider='{providerName}'.");
-            return;
-        }
-
-        if (_byToolId.ContainsKey(tool.Id))
-        {
-            Trace.TraceWarning($"[MCP] Duplicate tool id '{tool.Id}' ignored.");
-            return;
-        }
-
-        _byToolId[tool.Id] = tool;
-
-        if (!_byToolName.TryGetValue(tool.ProtocolTool.Name, out var nameList))
-        {
-            nameList = [];
-            _byToolName[tool.ProtocolTool.Name] = nameList;
-        }
-
-        nameList.Add(tool);
-    }
-
-    private void TryRegisterPrompt(string providerName, McpRegisteredPrompt prompt)
-    {
-        if (string.IsNullOrWhiteSpace(prompt.ProtocolPrompt.Name))
-        {
-            Trace.TraceWarning($"[MCP] Skip prompt with empty name from provider='{providerName}'.");
-            return;
-        }
-
-        if (_byPromptId.ContainsKey(prompt.Id))
-        {
-            Trace.TraceWarning($"[MCP] Duplicate prompt id '{prompt.Id}' ignored.");
-            return;
-        }
-
-        _byPromptId[prompt.Id] = prompt;
-
-        if (!_byPromptName.TryGetValue(prompt.ProtocolPrompt.Name, out var nameList))
-        {
-            nameList = [];
-            _byPromptName[prompt.ProtocolPrompt.Name] = nameList;
-        }
-
-        nameList.Add(prompt);
-    }
-
-    private void TryRegisterResource(string providerName, McpRegisteredResource resource)
-    {
-        var name = resource.ProtocolResource?.Name ?? resource.ProtocolTemplate?.Name ?? string.Empty;
         if (string.IsNullOrWhiteSpace(name))
         {
-            Trace.TraceWarning($"[MCP] Skip resource with empty name from provider='{providerName}'.");
+            Trace.TraceWarning($"[MCP] Skip {kind} with empty name from provider='{providerName}'.");
             return;
         }
 
-        if (_byResourceId.ContainsKey(resource.Id))
+        if (byId.ContainsKey(id))
         {
-            Trace.TraceWarning($"[MCP] Duplicate resource id '{resource.Id}' ignored.");
+            Trace.TraceWarning($"[MCP] Duplicate {kind} id '{id}' ignored.");
             return;
         }
 
-        _byResourceId[resource.Id] = resource;
-
-        if (!_byResourceName.TryGetValue(name, out var nameList))
+        byId[id] = item;
+        if (!byName.TryGetValue(name, out var nameList))
         {
             nameList = [];
-            _byResourceName[name] = nameList;
+            byName[name] = nameList;
         }
 
-        nameList.Add(resource);
+        nameList.Add(item);
     }
 
-    private static List<string> ResolvePaths(IEnumerable<string> paths, Func<string?, bool> validator) =>
-        paths
-            .Where(validator)
-            .Select(Path.GetFullPath)
-            .Distinct(StringComparer.OrdinalIgnoreCase)
-            .OrderBy(p => p, StringComparer.OrdinalIgnoreCase)
-            .ToList();
-
-    private bool PruneInvalidConfiguredPaths(McpRegistryCatalog loadedCatalog)
-    {
-        var changed = false;
-        changed |= RemoveInvalidPaths(settingsService.McpRegistryConfig.DotnetPaths, ExecutionMode.Assembly, loadedCatalog);
-        changed |= RemoveInvalidPaths(settingsService.McpRegistryConfig.PythonToolsetPaths, ExecutionMode.Python, loadedCatalog);
-        return changed;
-    }
-
-    private void PersistAcceptedPath(InputKind kind, string normalizedPath, McpRegistryCatalog loadedCatalog)
+    private void PersistAcceptedPath(McpPathValidator.InputKind kind, string normalizedPath, McpRegistryCatalog loadedCatalog)
     {
         switch (kind)
         {
-            case InputKind.DotnetAssembly when PathProducesCatalogItems(normalizedPath, ExecutionMode.Assembly, loadedCatalog):
-                AddDistinct(settingsService.McpRegistryConfig.DotnetPaths, normalizedPath);
+            case McpPathValidator.InputKind.DotnetAssembly when McpPathValidator.PathProducesCatalogItems(normalizedPath, ExecutionMode.Assembly, loadedCatalog):
+                McpPathValidator.AddDistinct(settingsService.McpRegistryConfig.DotnetPaths, normalizedPath);
                 break;
-            case InputKind.PythonToolset when PathProducesCatalogItems(normalizedPath, ExecutionMode.Python, loadedCatalog):
-                AddDistinct(settingsService.McpRegistryConfig.PythonToolsetPaths, normalizedPath);
+            case McpPathValidator.InputKind.PythonToolset when McpPathValidator.PathProducesCatalogItems(normalizedPath, ExecutionMode.Python, loadedCatalog):
+                McpPathValidator.AddDistinct(settingsService.McpRegistryConfig.PythonToolsetPaths, normalizedPath);
                 break;
         }
-    }
-
-    private enum InputKind
-    {
-        Unsupported,
-        DotnetAssembly,
-        PythonToolset
-    }
-
-    private static InputKind ClassifyInputPath(string path)
-    {
-        if (IsValidDotnetAssemblyPath(path))
-            return InputKind.DotnetAssembly;
-        if (IsValidPythonToolsetPath(path))
-            return InputKind.PythonToolset;
-        return InputKind.Unsupported;
-    }
-
-    private static bool IsValidDotnetAssemblyPath(string? path) =>
-        !string.IsNullOrWhiteSpace(path)
-        && File.Exists(path)
-        && string.Equals(Path.GetExtension(path), ".dll", StringComparison.OrdinalIgnoreCase);
-
-    private static bool IsValidPythonToolsetPath(string? path) =>
-        !string.IsNullOrWhiteSpace(path)
-        && Directory.Exists(path)
-        && Directory.EnumerateFiles(path!, PythonToolPattern, SearchOption.AllDirectories).Any();
-
-    private static bool PathProducesCatalogItems(string path, ExecutionMode mode, McpRegistryCatalog catalog)
-    {
-        if (string.IsNullOrWhiteSpace(path))
-            return false;
-
-        var normalized = NormalizePath(path);
-        return catalog.Tools.Any(t => t.Binding.SourceKind == mode && IsItemFromPath(normalized, t.Binding.SourcePath))
-            || catalog.Prompts.Any(t => t.Binding.SourceKind == mode && IsItemFromPath(normalized, t.Binding.SourcePath))
-            || catalog.Resources.Any(t => t.Binding.SourceKind == mode && IsItemFromPath(normalized, t.Binding.SourcePath));
-    }
-
-    private static bool IsItemFromPath(string configuredPath, string? itemSourcePath)
-    {
-        if (string.IsNullOrWhiteSpace(itemSourcePath))
-            return false;
-
-        var normalizedItem = NormalizePath(itemSourcePath!);
-        if (string.Equals(configuredPath, normalizedItem, StringComparison.OrdinalIgnoreCase))
-            return true;
-
-        if (!Directory.Exists(configuredPath))
-            return false;
-
-        var withSep = configuredPath.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar) + Path.DirectorySeparatorChar;
-        return normalizedItem.StartsWith(withSep, StringComparison.OrdinalIgnoreCase);
-    }
-
-    private static bool RemoveInvalidPaths(List<string> paths, ExecutionMode mode, McpRegistryCatalog catalog)
-    {
-        var removed = false;
-        for (var i = paths.Count - 1; i >= 0; i--)
-        {
-            if (PathProducesCatalogItems(paths[i], mode, catalog))
-                continue;
-
-            Trace.TraceInformation($"[MCP] Remove saved {mode} path '{paths[i]}' because it loaded no primitives.");
-            paths.RemoveAt(i);
-            removed = true;
-        }
-
-        return removed;
-    }
-
-    private static string NormalizePath(string path) =>
-        Path.GetFullPath(path).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
-
-    private static void AddDistinct(List<string> paths, string path)
-    {
-        if (!paths.Contains(path, StringComparer.OrdinalIgnoreCase))
-            paths.Add(path);
     }
 }

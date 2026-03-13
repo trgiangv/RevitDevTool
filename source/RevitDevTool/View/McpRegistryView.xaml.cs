@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using System.IO;
+using RevitDevTool.Mcp;
 using RevitDevTool.ViewModel;
 using DataFormats = System.Windows.DataFormats;
 using DragEventArgs = System.Windows.DragEventArgs;
@@ -8,7 +9,6 @@ namespace RevitDevTool.View;
 
 public partial class McpRegistryView
 {
-    private const string PythonToolPattern = "*mcp.py";
     private const string ValidDropTitle = "Drop to load";
     private const string ValidDropHint = "Direct .dll files or Python toolset folders are supported";
     private const string InvalidDropTitle = "Unsupported drop";
@@ -73,10 +73,7 @@ public partial class McpRegistryView
 
     private static bool IsSupportedPath(string path)
     {
-        if (Directory.Exists(path))
-            return Directory.EnumerateFiles(path, PythonToolPattern, SearchOption.AllDirectories).Any();
-
-        return File.Exists(path) && string.Equals(Path.GetExtension(path), ".dll", StringComparison.OrdinalIgnoreCase);
+        return McpPathValidator.IsValidDotnetAssemblyPath(path) || McpPathValidator.IsValidPythonToolsetPath(path);
     }
 
     private static bool IsValidDropData(DragEventArgs e)

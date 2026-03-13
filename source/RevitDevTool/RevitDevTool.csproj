@@ -63,8 +63,7 @@
     </ItemGroup>
     
     <ItemGroup>
-        <ProjectReference Include="..\RevitDevTool.Contracts\RevitDevTool.Contracts.csproj" />
-        <ProjectReference Include="..\RevitDevTool.Mcp.Parser\RevitDevTool.Mcp.Parser.csproj" />
+        <ProjectReference Include="..\RevitDevTool.McpParser\RevitDevTool.McpParser.csproj" />
         <ProjectReference Include="..\Supports\PythonNetStubGenerator\PythonNetStubGenerator.csproj" />
         <ProjectReference Include="..\RevitDevTool.Core\RevitDevTool.Core.csproj" />
         <ProjectReference Include="..\Supports\Serilog.Sinks.RichTextBox.WinForms.Colored\Serilog.Sinks.RichTextBox.WinForms.Colored.csproj" />

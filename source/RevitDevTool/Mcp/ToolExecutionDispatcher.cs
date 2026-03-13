@@ -1,17 +1,13 @@
 using System.Collections.Concurrent;
-using System.Diagnostics;
-using System.IO;
 using System.Text.Json;
 using Microsoft.Extensions.DependencyInjection;
 using ModelContextProtocol;
 using ModelContextProtocol.Protocol;
 using ModelContextProtocol.Server;
 using Python.Runtime;
-using RevitDevTool.Contracts;
-using RevitDevTool.Execution.Providers.Python;
-using RevitDevTool.Mcp.Parser;
-using RevitDevTool.Mcp.Parser.Dotnet;
-using RevitDevTool.Mcp.Parser.Models;
+using RevitDevTool.McpParser;
+using RevitDevTool.McpParser.Dotnet;
+using RevitDevTool.McpParser.Models;
 
 namespace RevitDevTool.Mcp;
 
@@ -63,12 +59,14 @@ public sealed class ToolExecutionDispatcher(
         return McpToolExecutionResult.Completed(result, $"Completed '{tool.ProtocolTool.Name}'.");
     }
 
+    public void ClearCache() => _cachedTools.Clear();
+
     private McpServerTool? GetOrCreateServerTool(McpRegisteredTool tool)
     {
         if (_cachedTools.TryGetValue(tool.Id, out var cached))
             return cached;
 
-        var method = DotnetToolMethodResolver.Resolve(tool);
+        var method = DotnetMethodResolver.ResolveTool(tool);
         if (method is null)
             return null;
 
@@ -81,27 +79,13 @@ public sealed class ToolExecutionDispatcher(
     private static McpToolExecutionResult InvokePythonTool(McpRegisteredTool tool, string normalizedPayload)
     {
         var binding = tool.Binding;
-
-        PythonInitializer.InitializeAsync().GetAwaiter().GetResult();
-
-        if (string.IsNullOrWhiteSpace(binding.SourcePath) || !File.Exists(binding.SourcePath))
-            return McpToolExecutionResult.Failed(ExecutionErrorCodes.ToolSourceNotFound, $"Python MCP source file was not found for '{tool.ProtocolTool.Name}'.", $"sourcePath={binding.SourcePath}");
-
-        using (Py.GIL())
+        var resultJson = PythonExecutionHelper.InvokeScript(binding.SourcePath, scope =>
         {
-            if (PythonInitializer.GlobalScope is null)
-                return McpToolExecutionResult.Failed(ExecutionErrorCodes.ToolPythonRuntimeUnavailable, "Global Python scope not initialized.");
-
-            using var scope = PythonInitializer.GlobalScope.NewScope();
-            PythonExecutor.PrepareExecutionScope(scope, binding.SourcePath);
             scope.Set("__tool_name__", new PyString(tool.ProtocolTool.Name));
             scope.Set("__payload_json__", new PyString(normalizedPayload));
-            scope.Exec(PythonEmbedded.ToolInvokeScript);
-
-            var resultJson = scope.Get("__result_json__").As<string>();
-            var callResult = DeserializePythonResult(resultJson);
-            return McpToolExecutionResult.Completed(callResult, $"Completed '{tool.ProtocolTool.Name}'.");
-        }
+        });
+        var callResult = DeserializePythonResult(resultJson);
+        return McpToolExecutionResult.Completed(callResult, $"Completed '{tool.ProtocolTool.Name}'.");
     }
 
     private static CallToolResult DeserializePythonResult(string resultJson)

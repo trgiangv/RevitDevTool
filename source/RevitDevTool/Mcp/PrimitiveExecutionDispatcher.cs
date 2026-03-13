@@ -1,16 +1,13 @@
 using System.Collections.Concurrent;
-using System.IO;
 using System.Text.Json;
 using Microsoft.Extensions.DependencyInjection;
 using ModelContextProtocol;
 using ModelContextProtocol.Protocol;
 using ModelContextProtocol.Server;
 using Python.Runtime;
-using RevitDevTool.Contracts;
-using RevitDevTool.Execution.Providers.Python;
-using RevitDevTool.Mcp.Parser;
-using RevitDevTool.Mcp.Parser.Dotnet;
-using RevitDevTool.Mcp.Parser.Models;
+using RevitDevTool.McpParser;
+using RevitDevTool.McpParser.Dotnet;
+using RevitDevTool.McpParser.Models;
 
 namespace RevitDevTool.Mcp;
 
@@ -82,12 +79,18 @@ public sealed class PrimitiveExecutionDispatcher(IServiceProvider serviceProvide
             .ConfigureAwait(false).GetAwaiter().GetResult();
     }
 
+    public void ClearCache()
+    {
+        _cachedPrompts.Clear();
+        _cachedResources.Clear();
+    }
+
     private McpServerPrompt? GetOrCreateServerPrompt(McpRegisteredPrompt prompt)
     {
         if (_cachedPrompts.TryGetValue(prompt.Id, out var cached))
             return cached;
 
-        var method = DotnetMcpPrimitiveMethodResolver.ResolvePrompt(prompt);
+        var method = DotnetMethodResolver.ResolvePrompt(prompt);
         if (method is null)
             return null;
 
@@ -102,7 +105,7 @@ public sealed class PrimitiveExecutionDispatcher(IServiceProvider serviceProvide
         if (_cachedResources.TryGetValue(resource.Id, out var cached))
             return cached;
 
-        var method = DotnetMcpPrimitiveMethodResolver.ResolveResource(resource);
+        var method = DotnetMethodResolver.ResolveResource(resource);
         if (method is null)
             return null;
 
@@ -116,7 +119,7 @@ public sealed class PrimitiveExecutionDispatcher(IServiceProvider serviceProvide
         McpRegisteredPrompt prompt,
         IReadOnlyDictionary<string, JsonElement>? arguments)
     {
-        var resultJson = InvokePythonPrimitive(
+        var resultJson = PythonExecutionHelper.InvokeScript(
             prompt.Binding.SourcePath,
             scope =>
             {
@@ -131,7 +134,7 @@ public sealed class PrimitiveExecutionDispatcher(IServiceProvider serviceProvide
 
     private static ReadResourceResult InvokePythonResource(McpRegisteredResource resource, string uri)
     {
-        var resultJson = InvokePythonPrimitive(
+        var resultJson = PythonExecutionHelper.InvokeScript(
             resource.Binding.SourcePath,
             scope =>
             {
@@ -148,25 +151,5 @@ public sealed class PrimitiveExecutionDispatcher(IServiceProvider serviceProvide
     private static string SerializeJson<T>(T value)
     {
         return JsonSerializer.Serialize(value, JsonOptions);
-    }
-
-    private static string InvokePythonPrimitive(string sourcePath, Action<PyModule> configureScope)
-    {
-        PythonInitializer.InitializeAsync().GetAwaiter().GetResult();
-
-        if (string.IsNullOrWhiteSpace(sourcePath) || !File.Exists(sourcePath))
-            throw new InvalidOperationException($"Python MCP source file was not found: {sourcePath}.");
-
-        using (Py.GIL())
-        {
-            if (PythonInitializer.GlobalScope is null)
-                throw new InvalidOperationException("Global Python scope not initialized.");
-
-            using var scope = PythonInitializer.GlobalScope.NewScope();
-            PythonExecutor.PrepareExecutionScope(scope, sourcePath);
-            configureScope(scope);
-            scope.Exec(PythonEmbedded.ToolInvokeScript);
-            return scope.Get("__result_json__").As<string>();
-        }
     }
 }

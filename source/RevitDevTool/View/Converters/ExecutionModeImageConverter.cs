@@ -2,7 +2,7 @@ using System.Globalization;
 using System.Windows;
 using System.Windows.Data;
 using System.Windows.Media;
-using RevitDevTool.Contracts;
+using RevitDevTool.McpParser.Models;
 using Visibility = System.Windows.Visibility;
 
 namespace RevitDevTool.View.Converters;
