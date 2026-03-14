@@ -6,35 +6,15 @@ using RevitDevTool.McpParser.Models;
 
 namespace RevitDevTool.McpServer;
 
-public sealed class CatalogService
+public sealed class CatalogService(InstanceManager instanceManager, 
+    McpServerPrimitiveCollection<McpServerTool> toolCollection, 
+    McpServerPrimitiveCollection<McpServerPrompt> promptCollection, 
+    McpServerResourceCollection resourceCollection, 
+    IReadOnlyList<McpServerTool> localTools, 
+    ILogger<CatalogService> logger, 
+    CancellationToken ct)
 {
-    private readonly InstanceManager _instanceManager;
-    private readonly McpServerPrimitiveCollection<McpServerTool> _toolCollection;
-    private readonly McpServerPrimitiveCollection<McpServerPrompt> _promptCollection;
-    private readonly McpServerResourceCollection _resourceCollection;
-    private readonly IReadOnlyList<McpServerTool> _localTools;
-    private readonly ILogger<CatalogService> _logger;
-    private readonly CancellationToken _ct;
-
     private int _refreshPending;
-
-    public CatalogService(
-        InstanceManager instanceManager,
-        McpServerPrimitiveCollection<McpServerTool> toolCollection,
-        McpServerPrimitiveCollection<McpServerPrompt> promptCollection,
-        McpServerResourceCollection resourceCollection,
-        IReadOnlyList<McpServerTool> localTools,
-        ILogger<CatalogService> logger,
-        CancellationToken ct)
-    {
-        _instanceManager = instanceManager;
-        _toolCollection = toolCollection;
-        _promptCollection = promptCollection;
-        _resourceCollection = resourceCollection;
-        _localTools = localTools;
-        _logger = logger;
-        _ct = ct;
-    }
 
     public void RequestRefresh()
     {
@@ -52,7 +32,7 @@ public sealed class CatalogService
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Refresh error");
+                logger.LogError(ex, "Refresh error");
             }
         }
     }
@@ -63,55 +43,76 @@ public sealed class CatalogService
         var newPrompts = new Dictionary<string, McpServerPrompt>(StringComparer.OrdinalIgnoreCase);
         var newResources = new List<McpServerResource>();
 
-        foreach (var local in _localTools)
+        foreach (var local in localTools)
             newTools[local.ProtocolTool.Name] = local;
 
-        foreach (var client in _instanceManager.GetClients())
+        foreach (var client in instanceManager.GetClients().Where(client => client.IsConnected))
         {
-            if (!client.IsConnected) continue;
-            try
-            {
-                var toolsResponse = await client.RequestAsync(BridgeMethods.ToolsList, ct: _ct).ConfigureAwait(false);
-                if (toolsResponse is { IsError: false, Result: { } toolsResult })
-                {
-                    foreach (var tool in JsonSerializer.Deserialize<List<Tool>>(toolsResult.GetRawText()) ?? [])
-                        newTools.TryAdd(tool.Name, new RoutingMcpServerTool(_instanceManager, tool));
-                }
-
-                var promptsResponse = await client.RequestAsync(BridgeMethods.PromptsList, ct: _ct).ConfigureAwait(false);
-                if (promptsResponse is { IsError: false, Result: { } promptsResult })
-                {
-                    foreach (var prompt in JsonSerializer.Deserialize<List<Prompt>>(promptsResult.GetRawText()) ?? [])
-                        newPrompts.TryAdd(prompt.Name, new RoutingMcpServerPrompt(_instanceManager, prompt));
-                }
-
-                var resourcesResponse = await client.RequestAsync(BridgeMethods.ResourcesList, ct: _ct).ConfigureAwait(false);
-                if (resourcesResponse is { IsError: false, Result: { } resourcesResult })
-                {
-                    foreach (var resource in JsonSerializer.Deserialize<List<Resource>>(resourcesResult.GetRawText()) ?? [])
-                        newResources.Add(new RoutingMcpServerResource(_instanceManager, resource, null));
-                }
-
-                var templatesResponse = await client.RequestAsync(BridgeMethods.ResourceTemplatesList, ct: _ct).ConfigureAwait(false);
-                if (templatesResponse is { IsError: false, Result: { } templatesResult })
-                {
-                    foreach (var template in JsonSerializer.Deserialize<List<ResourceTemplate>>(templatesResult.GetRawText()) ?? [])
-                        newResources.Add(new RoutingMcpServerResource(_instanceManager, null, template));
-                }
-            }
-            catch (Exception ex)
-            {
-                _logger.LogWarning(ex, "Error fetching from {PipeName}", client.PipeName);
-            }
+            await FetchClientPrimitivesAsync(client, newTools, newPrompts, newResources).ConfigureAwait(false);
         }
 
-        _toolCollection.Clear();
-        foreach (var t in newTools.Values) _toolCollection.TryAdd(t);
+        ApplySnapshot(toolCollection, newTools.Values);
+        ApplySnapshot(promptCollection, newPrompts.Values);
+        ApplySnapshot(resourceCollection, newResources);
+    }
 
-        _promptCollection.Clear();
-        foreach (var p in newPrompts.Values) _promptCollection.TryAdd(p);
+    private async Task FetchClientPrimitivesAsync(
+        RevitBridgeClient client,
+        Dictionary<string, McpServerTool> tools,
+        Dictionary<string, McpServerPrompt> prompts,
+        List<McpServerResource> resources)
+    {
+        try
+        {
+            await FetchToolsAsync(client, tools).ConfigureAwait(false);
+            await FetchPromptsAsync(client, prompts).ConfigureAwait(false);
+            await FetchResourcesAsync(client, resources).ConfigureAwait(false);
+            await FetchResourceTemplatesAsync(client, resources).ConfigureAwait(false);
+        }
+        catch (Exception ex)
+        {
+            logger.LogWarning(ex, "Error fetching from {PipeName}", client.PipeName);
+        }
+    }
 
-        _resourceCollection.Clear();
-        foreach (var r in newResources) _resourceCollection.TryAdd(r);
+    private async Task FetchToolsAsync(RevitBridgeClient client, Dictionary<string, McpServerTool> tools)
+    {
+        var response = await client.RequestAsync(BridgeMethods.ToolsList, ct: ct).ConfigureAwait(false);
+        foreach (var tool in DeserializeResult<Tool>(response))
+            tools.TryAdd(tool.Name, new RoutingMcpServerTool(instanceManager, tool));
+    }
+
+    private async Task FetchPromptsAsync(RevitBridgeClient client, Dictionary<string, McpServerPrompt> prompts)
+    {
+        var response = await client.RequestAsync(BridgeMethods.PromptsList, ct: ct).ConfigureAwait(false);
+        foreach (var prompt in DeserializeResult<Prompt>(response))
+            prompts.TryAdd(prompt.Name, new RoutingMcpServerPrompt(instanceManager, prompt));
+    }
+
+    private async Task FetchResourcesAsync(RevitBridgeClient client, List<McpServerResource> resources)
+    {
+        var response = await client.RequestAsync(BridgeMethods.ResourcesList, ct: ct).ConfigureAwait(false);
+        resources.AddRange(DeserializeResult<Resource>(response).Select(resource => new RoutingMcpServerResource(instanceManager, resource, null)));
+    }
+
+    private async Task FetchResourceTemplatesAsync(RevitBridgeClient client, List<McpServerResource> resources)
+    {
+        var response = await client.RequestAsync(BridgeMethods.ResourceTemplatesList, ct: ct).ConfigureAwait(false);
+        resources.AddRange(DeserializeResult<ResourceTemplate>(response).Select(template => new RoutingMcpServerResource(instanceManager, null, template)));
+    }
+
+    private static List<T> DeserializeResult<T>(BridgeMessage response)
+    {
+        if (response is { IsError: false, Result: { } result })
+            return JsonSerializer.Deserialize<List<T>>(result.GetRawText()) ?? [];
+        return [];
+    }
+
+    private static void ApplySnapshot<T>(McpServerPrimitiveCollection<T> collection, IEnumerable<T> items)
+        where T : IMcpServerPrimitive
+    {
+        collection.Clear();
+        foreach (var item in items) 
+            collection.TryAdd(item);
     }
 }
