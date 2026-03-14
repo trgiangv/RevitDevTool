@@ -1,4 +1,4 @@
-import clr
+import clr # noqa
 import sys
 import os
 import site
@@ -30,14 +30,14 @@ if site_packages and os.path.isdir(site_packages):
 if not hasattr(sys, '__revitdevtool__'):
     sys.__revitdevtool__ = {}
  
-def custom_print(*args, sep=' ', end='\n'):
+def custom_print(*args, sep=' ', end='\n', file=None, flush=False):  # noqa
     # __log_func__ will be injected globally
     if not hasattr(builtins, '__log_func__'):
         # Fallback to original print if __log_func__ is not available
         # This shouldn't happen during normal execution
         return
      
-    log_func = builtins.__log_func__
+    log_func = builtins.__log_func__  # noqa
     
     # Case 1: Single Argument -> Pass Raw Object (Enable Trace)
     if len(args) == 1:
@@ -76,6 +76,7 @@ class StdOutRedirector:
         if text != '\n':
             log_func(text)
     def flush(self):
+        # ignore
         pass
 
 sys.stdout = StdOutRedirector(builtins)
