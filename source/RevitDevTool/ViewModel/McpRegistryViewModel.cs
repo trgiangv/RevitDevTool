@@ -35,8 +35,7 @@ public sealed partial class McpRegistryViewModel : ObservableObject, IDisposable
     [ObservableProperty] private int _totalCalled;
     [ObservableProperty] private bool _isBusy;
     [ObservableProperty] private string _busyMessage = string.Empty;
-    [ObservableProperty] private string _connectedText = "Disconnected";
-    [ObservableProperty] private string _port = "N/A";
+    [ObservableProperty] private string _pipeName = "N/A";
     [ObservableProperty] private McpToolItem? _selectedTool;
     [ObservableProperty] private bool _isExecuting;
     [ObservableProperty] private string _executionStatusText = "Idle";
@@ -78,8 +77,7 @@ public sealed partial class McpRegistryViewModel : ObservableObject, IDisposable
         }
 
         IsConnected = _bridgeState.IsConnected;
-        ConnectedText = BuildConnectedText();
-        Port = string.IsNullOrWhiteSpace(_bridgeState.Endpoint) ? "N/A" : _bridgeState.Endpoint;
+        PipeName = string.IsNullOrWhiteSpace(_bridgeState.Endpoint) ? "N/A" : _bridgeState.Endpoint;
         TotalCalled = _bridgeState.TotalToolCalls;
         RefreshExecutionState();
     }
@@ -92,10 +90,20 @@ public sealed partial class McpRegistryViewModel : ObservableObject, IDisposable
     }
 
     [RelayCommand]
-    private async Task ReloadAsync()
+    private void Reload()
     {
         using var _ = BeginBusy("Reloading MCP tools...");
-        await _toolStore.ReloadAsync().ConfigureAwait(true);
+        DispatcherHelper.RunOnMainThread(async void () =>
+        {
+            try
+            {
+                await _toolStore.ReloadAsync();
+            }
+            catch
+            {
+                // ignore
+            }
+        });
     }
 
     public async Task AddDroppedPathAsync(string path)
@@ -252,8 +260,7 @@ public sealed partial class McpRegistryViewModel : ObservableObject, IDisposable
         {
             case nameof(BridgeConnectionState.IsConnected) or nameof(BridgeConnectionState.Endpoint):
                 IsConnected = _bridgeState.IsConnected;
-                ConnectedText = BuildConnectedText();
-                Port = string.IsNullOrWhiteSpace(_bridgeState.Endpoint) ? "N/A" : _bridgeState.Endpoint;
+                PipeName = string.IsNullOrWhiteSpace(_bridgeState.Endpoint) ? "N/A" : _bridgeState.Endpoint;
                 break;
             case nameof(BridgeConnectionState.TotalToolCalls):
                 TotalCalled = _bridgeState.TotalToolCalls;
@@ -350,11 +357,6 @@ public sealed partial class McpRegistryViewModel : ObservableObject, IDisposable
     {
         OnPropertyChanged(nameof(ShowStatusPanel));
         OnPropertyChanged(nameof(StatusPanelText));
-    }
-
-    private string BuildConnectedText()
-    {
-        return _bridgeState.IsConnected ? "Connected" : "Disconnected";
     }
 
     private static string BuildToolTipText(McpRegisteredTool tool)

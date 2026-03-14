@@ -400,8 +400,7 @@ public partial class CommandViewModel : ObservableObject
 
     partial void OnSearchTextChanged(string value)
     {
-        _searchDebounceTimer.Stop();
-        _searchDebounceTimer.Start();
+        RefreshFilteredItems();
     }
 
     private void SavePathToSettings(string path, ExecutionMode mode)

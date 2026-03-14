@@ -75,33 +75,26 @@
                     BorderBrush="{DynamicResource MahApps.Brushes.Gray8}"
                     BorderThickness="1"
                     CornerRadius="4">
-                <StackPanel>
-                    <TextBlock FontSize="10"
+                <StackPanel Orientation="Vertical">
+                    <Ellipse Width="8"
+                             Height="8"
+                             HorizontalAlignment="Left">
+                        <Ellipse.Style>
+                            <Style TargetType="Ellipse">
+                                <Setter Property="Fill" Value="#FF6B6B" />
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding IsConnected}"
+                                                 Value="True">
+                                        <Setter Property="Fill" Value="#4CAF50" />
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </Ellipse.Style>
+                    </Ellipse>
+                    <TextBlock Margin="0,6,0,0"
+                               FontSize="10"
                                Style="{StaticResource InfoBlock}"
-                               Text="{Binding ConnectedText}" />
-                    <StackPanel Orientation="Horizontal">
-                        <Ellipse Width="8"
-                                 Height="8"
-                                 Margin="0,0,4,0"
-                                 VerticalAlignment="Center">
-                            <Ellipse.Style>
-                                <Style TargetType="Ellipse">
-                                    <Setter Property="Fill" Value="#FF6B6B" />
-                                    <Style.Triggers>
-                                        <DataTrigger Binding="{Binding IsConnected}"
-                                                     Value="True">
-                                            <Setter Property="Fill" Value="#4CAF50" />
-                                        </DataTrigger>
-                                    </Style.Triggers>
-                                </Style>
-                            </Ellipse.Style>
-                        </Ellipse>
-                        <TextBlock VerticalAlignment="Center"
-                                   FontSize="10"
-                                   Style="{StaticResource InfoBlock}"
-                                   Text="{Binding Port}"
-                                   ToolTip="Port for MCP Server Connection" />
-                    </StackPanel>
+                               Text="{Binding PipeName}" />
                 </StackPanel>
             </Border>
 
@@ -210,7 +203,7 @@
                                 <TextBlock behav:HighlightTextBlockBehavior.Range="{Binding NameHighlight}"
                                            FontWeight="SemiBold"
                                            Style="{StaticResource InfoBlock}"
-                                           Text="{Binding DisplayName}"
+                                           Text="{Binding Name}"
                                            TextTrimming="CharacterEllipsis" />
                                 <Border Margin="6,0,0,0"
                                         Padding="5,1"
