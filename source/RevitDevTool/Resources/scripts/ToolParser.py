@@ -251,11 +251,10 @@ def parse_directory(toolset_path: str) -> str:
     return json.dumps(catalog)
 
 
-if __name__ == "__main__":
-    import sys
-
+if "__toolset_directory__" in dir():
+    __parser_result__ = parse_directory(__toolset_directory__)  # noqa: F821
+elif __name__ == "__main__":
     if len(sys.argv) != 2:
         print(f"Usage: {sys.argv[0]} <toolset_path>", file=sys.stderr)
         sys.exit(1)
-
     print(parse_directory(sys.argv[1]))

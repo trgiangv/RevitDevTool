@@ -19,10 +19,32 @@ public static class PythonToolsetParser
             throw new ArgumentException("Python executable path is required.", nameof(pythonExecutablePath));
 
         var parserOutput = RunParserProcess(toolsetDirectory, pythonExecutablePath, parserScriptPath);
-        if (parserOutput is null)
+        return BuildCatalogFromOutput(parserOutput, toolsetDirectory);
+    }
+
+    public static McpRegistryCatalog ParseDirectoryCatalog(string toolsetDirectory, Func<string, string?> parserFunction)
+    {
+        string? parserOutput;
+        try
+        {
+            parserOutput = parserFunction(toolsetDirectory);
+        }
+        catch (Exception ex)
+        {
+            Trace.TraceError($"[MCP] In-process parser failed for '{toolsetDirectory}': {ex.Message}\n{ex.StackTrace}");
+            return McpRegistryCatalog.Empty;
+        }
+    
+        return BuildCatalogFromOutput(parserOutput, toolsetDirectory);
+    }
+
+    private static McpRegistryCatalog BuildCatalogFromOutput(string? parserOutput, string toolsetDirectory)
+    {
+        if (string.IsNullOrWhiteSpace(parserOutput))
             return McpRegistryCatalog.Empty;
 
-        var catalog = DeserializeCatalog(parserOutput, toolsetDirectory);
+        // ReSharper disable once RedundantSuppressNullableWarningExpression
+        var catalog = DeserializeCatalog(parserOutput!, toolsetDirectory);
         if (catalog is null)
             return McpRegistryCatalog.Empty;
 

@@ -13,15 +13,16 @@ public static class PythonEmbedded
     private const string ResetSourcePath = "RevitDevTool.Resources.scripts.Reset.py";
     private const string PixiTomlSourcePath = "RevitDevTool.Resources.scripts.pixi.toml";
     
-    public static string ToolParserScriptPath => TryGetCached(ToolParserSourcePath, ScripPathCache);
     public static string ParserScriptPath => TryGetCached(ParserSourcePath, ScripPathCache);
     public static string PixiTomlPath => TryGetCached(PixiTomlSourcePath, ScripPathCache);
     public static string ToolInvokeScript => TryGetCached(ToolInvokeSourcePath, ScriptCache);
     public static string SetupScript => TryGetCached(SetupSourcePath, ScriptCache);
     public static string ResetScript => TryGetCached(ResetSourcePath, ScriptCache);
+    public static string ToolParserScript => TryGetCached(ToolParserSourcePath, ScriptCache);
 
     private static readonly string[] CachePaths =
     [
+        ToolParserSourcePath,
         ToolInvokeSourcePath,
         SetupSourcePath,
         ResetSourcePath
@@ -29,7 +30,6 @@ public static class PythonEmbedded
     
     private static readonly string[] CopyPaths =
     [
-        ToolParserSourcePath,
         ParserSourcePath,
         PixiTomlSourcePath
     ];

@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using System.IO;
+using Python.Runtime;
 using RevitDevTool.Execution.Providers.Python;
 using RevitDevTool.Mcp.Interfaces;
 using RevitDevTool.McpParser.Models;
@@ -38,7 +39,7 @@ public sealed class PythonMcpToolRegistryProvider : IMcpRegistryProvider
         {
             try
             {
-                all = all.Merge(PythonToolsetParser.ParseDirectoryCatalog(dir, PythonEnvironment.PythonExe, PythonEmbedded.ToolParserScriptPath));
+                all = all.Merge(PythonToolsetParser.ParseDirectoryCatalog(dir, ParseDirectory));
             }
             catch (Exception ex)
             {
@@ -48,6 +49,20 @@ public sealed class PythonMcpToolRegistryProvider : IMcpRegistryProvider
 
         LogMissingDirectories();
         return all;
+    }
+
+    private static string? ParseDirectory(string toolsetDirectory)
+    {
+        if (!PythonInitializer.IsInitialized || PythonInitializer.GlobalScope is null)
+            return null;
+
+        using (Py.GIL())
+        {
+            using var scope = PythonInitializer.GlobalScope.NewScope();
+            scope.Set("__toolset_directory__", new PyString(toolsetDirectory));
+            scope.Exec(PythonEmbedded.ToolParserScript);
+            return scope.Get("__parser_result__").As<string>();
+        }
     }
 
     private void LogMissingDirectories()
