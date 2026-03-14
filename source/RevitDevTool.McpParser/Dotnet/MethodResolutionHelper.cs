@@ -36,9 +36,18 @@ internal static class MethodResolutionHelper
             types = ex.Types.Where(t => t is not null).Cast<Type>().ToArray();
         }
 
+        var attributeFullName = attributeType.FullName;
         return types
             .OrderBy(item => item.FullName, StringComparer.OrdinalIgnoreCase)
-            .Where(type => type.IsDefined(attributeType));
+            .Where(type => HasAttributeByName(type, attributeFullName));
+    }
+
+    private static bool HasAttributeByName(MemberInfo member, string? attributeFullName)
+    {
+        if (string.IsNullOrWhiteSpace(attributeFullName))
+            return false;
+        return member.CustomAttributes.Any(a =>
+            string.Equals(a.AttributeType.FullName, attributeFullName, StringComparison.Ordinal));
     }
 
     public static string? GetAssemblyPath(Assembly assembly)

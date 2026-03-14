@@ -1,12 +1,26 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
     <PropertyGroup>
-        <TargetFramework>net8.0</TargetFramework>
+        <IsRepackable>true</IsRepackable>
         <LangVersion>latest</LangVersion>
         <ImplicitUsings>enable</ImplicitUsings>
         <Nullable>enable</Nullable>
     </PropertyGroup>
+
     <ItemGroup>
         <PackageReference Include="ModelContextProtocol" />
     </ItemGroup>
+
+    <ItemGroup>
+        <PackageReference Include="Nice3point.Revit.Build.Tasks"/>
+        <PackageReference Include="Nice3point.Revit.Extensions" VersionOverride="$(RevitVersion).*"/>
+        <PackageReference Include="Revit_All_Main_Versions_API_x64" VersionOverride="$(RevitVersion).*" ExcludeAssets="runtime"/>
+        <PackageReference Include="ILRepack"/>
+        <PackageReference Include="JetBrains.Annotations" PrivateAssets="All" ExcludeAssets="runtime; build; native; contentfiles; analyzers; buildtransitive"/>
+    </ItemGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\..\RevitDevTool.Core\RevitDevTool.Core.csproj" />
+    </ItemGroup>
+
 </Project>

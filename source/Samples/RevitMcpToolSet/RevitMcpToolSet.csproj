@@ -1,0 +1,21 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <IsRepackable>true</IsRepackable>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <!-- Revit References -->
+        <PackageReference Include="Nice3point.Revit.Build.Tasks"/>
+        <PackageReference Include="Nice3point.Revit.Extensions" VersionOverride="$(RevitVersion).*"/>
+        <PackageReference Include="Nice3point.Revit.Toolkit" VersionOverride="$(RevitVersion).*"/>
+        <PackageReference Include="Revit_All_Main_Versions_API_x64" VersionOverride="$(RevitVersion).*" ExcludeAssets="runtime"/>
+
+        <PackageReference Include="ModelContextProtocol" />
+
+        <!-- ILRepack -->
+        <PackageReference Include="ILRepack"/>
+        <PackageReference Include="JetBrains.Annotations" PrivateAssets="All"/>
+    </ItemGroup>
+
+</Project>
