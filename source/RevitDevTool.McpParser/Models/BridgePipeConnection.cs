@@ -1,18 +1,30 @@
 using System.Text.Json;
+using System.Text.Json.Serialization;
 namespace RevitDevTool.McpParser.Models;
 
 /// <summary>
 /// Bidirectional length-prefixed JSON framing over a raw stream.
 /// Thread-safe writes via SemaphoreSlim. Single read loop dispatches to <see cref="MessageReceived"/>.
 /// Protocol: [4-byte little-endian body length][UTF-8 JSON body]
+/// MaxMessageSize prevents a malformed header from allocating unbounded memory.
 /// </summary>
 public sealed class BridgePipeConnection(Stream stream) : IDisposable
+#if NET
+    , IAsyncDisposable
+#endif
 {
     private const int MaxMessageSize = 16 * 1024 * 1024;
+
+    public static readonly JsonSerializerOptions JsonOptions = new()
+    {
+        PropertyNameCaseInsensitive = true,
+        DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
+    };
 
     private readonly Stream _stream = stream ?? throw new ArgumentNullException(nameof(stream));
     private readonly SemaphoreSlim _writeLock = new(1, 1);
     private readonly CancellationTokenSource _cts = new();
+    private bool _disposed;
 
     public event Action<BridgeMessage>? MessageReceived;
     public event Action? Disconnected;
@@ -21,14 +33,20 @@ public sealed class BridgePipeConnection(Stream stream) : IDisposable
 
     public async Task WriteAsync(BridgeMessage message, CancellationToken ct = default)
     {
-        var body = JsonSerializer.SerializeToUtf8Bytes(message);
+        if (_disposed) throw new ObjectDisposedException(nameof(BridgePipeConnection));
+        var body = JsonSerializer.SerializeToUtf8Bytes(message, JsonOptions);
         var header = BitConverter.GetBytes(body.Length);
 
         await _writeLock.WaitAsync(ct).ConfigureAwait(false);
         try
         {
+#if NET
+            await _stream.WriteAsync(header.AsMemory(0, 4), ct).ConfigureAwait(false);
+            await _stream.WriteAsync(body.AsMemory(), ct).ConfigureAwait(false);
+#else
             await _stream.WriteAsync(header, 0, 4, ct).ConfigureAwait(false);
             await _stream.WriteAsync(body, 0, body.Length, ct).ConfigureAwait(false);
+#endif
             await _stream.FlushAsync(ct).ConfigureAwait(false);
         }
         finally
@@ -40,7 +58,6 @@ public sealed class BridgePipeConnection(Stream stream) : IDisposable
     private async Task ReadLoopAsync()
     {
         var ct = _cts.Token;
-
         try
         {
             while (!ct.IsCancellationRequested)
@@ -50,9 +67,10 @@ public sealed class BridgePipeConnection(Stream stream) : IDisposable
                 MessageReceived?.Invoke(msg);
             }
         }
-        catch (Exception) when (ct.IsCancellationRequested) { }
-        catch (IOException) { }
-        catch (ObjectDisposedException) { }
+        catch (Exception ex) when (ex is IOException or ObjectDisposedException or OperationCanceledException)
+        {
+            // ignore
+        }
 
         Disconnected?.Invoke();
     }
@@ -73,9 +91,9 @@ public sealed class BridgePipeConnection(Stream stream) : IDisposable
 
         try
         {
-            return JsonSerializer.Deserialize<BridgeMessage>(body);
+            return JsonSerializer.Deserialize<BridgeMessage>(body, JsonOptions);
         }
-        catch (System.Text.Json.JsonException)
+        catch (JsonException)
         {
             return null;
         }
@@ -85,7 +103,11 @@ public sealed class BridgePipeConnection(Stream stream) : IDisposable
     {
         while (count > 0)
         {
+#if NET
+            var read = await _stream.ReadAsync(buffer.AsMemory(offset, count), ct).ConfigureAwait(false);
+#else
             var read = await _stream.ReadAsync(buffer, offset, count, ct).ConfigureAwait(false);
+#endif
             if (read == 0) return false;
             offset += read;
             count -= read;
@@ -94,11 +116,23 @@ public sealed class BridgePipeConnection(Stream stream) : IDisposable
         return true;
     }
 
-    public void Dispose()
+    private void DisposeCore()
     {
+        if (_disposed) return;
+        _disposed = true;
         _cts.Cancel();
         _cts.Dispose();
         _writeLock.Dispose();
         _stream.Dispose();
     }
+
+    public void Dispose() => DisposeCore();
+
+#if NET
+    public ValueTask DisposeAsync()
+    {
+        DisposeCore();
+        return ValueTask.CompletedTask;
+    }
+#endif
 }

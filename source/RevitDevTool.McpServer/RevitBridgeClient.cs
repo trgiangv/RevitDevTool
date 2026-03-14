@@ -41,7 +41,7 @@ public sealed class RevitBridgeClient : IAsyncDisposable
 
         var infoResponse = await client.RequestAsync(BridgeMethods.InstanceInfo, ct: ct).ConfigureAwait(false);
         if (infoResponse.Result is { } result)
-            client.Info = JsonSerializer.Deserialize<InstanceInfo>(result.GetRawText());
+            client.Info = JsonSerializer.Deserialize<InstanceInfo>(result.GetRawText(), BridgePipeConnection.JsonOptions);
 
         return client;
     }
@@ -69,32 +69,37 @@ public sealed class RevitBridgeClient : IAsyncDisposable
 
     private void OnMessageReceived(BridgeMessage msg)
     {
-        if (msg.Type == BridgeMessage.TypeResponse && msg.Id is not null)
+        if (msg is { Type: BridgeMessage.TypeResponse, Id: not null })
         {
             if (_pending.TryRemove(msg.Id, out var tcs))
                 tcs.TrySetResult(msg);
+            return;
         }
-        else if (msg.Type == BridgeMessage.TypeNotification)
-        {
-            switch (msg.Method)
-            {
-                case BridgeMethods.NotifyToolsChanged:
-                    ToolsChanged?.Invoke();
-                    break;
-                case BridgeMethods.NotifyDocumentChanged:
-                    if (msg.Params is { } p)
-                    {
-                        var info = JsonSerializer.Deserialize<InstanceInfo>(p.GetRawText());
-                        if (info is not null)
-                        {
-                            Info = info;
-                            DocumentChanged?.Invoke(info);
-                        }
-                    }
 
-                    break;
-            }
+        if (msg.Type == BridgeMessage.TypeNotification)
+            HandleNotification(msg);
+    }
+
+    private void HandleNotification(BridgeMessage msg)
+    {
+        switch (msg.Method)
+        {
+            case BridgeMethods.NotifyToolsChanged:
+                ToolsChanged?.Invoke();
+                break;
+            case BridgeMethods.NotifyDocumentChanged:
+                HandleDocumentChanged(msg.Params);
+                break;
         }
+    }
+
+    private void HandleDocumentChanged(JsonElement? @params)
+    {
+        if (@params is not { } p) return;
+        var info = JsonSerializer.Deserialize<InstanceInfo>(p.GetRawText(), BridgePipeConnection.JsonOptions);
+        if (info is null) return;
+        Info = info;
+        DocumentChanged?.Invoke(info);
     }
 
     private void CancelPendingRequests()

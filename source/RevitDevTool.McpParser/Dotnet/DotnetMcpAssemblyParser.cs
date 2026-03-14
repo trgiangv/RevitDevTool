@@ -23,6 +23,11 @@ public static class DotnetMcpAssemblyParser
     private static readonly string RequestContextGenericFullName = typeof(RequestContext<>).FullName!;
     private static readonly string NullableGenericFullName = typeof(Nullable<>).FullName!;
     private const string IconSourceMemberName = "IconSource";
+    private const string NameMemberName = "Name";
+    private const string TitleMemberName = "Title";
+    private const string DescriptionMemberName = "Description";
+    private const string UriTemplateMemberName = "UriTemplate";
+    private const string MimeTypeMemberName = "MimeType";
 
     public static McpRegistryCatalog ParseCatalogFromAssembly(string assemblyPath)
     {
@@ -98,9 +103,9 @@ public static class DotnetMcpAssemblyParser
             if (toolAttribute is null)
                 return null;
 
-            var name = ExtractNamedArg<string>(toolAttribute, "Name") ?? method.Name;
-            var title = ExtractNamedArg<string>(toolAttribute, "Title");
-            var rawDescription = ExtractNamedArg<string>(toolAttribute, "Description") ?? ReadDescription(method.CustomAttributes);
+            var name = ExtractNamedArg<string>(toolAttribute, NameMemberName) ?? method.Name;
+            var title = ExtractNamedArg<string>(toolAttribute, TitleMemberName);
+            var rawDescription = ExtractNamedArg<string>(toolAttribute, DescriptionMemberName) ?? ReadDescription(method.CustomAttributes);
             var description = !string.IsNullOrWhiteSpace(rawDescription)
                 ? rawDescription!.Trim()
                 : $"MCP tool from {type.FullName}";
@@ -113,10 +118,10 @@ public static class DotnetMcpAssemblyParser
                 Name = name,
                 Title = title ?? name,
                 Description = description,
-                InputSchema = ParseSchema(BuildInputSchema(method)),
+                InputSchema = BuildInputSchema(method),
                 Annotations = annotations,
                 Icons = ParseIcons(ExtractNamedArg<string>(toolAttribute, IconSourceMemberName)),
-                Meta = ParseMeta(BuildMetaJson(method)),
+                Meta = BuildMeta(method),
             };
 
             return new McpRegisteredTool
@@ -141,8 +146,8 @@ public static class DotnetMcpAssemblyParser
             if (promptAttribute is null)
                 return null;
 
-            var name = ExtractNamedArg<string>(promptAttribute, "Name") ?? method.Name;
-            var title = ExtractNamedArg<string>(promptAttribute, "Title");
+            var name = ExtractNamedArg<string>(promptAttribute, NameMemberName) ?? method.Name;
+            var title = ExtractNamedArg<string>(promptAttribute, TitleMemberName);
             var description = ReadDescription(method.CustomAttributes) ?? $"MCP prompt from {type.FullName}";
             var arguments = method.GetParameters()
                 .Where(p => !IsInfrastructureParameter(p))
@@ -158,7 +163,7 @@ public static class DotnetMcpAssemblyParser
                 Description = description,
                 Arguments = arguments,
                 Icons = ParseIcons(ExtractNamedArg<string>(promptAttribute, IconSourceMemberName)),
-                Meta = ParseMeta(BuildMetaJson(method)),
+                Meta = BuildMeta(method),
             };
 
             return new McpRegisteredPrompt
@@ -183,11 +188,11 @@ public static class DotnetMcpAssemblyParser
             if (resourceAttribute is null)
                 return null;
 
-            var name = ExtractNamedArg<string>(resourceAttribute, "Name") ?? method.Name;
-            var title = ExtractNamedArg<string>(resourceAttribute, "Title");
+            var name = ExtractNamedArg<string>(resourceAttribute, NameMemberName) ?? method.Name;
+            var title = ExtractNamedArg<string>(resourceAttribute, TitleMemberName);
             var description = ReadDescription(method.CustomAttributes) ?? $"MCP resource from {type.FullName}";
-            var uriTemplate = ExtractNamedArg<string>(resourceAttribute, "UriTemplate") ?? BuildFallbackUriTemplate(name, method);
-            var mimeType = ExtractNamedArg<string>(resourceAttribute, "MimeType");
+            var uriTemplate = ExtractNamedArg<string>(resourceAttribute, UriTemplateMemberName) ?? BuildFallbackUriTemplate(name, method);
+            var mimeType = ExtractNamedArg<string>(resourceAttribute, MimeTypeMemberName);
             var binding = BuildBinding(assemblyPath, type, method);
             var id = McpPrimitiveBinding.CreatePrimitiveId(name, binding.SourceAddress);
             var isTemplate = uriTemplate.Contains('{');
@@ -205,7 +210,7 @@ public static class DotnetMcpAssemblyParser
                     Description = description,
                     MimeType = mimeType,
                     Icons = ParseIcons(ExtractNamedArg<string>(resourceAttribute, IconSourceMemberName)),
-                    Meta = ParseMeta(BuildMetaJson(method)),
+                    Meta = BuildMeta(method),
                 };
             }
             else
@@ -218,7 +223,7 @@ public static class DotnetMcpAssemblyParser
                     Description = description,
                     MimeType = mimeType,
                     Icons = ParseIcons(ExtractNamedArg<string>(resourceAttribute, IconSourceMemberName)),
-                    Meta = ParseMeta(BuildMetaJson(method)),
+                    Meta = BuildMeta(method),
                 };
             }
 
@@ -239,7 +244,7 @@ public static class DotnetMcpAssemblyParser
 
     private static McpPrimitiveBinding BuildBinding(string assemblyPath, Type type, MethodInfo method)
     {
-        var assemblyName = Path.GetFileName(assemblyPath) ?? assemblyPath;
+        var assemblyName = Path.GetFileName(assemblyPath);
         var sourceAddress = $"{assemblyName}:{type.FullName}.{method.Name}";
         return McpPrimitiveBinding.Create(
             ExecutionMode.Assembly,
@@ -280,32 +285,29 @@ public static class DotnetMcpAssemblyParser
         return false;
     }
 
-    private static string BuildInputSchema(MethodInfo method)
+    private static JsonElement BuildInputSchema(MethodInfo method)
     {
         var parameters = method.GetParameters()
             .Where(p => !IsInfrastructureParameter(p))
             .ToList();
 
-        var properties = new Dictionary<string, object>(StringComparer.Ordinal);
-        var required = new List<string>();
+        var properties = new JsonObject();
+        var required = new JsonArray();
 
         foreach (var p in parameters)
         {
             var schemaType = MapParameterTypeToJsonSchema(p.ParameterType);
-            var prop = new Dictionary<string, object>(StringComparer.Ordinal)
-            {
-                ["type"] = schemaType,
-            };
+            var prop = new JsonObject { ["type"] = schemaType };
             var desc = ReadDescription(p.CustomAttributes);
             if (!string.IsNullOrWhiteSpace(desc))
-                prop["description"] = desc!;
+                prop["description"] = desc;
 
             properties[p.Name ?? "arg"] = prop;
-            if (!p.HasDefaultValue && !p.IsOptional)
+            if (p is { HasDefaultValue: false, IsOptional: false })
                 required.Add(p.Name ?? "arg");
         }
 
-        var schema = new Dictionary<string, object>(StringComparer.Ordinal)
+        var schema = new JsonObject
         {
             ["type"] = "object",
             ["properties"] = properties,
@@ -313,7 +315,7 @@ public static class DotnetMcpAssemblyParser
         if (required.Count > 0)
             schema["required"] = required;
 
-        return JsonSerializer.Serialize(schema);
+        return JsonSerializer.SerializeToElement(schema);
     }
 
     private static readonly Dictionary<string, string> JsonSchemaTypeMap = new(StringComparer.Ordinal)
@@ -339,31 +341,11 @@ public static class DotnetMcpAssemblyParser
         return JsonSchemaTypeMap.TryGetValue(fullName, out var schemaType) ? schemaType : "string";
     }
 
-    private static JsonElement ParseSchema(string schemaJson)
-    {
-        using var doc = JsonDocument.Parse(schemaJson);
-        return doc.RootElement.Clone();
-    }
-
     private static IList<Icon>? ParseIcons(string? iconSource)
     {
         if (string.IsNullOrWhiteSpace(iconSource))
             return null;
         return [new Icon { Source = iconSource!.Trim() }];
-    }
-
-    private static JsonObject? ParseMeta(string? metaJson)
-    {
-        if (string.IsNullOrWhiteSpace(metaJson))
-            return null;
-        try
-        {
-            return JsonNode.Parse(metaJson!) as JsonObject;
-        }
-        catch
-        {
-            return null;
-        }
     }
 
     private static PromptArgument BuildPromptArgument(ParameterInfo parameter)
@@ -372,7 +354,7 @@ public static class DotnetMcpAssemblyParser
         {
             Name = parameter.Name ?? string.Empty,
             Description = ReadDescription(parameter.CustomAttributes) ?? string.Empty,
-            Required = !parameter.HasDefaultValue && !parameter.IsOptional,
+            Required = parameter is { HasDefaultValue: false, IsOptional: false },
         };
     }
 
@@ -422,7 +404,7 @@ public static class DotnetMcpAssemblyParser
         };
     }
 
-    private static string? BuildMetaJson(MethodInfo method)
+    private static JsonObject? BuildMeta(MethodInfo method)
     {
         var metaAttributes = method.CustomAttributes
             .Where(attr => string.Equals(attr.AttributeType.FullName, McpMetaAttributeName, StringComparison.Ordinal))
@@ -430,7 +412,7 @@ public static class DotnetMcpAssemblyParser
         if (metaAttributes.Count == 0)
             return null;
 
-        var metadata = new Dictionary<string, JsonElement>(StringComparer.Ordinal);
+        var metadata = new JsonObject();
         foreach (var attribute in metaAttributes)
         {
             var name = attribute.ConstructorArguments.Count > 0 ? attribute.ConstructorArguments[0].Value as string : null;
@@ -438,11 +420,10 @@ public static class DotnetMcpAssemblyParser
             if (string.IsNullOrWhiteSpace(name) || string.IsNullOrWhiteSpace(jsonValue))
                 continue;
 
-            using var document = JsonDocument.Parse(jsonValue!);
-            metadata[name!] = document.RootElement.Clone();
+            metadata[name!] = JsonNode.Parse(jsonValue!);
         }
 
-        return metadata.Count == 0 ? null : JsonSerializer.Serialize(metadata);
+        return metadata.Count == 0 ? null : metadata;
     }
 
     private static string? ReadMetaJsonValue(CustomAttributeData attribute)
@@ -468,7 +449,9 @@ public static class DotnetMcpAssemblyParser
 
     private static T? ExtractNamedArg<T>(CustomAttributeData attr, string memberName) where T : class
     {
-        foreach (var namedArg in attr.NamedArguments)
+        var namedAgrs = attr.NamedArguments;
+        if (namedAgrs == null) return null;
+        foreach (var namedArg in namedAgrs)
         {
             if (namedArg.MemberName == memberName && namedArg.TypedValue.Value is T value)
                 return value;
@@ -479,7 +462,9 @@ public static class DotnetMcpAssemblyParser
 
     private static T? ExtractNamedValueArg<T>(CustomAttributeData attr, string memberName) where T : struct
     {
-        foreach (var namedArg in attr.NamedArguments)
+        var namedAgrs = attr.NamedArguments;
+        if (namedAgrs == null) return null;
+        foreach (var namedArg in namedAgrs)
         {
             if (namedArg.MemberName == memberName && namedArg.TypedValue.Value is T value)
                 return value;

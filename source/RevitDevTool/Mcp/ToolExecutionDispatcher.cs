@@ -1,7 +1,6 @@
 using System.Collections.Concurrent;
 using System.Text.Json;
 using Microsoft.Extensions.DependencyInjection;
-using ModelContextProtocol;
 using ModelContextProtocol.Protocol;
 using ModelContextProtocol.Server;
 using Python.Runtime;
@@ -18,7 +17,6 @@ namespace RevitDevTool.Mcp;
 public sealed class ToolExecutionDispatcher(
     IServiceProvider serviceProvider)
 {
-    private static readonly JsonSerializerOptions JsonOptions = McpJsonUtilities.DefaultOptions;
     private readonly ConcurrentDictionary<string, McpServerTool> _cachedTools = new(StringComparer.OrdinalIgnoreCase);
 
     public McpToolExecutionResult Dispatch(McpRegisteredTool tool, string? payloadJson)
@@ -55,7 +53,6 @@ public sealed class ToolExecutionDispatcher(
         var requestContext = RequestContextFactory.Create(requestParams, RequestMethods.ToolsCall);
         var result = serverTool.InvokeAsync(requestContext, CancellationToken.None)
             .ConfigureAwait(false).GetAwaiter().GetResult();
-
         return McpToolExecutionResult.Completed(result, $"Completed '{tool.ProtocolTool.Name}'.");
     }
 

@@ -10,6 +10,7 @@ using RevitDevTool.Core;
 using RevitDevTool.Mcp.Models;
 using RevitDevTool.McpParser.Models;
 using RevitDevTool.Utils;
+// ReSharper disable RedundantSuppressNullableWarningExpression
 
 namespace RevitDevTool.Mcp;
 
@@ -120,7 +121,7 @@ public sealed class RevitPipeServer(
                 var conn = new BridgePipeConnection(pipe);
                 _connection = conn;
 
-                conn.MessageReceived += msg => OnMessageReceived(conn, msg);
+                conn.MessageReceived += OnMessageReceived;
                 conn.Disconnected += () =>
                 {
                     _connection = null;
@@ -131,7 +132,11 @@ public sealed class RevitPipeServer(
                 conn.StartReadLoop();
 
                 await disconnectSignal.Task.ConfigureAwait(false);
+#if NET
+                await conn.DisposeAsync();
+#else
                 conn.Dispose();
+#endif
             }
             catch (OperationCanceledException) { break; }
             catch (Exception ex)
@@ -142,7 +147,7 @@ public sealed class RevitPipeServer(
         }
     }
 
-    private async void OnMessageReceived(BridgePipeConnection conn, BridgeMessage msg)
+    private async void OnMessageReceived(BridgeMessage msg)
     {
         try
         {
@@ -161,7 +166,9 @@ public sealed class RevitPipeServer(
 
             try
             {
-                await conn.WriteAsync(response).ConfigureAwait(false);
+                var conn = _connection;
+                if (conn is not null)
+                    await conn.WriteAsync(response).ConfigureAwait(false);
             }
             catch (Exception ex)
             {
@@ -192,7 +199,9 @@ public sealed class RevitPipeServer(
 
     private async Task<BridgeMessage> HandleToolsCallAsync(string id, JsonElement? @params)
     {
-        var toolName = @params?.GetProperty("name").GetString();
+        string? toolName = null;
+        if (@params?.TryGetProperty("name", out var nameElement) == true)
+            toolName = nameElement.GetString();
         if (string.IsNullOrWhiteSpace(toolName))
             return BridgeMessage.Error(id, "Tool name is required.");
 
@@ -238,7 +247,9 @@ public sealed class RevitPipeServer(
 
     private async Task<BridgeMessage> HandlePromptsGetAsync(string id, JsonElement? @params)
     {
-        var promptName = @params?.GetProperty("name").GetString();
+        string? promptName = null;
+        if (@params?.TryGetProperty("name", out var nameElement) == true)
+            promptName = nameElement.GetString();
         if (string.IsNullOrWhiteSpace(promptName))
             return BridgeMessage.Error(id, "Prompt name is required.");
 
@@ -280,7 +291,9 @@ public sealed class RevitPipeServer(
 
     private async Task<BridgeMessage> HandleResourcesReadAsync(string id, JsonElement? @params)
     {
-        var uri = @params?.GetProperty("uri").GetString();
+        string? uri = null;
+        if (@params?.TryGetProperty("uri", out var uriElement) == true)
+            uri = uriElement.GetString();
         if (string.IsNullOrWhiteSpace(uri))
             return BridgeMessage.Error(id, "Resource URI is required.");
 
@@ -357,9 +370,13 @@ public sealed class RevitPipeServer(
     private static NamedPipeServerStream CreateServerPipe(string pipeName)
     {
         var security = new PipeSecurity();
+        var currentUser = WindowsIdentity.GetCurrent();
+        if (currentUser.User is null)
+            throw new InvalidOperationException("Cannot determine current user SID for pipe ACL.");
+
         security.AddAccessRule(new PipeAccessRule(
-            new SecurityIdentifier(WellKnownSidType.BuiltinUsersSid, null),
-            PipeAccessRights.ReadWrite,
+            currentUser.User,
+            PipeAccessRights.FullControl,
             AccessControlType.Allow));
 
 #if NETFRAMEWORK

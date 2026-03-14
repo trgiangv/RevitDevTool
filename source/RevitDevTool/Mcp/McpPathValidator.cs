@@ -2,12 +2,14 @@ using System.Diagnostics;
 using System.IO;
 using RevitDevTool.McpParser.Models;
 using RevitDevTool.Settings.Config;
+// ReSharper disable RedundantSuppressNullableWarningExpression
 
 namespace RevitDevTool.Mcp;
 
 internal static class McpPathValidator
 {
-    public const string PythonToolPattern = "*mcp.py";
+    private const string PythonToolPattern = "*mcp.py";
+    private const string DotnetToolPattern = ".dll";
 
     public enum InputKind
     {
@@ -28,7 +30,7 @@ internal static class McpPathValidator
     public static bool IsValidDotnetAssemblyPath(string? path) =>
         !string.IsNullOrWhiteSpace(path)
         && File.Exists(path)
-        && string.Equals(Path.GetExtension(path), ".dll", StringComparison.OrdinalIgnoreCase);
+        && string.Equals(Path.GetExtension(path), DotnetToolPattern, StringComparison.OrdinalIgnoreCase);
 
     public static bool IsValidPythonToolsetPath(string? path) =>
         !string.IsNullOrWhiteSpace(path)

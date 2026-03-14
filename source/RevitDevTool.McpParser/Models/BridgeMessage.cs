@@ -1,4 +1,5 @@
 using System.Text.Json;
+using System.Text.Json.Serialization;
 namespace RevitDevTool.McpParser.Models;
 
 public sealed class BridgeMessage
@@ -7,12 +8,25 @@ public sealed class BridgeMessage
     public const string TypeResponse = "response";
     public const string TypeNotification = "notification";
 
+    [JsonPropertyName("type")]
     public string Type { get; init; } = string.Empty;
+
+    [JsonPropertyName("id")]
     public string? Id { get; init; }
+
+    [JsonPropertyName("method")]
     public string? Method { get; init; }
+
+    [JsonPropertyName("params")]
     public JsonElement? Params { get; init; }
+
+    [JsonPropertyName("result")]
     public JsonElement? Result { get; init; }
+
+    [JsonPropertyName("isError")]
     public bool IsError { get; init; }
+
+    [JsonPropertyName("errorMessage")]
     public string? ErrorMessage { get; init; }
 
     public static BridgeMessage Request(string id, string method, JsonElement? @params = null) =>
