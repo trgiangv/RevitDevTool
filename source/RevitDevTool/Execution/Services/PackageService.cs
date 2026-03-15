@@ -17,9 +17,7 @@ public sealed class PackageService : IPackageService
 {
     private static readonly string NuGetCacheRoot = Path.Combine(SettingsUtils.GetApplicationDataPath(), "nuget");
     private static readonly string PixiTomlPath = Path.Combine(PythonEnvironment.PixiProjectDir, "pixi.toml");
-    private const string NuGetServiceIndexUrl = "https://api.nuget.org/v3/index.json";
     private static readonly HttpClient Http = new() { Timeout = TimeSpan.FromSeconds(30) };
-    private static string? _nugetPackageBaseUrl;
 
     public async Task<IReadOnlyList<Package>> ListInstalledPackagesAsync(CancellationToken cancellationToken = default)
     {
@@ -110,57 +108,49 @@ public sealed class PackageService : IPackageService
         var result = new List<Package>();
         foreach (var packageDir in Directory.GetDirectories(NuGetCacheRoot))
         {
-            var packageId = Path.GetFileName(packageDir);
-            if (string.IsNullOrWhiteSpace(packageId))
+            var (packageId, version) = ParseNuGetFolderName(packageDir);
+            if (packageId == null)
                 continue;
 
-            var versions = Directory.GetDirectories(packageDir)
-                .Select(Path.GetFileName)
-                .Where(version => !string.IsNullOrWhiteSpace(version))
-                .OrderByDescending(version => version, StringComparer.OrdinalIgnoreCase)
-                .ToArray();
-
-            if (versions.Length == 0)
-            {
-                result.Add(new Package(Marketplace.NuGet, packageId, null));
-                continue;
-            }
-
-            foreach (var version in versions)
-            {
-                result.Add(new Package(Marketplace.NuGet, packageId, version, version));
-            }
+            result.Add(new Package(Marketplace.NuGet, packageId, version, version));
         }
 
         return result;
     }
 
+    /// <summary>
+    /// nuget.exe install always creates <c>PackageId.nuspec</c> inside the folder.
+    /// </summary>
+    private static (string? PackageId, string? Version) ParseNuGetFolderName(string folderPath)
+    {
+        var folderName = Path.GetFileName(folderPath);
+        if (string.IsNullOrWhiteSpace(folderName))
+            return (null, null);
+
+        var nuspecFiles = Directory.GetFiles(folderPath, "*.nuspec", SearchOption.TopDirectoryOnly);
+        if (nuspecFiles.Length != 1)
+            return (null, null);
+
+        var nuspecName = Path.GetFileNameWithoutExtension(nuspecFiles[0]);
+        if (folderName.StartsWith(nuspecName + ".", StringComparison.OrdinalIgnoreCase)
+            && folderName.Length > nuspecName.Length + 1)
+        {
+            return (nuspecName, folderName[(nuspecName.Length + 1)..]);
+        }
+
+        return (nuspecName, null);
+    }
+
     private static async Task RemoveNuGetPackageAsync(Package package, CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
-        var packageRoot = Path.Combine(NuGetCacheRoot, package.PackageId.ToLowerInvariant());
-        if (!Directory.Exists(packageRoot))
-            return;
 
-        if (string.IsNullOrWhiteSpace(package.Version))
-        {
-            await Task.Run(() => Directory.Delete(packageRoot, recursive: true), cancellationToken).ConfigureAwait(false);
-            return;
-        }
+        var folderName = string.IsNullOrWhiteSpace(package.Version)
+            ? package.PackageId
+            : $"{package.PackageId}.{package.Version}";
 
-        var versionDir = Path.Combine(packageRoot, package.Version!.ToLowerInvariant());
-        if (Directory.Exists(versionDir))
-        {
-            await Task.Run(() => Directory.Delete(versionDir, recursive: true), cancellationToken).ConfigureAwait(false);
-        }
-
-        if (!Directory.Exists(packageRoot))
-            return;
-
-        if (Directory.EnumerateFileSystemEntries(packageRoot).Any())
-            return;
-
-        await Task.Run(() => Directory.Delete(packageRoot, recursive: true), cancellationToken).ConfigureAwait(false);
+        var packageDir = Path.Combine(NuGetCacheRoot, folderName);
+        await TryDeleteDirectoryAsync(packageDir, cancellationToken).ConfigureAwait(false);
     }
 
     private static async Task RemoveAllNuGetAsync(CancellationToken cancellationToken)
@@ -168,11 +158,25 @@ public sealed class PackageService : IPackageService
         if (!Directory.Exists(NuGetCacheRoot))
             return;
 
-        var dirs = Directory.GetDirectories(NuGetCacheRoot);
-        foreach (var dir in dirs)
+        foreach (var dir in Directory.GetDirectories(NuGetCacheRoot))
         {
             cancellationToken.ThrowIfCancellationRequested();
-            await Task.Run(() => Directory.Delete(dir, recursive: true), cancellationToken).ConfigureAwait(false);
+            await TryDeleteDirectoryAsync(dir, cancellationToken).ConfigureAwait(false);
+        }
+    }
+
+    private static async Task TryDeleteDirectoryAsync(string path, CancellationToken cancellationToken)
+    {
+        if (!Directory.Exists(path))
+            return;
+
+        try
+        {
+            await Task.Run(() => Directory.Delete(path, recursive: true), cancellationToken).ConfigureAwait(false);
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            Trace.TraceWarning($"[PackageService] Could not delete '{path}': {ex.Message} (files may be locked by Revit)");
         }
     }
 
@@ -379,7 +383,7 @@ public sealed class PackageService : IPackageService
         return normalized;
     }
 
-    private async Task<IReadOnlyList<Package>> AttachLatestVersionInfoAsync(IReadOnlyList<Package> packages, CancellationToken cancellationToken)
+    private static async Task<IReadOnlyList<Package>> AttachLatestVersionInfoAsync(IReadOnlyList<Package> packages, CancellationToken cancellationToken)
     {
         if (packages.Count == 0)
             return packages;
@@ -413,7 +417,7 @@ public sealed class PackageService : IPackageService
             .ToArray();
     }
 
-    private async Task<string?> FetchLatestVersionAsync(Marketplace marketplace, string packageId, CancellationToken cancellationToken)
+    private static async Task<string?> FetchLatestVersionAsync(Marketplace marketplace, string packageId, CancellationToken cancellationToken)
     {
         return marketplace switch
         {
@@ -431,57 +435,16 @@ public sealed class PackageService : IPackageService
         return current!.Trim().Equals(latest!.Trim(), StringComparison.OrdinalIgnoreCase);
     }
 
-    private async Task<string?> FetchLatestNuGetVersionAsync(string packageId, CancellationToken cancellationToken)
+    private static async Task<string?> FetchLatestNuGetVersionAsync(string packageId, CancellationToken cancellationToken)
     {
         try
         {
-            var baseUrl = await GetNuGetPackageBaseUrlAsync(cancellationToken).ConfigureAwait(false);
-            if (string.IsNullOrWhiteSpace(baseUrl))
-                return null;
-
-            var url = $"{baseUrl!.TrimEnd('/')}/{packageId.ToLowerInvariant()}/index.json";
-            using var response = await Http.GetAsync(url, cancellationToken).ConfigureAwait(false);
-            if (!response.IsSuccessStatusCode)
-                return null;
-
-            var payload = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
-            using var doc = JsonDocument.Parse(payload);
-            var versions = doc.RootElement.GetProperty("versions")
-                .EnumerateArray()
-                .Select(item => item.GetString())
-                .Where(item => !string.IsNullOrWhiteSpace(item))
-                .Cast<string>()
-                .ToArray();
-            return versions.LastOrDefault(v => !v.Contains('-')) ?? versions.LastOrDefault();
+            return await NugetManager.FetchLatestVersionAsync(packageId, cancellationToken).ConfigureAwait(false);
         }
         catch
         {
             return null;
         }
-    }
-
-    private static async Task<string?> GetNuGetPackageBaseUrlAsync(CancellationToken cancellationToken)
-    {
-        if (!string.IsNullOrWhiteSpace(_nugetPackageBaseUrl))
-            return _nugetPackageBaseUrl;
-
-        using var response = await Http.GetAsync(NuGetServiceIndexUrl, cancellationToken).ConfigureAwait(false);
-        if (!response.IsSuccessStatusCode)
-            return null;
-
-        var payload = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
-        using var doc = JsonDocument.Parse(payload);
-        foreach (var resource in doc.RootElement.GetProperty("resources").EnumerateArray())
-        {
-            var type = resource.TryGetProperty("@type", out var typeEl) ? typeEl.GetString() ?? string.Empty : string.Empty;
-            if (!type.StartsWith("PackageBaseAddress", StringComparison.OrdinalIgnoreCase))
-                continue;
-
-            _nugetPackageBaseUrl = resource.GetProperty("@id").GetString();
-            return _nugetPackageBaseUrl;
-        }
-
-        return null;
     }
 
     private static async Task<string?> FetchLatestPyPiVersionAsync(string packageId, CancellationToken cancellationToken)
