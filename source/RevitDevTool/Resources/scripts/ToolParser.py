@@ -35,6 +35,9 @@ from mcp.types import (
 PrimitiveServer: TypeAlias = FastMCP | LowLevelServer[Any]
 LowLevelRequestHandler: TypeAlias = Callable[[Any], Any]
 
+_SCOPE_TOOLSET_DIRECTORY = "__toolset_directory__"
+_SCOPE_PARSER_RESULT = "__parser_result__"
+
 EntryDict: TypeAlias = dict[str, Any]
 CatalogDict: TypeAlias = dict[str, list[EntryDict]]
 
@@ -230,7 +233,8 @@ def _extract_from_file(
                 resources.extend(_extract_lowlevel_resources(server, str(py_file)))
         return {"tools": tools, "prompts": prompts, "resources": resources}
     except Exception:  # noqa: BLE001
-        traceback.print_exc()
+        sys.stderr.write(traceback.format_exc())
+        sys.stderr.flush()
         return {"tools": [], "prompts": [], "resources": []}
     finally:
         _remove_sys_path(inserted)
@@ -251,8 +255,8 @@ def parse_directory(toolset_path: str) -> str:
     return json.dumps(catalog)
 
 
-if "__toolset_directory__" in dir():
-    __parser_result__ = parse_directory(__toolset_directory__)  # noqa: F821
+if _SCOPE_TOOLSET_DIRECTORY in dir():
+    __parser_result__ = parse_directory(globals()[_SCOPE_TOOLSET_DIRECTORY])  # noqa: F821
 elif __name__ == "__main__":
     if len(sys.argv) != 2:
         print(f"Usage: {sys.argv[0]} <toolset_path>", file=sys.stderr)

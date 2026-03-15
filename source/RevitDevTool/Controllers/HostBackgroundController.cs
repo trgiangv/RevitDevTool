@@ -17,8 +17,7 @@ public sealed class HostBackgroundController(ISettingsService settingsService) :
         settingsService.LoadSettings();
         ThemeManager.Current.ApplySettingsTheme(settingsService.GeneralConfig.Theme);
         ToggleHardwareRendering(settingsService);
-        PythonInitializer.InitializeAsync().ConfigureAwait(true);
-        return Task.CompletedTask;
+        return PythonInitializer.InitializeAsync();
     }
 
     public Task StopAsync(CancellationToken cancellationToken)
@@ -28,8 +27,7 @@ public sealed class HostBackgroundController(ISettingsService settingsService) :
         NotifyListener.TraceReceived -= DevToolsCommand.TraceReceivedHandler;
         DevToolsCommand.SharedViewModel?.IsStarted = false;
         VisualizationController.Stop();
-        PythonInitializer.Shutdown();
-        return Task.CompletedTask;
+        return PythonInitializer.Shutdown();
     }
 
     private void CleanLogFolder()

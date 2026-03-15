@@ -70,11 +70,11 @@ public static class PythonInitializer
     /// Shutdown Python runtime on host/application shutdown.
     /// Do not call this per-script execution.
     /// </summary>
-    public static void Shutdown()
+    public static async Task Shutdown()
     {
         if (!PythonEngine.IsInitialized) return;
 
-        InitLock.Wait();
+        await InitLock.WaitAsync().ConfigureAwait(false);
         try
         {
             using (Py.GIL())

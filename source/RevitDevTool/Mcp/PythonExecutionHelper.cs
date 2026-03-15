@@ -8,8 +8,6 @@ internal static class PythonExecutionHelper
 {
     public static string InvokeScript(string sourcePath, Action<PyModule> configureScope)
     {
-        PythonInitializer.InitializeAsync().GetAwaiter().GetResult();
-
         if (string.IsNullOrWhiteSpace(sourcePath) || !File.Exists(sourcePath))
             throw new InvalidOperationException($"Python MCP source file was not found: {sourcePath}.");
 
@@ -22,7 +20,7 @@ internal static class PythonExecutionHelper
             PythonExecutor.PrepareExecutionScope(scope, sourcePath);
             configureScope(scope);
             scope.Exec(PythonEmbedded.ToolInvokeScript);
-            return scope.Get("__result_json__").As<string>();
+            return scope.Get(PythonScopeVars.ResultJson).As<string>();
         }
     }
 }

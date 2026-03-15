@@ -15,12 +15,8 @@ public static class PythonEnvironment
     public static IReadOnlyCollection<string> RequirePackages =>
     [
         "mcp",
-        "anyio",
         "debugpy",
-        "pywin32",
-        "pydantic",
-        "packaging",
-        "structlog"
+        "packaging"
     ];
     private const string PixiEnvDir = @".pixi\envs\default";
     public static readonly string PixiProjectDir = Path.Combine(SettingsUtils.GetApplicationDataPath(), PixiEnvDirName);

@@ -4,9 +4,11 @@ using Microsoft.Extensions.DependencyInjection;
 using ModelContextProtocol.Protocol;
 using ModelContextProtocol.Server;
 using Python.Runtime;
+using RevitDevTool.Execution.Providers.Python;
 using RevitDevTool.McpParser;
 using RevitDevTool.McpParser.Dotnet;
 using RevitDevTool.McpParser.Models;
+// ReSharper disable RedundantSuppressNullableWarningExpression
 
 namespace RevitDevTool.Mcp;
 
@@ -78,8 +80,8 @@ public sealed class ToolExecutionDispatcher(
         var binding = tool.Binding;
         var resultJson = PythonExecutionHelper.InvokeScript(binding.SourcePath, scope =>
         {
-            scope.Set("__tool_name__", new PyString(tool.ProtocolTool.Name));
-            scope.Set("__payload_json__", new PyString(normalizedPayload));
+            scope.Set(PythonScopeVars.ToolName, new PyString(tool.ProtocolTool.Name));
+            scope.Set(PythonScopeVars.PayloadJson, new PyString(normalizedPayload));
         });
         var callResult = DeserializePythonResult(resultJson);
         return McpToolExecutionResult.Completed(callResult, $"Completed '{tool.ProtocolTool.Name}'.");
@@ -101,7 +103,7 @@ public sealed class ToolExecutionDispatcher(
         };
     }
 
-    private static IList<ContentBlock> ParseContentBlocks(JsonElement array)
+    private static List<ContentBlock> ParseContentBlocks(JsonElement array)
     {
         var blocks = new List<ContentBlock>();
         foreach (var element in array.EnumerateArray())

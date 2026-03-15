@@ -49,7 +49,7 @@ public sealed class PythonExecutionStrategy(string scriptPath, string rootPath) 
                 .ConfigureAwait(false);
 
             var result = await handler
-                .RaiseAsync(_ =>
+                .RaiseAsync(() =>
                 {
                     PythonExecutor.ExecuteScript(scriptPath, scriptContent, rootPath);
                     stopwatch.Stop();
@@ -76,7 +76,7 @@ public sealed class PythonExecutionStrategy(string scriptPath, string rootPath) 
         }
     }
 
-    private static async Task<bool> ResolveDependenciesAsync(
+    public static async Task<bool> ResolveDependenciesAsync(
         string scriptPath,
         IProgress<string>? progress = null,
         CancellationToken cancellationToken = default)

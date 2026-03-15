@@ -30,6 +30,8 @@ public sealed class PythonMcpToolRegistryProvider : IMcpRegistryProvider
             return McpRegistryCatalog.Empty;
         }
 
+        PreResolveDependencies(ToolsetDirectories);
+
         var all = McpRegistryCatalog.Empty;
 
         foreach (var dir in ToolsetDirectories
@@ -51,6 +53,37 @@ public sealed class PythonMcpToolRegistryProvider : IMcpRegistryProvider
         return all;
     }
 
+    private static void PreResolveDependencies(IReadOnlyList<string> directories)
+    {
+        foreach (var dir in directories
+                     .Where(Directory.Exists)
+                     .Distinct(StringComparer.OrdinalIgnoreCase)
+                     .OrderBy(d => d, StringComparer.OrdinalIgnoreCase))
+        {
+            foreach (var entryFile in FindMcpEntryFiles(dir))
+            {
+                try
+                {
+                    Trace.TraceInformation($"[MCP] Pre-resolving dependencies for '{entryFile}'...");
+                    PythonExecutionStrategy.ResolveDependenciesAsync(entryFile).GetAwaiter().GetResult();
+                }
+                catch (Exception ex)
+                {
+                    Trace.TraceWarning($"[MCP] Dependency pre-resolve failed for '{entryFile}': {ex.Message}");
+                }
+            }
+        }
+    }
+
+    private static IEnumerable<string> FindMcpEntryFiles(string directory)
+    {
+        if (!Directory.Exists(directory))
+            return [];
+
+        return Directory.EnumerateFiles(directory, McpPathValidator.PythonToolPattern, SearchOption.AllDirectories)
+            .OrderBy(f => f, StringComparer.OrdinalIgnoreCase);
+    }
+
     private static string? ParseDirectory(string toolsetDirectory)
     {
         if (!PythonInitializer.IsInitialized || PythonInitializer.GlobalScope is null)
@@ -59,9 +92,9 @@ public sealed class PythonMcpToolRegistryProvider : IMcpRegistryProvider
         using (Py.GIL())
         {
             using var scope = PythonInitializer.GlobalScope.NewScope();
-            scope.Set("__toolset_directory__", new PyString(toolsetDirectory));
+            scope.Set(PythonScopeVars.ToolsetDirectory, new PyString(toolsetDirectory));
             scope.Exec(PythonEmbedded.ToolParserScript);
-            return scope.Get("__parser_result__").As<string>();
+            return scope.Get(PythonScopeVars.ParserResult).As<string>();
         }
     }
 

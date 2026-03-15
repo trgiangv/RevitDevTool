@@ -8,7 +8,7 @@ namespace RevitDevTool.Mcp;
 
 internal static class McpPathValidator
 {
-    private const string PythonToolPattern = "*mcp.py";
+    public const string PythonToolPattern = "*mcp.py";
     private const string DotnetToolPattern = ".dll";
 
     public enum InputKind

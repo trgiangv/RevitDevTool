@@ -16,6 +16,20 @@ JsonValue: TypeAlias = JsonScalar | dict[str, "JsonValue"] | list["JsonValue"]
 PrimitiveServer: TypeAlias = FastMCP | LowLevelServer[Any]
 InvokeScope: TypeAlias = Mapping[str, object]
 
+_SCOPE_FILE = "__file__"
+_SCOPE_ROOT = "__root__"
+_SCOPE_SOURCE_FILE = "__source_file__"
+_SCOPE_OPERATION = "__operation__"
+_SCOPE_TOOL_NAME = "__tool_name__"
+_SCOPE_PAYLOAD_JSON = "__payload_json__"
+_SCOPE_PROMPT_NAME = "__prompt_name__"
+_SCOPE_ARGUMENTS_JSON = "__arguments_json__"
+_SCOPE_RESOURCE_URI = "__resource_uri__"
+
+_OP_TOOL = "tool"
+_OP_PROMPT = "prompt"
+_OP_RESOURCE = "resource"
+
 
 def __normalize(value: object) -> JsonValue:
     if value is None or isinstance(value, (str, int, float, bool)):
@@ -225,27 +239,27 @@ def __invoke_resource(
 
 
 def __invoke_from_scope(scope: InvokeScope) -> str:
-    module_path = __read_scope_string(scope, "__file__")
-    root_path = __read_scope_string(scope, "__root__")
-    source_file = __read_scope_string(scope, "__source_file__", module_path)
-    operation = __read_scope_string(scope, "__operation__", "tool")
-    tool_name = __read_scope_string(scope, "__tool_name__")
-    payload_json = __read_scope_string(scope, "__payload_json__")
-    prompt_name = __read_scope_string(scope, "__prompt_name__")
-    arguments_json = __read_scope_string(scope, "__arguments_json__")
-    resource_uri = __read_scope_string(scope, "__resource_uri__")
+    module_path = __read_scope_string(scope, _SCOPE_FILE)
+    root_path = __read_scope_string(scope, _SCOPE_ROOT)
+    source_file = __read_scope_string(scope, _SCOPE_SOURCE_FILE, module_path)
+    operation = __read_scope_string(scope, _SCOPE_OPERATION, _OP_TOOL)
+    tool_name = __read_scope_string(scope, _SCOPE_TOOL_NAME)
+    payload_json = __read_scope_string(scope, _SCOPE_PAYLOAD_JSON)
+    prompt_name = __read_scope_string(scope, _SCOPE_PROMPT_NAME)
+    arguments_json = __read_scope_string(scope, _SCOPE_ARGUMENTS_JSON)
+    resource_uri = __read_scope_string(scope, _SCOPE_RESOURCE_URI)
 
     if not module_path:
         raise RuntimeError("Tool source file path is required.")
-    if operation == "tool":
+    if operation == _OP_TOOL:
         if not tool_name:
             raise RuntimeError("Tool name is required.")
         return __invoke_tool(module_path, root_path, source_file, tool_name, payload_json)
-    if operation == "prompt":
+    if operation == _OP_PROMPT:
         if not prompt_name:
             raise RuntimeError("Prompt name is required.")
         return __invoke_prompt(module_path, root_path, source_file, prompt_name, arguments_json)
-    if operation == "resource":
+    if operation == _OP_RESOURCE:
         if not resource_uri:
             raise RuntimeError("Resource URI is required.")
         return __invoke_resource(module_path, root_path, source_file, resource_uri)

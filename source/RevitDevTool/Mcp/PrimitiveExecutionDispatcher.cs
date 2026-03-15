@@ -5,6 +5,7 @@ using ModelContextProtocol;
 using ModelContextProtocol.Protocol;
 using ModelContextProtocol.Server;
 using Python.Runtime;
+using RevitDevTool.Execution.Providers.Python;
 using RevitDevTool.McpParser;
 using RevitDevTool.McpParser.Dotnet;
 using RevitDevTool.McpParser.Models;
@@ -123,9 +124,9 @@ public sealed class PrimitiveExecutionDispatcher(IServiceProvider serviceProvide
             prompt.Binding.SourcePath,
             scope =>
             {
-                scope.Set("__operation__", new PyString("prompt"));
-                scope.Set("__prompt_name__", new PyString(prompt.ProtocolPrompt.Name));
-                scope.Set("__arguments_json__", new PyString(SerializeJson(arguments ?? new Dictionary<string, JsonElement>())));
+                scope.Set(PythonScopeVars.Operation, new PyString(PythonScopeVars.OperationPrompt));
+                scope.Set(PythonScopeVars.PromptName, new PyString(prompt.ProtocolPrompt.Name));
+                scope.Set(PythonScopeVars.ArgumentsJson, new PyString(SerializeJson(arguments ?? new Dictionary<string, JsonElement>())));
             });
 
         return JsonSerializer.Deserialize<GetPromptResult>(resultJson, JsonOptions)
@@ -139,9 +140,9 @@ public sealed class PrimitiveExecutionDispatcher(IServiceProvider serviceProvide
             scope =>
             {
                 var name = resource.ProtocolResource?.Name ?? resource.ProtocolTemplate?.Name ?? string.Empty;
-                scope.Set("__operation__", new PyString("resource"));
-                scope.Set("__resource_name__", new PyString(name));
-                scope.Set("__resource_uri__", new PyString(uri));
+                scope.Set(PythonScopeVars.Operation, new PyString(PythonScopeVars.OperationResource));
+                scope.Set(PythonScopeVars.ResourceName, new PyString(name));
+                scope.Set(PythonScopeVars.ResourceUri, new PyString(uri));
             });
 
         return JsonSerializer.Deserialize<ReadResourceResult>(resultJson, JsonOptions)
