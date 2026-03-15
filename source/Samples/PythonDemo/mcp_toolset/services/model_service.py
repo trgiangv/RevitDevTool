@@ -2,39 +2,35 @@
 
 from __future__ import annotations
 
+from Autodesk.Revit import DB
+
+from dto.elements import (
+    DocumentationSummary,
+    ElementSummary,
+    LevelInfo,
+    LevelsResult,
+    LinkedModelInfo,
+    LinkedModelsInfo,
+    ModelHealthInfo,
+    ModelInfoResult,
+    ProjectInfo,
+    RoomInfo,
+    SpatialOrganization,
+)
 from shared.constants import DEFAULT_NOT_SET
-from shared.context import get_doc
-from shared.element_helpers import element_id_value, normalize_string
-from shared.responses import ToolError
+from shared.element_helpers import (
+    category_display_name,
+    element_id_value,
+    get_param_string,
+    get_physical_element_filter,
+    normalize_string,
+    require_doc,
+)
 
 
 class ModelService:
-    _element_categories = {
-        "Walls": "OST_Walls",
-        "Floors": "OST_Floors",
-        "Ceilings": "OST_Ceilings",
-        "Roofs": "OST_Roofs",
-        "Doors": "OST_Doors",
-        "Windows": "OST_Windows",
-        "Stairs": "OST_Stairs",
-        "Railings": "OST_Railings",
-        "Columns": "OST_Columns",
-        "Structural_Framing": "OST_StructuralFraming",
-        "Furniture": "OST_Furniture",
-        "Lighting_Fixtures": "OST_LightingFixtures",
-        "Plumbing_Fixtures": "OST_PlumbingFixtures",
-    }
-
-    def _require_doc(self):
-        doc = get_doc()
-        if doc is None:
-            raise ToolError("No active Revit document")
-        return doc
-
-    def list_levels(self) -> dict:
-        from Autodesk.Revit import DB
-
-        doc = self._require_doc()
+    def list_levels(self) -> LevelsResult:
+        doc = require_doc()
 
         levels = []
         collector = (
@@ -46,73 +42,72 @@ class ModelService:
         for level in collector:
             try:
                 levels.append(
-                    {
-                        "name": normalize_string(level.Name),
-                        "elevation": round(float(level.Elevation), 2),
-                        "element_id": element_id_value(level.Id),
-                    }
+                    LevelInfo(
+                        name=normalize_string(level.Name),
+                        elevation=round(float(level.Elevation), 2),
+                        element_id=element_id_value(level.Id),
+                    )
                 )
             except Exception:
                 continue
 
-        levels.sort(key=lambda item: item.get("elevation", 0))
-        return {"levels": levels, "count": len(levels)}
+        levels.sort(key=lambda item: item.elevation)
+        return LevelsResult(levels=levels, count=len(levels))
 
-    def _project_info(self, doc) -> dict:
-        info = {
-            "name": normalize_string(doc.Title),
-            "number": DEFAULT_NOT_SET,
-            "client": DEFAULT_NOT_SET,
-            "file_name": normalize_string(doc.Title),
-        }
+    def _project_info(self, doc: DB.Document) -> ProjectInfo:
+        info = ProjectInfo(
+            name=normalize_string(doc.Title),
+            number=DEFAULT_NOT_SET,
+            client=DEFAULT_NOT_SET,
+            file_name=normalize_string(doc.Title),
+        )
         try:
             project_info = doc.ProjectInformation
             if project_info is None:
                 return info
-            return {
-                "name": normalize_string(project_info.Name if project_info else doc.Title),
-                "number": normalize_string(project_info.Number if project_info else DEFAULT_NOT_SET),
-                "client": normalize_string(project_info.ClientName if project_info else DEFAULT_NOT_SET),
-                "file_name": normalize_string(doc.Title),
-            }
+            return ProjectInfo(
+                name=normalize_string(project_info.Name),
+                number=normalize_string(project_info.Number),
+                client=normalize_string(project_info.ClientName),
+                file_name=normalize_string(doc.Title),
+            )
         except Exception:
             return info
 
-    def _element_summary(self, doc):
-        from Autodesk.Revit import DB
+    @staticmethod
+    def _element_summary(doc: DB.Document) -> ElementSummary:
+        multi_filter = get_physical_element_filter(doc)
+        elements = (
+            DB.FilteredElementCollector(doc)
+            .WherePasses(multi_filter)
+            .WhereElementIsNotElementType()
+            .ToElements()
+        )
 
-        by_category = {}
-        total = 0
-        for display_name, enum_name in self._element_categories.items():
+        by_category: dict[str, int] = {}
+        for elem in elements:
             try:
-                category = getattr(DB.BuiltInCategory, enum_name)
-                count = (
-                    DB.FilteredElementCollector(doc)
-                    .OfCategory(category)
-                    .WhereElementIsNotElementType()
-                    .GetElementCount()
-                )
-                by_category[display_name] = count
-                total += count
+                cat_name = category_display_name(elem)
+                by_category[cat_name] = by_category.get(cat_name, 0) + 1
             except Exception:
-                by_category[display_name] = 0
-        return {"total_elements": total, "by_category": by_category}
+                continue
 
-    def _model_health(self, doc):
+        total = sum(by_category.values())
+        return ElementSummary(total_elements=total, by_category=by_category)
+
+    def _model_health(self, doc: DB.Document) -> ModelHealthInfo:
         try:
             warnings_count = len(list(doc.GetWarnings()))
         except Exception:
             warnings_count = 0
         unplaced_rooms = self._count_unplaced_rooms(doc)
-        return {
-            "total_warnings": warnings_count,
-            "critical_warnings": 0,
-            "unplaced_rooms": unplaced_rooms,
-        }
+        return ModelHealthInfo(
+            total_warnings=warnings_count,
+            critical_warnings=0,
+            unplaced_rooms=unplaced_rooms,
+        )
 
-    def _collect_rooms(self, doc):
-        from Autodesk.Revit import DB
-
+    def _collect_rooms(self, doc: DB.Document) -> list[RoomInfo]:
         rooms = []
         collector = (
             DB.FilteredElementCollector(doc)
@@ -126,10 +121,10 @@ class ModelService:
                 rooms.append(room_info)
         return rooms
 
-    def _room_info(self, doc, room):
+    def _room_info(self, doc: DB.Document, room: DB.Element) -> RoomInfo | None:
         try:
-            room_name = normalize_string(room.LookupParameter("Name").AsString() if room.LookupParameter("Name") else "Unnamed Room")
-            room_number = normalize_string(room.LookupParameter("Number").AsString() if room.LookupParameter("Number") else "")
+            room_name = get_param_string(room, "Name", default="Unnamed Room")
+            room_number = get_param_string(room, "Number")
             level_name = "Unknown Level"
             try:
                 level = doc.GetElement(room.LevelId)
@@ -154,47 +149,51 @@ class ModelService:
             }
             if is_placed and area is not None:
                 info["area"] = round(area, 2)
-            return info
+            return RoomInfo(
+                name=info["name"],
+                number=info["number"],
+                level=info["level"],
+                is_placed=info["is_placed"],
+                area=info.get("area"),
+            )
         except Exception:
             return None
 
-    def _count_unplaced_rooms(self, doc) -> int:
+    def _count_unplaced_rooms(self, doc: DB.Document) -> int:
         rooms = self._collect_rooms(doc)
-        return sum(1 for room in rooms if not room.get("is_placed"))
+        return sum(1 for room in rooms if not room.is_placed)
 
-    def _documentation_summary(self, doc):
-        from Autodesk.Revit import DB
-
+    def _documentation_summary(self, doc: DB.Document) -> DocumentationSummary:
         all_views = DB.FilteredElementCollector(doc).OfClass(DB.View).ToElements()
-        valid_views = [
-            view
-            for view in all_views
-            if hasattr(view, "IsTemplate")
-            and not view.IsTemplate
-            and view.ViewType != DB.ViewType.Internal
-            and view.ViewType != DB.ViewType.ProjectBrowser
-        ]
+        valid_views = []
+        for view in all_views:
+            try:
+                if view.IsTemplate:
+                    continue
+                if view.ViewType in (DB.ViewType.Internal, DB.ViewType.ProjectBrowser):
+                    continue
+                valid_views.append(view)
+            except Exception:
+                continue
         sheets_count = (
             DB.FilteredElementCollector(doc)
             .OfCategory(DB.BuiltInCategory.OST_Sheets)
             .WhereElementIsNotElementType()
             .GetElementCount()
         )
-        return {
-            "total_views": len(valid_views),
-            "view_breakdown": {
+        return DocumentationSummary(
+            total_views=len(valid_views),
+            view_breakdown={
                 "floor_plans": sum(1 for view in valid_views if view.ViewType == DB.ViewType.FloorPlan),
                 "elevations": sum(1 for view in valid_views if view.ViewType == DB.ViewType.Elevation),
                 "sections": sum(1 for view in valid_views if view.ViewType == DB.ViewType.Section),
                 "3d_views": sum(1 for view in valid_views if view.ViewType == DB.ViewType.ThreeD),
                 "schedules": sum(1 for view in valid_views if view.ViewType == DB.ViewType.Schedule),
             },
-            "sheets_count": sheets_count,
-        }
+            sheets_count=sheets_count,
+        )
 
-    def _linked_models(self, doc):
-        from Autodesk.Revit import DB
-
+    def _linked_models(self, doc: DB.Document) -> LinkedModelsInfo:
         models = []
         try:
             link_instances = DB.FilteredElementCollector(doc).OfClass(DB.RevitLinkInstance).ToElements()
@@ -202,30 +201,34 @@ class ModelService:
                 try:
                     link_doc = link_instance.GetLinkDocument()
                     models.append(
-                        {
-                            "name": normalize_string(link_instance.Name),
-                            "is_loaded": link_doc is not None,
-                            "is_pinned": bool(getattr(link_instance, "Pinned", False)),
-                        }
+                        LinkedModelInfo(
+                            name=normalize_string(link_instance.Name),
+                            is_loaded=link_doc is not None,
+                            is_pinned=bool(link_instance.Pinned),
+                        )
                     )
                 except Exception:
                     continue
         except Exception:
             pass
-        return {"count": len(models), "models": models}
+        return LinkedModelsInfo(count=len(models), models=models)
 
-    def get_model_info(self) -> dict:
-        doc = self._require_doc()
+    def get_model_info(self) -> ModelInfoResult:
+        doc = require_doc()
 
         levels_data = self.list_levels()
-        levels = levels_data.get("levels", [])
+        levels = levels_data.levels
         rooms = self._collect_rooms(doc)
 
-        return {
-            "project_info": self._project_info(doc),
-            "element_summary": self._element_summary(doc),
-            "model_health": self._model_health(doc),
-            "spatial_organization": {"levels": levels, "rooms": rooms, "room_count": len(rooms)},
-            "documentation": self._documentation_summary(doc),
-            "linked_models": self._linked_models(doc),
-        }
+        return ModelInfoResult(
+            project_info=self._project_info(doc),
+            element_summary=self._element_summary(doc),
+            model_health=self._model_health(doc),
+            spatial_organization=SpatialOrganization(
+                levels=levels,
+                rooms=rooms,
+                room_count=len(rooms),
+            ),
+            documentation=self._documentation_summary(doc),
+            linked_models=self._linked_models(doc),
+        )

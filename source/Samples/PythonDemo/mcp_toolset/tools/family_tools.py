@@ -1,16 +1,19 @@
 """Family and placement tools."""
+from __future__ import annotations
 
 from typing import Annotated, Any
 
-from mcp.server.fastmcp import Context, FastMCP
+from mcp.server.fastmcp import FastMCP
 from mcp.types import ToolAnnotations
 from pydantic import Field
 
+from dto.families import FamilyCategoriesResult, FamilyListResult, FamilyPlacementResult
 from services.family_service import FamilyService
-from utils import try_log
 
 
-def register_family_tools(mcp: FastMCP, family_service: FamilyService) -> None:
+def register_family_tools(mcp: FastMCP) -> None:
+    family_service = FamilyService()
+
     @mcp.tool(
         annotations=ToolAnnotations(
             title="Place Family",
@@ -28,10 +31,16 @@ def register_family_tools(mcp: FastMCP, family_service: FamilyService) -> None:
         rotation: Annotated[float, Field(description="Rotation angle in degrees")] = 0.0,
         level_name: Annotated[str | None, Field(description="Level name to place the family on; uses active level if omitted")] = None,
         properties: Annotated[dict[str, Any] | None, Field(description="Optional parameter overrides as key-value pairs")] = None,
-        ctx: Context | None = None,
-    ) -> dict[str, Any]:
-        """Place a family instance in the model."""
-        await try_log(ctx, "info", "Placing family '{}'".format(family_name))
+    ) -> FamilyPlacementResult:
+        """
+        Place a family instance in the model.
+
+        Workflow:
+        - Use list_families to discover available families and types.
+        - Use list_levels to get valid level names.
+        - Coordinates are in feet; origin depends on project coordinates.
+        - Use properties to set instance parameters at placement time.
+        """
         return family_service.place_family(
             family_name=family_name,
             type_name=type_name,
@@ -55,10 +64,15 @@ def register_family_tools(mcp: FastMCP, family_service: FamilyService) -> None:
     async def list_families(
         contains: Annotated[str | None, Field(description="Optional substring filter applied to family and type names")] = None,
         limit: Annotated[int, Field(description="Maximum number of family types to return", ge=1, le=500)] = 50,
-        ctx: Context | None = None,
-    ) -> dict[str, Any]:
-        """List available family types, optionally filtered by substring."""
-        _ = ctx
+    ) -> FamilyListResult:
+        """
+        List available family types, optionally filtered by substring.
+
+        Workflow:
+        - Call before place_family to get exact family and type names.
+        - Use contains to narrow results (e.g. 'Door', 'Single-Flush').
+        - Results include both family and type names needed for placement.
+        """
         return family_service.list_families(contains=contains, limit=limit)
 
     @mcp.tool(
@@ -70,7 +84,13 @@ def register_family_tools(mcp: FastMCP, family_service: FamilyService) -> None:
         ),
         structured_output=True,
     )
-    async def list_family_categories(ctx: Context | None = None) -> dict[str, Any]:
-        """List family categories present in the model."""
-        _ = ctx
+    async def list_family_categories() -> FamilyCategoriesResult:
+        """
+        List family categories present in the model.
+
+        Workflow:
+        - Use to understand which categories have loadable families.
+        - Call before list_families to scope or filter by category.
+        - Categories map to Revit built-in categories (e.g. Doors, Walls).
+        """
         return family_service.list_family_categories()

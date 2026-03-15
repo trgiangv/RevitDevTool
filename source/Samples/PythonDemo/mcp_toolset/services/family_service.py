@@ -2,37 +2,39 @@
 
 from __future__ import annotations
 
-from shared.context import get_doc
+from Autodesk.Revit import DB
+
+from dto.families import (
+    FamilyCategoriesResult,
+    FamilyCategoryInfo,
+    FamilyListResult,
+    FamilyPlacementResult,
+    FamilyTypeInfo,
+)
 from shared.element_helpers import (
+    category_display_name,
     element_id_value,
     find_family_symbol_safely,
     normalize_string,
+    require_doc,
 )
 from shared.responses import ToolError
 from shared.transactions import run_transaction
 
 
 class FamilyService:
-    def _require_doc(self):
-        doc = get_doc()
-        if doc is None:
-            raise ToolError("No active Revit document")
-        return doc
-
     def place_family(
         self,
         family_name: str,
-        type_name: str = None,
+        type_name: str | None = None,
         x: float = 0.0,
         y: float = 0.0,
         z: float = 0.0,
         rotation: float = 0.0,
-        level_name: str = None,
+        level_name: str | None = None,
         properties: dict | None = None,
-    ) -> dict:
-        from Autodesk.Revit import DB
-
-        doc = self._require_doc()
+    ) -> FamilyPlacementResult:
+        doc = require_doc()
 
         target_symbol = find_family_symbol_safely(doc, family_name, type_name)
         if target_symbol is None:
@@ -52,27 +54,30 @@ class FamilyService:
             return instance, properties_set, properties_failed
 
         instance, properties_set, properties_failed = run_transaction(doc, "Place Family Instance via MCP", _operation)
-        return {
-            "element_id": element_id_value(instance.Id),
-            "family_name": family_name,
-            "type_name": type_name,
-            "requested_location": {"x": point.X, "y": point.Y, "z": point.Z},
-            "actual_location": self._instance_point(instance, point),
-            "rotation_degrees": rotation,
-            "level": level_name if target_level else None,
-            "properties_set": properties_set,
-            "properties_failed": properties_failed,
-        }
+        return FamilyPlacementResult(
+            element_id=element_id_value(instance.Id),
+            family_name=family_name,
+            type_name=type_name,
+            requested_location={"x": point.X, "y": point.Y, "z": point.Z},
+            actual_location=self._instance_point(instance, point),
+            rotation_degrees=rotation,
+            level=level_name if target_level else None,
+            properties_set=properties_set,
+            properties_failed=properties_failed,
+        )
 
     @staticmethod
-    def _create_instance(doc, point, target_symbol, target_level):
-        from Autodesk.Revit import DB
+    def _create_instance(
+        doc: DB.Document, point: DB.XYZ, target_symbol: DB.FamilySymbol, target_level: DB.Level | None,
+    ) -> DB.FamilyInstance:
         if target_level is not None:
-            return doc.Create.NewFamilyInstance(point, target_symbol, target_level, DB.Structure.StructuralType.NonStructural)
+            return doc.Create.NewFamilyInstance(
+                point, target_symbol, target_level, DB.Structure.StructuralType.NonStructural
+            )
         return doc.Create.NewFamilyInstance(point, target_symbol, DB.Structure.StructuralType.NonStructural)
 
     @staticmethod
-    def _instance_point(instance, fallback_point):
+    def _instance_point(instance: DB.FamilyInstance, fallback_point: DB.XYZ) -> dict[str, float]:
         try:
             placed_point = instance.Location.Point
             return {"x": placed_point.X, "y": placed_point.Y, "z": placed_point.Z}
@@ -80,21 +85,18 @@ class FamilyService:
             return {"x": fallback_point.X, "y": fallback_point.Y, "z": fallback_point.Z}
 
     @staticmethod
-    def _apply_rotation(instance, point, rotation):
-        from Autodesk.Revit import DB
+    def _apply_rotation(instance: DB.FamilyInstance, point: DB.XYZ, rotation: float) -> None:
         if not rotation:
             return
         try:
             rotation_radians = float(rotation) * (3.14159265359 / 180.0)
             axis = DB.Line.CreateBound(point, point.Add(DB.XYZ(0, 0, 1)))
-            if hasattr(instance.Location, "Rotate"):
-                instance.Location.Rotate(axis, rotation_radians)
+            instance.Location.Rotate(axis, rotation_radians)
         except Exception:
             pass
 
     @staticmethod
-    def _set_properties(instance, properties: dict):
-        from Autodesk.Revit import DB
+    def _set_properties(instance: DB.FamilyInstance, properties: dict) -> tuple[list[str], list[str]]:
         set_ok = []
         set_fail = []
         for param_name, param_value in properties.items():
@@ -121,8 +123,7 @@ class FamilyService:
         return set_ok, set_fail
 
     @staticmethod
-    def _resolve_level(doc, level_name):
-        from Autodesk.Revit import DB
+    def _resolve_level(doc: DB.Document, level_name: str | None) -> DB.Level | None:
         if not level_name:
             return None
         levels = (
@@ -140,8 +141,7 @@ class FamilyService:
         raise ToolError("Level not found: {}".format(level_name), code="revit.level_not_found")
 
     @staticmethod
-    def _raise_family_not_found(doc, family_name, type_name):
-        from Autodesk.Revit import DB
+    def _raise_family_not_found(doc: DB.Document, family_name: str, type_name: str | None) -> None:
         available = []
         try:
             symbols = DB.FilteredElementCollector(doc).OfClass(DB.FamilySymbol).ToElements()
@@ -153,10 +153,8 @@ class FamilyService:
             msg += ". Available (first 20): {}".format(", ".join(available[:20]))
         raise ToolError(msg, code="revit.family_type_not_found")
 
-    def list_families(self, contains: str = None, limit: int = 50) -> dict:
-        from Autodesk.Revit import DB
-
-        doc = self._require_doc()
+    def list_families(self, contains: str | None = None, limit: int = 50) -> FamilyListResult:
+        doc = require_doc()
 
         needle = normalize_string(contains).lower() if contains else ""
         items = []
@@ -169,33 +167,34 @@ class FamilyService:
                 if needle and needle not in combined:
                     continue
                 items.append(
-                    {
-                        "family_name": family_name,
-                        "type_name": type_name,
-                        "category": normalize_string(symbol.Category.Name) if symbol.Category else "Unknown",
-                        "is_active": bool(symbol.IsActive),
-                    }
+                    FamilyTypeInfo(
+                        family_name=family_name,
+                        type_name=type_name,
+                        category=category_display_name(symbol),
+                        is_active=bool(symbol.IsActive),
+                    )
                 )
             except Exception:
                 continue
-        items.sort(key=lambda item: (item["family_name"], item["type_name"]))
+        items.sort(key=lambda item: (item.family_name, item.type_name))
         if limit > 0:
             items = items[:limit]
-        return {"families": items, "count": len(items), "filtered_by": contains}
+        return FamilyListResult(families=items, count=len(items), filtered_by=contains)
 
-    def list_family_categories(self) -> dict:
-        from Autodesk.Revit import DB
-
-        doc = self._require_doc()
+    def list_family_categories(self) -> FamilyCategoriesResult:
+        doc = require_doc()
 
         categories = {}
         symbols = DB.FilteredElementCollector(doc).OfClass(DB.FamilySymbol).ToElements()
         for symbol in symbols:
             try:
-                category_name = normalize_string(symbol.Category.Name) if symbol.Category else "Unknown"
+                category_name = category_display_name(symbol)
                 categories[category_name] = categories.get(category_name, 0) + 1
             except Exception:
                 continue
 
-        category_list = [{"category": name, "family_count": count} for name, count in sorted(categories.items())]
-        return {"categories": category_list, "count": len(category_list)}
+        category_list = [
+            FamilyCategoryInfo(category=name, family_count=count)
+            for name, count in sorted(categories.items())
+        ]
+        return FamilyCategoriesResult(categories=category_list, count=len(category_list))

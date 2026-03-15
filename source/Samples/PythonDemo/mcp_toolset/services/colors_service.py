@@ -4,23 +4,30 @@ from __future__ import annotations
 
 from collections import defaultdict
 
-from shared.context import get_doc
-from shared.element_helpers import normalize_string
+from Autodesk.Revit import DB
+
+from dto.colors import (
+    CategoryParametersResult,
+    ClearColorsResult,
+    ColorAssignment,
+    ColorSplashResult,
+    ColorSplashStatistics,
+    ParameterInfo,
+)
+from shared.element_helpers import (
+    find_category_by_name,
+    normalize_string,
+    param_value_as_string,
+    require_active_view,
+    require_doc,
+)
 from shared.responses import ToolError
 from shared.transactions import run_transaction
 
 
 class ColorsService:
-    def _require_doc(self):
-        doc = get_doc()
-        if doc is None:
-            raise ToolError("No active Revit document")
-        return doc
-
-    def _require_category_elements(self, doc, category_name: str):
-        from Autodesk.Revit import DB
-
-        category = self._find_category(doc, category_name)
+    def _require_category_elements(self, doc: DB.Document, category_name: str) -> tuple[DB.Category, list]:
+        category = find_category_by_name(doc, category_name)
         if category is None:
             raise ToolError("Category '{}' not found".format(category_name))
 
@@ -35,17 +42,7 @@ class ColorsService:
         return category, elements
 
     @staticmethod
-    def _find_category(doc, category_name: str):
-        target_name = normalize_string(category_name)
-        for category in doc.Settings.Categories:
-            if normalize_string(category.Name) == target_name:
-                return category
-        return None
-
-    @staticmethod
-    def _hex_to_color(hex_color: str):
-        from Autodesk.Revit import DB
-
+    def _hex_to_color(hex_color: str) -> DB.Color:
         value = (hex_color or "").strip().lstrip("#")
         if len(value) != 6:
             return DB.Color(255, 0, 0)
@@ -55,16 +52,14 @@ class ColorsService:
             return DB.Color(255, 0, 0)
 
     @staticmethod
-    def _color_to_hex(color):
+    def _color_to_hex(color: DB.Color) -> str:
         try:
             return "#{:02X}{:02X}{:02X}".format(int(color.Red), int(color.Green), int(color.Blue))
         except Exception:
             return "#FF0000"
 
     @staticmethod
-    def _generate_distinct_colors(count: int):
-        from Autodesk.Revit import DB
-
+    def _generate_distinct_colors(count: int) -> list[DB.Color]:
         base_colors = [
             (255, 0, 0),
             (0, 128, 255),
@@ -88,9 +83,7 @@ class ColorsService:
         return colors
 
     @staticmethod
-    def _generate_gradient_colors(count: int):
-        from Autodesk.Revit import DB
-
+    def _generate_gradient_colors(count: int) -> list[DB.Color]:
         if count <= 1:
             return [DB.Color(255, 0, 0)]
         colors = []
@@ -103,9 +96,7 @@ class ColorsService:
         return colors
 
     @staticmethod
-    def _solid_fill_pattern_id(doc):
-        from Autodesk.Revit import DB
-
+    def _solid_fill_pattern_id(doc: DB.Document) -> DB.ElementId | None:
         try:
             for pattern in DB.FilteredElementCollector(doc).OfClass(DB.FillPatternElement):
                 fill_pattern = pattern.GetFillPattern()
@@ -116,46 +107,22 @@ class ColorsService:
         return None
 
     @staticmethod
-    def _value_from_parameter(parameter, document, revit_db):
+    def _value_from_parameter(parameter: DB.Parameter | None, document: DB.Document) -> str:
         if parameter is None or not parameter.HasValue:
             return "None"
-
-        storage_type = parameter.StorageType
-        if storage_type == revit_db.StorageType.String:
-            return normalize_string(parameter.AsString() or "None")
-        if storage_type == revit_db.StorageType.Integer:
-            return normalize_string(parameter.AsValueString() or str(parameter.AsInteger()))
-        if storage_type == revit_db.StorageType.Double:
-            return normalize_string(parameter.AsValueString() or str(round(parameter.AsDouble(), 3)))
-        if storage_type == revit_db.StorageType.ElementId:
-            return ColorsService._element_id_display_value(parameter, document, revit_db)
-
-        return normalize_string(parameter.AsValueString() or "None")
+        return param_value_as_string(parameter, document, default="None")
 
     @staticmethod
-    def _element_id_display_value(parameter, document, revit_db):
-        element_id = parameter.AsElementId()
-        if not element_id or element_id == revit_db.ElementId.InvalidElementId:
-            return "None"
-
-        referenced = document.GetElement(element_id)
-        if referenced is None:
-            return "None"
-        return normalize_string(getattr(referenced, "Name", None) or "None")
-
-    @staticmethod
-    def _try_get_element_type(element):
+    def _try_get_element_type(element: DB.Element) -> DB.Element | None:
         try:
             return element.Document.GetElement(element.GetTypeId())
         except Exception:
             return None
 
     @staticmethod
-    def _parameter_display_value(element, parameter_name: str):
-        from Autodesk.Revit import DB
-
+    def _parameter_display_value(element: DB.Element, parameter_name: str) -> str:
         parameter = element.LookupParameter(parameter_name)
-        value = ColorsService._value_from_parameter(parameter, element.Document, DB)
+        value = ColorsService._value_from_parameter(parameter, element.Document)
         if value != "None":
             return value
 
@@ -165,10 +132,9 @@ class ColorsService:
         return ColorsService._value_from_parameter(
             element_type.LookupParameter(parameter_name),
             element.Document,
-            DB,
         )
 
-    def _collect_parameter_metadata(self, sample_element):
+    def _collect_parameter_metadata(self, sample_element: DB.Element) -> list[ParameterInfo]:
         parameters = []
         seen_names = set()
 
@@ -180,12 +146,12 @@ class ColorsService:
                         continue
                     seen_names.add(name)
                     parameters.append(
-                        {
-                            "name": name,
-                            "storage_type": str(parameter.StorageType),
-                            "has_value": bool(parameter.HasValue),
-                            "sample_value": self._parameter_display_value(sample_element, name),
-                        }
+                        ParameterInfo(
+                            name=name,
+                            storage_type=str(parameter.StorageType),
+                            has_value=bool(parameter.HasValue),
+                            sample_value=self._parameter_display_value(sample_element, name),
+                        )
                     )
                 except Exception:
                     continue
@@ -198,23 +164,23 @@ class ColorsService:
         except Exception:
             pass
 
-        parameters.sort(key=lambda item: item["name"])
+        parameters.sort(key=lambda item: item.name)
         return parameters
 
-    def list_category_parameters(self, category_name: str) -> dict:
-        doc = self._require_doc()
+    def list_category_parameters(self, category_name: str) -> CategoryParametersResult:
+        doc = require_doc()
         _, elements = self._require_category_elements(doc, category_name)
         parameters = self._collect_parameter_metadata(elements[0])
-        return {"category": normalize_string(category_name), "parameter_count": len(parameters), "parameters": parameters}
+        return CategoryParametersResult(
+            category=normalize_string(category_name),
+            parameter_count=len(parameters),
+            parameters=parameters,
+        )
 
-    def clear_colors(self, category_name: str) -> dict:
-        from Autodesk.Revit import DB
-
-        doc = self._require_doc()
+    def clear_colors(self, category_name: str) -> ClearColorsResult:
+        doc = require_doc()
         _, elements = self._require_category_elements(doc, category_name)
-        active_view = doc.ActiveView
-        if active_view is None:
-            raise ToolError("No active view found")
+        active_view = require_active_view(doc)
 
         def _operation():
             empty_override = DB.OverrideGraphicSettings()
@@ -228,19 +194,21 @@ class ColorsService:
             return cleared_count
 
         cleared_count = run_transaction(doc, "Clear Element Colors", _operation)
-        return {
-            "category": normalize_string(category_name),
-            "elements_processed": cleared_count,
-        }
+        return ClearColorsResult(
+            category=normalize_string(category_name),
+            elements_processed=cleared_count,
+        )
 
-    def color_splash(self, category_name: str, parameter_name: str, use_gradient: bool = False, custom_colors=None) -> dict:
-        from Autodesk.Revit import DB
-
-        doc = self._require_doc()
+    def color_splash(
+        self,
+        category_name: str,
+        parameter_name: str,
+        use_gradient: bool = False,
+        custom_colors: list[str] | None = None,
+    ) -> ColorSplashResult:
+        doc = require_doc()
         _, elements = self._require_category_elements(doc, category_name)
-        active_view = doc.ActiveView
-        if active_view is None:
-            raise ToolError("No active view found")
+        active_view = require_active_view(doc)
 
         grouped_elements = defaultdict(list)
         for element in elements:
@@ -257,19 +225,25 @@ class ColorsService:
             return self._apply_color_overrides(active_view, grouped_elements, unique_values, colors, solid_fill_id)
 
         color_assignments, colored_count = run_transaction(doc, "Color Elements by Parameter", _operation)
-        return {
-            "category": normalize_string(category_name),
-            "parameter": normalize_string(parameter_name),
-            "color_assignments": color_assignments,
-            "statistics": {
-                "total_elements": len(elements),
-                "elements_colored": colored_count,
-                "unique_parameter_values": len(unique_values),
-                "use_gradient": bool(use_gradient),
-            },
+        assignments_dto = {
+            k: ColorAssignment(color=v["color"], element_count=v["element_count"])
+            for k, v in color_assignments.items()
         }
+        return ColorSplashResult(
+            category=normalize_string(category_name),
+            parameter=normalize_string(parameter_name),
+            color_assignments=assignments_dto,
+            statistics=ColorSplashStatistics(
+                total_elements=len(elements),
+                elements_colored=colored_count,
+                unique_parameter_values=len(unique_values),
+                use_gradient=bool(use_gradient),
+            ),
+        )
 
-    def _select_colors(self, unique_values, use_gradient, custom_colors):
+    def _select_colors(
+        self, unique_values: list[str], use_gradient: bool, custom_colors: list[str] | None,
+    ) -> list[DB.Color]:
         if custom_colors:
             colors = [self._hex_to_color(value) for value in custom_colors]
             if len(colors) < len(unique_values):
@@ -279,8 +253,14 @@ class ColorsService:
             return self._generate_gradient_colors(len(unique_values))
         return self._generate_distinct_colors(len(unique_values))
 
-    def _apply_color_overrides(self, active_view, grouped_elements, unique_values, colors, solid_fill_id):
-        from Autodesk.Revit import DB
+    def _apply_color_overrides(
+        self,
+        active_view: DB.View,
+        grouped_elements: dict[str, list],
+        unique_values: list[str],
+        colors: list[DB.Color],
+        solid_fill_id: DB.ElementId | None,
+    ) -> tuple[dict, int]:
         assignments = {}
         colored_count = 0
         for index, value in enumerate(unique_values):

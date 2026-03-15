@@ -5,14 +5,14 @@ from __future__ import annotations
 import io
 import traceback as tb
 
+from Autodesk.Revit import DB, UI
+from RevitDevTool.Core import RevitContext
+
 from shared.responses import ToolError
-from shared.context import get_doc, get_uidoc, get_uiapp
 
 
 class CodeExecutionService:
     def execute_code(self, code: str, description: str = "Code execution") -> dict:
-        from Autodesk.Revit import DB
-
         if not code:
             raise ToolError("No code provided")
 
@@ -23,10 +23,9 @@ class CodeExecutionService:
             output.write(text + kwargs.get("end", "\n"))
 
         scope = {
-            "uiapp": get_uiapp(),
-            "uidoc": get_uidoc(),
-            "doc": get_doc(),
             "DB": DB,
+            "UI": UI,
+            "RevitContext": RevitContext,
             "print": capture_print,
         }
         try:

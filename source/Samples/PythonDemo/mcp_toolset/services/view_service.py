@@ -6,8 +6,19 @@ import base64
 import os
 import tempfile
 
-from shared.context import get_doc, get_uidoc
-from shared.element_helpers import element_id_value, normalize_string
+from System.Collections.Generic import List
+from Autodesk.Revit import DB
+from RevitDevTool.Core import RevitContext
+
+from dto.views import (
+    ViewElementInfo,
+    ViewElementsResult,
+    ViewImageResult,
+    ViewInfo,
+    ViewInfoResult,
+    ViewListResult,
+)
+from shared.element_helpers import category_display_name, element_id_value, normalize_string, require_doc
 from shared.responses import ToolError
 
 
@@ -22,14 +33,8 @@ class ViewService:
         "Schedule": "schedules",
     }
 
-    def _require_doc(self):
-        doc = get_doc()
-        if doc is None:
-            raise ToolError("No active Revit document")
-        return doc
-
-    def _require_active_view(self):
-        uidoc = get_uidoc()
+    def _require_active_view(self) -> tuple[DB.UIDocument, DB.View]:
+        uidoc = RevitContext.ActiveUiDocument
         if uidoc is None or uidoc.Document is None:
             raise ToolError("No active Revit document")
         current_view = uidoc.ActiveView
@@ -37,10 +42,8 @@ class ViewService:
             raise ToolError("No active view found")
         return uidoc, current_view
 
-    def list_views(self) -> dict:
-        from Autodesk.Revit import DB
-
-        doc = self._require_doc()
+    def list_views(self) -> ViewListResult:
+        doc = require_doc()
 
         views_by_type = {
             "floor_plans": [],
@@ -68,58 +71,70 @@ class ViewService:
         for bucket in views_by_type.values():
             bucket.sort()
         total_views = sum(len(bucket) for bucket in views_by_type.values())
-        return {"views_by_type": views_by_type, "total_exportable_views": total_views}
+        return ViewListResult(views_by_type=views_by_type, total_exportable_views=total_views)
 
     @staticmethod
-    def _skip_view(view) -> bool:
-        from Autodesk.Revit import DB
+    def _skip_view(view: DB.View) -> bool:
         try:
-            if hasattr(view, "IsTemplate") and view.IsTemplate:
+            if view.IsTemplate:
                 return True
             return view.ViewType in (DB.ViewType.Internal, DB.ViewType.ProjectBrowser)
         except Exception:
             return True
 
-    def current_view_info(self) -> dict:
+    def current_view_info(self) -> ViewInfoResult:
         _, current_view = self._require_active_view()
 
-        view_info = {
-            "view_name": normalize_string(current_view.Name),
-            "view_type": str(current_view.ViewType),
-            "view_id": element_id_value(current_view.Id),
-            "is_template": bool(getattr(current_view, "IsTemplate", False)),
-            "scale": self._safe_attr(current_view, "Scale", None),
-            "crop_box_active": self._safe_attr(current_view, "CropBoxActive", False),
-            "detail_level": self._safe_attr(current_view, "DetailLevel", "Unknown", cast=str),
-            "discipline": self._safe_attr(current_view, "Discipline", "Unknown", cast=str),
-        }
-        view_family_type = self._get_view_family_type(current_view)
-        view_info["view_family_type"] = view_family_type
-        return {"view_info": view_info}
-
-    @staticmethod
-    def _safe_attr(obj, name, default, cast=None):
+        scale = None
         try:
-            value = getattr(obj, name)
-            return cast(value) if cast else value
-        except Exception:
-            return default
-
-    @staticmethod
-    def _get_view_family_type(current_view):
-        try:
-            view_family_type = current_view.Document.GetElement(current_view.GetTypeId())
-            if view_family_type:
-                return normalize_string(view_family_type.Name)
+            scale = int(current_view.Scale)
         except Exception:
             pass
-        return "Unknown"
 
-    def current_view_elements(self, limit: int = 5000, include_levels: bool = False, include_location: bool = False) -> dict:
-        from Autodesk.Revit import DB
+        crop_box_active = False
+        try:
+            crop_box_active = bool(current_view.CropBoxActive)
+        except Exception:
+            pass
 
-        doc = self._require_doc()
-        uidoc = get_uidoc()
+        detail_level = "Unknown"
+        try:
+            detail_level = str(current_view.DetailLevel)
+        except Exception:
+            pass
+
+        discipline = "Unknown"
+        try:
+            discipline = str(current_view.Discipline)
+        except Exception:
+            pass
+
+        view_family_type = "Unknown"
+        try:
+            type_elem = current_view.Document.GetElement(current_view.GetTypeId())
+            if type_elem is not None:
+                view_family_type = normalize_string(type_elem.Name)
+        except Exception:
+            pass
+
+        view_info = ViewInfo(
+            view_name=normalize_string(current_view.Name),
+            view_type=str(current_view.ViewType),
+            view_id=element_id_value(current_view.Id),
+            is_template=bool(current_view.IsTemplate),
+            scale=scale,
+            crop_box_active=crop_box_active,
+            detail_level=detail_level,
+            discipline=discipline,
+            view_family_type=view_family_type,
+        )
+        return ViewInfoResult(view_info=view_info)
+
+    def current_view_elements(
+        self, limit: int = 5000, include_levels: bool = False, include_location: bool = False
+    ) -> ViewElementsResult:
+        doc = require_doc()
+        uidoc = RevitContext.ActiveUiDocument
         if uidoc is None:
             raise ToolError("No active Revit document")
 
@@ -137,7 +152,7 @@ class ViewService:
         for elem in elements:
             try:
                 cat = elem.Category
-                cat_name = cat.Name if cat else "Unknown"
+                cat_name = category_display_name(elem)
                 category_counts[cat_name] = category_counts.get(cat_name, 0) + 1
                 total_elements += 1
                 if len(elements_info) >= int(limit):
@@ -147,31 +162,40 @@ class ViewService:
             except Exception:
                 continue
 
-        return {
-            "current_view": normalize_string(current_view.Name),
-            "total_elements": total_elements,
-            "returned_elements": len(elements_info),
-            "truncated": total_elements > len(elements_info),
-            "category_counts": category_counts,
-            "elements": elements_info,
-        }
+        return ViewElementsResult(
+            current_view=normalize_string(current_view.Name),
+            total_elements=total_elements,
+            returned_elements=len(elements_info),
+            truncated=total_elements > len(elements_info),
+            category_counts=category_counts,
+            elements=elements_info,
+        )
 
-    def _build_element_info(self, doc, elem, cat, include_levels, include_location, level_cache,):
-        from Autodesk.Revit import DB
+    def _build_element_info(
+        self,
+        doc: DB.Document,
+        elem: DB.Element,
+        cat: DB.Category | None,
+        include_levels: bool,
+        include_location: bool,
+        level_cache: dict,
+    ) -> ViewElementInfo:
         info = {
             "element_id": element_id_value(elem.Id),
             "name": normalize_string(elem.Name),
-            "category": cat.Name if cat else "Unknown",
+            "category": category_display_name(elem),
             "category_id": element_id_value(cat.Id) if cat else None,
+            "level": None,
+            "level_id": None,
+            "location": None,
         }
         if include_levels:
             self._attach_level_info(doc, elem, info, level_cache)
         if include_location:
             self._attach_location_info(elem, info)
-        return info
+        return ViewElementInfo(**info)
 
-    def _attach_level_info(self, doc, elem, info, level_cache,):
-        from Autodesk.Revit import DB
+    def _attach_level_info(self, doc: DB.Document, elem: DB.Element, info: dict, level_cache: dict) -> None:
         try:
             level_param = elem.get_Parameter(DB.BuiltInParameter.FAMILY_LEVEL_PARAM)
             if not level_param:
@@ -192,14 +216,14 @@ class ViewService:
             info["level_id"] = None
 
     @staticmethod
-    def _attach_location_info(elem, info):
+    def _attach_location_info(elem: DB.Element, info: dict) -> None:
         try:
             location = elem.Location
-            if hasattr(location, "Point"):
+            if isinstance(location, DB.LocationPoint):
                 pt = location.Point
                 info["location"] = {"type": "point", "x": pt.X, "y": pt.Y, "z": pt.Z}
                 return
-            if hasattr(location, "Curve"):
+            if isinstance(location, DB.LocationCurve):
                 curve = location.Curve
                 start = curve.GetEndPoint(0)
                 end = curve.GetEndPoint(1)
@@ -213,11 +237,8 @@ class ViewService:
             pass
         info["location"] = {"type": "unknown"}
 
-    def get_view_image(self, view_name: str) -> dict:
-        from Autodesk.Revit import DB
-        from System.Collections.Generic import List
-
-        doc = self._require_doc()
+    def get_view_image(self, view_name: str) -> ViewImageResult:
+        doc = require_doc()
 
         normalized_name = normalize_string(view_name)
         target_view = self._find_view_by_name(doc, normalized_name)
@@ -249,19 +270,18 @@ class ViewService:
         try:
             with open(exported_file, "rb") as img_file:
                 img_data = img_file.read()
-            return {
-                "image_data": base64.b64encode(img_data).decode("utf-8"),
-                "content_type": "image/png",
-                "view_name": normalized_name,
-                "file_size_bytes": len(img_data),
-            }
+            return ViewImageResult(
+                image_data=base64.b64encode(img_data).decode("utf-8"),
+                content_type="image/png",
+                view_name=normalized_name,
+                file_size_bytes=len(img_data),
+            )
         finally:
             if os.path.exists(exported_file):
                 os.remove(exported_file)
 
     @staticmethod
-    def _find_view_by_name(doc, view_name: str,):
-        from Autodesk.Revit import DB
+    def _find_view_by_name(doc: DB.Document, view_name: str) -> DB.View | None:
         all_views = DB.FilteredElementCollector(doc).OfClass(DB.View).ToElements()
         for view in all_views:
             try:
@@ -272,7 +292,7 @@ class ViewService:
         return None
 
     @staticmethod
-    def _find_latest_png(folder: str):
+    def _find_latest_png(folder: str) -> str | None:
         files = [os.path.join(folder, name) for name in os.listdir(folder) if name.endswith(".png")]
         files.sort(key=lambda path: os.path.getctime(path), reverse=True)
         return files[0] if files else None
