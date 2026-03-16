@@ -1,7 +1,8 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
     <PropertyGroup>
-        <UseWPF>true</UseWPF>
+        <UseRevit>true</UseRevit>
+        <UseWpf>true</UseWpf>
         <UseWindowsForms>true</UseWindowsForms>
         <DeployRevitAddin>true</DeployRevitAddin>
     </PropertyGroup>
@@ -18,24 +19,19 @@
 
     <ItemGroup>
         <!--Build-->
-        <PackageReference Include="Nice3point.Revit.Build.Tasks"/>
         <PackageReference Include="ILRepack"/>
-
-        <!--Revit API-->
-        <PackageReference Include="Nice3point.Revit.Extensions" VersionOverride="$(RevitVersion).*"/>
-        <PackageReference Include="Revit_All_Main_Versions_API_x64" VersionOverride="$(RevitVersion).*" ExcludeAssets="runtime"/>
 
         <!--UI-->
         <PackageReference Include="CommunityToolkit.Mvvm"/>
         <PackageReference Include="MahApps.Metro"/>
-        <PackageReference Include="Microsoft.Web.WebView2" Condition="'$(RevitVersion)' == '2022' OR '$(RevitVersion)' == '2023'"/>
+        <PackageReference Include="Microsoft.Web.WebView2"  Condition="$(RevitVersion) &lt; 2024"/>
 
         <!--Python-->
         <PackageReference Include="pythonnet"/>
-        
+
         <!--MCP-->
         <PackageReference Include="ModelContextProtocol"/>
-        
+
         <!--FSharp-->
         <PackageReference Include="FSharp.Core"/>
         <PackageReference Include="FSharp.Compiler.Service"/>
@@ -49,7 +45,6 @@
         <PackageReference Include="Microsoft.Extensions.Hosting"/>
 
         <!-- Utils -->
-        <PackageReference Include="JetBrains.Annotations"/>
         <PackageReference Include="PolySharp" PrivateAssets="All" IncludeAssets="runtime; build; native; contentfiles; analyzers; buildtransitive"/>
         <PackageReference Include="Microsoft-WindowsAPICodePack-Shell" Condition="$(TargetFramework.StartsWith('net4'))"/>
         <PackageReference Include="System.Reflection.MetadataLoadContext"/>
@@ -70,6 +65,11 @@
     </ItemGroup>
 
     <ItemGroup>
+        <Using Include="CommunityToolkit.Mvvm.ComponentModel" />
+        <Using Include="CommunityToolkit.Mvvm.Input" />
+    </ItemGroup>
+
+    <ItemGroup>
         <EmbeddedResource Include="Resources\scripts\*.*" />
         <Resource Include="resources\icons\*.*"/>
     </ItemGroup>
@@ -80,11 +80,5 @@
         <StartProgram>C:\Program Files\Autodesk\Revit $(RevitVersion)\Revit.exe</StartProgram>
         <StartArguments>/language ENG</StartArguments>
     </PropertyGroup>
-
-    <!-- Clean Files -->
-    <Target Name="DeleteFiles" AfterTargets="Clean">
-        <RemoveDir Directories="$(AppData)\Autodesk\Revit\Addins\$(RevitVersion)\$(ProjectName)"/>
-        <Delete Files="$(AppData)\Autodesk\Revit\Addins\$(RevitVersion)\$(ProjectName).addin"/>
-    </Target>
 
 </Project>

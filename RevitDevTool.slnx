@@ -1,0 +1,131 @@
+<Solution>
+    <Configurations>
+        <BuildType Name="Debug.Autodesk.2022" />
+        <BuildType Name="Debug.Autodesk.2023" />
+        <BuildType Name="Debug.Autodesk.2024" />
+        <BuildType Name="Debug.Autodesk.2025" />
+        <BuildType Name="Debug.Autodesk.2026" />
+        <BuildType Name="Release.Autodesk.2022" />
+        <BuildType Name="Release.Autodesk.2023" />
+        <BuildType Name="Release.Autodesk.2024" />
+        <BuildType Name="Release.Autodesk.2025" />
+        <BuildType Name="Release.Autodesk.2026" />
+    </Configurations>
+    <Folder Name="/Automation/">
+        <Project Path="build/Build.csproj">
+            <BuildType Solution="Debug.Autodesk.2022|*" Project="Debug" />
+            <BuildType Solution="Debug.Autodesk.2023|*" Project="Debug" />
+            <BuildType Solution="Debug.Autodesk.2024|*" Project="Debug" />
+            <BuildType Solution="Debug.Autodesk.2025|*" Project="Debug" />
+            <BuildType Solution="Debug.Autodesk.2026|*" Project="Debug" />
+            <BuildType Solution="Release.Autodesk.2022|*" Project="Release" />
+            <BuildType Solution="Release.Autodesk.2023|*" Project="Release" />
+            <BuildType Solution="Release.Autodesk.2024|*" Project="Release" />
+            <BuildType Solution="Release.Autodesk.2025|*" Project="Release" />
+            <BuildType Solution="Release.Autodesk.2026|*" Project="Release" />
+            <Build Project="false" />
+        </Project>
+        <Project Path="install/Installer.csproj">
+            <BuildType Solution="Debug.Autodesk.2022|*" Project="Debug" />
+            <BuildType Solution="Debug.Autodesk.2023|*" Project="Debug" />
+            <BuildType Solution="Debug.Autodesk.2024|*" Project="Debug" />
+            <BuildType Solution="Debug.Autodesk.2025|*" Project="Debug" />
+            <BuildType Solution="Debug.Autodesk.2026|*" Project="Debug" />
+            <BuildType Solution="Release.Autodesk.2022|*" Project="Release" />
+            <BuildType Solution="Release.Autodesk.2023|*" Project="Release" />
+            <BuildType Solution="Release.Autodesk.2024|*" Project="Release" />
+            <BuildType Solution="Release.Autodesk.2025|*" Project="Release" />
+            <BuildType Solution="Release.Autodesk.2026|*" Project="Release" />
+            <Build Project="false" />
+        </Project>
+    </Folder>
+    <Folder Name="/Samples/">
+        <Project Path="source/Samples/CSharpDemo/CSharpDemo.csproj" />
+        <Project Path="source/Samples/FSharpDemo/FSharpDemo.fsproj" />
+        <Project Path="source/Samples/McpToolsetDemo/McpToolsetDemo.csproj" />
+        <Project Path="source/Samples/RevitMcpToolSet/RevitMcpToolSet.csproj" />
+    </Folder>
+    <Folder Name="/Solution Items/">
+        <File Path=".editorconfig" />
+        <File Path=".gitignore" />
+        <File Path="build/appsettings.json" />
+        <File Path="Changelog.md" />
+        <File Path="Directory.Build.props" />
+        <File Path="Directory.Build.targets" />
+        <File Path="Directory.Packages.props" />
+        <File Path="Readme.md" />
+    </Folder>
+    <Folder Name="/Solution Items/props/">
+        <File Path="props/AutoCad.props" />
+        <File Path="props/Civil3d.props" />
+        <File Path="props/Common.props" />
+        <File Path="props/Navisworks.props" />
+        <File Path="props/Revit.props" />
+        <File Path="props/Revit.targets" />
+    </Folder>
+    <Folder Name="/Supports/">
+        <Project Path="source/Supports/PythonNetStubGenerator/PythonNetStubGenerator.csproj">
+            <BuildType Solution="Debug.Autodesk.2022|*" Project="Debug" />
+            <BuildType Solution="Debug.Autodesk.2023|*" Project="Debug" />
+            <BuildType Solution="Debug.Autodesk.2024|*" Project="Debug" />
+            <BuildType Solution="Debug.Autodesk.2025|*" Project="Debug" />
+            <BuildType Solution="Debug.Autodesk.2026|*" Project="Debug" />
+            <BuildType Solution="Release.Autodesk.2022|*" Project="Release" />
+            <BuildType Solution="Release.Autodesk.2023|*" Project="Release" />
+            <BuildType Solution="Release.Autodesk.2024|*" Project="Release" />
+            <BuildType Solution="Release.Autodesk.2025|*" Project="Release" />
+            <BuildType Solution="Release.Autodesk.2026|*" Project="Release" />
+        </Project>
+        <Project Path="source/Supports/Serilog.Sinks.RichTextBox.WinForms.Colored/Serilog.Sinks.RichTextBox.WinForms.Colored.csproj">
+            <BuildType Solution="Debug.Autodesk.2022|*" Project="Debug" />
+            <BuildType Solution="Debug.Autodesk.2023|*" Project="Debug" />
+            <BuildType Solution="Debug.Autodesk.2024|*" Project="Debug" />
+            <BuildType Solution="Debug.Autodesk.2025|*" Project="Debug" />
+            <BuildType Solution="Debug.Autodesk.2026|*" Project="Debug" />
+            <BuildType Solution="Release.Autodesk.2022|*" Project="Release" />
+            <BuildType Solution="Release.Autodesk.2023|*" Project="Release" />
+            <BuildType Solution="Release.Autodesk.2024|*" Project="Release" />
+            <BuildType Solution="Release.Autodesk.2025|*" Project="Release" />
+            <BuildType Solution="Release.Autodesk.2026|*" Project="Release" />
+        </Project>
+    </Folder>
+    <Project Path="source/RevitDevTool.Core/RevitDevTool.Core.csproj" />
+    <Project Path="source/RevitDevTool/RevitDevTool.csproj" />
+    <Project Path="source/RevitDevTool.McpParser/RevitDevTool.McpParser.csproj">
+        <BuildType Solution="Debug.Autodesk.2022|*" Project="Debug" />
+        <BuildType Solution="Debug.Autodesk.2023|*" Project="Debug" />
+        <BuildType Solution="Debug.Autodesk.2024|*" Project="Debug" />
+        <BuildType Solution="Debug.Autodesk.2025|*" Project="Debug" />
+        <BuildType Solution="Debug.Autodesk.2026|*" Project="Debug" />
+        <BuildType Solution="Release.Autodesk.2022|*" Project="Release" />
+        <BuildType Solution="Release.Autodesk.2023|*" Project="Release" />
+        <BuildType Solution="Release.Autodesk.2024|*" Project="Release" />
+        <BuildType Solution="Release.Autodesk.2025|*" Project="Release" />
+        <BuildType Solution="Release.Autodesk.2026|*" Project="Release" />
+    </Project>
+    <Project Path="source/RevitDevTool.McpServer/RevitDevTool.McpServer.csproj">
+        <BuildType Solution="Debug.Autodesk.2022|*" Project="Debug" />
+        <BuildType Solution="Debug.Autodesk.2023|*" Project="Debug" />
+        <BuildType Solution="Debug.Autodesk.2024|*" Project="Debug" />
+        <BuildType Solution="Debug.Autodesk.2025|*" Project="Debug" />
+        <BuildType Solution="Debug.Autodesk.2026|*" Project="Debug" />
+        <BuildType Solution="Release.Autodesk.2022|*" Project="Release" />
+        <BuildType Solution="Release.Autodesk.2023|*" Project="Release" />
+        <BuildType Solution="Release.Autodesk.2024|*" Project="Release" />
+        <BuildType Solution="Release.Autodesk.2025|*" Project="Release" />
+        <BuildType Solution="Release.Autodesk.2026|*" Project="Release" />
+    </Project>
+    <Project Path="source/RevitDevTool.Server.Tests/RevitDevTool.Server.Tests.csproj">
+        <BuildType Solution="Debug.Autodesk.2022|*" Project="Debug" />
+        <BuildType Solution="Debug.Autodesk.2023|*" Project="Debug" />
+        <BuildType Solution="Debug.Autodesk.2024|*" Project="Debug" />
+        <BuildType Solution="Debug.Autodesk.2025|*" Project="Debug" />
+        <BuildType Solution="Debug.Autodesk.2026|*" Project="Debug" />
+        <BuildType Solution="Release.Autodesk.2022|*" Project="Release" />
+        <BuildType Solution="Release.Autodesk.2023|*" Project="Release" />
+        <BuildType Solution="Release.Autodesk.2024|*" Project="Release" />
+        <BuildType Solution="Release.Autodesk.2025|*" Project="Release" />
+        <BuildType Solution="Release.Autodesk.2026|*" Project="Release" />
+        <Build Project="false" />
+    </Project>
+</Solution>

@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+
+    <Import Project="Common.props" />
+
+    <!-- Revit API -->
+    <ItemGroup>
+        <PackageReference Include="Nice3point.Revit.Extensions" VersionOverride="$(RevitVersion).*" />
+        <PackageReference Include="Revit_All_Main_Versions_API_x64" VersionOverride="$(RevitVersion).*" ExcludeAssets="runtime" />
+    </ItemGroup>
+
+    <!-- Global Usings (C# only) -->
+    <ItemGroup Condition="'$(MSBuildProjectExtension)' != '.fsproj'">
+        <Using Include="Autodesk.Revit.DB" />
+        <Using Include="Autodesk.Revit.UI" />
+        <Using Include="JetBrains.Annotations" />
+        <Using Include="System" />
+    </ItemGroup>
+
+</Project>

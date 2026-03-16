@@ -1,0 +1,195 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+
+
+    <!-- ============================================== -->
+    <!-- 1. Debug / Release Detection                   -->
+    <!-- ============================================== -->
+
+    <PropertyGroup Condition="'$(Configuration)' != 'Debug' AND $(Configuration.Contains('Debug'))">
+        <DebugSymbols>true</DebugSymbols>
+        <DefineConstants>$(DefineConstants);DEBUG</DefineConstants>
+    </PropertyGroup>
+
+    <PropertyGroup
+            Condition="'$(Configuration)' != 'Release' AND $(Configuration.Contains('Release'))">
+        <Optimize>true</Optimize>
+        <DebugType>portable</DebugType>
+        <DefineConstants>$(DefineConstants);RELEASE</DefineConstants>
+    </PropertyGroup>
+
+    <!-- ============================================== -->
+    <!-- 2. ILRepack                                    -->
+    <!-- ============================================== -->
+
+    <Target Name="RepackAddinFiles"
+            AfterTargets="Build"
+            BeforeTargets="PublishRevitAddinFiles"
+            Condition="'$(IsRepackable)' == 'true'">
+
+        <ItemGroup>
+            <ILRepackVersion Include="@(PackageVersion)"
+                             Condition="'%(PackageVersion.Identity)' == 'ILRepack'"/>
+        </ItemGroup>
+
+        <ItemGroup Condition="'@(ILRepackVersion->Count())' == '0'">
+            <ILRepackVersion Include="@(PackageReference)"
+                             Condition="'%(PackageReference.Identity)' == 'ILRepack'"/>
+        </ItemGroup>
+
+        <Error Condition="'@(ILRepackVersion->Count())' == '0'"
+               Text="ILRepack is required but not installed. The IsRepackable property is set to true. Add a PackageReference to ILRepack, or unset IsRepackable."/>
+
+        <ItemGroup>
+            <ILRepackInputNamesExcludes Include="$(RepackBinariesExcludes.Split(';'))"/>
+            <ILRepackInputAssembliesExcludes
+                    Include="$(OutputPath)%(ILRepackInputNamesExcludes.Identity)"/>
+        </ItemGroup>
+
+        <ItemGroup>
+            <ILRepackInputAssemblies Include="$(OutputPath)$(AssemblyName).dll"/>
+            <ILRepackInputAssemblies Include="$(OutputPath)*.dll"
+                                     Exclude="@(ILRepackInputAssembliesExcludes)"/>
+        </ItemGroup>
+
+        <PropertyGroup>
+            <ILRepackOutputName>$(AssemblyName)</ILRepackOutputName>
+            <ILRepackOutput>/out:&quot;$(OutputPath)$(ILRepackOutputName).dll&quot;</ILRepackOutput>
+            <ILRepackInput>@(ILRepackInputAssemblies -> '&quot;%(FullPath)&quot;', ' ')</ILRepackInput>
+            <ILRepackPath>
+                &quot;$(NuGetPackageRoot)\ilrepack\%(ILRepackVersion.Version)\tools\ILRepack.exe&quot;
+            </ILRepackPath>
+            <ILRepackLib>@(ReferencePath->'%(RelativeDir)'->Distinct()->'/lib:&quot;%(identity)
+                &quot;', ' ')
+            </ILRepackLib>
+        </PropertyGroup>
+
+        <Message Text="Repacking $(MSBuildProjectDirectory)\$(OutputPath)$(AssemblyName).dll"
+                 Importance="high"/>
+
+        <Exec
+                Command="$(ILRepackPath) /union /illink /parallel $(ILRepackOutput) $(ILRepackLib) $(ILRepackInput)"
+                Condition="$(Configuration.Contains('Debug'))"/>
+
+        <Exec
+                Command="$(ILRepackPath) /union /illink /parallel /noRepackRes /ndebug $(ILRepackOutput) $(ILRepackLib) $(ILRepackInput)"
+                StandardOutputImportance="Low"
+                Condition="$(Configuration.Contains('Release'))"/>
+
+        <ItemGroup>
+            <RepackedFiles
+                    Include="@(ILRepackInputAssemblies -> '%(RootDir)%(Directory)%(Filename).dll')"
+                    Condition="%(Filename) != $(ILRepackOutputName)"/>
+            <RepackedFiles
+                    Include="@(ILRepackInputAssemblies -> '%(RootDir)%(Directory)%(Filename).pdb')"
+                    Condition="%(Filename) != $(ILRepackOutputName)"/>
+        </ItemGroup>
+
+        <Delete Files="@(RepackedFiles)"/>
+    </Target>
+
+    <!-- ============================================== -->
+    <!-- 3. Deploy Addin                      -->
+    <!-- ============================================== -->
+
+    <PropertyGroup>
+        <DeployRevitAddin Condition="'$(DeployRevitAddin)' == ''">false</DeployRevitAddin>
+        <PublishRevitAddin Condition="'$(DeployRevitAddin)' == 'true'">true</PublishRevitAddin>
+        <PublishRevitAddin Condition="'$(PublishRevitAddin)' == ''">false</PublishRevitAddin>
+    </PropertyGroup>
+
+    <Target Name="PublishRevitAddinFiles"
+            AfterTargets="CoreBuild"
+            Condition="$(PublishRevitAddin) == 'true' AND $(RevitVersion) != ''">
+
+        <ItemGroup>
+            <RootItem Include="$(ProjectDir)*.addin"/>
+            <AddinItem Include="$(TargetDir)**\*" Exclude="**\$(PublishDirName)\**\*"/>
+            <_ResolvedFileToPublishAlways Include="@(Content)"
+                                          PublishDirectory="%(Content.PublishDirectory)"
+                                          Condition="'%(Content.CopyToPublishDirectory)' == 'Always'"/>
+            <_ResolvedFileToPublishPreserveNewest Include="@(Content)"
+                                                  PublishDirectory="%(Content.PublishDirectory)"
+                                                  Condition="'%(Content.CopyToPublishDirectory)' == 'PreserveNewest'"/>
+        </ItemGroup>
+
+        <PropertyGroup>
+            <RootDir>$(PublishDir)</RootDir>
+            <AddinDir>$(RootDir)$(AssemblyName)\</AddinDir>
+        </PropertyGroup>
+
+        <Copy SourceFiles="@(RootItem)"
+              DestinationFolder="$(RootDir)"/>
+        <Copy SourceFiles="@(AddinItem)"
+              DestinationFolder="$(AddinDir)\%(RecursiveDir)"/>
+        <Copy SourceFiles="@(_ResolvedFileToPublishAlways)"
+              SkipUnchangedFiles="false"
+              DestinationFolder="$(AddinDir)\%(_ResolvedFileToPublishAlways.PublishDirectory)\%(RecursiveDir)"/>
+        <Copy SourceFiles="@(_ResolvedFileToPublishPreserveNewest)"
+              SkipUnchangedFiles="true"
+              DestinationFolder="$(AddinDir)\%(_ResolvedFileToPublishPreserveNewest.PublishDirectory)\%(RecursiveDir)"/>
+
+        <Message Text="$(AssemblyName) -> $(PublishDir)" Importance="high"/>
+    </Target>
+
+    <Target Name="DeployRevitAddinFiles"
+            AfterTargets="PublishRevitAddinFiles"
+            Condition="$(DeployRevitAddin)">
+
+        <ItemGroup>
+            <AddinFiles Include="$(PublishDir)**\*"/>
+        </ItemGroup>
+
+        <Copy SourceFiles="@(AddinFiles)"
+              DestinationFolder="$(AppData)\Autodesk\Revit\Addins\$(RevitVersion)\%(RecursiveDir)"/>
+
+        <Message Text="$(AssemblyName) -> $(AppData)\Autodesk\Revit\Addins\$(RevitVersion)\"
+                 Importance="high"/>
+    </Target>
+
+    <Target Name="CleanRevitAddinFolder"
+            AfterTargets="Clean"
+            Condition="$(DeployRevitAddin)">
+        <RemoveDir Directories="$(AppData)\Autodesk\Revit\Addins\$(RevitVersion)\$(AssemblyName)"/>
+        <Delete Files="$(AppData)\Autodesk\Revit\Addins\$(RevitVersion)\$(AssemblyName).addin"/>
+    </Target>
+
+    <Target Name="CleanPublishFolder"
+            AfterTargets="Clean"
+            Condition="$(PublishRevitAddin) == 'true'">
+        <RemoveDir Directories="$(PublishDir)"/>
+    </Target>
+
+    <!-- ============================================== -->
+    <!-- 4. Define Constants                            -->
+    <!-- ============================================== -->
+
+    <Target Name="GenerateRevitCompatibleDefineConstants"
+            BeforeTargets="CoreCompile"
+            Condition="'$(RevitVersion)' != '' AND '$(DisableImplicitRevitDefines)' != 'true'">
+
+        <PropertyGroup>
+            <DefineConstants>$(DefineConstants);REVIT$(RevitVersion)</DefineConstants>
+        </PropertyGroup>
+
+        <PropertyGroup Condition="$(RevitVersion) &gt;= 2022">
+            <DefineConstants>$(DefineConstants);REVIT2022_OR_GREATER</DefineConstants>
+        </PropertyGroup>
+        <PropertyGroup Condition="$(RevitVersion) &gt;= 2023">
+            <DefineConstants>$(DefineConstants);REVIT2023_OR_GREATER</DefineConstants>
+        </PropertyGroup>
+        <PropertyGroup Condition="$(RevitVersion) &gt;= 2024">
+            <DefineConstants>$(DefineConstants);REVIT2024_OR_GREATER</DefineConstants>
+        </PropertyGroup>
+        <PropertyGroup Condition="$(RevitVersion) &gt;= 2025">
+            <DefineConstants>$(DefineConstants);REVIT2025_OR_GREATER</DefineConstants>
+        </PropertyGroup>
+        <PropertyGroup Condition="$(RevitVersion) &gt;= 2026">
+            <DefineConstants>$(DefineConstants);REVIT2026_OR_GREATER</DefineConstants>
+        </PropertyGroup>
+        <PropertyGroup Condition="$(RevitVersion) &gt;= 2027">
+            <DefineConstants>$(DefineConstants);REVIT2027_OR_GREATER</DefineConstants>
+        </PropertyGroup>
+    </Target>
+
+</Project>

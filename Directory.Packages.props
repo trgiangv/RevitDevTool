@@ -5,7 +5,7 @@
     </PropertyGroup>
     <ItemGroup>
         <!--Ioc-->
-        <PackageVersion Include="Microsoft.Extensions.Hosting" Version="10.0.3"/>
+        <PackageVersion Include="Microsoft.Extensions.Hosting" Version="10.0.5"/>
         <!--Python-->
         <PackageVersion Include="pythonnet" Version="3.0.5"/>
         <!--MCP-->
@@ -18,14 +18,12 @@
         <PackageVersion Include="Serilog.Enrichers.Autodesk.Revit" Version="2.0.1"/>
         <PackageVersion Include="Serilog.Sinks.File" Version="7.0.1-dev-02315"/>
         <!--Utilities-->
-        <PackageVersion Include="System.Text.Json" Version="10.0.3"/>
-        <PackageVersion Include="Nice3point.Revit.Build.Tasks" Version="3.0.1"/>
+        <PackageVersion Include="System.Diagnostics.DiagnosticSource" Version="10.0.5"/>
+        <PackageVersion Include="System.Reflection.MetadataLoadContext" Version="10.0.5"/>
         <PackageVersion Include="JetBrains.Annotations" Version="2025.2.4"/>
         <PackageVersion Include="PolySharp" Version="1.15.0"/>
         <PackageVersion Include="Microsoft-WindowsAPICodePack-Shell" Version="1.1.5"/>
-        <PackageVersion Include="System.Reflection.MetadataLoadContext" Version="10.0.3"/>
         <PackageVersion Include="System.Net.Http" Version="4.3.4"/>
-        <PackageVersion Include="System.Diagnostics.DiagnosticSource" Version="10.0.3"/>
         <!--Console-->
         <PackageVersion Include="CliWrap" Version="3.10.0"/>
         <!--UI-->
@@ -33,11 +31,17 @@
         <PackageVersion Include="CommunityToolkit.Mvvm" Version="8.4.0"/>
         <PackageVersion Include="Microsoft.Web.WebView2" Version="1.0.3800.47"/>
         <!--Build Tools-->
-        <PackageVersion Include="ILRepack" Version="2.0.41"/>
-        <PackageVersion Include="Nuke.Common" Version="9.0.4"/>
+        <PackageVersion Include="ILRepack" Version="2.0.44"/>
         <PackageVersion Include="Autodesk.PackageBuilder" Version="2.0.2"/>
-        <PackageVersion Include="WixSharp.bin" Version="1.26.0"/>
-        <PackageVersion Include="WixSharp.wix.bin" Version="3.14.1"/>
+        <PackageVersion Include="WixSharp.Core" Version="2.12.1"/>
+        <PackageVersion Include="WixSharp.Msi.Core" Version="2.12.1"/>
+        <PackageVersion Include="Sourcy.DotNet" Version="1.1.1"/>
+        <PackageVersion Include="Shouldly" Version="4.3.0"/>
+        <PackageVersion Include="ModularPipelines" Version="3.1.90"/>
+        <PackageVersion Include="ModularPipelines.Git" Version="3.1.90"/>
+        <PackageVersion Include="ModularPipelines.DotNet" Version="3.1.90"/>
+        <PackageVersion Include="ModularPipelines.GitHub" Version="3.1.90"/>
+        <PackageVersion Include="Microsoft.VisualStudio.SolutionPersistence" Version="1.0.52"/>
         <!--File IO-->
         <PackageVersion Include="OpenMcdf" Version="3.1.0"/>
         <!--Tests-->

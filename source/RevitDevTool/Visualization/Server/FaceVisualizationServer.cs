@@ -5,6 +5,7 @@ using RevitDevTool.Visualization.Contracts;
 using RevitDevTool.Visualization.Helpers;
 using RevitDevTool.Visualization.Render;
 using System.Diagnostics;
+using Nice3point.Revit.Extensions;
 using RevitDevTool.Core;
 using Color = Autodesk.Revit.DB.Color;
 

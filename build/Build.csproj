@@ -1,26 +1,27 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
     <PropertyGroup>
+        <Nullable>enable</Nullable>
         <OutputType>Exe</OutputType>
-        <Nullable>disable</Nullable>
-        <NoWarn>CS0649;CS0169</NoWarn>
         <LangVersion>latest</LangVersion>
         <ImplicitUsings>true</ImplicitUsings>
-        <TargetFramework>net9.0</TargetFramework>
-        <NukeRootDirectory>..</NukeRootDirectory>
-        <NukeScriptDirectory>..</NukeScriptDirectory>
-        <NukeTelemetryVersion>1</NukeTelemetryVersion>
+        <TargetFramework>net10.0</TargetFramework>
     </PropertyGroup>
 
     <ItemGroup>
-        <PackageReference Include="Nuke.Common"/>
-        <PackageReference Include="Autodesk.PackageBuilder"/>
+        <PackageReference Include="Sourcy.DotNet" />
+        <PackageReference Include="Shouldly" />
+        <PackageReference Include="ModularPipelines" />
+        <PackageReference Include="ModularPipelines.Git" />
+        <PackageReference Include="ModularPipelines.DotNet" />
+        <PackageReference Include="ModularPipelines.GitHub" />
+        <PackageReference Include="Microsoft.VisualStudio.SolutionPersistence" />
+        <PackageReference Include="Autodesk.PackageBuilder" />
+        <PackageReference Include="JetBrains.Annotations" />
     </ItemGroup>
 
     <ItemGroup>
-        <Using Include="Nuke.Common"/>
-        <Using Include="Nuke.Common.IO"/>
-        <Using Include="Serilog"/>
+        <None Update="appsettings.json" CopyToOutputDirectory="PreserveNewest"/>
     </ItemGroup>
 
 </Project>
