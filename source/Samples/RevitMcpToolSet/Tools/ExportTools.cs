@@ -1,6 +1,7 @@
 using System.ComponentModel;
 using ModelContextProtocol;
 using ModelContextProtocol.Server;
+using Nice3point.Revit.Toolkit;
 using RevitMcpToolSet.Data;
 using RevitMcpToolSet.Utilities;
 namespace RevitMcpToolSet.Tools;
@@ -38,7 +39,7 @@ public static class ExportTools
         string resultPath;
         if (mode == ExportScope.ByViewList && elementIds is { Length: > 0 })
         {
-            var viewIds = elementIds.Select(id => new ElementId(id)).ToList();
+            var viewIds = elementIds.Select(id => id.ToElementId()).ToList();
             var fileName = PathGuard.GenerateUniqueFilePath(outputDir, doc.Title, "pdf");
             options.FileName = Path.GetFileName(fileName);
             doc.Export(outputDir, viewIds, options);
@@ -95,7 +96,7 @@ public static class ExportTools
         else if (exportMode == ExportScope.ByViewList && elementIds is { Length: > 0 })
         {
             options.ExportRange = ExportRange.SetOfViews;
-            options.SetViewsAndSheets(elementIds.Select(id => new ElementId(id)).ToList());
+            options.SetViewsAndSheets(elementIds.Select(id => id.ToElementId()).ToList());
         }
         else
         {
@@ -113,7 +114,7 @@ public static class ExportTools
         [Description("Output directory path (optional)")] string? directoryPath = null)
     {
         var doc = Context.ActiveDocument ?? throw new McpException("No active document.");
-        var schedule = doc.GetElement(new ElementId(scheduleId)) as ViewSchedule
+        var schedule = doc.GetElement(scheduleId.ToElementId()) as ViewSchedule
             ?? throw new McpException($"Schedule {scheduleId} not found.");
 
         var outputDir = string.IsNullOrEmpty(directoryPath)

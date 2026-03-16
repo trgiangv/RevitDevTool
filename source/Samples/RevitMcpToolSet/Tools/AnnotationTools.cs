@@ -1,6 +1,8 @@
 using System.ComponentModel;
 using ModelContextProtocol;
 using ModelContextProtocol.Server;
+using RevitMcpToolSet.Utilities;
+using Nice3point.Revit.Toolkit;
 using RevitMcpToolSet.Data;
 namespace RevitMcpToolSet.Tools;
 
@@ -26,7 +28,7 @@ public static class AnnotationTools
         {
             foreach (var td in taggingData)
             {
-                var view = doc.GetElement(new ElementId(td.ViewId)) as View
+                var view = doc.GetElement(td.ViewId.ToElementId()) as View
                     ?? throw new McpException($"View {td.ViewId} not found.");
 
                 using var tx = new Transaction(doc, $"Tag elements in view {view.Name}");
@@ -35,7 +37,7 @@ public static class AnnotationTools
                 {
                     try
                     {
-                        var element = doc.GetElement(new ElementId(eid));
+                        var element = doc.GetElement(eid.ToElementId());
                         if (element is null) continue;
 
                         var location = element.Location as LocationPoint;
@@ -91,12 +93,12 @@ public static class AnnotationTools
         tx.Start();
         foreach (var eid in elementIds)
         {
-            var overrideSettings = activeView.GetElementOverrides(new ElementId(eid));
+            var overrideSettings = activeView.GetElementOverrides(eid.ToElementId());
             overrideSettings.SetSurfaceForegroundPatternColor(revitColor);
             overrideSettings.SetSurfaceForegroundPatternVisible(true);
             if (solidFillPatternId != ElementId.InvalidElementId)
                 overrideSettings.SetSurfaceForegroundPatternId(solidFillPatternId);
-            activeView.SetElementOverrides(new ElementId(eid), overrideSettings);
+            activeView.SetElementOverrides(eid.ToElementId(), overrideSettings);
         }
         tx.Commit();
         return new { status = "Success", coloredCount = elementIds.Length };

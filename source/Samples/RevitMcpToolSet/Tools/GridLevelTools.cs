@@ -2,7 +2,9 @@ using System.ComponentModel;
 using System.Text.Json;
 using ModelContextProtocol;
 using ModelContextProtocol.Server;
+using Nice3point.Revit.Toolkit;
 using RevitMcpToolSet.Data;
+using RevitMcpToolSet.Utilities;
 namespace RevitMcpToolSet.Tools;
 
 [McpServerToolType]
@@ -41,7 +43,7 @@ public static class GridLevelTools
                 var end = new XYZ(x, oy + extent, oz);
                 var grid = Grid.Create(doc, Line.CreateBound(start, end));
                 grid.Name = (i + 1).ToString();
-                createdGrids.Add(grid.Id.Value);
+                createdGrids.Add(grid.Id.ToValue());
             }
 
             for (var j = 0; j < horizontalCount; j++)
@@ -51,7 +53,7 @@ public static class GridLevelTools
                 var end = new XYZ(ox + extent, y, oz);
                 var grid = Grid.Create(doc, Line.CreateBound(start, end));
                 grid.Name = ((char)('A' + j)).ToString();
-                createdGrids.Add(grid.Id.Value);
+                createdGrids.Add(grid.Id.ToValue());
             }
 
             tx.Commit();
@@ -102,10 +104,10 @@ public static class GridLevelTools
                 {
                     var viewPlan = ViewPlan.Create(doc, viewFamilyType.Id, level.Id);
                     viewPlan.Name = $"Floor Plan - {level.Name}";
-                    viewId = viewPlan.Id.Value;
+                    viewId = viewPlan.Id.ToValue();
                 }
 
-                results.Add(new { levelId = level.Id.Value, levelName = level.Name, viewId });
+                results.Add(new { levelId = level.Id.ToValue(), levelName = level.Name, viewId });
             }
             tx.Commit();
             return new { status = "Success", levels = results };
@@ -145,7 +147,7 @@ public static class GridLevelTools
                     continue;
                 }
                 level.Elevation = elevation;
-                results.Add(new { levelName, levelId = level.Id.Value, newElevation = elevation, status = "Updated" });
+                results.Add(new { levelName, levelId = level.Id.ToValue(), newElevation = elevation, status = "Updated" });
             }
             tx.Commit();
             return new { status = "Success", results = JsonSerializer.Serialize(results) };

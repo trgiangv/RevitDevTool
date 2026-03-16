@@ -1,6 +1,8 @@
 using System.ComponentModel;
 using ModelContextProtocol;
 using ModelContextProtocol.Server;
+using Nice3point.Revit.Toolkit;
+using RevitMcpToolSet.Utilities;
 namespace RevitMcpToolSet.Tools;
 
 [McpServerToolType]
@@ -24,7 +26,7 @@ public static class TransformTools
         {
             try
             {
-                doc.Delete(new ElementId(eid));
+                doc.Delete(eid.ToElementId());
                 deleted++;
             }
             catch (Exception ex)
@@ -56,7 +58,7 @@ public static class TransformTools
         using var tx = new Transaction(doc, "Translate Elements");
         tx.Start();
         foreach (var eid in elementIds)
-            ElementTransformUtils.MoveElement(doc, new ElementId(eid), translation);
+            ElementTransformUtils.MoveElement(doc, eid.ToElementId(), translation);
         tx.Commit();
         return new { outcome = $"Moved {elementIds.Length} elements." };
     }
@@ -81,7 +83,7 @@ public static class TransformTools
         tx.Start();
         foreach (var eid in elementIds)
         {
-            var element = doc.GetElement(new ElementId(eid));
+            var element = doc.GetElement(eid.ToElementId());
             if (element is null) continue;
 
             XYZ origin;
@@ -111,7 +113,7 @@ public static class TransformTools
         var uiDoc = Context.ActiveUiDocument ?? throw new McpException("No active document.");
         if (elementIds.Length == 0) throw new McpException("No element IDs provided.");
 
-        var ids = elementIds.Select(id => new ElementId(id)).ToList();
+        var ids = elementIds.Select(id => id.ToElementId()).ToList();
         uiDoc.Selection.SetElementIds(ids);
         return new { outcome = $"Selected {ids.Count} elements." };
     }

@@ -1,6 +1,7 @@
 using System.ComponentModel;
 using ModelContextProtocol;
 using ModelContextProtocol.Server;
+using Nice3point.Revit.Toolkit;
 using RevitMcpToolSet.Data;
 using RevitMcpToolSet.Utilities;
 namespace RevitMcpToolSet.Tools;
@@ -49,7 +50,7 @@ public static class ScheduleTools
             }
 
             tx.Commit();
-            return new { status = "Success", scheduleId = schedule.Id.Value, scheduleName = schedule.Name };
+            return new { status = "Success", scheduleId = schedule.Id.ToValue(), scheduleName = schedule.Name };
         }
         catch (Exception ex)
         {
@@ -66,7 +67,7 @@ public static class ScheduleTools
 
         var schedules = new FilteredElementCollector(doc).OfClass(typeof(ViewSchedule))
             .Cast<ViewSchedule>()
-            .Select(s => new { name = s.Name, id = s.Id.Value })
+            .Select(s => new { name = s.Name, id = s.Id.ToValue() })
             .ToList();
 
         return schedules.Count == 0
@@ -88,7 +89,7 @@ public static class ScheduleTools
             .FirstOrDefault(s => s.Name.Equals(scheduleName, StringComparison.OrdinalIgnoreCase))
             ?? throw new McpException($"Schedule with name '{scheduleName}' not found.");
 
-        return new { scheduleId = schedule.Id.Value };
+        return new { scheduleId = schedule.Id.ToValue() };
     }
 
     [McpServerTool(Name = "revit_list_schedule_fields", Title = "List Schedulable Fields", ReadOnly = true)]
@@ -136,7 +137,7 @@ public static class ScheduleTools
         if (sortFields.Length == 0) throw new McpException("At least one sort field is required.");
 
         var doc = Context.ActiveDocument ?? throw new McpException("No active document.");
-        var schedule = doc.GetElement(new ElementId(scheduleId)) as ViewSchedule
+        var schedule = doc.GetElement(scheduleId.ToElementId()) as ViewSchedule
             ?? throw new McpException($"Schedule {scheduleId} not found.");
 
         using var tx = new Transaction(doc, "Add Schedule Sorting");
@@ -169,7 +170,7 @@ public static class ScheduleTools
         if (groupFields.Length == 0) throw new McpException("At least one group field is required.");
 
         var doc = Context.ActiveDocument ?? throw new McpException("No active document.");
-        var schedule = doc.GetElement(new ElementId(scheduleId)) as ViewSchedule
+        var schedule = doc.GetElement(scheduleId.ToElementId()) as ViewSchedule
             ?? throw new McpException($"Schedule {scheduleId} not found.");
 
         using var tx = new Transaction(doc, "Add Schedule Grouping");
@@ -207,7 +208,7 @@ public static class ScheduleTools
         if (groupFields.Length == 0) throw new McpException("At least one filter is required.");
 
         var doc = Context.ActiveDocument ?? throw new McpException("No active document.");
-        var schedule = doc.GetElement(new ElementId(scheduleId)) as ViewSchedule
+        var schedule = doc.GetElement(scheduleId.ToElementId()) as ViewSchedule
             ?? throw new McpException($"Schedule {scheduleId} not found.");
 
         var validFilterTypes = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
@@ -284,9 +285,9 @@ public static class ScheduleTools
             throw new McpException("schedulePosition must have at least 2 values [X, Y].");
 
         var doc = Context.ActiveDocument ?? throw new McpException("No active document.");
-        var sheet = doc.GetElement(new ElementId(sheetId)) as ViewSheet
+        var sheet = doc.GetElement(sheetId.ToElementId()) as ViewSheet
             ?? throw new McpException($"Sheet {sheetId} not found.");
-        var schedule = doc.GetElement(new ElementId(scheduleId)) as ViewSchedule
+        var schedule = doc.GetElement(scheduleId.ToElementId()) as ViewSchedule
             ?? throw new McpException($"Schedule {scheduleId} not found.");
 
         var position = schedulePosition is { Length: >= 2 }
@@ -299,7 +300,7 @@ public static class ScheduleTools
         {
             var instance = ScheduleSheetInstance.Create(doc, sheet.Id, schedule.Id, position);
             tx.Commit();
-            return new { status = "Success", instanceId = instance.Id.Value };
+            return new { status = "Success", instanceId = instance.Id.ToValue() };
         }
         catch (Exception ex)
         {

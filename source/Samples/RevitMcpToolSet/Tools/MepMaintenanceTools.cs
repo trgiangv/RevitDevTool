@@ -2,6 +2,8 @@ using System.ComponentModel;
 using Autodesk.Revit.DB.Mechanical;
 using ModelContextProtocol;
 using ModelContextProtocol.Server;
+using Nice3point.Revit.Toolkit;
+using RevitMcpToolSet.Utilities;
 namespace RevitMcpToolSet.Tools;
 
 [McpServerToolType]
@@ -15,7 +17,7 @@ public static class MepMaintenanceTools
         [Description("Insulation thickness in mm")] double thickness)
     {
         var doc = Context.ActiveDocument ?? throw new McpException("No active document.");
-        var system = doc.GetElement(new ElementId(systemId)) as MechanicalSystem
+        var system = doc.GetElement(systemId.ToElementId()) as MechanicalSystem
             ?? throw new McpException($"Mechanical system {systemId} not found.");
 
         var insulationTypeId = new FilteredElementCollector(doc).OfClass(typeof(DuctInsulationType))
@@ -39,7 +41,7 @@ public static class MepMaintenanceTools
                         DuctInsulation.Create(doc, duct.Id, insulationTypeId, thicknessInFeet);
                         insulated++;
                     }
-                    else if (element.Category?.Id.Value == (long)BuiltInCategory.OST_DuctFitting)
+                    else if (element.Category?.Id.ToValue() == (long)BuiltInCategory.OST_DuctFitting)
                     {
                         DuctInsulation.Create(doc, element.Id, insulationTypeId, thicknessInFeet);
                         insulated++;
@@ -118,7 +120,7 @@ public static class MepMaintenanceTools
         var cleared = 0;
         foreach (var eid in elementIds)
         {
-            var element = doc.GetElement(new ElementId(eid));
+            var element = doc.GetElement(eid.ToElementId());
             if (element is null) continue;
             var markParam = element.get_Parameter(BuiltInParameter.ALL_MODEL_MARK);
             if (markParam is not null && !markParam.IsReadOnly)

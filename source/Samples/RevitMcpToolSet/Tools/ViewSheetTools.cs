@@ -2,6 +2,8 @@ using System.ComponentModel;
 using System.Text.Json;
 using ModelContextProtocol;
 using ModelContextProtocol.Server;
+using Nice3point.Revit.Toolkit;
+using RevitMcpToolSet.Utilities;
 namespace RevitMcpToolSet.Tools;
 
 [McpServerToolType]
@@ -31,7 +33,7 @@ public static class ViewSheetTools
         tx.Commit();
 
         Context.ActiveUiDocument?.RequestViewChange(viewPlan);
-        return new { elementId = viewPlan.Id.Value.ToString() };
+        return new { elementId = viewPlan.Id.ToValue().ToString() };
     }
 
     [McpServerTool(Name = "revit_create_floor_plan_templated", Title = "Create Floor Plan with Template", ReadOnly = false)]
@@ -70,7 +72,7 @@ public static class ViewSheetTools
         tx.Commit();
 
         Context.ActiveView = viewPlan;
-        return new { elementId = viewPlan.Id.Value.ToString() };
+        return new { elementId = viewPlan.Id.ToValue().ToString() };
     }
 
     [McpServerTool(Name = "revit_create_section", Title = "Create Section View", ReadOnly = false)]
@@ -126,7 +128,7 @@ public static class ViewSheetTools
         viewSection.Name = viewName ?? $"Section - {DateTime.Now:yyyy-MM-dd HH-mm-ss}";
         tx.Commit();
 
-        return new { elementId = viewSection.Id.Value.ToString() };
+        return new { elementId = viewSection.Id.ToValue().ToString() };
     }
 
     [McpServerTool(Name = "revit_create_sheet", Title = "Create Sheet", ReadOnly = false)]
@@ -139,8 +141,8 @@ public static class ViewSheetTools
         ElementId titleBlockElementId;
         if (titleBlockId > 0)
         {
-            var element = doc.GetElement(new ElementId(titleBlockId));
-            titleBlockElementId = element is FamilySymbol ? new ElementId(titleBlockId) : ElementId.InvalidElementId;
+            var element = doc.GetElement(titleBlockId.ToElementId());
+            titleBlockElementId = element is FamilySymbol ? titleBlockId.ToElementId() : ElementId.InvalidElementId;
         }
         else
         {
@@ -152,7 +154,7 @@ public static class ViewSheetTools
         var sheet = ViewSheet.Create(doc, titleBlockElementId);
         tx.Commit();
 
-        return new { sheetId = sheet.Id.Value.ToString() };
+        return new { sheetId = sheet.Id.ToValue().ToString() };
     }
 
     [McpServerTool(Name = "revit_place_view_on_sheet", Title = "Place View on Sheet", ReadOnly = false)]
@@ -165,9 +167,9 @@ public static class ViewSheetTools
         if (viewPosition.Length < 3) throw new McpException("viewPosition must have at least 3 values [X, Y, Z].");
 
         var doc = Context.ActiveDocument ?? throw new McpException("No active document.");
-        var sheet = doc.GetElement(new ElementId(sheetId)) as ViewSheet
+        var sheet = doc.GetElement(sheetId.ToElementId()) as ViewSheet
             ?? throw new McpException($"Sheet {sheetId} not found.");
-        var view = doc.GetElement(new ElementId(viewId)) as View
+        var view = doc.GetElement(viewId.ToElementId()) as View
             ?? throw new McpException($"View {viewId} not found.");
 
         var position = new XYZ(viewPosition[0], viewPosition[1], 0.0);
@@ -178,7 +180,7 @@ public static class ViewSheetTools
         tx.Commit();
 
         Context.ActiveUiDocument?.RequestViewChange(sheet);
-        return new { viewportId = viewport.Id.Value.ToString() };
+        return new { viewportId = viewport.Id.ToValue().ToString() };
     }
 
     [McpServerTool(Name = "revit_apply_view_template", Title = "Apply View Template", ReadOnly = false)]
@@ -188,7 +190,7 @@ public static class ViewSheetTools
         [Description("View template name")] string viewTemplateName)
     {
         var doc = Context.ActiveDocument ?? throw new McpException("No active document.");
-        var view = doc.GetElement(new ElementId(viewId)) as View
+        var view = doc.GetElement(viewId.ToElementId()) as View
             ?? throw new McpException($"View {viewId} not found.");
         if (view.IsTemplate) throw new McpException("Cannot apply a template to a template view.");
 
@@ -217,7 +219,7 @@ public static class ViewSheetTools
         [Description("View element ID")] long viewId)
     {
         var doc = Context.ActiveDocument ?? throw new McpException("No active document.");
-        var view = doc.GetElement(new ElementId(viewId)) as View
+        var view = doc.GetElement(viewId.ToElementId()) as View
             ?? throw new McpException($"View {viewId} not found.");
 
         using var tx = new Transaction(doc, "Detach View Template");
@@ -233,12 +235,12 @@ public static class ViewSheetTools
         [Description("View element ID")] long viewId)
     {
         var doc = Context.ActiveDocument ?? throw new McpException("No active document.");
-        var view = doc.GetElement(new ElementId(viewId)) as View
+        var view = doc.GetElement(viewId.ToElementId()) as View
             ?? throw new McpException($"View {viewId} not found.");
         if (view.IsTemplate) throw new McpException("Cannot activate a template view.");
 
         Context.ActiveView = view;
-        return new { outcome = "Success", viewId = view.Id.Value, viewName = view.Name, viewType = view.ViewType.ToString() };
+        return new { outcome = "Success", viewId = view.Id.ToValue(), viewName = view.Name, viewType = view.ViewType.ToString() };
     }
 
     [McpServerTool(Name = "revit_list_views", Title = "List Views", ReadOnly = true)]
@@ -260,7 +262,7 @@ public static class ViewSheetTools
             .OrderBy(v => v.Name)
             .Select(v => new
             {
-                Id = v.Id.Value,
+                Id = v.Id.ToValue(),
                 Name = v.Name,
                 Type = v.ViewType.ToString(),
                 IsActive = activeViewId is not null && v.Id == activeViewId,
@@ -278,7 +280,7 @@ public static class ViewSheetTools
 
         var sheets = new FilteredElementCollector(doc).OfClass(typeof(ViewSheet))
             .Cast<ViewSheet>()
-            .Select(s => new { Id = s.Id.Value, Name = s.Name, Number = s.SheetNumber })
+            .Select(s => new { Id = s.Id.ToValue(), Name = s.Name, Number = s.SheetNumber })
             .ToList();
 
         return new { sheets = JsonSerializer.Serialize(sheets) };
@@ -296,7 +298,7 @@ public static class ViewSheetTools
             .OrderBy(v => v.ViewType.ToString()).ThenBy(v => v.Name)
             .Select(v => new
             {
-                Id = v.Id.Value,
+                Id = v.Id.ToValue(),
                 Name = v.Name,
                 ViewType = v.ViewType.ToString(),
                 ViewFamily = GetViewFamilyName(v),
@@ -315,7 +317,7 @@ public static class ViewSheetTools
         [Description("Sheet element ID")] long sheetId)
     {
         var doc = Context.ActiveDocument ?? throw new McpException("No active document.");
-        var sheet = doc.GetElement(new ElementId(sheetId)) as ViewSheet
+        var sheet = doc.GetElement(sheetId.ToElementId()) as ViewSheet
             ?? throw new McpException($"Sheet {sheetId} not found.");
 
         var viewports = sheet.GetAllViewports()
@@ -325,8 +327,8 @@ public static class ViewSheetTools
                 var center = vp?.GetBoxCenter();
                 return new
                 {
-                    ViewportId = vpId.Value,
-                    ViewId = vp?.ViewId.Value,
+                    ViewportId = vpId.ToValue(),
+                    ViewId = vp?.ViewId.ToValue(),
                     Center = center is not null ? new { X = center.X, Y = center.Y } : null,
                 };
             })
@@ -341,7 +343,7 @@ public static class ViewSheetTools
         [Description("Sheet element ID")] long sheetId)
     {
         var doc = Context.ActiveDocument ?? throw new McpException("No active document.");
-        var sheet = doc.GetElement(new ElementId(sheetId)) as ViewSheet
+        var sheet = doc.GetElement(sheetId.ToElementId()) as ViewSheet
             ?? throw new McpException($"Sheet {sheetId} not found.");
 
         var placedViews = sheet.GetAllViewports()
@@ -351,8 +353,8 @@ public static class ViewSheetTools
                 var view = vp is not null ? doc.GetElement(vp.ViewId) as View : null;
                 return new
                 {
-                    ViewportId = vpId.Value,
-                    ViewId = vp?.ViewId.Value,
+                    ViewportId = vpId.ToValue(),
+                    ViewId = vp?.ViewId.ToValue(),
                     ViewName = view?.Name,
                     ViewType = view?.ViewType.ToString(),
                 };
@@ -368,13 +370,13 @@ public static class ViewSheetTools
         [Description("Sheet element ID")] long sheetId)
     {
         var doc = Context.ActiveDocument ?? throw new McpException("No active document.");
-        var sheet = doc.GetElement(new ElementId(sheetId)) as ViewSheet
+        var sheet = doc.GetElement(sheetId.ToElementId()) as ViewSheet
             ?? throw new McpException($"Sheet {sheetId} not found.");
 
         var titleBlock = new FilteredElementCollector(doc, sheet.Id)
             .OfCategory(BuiltInCategory.OST_TitleBlocks)
             .FirstElement();
-        return new { titleBlockId = titleBlock?.Id.Value.ToString() ?? "-1" };
+        return new { titleBlockId = titleBlock?.Id.ToValue().ToString() ?? "-1" };
     }
 
     [McpServerTool(Name = "revit_set_sheet_number", Title = "Set Sheet Number", ReadOnly = false)]
@@ -384,7 +386,7 @@ public static class ViewSheetTools
         [Description("New sheet number")] string sheetNumber)
     {
         var doc = Context.ActiveDocument ?? throw new McpException("No active document.");
-        var sheet = doc.GetElement(new ElementId(sheetId)) as ViewSheet
+        var sheet = doc.GetElement(sheetId.ToElementId()) as ViewSheet
             ?? throw new McpException($"Sheet {sheetId} not found.");
 
         using var tx = new Transaction(doc, "Set Sheet Number");
@@ -401,7 +403,7 @@ public static class ViewSheetTools
         [Description("New sheet name")] string newName)
     {
         var doc = Context.ActiveDocument ?? throw new McpException("No active document.");
-        var sheet = doc.GetElement(new ElementId(sheetId)) as ViewSheet
+        var sheet = doc.GetElement(sheetId.ToElementId()) as ViewSheet
             ?? throw new McpException($"Sheet {sheetId} not found.");
 
         using var tx = new Transaction(doc, "Rename Sheet");

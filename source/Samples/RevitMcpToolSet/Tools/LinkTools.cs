@@ -2,6 +2,8 @@ using System.ComponentModel;
 using System.Text.Json;
 using ModelContextProtocol;
 using ModelContextProtocol.Server;
+using Nice3point.Revit.Toolkit;
+using RevitMcpToolSet.Utilities;
 namespace RevitMcpToolSet.Tools;
 
 [McpServerToolType]
@@ -50,7 +52,7 @@ public static class LinkTools
         {
             doc.Import(filePath, options, activeView, out var elementId);
             tx.Commit();
-            return new { status = "Success", elementId = elementId.Value };
+            return new { status = "Success", elementId = elementId.ToValue() };
         }
         catch (Exception ex)
         {
@@ -67,12 +69,12 @@ public static class LinkTools
 
         var revitLinks = new FilteredElementCollector(doc).OfClass(typeof(RevitLinkType))
             .Cast<RevitLinkType>()
-            .Select(l => new { Type = "Revit", Id = l.Id.Value, Name = l.Name })
+            .Select(l => new { Type = "Revit", Id = l.Id.ToValue(), Name = l.Name })
             .ToList<object>();
 
         var cadImports = new FilteredElementCollector(doc).OfClass(typeof(ImportInstance))
             .Cast<ImportInstance>()
-            .Select(i => new { Type = "CAD", Id = i.Id.Value, Name = i.Name ?? "" })
+            .Select(i => new { Type = "CAD", Id = i.Id.ToValue(), Name = i.Name ?? "" })
             .ToList<object>();
 
         var allLinks = revitLinks.Concat(cadImports).ToList();

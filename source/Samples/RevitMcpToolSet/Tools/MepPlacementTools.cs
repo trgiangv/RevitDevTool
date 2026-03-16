@@ -4,7 +4,9 @@ using Autodesk.Revit.DB.Mechanical;
 using Autodesk.Revit.DB.Plumbing;
 using ModelContextProtocol;
 using ModelContextProtocol.Server;
+using Nice3point.Revit.Toolkit;
 using RevitMcpToolSet.Data;
+using RevitMcpToolSet.Utilities;
 namespace RevitMcpToolSet.Tools;
 
 [McpServerToolType]
@@ -25,9 +27,9 @@ public static class MepPlacementTools
             var start = new XYZ(info.StartX, info.StartY, info.StartZ);
             var end = new XYZ(info.EndX, info.EndY, info.EndZ);
             var duct = Duct.Create(doc,
-                new ElementId(info.SystemTypeId),
-                new ElementId(info.DuctTypeId),
-                new ElementId(info.LevelId),
+                info.SystemTypeId.ToElementId(),
+                info.DuctTypeId.ToElementId(),
+                info.LevelId.ToElementId(),
                 start, end);
 
             if (info.Width > 0)
@@ -36,7 +38,7 @@ public static class MepPlacementTools
                 duct.get_Parameter(BuiltInParameter.RBS_CURVE_HEIGHT_PARAM)?.Set(info.Height);
 
             tx.Commit();
-            return new { ductId = duct.Id.Value };
+            return new { ductId = duct.Id.ToValue() };
         }
         catch (Exception ex)
         {
@@ -59,15 +61,15 @@ public static class MepPlacementTools
             var start = new XYZ(info.StartX, info.StartY, info.StartZ);
             var end = new XYZ(info.EndX, info.EndY, info.EndZ);
             var conduit = Conduit.Create(doc,
-                new ElementId(info.ConduitTypeId),
+                info.ConduitTypeId.ToElementId(),
                 start, end,
-                new ElementId(info.LevelId));
+                info.LevelId.ToElementId());
 
             if (info.Diameter > 0)
                 conduit.get_Parameter(BuiltInParameter.RBS_CONDUIT_DIAMETER_PARAM)?.Set(info.Diameter);
 
             tx.Commit();
-            return new { conduitId = conduit.Id.Value };
+            return new { conduitId = conduit.Id.ToValue() };
         }
         catch (Exception ex)
         {
@@ -90,16 +92,16 @@ public static class MepPlacementTools
             var start = new XYZ(info.StartX, info.StartY, info.StartZ);
             var end = new XYZ(info.EndX, info.EndY, info.EndZ);
             var pipe = Pipe.Create(doc,
-                new ElementId(info.SystemTypeId),
-                new ElementId(info.PipeTypeId),
-                new ElementId(info.LevelId),
+                info.SystemTypeId.ToElementId(),
+                info.PipeTypeId.ToElementId(),
+                info.LevelId.ToElementId(),
                 start, end);
 
             if (info.Diameter > 0)
                 pipe.get_Parameter(BuiltInParameter.RBS_PIPE_DIAMETER_PARAM)?.Set(info.Diameter);
 
             tx.Commit();
-            return new { pipeId = pipe.Id.Value };
+            return new { pipeId = pipe.Id.ToValue() };
         }
         catch (Exception ex)
         {

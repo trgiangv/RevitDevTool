@@ -1,6 +1,8 @@
 using System.ComponentModel;
 using ModelContextProtocol;
 using ModelContextProtocol.Server;
+using Nice3point.Revit.Toolkit;
+using RevitMcpToolSet.Utilities;
 namespace RevitMcpToolSet.Tools;
 
 [McpServerToolType]
@@ -31,6 +33,6 @@ public static class MaterialTools
             mat.Transparency = transparency;
         }
         tx.Commit();
-        return new { status = "Success", materialId = newMaterial.Value };
+        return new { status = "Success", materialId = newMaterial.ToValue() };
     }
 }

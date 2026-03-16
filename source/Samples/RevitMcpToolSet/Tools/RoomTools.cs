@@ -3,6 +3,8 @@ using System.Text.Json;
 using Autodesk.Revit.DB.Architecture;
 using ModelContextProtocol;
 using ModelContextProtocol.Server;
+using Nice3point.Revit.Toolkit;
+using RevitMcpToolSet.Utilities;
 namespace RevitMcpToolSet.Tools;
 
 [McpServerToolType]
@@ -26,7 +28,7 @@ public static class RoomTools
                     : "";
                 return new
                 {
-                    Id = r.Id.Value,
+                    Id = r.Id.ToValue(),
                     Name = r.Name,
                     Number = r.Number,
                     Area = r.Area,
@@ -49,7 +51,7 @@ public static class RoomTools
         if (color.Length < 3) throw new McpException("Color must have 3 components [R, G, B].");
 
         var doc = Context.ActiveDocument ?? throw new McpException("No active document.");
-        var room = doc.GetElement(new ElementId(roomId)) as Room
+        var room = doc.GetElement(roomId.ToElementId()) as Room
             ?? throw new McpException($"Room {roomId} not found.");
         var activeView = Context.ActiveView
             ?? throw new McpException("No active view.");
@@ -88,8 +90,8 @@ public static class RoomTools
         [Description("New room name")] string roomName)
     {
         var doc = Context.ActiveDocument ?? throw new McpException("No active document.");
-        var room = doc.GetElement(new ElementId(roomId)) as Room
-            ?? throw new McpException($"Room {roomId} not found.");
+        var room = doc.GetElement(roomId.ToElementId()) as Room
+                                  ?? throw new McpException($"Room {roomId} not found.");
 
         using var tx = new Transaction(doc, "Set Room Name");
         tx.Start();

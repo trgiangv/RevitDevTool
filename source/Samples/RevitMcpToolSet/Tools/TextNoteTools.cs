@@ -2,6 +2,8 @@ using System.ComponentModel;
 using System.Text.Json;
 using ModelContextProtocol;
 using ModelContextProtocol.Server;
+using Nice3point.Revit.Toolkit;
+using RevitMcpToolSet.Utilities;
 namespace RevitMcpToolSet.Tools;
 
 [McpServerToolType]
@@ -34,9 +36,9 @@ public static class TextNoteTools
 
         var results = textNotes.Select(tn => new
         {
-            Id = tn.Id.Value,
+            Id = tn.Id.ToValue(),
             Text = tn.Text,
-            ViewId = tn.OwnerViewId.Value,
+            ViewId = tn.OwnerViewId.ToValue(),
         }).ToList();
 
         return new { textNotes = JsonSerializer.Serialize(results) };
@@ -52,7 +54,7 @@ public static class TextNoteTools
         var textNotes = new FilteredElementCollector(doc, activeView.Id)
             .OfClass(typeof(TextNote))
             .Cast<TextNote>()
-            .Select(tn => new { Id = tn.Id.Value, Text = tn.Text })
+            .Select(tn => new { Id = tn.Id.ToValue(), Text = tn.Text })
             .ToList();
 
         return new { textNotes = JsonSerializer.Serialize(textNotes) };

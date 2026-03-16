@@ -1,7 +1,9 @@
 using System.ComponentModel;
 using ModelContextProtocol;
 using ModelContextProtocol.Server;
+using Nice3point.Revit.Toolkit;
 using RevitMcpToolSet.Data;
+using RevitMcpToolSet.Utilities;
 namespace RevitMcpToolSet.Tools;
 
 [McpServerToolType]
@@ -17,7 +19,7 @@ public static class ModelQueryTools
 
         FilteredElementCollector collector;
         if (input.ViewId > 0)
-            collector = new FilteredElementCollector(doc, new ElementId(input.ViewId));
+            collector = new FilteredElementCollector(doc, input.ViewId.ToElementId());
         else if (input.SelectedOnly && Context.ActiveUiDocument is not null)
         {
             var selectedIds = Context.ActiveUiDocument.Selection.GetElementIds();
@@ -92,7 +94,7 @@ public static class ModelQueryTools
         {
             var results = elements.Select(e => new ElementSummary
             {
-                Id = e.Id.Value,
+                Id = e.Id.ToValue(),
                 Name = e.Name ?? "",
                 Category = e.Category?.Name ?? "",
             }).ToList();
@@ -104,11 +106,11 @@ public static class ModelQueryTools
             {
                 var info = new ElementDetail
                 {
-                    Id = e.Id.Value,
+                    Id = e.Id.ToValue(),
                     Name = e.Name ?? "",
                     Category = e.Category?.Name ?? "",
                     ElementClass = e.GetType().Name,
-                    TypeId = e.GetTypeId()?.Value ?? -1,
+                    TypeId = e.GetTypeId()?.ToValue() ?? -1,
                 };
                 if (e is FamilyInstance fi)
                 {

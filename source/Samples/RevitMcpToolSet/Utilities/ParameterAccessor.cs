@@ -11,7 +11,7 @@ internal static class ParameterAccessor
                 StorageType.Integer => parameter.AsInteger().ToString(),
                 StorageType.Double => parameter.AsDouble().ToString("G15"),
                 StorageType.String => parameter.AsString() ?? "",
-                StorageType.ElementId => parameter.AsElementId()?.Value.ToString() ?? "",
+                StorageType.ElementId => parameter.AsElementId()?.ToString() ?? "",
                 _ => parameter.AsValueString() ?? "",
             };
         }
@@ -22,7 +22,7 @@ internal static class ParameterAccessor
     {
         try
         {
-            var newId = element.ChangeTypeId(new ElementId(newTypeId));
+            var newId = element.ChangeTypeId(newTypeId.ToElementId());
             return (true, $"Change type to '{newTypeId}'", newId);
         }
         catch (Exception ex) when (ex is ArgumentException or InvalidOperationException)
@@ -53,7 +53,7 @@ internal static class ParameterAccessor
                     StorageType.Double when double.TryParse(value, out var dblVal) => writable.Set(dblVal),
                     StorageType.Double => throw new FormatException($"Invalid numeric value '{value}' for parameter '{parameterName}'"),
                     StorageType.String => writable.Set(value),
-                    StorageType.ElementId when long.TryParse(value, out var eid) => writable.Set(new ElementId(eid)),
+                    StorageType.ElementId when long.TryParse(value, out var eid) => writable.Set(eid.ToElementId()),
                     StorageType.ElementId => throw new FormatException($"Invalid element ID '{value}' for parameter '{parameterName}'"),
                     _ => throw new NotSupportedException($"Unsupported parameter storage type '{writable.StorageType}' for parameter '{parameterName}'"),
                 };

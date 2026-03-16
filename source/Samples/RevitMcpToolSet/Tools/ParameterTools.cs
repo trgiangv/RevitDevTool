@@ -1,6 +1,7 @@
 using System.ComponentModel;
 using ModelContextProtocol;
 using ModelContextProtocol.Server;
+using Nice3point.Revit.Toolkit;
 using RevitMcpToolSet.Data;
 using RevitMcpToolSet.Utilities;
 namespace RevitMcpToolSet.Tools;
@@ -16,7 +17,7 @@ public static class ParameterTools
         [Description("Element ID")] long elementId)
     {
         var doc = Context.ActiveDocument ?? throw new McpException("No active document.");
-        var element = doc.GetElement(new ElementId(elementId))
+        var element = doc.GetElement(elementId.ToElementId())
             ?? throw new McpException($"Element with ID {elementId} not found.");
 
         var parameters = new List<ParameterEntry>();
@@ -51,7 +52,7 @@ public static class ParameterTools
         tx.Start();
         foreach (var eid in elementIds)
         {
-            var element = doc.GetElement(new ElementId(eid));
+            var element = doc.GetElement(eid.ToElementId());
             if (element is null) { outcome.Record(false, $"Element {eid} not found", eid); continue; }
 
             foreach (var update in updates)
@@ -72,7 +73,7 @@ public static class ParameterTools
         [Description("Parameter names to copy")] string[] parameterNames)
     {
         var doc = Context.ActiveDocument ?? throw new McpException("No active document.");
-        var source = doc.GetElement(new ElementId(sourceElementId))
+        var source = doc.GetElement(sourceElementId.ToElementId())
             ?? throw new McpException($"Source element {sourceElementId} not found.");
 
         var sourceValues = new Dictionary<string, string>();
@@ -88,7 +89,7 @@ public static class ParameterTools
         tx.Start();
         foreach (var eid in targetElementIds)
         {
-            var target = doc.GetElement(new ElementId(eid));
+            var target = doc.GetElement(eid.ToElementId());
             if (target is null) { outcome.Record(false, $"Element {eid} not found", eid); continue; }
             foreach (var pair in sourceValues)
             {
@@ -114,7 +115,7 @@ public static class ParameterTools
         tx.Start();
         foreach (var eid in elementIds)
         {
-            var element = doc.GetElement(new ElementId(eid));
+            var element = doc.GetElement(eid.ToElementId());
             if (element is null) { outcome.Record(false, $"Element {eid} not found", eid); continue; }
             var (success, message, _) = ParameterAccessor.ChangeType(element, newTypeId);
             outcome.Record(success, message, eid);
