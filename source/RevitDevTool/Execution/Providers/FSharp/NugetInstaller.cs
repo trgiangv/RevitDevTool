@@ -1,6 +1,6 @@
 using System.Diagnostics;
 using System.IO;
-using System.Net.Http;
+using RevitDevTool.Execution.Services;
 using RevitDevTool.Utils;
 
 namespace RevitDevTool.Execution.Providers.FSharp;
@@ -12,7 +12,6 @@ namespace RevitDevTool.Execution.Providers.FSharp;
 internal static class NugetInstaller
 {
     private const string NugetExeDownloadUrl = "https://dist.nuget.org/win-x86-commandline/latest/nuget.exe";
-    private static readonly HttpClient HttpClient = new() { Timeout = TimeSpan.FromMinutes(5) };
 
     private static string GetBinPath() => Path.Combine(SettingsUtils.GetApplicationDataPath(), "bin");
     public static string NugetExePath => Path.Combine(GetBinPath(), "nuget.exe");
@@ -38,7 +37,7 @@ internal static class NugetInstaller
         var tempPath = Path.Combine(Path.GetTempPath(), $"nuget-{Guid.NewGuid():N}.exe");
         try
         {
-            var bytes = await HttpClient.GetByteArrayAsync(NugetExeDownloadUrl).ConfigureAwait(false);
+            var bytes = await NetworkService.GetBytesAsync(NugetExeDownloadUrl).ConfigureAwait(false);
 #if NET
             await File.WriteAllBytesAsync(tempPath, bytes).ConfigureAwait(false);
 #else

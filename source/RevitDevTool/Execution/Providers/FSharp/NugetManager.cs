@@ -3,6 +3,7 @@ using System.Diagnostics;
 using System.IO;
 using CliWrap;
 using CliWrap.Buffered;
+using RevitDevTool.Execution.Services;
 using RevitDevTool.Utils;
 // ReSharper disable RedundantSuppressNullableWarningExpression
 namespace RevitDevTool.Execution.Providers.FSharp;
@@ -42,43 +43,47 @@ internal static class NugetManager
     {
         await NugetInstaller.EnsureNugetAsync().ConfigureAwait(false);
 
-        // nuget search output format:
-        //   > PackageId | Version | Downloads: N
-        var result = await Cli.Wrap(NugetInstaller.NugetExePath)
-            .WithArguments(["search", packageId, "-Source", "https://api.nuget.org/v3/index.json", "-Take", "1"])
-            .WithValidation(CommandResultValidation.None)
-            .ExecuteBufferedAsync(ct).ConfigureAwait(false);
+        return await NetworkService.WithRetryAsync(async () =>
+        {
+            var result = await Cli.Wrap(NugetInstaller.NugetExePath)
+                .WithArguments(["search", packageId, "-Source", "https://api.nuget.org/v3/index.json", "-Take", "1"])
+                .WithValidation(CommandResultValidation.None)
+                .ExecuteBufferedAsync(ct).ConfigureAwait(false);
 
-        if (result.ExitCode != 0)
-            throw new InvalidOperationException(
-                $"nuget.exe search failed for '{packageId}': {result.StandardError.Trim()}");
+            if (result.ExitCode != 0)
+                throw new InvalidOperationException(
+                    $"nuget.exe search failed for '{packageId}': {result.StandardError.Trim()}");
 
-        return ParseVersionFromSearchOutput(result.StandardOutput, packageId);
+            return ParseVersionFromSearchOutput(result.StandardOutput, packageId);
+        }).ConfigureAwait(false);
     }
 
     private static async Task InstallPackageAsync(string packageId, string version, CancellationToken ct)
     {
         Directory.CreateDirectory(NugetRoot);
 
-        var result = await Cli.Wrap(NugetInstaller.NugetExePath)
-            .WithArguments([
-                "install", packageId,
-                "-Version", version,
-                "-OutputDirectory", NugetRoot,
-                "-Framework", GetCurrentFrameworkMoniker(),
-                "-DependencyVersion", "Ignore",
-                "-PackageSaveMode", "nuspec;nupkg",
-                "-NonInteractive",
-                "-Source", "https://api.nuget.org/v3/index.json"
-            ])
-            .WithValidation(CommandResultValidation.None)
-            .ExecuteBufferedAsync(ct).ConfigureAwait(false);
+        await NetworkService.WithRetryAsync(async () =>
+        {
+            var result = await Cli.Wrap(NugetInstaller.NugetExePath)
+                .WithArguments([
+                    "install", packageId,
+                    "-Version", version,
+                    "-OutputDirectory", NugetRoot,
+                    "-Framework", GetCurrentFrameworkMoniker(),
+                    "-DependencyVersion", "Ignore",
+                    "-PackageSaveMode", "nuspec;nupkg",
+                    "-NonInteractive",
+                    "-Source", "https://api.nuget.org/v3/index.json"
+                ])
+                .WithValidation(CommandResultValidation.None)
+                .ExecuteBufferedAsync(ct).ConfigureAwait(false);
 
-        if (result.ExitCode != 0)
-            throw new InvalidOperationException(
-                $"nuget.exe install failed for '{packageId} {version}': {result.StandardError.Trim()}");
+            if (result.ExitCode != 0)
+                throw new InvalidOperationException(
+                    $"nuget.exe install failed for '{packageId} {version}': {result.StandardError.Trim()}");
 
-        Trace.TraceInformation($"[NuGetResolver] Installed {packageId} {version}");
+            Trace.TraceInformation($"[NuGetResolver] Installed {packageId} {version}");
+        }).ConfigureAwait(false);
     }
 
     // nuget install creates: <NugetRoot>/<PackageId>.<Version>/lib/<tfm>/*.dll

@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.IO;
 using System.Windows.Interop;
 using System.Windows.Media;
@@ -12,22 +13,30 @@ namespace RevitDevTool.Controllers;
 
 public sealed class HostBackgroundController(ISettingsService settingsService) : IHostedService
 {
-    public Task StartAsync(CancellationToken cancellationToken)
+    public async Task StartAsync(CancellationToken cancellationToken)
     {
         settingsService.LoadSettings();
         ThemeManager.Current.ApplySettingsTheme(settingsService.GeneralConfig.Theme);
         ToggleHardwareRendering(settingsService);
-        return PythonInitializer.InitializeAsync();
+
+        try
+        {
+            await PythonInitializer.InitializeAsync().ConfigureAwait(false);
+        }
+        catch (Exception ex)
+        {
+            Trace.TraceError($"[Python] Background init failed {ex.Message}");
+        }
     }
 
-    public Task StopAsync(CancellationToken cancellationToken)
+    public async Task StopAsync(CancellationToken cancellationToken)
     {
         settingsService.SaveSettings();
         CleanLogFolder();
         NotifyListener.TraceReceived -= DevToolsCommand.TraceReceivedHandler;
         DevToolsCommand.SharedViewModel?.IsStarted = false;
         VisualizationController.Stop();
-        return PythonInitializer.Shutdown();
+        await PythonInitializer.Shutdown();
     }
 
     private void CleanLogFolder()
@@ -53,7 +62,7 @@ public sealed class HostBackgroundController(ISettingsService settingsService) :
         var useHardwareRendering = settingsService.GeneralConfig.UseHardwareRendering;
         if (useHardwareRendering)
         {
-            ExternalEventController.ActionEventHandler.Raise(_ => RenderOptions.ProcessRenderMode = RenderMode.Default);
+            ExternalEventController.ActionEventHandler.Raise(() => RenderOptions.ProcessRenderMode = RenderMode.Default);
         }
         else
         {

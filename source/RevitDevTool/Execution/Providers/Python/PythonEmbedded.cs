@@ -37,10 +37,20 @@ public static class PythonEmbedded
     private static readonly ConcurrentDictionary<string, string> ScriptCache = new();
     private static readonly ConcurrentDictionary<string, string> ScripPathCache = new();
     
-    static PythonEmbedded()
+    private static bool IsCacheReady => CachePaths.All(ScriptCache.ContainsKey);
+    private static bool IsCopyReady => CopyPaths.All(ScripPathCache.ContainsKey);
+
+    public static void EnsureExtracted()
     {
-        EnsureCacheScripts();
-        EnsureCopyScripts(PythonEnvironment.PixiProjectDir);
+        if (IsCacheReady && IsCopyReady) return;
+        if (!IsCacheReady)
+        {
+            EnsureCacheScripts();
+        }
+        if (!IsCopyReady)
+        {
+            EnsureCopyScripts(PythonEnvironment.PixiProjectDir);
+        }
     }
     
     private static void EnsureCacheScripts()
@@ -82,13 +92,12 @@ public static class PythonEmbedded
         }
     }
     
-    private static string TryGetCached(string resourcePath, IDictionary<string, string> cache)
+    private static string TryGetCached(string resourcePath, ConcurrentDictionary<string, string> cache)
     {
         if (cache.TryGetValue(resourcePath, out var value))
             return value;
         
-        EnsureCacheScripts();
-        EnsureCopyScripts(PythonEnvironment.PixiProjectDir);
+        EnsureExtracted();
         return cache.TryGetValue(resourcePath, out var cachedValue)
             ? cachedValue
             : throw new InvalidOperationException($"Resource '{resourcePath}' was not found in cache after loading. Ensure it is embedded and loaded correctly.");

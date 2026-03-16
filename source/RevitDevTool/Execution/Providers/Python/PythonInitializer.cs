@@ -26,6 +26,8 @@ public static class PythonInitializer
             {
                 await PythonInstaller.SetupPixiAsync().ConfigureAwait(false);
             }
+            
+            PythonEmbedded.EnsureExtracted();
 
             if (!PythonEnvironment.IsEnvironmentReady())
             {
@@ -48,13 +50,6 @@ public static class PythonInitializer
                     PythonDebugger.StartListening();
                 }
             }
-        }
-        catch (TypeInitializationException ex)
-        {
-            Trace.TraceError(
-                $"[Python] Fatal init failure (pythonnet DLL load). " +
-                $"Cause: {ex.InnerException?.Message ?? ex.Message}\n" +
-                $"{ex.InnerException?.StackTrace ?? ex.StackTrace}");
         }
         catch (Exception ex)
         {

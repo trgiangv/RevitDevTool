@@ -1,6 +1,5 @@
 using System.Diagnostics;
 using System.IO;
-using System.Net.Http;
 using System.Text.Json;
 using CliWrap;
 using CliWrap.Buffered;
@@ -17,7 +16,6 @@ public sealed class PackageService : IPackageService
 {
     private static readonly string NuGetCacheRoot = Path.Combine(SettingsUtils.GetApplicationDataPath(), "nuget");
     private static readonly string PixiTomlPath = Path.Combine(PythonEnvironment.PixiProjectDir, "pixi.toml");
-    private static readonly HttpClient Http = new() { Timeout = TimeSpan.FromSeconds(30) };
 
     public async Task<IReadOnlyList<Package>> ListInstalledPackagesAsync(CancellationToken cancellationToken = default)
     {
@@ -441,8 +439,9 @@ public sealed class PackageService : IPackageService
         {
             return await NugetManager.FetchLatestVersionAsync(packageId, cancellationToken).ConfigureAwait(false);
         }
-        catch
+        catch (Exception ex)
         {
+            Trace.TraceWarning($"[PackageService] NuGet lookup failed for '{packageId}': {ex.Message}");
             return null;
         }
     }
@@ -452,19 +451,17 @@ public sealed class PackageService : IPackageService
         try
         {
             var url = $"https://pypi.org/pypi/{packageId}/json";
-            using var response = await Http.GetAsync(url, cancellationToken).ConfigureAwait(false);
-            if (!response.IsSuccessStatusCode)
-                return null;
+            using var doc = await NetworkService.GetJsonDocumentAsync(url, cancellationToken).ConfigureAwait(false);
+            if (doc == null) return null;
 
-            var payload = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
-            using var doc = JsonDocument.Parse(payload);
             return doc.RootElement.TryGetProperty("info", out var info) &&
                    info.TryGetProperty("version", out var ver)
                 ? ver.GetString()
                 : null;
         }
-        catch
+        catch (Exception ex)
         {
+            Trace.TraceWarning($"[PackageService] PyPI lookup failed for '{packageId}': {ex.Message}");
             return null;
         }
     }
@@ -474,18 +471,16 @@ public sealed class PackageService : IPackageService
         try
         {
             var url = $"https://api.anaconda.org/package/conda-forge/{packageId}";
-            using var response = await Http.GetAsync(url, cancellationToken).ConfigureAwait(false);
-            if (!response.IsSuccessStatusCode)
-                return null;
+            using var doc = await NetworkService.GetJsonDocumentAsync(url, cancellationToken).ConfigureAwait(false);
+            if (doc == null) return null;
 
-            var payload = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
-            using var doc = JsonDocument.Parse(payload);
             return doc.RootElement.TryGetProperty("latest_version", out var latest)
                 ? latest.GetString()
                 : null;
         }
-        catch
+        catch (Exception ex)
         {
+            Trace.TraceWarning($"[PackageService] Conda lookup failed for '{packageId}': {ex.Message}");
             return null;
         }
     }

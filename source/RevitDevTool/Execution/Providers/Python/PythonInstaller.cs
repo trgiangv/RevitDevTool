@@ -1,11 +1,11 @@
 using System.Diagnostics;
 using System.IO;
 using System.IO.Compression;
-using System.Net.Http;
 using System.Text.Json;
 using System.Text.RegularExpressions;
 using CliWrap;
 using CliWrap.Buffered;
+using RevitDevTool.Execution.Services;
 using RevitDevTool.Utils;
 
 // ReSharper disable RedundantSuppressNullableWarningExpression
@@ -21,7 +21,6 @@ public static partial class PythonInstaller
     private const string PixiGitHubApiUrl = "https://api.github.com/repos/prefix-dev/pixi/releases/latest";
     private const string PixiDownloadUrlTemplate = "https://github.com/prefix-dev/pixi/releases/download/v{0}/pixi-x86_64-pc-windows-msvc.zip";
     private const string VersionPattern = @"pixi\s+(\d+\.\d+\.\d+)";
-    private static readonly HttpClient HttpClient = new() { Timeout = TimeSpan.FromMinutes(10) };
 
 #if NET
     [GeneratedRegex(VersionPattern)]
@@ -48,6 +47,13 @@ public static partial class PythonInstaller
 
         if (string.IsNullOrEmpty(latestVersion))
         {
+            if (!IsPixiInstalled())
+            {
+                throw new InvalidOperationException(
+                    "Cannot install pixi: failed to determine the latest version from GitHub. " +
+                    "Ensure network connectivity and retry.");
+            }
+
             Trace.TraceWarning("Could not determine latest Pixi version from GitHub; skipping update check.");
             return;
         }
@@ -86,18 +92,14 @@ public static partial class PythonInstaller
     {
         try
         {
-            HttpClient.DefaultRequestHeaders.UserAgent.Clear();
-            HttpClient.DefaultRequestHeaders.UserAgent.ParseAdd("RevitDevTool");
-
-            var json    = await HttpClient.GetStringAsync(PixiGitHubApiUrl).ConfigureAwait(false);
+            var json = await NetworkService.GetStringAsync(PixiGitHubApiUrl).ConfigureAwait(false);
             using var doc = JsonDocument.Parse(json);
             return !doc.RootElement.TryGetProperty("tag_name", out var tagName) ? null :
-                // eg: tag_name is "v0.63.2" → strip leading 'v'
                 tagName.GetString()?.TrimStart('v');
         }
         catch (Exception ex)
         {
-            Trace.TraceWarning($"Failed to fetch Pixi release info: {ex.Message}");
+            Trace.TraceWarning($"Failed to fetch Pixi release info after retries: {ex.Message}");
             return null;
         }
     }
@@ -110,13 +112,14 @@ public static partial class PythonInstaller
 
     private static async Task DownloadAndInstallAsync(string version)
     {
-        var downloadUrl= string.Format(PixiDownloadUrlTemplate, version);
-        var tempZip= Path.Combine(Path.GetTempPath(), $"pixi-{version}.zip");
-        var tempExtractDir= Path.Combine(Path.GetTempPath(), $"pixi-{version}-extract");
+        var downloadUrl = string.Format(PixiDownloadUrlTemplate, version);
+        var tempZip = Path.Combine(Path.GetTempPath(), $"pixi-{version}.zip");
+        var tempExtractDir = Path.Combine(Path.GetTempPath(), $"pixi-{version}-extract");
 
         try
         {
-            var zipBytes = await HttpClient.GetByteArrayAsync(downloadUrl).ConfigureAwait(false);
+            var zipBytes = await NetworkService.GetBytesAsync(downloadUrl).ConfigureAwait(false);
+
 #if NETFRAMEWORK
             await Task.Run(() => File.WriteAllBytes(tempZip, zipBytes)).ConfigureAwait(false);
 #else
