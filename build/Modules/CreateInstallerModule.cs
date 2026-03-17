@@ -1,4 +1,4 @@
-﻿using Build.Options;
+using Build.Options;
 using JetBrains.Annotations;
 using Microsoft.Extensions.Options;
 using ModularPipelines.Attributes;
@@ -20,13 +20,16 @@ namespace Build.Modules;
 /// </summary>
 [DependsOn<ResolveVersioningModule>]
 [DependsOn<CompileProjectModule>]
+[DependsOn<PublishMcpServerModule>(Optional = true)]
 [UsedImplicitly]
 public sealed class CreateInstallerModule(IOptions<BuildOptions> buildOptions) : Module
 {
     protected override async Task ExecuteModuleAsync(IModuleContext context, CancellationToken cancellationToken)
     {
         var versioningResult = await context.GetModule<ResolveVersioningModule>();
+        var mcpServerResult = await context.GetModule<PublishMcpServerModule>();
         var versioning = versioningResult.ValueOrDefault!;
+        var mcpServerOutputPath = mcpServerResult.ValueOrDefault;
 
         var wixTarget = new File(Projects.RevitDevTool.FullName);
         var wixInstaller = new File(Projects.Installer.FullName);
@@ -46,9 +49,13 @@ public sealed class CreateInstallerModule(IOptions<BuildOptions> buildOptions) :
 
         targetDirectories.ShouldNotBeEmpty("No content were found to create an installer");
 
+        var installerArgs = string.IsNullOrEmpty(mcpServerOutputPath)
+            ? (string[])[versioning.Version, ..targetDirectories]
+            : (string[])[versioning.Version, ..targetDirectories, mcpServerOutputPath];
+
         await context.Shell.Command.ExecuteCommandLineTool(new GenericCommandLineToolOptions(builderFile.Path)
         {
-            Arguments = [versioning.Version, ..targetDirectories]
+            Arguments = installerArgs
         }, new CommandExecutionOptions
         {
             WorkingDirectory = context.Git().RootDirectory,

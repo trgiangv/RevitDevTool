@@ -56,12 +56,8 @@
             <ILRepackOutputName>$(AssemblyName)</ILRepackOutputName>
             <ILRepackOutput>/out:&quot;$(OutputPath)$(ILRepackOutputName).dll&quot;</ILRepackOutput>
             <ILRepackInput>@(ILRepackInputAssemblies -> '&quot;%(FullPath)&quot;', ' ')</ILRepackInput>
-            <ILRepackPath>
-                &quot;$(NuGetPackageRoot)\ilrepack\%(ILRepackVersion.Version)\tools\ILRepack.exe&quot;
-            </ILRepackPath>
-            <ILRepackLib>@(ReferencePath->'%(RelativeDir)'->Distinct()->'/lib:&quot;%(identity)
-                &quot;', ' ')
-            </ILRepackLib>
+            <ILRepackPath>&quot;$(NuGetPackageRoot)\ilrepack\%(ILRepackVersion.Version)\tools\ILRepack.exe&quot;</ILRepackPath>
+            <ILRepackLib>@(ReferencePath->'%(RelativeDir)'->Distinct()->'/lib:&quot;%(identity) &quot;', ' ')</ILRepackLib>
         </PropertyGroup>
 
         <Message Text="Repacking $(MSBuildProjectDirectory)\$(OutputPath)$(AssemblyName).dll"

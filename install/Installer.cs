@@ -1,4 +1,4 @@
-﻿using Installer;
+using Installer;
 using WixSharp;
 using WixSharp.CommonTasks;
 using WixSharp.Controls;
@@ -25,7 +25,20 @@ var project = new Project
     }
 };
 
-var wixEntities = Generator.GenerateWixEntities(args[1..]);
+
+var hasMcpServer = args.Length > 1 && !args[^1].Contains("publish", StringComparison.OrdinalIgnoreCase);
+var revitDirs = hasMcpServer ? args[1..^1] : args[1..];
+var mcpServerDir = hasMcpServer ? args[^1] : null;
+
+var wixEntities = Generator.GenerateWixEntities(revitDirs);
+
+var mcpServerFeature = new Feature
+{
+    Name = "MCP Server",
+    Description = "Standalone MCP server executable for AI assistant integration",
+    Display = FeatureDisplay.expand
+};
+
 project.RemoveDialogsBetween(NativeDialogs.WelcomeDlg, NativeDialogs.CustomizeDlg);
 
 BuildSingleUserMsi();
@@ -35,10 +48,15 @@ void BuildSingleUserMsi()
 {
     project.Scope = InstallScope.perUser;
     project.OutFileName = $"{outputName}-{versioning.Version}-SingleUser";
-    project.Dirs =
-    [
-        new InstallDir(@"%AppDataFolder%\Autodesk\Revit\Addins\", wixEntities)
-    ];
+
+    var dirs = new List<Dir> { new InstallDir(@"%AppDataFolder%\Autodesk\Revit\Addins\", wixEntities) };
+    if (mcpServerDir is not null)
+    {
+        dirs.Add(new Dir(new Id("MCPSERVERDIR_USER"), @"%AppDataFolder%\RevitDevTool\bin\",
+            new Files(mcpServerFeature, $@"{mcpServerDir}\*.*")));
+    }
+
+    project.Dirs = [..dirs];
     project.BuildMsi();
 }
 
@@ -46,9 +64,14 @@ void BuildMultiUserUserMsi()
 {
     project.Scope = InstallScope.perMachine;
     project.OutFileName = $"{outputName}-{versioning.Version}-MultiUser";
-    project.Dirs =
-    [
-        new InstallDir(@"%CommonAppDataFolder%\Autodesk\Revit\Addins\", wixEntities)
-    ];
+
+    var dirs = new List<Dir> { new InstallDir(@"%CommonAppDataFolder%\Autodesk\Revit\Addins\", wixEntities) };
+    if (mcpServerDir is not null)
+    {
+        dirs.Add(new Dir(new Id("MCPSERVERDIR_MACHINE"), @"%CommonAppDataFolder%\RevitDevTool\bin\",
+            new Files(mcpServerFeature, $@"{mcpServerDir}\*.*")));
+    }
+
+    project.Dirs = [..dirs];
     project.BuildMsi();
 }
