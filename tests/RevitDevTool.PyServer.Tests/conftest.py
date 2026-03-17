@@ -31,7 +31,7 @@ def parser_module(repo_root: Path) -> ModuleType:
 
 @pytest.fixture(scope="session")
 def sample_toolset_dir(repo_root: Path) -> Path:
-    return repo_root / "source" / "Samples" / "PythonDemo" / "mcp_toolset"
+    return repo_root / "Samples" / "PythonDemo" / "mcp_toolset"
 
 
 @pytest.fixture(scope="session")
