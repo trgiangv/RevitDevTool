@@ -4,7 +4,7 @@ using System.Windows.Interop;
 using System.Windows.Media;
 using Microsoft.Extensions.Hosting;
 using RevitDevTool.Commands;
-using RevitDevTool.Logging.Listeners;
+using DevTools.Logging.Listeners;
 using RevitDevTool.Settings;
 using RevitDevTool.Theme;
 using RevitDevTool.Execution.Providers.Python;
@@ -41,10 +41,10 @@ public sealed class HostBackgroundController(ISettingsService settingsService) :
 
     private void CleanLogFolder()
     {
-        var config = settingsService.LogConfig;
-        if (!config.IsSaveLogEnabled || !config.AutoClean) return;
+        var fileConfig = settingsService.LogConfig.FileLogging;
+        if (!fileConfig.Enabled || !fileConfig.AutoClean) return;
 
-        var logFolder = config.LogFolder;
+        var logFolder = fileConfig.LogFolder;
         if (string.IsNullOrEmpty(logFolder) || !Directory.Exists(logFolder)) return;
 
         var logFiles = Directory.EnumerateFiles(logFolder, "*.log");

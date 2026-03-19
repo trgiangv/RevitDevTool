@@ -1,5 +1,9 @@
-﻿using Autodesk.Revit.UI;
+﻿using System.Windows;
+using Autodesk.Revit.UI;
+using Autodesk.Windows;
+using DevTools.Utilities;
 using UIFramework;
+using TaskDialogResult = Autodesk.Revit.UI.TaskDialogResult;
 // ReSharper disable ConvertToExtensionBlock
 
 namespace RevitDevTool.Utils;
@@ -66,6 +70,12 @@ public static class UiAppExtension
                 }
             }
         }
+    }
+    
+    public static void SetRevitOwner(this Window window)
+    {
+        window.Owner = MainWindow.getMainWnd();
+        window.Closed += (_, _) => Win32Utils.SetForegroundWindow(ComponentManager.ApplicationWindow);
     }
 
     /// <summary>

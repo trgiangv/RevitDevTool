@@ -1,8 +1,14 @@
+using DevTools.Logging;
+using DevTools.Logging.Extensions;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 using RevitDevTool.Controllers;
 using RevitDevTool.Logging;
+using RevitDevTool.Logging.Enrichers;
+using RevitDevTool.Logging.Linkify;
 using RevitDevTool.Settings;
+using ZLogger.Scintilla.Public;
 using RevitDevTool.Settings.Options;
 using RevitDevTool.Utils;
 using RevitDevTool.View;
@@ -23,6 +29,7 @@ using RevitDevTool.Mcp.Interfaces;
 using RevitDevTool.Mcp.Models;
 using RevitDevTool.Mcp.Python;
 using RevitDevTool.McpParser.Models;
+// ReSharper disable ConvertToExtensionBlock
 
 namespace RevitDevTool;
 
@@ -43,35 +50,62 @@ public static class Host
             EnvironmentName = Environments.Development
 #endif
         });
-
-        ConfigureOptions(builder.Services, contentRoot);
-        ConfigureServices(builder.Services);
+        
+        builder.ConfigureOptions(contentRoot)
+               .ConfigureLogging()
+               .ConfigureServices();
 
         _host = builder.Build();
         _host.Start();
     }
 
-    private static void ConfigureOptions(IServiceCollection services, string contentRoot)
+    private static HostApplicationBuilder ConfigureOptions(this HostApplicationBuilder builder, string contentRoot)
     {
-        services.Configure<PathOptions>(options =>
+        builder.Services.Configure<PathOptions>(options =>
         {
             options.RootDirectory = contentRoot;
             options.SettingsDirectory = Path.Combine(contentRoot, "Settings");
             options.LogsDirectory = Path.Combine(contentRoot, "Logs");
             options.EnsureDirectoriesExist();
         });
+        return builder;
+    }
+    
+    private static HostApplicationBuilder ConfigureLogging(this HostApplicationBuilder builder)
+    {
+        var loggingConfig = new LoggingConfiguration();
+        builder.Services.AddSingleton(loggingConfig);
+
+        builder.Logging
+            .AddConfiguration(loggingConfig.Configuration.GetSection("Logging"))
+            .ClearProviders()
+            .AddZLoggerScintillaWpf(
+                v => v
+                    .Channel(capacity: 50_000, flushMs: 50, maxBatch: 800)
+                    .Display(maxLines: 50_000, fontSize: 9)
+                    .WithLinkify(new RevitLinkifier()));
+
+        return builder;
     }
 
-    private static void ConfigureServices(IServiceCollection services)
+    private static void ConfigureServices(this HostApplicationBuilder builder)
     {
+        var services = builder.Services;
         // Core services
         services.AddSingleton<IFileConfig<PathOptions>, FileConfig>();
         services.AddSingleton<ISettingsService, SettingsService>();
         services.AddHostedService<HostBackgroundController>();
 
+        // DevTools.Logging
+        services.AddSingleton<IAppInfo, RevitAppInfo>();
+        services.AddDevToolsFileLogging();
+        services.AddSingleton<IContextEnricher>(sp =>
+        {
+            var settings = sp.GetRequiredService<ISettingsService>();
+            return new RevitContextProvider(settings.RevitEnrichers);
+        });
+
         // Logging
-        services.AddSingleton<LoggerFactory>();
-        services.AddSingleton<ILoggingMonitor, RichTextBoxMonitor>();
         services.AddSingleton<ILoggingService, LoggingService>();
         services.AddSingleton<LogViewModel>();
 

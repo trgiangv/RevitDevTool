@@ -1,3 +1,4 @@
+using DevTools.Utilities;
 using RevitDevTool.Theme;
 using RevitDevTool.Utils;
 using RevitDevTool.ViewModel;
@@ -24,7 +25,7 @@ public partial class StubBuilderWindow
 
     private void OnLoaded(object sender, RoutedEventArgs e)
     {
-        this.DisableWindowButtons();
+        this.SetWindowButtons();
         ApplyTheme(ThemeManager.Current.ActualApplicationTheme);
     }
 
@@ -35,7 +36,7 @@ public partial class StubBuilderWindow
 
     private void ApplyTheme(AppTheme theme)
     {
-        this.SetImmersiveDarkMode(theme == AppTheme.Dark);
+        this.SetTitleBarTheme(theme == AppTheme.Dark);
     }
 
     private void OnClosed(object? sender, EventArgs e)

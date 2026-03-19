@@ -1,5 +1,5 @@
+using DevTools.Utilities;
 using RevitDevTool.Theme;
-using RevitDevTool.Utils;
 using System.Windows;
 
 namespace RevitDevTool.View;
@@ -18,7 +18,7 @@ public partial class MainWindow
 
     private void OnLoaded(object sender, RoutedEventArgs e)
     {
-        this.DisableWindowButtons();
+        this.SetWindowButtons();
         ApplyTheme(ThemeManager.Current.ActualApplicationTheme);
     }
 
@@ -30,7 +30,7 @@ public partial class MainWindow
     private void ApplyTheme(AppTheme theme)
     {
         var isDark = theme == AppTheme.Dark;
-        this.SetImmersiveDarkMode(isDark);
+        this.SetTitleBarTheme(isDark);
     }
 
     private void OnClosed(object? sender, EventArgs e)

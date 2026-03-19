@@ -1,85 +1,108 @@
+using System.Windows;
+using DevTools.Logging;
+using DevTools.Logging.Listeners;
+using DevTools.Logging.Options;
+using Microsoft.Extensions.Logging;
 using RevitDevTool.Logging.Listeners;
 using RevitDevTool.Settings;
 using RevitDevTool.Theme;
-using RevitDevTool.Utils;
-using ILogger = Serilog.ILogger;
-using Serilog.Events;
+using ZLogger.Scintilla.Public;
 
 namespace RevitDevTool.Logging;
 
-/// <summary>
-/// Core logging service implementation.
-/// Manages the complete logging lifecycle including initialization, trace listeners, and output.
-/// </summary>
 public sealed class LoggingService(
     ISettingsService settingsService,
-    LoggerFactory loggerFactory,
-    ILoggingMonitor monitor) : ILoggingService
+    ILoggerFactory loggerFactory,
+    FileLoggerProvider fileLoggerProvider,
+    LoggingConfiguration loggingConfiguration,
+    ScintillaLogViewerWpf viewer) : ILoggingService
 {
-    private static bool IsDarkTheme => ThemeManager.Current.ActualApplicationTheme == AppTheme.Dark;
-
     private bool _disposed;
 
-    private ILogger? _logger;
-    public ILoggingMonitor? Monitor { get; } = monitor;
-
+    private LoggerTraceListener? _loggerTraceListener;
     private GeometryListener? _geometryListener;
     private NotifyListener? _notifyListener;
-    private LoggerTraceListener? _loggerTraceListener;
+
+    public FrameworkElement HostElement => viewer.HostElement as FrameworkElement ?? throw new InvalidOperationException("Viewer host element is not a FrameworkElement.");
 
     public void Initialize()
     {
-        if (_logger != null)
-        {
-            Restart();
-            return;
-        }
+        Restart();
+        SetTheme(ThemeManager.Current.ActualApplicationTheme == AppTheme.Dark);
+        viewer.Start();
+    }
 
+    public void Restart(LogTargets targets = LogTargets.All)
+    {
         var config = settingsService.LogConfig;
 
-        _logger = loggerFactory.CreateLogger(config, Monitor, IsDarkTheme);
-        _loggerTraceListener = new LoggerTraceListener(_logger, config);
-        _geometryListener ??= new GeometryListener();
-        _notifyListener ??= new NotifyListener();
+        if (targets.HasFlag(LogTargets.File))
+        {
+            fileLoggerProvider.Restart(config.FileLogging);
+        }
+
+        if (targets.HasFlag(LogTargets.Monitor))
+        {
+            viewer.SetPrettyJson(config.Monitor.EnablePrettyJson);
+            viewer.SetFilter(config.TraceListener.LogLevel);
+        }
+
+        if (targets != LogTargets.None)
+        {
+            RecreateTraceListeners(config);
+        }
     }
 
-    public void Restart()
+    public void SetMinimumLevel(LogLevel level)
     {
-        UnregisterTraceListeners();
-        DisposeLogger();
-        Initialize();
-        RegisterTraceListeners();
+        loggingConfiguration.SetMinimumLevel(level);
     }
 
-    public void SetMinimumLevel(LogEventLevel level)
+    public void SetPrettyJson(bool enabled)
     {
-        loggerFactory.SetMinimumLevel(level);
+        viewer.SetPrettyJson(enabled);
+    }
+
+    public void SetTheme(bool isDark)
+    {
+        viewer.SetTheme(isDark ? ScintillaThemes.Dark : ScintillaThemes.Light);
     }
 
     public void RegisterTraceListeners()
     {
-        TraceUtils.RegisterTraceListeners(
-            settingsService.LogConfig.IncludeWpfTrace,
+        TraceListenerHelper.RegisterTraceListeners(
+            settingsService.LogConfig.TraceListener.IncludeWpfTrace,
             _loggerTraceListener, _geometryListener, _notifyListener);
     }
 
     public void UnregisterTraceListeners()
     {
-        TraceUtils.UnregisterTraceListeners(
-            settingsService.LogConfig.IncludeWpfTrace,
+        TraceListenerHelper.UnregisterTraceListeners(
+            settingsService.LogConfig.TraceListener.IncludeWpfTrace,
             _loggerTraceListener, _geometryListener, _notifyListener);
     }
 
     public void ClearOutput()
     {
-        if (settingsService.LogConfig.UseExternalFileOnly) return;
-        Monitor?.Clear();
+        if (settingsService.LogConfig.Monitor.UseExternalFileOnly) return;
+        viewer.Clear();
     }
 
-    private void DisposeLogger()
+    private void RecreateTraceListeners(LogConfig config)
     {
-        (_logger as IDisposable)?.Dispose();
-        _logger = null;
+        UnregisterTraceListeners();
+        DisposeListeners();
+
+        var logger = loggerFactory.CreateLogger("Trace");
+        _loggerTraceListener = new LoggerTraceListener(logger, config.TraceListener);
+
+        _geometryListener ??= new GeometryListener();
+        _notifyListener ??= new NotifyListener();
+        RegisterTraceListeners();
+    }
+
+    private void DisposeListeners()
+    {
         _loggerTraceListener?.Dispose();
         _loggerTraceListener = null;
         _geometryListener?.Dispose();
@@ -92,8 +115,10 @@ public sealed class LoggingService(
     {
         if (_disposed) return;
         UnregisterTraceListeners();
-        DisposeLogger();
-        Monitor?.Dispose();
+        DisposeListeners();
+        fileLoggerProvider.Dispose();
+        viewer.Stop();
+        viewer.Dispose();
         _disposed = true;
     }
 }

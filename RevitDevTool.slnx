@@ -76,18 +76,6 @@
             <BuildType Solution="Release.Autodesk.2025|*" Project="Release" />
             <BuildType Solution="Release.Autodesk.2026|*" Project="Release" />
         </Project>
-        <Project Path="source/Supports/Serilog.Sinks.RichTextBox.WinForms.Colored/Serilog.Sinks.RichTextBox.WinForms.Colored.csproj">
-            <BuildType Solution="Debug.Autodesk.2022|*" Project="Debug" />
-            <BuildType Solution="Debug.Autodesk.2023|*" Project="Debug" />
-            <BuildType Solution="Debug.Autodesk.2024|*" Project="Debug" />
-            <BuildType Solution="Debug.Autodesk.2025|*" Project="Debug" />
-            <BuildType Solution="Debug.Autodesk.2026|*" Project="Debug" />
-            <BuildType Solution="Release.Autodesk.2022|*" Project="Release" />
-            <BuildType Solution="Release.Autodesk.2023|*" Project="Release" />
-            <BuildType Solution="Release.Autodesk.2024|*" Project="Release" />
-            <BuildType Solution="Release.Autodesk.2025|*" Project="Release" />
-            <BuildType Solution="Release.Autodesk.2026|*" Project="Release" />
-        </Project>
     </Folder>
     <Folder Name="/Tests/">
         <Project Path="Tests/RevitDevTool.Server.Tests/RevitDevTool.Server.Tests.csproj">
@@ -104,8 +92,30 @@
             <Build Project="false" />
         </Project>
     </Folder>
-    <Project Path="source/RevitDevTool.Core/RevitDevTool.Core.csproj" />
-    <Project Path="source/RevitDevTool/RevitDevTool.csproj" />
+    <Project Path="source/DevTools.Logging/DevTools.Logging.csproj">
+        <BuildType Solution="Debug.Autodesk.2022|*" Project="Debug" />
+        <BuildType Solution="Debug.Autodesk.2023|*" Project="Debug" />
+        <BuildType Solution="Debug.Autodesk.2024|*" Project="Debug" />
+        <BuildType Solution="Debug.Autodesk.2025|*" Project="Debug" />
+        <BuildType Solution="Debug.Autodesk.2026|*" Project="Debug" />
+        <BuildType Solution="Release.Autodesk.2022|*" Project="Release" />
+        <BuildType Solution="Release.Autodesk.2023|*" Project="Release" />
+        <BuildType Solution="Release.Autodesk.2024|*" Project="Release" />
+        <BuildType Solution="Release.Autodesk.2025|*" Project="Release" />
+        <BuildType Solution="Release.Autodesk.2026|*" Project="Release" />
+    </Project>
+    <Project Path="source/DevTools.Utilities/DevTools.Utilities.csproj" >
+        <BuildType Solution="Debug.Autodesk.2022|*" Project="Debug" />
+        <BuildType Solution="Debug.Autodesk.2023|*" Project="Debug" />
+        <BuildType Solution="Debug.Autodesk.2024|*" Project="Debug" />
+        <BuildType Solution="Debug.Autodesk.2025|*" Project="Debug" />
+        <BuildType Solution="Debug.Autodesk.2026|*" Project="Debug" />
+        <BuildType Solution="Release.Autodesk.2022|*" Project="Release" />
+        <BuildType Solution="Release.Autodesk.2023|*" Project="Release" />
+        <BuildType Solution="Release.Autodesk.2024|*" Project="Release" />
+        <BuildType Solution="Release.Autodesk.2025|*" Project="Release" />
+        <BuildType Solution="Release.Autodesk.2026|*" Project="Release" />
+    </Project>
     <Project Path="source/RevitDevTool.McpParser/RevitDevTool.McpParser.csproj">
         <BuildType Solution="Debug.Autodesk.2022|*" Project="Debug" />
         <BuildType Solution="Debug.Autodesk.2023|*" Project="Debug" />
@@ -130,4 +140,6 @@
         <BuildType Solution="Release.Autodesk.2025|*" Project="Release" />
         <BuildType Solution="Release.Autodesk.2026|*" Project="Release" />
     </Project>
+    <Project Path="source/RevitDevTool.Core/RevitDevTool.Core.csproj" />
+    <Project Path="source/RevitDevTool/RevitDevTool.csproj" />
 </Solution>

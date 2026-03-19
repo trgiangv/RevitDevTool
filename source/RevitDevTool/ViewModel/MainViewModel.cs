@@ -1,10 +1,10 @@
 using CommunityToolkit.Mvvm.Messaging;
 using RevitDevTool.Settings;
-using RevitDevTool.Utils;
 using RevitDevTool.View;
 using RevitDevTool.ViewModel.Messages;
 using RevitDevTool.ViewModel.Settings;
 using System.Diagnostics;
+using DevTools.Utilities;
 
 namespace RevitDevTool.ViewModel;
 
@@ -21,7 +21,7 @@ public partial class MainViewModel : ObservableObject, IRecipient<IsSaveLogChang
     public ExecutionView ExecutionView { get; }
     public McpRegistryView McpRegistryView { get; }
     public MemoryView MemoryView { get; }
-    public int ProcessId { get; } = SettingsUtils.CurrentProcessId;
+    public int ProcessId { get; } = AppUtils.CurrentProcessId;
     public bool ShowLogMonitorOnly => !IsExecutionVisible && !IsMcpVisible;
     [ObservableProperty] private object? _currentPage;
     [ObservableProperty] private bool _isSettingsVisible;
@@ -74,7 +74,7 @@ public partial class MainViewModel : ObservableObject, IRecipient<IsSaveLogChang
     [RelayCommand(CanExecute = nameof(CanOpenLogFolder))]
     private void OpenLogFolder()
     {
-        var logFolder = _settingsService.LogConfig.LogFolder;
+        var logFolder = _settingsService.LogConfig.FileLogging.LogFolder;
         try
         {
             Process.Start("explorer.exe", logFolder);
@@ -102,7 +102,7 @@ public partial class MainViewModel : ObservableObject, IRecipient<IsSaveLogChang
         ExecutionView = addinLoadView;
         McpRegistryView = mcpRegistryView;
         MemoryView = memoryView;
-        IsSaveLogEnabled = settingsService.LogConfig.IsSaveLogEnabled;
+        IsSaveLogEnabled = settingsService.LogConfig.FileLogging.Enabled;
         _logSettingsViewModel = logSettingsViewModel;
         _settingsService = settingsService;
         WeakReferenceMessenger.Default.Register(this);

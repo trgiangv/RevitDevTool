@@ -117,7 +117,7 @@ public partial class CommandView
 
     private static async Task ProcessDroppedDllFileAsync(string filePath, CommandViewModel viewModel)
     {
-        if (Utils.AssemblyLoader.IsManagedAssembly(filePath))
+        if (DevTools.Utilities.AssemblyLoader.IsManagedAssembly(filePath))
         {
             await viewModel.LoadFromPathAsync(filePath);
         }

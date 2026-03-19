@@ -1,16 +1,17 @@
-using Serilog.Events;
+using System.Windows;
+using DevTools.Logging.Options;
+using Microsoft.Extensions.Logging;
+
 namespace RevitDevTool.Logging;
 
-/// <summary>
-/// Central service for managing application logging lifecycle.
-/// Coordinates logger creation, trace listener registration, and UI output.
-/// </summary>
 public interface ILoggingService : IDisposable
 {
-    ILoggingMonitor? Monitor { get; }
+    FrameworkElement? HostElement { get; }
     void Initialize();
-    void Restart();
-    void SetMinimumLevel(LogEventLevel level);
+    void Restart(LogTargets targets = LogTargets.All);
+    void SetMinimumLevel(LogLevel level);
+    void SetPrettyJson(bool enabled);
+    void SetTheme(bool isDark);
     void RegisterTraceListeners();
     void UnregisterTraceListeners();
     void ClearOutput();

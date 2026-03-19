@@ -3,13 +3,13 @@ using System.IO.Pipes;
 using System.Security.AccessControl;
 using System.Security.Principal;
 using System.Text.Json;
+using DevTools.Utilities;
 using Microsoft.Extensions.Hosting;
 using ModelContextProtocol.Protocol;
 using RevitDevTool.Controllers;
 using RevitDevTool.Core;
 using RevitDevTool.Mcp.Models;
 using RevitDevTool.McpParser.Models;
-using RevitDevTool.Utils;
 // ReSharper disable RedundantSuppressNullableWarningExpression
 
 namespace RevitDevTool.Mcp;
@@ -48,7 +48,7 @@ public sealed class RevitPipeServer(
     {
         if (_cts is not null) return Task.CompletedTask;
 
-        var pid = SettingsUtils.CurrentProcessId;
+        var pid = AppUtils.CurrentProcessId;
         _pipeName = $"Revit_{GetRevitVersion()}_{pid}";
         state.SetEndpoint(_pipeName);
         state.SetConnectedState(0);
@@ -327,7 +327,7 @@ public sealed class RevitPipeServer(
 
     private InstanceInfo BuildInstanceInfo() => new()
     {
-        ProcessId = SettingsUtils.CurrentProcessId,
+        ProcessId = AppUtils.CurrentProcessId,
         VersionNumber = GetRevitVersion(),
         DocumentTitle = _documentTitle,
         DocumentPath = _documentPath

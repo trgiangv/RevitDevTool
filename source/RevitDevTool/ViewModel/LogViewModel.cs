@@ -1,13 +1,12 @@
 using Autodesk.Revit.UI.Events;
 using CommunityToolkit.Mvvm.Messaging;
+using DevTools.Logging.Listeners;
+using Microsoft.Extensions.Logging;
 using RevitDevTool.Controllers;
 using RevitDevTool.Settings;
 using RevitDevTool.ViewModel.Messages;
-using System.Windows.Forms.Integration;
 using RevitDevTool.Core;
 using RevitDevTool.Logging;
-using RevitDevTool.Logging.Listeners;
-using Serilog.Events;
 
 namespace RevitDevTool.ViewModel;
 
@@ -22,20 +21,18 @@ public sealed partial class LogViewModel : ObservableObject, IDisposable,
 
     private ConsoleRedirector? _consoleRedirector;
     private bool _isSubscribed;
-    private bool _isClearing;
-
-    public WindowsFormsHost? LogTextBox => _loggingService.Monitor?.GetHostControl() as WindowsFormsHost;
+    public System.Windows.FrameworkElement? LogTextBox => _loggingService.HostElement;
 
     [ObservableProperty]
     private bool _isStarted;
 
     [ObservableProperty]
-    private LogEventLevel _logLevel = LogEventLevel.Debug;
+    private LogLevel _logLevel = LogLevel.Debug;
 
     [ObservableProperty]
     private int _geometryCount;
 
-    partial void OnLogLevelChanged(LogEventLevel value)
+    partial void OnLogLevelChanged(LogLevel value)
     {
         _loggingService.SetMinimumLevel(value);
     }
@@ -93,8 +90,8 @@ public sealed partial class LogViewModel : ObservableObject, IDisposable,
     public void Receive(LogSettingsAppliedMessage message)
     {
         if (!IsStarted) return;
-        LogLevel = _settingsService.LogConfig.LogLevel;
-        _loggingService.Restart();
+        LogLevel = _settingsService.LogConfig.TraceListener.LogLevel;
+        _loggingService.Restart(message.Targets);
     }
 
     private void Unsubscribe()
@@ -109,7 +106,7 @@ public sealed partial class LogViewModel : ObservableObject, IDisposable,
 
     private void OnIdling(object? sender, IdlingEventArgs e)
     {
-        if (IsStarted && !_isClearing)
+        if (IsStarted)
         {
             _loggingService.RegisterTraceListeners();
         }
@@ -118,12 +115,7 @@ public sealed partial class LogViewModel : ObservableObject, IDisposable,
     [RelayCommand]
     private void Clear()
     {
-        _isClearing = true;
-        if (IsStarted)
-        {
-            _loggingService.Restart();
-        }
-        _isClearing = false;
+        _loggingService.ClearOutput();
     }
 
     [RelayCommand]

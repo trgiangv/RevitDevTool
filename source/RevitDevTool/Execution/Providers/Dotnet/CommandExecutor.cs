@@ -84,7 +84,7 @@ internal static class CommandExecutor
         var dllFiles = Directory.GetFiles(directoryPath, "*.dll");
         foreach (var file in dllFiles)
         {
-            if (Utils.AssemblyLoader.IsManagedAssembly(file)) continue;
+            if (DevTools.Utilities.AssemblyLoader.IsManagedAssembly(file)) continue;
             var hModule = LoadLibrary(file);
             if (hModule == IntPtr.Zero) continue;
             loadedHandles.Add(hModule);

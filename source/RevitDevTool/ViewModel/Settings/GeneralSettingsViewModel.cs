@@ -1,5 +1,6 @@
 using CommunityToolkit.Mvvm.Messaging;
 using RevitDevTool.Controllers;
+using RevitDevTool.Logging;
 using RevitDevTool.Settings;
 using RevitDevTool.Theme;
 using RevitDevTool.ViewModel.Messages;
@@ -10,7 +11,8 @@ namespace RevitDevTool.ViewModel.Settings;
 public partial class GeneralSettingsViewModel : ObservableValidator, IRecipient<ResetSettingsMessage>
 {
     private readonly ISettingsService _settingsService;
-    
+    private readonly ILoggingService _loggingService;
+
     public static List<AppTheme> Themes =>
     [
         AppTheme.Light,
@@ -35,16 +37,23 @@ public partial class GeneralSettingsViewModel : ObservableValidator, IRecipient<
         HostBackgroundController.ToggleHardwareRendering(_settingsService);
     }
 
-    public GeneralSettingsViewModel(ISettingsService settingsService)
+    public GeneralSettingsViewModel(ISettingsService settingsService, ILoggingService loggingService)
     {
         _settingsService = settingsService;
+        _loggingService = loggingService;
         LoadFromConfig();
         WeakReferenceMessenger.Default.Register(this);
+        ThemeManager.Current.ActualApplicationThemeChanged += OnActualThemeChanged;
     }
 
     public void Receive(ResetSettingsMessage message)
     {
         LoadFromConfig();
+    }
+
+    private void OnActualThemeChanged(object? sender, EventArgs e)
+    {
+        _loggingService.SetTheme(ThemeManager.Current.ActualApplicationTheme == AppTheme.Dark);
     }
 
     private void LoadFromConfig()
