@@ -5,6 +5,7 @@ on:
     branches:
       - '*'
   pull_request:
+  workflow_dispatch:
 
 jobs:
   windows:
@@ -25,7 +26,17 @@ jobs:
           restore-keys: ${{ runner.os }}-nuget-
 
       - name: Compile solution
-        run: dotnet run -c Release
+        run: dotnet run -c Release pack
         working-directory: "build"
         env:
           DOTNET_ENVIRONMENT: ${{ github.ref_name == 'main' && 'Production' || 'Development' }}
+      
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-artifacts
+          path: |
+            output/*.zip
+            output/*.msi
+          if-no-files-found: warn
+          retention-days: 30
