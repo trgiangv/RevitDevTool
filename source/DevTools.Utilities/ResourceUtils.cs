@@ -1,5 +1,6 @@
 using System.Collections.ObjectModel;
 using System.Windows;
+using MahApps.Metro.Controls;
 // ReSharper disable ConvertToExtensionBlock
 
 namespace DevTools.Utilities;
@@ -10,7 +11,6 @@ namespace DevTools.Utilities;
 /// </summary>
 public static class ResourceUtils
 {
-    private const string MahAppsAssemblyName = "MahApps.Metro";
     private static ResourceDictionary? _mahAppsControls;
     private static ResourceDictionary? _mahAppsLightTheme;
     private static ResourceDictionary? _mahAppsDarkTheme;
@@ -21,19 +21,30 @@ public static class ResourceUtils
         return new ResourceDictionary { Source = uri };
     }
 
+    public static ResourceDictionary GetResource(Type type, string resourcePath)
+    {
+        var assembly = type.Assembly;
+        var assemblyName = assembly.GetName();
+        
+        var version = assemblyName.Version?.ToString(3);
+        var uri = new Uri($"pack://application:,,,/{assemblyName.Name};v{version};component/{resourcePath}", UriKind.Absolute);
+            
+        return new ResourceDictionary { Source = uri };
+    }
+
     public static ResourceDictionary GetMahAppsControls()
     {
-        return _mahAppsControls ??= GetResource(MahAppsAssemblyName, "Styles/Controls.xaml");
+        return _mahAppsControls ??= GetResource(typeof(HamburgerMenu), "Styles/Controls.xaml");
     }
 
     public static ResourceDictionary GetMahAppsLightTheme()
     {
-        return _mahAppsLightTheme ??= GetResource(MahAppsAssemblyName, "Styles/Themes/Light.Blue.xaml");
+        return _mahAppsLightTheme ??= GetResource(typeof(HamburgerMenu), "Styles/Themes/Light.Blue.xaml");
     }
 
     public static ResourceDictionary GetMahAppsDarkTheme()
     {
-        return _mahAppsDarkTheme ??= GetResource(MahAppsAssemblyName, "Styles/Themes/Dark.Blue.xaml");
+        return _mahAppsDarkTheme ??= GetResource(typeof(HamburgerMenu), "Styles/Themes/Dark.Blue.xaml");
     }
 
     public static void RemoveIfNotNull(this Collection<ResourceDictionary> mergedDictionaries, ResourceDictionary? item)
