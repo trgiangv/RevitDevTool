@@ -4,14 +4,14 @@
              xmlns:converters="clr-namespace:RevitDevTool.View.Converters"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:design="clr-namespace:RevitDevTool.Theme.Design"
-             xmlns:mah="http://metro.mahapps.com/winfx/xaml/controls"
+             xmlns:mah="http://metro.devtools.ui/winfx/xaml/controls"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:view="clr-namespace:RevitDevTool.View"
              xmlns:viewModel="clr-namespace:RevitDevTool.ViewModel"
              d:DataContext="{d:DesignInstance viewModel:ExecutionViewModel}"
              d:DesignHeight="500"
              d:DesignWidth="400"
-             Background="{DynamicResource MahApps.Brushes.ThemeBackground}"
+             Background="{DynamicResource DevTools.MahApps.Brushes.ThemeBackground}"
              mc:Ignorable="d">
 
     <UserControl.Resources>
@@ -68,7 +68,7 @@
                 <TextBlock Margin="3,0,0,0"
                            VerticalAlignment="Center"
                            FontSize="11"
-                           Foreground="{DynamicResource MahApps.Brushes.Gray}"
+                           Foreground="{DynamicResource DevTools.MahApps.Brushes.Gray}"
                            Text="{Binding CommandViewModel.DebugPort, Mode=OneTime, StringFormat=': {0}'}"
                            ToolTip="debugpy port" />
             </StackPanel>
@@ -78,12 +78,12 @@
                           Padding="5,0"
                           BorderThickness="0.5"
                           IsChecked="{Binding IsPackageMode, UpdateSourceTrigger=PropertyChanged}"
-                          Style="{DynamicResource MahApps.Styles.ToggleButton.Circle}"
+                          Style="{DynamicResource DevTools.MahApps.Styles.ToggleButton.Circle}"
                           ToolTip="Installed packages">
                 <Path Width="16"
                       Height="16"
                       Data="{StaticResource Package}"
-                      Fill="{DynamicResource MahApps.Brushes.ThemeForeground}"
+                      Fill="{DynamicResource DevTools.MahApps.Brushes.ThemeForeground}"
                       Stretch="Uniform" />
             </ToggleButton>
 
@@ -91,7 +91,7 @@
                         Margin="5,0,0,0"
                         Orientation="Horizontal">
                 <StackPanel.Resources>
-                    <Style BasedOn="{StaticResource MahApps.Styles.Button.Circle}"
+                    <Style BasedOn="{StaticResource DevTools.MahApps.Styles.Button.Circle}"
                            TargetType="{x:Type Button}">
                         <Setter Property="Height" Value="25" />
                         <Setter Property="Width" Value="25" />
@@ -103,7 +103,7 @@
                     <Path Width="7"
                           Height="7"
                           Data="{StaticResource Expand}"
-                          Fill="{DynamicResource MahApps.Brushes.ThemeForeground}"
+                          Fill="{DynamicResource DevTools.MahApps.Brushes.ThemeForeground}"
                           Stretch="Uniform" />
                 </Button>
                 <Button Margin="0,0,5,0"
@@ -112,7 +112,7 @@
                     <Path Width="7"
                           Height="7"
                           Data="{StaticResource Collapse}"
-                          Fill="{DynamicResource MahApps.Brushes.ThemeForeground}"
+                          Fill="{DynamicResource DevTools.MahApps.Brushes.ThemeForeground}"
                           Stretch="Uniform" />
                 </Button>
                 <Button Margin="0,0,5,0"
@@ -121,7 +121,7 @@
                     <Path Width="11"
                           Height="11"
                           Data="{StaticResource Toggle}"
-                          Fill="{DynamicResource MahApps.Brushes.ThemeForeground}"
+                          Fill="{DynamicResource DevTools.MahApps.Brushes.ThemeForeground}"
                           Stretch="Uniform" />
                 </Button>
             </StackPanel>

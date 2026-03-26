@@ -1,6 +1,5 @@
 using System.Collections.ObjectModel;
 using System.Windows;
-using MahApps.Metro.Controls;
 // ReSharper disable ConvertToExtensionBlock
 
 namespace DevTools.Utilities;
@@ -21,30 +20,19 @@ public static class ResourceUtils
         return new ResourceDictionary { Source = uri };
     }
 
-    public static ResourceDictionary GetResource(Type type, string resourcePath)
-    {
-        var assembly = type.Assembly;
-        var assemblyName = assembly.GetName();
-        
-        var version = assemblyName.Version?.ToString(3);
-        var uri = new Uri($"pack://application:,,,/{assemblyName.Name};v{version};component/{resourcePath}", UriKind.Absolute);
-            
-        return new ResourceDictionary { Source = uri };
-    }
-
     public static ResourceDictionary GetMahAppsControls()
     {
-        return _mahAppsControls ??= GetResource(typeof(HamburgerMenu), "Styles/Controls.xaml");
+        return _mahAppsControls ??= GetResource("DevTools.MahApps.Metro", "Styles/Controls.xaml");
     }
 
     public static ResourceDictionary GetMahAppsLightTheme()
     {
-        return _mahAppsLightTheme ??= GetResource(typeof(HamburgerMenu), "Styles/Themes/Light.Blue.xaml");
+        return _mahAppsLightTheme ??= GetResource("DevTools.MahApps.Metro", "Styles/Themes/Light.Blue.xaml");
     }
 
     public static ResourceDictionary GetMahAppsDarkTheme()
     {
-        return _mahAppsDarkTheme ??= GetResource(typeof(HamburgerMenu), "Styles/Themes/Dark.Blue.xaml");
+        return _mahAppsDarkTheme ??= GetResource("DevTools.MahApps.Metro", "Styles/Themes/Dark.Blue.xaml");
     }
 
     public static void RemoveIfNotNull(this Collection<ResourceDictionary> mergedDictionaries, ResourceDictionary? item)

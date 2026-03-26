@@ -5,7 +5,7 @@
              xmlns:control="clr-namespace:RevitDevTool.View.Controls"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:design="clr-namespace:RevitDevTool.Theme.Design"
-             xmlns:mah="http://metro.mahapps.com/winfx/xaml/controls"
+             xmlns:mah="http://metro.devtools.ui/winfx/xaml/controls"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:models="clr-namespace:RevitDevTool.Execution.Models"
              xmlns:viewModel="clr-namespace:RevitDevTool.ViewModel"
@@ -50,7 +50,7 @@
                                FontWeight="SemiBold"
                                Text="{Binding Name}" />
                     <TextBlock Margin="6,0,0,0"
-                               Foreground="{DynamicResource MahApps.Brushes.Gray}"
+                               Foreground="{DynamicResource DevTools.MahApps.Brushes.Gray}"
                                Text="{Binding Children.Count, StringFormat='({0})'}" />
                 </StackPanel>
             </HierarchicalDataTemplate>
@@ -61,13 +61,13 @@
                           Height="11"
                           Margin="0,0,6,0"
                           Data="{StaticResource Box}"
-                          Fill="{DynamicResource MahApps.Brushes.ThemeForeground}"
+                          Fill="{DynamicResource DevTools.MahApps.Brushes.ThemeForeground}"
                           Stretch="Uniform" />
                     <TextBlock behav:HighlightTextBlockBehavior.Range="{Binding HighlightRange}"
                                Text="{Binding Name}" />
                     <Border Margin="6,0,0,0"
                             Padding="4,1"
-                            Background="{DynamicResource MahApps.Brushes.Accent}"
+                            Background="{DynamicResource DevTools.MahApps.Brushes.Accent}"
                             CornerRadius="3"
                             Visibility="{Binding IsLatest, Converter={StaticResource BooleanToVisibilityConverter}}">
                         <TextBlock FontSize="10"
@@ -79,7 +79,7 @@
 
             <Style x:Key="ExtendedTreeViewItemStyle"
                    d:DataContext="{d:DesignInstance models:TreeNodeBase}"
-                   BasedOn="{StaticResource MahApps.Styles.TreeViewItem}"
+                   BasedOn="{StaticResource DevTools.MahApps.Styles.TreeViewItem}"
                    TargetType="{x:Type TreeViewItem}">
                 <Setter Property="IsExpanded" Value="{Binding IsExpanded, Mode=TwoWay}" />
                 <Setter Property="IsSelected" Value="{Binding IsSelected, Mode=TwoWay}" />
@@ -115,12 +115,12 @@
         <Border Grid.Row="1"
                 Margin="0,6,0,0"
                 Padding="8,6"
-                Background="{DynamicResource MahApps.Brushes.ThemeBackground}"
+                Background="{DynamicResource DevTools.MahApps.Brushes.ThemeBackground}"
                 BorderThickness="1"
                 Visibility="{Binding IsBusy, Converter={StaticResource BooleanToVisibilityConverter}}">
             <StackPanel>
                 <TextBlock FontSize="11"
-                           Foreground="{DynamicResource MahApps.Brushes.ThemeForeground}"
+                           Foreground="{DynamicResource DevTools.MahApps.Brushes.ThemeForeground}"
                            Text="{Binding BusyMessage}" />
                 <mah:MetroProgressBar Height="6"
                                       Margin="0,6,0,0"

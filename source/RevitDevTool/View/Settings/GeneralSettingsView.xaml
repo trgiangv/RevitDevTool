@@ -3,10 +3,10 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:design="clr-namespace:RevitDevTool.Theme.Design"
-             xmlns:mah="http://metro.mahapps.com/winfx/xaml/controls"
+             xmlns:mah="http://metro.devtools.ui/winfx/xaml/controls"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:settings="clr-namespace:RevitDevTool.ViewModel.Settings"
-             d:Background="{DynamicResource MahApps.Brushes.ThemeBackground}"
+             d:Background="{DynamicResource DevTools.MahApps.Brushes.ThemeBackground}"
              d:DataContext="{d:DesignInstance settings:GeneralSettingsViewModel}"
              d:DesignHeight="600"
              d:DesignWidth="600"
@@ -36,7 +36,7 @@
                         <TextBlock FontWeight="SemiBold"
                                    Text="Application Theme" />
                         <TextBlock FontSize="11"
-                                   Foreground="{DynamicResource MahApps.Brushes.Gray}"
+                                   Foreground="{DynamicResource DevTools.MahApps.Brushes.Gray}"
                                    Text="Customise the application theme" />
                     </StackPanel>
                     <ComboBox Grid.Column="1"
@@ -59,7 +59,7 @@
                         <TextBlock FontWeight="SemiBold"
                                    Text="Hardware graphics acceleration" />
                         <TextBlock FontSize="11"
-                                   Foreground="{DynamicResource MahApps.Brushes.Gray}"
+                                   Foreground="{DynamicResource DevTools.MahApps.Brushes.Gray}"
                                    Text="Offloads graphic rendering from the CPU to the GPU" />
                     </StackPanel>
                     <mah:ToggleSwitch Grid.Column="1"

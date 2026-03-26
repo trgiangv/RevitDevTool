@@ -12,7 +12,7 @@
         MinHeight="400"
         d:DesignHeight="700"
         d:DesignWidth="600"
-        Background="{DynamicResource MahApps.Brushes.ThemeBackground}"
+        Background="{DynamicResource DevTools.MahApps.Brushes.ThemeBackground}"
         ShowInTaskbar="False"
         WindowStartupLocation="CenterOwner"
         mc:Ignorable="d">

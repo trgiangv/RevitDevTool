@@ -7,7 +7,7 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:design="clr-namespace:RevitDevTool.Theme.Design"
              xmlns:executionModels="clr-namespace:RevitDevTool.Execution.Models"
-             xmlns:mah="http://metro.mahapps.com/winfx/xaml/controls"
+             xmlns:mah="http://metro.devtools.ui/winfx/xaml/controls"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:viewModel="clr-namespace:RevitDevTool.ViewModel"
              d:DataContext="{d:DesignInstance viewModel:CommandViewModel}"
@@ -64,7 +64,7 @@
 
             <Style x:Key="ExtendedTreeViewItemStyle"
                    d:DataContext="{d:DesignInstance executionModels:ExecutionNodeBase}"
-                   BasedOn="{StaticResource MahApps.Styles.TreeViewItem}"
+                   BasedOn="{StaticResource DevTools.MahApps.Styles.TreeViewItem}"
                    TargetType="{x:Type TreeViewItem}">
                 <Setter Property="IsExpanded" Value="{Binding IsExpanded, Mode=TwoWay}" />
                 <Setter Property="IsSelected" Value="{Binding IsSelected, Mode=TwoWay}" />
@@ -136,7 +136,7 @@
         <Border Grid.Row="1"
                 Margin="0,5,0,0"
                 Padding="10,6"
-                Background="{DynamicResource MahApps.Brushes.ThemeBackground}"
+                Background="{DynamicResource DevTools.MahApps.Brushes.ThemeBackground}"
                 BorderThickness="1"
                 Visibility="{Binding IsBusy, Converter={StaticResource BooleanToVisibilityConverter}}">
             <StackPanel>
@@ -149,7 +149,7 @@
                            Source="{Binding BusyProviderType, Converter={StaticResource ExecutionModeIconConverter}}"
                            Visibility="{Binding BusyProviderType, Converter={StaticResource ExecutionModeVisibilityConverter}}" />
                     <TextBlock FontSize="9"
-                               Foreground="{DynamicResource MahApps.Brushes.ThemeForeground}"
+                               Foreground="{DynamicResource DevTools.MahApps.Brushes.ThemeForeground}"
                                Text="{Binding BusyMessage}"
                                TextAlignment="Center"
                                TextTrimming="CharacterEllipsis" />

@@ -5,10 +5,10 @@
              xmlns:converters="clr-namespace:RevitDevTool.View.Converters"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:design="clr-namespace:RevitDevTool.Theme.Design"
-             xmlns:mah="http://metro.mahapps.com/winfx/xaml/controls"
+             xmlns:mah="http://metro.devtools.ui/winfx/xaml/controls"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:viewModel="clr-namespace:RevitDevTool.ViewModel"
-             d:Background="{DynamicResource MahApps.Brushes.ThemeBackground}"
+             d:Background="{DynamicResource DevTools.MahApps.Brushes.ThemeBackground}"
              d:DataContext="{d:DesignInstance viewModel:McpRegistryViewModel}"
              d:DesignHeight="500"
              d:DesignWidth="500"
@@ -23,7 +23,7 @@
 
             <Style x:Key="InfoBlock"
                    TargetType="TextBlock">
-                <Setter Property="Foreground" Value="{DynamicResource MahApps.Brushes.ThemeForeground}" />
+                <Setter Property="Foreground" Value="{DynamicResource DevTools.MahApps.Brushes.ThemeForeground}" />
             </Style>
 
             <converters:ExecutionModeImageConverter x:Key="ExecutionModeToIcon" />
@@ -61,7 +61,7 @@
                 <Path Width="12"
                       Height="12"
                       Data="{StaticResource Refresh}"
-                      Fill="{DynamicResource MahApps.Brushes.ThemeForeground}"
+                      Fill="{DynamicResource DevTools.MahApps.Brushes.ThemeForeground}"
                       Stretch="Uniform" />
             </Button>
         </Grid>
@@ -72,7 +72,7 @@
                      Rows="1">
             <Border Margin="0,0,5,0"
                     Padding="6"
-                    BorderBrush="{DynamicResource MahApps.Brushes.Gray8}"
+                    BorderBrush="{DynamicResource DevTools.MahApps.Brushes.Gray8}"
                     BorderThickness="1"
                     CornerRadius="4">
                 <StackPanel Orientation="Vertical">
@@ -100,7 +100,7 @@
 
             <Border Margin="2,0"
                     Padding="6"
-                    BorderBrush="{DynamicResource MahApps.Brushes.Gray8}"
+                    BorderBrush="{DynamicResource DevTools.MahApps.Brushes.Gray8}"
                     BorderThickness="1"
                     CornerRadius="4">
                 <StackPanel>
@@ -116,7 +116,7 @@
 
             <Border Margin="2,0"
                     Padding="6"
-                    BorderBrush="{DynamicResource MahApps.Brushes.Gray8}"
+                    BorderBrush="{DynamicResource DevTools.MahApps.Brushes.Gray8}"
                     BorderThickness="1"
                     CornerRadius="4">
                 <StackPanel>
@@ -132,7 +132,7 @@
 
             <Border Margin="2,0"
                     Padding="6"
-                    BorderBrush="{DynamicResource MahApps.Brushes.Gray8}"
+                    BorderBrush="{DynamicResource DevTools.MahApps.Brushes.Gray8}"
                     BorderThickness="1"
                     CornerRadius="4">
                 <StackPanel>
@@ -148,7 +148,7 @@
 
             <Border Margin="4,0,0,0"
                     Padding="6"
-                    BorderBrush="{DynamicResource MahApps.Brushes.Gray8}"
+                    BorderBrush="{DynamicResource DevTools.MahApps.Brushes.Gray8}"
                     BorderThickness="1"
                     CornerRadius="4">
                 <StackPanel>
@@ -208,7 +208,7 @@
                                 <Border Margin="6,0,0,0"
                                         Padding="5,1"
                                         VerticalAlignment="Center"
-                                        Background="{DynamicResource MahApps.Brushes.Accent}"
+                                        Background="{DynamicResource DevTools.MahApps.Brushes.Accent}"
                                         CornerRadius="3">
                                     <TextBlock behav:HighlightTextBlockBehavior.Range="{Binding GroupNameHighlight}"
                                                FontSize="10"
@@ -221,7 +221,7 @@
                                     Margin="6,0,0,0"
                                     Padding="6,2"
                                     VerticalAlignment="Center"
-                                    Background="{DynamicResource MahApps.Brushes.Accent}"
+                                    Background="{DynamicResource DevTools.MahApps.Brushes.Accent}"
                                     CornerRadius="6">
                                 <TextBlock FontSize="10"
                                            FontWeight="SemiBold"
@@ -258,12 +258,12 @@
         <Border Grid.Row="3"
                 Margin="0,6,0,0"
                 Padding="10,6"
-                Background="{DynamicResource MahApps.Brushes.ThemeBackground}"
+                Background="{DynamicResource DevTools.MahApps.Brushes.ThemeBackground}"
                 BorderThickness="1"
                 Visibility="{Binding ShowStatusPanel, Converter={StaticResource BooleanToVisibilityConverter}}">
             <StackPanel>
                 <TextBlock FontSize="9"
-                           Foreground="{DynamicResource MahApps.Brushes.ThemeForeground}"
+                           Foreground="{DynamicResource DevTools.MahApps.Brushes.ThemeForeground}"
                            Text="{Binding StatusPanelText}"
                            TextAlignment="Center"
                            TextTrimming="CharacterEllipsis" />

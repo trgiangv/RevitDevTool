@@ -11,9 +11,9 @@
     <PropertyGroup>
         <IsRepackable>true</IsRepackable>
         <RepackBinariesExcludes>
-            MahApps.Metro.dll;
-            ControlzEx.dll;
-            Microsoft.Xaml.Behaviors.dll;
+            DevTools.MahApps.Metro.dll;
+            DevTools.ControlzEx.dll;
+            DevTools.Microsoft.Xaml.Behaviors.dll;
             FSharp.Core.dll;
         </RepackBinariesExcludes>
     </PropertyGroup>
@@ -24,7 +24,6 @@
 
         <!--UI-->
         <PackageReference Include="CommunityToolkit.Mvvm"/>
-        <PackageReference Include="MahApps.Metro"/>
         <PackageReference Include="Microsoft.Web.WebView2" Condition="$(RevitVersion) &lt; 2024"/>
 
         <!--Python-->
@@ -58,6 +57,7 @@
     </ItemGroup>
     
     <ItemGroup>
+        <ProjectReference Include="..\..\libs\MahApps.Metro\src\MahApps.Metro\MahApps.Metro.csproj" />
         <ProjectReference Include="..\DevTools.Utilities\DevTools.Utilities.csproj" />
         <ProjectReference Include="..\DevTools.Logging\DevTools.Logging.csproj" />
         <ProjectReference Include="..\RevitDevTool.McpParser\RevitDevTool.McpParser.csproj" />

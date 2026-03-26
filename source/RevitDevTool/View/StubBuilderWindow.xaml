@@ -3,7 +3,7 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:design="clr-namespace:RevitDevTool.Theme.Design"
-        xmlns:mah="http://metro.mahapps.com/winfx/xaml/controls"
+        xmlns:mah="http://metro.devtools.ui/winfx/xaml/controls"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:viewModel="clr-namespace:RevitDevTool.ViewModel"
         Title="Stubs Builder"
@@ -14,7 +14,7 @@
         d:DesignHeight="650"
         d:DesignWidth="700"
         d:DataContext="{d:DesignInstance Type=viewModel:StubBuilderViewModel}"
-        Background="{DynamicResource MahApps.Brushes.ThemeBackground}"
+        Background="{DynamicResource DevTools.MahApps.Brushes.ThemeBackground}"
         ShowInTaskbar="False"
         WindowStartupLocation="CenterOwner"
         mc:Ignorable="d">
@@ -75,10 +75,10 @@
                         <CheckBox.Content>
                             <StackPanel Orientation="Horizontal">
                                 <TextBlock FontWeight="SemiBold"
-                                           Foreground="{DynamicResource MahApps.Brushes.ThemeForeground}"
+                                           Foreground="{DynamicResource DevTools.MahApps.Brushes.ThemeForeground}"
                                            Text="{Binding Name}" />
                                 <TextBlock Margin="8,0,0,0"
-                                           Foreground="{DynamicResource MahApps.Brushes.Gray}"
+                                           Foreground="{DynamicResource DevTools.MahApps.Brushes.Gray}"
                                            Text="{Binding Location}"
                                            TextTrimming="CharacterEllipsis"
                                            MaxWidth="400" />
@@ -101,7 +101,7 @@
                        Margin="0,0,8,0"
                        VerticalAlignment="Center"
                        FontWeight="SemiBold"
-                       Foreground="{DynamicResource MahApps.Brushes.ThemeForeground}"
+                       Foreground="{DynamicResource DevTools.MahApps.Brushes.ThemeForeground}"
                        Text="Output Path:" />
 
             <TextBox Grid.Column="1"
@@ -119,7 +119,7 @@
         <TextBlock Grid.Row="3"
                    Margin="0,0,0,8"
                    FontSize="11"
-                   Foreground="{DynamicResource MahApps.Brushes.Accent}"
+                   Foreground="{DynamicResource DevTools.MahApps.Brushes.Accent}"
                    Text="{Binding StatusMessage}"
                    TextWrapping="Wrap" />
 

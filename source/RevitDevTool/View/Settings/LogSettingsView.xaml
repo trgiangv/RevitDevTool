@@ -3,11 +3,11 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:design="clr-namespace:RevitDevTool.Theme.Design"
-             xmlns:mah="http://metro.mahapps.com/winfx/xaml/controls"
+             xmlns:mah="http://metro.devtools.ui/winfx/xaml/controls"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:settings="clr-namespace:RevitDevTool.ViewModel.Settings"
              xmlns:sys="clr-namespace:System;assembly=mscorlib"
-             d:Background="{DynamicResource MahApps.Brushes.ThemeBackground}"
+             d:Background="{DynamicResource DevTools.MahApps.Brushes.ThemeBackground}"
              d:DataContext="{d:DesignInstance settings:LogSettingsViewModel}"
              d:DesignHeight="850"
              d:DesignWidth="600"
@@ -43,7 +43,7 @@
                               Height="20"
                               VerticalAlignment="Center"
                               Data="{StaticResource LogLevel}"
-                              Fill="{DynamicResource MahApps.Brushes.ThemeForeground}"
+                              Fill="{DynamicResource DevTools.MahApps.Brushes.ThemeForeground}"
                               Stretch="Uniform" />
                         <StackPanel Grid.Column="1"
                                     Margin="12,0"
@@ -51,7 +51,7 @@
                             <TextBlock FontWeight="SemiBold"
                                        Text="Minimum Level" />
                             <TextBlock FontSize="11"
-                                       Foreground="{DynamicResource MahApps.Brushes.Gray}"
+                                       Foreground="{DynamicResource DevTools.MahApps.Brushes.Gray}"
                                        Text="Minimum level for displaying logs" />
                         </StackPanel>
                         <ComboBox Grid.Column="2"
@@ -72,7 +72,7 @@
                               Height="20"
                               VerticalAlignment="Center"
                               Data="{StaticResource PrettyJson}"
-                              Fill="{DynamicResource MahApps.Brushes.ThemeForeground}"
+                              Fill="{DynamicResource DevTools.MahApps.Brushes.ThemeForeground}"
                               Stretch="Uniform" />
                         <StackPanel Grid.Column="1"
                                     Margin="12,0"
@@ -80,7 +80,7 @@
                             <TextBlock FontWeight="SemiBold"
                                        Text="Pretty JSON" />
                             <TextBlock FontSize="11"
-                                       Foreground="{DynamicResource MahApps.Brushes.Gray}"
+                                       Foreground="{DynamicResource DevTools.MahApps.Brushes.Gray}"
                                        Text="Format objects as indented JSON" />
                         </StackPanel>
                         <mah:ToggleSwitch Grid.Column="2"
@@ -95,7 +95,7 @@
                         <StackPanel>
                             <TextBlock Margin="0,4"
                                        FontSize="11"
-                                       Foreground="{DynamicResource MahApps.Brushes.Gray}"
+                                       Foreground="{DynamicResource DevTools.MahApps.Brushes.Gray}"
                                        Text="comma-separated, max 5 keywords for each level" />
                             <!--  Information Keywords  -->
                             <TextBox Margin="0,4"
@@ -141,7 +141,7 @@
                               Height="20"
                               VerticalAlignment="Center"
                               Data="{StaticResource Stack}"
-                              Fill="{DynamicResource MahApps.Brushes.ThemeForeground}"
+                              Fill="{DynamicResource DevTools.MahApps.Brushes.ThemeForeground}"
                               Stretch="Uniform" />
                         <StackPanel Grid.Column="1"
                                     Margin="12,0"
@@ -149,7 +149,7 @@
                             <TextBlock FontWeight="SemiBold"
                                        Text="Include Stack Trace" />
                             <TextBlock FontSize="11"
-                                       Foreground="{DynamicResource MahApps.Brushes.Gray}"
+                                       Foreground="{DynamicResource DevTools.MahApps.Brushes.Gray}"
                                        Text="Include stack trace frame information" />
                         </StackPanel>
                         <StackPanel Grid.Column="2"
@@ -185,7 +185,7 @@
                             <TextBlock FontWeight="SemiBold"
                                        Text="Include WPF Trace" />
                             <TextBlock FontSize="11"
-                                       Foreground="{DynamicResource MahApps.Brushes.Gray}"
+                                       Foreground="{DynamicResource DevTools.MahApps.Brushes.Gray}"
                                        Text="Include presentation trace information" />
                         </StackPanel>
                         <StackPanel Grid.Column="2"
@@ -220,7 +220,7 @@
                                   Height="20"
                                   VerticalAlignment="Center"
                                   Data="{StaticResource FileLog}"
-                                  Fill="{DynamicResource MahApps.Brushes.ThemeForeground}"
+                                  Fill="{DynamicResource DevTools.MahApps.Brushes.ThemeForeground}"
                                   Stretch="Uniform" />
                             <StackPanel Grid.Column="1"
                                         Margin="12,0"
@@ -228,7 +228,7 @@
                                 <TextBlock FontWeight="SemiBold"
                                            Text="Enable Save Log" />
                                 <TextBlock FontSize="11"
-                                           Foreground="{DynamicResource MahApps.Brushes.Gray}"
+                                           Foreground="{DynamicResource DevTools.MahApps.Brushes.Gray}"
                                            Text="Output format for log entries" />
                             </StackPanel>
                             <StackPanel Grid.Column="2"
@@ -258,7 +258,7 @@
                               Height="20"
                               VerticalAlignment="Center"
                               Data="{StaticResource MonitorLog}"
-                              Fill="{DynamicResource MahApps.Brushes.ThemeForeground}"
+                              Fill="{DynamicResource DevTools.MahApps.Brushes.ThemeForeground}"
                               Stretch="Uniform" />
                         <StackPanel Grid.Column="1"
                                     Margin="12,0"
@@ -266,7 +266,7 @@
                             <TextBlock FontWeight="SemiBold"
                                        Text="Log only to file" />
                             <TextBlock FontSize="11"
-                                       Foreground="{DynamicResource MahApps.Brushes.Gray}"
+                                       Foreground="{DynamicResource DevTools.MahApps.Brushes.Gray}"
                                        Text="Disable UI logging" />
                         </StackPanel>
                         <mah:ToggleSwitch Grid.Column="2"
@@ -287,7 +287,7 @@
                               Height="20"
                               VerticalAlignment="Center"
                               Data="{StaticResource Clock}"
-                              Fill="{DynamicResource MahApps.Brushes.ThemeForeground}"
+                              Fill="{DynamicResource DevTools.MahApps.Brushes.ThemeForeground}"
                               Stretch="Uniform" />
                         <StackPanel Grid.Column="1"
                                     Margin="12,0"
@@ -295,7 +295,7 @@
                             <TextBlock FontWeight="SemiBold"
                                        Text="Rolling Interval" />
                             <TextBlock FontSize="11"
-                                       Foreground="{DynamicResource MahApps.Brushes.Gray}"
+                                       Foreground="{DynamicResource DevTools.MahApps.Brushes.Gray}"
                                        Text="Create new file every" />
                         </StackPanel>
                         <ComboBox Grid.Column="2"
@@ -317,7 +317,7 @@
                               Height="20"
                               VerticalAlignment="Center"
                               Data="{StaticResource Clear}"
-                              Fill="{DynamicResource MahApps.Brushes.ThemeForeground}"
+                              Fill="{DynamicResource DevTools.MahApps.Brushes.ThemeForeground}"
                               Stretch="Uniform" />
                         <StackPanel Grid.Column="1"
                                     Margin="12,0"
@@ -325,7 +325,7 @@
                             <TextBlock FontWeight="SemiBold"
                                        Text="Auto Clean" />
                             <TextBlock FontSize="11"
-                                       Foreground="{DynamicResource MahApps.Brushes.Gray}"
+                                       Foreground="{DynamicResource DevTools.MahApps.Brushes.Gray}"
                                        Text="Delete old log files when Revit startup or shutdown" />
                         </StackPanel>
                         <mah:ToggleSwitch Grid.Column="2"
@@ -346,7 +346,7 @@
                               Height="20"
                               VerticalAlignment="Center"
                               Data="{StaticResource RevitEnricher}"
-                              Fill="{DynamicResource MahApps.Brushes.ThemeForeground}"
+                              Fill="{DynamicResource DevTools.MahApps.Brushes.ThemeForeground}"
                               Stretch="Uniform" />
                         <StackPanel Grid.Column="1"
                                     Margin="12,0"
@@ -354,14 +354,14 @@
                             <TextBlock FontWeight="SemiBold"
                                        Text="Revit Enrichers" />
                             <TextBlock FontSize="11"
-                                       Foreground="{DynamicResource MahApps.Brushes.Gray}"
+                                       Foreground="{DynamicResource DevTools.MahApps.Brushes.Gray}"
                                        Text="Add Revit context to JSON logs" />
                         </StackPanel>
                         <mah:MultiSelectionComboBox Grid.Column="2"
                                                     Width="300"
                                                     VerticalAlignment="Center"
                                                     mah:MultiSelectorHelper.SelectedItems="{Binding SelectedRevitEnrichers}"
-                                                    ItemContainerStyle="{StaticResource MahApps.Styles.MultiSelectionComboBoxItem.CheckBox}"
+                                                    ItemContainerStyle="{StaticResource DevTools.MahApps.Styles.MultiSelectionComboBoxItem.CheckBox}"
                                                     ItemsSource="{Binding AvailableRevitEnrichers, Mode=OneTime}"
                                                     SelectionMode="Multiple" />
                     </Grid>
@@ -378,14 +378,14 @@
                               Height="20"
                               VerticalAlignment="Center"
                               Data="{StaticResource Folder}"
-                              Fill="{DynamicResource MahApps.Brushes.ThemeForeground}"
+                              Fill="{DynamicResource DevTools.MahApps.Brushes.ThemeForeground}"
                               Stretch="Uniform" />
                         <StackPanel Grid.Column="1"
                                     Margin="12,0">
                             <TextBlock FontWeight="SemiBold"
                                        Text="Log Folder" />
                             <TextBlock FontSize="11"
-                                       Foreground="{DynamicResource MahApps.Brushes.Gray}"
+                                       Foreground="{DynamicResource DevTools.MahApps.Brushes.Gray}"
                                        Text="{Binding LogFolder}"
                                        TextTrimming="CharacterEllipsis"
                                        ToolTip="{Binding LogFolder}" />
