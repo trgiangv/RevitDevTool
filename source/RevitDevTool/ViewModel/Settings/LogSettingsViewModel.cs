@@ -125,10 +125,10 @@ public partial class LogSettingsViewModel : ObservableObject, IDataErrorInfo, IR
 
         LogLevel = config.TraceListener.LogLevel;
         EnablePrettyJson = config.Monitor.EnablePrettyJson;
-        InformationKeywords = config.TraceListener.FilterKeywords.Information;
-        WarningKeywords = config.TraceListener.FilterKeywords.Warning;
-        ErrorKeywords = config.TraceListener.FilterKeywords.Error;
-        CriticalKeywords = config.TraceListener.FilterKeywords.Critical;
+        InformationKeywords = config.TraceListener.LevelKeys.Information;
+        WarningKeywords = config.TraceListener.LevelKeys.Warning;
+        ErrorKeywords = config.TraceListener.LevelKeys.Error;
+        CriticalKeywords = config.TraceListener.LevelKeys.Critical;
         IsSaveLogEnabled = config.FileLogging.Enabled;
         UseExternalFileOnly = config.Monitor.UseExternalFileOnly;
         SaveFormat = config.FileLogging.Format;
@@ -159,10 +159,10 @@ public partial class LogSettingsViewModel : ObservableObject, IDataErrorInfo, IR
 
         config.TraceListener.LogLevel = LogLevel;
         config.Monitor.EnablePrettyJson = EnablePrettyJson;
-        config.TraceListener.FilterKeywords.Information = InformationKeywords;
-        config.TraceListener.FilterKeywords.Warning = WarningKeywords;
-        config.TraceListener.FilterKeywords.Error = ErrorKeywords;
-        config.TraceListener.FilterKeywords.Critical = CriticalKeywords;
+        config.TraceListener.LevelKeys.Information = InformationKeywords;
+        config.TraceListener.LevelKeys.Warning = WarningKeywords;
+        config.TraceListener.LevelKeys.Error = ErrorKeywords;
+        config.TraceListener.LevelKeys.Critical = CriticalKeywords;
         config.FileLogging.Enabled = IsSaveLogEnabled;
         config.Monitor.UseExternalFileOnly = UseExternalFileOnly;
         config.FileLogging.Format = SaveFormat;

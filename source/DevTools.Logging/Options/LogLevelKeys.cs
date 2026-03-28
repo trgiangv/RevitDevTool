@@ -3,7 +3,7 @@ using System.Text.Json.Serialization;
 namespace DevTools.Logging.Options;
 
 [Serializable]
-public class LogFilterKeywords
+public class LogLevelKeys
 {
     [JsonPropertyName("information")]
     public string Information { get; set; } = "info,success,completed";

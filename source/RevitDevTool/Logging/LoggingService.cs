@@ -13,7 +13,8 @@ namespace RevitDevTool.Logging;
 public sealed class LoggingService(
     ISettingsService settingsService,
     ILoggerFactory loggerFactory,
-    FileLoggerProvider fileLoggerProvider,
+    IAppInfo appInfo,
+    FileLogProcessor fileLogProcessor,
     LoggingConfiguration loggingConfiguration,
     ScintillaLogViewerWpf viewer) : ILoggingService
 {
@@ -38,7 +39,7 @@ public sealed class LoggingService(
 
         if (targets.HasFlag(LogTargets.File))
         {
-            fileLoggerProvider.Restart(config.FileLogging);
+            fileLogProcessor.Restart(config.FileLogging, appInfo);
         }
 
         if (targets.HasFlag(LogTargets.Monitor))
@@ -93,7 +94,7 @@ public sealed class LoggingService(
         UnregisterTraceListeners();
         DisposeListeners();
 
-        var logger = loggerFactory.CreateLogger("Trace");
+        var logger = loggerFactory.CreateLogger("");
         _loggerTraceListener = new LoggerTraceListener(logger, config.TraceListener);
 
         _geometryListener ??= new GeometryListener();
@@ -116,7 +117,7 @@ public sealed class LoggingService(
         if (_disposed) return;
         UnregisterTraceListeners();
         DisposeListeners();
-        fileLoggerProvider.Dispose();
+        fileLogProcessor.Stop();
         viewer.Stop();
         viewer.Dispose();
         _disposed = true;

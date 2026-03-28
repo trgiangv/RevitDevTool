@@ -44,7 +44,6 @@
         <PackageReference Include="Microsoft.Extensions.Hosting"/>
 
         <!-- Utils -->
-        <PackageReference Include="PolySharp" PrivateAssets="All" IncludeAssets="runtime; build; native; contentfiles; analyzers; buildtransitive"/>
         <PackageReference Include="Microsoft-WindowsAPICodePack-Shell" Condition="$(TargetFramework.StartsWith('net4'))"/>
         <PackageReference Include="System.Reflection.MetadataLoadContext"/>
         <PackageReference Include="System.Net.Http" Condition="$(TargetFramework.StartsWith('net4'))"/>

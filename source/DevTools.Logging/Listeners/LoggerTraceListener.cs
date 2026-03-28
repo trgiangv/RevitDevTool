@@ -1,30 +1,18 @@
 using System.Diagnostics;
 using DevTools.Logging.Options;
 using Microsoft.Extensions.Logging;
-using ZLogger;
 
 namespace DevTools.Logging.Listeners;
 
-public class LoggerTraceListener : TraceListener
+public class LoggerTraceListener(ILogger logger, TraceListenerOptions options) : TraceListener
 {
-    private readonly ILogger _logger;
-    private readonly TraceListenerOptions _options;
+    private readonly ILogger _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+    private readonly TraceListenerOptions _options = options ?? throw new ArgumentNullException(nameof(options));
 
-    private readonly string[] _criticalKeywords;
-    private readonly string[] _errorKeywords;
-    private readonly string[] _warningKeywords;
-    private readonly string[] _informationKeywords;
-
-    public LoggerTraceListener(ILogger logger, TraceListenerOptions options)
-    {
-        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
-        _options = options ?? throw new ArgumentNullException(nameof(options));
-
-        _criticalKeywords = LogLevelDetector.ParseKeywords(options.FilterKeywords.Critical);
-        _errorKeywords = LogLevelDetector.ParseKeywords(options.FilterKeywords.Error);
-        _warningKeywords = LogLevelDetector.ParseKeywords(options.FilterKeywords.Warning);
-        _informationKeywords = LogLevelDetector.ParseKeywords(options.FilterKeywords.Information);
-    }
+    private readonly string[] _criticalKeywords = LogLevelDetector.ParseKeywords(options.LevelKeys.Critical);
+    private readonly string[] _errorKeywords = LogLevelDetector.ParseKeywords(options.LevelKeys.Error);
+    private readonly string[] _warningKeywords = LogLevelDetector.ParseKeywords(options.LevelKeys.Warning);
+    private readonly string[] _informationKeywords = LogLevelDetector.ParseKeywords(options.LevelKeys.Information);
 
     public override bool IsThreadSafe => true;
 
@@ -63,7 +51,7 @@ public class LoggerTraceListener : TraceListener
     {
         if (!ShouldTrace(eventCache, source, eventType, id, format, args, null, null)) return;
         var level = GetLogLevel(eventType);
-        LogWithStackTrace(level, null, args is { Length: > 0 } ? string.Format(format ?? "", args!) : format, eventCache);
+        LogWithStackTrace(level, null, args is { Length: > 0 } ? string.Format(format ?? "", args) : format, eventCache);
     }
 
     public override void TraceTransfer(TraceEventCache? eventCache, string source, int id, string? message, Guid relatedActivityId)
@@ -112,7 +100,7 @@ public class LoggerTraceListener : TraceListener
 
     private void Log(LogLevel level, Exception? exception, string? message)
     {
-        _logger.ZLog(level, exception, $"{message}");
+        _logger.Log(level, 0, message, exception, static (s, _) => s ?? string.Empty);
     }
 
     private static LogLevel GetLogLevel(TraceEventType eventType) => eventType switch

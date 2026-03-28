@@ -23,5 +23,5 @@ public class TraceListenerOptions
     public SourceLevels WpfTraceLevel { get; set; } = SourceLevels.Warning;
 
     [JsonPropertyName("filterKeywords")]
-    public LogFilterKeywords FilterKeywords { get; set; } = new();
+    public LogLevelKeys LevelKeys { get; set; } = new();
 }

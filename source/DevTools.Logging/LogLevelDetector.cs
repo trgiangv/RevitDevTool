@@ -26,7 +26,7 @@ public static class LogLevelDetector
             return null;
 
         var keywords = input!
-            .Split([KeywordSeparator], StringSplitOptions.RemoveEmptyEntries)
+            .Split(KeywordSeparator, StringSplitOptions.RemoveEmptyEntries)
             .Select(k => k.Trim())
             .Where(k => !string.IsNullOrWhiteSpace(k))
             .ToArray();
@@ -55,7 +55,7 @@ public static class LogLevelDetector
     public static string[] ParseKeywords(string? input)
     {
         if (string.IsNullOrWhiteSpace(input)) return [];
-        return input!.Split([','], StringSplitOptions.RemoveEmptyEntries)
+        return input!.Split(KeywordSeparator, StringSplitOptions.RemoveEmptyEntries)
             .Select(k => k.Trim())
             .Where(k => !string.IsNullOrWhiteSpace(k))
             .Select(k => k.ToLowerInvariant())

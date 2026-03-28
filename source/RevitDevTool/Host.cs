@@ -1,11 +1,9 @@
 using DevTools.Logging;
-using DevTools.Logging.Extensions;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using RevitDevTool.Controllers;
 using RevitDevTool.Logging;
-using RevitDevTool.Logging.Enrichers;
 using RevitDevTool.Logging.Linkify;
 using RevitDevTool.Settings;
 using ZLogger.Scintilla.Public;
@@ -19,6 +17,7 @@ using RevitDevTool.ViewModel.Settings;
 using RevitDevTool.ViewModel.Settings.Visualization;
 using RevitDevTool.Visualization.Server;
 using System.IO;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using RevitDevTool.Execution.Interfaces;
 using RevitDevTool.Execution.Providers;
 using RevitDevTool.Execution.Providers.Dotnet;
@@ -96,16 +95,9 @@ public static class Host
         services.AddSingleton<ISettingsService, SettingsService>();
         services.AddHostedService<HostBackgroundController>();
 
-        // DevTools.Logging
-        services.AddSingleton<IAppInfo, RevitAppInfo>();
-        services.AddDevToolsFileLogging();
-        services.AddSingleton<IContextEnricher>(sp =>
-        {
-            var settings = sp.GetRequiredService<ISettingsService>();
-            return new RevitContextProvider(settings.RevitEnrichers);
-        });
-
         // Logging
+        services.TryAddSingleton<FileLogProcessor>();
+        services.AddSingleton<IAppInfo, RevitAppInfo>();
         services.AddSingleton<ILoggingService, LoggingService>();
         services.AddSingleton<LogViewModel>();
 
