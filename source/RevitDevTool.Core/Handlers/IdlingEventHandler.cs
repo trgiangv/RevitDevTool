@@ -1,5 +1,4 @@
 ﻿using System.ComponentModel;
-using Autodesk.Revit.UI;
 using Autodesk.Revit.UI.Events;
 // ReSharper disable once CheckNamespace
 namespace RevitDevTool.Core;

@@ -1,5 +1,4 @@
 ﻿using System.ComponentModel;
-using Autodesk.Revit.UI;
 
 // ReSharper disable once CheckNamespace
 namespace RevitDevTool.Core;
@@ -13,12 +12,7 @@ public sealed class AsyncEventHandler : ExternalEventHandler
 {
     private Action<UIApplication>? _contextAction;
     private Action? _action;
-
-#if NET
     private TaskCompletionSource? _resultTask;
-#else
-    private TaskCompletionSource<bool>? _resultTask;
-#endif
 
     /// <summary>Callback invoked by Revit. Not used to be called in user code.</summary>
     [EditorBrowsable(EditorBrowsableState.Never)]
@@ -31,11 +25,7 @@ public sealed class AsyncEventHandler : ExternalEventHandler
         {
             _contextAction?.Invoke(uiApplication);
             _action?.Invoke();
-#if NET
             _resultTask.SetResult();
-#else
-            _resultTask.SetResult(false);
-#endif
         }
         catch (Exception exception)
         {
@@ -68,13 +58,7 @@ public sealed class AsyncEventHandler : ExternalEventHandler
 
         if (_contextAction is null) _contextAction = action;
         else _contextAction += action;
-
-#if NET
         _resultTask ??= new TaskCompletionSource();
-#else
-        _resultTask ??= new TaskCompletionSource<bool>();
-#endif
-
         Raise();
         await _resultTask.Task;
     }
@@ -99,13 +83,7 @@ public sealed class AsyncEventHandler : ExternalEventHandler
 
         if (_action is null) _action = action;
         else _action += action;
-
-#if NET
         _resultTask ??= new TaskCompletionSource();
-#else
-        _resultTask ??= new TaskCompletionSource<bool>();
-#endif
-
         Raise();
         await _resultTask.Task;
     }
