@@ -18,7 +18,8 @@
     </PropertyGroup>
 
     <PropertyGroup>
-        <Configurations>Debug.Autodesk.2022;Debug.Autodesk.2023;Debug.Autodesk.2024;Debug.Autodesk.2025;Debug.Autodesk.2026</Configurations>
+        <Configurations>Debug;Release</Configurations>
+        <Configurations>$(Configurations);Debug.Autodesk.2022;Debug.Autodesk.2023;Debug.Autodesk.2024;Debug.Autodesk.2025;Debug.Autodesk.2026</Configurations>
         <Configurations>$(Configurations);Release.Autodesk.2022;Release.Autodesk.2023;Release.Autodesk.2024;Release.Autodesk.2025;Release.Autodesk.2026</Configurations>
     </PropertyGroup>
 
