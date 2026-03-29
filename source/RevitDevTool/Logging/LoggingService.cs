@@ -10,6 +10,7 @@ using RevitDevTool.Theme;
 
 namespace RevitDevTool.Logging;
 
+[UsedImplicitly]
 public sealed class LoggingService(
     ISettingsService settingsService,
     ILoggerFactory loggerFactory,
@@ -26,7 +27,7 @@ public sealed class LoggingService(
     private NotifyListener? _notifyListener;
     private IDisposable? _enricherScope;
 
-    public FrameworkElement? HostElement => monitor.HostElement;
+    public FrameworkElement HostElement => monitor.HostElement;
 
     public void Initialize()
     {
@@ -34,35 +35,35 @@ public sealed class LoggingService(
 
         var config = settingsService.LogConfig;
 
-        ((IEnableable)monitor).Enable(config.Monitor);
+        monitor.Enable(config.Monitor);
         SetTheme(ThemeManager.Current.ActualApplicationTheme == AppTheme.Dark);
         monitor.SetPrettyJson(config.Monitor.EnablePrettyJson);
         monitor.SetFilter(config.TraceListener.LogLevel);
 
         if (config.FileLogging.Enabled)
-            ((IEnableable)fileLogTarget).Enable(config.FileLogging);
+            fileLogTarget.Enable(config.FileLogging);
 
         if (config.HttpLogging.Enabled)
-            ((IEnableable)httpLogTarget).Enable(config.HttpLogging);
+            httpLogTarget.Enable(config.HttpLogging);
 
         RecreateTraceListeners(config);
     }
 
-    public void EnableTarget(LogTarget target)
+    public void EnableTarget(LogSink sink)
     {
         var config = settingsService.LogConfig;
 
-        switch (target)
+        switch (sink)
         {
-            case LogTarget.File:
+            case LogSink.File:
                 PushEnricherScope();
-                ((IEnableable)fileLogTarget).Enable(config.FileLogging);
+                fileLogTarget.Enable(config.FileLogging);
                 break;
-            case LogTarget.Http:
-                ((IEnableable)httpLogTarget).Enable(config.HttpLogging);
+            case LogSink.Http:
+                httpLogTarget.Enable(config.HttpLogging);
                 break;
-            case LogTarget.Monitor:
-                ((IEnableable)monitor).Enable(config.Monitor);
+            case LogSink.Monitor:
+                monitor.Enable(config.Monitor);
                 monitor.SetPrettyJson(config.Monitor.EnablePrettyJson);
                 monitor.SetFilter(config.TraceListener.LogLevel);
                 break;
@@ -71,18 +72,18 @@ public sealed class LoggingService(
         RecreateTraceListeners(config);
     }
 
-    public void DisableTarget(LogTarget target)
+    public void DisableTarget(LogSink sink)
     {
-        switch (target)
+        switch (sink)
         {
-            case LogTarget.File:
-                ((IEnableable)fileLogTarget).Disable();
+            case LogSink.File:
+                fileLogTarget.Disable();
                 break;
-            case LogTarget.Http:
-                ((IEnableable)httpLogTarget).Disable();
+            case LogSink.Http:
+                httpLogTarget.Disable();
                 break;
-            case LogTarget.Monitor:
-                ((IEnableable)monitor).Disable();
+            case LogSink.Monitor:
+                monitor.Disable();
                 break;
         }
     }
@@ -167,9 +168,9 @@ public sealed class LoggingService(
         UnregisterTraceListeners();
         DisposeListeners();
         _enricherScope?.Dispose();
-        ((IEnableable)fileLogTarget).Disable();
-        ((IEnableable)httpLogTarget).Disable();
-        ((IEnableable)monitor).Disable();
+        fileLogTarget.Disable();
+        httpLogTarget.Disable();
+        monitor.Disable();
         monitor.Dispose();
         _disposed = true;
     }

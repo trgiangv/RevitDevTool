@@ -8,8 +8,8 @@ public interface ILoggingService : IDisposable
 {
     FrameworkElement? HostElement { get; }
     void Initialize();
-    void EnableTarget(LogTarget target);
-    void DisableTarget(LogTarget target);
+    void EnableTarget(LogSink sink);
+    void DisableTarget(LogSink sink);
     void SetMinimumLevel(LogLevel level);
     void SetPrettyJson(bool enabled);
     void SetTheme(bool isDark);

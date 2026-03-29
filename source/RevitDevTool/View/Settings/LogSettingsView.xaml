@@ -176,9 +176,9 @@
                 </StackPanel>
             </GroupBox>
 
-            <!--  Log Targets  -->
+            <!--  Log Sinks  -->
             <GroupBox Margin="0,0,0,8"
-                      Header="Log Targets">
+                      Header="Log Sinks">
                 <StackPanel Margin="8,5,8,8">
                     <!--  Target Selector  -->
                     <Grid>
@@ -197,7 +197,7 @@
                                     Margin="12,0"
                                     VerticalAlignment="Center">
                             <TextBlock FontWeight="SemiBold"
-                                       Text="Active Targets" />
+                                       Text="Active Sinks" />
                             <TextBlock FontSize="11"
                                        Foreground="{DynamicResource DevTools.MahApps.Brushes.Gray}"
                                        Text="Select logging output destinations" />

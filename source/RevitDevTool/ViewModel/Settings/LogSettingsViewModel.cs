@@ -26,16 +26,7 @@ public partial class LogSettingsViewModel : ObservableObject, IDataErrorInfo, IR
     public static RollingInterval[] LogTimeIntervals { get; } = Enum.GetValues(typeof(RollingInterval)).Cast<RollingInterval>().ToArray();
     public static SourceLevels[] SourceLevels { get; } = Enum.GetValues(typeof(SourceLevels)).Cast<SourceLevels>().ToArray();
     public static LogTarget[] AvailableLogTargets { get; } = Enum.GetValues(typeof(LogTarget)).Cast<LogTarget>().ToArray();
-    public static RevitEnricher[] AvailableRevitEnrichers { get; } =
-    [
-        RevitEnricher.RevitVersion,
-        RevitEnricher.RevitBuild,
-        RevitEnricher.RevitUserName,
-        RevitEnricher.RevitLanguage,
-        RevitEnricher.RevitDocumentTitle,
-        RevitEnricher.RevitDocumentPathName,
-        RevitEnricher.RevitDocumentModelPath
-    ];
+    public static RevitEnricher[] AvailableRevitEnrichers { get; } = Enum.GetValues(typeof(RevitEnricher)).Cast<RevitEnricher>().ToArray();
 
     [ObservableProperty] private LogLevel _logLevel;
     [ObservableProperty] private bool _enableJson;
@@ -157,11 +148,8 @@ public partial class LogSettingsViewModel : ObservableObject, IDataErrorInfo, IR
             SelectedLogTargets.Add(LogTarget.Http);
 
         SelectedRevitEnrichers.Clear();
-        foreach (var enricher in AvailableRevitEnrichers)
-        {
-            if (_settingsService.RevitEnrichers.HasFlag(enricher))
-                SelectedRevitEnrichers.Add(enricher);
-        }
+        foreach (var enricher in _settingsService.RevitEnrichers)
+            SelectedRevitEnrichers.Add(enricher);
     }
 
     public void Receive(ResetSettingsMessage message)
@@ -197,7 +185,7 @@ public partial class LogSettingsViewModel : ObservableObject, IDataErrorInfo, IR
         config.HttpLogging.BatchSize = HttpBatchSize;
         config.HttpLogging.Format = format;
 
-        _settingsService.RevitEnrichers = SelectedRevitEnrichers.Aggregate(RevitEnricher.None, (current, enricher) => current | enricher);
+        _settingsService.RevitEnrichers = [..SelectedRevitEnrichers];
 
         _settingsService.SaveSettings();
     }
@@ -251,9 +239,8 @@ public partial class LogSettingsViewModel : ObservableObject, IDataErrorInfo, IR
 
     private bool OutputSettingsChanged()
     {
-        var currentEnrichers = SelectedRevitEnrichers.Aggregate(RevitEnricher.None, (current, e) => current | e);
         return _baseline.EnableJson != EnableJson
-            || _baseline.RevitEnrichers != currentEnrichers;
+            || !_baseline.RevitEnrichers.SetEquals(SelectedRevitEnrichers);
     }
 
     private bool TraceListenerChanged()
@@ -285,7 +272,7 @@ public partial class LogSettingsViewModel : ObservableObject, IDataErrorInfo, IR
             CriticalKeywords,
             HttpEndpoint,
             HttpBatchSize,
-            SelectedRevitEnrichers.Aggregate(RevitEnricher.None, (current, e) => current | e)
+            [..SelectedRevitEnrichers]
         );
 
         RestartRequired = false;
@@ -312,7 +299,7 @@ public partial class LogSettingsViewModel : ObservableObject, IDataErrorInfo, IR
         string CriticalKeywords,
         string HttpEndpoint,
         int HttpBatchSize,
-        RevitEnricher RevitEnrichers);
+        HashSet<RevitEnricher> RevitEnrichers);
 
     [RelayCommand]
     private void BrowseFolder()

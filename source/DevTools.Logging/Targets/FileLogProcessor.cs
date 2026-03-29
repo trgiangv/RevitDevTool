@@ -10,7 +10,7 @@ namespace DevTools.Logging.Targets;
 /// Manages file logging by dynamically adding/removing a <see cref="ZLoggerRollingFileLoggerProvider"/>
 /// to the <see cref="ILoggerFactory"/> at runtime.
 /// </summary>
-public sealed class FileLogProcessor(ILoggerFactory loggerFactory, IAppInfo appInfo) : IFileLogTarget, IEnableable
+public sealed class FileLogProcessor(ILoggerFactory loggerFactory, IAppInfo appInfo) : IFileLogTarget
 {
     private ZLoggerRollingFileLoggerProvider? _provider;
     private bool _disposed;
@@ -53,7 +53,7 @@ public sealed class FileLogProcessor(ILoggerFactory loggerFactory, IAppInfo appI
         old?.Dispose();
     }
 
-    public void Dispose()
+    void IDisposable.Dispose()
     {
         if (_disposed) return;
         _disposed = true;

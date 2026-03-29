@@ -8,7 +8,7 @@ public interface ISettingsService
 {
     GeneralConfig GeneralConfig { get; }
     LogConfig LogConfig { get; }
-    RevitEnricher RevitEnrichers { get; set; }
+    HashSet<RevitEnricher> RevitEnrichers { get; set; }
     VisualizationConfig VisualizationConfig { get; }
     CodeExecuteConfig CodeExecuteConfig { get; }
     McpRegistryConfig McpRegistryConfig { get; }

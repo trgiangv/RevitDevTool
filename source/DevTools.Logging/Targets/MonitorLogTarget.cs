@@ -8,7 +8,7 @@ namespace DevTools.Logging.Targets;
 /// Thin wrapper around <see cref="ScintillaLogViewerWpf"/> implementing <see cref="IMonitorLogTarget"/>.
 /// Moves Scintilla-specific knowledge into DevTools.Logging so consumers only see the interface.
 /// </summary>
-public sealed class MonitorLogTarget(ScintillaLogViewerWpf viewer) : IMonitorLogTarget, IEnableable
+public sealed class MonitorLogTarget(ScintillaLogViewerWpf viewer) : IMonitorLogTarget
 {
     public bool IsEnabled { get; private set; }
 

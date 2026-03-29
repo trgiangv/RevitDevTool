@@ -2,7 +2,7 @@ using System.Windows;
 using Microsoft.Extensions.Logging;
 namespace DevTools.Logging.Abstractions;
 
-public interface IMonitorLogTarget : IDisposable
+public interface IMonitorLogTarget : IDisposable, IEnableable
 {
     FrameworkElement HostElement { get; }
     void SetFilter(LogLevel level);

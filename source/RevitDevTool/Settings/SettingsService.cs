@@ -35,7 +35,7 @@ public sealed class SettingsService(IFileConfig<PathOptions> fileConfig) : ISett
         }
     }
 
-    public RevitEnricher RevitEnrichers { get; set; } = RevitEnricher.RevitVersion | RevitEnricher.RevitDocumentTitle;
+    public HashSet<RevitEnricher> RevitEnrichers { get; set; } = [RevitEnricher.RevitVersion, RevitEnricher.RevitDocumentTitle];
 
     public VisualizationConfig VisualizationConfig
     {

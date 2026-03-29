@@ -1,3 +1,3 @@
 namespace DevTools.Logging.Abstractions;
 
-public interface IFileLogTarget;
+public interface IFileLogTarget : IEnableable, IDisposable;

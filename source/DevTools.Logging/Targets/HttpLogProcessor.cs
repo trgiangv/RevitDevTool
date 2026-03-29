@@ -11,7 +11,7 @@ namespace DevTools.Logging.Targets;
 /// Manages HTTP logging by dynamically adding/removing a <see cref="ZLoggerLogProcessorLoggerProvider"/>
 /// wrapping a <see cref="HttpBatchProcessor"/> to the <see cref="ILoggerFactory"/> at runtime.
 /// </summary>
-public sealed class HttpLogProcessor(ILoggerFactory loggerFactory) : IHttpLogTarget, IEnableable
+public sealed class HttpLogProcessor(ILoggerFactory loggerFactory) : IHttpLogTarget
 {
     private ZLoggerLogProcessorLoggerProvider? _provider;
     private bool _disposed;
@@ -61,21 +61,11 @@ public sealed class HttpLogProcessor(ILoggerFactory loggerFactory) : IHttpLogTar
         Disable();
     }
 
-    private sealed class HttpBatchProcessor : BatchingAsyncLogProcessor
+    private sealed class HttpBatchProcessor(int batchSize, ZLoggerOptions options, string endpoint) : BatchingAsyncLogProcessor(batchSize, options)
     {
-        private readonly HttpClient _httpClient;
-        private readonly ArrayBufferWriter<byte> _buffer;
-        private readonly IZLoggerFormatter _formatter;
-        private readonly string _endpoint;
-
-        public HttpBatchProcessor(int batchSize, ZLoggerOptions options, string endpoint)
-            : base(batchSize, options)
-        {
-            _httpClient = new HttpClient();
-            _buffer = new ArrayBufferWriter<byte>();
-            _formatter = options.CreateFormatter();
-            _endpoint = endpoint;
-        }
+        private readonly HttpClient _httpClient = new();
+        private readonly ArrayBufferWriter<byte> _buffer = new();
+        private readonly IZLoggerFormatter _formatter = options.CreateFormatter();
 
         protected override async ValueTask ProcessAsync(IReadOnlyList<INonReturnableZLoggerEntry> list)
         {
@@ -89,7 +79,7 @@ public sealed class HttpLogProcessor(ILoggerFactory loggerFactory) : IHttpLogTar
 
             try
             {
-                await _httpClient.PostAsync(_endpoint, content).ConfigureAwait(false);
+                await _httpClient.PostAsync(endpoint, content).ConfigureAwait(false);
             }
             catch
             {

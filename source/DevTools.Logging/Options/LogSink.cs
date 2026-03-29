@@ -1,6 +1,6 @@
 namespace DevTools.Logging.Options;
 
-public enum LogTarget
+public enum LogSink
 {
     Monitor,
     File,

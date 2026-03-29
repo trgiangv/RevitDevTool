@@ -5,47 +5,52 @@ using RevitDevTool.Logging.Enums;
 
 namespace RevitDevTool.Logging.Enrichers;
 
-public sealed class RevitContextProvider(RevitEnricher flags) : IContextEnricher
+public sealed class RevitContextProvider(IEnumerable<RevitEnricher> selected) : IContextEnricher
 {
+    private readonly HashSet<RevitEnricher> _enrichers = new(selected);
     private Dictionary<string, object?>? _staticCache;
 
-    private const RevitEnricher StaticFlags = RevitEnricher.RevitVersion | RevitEnricher.RevitBuild | RevitEnricher.RevitUserName | RevitEnricher.RevitLanguage;
-    private const RevitEnricher DynamicFlags = RevitEnricher.RevitDocumentTitle | RevitEnricher.RevitDocumentPathName | RevitEnricher.RevitDocumentModelPath;
+    private static readonly RevitEnricher[] StaticEnrichers =
+        [RevitEnricher.RevitVersion, RevitEnricher.RevitBuild, RevitEnricher.RevitUserName, RevitEnricher.RevitLanguage];
+
+    private static readonly RevitEnricher[] DynamicEnrichers =
+        [RevitEnricher.RevitDocumentTitle, RevitEnricher.RevitDocumentPathName, RevitEnricher.RevitDocumentModelPath];
 
     public Dictionary<string, object?> GetStaticProperties()
     {
-        var staticPart = flags & StaticFlags;
-        if (staticPart == RevitEnricher.None)
+        var matched = Array.FindAll(StaticEnrichers, _enrichers.Contains);
+        if (matched.Length == 0)
             return new Dictionary<string, object?>();
 
         var statics = GetOrCacheStaticProperties();
         var result = new Dictionary<string, object?>();
 
-        if (staticPart.HasFlag(RevitEnricher.RevitVersion) && statics.TryGetValue(nameof(RevitEnricher.RevitVersion), out var v))
-            result[nameof(RevitEnricher.RevitVersion)] = v;
-        if (staticPart.HasFlag(RevitEnricher.RevitBuild) && statics.TryGetValue(nameof(RevitEnricher.RevitBuild), out var b))
-            result[nameof(RevitEnricher.RevitBuild)] = b;
-        if (staticPart.HasFlag(RevitEnricher.RevitUserName) && statics.TryGetValue(nameof(RevitEnricher.RevitUserName), out var u))
-            result[nameof(RevitEnricher.RevitUserName)] = u;
-        if (staticPart.HasFlag(RevitEnricher.RevitLanguage) && statics.TryGetValue(nameof(RevitEnricher.RevitLanguage), out var l))
-            result[nameof(RevitEnricher.RevitLanguage)] = l;
+        foreach (var enricher in matched)
+        {
+            if (statics.TryGetValue(enricher.ToString(), out var value))
+                result[enricher.ToString()] = value;
+        }
 
         return result;
     }
 
     public Dictionary<string, object?>? GetDynamicProperties()
     {
-        var dynamicPart = flags & DynamicFlags;
-        if (dynamicPart == RevitEnricher.None) return null;
+        var matched = Array.FindAll(DynamicEnrichers, _enrichers.Contains);
+        if (matched.Length == 0) return null;
 
         var result = new Dictionary<string, object?>();
 
-        if (dynamicPart.HasFlag(RevitEnricher.RevitDocumentTitle))
-            result[nameof(RevitEnricher.RevitDocumentTitle)] = GetDocumentTitle();
-        if (dynamicPart.HasFlag(RevitEnricher.RevitDocumentPathName))
-            result[nameof(RevitEnricher.RevitDocumentPathName)] = GetDocumentPathName();
-        if (dynamicPart.HasFlag(RevitEnricher.RevitDocumentModelPath))
-            result[nameof(RevitEnricher.RevitDocumentModelPath)] = GetDocumentModelPath();
+        foreach (var enricher in matched)
+        {
+            result[enricher.ToString()] = enricher switch
+            {
+                RevitEnricher.RevitDocumentTitle => GetDocumentTitle(),
+                RevitEnricher.RevitDocumentPathName => GetDocumentPathName(),
+                RevitEnricher.RevitDocumentModelPath => GetDocumentModelPath(),
+                _ => null
+            };
+        }
 
         return result.Count > 0 ? result : null;
     }
@@ -59,10 +64,10 @@ public sealed class RevitContextProvider(RevitEnricher flags) : IContextEnricher
             var app = RevitContext.Application;
             _staticCache = new Dictionary<string, object?>
             {
-                [nameof(RevitEnricher.RevitVersion)] = app.VersionNumber,
-                [nameof(RevitEnricher.RevitBuild)] = app.VersionBuild,
-                [nameof(RevitEnricher.RevitUserName)] = app.Username,
-                [nameof(RevitEnricher.RevitLanguage)] = app.Language.ToString()
+                [RevitEnricher.RevitVersion.ToString()] = app.VersionNumber,
+                [RevitEnricher.RevitBuild.ToString()] = app.VersionBuild,
+                [RevitEnricher.RevitUserName.ToString()] = app.Username,
+                [RevitEnricher.RevitLanguage.ToString()] = app.Language.ToString()
             };
         }
         catch
