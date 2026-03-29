@@ -38,11 +38,7 @@ internal static class NugetInstaller
         try
         {
             var bytes = await NetworkService.GetBytesAsync(NugetExeDownloadUrl).ConfigureAwait(false);
-#if NET
             await File.WriteAllBytesAsync(tempPath, bytes).ConfigureAwait(false);
-#else
-            await Task.Run(() => File.WriteAllBytes(tempPath, bytes)).ConfigureAwait(false);
-#endif
             var dest = NugetExePath;
             if (File.Exists(dest)) File.Delete(dest);
             File.Copy(tempPath, dest, overwrite: true);

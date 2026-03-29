@@ -23,6 +23,7 @@ using DevTools.Logging.Abstractions;
 using RevitDevTool.Execution.Interfaces;
 using RevitDevTool.Execution.Providers;
 using RevitDevTool.Execution.Providers.Dotnet;
+using RevitDevTool.Execution.Providers.Python;
 using RevitDevTool.Execution.Services;
 using RevitDevTool.Mcp;
 using RevitDevTool.Mcp.Dotnet;
@@ -141,6 +142,11 @@ public static class Host
         services.AddSingleton<GeneralSettingsViewModel>();
         services.AddSingleton<GeneralSettingsView>();
         services.AddSingleton<LogSettingsViewModel>();
+        
+        // Python Environment
+        services.AddKeyedSingleton<IPythonEnvironmentProvider, PixiEnvironmentProvider>(PythonBackend.Pixi);
+        services.AddKeyedSingleton<IPythonEnvironmentProvider, PipEnvironmentProvider>(PythonBackend.Pip);
+        services.AddSingleton<PythonInitializer>();
 
         // Execution Services
         services.AddSingleton<ITreeStateManager, TreeStateManager>();

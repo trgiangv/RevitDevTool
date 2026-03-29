@@ -17,7 +17,8 @@ namespace RevitDevTool.Mcp;
 /// inside Revit's <c>IExternalEventHandler.Execute()</c> on the main thread.
 /// </summary>
 public sealed class ToolExecutionDispatcher(
-    IServiceProvider serviceProvider)
+    IServiceProvider serviceProvider,
+    PythonInitializer pythonInitializer)
 {
     private readonly ConcurrentDictionary<string, McpServerTool> _cachedTools = new(StringComparer.OrdinalIgnoreCase);
 
@@ -30,7 +31,7 @@ public sealed class ToolExecutionDispatcher(
             return tool.Binding.SourceKind switch
             {
                 ExecutionMode.Assembly => InvokeDotnetTool(tool, normalizedPayload),
-                ExecutionMode.Python => InvokePythonTool(tool, normalizedPayload),
+                ExecutionMode.Python => InvokePythonTool(pythonInitializer, tool, normalizedPayload),
                 _ => McpToolExecutionResult.Failed(ExecutionErrorCodes.ToolUnknownSourceKind, $"Unknown or unsupported MCP tool execution: '{tool.Binding.SourceKind}'.")
             };
         }
@@ -75,10 +76,10 @@ public sealed class ToolExecutionDispatcher(
         return serverTool;
     }
 
-    private static McpToolExecutionResult InvokePythonTool(McpRegisteredTool tool, string normalizedPayload)
+    private static McpToolExecutionResult InvokePythonTool(PythonInitializer initializer, McpRegisteredTool tool, string normalizedPayload)
     {
         var binding = tool.Binding;
-        var resultJson = PythonExecutionHelper.InvokeScript(binding.SourcePath, scope =>
+        var resultJson = PythonExecutionHelper.InvokeScript(initializer, binding.SourcePath, scope =>
         {
             scope.Set(PythonScopeVars.ToolName, new PyString(tool.ProtocolTool.Name));
             scope.Set(PythonScopeVars.PayloadJson, new PyString(normalizedPayload));

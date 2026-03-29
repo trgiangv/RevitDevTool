@@ -7,20 +7,21 @@ namespace RevitDevTool.Execution.Providers.Python;
 /// </summary>
 public static class PythonExecutor
 {
-    public static void ExecuteScript(string scriptPath, 
+    public static void ExecuteScript(PythonInitializer initializer,
+        string scriptPath,
         string scriptContent,
         string? rootFolder = null)
     {
-        if (!PythonInitializer.IsInitialized)
+        if (!initializer.IsInitialized)
             throw new InvalidOperationException("Python runtime not initialized. Call InitializeAsync() first.");
 
         rootFolder ??= Path.GetDirectoryName(scriptPath) ?? string.Empty;
         using (Py.GIL())
         {
-            if (PythonInitializer.GlobalScope == null)
+            if (initializer.GlobalScope == null)
                 throw new InvalidOperationException("Global Python scope not initialized.");
 
-            using (var scope = PythonInitializer.GlobalScope.NewScope())
+            using (var scope = initializer.GlobalScope.NewScope())
             {
                 scope.Set(PythonScopeVars.Source, new PyString(scriptContent));
                 PrepareExecutionScope(scope, scriptPath, rootFolder);
@@ -31,7 +32,7 @@ public static class PythonExecutor
             }
         }
     }
-    
+
     public static void PrepareExecutionScope(PyModule scope, string scriptPath, string? rootFolder = null)
     {
         rootFolder ??= Path.GetDirectoryName(scriptPath) ?? string.Empty;
@@ -42,11 +43,6 @@ public static class PythonExecutor
         SetupScriptRoot(scope);
     }
 
-    /// <summary>
-    /// Manage sys.path so the script's root folder is importable.
-    /// Removes all previously added roots before adding the new one,
-    /// preventing stale paths from accumulating across executions.
-    /// </summary>
     private static void SetupScriptRoot(PyModule scope)
     {
         const string setupCode = """
@@ -68,11 +64,6 @@ public static class PythonExecutor
         scope.Exec(setupCode);
     }
 
-    /// <summary>
-    /// Python runtime is process-wide and keeps module cache in sys.modules.
-    /// Clear modules that belong to the current script root before each execution
-    /// so that code changes are reflected without restarting Revit.
-    /// </summary>
     private static void ResetModuleCache(PyModule scope)
     {
         scope.Exec(PythonEmbedded.ResetScript);

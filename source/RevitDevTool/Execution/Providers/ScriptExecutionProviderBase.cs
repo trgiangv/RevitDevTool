@@ -7,7 +7,7 @@ using RevitDevTool.Execution.Providers.Python;
 using RevitDevTool.McpParser.Models;
 namespace RevitDevTool.Execution.Providers;
 
-public sealed class ScriptExecutionProvider : IExecutionProvider
+public sealed class ScriptExecutionProvider(PythonInitializer pythonInitializer) : IExecutionProvider
 {
     private static readonly string[] ScriptSearchPatterns = ["*.py", "*.fsx"];
 
@@ -122,7 +122,7 @@ public sealed class ScriptExecutionProvider : IExecutionProvider
         };
     }
 
-    private static void PopulateScripts(ExecutionNodeBase folder, string currentPath, string rootPath)
+    private void PopulateScripts(ExecutionNodeBase folder, string currentPath, string rootPath)
     {
         var scriptFiles = ScriptSearchPatterns
             .SelectMany(pattern => Directory.GetFiles(currentPath, pattern, SearchOption.TopDirectoryOnly))
@@ -136,7 +136,7 @@ public sealed class ScriptExecutionProvider : IExecutionProvider
         }
     }
 
-    private static ExecutionNode BuildScriptNode(string scriptPath, string rootPath)
+    private ExecutionNode BuildScriptNode(string scriptPath, string rootPath)
     {
         var fileName = Path.GetFileName(scriptPath);
         var extension = Path.GetExtension(scriptPath);
@@ -151,7 +151,7 @@ public sealed class ScriptExecutionProvider : IExecutionProvider
                 SourceFilePath = scriptPath,
                 ProviderType = ExecutionMode.Python,
                 NodeType = NodeType.Executable,
-                ExecutionStrategy = new PythonExecutionStrategy(scriptPath, rootPath)
+                ExecutionStrategy = new PythonExecutionStrategy(scriptPath, rootPath, pythonInitializer)
             },
             ".fsx" => new ExecutionNode
             {

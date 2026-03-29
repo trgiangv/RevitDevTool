@@ -7,7 +7,7 @@ using RevitDevTool.McpParser.Models;
 using RevitDevTool.McpParser.Python;
 namespace RevitDevTool.Mcp.Python;
 
-public sealed class PythonMcpToolRegistryProvider : IMcpRegistryProvider
+public sealed class PythonMcpToolRegistryProvider(PythonInitializer pythonInitializer) : IMcpRegistryProvider
 {
     public string Name => "python-mcp";
     public ExecutionMode SourceKind => ExecutionMode.Python;
@@ -41,7 +41,7 @@ public sealed class PythonMcpToolRegistryProvider : IMcpRegistryProvider
         {
             try
             {
-                all = all.Merge(PythonToolsetParser.ParseDirectoryCatalog(dir, ParseDirectory));
+                all = all.Merge(PythonToolsetParser.ParseDirectoryCatalog(dir, d => ParseDirectory(d)));
             }
             catch (Exception ex)
             {
@@ -53,7 +53,7 @@ public sealed class PythonMcpToolRegistryProvider : IMcpRegistryProvider
         return all;
     }
 
-    private static void PreResolveDependencies(IReadOnlyList<string> directories)
+    private void PreResolveDependencies(IReadOnlyList<string> directories)
     {
         foreach (var dir in directories
                      .Where(Directory.Exists)
@@ -65,7 +65,7 @@ public sealed class PythonMcpToolRegistryProvider : IMcpRegistryProvider
                 try
                 {
                     Trace.TraceInformation($"[MCP] Pre-resolving dependencies for '{entryFile}'...");
-                    PythonExecutionStrategy.ResolveDependenciesAsync(entryFile).GetAwaiter().GetResult();
+                    PythonExecutionStrategy.ResolveDependenciesAsync(pythonInitializer, entryFile).GetAwaiter().GetResult();
                 }
                 catch (Exception ex)
                 {
@@ -84,14 +84,14 @@ public sealed class PythonMcpToolRegistryProvider : IMcpRegistryProvider
             .OrderBy(f => f, StringComparer.OrdinalIgnoreCase);
     }
 
-    private static string? ParseDirectory(string toolsetDirectory)
+    private string? ParseDirectory(string toolsetDirectory)
     {
-        if (!PythonInitializer.IsInitialized || PythonInitializer.GlobalScope is null)
+        if (!pythonInitializer.IsInitialized || pythonInitializer.GlobalScope is null)
             return null;
 
         using (Py.GIL())
         {
-            using var scope = PythonInitializer.GlobalScope.NewScope();
+            using var scope = pythonInitializer.GlobalScope.NewScope();
             scope.Set(PythonScopeVars.ToolsetDirectory, new PyString(toolsetDirectory));
             scope.Exec(PythonEmbedded.ToolParserScript);
             return scope.Get(PythonScopeVars.ParserResult).As<string>();

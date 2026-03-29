@@ -1,6 +1,7 @@
 using System.Collections.ObjectModel;
 using RevitDevTool.Execution.Interfaces;
 using RevitDevTool.Execution.Models;
+using RevitDevTool.Execution.Providers.Python;
 using RevitDevTool.Theme;
 // ReSharper disable UnusedParameterInPartialMethod
 
@@ -9,6 +10,7 @@ namespace RevitDevTool.ViewModel;
 public partial class PackageViewModel : ObservableObject
 {
     private readonly IPackageService _packageService;
+    private readonly PythonInitializer _pythonInitializer;
     private IReadOnlyList<Package> _allPackages = [];
 
     [ObservableProperty]
@@ -25,9 +27,10 @@ public partial class PackageViewModel : ObservableObject
 
     public ObservableCollection<PackageTreeNode> FilteredItems { get; } = [];
 
-    public PackageViewModel(IPackageService packageService)
+    public PackageViewModel(IPackageService packageService, PythonInitializer pythonInitializer)
     {
         _packageService = packageService;
+        _pythonInitializer = pythonInitializer;
         ThemeManager.Current.ActualApplicationThemeChanged += OnThemeChanged;
     }
 
@@ -78,6 +81,7 @@ public partial class PackageViewModel : ObservableObject
 
         using var allBusy = BeginBusy("Removing all runtime packages...");
         await _packageService.RemoveAllAsync(Marketplace.NuGet);
+    if (_pythonInitializer.Provider?.Backend == PythonBackend.Pixi)
         await _packageService.RemoveAllAsync(Marketplace.CondaForge);
         await _packageService.RemoveAllAsync(Marketplace.PyPi);
         await LoadPackagesAsync();
@@ -108,7 +112,7 @@ public partial class PackageViewModel : ObservableObject
 
     private bool CanUpdate()
     {
-        return SelectedNode is PackageItemNode package && !package.IsLatest;
+        return SelectedNode is PackageItemNode { IsLatest: false };
     }
 
     [RelayCommand(CanExecute = nameof(CanRepair))]
@@ -175,12 +179,11 @@ public partial class PackageViewModel : ObservableObject
 
     private List<MarketplaceNode> BuildMarketplaceRoots()
     {
-        var marketplaces = new[]
-        {
-            Marketplace.NuGet,
-            Marketplace.CondaForge,
-            Marketplace.PyPi
-        };
+        var isPixi = _pythonInitializer.Provider?.Backend == PythonBackend.Pixi;
+
+        Marketplace[] marketplaces = isPixi
+            ? [Marketplace.NuGet, Marketplace.CondaForge, Marketplace.PyPi]
+            : [Marketplace.NuGet, Marketplace.PyPi];
 
         var roots = new List<MarketplaceNode>(marketplaces.Length);
         foreach (var marketplace in marketplaces)

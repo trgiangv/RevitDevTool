@@ -91,6 +91,18 @@
             <BuildType Solution="Release.Autodesk.2026|*" Project="Release" />
             <Build Project="false" />
         </Project>
+        <Project Path="Tests/RevitDevTool.Execution.Tests/RevitDevTool.Execution.Tests.csproj">
+            <BuildType Solution="Debug.Autodesk.2022|*" Project="Debug" />
+            <BuildType Solution="Debug.Autodesk.2023|*" Project="Debug" />
+            <BuildType Solution="Debug.Autodesk.2024|*" Project="Debug" />
+            <BuildType Solution="Debug.Autodesk.2025|*" Project="Debug" />
+            <BuildType Solution="Debug.Autodesk.2026|*" Project="Debug" />
+            <BuildType Solution="Release.Autodesk.2022|*" Project="Release" />
+            <BuildType Solution="Release.Autodesk.2023|*" Project="Release" />
+            <BuildType Solution="Release.Autodesk.2024|*" Project="Release" />
+            <BuildType Solution="Release.Autodesk.2025|*" Project="Release" />
+            <BuildType Solution="Release.Autodesk.2026|*" Project="Release" />
+        </Project>
     </Folder>
     <Project Path="source/DevTools.Logging/DevTools.Logging.csproj">
         <BuildType Solution="Debug.Autodesk.2022|*" Project="Debug" />

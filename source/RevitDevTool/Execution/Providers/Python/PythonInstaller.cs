@@ -119,12 +119,7 @@ public static partial class PythonInstaller
         try
         {
             var zipBytes = await NetworkService.GetBytesAsync(downloadUrl).ConfigureAwait(false);
-
-#if NETFRAMEWORK
-            await Task.Run(() => File.WriteAllBytes(tempZip, zipBytes)).ConfigureAwait(false);
-#else
             await File.WriteAllBytesAsync(tempZip, zipBytes).ConfigureAwait(false);
-#endif
             if (Directory.Exists(tempExtractDir))
                 Directory.Delete(tempExtractDir, true);
 

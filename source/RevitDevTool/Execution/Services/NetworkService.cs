@@ -28,11 +28,7 @@ public static class NetworkService
         return await WithRetryAsync(async () =>
         {
             cancellationToken.ThrowIfCancellationRequested();
-#if NET
             return await Http.GetStringAsync(url, cancellationToken).ConfigureAwait(false);
-#else
-            return await Http.GetStringAsync(url).ConfigureAwait(false);
-#endif
         }).ConfigureAwait(false);
     }
 
@@ -44,11 +40,7 @@ public static class NetworkService
         return await WithRetryAsync(async () =>
         {
             cancellationToken.ThrowIfCancellationRequested();
-#if NET
             return await Http.GetByteArrayAsync(url, cancellationToken).ConfigureAwait(false);
-#else
-            return await Http.GetByteArrayAsync(url).ConfigureAwait(false);
-#endif
         }).ConfigureAwait(false);
     }
 

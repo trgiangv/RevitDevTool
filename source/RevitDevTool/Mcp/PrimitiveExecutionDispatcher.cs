@@ -12,7 +12,9 @@ using RevitDevTool.McpParser.Models;
 
 namespace RevitDevTool.Mcp;
 
-public sealed class PrimitiveExecutionDispatcher(IServiceProvider serviceProvider)
+public sealed class PrimitiveExecutionDispatcher(
+    IServiceProvider serviceProvider,
+    PythonInitializer pythonInitializer)
 {
     private static readonly JsonSerializerOptions JsonOptions = McpJsonUtilities.DefaultOptions;
     private readonly ConcurrentDictionary<string, McpServerPrompt> _cachedPrompts = new(StringComparer.OrdinalIgnoreCase);
@@ -28,7 +30,7 @@ public sealed class PrimitiveExecutionDispatcher(IServiceProvider serviceProvide
         return prompt.Binding.SourceKind switch
         {
             ExecutionMode.Assembly => InvokeDotnetPrompt(prompt, arguments),
-            ExecutionMode.Python => InvokePythonPrompt(prompt, arguments),
+            ExecutionMode.Python => InvokePythonPrompt(pythonInitializer, prompt, arguments),
             _ => throw new InvalidOperationException($"Unsupported prompt execution source '{prompt.Binding.SourceKind}'.")
         };
     }
@@ -43,7 +45,7 @@ public sealed class PrimitiveExecutionDispatcher(IServiceProvider serviceProvide
         return resource.Binding.SourceKind switch
         {
             ExecutionMode.Assembly => InvokeDotnetResource(resource, uri),
-            ExecutionMode.Python => InvokePythonResource(resource, uri),
+            ExecutionMode.Python => InvokePythonResource(pythonInitializer, resource, uri),
             _ => throw new InvalidOperationException($"Unsupported resource execution source '{resource.Binding.SourceKind}'.")
         };
     }
@@ -117,10 +119,11 @@ public sealed class PrimitiveExecutionDispatcher(IServiceProvider serviceProvide
     }
 
     private static GetPromptResult InvokePythonPrompt(
+        PythonInitializer initializer,
         McpRegisteredPrompt prompt,
         IReadOnlyDictionary<string, JsonElement>? arguments)
     {
-        var resultJson = PythonExecutionHelper.InvokeScript(
+        var resultJson = PythonExecutionHelper.InvokeScript(initializer,
             prompt.Binding.SourcePath,
             scope =>
             {
@@ -133,9 +136,9 @@ public sealed class PrimitiveExecutionDispatcher(IServiceProvider serviceProvide
                ?? new GetPromptResult { Description = prompt.ProtocolPrompt.Description };
     }
 
-    private static ReadResourceResult InvokePythonResource(McpRegisteredResource resource, string uri)
+    private static ReadResourceResult InvokePythonResource(PythonInitializer initializer, McpRegisteredResource resource, string uri)
     {
-        var resultJson = PythonExecutionHelper.InvokeScript(
+        var resultJson = PythonExecutionHelper.InvokeScript(initializer,
             resource.Binding.SourcePath,
             scope =>
             {

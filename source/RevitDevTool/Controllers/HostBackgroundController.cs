@@ -11,7 +11,9 @@ using RevitDevTool.Execution.Providers.Python;
 
 namespace RevitDevTool.Controllers;
 
-public sealed class HostBackgroundController(ISettingsService settingsService) : IHostedService
+public sealed class HostBackgroundController(
+    ISettingsService settingsService,
+    PythonInitializer pythonInitializer) : IHostedService
 {
     public async Task StartAsync(CancellationToken cancellationToken)
     {
@@ -21,7 +23,7 @@ public sealed class HostBackgroundController(ISettingsService settingsService) :
 
         try
         {
-            await PythonInitializer.InitializeAsync().ConfigureAwait(false);
+            await pythonInitializer.InitializeAsync().ConfigureAwait(false);
         }
         catch (Exception ex)
         {
@@ -36,7 +38,7 @@ public sealed class HostBackgroundController(ISettingsService settingsService) :
         NotifyListener.TraceReceived -= DevToolsCommand.TraceReceivedHandler;
         DevToolsCommand.SharedViewModel?.IsStarted = false;
         VisualizationController.Stop();
-        await PythonInitializer.Shutdown();
+        await pythonInitializer.Shutdown();
     }
 
     private void CleanLogFolder()

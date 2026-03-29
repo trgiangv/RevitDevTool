@@ -10,7 +10,8 @@ namespace RevitDevTool.Execution.Providers.Python;
 /// Execution strategy for Python scripts.
 /// Handles dependency resolution and execution orchestration directly.
 /// </summary>
-public sealed class PythonExecutionStrategy(string scriptPath, string rootPath) : IExecutionStrategy
+public sealed class PythonExecutionStrategy(string scriptPath, string rootPath, PythonInitializer pythonInitializer)
+    : IExecutionStrategy
 {
     public async Task<ExecutionResult> ExecuteAsync(IProgress<string>? progress = null, CancellationToken cancellationToken = default)
     {
@@ -19,24 +20,11 @@ public sealed class PythonExecutionStrategy(string scriptPath, string rootPath) 
         try
         {
             progress?.Report($"Initializing {scriptName}...");
-            await PythonInitializer.InitializeAsync().ConfigureAwait(true);
+            await pythonInitializer.InitializeAsync().ConfigureAwait(true);
 
-            string scriptContent;
-            try
-            {
-#if NET
-                scriptContent = await File.ReadAllTextAsync(scriptPath, cancellationToken).ConfigureAwait(false);
-#else
-                scriptContent = await Task.Run(() => File.ReadAllText(scriptPath), cancellationToken).ConfigureAwait(false);
-#endif
-            }
-            catch (IOException ex)
-            {
-                Trace.TraceError($"Failed to read script file: {ex.Message}");
-                throw;
-            }
+            var scriptContent = await File.ReadAllTextAsync(scriptPath, cancellationToken).ConfigureAwait(false);
 
-            var success = await ResolveDependenciesAsync(scriptPath, progress, cancellationToken).ConfigureAwait(false);
+            var success = await ResolveDependenciesAsync(pythonInitializer, scriptPath, progress, cancellationToken).ConfigureAwait(false);
             if (!success)
             {
                 stopwatch.Stop();
@@ -51,7 +39,7 @@ public sealed class PythonExecutionStrategy(string scriptPath, string rootPath) 
             var result = await handler
                 .RaiseAsync(() =>
                 {
-                    PythonExecutor.ExecuteScript(scriptPath, scriptContent, rootPath);
+                    PythonExecutor.ExecuteScript(pythonInitializer, scriptPath, scriptContent, rootPath);
                     stopwatch.Stop();
                     return ExecutionResult.Succeeded("Python script completed successfully.", stopwatch.ElapsedMilliseconds);
                 })
@@ -77,16 +65,19 @@ public sealed class PythonExecutionStrategy(string scriptPath, string rootPath) 
     }
 
     public static async Task<bool> ResolveDependenciesAsync(
+        PythonInitializer pythonInitializer,
         string scriptPath,
         IProgress<string>? progress = null,
         CancellationToken cancellationToken = default)
     {
-        // 1. Parse PEP 723 metadata
+        var provider = pythonInitializer.Provider
+            ?? throw new InvalidOperationException("Python environment provider not initialized.");
+
         List<string> dependencies;
         try
         {
             progress?.Report("Resolving Python dependencies...");
-            dependencies = await PythonDepsManager.ResolveDependenciesAsync(scriptPath, cancellationToken).ConfigureAwait(false);
+            dependencies = await PythonDepsManager.ResolveDependenciesAsync(provider, scriptPath, cancellationToken).ConfigureAwait(false);
         }
         catch (Exception ex)
         {
@@ -94,16 +85,15 @@ public sealed class PythonExecutionStrategy(string scriptPath, string rootPath) 
             return false;
         }
 
-        // 2. No dependencies or empty list -> success
         if (dependencies.Count == 0)
             return true;
 
         var reporter = progress ?? new Progress<string>(_ => { });
-        Trace.TraceInformation($"Installing {dependencies.Count} dependency(s) via pixi...");
-        reporter.Report($"Installing {dependencies.Count} dependency(s) via pixi...");
-        await PythonDepsManager.InstallDependenciesAsync(dependencies, reporter, cancellationToken).ConfigureAwait(false);
+        Trace.TraceInformation($"Installing {dependencies.Count} dependency(s) via {provider.Backend}...");
+        reporter.Report($"Installing {dependencies.Count} dependency(s) via {provider.Backend}...");
+        await PythonDepsManager.InstallDependenciesAsync(provider, dependencies, reporter, cancellationToken).ConfigureAwait(false);
         
-        RefreshImportCache();
+        RefreshImportCache(pythonInitializer);
         return true;
     }
 
@@ -112,9 +102,9 @@ public sealed class PythonExecutionStrategy(string scriptPath, string rootPath) 
     /// the directory listings from sys.path entries. invalidate_caches()
     /// forces it to rescan on the next import.
     /// </summary>
-    private static void RefreshImportCache()
+    private static void RefreshImportCache(PythonInitializer pythonInitializer)
     {
-        if (!PythonInitializer.IsInitialized) return;
+        if (!pythonInitializer.IsInitialized) return;
         
         try
         {

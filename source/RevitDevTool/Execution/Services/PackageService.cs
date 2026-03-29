@@ -1,34 +1,33 @@
 using System.Diagnostics;
 using System.IO;
-using System.Text.Json;
-using CliWrap;
-using CliWrap.Buffered;
 using RevitDevTool.Execution.Interfaces;
 using RevitDevTool.Execution.Models;
 using RevitDevTool.Execution.Providers.FSharp;
 using RevitDevTool.Execution.Providers.Python;
 using RevitDevTool.Utils;
-// ReSharper disable RedundantSuppressNullableWarningExpression
 
 namespace RevitDevTool.Execution.Services;
 
-public sealed class PackageService : IPackageService
+public sealed class PackageService(PythonInitializer pythonInitializer) : IPackageService
 {
     private static readonly string NuGetCacheRoot = Path.Combine(SettingsUtils.GetApplicationDataPath(), "nuget");
-    private static readonly string PixiTomlPath = Path.Combine(PythonEnvironment.PixiProjectDir, "pixi.toml");
+
+    private bool IsPixiBackend => pythonInitializer.Provider?.Backend == PythonBackend.Pixi;
 
     public async Task<IReadOnlyList<Package>> ListInstalledPackagesAsync(CancellationToken cancellationToken = default)
     {
         var nugetTask = Task.Run(ListNuGetPackages, cancellationToken);
-        var pixiTask = ReadPixiExplicitPackagesAsync(cancellationToken);
+        var pythonTask = IsPixiBackend
+            ? PixiPackageHelper.ListPackagesAsync(cancellationToken)
+            : PipPackageHelper.ListPackagesAsync(cancellationToken);
 
-        await Task.WhenAll(nugetTask, pixiTask).ConfigureAwait(false);
+        await Task.WhenAll(nugetTask, pythonTask).ConfigureAwait(false);
 
         var packages = new List<Package>();
         packages.AddRange(nugetTask.Result);
-        packages.AddRange(pixiTask.Result);
+        packages.AddRange(pythonTask.Result);
 
-        return await AttachLatestVersionInfoAsync(packages, cancellationToken).ConfigureAwait(false);
+        return await PackageVersionChecker.AttachLatestVersionsAsync(packages, cancellationToken).ConfigureAwait(false);
     }
 
     public async Task RemovePackageAsync(Package package, CancellationToken cancellationToken = default)
@@ -42,10 +41,13 @@ public sealed class PackageService : IPackageService
                 await RemoveNuGetPackageAsync(package, cancellationToken).ConfigureAwait(false);
                 break;
             case Marketplace.CondaForge:
-                await RemovePixiPackageAsync(package.PackageId, pypi: false, cancellationToken).ConfigureAwait(false);
+                await PixiPackageHelper.RemoveAsync(package.PackageId, pypi: false, cancellationToken).ConfigureAwait(false);
                 break;
             case Marketplace.PyPi:
-                await RemovePixiPackageAsync(package.PackageId, pypi: true, cancellationToken).ConfigureAwait(false);
+                if (IsPixiBackend)
+                    await PixiPackageHelper.RemoveAsync(package.PackageId, pypi: true, cancellationToken).ConfigureAwait(false);
+                else
+                    await PipPackageHelper.RemoveAsync(package.PackageId, cancellationToken).ConfigureAwait(false);
                 break;
         }
     }
@@ -61,8 +63,7 @@ public sealed class PackageService : IPackageService
             case Marketplace.PyPi:
                 var all = await ListInstalledPackagesAsync(cancellationToken).ConfigureAwait(false);
                 var targets = all
-                    .Where(item => item.Marketplace == marketplace)
-                    .Where(item => !item.IsProtected)
+                    .Where(item => item.Marketplace == marketplace && !item.IsProtected)
                     .ToArray();
                 foreach (var item in targets)
                 {
@@ -78,8 +79,9 @@ public sealed class PackageService : IPackageService
         return package.Marketplace switch
         {
             Marketplace.NuGet => NugetManager.ResolvePackageDllsAsync(package.PackageId, null, cancellationToken),
-            Marketplace.CondaForge => InstallPixiPackageAsync(package.PackageId, null, pypi: false, cancellationToken),
-            Marketplace.PyPi => InstallPixiPackageAsync(package.PackageId, null, pypi: true, cancellationToken),
+            Marketplace.CondaForge when IsPixiBackend => PixiPackageHelper.InstallAsync(package.PackageId, null, pypi: false, cancellationToken),
+            Marketplace.PyPi when IsPixiBackend => PixiPackageHelper.InstallAsync(package.PackageId, null, pypi: true, cancellationToken),
+            Marketplace.PyPi => PipPackageHelper.InstallAsync(package.PackageId, null, cancellationToken),
             _ => Task.CompletedTask
         };
     }
@@ -93,9 +95,17 @@ public sealed class PackageService : IPackageService
             return;
         }
 
-        var isPypi = package.Marketplace == Marketplace.PyPi;
-        await RemovePixiPackageAsync(package.PackageId, isPypi, cancellationToken).ConfigureAwait(false);
-        await InstallPixiPackageAsync(package.PackageId, package.DeclaredVersion, isPypi, cancellationToken).ConfigureAwait(false);
+        if (IsPixiBackend)
+        {
+            var isPypi = package.Marketplace == Marketplace.PyPi;
+            await PixiPackageHelper.RemoveAsync(package.PackageId, isPypi, cancellationToken).ConfigureAwait(false);
+            await PixiPackageHelper.InstallAsync(package.PackageId, package.DeclaredVersion, isPypi, cancellationToken).ConfigureAwait(false);
+        }
+        else
+        {
+            await PipPackageHelper.RemoveAsync(package.PackageId, cancellationToken).ConfigureAwait(false);
+            await PipPackageHelper.InstallAsync(package.PackageId, package.DeclaredVersion, cancellationToken).ConfigureAwait(false);
+        }
     }
 
     private static IEnumerable<Package> ListNuGetPackages()
@@ -112,13 +122,9 @@ public sealed class PackageService : IPackageService
 
             result.Add(new Package(Marketplace.NuGet, packageId, version, version));
         }
-
         return result;
     }
 
-    /// <summary>
-    /// nuget.exe install always creates <c>PackageId.nuspec</c> inside the folder.
-    /// </summary>
     private static (string? PackageId, string? Version) ParseNuGetFolderName(string folderPath)
     {
         var folderName = Path.GetFileName(folderPath);
@@ -175,313 +181,6 @@ public sealed class PackageService : IPackageService
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
             Trace.TraceWarning($"[PackageService] Could not delete '{path}': {ex.Message} (files may be locked by Revit)");
-        }
-    }
-
-    private static async Task RemovePixiPackageAsync(string packageId, bool pypi, CancellationToken cancellationToken)
-    {
-        if (string.IsNullOrWhiteSpace(packageId))
-            return;
-
-        if (!PythonInstaller.IsPixiInstalled() || !Directory.Exists(PythonEnvironment.PixiProjectDir))
-        {
-            Trace.TraceWarning("Pixi runtime is unavailable. Skip package removal.");
-            return;
-        }
-
-        var args = new List<string> { "remove" };
-        if (pypi)
-            args.Add("--pypi");
-        args.Add(packageId);
-
-        await Cli.Wrap(PythonInstaller.PixiExePath)
-            .WithArguments(args)
-            .WithWorkingDirectory(PythonEnvironment.PixiProjectDir)
-            .WithValidation(CommandResultValidation.None)
-            .ExecuteAsync(cancellationToken).ConfigureAwait(false);
-    }
-
-    private static async Task InstallPixiPackageAsync(string packageId, string? declaredVersion, bool pypi, CancellationToken cancellationToken)
-    {
-        if (string.IsNullOrWhiteSpace(packageId))
-            return;
-
-        if (!PythonInstaller.IsPixiInstalled() || !Directory.Exists(PythonEnvironment.PixiProjectDir))
-        {
-            Trace.TraceWarning("Pixi runtime is unavailable. Skip package install/update.");
-            return;
-        }
-
-        var args = new List<string> { "add" };
-        if (pypi)
-            args.Add("--pypi");
-        args.Add(BuildPixiSpec(packageId, declaredVersion));
-
-        await Cli.Wrap(PythonInstaller.PixiExePath)
-            .WithArguments(args)
-            .WithWorkingDirectory(PythonEnvironment.PixiProjectDir)
-            .WithValidation(CommandResultValidation.None)
-            .ExecuteAsync(cancellationToken).ConfigureAwait(false);
-    }
-
-    private static async Task<IReadOnlyList<Package>> ReadPixiExplicitPackagesAsync(CancellationToken cancellationToken)
-    {
-        if (!File.Exists(PixiTomlPath) || !PythonInstaller.IsPixiInstalled() || !Directory.Exists(PythonEnvironment.PixiProjectDir))
-            return [];
-
-        var output = await ExecutePixiListExplicitJsonAsync(cancellationToken).ConfigureAwait(false);
-        if (string.IsNullOrWhiteSpace(output))
-            return [];
-
-        try
-        {
-            return ParsePixiExplicitPackages(output!);
-        }
-        catch
-        {
-            return [];
-        }
-    }
-
-    private static async Task<string?> ExecutePixiListExplicitJsonAsync(CancellationToken cancellationToken)
-    {
-        var result = await Cli.Wrap(PythonInstaller.PixiExePath)
-            .WithArguments(["list", "--explicit", "--json"])
-            .WithWorkingDirectory(PythonEnvironment.PixiProjectDir)
-            .WithValidation(CommandResultValidation.None)
-            .ExecuteBufferedAsync(cancellationToken)
-            .ConfigureAwait(false);
-
-        if (result.ExitCode != 0 || string.IsNullOrWhiteSpace(result.StandardOutput))
-            return null;
-
-        return result.StandardOutput;
-    }
-
-    private static List<Package> ParsePixiExplicitPackages(string json)
-    {
-        using var doc = JsonDocument.Parse(json);
-        if (doc.RootElement.ValueKind != JsonValueKind.Array)
-            return [];
-
-        var packages = new List<Package>();
-        foreach (var item in doc.RootElement.EnumerateArray())
-        {
-            if (TryCreateRuntimePackage(item, out var package))
-                packages.Add(package);
-        }
-
-        return packages;
-    }
-
-    private static bool TryCreateRuntimePackage(JsonElement item, out Package package)
-    {
-        package = null!;
-        if (!TryMapMarketplace(item, out var marketplace))
-            return false;
-
-        if (!TryGetString(item, "name", out var packageId))
-            return false;
-
-        if (IsSkippedPixiPackage(marketplace, packageId))
-            return false;
-
-        var installedVersion = TryGetString(item, "version", out var versionText) ? versionText : null;
-        var requestedSpec = TryGetString(item, "requested_spec", out var requestedSpecText)
-            ? NormalizeRequestedSpec(requestedSpecText)
-            : null;
-
-        package = new Package(
-            marketplace,
-            packageId,
-            string.IsNullOrWhiteSpace(installedVersion) ? null : installedVersion,
-            requestedSpec,
-            IsRequiredPythonPackage(packageId));
-        return true;
-    }
-
-    private static bool IsSkippedPixiPackage(Marketplace marketplace, string packageId)
-    {
-        return marketplace == Marketplace.CondaForge &&
-               packageId.Equals("python", StringComparison.OrdinalIgnoreCase);
-    }
-
-    private static bool IsRequiredPythonPackage(string packageId)
-    {
-        return PythonEnvironment.RequirePackages.Contains(packageId, StringComparer.OrdinalIgnoreCase);
-    }
-
-    private static string BuildPixiSpec(string packageId, string? declaredVersion)
-    {
-        if (string.IsNullOrWhiteSpace(declaredVersion))
-            return packageId;
-
-        var version = declaredVersion!.Trim();
-        if (version.Length == 0 || version == "*")
-            return packageId;
-
-        return $"{packageId}{version}";
-    }
-
-    private static string NormalizePackageId(string packageId)
-    {
-        return packageId.Trim().Replace('_', '-').ToLowerInvariant();
-    }
-
-    private static bool TryMapMarketplace(JsonElement item, out Marketplace marketplace)
-    {
-        marketplace = default;
-        if (!TryGetString(item, "kind", out var kind))
-            return false;
-
-        if (kind.Equals("conda", StringComparison.OrdinalIgnoreCase))
-        {
-            marketplace = Marketplace.CondaForge;
-            return true;
-        }
-
-        if (kind.Equals("pypi", StringComparison.OrdinalIgnoreCase))
-        {
-            marketplace = Marketplace.PyPi;
-            return true;
-        }
-
-        return false;
-    }
-
-    private static bool TryGetString(JsonElement item, string propertyName, out string value)
-    {
-        value = string.Empty;
-        if (!item.TryGetProperty(propertyName, out var property))
-            return false;
-
-        if (property.ValueKind != JsonValueKind.String)
-            return false;
-
-        var text = property.GetString();
-        if (string.IsNullOrWhiteSpace(text))
-            return false;
-
-        value = text!;
-        return true;
-    }
-
-    private static string? NormalizeRequestedSpec(string? requestedSpec)
-    {
-        if (string.IsNullOrWhiteSpace(requestedSpec))
-            return null;
-
-        var normalized = requestedSpec!.Trim();
-        while (normalized.Length >= 2 && normalized[0] == '"' && normalized[^1] == '"')
-            normalized = normalized[1..^1].Trim();
-
-        if (normalized.Length == 0 || normalized == "*")
-            return null;
-
-        return normalized;
-    }
-
-    private static async Task<IReadOnlyList<Package>> AttachLatestVersionInfoAsync(IReadOnlyList<Package> packages, CancellationToken cancellationToken)
-    {
-        if (packages.Count == 0)
-            return packages;
-
-        var uniqueKeys = packages
-            .Select(p => (p.Marketplace, Id: NormalizePackageId(p.PackageId)))
-            .Distinct()
-            .ToArray();
-
-        var fetchTasks = uniqueKeys.Select(async key =>
-        {
-            var latest = await FetchLatestVersionAsync(key.Marketplace, key.Id, cancellationToken).ConfigureAwait(false);
-            return (key, latest);
-        });
-
-        var results = await Task.WhenAll(fetchTasks).ConfigureAwait(false);
-        var latestCache = results.ToDictionary(r => r.key, r => r.latest);
-
-        return packages
-            .Select(package =>
-            {
-                var key = (package.Marketplace, NormalizePackageId(package.PackageId));
-                latestCache.TryGetValue(key, out var latest);
-                var isLatest = IsSameVersion(package.Version, latest);
-                return package with
-                {
-                    LatestVersion = latest,
-                    IsLatest = isLatest
-                };
-            })
-            .ToArray();
-    }
-
-    private static async Task<string?> FetchLatestVersionAsync(Marketplace marketplace, string packageId, CancellationToken cancellationToken)
-    {
-        return marketplace switch
-        {
-            Marketplace.NuGet => await FetchLatestNuGetVersionAsync(packageId, cancellationToken).ConfigureAwait(false),
-            Marketplace.PyPi => await FetchLatestPyPiVersionAsync(packageId, cancellationToken).ConfigureAwait(false),
-            Marketplace.CondaForge => await FetchLatestCondaVersionAsync(packageId, cancellationToken).ConfigureAwait(false),
-            _ => null
-        };
-    }
-
-    private static bool IsSameVersion(string? current, string? latest)
-    {
-        if (string.IsNullOrWhiteSpace(current) || string.IsNullOrWhiteSpace(latest))
-            return false;
-        return current!.Trim().Equals(latest!.Trim(), StringComparison.OrdinalIgnoreCase);
-    }
-
-    private static async Task<string?> FetchLatestNuGetVersionAsync(string packageId, CancellationToken cancellationToken)
-    {
-        try
-        {
-            return await NugetManager.FetchLatestVersionAsync(packageId, cancellationToken).ConfigureAwait(false);
-        }
-        catch (Exception ex)
-        {
-            Trace.TraceWarning($"[PackageService] NuGet lookup failed for '{packageId}': {ex.Message}");
-            return null;
-        }
-    }
-
-    private static async Task<string?> FetchLatestPyPiVersionAsync(string packageId, CancellationToken cancellationToken)
-    {
-        try
-        {
-            var url = $"https://pypi.org/pypi/{packageId}/json";
-            using var doc = await NetworkService.GetJsonDocumentAsync(url, cancellationToken).ConfigureAwait(false);
-            if (doc == null) return null;
-
-            return doc.RootElement.TryGetProperty("info", out var info) &&
-                   info.TryGetProperty("version", out var ver)
-                ? ver.GetString()
-                : null;
-        }
-        catch (Exception ex)
-        {
-            Trace.TraceWarning($"[PackageService] PyPI lookup failed for '{packageId}': {ex.Message}");
-            return null;
-        }
-    }
-
-    private static async Task<string?> FetchLatestCondaVersionAsync(string packageId, CancellationToken cancellationToken)
-    {
-        try
-        {
-            var url = $"https://api.anaconda.org/package/conda-forge/{packageId}";
-            using var doc = await NetworkService.GetJsonDocumentAsync(url, cancellationToken).ConfigureAwait(false);
-            if (doc == null) return null;
-
-            return doc.RootElement.TryGetProperty("latest_version", out var latest)
-                ? latest.GetString()
-                : null;
-        }
-        catch (Exception ex)
-        {
-            Trace.TraceWarning($"[PackageService] Conda lookup failed for '{packageId}': {ex.Message}");
-            return null;
         }
     }
 }

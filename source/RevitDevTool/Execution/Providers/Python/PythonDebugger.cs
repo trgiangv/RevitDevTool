@@ -36,7 +36,7 @@ public static class PythonDebugger
 
     public static bool IsConnected()
     {
-        if (!PythonInitializer.IsInitialized) return false;
+        if (!PythonEngine.IsInitialized) return false;
 
         using (Py.GIL())
         {

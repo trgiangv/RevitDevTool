@@ -1,44 +1,46 @@
 using System.Diagnostics;
 using System.IO;
+using Microsoft.Extensions.DependencyInjection;
 using Python.Runtime;
 using RevitDevTool.Core;
+
 namespace RevitDevTool.Execution.Providers.Python;
 
-public static class PythonInitializer
+public sealed class PythonInitializer(
+    [FromKeyedServices(PythonBackend.Pixi)] IPythonEnvironmentProvider pixiProvider,
+    [FromKeyedServices(PythonBackend.Pip)] IPythonEnvironmentProvider pipProvider)
 {
-    private static readonly SemaphoreSlim InitLock = new(1, 1);
-    public static PyModule? GlobalScope { get; private set; }
+    private readonly SemaphoreSlim _initLock = new(1, 1);
 
-    public static bool IsInitialized => PythonEngine.IsInitialized
-                                         && PythonInstaller.IsPixiInstalled()
-                                         && PythonEnvironment.IsEnvironmentReady();
+    public PyModule? GlobalScope { get; private set; }
+    public IPythonEnvironmentProvider? Provider { get; private set; }
 
-    public static async Task InitializeAsync()
+    public bool IsInitialized => PythonEngine.IsInitialized
+                                 && Provider is not null
+                                 && Provider.IsEnvironmentReady();
+
+    public async Task InitializeAsync()
     {
         if (IsInitialized) return;
 
-        await InitLock.WaitAsync().ConfigureAwait(false);
+        await _initLock.WaitAsync().ConfigureAwait(false);
         try
         {
             if (IsInitialized) return;
 
-            if (!PythonInstaller.IsPixiInstalled())
-            {
-                await PythonInstaller.SetupPixiAsync().ConfigureAwait(false);
-            }
-            
-            PythonEmbedded.EnsureExtracted();
+            Provider ??= await DetectProviderAsync().ConfigureAwait(false); 
+            Trace.TraceInformation($"[Python] Using backend: {Provider.Backend}");
 
-            if (!PythonEnvironment.IsEnvironmentReady())
+            if (!Provider.IsEnvironmentReady())
             {
-                await PythonEnvironment.SetupEnvironmentAsync().ConfigureAwait(false);
+                await Provider.SetupEnvironmentAsync().ConfigureAwait(false);
             }
 
             if (!PythonEngine.IsInitialized)
             {
                 PrependPixiEnvToPath();
 
-                Runtime.PythonDLL = PythonEnvironment.GetPythonDllPath();
+                Runtime.PythonDLL = Provider.GetPythonDllPath();
                 PythonEngine.PythonHome = PythonEnvironment.PythonHome;
                 PythonEngine.ProgramName = "RevitDevTool";
                 PythonEngine.Initialize();
@@ -57,19 +59,15 @@ public static class PythonInitializer
         }
         finally
         {
-            InitLock.Release();
+            _initLock.Release();
         }
     }
 
-    /// <summary>
-    /// Shutdown Python runtime on host/application shutdown.
-    /// Do not call this per-script execution.
-    /// </summary>
-    public static async Task Shutdown()
+    public async Task Shutdown()
     {
         if (!PythonEngine.IsInitialized) return;
 
-        await InitLock.WaitAsync().ConfigureAwait(false);
+        await _initLock.WaitAsync().ConfigureAwait(false);
         try
         {
             using (Py.GIL())
@@ -85,16 +83,25 @@ public static class PythonInitializer
         }
         finally
         {
-            InitLock.Release();
+            _initLock.Release();
         }
     }
 
-    /// <summary>
-    /// Prepend the pixi Python env directory (and Library/bin) to the process PATH
-    /// so that Windows DLL loader can find python313.dll's native dependencies
-    /// (vcruntime140.dll, python3.dll, etc.) which live alongside the interpreter.
-    /// Must be called before Runtime.PythonDLL and PythonEngine.PythonHome are set.
-    /// </summary>
+    private async Task<IPythonEnvironmentProvider> DetectProviderAsync()
+    {
+        try
+        {
+            await PythonInstaller.SetupPixiAsync().ConfigureAwait(false);
+            Trace.TraceInformation("[Python] Pixi is available.");
+            return pixiProvider;
+        }
+        catch (Exception ex)
+        {
+            Trace.TraceWarning($"[Python] Pixi unavailable ({ex.GetType().Name}: {ex.Message}). Falling back to pip.");
+            return pipProvider;
+        }
+    }
+
     private static void PrependPixiEnvToPath()
     {
         var pythonHome = PythonEnvironment.PythonHome;
@@ -114,7 +121,7 @@ public static class PythonInitializer
         Trace.TraceInformation($"[Python] Prepended to PATH: {string.Join("; ", toAdd)}");
     }
 
-    private static void SetupGlobalScope()
+    private void SetupGlobalScope()
     {
         GlobalScope ??= Py.CreateScope("__main__");
 

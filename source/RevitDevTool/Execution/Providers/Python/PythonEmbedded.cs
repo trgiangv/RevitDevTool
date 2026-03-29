@@ -113,7 +113,7 @@ public static class PythonEmbedded
     {
         var parts = resourcePath.Split('.');
         return parts.Length < 2 
-            ? throw new ArgumentOutOfRangeException(nameof(resourcePath), resourcePath, "Invalid embedded resource path.") 
+            ? throw new ArgumentOutOfRangeException(nameof(resourcePath), resourcePath, @"Invalid embedded resource path.") 
             : $"{parts[^2]}.{parts[^1]}";
     }
 }

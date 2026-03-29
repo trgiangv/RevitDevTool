@@ -1,4 +1,3 @@
-using System.Diagnostics;
 using System.IO;
 using System.Text;
 using System.Text.Json;
@@ -17,23 +16,28 @@ public static class PythonDepsManager
 
     /// <summary>
     /// Resolves which packages from the PEP 723 metadata in <paramref name="scriptPath"/>
-    /// are missing or version-mismatched in the current pixi environment.
-    /// Returns empty list when no PEP 723 block is found or everything is up-to-date.
+    /// need to be installed.
+    /// For Pixi: Parser.py receives pixi.toml via stdin and filters internally.
+    /// For Pip: stdin is empty, all declared deps are returned — pip install is idempotent.
     /// </summary>
     public static async Task<List<string>> ResolveDependenciesAsync(
+        IPythonEnvironmentProvider provider,
         string scriptPath,
         CancellationToken cancellationToken = default)
     {
-        var pixiTomlContent = await ReadPixiTomlAsync(cancellationToken).ConfigureAwait(false);
-        var result = await RunParserAsync(scriptPath, pixiTomlContent, cancellationToken).ConfigureAwait(false);
+        var pixiToml = provider.Backend == PythonBackend.Pixi
+            ? await ReadPixiTomlAsync(cancellationToken).ConfigureAwait(false)
+            : string.Empty;
+
+        var result = await RunParserAsync(scriptPath, pixiToml, cancellationToken).ConfigureAwait(false);
         return result.ToInstall;
     }
 
     /// <summary>
-    /// Installs <paramref name="dependencies"/> into the pixi-managed Python env,
-    /// reporting progress through <paramref name="progress"/>.
+    /// Installs <paramref name="dependencies"/> into the Python env via the given provider.
     /// </summary>
     public static async Task InstallDependenciesAsync(
+        IPythonEnvironmentProvider provider,
         IEnumerable<string> dependencies,
         IProgress<string> progress,
         CancellationToken cancellationToken)
@@ -43,35 +47,25 @@ public static class PythonDepsManager
 
         progress.Report($"Installing {depList.Count} package(s)...");
 
-        EnsureEnvironmentReady();
+        if (!PythonEnvironment.IsEnvironmentReady())
+            throw new DirectoryNotFoundException(
+                $"Python environment is not ready at {PythonEnvironment.PythonHome}.");
 
-        await PythonEnvironment.InstallPackagesAsync(depList, progress, cancellationToken).ConfigureAwait(false);
+        await provider.InstallPackagesAsync(depList, progress, cancellationToken).ConfigureAwait(false);
 
         progress.Report($"All {depList.Count} package(s) installed.");
     }
 
-    /// <summary>
-    /// Reads pixi.toml as text. Returns empty string when not yet created.
-    /// Only explicitly declared packages appear here — no transitive dependencies.
-    /// </summary>
     private static async Task<string> ReadPixiTomlAsync(CancellationToken cancellationToken)
     {
-        var tomlPath = PythonEmbedded.PixiTomlPath;
-        if (!File.Exists(tomlPath)) return string.Empty;
-#if NET
-        return await File.ReadAllTextAsync(tomlPath, cancellationToken).ConfigureAwait(false);
-#else
-        return await Task.Run(() => File.ReadAllText(tomlPath), cancellationToken).ConfigureAwait(false);
-#endif
+        var path = Path.Combine(PythonEnvironment.PixiProjectDir, "pixi.toml");
+        if (!File.Exists(path)) return string.Empty;
+        return await File.ReadAllTextAsync(path, cancellationToken).ConfigureAwait(false);
     }
 
-    /// <summary>
-    /// Runs Parser.py with <paramref name="pixiTomlContent"/> piped to stdin.
-    /// Python handles PEP 723 parsing + package name canonicalisation.
-    /// </summary>
     private static async Task<ParseResult> RunParserAsync(
         string scriptPath,
-        string pixiTomlContent,
+        string stdinContent,
         CancellationToken cancellationToken)
     {
         var stdout = new StringBuilder();
@@ -80,7 +74,7 @@ public static class PythonDepsManager
         var cmd = await Cli.Wrap(PythonEnvironment.PythonExe)
             .WithArguments([PythonEmbedded.ParserScriptPath, scriptPath])
             .WithWorkingDirectory(PythonEnvironment.PixiProjectDir)
-            .WithStandardInputPipe(PipeSource.FromString(pixiTomlContent))
+            .WithStandardInputPipe(PipeSource.FromString(stdinContent))
             .WithStandardOutputPipe(PipeTarget.ToStringBuilder(stdout))
             .WithStandardErrorPipe(PipeTarget.ToStringBuilder(stderr))
             .WithValidation(CommandResultValidation.None)
@@ -97,20 +91,5 @@ public static class PythonDepsManager
         if (string.IsNullOrEmpty(json)) return ParseResult.Empty;
 
         return JsonSerializer.Deserialize<ParseResult>(json) ?? ParseResult.Empty;
-    }
-
-    private static void EnsureEnvironmentReady()
-    {
-        if (!PythonInstaller.IsPixiInstalled())
-            throw new FileNotFoundException(
-                "pixi.exe not found. Python runtime must be initialised before installing packages.",
-                PythonInstaller.PixiExePath);
-
-        if (!PythonEnvironment.IsEnvironmentReady())
-            throw new DirectoryNotFoundException(
-                $"Pixi Python environment is not ready at {PythonEnvironment.PythonHome}. " +
-                "Call PythonInitializer.InitializeAsync() first.");
-
-        Trace.TraceInformation($"Pixi environment ready: {PythonEnvironment.PythonExe}");
     }
 }
