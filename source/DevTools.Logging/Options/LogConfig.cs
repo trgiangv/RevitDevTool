@@ -13,4 +13,7 @@ public class LogConfig
 
     [JsonPropertyName("monitor")]
     public MonitorLoggingOptions Monitor { get; set; } = new();
+
+    [JsonPropertyName("httpLogging")]
+    public HttpLoggingOptions HttpLogging { get; set; } = new();
 }

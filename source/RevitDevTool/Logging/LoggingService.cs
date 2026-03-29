@@ -1,56 +1,89 @@
 using System.Windows;
 using DevTools.Logging;
+using DevTools.Logging.Abstractions;
 using DevTools.Logging.Listeners;
 using DevTools.Logging.Options;
 using Microsoft.Extensions.Logging;
 using RevitDevTool.Logging.Listeners;
 using RevitDevTool.Settings;
 using RevitDevTool.Theme;
-using ZLogger.Scintilla.Public;
 
 namespace RevitDevTool.Logging;
 
 public sealed class LoggingService(
     ISettingsService settingsService,
     ILoggerFactory loggerFactory,
-    IAppInfo appInfo,
-    FileLogProcessor fileLogProcessor,
-    LoggingConfiguration loggingConfiguration,
-    ScintillaLogViewerWpf viewer) : ILoggingService
+    IFileLogTarget fileLogTarget,
+    IHttpLogTarget httpLogTarget,
+    IMonitorLogTarget monitor,
+    IContextEnricher contextEnricher,
+    LoggingConfiguration loggingConfiguration) : ILoggingService
 {
     private bool _disposed;
 
     private LoggerTraceListener? _loggerTraceListener;
     private GeometryListener? _geometryListener;
     private NotifyListener? _notifyListener;
+    private IDisposable? _enricherScope;
 
-    public FrameworkElement HostElement => viewer.HostElement as FrameworkElement ?? throw new InvalidOperationException("Viewer host element is not a FrameworkElement.");
+    public FrameworkElement? HostElement => monitor.HostElement;
 
     public void Initialize()
     {
-        Restart();
+        PushEnricherScope();
+
+        var config = settingsService.LogConfig;
+
+        ((IEnableable)monitor).Enable(config.Monitor);
         SetTheme(ThemeManager.Current.ActualApplicationTheme == AppTheme.Dark);
-        viewer.Start();
+        monitor.SetPrettyJson(config.Monitor.EnablePrettyJson);
+        monitor.SetFilter(config.TraceListener.LogLevel);
+
+        if (config.FileLogging.Enabled)
+            ((IEnableable)fileLogTarget).Enable(config.FileLogging);
+
+        if (config.HttpLogging.Enabled)
+            ((IEnableable)httpLogTarget).Enable(config.HttpLogging);
+
+        RecreateTraceListeners(config);
     }
 
-    public void Restart(LogTargets targets = LogTargets.All)
+    public void EnableTarget(LogTarget target)
     {
         var config = settingsService.LogConfig;
 
-        if (targets.HasFlag(LogTargets.File))
+        switch (target)
         {
-            fileLogProcessor.Restart(config.FileLogging, appInfo);
+            case LogTarget.File:
+                PushEnricherScope();
+                ((IEnableable)fileLogTarget).Enable(config.FileLogging);
+                break;
+            case LogTarget.Http:
+                ((IEnableable)httpLogTarget).Enable(config.HttpLogging);
+                break;
+            case LogTarget.Monitor:
+                ((IEnableable)monitor).Enable(config.Monitor);
+                monitor.SetPrettyJson(config.Monitor.EnablePrettyJson);
+                monitor.SetFilter(config.TraceListener.LogLevel);
+                break;
         }
 
-        if (targets.HasFlag(LogTargets.Monitor))
-        {
-            viewer.SetPrettyJson(config.Monitor.EnablePrettyJson);
-            viewer.SetFilter(config.TraceListener.LogLevel);
-        }
+        RecreateTraceListeners(config);
+    }
 
-        if (targets != LogTargets.None)
+    public void DisableTarget(LogTarget target)
+    {
+        switch (target)
         {
-            RecreateTraceListeners(config);
+            case LogTarget.File:
+                ((IEnableable)fileLogTarget).Disable();
+                break;
+            case LogTarget.Http:
+                ((IEnableable)httpLogTarget).Disable();
+                break;
+            case LogTarget.Monitor:
+                ((IEnableable)monitor).Disable();
+                break;
         }
     }
 
@@ -61,12 +94,12 @@ public sealed class LoggingService(
 
     public void SetPrettyJson(bool enabled)
     {
-        viewer.SetPrettyJson(enabled);
+        monitor.SetPrettyJson(enabled);
     }
 
     public void SetTheme(bool isDark)
     {
-        viewer.SetTheme(isDark ? ScintillaThemes.Dark : ScintillaThemes.Light);
+        monitor.SetTheme(isDark);
     }
 
     public void RegisterTraceListeners()
@@ -85,8 +118,7 @@ public sealed class LoggingService(
 
     public void ClearOutput()
     {
-        if (settingsService.LogConfig.Monitor.UseExternalFileOnly) return;
-        viewer.Clear();
+        monitor.Clear();
     }
 
     private void RecreateTraceListeners(LogConfig config)
@@ -100,6 +132,23 @@ public sealed class LoggingService(
         _geometryListener ??= new GeometryListener();
         _notifyListener ??= new NotifyListener();
         RegisterTraceListeners();
+    }
+
+    private void PushEnricherScope()
+    {
+        _enricherScope?.Dispose();
+
+        var properties = contextEnricher.GetStaticProperties();
+        var dynamic = contextEnricher.GetDynamicProperties();
+        if (dynamic != null)
+        {
+            foreach (var kvp in dynamic) properties[kvp.Key] = kvp.Value;
+        }
+
+        if (properties.Count > 0)
+        {
+            _enricherScope = loggerFactory.CreateLogger("").BeginScope(properties);
+        }
     }
 
     private void DisposeListeners()
@@ -117,9 +166,11 @@ public sealed class LoggingService(
         if (_disposed) return;
         UnregisterTraceListeners();
         DisposeListeners();
-        fileLogProcessor.Stop();
-        viewer.Stop();
-        viewer.Dispose();
+        _enricherScope?.Dispose();
+        ((IEnableable)fileLogTarget).Disable();
+        ((IEnableable)httpLogTarget).Disable();
+        ((IEnableable)monitor).Disable();
+        monitor.Dispose();
         _disposed = true;
     }
 }

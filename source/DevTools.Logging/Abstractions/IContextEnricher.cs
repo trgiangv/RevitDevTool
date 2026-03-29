@@ -1,4 +1,4 @@
-namespace DevTools.Logging;
+namespace DevTools.Logging.Abstractions;
 
 public interface IContextEnricher
 {

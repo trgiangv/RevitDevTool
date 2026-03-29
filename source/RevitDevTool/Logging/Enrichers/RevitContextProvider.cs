@@ -1,4 +1,5 @@
 using DevTools.Logging;
+using DevTools.Logging.Abstractions;
 using RevitDevTool.Core;
 using RevitDevTool.Logging.Enums;
 

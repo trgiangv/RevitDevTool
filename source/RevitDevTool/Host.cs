@@ -1,12 +1,13 @@
 using DevTools.Logging;
+using DevTools.Logging.Extensions;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using RevitDevTool.Controllers;
 using RevitDevTool.Logging;
+using RevitDevTool.Logging.Enrichers;
 using RevitDevTool.Logging.Linkify;
 using RevitDevTool.Settings;
-using ZLogger.Scintilla.Public;
 using RevitDevTool.Settings.Options;
 using RevitDevTool.Utils;
 using RevitDevTool.View;
@@ -17,7 +18,7 @@ using RevitDevTool.ViewModel.Settings;
 using RevitDevTool.ViewModel.Settings.Visualization;
 using RevitDevTool.Visualization.Server;
 using System.IO;
-using Microsoft.Extensions.DependencyInjection.Extensions;
+using DevTools.Logging.Abstractions;
 using RevitDevTool.Execution.Interfaces;
 using RevitDevTool.Execution.Providers;
 using RevitDevTool.Execution.Providers.Dotnet;
@@ -78,11 +79,12 @@ public static class Host
         builder.Logging
             .AddConfiguration(loggingConfig.Configuration.GetSection("Logging"))
             .ClearProviders()
-            .AddZLoggerScintillaWpf(
-                v => v
-                    .Channel(capacity: 50_000, flushMs: 50, maxBatch: 800)
-                    .Display(maxLines: 50_000, fontSize: 9)
-                    .WithLinkify(new RevitLinkifier()));
+            .AddMonitorLogging(v => v
+                .Channel(capacity: 50_000, flushMs: 50, maxBatch: 800)
+                .Display(maxLines: 50_000, fontSize: 9)
+                .WithLinkify(new RevitLinkifier()))
+            .AddFileLogging()
+            .AddHttpLogging();
 
         return builder;
     }
@@ -96,8 +98,12 @@ public static class Host
         services.AddHostedService<HostBackgroundController>();
 
         // Logging
-        services.TryAddSingleton<FileLogProcessor>();
         services.AddSingleton<IAppInfo, RevitAppInfo>();
+        services.AddSingleton<IContextEnricher>(sp =>
+        {
+            var settings = sp.GetRequiredService<ISettingsService>();
+            return new RevitContextProvider(settings.RevitEnrichers);
+        });
         services.AddSingleton<ILoggingService, LoggingService>();
         services.AddSingleton<LogViewModel>();
 

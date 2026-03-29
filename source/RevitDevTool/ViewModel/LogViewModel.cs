@@ -91,7 +91,7 @@ public sealed partial class LogViewModel : ObservableObject, IDisposable,
     {
         if (!IsStarted) return;
         LogLevel = _settingsService.LogConfig.TraceListener.LogLevel;
-        _loggingService.Restart(message.Targets);
+        _loggingService.EnableTarget(message.Target);
     }
 
     private void Unsubscribe()

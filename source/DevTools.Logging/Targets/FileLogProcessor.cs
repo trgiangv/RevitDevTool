@@ -1,34 +1,31 @@
 using System.IO;
+using DevTools.Logging.Abstractions;
 using DevTools.Logging.Options;
 using Microsoft.Extensions.Logging;
 using ZLogger;
 using ZLogger.Providers;
-
-namespace DevTools.Logging;
+namespace DevTools.Logging.Targets;
 
 /// <summary>
 /// Manages file logging by dynamically adding/removing a <see cref="ZLoggerRollingFileLoggerProvider"/>
-/// to the <see cref="ILoggerFactory"/> at runtime. No custom <see cref="IAsyncLogProcessor"/>,
-/// no reflection — uses ZLogger's rolling file provider exactly as designed.
-/// MEL's built-in fan-out ensures every <c>ILogger&lt;T&gt;.Log()</c> call reaches the file provider.
+/// to the <see cref="ILoggerFactory"/> at runtime.
 /// </summary>
-public sealed class FileLogProcessor(ILoggerFactory loggerFactory) : IDisposable
+public sealed class FileLogProcessor(ILoggerFactory loggerFactory, IAppInfo appInfo) : IFileLogTarget, IEnableable
 {
     private ZLoggerRollingFileLoggerProvider? _provider;
     private bool _disposed;
 
-    public void Restart(FileLoggingOptions options, IAppInfo appInfo)
-    {
-        if (!options.Enabled)
-        {
-            Stop();
-            return;
-        }
+    public bool IsEnabled => _provider != null;
 
-        var folder = options.LogFolder;
+    public void Enable<T>(T options)
+    {
+        if (options is not FileLoggingOptions fileOptions)
+            throw new ArgumentException($"Expected {nameof(FileLoggingOptions)}, got {typeof(T).Name}");
+
+        var folder = fileOptions.LogFolder;
         Directory.CreateDirectory(folder);
 
-        var ext = options.Format == SaveFormat.Json ? "json" : "log";
+        var ext = fileOptions.Format == SaveFormat.Json ? "json" : "log";
         var app = appInfo.AppName;
         var ver = appInfo.VersionBuild;
         var pid = appInfo.ProcessId;
@@ -38,10 +35,10 @@ public sealed class FileLogProcessor(ILoggerFactory loggerFactory) : IDisposable
             IncludeScopes = true,
             FilePathSelector = (dt, seq) =>
                 Path.Combine(folder, $"log_{app}_{ver}_{pid}_{dt:yyyyMMddTHHmmss}_{seq:D3}.{ext}"),
-            RollingInterval = options.RollingInterval
+            RollingInterval = fileOptions.RollingInterval
         };
 
-        ConfigureFormatter(rollingOptions, options.Format);
+        ConfigureFormatter(rollingOptions, fileOptions.Format);
 
         var newProvider = new ZLoggerRollingFileLoggerProvider(rollingOptions);
         loggerFactory.AddProvider(newProvider);
@@ -50,7 +47,7 @@ public sealed class FileLogProcessor(ILoggerFactory loggerFactory) : IDisposable
         old?.Dispose();
     }
 
-    public void Stop()
+    public void Disable()
     {
         var old = Interlocked.Exchange(ref _provider, null);
         old?.Dispose();
@@ -60,7 +57,7 @@ public sealed class FileLogProcessor(ILoggerFactory loggerFactory) : IDisposable
     {
         if (_disposed) return;
         _disposed = true;
-        Stop();
+        Disable();
     }
 
     private static void ConfigureFormatter(ZLoggerOptions options, SaveFormat format)

@@ -61,34 +61,6 @@
                                   SelectedItem="{Binding LogLevel}" />
                     </Grid>
 
-                    <!--  Pretty JSON  -->
-                    <Grid Margin="0,12,0,0">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="Auto" />
-                            <ColumnDefinition Width="*" />
-                            <ColumnDefinition Width="Auto" />
-                        </Grid.ColumnDefinitions>
-                        <Path Width="20"
-                              Height="20"
-                              VerticalAlignment="Center"
-                              Data="{StaticResource PrettyJson}"
-                              Fill="{DynamicResource DevTools.MahApps.Brushes.ThemeForeground}"
-                              Stretch="Uniform" />
-                        <StackPanel Grid.Column="1"
-                                    Margin="12,0"
-                                    VerticalAlignment="Center">
-                            <TextBlock FontWeight="SemiBold"
-                                       Text="Pretty JSON" />
-                            <TextBlock FontSize="11"
-                                       Foreground="{DynamicResource DevTools.MahApps.Brushes.Gray}"
-                                       Text="Format objects as indented JSON" />
-                        </StackPanel>
-                        <mah:ToggleSwitch Grid.Column="2"
-                                          MinWidth="{StaticResource ToggleSwitchMinWidth}"
-                                          HorizontalAlignment="Right"
-                                          IsOn="{Binding EnablePrettyJson}" />
-                    </Grid>
-
                     <Expander Margin="0,12,0,0"
                               Header="Level Detection Keywords"
                               IsExpanded="False">
@@ -204,51 +176,12 @@
                 </StackPanel>
             </GroupBox>
 
-            <!--  Save Log  -->
+            <!--  Log Targets  -->
             <GroupBox Margin="0,0,0,8"
-                      Header="Save Log">
-                <StackPanel>
-                    <!--  Save Log  -->
-                    <StackPanel Margin="8">
-                        <Grid>
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="Auto" />
-                                <ColumnDefinition Width="*" />
-                                <ColumnDefinition Width="Auto" />
-                            </Grid.ColumnDefinitions>
-                            <Path Width="20"
-                                  Height="20"
-                                  VerticalAlignment="Center"
-                                  Data="{StaticResource FileLog}"
-                                  Fill="{DynamicResource DevTools.MahApps.Brushes.ThemeForeground}"
-                                  Stretch="Uniform" />
-                            <StackPanel Grid.Column="1"
-                                        Margin="12,0"
-                                        VerticalAlignment="Center">
-                                <TextBlock FontWeight="SemiBold"
-                                           Text="Enable Save Log" />
-                                <TextBlock FontSize="11"
-                                           Foreground="{DynamicResource DevTools.MahApps.Brushes.Gray}"
-                                           Text="Output format for log entries" />
-                            </StackPanel>
-                            <StackPanel Grid.Column="2"
-                                        Orientation="Vertical">
-                                <mah:ToggleSwitch MinWidth="{StaticResource ToggleSwitchMinWidth}"
-                                                  HorizontalAlignment="Right"
-                                                  IsOn="{Binding IsSaveLogEnabled}" />
-                                <ComboBox Width="{StaticResource ContentMinWidth}"
-                                          Margin="0,8,0,0"
-                                          HorizontalAlignment="Right"
-                                          ItemsSource="{Binding LogSaveFormats, Mode=OneTime}"
-                                          SelectedItem="{Binding SaveFormat}"
-                                          Visibility="{Binding IsSaveLogEnabled, Converter={StaticResource BoolToVisibility}}" />
-                            </StackPanel>
-                        </Grid>
-                    </StackPanel>
-
-                    <!--  External File Only  -->
-                    <Grid Margin="8"
-                          Visibility="{Binding IsSaveLogEnabled, Converter={StaticResource BoolToVisibility}}">
+                      Header="Log Targets">
+                <StackPanel Margin="8,5,8,8">
+                    <!--  Target Selector  -->
+                    <Grid>
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="Auto" />
                             <ColumnDefinition Width="*" />
@@ -264,20 +197,22 @@
                                     Margin="12,0"
                                     VerticalAlignment="Center">
                             <TextBlock FontWeight="SemiBold"
-                                       Text="Log only to file" />
+                                       Text="Active Targets" />
                             <TextBlock FontSize="11"
                                        Foreground="{DynamicResource DevTools.MahApps.Brushes.Gray}"
-                                       Text="Disable UI logging" />
+                                       Text="Select logging output destinations" />
                         </StackPanel>
-                        <mah:ToggleSwitch Grid.Column="2"
-                                          MinWidth="{StaticResource ToggleSwitchMinWidth}"
-                                          VerticalAlignment="Bottom"
-                                          IsOn="{Binding UseExternalFileOnly}" />
+                        <mah:MultiSelectionComboBox Grid.Column="2"
+                                                    Width="200"
+                                                    VerticalAlignment="Center"
+                                                    mah:MultiSelectorHelper.SelectedItems="{Binding SelectedLogTargets}"
+                                                    ItemContainerStyle="{StaticResource DevTools.MahApps.Styles.MultiSelectionComboBoxItem.CheckBox}"
+                                                    ItemsSource="{Binding AvailableLogTargets, Mode=OneTime}"
+                                                    SelectionMode="Multiple" />
                     </Grid>
 
-                    <!--  Time Interval  -->
-                    <Grid Margin="8"
-                          Visibility="{Binding IsSaveLogEnabled, Converter={StaticResource BoolToVisibility}}">
+                    <!--  JSON Output  -->
+                    <Grid Margin="0,12,0,0">
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="Auto" />
                             <ColumnDefinition Width="*" />
@@ -286,57 +221,27 @@
                         <Path Width="20"
                               Height="20"
                               VerticalAlignment="Center"
-                              Data="{StaticResource Clock}"
+                              Data="{StaticResource PrettyJson}"
                               Fill="{DynamicResource DevTools.MahApps.Brushes.ThemeForeground}"
                               Stretch="Uniform" />
                         <StackPanel Grid.Column="1"
                                     Margin="12,0"
                                     VerticalAlignment="Center">
                             <TextBlock FontWeight="SemiBold"
-                                       Text="Rolling Interval" />
+                                       Text="JSON" />
                             <TextBlock FontSize="11"
                                        Foreground="{DynamicResource DevTools.MahApps.Brushes.Gray}"
-                                       Text="Create new file every" />
-                        </StackPanel>
-                        <ComboBox Grid.Column="2"
-                                  Width="{StaticResource ContentMinWidth}"
-                                  VerticalAlignment="Center"
-                                  ItemsSource="{Binding LogTimeIntervals, Mode=OneTime}"
-                                  SelectedItem="{Binding TimeInterval}" />
-                    </Grid>
-
-                    <!--  Auto Clean  -->
-                    <Grid Margin="8"
-                          Visibility="{Binding IsSaveLogEnabled, Converter={StaticResource BoolToVisibility}}">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="Auto" />
-                            <ColumnDefinition Width="*" />
-                            <ColumnDefinition Width="Auto" />
-                        </Grid.ColumnDefinitions>
-                        <Path Width="20"
-                              Height="20"
-                              VerticalAlignment="Center"
-                              Data="{StaticResource Clear}"
-                              Fill="{DynamicResource DevTools.MahApps.Brushes.ThemeForeground}"
-                              Stretch="Uniform" />
-                        <StackPanel Grid.Column="1"
-                                    Margin="12,0"
-                                    VerticalAlignment="Center">
-                            <TextBlock FontWeight="SemiBold"
-                                       Text="Auto Clean" />
-                            <TextBlock FontSize="11"
-                                       Foreground="{DynamicResource DevTools.MahApps.Brushes.Gray}"
-                                       Text="Delete old log files when Revit startup or shutdown" />
+                                       Text="Use JSON format for all logging outputs" />
                         </StackPanel>
                         <mah:ToggleSwitch Grid.Column="2"
                                           MinWidth="{StaticResource ToggleSwitchMinWidth}"
-                                          VerticalAlignment="Bottom"
-                                          IsOn="{Binding AutoClean}" />
+                                          HorizontalAlignment="Right"
+                                          IsOn="{Binding EnableJson}" />
                     </Grid>
 
                     <!--  Revit Enrichers  -->
-                    <Grid Margin="8"
-                          Visibility="{Binding IsSaveLogEnabled, Converter={StaticResource BoolToVisibility}}">
+                    <Grid Margin="0,12,0,0"
+                          Visibility="{Binding IsOutputSettingsVisible, Converter={StaticResource BoolToVisibility}}">
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="Auto" />
                             <ColumnDefinition Width="*" />
@@ -365,10 +270,73 @@
                                                     ItemsSource="{Binding AvailableRevitEnrichers, Mode=OneTime}"
                                                     SelectionMode="Multiple" />
                     </Grid>
+                </StackPanel>
+            </GroupBox>
+
+            <!--  File Logging  -->
+            <GroupBox Margin="0,0,0,8"
+                      Header="File Logging"
+                      Visibility="{Binding IsFileTargetSelected, Converter={StaticResource BoolToVisibility}}">
+                <StackPanel Margin="8,5,8,8">
+                    <!--  Rolling Interval  -->
+                    <Grid Margin="0,12,0,0">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <Path Width="20"
+                              Height="20"
+                              VerticalAlignment="Center"
+                              Data="{StaticResource Clock}"
+                              Fill="{DynamicResource DevTools.MahApps.Brushes.ThemeForeground}"
+                              Stretch="Uniform" />
+                        <StackPanel Grid.Column="1"
+                                    Margin="12,0"
+                                    VerticalAlignment="Center">
+                            <TextBlock FontWeight="SemiBold"
+                                       Text="Rolling Interval" />
+                            <TextBlock FontSize="11"
+                                       Foreground="{DynamicResource DevTools.MahApps.Brushes.Gray}"
+                                       Text="Create new file every" />
+                        </StackPanel>
+                        <ComboBox Grid.Column="2"
+                                  Width="{StaticResource ContentMinWidth}"
+                                  VerticalAlignment="Center"
+                                  ItemsSource="{Binding LogTimeIntervals, Mode=OneTime}"
+                                  SelectedItem="{Binding TimeInterval}" />
+                    </Grid>
+
+                    <!--  Auto Clean  -->
+                    <Grid Margin="0,12,0,0">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <Path Width="20"
+                              Height="20"
+                              VerticalAlignment="Center"
+                              Data="{StaticResource Clear}"
+                              Fill="{DynamicResource DevTools.MahApps.Brushes.ThemeForeground}"
+                              Stretch="Uniform" />
+                        <StackPanel Grid.Column="1"
+                                    Margin="12,0"
+                                    VerticalAlignment="Center">
+                            <TextBlock FontWeight="SemiBold"
+                                       Text="Auto Clean" />
+                            <TextBlock FontSize="11"
+                                       Foreground="{DynamicResource DevTools.MahApps.Brushes.Gray}"
+                                       Text="Delete old log files when Revit startup or shutdown" />
+                        </StackPanel>
+                        <mah:ToggleSwitch Grid.Column="2"
+                                          MinWidth="{StaticResource ToggleSwitchMinWidth}"
+                                          VerticalAlignment="Bottom"
+                                          IsOn="{Binding AutoClean}" />
+                    </Grid>
 
                     <!--  Log Folder  -->
-                    <Grid Margin="8"
-                          Visibility="{Binding IsSaveLogEnabled, Converter={StaticResource BoolToVisibility}}">
+                    <Grid Margin="0,12,0,0">
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="Auto" />
                             <ColumnDefinition Width="*" />
@@ -395,6 +363,73 @@
                                 Command="{Binding BrowseFolderCommand}"
                                 Content="Browse..." />
                     </Grid>
+                </StackPanel>
+            </GroupBox>
+
+            <!--  HTTP Logging  -->
+            <GroupBox Margin="0,0,0,8"
+                      Header="HTTP Logging"
+                      Visibility="{Binding IsHttpTargetSelected, Converter={StaticResource BoolToVisibility}}">
+                <StackPanel Margin="8,5,8,8">
+                    <!--  Endpoint  -->
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <Path Width="20"
+                              Height="20"
+                              VerticalAlignment="Center"
+                              Data="{StaticResource Link}"
+                              Fill="{DynamicResource DevTools.MahApps.Brushes.ThemeForeground}"
+                              Stretch="Uniform" />
+                        <StackPanel Grid.Column="1"
+                                    Margin="12,0"
+                                    VerticalAlignment="Center">
+                            <TextBlock FontWeight="SemiBold"
+                                       Text="Endpoint" />
+                            <TextBlock FontSize="11"
+                                       Foreground="{DynamicResource DevTools.MahApps.Brushes.Gray}"
+                                       Text="HTTP endpoint URL to send logs" />
+                        </StackPanel>
+                        <TextBox Grid.Column="2"
+                                 Width="250"
+                                 VerticalAlignment="Center"
+                                 mah:TextBoxHelper.UseFloatingWatermark="True"
+                                 mah:TextBoxHelper.Watermark="https://..."
+                                 Text="{Binding HttpEndpoint, UpdateSourceTrigger=PropertyChanged}" />
+                    </Grid>
+
+                    <!--  Batch Size  -->
+                    <Grid Margin="0,12,0,0">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <Path Width="20"
+                              Height="20"
+                              VerticalAlignment="Center"
+                              Data="{StaticResource BulletList}"
+                              Fill="{DynamicResource DevTools.MahApps.Brushes.ThemeForeground}"
+                              Stretch="Uniform" />
+                        <StackPanel Grid.Column="1"
+                                    Margin="12,0"
+                                    VerticalAlignment="Center">
+                            <TextBlock FontWeight="SemiBold"
+                                       Text="Batch Size" />
+                            <TextBlock FontSize="11"
+                                       Foreground="{DynamicResource DevTools.MahApps.Brushes.Gray}"
+                                       Text="Number of log entries per HTTP request" />
+                        </StackPanel>
+                        <mah:NumericUpDown Grid.Column="2"
+                                           Width="{StaticResource ContentMinWidth}"
+                                           VerticalAlignment="Center"
+                                           Minimum="1"
+                                           Value="{Binding HttpBatchSize, UpdateSourceTrigger=PropertyChanged}" />
+                    </Grid>
+
                 </StackPanel>
             </GroupBox>
         </StackPanel>

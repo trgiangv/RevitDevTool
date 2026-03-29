@@ -1,4 +1,4 @@
-using DevTools.Logging;
+using DevTools.Logging.Abstractions;
 using DevTools.Utilities;
 using RevitDevTool.Core;
 
