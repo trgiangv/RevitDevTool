@@ -1,7 +1,6 @@
 using System.Windows.Input;
 using Autodesk.Revit.Attributes;
 using Autodesk.Revit.DB.Events;
-using Autodesk.Revit.UI;
 using RevitDevTool.Core;
 using DevTools.Logging.Listeners;
 using RevitDevTool.Utils;

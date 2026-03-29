@@ -1,8 +1,5 @@
 using System.Windows;
 using RevitDevTool.Utils;
-#if REVIT2024_OR_GREATER
-using Autodesk.Revit.UI;
-#endif
 
 namespace RevitDevTool.Theme;
 

@@ -1,5 +1,4 @@
 using CommunityToolkit.Mvvm.Messaging;
-using Microsoft.Extensions.DependencyInjection;
 using RevitDevTool.Core;
 using RevitDevTool.ViewModel.Messages;
 using RevitDevTool.ViewModel.Settings.Visualization;

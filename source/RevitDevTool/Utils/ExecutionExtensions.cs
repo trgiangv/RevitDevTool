@@ -21,7 +21,7 @@ public static class ExecutionExtensions
     
     public static List<object> AsObjectCollection(this PyObject pyObject)
     {
-        if (!pyObject.IsIterable()) throw new ArgumentException("PyObject is not iterable", nameof(pyObject));
+        if (!pyObject.IsIterable()) return [];
         var netList = new List<object>();
         using (Py.GIL())
         {

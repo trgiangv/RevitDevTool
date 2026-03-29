@@ -1,5 +1,4 @@
 using Autodesk.Revit.Attributes;
-using Autodesk.Revit.UI;
 using RevitDevTool.Utils;
 using RevitDevTool.View;
 using RevitDevTool.ViewModel;

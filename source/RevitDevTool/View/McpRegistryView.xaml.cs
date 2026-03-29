@@ -1,5 +1,4 @@
 using System.Diagnostics;
-using System.IO;
 using RevitDevTool.Mcp;
 using RevitDevTool.ViewModel;
 using DataFormats = System.Windows.DataFormats;

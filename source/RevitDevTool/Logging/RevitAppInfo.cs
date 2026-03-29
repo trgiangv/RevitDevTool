@@ -1,5 +1,4 @@
 using DevTools.Logging.Abstractions;
-using DevTools.Utilities;
 using RevitDevTool.Core;
 
 namespace RevitDevTool.Logging;
