@@ -8,9 +8,6 @@ using DevTools.Utilities;
 
 namespace RevitDevTool.ViewModel;
 
-/// <summary>
-/// ViewModel for the main MainPage that handles navigation
-/// </summary>
 public partial class MainViewModel : ObservableObject, IRecipient<IsSaveLogChangedMessage>
 {
     private readonly LogSettingsViewModel _logSettingsViewModel;
@@ -96,7 +93,8 @@ public partial class MainViewModel : ObservableObject, IRecipient<IsSaveLogChang
         McpRegistryView mcpRegistryView,
         MemoryView memoryView,
         LogSettingsViewModel logSettingsViewModel,
-        ISettingsService settingsService)
+        ISettingsService settingsService,
+        IMessenger messenger)
     {
         LogViewModel = logViewModel;
         ExecutionView = addinLoadView;
@@ -105,12 +103,12 @@ public partial class MainViewModel : ObservableObject, IRecipient<IsSaveLogChang
         IsSaveLogEnabled = settingsService.LogConfig.FileLogging.Enabled;
         _logSettingsViewModel = logSettingsViewModel;
         _settingsService = settingsService;
-        WeakReferenceMessenger.Default.Register(this);
+        messenger.Register(this);
     }
 
     public void Receive(IsSaveLogChangedMessage message)
     {
-        IsSaveLogEnabled = message.Value;
+        IsSaveLogEnabled = message.IsEnabled;
         OpenLogFolderCommand.NotifyCanExecuteChanged();
     }
 }

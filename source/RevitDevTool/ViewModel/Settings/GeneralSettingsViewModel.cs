@@ -37,12 +37,12 @@ public partial class GeneralSettingsViewModel : ObservableValidator, IRecipient<
         HostBackgroundController.ToggleHardwareRendering(_settingsService);
     }
 
-    public GeneralSettingsViewModel(ISettingsService settingsService, ILoggingService loggingService)
+    public GeneralSettingsViewModel(ISettingsService settingsService, ILoggingService loggingService, IMessenger messenger)
     {
         _settingsService = settingsService;
         _loggingService = loggingService;
         LoadFromConfig();
-        WeakReferenceMessenger.Default.Register(this);
+        messenger.Register(this);
         ThemeManager.Current.ActualApplicationThemeChanged += OnActualThemeChanged;
     }
 

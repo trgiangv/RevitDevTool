@@ -25,7 +25,7 @@ public partial class LogSettingsViewModel : ObservableObject, IDataErrorInfo, IR
     public static LogLevel[] LogLevels { get; } = Enum.GetValues(typeof(LogLevel)).Cast<LogLevel>().ToArray();
     public static RollingInterval[] LogTimeIntervals { get; } = Enum.GetValues(typeof(RollingInterval)).Cast<RollingInterval>().ToArray();
     public static SourceLevels[] SourceLevels { get; } = Enum.GetValues(typeof(SourceLevels)).Cast<SourceLevels>().ToArray();
-    public static LogTarget[] AvailableLogTargets { get; } = Enum.GetValues(typeof(LogTarget)).Cast<LogTarget>().ToArray();
+    public static LogSink[] AvailableLogTargets { get; } = Enum.GetValues(typeof(LogSink)).Cast<LogSink>().ToArray();
     public static RevitEnricher[] AvailableRevitEnrichers { get; } = Enum.GetValues(typeof(RevitEnricher)).Cast<RevitEnricher>().ToArray();
 
     [ObservableProperty] private LogLevel _logLevel;
@@ -46,27 +46,27 @@ public partial class LogSettingsViewModel : ObservableObject, IDataErrorInfo, IR
     [ObservableProperty] private string _httpEndpoint = string.Empty;
     [ObservableProperty] private int _httpBatchSize = 100;
 
-    public ObservableCollection<LogTarget> SelectedLogTargets { get; } = [];
+    public ObservableCollection<LogSink> SelectedLogTargets { get; } = [];
     public ObservableCollection<RevitEnricher> SelectedRevitEnrichers { get; } = [];
 
-    public bool IsFileTargetSelected => SelectedLogTargets.Contains(LogTarget.File);
-    public bool IsHttpTargetSelected => SelectedLogTargets.Contains(LogTarget.Http);
+    public bool IsFileTargetSelected => SelectedLogTargets.Contains(LogSink.File);
+    public bool IsHttpTargetSelected => SelectedLogTargets.Contains(LogSink.Http);
     public bool IsOutputSettingsVisible => IsFileTargetSelected || IsHttpTargetSelected;
 
     private Snapshot _baseline;
 
-    public LogSettingsViewModel(ISettingsService settingsService, ILoggingService loggingService)
+    public LogSettingsViewModel(ISettingsService settingsService, ILoggingService loggingService, IMessenger messenger)
     {
         _settingsService = settingsService;
         _loggingService = loggingService;
-        _messenger = WeakReferenceMessenger.Default;
+        _messenger = messenger;
 
         SelectedLogTargets.CollectionChanged += (_, _) =>
         {
             OnPropertyChanged(nameof(IsFileTargetSelected));
             OnPropertyChanged(nameof(IsHttpTargetSelected));
             OnPropertyChanged(nameof(IsOutputSettingsVisible));
-            WeakReferenceMessenger.Default.Send(new IsSaveLogChangedMessage(IsFileTargetSelected));
+            _messenger.Send(new IsSaveLogChangedMessage(IsFileTargetSelected));
             UpdateHasPendingChanges();
         };
         SelectedRevitEnrichers.CollectionChanged += (_, _) => UpdateHasPendingChanges();
@@ -141,11 +141,11 @@ public partial class LogSettingsViewModel : ObservableObject, IDataErrorInfo, IR
         HttpBatchSize = config.HttpLogging.BatchSize;
 
         SelectedLogTargets.Clear();
-        SelectedLogTargets.Add(LogTarget.Monitor);
+        SelectedLogTargets.Add(LogSink.Monitor);
         if (config.FileLogging.Enabled)
-            SelectedLogTargets.Add(LogTarget.File);
+            SelectedLogTargets.Add(LogSink.File);
         if (config.HttpLogging.Enabled)
-            SelectedLogTargets.Add(LogTarget.Http);
+            SelectedLogTargets.Add(LogSink.Http);
 
         SelectedRevitEnrichers.Clear();
         foreach (var enricher in _settingsService.RevitEnrichers)
@@ -201,23 +201,23 @@ public partial class LogSettingsViewModel : ObservableObject, IDataErrorInfo, IR
             _messenger.Send(new LogSettingsAppliedMessage(target));
     }
 
-    private List<LogTarget> ComputeChangedTargets()
+    private List<LogSink> ComputeChangedTargets()
     {
         if (TraceListenerChanged())
-            return [LogTarget.Monitor, LogTarget.File, LogTarget.Http];
+            return [LogSink.Monitor, LogSink.File, LogSink.Http];
 
-        var changed = new List<LogTarget>();
+        var changed = new List<LogSink>();
 
         var outputChanged = OutputSettingsChanged();
 
         if (outputChanged)
-            changed.Add(LogTarget.Monitor);
+            changed.Add(LogSink.Monitor);
 
         if (FileLoggingChanged() || outputChanged)
-            changed.Add(LogTarget.File);
+            changed.Add(LogSink.File);
 
         if (HttpLoggingChanged() || outputChanged)
-            changed.Add(LogTarget.Http);
+            changed.Add(LogSink.Http);
 
         return changed;
     }

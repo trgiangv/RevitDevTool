@@ -16,7 +16,7 @@ public sealed partial class LogViewModel : ObservableObject, IDisposable,
 {
     private readonly ISettingsService _settingsService;
     private readonly ILoggingService _loggingService;
-    private readonly WeakReferenceMessenger _messenger;
+    private readonly IMessenger _messenger;
     private readonly EventHandler<IdlingEventArgs> _onIdlingHandler;
 
     private ConsoleRedirector? _consoleRedirector;
@@ -44,11 +44,11 @@ public sealed partial class LogViewModel : ObservableObject, IDisposable,
         else StopTracing();
     }
 
-    public LogViewModel(ISettingsService settingsService, ILoggingService loggingService)
+    public LogViewModel(ISettingsService settingsService, ILoggingService loggingService, IMessenger messenger)
     {
         _settingsService = settingsService;
         _loggingService = loggingService;
-        _messenger = WeakReferenceMessenger.Default;
+        _messenger = messenger;
         _onIdlingHandler = OnIdling;
         _isStarted = _settingsService.GeneralConfig.IsTraceEnabled;
         Subscribe();
@@ -84,14 +84,14 @@ public sealed partial class LogViewModel : ObservableObject, IDisposable,
 
     public void Receive(GeometryCountChangedMessage message)
     {
-        GeometryCount = message.Value;
+        GeometryCount = message.Count;
     }
 
     public void Receive(LogSettingsAppliedMessage message)
     {
         if (!IsStarted) return;
         LogLevel = _settingsService.LogConfig.TraceListener.LogLevel;
-        _loggingService.EnableTarget(message.Target);
+        _loggingService.EnableTarget(message.Sink);
     }
 
     private void Unsubscribe()

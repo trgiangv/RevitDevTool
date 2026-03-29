@@ -1,3 +1,4 @@
+using CommunityToolkit.Mvvm.Messaging;
 using DevTools.Logging;
 using DevTools.Logging.Extensions;
 using Microsoft.Extensions.DependencyInjection;
@@ -92,6 +93,10 @@ public static class Host
     private static void ConfigureServices(this HostApplicationBuilder builder)
     {
         var services = builder.Services;
+
+        // Messaging
+        services.AddSingleton<IMessenger>(WeakReferenceMessenger.Default);
+
         // Core services
         services.AddSingleton<IFileConfig<PathOptions>, FileConfig>();
         services.AddSingleton<ISettingsService, SettingsService>();

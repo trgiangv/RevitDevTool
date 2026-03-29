@@ -1,4 +1,5 @@
 using CommunityToolkit.Mvvm.Messaging;
+using Microsoft.Extensions.DependencyInjection;
 using RevitDevTool.Core;
 using RevitDevTool.ViewModel.Messages;
 using RevitDevTool.ViewModel.Settings.Visualization;
@@ -69,7 +70,7 @@ internal static class VisualizationController
     public static void NotifyGeometryCountChanged()
     {
         var totalGeometryCount = ServerViewModelPairs.Sum(pair => pair.Server.GeometryCount);
-        WeakReferenceMessenger.Default.Send(new GeometryCountChangedMessage(totalGeometryCount));
+        Host.GetService<IMessenger>().Send(new GeometryCountChangedMessage(totalGeometryCount));
     }
 
     public static void Refresh()
