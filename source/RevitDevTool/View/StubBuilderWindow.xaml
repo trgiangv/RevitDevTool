@@ -7,13 +7,13 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:viewModel="clr-namespace:RevitDevTool.ViewModel"
         Title="Stubs Builder"
-        MinWidth="650"
         Width="700"
-        MinHeight="500"
         Height="650"
+        MinWidth="650"
+        MinHeight="500"
+        d:DataContext="{d:DesignInstance Type=viewModel:StubBuilderViewModel}"
         d:DesignHeight="650"
         d:DesignWidth="700"
-        d:DataContext="{d:DesignInstance Type=viewModel:StubBuilderViewModel}"
         Background="{DynamicResource DevTools.MahApps.Brushes.ThemeBackground}"
         ShowInTaskbar="False"
         WindowStartupLocation="CenterOwner"
@@ -28,7 +28,7 @@
         </ResourceDictionary>
     </Window.Resources>
 
-    <Grid Margin="10">
+    <Grid Margin="5">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
             <RowDefinition Height="*" />
@@ -37,60 +37,66 @@
             <RowDefinition Height="Auto" />
         </Grid.RowDefinitions>
 
-        <!-- Search bar + Select All / Clear -->
-        <Grid Margin="0,0,0,8">
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="*" />
-                <ColumnDefinition Width="Auto" />
-                <ColumnDefinition Width="Auto" />
-            </Grid.ColumnDefinitions>
+        <!--  Toolbar: Hide unchecked + Select All / Clear  -->
+        <StackPanel Margin="0,0,0,8"
+                    HorizontalAlignment="Left"
+                    Orientation="Horizontal">
 
-            <TextBox Grid.Column="0"
-                     VerticalContentAlignment="Center"
-                     mah:TextBoxHelper.Watermark="Search assemblies in AppDomain..."
-                     mah:TextBoxHelper.ClearTextButton="True"
-                     Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}" />
+            <CheckBox Margin="0,0,12,0"
+                      VerticalAlignment="Center"
+                      Content="Hide unchecked"
+                      Foreground="{DynamicResource DevTools.MahApps.Brushes.ThemeForeground}"
+                      IsChecked="{Binding HideUnchecked}" />
 
-            <Button Grid.Column="1"
-                    Margin="8 0"
+            <Button Margin="0,0,8,0"
                     Command="{Binding SelectAllCommand}"
                     Content="Check All" />
 
-            <Button Grid.Column="2"
-                    Command="{Binding ClearSelectionCommand}"
+            <Button Command="{Binding ClearSelectionCommand}"
                     Content="Check None" />
-        </Grid>
+        </StackPanel>
 
-        <!-- Assembly CheckListBox -->
+        <!--  Assembly CheckListBox  -->
         <ListBox Grid.Row="1"
                  Margin="0,0,0,8"
                  ItemsSource="{Binding FilteredAssemblies}"
                  ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                 TextSearch.TextPath="Name"
                  VirtualizingStackPanel.IsVirtualizing="True"
                  VirtualizingStackPanel.VirtualizationMode="Recycling">
+            <ListBox.ItemContainerStyle>
+                <Style BasedOn="{StaticResource {x:Type ListBoxItem}}"
+                       TargetType="ListBoxItem">
+                    <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+                    <Setter Property="Padding" Value="4,2" />
+                    <EventSetter Event="MouseDoubleClick"
+                                 Handler="OnAssemblyItemDoubleClick" />
+                </Style>
+            </ListBox.ItemContainerStyle>
             <ListBox.ItemTemplate>
                 <DataTemplate DataType="viewModel:AssemblyItem">
-                    <CheckBox Margin="0 2"
-                              IsChecked="{Binding IsSelected}">
-                        <CheckBox.Content>
-                            <StackPanel Orientation="Horizontal">
-                                <TextBlock FontWeight="SemiBold"
-                                           Foreground="{DynamicResource DevTools.MahApps.Brushes.ThemeForeground}"
-                                           Text="{Binding Name}" />
-                                <TextBlock Margin="8,0,0,0"
-                                           Foreground="{DynamicResource DevTools.MahApps.Brushes.Gray}"
-                                           Text="{Binding Location}"
-                                           TextTrimming="CharacterEllipsis"
-                                           MaxWidth="400" />
-                            </StackPanel>
-                        </CheckBox.Content>
-                    </CheckBox>
+                    <StackPanel Orientation="Horizontal">
+                        <CheckBox Margin="0,0,6,0"
+                                  VerticalAlignment="Center"
+                                  IsChecked="{Binding IsSelected}" />
+                        <TextBlock VerticalAlignment="Center"
+                                   FontWeight="SemiBold"
+                                   Foreground="{DynamicResource DevTools.MahApps.Brushes.ThemeForeground}"
+                                   Text="{Binding Name}" />
+                        <TextBlock MaxWidth="350"
+                                   Margin="8,0,0,0"
+                                   VerticalAlignment="Center"
+                                   Foreground="{DynamicResource DevTools.MahApps.Brushes.Gray}"
+                                   Text="{Binding Location}"
+                                   TextTrimming="CharacterEllipsis" />
+                    </StackPanel>
                 </DataTemplate>
             </ListBox.ItemTemplate>
         </ListBox>
 
-        <!-- Output Path -->
-        <Grid Grid.Row="2" Margin="0,0,0,8">
+        <!--  Output Path  -->
+        <Grid Grid.Row="2"
+              Margin="0,0,0,8">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="Auto" />
                 <ColumnDefinition Width="*" />
@@ -110,12 +116,12 @@
                      Text="{Binding OutputPath, UpdateSourceTrigger=PropertyChanged}" />
 
             <Button Grid.Column="2"
-                    Padding="12,4"
+                    Width="30"
                     Command="{Binding BrowseOutputPathCommand}"
-                    Content="Browse..." />
+                    Content="..." />
         </Grid>
 
-        <!-- Status Message -->
+        <!--  Status Message  -->
         <TextBlock Grid.Row="3"
                    Margin="0,0,0,8"
                    FontSize="11"
@@ -123,11 +129,10 @@
                    Text="{Binding StatusMessage}"
                    TextWrapping="Wrap" />
 
-        <!-- Bottom buttons -->
+        <!--  Bottom buttons  -->
         <Grid Grid.Row="4">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="*" />
-                <ColumnDefinition Width="Auto" />
                 <ColumnDefinition Width="Auto" />
                 <ColumnDefinition Width="Auto" />
             </Grid.ColumnDefinitions>
@@ -140,18 +145,14 @@
                                   Visibility="{Binding IsGenerating, Converter={StaticResource BooleanToVisibilityConverter}}" />
 
             <Button Grid.Column="1"
-                    Margin="0,0,8,0"
-                    Padding="16,6"
-                    Command="{Binding GenerateExternalStubsCommand}"
-                    Content="Generate External" />
-
-            <Button Grid.Column="2"
+                    Width="100"
                     Margin="0,0,8,0"
                     Padding="16,6"
                     Command="{Binding GenerateStubsCommand}"
-                    Content="Generate Selected" />
+                    Content="Generate" />
 
-            <Button Grid.Column="3"
+            <Button Grid.Column="2"
+                    Width="100"
                     Padding="16,6"
                     Command="{Binding CancelCommand}"
                     Content="Cancel" />

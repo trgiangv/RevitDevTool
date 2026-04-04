@@ -117,10 +117,10 @@ public static class AssemblyLoader
 
             fs.Position = peHeaderOffset;
             if (reader.ReadUInt32() != 0x00004550) return false;
-            
+
             fs.Position = peHeaderOffset + 20;
             var optionalHeaderSize = reader.ReadUInt16();
-            
+
             fs.Position = peHeaderOffset + 24 + 96;
 
             if (optionalHeaderSize < 112 + 8) return false;
