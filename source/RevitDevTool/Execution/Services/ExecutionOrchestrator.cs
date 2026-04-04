@@ -374,13 +374,8 @@ public sealed class ExecutionOrchestrator : IExecutionOrchestrator, IDisposable
     private static bool AreSamePath(string left, string right)
     {
         return string.Equals(
-#if NET
             Path.TrimEndingDirectorySeparator(left),
             Path.TrimEndingDirectorySeparator(right),
-#else
-            Path.GetFullPath(left).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar),
-            Path.GetFullPath(right).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar),
-#endif
             StringComparison.OrdinalIgnoreCase);
     }
 
