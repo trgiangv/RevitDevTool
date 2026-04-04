@@ -1,44 +1,32 @@
 using System.Diagnostics;
 using System.IO;
-using System.IO.Compression;
 using System.Text;
 using System.Text.Json;
 using CliWrap;
 using RevitDevTool.Execution.Services;
+// ReSharper disable RedundantSuppressNullableWarningExpression
 
 namespace RevitDevTool.Execution.Providers.Python;
 
 /// <summary>
 /// Pip-based Python environment provider for restricted enterprise environments
 /// where pixi.exe cannot execute due to security policies.
-/// Downloads the official embedded Python distribution from python.org and uses
-/// <c>python.exe -m pip</c> for package management.
+/// Discovers the CPython distribution shipped with pyRevit (cengines directory),
+/// bootstraps pip, and uses <c>python.exe -m pip</c> for package management.
 /// </summary>
-public sealed class PipEnvironmentProvider : IPythonEnvironmentProvider
+public sealed class PipEnvironmentProvider : PyEnvironmentProvider
 {
-    private const string PythonVersion = "3.13.12";
-    private const string PythonDownloadUrl = $"https://www.python.org/ftp/python/{PythonVersion}/python-{PythonVersion}-embed-amd64.zip";
-    private const string PythonPthFile = "python313._pth";
+    public override PythonBackend Backend => PythonBackend.Pip;
 
-    public PythonBackend Backend => PythonBackend.Pip;
-
-    public bool IsEnvironmentReady() => File.Exists(PythonEnvironment.PythonExe);
-
-    public string GetPythonDllPath() => PythonEnvironment.GetPythonDllPath();
-
-    public async Task SetupEnvironmentAsync()
+    public override async Task SetupEnvironmentAsync()
     {
-        var targetDir = PythonEnvironment.PythonHome;
+        if (!IsEnvironmentReady())
+        {
+            PythonHomePath = await DiscoverPyRevitAsync().ConfigureAwait(false);
+            RemovePthFile(PythonHomePath);
 
-        if (IsEnvironmentReady())
-        {
-            Trace.TraceInformation("[Pip] Python environment already exists, skipping download.");
-        }
-        else
-        {
-            await DownloadAndExtractAsync(targetDir).ConfigureAwait(false);
-            RemovePthFile(targetDir);
-            await BootstrapPipAsync().ConfigureAwait(false);
+            if (!await IsPipAvailableAsync().ConfigureAwait(false))
+                await BootstrapPipAsync().ConfigureAwait(false);
         }
 
         await EnsureRequirePackagesAsync().ConfigureAwait(false);
@@ -47,32 +35,72 @@ public sealed class PipEnvironmentProvider : IPythonEnvironmentProvider
     }
 
     /// <summary>
-    /// Ensures all <see cref="PythonEnvironment.RequirePackages"/> are installed.
-    /// Checks what's already present via <c>pip list</c> and only installs missing ones.
+    /// Locates pyrevit.exe on PATH, navigates to <c>..\cengines</c>,
+    /// and picks the first CPython engine directory containing python.exe.
     /// </summary>
+    private static Task<string> DiscoverPyRevitAsync()
+    {
+        var pyrevitExe = FindOnPath("pyrevit.exe");
+        if (pyrevitExe is null)
+            throw new FileNotFoundException(
+                "pyrevit.exe not found on PATH. Ensure pyRevit CLI is installed.");
+
+        var binDir = Path.GetDirectoryName(pyrevitExe)!;
+        var cenginesDir = Path.Combine(binDir, "cengines");
+
+        if (!Directory.Exists(cenginesDir))
+            throw new DirectoryNotFoundException(
+                $"cengines directory not found at: {cenginesDir}");
+
+        var engineDir = Directory.EnumerateDirectories(cenginesDir, "CPY*")
+            .FirstOrDefault(d => File.Exists(Path.Combine(d, "python.exe")));
+
+        if (engineDir is null)
+            throw new FileNotFoundException(
+                $"No CPython engine with python.exe found in: {cenginesDir}");
+
+        Trace.TraceInformation($"[Pip] Discovered pyRevit CPython at: {engineDir}");
+        return Task.FromResult(engineDir);
+    }
+
+    private static string? FindOnPath(string fileName)
+    {
+        var pathVar = Environment.GetEnvironmentVariable("PATH");
+        if (string.IsNullOrEmpty(pathVar)) return null;
+
+        foreach (var dir in pathVar.Split(';'))
+        {
+            if (string.IsNullOrWhiteSpace(dir)) continue;
+            var full = Path.Combine(dir.Trim(), fileName);
+            if (File.Exists(full)) return full;
+        }
+
+        return null;
+    }
+
     private async Task EnsureRequirePackagesAsync()
     {
         var installed = await RunPipListAsync().ConfigureAwait(false);
-        var missing = PythonEnvironment.RequirePackages
+        var missing = RequirePackages
             .Where(pkg => !installed.Contains(CanonicalizePackageName(pkg)))
             .ToList();
 
         if (missing.Count == 0)
         {
-            Trace.TraceInformation("[Pip] All required packages already installed.");
+            Debug.WriteLine("[Pip] All required packages already installed.");
             return;
         }
 
         Trace.TraceInformation($"[Pip] Installing required packages: {string.Join(", ", missing)}");
 
-        var args = new List<string> { "-m", "pip", "install", "--prefer-binary" };
+        var args = new List<string> { "-m", "pip", "install", "--prefer-binary", "--no-warn-script-location" };
         args.AddRange(missing);
 
-        var result = await Cli.Wrap(PythonEnvironment.PythonExe)
+        var result = await Cli.Wrap(PythonExe)
             .WithArguments(args)
-            .WithWorkingDirectory(PythonEnvironment.PixiProjectDir)
-            .WithStandardOutputPipe(PipeTarget.ToDelegate(line => Trace.TraceInformation($"[pip] {line}")))
-            .WithStandardErrorPipe(PipeTarget.ToDelegate(line => Trace.TraceWarning($"[pip] {line}")))
+            .WithWorkingDirectory(PythonHome)
+            .WithStandardOutputPipe(PipeTarget.ToDelegate(line => Debug.WriteLine($"[pip] {line}")))
+            .WithStandardErrorPipe(PipeTarget.ToDelegate(line => Debug.WriteLine($"[pip] {line}")))
             .WithValidation(CommandResultValidation.None)
             .ExecuteAsync().ConfigureAwait(false);
 
@@ -82,7 +110,7 @@ public sealed class PipEnvironmentProvider : IPythonEnvironmentProvider
         Trace.TraceInformation("[Pip] Required packages installed.");
     }
 
-    public async Task InstallPackagesAsync(
+    public override async Task InstallPackagesAsync(
         IEnumerable<string> packages,
         IProgress<string> progress,
         CancellationToken cancellationToken)
@@ -104,19 +132,15 @@ public sealed class PipEnvironmentProvider : IPythonEnvironmentProvider
         progress.Report($"All {list.Count} package(s) installed via pip.");
     }
 
-    /// <summary>
-    /// Returns package names currently installed via pip.
-    /// Runs <c>python.exe -m pip list --format=json</c> and extracts canonical names.
-    /// </summary>
     private async Task<HashSet<string>> RunPipListAsync(CancellationToken cancellationToken = default)
     {
         if (!IsEnvironmentReady()) return [];
 
         var stdout = new StringBuilder();
 
-        var result = await Cli.Wrap(PythonEnvironment.PythonExe)
+        var result = await Cli.Wrap(PythonExe)
             .WithArguments(["-m", "pip", "list", "--format=json"])
-            .WithWorkingDirectory(PythonEnvironment.PixiProjectDir)
+            .WithWorkingDirectory(PythonHome)
             .WithStandardOutputPipe(PipeTarget.ToStringBuilder(stdout))
             .WithValidation(CommandResultValidation.None)
             .ExecuteAsync(cancellationToken).ConfigureAwait(false);
@@ -125,7 +149,6 @@ public sealed class PipEnvironmentProvider : IPythonEnvironmentProvider
 
         var json = stdout.ToString().Trim();
         return string.IsNullOrEmpty(json) ? [] : ParsePipListJson(json);
-
     }
 
     private static HashSet<string> ParsePipListJson(string json)
@@ -146,129 +169,121 @@ public sealed class PipEnvironmentProvider : IPythonEnvironmentProvider
     private static string CanonicalizePackageName(string name)
         => name.ToLowerInvariant().Replace('_', '-').Replace('.', '-');
 
-    private static async Task DownloadAndExtractAsync(string targetDir)
-    {
-        Trace.TraceInformation($"[Pip] Downloading Python {PythonVersion} from python.org...");
-
-        var tempZip = Path.Combine(Path.GetTempPath(), $"python-{PythonVersion}-embed.zip");
-        var tempExtractDir = Path.Combine(Path.GetTempPath(), $"python-{PythonVersion}-extract");
-
-        try
-        {
-            var zipBytes = await NetworkService.GetBytesAsync(PythonDownloadUrl).ConfigureAwait(false);
-            await File.WriteAllBytesAsync(tempZip, zipBytes).ConfigureAwait(false);
-
-            if (Directory.Exists(tempExtractDir))
-                Directory.Delete(tempExtractDir, true);
-
-            ZipFile.ExtractToDirectory(tempZip, tempExtractDir);
-
-            Directory.CreateDirectory(targetDir);
-
-            foreach (var file in Directory.GetFiles(tempExtractDir, "*", SearchOption.AllDirectories))
-            {
-                var relativePath = file.Substring(tempExtractDir.Length).TrimStart(Path.DirectorySeparatorChar);
-                var destPath = Path.Combine(targetDir, relativePath);
-                var destDir = Path.GetDirectoryName(destPath)!;
-                Directory.CreateDirectory(destDir);
-                File.Copy(file, destPath, overwrite: true);
-            }
-
-            Trace.TraceInformation($"[Pip] Python {PythonVersion} extracted to {targetDir}");
-        }
-        finally
-        {
-            if (File.Exists(tempZip)) File.Delete(tempZip);
-            if (Directory.Exists(tempExtractDir)) Directory.Delete(tempExtractDir, true);
-        }
-    }
-
-    /// <summary>
-    /// The ._pth file forces isolated mode which prevents site-packages from loading.
-    /// Removing it allows pip and installed packages to work normally.
-    /// </summary>
     private static void RemovePthFile(string targetDir)
     {
-        var pthPath = Path.Combine(targetDir, PythonPthFile);
-        if (!File.Exists(pthPath)) return;
+        var pthFile = Directory.EnumerateFiles(targetDir, "python*._pth").FirstOrDefault();
+        if (pthFile is null) return;
 
-        File.Delete(pthPath);
-        Trace.TraceInformation($"[Pip] Removed {PythonPthFile} to enable site-packages.");
+        File.Delete(pthFile);
+        Debug.WriteLine($"[Pip] Removed {Path.GetFileName(pthFile)} to enable site-packages.");
     }
 
-    private static async Task BootstrapPipAsync()
+    private async Task<bool> IsPipAvailableAsync()
     {
-        Trace.TraceInformation("[Pip] Bootstrapping pip via ensurepip...");
-
-        var ensurepipResult = await Cli.Wrap(PythonEnvironment.PythonExe)
-            .WithArguments(["-m", "ensurepip", "--upgrade"])
-            .WithWorkingDirectory(PythonEnvironment.PythonHome)
-            .WithStandardOutputPipe(PipeTarget.ToDelegate(line => Trace.TraceInformation($"[ensurepip] {line}")))
-            .WithStandardErrorPipe(PipeTarget.ToDelegate(line => Trace.TraceWarning($"[ensurepip] {line}")))
+        var result = await Cli.Wrap(PythonExe)
+            .WithArguments(["-m", "pip", "--version"])
+            .WithWorkingDirectory(PythonHome)
             .WithValidation(CommandResultValidation.None)
             .ExecuteAsync().ConfigureAwait(false);
 
-        if (ensurepipResult.ExitCode == 0)
-        {
-            Trace.TraceInformation("[Pip] pip bootstrapped via ensurepip.");
-            return;
-        }
+        if (result.ExitCode != 0) return false;
 
-        Trace.TraceWarning("[Pip] ensurepip not available in embedded distribution, falling back to get-pip.py...");
-        await BootstrapPipViaGetPipAsync().ConfigureAwait(false);
+        Debug.WriteLine("[Pip] pip already available, skipping bootstrap.");
+        return true;
     }
 
-    private static async Task BootstrapPipViaGetPipAsync()
+    /// <summary>
+    /// Bootstraps pip: tries ensurepip first, falls back to get-pip.py
+    /// for embedded distributions where ensurepip is absent.
+    /// </summary>
+    private async Task BootstrapPipAsync()
     {
-        const string getPipUrl = "https://bootstrap.pypa.io/get-pip.py";
-        var getPipPath = Path.Combine(PythonEnvironment.PythonHome, "get-pip.py");
+        if (await TryEnsurepipAsync().ConfigureAwait(false))
+            return;
 
-        var script = await NetworkService.GetStringAsync(getPipUrl).ConfigureAwait(false);
-        await File.WriteAllTextAsync(getPipPath, script).ConfigureAwait(false);
+        Trace.TraceInformation("[Pip] ensurepip unavailable, falling back to get-pip.py...");
+        await GetPipAsync().ConfigureAwait(false);
+    }
 
-        var result = await Cli.Wrap(PythonEnvironment.PythonExe)
-            .WithArguments(getPipPath)
-            .WithWorkingDirectory(PythonEnvironment.PythonHome)
-            .WithStandardOutputPipe(PipeTarget.ToDelegate(line => Trace.TraceInformation($"[get-pip] {line}")))
-            .WithStandardErrorPipe(PipeTarget.ToDelegate(line => Trace.TraceWarning($"[get-pip] {line}")))
+    private async Task<bool> TryEnsurepipAsync()
+    {
+        Debug.WriteLine("[Pip] Trying ensurepip...");
+
+        var result = await Cli.Wrap(PythonExe)
+            .WithArguments(["-m", "ensurepip", "--upgrade"])
+            .WithWorkingDirectory(PythonHome)
+            .WithStandardOutputPipe(PipeTarget.ToDelegate(line => Debug.WriteLine($"[ensurepip] {line}")))
+            .WithStandardErrorPipe(PipeTarget.ToDelegate(line => Debug.WriteLine($"[ensurepip] {line}")))
             .WithValidation(CommandResultValidation.None)
             .ExecuteAsync().ConfigureAwait(false);
 
         if (result.ExitCode != 0)
-            throw new Exception($"get-pip.py failed with exit code {result.ExitCode}. pip is required for pip mode.");
+        {
+            Debug.WriteLine($"[Pip] ensurepip failed (exit {result.ExitCode}).");
+            return false;
+        }
+
+        Trace.TraceInformation("[Pip] pip bootstrapped via ensurepip.");
+        return true;
+    }
+
+    private async Task GetPipAsync()
+    {
+        const string getPipUrl = "https://bootstrap.pypa.io/get-pip.py";
+        var getPipPath = Path.Combine(PythonHome, "get-pip.py");
+
+        if (!File.Exists(getPipPath))
+        {
+            Debug.WriteLine("[Pip] Downloading get-pip.py...");
+            var script = await NetworkService.GetStringAsync(getPipUrl).ConfigureAwait(false);
+            await File.WriteAllTextAsync(getPipPath, script).ConfigureAwait(false);
+        }
+
+        var result = await Cli.Wrap(PythonExe)
+            .WithArguments([getPipPath, "--no-warn-script-location"])
+            .WithWorkingDirectory(PythonHome)
+            .WithStandardOutputPipe(PipeTarget.ToDelegate(line => Debug.WriteLine($"[get-pip] {line}")))
+            .WithStandardErrorPipe(PipeTarget.ToDelegate(line => Debug.WriteLine($"[get-pip] {line}")))
+            .WithValidation(CommandResultValidation.None)
+            .ExecuteAsync().ConfigureAwait(false);
+
+        if (result.ExitCode != 0)
+            throw new InvalidOperationException(
+                $"get-pip.py failed (exit {result.ExitCode}). " +
+                "Cannot bootstrap pip into pyRevit CPython. Check network connectivity.");
 
         Trace.TraceInformation("[Pip] pip bootstrapped via get-pip.py.");
     }
 
-    private static async Task<(List<string> Succeeded, List<string> Failed)> TryPipInstallBatchAsync(
-        List<string> pkgs,
+    private async Task<(List<string> Succeeded, List<string> Failed)> TryPipInstallBatchAsync(
+        List<string> packages,
         IProgress<string> progress,
         CancellationToken cancellationToken)
     {
         var args = new List<string> { "-m", "pip", "install", "--prefer-binary" };
-        args.AddRange(pkgs);
+        args.AddRange(packages);
 
-        var batchResult = await Cli.Wrap(PythonEnvironment.PythonExe)
+        var batchResult = await Cli.Wrap(PythonExe)
             .WithArguments(args)
-            .WithWorkingDirectory(PythonEnvironment.PixiProjectDir)
+            .WithWorkingDirectory(PythonHome)
             .WithStandardOutputPipe(PipeTarget.ToDelegate(line => progress.Report($"  {line}")))
             .WithStandardErrorPipe(PipeTarget.ToDelegate(line => progress.Report($"  {line}")))
             .WithValidation(CommandResultValidation.None)
             .ExecuteAsync(cancellationToken).ConfigureAwait(false);
 
         if (batchResult.ExitCode == 0)
-            return (pkgs, []);
+            return (packages, []);
 
         var succeeded = new List<string>();
         var failed = new List<string>();
 
-        foreach (var pkg in pkgs)
+        foreach (var pkg in packages)
         {
             cancellationToken.ThrowIfCancellationRequested();
 
-            var singleResult = await Cli.Wrap(PythonEnvironment.PythonExe)
+            var singleResult = await Cli.Wrap(PythonExe)
                 .WithArguments(["-m", "pip", "install", "--prefer-binary", pkg])
-                .WithWorkingDirectory(PythonEnvironment.PixiProjectDir)
+                .WithWorkingDirectory(PythonHome)
                 .WithStandardOutputPipe(PipeTarget.ToDelegate(line => progress.Report($"  {line}")))
                 .WithStandardErrorPipe(PipeTarget.ToDelegate(line => progress.Report($"  {line}")))
                 .WithValidation(CommandResultValidation.None)

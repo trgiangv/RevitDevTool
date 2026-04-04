@@ -12,14 +12,17 @@ public sealed class PackageService(PythonInitializer pythonInitializer) : IPacka
 {
     private static readonly string NuGetCacheRoot = Path.Combine(SettingsUtils.GetApplicationDataPath(), "nuget");
 
-    private bool IsPixiBackend => pythonInitializer.Provider?.Backend == PythonBackend.Pixi;
+    private PyEnvironmentProvider? Provider => pythonInitializer.Provider;
+    private bool IsPixiBackend => Provider?.Backend == PythonBackend.Pixi;
 
     public async Task<IReadOnlyList<Package>> ListInstalledPackagesAsync(CancellationToken cancellationToken = default)
     {
         var nugetTask = Task.Run(ListNuGetPackages, cancellationToken);
         var pythonTask = IsPixiBackend
             ? PixiPackageHelper.ListPackagesAsync(cancellationToken)
-            : PipPackageHelper.ListPackagesAsync(cancellationToken);
+            : Provider is not null
+                ? PipPackageHelper.ListPackagesAsync(Provider, cancellationToken)
+                : Task.FromResult<IReadOnlyList<Package>>([]);
 
         await Task.WhenAll(nugetTask, pythonTask).ConfigureAwait(false);
 
@@ -46,8 +49,8 @@ public sealed class PackageService(PythonInitializer pythonInitializer) : IPacka
             case Marketplace.PyPi:
                 if (IsPixiBackend)
                     await PixiPackageHelper.RemoveAsync(package.PackageId, pypi: true, cancellationToken).ConfigureAwait(false);
-                else
-                    await PipPackageHelper.RemoveAsync(package.PackageId, cancellationToken).ConfigureAwait(false);
+                else if (Provider is not null)
+                    await PipPackageHelper.RemoveAsync(Provider, package.PackageId, cancellationToken).ConfigureAwait(false);
                 break;
         }
     }
@@ -81,7 +84,7 @@ public sealed class PackageService(PythonInitializer pythonInitializer) : IPacka
             Marketplace.NuGet => NugetManager.ResolvePackageDllsAsync(package.PackageId, null, cancellationToken),
             Marketplace.CondaForge when IsPixiBackend => PixiPackageHelper.InstallAsync(package.PackageId, null, pypi: false, cancellationToken),
             Marketplace.PyPi when IsPixiBackend => PixiPackageHelper.InstallAsync(package.PackageId, null, pypi: true, cancellationToken),
-            Marketplace.PyPi => PipPackageHelper.InstallAsync(package.PackageId, null, cancellationToken),
+            Marketplace.PyPi when Provider is not null => PipPackageHelper.InstallAsync(Provider, package.PackageId, null, cancellationToken),
             _ => Task.CompletedTask
         };
     }
@@ -101,10 +104,10 @@ public sealed class PackageService(PythonInitializer pythonInitializer) : IPacka
             await PixiPackageHelper.RemoveAsync(package.PackageId, isPypi, cancellationToken).ConfigureAwait(false);
             await PixiPackageHelper.InstallAsync(package.PackageId, package.DeclaredVersion, isPypi, cancellationToken).ConfigureAwait(false);
         }
-        else
+        else if (Provider is not null)
         {
-            await PipPackageHelper.RemoveAsync(package.PackageId, cancellationToken).ConfigureAwait(false);
-            await PipPackageHelper.InstallAsync(package.PackageId, package.DeclaredVersion, cancellationToken).ConfigureAwait(false);
+            await PipPackageHelper.RemoveAsync(Provider, package.PackageId, cancellationToken).ConfigureAwait(false);
+            await PipPackageHelper.InstallAsync(Provider, package.PackageId, package.DeclaredVersion, cancellationToken).ConfigureAwait(false);
         }
     }
 

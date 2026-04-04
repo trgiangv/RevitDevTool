@@ -1,36 +1,39 @@
 using System.Diagnostics;
 using System.IO;
-using System.Text;
-using System.Text.Json;
 using CliWrap;
+using RevitDevTool.Utils;
 
 namespace RevitDevTool.Execution.Providers.Python;
 
 /// <summary>
 /// Pixi-based Python environment provider.
 /// Uses conda-forge first, PyPI fallback via pixi's embedded uv.
-/// On setup, syncs any packages previously installed by the pip fallback provider
-/// back into pixi.toml so the manifest stays the source of truth.
 /// </summary>
-public sealed class PixiEnvironmentProvider : IPythonEnvironmentProvider
+public sealed class PixiEnvironmentProvider : PyEnvironmentProvider
 {
-    public PythonBackend Backend => PythonBackend.Pixi;
+    private const string PixiEnvDirName = "pixi-env";
 
-    public bool IsEnvironmentReady() => File.Exists(PythonEnvironment.PythonExe);
+    public static readonly string PixiProjectDir =
+        Path.Combine(SettingsUtils.GetApplicationDataPath(), PixiEnvDirName);
 
-    public string GetPythonDllPath() => PythonEnvironment.GetPythonDllPath();
+    public override PythonBackend Backend => PythonBackend.Pixi;
 
-    public async Task SetupEnvironmentAsync()
+    public override bool IsEnvironmentReady() => File.Exists(PythonExe);
+
+    public PixiEnvironmentProvider()
+    {
+        PythonHomePath = Path.Combine(PixiProjectDir, @".pixi\envs\default");
+    }
+
+    public override async Task SetupEnvironmentAsync()
     {
         PythonEmbedded.EnsureExtracted();
-
-        await SyncPixiStateAsync().ConfigureAwait(false);
 
         Debug.WriteLine("Running pixi install to bootstrap Python environment...");
 
         var result = await Cli.Wrap(PythonInstaller.PixiExePath)
             .WithArguments("install")
-            .WithWorkingDirectory(PythonEnvironment.PixiProjectDir)
+            .WithWorkingDirectory(PixiProjectDir)
             .WithStandardOutputPipe(PipeTarget.ToDelegate(line => Trace.TraceInformation($"[pixi] {line}")))
             .WithStandardErrorPipe(PipeTarget.ToDelegate(line => Trace.TraceWarning($"[pixi] {line}")))
             .WithValidation(CommandResultValidation.None)
@@ -42,7 +45,7 @@ public sealed class PixiEnvironmentProvider : IPythonEnvironmentProvider
         Debug.WriteLine("Pixi Python environment ready.");
     }
 
-    public async Task InstallPackagesAsync(
+    public override async Task InstallPackagesAsync(
         IEnumerable<string> packages,
         IProgress<string> progress,
         CancellationToken cancellationToken)
@@ -80,95 +83,6 @@ public sealed class PixiEnvironmentProvider : IPythonEnvironmentProvider
         progress.Report($"All {list.Count} package(s) installed.");
     }
 
-    /// <summary>
-    /// When previous sessions used the pip fallback, packages may exist in
-    /// site-packages but not in pixi.toml. Sync them into pixi so the manifest stays
-    /// the source of truth and pixi install can reconcile the lock file.
-    /// </summary>
-    private static async Task SyncPixiStateAsync()
-    {
-        if (!File.Exists(PythonEnvironment.PythonExe)) return;
-
-        HashSet<string> pixiPackages;
-        try
-        {
-            pixiPackages = await RunPixiListAsync().ConfigureAwait(false);
-        }
-        catch (Exception ex)
-        {
-            Trace.TraceWarning($"[Pixi] Could not read pixi packages for sync: {ex.Message}");
-            return;
-        }
-
-        if (pixiPackages.Count == 0) return;
-
-        var tomlPath = Path.Combine(PythonEnvironment.PixiProjectDir, "pixi.toml");
-        var tomlContent = File.Exists(tomlPath)
-            ? await File.ReadAllTextAsync(tomlPath).ConfigureAwait(false)
-            : string.Empty;
-
-        var missing = pixiPackages
-            .Where(pkg => tomlContent.IndexOf(pkg, StringComparison.OrdinalIgnoreCase) < 0)
-            .ToList();
-
-        if (missing.Count == 0) return;
-
-        Trace.TraceInformation($"[Pixi] Syncing {missing.Count} package(s) into pixi.toml: {string.Join(", ", missing)}");
-
-        foreach (var pkg in missing)
-        {
-            try
-            {
-                var result = await Cli.Wrap(PythonInstaller.PixiExePath)
-                    .WithArguments(["add", "--pypi", pkg])
-                    .WithWorkingDirectory(PythonEnvironment.PixiProjectDir)
-                    .WithValidation(CommandResultValidation.None)
-                    .ExecuteAsync().ConfigureAwait(false);
-
-                if (result.ExitCode != 0)
-                    Trace.TraceWarning($"[Pixi] Failed to sync package '{pkg}' into pixi.toml.");
-            }
-            catch (Exception ex)
-            {
-                Trace.TraceWarning($"[Pixi] Error syncing package '{pkg}': {ex.Message}");
-            }
-        }
-    }
-
-    /// <summary>
-    /// Runs <c>pixi list --json</c> and extracts canonical package names.
-    /// Each entry has a "name" field.
-    /// </summary>
-    private static async Task<HashSet<string>> RunPixiListAsync(CancellationToken cancellationToken = default)
-    {
-        var stdout = new StringBuilder();
-
-        var result = await Cli.Wrap(PythonInstaller.PixiExePath)
-            .WithArguments(["list", "--json"])
-            .WithWorkingDirectory(PythonEnvironment.PixiProjectDir)
-            .WithStandardOutputPipe(PipeTarget.ToStringBuilder(stdout))
-            .WithValidation(CommandResultValidation.None)
-            .ExecuteAsync(cancellationToken).ConfigureAwait(false);
-
-        if (result.ExitCode != 0) return [];
-
-        var json = stdout.ToString().Trim();
-        if (string.IsNullOrEmpty(json)) return [];
-
-        using var doc = JsonDocument.Parse(json);
-        var names = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-        foreach (var entry in doc.RootElement.EnumerateArray())
-        {
-            if (entry.TryGetProperty("name", out var nameProp))
-            {
-                var name = nameProp.GetString();
-                if (!string.IsNullOrEmpty(name))
-                    names.Add(name!.ToLowerInvariant().Replace('_', '-').Replace('.', '-'));
-            }
-        }
-        return names;
-    }
-
     private static async Task<(List<string> Succeeded, List<string> Failed)> TryPixiAddBatchAsync(
         string pixiExe,
         List<string> pkgs,
@@ -178,7 +92,7 @@ public sealed class PixiEnvironmentProvider : IPythonEnvironmentProvider
     {
         var batchResult = await Cli.Wrap(pixiExe)
             .WithArguments(BuildPixiAddArgs(pkgs, pypi))
-            .WithWorkingDirectory(PythonEnvironment.PixiProjectDir)
+            .WithWorkingDirectory(PixiProjectDir)
             .WithStandardOutputPipe(PipeTarget.ToDelegate(line => progress.Report($"  {line}")))
             .WithStandardErrorPipe(PipeTarget.ToDelegate(line => progress.Report($"  {line}")))
             .WithValidation(CommandResultValidation.None)
@@ -196,7 +110,7 @@ public sealed class PixiEnvironmentProvider : IPythonEnvironmentProvider
 
             var singleResult = await Cli.Wrap(pixiExe)
                 .WithArguments(BuildPixiAddArgs([pkg], pypi))
-                .WithWorkingDirectory(PythonEnvironment.PixiProjectDir)
+                .WithWorkingDirectory(PixiProjectDir)
                 .WithStandardOutputPipe(PipeTarget.ToDelegate(line => progress.Report($"  {line}")))
                 .WithStandardErrorPipe(PipeTarget.ToDelegate(line => progress.Report($"  {line}")))
                 .WithValidation(CommandResultValidation.None)

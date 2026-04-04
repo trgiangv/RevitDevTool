@@ -7,13 +7,13 @@ using RevitDevTool.Core;
 namespace RevitDevTool.Execution.Providers.Python;
 
 public sealed class PythonInitializer(
-    [FromKeyedServices(PythonBackend.Pixi)] IPythonEnvironmentProvider pixiProvider,
-    [FromKeyedServices(PythonBackend.Pip)] IPythonEnvironmentProvider pipProvider)
+    [FromKeyedServices(PythonBackend.Pixi)] PyEnvironmentProvider pixiProvider,
+    [FromKeyedServices(PythonBackend.Pip)] PyEnvironmentProvider pipProvider)
 {
     private readonly SemaphoreSlim _initLock = new(1, 1);
 
     public PyModule? GlobalScope { get; private set; }
-    public IPythonEnvironmentProvider? Provider { get; private set; }
+    public PyEnvironmentProvider? Provider { get; private set; }
 
     public bool IsInitialized => PythonEngine.IsInitialized
                                  && Provider is not null
@@ -28,7 +28,7 @@ public sealed class PythonInitializer(
         {
             if (IsInitialized) return;
 
-            Provider ??= await DetectProviderAsync().ConfigureAwait(false); 
+            Provider ??= await DetectProviderAsync().ConfigureAwait(false);
             Trace.TraceInformation($"[Python] Using backend: {Provider.Backend}");
 
             if (!Provider.IsEnvironmentReady())
@@ -38,10 +38,10 @@ public sealed class PythonInitializer(
 
             if (!PythonEngine.IsInitialized)
             {
-                PrependPixiEnvToPath();
+                PrependPythonHomeToPath(Provider.PythonHome);
 
                 Runtime.PythonDLL = Provider.GetPythonDllPath();
-                PythonEngine.PythonHome = PythonEnvironment.PythonHome;
+                PythonEngine.PythonHome = Provider.PythonHome;
                 PythonEngine.ProgramName = "RevitDevTool";
                 PythonEngine.Initialize();
                 PythonEngine.BeginAllowThreads();
@@ -87,7 +87,7 @@ public sealed class PythonInitializer(
         }
     }
 
-    private async Task<IPythonEnvironmentProvider> DetectProviderAsync()
+    private async Task<PyEnvironmentProvider> DetectProviderAsync()
     {
         try
         {
@@ -102,9 +102,8 @@ public sealed class PythonInitializer(
         }
     }
 
-    private static void PrependPixiEnvToPath()
+    private static void PrependPythonHomeToPath(string pythonHome)
     {
-        var pythonHome = PythonEnvironment.PythonHome;
         var libraryBin = Path.Combine(pythonHome, "Library", "bin");
 
         var current = Environment.GetEnvironmentVariable("PATH") ?? string.Empty;

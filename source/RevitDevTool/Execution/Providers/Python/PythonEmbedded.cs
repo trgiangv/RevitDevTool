@@ -49,7 +49,7 @@ public static class PythonEmbedded
         }
         if (!IsCopyReady)
         {
-            EnsureCopyScripts(PythonEnvironment.PixiProjectDir);
+            EnsureCopyScripts(PixiEnvironmentProvider.PixiProjectDir);
         }
     }
     

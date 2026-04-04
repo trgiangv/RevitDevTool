@@ -9,15 +9,15 @@ namespace RevitDevTool.Execution.Services;
 
 internal static class PipPackageHelper
 {
-    public static async Task<IReadOnlyList<Package>> ListPackagesAsync(CancellationToken cancellationToken)
+    public static async Task<IReadOnlyList<Package>> ListPackagesAsync(PyEnvironmentProvider provider, CancellationToken cancellationToken)
     {
-        if (!PythonEnvironment.IsEnvironmentReady())
+        if (!provider.IsEnvironmentReady())
             return [];
 
         var stdout = new StringBuilder();
-        var result = await Cli.Wrap(PythonEnvironment.PythonExe)
+        var result = await Cli.Wrap(provider.PythonExe)
             .WithArguments(["-m", "pip", "list", "--format=json"])
-            .WithWorkingDirectory(PythonEnvironment.PixiProjectDir)
+            .WithWorkingDirectory(provider.PythonHome)
             .WithStandardOutputPipe(PipeTarget.ToStringBuilder(stdout))
             .WithValidation(CommandResultValidation.None)
             .ExecuteAsync(cancellationToken).ConfigureAwait(false);
@@ -39,30 +39,30 @@ internal static class PipPackageHelper
         }
     }
 
-    public static async Task InstallAsync(string packageId, string? declaredVersion, CancellationToken cancellationToken)
+    public static async Task InstallAsync(PyEnvironmentProvider provider, string packageId, string? declaredVersion, CancellationToken cancellationToken)
     {
-        if (string.IsNullOrWhiteSpace(packageId) || !PythonEnvironment.IsEnvironmentReady())
+        if (string.IsNullOrWhiteSpace(packageId) || !provider.IsEnvironmentReady())
             return;
 
         var spec = string.IsNullOrWhiteSpace(declaredVersion) || declaredVersion!.Trim() == "*"
             ? packageId
             : $"{packageId}=={declaredVersion.Trim()}";
 
-        await Cli.Wrap(PythonEnvironment.PythonExe)
+        await Cli.Wrap(provider.PythonExe)
             .WithArguments(["-m", "pip", "install", "--prefer-binary", spec])
-            .WithWorkingDirectory(PythonEnvironment.PixiProjectDir)
+            .WithWorkingDirectory(provider.PythonHome)
             .WithValidation(CommandResultValidation.None)
             .ExecuteAsync(cancellationToken).ConfigureAwait(false);
     }
 
-    public static async Task RemoveAsync(string packageId, CancellationToken cancellationToken)
+    public static async Task RemoveAsync(PyEnvironmentProvider provider, string packageId, CancellationToken cancellationToken)
     {
-        if (string.IsNullOrWhiteSpace(packageId) || !PythonEnvironment.IsEnvironmentReady())
+        if (string.IsNullOrWhiteSpace(packageId) || !provider.IsEnvironmentReady())
             return;
 
-        await Cli.Wrap(PythonEnvironment.PythonExe)
+        await Cli.Wrap(provider.PythonExe)
             .WithArguments(["-m", "pip", "uninstall", "-y", packageId])
-            .WithWorkingDirectory(PythonEnvironment.PixiProjectDir)
+            .WithWorkingDirectory(provider.PythonHome)
             .WithValidation(CommandResultValidation.None)
             .ExecuteAsync(cancellationToken).ConfigureAwait(false);
     }
@@ -86,7 +86,7 @@ internal static class PipPackageHelper
                 name,
                 version,
                 version,
-                PythonEnvironment.RequirePackages.Contains(name, StringComparer.OrdinalIgnoreCase)));
+                PyEnvironmentProvider.RequirePackages.Contains(name, StringComparer.OrdinalIgnoreCase)));
         }
         return packages;
     }

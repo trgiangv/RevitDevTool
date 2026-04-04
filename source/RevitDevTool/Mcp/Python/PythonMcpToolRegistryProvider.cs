@@ -24,7 +24,7 @@ public sealed class PythonMcpToolRegistryProvider(PythonInitializer pythonInitia
         if (ToolsetDirectories.Count == 0)
             return McpRegistryCatalog.Empty;
 
-        if (!PythonEnvironment.IsEnvironmentReady())
+        if (pythonInitializer.Provider is null || !pythonInitializer.Provider.IsEnvironmentReady())
         {
             Trace.TraceWarning("[MCP] Python environment is not ready. Skipping Python MCP registry discovery.");
             return McpRegistryCatalog.Empty;
