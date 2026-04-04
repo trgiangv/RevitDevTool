@@ -47,25 +47,43 @@
                 </Grid>
             </GroupBox>
 
-            <!--  Hardware Acceleration  -->
+            <!--  Performance  -->
             <GroupBox Margin="0,0,0,8"
                       Header="Performance">
-                <Grid Margin="8">
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="*" />
-                        <ColumnDefinition Width="Auto" />
-                    </Grid.ColumnDefinitions>
-                    <StackPanel VerticalAlignment="Center">
-                        <TextBlock FontWeight="SemiBold"
-                                   Text="Hardware graphics acceleration" />
-                        <TextBlock FontSize="11"
-                                   Foreground="{DynamicResource DevTools.MahApps.Brushes.Gray}"
-                                   Text="Offloads graphic rendering from the CPU to the GPU" />
-                    </StackPanel>
-                    <mah:ToggleSwitch Grid.Column="1"
-                                      MinWidth="60"
-                                      IsOn="{Binding UseHardwareRendering}" />
-                </Grid>
+                <StackPanel>
+                    <Grid Margin="8">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <StackPanel VerticalAlignment="Center">
+                            <TextBlock FontWeight="SemiBold"
+                                       Text="Hardware graphics acceleration" />
+                            <TextBlock FontSize="11"
+                                       Foreground="{DynamicResource DevTools.MahApps.Brushes.Gray}"
+                                       Text="Offloads graphic rendering from the CPU to the GPU" />
+                        </StackPanel>
+                        <mah:ToggleSwitch Grid.Column="1"
+                                          MinWidth="60"
+                                          IsOn="{Binding UseHardwareRendering}" />
+                    </Grid>
+                    <Grid Margin="8,0,8,8">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <StackPanel VerticalAlignment="Center">
+                            <TextBlock FontWeight="SemiBold"
+                                       Text="Memory monitor" />
+                            <TextBlock FontSize="11"
+                                       Foreground="{DynamicResource DevTools.MahApps.Brushes.Gray}"
+                                       Text="Shows realtime process memory and operation tracking" />
+                        </StackPanel>
+                        <mah:ToggleSwitch Grid.Column="1"
+                                          MinWidth="60"
+                                          IsOn="{Binding IsMemoryEnabled}" />
+                    </Grid>
+                </StackPanel>
             </GroupBox>
         </StackPanel>
     </ScrollViewer>

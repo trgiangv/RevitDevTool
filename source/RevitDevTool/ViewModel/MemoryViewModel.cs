@@ -87,8 +87,18 @@ public partial class MemoryViewModel : ObservableObject
             Interval = TimeSpan.FromSeconds(1)
         };
         _refreshTimer.Tick += (_, _) => RefreshMemoryUsage();
-        _refreshTimer.Start();
+    }
+
+    public void Start()
+    {
+        if (_refreshTimer.IsEnabled) return;
         RefreshMemoryUsage();
+        _refreshTimer.Start();
+    }
+
+    public void Stop()
+    {
+        _refreshTimer.Stop();
     }
 
     private void RefreshMemoryUsage()

@@ -4,11 +4,10 @@ using RevitDevTool.View;
 using RevitDevTool.ViewModel.Messages;
 using RevitDevTool.ViewModel.Settings;
 using System.Diagnostics;
-using DevTools.Utilities;
 
 namespace RevitDevTool.ViewModel;
 
-public partial class MainViewModel : ObservableObject, IRecipient<IsSaveLogChangedMessage>
+public partial class MainViewModel : ObservableRecipient, IRecipient<IsSaveLogChangedMessage>, IRecipient<IsMemoryEnableChangedMessage>
 {
     private readonly LogSettingsViewModel _logSettingsViewModel;
     private readonly ISettingsService _settingsService;
@@ -18,13 +17,14 @@ public partial class MainViewModel : ObservableObject, IRecipient<IsSaveLogChang
     public ExecutionView ExecutionView { get; }
     public McpRegistryView McpRegistryView { get; }
     public MemoryView MemoryView { get; }
-    public int ProcessId { get; } = AppUtils.CurrentProcessId;
+    public int ProcessId { get; } = Environment.ProcessId;
     public bool ShowLogMonitorOnly => !IsExecutionVisible && !IsMcpVisible;
     [ObservableProperty] private object? _currentPage;
     [ObservableProperty] private bool _isSettingsVisible;
     [ObservableProperty] private bool _isExecutionVisible = true;
     [ObservableProperty] private bool _isMcpVisible;
     [ObservableProperty] private bool _isSaveLogEnabled;
+    [ObservableProperty] private bool _isMemoryEnabled;
 
     partial void OnIsSettingsVisibleChanged(bool value)
     {
@@ -93,22 +93,38 @@ public partial class MainViewModel : ObservableObject, IRecipient<IsSaveLogChang
         McpRegistryView mcpRegistryView,
         MemoryView memoryView,
         LogSettingsViewModel logSettingsViewModel,
-        ISettingsService settingsService,
-        IMessenger messenger)
+        ISettingsService settingsService)
     {
         LogViewModel = logViewModel;
         ExecutionView = addinLoadView;
         McpRegistryView = mcpRegistryView;
         MemoryView = memoryView;
         IsSaveLogEnabled = settingsService.LogConfig.FileLogging.Enabled;
+        IsMemoryEnabled = settingsService.GeneralConfig.IsMemoryEnabled;
+        IsActive = true;
         _logSettingsViewModel = logSettingsViewModel;
         _settingsService = settingsService;
-        messenger.Register(this);
+        ApplyMemoryMonitorState(IsMemoryEnabled);
     }
 
     public void Receive(IsSaveLogChangedMessage message)
     {
         IsSaveLogEnabled = message.IsEnabled;
         OpenLogFolderCommand.NotifyCanExecuteChanged();
+    }
+    
+    public void Receive(IsMemoryEnableChangedMessage message)
+    {
+        IsMemoryEnabled = message.IsEnabled;
+        ApplyMemoryMonitorState(message.IsEnabled);
+    }
+
+    private void ApplyMemoryMonitorState(bool enabled)
+    {
+        var memoryViewModel = MemoryView.DataContext as MemoryViewModel;
+        if (enabled)
+            memoryViewModel?.Start();
+        else
+            memoryViewModel?.Stop();
     }
 }

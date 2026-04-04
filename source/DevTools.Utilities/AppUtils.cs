@@ -20,14 +20,7 @@ public static class AppUtils
             return false;
         }
     }
-
-    public static int CurrentProcessId =>
-#if NET8_0_OR_GREATER
-        Environment.ProcessId;
-#else
-        System.Diagnostics.Process.GetCurrentProcess().Id;
-#endif
-
+    
     /// <summary>
     /// Show a folder selection dialog and return the selected folder path.
     /// </summary>

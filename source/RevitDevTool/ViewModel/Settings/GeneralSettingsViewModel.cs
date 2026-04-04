@@ -12,6 +12,7 @@ public partial class GeneralSettingsViewModel : ObservableValidator, IRecipient<
 {
     private readonly ISettingsService _settingsService;
     private readonly ILoggingService _loggingService;
+    private readonly IMessenger _messenger;
 
     public static List<AppTheme> Themes =>
     [
@@ -24,6 +25,7 @@ public partial class GeneralSettingsViewModel : ObservableValidator, IRecipient<
 
     [ObservableProperty] private AppTheme _theme;
     [ObservableProperty] private bool _useHardwareRendering;
+    [ObservableProperty] private bool _isMemoryEnabled;
 
     partial void OnThemeChanged(AppTheme value)
     {
@@ -37,10 +39,17 @@ public partial class GeneralSettingsViewModel : ObservableValidator, IRecipient<
         HostBackgroundController.ToggleHardwareRendering(_settingsService);
     }
 
+    partial void OnIsMemoryEnabledChanged(bool value)
+    {
+        _settingsService.GeneralConfig.IsMemoryEnabled = value;
+        _messenger.Send(new IsMemoryEnableChangedMessage(value));
+    }
+
     public GeneralSettingsViewModel(ISettingsService settingsService, ILoggingService loggingService, IMessenger messenger)
     {
         _settingsService = settingsService;
         _loggingService = loggingService;
+        _messenger = messenger;
         LoadFromConfig();
         messenger.Register(this);
         ThemeManager.Current.ActualApplicationThemeChanged += OnActualThemeChanged;
@@ -60,5 +69,6 @@ public partial class GeneralSettingsViewModel : ObservableValidator, IRecipient<
     {
         Theme = _settingsService.GeneralConfig.Theme;
         UseHardwareRendering = _settingsService.GeneralConfig.UseHardwareRendering;
+        IsMemoryEnabled = _settingsService.GeneralConfig.IsMemoryEnabled;
     }
 }
