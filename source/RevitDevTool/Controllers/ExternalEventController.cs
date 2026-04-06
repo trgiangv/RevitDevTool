@@ -1,5 +1,4 @@
 using System.Collections.Concurrent;
-using Autodesk.Revit.UI;
 using RevitDevTool.Core;
 
 // ReSharper disable ReplaceWithFieldKeyword

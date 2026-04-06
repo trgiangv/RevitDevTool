@@ -1,4 +1,3 @@
-using DevTools.Logging;
 using DevTools.Logging.Abstractions;
 using RevitDevTool.Core;
 using RevitDevTool.Logging.Enums;
@@ -64,10 +63,10 @@ public sealed class RevitContextProvider(IEnumerable<RevitEnricher> selected) : 
             var app = RevitContext.Application;
             _staticCache = new Dictionary<string, object?>
             {
-                [RevitEnricher.RevitVersion.ToString()] = app.VersionNumber,
-                [RevitEnricher.RevitBuild.ToString()] = app.VersionBuild,
-                [RevitEnricher.RevitUserName.ToString()] = app.Username,
-                [RevitEnricher.RevitLanguage.ToString()] = app.Language.ToString()
+                [nameof(RevitEnricher.RevitVersion)] = app.VersionNumber,
+                [nameof(RevitEnricher.RevitBuild)] = app.VersionBuild,
+                [nameof(RevitEnricher.RevitUserName)] = app.Username,
+                [nameof(RevitEnricher.RevitLanguage)] = app.Language.ToString()
             };
         }
         catch

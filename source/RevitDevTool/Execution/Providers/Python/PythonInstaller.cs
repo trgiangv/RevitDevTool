@@ -2,9 +2,6 @@ using System.Diagnostics;
 using System.IO;
 using System.IO.Compression;
 using System.Text.Json;
-using System.Text.RegularExpressions;
-using CliWrap;
-using CliWrap.Buffered;
 using RevitDevTool.Execution.Services;
 using RevitDevTool.Utils;
 
@@ -12,80 +9,45 @@ using RevitDevTool.Utils;
 namespace RevitDevTool.Execution.Providers.Python;
 
 /// <summary>
-/// Manages Pixi installation by downloading the latest version from GitHub releases.
+/// Manages Pixi installation by downloading from GitHub releases.
 /// Pixi is used as the primary Python environment manager (conda-forge + PyPI via built-in uv).
 /// </summary>
-// ReSharper disable once PartialTypeWithSinglePart
-public static partial class PythonInstaller
+public static class PythonInstaller
 {
     private const string PixiGitHubApiUrl = "https://api.github.com/repos/prefix-dev/pixi/releases/latest";
     private const string PixiDownloadUrlTemplate = "https://github.com/prefix-dev/pixi/releases/download/v{0}/pixi-x86_64-pc-windows-msvc.zip";
-    private const string VersionPattern = @"pixi\s+(\d+\.\d+\.\d+)";
-
-#if NET
-    [GeneratedRegex(VersionPattern)]
-    private static partial Regex VersionRegex();
-#else
-    private static readonly Regex VersionRx = new(VersionPattern, RegexOptions.Compiled);
-    private static Regex VersionRegex() => VersionRx;
-#endif
 
     private static string GetBinPath() => Path.Combine(SettingsUtils.GetApplicationDataPath(), "bin");
     public static string PixiExePath => Path.Combine(GetBinPath(), "pixi.exe");
     public static bool IsPixiInstalled() => File.Exists(PixiExePath);
 
     /// <summary>
-    /// Ensures pixi is installed; downloads or updates to latest release if needed.
+    /// Ensures pixi is installed. If already present, returns immediately.
+    /// First-time install requires network access to GitHub releases.
     /// </summary>
     public static async Task SetupPixiAsync()
     {
         var outputDir = GetBinPath();
         Directory.CreateDirectory(outputDir);
 
-        var currentVersion = await GetCurrentPixiVersionAsync().ConfigureAwait(false);
-        var latestVersion  = await GetLatestReleaseVersionAsync().ConfigureAwait(false);
-
-        if (string.IsNullOrEmpty(latestVersion))
+        if (IsPixiInstalled())
         {
-            if (!IsPixiInstalled())
-            {
-                throw new InvalidOperationException(
-                    "Cannot install pixi: failed to determine the latest version from GitHub. " +
-                    "Ensure network connectivity and retry.");
-            }
-
-            Trace.TraceWarning("Could not determine latest Pixi version from GitHub; skipping update check.");
+            Trace.TraceInformation("[Pixi] Already installed, skipping network version check.");
             return;
         }
 
-        if (string.IsNullOrEmpty(currentVersion) || IsNewerVersion(latestVersion!, currentVersion!))
+        var latestVersion = await GetLatestReleaseVersionAsync().ConfigureAwait(false);
+
+        if (string.IsNullOrEmpty(latestVersion))
         {
-            Trace.TraceInformation($"Downloading Pixi v{latestVersion}...");
-            await DownloadAndInstallAsync(latestVersion!).ConfigureAwait(false);
-            Trace.TraceInformation($"Pixi v{latestVersion} installed.");
+            throw new InvalidOperationException(
+                "Cannot install pixi: failed to determine the latest version from GitHub. " +
+                "Ensure network connectivity and retry.");
         }
-    }
 
-    private static async Task<string?> GetCurrentPixiVersionAsync()
-    {
-        try
-        {
-            if (!File.Exists(PixiExePath)) return null;
-
-            var result = await Cli.Wrap(PixiExePath)
-                .WithArguments("--version")
-                .WithValidation(CommandResultValidation.None)
-                .ExecuteBufferedAsync().ConfigureAwait(false);
-
-            if (result.ExitCode != 0) return null;
-
-            var match = VersionRegex().Match(result.StandardOutput.Trim());
-            return match.Success ? match.Groups[1].Value : null;
-        }
-        catch
-        {
-            return null;
-        }
+        Trace.TraceInformation($"Downloading Pixi v{latestVersion}...");
+        await DownloadAndInstallAsync(latestVersion!).ConfigureAwait(false);
+        Trace.TraceInformation($"Pixi v{latestVersion} installed.");
     }
 
     private static async Task<string?> GetLatestReleaseVersionAsync()
@@ -102,12 +64,6 @@ public static partial class PythonInstaller
             Trace.TraceWarning($"Failed to fetch Pixi release info after retries: {ex.Message}");
             return null;
         }
-    }
-
-    private static bool IsNewerVersion(string latest, string current)
-    {
-        try { return Version.Parse(latest) > Version.Parse(current); }
-        catch { return false; }
     }
 
     private static async Task DownloadAndInstallAsync(string version)

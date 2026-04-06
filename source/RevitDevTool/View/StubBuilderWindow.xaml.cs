@@ -1,8 +1,11 @@
+using System.Diagnostics;
+using System.IO;
+using System.Windows;
+using System.Windows.Input;
 using DevTools.Utilities;
 using RevitDevTool.Theme;
 using RevitDevTool.Utils;
 using RevitDevTool.ViewModel;
-using System.Windows;
 
 namespace RevitDevTool.View;
 
@@ -13,10 +16,7 @@ public partial class StubBuilderWindow
         InitializeComponent();
         DataContext = vm;
 
-        vm.CloseAction = () =>
-        {
-            DispatcherHelper.RunOnMainThread(Close);
-        };
+        vm.CloseAction = () => DispatcherHelper.RunOnMainThread(Close);
 
         Loaded += OnLoaded;
         ThemeManager.Current.ActualApplicationThemeChanged += OnThemeChanged;
@@ -42,5 +42,12 @@ public partial class StubBuilderWindow
     private void OnClosed(object? sender, EventArgs e)
     {
         ThemeManager.Current.ActualApplicationThemeChanged -= OnThemeChanged;
+    }
+
+    private void OnAssemblyItemDoubleClick(object sender, MouseButtonEventArgs e)
+    {
+        if (sender is not FrameworkElement { DataContext: AssemblyItem item }) return;
+        if (!File.Exists(item.Location)) return;
+        Process.Start("explorer.exe", $"/select,\"{item.Location}\"");
     }
 }

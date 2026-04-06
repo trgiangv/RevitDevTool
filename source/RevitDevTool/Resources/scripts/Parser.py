@@ -2,10 +2,13 @@
 Parser.py — PEP 723 dependency resolver for RevitDevTool.
 
 Usage:
-    pixi run python Parser.py <script.py>
+    python Parser.py <script.py>
 
 stdin:
-    Content of pixi.toml (or empty string when not yet created).
+    Installed-package state in one of two formats (auto-detected):
+      - JSON array from ``pip list --format=json``  (Pip backend)
+      - TOML content of pixi.toml                   (Pixi backend)
+      - Empty string when no state is available.
 
 Output (stdout, JSON):
     {
@@ -13,8 +16,7 @@ Output (stdout, JSON):
         "to_install": ["numpy==2.4.2", "black"]
     }
 
-to_install contains only packages not yet explicitly declared in pixi.toml.
-Transitive dependencies resolved by pixi are intentionally ignored.
+to_install contains only packages not yet installed / declared.
 
 Exit codes:
     0 — success
@@ -89,17 +91,52 @@ def _parse_specifier(val: object) -> SpecifierSet:
         return SpecifierSet()
 
 
-def _managed_packages(pixi_toml_content: str) -> dict[str, SpecifierSet]:
-    """Return {canonical_name: SpecifierSet} for packages explicitly declared
-    in pixi.toml [dependencies] and [pypi-dependencies].
-    Transitive dependencies and 'python' itself are excluded.
+def _managed_packages(stdin_content: str) -> dict[str, SpecifierSet]:
+    """Return {canonical_name: SpecifierSet} for packages already managed.
+
+    Accepts two formats (auto-detected):
+      - JSON array from ``pip list --format=json``
+      - TOML from pixi.toml
+
     Returns empty dict when content is empty or unparseable.
     """
-    if not pixi_toml_content.strip():
+    text = stdin_content.strip()
+    if not text:
         return {}
 
+    if text.startswith("["):
+        return _parse_pip_json(text)
+
+    return _parse_pixi_toml(text)
+
+
+def _parse_pip_json(text: str) -> dict[str, SpecifierSet]:
+    """Parse ``pip list --format=json`` into {canonical_name: SpecifierSet}.
+
+    pip list returns ``[{"name": "foo", "version": "1.2.3"}, ...]``.
+    We build an exact ``==version`` specifier so _needs_install can do
+    proper version comparison.
+    """
     try:
-        data = tomllib.loads(pixi_toml_content)
+        entries = json.loads(text)
+    except json.JSONDecodeError:
+        return {}
+
+    managed: dict[str, SpecifierSet] = {}
+    for entry in entries:
+        name = entry.get("name", "")
+        version = entry.get("version", "")
+        if not name:
+            continue
+        spec = SpecifierSet(f"=={version}") if version else SpecifierSet()
+        managed[canonicalize_name(name)] = spec
+    return managed
+
+
+def _parse_pixi_toml(text: str) -> dict[str, SpecifierSet]:
+    """Parse pixi.toml [dependencies] and [pypi-dependencies]."""
+    try:
+        data = tomllib.loads(text)
     except tomllib.TOMLDecodeError:
         return {}
 
@@ -116,16 +153,16 @@ def _managed_packages(pixi_toml_content: str) -> dict[str, SpecifierSet]:
 
 def _needs_install(req: Requirement, managed: dict[str, SpecifierSet]) -> bool:
     """
-    Return True when the package must be added via 'pixi add'.
+    Return True when the package needs to be installed.
 
     Rules:
-    1. Name not in pixi.toml  → must install.
-    2. Name present, script has no specifier  → skip (pixi manages it).
+    1. Name not in managed set  → must install.
+    2. Name present, script has no specifier  → skip (already managed).
     3. Name present, script has specifier:
-       - pixi.toml has no constraint ("*") → trust pixi, skip.
-       - Otherwise check whether *every* version the script requires
-         is also permitted by pixi.toml's constraint.
-         If not → reinstall so pixi can update its constraint.
+       - Managed set has no constraint ("*") → trust existing, skip.
+       - Otherwise check whether the version the script requires
+         is also permitted by the managed constraint.
+         If not → reinstall to satisfy the script's constraint.
     """
     canonical = canonicalize_name(req.name)
 
@@ -135,18 +172,15 @@ def _needs_install(req: Requirement, managed: dict[str, SpecifierSet]) -> bool:
     if not req.specifier:
         return False  # any version is fine
 
-    pixi_spec = managed[canonical]
-    if not pixi_spec:  # pixi.toml says "*"
+    managed_spec = managed[canonical]
+    if not managed_spec:
         return False
 
-    # Probe: pick a representative version from the script's specifier
-    # and check whether it is also allowed by pixi.toml's constraint.
-    # We extract the version number embedded in the first operator clause.
     probe = _probe_version(req.specifier)
     if probe is None:
-        return False  # can't determine → trust pixi
+        return False
 
-    return probe not in pixi_spec
+    return probe not in managed_spec
 
 
 def _probe_version(specifier: SpecifierSet) -> Version:
@@ -159,14 +193,14 @@ def _probe_version(specifier: SpecifierSet) -> Version:
     return None
 
 
-def main(script_path: Path, pixi_toml_content: str) -> None:
+def main(script_path: Path, stdin_content: str) -> None:
     requires_python, reqs = _parse_script(script_path)
 
     if not reqs:
         print(json.dumps({"requires_python": requires_python, "to_install": []}))
         return
 
-    managed = _managed_packages(pixi_toml_content)
+    managed = _managed_packages(stdin_content)
 
     to_install = [str(req) for req in reqs if _needs_install(req, managed)]
 
@@ -175,16 +209,16 @@ def main(script_path: Path, pixi_toml_content: str) -> None:
 
 if __name__ == "__main__":
     if len(sys.argv) < 2:
-        sys.exit("Usage: pixi run python Parser.py <script.py>  (pixi.toml content on stdin)")
+        sys.exit("Usage: python Parser.py <script.py>  (installed state on stdin)")
 
     path = Path(sys.argv[1])
     if not path.exists():
         sys.exit(f"Script not found: {path}")
 
-    pixi_toml = sys.stdin.read()
+    stdin_content = sys.stdin.read()
 
     try:
-        main(path, pixi_toml)
+        main(path, stdin_content)
     except Exception as e:
         print(json.dumps({"error": str(e)}), file=sys.stderr)
         sys.exit(1)

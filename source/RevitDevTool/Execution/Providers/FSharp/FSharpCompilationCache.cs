@@ -2,7 +2,6 @@ using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.IO;
 using System.Runtime.CompilerServices;
-using Autodesk.Revit.UI;
 using FSharp.Compiler.Interactive;
 namespace RevitDevTool.Execution.Providers.FSharp;
 

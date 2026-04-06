@@ -2,7 +2,6 @@ using System.Diagnostics;
 using System.IO;
 using System.Reflection;
 using Autodesk.Revit.Attributes;
-using Autodesk.Revit.UI;
 namespace RevitDevTool.Execution.Providers.Dotnet;
 
 /// <summary>
@@ -108,7 +107,7 @@ public static class AssemblyLoaderService
     /// <summary>
     /// Collects all assembly paths needed for MetadataLoadContext resolution
     /// </summary>
-    public static List<string> CollectAssemblyPaths(string targetAssemblyPath)
+    private static List<string> CollectAssemblyPaths(string targetAssemblyPath)
     {
         var paths = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 

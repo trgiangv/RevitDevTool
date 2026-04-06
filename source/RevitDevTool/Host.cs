@@ -144,8 +144,8 @@ public static class Host
         services.AddSingleton<LogSettingsViewModel>();
         
         // Python Environment
-        services.AddKeyedSingleton<IPythonEnvironmentProvider, PixiEnvironmentProvider>(PythonBackend.Pixi);
-        services.AddKeyedSingleton<IPythonEnvironmentProvider, PipEnvironmentProvider>(PythonBackend.Pip);
+        services.AddKeyedSingleton<PyEnvironmentProvider, PixiEnvironmentProvider>(PythonBackend.Pixi);
+        services.AddKeyedSingleton<PyEnvironmentProvider, PipEnvironmentProvider>(PythonBackend.Pip);
         services.AddSingleton<PythonInitializer>();
 
         // Execution Services

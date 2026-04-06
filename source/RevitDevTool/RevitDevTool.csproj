@@ -60,7 +60,7 @@
         <ProjectReference Include="..\DevTools.Utilities\DevTools.Utilities.csproj" />
         <ProjectReference Include="..\DevTools.Logging\DevTools.Logging.csproj" />
         <ProjectReference Include="..\RevitDevTool.McpParser\RevitDevTool.McpParser.csproj" />
-        <ProjectReference Include="..\Supports\PythonNetStubGenerator\PythonNetStubGenerator.csproj" />
+        <ProjectReference Include="..\..\libs\pythonnet-stub-generator\csharp\PythonNetStubGenerator\PythonNetStubGenerator.csproj" />
         <ProjectReference Include="..\RevitDevTool.Core\RevitDevTool.Core.csproj" />
     </ItemGroup>
 

@@ -63,20 +63,6 @@
         <File Path="props/Revit.props" />
         <File Path="props/Revit.targets" />
     </Folder>
-    <Folder Name="/Supports/">
-        <Project Path="source/Supports/PythonNetStubGenerator/PythonNetStubGenerator.csproj">
-            <BuildType Solution="Debug.Autodesk.2022|*" Project="Debug" />
-            <BuildType Solution="Debug.Autodesk.2023|*" Project="Debug" />
-            <BuildType Solution="Debug.Autodesk.2024|*" Project="Debug" />
-            <BuildType Solution="Debug.Autodesk.2025|*" Project="Debug" />
-            <BuildType Solution="Debug.Autodesk.2026|*" Project="Debug" />
-            <BuildType Solution="Release.Autodesk.2022|*" Project="Release" />
-            <BuildType Solution="Release.Autodesk.2023|*" Project="Release" />
-            <BuildType Solution="Release.Autodesk.2024|*" Project="Release" />
-            <BuildType Solution="Release.Autodesk.2025|*" Project="Release" />
-            <BuildType Solution="Release.Autodesk.2026|*" Project="Release" />
-        </Project>
-    </Folder>
     <Folder Name="/Tests/">
         <Project Path="Tests/RevitDevTool.Server.Tests/RevitDevTool.Server.Tests.csproj">
             <BuildType Solution="Debug.Autodesk.2022|*" Project="Debug" />
@@ -155,6 +141,18 @@
     <Project Path="source/RevitDevTool.Core/RevitDevTool.Core.csproj" />
     <Project Path="source/RevitDevTool/RevitDevTool.csproj" />
     <Folder Name="/Libs/">
+        <Project Path="libs/pythonnet-stub-generator/csharp/PythonNetStubGenerator/PythonNetStubGenerator.csproj">
+            <BuildType Solution="Debug.Autodesk.2022|*" Project="Debug" />
+            <BuildType Solution="Debug.Autodesk.2023|*" Project="Debug" />
+            <BuildType Solution="Debug.Autodesk.2024|*" Project="Debug" />
+            <BuildType Solution="Debug.Autodesk.2025|*" Project="Debug" />
+            <BuildType Solution="Debug.Autodesk.2026|*" Project="Debug" />
+            <BuildType Solution="Release.Autodesk.2022|*" Project="Release" />
+            <BuildType Solution="Release.Autodesk.2023|*" Project="Release" />
+            <BuildType Solution="Release.Autodesk.2024|*" Project="Release" />
+            <BuildType Solution="Release.Autodesk.2025|*" Project="Release" />
+            <BuildType Solution="Release.Autodesk.2026|*" Project="Release" />
+        </Project>
         <Project Path="libs/MahApps.Metro/src/MahApps.Metro/MahApps.Metro.csproj">
             <BuildType Solution="Debug.Autodesk.2022|*" Project="Debug" />
             <BuildType Solution="Debug.Autodesk.2023|*" Project="Debug" />

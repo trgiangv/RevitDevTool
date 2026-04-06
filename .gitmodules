@@ -10,3 +10,7 @@
 	path = libs/MahApps.Metro
 	url = git@github.com:trgiangv/MahApps.Metro.git
 	branch = devtools/main
+[submodule "libs/pythonnet-stub-generator"]
+	path = libs/pythonnet-stub-generator
+	url = git@github.com:trgiangv/pythonnet-stub-generator.git
+	branch = devtools/main

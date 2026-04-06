@@ -1,4 +1,3 @@
-using System.Diagnostics;
 using System.IO;
 using System.Windows.Interop;
 using System.Windows.Media;
@@ -20,15 +19,7 @@ public sealed class HostBackgroundController(
         settingsService.LoadSettings();
         ThemeManager.Current.ApplySettingsTheme(settingsService.GeneralConfig.Theme);
         ToggleHardwareRendering(settingsService);
-
-        try
-        {
-            await pythonInitializer.InitializeAsync().ConfigureAwait(false);
-        }
-        catch (Exception ex)
-        {
-            Trace.TraceError($"[Python] Background init failed {ex.Message}");
-        }
+        await pythonInitializer.InitializeAsync().ConfigureAwait(false);
     }
 
     public async Task StopAsync(CancellationToken cancellationToken)

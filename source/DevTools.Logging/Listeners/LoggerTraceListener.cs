@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using DevTools.Logging.Options;
 using Microsoft.Extensions.Logging;
+using ZLogger;
 
 namespace DevTools.Logging.Listeners;
 
@@ -63,7 +64,7 @@ public class LoggerTraceListener(ILogger logger, TraceListenerOptions options) :
         => Log(DetectLogLevel(message), null, $"{message}");
 
     public override void Write(object? o)
-        => Log(LogLevel.Debug, null, $"{o}");
+        => Log(LogLevel.Debug, o);
 
     public override void Write(string? message, string? category)
     {
@@ -75,8 +76,10 @@ public class LoggerTraceListener(ILogger logger, TraceListenerOptions options) :
     public override void Write(object? o, string? category)
     {
         var level = DetectLogLevel(o?.ToString());
-        var formatted = !string.IsNullOrWhiteSpace(category) ? $"[{category}] {o}" : $"{o}";
-        Log(level, null, formatted);
+        if (!string.IsNullOrWhiteSpace(category))
+            Log(level, null, $"[{category}] {o}");
+        else
+            Log(level, o);
     }
 
     public override void WriteLine(string? message) => Write(message);
@@ -100,7 +103,12 @@ public class LoggerTraceListener(ILogger logger, TraceListenerOptions options) :
 
     private void Log(LogLevel level, Exception? exception, string? message)
     {
-        _logger.Log(level, 0, message, exception, static (s, _) => s ?? string.Empty);
+        _logger.ZLog(level, exception, $"{message}");
+    }
+    
+    private void Log(LogLevel level, object? value)
+    {
+        _logger.ZLog(level, $"{value}");
     }
 
     private static LogLevel GetLogLevel(TraceEventType eventType) => eventType switch

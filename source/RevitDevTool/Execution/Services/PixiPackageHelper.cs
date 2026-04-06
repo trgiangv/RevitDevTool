@@ -12,12 +12,12 @@ internal static class PixiPackageHelper
 {
     public static async Task<IReadOnlyList<Package>> ListPackagesAsync(CancellationToken cancellationToken)
     {
-        if (!PythonInstaller.IsPixiInstalled() || !Directory.Exists(PythonEnvironment.PixiProjectDir))
+        if (!PythonInstaller.IsPixiInstalled() || !Directory.Exists(PixiEnvironmentProvider.PixiProjectDir))
             return [];
 
         var result = await Cli.Wrap(PythonInstaller.PixiExePath)
             .WithArguments(["list", "--explicit", "--json"])
-            .WithWorkingDirectory(PythonEnvironment.PixiProjectDir)
+            .WithWorkingDirectory(PixiEnvironmentProvider.PixiProjectDir)
             .WithValidation(CommandResultValidation.None)
             .ExecuteBufferedAsync(cancellationToken)
             .ConfigureAwait(false);
@@ -47,7 +47,7 @@ internal static class PixiPackageHelper
 
         await Cli.Wrap(PythonInstaller.PixiExePath)
             .WithArguments(args)
-            .WithWorkingDirectory(PythonEnvironment.PixiProjectDir)
+            .WithWorkingDirectory(PixiEnvironmentProvider.PixiProjectDir)
             .WithValidation(CommandResultValidation.None)
             .ExecuteAsync(cancellationToken).ConfigureAwait(false);
     }
@@ -64,14 +64,14 @@ internal static class PixiPackageHelper
 
         await Cli.Wrap(PythonInstaller.PixiExePath)
             .WithArguments(args)
-            .WithWorkingDirectory(PythonEnvironment.PixiProjectDir)
+            .WithWorkingDirectory(PixiEnvironmentProvider.PixiProjectDir)
             .WithValidation(CommandResultValidation.None)
             .ExecuteAsync(cancellationToken).ConfigureAwait(false);
     }
 
     private static bool IsAvailable()
     {
-        if (PythonInstaller.IsPixiInstalled() && Directory.Exists(PythonEnvironment.PixiProjectDir))
+        if (PythonInstaller.IsPixiInstalled() && Directory.Exists(PixiEnvironmentProvider.PixiProjectDir))
             return true;
 
         Trace.TraceWarning("Pixi runtime is unavailable. Skipping operation.");
@@ -117,7 +117,7 @@ internal static class PixiPackageHelper
             packageId,
             string.IsNullOrWhiteSpace(version) ? null : version,
             requestedSpec,
-            PythonEnvironment.RequirePackages.Contains(packageId, StringComparer.OrdinalIgnoreCase));
+            PyEnvironmentProvider.RequirePackages.Contains(packageId, StringComparer.OrdinalIgnoreCase));
         return true;
     }
 

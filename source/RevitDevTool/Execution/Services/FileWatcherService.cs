@@ -1,6 +1,7 @@
 using System.Collections.Concurrent;
 using System.IO;
 using RevitDevTool.Execution.Interfaces;
+// ReSharper disable RedundantSuppressNullableWarningExpression
 namespace RevitDevTool.Execution.Services;
 
 /// <summary>
@@ -27,11 +28,11 @@ public sealed class FileWatcherService : IFileWatcherService
         if (_disposed) throw new ObjectDisposedException(nameof(FileWatcherService));
         if (string.IsNullOrWhiteSpace(path)) return;
 
-        var rootPath = NormalizePath(path);
+        var rootPath = Path.TrimEndingDirectorySeparator(path);
         if (string.IsNullOrEmpty(rootPath))
             return;
 
-        var directoryPath = ResolveDirectoryPath(rootPath!);
+        var directoryPath = Path.GetDirectoryName(path);
         if (string.IsNullOrEmpty(directoryPath) || !Directory.Exists(directoryPath))
             return;
 
@@ -63,7 +64,7 @@ public sealed class FileWatcherService : IFileWatcherService
     {
         if (_disposed) return;
 
-        var rootPath = NormalizePath(path);
+        var rootPath = Path.TrimEndingDirectorySeparator(path);
         if (string.IsNullOrEmpty(rootPath))
             return;
 
@@ -161,30 +162,42 @@ public sealed class FileWatcherService : IFileWatcherService
         _watchers[parentKey] = watcher;
     }
 
+    /// <summary>
+    /// Build tools (compiler, ILRepack) delete then recreate the file.
+    /// Wait for the dust to settle before deciding whether the root is truly gone.
+    /// </summary>
     private void OnRootDeleted(object sender, FileSystemEventArgs e)
     {
-        FireImmediate(new FileChangedEventArgs
+        Task.Run(async () =>
         {
-            Path = e.FullPath,
-            ChangeType = FileChangeType.Deleted,
-            Scope = FileWatcherScope.RootLifecycle
+            var path = e.FullPath;
+            // wait for 10 seconds to see if the file/directory comes back (common for build output)
+            await Task.Delay(TimeSpan.FromSeconds(10)).ConfigureAwait(false);
+
+            if (File.Exists(path) || Directory.Exists(path))
+            {
+                ScheduleDebouncedNotification(path, FileChangeType.Modified, FileWatcherScope.FileContent);
+                return;
+            }
+
+            FileChanged?.Invoke(this, new FileChangedEventArgs
+            {
+                Path = path,
+                ChangeType = FileChangeType.Deleted,
+                Scope = FileWatcherScope.RootLifecycle
+            });
         });
     }
 
     private void OnRootRenamed(object sender, RenamedEventArgs e)
     {
-        FireImmediate(new FileChangedEventArgs
+        FileChanged?.Invoke(this, new FileChangedEventArgs
         {
             Path = e.FullPath,
             OldPath = e.OldFullPath,
             ChangeType = FileChangeType.Renamed,
             Scope = FileWatcherScope.RootLifecycle
         });
-    }
-
-    private void FireImmediate(FileChangedEventArgs args)
-    {
-        FileChanged?.Invoke(this, args);
     }
 
     #endregion
@@ -234,7 +247,7 @@ public sealed class FileWatcherService : IFileWatcherService
 
     private void ScheduleDebouncedNotification(string path, FileChangeType changeType, FileWatcherScope scope, string? oldPath = null)
     {
-        var key = BuildDebounceKey(scope, path);
+        var key = $"{scope}|{path}";
         var incoming = new PendingChange(path, oldPath, changeType, scope);
         _pendingChanges.AddOrUpdate(key, incoming, (_, existing) => MergeChange(existing, incoming));
 
@@ -294,11 +307,6 @@ public sealed class FileWatcherService : IFileWatcherService
         }
     }
 
-    private static string BuildDebounceKey(FileWatcherScope scope, string path)
-    {
-        return $"{scope}|{path}";
-    }
-
     private static bool IsDebounceKeyUnderRoot(string debounceKey, string rootPath)
     {
         var separatorIndex = debounceKey.IndexOf('|');
@@ -319,21 +327,6 @@ public sealed class FileWatcherService : IFileWatcherService
             WatcherChangeTypes.Renamed => FileChangeType.Renamed,
             _ => FileChangeType.Modified
         };
-    }
-
-    private static string? ResolveDirectoryPath(string path)
-    {
-        return Directory.Exists(path) ? path : Path.GetDirectoryName(path);
-    }
-
-    private static string? NormalizePath(string path)
-    {
-        return string.IsNullOrWhiteSpace(path) ? null : 
-#if NET
-            Path.TrimEndingDirectorySeparator(path);
-#else
-            Path.GetFullPath(path).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
-#endif
     }
 
     private static bool IsPathUnderRoot(string path, string rootPath)

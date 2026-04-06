@@ -3,7 +3,6 @@ using System.IO.Pipes;
 using System.Security.AccessControl;
 using System.Security.Principal;
 using System.Text.Json;
-using DevTools.Utilities;
 using Microsoft.Extensions.Hosting;
 using ModelContextProtocol.Protocol;
 using RevitDevTool.Controllers;
@@ -47,9 +46,7 @@ public sealed class RevitPipeServer(
     public Task StartAsync(CancellationToken cancellationToken)
     {
         if (_cts is not null) return Task.CompletedTask;
-
-        var pid = AppUtils.CurrentProcessId;
-        _pipeName = $"Revit_{GetRevitVersion()}_{pid}";
+        _pipeName = $"Revit_{GetRevitVersion()}_{Environment.ProcessId}";
         state.SetEndpoint(_pipeName);
         state.SetConnectedState(0);
         state.SetQueueDepth(0);
@@ -327,7 +324,7 @@ public sealed class RevitPipeServer(
 
     private InstanceInfo BuildInstanceInfo() => new()
     {
-        ProcessId = AppUtils.CurrentProcessId,
+        ProcessId = Environment.ProcessId,
         VersionNumber = GetRevitVersion(),
         DocumentTitle = _documentTitle,
         DocumentPath = _documentPath
