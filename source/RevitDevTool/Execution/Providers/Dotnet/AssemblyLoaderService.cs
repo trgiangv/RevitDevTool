@@ -151,7 +151,30 @@ public static class AssemblyLoaderService
         if (!string.IsNullOrEmpty(currentAssemblyDir))
             AddDllsFromDirectory(paths, currentAssemblyDir);
 
-        return paths.ToList();
+        return DeduplicateByAssemblyName(paths);
+    }
+
+    /// <summary>
+    /// PathAssemblyResolver throws if two paths resolve to the same assembly identity.
+    /// Keep only the first path encountered for each assembly full name.
+    /// </summary>
+    private static List<string> DeduplicateByAssemblyName(HashSet<string> paths)
+    {
+        var seen = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var path in paths)
+        {
+            try
+            {
+                var name = AssemblyName.GetAssemblyName(path).FullName;
+                seen.TryAdd(name, path);
+            }
+            catch
+            {
+                // Not a valid managed assembly — include it anyway, PathAssemblyResolver will ignore it.
+                seen.TryAdd(path, path);
+            }
+        }
+        return seen.Values.ToList();
     }
 
     private static void AddDllsFromDirectory(HashSet<string> paths, string directory)

@@ -12,6 +12,50 @@ internal class CommandLoadContext : AssemblyLoadContext
 {
     private readonly AssemblyDependencyResolver _resolver;
 
+    /// <summary>
+    /// Assemblies that must come from Default ALC — Revit folder + well-known prefixes.
+    /// </summary>
+    private static readonly HashSet<string> SharedAssemblyNames = BuildSharedAssemblyNames();
+
+    /// <summary>
+    /// Common 3rd party assembly prefixes that are expected to be shared and not loaded in isolation.
+    /// </summary>
+    private static readonly string[] SharedPrefixes =
+    [
+        "System.", "Microsoft.", "MahApps.", "ControlzEx.",
+        "CommunityToolkit.", "Autodesk."
+    ];
+
+    private static HashSet<string> BuildSharedAssemblyNames()
+    {
+        var names = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+        var revitDir = Path.GetDirectoryName(typeof(IExternalCommand).Assembly.Location)!;
+        var hostDir = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location)!;
+        
+        foreach (var dll in Directory.GetFiles(revitDir, "*.dll"))
+            names.Add(Path.GetFileNameWithoutExtension(dll));
+
+        foreach (var dll in Directory.GetFiles(hostDir, "*.dll"))
+            names.Add(Path.GetFileNameWithoutExtension(dll));
+        
+        return names;
+    }
+
+    private static bool IsSharedAssembly(string assemblyName)
+    {
+        if (SharedAssemblyNames.Contains(assemblyName))
+            return true;
+
+        foreach (var prefix in SharedPrefixes)
+        {
+            if (assemblyName.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
+                return true;
+        }
+
+        return false;
+    }
+
     public CommandLoadContext(string pluginPath) : base(name: $"RevitDevTool_{Guid.NewGuid():N}", isCollectible: true)
     {
         _resolver = new AssemblyDependencyResolver(pluginPath);
@@ -21,6 +65,9 @@ internal class CommandLoadContext : AssemblyLoadContext
 
     protected override Assembly? Load(AssemblyName assemblyName)
     {
+        if (assemblyName.Name != null && IsSharedAssembly(assemblyName.Name))
+            return null;
+
         var assemblyPath = _resolver.ResolveAssemblyToPath(assemblyName);
         return assemblyPath != null ? LoadFromAssemblyPathStream(assemblyPath) : null;
     }
@@ -29,10 +76,10 @@ internal class CommandLoadContext : AssemblyLoadContext
     {
         if (string.IsNullOrEmpty(pluginDirectory) || !Directory.Exists(pluginDirectory)) return;
 
-        var dllPaths = Directory.GetFiles(pluginDirectory, "*.dll");
-
-        foreach (var dllPath in dllPaths)
+        foreach (var dllPath in Directory.GetFiles(pluginDirectory, "*.dll"))
         {
+            var simpleName = Path.GetFileNameWithoutExtension(dllPath);
+            if (IsSharedAssembly(simpleName)) continue;
             context.LoadFromAssemblyPathStream(dllPath);
         }
     }
@@ -43,12 +90,7 @@ internal class CommandLoadContext : AssemblyLoadContext
         return libraryPath != null ? LoadUnmanagedDllFromPath(libraryPath) : IntPtr.Zero;
     }
 
-    /// <summary>
-    /// Load a managed assembly from the specified path without keeping the file open.
-    /// Reads the DLL (and optional PDB) into memory and calls LoadFromStream.
-    /// </summary>
-    /// <param name="assemblyPath">Full path to the managed assembly file.</param>
-    /// <returns>The loaded Assembly instance.</returns>
+    /// <summary>Loads assembly from bytes to avoid file locking.</summary>
     private Assembly? LoadFromAssemblyPathStream(string assemblyPath)
     {
         try
