@@ -16,7 +16,7 @@ public static class ViewSheetTools
         [Description("Level name for the floor plan")] string levelName,
         [Description("Name for the new view (optional)")] string newName = "")
     {
-        var doc = Context.ActiveDocument ?? throw new McpException("No active document.");
+        var doc = RevitContext.ActiveDocument ?? throw new McpException("No active document.");
 
         var level = new FilteredElementCollector(doc).OfClass(typeof(Level))
             .Cast<Level>().FirstOrDefault(l => l.Name.Equals(levelName, StringComparison.OrdinalIgnoreCase))
@@ -32,7 +32,7 @@ public static class ViewSheetTools
         viewPlan.Name = string.IsNullOrEmpty(newName) ? $"Auto-Floor Plan - {level.Name}" : newName;
         tx.Commit();
 
-        Context.ActiveUiDocument?.RequestViewChange(viewPlan);
+        RevitContext.ActiveUiDocument?.RequestViewChange(viewPlan);
         return new { elementId = viewPlan.Id.ToValue().ToString() };
     }
 
@@ -42,7 +42,7 @@ public static class ViewSheetTools
         [Description("Level name")] string levelName,
         [Description("View template name (optional)")] string viewTemplateName = "")
     {
-        var doc = Context.ActiveDocument ?? throw new McpException("No active document.");
+        var doc = RevitContext.ActiveDocument ?? throw new McpException("No active document.");
 
         var level = new FilteredElementCollector(doc).OfClass(typeof(Level))
             .Cast<Level>().FirstOrDefault(l => l.Name.Equals(levelName, StringComparison.OrdinalIgnoreCase))
@@ -71,7 +71,7 @@ public static class ViewSheetTools
             viewPlan.ViewTemplateId = template.Id;
         tx.Commit();
 
-        Context.ActiveView = viewPlan;
+        RevitContext.ActiveView = viewPlan;
         return new { elementId = viewPlan.Id.ToValue().ToString() };
     }
 
@@ -93,7 +93,7 @@ public static class ViewSheetTools
         if (depth.HasValue && depth.Value <= 0)
             throw new McpException("Depth must be positive.");
 
-        var doc = Context.ActiveDocument ?? throw new McpException("No active document.");
+        var doc = RevitContext.ActiveDocument ?? throw new McpException("No active document.");
 
         var viewFamilyType = new FilteredElementCollector(doc).OfClass(typeof(ViewFamilyType))
             .Cast<ViewFamilyType>().FirstOrDefault(vft => vft.ViewFamily == ViewFamily.Section)
@@ -136,7 +136,7 @@ public static class ViewSheetTools
     public static object CreateSheet(
         [Description("Title block family type ID (-1 for default)")] long titleBlockId = -1L)
     {
-        var doc = Context.ActiveDocument ?? throw new McpException("No active document.");
+        var doc = RevitContext.ActiveDocument ?? throw new McpException("No active document.");
 
         ElementId titleBlockElementId;
         if (titleBlockId > 0)
@@ -166,7 +166,7 @@ public static class ViewSheetTools
     {
         if (viewPosition.Length < 3) throw new McpException("viewPosition must have at least 3 values [X, Y, Z].");
 
-        var doc = Context.ActiveDocument ?? throw new McpException("No active document.");
+        var doc = RevitContext.ActiveDocument ?? throw new McpException("No active document.");
         var sheet = doc.GetElement(sheetId.ToElementId()) as ViewSheet
             ?? throw new McpException($"Sheet {sheetId} not found.");
         var view = doc.GetElement(viewId.ToElementId()) as View
@@ -179,7 +179,7 @@ public static class ViewSheetTools
         var viewport = Viewport.Create(doc, sheet.Id, view.Id, position);
         tx.Commit();
 
-        Context.ActiveUiDocument?.RequestViewChange(sheet);
+        RevitContext.ActiveUiDocument?.RequestViewChange(sheet);
         return new { viewportId = viewport.Id.ToValue().ToString() };
     }
 
@@ -189,7 +189,7 @@ public static class ViewSheetTools
         [Description("Target view element ID")] long viewId,
         [Description("View template name")] string viewTemplateName)
     {
-        var doc = Context.ActiveDocument ?? throw new McpException("No active document.");
+        var doc = RevitContext.ActiveDocument ?? throw new McpException("No active document.");
         var view = doc.GetElement(viewId.ToElementId()) as View
             ?? throw new McpException($"View {viewId} not found.");
         if (view.IsTemplate) throw new McpException("Cannot apply a template to a template view.");
@@ -218,7 +218,7 @@ public static class ViewSheetTools
     public static object DetachViewTemplate(
         [Description("View element ID")] long viewId)
     {
-        var doc = Context.ActiveDocument ?? throw new McpException("No active document.");
+        var doc = RevitContext.ActiveDocument ?? throw new McpException("No active document.");
         var view = doc.GetElement(viewId.ToElementId()) as View
             ?? throw new McpException($"View {viewId} not found.");
 
@@ -234,12 +234,12 @@ public static class ViewSheetTools
     public static object ActivateView(
         [Description("View element ID")] long viewId)
     {
-        var doc = Context.ActiveDocument ?? throw new McpException("No active document.");
+        var doc = RevitContext.ActiveDocument ?? throw new McpException("No active document.");
         var view = doc.GetElement(viewId.ToElementId()) as View
             ?? throw new McpException($"View {viewId} not found.");
         if (view.IsTemplate) throw new McpException("Cannot activate a template view.");
 
-        Context.ActiveView = view;
+        RevitContext.ActiveView = view;
         return new { outcome = "Success", viewId = view.Id.ToValue(), viewName = view.Name, viewType = view.ViewType.ToString() };
     }
 
@@ -247,7 +247,7 @@ public static class ViewSheetTools
     [Description("Lists all non-template views in the document.")]
     public static object ListViews()
     {
-        var doc = Context.ActiveDocument ?? throw new McpException("No active document.");
+        var doc = RevitContext.ActiveDocument ?? throw new McpException("No active document.");
         var activeViewId = doc.ActiveView?.Id;
 
         var views = new FilteredElementCollector(doc).OfClass(typeof(View))
@@ -276,7 +276,7 @@ public static class ViewSheetTools
     [Description("Lists all drawing sheets in the document.")]
     public static object ListSheets()
     {
-        var doc = Context.ActiveDocument ?? throw new McpException("No active document.");
+        var doc = RevitContext.ActiveDocument ?? throw new McpException("No active document.");
 
         var sheets = new FilteredElementCollector(doc).OfClass(typeof(ViewSheet))
             .Cast<ViewSheet>()
@@ -290,7 +290,7 @@ public static class ViewSheetTools
     [Description("Lists all view templates in the document.")]
     public static object ListViewTemplates()
     {
-        var doc = Context.ActiveDocument ?? throw new McpException("No active document.");
+        var doc = RevitContext.ActiveDocument ?? throw new McpException("No active document.");
 
         var templates = new FilteredElementCollector(doc).OfClass(typeof(View))
             .Cast<View>()
@@ -316,7 +316,7 @@ public static class ViewSheetTools
     public static object ListViewports(
         [Description("Sheet element ID")] long sheetId)
     {
-        var doc = Context.ActiveDocument ?? throw new McpException("No active document.");
+        var doc = RevitContext.ActiveDocument ?? throw new McpException("No active document.");
         var sheet = doc.GetElement(sheetId.ToElementId()) as ViewSheet
             ?? throw new McpException($"Sheet {sheetId} not found.");
 
@@ -342,7 +342,7 @@ public static class ViewSheetTools
     public static object ListPlacedViews(
         [Description("Sheet element ID")] long sheetId)
     {
-        var doc = Context.ActiveDocument ?? throw new McpException("No active document.");
+        var doc = RevitContext.ActiveDocument ?? throw new McpException("No active document.");
         var sheet = doc.GetElement(sheetId.ToElementId()) as ViewSheet
             ?? throw new McpException($"Sheet {sheetId} not found.");
 
@@ -369,7 +369,7 @@ public static class ViewSheetTools
     public static object GetTitleblock(
         [Description("Sheet element ID")] long sheetId)
     {
-        var doc = Context.ActiveDocument ?? throw new McpException("No active document.");
+        var doc = RevitContext.ActiveDocument ?? throw new McpException("No active document.");
         var sheet = doc.GetElement(sheetId.ToElementId()) as ViewSheet
             ?? throw new McpException($"Sheet {sheetId} not found.");
 
@@ -385,7 +385,7 @@ public static class ViewSheetTools
         [Description("Sheet element ID")] long sheetId,
         [Description("New sheet number")] string sheetNumber)
     {
-        var doc = Context.ActiveDocument ?? throw new McpException("No active document.");
+        var doc = RevitContext.ActiveDocument ?? throw new McpException("No active document.");
         var sheet = doc.GetElement(sheetId.ToElementId()) as ViewSheet
             ?? throw new McpException($"Sheet {sheetId} not found.");
 
@@ -402,7 +402,7 @@ public static class ViewSheetTools
         [Description("Sheet element ID")] long sheetId,
         [Description("New sheet name")] string newName)
     {
-        var doc = Context.ActiveDocument ?? throw new McpException("No active document.");
+        var doc = RevitContext.ActiveDocument ?? throw new McpException("No active document.");
         var sheet = doc.GetElement(sheetId.ToElementId()) as ViewSheet
             ?? throw new McpException($"Sheet {sheetId} not found.");
 

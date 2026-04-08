@@ -13,7 +13,7 @@ public class XyzVisualization : ExternalCommand
     {
         try
         {
-            var xyz = UiDocument.Selection.PickObject(ObjectType.PointOnElement);
+            var xyz = Application.ActiveUIDocument.Selection.PickObject(ObjectType.PointOnElement);
             var xyzPoint = xyz.GlobalPoint;
             Trace.Write(xyzPoint);
         }
@@ -32,7 +32,7 @@ public class XyzsVisualization : ExternalCommand
     {
         try
         {
-            var xyzRefs = UiDocument.Selection.PickObjects(ObjectType.PointOnElement);
+            var xyzRefs = Application.ActiveUIDocument.Selection.PickObjects(ObjectType.PointOnElement);
             var xyzs = xyzRefs.Select(x => x.GlobalPoint).ToList();
             if (xyzs.Count == 0)
             {

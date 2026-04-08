@@ -17,8 +17,8 @@ public static class LinkTools
         [Description("Import unit: Foot, Inch, Meter, Millimeter, Centimeter, or Auto")] string importUnit = "Auto",
         [Description("Placement: Origin, Shared, or LastPlacement")] string placement = "Origin")
     {
-        var doc = Context.ActiveDocument ?? throw new McpException("No active document.");
-        var activeView = Context.ActiveView ?? throw new McpException("No active view.");
+        var doc = RevitContext.ActiveDocument ?? throw new McpException("No active document.");
+        var activeView = RevitContext.ActiveView ?? throw new McpException("No active view.");
 
         if (!File.Exists(filePath))
             throw new McpException($"File not found: '{filePath}'");
@@ -65,7 +65,7 @@ public static class LinkTools
     [Description("Lists all linked Revit and CAD files in the current document.")]
     public static object ListLinks()
     {
-        var doc = Context.ActiveDocument ?? throw new McpException("No active document.");
+        var doc = RevitContext.ActiveDocument ?? throw new McpException("No active document.");
 
         var revitLinks = new FilteredElementCollector(doc).OfClass(typeof(RevitLinkType))
             .Cast<RevitLinkType>()

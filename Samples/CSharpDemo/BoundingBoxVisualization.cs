@@ -13,13 +13,13 @@ public class BoundingBoxVisualization : ExternalCommand
     {
         try
         {
-            var elementRef = UiDocument.Selection.PickObject(ObjectType.Element, "Select Element");
-            var element = Document.GetElement(elementRef);
+            var elementRef = Application.ActiveUIDocument.Selection.PickObject(ObjectType.Element, "Select Element");
+            var element = Application.ActiveUIDocument.Document.GetElement(elementRef);
             Trace.Write(elementRef.ElementId);
             Trace.Write(element.get_Parameter(BuiltInParameter.IFC_GUID)?.AsString());
             Trace.Write(element.UniqueId);
 
-            var bbox = element.get_BoundingBox(ActiveView);
+            var bbox = element.get_BoundingBox(Application.ActiveUIDocument.ActiveView);
             Trace.Write(bbox);
         }
         catch (Autodesk.Revit.Exceptions.OperationCanceledException)
@@ -41,12 +41,12 @@ public class BoundingBoxesVisualization : ExternalCommand
     {
         try
         {
-            var elementRefs = UiDocument.Selection.PickObjects(ObjectType.Element, "Select Elements");
+            var elementRefs = Application.ActiveUIDocument.Selection.PickObjects(ObjectType.Element, "Select Elements");
             var boxes = new List<BoundingBoxXYZ>();
             foreach (var elementRef in elementRefs)
             {
-                var element = Document.GetElement(elementRef);
-                var bbox = element.get_BoundingBox(ActiveView);
+                var element = Application.ActiveUIDocument.Document.GetElement(elementRef);
+                var bbox = element.get_BoundingBox(Application.ActiveUIDocument.ActiveView);
                 if (bbox != null)
                 {
                     boxes.Add(bbox);
@@ -80,10 +80,10 @@ public class OutlineVisualization : ExternalCommand
     {
         try
         {
-            var elementRef = UiDocument.Selection.PickObject(ObjectType.Element, "Select Element");
-            var element = Document.GetElement(elementRef);
+            var elementRef = Application.ActiveUIDocument.Selection.PickObject(ObjectType.Element, "Select Element");
+            var element = Application.ActiveUIDocument.Document.GetElement(elementRef);
 
-            var bbox = element.get_BoundingBox(ActiveView);
+            var bbox = element.get_BoundingBox(Application.ActiveUIDocument.ActiveView);
             var outline = new Outline(bbox.Min, bbox.Max);
             outline.Scale(2);
             Trace.Write(outline);
@@ -107,12 +107,12 @@ public class OutlinesVisualization : ExternalCommand
     {
         try
         {
-            var elementRefs = UiDocument.Selection.PickObjects(ObjectType.Element, "Select Elements");
+            var elementRefs = Application.ActiveUIDocument.Selection.PickObjects(ObjectType.Element, "Select Elements");
             var boxes = new List<Outline>();
             foreach (var elementRef in elementRefs)
             {
-                var element = Document.GetElement(elementRef);
-                var bbox = element.get_BoundingBox(ActiveView);
+                var element = Application.ActiveUIDocument.Document.GetElement(elementRef);
+                var bbox = element.get_BoundingBox(Application.ActiveUIDocument.ActiveView);
                 if (bbox != null)
                 {
                     var ol = new Outline(bbox.Min, bbox.Max);

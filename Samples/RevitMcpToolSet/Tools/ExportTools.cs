@@ -18,7 +18,7 @@ public static class ExportTools
         [Description("Export scope: ByViewList or CurrentView")] string exportMode = "CurrentView",
         [Description("Export in background")] bool exportInBackground = true)
     {
-        var doc = Context.ActiveDocument ?? throw new McpException("No active document.");
+        var doc = RevitContext.ActiveDocument ?? throw new McpException("No active document.");
 
         var outputDir = string.IsNullOrEmpty(directoryPath)
             ? Path.GetTempPath()
@@ -47,7 +47,7 @@ public static class ExportTools
         }
         else
         {
-            var activeView = Context.ActiveView ?? throw new McpException("No active view.");
+            var activeView = RevitContext.ActiveView ?? throw new McpException("No active view.");
             var fileName = PathGuard.GenerateUniqueFilePath(outputDir, $"{doc.Title}_{activeView.Name}", "pdf");
             options.FileName = Path.GetFileName(fileName);
             doc.Export(outputDir, new List<ElementId> { activeView.Id }, options);
@@ -65,7 +65,7 @@ public static class ExportTools
         [Description("Image format: PNG, JPG, BMP, or TIFF")] ImageOutputFormat imageFormat = ImageOutputFormat.PNG,
         [Description("Export scope: ByViewList, CurrentView, or VisibleRegion")] ExportScope exportMode = ExportScope.CurrentView)
     {
-        var doc = Context.ActiveDocument ?? throw new McpException("No active document.");
+        var doc = RevitContext.ActiveDocument ?? throw new McpException("No active document.");
 
         var outputDir = string.IsNullOrEmpty(directoryPath)
             ? Path.GetTempPath()
@@ -113,7 +113,7 @@ public static class ExportTools
         [Description("Schedule element ID")] long scheduleId,
         [Description("Output directory path (optional)")] string? directoryPath = null)
     {
-        var doc = Context.ActiveDocument ?? throw new McpException("No active document.");
+        var doc = RevitContext.ActiveDocument ?? throw new McpException("No active document.");
         var schedule = doc.GetElement(scheduleId.ToElementId()) as ViewSchedule
             ?? throw new McpException($"Schedule {scheduleId} not found.");
 

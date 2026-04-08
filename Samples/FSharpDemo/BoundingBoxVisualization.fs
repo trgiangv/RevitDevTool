@@ -14,12 +14,12 @@ type BoundingBoxVisualization() =
 
     override this.Execute() =
         try
-            let elementRef = this.UiDocument.Selection.PickObject(ObjectType.Element, "Select Element")
-            let element = this.Document.GetElement(elementRef)
+            let elementRef = this.Application.ActiveUIDocument.Selection.PickObject(ObjectType.Element, "Select Element")
+            let element = this.Application.ActiveUIDocument.Document.GetElement(elementRef)
             Trace.Write(elementRef.ElementId)
             Trace.Write(element.get_Parameter(BuiltInParameter.IFC_GUID) |> Option.ofObj |> Option.map (fun p -> p.AsString()) |> Option.defaultValue null)
             Trace.Write(element.UniqueId)
-            let bbox = element.get_BoundingBox(this.ActiveView)
+            let bbox = element.get_BoundingBox(this.Application.ActiveUIDocument.Document.ActiveView)
             Trace.Write(bbox)
         with
         | :? Autodesk.Revit.Exceptions.OperationCanceledException -> ()
@@ -32,11 +32,11 @@ type BoundingBoxesVisualization() =
 
     override this.Execute() =
         try
-            let elementRefs = this.UiDocument.Selection.PickObjects(ObjectType.Element, "Select Elements")
+            let elementRefs = this.Application.ActiveUIDocument.Selection.PickObjects(ObjectType.Element, "Select Elements")
             let boxes =
                 [ for elementRef in elementRefs do
-                    let element = this.Document.GetElement(elementRef)
-                    let bbox = element.get_BoundingBox(this.ActiveView)
+                    let element = this.Application.ActiveUIDocument.Document.GetElement(elementRef)
+                    let bbox = element.get_BoundingBox(this.Application.ActiveUIDocument.Document.ActiveView)
                     if bbox <> null then
                         yield bbox
                     else
@@ -56,9 +56,9 @@ type OutlineVisualization() =
 
     override this.Execute() =
         try
-            let elementRef = this.UiDocument.Selection.PickObject(ObjectType.Element, "Select Element")
-            let element = this.Document.GetElement(elementRef)
-            let bbox = element.get_BoundingBox(this.ActiveView)
+            let elementRef = this.Application.ActiveUIDocument.Selection.PickObject(ObjectType.Element, "Select Element")
+            let element = this.Application.ActiveUIDocument.Document.GetElement(elementRef)
+            let bbox = element.get_BoundingBox(this.Application.ActiveUIDocument.Document.ActiveView)
             let outline = new Outline(bbox.Min, bbox.Max)
             outline.Scale(2.0)
             Trace.Write(outline)
@@ -73,11 +73,11 @@ type OutlinesVisualization() =
 
     override this.Execute() =
         try
-            let elementRefs = this.UiDocument.Selection.PickObjects(ObjectType.Element, "Select Elements")
+            let elementRefs = this.Application.ActiveUIDocument.Selection.PickObjects(ObjectType.Element, "Select Elements")
             let boxes =
                 [ for elementRef in elementRefs do
-                    let element = this.Document.GetElement(elementRef)
-                    let bbox = element.get_BoundingBox(this.ActiveView)
+                    let element = this.Application.ActiveUIDocument.Document.GetElement(elementRef)
+                    let bbox = element.get_BoundingBox(this.Application.ActiveUIDocument.Document.ActiveView)
                     if bbox <> null then
                         let ol = new Outline(bbox.Min, bbox.Max)
                         ol.Scale(2.0)

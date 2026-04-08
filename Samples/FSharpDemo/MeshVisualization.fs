@@ -14,8 +14,8 @@ type MeshVisualization() =
 
     override this.Execute() =
         try
-            let meshRef = this.UiDocument.Selection.PickObject(ObjectType.Element, "Select Mesh Element")
-            let meshes = getMeshes (this.Document.GetElement(meshRef))
+            let meshRef = this.Application.ActiveUIDocument.Selection.PickObject(ObjectType.Element, "Select Mesh Element")
+            let meshes = getMeshes (this.Application.ActiveUIDocument.Document.GetElement(meshRef))
             Trace.Write(meshes |> List.head)
         with
         | ex -> Trace.TraceError($"Error in MeshVisualization: {ex.Message}")
@@ -27,10 +27,10 @@ type MeshesVisualization() =
 
     override this.Execute() =
         try
-            let meshRefs = this.UiDocument.Selection.PickObjects(ObjectType.Element, "Select Mesh Elements")
+            let meshRefs = this.Application.ActiveUIDocument.Selection.PickObjects(ObjectType.Element, "Select Mesh Elements")
             let meshes =
                 meshRefs
-                |> Seq.collect (fun mRef -> getMeshes (this.Document.GetElement(mRef)))
+                |> Seq.collect (fun mRef -> getMeshes (this.Application.ActiveUIDocument.Document.GetElement(mRef)))
                 |> Seq.toList
             Trace.Write(meshes)
         with

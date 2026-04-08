@@ -14,8 +14,8 @@ type SolidVisualization() =
 
     override this.Execute() =
         try
-            let solidRef = this.UiDocument.Selection.PickObject(ObjectType.Element, "Select Solid Element")
-            let solids = getSolids (this.Document.GetElement(solidRef))
+            let solidRef = this.Application.ActiveUIDocument.Selection.PickObject(ObjectType.Element, "Select Solid Element")
+            let solids = getSolids (this.Application.ActiveUIDocument.Document.GetElement(solidRef))
             if solids.IsEmpty then
                 Trace.TraceWarning("No solid found for the selected element.")
             else
@@ -30,10 +30,10 @@ type SolidsVisualization() =
 
     override this.Execute() =
         try
-            let solidRefs = this.UiDocument.Selection.PickObjects(ObjectType.Element, "Select Solid Elements")
+            let solidRefs = this.Application.ActiveUIDocument.Selection.PickObjects(ObjectType.Element, "Select Solid Elements")
             let solids =
                 solidRefs
-                |> Seq.collect (fun sRef -> getSolids (this.Document.GetElement(sRef)))
+                |> Seq.collect (fun sRef -> getSolids (this.Application.ActiveUIDocument.Document.GetElement(sRef)))
                 |> Seq.toList
             if solids.IsEmpty then
                 Trace.TraceWarning("No solids found for the selected elements.")

@@ -13,8 +13,8 @@ public class CurveVisualization : ExternalCommand
     {
         try
         {
-            var curveRef = UiDocument.Selection.PickObject(ObjectType.Edge, "Select Curve");
-            var curve = Document.GetElement(curveRef)?.GetGeometryObjectFromReference(curveRef) as Edge;
+            var curveRef = Application.ActiveUIDocument.Selection.PickObject(ObjectType.Edge, "Select Curve");
+            var curve = Application.ActiveUIDocument.Document.GetElement(curveRef)?.GetGeometryObjectFromReference(curveRef) as Edge;
             Trace.Write(curve);
         }
         catch (Exception e)
@@ -32,12 +32,12 @@ public class CurvesVisualization : ExternalCommand
     {
         try
         {
-            var curveRefs = UiDocument.Selection.PickObjects(ObjectType.Edge, "Select Curves");
+            var curveRefs = Application.ActiveUIDocument.Selection.PickObjects(ObjectType.Edge, "Select Curves");
 
             var curves = new List<Edge>();
             foreach (var curveRef in curveRefs)
             {
-                var curve = Document.GetElement(curveRef)?.GetGeometryObjectFromReference(curveRef) as Edge;
+                var curve = Application.ActiveUIDocument.Document.GetElement(curveRef)?.GetGeometryObjectFromReference(curveRef) as Edge;
                 if (curve != null) curves.Add(curve);
             }
 

@@ -18,7 +18,7 @@ public static class MepPlacementTools
     public static object PlaceDuct(
         [Description("Duct placement specifications")] DuctSpec info)
     {
-        var doc = Context.ActiveDocument ?? throw new McpException("No active document.");
+        var doc = RevitContext.ActiveDocument ?? throw new McpException("No active document.");
 
         using var tx = new Transaction(doc, "Place Duct");
         tx.Start();
@@ -52,7 +52,7 @@ public static class MepPlacementTools
     public static object PlaceConduit(
         [Description("Conduit placement specifications")] ConduitSpec info)
     {
-        var doc = Context.ActiveDocument ?? throw new McpException("No active document.");
+        var doc = RevitContext.ActiveDocument ?? throw new McpException("No active document.");
 
         using var tx = new Transaction(doc, "Place Conduit");
         tx.Start();
@@ -83,7 +83,7 @@ public static class MepPlacementTools
     public static object PlacePipe(
         [Description("Pipe placement specifications")] PipeSpec info)
     {
-        var doc = Context.ActiveDocument ?? throw new McpException("No active document.");
+        var doc = RevitContext.ActiveDocument ?? throw new McpException("No active document.");
 
         using var tx = new Transaction(doc, "Place Pipe");
         tx.Start();

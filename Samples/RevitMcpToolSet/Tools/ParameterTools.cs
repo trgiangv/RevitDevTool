@@ -16,7 +16,7 @@ public static class ParameterTools
     public static object ReadParameters(
         [Description("Element ID")] long elementId)
     {
-        var doc = Context.ActiveDocument ?? throw new McpException("No active document.");
+        var doc = RevitContext.ActiveDocument ?? throw new McpException("No active document.");
         var element = doc.GetElement(elementId.ToElementId())
             ?? throw new McpException($"Element with ID {elementId} not found.");
 
@@ -43,7 +43,7 @@ public static class ParameterTools
         [Description("Array of element IDs")] long[] elementIds,
         [Description("Parameter updates to apply")] ParameterUpdate[] updates)
     {
-        var doc = Context.ActiveDocument ?? throw new McpException("No active document.");
+        var doc = RevitContext.ActiveDocument ?? throw new McpException("No active document.");
         if (elementIds.Length == 0) throw new McpException("No element IDs provided.");
         if (updates.Length == 0) throw new McpException("No parameter updates provided.");
 
@@ -72,7 +72,7 @@ public static class ParameterTools
         [Description("Target element IDs")] long[] targetElementIds,
         [Description("Parameter names to copy")] string[] parameterNames)
     {
-        var doc = Context.ActiveDocument ?? throw new McpException("No active document.");
+        var doc = RevitContext.ActiveDocument ?? throw new McpException("No active document.");
         var source = doc.GetElement(sourceElementId.ToElementId())
             ?? throw new McpException($"Source element {sourceElementId} not found.");
 
@@ -107,7 +107,7 @@ public static class ParameterTools
         [Description("Element IDs to change")] long[] elementIds,
         [Description("New type element ID")] long newTypeId)
     {
-        var doc = Context.ActiveDocument ?? throw new McpException("No active document.");
+        var doc = RevitContext.ActiveDocument ?? throw new McpException("No active document.");
         if (elementIds.Length == 0) throw new McpException("No element IDs provided.");
 
         var outcome = new OperationOutcome();

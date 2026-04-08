@@ -17,7 +17,7 @@ public static class ScheduleTools
     {
         if (string.IsNullOrWhiteSpace(categoryName)) throw new McpException("Category name cannot be empty.");
 
-        var doc = Context.ActiveDocument ?? throw new McpException("No active document.");
+        var doc = RevitContext.ActiveDocument ?? throw new McpException("No active document.");
 
         Category? category = null;
         foreach (Category cat in doc.Settings.Categories)
@@ -63,7 +63,7 @@ public static class ScheduleTools
     [Description("Returns all schedules in the document.")]
     public static object GetAllSchedules()
     {
-        var doc = Context.ActiveDocument ?? throw new McpException("No active document.");
+        var doc = RevitContext.ActiveDocument ?? throw new McpException("No active document.");
 
         var schedules = new FilteredElementCollector(doc).OfClass(typeof(ViewSchedule))
             .Cast<ViewSchedule>()
@@ -82,7 +82,7 @@ public static class ScheduleTools
     {
         if (string.IsNullOrWhiteSpace(scheduleName)) throw new McpException("Schedule name cannot be empty.");
 
-        var doc = Context.ActiveDocument ?? throw new McpException("No active document.");
+        var doc = RevitContext.ActiveDocument ?? throw new McpException("No active document.");
 
         var schedule = new FilteredElementCollector(doc).OfClass(typeof(ViewSchedule))
             .Cast<ViewSchedule>()
@@ -99,7 +99,7 @@ public static class ScheduleTools
     {
         if (string.IsNullOrWhiteSpace(categoryName)) throw new McpException("Category name cannot be empty.");
 
-        var doc = Context.ActiveDocument ?? throw new McpException("No active document.");
+        var doc = RevitContext.ActiveDocument ?? throw new McpException("No active document.");
 
         Category? category = null;
         foreach (Category cat in doc.Settings.Categories)
@@ -136,7 +136,7 @@ public static class ScheduleTools
     {
         if (sortFields.Length == 0) throw new McpException("At least one sort field is required.");
 
-        var doc = Context.ActiveDocument ?? throw new McpException("No active document.");
+        var doc = RevitContext.ActiveDocument ?? throw new McpException("No active document.");
         var schedule = doc.GetElement(scheduleId.ToElementId()) as ViewSchedule
             ?? throw new McpException($"Schedule {scheduleId} not found.");
 
@@ -169,7 +169,7 @@ public static class ScheduleTools
     {
         if (groupFields.Length == 0) throw new McpException("At least one group field is required.");
 
-        var doc = Context.ActiveDocument ?? throw new McpException("No active document.");
+        var doc = RevitContext.ActiveDocument ?? throw new McpException("No active document.");
         var schedule = doc.GetElement(scheduleId.ToElementId()) as ViewSchedule
             ?? throw new McpException($"Schedule {scheduleId} not found.");
 
@@ -207,7 +207,7 @@ public static class ScheduleTools
     {
         if (groupFields.Length == 0) throw new McpException("At least one filter is required.");
 
-        var doc = Context.ActiveDocument ?? throw new McpException("No active document.");
+        var doc = RevitContext.ActiveDocument ?? throw new McpException("No active document.");
         var schedule = doc.GetElement(scheduleId.ToElementId()) as ViewSchedule
             ?? throw new McpException($"Schedule {scheduleId} not found.");
 
@@ -284,7 +284,7 @@ public static class ScheduleTools
         if (schedulePosition is not null && schedulePosition.Length < 2)
             throw new McpException("schedulePosition must have at least 2 values [X, Y].");
 
-        var doc = Context.ActiveDocument ?? throw new McpException("No active document.");
+        var doc = RevitContext.ActiveDocument ?? throw new McpException("No active document.");
         var sheet = doc.GetElement(sheetId.ToElementId()) as ViewSheet
             ?? throw new McpException($"Sheet {sheetId} not found.");
         var schedule = doc.GetElement(scheduleId.ToElementId()) as ViewSchedule

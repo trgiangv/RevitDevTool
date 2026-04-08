@@ -15,14 +15,14 @@ public static class ModelQueryTools
     public static object FindElements(
         [Description("Search configuration")] ElementSearchCriteria input)
     {
-        var doc = Context.ActiveDocument ?? throw new McpException("No active document.");
+        var doc = RevitContext.ActiveDocument ?? throw new McpException("No active document.");
 
         FilteredElementCollector collector;
         if (input.ViewId > 0)
             collector = new FilteredElementCollector(doc, input.ViewId.ToElementId());
-        else if (input.SelectedOnly && Context.ActiveUiDocument is not null)
+        else if (input.SelectedOnly && RevitContext.ActiveUiDocument is not null)
         {
-            var selectedIds = Context.ActiveUiDocument.Selection.GetElementIds();
+            var selectedIds = RevitContext.ActiveUiDocument.Selection.GetElementIds();
             collector = selectedIds.Count > 0
                 ? new FilteredElementCollector(doc, selectedIds)
                 : throw new McpException("No elements selected.");

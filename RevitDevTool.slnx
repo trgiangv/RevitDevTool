@@ -40,10 +40,18 @@
         </Project>
     </Folder>
     <Folder Name="/Samples/">
-        <Project Path="Samples/CSharpDemo/CSharpDemo.csproj" />
-        <Project Path="Samples/FSharpDemo/FSharpDemo.fsproj" />
-        <Project Path="Samples/McpToolsetDemo/McpToolsetDemo.csproj" />
-        <Project Path="Samples/RevitMcpToolSet/RevitMcpToolSet.csproj" />
+        <Project Path="Samples/CSharpDemo/CSharpDemo.csproj" >
+            <Build Project="false" />
+        </Project>
+        <Project Path="Samples/FSharpDemo/FSharpDemo.fsproj" >
+            <Build Project="false" />
+        </Project>
+        <Project Path="Samples/McpToolsetDemo/McpToolsetDemo.csproj" >
+            <Build Project="false" />
+        </Project>
+        <Project Path="Samples/RevitMcpToolSet/RevitMcpToolSet.csproj" >
+            <Build Project="false" />
+        </Project>
     </Folder>
     <Folder Name="/Solution Items/">
         <File Path=".editorconfig" />
@@ -88,6 +96,7 @@
             <BuildType Solution="Release.Autodesk.2024|*" Project="Release" />
             <BuildType Solution="Release.Autodesk.2025|*" Project="Release" />
             <BuildType Solution="Release.Autodesk.2026|*" Project="Release" />
+            <Build Project="false" />
         </Project>
     </Folder>
     <Project Path="source/DevTools.Logging/DevTools.Logging.csproj">

@@ -17,7 +17,7 @@ public static class MepInventoryTools
     [Description("Lists all duct types available in the document.")]
     public static object ListDuctTypes()
     {
-        var doc = Context.ActiveDocument ?? throw new McpException("No active document.");
+        var doc = RevitContext.ActiveDocument ?? throw new McpException("No active document.");
         var ductTypes = new FilteredElementCollector(doc).OfClass(typeof(DuctType))
             .Cast<DuctType>().Select(t => new { Id = t.Id.ToValue(), Name = t.Name }).ToList();
         return new { ductTypes = JsonSerializer.Serialize(ductTypes) };
@@ -27,7 +27,7 @@ public static class MepInventoryTools
     [Description("Lists all duct system types available in the document.")]
     public static object ListDuctSystemTypes()
     {
-        var doc = Context.ActiveDocument ?? throw new McpException("No active document.");
+        var doc = RevitContext.ActiveDocument ?? throw new McpException("No active document.");
         var ductSystemTypes = new FilteredElementCollector(doc).OfClass(typeof(MechanicalSystemType))
             .Cast<MechanicalSystemType>().Select(t => new { Id = t.Id.ToValue(), Name = t.Name }).ToList();
         return new { ductSystemTypes = JsonSerializer.Serialize(ductSystemTypes) };
@@ -37,7 +37,7 @@ public static class MepInventoryTools
     [Description("Lists all mechanical duct systems in the document.")]
     public static object ListDuctSystems()
     {
-        var doc = Context.ActiveDocument ?? throw new McpException("No active document.");
+        var doc = RevitContext.ActiveDocument ?? throw new McpException("No active document.");
         var ductSystems = new FilteredElementCollector(doc).OfClass(typeof(MechanicalSystem))
             .Cast<MechanicalSystem>().Select(s => new { Id = s.Id.ToValue(), Name = s.Name }).ToList();
         return new { ductSystems = JsonSerializer.Serialize(ductSystems) };
@@ -48,7 +48,7 @@ public static class MepInventoryTools
     public static object ListDuctsInSystem(
         [Description("Mechanical system element ID")] long systemId)
     {
-        var doc = Context.ActiveDocument ?? throw new McpException("No active document.");
+        var doc = RevitContext.ActiveDocument ?? throw new McpException("No active document.");
         var system = doc.GetElement(systemId.ToElementId()) as MechanicalSystem
             ?? throw new McpException($"Mechanical system {systemId} not found.");
 
@@ -63,7 +63,7 @@ public static class MepInventoryTools
     [Description("Lists all pipe types available in the document.")]
     public static object ListPipeTypes()
     {
-        var doc = Context.ActiveDocument ?? throw new McpException("No active document.");
+        var doc = RevitContext.ActiveDocument ?? throw new McpException("No active document.");
         var pipeTypes = new FilteredElementCollector(doc).OfClass(typeof(PipeType))
             .Cast<PipeType>().Select(t => new { Id = t.Id.ToValue(), Name = t.Name }).ToList();
         return new { pipeTypes = JsonSerializer.Serialize(pipeTypes) };
@@ -73,7 +73,7 @@ public static class MepInventoryTools
     [Description("Lists all conduit types available in the document.")]
     public static object ListConduitTypes()
     {
-        var doc = Context.ActiveDocument ?? throw new McpException("No active document.");
+        var doc = RevitContext.ActiveDocument ?? throw new McpException("No active document.");
         var conduitTypes = new FilteredElementCollector(doc).OfClass(typeof(ConduitType))
             .Cast<ConduitType>().Select(t => new { Id = t.Id.ToValue(), Name = t.Name }).ToList();
         return new { conduitTypes = JsonSerializer.Serialize(conduitTypes) };
@@ -83,7 +83,7 @@ public static class MepInventoryTools
     [Description("Lists all wire types available in the document.")]
     public static object ListWireTypes()
     {
-        var doc = Context.ActiveDocument ?? throw new McpException("No active document.");
+        var doc = RevitContext.ActiveDocument ?? throw new McpException("No active document.");
         var wireTypes = new FilteredElementCollector(doc).OfClass(typeof(WireType))
             .Cast<WireType>().Select(t => new { Id = t.Id.ToValue(), Name = t.Name }).ToList();
         return new { wireTypes = JsonSerializer.Serialize(wireTypes) };
@@ -93,7 +93,7 @@ public static class MepInventoryTools
     [Description("Lists all electrical circuits in the document.")]
     public static object ListCircuits()
     {
-        var doc = Context.ActiveDocument ?? throw new McpException("No active document.");
+        var doc = RevitContext.ActiveDocument ?? throw new McpException("No active document.");
         var circuits = new FilteredElementCollector(doc).OfClass(typeof(ElectricalSystem))
             .Cast<ElectricalSystem>().Select(c => new { Id = c.Id.ToValue(), Name = c.Name }).ToList();
         return new { circuits = JsonSerializer.Serialize(circuits) };
@@ -104,7 +104,7 @@ public static class MepInventoryTools
     public static object ListMepMarked(
         [Description("Optional category names to filter (e.g. ['Ducts', 'Pipes'])")] string[]? mepCategories = null)
     {
-        var doc = Context.ActiveDocument ?? throw new McpException("No active document.");
+        var doc = RevitContext.ActiveDocument ?? throw new McpException("No active document.");
 
         var collector = new FilteredElementCollector(doc).WhereElementIsNotElementType();
 
@@ -148,7 +148,7 @@ public static class MepInventoryTools
     public static object GeneratePanelSchedule(
         [Description("Panel element ID")] long panelId)
     {
-        var doc = Context.ActiveDocument ?? throw new McpException("No active document.");
+        var doc = RevitContext.ActiveDocument ?? throw new McpException("No active document.");
         var panel = doc.GetElement(panelId.ToElementId())
             ?? throw new McpException($"Panel element {panelId} not found.");
         return new { status = "Validated", panelId = panel.Id.ToValue(), panelName = panel.Name };

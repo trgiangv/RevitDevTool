@@ -18,7 +18,7 @@ public static class AnnotationTools
     {
         if (taggingData.Length == 0) throw new McpException("No tagging data provided.");
 
-        var doc = Context.ActiveDocument ?? throw new McpException("No active document.");
+        var doc = RevitContext.ActiveDocument ?? throw new McpException("No active document.");
         var tagged = 0;
         var failures = new List<object>();
 
@@ -79,8 +79,8 @@ public static class AnnotationTools
         if (elementIds.Length == 0) throw new McpException("No element IDs provided.");
         if (color.Length < 3) throw new McpException("Color must have 3 components [R, G, B].");
 
-        var doc = Context.ActiveDocument ?? throw new McpException("No active document.");
-        var activeView = Context.ActiveView ?? throw new McpException("No active view.");
+        var doc = RevitContext.ActiveDocument ?? throw new McpException("No active document.");
+        var activeView = RevitContext.ActiveView ?? throw new McpException("No active view.");
 
         var revitColor = new Color((byte)color[0], (byte)color[1], (byte)color[2]);
 

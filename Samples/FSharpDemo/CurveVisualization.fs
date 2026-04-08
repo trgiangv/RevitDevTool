@@ -14,8 +14,8 @@ type CurveVisualization() =
 
     override this.Execute() =
         try
-            let curveRef = this.UiDocument.Selection.PickObject(ObjectType.Edge, "Select Curve")
-            let curve = this.Document.GetElement(curveRef).GetGeometryObjectFromReference(curveRef) :?> Edge
+            let curveRef = this.Application.ActiveUIDocument.Selection.PickObject(ObjectType.Edge, "Select Curve")
+            let curve = this.Application.ActiveUIDocument.Document.GetElement(curveRef).GetGeometryObjectFromReference(curveRef) :?> Edge
             Trace.Write(curve)
         with
         | ex -> Trace.TraceError($"Error in CurveVisualization: {ex.Message}")
@@ -27,10 +27,10 @@ type CurvesVisualization() =
 
     override this.Execute() =
         try
-            let curveRefs = this.UiDocument.Selection.PickObjects(ObjectType.Edge, "Select Curves")
+            let curveRefs = this.Application.ActiveUIDocument.Selection.PickObjects(ObjectType.Edge, "Select Curves")
             let curves =
                 [ for curveRef in curveRefs do
-                    match this.Document.GetElement(curveRef).GetGeometryObjectFromReference(curveRef) with
+                    match this.Application.ActiveUIDocument.Document.GetElement(curveRef).GetGeometryObjectFromReference(curveRef) with
                     | :? Edge as edge -> yield edge
                     | _ -> () ]
             Trace.Write(curves)

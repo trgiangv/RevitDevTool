@@ -16,7 +16,7 @@ public static class MepMaintenanceTools
         [Description("Mechanical system element ID")] long systemId,
         [Description("Insulation thickness in mm")] double thickness)
     {
-        var doc = Context.ActiveDocument ?? throw new McpException("No active document.");
+        var doc = RevitContext.ActiveDocument ?? throw new McpException("No active document.");
         var system = doc.GetElement(systemId.ToElementId()) as MechanicalSystem
             ?? throw new McpException($"Mechanical system {systemId} not found.");
 
@@ -65,7 +65,7 @@ public static class MepMaintenanceTools
         [Description("Category names to filter (optional)")] string[]? mepCategories = null,
         [Description("If true, clears marks on all MEP elements regardless of category")] bool clearAll = false)
     {
-        var doc = Context.ActiveDocument ?? throw new McpException("No active document.");
+        var doc = RevitContext.ActiveDocument ?? throw new McpException("No active document.");
 
         var collector = new FilteredElementCollector(doc).WhereElementIsNotElementType();
 
@@ -112,7 +112,7 @@ public static class MepMaintenanceTools
     public static object ClearMepMarks(
         [Description("Element IDs to clear marks on")] long[] elementIds)
     {
-        var doc = Context.ActiveDocument ?? throw new McpException("No active document.");
+        var doc = RevitContext.ActiveDocument ?? throw new McpException("No active document.");
         if (elementIds.Length == 0) throw new McpException("No element IDs provided.");
 
         using var tx = new Transaction(doc, "Clear MEP Marks");

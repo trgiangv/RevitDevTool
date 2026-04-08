@@ -14,8 +14,8 @@ public class MeshVisualization : ExternalCommand
     {
         try
         {
-            var meshRef = UiDocument.Selection.PickObject(ObjectType.Element, "Select Mesh Element");
-            var mesh = Document.GetElement(meshRef).GetMeshes();
+            var meshRef = Application.ActiveUIDocument.Selection.PickObject(ObjectType.Element, "Select Mesh Element");
+            var mesh = Application.ActiveUIDocument.Document.GetElement(meshRef).GetMeshes();
             Trace.Write(mesh.First());
         }
         catch (Exception e)
@@ -33,8 +33,8 @@ public class MeshesVisualization : ExternalCommand
     {
         try
         {
-            var meshRefs = UiDocument.Selection.PickObjects(ObjectType.Element, "Select Mesh Elements");
-            var meshes = meshRefs.SelectMany(mRef => Document.GetElement(mRef).GetMeshes()).ToList();
+            var meshRefs = Application.ActiveUIDocument.Selection.PickObjects(ObjectType.Element, "Select Mesh Elements");
+            var meshes = meshRefs.SelectMany(mRef => Application.ActiveUIDocument.Document.GetElement(mRef).GetMeshes()).ToList();
             Trace.Write(meshes);
         }
         catch (Exception e)

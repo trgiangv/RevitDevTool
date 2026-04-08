@@ -25,7 +25,7 @@ public static class GridLevelTools
         if (origin.Length < 3) throw new McpException("Origin must have 3 components [X, Y, Z].");
         if (verticalCount <= 0 || horizontalCount <= 0) throw new McpException("Grid counts must be positive.");
 
-        var doc = Context.ActiveDocument ?? throw new McpException("No active document.");
+        var doc = RevitContext.ActiveDocument ?? throw new McpException("No active document.");
         var ox = origin[0];
         var oy = origin[1];
         var oz = origin[2];
@@ -73,7 +73,7 @@ public static class GridLevelTools
     {
         if (levels.Length == 0) throw new McpException("No level configurations provided.");
 
-        var doc = Context.ActiveDocument ?? throw new McpException("No active document.");
+        var doc = RevitContext.ActiveDocument ?? throw new McpException("No active document.");
 
         var viewFamilyType = new FilteredElementCollector(doc).OfClass(typeof(ViewFamilyType))
             .Cast<ViewFamilyType>().FirstOrDefault(vft => vft.ViewFamily == ViewFamily.FloorPlan);
@@ -126,7 +126,7 @@ public static class GridLevelTools
     {
         if (levelElevations.Count == 0) throw new McpException("No level elevations provided.");
 
-        var doc = Context.ActiveDocument ?? throw new McpException("No active document.");
+        var doc = RevitContext.ActiveDocument ?? throw new McpException("No active document.");
 
         var allLevels = new FilteredElementCollector(doc).OfClass(typeof(Level))
             .Cast<Level>().ToList();

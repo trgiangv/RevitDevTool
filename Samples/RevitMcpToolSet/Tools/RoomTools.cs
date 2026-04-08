@@ -14,7 +14,7 @@ public static class RoomTools
     [Description("Lists all placed rooms in the document with their area, level, and location.")]
     public static object ListRooms()
     {
-        var doc = Context.ActiveDocument ?? throw new McpException("No active document.");
+        var doc = RevitContext.ActiveDocument ?? throw new McpException("No active document.");
 
         var rooms = new FilteredElementCollector(doc)
             .OfCategory(BuiltInCategory.OST_Rooms)
@@ -50,10 +50,10 @@ public static class RoomTools
     {
         if (color.Length < 3) throw new McpException("Color must have 3 components [R, G, B].");
 
-        var doc = Context.ActiveDocument ?? throw new McpException("No active document.");
+        var doc = RevitContext.ActiveDocument ?? throw new McpException("No active document.");
         var room = doc.GetElement(roomId.ToElementId()) as Room
             ?? throw new McpException($"Room {roomId} not found.");
-        var activeView = Context.ActiveView
+        var activeView = RevitContext.ActiveView
             ?? throw new McpException("No active view.");
 
         var revitColor = new Color((byte)color[0], (byte)color[1], (byte)color[2]);
@@ -89,7 +89,7 @@ public static class RoomTools
         [Description("Room element ID")] long roomId,
         [Description("New room name")] string roomName)
     {
-        var doc = Context.ActiveDocument ?? throw new McpException("No active document.");
+        var doc = RevitContext.ActiveDocument ?? throw new McpException("No active document.");
         var room = doc.GetElement(roomId.ToElementId()) as Room
                                   ?? throw new McpException($"Room {roomId} not found.");
 

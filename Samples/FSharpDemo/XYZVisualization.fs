@@ -13,7 +13,7 @@ type XyzVisualization() =
 
     override this.Execute() =
         try
-            let xyz = this.UiDocument.Selection.PickObject(ObjectType.PointOnElement)
+            let xyz = this.Application.ActiveUIDocument.Selection.PickObject(ObjectType.PointOnElement)
             Trace.Write(xyz.GlobalPoint)
         with
         | ex -> Trace.TraceError($"Error in XyzVisualization: {ex.Message}")
@@ -25,7 +25,7 @@ type XyzsVisualization() =
 
     override this.Execute() =
         try
-            let xyzRefs = this.UiDocument.Selection.PickObjects(ObjectType.PointOnElement)
+            let xyzRefs = this.Application.ActiveUIDocument.Selection.PickObjects(ObjectType.PointOnElement)
             let xyzs = xyzRefs |> Seq.map (fun x -> x.GlobalPoint) |> Seq.toList
             if xyzs.IsEmpty then
                 Trace.TraceWarning("No points selected.")

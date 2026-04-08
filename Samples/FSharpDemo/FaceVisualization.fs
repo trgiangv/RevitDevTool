@@ -14,8 +14,8 @@ type FaceVisualization() =
 
     override this.Execute() =
         try
-            let faceRef = this.UiDocument.Selection.PickObject(ObjectType.Face, "Select Face")
-            let face = this.Document.GetElement(faceRef).GetGeometryObjectFromReference(faceRef) :?> Face
+            let faceRef = this.Application.ActiveUIDocument.Selection.PickObject(ObjectType.Face, "Select Face")
+            let face = this.Application.ActiveUIDocument.Document.GetElement(faceRef).GetGeometryObjectFromReference(faceRef) :?> Face
             Trace.Write(face)
         with
         | ex -> Trace.TraceError($"Error in FaceVisualization: {ex.Message}")
@@ -27,10 +27,10 @@ type FacesVisualization() =
 
     override this.Execute() =
         try
-            let faceRefs = this.UiDocument.Selection.PickObjects(ObjectType.Face, "Select Faces")
+            let faceRefs = this.Application.ActiveUIDocument.Selection.PickObjects(ObjectType.Face, "Select Faces")
             let faces =
                 [ for faceRef in faceRefs do
-                    match this.Document.GetElement(faceRef).GetGeometryObjectFromReference(faceRef) with
+                    match this.Application.ActiveUIDocument.Document.GetElement(faceRef).GetGeometryObjectFromReference(faceRef) with
                     | :? Face as face -> yield face
                     | _ -> Trace.TraceWarning($"Face not found for reference: {faceRef}") ]
             Trace.Write(faces)

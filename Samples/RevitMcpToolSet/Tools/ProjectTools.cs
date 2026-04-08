@@ -13,7 +13,7 @@ public static class ProjectTools
     [Description("Reads project information including name, number, address, and client name.")]
     public static object ReadProjectInfo()
     {
-        var doc = Context.ActiveDocument ?? throw new McpException("No active document.");
+        var doc = RevitContext.ActiveDocument ?? throw new McpException("No active document.");
         var info = doc.ProjectInformation;
         return new
         {
@@ -31,7 +31,7 @@ public static class ProjectTools
     [Description("Reads the project unit settings for length, area, volume, and angle.")]
     public static object ReadProjectUnits()
     {
-        var doc = Context.ActiveDocument ?? throw new McpException("No active document.");
+        var doc = RevitContext.ActiveDocument ?? throw new McpException("No active document.");
         var units = doc.GetUnits();
 
         string GetUnitTypeId(ForgeTypeId specTypeId)
@@ -60,7 +60,7 @@ public static class ProjectTools
         [Description("Project address")] string projectAddress = "",
         [Description("Client name")] string clientName = "")
     {
-        var doc = Context.ActiveDocument ?? throw new McpException("No active document.");
+        var doc = RevitContext.ActiveDocument ?? throw new McpException("No active document.");
         using var tx = new Transaction(doc, "Write Project Info");
         tx.Start();
         try
@@ -87,7 +87,7 @@ public static class ProjectTools
         [Description("North/South offset")] double northSouth,
         [Description("Elevation")] double elevation)
     {
-        var doc = Context.ActiveDocument ?? throw new McpException("No active document.");
+        var doc = RevitContext.ActiveDocument ?? throw new McpException("No active document.");
         var basePoint = new FilteredElementCollector(doc)
             .OfCategory(BuiltInCategory.OST_ProjectBasePoint)
             .FirstElement() ?? throw new McpException("Project Base Point not found.");
@@ -115,7 +115,7 @@ public static class ProjectTools
         [Description("Numeric value to format")] double value,
         [Description("Unit type: Length, Area, Volume, or Angle")] string unitType)
     {
-        var doc = Context.ActiveDocument ?? throw new McpException("No active document.");
+        var doc = RevitContext.ActiveDocument ?? throw new McpException("No active document.");
         var specTypeId = unitType.ToLowerInvariant() switch
         {
             "length" => SpecTypeId.Length,

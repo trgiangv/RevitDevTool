@@ -15,7 +15,7 @@ public static class TransformTools
     public static object RemoveElements(
         [Description("Array of element IDs to remove")] long[] elementIds)
     {
-        var doc = Context.ActiveDocument ?? throw new McpException("No active document.");
+        var doc = RevitContext.ActiveDocument ?? throw new McpException("No active document.");
         if (elementIds.Length == 0) throw new McpException("No element IDs provided.");
 
         using var tx = new Transaction(doc, "Remove Elements");
@@ -50,7 +50,7 @@ public static class TransformTools
         [Description("Array of element IDs to move")] long[] elementIds,
         [Description("Translation vector [X, Y, Z] in feet")] double[] translationVector)
     {
-        var doc = Context.ActiveDocument ?? throw new McpException("No active document.");
+        var doc = RevitContext.ActiveDocument ?? throw new McpException("No active document.");
         if (elementIds.Length == 0) throw new McpException("No element IDs provided.");
         if (translationVector.Length != 3) throw new McpException("Translation vector must have exactly 3 components [X, Y, Z].");
 
@@ -71,7 +71,7 @@ public static class TransformTools
         [Description("Axis direction [X, Y, Z]")] double[] axisDirection,
         [Description("Rotation angle in degrees")] double degrees)
     {
-        var doc = Context.ActiveDocument ?? throw new McpException("No active document.");
+        var doc = RevitContext.ActiveDocument ?? throw new McpException("No active document.");
         if (elementIds.Length == 0) throw new McpException("No element IDs provided.");
         if (axisDirection.Length != 3) throw new McpException("Axis direction must have exactly 3 components.");
 
@@ -110,7 +110,7 @@ public static class TransformTools
     public static object HighlightElements(
         [Description("Array of element IDs to select")] long[] elementIds)
     {
-        var uiDoc = Context.ActiveUiDocument ?? throw new McpException("No active document.");
+        var uiDoc = RevitContext.ActiveUiDocument ?? throw new McpException("No active document.");
         if (elementIds.Length == 0) throw new McpException("No element IDs provided.");
 
         var ids = elementIds.Select(id => id.ToElementId()).ToList();

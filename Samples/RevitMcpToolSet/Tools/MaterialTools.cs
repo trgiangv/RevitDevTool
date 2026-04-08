@@ -18,7 +18,7 @@ public static class MaterialTools
         [Description("Blue (0-255)")] int colorBlue,
         [Description("Transparency (0-100)")] int transparency = 0)
     {
-        var doc = Context.ActiveDocument ?? throw new McpException("No active document.");
+        var doc = RevitContext.ActiveDocument ?? throw new McpException("No active document.");
         var sourceMaterial = new FilteredElementCollector(doc).OfClass(typeof(Material))
             .Cast<Material>().FirstOrDefault(m => m.Name.Equals(sourceMaterialName, StringComparison.OrdinalIgnoreCase))
             ?? throw new McpException($"Material '{sourceMaterialName}' not found.");

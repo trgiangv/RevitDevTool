@@ -15,7 +15,7 @@ public static class TextNoteTools
         [Description("Filter by view name (optional)")] string? viewName = null,
         [Description("If true, excludes text notes with empty content")] bool excludeEmpty = false)
     {
-        var doc = Context.ActiveDocument ?? throw new McpException("No active document.");
+        var doc = RevitContext.ActiveDocument ?? throw new McpException("No active document.");
 
         IEnumerable<TextNote> textNotes;
 
@@ -48,8 +48,8 @@ public static class TextNoteTools
     [Description("Lists all text notes in the currently active view.")]
     public static object ListViewTextNotes()
     {
-        var doc = Context.ActiveDocument ?? throw new McpException("No active document.");
-        var activeView = Context.ActiveView ?? throw new McpException("No active view.");
+        var doc = RevitContext.ActiveDocument ?? throw new McpException("No active document.");
+        var activeView = RevitContext.ActiveView ?? throw new McpException("No active view.");
 
         var textNotes = new FilteredElementCollector(doc, activeView.Id)
             .OfClass(typeof(TextNote))
@@ -66,7 +66,7 @@ public static class TextNoteTools
         [Description("Scope: 'current_view', 'all', or a view name")] string scope = "current_view",
         [Description("Capitalization style: UPPER, lower, Title, Sentence")] string capitalizationStyle = "UPPER")
     {
-        var doc = Context.ActiveDocument ?? throw new McpException("No active document.");
+        var doc = RevitContext.ActiveDocument ?? throw new McpException("No active document.");
 
         IEnumerable<TextNote> textNotes;
         if (scope.Equals("all", StringComparison.OrdinalIgnoreCase))
@@ -75,7 +75,7 @@ public static class TextNoteTools
         }
         else if (scope.Equals("current_view", StringComparison.OrdinalIgnoreCase))
         {
-            var activeView = Context.ActiveView ?? throw new McpException("No active view.");
+            var activeView = RevitContext.ActiveView ?? throw new McpException("No active view.");
             textNotes = new FilteredElementCollector(doc, activeView.Id).OfClass(typeof(TextNote)).Cast<TextNote>();
         }
         else
