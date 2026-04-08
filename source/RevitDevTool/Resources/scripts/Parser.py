@@ -104,7 +104,7 @@ def _managed_packages(stdin_content: str) -> dict[str, SpecifierSet]:
     if not text:
         return {}
 
-    if text.startswith("["):
+    if text.startswith("[{"):
         return _parse_pip_json(text)
 
     return _parse_pixi_toml(text)

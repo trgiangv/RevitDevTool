@@ -28,9 +28,13 @@ public static class PythonEmbedded
         ResetSourcePath
     ];
     
-    private static readonly string[] CopyPaths =
+    private static readonly string[] AlwaysOverwritePaths =
     [
-        ParserSourcePath,
+        ParserSourcePath
+    ];
+
+    private static readonly string[] CreateOnlyPaths =
+    [
         PixiTomlSourcePath
     ];
     
@@ -38,19 +42,23 @@ public static class PythonEmbedded
     private static readonly ConcurrentDictionary<string, string> ScripPathCache = new();
     
     private static bool IsCacheReady => CachePaths.All(ScriptCache.ContainsKey);
-    private static bool IsCopyReady => CopyPaths.All(ScripPathCache.ContainsKey);
+    private static bool IsCopyReady => AlwaysOverwritePaths.Concat(CreateOnlyPaths).All(ScripPathCache.ContainsKey);
 
     public static void EnsureExtracted()
     {
         if (IsCacheReady && IsCopyReady) return;
+        
         if (!IsCacheReady)
-        {
             EnsureCacheScripts();
-        }
-        if (!IsCopyReady)
-        {
-            EnsureCopyScripts(PixiEnvironmentProvider.PixiProjectDir);
-        }
+
+        var targetDir = PixiEnvironmentProvider.PixiProjectDir;
+        Directory.CreateDirectory(targetDir);
+
+        foreach (var path in AlwaysOverwritePaths)
+            CopyResource(path, targetDir, overwrite: true);
+
+        foreach (var path in CreateOnlyPaths)
+            CopyResource(path, targetDir, overwrite: false);
     }
     
     private static void EnsureCacheScripts()
@@ -70,25 +78,29 @@ public static class PythonEmbedded
             }
         }
     }
-    
-    private static void EnsureCopyScripts(string targetDirectory)
+
+    private static void CopyResource(string resourcePath, string targetDirectory, bool overwrite)
     {
-        Directory.CreateDirectory(targetDirectory);
-        foreach (var path in CopyPaths)
+        try
         {
-            try
+            var fileName = GetFileName(resourcePath);
+            var targetPath = Path.Combine(targetDirectory, fileName);
+
+            if (!overwrite && File.Exists(targetPath))
             {
-                using var stream = OpenResourceStreamByPath(path);
-                var fileName = GetFileName(path);
-                var targetPath = Path.Combine(targetDirectory, fileName);
-                using var fileStream = new FileStream(targetPath, FileMode.Create, FileAccess.Write);
-                stream.CopyTo(fileStream);
-                ScripPathCache[path] = targetPath;
+                ScripPathCache[resourcePath] = targetPath;
+                return;
             }
-            catch (Exception ex)
-            {
-                Trace.TraceError($"Failed to copy embedded script '{path}' to '{targetDirectory}': {ex.Message}");
-            }
+
+            using var stream = OpenResourceStreamByPath(resourcePath);
+            using var fileStream = new FileStream(targetPath, FileMode.Create, FileAccess.Write);
+            stream.CopyTo(fileStream);
+
+            ScripPathCache[resourcePath] = targetPath;
+        }
+        catch (Exception ex)
+        {
+            Trace.TraceError($"Failed to copy embedded resource '{resourcePath}': {ex.Message}");
         }
     }
     

@@ -6,6 +6,3 @@ platforms = ["win-64"]
 
 [dependencies]
 python = "3.13.*"
-packaging = "*"
-debugpy = "*"
-mcp = "*"

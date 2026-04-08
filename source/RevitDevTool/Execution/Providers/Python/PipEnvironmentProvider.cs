@@ -82,7 +82,8 @@ public sealed class PipEnvironmentProvider : PyEnvironmentProvider
     {
         var installed = await RunPipListAsync().ConfigureAwait(false);
         var missing = RequirePackages
-            .Where(pkg => !installed.Contains(CanonicalizePackageName(pkg)))
+            .Where(kv => !installed.Contains(CanonicalizePackageName(kv.Key)))
+            .Select(kv => kv.Value)
             .ToList();
 
         if (missing.Count == 0)

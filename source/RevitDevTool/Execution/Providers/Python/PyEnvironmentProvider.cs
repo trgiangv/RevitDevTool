@@ -16,12 +16,18 @@ public enum PythonBackend
 /// </summary>
 public abstract class PyEnvironmentProvider
 {
-    public static IReadOnlyCollection<string> RequirePackages =>
-    [
-        "mcp",
-        "debugpy",
-        "packaging"
-    ];
+    /// <summary>
+    /// Packages that must always be present, with pinned version constraints.
+    /// Keys are package names (used for display/matching),
+    /// values are pixi add specs (name + constraint).
+    /// </summary>
+    public static IReadOnlyDictionary<string, string> RequirePackages { get; } =
+        new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+        {
+            ["mcp"] = "mcp>=1.27,<2",
+            ["debugpy"] = "debugpy>=1.8,<2",
+            ["packaging"] = "packaging>=26.0,<27",
+        };
 
     protected string? PythonHomePath;
 

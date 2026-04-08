@@ -41,7 +41,7 @@ public sealed class PythonMcpToolRegistryProvider(PythonInitializer pythonInitia
         {
             try
             {
-                all = all.Merge(PythonToolsetParser.ParseDirectoryCatalog(dir, d => ParseDirectory(d)));
+                all = all.Merge(PythonToolsetParser.ParseDirectoryCatalog(dir, ParseDirectory));
             }
             catch (Exception ex)
             {

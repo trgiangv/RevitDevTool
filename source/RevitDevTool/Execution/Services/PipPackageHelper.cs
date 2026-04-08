@@ -55,6 +55,27 @@ internal static class PipPackageHelper
             .ExecuteAsync(cancellationToken).ConfigureAwait(false);
     }
 
+    /// <summary>
+    /// Updates a package to the latest compatible version.
+    /// Protected packages are reinstalled at their current version;
+    /// user packages are upgraded to latest.
+    /// </summary>
+    public static async Task UpdateAsync(PyEnvironmentProvider provider, Package package, CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(package.PackageId) || !provider.IsEnvironmentReady())
+            return;
+
+        var args = package.IsProtected && !string.IsNullOrWhiteSpace(package.Version)
+            ? new[] { "-m", "pip", "install", "--prefer-binary", $"{package.PackageId}=={package.Version}" }
+            : new[] { "-m", "pip", "install", "--upgrade", "--prefer-binary", package.PackageId };
+
+        await Cli.Wrap(provider.PythonExe)
+            .WithArguments(args)
+            .WithWorkingDirectory(provider.PythonHome)
+            .WithValidation(CommandResultValidation.None)
+            .ExecuteAsync(cancellationToken).ConfigureAwait(false);
+    }
+
     public static async Task RemoveAsync(PyEnvironmentProvider provider, string packageId, CancellationToken cancellationToken)
     {
         if (string.IsNullOrWhiteSpace(packageId) || !provider.IsEnvironmentReady())
@@ -86,7 +107,7 @@ internal static class PipPackageHelper
                 name,
                 version,
                 version,
-                PyEnvironmentProvider.RequirePackages.Contains(name, StringComparer.OrdinalIgnoreCase)));
+                PyEnvironmentProvider.RequirePackages.ContainsKey(name)));
         }
         return packages;
     }

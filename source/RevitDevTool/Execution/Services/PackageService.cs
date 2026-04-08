@@ -82,9 +82,9 @@ public sealed class PackageService(PythonInitializer pythonInitializer) : IPacka
         return package.Marketplace switch
         {
             Marketplace.NuGet => NugetManager.ResolvePackageDllsAsync(package.PackageId, null, cancellationToken),
-            Marketplace.CondaForge when IsPixiBackend => PixiPackageHelper.InstallAsync(package.PackageId, null, pypi: false, cancellationToken),
-            Marketplace.PyPi when IsPixiBackend => PixiPackageHelper.InstallAsync(package.PackageId, null, pypi: true, cancellationToken),
-            Marketplace.PyPi when Provider is not null => PipPackageHelper.InstallAsync(Provider, package.PackageId, null, cancellationToken),
+            Marketplace.CondaForge when IsPixiBackend => PixiPackageHelper.UpdateAsync(package, pypi: false, cancellationToken),
+            Marketplace.PyPi when IsPixiBackend => PixiPackageHelper.UpdateAsync(package, pypi: true, cancellationToken),
+            Marketplace.PyPi when Provider is not null => PipPackageHelper.UpdateAsync(Provider, package, cancellationToken),
             _ => Task.CompletedTask
         };
     }

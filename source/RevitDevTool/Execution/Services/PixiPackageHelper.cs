@@ -5,6 +5,7 @@ using CliWrap;
 using CliWrap.Buffered;
 using RevitDevTool.Execution.Models;
 using RevitDevTool.Execution.Providers.Python;
+// ReSharper disable RedundantSuppressNullableWarningExpression
 
 namespace RevitDevTool.Execution.Services;
 
@@ -50,6 +51,30 @@ internal static class PixiPackageHelper
             .WithWorkingDirectory(PixiEnvironmentProvider.PixiProjectDir)
             .WithValidation(CommandResultValidation.None)
             .ExecuteAsync(cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// Updates a package. Protected packages use <c>pixi update</c> to stay
+    /// within the existing constraint range; user packages use <c>pixi add</c>
+    /// to get the latest version.
+    /// </summary>
+    public static async Task UpdateAsync(Package package, bool pypi, CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(package.PackageId) || !IsAvailable())
+            return;
+
+        if (package.IsProtected)
+        {
+            await Cli.Wrap(PythonInstaller.PixiExePath)
+                .WithArguments(["update", package.PackageId])
+                .WithWorkingDirectory(PixiEnvironmentProvider.PixiProjectDir)
+                .WithValidation(CommandResultValidation.None)
+                .ExecuteAsync(cancellationToken).ConfigureAwait(false);
+        }
+        else
+        {
+            await InstallAsync(package.PackageId, null, pypi, cancellationToken).ConfigureAwait(false);
+        }
     }
 
     public static async Task RemoveAsync(string packageId, bool pypi, CancellationToken cancellationToken)
@@ -117,7 +142,7 @@ internal static class PixiPackageHelper
             packageId,
             string.IsNullOrWhiteSpace(version) ? null : version,
             requestedSpec,
-            PyEnvironmentProvider.RequirePackages.Contains(packageId, StringComparer.OrdinalIgnoreCase));
+            PyEnvironmentProvider.RequirePackages.ContainsKey(packageId));
         return true;
     }
 
