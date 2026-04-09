@@ -1,0 +1,38 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "RevitDevTool.PyTest"
+version = "0.0.1"
+description = "pytest plugin for testing Revit API code via RevitDevTool Named Pipe bridge"
+readme = "README.md"
+license = "MIT"
+requires-python = ">=3.10"
+authors = [{ name = "Truong Giang Vu" }]
+keywords = ["pytest", "revit", "revit-api", "testing", "bim", "revitdevtool"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Framework :: Pytest",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: Microsoft :: Windows",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Software Development :: Testing",
+]
+dependencies = ["pytest>=9.0", "pywin32>=311"]
+
+[project.entry-points."pytest11"]
+revitdevtool = "revitdevtool_pytest.plugin"
+
+[project.urls]
+Homepage = "https://github.com/trgiangv/RevitDevTool.PyTest"
+Repository = "https://github.com/trgiangv/RevitDevTool.PyTest"
+Issues = "https://github.com/trgiangv/RevitDevTool.PyTest/issues"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/revitdevtool_pytest"]

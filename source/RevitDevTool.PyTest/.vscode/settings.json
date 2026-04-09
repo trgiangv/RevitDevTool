@@ -1,0 +1,31 @@
+{
+    "python.autoComplete.extraPaths": [
+        "~/AppData/Roaming/RevitDevTool/2025/Stubs",
+        "~/AppData/Roaming/pyRevit-Master/pyrevitlib",
+        "~/AppData/Roaming/pyRevit-Master/site-packages"
+    ],
+    "python.analysis.extraPaths": [
+        "~/AppData/Roaming/RevitDevTool/2025/Stubs",
+        "~/AppData/Roaming/pyRevit-Master/pyrevitlib",
+        "~/AppData/Roaming/pyRevit-Master/site-packages"
+    ],
+    "cursorpyright.analysis.extraPaths": [
+        "~/AppData/Roaming/RevitDevTool/2025/Stubs",
+        "~/AppData/Roaming/pyRevit-Master/pyrevitlib",
+        "~/AppData/Roaming/pyRevit-Master/site-packages"
+    ],
+    "basedpyright.analysis.extraPaths": [
+        "~/AppData/Roaming/RevitDevTool/2025/Stubs",
+        "~/AppData/Roaming/pyRevit-Master/pyrevitlib",
+        "~/AppData/Roaming/pyRevit-Master/site-packages"
+    ],
+    "basedpyright.importStrategy": "useBundled",
+    "basedpyright.analysis.typeCheckingMode": "off",
+    "python.testing.pytestEnabled": true,
+    "python.testing.pytestArgs": [
+        "--revit-launch",
+        "--revit-version=2025",
+        "--revit-launch-timeout=180",
+        "tests"
+    ]
+}
