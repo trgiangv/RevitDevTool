@@ -12,4 +12,5 @@ public static class BridgeMethods
     public const string InstanceInfo = "instance/info";
     public const string NotifyToolsChanged = "notifications/tools/list_changed";
     public const string NotifyDocumentChanged = "notifications/document/changed";
+    public const string TestsExecute = "tests/execute";
 }

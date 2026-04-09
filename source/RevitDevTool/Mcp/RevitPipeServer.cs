@@ -5,11 +5,15 @@ using System.Security.Principal;
 using System.Text.Json;
 using Microsoft.Extensions.Hosting;
 using ModelContextProtocol.Protocol;
+using Python.Runtime;
 using RevitDevTool.Controllers;
 using RevitDevTool.Core;
+using RevitDevTool.Execution.Providers.Python;
 using RevitDevTool.Mcp.Models;
 using RevitDevTool.McpParser.Models;
 // ReSharper disable RedundantSuppressNullableWarningExpression
+// ReSharper disable ConditionalAccessQualifierIsNonNullableAccordingToAPIContract
+// ReSharper disable ReplaceWithFieldKeyword
 
 namespace RevitDevTool.Mcp;
 
@@ -18,7 +22,8 @@ public sealed class RevitPipeServer(
     ToolRegistryStore toolStore,
     BridgeConnectionState state,
     ToolExecutionDispatcher dispatcher,
-    PrimitiveExecutionDispatcher primitiveDispatcher) : IHostedService, IDisposable
+    PrimitiveExecutionDispatcher primitiveDispatcher,
+    PythonInitializer pythonInitializer) : IHostedService, IDisposable
 {
     private Dictionary<string, Func<string, JsonElement?, Task<BridgeMessage>>>? _handlers;
 
@@ -33,6 +38,7 @@ public sealed class RevitPipeServer(
             [BridgeMethods.ResourceTemplatesList] = (id, _) => Task.FromResult(HandleResourceTemplatesList(id)),
             [BridgeMethods.ResourcesRead] = HandleResourcesReadAsync,
             [BridgeMethods.InstanceInfo] = (id, _) => Task.FromResult(HandleInstanceInfo(id)),
+            [BridgeMethods.TestsExecute] = HandleTestsExecuteAsync,
         };
 
     private CancellationTokenSource? _cts;
@@ -315,6 +321,122 @@ public sealed class RevitPipeServer(
         var json = JsonSerializer.SerializeToElement(result);
         return BridgeMessage.Response(id, json);
     }
+
+    private async Task<BridgeMessage> HandleTestsExecuteAsync(string id, JsonElement? @params)
+    {
+        string? moduleSource = null;
+        string? testName = null;
+        string? filePath = null;
+        string? className = null;
+
+        if (@params?.TryGetProperty("module_source", out var srcEl) == true)
+            moduleSource = srcEl.GetString();
+        if (@params?.TryGetProperty("test_name", out var nameEl) == true)
+            testName = nameEl.GetString();
+        if (@params?.TryGetProperty("file_path", out var pathEl) == true)
+            filePath = pathEl.GetString();
+        if (@params?.TryGetProperty("class_name", out var clsEl) == true)
+            className = clsEl.GetString();
+
+        if (string.IsNullOrWhiteSpace(moduleSource) || string.IsNullOrWhiteSpace(testName))
+            return BridgeMessage.Error(id, "module_source and test_name are required.");
+
+        filePath ??= "<pytest>";
+
+        var handler = await ExternalEventController
+            .AsyncGenericEventHandler<TestExecutionResult>()
+            .ConfigureAwait(false);
+
+        var result = await handler.RaiseAsync(() =>
+        {
+            var sw = Stopwatch.StartNew();
+            var stdout = new System.IO.StringWriter();
+            string outcome;
+            string message;
+            string traceback;
+
+            try
+            {
+                using (Py.GIL())
+                {
+                    if (pythonInitializer.GlobalScope is null)
+                        throw new InvalidOperationException("Python runtime not initialized.");
+
+                    using var scope = pythonInitializer.GlobalScope.NewScope();
+                    var rootFolder = System.IO.Path.GetDirectoryName(filePath) ?? "";
+                    PythonExecutor.PrepareExecutionScope(scope, filePath, rootFolder);
+
+                    var invokeCode = BuildTestInvokeCode(testName!, className);
+                    scope.Set(PythonScopeVars.Source, new PyString(moduleSource!));
+                    scope.Set("__test_invoke__", new PyString(invokeCode));
+
+                    scope.Exec("""
+                               import io, sys, traceback as _tb
+                               _captured = io.StringIO()
+                               _old_stdout = sys.stdout
+                               sys.stdout = _captured
+                               _test_outcome = "passed"
+                               _test_message = ""
+                               _test_traceback = ""
+                               try:
+                                   compiled_code = compile(__source__, __file__, 'exec')
+                                   exec(compiled_code, globals())
+                                   exec(compile(__test_invoke__, '<test_invoke>', 'exec'), globals())
+                               except AssertionError as e:
+                                   _test_outcome = "failed"
+                                   _test_message = str(e)
+                                   _test_traceback = _tb.format_exc()
+                               except Exception as e:
+                                   _test_outcome = "error"
+                                   _test_message = str(e)
+                                   _test_traceback = _tb.format_exc()
+                               finally:
+                                   sys.stdout = _old_stdout
+                               """);
+
+                    outcome = scope.Get("_test_outcome")?.As<string>() ?? "error";
+                    message = scope.Get("_test_message")?.As<string>() ?? "";
+                    traceback = scope.Get("_test_traceback")?.As<string>() ?? "";
+                    var captured = scope.Get("_captured");
+                    stdout.Write(captured?.InvokeMethod("getvalue")?.As<string>() ?? "");
+                }
+            }
+            catch (Exception ex)
+            {
+                outcome = "error";
+                message = ex.Message;
+                traceback = ex.ToString();
+            }
+
+            sw.Stop();
+            return new TestExecutionResult(outcome, message, traceback, stdout.ToString(), sw.Elapsed.TotalMilliseconds);
+        }).ConfigureAwait(false);
+
+        var resultObj = new
+        {
+            outcome = result.Outcome,
+            message = result.Message,
+            traceback = result.Traceback,
+            stdout = result.Stdout,
+            duration_ms = result.DurationMs,
+        };
+        var json = JsonSerializer.SerializeToElement(resultObj);
+        return BridgeMessage.Response(id, json);
+    }
+
+    private static string BuildTestInvokeCode(string testName, string? className)
+    {
+        return string.IsNullOrEmpty(className) 
+            ? $"{testName!}()" 
+            : $"_test_instance = {className}()\n_test_instance.{testName}()";
+    }
+
+    private record TestExecutionResult(
+        string Outcome,
+        string Message,
+        string Traceback,
+        string Stdout,
+        double DurationMs);
 
     private BridgeMessage HandleInstanceInfo(string id)
     {
