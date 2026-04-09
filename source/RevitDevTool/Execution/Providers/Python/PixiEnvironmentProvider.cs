@@ -29,18 +29,24 @@ public sealed class PixiEnvironmentProvider : PyEnvironmentProvider
     {
         PythonEmbedded.EnsureExtracted();
 
-        Debug.WriteLine("Running pixi install to bootstrap Python environment...");
+        if (!IsEnvironmentReady())
+        {
+            Debug.WriteLine("Running pixi install to bootstrap Python environment...");
 
-        var result = await Cli.Wrap(PythonInstaller.PixiExePath)
-            .WithArguments("install")
-            .WithWorkingDirectory(PixiProjectDir)
-            .WithStandardOutputPipe(PipeTarget.ToDelegate(line => Trace.TraceInformation($"[pixi] {line}")))
-            .WithStandardErrorPipe(PipeTarget.ToDelegate(line => Trace.TraceWarning($"[pixi] {line}")))
-            .WithValidation(CommandResultValidation.None)
-            .ExecuteAsync().ConfigureAwait(false);
+            var result = await Cli.Wrap(PythonInstaller.PixiExePath)
+                .WithArguments("install")
+                .WithWorkingDirectory(PixiProjectDir)
+                .WithStandardOutputPipe(PipeTarget.ToDelegate(line => Trace.TraceInformation($"[pixi] {line}")))
+                .WithStandardErrorPipe(PipeTarget.ToDelegate(line => Trace.TraceWarning($"[pixi] {line}")))
+                .WithValidation(CommandResultValidation.None)
+                .ExecuteAsync().ConfigureAwait(false);
 
-        if (result.ExitCode != 0)
-            throw new Exception($"pixi install failed with exit code {result.ExitCode}.");
+            if (result.ExitCode != 0)
+                throw new InvalidOperationException($"pixi install failed with exit code {result.ExitCode}.");
+        }
+
+        if (!IsEnvironmentReady())
+            throw new InvalidOperationException("Python environment is not ready after pixi install.");
 
         await EnsureRequiredPackagesAsync().ConfigureAwait(false);
 
@@ -94,7 +100,7 @@ public sealed class PixiEnvironmentProvider : PyEnvironmentProvider
             progress.Report($"PyPI: {string.Join(", ", pypiSuccess)}");
 
         if (pypiFailed.Count > 0)
-            throw new Exception($"Failed to install the following package(s): {string.Join(", ", pypiFailed)}");
+            throw new InvalidOperationException($"Failed to install the following package(s): {string.Join(", ", pypiFailed)}");
 
         progress.Report($"All {list.Count} package(s) installed.");
     }

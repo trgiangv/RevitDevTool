@@ -1,7 +1,6 @@
 using System.Diagnostics;
 using System.IO;
 using System.Text;
-using System.Text.Json;
 using CliWrap;
 using RevitDevTool.Execution.Services;
 // ReSharper disable RedundantSuppressNullableWarningExpression
@@ -20,14 +19,14 @@ public sealed class PipEnvironmentProvider : PyEnvironmentProvider
 
     public override async Task SetupEnvironmentAsync()
     {
-        if (!IsEnvironmentReady())
-        {
-            PythonHomePath = await DiscoverPyRevitAsync().ConfigureAwait(false);
-            RemovePthFile(PythonHomePath);
+        PythonHomePath = await DiscoverPyRevitAsync().ConfigureAwait(false);
+        RemovePthFile(PythonHomePath);
 
-            if (!await IsPipAvailableAsync().ConfigureAwait(false))
-                await BootstrapPipAsync().ConfigureAwait(false);
-        }
+        if (!await IsPipAvailableAsync().ConfigureAwait(false))
+            await BootstrapPipAsync().ConfigureAwait(false);
+
+        if (!IsEnvironmentReady())
+            throw new InvalidOperationException("Python environment is not ready after setup.");
 
         await EnsureRequirePackagesAsync().ConfigureAwait(false);
 
@@ -35,67 +34,82 @@ public sealed class PipEnvironmentProvider : PyEnvironmentProvider
     }
 
     /// <summary>
-    /// Locates pyrevit.exe on PATH, navigates to <c>..\cengines</c>,
-    /// and picks the first CPython engine directory containing python.exe.
+    /// Queries attached pyRevit clones and picks the first CPython engine
+    /// under <c>bin\cengines</c> that contains python.exe.
     /// </summary>
-    private static Task<string> DiscoverPyRevitAsync()
+    private static async Task<string> DiscoverPyRevitAsync()
     {
-        var pyrevitExe = FindOnPath("pyrevit.exe");
-        if (pyrevitExe is null)
-            throw new FileNotFoundException(
-                "pyrevit.exe not found on PATH. Ensure pyRevit CLI is installed.");
+        var clonePaths = await GetAttachedClonePathsAsync().ConfigureAwait(false);
+        var candidateDirectories = clonePaths
+            .Select(path => Path.Combine(path, "bin", "cengines"))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList();
 
-        var binDir = Path.GetDirectoryName(pyrevitExe)!;
-        var cenginesDir = Path.Combine(binDir, "cengines");
-
-        if (!Directory.Exists(cenginesDir))
-            throw new DirectoryNotFoundException(
-                $"cengines directory not found at: {cenginesDir}");
-
-        var engineDir = Directory.EnumerateDirectories(cenginesDir, "CPY*")
-            .FirstOrDefault(d => File.Exists(Path.Combine(d, "python.exe")));
-
-        if (engineDir is null)
-            throw new FileNotFoundException(
-                $"No CPython engine with python.exe found in: {cenginesDir}");
-
-        Trace.TraceInformation($"[Pip] Discovered pyRevit CPython at: {engineDir}");
-        return Task.FromResult(engineDir);
-    }
-
-    private static string? FindOnPath(string fileName)
-    {
-        var pathVar = Environment.GetEnvironmentVariable("PATH");
-        if (string.IsNullOrEmpty(pathVar)) return null;
-
-        foreach (var dir in pathVar.Split(';'))
+        foreach (var cenginesDir in candidateDirectories.Where(Directory.Exists))
         {
-            if (string.IsNullOrWhiteSpace(dir)) continue;
-            var full = Path.Combine(dir.Trim(), fileName);
-            if (File.Exists(full)) return full;
+            var engineDir = Directory.EnumerateDirectories(cenginesDir, "CPY*")
+                .FirstOrDefault(d => File.Exists(Path.Combine(d, "python.exe")));
+
+            if (engineDir is null)
+                continue;
+
+            Trace.TraceInformation($"[Pip] Discovered pyRevit CPython at: {engineDir}");
+            return engineDir;
         }
 
-        return null;
+        throw new DirectoryNotFoundException(
+            $"cengines directory not found. Searched: {string.Join(", ", candidateDirectories.Distinct(StringComparer.OrdinalIgnoreCase))}");
+    }
+
+    private static async Task<List<string>> GetAttachedClonePathsAsync()
+    {
+        var stdout = new StringBuilder();
+
+        var result = await Cli.Wrap("pyrevit.exe")
+            .WithArguments("attached")
+            .WithStandardOutputPipe(PipeTarget.ToStringBuilder(stdout))
+            .WithValidation(CommandResultValidation.None)
+            .ExecuteAsync().ConfigureAwait(false);
+
+        if (result.ExitCode != 0)
+        {
+            throw new InvalidOperationException(
+                $"Failed to query pyRevit attachments. Exit code: {result.ExitCode}");
+        }
+
+        var paths = new List<string>();
+
+        foreach (var line in stdout.ToString().Split(Environment.NewLine))
+        {
+            const string marker = "Path: \"";
+            var start = line.IndexOf(marker, StringComparison.OrdinalIgnoreCase);
+            if (start < 0)
+                continue;
+
+            start += marker.Length;
+            var end = line.IndexOf('"', start);
+            if (end <= start)
+                continue;
+
+            var path = line[start..end];
+            if (!string.IsNullOrWhiteSpace(path))
+                paths.Add(path);
+        }
+
+        if (paths.Count == 0)
+            throw new DirectoryNotFoundException("No attached pyRevit clone paths were reported by 'pyrevit attached'.");
+
+        return paths.Distinct(StringComparer.OrdinalIgnoreCase).ToList();
     }
 
     private async Task EnsureRequirePackagesAsync()
     {
-        var installed = await RunPipListAsync().ConfigureAwait(false);
-        var missing = RequirePackages
-            .Where(kv => !installed.Contains(CanonicalizePackageName(kv.Key)))
-            .Select(kv => kv.Value)
-            .ToList();
-
-        if (missing.Count == 0)
-        {
-            Debug.WriteLine("[Pip] All required packages already installed.");
-            return;
-        }
-
-        Trace.TraceInformation($"[Pip] Installing required packages: {string.Join(", ", missing)}");
+        // pip install is idempotent with version constraints:
+        // no-op if constraint is already satisfied, upgrades if version falls outside range.
+        var specs = RequirePackages.Values.ToList();
 
         var args = new List<string> { "-m", "pip", "install", "--prefer-binary", "--no-warn-script-location" };
-        args.AddRange(missing);
+        args.AddRange(specs);
 
         var result = await Cli.Wrap(PythonExe)
             .WithArguments(args)
@@ -106,9 +120,7 @@ public sealed class PipEnvironmentProvider : PyEnvironmentProvider
             .ExecuteAsync().ConfigureAwait(false);
 
         if (result.ExitCode != 0)
-            throw new Exception($"Failed to install required packages: {string.Join(", ", missing)}");
-
-        Trace.TraceInformation("[Pip] Required packages installed.");
+            throw new InvalidOperationException($"Failed to verify required packages: {string.Join(", ", specs)}");
     }
 
     public override async Task InstallPackagesAsync(
@@ -128,47 +140,13 @@ public sealed class PipEnvironmentProvider : PyEnvironmentProvider
             progress.Report($"pip: {string.Join(", ", succeeded)}");
 
         if (failed.Count > 0)
-            throw new Exception($"Failed to install the following package(s): {string.Join(", ", failed)}");
+        {
+            throw new InvalidOperationException(
+                $"Failed to install the following package(s): {string.Join(", ", failed)}");
+        }
 
         progress.Report($"All {list.Count} package(s) installed via pip.");
     }
-
-    private async Task<HashSet<string>> RunPipListAsync(CancellationToken cancellationToken = default)
-    {
-        if (!IsEnvironmentReady()) return [];
-
-        var stdout = new StringBuilder();
-
-        var result = await Cli.Wrap(PythonExe)
-            .WithArguments(["-m", "pip", "list", "--format=json"])
-            .WithWorkingDirectory(PythonHome)
-            .WithStandardOutputPipe(PipeTarget.ToStringBuilder(stdout))
-            .WithValidation(CommandResultValidation.None)
-            .ExecuteAsync(cancellationToken).ConfigureAwait(false);
-
-        if (result.ExitCode != 0) return [];
-
-        var json = stdout.ToString().Trim();
-        return string.IsNullOrEmpty(json) ? [] : ParsePipListJson(json);
-    }
-
-    private static HashSet<string> ParsePipListJson(string json)
-    {
-        using var doc = JsonDocument.Parse(json);
-        var names = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-
-        foreach (var entry in doc.RootElement.EnumerateArray())
-        {
-            var name = entry.GetProperty("name").GetString();
-            if (!string.IsNullOrEmpty(name))
-                names.Add(CanonicalizePackageName(name!));
-        }
-
-        return names;
-    }
-
-    private static string CanonicalizePackageName(string name)
-        => name.ToLowerInvariant().Replace('_', '-').Replace('.', '-');
 
     private static void RemovePthFile(string targetDir)
     {
