@@ -59,7 +59,10 @@ class DialogResolverOptions:
         "Autodesk", "Revit", "Load", "Security", "Warning", "Add-in", "Addin",
     ])
     preferred_button_keywords: list[str] = field(default_factory=lambda: [
-        "Always Load", "Load", "OK", "Yes", "Accept", "Continue", "Close",
+        "Always Load", "Load Once", "Load", "OK", "Yes", "Accept", "Continue", "Close",
+    ])
+    blocked_button_keywords: list[str] = field(default_factory=lambda: [
+        "Do Not Load", "Cancel", "No",
     ])
 
 
@@ -106,17 +109,25 @@ class StartupDialogResolver:
         return any(kw.lower() in lower for kw in self._opts.dialog_title_keywords)
 
     def _find_button(self, parent: int) -> int | None:
-        result: list[int] = []
+        result: list[tuple[int, int]] = []
 
         @_EnumWindowsProc
         def _cb(child: int, _: int) -> bool:
-            if _is_preferred_button(child, self._opts.preferred_button_keywords):
-                result.append(child)
-                return False
+            score = _get_button_score(
+                child,
+                self._opts.preferred_button_keywords,
+                self._opts.blocked_button_keywords,
+            )
+            if score is not None:
+                result.append((score, child))
             return True
 
         _user32.EnumChildWindows(parent, _cb, 0)
-        return result[0] if result else None
+        if not result:
+            return None
+
+        result.sort(key=lambda item: item[0])
+        return result[0][1]
 
     def _enum_dialog_windows(self) -> list[int]:
         windows: list[int] = []
@@ -131,14 +142,30 @@ class StartupDialogResolver:
         return windows
 
 
-def _is_preferred_button(hwnd: int, keywords: list[str]) -> bool:
+def _get_button_score(hwnd: int, keywords: list[str], blocked_keywords: list[str]) -> int | None:
     if _get_class_name(hwnd).lower() != _BUTTON_CLASS:
-        return False
+        return None
+
     text = _get_window_text(hwnd)
     if not text:
-        return False
+        return None
+
     text_lower = text.lower()
-    return any(kw.lower() in text_lower for kw in keywords)
+
+    if any(kw.lower() in text_lower for kw in blocked_keywords):
+        return None
+
+    for index, keyword in enumerate(keywords):
+        keyword_lower = keyword.lower()
+        if text_lower == keyword_lower:
+            return index
+
+    for index, keyword in enumerate(keywords):
+        keyword_lower = keyword.lower()
+        if keyword_lower in text_lower:
+            return index + len(keywords)
+
+    return None
 
 
 def _is_target_dialog(hwnd: int, target_pid: int) -> bool:

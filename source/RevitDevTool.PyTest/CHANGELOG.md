@@ -2,6 +2,18 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.0.3] - 2026-04-10
+
+### Fixed
+
+- Fixed Revit auto-launch dialog handling by starting the startup dialog resolver immediately after spawning Revit, before waiting for the named pipe.
+- Fixed startup dialog button selection to prefer safe allow-list actions such as `Always Load` and `Load Once`.
+- Prevented accidental clicks on destructive dialog actions such as `Do Not Load`, `Cancel`, and `No`.
+
+### Notes
+
+- This release focuses on reliable auto-launch behavior when Revit shows unsigned add-in security dialogs during startup.
+
 ## [0.0.2] - 2026-04-10
 
 ### Fixed

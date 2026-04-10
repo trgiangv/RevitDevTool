@@ -22,7 +22,7 @@ from .constants import (
     OPT_VERSION,
     PLUGIN_NAME,
 )
-from .discovery import find_revit_path, find_revit_pipes, launch_revit, select_instance
+from .discovery import find_revit_path, find_revit_pipes, select_instance, start_revit, wait_for_revit_pipe
 from .models import TestOutcome
 from .serializer import serialize_test
 
@@ -152,21 +152,24 @@ def _auto_launch(version: int, config: pytest.Config) -> RevitInstance:
         )
 
     print(f"{PLUGIN_NAME}: Launching Revit {version}...")
-    instance = launch_revit(version, wait_timeout_s=timeout)
+
+    process_id = start_revit(version)
+
+    try:
+        from .dialog_resolver import StartupDialogResolver as _Resolver
+
+        _dialog_resolver = _Resolver(process_id)
+        _dialog_resolver.start()
+    except ImportError:
+        pass
+
+    instance = wait_for_revit_pipe(version, timeout_s=timeout)
 
     if instance is None:
         pytest.exit(
             f"{PLUGIN_NAME}: Revit {version} launched but Named Pipe did not appear within {timeout}s.",
             returncode=EXIT_CODE_CONFIG_ERROR,
         )
-
-    try:
-        from .dialog_resolver import StartupDialogResolver as _Resolver
-
-        _dialog_resolver = _Resolver(instance.process_id)
-        _dialog_resolver.start()
-    except ImportError:
-        pass
 
     print(f"{PLUGIN_NAME}: Connected to Revit {instance.version} (pid={instance.process_id})")
     return instance

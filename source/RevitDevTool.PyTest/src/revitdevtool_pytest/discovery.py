@@ -87,6 +87,19 @@ def launch_revit(
     return wait_for_revit_pipe(version, timeout_s=wait_timeout_s)
 
 
+def start_revit(version: int) -> int:
+    """Start Revit with ``/nosplash`` and return the spawned process id."""
+    exe_path = find_revit_path(version)
+    if exe_path is None:
+        raise FileNotFoundError(f"Revit {version} installation not found.")
+
+    process = subprocess.Popen(  # noqa: S603
+        [exe_path, REVIT_NOSPLASH],
+        creationflags=subprocess.DETACHED_PROCESS,
+    )
+    return int(process.pid)
+
+
 def wait_for_revit_pipe(
     version: int | None = None,
     timeout_s: float = DEFAULT_LAUNCH_TIMEOUT_S,
