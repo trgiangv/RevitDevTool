@@ -126,7 +126,7 @@ def pytest_pyfunc_call(pyfuncitem: pytest.Function) -> object:
     pytest.fail(msg, pytrace=False)
 
 
-def pytest_unconfigure(_config: pytest.Config) -> None:
+def pytest_unconfigure(config: pytest.Config) -> None:
     global _bridge, _dialog_resolver
     if _dialog_resolver is not None:
         _dialog_resolver.stop()

@@ -10,7 +10,27 @@ Tests run inside a live Revit process — write standard pytest, execute remotel
 ## Installation
 
 ```bash
+pip install revitdevtool_pytest
+```
+
+Recommended package name for manifests and package managers such as Pixi:
+
+```bash
+revitdevtool_pytest
+```
+
+`pip` normalizes package names, so the following forms are equivalent when installing from PyPI:
+
+```bash
+pip install revitdevtool_pytest
+pip install revitdevtool-pytest
 pip install RevitDevTool.PyTest
+```
+
+The Python import/module name used by the package is:
+
+```python
+import revitdevtool_pytest
 ```
 
 ## Dependencies
