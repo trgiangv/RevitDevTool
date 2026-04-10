@@ -1,44 +1,34 @@
 using System.IO;
 using Python.Runtime;
+
 namespace RevitDevTool.Execution.Providers.Python;
 
-/// <summary>
-/// Script execution using Python.NET.
-/// </summary>
-public static class PythonExecutor
+public class PythonExecutor(PythonInitializer initializer)
 {
-    public static void ExecuteScript(PythonInitializer initializer,
-        string scriptPath,
-        string scriptContent,
-        string? rootFolder = null)
+    public T Execute<T>(
+        string anchorFile,
+        string rootFolder,
+        Func<PyModule, T> action)
     {
-        if (!initializer.IsInitialized)
-            throw new InvalidOperationException("Python runtime not initialized. Call InitializeAsync() first.");
-
-        rootFolder ??= Path.GetDirectoryName(scriptPath) ?? string.Empty;
         using (Py.GIL())
         {
-            if (initializer.GlobalScope == null)
-                throw new InvalidOperationException("Global Python scope not initialized.");
+            if (!initializer.IsInitialized)
+                throw new InvalidOperationException("Python runtime not initialized.");
 
-            using (var scope = initializer.GlobalScope.NewScope())
-            {
-                scope.Set(PythonScopeVars.Source, new PyString(scriptContent));
-                PrepareExecutionScope(scope, scriptPath, rootFolder);
-                scope.Exec("""
-                           compiled_code = compile(__source__, __file__, 'exec')
-                           exec(compiled_code, globals())
-                           """);
-            }
+            using var scope = initializer.GlobalScope!.NewScope();
+            PrepareExecutionScope(scope, anchorFile, rootFolder);
+            return action(scope);
         }
     }
 
-    public static void PrepareExecutionScope(PyModule scope, string scriptPath, string? rootFolder = null)
+    private static void PrepareExecutionScope(
+        PyModule scope,
+        string scriptPath,
+        string? rootFolder = null)
     {
         rootFolder ??= Path.GetDirectoryName(scriptPath) ?? string.Empty;
-        scope.Set(PythonScopeVars.File, new PyString(scriptPath));
-        scope.Set(PythonScopeVars.Root, new PyString(rootFolder));
-
+        scope.Set(PythonInstances.File, new PyString(scriptPath));
+        scope.Set(PythonInstances.Root, new PyString(rootFolder));
         ResetModuleCache(scope);
         SetupScriptRoot(scope);
     }

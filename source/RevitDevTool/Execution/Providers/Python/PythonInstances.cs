@@ -4,7 +4,7 @@ namespace RevitDevTool.Execution.Providers.Python;
 /// Canonical names for variables exchanged between C# and embedded Python scripts.
 /// Any rename here must be mirrored in the corresponding Python script constants.
 /// </summary>
-public static class PythonScopeVars
+public static class PythonInstances
 {
     // Execution scope
     public const string Source = "__source__";
@@ -25,10 +25,6 @@ public static class PythonScopeVars
     public const string ToolsetDirectory = "__toolset_directory__";
     public const string ParserResult = "__parser_result__";
 
-    // Test execution — JSON request keys and Python scope vars
-    public const string ModuleSource = "module_source";
-    public const string TestName = "test_name";
-    public const string TestFilePath = "file_path";
-    public const string ClassName = "class_name";
-    public const string TestInvoke = "__test_invoke__";
+    // Test execution
+    public const string PytestRequestJson = "__pytest_request_json__";
 }

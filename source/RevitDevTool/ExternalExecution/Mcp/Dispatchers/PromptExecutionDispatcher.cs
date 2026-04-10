@@ -1,4 +1,5 @@
 using System.Collections.Concurrent;
+using System.IO;
 using System.Text.Json;
 using ModelContextProtocol;
 using ModelContextProtocol.Protocol;
@@ -17,8 +18,7 @@ namespace RevitDevTool.ExternalExecution.Mcp.Dispatchers;
 /// or synchronously under the GIL for the Python backend.
 /// </summary>
 public sealed class PromptExecutionDispatcher(
-    IServiceProvider serviceProvider,
-    PythonInitializer pythonInitializer) : ICacheable
+    IServiceProvider serviceProvider, PythonExecutor executor) : ICacheable
 {
     private static readonly JsonSerializerOptions JsonOptions = McpJsonUtilities.DefaultOptions;
     private readonly ConcurrentDictionary<string, McpServerPrompt> _cachedPrompts = new(StringComparer.OrdinalIgnoreCase);
@@ -69,13 +69,21 @@ public sealed class PromptExecutionDispatcher(
         McpRegisteredPrompt prompt,
         IReadOnlyDictionary<string, JsonElement>? arguments)
     {
-        var resultJson = PythonExecutionHelper.InvokeScript(pythonInitializer,
-            prompt.Binding.SourcePath,
+        var sourcePath = prompt.Binding.SourcePath;
+        if (string.IsNullOrWhiteSpace(sourcePath) || !File.Exists(sourcePath))
+            throw new InvalidOperationException($"Python MCP source file was not found: {sourcePath}.");
+
+        var rootFolder = Path.GetDirectoryName(sourcePath) ?? string.Empty;
+        var resultJson = executor.Execute(
+            sourcePath,
+            rootFolder,
             scope =>
             {
-                scope.Set(PythonScopeVars.Operation, new PyString(PythonScopeVars.OperationPrompt));
-                scope.Set(PythonScopeVars.PromptName, new PyString(prompt.ProtocolPrompt.Name));
-                scope.Set(PythonScopeVars.ArgumentsJson, new PyString(SerializeJson(arguments ?? new Dictionary<string, JsonElement>())));
+                scope.Set(PythonInstances.Operation, new PyString(PythonInstances.OperationPrompt));
+                scope.Set(PythonInstances.PromptName, new PyString(prompt.ProtocolPrompt.Name));
+                scope.Set(PythonInstances.ArgumentsJson, new PyString(SerializeJson(arguments ?? new Dictionary<string, JsonElement>())));
+                scope.Exec(PythonEmbedded.ToolInvokeScript);
+                return scope.Get(PythonInstances.ResultJson).As<string>();
             });
 
         return JsonSerializer.Deserialize<GetPromptResult>(resultJson, JsonOptions)

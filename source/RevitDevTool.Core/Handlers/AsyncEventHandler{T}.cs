@@ -60,6 +60,7 @@ public sealed class AsyncEventHandler<T> : ExternalEventHandler
         finally
         {
             _contextDelegate = null;
+            _delegate = null;
             _asyncDelegate = null;
             _resultTask = null;
         }
@@ -80,6 +81,17 @@ public sealed class AsyncEventHandler<T> : ExternalEventHandler
     /// </remarks>
     public async Task<T> RaiseAsync(Func<UIApplication, T> handler)
     {
+        return await RaiseAsync(handler, timeout: null);
+    }
+
+    /// <summary>
+    ///     Instructing Revit to queue a handler, raise (signal) the external event and async awaiting for its completion.
+    /// </summary>
+    /// <remarks>
+    ///     Throws <see cref="TimeoutException"/> when execution does not complete within <paramref name="timeout"/>.
+    /// </remarks>
+    public async Task<T> RaiseAsync(Func<UIApplication, T> handler, TimeSpan? timeout)
+    {
         if (RevitContext.IsRevitInApiMode)
         {
             return handler(RevitContext.UiApplication)!;
@@ -90,10 +102,10 @@ public sealed class AsyncEventHandler<T> : ExternalEventHandler
         try
         {
             _contextDelegate = handler;
-            _resultTask = new TaskCompletionSource<T>();
+            _resultTask = new TaskCompletionSource<T>(TaskCreationOptions.RunContinuationsAsynchronously);
         
             Raise();
-            return await _resultTask.Task;
+            return await AwaitCompletionAsync(_resultTask.Task, timeout);
         }
         finally
         {
@@ -116,6 +128,17 @@ public sealed class AsyncEventHandler<T> : ExternalEventHandler
     /// </remarks>
     public async Task<T> RaiseAsync(Func<T> handler)
     {
+        return await RaiseAsync(handler, timeout: null);
+    }
+
+    /// <summary>
+    ///     Instructing Revit to queue a handler, raise (signal) the external event and async awaiting for its completion.
+    /// </summary>
+    /// <remarks>
+    ///     Throws <see cref="TimeoutException"/> when execution does not complete within <paramref name="timeout"/>.
+    /// </remarks>
+    public async Task<T> RaiseAsync(Func<T> handler, TimeSpan? timeout)
+    {
         if (RevitContext.IsRevitInApiMode)
         {
             return handler();
@@ -126,10 +149,10 @@ public sealed class AsyncEventHandler<T> : ExternalEventHandler
         try
         {
             _delegate = handler;
-            _resultTask = new TaskCompletionSource<T>();
+            _resultTask = new TaskCompletionSource<T>(TaskCreationOptions.RunContinuationsAsynchronously);
 
             Raise();
-            return await _resultTask.Task;
+            return await AwaitCompletionAsync(_resultTask.Task, timeout);
         }
         finally
         {
@@ -150,6 +173,17 @@ public sealed class AsyncEventHandler<T> : ExternalEventHandler
     /// </remarks>
     public async Task<T> RaiseAsync(Func<Task<T>> asyncHandler)
     {
+        return await RaiseAsync(asyncHandler, timeout: null);
+    }
+
+    /// <summary>
+    ///     Instructing Revit to queue a handler, raise (signal) the external event and async awaiting for its completion.
+    /// </summary>
+    /// <remarks>
+    ///     Throws <see cref="TimeoutException"/> when execution does not complete within <paramref name="timeout"/>.
+    /// </remarks>
+    public async Task<T> RaiseAsync(Func<Task<T>> asyncHandler, TimeSpan? timeout)
+    {
         if (RevitContext.IsRevitInApiMode)
             return await asyncHandler().ConfigureAwait(false);
 
@@ -157,13 +191,23 @@ public sealed class AsyncEventHandler<T> : ExternalEventHandler
         try
         {
             _asyncDelegate = asyncHandler;
-            _resultTask = new TaskCompletionSource<T>();
+            _resultTask = new TaskCompletionSource<T>(TaskCreationOptions.RunContinuationsAsynchronously);
             Raise();
-            return await _resultTask.Task;
+            return await AwaitCompletionAsync(_resultTask.Task, timeout);
         }
         finally
         {
             _semaphore.Release();
         }
+    }
+
+    private static async Task<T> AwaitCompletionAsync(Task<T> task, TimeSpan? timeout)
+    {
+        if (timeout is null)
+        {
+            return await task;
+        }
+
+        return await task.WaitAsync(timeout.Value);
     }
 }

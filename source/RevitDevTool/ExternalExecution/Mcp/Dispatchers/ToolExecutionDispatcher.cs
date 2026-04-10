@@ -1,4 +1,5 @@
 using System.Collections.Concurrent;
+using System.IO;
 using System.Text.Json;
 using ModelContextProtocol.Protocol;
 using ModelContextProtocol.Server;
@@ -17,8 +18,7 @@ namespace RevitDevTool.ExternalExecution.Mcp.Dispatchers;
 /// Dotnet tools are invoked asynchronously; Python tools run synchronously under the GIL.
 /// </summary>
 public sealed class ToolExecutionDispatcher(
-    IServiceProvider serviceProvider,
-    PythonInitializer pythonInitializer) : ICacheable
+    IServiceProvider serviceProvider, PythonExecutor executor) : ICacheable
 {
     private readonly ConcurrentDictionary<string, McpServerTool> _cachedTools = new(StringComparer.OrdinalIgnoreCase);
 
@@ -31,7 +31,7 @@ public sealed class ToolExecutionDispatcher(
             return tool.Binding.SourceKind switch
             {
                 ExecutionMode.Assembly => await InvokeDotnetToolAsync(tool, normalizedPayload).ConfigureAwait(false),
-                ExecutionMode.Python => InvokePythonTool(pythonInitializer, tool, normalizedPayload),
+                ExecutionMode.Python => InvokePythonTool(executor, tool, normalizedPayload),
                 _ => McpToolExecutionResult.Failed(ExecutionErrorCodes.ToolUnknownSourceKind, $"Unknown or unsupported MCP tool execution: '{tool.Binding.SourceKind}'.")
             };
         }
@@ -71,14 +71,23 @@ public sealed class ToolExecutionDispatcher(
             (method, target) => McpServerTool.Create(method, target));
     }
 
-    private static McpToolExecutionResult InvokePythonTool(PythonInitializer initializer, McpRegisteredTool tool, string normalizedPayload)
+    private static McpToolExecutionResult InvokePythonTool(PythonExecutor executor, McpRegisteredTool tool, string normalizedPayload)
     {
         var binding = tool.Binding;
-        var resultJson = PythonExecutionHelper.InvokeScript(initializer, binding.SourcePath, scope =>
-        {
-            scope.Set(PythonScopeVars.ToolName, new PyString(tool.ProtocolTool.Name));
-            scope.Set(PythonScopeVars.PayloadJson, new PyString(normalizedPayload));
-        });
+        if (string.IsNullOrWhiteSpace(binding.SourcePath) || !File.Exists(binding.SourcePath))
+            throw new InvalidOperationException($"Python MCP source file was not found: {binding.SourcePath}.");
+
+        var rootFolder = Path.GetDirectoryName(binding.SourcePath) ?? string.Empty;
+        var resultJson = executor.Execute(
+            binding.SourcePath,
+            rootFolder,
+            scope =>
+            {
+                scope.Set(PythonInstances.ToolName, new PyString(tool.ProtocolTool.Name));
+                scope.Set(PythonInstances.PayloadJson, new PyString(normalizedPayload));
+                scope.Exec(PythonEmbedded.ToolInvokeScript);
+                return scope.Get(PythonInstances.ResultJson).As<string>();
+            });
         var callResult = PythonResultParser.ParseCallToolResult(resultJson);
         return McpToolExecutionResult.Completed(callResult, $"Completed '{tool.ProtocolTool.Name}'.");
     }

@@ -4,6 +4,7 @@ using RevitDevTool.Controllers;
 using RevitDevTool.McpParser.Models;
 using RevitDevTool.ExternalExecution.Mcp.Dispatchers;
 using RevitDevTool.ExternalExecution.Connections;
+// ReSharper disable RedundantSuppressNullableWarningExpression
 
 namespace RevitDevTool.ExternalExecution.Mcp.Handlers;
 
@@ -14,6 +15,8 @@ public sealed class RegistryRequestHandler(
     PromptExecutionDispatcher promptDispatcher,
     ResourceExecutionDispatcher resourceDispatcher)
 {
+    private static readonly TimeSpan CallTimeout = TimeSpan.FromSeconds(30);
+
     public Task<BridgeMessage> HandleToolsListAsync(string id)
     {
         toolStore.EnsureLoaded();
@@ -47,13 +50,33 @@ public sealed class RegistryRequestHandler(
             .ConfigureAwait(false);
 
         scope.MarkRunning();
+        McpToolExecutionResult? result;
+        var toolTimeoutMessage = $"Tool '{resolvedToolName}' exceeded timeout ({CallTimeout.TotalSeconds:F0}s).";
+        try
+        {
+            result = await handler
+                .RaiseAsync(() => dispatcher.DispatchAsync(tool, payloadJson), CallTimeout)
+                .ConfigureAwait(false);
+        }
+        catch (TimeoutException)
+        {
+            var failed = McpToolExecutionResult.Failed(
+                ExecutionErrorCodes.ToolInvokeFailed,
+                toolTimeoutMessage);
+            scope.Complete(failed);
+            return BridgeMessage.Error(id, failed.Error?.Message ?? failed.Detail);
+        }
 
-        var result = await handler
-            .RaiseAsync(() => dispatcher.DispatchAsync(tool, payloadJson))
-            .ConfigureAwait(false);
+        if (result is null)
+        {
+            var failed = McpToolExecutionResult.Failed(
+                ExecutionErrorCodes.ToolInvokeFailed,
+                $"Tool '{resolvedToolName}' returned no result.");
+            scope.Complete(failed);
+            return BridgeMessage.Error(id, failed.Error?.Message ?? failed.Detail);
+        }
 
         scope.Complete(result);
-
         if (result is { State: ExecutionState.Completed })
         {
             state.RecordCall(tool.Id, tool.ProtocolTool.Name);
@@ -92,9 +115,20 @@ public sealed class RegistryRequestHandler(
             .AsyncGenericEventHandler<GetPromptResult>()
             .ConfigureAwait(false);
 
-        var result = await handler
-            .RaiseAsync(() => promptDispatcher.GetPromptAsync(prompt, arguments))
-            .ConfigureAwait(false);
+        GetPromptResult? result;
+        try
+        {
+            result = await handler
+                .RaiseAsync(() => promptDispatcher.GetPromptAsync(prompt, arguments), CallTimeout)
+                .ConfigureAwait(false);
+        }
+        catch (TimeoutException)
+        {
+            return BridgeMessage.Error(id, $"Prompt '{promptName}' exceeded timeout ({CallTimeout.TotalSeconds:F0}s).");
+        }
+
+        if (result is null)
+            return BridgeMessage.Error(id, $"Prompt '{promptName}' returned no result.");
 
         var json = JsonSerializer.SerializeToElement(result);
         return BridgeMessage.Response(id, json);
@@ -134,9 +168,20 @@ public sealed class RegistryRequestHandler(
             .AsyncGenericEventHandler<ReadResourceResult>()
             .ConfigureAwait(false);
 
-        var result = await handler
-            .RaiseAsync(() => resourceDispatcher.ReadResourceAsync(resource, resolvedUri))
-            .ConfigureAwait(false);
+        ReadResourceResult? result;
+        try
+        {
+            result = await handler
+                .RaiseAsync(() => resourceDispatcher.ReadResourceAsync(resource, resolvedUri), CallTimeout)
+                .ConfigureAwait(false);
+        }
+        catch (TimeoutException)
+        {
+            return BridgeMessage.Error(id, $"Resource '{resolvedUri}' exceeded timeout ({CallTimeout.TotalSeconds:F0}s).");
+        }
+
+        if (result is null)
+            return BridgeMessage.Error(id, $"Resource '{resolvedUri}' returned no result.");
 
         var json = JsonSerializer.SerializeToElement(result);
         return BridgeMessage.Response(id, json);

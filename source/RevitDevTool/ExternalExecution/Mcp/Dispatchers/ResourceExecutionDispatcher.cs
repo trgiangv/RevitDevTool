@@ -1,4 +1,5 @@
 using System.Collections.Concurrent;
+using System.IO;
 using System.Text.Json;
 using ModelContextProtocol;
 using ModelContextProtocol.Protocol;
@@ -17,8 +18,7 @@ namespace RevitDevTool.ExternalExecution.Mcp.Dispatchers;
 /// or synchronously under the GIL for the Python backend.
 /// </summary>
 public sealed class ResourceExecutionDispatcher(
-    IServiceProvider serviceProvider,
-    PythonInitializer pythonInitializer) : ICacheable
+    IServiceProvider serviceProvider, PythonExecutor executor) : ICacheable
 {
     private static readonly JsonSerializerOptions JsonOptions = McpJsonUtilities.DefaultOptions;
     private readonly ConcurrentDictionary<string, McpServerResource> _cachedResources = new(StringComparer.OrdinalIgnoreCase);
@@ -63,14 +63,22 @@ public sealed class ResourceExecutionDispatcher(
 
     private ReadResourceResult InvokePythonResource(McpRegisteredResource resource, string uri)
     {
-        var resultJson = PythonExecutionHelper.InvokeScript(pythonInitializer,
-            resource.Binding.SourcePath,
+        var sourcePath = resource.Binding.SourcePath;
+        if (string.IsNullOrWhiteSpace(sourcePath) || !File.Exists(sourcePath))
+            throw new InvalidOperationException($"Python MCP source file was not found: {sourcePath}.");
+
+        var rootFolder = Path.GetDirectoryName(sourcePath) ?? string.Empty;
+        var resultJson = executor.Execute(
+            sourcePath,
+            rootFolder,
             scope =>
             {
                 var name = resource.ProtocolResource?.Name ?? resource.ProtocolTemplate?.Name ?? string.Empty;
-                scope.Set(PythonScopeVars.Operation, new PyString(PythonScopeVars.OperationResource));
-                scope.Set(PythonScopeVars.ResourceName, new PyString(name));
-                scope.Set(PythonScopeVars.ResourceUri, new PyString(uri));
+                scope.Set(PythonInstances.Operation, new PyString(PythonInstances.OperationResource));
+                scope.Set(PythonInstances.ResourceName, new PyString(name));
+                scope.Set(PythonInstances.ResourceUri, new PyString(uri));
+                scope.Exec(PythonEmbedded.ToolInvokeScript);
+                return scope.Get(PythonInstances.ResultJson).As<string>();
             });
 
         return JsonSerializer.Deserialize<ReadResourceResult>(resultJson, JsonOptions)

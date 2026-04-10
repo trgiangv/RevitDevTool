@@ -9,6 +9,7 @@ public static class PythonEmbedded
     private const string ParserSourcePath = "RevitDevTool.Resources.scripts.Parser.py";
     private const string ToolParserSourcePath = "RevitDevTool.Resources.scripts.ToolParser.py";
     private const string ToolInvokeSourcePath = "RevitDevTool.Resources.scripts.ToolInvoke.py";
+    private const string PytestRunnerSourcePath = "RevitDevTool.Resources.scripts.PytestRunner.py";
     private const string SetupSourcePath = "RevitDevTool.Resources.scripts.Setup.py";
     private const string ResetSourcePath = "RevitDevTool.Resources.scripts.Reset.py";
     private const string PixiTomlSourcePath = "RevitDevTool.Resources.scripts.pixi.toml";
@@ -16,6 +17,7 @@ public static class PythonEmbedded
     public static string ParserScriptPath => TryGetCached(ParserSourcePath, ScripPathCache);
     public static string PixiTomlPath => TryGetCached(PixiTomlSourcePath, ScripPathCache);
     public static string ToolInvokeScript => TryGetCached(ToolInvokeSourcePath, ScriptCache);
+    public static string PytestRunnerScript => TryGetCached(PytestRunnerSourcePath, ScriptCache);
     public static string SetupScript => TryGetCached(SetupSourcePath, ScriptCache);
     public static string ResetScript => TryGetCached(ResetSourcePath, ScriptCache);
     public static string ToolParserScript => TryGetCached(ToolParserSourcePath, ScriptCache);
@@ -24,19 +26,18 @@ public static class PythonEmbedded
     [
         ToolParserSourcePath,
         ToolInvokeSourcePath,
+        PytestRunnerSourcePath,
         SetupSourcePath,
         ResetSourcePath
     ];
     
     private static readonly string[] AlwaysOverwritePaths =
     [
-        ParserSourcePath
-    ];
-
-    private static readonly string[] CreateOnlyPaths =
-    [
+        ParserSourcePath,
         PixiTomlSourcePath
     ];
+
+    private static readonly string[] CreateOnlyPaths = [];
     
     private static readonly ConcurrentDictionary<string, string> ScriptCache = new();
     private static readonly ConcurrentDictionary<string, string> ScripPathCache = new();

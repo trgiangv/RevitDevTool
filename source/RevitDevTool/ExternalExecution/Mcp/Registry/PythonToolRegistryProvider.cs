@@ -7,7 +7,8 @@ using RevitDevTool.McpParser.Python;
 
 namespace RevitDevTool.ExternalExecution.Mcp.Registry;
 
-public sealed class PythonToolRegistryProvider(PythonInitializer pythonInitializer) : IMcpRegistryProvider
+public sealed class PythonToolRegistryProvider(
+    PythonInitializer pythonInitializer, PythonExecutor executor) : IMcpRegistryProvider
 {
     public string Name => "python-mcp";
     public ExecutionMode SourceKind => ExecutionMode.Python;
@@ -86,16 +87,19 @@ public sealed class PythonToolRegistryProvider(PythonInitializer pythonInitializ
 
     private string? ParseDirectory(string toolsetDirectory)
     {
-        if (!pythonInitializer.IsInitialized || pythonInitializer.GlobalScope is null)
+        if (!pythonInitializer.IsInitialized)
             return null;
 
-        using (Py.GIL())
-        {
-            using var scope = pythonInitializer.GlobalScope.NewScope();
-            scope.Set(PythonScopeVars.ToolsetDirectory, new PyString(toolsetDirectory));
+        var anchorFile = Path.Combine(toolsetDirectory, "__mcp_registry__.py");
+        return executor.Execute(
+            anchorFile,
+            toolsetDirectory,
+            scope =>
+            {
+            scope.Set(PythonInstances.ToolsetDirectory, new PyString(toolsetDirectory));
             scope.Exec(PythonEmbedded.ToolParserScript);
-            return scope.Get(PythonScopeVars.ParserResult).As<string>();
-        }
+            return scope.Get(PythonInstances.ParserResult).As<string>();
+            });
     }
 
     private void LogMissingDirectories()

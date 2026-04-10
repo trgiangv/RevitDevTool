@@ -150,6 +150,7 @@ public static class Host
         services.AddKeyedSingleton<PyEnvironmentProvider, PixiEnvironmentProvider>(PythonBackend.Pixi);
         services.AddKeyedSingleton<PyEnvironmentProvider, PipEnvironmentProvider>(PythonBackend.Pip);
         services.AddSingleton<PythonInitializer>();
+        services.AddSingleton<PythonExecutor>();
 
         // Execution Services
         services.AddSingleton<ITreeStateManager, TreeStateManager>();
@@ -173,7 +174,7 @@ public static class Host
         services.AddSingleton<MemoryView>();
         services.AddSingleton<ExecutionView>();
 
-        // IPC Brigde Execution
+        // IPC Brigde
         services.AddSingleton<McpRegistryView>();
         services.AddSingleton<McpRegistryViewModel>();
         services.AddSingleton<ConnectionState>();
@@ -187,7 +188,8 @@ public static class Host
         services.AddSingleton<ResourceExecutionDispatcher>();
         services.AddSingleton<InstanceRequestHandler>();
         services.AddSingleton<RegistryRequestHandler>();
-        services.AddSingleton<TestExecutionService>();
+        services.AddSingleton<PytestDependencyService>();
+        services.AddSingleton<PytestExecutionService>();
         services.AddSingleton<ToolRegistryStore>();
         services.AddHostedService<RevitPipeServer>();
 

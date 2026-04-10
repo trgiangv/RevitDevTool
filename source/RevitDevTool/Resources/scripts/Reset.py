@@ -21,6 +21,9 @@ if targets:
         except Exception:
             continue
 
+        if not os.path.isfile(mod_path):
+            continue
+
         for target in normalized_targets:
             try:
                 if os.path.commonpath([mod_path, target]) == target:

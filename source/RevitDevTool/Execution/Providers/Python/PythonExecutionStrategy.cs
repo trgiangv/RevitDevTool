@@ -10,7 +10,11 @@ namespace RevitDevTool.Execution.Providers.Python;
 /// Execution strategy for Python scripts.
 /// Handles dependency resolution and execution orchestration directly.
 /// </summary>
-public sealed class PythonExecutionStrategy(string scriptPath, string rootPath, PythonInitializer pythonInitializer)
+public sealed class PythonExecutionStrategy(
+    string scriptPath,
+    string rootPath,
+    PythonInitializer pythonInitializer,
+    PythonExecutor executor)
     : IExecutionStrategy
 {
     public async Task<ExecutionResult> ExecuteAsync(IProgress<string>? progress = null, CancellationToken cancellationToken = default)
@@ -39,7 +43,18 @@ public sealed class PythonExecutionStrategy(string scriptPath, string rootPath, 
             var result = await handler
                 .RaiseAsync(() =>
                 {
-                    PythonExecutor.ExecuteScript(pythonInitializer, scriptPath, scriptContent, rootPath);
+                    executor.Execute(
+                        scriptPath,
+                        rootPath,
+                        scope =>
+                        {
+                            scope.Set(PythonInstances.Source, new PyString(scriptContent));
+                            scope.Exec("""
+                                       compiled_code = compile(__source__, __file__, 'exec')
+                                       exec(compiled_code, globals())
+                                       """);
+                            return 0;
+                        });
                     stopwatch.Stop();
                     return ExecutionResult.Succeeded("Python script completed successfully.", stopwatch.ElapsedMilliseconds);
                 })
@@ -98,7 +113,7 @@ public sealed class PythonExecutionStrategy(string scriptPath, string rootPath, 
     }
 
     /// <summary>
-    /// After uv installs new packages on disk, Python's PathFinder caches
+    /// After installs new packages on disk, Python's PathFinder caches
     /// the directory listings from sys.path entries. invalidate_caches()
     /// forces it to rescan on the next import.
     /// </summary>
@@ -113,18 +128,14 @@ public sealed class PythonExecutionStrategy(string scriptPath, string rootPath, 
                 using var scope = Py.CreateScope();
                 scope.Exec("""
                             import importlib
-                            import site
+                            import os
                             import sys
-                            
+                             
                             importlib.invalidate_caches()
-                            
-                            for sp in site.getsitepackages():
-                                if sp not in sys.path:
-                                    sys.path.insert(0, sp)
-                            
-                            user_site = site.getusersitepackages()
-                            if isinstance(user_site, str) and user_site not in sys.path:
-                                sys.path.insert(0, user_site)
+
+                            site_packages = os.path.join(sys.prefix, "Lib", "site-packages")
+                            if os.path.isdir(site_packages) and site_packages not in sys.path:
+                                sys.path.insert(0, site_packages)
                             """);
             }
         }

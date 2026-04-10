@@ -25,6 +25,7 @@ public abstract class PyEnvironmentProvider
         new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
         {
             ["mcp"] = "mcp>=1.27,<2",
+            ["pytest"] = "pytest>=9.0.3,<10",
             ["debugpy"] = "debugpy>=1.8,<2",
             ["packaging"] = "packaging>=26.0,<27",
         };

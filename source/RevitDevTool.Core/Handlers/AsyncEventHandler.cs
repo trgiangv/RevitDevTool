@@ -34,6 +34,7 @@ public sealed class AsyncEventHandler : ExternalEventHandler
         finally
         {
             _contextAction = null;
+            _action = null;
             _resultTask = null;
         }
     }
@@ -50,6 +51,17 @@ public sealed class AsyncEventHandler : ExternalEventHandler
     /// </remarks>
     public async Task RaiseAsync(Action<UIApplication> action)
     {
+        await RaiseAsync(action, timeout: null);
+    }
+
+    /// <summary>
+    ///     Instructing Revit to queue a handler, raise (signal) the external event and async awaiting for its completion.
+    /// </summary>
+    /// <remarks>
+    ///     Throws <see cref="TimeoutException"/> when execution does not complete within <paramref name="timeout"/>.
+    /// </remarks>
+    public async Task RaiseAsync(Action<UIApplication> action, TimeSpan? timeout)
+    {
         if (RevitContext.IsRevitInApiMode)
         {
             action.Invoke(RevitContext.UiApplication);
@@ -58,9 +70,9 @@ public sealed class AsyncEventHandler : ExternalEventHandler
 
         if (_contextAction is null) _contextAction = action;
         else _contextAction += action;
-        _resultTask ??= new TaskCompletionSource();
+        _resultTask ??= new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
         Raise();
-        await _resultTask.Task;
+        await AwaitCompletionAsync(_resultTask.Task, timeout);
     }
     
     /// <summary>
@@ -75,6 +87,17 @@ public sealed class AsyncEventHandler : ExternalEventHandler
     /// </remarks>
     public async Task RaiseAsync(Action action)
     {
+        await RaiseAsync(action, timeout: null);
+    }
+
+    /// <summary>
+    ///     Instructing Revit to queue a handler, raise (signal) the external event and async awaiting for its completion.
+    /// </summary>
+    /// <remarks>
+    ///     Throws <see cref="TimeoutException"/> when execution does not complete within <paramref name="timeout"/>.
+    /// </remarks>
+    public async Task RaiseAsync(Action action, TimeSpan? timeout)
+    {
         if (RevitContext.IsRevitInApiMode)
         {
             action.Invoke();
@@ -83,8 +106,19 @@ public sealed class AsyncEventHandler : ExternalEventHandler
 
         if (_action is null) _action = action;
         else _action += action;
-        _resultTask ??= new TaskCompletionSource();
+        _resultTask ??= new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
         Raise();
-        await _resultTask.Task;
+        await AwaitCompletionAsync(_resultTask.Task, timeout);
+    }
+
+    private static async Task AwaitCompletionAsync(Task task, TimeSpan? timeout)
+    {
+        if (timeout is null)
+        {
+            await task;
+            return;
+        }
+
+        await task.WaitAsync(timeout.Value);
     }
 }

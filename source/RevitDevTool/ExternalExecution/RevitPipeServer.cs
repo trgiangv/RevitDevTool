@@ -1,8 +1,10 @@
 using System.Diagnostics;
 using System.IO.Pipes;
+using System.IO;
 using System.Security.AccessControl;
 using System.Security.Principal;
 using System.Text.Json;
+using System.Collections.Concurrent;
 using Microsoft.Extensions.Hosting;
 using RevitDevTool.Controllers;
 using RevitDevTool.Core;
@@ -24,8 +26,10 @@ public sealed class RevitPipeServer(
     ConnectionState state,
     InstanceRequestHandler instanceRequestHandler,
     RegistryRequestHandler registryRequestHandler,
-    TestExecutionService testExecutionService) : IHostedService, IDisposable
+    PytestDependencyService pytestDependencyService,
+    PytestExecutionService pytestExecutionService) : IHostedService, IDisposable
 {
+    private const int MaxPipeInstances = 8;
     private Dictionary<string, Func<string, JsonElement?, Task<BridgeMessage>>>? _handlers;
 
     private Dictionary<string, Func<string, JsonElement?, Task<BridgeMessage>>> Handlers =>
@@ -39,12 +43,14 @@ public sealed class RevitPipeServer(
             [BridgeMethods.ResourceTemplatesList] = (id, _) => registryRequestHandler.HandleResourceTemplatesListAsync(id),
             [BridgeMethods.ResourcesRead] = registryRequestHandler.HandleResourcesReadAsync,
             [BridgeMethods.InstanceInfo] = (id, _) => Task.FromResult(instanceRequestHandler.HandleInstanceInfo(id)),
-            [BridgeMethods.TestsExecute] = HandleTestsExecuteAsync,
+            [BridgeMethods.TestsDiscover] = HandleTestsDiscoverAsync,
+            [BridgeMethods.TestsRun] = HandleTestsRunAsync,
         };
 
     private CancellationTokenSource? _cts;
     private Task? _acceptLoopTask;
-    private volatile BridgePipeConnection? _connection;
+    private readonly ConcurrentDictionary<int, BridgePipeConnection> _connections = new();
+    private int _nextConnectionId;
     private string? _pipeName;
     private bool _disposed;
 
@@ -77,8 +83,9 @@ public sealed class RevitPipeServer(
         toolStore.ToolsChanged -= OnToolsChanged;
 
         _cts?.CancelAsync();
-        _connection?.Dispose();
-        _connection = null;
+        foreach (var connection in _connections.Values)
+            connection.Dispose();
+        _connections.Clear();
 
         if (_acceptLoopTask is not null)
         {
@@ -115,27 +122,27 @@ public sealed class RevitPipeServer(
                 var pipe = CreateServerPipe(_pipeName!);
                 await pipe.WaitForConnectionAsync(ct).ConfigureAwait(false);
 
-                state.SetConnectedState(1);
-                Trace.TraceInformation("[MCP/PIPE] Client connected.");
-
-                var disconnectSignal = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
                 var conn = new BridgePipeConnection(pipe);
-                _connection = conn;
+                var connectionId = Interlocked.Increment(ref _nextConnectionId);
+                _connections[connectionId] = conn;
+                state.SetConnectedState(_connections.IsEmpty ? 0 : 1);
+                Trace.TraceInformation($"[MCP/PIPE] Client connected. Active clients: {_connections.Count}");
 
-                conn.MessageReceived += OnMessageReceived;
+                conn.MessageReceived += msg => OnMessageReceived(conn, msg);
                 conn.Disconnected += () =>
                 {
-                    _connection = null;
-                    state.SetConnectedState(0);
-                    Trace.TraceInformation("[MCP/PIPE] Client disconnected.");
-                    disconnectSignal.TrySetResult(true);
+                    if (_connections.TryRemove(connectionId, out var disconnectedConnection))
+                        disconnectedConnection.Dispose();
+                    state.SetConnectedState(_connections.IsEmpty ? 0 : 1);
+                    Trace.TraceInformation($"[MCP/PIPE] Client disconnected. Active clients: {_connections.Count}");
                 };
                 conn.StartReadLoop();
-
-                await disconnectSignal.Task.ConfigureAwait(false);
-                conn.Dispose();
             }
             catch (OperationCanceledException) { break; }
+            catch (IOException ex) when (IsPipeInstancesBusy(ex))
+            {
+                await Task.Delay(200, ct).ConfigureAwait(false);
+            }
             catch (Exception ex)
             {
                 Trace.TraceWarning($"[MCP/PIPE] Accept loop error: {ex.Message}");
@@ -144,7 +151,7 @@ public sealed class RevitPipeServer(
         }
     }
 
-    private async void OnMessageReceived(BridgeMessage msg)
+    private async void OnMessageReceived(BridgePipeConnection connection, BridgeMessage msg)
     {
         try
         {
@@ -163,9 +170,7 @@ public sealed class RevitPipeServer(
 
             try
             {
-                var conn = _connection;
-                if (conn is not null)
-                    await conn.WriteAsync(response).ConfigureAwait(false);
+                await connection.WriteAsync(response).ConfigureAwait(false);
             }
             catch (Exception ex)
             {
@@ -186,19 +191,65 @@ public sealed class RevitPipeServer(
         return BridgeMessage.Error(id, $"Unknown method: {request.Method}");
     }
 
-    private async Task<BridgeMessage> HandleTestsExecuteAsync(string id, JsonElement? @params)
+    private async Task<BridgeMessage> HandleTestsDiscoverAsync(string id, JsonElement? @params)
     {
-        if (!TestExecutionService.TryParseRequest(@params, out var request, out var error))
-            return BridgeMessage.Error(id, error ?? "Invalid test execution request.");
+        if (!PytestExecutionService.TryParseDiscoverRequest(@params, out var request, out var error))
+            return BridgeMessage.Error(id, error ?? "Invalid pytest discover request.");
+
+        await pytestDependencyService.PrepareDiscoverAsync(request!).ConfigureAwait(false);
 
         var handler = await ExternalEventController
-            .AsyncGenericEventHandler<TestExecutionResponse>()
+            .AsyncGenericEventHandler<PytestDiscoverResponse>()
             .ConfigureAwait(false);
 
-        var result = await handler.RaiseAsync(() => testExecutionService.Execute(request!)).ConfigureAwait(false);
+        var result = await handler
+            .RaiseAsync(() => pytestExecutionService.Discover(request!))
+            .ConfigureAwait(false);
+
         var json = JsonSerializer.SerializeToElement(result);
         return BridgeMessage.Response(id, json);
     }
+
+    private async Task<BridgeMessage> HandleTestsRunAsync(string id, JsonElement? @params)
+    {
+        if (!PytestExecutionService.TryParseRunRequest(@params, out var request, out var error))
+        {
+            var invalidRequest = PytestExecutionService.Error("prepare", error ?? "Invalid pytest run request.");
+            var invalidRequestJson = JsonSerializer.SerializeToElement(invalidRequest);
+            return BridgeMessage.Response(id, invalidRequestJson);
+        }
+
+        try
+        {
+            await pytestDependencyService.PrepareRunAsync(request!).ConfigureAwait(false);
+        }
+        catch (Exception ex)
+        {
+            var prepareFailure = PytestExecutionService.Error("prepare", "Failed to prepare pytest session.", ex.ToString());
+            var prepareJson = JsonSerializer.SerializeToElement(prepareFailure);
+            return BridgeMessage.Response(id, prepareJson);
+        }
+
+        PytestRunResponse result;
+        try
+        {
+            var handler = await ExternalEventController
+                .AsyncGenericEventHandler<PytestRunResponse>()
+                .ConfigureAwait(false);
+
+            result = await handler
+                .RaiseAsync(() => pytestExecutionService.Run(request!))
+                .ConfigureAwait(false);
+        }
+        catch (Exception ex)
+        {
+            result = PytestExecutionService.Error("run", "Failed to execute pytest session.", ex.ToString());
+        }
+
+        var json = JsonSerializer.SerializeToElement(result);
+        return BridgeMessage.Response(id, json);
+    }
+
 
     private void OnToolsChanged(object? sender, EventArgs e)
     {
@@ -210,19 +261,21 @@ public sealed class RevitPipeServer(
     {
         try
         {
-            var conn = _connection;
-            if (conn is null) return;
+            if (_connections.IsEmpty) return;
 
             var @params = data is not null ? JsonSerializer.SerializeToElement(data) : (JsonElement?)null;
             var notification = BridgeMessage.Notification(method, @params);
 
-            try
+            foreach (var connection in _connections.Values)
             {
-                await conn.WriteAsync(notification).ConfigureAwait(false);
-            }
-            catch (Exception ex)
-            {
-                Trace.TraceWarning($"[MCP/PIPE] Notification '{method}' failed: {ex.Message}");
+                try
+                {
+                    await connection.WriteAsync(notification).ConfigureAwait(false);
+                }
+                catch (Exception ex)
+                {
+                    Trace.TraceWarning($"[MCP/PIPE] Notification '{method}' failed: {ex.Message}");
+                }
             }
         }
         catch (Exception ex)
@@ -244,12 +297,20 @@ public sealed class RevitPipeServer(
             AccessControlType.Allow));
 
 #if NETFRAMEWORK
-        return new NamedPipeServerStream(pipeName, PipeDirection.InOut, 1,
+        return new NamedPipeServerStream(pipeName, PipeDirection.InOut, MaxPipeInstances,
             PipeTransmissionMode.Byte, PipeOptions.Asynchronous, 0, 0, security);
 #else
-        return NamedPipeServerStreamAcl.Create(pipeName, PipeDirection.InOut, 1,
+        return NamedPipeServerStreamAcl.Create(pipeName, PipeDirection.InOut, MaxPipeInstances,
             PipeTransmissionMode.Byte, PipeOptions.Asynchronous, 0, 0, security);
 #endif
+    }
+
+    private static bool IsPipeInstancesBusy(IOException ex)
+    {
+        const int allPipeInstancesBusy = 231;
+        var win32Code = ex.HResult & 0xFFFF;
+        return win32Code == allPipeInstancesBusy ||
+               ex.Message.Contains("All pipe instances are busy", StringComparison.OrdinalIgnoreCase);
     }
 
     public void Dispose()
@@ -258,7 +319,9 @@ public sealed class RevitPipeServer(
         _disposed = true;
         toolStore.ToolsChanged -= OnToolsChanged;
         _cts?.Cancel();
-        _connection?.Dispose();
+        foreach (var connection in _connections.Values)
+            connection.Dispose();
+        _connections.Clear();
         _cts?.Dispose();
     }
 }

@@ -6,3 +6,7 @@ platforms = ["win-64"]
 
 [dependencies]
 python = "3.13.*"
+mcp = ">=1.27,<2"
+pytest = ">=9.0.3,<10"
+debugpy = ">=1.8,<2"
+packaging = ">=26.0,<27"
