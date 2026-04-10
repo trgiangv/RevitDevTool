@@ -2,9 +2,9 @@ using System.Collections.ObjectModel;
 using System.Diagnostics;
 using RevitDevTool.McpParser.Models;
 using RevitDevTool.Utils;
-namespace RevitDevTool.Mcp.Models;
+namespace RevitDevTool.ExternalExecution.Connections;
 
-public sealed partial class BridgeConnectionState : ObservableObject
+public sealed partial class ConnectionState : ObservableObject
 {
     [ObservableProperty] private bool _isConnected;
     [ObservableProperty] private string _endpoint = string.Empty;
@@ -15,7 +15,7 @@ public sealed partial class BridgeConnectionState : ObservableObject
     [ObservableProperty] private string _currentStatusMessage = string.Empty;
     [ObservableProperty] private DateTime _executionStartedAtUtc;
 
-    public ObservableCollection<McpToolCallMetric> ToolCalls { get; } = [];
+    public ObservableCollection<ToolCallMetric> ToolCalls { get; } = [];
 
     public void SetEndpoint(string endpoint)
     {
@@ -81,7 +81,7 @@ public sealed partial class BridgeConnectionState : ObservableObject
                 return;
             }
 
-            ToolCalls.Add(new McpToolCallMetric(toolId, toolName, 1));
+            ToolCalls.Add(new ToolCallMetric(toolId, toolName, 1));
         });
     }
 
@@ -93,12 +93,12 @@ public sealed partial class BridgeConnectionState : ObservableObject
 
 public sealed class ExecutionScope : IDisposable
 {
-    private readonly BridgeConnectionState _state;
+    private readonly ConnectionState _state;
     private readonly string _toolName;
     private readonly Stopwatch _stopwatch;
     private bool _completed;
 
-    internal ExecutionScope(BridgeConnectionState state, string toolName)
+    internal ExecutionScope(ConnectionState state, string toolName)
     {
         _state = state;
         _toolName = toolName;

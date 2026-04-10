@@ -1,7 +1,6 @@
-﻿namespace RevitDevTool.Mcp.Models;
+﻿namespace RevitDevTool.ExternalExecution.Connections;
 
-
-public sealed partial class McpToolCallMetric(string toolId, string toolName, int count) : ObservableObject
+public sealed partial class ToolCallMetric(string toolId, string toolName, int count) : ObservableObject
 {
     [ObservableProperty] private string _toolId = toolId;
     [ObservableProperty] private string _toolName = toolName;

@@ -1,10 +1,10 @@
 using System.Diagnostics;
-using RevitDevTool.Mcp.Interfaces;
 using RevitDevTool.McpParser.Dotnet;
 using RevitDevTool.McpParser.Models;
-namespace RevitDevTool.Mcp.Dotnet;
 
-public sealed class DotnetMcpToolRegistryProvider : IMcpRegistryProvider
+namespace RevitDevTool.ExternalExecution.Mcp.Registry;
+
+public sealed class DotnetToolRegistryProvider : IMcpRegistryProvider
 {
     public string Name => "dotnet-mcp";
     public ExecutionMode SourceKind => ExecutionMode.Assembly;

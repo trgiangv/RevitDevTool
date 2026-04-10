@@ -2,7 +2,7 @@ using System.IO;
 using Python.Runtime;
 using RevitDevTool.Execution.Providers.Python;
 
-namespace RevitDevTool.Mcp;
+namespace RevitDevTool.ExternalExecution.Mcp.Execution;
 
 internal static class PythonExecutionHelper
 {

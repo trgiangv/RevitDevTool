@@ -25,12 +25,15 @@ using RevitDevTool.Execution.Providers;
 using RevitDevTool.Execution.Providers.Dotnet;
 using RevitDevTool.Execution.Providers.Python;
 using RevitDevTool.Execution.Services;
-using RevitDevTool.Mcp;
-using RevitDevTool.Mcp.Dotnet;
-using RevitDevTool.Mcp.Interfaces;
-using RevitDevTool.Mcp.Models;
-using RevitDevTool.Mcp.Python;
 using RevitDevTool.McpParser.Models;
+using RevitDevTool.ExternalExecution.Mcp.Dispatchers;
+using RevitDevTool.ExternalExecution.Mcp.Registry;
+using RevitDevTool.ExternalExecution;
+using RevitDevTool.ExternalExecution.Mcp.Handlers;
+using RevitDevTool.ExternalExecution.Handlers;
+using RevitDevTool.ExternalExecution.Testing;
+using RevitDevTool.ExternalExecution.Mcp;
+using RevitDevTool.ExternalExecution.Connections;
 // ReSharper disable ConvertToExtensionBlock
 
 namespace RevitDevTool;
@@ -169,17 +172,22 @@ public static class Host
         services.AddSingleton<PackageView>();
         services.AddSingleton<MemoryView>();
         services.AddSingleton<ExecutionView>();
-        
-        // MCP
+
+        // IPC Brigde Execution
         services.AddSingleton<McpRegistryView>();
         services.AddSingleton<McpRegistryViewModel>();
-        services.AddSingleton<BridgeConnectionState>();
-        services.AddSingleton<DotnetMcpToolRegistryProvider>();
-        services.AddSingleton<PythonMcpToolRegistryProvider>();
-        services.AddSingleton<IMcpRegistryProvider>(sp => sp.GetRequiredService<DotnetMcpToolRegistryProvider>());
-        services.AddSingleton<IMcpRegistryProvider>(sp => sp.GetRequiredService<PythonMcpToolRegistryProvider>());
+        services.AddSingleton<ConnectionState>();
+        services.AddSingleton<DotnetToolRegistryProvider>();
+        services.AddSingleton<PythonToolRegistryProvider>();
+        services.AddSingleton<IMcpRegistryProvider>(sp => sp.GetRequiredService<DotnetToolRegistryProvider>());
+        services.AddSingleton<IMcpRegistryProvider>(sp => sp.GetRequiredService<PythonToolRegistryProvider>());
+        services.AddSingleton<ToolRegistryCatalogLoader>();
         services.AddSingleton<ToolExecutionDispatcher>();
-        services.AddSingleton<PrimitiveExecutionDispatcher>();
+        services.AddSingleton<PromptExecutionDispatcher>();
+        services.AddSingleton<ResourceExecutionDispatcher>();
+        services.AddSingleton<InstanceRequestHandler>();
+        services.AddSingleton<RegistryRequestHandler>();
+        services.AddSingleton<TestExecutionService>();
         services.AddSingleton<ToolRegistryStore>();
         services.AddHostedService<RevitPipeServer>();
 

@@ -1,6 +1,6 @@
 using RevitDevTool.McpParser.Models;
 
-namespace RevitDevTool.Mcp.Interfaces;
+namespace RevitDevTool.ExternalExecution.Mcp.Registry;
 
 public interface IMcpRegistryProvider
 {

@@ -9,9 +9,6 @@ namespace RevitDevTool.McpParser.Models;
 /// MaxMessageSize prevents a malformed header from allocating unbounded memory.
 /// </summary>
 public sealed class BridgePipeConnection(Stream stream) : IDisposable
-#if NET
-    , IAsyncDisposable
-#endif
 {
     private const int MaxMessageSize = 16 * 1024 * 1024;
 
@@ -40,13 +37,8 @@ public sealed class BridgePipeConnection(Stream stream) : IDisposable
         await _writeLock.WaitAsync(ct).ConfigureAwait(false);
         try
         {
-#if NET
             await _stream.WriteAsync(header.AsMemory(0, 4), ct).ConfigureAwait(false);
             await _stream.WriteAsync(body.AsMemory(), ct).ConfigureAwait(false);
-#else
-            await _stream.WriteAsync(header, 0, 4, ct).ConfigureAwait(false);
-            await _stream.WriteAsync(body, 0, body.Length, ct).ConfigureAwait(false);
-#endif
             await _stream.FlushAsync(ct).ConfigureAwait(false);
         }
         finally
@@ -103,11 +95,7 @@ public sealed class BridgePipeConnection(Stream stream) : IDisposable
     {
         while (count > 0)
         {
-#if NET
             var read = await _stream.ReadAsync(buffer.AsMemory(offset, count), ct).ConfigureAwait(false);
-#else
-            var read = await _stream.ReadAsync(buffer, offset, count, ct).ConfigureAwait(false);
-#endif
             if (read == 0) return false;
             offset += read;
             count -= read;
@@ -116,7 +104,7 @@ public sealed class BridgePipeConnection(Stream stream) : IDisposable
         return true;
     }
 
-    private void DisposeCore()
+    public void Dispose()
     {
         if (_disposed) return;
         _disposed = true;
@@ -125,14 +113,4 @@ public sealed class BridgePipeConnection(Stream stream) : IDisposable
         _writeLock.Dispose();
         _stream.Dispose();
     }
-
-    public void Dispose() => DisposeCore();
-
-#if NET
-    public ValueTask DisposeAsync()
-    {
-        DisposeCore();
-        return ValueTask.CompletedTask;
-    }
-#endif
 }

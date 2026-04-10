@@ -4,7 +4,7 @@ using RevitDevTool.McpParser.Models;
 using RevitDevTool.Settings.Config;
 // ReSharper disable RedundantSuppressNullableWarningExpression
 
-namespace RevitDevTool.Mcp;
+namespace RevitDevTool.ExternalExecution.Mcp;
 
 internal static class McpPathValidator
 {

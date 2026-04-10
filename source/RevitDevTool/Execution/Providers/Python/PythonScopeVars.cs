@@ -24,4 +24,11 @@ public static class PythonScopeVars
     public const string ResultJson = "__result_json__";
     public const string ToolsetDirectory = "__toolset_directory__";
     public const string ParserResult = "__parser_result__";
+
+    // Test execution — JSON request keys and Python scope vars
+    public const string ModuleSource = "module_source";
+    public const string TestName = "test_name";
+    public const string TestFilePath = "file_path";
+    public const string ClassName = "class_name";
+    public const string TestInvoke = "__test_invoke__";
 }

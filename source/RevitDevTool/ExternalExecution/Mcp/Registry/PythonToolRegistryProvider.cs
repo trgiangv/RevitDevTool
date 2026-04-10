@@ -2,12 +2,12 @@ using System.Diagnostics;
 using System.IO;
 using Python.Runtime;
 using RevitDevTool.Execution.Providers.Python;
-using RevitDevTool.Mcp.Interfaces;
 using RevitDevTool.McpParser.Models;
 using RevitDevTool.McpParser.Python;
-namespace RevitDevTool.Mcp.Python;
 
-public sealed class PythonMcpToolRegistryProvider(PythonInitializer pythonInitializer) : IMcpRegistryProvider
+namespace RevitDevTool.ExternalExecution.Mcp.Registry;
+
+public sealed class PythonToolRegistryProvider(PythonInitializer pythonInitializer) : IMcpRegistryProvider
 {
     public string Name => "python-mcp";
     public ExecutionMode SourceKind => ExecutionMode.Python;

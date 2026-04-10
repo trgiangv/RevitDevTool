@@ -8,10 +8,10 @@ using RevitDevTool.Utils;
 using RevitDevTool.Theme;
 using System.Windows.Threading;
 using RevitDevTool.Execution.Models;
-using RevitDevTool.Mcp;
-using RevitDevTool.Mcp.Models;
 using RevitDevTool.McpParser.Models;
 using RevitDevTool.ViewModel.Models;
+using RevitDevTool.ExternalExecution.Mcp;
+using RevitDevTool.ExternalExecution.Connections;
 // ReSharper disable UnusedParameterInPartialMethod
 // ReSharper disable RedundantSuppressNullableWarningExpression
 
@@ -20,7 +20,7 @@ namespace RevitDevTool.ViewModel;
 public sealed partial class McpRegistryViewModel : ObservableObject, IDisposable
 {
     private readonly ToolRegistryStore _toolStore;
-    private readonly BridgeConnectionState _bridgeState;
+    private readonly ConnectionState _bridgeState;
     private readonly DispatcherTimer _searchDebounceTimer;
     private readonly DispatcherTimer _elapsedTimer;
     private readonly Dictionary<string, int> _callCounts = new(StringComparer.OrdinalIgnoreCase);
@@ -44,7 +44,7 @@ public sealed partial class McpRegistryViewModel : ObservableObject, IDisposable
     public bool ShowStatusPanel => IsBusy || IsExecuting;
     public string StatusPanelText => IsBusy ? BusyMessage : ExecutionStatusText;
 
-    public McpRegistryViewModel(ToolRegistryStore toolStore, BridgeConnectionState bridgeState)
+    public McpRegistryViewModel(ToolRegistryStore toolStore, ConnectionState bridgeState)
     {
         _toolStore = toolStore;
         _bridgeState = bridgeState;
@@ -258,18 +258,18 @@ public sealed partial class McpRegistryViewModel : ObservableObject, IDisposable
 
         switch (e.PropertyName)
         {
-            case nameof(BridgeConnectionState.IsConnected) or nameof(BridgeConnectionState.Endpoint):
+            case nameof(ConnectionState.IsConnected) or nameof(ConnectionState.Endpoint):
                 IsConnected = _bridgeState.IsConnected;
                 PipeName = string.IsNullOrWhiteSpace(_bridgeState.Endpoint) ? "N/A" : _bridgeState.Endpoint;
                 break;
-            case nameof(BridgeConnectionState.TotalToolCalls):
+            case nameof(ConnectionState.TotalToolCalls):
                 TotalCalled = _bridgeState.TotalToolCalls;
                 break;
-            case nameof(BridgeConnectionState.IsExecuting):
+            case nameof(ConnectionState.IsExecuting):
                 RefreshExecutionState();
                 break;
-            case nameof(BridgeConnectionState.CurrentToolName):
-            case nameof(BridgeConnectionState.CurrentStatusMessage):
+            case nameof(ConnectionState.CurrentToolName):
+            case nameof(ConnectionState.CurrentStatusMessage):
                 UpdateElapsedDisplay();
                 break;
         }
@@ -279,13 +279,13 @@ public sealed partial class McpRegistryViewModel : ObservableObject, IDisposable
     {
         if (e.NewItems is not null)
         {
-            foreach (var item in e.NewItems.OfType<McpToolCallMetric>())
+            foreach (var item in e.NewItems.OfType<ToolCallMetric>())
                 item.PropertyChanged += OnToolCallMetricChanged;
         }
 
         if (e.OldItems is not null)
         {
-            foreach (var item in e.OldItems.OfType<McpToolCallMetric>())
+            foreach (var item in e.OldItems.OfType<ToolCallMetric>())
                 item.PropertyChanged -= OnToolCallMetricChanged;
         }
 
@@ -294,7 +294,7 @@ public sealed partial class McpRegistryViewModel : ObservableObject, IDisposable
 
     private void OnToolCallMetricChanged(object? sender, PropertyChangedEventArgs e)
     {
-        if (e.PropertyName != nameof(McpToolCallMetric.Count))
+        if (e.PropertyName != nameof(ToolCallMetric.Count))
             return;
 
         SyncCallCounts();
