@@ -4,7 +4,15 @@ Shows how users can build their own transaction isolation patterns
 without any framework-imposed behavior.
 """
 
+import pytest
 
+requires_document = pytest.mark.skipif(
+    "__revit__" not in dir() or __revit__.ActiveUIDocument is None,  # noqa: F821
+    reason="No document open in Revit",
+)
+
+
+@requires_document
 def test_create_and_delete_wall():
     """Create a wall inside a transaction, then roll back."""
     from Autodesk.Revit.DB import (
@@ -32,6 +40,7 @@ def test_create_and_delete_wall():
         print("Transaction rolled back")
 
 
+@requires_document
 def test_read_project_info():
     """Read project information — no transaction needed for read-only."""
     doc = __revit__.ActiveUIDocument.Document  # noqa: F821

@@ -1,65 +1,26 @@
 """Data models for the RevitDevTool bridge protocol.
 
-Mirrors ``RevitDevTool.McpParser.Models.BridgeMessage`` on the C# side.
+Mirrors ``RevitDevTool.McpParser.Models.BridgeMessage`` on the C# side
+and ``PytestContracts.cs`` response models.
 """
 
 from __future__ import annotations
 
 import json
 import uuid
-from dataclasses import dataclass, field
-from enum import Enum
-from typing import Any
+from dataclasses import asdict, dataclass, field, fields
+from typing import Any, TypeVar
+
+_T = TypeVar("_T")
 
 
-class TestOutcome(Enum):
-    PASSED = "passed"
-    FAILED = "failed"
-    SKIPPED = "skipped"
-    ERROR = "error"
+def _deserialize(cls: type[_T], data: dict[str, Any]) -> _T:
+    """Deserialize dict → flat dataclass. Like ``JsonSerializer.Deserialize<T>()``.
 
-
-@dataclass(frozen=True, slots=True)
-class TestRequest:
-    module_source: str
-    test_name: str
-    file_path: str
-    class_name: str | None = None
-
-    def to_bridge_params(self) -> dict[str, Any]:
-        params: dict[str, Any] = {
-            "module_source": self.module_source,
-            "test_name": self.test_name,
-            "file_path": self.file_path,
-        }
-        if self.class_name:
-            params["class_name"] = self.class_name
-        return params
-
-
-@dataclass(frozen=True, slots=True)
-class TestResult:
-    outcome: TestOutcome = TestOutcome.ERROR
-    message: str = ""
-    traceback: str = ""
-    stdout: str = ""
-    duration_ms: float = 0.0
-
-    @classmethod
-    def from_dict(cls, data: dict[str, Any]) -> TestResult:
-        raw = data.get("outcome", "error")
-        try:
-            outcome = TestOutcome(raw)
-        except ValueError:
-            outcome = TestOutcome.ERROR
-        return cls(
-            outcome=outcome,
-            message=data.get("message", ""),
-            traceback=data.get("traceback", ""),
-            stdout=data.get("stdout", ""),
-            duration_ms=data.get("duration_ms", 0.0),
-        )
-
+    Maps dict keys to dataclass fields by name. Missing keys use field defaults.
+    Only works for flat dataclasses (no nested types).
+    """
+    return cls(**{f.name: data[f.name] for f in fields(cls) if f.name in data})  # type: ignore[arg-type]
 
 @dataclass(slots=True)
 class BridgeRequest:
@@ -92,4 +53,110 @@ class BridgeResponse:
             result=data.get("result"),
             is_error=data.get("isError", False),
             error_message=data.get("errorMessage", ""),
+        )
+
+
+# -- Request contracts (mirrors PytestContracts.cs requests) -----------------
+
+@dataclass(slots=True)
+class RunRequest:
+    workspace_root: str = ""
+    test_root: str = ""
+    nodeids: list[str] = field(default_factory=list)
+    pytest_args: list[str] = field(default_factory=list)
+    mode: str = "session"
+
+    def to_params(self) -> dict[str, Any]:
+        return asdict(self)
+
+
+@dataclass(slots=True)
+class DiscoverRequest:
+    workspace_root: str = ""
+    test_root: str = ""
+    pytest_args: list[str] = field(default_factory=list)
+
+    def to_params(self) -> dict[str, Any]:
+        return asdict(self)
+
+
+# -- Response contracts (mirrors PytestContracts.cs responses) ---------------
+
+@dataclass(frozen=True, slots=True)
+class CaseResult:
+    nodeid: str = ""
+    outcome: str = "error"
+    phase: str = "call"
+    duration_ms: float = 0.0
+    stdout: str = ""
+    stderr: str = ""
+    message: str = ""
+    traceback: str = ""
+
+    @classmethod
+    def from_dict(cls, data: dict[str, Any]) -> CaseResult:
+        return _deserialize(cls, data)
+
+
+@dataclass(frozen=True, slots=True)
+class CollectionError:
+    nodeid: str = ""
+    path: str = ""
+    message: str = ""
+    traceback: str = ""
+
+    @classmethod
+    def from_dict(cls, data: dict[str, Any]) -> CollectionError:
+        return _deserialize(cls, data)
+
+
+@dataclass(frozen=True, slots=True)
+class RunSummary:
+    passed: int = 0
+    failed: int = 0
+    skipped: int = 0
+    errors: int = 0
+    xfailed: int = 0
+    xpassed: int = 0
+
+    @classmethod
+    def from_dict(cls, data: dict[str, Any]) -> RunSummary:
+        return _deserialize(cls, data)
+
+
+@dataclass(frozen=True, slots=True)
+class RunResponse:
+    exit_code: int = 1
+    summary: RunSummary = field(default_factory=RunSummary)
+    results: tuple[CaseResult, ...] = ()
+    collection_errors: tuple[CollectionError, ...] = ()
+    rootdir: str = ""
+
+    @classmethod
+    def from_dict(cls, data: dict[str, Any]) -> RunResponse:
+        return cls(
+            exit_code=data.get("exit_code", 1),
+            summary=RunSummary.from_dict(data.get("summary", {})),
+            results=tuple(CaseResult.from_dict(r) for r in data.get("results", [])),
+            collection_errors=tuple(
+                CollectionError.from_dict(e) for e in data.get("collection_errors", [])
+            ),
+            rootdir=data.get("rootdir", ""),
+        )
+
+
+@dataclass(frozen=True, slots=True)
+class DiscoverResponse:
+    rootdir: str = ""
+    nodeids: tuple[str, ...] = ()
+    collection_errors: tuple[CollectionError, ...] = ()
+
+    @classmethod
+    def from_dict(cls, data: dict[str, Any]) -> DiscoverResponse:
+        return cls(
+            rootdir=data.get("rootdir", ""),
+            nodeids=tuple(data.get("nodeids", [])),
+            collection_errors=tuple(
+                CollectionError.from_dict(e) for e in data.get("collection_errors", [])
+            ),
         )

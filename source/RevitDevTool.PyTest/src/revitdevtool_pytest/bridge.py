@@ -12,12 +12,21 @@ import time
 from typing import Any
 
 from .constants import (
-    BRIDGE_METHOD_TESTS_EXECUTE,
+    BRIDGE_METHOD_TESTS_DISCOVER,
+    BRIDGE_METHOD_TESTS_RUN,
     BRIDGE_MSG_TYPE_NOTIFICATION,
     DEFAULT_CONNECT_TIMEOUT_MS,
     DEFAULT_TEST_TIMEOUT_S,
 )
-from .models import BridgeRequest, BridgeResponse, TestOutcome, TestRequest, TestResult
+from .models import (
+    BridgeRequest,
+    BridgeResponse,
+    CollectionError,
+    DiscoverRequest,
+    DiscoverResponse,
+    RunRequest,
+    RunResponse,
+)
 
 _MAX_FRAME_SIZE = 16 * 1024 * 1024
 _HEADER_FMT = "<I"
@@ -74,16 +83,65 @@ class RevitBridge:
     def connected(self) -> bool:
         return self._handle is not None
 
-    def execute_test(self, request: TestRequest, *, timeout_s: float = DEFAULT_TEST_TIMEOUT_S) -> TestResult:
+    def run_tests(
+        self,
+        workspace_root: str,
+        test_root: str,
+        nodeids: list[str],
+        *,
+        pytest_args: list[str] | None = None,
+        mode: str = "session",
+        timeout_s: float = DEFAULT_TEST_TIMEOUT_S,
+    ) -> RunResponse:
+        request = RunRequest(
+            workspace_root=workspace_root,
+            test_root=test_root,
+            nodeids=nodeids,
+            pytest_args=pytest_args or [],
+            mode=mode,
+        )
         response = self._request(
-            BridgeRequest(method=BRIDGE_METHOD_TESTS_EXECUTE, params=request.to_bridge_params()),
+            BridgeRequest(method=BRIDGE_METHOD_TESTS_RUN, params=request.to_params()),
             timeout_s,
         )
         if response.is_error:
-            return TestResult(outcome=TestOutcome.ERROR, message=response.error_message)
+            return RunResponse(
+                exit_code=1,
+                collection_errors=(CollectionError(message=response.error_message),),
+            )
         if isinstance(response.result, dict):
-            return TestResult.from_dict(response.result)
-        return TestResult(outcome=TestOutcome.ERROR, message=f"Unexpected response: {response.result}")
+            return RunResponse.from_dict(response.result)
+        return RunResponse(
+            exit_code=1,
+            collection_errors=(CollectionError(message=f"Unexpected response: {response.result}"),),
+        )
+
+    def discover(
+        self,
+        workspace_root: str,
+        test_root: str,
+        *,
+        pytest_args: list[str] | None = None,
+        timeout_s: float = DEFAULT_TEST_TIMEOUT_S,
+    ) -> DiscoverResponse:
+        request = DiscoverRequest(
+            workspace_root=workspace_root,
+            test_root=test_root,
+            pytest_args=pytest_args or [],
+        )
+        response = self._request(
+            BridgeRequest(method=BRIDGE_METHOD_TESTS_DISCOVER, params=request.to_params()),
+            timeout_s,
+        )
+        if response.is_error:
+            return DiscoverResponse(
+                collection_errors=(CollectionError(message=response.error_message),),
+            )
+        if isinstance(response.result, dict):
+            return DiscoverResponse.from_dict(response.result)
+        return DiscoverResponse(
+            collection_errors=(CollectionError(message=f"Unexpected response: {response.result}"),),
+        )
 
     def _request(self, req: BridgeRequest, timeout_s: float) -> BridgeResponse:
         self._write_frame(req.to_json_bytes())
@@ -120,8 +178,8 @@ class RevitBridge:
         while len(buf) < count:
             if time.monotonic() >= deadline:
                 raise TimeoutError(f"Timed out reading {count} bytes (got {len(buf)})")
-            _, data = win32file.ReadFile(self._handle, count - len(buf))
+            _, data = win32file.ReadFile(self._handle, count - len(buf))  # type: ignore[call-overload]
             if not data:
                 raise ConnectionError("Pipe closed while reading")
-            buf.extend(data)
+            buf.extend(data)  # type: ignore[arg-type]  # ReadFile returns bytes at runtime
         return bytes(buf)

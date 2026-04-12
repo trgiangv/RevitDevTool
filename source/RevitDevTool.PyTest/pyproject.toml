@@ -36,3 +36,10 @@ Issues = "https://github.com/trgiangv/RevitDevTool.PyTest/issues"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/revitdevtool_pytest"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+revit_version = "2025"
+revit_timeout = "60"
+revit_launch = true
+revit_launch_timeout = "180"

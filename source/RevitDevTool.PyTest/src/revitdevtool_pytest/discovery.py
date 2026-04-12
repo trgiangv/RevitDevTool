@@ -14,7 +14,6 @@ from .constants import (
     DEFAULT_POLL_INTERVAL_S,
     PIPE_DIR,
     PIPE_PATTERN,
-    REVIT_DEFAULT_DIR,
     REVIT_EXE,
     REVIT_NOSPLASH,
     REVIT_REGISTRY_KEY,
@@ -37,7 +36,9 @@ def find_revit_pipes() -> list[RevitInstance]:
     for name in _list_named_pipes():
         m = _PIPE_RE.match(name)
         if m:
-            instances.append(RevitInstance(name, int(m.group(1)), int(m.group(2))))
+            process_id = int(m.group(2))
+            version = int(m.group(1))
+            instances.append(RevitInstance(name, version, process_id))
     return instances
 
 
@@ -53,8 +54,14 @@ def select_instance(
         return None
     if version is not None:
         matches = [i for i in instances if i.version == version]
-        return matches[0] if matches else None
-    return max(instances, key=lambda i: i.version)
+        if not matches:
+            return None
+        # Deterministic selection for multiple instances of the same year:
+        # prefer highest PID (typically newest launched process).
+        return max(matches, key=lambda i: i.process_id)
+
+    # Prefer newest version; tie-break by highest PID.
+    return max(instances, key=lambda i: (i.version, i.process_id))
 
 
 def find_revit_path(version: int) -> str | None:
@@ -62,7 +69,7 @@ def find_revit_path(version: int) -> str | None:
     path = _find_from_registry(version)
     if path:
         return path
-    default = os.path.join(REVIT_DEFAULT_DIR, f"Revit {version}", REVIT_EXE)
+    default = f"C:\\Program Files\\Autodesk\\Revit {version}\\Revit.exe"
     return default if os.path.isfile(default) else None
 
 

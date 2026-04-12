@@ -11,14 +11,15 @@ import ctypes
 import ctypes.wintypes
 import threading
 from dataclasses import dataclass, field
+from typing import Any
 
 _BM_CLICK = 0x00F5
 _DIALOG_CLASS = "#32770"
 _BUTTON_CLASS = "button"
 
-_user32 = ctypes.windll.user32  # type: ignore[attr-defined]
+_user32: Any = ctypes.windll.user32  # type: ignore[attr-defined]
 
-_EnumWindowsProc = ctypes.WINFUNCTYPE(
+_EnumWindowsProc = ctypes.WINFUNCTYPE(  # type: ignore[misc]
     ctypes.wintypes.BOOL, ctypes.wintypes.HWND, ctypes.wintypes.LPARAM,
 )
 
@@ -69,7 +70,7 @@ class DialogResolverOptions:
 class StartupDialogResolver:
     """Poll for Revit startup dialogs and auto-click whitelisted buttons."""
 
-    def __init__(self, process_id: int, options: DialogResolverOptions | None = None) -> None:
+    def __init__(self, process_id: int, options: DialogResolverOptions | None = None):
         self._pid = process_id
         self._opts = options or DialogResolverOptions()
         self._stop = threading.Event()

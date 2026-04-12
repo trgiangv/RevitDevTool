@@ -22,10 +22,4 @@
     "basedpyright.importStrategy": "useBundled",
     "basedpyright.analysis.typeCheckingMode": "off",
     "python.testing.pytestEnabled": true,
-    "python.testing.pytestArgs": [
-        "--revit-launch",
-        "--revit-version=2025",
-        "--revit-launch-timeout=180",
-        "tests"
-    ]
 }

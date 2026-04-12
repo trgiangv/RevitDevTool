@@ -14,3 +14,4 @@ build/
 .env
 .venv/
 venv/
+.idea/
