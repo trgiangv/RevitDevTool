@@ -13,7 +13,7 @@ public sealed class ReadRevitFileInfoTool : McpServerTool
     public override Tool ProtocolTool { get; } = new()
     {
         Name = "read_revit_file_info",
-        Description = "Read basic information from a Revit file (.rvt, .rfa, .rft, .rte) without requiring Revit to be running. Returns version, author, worksharing status, and file paths.",
+        Description = "Read metadata directly from a Revit file without launching Revit. Useful for preflight checks before `launch_revit` or `open_revit_model`.",
         InputSchema = JsonSerializer.SerializeToElement(new
         {
             type = "object",

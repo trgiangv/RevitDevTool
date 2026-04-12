@@ -9,7 +9,7 @@ public sealed class ListRevitInstancesTool(InstanceManager instanceManager) : Mc
     public override Tool ProtocolTool { get; } = new()
     {
         Name = "list_revit_instances",
-        Description = "List all running Revit instances with their process ID, version, and active document. Use this to discover available Revit instances before calling other tools.",
+        Description = "List discovered and connected Revit instances managed by MCPServer. Use this first to choose a target `revitInstanceId` for tools that route into running Revit sessions.",
         InputSchema = JsonSerializer.SerializeToElement(new { type = "object", properties = new { } })
     };
 

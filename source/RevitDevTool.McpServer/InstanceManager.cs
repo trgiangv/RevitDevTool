@@ -33,8 +33,11 @@ public sealed partial class InstanceManager(ILogger<InstanceManager> logger) : I
     {
         var knownPipes = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
-        while (!ct.IsCancellationRequested)
+        while (true)
         {
+            if (ct.IsCancellationRequested)
+                return;
+
             try
             {
                 var currentPipes = DiscoverRevitPipes(logger);
@@ -54,16 +57,23 @@ public sealed partial class InstanceManager(ILogger<InstanceManager> logger) : I
                     await TryConnectAsync(pipeName, ct).ConfigureAwait(false);
                 }
             }
-            catch (OperationCanceledException)
+            catch (OperationCanceledException) when (ct.IsCancellationRequested)
             {
-                break;
+                return;
             }
             catch (Exception ex)
             {
                 logger.LogError(ex, "Discovery error");
             }
 
-            await Task.Delay(2000, ct).ConfigureAwait(false);
+            try
+            {
+                await Task.Delay(2000, ct).ConfigureAwait(false);
+            }
+            catch (OperationCanceledException) when (ct.IsCancellationRequested)
+            {
+                return;
+            }
         }
     }
 
