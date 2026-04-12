@@ -1,6 +1,7 @@
 """Dependency tests resolved from suite metadata in conftest.py."""
 
 import pytest
+from functools import wraps
 import humanize
 import networkx as nx
 import numpy as np
@@ -9,6 +10,7 @@ from openpyxl import Workbook
 from pydantic import BaseModel, ValidationError
 from shapely.geometry import Polygon, box
 from tabulate import tabulate
+
 
 requires_document = pytest.mark.skipif(
     "__revit__" not in dir() or __revit__.ActiveUIDocument is None,  # noqa: F821

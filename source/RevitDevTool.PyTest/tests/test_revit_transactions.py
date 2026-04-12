@@ -5,11 +5,30 @@ without any framework-imposed behavior.
 """
 
 import pytest
+from functools import wraps
 
-requires_document = pytest.mark.skipif(
-    "__revit__" not in dir() or __revit__.ActiveUIDocument is None,  # noqa: F821
-    reason="No document open in Revit",
-)
+
+def _get_active_uidocument_or_skip():
+    try:
+        if "__revit__" not in dir():  # noqa: F821
+            pytest.skip("No Revit application available.")
+        uidoc = getattr(__revit__, "ActiveUIDocument", None)  # noqa: F821
+    except BaseException:
+        pytest.skip("Cannot access ActiveUIDocument from Revit.")
+
+    if uidoc is None:
+        pytest.skip("No document open in Revit.")
+
+    return uidoc
+
+
+def requires_document(test_func):
+    @wraps(test_func)
+    def wrapped(*args, **kwargs):
+        _get_active_uidocument_or_skip()
+        return test_func(*args, **kwargs)
+
+    return wrapped
 
 
 @requires_document
@@ -23,7 +42,7 @@ def test_create_and_delete_wall():
         BuiltInCategory,
     )
 
-    doc = __revit__.ActiveUIDocument.Document  # noqa: F821
+    doc = _get_active_uidocument_or_skip().Document
 
     collector = FilteredElementCollector(doc).OfCategory(
         BuiltInCategory.OST_Walls
@@ -43,7 +62,7 @@ def test_create_and_delete_wall():
 @requires_document
 def test_read_project_info():
     """Read project information — no transaction needed for read-only."""
-    doc = __revit__.ActiveUIDocument.Document  # noqa: F821
+    doc = _get_active_uidocument_or_skip().Document
     info = doc.ProjectInformation
     assert info is not None
     print(f"Project name: {info.Name}")

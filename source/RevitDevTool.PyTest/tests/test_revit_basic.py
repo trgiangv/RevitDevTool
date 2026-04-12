@@ -5,6 +5,8 @@ __revit__ is available globally (injected by RevitDevTool).
 """
 
 import pytest
+from functools import wraps
+
 
 requires_document = pytest.mark.skipif(
     "__revit__" not in dir() or __revit__.ActiveUIDocument is None,  # noqa: F821
