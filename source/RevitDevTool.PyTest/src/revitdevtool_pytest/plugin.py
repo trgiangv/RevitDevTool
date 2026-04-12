@@ -45,6 +45,7 @@ _bridge: RevitBridge | None = None
 _dialog_resolver: StartupDialogResolver | None = None
 _no_revit_key = pytest.StashKey[bool]()
 _collect_only_key = pytest.StashKey[bool]()
+_remote_results_key = pytest.StashKey[dict[str, list[CaseResult]]]()
 
 _VALID_REPORT_OUTCOMES = frozenset({OUTCOME_PASSED, OUTCOME_FAILED, OUTCOME_SKIPPED})
 
@@ -109,11 +110,27 @@ def pytest_runtestloop(session: pytest.Session) -> bool:
     elif _bridge is None or not _bridge.connected:
         _skip_all(session, "Not connected to Revit")
     elif session.items:
-        _run_remote_session(session)
+        session.stash[_remote_results_key] = _run_remote_session(session)
+        for index, item in enumerate(session.items):
+            nextitem = session.items[index + 1] if index + 1 < len(session.items) else None
+            session.config.hook.pytest_runtest_protocol(item=item, nextitem=nextitem)
     return True
 
 
-def _run_remote_session(session: pytest.Session) -> None:
+@pytest.hookimpl(tryfirst=True)
+def pytest_runtest_protocol(item: pytest.Item, nextitem: pytest.Item | None) -> bool:  # noqa: ARG001
+    results_by_nodeid = item.session.stash.get(_remote_results_key, None)
+    if results_by_nodeid is None:
+        return False
+
+    reports = _emit_item_reports(item, results_by_nodeid.get(item.nodeid, []))
+    for report in reports:
+        if report.when == PHASE_CALL and report.failed:
+            item.session.testsfailed += 1
+    return True
+
+
+def _run_remote_session(session: pytest.Session) -> dict[str, list[CaseResult]]:
     workspace_root = str(session.config.rootdir)
     per_test_timeout = _opt_float(session.config, OPT_TIMEOUT, OPT_TIMEOUT) or DEFAULT_TEST_TIMEOUT_S
     total_timeout = per_test_timeout * max(len(session.items), 1)
@@ -132,7 +149,7 @@ def _run_remote_session(session: pytest.Session) -> None:
         )
     except OSError as exc:
         _fail_all(session, f"{PLUGIN_NAME}: Remote execution failed: {exc}")
-        return
+        return {}
 
     for err in response.collection_errors:
         _report_collection_error(session, err.nodeid, err.message, err.traceback)
@@ -141,8 +158,7 @@ def _run_remote_session(session: pytest.Session) -> None:
     for r in response.results:
         results_by_nodeid.setdefault(r.nodeid, []).append(r)
 
-    for item in session.items:
-        _emit_item_reports(item, results_by_nodeid.get(item.nodeid, []))
+    return results_by_nodeid
 
 
 def pytest_unconfigure(config: pytest.Config) -> None:  # noqa
@@ -249,19 +265,23 @@ def _connect_pipe(pipe_name: str) -> RevitBridge:
         raise
 
 
-def _emit_item_reports(item: pytest.Item, results: list[CaseResult]) -> None:
+def _emit_item_reports(item: pytest.Item, results: list[CaseResult]) -> list[pytest.TestReport]:
     ihook = item.ihook
     ihook.pytest_runtest_logstart(nodeid=item.nodeid, location=item.location)
 
+    emitted: list[pytest.TestReport] = []
     if not results:
         report = _make_error_report(item, "No result received from Revit for this test.")
         ihook.pytest_runtest_logreport(report=report)
+        emitted.append(report)
     else:
         for r in results:
             report = _make_report(item, r)
             ihook.pytest_runtest_logreport(report=report)
+            emitted.append(report)
 
     ihook.pytest_runtest_logfinish(nodeid=item.nodeid, location=item.location)
+    return emitted
 
 
 def _make_report(item: pytest.Item, result: CaseResult) -> pytest.TestReport:
