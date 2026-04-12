@@ -1,4 +1,5 @@
 using System.Windows.Input;
+using System.Diagnostics.CodeAnalysis;
 using Autodesk.Revit.Attributes;
 using Autodesk.Revit.DB.Events;
 using RevitDevTool.Core;
@@ -19,6 +20,7 @@ public class DevToolsCommand : IExternalCommand, IExternalCommandAvailability
     public static readonly Action TraceReceivedHandler = OnTraceReceived;
 
     private static bool IsForceHide { get; set; }
+    private static bool PreferDockablePane { get; set; }
     internal static LogViewModel? SharedViewModel { get; private set; }
     private static MainWindow? FloatingWindow { get; set; }
     private static bool HasUiDocument => RevitContext.UiApplication.HasActiveUiDocument();
@@ -59,7 +61,9 @@ public class DevToolsCommand : IExternalCommand, IExternalCommandAvailability
 
     private static void ExecutePaneVisibility()
     {
-        var dockablePane = RevitContext.UiApplication.GetDockablePane(PaneId);
+        if (!TryGetDockablePaneFromUiApplication(out var dockablePane))
+            return;
+
         if (dockablePane.IsShown())
         {
             dockablePane.Hide();
@@ -98,15 +102,21 @@ public class DevToolsCommand : IExternalCommand, IExternalCommandAvailability
             });
 
         application.ControlledApplication.DocumentOpened += OnDocumentOpened;
+        application.ControlledApplication.DocumentOpening += OnDocumentOpening;
         application.ControlledApplication.DocumentClosed += OnDocumentClosed;
         NotifyListener.TraceReceived += TraceReceivedHandler;
+        PreferDockablePane = HasUiDocument;
     }
 
     private static void OnTraceReceived()
     {
         if (HasUiDocument)
         {
-            var dockablePane = RevitContext.UiControlledApplication.GetDockablePane(PaneId);
+            PreferDockablePane = true;
+            CloseFloatingWindow();
+            if (!TryGetDockablePaneFromUiControlledApplication(out var dockablePane))
+                return;
+
             if (!dockablePane.IsShown() && !IsForceHide)
             {
                 dockablePane.Show();
@@ -122,17 +132,26 @@ public class DevToolsCommand : IExternalCommand, IExternalCommandAvailability
             return;
         }
         if (FloatingWindow != null) return;
+        if (PreferDockablePane) return;
 
         SharedViewModel.Subscribe();
         ShowFloatingWindow();
     }
 
+    private static void OnDocumentOpening(object? sender, DocumentOpeningEventArgs args)
+    {
+        PreferDockablePane = true;
+        CloseFloatingWindow();
+    }
+
     private static void OnDocumentOpened(object? sender, DocumentOpenedEventArgs args)
     {
         if (!HasUiDocument) return;
+        PreferDockablePane = true;
         CloseFloatingWindow();
 
-        var dockablePane = RevitContext.UiControlledApplication.GetDockablePane(PaneId);
+        if (!TryGetDockablePaneFromUiControlledApplication(out var dockablePane))
+            return;
 
         if (IsForceHide)
         {
@@ -187,6 +206,7 @@ public class DevToolsCommand : IExternalCommand, IExternalCommandAvailability
     private static void OnDocumentClosed(object? sender, DocumentClosedEventArgs args)
     {
         if (HasUiDocument) return;
+        PreferDockablePane = false;
 
         if (SharedViewModel is null or { IsStarted: false })
         {
@@ -194,6 +214,36 @@ public class DevToolsCommand : IExternalCommand, IExternalCommandAvailability
         }
 
         NotifyListener.TraceReceived += TraceReceivedHandler;
+    }
+
+    private static bool TryGetDockablePaneFromUiApplication([NotNullWhen(true)] out DockablePane? dockablePane)
+    {
+        Application.EnsureDockablePaneRegistered();
+        try
+        {
+            dockablePane = RevitContext.UiApplication.GetDockablePane(PaneId);
+            return true;
+        }
+        catch
+        {
+            dockablePane = null;
+            return false;
+        }
+    }
+
+    private static bool TryGetDockablePaneFromUiControlledApplication([NotNullWhen(true)] out DockablePane? dockablePane)
+    {
+        Application.EnsureDockablePaneRegistered();
+        try
+        {
+            dockablePane = RevitContext.UiControlledApplication.GetDockablePane(PaneId);
+            return true;
+        }
+        catch
+        {
+            dockablePane = null;
+            return false;
+        }
     }
 
     public bool IsCommandAvailable(UIApplication applicationData, CategorySet selectedCategories)

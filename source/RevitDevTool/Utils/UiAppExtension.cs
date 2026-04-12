@@ -21,6 +21,11 @@ public static class UiAppExtension
     /// <returns>True if there is an active UI document; otherwise, false.</returns>
     public static bool HasActiveUiDocument(this UIApplication uiapp)
     {
+        if (uiapp.ActiveUIDocument is not null)
+        {
+            return true;
+        }
+
         var frameManager = MainWindow.getMainWnd().frameManager;
         var activeFrameControl = frameManager.onGetActiveFrame();
         var activeFrameHost = activeFrameControl?.Content as MFCMDIFrameHost;
