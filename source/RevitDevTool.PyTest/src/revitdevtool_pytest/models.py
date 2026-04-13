@@ -22,6 +22,7 @@ def _deserialize(cls: type[_T], data: dict[str, Any]) -> _T:
     """
     return cls(**{f.name: data[f.name] for f in fields(cls) if f.name in data})  # type: ignore[arg-type]
 
+
 @dataclass(slots=True)
 class BridgeRequest:
     method: str
@@ -58,22 +59,12 @@ class BridgeResponse:
 
 # -- Request contracts (mirrors PytestContracts.cs requests) -----------------
 
+
 @dataclass(slots=True)
 class RunRequest:
     workspace_root: str = ""
     test_root: str = ""
     nodeids: list[str] = field(default_factory=list)
-    pytest_args: list[str] = field(default_factory=list)
-    mode: str = "session"
-
-    def to_params(self) -> dict[str, Any]:
-        return asdict(self)
-
-
-@dataclass(slots=True)
-class DiscoverRequest:
-    workspace_root: str = ""
-    test_root: str = ""
     pytest_args: list[str] = field(default_factory=list)
 
     def to_params(self) -> dict[str, Any]:
@@ -81,6 +72,7 @@ class DiscoverRequest:
 
 
 # -- Response contracts (mirrors PytestContracts.cs responses) ---------------
+
 
 @dataclass(frozen=True, slots=True)
 class CaseResult:
@@ -142,21 +134,4 @@ class RunResponse:
                 CollectionError.from_dict(e) for e in data.get("collection_errors", [])
             ),
             rootdir=data.get("rootdir", ""),
-        )
-
-
-@dataclass(frozen=True, slots=True)
-class DiscoverResponse:
-    rootdir: str = ""
-    nodeids: tuple[str, ...] = ()
-    collection_errors: tuple[CollectionError, ...] = ()
-
-    @classmethod
-    def from_dict(cls, data: dict[str, Any]) -> DiscoverResponse:
-        return cls(
-            rootdir=data.get("rootdir", ""),
-            nodeids=tuple(data.get("nodeids", [])),
-            collection_errors=tuple(
-                CollectionError.from_dict(e) for e in data.get("collection_errors", [])
-            ),
         )

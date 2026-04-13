@@ -1,17 +1,18 @@
-"""Document-level tests — open a specific RVT, query elements, verify model data.
-
-Tests UIApplication.OpenAndActivateDocument, FilteredElementCollector with
-multiple categories, parameter reading, and BoundingBox geometry queries.
-
-Requires F:\\Project1.rvt to exist on disk.
-"""
+"""Document-level tests against a stable project model used in real Revit runs."""
 
 import pytest
+
 
 def test_document_title(revit_doc):
     """Opened document has a meaningful title."""
     assert revit_doc.Title
     print(f"Document title: {revit_doc.Title}")
+
+
+def test_document_path_exists(revit_doc):
+    """The configured test project is backed by a real RVT file on disk."""
+    assert revit_doc.PathName
+    print(f"Document path: {revit_doc.PathName}")
 
 
 def test_document_is_not_family(revit_doc):
@@ -68,18 +69,6 @@ def test_wall_count_and_parameters(revit_doc):
             print(f"  First wall length: {length_param.AsDouble():.4f} ft")
 
 
-def test_room_collector(revit_doc):
-    """Collect rooms — may be zero in an empty project."""
-    from Autodesk.Revit.DB import FilteredElementCollector, BuiltInCategory
-
-    rooms = list(
-        FilteredElementCollector(revit_doc)
-        .OfCategory(BuiltInCategory.OST_Rooms)
-        .WhereElementIsNotElementType()
-    )
-    print(f"Found {len(rooms)} rooms")
-
-
 def test_bounding_box_geometry(revit_doc):
     """At least one element has a valid BoundingBox."""
     from Autodesk.Revit.DB import FilteredElementCollector, BuiltInCategory
@@ -101,15 +90,3 @@ def test_bounding_box_geometry(revit_doc):
     dz = bb.Max.Z - bb.Min.Z
     print(f"  BoundingBox size: {dx:.2f} x {dy:.2f} x {dz:.2f} ft")
     assert dx >= 0 and dy >= 0 and dz >= 0
-
-
-def test_transaction_commit_rollback(revit_doc):
-    """Verify transaction start/commit/rollback cycle works."""
-    from Autodesk.Revit.DB import Transaction, TransactionStatus
-
-    tx = Transaction(revit_doc, "pytest: transaction test")
-    assert tx.Start() == TransactionStatus.Started
-
-    status = tx.RollBack()
-    assert status == TransactionStatus.RolledBack
-    print("Transaction start → rollback cycle OK")

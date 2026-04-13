@@ -12,7 +12,6 @@ import time
 from typing import Any
 
 from .constants import (
-    BRIDGE_METHOD_TESTS_DISCOVER,
     BRIDGE_METHOD_TESTS_RUN,
     BRIDGE_MSG_TYPE_NOTIFICATION,
     DEFAULT_CONNECT_TIMEOUT_MS,
@@ -22,8 +21,6 @@ from .models import (
     BridgeRequest,
     BridgeResponse,
     CollectionError,
-    DiscoverRequest,
-    DiscoverResponse,
     RunRequest,
     RunResponse,
 )
@@ -36,7 +33,9 @@ _HEADER_LEN = struct.calcsize(_HEADER_FMT)
 class RevitBridge:
     """Synchronous Named Pipe client for the RevitDevTool bridge."""
 
-    def __init__(self, pipe_name: str, *, connect_timeout_ms: int = DEFAULT_CONNECT_TIMEOUT_MS) -> None:
+    def __init__(
+        self, pipe_name: str, *, connect_timeout_ms: int = DEFAULT_CONNECT_TIMEOUT_MS
+    ) -> None:
         self._pipe_name = pipe_name
         self._connect_timeout_ms = connect_timeout_ms
         self._handle: Any = None
@@ -53,11 +52,17 @@ class RevitBridge:
                 self._handle = win32file.CreateFile(
                     pipe_path,
                     win32file.GENERIC_READ | win32file.GENERIC_WRITE,
-                    0, None,
-                    win32file.OPEN_EXISTING, 0, None,
+                    0,
+                    None,
+                    win32file.OPEN_EXISTING,
+                    0,
+                    None,
                 )
                 win32pipe.SetNamedPipeHandleState(
-                    self._handle, win32pipe.PIPE_READMODE_BYTE, None, None,
+                    self._handle,
+                    win32pipe.PIPE_READMODE_BYTE,
+                    None,
+                    None,
                 )
                 return
             except Exception:
@@ -90,7 +95,6 @@ class RevitBridge:
         nodeids: list[str],
         *,
         pytest_args: list[str] | None = None,
-        mode: str = "session",
         timeout_s: float = DEFAULT_TEST_TIMEOUT_S,
     ) -> RunResponse:
         request = RunRequest(
@@ -98,7 +102,6 @@ class RevitBridge:
             test_root=test_root,
             nodeids=nodeids,
             pytest_args=pytest_args or [],
-            mode=mode,
         )
         response = self._request(
             BridgeRequest(method=BRIDGE_METHOD_TESTS_RUN, params=request.to_params()),
@@ -113,34 +116,9 @@ class RevitBridge:
             return RunResponse.from_dict(response.result)
         return RunResponse(
             exit_code=1,
-            collection_errors=(CollectionError(message=f"Unexpected response: {response.result}"),),
-        )
-
-    def discover(
-        self,
-        workspace_root: str,
-        test_root: str,
-        *,
-        pytest_args: list[str] | None = None,
-        timeout_s: float = DEFAULT_TEST_TIMEOUT_S,
-    ) -> DiscoverResponse:
-        request = DiscoverRequest(
-            workspace_root=workspace_root,
-            test_root=test_root,
-            pytest_args=pytest_args or [],
-        )
-        response = self._request(
-            BridgeRequest(method=BRIDGE_METHOD_TESTS_DISCOVER, params=request.to_params()),
-            timeout_s,
-        )
-        if response.is_error:
-            return DiscoverResponse(
-                collection_errors=(CollectionError(message=response.error_message),),
-            )
-        if isinstance(response.result, dict):
-            return DiscoverResponse.from_dict(response.result)
-        return DiscoverResponse(
-            collection_errors=(CollectionError(message=f"Unexpected response: {response.result}"),),
+            collection_errors=(
+                CollectionError(message=f"Unexpected response: {response.result}"),
+            ),
         )
 
     def _request(self, req: BridgeRequest, timeout_s: float) -> BridgeResponse:

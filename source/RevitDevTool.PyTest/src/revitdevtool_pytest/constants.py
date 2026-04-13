@@ -5,7 +5,6 @@ from typing import Final
 PLUGIN_NAME: Final = "RevitDevTool.PyTest"
 
 BRIDGE_METHOD_TESTS_RUN: Final = "tests/run"
-BRIDGE_METHOD_TESTS_DISCOVER: Final = "tests/discover"
 BRIDGE_MSG_TYPE_NOTIFICATION: Final = "notification"
 
 OPT_VERSION: Final = "revit_version"
@@ -40,5 +39,3 @@ OUTCOME_XPASSED: Final = "xpassed"
 PHASE_SETUP: Final = "setup"
 PHASE_CALL: Final = "call"
 PHASE_TEARDOWN: Final = "teardown"
-
-RUN_MODE_SESSION: Final = "session"

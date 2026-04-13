@@ -4,16 +4,6 @@ All Revit API imports must be inside function bodies (lazy imports).
 __revit__ is available globally (injected by RevitDevTool).
 """
 
-import pytest
-from functools import wraps
-
-
-requires_document = pytest.mark.skipif(
-    "__revit__" not in dir() or __revit__.ActiveUIDocument is None,  # noqa: F821
-    reason="No document open in Revit",
-)
-
-
 def test_revit_version():
     """Verify Revit is running and we can read the version."""
     app = __revit__.Application  # noqa: F821
@@ -21,17 +11,16 @@ def test_revit_version():
     print(f"Revit version: {app.VersionName}")
 
 
-@requires_document
-def test_active_document_exists():
-    """Verify a document is open in Revit."""
-    uidoc = __revit__.ActiveUIDocument  # noqa: F821
-    assert uidoc is not None
-    assert uidoc.Document is not None
-    print(f"Active document: {uidoc.Document.Title}")
+def test_target_document_available(revit_doc):
+    """Verify the configured target document is available for test execution."""
+    assert revit_doc is not None
+    assert revit_doc.IsValidObject
+    assert revit_doc.Title
+    print(f"Target document: {revit_doc.Title}")
 
 
-def test_wall_collector(revit_doc):
-    """Query walls from the active document using FilteredElementCollector."""
+def test_basic_wall_collection(revit_doc):
+    """Query walls from the configured test document."""
     from Autodesk.Revit.DB import FilteredElementCollector, BuiltInCategory
 
     collector = (

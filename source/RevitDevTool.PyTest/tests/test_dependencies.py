@@ -1,21 +1,6 @@
 """Dependency tests resolved from suite metadata in conftest.py."""
 
 import pytest
-from functools import wraps
-import humanize
-import networkx as nx
-import numpy as np
-import polars as pl
-from openpyxl import Workbook
-from pydantic import BaseModel, ValidationError
-from shapely.geometry import Polygon, box
-from tabulate import tabulate
-
-
-requires_document = pytest.mark.skipif(
-    "__revit__" not in dir() or __revit__.ActiveUIDocument is None,  # noqa: F821
-    reason="No document open in Revit",
-)
 
 
 def test_humanize_from_conftest(humanize_mod):
@@ -31,6 +16,8 @@ def test_humanize_from_conftest(humanize_mod):
 
 def test_humanize_intcomma():
     """humanize.intcomma formats large numbers."""
+    import humanize
+
     assert humanize.intcomma(1_000_000) == "1,000,000"
     assert humanize.intcomma(1234567890) == "1,234,567,890"
     print(f"humanize {humanize.__version__} — intcomma OK")
@@ -38,6 +25,8 @@ def test_humanize_intcomma():
 
 def test_tabulate_basic():
     """tabulate is available from suite dependency setup."""
+    from tabulate import tabulate
+
     data = [["Wall", 42], ["Floor", 15], ["Roof", 3]]
     table = tabulate(data, headers=["Element", "Count"], tablefmt="grid")
     assert "Wall" in table
@@ -45,12 +34,10 @@ def test_tabulate_basic():
     print(f"tabulate output:\n{table}")
 
 
-@requires_document
-def test_tabulate_with_revit_data():
+def test_tabulate_with_revit_data(revit_doc):
     """Combine tabulate (auto-installed) with Revit API data."""
     from Autodesk.Revit.DB import FilteredElementCollector, BuiltInCategory
-
-    doc = __revit__.ActiveUIDocument.Document  # noqa: F821
+    from tabulate import tabulate
 
     categories = [
         ("Walls", BuiltInCategory.OST_Walls),
@@ -61,7 +48,7 @@ def test_tabulate_with_revit_data():
     ]
     rows = []
     for name, cat in categories:
-        count = FilteredElementCollector(doc).OfCategory(cat).WhereElementIsNotElementType().GetElementCount()
+        count = FilteredElementCollector(revit_doc).OfCategory(cat).WhereElementIsNotElementType().GetElementCount()
         rows.append([name, count])
 
     table = tabulate(rows, headers=["Category", "Count"], tablefmt="simple")
@@ -71,6 +58,8 @@ def test_tabulate_with_revit_data():
 
 def test_numpy_linalg():
     """numpy: matrix operations from Pixi environment."""
+    import numpy as np
+
     a = np.array([[1, 2], [3, 4]], dtype=np.float64)
     b = np.linalg.inv(a)
     identity = a @ b
@@ -80,6 +69,8 @@ def test_numpy_linalg():
 
 def test_polars_groupby():
     """polars: DataFrame from Pixi environment."""
+    import polars as pl
+
     df = pl.DataFrame({
         "category": ["A", "B", "A", "B", "A"],
         "value": [10, 20, 30, 40, 50],
@@ -92,6 +83,8 @@ def test_polars_groupby():
 
 def test_shapely_intersection():
     """shapely: geometry operations (auto-installed via conftest.py PEP 723)."""
+    from shapely.geometry import Polygon, box
+
     poly = Polygon([(0, 0), (10, 0), (10, 10), (0, 10)])
     clip = box(5, 5, 15, 15)
     intersection = poly.intersection(clip)
@@ -101,6 +94,8 @@ def test_shapely_intersection():
 
 def test_pydantic_validation():
     """pydantic: model validation from Pixi environment."""
+    from pydantic import BaseModel, ValidationError
+
     class WallInfo(BaseModel):
         name: str
         length: float
@@ -117,6 +112,8 @@ def test_pydantic_validation():
 
 def test_networkx_shortest_path():
     """networkx: graph algorithms (auto-installed via conftest.py PEP 723)."""
+    import networkx as nx
+
     G = nx.Graph()
     G.add_weighted_edges_from([(1, 2, 1), (2, 3, 2), (1, 3, 10), (3, 4, 1)])
 
@@ -127,6 +124,8 @@ def test_networkx_shortest_path():
 
 def test_openpyxl_workbook():
     """openpyxl: in-memory Excel workbook (auto-installed via conftest.py PEP 723)."""
+    from openpyxl import Workbook
+
     wb = Workbook()
     ws = wb.active
     ws["A1"] = "Element"
