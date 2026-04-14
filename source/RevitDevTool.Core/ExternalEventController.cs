@@ -1,8 +1,7 @@
 using System.Collections.Concurrent;
-using RevitDevTool.Core;
 
 // ReSharper disable ReplaceWithFieldKeyword
-namespace RevitDevTool.Controllers;
+namespace RevitDevTool.Core;
 
 [PublicAPI]
 public static class ExternalEventController

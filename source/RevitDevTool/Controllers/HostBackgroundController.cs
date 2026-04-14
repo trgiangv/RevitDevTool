@@ -4,6 +4,7 @@ using System.Windows.Media;
 using Microsoft.Extensions.Hosting;
 using RevitDevTool.Commands;
 using DevTools.Logging.Listeners;
+using RevitDevTool.Core;
 using RevitDevTool.Settings;
 using RevitDevTool.Theme;
 using RevitDevTool.Execution.Providers.Python;
