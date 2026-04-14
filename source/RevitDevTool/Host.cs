@@ -190,6 +190,7 @@ public static class Host
         services.AddSingleton<RegistryRequestHandler>();
         services.AddSingleton<PytestDependencyService>();
         services.AddSingleton<PytestExecutionService>();
+        services.AddSingleton<PytestRequestHandler>();
         services.AddSingleton<ToolRegistryStore>();
         services.AddHostedService<RevitPipeServer>();
 

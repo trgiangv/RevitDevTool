@@ -44,8 +44,8 @@ public sealed class PytestDependencyService(PythonInitializer pythonInitializer)
 
     private static IReadOnlyList<string> GetDiscoverDependencyPaths(PytestDiscoverRequest request)
     {
-        var workspaceRoot = ResolveWorkspaceRoot(request.WorkspaceRoot, request.TestRoot);
-        var testRoot = ResolveTestRoot(request.TestRoot, workspaceRoot);
+        var workspaceRoot = PytestPathResolver.ResolveWorkspaceRoot(request.WorkspaceRoot, request.TestRoot);
+        var testRoot = PytestPathResolver.ResolvePath(request.TestRoot, workspaceRoot);
         var startDirectory = Directory.Exists(testRoot)
             ? testRoot
             : Path.GetDirectoryName(testRoot) ?? workspaceRoot;
@@ -55,8 +55,8 @@ public sealed class PytestDependencyService(PythonInitializer pythonInitializer)
 
     private static List<string> GetRunDependencyPaths(PytestRunRequest request)
     {
-        var workspaceRoot = ResolveWorkspaceRoot(request.WorkspaceRoot, request.TestRoot);
-        var testRoot = ResolveTestRoot(request.TestRoot, workspaceRoot);
+        var workspaceRoot = PytestPathResolver.ResolveWorkspaceRoot(request.WorkspaceRoot, request.TestRoot);
+        var testRoot = PytestPathResolver.ResolvePath(request.TestRoot, workspaceRoot);
         var paths = new List<string>();
 
         foreach (var nodeId in request.NodeIds)
@@ -76,28 +76,6 @@ public sealed class PytestDependencyService(PythonInitializer pythonInitializer)
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .OrderBy(path => path, StringComparer.OrdinalIgnoreCase)
             .ToList();
-    }
-
-    private static string ResolveWorkspaceRoot(string workspaceRoot, string testRoot)
-    {
-        if (!string.IsNullOrWhiteSpace(workspaceRoot))
-            return Path.GetFullPath(workspaceRoot);
-
-        if (Directory.Exists(testRoot))
-            return Path.GetFullPath(testRoot);
-
-        var directory = Path.GetDirectoryName(testRoot);
-        return Path.GetFullPath(string.IsNullOrWhiteSpace(directory) ? testRoot : directory);
-    }
-
-    private static string ResolveTestRoot(string testRoot, string workspaceRoot)
-    {
-        if (string.IsNullOrWhiteSpace(testRoot))
-            return workspaceRoot;
-
-        return Path.IsPathRooted(testRoot)
-            ? Path.GetFullPath(testRoot)
-            : Path.GetFullPath(Path.Combine(workspaceRoot, testRoot));
     }
 
     private static IReadOnlyList<string> EnumerateConftestChain(string startDirectory, string workspaceRoot)

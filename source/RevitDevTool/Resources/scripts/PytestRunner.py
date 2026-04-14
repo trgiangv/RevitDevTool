@@ -175,7 +175,11 @@ def _load_request() -> dict[str, Any]:
 
 
 def _build_args(request: dict[str, Any]) -> list[str]:
-    args: list[str] = ["-p", "no:faulthandler", "--disable-plugin-autoload"]
+    args: list[str] = [
+        "-p", "no:faulthandler",
+        "--disable-plugin-autoload",
+        "-W", "ignore::pytest.PytestConfigWarning",
+    ]
     test_root = request.get("test_root") or ""
     if not isinstance(test_root, str) or not test_root:
         raise RuntimeError("test_root is required.")

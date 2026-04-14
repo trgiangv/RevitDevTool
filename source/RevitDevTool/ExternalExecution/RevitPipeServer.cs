@@ -6,12 +6,10 @@ using System.Security.Principal;
 using System.Text.Json;
 using System.Collections.Concurrent;
 using Microsoft.Extensions.Hosting;
-using RevitDevTool.Controllers;
 using RevitDevTool.Core;
 using RevitDevTool.McpParser.Models;
 using RevitDevTool.ExternalExecution.Mcp.Handlers;
 using RevitDevTool.ExternalExecution.Handlers;
-using RevitDevTool.ExternalExecution.Testing;
 using RevitDevTool.ExternalExecution.Mcp;
 using RevitDevTool.ExternalExecution.Connections;
 // ReSharper disable RedundantSuppressNullableWarningExpression
@@ -26,8 +24,7 @@ public sealed class RevitPipeServer(
     ConnectionState state,
     InstanceRequestHandler instanceRequestHandler,
     RegistryRequestHandler registryRequestHandler,
-    PytestDependencyService pytestDependencyService,
-    PytestExecutionService pytestExecutionService) : IHostedService, IDisposable
+    PytestRequestHandler pytestRequestHandler) : IHostedService, IDisposable
 {
     private const int MaxPipeInstances = 8;
     private Dictionary<string, Func<string, JsonElement?, Task<BridgeMessage>>>? _handlers;
@@ -43,8 +40,8 @@ public sealed class RevitPipeServer(
             [BridgeMethods.ResourceTemplatesList] = (id, _) => registryRequestHandler.HandleResourceTemplatesListAsync(id),
             [BridgeMethods.ResourcesRead] = registryRequestHandler.HandleResourcesReadAsync,
             [BridgeMethods.InstanceInfo] = (id, _) => Task.FromResult(instanceRequestHandler.HandleInstanceInfo(id)),
-            [BridgeMethods.TestsDiscover] = HandleTestsDiscoverAsync,
-            [BridgeMethods.TestsRun] = HandleTestsRunAsync,
+            [BridgeMethods.TestsDiscover] = pytestRequestHandler.HandleDiscoverAsync,
+            [BridgeMethods.TestsRun] = pytestRequestHandler.HandleRunAsync,
         };
 
     private CancellationTokenSource? _cts;
@@ -190,66 +187,6 @@ public sealed class RevitPipeServer(
             return await handler(id, request.Params).ConfigureAwait(false);
         return BridgeMessage.Error(id, $"Unknown method: {request.Method}");
     }
-
-    private async Task<BridgeMessage> HandleTestsDiscoverAsync(string id, JsonElement? @params)
-    {
-        if (!PytestExecutionService.TryParseDiscoverRequest(@params, out var request, out var error))
-            return BridgeMessage.Error(id, error ?? "Invalid pytest discover request.");
-
-        await pytestDependencyService.PrepareDiscoverAsync(request!).ConfigureAwait(false);
-
-        var handler = await ExternalEventController
-            .AsyncGenericEventHandler<PytestDiscoverResponse>()
-            .ConfigureAwait(false);
-
-        var result = await handler
-            .RaiseAsync(() => pytestExecutionService.Discover(request!))
-            .ConfigureAwait(false);
-
-        var json = JsonSerializer.SerializeToElement(result);
-        return BridgeMessage.Response(id, json);
-    }
-
-    private async Task<BridgeMessage> HandleTestsRunAsync(string id, JsonElement? @params)
-    {
-        if (!PytestExecutionService.TryParseRunRequest(@params, out var request, out var error))
-        {
-            var invalidRequest = PytestExecutionService.Error("prepare", error ?? "Invalid pytest run request.");
-            var invalidRequestJson = JsonSerializer.SerializeToElement(invalidRequest);
-            return BridgeMessage.Response(id, invalidRequestJson);
-        }
-
-        try
-        {
-            await pytestDependencyService.PrepareRunAsync(request!).ConfigureAwait(false);
-        }
-        catch (Exception ex)
-        {
-            var prepareFailure = PytestExecutionService.Error("prepare", "Failed to prepare pytest session.", ex.ToString());
-            var prepareJson = JsonSerializer.SerializeToElement(prepareFailure);
-            return BridgeMessage.Response(id, prepareJson);
-        }
-
-        PytestRunResponse result;
-        try
-        {
-            var handler = await ExternalEventController
-                .AsyncGenericEventHandler<PytestRunResponse>()
-                .ConfigureAwait(false);
-
-            result = await handler
-                .RaiseAsync(() => pytestExecutionService.Run(request!))
-                .ConfigureAwait(false);
-        }
-        catch (Exception ex)
-        {
-            result = PytestExecutionService.Error("run", "Failed to execute pytest session.", ex.ToString());
-        }
-
-        var json = JsonSerializer.SerializeToElement(result);
-        return BridgeMessage.Response(id, json);
-    }
-
 
     private void OnToolsChanged(object? sender, EventArgs e)
     {

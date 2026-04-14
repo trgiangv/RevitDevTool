@@ -41,9 +41,9 @@ public sealed class PytestExecutionService(PythonExecutor executor)
             return false;
         }
 
-        var workspaceRoot = ResolveWorkspaceRoot(request.WorkspaceRoot, request.TestRoot);
+        var workspaceRoot = PytestPathResolver.ResolveWorkspaceRoot(request.WorkspaceRoot, request.TestRoot);
         var pytestArgs = request.PytestArgs?.Where(arg => !string.IsNullOrWhiteSpace(arg)).ToList() ?? [];
-        request = new PytestDiscoverRequest(workspaceRoot, ResolvePath(request.TestRoot, workspaceRoot), pytestArgs);
+        request = new PytestDiscoverRequest(workspaceRoot, PytestPathResolver.ResolvePath(request.TestRoot, workspaceRoot), pytestArgs);
         error = null;
         return true;
     }
@@ -81,9 +81,9 @@ public sealed class PytestExecutionService(PythonExecutor executor)
             return false;
         }
 
-        var workspaceRoot = ResolveWorkspaceRoot(request.WorkspaceRoot, request.TestRoot);
+        var workspaceRoot = PytestPathResolver.ResolveWorkspaceRoot(request.WorkspaceRoot, request.TestRoot);
         var pytestArgs = request.PytestArgs?.Where(arg => !string.IsNullOrWhiteSpace(arg)).ToList() ?? [];
-        request = new PytestRunRequest(workspaceRoot, ResolvePath(request.TestRoot, workspaceRoot), nodeIds, pytestArgs);
+        request = new PytestRunRequest(workspaceRoot, PytestPathResolver.ResolvePath(request.TestRoot, workspaceRoot), nodeIds, pytestArgs);
         error = null;
         return true;
     }
@@ -141,25 +141,6 @@ public sealed class PytestExecutionService(PythonExecutor executor)
                 var response = JsonSerializer.Deserialize<T>(resultJson, RequestOptions);
                 return response ?? throw new InvalidOperationException("Pytest runner returned an empty response.");
             });
-    }
-
-    private static string ResolveWorkspaceRoot(string workspaceRoot, string testRoot)
-    {
-        if (!string.IsNullOrWhiteSpace(workspaceRoot))
-            return Path.GetFullPath(workspaceRoot);
-
-        if (Directory.Exists(testRoot))
-            return Path.GetFullPath(testRoot);
-
-        var directory = Path.GetDirectoryName(testRoot);
-        return Path.GetFullPath(string.IsNullOrWhiteSpace(directory) ? testRoot : directory);
-    }
-
-    private static string ResolvePath(string path, string workspaceRoot)
-    {
-        return Path.IsPathRooted(path)
-            ? Path.GetFullPath(path)
-            : Path.GetFullPath(Path.Combine(workspaceRoot, path));
     }
 
     private static string ResolveAnchorFile(string anchorPath, string rootFolder)
