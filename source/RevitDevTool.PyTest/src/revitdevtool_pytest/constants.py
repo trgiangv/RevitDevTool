@@ -4,6 +4,7 @@ from typing import Final
 
 PLUGIN_NAME: Final = "RevitDevTool.PyTest"
 
+BRIDGE_METHOD_TESTS_DISCOVER: Final = "tests/discover"
 BRIDGE_METHOD_TESTS_RUN: Final = "tests/run"
 BRIDGE_MSG_TYPE_NOTIFICATION: Final = "notification"
 

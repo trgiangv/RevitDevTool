@@ -61,6 +61,16 @@ class BridgeResponse:
 
 
 @dataclass(slots=True)
+class DiscoverRequest:
+    workspace_root: str = ""
+    test_root: str = ""
+    pytest_args: list[str] = field(default_factory=list)
+
+    def to_params(self) -> dict[str, Any]:
+        return asdict(self)
+
+
+@dataclass(slots=True)
 class RunRequest:
     workspace_root: str = ""
     test_root: str = ""
@@ -114,6 +124,23 @@ class RunSummary:
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> RunSummary:
         return _deserialize(cls, data)
+
+
+@dataclass(frozen=True, slots=True)
+class DiscoverResponse:
+    rootdir: str = ""
+    nodeids: tuple[str, ...] = ()
+    collection_errors: tuple[CollectionError, ...] = ()
+
+    @classmethod
+    def from_dict(cls, data: dict[str, Any]) -> DiscoverResponse:
+        return cls(
+            rootdir=data.get("rootdir", ""),
+            nodeids=tuple(data.get("nodeids", [])),
+            collection_errors=tuple(
+                CollectionError.from_dict(e) for e in data.get("collection_errors", [])
+            ),
+        )
 
 
 @dataclass(frozen=True, slots=True)
