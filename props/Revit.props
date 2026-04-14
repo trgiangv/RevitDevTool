@@ -6,6 +6,7 @@
     <!-- Revit API -->
     <ItemGroup>
         <PackageReference Include="Nice3point.Revit.Extensions" VersionOverride="$(RevitVersion).*" />
+        <PackageReference Include="Nice3point.Revit.Api.UIFrameworkServices" VersionOverride="$(RevitVersion).*" />
         <PackageReference Include="Revit_All_Main_Versions_API_x64" VersionOverride="$(RevitVersion).*" ExcludeAssets="runtime" />
     </ItemGroup>
 
