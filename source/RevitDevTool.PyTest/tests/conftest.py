@@ -67,3 +67,21 @@ def humanize_mod():
     import humanize
 
     return humanize
+
+
+@pytest.fixture
+def revit_transaction_service():
+    """Lazily import RevitTransactionService only in Revit-hosted tests."""
+    from RevitDevTool.Core import RevitTransactionService
+
+    return RevitTransactionService
+
+
+@pytest.fixture
+def revit_auto_rollback(revit_transaction_service):
+    """Start undo tracking before a test and always revert after it finishes."""
+    revit_transaction_service.StartChanges()
+    try:
+        yield revit_transaction_service
+    finally:
+        revit_transaction_service.RevertChanges()
