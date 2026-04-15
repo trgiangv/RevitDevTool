@@ -7,6 +7,7 @@ Matches ``RevitDevTool.McpParser.Models.BridgePipeConnection``.
 from __future__ import annotations
 
 import json
+import logging
 import struct
 import time
 from typing import Any
@@ -17,6 +18,7 @@ from .constants import (
     BRIDGE_MSG_TYPE_NOTIFICATION,
     DEFAULT_CONNECT_TIMEOUT_MS,
     DEFAULT_TEST_TIMEOUT_S,
+    PLUGIN_NAME,
 )
 from .models import (
     BridgeRequest,
@@ -27,6 +29,8 @@ from .models import (
     RunRequest,
     RunResponse,
 )
+
+log = logging.getLogger(PLUGIN_NAME)
 
 _MAX_FRAME_SIZE = 16 * 1024 * 1024
 _HEADER_FMT = "<I"
@@ -83,13 +87,26 @@ class RevitBridge:
         import win32file  # type: ignore[import-untyped]
 
         try:
+            win32file.FlushFileBuffers(handle)
+        except Exception:  # noqa: BLE001
+            pass
+        try:
             win32file.CloseHandle(handle)
         except Exception:  # noqa: BLE001
             pass
 
     @property
     def connected(self) -> bool:
-        return self._handle is not None
+        if self._handle is None:
+            return False
+        try:
+            import win32pipe  # type: ignore[import-untyped]
+
+            win32pipe.PeekNamedPipe(self._handle, 0)
+            return True
+        except Exception:  # noqa: BLE001
+            log.debug("Pipe health check failed, marking as disconnected")
+            return False
 
     def discover_tests(
         self,
