@@ -1,9 +1,11 @@
 using System.Diagnostics;
+using System.Text.RegularExpressions;
 using ModelContextProtocol.Protocol;
+using RevitDevTool.McpServer.RevitFileInfo;
 
 namespace RevitDevTool.McpServer.Tools.Utils;
 
-internal static class RevitLaunchCoordinator
+internal static partial class RevitLaunchCoordinator
 {
     private const int DialogResolveSeconds = 90;
 
@@ -22,14 +24,12 @@ internal static class RevitLaunchCoordinator
         if (requireVersion && string.IsNullOrWhiteSpace(requestedVersion))
             return (null, ToolHelpers.ErrorResult("versionNumber is required."));
 
-        var version = string.IsNullOrWhiteSpace(requestedVersion)
-            ? RevitPathResolver.GetInstalledVersions().FirstOrDefault()
-            : requestedVersion;
-        if (string.IsNullOrWhiteSpace(version))
-            return (null, ToolHelpers.ErrorResult("No connected instance and no installed Revit version found to launch."));
-
         if (!string.IsNullOrWhiteSpace(filePath) && !File.Exists(filePath))
             return (null, ToolHelpers.ErrorResult($"File not found: {filePath}"));
+
+        var version = ResolveVersion(requestedVersion, filePath);
+        if (version is null)
+            return (null, ToolHelpers.ErrorResult("No compatible Revit version found to open this file."));
 
         var revitPath = RevitPathResolver.FindRevitPath(version);
         if (string.IsNullOrWhiteSpace(revitPath))
@@ -47,6 +47,51 @@ internal static class RevitLaunchCoordinator
             arguments.Add(filePath);
 
         return (new RevitLaunchContext(version, revitPath, language, arguments), null);
+    }
+
+    /// <summary>
+    /// Determines the Revit version to launch:
+    /// 1. If explicitly requested, use that.
+    /// 2. If a file is provided, read its saved version, try exact match,
+    ///    then the nearest higher installed version. Fail if none is >= file version.
+    /// 3. Fall back to the latest installed version.
+    /// </summary>
+    private static string? ResolveVersion(string? requestedVersion, string? filePath)
+    {
+        if (!string.IsNullOrWhiteSpace(requestedVersion))
+            return requestedVersion;
+
+        var installedVersions = RevitPathResolver.GetInstalledVersions();
+        if (installedVersions.Count == 0)
+            return null;
+
+        if (string.IsNullOrWhiteSpace(filePath) || !File.Exists(filePath))
+            return installedVersions.FirstOrDefault();
+
+        var fileVersion = ReadFileVersion(filePath);
+        if (fileVersion is null || !int.TryParse(fileVersion, out var fileYear))
+            return installedVersions.FirstOrDefault();
+
+        return installedVersions
+            .Where(v => int.TryParse(v, out var y) && y >= fileYear)
+            .OrderBy(v => v)
+            .FirstOrDefault();
+    }
+
+    private static string? ReadFileVersion(string filePath)
+    {
+        try
+        {
+            var info = BasicFileInfoReader.Read(filePath);
+            if (info?.RevitVersion is null) return null;
+
+            var match = RevitVersion().Match(info.RevitVersion);
+            return match.Success ? match.Value : null;
+        }
+        catch
+        {
+            return null;
+        }
     }
 
     public static (Process? Process, CallToolResult? Error) StartProcess(RevitLaunchContext context)
@@ -91,4 +136,7 @@ internal static class RevitLaunchCoordinator
             }
         }, cancellationToken);
     }
+
+    [GeneratedRegex(@"20\d{2}")]
+    private static partial Regex RevitVersion();
 }
