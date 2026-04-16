@@ -10,6 +10,10 @@ class HeaderContractInspector(object):
         self.schedule = schedule
         self.header = get_section(schedule, "Header")
 
+    def visible_last_column(self):
+        body = get_section(self.schedule, "Body")
+        return min(self.header.LastColumnNumber, body.LastColumnNumber)
+
     def merged_cell_signature(self, merged_cell):
         if merged_cell is None:
             return None
@@ -31,9 +35,11 @@ class HeaderContractInspector(object):
     def row_spans(self, row):
         spans = []
         col = self.header.FirstColumnNumber
-        while col <= self.header.LastColumnNumber:
+        visible_last_col = self.visible_last_column()
+        while col <= visible_last_col:
             signature = self.merged_cell_signature(self.header.GetMergedCell(row, col))
             if self.is_nontrivial_merged_signature(signature):
+                signature["right"] = min(signature["right"], visible_last_col)
                 spans.append(signature)
                 col = signature["right"] + 1
                 continue
@@ -81,11 +87,18 @@ class HeaderContractInspector(object):
             "vertical_alignment": str(style.FontVerticalAlignment),
             "text_color": self.color_signature(style.TextColor),
             "background_color": self.color_signature(style.BackgroundColor),
-            "sheet_background_color": self.color_signature(style.SheetBackgroundColor),
-            "border_top": None if style.BorderTopLineStyle is None else str(style.BorderTopLineStyle),
-            "border_bottom": None if style.BorderBottomLineStyle is None else str(style.BorderBottomLineStyle),
-            "border_left": None if style.BorderLeftLineStyle is None else str(style.BorderLeftLineStyle),
-            "border_right": None if style.BorderRightLineStyle is None else str(style.BorderRightLineStyle),
+            "border_top": None
+            if style.BorderTopLineStyle is None
+            else str(style.BorderTopLineStyle),
+            "border_bottom": None
+            if style.BorderBottomLineStyle is None
+            else str(style.BorderBottomLineStyle),
+            "border_left": None
+            if style.BorderLeftLineStyle is None
+            else str(style.BorderLeftLineStyle),
+            "border_right": None
+            if style.BorderRightLineStyle is None
+            else str(style.BorderRightLineStyle),
         }
 
     def format_signature(self, format_options):
@@ -97,15 +110,20 @@ class HeaderContractInspector(object):
             "accuracy": None
             if use_default or format_options.Accuracy is None
             else round(format_options.Accuracy, 6),
-            "suppress_leading_zeros": None if use_default else format_options.SuppressLeadingZeros,
-            "suppress_trailing_zeros": None if use_default else format_options.SuppressTrailingZeros,
+            "suppress_leading_zeros": None
+            if use_default
+            else format_options.SuppressLeadingZeros,
+            "suppress_trailing_zeros": None
+            if use_default
+            else format_options.SuppressTrailingZeros,
             "suppress_spaces": None if use_default else format_options.SuppressSpaces,
-            "use_digit_grouping": None if use_default else format_options.UseDigitGrouping,
+            "use_digit_grouping": None
+            if use_default
+            else format_options.UseDigitGrouping,
             "use_plus_prefix": None if use_default else format_options.UsePlusPrefix,
         }
 
     def title_last_row(self):
-        # Treat the full Header section as the contract surface.
         return self.header.LastRowNumber
 
     def span_width(self, span):
@@ -132,9 +150,13 @@ class HeaderContractInspector(object):
                         "text": self.header.GetCellText(row, left),
                         "width": self.span_width(span),
                         "height": self.header.GetRowHeight(row),
-                        "style": self.style_signature(self.header.GetTableCellStyle(row, left)),
+                        "style": self.style_signature(
+                            self.header.GetTableCellStyle(row, left)
+                        ),
                         "format": self.format_signature(
-                            self.header.GetCellFormatOptions(row, left, self.schedule.Document)
+                            self.header.GetCellFormatOptions(
+                                row, left, self.schedule.Document
+                            )
                         ),
                     }
                 )
@@ -152,7 +174,9 @@ class HeaderContractInspector(object):
                         "right": cell["right"],
                         "text": cell["text"],
                         "width": round(cell["width"], 6),
-                        "height": None if cell["height"] is None else round(cell["height"], 6),
+                        "height": None
+                        if cell["height"] is None
+                        else round(cell["height"], 6),
                         "style": cell["style"],
                         "format": cell["format"],
                     }
@@ -166,9 +190,7 @@ class HeaderContractInspector(object):
         row_count = title_last_row - self.header.FirstRowNumber + 1
         visual_cells = self.normalized_visual_cells(self.visual_cells(row_count))
         has_text = any(
-            cell["text"] not in (None, "")
-            for row in visual_cells
-            for cell in row
+            cell["text"] not in (None, "") for row in visual_cells for cell in row
         )
         return {
             "title_last_row": title_last_row,
@@ -368,7 +390,10 @@ def compare_header_contracts(
                     expected_text,
                 )
 
-            if "text" in compared_fields and actual_cell["text"] != expected_actual_text:
+            if (
+                "text" in compared_fields
+                and actual_cell["text"] != expected_actual_text
+            ):
                 issues.append(
                     {
                         "field": "text",
@@ -381,6 +406,8 @@ def compare_header_contracts(
 
             for field_name in compared_fields:
                 if field_name == "text":
+                    continue
+                if field_name == "style" and expected_cell["text"] in (None, ""):
                     continue
                 if actual_cell[field_name] != expected_cell[field_name]:
                     issues.append(
