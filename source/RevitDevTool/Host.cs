@@ -12,7 +12,6 @@ using RevitDevTool.Settings;
 using RevitDevTool.Settings.Options;
 using RevitDevTool.Utils;
 using RevitDevTool.View;
-using RevitDevTool.View.Settings;
 using RevitDevTool.View.Settings.Visualization;
 using RevitDevTool.ViewModel;
 using RevitDevTool.ViewModel.Settings;
@@ -55,7 +54,7 @@ public static class Host
             EnvironmentName = Environments.Development
 #endif
         });
-        
+
         builder.ConfigureOptions(contentRoot)
                .ConfigureLogging()
                .ConfigureServices();
@@ -75,7 +74,7 @@ public static class Host
         });
         return builder;
     }
-    
+
     private static HostApplicationBuilder ConfigureLogging(this HostApplicationBuilder builder)
     {
         var loggingConfig = new LoggingConfiguration();
@@ -115,6 +114,7 @@ public static class Host
         });
         services.AddSingleton<ILoggingService, LoggingService>();
         services.AddSingleton<LogViewModel>();
+        services.AddSingleton<PanelController>();
 
         // Visualization Servers
         services.AddSingleton<BoundingBoxVisualizationServer>();
@@ -133,18 +133,17 @@ public static class Host
         services.AddSingleton<XyzVisualizationViewModel>();
 
         // Visualization Views
-        services.AddSingleton<BoundingBoxVisualizationSettingsView>();
-        services.AddSingleton<FaceVisualizationSettingsView>();
-        services.AddSingleton<MeshVisualizationSettingsView>();
-        services.AddSingleton<PolylineVisualizationSettingsView>();
-        services.AddSingleton<SolidVisualizationSettingsView>();
-        services.AddSingleton<XyzVisualizationSettingsView>();
+        services.AddTransient<BoundingBoxVisualizationSettingsView>();
+        services.AddTransient<FaceVisualizationSettingsView>();
+        services.AddTransient<MeshVisualizationSettingsView>();
+        services.AddTransient<PolylineVisualizationSettingsView>();
+        services.AddTransient<SolidVisualizationSettingsView>();
+        services.AddTransient<XyzVisualizationSettingsView>();
 
         // Settings
-        services.AddSingleton<SettingsViewModel>();
-        services.AddSingleton<GeneralSettingsViewModel>();
-        services.AddSingleton<GeneralSettingsView>();
-        services.AddSingleton<LogSettingsViewModel>();
+        services.AddTransient<SettingsViewModel>();
+        services.AddTransient<GeneralSettingsViewModel>();
+        services.AddTransient<LogSettingsViewModel>();
         
         // Python Environment
         services.AddKeyedSingleton<PyEnvironmentProvider, PixiEnvironmentProvider>(PythonBackend.Pixi);

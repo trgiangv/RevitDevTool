@@ -16,13 +16,10 @@ public sealed class PythonInitializer(
     public PyEnvironmentProvider? Provider { get; private set; }
 
     public bool IsInitialized => PythonEngine.IsInitialized
-                                 && Provider is not null
-                                 && Provider.IsEnvironmentReady();
+                                 && Provider?.IsEnvironmentReady() == true;
 
     public async Task InitializeAsync()
     {
-        if (IsInitialized) return;
-
         await _initLock.WaitAsync().ConfigureAwait(false);
         try
         {
@@ -36,21 +33,19 @@ public sealed class PythonInitializer(
                 await Provider.SetupEnvironmentAsync().ConfigureAwait(false);
             }
 
-            if (!PythonEngine.IsInitialized)
+            if (PythonEngine.IsInitialized) return;
+            PrependPythonHomeToPath(Provider.PythonHome);
+
+            Runtime.PythonDLL = Provider.GetPythonDllPath();
+            PythonEngine.PythonHome = Provider.PythonHome;
+            PythonEngine.ProgramName = "RevitDevTool";
+            PythonEngine.Initialize();
+            PythonEngine.BeginAllowThreads();
+
+            using (Py.GIL())
             {
-                PrependPythonHomeToPath(Provider.PythonHome);
-
-                Runtime.PythonDLL = Provider.GetPythonDllPath();
-                PythonEngine.PythonHome = Provider.PythonHome;
-                PythonEngine.ProgramName = "RevitDevTool";
-                PythonEngine.Initialize();
-                PythonEngine.BeginAllowThreads();
-
-                using (Py.GIL())
-                {
-                    SetupGlobalScope();
-                    PythonDebugger.StartListening();
-                }
+                SetupGlobalScope();
+                PythonDebugger.StartListening();
             }
         }
         catch (Exception ex)
@@ -63,7 +58,7 @@ public sealed class PythonInitializer(
         }
     }
 
-    public async Task Shutdown()
+    public async Task ShutdownAsync()
     {
         if (!PythonEngine.IsInitialized) return;
 

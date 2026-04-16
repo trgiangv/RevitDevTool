@@ -1,7 +1,6 @@
 using System.Diagnostics;
 using System.IO;
 using System.IO.Compression;
-using System.Text.Json;
 using RevitDevTool.Execution.Services;
 using RevitDevTool.Utils;
 
@@ -14,16 +13,18 @@ namespace RevitDevTool.Execution.Providers.Python;
 /// </summary>
 public static class PythonInstaller
 {
-    private const string PixiGitHubApiUrl = "https://api.github.com/repos/prefix-dev/pixi/releases/latest";
+    private const string PixiVersion = "0.67.0";
     private const string PixiDownloadUrlTemplate = "https://github.com/prefix-dev/pixi/releases/download/v{0}/pixi-x86_64-pc-windows-msvc.zip";
 
     private static string GetBinPath() => Path.Combine(SettingsUtils.GetApplicationDataPath(), "bin");
     public static string PixiExePath => Path.Combine(GetBinPath(), "pixi.exe");
-    public static bool IsPixiInstalled() => File.Exists(PixiExePath);
+    public static bool IsPixiInstalled() => File.Exists(PixiExePath) && IsMarkedVersion(PixiVersion);
+    private static string VersionMarkerPath => Path.Combine(GetBinPath(), ".pixi-version");
 
     /// <summary>
-    /// Ensures pixi is installed. If already present, returns immediately.
-    /// First-time install requires network access to GitHub releases.
+    /// Ensures pixi is installed at the locked version.
+    /// Uses a marker file to avoid spawning a child process on every startup.
+    /// Downloads only when pixi.exe is missing or the marker version differs from <see cref="PixiVersion"/>.
     /// </summary>
     public static async Task SetupPixiAsync()
     {
@@ -32,37 +33,27 @@ public static class PythonInstaller
 
         if (IsPixiInstalled())
         {
-            Trace.TraceInformation("[Pixi] Already installed, skipping network version check.");
+            Trace.TraceInformation($"[Pixi] v{PixiVersion} already installed.");
             return;
         }
 
-        var latestVersion = await GetLatestReleaseVersionAsync().ConfigureAwait(false);
-
-        if (string.IsNullOrEmpty(latestVersion))
-        {
-            throw new InvalidOperationException(
-                "Cannot install pixi: failed to determine the latest version from GitHub. " +
-                "Ensure network connectivity and retry.");
-        }
-
-        Trace.TraceInformation($"Downloading Pixi v{latestVersion}...");
-        await DownloadAndInstallAsync(latestVersion!).ConfigureAwait(false);
-        Trace.TraceInformation($"Pixi v{latestVersion} installed.");
+        Trace.TraceInformation($"[Pixi] Downloading v{PixiVersion}...");
+        await DownloadAndInstallAsync(PixiVersion).ConfigureAwait(false);
+        await File.WriteAllTextAsync(VersionMarkerPath, PixiVersion).ConfigureAwait(false);
+        Trace.TraceInformation($"[Pixi] v{PixiVersion} installed.");
     }
 
-    private static async Task<string?> GetLatestReleaseVersionAsync()
+    private static bool IsMarkedVersion(string version)
     {
         try
         {
-            var json = await NetworkService.GetStringAsync(PixiGitHubApiUrl).ConfigureAwait(false);
-            using var doc = JsonDocument.Parse(json);
-            return !doc.RootElement.TryGetProperty("tag_name", out var tagName) ? null :
-                tagName.GetString()?.TrimStart('v');
+            if (!File.Exists(VersionMarkerPath)) return false;
+            var stored = File.ReadAllText(VersionMarkerPath).Trim();
+            return string.Equals(stored, version, StringComparison.Ordinal);
         }
-        catch (Exception ex)
+        catch
         {
-            Trace.TraceWarning($"Failed to fetch Pixi release info after retries: {ex.Message}");
-            return null;
+            return false;
         }
     }
 

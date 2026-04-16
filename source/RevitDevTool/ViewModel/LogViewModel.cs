@@ -51,7 +51,6 @@ public sealed partial class LogViewModel : ObservableObject, IDisposable,
         _messenger = messenger;
         _onIdlingHandler = OnIdling;
         _isStarted = _settingsService.GeneralConfig.IsTraceEnabled;
-        Subscribe();
         if (_isStarted) StartTracing();
     }
 
@@ -126,8 +125,9 @@ public sealed partial class LogViewModel : ObservableObject, IDisposable,
 
     public void Dispose()
     {
-        IsStarted = false;
         Unsubscribe();
+        _loggingService.UnregisterTraceListeners();
+        VisualizationController.Stop();
 
         _loggingService.Dispose();
         _consoleRedirector?.Dispose();

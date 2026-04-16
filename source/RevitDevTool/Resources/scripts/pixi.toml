@@ -1,4 +1,4 @@
-[project]
+[workspace]
 name = "revitdevtool-runtime"
 version = "0.1.0"
 channels = ["conda-forge"]

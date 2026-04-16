@@ -28,6 +28,7 @@ public sealed class PixiEnvironmentProvider : PyEnvironmentProvider
     public override async Task SetupEnvironmentAsync()
     {
         PythonEmbedded.EnsureExtracted();
+        await EnsureRequirePackagesAsync().ConfigureAwait(false);
 
         if (!IsEnvironmentReady())
         {
@@ -49,6 +50,23 @@ public sealed class PixiEnvironmentProvider : PyEnvironmentProvider
             throw new InvalidOperationException("Python environment is not ready after pixi install.");
 
         Debug.WriteLine("Pixi Python environment ready.");
+    }
+
+    private static async Task EnsureRequirePackagesAsync()
+    {
+        var args = new List<string> { "add" };
+        args.AddRange(RequirePackages.Values);
+
+        var result = await Cli.Wrap(PythonInstaller.PixiExePath)
+            .WithArguments(args)
+            .WithWorkingDirectory(PixiProjectDir)
+            .WithStandardOutputPipe(PipeTarget.ToDelegate(line => Trace.TraceInformation($"[pixi] {line}")))
+            .WithStandardErrorPipe(PipeTarget.ToDelegate(line => Trace.TraceWarning($"[pixi] {line}")))
+            .WithValidation(CommandResultValidation.None)
+            .ExecuteAsync().ConfigureAwait(false);
+
+        if (result.ExitCode != 0)
+            Trace.TraceWarning($"[Pixi] Failed to ensure required packages (exit {result.ExitCode}), will proceed with pixi install.");
     }
 
     public override async Task InstallPackagesAsync(

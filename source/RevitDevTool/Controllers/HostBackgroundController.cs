@@ -2,12 +2,10 @@ using System.IO;
 using System.Windows.Interop;
 using System.Windows.Media;
 using Microsoft.Extensions.Hosting;
-using RevitDevTool.Commands;
-using DevTools.Logging.Listeners;
 using RevitDevTool.Core;
+using RevitDevTool.Execution.Providers.Python;
 using RevitDevTool.Settings;
 using RevitDevTool.Theme;
-using RevitDevTool.Execution.Providers.Python;
 
 namespace RevitDevTool.Controllers;
 
@@ -27,10 +25,7 @@ public sealed class HostBackgroundController(
     {
         settingsService.SaveSettings();
         CleanLogFolder();
-        NotifyListener.TraceReceived -= DevToolsCommand.TraceReceivedHandler;
-        DevToolsCommand.SharedViewModel?.IsStarted = false;
-        VisualizationController.Stop();
-        await pythonInitializer.Shutdown();
+        await pythonInitializer.ShutdownAsync().ConfigureAwait(false);
     }
 
     private void CleanLogFolder()

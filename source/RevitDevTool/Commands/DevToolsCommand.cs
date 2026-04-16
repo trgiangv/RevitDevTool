@@ -1,11 +1,6 @@
 using System.Windows.Input;
-using System.Diagnostics.CodeAnalysis;
 using Autodesk.Revit.Attributes;
-using Autodesk.Revit.DB.Events;
-using RevitDevTool.Core;
-using DevTools.Logging.Listeners;
-using RevitDevTool.Utils;
-using RevitDevTool.View;
+using RevitDevTool.Controllers;
 using RevitDevTool.ViewModel;
 
 namespace RevitDevTool.Commands;
@@ -15,235 +10,23 @@ namespace RevitDevTool.Commands;
 public class DevToolsCommand : IExternalCommand, IExternalCommandAvailability
 {
     public const string CommandName = "DevTools";
-    private static readonly Guid PaneGuid = new("43AE2B41-0BE6-425A-B27A-724B2CE17351");
-    private static readonly DockablePaneId PaneId = new(PaneGuid);
-    public static readonly Action TraceReceivedHandler = OnTraceReceived;
-
-    private static bool IsForceHide { get; set; }
-    private static bool PreferDockablePane { get; set; }
-    internal static LogViewModel? SharedViewModel { get; private set; }
-    private static MainWindow? FloatingWindow { get; set; }
-    private static bool HasUiDocument => RevitContext.UiApplication.HasActiveUiDocument();
 
     public Result Execute(ExternalCommandData commandData, ref string message, ElementSet elements)
     {
-        if (Keyboard.IsKeyDown(Key.LeftCtrl)
-            || Keyboard.IsKeyDown(Key.RightCtrl))
+        var panel = Host.GetService<PanelController>();
+
+        if (Keyboard.IsKeyDown(Key.LeftCtrl) || Keyboard.IsKeyDown(Key.RightCtrl))
         {
-            if (HasUiDocument)
-            {
-                ExecutePaneVisibility();
-            }
+            if (PanelController.HasUiDocument)
+                panel.TogglePaneVisibility();
             else
-            {
-                ExecuteFloatingWindow();
-            }
+                panel.ToggleFloatingWindow();
+
             return Result.Succeeded;
         }
 
-        ExecuteLastCode();
+        Host.GetService<ExecutionViewModel>().ExecuteLastItem();
         return Result.Succeeded;
-    }
-
-    private static void ExecuteFloatingWindow()
-    {
-        if (FloatingWindow != null)
-        {
-            CloseFloatingWindow();
-        }
-        else
-        {
-            SharedViewModel ??= Host.GetService<LogViewModel>();
-            SharedViewModel.Subscribe();
-            ShowFloatingWindow();
-        }
-    }
-
-    private static void ExecutePaneVisibility()
-    {
-        if (!TryGetDockablePaneFromUiApplication(out var dockablePane))
-            return;
-
-        if (dockablePane.IsShown())
-        {
-            dockablePane.Hide();
-            IsForceHide = true;
-        }
-        else
-        {
-            SharedViewModel ??= Host.GetService<LogViewModel>();
-            SharedViewModel.Subscribe();
-            dockablePane.Show();
-            IsForceHide = false;
-        }
-    }
-
-    private static void ExecuteLastCode()
-    {
-        var codeExecuteVm = Host.GetService<ExecutionViewModel>();
-        codeExecuteVm.ExecuteLastItem();
-    }
-
-    public static void RegisterDockablePane(UIControlledApplication application)
-    {
-        SharedViewModel = Host.GetService<LogViewModel>();
-        DockablePaneProvider
-            .Register(application, PaneGuid, CommandName)
-            .SetConfiguration(data =>
-            {
-                data.FrameworkElement = Host.GetService<MainPage>();
-                data.InitialState = new DockablePaneState
-                {
-                    MinimumWidth = 550,
-                    MinimumHeight = 600,
-                    DockPosition = DockPosition.Right,
-                    TabBehind = DockablePanes.BuiltInDockablePanes.PropertiesPalette
-                };
-            });
-
-        application.ControlledApplication.DocumentOpened += OnDocumentOpened;
-        application.ControlledApplication.DocumentOpening += OnDocumentOpening;
-        application.ControlledApplication.DocumentClosed += OnDocumentClosed;
-        NotifyListener.TraceReceived += TraceReceivedHandler;
-        PreferDockablePane = HasUiDocument;
-    }
-
-    private static void OnTraceReceived()
-    {
-        if (HasUiDocument)
-        {
-            PreferDockablePane = true;
-            CloseFloatingWindow();
-            if (!TryGetDockablePaneFromUiControlledApplication(out var dockablePane))
-                return;
-
-            if (!dockablePane.IsShown() && !IsForceHide)
-            {
-                dockablePane.Show();
-            }
-            return;
-        }
-
-        NotifyListener.TraceReceived -= TraceReceivedHandler;
-
-        if (SharedViewModel is not { IsStarted: true })
-        {
-            NotifyListener.TraceReceived += TraceReceivedHandler;
-            return;
-        }
-        if (FloatingWindow != null) return;
-        if (PreferDockablePane) return;
-
-        SharedViewModel.Subscribe();
-        ShowFloatingWindow();
-    }
-
-    private static void OnDocumentOpening(object? sender, DocumentOpeningEventArgs args)
-    {
-        PreferDockablePane = true;
-        CloseFloatingWindow();
-    }
-
-    private static void OnDocumentOpened(object? sender, DocumentOpenedEventArgs args)
-    {
-        if (!HasUiDocument) return;
-        PreferDockablePane = true;
-        CloseFloatingWindow();
-
-        if (!TryGetDockablePaneFromUiControlledApplication(out var dockablePane))
-            return;
-
-        if (IsForceHide)
-        {
-            NotifyListener.TraceReceived -= TraceReceivedHandler;
-            SharedViewModel?.Dispose();
-            dockablePane.Hide();
-        }
-        else
-        {
-            if (!dockablePane.IsShown())
-            {
-                dockablePane.Show();
-            }
-        }
-    }
-
-    private static void ShowFloatingWindow()
-    {
-        if (FloatingWindow != null) return;
-        if (SharedViewModel is null) return;
-
-        DispatcherHelper.RunOnMainThread(() =>
-        {
-            FloatingWindow = Host.GetService<MainWindow>();
-            FloatingWindow.Closed += OnFloatingWindowClosed;
-            FloatingWindow.SetRevitOwner();
-            FloatingWindow.Show();
-        });
-    }
-
-    private static void CloseFloatingWindow()
-    {
-        if (FloatingWindow is null) return;
-
-        DispatcherHelper.RunOnMainThread(() =>
-        {
-            FloatingWindow!.Closed -= OnFloatingWindowClosed;
-            FloatingWindow.Close();
-            FloatingWindow = null;
-        });
-    }
-
-    private static void OnFloatingWindowClosed(object? sender, EventArgs e)
-    {
-        if (FloatingWindow == null) return;
-        FloatingWindow.Closed -= OnFloatingWindowClosed;
-        FloatingWindow = null;
-        if (HasUiDocument) return;
-        NotifyListener.TraceReceived += TraceReceivedHandler;
-    }
-
-    private static void OnDocumentClosed(object? sender, DocumentClosedEventArgs args)
-    {
-        if (HasUiDocument) return;
-        PreferDockablePane = false;
-
-        if (SharedViewModel is null or { IsStarted: false })
-        {
-            SharedViewModel = Host.GetService<LogViewModel>();
-        }
-
-        NotifyListener.TraceReceived += TraceReceivedHandler;
-    }
-
-    private static bool TryGetDockablePaneFromUiApplication([NotNullWhen(true)] out DockablePane? dockablePane)
-    {
-        Application.EnsureDockablePaneRegistered();
-        try
-        {
-            dockablePane = RevitContext.UiApplication.GetDockablePane(PaneId);
-            return true;
-        }
-        catch
-        {
-            dockablePane = null;
-            return false;
-        }
-    }
-
-    private static bool TryGetDockablePaneFromUiControlledApplication([NotNullWhen(true)] out DockablePane? dockablePane)
-    {
-        Application.EnsureDockablePaneRegistered();
-        try
-        {
-            dockablePane = RevitContext.UiControlledApplication.GetDockablePane(PaneId);
-            return true;
-        }
-        catch
-        {
-            dockablePane = null;
-            return false;
-        }
     }
 
     public bool IsCommandAvailable(UIApplication applicationData, CategorySet selectedCategories)

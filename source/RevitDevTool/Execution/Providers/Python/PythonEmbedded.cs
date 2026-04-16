@@ -33,11 +33,13 @@ public static class PythonEmbedded
     
     private static readonly string[] AlwaysOverwritePaths =
     [
-        ParserSourcePath,
-        PixiTomlSourcePath
+        ParserSourcePath
     ];
 
-    private static readonly string[] CreateOnlyPaths = [];
+    private static readonly string[] CreateOnlyPaths =
+    [
+        PixiTomlSourcePath
+    ];
     
     private static readonly ConcurrentDictionary<string, string> ScriptCache = new();
     private static readonly ConcurrentDictionary<string, string> ScripPathCache = new();
