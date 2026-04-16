@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+
+    <PropertyGroup>
+        <Authors>Truong Giang Vu</Authors>
+        <Copyright>Copyright © Truong Giang Vu $([System.DateTime]::Now.Year)</Copyright>
+
+        <!-- Package Info -->
+        <RepositoryType>git</RepositoryType>
+        <RepositoryUrl>https://github.com/trgiangv/RevitDevTool</RepositoryUrl>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <PackageReference Include="JetBrains.Annotations" PrivateAssets="All" />
+    </ItemGroup>
+
+</Project>

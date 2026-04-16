@@ -1,6 +1,7 @@
 using CommunityToolkit.Mvvm.Messaging;
+using DevTools.Logging;
+using DevTools.Logging.Options;
 using Microsoft.Extensions.Logging;
-using RevitDevTool.Logging;
 using RevitDevTool.Logging.Enums;
 using RevitDevTool.Settings;
 using RevitDevTool.Utils;
@@ -8,6 +9,8 @@ using RevitDevTool.ViewModel.Messages;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Diagnostics;
+using RevitDevTool.Logging;
+using ZLogger.Providers;
 
 // ReSharper disable UnusedParameterInPartialMethod
 
@@ -19,28 +22,19 @@ public partial class LogSettingsViewModel : ObservableObject, IDataErrorInfo, IR
     private readonly ILoggingService _loggingService;
     private readonly IMessenger _messenger;
 
+    public static LogLevel[] LogLevels { get; } = Enum.GetValues(typeof(LogLevel)).Cast<LogLevel>().ToArray();
+    public static RollingInterval[] LogTimeIntervals { get; } = Enum.GetValues(typeof(RollingInterval)).Cast<RollingInterval>().ToArray();
     public static SourceLevels[] SourceLevels { get; } = Enum.GetValues(typeof(SourceLevels)).Cast<SourceLevels>().ToArray();
-    public static RevitEnricher[] AvailableRevitEnrichers { get; } =
-    [
-        RevitEnricher.RevitVersion,
-        RevitEnricher.RevitBuild,
-        RevitEnricher.RevitUserName,
-        RevitEnricher.RevitLanguage,
-        RevitEnricher.RevitDocumentTitle,
-        RevitEnricher.RevitDocumentPathName,
-        RevitEnricher.RevitDocumentModelPath
-    ];
+    public static LogSink[] AvailableLogTargets { get; } = Enum.GetValues(typeof(LogSink)).Cast<LogSink>().ToArray();
+    public static RevitEnricher[] AvailableRevitEnrichers { get; } = Enum.GetValues(typeof(RevitEnricher)).Cast<RevitEnricher>().ToArray();
 
     [ObservableProperty] private LogLevel _logLevel;
-    [ObservableProperty] private bool _enablePrettyJson;
+    [ObservableProperty] private bool _enableJson;
     [ObservableProperty] private string _informationKeywords = string.Empty;
     [ObservableProperty] private string _warningKeywords = string.Empty;
     [ObservableProperty] private string _errorKeywords = string.Empty;
     [ObservableProperty] private string _criticalKeywords = string.Empty;
     [ObservableProperty] private bool _restartRequired;
-    [ObservableProperty] private bool _isSaveLogEnabled;
-    [ObservableProperty] private bool _useExternalFileOnly;
-    [ObservableProperty] private LogSaveFormat _saveFormat;
     [ObservableProperty] private bool _includeStackTrace;
     [ObservableProperty] private SourceLevels _wpfTraceLevel;
     [ObservableProperty] private bool _includeWpfTrace;
@@ -49,16 +43,32 @@ public partial class LogSettingsViewModel : ObservableObject, IDataErrorInfo, IR
     [ObservableProperty] private string _logFolder = string.Empty;
     [ObservableProperty] private bool _autoClean;
 
+    [ObservableProperty] private string _httpEndpoint = string.Empty;
+    [ObservableProperty] private int _httpBatchSize = 100;
+
+    public ObservableCollection<LogSink> SelectedLogTargets { get; } = [];
     public ObservableCollection<RevitEnricher> SelectedRevitEnrichers { get; } = [];
+
+    public bool IsFileTargetSelected => SelectedLogTargets.Contains(LogSink.File);
+    public bool IsHttpTargetSelected => SelectedLogTargets.Contains(LogSink.Http);
+    public bool IsOutputSettingsVisible => IsFileTargetSelected || IsHttpTargetSelected;
 
     private Snapshot _baseline;
 
-    public LogSettingsViewModel(ISettingsService settingsService, ILoggingService loggingService)
+    public LogSettingsViewModel(ISettingsService settingsService, ILoggingService loggingService, IMessenger messenger)
     {
         _settingsService = settingsService;
         _loggingService = loggingService;
-        _messenger = WeakReferenceMessenger.Default;
+        _messenger = messenger;
 
+        SelectedLogTargets.CollectionChanged += (_, _) =>
+        {
+            OnPropertyChanged(nameof(IsFileTargetSelected));
+            OnPropertyChanged(nameof(IsHttpTargetSelected));
+            OnPropertyChanged(nameof(IsOutputSettingsVisible));
+            _messenger.Send(new IsSaveLogChangedMessage(IsFileTargetSelected));
+            UpdateHasPendingChanges();
+        };
         SelectedRevitEnrichers.CollectionChanged += (_, _) => UpdateHasPendingChanges();
 
         LoadFromConfig();
@@ -70,31 +80,29 @@ public partial class LogSettingsViewModel : ObservableObject, IDataErrorInfo, IR
 
     public string this[string columnName] => columnName switch
     {
-        nameof(InformationKeywords) => TraceUtils.ValidateKeywords(InformationKeywords) ?? string.Empty,
-        nameof(WarningKeywords) => TraceUtils.ValidateKeywords(WarningKeywords) ?? string.Empty,
-        nameof(ErrorKeywords) => TraceUtils.ValidateKeywords(ErrorKeywords) ?? string.Empty,
-        nameof(CriticalKeywords) => TraceUtils.ValidateKeywords(CriticalKeywords) ?? string.Empty,
+        nameof(InformationKeywords) => LogLevelDetector.ValidateKeywords(InformationKeywords) ?? string.Empty,
+        nameof(WarningKeywords) => LogLevelDetector.ValidateKeywords(WarningKeywords) ?? string.Empty,
+        nameof(ErrorKeywords) => LogLevelDetector.ValidateKeywords(ErrorKeywords) ?? string.Empty,
+        nameof(CriticalKeywords) => LogLevelDetector.ValidateKeywords(CriticalKeywords) ?? string.Empty,
         _ => string.Empty
     };
 
     partial void OnLogLevelChanged(LogLevel value)
     {
-        _settingsService.LogConfig.LogLevel = value;
+        _settingsService.LogConfig.TraceListener.LogLevel = value;
         _loggingService.SetMinimumLevel(value);
     }
 
-    partial void OnIsSaveLogEnabledChanged(bool value)
+    partial void OnEnableJsonChanged(bool value)
     {
-        WeakReferenceMessenger.Default.Send(new IsSaveLogChangedMessage(value));
+        _loggingService.SetPrettyJson(value);
         UpdateHasPendingChanges();
     }
-    partial void OnUseExternalFileOnlyChanged(bool value) => UpdateHasPendingChanges();
-    partial void OnSaveFormatChanged(LogSaveFormat value) => UpdateHasPendingChanges();
     partial void OnIncludeStackTraceChanged(bool value) => UpdateHasPendingChanges();
 
     partial void OnWpfTraceLevelChanged(SourceLevels value)
     {
-        _settingsService.LogConfig.WpfTraceLevel = value;
+        _settingsService.LogConfig.TraceListener.WpfTraceLevel = value;
         PresentationTraceSources.DataBindingSource.Switch.Level = value;
     }
 
@@ -103,38 +111,45 @@ public partial class LogSettingsViewModel : ObservableObject, IDataErrorInfo, IR
     partial void OnStackTraceDepthChanged(int value) => UpdateHasPendingChanges();
     partial void OnLogFolderChanged(string value) => UpdateHasPendingChanges();
     partial void OnAutoCleanChanged(bool value) => UpdateHasPendingChanges();
-    partial void OnEnablePrettyJsonChanged(bool value) => UpdateHasPendingChanges();
     partial void OnInformationKeywordsChanged(string value) => UpdateHasPendingChanges();
     partial void OnWarningKeywordsChanged(string value) => UpdateHasPendingChanges();
     partial void OnErrorKeywordsChanged(string value) => UpdateHasPendingChanges();
     partial void OnCriticalKeywordsChanged(string value) => UpdateHasPendingChanges();
 
+    partial void OnHttpEndpointChanged(string value) => UpdateHasPendingChanges();
+    partial void OnHttpBatchSizeChanged(int value) => UpdateHasPendingChanges();
+
     private void LoadFromConfig()
     {
         var config = _settingsService.LogConfig;
 
-        LogLevel = config.LogLevel;
-        EnablePrettyJson = config.EnablePrettyJson;
-        InformationKeywords = config.FilterKeywords.Information;
-        WarningKeywords = config.FilterKeywords.Warning;
-        ErrorKeywords = config.FilterKeywords.Error;
-        CriticalKeywords = config.FilterKeywords.Critical;
-        IsSaveLogEnabled = config.IsSaveLogEnabled;
-        UseExternalFileOnly = config.UseExternalFileOnly;
-        SaveFormat = config.SaveFormat;
-        IncludeStackTrace = config.IncludeStackTrace;
-        IncludeWpfTrace = config.IncludeWpfTrace;
-        WpfTraceLevel = config.WpfTraceLevel;
-        StackTraceDepth = config.StackTraceDepth;
-        TimeInterval = config.TimeInterval;
-        LogFolder = config.LogFolder;
-        AutoClean = config.AutoClean;
+        LogLevel = config.TraceListener.LogLevel;
+        EnableJson = config.FileLogging.Format == SaveFormat.Json;
+        InformationKeywords = config.TraceListener.LevelKeys.Information;
+        WarningKeywords = config.TraceListener.LevelKeys.Warning;
+        ErrorKeywords = config.TraceListener.LevelKeys.Error;
+        CriticalKeywords = config.TraceListener.LevelKeys.Critical;
+        IncludeStackTrace = config.TraceListener.IncludeStackTrace;
+        IncludeWpfTrace = config.TraceListener.IncludeWpfTrace;
+        WpfTraceLevel = config.TraceListener.WpfTraceLevel;
+        StackTraceDepth = config.TraceListener.StackTraceDepth;
+        TimeInterval = config.FileLogging.RollingInterval;
+        LogFolder = config.FileLogging.LogFolder;
+        AutoClean = config.FileLogging.AutoClean;
+
+        HttpEndpoint = config.HttpLogging.Endpoint;
+        HttpBatchSize = config.HttpLogging.BatchSize;
+
+        SelectedLogTargets.Clear();
+        SelectedLogTargets.Add(LogSink.Monitor);
+        if (config.FileLogging.Enabled)
+            SelectedLogTargets.Add(LogSink.File);
+        if (config.HttpLogging.Enabled)
+            SelectedLogTargets.Add(LogSink.Http);
+
         SelectedRevitEnrichers.Clear();
-        foreach (var enricher in AvailableRevitEnrichers)
-        {
-            if (config.RevitEnrichers.HasFlag(enricher))
-                SelectedRevitEnrichers.Add(enricher);
-        }
+        foreach (var enricher in _settingsService.RevitEnrichers)
+            SelectedRevitEnrichers.Add(enricher);
     }
 
     public void Receive(ResetSettingsMessage message)
@@ -147,54 +162,117 @@ public partial class LogSettingsViewModel : ObservableObject, IDataErrorInfo, IR
     {
         var config = _settingsService.LogConfig;
 
-        config.LogLevel = LogLevel;
-        config.EnablePrettyJson = EnablePrettyJson;
-        config.FilterKeywords.Information = InformationKeywords;
-        config.FilterKeywords.Warning = WarningKeywords;
-        config.FilterKeywords.Error = ErrorKeywords;
-        config.FilterKeywords.Critical = CriticalKeywords;
-        config.IsSaveLogEnabled = IsSaveLogEnabled;
-        config.UseExternalFileOnly = UseExternalFileOnly;
-        config.SaveFormat = SaveFormat;
-        config.IncludeStackTrace = IncludeStackTrace;
-        config.IncludeWpfTrace = IncludeWpfTrace;
-        config.WpfTraceLevel = WpfTraceLevel;
-        config.StackTraceDepth = StackTraceDepth;
-        config.TimeInterval = TimeInterval;
-        config.LogFolder = LogFolder;
-        config.AutoClean = AutoClean;
-        config.RevitEnrichers = SelectedRevitEnrichers.Aggregate(RevitEnricher.None, (current, enricher) => current | enricher);
+        var format = EnableJson ? SaveFormat.Json : SaveFormat.Text;
+
+        config.TraceListener.LogLevel = LogLevel;
+        config.Monitor.EnablePrettyJson = EnableJson;
+        config.TraceListener.LevelKeys.Information = InformationKeywords;
+        config.TraceListener.LevelKeys.Warning = WarningKeywords;
+        config.TraceListener.LevelKeys.Error = ErrorKeywords;
+        config.TraceListener.LevelKeys.Critical = CriticalKeywords;
+        config.FileLogging.Enabled = IsFileTargetSelected;
+        config.FileLogging.Format = format;
+        config.TraceListener.IncludeStackTrace = IncludeStackTrace;
+        config.TraceListener.IncludeWpfTrace = IncludeWpfTrace;
+        config.TraceListener.WpfTraceLevel = WpfTraceLevel;
+        config.TraceListener.StackTraceDepth = StackTraceDepth;
+        config.FileLogging.RollingInterval = TimeInterval;
+        config.FileLogging.LogFolder = LogFolder;
+        config.FileLogging.AutoClean = AutoClean;
+
+        config.HttpLogging.Enabled = IsHttpTargetSelected;
+        config.HttpLogging.Endpoint = HttpEndpoint;
+        config.HttpLogging.BatchSize = HttpBatchSize;
+        config.HttpLogging.Format = format;
+
+        _settingsService.RevitEnrichers = [..SelectedRevitEnrichers];
 
         _settingsService.SaveSettings();
     }
 
-    /// <summary>
-    /// Apply pending changes (save settings + notify restart) only once when closing Settings.
-    /// This avoids restarting logging on every property change, but still guarantees the new
-    /// settings are applied when user navigates back.
-    /// </summary>
     public void ApplyIfPendingChanges()
     {
         SaveToConfig();
-        if (!RestartRequired) return;
+
+        var changed = ComputeChangedTargets();
         SetBaselineFromCurrent();
-        _messenger.Send(new LogSettingsAppliedMessage());
+
+        foreach (var target in changed)
+            _messenger.Send(new LogSettingsAppliedMessage(target));
+    }
+
+    private List<LogSink> ComputeChangedTargets()
+    {
+        if (TraceListenerChanged())
+            return [LogSink.Monitor, LogSink.File, LogSink.Http];
+
+        var changed = new List<LogSink>();
+
+        var outputChanged = OutputSettingsChanged();
+
+        if (outputChanged)
+            changed.Add(LogSink.Monitor);
+
+        if (FileLoggingChanged() || outputChanged)
+            changed.Add(LogSink.File);
+
+        if (HttpLoggingChanged() || outputChanged)
+            changed.Add(LogSink.Http);
+
+        return changed;
+    }
+
+    private bool FileLoggingChanged()
+    {
+        return _baseline.IsFileEnabled != IsFileTargetSelected
+            || _baseline.TimeInterval != TimeInterval
+            || _baseline.AutoClean != AutoClean
+            || !string.Equals(_baseline.LogFolder, LogFolder, StringComparison.OrdinalIgnoreCase);
+    }
+
+    private bool HttpLoggingChanged()
+    {
+        return _baseline.IsHttpEnabled != IsHttpTargetSelected
+            || _baseline.HttpEndpoint != HttpEndpoint
+            || _baseline.HttpBatchSize != HttpBatchSize;
+    }
+
+    private bool OutputSettingsChanged()
+    {
+        return _baseline.EnableJson != EnableJson
+            || !_baseline.RevitEnrichers.SetEquals(SelectedRevitEnrichers);
+    }
+
+    private bool TraceListenerChanged()
+    {
+        return _baseline.IncludeStackTrace != IncludeStackTrace
+            || _baseline.StackTraceDepth != StackTraceDepth
+            || _baseline.IncludeWpfTrace != IncludeWpfTrace
+            || _baseline.InformationKeywords != InformationKeywords
+            || _baseline.WarningKeywords != WarningKeywords
+            || _baseline.ErrorKeywords != ErrorKeywords
+            || _baseline.CriticalKeywords != CriticalKeywords;
     }
 
     private void SetBaselineFromCurrent()
     {
         _baseline = new Snapshot(
-            LogLevel,
-            IsSaveLogEnabled,
-            UseExternalFileOnly,
-            SaveFormat,
+            IsFileTargetSelected,
+            IsHttpTargetSelected,
+            EnableJson,
             IncludeStackTrace,
             StackTraceDepth,
             IncludeWpfTrace,
             TimeInterval,
             LogFolder,
-            EnablePrettyJson,
-            SelectedRevitEnrichers.Aggregate(RevitEnricher.None, (current, e) => current | e)
+            AutoClean,
+            InformationKeywords,
+            WarningKeywords,
+            ErrorKeywords,
+            CriticalKeywords,
+            HttpEndpoint,
+            HttpBatchSize,
+            [..SelectedRevitEnrichers]
         );
 
         RestartRequired = false;
@@ -202,34 +280,26 @@ public partial class LogSettingsViewModel : ObservableObject, IDataErrorInfo, IR
 
     private void UpdateHasPendingChanges()
     {
-        var currentEnrichers = SelectedRevitEnrichers.Aggregate(RevitEnricher.None, (current, e) => current | e);
-
-        RestartRequired =
-            _baseline.LogLevel != LogLevel
-            || _baseline.IsSaveLogEnabled != IsSaveLogEnabled
-            || _baseline.UseExternalFileOnly != UseExternalFileOnly
-            || _baseline.SaveFormat != SaveFormat
-            || _baseline.IncludeStackTrace != IncludeStackTrace
-            || _baseline.StackTraceDepth != StackTraceDepth
-            || _baseline.IncludeWpfTrace != IncludeWpfTrace
-            || _baseline.TimeInterval != TimeInterval
-            || _baseline.EnablePrettyJson != EnablePrettyJson
-            || _baseline.RevitEnrichers != currentEnrichers
-            || !string.Equals(_baseline.LogFolder, LogFolder, StringComparison.OrdinalIgnoreCase);
+        RestartRequired = FileLoggingChanged() || HttpLoggingChanged() || OutputSettingsChanged() || TraceListenerChanged();
     }
 
     private readonly record struct Snapshot(
-        LogLevel LogLevel,
-        bool IsSaveLogEnabled,
-        bool UseExternalFileOnly,
-        LogSaveFormat SaveFormat,
+        bool IsFileEnabled,
+        bool IsHttpEnabled,
+        bool EnableJson,
         bool IncludeStackTrace,
         int StackTraceDepth,
         bool IncludeWpfTrace,
         RollingInterval TimeInterval,
         string LogFolder,
-        bool EnablePrettyJson,
-        RevitEnricher RevitEnrichers);
+        bool AutoClean,
+        string InformationKeywords,
+        string WarningKeywords,
+        string ErrorKeywords,
+        string CriticalKeywords,
+        string HttpEndpoint,
+        int HttpBatchSize,
+        HashSet<RevitEnricher> RevitEnrichers);
 
     [RelayCommand]
     private void BrowseFolder()

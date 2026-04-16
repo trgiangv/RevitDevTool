@@ -1,10 +1,11 @@
+using DevTools.Logging.Options;
+using RevitDevTool.Logging.Enums;
 using RevitDevTool.Settings.Config;
 using RevitDevTool.Settings.Options;
-using RevitDevTool.Theme;
-using RevitDevTool.Utils;
-using Serilog;
 using System.Diagnostics;
 using System.IO;
+using AppUtils = DevTools.Utilities.AppUtils;
+
 namespace RevitDevTool.Settings;
 
 public sealed class SettingsService(IFileConfig<PathOptions> fileConfig) : ISettingsService
@@ -13,6 +14,7 @@ public sealed class SettingsService(IFileConfig<PathOptions> fileConfig) : ISett
     private LogConfig? _logConfig;
     private VisualizationConfig? _visualizationConfig;
     private CodeExecuteConfig? _codeExecuteConfig;
+    private McpRegistryConfig? _mcpRegistryConfig;
 
     public GeneralConfig GeneralConfig
     {
@@ -33,6 +35,8 @@ public sealed class SettingsService(IFileConfig<PathOptions> fileConfig) : ISett
         }
     }
 
+    public HashSet<RevitEnricher> RevitEnrichers { get; set; } = [RevitEnricher.RevitVersion, RevitEnricher.RevitDocumentTitle];
+
     public VisualizationConfig VisualizationConfig
     {
         get
@@ -51,7 +55,14 @@ public sealed class SettingsService(IFileConfig<PathOptions> fileConfig) : ISett
         }
     }
 
-
+    public McpRegistryConfig McpRegistryConfig
+    {
+        get
+        {
+            _mcpRegistryConfig ??= new McpRegistryConfig();
+            return _mcpRegistryConfig;
+        }
+    }
 
     public void SaveSettings()
     {
@@ -59,6 +70,7 @@ public sealed class SettingsService(IFileConfig<PathOptions> fileConfig) : ISett
         SaveVisualizationSettings();
         SaveLogSettings();
         SaveCodeExecuteSettings();
+        SaveMcpRegistrySettings();
     }
 
     public void LoadSettings()
@@ -67,6 +79,7 @@ public sealed class SettingsService(IFileConfig<PathOptions> fileConfig) : ISett
         LoadVisualizationSettings();
         LoadLogSettings();
         LoadCodeExecuteSettings();
+        LoadMcpRegistrySettings();
     }
 
     public void ResetSettings()
@@ -86,7 +99,7 @@ public sealed class SettingsService(IFileConfig<PathOptions> fileConfig) : ISett
     {
         if (_logConfig is null) return;
         fileConfig.Save(_logConfig);
-        PresentationTraceSources.DataBindingSource.Switch.Level = _logConfig.WpfTraceLevel;
+        PresentationTraceSources.DataBindingSource.Switch.Level = _logConfig.TraceListener.WpfTraceLevel;
     }
 
     private void SaveVisualizationSettings()
@@ -103,7 +116,7 @@ public sealed class SettingsService(IFileConfig<PathOptions> fileConfig) : ISett
         }
         catch (Exception exception)
         {
-            Log.Logger.Error(exception, "Application settings loading error");
+            Trace.TraceError($"Application settings loading error: {exception.Message}");
         }
 
         if (_generalConfig is null)
@@ -120,7 +133,7 @@ public sealed class SettingsService(IFileConfig<PathOptions> fileConfig) : ISett
         }
         catch (Exception exception)
         {
-            Log.Logger.Error(exception, "Visualization settings loading error");
+            Trace.TraceError($"Visualization settings loading error: {exception.Message}");
         }
 
         if (_visualizationConfig is null)
@@ -137,7 +150,7 @@ public sealed class SettingsService(IFileConfig<PathOptions> fileConfig) : ISett
         }
         catch (Exception exception)
         {
-            Log.Logger.Error(exception, "Log settings loading error");
+            Trace.TraceError($"Log settings loading error: {exception.Message}");
         }
 
         if (_logConfig is null)
@@ -147,7 +160,7 @@ public sealed class SettingsService(IFileConfig<PathOptions> fileConfig) : ISett
         else
         {
             EnsureLogFolder(_logConfig);
-            PresentationTraceSources.DataBindingSource.Switch.Level = _logConfig.WpfTraceLevel;
+            PresentationTraceSources.DataBindingSource.Switch.Level = _logConfig.TraceListener.WpfTraceLevel;
         }
     }
 
@@ -156,9 +169,9 @@ public sealed class SettingsService(IFileConfig<PathOptions> fileConfig) : ISett
         _generalConfig = new GeneralConfig
         {
 #if REVIT2024_OR_GREATER
-            Theme = AppTheme.Auto,
+            Theme = Theme.AppTheme.Auto,
 #else
-            Theme = AppTheme.Light,
+            Theme = Theme.AppTheme.Light,
 #endif
             UseHardwareRendering = true,
             IsTraceEnabled = true,
@@ -169,7 +182,7 @@ public sealed class SettingsService(IFileConfig<PathOptions> fileConfig) : ISett
     {
         _logConfig = new LogConfig();
         EnsureLogFolder(_logConfig);
-        PresentationTraceSources.DataBindingSource.Switch.Level = _logConfig.WpfTraceLevel;
+        PresentationTraceSources.DataBindingSource.Switch.Level = _logConfig.TraceListener.WpfTraceLevel;
     }
 
     private void ResetVisualizationSettings()
@@ -187,15 +200,15 @@ public sealed class SettingsService(IFileConfig<PathOptions> fileConfig) : ISett
 
     private void EnsureLogFolder(LogConfig config)
     {
-        if (SettingsUtils.IsValidPath(config.LogFolder)) return;
-        config.LogFolder = fileConfig.Options.LogsDirectory;
+        if (AppUtils.IsValidPath(config.FileLogging.LogFolder)) return;
+        config.FileLogging.LogFolder = fileConfig.Options.LogsDirectory;
     }
 
     private void SaveCodeExecuteSettings()
     {
         if (_codeExecuteConfig is null) return;
         _codeExecuteConfig.DotnetAssemblyPaths.RemoveAll(path => !File.Exists(path));
-        _codeExecuteConfig.PythonFolderPaths.RemoveAll(path => !Directory.Exists(path));
+        _codeExecuteConfig.ScriptFolderPaths.RemoveAll(path => !Directory.Exists(path));
         fileConfig.Save(_codeExecuteConfig);
     }
 
@@ -211,5 +224,34 @@ public sealed class SettingsService(IFileConfig<PathOptions> fileConfig) : ISett
         }
 
         _codeExecuteConfig ??= new CodeExecuteConfig();
+    }
+
+    private void SaveMcpRegistrySettings()
+    {
+        if (_mcpRegistryConfig is null)
+            return;
+
+        _mcpRegistryConfig.DotnetPaths.RemoveAll(path =>
+            string.IsNullOrWhiteSpace(path) ||
+            !File.Exists(path) ||
+            !string.Equals(Path.GetExtension(path), ".dll", StringComparison.OrdinalIgnoreCase));
+        _mcpRegistryConfig.PythonToolsetPaths.RemoveAll(path =>
+            string.IsNullOrWhiteSpace(path) || !Directory.Exists(path));
+
+        fileConfig.Save(_mcpRegistryConfig);
+    }
+
+    private void LoadMcpRegistrySettings()
+    {
+        try
+        {
+            _mcpRegistryConfig = fileConfig.Load<McpRegistryConfig>();
+        }
+        catch (Exception exception)
+        {
+            Trace.TraceError($"MCP registry settings loading error: {exception.Message}");
+        }
+
+        _mcpRegistryConfig ??= new McpRegistryConfig();
     }
 }

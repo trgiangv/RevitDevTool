@@ -1,7 +1,6 @@
 #IDE folders
 *.idea/
 *.vs/
-*.vscode/
 *.cr/
 riderModule.iml
 /_ReSharper.Caches/
@@ -30,3 +29,10 @@ pytest_cache/
 .pytest_cache/
 .mypy_cache/
 .venv/
+
+#FSharp
+.fake
+
+# Skills
+skills
+.gitnexus

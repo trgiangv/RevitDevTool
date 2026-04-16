@@ -1,0 +1,11 @@
+[project]
+name = "revitdevtool-runtime"
+version = "0.1.0"
+channels = ["conda-forge"]
+platforms = ["win-64"]
+
+[dependencies]
+python = "3.13.*"
+packaging = "*"
+debugpy = "*"
+mcp = "*"

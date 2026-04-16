@@ -1,10 +1,11 @@
-﻿using Autodesk.Revit.DB.DirectContext3D;
+using Autodesk.Revit.DB.DirectContext3D;
 using RevitDevTool.Settings;
-using RevitDevTool.Utils;
+using DevTools.Utilities;
 using RevitDevTool.Visualization.Contracts;
 using RevitDevTool.Visualization.Helpers;
 using RevitDevTool.Visualization.Render;
 using System.Diagnostics;
+using RevitDevTool.Core;
 using Color = Autodesk.Revit.DB.Color;
 
 namespace RevitDevTool.Visualization.Server;
@@ -51,11 +52,11 @@ public sealed class BoundingBoxVisualizationServer : VisualizationServer<Boundin
 
     public override Outline? GetBoundingBox(Autodesk.Revit.DB.View view)
     {
-        if (visualizeGeometries.Count == 0) return null;
+        if (VisualizeGeometries.Count == 0) return null;
 
         var allTransformedPoints = new List<XYZ>();
 
-        foreach (var box in visualizeGeometries)
+        foreach (var box in VisualizeGeometries)
         {
             // Generate all 8 corners in local coordinate system and transform them
             XYZ[] localCorners =
@@ -88,18 +89,18 @@ public sealed class BoundingBoxVisualizationServer : VisualizationServer<Boundin
 
     protected override void RenderScene()
     {
-        if (visualizeGeometries.Count == 0) return;
+        if (VisualizeGeometries.Count == 0) return;
 
-        if (hasGeometryUpdates || _surfaceBuffers.Count == 0 || _edgeBuffers.Count == 0)
+        if (HasGeometryUpdates || _surfaceBuffers.Count == 0 || _edgeBuffers.Count == 0)
         {
             MapGeometryBuffer();
-            hasGeometryUpdates = false;
+            HasGeometryUpdates = false;
         }
 
-        if (hasEffectsUpdates)
+        if (HasEffectsUpdates)
         {
             UpdateEffects();
-            hasEffectsUpdates = false;
+            HasEffectsUpdates = false;
         }
 
         RenderSurfaceBuffers();
@@ -160,11 +161,11 @@ public sealed class BoundingBoxVisualizationServer : VisualizationServer<Boundin
     {
         DisposeBuffers();
 
-        if (visualizeGeometries.Count == 0) return;
+        if (VisualizeGeometries.Count == 0) return;
 
         try
         {
-            foreach (var geometry in visualizeGeometries)
+            foreach (var geometry in VisualizeGeometries)
             {
                 var scaledBox = RenderGeometryHelper.GetScaledBoundingBox(geometry, _scale);
                 var surfaceBuffer = new RenderingBufferStorage();
@@ -199,8 +200,8 @@ public sealed class BoundingBoxVisualizationServer : VisualizationServer<Boundin
             var minBuffer = axisBuffer[i];
             var maxBuffer = axisBuffer[i + _normals.Length];
 
-            RenderHelper.MapNormalVectorBuffer(minBuffer, minPoint - (UnitVector * Context.Application.ShortCurveTolerance), normal, axisLength);
-            RenderHelper.MapNormalVectorBuffer(maxBuffer, maxPoint + (UnitVector * Context.Application.ShortCurveTolerance), -normal, axisLength);
+            RenderHelper.MapNormalVectorBuffer(minBuffer, minPoint - (UnitVector * RevitContext.Application.ShortCurveTolerance), normal, axisLength);
+            RenderHelper.MapNormalVectorBuffer(maxBuffer, maxPoint + (UnitVector * RevitContext.Application.ShortCurveTolerance), -normal, axisLength);
         }
 
         _axisBuffers.AddRange(axisBuffer);
@@ -230,13 +231,13 @@ public sealed class BoundingBoxVisualizationServer : VisualizationServer<Boundin
 
     public void UpdateSurfaceColor(Color color)
     {
-        var uiDocument = Context.ActiveUiDocument;
+        var uiDocument = RevitContext.ActiveUiDocument;
         if (uiDocument is null) return;
 
-        lock (renderLock)
+        lock (RenderLock)
         {
             _surfaceColor = color;
-            hasEffectsUpdates = true;
+            HasEffectsUpdates = true;
 
             uiDocument.UpdateAllOpenViews();
         }
@@ -244,13 +245,13 @@ public sealed class BoundingBoxVisualizationServer : VisualizationServer<Boundin
 
     public void UpdateEdgeColor(Color color)
     {
-        var uiDocument = Context.ActiveUiDocument;
+        var uiDocument = RevitContext.ActiveUiDocument;
         if (uiDocument is null) return;
 
-        lock (renderLock)
+        lock (RenderLock)
         {
             _edgeColor = color;
-            hasEffectsUpdates = true;
+            HasEffectsUpdates = true;
 
             uiDocument.UpdateAllOpenViews();
         }
@@ -258,13 +259,13 @@ public sealed class BoundingBoxVisualizationServer : VisualizationServer<Boundin
 
     public void UpdateAxisColor(Color color)
     {
-        var uiDocument = Context.ActiveUiDocument;
+        var uiDocument = RevitContext.ActiveUiDocument;
         if (uiDocument is null) return;
 
-        lock (renderLock)
+        lock (RenderLock)
         {
             _axisColor = color;
-            hasEffectsUpdates = true;
+            HasEffectsUpdates = true;
 
             uiDocument.UpdateAllOpenViews();
         }
@@ -272,13 +273,13 @@ public sealed class BoundingBoxVisualizationServer : VisualizationServer<Boundin
 
     public void UpdateTransparency(double value)
     {
-        var uiDocument = Context.ActiveUiDocument;
+        var uiDocument = RevitContext.ActiveUiDocument;
         if (uiDocument is null) return;
 
-        lock (renderLock)
+        lock (RenderLock)
         {
             _transparency = value;
-            hasEffectsUpdates = true;
+            HasEffectsUpdates = true;
 
             uiDocument.UpdateAllOpenViews();
         }
@@ -286,15 +287,15 @@ public sealed class BoundingBoxVisualizationServer : VisualizationServer<Boundin
 
     public void UpdateScale(double value)
     {
-        var uiDocument = Context.ActiveUiDocument;
+        var uiDocument = RevitContext.ActiveUiDocument;
         if (uiDocument is null) return;
 
         _scale = value;
 
-        lock (renderLock)
+        lock (RenderLock)
         {
-            hasGeometryUpdates = true;
-            hasEffectsUpdates = true;
+            HasGeometryUpdates = true;
+            HasEffectsUpdates = true;
             DisposeBuffers();
 
             uiDocument.UpdateAllOpenViews();
@@ -303,10 +304,10 @@ public sealed class BoundingBoxVisualizationServer : VisualizationServer<Boundin
 
     public void UpdateSurfaceVisibility(bool visible)
     {
-        var uiDocument = Context.ActiveUiDocument;
+        var uiDocument = RevitContext.ActiveUiDocument;
         if (uiDocument is null) return;
 
-        lock (renderLock)
+        lock (RenderLock)
         {
             _drawSurface = visible;
 
@@ -316,10 +317,10 @@ public sealed class BoundingBoxVisualizationServer : VisualizationServer<Boundin
 
     public void UpdateEdgeVisibility(bool visible)
     {
-        var uiDocument = Context.ActiveUiDocument;
+        var uiDocument = RevitContext.ActiveUiDocument;
         if (uiDocument is null) return;
 
-        lock (renderLock)
+        lock (RenderLock)
         {
             _drawEdge = visible;
 
@@ -329,10 +330,10 @@ public sealed class BoundingBoxVisualizationServer : VisualizationServer<Boundin
 
     public void UpdateAxisVisibility(bool visible)
     {
-        var uiDocument = Context.ActiveUiDocument;
+        var uiDocument = RevitContext.ActiveUiDocument;
         if (uiDocument is null) return;
 
-        lock (renderLock)
+        lock (RenderLock)
         {
             _drawAxis = visible;
 

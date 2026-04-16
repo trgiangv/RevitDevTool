@@ -1,0 +1,16 @@
+[submodule "libs/XamlBehaviorsWpf"]
+	path = libs/XamlBehaviorsWpf
+	url = git@github.com:trgiangv/XamlBehaviorsWpf.git
+	branch = devtools/main
+[submodule "libs/ControlzEx"]
+	path = libs/ControlzEx
+	url = git@github.com:trgiangv/ControlzEx.git
+	branch = devtools/main
+[submodule "libs/MahApps.Metro"]
+	path = libs/MahApps.Metro
+	url = git@github.com:trgiangv/MahApps.Metro.git
+	branch = devtools/main
+[submodule "libs/pythonnet-stub-generator"]
+	path = libs/pythonnet-stub-generator
+	url = git@github.com:trgiangv/pythonnet-stub-generator.git
+	branch = devtools/main

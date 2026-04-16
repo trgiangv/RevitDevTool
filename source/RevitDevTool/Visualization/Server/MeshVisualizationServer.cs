@@ -1,10 +1,11 @@
-﻿using Autodesk.Revit.DB.DirectContext3D;
+using Autodesk.Revit.DB.DirectContext3D;
 using RevitDevTool.Settings;
-using RevitDevTool.Utils;
+using DevTools.Utilities;
 using RevitDevTool.Visualization.Contracts;
 using RevitDevTool.Visualization.Helpers;
 using RevitDevTool.Visualization.Render;
 using System.Diagnostics;
+using RevitDevTool.Core;
 using Color = Autodesk.Revit.DB.Color;
 
 namespace RevitDevTool.Visualization.Server;
@@ -48,18 +49,18 @@ public sealed class MeshVisualizationServer : VisualizationServer<Mesh>
 
     protected override void RenderScene()
     {
-        if (visualizeGeometries.Count == 0) return;
+        if (VisualizeGeometries.Count == 0) return;
 
-        if (hasGeometryUpdates || _surfaceBuffers.Count == 0 || _meshGridBuffers.Count == 0)
+        if (HasGeometryUpdates || _surfaceBuffers.Count == 0 || _meshGridBuffers.Count == 0)
         {
             MapGeometryBuffer();
-            hasGeometryUpdates = false;
+            HasGeometryUpdates = false;
         }
 
-        if (hasEffectsUpdates)
+        if (HasEffectsUpdates)
         {
             UpdateEffects();
-            hasEffectsUpdates = false;
+            HasEffectsUpdates = false;
         }
 
         RenderSurfaceBuffers();
@@ -120,11 +121,11 @@ public sealed class MeshVisualizationServer : VisualizationServer<Mesh>
     {
         DisposeBuffers();
 
-        if (visualizeGeometries.Count == 0) return;
+        if (VisualizeGeometries.Count == 0) return;
 
         try
         {
-            foreach (var visualizeGeometry in visualizeGeometries)
+            foreach (var visualizeGeometry in VisualizeGeometries)
             {
                 var surfaceBuffer = new RenderingBufferStorage();
                 RenderHelper.MapSurfaceBuffer(surfaceBuffer, visualizeGeometry, _extrusion);
@@ -147,7 +148,7 @@ public sealed class MeshVisualizationServer : VisualizationServer<Mesh>
     {
         _normalBuffers.Clear(true);
 
-        foreach (var mesh in visualizeGeometries)
+        foreach (var mesh in VisualizeGeometries)
         {
             var area = RenderGeometryHelper.ComputeMeshSurfaceArea(mesh);
             var offset = RenderGeometryHelper.InterpolateOffsetByArea(area);
@@ -196,13 +197,13 @@ public sealed class MeshVisualizationServer : VisualizationServer<Mesh>
 
     public void UpdateSurfaceColor(Color value)
     {
-        var uiDocument = Context.ActiveUiDocument;
+        var uiDocument = RevitContext.ActiveUiDocument;
         if (uiDocument is null) return;
 
-        lock (renderLock)
+        lock (RenderLock)
         {
             _surfaceColor = value;
-            hasEffectsUpdates = true;
+            HasEffectsUpdates = true;
 
             uiDocument.UpdateAllOpenViews();
         }
@@ -210,13 +211,13 @@ public sealed class MeshVisualizationServer : VisualizationServer<Mesh>
 
     public void UpdateMeshGridColor(Color value)
     {
-        var uiDocument = Context.ActiveUiDocument;
+        var uiDocument = RevitContext.ActiveUiDocument;
         if (uiDocument is null) return;
 
-        lock (renderLock)
+        lock (RenderLock)
         {
             _meshColor = value;
-            hasEffectsUpdates = true;
+            HasEffectsUpdates = true;
 
             uiDocument.UpdateAllOpenViews();
         }
@@ -224,13 +225,13 @@ public sealed class MeshVisualizationServer : VisualizationServer<Mesh>
 
     public void UpdateNormalVectorColor(Color value)
     {
-        var uiDocument = Context.ActiveUiDocument;
+        var uiDocument = RevitContext.ActiveUiDocument;
         if (uiDocument is null) return;
 
-        lock (renderLock)
+        lock (RenderLock)
         {
             _normalColor = value;
-            hasEffectsUpdates = true;
+            HasEffectsUpdates = true;
 
             uiDocument.UpdateAllOpenViews();
         }
@@ -238,14 +239,14 @@ public sealed class MeshVisualizationServer : VisualizationServer<Mesh>
 
     public void UpdateExtrusion(double value)
     {
-        var uiDocument = Context.ActiveUiDocument;
+        var uiDocument = RevitContext.ActiveUiDocument;
         if (uiDocument is null) return;
 
-        lock (renderLock)
+        lock (RenderLock)
         {
             _extrusion = value;
-            hasGeometryUpdates = true;
-            hasEffectsUpdates = true;
+            HasGeometryUpdates = true;
+            HasEffectsUpdates = true;
             DisposeBuffers();
 
             uiDocument.UpdateAllOpenViews();
@@ -254,13 +255,13 @@ public sealed class MeshVisualizationServer : VisualizationServer<Mesh>
 
     public void UpdateTransparency(double value)
     {
-        var uiDocument = Context.ActiveUiDocument;
+        var uiDocument = RevitContext.ActiveUiDocument;
         if (uiDocument is null) return;
 
-        lock (renderLock)
+        lock (RenderLock)
         {
             _transparency = value;
-            hasEffectsUpdates = true;
+            HasEffectsUpdates = true;
 
             uiDocument.UpdateAllOpenViews();
         }
@@ -269,10 +270,10 @@ public sealed class MeshVisualizationServer : VisualizationServer<Mesh>
 
     public void UpdateSurfaceVisibility(bool visible)
     {
-        var uiDocument = Context.ActiveUiDocument;
+        var uiDocument = RevitContext.ActiveUiDocument;
         if (uiDocument is null) return;
 
-        lock (renderLock)
+        lock (RenderLock)
         {
             _drawSurface = visible;
             uiDocument.UpdateAllOpenViews();
@@ -281,10 +282,10 @@ public sealed class MeshVisualizationServer : VisualizationServer<Mesh>
 
     public void UpdateMeshGridVisibility(bool visible)
     {
-        var uiDocument = Context.ActiveUiDocument;
+        var uiDocument = RevitContext.ActiveUiDocument;
         if (uiDocument is null) return;
 
-        lock (renderLock)
+        lock (RenderLock)
         {
             _drawMeshGrid = visible;
             uiDocument.UpdateAllOpenViews();
@@ -293,10 +294,10 @@ public sealed class MeshVisualizationServer : VisualizationServer<Mesh>
 
     public void UpdateNormalVectorVisibility(bool visible)
     {
-        var uiDocument = Context.ActiveUiDocument;
+        var uiDocument = RevitContext.ActiveUiDocument;
         if (uiDocument is null) return;
 
-        lock (renderLock)
+        lock (RenderLock)
         {
             _drawNormalVector = visible;
             uiDocument.UpdateAllOpenViews();

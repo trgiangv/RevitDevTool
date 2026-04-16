@@ -1,0 +1,13 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <UseRevit>true</UseRevit>
+        <IsRepackable>true</IsRepackable>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <PackageReference Include="Nice3point.Revit.Toolkit" VersionOverride="$(RevitVersion).*" />
+        <PackageReference Include="ILRepack"/>
+    </ItemGroup>
+
+</Project>

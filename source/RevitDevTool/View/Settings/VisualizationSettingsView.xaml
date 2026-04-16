@@ -3,11 +3,11 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:design="clr-namespace:RevitDevTool.Theme.Design"
-             xmlns:mah="http://metro.mahapps.com/winfx/xaml/controls"
+             xmlns:mah="http://metro.devtools.ui/winfx/xaml/controls"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              d:DesignHeight="630"
              d:DesignWidth="600"
-             Background="{DynamicResource MahApps.Brushes.ThemeBackground}"
+             Background="{DynamicResource DevTools.MahApps.Brushes.ThemeBackground}"
              mc:Ignorable="d">
 
     <UserControl.Resources>
@@ -45,7 +45,7 @@
                        ItemTemplate="{StaticResource MenuItemTemplate}"
                        OpenPaneLength="150"
                        SelectedIndex="0"
-                       Style="{DynamicResource MahApps.Styles.HamburgerMenu.CreatorsUpdate}">
+                       Style="{DynamicResource DevTools.MahApps.Styles.HamburgerMenu.CreatorsUpdate}">
         <mah:HamburgerMenu.ItemsSource>
             <mah:HamburgerMenuItemCollection>
                 <mah:HamburgerMenuIconItem Label="BoundingBox"
@@ -54,7 +54,7 @@
                         <Path Width="20"
                               Height="20"
                               Data="{StaticResource Box}"
-                              Fill="{DynamicResource MahApps.Brushes.ThemeForeground}"
+                              Fill="{DynamicResource DevTools.MahApps.Brushes.ThemeForeground}"
                               Stretch="Uniform" />
                     </mah:HamburgerMenuIconItem.Icon>
                 </mah:HamburgerMenuIconItem>
@@ -64,7 +64,7 @@
                         <Path Width="20"
                               Height="20"
                               Data="{StaticResource Face}"
-                              Fill="{DynamicResource MahApps.Brushes.ThemeForeground}"
+                              Fill="{DynamicResource DevTools.MahApps.Brushes.ThemeForeground}"
                               Stretch="Uniform" />
                     </mah:HamburgerMenuIconItem.Icon>
                 </mah:HamburgerMenuIconItem>
@@ -74,7 +74,7 @@
                         <Path Width="20"
                               Height="20"
                               Data="{StaticResource Mesh}"
-                              Fill="{DynamicResource MahApps.Brushes.ThemeForeground}"
+                              Fill="{DynamicResource DevTools.MahApps.Brushes.ThemeForeground}"
                               Stretch="Uniform" />
                     </mah:HamburgerMenuIconItem.Icon>
                 </mah:HamburgerMenuIconItem>
@@ -84,7 +84,7 @@
                         <Path Width="20"
                               Height="20"
                               Data="{StaticResource Line}"
-                              Fill="{DynamicResource MahApps.Brushes.ThemeForeground}"
+                              Fill="{DynamicResource DevTools.MahApps.Brushes.ThemeForeground}"
                               Stretch="Uniform" />
                     </mah:HamburgerMenuIconItem.Icon>
                 </mah:HamburgerMenuIconItem>
@@ -94,7 +94,7 @@
                         <Path Width="20"
                               Height="20"
                               Data="{StaticResource Solid}"
-                              Fill="{DynamicResource MahApps.Brushes.ThemeForeground}"
+                              Fill="{DynamicResource DevTools.MahApps.Brushes.ThemeForeground}"
                               Stretch="Uniform" />
                     </mah:HamburgerMenuIconItem.Icon>
                 </mah:HamburgerMenuIconItem>
@@ -104,7 +104,7 @@
                         <Path Width="20"
                               Height="20"
                               Data="{StaticResource Point}"
-                              Fill="{DynamicResource MahApps.Brushes.ThemeForeground}"
+                              Fill="{DynamicResource DevTools.MahApps.Brushes.ThemeForeground}"
                               Stretch="Uniform" />
                     </mah:HamburgerMenuIconItem.Icon>
                 </mah:HamburgerMenuIconItem>

@@ -1,10 +1,12 @@
-﻿using Autodesk.Revit.DB.DirectContext3D;
+using Autodesk.Revit.DB.DirectContext3D;
 using RevitDevTool.Settings;
-using RevitDevTool.Utils;
+using DevTools.Utilities;
 using RevitDevTool.Visualization.Contracts;
 using RevitDevTool.Visualization.Helpers;
 using RevitDevTool.Visualization.Render;
 using System.Diagnostics;
+using Nice3point.Revit.Extensions;
+using RevitDevTool.Core;
 using Color = Autodesk.Revit.DB.Color;
 
 namespace RevitDevTool.Visualization.Server;
@@ -43,10 +45,10 @@ public sealed class FaceVisualizationServer : VisualizationServer<Face>
 
     public override Outline? GetBoundingBox(Autodesk.Revit.DB.View view)
     {
-        if (visualizeGeometries.Count == 0) return null;
+        if (VisualizeGeometries.Count == 0) return null;
         List<XYZ> minPoints = [];
         List<XYZ> maxPoints = [];
-        foreach (var face in visualizeGeometries)
+        foreach (var face in VisualizeGeometries)
         {
             if (face.Reference is null) return null;
 
@@ -74,18 +76,18 @@ public sealed class FaceVisualizationServer : VisualizationServer<Face>
 
     protected override void RenderScene()
     {
-        if (visualizeGeometries.Count == 0) return;
+        if (VisualizeGeometries.Count == 0) return;
 
-        if (hasGeometryUpdates || _surfaceBuffers.Count == 0 || _meshGridBuffers.Count == 0 || _normalBuffers.Count == 0)
+        if (HasGeometryUpdates || _surfaceBuffers.Count == 0 || _meshGridBuffers.Count == 0 || _normalBuffers.Count == 0)
         {
             MapGeometryBuffer();
-            hasGeometryUpdates = false;
+            HasGeometryUpdates = false;
         }
 
-        if (hasEffectsUpdates)
+        if (HasEffectsUpdates)
         {
             UpdateEffects();
-            hasEffectsUpdates = false;
+            HasEffectsUpdates = false;
         }
 
         RenderSurfaceBuffers();
@@ -146,11 +148,11 @@ public sealed class FaceVisualizationServer : VisualizationServer<Face>
     {
         DisposeBuffers();
 
-        if (visualizeGeometries.Count == 0) return;
+        if (VisualizeGeometries.Count == 0) return;
 
         try
         {
-            foreach (var face in visualizeGeometries)
+            foreach (var face in VisualizeGeometries)
             {
                 var mesh = face.Triangulate();
                 var faceBox = face.GetBoundingBox();
@@ -201,13 +203,13 @@ public sealed class FaceVisualizationServer : VisualizationServer<Face>
 
     public void UpdateSurfaceColor(Color value)
     {
-        var uiDocument = Context.ActiveUiDocument;
+        var uiDocument = RevitContext.ActiveUiDocument;
         if (uiDocument is null) return;
 
-        lock (renderLock)
+        lock (RenderLock)
         {
             _surfaceColor = value;
-            hasEffectsUpdates = true;
+            HasEffectsUpdates = true;
 
             uiDocument.UpdateAllOpenViews();
         }
@@ -215,13 +217,13 @@ public sealed class FaceVisualizationServer : VisualizationServer<Face>
 
     public void UpdateMeshGridColor(Color value)
     {
-        var uiDocument = Context.ActiveUiDocument;
+        var uiDocument = RevitContext.ActiveUiDocument;
         if (uiDocument is null) return;
 
-        lock (renderLock)
+        lock (RenderLock)
         {
             _meshColor = value;
-            hasEffectsUpdates = true;
+            HasEffectsUpdates = true;
 
             uiDocument.UpdateAllOpenViews();
         }
@@ -229,13 +231,13 @@ public sealed class FaceVisualizationServer : VisualizationServer<Face>
 
     public void UpdateNormalVectorColor(Color value)
     {
-        var uiDocument = Context.ActiveUiDocument;
+        var uiDocument = RevitContext.ActiveUiDocument;
         if (uiDocument is null) return;
 
-        lock (renderLock)
+        lock (RenderLock)
         {
             _normalColor = value;
-            hasEffectsUpdates = true;
+            HasEffectsUpdates = true;
 
             uiDocument.UpdateAllOpenViews();
         }
@@ -243,14 +245,14 @@ public sealed class FaceVisualizationServer : VisualizationServer<Face>
 
     public void UpdateExtrusion(double value)
     {
-        var uiDocument = Context.ActiveUiDocument;
+        var uiDocument = RevitContext.ActiveUiDocument;
         if (uiDocument is null) return;
 
-        lock (renderLock)
+        lock (RenderLock)
         {
             _extrusion = value;
-            hasGeometryUpdates = true;
-            hasEffectsUpdates = true;
+            HasGeometryUpdates = true;
+            HasEffectsUpdates = true;
             DisposeBuffers();
 
             uiDocument.UpdateAllOpenViews();
@@ -259,13 +261,13 @@ public sealed class FaceVisualizationServer : VisualizationServer<Face>
 
     public void UpdateTransparency(double value)
     {
-        var uiDocument = Context.ActiveUiDocument;
+        var uiDocument = RevitContext.ActiveUiDocument;
         if (uiDocument is null) return;
 
-        lock (renderLock)
+        lock (RenderLock)
         {
             _transparency = value;
-            hasEffectsUpdates = true;
+            HasEffectsUpdates = true;
 
             uiDocument.UpdateAllOpenViews();
         }
@@ -273,10 +275,10 @@ public sealed class FaceVisualizationServer : VisualizationServer<Face>
 
     public void UpdateSurfaceVisibility(bool visible)
     {
-        var uiDocument = Context.ActiveUiDocument;
+        var uiDocument = RevitContext.ActiveUiDocument;
         if (uiDocument is null) return;
 
-        lock (renderLock)
+        lock (RenderLock)
         {
             _drawSurface = visible;
             uiDocument.UpdateAllOpenViews();
@@ -285,10 +287,10 @@ public sealed class FaceVisualizationServer : VisualizationServer<Face>
 
     public void UpdateMeshGridVisibility(bool visible)
     {
-        var uiDocument = Context.ActiveUiDocument;
+        var uiDocument = RevitContext.ActiveUiDocument;
         if (uiDocument is null) return;
 
-        lock (renderLock)
+        lock (RenderLock)
         {
             _drawMeshGrid = visible;
             uiDocument.UpdateAllOpenViews();
@@ -297,10 +299,10 @@ public sealed class FaceVisualizationServer : VisualizationServer<Face>
 
     public void UpdateNormalVectorVisibility(bool visible)
     {
-        var uiDocument = Context.ActiveUiDocument;
+        var uiDocument = RevitContext.ActiveUiDocument;
         if (uiDocument is null) return;
 
-        lock (renderLock)
+        lock (RenderLock)
         {
             _drawNormalVector = visible;
             uiDocument.UpdateAllOpenViews();

@@ -2,18 +2,19 @@ using Autodesk.Revit.DB.DirectContext3D;
 using Autodesk.Revit.DB.ExternalService;
 using RevitDevTool.Controllers;
 using System.Diagnostics;
+using RevitDevTool.Core;
 using RevitDevTool.ViewModel.Settings.Visualization;
 
 namespace RevitDevTool.Visualization.Contracts;
 
 public abstract class VisualizationServer<TG> : IDirectContext3DServer, IVisualizationServerLifeCycle
 {
-    protected readonly List<TG> visualizeGeometries = [];
-    protected bool hasGeometryUpdates = true;
-    protected bool hasEffectsUpdates = true;
-    protected readonly object renderLock = new();
+    protected readonly List<TG> VisualizeGeometries = [];
+    protected bool HasGeometryUpdates = true;
+    protected bool HasEffectsUpdates = true;
+    protected readonly object RenderLock = new();
 
-    public int GeometryCount => visualizeGeometries.Count;
+    public int GeometryCount => VisualizeGeometries.Count;
 
     public string GetVendorId() => "RevitDevTool";
     public bool CanExecute(Autodesk.Revit.DB.View dBView) => true;
@@ -38,7 +39,7 @@ public abstract class VisualizationServer<TG> : IDirectContext3DServer, IVisuali
 
     public void RenderScene(Autodesk.Revit.DB.View dBView, DisplayStyle displayStyle)
     {
-        lock (renderLock)
+        lock (RenderLock)
         {
             try
             {
@@ -54,14 +55,14 @@ public abstract class VisualizationServer<TG> : IDirectContext3DServer, IVisuali
 
     public void ClearGeometry()
     {
-        var uiDocument = Context.ActiveUiDocument;
+        var uiDocument = RevitContext.ActiveUiDocument;
         if (uiDocument is null) return;
-        lock (renderLock)
+        lock (RenderLock)
         {
             try
             {
-                visualizeGeometries.Clear();
-                hasGeometryUpdates = true;
+                VisualizeGeometries.Clear();
+                HasGeometryUpdates = true;
                 DisposeBuffers();
                 uiDocument.UpdateAllOpenViews();
             }
@@ -74,15 +75,15 @@ public abstract class VisualizationServer<TG> : IDirectContext3DServer, IVisuali
 
     public void AddGeometries(IEnumerable<TG> geometries)
     {
-        var uiDocument = Context.ActiveUiDocument;
+        var uiDocument = RevitContext.ActiveUiDocument;
         if (uiDocument is null) return;
-        lock (renderLock)
+        lock (RenderLock)
         {
             try
             {
-                visualizeGeometries.AddRange(geometries);
-                hasGeometryUpdates = true;
-                hasEffectsUpdates = true;
+                VisualizeGeometries.AddRange(geometries);
+                HasGeometryUpdates = true;
+                HasEffectsUpdates = true;
                 uiDocument.UpdateAllOpenViews();
                 VisualizationController.NotifyGeometryCountChanged();
             }
@@ -95,15 +96,15 @@ public abstract class VisualizationServer<TG> : IDirectContext3DServer, IVisuali
 
     public void AddGeometry(TG geometry)
     {
-        var uiDocument = Context.ActiveUiDocument;
+        var uiDocument = RevitContext.ActiveUiDocument;
         if (uiDocument is null) return;
-        lock (renderLock)
+        lock (RenderLock)
         {
             try
             {
-                visualizeGeometries.Add(geometry);
-                hasGeometryUpdates = true;
-                hasEffectsUpdates = true;
+                VisualizeGeometries.Add(geometry);
+                HasGeometryUpdates = true;
+                HasEffectsUpdates = true;
                 uiDocument.UpdateAllOpenViews();
                 VisualizationController.NotifyGeometryCountChanged();
             }
@@ -123,7 +124,7 @@ public abstract class VisualizationServer<TG> : IDirectContext3DServer, IVisuali
             var serverIds = directContextService.GetActiveServerIds();
             if (directContextService.IsRegisteredServerId(GetServerId()))
             {
-                Trace.TraceInformation("{0} already registered", GetName());
+                Debug.WriteLine($"{GetName()} already registered");
                 return;
             }
             directContextService.AddServer(this);
@@ -131,7 +132,7 @@ public abstract class VisualizationServer<TG> : IDirectContext3DServer, IVisuali
             directContextService.SetActiveServers(serverIds);
 
             visualizationViewModel.Initialize();
-            Trace.TraceInformation("{0} registered", GetName());
+            Debug.WriteLine($"{GetName()} registered");
         });
     }
 
@@ -143,13 +144,13 @@ public abstract class VisualizationServer<TG> : IDirectContext3DServer, IVisuali
                 ExternalServiceRegistry.GetService(ExternalServices.BuiltInExternalServices.DirectContext3DService);
             if (!directContextService.IsRegisteredServerId(GetServerId()))
             {
-                Trace.TraceInformation("{0} already unregistered", GetName());
+                Debug.WriteLine($"{GetName()} already unregistered");
                 return;
             }
 
             directContextService.RemoveServer(GetServerId());
 
-            Trace.TraceInformation("{0} unregistered", GetName());
+            Debug.WriteLine($"{GetName()} unregistered");
             application.ActiveUIDocument?.UpdateAllOpenViews();
         });
     }

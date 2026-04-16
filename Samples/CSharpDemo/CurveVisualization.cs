@@ -1,0 +1,52 @@
+﻿using Autodesk.Revit.Attributes;
+using Autodesk.Revit.UI.Selection;
+using Nice3point.Revit.Toolkit.External;
+using System.Diagnostics;
+
+namespace CSharpDemo;
+
+[Transaction(TransactionMode.Manual)]
+[UsedImplicitly]
+public class CurveVisualization : ExternalCommand
+{
+    public override void Execute()
+    {
+        try
+        {
+            var curveRef = Application.ActiveUIDocument.Selection.PickObject(ObjectType.Edge, "Select Curve");
+            var curve = Application.ActiveUIDocument.Document.GetElement(curveRef)?.GetGeometryObjectFromReference(curveRef) as Edge;
+            Trace.Write(curve);
+        }
+        catch (Exception e)
+        {
+            Trace.TraceError($"Error in CurveVisualization: {e.Message}");
+        }
+    }
+}
+
+[Transaction(TransactionMode.Manual)]
+[UsedImplicitly]
+public class CurvesVisualization : ExternalCommand
+{
+    public override void Execute()
+    {
+        try
+        {
+            var curveRefs = Application.ActiveUIDocument.Selection.PickObjects(ObjectType.Edge, "Select Curves");
+
+            var curves = new List<Edge>();
+            foreach (var curveRef in curveRefs)
+            {
+                var curve = Application.ActiveUIDocument.Document.GetElement(curveRef)?.GetGeometryObjectFromReference(curveRef) as Edge;
+                if (curve != null) curves.Add(curve);
+            }
+
+            Trace.Write(curves);
+        }
+        catch (Exception e)
+        {
+            Trace.TraceError($"Error in CurvesVisualization: {e.Message}");
+        }
+
+    }
+}

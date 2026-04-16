@@ -1,0 +1,10 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <UseRevit>true</UseRevit>
+    </PropertyGroup>
+    
+    <ItemGroup Condition="'$(TargetFramework)' != 'net48'">
+        <PackageReference Include="System.Drawing.Common" ExcludeAssets="runtime"/>
+    </ItemGroup>
+</Project>

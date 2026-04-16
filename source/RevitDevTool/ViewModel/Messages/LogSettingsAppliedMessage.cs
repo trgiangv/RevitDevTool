@@ -1,11 +1,5 @@
-using RevitDevTool.Settings;
+using DevTools.Logging.Options;
 
 namespace RevitDevTool.ViewModel.Messages;
 
-/// <summary>
-/// Published when user clicks Apply in Log Settings.
-/// Consumers should re-read settings from <see cref="ISettingsService"/>.
-/// </summary>
-public sealed record LogSettingsAppliedMessage;
-
-
+public sealed record LogSettingsAppliedMessage(LogSink Sink);

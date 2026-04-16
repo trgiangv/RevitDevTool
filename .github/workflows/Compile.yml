@@ -1,58 +1,43 @@
-name: Compile
+name: Compile solution
 
 on:
   push:
     branches:
       - '*'
   pull_request:
-
-concurrency:
-  group: ci-build-release-lock
-  cancel-in-progress: true
+  workflow_dispatch:
 
 jobs:
-  prepare:
-    name: Prepare compile matrix
-    runs-on: windows-2022
-    outputs:
-      versions: ${{ steps.versions.outputs.versions }}
+  windows:
+    name: windows-2025
+    runs-on: windows-2025
     steps:
+
       - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Read versions from Directory.Build.props
-        id: versions
-        shell: pwsh
-        run: |
-          $propsContent = Get-Content "source/Directory.Build.props" -Raw
-          $matches = [regex]::Matches($propsContent, 'Release\s+(R\d+)', [System.Text.RegularExpressions.RegexOptions]::IgnoreCase)
-          $versions = @($matches | ForEach-Object { $_.Groups[1].Value.ToUpperInvariant() } | Sort-Object -Unique)
-          if ($versions.Count -eq 0) {
-            throw "No Release Rxx configurations found in source/Directory.Build.props"
-          }
-
-          $versionsJson = $versions | ConvertTo-Json -Compress
-          "versions=$versionsJson" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
-
-  compile:
-    needs: prepare
-    name: Compile ${{ matrix.version }}
-    runs-on: windows-2022
-    strategy:
-      fail-fast: false
-      matrix:
-        version: ${{ fromJson(needs.prepare.outputs.versions) }}
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+          submodules: recursive
 
       - name: Cache packages
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
-          path: |
-            .nuke/temp
-            ~/.nuget/packages
-          key: ${{ runner.os }}-${{ matrix.version }}-${{ hashFiles('**/global.json', '**/*.csproj', '**/Directory.Packages.props') }}
+          path: ~/.nuget/packages
+          key: ${{ runner.os }}-nuget-${{ hashFiles('**/*.csproj', 'Directory.Build.props', 'Directory.Packages.props') }}
+          restore-keys: ${{ runner.os }}-nuget-
 
       - name: Compile solution
-        run: ./.nuke/build.cmd --configurations "Release ${{ matrix.version }}"
+        run: dotnet run -c Release pack
+        working-directory: "build"
+        env:
+          DOTNET_ENVIRONMENT: ${{ github.ref_name == 'main' && 'Production' || 'Development' }}
+      
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-artifacts
+          path: |
+            output/*.zip
+            output/*.msi
+          if-no-files-found: warn
+          retention-days: 30

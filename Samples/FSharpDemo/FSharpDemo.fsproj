@@ -1,0 +1,22 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <UseRevit>true</UseRevit>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <PackageReference Include="Nice3point.Revit.Toolkit" VersionOverride="$(RevitVersion).*"/>
+    </ItemGroup>
+
+    <ItemGroup>
+        <Compile Include="Extensions\GeometryExtensions.fs"/>
+        <Compile Include="BoundingBoxVisualization.fs"/>
+        <Compile Include="CurveVisualization.fs"/>
+        <Compile Include="FaceVisualization.fs"/>
+        <Compile Include="MeshVisualization.fs"/>
+        <Compile Include="SolidVisualization.fs"/>
+        <Compile Include="XYZVisualization.fs"/>
+        <Compile Include="Log.fs"/>
+    </ItemGroup>
+
+</Project>

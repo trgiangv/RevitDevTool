@@ -6,7 +6,7 @@ namespace RevitDevTool.View.Settings;
 
 public partial class VisualizationSettingsView
 {
-    private readonly Dictionary<string, object> _viewCache = new();
+    private readonly Dictionary<Type, object> _viewCache = [];
 
     public VisualizationSettingsView()
     {
@@ -16,7 +16,6 @@ public partial class VisualizationSettingsView
 
     private void OnLoaded(object sender, RoutedEventArgs e)
     {
-        // Navigate to first item on load
         if (HamburgerMenuControl.SelectedItem is HamburgerMenuIconItem item)
         {
             NavigateTo(item.Tag?.ToString());
@@ -46,13 +45,12 @@ public partial class VisualizationSettingsView
             _ => null
         };
 
-        if (viewType == null) return;
+        if (viewType is null) return;
 
-        if (!_viewCache.TryGetValue(tag!, out var view))
+        if (!_viewCache.TryGetValue(viewType, out var view))
         {
-            view = Host.GetService(viewType) ?? Activator.CreateInstance(viewType);
-            if (view != null)
-                _viewCache[tag!] = view;
+            view = Host.GetService(viewType);
+            if (view is not null) _viewCache[viewType] = view;
         }
 
         HamburgerMenuControl.Content = view;

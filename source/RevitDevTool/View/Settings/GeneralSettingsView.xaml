@@ -3,11 +3,10 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:design="clr-namespace:RevitDevTool.Theme.Design"
-             xmlns:mah="http://metro.mahapps.com/winfx/xaml/controls"
+             xmlns:mah="http://metro.devtools.ui/winfx/xaml/controls"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:settings="clr-namespace:RevitDevTool.ViewModel.Settings"
-             xmlns:i="http://schemas.microsoft.com/xaml/behaviors"
-             d:Background="{DynamicResource MahApps.Brushes.ThemeBackground}"
+             d:Background="{DynamicResource DevTools.MahApps.Brushes.ThemeBackground}"
              d:DataContext="{d:DesignInstance settings:GeneralSettingsViewModel}"
              d:DesignHeight="600"
              d:DesignWidth="600"
@@ -37,7 +36,7 @@
                         <TextBlock FontWeight="SemiBold"
                                    Text="Application Theme" />
                         <TextBlock FontSize="11"
-                                   Foreground="{DynamicResource MahApps.Brushes.Gray}"
+                                   Foreground="{DynamicResource DevTools.MahApps.Brushes.Gray}"
                                    Text="Customise the application theme" />
                     </StackPanel>
                     <ComboBox Grid.Column="1"
@@ -48,55 +47,44 @@
                 </Grid>
             </GroupBox>
 
-            <!--  Hardware Acceleration  -->
+            <!--  Performance  -->
             <GroupBox Margin="0,0,0,8"
                       Header="Performance">
-                <Grid Margin="8">
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="*" />
-                        <ColumnDefinition Width="Auto" />
-                    </Grid.ColumnDefinitions>
-                    <StackPanel VerticalAlignment="Center">
-                        <TextBlock FontWeight="SemiBold"
-                                   Text="Hardware graphics acceleration" />
-                        <TextBlock FontSize="11"
-                                   Foreground="{DynamicResource MahApps.Brushes.Gray}"
-                                   Text="Offloads graphic rendering from the CPU to the GPU" />
-                    </StackPanel>
-                    <mah:ToggleSwitch Grid.Column="1"
-                                      MinWidth="60"
-                                      IsOn="{Binding UseHardwareRendering}" />
-                </Grid>
+                <StackPanel>
+                    <Grid Margin="8">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <StackPanel VerticalAlignment="Center">
+                            <TextBlock FontWeight="SemiBold"
+                                       Text="Hardware graphics acceleration" />
+                            <TextBlock FontSize="11"
+                                       Foreground="{DynamicResource DevTools.MahApps.Brushes.Gray}"
+                                       Text="Offloads graphic rendering from the CPU to the GPU" />
+                        </StackPanel>
+                        <mah:ToggleSwitch Grid.Column="1"
+                                          MinWidth="60"
+                                          IsOn="{Binding UseHardwareRendering}" />
+                    </Grid>
+                    <Grid Margin="8,0,8,8">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <StackPanel VerticalAlignment="Center">
+                            <TextBlock FontWeight="SemiBold"
+                                       Text="Memory monitor" />
+                            <TextBlock FontSize="11"
+                                       Foreground="{DynamicResource DevTools.MahApps.Brushes.Gray}"
+                                       Text="Shows realtime process memory and operation tracking" />
+                        </StackPanel>
+                        <mah:ToggleSwitch Grid.Column="1"
+                                          MinWidth="60"
+                                          IsOn="{Binding IsMemoryEnabled}" />
+                    </Grid>
+                </StackPanel>
             </GroupBox>
-
-            <!--  Python Debug Port  -->
-            <GroupBox Margin="0,0,0,8"
-                      Header="Debugging">
-                <Grid Margin="8">
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="*" />
-                        <ColumnDefinition Width="Auto" />
-                    </Grid.ColumnDefinitions>
-                    <StackPanel VerticalAlignment="Center">
-                        <TextBlock FontWeight="SemiBold"
-                                   Text="Debug Port" />
-                        <TextBlock FontSize="11"
-                                   Foreground="{DynamicResource MahApps.Brushes.Gray}"
-                                   Text="Port for Python debugpy adapter (1024-65535)" />
-                    </StackPanel>
-                    <mah:NumericUpDown Grid.Column="1"
-                                       Width="120"
-                                       NumericInputMode="Numbers"
-                                       Value="{Binding DebugPort, UpdateSourceTrigger=LostFocus}" >
-                        <i:Interaction.Triggers>
-                            <i:EventTrigger EventName="LostFocus">
-                                <i:CallMethodAction TargetObject="{Binding}" MethodName="RevertIfInvalid"/>
-                            </i:EventTrigger>
-                        </i:Interaction.Triggers>
-                    </mah:NumericUpDown>
-                </Grid>
-            </GroupBox>
-
         </StackPanel>
     </ScrollViewer>
 </UserControl>

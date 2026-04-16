@@ -1,19 +1,19 @@
+using System.Windows;
+using DevTools.Logging.Options;
 using Microsoft.Extensions.Logging;
 
 namespace RevitDevTool.Logging;
 
-/// <summary>
-/// Central service for managing application logging lifecycle.
-/// Coordinates logger creation, trace listener registration, and UI output.
-/// </summary>
 public interface ILoggingService : IDisposable
 {
-    ILogOutputSink? OutputSink { get; }
-    void Initialize(bool isDarkTheme);
-    void Restart(bool isDarkTheme);
+    FrameworkElement? HostElement { get; }
+    void Initialize();
+    void EnableTarget(LogSink sink);
+    void DisableTarget(LogSink sink);
     void SetMinimumLevel(LogLevel level);
+    void SetPrettyJson(bool enabled);
+    void SetTheme(bool isDark);
     void RegisterTraceListeners();
     void UnregisterTraceListeners();
     void ClearOutput();
 }
-

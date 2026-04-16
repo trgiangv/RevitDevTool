@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+    <PropertyGroup>
+        <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
+    </PropertyGroup>
+    
+    <PropertyGroup>
+        <LangVersion>latest</LangVersion>
+        <PlatformTarget>x64</PlatformTarget>
+        <Prefer32Bit>false</Prefer32Bit>
+        <ImplicitUsings>true</ImplicitUsings>
+        <Nullable>enable</Nullable>
+        <NoWarn>NU1903</NoWarn>
+        <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+        <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
+        <EnableDynamicLoading>true</EnableDynamicLoading>
+        <ImportFrameworkWinFXTargets>false</ImportFrameworkWinFXTargets>
+    </PropertyGroup>
+
+    <PropertyGroup>
+        <Configurations>Debug;Release</Configurations>
+        <Configurations>$(Configurations);Debug.Autodesk.2022;Debug.Autodesk.2023;Debug.Autodesk.2024;Debug.Autodesk.2025;Debug.Autodesk.2026</Configurations>
+        <Configurations>$(Configurations);Release.Autodesk.2022;Release.Autodesk.2023;Release.Autodesk.2024;Release.Autodesk.2025;Release.Autodesk.2026</Configurations>
+    </PropertyGroup>
+
+    <PropertyGroup Condition="$(Configuration.Contains('2022'))">
+        <AutoCadVersion>2022</AutoCadVersion>
+        <Civil3dVersion>2022</Civil3dVersion>
+        <NavisworksVersion>2022</NavisworksVersion>
+        <RevitVersion>2022</RevitVersion>
+        <TargetFramework>net48</TargetFramework>
+    </PropertyGroup>
+    <PropertyGroup Condition="$(Configuration.Contains('2023'))">
+        <AutoCadVersion>2023</AutoCadVersion>
+        <Civil3dVersion>2023</Civil3dVersion>
+        <NavisworksVersion>2023</NavisworksVersion>
+        <RevitVersion>2023</RevitVersion>
+        <TargetFramework>net48</TargetFramework>
+    </PropertyGroup>
+    <PropertyGroup Condition="$(Configuration.Contains('2024'))">
+        <AutoCadVersion>2024</AutoCadVersion>
+        <Civil3dVersion>2024</Civil3dVersion>
+        <NavisworksVersion>2024</NavisworksVersion>
+        <RevitVersion>2024</RevitVersion>
+        <TargetFramework>net48</TargetFramework>
+    </PropertyGroup>
+    <PropertyGroup Condition="$(Configuration.Contains('2025'))">
+        <AutoCadVersion>2025</AutoCadVersion>
+        <Civil3dVersion>2025</Civil3dVersion>
+        <NavisworksVersion>2025</NavisworksVersion>
+        <RevitVersion>2025</RevitVersion>
+        <TargetFramework>net8.0-windows</TargetFramework>
+    </PropertyGroup>
+    <PropertyGroup Condition="$(Configuration.Contains('2026'))">
+        <AutoCadVersion>2026</AutoCadVersion>
+        <Civil3dVersion>2026</Civil3dVersion>
+        <NavisworksVersion>2026</NavisworksVersion>
+        <RevitVersion>2026</RevitVersion>
+        <TargetFramework>net8.0-windows</TargetFramework>
+    </PropertyGroup>
+
+    <PropertyGroup Condition="$(Configuration.Contains('Autodesk'))">
+        <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
+    </PropertyGroup>
+
+</Project>

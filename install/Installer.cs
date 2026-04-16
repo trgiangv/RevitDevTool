@@ -1,13 +1,12 @@
-﻿using Installer;
-using System;
+using Installer;
 using WixSharp;
 using WixSharp.CommonTasks;
 using WixSharp.Controls;
-using Assembly = System.Reflection.Assembly;
 
 const string outputName = "RevitDevTool";
 const string projectName = "RevitDevTool";
 
+var versioning = Versioning.CreateFromVersionStringAsync(args[0]);
 var project = new Project
 {
     OutDir = "output",
@@ -18,15 +17,28 @@ var project = new Project
     GUID = new Guid("B2BC2881-A08A-41D8-B1B3-424045E529DB"),
     BannerImage = @"install\Resources\Icons\BannerImage.png",
     BackgroundImage = @"install\Resources\Icons\BackgroundImage.png",
-    Version = Assembly.GetExecutingAssembly().GetName().Version.ClearRevision(),
+    Version = versioning.VersionPrefix,
     ControlPanelInfo =
     {
-        Manufacturer = projectName,
+        Manufacturer = Environment.UserName,
         ProductIcon = @"install\Resources\Icons\ShellIcon.ico"
     }
 };
 
-var wixEntities = Generator.GenerateWixEntities(args);
+
+var hasMcpServer = args.Length > 1 && !args[^1].Contains("publish", StringComparison.OrdinalIgnoreCase);
+var revitDirs = hasMcpServer ? args[1..^1] : args[1..];
+var mcpServerDir = hasMcpServer ? args[^1] : null;
+
+var wixEntities = Generator.GenerateWixEntities(revitDirs);
+
+var mcpServerFeature = new Feature
+{
+    Name = "MCP Server",
+    Description = "Standalone MCP server executable for AI assistant integration",
+    Display = FeatureDisplay.expand
+};
+
 project.RemoveDialogsBetween(NativeDialogs.WelcomeDlg, NativeDialogs.CustomizeDlg);
 
 BuildSingleUserMsi();
@@ -34,22 +46,32 @@ BuildMultiUserUserMsi();
 
 void BuildSingleUserMsi()
 {
-    project.InstallScope = InstallScope.perUser;
-    project.OutFileName = $"{outputName}-{project.Version}-SingleUser";
-    project.Dirs =
-    [
-        new InstallDir(@"%AppDataFolder%\Autodesk\Revit\Addins\", wixEntities)
-    ];
+    project.Scope = InstallScope.perUser;
+    project.OutFileName = $"{outputName}-{versioning.Version}-SingleUser";
+
+    var dirs = new List<Dir> { new InstallDir(@"%AppDataFolder%\Autodesk\Revit\Addins\", wixEntities) };
+    if (mcpServerDir is not null)
+    {
+        dirs.Add(new Dir(new Id("MCPSERVERDIR_USER"), @"%AppDataFolder%\RevitDevTool\bin\",
+            new Files(mcpServerFeature, $@"{mcpServerDir}\*.*")));
+    }
+
+    project.Dirs = [..dirs];
     project.BuildMsi();
 }
 
 void BuildMultiUserUserMsi()
 {
-    project.InstallScope = InstallScope.perMachine;
-    project.OutFileName = $"{outputName}-{project.Version}-MultiUser";
-    project.Dirs =
-    [
-        new InstallDir(@"%CommonAppDataFolder%\Autodesk\Revit\Addins\", wixEntities)
-    ];
+    project.Scope = InstallScope.perMachine;
+    project.OutFileName = $"{outputName}-{versioning.Version}-MultiUser";
+
+    var dirs = new List<Dir> { new InstallDir(@"%CommonAppDataFolder%\Autodesk\Revit\Addins\", wixEntities) };
+    if (mcpServerDir is not null)
+    {
+        dirs.Add(new Dir(new Id("MCPSERVERDIR_MACHINE"), @"%CommonAppDataFolder%\RevitDevTool\bin\",
+            new Files(mcpServerFeature, $@"{mcpServerDir}\*.*")));
+    }
+
+    project.Dirs = [..dirs];
     project.BuildMsi();
 }

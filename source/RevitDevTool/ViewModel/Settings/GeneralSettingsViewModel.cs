@@ -1,9 +1,7 @@
-using System.ComponentModel.DataAnnotations;
 using CommunityToolkit.Mvvm.Messaging;
-using RevitDevTool.CodeExecute.Providers.Python;
 using RevitDevTool.Controllers;
+using RevitDevTool.Logging;
 using RevitDevTool.Settings;
-using RevitDevTool.Settings.Config;
 using RevitDevTool.Theme;
 using RevitDevTool.ViewModel.Messages;
 // ReSharper disable ReplaceWithFieldKeyword
@@ -13,39 +11,21 @@ namespace RevitDevTool.ViewModel.Settings;
 public partial class GeneralSettingsViewModel : ObservableValidator, IRecipient<ResetSettingsMessage>
 {
     private readonly ISettingsService _settingsService;
-    
-    private const int MinAllowedPort = 1024;
-    private const int MaxAllowedPort = 65535;
+    private readonly ILoggingService _loggingService;
+    private readonly IMessenger _messenger;
 
-    public static List<AppTheme> Themes
-    {
-        get =>
-        [
-            AppTheme.Light,
-            AppTheme.Dark,
+    public static List<AppTheme> Themes =>
+    [
+        AppTheme.Light,
+        AppTheme.Dark,
 #if REVIT2024_OR_GREATER
-            AppTheme.Auto
+        AppTheme.Auto
 #endif
-        ];
-    }
+    ];
 
     [ObservableProperty] private AppTheme _theme;
     [ObservableProperty] private bool _useHardwareRendering;
-    [ObservableProperty] private bool _isDebuggerConnected;
-    
-    private int _debugPort;
-    [Range(MinAllowedPort, MaxAllowedPort, ErrorMessage = "Port number must be between 1024 and 65535.")]
-    public int DebugPort
-    {
-        get => _debugPort;
-        set
-        {
-            if (SetProperty(ref _debugPort, value, true))
-            {
-                OnDebugPortChanged(value);
-            }
-        }
-    }
+    [ObservableProperty] private bool _isMemoryEnabled;
 
     partial void OnThemeChanged(AppTheme value)
     {
@@ -59,26 +39,20 @@ public partial class GeneralSettingsViewModel : ObservableValidator, IRecipient<
         HostBackgroundController.ToggleHardwareRendering(_settingsService);
     }
 
-    private void OnDebugPortChanged(int value)
+    partial void OnIsMemoryEnabledChanged(bool value)
     {
-        _settingsService.GeneralConfig.DebugPort = value;
-        PythonInitializer.ListenToDebugger();
-    }
-    
-    [UsedImplicitly]
-    public void RevertIfInvalid()
-    {
-        if (!GetErrors(nameof(DebugPort)).Any()) return;
-        DebugPort = GeneralConfig.DefaultDebugPort;
-        ClearErrors(nameof(DebugPort));
-        OnPropertyChanged(nameof(DebugPort));
+        _settingsService.GeneralConfig.IsMemoryEnabled = value;
+        _messenger.Send(new IsMemoryEnableChangedMessage(value));
     }
 
-    public GeneralSettingsViewModel(ISettingsService settingsService)
+    public GeneralSettingsViewModel(ISettingsService settingsService, ILoggingService loggingService, IMessenger messenger)
     {
         _settingsService = settingsService;
+        _loggingService = loggingService;
+        _messenger = messenger;
         LoadFromConfig();
-        WeakReferenceMessenger.Default.Register(this);
+        messenger.Register(this);
+        ThemeManager.Current.ActualApplicationThemeChanged += OnActualThemeChanged;
     }
 
     public void Receive(ResetSettingsMessage message)
@@ -86,12 +60,15 @@ public partial class GeneralSettingsViewModel : ObservableValidator, IRecipient<
         LoadFromConfig();
     }
 
+    private void OnActualThemeChanged(object? sender, EventArgs e)
+    {
+        _loggingService.SetTheme(ThemeManager.Current.ActualApplicationTheme == AppTheme.Dark);
+    }
+
     private void LoadFromConfig()
     {
         Theme = _settingsService.GeneralConfig.Theme;
         UseHardwareRendering = _settingsService.GeneralConfig.UseHardwareRendering;
-        DebugPort = _settingsService.GeneralConfig.DebugPort is >= MinAllowedPort and <= MaxAllowedPort
-            ? _settingsService.GeneralConfig.DebugPort
-            : GeneralConfig.DefaultDebugPort;
+        IsMemoryEnabled = _settingsService.GeneralConfig.IsMemoryEnabled;
     }
 }
