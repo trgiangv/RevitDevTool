@@ -16,6 +16,7 @@
         <!--Logging-->
         <PackageVersion Include="ZLogger" Version="2.5.10"/>
         <PackageVersion Include="ZLogger.Scintilla" Version="0.0.6"/>
+        <PackageVersion Include="Scintilla5.NET" Version="6.1.2"/> <!-- Just to ensure unmanaged dlls copy to output -->
         <!--Utilities-->
         <PackageVersion Include="System.Diagnostics.DiagnosticSource" Version="10.0.5"/>
         <PackageVersion Include="System.Reflection.MetadataLoadContext" Version="10.0.5"/>
