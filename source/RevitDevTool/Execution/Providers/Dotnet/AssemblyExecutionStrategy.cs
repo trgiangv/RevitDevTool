@@ -1,5 +1,4 @@
 using System.Diagnostics;
-using RevitDevTool.Controllers;
 using RevitDevTool.Core;
 using RevitDevTool.Execution.Interfaces;
 using RevitDevTool.Execution.Models;
@@ -18,18 +17,14 @@ public sealed class AssemblyExecutionStrategy(CommandItem commandItem) : IExecut
         {
             progress?.Report($"Running {commandItem.Name}...");
 
-            var handler = await ExternalEventController
-                .AsyncGenericEventHandler<ExecutionResult>()
-                .ConfigureAwait(false);
-
-            var result = await handler
+            var result = await RevitContextExecutor
                 .RaiseAsync(() =>
                 {
                     var message = string.Empty;
                     var commandResult = CommandExecutor.RunCommand(commandItem, CommandData.ExternalCommandData, ref message, CommandData.ElementSet);
                     stopwatch.Stop();
                     return commandResult.ToExecutionResult(message, stopwatch.ElapsedMilliseconds);
-                })
+                }, cancellationToken)
                 .ConfigureAwait(false);
 
             progress?.Report(result.Success

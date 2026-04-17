@@ -12,7 +12,7 @@ from __future__ import annotations
 from collections.abc import Callable
 from typing import Any
 
-from RevitDevTool.Controllers import ExternalEventController
+from RevitDevTool.Core import RevitContextExecutor
 from System import Action
 
 
@@ -38,4 +38,4 @@ class RevitActionDispatcher:
                 if callback is not None:
                     callback({"ok": False, "error": str(exc)})
 
-        ExternalEventController.ActionEventHandler.Raise(Action(_run))
+        RevitContextExecutor.Raise(Action(_run))

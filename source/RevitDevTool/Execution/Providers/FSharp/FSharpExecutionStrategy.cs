@@ -1,6 +1,5 @@
 using System.Diagnostics;
 using System.IO;
-using RevitDevTool.Controllers;
 using RevitDevTool.Core;
 using RevitDevTool.Execution.Interfaces;
 using RevitDevTool.Execution.Models;
@@ -28,18 +27,14 @@ public sealed class FSharpExecutionStrategy(string scriptPath) : IExecutionStrat
                 return ExecutionResult.Failed($"F# compilation failed for '{scriptPath}'.", durationMs: stopwatch.ElapsedMilliseconds);
 
             progress?.Report($"Running {scriptName}...");
-            var handler = await ExternalEventController
-                .AsyncGenericEventHandler<ExecutionResult>()
-                .ConfigureAwait(false);
-
-            var result = await handler
+            var result = await RevitContextExecutor
                 .RaiseAsync(() =>
                 {
                     var message = string.Empty;
                     var commandResult = FSharpExecutor.ExecuteCommand(command, CommandData.ExternalCommandData, ref message, CommandData.ElementSet);
                     stopwatch.Stop();
                     return commandResult.ToExecutionResult(message, stopwatch.ElapsedMilliseconds);
-                })
+                }, cancellationToken)
                 .ConfigureAwait(false);
 
             progress?.Report(result.Success

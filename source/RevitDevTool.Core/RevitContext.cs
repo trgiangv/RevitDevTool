@@ -4,86 +4,80 @@ using Autodesk.Revit.UI.Events;
 namespace RevitDevTool.Core;
 
 /// <summary>
-///     Provides members for setting and retrieving data about Revit application context.
+///     Provides static access to the current Revit session objects and API-mode detection.
 /// </summary>
+/// <remarks>
+///     Properties like <see cref="UiApplication"/> and <see cref="ActiveDocument"/> are
+///     available for the lifetime of the Revit session without requiring an explicit reference
+///     to be passed around.
+/// </remarks>
 [PublicAPI]
 public static class RevitContext
 {
-    private static RibbonItemEventArgs _ribbonItemEventArgs = new();
+    private static readonly RibbonItemEventArgs RibbonItemEventArgs = new();
+    private static UIControlledApplication? _uiControlledApplication;
+    private static readonly Func<bool> GetIsInApiContext;
 
     /// <summary>
-    ///     Represents an active session of the Autodesk Revit user interface, providing access to
-    ///     UI customization methods, events, the main window, and the active document.
+    ///  Internal API via reflection inspired by RevitToolkit
+    ///  https://github.com/Nice3point/RevitToolkit
     /// </summary>
-    public static UIApplication UiApplication => _ribbonItemEventArgs.Application;
+    /// <exception cref="NotSupportedException"></exception>
+    static RevitContext()
+    {
+        var assembly = AppDomain.CurrentDomain.GetAssemblies()
+            .FirstOrDefault(a => a.GetName().Name == "APIUIAPI")
+            ?? throw new NotSupportedException("Cannot find APIUIAPI assembly");
+
+        var methods = assembly.ManifestModule.GetMethods(BindingFlags.NonPublic | BindingFlags.Static);
+        var singletonFactory = methods.FirstOrDefault(m => m.Name == "APICallDepthManager.singletonfactory")
+                               ?? throw new NotSupportedException("Cannot resolve APICallDepthManager.singletonfactory");
+        var isInApiMode = methods.FirstOrDefault(m => m.Name == "APICallDepthManager.isRevitInAPIMode")
+                          ?? throw new NotSupportedException("Cannot resolve APICallDepthManager.isRevitInAPIMode");
+
+        GetIsInApiContext = () =>
+        {
+            var manager = singletonFactory.Invoke(null, null);
+            return (bool)isInApiMode.Invoke(null, [manager])!;
+        };
+    }
 
     /// <summary>
-    ///     Represents the Autodesk Revit user interface, providing access to UI customization methods and events.
+    ///     Active <see cref="Autodesk.Revit.UI.UIApplication"/> for the current Revit session.
     /// </summary>
-    public static UIControlledApplication UiControlledApplication => CreateUiControlledApplication();
+    public static UIApplication UiApplication => RibbonItemEventArgs.Application;
 
     /// <summary>
-    ///     Represents the database level Autodesk Revit Application, providing access to documents, options and other application wide data and settings.
+    ///     <see cref="Autodesk.Revit.UI.UIControlledApplication"/> instance for the current session.
+    ///     Created lazily via internal constructor reflection.
+    /// </summary>
+    public static UIControlledApplication UiControlledApplication => _uiControlledApplication ??= CreateUiControlledApplication();
+
+    /// <summary>
+    ///     Database-level <see cref="Autodesk.Revit.ApplicationServices.Application"/> for the current session.
     /// </summary>
     public static Autodesk.Revit.ApplicationServices.Application Application => UiApplication.Application;
 
-    /// <summary>Represents a currently active Autodesk Revit project at the UI level.</summary>
-    /// <remarks>
-    ///     External API commands can access this property in read-only mode only.
-    /// </remarks>
-    /// <exception cref="T:Autodesk.Revit.Exceptions.InvalidOperationException">Thrown when attempting to modify the property.</exception>
-    /// <returns>
-    ///     Currently active project.<br/>
-    ///     Returns <see langword="null" /> if there are no active projects.
-    /// </returns>
+    /// <summary>
+    ///     Currently active project at the UI level, or <see langword="null"/> if none.
+    /// </summary>
     public static UIDocument? ActiveUiDocument => UiApplication.ActiveUIDocument;
 
-    /// <summary>Represents a currently active Autodesk Revit project at the database level.</summary>
-    /// <remarks>
-    ///     Revit can have multiple projects open and multiple views to those projects.
-    ///     The active or top most view will be the active project and hence the active document which is available from the Application object.<br/><br/>
-    ///     Returns <see langword="null" /> if there are no active projects.
-    /// </remarks>
+    /// <summary>
+    ///     Currently active <see cref="Autodesk.Revit.DB.Document"/>, or <see langword="null"/> if none.
+    /// </summary>
     public static Document? ActiveDocument => UiApplication.ActiveUIDocument?.Document;
 
-    /// <summary>Represents a currently active Autodesk Revit project at the database level.</summary>
-    [Obsolete("Document property renamed and will be removed in the next Major version, use Context.ActiveDocument instead")]
+    /// <inheritdoc cref="ActiveDocument"/>
+    [Obsolete("Use RevitContext.ActiveDocument instead.")]
     public static Document? Document => ActiveDocument;
 
-    /// <summary>Represents the currently active view of the currently active document.</summary>
-    /// <remarks>
-    ///     <para>
-    ///         This property is applicable to the currently active document only.<br/>
-    ///         Returns <see langword="null" /> if there are no active projects.
-    ///     </para>
-    ///     <para>
-    ///         The active view can only be changed when:
-    ///         <ul>
-    ///             <li>There is no open transaction.</li><li><see cref="P:Autodesk.Revit.DB.Document.IsModifiable" /> is false.</li>
-    ///             <li><see cref="P:Autodesk.Revit.DB.Document.IsReadOnly" /> is false.</li>
-    ///             <li>ViewActivating, ViewActivated, and any pre-action of events (such as DocumentSaving or DocumentClosing events) are not being handled.</li>
-    ///         </ul>
-    ///     </para>
-    /// </remarks>
-    /// <exception cref="T:Autodesk.Revit.Exceptions.ArgumentNullException">
-    ///     When setting the property: If the 'view' argument is NULL.
-    /// </exception>
-    /// <exception cref="T:Autodesk.Revit.Exceptions.ArgumentException">
-    ///     When setting the property:
-    ///     <ul>
-    ///         <li>If the given view is not a valid view of the document; -or-</li><li>If the given view is a template view; -or-</li><li>If the given view is an internal view.</li>
-    ///     </ul>
-    /// </exception>
-    /// <exception cref="T:Autodesk.Revit.Exceptions.InvalidOperationException">
-    ///     <para>
-    ///         When setting the property:
-    ///         <ul>
-    ///             <li>If the document is not currently active; -or-</li><li>If the document is currently modifiable (i.e. with an active transaction); -or-</li>
-    ///             <li>If the document is currently in read-only state; -or-</li><li>When invoked during either ViewActivating or ViewActivated event; -or-</li>
-    ///             <li>When invoked during any pre-action kind of event, such as DocumentSaving, DocumentClosing, etc.</li>
-    ///             <li>When there are no active documents in the current Autodesk Revit session</li>
-    ///         </ul>
-    ///     </para>
+    /// <summary>
+    ///     Active <see cref="Autodesk.Revit.DB.View"/> of the active document, or <see langword="null"/>.
+    /// </summary>
+    /// <exception cref="System.InvalidOperationException">
+    ///     Thrown when setting the property while no document is open, a transaction is active,
+    ///     the document is read-only, or during restricted events.
     /// </exception>
     public static View? ActiveView
     {
@@ -95,24 +89,19 @@ public static class RevitContext
         }
     }
 
-    /// <summary>Represents the currently active graphical view of the currently active document.</summary>
-    /// <remarks>
-    ///     This property is applicable to the currently active document only.
-    ///     Returns <see langword="null" /> if there are no active projects.
-    /// </remarks>
+    /// <summary>
+    ///     Active graphical <see cref="Autodesk.Revit.DB.View"/> of the active document, or <see langword="null"/>.
+    /// </summary>
     public static View? ActiveGraphicalView => UiApplication.ActiveUIDocument?.ActiveGraphicalView;
 
     /// <summary>
-    ///     Determines whether Revit is in API mode or not.
+    ///     Returns <see langword="true"/> when the current thread is inside a valid Revit API context.
     /// </summary>
     /// <remarks>
-    ///     If Revit is within an API context, direct API calls should be used.
-    ///     Otherwise, when Revit is outside the API context, API calls should be handled 
-    ///     through the <see cref="Autodesk.Revit.UI.IExternalEventHandler"/> interface.
-    ///     IExternalEventHandler enables safely executing commands and operations from external threads 
-    ///     or the user interface, ensuring they are synchronized with Revit's main thread.
+    ///     Implemented via reflection on Revit's internal <c>APICallDepthManager</c> for a fast,
+    ///     side-effect-free check (~1-5 us).
     /// </remarks>
-    public static bool IsRevitInApiMode => UiApplication.ActiveAddInId is not null;
+    public static bool IsRevitInApiMode => GetIsInApiContext();
 
     private static UIControlledApplication CreateUiControlledApplication()
     {

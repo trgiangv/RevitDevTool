@@ -51,7 +51,7 @@ public sealed class HostBackgroundController(
         var useHardwareRendering = settingsService.GeneralConfig.UseHardwareRendering;
         if (useHardwareRendering)
         {
-            ExternalEventController.ActionEventHandler.Raise(() => RenderOptions.ProcessRenderMode = RenderMode.Default);
+            RevitContextExecutor.Raise(() => RenderOptions.ProcessRenderMode = RenderMode.Default);
         }
         else
         {

@@ -1,5 +1,5 @@
 ﻿from Autodesk.Revit import DB, UI
-from RevitDevTool.Controllers import ExternalEventController
+from RevitDevTool.Core import RevitContextExecutor
 from System import Action, Guid
 from System.Windows import Controls, Window, WindowStartupLocation
 from UIFramework import MainWindow
@@ -70,8 +70,8 @@ class MyModelessForm(Window):
             finally:
                 if t.HasEnded:
                     t.Dispose()
-        # 2. use ActionEventHandler to run the wall creation code in Revit API context (preffer)
-        ExternalEventController.ActionEventHandler.Raise(Action[UI.UIApplication](create_wall_action))
+        # 2. use RevitContextExecutor.Raise to run the wall creation code in Revit API context (preferred)
+        RevitContextExecutor.Raise(Action[UI.UIApplication](create_wall_action))
 
         # 1. use ExternalEvent to run the wall creation code in Revit API context (alternative approach, not recommended due to small memory leak)
         # event_handler.Raise(Action(create_wall_action))

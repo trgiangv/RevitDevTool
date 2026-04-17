@@ -16,7 +16,7 @@ public class Application : IExternalApplication
     {
         _application = application;
         AssemblyLoader.Initialize();
-        ExternalEventController.Register();
+        RevitContextExecutor.Register();
         Host.Start();
         AddButtons(application);
         application.ControlledApplication.ApplicationInitialized += OnApplicationInitialized;

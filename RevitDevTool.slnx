@@ -40,16 +40,16 @@
         </Project>
     </Folder>
     <Folder Name="/Samples/">
-        <Project Path="Samples/CSharpDemo/CSharpDemo.csproj" >
+        <Project Path="Samples/CSharpDemo/CSharpDemo.csproj">
             <Build Project="false" />
         </Project>
-        <Project Path="Samples/FSharpDemo/FSharpDemo.fsproj" >
+        <Project Path="Samples/FSharpDemo/FSharpDemo.fsproj">
             <Build Project="false" />
         </Project>
-        <Project Path="Samples/McpToolsetDemo/McpToolsetDemo.csproj" >
+        <Project Path="Samples/McpToolsetDemo/McpToolsetDemo.csproj">
             <Build Project="false" />
         </Project>
-        <Project Path="Samples/RevitMcpToolSet/RevitMcpToolSet.csproj" >
+        <Project Path="Samples/RevitMcpToolSet/RevitMcpToolSet.csproj">
             <Build Project="false" />
         </Project>
     </Folder>
@@ -72,6 +72,9 @@
         <File Path="props/Revit.targets" />
     </Folder>
     <Folder Name="/Tests/">
+        <Project Path="tests/RevitDevTool.ExternalEvent.App/RevitDevTool.ExternalEvent.App.csproj">
+            <Build Project="false" />
+        </Project>
         <Project Path="Tests/RevitDevTool.Server.Tests/RevitDevTool.Server.Tests.csproj">
             <BuildType Solution="Debug.Autodesk.2022|*" Project="Debug" />
             <BuildType Solution="Debug.Autodesk.2023|*" Project="Debug" />
@@ -111,7 +114,7 @@
         <BuildType Solution="Release.Autodesk.2025|*" Project="Release" />
         <BuildType Solution="Release.Autodesk.2026|*" Project="Release" />
     </Project>
-    <Project Path="source/DevTools.Utilities/DevTools.Utilities.csproj" >
+    <Project Path="source/DevTools.Utilities/DevTools.Utilities.csproj">
         <BuildType Solution="Debug.Autodesk.2022|*" Project="Debug" />
         <BuildType Solution="Debug.Autodesk.2023|*" Project="Debug" />
         <BuildType Solution="Debug.Autodesk.2024|*" Project="Debug" />

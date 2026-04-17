@@ -1,0 +1,10 @@
+<RevitAddIns>
+    <AddIn Type="Application">
+        <Name>RevitDevTool.ExternalEvent.App</Name>
+        <Assembly>RevitDevTool.ExternalEvent.App\RevitDevTool.ExternalEvent.App.dll</Assembly>
+        <AddInId>4883146B-F65D-40B0-856A-76F85C33B9F4</AddInId>
+        <FullClassName>RevitDevTool.ExternalEvent.App.Application</FullClassName>
+        <VendorId>Development</VendorId>
+        <VendorDescription></VendorDescription>
+    </AddIn>
+</RevitAddIns>

@@ -1,6 +1,5 @@
 using System.Text.Json;
 using ModelContextProtocol.Protocol;
-using RevitDevTool.Controllers;
 using RevitDevTool.Core;
 using RevitDevTool.McpParser.Models;
 using RevitDevTool.ExternalExecution.Mcp.Dispatchers;
@@ -46,20 +45,17 @@ public sealed class RegistryRequestHandler(
 
         using var scope = state.BeginExecution(resolvedToolName);
 
-        var handler = await ExternalEventController
-            .AsyncGenericEventHandler<McpToolExecutionResult>()
-            .ConfigureAwait(false);
-
         scope.MarkRunning();
         McpToolExecutionResult? result;
         var toolTimeoutMessage = $"Tool '{resolvedToolName}' exceeded timeout ({CallTimeout.TotalSeconds:F0}s).";
         try
         {
-            result = await handler
-                .RaiseAsync(() => dispatcher.DispatchAsync(tool, payloadJson), CallTimeout)
+            using var cts = new CancellationTokenSource(CallTimeout);
+            result = await RevitContextExecutor
+                .RaiseAsync(() => dispatcher.DispatchAsync(tool, payloadJson), cts.Token)
                 .ConfigureAwait(false);
         }
-        catch (TimeoutException)
+        catch (OperationCanceledException)
         {
             var failed = McpToolExecutionResult.Failed(
                 ExecutionErrorCodes.ToolInvokeFailed,
@@ -112,18 +108,15 @@ public sealed class RegistryRequestHandler(
         if (@params?.TryGetProperty("arguments", out var argsElement) == true)
             arguments = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(argsElement.GetRawText());
 
-        var handler = await ExternalEventController
-            .AsyncGenericEventHandler<GetPromptResult>()
-            .ConfigureAwait(false);
-
         GetPromptResult? result;
         try
         {
-            result = await handler
-                .RaiseAsync(() => promptDispatcher.GetPromptAsync(prompt, arguments), CallTimeout)
+            using var cts = new CancellationTokenSource(CallTimeout);
+            result = await RevitContextExecutor
+                .RaiseAsync(() => promptDispatcher.GetPromptAsync(prompt, arguments), cts.Token)
                 .ConfigureAwait(false);
         }
-        catch (TimeoutException)
+        catch (OperationCanceledException)
         {
             return BridgeMessage.Error(id, $"Prompt '{promptName}' exceeded timeout ({CallTimeout.TotalSeconds:F0}s).");
         }
@@ -165,18 +158,15 @@ public sealed class RegistryRequestHandler(
         if (!toolStore.TryResolveResourceByUri(resolvedUri, out var resource) || resource is null)
             return BridgeMessage.Error(id, $"Resource '{resolvedUri}' is not registered.");
 
-        var handler = await ExternalEventController
-            .AsyncGenericEventHandler<ReadResourceResult>()
-            .ConfigureAwait(false);
-
         ReadResourceResult? result;
         try
         {
-            result = await handler
-                .RaiseAsync(() => resourceDispatcher.ReadResourceAsync(resource, resolvedUri), CallTimeout)
+            using var cts = new CancellationTokenSource(CallTimeout);
+            result = await RevitContextExecutor
+                .RaiseAsync(() => resourceDispatcher.ReadResourceAsync(resource, resolvedUri), cts.Token)
                 .ConfigureAwait(false);
         }
-        catch (TimeoutException)
+        catch (OperationCanceledException)
         {
             return BridgeMessage.Error(id, $"Resource '{resolvedUri}' exceeded timeout ({CallTimeout.TotalSeconds:F0}s).");
         }

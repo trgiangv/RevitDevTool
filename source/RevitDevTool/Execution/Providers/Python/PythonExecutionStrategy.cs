@@ -36,11 +36,7 @@ public sealed class PythonExecutionStrategy(
             }
 
             progress?.Report($"Running {scriptName}...");
-            var handler = await ExternalEventController
-                .AsyncGenericEventHandler<ExecutionResult>()
-                .ConfigureAwait(false);
-
-            var result = await handler
+            var result = await RevitContextExecutor
                 .RaiseAsync(() =>
                 {
                     executor.Execute(
@@ -57,7 +53,7 @@ public sealed class PythonExecutionStrategy(
                         });
                     stopwatch.Stop();
                     return ExecutionResult.Succeeded("Python script completed successfully.", stopwatch.ElapsedMilliseconds);
-                })
+                }, cancellationToken)
                 .ConfigureAwait(false);
 
             progress?.Report(result.Success

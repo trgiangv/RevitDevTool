@@ -276,7 +276,7 @@ public static class RevitImageExporter
         var doc = view.Document;
         var exportBasePath = GetExportBasePath(outputDir, view);
 
-        ExternalEventController.ActionEventHandler.Raise(() => 
+        RevitContextExecutor.Raise(() => 
         {
             using var tg = new TransactionGroup(doc, "Schedule Export");
             tg.Start();

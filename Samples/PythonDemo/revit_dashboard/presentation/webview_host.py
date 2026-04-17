@@ -150,7 +150,7 @@ def _on_window_loaded(window: Window, webview: WebView2) -> None:
     (the Revit host validates all calls on the UI thread).  We therefore
     use ``RevitTask.RunAsync`` instead of ``Dispatcher.BeginInvoke``.
     """
-    from RevitDevTool.Controllers import ExternalEventController
+    from RevitDevTool.Core import RevitContextExecutor
 
     print("[Dashboard] Window loaded, initialising WebView2…")
     user_data = _ensure_cache_folder()
@@ -163,7 +163,7 @@ def _on_window_loaded(window: Window, webview: WebView2) -> None:
             env = env_task.Result
             # Use RevitTask.RunAsync so EnsureCoreWebView2Async runs
             # inside a valid Revit API context on the UI thread.
-            ExternalEventController.ActionEventHandler.Raise(
+            RevitContextExecutor.Raise(
                 Action(lambda: webview.EnsureCoreWebView2Async(env)),
             )
             print("[Dashboard] WebView2 environment ready")
@@ -210,12 +210,12 @@ def _on_core_ready(webview: WebView2, args, ctx: dict) -> None:
     # Subscribe to Revit selection changes for Ghost Mode.
     # _subscribe_selection_changed accesses HOST_APP.uiapp which requires
     # Revit API context — schedule it via RevitTask.RunAsync.
-    from RevitDevTool.Controllers import ExternalEventController
+    from RevitDevTool.Core import RevitContextExecutor
 
     def _setup_selection():
         ctx["_selection_sub"] = _subscribe_selection_changed(router)
 
-    ExternalEventController.ActionEventHandler.Raise(Action(_setup_selection))
+    RevitContextExecutor.Raise(Action(_setup_selection))
 
     if use_dev_mode:
         # DEV MODE: Navigate to localhost dev server
@@ -299,7 +299,7 @@ def _on_window_closing(webview: WebView2, ctx: dict) -> None:
     # 1. Unsubscribe Revit event — requires API context
     sub = ctx.get("_selection_sub")
     if sub is not None:
-        from RevitDevTool.Controllers import ExternalEventController
+        from RevitDevTool.Core import RevitContextExecutor
 
         uiapp_ref, handler_ref = sub
 
@@ -310,7 +310,7 @@ def _on_window_closing(webview: WebView2, ctx: dict) -> None:
             except Exception as exc:
                 print(f"[Dashboard] Error unsubscribing SelectionChanged: {exc}")
 
-        ExternalEventController.ActionEventHandler.Raise(Action(_unsub))
+        RevitContextExecutor.Raise(Action(_unsub))
         ctx["_selection_sub"] = None
 
     # 2. Dispose WebView2 (WPF operation — no API context needed)

@@ -1,0 +1,37 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <UseRevit>true</UseRevit>
+        <UseWpf>true</UseWpf>
+        <IsRepackable>true</IsRepackable>
+        <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+        <UseWindowsForms>true</UseWindowsForms>
+        <DeployRevitAddin>true</DeployRevitAddin>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <!--Build-->
+        <PackageReference Include="ILRepack"/>
+        
+        <!-- Revit Platform -->
+        <PackageReference Include="Nice3point.Revit.Toolkit" VersionOverride="$(RevitVersion).*"/>
+        <PackageReference Include="Revit.Async"/>
+        <PackageReference Include="ricaun.Revit.UI.Tasks"/>
+    </ItemGroup>
+
+    <ItemGroup>
+        <Resource Include="Resources\Icons\RibbonIcon16.png"/>
+        <Resource Include="Resources\Icons\RibbonIcon32.png"/>
+    </ItemGroup>
+
+    <ItemGroup>
+      <ProjectReference Include="..\..\source\RevitDevTool.Core\RevitDevTool.Core.csproj" />
+    </ItemGroup>
+
+    <!-- Start Revit -->
+    <PropertyGroup>
+        <StartAction>Program</StartAction>
+        <StartProgram>C:\Program Files\Autodesk\Revit $(RevitVersion)\Revit.exe</StartProgram>
+        <StartArguments>/language ENG</StartArguments>
+    </PropertyGroup>
+</Project>

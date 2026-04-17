@@ -1,5 +1,4 @@
 using System.Text.Json;
-using RevitDevTool.Controllers;
 using RevitDevTool.Core;
 using RevitDevTool.ExternalExecution.Testing;
 using RevitDevTool.McpParser.Models;
@@ -17,11 +16,7 @@ public sealed class PytestRequestHandler(
 
         await dependencyService.PrepareDiscoverAsync(request!).ConfigureAwait(false);
 
-        var handler = await ExternalEventController
-            .AsyncGenericEventHandler<PytestDiscoverResponse>()
-            .ConfigureAwait(false);
-
-        var result = await handler
+        var result = await RevitContextExecutor
             .RaiseAsync(() => executionService.Discover(request!))
             .ConfigureAwait(false);
 
@@ -52,11 +47,7 @@ public sealed class PytestRequestHandler(
         PytestRunResponse result;
         try
         {
-            var handler = await ExternalEventController
-                .AsyncGenericEventHandler<PytestRunResponse>()
-                .ConfigureAwait(false);
-
-            result = await handler
+            result = await RevitContextExecutor
                 .RaiseAsync(() => executionService.Run(request!))
                 .ConfigureAwait(false);
         }

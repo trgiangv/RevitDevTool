@@ -6,8 +6,14 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <PackageReference Include="Nice3point.Revit.Toolkit" VersionOverride="$(RevitVersion).*" />
+        <PackageReference Include="Nice3point.Revit.Toolkit" VersionOverride="$(RevitVersion).*"/>
+        <PackageReference Include="Revit.Async"/>
+        <PackageReference Include="ricaun.Revit.UI.Tasks"/>
         <PackageReference Include="ILRepack"/>
+    </ItemGroup>
+    
+    <ItemGroup>
+      <ProjectReference Include="..\..\source\RevitDevTool.Core\RevitDevTool.Core.csproj" />
     </ItemGroup>
 
 </Project>

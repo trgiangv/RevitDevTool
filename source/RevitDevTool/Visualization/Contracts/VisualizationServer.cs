@@ -117,7 +117,7 @@ public abstract class VisualizationServer<TG> : IDirectContext3DServer, IVisuali
 
     public void Register(IVisualizationViewModel visualizationViewModel)
     {
-        ExternalEventController.ActionEventHandler.Raise(_ =>
+        RevitContextExecutor.Raise(() =>
         {
             var directContextService = (MultiServerService)
                 ExternalServiceRegistry.GetService(ExternalServices.BuiltInExternalServices.DirectContext3DService);
@@ -138,7 +138,7 @@ public abstract class VisualizationServer<TG> : IDirectContext3DServer, IVisuali
 
     public void Unregister()
     {
-        ExternalEventController.ActionEventHandler.Raise(application =>
+        RevitContextExecutor.Raise(application =>
         {
             var directContextService = (MultiServerService)
                 ExternalServiceRegistry.GetService(ExternalServices.BuiltInExternalServices.DirectContext3DService);
