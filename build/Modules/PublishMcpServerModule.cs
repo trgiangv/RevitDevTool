@@ -29,7 +29,7 @@ public sealed class PublishMcpServerModule(IOptions<BuildOptions> buildOptions) 
 
         await context.DotNet().Publish(new DotNetPublishOptions
         {
-            ProjectSolution = Projects.RevitDevTool_McpServer.FullName,
+            ProjectSolution = Projects.DevTool_McpServer.FullName,
             Configuration = "Release",
             Properties =
             [

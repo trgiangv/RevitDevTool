@@ -17,7 +17,7 @@
     </ItemGroup>
 
     <ItemGroup>
-        <ProjectReference Include="..\..\source\RevitDevTool.McpParser\RevitDevTool.McpParser.csproj" />
+        <ProjectReference Include="..\..\source\DevTool.McpParser\DevTool.McpParser.csproj" />
     </ItemGroup>
 
 </Project>

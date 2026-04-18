@@ -6,9 +6,9 @@ using ModelContextProtocol.Server;
 using Python.Runtime;
 using RevitDevTool.Execution.Providers.Python;
 using RevitDevTool.ExternalExecution.Mcp.Execution;
-using RevitDevTool.McpParser;
-using RevitDevTool.McpParser.Dotnet;
-using RevitDevTool.McpParser.Models;
+using DevTool.McpParser;
+using DevTool.McpParser.Dotnet;
+using DevTool.McpParser.Models;
 // ReSharper disable RedundantSuppressNullableWarningExpression
 
 namespace RevitDevTool.ExternalExecution.Mcp.Dispatchers;

@@ -2,8 +2,8 @@ using System.Diagnostics;
 using System.IO;
 using Python.Runtime;
 using RevitDevTool.Execution.Providers.Python;
-using RevitDevTool.McpParser.Models;
-using RevitDevTool.McpParser.Python;
+using DevTool.McpParser.Models;
+using DevTool.McpParser.Python;
 
 namespace RevitDevTool.ExternalExecution.Mcp.Registry;
 

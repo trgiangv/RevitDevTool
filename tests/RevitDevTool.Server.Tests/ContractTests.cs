@@ -1,5 +1,5 @@
 using ModelContextProtocol.Protocol;
-using RevitDevTool.McpParser.Models;
+using DevTool.McpParser.Models;
 
 namespace RevitDevTool.Server.Tests;
 

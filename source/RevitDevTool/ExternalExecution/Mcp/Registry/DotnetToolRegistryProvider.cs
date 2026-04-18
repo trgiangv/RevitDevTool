@@ -1,6 +1,6 @@
 using System.Diagnostics;
-using RevitDevTool.McpParser.Dotnet;
-using RevitDevTool.McpParser.Models;
+using DevTool.McpParser.Dotnet;
+using DevTool.McpParser.Models;
 
 namespace RevitDevTool.ExternalExecution.Mcp.Registry;
 
