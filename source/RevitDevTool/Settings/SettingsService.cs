@@ -13,7 +13,7 @@ public sealed class SettingsService(IFileConfig<PathOptions> fileConfig) : ISett
     private GeneralConfig? _generalConfig;
     private LogConfig? _logConfig;
     private VisualizationConfig? _visualizationConfig;
-    private CodeExecuteConfig? _codeExecuteConfig;
+    private ExecutionConfig? _codeExecuteConfig;
     private McpRegistryConfig? _mcpRegistryConfig;
 
     public GeneralConfig GeneralConfig
@@ -46,11 +46,11 @@ public sealed class SettingsService(IFileConfig<PathOptions> fileConfig) : ISett
         }
     }
 
-    public CodeExecuteConfig CodeExecuteConfig
+    public ExecutionConfig ExecutionConfig
     {
         get
         {
-            _codeExecuteConfig ??= new CodeExecuteConfig();
+            _codeExecuteConfig ??= new ExecutionConfig();
             return _codeExecuteConfig;
         }
     }
@@ -216,14 +216,14 @@ public sealed class SettingsService(IFileConfig<PathOptions> fileConfig) : ISett
     {
         try
         {
-            _codeExecuteConfig = fileConfig.Load<CodeExecuteConfig>();
+            _codeExecuteConfig = fileConfig.Load<ExecutionConfig>();
         }
         catch (Exception exception)
         {
             Trace.TraceError($"Code execute settings loading error: {exception.Message}");
         }
 
-        _codeExecuteConfig ??= new CodeExecuteConfig();
+        _codeExecuteConfig ??= new ExecutionConfig();
     }
 
     private void SaveMcpRegistrySettings()

@@ -87,7 +87,7 @@ public partial class CommandViewModel : ObservableObject
 
     public async Task LoadSavedPathsAsync()
     {
-        var config = _settingsService.CodeExecuteConfig;
+        var config = _settingsService.ExecutionConfig;
         var allPaths = config.DotnetAssemblyPaths.Concat(config.ScriptFolderPaths);
 
         using var _ = BeginBusy("Loading saved paths...");
@@ -405,7 +405,7 @@ public partial class CommandViewModel : ObservableObject
 
     private void SavePathToSettings(string path, ExecutionMode mode)
     {
-        var config = _settingsService.CodeExecuteConfig;
+        var config = _settingsService.ExecutionConfig;
 
         var list = mode switch
         {
@@ -422,14 +422,14 @@ public partial class CommandViewModel : ObservableObject
 
     private void RemovePathFromSettings(string path)
     {
-        var config = _settingsService.CodeExecuteConfig;
+        var config = _settingsService.ExecutionConfig;
         config.DotnetAssemblyPaths.RemoveAll(p => p.Equals(path, StringComparison.OrdinalIgnoreCase));
         config.ScriptFolderPaths.RemoveAll(p => p.Equals(path, StringComparison.OrdinalIgnoreCase));
     }
 
     private void ClearAllPathsFromSettings()
     {
-        var config = _settingsService.CodeExecuteConfig;
+        var config = _settingsService.ExecutionConfig;
         config.DotnetAssemblyPaths.Clear();
         config.ScriptFolderPaths.Clear();
     }

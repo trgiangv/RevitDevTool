@@ -10,7 +10,7 @@ public interface ISettingsService
     LogConfig LogConfig { get; }
     HashSet<RevitEnricher> RevitEnrichers { get; set; }
     VisualizationConfig VisualizationConfig { get; }
-    CodeExecuteConfig CodeExecuteConfig { get; }
+    ExecutionConfig ExecutionConfig { get; }
     McpRegistryConfig McpRegistryConfig { get; }
 
     void SaveSettings();

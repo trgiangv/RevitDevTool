@@ -6,7 +6,7 @@ namespace RevitDevTool.Settings.Config;
 /// Configuration for persisting code execution settings (DotNet assemblies and script folders)
 /// </summary>
 [Serializable]
-public sealed class CodeExecuteConfig
+public sealed class ExecutionConfig
 {
     /// <summary>
     /// List of assembly file paths
