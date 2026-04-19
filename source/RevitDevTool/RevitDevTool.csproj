@@ -9,7 +9,8 @@
     </PropertyGroup>
 
     <PropertyGroup>
-        <IsRepackable>true</IsRepackable>
+        <!-- Revit 2027 have new isolated context, that have issue with ILRepack -> System.BadImageFormatException: Invalid token -->
+        <IsRepackable Condition="$(RevitVersion) &lt; 2027">true</IsRepackable>
         <RepackBinariesExcludes>
             DevTools.MahApps.Metro.dll;
             DevTools.ControlzEx.dll;
@@ -48,7 +49,6 @@
         <PackageReference Include="Microsoft-WindowsAPICodePack-Shell" Condition="$(TargetFramework.StartsWith('net4'))"/>
         <PackageReference Include="System.Reflection.MetadataLoadContext"/>
         <PackageReference Include="System.Net.Http" Condition="$(TargetFramework.StartsWith('net4'))"/>
-        <PackageReference Include="System.Diagnostics.DiagnosticSource"/>
         <PackageReference Include="CliWrap"/>
     </ItemGroup>
 
