@@ -10,7 +10,7 @@ import json
 import logging
 import struct
 import time
-from typing import Any
+from typing import Any, Callable
 
 from .constants import (
     BRIDGE_METHOD_TESTS_DISCOVER,
@@ -36,16 +36,20 @@ _MAX_FRAME_SIZE = 16 * 1024 * 1024
 _HEADER_FMT = "<I"
 _HEADER_LEN = struct.calcsize(_HEADER_FMT)
 
+NotificationCallback = Callable[[str, Any], None]
+
 
 class RevitBridge:
     """Synchronous Named Pipe client for the RevitDevTool bridge."""
 
     def __init__(
-        self, pipe_name: str, *, connect_timeout_ms: int = DEFAULT_CONNECT_TIMEOUT_MS
+        self, pipe_name: str, *, connect_timeout_ms: int = DEFAULT_CONNECT_TIMEOUT_MS,
     ) -> None:
         self._pipe_name = pipe_name
         self._connect_timeout_ms = connect_timeout_ms
         self._handle: Any = None
+
+    # -- Connection lifecycle -----------------------------------------------
 
     def connect(self) -> None:
         import win32file  # type: ignore[import-untyped]
@@ -59,17 +63,10 @@ class RevitBridge:
                 self._handle = win32file.CreateFile(
                     pipe_path,
                     win32file.GENERIC_READ | win32file.GENERIC_WRITE,
-                    0,
-                    None,
-                    win32file.OPEN_EXISTING,
-                    0,
-                    None,
+                    0, None, win32file.OPEN_EXISTING, 0, None,
                 )
                 win32pipe.SetNamedPipeHandleState(
-                    self._handle,
-                    win32pipe.PIPE_READMODE_BYTE,
-                    None,
-                    None,
+                    self._handle, win32pipe.PIPE_READMODE_BYTE, None, None,
                 )
                 return
             except Exception:
@@ -108,6 +105,8 @@ class RevitBridge:
             log.debug("Pipe health check failed, marking as disconnected")
             return False
 
+    # -- Public RPC methods -------------------------------------------------
+
     def discover_tests(
         self,
         workspace_root: str,
@@ -125,17 +124,7 @@ class RevitBridge:
             BridgeRequest(method=BRIDGE_METHOD_TESTS_DISCOVER, params=request.to_params()),
             timeout_s,
         )
-        if response.is_error:
-            return DiscoverResponse(
-                collection_errors=(CollectionError(message=response.error_message),),
-            )
-        if isinstance(response.result, dict):
-            return DiscoverResponse.from_dict(response.result)
-        return DiscoverResponse(
-            collection_errors=(
-                CollectionError(message=f"Unexpected response: {response.result}"),
-            ),
-        )
+        return _parse_discover_response(response)
 
     def run_tests(
         self,
@@ -145,6 +134,7 @@ class RevitBridge:
         *,
         pytest_args: list[str] | None = None,
         timeout_s: float = DEFAULT_TEST_TIMEOUT_S,
+        on_notification: NotificationCallback | None = None,
     ) -> RunResponse:
         request = RunRequest(
             workspace_root=workspace_root,
@@ -155,22 +145,19 @@ class RevitBridge:
         response = self._request(
             BridgeRequest(method=BRIDGE_METHOD_TESTS_RUN, params=request.to_params()),
             timeout_s,
+            on_notification=on_notification,
         )
-        if response.is_error:
-            return RunResponse(
-                exit_code=1,
-                collection_errors=(CollectionError(message=response.error_message),),
-            )
-        if isinstance(response.result, dict):
-            return RunResponse.from_dict(response.result)
-        return RunResponse(
-            exit_code=1,
-            collection_errors=(
-                CollectionError(message=f"Unexpected response: {response.result}"),
-            ),
-        )
+        return _parse_run_response(response)
 
-    def _request(self, req: BridgeRequest, timeout_s: float) -> BridgeResponse:
+    # -- Wire protocol ------------------------------------------------------
+
+    def _request(
+        self,
+        req: BridgeRequest,
+        timeout_s: float,
+        *,
+        on_notification: NotificationCallback | None = None,
+    ) -> BridgeResponse:
         self._write_frame(req.to_json_bytes())
         deadline = time.monotonic() + timeout_s
         while True:
@@ -179,8 +166,11 @@ class RevitBridge:
                 raise TimeoutError(f"Timed out waiting for response to {req.id}")
             data = self._read_frame(remaining)
             parsed = json.loads(data)
+
             if parsed.get("type") == BRIDGE_MSG_TYPE_NOTIFICATION:
+                _dispatch_notification(parsed, on_notification)
                 continue
+
             resp = BridgeResponse.from_json(parsed)
             if resp.id == req.id:
                 return resp
@@ -208,5 +198,54 @@ class RevitBridge:
             _, data = win32file.ReadFile(self._handle, count - len(buf))  # type: ignore[call-overload]
             if not data:
                 raise ConnectionError("Pipe closed while reading")
-            buf.extend(data)  # type: ignore[arg-type]  # ReadFile returns bytes at runtime
+            buf.extend(data)  # type: ignore[arg-type]
         return bytes(buf)
+
+
+# ---------------------------------------------------------------------------
+# Response parsing helpers
+# ---------------------------------------------------------------------------
+
+
+def _parse_discover_response(response: BridgeResponse) -> DiscoverResponse:
+    if response.is_error:
+        return DiscoverResponse(
+            collection_errors=(CollectionError(message=response.error_message),),
+        )
+    if isinstance(response.result, dict):
+        return DiscoverResponse.from_dict(response.result)
+    return DiscoverResponse(
+        collection_errors=(
+            CollectionError(message=f"Unexpected response: {response.result}"),
+        ),
+    )
+
+
+def _parse_run_response(response: BridgeResponse) -> RunResponse:
+    if response.is_error:
+        return RunResponse(
+            exit_code=1,
+            collection_errors=(CollectionError(message=response.error_message),),
+        )
+    if isinstance(response.result, dict):
+        return RunResponse.from_dict(response.result)
+    return RunResponse(
+        exit_code=1,
+        collection_errors=(
+            CollectionError(message=f"Unexpected response: {response.result}"),
+        ),
+    )
+
+
+def _dispatch_notification(
+    parsed: dict[str, Any],
+    callback: NotificationCallback | None,
+) -> None:
+    if callback is None:
+        return
+    method = parsed.get("method", "")
+    params = parsed.get("params")
+    try:
+        callback(method, params)
+    except Exception:  # noqa: BLE001
+        log.debug("Notification callback error for method=%s", method, exc_info=True)
