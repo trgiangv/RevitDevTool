@@ -23,14 +23,8 @@ public sealed class InstanceRequestHandler
         }
         catch (Exception ex)
         {
-            Trace.TraceWarning($"[MCP/PIPE] Could not read active document: {ex.Message}");
+            Trace.TraceWarning($"[PipeServer] Could not read active document: {ex.Message}");
         }
-    }
-
-    public void UpdateDocumentInfo(string title, string path)
-    {
-        _documentTitle = title;
-        _documentPath = path;
     }
 
     public BridgeMessage HandleInstanceInfo(string id)
@@ -39,7 +33,7 @@ public sealed class InstanceRequestHandler
         return BridgeMessage.Response(id, json);
     }
 
-    public InstanceInfo BuildInstanceInfo() => new()
+    private InstanceInfo BuildInstanceInfo() => new()
     {
         ProcessId = Environment.ProcessId,
         VersionNumber = RevitContext.Application.VersionNumber,

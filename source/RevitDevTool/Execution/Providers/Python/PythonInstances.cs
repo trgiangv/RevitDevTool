@@ -27,4 +27,5 @@ public static class PythonInstances
 
     // Test execution
     public const string PytestRequestJson = "__pytest_request_json__";
+    public const string ProgressCallback = "__progress_callback__";
 }

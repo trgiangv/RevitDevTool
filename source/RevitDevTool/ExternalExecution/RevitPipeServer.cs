@@ -59,11 +59,18 @@ public sealed class RevitPipeServer(
         state.SetConnectedState(0);
         state.SetQueueDepth(0);
         instanceRequestHandler.InitializeFromContext();
+        pytestRequestHandler.NotifySender = SendNotification;
 
-        _ = Task.Run(() =>
+        Task.Run(() =>
         {
-            try { toolStore.EnsureLoaded(); }
-            catch (Exception ex) { Trace.TraceWarning($"[MCP/PIPE] Catalog preload failed: {ex.Message}"); }
+            try
+            {
+                toolStore.EnsureLoaded();
+            }
+            catch (Exception ex)
+            {
+                Trace.TraceWarning($"[PipeServer] Catalog preload failed: {ex.Message}");
+            }
         }, cancellationToken);
 
         toolStore.ToolsChanged += OnToolsChanged;
@@ -71,7 +78,7 @@ public sealed class RevitPipeServer(
         _cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
         _acceptLoopTask = AcceptLoopAsync(_cts.Token);
 
-        Trace.TraceInformation($"[MCP/PIPE] Listening on pipe '{_pipeName}'.");
+        Trace.TraceInformation($"[PipeServer] Listening on pipe '{_pipeName}'.");
         return Task.CompletedTask;
     }
 
@@ -104,12 +111,6 @@ public sealed class RevitPipeServer(
         state.SetQueueDepth(0);
     }
 
-    public void UpdateDocumentInfo(string title, string path)
-    {
-        instanceRequestHandler.UpdateDocumentInfo(title, path);
-        SendNotification(BridgeMethods.NotifyDocumentChanged, instanceRequestHandler.BuildInstanceInfo());
-    }
-
     private async Task AcceptLoopAsync(CancellationToken ct)
     {
         while (!ct.IsCancellationRequested)
@@ -118,22 +119,7 @@ public sealed class RevitPipeServer(
             {
                 var pipe = CreateServerPipe(_pipeName!);
                 await pipe.WaitForConnectionAsync(ct).ConfigureAwait(false);
-
-                var conn = new BridgePipeConnection(pipe);
-                var connectionId = Interlocked.Increment(ref _nextConnectionId);
-                _connections[connectionId] = conn;
-                state.SetConnectedState(_connections.IsEmpty ? 0 : 1);
-                Trace.TraceInformation($"[MCP/PIPE] Client connected. Active clients: {_connections.Count}");
-
-                conn.MessageReceived += msg => OnMessageReceived(conn, msg);
-                conn.Disconnected += () =>
-                {
-                    if (_connections.TryRemove(connectionId, out var disconnectedConnection))
-                        disconnectedConnection.Dispose();
-                    state.SetConnectedState(_connections.IsEmpty ? 0 : 1);
-                    Trace.TraceInformation($"[MCP/PIPE] Client disconnected. Active clients: {_connections.Count}");
-                };
-                conn.StartReadLoop();
+                RegisterConnection(pipe);
             }
             catch (OperationCanceledException) { break; }
             catch (IOException ex) when (IsPipeInstancesBusy(ex))
@@ -142,10 +128,29 @@ public sealed class RevitPipeServer(
             }
             catch (Exception ex)
             {
-                Trace.TraceWarning($"[MCP/PIPE] Accept loop error: {ex.Message}");
+                Trace.TraceWarning($"[PipeServer] Accept loop error: {ex.Message}");
                 await Task.Delay(500, ct).ConfigureAwait(false);
             }
         }
+    }
+
+    private void RegisterConnection(NamedPipeServerStream pipe)
+    {
+        var conn = new BridgePipeConnection(pipe);
+        var connectionId = Interlocked.Increment(ref _nextConnectionId);
+        _connections[connectionId] = conn;
+        state.SetConnectedState(_connections.IsEmpty ? 0 : 1);
+        Trace.TraceInformation($"[PipeServer] Client connected. Active clients: {_connections.Count}");
+
+        conn.MessageReceived += msg => OnMessageReceived(conn, msg);
+        conn.Disconnected += () =>
+        {
+            if (_connections.TryRemove(connectionId, out var disconnectedConnection))
+                disconnectedConnection.Dispose();
+            state.SetConnectedState(_connections.IsEmpty ? 0 : 1);
+            Trace.TraceInformation($"[PipeServer] Client disconnected. Active clients: {_connections.Count}");
+        };
+        conn.StartReadLoop();
     }
 
     private async void OnMessageReceived(BridgePipeConnection connection, BridgeMessage msg)
@@ -171,12 +176,12 @@ public sealed class RevitPipeServer(
             }
             catch (Exception ex)
             {
-                Trace.TraceWarning($"[MCP/PIPE] Failed to send response: {ex.Message}");
+                Trace.TraceWarning($"[PipeServer] Failed to send response: {ex.Message}");
             }
         }
         catch (Exception ex)
         {
-            Trace.TraceError($"[MCP/PIPE] Unhandled error in message handler: {ex}");
+            Trace.TraceError($"[PipeServer] Unhandled error in message handler: {ex}");
         }
     }
 
@@ -211,13 +216,13 @@ public sealed class RevitPipeServer(
                 }
                 catch (Exception ex)
                 {
-                    Trace.TraceWarning($"[MCP/PIPE] Notification '{method}' failed: {ex.Message}");
+                    Trace.TraceWarning($"[PipeServer] Notification '{method}' failed: {ex.Message}");
                 }
             }
         }
         catch (Exception ex)
         {
-            Trace.TraceError($"[MCP/PIPE] Unhandled error in SendNotification: {ex}");
+            Trace.TraceError($"[PipeServer] Unhandled error in SendNotification: {ex}");
         }
     }
 

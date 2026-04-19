@@ -143,7 +143,7 @@ public static class Host
         // Settings
         services.AddTransient<SettingsViewModel>();
         services.AddTransient<GeneralSettingsViewModel>();
-        services.AddTransient<LogSettingsViewModel>();
+        services.AddSingleton<LogSettingsViewModel>();  // avoid re-creating when the settings are applied
         
         // Python Environment
         services.AddKeyedSingleton<PyEnvironmentProvider, PixiEnvironmentProvider>(PythonBackend.Pixi);

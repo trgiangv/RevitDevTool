@@ -9,6 +9,11 @@ public sealed class PytestRequestHandler(
     PytestDependencyService dependencyService,
     PytestExecutionService executionService)
 {
+    /// <summary>
+    /// Injected by the pipe server to broadcast notifications to connected clients.
+    /// </summary>
+    public Action<string, object?>? NotifySender { get; set; }
+
     public async Task<BridgeMessage> HandleDiscoverAsync(string id, JsonElement? @params)
     {
         if (!PytestExecutionService.TryParseDiscoverRequest(@params, out var request, out var error))
@@ -48,7 +53,7 @@ public sealed class PytestRequestHandler(
         try
         {
             result = await RevitContextExecutor
-                .RaiseAsync(() => executionService.Run(request!))
+                .RaiseAsync(() => executionService.Run(request!, CreateProgressCallback()))
                 .ConfigureAwait(false);
         }
         catch (Exception ex)
@@ -58,5 +63,14 @@ public sealed class PytestRequestHandler(
 
         var json = JsonSerializer.SerializeToElement(result);
         return BridgeMessage.Response(id, json);
+    }
+
+    private Action<string>? CreateProgressCallback()
+    {
+        var sender = NotifySender;
+        if (sender is null)
+            return null;
+
+        return resultJson => sender(BridgeMethods.NotifyTestProgress, resultJson);
     }
 }

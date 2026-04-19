@@ -14,4 +14,5 @@ public static class BridgeMethods
     public const string NotifyDocumentChanged = "notifications/document/changed";
     public const string TestsDiscover = "tests/discover";
     public const string TestsRun = "tests/run";
+    public const string NotifyTestProgress = "notifications/tests/progress";
 }

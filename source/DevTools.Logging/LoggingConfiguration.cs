@@ -6,25 +6,31 @@ namespace DevTools.Logging;
 
 public sealed class LoggingConfiguration
 {
-    private readonly Dictionary<string, string?> _memoryData;
+    private const string LevelKey = "Logging:LogLevel:Default";
+    private readonly MemoryConfigurationProvider _provider;
 
     public LoggingConfiguration(LogLevel initialLevel = LogLevel.Debug)
     {
-        _memoryData = new Dictionary<string, string?>
+        var source = new MemoryConfigurationSource
         {
-            ["Logging:LogLevel:Default"] = initialLevel.ToString()
+            InitialData = new Dictionary<string, string?>
+            {
+                [LevelKey] = initialLevel.ToString()
+            }
         };
 
-        Configuration = new ConfigurationBuilder()
-            .Add(new MemoryConfigurationSource { InitialData = _memoryData })
-            .Build();
+        var builder = new ConfigurationBuilder();
+        builder.Add(source);
+        Configuration = builder.Build();
+
+        _provider = (MemoryConfigurationProvider)Configuration.Providers.First();
     }
 
     public IConfigurationRoot Configuration { get; }
 
     public void SetMinimumLevel(LogLevel level)
     {
-        _memoryData["Logging:LogLevel:Default"] = level.ToString();
+        _provider.Set(LevelKey, level.ToString());
         Configuration.Reload();
     }
 }
