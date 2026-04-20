@@ -42,7 +42,7 @@ def revit_app(revit_uiapp):
 
 
 @pytest.fixture(scope="session")
-def revit_doc(revit_uiapp, revit_app):
+def revit_doc(revit_uiapp):
     """Return the target project document, opening it only if not already open."""
     if not os.path.isfile(RVT_PATH):
         pytest.skip(f"{RVT_PATH} not found on disk")
@@ -60,6 +60,22 @@ def revit_doc(revit_uiapp, revit_app):
     current_uidoc = revit_uiapp.OpenAndActivateDocument(RVT_PATH)
     return current_uidoc.Document
 
+@pytest.fixture(scope="session")
+def source_schedule(revit_doc):
+    """Return the source schedule element for testing."""
+    from tests.schedule.constants import SOURCE_SCHEDULE_ID
+    from Autodesk.Revit import DB
+
+    return revit_doc.GetElement(DB.ElementId(SOURCE_SCHEDULE_ID))
+
+
+@pytest.fixture(scope="session")
+def target_schedule(revit_doc):
+    """Return the target schedule element for testing."""
+    from tests.schedule.constants import TARGET_SCHEDULE_ID
+    from Autodesk.Revit import DB
+
+    return revit_doc.GetElement(DB.ElementId(TARGET_SCHEDULE_ID))
 
 @pytest.fixture(scope="session")
 def humanize_mod():
