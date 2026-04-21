@@ -176,7 +176,8 @@
                      VirtualizingPanel.IsVirtualizing="True"
                      VirtualizingPanel.VirtualizationMode="Recycling">
                 <ListBox.ItemContainerStyle>
-                    <Style TargetType="ListBoxItem">
+                    <Style BasedOn="{StaticResource {x:Type ListBoxItem}}"
+                           TargetType="ListBoxItem">
                         <Setter Property="HorizontalContentAlignment" Value="Stretch" />
                         <Setter Property="Padding" Value="4,3" />
                         <Setter Property="ToolTip" Value="{Binding ToolTipText}" />
