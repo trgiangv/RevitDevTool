@@ -1,5 +1,4 @@
-﻿using Autodesk.Revit.DB;
-using Autodesk.Revit.DB.DirectContext3D;
+﻿using Autodesk.Revit.DB.DirectContext3D;
 using DevTools.Utilities;
 using RevitDevTool.Core;
 using RevitDevTool.Settings;
@@ -20,8 +19,7 @@ public sealed class PlaneVisualizationServer : VisualizationServer<Plane>
     private readonly List<RenderingBufferStorage> _normalBuffers = [];
     private readonly List<RenderingBufferStorage> _surfaceBuffers = [];
 
-    private double _planeHalfSize;
-    private double _normalLength;
+    private double _extrusion;
     private double _transparency;
     private Color _meshColor;
     private Color _normalColor;
@@ -30,12 +28,16 @@ public sealed class PlaneVisualizationServer : VisualizationServer<Plane>
     private bool _drawNormalVector;
     private bool _drawSurface;
 
+    private const double BasePlaneHalfSize = 5;
+    private const double PlaneScaleFactor = 50;
+    private const double PlaneNormalLengthFactor = 0.5;
+    private double PlaneHalfSize => BasePlaneHalfSize + _extrusion * PlaneScaleFactor;
+    private double PlaneNormalLength => PlaneHalfSize * PlaneNormalLengthFactor;
+
     public PlaneVisualizationServer(ISettingsService settingsService)
     {
         var settings = settingsService.VisualizationConfig.FaceSettings;
-
-        _planeHalfSize = 3.0;
-        _normalLength = 1.0;
+        _extrusion = settings.Extrusion / 12.0;
         _transparency = settings.Transparency / 100.0;
         _meshColor = new Color(settings.MeshColor.R, settings.MeshColor.G, settings.MeshColor.B);
         _normalColor = new Color(settings.NormalVectorColor.R, settings.NormalVectorColor.G, settings.NormalVectorColor.B);
@@ -55,10 +57,10 @@ public sealed class PlaneVisualizationServer : VisualizationServer<Plane>
 
         foreach (var plane in VisualizeGeometries)
         {
-            var corners = RenderHelper.GetPlaneCorners(plane, _planeHalfSize);
+            var corners = RenderHelper.GetPlaneCorners(plane, PlaneHalfSize);
             allPoints.AddRange(corners);
             allPoints.Add(plane.Origin);
-            allPoints.Add(plane.Origin + plane.Normal.Normalize() * _normalLength);
+            allPoints.Add(plane.Origin + plane.Normal.Normalize() * PlaneNormalLength);
         }
 
         if (allPoints.Count == 0) return null;
@@ -169,9 +171,9 @@ public sealed class PlaneVisualizationServer : VisualizationServer<Plane>
                 var meshGridBuffer = new RenderingBufferStorage();
                 var normalBuffer = new RenderingBufferStorage();
 
-                RenderHelper.MapPlaneBuffer(surfaceBuffer, plane, _planeHalfSize);
-                RenderHelper.MapPlaneGridBuffer(meshGridBuffer, plane, _planeHalfSize);
-                RenderHelper.MapNormalVectorBuffer(normalBuffer, plane.Origin, plane.Normal.Normalize(), _normalLength);
+                RenderHelper.MapPlaneBuffer(surfaceBuffer, plane, PlaneHalfSize);
+                RenderHelper.MapPlaneGridBuffer(meshGridBuffer, plane, PlaneHalfSize);
+                RenderHelper.MapNormalVectorBuffer(normalBuffer, plane.Origin, plane.Normal.Normalize(), PlaneNormalLength);
 
                 _surfaceBuffers.Add(surfaceBuffer);
                 _meshGridBuffers.Add(meshGridBuffer);
@@ -206,29 +208,16 @@ public sealed class PlaneVisualizationServer : VisualizationServer<Plane>
         }
     }
 
-    public void UpdatePlaneHalfSize(double value)
+    public void UpdateExtrusion(double value)
     {
         var uiDocument = RevitContext.ActiveUiDocument;
         if (uiDocument is null) return;
 
         lock (RenderLock)
         {
-            _planeHalfSize = value;
+            _extrusion = value;
             HasGeometryUpdates = true;
-            DisposeBuffers();
-            uiDocument.UpdateAllOpenViews();
-        }
-    }
-
-    public void UpdateNormalLength(double value)
-    {
-        var uiDocument = RevitContext.ActiveUiDocument;
-        if (uiDocument is null) return;
-
-        lock (RenderLock)
-        {
-            _normalLength = value;
-            HasGeometryUpdates = true;
+            HasEffectsUpdates = true;
             DisposeBuffers();
             uiDocument.UpdateAllOpenViews();
         }

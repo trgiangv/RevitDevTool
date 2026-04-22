@@ -130,6 +130,7 @@ public sealed partial class FaceVisualizationViewModel : ObservableObject, IVisu
     private static void UpdateExtrusion(double value)
     {
         VisualizationController.FaceVisualizationServer.UpdateExtrusion(value / 12);
+        VisualizationController.PlaneVisualizationServer.UpdateExtrusion(value / 12);
     }
 
     private static void UpdateTransparency(double value)

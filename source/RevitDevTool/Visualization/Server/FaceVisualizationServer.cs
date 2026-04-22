@@ -31,8 +31,8 @@ public sealed class FaceVisualizationServer : VisualizationServer<Face>
     public FaceVisualizationServer(ISettingsService settingsService)
     {
         var settings = settingsService.VisualizationConfig.FaceSettings;
-        _extrusion = settings.Extrusion / 12;
-        _transparency = settings.Transparency / 100;
+        _extrusion = settings.Extrusion / 12.0;
+        _transparency = settings.Transparency / 100.0;
         _meshColor = new Color(settings.MeshColor.R, settings.MeshColor.G, settings.MeshColor.B);
         _normalColor = new Color(settings.NormalVectorColor.R, settings.NormalVectorColor.G, settings.NormalVectorColor.B);
         _surfaceColor = new Color(settings.SurfaceColor.R, settings.SurfaceColor.G, settings.SurfaceColor.B);

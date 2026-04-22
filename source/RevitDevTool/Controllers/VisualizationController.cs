@@ -31,57 +31,64 @@ internal static class VisualizationController
     public static PlaneVisualizationServer PlaneVisualizationServer =>
         _planeVisualizationServer ??= Host.GetService<PlaneVisualizationServer>();
 
-    private static List<(IVisualizationServerLifeCycle Server, IVisualizationViewModel ViewModel)>? _serverViewModelPairs;
+    private static IVisualizationServerLifeCycle[]? _servers;
 
-    private static List<(IVisualizationServerLifeCycle Server, IVisualizationViewModel ViewModel)> ServerViewModelPairs =>
-        _serverViewModelPairs ??=
+    private static IVisualizationServerLifeCycle[] Servers =>
+        _servers ??=
         [
-            (BoundingBoxVisualizationServer, Host.GetService<BoundingBoxVisualizationViewModel>()),
-            (MeshVisualizationServer, Host.GetService<MeshVisualizationViewModel>()),
-            (PolylineVisualizationServer, Host.GetService<PolylineVisualizationViewModel>()),
-            (SolidVisualizationServer, Host.GetService<SolidVisualizationViewModel>()),
-            (XyzVisualizationServer, Host.GetService<XyzVisualizationViewModel>()),
-            (FaceVisualizationServer, Host.GetService<FaceVisualizationViewModel>()),
-            (PlaneVisualizationServer, Host.GetService<FaceVisualizationViewModel>())
+            BoundingBoxVisualizationServer,
+            MeshVisualizationServer,
+            PolylineVisualizationServer,
+            SolidVisualizationServer,
+            XyzVisualizationServer,
+            FaceVisualizationServer,
+            PlaneVisualizationServer
+        ];
+
+    private static IVisualizationViewModel[]? _viewModels;
+
+    private static IVisualizationViewModel[] ViewModels =>
+        _viewModels ??=
+        [
+            Host.GetService<BoundingBoxVisualizationViewModel>(),
+            Host.GetService<MeshVisualizationViewModel>(),
+            Host.GetService<PolylineVisualizationViewModel>(),
+            Host.GetService<SolidVisualizationViewModel>(),
+            Host.GetService<XyzVisualizationViewModel>(),
+            Host.GetService<FaceVisualizationViewModel>()
         ];
 
     public static void Start()
     {
-        foreach (var (server, viewModel) in ServerViewModelPairs)
-        {
-            server.Register(viewModel);
-        }
+        foreach (var server in Servers)
+            server.Register();
+        foreach (var viewModel in ViewModels)
+            viewModel.Initialize();
     }
 
     public static void Stop()
     {
-        foreach (var (server, _) in ServerViewModelPairs)
-        {
+        foreach (var server in Servers)
             server.Unregister();
-        }
     }
 
     public static void Clear()
     {
-        foreach (var (server, _) in ServerViewModelPairs)
-        {
+        foreach (var server in Servers)
             server.ClearGeometry();
-        }
         NotifyGeometryCountChanged();
     }
 
     public static void NotifyGeometryCountChanged()
     {
-        var totalGeometryCount = ServerViewModelPairs.Sum(pair => pair.Server.GeometryCount);
+        var totalGeometryCount = Servers.Sum(server => server.GeometryCount);
         Host.GetService<IMessenger>().Send(new GeometryCountChangedMessage(totalGeometryCount));
     }
 
     public static void Refresh()
     {
-        foreach (var (_, viewModel) in ServerViewModelPairs)
-        {
+        foreach (var viewModel in ViewModels)
             viewModel.Refresh();
-        }
         RevitContext.ActiveUiDocument?.UpdateAllOpenViews();
     }
 
@@ -91,34 +98,38 @@ internal static class VisualizationController
         {
             case BoundingBoxXYZ boundingBox:
                 BoundingBoxVisualizationServer.AddGeometry(boundingBox);
-                break;
+                return;
             case Outline outline:
-                AddOutline(outline);
-                break;
+                BoundingBoxVisualizationServer.AddGeometry(new BoundingBoxXYZ
+                {
+                    Min = outline.MinimumPoint,
+                    Max = outline.MaximumPoint
+                });
+                return;
             case Mesh mesh:
                 MeshVisualizationServer.AddGeometry(mesh);
-                break;
+                return;
             case Solid solid:
                 SolidVisualizationServer.AddGeometry(solid);
-                break;
+                return;
             case XYZ xyz:
                 XyzVisualizationServer.AddGeometry(xyz);
-                break;
+                return;
             case Curve curve:
                 PolylineVisualizationServer.AddGeometry(curve);
-                break;
+                return;
             case Edge edge:
                 PolylineVisualizationServer.AddGeometry(edge);
-                break;
+                return;
             case PolyLine polyline:
                 PolylineVisualizationServer.AddGeometry(polyline);
-                break;
+                return;
             case Face face:
                 FaceVisualizationServer.AddGeometry(face);
-                break;
+                return;
             case Plane plane:
                 PlaneVisualizationServer.AddGeometry(plane);
-                break;
+                return;
         }
     }
 
@@ -144,6 +155,8 @@ internal static class VisualizationController
         {
             AddGroupedGeometries(group.Key!, group);
         }
+
+        NotifyGeometryCountChanged();
     }
 
     private static Type? GetGeometryType<T>(T geometry) => geometry switch
@@ -183,16 +196,6 @@ internal static class VisualizationController
             PolylineVisualizationServer.AddGeometries(geometries.Cast<Edge>());
         else if (geometryType == typeof(PolyLine))
             PolylineVisualizationServer.AddGeometries(geometries.Cast<PolyLine>());
-    }
-
-    private static void AddOutline(Outline outline)
-    {
-        var bbox = new BoundingBoxXYZ
-        {
-            Min = outline.MinimumPoint,
-            Max = outline.MaximumPoint
-        };
-        BoundingBoxVisualizationServer.AddGeometry(bbox);
     }
 
     private static void AddOutlines(IEnumerable<Outline> outlines)

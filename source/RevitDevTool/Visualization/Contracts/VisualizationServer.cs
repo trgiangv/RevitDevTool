@@ -3,13 +3,12 @@ using Autodesk.Revit.DB.ExternalService;
 using RevitDevTool.Controllers;
 using System.Diagnostics;
 using RevitDevTool.Core;
-using RevitDevTool.ViewModel.Settings.Visualization;
 
 namespace RevitDevTool.Visualization.Contracts;
 
-public abstract class VisualizationServer<TG> : IDirectContext3DServer, IVisualizationServerLifeCycle
+public abstract class VisualizationServer<Tg> : IDirectContext3DServer, IVisualizationServerLifeCycle
 {
-    protected readonly List<TG> VisualizeGeometries = [];
+    protected readonly List<Tg> VisualizeGeometries = [];
     protected bool HasGeometryUpdates = true;
     protected bool HasEffectsUpdates = true;
     protected readonly object RenderLock = new();
@@ -22,8 +21,8 @@ public abstract class VisualizationServer<TG> : IDirectContext3DServer, IVisuali
     public string GetSourceId() => string.Empty;
     public bool UsesHandles() => false;
     public ExternalServiceId GetServiceId() => ExternalServices.BuiltInExternalServices.DirectContext3DService;
-    public string GetName() => $"{typeof(TG).Name} Visualization Server";
-    public string GetDescription() => $"Visualize and debug geometry of {typeof(TG).Name}";
+    public string GetName() => $"{typeof(Tg).Name} Visualization Server";
+    public string GetDescription() => $"Visualize and debug geometry of {typeof(Tg).Name}";
 
     public abstract Guid GetServerId();
     public abstract Outline? GetBoundingBox(Autodesk.Revit.DB.View dBView);
@@ -73,7 +72,7 @@ public abstract class VisualizationServer<TG> : IDirectContext3DServer, IVisuali
         }
     }
 
-    public void AddGeometries(IEnumerable<TG> geometries)
+    internal void AddGeometries(IEnumerable<Tg> geometries)
     {
         var uiDocument = RevitContext.ActiveUiDocument;
         if (uiDocument is null) return;
@@ -85,7 +84,6 @@ public abstract class VisualizationServer<TG> : IDirectContext3DServer, IVisuali
                 HasGeometryUpdates = true;
                 HasEffectsUpdates = true;
                 uiDocument.UpdateAllOpenViews();
-                VisualizationController.NotifyGeometryCountChanged();
             }
             catch (Exception ex)
             {
@@ -94,7 +92,7 @@ public abstract class VisualizationServer<TG> : IDirectContext3DServer, IVisuali
         }
     }
 
-    public void AddGeometry(TG geometry)
+    public void AddGeometry(Tg geometry)
     {
         var uiDocument = RevitContext.ActiveUiDocument;
         if (uiDocument is null) return;
@@ -115,7 +113,7 @@ public abstract class VisualizationServer<TG> : IDirectContext3DServer, IVisuali
         }
     }
 
-    public void Register(IVisualizationViewModel visualizationViewModel)
+    public void Register()
     {
         RevitContextExecutor.Raise(() =>
         {
@@ -131,7 +129,6 @@ public abstract class VisualizationServer<TG> : IDirectContext3DServer, IVisuali
             serverIds.Add(GetServerId());
             directContextService.SetActiveServers(serverIds);
 
-            visualizationViewModel.Initialize();
             Debug.WriteLine($"{GetName()} registered");
         });
     }
