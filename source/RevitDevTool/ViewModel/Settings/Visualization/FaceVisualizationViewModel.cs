@@ -112,16 +112,19 @@ public sealed partial class FaceVisualizationViewModel : ObservableObject, IVisu
     private static void UpdateSurfaceColor(System.Windows.Media.Color value)
     {
         VisualizationController.FaceVisualizationServer.UpdateSurfaceColor(new Color(value.R, value.G, value.B));
+        VisualizationController.PlaneVisualizationServer.UpdateSurfaceColor(new Color(value.R, value.G, value.B));
     }
 
     private static void UpdateMeshColor(System.Windows.Media.Color value)
     {
         VisualizationController.FaceVisualizationServer.UpdateMeshGridColor(new Color(value.R, value.G, value.B));
+        VisualizationController.PlaneVisualizationServer.UpdateMeshGridColor(new Color(value.R, value.G, value.B));
     }
 
     private static void UpdateNormalVectorColor(System.Windows.Media.Color value)
     {
         VisualizationController.FaceVisualizationServer.UpdateNormalVectorColor(new Color(value.R, value.G, value.B));
+        VisualizationController.PlaneVisualizationServer.UpdateNormalVectorColor(new Color(value.R, value.G, value.B));
     }
 
     private static void UpdateExtrusion(double value)
@@ -132,20 +135,24 @@ public sealed partial class FaceVisualizationViewModel : ObservableObject, IVisu
     private static void UpdateTransparency(double value)
     {
         VisualizationController.FaceVisualizationServer.UpdateTransparency(value / 100);
+        VisualizationController.PlaneVisualizationServer.UpdateTransparency(value / 100);
     }
 
     private static void UpdateShowSurface(bool value)
     {
         VisualizationController.FaceVisualizationServer.UpdateSurfaceVisibility(value);
+        VisualizationController.PlaneVisualizationServer.UpdateSurfaceVisibility(value);
     }
 
     private static void UpdateShowMeshGrid(bool value)
     {
         VisualizationController.FaceVisualizationServer.UpdateMeshGridVisibility(value);
+        VisualizationController.PlaneVisualizationServer.UpdateMeshGridVisibility(value);
     }
 
     private static void UpdateShowNormalVector(bool value)
     {
         VisualizationController.FaceVisualizationServer.UpdateNormalVectorVisibility(value);
+        VisualizationController.PlaneVisualizationServer.UpdateNormalVectorVisibility(value);
     }
 }

@@ -119,6 +119,7 @@ public static class Host
         // Visualization Servers
         services.AddSingleton<BoundingBoxVisualizationServer>();
         services.AddSingleton<FaceVisualizationServer>();
+        services.AddSingleton<PlaneVisualizationServer>();
         services.AddSingleton<MeshVisualizationServer>();
         services.AddSingleton<PolylineVisualizationServer>();
         services.AddSingleton<SolidVisualizationServer>();
@@ -144,7 +145,7 @@ public static class Host
         services.AddTransient<SettingsViewModel>();
         services.AddTransient<GeneralSettingsViewModel>();
         services.AddSingleton<LogSettingsViewModel>();  // avoid re-creating when the settings are applied
-        
+
         // Python Environment
         services.AddKeyedSingleton<PyEnvironmentProvider, PixiEnvironmentProvider>(PythonBackend.Pixi);
         services.AddKeyedSingleton<PyEnvironmentProvider, PipEnvironmentProvider>(PythonBackend.Pip);

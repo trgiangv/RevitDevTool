@@ -21,6 +21,7 @@ public sealed class GeometryListener : TraceListener
     {
         // Single geometry object
         GeometryObject g => Trace(g),
+        Plane plane => Trace(plane),
         XYZ xyz => Trace(xyz),
         BoundingBoxXYZ bbox => Trace(bbox),
         Outline outline => Trace(outline),
@@ -36,6 +37,7 @@ public sealed class GeometryListener : TraceListener
         IEnumerable<EdgeArray> edgeArrays => Trace(edgeArrays.SelectMany(x => x.Cast<Edge>())),
         IEnumerable<FaceArray> faceArrays => Trace(faceArrays.SelectMany(x => x.Cast<Face>())),
         IEnumerable<GeometryObject> geometries => Trace(geometries),
+        IEnumerable<Plane> planes => Trace(planes),
         IEnumerable<XYZ> xyz => Trace(xyz),
         IEnumerable<BoundingBoxXYZ> boxes => Trace(boxes),
 
@@ -68,7 +70,7 @@ public sealed class GeometryListener : TraceListener
 
     private static IEnumerable<object> ConvertToGeometryObjects(object geometry) => geometry switch
     {
-        GeometryObject or BoundingBoxXYZ or Outline or XYZ => [geometry],
+        GeometryObject or Plane or BoundingBoxXYZ or Outline or XYZ => [geometry],
         CurveLoop curveLoop => curveLoop,
         CurveArray curveArray => curveArray.Cast<Curve>(),
         EdgeArray edgeArray => edgeArray.Cast<Edge>(),
@@ -79,6 +81,7 @@ public sealed class GeometryListener : TraceListener
     private static Type GetGeometryType(object geometry) => geometry switch
     {
         GeometryObject => typeof(GeometryObject),
+        Plane => typeof(Plane),
         BoundingBoxXYZ => typeof(BoundingBoxXYZ),
         Outline => typeof(Outline),
         XYZ => typeof(XYZ),

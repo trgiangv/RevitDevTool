@@ -14,6 +14,7 @@ internal static class VisualizationController
     private static SolidVisualizationServer? _solidVisualizationServer;
     private static XyzVisualizationServer? _xyzVisualizationServer;
     private static FaceVisualizationServer? _faceVisualizationServer;
+    private static PlaneVisualizationServer? _planeVisualizationServer;
 
     public static BoundingBoxVisualizationServer BoundingBoxVisualizationServer =>
         _boundingBoxVisualizationServer ??= Host.GetService<BoundingBoxVisualizationServer>();
@@ -27,6 +28,8 @@ internal static class VisualizationController
         _xyzVisualizationServer ??= Host.GetService<XyzVisualizationServer>();
     public static FaceVisualizationServer FaceVisualizationServer =>
         _faceVisualizationServer ??= Host.GetService<FaceVisualizationServer>();
+    public static PlaneVisualizationServer PlaneVisualizationServer =>
+        _planeVisualizationServer ??= Host.GetService<PlaneVisualizationServer>();
 
     private static List<(IVisualizationServerLifeCycle Server, IVisualizationViewModel ViewModel)>? _serverViewModelPairs;
 
@@ -38,7 +41,8 @@ internal static class VisualizationController
             (PolylineVisualizationServer, Host.GetService<PolylineVisualizationViewModel>()),
             (SolidVisualizationServer, Host.GetService<SolidVisualizationViewModel>()),
             (XyzVisualizationServer, Host.GetService<XyzVisualizationViewModel>()),
-            (FaceVisualizationServer, Host.GetService<FaceVisualizationViewModel>())
+            (FaceVisualizationServer, Host.GetService<FaceVisualizationViewModel>()),
+            (PlaneVisualizationServer, Host.GetService<FaceVisualizationViewModel>())
         ];
 
     public static void Start()
@@ -112,6 +116,9 @@ internal static class VisualizationController
             case Face face:
                 FaceVisualizationServer.AddGeometry(face);
                 break;
+            case Plane plane:
+                PlaneVisualizationServer.AddGeometry(plane);
+                break;
         }
     }
 
@@ -147,6 +154,7 @@ internal static class VisualizationController
         Solid => typeof(Solid),
         XYZ => typeof(XYZ),
         Face => typeof(Face),
+        Plane => typeof(Plane),
         Curve => typeof(Curve),
         Edge => typeof(Edge),
         PolyLine => typeof(PolyLine),
@@ -167,6 +175,8 @@ internal static class VisualizationController
             XyzVisualizationServer.AddGeometries(geometries.Cast<XYZ>());
         else if (geometryType == typeof(Face))
             FaceVisualizationServer.AddGeometries(geometries.Cast<Face>());
+        else if (geometryType == typeof(Plane))
+            PlaneVisualizationServer.AddGeometries(geometries.Cast<Plane>());
         else if (geometryType == typeof(Curve))
             PolylineVisualizationServer.AddGeometries(geometries.Cast<Curve>());
         else if (geometryType == typeof(Edge))
