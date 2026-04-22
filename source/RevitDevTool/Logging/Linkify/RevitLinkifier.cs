@@ -74,16 +74,27 @@ internal sealed class RevitLinkifier : ILinkifier
 
     private static bool IsRevitIfcGuid(ReadOnlySpan<byte> span)
     {
+        if (span[0] is not (0x30 or 0x31 or 0x32 or 0x33)) return false;
+
+        var hasDigitOrSpecial = false;
         for (var i = 0; i < span.Length; i++)
         {
             var c = span[i];
-            var valid = c is (>= 0x30 and <= 0x39)
-                          or (>= 0x41 and <= 0x5A)
-                          or (>= 0x61 and <= 0x7A)
-                          or 0x5F
-                          or 0x24;
-            if (!valid) return false;
+            switch (c)
+            {
+                case >= 0x30 and <= 0x39: // 0-9
+                case 0x5F:               // _
+                case 0x24:               // $
+                    hasDigitOrSpecial = true;
+                    break;
+                case >= 0x41 and <= 0x5A: // A-Z
+                case >= 0x61 and <= 0x7A: // a-z
+                    break;
+                default:
+                    return false;
+            }
         }
-        return true;
+
+        return hasDigitOrSpecial;
     }
 }

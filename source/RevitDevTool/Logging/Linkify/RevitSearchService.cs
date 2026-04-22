@@ -24,8 +24,57 @@ internal static class RevitSearchService
     
     private static void ShowElements(UIDocument uiDocument, ICollection<ElementId> elementIds)
     {
+        if (elementIds.Count == 0) return;
+
+        var document = uiDocument.Document;
+        var first = document.GetElement(elementIds.First());
+        switch (first)
+        {
+            case null:
+                return;
+            case Autodesk.Revit.DB.View view:
+                uiDocument.RequestViewChange(view);
+                return;
+        }
+
+        if (first.OwnerViewId != ElementId.InvalidElementId && HasSameOwnerView(document, elementIds))
+        {
+            var ownerView = (Autodesk.Revit.DB.View)document.GetElement(first.OwnerViewId);
+            uiDocument.RequestViewChange(ownerView);
+        }
+
         uiDocument.Selection.SetElementIds(elementIds);
-        uiDocument.ShowElements(elementIds);
+        uiDocument.ShowElements(ResolveVisibleIds(document, elementIds));
+    }
+
+    private static bool HasSameOwnerView(Document document, ICollection<ElementId> elementIds)
+    {
+        ElementId? ownerViewId = null;
+        foreach (var id in elementIds)
+        {
+            var viewId = document.GetElement(id)?.OwnerViewId ?? ElementId.InvalidElementId;
+            if (viewId == ElementId.InvalidElementId) return false;
+            ownerViewId ??= viewId;
+            if (viewId != ownerViewId) return false;
+        }
+        return true;
+    }
+
+    private static ICollection<ElementId> ResolveVisibleIds(Document document, ICollection<ElementId> elementIds)
+    {
+        List<ElementId>? expanded = null;
+        foreach (var id in elementIds)
+        {
+            if (document.GetElement(id) is not IndependentTag tag) continue;
+
+            expanded ??= new List<ElementId>(elementIds);
+            foreach (var hostId in tag.GetTaggedLocalElementIds())
+            {
+                if (hostId != ElementId.InvalidElementId)
+                    expanded.Add(hostId);
+            }
+        }
+        return expanded ?? elementIds;
     }
 
     private static object SearchDocument(Document document, RevitTokenKind kind, string value)
