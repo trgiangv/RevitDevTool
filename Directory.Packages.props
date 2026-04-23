@@ -9,7 +9,7 @@
         <!--Python-->
         <PackageVersion Include="pythonnet" Version="3.0.5"/>
         <!--MCP-->
-        <PackageVersion Include="ModelContextProtocol" Version="1.1.0"/>
+        <PackageVersion Include="ModelContextProtocol" Version="1.2.0"/>
         <!--FSharp-->
         <PackageVersion Include="FSharp.Core" Version="11.0.100-preview1.26104.118"/>
         <PackageVersion Include="FSharp.Compiler.Service" Version="43.12.100-preview1.26104.118"/>

@@ -64,7 +64,7 @@ public sealed partial class RoutingMcpServerResource : McpServerResource
         var client = _instanceManager.GetDefault()
                      ?? throw new InvalidOperationException(ToolHelpers.FormatInstanceListing(_instanceManager));
 
-        var targetUri = request.Params?.Uri ?? ProtocolResourceTemplate.UriTemplate;
+        var targetUri = request.Params.Uri;
         var callParams = JsonSerializer.SerializeToElement(new { uri = targetUri });
 
         var response = await client.RequestAsync(BridgeMethods.ResourcesRead, callParams, cancellationToken)

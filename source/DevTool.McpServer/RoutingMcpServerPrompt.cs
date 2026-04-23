@@ -15,7 +15,7 @@ public sealed class RoutingMcpServerPrompt(InstanceManager instanceManager, Prom
         RequestContext<GetPromptRequestParams> request,
         CancellationToken cancellationToken = default)
     {
-        var args = request.Params?.Arguments != null
+        var args = request.Params.Arguments != null
             ? new Dictionary<string, JsonElement>(request.Params.Arguments)
             : new Dictionary<string, JsonElement>();
 

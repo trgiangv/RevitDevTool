@@ -2,6 +2,7 @@ using System.Text.Json;
 using Microsoft.Extensions.Logging;
 using ModelContextProtocol.Protocol;
 using ModelContextProtocol.Server;
+using ZLogger;
 using DevTool.McpParser.Models;
 
 namespace DevTool.McpServer;
@@ -32,7 +33,7 @@ public sealed class CatalogService(InstanceManager instanceManager,
             }
             catch (Exception ex)
             {
-                logger.LogError(ex, "Refresh error");
+                logger.ZLogError(ex, $"Refresh error");
             }
         }
     }
@@ -71,7 +72,7 @@ public sealed class CatalogService(InstanceManager instanceManager,
         }
         catch (Exception ex)
         {
-            logger.LogWarning(ex, "Error fetching from {PipeName}", client.PipeName);
+            logger.ZLogWarning(ex, $"Error fetching from {client.PipeName}");
         }
     }
 

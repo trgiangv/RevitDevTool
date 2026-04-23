@@ -1,13 +1,12 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
     <!--
-        Build (dev):
-            dotnet build
+        Build (dev):   dotnet build
+        Publish:       dotnet publish -c Release
 
-        Publish (single-file, self-contained, no .NET runtime required on target machine):
-            dotnet publish -c Release
-
-        Output: bin\Release\net10.0-windows\win-x64\publish\McpServer.exe  (~78 MB)
+        Usage:
+            MCPServer.exe                                                       stdio mode (Claude Desktop, Cursor)
+            MCPServer.exe  gateway wss://gw.example.com/tunnel  token xxx       gateway tunnel mode (enterprise)
     -->
 
     <PropertyGroup>
@@ -31,6 +30,7 @@
         <PackageReference Include="Microsoft.Extensions.Hosting"/>
         <PackageReference Include="ModelContextProtocol"/>
         <PackageReference Include="OpenMcdf"/>
+        <PackageReference Include="ZLogger"/>
     </ItemGroup>
 
     <ItemGroup>

@@ -15,7 +15,7 @@ public sealed class RoutingMcpServerTool(InstanceManager instanceManager, Tool t
         RequestContext<CallToolRequestParams> request,
         CancellationToken cancellationToken = default)
     {
-        var args = request.Params?.Arguments ?? new Dictionary<string, JsonElement>();
+        var args = request.Params.Arguments ?? new Dictionary<string, JsonElement>();
 
         var client = ToolHelpers.ResolveClient(instanceManager, args, out var cleanedArgs);
         if (client is null)

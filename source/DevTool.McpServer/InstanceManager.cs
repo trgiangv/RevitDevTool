@@ -2,6 +2,7 @@ using System.Collections.Concurrent;
 using System.Text.Json;
 using System.Text.RegularExpressions;
 using Microsoft.Extensions.Logging;
+using ZLogger;
 using DevTool.McpParser.Models;
 
 namespace DevTool.McpServer;
@@ -33,29 +34,11 @@ public sealed partial class InstanceManager(ILogger<InstanceManager> logger) : I
     {
         var knownPipes = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
-        while (true)
+        while (!ct.IsCancellationRequested)
         {
-            if (ct.IsCancellationRequested)
-                return;
-
             try
             {
-                var currentPipes = DiscoverRevitPipes(logger);
-
-                var added = currentPipes.Where(p => !knownPipes.Contains(p)).ToList();
-                var removed = knownPipes.Where(p => !currentPipes.Contains(p)).ToList();
-
-                foreach (var pipeName in removed)
-                {
-                    knownPipes.Remove(pipeName);
-                    await DisconnectAsync(pipeName).ConfigureAwait(false);
-                }
-
-                foreach (var pipeName in added)
-                {
-                    knownPipes.Add(pipeName);
-                    await TryConnectAsync(pipeName, ct).ConfigureAwait(false);
-                }
+                await SyncPipesAsync(knownPipes, ct).ConfigureAwait(false);
             }
             catch (OperationCanceledException) when (ct.IsCancellationRequested)
             {
@@ -63,7 +46,7 @@ public sealed partial class InstanceManager(ILogger<InstanceManager> logger) : I
             }
             catch (Exception ex)
             {
-                logger.LogError(ex, "Discovery error");
+                logger.ZLogError(ex, $"Discovery error");
             }
 
             try
@@ -77,11 +60,28 @@ public sealed partial class InstanceManager(ILogger<InstanceManager> logger) : I
         }
     }
 
+    private async Task SyncPipesAsync(HashSet<string> knownPipes, CancellationToken ct)
+    {
+        var currentPipes = DiscoverRevitPipes(logger);
+
+        foreach (var pipeName in knownPipes.Where(p => !currentPipes.Contains(p)).ToList())
+        {
+            knownPipes.Remove(pipeName);
+            await DisconnectAsync(pipeName).ConfigureAwait(false);
+        }
+
+        foreach (var pipeName in currentPipes.Where(p => !knownPipes.Contains(p)).ToList())
+        {
+            knownPipes.Add(pipeName);
+            await TryConnectAsync(pipeName, ct).ConfigureAwait(false);
+        }
+    }
+
     private async Task TryConnectAsync(string pipeName, CancellationToken ct)
     {
         try
         {
-            logger.LogInformation("Connecting to {PipeName}...", pipeName);
+            logger.ZLogInformation($"Connecting to {pipeName}...");
             var client = await RevitBridgeClient.ConnectAsync(pipeName, ct).ConfigureAwait(false);
             client.ToolsChanged += () => Changed?.Invoke();
             client.DocumentChanged += _ => Changed?.Invoke();
@@ -92,14 +92,13 @@ public sealed partial class InstanceManager(ILogger<InstanceManager> logger) : I
             };
 
             _clients[pipeName] = client;
-            logger.LogInformation("Connected to {PipeName} (PID={ProcessId}, Doc={DocumentTitle})",
-                pipeName, client.Info?.ProcessId, client.Info?.DocumentTitle);
+            logger.ZLogInformation($"Connected to {pipeName} (PID={client.Info?.ProcessId}, Doc={client.Info?.DocumentTitle})");
 
             Changed?.Invoke();
         }
         catch (Exception ex)
         {
-            logger.LogWarning(ex, "Failed to connect to {PipeName}", pipeName);
+            logger.ZLogWarning(ex, $"Failed to connect to {pipeName}");
         }
     }
 
@@ -108,7 +107,7 @@ public sealed partial class InstanceManager(ILogger<InstanceManager> logger) : I
         if (_clients.TryRemove(pipeName, out var client))
         {
             await client.DisposeAsync().ConfigureAwait(false);
-            logger.LogInformation("Disconnected from {PipeName}", pipeName);
+            logger.ZLogInformation($"Disconnected from {pipeName}");
         }
     }
 
@@ -126,7 +125,7 @@ public sealed partial class InstanceManager(ILogger<InstanceManager> logger) : I
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
-            logger?.LogWarning(ex, "Pipe scan error");
+            logger?.ZLogWarning(ex, $"Pipe scan error");
         }
 
         return pipes;

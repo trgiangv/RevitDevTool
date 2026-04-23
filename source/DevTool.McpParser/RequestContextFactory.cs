@@ -13,6 +13,6 @@ public static class RequestContextFactory
             Method = method,
             Params = null
         };
-        return new RequestContext<T>(null!, jsonRpcRequest) { Params = requestParams };
+        return new RequestContext<T>(null!, jsonRpcRequest, requestParams);
     }
 }
