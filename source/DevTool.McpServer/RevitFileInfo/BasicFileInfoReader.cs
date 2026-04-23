@@ -1,11 +1,13 @@
 using System.Text;
 using System.Text.RegularExpressions;
-using OpenMcdf;
+using JetBrains.Annotations;
 
 namespace DevTool.McpServer.RevitFileInfo;
 
 internal static partial class BasicFileInfoReader
 {
+    private const string StreamName = "BasicFileInfo";
+
     private const int FormatVersion = 12;
     private const int LastSavePathVersion = 1;
     private const int DefaultOpenWorksetVersion = 3;
@@ -19,82 +21,89 @@ internal static partial class BasicFileInfoReader
     private const int IsSingleUserCloudModelVersion = 11;
     private const int AuthorVersion = 13;
 
-    public static BasicFileInfoDto? Read(string filePath)
+    public static BasicFileInfo? Read(RevitCompoundFile file)
     {
-        using var storage = RootStorage.OpenRead(filePath);
-        CfbStream stream;
-        try
-        {
-            stream = storage.OpenStream("BasicFileInfo");
-        }
-        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidOperationException or FormatException)
-        {
-            return null;
-        }
-
-        using var ms = new MemoryStream();
-        stream.CopyTo(ms);
-        ms.Position = 0;
+        using var ms = file.TryReadStream(StreamName);
+        if (ms is null) return null;
 
         using var reader = new BinaryReader(ms, Encoding.Unicode);
-        var dto = new BasicFileInfoDto
+        var header = ReadHeader(reader);
+        var optional = ReadOptionalFields(reader, header.FileVersion);
+
+        return header with
         {
-            FileVersion = reader.ReadInt32(),
-            IsWorkshared = reader.ReadBoolean()
+            RevitVersion = optional.RevitVersion,
+            Build = optional.Build,
+            LastSavePath = optional.LastSavePath,
+            DefaultOpenWorkset = optional.DefaultOpenWorkset,
+            IsRevitLite = optional.IsRevitLite,
+            CentralIdentity = optional.CentralIdentity,
+            Locale = optional.Locale,
+            IsModified = optional.IsModified,
+            ModelIdentity = optional.ModelIdentity,
+            IsSingleUserCloud = optional.IsSingleUserCloud,
+            Author = optional.Author,
         };
+    }
 
+    private static BasicFileInfo ReadHeader(BinaryReader reader)
+    {
+        var fileVersion = reader.ReadInt32();
+        var isWorkshared = reader.ReadBoolean();
         var worksharingByte = reader.ReadByte();
-        dto.WorksharingType = dto.IsWorkshared
-            ? WorksharingTypeToString(worksharingByte + 1)
-            : "Not enabled";
 
-        dto.Username = ReadString(reader);
-        dto.CentralPath = ReadString(reader);
-
-        if (dto.FileVersion >= FormatVersion)
+        return new BasicFileInfo
         {
-            dto.RevitVersion = ReadString(reader);
-            dto.Build = ReadString(reader);
+            FileVersion = fileVersion,
+            IsWorkshared = isWorkshared,
+            WorksharingType = isWorkshared ? WorksharingTypeToString(worksharingByte + 1) : "Not enabled",
+            Username = ReadString(reader),
+            CentralPath = ReadString(reader),
+        };
+    }
+
+    private static BasicFileInfo ReadOptionalFields(BinaryReader reader, int ver)
+    {
+        string? revitVersion, build;
+        if (ver >= FormatVersion)
+        {
+            revitVersion = ReadString(reader);
+            build = ReadString(reader);
         }
         else
         {
-            dto.Build = ReadString(reader);
-            dto.RevitVersion = ExtractVersionFromBuild(dto.Build);
+            build = ReadString(reader);
+            revitVersion = ExtractVersionFromBuild(build);
         }
 
-        if (dto.FileVersion >= LastSavePathVersion)
-            dto.LastSavePath = ReadString(reader);
-        if (dto.FileVersion >= DefaultOpenWorksetVersion)
-            dto.DefaultOpenWorkset = reader.ReadInt32();
-        if (dto.FileVersion >= IsRevitLiteVersion)
-            dto.IsRevitLite = reader.ReadBoolean();
-        if (dto.FileVersion >= CentralIdentityVersion)
-            dto.CentralIdentity = ReadString(reader);
-        if (dto.FileVersion >= FileLocaleVersion)
-            dto.Locale = ReadString(reader);
-        if (dto.FileVersion >= IsModifiedVersion)
-            dto.IsModified = reader.ReadBoolean();
+        var lastSavePath = ver >= LastSavePathVersion ? ReadString(reader) : null;
+        var defaultOpenWorkset = ver >= DefaultOpenWorksetVersion ? reader.ReadInt32() : 0;
+        var isRevitLite = ver >= IsRevitLiteVersion && reader.ReadBoolean();
+        var centralIdentity = ver >= CentralIdentityVersion ? ReadString(reader) : null;
+        var locale = ver >= FileLocaleVersion ? ReadString(reader) : null;
+        var isModified = ver >= IsModifiedVersion && reader.ReadBoolean();
 
-        if (dto.FileVersion >= CentralVersionNum)
+        if (ver >= CentralVersionNum) { reader.ReadInt32(); ReadString(reader); }
+        if (ver >= CurrentVersionNum) { ReadString(reader); ReadString(reader); }
+
+        var modelIdentity = ver >= IdentityVersion ? ReadString(reader) : null;
+        var isSingleUserCloud = ver >= IsSingleUserCloudModelVersion && reader.ReadBoolean();
+        var author = ver >= AuthorVersion ? ReadString(reader) : null;
+
+        return new BasicFileInfo
         {
-            reader.ReadInt32();
-            ReadString(reader);
-        }
-
-        if (dto.FileVersion >= CurrentVersionNum)
-        {
-            ReadString(reader);
-            ReadString(reader);
-        }
-
-        if (dto.FileVersion >= IdentityVersion)
-            dto.ModelIdentity = ReadString(reader);
-        if (dto.FileVersion >= IsSingleUserCloudModelVersion)
-            dto.IsSingleUserCloud = reader.ReadBoolean();
-        if (dto.FileVersion >= AuthorVersion)
-            dto.Author = ReadString(reader);
-
-        return dto;
+            RevitVersion = revitVersion,
+            Build = build,
+            LastSavePath = lastSavePath,
+            DefaultOpenWorkset = defaultOpenWorkset,
+            IsRevitLite = isRevitLite,
+            CentralIdentity = centralIdentity,
+            Locale = locale,
+            IsModified = isModified,
+            ModelIdentity = modelIdentity,
+            IsSingleUserCloud = isSingleUserCloud,
+            Author = author,
+        };
     }
 
     private static string? ReadString(BinaryReader reader)
@@ -126,22 +135,23 @@ internal static partial class BasicFileInfoReader
     private static partial Regex VersionRegex();
 }
 
-internal sealed class BasicFileInfoDto
+[PublicAPI]
+internal sealed record BasicFileInfo
 {
-    public int FileVersion { get; set; }
-    public string? RevitVersion { get; set; }
-    public string? Build { get; set; }
-    public bool IsWorkshared { get; set; }
-    public string WorksharingType { get; set; } = "Not enabled";
-    public string? Username { get; set; }
-    public string? CentralPath { get; set; }
-    public string? LastSavePath { get; set; }
-    public int DefaultOpenWorkset { get; set; }
-    public bool IsRevitLite { get; set; }
-    public bool IsModified { get; set; }
-    public bool IsSingleUserCloud { get; set; }
-    public string? Locale { get; set; }
-    public string? Author { get; set; }
-    public string? ModelIdentity { get; set; }
-    public string? CentralIdentity { get; set; }
+    public int FileVersion { get; init; }
+    public string? RevitVersion { get; init; }
+    public string? Build { get; init; }
+    public bool IsWorkshared { get; init; }
+    public string WorksharingType { get; init; } = "Not enabled";
+    public string? Username { get; init; }
+    public string? CentralPath { get; init; }
+    public string? LastSavePath { get; init; }
+    public int DefaultOpenWorkset { get; init; }
+    public bool IsRevitLite { get; init; }
+    public bool IsModified { get; init; }
+    public bool IsSingleUserCloud { get; init; }
+    public string? Locale { get; init; }
+    public string? Author { get; init; }
+    public string? ModelIdentity { get; init; }
+    public string? CentralIdentity { get; init; }
 }

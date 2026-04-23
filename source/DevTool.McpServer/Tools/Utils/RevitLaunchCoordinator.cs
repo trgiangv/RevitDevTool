@@ -82,7 +82,8 @@ internal static partial class RevitLaunchCoordinator
     {
         try
         {
-            var info = BasicFileInfoReader.Read(filePath);
+            using var file = RevitCompoundFile.Open(filePath);
+            var info = BasicFileInfoReader.Read(file);
             if (info?.RevitVersion is null) return null;
 
             var match = RevitVersion().Match(info.RevitVersion);

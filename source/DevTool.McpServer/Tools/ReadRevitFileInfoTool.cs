@@ -32,7 +32,7 @@ public sealed class ReadRevitFileInfoTool : McpServerTool
         CancellationToken cancellationToken = default)
     {
         string? filePath = null;
-        if (request.Params?.Arguments?.TryGetValue("filePath", out var filePathElement) == true)
+        if (request.Params.Arguments?.TryGetValue("filePath", out var filePathElement) == true)
             filePath = filePathElement.GetString();
 
         if (string.IsNullOrWhiteSpace(filePath))
@@ -61,9 +61,20 @@ public sealed class ReadRevitFileInfoTool : McpServerTool
 
     private static object ReadFileInfo(string filePath)
     {
-        var basicInfo = BasicFileInfoReader.Read(filePath);
-        var transmissionData = TransmissionDataReader.Read(filePath);
-        var worksets = WorksetParser.TryParse(filePath);
+        using var file = RevitCompoundFile.Open(filePath);
+
+        var basicInfo = BasicFileInfoReader.Read(file);
+        var transmissionData = TransmissionDataReader.Read(file);
+        var projectInformation = ProjectInformationReader.Read(file);
+
+        using var ptStream = file.TryReadStream("Global", "PartitionTable");
+        var ptDecompressed = ptStream is not null
+            ? PartitionTableReader.Decompress(ptStream.ToArray())
+            : [];
+
+        var worksets = WorksetParser.TryParse(ptDecompressed);
+        var partitionSummary = PartitionTableReader.Read(ptDecompressed);
+        var browserOrganization = BrowserOrganizationReader.Read(file);
 
         return new
         {
@@ -71,7 +82,10 @@ public sealed class ReadRevitFileInfoTool : McpServerTool
             fileName = Path.GetFileName(filePath),
             basicInfo,
             transmissionData,
-            worksets
+            projectInformation,
+            worksets,
+            partitionSummary,
+            browserOrganization
         };
     }
 }

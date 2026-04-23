@@ -32,7 +32,7 @@ public sealed class OpenRevitModelTool(InstanceManager instanceManager) : McpSer
         RequestContext<CallToolRequestParams> request,
         CancellationToken cancellationToken = default)
     {
-        var args = request.Params?.Arguments ?? new Dictionary<string, JsonElement>();
+        var args = request.Params.Arguments ?? new Dictionary<string, JsonElement>();
         var parsed = ParseRequest(args);
         if (parsed.Error is not null)
             return parsed.Error;

@@ -27,6 +27,7 @@
     </PropertyGroup>
 
     <ItemGroup>
+        <PackageReference Include="JetBrains.Annotations" ExcludeAssets="runtime" />
         <PackageReference Include="Microsoft.Extensions.Hosting"/>
         <PackageReference Include="ModelContextProtocol"/>
         <PackageReference Include="OpenMcdf"/>

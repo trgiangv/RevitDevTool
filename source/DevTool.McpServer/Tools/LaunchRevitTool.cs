@@ -32,7 +32,7 @@ public sealed class LaunchRevitTool(InstanceManager instanceManager) : McpServer
         RequestContext<CallToolRequestParams> request,
         CancellationToken cancellationToken = default)
     {
-        var args = request.Params?.Arguments;
+        var args = request.Params.Arguments;
         var version = ReadString(args, "versionNumber");
         var languageCode = ReadString(args, "languageCode");
         var filePath = ReadString(args, "filePath");

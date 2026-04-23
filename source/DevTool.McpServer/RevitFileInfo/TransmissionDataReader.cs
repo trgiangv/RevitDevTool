@@ -1,42 +1,30 @@
 using System.Text;
 using System.Xml.Serialization;
-using OpenMcdf;
+using JetBrains.Annotations;
 
 namespace DevTool.McpServer.RevitFileInfo;
 
 internal static class TransmissionDataReader
 {
     private const string StreamName = "TransmissionData";
+    private static readonly XmlSerializer Serializer = new(typeof(TransmissionData));
 
-    public static TransmissionDataDto? Read(string filePath)
+    public static TransmissionData? Read(RevitCompoundFile file)
     {
-        using var storage = RootStorage.OpenRead(filePath);
-        CfbStream stream;
-        try
-        {
-            stream = storage.OpenStream(StreamName);
-        }
-        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidOperationException or FormatException)
-        {
-            return null;
-        }
-
-        using var ms = new MemoryStream();
-        stream.CopyTo(ms);
-        ms.Position = 0;
+        using var ms = file.TryReadStream(StreamName);
+        if (ms is null) return null;
 
         using var reader = new BinaryReader(ms, Encoding.Unicode);
         var length = reader.ReadInt32();
         var xml = new string(reader.ReadChars(length));
 
-        var serializer = new XmlSerializer(typeof(TransmissionDataDto));
         using var textReader = new StringReader(xml);
-        return serializer.Deserialize(textReader) as TransmissionDataDto;
+        return Serializer.Deserialize(textReader) as TransmissionData;
     }
 }
 
 [XmlRoot("TransmissionData")]
-public sealed class TransmissionDataDto
+public sealed record TransmissionData
 {
     [XmlAttribute("isTransmitted")]
     public bool IsTransmitted { get; set; }
@@ -48,10 +36,11 @@ public sealed class TransmissionDataDto
     public int Version { get; set; }
 
     [XmlElement("ExternalFileReference")]
-    public List<ExternalFileReferenceDto> ExternalFileReferences { get; set; } = [];
+    public List<ExternalFileReference> ExternalFileReferences { get; set; } = [];
 }
 
-public sealed class ExternalFileReferenceDto
+[PublicAPI]
+public sealed record ExternalFileReference
 {
     public int ElementId { get; set; }
     public string? ExternalFileReferenceType { get; set; }
