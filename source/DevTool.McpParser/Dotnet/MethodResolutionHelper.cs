@@ -1,4 +1,3 @@
-using System.IO;
 using System.Reflection;
 
 namespace DevTool.McpParser.Dotnet;
@@ -14,6 +13,7 @@ internal static class MethodResolutionHelper
         return string.IsNullOrWhiteSpace(assemblyPath) ||
                string.Equals(
                    Path.GetFullPath(assemblyPath),
+                   // ReSharper disable once RedundantSuppressNullableWarningExpression
                    Path.GetFullPath(sourcePath!),
                    StringComparison.OrdinalIgnoreCase);
     }
@@ -33,6 +33,7 @@ internal static class MethodResolutionHelper
         }
         catch (ReflectionTypeLoadException ex)
         {
+            // ReSharper disable once RedundantEnumerableCastCall
             types = ex.Types.Where(t => t is not null).Cast<Type>().ToArray();
         }
 

@@ -18,7 +18,7 @@ namespace RevitDevTool.ExternalExecution.Mcp.Dispatchers;
 /// Dotnet tools are invoked asynchronously; Python tools run synchronously under the GIL.
 /// </summary>
 public sealed class ToolExecutionDispatcher(
-    IServiceProvider serviceProvider, PythonExecutor executor) : ICacheable
+    IServiceProvider serviceProvider, PythonExecutor executor, DotnetMethodResolver methodResolver) : ICacheable
 {
     private readonly ConcurrentDictionary<string, McpServerTool> _cachedTools = new(StringComparer.OrdinalIgnoreCase);
 
@@ -66,7 +66,7 @@ public sealed class ToolExecutionDispatcher(
             _cachedTools,
             tool.Id,
             tool,
-            DotnetMethodResolver.ResolveTool,
+            methodResolver.ResolveTool,
             serviceProvider,
             (method, target) => McpServerTool.Create(method, target));
     }

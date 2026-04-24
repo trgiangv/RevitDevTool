@@ -18,7 +18,7 @@ namespace RevitDevTool.ExternalExecution.Mcp.Dispatchers;
 /// or synchronously under the GIL for the Python backend.
 /// </summary>
 public sealed class PromptExecutionDispatcher(
-    IServiceProvider serviceProvider, PythonExecutor executor) : ICacheable
+    IServiceProvider serviceProvider, PythonExecutor executor, DotnetMethodResolver methodResolver) : ICacheable
 {
     private static readonly JsonSerializerOptions JsonOptions = McpJsonUtilities.DefaultOptions;
     private readonly ConcurrentDictionary<string, McpServerPrompt> _cachedPrompts = new(StringComparer.OrdinalIgnoreCase);
@@ -60,7 +60,7 @@ public sealed class PromptExecutionDispatcher(
             _cachedPrompts,
             prompt.Id,
             prompt,
-            DotnetMethodResolver.ResolvePrompt,
+            methodResolver.ResolvePrompt,
             serviceProvider,
             (method, target) => McpServerPrompt.Create(method, target));
     }

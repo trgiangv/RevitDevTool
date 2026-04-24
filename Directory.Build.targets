@@ -1,6 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
 
+    <!-- Common -->
+    <Import Project="$(MSBuildThisFileDirectory)props\Common.props" />
+    
     <!-- Revit -->
     <Import Condition="'$(UseRevit)' == 'true'" Project="$(MSBuildThisFileDirectory)props\Revit.props" />
     <Import Condition="'$(UseRevit)' == 'true'" Project="$(MSBuildThisFileDirectory)props\Revit.targets" />

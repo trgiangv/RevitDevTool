@@ -133,10 +133,7 @@ public partial class StubBuilderViewModel : ObservableObject
 
             await Task.Run(() =>
             {
-                StubBuilder.BuildAssemblyStubs(
-                    destPath,
-                    assemblies,
-                    logger: message => DispatcherHelper.RunOnMainThread(() => StatusMessage = message));
+                StubBuilder.BuildAssemblyStubs(destPath, assemblies);
             }).ConfigureAwait(true);
 
             StatusMessage = $"Stubs generated successfully at: {OutputPath}";

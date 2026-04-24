@@ -24,6 +24,7 @@ using RevitDevTool.Execution.Providers;
 using RevitDevTool.Execution.Providers.Dotnet;
 using RevitDevTool.Execution.Providers.Python;
 using RevitDevTool.Execution.Services;
+using DevTool.McpParser.Dotnet;
 using DevTool.McpParser.Models;
 using RevitDevTool.ExternalExecution.Mcp.Dispatchers;
 using RevitDevTool.ExternalExecution.Mcp.Registry;
@@ -183,6 +184,8 @@ public static class Host
         services.AddSingleton<IMcpRegistryProvider>(sp => sp.GetRequiredService<DotnetToolRegistryProvider>());
         services.AddSingleton<IMcpRegistryProvider>(sp => sp.GetRequiredService<PythonToolRegistryProvider>());
         services.AddSingleton<ToolRegistryCatalogLoader>();
+        services.AddSingleton<McpToolsetContextManager>();
+        services.AddSingleton<DotnetMethodResolver>();
         services.AddSingleton<ToolExecutionDispatcher>();
         services.AddSingleton<PromptExecutionDispatcher>();
         services.AddSingleton<ResourceExecutionDispatcher>();

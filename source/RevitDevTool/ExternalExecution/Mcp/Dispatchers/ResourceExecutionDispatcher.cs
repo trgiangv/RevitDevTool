@@ -18,7 +18,7 @@ namespace RevitDevTool.ExternalExecution.Mcp.Dispatchers;
 /// or synchronously under the GIL for the Python backend.
 /// </summary>
 public sealed class ResourceExecutionDispatcher(
-    IServiceProvider serviceProvider, PythonExecutor executor) : ICacheable
+    IServiceProvider serviceProvider, PythonExecutor executor, DotnetMethodResolver methodResolver) : ICacheable
 {
     private static readonly JsonSerializerOptions JsonOptions = McpJsonUtilities.DefaultOptions;
     private readonly ConcurrentDictionary<string, McpServerResource> _cachedResources = new(StringComparer.OrdinalIgnoreCase);
@@ -56,7 +56,7 @@ public sealed class ResourceExecutionDispatcher(
             _cachedResources,
             resource.Id,
             resource,
-            DotnetMethodResolver.ResolveResource,
+            methodResolver.ResolveResource,
             serviceProvider,
             (method, target) => McpServerResource.Create(method, target));
     }

@@ -95,13 +95,8 @@ public sealed class ToolRegistryCatalogLoader(IEnumerable<IMcpRegistryProvider> 
                 continue;
             }
 
-            if (byId.ContainsKey(id))
-            {
-                Trace.TraceWarning($"[MCP] Duplicate {kind} id '{id}' ignored.");
-                continue;
-            }
-
-            byId[id] = item;
+            if (byId.TryAdd(id, item)) continue;
+            Trace.TraceWarning($"[MCP] Duplicate {kind} id '{id}' ignored.");
         }
     }
 }

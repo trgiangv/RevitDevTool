@@ -1,17 +1,17 @@
-using System.IO;
+using System.Diagnostics;
 using System.Reflection;
 using DevTool.McpParser.Models;
 using ModelContextProtocol.Server;
 
 namespace DevTool.McpParser.Dotnet;
 
-public static class DotnetMethodResolver
+public sealed class DotnetMethodResolver(McpToolsetContextManager contextManager)
 {
     private static readonly string McpToolAttributeFullName = typeof(McpServerToolAttribute).FullName!;
     private static readonly string McpPromptAttributeFullName = typeof(McpServerPromptAttribute).FullName!;
     private static readonly string McpResourceAttributeFullName = typeof(McpServerResourceAttribute).FullName!;
 
-    public static MethodInfo? ResolveTool(McpRegisteredTool tool)
+    public MethodInfo? ResolveTool(McpRegisteredTool tool)
     {
         return Resolve(
             tool.ProtocolTool.Name,
@@ -22,7 +22,7 @@ public static class DotnetMethodResolver
             method => ExtractNamedArg(FindAttributeByName(method, McpToolAttributeFullName), "Name"));
     }
 
-    public static MethodInfo? ResolvePrompt(McpRegisteredPrompt prompt)
+    public MethodInfo? ResolvePrompt(McpRegisteredPrompt prompt)
     {
         return Resolve(
             prompt.ProtocolPrompt.Name,
@@ -33,7 +33,7 @@ public static class DotnetMethodResolver
             method => ExtractNamedArg(FindAttributeByName(method, McpPromptAttributeFullName), "Name"));
     }
 
-    public static MethodInfo? ResolveResource(McpRegisteredResource resource)
+    public MethodInfo? ResolveResource(McpRegisteredResource resource)
     {
         var name = resource.ProtocolResource?.Name ?? resource.ProtocolTemplate?.Name ?? string.Empty;
         return Resolve(
@@ -53,13 +53,15 @@ public static class DotnetMethodResolver
 
     private static string? ExtractNamedArg(CustomAttributeData? attr, string memberName)
     {
-        return attr?.NamedArguments
-            .Where(a => a.MemberName == memberName)
-            .Select(a => a.TypedValue.Value as string)
-            .FirstOrDefault();
+        return attr is { NamedArguments: not null }
+            ? attr.NamedArguments
+                .Where(a => a.MemberName == memberName)
+                .Select(a => a.TypedValue.Value as string)
+                .FirstOrDefault()
+            : null;
     }
 
-    private static MethodInfo? Resolve(
+    private MethodInfo? Resolve(
         string targetName,
         McpPrimitiveBinding binding,
         Type containerAttributeType,
@@ -67,29 +69,13 @@ public static class DotnetMethodResolver
         Func<MethodInfo, bool> attributeChecker,
         Func<MethodInfo, string?> configuredNameSelector)
     {
-        // Phase 1: Search in already-loaded assemblies (e.g. merged into main add-in)
         var result = ResolveFromLoadedAssemblies(targetName, binding, containerAttributeType,
             requireAttribute, attributeChecker, configuredNameSelector);
         if (result is not null)
             return result;
 
-        // Phase 2: Load assembly from disk if not found (standalone tool DLLs like RevitMcpToolSet.dll)
-        if (!string.IsNullOrWhiteSpace(binding.SourcePath) && File.Exists(binding.SourcePath))
-        {
-            try
-            {
-                var assembly = Assembly.LoadFrom(binding.SourcePath);
-                return ResolveFromAssembly(assembly, targetName, binding, containerAttributeType,
-                    requireAttribute, attributeChecker, configuredNameSelector);
-            }
-            catch (Exception)
-            {
-                // Assembly load failed (e.g. missing dependencies, wrong runtime)
-                return null;
-            }
-        }
-
-        return null;
+        return ResolveFromToolsetContext(targetName, binding, containerAttributeType,
+            requireAttribute, attributeChecker, configuredNameSelector);
     }
 
     private static MethodInfo? ResolveFromLoadedAssemblies(
@@ -100,8 +86,11 @@ public static class DotnetMethodResolver
         Func<MethodInfo, bool> attributeChecker,
         Func<MethodInfo, string?> configuredNameSelector)
     {
-        foreach (var assembly in AppDomain.CurrentDomain.GetAssemblies()
-                     .OrderBy(MethodResolutionHelper.GetAssemblyPath, StringComparer.OrdinalIgnoreCase))
+        var assemblies = AppDomain.CurrentDomain
+            .GetAssemblies()
+            .OrderBy(MethodResolutionHelper.GetAssemblyPath, StringComparer.OrdinalIgnoreCase);
+
+        foreach (var assembly in assemblies)
         {
             if (!MethodResolutionHelper.IsAssemblyMatch(assembly, binding.SourcePath))
                 continue;
@@ -113,6 +102,32 @@ public static class DotnetMethodResolver
         }
 
         return null;
+    }
+
+    private MethodInfo? ResolveFromToolsetContext(
+        string targetName,
+        McpPrimitiveBinding binding,
+        Type containerAttributeType,
+        bool requireAttribute,
+        Func<MethodInfo, bool> attributeChecker,
+        Func<MethodInfo, string?> configuredNameSelector)
+    {
+        if (string.IsNullOrWhiteSpace(binding.SourcePath) || !File.Exists(binding.SourcePath))
+            return null;
+
+        try
+        {
+            var context = contextManager.GetOrCreate(binding.SourcePath);
+            var assembly = context.LoadAssembly();
+            return ResolveFromAssembly(assembly, targetName, binding, containerAttributeType,
+                requireAttribute, attributeChecker, configuredNameSelector);
+        }
+        catch (Exception ex)
+        {
+            Trace.TraceWarning(
+                $"[MCP] Failed to load toolset '{binding.SourcePath}': {ex.Message}");
+            return null;
+        }
     }
 
     private static MethodInfo? ResolveFromAssembly(

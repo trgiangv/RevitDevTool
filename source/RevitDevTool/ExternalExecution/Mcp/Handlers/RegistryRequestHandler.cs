@@ -1,6 +1,7 @@
 using System.Text.Json;
 using ModelContextProtocol.Protocol;
 using RevitDevTool.Core;
+using DevTool.McpParser.Dotnet;
 using DevTool.McpParser.Models;
 using RevitDevTool.ExternalExecution.Mcp.Dispatchers;
 using RevitDevTool.ExternalExecution.Connections;
@@ -13,7 +14,8 @@ public sealed class RegistryRequestHandler(
     ConnectionState state,
     ToolExecutionDispatcher dispatcher,
     PromptExecutionDispatcher promptDispatcher,
-    ResourceExecutionDispatcher resourceDispatcher)
+    ResourceExecutionDispatcher resourceDispatcher,
+    McpToolsetContextManager toolsetContextManager)
 {
     private static readonly TimeSpan CallTimeout = TimeSpan.FromSeconds(30);
 
@@ -46,8 +48,7 @@ public sealed class RegistryRequestHandler(
         using var scope = state.BeginExecution(resolvedToolName);
 
         scope.MarkRunning();
-        McpToolExecutionResult? result;
-        var toolTimeoutMessage = $"Tool '{resolvedToolName}' exceeded timeout ({CallTimeout.TotalSeconds:F0}s).";
+        McpToolExecutionResult result;
         try
         {
             using var cts = new CancellationTokenSource(CallTimeout);
@@ -59,29 +60,19 @@ public sealed class RegistryRequestHandler(
         {
             var failed = McpToolExecutionResult.Failed(
                 ExecutionErrorCodes.ToolInvokeFailed,
-                toolTimeoutMessage);
-            scope.Complete(failed);
-            return BridgeMessage.Error(id, failed.Error?.Message ?? failed.Detail);
-        }
-
-        if (result is null)
-        {
-            var failed = McpToolExecutionResult.Failed(
-                ExecutionErrorCodes.ToolInvokeFailed,
-                $"Tool '{resolvedToolName}' returned no result.");
+                $"Tool '{resolvedToolName}' exceeded timeout ({CallTimeout.TotalSeconds:F0}s).");
             scope.Complete(failed);
             return BridgeMessage.Error(id, failed.Error?.Message ?? failed.Detail);
         }
 
         scope.Complete(result);
-        if (result is { State: ExecutionState.Completed })
-        {
-            state.RecordCall(tool.Id, tool.ProtocolTool.Name);
-            var json = JsonSerializer.SerializeToElement(result.Result);
-            return BridgeMessage.Response(id, json);
-        }
 
-        return BridgeMessage.Error(id, result.Error?.Message ?? result.Detail);
+        if (result is not { State: ExecutionState.Completed }) 
+            return BridgeMessage.Error(id, result.Error?.Message ?? result.Detail);
+
+        state.RecordCall(tool.Id, tool.ProtocolTool.Name);
+        var json = JsonSerializer.SerializeToElement(result.Result);
+        return BridgeMessage.Response(id, json);
     }
 
     public Task<BridgeMessage> HandlePromptsListAsync(string id)
@@ -108,7 +99,7 @@ public sealed class RegistryRequestHandler(
         if (@params?.TryGetProperty("arguments", out var argsElement) == true)
             arguments = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(argsElement.GetRawText());
 
-        GetPromptResult? result;
+        GetPromptResult result;
         try
         {
             using var cts = new CancellationTokenSource(CallTimeout);
@@ -120,9 +111,6 @@ public sealed class RegistryRequestHandler(
         {
             return BridgeMessage.Error(id, $"Prompt '{promptName}' exceeded timeout ({CallTimeout.TotalSeconds:F0}s).");
         }
-
-        if (result is null)
-            return BridgeMessage.Error(id, $"Prompt '{promptName}' returned no result.");
 
         var json = JsonSerializer.SerializeToElement(result);
         return BridgeMessage.Response(id, json);
@@ -158,7 +146,7 @@ public sealed class RegistryRequestHandler(
         if (!toolStore.TryResolveResourceByUri(resolvedUri, out var resource) || resource is null)
             return BridgeMessage.Error(id, $"Resource '{resolvedUri}' is not registered.");
 
-        ReadResourceResult? result;
+        ReadResourceResult result;
         try
         {
             using var cts = new CancellationTokenSource(CallTimeout);
@@ -171,9 +159,6 @@ public sealed class RegistryRequestHandler(
             return BridgeMessage.Error(id, $"Resource '{resolvedUri}' exceeded timeout ({CallTimeout.TotalSeconds:F0}s).");
         }
 
-        if (result is null)
-            return BridgeMessage.Error(id, $"Resource '{resolvedUri}' returned no result.");
-
         var json = JsonSerializer.SerializeToElement(result);
         return BridgeMessage.Response(id, json);
     }
@@ -183,5 +168,6 @@ public sealed class RegistryRequestHandler(
         dispatcher.ClearCache();
         promptDispatcher.ClearCache();
         resourceDispatcher.ClearCache();
+        toolsetContextManager.Clear();
     }
 }

@@ -330,15 +330,16 @@ public static class DotnetMcpAssemblyParser
 
     private static string MapParameterTypeToJsonSchema(Type parameterType)
     {
-        var fullName = parameterType.FullName ?? parameterType.Name;
-        if (parameterType.IsGenericType && parameterType.GetGenericArguments().Length > 0)
+        while (true)
         {
+            var fullName = parameterType.FullName ?? parameterType.Name;
+            if (!parameterType.IsGenericType || parameterType.GetGenericArguments().Length <= 0) 
+                return JsonSchemaTypeMap.GetValueOrDefault(fullName, "string");
             var genericDefFullName = parameterType.GetGenericTypeDefinition().FullName;
-            if (string.Equals(genericDefFullName, NullableGenericFullName, StringComparison.Ordinal))
-                return MapParameterTypeToJsonSchema(parameterType.GetGenericArguments()[0]);
+            if (!string.Equals(genericDefFullName, NullableGenericFullName, StringComparison.Ordinal)) 
+                return JsonSchemaTypeMap.GetValueOrDefault(fullName, "string");
+            parameterType = parameterType.GetGenericArguments()[0];
         }
-
-        return JsonSchemaTypeMap.TryGetValue(fullName, out var schemaType) ? schemaType : "string";
     }
 
     private static IList<Icon>? ParseIcons(string? iconSource)
@@ -447,9 +448,9 @@ public static class DotnetMcpAssemblyParser
         return null;
     }
 
-    private static T? ExtractNamedArg<T>(CustomAttributeData attr, string memberName) where T : class
+    private static T? ExtractNamedArg<T>(CustomAttributeData? attr, string memberName) where T : class
     {
-        var namedAgrs = attr.NamedArguments;
+        var namedAgrs = attr?.NamedArguments;
         if (namedAgrs == null) return null;
         foreach (var namedArg in namedAgrs)
         {
@@ -460,9 +461,9 @@ public static class DotnetMcpAssemblyParser
         return null;
     }
 
-    private static T? ExtractNamedValueArg<T>(CustomAttributeData attr, string memberName) where T : struct
+    private static T? ExtractNamedValueArg<T>(CustomAttributeData? attr, string memberName) where T : struct
     {
-        var namedAgrs = attr.NamedArguments;
+        var namedAgrs = attr?.NamedArguments;
         if (namedAgrs == null) return null;
         foreach (var namedArg in namedAgrs)
         {
