@@ -34,7 +34,7 @@ public static class PythonToolsetParser
             Trace.TraceError($"[MCP] In-process parser failed for '{toolsetDirectory}': {ex.Message}\n{ex.StackTrace}");
             return McpRegistryCatalog.Empty;
         }
-    
+
         return BuildCatalogFromOutput(parserOutput, toolsetDirectory);
     }
 
