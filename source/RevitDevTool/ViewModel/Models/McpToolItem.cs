@@ -1,5 +1,5 @@
 using RevitDevTool.Execution.Models;
-using DevTool.McpParser.Models;
+using DevTools.McpParser.Models;
 namespace RevitDevTool.ViewModel.Models;
 
 public partial class McpToolItem : ObservableObject

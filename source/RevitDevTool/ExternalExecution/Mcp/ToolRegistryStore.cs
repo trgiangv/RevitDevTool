@@ -3,7 +3,7 @@ using System.Text;
 using System.Text.RegularExpressions;
 using ModelContextProtocol.Protocol;
 using RevitDevTool.ExternalExecution.Mcp.Registry;
-using DevTool.McpParser.Models;
+using DevTools.McpParser.Models;
 using RevitDevTool.Settings;
 // ReSharper disable RedundantSuppressNullableWarningExpression
 

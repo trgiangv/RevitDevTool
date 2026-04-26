@@ -1,6 +1,6 @@
 using System.Text.Json;
-using DevTool.McpParser.Dotnet;
-using DevTool.McpParser.Python;
+using DevTools.McpParser.Dotnet;
+using DevTools.McpParser.Python;
 
 namespace RevitDevTool.Server.Tests;
 

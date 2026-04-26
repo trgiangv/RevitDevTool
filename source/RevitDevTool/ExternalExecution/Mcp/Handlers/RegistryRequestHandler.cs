@@ -1,8 +1,8 @@
 using System.Text.Json;
 using ModelContextProtocol.Protocol;
 using RevitDevTool.Core;
-using DevTool.McpParser.Dotnet;
-using DevTool.McpParser.Models;
+using DevTools.McpParser.Dotnet;
+using DevTools.McpParser.Models;
 using RevitDevTool.ExternalExecution.Mcp.Dispatchers;
 using RevitDevTool.ExternalExecution.Connections;
 // ReSharper disable RedundantSuppressNullableWarningExpression

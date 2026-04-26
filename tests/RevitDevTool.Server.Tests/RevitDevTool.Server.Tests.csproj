@@ -17,7 +17,7 @@
     </ItemGroup>
 
     <ItemGroup>
-        <ProjectReference Include="..\..\source\DevTool.McpParser\DevTool.McpParser.csproj" />
+        <ProjectReference Include="..\..\source\DevTools.McpParser\DevTools.McpParser.csproj" />
     </ItemGroup>
 
 </Project>
