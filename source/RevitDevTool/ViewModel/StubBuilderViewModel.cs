@@ -3,8 +3,8 @@ using System.ComponentModel;
 using System.IO;
 using System.Reflection;
 using System.Windows.Data;
+using DevTools.Utilities;
 using PythonNetStubGenerator;
-using RevitDevTool.Utils;
 // ReSharper disable UnusedParameterInPartialMethod
 
 namespace RevitDevTool.ViewModel;
@@ -88,7 +88,7 @@ public partial class StubBuilderViewModel : ObservableObject
     [RelayCommand]
     private void BrowseOutputPath()
     {
-        var selectedPath = SettingsUtils.SelectFolder("Select Stub Output Folder");
+        var selectedPath = AppUtils.SelectFolder("Select Stub Output Folder");
         if (!string.IsNullOrEmpty(selectedPath))
         {
             OutputPath = selectedPath;

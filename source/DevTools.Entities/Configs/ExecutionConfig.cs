@@ -1,6 +1,4 @@
-using System.Text.Json.Serialization;
-
-namespace RevitDevTool.Settings.Config;
+namespace DevTools.Entities.Configs;
 
 /// <summary>
 /// Configuration for persisting code execution settings (DotNet assemblies and script folders)
@@ -11,12 +9,10 @@ public sealed class ExecutionConfig
     /// <summary>
     /// List of assembly file paths
     /// </summary>
-    [JsonPropertyName("DotnetAssemblyPaths")]
     public List<string> DotnetAssemblyPaths { get; set; } = [];
 
     /// <summary>
     /// List of folders to load scripts from (Python .py and F# .fsx)
     /// </summary>
-    [JsonPropertyName("ScriptFolderPaths")]
     public List<string> ScriptFolderPaths { get; set; } = [];
 }

@@ -1,6 +1,7 @@
 using System.IO;
 using System.Text;
 using System.Text.RegularExpressions;
+using DevTools.Entities;
 using ModelContextProtocol.Protocol;
 using RevitDevTool.ExternalExecution.Mcp.Registry;
 using DevTools.McpParser.Models;
@@ -111,7 +112,7 @@ public sealed class ToolRegistryStore(ToolRegistryCatalogLoader catalogLoader, I
     {
         EnsureLoaded();
 
-        resource = default;
+        resource = null;
         if (string.IsNullOrWhiteSpace(uri))
             return false;
 
@@ -279,7 +280,7 @@ public sealed class ToolRegistryStore(ToolRegistryCatalogLoader catalogLoader, I
             return true;
         }
 
-        if (candidate.ProtocolTemplate?.UriTemplate is not string uriTemplate || string.IsNullOrWhiteSpace(uriTemplate))
+        if (candidate.ProtocolTemplate?.UriTemplate is not { } uriTemplate || string.IsNullOrWhiteSpace(uriTemplate))
             return false;
 
         return TemplateMatches(uriTemplate, uri);

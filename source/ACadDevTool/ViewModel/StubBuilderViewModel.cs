@@ -3,7 +3,7 @@ using System.ComponentModel;
 using System.IO;
 using System.Reflection;
 using System.Windows.Data;
-using AcadDevTool.Utils;
+using DevTools.Utilities;
 using PythonNetStubGenerator;
 // ReSharper disable UnusedParameterInPartialMethod
 
@@ -88,7 +88,7 @@ public partial class StubBuilderViewModel : ObservableObject
     [RelayCommand]
     private void BrowseOutputPath()
     {
-        var selectedPath = SettingsUtils.SelectFolder("Select Stub Output Folder");
+        var selectedPath = AppUtils.SelectFolder("Select Stub Output Folder");
         if (!string.IsNullOrEmpty(selectedPath))
         {
             OutputPath = selectedPath;

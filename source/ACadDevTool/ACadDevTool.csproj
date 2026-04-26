@@ -17,6 +17,7 @@
             DevTools.Microsoft.Xaml.Behaviors.dll;
             FSharp.Core.dll;
             DevTools.UI.dll;
+            DevTools.Entities.dll;
         </RepackBinariesExcludes>
     </PropertyGroup>
 

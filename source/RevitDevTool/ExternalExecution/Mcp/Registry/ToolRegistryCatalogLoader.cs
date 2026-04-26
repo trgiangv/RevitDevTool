@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using DevTools.Entities;
 using DevTools.McpParser.Models;
 
 namespace RevitDevTool.ExternalExecution.Mcp.Registry;

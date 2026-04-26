@@ -1,3 +1,4 @@
+using DevTools.Entities;
 using DevTools.McpParser.Models;
 using DevTools.UI.Controls;
 namespace RevitDevTool.ViewModel.Models;

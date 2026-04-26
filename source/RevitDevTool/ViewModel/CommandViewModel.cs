@@ -4,6 +4,7 @@ using System.IO;
 using RevitDevTool.Settings;
 using DevTools.UI.Theme;
 using System.Windows.Threading;
+using DevTools.Entities;
 using RevitDevTool.Execution.Interfaces;
 using RevitDevTool.Execution.Models;
 using RevitDevTool.Execution.Providers.Python;
@@ -137,7 +138,7 @@ public partial class CommandViewModel : ObservableObject
     {
         if (string.IsNullOrEmpty(path))
         {
-            var selectedFolder = SettingsUtils.SelectFolder("Select Scripts Folder");
+            var selectedFolder = DevTools.Utilities.AppUtils.SelectFolder("Select Scripts Folder");
             if (!string.IsNullOrEmpty(selectedFolder))
             {
                 path = selectedFolder;

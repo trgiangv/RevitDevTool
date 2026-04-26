@@ -7,8 +7,10 @@ using System.Text.Json;
 using RevitDevTool.Utils;
 using DevTools.UI.Theme;
 using System.Windows.Threading;
+using DevTools.Entities;
 using DevTools.McpParser.Models;
 using DevTools.UI.Controls;
+using DevTools.Utilities;
 using RevitDevTool.ViewModel.Models;
 using RevitDevTool.ExternalExecution.Mcp;
 using RevitDevTool.ExternalExecution.Connections;
@@ -131,7 +133,7 @@ public sealed partial class McpRegistryViewModel : ObservableObject, IDisposable
     [RelayCommand]
     private async Task LoadPythonToolsetAsync()
     {
-        var selectedFolder = SettingsUtils.SelectFolder("Select Python MCP Toolset Folder");
+        var selectedFolder = AppUtils.SelectFolder("Select Python MCP Toolset Folder");
         if (!string.IsNullOrWhiteSpace(selectedFolder))
         {
             using var _ = BeginBusy($"Parsing MCP toolset from '{Path.GetFileName(selectedFolder)}'...");

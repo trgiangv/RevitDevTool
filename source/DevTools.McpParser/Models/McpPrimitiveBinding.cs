@@ -1,3 +1,4 @@
+using DevTools.Entities;
 
 // ReSharper disable RedundantSuppressNullableWarningExpression
 namespace DevTools.McpParser.Models;

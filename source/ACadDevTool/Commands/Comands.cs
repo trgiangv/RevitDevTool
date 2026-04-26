@@ -1,7 +1,7 @@
-﻿using AcadDevTool.Utils;
-using AcadDevTool.View;
+﻿using AcadDevTool.View;
 using AcadDevTool.ViewModel;
 using Autodesk.AutoCAD.Runtime;
+using DevTools.Utilities;
 namespace AcadDevTool.Commands;
 
 public static class Commands
@@ -17,7 +17,7 @@ public static class Commands
     {
         var vm = new StubBuilderViewModel();
         var window = new StubBuilderWindow(vm);
-        window.SetAcadOwner();
+        window.SetHostAppOwner();
         window.ShowDialog();
     }
 }

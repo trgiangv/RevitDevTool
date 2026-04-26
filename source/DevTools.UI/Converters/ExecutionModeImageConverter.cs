@@ -2,7 +2,7 @@ using System.Globalization;
 using System.Windows;
 using System.Windows.Data;
 using System.Windows.Media;
-using DevTools.McpParser.Models;
+using DevTools.Entities;
 using Visibility = System.Windows.Visibility;
 
 namespace DevTools.UI.Converters;

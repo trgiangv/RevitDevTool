@@ -1,3 +1,4 @@
+using DevTools.Entities.Configs;
 using DevTools.Logging.Options;
 using RevitDevTool.Logging.Enums;
 using RevitDevTool.Settings.Config;

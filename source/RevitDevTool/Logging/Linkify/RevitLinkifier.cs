@@ -1,4 +1,5 @@
 using System.Text;
+using DevTools.Utilities;
 using RevitDevTool.Logging.Enums;
 using RevitDevTool.Utils;
 using ZLogger.Scintilla.Models;

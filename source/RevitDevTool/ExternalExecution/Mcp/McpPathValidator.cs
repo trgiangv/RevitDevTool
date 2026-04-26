@@ -1,7 +1,8 @@
 using System.Diagnostics;
 using System.IO;
+using DevTools.Entities;
+using DevTools.Entities.Configs;
 using DevTools.McpParser.Models;
-using RevitDevTool.Settings.Config;
 // ReSharper disable RedundantSuppressNullableWarningExpression
 
 namespace RevitDevTool.ExternalExecution.Mcp;

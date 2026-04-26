@@ -1,4 +1,5 @@
 using Autodesk.Revit.Attributes;
+using DevTools.Utilities;
 using RevitDevTool.Utils;
 using RevitDevTool.View;
 using RevitDevTool.ViewModel;
@@ -13,7 +14,7 @@ public class StubBuilderCommand : IExternalCommand, IExternalCommandAvailability
     {
         var vm = new StubBuilderViewModel();
         var window = new StubBuilderWindow(vm);
-        window.SetRevitOwner();
+        window.SetHostAppOwner();
         window.ShowDialog();
         return Result.Succeeded;
     }

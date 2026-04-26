@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using DevTools.Entities;
 using DevTools.McpParser.Dotnet;
 using DevTools.McpParser.Models;
 

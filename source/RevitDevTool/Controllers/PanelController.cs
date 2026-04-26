@@ -1,6 +1,7 @@
 using System.Diagnostics.CodeAnalysis;
 using Autodesk.Revit.DB.Events;
 using DevTools.Logging.Listeners;
+using DevTools.Utilities;
 using RevitDevTool.Commands;
 using RevitDevTool.Core;
 using RevitDevTool.Utils;
@@ -168,7 +169,7 @@ public sealed class PanelController(LogViewModel logViewModel)
             if (_floatingWindow != null) return;
             _floatingWindow = Host.GetService<MainWindow>();
             _floatingWindow.Closed += OnFloatingWindowClosed;
-            _floatingWindow.SetRevitOwner();
+            _floatingWindow.SetHostAppOwner();
             _floatingWindow.Show();
         });
     }

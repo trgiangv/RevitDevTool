@@ -3,6 +3,7 @@ using System.Diagnostics;
 using System.IO;
 using CliWrap;
 using CliWrap.Buffered;
+using DevTools.Utilities;
 using RevitDevTool.Execution.Services;
 using RevitDevTool.Utils;
 // ReSharper disable RedundantSuppressNullableWarningExpression

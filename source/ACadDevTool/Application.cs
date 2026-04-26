@@ -1,5 +1,4 @@
 ﻿using AcadDevTool.Controllers;
-using AcadDevTool.Utils;
 using Autodesk.AutoCAD.Runtime;
 using Autodesk.Windows;
 using DevTools.UI.Theme;

@@ -1,6 +1,7 @@
 using System.Runtime.InteropServices;
 using System.Windows;
 using System.Windows.Interop;
+using Autodesk.Windows;
 // ReSharper disable InconsistentNaming
 // ReSharper disable ConvertToExtensionBlock
 // ReSharper disable UnusedMethodReturnValue.Local
@@ -93,5 +94,11 @@ public static partial class Win32Utils
         var hMenu = GetSystemMenu(helper.Handle, false);
         if (hMenu != IntPtr.Zero)
             EnableMenuItem(hMenu, SC_CLOSE, MF_BYCOMMAND | MF_GRAYED | MF_DISABLED);
+    }
+    
+    public static void SetHostAppOwner(this Window window)
+    {
+        new WindowInteropHelper(window).Owner = ComponentManager.ApplicationWindow;
+        window.Closed += (_, _) => SetForegroundWindow(ComponentManager.ApplicationWindow);
     }
 }

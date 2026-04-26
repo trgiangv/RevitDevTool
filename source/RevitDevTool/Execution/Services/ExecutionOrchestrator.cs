@@ -1,6 +1,7 @@
 using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.IO;
+using DevTools.Utilities;
 using Microsoft.Extensions.DependencyInjection;
 using RevitDevTool.Execution.Interfaces;
 using RevitDevTool.Execution.Models;
@@ -210,7 +211,7 @@ public sealed class ExecutionOrchestrator : IExecutionOrchestrator, IDisposable
         if (e.ChangeType == FileChangeType.Modified)
             return;
 
-        Utils.DispatcherHelper.RunOnMainThread(async void () =>
+        DispatcherHelper.RunOnMainThread(async void () =>
         {
             try
             {
