@@ -2,7 +2,12 @@
 <Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
 
     <ItemGroup>
-        <PackageReference Include="Speckle.AutoCAD.API" VersionOverride="$(AutoCadVersion).*" ExcludeAssets="runtime" />
+        <PackageReference Include="AutoCAD.NET" VersionOverride="$(AutoCadInternalVersion)" ExcludeAssets="runtime" />
+    </ItemGroup>
+
+    <ItemGroup Condition="'$(MSBuildProjectExtension)' != '.fsproj'">
+        <Using Include="JetBrains.Annotations" />
+        <Using Include="System" />
     </ItemGroup>
 
 </Project>

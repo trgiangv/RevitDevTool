@@ -47,6 +47,8 @@
         <!--Revit Tasks (Testing only)-->
         <PackageVersion Include="Revit.Async" Version="2.1.1"/>
         <PackageVersion Include="ricaun.Revit.UI.Tasks" Version="1.0.1"/>
+        <!--AutoCad-->
+        <PackageVersion Include="ricaun.AutoCAD.UI" Version="0.5.0"/>
         <!--Tests-->
         <PackageVersion Include="coverlet.collector" Version="8.0.0"/>
         <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="18.3.0"/>

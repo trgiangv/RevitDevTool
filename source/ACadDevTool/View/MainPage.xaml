@@ -1,0 +1,28 @@
+<UserControl x:Class="AcadDevTool.View.MainPage"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:design="clr-namespace:AcadDevTool.Theme.Design"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             d:DesignHeight="600"
+             d:DesignWidth="500"
+             Background="{DynamicResource DevTools.MahApps.Brushes.ThemeBackground}"
+             mc:Ignorable="d">
+
+    <UserControl.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="/AcadDevTool;component/Theme/Theme.xaml" />
+                <design:IntellisenseResources Source="/AcadDevTool;component/Theme/Design/DesignTimeResources.xaml" />
+            </ResourceDictionary.MergedDictionaries>
+        </ResourceDictionary>
+    </UserControl.Resources>
+
+    <Grid>
+        <TextBlock HorizontalAlignment="Center"
+                   VerticalAlignment="Center"
+                   FontSize="16"
+                   Foreground="{DynamicResource DevTools.MahApps.Brushes.ThemeForeground}"
+                   Text="DevTools Panel" />
+    </Grid>
+</UserControl>

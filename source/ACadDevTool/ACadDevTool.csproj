@@ -1,0 +1,85 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <UseAutoCad>true</UseAutoCad>
+        <UseWpf>true</UseWpf>
+        <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+        <UseWindowsForms>true</UseWindowsForms>
+        <DeployAutoCadBundle>true</DeployAutoCadBundle>
+    </PropertyGroup>
+
+    <PropertyGroup>
+        <!-- AutoCAD 2027 has new isolated context, that has issue with ILRepack -> System.BadImageFormatException: Invalid token -->
+        <IsRepackable Condition="$(AutoCadVersion) &lt; 2027">true</IsRepackable>
+        <RepackBinariesExcludes>
+            DevTools.MahApps.Metro.dll;
+            DevTools.ControlzEx.dll;
+            DevTools.Microsoft.Xaml.Behaviors.dll;
+            FSharp.Core.dll;
+        </RepackBinariesExcludes>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <!--Build-->
+        <PackageReference Include="ILRepack"/>
+
+        <!--UI-->
+        <PackageReference Include="CommunityToolkit.Mvvm"/>
+        <PackageReference Include="Microsoft.Web.WebView2" Condition="$(RevitVersion) &lt; 2024"/>
+        <PackageReference Include="ricaun.AutoCAD.UI"/>
+
+        <!--Python-->
+        <PackageReference Include="pythonnet"/>
+
+        <!--MCP-->
+        <PackageReference Include="ModelContextProtocol"/>
+
+        <!--FSharp-->
+        <PackageReference Include="FSharp.Core"/>
+        <PackageReference Include="FSharp.Compiler.Service"/>
+
+        <!--Logging-->
+        <PackageReference Include="ZLogger"/>
+        <PackageReference Include="ZLogger.Scintilla" />
+        <PackageReference Include="Scintilla5.NET" Condition="$(TargetFramework.StartsWith('net4'))" /> <!-- Just to ensure unmanaged dlls copy to output -->
+
+        <!--Ioc-->
+        <PackageReference Include="Microsoft.Extensions.Hosting"/>
+
+        <!-- Utils -->
+        <PackageReference Include="Microsoft-WindowsAPICodePack-Shell" Condition="$(TargetFramework.StartsWith('net4'))"/>
+        <PackageReference Include="System.Reflection.MetadataLoadContext"/>
+        <PackageReference Include="System.Net.Http" Condition="$(TargetFramework.StartsWith('net4'))"/>
+        <PackageReference Include="CliWrap"/>
+    </ItemGroup>
+
+    <ItemGroup Condition="$(TargetFramework.StartsWith('net4'))">
+        <Reference Include="System.IO.Compression" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\..\libs\MahApps.Metro\src\MahApps.Metro\MahApps.Metro.csproj" />
+        <ProjectReference Include="..\..\libs\pythonnet-stub-generator\csharp\PythonNetStubGenerator\PythonNetStubGenerator.csproj" />
+        <ProjectReference Include="..\DevTools.Utilities\DevTools.Utilities.csproj" />
+        <ProjectReference Include="..\DevTools.Logging\DevTools.Logging.csproj" />
+        <ProjectReference Include="..\DevTool.McpParser\DevTool.McpParser.csproj" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <Using Include="CommunityToolkit.Mvvm.ComponentModel" />
+        <Using Include="CommunityToolkit.Mvvm.Input" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <EmbeddedResource Include="Resources\scripts\*.*" />
+        <Resource Include="Resources\icons\*.*"/>
+    </ItemGroup>
+
+    <!-- Start AutoCad -->
+    <PropertyGroup>
+        <StartAction>Program</StartAction>
+        <StartProgram>C:\Program Files\Autodesk\AutoCAD $(AutoCadVersion)\acad.exe</StartProgram>
+        <StartArguments>/language ENG</StartArguments>
+    </PropertyGroup>
+
+</Project>

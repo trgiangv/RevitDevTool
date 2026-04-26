@@ -11,7 +11,7 @@
     </ItemGroup>
 
     <ItemGroup>
-        <PackageReference Include="Microsoft-WindowsAPICodePack-Shell" Condition="$(TargetFramework.StartsWith('net4'))" />
+        <PackageReference Include="Microsoft-WindowsAPICodePack-Shell" />
     </ItemGroup>
 
 </Project>

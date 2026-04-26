@@ -1,0 +1,198 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+
+
+    <!-- ============================================== -->
+    <!-- 1. Debug / Release Detection                   -->
+    <!-- ============================================== -->
+
+    <PropertyGroup Condition="'$(Configuration)' != 'Debug' AND $(Configuration.Contains('Debug'))">
+        <DebugSymbols>true</DebugSymbols>
+        <DefineConstants>$(DefineConstants);DEBUG</DefineConstants>
+    </PropertyGroup>
+
+    <PropertyGroup
+            Condition="'$(Configuration)' != 'Release' AND $(Configuration.Contains('Release'))">
+        <Optimize>true</Optimize>
+        <DebugType>portable</DebugType>
+        <DefineConstants>$(DefineConstants);RELEASE</DefineConstants>
+    </PropertyGroup>
+
+    <!-- ============================================== -->
+    <!-- 2. ILRepack                                    -->
+    <!-- ============================================== -->
+
+    <Target Name="RepackAddinFiles"
+            AfterTargets="Build"
+            BeforeTargets="PublishAutoCadBundleFiles"
+            Condition="'$(IsRepackable)' == 'true'">
+
+        <ItemGroup>
+            <ILRepackVersion Include="@(PackageVersion)"
+                             Condition="'%(PackageVersion.Identity)' == 'ILRepack'"/>
+        </ItemGroup>
+
+        <ItemGroup Condition="'@(ILRepackVersion->Count())' == '0'">
+            <ILRepackVersion Include="@(PackageReference)"
+                             Condition="'%(PackageReference.Identity)' == 'ILRepack'"/>
+        </ItemGroup>
+
+        <Error Condition="'@(ILRepackVersion->Count())' == '0'"
+               Text="ILRepack is required but not installed. The IsRepackable property is set to true. Add a PackageReference to ILRepack, or unset IsRepackable."/>
+
+        <ItemGroup>
+            <ILRepackInputNamesExcludes Include="$(RepackBinariesExcludes.Split(';'))"/>
+            <ILRepackInputAssembliesExcludes
+                    Include="$(OutputPath)%(ILRepackInputNamesExcludes.Identity)"/>
+        </ItemGroup>
+
+        <ItemGroup>
+            <ILRepackInputAssemblies Include="$(OutputPath)$(AssemblyName).dll"/>
+            <ILRepackInputAssemblies Include="$(OutputPath)*.dll"
+                                     Exclude="@(ILRepackInputAssembliesExcludes)"/>
+        </ItemGroup>
+
+        <PropertyGroup>
+            <ILRepackOutputName>$(AssemblyName)</ILRepackOutputName>
+            <ILRepackOutput>/out:&quot;$(OutputPath)$(ILRepackOutputName).dll&quot;</ILRepackOutput>
+            <ILRepackInput>@(ILRepackInputAssemblies -> '&quot;%(FullPath)&quot;', ' ')</ILRepackInput>
+            <ILRepackPath>&quot;$(NuGetPackageRoot)\ilrepack\%(ILRepackVersion.Version)\tools\ILRepack.exe&quot;</ILRepackPath>
+            <ILRepackLib>@(ReferencePath->'%(RelativeDir)'->Distinct()->'/lib:&quot;%(identity) &quot;', ' ')</ILRepackLib>
+        </PropertyGroup>
+
+        <Message Text="Repacking $(MSBuildProjectDirectory)\$(OutputPath)$(AssemblyName).dll"
+                 Importance="high"/>
+
+        <Exec
+                Command="$(ILRepackPath) /union /illink /parallel $(ILRepackOutput) $(ILRepackLib) $(ILRepackInput)"
+                Condition="$(Configuration.Contains('Debug'))"/>
+
+        <Exec
+                Command="$(ILRepackPath) /union /illink /parallel /noRepackRes /ndebug $(ILRepackOutput) $(ILRepackLib) $(ILRepackInput)"
+                StandardOutputImportance="Low"
+                Condition="$(Configuration.Contains('Release'))"/>
+
+        <ItemGroup>
+            <RepackedFiles
+                    Include="@(ILRepackInputAssemblies -> '%(RootDir)%(Directory)%(Filename).dll')"
+                    Condition="%(Filename) != $(ILRepackOutputName)"/>
+            <RepackedFiles
+                    Include="@(ILRepackInputAssemblies -> '%(RootDir)%(Directory)%(Filename).pdb')"
+                    Condition="%(Filename) != $(ILRepackOutputName)"/>
+        </ItemGroup>
+
+        <Delete Files="@(RepackedFiles)"/>
+    </Target>
+
+    <!-- ============================================== -->
+    <!-- 3. Deploy Bundle                               -->
+    <!-- ============================================== -->
+    <!--
+        AutoCAD-family apps (AutoCAD, Civil 3D, Plant 3D, ...) use the
+        ApplicationPlugins bundle layout:
+          %APPDATA%\Autodesk\ApplicationPlugins\<Name>.bundle\
+              PackageContents.xml
+              <Version>\*.dll
+    -->
+
+    <PropertyGroup>
+        <BundleDestinationFolder Condition="'$(BundleDestinationFolder)' == ''">$(AppData)\Autodesk\ApplicationPlugins\$(MSBuildProjectName).bundle</BundleDestinationFolder>
+        <DeployAutoCadBundle Condition="'$(DeployAutoCadBundle)' == ''">false</DeployAutoCadBundle>
+        <PublishAutoCadBundle Condition="'$(DeployAutoCadBundle)' == 'true'">true</PublishAutoCadBundle>
+        <PublishAutoCadBundle Condition="'$(PublishAutoCadBundle)' == ''">false</PublishAutoCadBundle>
+    </PropertyGroup>
+
+    <Target Name="PublishAutoCadBundleFiles"
+            AfterTargets="CoreBuild"
+            Condition="$(PublishAutoCadBundle) == 'true' AND '$(AutoCadVersion)' != '' AND '$(TargetFramework)' != ''">
+
+        <ItemGroup>
+            <PackageContentsFile Include="$(ProjectDir)PackageContents.xml"/>
+            <BundleItems Include="$(TargetDir)**\*" Exclude="**\$(PublishDirName)\**\*"/>
+        </ItemGroup>
+
+        <PropertyGroup>
+            <BundlePublishDir>$(PublishDir)</BundlePublishDir>
+            <BundleVersionDir>$(BundlePublishDir)$(AutoCadVersion)\</BundleVersionDir>
+        </PropertyGroup>
+
+        <Copy SourceFiles="@(PackageContentsFile)"
+              DestinationFolder="$(BundlePublishDir)"/>
+        <Copy SourceFiles="@(BundleItems)"
+              DestinationFolder="$(BundleVersionDir)%(RecursiveDir)"/>
+
+        <Message Text="$(MSBuildProjectName) -> $(BundlePublishDir)" Importance="high"/>
+    </Target>
+
+    <Target Name="DeployAutoCadBundleFiles"
+            AfterTargets="PublishAutoCadBundleFiles"
+            Condition="$(DeployAutoCadBundle) == 'true' AND '$(AutoCadVersion)' != '' AND '$(TargetFramework)' != ''">
+
+        <ItemGroup>
+            <BundleDeployItems Include="$(PublishDir)**\*"/>
+        </ItemGroup>
+
+        <Copy SourceFiles="@(BundleDeployItems)"
+              SkipUnchangedFiles="false"
+              DestinationFolder="$(BundleDestinationFolder)\%(RecursiveDir)"
+              ContinueOnError="true"
+              Retries="1"/>
+
+        <Message Text="$(MSBuildProjectName) -> $(BundleDestinationFolder)\"
+                 Importance="high"/>
+    </Target>
+
+    <Target Name="CleanAutoCadBundleFolder"
+            AfterTargets="Clean"
+            Condition="$(DeployAutoCadBundle) == 'true'">
+        <RemoveDir Directories="$(BundleDestinationFolder)" ContinueOnError="true"/>
+    </Target>
+
+    <Target Name="CleanPublishFolder"
+            AfterTargets="Clean"
+            Condition="$(PublishAutoCadBundle) == 'true'">
+        <RemoveDir Directories="$(PublishDir)"/>
+    </Target>
+
+    <!-- ============================================== -->
+    <!-- 4. Define Constants                            -->
+    <!-- ============================================== -->
+
+    <Target Name="GenerateAutoCadCompatibleDefineConstants"
+            BeforeTargets="CoreCompile"
+            Condition="'$(AutoCadVersion)' != '' AND '$(DisableImplicitAutoCadDefines)' != 'true'">
+
+        <PropertyGroup>
+            <DefineConstants>$(DefineConstants);AUTOCAD$(AutoCadVersion)</DefineConstants>
+        </PropertyGroup>
+
+        <!-- AutoCAD version ladder -->
+        <PropertyGroup Condition="$(AutoCadVersion) &gt;= 2022">
+            <DefineConstants>$(DefineConstants);AUTOCAD2022_OR_GREATER</DefineConstants>
+        </PropertyGroup>
+        <PropertyGroup Condition="$(AutoCadVersion) &gt;= 2023">
+            <DefineConstants>$(DefineConstants);AUTOCAD2023_OR_GREATER</DefineConstants>
+        </PropertyGroup>
+        <PropertyGroup Condition="$(AutoCadVersion) &gt;= 2024">
+            <DefineConstants>$(DefineConstants);AUTOCAD2024_OR_GREATER</DefineConstants>
+        </PropertyGroup>
+        <PropertyGroup Condition="$(AutoCadVersion) &gt;= 2025">
+            <DefineConstants>$(DefineConstants);AUTOCAD2025_OR_GREATER</DefineConstants>
+        </PropertyGroup>
+        <PropertyGroup Condition="$(AutoCadVersion) &gt;= 2026">
+            <DefineConstants>$(DefineConstants);AUTOCAD2026_OR_GREATER</DefineConstants>
+        </PropertyGroup>
+        <PropertyGroup Condition="$(AutoCadVersion) &gt;= 2027">
+            <DefineConstants>$(DefineConstants);AUTOCAD2027_OR_GREATER</DefineConstants>
+        </PropertyGroup>
+
+        <!-- Product-family defines (set UseXxx in csproj to opt-in) -->
+        <PropertyGroup Condition="'$(UseCivil3d)' == 'true'">
+            <DefineConstants>$(DefineConstants);CIVIL3D;CIVIL3D$(Civil3dVersion)</DefineConstants>
+        </PropertyGroup>
+        <PropertyGroup Condition="'$(UsePlant3d)' == 'true'">
+            <DefineConstants>$(DefineConstants);PLANT3D;PLANT3D$(AutoCadVersion)</DefineConstants>
+        </PropertyGroup>
+    </Target>
+
+</Project>

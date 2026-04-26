@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ApplicationPackage SchemaVersion="1.0" AutodeskProduct="AutoCAD" Name="AcadDevTool" AppVersion="0.0.0" ProductType="Application" >
+  <CompanyDetails Name="Inspexel" />
+  <Components Description="AutoCAD 2026+">
+    <RuntimeRequirements OS="Win64" Platform="AutoCAD*" SeriesMin="R25.1" />
+    <ComponentEntry AppName="AcadDevTool" ModuleName="./2026/AcadDevTool.dll" />
+  </Components>
+</ApplicationPackage>

@@ -1,5 +1,5 @@
 ﻿<component name="ProjectRunConfigurationManager">
-  <configuration default="false" name="Compile" type="DotNetProject" factoryName=".NET Project">
+  <configuration default="false" name="Compile" type="DotNetProject" factoryName=".NET Project" folderName="Build">
     <option name="EXE_PATH" value="$PROJECT_DIR$/build/bin/Debug/net10.0/Build.exe" />
     <option name="PROGRAM_PARAMETERS" value="" />
     <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/build/bin/Debug/net10.0" />

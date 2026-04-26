@@ -40,44 +40,44 @@
     </PropertyGroup>
 
     <PropertyGroup Condition="$(Configuration.Contains('2022'))">
+        <AutoCadInternalVersion>24.2.0</AutoCadInternalVersion>
         <AutoCadVersion>2022</AutoCadVersion>
         <Civil3dVersion>2022</Civil3dVersion>
-        <NavisworksVersion>2022</NavisworksVersion>
         <RevitVersion>2022</RevitVersion>
         <TargetFramework>net48</TargetFramework>
     </PropertyGroup>
     <PropertyGroup Condition="$(Configuration.Contains('2023'))">
+        <AutoCadInternalVersion>24.3.0</AutoCadInternalVersion>
         <AutoCadVersion>2023</AutoCadVersion>
         <Civil3dVersion>2023</Civil3dVersion>
-        <NavisworksVersion>2023</NavisworksVersion>
         <RevitVersion>2023</RevitVersion>
         <TargetFramework>net48</TargetFramework>
     </PropertyGroup>
     <PropertyGroup Condition="$(Configuration.Contains('2024'))">
+        <AutoCadInternalVersion>24.3.0</AutoCadInternalVersion>
         <AutoCadVersion>2024</AutoCadVersion>
         <Civil3dVersion>2024</Civil3dVersion>
-        <NavisworksVersion>2024</NavisworksVersion>
         <RevitVersion>2024</RevitVersion>
         <TargetFramework>net48</TargetFramework>
     </PropertyGroup>
     <PropertyGroup Condition="$(Configuration.Contains('2025'))">
+        <AutoCadInternalVersion>25.0.1</AutoCadInternalVersion>
         <AutoCadVersion>2025</AutoCadVersion>
         <Civil3dVersion>2025</Civil3dVersion>
-        <NavisworksVersion>2025</NavisworksVersion>
         <RevitVersion>2025</RevitVersion>
         <TargetFramework>net8.0-windows</TargetFramework>
     </PropertyGroup>
     <PropertyGroup Condition="$(Configuration.Contains('2026'))">
+        <AutoCadInternalVersion>25.1.0</AutoCadInternalVersion>
         <AutoCadVersion>2026</AutoCadVersion>
         <Civil3dVersion>2026</Civil3dVersion>
-        <NavisworksVersion>2026</NavisworksVersion>
         <RevitVersion>2026</RevitVersion>
         <TargetFramework>net8.0-windows</TargetFramework>
     </PropertyGroup>
     <PropertyGroup Condition="$(Configuration.Contains('2027'))">
+        <AutoCadInternalVersion>26.0.0</AutoCadInternalVersion>
         <AutoCadVersion>2027</AutoCadVersion>
         <Civil3dVersion>2027</Civil3dVersion>
-        <NavisworksVersion>2027</NavisworksVersion>
         <RevitVersion>2027</RevitVersion>
         <TargetFramework>net10.0-windows</TargetFramework>
     </PropertyGroup>

@@ -10,11 +10,6 @@
 
     <!-- AutoCad -->
     <Import Condition="'$(UseAutoCad)' == 'true'" Project="$(MSBuildThisFileDirectory)props\AutoCad.props" />
-    
-    <!-- Civil3d -->
-    <Import Condition="'$(UseCivil3d)' == 'true'" Project="$(MSBuildThisFileDirectory)props\Civil3d.props" />
-
-    <!-- Navisworks -->
-    <Import Condition="'$(UseNavisworks)' == 'true'" Project="$(MSBuildThisFileDirectory)props\Navisworks.props" />
+    <Import Condition="'$(UseAutoCad)' == 'true'" Project="$(MSBuildThisFileDirectory)props\AutoCad.targets" />
 
 </Project>

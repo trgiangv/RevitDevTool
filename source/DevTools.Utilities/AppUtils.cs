@@ -29,21 +29,31 @@ public static class AppUtils
     /// <returns>Selected folder path or empty string if cancelled</returns>
     public static string SelectFolder(string title, Window? owner = null)
     {
-#if NET8_0_OR_GREATER
-        var dialog = new Microsoft.Win32.OpenFolderDialog
-        {
-            Title = title,
-            Multiselect = false
-        };
-        return dialog.ShowDialog(owner) == true ? dialog.FolderName : string.Empty;
-#else
         using var dialog = new Microsoft.WindowsAPICodePack.Dialogs.CommonOpenFileDialog();
         dialog.Title = title;
         dialog.IsFolderPicker = true;
         dialog.Multiselect = false;
-        return dialog.ShowDialog(owner) == Microsoft.WindowsAPICodePack.Dialogs.CommonFileDialogResult.Ok
+        var result = owner != null ? dialog.ShowDialog(owner) : dialog.ShowDialog();
+        return result == Microsoft.WindowsAPICodePack.Dialogs.CommonFileDialogResult.Ok
             ? dialog.FileName
             : string.Empty;
-#endif
+    }
+    
+    /// <summary>
+    /// Show a folder selection dialog and return the selected folder path.
+    /// </summary>
+    /// <param name="title">Dialog description</param>
+    /// <param name="owner">Owner window handle for the dialog</param>
+    /// <returns>Selected folder path or empty string if cancelled</returns>
+    public static string SelectFolder(string title, IntPtr? owner = null)
+    {
+        using var dialog = new Microsoft.WindowsAPICodePack.Dialogs.CommonOpenFileDialog();
+        dialog.Title = title;
+        dialog.IsFolderPicker = true;
+        dialog.Multiselect = false;
+        var result = owner.HasValue ? dialog.ShowDialog(owner.Value) : dialog.ShowDialog();
+        return result == Microsoft.WindowsAPICodePack.Dialogs.CommonFileDialogResult.Ok
+            ? dialog.FileName
+            : string.Empty;
     }
 }
