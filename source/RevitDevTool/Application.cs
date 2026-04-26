@@ -25,8 +25,6 @@ public class Application : IExternalApplication
 
     public Result OnShutdown(UIControlledApplication application)
     {
-        Host.GetService<PanelController>().Shutdown();
-        application.ControlledApplication.ApplicationInitialized -= OnApplicationInitialized;
         Host.Stop();
         return Result.Succeeded;
     }
@@ -44,12 +42,12 @@ public class Application : IExternalApplication
         panel.AddPushButton<DevToolsCommand>(DevToolsCommand.CommandName)
             .AddShortcuts("AD")
             .SetAvailabilityController<DevToolsCommand>()
-            .SetLargeImage("/RevitDevTool;component/Resources/Icons/TraceGeometry32_light.tiff")
+            .SetLargeImage("/DevTools.UI;component/Resources/Icons/TraceGeometry32_light.tiff")
             .SetToolTip("Execute last command\nCtrl + click to Show/Hide DevTools");
 
         panel.AddPushButton<StubBuilderCommand>("StubBuilder")
             .SetAvailabilityController<StubBuilderCommand>()
-            .SetLargeImage("/RevitDevTool;component/Resources/Icons/python32.png")
+            .SetLargeImage("/DevTools.UI;component/Resources/Icons/python32.png")
             .SetToolTip("Generate Python .pyi stub files from .NET assemblies");
     }
 }

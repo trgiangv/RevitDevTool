@@ -1,0 +1,22 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <TargetFrameworks>net48;net8.0-windows;net10.0-windows</TargetFrameworks>
+        <UseWpf>true</UseWpf>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\..\libs\MahApps.Metro\src\MahApps.Metro\MahApps.Metro.csproj" />
+        <ProjectReference Include="..\DevTools.McpParser\DevTools.McpParser.csproj" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <Using Include="JetBrains.Annotations" />
+        <Using Include="System" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <Resource Include="Resources\icons\*.*"/>
+    </ItemGroup>
+
+</Project>

@@ -1,4 +1,5 @@
 using System.Collections.ObjectModel;
+using DevTools.UI.Controls;
 using RevitDevTool.Execution.Interfaces;
 namespace RevitDevTool.Execution.Models;
 
@@ -20,7 +21,7 @@ public abstract partial class TreeNodeBase : ObservableObject
     private bool _isVisible = true;
 
     [ObservableProperty]
-    private ISelectionRange? _highlightRange;
+    private HighlightRange? _highlightRange;
 
     public abstract IEnumerable<TreeNodeBase> ChildNodes { get; }
 }

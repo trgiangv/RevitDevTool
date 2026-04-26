@@ -44,6 +44,7 @@ public static class Host
 
     public static void Start()
     {
+        SetupTheme();
         var contentRoot = SettingsUtils.GetContentRootPath();
         var builder = Microsoft.Extensions.Hosting.Host.CreateApplicationBuilder(new HostApplicationBuilderSettings
         {
@@ -217,5 +218,21 @@ public static class Host
     public static object? GetService(Type serviceType)
     {
         return _host!.Services.GetService(serviceType);
+    }
+
+    private static void SetupTheme()
+    {
+#if REVIT2024_OR_GREATER
+        DevTools.UI.Theme.ThemeManager.Setup(
+            () => UIThemeManager.CurrentTheme == UITheme.Dark
+                ? DevTools.UI.Theme.AppTheme.Dark
+                : DevTools.UI.Theme.AppTheme.Light,
+            onChanged => UIFramework.ApplicationTheme.CurrentTheme.PropertyChanged += (_, e) =>
+            {
+                if (e.PropertyName != nameof(UIFramework.ApplicationTheme.CurrentTheme.RibbonPanelBackgroundBrush)) return;
+                if (UIThemeManager.CurrentTheme.ToString() == UIFramework.ApplicationTheme.CurrentTheme.RibbonTheme.Name) return;
+                DispatcherHelper.RunOnMainThread(onChanged);
+            });
+#endif
     }
 }

@@ -16,6 +16,7 @@
             DevTools.ControlzEx.dll;
             DevTools.Microsoft.Xaml.Behaviors.dll;
             FSharp.Core.dll;
+            DevTools.UI.dll;
         </RepackBinariesExcludes>
     </PropertyGroup>
 
@@ -57,7 +58,7 @@
     </ItemGroup>
     
     <ItemGroup>
-        <ProjectReference Include="..\..\libs\MahApps.Metro\src\MahApps.Metro\MahApps.Metro.csproj" />
+        <ProjectReference Include="..\DevTools.UI\DevTools.UI.csproj" />
         <ProjectReference Include="..\DevTools.Utilities\DevTools.Utilities.csproj" />
         <ProjectReference Include="..\DevTools.Logging\DevTools.Logging.csproj" />
         <ProjectReference Include="..\DevTools.McpParser\DevTools.McpParser.csproj" />
@@ -72,7 +73,6 @@
 
     <ItemGroup>
         <EmbeddedResource Include="Resources\scripts\*.*" />
-        <Resource Include="resources\icons\*.*"/>
     </ItemGroup>
 
     <!-- Start Revit -->

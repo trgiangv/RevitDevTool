@@ -2,7 +2,7 @@
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
-             xmlns:design="clr-namespace:RevitDevTool.Theme.Design"
+             xmlns:design="clr-namespace:DevTools.UI.Theme.Design;assembly=DevTools.UI"
              xmlns:mah="http://metro.devtools.ui/winfx/xaml/controls"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:settings="clr-namespace:RevitDevTool.ViewModel.Settings"
@@ -16,8 +16,8 @@
     <UserControl.Resources>
         <ResourceDictionary>
             <ResourceDictionary.MergedDictionaries>
-                <ResourceDictionary Source="/RevitDevTool;component/Theme/Theme.xaml" />
-                <design:IntellisenseResources Source="/RevitDevTool;component/Theme/Design/DesignTimeResources.xaml" />
+                <ResourceDictionary Source="/DevTools.UI;component/Theme/Theme.xaml" />
+                <design:IntellisenseResources Source="/DevTools.UI;component/Theme/Design/DesignTimeResources.xaml" />
             </ResourceDictionary.MergedDictionaries>
             <BooleanToVisibilityConverter x:Key="BoolToVisibility" />
             <sys:Double x:Key="ContentMinWidth">100</sys:Double>
@@ -135,8 +135,8 @@
                                                HorizontalAlignment="Right"
                                                VerticalAlignment="Center"
                                                Minimum="1"
-                                               Value="{Binding StackTraceDepth, UpdateSourceTrigger=PropertyChanged}"
-                                               Visibility="{Binding IncludeStackTrace, Converter={StaticResource BoolToVisibility}}" />
+                                               Visibility="{Binding IncludeStackTrace, Converter={StaticResource BoolToVisibility}}"
+                                               Value="{Binding StackTraceDepth, UpdateSourceTrigger=PropertyChanged}" />
                         </StackPanel>
                     </Grid>
 
@@ -150,7 +150,7 @@
                         <Image Width="20"
                                Height="20"
                                VerticalAlignment="Center"
-                               Source="pack://application:,,,/RevitDevTool;component/Resources/Icons/wpf.png" />
+                               Source="pack://application:,,,/DevTools.UI;component/Resources/Icons/wpf.png" />
                         <StackPanel Grid.Column="1"
                                     Margin="12,0"
                                     VerticalAlignment="Center">

@@ -6,7 +6,7 @@ using DevTools.Logging.Options;
 using Microsoft.Extensions.Logging;
 using RevitDevTool.Logging.Listeners;
 using RevitDevTool.Settings;
-using RevitDevTool.Theme;
+using DevTools.UI.Theme;
 
 namespace RevitDevTool.Logging;
 

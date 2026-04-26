@@ -2,7 +2,7 @@ using CommunityToolkit.Mvvm.Messaging;
 using RevitDevTool.Controllers;
 using RevitDevTool.Logging;
 using RevitDevTool.Settings;
-using RevitDevTool.Theme;
+using DevTools.UI.Theme;
 using RevitDevTool.ViewModel.Messages;
 // ReSharper disable ReplaceWithFieldKeyword
 

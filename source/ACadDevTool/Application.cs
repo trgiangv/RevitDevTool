@@ -1,9 +1,11 @@
 ﻿using AcadDevTool.Controllers;
-using AcadDevTool.Theme;
+using AcadDevTool.Utils;
 using Autodesk.AutoCAD.Runtime;
 using Autodesk.Windows;
+using DevTools.UI.Theme;
 using DevTools.Utilities;
 using ricaun.AutoCAD.UI;
+using AcadApp = Autodesk.AutoCAD.ApplicationServices.Core.Application;
 using Application = AcadDevTool.Application;
 [assembly: ExtensionApplication(typeof(Application))]
 namespace AcadDevTool;
@@ -15,6 +17,13 @@ public class Application : ExtensionApplication
     public override void OnStartup(RibbonControl ribbonControl)
     {
         AssemblyLoader.Initialize();
+        ThemeManager.Setup(
+            () => (short)AcadApp.GetSystemVariable("COLORTHEME") == 0 ? AppTheme.Dark : AppTheme.Light,
+            onChanged => AcadApp.SystemVariableChanged += (_, e) =>
+            {
+                if (!string.Equals(e.Name, "COLORTHEME", StringComparison.OrdinalIgnoreCase)) return;
+                DispatcherHelper.RunOnMainThread(onChanged);
+            });
         ThemeManager.Current.ApplySettingsTheme(AppTheme.Auto);
         PanelController.Initialize();
         AddButtons(ribbonControl);

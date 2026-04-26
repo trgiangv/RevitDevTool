@@ -4,6 +4,7 @@ using RevitDevTool.Settings.Config;
 using RevitDevTool.Settings.Options;
 using System.Diagnostics;
 using System.IO;
+using DevTools.UI.Theme;
 using AppUtils = DevTools.Utilities.AppUtils;
 
 namespace RevitDevTool.Settings;
@@ -169,9 +170,9 @@ public sealed class SettingsService(IFileConfig<PathOptions> fileConfig) : ISett
         _generalConfig = new GeneralConfig
         {
 #if REVIT2024_OR_GREATER
-            Theme = Theme.AppTheme.Auto,
+            Theme = AppTheme.Auto,
 #else
-            Theme = Theme.AppTheme.Light,
+            Theme = AppTheme.Light,
 #endif
             UseHardwareRendering = true,
             IsTraceEnabled = true,

@@ -1,5 +1,6 @@
 namespace RevitDevTool.Execution.Models;
 
+[PublicAPI]
 public sealed class ExecutionResult
 {
     public bool Success { get; init; }

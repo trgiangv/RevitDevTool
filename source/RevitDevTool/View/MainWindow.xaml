@@ -3,7 +3,7 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:commands="clr-namespace:RevitDevTool.Commands"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
-        xmlns:design="clr-namespace:RevitDevTool.Theme.Design"
+        xmlns:design="clr-namespace:DevTools.UI.Theme.Design;assembly=DevTools.UI"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         Title="{x:Static commands:DevToolsCommand.CommandName}"
         Width="600"
@@ -20,8 +20,8 @@
     <Window.Resources>
         <ResourceDictionary>
             <ResourceDictionary.MergedDictionaries>
-                <ResourceDictionary Source="/RevitDevTool;component/Theme/Theme.xaml" />
-                <design:IntellisenseResources Source="/RevitDevTool;component/Theme/Design/DesignTimeResources.xaml" />
+                <ResourceDictionary Source="/DevTools.UI;component/Theme/Theme.xaml" />
+                <design:IntellisenseResources Source="/DevTools.UI;component/Theme/Design/DesignTimeResources.xaml" />
             </ResourceDictionary.MergedDictionaries>
         </ResourceDictionary>
     </Window.Resources>

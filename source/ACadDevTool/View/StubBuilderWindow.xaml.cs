@@ -2,7 +2,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Windows;
 using System.Windows.Input;
-using AcadDevTool.Theme;
+using DevTools.UI.Theme;
 using AcadDevTool.Utils;
 using AcadDevTool.ViewModel;
 using DevTools.Utilities;
