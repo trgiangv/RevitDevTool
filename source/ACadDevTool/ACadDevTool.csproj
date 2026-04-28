@@ -74,10 +74,6 @@
         <Using Include="ZLogger.Providers" />
     </ItemGroup>
 
-    <ItemGroup>
-        <EmbeddedResource Include="Resources\scripts\*.*" />
-    </ItemGroup>
-
     <!-- Start AutoCad -->
     <PropertyGroup>
         <StartAction>Program</StartAction>

@@ -8,11 +8,12 @@ import builtins
 clr.AddReference("acdbmgd")
 clr.AddReference("acmgd")
 clr.AddReference("accoremgd")
+clr.AddReference("AdWindows")
 clr.AddReference("AcadDevTool")
 import System
 from Autodesk.AutoCAD.ApplicationServices.Core import Application
 
-if Application.Version >= System.Version(24, 3, 0, 0): # AutoCAD 2023+ (24.3.0)
+if Application.Version >= System.Version(24, 3, 0, 0): # AutoCAD 2023+ (24.3.0) (WebView2 support)
     clr.AddReference("Microsoft.Web.WebView2.Wpf")
     clr.AddReference("Microsoft.Web.WebView2.Core")
 

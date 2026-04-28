@@ -47,4 +47,8 @@
         <Using Include="System" />
     </ItemGroup>
 
+    <ItemGroup>
+        <EmbeddedResource Include="Resources\scripts\*.*" />
+    </ItemGroup>
+
 </Project>

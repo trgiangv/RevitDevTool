@@ -11,13 +11,13 @@ clr.AddReference("AdWindows")
 clr.AddReference("UIFramework")
 clr.AddReference("UIFrameworkServices")
 clr.AddReference("RevitDevTool")
+import System
 
-# Version specific references
-if int(__revit__.Application.VersionNumber) >= 2024:  # pyright: ignore[reportUndefinedVariable] # noqa: F821
+if int(__revit__.Application.VersionNumber) >= 2024:  # Revit 2024+ (WebView2 support)  # pyright: ignore[reportUndefinedVariable]
     clr.AddReference("Microsoft.Web.WebView2.Wpf")
     clr.AddReference("Microsoft.Web.WebView2.Core")
 
-if int(__revit__.Application.VersionNumber) >= 2025:  # pyright: ignore[reportUndefinedVariable] # noqa: F821
+if System.Environment.Version.Major >= 8:  # Revit 2025+ (.NET 8)
     clr.AddReference("System.Console")
     clr.AddReference("System.Diagnostics.TraceSource")
 

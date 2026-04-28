@@ -73,10 +73,6 @@
         <Using Include="CommunityToolkit.Mvvm.Input" />
     </ItemGroup>
 
-    <ItemGroup>
-        <EmbeddedResource Include="Resources\scripts\*.*" />
-    </ItemGroup>
-
     <!-- Start Revit -->
     <PropertyGroup>
         <StartAction>Program</StartAction>

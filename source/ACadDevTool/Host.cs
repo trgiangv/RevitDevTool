@@ -145,7 +145,7 @@ public static class Host
 
         // Configure shared services for AutoCAD host
         NetworkService.ConfigureUserAgent("AutoCAD");
-        PythonEmbedded.Configure(typeof(Host).Assembly, "AcadDevTool.Resources.scripts");
+        PythonEmbedded.Configure(PythonHostKind.AutoCAD);
 
         // Shared execution services
         services.AddDevToolsExecution();

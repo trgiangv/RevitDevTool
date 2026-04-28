@@ -175,7 +175,7 @@ public static class Host
 
         // Configure shared services for Revit host
         NetworkService.ConfigureUserAgent("Revit");
-        PythonEmbedded.Configure(typeof(Host).Assembly, "RevitDevTool.Resources.scripts");
+        PythonEmbedded.Configure(PythonHostKind.Revit);
 
         // Shared execution services (Python, FSharp, Orchestrator, Pipe Server, MCP, etc.)
         services.AddDevToolsExecution();
