@@ -40,18 +40,43 @@ public partial class StubBuilderViewModel : ObservableObject
     private void LoadAppDomainAssemblies()
     {
         var assemblies = AppDomain.CurrentDomain.GetAssemblies()
-            .Where(a => !a.IsDynamic && !string.IsNullOrEmpty(a.Location))
+            .Where(a => !a.IsDynamic)
             .OrderBy(a => a.GetName().Name, StringComparer.OrdinalIgnoreCase)
             .Select(a => new AssemblyItem
             {
-                Name = a.GetName().Name ?? Path.GetFileNameWithoutExtension(a.Location),
+                Name = a.GetName().Name ?? "(unknown)",
                 FullName = a.FullName!,
-                Location = a.Location,
+                Location = ResolveAssemblyLocationHint(a),
                 Assembly = a
             });
 
         foreach (var item in assemblies)
             AppDomainAssemblies.Add(item);
+    }
+
+    /// <summary>
+    /// Prefer <see cref="Assembly.Location"/>; when empty (common in some hosts), show module path so stubs can still be chosen.
+    /// </summary>
+    private static string ResolveAssemblyLocationHint(Assembly assembly)
+    {
+        if (!string.IsNullOrEmpty(assembly.Location))
+            return assembly.Location;
+
+        try
+        {
+            foreach (var module in assembly.GetModules(false))
+            {
+                var fq = module.FullyQualifiedName;
+                if (!string.IsNullOrEmpty(fq) && File.Exists(fq))
+                    return fq;
+            }
+        }
+        catch
+        {
+            // ignored
+        }
+
+        return "(no disk path)";
     }
 
     [RelayCommand]
