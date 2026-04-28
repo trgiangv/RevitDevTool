@@ -1,4 +1,5 @@
 using System.IO;
+using DevTools.Logging;
 using DevTools.Logging.Abstractions;
 using DevTools.Logging.Options;
 using Microsoft.Extensions.Logging;
@@ -10,7 +11,7 @@ namespace DevTools.Logging.Targets;
 /// Manages file logging by dynamically adding/removing a <see cref="ZLoggerRollingFileLoggerProvider"/>
 /// to the <see cref="ILoggerFactory"/> at runtime.
 /// </summary>
-public sealed class FileLogProcessor(ILoggerFactory loggerFactory, IAppInfo appInfo) : IFileLogTarget
+public sealed class FileLogProcessor(ILoggerFactory loggerFactory, IHostAppInfo appInfo) : IFileLogTarget
 {
     private ZLoggerRollingFileLoggerProvider? _provider;
     private bool _disposed;

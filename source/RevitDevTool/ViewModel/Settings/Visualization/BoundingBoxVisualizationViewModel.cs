@@ -6,9 +6,9 @@ namespace RevitDevTool.ViewModel.Settings.Visualization;
 
 public sealed partial class BoundingBoxVisualizationViewModel : ObservableObject, IVisualizationViewModel
 {
-    private readonly ISettingsService _settingsService;
+    private readonly IRevitSettingsService _settingsService;
 
-    public BoundingBoxVisualizationViewModel(ISettingsService settingsService)
+    public BoundingBoxVisualizationViewModel(IRevitSettingsService settingsService)
     {
         _settingsService = settingsService;
 

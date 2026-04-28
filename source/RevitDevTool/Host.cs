@@ -4,36 +4,31 @@ using DevTools.Logging.Extensions;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using RevitDevTool.Bridges;
 using RevitDevTool.Controllers;
 using RevitDevTool.Logging;
 using RevitDevTool.Logging.Enrichers;
 using RevitDevTool.Logging.Linkify;
 using RevitDevTool.Settings;
-using RevitDevTool.Settings.Options;
+using DevTools.Execution.Settings;
 using RevitDevTool.View;
 using RevitDevTool.View.Settings.Visualization;
-using RevitDevTool.ViewModel;
-using RevitDevTool.ViewModel.Settings;
 using RevitDevTool.ViewModel.Settings.Visualization;
 using RevitDevTool.Visualization.Server;
 using System.IO;
-using DevTools.Entities;
+using DevTools.Execution;
+using DevTools.Execution.Interfaces;
+using DevTools.Execution.Providers.Python;
+using DevTools.Execution.Services;
 using DevTools.Logging.Abstractions;
-using RevitDevTool.Execution.Interfaces;
-using RevitDevTool.Execution.Providers;
-using RevitDevTool.Execution.Providers.Dotnet;
-using RevitDevTool.Execution.Providers.Python;
-using RevitDevTool.Execution.Services;
 using DevTools.McpParser.Dotnet;
+using DevTools.UI.Theme;
 using DevTools.Utilities;
-using RevitDevTool.ExternalExecution.Mcp.Dispatchers;
-using RevitDevTool.ExternalExecution.Mcp.Registry;
-using RevitDevTool.ExternalExecution;
-using RevitDevTool.ExternalExecution.Mcp.Handlers;
-using RevitDevTool.ExternalExecution.Handlers;
-using RevitDevTool.ExternalExecution.Testing;
-using RevitDevTool.ExternalExecution.Mcp;
-using RevitDevTool.ExternalExecution.Connections;
+using DevTools.Views;
+using DevTools.Views.Interfaces;
+using DevTools.Views.ViewModel;
+using DevTools.Views.ViewModel.Settings;
+using RevitDevTool.HostAdapters;
 // ReSharper disable ConvertToExtensionBlock
 
 namespace RevitDevTool;
@@ -62,6 +57,7 @@ public static class Host
                .ConfigureServices();
 
         _host = builder.Build();
+        ViewServiceLocator.Services = _host.Services;
         _host.Start();
     }
 
@@ -104,19 +100,28 @@ public static class Host
 
         // Core services
         services.AddSingleton<IFileConfig<PathOptions>, FileConfig>();
-        services.AddSingleton<ISettingsService, SettingsService>();
+        services.AddSingleton<SettingsService>();
+        services.AddSingleton<IRevitSettingsService>(sp => sp.GetRequiredService<SettingsService>());
+        services.AddSingleton<IDevToolsSettingsService>(sp => sp.GetRequiredService<SettingsService>());
+        services.AddSingleton<ISettingsService>(sp => sp.GetRequiredService<SettingsService>());
         services.AddHostedService<HostBackgroundController>();
 
         // Logging
-        services.AddSingleton<IAppInfo, RevitAppInfo>();
+        services.AddSingleton<IHostAppInfo, RevitHostAppInfo>();
         services.AddSingleton<IContextEnricher>(sp =>
         {
-            var settings = sp.GetRequiredService<ISettingsService>();
+            var settings = sp.GetRequiredService<IRevitSettingsService>();
             return new RevitContextProvider(settings.RevitEnrichers);
         });
-        services.AddSingleton<ILoggingService, LoggingService>();
-        services.AddSingleton<LogViewModel>();
+        services.AddSingleton<LoggingService>();
+        services.AddSingleton<IDevToolsLoggingService>(sp => sp.GetRequiredService<LoggingService>());
         services.AddSingleton<PanelController>();
+
+        // Bridges
+        services.AddSingleton<IDebuggerBridge, RevitDebuggerBridge>();
+        services.AddSingleton<IVisualizationBridge, RevitVisualizationBridge>();
+        services.AddSingleton<IHostIdlingBridge, RevitIdlingBridge>();
+        services.AddSingleton<ILogEnricherProvider, RevitLogEnricherProvider>();
 
         // Visualization Servers
         services.AddSingleton<BoundingBoxVisualizationServer>();
@@ -143,63 +148,48 @@ public static class Host
         services.AddTransient<SolidVisualizationSettingsView>();
         services.AddTransient<XyzVisualizationSettingsView>();
 
-        // Settings
+        // Shared ViewModels from DevTools.Views
         services.AddTransient<SettingsViewModel>();
         services.AddTransient<GeneralSettingsViewModel>();
-        services.AddSingleton<LogSettingsViewModel>();  // avoid re-creating when the settings are applied
-
-        // Python Environment
-        services.AddKeyedSingleton<PyEnvironmentProvider, PixiEnvironmentProvider>(PythonBackend.Pixi);
-        services.AddKeyedSingleton<PyEnvironmentProvider, PipEnvironmentProvider>(PythonBackend.Pip);
-        services.AddSingleton<PythonInitializer>();
-        services.AddSingleton<PythonExecutor>();
-
-        // Execution Services
-        services.AddSingleton<ITreeStateManager, TreeStateManager>();
-        services.AddSingleton<IFileWatcherService, FileWatcherService>();
-        services.AddSingleton<IExecutionOrchestrator, ExecutionOrchestrator>();
-        services.AddSingleton<IPackageService, PackageService>();
-
-        // Execution Providers
-        services.AddSingleton<IExecutionProvider, AssemblyExecutionProvider>();
-        services.AddSingleton<IExecutionProvider, ScriptExecutionProvider>();
-        services.AddKeyedSingleton<IExecutionProvider, AssemblyExecutionProvider>(ExecutionMode.Assembly);
-        services.AddKeyedSingleton<IExecutionProvider, ScriptExecutionProvider>(ExecutionMode.Script);
-
-        // Execution ViewModels
+        services.AddSingleton<LogSettingsViewModel>();
+        services.AddSingleton<LogViewModel>();
         services.AddSingleton<CommandViewModel>();
         services.AddSingleton<PackageViewModel>();
         services.AddSingleton<MemoryViewModel>();
         services.AddSingleton<ExecutionViewModel>();
-        services.AddSingleton<CommandView>();
-        services.AddSingleton<PackageView>();
-        services.AddSingleton<MemoryView>();
-        services.AddSingleton<ExecutionView>();
-
-        // IPC Brigde
-        services.AddSingleton<McpRegistryView>();
         services.AddSingleton<McpRegistryViewModel>();
-        services.AddSingleton<ConnectionState>();
-        services.AddSingleton<DotnetToolRegistryProvider>();
-        services.AddSingleton<PythonToolRegistryProvider>();
-        services.AddSingleton<IMcpRegistryProvider>(sp => sp.GetRequiredService<DotnetToolRegistryProvider>());
-        services.AddSingleton<IMcpRegistryProvider>(sp => sp.GetRequiredService<PythonToolRegistryProvider>());
-        services.AddSingleton<ToolRegistryCatalogLoader>();
+        services.AddSingleton<MainViewModel>(sp => new MainViewModel(
+            sp.GetRequiredService<LogViewModel>(),
+            sp.GetRequiredService<DevTools.Views.View.ExecutionView>(),
+            sp.GetRequiredService<DevTools.Views.View.McpRegistryView>(),
+            sp.GetRequiredService<DevTools.Views.View.MemoryView>(),
+            sp.GetRequiredService<LogSettingsViewModel>(),
+            sp.GetRequiredService<IDevToolsSettingsService>()));
+
+        // Host-specific execution adapters
+        services.AddSingleton<IHostContextExecutor, RevitHostContextExecutor>();
+        services.AddSingleton<ICommandRunner, RevitCommandRunner>();
+        services.AddSingleton<ICommandDiscovery, RevitCommandDiscovery>();
+        services.AddSingleton<IFSharpHostSupport, RevitFSharpSupport>();
+        services.AddSingleton<IHostPythonBridge, RevitPythonBridge>();
+
+        // Configure shared services for Revit host
+        NetworkService.ConfigureUserAgent("Revit");
+        PythonEmbedded.Configure(typeof(Host).Assembly, "RevitDevTool.Resources.scripts");
+
+        // Shared execution services (Python, FSharp, Orchestrator, Pipe Server, MCP, etc.)
+        services.AddDevToolsExecution();
+
+        // Shared Views from DevTools.Views
+        services.AddSingleton<DevTools.Views.View.CommandView>();
+        services.AddSingleton<DevTools.Views.View.PackageView>();
+        services.AddSingleton<DevTools.Views.View.MemoryView>();
+        services.AddSingleton<DevTools.Views.View.ExecutionView>();
+        services.AddSingleton<DevTools.Views.View.McpRegistryView>();
         services.AddSingleton<McpToolsetContextManager>();
         services.AddSingleton<DotnetMethodResolver>();
-        services.AddSingleton<ToolExecutionDispatcher>();
-        services.AddSingleton<PromptExecutionDispatcher>();
-        services.AddSingleton<ResourceExecutionDispatcher>();
-        services.AddSingleton<InstanceRequestHandler>();
-        services.AddSingleton<RegistryRequestHandler>();
-        services.AddSingleton<PytestDependencyService>();
-        services.AddSingleton<PytestExecutionService>();
-        services.AddSingleton<PytestRequestHandler>();
-        services.AddSingleton<ToolRegistryStore>();
-        services.AddHostedService<RevitPipeServer>();
 
-        // Main
-        services.AddSingleton<MainViewModel>();
+        // Main (host-specific)
         services.AddTransient<MainPage>();
         services.AddTransient<MainWindow>();
     }
@@ -223,10 +213,10 @@ public static class Host
     private static void SetupTheme()
     {
 #if REVIT2024_OR_GREATER
-        DevTools.UI.Theme.ThemeManager.Setup(
+        ThemeManager.Setup(
             () => UIThemeManager.CurrentTheme == UITheme.Dark
-                ? DevTools.UI.Theme.AppTheme.Dark
-                : DevTools.UI.Theme.AppTheme.Light,
+                ? AppTheme.Dark
+                : AppTheme.Light,
             onChanged => UIFramework.ApplicationTheme.CurrentTheme.PropertyChanged += (_, e) =>
             {
                 if (e.PropertyName != nameof(UIFramework.ApplicationTheme.CurrentTheme.RibbonPanelBackgroundBrush)) return;

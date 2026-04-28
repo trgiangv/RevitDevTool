@@ -28,7 +28,7 @@ public sealed class FaceVisualizationServer : VisualizationServer<Face>
     private bool _drawNormalVector;
     private bool _drawSurface;
 
-    public FaceVisualizationServer(ISettingsService settingsService)
+    public FaceVisualizationServer(IRevitSettingsService settingsService)
     {
         var settings = settingsService.VisualizationConfig.FaceSettings;
         _extrusion = settings.Extrusion / 12.0;

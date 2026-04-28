@@ -1,7 +1,8 @@
-﻿using AcadDevTool.View;
-using AcadDevTool.ViewModel;
+﻿using AcadDevTool.Controllers;
 using Autodesk.AutoCAD.Runtime;
 using DevTools.Utilities;
+using DevTools.Views.View;
+using DevTools.Views.ViewModel;
 namespace AcadDevTool.Commands;
 
 public static class Commands
@@ -9,7 +10,7 @@ public static class Commands
     [CommandMethod("DevTools")]
     public static void DevToolsCommand()
     {
-        Application.PanelController.ToggleVisibility();
+        Host.GetService<PanelController>().ToggleVisibility();
     }
 
     [CommandMethod("StubBuilder")]

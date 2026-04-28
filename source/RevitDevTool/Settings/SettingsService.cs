@@ -1,16 +1,16 @@
 using DevTools.Logging.Options;
-using DevTools.Entities.Configs;
+using DevTools.Execution.Configs;
+using DevTools.Execution.Settings;
+using DevTools.UI.Theme;
 using RevitDevTool.Logging.Enums;
 using RevitDevTool.Settings.Config;
-using RevitDevTool.Settings.Options;
 using System.Diagnostics;
 using System.IO;
-using DevTools.UI.Theme;
 using AppUtils = DevTools.Utilities.AppUtils;
 
 namespace RevitDevTool.Settings;
 
-public sealed class SettingsService(IFileConfig<PathOptions> fileConfig) : ISettingsService
+public sealed class SettingsService(IFileConfig<PathOptions> fileConfig) : IRevitSettingsService
 {
     private GeneralConfig? _generalConfig;
     private LogConfig? _logConfig;
@@ -168,16 +168,16 @@ public sealed class SettingsService(IFileConfig<PathOptions> fileConfig) : ISett
 
     private void ResetGeneralSettings()
     {
-        _generalConfig = new GeneralConfig
-        {
-#if REVIT2024_OR_GREATER
-            Theme = AppTheme.Auto,
-#else
-            Theme = AppTheme.Light,
+        _generalConfig = CreateDefaultGeneralConfig();
+    }
+
+    private static GeneralConfig CreateDefaultGeneralConfig()
+    {
+        var config = new GeneralConfig();
+#if AUTODESK2024_OR_GREATER
+        config.Theme = AppTheme.Auto;
 #endif
-            UseHardwareRendering = true,
-            IsTraceEnabled = true,
-        };
+        return config;
     }
 
     private void ResetLogSettings()

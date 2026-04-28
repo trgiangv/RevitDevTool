@@ -35,7 +35,7 @@ public sealed class XyzVisualizationServer : VisualizationServer<XYZ>
     private bool _drawYAxis;
     private bool _drawZAxis;
 
-    public XyzVisualizationServer(ISettingsService settingsService)
+    public XyzVisualizationServer(IRevitSettingsService settingsService)
     {
         var settings = settingsService.VisualizationConfig.XyzSettings;
         _transparency = settings.Transparency / 100;

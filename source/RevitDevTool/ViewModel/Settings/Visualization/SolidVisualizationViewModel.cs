@@ -6,9 +6,9 @@ namespace RevitDevTool.ViewModel.Settings.Visualization;
 
 public sealed partial class SolidVisualizationViewModel : ObservableObject, IVisualizationViewModel
 {
-    private readonly ISettingsService _settingsService;
+    private readonly IRevitSettingsService _settingsService;
 
-    public SolidVisualizationViewModel(ISettingsService settingsService)
+    public SolidVisualizationViewModel(IRevitSettingsService settingsService)
     {
         _settingsService = settingsService;
 

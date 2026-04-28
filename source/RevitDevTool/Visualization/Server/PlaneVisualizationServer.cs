@@ -34,7 +34,7 @@ public sealed class PlaneVisualizationServer : VisualizationServer<Plane>
     private double PlaneHalfSize => BasePlaneHalfSize + _extrusion * PlaneScaleFactor;
     private double PlaneNormalLength => PlaneHalfSize * PlaneNormalLengthFactor;
 
-    public PlaneVisualizationServer(ISettingsService settingsService)
+    public PlaneVisualizationServer(IRevitSettingsService settingsService)
     {
         var settings = settingsService.VisualizationConfig.FaceSettings;
         _extrusion = settings.Extrusion / 12.0;

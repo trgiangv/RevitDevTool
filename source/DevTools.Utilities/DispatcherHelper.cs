@@ -1,3 +1,5 @@
+using System.Windows.Interop;
+using System.Windows.Media;
 using System.Windows.Threading;
 using Autodesk.Windows;
 namespace DevTools.Utilities;
@@ -37,5 +39,14 @@ public static class DispatcherHelper
             action();
         else
             RevitDispatcher.BeginInvoke(action, priority);
+    }
+
+    /// <summary>
+    /// Toggles WPF hardware/software rendering mode on the main UI thread.
+    /// </summary>
+    public static void ToggleHardwareRendering(bool useHardware)
+    {
+        RunOnMainThread(() =>
+            RenderOptions.ProcessRenderMode = useHardware ? RenderMode.Default : RenderMode.SoftwareOnly);
     }
 }

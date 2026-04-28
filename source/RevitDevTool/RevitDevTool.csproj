@@ -17,7 +17,6 @@
             DevTools.Microsoft.Xaml.Behaviors.dll;
             FSharp.Core.dll;
             DevTools.UI.dll;
-            DevTools.Entities.dll;
         </RepackBinariesExcludes>
     </PropertyGroup>
 
@@ -59,9 +58,11 @@
     </ItemGroup>
     
     <ItemGroup>
+        <ProjectReference Include="..\DevTools.Views\DevTools.Views.csproj" />
         <ProjectReference Include="..\DevTools.UI\DevTools.UI.csproj" />
         <ProjectReference Include="..\DevTools.Utilities\DevTools.Utilities.csproj" />
         <ProjectReference Include="..\DevTools.Logging\DevTools.Logging.csproj" />
+        <ProjectReference Include="..\DevTools.Execution\DevTools.Execution.csproj" />
         <ProjectReference Include="..\DevTools.McpParser\DevTools.McpParser.csproj" />
         <ProjectReference Include="..\..\libs\pythonnet-stub-generator\csharp\PythonNetStubGenerator\PythonNetStubGenerator.csproj" />
         <ProjectReference Include="..\RevitDevTool.Core\RevitDevTool.Core.csproj" />

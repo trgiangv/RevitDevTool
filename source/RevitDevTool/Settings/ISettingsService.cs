@@ -1,20 +1,12 @@
-using DevTools.Entities.Configs;
 using DevTools.Logging.Options;
+using DevTools.Views.Interfaces;
 using RevitDevTool.Logging.Enums;
 using RevitDevTool.Settings.Config;
 
 namespace RevitDevTool.Settings;
 
-public interface ISettingsService
+public interface IRevitSettingsService : IDevToolsSettingsService
 {
-    GeneralConfig GeneralConfig { get; }
-    LogConfig LogConfig { get; }
     HashSet<RevitEnricher> RevitEnrichers { get; set; }
     VisualizationConfig VisualizationConfig { get; }
-    ExecutionConfig ExecutionConfig { get; }
-    McpRegistryConfig McpRegistryConfig { get; }
-
-    void SaveSettings();
-    void LoadSettings();
-    void ResetSettings();
 }

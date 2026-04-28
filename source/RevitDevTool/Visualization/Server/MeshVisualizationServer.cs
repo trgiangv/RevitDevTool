@@ -27,7 +27,7 @@ public sealed class MeshVisualizationServer : VisualizationServer<Mesh>
     private Color _normalColor;
     private Color _surfaceColor;
 
-    public MeshVisualizationServer(ISettingsService settingsService)
+    public MeshVisualizationServer(IRevitSettingsService settingsService)
     {
         var settings = settingsService.VisualizationConfig.MeshSettings;
         _extrusion = settings.Extrusion / 12;

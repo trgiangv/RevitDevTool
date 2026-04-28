@@ -22,7 +22,4 @@
         <PackageReference Include="ModelContextProtocol"/>
     </ItemGroup>
 
-    <ItemGroup>
-      <ProjectReference Include="..\DevTools.Entities\DevTools.Entities.csproj" />
-    </ItemGroup>
 </Project>

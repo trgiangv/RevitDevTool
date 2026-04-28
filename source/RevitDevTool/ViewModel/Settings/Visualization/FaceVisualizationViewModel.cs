@@ -6,9 +6,9 @@ namespace RevitDevTool.ViewModel.Settings.Visualization;
 
 public sealed partial class FaceVisualizationViewModel : ObservableObject, IVisualizationViewModel
 {
-    private readonly ISettingsService _settingsService;
+    private readonly IRevitSettingsService _settingsService;
 
-    public FaceVisualizationViewModel(ISettingsService settingsService)
+    public FaceVisualizationViewModel(IRevitSettingsService settingsService)
     {
         _settingsService = settingsService;
 

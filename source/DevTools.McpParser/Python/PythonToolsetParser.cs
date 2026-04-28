@@ -2,7 +2,7 @@ using System.Diagnostics;
 using System.Text.Json;
 using CliWrap;
 using CliWrap.Buffered;
-using DevTools.Entities;
+using DevTools.McpParser;
 using DevTools.McpParser.Models;
 using ModelContextProtocol;
 using ModelContextProtocol.Protocol;

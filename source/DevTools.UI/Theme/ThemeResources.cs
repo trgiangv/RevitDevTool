@@ -1,6 +1,7 @@
 using System.ComponentModel;
 using System.Diagnostics;
 using System.Windows;
+using DevTools.UI;
 using DevTools.UI.Theme.Design;
 // ReSharper disable ReplaceWithFieldKeyword
 

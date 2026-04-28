@@ -35,7 +35,7 @@ public sealed class BoundingBoxVisualizationServer : VisualizationServer<Boundin
     private Color _edgeColor;
     private Color _axisColor;
 
-    public BoundingBoxVisualizationServer(ISettingsService settingsService)
+    public BoundingBoxVisualizationServer(IRevitSettingsService settingsService)
     {
         var settings = settingsService.VisualizationConfig.BoundingBoxSettings;
         _transparency = settings.Transparency / 100;

@@ -24,7 +24,7 @@ public sealed class SolidVisualizationServer : VisualizationServer<Solid>
     private bool _drawFace;
     private bool _drawEdge;
 
-    public SolidVisualizationServer(ISettingsService settingsService)
+    public SolidVisualizationServer(IRevitSettingsService settingsService)
     {
         var settings = settingsService.VisualizationConfig.SolidSettings;
         _transparency = settings.Transparency / 100;

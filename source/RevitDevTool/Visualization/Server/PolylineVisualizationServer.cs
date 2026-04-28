@@ -28,7 +28,7 @@ public sealed class PolylineVisualizationServer : VisualizationServer<GeometryOb
     private bool _drawDirection;
     private bool _drawSurface;
 
-    public PolylineVisualizationServer(ISettingsService settingsService)
+    public PolylineVisualizationServer(IRevitSettingsService settingsService)
     {
         var settings = settingsService.VisualizationConfig.PolylineSettings;
         _transparency = settings.Transparency / 100;

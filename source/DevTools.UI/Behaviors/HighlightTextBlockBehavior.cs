@@ -1,7 +1,7 @@
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
-using DevTools.UI.Controls;
+using DevTools.UI;
 using Brush = System.Windows.Media.Brush;
 using TextElement = System.Windows.Documents.TextElement;
 using TextRange = System.Windows.Documents.TextRange;

@@ -1,0 +1,24 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <TargetFrameworks Condition="'$(TargetFramework)' == ''">net48;net8.0-windows;net10.0-windows</TargetFrameworks>
+        <UseWpf>true</UseWpf>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\DevTools.Utilities\DevTools.Utilities.csproj" />
+        <ProjectReference Include="..\DevTools.UI\DevTools.UI.csproj" />
+        <ProjectReference Include="..\DevTools.McpParser\DevTools.McpParser.csproj" />
+        <ProjectReference Include="..\DevTools.Execution\DevTools.Execution.csproj" />
+        <ProjectReference Include="..\DevTools.Logging\DevTools.Logging.csproj" />
+        <ProjectReference Include="..\..\libs\pythonnet-stub-generator\csharp\PythonNetStubGenerator\PythonNetStubGenerator.csproj" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <Using Include="CommunityToolkit.Mvvm.ComponentModel" />
+        <Using Include="CommunityToolkit.Mvvm.Input" />
+        <Using Include="JetBrains.Annotations" />
+        <Using Include="System" />
+    </ItemGroup>
+
+</Project>

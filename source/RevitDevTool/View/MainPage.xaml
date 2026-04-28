@@ -8,7 +8,7 @@
       xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
       xmlns:system="clr-namespace:System;assembly=System.Runtime"
       xmlns:view="clr-namespace:RevitDevTool.View"
-      xmlns:vm="clr-namespace:RevitDevTool.ViewModel"
+      xmlns:vm="http://devtools.views/vm"
       d:DataContext="{d:DesignInstance vm:MainViewModel}"
       d:DesignHeight="600"
       d:DesignWidth="450"

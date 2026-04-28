@@ -6,9 +6,9 @@ namespace RevitDevTool.ViewModel.Settings.Visualization;
 
 public sealed partial class XyzVisualizationViewModel : ObservableObject, IVisualizationViewModel
 {
-    private readonly ISettingsService _settingsService;
+    private readonly IRevitSettingsService _settingsService;
 
-    public XyzVisualizationViewModel(ISettingsService settingsService)
+    public XyzVisualizationViewModel(IRevitSettingsService settingsService)
     {
         _settingsService = settingsService;
 

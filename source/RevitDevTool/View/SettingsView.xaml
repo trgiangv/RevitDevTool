@@ -6,7 +6,8 @@
              xmlns:mah="http://metro.devtools.ui/winfx/xaml/controls"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:settings="clr-namespace:RevitDevTool.View.Settings"
-             xmlns:vm="clr-namespace:RevitDevTool.ViewModel.Settings"
+             xmlns:sharedSettings="http://devtools.views"
+             xmlns:vm="http://devtools.views/vm"
              d:DesignHeight="630"
              d:DesignWidth="600"
              d:DataContext="{d:DesignInstance vm:SettingsViewModel}"
@@ -30,13 +31,13 @@
 
         <TabControl Grid.Row="0">
             <TabItem Header="General">
-                <settings:GeneralSettingsView />
+                <sharedSettings:GeneralSettingsView />
             </TabItem>
             <TabItem Header="Visualization">
                 <settings:VisualizationSettingsView />
             </TabItem>
             <TabItem Header="Log">
-                <settings:LogSettingsView />
+                <sharedSettings:LogSettingsView />
             </TabItem>
         </TabControl>
 

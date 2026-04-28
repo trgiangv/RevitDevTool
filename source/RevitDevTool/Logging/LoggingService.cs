@@ -5,20 +5,22 @@ using DevTools.Logging.Listeners;
 using DevTools.Logging.Options;
 using Microsoft.Extensions.Logging;
 using RevitDevTool.Logging.Listeners;
+using DevTools.UI;
 using RevitDevTool.Settings;
 using DevTools.UI.Theme;
+using DevTools.Views.Interfaces;
 
 namespace RevitDevTool.Logging;
 
 [UsedImplicitly]
 public sealed class LoggingService(
-    ISettingsService settingsService,
+    IRevitSettingsService settingsService,
     ILoggerFactory loggerFactory,
     IFileLogTarget fileLogTarget,
     IHttpLogTarget httpLogTarget,
     IMonitorLogTarget monitor,
     IContextEnricher contextEnricher,
-    LoggingConfiguration loggingConfiguration) : ILoggingService
+    LoggingConfiguration loggingConfiguration) : IDevToolsLoggingService
 {
     private bool _disposed;
 

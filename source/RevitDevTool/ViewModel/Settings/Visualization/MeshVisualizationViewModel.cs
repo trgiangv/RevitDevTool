@@ -6,9 +6,9 @@ namespace RevitDevTool.ViewModel.Settings.Visualization;
 
 public sealed partial class MeshVisualizationViewModel : ObservableObject, IVisualizationViewModel
 {
-    private readonly ISettingsService _settingsService;
+    private readonly IRevitSettingsService _settingsService;
 
-    public MeshVisualizationViewModel(ISettingsService settingsService)
+    public MeshVisualizationViewModel(IRevitSettingsService settingsService)
     {
         _settingsService = settingsService;
 

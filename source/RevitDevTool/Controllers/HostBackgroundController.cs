@@ -1,16 +1,14 @@
 using System.IO;
-using System.Windows.Interop;
-using System.Windows.Media;
 using Microsoft.Extensions.Hosting;
-using RevitDevTool.Core;
-using RevitDevTool.Execution.Providers.Python;
+using DevTools.Execution.Providers.Python;
+using DevTools.Utilities;
 using RevitDevTool.Settings;
 using DevTools.UI.Theme;
 
 namespace RevitDevTool.Controllers;
 
 public sealed class HostBackgroundController(
-    ISettingsService settingsService,
+    IRevitSettingsService settingsService,
     PythonInitializer pythonInitializer) : IHostedService
 {
     public async Task StartAsync(CancellationToken cancellationToken)
@@ -46,16 +44,8 @@ public sealed class HostBackgroundController(
         }
     }
 
-    public static void ToggleHardwareRendering(ISettingsService settingsService)
+    public static void ToggleHardwareRendering(IRevitSettingsService settingsService)
     {
-        var useHardwareRendering = settingsService.GeneralConfig.UseHardwareRendering;
-        if (useHardwareRendering)
-        {
-            RevitContextExecutor.Raise(() => RenderOptions.ProcessRenderMode = RenderMode.Default);
-        }
-        else
-        {
-            RenderOptions.ProcessRenderMode = RenderMode.SoftwareOnly;
-        }
+        DispatcherHelper.ToggleHardwareRendering(settingsService.GeneralConfig.UseHardwareRendering);
     }
 }

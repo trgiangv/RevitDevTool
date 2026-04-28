@@ -7,7 +7,6 @@
 
     <ItemGroup>
         <ProjectReference Include="..\..\libs\MahApps.Metro\src\MahApps.Metro\MahApps.Metro.csproj" />
-        <ProjectReference Include="..\DevTools.Entities\DevTools.Entities.csproj" />
     </ItemGroup>
 
     <ItemGroup>

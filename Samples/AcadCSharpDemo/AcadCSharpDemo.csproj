@@ -1,0 +1,12 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <UseAutoCad>true</UseAutoCad>
+        <IsRepackable>true</IsRepackable>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <PackageReference Include="ILRepack"/>
+    </ItemGroup>
+
+</Project>

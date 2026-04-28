@@ -5,8 +5,8 @@ using DevTools.Utilities;
 using RevitDevTool.Commands;
 using RevitDevTool.Core;
 using RevitDevTool.Utils;
+using DevTools.Views.ViewModel;
 using RevitDevTool.View;
-using RevitDevTool.ViewModel;
 
 namespace RevitDevTool.Controllers;
 

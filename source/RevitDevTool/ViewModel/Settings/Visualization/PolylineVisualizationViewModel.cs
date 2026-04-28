@@ -6,9 +6,9 @@ namespace RevitDevTool.ViewModel.Settings.Visualization;
 
 public sealed partial class PolylineVisualizationViewModel : ObservableObject, IVisualizationViewModel
 {
-    private readonly ISettingsService _settingsService;
+    private readonly IRevitSettingsService _settingsService;
 
-    public PolylineVisualizationViewModel(ISettingsService settingsService)
+    public PolylineVisualizationViewModel(IRevitSettingsService settingsService)
     {
         _settingsService = settingsService;
 
