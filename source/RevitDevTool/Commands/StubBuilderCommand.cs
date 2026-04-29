@@ -1,7 +1,7 @@
 using Autodesk.Revit.Attributes;
+using DevTools.Presentation.ViewModels;
+using DevTools.Presentation.Views;
 using DevTools.Utilities;
-using DevTools.Views.View;
-using DevTools.Views.ViewModel;
 
 namespace RevitDevTool.Commands;
 

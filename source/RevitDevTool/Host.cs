@@ -24,10 +24,11 @@ using DevTools.Logging.Abstractions;
 using DevTools.McpParser.Dotnet;
 using DevTools.UI.Theme;
 using DevTools.Utilities;
-using DevTools.Views;
-using DevTools.Views.Interfaces;
-using DevTools.Views.ViewModel;
-using DevTools.Views.ViewModel.Settings;
+using DevTools.Presentation;
+using DevTools.Presentation.Interfaces;
+using DevTools.Presentation.ViewModels;
+using DevTools.Presentation.ViewModels.Settings;
+using DevTools.Presentation.Views;
 using RevitDevTool.HostAdapters;
 // ReSharper disable ConvertToExtensionBlock
 
@@ -148,7 +149,7 @@ public static class Host
         services.AddTransient<SolidVisualizationSettingsView>();
         services.AddTransient<XyzVisualizationSettingsView>();
 
-        // Shared ViewModels from DevTools.Views
+        // Shared ViewModels from DevTools.Presentation
         services.AddTransient<SettingsViewModel>();
         services.AddTransient<GeneralSettingsViewModel>();
         services.AddSingleton<LogSettingsViewModel>();
@@ -160,9 +161,9 @@ public static class Host
         services.AddSingleton<McpRegistryViewModel>();
         services.AddSingleton<MainViewModel>(sp => new MainViewModel(
             sp.GetRequiredService<LogViewModel>(),
-            sp.GetRequiredService<DevTools.Views.View.ExecutionView>(),
-            sp.GetRequiredService<DevTools.Views.View.McpRegistryView>(),
-            sp.GetRequiredService<DevTools.Views.View.MemoryView>(),
+            sp.GetRequiredService<ExecutionView>(),
+            sp.GetRequiredService<McpRegistryView>(),
+            sp.GetRequiredService<MemoryView>(),
             sp.GetRequiredService<LogSettingsViewModel>(),
             sp.GetRequiredService<IDevToolsSettingsService>()));
 
@@ -180,12 +181,12 @@ public static class Host
         // Shared execution services (Python, FSharp, Orchestrator, Pipe Server, MCP, etc.)
         services.AddDevToolsExecution();
 
-        // Shared Views from DevTools.Views
-        services.AddSingleton<DevTools.Views.View.CommandView>();
-        services.AddSingleton<DevTools.Views.View.PackageView>();
-        services.AddSingleton<DevTools.Views.View.MemoryView>();
-        services.AddSingleton<DevTools.Views.View.ExecutionView>();
-        services.AddSingleton<DevTools.Views.View.McpRegistryView>();
+        // Shared Views from DevTools.Presentation
+        services.AddSingleton<CommandView>();
+        services.AddSingleton<PackageView>();
+        services.AddSingleton<MemoryView>();
+        services.AddSingleton<ExecutionView>();
+        services.AddSingleton<McpRegistryView>();
         services.AddSingleton<McpToolsetContextManager>();
         services.AddSingleton<DotnetMethodResolver>();
 

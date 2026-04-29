@@ -1,4 +1,3 @@
-using DevTools.UI;
 using DevTools.Utilities;
 using DevTools.UI.Theme;
 using System.Windows;

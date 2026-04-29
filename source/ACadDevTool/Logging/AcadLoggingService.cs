@@ -5,7 +5,7 @@ using DevTools.Logging.Abstractions;
 using DevTools.Logging.Listeners;
 using DevTools.Logging.Options;
 using DevTools.UI.Theme;
-using DevTools.Views.Interfaces;
+using DevTools.Presentation.Interfaces;
 using Microsoft.Extensions.Logging;
 
 namespace AcadDevTool.Logging;

@@ -1,5 +1,5 @@
 using AcadDevTool.Logging.Enums;
-using DevTools.Views.Interfaces;
+using DevTools.Presentation.Interfaces;
 
 namespace AcadDevTool.Settings;
 

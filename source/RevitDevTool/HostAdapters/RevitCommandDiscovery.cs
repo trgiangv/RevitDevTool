@@ -121,7 +121,7 @@ public sealed class RevitCommandDiscovery : ICommandDiscovery
                 {
                     var type = typeInfo.AsType();
                     _ = type.BaseType;
-                    types.Add(type!);
+                    types.Add(type);
                 }
                 catch
                 {

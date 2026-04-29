@@ -8,8 +8,8 @@
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:system="clr-namespace:System;assembly=System.Runtime"
              xmlns:view="clr-namespace:AcadDevTool.View"
-             xmlns:vm="http://devtools.views/vm"
-             d:DataContext="{d:DesignInstance vm:MainViewModel}"
+             xmlns:viewModels="http://devtools.presentation"
+             d:DataContext="{d:DesignInstance viewModels:MainViewModel}"
              d:DesignHeight="600"
              d:DesignWidth="450"
              Background="{DynamicResource DevTools.MahApps.Brushes.ThemeBackground}"
@@ -32,16 +32,23 @@
             <RowDefinition Height="*" />
         </Grid.RowDefinitions>
 
-        <DockPanel Grid.Row="0" Margin="5" LastChildFill="False">
-            <ToggleButton Padding="7,4" BorderThickness="0.5"
+        <DockPanel Grid.Row="0"
+                   Margin="5"
+                   LastChildFill="False">
+            <ToggleButton Padding="7,4"
+                          BorderThickness="0.5"
                           IsChecked="{Binding IsSettingsVisible, UpdateSourceTrigger=PropertyChanged}"
                           Style="{DynamicResource DevTools.MahApps.Styles.ToggleButton.Circle}">
-                <Path Width="16" Height="16" Fill="{DynamicResource DevTools.MahApps.Brushes.ThemeForeground}" Stretch="Uniform">
+                <Path Width="16"
+                      Height="16"
+                      Fill="{DynamicResource DevTools.MahApps.Brushes.ThemeForeground}"
+                      Stretch="Uniform">
                     <Path.Style>
                         <Style TargetType="Path">
                             <Setter Property="Data" Value="{StaticResource Settings}" />
                             <Style.Triggers>
-                                <DataTrigger Binding="{Binding Path=IsChecked, RelativeSource={RelativeSource AncestorType=ToggleButton}}" Value="True">
+                                <DataTrigger Binding="{Binding Path=IsChecked, RelativeSource={RelativeSource AncestorType=ToggleButton}}"
+                                             Value="True">
                                     <Setter Property="Data" Value="{StaticResource ArrowLeft}" />
                                 </DataTrigger>
                             </Style.Triggers>
@@ -49,45 +56,94 @@
                     </Path.Style>
                 </Path>
             </ToggleButton>
-            <ToggleButton Margin="5,0,0,0" Padding="7,4" BorderThickness="0.5"
+            <ToggleButton Margin="5,0,0,0"
+                          Padding="7,4"
+                          BorderThickness="0.5"
                           IsChecked="{Binding IsExecutionVisible}"
-                          Style="{DynamicResource DevTools.MahApps.Styles.ToggleButton.Circle}" ToolTip="Execution">
-                <Path Width="16" Height="16" Data="{StaticResource Code}" Fill="{DynamicResource DevTools.MahApps.Brushes.ThemeForeground}" Stretch="Uniform" />
+                          Style="{DynamicResource DevTools.MahApps.Styles.ToggleButton.Circle}"
+                          ToolTip="Execution">
+                <Path Width="16"
+                      Height="16"
+                      Data="{StaticResource Code}"
+                      Fill="{DynamicResource DevTools.MahApps.Brushes.ThemeForeground}"
+                      Stretch="Uniform" />
             </ToggleButton>
-            <ToggleButton Margin="5,0" Padding="7,4" BorderThickness="0.5"
+            <ToggleButton Margin="5,0"
+                          Padding="7,4"
+                          BorderThickness="0.5"
                           IsChecked="{Binding IsMcpVisible}"
-                          Style="{DynamicResource DevTools.MahApps.Styles.ToggleButton.Circle}" ToolTip="MCP">
-                <Path Width="16" Height="16" Data="{StaticResource Mcp}" Fill="{DynamicResource DevTools.MahApps.Brushes.ThemeForeground}" Stretch="Uniform" />
+                          Style="{DynamicResource DevTools.MahApps.Styles.ToggleButton.Circle}"
+                          ToolTip="MCP">
+                <Path Width="16"
+                      Height="16"
+                      Data="{StaticResource Mcp}"
+                      Fill="{DynamicResource DevTools.MahApps.Brushes.ThemeForeground}"
+                      Stretch="Uniform" />
             </ToggleButton>
 
-            <StackPanel HorizontalAlignment="Right" DockPanel.Dock="Right" Orientation="Horizontal">
-                <TextBlock Margin="5,0" VerticalAlignment="Center" FontSize="11" Foreground="{DynamicResource DevTools.MahApps.Brushes.Gray}" Text="{Binding ProcessId, Mode=OneTime, StringFormat='PID: {0}'}" />
-                <Button Padding="0" BorderThickness="0.5" Command="{Binding LogViewModel.ClearCommand}" ToolTip="Clear Log">
-                    <StackPanel Margin="0" Orientation="Horizontal">
-                        <Path Width="14" Height="14" Margin="5,0,0,0" Data="{StaticResource ClearLog}" Fill="{DynamicResource DevTools.MahApps.Brushes.ThemeForeground}" Stretch="Uniform" />
-                        <TextBlock Margin="5" Text="Clear Log" />
+            <StackPanel HorizontalAlignment="Right"
+                        DockPanel.Dock="Right"
+                        Orientation="Horizontal">
+                <TextBlock Margin="5,0"
+                           VerticalAlignment="Center"
+                           FontSize="11"
+                           Foreground="{DynamicResource DevTools.MahApps.Brushes.Gray}"
+                           Text="{Binding ProcessId, Mode=OneTime, StringFormat='PID: {0}'}" />
+                <Button Padding="0"
+                        BorderThickness="0.5"
+                        Command="{Binding LogViewModel.ClearCommand}"
+                        ToolTip="Clear Log">
+                    <StackPanel Margin="0"
+                                Orientation="Horizontal">
+                        <Path Width="14"
+                              Height="14"
+                              Margin="5,0,0,0"
+                              Data="{StaticResource ClearLog}"
+                              Fill="{DynamicResource DevTools.MahApps.Brushes.ThemeForeground}"
+                              Stretch="Uniform" />
+                        <TextBlock Margin="5"
+                                   Text="Clear Log" />
                     </StackPanel>
                 </Button>
-                <Button Margin="5,0" Padding="0" BorderThickness="0.5"
-                        Command="{Binding OpenLogFolderCommand}" ToolTip="Open log folder">
-                    <StackPanel Margin="0" Orientation="Horizontal">
-                        <Path Width="14" Height="14" Margin="5,0,0,0" Data="{StaticResource Folder}" Fill="{DynamicResource DevTools.MahApps.Brushes.ThemeForeground}" Stretch="Uniform" />
-                        <TextBlock Margin="5,0" Text="Log Folder" />
+                <Button Margin="5,0"
+                        Padding="0"
+                        BorderThickness="0.5"
+                        Command="{Binding OpenLogFolderCommand}"
+                        ToolTip="Open log folder">
+                    <StackPanel Margin="0"
+                                Orientation="Horizontal">
+                        <Path Width="14"
+                              Height="14"
+                              Margin="5,0,0,0"
+                              Data="{StaticResource Folder}"
+                              Fill="{DynamicResource DevTools.MahApps.Brushes.ThemeForeground}"
+                              Stretch="Uniform" />
+                        <TextBlock Margin="5,0"
+                                   Text="Log Folder" />
                     </StackPanel>
                 </Button>
-                <mah:ToggleSwitch MinWidth="0" ContentPadding="0" DataContext="{Binding LogViewModel}" IsOn="{Binding IsStarted}" OffContent="" OnContent="">
+                <mah:ToggleSwitch MinWidth="0"
+                                  ContentPadding="0"
+                                  DataContext="{Binding LogViewModel}"
+                                  IsOn="{Binding IsStarted}"
+                                  OffContent=""
+                                  OnContent="">
                     <mah:ToggleSwitch.Resources>
+                        <!--  ReSharper disable Xaml.RedundantResource  -->
                         <GridLength x:Key="ToggleSwitchContentSpaceMargin">0</GridLength>
                         <system:Double x:Key="ToggleSwitchThemeMinWidth">0</system:Double>
                         <GridLength x:Key="ToggleSwitchPreContentMargin">0</GridLength>
                         <GridLength x:Key="ToggleSwitchPostContentMargin">0</GridLength>
+                        <!--  ReSharper restore Xaml.RedundantResource  -->
                     </mah:ToggleSwitch.Resources>
                 </mah:ToggleSwitch>
             </StackPanel>
         </DockPanel>
 
-        <Grid Grid.Row="1" Background="{DynamicResource DevTools.MahApps.Brushes.ThemeBackground}">
-            <Grid Margin="5,0,5,5" Visibility="{Binding IsSettingsVisible, Converter={StaticResource InverseBoolToVisibility}}">
+        <Grid Grid.Row="1"
+              Background="{DynamicResource DevTools.MahApps.Brushes.ThemeBackground}">
+            <Grid Margin="5,0,5,5"
+                  Visibility="{Binding IsSettingsVisible, Converter={StaticResource InverseBoolToVisibility}}">
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto" />
                     <RowDefinition Height="*" />
@@ -97,7 +153,8 @@
                                 <Setter Property="Height" Value="Auto" />
                                 <Setter Property="MaxHeight" Value="999" />
                                 <Style.Triggers>
-                                    <DataTrigger Binding="{Binding ShowLogMonitorOnly}" Value="True">
+                                    <DataTrigger Binding="{Binding ShowLogMonitorOnly}"
+                                                 Value="True">
                                         <Setter Property="MaxHeight" Value="0" />
                                     </DataTrigger>
                                 </Style.Triggers>
@@ -110,7 +167,8 @@
                                 <Setter Property="Height" Value="300" />
                                 <Setter Property="MaxHeight" Value="999" />
                                 <Style.Triggers>
-                                    <DataTrigger Binding="{Binding ShowLogMonitorOnly}" Value="True">
+                                    <DataTrigger Binding="{Binding ShowLogMonitorOnly}"
+                                                 Value="True">
                                         <Setter Property="MaxHeight" Value="0" />
                                     </DataTrigger>
                                 </Style.Triggers>
@@ -119,20 +177,40 @@
                     </RowDefinition>
                 </Grid.RowDefinitions>
 
-                <ContentControl Grid.Row="0" Margin="0,0,0,5" Content="{Binding MemoryView}" Visibility="{Binding IsMemoryEnabled, Converter={StaticResource BoolToVisibility}}" />
+                <ContentControl Grid.Row="0"
+                                Margin="0,0,0,5"
+                                Content="{Binding MemoryView}"
+                                Visibility="{Binding IsMemoryEnabled, Converter={StaticResource BoolToVisibility}}" />
 
-                <Border Grid.Row="1" Padding="2" BorderBrush="{DynamicResource DevTools.MahApps.Brushes.Gray8}" BorderThickness="1" CornerRadius="6" SnapsToDevicePixels="True">
+                <Border Grid.Row="1"
+                        Padding="2"
+                        BorderBrush="{DynamicResource DevTools.MahApps.Brushes.Gray8}"
+                        BorderThickness="1"
+                        CornerRadius="6"
+                        SnapsToDevicePixels="True">
                     <ContentControl Content="{Binding LogViewModel.LogTextBox}" />
                 </Border>
 
-                <GridSplitter Grid.Row="2" Height="2" Margin="0,5" Background="{DynamicResource DevTools.MahApps.Brushes.Gray8}" ShowsPreview="False"
+                <GridSplitter Grid.Row="2"
+                              Height="2"
+                              Margin="0,5"
+                              Background="{DynamicResource DevTools.MahApps.Brushes.Gray8}"
+                              ShowsPreview="False"
                               Visibility="{Binding ShowLogMonitorOnly, Converter={StaticResource InverseBoolToVisibility}}" />
 
-                <ContentControl Grid.Row="3" Content="{Binding ExecutionView}" Visibility="{Binding IsExecutionVisible, Converter={StaticResource BoolToVisibility}}" />
-                <ContentControl Grid.Row="3" Content="{Binding McpRegistryView}" Visibility="{Binding IsMcpVisible, Converter={StaticResource BoolToVisibility}}" />
+                <ContentControl Grid.Row="3"
+                                Content="{Binding ExecutionView}"
+                                Visibility="{Binding IsExecutionVisible, Converter={StaticResource BoolToVisibility}}" />
+                <ContentControl Grid.Row="3"
+                                Content="{Binding McpRegistryView}"
+                                Visibility="{Binding IsMcpVisible, Converter={StaticResource BoolToVisibility}}" />
             </Grid>
 
-            <Border Margin="5,0,5,5" Padding="2" BorderBrush="{DynamicResource DevTools.MahApps.Brushes.Gray8}" BorderThickness="1" CornerRadius="6"
+            <Border Margin="5,0,5,5"
+                    Padding="2"
+                    BorderBrush="{DynamicResource DevTools.MahApps.Brushes.Gray8}"
+                    BorderThickness="1"
+                    CornerRadius="6"
                     Visibility="{Binding IsSettingsVisible, Converter={StaticResource BoolToVisibility}}">
                 <view:SettingsView />
             </Border>

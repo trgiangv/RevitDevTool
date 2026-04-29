@@ -1,4 +1,4 @@
-using DevTools.Views.Interfaces;
+using DevTools.Presentation.Interfaces;
 using AcadApp = Autodesk.AutoCAD.ApplicationServices.Core.Application;
 
 namespace AcadDevTool.Bridges;

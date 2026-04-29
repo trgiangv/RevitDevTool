@@ -228,9 +228,9 @@
         <BuildType Solution="Release.Autodesk.2026|*" Project="Release" />
         <BuildType Solution="Release.Autodesk.2027|*" Project="Release" />
     </Project>
-    <Project Path="source/DevTools.Views/DevTools.Views.csproj"/>
-    <Project Path="source/DevTools.Execution/DevTools.Execution.csproj"/>
-    <Project Path="source/DevTools.Utilities/DevTools.Utilities.csproj"/>
+    <Project Path="source/DevTools.Presentation/DevTools.Presentation.csproj" />
+    <Project Path="source/DevTools.Execution/DevTools.Execution.csproj" />
+    <Project Path="source/DevTools.Utilities/DevTools.Utilities.csproj" />
     <Project Path="source/RevitDevTool.Core/RevitDevTool.Core.csproj" />
     <Project Path="source/RevitDevTool/RevitDevTool.csproj" />
     <Project Path="source/AcadDevTool/AcadDevTool.csproj" />

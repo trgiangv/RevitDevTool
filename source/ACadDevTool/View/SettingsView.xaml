@@ -4,11 +4,10 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:design="clr-namespace:DevTools.UI.Theme.Design;assembly=DevTools.UI"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-             xmlns:sharedSettings="http://devtools.views"
-             xmlns:vm="http://devtools.views/vm"
+             xmlns:settings="http://devtools.presentation"
+             d:DataContext="{d:DesignInstance settings:SettingsViewModel}"
              d:DesignHeight="630"
              d:DesignWidth="600"
-             d:DataContext="{d:DesignInstance vm:SettingsViewModel}"
              Background="{DynamicResource DevTools.MahApps.Brushes.ThemeBackground}"
              mc:Ignorable="d">
 
@@ -29,16 +28,16 @@
 
         <TabControl Grid.Row="0">
             <TabItem Header="General">
-                <sharedSettings:GeneralSettingsView />
+                <settings:GeneralSettingsView />
             </TabItem>
             <TabItem Header="Log">
-                <sharedSettings:LogSettingsView />
+                <settings:LogSettingsView />
             </TabItem>
         </TabControl>
 
         <Button Grid.Row="1"
                 Width="100"
-                Margin="5 0 5 5"
+                Margin="5,0,5,5"
                 HorizontalAlignment="Right"
                 HorizontalContentAlignment="Center"
                 Command="{Binding ResetSettingsCommand}"

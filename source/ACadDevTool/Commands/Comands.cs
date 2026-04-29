@@ -1,8 +1,8 @@
 ﻿using AcadDevTool.Controllers;
 using Autodesk.AutoCAD.Runtime;
 using DevTools.Utilities;
-using DevTools.Views.View;
-using DevTools.Views.ViewModel;
+using DevTools.Presentation.ViewModels;
+using DevTools.Presentation.Views;
 namespace AcadDevTool.Commands;
 
 public static class Commands

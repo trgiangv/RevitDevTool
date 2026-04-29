@@ -1,4 +1,4 @@
-using DevTools.Views.ViewModel.Settings;
+using DevTools.Presentation.ViewModels.Settings;
 namespace RevitDevTool.View;
 
 public partial class SettingsView

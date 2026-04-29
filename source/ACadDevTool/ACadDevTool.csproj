@@ -60,7 +60,7 @@
 
     <ItemGroup>
         <ProjectReference Include="..\..\libs\pythonnet-stub-generator\csharp\PythonNetStubGenerator\PythonNetStubGenerator.csproj" />
-        <ProjectReference Include="..\DevTools.Views\DevTools.Views.csproj" />
+        <ProjectReference Include="..\DevTools.Presentation\DevTools.Presentation.csproj" />
         <ProjectReference Include="..\DevTools.UI\DevTools.UI.csproj" />
         <ProjectReference Include="..\DevTools.Utilities\DevTools.Utilities.csproj" />
         <ProjectReference Include="..\DevTools.Logging\DevTools.Logging.csproj" />

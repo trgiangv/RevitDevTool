@@ -3,14 +3,12 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:design="clr-namespace:DevTools.UI.Theme.Design;assembly=DevTools.UI"
-             xmlns:mah="http://metro.devtools.ui/winfx/xaml/controls"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-             xmlns:settings="clr-namespace:RevitDevTool.View.Settings"
-             xmlns:sharedSettings="http://devtools.views"
-             xmlns:vm="http://devtools.views/vm"
+             xmlns:settings="http://devtools.presentation"
+             xmlns:visualization="clr-namespace:RevitDevTool.View.Settings"
+             d:DataContext="{d:DesignInstance settings:SettingsViewModel}"
              d:DesignHeight="630"
              d:DesignWidth="600"
-             d:DataContext="{d:DesignInstance vm:SettingsViewModel}"
              Background="{DynamicResource DevTools.MahApps.Brushes.ThemeBackground}"
              mc:Ignorable="d">
 
@@ -31,20 +29,20 @@
 
         <TabControl Grid.Row="0">
             <TabItem Header="General">
-                <sharedSettings:GeneralSettingsView />
+                <settings:GeneralSettingsView />
             </TabItem>
             <TabItem Header="Visualization">
-                <settings:VisualizationSettingsView />
+                <visualization:VisualizationSettingsView />
             </TabItem>
             <TabItem Header="Log">
-                <sharedSettings:LogSettingsView />
+                <settings:LogSettingsView />
             </TabItem>
         </TabControl>
 
         <!--  Reset  -->
         <Button Grid.Row="1"
                 Width="100"
-                Margin="5 0 5 5"
+                Margin="5,0,5,5"
                 HorizontalAlignment="Right"
                 HorizontalContentAlignment="Center"
                 Command="{Binding ResetSettingsCommand}"

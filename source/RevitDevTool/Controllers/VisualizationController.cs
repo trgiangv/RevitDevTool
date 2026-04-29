@@ -1,6 +1,6 @@
 using CommunityToolkit.Mvvm.Messaging;
+using DevTools.Presentation.ViewModels.Messages;
 using RevitDevTool.Core;
-using DevTools.Views.ViewModel.Messages;
 using RevitDevTool.ViewModel.Settings.Visualization;
 using RevitDevTool.Visualization.Contracts;
 using RevitDevTool.Visualization.Server;

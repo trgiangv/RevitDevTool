@@ -1,4 +1,4 @@
-using DevTools.Views.ViewModel.Settings;
+using DevTools.Presentation.ViewModels.Settings;
 
 namespace AcadDevTool.View;
 
