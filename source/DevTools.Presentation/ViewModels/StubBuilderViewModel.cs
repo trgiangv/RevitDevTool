@@ -24,7 +24,7 @@ public partial class StubBuilderViewModel : ObservableObject
 
     public StubBuilderViewModel()
     {
-        _outputPath = Path.Combine(SettingsUtils.GetContentRootPath(), "Stubs");
+        _outputPath = Path.Combine(AppUtils.GetContentRootPath(), "Stubs");
         FilteredAssemblies = CollectionViewSource.GetDefaultView(AppDomainAssemblies);
         FilteredAssemblies.Filter = FilterAssembly;
         LoadAppDomainAssemblies();

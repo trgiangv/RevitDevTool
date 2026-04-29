@@ -1,5 +1,4 @@
 using System.IO;
-using DevTools.Logging;
 using DevTools.Logging.Abstractions;
 using DevTools.Logging.Options;
 using Microsoft.Extensions.Logging;
@@ -27,7 +26,7 @@ public sealed class FileLogProcessor(ILoggerFactory loggerFactory, IHostAppInfo 
         Directory.CreateDirectory(folder);
 
         var ext = fileOptions.Format == SaveFormat.Json ? "json" : "log";
-        var app = appInfo.AppName;
+        var app = appInfo.Host;
         var ver = appInfo.VersionBuild;
         var pid = appInfo.ProcessId;
 

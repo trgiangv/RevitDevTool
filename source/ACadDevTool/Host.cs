@@ -17,7 +17,7 @@ public static class Host
     public static void Start()
     {
         SetupTheme();
-        var contentRoot = SettingsUtils.GetContentRootPath();
+        var contentRoot = AppUtils.GetContentRootPath();
         var builder = Microsoft.Extensions.Hosting.Host.CreateApplicationBuilder(new HostApplicationBuilderSettings
         {
             ContentRootPath = contentRoot,

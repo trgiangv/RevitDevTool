@@ -10,7 +10,7 @@ namespace DevTools.Execution.Services;
 
 public sealed class PackageService(PythonInitializer pythonInitializer, IHostAppInfo hostAppInfo) : IPackageService
 {
-    private static readonly string NuGetCacheRoot = Path.Combine(SettingsUtils.GetApplicationDataPath(), "nuget");
+    private static readonly string NuGetCacheRoot = Path.Combine(AppUtils.GetApplicationDataPath(), "nuget");
 
     private PyEnvironmentProvider? Provider => pythonInitializer.Provider;
     private bool IsPixiBackend => Provider?.Backend == PythonBackend.Pixi;
@@ -183,7 +183,7 @@ public sealed class PackageService(PythonInitializer pythonInitializer, IHostApp
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
-            Trace.TraceWarning($"[PackageService] Could not delete '{path}': {ex.Message} (files may be locked by {hostAppInfo.AppName})");
+            Trace.TraceWarning($"[PackageService] Could not delete '{path}': {ex.Message} (files may be locked by {hostAppInfo.Host})");
         }
     }
 }

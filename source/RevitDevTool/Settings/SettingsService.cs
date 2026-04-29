@@ -4,7 +4,7 @@ using RevitDevTool.Logging.Enums;
 using RevitDevTool.Settings.Config;
 using System.Diagnostics;
 using System.IO;
-using AppUtils = DevTools.Utilities.AppUtils;
+using DevTools.Utilities;
 
 namespace RevitDevTool.Settings;
 
@@ -166,16 +166,10 @@ public sealed class SettingsService(IFileConfig<PathOptions> fileConfig) : IRevi
 
     private void ResetGeneralSettings()
     {
-        _generalConfig = CreateDefaultGeneralConfig();
-    }
-
-    private static GeneralConfig CreateDefaultGeneralConfig()
-    {
-        var config = new GeneralConfig();
-#if AUTODESK2024_OR_GREATER
-        config.Theme = AppTheme.Auto;
+        _generalConfig = new GeneralConfig();
+#if REVIT2024_OR_GREATER
+        _generalConfig.Theme = DevTools.UI.Theme.AppTheme.Auto;
 #endif
-        return config;
     }
 
     private void ResetLogSettings()

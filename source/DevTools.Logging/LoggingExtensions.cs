@@ -15,7 +15,7 @@ public static class LoggingExtensions
     /// Monitor defaults match historical Host.cs (channel/display); optional <paramref name="configureMonitor"/>
     /// runs after those defaults (e.g. Revit linkification).
     /// </summary>
-    public static HostApplicationBuilder AddLoggingServices(
+    public static HostApplicationBuilder AddLoggingProvider(
         this HostApplicationBuilder builder,
         Action<ScintillaOptions>? configureMonitor = null)
     {

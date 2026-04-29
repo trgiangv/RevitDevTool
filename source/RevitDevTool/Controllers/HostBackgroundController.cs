@@ -1,6 +1,8 @@
 using System.IO;
+using DevTools.Logging;
 using Microsoft.Extensions.Hosting;
 using DevTools.Execution.Providers.Python;
+using DevTools.Execution.Services;
 using DevTools.Utilities;
 using RevitDevTool.Settings;
 using DevTools.UI.Theme;
@@ -8,14 +10,19 @@ using DevTools.UI.Theme;
 namespace RevitDevTool.Controllers;
 
 public sealed class HostBackgroundController(
+    IHostAppInfo hostAppInfo,
     IRevitSettingsService settingsService,
     PythonInitializer pythonInitializer) : IHostedService
 {
     public async Task StartAsync(CancellationToken cancellationToken)
     {
+        var hostApp = hostAppInfo.Host;
+        NetworkService.Configure(hostApp);
+        PythonEmbedded.Configure(hostApp);
+
         settingsService.LoadSettings();
         ThemeManager.Current.ApplySettingsTheme(settingsService.GeneralConfig.Theme);
-        ToggleHardwareRendering(settingsService);
+        DispatcherHelper.ToggleHardwareRendering(settingsService.GeneralConfig.UseHardwareRendering);
         await pythonInitializer.InitializeAsync().ConfigureAwait(false);
     }
 
@@ -42,10 +49,5 @@ public sealed class HostBackgroundController(
             try { File.Delete(file); }
             catch { /* ignore */ }
         }
-    }
-
-    public static void ToggleHardwareRendering(IRevitSettingsService settingsService)
-    {
-        DispatcherHelper.ToggleHardwareRendering(settingsService.GeneralConfig.UseHardwareRendering);
     }
 }

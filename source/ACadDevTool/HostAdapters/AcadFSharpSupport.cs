@@ -46,13 +46,13 @@ public sealed class AcadFSharpSupport : IFSharpHostSupport
 
     public string GetHostVersion()
     {
-        return SettingsUtils.AutodeskVersion;
+        return AppUtils.AutodeskVersion;
     }
 
     public string GetHostReferencePattern() => @"AutoCAD\s+\d{4}";
 
     public string GetHostReferenceReplacement()
     {
-        return $"AutoCAD {SettingsUtils.AutodeskVersion}";
+        return $"AutoCAD {AppUtils.AutodeskVersion}";
     }
 }

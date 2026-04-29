@@ -2,6 +2,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Net.Http;
 using System.Text.Json;
+using DevTools.Logging;
 namespace DevTools.Execution.Services;
 
 /// <summary>
@@ -19,10 +20,10 @@ public static class NetworkService
     /// <summary>
     /// Updates the User-Agent header to reflect the host app. Call once at startup.
     /// </summary>
-    public static void ConfigureUserAgent(string hostAppName)
+    public static void Configure(HostApp host)
     {
         Http.DefaultRequestHeaders.Remove("User-Agent");
-        Http.DefaultRequestHeaders.Add("User-Agent", $"DevTools/{hostAppName}");
+        Http.DefaultRequestHeaders.Add("User-Agent", $"DevTools/{host}");
     }
 
     private const int DefaultMaxRetries = 3;
@@ -68,7 +69,7 @@ public static class NetworkService
             if (!response.IsSuccessStatusCode)
                 return null;
 
-            var payload = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
+            var payload = await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
             return JsonDocument.Parse(payload);
         }).ConfigureAwait(false);
     }

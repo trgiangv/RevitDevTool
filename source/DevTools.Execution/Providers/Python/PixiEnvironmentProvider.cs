@@ -13,7 +13,7 @@ public sealed class PixiEnvironmentProvider : PyEnvironmentProvider
     private const string PixiEnvDirName = "pixi-env";
 
     public static readonly string PixiProjectDir =
-        Path.Combine(SettingsUtils.GetApplicationDataPath(), PixiEnvDirName);
+        Path.Combine(AppUtils.GetApplicationDataPath(), PixiEnvDirName);
 
     public override PythonBackend Backend => PythonBackend.Pixi;
 

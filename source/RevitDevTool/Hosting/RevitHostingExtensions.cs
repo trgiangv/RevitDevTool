@@ -1,8 +1,6 @@
 using CommunityToolkit.Mvvm.Messaging;
 using DevTools.Execution;
 using DevTools.Execution.Interfaces;
-using DevTools.Execution.Providers.Python;
-using DevTools.Execution.Services;
 using DevTools.Logging;
 using DevTools.Logging.Abstractions;
 using DevTools.Presentation;
@@ -41,7 +39,7 @@ internal static class RevitHostingExtensions
         this HostApplicationBuilder builder,
         Action<ScintillaOptions>? configureMonitor = null)
     {
-        LoggingExtensions.AddLoggingServices(builder, configureMonitor);
+        builder.AddLoggingProvider(configureMonitor);
 
         var services = builder.Services;
         services.AddSingleton<LoggingService>();
@@ -110,9 +108,6 @@ internal static class RevitHostingExtensions
         services.AddSingleton<ICommandDiscovery, RevitCommandDiscovery>();
         services.AddSingleton<IFSharpHostSupport, RevitFSharpSupport>();
         services.AddSingleton<IHostPythonBridge, RevitPythonBridge>();
-
-        NetworkService.ConfigureUserAgent("Revit");
-        PythonEmbedded.Configure(PythonHostKind.Revit);
 
         services.AddExecutionServices();
         return builder;

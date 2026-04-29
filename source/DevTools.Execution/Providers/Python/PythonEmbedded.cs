@@ -2,6 +2,7 @@ using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.IO;
 using System.Reflection;
+using DevTools.Logging;
 namespace DevTools.Execution.Providers.Python;
 
 public static class PythonEmbedded
@@ -12,14 +13,14 @@ public static class PythonEmbedded
     /// </summary>
     private const string ExecutionScriptsPrefix = "DevTools.Execution.Resources.scripts";
 
-    private static PythonHostKind _hostKind = PythonHostKind.Revit;
+    private static HostApp _host;
 
     /// <summary>
-    /// Configures host-specific setup script (Revit vs AutoCAD CLR references). Must run before any script access.
+    /// Configures host-specific setup script from <see cref="DevTools.Logging.IHostAppInfo.Host"/>. Must run before any script access.
     /// </summary>
-    public static void Configure(PythonHostKind hostKind)
+    public static void Configure(HostApp host)
     {
-        _hostKind = hostKind;
+        _host = host;
         ScriptCache.Clear();
         ScriptPathCache.Clear();
     }
@@ -29,12 +30,12 @@ public static class PythonEmbedded
     private static string ToolInvokeSourcePath => $"{ExecutionScriptsPrefix}.ToolInvoke.py";
     private static string PytestRunnerSourcePath => $"{ExecutionScriptsPrefix}.PytestRunner.py";
 
-    private static string SetupSourcePath => _hostKind switch
-    {
-        PythonHostKind.Revit => $"{ExecutionScriptsPrefix}.SetupRevit.py",
-        PythonHostKind.AutoCad => $"{ExecutionScriptsPrefix}.SetupAcad.py",
-        _ => throw new ArgumentOutOfRangeException(nameof(_hostKind)),
-    };
+    private static string SetupSourcePath =>
+        _host switch
+        {
+            HostApp.Revit => $"{ExecutionScriptsPrefix}.SetupRevit.py",
+            _ => $"{ExecutionScriptsPrefix}.SetupAcad.py",
+        };
 
     private static string ResetSourcePath => $"{ExecutionScriptsPrefix}.Reset.py";
     private static string PixiTomlSourcePath => $"{ExecutionScriptsPrefix}.pixi.toml";
@@ -174,7 +175,7 @@ public static class PythonEmbedded
         yield return $"{hostName}.{ExecutionScriptsPrefix}.{fileName}";
 
         var suffix = $".{ExecutionScriptsPrefix}.{fileName}";
-        foreach (var name in assembly.GetManifestResourceNames() ?? Array.Empty<string>())
+        foreach (var name in assembly.GetManifestResourceNames())
         {
             if (name.EndsWith(suffix, StringComparison.Ordinal))
                 yield return name;

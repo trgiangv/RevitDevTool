@@ -1,6 +1,8 @@
 using System.IO;
 using AcadDevTool.Settings;
+using DevTools.Logging;
 using DevTools.Execution.Providers.Python;
+using DevTools.Execution.Services;
 using DevTools.Utilities;
 using DevTools.UI.Theme;
 using Microsoft.Extensions.Hosting;
@@ -8,14 +10,19 @@ using Microsoft.Extensions.Hosting;
 namespace AcadDevTool.Controllers;
 
 public sealed class HostBackgroundController(
+    IHostAppInfo hostAppInfo,
     IAcadSettingsService settingsService,
     PythonInitializer pythonInitializer) : IHostedService
 {
     public async Task StartAsync(CancellationToken cancellationToken)
     {
+        var hostApp = hostAppInfo.Host;
+        NetworkService.Configure(hostApp);
+        PythonEmbedded.Configure(hostApp);
+
         settingsService.LoadSettings();
         ThemeManager.Current.ApplySettingsTheme(settingsService.GeneralConfig.Theme);
-        ToggleHardwareRendering(settingsService);
+        DispatcherHelper.ToggleHardwareRendering(settingsService.GeneralConfig.UseHardwareRendering);
         await pythonInitializer.InitializeAsync().ConfigureAwait(false);
     }
 
@@ -24,11 +31,6 @@ public sealed class HostBackgroundController(
         settingsService.SaveSettings();
         CleanLogFolder();
         await pythonInitializer.ShutdownAsync().ConfigureAwait(false);
-    }
-
-    public static void ToggleHardwareRendering(IAcadSettingsService settingsService)
-    {
-        DispatcherHelper.ToggleHardwareRendering(settingsService.GeneralConfig.UseHardwareRendering);
     }
 
     private void CleanLogFolder()

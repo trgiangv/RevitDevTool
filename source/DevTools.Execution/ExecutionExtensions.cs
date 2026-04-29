@@ -19,8 +19,8 @@ namespace DevTools.Execution;
 
 /// <summary>
 /// Shared execution registrations for <see cref="IServiceCollection"/> (same layering as host apps wiring inside <c>ConfigureServices</c>).
-/// Host-specific adapters (<see cref="IHostContextExecutor"/>, <see cref="ICommandDiscovery"/>, …)
-/// and <see cref="PythonEmbedded.Configure"/> belong in the add-in; call this after those registrations.
+/// Host-specific adapters (<see cref="IHostContextExecutor"/>, <see cref="ICommandDiscovery"/>, …) belong in the add-in.
+/// Call <see cref="ExecutionHostBootstrap.Apply"/> once at startup (before Python init), typically from the host <see cref="IHostedService"/>.
 /// </summary>
 public static class ExecutionExtensions
 {

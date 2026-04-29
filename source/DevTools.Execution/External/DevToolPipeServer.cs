@@ -55,7 +55,7 @@ public sealed class DevToolsPipeServer(
     public Task StartAsync(CancellationToken cancellationToken)
     {
         if (_cts is not null) return Task.CompletedTask;
-        _pipeName = $"{hostInfo.AppName}_{hostInfo.VersionNumber}_{Environment.ProcessId}";
+        _pipeName = $"{hostInfo.Host}_{hostInfo.VersionNumber}_{Environment.ProcessId}";
         state.SetEndpoint(_pipeName);
         state.SetConnectedState(0);
         state.SetQueueDepth(0);

@@ -1,8 +1,6 @@
 using CommunityToolkit.Mvvm.Messaging;
 using DevTools.Execution;
 using DevTools.Execution.Interfaces;
-using DevTools.Execution.Providers.Python;
-using DevTools.Execution.Services;
 using DevTools.Logging;
 using DevTools.Logging.Abstractions;
 using DevTools.Presentation;
@@ -17,6 +15,8 @@ using AcadDevTool.Logging;
 using AcadDevTool.Logging.Enrichers;
 using AcadDevTool.Settings;
 using AcadDevTool.View;
+using DevTools.Execution.Providers.Python;
+using DevTools.Execution.Services;
 using ZLogger.Scintilla.Public;
 // ReSharper disable ConvertToExtensionBlock
 
@@ -38,7 +38,7 @@ internal static class AcadHostingExtensions
         this HostApplicationBuilder builder,
         Action<ScintillaOptions>? configureMonitor = null)
     {
-        LoggingExtensions.AddLoggingServices(builder, configureMonitor);
+        builder.AddLoggingProvider(configureMonitor);
 
         var services = builder.Services;
         services.AddSingleton<AcadLoggingService>();
@@ -80,9 +80,6 @@ internal static class AcadHostingExtensions
         services.AddSingleton<ICommandDiscovery, AcadCommandDiscovery>();
         services.AddSingleton<IFSharpHostSupport, AcadFSharpSupport>();
         services.AddSingleton<IHostPythonBridge, AcadPythonBridge>();
-
-        NetworkService.ConfigureUserAgent("AutoCAD");
-        PythonEmbedded.Configure(PythonHostKind.AutoCad);
 
         services.AddExecutionServices();
         return builder;

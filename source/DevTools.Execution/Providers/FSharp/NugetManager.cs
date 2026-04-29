@@ -10,7 +10,7 @@ namespace DevTools.Execution.Providers.FSharp;
 
 internal static class NugetManager
 {
-    private static readonly string NugetRoot = Path.Combine(SettingsUtils.GetApplicationDataPath(), "nuget");
+    private static readonly string NugetRoot = Path.Combine(AppUtils.GetApplicationDataPath(), "nuget");
     private static readonly ConcurrentDictionary<string, string[]> SessionCache = new();
 
     public static async Task<string[]> ResolvePackageDllsAsync(string packageId, string? version, CancellationToken ct)

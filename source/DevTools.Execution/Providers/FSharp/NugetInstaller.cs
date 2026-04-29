@@ -12,7 +12,7 @@ internal static class NugetInstaller
 {
     private const string NugetExeDownloadUrl = "https://dist.nuget.org/win-x86-commandline/latest/nuget.exe";
 
-    private static string GetBinPath() => Path.Combine(SettingsUtils.GetApplicationDataPath(), "bin");
+    private static string GetBinPath() => Path.Combine(AppUtils.GetApplicationDataPath(), "bin");
     public static string NugetExePath => Path.Combine(GetBinPath(), "nuget.exe");
 
     /// <summary>

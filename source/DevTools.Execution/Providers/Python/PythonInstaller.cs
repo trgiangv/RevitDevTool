@@ -16,7 +16,7 @@ public static class PythonInstaller
     private const string PixiVersion = "0.67.0";
     private const string PixiDownloadUrlTemplate = "https://github.com/prefix-dev/pixi/releases/download/v{0}/pixi-x86_64-pc-windows-msvc.zip";
 
-    private static string GetBinPath() => Path.Combine(SettingsUtils.GetApplicationDataPath(), "bin");
+    private static string GetBinPath() => Path.Combine(AppUtils.GetApplicationDataPath(), "bin");
     public static string PixiExePath => Path.Combine(GetBinPath(), "pixi.exe");
     public static bool IsPixiInstalled() => File.Exists(PixiExePath) && IsMarkedVersion(PixiVersion);
     private static string VersionMarkerPath => Path.Combine(GetBinPath(), ".pixi-version");
