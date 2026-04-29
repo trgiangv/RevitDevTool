@@ -1,10 +1,10 @@
 using System.Diagnostics;
 using System.IO;
-using DevTools.McpParser;
 using DevTools.Execution.Interfaces;
 using DevTools.Execution.Models;
 using DevTools.Execution.Providers.FSharp;
 using DevTools.Execution.Providers.Python;
+using DevTools.McpParser.Models;
 namespace DevTools.Execution.Providers;
 
 public sealed class ScriptExecutionProvider(

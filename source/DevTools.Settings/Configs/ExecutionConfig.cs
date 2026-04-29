@@ -1,4 +1,4 @@
-namespace DevTools.Execution.Configs;
+namespace DevTools.Settings.Configs;
 
 /// <summary>
 /// Configuration for persisting code execution settings (DotNet assemblies and script folders)

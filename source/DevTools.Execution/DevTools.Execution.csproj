@@ -34,6 +34,7 @@
     </ItemGroup>
 
     <ItemGroup>
+        <ProjectReference Include="..\DevTools.Settings\DevTools.Settings.csproj" />
         <ProjectReference Include="..\DevTools.UI\DevTools.UI.csproj" />
         <ProjectReference Include="..\DevTools.Logging\DevTools.Logging.csproj" />
         <ProjectReference Include="..\DevTools.Utilities\DevTools.Utilities.csproj" />

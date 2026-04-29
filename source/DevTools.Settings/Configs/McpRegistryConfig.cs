@@ -1,4 +1,4 @@
-namespace DevTools.Execution.Configs;
+namespace DevTools.Settings.Configs;
 
 [Serializable]
 public class McpRegistryConfig

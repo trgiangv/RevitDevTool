@@ -1,6 +1,7 @@
 using System.Text.Json.Serialization;
 using DevTools.UI.Theme;
-namespace DevTools.Execution.Settings;
+
+namespace DevTools.Settings;
 
 [Serializable]
 public sealed class GeneralConfig

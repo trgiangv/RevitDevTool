@@ -18,6 +18,12 @@
                 <ResourceDictionary Source="/DevTools.UI;component/Theme/Theme.xaml" />
                 <design:IntellisenseResources Source="/DevTools.UI;component/Theme/Design/DesignTimeResources.xaml" />
             </ResourceDictionary.MergedDictionaries>
+            <DataTemplate DataType="{x:Type settings:GeneralSettingsViewModel}">
+                <settings:GeneralSettingsView />
+            </DataTemplate>
+            <DataTemplate DataType="{x:Type settings:LogSettingsViewModel}">
+                <settings:LogSettingsView />
+            </DataTemplate>
         </ResourceDictionary>
     </UserControl.Resources>
 
@@ -29,13 +35,13 @@
 
         <TabControl Grid.Row="0">
             <TabItem Header="General">
-                <settings:GeneralSettingsView />
+                <ContentControl Content="{Binding GeneralSettings}" />
             </TabItem>
             <TabItem Header="Visualization">
                 <visualization:VisualizationSettingsView />
             </TabItem>
             <TabItem Header="Log">
-                <settings:LogSettingsView />
+                <ContentControl Content="{Binding LogSettings}" />
             </TabItem>
         </TabControl>
 

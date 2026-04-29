@@ -4,6 +4,7 @@ using DevTools.Logging;
 using DevTools.Logging.Abstractions;
 using DevTools.Logging.Listeners;
 using DevTools.Logging.Options;
+using DevTools.Settings.Configs;
 using DevTools.UI.Theme;
 using DevTools.Presentation.Interfaces;
 using Microsoft.Extensions.Logging;

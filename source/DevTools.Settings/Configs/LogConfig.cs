@@ -1,7 +1,11 @@
 using System.Text.Json.Serialization;
+using DevTools.Logging.Options;
 
-namespace DevTools.Logging.Options;
+namespace DevTools.Settings.Configs;
 
+/// <summary>
+/// Persisted log sink configuration (JSON under Settings/). Nested option POCOs live in <c>DevTools.Logging.Options</c>.
+/// </summary>
 [Serializable]
 public class LogConfig
 {

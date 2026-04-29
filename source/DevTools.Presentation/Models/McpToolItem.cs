@@ -1,4 +1,4 @@
-using DevTools.McpParser;
+using DevTools.McpParser.Models;
 using DevTools.UI.Behaviors;
 namespace DevTools.Presentation.Models;
 

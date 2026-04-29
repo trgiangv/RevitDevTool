@@ -1,7 +1,5 @@
-using DevTools.Logging.Options;
-using DevTools.Execution.Configs;
-using DevTools.Execution.Settings;
-using DevTools.UI.Theme;
+using DevTools.Settings;
+using DevTools.Settings.Configs;
 using RevitDevTool.Logging.Enums;
 using RevitDevTool.Settings.Config;
 using System.Diagnostics;

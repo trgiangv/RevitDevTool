@@ -42,7 +42,7 @@ public interface IExecutionOrchestrator
     /// </summary>
     /// <param name="paths">List of paths to load (assemblies, folders, etc.)</param>
     /// <param name="cancellationToken">Cancellation token</param>
-    Task LoadSavedPathsAsync(IEnumerable<string> paths, CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<string>> LoadSavedPathsAsync(IEnumerable<string> paths, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Reload the current tree (e.g., after file changes)

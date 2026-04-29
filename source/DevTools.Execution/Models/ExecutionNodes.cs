@@ -1,4 +1,4 @@
-﻿using DevTools.McpParser;
+﻿using DevTools.McpParser.Models;
 namespace DevTools.Execution.Models;
 
 /// <summary>

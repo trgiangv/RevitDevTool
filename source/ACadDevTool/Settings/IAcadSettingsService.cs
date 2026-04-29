@@ -1,9 +1,9 @@
 using AcadDevTool.Logging.Enums;
-using DevTools.Presentation.Interfaces;
+using DevTools.Settings;
 
 namespace AcadDevTool.Settings;
 
-public interface IAcadSettingsService : IDevToolsSettingsService
+public interface IAcadSettingsService : ISettingsService
 {
     HashSet<AcadEnricher> AcadEnrichers { get; set; }
 }

@@ -1,4 +1,4 @@
-namespace DevTools.McpParser;
+namespace DevTools.McpParser.Models;
 
 public enum ExecutionMode
 {

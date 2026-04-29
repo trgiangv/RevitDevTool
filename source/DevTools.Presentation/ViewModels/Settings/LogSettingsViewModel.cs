@@ -5,6 +5,7 @@ using CommunityToolkit.Mvvm.Messaging;
 using DevTools.Logging;
 using DevTools.Logging.Options;
 using DevTools.Presentation.Interfaces;
+using DevTools.Settings;
 using DevTools.Presentation.ViewModels.Messages;
 using Microsoft.Extensions.Logging;
 using ZLogger.Providers;
@@ -14,7 +15,7 @@ namespace DevTools.Presentation.ViewModels.Settings;
 
 public partial class LogSettingsViewModel : ObservableObject, IDataErrorInfo, IRecipient<ResetSettingsMessage>
 {
-    private readonly IDevToolsSettingsService _settingsService;
+    private readonly ISettingsService _settingsService;
     private readonly IDevToolsLoggingService _loggingService;
     private readonly IMessenger _messenger;
     private readonly ILogEnricherProvider? _enricherProvider;
@@ -58,7 +59,7 @@ public partial class LogSettingsViewModel : ObservableObject, IDataErrorInfo, IR
     private Snapshot _baseline;
 
     public LogSettingsViewModel(
-        IDevToolsSettingsService settingsService,
+        ISettingsService settingsService,
         IDevToolsLoggingService loggingService,
         IMessenger messenger,
         ILogEnricherProvider? enricherProvider = null)

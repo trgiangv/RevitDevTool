@@ -1,5 +1,6 @@
 using CommunityToolkit.Mvvm.Messaging;
 using DevTools.Presentation.Interfaces;
+using DevTools.Settings;
 using DevTools.Presentation.ViewModels.Messages;
 using DevTools.UI.Theme;
 using DevTools.Utilities;
@@ -7,7 +8,7 @@ namespace DevTools.Presentation.ViewModels.Settings;
 
 public partial class GeneralSettingsViewModel : ObservableValidator, IRecipient<ResetSettingsMessage>
 {
-    private readonly IDevToolsSettingsService _settingsService;
+    private readonly ISettingsService _settingsService;
     private readonly IDevToolsLoggingService _loggingService;
     private readonly IMessenger _messenger;
 
@@ -36,7 +37,7 @@ public partial class GeneralSettingsViewModel : ObservableValidator, IRecipient<
     }
 
     public GeneralSettingsViewModel(
-        IDevToolsSettingsService settingsService,
+        ISettingsService settingsService,
         IDevToolsLoggingService loggingService,
         IMessenger messenger)
     {

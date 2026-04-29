@@ -1,9 +1,8 @@
 using System.IO;
 using System.Text;
 using System.Text.RegularExpressions;
-using DevTools.McpParser;
 using DevTools.Execution.External.Mcp.Registry;
-using DevTools.Execution.Settings;
+using DevTools.Settings;
 using DevTools.McpParser.Models;
 using ModelContextProtocol.Protocol;
 // ReSharper disable RedundantSuppressNullableWarningExpression

@@ -6,5 +6,7 @@ namespace DevTools.Execution.Providers.Python;
 public enum PythonHostKind
 {
     Revit,
-    AutoCAD,
+    AutoCad,
+    Civil3D,
+    Plant3D
 }

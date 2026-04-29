@@ -60,10 +60,17 @@ public sealed class ExecutionOrchestrator : IExecutionOrchestrator, IDisposable
         TreeChanged?.Invoke(this, EventArgs.Empty);
     }
 
-    public async Task LoadSavedPathsAsync(IEnumerable<string> paths, CancellationToken cancellationToken = default)
+    public async Task<IReadOnlyList<string>> LoadSavedPathsAsync(IEnumerable<string> paths, CancellationToken cancellationToken = default)
     {
+        var failed = new List<string>();
         foreach (var path in paths)
         {
+            if (string.IsNullOrWhiteSpace(path))
+            {
+                failed.Add(path);
+                continue;
+            }
+
             try
             {
                 await LoadFromPathAsync(path, cancellationToken).ConfigureAwait(true);
@@ -71,8 +78,28 @@ public sealed class ExecutionOrchestrator : IExecutionOrchestrator, IDisposable
             catch (Exception ex)
             {
                 Trace.TraceError($"Failed to load path '{path}': {ex.Message}");
+                failed.Add(path);
+                continue;
+            }
+
+            if (!HasRootForConfiguredPath(path))
+            {
+                failed.Add(path);
             }
         }
+
+        return failed;
+    }
+
+    private bool HasRootForConfiguredPath(string path)
+    {
+        foreach (var root in _treeRoot.OfType<ExecutionNodeRoot>())
+        {
+            if (AreSamePath(path, root.RootPath))
+                return true;
+        }
+
+        return false;
     }
 
     public async Task ReloadAsync(CancellationToken cancellationToken = default)

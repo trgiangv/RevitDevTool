@@ -32,7 +32,7 @@ public static class PythonEmbedded
     private static string SetupSourcePath => _hostKind switch
     {
         PythonHostKind.Revit => $"{ExecutionScriptsPrefix}.SetupRevit.py",
-        PythonHostKind.AutoCAD => $"{ExecutionScriptsPrefix}.SetupAcad.py",
+        PythonHostKind.AutoCad => $"{ExecutionScriptsPrefix}.SetupAcad.py",
         _ => throw new ArgumentOutOfRangeException(nameof(_hostKind)),
     };
 

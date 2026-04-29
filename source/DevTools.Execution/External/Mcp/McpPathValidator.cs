@@ -1,7 +1,6 @@
 using System.Diagnostics;
 using System.IO;
-using DevTools.McpParser;
-using DevTools.Execution.Configs;
+using DevTools.Settings.Configs;
 using DevTools.McpParser.Models;
 // ReSharper disable RedundantSuppressNullableWarningExpression
 

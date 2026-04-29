@@ -1,8 +1,7 @@
 using Microsoft.Extensions.Options;
-using System.IO;
 using System.Text.Json;
 
-namespace DevTools.Execution.Settings;
+namespace DevTools.Settings;
 
 /// <summary>
 /// Stores configurations as JSON files in the settings directory.

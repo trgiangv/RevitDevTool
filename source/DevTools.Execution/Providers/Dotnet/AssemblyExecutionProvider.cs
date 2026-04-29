@@ -1,8 +1,8 @@
 using System.Diagnostics;
 using System.IO;
-using DevTools.McpParser;
 using DevTools.Execution.Interfaces;
 using DevTools.Execution.Models;
+using DevTools.McpParser.Models;
 namespace DevTools.Execution.Providers.Dotnet;
 
 /// <summary>

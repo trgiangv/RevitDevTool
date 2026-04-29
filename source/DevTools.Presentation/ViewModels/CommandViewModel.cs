@@ -4,8 +4,8 @@ using System.IO;
 using System.Windows.Threading;
 using DevTools.Execution.Interfaces;
 using DevTools.Execution.Models;
-using DevTools.Execution.Settings;
-using DevTools.McpParser;
+using DevTools.Settings;
+using DevTools.McpParser.Models;
 using DevTools.Presentation.Interfaces;
 using DevTools.UI.Theme;
 // ReSharper disable UnusedParameterInPartialMethod
@@ -70,9 +70,15 @@ public partial class CommandViewModel : ObservableObject
     public async Task LoadSavedPathsAsync()
     {
         var config = _settingsService.ExecutionConfig;
-        var allPaths = config.DotnetAssemblyPaths.Concat(config.ScriptFolderPaths);
+        var allPaths = config.DotnetAssemblyPaths.Concat(config.ScriptFolderPaths).ToList();
         using var _ = BeginBusy("Loading saved paths...");
-        await _orchestrator.LoadSavedPathsAsync(allPaths);
+        var failedPaths = await _orchestrator.LoadSavedPathsAsync(allPaths);
+
+        foreach (var path in failedPaths)
+        {
+            RemovePathFromSettings(path);
+        }
+
         UpdateTreeRoot();
     }
 

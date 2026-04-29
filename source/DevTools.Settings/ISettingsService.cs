@@ -1,6 +1,6 @@
-using DevTools.Execution.Configs;
+using DevTools.Settings.Configs;
 
-namespace DevTools.Execution.Settings;
+namespace DevTools.Settings;
 
 /// <summary>
 /// Shared settings contract for all host apps.
@@ -11,6 +11,9 @@ public interface ISettingsService
     GeneralConfig GeneralConfig { get; }
     ExecutionConfig ExecutionConfig { get; }
     McpRegistryConfig McpRegistryConfig { get; }
+    LogConfig LogConfig { get; }
+
     void SaveSettings();
     void LoadSettings();
+    void ResetSettings();
 }

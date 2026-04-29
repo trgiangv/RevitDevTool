@@ -1,9 +1,8 @@
 using System.Diagnostics;
 using System.IO;
 using AcadDevTool.Logging.Enums;
-using DevTools.Execution.Configs;
-using DevTools.Execution.Settings;
-using DevTools.Logging.Options;
+using DevTools.Settings;
+using DevTools.Settings.Configs;
 using DevTools.UI.Theme;
 using AppUtils = DevTools.Utilities.AppUtils;
 
@@ -98,7 +97,7 @@ public sealed class SettingsService(IFileConfig<PathOptions> fileConfig) : IAcad
         if (_executionConfig is null) return;
         _executionConfig.DotnetAssemblyPaths.RemoveAll(path => !File.Exists(path));
         _executionConfig.ScriptFolderPaths.RemoveAll(path => !Directory.Exists(path));
-        fileConfig.Save<AcadExecutionConfig>(_executionConfig);
+        fileConfig.Save(_executionConfig);
     }
 
     private void SaveMcpRegistrySettings()
@@ -110,7 +109,7 @@ public sealed class SettingsService(IFileConfig<PathOptions> fileConfig) : IAcad
             !string.Equals(Path.GetExtension(path), ".dll", StringComparison.OrdinalIgnoreCase));
         _mcpRegistryConfig.PythonToolsetPaths.RemoveAll(path =>
             string.IsNullOrWhiteSpace(path) || !Directory.Exists(path));
-        fileConfig.Save<AcadMcpRegistryConfig>(_mcpRegistryConfig);
+        fileConfig.Save(_mcpRegistryConfig);
     }
 
     private void LoadApplicationSettings()

@@ -4,6 +4,8 @@ using CommunityToolkit.Mvvm.Messaging;
 using DevTools.Presentation.Interfaces;
 using DevTools.Presentation.ViewModels.Messages;
 using DevTools.Presentation.ViewModels.Settings;
+using DevTools.Presentation.Views;
+using DevTools.Settings;
 namespace DevTools.Presentation.ViewModels;
 
 public partial class MainViewModel : ObservableRecipient,
@@ -11,7 +13,7 @@ public partial class MainViewModel : ObservableRecipient,
     IRecipient<IsMemoryEnableChangedMessage>
 {
     private readonly LogSettingsViewModel _logSettingsViewModel;
-    private readonly IDevToolsSettingsService _settingsService;
+    private readonly ISettingsService _settingsService;
     private bool _isInterlockingVisibility;
 
     public LogViewModel LogViewModel { get; }
@@ -61,11 +63,11 @@ public partial class MainViewModel : ObservableRecipient,
 
     public MainViewModel(
         LogViewModel logViewModel,
-        FrameworkElement executionView,
-        FrameworkElement mcpRegistryView,
-        FrameworkElement memoryView,
+        ExecutionView executionView,
+        McpRegistryView mcpRegistryView,
+        MemoryView memoryView,
         LogSettingsViewModel logSettingsViewModel,
-        IDevToolsSettingsService settingsService)
+        ISettingsService settingsService)
     {
         LogViewModel = logViewModel;
         ExecutionView = executionView;

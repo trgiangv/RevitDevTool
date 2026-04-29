@@ -1,4 +1,4 @@
-namespace DevTools.Execution.Settings;
+namespace DevTools.Settings;
 
 /// <summary>
 /// Abstraction for configuration persistence operations.

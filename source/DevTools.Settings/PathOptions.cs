@@ -1,6 +1,4 @@
-using System.IO;
-
-namespace DevTools.Execution.Settings;
+namespace DevTools.Settings;
 
 /// <summary>
 /// Configuration options for application paths.

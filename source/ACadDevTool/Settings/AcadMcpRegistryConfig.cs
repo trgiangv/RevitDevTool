@@ -1,4 +1,4 @@
-using DevTools.Execution.Configs;
+using DevTools.Settings.Configs;
 
 namespace AcadDevTool.Settings;
 
