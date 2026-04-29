@@ -1,5 +1,4 @@
-using System.IO;
-using Autodesk.Windows;
+
 
 namespace DevTools.Utilities;
 
@@ -67,7 +66,7 @@ public static class AppUtils
     /// <returns>Selected folder path or empty string if cancelled</returns>
     public static string SelectFolder(string title, IntPtr? owner = null)
     {
-        owner ??= ComponentManager.ApplicationWindow;
+        owner ??= HostUiHelper.MainWindowHandle;
         using var dialog = new Microsoft.WindowsAPICodePack.Dialogs.CommonOpenFileDialog();
         dialog.Title = title;
         dialog.IsFolderPicker = true;

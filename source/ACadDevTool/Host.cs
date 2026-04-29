@@ -61,7 +61,7 @@ public static class Host
             onChanged => AcadApp.SystemVariableChanged += (_, e) =>
             {
                 if (!string.Equals(e.Name, "COLORTHEME", StringComparison.OrdinalIgnoreCase)) return;
-                DispatcherHelper.RunOnMainThread(onChanged);
+                HostUiHelper.RunOnMainThread(onChanged);
             });
     }
 }

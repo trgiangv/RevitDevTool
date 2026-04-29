@@ -88,7 +88,7 @@ public sealed partial class McpRegistryViewModel : ObservableObject, IDisposable
     private void Reload()
     {
         using var _ = BeginBusy("Reloading MCP tools...");
-        DispatcherHelper.RunOnMainThread(async void () =>
+        HostUiHelper.RunOnMainThread(async void () =>
         {
             try { await _toolStore.ReloadAsync(); }
             catch { /* ignore */ }

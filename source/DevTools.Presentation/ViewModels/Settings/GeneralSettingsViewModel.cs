@@ -27,7 +27,7 @@ public partial class GeneralSettingsViewModel : ObservableValidator, IRecipient<
     partial void OnUseHardwareRenderingChanged(bool value)
     {
         _settingsService.GeneralConfig.UseHardwareRendering = value;
-        DispatcherHelper.ToggleHardwareRendering(value);
+        HostUiHelper.ToggleHardwareRendering(value);
     }
 
     partial void OnIsMemoryEnabledChanged(bool value)

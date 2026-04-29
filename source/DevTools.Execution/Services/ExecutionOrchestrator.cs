@@ -238,7 +238,7 @@ public sealed class ExecutionOrchestrator : IExecutionOrchestrator, IDisposable
         if (e.ChangeType == FileChangeType.Modified)
             return;
 
-        DispatcherHelper.RunOnMainThread(async void () =>
+        HostUiHelper.RunOnMainThread(async void () =>
         {
             try
             {

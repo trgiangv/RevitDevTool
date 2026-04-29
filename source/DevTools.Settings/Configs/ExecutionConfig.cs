@@ -1,3 +1,4 @@
+using System.Text.Json.Serialization;
 namespace DevTools.Settings.Configs;
 
 /// <summary>
@@ -9,10 +10,12 @@ public class ExecutionConfig
     /// <summary>
     /// List of assembly file paths
     /// </summary>
+    [JsonPropertyName("dotnetAssemblyPaths")]
     public List<string> DotnetAssemblyPaths { get; set; } = [];
 
     /// <summary>
     /// List of folders to load scripts from (Python .py and F# .fsx)
     /// </summary>
+    [JsonPropertyName("scriptFolderPaths")]
     public List<string> ScriptFolderPaths { get; set; } = [];
 }

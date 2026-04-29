@@ -14,7 +14,7 @@ public partial class StubBuilderWindow
     {
         InitializeComponent();
         DataContext = vm;
-        vm.CloseAction = () => DispatcherHelper.RunOnMainThread(Close);
+        vm.CloseAction = () => HostUiHelper.RunOnMainThread(Close);
         Loaded += OnLoaded;
         ThemeManager.Current.ActualApplicationThemeChanged += OnThemeChanged;
         Closed += OnClosed;

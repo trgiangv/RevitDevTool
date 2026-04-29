@@ -87,7 +87,7 @@ public sealed partial class ConnectionState : ObservableObject
 
     private static void UpdateUiState(Action updateAction)
     {
-        DispatcherHelper.RunOnMainThread(updateAction);
+        HostUiHelper.RunOnMainThread(updateAction);
     }
 }
 

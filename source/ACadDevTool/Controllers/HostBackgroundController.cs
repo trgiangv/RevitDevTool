@@ -1,5 +1,6 @@
 using System.IO;
 using AcadDevTool.Settings;
+using Autodesk.Windows;
 using DevTools.Logging;
 using DevTools.Execution.Providers.Python;
 using DevTools.Execution.Services;
@@ -16,13 +17,15 @@ public sealed class HostBackgroundController(
 {
     public async Task StartAsync(CancellationToken cancellationToken)
     {
+        HostUiHelper.Initialize(ComponentManager.ApplicationWindow, ComponentManager.Ribbon.Dispatcher);
+
         var hostApp = hostAppInfo.Host;
         NetworkService.Configure(hostApp);
         PythonEmbedded.Configure(hostApp);
 
         settingsService.LoadSettings();
         ThemeManager.Current.ApplySettingsTheme(settingsService.GeneralConfig.Theme);
-        DispatcherHelper.ToggleHardwareRendering(settingsService.GeneralConfig.UseHardwareRendering);
+        HostUiHelper.ToggleHardwareRendering(settingsService.GeneralConfig.UseHardwareRendering);
         await pythonInitializer.InitializeAsync().ConfigureAwait(false);
     }
 

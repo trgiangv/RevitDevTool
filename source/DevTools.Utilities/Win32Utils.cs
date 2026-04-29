@@ -1,7 +1,6 @@
 using System.Runtime.InteropServices;
 using System.Windows;
 using System.Windows.Interop;
-using Autodesk.Windows;
 // ReSharper disable InconsistentNaming
 // ReSharper disable ConvertToExtensionBlock
 // ReSharper disable UnusedMethodReturnValue.Local
@@ -98,7 +97,7 @@ public static partial class Win32Utils
     
     public static void SetHostAppOwner(this Window window)
     {
-        new WindowInteropHelper(window).Owner = ComponentManager.ApplicationWindow;
-        window.Closed += (_, _) => SetForegroundWindow(ComponentManager.ApplicationWindow);
+        new WindowInteropHelper(window).Owner = HostUiHelper.MainWindowHandle;
+        window.Closed += (_, _) => SetForegroundWindow(HostUiHelper.MainWindowHandle);
     }
 }

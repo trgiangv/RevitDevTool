@@ -1,4 +1,3 @@
-using System.IO;
 using System.Reflection;
 #if NET
 using System.Collections.Concurrent;

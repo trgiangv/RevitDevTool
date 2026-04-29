@@ -40,7 +40,7 @@ internal sealed class RevitLinkifier : ILinkifier
 
     private static Action CreateSearchAction(RevitTokenKind tokenKind, string value)
     {
-        return () => DispatcherHelper.RunOnMainThread(
+        return () => HostUiHelper.RunOnMainThread(
             () => RevitSearchService.TrySearchAndSelectInActiveDocument(tokenKind, value));
     }
 

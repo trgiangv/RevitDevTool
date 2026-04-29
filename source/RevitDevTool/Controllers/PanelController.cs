@@ -164,7 +164,7 @@ public sealed class PanelController(LogViewModel logViewModel)
     {
         if (_floatingWindow != null) return;
 
-        DispatcherHelper.RunOnMainThread(() =>
+        HostUiHelper.RunOnMainThread(() =>
         {
             if (_floatingWindow != null) return;
             _floatingWindow = Host.GetService<MainWindow>();
@@ -178,7 +178,7 @@ public sealed class PanelController(LogViewModel logViewModel)
     {
         if (_floatingWindow is null) return;
 
-        DispatcherHelper.RunOnMainThread(() =>
+        HostUiHelper.RunOnMainThread(() =>
         {
             if (_floatingWindow is null) return;
             _floatingWindow.Closed -= OnFloatingWindowClosed;

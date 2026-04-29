@@ -1,7 +1,7 @@
 using System.Windows.Interop;
 using System.Windows.Media;
 using System.Windows.Threading;
-using Autodesk.Windows;
+
 namespace DevTools.Utilities;
 
 /// <summary>
@@ -9,12 +9,23 @@ namespace DevTools.Utilities;
 /// Uses ComponentManager.Ribbon.Dispatcher which is the official Autodesk UI dispatcher.
 /// </summary>
 [PublicAPI]
-public static class DispatcherHelper
+public static class HostUiHelper
 {
     /// <summary>
     /// Gets the Autodesk UI thread dispatcher.
     /// </summary>
-    private static Dispatcher? RevitDispatcher => ComponentManager.Ribbon?.Dispatcher;
+    public static Dispatcher? HostDispatcher { get; private set; }
+    
+    /// <summary>
+    /// Gets the handle of the Host main window.
+    /// </summary>
+    public static IntPtr MainWindowHandle { get; private set; }
+    
+    public static void Initialize(IntPtr mainWindowHandle, Dispatcher dispatcher)
+    {
+        HostDispatcher = dispatcher;
+        MainWindowHandle = mainWindowHandle;
+    }
 
     /// <summary>
     /// Executes an action on the Autodesk main UI thread.
@@ -22,11 +33,11 @@ public static class DispatcherHelper
     /// </summary>
     public static void RunOnMainThread(Action action)
     {
-        if (RevitDispatcher is null) return;
-        if (RevitDispatcher.CheckAccess())
+        if (HostDispatcher is null) return;
+        if (HostDispatcher.CheckAccess())
             action();
         else
-            RevitDispatcher.BeginInvoke(action);
+            HostDispatcher.BeginInvoke(action);
     }
 
     /// <summary>
@@ -34,11 +45,11 @@ public static class DispatcherHelper
     /// </summary>
     public static void RunOnMainThread(Action action, DispatcherPriority priority)
     {
-        if (RevitDispatcher is null) return;
-        if (RevitDispatcher.CheckAccess())
+        if (HostDispatcher is null) return;
+        if (HostDispatcher.CheckAccess())
             action();
         else
-            RevitDispatcher.BeginInvoke(action, priority);
+            HostDispatcher.BeginInvoke(action, priority);
     }
 
     /// <summary>

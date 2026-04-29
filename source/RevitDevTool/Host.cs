@@ -65,7 +65,7 @@ public static class Host
             {
                 if (e.PropertyName != nameof(UIFramework.ApplicationTheme.CurrentTheme.RibbonPanelBackgroundBrush)) return;
                 if (UIThemeManager.CurrentTheme.ToString() == UIFramework.ApplicationTheme.CurrentTheme.RibbonTheme.Name) return;
-                DispatcherHelper.RunOnMainThread(onChanged);
+                HostUiHelper.RunOnMainThread(onChanged);
             });
 #endif
     }
