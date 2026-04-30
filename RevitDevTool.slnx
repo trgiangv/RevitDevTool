@@ -79,6 +79,7 @@
         <File Path="props/AutoCad.targets" />
         <File Path="props/Revit.props" />
         <File Path="props/Revit.targets" />
+        <File Path="props/PackageContents.xml" />
     </Folder>
     <Folder Name="/Tests/">
         <Project Path="tests/RevitDevTool.ExternalEvent.App/RevitDevTool.ExternalEvent.App.csproj">

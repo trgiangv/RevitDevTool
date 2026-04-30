@@ -85,7 +85,7 @@
     </Target>
 
     <!-- ============================================== -->
-    <!-- 3. Deploy Addin                      -->
+    <!-- 3. Deploy Bundle / Addin                       -->
     <!-- ============================================== -->
 
     <PropertyGroup>
@@ -96,11 +96,12 @@
 
     <Target Name="PublishRevitAddinFiles"
             AfterTargets="CoreBuild"
-            Condition="$(PublishRevitAddin) == 'true' AND $(RevitVersion) != ''">
+            Condition="$(PublishRevitAddin) == 'true' AND '$(RevitVersion)' != ''">
 
         <ItemGroup>
-            <RootItem Include="$(ProjectDir)*.addin"/>
-            <AddinItem Include="$(TargetDir)**\*" Exclude="**\$(PublishDirName)\**\*"/>
+            <PackageContentsFile Include="$(MSBuildThisFileDirectory)PackageContents.xml"/>
+            <RevitAddinFile Include="$(ProjectDir)*.addin"/>
+            <RevitBundleItems Include="$(TargetDir)**\*" Exclude="**\$(PublishDirName)\**\*"/>
             <_ResolvedFileToPublishAlways Include="@(Content)"
                                           PublishDirectory="%(Content.PublishDirectory)"
                                           Condition="'%(Content.CopyToPublishDirectory)' == 'Always'"/>
@@ -110,44 +111,50 @@
         </ItemGroup>
 
         <PropertyGroup>
-            <RootDir>$(PublishDir)</RootDir>
-            <AddinDir>$(RootDir)$(AssemblyName)\</AddinDir>
+            <BundleVersionDir>$(PublishDir)Contents\$(RevitVersion)\</BundleVersionDir>
         </PropertyGroup>
 
-        <Copy SourceFiles="@(RootItem)"
-              DestinationFolder="$(RootDir)"/>
-        <Copy SourceFiles="@(AddinItem)"
-              DestinationFolder="$(AddinDir)\%(RecursiveDir)"/>
+        <Copy SourceFiles="@(PackageContentsFile)"
+              DestinationFolder="$(PublishDir)"/>
+        <Copy SourceFiles="@(RevitAddinFile)"
+              DestinationFolder="$(BundleVersionDir)"/>
+        <Copy SourceFiles="@(RevitBundleItems)"
+              DestinationFolder="$(BundleVersionDir)%(RecursiveDir)"/>
         <Copy SourceFiles="@(_ResolvedFileToPublishAlways)"
               SkipUnchangedFiles="false"
-              DestinationFolder="$(AddinDir)\%(_ResolvedFileToPublishAlways.PublishDirectory)\%(RecursiveDir)"/>
+              DestinationFolder="$(BundleVersionDir)%(_ResolvedFileToPublishAlways.PublishDirectory)\%(RecursiveDir)"/>
         <Copy SourceFiles="@(_ResolvedFileToPublishPreserveNewest)"
               SkipUnchangedFiles="true"
-              DestinationFolder="$(AddinDir)\%(_ResolvedFileToPublishPreserveNewest.PublishDirectory)\%(RecursiveDir)"/>
+              DestinationFolder="$(BundleVersionDir)%(_ResolvedFileToPublishPreserveNewest.PublishDirectory)\%(RecursiveDir)"/>
 
-        <Message Text="$(AssemblyName) -> $(PublishDir)" Importance="high"/>
+        <Message Text="$(AssemblyName) -> $(BundleVersionDir)" Importance="high"/>
     </Target>
 
     <Target Name="DeployRevitAddinFiles"
             AfterTargets="PublishRevitAddinFiles"
-            Condition="$(DeployRevitAddin)">
+            Condition="$(DeployRevitAddin) == 'true' AND '$(RevitVersion)' != ''">
+
+        <PropertyGroup>
+            <BundleDestinationFolder Condition="'$(BundleDestinationFolder)' == ''">$(AppData)\Autodesk\ApplicationPlugins\$(MSBuildProjectName).bundle</BundleDestinationFolder>
+        </PropertyGroup>
 
         <ItemGroup>
-            <AddinFiles Include="$(PublishDir)**\*"/>
+            <RevitBundleDeployItems Include="$(PublishDir)**\*"/>
         </ItemGroup>
 
-        <Copy SourceFiles="@(AddinFiles)"
-              DestinationFolder="$(AppData)\Autodesk\Revit\Addins\$(RevitVersion)\%(RecursiveDir)"/>
+        <Copy SourceFiles="@(RevitBundleDeployItems)"
+              SkipUnchangedFiles="false"
+              DestinationFolder="$(BundleDestinationFolder)\%(RecursiveDir)"
+              ContinueOnError="true"
+              Retries="1"/>
 
-        <Message Text="$(AssemblyName) -> $(AppData)\Autodesk\Revit\Addins\$(RevitVersion)\"
-                 Importance="high"/>
+        <Message Text="$(AssemblyName) -> $(BundleDestinationFolder)\" Importance="high"/>
     </Target>
 
     <Target Name="CleanRevitAddinFolder"
             AfterTargets="Clean"
-            Condition="$(DeployRevitAddin)">
-        <RemoveDir Directories="$(AppData)\Autodesk\Revit\Addins\$(RevitVersion)\$(AssemblyName)"/>
-        <Delete Files="$(AppData)\Autodesk\Revit\Addins\$(RevitVersion)\$(AssemblyName).addin"/>
+            Condition="$(DeployRevitAddin) == 'true'">
+        <RemoveDir Directories="$(BundleDestinationFolder)" ContinueOnError="true"/>
     </Target>
 
     <Target Name="CleanPublishFolder"

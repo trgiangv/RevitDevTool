@@ -1,5 +1,4 @@
-﻿using JetBrains.Annotations;
-using Microsoft.VisualStudio.SolutionPersistence.Model;
+﻿using Microsoft.VisualStudio.SolutionPersistence.Model;
 using Microsoft.VisualStudio.SolutionPersistence.Serializer;
 using ModularPipelines.Context;
 using ModularPipelines.Modules;
@@ -17,7 +16,9 @@ public sealed class ResolveConfigurationsModule : Module<string[]>
     protected override async Task<string[]?> ExecuteAsync(IModuleContext context, CancellationToken cancellationToken)
     {
         var solutionModel = await LoadSolutionModelAsync(cancellationToken);
-        var configurations = solutionModel.BuildTypes.Where(configuration => configuration.Contains("Release.Autodesk", StringComparison.OrdinalIgnoreCase)).ToArray();
+        var configurations = solutionModel.BuildTypes
+            .Where(c => c.Contains("Release.Autodesk", StringComparison.OrdinalIgnoreCase))
+            .ToArray();
 
         configurations.ShouldNotBeEmpty("No solution configurations have been found");
 

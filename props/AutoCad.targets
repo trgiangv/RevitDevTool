@@ -107,7 +107,7 @@
             Condition="$(PublishAutoCadBundle) == 'true' AND '$(AutoCadVersion)' != '' AND '$(TargetFramework)' != ''">
 
         <ItemGroup>
-            <PackageContentsFile Include="$(ProjectDir)PackageContents.xml"/>
+            <PackageContentsFile Include="$(MSBuildThisFileDirectory)PackageContents.xml"/>
             <BundleItems Include="$(TargetDir)**\*" Exclude="**\$(PublishDirName)\**\*"/>
         </ItemGroup>
 

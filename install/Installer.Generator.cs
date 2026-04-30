@@ -12,10 +12,10 @@ public static partial class Generator
     public static WixEntity[] GenerateWixEntities(string[] args)
     {
         var versionStorages = new Dictionary<string, List<WixEntity>>();
-        var revitFeature = new Feature
+        var autodeskFeature = new Feature
         {
-            Name = "Revit Add-in",
-            Description = "Revit add-in installation files",
+            Name = "Autodesk",
+            Description = "Autodesk add-in installation files",
             Display = FeatureDisplay.expand
         };
 
@@ -30,11 +30,11 @@ public static partial class Generator
             var feature = new Feature
             {
                 Name = fileVersion,
-                Description = $"Install add-in for Revit {fileVersion}",
+                Description = $"Install add-in for Autodesk {fileVersion}",
                 ConfigurableDir = $"INSTALL{fileVersion}"
             };
 
-            revitFeature.Add(feature);
+            autodeskFeature.Add(feature);
 
             var files = new Files(feature, $@"{directory}\*.*");
             if (versionStorages.TryGetValue(fileVersion, out var storage))

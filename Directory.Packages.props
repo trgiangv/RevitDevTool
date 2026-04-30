@@ -11,8 +11,8 @@
         <!--MCP-->
         <PackageVersion Include="ModelContextProtocol" Version="1.2.0"/>
         <!--FSharp-->
-        <PackageVersion Include="FSharp.Core" Version="11.0.100-preview1.26104.118"/>
-        <PackageVersion Include="FSharp.Compiler.Service" Version="43.12.100-preview1.26104.118"/>
+        <PackageVersion Include="FSharp.Core" Version="10.1.203"/>
+        <PackageVersion Include="FSharp.Compiler.Service" Version="43.12.203"/>
         <!--Logging-->
         <PackageVersion Include="ZLogger" Version="2.5.10"/>
         <PackageVersion Include="ZLogger.Scintilla" Version="0.0.6"/>
@@ -26,9 +26,9 @@
         <PackageVersion Include="System.Drawing.Common" Version="8.0.25"/>
         <PackageVersion Include="System.Net.Http" Version="4.3.4"/>
         <!--Console-->
-        <PackageVersion Include="CliWrap" Version="3.10.0"/>
+        <PackageVersion Include="CliWrap" Version="3.10.1"/>
         <!--UI-->
-        <PackageVersion Include="CommunityToolkit.Mvvm" Version="8.4.0"/>
+        <PackageVersion Include="CommunityToolkit.Mvvm" Version="8.4.2"/>
         <PackageVersion Include="Microsoft.Web.WebView2" Version="1.0.3800.47"/>
         <!--Build Tools-->
         <PackageVersion Include="ILRepack" Version="2.0.44"/>
@@ -37,10 +37,10 @@
         <PackageVersion Include="WixSharp.Msi.Core" Version="2.12.1"/>
         <PackageVersion Include="Sourcy.DotNet" Version="1.1.1"/>
         <PackageVersion Include="Shouldly" Version="4.3.0"/>
-        <PackageVersion Include="ModularPipelines" Version="3.1.90"/>
-        <PackageVersion Include="ModularPipelines.Git" Version="3.1.90"/>
-        <PackageVersion Include="ModularPipelines.DotNet" Version="3.1.90"/>
-        <PackageVersion Include="ModularPipelines.GitHub" Version="3.1.90"/>
+        <PackageVersion Include="ModularPipelines" Version="3.2.8"/>
+        <PackageVersion Include="ModularPipelines.Git" Version="3.2.8"/>
+        <PackageVersion Include="ModularPipelines.DotNet" Version="3.2.8"/>
+        <PackageVersion Include="ModularPipelines.GitHub" Version="3.2.8"/>
         <PackageVersion Include="Microsoft.VisualStudio.SolutionPersistence" Version="1.0.52"/>
         <!--File IO-->
         <PackageVersion Include="OpenMcdf" Version="3.1.3"/>

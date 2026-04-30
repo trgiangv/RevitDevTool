@@ -1,11 +1,9 @@
 using Build.Options;
-using JetBrains.Annotations;
 using Microsoft.Extensions.Options;
 using ModularPipelines.Attributes;
 using ModularPipelines.Context;
 using ModularPipelines.DotNet.Extensions;
 using ModularPipelines.DotNet.Options;
-using ModularPipelines.FileSystem;
 using ModularPipelines.Git.Extensions;
 using ModularPipelines.Modules;
 using ModularPipelines.Options;
@@ -19,21 +17,18 @@ namespace Build.Modules;
 ///     Create the .msi installer.
 /// </summary>
 [DependsOn<ResolveVersioningModule>]
-[DependsOn<CompileProjectModule>]
-[DependsOn<PublishMcpServerModule>(Optional = true)]
+[DependsOn<CreateBundleModule>]
 [UsedImplicitly]
 public sealed class CreateInstallerModule(IOptions<BuildOptions> buildOptions) : Module
 {
     protected override async Task ExecuteModuleAsync(IModuleContext context, CancellationToken cancellationToken)
     {
         var versioningResult = await context.GetModule<ResolveVersioningModule>();
-        var mcpServerResult = await context.GetModule<PublishMcpServerModule>();
+        var bundleResult = await context.GetModule<CreateBundleModule>();
         var versioning = versioningResult.ValueOrDefault!;
-        var mcpServerOutputPath = mcpServerResult.ValueOrDefault;
+        var bundleFolderPath = bundleResult.ValueOrDefault!;
 
-        var wixTarget = new File(Projects.RevitDevTool.FullName);
         var wixInstaller = new File(Projects.Installer.FullName);
-        var wixToolFolder = await InstallWixAsync(context, cancellationToken);
 
         await context.DotNet().Build(new DotNetBuildOptions
         {
@@ -42,27 +37,16 @@ public sealed class CreateInstallerModule(IOptions<BuildOptions> buildOptions) :
         }, cancellationToken: cancellationToken);
 
         var builderFile = wixInstaller.Folder!.GetFolder("bin").FindFile(file => file.NameWithoutExtension == wixInstaller.NameWithoutExtension && file.Extension == ".exe");
-
         builderFile.ShouldNotBeNull($"No installer builder was found for the project: {wixInstaller.NameWithoutExtension}");
 
-        var targetDirectories = wixTarget.Folder!.GetFolder("bin").GetFolders(folder => folder.Name == "publish").Select(folder => folder.Path).ToArray();
-
-        targetDirectories.ShouldNotBeEmpty("No content were found to create an installer");
-
-        var installerArgs = string.IsNullOrEmpty(mcpServerOutputPath)
-            ? (string[])[versioning.Version, ..targetDirectories]
-            : (string[])[versioning.Version, ..targetDirectories, mcpServerOutputPath];
+        var installerArgs = (string[])[versioning.Version, bundleFolderPath];
 
         await context.Shell.Command.ExecuteCommandLineTool(new GenericCommandLineToolOptions(builderFile.Path)
         {
             Arguments = installerArgs
         }, new CommandExecutionOptions
         {
-            WorkingDirectory = context.Git().RootDirectory,
-            EnvironmentVariables = new Dictionary<string, string?>
-            {
-                { "PATH", $"{Environment.GetEnvironmentVariable("PATH")};{wixToolFolder}" }
-            }
+            WorkingDirectory = context.Git().RootDirectory
         }, cancellationToken: cancellationToken);
 
         var outputFolder = context.Git().RootDirectory.GetFolder(buildOptions.Value.OutputDirectory);
@@ -72,17 +56,4 @@ public sealed class CreateInstallerModule(IOptions<BuildOptions> buildOptions) :
         }
     }
 
-    /// <summary>
-    ///     Installs the WiX toolset required for building installers.
-    /// </summary>
-    private static async Task<Folder> InstallWixAsync(IModuleContext context, CancellationToken cancellationToken)
-    {
-        var wixToolFolder = Folder.CreateTemporaryFolder();
-        await context.DotNet().Tool.Execute(new DotNetToolOptions
-        {
-            Arguments = ["install", "wix", "--tool-path", wixToolFolder.Path]
-        }, cancellationToken: cancellationToken);
-
-        return wixToolFolder;
-    }
 }

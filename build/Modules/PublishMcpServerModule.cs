@@ -1,5 +1,4 @@
 using Build.Options;
-using JetBrains.Annotations;
 using Microsoft.Extensions.Options;
 using ModularPipelines.Attributes;
 using ModularPipelines.Context;
@@ -29,7 +28,7 @@ public sealed class PublishMcpServerModule(IOptions<BuildOptions> buildOptions) 
 
         await context.DotNet().Publish(new DotNetPublishOptions
         {
-            ProjectSolution = Projects.DevTool_McpServer.FullName,
+            ProjectSolution = Projects.DevTools_McpServer.FullName,
             Configuration = "Release",
             Properties =
             [
@@ -38,8 +37,6 @@ public sealed class PublishMcpServerModule(IOptions<BuildOptions> buildOptions) 
                 ("PublishDir", mcpServerOutputPath)
             ]
         }, cancellationToken: cancellationToken);
-
-        context.Summary.KeyValue("Artifacts", "MCPServer", mcpServerOutputPath);
 
         return mcpServerOutputPath;
     }

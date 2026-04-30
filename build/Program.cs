@@ -29,7 +29,6 @@ if (args.Contains("pack"))
 {
     builder.Services.AddModule<CleanProjectModule>();
     builder.Services.AddModule<CreateBundleModule>();
-    builder.Services.AddModule<PublishMcpServerModule>();
     builder.Services.AddModule<CreateInstallerModule>();
 }
 if (args.Contains("publish"))

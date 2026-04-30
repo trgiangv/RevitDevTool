@@ -1,8 +1,7 @@
 ﻿using System.Diagnostics.CodeAnalysis;
 using System.Text.RegularExpressions;
-using Autodesk.PackageBuilder;
+using System.Xml;
 using Build.Options;
-using JetBrains.Annotations;
 using Microsoft.Extensions.Options;
 using ModularPipelines.Attributes;
 using ModularPipelines.Context;
@@ -20,32 +19,38 @@ namespace Build.Modules;
 /// </summary>
 [DependsOn<ResolveVersioningModule>]
 [DependsOn<CompileProjectModule>]
+[DependsOn<PublishMcpServerModule>]
 [UsedImplicitly]
-public sealed partial class CreateBundleModule(IOptions<BuildOptions> buildOptions, IOptions<BundleOptions> bundleOptions) : Module
+public sealed partial class CreateBundleModule(IOptions<BuildOptions> buildOptions) : Module<string>
 {
-    protected override async Task ExecuteModuleAsync(IModuleContext context, CancellationToken cancellationToken)
+    protected override async Task<string?> ExecuteAsync(IModuleContext context, CancellationToken cancellationToken)
     {
         var versioningResult = await context.GetModule<ResolveVersioningModule>();
         var versioning = versioningResult.ValueOrDefault!;
 
-        var bundleTarget = new File(Projects.RevitDevTool.FullName);
-        var targetDirectories = bundleTarget.Folder!.GetFolder("bin").GetFolders(folder => folder.Name == "publish").ToArray();
+        var revitTarget = new File(Projects.RevitDevTool.FullName);
+        var acadTarget = new File(Projects.AcadDevTool.FullName);
 
-        targetDirectories.ShouldNotBeEmpty("No content were found to create a bundle");
+        var revitPublishDirs = revitTarget.Folder!.GetFolder("bin").GetFolders(folder => folder.Name == "publish").ToArray();
+        var acadPublishDirs = acadTarget.Folder!.GetFolder("bin").GetFolders(folder => folder.Name == "publish").ToArray();
+
+        revitPublishDirs.ShouldNotBeEmpty("No Revit content were found to create a bundle");
 
         var outputFolder = context.Git().RootDirectory.GetFolder(buildOptions.Value.OutputDirectory);
-        var bundleFolder = outputFolder.CreateFolder($"{bundleTarget.NameWithoutExtension}.bundle");
+        var bundleFolder = outputFolder.CreateFolder($"{revitTarget.NameWithoutExtension}.bundle");
         var contentFolder = bundleFolder.CreateFolder("Contents");
         var manifestFile = bundleFolder.GetFile("PackageContents.xml");
 
-        PackFiles(targetDirectories, contentFolder);
-        GenerateManifest(bundleTarget, targetDirectories, manifestFile, versioning);
+        PackFiles(revitPublishDirs, contentFolder);
+        PackFiles(acadPublishDirs, contentFolder);
+        PackMcpServer(context, contentFolder);
+        CopyManifest(context, manifestFile, versioning);
 
         var outputFile = outputFolder.GetFile($"{bundleFolder.Name}.zip");
         context.Files.Zip.ZipFolder(bundleFolder, outputFile.Path);
-        await bundleFolder.DeleteAsync(cancellationToken);
 
         context.Summary.KeyValue("Artifacts", "Bundle", outputFile.Path);
+        return bundleFolder.Path;
     }
 
     private static void PackFiles(Folder[] targetDirectories, Folder contentFolder)
@@ -54,10 +59,13 @@ public sealed partial class CreateBundleModule(IOptions<BuildOptions> buildOptio
         {
             TryParseVersion(targetDirectory.Path, out var version).ShouldBeTrue($"Could not parse version from directory name: {targetDirectory.Path}");
 
+            var sourceDir = targetDirectory.GetFolder("Contents").GetFolder(version);
+            if (!sourceDir.Exists) continue;
+
             var versionFolder = contentFolder.CreateFolder(version);
-            foreach (var filePath in targetDirectory.GetFiles(file => file.Exists))
+            foreach (var filePath in sourceDir.GetFiles(file => file.Exists))
             {
-                var relativePath = Path.GetRelativePath(targetDirectory.Path, filePath.Path);
+                var relativePath = Path.GetRelativePath(sourceDir.Path, filePath.Path);
                 var destinationPath = versionFolder.GetFile(relativePath);
                 if (!destinationPath.Folder!.Exists)
                 {
@@ -69,30 +77,27 @@ public sealed partial class CreateBundleModule(IOptions<BuildOptions> buildOptio
         }
     }
 
-    /// <summary>
-    ///     Generate the Autodesk manifest.
-    /// </summary>
-    private void GenerateManifest(File bundleTarget, Folder[] targetDirectories, File manifestDirectory, ResolveVersioningResult versioning)
+    private void PackMcpServer(IModuleContext context, Folder contentFolder)
     {
-        BuilderUtils.Build<PackageContentsBuilder>(builder =>
-        {
-            builder.ApplicationPackage.Create().ProductType(ProductTypes.Application).AutodeskProduct(AutodeskProducts.Revit).Name(bundleTarget.NameWithoutExtension).AppVersion(versioning.Version);
+        var mcpServerDir = context.Git().RootDirectory.GetFolder(buildOptions.Value.OutputDirectory).GetFolder("MCPServer");
+        var mcpExe = mcpServerDir.GetFile("MCPServer.exe");
+        if (!mcpExe.Exists) return;
 
-            builder.CompanyDetails.Create(bundleOptions.Value.VendorName).Email(bundleOptions.Value.VendorEmail).Url(bundleOptions.Value.VendorUrl);
+        mcpExe.CopyTo(contentFolder.GetFile("MCPServer.exe").Path);
+    }
 
-            foreach (var targetDirectory in targetDirectories)
-            {
-                TryParseVersion(targetDirectory.Path, out var version).ShouldBeTrue($"Could not parse version from directory name: {targetDirectory.Path}");
+    private static void CopyManifest(IModuleContext context, File manifestFile, ResolveVersioningResult versioning)
+    {
+        var propsDir = context.Git().RootDirectory.GetFolder("props");
+        var sourceManifest = propsDir.GetFile("PackageContents.xml");
 
-                var addinManifests = targetDirectory.GetFiles(file => file.Extension == ".addin");
-                foreach (var addinManifest in addinManifests)
-                {
-                    var relativePath = Path.GetRelativePath(targetDirectory.Path, addinManifest.Path);
+        var xml = new XmlDocument();
+        xml.Load(sourceManifest.Path);
 
-                    builder.Components.CreateEntry($"Revit {version}").RevitPlatform(int.Parse(version)).AppName(bundleTarget.NameWithoutExtension).ModuleName($"./Contents/{version}/{relativePath}");
-                }
-            }
-        }, manifestDirectory);
+        var root = xml.DocumentElement!;
+        root.SetAttribute("AppVersion", versioning.Version);
+
+        xml.Save(manifestFile.Path);
     }
 
     /// <summary>

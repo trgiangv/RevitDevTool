@@ -17,7 +17,10 @@
         <PackageReference Include="ModularPipelines.GitHub" />
         <PackageReference Include="Microsoft.VisualStudio.SolutionPersistence" />
         <PackageReference Include="Autodesk.PackageBuilder" />
-        <PackageReference Include="JetBrains.Annotations" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <Using Include="JetBrains.Annotations" />
     </ItemGroup>
 
     <ItemGroup>
