@@ -1,4 +1,5 @@
 using CommunityToolkit.Mvvm.Messaging;
+using DevTools.Logging;
 using DevTools.Presentation.Interfaces;
 using DevTools.Settings;
 using DevTools.Presentation.ViewModels.Messages;
@@ -11,8 +12,21 @@ public partial class GeneralSettingsViewModel : ObservableValidator, IRecipient<
     private readonly ISettingsService _settingsService;
     private readonly IDevToolsLoggingService _loggingService;
     private readonly IMessenger _messenger;
+    private readonly IHostAppInfo _hostAppInfo;
 
-    public static List<AppTheme> Themes => [AppTheme.Light, AppTheme.Dark, AppTheme.Auto];
+    public List<AppTheme> Themes
+    {
+        get
+        {
+            var themes = Enum.GetValues<AppTheme>().ToList();
+            // Revit 2023 and earlier do not support Dark theme
+            if (_hostAppInfo.Host == HostApp.Revit && int.Parse(_hostAppInfo.VersionNumber) < 2024)
+            {
+                themes.Remove(AppTheme.Auto);
+            }
+            return themes;
+        }
+    }
 
     [ObservableProperty] private AppTheme _theme;
     [ObservableProperty] private bool _useHardwareRendering;
@@ -37,10 +51,12 @@ public partial class GeneralSettingsViewModel : ObservableValidator, IRecipient<
     }
 
     public GeneralSettingsViewModel(
+        IHostAppInfo hostAppInfo,
         ISettingsService settingsService,
         IDevToolsLoggingService loggingService,
         IMessenger messenger)
     {
+        _hostAppInfo = hostAppInfo;
         _settingsService = settingsService;
         _loggingService = loggingService;
         _messenger = messenger;

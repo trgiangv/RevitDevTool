@@ -113,7 +113,7 @@
 
         <PropertyGroup>
             <BundlePublishDir>$(PublishDir)</BundlePublishDir>
-            <BundleVersionDir>$(BundlePublishDir)$(AutoCadVersion)\</BundleVersionDir>
+            <BundleVersionDir>$(BundlePublishDir)Contents\$(AutoCadVersion)\</BundleVersionDir>
         </PropertyGroup>
 
         <Copy SourceFiles="@(PackageContentsFile)"
