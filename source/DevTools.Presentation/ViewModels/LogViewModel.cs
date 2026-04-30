@@ -10,7 +10,7 @@ public sealed partial class LogViewModel : ObservableObject, IDisposable,
     IRecipient<LogSettingsAppliedMessage>
 {
     private readonly ISettingsService _settingsService;
-    private readonly IDevToolsLoggingService _loggingService;
+    private readonly ILoggingService _loggingService;
     private readonly IMessenger _messenger;
     private readonly IVisualizationBridge? _visualization;
     private readonly IHostIdlingBridge? _idling;
@@ -36,7 +36,7 @@ public sealed partial class LogViewModel : ObservableObject, IDisposable,
 
     public LogViewModel(
         ISettingsService settingsService,
-        IDevToolsLoggingService loggingService,
+        ILoggingService loggingService,
         IMessenger messenger,
         IVisualizationBridge? visualization = null,
         IHostIdlingBridge? idling = null)

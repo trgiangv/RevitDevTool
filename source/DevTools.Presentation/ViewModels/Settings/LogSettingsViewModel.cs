@@ -16,7 +16,7 @@ namespace DevTools.Presentation.ViewModels.Settings;
 public partial class LogSettingsViewModel : ObservableObject, IDataErrorInfo, IRecipient<ResetSettingsMessage>
 {
     private readonly ISettingsService _settingsService;
-    private readonly IDevToolsLoggingService _loggingService;
+    private readonly ILoggingService _loggingService;
     private readonly IMessenger _messenger;
     private readonly ILogEnricherProvider? _enricherProvider;
 
@@ -60,7 +60,7 @@ public partial class LogSettingsViewModel : ObservableObject, IDataErrorInfo, IR
 
     public LogSettingsViewModel(
         ISettingsService settingsService,
-        IDevToolsLoggingService loggingService,
+        ILoggingService loggingService,
         IMessenger messenger,
         ILogEnricherProvider? enricherProvider = null)
     {

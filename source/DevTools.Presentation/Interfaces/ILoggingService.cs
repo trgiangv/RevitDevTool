@@ -4,7 +4,7 @@ using Microsoft.Extensions.Logging;
 
 namespace DevTools.Presentation.Interfaces;
 
-public interface IDevToolsLoggingService : IDisposable
+public interface ILoggingService : IDisposable
 {
     FrameworkElement? HostElement { get; }
     void Initialize();

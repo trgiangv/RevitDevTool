@@ -11,15 +11,13 @@ using Microsoft.Extensions.Logging;
 
 namespace AcadDevTool.Logging;
 
-public interface IAcadLoggingService : IDevToolsLoggingService;
-
-public sealed class AcadLoggingService(
+public sealed class LoggingService(
     IAcadSettingsService settingsService,
     ILoggerFactory loggerFactory,
     IFileLogTarget fileLogTarget,
     IHttpLogTarget httpLogTarget,
     IMonitorLogTarget monitor,
-    LoggingConfiguration loggingConfiguration) : IAcadLoggingService
+    LoggingConfiguration loggingConfiguration) : ILoggingService
 {
     private bool _disposed;
     private LoggerTraceListener? _loggerTraceListener;

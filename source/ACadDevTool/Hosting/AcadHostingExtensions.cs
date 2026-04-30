@@ -15,8 +15,6 @@ using AcadDevTool.Logging;
 using AcadDevTool.Logging.Enrichers;
 using AcadDevTool.Settings;
 using AcadDevTool.View;
-using DevTools.Execution.Providers.Python;
-using DevTools.Execution.Services;
 using ZLogger.Scintilla.Public;
 // ReSharper disable ConvertToExtensionBlock
 
@@ -41,9 +39,8 @@ internal static class AcadHostingExtensions
         builder.AddLoggingProvider(configureMonitor);
 
         var services = builder.Services;
-        services.AddSingleton<AcadLoggingService>();
-        services.AddSingleton<IAcadLoggingService>(sp => sp.GetRequiredService<AcadLoggingService>());
-        services.AddSingleton<IDevToolsLoggingService>(sp => sp.GetRequiredService<AcadLoggingService>());
+        services.AddSingleton<LoggingService>();
+        services.AddSingleton<ILoggingService>(sp => sp.GetRequiredService<LoggingService>());
         services.AddSingleton<IHostIdlingBridge, AcadIdlingBridge>();
         services.AddSingleton<ILogEnricherProvider, AcadLogEnricherProvider>();
 

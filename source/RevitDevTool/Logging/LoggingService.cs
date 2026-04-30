@@ -20,7 +20,7 @@ public sealed class LoggingService(
     IHttpLogTarget httpLogTarget,
     IMonitorLogTarget monitor,
     IContextEnricher contextEnricher,
-    LoggingConfiguration loggingConfiguration) : IDevToolsLoggingService
+    LoggingConfiguration loggingConfiguration) : ILoggingService
 {
     private bool _disposed;
 

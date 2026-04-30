@@ -10,7 +10,7 @@ namespace DevTools.Presentation.ViewModels.Settings;
 public partial class GeneralSettingsViewModel : ObservableValidator, IRecipient<ResetSettingsMessage>
 {
     private readonly ISettingsService _settingsService;
-    private readonly IDevToolsLoggingService _loggingService;
+    private readonly ILoggingService _loggingService;
     private readonly IMessenger _messenger;
     private readonly IHostAppInfo _hostAppInfo;
 
@@ -53,7 +53,7 @@ public partial class GeneralSettingsViewModel : ObservableValidator, IRecipient<
     public GeneralSettingsViewModel(
         IHostAppInfo hostAppInfo,
         ISettingsService settingsService,
-        IDevToolsLoggingService loggingService,
+        ILoggingService loggingService,
         IMessenger messenger)
     {
         _hostAppInfo = hostAppInfo;

@@ -43,7 +43,7 @@ internal static class RevitHostingExtensions
 
         var services = builder.Services;
         services.AddSingleton<LoggingService>();
-        services.AddSingleton<IDevToolsLoggingService>(sp => sp.GetRequiredService<LoggingService>());
+        services.AddSingleton<ILoggingService>(sp => sp.GetRequiredService<LoggingService>());
         services.AddSingleton<IHostIdlingBridge, RevitIdlingBridge>();
         services.AddSingleton<ILogEnricherProvider, RevitLogEnricherProvider>();
 
