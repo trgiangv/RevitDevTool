@@ -1,0 +1,134 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!-- RevitDevTool - StubBuilder Command Icon (32px Dark Theme) -->
+
+<!-- Dark theme: lighter page, no border overlay                            -->
+
+<svg
+   width="32"
+   height="32"
+   viewBox="0 0 32 32"
+   fill="none"
+   version="1.1"
+   id="svg14"
+   sodipodi:docname="StubBuilder-32-Dark.svg"
+   inkscape:version="1.4.3 (0d15f75, 2025-12-25)"
+   inkscape:export-filename="..\..\..\source\DevTools.UI\Resources\icons\StubBuilder-32-Dark.png"
+   inkscape:export-xdpi="96"
+   inkscape:export-ydpi="96"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg">
+  <sodipodi:namedview
+     id="namedview14"
+     pagecolor="#505050"
+     bordercolor="#ffffff"
+     borderopacity="1"
+     inkscape:showpageshadow="0"
+     inkscape:pageopacity="0"
+     inkscape:pagecheckerboard="1"
+     inkscape:deskcolor="#505050"
+     inkscape:zoom="12.97099"
+     inkscape:cx="29.257597"
+     inkscape:cy="18.734114"
+     inkscape:window-width="2560"
+     inkscape:window-height="1369"
+     inkscape:window-x="-8"
+     inkscape:window-y="-8"
+     inkscape:window-maximized="1"
+     inkscape:current-layer="svg14" />
+  <defs
+     id="defs6">
+    <linearGradient
+       id="doc-grad-dark"
+       x1="5"
+       y1="4"
+       x2="5"
+       y2="28"
+       gradientUnits="userSpaceOnUse"
+       gradientTransform="matrix(1.2279355,0,0,1.2082767,-6.1396777,-4.8331067)">
+      <stop
+         offset="0%"
+         stop-color="#F3F3F3"
+         id="stop1" />
+      <stop
+         offset="100%"
+         stop-color="#D8D8D8"
+         id="stop2" />
+    </linearGradient>
+    <linearGradient
+       id="py-logo-blue-dark"
+       x1="12.4809"
+       y1="2"
+       x2="12.4809"
+       y2="22.7407"
+       gradientUnits="userSpaceOnUse">
+      <stop
+         stop-color="#6AAAD6"
+         id="stop3" />
+      <stop
+         offset="1"
+         stop-color="#4584B6"
+         id="stop4" />
+    </linearGradient>
+    <linearGradient
+       id="py-logo-yellow-dark"
+       x1="19.519"
+       y1="9.25928"
+       x2="19.519"
+       y2="30"
+       gradientUnits="userSpaceOnUse">
+      <stop
+         stop-color="#FFE873"
+         id="stop5" />
+      <stop
+         offset="1"
+         stop-color="#FFD43B"
+         id="stop6" />
+    </linearGradient>
+  </defs>
+  <!-- === MAIN BODY: dark document page === -->
+  <!-- Code lines -->
+  <!-- Python logo (full icon from python-svgrepo-com.svg) -->
+  <g
+     transform="matrix(0.9642926,0,0,0.96428571,-1.9285852,-1.9285715)"
+     id="g11">
+    <path
+       fill-rule="evenodd"
+       clip-rule="evenodd"
+       d="M 13.0164,2 C 10.8193,2 9.03825,3.72453 9.03825,5.85185 V 8.51852 H 15.9235 V 9.25926 H 5.97814 C 3.78107,9.25926 2,10.9838 2,13.1111 v 5.7778 c 0,2.1273 1.78107,3.8518 3.97814,3.8518 h 2.29508 v -3.2592 c 0,-2.1273 1.78108,-3.8519 3.97818,-3.8519 h 7.3442 c 1.8591,0 3.3661,-1.4592 3.3661,-3.2592 V 5.85185 C 22.9617,3.72453 21.1807,2 18.9836,2 Z m -0.918,4.74074 c 0.7605,0 1.377,-0.59696 1.377,-1.33333 0,-0.73638 -0.6165,-1.33334 -1.377,-1.33334 -0.7606,0 -1.3771,0.59696 -1.3771,1.33334 0,0.73637 0.6165,1.33333 1.3771,1.33333 z"
+       fill="url(#py-logo-blue-dark)"
+       id="path10"
+       style="fill:url(#py-logo-blue-dark)" />
+    <path
+       fill-rule="evenodd"
+       clip-rule="evenodd"
+       d="m 18.9834,30 c 2.1971,0 3.9782,-1.7245 3.9782,-3.8518 v -2.6667 h -6.8853 v -0.7407 h 9.9454 c 2.1971,0 3.9781,-1.7246 3.9781,-3.8519 v -5.7778 c 0,-2.1273 -1.781,-3.85182 -3.9781,-3.85182 h -2.2951 v 3.25922 c 0,2.1274 -1.7811,3.8519 -3.9781,3.8519 h -7.3443 c -1.8591,0 -3.36611,1.4592 -3.36611,3.2592 v 6.5186 C 9.03809,28.2755 10.8192,30 13.0162,30 Z m 0.9181,-4.7407 c -0.7606,0 -1.3771,0.5969 -1.3771,1.3333 0,0.7364 0.6165,1.3333 1.3771,1.3333 0.7605,0 1.377,-0.5969 1.377,-1.3333 0,-0.7364 -0.6165,-1.3333 -1.377,-1.3333 z"
+       fill="url(#py-logo-yellow-dark)"
+       id="path11"
+       style="fill:url(#py-logo-yellow-dark)" />
+  </g>
+  <!-- === BADGE: Autodesk Edit-32-Dark (bottom-right) === -->
+  <g
+     transform="matrix(0.80245923,0,0,0.80246914,17.555734,18.197531)"
+     id="g14">
+    <path
+       fill-rule="evenodd"
+       clip-rule="evenodd"
+       d="m 3.2998,11.5 4.2,4.2 -5.7,1.5 z"
+       fill="#aaaaaa"
+       id="path12" />
+    <path
+       fill-rule="evenodd"
+       clip-rule="evenodd"
+       d="M 17.0924,1.92411 C 17.6738,2.50384 18,3.28727 18,4.10376 18,4.92025 17.6738,5.70368 17.0924,6.28341 L 16.3678,7 12,2.65066 12.7246,1.92411 C 13.0065,1.63205 13.3454,1.39957 13.7208,1.24073 14.0962,1.0819 14.5002,1 14.9085,1 c 0.4083,0 0.8123,0.0819 1.1877,0.24073 0.3754,0.15884 0.7143,0.39132 0.9962,0.68338 z"
+       fill="#ff6666"
+       id="path13" />
+    <path
+       fill-rule="evenodd"
+       clip-rule="evenodd"
+       d="m 11.33,3.43988 4.37,4.36 L 8.36,15 4,10.64 Z"
+       fill="#ffd580"
+       id="path14" />
+  </g>
+</svg>

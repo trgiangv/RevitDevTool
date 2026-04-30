@@ -33,12 +33,12 @@ public class Application : ExtensionApplication
 
         ribbonPanel.CreateButton("DevTools")
             .SetCommand(Commands.Commands.DevToolsCommand)
-            .SetLargeImage("/DevTools.UI;component/Resources/Icons/TraceGeometry32_light.tiff")
+            .SetLargeImage("/DevTools.UI;component/Resources/Icons/DevTools-32-Light.png")
             .SetToolTip("Execute last command\nCtrl + click to Show/Hide DevTools");
 
         ribbonPanel.CreateButton("StubBuilder")
             .SetCommand(Commands.Commands.StubBuilderCommand)
-            .SetLargeImage("/DevTools.UI;component/Resources/Icons/python32.png")
+            .SetLargeImage("/DevTools.UI;component/Resources/Icons/StubBuilder-32-Light.png")
             .SetToolTip("Generate Python .pyi stub files from .NET assemblies");
     }
 }
