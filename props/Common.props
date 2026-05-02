@@ -2,8 +2,8 @@
 <Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
 
     <PropertyGroup>
-        <Authors>Truong Giang Vu</Authors>
-        <Copyright>Copyright © Truong Giang Vu $([System.DateTime]::Now.Year)</Copyright>
+        <Authors>Inspexel</Authors>
+        <Copyright>Copyright © Inspexel $([System.DateTime]::Now.Year)</Copyright>
 
         <!-- Package Info -->
         <RepositoryType>git</RepositoryType>

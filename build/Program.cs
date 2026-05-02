@@ -33,6 +33,7 @@ if (args.Contains("pack"))
 }
 if (args.Contains("publish"))
 {
+    builder.Services.AddModule<SignModule>();
     builder.Services.AddModule<PublishGithubModule>();
 }
 

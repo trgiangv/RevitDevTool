@@ -1,5 +1,5 @@
 [workspace]
-authors = ["Truong Giang Vu"]
+authors = ["Inspexel"]
 channels = ["conda-forge"]
 name = "RevitDevTool"
 platforms = ["win-64"]

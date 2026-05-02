@@ -37,3 +37,8 @@ pytest_cache/
 openspec/
 .gitnexus/
 .claude/
+
+# Code signing
+*.pfx
+cert.txt
+*.cer
