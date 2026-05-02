@@ -6,11 +6,17 @@
         <LangVersion>latest</LangVersion>
         <ImplicitUsings>true</ImplicitUsings>
         <TargetFramework>net10.0-windows</TargetFramework>
+        <PackAsTool>false</PackAsTool>
     </PropertyGroup>
 
     <ItemGroup>
-        <PackageReference Include="WixSharp.Core"/>
-        <PackageReference Include="WixSharp.Msi.Core"/>
+        <PackageReference Include="CliWrap" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <None Include="Setup.iss" CopyToOutputDirectory="PreserveNewest"/>
+        <None Include="includes\**\*" CopyToOutputDirectory="PreserveNewest" />
+        <None Include="Resources\**\*" CopyToOutputDirectory="PreserveNewest" />
     </ItemGroup>
 
 </Project>

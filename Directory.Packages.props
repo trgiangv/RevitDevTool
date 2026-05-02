@@ -32,9 +32,6 @@
         <PackageVersion Include="Microsoft.Web.WebView2" Version="1.0.3800.47"/>
         <!--Build Tools-->
         <PackageVersion Include="ILRepack" Version="2.0.44"/>
-        <PackageVersion Include="Autodesk.PackageBuilder" Version="2.0.2"/>
-        <PackageVersion Include="WixSharp.Core" Version="2.12.1"/>
-        <PackageVersion Include="WixSharp.Msi.Core" Version="2.12.1"/>
         <PackageVersion Include="Sourcy.DotNet" Version="1.1.1"/>
         <PackageVersion Include="Shouldly" Version="4.3.0"/>
         <PackageVersion Include="ModularPipelines" Version="3.2.8"/>

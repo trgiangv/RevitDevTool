@@ -4,9 +4,9 @@
 <!-- WiX installer left panel / welcome screen background                  -->
 
 <svg
-   width="493"
-   height="312"
-   viewBox="0 0 493 312"
+   width="164"
+   height="314"
+   viewBox="0 0 164 314"
    fill="none"
    version="1.1"
    id="svg22"
@@ -25,8 +25,10 @@
        id="clip0_19_13"><rect
          width="180"
          height="180"
-         fill="white"
-         id="rect3-8" /></clipPath></defs><sodipodi:namedview
+         fill="#ffffff"
+         id="rect3-8"
+         x="0"
+         y="0" /></clipPath></defs><sodipodi:namedview
      id="namedview22"
      pagecolor="#505050"
      bordercolor="#ffffff"
@@ -36,15 +38,15 @@
      inkscape:pagecheckerboard="1"
      inkscape:deskcolor="#505050"
      inkscape:zoom="2.6607159"
-     inkscape:cx="169.50325"
-     inkscape:cy="198.06699"
+     inkscape:cx="117.26167"
+     inkscape:cy="183.78512"
      inkscape:window-width="2560"
      inkscape:window-height="1369"
      inkscape:window-x="-8"
      inkscape:window-y="-8"
      inkscape:window-maximized="1"
      inkscape:current-layer="svg22" /><!-- ===== LEFT PANEL: dark sidebar (160px wide) ===== --><!-- Right panel: light --><!-- Green accent separator line --><!-- Green top accent bar (right panel) --><!-- ===== HERO </> ICON (centered in left panel) ===== --><!-- Dark card bg for the icon --><!-- < left bracket (within card) --><!-- / slash --><!-- > right bracket --><!-- Geometry primitives row (inside card, bottom) --><!-- Product name (bottom of left panel) --><!-- Green dot accent at bottom left --><!-- ===== RIGHT PANEL: feature strip ===== --><!-- Feature 1: Code Execute --><!-- Feature 2: Python --><!-- Feature 3: Visualization / Geometry --><!-- Feature 4: Logging --><!-- Feature labels --><!-- Separator below feature strip --><!-- Bottom wordmark strip (right panel) --><text
-     x="79.131973"
+     x="81.342705"
      y="199.00679"
      font-family="'Segoe UI', Arial, sans-serif"
      font-size="7.5px"
@@ -57,7 +59,7 @@
        id="tspan24">AEC DEVELOPER TOOLS </tspan></text><g
      inkscape:label="Layer 1"
      id="layer1"
-     transform="matrix(4,0,0,4.0288524,16,20.000796)"><g
+     transform="matrix(4,0,0,4.0288524,18,20.000796)"><g
        style="fill:none"
        id="g1"
        transform="translate(24,24)"
@@ -108,7 +110,7 @@
            id="path1-5" /></g></g></g><g
      style="fill:none"
      id="g22"
-     transform="matrix(2.2857143,0,0,2.2857143,9.0331945,247.81828)"><path
+     transform="matrix(2.2857143,0,0,2.2857143,10.714286,247.81828)"><path
        d="M 7.2,1 H 1.8 C 1.35817,1 1,1.35817 1,1.8 V 7.2 C 1,7.64183 1.35817,8 1.8,8 H 7.2 C 7.64183,8 8,7.64183 8,7.2 V 1.8 C 8,1.35817 7.64183,1 7.2,1 Z"
        fill="#24b353"
        id="path1-8" /><path
@@ -122,7 +124,7 @@
        id="path3-2" /></g><g
      style="fill:none"
      id="g23"
-     transform="translate(41.084675,249.10399)"><path
+     transform="translate(42.765766,249.10399)"><path
        d="M 17,1 H 1 v 16 h 16 z"
        fill="#f3f3f3"
        id="path1-1" /><path
@@ -148,7 +150,7 @@
        fill="#178fe6"
        id="path8" /></g><g
      id="g25"
-     transform="matrix(0.03125,0,0,0.03335729,72.850441,249.81453)"><path
+     transform="matrix(0.03125,0,0,0.03335729,74.531532,249.81453)"><path
        style="fill:#f4a026"
        d="m 345,167 c 32.953,0 46.333,40.047 46.333,73 V 340.333 C 391.333,414.708 331.041,475 256.666,475 v 0 C 182.292,475 122,414.708 122,340.333 V 240 c 0,-32.953 13.38,-73 46.333,-73 z"
        id="path1-6" /><path
@@ -160,7 +162,7 @@
        style="fill:#140a0a;fill-opacity:1" /></g><g
      style="fill:none"
      id="g27"
-     transform="matrix(1.1428571,0,0,1.1428571,102.47335,248.96114)"><path
+     transform="matrix(1.1428571,0,0,1.1428571,104.15444,248.96114)"><path
        d="M 12,1 H 4 v 1 h 8 z"
        fill="#178fe6"
        id="path1-33" /><path
@@ -200,7 +202,7 @@
        id="path10-7" /></g><g
      style="fill:none"
      id="g28"
-     transform="matrix(0.10282682,0,0,0.09333421,133.14805,249.62864)"><g
+     transform="matrix(0.10282682,0,0,0.09333421,134.82914,249.62864)"><g
        clip-path="url(#clip0_19_13)"
        id="g3"><path
          d="M 18,84.8528 85.8822,16.9706 c 9.3726,-9.37262 24.5688,-9.37262 33.9408,0 v 0 c 9.373,9.3725 9.373,24.5685 0,33.9411 L 68.5581,102.177"

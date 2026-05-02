@@ -16,7 +16,6 @@
         <PackageReference Include="ModularPipelines.DotNet" />
         <PackageReference Include="ModularPipelines.GitHub" />
         <PackageReference Include="Microsoft.VisualStudio.SolutionPersistence" />
-        <PackageReference Include="Autodesk.PackageBuilder" />
     </ItemGroup>
 
     <ItemGroup>
