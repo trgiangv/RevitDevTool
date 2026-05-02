@@ -29,7 +29,7 @@ public sealed partial class CreateBundleModule(IOptions<BuildOptions> buildOptio
         var versioning = versioningResult.ValueOrDefault!;
 
         var revitTarget = new File(Projects.RevitDevTool.FullName);
-        var acadTarget = new File(Projects.AcadDevTool.FullName);
+        var acadTarget = new File(Path.Combine(revitTarget.Folder!.Parent!.Path, "AcadDevTool", "AcadDevTool.csproj"));
 
         var revitPublishDirs = revitTarget.Folder!.GetFolder("bin").GetFolders(folder => folder.Name == "publish").ToArray();
         var acadPublishDirs = acadTarget.Folder!.GetFolder("bin").GetFolders(folder => folder.Name == "publish").ToArray();
