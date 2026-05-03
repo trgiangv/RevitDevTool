@@ -2,6 +2,43 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.1.0] - 2026-05-03
+
+### Added
+
+- **Real-time streaming:** test progress notifications streamed from Revit to the pytest client during execution.
+- **Suite leasing:** Windows Mutex-based exclusive access prevents multiple pytest processes from connecting to the same Revit instance.
+- **Test discovery:** `PytestRunRequest` + `_BridgePlugin` integration enables `--collect-only` discovery without executing tests.
+- **Reporting module:** remote `CaseResult[]` mapping back to pytest `TestReport`, with `run_remote_session` orchestrating discover + run.
+- **Connection module:** centralized `ensure_bridge()` with auto-connect, lease management, and Revit auto-launch flow.
+- **Schedule API tests:** comprehensive test suite for Revit schedule operations (copy, field mapping, header, template, custom workflow).
+- **Image export tests:** `test_image_export.py` covering `RevitImageExporter`.
+- **Document & transaction tests:** `test_revit_document.py`, `test_revit_transactions.py`.
+- **Session cleanliness tests:** `test_session_cleanliness.py`, `test_active_state.py` verifying state isolation between runs.
+- **Streaming tests:** `test_streaming.py` validating progress notification flow.
+- **Dependencies tests:** `test_dependencies.py` verifying package resolution.
+- **GitNexus integration:** AGENTS.md, CLAUDE.md, and CLI skills for graph-based code intelligence.
+- **Project setup guide:** recommended `uv` and `pixi` workflows in README.
+
+### Changed
+
+- **Architecture rewrite:** `plugin.py` restructured — execution now intercepted via `pytest_runtestloop` instead of `pytest_pyfunc_call`. Remote session orchestrates discover + run in a single round-trip.
+- **Configuration:** primary config via `[tool.pytest.ini_options]` in `pyproject.toml` — CLI flags remain as overrides.
+- **`bridge.py`:** expanded with `discover_tests()`, `run_tests()`, notification dispatch, frame protocol hardening.
+- **`models.py`:** new `DiscoverRequest`, `RunRequest`, `RunResponse`, `CaseResult`, `CollectionError` contracts.
+- **`constants.py`:** centralized all bridge methods, option names, timeouts, pipe patterns.
+- **`pyproject.toml`:** bumped `revit_launch_timeout` to 180s, added `revit_timeout` default.
+
+### Removed
+
+- **`serializer.py`:** deprecated — test code serialization replaced by structured discovery + run flow.
+- **`.vscode/settings.json`:** removed from repo; config lives in `pyproject.toml`.
+
+### Notes
+
+- `0.1.0` represents a major architectural shift from single-test relay to session-oriented orchestration. The plugin now discovers tests remotely, runs them in batch, and streams progress back in real-time.
+- Suite leasing ensures safe concurrent usage across multiple test suits targeting the same Revit year.
+
 ## [0.0.3] - 2026-04-10
 
 ### Fixed
