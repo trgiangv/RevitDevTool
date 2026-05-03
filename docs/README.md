@@ -1,161 +1,160 @@
-# RevitDevTool - Architecture Documentation
+# RevitDevTool — Architecture Documentation
 
 This folder contains **internal architecture documentation** for developers contributing to RevitDevTool.
 
-**For user guides and tutorials, see:** [RevitDevTool.Wiki](https://github.com/trgiangv/RevitDevTool/wiki)
+**User guides and tutorials:** [RevitDevTool.Wiki](https://github.com/trgiangv/RevitDevTool/wiki)
 
 ---
 
-## 📁 Structure
+## Directory Structure
 
 ```
 docs/
-├── CodeExecute/
-│   └── architecture/          # CodeExecute internal design
+├── Execution/
+│   └── README.md           # Execution engine architecture
 ├── Logging/
-│   └── architecture/          # Logging internal design
+│   └── README.md           # Logging system architecture
 ├── Visualization/
-│   └── architecture/          # Visualization internal design
+│   └── README.md           # DirectContext3D visualization
 ├── PythonDemo/
-│   └── architecture/          # PythonDemo internal design
-└── PythonNetStubGenerator/
-    └── architecture/          # Stub generator internal design
+│   └── README.md           # Python + WebView2 dashboard
+├── MCP/
+│   └── README.md           # MCP parser & server design
+└── PyTest/
+    └── README.md           # pytest bridge architecture
 ```
 
 ---
 
-## 📚 Architecture Documentation
+## Module Documentation
 
-### CodeExecute Module
-**Path:** `CodeExecute/architecture/`
+### Execution
+**Path:** `Execution/README.md`
 
-Internal design documentation:
-- System architecture and design patterns
-- Provider pattern implementation
-- Strategy pattern for execution
-- Tree model structure
-- Python implementation details
-- Dependency resolution internals
+Comprehensive architecture documentation covering:
+- 3 execution modes: .NET DLL, Python script, F# script
+- `IExecutionProvider` / `IExecutionStrategy` interfaces
+- Tree node model (Root → Intermediate → Executable)
+- `ExecutionOrchestrator` event-driven lifecycle
+- PEP 723 dependency resolution (Pixi + Pip backends)
+- F# NuGet dependency resolution
+- `FileWatcherService` 3-layer debounced watching
+- `TreeStateManager` state persistence
+- MCP bridge & Named Pipe server integration
+- Package management (`PackageService`)
 
-### Logging Module
-**Path:** `Logging/architecture/`
+### Logging
+**Path:** `Logging/README.md`
 
-Internal design documentation:
-- System overview and architecture
-- Developer guide for extensions
-- Serilog sink implementation
-- Theme system design
-- Python integration bridge
+Unified logging infrastructure:
+- Multi-sink output (monitor, file, HTTP)
+- Keyword-based log level detection
+- Geometry interception → visualization routing
+- Console + Python `print()` redirection
+- Revit element linkification
 
-### Visualization Module
-**Path:** `Visualization/architecture/`
+### Visualization
+**Path:** `Visualization/README.md`
 
-Internal design documentation:
-- System overview and architecture
-- Developer guide for extensions
-- DirectContext3D implementation
-- Geometry type handlers
-- Buffer management strategy
+DirectContext3D transient geometry rendering:
+- Server-per-geometry-type pattern
+- Two-pass rendering (opaque + transparent)
+- RenderingBufferStorage caching
+- Integration with logging via `GeometryListener`
 
-### PythonDemo Module
-**Path:** `PythonDemo/architecture/`
+### PythonDemo
+**Path:** `PythonDemo/README.md`
 
-Internal design documentation:
-- Python + WebView2 dashboard architecture
-- React frontend integration patterns
-- Polars analytics engine design
-- Data collection and export workflow
-- Quality gates and development workflow
+Python + WebView2 dashboard application:
+- 17 demo scripts (data analysis, visualization, logging, ML, geometry)
+- React + TypeScript frontend with Recharts
+- Polars analytics engine
+- WebView2 embedded browser integration
+- MCP toolset examples
 
-### PythonNetStubGenerator Utility
-**Path:** `PythonNetStubGenerator/architecture/`
+### MCP
+**Path:** `MCP/README.md`
 
-Internal design documentation:
-- Type stub generation pipeline
-- .NET to Python type mapping
-- XML documentation integration
-- Roslyn semantic analysis
-- Symbol scope management
+Model Context Protocol integration:
+- `DevTools.McpParser` — message parsing library
+- `DevTools.McpServer` — standalone server binary
+- `ToolRegistryStore` — in-process tool discovery & caching
+- `.NET` + Python toolset providers
+- Tool/Prompt/Resource dispatch
 
----
+### PyTest
+**Path:** `PyTest/README.md`
 
-## 🎯 For Different Audiences
-
-### I want to **use** RevitDevTool
-👉 See: [RevitDevTool.Wiki](https://github.com/trgiangv/RevitDevTool/wiki)
-- User guides and tutorials
-- API usage examples
-- Comparison with other tools
-- Quick start guides
-
-### I want to **contribute** to RevitDevTool
-👉 Read this folder's architecture docs
-- Understand internal design patterns
-- Learn system architecture
-- Extend modules with custom providers/handlers
-- Debug and troubleshoot
-
-### I want to understand **how it works**
-👉 Start with architecture overviews:
-- [CodeExecute/architecture/10-system-design.md](CodeExecute/architecture/10-system-design.md)
-- [Logging/architecture/00-overview.md](Logging/architecture/00-overview.md)
-- [Visualization/architecture/00-overview.md](Visualization/architecture/00-overview.md)
-- [PythonDemo/architecture/00-overview.md](PythonDemo/architecture/00-overview.md)
-- [PythonNetStubGenerator/architecture/00-overview.md](PythonNetStubGenerator/architecture/00-overview.md)
+pytest remote execution bridge:
+- Named Pipe protocol
+- `revitdevtool_pytest` client plugin
+- `PytestExecutionService` + `PytestRunner.py` server
+- Test progress streaming & result reporting
 
 ---
 
-## 📊 Documentation Completeness
+## Quick Navigation
 
-| Module | Architecture Docs | Source README | Status |
-|--------|-------------------|---------------|--------|
-| **CodeExecute** | ✅ Complete | ✅ Yes | Production |
-| **Logging** | ✅ Complete | ✅ Yes | Production |
-| **Visualization** | ✅ Complete | ✅ Yes | Production |
-| **PythonDemo** | ✅ Complete | ✅ Yes | Production |
-| **PythonNetStubGenerator** | ✅ Complete | ✅ Yes | Utility |
-| **DotnetDemo** | ⚠️ Source README only | ✅ Yes | Examples |
-
-**Legend:**
-- ✅ Complete: Full architecture documentation with overview and developer guide
-- ⚠️ Source README only: Basic documentation in source folder, no architecture docs yet
-- Production: Core functionality module
-- Utility: Supporting tool for development
-- Examples: Demo commands for testing and reference
+| I want to... | Read |
+|-------------|------|
+| Understand the execution engine | [Execution/README.md](Execution/README.md) |
+| Understand logging | [Logging/README.md](Logging/README.md) |
+| Understand visualization | [Visualization/README.md](Visualization/README.md) |
+| Understand MCP integration | [MCP/README.md](MCP/README.md) |
+| Understand pytest bridge | [PyTest/README.md](PyTest/README.md) |
+| Use RevitDevTool | [RevitDevTool.Wiki](https://github.com/trgiangv/RevitDevTool/wiki) |
 
 ---
 
-## 🔗 Related Documentation
+## Documentation Completeness
 
-- **User Documentation:** [RevitDevTool.Wiki](https://github.com/trgiangv/RevitDevTool/wiki)
+| Module | Architecture Docs | Status |
+|--------|-------------------|--------|
+| **Execution** | ✅ `README.md` | Production |
+| **Logging** | ✅ `README.md` | Production |
+| **Visualization** | ✅ `README.md` | Production |
+| **PythonDemo** | ✅ `README.md` | Production |
+| **MCP** | ✅ `README.md` | Integration |
+| **PyTest** | ✅ `README.md` | Integration |
+| **CSharpDemo** | ⚠️ Source only | Examples |
+| **FSharpDemo** | ⚠️ Source only | Examples |
+| **FSharpScriptDemo** | ⚠️ Source only | Examples |
+| **McpToolsetDemo** | ⚠️ Source only | Examples |
+| **RevitMcpToolSet** | ⚠️ Source only | Examples |
+
+---
+
+## Related Links
+
 - **Source Code:** [../source/](../source/)
-- **Demo Commands (.NET):** [../source/RevitDevTool.DotnetDemo/](../source/RevitDevTool.DotnetDemo/)
-- **Demo Scripts (Python):** [../source/RevitDevTool.PythonDemo/commands/](../source/RevitDevTool.PythonDemo/commands/)
+- **Main engine:** `source/DevTools.Execution/`
+- **Logging library:** `source/DevTools.Logging/`
+- **MCP parser:** `source/DevTools.McpParser/`
+- **MCP server:** `source/DevTools.McpServer/`
+- **C# samples:** [../Samples/CSharpDemo/](../Samples/CSharpDemo/)
+- **F# samples:** [../Samples/FSharpDemo/](../Samples/FSharpDemo/)
+- **Python samples:** [../Samples/PythonDemo/commands/](../Samples/PythonDemo/commands/)
 
 ---
 
-## 📝 Contributing
-
-When contributing to RevitDevTool:
+## Contributing
 
 1. **Read architecture docs** for the module you're modifying
-2. **Follow existing patterns** (Provider, Strategy, Tree Model)
-3. **Update architecture docs** if you change internal design
-4. **Add demo commands** in RevitDevTool.DotnetDemo/ or scripts in RevitDevTool.PythonDemo/
-5. **Update user docs** in RevitDevTool.Wiki if user-facing changes
+2. **Follow existing patterns** (Provider, Strategy, Composite, Observer)
+3. **Update docs** if you change internal design
+4. **Add demos** in `Samples/`
+5. **Update wiki** for user-facing changes
 
 ---
 
-## 🏗️ Design Philosophy
+## Design Philosophy
 
-RevitDevTool follows these principles:
-
-1. **Separation of Concerns** - Each module has clear responsibilities
-2. **Extensibility** - Provider/Strategy patterns for pluggable behavior
-3. **Performance** - Buffering, caching, async where appropriate
-4. **Type Safety** - Strong typing with nullability annotations
-5. **Testability** - Dependency injection and mockable interfaces
+1. **Separation of Concerns** — Each module has clear responsibilities
+2. **Extensibility** — Provider/Strategy patterns for pluggable behavior
+3. **Performance** — Buffering, caching, async throughout
+4. **Type Safety** — Strong typing with nullability annotations
+5. **Testability** — Dependency injection and mockable interfaces
 
 ---
 
-_Last updated: 2026-02-14_
+_Last updated: 2026-05-03_
