@@ -31,9 +31,9 @@ if (args.Contains("pack"))
     builder.Services.AddModule<CreateBundleModule>();
     builder.Services.AddModule<CreateInstallerModule>();
 }
+
 if (args.Contains("publish"))
 {
-    builder.Services.AddModule<SignModule>();
     builder.Services.AddModule<PublishGithubModule>();
 }
 

@@ -45,5 +45,3 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           DOTNET_ENVIRONMENT: ${{ (github.ref_name == 'main' || github.ref_type == 'tag') && 'Production' || 'Development' }}
           Publish__Version: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.version || github.ref_name }}
-          SIGN_CERT_BASE64: ${{ secrets.SIGN_CERT_BASE64 }}
-          SIGN_CERT_PASSWORD: ${{ secrets.SIGN_CERT_PASSWORD }}
