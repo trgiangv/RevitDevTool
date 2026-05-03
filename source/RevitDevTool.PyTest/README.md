@@ -13,22 +13,6 @@ Tests run inside a live Revit process — write standard pytest, execute remotel
 pip install revitdevtool_pytest
 ```
 
-Recommended package name for manifests and package managers such as Pixi:
-
-```bash
-revitdevtool_pytest
-```
-
-`pip` normalizes package names, so the following forms are equivalent when installing from PyPI:
-
-```bash
-pip install revitdevtool_pytest
-pip install revitdevtool-pytest
-pip install RevitDevTool.PyTest
-```
-
-The Python import/module name used by the package is:
-
 ```python
 import revitdevtool_pytest
 ```
@@ -46,6 +30,54 @@ import revitdevtool_pytest
 - Windows (Named Pipes)
 - Revit with [RevitDevTool](https://github.com/trgiangv/RevitDevTool) add-in installed
 
+## Project Setup
+
+**Recommended:** scaffold your project with [uv](https://docs.astral.sh/uv/) or [pixi](https://pixi.sh/).
+
+```bash
+# uv
+uv init my-revit-tests
+cd my-revit-tests
+uv add revitdevtool_pytest
+
+# pixi
+pixi init my-revit-tests
+cd my-revit-tests
+pixi add revitdevtool_pytest
+```
+
+Both tools automatically manage virtual environments, lock files, and `pyproject.toml` — no separate `pip` setup needed.
+
+## Configuration
+
+Add plugin settings to `[tool.pytest.ini_options]` in your `pyproject.toml`:
+
+```toml
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+revit_version = "2025"
+revit_launch = true
+revit_launch_timeout = "180"
+```
+
+> With `uv` or `pixi`, run tests via `uv run pytest` or `pixi run pytest`.
+
+All options are settable via `[tool.pytest.ini_options]` or standard INI files (`pytest.ini`, `tox.ini`, `setup.cfg`):
+
+| Option | Type | Default | Description |
+|---|---|---|---|
+| `revit_version` | string | — | Revit version year (e.g. `"2025"`). Required when `revit_launch = true`. |
+| `revit_launch` | bool | `false` | Auto-launch Revit if no running instance found. |
+| `revit_timeout` | string | `"60"` | Per-test execution timeout in seconds. |
+| `revit_launch_timeout` | string | `"120"` | Seconds to wait for Revit to start. |
+| `revit_pipe` | string | — | Explicit pipe name (bypasses auto-discovery). |
+
+CLI flags override INI settings for one-off runs:
+
+```bash
+pytest --revit-launch --revit-version=2025 -v
+```
+
 ## Usage
 
 ```python
@@ -55,28 +87,18 @@ def test_revit_version():
 ```
 
 ```bash
-# Auto-detect running Revit 2025
-pytest --revit-version=2025 -v
+# With pyproject.toml configured, just run:
+pytest
 
-# Auto-launch Revit 2025 if not running
-pytest --revit-launch --revit-version=2025 -v
+# Or override for a single run:
+pytest --revit-version=2026 -v
 ```
-
-## CLI Options
-
-| Option | Description |
-|---|---|
-| `--revit-version` | Revit version year (e.g. 2025). Required with `--revit-launch`. |
-| `--revit-launch` | Auto-launch Revit if no running instance found. |
-| `--revit-timeout` | Per-test timeout in seconds (default: 60). |
-| `--revit-launch-timeout` | Revit startup timeout in seconds (default: 120). |
-| `--revit-pipe` | Explicit pipe name (bypasses auto-discovery). |
 
 ## How It Works
 
 1. pytest discovers tests locally as usual
-2. The plugin intercepts test execution via `pytest_pyfunc_call`
-3. Test source code is serialized and sent over Named Pipe to Revit
+2. Plugin intercepts execution via `pytest_runtestloop`
+3. Test source is serialized and sent over Named Pipe to Revit
 4. RevitDevTool add-in executes the test inside Revit's Python (pythonnet) environment
 5. Results are mapped back to pytest pass/fail/skip
 
@@ -87,6 +109,16 @@ Add to `.vscode/settings.json`:
 ```json
 {
     "python.testing.pytestEnabled": true,
+    "python.testing.pytestArgs": [
+        "tests"
+    ]
+}
+```
+
+CLI args can go in `pytestArgs` if not configured in `pyproject.toml`:
+
+```json
+{
     "python.testing.pytestArgs": [
         "--revit-launch",
         "--revit-version=2025",
