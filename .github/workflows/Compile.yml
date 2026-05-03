@@ -32,16 +32,12 @@ jobs:
         env:
           DOTNET_ENVIRONMENT: ${{ github.ref_name == 'main' && 'Production' || 'Development' }}
 
-      - name: Debug output
-        run: Get-ChildItem -Path . -Recurse -Include *.exe,*.zip,*.msi | Select-Object FullName
-        shell: pwsh
-      
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: build-artifacts
+          name: build-output
           path: |
             output/*.zip
             output/*.exe
           if-no-files-found: warn
-          retention-days: 30
+          retention-days: 7

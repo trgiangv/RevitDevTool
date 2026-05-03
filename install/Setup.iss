@@ -37,6 +37,7 @@ DisableDirPage=yes
 SetupIconFile=Resources\Icons\ShellIcon.ico
 WizardImageFile=Resources\Icons\BackgroundImage.png
 WizardSmallImageFile=Resources\Icons\BannerImage.png
+LicenseFile=LICENSE.txt
 WizardStyle=modern windows11
 UninstallDisplayIcon={uninstallexe}
 UninstallFilesDir={app}\Uninstall

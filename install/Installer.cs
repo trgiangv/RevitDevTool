@@ -159,6 +159,13 @@ internal static class Program
             await Task.Run(() => CopyDirectory(sourceIncludes, destIncludes));
         }
 
+        var licenseSource = Path.Combine(templateDir, "LICENSE");
+        var licenseDest = Path.Combine(tempDir, "LICENSE.txt");
+        if (File.Exists(licenseSource))
+        {
+            await Task.Run(() => File.Copy(licenseSource, licenseDest, overwrite: true));
+        }
+
         Console.WriteLine($"Generated: {outputIssPath}");
         return outputIssPath;
     }

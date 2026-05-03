@@ -17,6 +17,7 @@
         <None Include="Setup.iss" CopyToOutputDirectory="PreserveNewest"/>
         <None Include="includes\**\*" CopyToOutputDirectory="PreserveNewest" />
         <None Include="Resources\**\*" CopyToOutputDirectory="PreserveNewest" />
+        <None Include="..\LICENSE" CopyToOutputDirectory="PreserveNewest" />
     </ItemGroup>
 
 </Project>
