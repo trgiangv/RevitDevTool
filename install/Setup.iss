@@ -116,6 +116,7 @@ Name: "{autoprograms}\Uninstall {#AppName}"; Filename: "{uninstallexe}"
 ; CODE — Pascal split across install\includes\*.inc (order matters)
 ;   Registry.inc  — APP_COUNT, years, component/XML description helpers
 ;   Processes.inc — monitored EXEs; line = name - file version - PID: n; extend MONITORED_EXE_COUNT
+;   Cleanup.inc   — Legacy RevitDevTool cleanup (OnPostInstall)
 ;   XmlFilter.inc — PackageContents.xml pruning
 ;   Register.inc  — OnPostInstall, CurStepChanged
 ;   Hooks.inc     — InitializeSetup / InitializeUninstall
@@ -125,5 +126,6 @@ Name: "{autoprograms}\Uninstall {#AppName}"; Filename: "{uninstallexe}"
 #include "includes\Registry.inc"
 #include "includes\Processes.inc"
 #include "includes\XmlFilter.inc"
+#include "includes\Cleanup.inc"
 #include "includes\Register.inc"
 #include "includes\Hooks.inc"

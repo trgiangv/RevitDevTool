@@ -22,6 +22,8 @@ var
 begin
   if CurStep <> ssPostInstall then Exit;
 
+  RemoveLegacyRevitDevTool;
+
   for I := 0 to APP_COUNT - 1 do
     OnPostInstall(I);
 end;
