@@ -27,11 +27,7 @@ public partial class LogSettingsViewModel : ObservableObject, IDataErrorInfo, IR
 
     public bool HasEnrichers => _enricherProvider != null;
     public IReadOnlyList<object> AvailableEnrichers => _enricherProvider?.AvailableEnrichers ?? [];
-    public IList<object> SelectedEnrichers
-    {
-        get => _enricherProvider?.SelectedEnrichers ?? Array.Empty<object>();
-        set => _enricherProvider?.SelectedEnrichers = value;
-    }
+    public ObservableCollection<object> SelectedEnrichers { get; } = [];
 
     [ObservableProperty] private LogLevel _logLevel;
     [ObservableProperty] private bool _enableJson;
@@ -150,6 +146,13 @@ public partial class LogSettingsViewModel : ObservableObject, IDataErrorInfo, IR
         SelectedLogTargets.Add(LogSink.Monitor);
         if (config.FileLogging.Enabled) SelectedLogTargets.Add(LogSink.File);
         if (config.HttpLogging.Enabled) SelectedLogTargets.Add(LogSink.Http);
+
+        SelectedEnrichers.Clear();
+        if (_enricherProvider is not null)
+        {
+            foreach (var enricher in _enricherProvider.SelectedEnrichers)
+                SelectedEnrichers.Add(enricher);
+        }
     }
 
     public void Receive(ResetSettingsMessage message)
@@ -182,6 +185,9 @@ public partial class LogSettingsViewModel : ObservableObject, IDataErrorInfo, IR
         config.HttpLogging.Endpoint = HttpEndpoint;
         config.HttpLogging.BatchSize = HttpBatchSize;
         config.HttpLogging.Format = format;
+
+        if (_enricherProvider is not null)
+            _enricherProvider.SelectedEnrichers = SelectedEnrichers.ToList();
 
         _settingsService.SaveSettings();
     }
