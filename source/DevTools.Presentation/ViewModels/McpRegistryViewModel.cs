@@ -7,7 +7,6 @@ using System.Text.Json;
 using System.Windows.Threading;
 using DevTools.Execution.External.Connections;
 using DevTools.Execution.External.Mcp;
-using DevTools.McpParser;
 using DevTools.McpParser.Models;
 using DevTools.Presentation.Models;
 using DevTools.UI.Behaviors;
@@ -44,6 +43,23 @@ public sealed partial class McpRegistryViewModel : ObservableObject, IDisposable
     public ObservableCollection<McpToolItem> FilteredTools { get; } = [];
     public bool ShowStatusPanel => IsBusy || IsExecuting;
     public string StatusPanelText => IsBusy ? BusyMessage : ExecutionStatusText;
+
+    private static readonly string McpServerPath = Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
+            "Autodesk", "ApplicationPlugins", "RevitDevTool.bundle", "Contents", "MCPServer.exe")
+        .Replace("\\", "/");
+
+    public string McpConfigSnippet { get; } = $$"""
+        {
+          "mcpServers": {
+            "revitdevtool": {
+              "type": "stdio",
+              "command": "{{McpServerPath}}",
+              "args": []
+            }
+          }
+        }
+        """;
 
     public McpRegistryViewModel(ToolRegistryStore toolStore, ConnectionState bridgeState)
     {
@@ -177,8 +193,8 @@ public sealed partial class McpRegistryViewModel : ObservableObject, IDisposable
         if (hasQuery)
         {
             source = source.Where(item =>
-                item.Name.Contains((string) query, StringComparison.OrdinalIgnoreCase) ||
-                item.GroupName.Contains((string) query, StringComparison.OrdinalIgnoreCase));
+                item.Name.Contains(query, StringComparison.OrdinalIgnoreCase) ||
+                item.GroupName.Contains(query, StringComparison.OrdinalIgnoreCase));
         }
 
         source = source
