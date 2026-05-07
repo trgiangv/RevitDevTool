@@ -18,7 +18,7 @@ public sealed class HostBackgroundController(
     public async Task StartAsync(CancellationToken cancellationToken)
     {
         HostUiHelper.Initialize(ComponentManager.ApplicationWindow, ComponentManager.Ribbon.Dispatcher);
-        
+
         var hostApp = hostAppInfo.Host;
         NetworkService.Configure(hostApp);
         PythonEmbedded.Configure(hostApp);

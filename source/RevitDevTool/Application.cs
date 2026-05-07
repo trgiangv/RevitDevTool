@@ -25,6 +25,7 @@ public class Application : IExternalApplication
 
     public Result OnShutdown(UIControlledApplication application)
     {
+        Host.GetService<PanelController>().Shutdown();
         Host.Stop();
         return Result.Succeeded;
     }

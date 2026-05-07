@@ -5,6 +5,7 @@ using RevitDevTool.Settings.Config;
 using System.Diagnostics;
 using System.IO;
 using DevTools.Utilities;
+using DevTools.Logging;
 
 namespace RevitDevTool.Settings;
 
@@ -99,7 +100,7 @@ public sealed class SettingsService(IFileConfig<PathOptions> fileConfig) : IRevi
     {
         if (_logConfig is null) return;
         fileConfig.Save(_logConfig);
-        PresentationTraceSources.DataBindingSource.Switch.Level = _logConfig.TraceListener.WpfTraceLevel;
+        TraceListenerHelper.ApplyPresentationTraceSwitches(_logConfig.TraceListener.WpfTraceLevel);
     }
 
     private void SaveVisualizationSettings()
@@ -160,7 +161,7 @@ public sealed class SettingsService(IFileConfig<PathOptions> fileConfig) : IRevi
         else
         {
             EnsureLogFolder(_logConfig);
-            PresentationTraceSources.DataBindingSource.Switch.Level = _logConfig.TraceListener.WpfTraceLevel;
+            TraceListenerHelper.ApplyPresentationTraceSwitches(_logConfig.TraceListener.WpfTraceLevel);
         }
     }
 
@@ -176,7 +177,7 @@ public sealed class SettingsService(IFileConfig<PathOptions> fileConfig) : IRevi
     {
         _logConfig = new LogConfig();
         EnsureLogFolder(_logConfig);
-        PresentationTraceSources.DataBindingSource.Switch.Level = _logConfig.TraceListener.WpfTraceLevel;
+        TraceListenerHelper.ApplyPresentationTraceSwitches(_logConfig.TraceListener.WpfTraceLevel);
     }
 
     private void ResetVisualizationSettings()

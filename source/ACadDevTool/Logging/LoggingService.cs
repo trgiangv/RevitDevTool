@@ -21,6 +21,7 @@ public sealed class LoggingService(
 {
     private bool _disposed;
     private LoggerTraceListener? _loggerTraceListener;
+    private ConsoleRedirector? _consoleRedirector;
 
     public FrameworkElement HostElement => monitor.HostElement;
 
@@ -40,6 +41,7 @@ public sealed class LoggingService(
             httpLogTarget.Enable(config.HttpLogging);
 
         RecreateTraceListeners(config);
+        _consoleRedirector = new ConsoleRedirector();
     }
 
     public void EnableTarget(LogSink sink)
@@ -88,9 +90,7 @@ public sealed class LoggingService(
 
     public void UnregisterTraceListeners()
     {
-        TraceListenerHelper.UnregisterTraceListeners(
-            settingsService.LogConfig.TraceListener.IncludeWpfTrace,
-            _loggerTraceListener);
+        TraceListenerHelper.UnregisterTraceListeners(_loggerTraceListener);
     }
 
     public void ClearOutput()
@@ -111,6 +111,8 @@ public sealed class LoggingService(
     public void Dispose()
     {
         if (_disposed) return;
+        _consoleRedirector?.Dispose();
+        _consoleRedirector = null;
         UnregisterTraceListeners();
         _loggerTraceListener?.Dispose();
         _loggerTraceListener = null;

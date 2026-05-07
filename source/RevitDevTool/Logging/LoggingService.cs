@@ -27,6 +27,7 @@ public sealed class LoggingService(
     private LoggerTraceListener? _loggerTraceListener;
     private GeometryListener? _geometryListener;
     private NotifyListener? _notifyListener;
+    private ConsoleRedirector? _consoleRedirector;
     private IDisposable? _enricherScope;
 
     public FrameworkElement HostElement => monitor.HostElement;
@@ -49,6 +50,7 @@ public sealed class LoggingService(
             httpLogTarget.Enable(config.HttpLogging);
 
         RecreateTraceListeners(config);
+        _consoleRedirector = new ConsoleRedirector();
     }
 
     public void EnableTarget(LogSink sink)
@@ -114,9 +116,9 @@ public sealed class LoggingService(
 
     public void UnregisterTraceListeners()
     {
-        TraceListenerHelper.UnregisterTraceListeners(
-            settingsService.LogConfig.TraceListener.IncludeWpfTrace,
-            _loggerTraceListener, _geometryListener, _notifyListener);
+        // Remove NotifyListener first
+        // with Trace and would otherwise raise TraceReceived during teardown.
+        TraceListenerHelper.UnregisterTraceListeners(_notifyListener, _geometryListener, _loggerTraceListener);
     }
 
     public void ClearOutput()
@@ -167,6 +169,8 @@ public sealed class LoggingService(
     public void Dispose()
     {
         if (_disposed) return;
+        _consoleRedirector?.Dispose();
+        _consoleRedirector = null;
         UnregisterTraceListeners();
         DisposeListeners();
         _enricherScope?.Dispose();

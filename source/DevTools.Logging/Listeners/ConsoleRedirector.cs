@@ -1,8 +1,13 @@
 using System.Diagnostics;
 using System.IO;
+using System.Text;
 
 namespace DevTools.Logging.Listeners;
 
+/// <summary>
+/// Routes <see cref="Console.Out"/> and <see cref="Console.Error"/> to <see cref="Trace"/>
+/// so active trace listeners (e.g. <see cref="LoggerTraceListener"/>) receive console output.
+/// </summary>
 public sealed class ConsoleRedirector : IDisposable
 {
     private readonly TextWriter _originalOut;
@@ -35,19 +40,27 @@ public sealed class ConsoleRedirector : IDisposable
 
     private sealed class ConsoleTextWriter : TextWriter
     {
+        public override Encoding Encoding => System.Text.Encoding.UTF8;
+
+        public override void Write(char value) => Trace.Write(value);
+
         public override void Write(string? value)
         {
-            if (string.IsNullOrEmpty(value))
-                return;
-
-            Trace.Write(value);
+            if (!string.IsNullOrEmpty(value))
+                Trace.Write(value);
         }
 
-        public override void WriteLine(string? value)
+        public override void Write(char[] buffer, int index, int count)
         {
-            if (value != null) Write(value);
+            if (buffer is null || count <= 0)
+                return;
+            Trace.Write(new string(buffer, index, count));
         }
 
-        public override System.Text.Encoding Encoding => System.Text.Encoding.UTF8;
+        public override void WriteLine() => Trace.WriteLine(string.Empty);
+
+        public override void WriteLine(string? value) => Trace.WriteLine(value);
+
+        public override void Flush() => Trace.Flush();
     }
 }

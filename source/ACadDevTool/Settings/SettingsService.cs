@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using System.IO;
 using AcadDevTool.Logging.Enums;
+using DevTools.Logging;
 using DevTools.Settings;
 using DevTools.Settings.Configs;
 using DevTools.UI.Theme;
@@ -77,6 +78,7 @@ public sealed class SettingsService(IFileConfig<PathOptions> fileConfig) : IAcad
         _logConfig = new LogConfig();
         EnsureLogFolder(_logConfig);
         PresentationTraceSources.DataBindingSource.Switch.Level = _logConfig.TraceListener.WpfTraceLevel;
+        TraceListenerHelper.ApplyPresentationTraceSwitches(_logConfig.TraceListener.WpfTraceLevel);
     }
 
     private void SaveConfig<T>(T? config) where T : class

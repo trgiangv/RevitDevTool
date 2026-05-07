@@ -107,7 +107,7 @@ public partial class LogSettingsViewModel : ObservableObject, IDataErrorInfo, IR
     partial void OnWpfTraceLevelChanged(SourceLevels value)
     {
         _settingsService.LogConfig.TraceListener.WpfTraceLevel = value;
-        PresentationTraceSources.DataBindingSource.Switch.Level = value;
+        TraceListenerHelper.ApplyPresentationTraceSwitches(value);
     }
 
     partial void OnIncludeWpfTraceChanged(bool value) => UpdateHasPendingChanges();
