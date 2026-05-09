@@ -16,24 +16,11 @@ namespace RevitDevTool.Core;
 ///         inside an API context and no requests are pending, the delegate executes synchronously
 ///         without queuing.
 ///     </para>
-///     <para>
-///         <see cref="Register"/> must be called once from <c>IExternalApplication.OnStartup</c>.
-///     </para>
 /// </remarks>
 [PublicAPI]
 public static class RevitContextExecutor
 {
     private static readonly RevitDispatcher Dispatcher = new();
-
-    /// <summary>
-    ///     Creates the internal <see cref="ExternalEvent"/>.
-    ///     Must be called once from <c>IExternalApplication.OnStartup</c>.
-    ///     Thread-safe and idempotent.
-    /// </summary>
-    public static void Register()
-    {
-        Dispatcher.Subscribe();
-    }
 
     /// <summary>
     ///     Queues <paramref name="action"/> for fire-and-forget execution on the Revit thread.

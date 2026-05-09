@@ -12,15 +12,11 @@ internal sealed class RevitDispatcher : IExternalEventHandler
     private readonly Lock _gate = new();
     private bool _raisePending;
     private readonly Queue<IRevitRequest> _queue = new();
-    private ExternalEvent? _event;
+    private readonly ExternalEvent? _event;
 
-    /// <summary>
-    ///     Creates the internal <see cref="ExternalEvent"/>. Thread-safe, idempotent.
-    ///     Must be called from a valid Revit API context (e.g. <c>OnStartup</c>).
-    /// </summary>
-    public void Subscribe()
+    public RevitDispatcher()
     {
-        lock (_gate)
+        using (RevitContext.BeginApiContextScope())
         {
             _event ??= ExternalEvent.Create(this);
         }

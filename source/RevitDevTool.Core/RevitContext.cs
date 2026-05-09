@@ -1,4 +1,5 @@
 ﻿using System.Reflection;
+using System.Runtime.InteropServices;
 using Autodesk.Revit.UI.Events;
 
 namespace RevitDevTool.Core;
@@ -17,6 +18,14 @@ public static class RevitContext
     private static readonly RibbonItemEventArgs RibbonItemEventArgs = new();
     private static UIControlledApplication? _uiControlledApplication;
     private static readonly Func<bool> GetIsInApiContext;
+    private static readonly IntPtr IncrementConstructorPointer;
+    private static readonly IntPtr IncrementDestructorPointer;
+    
+    [UnmanagedFunctionPointer(CallingConvention.ThisCall)]
+    private delegate IntPtr IncrementCtor(IntPtr self);
+
+    [UnmanagedFunctionPointer(CallingConvention.ThisCall)]
+    private delegate void IncrementDtor(IntPtr self);
 
     /// <summary>
     ///  Internal API via reflection inspired by RevitToolkit
@@ -25,16 +34,22 @@ public static class RevitContext
     /// <exception cref="NotSupportedException"></exception>
     static RevitContext()
     {
-        var assembly = AppDomain.CurrentDomain.GetAssemblies()
-            .FirstOrDefault(a => a.GetName().Name == "APIUIAPI")
-            ?? throw new NotSupportedException("Cannot find APIUIAPI assembly");
+        var assemblies = FindAssemblies("APIUIAPI", "RevitAPIUI");
 
-        var methods = assembly.ManifestModule.GetMethods(BindingFlags.NonPublic | BindingFlags.Static);
-        var singletonFactory = methods.FirstOrDefault(m => m.Name == "APICallDepthManager.singletonfactory")
+        var apiMethods = assemblies[0].ManifestModule.GetMethods(BindingFlags.NonPublic | BindingFlags.Static);
+        var singletonFactory = apiMethods.FirstOrDefault(m => m.Name == "APICallDepthManager.singletonfactory")
                                ?? throw new NotSupportedException("Cannot resolve APICallDepthManager.singletonfactory");
-        var isInApiMode = methods.FirstOrDefault(m => m.Name == "APICallDepthManager.isRevitInAPIMode")
+        var isInApiMode = apiMethods.FirstOrDefault(m => m.Name == "APICallDepthManager.isRevitInAPIMode")
                           ?? throw new NotSupportedException("Cannot resolve APICallDepthManager.isRevitInAPIMode");
 
+        var uiAssemblyMethods =  assemblies[1].ManifestModule.GetMethods(BindingFlags.NonPublic | BindingFlags.Static);
+        var incrementConstructor = uiAssemblyMethods.FirstOrDefault(method => method.Name == "IncrementAPICallDepth.{ctor}") 
+                                   ?? throw new NotSupportedException("Cannot resolve IncrementAPICallDepth constructor");
+        var incrementDestructor = uiAssemblyMethods.FirstOrDefault(method => method.Name == "IncrementAPICallDepth.{dtor}")
+                                   ?? throw new NotSupportedException("Cannot resolve IncrementAPICallDepth destructor");
+        
+        IncrementConstructorPointer = incrementConstructor.MethodHandle.GetFunctionPointer();
+        IncrementDestructorPointer = incrementDestructor.MethodHandle.GetFunctionPointer();
         GetIsInApiContext = () =>
         {
             var manager = singletonFactory.Invoke(null, null);
@@ -111,5 +126,59 @@ public static class RevitContext
             null,
             [UiApplication],
             null)!;
+    }
+    
+    /// <summary>
+    ///     Finds assemblies loaded in the current application domain that match the specified names.
+    /// </summary>
+    private static Assembly[] FindAssemblies(params string[] names)
+    {
+        var remaining = new HashSet<string>(names);
+        var result = new Dictionary<string, Assembly>(names.Length);
+
+        foreach (var assembly in AppDomain.CurrentDomain.GetAssemblies())
+        {
+            var name = assembly.GetName().Name;
+            if (name is null || !remaining.Remove(name)) continue;
+            result[name] = assembly;
+            if (remaining.Count == 0) break;
+        }
+
+        if (remaining.Count <= 0) 
+            return names.Select(name => result[name]).ToArray();
+        var missing = string.Join(", ", remaining);
+        throw new NotSupportedException($"Cannot find assemblies: {missing}");
+    }
+    
+    internal static IDisposable BeginApiContextScope()
+    {
+        return new ApiContextScope(IncrementConstructorPointer, IncrementDestructorPointer);
+    }
+    
+    private sealed class ApiContextScope : IDisposable
+    {
+        private readonly IntPtr _memory;
+        private readonly IntPtr _deconstructorPointer;
+        private int _disposed;
+
+        internal ApiContextScope(IntPtr constructorPointer, IntPtr deconstructorPointer)
+        {
+            _deconstructorPointer = deconstructorPointer;
+            _memory = Marshal.AllocHGlobal(8);
+            Marshal.WriteInt64(_memory, 0);
+
+            var constructorDelegate = Marshal.GetDelegateForFunctionPointer<IncrementCtor>(constructorPointer);
+            constructorDelegate(_memory);
+        }
+
+        public void Dispose()
+        {
+            if (Interlocked.Exchange(ref _disposed, 1) != 0) return;
+
+            var deconstructorDelegate = Marshal.GetDelegateForFunctionPointer<IncrementDtor>(_deconstructorPointer);
+            deconstructorDelegate(_memory);
+
+            Marshal.FreeHGlobal(_memory);
+        }
     }
 }

@@ -3,7 +3,6 @@ using Nice3point.Revit.Extensions.UI;
 using Autodesk.Revit.DB.Events;
 using RevitDevTool.Commands;
 using RevitDevTool.Controllers;
-using RevitDevTool.Core;
 
 namespace RevitDevTool;
 
@@ -16,7 +15,6 @@ public class Application : IExternalApplication
     {
         _application = application;
         AssemblyLoader.Initialize();
-        RevitContextExecutor.Register();
         Host.Start();
         AddButtons(application);
         application.ControlledApplication.ApplicationInitialized += OnApplicationInitialized;
