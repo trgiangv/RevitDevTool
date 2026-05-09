@@ -1,4 +1,5 @@
 ﻿using AcadDevTool.Controllers;
+using AcadDevTool.HostAdapters;
 using Autodesk.AutoCAD.Runtime;
 using DevTools.Utilities;
 using DevTools.Presentation.ViewModels;
@@ -16,7 +17,7 @@ public static class Commands
     [CommandMethod("StubBuilder")]
     public static void StubBuilderCommand()
     {
-        var vm = new StubBuilderViewModel();
+        var vm = new StubBuilderViewModel(AcadProductDetector.GetVersionNumber());
         var window = new StubBuilderWindow(vm);
         window.SetHostAppOwner();
         window.ShowDialog();

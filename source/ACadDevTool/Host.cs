@@ -1,3 +1,4 @@
+using AcadDevTool.HostAdapters;
 using Microsoft.Extensions.DependencyInjection;
 using DevTools.UI.Theme;
 using DevTools.Utilities;
@@ -17,7 +18,7 @@ public static class Host
     public static void Start()
     {
         SetupTheme();
-        var contentRoot = AppUtils.GetContentRootPath();
+        var contentRoot = AppUtils.GetContentRootPath(AcadProductDetector.GetVersionNumber());
         var builder = Microsoft.Extensions.Hosting.Host.CreateApplicationBuilder(new HostApplicationBuilderSettings
         {
             ContentRootPath = contentRoot,
@@ -56,11 +57,12 @@ public static class Host
 
     private static void SetupTheme()
     {
+        const string colorTheme = "COLORTHEME";
         ThemeManager.Setup(
-            () => (short)AcadApp.GetSystemVariable("COLORTHEME") == 0 ? AppTheme.Dark : AppTheme.Light,
+            () => (short)AcadApp.GetSystemVariable(colorTheme) == 0 ? AppTheme.Dark : AppTheme.Light,
             onChanged => AcadApp.SystemVariableChanged += (_, e) =>
             {
-                if (!string.Equals(e.Name, "COLORTHEME", StringComparison.OrdinalIgnoreCase)) return;
+                if (!string.Equals(e.Name, colorTheme, StringComparison.OrdinalIgnoreCase)) return;
                 HostUiHelper.RunOnMainThread(onChanged);
             });
     }

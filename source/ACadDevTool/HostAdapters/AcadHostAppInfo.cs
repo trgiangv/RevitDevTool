@@ -1,7 +1,7 @@
 using System.Text.RegularExpressions;
 using Autodesk.AutoCAD.DatabaseServices;
+using Autodesk.AutoCAD.Runtime;
 using DevTools.Logging;
-using DevTools.Utilities;
 using AcadApp = Autodesk.AutoCAD.ApplicationServices.Core.Application;
 
 namespace AcadDevTool.HostAdapters;
@@ -9,7 +9,7 @@ namespace AcadDevTool.HostAdapters;
 public sealed class AcadHostAppInfo : IHostAppInfo
 {
     public HostApp Host => AcadProductDetector.Detect();
-    public string VersionNumber => AppUtils.AutodeskVersion;
+    public string VersionNumber => AcadProductDetector.GetVersionNumber();
     public string VersionBuild => AcadApp.Version.ToString();
     public int ProcessId => Environment.ProcessId;
 }
@@ -51,5 +51,16 @@ public static partial class AcadProductDetector
 
         var productId = match.Groups["productId"].Value;
         return ProductMap.GetValueOrDefault(productId, HostApp.AutoCad);
+    }
+    
+    /// <summary>
+    /// "Software\Autodesk\AutoCAD\R25.1\ACAD-9100:409" -> "2026"
+    /// </summary>
+    public static string GetVersionNumber()
+    {
+        var regPath = HostApplicationServices.Current?.UserRegistryProductRootKey;
+        if (regPath is null) return "Unknown";
+        using var key = Registry.LocalMachine.OpenSubKey(regPath);
+        return key?.GetValue("UPIRELEASE") as string ?? "Unknown";
     }
 }

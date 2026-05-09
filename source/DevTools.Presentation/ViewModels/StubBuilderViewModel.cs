@@ -22,9 +22,9 @@ public partial class StubBuilderViewModel : ObservableObject
     public ICollectionView FilteredAssemblies { get; }
     public Action? CloseAction { get; set; }
 
-    public StubBuilderViewModel()
+    public StubBuilderViewModel(string versionNumber)
     {
-        _outputPath = Path.Combine(AppUtils.GetContentRootPath(), "Stubs");
+        _outputPath = Path.Combine(AppUtils.GetContentRootPath(versionNumber), "Stubs");
         FilteredAssemblies = CollectionViewSource.GetDefaultView(AppDomainAssemblies);
         FilteredAssemblies.Filter = FilterAssembly;
         LoadAppDomainAssemblies();

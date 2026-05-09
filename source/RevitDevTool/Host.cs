@@ -1,7 +1,7 @@
 using Microsoft.Extensions.DependencyInjection;
-using DevTools.UI.Theme;
 using DevTools.Utilities;
 using Microsoft.Extensions.Hosting;
+using RevitDevTool.Core;
 using RevitDevTool.Hosting;
 using RevitDevTool.Logging.Linkify;
 
@@ -17,7 +17,7 @@ public static class Host
     public static void Start()
     {
         SetupTheme();
-        var contentRoot = AppUtils.GetContentRootPath();
+        var contentRoot = AppUtils.GetContentRootPath(RevitContext.Application.VersionNumber);
         var builder = Microsoft.Extensions.Hosting.Host.CreateApplicationBuilder(new HostApplicationBuilderSettings
         {
             ContentRootPath = contentRoot,
@@ -57,10 +57,10 @@ public static class Host
     private static void SetupTheme()
     {
 #if REVIT2024_OR_GREATER
-        ThemeManager.Setup(
+        DevTools.UI.Theme.ThemeManager.Setup(
             () => UIThemeManager.CurrentTheme == UITheme.Dark
-                ? AppTheme.Dark
-                : AppTheme.Light,
+                ? DevTools.UI.Theme.AppTheme.Dark
+                : DevTools.UI.Theme.AppTheme.Light,
             onChanged => UIFramework.ApplicationTheme.CurrentTheme.PropertyChanged += (_, e) =>
             {
                 if (e.PropertyName != nameof(UIFramework.ApplicationTheme.CurrentTheme.RibbonPanelBackgroundBrush)) return;
