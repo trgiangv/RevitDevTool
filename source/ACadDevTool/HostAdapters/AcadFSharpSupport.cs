@@ -1,33 +1,18 @@
 using System.Reflection;
 using Autodesk.AutoCAD.Runtime;
 using DevTools.Execution.Interfaces;
-using DevTools.Utilities;
+using DevTools.Logging;
 
 namespace AcadDevTool.HostAdapters;
 
-public sealed class AcadFSharpSupport : IFSharpHostSupport
+public sealed class AcadFSharpSupport(IHostAppInfo hostAppInfo) : IFSharpHostSupport
 {
     public IEnumerable<string> GetSessionReferences()
     {
         yield return typeof(CommandMethodAttribute).Assembly.Location;
     }
 
-    public object? FindAndCreateCommand(HashSet<Assembly> assemblySnapshot)
-    {
-        var current = new HashSet<Assembly>(AppDomain.CurrentDomain.GetAssemblies());
-        current.ExceptWith(assemblySnapshot);
-
-        foreach (var assembly in current)
-        {
-            var commandType = TryFindCommandType(assembly);
-            if (commandType != null)
-                return Activator.CreateInstance(commandType);
-        }
-
-        return null;
-    }
-
-    private static Type? TryFindCommandType(Assembly assembly)
+    public Type? TryFindCommandType(Assembly assembly)
     {
         try
         {
@@ -44,15 +29,9 @@ public sealed class AcadFSharpSupport : IFSharpHostSupport
         return null;
     }
 
-    public string GetHostVersion()
-    {
-        return AppUtils.AutodeskVersion;
-    }
+    public string GetHostVersion() => hostAppInfo.VersionNumber;
 
     public string GetHostReferencePattern() => @"AutoCAD\s+\d{4}";
 
-    public string GetHostReferenceReplacement()
-    {
-        return $"AutoCAD {AppUtils.AutodeskVersion}";
-    }
+    public string GetHostReferenceReplacement() => $"AutoCAD {hostAppInfo.VersionNumber}";
 }

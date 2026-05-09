@@ -15,10 +15,11 @@ public interface IFSharpHostSupport
     IEnumerable<string> GetSessionReferences();
 
     /// <summary>
-    /// Finds and instantiates the command type from assemblies loaded after FSI evaluation.
-    /// Returns null if no command type was found.
+    /// Tries to find the command type in the given assembly. Returns null if not found or if the assembly can't be reflected.
     /// </summary>
-    object? FindAndCreateCommand(HashSet<Assembly> assemblySnapshot);
+    /// <param name="assembly">The assembly to search for the command type.</param>
+    /// <returns>The command type if found; null otherwise.</returns>
+    Type? TryFindCommandType(Assembly assembly);
 
     /// <summary>
     /// Returns the host version string for correcting assembly references (e.g., "2025" for Revit).

@@ -31,9 +31,7 @@ internal static class FSharpExecutor
         {
             var sessionReferences = hostSupport.GetSessionReferences();
             var allRefs = new HashSet<string>(sessionReferences, StringComparer.OrdinalIgnoreCase);
-            foreach (var r in references)
-                if (!string.IsNullOrWhiteSpace(r))
-                    allRefs.Add(r);
+            allRefs.UnionWith(references.Where(r => !string.IsNullOrWhiteSpace(r)));
 
             var argv = BuildSessionArgs(allRefs);
             var fsiConfig = Shell.FsiEvaluationSession.GetDefaultConfiguration();
@@ -98,6 +96,17 @@ internal static class FSharpExecutor
                 $"FCS: '{typeof(Shell.FsiEvaluationSession).Assembly.Location}'");
             return new FSharpCompilationOutput(null, null);
         }
+    }
+    
+    private static object? FindAndCreateCommand(this IFSharpHostSupport fSharpHost, HashSet<Assembly> assemblySnapshot)
+    {
+        var current = new HashSet<Assembly>(AppDomain.CurrentDomain.GetAssemblies());
+        current.ExceptWith(assemblySnapshot);
+        return current
+            .Select(fSharpHost.TryFindCommandType)
+            .OfType<Type>()
+            .Select(Activator.CreateInstance)
+            .FirstOrDefault();
     }
 
     public static ExecutionResult ExecuteCommand(object compiledCommand, ICommandRunner commandRunner)
