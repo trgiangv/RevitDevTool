@@ -60,4 +60,27 @@ public static class HostUiHelper
         RunOnMainThread(() =>
             RenderOptions.ProcessRenderMode = useHardware ? RenderMode.Default : RenderMode.SoftwareOnly);
     }
+
+    /// <summary>
+    /// https://github.com/Nice3point/RevitToolkit
+    /// </summary>
+    public static void RunWithMessagePump(Task task)
+    {
+        if (task.IsCompleted)
+        {
+            task.GetAwaiter().GetResult();
+            return;
+        }
+
+        var frame = new DispatcherFrame();
+
+        // TaskScheduler.Default ensures continuation runs on ThreadPool, not UI thread.
+        // Prevents deadlock: if continuation ran on UI thread via SynchronizationContext,
+        // it would wait for PushFrame to finish, which waits for continuation - deadlock.
+        task.ContinueWith(_ => frame.Continue = false, TaskScheduler.Default);
+
+        Dispatcher.PushFrame(frame);
+
+        task.GetAwaiter().GetResult();
+    }
 }

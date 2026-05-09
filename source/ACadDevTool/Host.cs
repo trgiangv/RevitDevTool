@@ -36,7 +36,7 @@ public static class Host
                .AddExecutionServices();
 
         _host = builder.Build();
-        _host.Start();
+        HostUiHelper.RunWithMessagePump(_host.StartAsync());
     }
 
     public static void Stop()
