@@ -1,6 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
     <PropertyGroup>
+        <UseWpf>true</UseWpf>
         <UseRevit>true</UseRevit>
     </PropertyGroup>
     

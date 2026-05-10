@@ -1,7 +1,6 @@
 ﻿using Nice3point.Revit.Extensions.UI;
 using Nice3point.Revit.Toolkit.External;
 using Revit.Async;
-using RevitDevTool.Core;
 using RevitDevTool.ExternalEvent.App.Commands;
 using ricaun.Revit.UI.Tasks;
 
@@ -16,10 +15,10 @@ public class Application : ExternalApplication
     public static RevitTaskService? RicaunService;
     public override void OnStartup()
     {
-        RevitContextExecutor.Register();
         RevitTask.Initialize(Application);
         RicaunService = new RevitTaskService(Application);
         RicaunService.Initialize();
+        HotReloadDockablePane.Register(Application);
         CreateRibbon();
     }
 
@@ -28,6 +27,14 @@ public class Application : ExternalApplication
         var panel = Application.CreatePanel("External Tools");
 
         panel.AddPushButton<ExternalEventCommand>("Execute")
+            .SetImage("/RevitDevTool.ExternalEvent.App;component/Resources/Icons/RibbonIcon16.png")
+            .SetLargeImage("/RevitDevTool.ExternalEvent.App;component/Resources/Icons/RibbonIcon32.png");
+
+        panel.AddPushButton<ShowHotReloadPaneCommand>("Hot pane")
+            .SetImage("/RevitDevTool.ExternalEvent.App;component/Resources/Icons/RibbonIcon16.png")
+            .SetLargeImage("/RevitDevTool.ExternalEvent.App;component/Resources/Icons/RibbonIcon32.png");
+
+        panel.AddPushButton<ReloadHotReloadPaneCommand>("Reload pane")
             .SetImage("/RevitDevTool.ExternalEvent.App;component/Resources/Icons/RibbonIcon16.png")
             .SetLargeImage("/RevitDevTool.ExternalEvent.App;component/Resources/Icons/RibbonIcon32.png");
     }
