@@ -13,6 +13,8 @@
         <!--FSharp-->
         <PackageVersion Include="FSharp.Core" Version="10.1.203"/>
         <PackageVersion Include="FSharp.Compiler.Service" Version="43.12.203"/>
+        <!--Telemetry-->
+        <PackageVersion Include="Sentry" Version="6.5.0"/>
         <!--Logging-->
         <PackageVersion Include="ZLogger" Version="2.5.10"/>
         <PackageVersion Include="ZLogger.Scintilla" Version="0.0.6"/>

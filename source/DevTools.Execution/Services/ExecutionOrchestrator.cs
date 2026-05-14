@@ -3,6 +3,7 @@ using System.Diagnostics;
 using System.IO;
 using DevTools.Execution.Interfaces;
 using DevTools.Execution.Models;
+using DevTools.Telemetry;
 using DevTools.Utilities;
 using Microsoft.Extensions.DependencyInjection;
 namespace DevTools.Execution.Services;
@@ -15,6 +16,7 @@ public sealed class ExecutionOrchestrator : IExecutionOrchestrator, IDisposable
     private readonly IServiceProvider _serviceProvider;
     private readonly ITreeStateManager _stateManager;
     private readonly IFileWatcherService _fileWatcher;
+    private readonly ITelemetry _telemetry;
     private readonly ObservableCollection<ExecutionNodeBase> _treeRoot = [];
     private readonly SemaphoreSlim _reloadGate = new(1, 1);
     private ExecutionNodeBase? _lastExecutedNode;
@@ -25,11 +27,16 @@ public sealed class ExecutionOrchestrator : IExecutionOrchestrator, IDisposable
     public event EventHandler<RootRemovedEventArgs>? RootRemoved;
     public event EventHandler<ExecutionProgressEventArgs>? ExecutionProgressChanged;
 
-    public ExecutionOrchestrator(IServiceProvider serviceProvider, ITreeStateManager stateManager, IFileWatcherService fileWatcher)
+    public ExecutionOrchestrator(
+        IServiceProvider serviceProvider,
+        ITreeStateManager stateManager,
+        IFileWatcherService fileWatcher,
+        ITelemetry telemetry)
     {
         _serviceProvider = serviceProvider;
         _stateManager = stateManager;
         _fileWatcher = fileWatcher;
+        _telemetry = telemetry;
         _fileWatcher.FileChanged += OnFileChanged;
     }
 
@@ -197,6 +204,19 @@ public sealed class ExecutionOrchestrator : IExecutionOrchestrator, IDisposable
             ExecutionProgressChanged?.Invoke(this, new ExecutionProgressEventArgs(result.Message));
         }
 
+        if (result.IsCancelled) return result;
+
+        var providerKind = GetProviderKind(node);
+        _telemetry.RecordExecutionInvocation(providerKind, result.Success);
+        if (result is { Success: false, Exception: { } ex }
+            && TelemetryReporting.ShouldReportCriticalException(ex))
+        {
+            _telemetry.RecordCriticalException(
+                ex,
+                "execution",
+                new Dictionary<string, string> { ["provider"] = providerKind });
+        }
+
         return result;
     }
 
@@ -208,6 +228,9 @@ public sealed class ExecutionOrchestrator : IExecutionOrchestrator, IDisposable
     }
 
     #region Private Helpers
+
+    private static string GetProviderKind(ExecutionNodeBase node) =>
+        node is ExecutionNode executable ? executable.ProviderType.ToString() : "unknown";
 
     private async Task<ReloadRootResult> ReloadRootAsync(ExecutionNodeRoot currentExecutionNodeRoot, CancellationToken cancellationToken)
     {

@@ -85,6 +85,28 @@
                     </Grid>
                 </StackPanel>
             </GroupBox>
+
+            <!--  Privacy  -->
+            <GroupBox Margin="0,0,0,8"
+                      Header="Privacy">
+                <Grid Margin="8">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <StackPanel VerticalAlignment="Center">
+                        <TextBlock FontWeight="SemiBold"
+                                   Text="Anonymous diagnostics" />
+                        <TextBlock FontSize="11"
+                                   Foreground="{DynamicResource DevTools.MahApps.Brushes.Gray}"
+                                   TextWrapping="Wrap"
+                                   Text="Optional. Helps maintainers spot crashes and usage patterns. No model content or script source." />
+                    </StackPanel>
+                    <mah:ToggleSwitch Grid.Column="1"
+                                      MinWidth="60"
+                                      IsOn="{Binding EnableTelemetry}" />
+                </Grid>
+            </GroupBox>
         </StackPanel>
     </ScrollViewer>
 </UserControl>

@@ -16,4 +16,7 @@ public sealed class GeneralConfig
     
     [JsonPropertyName("isMemoryEnabled")]
     public bool IsMemoryEnabled { get; set; } = true;
+
+    [JsonPropertyName("enableTelemetry")]
+    public bool EnableTelemetry { get; set; } = true;
 }

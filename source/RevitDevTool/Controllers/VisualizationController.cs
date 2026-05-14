@@ -1,5 +1,6 @@
 using CommunityToolkit.Mvvm.Messaging;
 using DevTools.Presentation.ViewModels.Messages;
+using DevTools.Telemetry;
 using RevitDevTool.Core;
 using RevitDevTool.ViewModel.Settings.Visualization;
 using RevitDevTool.Visualization.Contracts;
@@ -98,6 +99,7 @@ internal static class VisualizationController
         {
             case BoundingBoxXYZ boundingBox:
                 BoundingBoxVisualizationServer.AddGeometry(boundingBox);
+                RecordGeometryTelemetry("bounding_box");
                 return;
             case Outline outline:
                 BoundingBoxVisualizationServer.AddGeometry(new BoundingBoxXYZ
@@ -105,30 +107,39 @@ internal static class VisualizationController
                     Min = outline.MinimumPoint,
                     Max = outline.MaximumPoint
                 });
+                RecordGeometryTelemetry("outline");
                 return;
             case Mesh mesh:
                 MeshVisualizationServer.AddGeometry(mesh);
+                RecordGeometryTelemetry("mesh");
                 return;
             case Solid solid:
                 SolidVisualizationServer.AddGeometry(solid);
+                RecordGeometryTelemetry("solid");
                 return;
             case XYZ xyz:
                 XyzVisualizationServer.AddGeometry(xyz);
+                RecordGeometryTelemetry("xyz");
                 return;
             case Curve curve:
                 PolylineVisualizationServer.AddGeometry(curve);
+                RecordGeometryTelemetry("curve");
                 return;
             case Edge edge:
                 PolylineVisualizationServer.AddGeometry(edge);
+                RecordGeometryTelemetry("edge");
                 return;
             case PolyLine polyline:
                 PolylineVisualizationServer.AddGeometry(polyline);
+                RecordGeometryTelemetry("polyline");
                 return;
             case Face face:
                 FaceVisualizationServer.AddGeometry(face);
+                RecordGeometryTelemetry("face");
                 return;
             case Plane plane:
                 PlaneVisualizationServer.AddGeometry(plane);
+                RecordGeometryTelemetry("plane");
                 return;
         }
     }
@@ -206,5 +217,17 @@ internal static class VisualizationController
             Max = outline.MaximumPoint
         });
         BoundingBoxVisualizationServer.AddGeometries(boxes);
+    }
+
+    private static void RecordGeometryTelemetry(string category)
+    {
+        try
+        {
+            Host.GetService<ITelemetry>().RecordLoggerGeometry(category);
+        }
+        catch
+        {
+            // ignored
+        }
     }
 }

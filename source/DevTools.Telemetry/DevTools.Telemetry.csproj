@@ -1,0 +1,22 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <TargetFrameworks>net48;net8.0-windows;net10.0-windows</TargetFrameworks>
+        <Nullable>enable</Nullable>
+        <LangVersion>latest</LangVersion>
+        <RootNamespace>DevTools.Telemetry</RootNamespace>
+        <AssemblyName>DevTools.Telemetry</AssemblyName>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <PackageReference Include="Microsoft.Extensions.Hosting" />
+        <PackageReference Include="Sentry" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\DevTools.Logging\DevTools.Logging.csproj" />
+        <ProjectReference Include="..\DevTools.Settings\DevTools.Settings.csproj" />
+        <ProjectReference Include="..\DevTools.Utilities\DevTools.Utilities.csproj" />
+    </ItemGroup>
+
+</Project>

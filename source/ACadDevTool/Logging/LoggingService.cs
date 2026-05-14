@@ -5,6 +5,7 @@ using DevTools.Logging.Abstractions;
 using DevTools.Logging.Listeners;
 using DevTools.Logging.Options;
 using DevTools.Settings.Configs;
+using DevTools.Telemetry;
 using DevTools.UI.Theme;
 using DevTools.Presentation.Interfaces;
 using Microsoft.Extensions.Logging;
@@ -17,7 +18,8 @@ public sealed class LoggingService(
     IFileLogTarget fileLogTarget,
     IHttpLogTarget httpLogTarget,
     IMonitorLogTarget monitor,
-    LoggingConfiguration loggingConfiguration) : ILoggingService
+    LoggingConfiguration loggingConfiguration,
+    ITelemetry telemetry) : ILoggingService
 {
     private bool _disposed;
     private LoggerTraceListener? _loggerTraceListener;
@@ -104,7 +106,7 @@ public sealed class LoggingService(
         _loggerTraceListener?.Dispose();
 
         var logger = loggerFactory.CreateLogger("");
-        _loggerTraceListener = new LoggerTraceListener(logger, config.TraceListener);
+        _loggerTraceListener = new LoggerTraceListener(logger, config.TraceListener, () => telemetry.RecordLoggerTrace());
         RegisterTraceListeners();
     }
 

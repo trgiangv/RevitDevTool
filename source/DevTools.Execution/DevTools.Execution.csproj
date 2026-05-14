@@ -39,6 +39,7 @@
         <ProjectReference Include="..\DevTools.Logging\DevTools.Logging.csproj" />
         <ProjectReference Include="..\DevTools.Utilities\DevTools.Utilities.csproj" />
         <ProjectReference Include="..\DevTools.McpParser\DevTools.McpParser.csproj" />
+        <ProjectReference Include="..\DevTools.Telemetry\DevTools.Telemetry.csproj" />
     </ItemGroup>
 
     <ItemGroup>

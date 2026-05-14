@@ -31,6 +31,7 @@ public partial class GeneralSettingsViewModel : ObservableValidator, IRecipient<
     [ObservableProperty] private AppTheme _theme;
     [ObservableProperty] private bool _useHardwareRendering;
     [ObservableProperty] private bool _isMemoryEnabled;
+    [ObservableProperty] private bool _enableTelemetry;
 
     partial void OnThemeChanged(AppTheme value)
     {
@@ -48,6 +49,11 @@ public partial class GeneralSettingsViewModel : ObservableValidator, IRecipient<
     {
         _settingsService.GeneralConfig.IsMemoryEnabled = value;
         _messenger.Send(new IsMemoryEnableChangedMessage(value));
+    }
+
+    partial void OnEnableTelemetryChanged(bool value)
+    {
+        _settingsService.GeneralConfig.EnableTelemetry = value;
     }
 
     public GeneralSettingsViewModel(
@@ -77,5 +83,6 @@ public partial class GeneralSettingsViewModel : ObservableValidator, IRecipient<
         Theme = _settingsService.GeneralConfig.Theme;
         UseHardwareRendering = _settingsService.GeneralConfig.UseHardwareRendering;
         IsMemoryEnabled = _settingsService.GeneralConfig.IsMemoryEnabled;
+        EnableTelemetry = _settingsService.GeneralConfig.EnableTelemetry;
     }
 }

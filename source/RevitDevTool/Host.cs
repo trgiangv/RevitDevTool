@@ -1,4 +1,5 @@
 using Microsoft.Extensions.DependencyInjection;
+using DevTools.Telemetry;
 using DevTools.Utilities;
 using Microsoft.Extensions.Hosting;
 using RevitDevTool.Core;
@@ -8,11 +9,12 @@ using RevitDevTool.Logging.Linkify;
 namespace RevitDevTool;
 
 /// <summary>
-/// Application host bootstrap. Four composition groups: SettingServices → LoggingServices → ApplicationServices → ExecutionServices.
+/// Application host bootstrap. Composition: SettingServices → LoggingServices → Telemetry → ApplicationServices → ExecutionServices.
 /// </summary>
 public static class Host
 {
     private static IHost? _host;
+    private static bool _processTelemetryHandlersRegistered;
 
     public static void Start()
     {
@@ -31,17 +33,30 @@ public static class Host
 
         builder.AddSettingServices(contentRoot)
                .AddLoggingServices(v => v.WithLinkify(new RevitLinkifier()))
+               .AddDevToolsTelemetry()
                .AddApplicationServices()
                .AddExecutionServices();
 
         _host = builder.Build();
+        RegisterProcessTelemetryHandlers();
         HostUiHelper.RunWithMessagePump(_host.StartAsync());
     }
 
     public static void Stop()
     {
-        _host?.StopAsync().GetAwaiter().GetResult();
-        _host?.Dispose();
+        if (_host is null)
+        {
+            return;
+        }
+
+        if (_host.Services.GetService<ITelemetry>() is { } telemetry)
+        {
+            telemetry.Flush();
+        }
+
+        _host.StopAsync().GetAwaiter().GetResult();
+        _host.Dispose();
+        _host = null;
     }
 
     public static T GetService<T>() where T : class
@@ -52,6 +67,39 @@ public static class Host
     public static object? GetService(Type serviceType)
     {
         return _host!.Services.GetService(serviceType);
+    }
+
+    private static void RegisterProcessTelemetryHandlers()
+    {
+        if (_processTelemetryHandlersRegistered)
+        {
+            return;
+        }
+
+        _processTelemetryHandlersRegistered = true;
+
+        AppDomain.CurrentDomain.UnhandledException += (_, args) =>
+        {
+            try
+            {
+                if (args.ExceptionObject is not Exception ex || !TelemetryReporting.ShouldReportCriticalException(ex))
+                {
+                    return;
+                }
+
+                if (_host?.Services.GetService<ITelemetry>() is not { } telemetry)
+                {
+                    return;
+                }
+
+                telemetry.RecordCriticalException(ex, "appdomain.unhandled", null);
+                telemetry.Flush();
+            }
+            catch
+            {
+                // Never throw from the unhandled handler.
+            }
+        };
     }
 
     private static void SetupTheme()

@@ -12,7 +12,9 @@ using DevTools.Execution.Providers.Dotnet;
 using DevTools.Execution.Providers.Python;
 using DevTools.Execution.Services;
 using DevTools.McpParser.Models;
+using DevTools.Telemetry;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
 
 namespace DevTools.Execution;
@@ -20,7 +22,6 @@ namespace DevTools.Execution;
 /// <summary>
 /// Shared execution registrations for <see cref="IServiceCollection"/> (same layering as host apps wiring inside <c>ConfigureServices</c>).
 /// Host-specific adapters (<see cref="IHostContextExecutor"/>, <see cref="ICommandDiscovery"/>, …) belong in the add-in.
-/// Call <see cref="ExecutionHostBootstrap.Apply"/> once at startup (before Python init), typically from the host <see cref="IHostedService"/>.
 /// </summary>
 public static class ExecutionExtensions
 {
@@ -30,6 +31,8 @@ public static class ExecutionExtensions
     /// </summary>
     public static IServiceCollection AddExecutionServices(this IServiceCollection services)
     {
+        services.TryAddSingleton<ITelemetry, NoOpTelemetry>();
+
         services.AddKeyedSingleton<PyEnvironmentProvider, PixiEnvironmentProvider>(PythonBackend.Pixi);
         services.AddKeyedSingleton<PyEnvironmentProvider, PipEnvironmentProvider>(PythonBackend.Pip);
         services.AddSingleton<PythonInitializer>();

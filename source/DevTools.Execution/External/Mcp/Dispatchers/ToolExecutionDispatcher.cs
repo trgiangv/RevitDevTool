@@ -1,4 +1,5 @@
 using System.Collections.Concurrent;
+using System.Collections.Generic;
 using System.IO;
 using System.Text.Json;
 using DevTools.McpParser;
@@ -6,6 +7,7 @@ using DevTools.Execution.External.Mcp.Execution;
 using DevTools.Execution.Providers.Python;
 using DevTools.McpParser.Dotnet;
 using DevTools.McpParser.Models;
+using DevTools.Telemetry;
 using ModelContextProtocol.Protocol;
 using ModelContextProtocol.Server;
 using Python.Runtime;
@@ -18,12 +20,17 @@ namespace DevTools.Execution.External.Mcp.Dispatchers;
 /// Dotnet tools are invoked asynchronously; Python tools run synchronously under the GIL.
 /// </summary>
 public sealed class ToolExecutionDispatcher(
-    IServiceProvider serviceProvider, PythonExecutor executor, DotnetMethodResolver methodResolver) : ICacheable
+    IServiceProvider serviceProvider,
+    PythonExecutor executor,
+    DotnetMethodResolver methodResolver,
+    ITelemetry telemetry) : ICacheable
 {
     private readonly ConcurrentDictionary<string, McpServerTool> _cachedTools = new(StringComparer.OrdinalIgnoreCase);
 
     public async Task<McpToolExecutionResult> DispatchAsync(McpRegisteredTool tool, string? payloadJson)
     {
+        telemetry.RecordMcpInvocation(tool.Binding.SourceKind.ToString());
+
         try
         {
             var normalizedPayload = NormalizePayload(payloadJson);
@@ -37,6 +44,14 @@ public sealed class ToolExecutionDispatcher(
         }
         catch (Exception ex)
         {
+            if (TelemetryReporting.ShouldReportCriticalException(ex))
+            {
+                telemetry.RecordCriticalException(
+                    ex,
+                    "mcp.dispatch",
+                    new Dictionary<string, string> { ["source_kind"] = tool.Binding.SourceKind.ToString() });
+            }
+
             return McpToolExecutionResult.Failed(ExecutionErrorCodes.ToolInvokeFailed, ex.Message, ex.StackTrace);
         }
     }

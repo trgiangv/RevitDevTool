@@ -1,5 +1,6 @@
 using AcadDevTool.HostAdapters;
 using Microsoft.Extensions.DependencyInjection;
+using DevTools.Telemetry;
 using DevTools.UI.Theme;
 using DevTools.Utilities;
 using Microsoft.Extensions.Hosting;
@@ -9,11 +10,13 @@ using AcadApp = Autodesk.AutoCAD.ApplicationServices.Core.Application;
 namespace AcadDevTool;
 
 /// <summary>
-/// Application host bootstrap. Four composition groups: SettingServices → LoggingServices → ApplicationServices → ExecutionServices.
+/// Application host bootstrap. Composition: SettingServices → LoggingServices → ApplicationServices → DevTools telemetry → ExecutionServices.
+/// Registers <see cref="AppDomain.UnhandledException"/> for critical telemetry (same pattern as Revit).
 /// </summary>
 public static class Host
 {
     private static IHost? _host;
+    private static bool _processTelemetryHandlersRegistered;
 
     public static void Start()
     {
@@ -33,16 +36,29 @@ public static class Host
         builder.AddSettingServices(contentRoot)
                .AddLoggingServices()
                .AddApplicationServices()
+               .AddDevToolsTelemetry()
                .AddExecutionServices();
 
         _host = builder.Build();
+        RegisterProcessTelemetryHandlers();
         HostUiHelper.RunWithMessagePump(_host.StartAsync());
     }
 
     public static void Stop()
     {
-        _host?.StopAsync().GetAwaiter().GetResult();
-        _host?.Dispose();
+        if (_host is null)
+        {
+            return;
+        }
+
+        if (_host.Services.GetService<ITelemetry>() is { } telemetry)
+        {
+            telemetry.Flush();
+        }
+
+        _host.StopAsync().GetAwaiter().GetResult();
+        _host.Dispose();
+        _host = null;
     }
 
     public static T GetService<T>() where T : class
@@ -53,6 +69,39 @@ public static class Host
     public static object? GetService(Type serviceType)
     {
         return _host!.Services.GetService(serviceType);
+    }
+
+    private static void RegisterProcessTelemetryHandlers()
+    {
+        if (_processTelemetryHandlersRegistered)
+        {
+            return;
+        }
+
+        _processTelemetryHandlersRegistered = true;
+
+        AppDomain.CurrentDomain.UnhandledException += (_, args) =>
+        {
+            try
+            {
+                if (args.ExceptionObject is not Exception ex || !TelemetryReporting.ShouldReportCriticalException(ex))
+                {
+                    return;
+                }
+
+                if (_host?.Services.GetService<ITelemetry>() is not { } telemetry)
+                {
+                    return;
+                }
+
+                telemetry.RecordCriticalException(ex, "appdomain.unhandled", null);
+                telemetry.Flush();
+            }
+            catch
+            {
+                // Never throw from the unhandled handler.
+            }
+        };
     }
 
     private static void SetupTheme()
