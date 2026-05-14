@@ -118,9 +118,18 @@ public sealed class PythonInitializer(
     private void SetupGlobalScope()
     {
         GlobalScope ??= Py.CreateScope("__main__");
+        
+        Action<object> logFunction = obj =>
+        {
+            if (obj is string str)
+                Trace.Write(str);
+            else
+                Trace.Write(obj);
+        };
 
         dynamic builtins = Py.Import("builtins");
         hostBridge.SetupBuiltins(builtins, GlobalScope);
+        builtins.__log_func__ = logFunction.ToPython();
 
         GlobalScope.Exec(PythonEmbedded.SetupScript);
     }
