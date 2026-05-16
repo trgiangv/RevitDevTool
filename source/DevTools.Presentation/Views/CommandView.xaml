@@ -195,8 +195,15 @@
                                Text="/" />
                     <Image Width="16"
                            Height="16"
-                           Margin="0,0,5,0"
+                           Margin="0,0,2,0"
                            Source="{StaticResource PythonIcon}" />
+                    <TextBlock Margin="0,0,2,0"
+                               VerticalAlignment="Center"
+                               Text="/" />
+                    <Image Width="16"
+                           Height="16"
+                           Margin="0,0,5,0"
+                           Source="{StaticResource IronPythonIcon}" />
                     <TextBlock VerticalAlignment="Center"
                                Text="Load Scripts" />
                 </StackPanel>

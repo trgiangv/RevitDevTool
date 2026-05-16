@@ -3,19 +3,25 @@ using System.IO;
 using DevTools.Execution.Interfaces;
 using DevTools.Execution.Models;
 using DevTools.Execution.Providers.FSharp;
+using DevTools.Execution.Providers.IronPython;
 using DevTools.Execution.Providers.Python;
 using DevTools.McpParser.Models;
+
 namespace DevTools.Execution.Providers;
 
+/// <summary>Folder tree for <c>*script.py</c> (CPython or IronPython) and <c>*script.fsx</c>; engine is chosen per file in <c>BuildScriptNode</c>.</summary>
 public sealed class ScriptExecutionProvider(
     PythonInitializer pythonInitializer,
     PythonExecutor executor,
+    IIronPythonBridge ironPythonBridge,
     IHostContextExecutor hostContext,
     ICommandRunner commandRunner) : IExecutionProvider
 {
-    private static readonly string[] ScriptSearchPatterns = ["*.py", "*.fsx"];
+    private static readonly string[] WatchPatterns = ["*script.py", "*script.fsx"];
+    
+    private const string IronPythonEntryFileSuffix = "_ipy_script.py";
 
-    private static readonly HashSet<string> IgnoredFolders = new(StringComparer.OrdinalIgnoreCase)
+    private static readonly HashSet<string> SkippedScriptSubfolderNames = new(StringComparer.OrdinalIgnoreCase)
     {
         // Ide/git
         ".git", ".github", ".vs", ".idea", ".vscode", ".cursor",
@@ -51,15 +57,9 @@ public sealed class ScriptExecutionProvider(
         }, cancellationToken);
     }
 
-    public IEnumerable<string> GetWatchPatterns()
-    {
-        return ScriptSearchPatterns;
-    }
+    public IEnumerable<string> GetWatchPatterns() => WatchPatterns;
 
-    public bool ValidatePath(string path)
-    {
-        return Directory.Exists(path);
-    }
+    public bool ValidatePath(string path) => Directory.Exists(path);
 
     private ExecutionNodeBase? BuildFolderTree(string rootPath, string currentPath)
     {
@@ -128,9 +128,8 @@ public sealed class ScriptExecutionProvider(
 
     private void PopulateScripts(ExecutionNodeBase folder, string currentPath, string rootPath)
     {
-        var scriptFiles = ScriptSearchPatterns
-            .SelectMany(pattern => Directory.GetFiles(currentPath, pattern, SearchOption.TopDirectoryOnly))
-            .Where(f => Path.GetFileNameWithoutExtension(f).EndsWith("script", StringComparison.OrdinalIgnoreCase))
+        var scriptFiles = Directory.GetFiles(currentPath, "*script.py", SearchOption.TopDirectoryOnly)
+            .Concat(Directory.GetFiles(currentPath, "*script.fsx", SearchOption.TopDirectoryOnly))
             .OrderBy(Path.GetFileName);
 
         foreach (var scriptFile in scriptFiles)
@@ -147,6 +146,16 @@ public sealed class ScriptExecutionProvider(
 
         return extension.ToLowerInvariant() switch
         {
+            ".py" when IsIronPythonEntryScript(scriptPath) => new ExecutionNode
+            {
+                Id = $"ironpython://{scriptPath}",
+                Name = fileName,
+                ExecutablePath = scriptPath,
+                SourceFilePath = scriptPath,
+                ProviderType = ExecutionMode.IronPython,
+                NodeType = NodeType.Executable,
+                ExecutionStrategy = new IronPythonExecutionStrategy(scriptPath, rootPath, ironPythonBridge, hostContext)
+            },
             ".py" => new ExecutionNode
             {
                 Id = $"python://{scriptPath}",
@@ -174,7 +183,7 @@ public sealed class ScriptExecutionProvider(
     private void PopulateSubFolders(ExecutionNodeBase folder, string rootPath, string currentPath)
     {
         var subFolders = Directory.GetDirectories(currentPath)
-            .Where(d => !IsIgnoredFolder(Path.GetFileName(d)))
+            .Where(d => !IsSkippedScriptSubfolder(Path.GetFileName(d)))
             .OrderBy(Path.GetFileName);
 
         foreach (var subFolder in subFolders)
@@ -187,9 +196,14 @@ public sealed class ScriptExecutionProvider(
         }
     }
 
-    private static bool IsIgnoredFolder(string folderName)
+    private static bool IsSkippedScriptSubfolder(string folderName)
     {
-        return IgnoredFolders.Contains(folderName);
+        return !string.IsNullOrWhiteSpace(folderName) && SkippedScriptSubfolderNames.Contains(folderName);
+    }
+
+    private static bool IsIronPythonEntryScript(string filePath)
+    {
+        return filePath.EndsWith(IronPythonEntryFileSuffix, StringComparison.OrdinalIgnoreCase);
     }
 
     private static bool HasAnyEntryScript(string rootPath)

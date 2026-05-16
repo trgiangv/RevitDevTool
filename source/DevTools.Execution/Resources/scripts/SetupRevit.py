@@ -1,37 +1,42 @@
-import clr # pyright: ignore[reportMissingImports] # noqa
 import sys
-import os
-import site
 import builtins
 
-# Add Revit API references
-clr.AddReference("RevitAPI")
-clr.AddReference("RevitAPIUI")
-clr.AddReference("AdWindows")
-clr.AddReference("UIFramework")
-clr.AddReference("UIFrameworkServices")
-clr.AddReference("RevitDevTool")
-import System
-
-if int(__revit__.Application.VersionNumber) >= 2024:  # Revit 2024+ (WebView2 support)  # pyright: ignore[reportUndefinedVariable]
-    clr.AddReference("Microsoft.Web.WebView2.Wpf")
-    clr.AddReference("Microsoft.Web.WebView2.Core")
-
-if System.Environment.Version.Major >= 8:  # Revit 2025+ (.NET 8)
-    clr.AddReference("System.Console")
-    clr.AddReference("System.Diagnostics.TraceSource")
+def _is_ironpython():
+    return '.net' in sys.version.lower()
 
 _LOG_FUNC = '__log_func__'
 _RDT_STATE = '__revitdevtool__'
 
-# Ensure newly-installed packages are importable in the same runtime session.
-site_packages = os.path.join(sys.prefix, "Lib", "site-packages")
-if site_packages and os.path.isdir(site_packages):
-    site.addsitedir(site_packages)
+if not _is_ironpython():
+    import clr  # pyright: ignore[reportMissingImports] # noqa
+    import os
+    import site
 
-# Initialize sys.__revitdevtool__ namespace for scope-local state (not global builtins pollution)
-if not hasattr(sys, _RDT_STATE):
-    setattr(sys, _RDT_STATE, {})
+    # Add Revit API references
+    clr.AddReference("RevitAPI")
+    clr.AddReference("RevitAPIUI")
+    clr.AddReference("AdWindows")
+    clr.AddReference("UIFramework")
+    clr.AddReference("UIFrameworkServices")
+    clr.AddReference("RevitDevTool")
+    import System
+
+    if int(__revit__.Application.VersionNumber) >= 2024:  # Revit 2024+ (WebView2 support)  # pyright: ignore[reportUndefinedVariable]
+        clr.AddReference("Microsoft.Web.WebView2.Wpf")
+        clr.AddReference("Microsoft.Web.WebView2.Core")
+
+    if System.Environment.Version.Major >= 8:  # Revit 2025+ (.NET 8)
+        clr.AddReference("System.Console")
+        clr.AddReference("System.Diagnostics.TraceSource")
+
+    # Ensure newly-installed packages are importable in the same runtime session.
+    site_packages = os.path.join(sys.prefix, "Lib", "site-packages")
+    if site_packages and os.path.isdir(site_packages):
+        site.addsitedir(site_packages)
+
+    # Initialize sys.__revitdevtool__ namespace for scope-local state (not global builtins pollution)
+    if not hasattr(sys, _RDT_STATE):
+        setattr(sys, _RDT_STATE, {})
 
 def custom_print(*args, sep=' ', end='\n', file=None, flush=False):  # pyright: ignore[reportUnusedParameter]
     if not hasattr(builtins, _LOG_FUNC):

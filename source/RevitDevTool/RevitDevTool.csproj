@@ -18,6 +18,9 @@
             DevTools.Microsoft.Xaml.Behaviors.dll;
             FSharp.Core.dll;
             DevTools.UI.dll;
+            IronPython*.dll;
+            Microsoft.Dynamic.dll;
+            Microsoft.Scripting*.dll;
         </RepackBinariesExcludes>
     </PropertyGroup>
 
@@ -30,6 +33,7 @@
         <PackageReference Include="Microsoft.Web.WebView2" Condition="$(RevitVersion) &lt; 2024"/>
 
         <!--Python-->
+        <PackageReference Include="IronPython"/>
         <PackageReference Include="pythonnet"/>
 
         <!--MCP-->

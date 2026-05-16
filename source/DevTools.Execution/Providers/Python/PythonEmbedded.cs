@@ -37,6 +37,9 @@ public static class PythonEmbedded
             _ => $"{ExecutionScriptsPrefix}.SetupAcad.py",
         };
 
+    /// <summary>Short filename for stack traces (e.g. <c>SetupRevit.py</c>), matching <see cref="SetupSourcePath"/>.</summary>
+    public static string SetupScriptFileName => GetFileName(SetupSourcePath);
+
     private static string ResetSourcePath => $"{ExecutionScriptsPrefix}.Reset.py";
     private static string PixiTomlSourcePath => $"{ExecutionScriptsPrefix}.pixi.toml";
 

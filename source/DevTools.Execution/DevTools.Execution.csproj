@@ -11,6 +11,7 @@
 
         <!--Python-->
         <PackageReference Include="pythonnet"/>
+        <PackageReference Include="IronPython"/>
 
         <!--MCP-->
         <PackageReference Include="ModelContextProtocol"/>
@@ -50,6 +51,7 @@
     </ItemGroup>
 
     <ItemGroup>
+        <EmbeddedResource Include="Resources\*.*" />
         <EmbeddedResource Include="Resources\scripts\*.*" />
     </ItemGroup>
 

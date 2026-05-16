@@ -77,6 +77,7 @@ internal static class AcadHostingExtensions
         services.AddSingleton<ICommandDiscovery, AcadCommandDiscovery>();
         services.AddSingleton<IFSharpHostSupport, AcadFSharpSupport>();
         services.AddSingleton<IHostPythonBridge, AcadPythonBridge>();
+        services.AddSingleton<IIronPythonBridge, AcadIronPythonBridge>();
 
         services.AddExecutionServices();
         return builder;

@@ -1,37 +1,42 @@
-import clr # pyright: ignore[reportMissingImports] # noqa
 import sys
-import os
-import site
 import builtins
 
-# Add AutoCAD API references
-clr.AddReference("acdbmgd")
-clr.AddReference("acmgd")
-clr.AddReference("accoremgd")
-clr.AddReference("AdWindows")
-clr.AddReference("AcadDevTool")
-import System
-from Autodesk.AutoCAD.ApplicationServices.Core import Application
-
-if Application.Version >= System.Version(24, 3, 0, 0): # AutoCAD 2023+ (24.3.0) (WebView2 support)
-    clr.AddReference("Microsoft.Web.WebView2.Wpf")
-    clr.AddReference("Microsoft.Web.WebView2.Core")
-
-if System.Environment.Version.Major >= 8:  # AutoCAD 2025+ (.NET 8)
-    clr.AddReference("System.Console")
-    clr.AddReference("System.Diagnostics.TraceSource")
+def _is_ironpython():
+    return '.net' in sys.version.lower()
 
 _LOG_FUNC = '__log_func__'
 _RDT_STATE = '__acaddevtool__'
 
-# Ensure newly-installed packages are importable in the same runtime session.
-site_packages = os.path.join(sys.prefix, "Lib", "site-packages")
-if site_packages and os.path.isdir(site_packages):
-    site.addsitedir(site_packages)
+if not _is_ironpython():
+    import clr  # pyright: ignore[reportMissingImports] # noqa
+    import os
+    import site
 
-# Initialize sys.__acaddevtool__ namespace for scope-local state (not global builtins pollution)
-if not hasattr(sys, _RDT_STATE):
-    setattr(sys, _RDT_STATE, {})
+    # Add AutoCAD API references
+    clr.AddReference("acdbmgd")
+    clr.AddReference("acmgd")
+    clr.AddReference("accoremgd")
+    clr.AddReference("AdWindows")
+    clr.AddReference("AcadDevTool")
+    import System
+    from Autodesk.AutoCAD.ApplicationServices.Core import Application
+
+    if Application.Version >= System.Version(24, 3, 0, 0):  # AutoCAD 2023+ (24.3.0) (WebView2 support)
+        clr.AddReference("Microsoft.Web.WebView2.Wpf")
+        clr.AddReference("Microsoft.Web.WebView2.Core")
+
+    if System.Environment.Version.Major >= 8:  # AutoCAD 2025+ (.NET 8)
+        clr.AddReference("System.Console")
+        clr.AddReference("System.Diagnostics.TraceSource")
+
+    # Ensure newly-installed packages are importable in the same runtime session.
+    site_packages = os.path.join(sys.prefix, "Lib", "site-packages")
+    if site_packages and os.path.isdir(site_packages):
+        site.addsitedir(site_packages)
+
+    # Initialize sys.__acaddevtool__ namespace for scope-local state (not global builtins pollution)
+    if not hasattr(sys, _RDT_STATE):
+        setattr(sys, _RDT_STATE, {})
 
 def custom_print(*args, sep=' ', end='\n', file=None, flush=False):  # pyright: ignore[reportUnusedParameter]
     if not hasattr(builtins, _LOG_FUNC):

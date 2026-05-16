@@ -108,6 +108,7 @@ internal static class RevitHostingExtensions
         services.AddSingleton<ICommandDiscovery, RevitCommandDiscovery>();
         services.AddSingleton<IFSharpHostSupport, RevitFSharpSupport>();
         services.AddSingleton<IHostPythonBridge, RevitPythonBridge>();
+        services.AddSingleton<IIronPythonBridge, RevitIronPythonBridge>();
 
         services.AddExecutionServices();
         return builder;

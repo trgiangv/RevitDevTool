@@ -111,6 +111,10 @@
                                         <Setter Property="Source" Value="{StaticResource PythonIcon}" />
                                     </DataTrigger>
                                     <DataTrigger Binding="{Binding LastOperationProvider, Mode=OneWay}"
+                                                 Value="IronPython">
+                                        <Setter Property="Source" Value="{StaticResource IronPythonIcon}" />
+                                    </DataTrigger>
+                                    <DataTrigger Binding="{Binding LastOperationProvider, Mode=OneWay}"
                                                  Value="FSharp">
                                         <Setter Property="Source" Value="{StaticResource FsharpIcon}" />
                                     </DataTrigger>

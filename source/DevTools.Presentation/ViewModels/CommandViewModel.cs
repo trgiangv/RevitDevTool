@@ -295,7 +295,7 @@ public partial class CommandViewModel : ObservableObject
         var list = mode switch
         {
             ExecutionMode.Assembly => config.DotnetAssemblyPaths,
-            ExecutionMode.Script => config.ScriptFolderPaths,
+            ExecutionMode.Script or ExecutionMode.IronPython => config.ScriptFolderPaths,
             _ => throw new ArgumentOutOfRangeException(nameof(mode))
         };
         if (!list.Contains(path, StringComparer.OrdinalIgnoreCase)) list.Add(path);
