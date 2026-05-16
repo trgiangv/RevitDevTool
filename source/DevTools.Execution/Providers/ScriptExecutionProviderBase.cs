@@ -9,8 +9,8 @@ using DevTools.McpParser.Models;
 
 namespace DevTools.Execution.Providers;
 
-/// <summary>Folder tree for <c>*script.py</c> (CPython or IronPython) and <c>*script.fsx</c>; engine is chosen per file in <c>BuildScriptNode</c>.</summary>
-public sealed class ScriptExecutionProvider(
+/// <summary>Folder tree for <c>*script.py</c> (CPython or IronPython) and <c>*script.fsx</c>.</summary>
+public abstract class ScriptExecutionProviderBase(
     PythonInitializer pythonInitializer,
     PythonExecutor executor,
     IIronPythonBridge ironPythonBridge,
@@ -18,22 +18,17 @@ public sealed class ScriptExecutionProvider(
     ICommandRunner commandRunner) : IExecutionProvider
 {
     private static readonly string[] WatchPatterns = ["*script.py", "*script.fsx"];
-    
+
     private const string IronPythonEntryFileSuffix = "_ipy_script.py";
 
     private static readonly HashSet<string> SkippedScriptSubfolderNames = new(StringComparer.OrdinalIgnoreCase)
     {
-        // Ide/git
         ".git", ".github", ".vs", ".idea", ".vscode", ".cursor",
-        // Docs
         "docs", "doc", "img", "assets", "resources",
-        // Agents
         ".agent", ".agents", ".claude",
-        // Build
         "bin", "obj", "packages", "node_modules", "output",
         "__pycache__", "dist", "build", ".mypy_cache", ".pytest_cache",
-        // Virtual envs
-        "venv", ".venv", "env", ".env", "virtualenv", ".pixi", 
+        "venv", ".venv", "env", ".env", "virtualenv", ".pixi",
     };
 
     public string Name => "Script";
@@ -61,23 +56,25 @@ public sealed class ScriptExecutionProvider(
 
     public bool ValidatePath(string path) => Directory.Exists(path);
 
+    
+    /// <summary>
+    /// Override for specific IronPython Execution
+    /// </summary>
+    protected virtual IExecutionStrategy CreateIronPythonStrategy(string scriptPath, string rootPath) =>
+        new IronPythonExecutionStrategy(scriptPath, rootPath, ironPythonBridge, hostContext);
+
     private ExecutionNodeBase? BuildFolderTree(string rootPath, string currentPath)
     {
         if (ShouldSkipRootFolder(rootPath, currentPath))
-        {
             return null;
-        }
 
         var folderNode = CreateFolderNode(rootPath, currentPath);
-
         PopulateScripts(folderNode, currentPath, rootPath);
         PopulateSubFolders(folderNode, rootPath, currentPath);
 
         var isRoot = currentPath.Equals(rootPath, StringComparison.OrdinalIgnoreCase);
         if (!isRoot && folderNode.Children.Count == 0)
-        {
             return null;
-        }
 
         return folderNode;
     }
@@ -87,7 +84,9 @@ public sealed class ScriptExecutionProvider(
         if (!currentPath.Equals(rootPath, StringComparison.OrdinalIgnoreCase))
             return false;
 
-        if (HasAnyEntryScript(rootPath)) return false;
+        if (HasAnyEntryScript(rootPath))
+            return false;
+
         Trace.TraceWarning($"No valid entry script found (*script.py or *script.fsx) in: {rootPath}");
         return true;
     }
@@ -96,9 +95,7 @@ public sealed class ScriptExecutionProvider(
     {
         var folderName = Path.GetFileName(currentPath);
         if (string.IsNullOrEmpty(folderName))
-        {
             folderName = currentPath;
-        }
 
         var folderId = $"script://{currentPath}";
         var isRoot = currentPath.Equals(rootPath, StringComparison.OrdinalIgnoreCase);
@@ -133,10 +130,7 @@ public sealed class ScriptExecutionProvider(
             .OrderBy(Path.GetFileName);
 
         foreach (var scriptFile in scriptFiles)
-        {
-            var scriptNode = BuildScriptNode(scriptFile, rootPath);
-            folder.Children.Add(scriptNode);
-        }
+            folder.Children.Add(BuildScriptNode(scriptFile, rootPath));
     }
 
     private ExecutionNode BuildScriptNode(string scriptPath, string rootPath)
@@ -154,7 +148,7 @@ public sealed class ScriptExecutionProvider(
                 SourceFilePath = scriptPath,
                 ProviderType = ExecutionMode.IronPython,
                 NodeType = NodeType.Executable,
-                ExecutionStrategy = new IronPythonExecutionStrategy(scriptPath, rootPath, ironPythonBridge, hostContext)
+                ExecutionStrategy = CreateIronPythonStrategy(scriptPath, rootPath)
             },
             ".py" => new ExecutionNode
             {
@@ -164,7 +158,8 @@ public sealed class ScriptExecutionProvider(
                 SourceFilePath = scriptPath,
                 ProviderType = ExecutionMode.Python,
                 NodeType = NodeType.Executable,
-                ExecutionStrategy = new PythonExecutionStrategy(scriptPath, rootPath, pythonInitializer, executor, hostContext)
+                ExecutionStrategy = new PythonExecutionStrategy(
+                    scriptPath, rootPath, pythonInitializer, executor, hostContext)
             },
             ".fsx" => new ExecutionNode
             {
@@ -176,7 +171,8 @@ public sealed class ScriptExecutionProvider(
                 NodeType = NodeType.Executable,
                 ExecutionStrategy = new FSharpExecutionStrategy(scriptPath, hostContext, commandRunner)
             },
-            _ => throw new NotSupportedException($"Unsupported script extension '{extension}' for file '{scriptPath}'.")
+            _ => throw new NotSupportedException(
+                $"Unsupported script extension '{extension}' for file '{scriptPath}'.")
         };
     }
 
@@ -189,26 +185,18 @@ public sealed class ScriptExecutionProvider(
         foreach (var subFolder in subFolders)
         {
             var subFolderNode = BuildFolderTree(rootPath, subFolder);
-            if (subFolderNode != null)
-            {
+            if (subFolderNode is not null)
                 folder.Children.Add(subFolderNode);
-            }
         }
     }
 
-    private static bool IsSkippedScriptSubfolder(string folderName)
-    {
-        return !string.IsNullOrWhiteSpace(folderName) && SkippedScriptSubfolderNames.Contains(folderName);
-    }
+    private static bool IsSkippedScriptSubfolder(string folderName) =>
+        !string.IsNullOrWhiteSpace(folderName) && SkippedScriptSubfolderNames.Contains(folderName);
 
-    private static bool IsIronPythonEntryScript(string filePath)
-    {
-        return filePath.EndsWith(IronPythonEntryFileSuffix, StringComparison.OrdinalIgnoreCase);
-    }
+    private static bool IsIronPythonEntryScript(string filePath) =>
+        filePath.EndsWith(IronPythonEntryFileSuffix, StringComparison.OrdinalIgnoreCase);
 
-    private static bool HasAnyEntryScript(string rootPath)
-    {
-        return Directory.GetFiles(rootPath, "*script.py", SearchOption.AllDirectories).Length != 0
-               || Directory.GetFiles(rootPath, "*script.fsx", SearchOption.AllDirectories).Length != 0;
-    }
+    private static bool HasAnyEntryScript(string rootPath) =>
+        Directory.GetFiles(rootPath, "*script.py", SearchOption.AllDirectories).Length != 0
+        || Directory.GetFiles(rootPath, "*script.fsx", SearchOption.AllDirectories).Length != 0;
 }

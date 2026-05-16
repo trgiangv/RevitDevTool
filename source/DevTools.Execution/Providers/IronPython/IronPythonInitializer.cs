@@ -16,7 +16,7 @@ internal static class IronPythonInitializer
     private static string? _stdlibResourceName;
 
     /// <summary>
-    /// Registers embedded setup script and logging function on the engine. Must be called before executing any script to ensure setup is applied.
+    /// Registers <c>__log_func__</c> and runs embedded setup (<see cref="PythonEmbedded.SetupScript"/>) to redirect print/stdout to <see cref="Trace"/>.
     /// </summary>
     internal static void Setup(ScriptEngine engine)
     {

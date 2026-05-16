@@ -29,7 +29,9 @@ public static class ExecutionExtensions
     /// Registers execution orchestration, script/assembly providers, MCP registry, and in-proc pipe server.
     /// From the add-in host: after registering bridges/adapters on <see cref="HostApplicationBuilder.Services"/>, call <c>services.AddExecutionServices()</c>.
     /// </summary>
-    public static IServiceCollection AddExecutionServices(this IServiceCollection services)
+    public static IServiceCollection AddExecutionServices(
+        this IServiceCollection services,
+        bool registerDefaultScriptProvider = true)
     {
         services.TryAddSingleton<ITelemetry, NoOpTelemetry>();
 
@@ -44,9 +46,13 @@ public static class ExecutionExtensions
         services.AddSingleton<IPackageService, PackageService>();
 
         services.AddSingleton<IExecutionProvider, AssemblyExecutionProvider>();
-        services.AddSingleton<IExecutionProvider, ScriptExecutionProvider>();
         services.AddKeyedSingleton<IExecutionProvider, AssemblyExecutionProvider>(ExecutionMode.Assembly);
-        services.AddKeyedSingleton<IExecutionProvider, ScriptExecutionProvider>(ExecutionMode.Script);
+
+        if (registerDefaultScriptProvider)
+        {
+            services.AddSingleton<IExecutionProvider, ScriptExecutionProvider>();
+            services.AddKeyedSingleton<IExecutionProvider, ScriptExecutionProvider>(ExecutionMode.Script);
+        }
 
         services.AddSingleton<ConnectionState>();
         services.AddSingleton<InstanceRequestHandler>();

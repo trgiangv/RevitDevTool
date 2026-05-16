@@ -5,6 +5,7 @@ using DevTools.Execution.Models;
 
 namespace DevTools.Execution.Providers.IronPython;
 
+/// <summary>Embedded IronPython 3.4.2 (DevTools stdlib + Trace logging).</summary>
 public sealed class IronPythonExecutionStrategy(
     string scriptPath,
     string rootPath,
@@ -22,7 +23,7 @@ public sealed class IronPythonExecutionStrategy(
             var result = await hostContext
                 .ExecuteAsync(() =>
                 {
-                    var run = IronPythonScriptRunner.Execute(scriptPath, rootPath, bridge);
+                    var run = IronPythonRunner.Execute(scriptPath, rootPath, bridge);
                     stopwatch.Stop();
                     return run.Success
                         ? ExecutionResult.Succeeded(run.Message, stopwatch.ElapsedMilliseconds)
@@ -30,10 +31,7 @@ public sealed class IronPythonExecutionStrategy(
                 }, cancellationToken)
                 .ConfigureAwait(false);
 
-            progress?.Report(result.Success
-                ? $"Completed {scriptName}."
-                : result.Message);
-
+            progress?.Report(result.Success ? $"Completed {scriptName}." : result.Message);
             return result;
         }
         catch (OperationCanceledException)

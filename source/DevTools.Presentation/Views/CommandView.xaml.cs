@@ -89,7 +89,7 @@ public partial class CommandView
 
     private static async Task ProcessDroppedDllFileAsync(string filePath, CommandViewModel viewModel)
     {
-        if (DevTools.Utilities.AssemblyLoader.IsManagedAssembly(filePath))
+        if (Utilities.AssemblyLoader.IsManagedAssembly(filePath))
             await viewModel.LoadFromPathAsync(filePath);
         else
             Trace.TraceWarning($"File {filePath} is not a valid managed assembly.");
