@@ -5,7 +5,7 @@ using ZLogger;
 
 namespace DevTools.Logging.Listeners;
 
-public class LoggerTraceListener(ILogger logger, TraceListenerOptions options, Action? onLogLineDelivered = null) : TraceListener
+public class LoggerTraceListener(ILogger logger, TraceListenerOptions options, Action<LogLevel>? onLogLineDelivered = null) : TraceListener
 {
     private readonly ILogger _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     private readonly TraceListenerOptions _options = options ?? throw new ArgumentNullException(nameof(options));
@@ -103,21 +103,21 @@ public class LoggerTraceListener(ILogger logger, TraceListenerOptions options, A
 
     private void Log(LogLevel level, Exception? exception, string? message)
     {
-        NotifyLogLineDelivered();
+        NotifyLogLineDelivered(level);
         _logger.ZLog(level, exception, $"{message}");
     }
 
     private void Log(LogLevel level, object? value)
     {
-        NotifyLogLineDelivered();
+        NotifyLogLineDelivered(level);
         _logger.ZLog(level, $"{value}");
     }
 
-    private void NotifyLogLineDelivered()
+    private void NotifyLogLineDelivered(LogLevel level)
     {
         try
         {
-            onLogLineDelivered?.Invoke();
+            onLogLineDelivered?.Invoke(level);
         }
         catch
         {

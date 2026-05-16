@@ -1,3 +1,5 @@
+using Microsoft.Extensions.Logging;
+
 namespace DevTools.Telemetry;
 
 /// <summary>
@@ -17,7 +19,7 @@ public sealed class NoOpTelemetry : ITelemetry
     {
     }
 
-    public void RecordLoggerTrace()
+    public void RecordLoggerTrace(LogLevel level)
     {
     }
 

@@ -48,8 +48,8 @@ public sealed class ToolExecutionDispatcher(
             {
                 telemetry.RecordCriticalException(
                     ex,
-                    "mcp.dispatch",
-                    new Dictionary<string, string> { ["source_kind"] = tool.Binding.SourceKind.ToString() });
+                    TelemetryKeys.Feature.Mcp,
+                    new Dictionary<string, string> { [TelemetryKeys.Tag.Provider] = tool.Binding.SourceKind.ToString() });
             }
 
             return McpToolExecutionResult.Failed(ExecutionErrorCodes.ToolInvokeFailed, ex.Message, ex.StackTrace);

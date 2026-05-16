@@ -134,7 +134,7 @@ public sealed class LoggingService(
         DisposeListeners();
 
         var logger = loggerFactory.CreateLogger("");
-        _loggerTraceListener = new LoggerTraceListener(logger, config.TraceListener, () => telemetry.RecordLoggerTrace());
+        _loggerTraceListener = new LoggerTraceListener(logger, config.TraceListener, telemetry.RecordLoggerTrace);
 
         _geometryListener ??= new GeometryListener();
         _notifyListener ??= new NotifyListener();

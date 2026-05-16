@@ -208,13 +208,15 @@ public sealed class ExecutionOrchestrator : IExecutionOrchestrator, IDisposable
 
         var providerKind = GetProviderKind(node);
         _telemetry.RecordExecutionInvocation(providerKind, result.Success);
-        if (result is { Success: false, Exception: { } ex }
-            && TelemetryReporting.ShouldReportCriticalException(ex))
+        
+        var isCritical = result is { Success: false, Exception: { } ex }
+                         && TelemetryReporting.ShouldReportCriticalException(ex);
+        if (isCritical)
         {
             _telemetry.RecordCriticalException(
-                ex,
-                "execution",
-                new Dictionary<string, string> { ["provider"] = providerKind });
+                result.Exception!,
+                TelemetryKeys.Feature.Execution,
+                new Dictionary<string, string> { [TelemetryKeys.Tag.Provider] = providerKind });
         }
 
         return result;

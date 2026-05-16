@@ -106,7 +106,7 @@ public sealed class LoggingService(
         _loggerTraceListener?.Dispose();
 
         var logger = loggerFactory.CreateLogger("");
-        _loggerTraceListener = new LoggerTraceListener(logger, config.TraceListener, () => telemetry.RecordLoggerTrace());
+        _loggerTraceListener = new LoggerTraceListener(logger, config.TraceListener, telemetry.RecordLoggerTrace);
         RegisterTraceListeners();
     }
 

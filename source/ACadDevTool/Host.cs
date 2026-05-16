@@ -94,7 +94,7 @@ public static class Host
                     return;
                 }
 
-                telemetry.RecordCriticalException(ex, "appdomain.unhandled", null);
+                telemetry.RecordCriticalException(ex, TelemetryKeys.Feature.AppDomain);
                 telemetry.Flush();
             }
             catch

@@ -1,3 +1,5 @@
+using Microsoft.Extensions.Logging;
+
 namespace DevTools.Telemetry;
 
 /// <summary>
@@ -12,7 +14,7 @@ public interface ITelemetry : IDisposable
 
     void RecordLoggerGeometry(string category);
     
-    void RecordLoggerTrace();
+    void RecordLoggerTrace(LogLevel level);
 
     void RecordCriticalException(
         Exception exception,

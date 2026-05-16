@@ -1,3 +1,5 @@
+using Microsoft.Extensions.Logging;
+
 namespace DevTools.Telemetry.Tests;
 
 public sealed class NoOpTelemetryTests
@@ -9,7 +11,7 @@ public sealed class NoOpTelemetryTests
         t.RecordExecutionInvocation("Assembly", true);
         t.RecordMcpInvocation("Assembly");
         t.RecordLoggerGeometry("mesh");
-        t.RecordLoggerTrace();
+        t.RecordLoggerTrace(LogLevel.Information);
         t.RecordCriticalException(new Exception("x"), "test", null);
         t.Flush();
         t.Dispose();
