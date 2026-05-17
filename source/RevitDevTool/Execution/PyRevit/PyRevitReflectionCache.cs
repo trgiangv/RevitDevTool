@@ -1,8 +1,14 @@
 using System.Diagnostics;
 using System.IO;
 using System.Reflection;
+#if NET
 using System.Runtime.CompilerServices;
+#else
+using System.Runtime.Serialization;
+#endif
 using DevTools.Execution.Models;
+// ReSharper disable RedundantSuppressNullableWarningExpression
+
 namespace RevitDevTool.Execution.PyRevit;
 
 /// <summary>
@@ -106,7 +112,7 @@ internal sealed class PyRevitReflectionCache
             return ExecutionResult.Succeeded("Script completed (pyRevit loader).");
 
         if (!string.IsNullOrEmpty(message))
-            return ExecutionResult.Failed(message);
+            return ExecutionResult.Failed(message!);
 
         return ExecutionResult.Failed($"pyRevit loader finished with {resultName}.");
     }
@@ -217,7 +223,11 @@ internal sealed class PyRevitReflectionCache
 
         private object CreateCommandData(UIApplication uiApplication)
         {
+#if NET
             var commandData = RuntimeHelpers.GetUninitializedObject(typeof(ExternalCommandData));
+#else
+            var commandData = FormatterServices.GetUninitializedObject(typeof(ExternalCommandData));
+#endif
             CommandDataApplicationProperty.SetValue(commandData, uiApplication);
             return commandData;
         }

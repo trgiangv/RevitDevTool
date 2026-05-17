@@ -42,6 +42,14 @@ public sealed class ExecutionOrchestrator : IExecutionOrchestrator, IDisposable
 
     public async Task LoadFromPathAsync(string path, CancellationToken cancellationToken = default)
     {
+        if (IsPathUnderExistingRoot(path))
+        {
+            Trace.TraceWarning($"Path '{path}' is already covered by an existing parent root. Skipping.");
+            return;
+        }
+
+        AbsorbChildRoots(path);
+
         var providers = _serviceProvider.GetServices<IExecutionProvider>()
             .Where(p => p.CanHandle(path))
             .OrderByDescending(p => p.Priority)
@@ -230,6 +238,28 @@ public sealed class ExecutionOrchestrator : IExecutionOrchestrator, IDisposable
     }
 
     #region Private Helpers
+
+    private bool IsPathUnderExistingRoot(string path)
+    {
+        return _treeRoot
+            .OfType<ExecutionNodeRoot>()
+            .Any(root => IsPathUnderRoot(path, root.RootPath));
+    }
+
+    private void AbsorbChildRoots(string path)
+    {
+        var childRoots = _treeRoot
+            .OfType<ExecutionNodeRoot>()
+            .Where(root => IsPathUnderRoot(root.RootPath, path) && !AreSamePath(root.RootPath, path))
+            .ToList();
+
+        foreach (var child in childRoots)
+        {
+            _fileWatcher.Unwatch(child.RootPath);
+            TreeNodeOperations.RemoveNodeWithCascade(_treeRoot, child, _ => { });
+            RootRemoved?.Invoke(this, new RootRemovedEventArgs(child.RootPath));
+        }
+    }
 
     private static string GetProviderKind(ExecutionNodeBase node) =>
         node is ExecutionNode executable ? executable.ProviderType.ToString() : "unknown";
