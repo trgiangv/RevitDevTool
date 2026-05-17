@@ -1,6 +1,7 @@
 using DevTools.Utilities;
 using Nice3point.Revit.Extensions.UI;
 using Autodesk.Revit.DB.Events;
+using RevitDevTool.CommandBrowser;
 using RevitDevTool.Commands;
 using RevitDevTool.Controllers;
 
@@ -23,6 +24,7 @@ public class Application : IExternalApplication
 
     public Result OnShutdown(UIControlledApplication application)
     {
+        Host.GetService<CommandBrowserController>().Shutdown();
         Host.GetService<PanelController>().Shutdown();
         Host.Stop();
         return Result.Succeeded;
@@ -32,6 +34,7 @@ public class Application : IExternalApplication
     {
         if (_application is null) return;
         Host.GetService<PanelController>().Initialize(_application);
+        Host.GetService<CommandBrowserController>().Initialize(_application);
     }
 
     private static void AddButtons(UIControlledApplication application)
@@ -48,5 +51,9 @@ public class Application : IExternalApplication
             .SetAvailabilityController<StubBuilderCommand>()
             .SetLargeImage("/DevTools.UI;component/Resources/Icons/StubBuilder-32-Light.png")
             .SetToolTip("Generate Python .pyi stub files from .NET assemblies");
+
+        panel.AddPushButton<CommandBrowserCommand>(CommandBrowserController.CommandName)
+            .SetLargeImage("/DevTools.UI;component/Resources/Icons/StubBuilder-32-Light.png")
+            .SetToolTip("Search and run any Revit ribbon command\nKeyboard shortcut: CB");
     }
 }

@@ -10,6 +10,9 @@ using DevTools.Settings;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using RevitDevTool.Bridges;
+using RevitDevTool.CommandBrowser;
+using RevitDevTool.CommandBrowser.Services;
+using RevitDevTool.CommandBrowser.ViewModels;
 using RevitDevTool.Controllers;
 using RevitDevTool.HostAdapters;
 using RevitDevTool.Execution;
@@ -96,6 +99,12 @@ internal static class RevitHostingExtensions
         services.AddTransient<PolylineVisualizationSettingsView>();
         services.AddTransient<SolidVisualizationSettingsView>();
         services.AddTransient<XyzVisualizationSettingsView>();
+        
+        // Command Browser
+        services.AddSingleton<RibbonSnoopService>();
+        services.AddSingleton<CommandBrowserCache>();
+        services.AddSingleton<CommandBrowserViewModel>();
+        services.AddSingleton<CommandBrowserController>();
 
         return builder;
     }
