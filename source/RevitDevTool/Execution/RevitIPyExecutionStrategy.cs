@@ -3,12 +3,12 @@ using System.IO;
 using DevTools.Execution.Interfaces;
 using DevTools.Execution.Models;
 using DevTools.Execution.Providers.IronPython;
-using RevitDevTool.HostAdapters.PyRevit;
+using RevitDevTool.Execution.PyRevit;
 
 namespace RevitDevTool.Execution;
 
 /// <summary>
-/// Revit IronPython: pyRevit <c>ScriptExecutor</c> when loaded, otherwise embedded IPy 3.4.2.
+/// Revit IronPython: pyRevit Labs <c>ScriptRuntime</c> (clean engine) when loaded, otherwise embedded IPy 3.4.2.
 /// </summary>
 public sealed class RevitIPyExecutionStrategy(
     string scriptPath,

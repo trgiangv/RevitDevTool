@@ -1,7 +1,7 @@
 using System.IO;
 // ReSharper disable RedundantSuppressNullableWarningExpression
 
-namespace RevitDevTool.HostAdapters.PyRevit;
+namespace RevitDevTool.Execution.PyRevit;
 
 /// <summary>
 /// Walks from a script directory up to <c>*.extension</c> and collects hierarchy <c>lib</c>/<c>bin</c> folders.

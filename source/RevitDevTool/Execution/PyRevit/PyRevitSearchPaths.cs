@@ -1,6 +1,5 @@
 using System.IO;
-
-namespace RevitDevTool.HostAdapters.PyRevit;
+namespace RevitDevTool.Execution.PyRevit;
 
 /// <summary>
 /// Matches pyRevit <c>CommandTypeGenerator</c> search paths: script dir, hierarchy lib/bin,
