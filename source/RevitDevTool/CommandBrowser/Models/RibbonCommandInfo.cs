@@ -14,9 +14,13 @@ public sealed partial class RibbonCommandInfo : ObservableObject
 {
     private readonly RibbonCommandItem _commandItem;
     private readonly RibbonPanel _panel;
+    private readonly RevitCommandId? _revitCommandId;
 
     [ObservableProperty]
     public partial ImageSource? Image { get; private set; } = null;
+
+    [ObservableProperty]
+    public partial bool IsEnabled { get; private set; }
 
     public RibbonCommandInfo(RibbonCommandItem commandItem, RibbonPanel panel)
     {
@@ -27,19 +31,16 @@ public sealed partial class RibbonCommandInfo : ObservableObject
         FullName = BuildFullName();
         Description = ExtractDescription();
         Image = commandItem.Image ?? commandItem.LargeImage;
-        
-        var revitCommandId = RevitCommandId.LookupCommandId(Id);
-        if (revitCommandId is not null)
-        {
-            IsEnabled = RevitContext.UiApplication.CanPostCommand(revitCommandId);
-        }
+
+        _revitCommandId = RevitCommandId.LookupCommandId(Id);
+        if (_revitCommandId is not null)
+            IsEnabled = RevitContext.UiApplication.CanPostCommand(_revitCommandId);
     }
 
     public string Id { get; }
     public string Name { get; }
     private string FullName { get; }
     public string Description { get; }
-    public bool IsEnabled { get; }
     public string TabName => _panel.Tab.Title;
 
     public string ToolTip => field ??= string.IsNullOrEmpty(Description)
@@ -49,6 +50,16 @@ public sealed partial class RibbonCommandInfo : ObservableObject
     public void RefreshImage()
     {
         Image = _commandItem.Image ?? _commandItem.LargeImage;
+    }
+
+    /// <summary>
+    /// Re-evaluates command availability via <see cref="Autodesk.Revit.UI.UIApplication.CanPostCommand"/>.
+    /// Called when the dropdown opens so the UI reflects the current Revit context.
+    /// </summary>
+    public void RefreshIsEnabled()
+    {
+        if (_revitCommandId is null) return;
+        IsEnabled = RevitContext.UiApplication.CanPostCommand(_revitCommandId);
     }
 
     private string BuildName()

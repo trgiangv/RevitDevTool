@@ -10,12 +10,13 @@ namespace RevitDevTool.CommandBrowser.Services;
 public sealed class CommandBrowserCache(IFileConfig<PathOptions> fileConfig)
 {
     private const int MaxRecentCommands = 10;
-    private readonly List<string> _recentIds = [];
-    private readonly HashSet<string> _favoriteIds = [];
+    private readonly LinkedList<string> _recentOrder = [];
+    private readonly HashSet<string> _recentSet = new(StringComparer.Ordinal);
+    private readonly HashSet<string> _favoriteIds = new(StringComparer.Ordinal);
 
     public bool IsBarVisible { get; set; } = true;
 
-    public bool IsRecent(string commandId) => _recentIds.Contains(commandId);
+    public bool IsRecent(string commandId) => _recentSet.Contains(commandId);
 
     public bool IsFavorite(string commandId) => _favoriteIds.Contains(commandId);
 
@@ -49,16 +50,25 @@ public sealed class CommandBrowserCache(IFileConfig<PathOptions> fileConfig)
 
     /// <summary>
     /// Promotes a command to the top of the recent list (MRU order).
-    /// Evicts the oldest entry when capacity is reached. Session-only, not persisted.
+    /// Uses LinkedList + HashSet for O(1) contains, O(1) add/remove.
     /// </summary>
     public void AddRecent(BrowserCommandItem command)
     {
-        _recentIds.Remove(command.RibbonInfo.Id);
+        var id = command.RibbonInfo.Id;
 
-        if (_recentIds.Count >= MaxRecentCommands)
-            _recentIds.RemoveAt(_recentIds.Count - 1);
+        if (_recentSet.Contains(id))
+        {
+            _recentOrder.Remove(id);
+        }
+        else if (_recentOrder.Count >= MaxRecentCommands)
+        {
+            var last = _recentOrder.Last!.Value;
+            _recentOrder.RemoveLast();
+            _recentSet.Remove(last);
+        }
 
-        _recentIds.Insert(0, command.RibbonInfo.Id);
+        _recentOrder.AddFirst(id);
+        _recentSet.Add(id);
     }
 
     public void ToggleFavorite(BrowserCommandItem command)

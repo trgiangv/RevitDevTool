@@ -52,7 +52,7 @@ public class Application : IExternalApplication
             .SetLargeImage("/DevTools.UI;component/Resources/Icons/StubBuilder-32-Light.png")
             .SetToolTip("Generate Python .pyi stub files from .NET assemblies");
 
-        panel.AddPushButton<CommandBrowserCommand>(CommandBrowserController.CommandName)
+        panel.AddPushButton<CommandBrowserCommand>("Commands")
             .SetLargeImage("/DevTools.UI;component/Resources/Icons/StubBuilder-32-Light.png")
             .SetToolTip("Search and run any Revit ribbon command\nKeyboard shortcut: CB");
     }

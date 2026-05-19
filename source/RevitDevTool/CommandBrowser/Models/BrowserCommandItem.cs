@@ -14,8 +14,6 @@ public sealed partial class BrowserCommandItem(RibbonCommandInfo ribbonInfo, Rev
     public RibbonCommandInfo RibbonInfo { get; } = ribbonInfo;
     private RevitCommandId CommandId { get; } = commandId;
 
-    public bool IsAvailable => RibbonInfo.IsEnabled;
-
     public void Run()
     {
         RevitContextExecutor.Raise(uiApp => uiApp.PostCommand(CommandId));

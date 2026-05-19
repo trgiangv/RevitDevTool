@@ -14,12 +14,19 @@ public partial class CommandBrowserView
     public CommandBrowserView()
     {
         InitializeComponent();
+        SearchComboBox.DropDownOpened += OnSearchDropDownOpened;
         SearchComboBox.DropDownClosed += OnSearchDropDownClosed;
+    }
+
+    private void OnSearchDropDownOpened(object? sender, EventArgs e)
+    {
+        if (DataContext is CommandBrowserViewModel vm)
+            vm.RefreshAvailability();
     }
 
     private void OnSelectionChanged(object sender, SelectionChangedEventArgs e)
     {
-        if (SearchComboBox.SelectedItem is not GroupedCommandEntry { Command.IsAvailable: true } entry
+        if (SearchComboBox.SelectedItem is not GroupedCommandEntry { Command.RibbonInfo.IsEnabled: true } entry
             || DataContext is not CommandBrowserViewModel vm)
         {
             SearchComboBox.SelectedIndex = -1;

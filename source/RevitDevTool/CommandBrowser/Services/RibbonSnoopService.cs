@@ -14,10 +14,10 @@ namespace RevitDevTool.CommandBrowser.Services;
 /// </summary>
 public sealed class RibbonSnoopService : IDisposable
 {
-    private readonly HashSet<BrowserCommandItem> _allCommands = [];
+    private readonly Dictionary<string, BrowserCommandItem> _commandsById = new(StringComparer.Ordinal);
     private bool _disposed;
 
-    public IReadOnlyCollection<BrowserCommandItem> AllCommands => _allCommands;
+    public IReadOnlyCollection<BrowserCommandItem> AllCommands => _commandsById.Values;
 
     /// <summary>
     /// Raised when a ribbon command is executed by the user (from the ribbon, not from this browser).
@@ -31,13 +31,13 @@ public sealed class RibbonSnoopService : IDisposable
     /// </summary>
     public void SnoopAll()
     {
-        _allCommands.Clear();
+        _commandsById.Clear();
 
         foreach (var info in EnumerateRibbonButtons())
         {
             var commandId = RevitCommandId.LookupCommandId(info.Id);
             if (commandId is null) continue;
-            _allCommands.Add(new BrowserCommandItem(info, commandId));
+            _commandsById.TryAdd(info.Id, new BrowserCommandItem(info, commandId));
         }
     }
 
@@ -74,27 +74,25 @@ public sealed class RibbonSnoopService : IDisposable
         {
             var commandId = RevitCommandId.LookupCommandId(info.Id);
             if (commandId is null) continue;
-            _allCommands.Add(new BrowserCommandItem(info, commandId));
+            _commandsById.TryAdd(info.Id, new BrowserCommandItem(info, commandId));
         }
     }
 
     private void OnItemExecuted(object? sender, RibbonItemExecutedEventArgs e)
     {
         var id = e.Item.Id.Replace("_RibbonListButton", string.Empty);
-        var match = _allCommands.FirstOrDefault(c => c.RibbonInfo.Id == id);
-        if (match is not null)
+        if (_commandsById.TryGetValue(id, out var match))
             CommandExecuted?.Invoke(match);
     }
 
-    private IEnumerable<RibbonCommandInfo> EnumerateRibbonButtons()
+    private static IEnumerable<RibbonCommandInfo> EnumerateRibbonButtons()
     {
         var ribbon = ComponentManager.Ribbon;
         if (ribbon is null) yield break;
 
-        var visibleTabs = ribbon.Tabs.Where(tab => tab.IsVisible);
-
-        foreach (var tab in visibleTabs)
+        foreach (var tab in ribbon.Tabs)
         {
+            if (!tab.IsVisible) continue;
             foreach (var panel in tab.Panels)
             {
                 foreach (var info in EnumeratePanel(panel.Source.Items, panel))
@@ -103,14 +101,18 @@ public sealed class RibbonSnoopService : IDisposable
         }
     }
 
-    private IEnumerable<RibbonCommandInfo> EnumeratePanel(
+    private static IEnumerable<RibbonCommandInfo> EnumeratePanel(
         RibbonItemCollection items,
         RibbonPanel panel)
     {
-        return items.SelectMany(item => EnumerateItem(item, panel));
+        foreach (var item in items)
+        {
+            foreach (var info in EnumerateItem(item, panel))
+                yield return info;
+        }
     }
 
-    private IEnumerable<RibbonCommandInfo> EnumerateItem(
+    private static IEnumerable<RibbonCommandInfo> EnumerateItem(
         RibbonItem item,
         RibbonPanel panel)
     {

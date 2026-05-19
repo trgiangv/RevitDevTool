@@ -2,7 +2,6 @@ using System.Collections;
 using System.ComponentModel;
 using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Controls.Primitives;
 using System.Windows.Data;
 using System.Windows.Media;
 using System.Windows.Threading;
@@ -16,29 +15,32 @@ namespace RevitDevTool.CommandBrowser.Controls;
 /// ComboBox with autocomplete/filtering support.
 /// Ported from DotNetKit.Wpf.AutoCompleteComboBox, adapted for RevitDevTool namespaces.
 /// </summary>
-public partial class AutoCompleteComboBox : System.Windows.Controls.ComboBox
+public partial class AutoCompleteComboBox
 {
-    private System.Windows.Controls.TextBox? _editableTextBoxCache;
     private DispatcherTimer? _debounceTimer;
     private Predicate<object>? _defaultItemsFilter;
     private string? _previousText;
+    private BindingEvaluator<string>? _itemTextEvaluator;
+    private string? _cachedFilterQuery;
+    private Predicate<object>? _cachedFilter;
 
+    [UsedImplicitly]
     public System.Windows.Controls.TextBox? EditableTextBox
     {
         get
         {
-            _editableTextBoxCache ??= FindDescendant(this, "PART_EditableTextBox") as System.Windows.Controls.TextBox;
-            return _editableTextBoxCache;
+            field ??= FindDescendant(this, "PART_EditableTextBox") as System.Windows.Controls.TextBox;
+            return field;
         }
     }
 
-    private string GetItemText(object item)
+    private string GetItemText(object? item)
     {
         if (item is null) return string.Empty;
 
-        var evaluator = new BindingEvaluator<string>();
-        evaluator.SetBinding(item, TextSearch.GetTextPath(this));
-        return evaluator.Value ?? string.Empty;
+        _itemTextEvaluator ??= new BindingEvaluator<string>();
+        _itemTextEvaluator.SetBinding(item, TextSearch.GetTextPath(this));
+        return _itemTextEvaluator.Value ?? string.Empty;
     }
 
     protected override void OnItemsSourceChanged(IEnumerable oldValue, IEnumerable newValue)
@@ -49,10 +51,9 @@ public partial class AutoCompleteComboBox : System.Windows.Controls.ComboBox
 
     #region Setting
 
-    private static readonly DependencyProperty SettingPropertyField =
-        DependencyProperty.Register("Setting", typeof(AutoCompleteComboBoxSetting), typeof(AutoCompleteComboBox));
-
-    public static DependencyProperty SettingProperty => SettingPropertyField;
+    [UsedImplicitly]
+    public static DependencyProperty SettingProperty { get; } =
+        DependencyProperty.Register(nameof(Setting), typeof(AutoCompleteComboBoxSetting), typeof(AutoCompleteComboBox));
 
     public AutoCompleteComboBoxSetting? Setting
     {
@@ -66,26 +67,17 @@ public partial class AutoCompleteComboBox : System.Windows.Controls.ComboBox
 
     #region TextChanged / Filtering
 
-    private struct TextBoxStateSaver : IDisposable
+    private readonly struct TextBoxStateSaver(System.Windows.Controls.TextBox? textBox) : IDisposable
     {
-        private readonly System.Windows.Controls.TextBox? _textBox;
-        private readonly int _selectionStart;
-        private readonly int _selectionLength;
-        private readonly string _text;
-
-        public TextBoxStateSaver(System.Windows.Controls.TextBox? textBox)
-        {
-            _textBox = textBox;
-            _selectionStart = textBox?.SelectionStart ?? 0;
-            _selectionLength = textBox?.SelectionLength ?? 0;
-            _text = textBox?.Text ?? "";
-        }
+        private readonly int _selectionStart = textBox?.SelectionStart ?? 0;
+        private readonly int _selectionLength = textBox?.SelectionLength ?? 0;
+        private readonly string _text = textBox?.Text ?? "";
 
         public void Dispose()
         {
-            if (_textBox is null) return;
-            _textBox.Text = _text;
-            _textBox.Select(_selectionStart, _selectionLength);
+            if (textBox is null) return;
+            textBox.Text = _text;
+            textBox.Select(_selectionStart, _selectionLength);
         }
     }
 
@@ -100,8 +92,7 @@ public partial class AutoCompleteComboBox : System.Windows.Controls.ComboBox
             Items.Filter = filter;
         }
 
-        if (textBox is not null)
-            textBox.Select(textBox.SelectionStart + textBox.SelectionLength, 0);
+        textBox?.Select(textBox.SelectionStart + textBox.SelectionLength, 0);
     }
 
     private void UpdateSuggestionList(bool controlOpen)
@@ -118,10 +109,12 @@ public partial class AutoCompleteComboBox : System.Windows.Controls.ComboBox
             {
                 Items.Filter = _defaultItemsFilter;
             }
+            _cachedFilterQuery = null;
+            _cachedFilter = null;
         }
         else if (SelectedItem is not null && GetItemText(SelectedItem) == text)
         {
-            return;
+            // ignore
         }
         else
         {
@@ -149,14 +142,17 @@ public partial class AutoCompleteComboBox : System.Windows.Controls.ComboBox
             return;
         }
 
-        _debounceTimer?.Stop();
-        _debounceTimer = new DispatcherTimer(setting.Delay, DispatcherPriority.Normal,
-            (_, _) =>
+        if (_debounceTimer is null)
+        {
+            _debounceTimer = new DispatcherTimer(DispatcherPriority.Normal) { Interval = setting.Delay };
+            _debounceTimer.Tick += (_, _) =>
             {
-                _debounceTimer?.Stop();
-                _debounceTimer = null;
+                _debounceTimer.Stop();
                 UpdateSuggestionList(controlOpen: true);
-            }, Dispatcher);
+            };
+        }
+
+        _debounceTimer.Stop();
         _debounceTimer.Start();
     }
 
@@ -167,7 +163,6 @@ public partial class AutoCompleteComboBox : System.Windows.Controls.ComboBox
         base.OnDropDownOpened(e);
 
         _debounceTimer?.Stop();
-        _debounceTimer = null;
 
         UpdateSuggestionList(controlOpen: false);
 
@@ -178,20 +173,27 @@ public partial class AutoCompleteComboBox : System.Windows.Controls.ComboBox
 
     private void ComboBox_PreviewKeyDown(object sender, KeyEventArgs e)
     {
-        if (System.Windows.Input.Keyboard.Modifiers.HasFlag(System.Windows.Input.ModifierKeys.Control)
-            && e.Key == System.Windows.Input.Key.Space)
-        {
-            e.Handled = true;
-            IsDropDownOpen = true;
-        }
+        if (!System.Windows.Input.Keyboard.Modifiers.HasFlag(System.Windows.Input.ModifierKeys.Control) || e.Key != System.Windows.Input.Key.Space) return;
+        e.Handled = true;
+        IsDropDownOpen = true;
     }
 
     private Predicate<object> GetFilter()
     {
-        var filter = SettingOrDefault.GetFilter(Text ?? "", GetItemText);
-        return _defaultItemsFilter is not null
+        var query = Text ?? "";
+        if (query == _cachedFilterQuery && _cachedFilter is not null)
+        {
+            return _cachedFilter;
+        }
+
+        var filter = SettingOrDefault.GetFilter(query, GetItemText);
+        var combined = _defaultItemsFilter is not null
             ? i => _defaultItemsFilter(i) && filter(i)
             : filter;
+
+        _cachedFilterQuery = query;
+        _cachedFilter = combined;
+        return combined;
     }
 
     public AutoCompleteComboBox()
@@ -205,7 +207,7 @@ public partial class AutoCompleteComboBox : System.Windows.Controls.ComboBox
     private sealed class BindingEvaluator<T> : DependencyObject
     {
         public static readonly DependencyProperty ValueProperty =
-            DependencyProperty.Register("Value", typeof(T), typeof(BindingEvaluator<T>));
+            DependencyProperty.Register(nameof(Value), typeof(T), typeof(BindingEvaluator<T>));
 
         public T? Value
         {
@@ -213,7 +215,7 @@ public partial class AutoCompleteComboBox : System.Windows.Controls.ComboBox
             set => SetValue(ValueProperty, value);
         }
 
-        public void SetBinding(Binding binding)
+        private void SetBinding(Binding binding)
         {
             BindingOperations.SetBinding(this, ValueProperty, binding);
         }

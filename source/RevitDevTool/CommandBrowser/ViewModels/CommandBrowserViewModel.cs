@@ -5,6 +5,7 @@ using System.Windows.Media;
 using DevTools.UI.Theme;
 using RevitDevTool.CommandBrowser.Models;
 using RevitDevTool.CommandBrowser.Services;
+// ReSharper disable UnusedParameterInPartialMethod
 
 namespace RevitDevTool.CommandBrowser.ViewModels;
 
@@ -19,8 +20,19 @@ public sealed partial class CommandBrowserViewModel : ObservableObject, IDisposa
     private readonly RibbonSnoopService _snoopService;
     private readonly ObservableCollection<GroupedCommandEntry> _entries = [];
 
+    private static readonly SolidColorBrush DarkIconsBg;
+    private static readonly SolidColorBrush LightIconsBg;
+
+    static CommandBrowserViewModel()
+    {
+        DarkIconsBg = new SolidColorBrush((System.Windows.Media.Color)System.Windows.Media.ColorConverter.ConvertFromString("#3B4552"));
+        DarkIconsBg.Freeze();
+        LightIconsBg = new SolidColorBrush((System.Windows.Media.Color)System.Windows.Media.ColorConverter.ConvertFromString("#F4F4F4"));
+        LightIconsBg.Freeze();
+    }
+
     [ObservableProperty]
-    public partial SolidColorBrush IconsBackground { get; private set; } = new(Colors.Transparent);
+    public partial SolidColorBrush IconsBackground { get; private set; } = LightIconsBg;
 
     [ObservableProperty]
     public partial bool ShowOnlyFavorites { get; set; }
@@ -55,7 +67,6 @@ public sealed partial class CommandBrowserViewModel : ObservableObject, IDisposa
     {
         if (command is null) return;
         _cache.AddRecent(command);
-        _cache.Save();
         RebuildEntries();
         command.Run();
     }
@@ -65,21 +76,27 @@ public sealed partial class CommandBrowserViewModel : ObservableObject, IDisposa
     {
         if (command is null) return;
         _cache.ToggleFavorite(command);
-        _cache.Save();
+        AllItemsView?.Refresh();
+    }
+
+    /// <summary>
+    /// Refreshes <see cref="RibbonCommandInfo.IsEnabled"/> for all commands
+    /// so the dropdown reflects current availability.
+    /// </summary>
+    public void RefreshAvailability()
+    {
+        foreach (var cmd in _snoopService.AllCommands)
+            cmd.RibbonInfo.RefreshIsEnabled();
+
         AllItemsView?.Refresh();
     }
 
     private void OnRibbonCommandExecuted(BrowserCommandItem command)
     {
         _cache.AddRecent(command);
-        _cache.Save();
         RebuildEntries();
     }
 
-    /// <summary>
-    /// Rebuilds the composite list: Recent entries first, then all commands in AllItems.
-    /// The same <see cref="BrowserCommandItem"/> can appear in both groups.
-    /// </summary>
     private void RebuildEntries()
     {
         _entries.Clear();
@@ -122,9 +139,7 @@ public sealed partial class CommandBrowserViewModel : ObservableObject, IDisposa
     private void RefreshIconsBackground()
     {
         var isDark = ThemeManager.Current.ActualApplicationTheme == AppTheme.Dark;
-        IconsBackground = new SolidColorBrush(isDark
-            ? (System.Windows.Media.Color)System.Windows.Media.ColorConverter.ConvertFromString("#3B4552")
-            : (System.Windows.Media.Color)System.Windows.Media.ColorConverter.ConvertFromString("#F4F4F4"));
+        IconsBackground = isDark ? DarkIconsBg : LightIconsBg;
     }
 
     public void Dispose()
