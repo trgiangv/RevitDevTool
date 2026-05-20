@@ -43,7 +43,7 @@
         <PackageVersion Include="ModularPipelines.GitHub" Version="3.2.8"/>
         <PackageVersion Include="Microsoft.VisualStudio.SolutionPersistence" Version="1.0.52"/>
         <!--File IO-->
-        <PackageVersion Include="OpenMcdf" Version="3.1.3"/>
+        <PackageVersion Include="OpenMcdf" Version="3.1.4"/>
         <!--Revit Tasks (Testing only)-->
         <PackageVersion Include="Revit.Async" Version="2.1.1"/>
         <PackageVersion Include="ricaun.Revit.UI.Tasks" Version="1.0.1"/>
