@@ -1,0 +1,156 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!-- RevitDevTool - StubBuilder Command Icon (32px Light Theme) -->
+
+<!-- Main body: document/page with .pyi stub lines (Grey 100-300 gradient) -->
+
+<!-- Accent: Python yellow snake mark                                        -->
+
+<!-- Badge: Edit/Modify (blue, Autodesk standard)                           -->
+
+<svg
+   width="16"
+   height="16"
+   viewBox="0 0 16 16"
+   fill="none"
+   version="1.1"
+   id="svg17"
+   sodipodi:docname="StubBuilder-16-Light.svg"
+   inkscape:version="1.4.3 (0d15f75, 2025-12-25)"
+   inkscape:export-filename="..\..\..\source\DevTools.UI\Resources\icons\StubBuilder-16-Light.png"
+   inkscape:export-xdpi="96"
+   inkscape:export-ydpi="96"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg">
+  <sodipodi:namedview
+     id="namedview17"
+     pagecolor="#505050"
+     bordercolor="#ffffff"
+     borderopacity="1"
+     inkscape:showpageshadow="0"
+     inkscape:pageopacity="0"
+     inkscape:pagecheckerboard="1"
+     inkscape:deskcolor="#505050"
+     inkscape:zoom="25.94198"
+     inkscape:cx="18.657018"
+     inkscape:cy="11.602815"
+     inkscape:window-width="2560"
+     inkscape:window-height="1369"
+     inkscape:window-x="-8"
+     inkscape:window-y="-8"
+     inkscape:window-maximized="1"
+     inkscape:current-layer="g12" />
+  <defs
+     id="defs6">
+    <linearGradient
+       id="doc-grad-light"
+       x1="5"
+       y1="4"
+       x2="5"
+       y2="28"
+       gradientUnits="userSpaceOnUse"
+       gradientTransform="matrix(1.2111657,0,0,1.1917817,-5.6188043,-4.330103)">
+      <stop
+         offset="0%"
+         stop-color="#4A4A4A"
+         id="stop1" />
+      <stop
+         offset="100%"
+         stop-color="#363636"
+         id="stop2" />
+    </linearGradient>
+    <linearGradient
+       id="py-logo-blue"
+       x1="12.4809"
+       y1="2"
+       x2="12.4809"
+       y2="22.7407"
+       gradientUnits="userSpaceOnUse"
+       gradientTransform="matrix(0.4879267,0,0,0.48780434,1.1506297,1.1508746)">
+      <stop
+         stop-color="#327EBD"
+         id="stop3" />
+      <stop
+         offset="1"
+         stop-color="#1565A7"
+         id="stop4" />
+    </linearGradient>
+    <linearGradient
+       id="py-logo-yellow"
+       x1="19.519"
+       y1="9.25928"
+       x2="19.519"
+       y2="30"
+       gradientUnits="userSpaceOnUse"
+       gradientTransform="matrix(0.48792648,0,0,0.48780386,1.2357196,1.2394002)">
+      <stop
+         stop-color="#FFDA4B"
+         id="stop5" />
+      <stop
+         offset="1"
+         stop-color="#F9C600"
+         id="stop6" />
+    </linearGradient>
+  </defs>
+  <!-- === MAIN BODY: document page with folded corner === -->
+  <!-- Folded corner triangle -->
+  <!-- Page border -->
+  <!-- Code lines (stub content hint) -->
+  <!-- Python logo (full icon from python-svgrepo-com.svg) -->
+  <g
+     transform="matrix(0.9642926,0,0,0.96428571,-1.9285852,-1.9285714)"
+     id="g12">
+    <path
+       fill-rule="evenodd"
+       clip-rule="evenodd"
+       d="m 7.5016787,2.1264833 c -1.0720239,0 -1.9410454,0.8412332 -1.9410454,1.8789491 V 5.3062457 H 8.9201302 V 5.6675818 H 4.0675238 c -1.0720091,0 -1.9410407,0.8412381 -1.9410407,1.8789438 v 2.8184364 c 0,1.037705 0.8690316,1.878925 1.9410407,1.878925 h 1.1198309 v -1.589852 c 0,-1.0377061 0.8690366,-1.8789733 1.94106,-1.8789733 h 3.5834323 c 0.907103,0 1.642409,-0.7118042 1.642409,-1.5898521 V 4.0054324 c 0,-1.0377159 -0.868997,-1.8789491 -1.941021,-1.8789491 z M 7.0537618,4.4390368 c 0.3710684,0 0.6718749,-0.2911996 0.6718749,-0.6504041 0,-0.3592094 -0.3008065,-0.6504091 -0.6718749,-0.6504091 -0.371117,0 -0.671924,0.2911997 -0.671924,0.6504091 0,0.3592045 0.300807,0.6504041 0.671924,0.6504041 z"
+       fill="url(#py-logo-blue)"
+       id="path11"
+       style="fill:url(#py-logo-blue);stroke:#2261a3;stroke-width:0.252967;stroke-dasharray:none;stroke-opacity:1;paint-order:fill markers stroke" />
+    <path
+       fill-rule="evenodd"
+       clip-rule="evenodd"
+       d="m 10.498223,15.873516 c 1.072023,0 1.941069,-0.841217 1.941069,-1.878923 V 12.693767 H 9.0797716 V 12.33245 h 4.8526244 c 1.072023,0 1.94102,-0.841266 1.94102,-1.878972 V 7.6350452 c 0,-1.0377052 -0.868997,-1.8789324 -1.94102,-1.8789324 h -1.11984 v 1.5898601 c 0,1.0377542 -0.869046,1.8789719 -1.941021,1.8789719 H 7.2880573 c -0.9071045,0 -1.6424143,0.7118032 -1.6424143,1.5898502 v 3.179798 c 0,1.037706 0.8690507,1.878923 1.9410247,1.878923 z m 0.447966,-2.312531 c -0.371117,0 -0.671925,0.29117 -0.671925,0.650389 0,0.359218 0.300808,0.650388 0.671925,0.650388 0.371068,0 0.671873,-0.29117 0.671873,-0.650388 0,-0.359219 -0.300805,-0.650389 -0.671873,-0.650389 z"
+       fill="url(#py-logo-yellow)"
+       id="path12"
+       style="fill:url(#py-logo-yellow);stroke:#eab448;stroke-width:0.252966;stroke-dasharray:none;stroke-opacity:1;paint-order:fill markers stroke" />
+  </g>
+  <!-- === BADGE: Autodesk Edit-32-Light (bottom-right) === -->
+  <g
+     transform="matrix(0.4012296,0,0,0.40123951,8.7778666,9.0987605)"
+     id="g17">
+    <path
+       fill-rule="evenodd"
+       clip-rule="evenodd"
+       d="m 3.2998,11.4998 4.2,4.2 -5.7,1.5 z"
+       fill="#666666"
+       id="path13" />
+    <path
+       fill-rule="evenodd"
+       clip-rule="evenodd"
+       d="M 17.0924,1.92411 C 17.6738,2.50384 18,3.28727 18,4.10376 18,4.92025 17.6738,5.70368 17.0924,6.28341 L 16.3678,7 12,2.65066 12.7246,1.92411 C 13.0065,1.63205 13.3454,1.39957 13.7208,1.24073 14.0962,1.0819 14.5002,1 14.9085,1 c 0.4083,0 0.8123,0.0819 1.1877,0.24073 0.3754,0.15884 0.7143,0.39132 0.9962,0.68338 z"
+       fill="#ff3333"
+       id="path14" />
+    <path
+       fill-rule="evenodd"
+       clip-rule="evenodd"
+       d="m 11.2,3.20001 4.5,4.6 L 8.36,15 4,10.64 Z"
+       fill="#ffaa00"
+       id="path15" />
+    <path
+       fill-rule="evenodd"
+       clip-rule="evenodd"
+       d="m 12.7246,1.90001 c 0.5791,-0.57584 1.3646,-0.89957 2.1839,-0.9 0.4058,-8.84e-4 0.8078,0.0782 1.1827,0.23269 0.3748,0.15448 0.7151,0.38129 1.0012,0.66731 C 17.6738,2.48249 18,3.26963 18,4.09 18,4.91038 17.6738,5.69752 17.0924,6.28 L 16.3678,7 12,2.63 Z m 2.9853,0.2573 C 15.4559,2.05258 15.1835,1.99911 14.9085,2.00001 14.6347,1.99703 14.3632,2.0496 14.1105,2.15448 13.8579,2.25937 13.6294,2.41437 13.4392,2.61001 L 16.3879,5.61 C 16.5875,5.41378 16.746,5.18018 16.8541,4.92271 16.9623,4.66523 17.018,4.389 17.018,4.11 17.018,3.83101 16.9623,3.55477 16.8541,3.2973 16.746,3.03983 16.5875,2.80622 16.3879,2.61001 16.1944,2.41592 15.9639,2.26203 15.7099,2.15731 Z"
+       fill="#000000"
+       fill-opacity="0.1"
+       id="path16" />
+    <path
+       fill-rule="evenodd"
+       clip-rule="evenodd"
+       d="M 4,10.64 11.2031,3.2 15.7,7.8 8.36,15 Z M 14.3,7.8 11.2031,4.62 5.41,10.64 8.36,13.58 Z"
+       fill="#000000"
+       fill-opacity="0.1"
+       id="path17" />
+  </g>
+</svg>

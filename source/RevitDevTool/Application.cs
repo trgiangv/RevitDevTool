@@ -46,14 +46,18 @@ public class Application : IExternalApplication
             .SetAvailabilityController<DevToolsCommand>()
             .SetLargeImage("/DevTools.UI;component/Resources/Icons/DevTools-32-Light.png")
             .SetToolTip("Execute last command\nCtrl + click to Show/Hide DevTools");
+        
+        var stack = panel.AddStackPanel();
 
-        panel.AddPushButton<StubBuilderCommand>("StubBuilder")
+        stack.AddPushButton<StubBuilderCommand>("StubBuilder")
             .SetAvailabilityController<StubBuilderCommand>()
             .SetLargeImage("/DevTools.UI;component/Resources/Icons/StubBuilder-32-Light.png")
+            .SetImage("/DevTools.UI;component/Resources/Icons/StubBuilder-16-Light.png")
             .SetToolTip("Generate Python .pyi stub files from .NET assemblies");
 
-        panel.AddPushButton<CommandBrowserCommand>("Commands")
-            .SetLargeImage("/DevTools.UI;component/Resources/Icons/StubBuilder-32-Light.png")
-            .SetToolTip("Search and run any Revit ribbon command\nKeyboard shortcut: CB");
+        stack.AddPushButton<CommandBrowserCommand>("Commands")
+            .SetLargeImage("/DevTools.UI;component/Resources/Icons/Commands-32-Light.png")
+            .SetImage("/DevTools.UI;component/Resources/Icons/Commands-16-Light.png")
+            .SetToolTip("Search and run any Revit ribbon command");
     }
 }
