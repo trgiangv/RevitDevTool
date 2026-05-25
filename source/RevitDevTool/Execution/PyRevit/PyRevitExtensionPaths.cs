@@ -13,6 +13,8 @@ internal static class PyRevitExtensionPaths
     private const string ExtensionSuffix = ".extension";
     private const int MaxExtensionAncestorDepth = 12;
 
+    internal readonly record struct DllCandidate(string FilePath, string SimpleName, bool IsLib, int Depth);
+
     /// <summary>
     /// Yields component folders from extension root down to the script directory
     /// (libs first, then bins — matches pyRevit <c>CollectLibraryPaths</c> / <c>CollectBinaryPaths</c>).
@@ -20,11 +22,42 @@ internal static class PyRevitExtensionPaths
     internal static IEnumerable<string> EnumerateHierarchyPaths(string? scriptDirectory)
     {
         var chain = BuildAncestorChain(scriptDirectory);
-        foreach (var path in EnumerateComponentPaths(chain, LibDir))
+        foreach (var (path, _) in EnumerateComponentPaths(chain, LibDir))
             yield return path;
 
-        foreach (var path in EnumerateComponentPaths(chain, BinDir))
+        foreach (var (path, _) in EnumerateComponentPaths(chain, BinDir))
             yield return path;
+    }
+
+    /// <summary>
+    /// Enumerates DLL candidates from the hierarchy.
+    /// <list type="bullet">
+    /// <item><c>lib/</c> — all <c>*.dll</c> at any depth (root + subfolders)</item>
+    /// <item><c>bin/</c> — only <c>*.dll</c> in subfolders (skip DLLs directly in bin root)</item>
+    /// </list>
+    /// Depth 0 = closest to script (extension root is highest depth).
+    /// </summary>
+    internal static IEnumerable<DllCandidate> EnumerateDllCandidates(string? scriptDirectory)
+    {
+        var chain = BuildAncestorChain(scriptDirectory);
+
+        foreach (var (folderPath, depth) in EnumerateComponentPaths(chain, LibDir))
+        {
+            foreach (var dll in EnumerateAllDlls(folderPath))
+                yield return new DllCandidate(dll, Path.GetFileNameWithoutExtension(dll), IsLib: true, depth);
+        }
+
+        foreach (var (folderPath, depth) in EnumerateComponentPaths(chain, BinDir))
+        {
+            foreach (var dll in EnumerateSubfolderDlls(folderPath))
+                yield return new DllCandidate(dll, Path.GetFileNameWithoutExtension(dll), IsLib: false, depth);
+        }
+    }
+
+    private static IEnumerable<string> EnumerateSubfolderDlls(string binRoot)
+    {
+        return Directory.EnumerateDirectories(binRoot)
+            .SelectMany(subDir => Directory.EnumerateFiles(subDir, "*.dll", SearchOption.AllDirectories));
     }
 
     /// <summary>Script directory first, then parents until <c>*.extension</c> (inclusive).</summary>
@@ -61,15 +94,19 @@ internal static class PyRevitExtensionPaths
         return true;
     }
 
-    private static IEnumerable<string> EnumerateComponentPaths(List<string> chain, string componentDir)
+    private static IEnumerable<(string Path, int Depth)> EnumerateComponentPaths(
+        List<string> chain, string componentDir)
     {
         for (var i = chain.Count - 1; i >= 0; i--)
         {
             var path = Path.Combine(chain[i], componentDir);
             if (Directory.Exists(path))
-                yield return path;
+                yield return (path, i);
         }
     }
+
+    private static IEnumerable<string> EnumerateAllDlls(string directory) =>
+        Directory.EnumerateFiles(directory, "*.dll", SearchOption.AllDirectories);
 
     private static bool IsExtensionRoot(string dir) =>
         dir.EndsWith(ExtensionSuffix, StringComparison.OrdinalIgnoreCase);

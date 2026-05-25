@@ -12,6 +12,7 @@ internal static class PyRevitScriptExecutor
         var uiApplication = RevitContext.UiApplication;
         try
         {
+            PyRevitAssemblyLoader.EnsureLoaded(scriptPath);
             var reflection = PyRevitReflectionCache.Instance;
 
             if (reflection.HasRuntime)
