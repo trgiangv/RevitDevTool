@@ -118,6 +118,9 @@
                                                  Value="FSharp">
                                         <Setter Property="Source" Value="{StaticResource FsharpIcon}" />
                                     </DataTrigger>
+                                    <DataTrigger Binding="{Binding LastOperationProvider, Mode=OneWay}" Value="CSharp">
+                                        <Setter Property="Source" Value="{StaticResource CsharpIcon}" />
+                                    </DataTrigger>
                                     <DataTrigger Binding="{Binding LastOperationProvider, Mode=OneWay}"
                                                  Value="-">
                                         <Setter Property="Visibility" Value="Collapsed" />

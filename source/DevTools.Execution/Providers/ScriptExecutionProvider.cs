@@ -9,6 +9,7 @@ public sealed class ScriptExecutionProvider(
     PythonExecutor executor,
     IIronPythonBridge ironPythonBridge,
     IHostContextExecutor hostContext,
-    ICommandRunner commandRunner)
+    ICommandRunner commandRunner,
+    IFSharpHostSupport fsharpHostSupport)
     : ScriptExecutionProviderBase(
-        pythonInitializer, executor, ironPythonBridge, hostContext, commandRunner);
+        pythonInitializer, executor, ironPythonBridge, hostContext, commandRunner, fsharpHostSupport);

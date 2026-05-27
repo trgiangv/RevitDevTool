@@ -6,5 +6,6 @@ public enum ExecutionMode
     Assembly,
     Python,
     IronPython,
-    FSharp
+    FSharp,
+    CSharp
 }

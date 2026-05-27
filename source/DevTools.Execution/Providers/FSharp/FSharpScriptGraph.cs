@@ -77,7 +77,7 @@ internal static partial class FSharpScriptGraph
             hash.AppendData(File.ReadAllBytes(path));
         }
 
-        return BitConverter.ToString(hash.GetHashAndReset()).Replace("-", "").ToLowerInvariant();
+        return Convert.ToHexStringLower(hash.GetHashAndReset());
     }
 
     public static async Task<RewriteResult> RewriteGraphAsync(

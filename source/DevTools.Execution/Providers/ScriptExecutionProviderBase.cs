@@ -2,6 +2,7 @@ using System.Diagnostics;
 using System.IO;
 using DevTools.Execution.Interfaces;
 using DevTools.Execution.Models;
+using DevTools.Execution.Providers.CSharp;
 using DevTools.Execution.Providers.FSharp;
 using DevTools.Execution.Providers.IronPython;
 using DevTools.Execution.Providers.Python;
@@ -9,15 +10,16 @@ using DevTools.McpParser.Models;
 
 namespace DevTools.Execution.Providers;
 
-/// <summary>Folder tree for <c>*script.py</c> (CPython or IronPython) and <c>*script.fsx</c>.</summary>
+/// <summary>Folder tree for <c>*script.py</c> (CPython or IronPython), <c>*script.fsx</c>, and <c>*script.csx</c>.</summary>
 public abstract class ScriptExecutionProviderBase(
     PythonInitializer pythonInitializer,
     PythonExecutor executor,
     IIronPythonBridge ironPythonBridge,
     IHostContextExecutor hostContext,
-    ICommandRunner commandRunner) : IExecutionProvider
+    ICommandRunner commandRunner,
+    IFSharpHostSupport fsharpHostSupport) : IExecutionProvider
 {
-    private static readonly string[] WatchPatterns = ["*script.py", "*script.fsx"];
+    private static readonly string[] WatchPatterns = ["*script.py", "*script.fsx", "*script.csx"];
 
     private const string IronPythonEntryFileSuffix = "_ipy_script.py";
 
@@ -87,7 +89,7 @@ public abstract class ScriptExecutionProviderBase(
         if (HasAnyEntryScript(rootPath))
             return false;
 
-        Trace.TraceWarning($"No valid entry script found (*script.py or *script.fsx) in: {rootPath}");
+        Trace.TraceWarning($"No valid entry script found (*script.py, *script.fsx, or *script.csx) in: {rootPath}");
         return true;
     }
 
@@ -127,6 +129,7 @@ public abstract class ScriptExecutionProviderBase(
     {
         var scriptFiles = Directory.GetFiles(currentPath, "*script.py", SearchOption.TopDirectoryOnly)
             .Concat(Directory.GetFiles(currentPath, "*script.fsx", SearchOption.TopDirectoryOnly))
+            .Concat(Directory.GetFiles(currentPath, "*script.csx", SearchOption.TopDirectoryOnly))
             .OrderBy(Path.GetFileName);
 
         foreach (var scriptFile in scriptFiles)
@@ -171,6 +174,16 @@ public abstract class ScriptExecutionProviderBase(
                 NodeType = NodeType.Executable,
                 ExecutionStrategy = new FSharpExecutionStrategy(scriptPath, hostContext, commandRunner)
             },
+            ".csx" => new ExecutionNode
+            {
+                Id = $"csharp://{scriptPath}",
+                Name = fileName,
+                ExecutablePath = scriptPath,
+                SourceFilePath = scriptPath,
+                ProviderType = ExecutionMode.CSharp,
+                NodeType = NodeType.Executable,
+                ExecutionStrategy = new CSharpExecutionStrategy(scriptPath, hostContext, commandRunner, fsharpHostSupport)
+            },
             _ => throw new NotSupportedException(
                 $"Unsupported script extension '{extension}' for file '{scriptPath}'.")
         };
@@ -198,5 +211,6 @@ public abstract class ScriptExecutionProviderBase(
 
     private static bool HasAnyEntryScript(string rootPath) =>
         Directory.GetFiles(rootPath, "*script.py", SearchOption.AllDirectories).Length != 0
-        || Directory.GetFiles(rootPath, "*script.fsx", SearchOption.AllDirectories).Length != 0;
+        || Directory.GetFiles(rootPath, "*script.fsx", SearchOption.AllDirectories).Length != 0
+        || Directory.GetFiles(rootPath, "*script.csx", SearchOption.AllDirectories).Length != 0;
 }

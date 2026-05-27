@@ -20,6 +20,9 @@
         <PackageReference Include="FSharp.Core"/>
         <PackageReference Include="FSharp.Compiler.Service"/>
 
+        <!--CSharp Scripting-->
+        <PackageReference Include="Microsoft.CodeAnalysis.CSharp"/>
+
         <!--Logging-->
         <PackageReference Include="ZLogger"/>
         <PackageReference Include="ZLogger.Scintilla" />
