@@ -13,7 +13,7 @@ public sealed class CSharpExecutionStrategy(
     string scriptPath,
     IHostContextExecutor hostContext,
     ICommandRunner commandRunner,
-    ICompiledScriptBridge bridgeSupport) : IExecutionStrategy
+    CSharpCompilationCache cache) : IExecutionStrategy
 {
     private static readonly TimeSpan CompileTimeout = TimeSpan.FromSeconds(30);
 
@@ -71,7 +71,7 @@ public sealed class CSharpExecutionStrategy(
 
         try
         {
-            return await CSharpCompilationCache.GetOrCompileAsync(path, bridgeSupport, progress, timeoutCts.Token).ConfigureAwait(false);
+            return await cache.GetOrCompileAsync(path, progress, timeoutCts.Token).ConfigureAwait(false);
         }
         catch (OperationCanceledException) when (!ct.IsCancellationRequested)
         {

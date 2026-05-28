@@ -180,7 +180,7 @@ internal static partial class CSharpDirectiveParser
         var normalized = reference.Replace('/', '\\');
         foreach (var segment in IgnoredPathSegments)
         {
-            if (normalized.IndexOf(segment, StringComparison.OrdinalIgnoreCase) >= 0)
+            if (normalized.Contains(segment, StringComparison.OrdinalIgnoreCase))
                 return true;
         }
         return false;

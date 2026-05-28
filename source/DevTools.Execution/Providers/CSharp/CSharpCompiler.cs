@@ -13,6 +13,7 @@ namespace DevTools.Execution.Providers.CSharp;
 /// Compiles a .csx script graph via Roslyn. Recursively resolves #load directives,
 /// merges all #r references (NuGet, file, host-rewrite) from the entire graph,
 /// collects AppDomain references, emits in-memory assembly, and finds IExternalCommand.
+/// On .NET Core+, loads into a collectible AssemblyLoadContext for proper unloading.
 /// </summary>
 internal static class CSharpCompiler
 {
@@ -33,21 +34,35 @@ internal static class CSharpCompiler
         var graph = CSharpDirectiveParser.ResolveGraph(
             scriptPath, hostSupport.GetHostReferencePattern(), hostSupport.GetHostReferenceReplacement());
 
-        var references = await ResolveReferencesAsync(graph, progress, ct).ConfigureAwait(false);
+        var (allReferences, nugetDllPaths) = await ResolveReferencesAsync(graph, progress, ct).ConfigureAwait(false);
 
         ReportCompileProgress(progress, scriptName, graph.SourceFiles.Count);
-        var assembly = Compile(graph.SourceFiles, references, out var diagnostics);
+        var peBytes = Compile(graph.SourceFiles, allReferences, out var diagnostics);
 
-        if (assembly == null)
+        if (peBytes == null)
             return ScriptCompilationResult.Failed(diagnostics);
 
-        return CreateCommandResult(assembly, hostSupport);
+        return LoadAndCreateCommand(peBytes, nugetDllPaths, hostSupport);
     }
 
-    private static async Task<HashSet<string>> ResolveReferencesAsync(
+    private static ScriptCompilationResult LoadAndCreateCommand(
+        byte[] peBytes, IReadOnlyCollection<string> nugetDllPaths, ICompiledScriptBridge hostSupport)
+    {
+#if NET
+        var context = new ScriptLoadContext(nugetDllPaths);
+        var assembly = context.LoadCompiledScript(peBytes);
+        return CreateCommandResult(assembly, hostSupport, context);
+#else
+        var assembly = Assembly.Load(peBytes);
+        return CreateCommandResult(assembly, hostSupport, cleanup: null);
+#endif
+    }
+
+    private static async Task<(HashSet<string> AllReferences, List<string> NugetDlls)> ResolveReferencesAsync(
         ScriptGraph graph, IProgress<string>? progress, CancellationToken ct)
     {
         var references = new HashSet<string>(graph.AssemblyReferences, StringComparer.OrdinalIgnoreCase);
+        var nugetDlls = new List<string>();
 
         if (graph.Packages.Count > 0)
         {
@@ -59,35 +74,44 @@ internal static class CSharpCompiler
                     continue;
                 var dlls = await NugetManager.ResolvePackageDllsAsync(pkg.PackageId, pkg.Version, ct).ConfigureAwait(false);
                 foreach (var dll in dlls)
+                {
                     references.Add(dll);
+                    nugetDlls.Add(dll);
+                }
             }
         }
 
         CollectAppDomainReferences(references);
-        return references;
+        return (references, nugetDlls);
     }
 
-    private static ScriptCompilationResult CreateCommandResult(Assembly assembly, ICompiledScriptBridge hostSupport)
+    private static ScriptCompilationResult CreateCommandResult(Assembly assembly, ICompiledScriptBridge hostSupport, IDisposable? cleanup)
     {
         var commandType = hostSupport.TryFindCommandType(assembly);
         if (commandType == null)
+        {
+            cleanup?.Dispose();
             return ScriptCompilationResult.Failed("No type implementing IExternalCommand found in compiled script.");
+        }
 
         var instance = Activator.CreateInstance(commandType);
         if (instance == null)
+        {
+            cleanup?.Dispose();
             return ScriptCompilationResult.Failed($"Failed to create instance of {commandType.FullName}.");
+        }
 
-        return ScriptCompilationResult.Succeeded(instance);
+        return ScriptCompilationResult.Succeeded(instance, cleanup);
     }
 
     private static void ReportCompileProgress(IProgress<string>? progress, string scriptName, int fileCount)
     {
-        progress?.Report(fileCount > 1 
+        progress?.Report(fileCount > 1
             ? $"Compiling {scriptName} + {fileCount - 1} loaded file(s)..."
             : $"Compiling {scriptName}...");
     }
 
-    private static Assembly? Compile(IReadOnlyList<SourceFileEntry> sourceFiles, HashSet<string> referencePaths, out List<string> diagnostics)
+    private static byte[]? Compile(IReadOnlyList<SourceFileEntry> sourceFiles, HashSet<string> referencePaths, out List<string> diagnostics)
     {
         diagnostics = [];
 
@@ -120,8 +144,7 @@ internal static class CSharpCompiler
         if (!emitResult.Success)
             return null;
 
-        peStream.Seek(0, SeekOrigin.Begin);
-        return Assembly.Load(peStream.ToArray());
+        return peStream.ToArray();
     }
 
     private static List<MetadataReference> LoadMetadataReferences(HashSet<string> referencePaths)

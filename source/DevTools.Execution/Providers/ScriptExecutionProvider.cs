@@ -1,4 +1,6 @@
 using DevTools.Execution.Interfaces;
+using DevTools.Execution.Providers.CSharp;
+using DevTools.Execution.Providers.FSharp;
 using DevTools.Execution.Providers.Python;
 
 namespace DevTools.Execution.Providers;
@@ -10,6 +12,7 @@ public sealed class ScriptExecutionProvider(
     IIronPythonBridge ironPythonBridge,
     IHostContextExecutor hostContext,
     ICommandRunner commandRunner,
-    ICompiledScriptBridge compiledScriptBridge)
+    CSharpCompilationCache csharpCache,
+    FSharpCompilationCache fsharpCache)
     : ScriptExecutionProviderBase(
-        pythonInitializer, executor, ironPythonBridge, hostContext, commandRunner, compiledScriptBridge);
+        pythonInitializer, executor, ironPythonBridge, hostContext, commandRunner, csharpCache, fsharpCache);

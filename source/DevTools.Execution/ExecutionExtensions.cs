@@ -8,7 +8,9 @@ using DevTools.Execution.External.Mcp.Registry;
 using DevTools.Execution.External.Testing;
 using DevTools.Execution.Interfaces;
 using DevTools.Execution.Providers;
+using DevTools.Execution.Providers.CSharp;
 using DevTools.Execution.Providers.Dotnet;
+using DevTools.Execution.Providers.FSharp;
 using DevTools.Execution.Providers.Python;
 using DevTools.Execution.Services;
 using DevTools.McpParser.Models;
@@ -39,6 +41,9 @@ public static class ExecutionExtensions
         services.AddKeyedSingleton<PyEnvironmentProvider, PipEnvironmentProvider>(PythonBackend.Pip);
         services.AddSingleton<PythonInitializer>();
         services.AddSingleton<PythonExecutor>();
+
+        services.AddSingleton<CSharpCompilationCache>();
+        services.AddSingleton<FSharpCompilationCache>();
 
         services.AddSingleton<ITreeStateManager, TreeStateManager>();
         services.AddSingleton<IFileWatcherService, FileWatcherService>();
