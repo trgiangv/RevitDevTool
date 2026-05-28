@@ -20,11 +20,6 @@ public interface ICompiledScriptBridge
     Type? TryFindCommandType(Assembly assembly);
 
     /// <summary>
-    /// Returns the host version string for correcting assembly references (e.g., "2025" for Revit).
-    /// </summary>
-    string GetHostVersion();
-
-    /// <summary>
     /// Returns a regex pattern matching host-versioned assembly references in #r directives.
     /// E.g. <c>Revit\s+\d{4}</c> for Revit, <c>AutoCAD\s+\d{4}</c> for AutoCAD.
     /// Return null if no reference rewriting is needed.

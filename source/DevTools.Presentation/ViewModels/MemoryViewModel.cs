@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using System.Windows.Media;
 using System.Windows.Threading;
+using DevTools.McpParser.Models;
 using Brush = System.Windows.Media.Brush;
 using Color = System.Windows.Media.Color;
 
@@ -29,7 +30,7 @@ public partial class MemoryViewModel : ObservableObject
     [ObservableProperty] private int _handleCount;
     [ObservableProperty] private int _threadCount;
     [ObservableProperty] private string _lastOperationName = "N/A";
-    [ObservableProperty] private string _lastOperationProvider = "-";
+    [ObservableProperty] private ExecutionMode? _lastOperationProvider;
     [ObservableProperty] private bool _lastOperationSuccess;
     [ObservableProperty] private long _lastOperationDurationMs;
     [ObservableProperty] private double _lastDeltaPrivateMb;
@@ -64,12 +65,11 @@ public partial class MemoryViewModel : ObservableObject
         UpdateActiveSessionPeak(snapshot);
     }
 
-    public OperationScope BeginOperation(string provider, string target)
+    public OperationScope BeginOperation(ExecutionMode? provider, string target)
     {
-        var normalizedProvider = string.IsNullOrWhiteSpace(provider) ? "-" : provider;
         var normalizedTarget = string.IsNullOrWhiteSpace(target) ? "-" : target;
         var before = CaptureSnapshot();
-        _activeSession = new OperationSession(normalizedProvider, normalizedTarget, before);
+        _activeSession = new OperationSession(provider, normalizedTarget, before);
         return new OperationScope(this);
     }
 
@@ -148,9 +148,9 @@ public partial class MemoryViewModel : ObservableObject
 
     private readonly record struct MemorySnapshot(double RamMb, double PrivateMb, double ManagedMb, int HandleCount, int ThreadCount);
 
-    private readonly record struct OperationSession(string Provider, string Target, MemorySnapshot Before, MemorySnapshot Peak)
+    private readonly record struct OperationSession(ExecutionMode? Provider, string Target, MemorySnapshot Before, MemorySnapshot Peak)
     {
-        public OperationSession(string provider, string target, MemorySnapshot before)
+        public OperationSession(ExecutionMode? provider, string target, MemorySnapshot before)
             : this(provider, target, before, before) { }
     }
 

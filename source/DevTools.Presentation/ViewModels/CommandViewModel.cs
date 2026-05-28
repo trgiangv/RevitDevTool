@@ -131,8 +131,7 @@ public partial class CommandViewModel : ObservableObject
     {
         var node = parameter as ExecutionNodeBase ?? SelectedNode;
         if (node is not { NodeType: NodeType.Executable }) return;
-        var provider = (node as ExecutionNode)?.ProviderType.ToString() ?? "Unknown";
-        using var memoryScope = _memoryViewModel.BeginOperation(provider, node.Name);
+        using var memoryScope = _memoryViewModel.BeginOperation((node as ExecutionNode)?.ProviderType, node.Name);
         using var _ = BeginBusy($"Executing '{node.Name}'...", (node as ExecutionNode)?.ProviderType);
         var result = await _orchestrator.ExecuteAsync(node);
         memoryScope.Complete(success: result.Success);
@@ -149,8 +148,7 @@ public partial class CommandViewModel : ObservableObject
         if (lastExecuted == null) return;
         try
         {
-            var provider = (lastExecuted as ExecutionNode)?.ProviderType.ToString() ?? "Unknown";
-            using var memoryScope = _memoryViewModel.BeginOperation(provider, lastExecuted.Name);
+            using var memoryScope = _memoryViewModel.BeginOperation((lastExecuted as ExecutionNode)?.ProviderType, lastExecuted.Name);
             using var _ = BeginBusy($"Executing '{lastExecuted.Name}'...", (lastExecuted as ExecutionNode)?.ProviderType);
             var result = await _orchestrator.ExecuteAsync(lastExecuted);
             memoryScope.Complete(success: result.Success);

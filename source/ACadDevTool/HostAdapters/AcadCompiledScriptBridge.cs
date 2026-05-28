@@ -29,8 +29,6 @@ public sealed class AcadCompiledScriptBridge(IHostAppInfo hostAppInfo) : ICompil
         return null;
     }
 
-    public string GetHostVersion() => hostAppInfo.VersionNumber;
-
     public string GetHostReferencePattern() => @"AutoCAD\s+\d{4}";
 
     public string GetHostReferenceReplacement() => $"AutoCAD {hostAppInfo.VersionNumber}";

@@ -8,7 +8,7 @@ namespace DevTools.Execution.Providers.Python;
 public sealed class PythonInitializer(
     [FromKeyedServices(PythonBackend.Pixi)] PyEnvironmentProvider pixiProvider,
     [FromKeyedServices(PythonBackend.Pip)] PyEnvironmentProvider pipProvider,
-    IHostPythonBridge hostBridge)
+    IPythonBridge bridge)
 {
     private readonly SemaphoreSlim _initLock = new(1, 1);
 
@@ -38,7 +38,7 @@ public sealed class PythonInitializer(
 
             Runtime.PythonDLL = Provider.GetPythonDllPath();
             PythonEngine.PythonHome = Provider.PythonHome;
-            PythonEngine.ProgramName = hostBridge.ProgramName;
+            PythonEngine.ProgramName = bridge.ProgramName;
             PythonEngine.Initialize();
             PythonEngine.BeginAllowThreads();
 
@@ -128,7 +128,7 @@ public sealed class PythonInitializer(
         };
 
         dynamic builtins = Py.Import("builtins");
-        hostBridge.SetupBuiltins(builtins, GlobalScope);
+        bridge.SetupBuiltins(builtins, GlobalScope);
         builtins.__log_func__ = logFunction.ToPython();
 
         GlobalScope.Exec(PythonEmbedded.SetupScript);

@@ -4,7 +4,7 @@ using RevitDevTool.Core;
 
 namespace RevitDevTool.HostAdapters;
 
-public sealed class RevitPythonBridge : IHostPythonBridge
+public sealed class RevitPythonBridge : IPythonBridge
 {
     public string ProgramName => "RevitDevTool";
 

@@ -3,7 +3,7 @@ using Python.Runtime;
 
 namespace AcadDevTool.HostAdapters;
 
-public sealed class AcadPythonBridge : IHostPythonBridge
+public sealed class AcadPythonBridge : IPythonBridge
 {
     public string ProgramName => "AcadDevTool";
 

@@ -31,8 +31,6 @@ public sealed class RevitCompiledScriptBridge(IHostAppInfo hostAppInfo) : ICompi
         return null;
     }
 
-    public string GetHostVersion() => hostAppInfo.VersionNumber;
-
     public string GetHostReferencePattern() => @"Revit\s+\d{4}";
 
     public string GetHostReferenceReplacement() => $"Revit {hostAppInfo.VersionNumber}";
