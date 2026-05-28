@@ -3,6 +3,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Runtime.CompilerServices;
 using DevTools.Execution.Interfaces;
+using DevTools.Execution.Models;
 using FSharp.Compiler.Interactive;
 namespace DevTools.Execution.Providers.FSharp;
 
@@ -15,12 +16,10 @@ public static class FSharpCompilationCache
 {
     private static readonly ConcurrentDictionary<string, CachedScript> Cache = new(StringComparer.OrdinalIgnoreCase);
     private static readonly ConcurrentDictionary<string, SemaphoreSlim> CompileLocks = new(StringComparer.OrdinalIgnoreCase);
-    private static IFSharpHostSupport? _hostSupport;
 
-    public static void Configure(IFSharpHostSupport hostSupport) => _hostSupport = hostSupport;
-
-    public static async Task<object?> GetOrCompileAsync(
+    public static async Task<ScriptCompilationResult> GetOrCompileAsync(
         string scriptPath,
+        ICompiledScriptBridge bridgeSupport,
         IProgress<string>? progress = null,
         CancellationToken ct = default)
     {
@@ -34,7 +33,7 @@ public static class FSharpCompilationCache
         {
             progress?.Report($"Using cached {scriptName}.");
             Debug.WriteLine($"[FSharpCache] Hit for '{Path.GetFileName(canonicalPath)}' (hash: {currentHash[..16]})");
-            return cached.Command;
+            return ScriptCompilationResult.Succeeded(cached.Command);
         }
 
         var gate = CompileLocks.GetOrAdd(canonicalPath, _ => new SemaphoreSlim(1, 1));
@@ -45,7 +44,7 @@ public static class FSharpCompilationCache
             {
                 progress?.Report($"Using cached {scriptName}.");
                 Debug.WriteLine($"[FSharpCache] Hit (after lock) for '{Path.GetFileName(canonicalPath)}'");
-                return cached.Command;
+                return ScriptCompilationResult.Succeeded(cached.Command);
             }
 
             if (cached != null)
@@ -59,25 +58,22 @@ public static class FSharpCompilationCache
                 Debug.WriteLine($"[FSharpCache] Miss (first compile) for '{Path.GetFileName(canonicalPath)}'");
             }
 
-            var hostSupport = _hostSupport
-                ?? throw new InvalidOperationException("FSharpCompilationCache has not been configured with host support.");
-
-            var resolution = await FSharpDependencyResolver.ResolveAsync(canonicalPath, graph, hostSupport, progress, ct).ConfigureAwait(false);
+            var resolution = await FSharpDependencyResolver.ResolveAsync(canonicalPath, graph, bridgeSupport, progress, ct).ConfigureAwait(false);
             progress?.Report($"Compiling {scriptName}...");
 
-            var result = FSharpExecutor.CreateSessionAndEvaluate(resolution.ScriptPath, resolution.References, hostSupport);
-            if (result.Command == null)
+            var output = FSharpExecutor.CreateSessionAndEvaluate(resolution.ScriptPath, resolution.References, bridgeSupport);
+            if (output.Command == null)
             {
-                (result.Session as IDisposable)?.Dispose();
+                (output.Session as IDisposable)?.Dispose();
                 resolution.Cleanup?.Dispose();
-                return null;
+                return ScriptCompilationResult.Failed("No executable command type found in F# script.");
             }
 
-            var entry = new CachedScript(currentHash, result.Command, result.Session, resolution.Cleanup);
+            var entry = new CachedScript(currentHash, output.Command, output.Session, resolution.Cleanup);
             Cache[canonicalPath] = entry;
 
             Debug.WriteLine($"[FSharpCache] Cached '{Path.GetFileName(canonicalPath)}' (hash: {currentHash[..16]})");
-            return result.Command;
+            return ScriptCompilationResult.Succeeded(output.Command);
         }
         finally
         {

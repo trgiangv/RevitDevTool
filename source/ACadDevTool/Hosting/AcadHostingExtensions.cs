@@ -75,7 +75,7 @@ internal static class AcadHostingExtensions
         services.AddSingleton<IHostContextExecutor, AcadHostContextExecutor>();
         services.AddSingleton<ICommandRunner, AcadCommandRunner>();
         services.AddSingleton<ICommandDiscovery, AcadCommandDiscovery>();
-        services.AddSingleton<IFSharpHostSupport, AcadFSharpSupport>();
+        services.AddSingleton<ICompiledScriptBridge, AcadCompiledScriptBridge>();
         services.AddSingleton<IHostPythonBridge, AcadPythonBridge>();
         services.AddSingleton<IIronPythonBridge, AcadIronPythonBridge>();
 

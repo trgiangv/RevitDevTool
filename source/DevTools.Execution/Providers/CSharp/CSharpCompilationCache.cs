@@ -4,34 +4,35 @@ using System.IO;
 using System.Runtime.CompilerServices;
 using System.Security.Cryptography;
 using DevTools.Execution.Interfaces;
+using DevTools.Execution.Models;
 
 namespace DevTools.Execution.Providers.CSharp;
 
 /// <summary>
-/// Caches compiled C# scripts keyed by file content hash.
-/// Recompiles only when the source file changes.
+/// Caches compiled C# scripts keyed by combined hash of entry file + all #load dependencies.
+/// Recompiles when any file in the graph changes.
 /// </summary>
 internal static class CSharpCompilationCache
 {
     private static readonly ConcurrentDictionary<string, CachedCSharpScript> Cache = new(StringComparer.OrdinalIgnoreCase);
     private static readonly ConcurrentDictionary<string, SemaphoreSlim> CompileLocks = new(StringComparer.OrdinalIgnoreCase);
 
-    public static async Task<CSharpCompilationResult> GetOrCompileAsync(
+    public static async Task<ScriptCompilationResult> GetOrCompileAsync(
         string scriptPath,
-        IFSharpHostSupport hostSupport,
+        ICompiledScriptBridge bridgeSupport,
         IProgress<string>? progress = null,
         CancellationToken ct = default)
     {
         var canonicalPath = Path.GetFullPath(scriptPath);
         var scriptName = Path.GetFileName(canonicalPath);
 
-        var currentHash = await ComputeFileHashAsync(canonicalPath, ct).ConfigureAwait(false);
+        var currentHash = await ComputeGraphHashAsync(canonicalPath, bridgeSupport, ct).ConfigureAwait(false);
 
         if (Cache.TryGetValue(canonicalPath, out var cached) && cached.ContentHash == currentHash)
         {
             progress?.Report($"Using cached {scriptName}.");
             Debug.WriteLine($"[CSharpCache] Hit for '{scriptName}' (hash: {currentHash[..16]})");
-            return CSharpCompilationResult.Succeeded(cached.Command);
+            return ScriptCompilationResult.Succeeded(cached.Command);
         }
 
         var gate = CompileLocks.GetOrAdd(canonicalPath, _ => new SemaphoreSlim(1, 1));
@@ -42,7 +43,7 @@ internal static class CSharpCompilationCache
             {
                 progress?.Report($"Using cached {scriptName}.");
                 Debug.WriteLine($"[CSharpCache] Hit (after lock) for '{scriptName}'");
-                return CSharpCompilationResult.Succeeded(cached.Command);
+                return ScriptCompilationResult.Succeeded(cached.Command);
             }
 
             if (cached != null)
@@ -56,7 +57,7 @@ internal static class CSharpCompilationCache
                 Debug.WriteLine($"[CSharpCache] Miss (first compile) for '{scriptName}'");
             }
 
-            var result = await CSharpCompiler.CompileAsync(canonicalPath, hostSupport, progress, ct).ConfigureAwait(false);
+            var result = await CSharpCompiler.CompileAsync(canonicalPath, bridgeSupport, progress, ct).ConfigureAwait(false);
 
             if (result is { Success: true, Command: not null })
             {
@@ -82,11 +83,24 @@ internal static class CSharpCompilationCache
 #endif
     }
 
-    private static async Task<string> ComputeFileHashAsync(string filePath, CancellationToken ct)
+    private static Task<string> ComputeGraphHashAsync(string entryPath, ICompiledScriptBridge bridgeSupport, CancellationToken ct)
     {
-        using var stream = File.OpenRead(filePath);
-        var hashBytes = await SHA256.HashDataAsync(stream, ct).ConfigureAwait(false);
-        return Convert.ToHexString(hashBytes);
+        ct.ThrowIfCancellationRequested();
+
+        var graph = CSharpDirectiveParser.ResolveGraph(
+            entryPath,
+            bridgeSupport.GetHostReferencePattern(),
+            bridgeSupport.GetHostReferenceReplacement());
+
+        using var hasher = IncrementalHash.CreateHash(HashAlgorithmName.SHA256);
+        foreach (var file in graph.SourceFiles)
+        {
+            var bytes = File.ReadAllBytes(file.Path);
+            hasher.AppendData(bytes);
+        }
+
+        var hash = hasher.GetHashAndReset();
+        return Task.FromResult(Convert.ToHexString(hash));
     }
 }
 

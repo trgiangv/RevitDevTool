@@ -17,7 +17,7 @@ public abstract class ScriptExecutionProviderBase(
     IIronPythonBridge ironPythonBridge,
     IHostContextExecutor hostContext,
     ICommandRunner commandRunner,
-    IFSharpHostSupport fsharpHostSupport) : IExecutionProvider
+    ICompiledScriptBridge compiledScriptBridge) : IExecutionProvider
 {
     private static readonly string[] WatchPatterns = ["*script.py", "*script.fsx", "*script.csx"];
 
@@ -172,7 +172,7 @@ public abstract class ScriptExecutionProviderBase(
                 SourceFilePath = scriptPath,
                 ProviderType = ExecutionMode.FSharp,
                 NodeType = NodeType.Executable,
-                ExecutionStrategy = new FSharpExecutionStrategy(scriptPath, hostContext, commandRunner)
+                ExecutionStrategy = new FSharpExecutionStrategy(scriptPath, hostContext, commandRunner, compiledScriptBridge)
             },
             ".csx" => new ExecutionNode
             {
@@ -182,7 +182,7 @@ public abstract class ScriptExecutionProviderBase(
                 SourceFilePath = scriptPath,
                 ProviderType = ExecutionMode.CSharp,
                 NodeType = NodeType.Executable,
-                ExecutionStrategy = new CSharpExecutionStrategy(scriptPath, hostContext, commandRunner, fsharpHostSupport)
+                ExecutionStrategy = new CSharpExecutionStrategy(scriptPath, hostContext, commandRunner, compiledScriptBridge)
             },
             _ => throw new NotSupportedException(
                 $"Unsupported script extension '{extension}' for file '{scriptPath}'.")

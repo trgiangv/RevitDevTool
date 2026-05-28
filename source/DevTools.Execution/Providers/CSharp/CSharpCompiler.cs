@@ -1,8 +1,8 @@
 using System.Diagnostics;
 using System.IO;
 using System.Reflection;
-using System.Runtime.InteropServices;
 using DevTools.Execution.Interfaces;
+using DevTools.Execution.Models;
 using DevTools.Execution.Providers.FSharp;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
@@ -10,42 +10,53 @@ using Microsoft.CodeAnalysis.CSharp;
 namespace DevTools.Execution.Providers.CSharp;
 
 /// <summary>
-/// Compiles a .csx script via Roslyn. Resolves #r directives (NuGet, file, host-rewrite),
+/// Compiles a .csx script graph via Roslyn. Recursively resolves #load directives,
+/// merges all #r references (NuGet, file, host-rewrite) from the entire graph,
 /// collects AppDomain references, emits in-memory assembly, and finds IExternalCommand.
 /// </summary>
 internal static class CSharpCompiler
 {
     private static readonly LanguageVersion MaxLanguageVersion =
-        Enum.GetValues(typeof(LanguageVersion))
-            .Cast<LanguageVersion>()
+        Enum.GetValues<LanguageVersion>()
             .Where(v => v != LanguageVersion.LatestMajor && v != LanguageVersion.Latest && v != LanguageVersion.Preview && v != LanguageVersion.Default)
             .Max();
 
-    public static async Task<CSharpCompilationResult> CompileAsync(
+    public static async Task<ScriptCompilationResult> CompileAsync(
         string scriptPath,
-        IFSharpHostSupport hostSupport,
+        ICompiledScriptBridge hostSupport,
         IProgress<string>? progress = null,
         CancellationToken ct = default)
     {
         var scriptName = Path.GetFileName(scriptPath);
-        progress?.Report($"Parsing directives for {scriptName}...");
+        progress?.Report($"Resolving script graph for {scriptName}...");
 
-        var source = await ReadFileAsync(scriptPath, ct).ConfigureAwait(false);
-        var hostPattern = hostSupport.GetHostReferencePattern();
-        var hostReplacement = hostSupport.GetHostReferenceReplacement();
+        var graph = CSharpDirectiveParser.ResolveGraph(
+            scriptPath, hostSupport.GetHostReferencePattern(), hostSupport.GetHostReferenceReplacement());
 
-        var parsed = CSharpDirectiveParser.Parse(source, hostPattern, hostReplacement);
+        var references = await ResolveReferencesAsync(graph, progress, ct).ConfigureAwait(false);
 
-        var references = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        ReportCompileProgress(progress, scriptName, graph.SourceFiles.Count);
+        var assembly = Compile(graph.SourceFiles, references, out var diagnostics);
 
-        foreach (var fileRef in parsed.FileReferences)
-            references.Add(fileRef);
+        if (assembly == null)
+            return ScriptCompilationResult.Failed(diagnostics);
 
-        if (parsed.Packages.Count > 0)
+        return CreateCommandResult(assembly, hostSupport);
+    }
+
+    private static async Task<HashSet<string>> ResolveReferencesAsync(
+        ScriptGraph graph, IProgress<string>? progress, CancellationToken ct)
+    {
+        var references = new HashSet<string>(graph.AssemblyReferences, StringComparer.OrdinalIgnoreCase);
+
+        if (graph.Packages.Count > 0)
         {
-            progress?.Report($"Resolving {parsed.Packages.Count} NuGet package(s)...");
-            foreach (var pkg in parsed.Packages)
+            progress?.Report($"Resolving {graph.Packages.Count} NuGet package(s)...");
+            var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            foreach (var pkg in graph.Packages)
             {
+                if (!seen.Add(pkg.PackageId))
+                    continue;
                 var dlls = await NugetManager.ResolvePackageDllsAsync(pkg.PackageId, pkg.Version, ct).ConfigureAwait(false);
                 foreach (var dll in dlls)
                     references.Add(dll);
@@ -53,25 +64,30 @@ internal static class CSharpCompiler
         }
 
         CollectAppDomainReferences(references);
+        return references;
+    }
 
-        progress?.Report($"Compiling {scriptName}...");
-        var assembly = Compile(parsed.CleanSource, scriptPath, references, out var diagnostics);
-
-        if (assembly == null)
-            return CSharpCompilationResult.Failed(diagnostics);
-
+    private static ScriptCompilationResult CreateCommandResult(Assembly assembly, ICompiledScriptBridge hostSupport)
+    {
         var commandType = hostSupport.TryFindCommandType(assembly);
         if (commandType == null)
-            return CSharpCompilationResult.Failed(["No type implementing IExternalCommand found in compiled script."]);
+            return ScriptCompilationResult.Failed("No type implementing IExternalCommand found in compiled script.");
 
         var instance = Activator.CreateInstance(commandType);
         if (instance == null)
-            return CSharpCompilationResult.Failed([$"Failed to create instance of {commandType.FullName}."]);
+            return ScriptCompilationResult.Failed($"Failed to create instance of {commandType.FullName}.");
 
-        return CSharpCompilationResult.Succeeded(instance);
+        return ScriptCompilationResult.Succeeded(instance);
     }
 
-    private static Assembly? Compile(string source, string filePath, HashSet<string> referencePaths, out List<string> diagnostics)
+    private static void ReportCompileProgress(IProgress<string>? progress, string scriptName, int fileCount)
+    {
+        progress?.Report(fileCount > 1 
+            ? $"Compiling {scriptName} + {fileCount - 1} loaded file(s)..."
+            : $"Compiling {scriptName}...");
+    }
+
+    private static Assembly? Compile(IReadOnlyList<SourceFileEntry> sourceFiles, HashSet<string> referencePaths, out List<string> diagnostics)
     {
         diagnostics = [];
 
@@ -79,12 +95,38 @@ internal static class CSharpCompiler
             .WithLanguageVersion(MaxLanguageVersion)
             .WithKind(SourceCodeKind.Regular);
 
-        var syntaxTree = CSharpSyntaxTree.ParseText(
-            text: source,
-            options: parseOptions,
-            path: filePath);
+        var syntaxTrees = sourceFiles
+            .Select(f => CSharpSyntaxTree.ParseText(f.CleanSource, parseOptions, f.Path))
+            .ToList();
 
-        var metadataRefs = new List<MetadataReference>();
+        var metadataRefs = LoadMetadataReferences(referencePaths);
+
+        var compilation = CSharpCompilation.Create(
+            assemblyName: $"CsxScript_{Guid.NewGuid():N}",
+            syntaxTrees: syntaxTrees,
+            references: metadataRefs,
+            options: new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary)
+                .WithOverflowChecks(true)
+                .WithPlatform(Platform.X64)
+                .WithOptimizationLevel(OptimizationLevel.Release));
+
+        using var peStream = new MemoryStream();
+        var emitResult = compilation.Emit(peStream);
+
+        diagnostics.AddRange(emitResult.Diagnostics
+            .Where(d => d.Severity is DiagnosticSeverity.Error or DiagnosticSeverity.Warning)
+            .Select(d => d.ToString()));
+
+        if (!emitResult.Success)
+            return null;
+
+        peStream.Seek(0, SeekOrigin.Begin);
+        return Assembly.Load(peStream.ToArray());
+    }
+
+    private static List<MetadataReference> LoadMetadataReferences(HashSet<string> referencePaths)
+    {
+        var refs = new List<MetadataReference>();
         foreach (var refPath in referencePaths)
         {
             if (!File.Exists(refPath))
@@ -95,39 +137,14 @@ internal static class CSharpCompiler
 
             try
             {
-                metadataRefs.Add(MetadataReference.CreateFromFile(refPath));
+                refs.Add(MetadataReference.CreateFromFile(refPath));
             }
             catch (Exception ex)
             {
                 Debug.WriteLine($"[CSharpCompiler] Failed to load reference '{refPath}': {ex.Message}");
             }
         }
-
-        var compilationOptions = new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary)
-            .WithOverflowChecks(true)
-            .WithPlatform(Platform.X64)
-            .WithOptimizationLevel(OptimizationLevel.Release);
-
-        var compilation = CSharpCompilation.Create(
-            assemblyName: $"CsxScript_{Guid.NewGuid():N}",
-            syntaxTrees: [syntaxTree],
-            references: metadataRefs,
-            options: compilationOptions);
-
-        using var peStream = new MemoryStream();
-        var emitResult = compilation.Emit(peStream);
-
-        foreach (var diag in emitResult.Diagnostics)
-        {
-            if (diag.Severity == DiagnosticSeverity.Error || diag.Severity == DiagnosticSeverity.Warning)
-                diagnostics.Add(diag.ToString());
-        }
-
-        if (!emitResult.Success)
-            return null;
-
-        peStream.Seek(0, SeekOrigin.Begin);
-        return Assembly.Load(peStream.ToArray());
+        return refs;
     }
 
     private static void CollectAppDomainReferences(HashSet<string> references)
@@ -148,44 +165,5 @@ internal static class CSharpCompiler
                 // Some assemblies may not have a location
             }
         }
-
-#if NET
-        var runtimeDir = RuntimeEnvironment.GetRuntimeDirectory();
-        AddIfExists(references, Path.Combine(runtimeDir, "mscorlib.dll"));
-        AddIfExists(references, Path.Combine(runtimeDir, "netstandard.dll"));
-        AddIfExists(references, Path.Combine(runtimeDir, "System.Runtime.dll"));
-#endif
     }
-
-    private static void AddIfExists(HashSet<string> references, string path)
-    {
-        if (File.Exists(path))
-            references.Add(path);
-    }
-
-    private static async Task<string> ReadFileAsync(string path, CancellationToken ct)
-    {
-#if NET
-        return await File.ReadAllTextAsync(path, ct).ConfigureAwait(false);
-#else
-        using var reader = new StreamReader(path);
-        return await reader.ReadToEndAsync().ConfigureAwait(false);
-#endif
-    }
-}
-
-internal sealed class CSharpCompilationResult
-{
-    public bool Success { get; private init; }
-    public object? Command { get; private init; }
-    public IReadOnlyList<string> Diagnostics { get; private init; } = [];
-
-    public static CSharpCompilationResult Succeeded(object command) =>
-        new() { Success = true, Command = command };
-
-    public static CSharpCompilationResult Failed(IReadOnlyList<string> diagnostics) =>
-        new() { Success = false, Diagnostics = diagnostics };
-
-    public static CSharpCompilationResult Failed(List<string> diagnostics) =>
-        new() { Success = false, Diagnostics = diagnostics };
 }

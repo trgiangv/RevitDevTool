@@ -3,22 +3,20 @@ using System.Reflection;
 namespace DevTools.Execution.Interfaces;
 
 /// <summary>
-/// Host-specific support for F# script compilation: provides host API assembly references 
-/// and finds the compiled command type after FSI evaluation.
+/// Host-specific support for script compilation (C# and F#): provides host API assembly references,
+/// reference rewriting for host versions, and command type discovery in compiled assemblies.
 /// </summary>
-public interface IFSharpHostSupport
+public interface ICompiledScriptBridge
 {
     /// <summary>
     /// Returns assembly paths for host API references (e.g., RevitAPI.dll, RevitAPIUI.dll)
-    /// to add to the FSI session.
+    /// to add to the compilation session.
     /// </summary>
     IEnumerable<string> GetSessionReferences();
 
     /// <summary>
     /// Tries to find the command type in the given assembly. Returns null if not found or if the assembly can't be reflected.
     /// </summary>
-    /// <param name="assembly">The assembly to search for the command type.</param>
-    /// <returns>The command type if found; null otherwise.</returns>
     Type? TryFindCommandType(Assembly assembly);
 
     /// <summary>

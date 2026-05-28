@@ -64,10 +64,10 @@ public sealed class RevitCommandRunner : ICommandRunner
 #endif
     }
 
-    public ExecutionResult RunFSharpCommand(object compiledCommand)
+    public ExecutionResult RunCompiledCommand(object compiledCommand)
     {
         if (compiledCommand is not IExternalCommand command)
-            return ExecutionResult.Failed($"Compiled F# type does not implement IExternalCommand.");
+            return ExecutionResult.Failed($"Compiled type does not implement IExternalCommand.");
 
         var message = string.Empty;
         var data = GetExternalCommandData();

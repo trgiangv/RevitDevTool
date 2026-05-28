@@ -4,21 +4,28 @@ using System.Text.RegularExpressions;
 namespace DevTools.Execution.Providers.CSharp;
 
 /// <summary>
-/// Parses #r directives from .csx scripts into categorized results:
-/// NuGet packages, file references (with host version rewriting), and ignored runtime refs.
+/// Parses #r and #load directives from .csx scripts recursively.
+/// Each .csx in the graph can declare its own #r and #load directives,
+/// mirroring F# scripting where each .fsx manages its own dependencies.
 /// </summary>
 // ReSharper disable once PartialTypeWithSinglePart
 internal static partial class CSharpDirectiveParser
 {
-    private const string DirectivePattern = """^\s*#r\s+"(?<ref>[^"]+)"\s*$""";
+    private const string ReferenceDirectivePattern = """^\s*#r\s+"(?<ref>[^"]+)"\s*$""";
+    private const string LoadDirectivePattern = """^\s*#load\s+"(?<path>[^"]+)"\s*$""";
     private const string NugetPrefix = "nuget:";
 
 #if NETFRAMEWORK
-    private static readonly Regex DirectiveRx = new(DirectivePattern, RegexOptions.Compiled);
-    private static Regex DirectiveRegex() => DirectiveRx;
+    private static readonly Regex ReferenceDirectiveRx = new(ReferenceDirectivePattern, RegexOptions.Compiled);
+    private static readonly Regex LoadDirectiveRx = new(LoadDirectivePattern, RegexOptions.Compiled);
+    private static Regex ReferenceDirectiveRegex() => ReferenceDirectiveRx;
+    private static Regex LoadDirectiveRegex() => LoadDirectiveRx;
 #else
-    [GeneratedRegex(DirectivePattern)]
-    private static partial Regex DirectiveRegex();
+    [GeneratedRegex(ReferenceDirectivePattern)]
+    private static partial Regex ReferenceDirectiveRegex();
+
+    [GeneratedRegex(LoadDirectivePattern)]
+    private static partial Regex LoadDirectiveRegex();
 #endif
 
     private static readonly string[] IgnoredPathSegments =
@@ -28,43 +35,121 @@ internal static partial class CSharpDirectiveParser
         @"\Reference Assemblies\Microsoft\Framework\"
     ];
 
-    public static ParsedDirectives Parse(string source, string? hostPattern, string? hostReplacement)
+    /// <summary>
+    /// Recursively resolves the entire script graph starting from the entry file.
+    /// Returns a flattened result containing all source files (topologically ordered,
+    /// dependencies before dependents) and merged references from the entire graph.
+    /// </summary>
+    public static ScriptGraph ResolveGraph(string entryPath, string? hostPattern, string? hostReplacement)
     {
-        var packages = new List<PackageReference>();
-        var fileReferences = new List<string>();
-        var strippedLines = new List<int>();
+        var visited = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var sourceFiles = new List<SourceFileEntry>();
+        var allPackages = new List<PackageReference>();
+        var allAssemblyRefs = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
         var hostRegex = hostPattern is not null
             ? new Regex(hostPattern, RegexOptions.IgnoreCase | RegexOptions.Compiled)
             : null;
 
+        ResolveRecursive(entryPath, visited, sourceFiles, allPackages, allAssemblyRefs, hostRegex, hostReplacement);
+
+        return new ScriptGraph(sourceFiles, allPackages, allAssemblyRefs.ToList());
+    }
+
+    private static void ResolveRecursive(
+        string filePath,
+        HashSet<string> visited,
+        List<SourceFileEntry> sourceFiles,
+        List<PackageReference> allPackages,
+        HashSet<string> allAssemblyRefs,
+        Regex? hostRegex,
+        string? hostReplacement)
+    {
+        var canonicalPath = Path.GetFullPath(filePath);
+        if (!visited.Add(canonicalPath))
+            return;
+
+        if (!File.Exists(canonicalPath))
+            return;
+
+        var source = File.ReadAllText(canonicalPath);
+        var parsed = ParseSingleFile(source, canonicalPath, hostRegex, hostReplacement);
+
+        foreach (var loadedPath in parsed.LoadedFiles)
+            ResolveRecursive(loadedPath, visited, sourceFiles, allPackages, allAssemblyRefs, hostRegex, hostReplacement);
+
+        sourceFiles.Add(new SourceFileEntry(canonicalPath, parsed.CleanSource));
+
+        allPackages.AddRange(parsed.Packages);
+
+        foreach (var asmRef in parsed.AssemblyReferences)
+            allAssemblyRefs.Add(asmRef);
+    }
+
+    private static ParsedFile ParseSingleFile(string source, string filePath, Regex? hostRegex, string? hostReplacement)
+    {
+        var packages = new List<PackageReference>();
+        var assemblyReferences = new List<string>();
+        var loadedFiles = new List<string>();
+        var strippedLines = new List<int>();
+        var fileDir = Path.GetDirectoryName(filePath) ?? string.Empty;
+
         var lines = source.Split(['\r', '\n'], StringSplitOptions.None);
         for (var i = 0; i < lines.Length; i++)
         {
-            var line = lines[i];
-            var match = DirectiveRegex().Match(line);
-            if (!match.Success)
-                continue;
-
-            strippedLines.Add(i);
-            var reference = match.Groups["ref"].Value.Trim();
-
-            if (IsNugetReference(reference, out var packageId, out var version))
+            if (TryParseLoadDirective(lines[i], fileDir, out var loadedPath))
             {
-                packages.Add(new PackageReference(packageId, version));
+                strippedLines.Add(i);
+                if (loadedPath != null)
+                    loadedFiles.Add(loadedPath);
                 continue;
             }
 
-            if (IsIgnoredRuntimeReference(reference))
-                continue;
-
-            var resolvedPath = RewriteHostVersion(reference, hostRegex, hostReplacement);
-            if (File.Exists(resolvedPath))
-                fileReferences.Add(resolvedPath);
+            if (TryParseReferenceDirective(lines[i], hostRegex, hostReplacement, packages, assemblyReferences))
+                strippedLines.Add(i);
         }
 
         var cleanSource = BuildCleanSource(lines, strippedLines);
-        return new ParsedDirectives(cleanSource, packages, fileReferences);
+        return new ParsedFile(cleanSource, packages, assemblyReferences, loadedFiles);
+    }
+
+    private static bool TryParseLoadDirective(string line, string baseDir, out string? resolvedPath)
+    {
+        resolvedPath = null;
+        var match = LoadDirectiveRegex().Match(line);
+        if (!match.Success)
+            return false;
+
+        var relativePath = match.Groups["path"].Value.Trim();
+        var absolutePath = Path.GetFullPath(Path.Combine(baseDir, relativePath));
+        if (File.Exists(absolutePath))
+            resolvedPath = absolutePath;
+        return true;
+    }
+
+    private static bool TryParseReferenceDirective(
+        string line, Regex? hostRegex, string? hostReplacement,
+        List<PackageReference> packages, List<string> assemblyReferences)
+    {
+        var match = ReferenceDirectiveRegex().Match(line);
+        if (!match.Success)
+            return false;
+
+        var reference = match.Groups["ref"].Value.Trim();
+
+        if (IsNugetReference(reference, out var packageId, out var version))
+        {
+            packages.Add(new PackageReference(packageId, version));
+            return true;
+        }
+
+        if (IsIgnoredRuntimeReference(reference))
+            return true;
+
+        var resolvedPath = RewriteHostVersion(reference, hostRegex, hostReplacement);
+        if (File.Exists(resolvedPath))
+            assemblyReferences.Add(resolvedPath);
+        return true;
     }
 
     private static bool IsNugetReference(string reference, out string packageId, out string? version)
@@ -127,12 +212,33 @@ internal static partial class CSharpDirectiveParser
 
 internal readonly record struct PackageReference(string PackageId, string? Version);
 
-internal sealed class ParsedDirectives(
+internal readonly record struct SourceFileEntry(string Path, string CleanSource);
+
+/// <summary>
+/// Result of parsing a single .csx file (before graph merge).
+/// </summary>
+internal sealed class ParsedFile(
     string cleanSource,
     List<PackageReference> packages,
-    List<string> fileReferences)
+    List<string> assemblyReferences,
+    List<string> loadedFiles)
 {
     public string CleanSource { get; } = cleanSource;
     public IReadOnlyList<PackageReference> Packages { get; } = packages;
-    public IReadOnlyList<string> FileReferences { get; } = fileReferences;
+    public IReadOnlyList<string> AssemblyReferences { get; } = assemblyReferences;
+    public IReadOnlyList<string> LoadedFiles { get; } = loadedFiles;
+}
+
+/// <summary>
+/// Flattened result of the entire script graph.
+/// SourceFiles are in topological order (dependencies first).
+/// </summary>
+internal sealed class ScriptGraph(
+    List<SourceFileEntry> sourceFiles,
+    List<PackageReference> packages,
+    List<string> assemblyReferences)
+{
+    public IReadOnlyList<SourceFileEntry> SourceFiles { get; } = sourceFiles;
+    public IReadOnlyList<PackageReference> Packages { get; } = packages;
+    public IReadOnlyList<string> AssemblyReferences { get; } = assemblyReferences;
 }

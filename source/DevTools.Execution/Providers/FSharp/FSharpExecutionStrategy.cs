@@ -11,7 +11,8 @@ namespace DevTools.Execution.Providers.FSharp;
 public sealed class FSharpExecutionStrategy(
     string scriptPath,
     IHostContextExecutor hostContext,
-    ICommandRunner commandRunner) : IExecutionStrategy
+    ICommandRunner commandRunner,
+    ICompiledScriptBridge bridgeSupport) : IExecutionStrategy
 {
     private static readonly TimeSpan CompileTimeout = TimeSpan.FromSeconds(30);
 
@@ -22,15 +23,19 @@ public sealed class FSharpExecutionStrategy(
         try
         {
             progress?.Report($"Preparing {scriptName}...");
-            var command = await CompileAsync(scriptPath, progress, cancellationToken).ConfigureAwait(false);
-            if (command == null)
-                return ExecutionResult.Failed($"F# compilation failed for '{scriptPath}'.", durationMs: stopwatch.ElapsedMilliseconds);
+            var compilationResult = await CompileAsync(scriptPath, progress, cancellationToken).ConfigureAwait(false);
+
+            if (compilationResult == null)
+                return ExecutionResult.Failed($"F# compilation timeout after {CompileTimeout.TotalSeconds:0}s for '{scriptName}'.", durationMs: stopwatch.ElapsedMilliseconds);
+
+            if (!compilationResult.Success || compilationResult.Command == null)
+                return ExecutionResult.Failed(compilationResult.FormatDiagnostics($"F# compilation failed for '{scriptName}'."), durationMs: stopwatch.ElapsedMilliseconds);
 
             progress?.Report($"Running {scriptName}...");
             var result = await hostContext
                 .ExecuteAsync(() =>
                 {
-                    var execResult = FSharpExecutor.ExecuteCommand(command, commandRunner);
+                    var execResult = commandRunner.RunCompiledCommand(compilationResult.Command);
                     stopwatch.Stop();
                     return execResult;
                 }, cancellationToken)
@@ -55,8 +60,8 @@ public sealed class FSharpExecutionStrategy(
         }
     }
 
-    private static async Task<object?> CompileAsync(
-        string scriptPath,
+    private async Task<ScriptCompilationResult?> CompileAsync(
+        string path,
         IProgress<string>? progress,
         CancellationToken ct)
     {
@@ -65,11 +70,11 @@ public sealed class FSharpExecutionStrategy(
 
         try
         {
-            return await FSharpCompilationCache.GetOrCompileAsync(scriptPath, progress, timeoutCts.Token).ConfigureAwait(false);
+            return await FSharpCompilationCache.GetOrCompileAsync(path, bridgeSupport, progress, timeoutCts.Token).ConfigureAwait(false);
         }
         catch (OperationCanceledException) when (!ct.IsCancellationRequested)
         {
-            Trace.TraceError($"F# compilation timeout after {CompileTimeout.TotalSeconds:0}s for '{scriptPath}'.");
+            Trace.TraceError($"F# compilation timeout after {CompileTimeout.TotalSeconds:0}s for '{path}'.");
             return null;
         }
     }

@@ -13,7 +13,7 @@ public sealed class CSharpExecutionStrategy(
     string scriptPath,
     IHostContextExecutor hostContext,
     ICommandRunner commandRunner,
-    IFSharpHostSupport hostSupport) : IExecutionStrategy
+    ICompiledScriptBridge bridgeSupport) : IExecutionStrategy
 {
     private static readonly TimeSpan CompileTimeout = TimeSpan.FromSeconds(30);
 
@@ -30,18 +30,13 @@ public sealed class CSharpExecutionStrategy(
                 return ExecutionResult.Failed($"C# compilation timeout after {CompileTimeout.TotalSeconds:0}s for '{scriptName}'.", durationMs: stopwatch.ElapsedMilliseconds);
 
             if (!compilationResult.Success || compilationResult.Command == null)
-            {
-                var errorMessage = compilationResult.Diagnostics.Count > 0
-                    ? string.Join(Environment.NewLine, compilationResult.Diagnostics)
-                    : $"C# compilation failed for '{scriptName}'.";
-                return ExecutionResult.Failed(errorMessage, durationMs: stopwatch.ElapsedMilliseconds);
-            }
+                return ExecutionResult.Failed(compilationResult.FormatDiagnostics($"C# compilation failed for '{scriptName}'."), durationMs: stopwatch.ElapsedMilliseconds);
 
             progress?.Report($"Running {scriptName}...");
             var result = await hostContext
                 .ExecuteAsync(() =>
                 {
-                    var execResult = commandRunner.RunFSharpCommand(compilationResult.Command);
+                    var execResult = commandRunner.RunCompiledCommand(compilationResult.Command);
                     stopwatch.Stop();
                     return execResult;
                 }, cancellationToken)
@@ -66,8 +61,8 @@ public sealed class CSharpExecutionStrategy(
         }
     }
 
-    private async Task<CSharpCompilationResult?> CompileAsync(
-        string scrPath,
+    private async Task<ScriptCompilationResult?> CompileAsync(
+        string path,
         IProgress<string>? progress,
         CancellationToken ct)
     {
@@ -76,11 +71,11 @@ public sealed class CSharpExecutionStrategy(
 
         try
         {
-            return await CSharpCompilationCache.GetOrCompileAsync(scrPath, hostSupport, progress, timeoutCts.Token).ConfigureAwait(false);
+            return await CSharpCompilationCache.GetOrCompileAsync(path, bridgeSupport, progress, timeoutCts.Token).ConfigureAwait(false);
         }
         catch (OperationCanceledException) when (!ct.IsCancellationRequested)
         {
-            Trace.TraceError($"C# compilation timeout after {CompileTimeout.TotalSeconds:0}s for '{scrPath}'.");
+            Trace.TraceError($"C# compilation timeout after {CompileTimeout.TotalSeconds:0}s for '{path}'.");
             return null;
         }
     }

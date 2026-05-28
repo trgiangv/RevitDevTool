@@ -5,7 +5,7 @@ using DevTools.Logging;
 
 namespace AcadDevTool.HostAdapters;
 
-public sealed class AcadFSharpSupport(IHostAppInfo hostAppInfo) : IFSharpHostSupport
+public sealed class AcadCompiledScriptBridge(IHostAppInfo hostAppInfo) : ICompiledScriptBridge
 {
     public IEnumerable<string> GetSessionReferences()
     {

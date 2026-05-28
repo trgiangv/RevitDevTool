@@ -13,7 +13,7 @@ public interface ICommandRunner
     ExecutionResult RunCommand(CommandItem commandItem);
 
     /// <summary>
-    /// Executes a compiled F# command object using the host's execution mechanism.
+    /// Executes a compiled script command (C# or F#) using the host's execution mechanism.
     /// </summary>
-    ExecutionResult RunFSharpCommand(object compiledCommand);
+    ExecutionResult RunCompiledCommand(object compiledCommand);
 }

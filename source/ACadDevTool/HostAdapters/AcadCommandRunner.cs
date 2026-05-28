@@ -32,11 +32,11 @@ public sealed class AcadCommandRunner : ICommandRunner
 #endif
     }
 
-    public ExecutionResult RunFSharpCommand(object compiledCommand)
+    public ExecutionResult RunCompiledCommand(object compiledCommand)
     {
         var method = compiledCommand.GetType().GetMethod("Execute", BindingFlags.Public | BindingFlags.Instance);
         if (method == null)
-            return ExecutionResult.Failed("F# command does not have an Execute method.");
+            return ExecutionResult.Failed("Compiled command does not have an Execute method.");
 
         method.Invoke(compiledCommand, null);
         return ExecutionResult.Succeeded();

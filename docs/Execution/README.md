@@ -254,7 +254,7 @@ sequenceDiagram
     Note over Exec: FSI session with host API references
     Note over Exec: 30 second compilation timeout
     Exec-->>Cache: compiled command object
-    Strat->>Host: ExecuteAsync(() => runner.RunFSharpCommand(compiled))
+    Strat->>Host: ExecuteAsync(() => runner.RunCompiledCommand(compiled))
     Host-->>Strat: ExecutionResult
     Strat-->>Orch: result
 ```
@@ -264,7 +264,7 @@ sequenceDiagram
 - NuGet resolution: `#r "nuget: Some.Package"` directives parsed, packages downloaded via `NugetInstaller` into `%APPDATA%/RevitDevTool/nuget`
 - 30-second compile timeout
 - `FSharpDependencyResolver`: resolves NuGet package closure via `nuget.org` API
-- Host API refs: `IFSharpHostSupport.GetSessionReferences()` provides RevitAPI.dll etc. to the FSI session
+- Host API refs: `ICompiledScriptBridge.GetSessionReferences()` provides RevitAPI.dll etc. to the FSI session
 
 ---
 

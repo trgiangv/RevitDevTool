@@ -9,17 +9,16 @@ internal static class FSharpDependencyResolver
     public static async Task<FSharpNugetResolutionResult> ResolveAsync(
         string entryScriptPath,
         LoadGraph graph,
-        IFSharpHostSupport hostSupport,
+        ICompiledScriptBridge bridgeSupport,
         IProgress<string>? progress = null,
         CancellationToken ct = default)
     {
         var entryScript = Path.GetFullPath(entryScriptPath);
         var entryScriptName = Path.GetFileName(entryScript);
-        var hostVersion = hostSupport.GetHostVersion();
-        var hostPattern = hostSupport.GetHostReferencePattern();
-        var hostReplacement = hostSupport.GetHostReferenceReplacement();
+        var hostPattern = bridgeSupport.GetHostReferencePattern();
+        var hostReplacement = bridgeSupport.GetHostReferenceReplacement();
         var references = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-        var resolvedReferenceLines = ResolveFileReferences(graph.FileReferences, hostVersion, hostPattern, hostReplacement, references);
+        var resolvedReferenceLines = ResolveFileReferences(graph.FileReferences, hostPattern, hostReplacement, references);
         var requiresRewrite = graph.Packages.Count > 0 || resolvedReferenceLines.Count > 0;
 
         if (graph.Packages.Count > 0)
@@ -52,7 +51,6 @@ internal static class FSharpDependencyResolver
 
     private static IReadOnlyDictionary<string, IReadOnlyDictionary<int, string>> ResolveFileReferences(
         IReadOnlyList<ReferenceDirective> directives,
-        string hostVersion,
         string? hostPattern,
         string hostReplacement,
         HashSet<string> references)

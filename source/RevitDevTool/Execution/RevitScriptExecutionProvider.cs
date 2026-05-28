@@ -11,7 +11,7 @@ public sealed class RevitScriptExecutionProvider(
     IIronPythonBridge ironPythonBridge, 
     IHostContextExecutor hostContext, 
     ICommandRunner commandRunner,
-    IFSharpHostSupport fsharpHostSupport) : ScriptExecutionProviderBase(pythonInitializer, executor, ironPythonBridge, hostContext, commandRunner, fsharpHostSupport)
+    ICompiledScriptBridge compiledScriptBridge) : ScriptExecutionProviderBase(pythonInitializer, executor, ironPythonBridge, hostContext, commandRunner, compiledScriptBridge)
 {
     private readonly IIronPythonBridge _bridge = ironPythonBridge;
     private readonly IHostContextExecutor _hostContext = hostContext;

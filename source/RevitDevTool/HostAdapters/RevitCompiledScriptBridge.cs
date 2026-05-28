@@ -1,11 +1,10 @@
 using System.Reflection;
 using DevTools.Execution.Interfaces;
 using DevTools.Logging;
-using RevitDevTool.Core;
 
 namespace RevitDevTool.HostAdapters;
 
-public sealed class RevitFSharpSupport(IHostAppInfo hostAppInfo) : IFSharpHostSupport
+public sealed class RevitCompiledScriptBridge(IHostAppInfo hostAppInfo) : ICompiledScriptBridge
 {
     public IEnumerable<string> GetSessionReferences()
     {

@@ -3,7 +3,6 @@ using System.IO;
 using System.Reflection;
 using System.Text;
 using DevTools.Execution.Interfaces;
-using DevTools.Execution.Models;
 using FSharp.Compiler.Diagnostics;
 using FSharp.Compiler.Interactive;
 using Microsoft.FSharp.Core;
@@ -11,14 +10,14 @@ namespace DevTools.Execution.Providers.FSharp;
 
 /// <summary>
 /// Creates an FsiEvaluationSession and evaluates an F# script.
-/// Uses <see cref="IFSharpHostSupport"/> for host-specific type discovery and session references.
+/// Uses <see cref="ICompiledScriptBridge"/> for host-specific type discovery and session references.
 /// </summary>
 internal static class FSharpExecutor
 {
     public static FSharpCompilationOutput CreateSessionAndEvaluate(
         string resolvedScriptPath,
         string[] references,
-        IFSharpHostSupport hostSupport)
+        ICompiledScriptBridge bridgeSupport)
     {
         var assemblySnapshot = new HashSet<Assembly>(AppDomain.CurrentDomain.GetAssemblies());
 
@@ -29,7 +28,7 @@ internal static class FSharpExecutor
 
         try
         {
-            var sessionReferences = hostSupport.GetSessionReferences();
+            var sessionReferences = bridgeSupport.GetSessionReferences();
             var allRefs = new HashSet<string>(sessionReferences, StringComparer.OrdinalIgnoreCase);
             allRefs.UnionWith(references.Where(r => !string.IsNullOrWhiteSpace(r)));
 
@@ -70,7 +69,7 @@ internal static class FSharpExecutor
                 return new FSharpCompilationOutput(null, null);
             }
 
-            var commandInstance = hostSupport.FindAndCreateCommand(assemblySnapshot);
+            var commandInstance = bridgeSupport.FindAndCreateCommand(assemblySnapshot);
             if (commandInstance != null)
                 return new FSharpCompilationOutput(commandInstance, session);
 
@@ -98,20 +97,15 @@ internal static class FSharpExecutor
         }
     }
     
-    private static object? FindAndCreateCommand(this IFSharpHostSupport fSharpHost, HashSet<Assembly> assemblySnapshot)
+    private static object? FindAndCreateCommand(this ICompiledScriptBridge fSharpBridge, HashSet<Assembly> assemblySnapshot)
     {
         var current = new HashSet<Assembly>(AppDomain.CurrentDomain.GetAssemblies());
         current.ExceptWith(assemblySnapshot);
         return current
-            .Select(fSharpHost.TryFindCommandType)
+            .Select(fSharpBridge.TryFindCommandType)
             .OfType<Type>()
             .Select(Activator.CreateInstance)
             .FirstOrDefault();
-    }
-
-    public static ExecutionResult ExecuteCommand(object compiledCommand, ICommandRunner commandRunner)
-    {
-        return commandRunner.RunFSharpCommand(compiledCommand);
     }
 
     private static void DisposeSession(Shell.FsiEvaluationSession session) =>
