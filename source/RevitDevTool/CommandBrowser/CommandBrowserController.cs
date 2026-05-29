@@ -1,8 +1,10 @@
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Interop;
+using System.Windows.Threading;
 using Autodesk.Revit.DB.Events;
 using Autodesk.Windows;
+using DevTools.Utilities;
 using RevitDevTool.CommandBrowser.Services;
 using RevitDevTool.CommandBrowser.ViewModels;
 using RevitDevTool.CommandBrowser.Views;
@@ -23,27 +25,25 @@ public sealed class CommandBrowserController(
 {
     private const string ControlName = "DevToolsCommandBrowser";
     private bool _initialized;
+    private bool _loaded;
+    private bool _desiredVisible;
     private UIControlledApplication? _application;
 
     public void Initialize(UIControlledApplication application)
     {
         _application = application;
-
-        snoopService.SnoopAll();
-        snoopService.StartTracking();
-        cache.Load(snoopService.AllCommands);
-        viewModel.InitializeView();
+        _desiredVisible = cache.IsBarVisible;
         _initialized = true;
 
         application.ControlledApplication.DocumentOpened += OnDocumentOpened;
 
-        if (cache.IsBarVisible)
-            Add();
+        if (_desiredVisible)
+            ScheduleRetry();
     }
 
     public void Shutdown()
     {
-        cache.IsBarVisible = IsAdded();
+        cache.IsBarVisible = _desiredVisible;
         cache.Save();
 
         if (_application is not null)
@@ -64,28 +64,68 @@ public sealed class CommandBrowserController(
     {
         if (!_initialized) return;
 
-        if (IsAdded())
-            Remove();
+        if (_desiredVisible || IsAdded())
+        {
+            _desiredVisible = false;
+            Hide();
+        }
         else
-            Add();
+        {
+            _desiredVisible = true;
+            Show();
+        }
 
-        cache.IsBarVisible = IsAdded();
+        cache.IsBarVisible = _desiredVisible;
         cache.Save();
+    }
+
+    private void EnsureLoaded()
+    {
+        if (_loaded) return;
+
+        snoopService.SnoopAll();
+        snoopService.StartTracking();
+        cache.Load(snoopService.AllCommands);
+        viewModel.InitializeView();
+        _loaded = true;
+    }
+
+    private void Show()
+    {
+        HostUiHelper.RunOnMainThread(() =>
+        {
+            EnsureLoaded();
+            if (TryAdd())
+                return;
+
+            ScheduleRetry();
+        });
+    }
+
+    private static void Hide()
+    {
+        HostUiHelper.RunOnMainThread(Remove);
     }
 
     /// <summary>
     /// Injects the command browser bar at the top of the document pane.
     /// Creates a fresh view instance each time (WPF requires a clean logical parent).
     /// </summary>
-    private void Add()
+    private bool TryAdd()
     {
-        if (IsAdded()) Remove();
+        if (IsAdded()) return true;
 
         var grid = FindDocumentGrid();
-        if (grid is null) return;
+        if (grid is null) return false;
 
         // Only inject when the grid is in its pristine 2-row state
-        if (grid.RowDefinitions.Count != 2) return;
+        if (grid.RowDefinitions.Count != 2) return false;
+
+        var background = grid.Children.OfType<Border>().FirstOrDefault(b => string.IsNullOrEmpty(b.Name));
+        var contentPanel = grid.Children.OfType<Border>().FirstOrDefault(b => b.Name == "ContentPanel");
+        var tabStrip = grid.Children.OfType<Grid>().FirstOrDefault();
+        if (background is null || contentPanel is null || tabStrip is null)
+            return false;
 
         var control = new CommandBrowserView
         {
@@ -97,21 +137,18 @@ public sealed class CommandBrowserController(
         grid.RowDefinitions.Insert(1, new RowDefinition { Height = GridLength.Auto });
 
         // Background border spans all 3 rows
-        Grid.SetRowSpan(
-            grid.Children.OfType<Border>().First(b => string.IsNullOrEmpty(b.Name)),
-            3);
+        Grid.SetRowSpan(background, 3);
 
         // Content panel moves to row 2
-        Grid.SetRow(
-            grid.Children.OfType<Border>().First(b => b.Name == "ContentPanel"),
-            2);
+        Grid.SetRow(contentPanel, 2);
 
         // Tab strip stays at row 0
-        Grid.SetRow(grid.Children.OfType<Grid>().First(), 0);
+        Grid.SetRow(tabStrip, 0);
 
         // Add our control at row 1
         grid.Children.Add(control);
         Grid.SetRow(control, 1);
+        return true;
     }
 
     /// <summary>
@@ -165,8 +202,20 @@ public sealed class CommandBrowserController(
 
     private void OnDocumentOpened(object? sender, DocumentOpenedEventArgs e)
     {
-        if (!_initialized || !cache.IsBarVisible) return;
-        if (!IsAdded()) Add();
+        if (!_initialized || !_desiredVisible) return;
+        ScheduleRetry();
+    }
+
+    private void ScheduleRetry()
+    {
+        if (!_desiredVisible) return;
+
+        HostUiHelper.HostDispatcher?.BeginInvoke((Action)(() =>
+        {
+            if (!_initialized || !_desiredVisible) return;
+            EnsureLoaded();
+            TryAdd();
+        }), DispatcherPriority.ApplicationIdle);
     }
 
     /// <summary>

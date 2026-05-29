@@ -13,12 +13,25 @@ public sealed class CommandBrowserCache(IFileConfig<PathOptions> fileConfig)
     private readonly LinkedList<string> _recentOrder = [];
     private readonly HashSet<string> _recentSet = new(StringComparer.Ordinal);
     private readonly HashSet<string> _favoriteIds = new(StringComparer.Ordinal);
+    private bool _visibilityLoaded;
 
-    public bool IsBarVisible { get; set; } = true;
+    private bool _isBarVisible = true;
+
+    public bool IsBarVisible
+    {
+        get
+        {
+            LoadVisibility();
+            return _isBarVisible;
+        }
+        set
+        {
+            _visibilityLoaded = true;
+            _isBarVisible = value;
+        }
+    }
 
     public bool IsRecent(string commandId) => _recentSet.Contains(commandId);
-
-    public bool IsFavorite(string commandId) => _favoriteIds.Contains(commandId);
 
     /// <summary>
     /// Restores favorites and bar visibility from persisted config.
@@ -28,7 +41,8 @@ public sealed class CommandBrowserCache(IFileConfig<PathOptions> fileConfig)
     {
         var config = fileConfig.Load<CommandBrowserConfig>() ?? new CommandBrowserConfig();
 
-        IsBarVisible = config.IsBarVisible;
+        _visibilityLoaded = true;
+        _isBarVisible = config.IsBarVisible;
 
         _favoriteIds.Clear();
         foreach (var id in config.FavoriteCommandIds)
@@ -43,9 +57,18 @@ public sealed class CommandBrowserCache(IFileConfig<PathOptions> fileConfig)
         var config = new CommandBrowserConfig
         {
             FavoriteCommandIds = [.._favoriteIds],
-            IsBarVisible = IsBarVisible
+            IsBarVisible = _isBarVisible
         };
         fileConfig.Save(config);
+    }
+
+    private void LoadVisibility()
+    {
+        if (_visibilityLoaded) return;
+
+        var config = fileConfig.Load<CommandBrowserConfig>() ?? new CommandBrowserConfig();
+        _isBarVisible = config.IsBarVisible;
+        _visibilityLoaded = true;
     }
 
     /// <summary>
