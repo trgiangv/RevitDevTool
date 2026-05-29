@@ -118,6 +118,8 @@ internal static class FSharpExecutor
             "fsi.exe",
             "--noninteractive",
             "--nologo",
+            "--define:TRACE",
+            "--define:DEBUG",
 #if NETFRAMEWORK
             "--multiemit-",
 #else

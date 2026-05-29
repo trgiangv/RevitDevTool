@@ -118,7 +118,8 @@ internal static class CSharpCompiler
 
         var parseOptions = CSharpParseOptions.Default
             .WithLanguageVersion(MaxLanguageVersion)
-            .WithKind(SourceCodeKind.Regular);
+            .WithKind(SourceCodeKind.Regular)
+            .WithPreprocessorSymbols("TRACE", "DEBUG");
 
         var syntaxTrees = sourceFiles
             .Select(f => CSharpSyntaxTree.ParseText(f.CleanSource, parseOptions, f.Path))
