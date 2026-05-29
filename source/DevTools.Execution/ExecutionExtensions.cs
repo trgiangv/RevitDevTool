@@ -44,6 +44,9 @@ public static class ExecutionExtensions
 
         services.AddSingleton<CSharpCompilationCache>();
         services.AddSingleton<FSharpCompilationCache>();
+        services.AddSingleton<ScriptExecutionStrategyFactory>();
+        services.TryAddSingleton<IScriptExecutionStrategyFactory>(
+            sp => sp.GetRequiredService<ScriptExecutionStrategyFactory>());
 
         services.AddSingleton<ITreeStateManager, TreeStateManager>();
         services.AddSingleton<IFileWatcherService, FileWatcherService>();

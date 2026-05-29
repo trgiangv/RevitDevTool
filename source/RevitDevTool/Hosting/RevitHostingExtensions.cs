@@ -1,6 +1,7 @@
 using CommunityToolkit.Mvvm.Messaging;
 using DevTools.Execution;
 using DevTools.Execution.Interfaces;
+using DevTools.Execution.Providers;
 using DevTools.McpParser.Models;
 using DevTools.Logging;
 using DevTools.Logging.Abstractions;
@@ -122,8 +123,9 @@ internal static class RevitHostingExtensions
         services.AddSingleton<IIronPythonBridge, RevitIronPythonBridge>();
 
         services.AddExecutionServices(registerDefaultScriptProvider: false);
-        services.AddSingleton<IExecutionProvider, RevitScriptExecutionProvider>();
-        services.AddKeyedSingleton<IExecutionProvider, RevitScriptExecutionProvider>(ExecutionMode.Script);
+        services.AddSingleton<IScriptExecutionStrategyFactory, RevitScriptExecutionStrategyFactory>();
+        services.AddSingleton<IExecutionProvider, ScriptExecutionProvider>();
+        services.AddKeyedSingleton<IExecutionProvider, ScriptExecutionProvider>(ExecutionMode.Script);
         return builder;
     }
 }
