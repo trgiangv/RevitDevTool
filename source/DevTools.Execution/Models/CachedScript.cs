@@ -1,18 +1,30 @@
+using System.Diagnostics;
+
 namespace DevTools.Execution.Models;
 
 /// <summary>
 /// Unified cache entry for compiled scripts (C# and F#).
-/// Holds the compiled command and optional cleanup disposables
+/// Holds a compiled command factory and optional cleanup disposables
 /// (e.g., collectible AssemblyLoadContext for C#, FsiEvaluationSession + temp files for F#).
 /// </summary>
-internal sealed class CachedScript(string contentHash, object command, params IDisposable?[] cleanups) : IDisposable
+internal sealed class CachedScript(string contentHash, Func<object> createCommand, params IDisposable?[] cleanups) : IDisposable
 {
     public string ContentHash { get; } = contentHash;
-    public object Command { get; } = command;
+
+    public object CreateCommand() => createCommand();
 
     public void Dispose()
     {
         foreach (var item in cleanups)
-            item?.Dispose();
+        {
+            try
+            {
+                item?.Dispose();
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"[CachedScript] Cleanup failed: {ex.Message}");
+            }
+        }
     }
 }

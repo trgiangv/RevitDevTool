@@ -72,8 +72,15 @@ public sealed class RevitCommandRunner : ICommandRunner
         var message = string.Empty;
         var data = GetExternalCommandData();
         var elements = GetElementSet();
-        var result = command.Execute(data, ref message, elements);
-        return ToExecutionResult(result, message);
+        try
+        {
+            var result = command.Execute(data, ref message, elements);
+            return ToExecutionResult(result, message);
+        }
+        finally
+        {
+            RevitContext.Application.PurgeReleasedAPIObjects();
+        }
     }
 
 #if NET

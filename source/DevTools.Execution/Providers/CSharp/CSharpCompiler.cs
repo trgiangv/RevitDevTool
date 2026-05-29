@@ -46,6 +46,7 @@ internal static class CSharpCompiler
     }
 
     private static ScriptCompilationResult LoadAndCreateCommand(
+        // ReSharper disable once UnusedParameter.Local
         byte[] peBytes, IReadOnlyCollection<string> nugetDllPaths, ICompiledScriptBridge hostSupport)
     {
 #if NET

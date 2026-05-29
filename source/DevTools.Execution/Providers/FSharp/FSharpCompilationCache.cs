@@ -32,7 +32,7 @@ public sealed class FSharpCompilationCache(ICompiledScriptBridge bridge)
         {
             progress?.Report($"Using cached {scriptName}.");
             Debug.WriteLine($"[FSharpCache] Hit for '{scriptName}' (hash: {currentHash[..16]})");
-            return ScriptCompilationResult.Succeeded(cached.Command);
+            return ScriptCompilationResult.Succeeded(cached.CreateCommand());
         }
 
         var gate = _compileLocks.GetOrAdd(canonicalPath, _ => new SemaphoreSlim(1, 1));
@@ -43,7 +43,7 @@ public sealed class FSharpCompilationCache(ICompiledScriptBridge bridge)
             {
                 progress?.Report($"Using cached {scriptName}.");
                 Debug.WriteLine($"[FSharpCache] Hit (after lock) for '{scriptName}'");
-                return ScriptCompilationResult.Succeeded(cached.Command);
+                return ScriptCompilationResult.Succeeded(cached.CreateCommand());
             }
 
             if (cached != null)
@@ -68,7 +68,13 @@ public sealed class FSharpCompilationCache(ICompiledScriptBridge bridge)
                 return ScriptCompilationResult.Failed("No executable command type found in F# script.");
             }
 
-            var entry = new CachedScript(currentHash, output.Command, output.Session, resolution.Cleanup);
+            var commandType = output.Command.GetType();
+            var entry = new CachedScript(
+                currentHash,
+                () => Activator.CreateInstance(commandType)
+                      ?? throw new InvalidOperationException($"Failed to create instance of {commandType.FullName}."),
+                output.Session,
+                resolution.Cleanup);
             _cache[canonicalPath] = entry;
 
             Debug.WriteLine($"[FSharpCache] Cached '{scriptName}' (hash: {currentHash[..16]})");

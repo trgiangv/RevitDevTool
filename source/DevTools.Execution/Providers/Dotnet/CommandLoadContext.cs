@@ -13,7 +13,16 @@ public class CommandLoadContext : AssemblyLoadContext
 {
     private readonly AssemblyDependencyResolver _resolver;
 
-    private static readonly HashSet<string> SharedAssemblyNames = new(StringComparer.OrdinalIgnoreCase);
+    private static readonly HashSet<string> SharedAssemblyNames = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "RevitAPI",
+        "RevitAPIUI",
+        "AdWindows",
+        "acmgd",
+        "acdbmgd",
+        "accoremgd",
+        "acdbmgdbrep"
+    };
 
     private static readonly string[] SharedPrefixes =
     [

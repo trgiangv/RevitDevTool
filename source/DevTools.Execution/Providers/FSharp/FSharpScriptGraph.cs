@@ -73,8 +73,8 @@ internal static partial class FSharpScriptGraph
 
         foreach (var path in graph.Nodes.Keys.OrderBy(k => k, StringComparer.OrdinalIgnoreCase))
         {
-            hash.AppendData(Encoding.UTF8.GetBytes(path.ToLowerInvariant()));
             hash.AppendData(File.ReadAllBytes(path));
+            hash.AppendData([0]);
         }
 
         return Convert.ToHexStringLower(hash.GetHashAndReset());
@@ -95,7 +95,7 @@ internal static partial class FSharpScriptGraph
             for (var i = 0; i < node.Lines.Length; i++)
                 rewritten.Add(TransformLine(node, i, pathMap, resolvedReferenceLines));
 
-            await WriteAllLinesAsync(pathMap[node.Path], rewritten, ct).ConfigureAwait(false);
+            await File.WriteAllLinesAsync(pathMap[node.Path], rewritten, ct).ConfigureAwait(false);
         }
 
         return new RewriteResult(pathMap[entryScript],
@@ -104,7 +104,7 @@ internal static partial class FSharpScriptGraph
 
     private static async Task<ScriptNode> ParseScriptNodeAsync(string filePath, CancellationToken ct)
     {
-        var lines = await ReadAllLinesAsync(filePath, ct).ConfigureAwait(false);
+        var lines = await File.ReadAllLinesAsync(filePath, ct).ConfigureAwait(false);
         var directory = Path.GetDirectoryName(filePath) ?? string.Empty;
         var loadTargets = new Dictionary<int, string>();
 
@@ -199,27 +199,6 @@ internal static partial class FSharpScriptGraph
         // ReSharper disable once RedundantSuppressNullableWarningExpression
         var cleaned = VersionPrefixRegex().Replace(raw!.Trim(), "").Trim();
         return cleaned.Length == 0 ? null : cleaned;
-    }
-
-    private static Task<string[]> ReadAllLinesAsync(string path, CancellationToken ct)
-    {
-#if NET
-        return File.ReadAllLinesAsync(path, ct);
-#else
-        ct.ThrowIfCancellationRequested();
-        return Task.FromResult(File.ReadAllLines(path));
-#endif
-    }
-
-    private static Task WriteAllLinesAsync(string path, IEnumerable<string> lines, CancellationToken ct)
-    {
-#if NET
-        return File.WriteAllLinesAsync(path, lines, ct);
-#else
-        ct.ThrowIfCancellationRequested();
-        File.WriteAllLines(path, lines.ToArray());
-        return Task.CompletedTask;
-#endif
     }
 }
 

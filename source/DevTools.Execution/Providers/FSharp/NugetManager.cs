@@ -11,6 +11,7 @@ namespace DevTools.Execution.Providers.FSharp;
 internal static class NugetManager
 {
     private static readonly string NugetRoot = Path.Combine(AppUtils.GetApplicationDataPath(), "nuget");
+    private static readonly string RestoreRoot = Path.Combine(NugetRoot, ".restore");
     private static readonly ConcurrentDictionary<string, string[]> SessionCache = new();
 
     public static async Task<string[]> ResolvePackageDllsAsync(string packageId, string? version, CancellationToken ct)
@@ -25,16 +26,8 @@ internal static class NugetManager
         if (SessionCache.TryGetValue(cacheKey, out var cached))
             return cached;
 
-        var packageDir = FindInstalledPackageDir(packageId, resolvedVersion);
-        if (packageDir == null)
-        {
-            await InstallPackageAsync(packageId, resolvedVersion, ct).ConfigureAwait(false);
-            packageDir = FindInstalledPackageDir(packageId, resolvedVersion)
-                ?? throw new InvalidOperationException(
-                    $"nuget.exe install succeeded but package folder not found for '{packageId} {resolvedVersion}'.");
-        }
-
-        var dlls = ScanDlls(packageDir, packageId, resolvedVersion);
+        var packageDirs = await RestorePackageGraphAsync(packageId, resolvedVersion, ct).ConfigureAwait(false);
+        var dlls = ScanDlls(packageDirs, packageId, resolvedVersion);
         SessionCache[cacheKey] = dlls;
         return dlls;
     }
@@ -46,7 +39,7 @@ internal static class NugetManager
         return await NetworkService.WithRetryAsync(async () =>
         {
             var result = await Cli.Wrap(NugetInstaller.NugetExePath)
-                .WithArguments(["search", packageId, "-Source", "https://api.nuget.org/v3/index.json", "-Take", "1"])
+                .WithArguments(["search", packageId, "-Source", "https://api.nuget.org/v3/index.json", "-Take", "10"])
                 .WithValidation(CommandResultValidation.None)
                 .ExecuteBufferedAsync(ct).ConfigureAwait(false);
 
@@ -58,19 +51,64 @@ internal static class NugetManager
         }).ConfigureAwait(false);
     }
 
-    private static async Task InstallPackageAsync(string packageId, string version, CancellationToken ct)
+    private static async Task<string[]> RestorePackageGraphAsync(string packageId, string version, CancellationToken ct)
     {
         Directory.CreateDirectory(NugetRoot);
+        Directory.CreateDirectory(RestoreRoot);
 
+        var restoreDir = Path.Combine(RestoreRoot, Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(restoreDir);
+
+        try
+        {
+            await InstallPackageGraphAsync(packageId, version, restoreDir, ct).ConfigureAwait(false);
+
+            var restoredPackageDirs = Directory.GetDirectories(restoreDir);
+            if (restoredPackageDirs.Length == 0)
+            {
+                throw new InvalidOperationException(
+                    $"nuget.exe install succeeded but no package folders were restored for '{packageId} {version}'.");
+            }
+
+            foreach (var restoredPackageDir in restoredPackageDirs)
+            {
+                var targetDir = Path.Combine(NugetRoot, Path.GetFileName(restoredPackageDir));
+                CopyPackageDirectory(restoredPackageDir, targetDir);
+            }
+
+            var packageDirs = restoredPackageDirs
+                .Select(path => Path.Combine(NugetRoot, Path.GetFileName(path)))
+                .Where(Directory.Exists)
+                .ToArray();
+
+            if (!packageDirs.Any(IsRequestedPackageDir))
+            {
+                throw new InvalidOperationException(
+                    $"nuget.exe install succeeded but package folder not found for '{packageId} {version}'.");
+            }
+
+            return packageDirs;
+        }
+        finally
+        {
+            TryDeleteDirectory(restoreDir);
+        }
+
+        bool IsRequestedPackageDir(string path) =>
+            Path.GetFileName(path).Equals($"{packageId}.{version}", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static async Task InstallPackageGraphAsync(string packageId, string version, string outputDirectory, CancellationToken ct)
+    {
         await NetworkService.WithRetryAsync(async () =>
         {
             var result = await Cli.Wrap(NugetInstaller.NugetExePath)
                 .WithArguments([
                     "install", packageId,
                     "-Version", version,
-                    "-OutputDirectory", NugetRoot,
+                    "-OutputDirectory", outputDirectory,
                     "-Framework", GetCurrentFrameworkMoniker(),
-                    "-DependencyVersion", "Ignore",
+                    "-DependencyVersion", "HighestPatch",
                     "-PackageSaveMode", "nuspec;nupkg",
                     "-NonInteractive",
                     "-Source", "https://api.nuget.org/v3/index.json"
@@ -82,26 +120,74 @@ internal static class NugetManager
                 throw new InvalidOperationException(
                     $"nuget.exe install failed for '{packageId} {version}': {result.StandardError.Trim()}");
 
-            Trace.TraceInformation($"[NuGetResolver] Installed {packageId} {version}");
+            Trace.TraceInformation($"[NuGetResolver] Restored {packageId} {version} dependency graph");
         }).ConfigureAwait(false);
     }
 
-    // nuget install creates: <NugetRoot>/<PackageId>.<Version>/lib/<tfm>/*.dll
-    private static string? FindInstalledPackageDir(string packageId, string version)
+    private static void CopyPackageDirectory(string sourceDir, string targetDir)
     {
-        if (!Directory.Exists(NugetRoot))
-            return null;
+        Directory.CreateDirectory(targetDir);
 
-        var expected = Path.Combine(NugetRoot, $"{packageId}.{version}");
-        return Directory.Exists(expected) ? expected : null;
+        foreach (var sourceFile in Directory.GetFiles(sourceDir, "*", SearchOption.AllDirectories))
+        {
+            var relativePath = GetRelativePath(sourceDir, sourceFile);
+            var targetFile = Path.Combine(targetDir, relativePath);
+            if (File.Exists(targetFile))
+                continue;
+
+            Directory.CreateDirectory(Path.GetDirectoryName(targetFile)!);
+            File.Copy(sourceFile, targetFile, overwrite: false);
+        }
     }
 
-    private static string[] ScanDlls(string packageDir, string packageId, string version)
+    private static string GetRelativePath(string baseDirectory, string path)
+    {
+        var baseUri = new Uri(AppendDirectorySeparator(Path.GetFullPath(baseDirectory)));
+        var pathUri = new Uri(Path.GetFullPath(path));
+        return Uri.UnescapeDataString(baseUri.MakeRelativeUri(pathUri).ToString())
+            .Replace('/', Path.DirectorySeparatorChar);
+    }
+
+    private static string AppendDirectorySeparator(string path) =>
+        path.EndsWith(Path.DirectorySeparatorChar.ToString(), StringComparison.Ordinal) ||
+        path.EndsWith(Path.AltDirectorySeparatorChar.ToString(), StringComparison.Ordinal)
+            ? path
+            : path + Path.DirectorySeparatorChar;
+
+    private static void TryDeleteDirectory(string directory)
+    {
+        try
+        {
+            if (Directory.Exists(directory))
+                Directory.Delete(directory, recursive: true);
+        }
+        catch (Exception ex)
+        {
+            Trace.TraceWarning($"[NuGetResolver] Failed to delete restore directory '{directory}': {ex.Message}");
+        }
+    }
+
+    private static string[] ScanDlls(IReadOnlyList<string> packageDirs, string packageId, string version)
+    {
+        var dlls = new List<string>();
+
+        foreach (var packageDir in packageDirs.OrderBy(Path.GetFileName))
+            dlls.AddRange(ScanPackageDlls(packageDir));
+
+        if (dlls.Count == 0)
+            Trace.TraceWarning($"[NuGetResolver] {packageId} {version}: no compatible DLLs found in restored package graph.");
+
+        return dlls
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+    }
+
+    private static string[] ScanPackageDlls(string packageDir)
     {
         var libDir = Path.Combine(packageDir, "lib");
         if (!Directory.Exists(libDir))
         {
-            Trace.TraceWarning($"[NuGetResolver] {packageId} {version}: no lib/ folder found.");
+            Trace.TraceInformation($"[NuGetResolver] {Path.GetFileName(packageDir)}: no lib/ folder found.");
             return [];
         }
 
@@ -113,14 +199,14 @@ internal static class NugetManager
 
             var dlls = Directory.GetFiles(tfmDir, "*.dll", SearchOption.TopDirectoryOnly);
             if (dlls.Length <= 0) continue;
-            Trace.TraceInformation($"[NuGetResolver] {packageId} {version}: using TFM '{tfm}'");
+            Trace.TraceInformation($"[NuGetResolver] {Path.GetFileName(packageDir)}: using TFM '{tfm}'");
             return dlls;
         }
 
-        var availableTfms = Directory.GetDirectories(libDir).Select(Path.GetFileName).ToArray();
-        throw new InvalidOperationException(
-            $"Package '{packageId} {version}' has no compatible TFM for {System.Runtime.InteropServices.RuntimeInformation.FrameworkDescription}. " +
-            $"Available: [{string.Join(", ", availableTfms)}].");
+        Trace.TraceInformation(
+            $"[NuGetResolver] {Path.GetFileName(packageDir)}: no compatible lib TFM for " +
+            $"{System.Runtime.InteropServices.RuntimeInformation.FrameworkDescription}.");
+        return [];
     }
 
     private static string GetCurrentFrameworkMoniker()
@@ -156,11 +242,7 @@ internal static class NugetManager
         foreach (var line in output.Split(['\r', '\n'], StringSplitOptions.RemoveEmptyEntries))
         {
             var trimmed = line.Trim();
-#if NET
             if (!trimmed.StartsWith('>'))
-#else
-            if (!trimmed.StartsWith(">", StringComparison.Ordinal))
-#endif
                 continue;
 
             // "> PackageId | Version | Downloads: N"

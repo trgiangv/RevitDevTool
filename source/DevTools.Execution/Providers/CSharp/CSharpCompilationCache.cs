@@ -32,7 +32,7 @@ public sealed class CSharpCompilationCache(ICompiledScriptBridge bridge)
         {
             progress?.Report($"Using cached {scriptName}.");
             Debug.WriteLine($"[CSharpCache] Hit for '{scriptName}' (hash: {currentHash[..16]})");
-            return ScriptCompilationResult.Succeeded(cached.Command);
+            return ScriptCompilationResult.Succeeded(cached.CreateCommand());
         }
 
         var gate = _compileLocks.GetOrAdd(canonicalPath, _ => new SemaphoreSlim(1, 1));
@@ -43,7 +43,7 @@ public sealed class CSharpCompilationCache(ICompiledScriptBridge bridge)
             {
                 progress?.Report($"Using cached {scriptName}.");
                 Debug.WriteLine($"[CSharpCache] Hit (after lock) for '{scriptName}'");
-                return ScriptCompilationResult.Succeeded(cached.Command);
+                return ScriptCompilationResult.Succeeded(cached.CreateCommand());
             }
 
             if (cached != null)
@@ -61,7 +61,12 @@ public sealed class CSharpCompilationCache(ICompiledScriptBridge bridge)
 
             if (result is { Success: true, Command: not null })
             {
-                _cache[canonicalPath] = new CachedScript(currentHash, result.Command, result.Cleanup);
+                var commandType = result.Command.GetType();
+                _cache[canonicalPath] = new CachedScript(
+                    currentHash,
+                    () => Activator.CreateInstance(commandType)
+                          ?? throw new InvalidOperationException($"Failed to create instance of {commandType.FullName}."),
+                    result.Cleanup);
                 Debug.WriteLine($"[CSharpCache] Cached '{scriptName}' (hash: {currentHash[..16]})");
             }
 
@@ -95,10 +100,11 @@ public sealed class CSharpCompilationCache(ICompiledScriptBridge bridge)
             bridge.GetHostReferenceReplacement());
 
         using var hasher = IncrementalHash.CreateHash(HashAlgorithmName.SHA256);
-        foreach (var file in graph.SourceFiles)
+        foreach (var file in graph.SourceFiles.OrderBy(f => f.Path, StringComparer.OrdinalIgnoreCase))
         {
             var bytes = File.ReadAllBytes(file.Path);
             hasher.AppendData(bytes);
+            hasher.AppendData([0]);
         }
 
         var hash = hasher.GetHashAndReset();

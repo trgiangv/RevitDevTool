@@ -7,15 +7,17 @@ namespace DevTools.Execution.Providers.CSharp;
 
 /// <summary>
 /// Collectible AssemblyLoadContext for C# script execution.
-/// Preloads NuGet-resolved DLLs so script code can resolve them at runtime.
+/// Lazily resolves NuGet DLLs selected during compilation.
 /// Host assemblies (Revit API, System.*, etc.) fall through to the default context.
 /// </summary>
 internal sealed class ScriptLoadContext : AssemblyLoadContext, IDisposable
 {
+    private readonly Dictionary<string, string> _dependencyPaths;
+
     public ScriptLoadContext(IEnumerable<string> nugetDllPaths)
         : base($"CsxScript_{Guid.NewGuid():N}", isCollectible: true)
     {
-        PreloadAssemblies(nugetDllPaths);
+        _dependencyPaths = BuildDependencyPathMap(nugetDllPaths);
     }
 
     public Assembly LoadCompiledScript(byte[] peBytes)
@@ -26,25 +28,48 @@ internal sealed class ScriptLoadContext : AssemblyLoadContext, IDisposable
 
     protected override Assembly? Load(AssemblyName assemblyName)
     {
-        // Returning null delegates resolution to the default ALC,
-        // where host APIs (RevitAPI, System.*, etc.) are already loaded.
-        return null;
+        if (assemblyName.Name is null)
+            return null;
+
+        if (!_dependencyPaths.TryGetValue(assemblyName.Name, out var dllPath))
+            return null;
+
+        try
+        {
+            return LoadFromAssemblyPath(dllPath);
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"[ScriptLoadContext] Failed to load '{assemblyName.Name}' from '{dllPath}': {ex.Message}");
+            return null;
+        }
     }
 
-    private void PreloadAssemblies(IEnumerable<string> dllPaths)
+    private static Dictionary<string, string> BuildDependencyPathMap(IEnumerable<string> dllPaths)
     {
-        foreach (var dllPath in dllPaths)
+        var dependencyPaths = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var dllPath in dllPaths.Where(File.Exists))
         {
-            if (!File.Exists(dllPath)) continue;
-            try
-            {
-                using var stream = new FileStream(dllPath, FileMode.Open, FileAccess.Read);
-                LoadFromStream(stream);
-            }
-            catch (Exception ex)
-            {
-                Debug.WriteLine($"[ScriptLoadContext] Failed to preload '{Path.GetFileName(dllPath)}': {ex.Message}");
-            }
+            var assemblyName = TryGetAssemblyName(dllPath);
+            if (assemblyName is null)
+                continue;
+
+            dependencyPaths.TryAdd(assemblyName, Path.GetFullPath(dllPath));
+        }
+
+        return dependencyPaths;
+    }
+
+    private static string? TryGetAssemblyName(string dllPath)
+    {
+        try
+        {
+            return AssemblyName.GetAssemblyName(dllPath).Name;
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"[ScriptLoadContext] Failed to read assembly name from '{dllPath}': {ex.Message}");
+            return null;
         }
     }
 

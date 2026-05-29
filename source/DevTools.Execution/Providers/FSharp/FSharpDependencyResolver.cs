@@ -88,8 +88,7 @@ internal static class FSharpDependencyResolver
         }
 
         return resolvedLines.ToDictionary(
-            item => item.Key,
-            item => (IReadOnlyDictionary<int, string>)item.Value,
+            item => item.Key, IReadOnlyDictionary<int, string> (item) => item.Value,
             StringComparer.OrdinalIgnoreCase);
     }
 
