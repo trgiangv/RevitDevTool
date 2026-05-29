@@ -1,488 +1,206 @@
 # Execution System Architecture
 
-The Execution system is the core engine of RevitDevTool — a multi-language code execution framework that discovers, loads, and runs code inside the Revit process. It supports three execution modes: .NET assemblies, Python scripts, and F# scripts, all unified through a tree-view UI.
+The execution system is the shared runtime in `source/DevTools.Execution/`. It discovers user code, builds the execution tree, watches roots for changes, resolves script dependencies, and dispatches work through host adapters.
 
-**Source:** `source/DevTools.Execution/`
+The platform is not Revit-only. Revit and AutoCAD currently provide host adapters; future .NET-capable hosts should plug in through the same abstractions.
+
+Last updated: 2026-05-29
 
 ---
 
-## High-Level Architecture
+## Source Map
+
+| Area | Path |
+|------|------|
+| Shared registrations | `source/DevTools.Execution/ExecutionExtensions.cs` |
+| Orchestrator | `source/DevTools.Execution/Services/ExecutionOrchestrator.cs` |
+| Providers | `source/DevTools.Execution/Providers/` |
+| External pipe server | `source/DevTools.Execution/External/DevToolsPipeServer.cs` |
+| MCP runtime | `source/DevTools.Execution/External/Mcp/` |
+| Pytest bridge | `source/DevTools.Execution/External/Testing/` |
+| Embedded scripts | `source/DevTools.Execution/Resources/scripts/` |
+| Revit adapters | `source/RevitDevTool/HostAdapters/`, `source/RevitDevTool/Hosting/` |
+| AutoCAD adapters | `source/AcadDevTool/HostAdapters/`, `source/AcadDevTool/Hosting/` |
+
+---
+
+## Architecture
 
 ```mermaid
 flowchart TB
-    subgraph UI["Revit UI — Dockable Panel"]
-        TreeView["TreeView\n(ObservableCollection&lt;ExecutionNodeBase&gt;)"]
-    end
+    UI["Shared presentation UI\nCommand/Package/MCP/Memory views"]
+    Orch["ExecutionOrchestrator"]
+    Providers["IExecutionProvider\nAssembly + Script"]
+    Strategies["IExecutionStrategy\nAssembly, Python, IronPython, FSharp, CSharp"]
+    Host["Host adapters\nIHostContextExecutor, ICommandDiscovery, ICommandRunner, script bridges"]
+    Services["TreeStateManager\nFileWatcherService\nPackageService"]
+    External["DevToolsPipeServer\nMCP + pytest routes"]
 
-    subgraph Orchestrator["ExecutionOrchestrator"]
-        LoadPath["LoadFromPathAsync()"]
-        Reload["ReloadAsync()"]
-        Execute["ExecuteAsync()"]
-        Events["TreeChanged / ExecutionProgressChanged"]
-    end
-
-    subgraph Providers["IExecutionProvider × 2"]
-        direction LR
-        Assembly["AssemblyExecutionProvider\n(.dll → IExternalCommand)"]
-        Script["ScriptExecutionProvider\n(*script.py / *script.fsx)"]
-    end
-
-    subgraph Strategies["IExecutionStrategy × 3"]
-        direction LR
-        DotNetStrat["AssemblyExecutionStrategy\n(HostContext → ICommandRunner)"]
-        PythonStrat["PythonExecutionStrategy\n(PEP 723 → UV/pip → exec)"]
-        FSharpStrat["FSharpExecutionStrategy\n(FSI compile → RunCommand)"]
-    end
-
-    subgraph Services["Services"]
-        FileWatch["FileWatcherService\n(3-layer: FileContent / DirStructure / RootLifecycle)"]
-        TreeState["TreeStateManager\n(Capture / Restore)"]
-        PackageSvc["PackageService\n(Pixi / pip / NuGet)"]
-    end
-
-    TreeView -->|user action| Orchestrator
-    Orchestrator --> Providers
+    UI --> Orch
+    Orch --> Providers
     Providers --> Strategies
-    Orchestrator --> Services
-    FileWatch -->|FileChanged| Orchestrator
-    Orchestrator -->|TreeChanged| TreeView
+    Strategies --> Host
+    Orch --> Services
+    External --> Orch
+    External --> Services
 ```
+
+`DevTools.Execution` owns orchestration and contracts. Host projects own API-thread dispatch, command discovery, command invocation, script builtins, and host-specific context.
 
 ---
 
-## Core Interfaces
+## Execution Modes
 
-### `IExecutionProvider` — Detection & Discovery
-
-```csharp
-public interface IExecutionProvider
-{
-    string Name { get; }                        // "DotNet", "Script"
-    int Priority { get; }                       // Higher = checked first
-    bool CanHandle(string path);                // .dll → true, folder → true
-    Task<IEnumerable<ExecutionNodeBase>> DiscoverAsync(string path, ...);
-    IEnumerable<string> GetWatchPatterns();     // "*.dll", "*.py", "*.fsx"
-    bool ValidatePath(string path);
-}
-```
-
-| Provider | `Name` | `Priority` | `CanHandle` | Discover |
-|----------|--------|-----------|-------------|----------|
-| `AssemblyExecutionProvider` | `"DotNet"` | `100` | `.dll` files | Parses `IExternalCommand` from assembly |
-| `ScriptExecutionProvider` | `"Script"` | `-100` | Directories | Recurses folder tree, finds `*script.py` and `*script.fsx` |
-
-### `IExecutionStrategy` — Execution
-
-```csharp
-public interface IExecutionStrategy
-{
-    Task<ExecutionResult> ExecuteAsync(
-        IProgress<string>? progress = null,
-        CancellationToken cancellationToken = default);
-}
-```
-
-Each node in the tree carries its own `IExecutionStrategy` instance. Execution is dispatched via `IHostContextExecutor` which marshals the call onto the Revit API thread (via `ExternalEvent`).
-
----
-
-## Node Tree Model
-
-```mermaid
-classDiagram
-    class TreeNodeBase {
-        +string Name
-        +bool IsExpanded
-        +bool IsSelected
-        +bool IsVisible
-    }
-    class ExecutionNodeBase {
-        +string Id
-        +ObservableCollection~ExecutionNodeBase~ Children
-        +NodeType NodeType
-        +IExecutionStrategy? ExecutionStrategy
-        +bool IsExecutable
-        +ExecuteAsync() Task~ExecutionResult~
-    }
-    class ExecutionNodeRoot {
-        +string RootPath
-        +ExecutionMode ProviderType
-    }
-    class ExecutionNodeIntermediate {
-        +string FullPath
-    }
-    class ExecutionNode {
-        +string ExecutablePath
-        +ExecutionMode ProviderType
-        +string? SourceFilePath
-    }
-
-    TreeNodeBase <|-- ExecutionNodeBase
-    ExecutionNodeBase <|-- ExecutionNodeRoot
-    ExecutionNodeBase <|-- ExecutionNodeIntermediate
-    ExecutionNodeBase <|-- ExecutionNode
-
-    note for ExecutionNodeRoot "Assembly (.dll) or Root Folder"
-    note for ExecutionNodeIntermediate "Namespace or SubFolder"
-    note for ExecutionNode "IExternalCommand / Python Script / F# Script"
-```
-
-### `ExecutionMode` Enum
+The current `ExecutionMode` enum is in `source/DevTools.McpParser/Models/ExecutionMode.cs`:
 
 ```csharp
 public enum ExecutionMode
 {
-    Assembly,   // .dll assemblies
-    Script,     // Directory-based (Python + F#)
-    Python,     // Individual Python scripts
-    FSharp      // Individual F# scripts
+    Script,
+    Assembly,
+    Python,
+    IronPython,
+    FSharp,
+    CSharp
 }
 ```
 
-### Node ID Scheme
+| Mode | Discovered by | Strategy | Notes |
+|------|---------------|----------|-------|
+| `Assembly` | `AssemblyExecutionProvider` for `.dll` | `AssemblyExecutionStrategy` | Host-specific discovery: Revit scans `IExternalCommand`; AutoCAD scans command attributes. |
+| `Script` | Root folder container | n/a | The folder root groups script entries. |
+| `Python` | `*script.py` | `PythonExecutionStrategy` | CPython via pythonnet. Pixi first, pip/pyRevit fallback. |
+| `IronPython` | `*_ipy_script.py` | `IronPythonExecutionStrategy` | Host bridge injects host API builtins and references. |
+| `FSharp` | `*script.fsx` | `FSharpExecutionStrategy` | Compiles into a host command; NuGet resolution under app data. |
+| `CSharp` | `*script.csx` | `CSharpExecutionStrategy` | Roslyn compile with content-hash caching. |
 
-| Type | Pattern | Example |
-|------|---------|---------|
-| .NET Assembly | `dotnet://{path}` | `dotnet://C:/Plugins/Tools.dll` |
-| .NET Namespace | `dotnet://{path}\|{ns}` | `dotnet://C:/Plugins/Tools.dll\|MyCompany.Commands` |
-| .NET Command | `dotnet://{path}\|{class}` | `dotnet://C:/Plugins/Tools.dll\|MyCompany.Commands.PurgeCommand` |
-| Python Script | `python://{path}` | `python://C:/Scripts/data_analysis_script.py` |
-| F# Script | `fsharp://{path}` | `fsharp://C:/Scripts/excel_export_script.fsx` |
+`ScriptExecutionProvider` skips folders such as `docs`, `resources`, `bin`, `obj`, `packages`, `node_modules`, `output`, caches, virtualenvs, and agent/tool folders.
 
 ---
 
-## Execution Flows
+## Host Boundary
 
-### 1. .NET Assembly Execution (`ExecutionMode.Assembly`)
+Shared execution depends on interfaces:
+
+| Interface | Purpose |
+|-----------|---------|
+| `IHostContextExecutor` | Marshal work to the host-safe context/API thread. |
+| `ICommandDiscovery` | Parse host commands from an assembly. |
+| `ICommandRunner` | Invoke discovered or compiled commands. |
+| `ICompiledScriptBridge` | Provide references and host-specific compile context. |
+| `IPythonBridge` | Configure CPython builtins/scope for the host. |
+| `IIronPythonBridge` | Configure IronPython runtime and search paths for the host. |
+| `IDebuggerBridge` | Open debugger/runtime hooks from shared UI. |
+| `IHostIdlingBridge` | Run UI/log updates on host idling when needed. |
+
+Revit wiring lives in `RevitHostingExtensions`. AutoCAD wiring lives in `AcadHostingExtensions`. New hosts should add their own adapter project or host project rather than leaking host APIs into `DevTools.Execution`.
+
+---
+
+## Orchestrator Flow
 
 ```mermaid
 sequenceDiagram
-    participant User as User
-    participant Orch as Orchestrator
-    participant Provider as AssemblyExecutionProvider
-    participant Disc as ICommandDiscovery
-    participant Strat as AssemblyExecutionStrategy
-    participant Host as IHostContextExecutor
-    participant Runner as ICommandRunner
+    participant UI as UI/ViewModel
+    participant Orch as ExecutionOrchestrator
+    participant Provider as IExecutionProvider
+    participant Watcher as FileWatcherService
+    participant Node as ExecutionNode
+    participant Strategy as IExecutionStrategy
+    participant Host as Host adapter
 
-    User->>Orch: LoadFromPathAsync("Tools.dll")
-    Orch->>Provider: CanHandle(path) → true
-    Provider->>Disc: ParseCommands(assemblyPath)
-    Disc-->>Provider: List<CommandItem>
-    Provider->>Provider: BuildAssemblyNode()
-    Note over Provider: RootNode → NamespaceNode → CommandNode
-    Provider-->>Orch: ExecutionNodeRoot (with children)
-
-    User->>Orch: ExecuteAsync(commandNode)
-    Orch->>Strat: ExecuteAsync(progress, ct)
-    Strat->>Host: ExecuteAsync(() => runner.RunCommand(item))
-    Host-->>Strat: ExecutionResult
-    Strat-->>Orch: result
-    Orch-->>User: UI update
+    UI->>Orch: LoadFromPathAsync(path)
+    Orch->>Provider: CanHandle + DiscoverAsync
+    Provider-->>Orch: ExecutionNodeRoot
+    Orch->>Watcher: Watch(root, patterns)
+    UI->>Orch: ExecuteAsync(node)
+    Orch->>Node: ExecuteAsync
+    Node->>Strategy: ExecuteAsync
+    Strategy->>Host: Execute in host context
+    Host-->>Strategy: ExecutionResult
+    Watcher-->>Orch: FileChanged
+    Orch->>Orch: Reload affected root
 ```
 
-**Key points:**
-- `.dll` files discovered via `ICommandDiscovery.ParseCommands()` (host-specific: Revit scans `IExternalCommand`, AutoCAD scans `CommandMethodAttribute`)
-- Namespace grouping: commands organized by namespace → UI subtree
-- Execution: `IHostContextExecutor` dispatches to API thread, `ICommandRunner.RunCommand()` invokes the command
-
-### 2. Python Script Execution (`ExecutionMode.Script`)
-
-```mermaid
-sequenceDiagram
-    participant User as User
-    participant Orch as Orchestrator
-    participant Provider as ScriptExecutionProvider
-    participant Strat as PythonExecutionStrategy
-    participant Init as PythonInitializer
-    participant Deps as PythonDepsManager
-    participant Exec as PythonExecutor
-    participant Host as IHostContextExecutor
-
-    User->>Orch: LoadFromPathAsync("C:/Scripts/")
-    Orch->>Provider: CanHandle(path) → true
-    Provider->>Provider: BuildFolderTree(root, root)
-    loop Folder recursion
-        Provider->>Provider: PopulateScripts(*script.py) + PopulateSubFolders
-    end
-    Note over Provider: Skips ignored dirs (bin, obj, .git, venv, ...)
-    Provider-->>Orch: ExecutionNodeRoot (folder tree)
-
-    User->>Orch: ExecuteAsync(scriptNode)
-    Orch->>Strat: ExecuteAsync(progress, ct)
-    Strat->>Init: InitializeAsync()
-    Init->>Init: DetectProvider() → Pixi or Pip fallback
-    Init->>Init: PythonEngine.Initialize()
-    Strat->>Deps: ResolveDependenciesAsync(provider, scriptPath)
-    Note over Deps: Parser.py reads PEP 723 inline metadata
-    Note over Deps: Pixi: conda-forge first, PyPI fallback
-    Note over Deps: Pip: install via python -m pip
-    Strat->>Host: ExecuteAsync(() => executor.Execute(scriptPath, rootPath, ...))
-    Exec->>Exec: Prepare scope → compile & exec script
-    Host-->>Strat: ExecutionResult
-    Strat-->>Orch: result
-    Orch-->>User: UI update
-```
-
-**Key points:**
-- Entry scripts: only files matching `*script.py` are discovered
-- Ignored folders: `.git`, `bin`, `obj`, `docs`, `venv`, `node_modules`, `.pytest_cache`, etc.
-- PEP 723: inline `# /// script` / `# //+` block parsed by `Parser.py`
-- Dual backend: Pixi (preferred, conda-forge + PyPI) → Pip fallback (pyRevit CPython)
-- `PythonInitializer.DetectProvider()`: tries Pixi first, falls back to Pip if unavailable
-- Execution scope: isolated per-run via `PyModule.NewScope()`, module cache reset after each run
-
-### 3. F# Script Execution (`ExecutionMode.Script`)
-
-```mermaid
-sequenceDiagram
-    participant User as User
-    participant Orch as Orchestrator
-    participant Strat as FSharpExecutionStrategy
-    participant Cache as FSharpCompilationCache
-    participant Exec as FSharpExecutor
-    participant Host as IHostContextExecutor
-    participant Runner as ICommandRunner
-
-    User->>Orch: ExecuteAsync(fsxScriptNode)
-    Orch->>Strat: ExecuteAsync(progress, ct)
-    Strat->>Cache: GetOrCompile(scriptPath)
-    Cache->>Cache: Parse #r "nuget: ..." directives
-    Note over Cache: FSharpDependencyResolver → NugetManager
-    Note over Cache: Downloads into %APPDATA%/RevitDevTool/nuget
-    Cache->>Exec: Compile via FSharpExecutor
-    Note over Exec: FSI session with host API references
-    Note over Exec: 30 second compilation timeout
-    Exec-->>Cache: compiled command object
-    Strat->>Host: ExecuteAsync(() => runner.RunCompiledCommand(compiled))
-    Host-->>Strat: ExecutionResult
-    Strat-->>Orch: result
-```
-
-**Key points:**
-- `FSharpCompilationCache`: graph-level caching — parent scripts cache compiled outputs that child scripts reuse
-- NuGet resolution: `#r "nuget: Some.Package"` directives parsed, packages downloaded via `NugetInstaller` into `%APPDATA%/RevitDevTool/nuget`
-- 30-second compile timeout
-- `FSharpDependencyResolver`: resolves NuGet package closure via `nuget.org` API
-- Host API refs: `ICompiledScriptBridge.GetSessionReferences()` provides RevitAPI.dll etc. to the FSI session
+`TreeStateManager` captures and restores expansion/selection/last-executed state during reloads.
 
 ---
 
-## Dependency Resolution
+## Script Runtimes
 
-### Python — PEP 723 + Pixi/Pip
+### Python
 
-```mermaid
-flowchart LR
-    Script["*.py script"] --> Parser["Parser.py\n(parsed outside Python)"]
-    Parser -->|stdin: installed state| Deps["PythonDepsManager\n.ResolveDependenciesAsync()"]
-    Deps --> Provider{"Backend?"}
-    Provider -->|Pixi| Pixi["PixiEnvironmentProvider\nconda-forge → PyPI fallback"]
-    Provider -->|Pip| Pip["PipEnvironmentProvider\npython -m pip install"]
-    Pixi --> Installed["Packages installed"]
-    Pip --> Installed
-    Installed --> Refresh["RefreshImportCache()"]
-```
+- `PythonInitializer` chooses Pixi first, then pip-backed pyRevit CPython if Pixi cannot run.
+- `PythonEmbedded` extracts `Parser.py`, `ToolParser.py`, `PytestRunner.py`, setup scripts, and `pixi.toml`.
+- `PythonDepsManager` parses PEP 723 dependencies through `Parser.py`.
+- Pixi uses conda-forge first and PyPI fallback.
+- Pip fallback depends on `pyrevit.exe attached` to locate `bin/cengines/CPY*/python.exe`.
 
-**PEP 723 format:**
-```python
-# /// script
-# dependencies = ["pandas==1.5.3", "numpy>=1.24"]
-# ///
-```
+### IronPython
 
-**Required packages** (always pre-installed):
-| Package | Spec |
-|---------|------|
-| `mcp` | `>=1.27,<2` |
-| `pytest` | `>=9.0.3,<10` |
-| `debugpy` | `>=1.8,<2` |
-| `packaging` | `>=26.0,<27` |
+- `IronPythonExecutionStrategy` executes `*_ipy_script.py`.
+- Host bridges configure builtins, references, and search paths.
+- Revit has additional pyRevit path helpers under `source/RevitDevTool/Execution/PyRevit/`.
 
-### FSharp — `#r "nuget:"` Directives
+### FSharp
 
-```
-#r "nuget: Newtonsoft.Json, 13.0.3"
-#r "nuget: ClosedXML"
-```
+- `FSharpExecutionStrategy` compiles `.fsx` through `FSharpCompilationCache`.
+- `FSharpDependencyResolver` handles `#r "nuget: ..."` directives.
+- `NugetManager` restores packages under `%APPDATA%\RevitDevTool\nuget`.
+- Compilation has a hard timeout.
 
-- Parsed by `FSharpDependencyResolver`
-- Downloaded to `%APPDATA%\RevitDevTool\nuget\{package}\{version}\`
-- Closure resolution handled by `NugetManager`
+### CSharp
 
-### Package Manager UI
-
-The `PackageService` provides a unified package management interface:
-- `ListInstalledPackagesAsync()` — Pixi + Pip + NuGet
-- `RemovePackageAsync()` — per-marketplace removal
-- `UpdateLatestAsync()` — update to latest
-- `RepairAsync()` — remove + reinstall
-- `RemoveAllAsync(Marketplace)` — bulk cleanup
+- `CSharpExecutionStrategy` compiles `.csx` through `CSharpCompilationCache`.
+- `CSharpDirectiveParser` handles references and package directives.
+- Compiled script outputs are loaded through `ScriptLoadContext`.
+- Compilation has a hard timeout.
 
 ---
 
-## FileWatcherService
+## External Runtime
 
-Three-layer file watching with 500ms debounce:
+`DevToolsPipeServer` is registered as an `IHostedService` by `ExecutionExtensions.AddExecutionServices()`.
 
-```mermaid
-flowchart TB
-    subgraph Layer1["Layer 1: FileContent"]
-        FW["FileSystemWatcher\n(*.py, *.fsx, *.dll)\nIncludeSubdirectories: true"]
-    end
-    subgraph Layer2["Layer 2: DirectoryStructure"]
-        DW["FileSystemWatcher\n(DirectoryName only)\nIncludeSubdirectories: true"]
-    end
-    subgraph Layer3["Layer 3: RootLifecycle"]
-        RW["FileSystemWatcher\n(parent folder, root name)\n10s delete confirmation"]
-    end
-    subgraph Debounce["Debounce (500ms)"]
-        Merge["MergeChange()\nModified does not override Created/Deleted"]
-    end
-    subgraph Output["Event"]
-        Changed["FileChanged event\n(Path, OldPath, ChangeType, Scope)"]
-    end
+It exposes framed named-pipe routes for:
 
-    FW --> Debounce
-    DW --> Debounce
-    RW --> Debounce
-    Debounce --> Changed
-    Changed -->|Orchestrator.OnFileChanged| Orch["HandleFileChangeAsync()\n→ ReloadAffectedRoot()\n→ HandleRootLifecycleEvent()"]
-```
+- MCP: `tools/list`, `tools/call`, `prompts/list`, `prompts/get`, `resources/list`, `resources/templates/list`, `resources/read`
+- Instance info: `instance/info`
+- Pytest bridge: `tests/discover`, `tests/run`
 
-| Scope | Detects | Debounce |
-|-------|---------|----------|
-| `FileContent` | File created/modified/deleted/renamed | 500ms |
-| `DirectoryStructure` | Subdirectory created/deleted/renamed | 500ms |
-| `RootLifecycle` | Root folder deleted (10s cooldown), renamed | Immediate (rename), 10s delayed (delete) |
+The pipe name is built from `IHostAppInfo`: `{Host}_{VersionNumber}_{ProcessId}`. This makes the same bridge model usable by multiple host processes.
 
 ---
 
-## TreeStateManager
+## Package Service
 
-State persistence for UI tree view between reloads:
+`PackageService` gives the UI a unified package surface:
 
-```csharp
-public interface ITreeStateManager
-{
-    TreeState CaptureState(IEnumerable<ExecutionNodeBase> nodes);
-    void RestoreState(IEnumerable<ExecutionNodeBase> nodes, TreeState state,
-                      bool autoExpandNew = false);
-}
-```
+- Pixi/conda-forge packages
+- Pixi PyPI packages
+- pip fallback packages
+- FSharp/NuGet packages
 
-**State tracked:** Expanded nodes, selected node, highlight ranges, last-executed marker.
+Package operations include list, remove, remove all, update latest, and repair.
 
 ---
 
-## DI Registration (`AddExecutionServices()`)
+## Verification Reality
 
-```mermaid
-flowchart TB
-    subgraph Python["Python Runtime"]
-        Pixi["PixiEnvironmentProvider\n(Keyed: Pixi)"]
-        Pip["PipEnvironmentProvider\n(Keyed: Pip)"]
-        Init["PythonInitializer"]
-        Executor["PythonExecutor"]
-    end
-    subgraph Core["Execution Core"]
-        TreeMgr["ITreeStateManager → TreeStateManager"]
-        FileWatch["IFileWatcherService → FileWatcherService"]
-        Orch["IExecutionOrchestrator → ExecutionOrchestrator"]
-        Package["IPackageService → PackageService"]
-    end
-    subgraph Providers["Execution Providers"]
-        Assembly["IExecutionProvider → AssemblyExecutionProvider\n(Keyed: Assembly)"]
-        ScriptProv["IExecutionProvider → ScriptExecutionProvider\n(Keyed: Script)"]
-    end
-    subgraph MCP["MCP Registry + Pipe"]
-        PipeSrv["DevToolsPipeServer\n(IHostedService)"]
-        Registry["ToolRegistryStore + Providers"]
-        Dispatchers["Tool/Prompt/Resource Dispatchers"]
-    end
-    subgraph Pytest["Pytest Bridge"]
-        PytestExec["PytestExecutionService"]
-        PytestHandler["PytestRequestHandler"]
-    end
-```
+Current tests are useful but shallow. They cover parser contracts, telemetry helpers, and some environment behavior, but they are not deep assurance for live host integration, threading, startup, package installation, or named-pipe runtime behavior.
 
-Full registration in `ExecutionExtensions.AddExecutionServices()` (`source/DevTools.Execution/ExecutionExtensions.cs`).
+When changing execution behavior:
+
+- Build the most relevant host/year with `scripts/agent/build-host.ps1`.
+- Add a focused test for pure shared logic when practical.
+- Document live-host verification gaps explicitly.
 
 ---
 
-## ExecutionOrchestrator — Full API
+## Related Docs
 
-```csharp
-public interface IExecutionOrchestrator
-{
-    IEnumerable<ExecutionNodeBase> TreeRoot { get; }
-
-    event EventHandler? TreeChanged;
-    event EventHandler<RootRemovedEventArgs>? RootRemoved;
-    event EventHandler<ExecutionProgressEventArgs>? ExecutionProgressChanged;
-
-    Task LoadFromPathAsync(string path, CancellationToken ct = default);
-    Task<IReadOnlyList<string>> LoadSavedPathsAsync(IEnumerable<string> paths, ...);
-    Task ReloadAsync(CancellationToken ct = default);
-    ExecutionNodeBase? RemoveNode(ExecutionNodeBase node);
-    void ClearAll();
-    Task<ExecutionResult> ExecuteAsync(ExecutionNodeBase node, ...);
-}
-```
-
-**Orchestration flow:**
-1. `LoadFromPathAsync` → auto-detects provider via `CanHandle()` sorted by `Priority`
-2. On file change → `FileWatcher.FileChanged` → `HandleFileChangeAsync()` → `ReloadAffectedRootAsync()` or `HandleRootLifecycleEventAsync()`
-3. Root rename/delete → parent watcher fires → auto-reloads or cleans up
-4. Execution → `node.ExecuteAsync()` → strategy → host context → Revit API thread
-
----
-
-## Error Handling
-
-```mermaid
-flowchart LR
-    Execute["ExecuteAsync()"] --> Try[try]
-    Try --> Strategy["strategy.ExecuteAsync()"]
-    Strategy -->|OperationCanceledException| Cancelled["ExecutionResult.Cancelled()"]
-    Strategy -->|Exception| Failed["ExecutionResult.Failed(ex)"]
-    Strategy -->|Success| Ok["ExecutionResult.Succeeded()"]
-    Cancelled --> Finally["IsLastExecuted = false"]
-    Failed --> Finally
-    Ok --> Finally2["IsLastExecuted = true"]
-    Finally --> UpdateTime["LastExecutedTime = now"]
-    Finally2 --> UpdateTime
-```
-
----
-
-## Architecture Patterns
-
-| Pattern | Application |
-|---------|------------|
-| **Provider** | `IExecutionProvider` — auto-detect execution mode from file path |
-| **Strategy** | `IExecutionStrategy` — polymorphic execution per mode |
-| **Composite** | `ExecutionNodeBase` tree — `Children: ObservableCollection<ExecutionNodeBase>` |
-| **Observer** | `FileWatcherService` → `IExecutionOrchestrator.TreeChanged` |
-| **State** | `TreeStateManager.CaptureState()` / `RestoreState()` |
-| **Template Method** | `PyEnvironmentProvider` — abstract base for Pixi/Pip backends |
-| **Chain of Responsibility** | Provider selection: highest priority first, fallback to lower |
-
----
-
-## Related Documentation
-
-- **[MCP Architecture](../MCP/README.md)** — MCP registry and pipe server
-- **[PyTest Architecture](../PyTest/README.md)** — pytest bridge between RevitDevTool and `revitdevtool_pytest`
-- **[Logging Architecture](../Logging/README.md)** — Trace capture and visualization routing
-- **[Visualization Architecture](../Visualization/README.md)** — DirectContext3D rendering
-
-**Source Code:**
-- `source/DevTools.Execution/` — Execution engine
-- `source/DevTools.Execution/Services/ExecutionOrchestrator.cs` — Main orchestrator
-- `source/DevTools.Execution/Providers/` — All three providers + strategies
-- `source/DevTools.Execution/External/` — Named pipe server, MCP bridge, pytest bridge
-
----
-
-_Last updated: 2026-05-03_
+- `docs/ai/execution-system.md`
+- `docs/ai/host-boundaries.md`
+- `docs/MCP/README.md`
+- `docs/PyTest/README.md`
+- `docs/Logging/README.md`

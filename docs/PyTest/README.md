@@ -1,147 +1,137 @@
 # PyTest Bridge Architecture
 
-Architecture documentation for the pytest remote execution bridge between the `revitdevtool_pytest` plugin and RevitDevTool's Named Pipe server.
+The pytest bridge lets an external pytest process discover and run tests inside a running host process through `DevToolsPipeServer`.
+
+The current client plugin and workflow are Revit-oriented, but the server-side bridge lives in shared `DevTools.Execution`.
+
+Last updated: 2026-05-29
 
 ---
 
-## Overview
+## Source Map
+
+| Area | Path |
+|------|------|
+| Pipe server | `source/DevTools.Execution/External/DevToolsPipeServer.cs` |
+| Request handler | `source/DevTools.Execution/External/Handlers/PytestRequestHandler.cs` |
+| Test execution service | `source/DevTools.Execution/External/Testing/PytestExecutionService.cs` |
+| Dependency service | `source/DevTools.Execution/External/Testing/PytestDependencyService.cs` |
+| Path resolver | `source/DevTools.Execution/External/Testing/PytestPathResolver.cs` |
+| Contracts | `source/DevTools.Execution/External/Testing/PytestContracts.cs` |
+| Embedded runner | `source/DevTools.Execution/Resources/scripts/PytestRunner.py` |
+
+---
+
+## Architecture
 
 ```mermaid
 flowchart TB
-    subgraph Client["Client Side (pytest process)"]
-        Plugin["revitdevtool_pytest plugin\n- plugin.py\n- bridge.py\n- connection.py\n- reporting.py\n- suite_lock.py"]
-    end
-
-    subgraph Pipe["Named Pipe (IPC)"]
-        Proto["Frame protocol:\n[4-byte LE length][UTF-8 JSON]"]
-    end
-
-    subgraph Server["Server Side (inside Revit)"]
-        PipeSrv["DevToolsPipeServer"]
-        Handler["PytestRequestHandler"]
-        ExecSvc["PytestExecutionService"]
-        Runner["PytestRunner.py\n(embedded resource)"]
-    end
+    Client["pytest process\nrevitdevtool_pytest client"]
+    Pipe["Named pipe\nBridgeMessage frames"]
+    Server["DevToolsPipeServer\ninside host"]
+    Handler["PytestRequestHandler"]
+    Deps["PytestDependencyService"]
+    Exec["PytestExecutionService"]
+    Runner["PytestRunner.py\nembedded script"]
+    Python["Python runtime\nPythonInitializer + PythonExecutor"]
 
     Client -->|"tests/discover\ntests/run"| Pipe
-    Pipe --> PipeSrv
-    PipeSrv --> Handler
-    Handler -->|"Prepare deps"| ExecSvc
-    Handler -->|"Execute in Python scope"| ExecSvc
-    ExecSvc --> Runner
-    Runner -->|"JSON result"| ExecSvc
-    ExecSvc -->|"BridgeMessage"| Handler
-    Handler -->|"JSON response"| PipeSrv
-    PipeSrv -->|"response + notifications"| Pipe
+    Pipe --> Server
+    Server --> Handler
+    Handler --> Deps
+    Handler --> Exec
+    Exec --> Python
+    Python --> Runner
+    Runner --> Exec
+    Exec --> Handler
+    Handler --> Server
+    Server --> Pipe
     Pipe --> Client
 ```
 
----
-
-## Client Side: `revitdevtool_pytest`
-
-| File | Responsibility |
-|------|---------------|
-| **plugin.py** | pytest plugin entry point. Registers CLI + INI options (`--revit-version`, `--revit-launch`, `--revit-timeout`, `--revit-pipe`). Reads config from `[tool.pytest.ini_options]` in `pyproject.toml` (or `pytest.ini`/`tox.ini`/`setup.cfg`), with CLI overrides. Hooks into session lifecycle.
-| **bridge.py** | `RevitBridge` — synchronous Named Pipe client. Connect/disconnect, frame-based RPC |
-| **connection.py** | Bridge lifecycle: `ensure_bridge()` — connect, lease, auto-launch Revit if needed |
-| **suite_lock.py** | Windows Mutex-based locking prevents multiple pytest processes on same Revit |
-| **suite_leasing.py** | `SuiteLeaseStore` — exclusive test execution lease management |
-| **reporting.py** | Maps remote `CaseResult[]` back to pytest `TestReport`. `run_remote_session` dispatches discover + run |
-| **models.py** | Data models: `DiscoverRequest`, `RunRequest`, `CaseResult`, `BridgeResponse` |
-| **dialog_resolver.py** | Handles Revit startup dialog detection and resolution |
-| **constants.py** | Shared constants: pipe names, timeouts, phase/outcome enums |
-
-## Server Side: `DevTools.Execution/External/Testing/`
-
-| File | Responsibility |
-|------|---------------|
-| **PytestRequestHandler.cs** | Handles `tests/discover` and `tests/run` bridge messages |
-| **PytestExecutionService.cs** | Core execution — serializes request, runs `PytestRunner.py` in Python scope, deserializes response |
-| **PytestDependencyService.cs** | Ensures pytest + required packages installed before execution |
-| **PytestPathResolver.cs** | Resolves test root and workspace root paths |
-| **PytestContracts.cs** | Shared contracts: request/response types |
+The server does not execute pytest as a separate process. It runs `PytestRunner.py` inside the host Python scope and returns serialized results through the bridge.
 
 ---
 
-## Execution Flow
+## Pipe Methods
 
-### Discovery
+| Method | Handler | Purpose |
+|--------|---------|---------|
+| `tests/discover` | `PytestRequestHandler.HandleDiscoverAsync` | Collect pytest node IDs under a test root. |
+| `tests/run` | `PytestRequestHandler.HandleRunAsync` | Run requested node IDs and stream progress notifications. |
+
+Frame format is shared with MCP routes: `[4-byte little-endian length][UTF-8 JSON BridgeMessage]`.
+
+---
+
+## Discovery Flow
 
 ```mermaid
 sequenceDiagram
-    participant Plugin as pytest Plugin
-    participant Bridge as RevitBridge
+    participant Client as pytest client
     participant Pipe as DevToolsPipeServer
     participant Handler as PytestRequestHandler
+    participant Deps as PytestDependencyService
     participant Exec as PytestExecutionService
-    participant Python as PytestRunner.py
+    participant Runner as PytestRunner.py
 
-    Plugin->>Bridge: discover_tests(workspace_root, test_root)
-    Bridge->>Pipe: tests/discover (JSON)
-    Pipe->>Handler: HandleDiscoverAsync()
-    Handler->>Handler: Prepare dependencies
+    Client->>Pipe: tests/discover
+    Pipe->>Handler: HandleDiscoverAsync
+    Handler->>Deps: Ensure pytest/runtime deps
     Handler->>Exec: Discover(request)
-    Exec->>Python: run("pytest --collect-only")
-    Python-->>Exec: node IDs
-    Exec-->>Handler: DiscoverResponse
-    Handler-->>Pipe: JSON response
-    Pipe-->>Bridge: response
-    Bridge-->>Plugin: DiscoverResponse (node IDs)
+    Exec->>Runner: pytest --collect-only equivalent
+    Runner-->>Exec: node IDs
+    Exec-->>Handler: Discover response
+    Handler-->>Pipe: BridgeMessage response
+    Pipe-->>Client: JSON result
 ```
 
-### Run
+---
+
+## Run Flow
 
 ```mermaid
 sequenceDiagram
-    participant Plugin as pytest Plugin
-    participant Bridge as RevitBridge
+    participant Client as pytest client
     participant Pipe as DevToolsPipeServer
     participant Handler as PytestRequestHandler
     participant Exec as PytestExecutionService
-    participant Python as PytestRunner.py
-    participant Plugin_in as _BridgePlugin
+    participant Runner as PytestRunner.py
 
-    Plugin->>Bridge: run_tests(workspace_root, test_root, nodeids)
-    Bridge->>Pipe: tests/run (JSON)
-    Pipe->>Handler: HandleRunAsync()
-    Handler->>Handler: Prepare dependencies
-    Handler->>Exec: Run(request, progressCallback)
-    Exec->>Python: set __pytest_request_json__, exec PytestRunner.py
-    Python->>Python: pytest.main(args, plugins=[_BridgePlugin])
-    loop Each test
-        Plugin_in->>Python: pytest_runtest_logreport()
-        Python-->>Exec: progress notification (JSON)
-        Exec-->>Handler: SendNotification()
-        Handler-->>Pipe: notification to client
+    Client->>Pipe: tests/run
+    Pipe->>Handler: HandleRunAsync
+    Handler->>Exec: Run(request, notify)
+    Exec->>Runner: pytest.main(args, bridge plugin)
+    loop Each test phase
+        Runner-->>Exec: progress JSON
+        Exec-->>Handler: notification
+        Handler-->>Pipe: Bridge notification
+        Pipe-->>Client: progress
     end
-    Python-->>Exec: final JSON result
-    Exec-->>Handler: RunResponse
-    Handler-->>Pipe: JSON response
-    Pipe-->>Bridge: response
-    Bridge-->>Plugin: RunResponse (summary + results)
+    Runner-->>Exec: final JSON
+    Exec-->>Handler: Run response
+    Handler-->>Pipe: BridgeMessage response
+    Pipe-->>Client: final result
 ```
 
 ---
 
-## Wire Protocol
+## Current Test Reality
 
-Frame format: `[4-byte LE body length][UTF-8 JSON body]`
+The in-repo tests are not a deep end-to-end pytest bridge suite yet. Several tests still have stale path assumptions or require a prepared Pixi environment and built sample assets. Treat them as contract/smoke checks.
 
-| Type | Structure |
-|------|-----------|
-| **Request** | `{"type":"request","id":"...","method":"...","params":{...}}` |
-| **Response** | `{"type":"response","id":"...","result":{...}}` |
-| **Error** | `{"type":"response","id":"...","error":{"message":"..."}}` |
-| **Notification** | `{"type":"notification","method":"...","params":{...}}` |
+Known gaps are tracked in `docs/ai/known-test-gaps.md`.
 
----
+When changing the pytest bridge:
 
-## Related Documentation
-
-- **[Execution Architecture](../Execution/README.md)** — Execution engine and Named Pipe server
-- **RevitDevTool.PyTest** — [README](https://github.com/trgiangv/RevitDevTool.PyTest)
+- Add a focused contract or runner test if the changed code can run without a live host.
+- Keep dependency preparation separate from discovery/run execution.
+- Document missing live-host or named-pipe verification explicitly.
 
 ---
 
-_Last updated: 2026-05-03_
+## Related Docs
+
+- `docs/ai/mcp-pytest-bridge.md`
+- `docs/Execution/README.md`
+- `docs/MCP/README.md`

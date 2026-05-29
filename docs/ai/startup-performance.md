@@ -1,0 +1,17 @@
+# Startup Performance
+
+Startup-sensitive code includes host boot, DI registration, command discovery, Python initialization, MCP registry loading, logging setup, and UI construction.
+
+## Rules
+
+- Prefer lazy initialization for Python, MCP catalog loading, package inspection, and expensive discovery.
+- Do not block host startup on network, package restore, Python package installation, or sample scanning.
+- Keep file watchers scoped to configured roots.
+- Avoid reflection scans outside explicit user-configured paths or known host bundles.
+- Keep startup logging useful but bounded.
+
+## Verification
+
+- Build the touched host/year.
+- If startup behavior changed, collect logs with `scripts/agent/collect-logs.ps1`.
+- For manual profiling, use `scripts/agent/startup-profile.ps1` to record process timing notes and relevant log locations.

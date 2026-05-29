@@ -1,6 +1,8 @@
-# RevitDevTool — Architecture Documentation
+# RevitDevTool - Architecture Documentation
 
-This folder contains **internal architecture documentation** for developers contributing to RevitDevTool.
+This folder contains internal architecture documentation for the RevitDevTool platform.
+
+RevitDevTool is evolving into a reusable .NET host/dev-tool platform. Revit and AutoCAD are current hosts; shared platform behavior lives in `source/DevTools.*`.
 
 **User guides and tutorials:** [RevitDevTool.Wiki](https://github.com/trgiangv/RevitDevTool/wiki)
 
@@ -10,6 +12,8 @@ This folder contains **internal architecture documentation** for developers cont
 
 ```
 docs/
+├── ai/
+│   └── index.md           # Agent workflow routing and deterministic memory
 ├── Execution/
 │   └── README.md           # Execution engine architecture
 ├── Logging/
@@ -28,16 +32,28 @@ docs/
 
 ## Module Documentation
 
+### AI Harness
+**Path:** `ai/index.md`
+
+Operational workflow for coding agents:
+- Task routing to module docs and skill checklists
+- Build/test/package command selection
+- Known harness gaps and host-boundary rules
+- Verification loop guidance
+
+This is an agent digest. It does not replace the architecture docs below.
+
 ### Execution
 **Path:** `Execution/README.md`
 
 Comprehensive architecture documentation covering:
-- 3 execution modes: .NET DLL, Python script, F# script
+- Host-adapter execution model for Revit, AutoCAD, and future .NET hosts
+- Execution modes: .NET assemblies, Python, IronPython, F#, C# scripts
 - `IExecutionProvider` / `IExecutionStrategy` interfaces
 - Tree node model (Root → Intermediate → Executable)
 - `ExecutionOrchestrator` event-driven lifecycle
 - PEP 723 dependency resolution (Pixi + Pip backends)
-- F# NuGet dependency resolution
+- F# NuGet and C# Roslyn script compilation
 - `FileWatcherService` 3-layer debounced watching
 - `TreeStateManager` state persistence
 - MCP bridge & Named Pipe server integration
@@ -49,7 +65,8 @@ Comprehensive architecture documentation covering:
 Unified logging infrastructure:
 - Multi-sink output (monitor, file, HTTP)
 - Keyword-based log level detection
-- Geometry interception → visualization routing
+- Host-specific context enrichment
+- Revit geometry interception → visualization routing
 - Console + Python `print()` redirection
 - Revit element linkification
 
@@ -57,6 +74,7 @@ Unified logging infrastructure:
 **Path:** `Visualization/README.md`
 
 DirectContext3D transient geometry rendering:
+- Revit-host feature, not shared platform rendering
 - Server-per-geometry-type pattern
 - Two-pass rendering (opaque + transparent)
 - RenderingBufferStorage caching
@@ -81,15 +99,17 @@ Model Context Protocol integration:
 - `ToolRegistryStore` — in-process tool discovery & caching
 - `.NET` + Python toolset providers
 - Tool/Prompt/Resource dispatch
+- Current standalone helper tools are Revit-oriented; in-host MCP runtime is shared
 
 ### PyTest
 **Path:** `PyTest/README.md`
 
 pytest remote execution bridge:
 - Named Pipe protocol
-- `revitdevtool_pytest` client plugin
+- Revit-oriented `revitdevtool_pytest` client plugin
 - `PytestExecutionService` + `PytestRunner.py` server
 - Test progress streaming & result reporting
+- Current tests are smoke/contract level, not deep end-to-end assurance
 
 ---
 
@@ -102,6 +122,7 @@ pytest remote execution bridge:
 | Understand visualization | [Visualization/README.md](Visualization/README.md) |
 | Understand MCP integration | [MCP/README.md](MCP/README.md) |
 | Understand pytest bridge | [PyTest/README.md](PyTest/README.md) |
+| Understand AI harness rules | [ai/index.md](ai/index.md) |
 | Use RevitDevTool | [RevitDevTool.Wiki](https://github.com/trgiangv/RevitDevTool/wiki) |
 
 ---
@@ -116,9 +137,11 @@ pytest remote execution bridge:
 | **PythonDemo** | ✅ `README.md` | Production |
 | **MCP** | ✅ `README.md` | Integration |
 | **PyTest** | ✅ `README.md` | Integration |
+| **AI Harness** | ✅ `index.md` | Agent workflow |
 | **CSharpDemo** | ⚠️ Source only | Examples |
 | **FSharpDemo** | ⚠️ Source only | Examples |
 | **FSharpScriptDemo** | ⚠️ Source only | Examples |
+| **CSharpScriptDemo** | ⚠️ Source only | Examples |
 | **McpToolsetDemo** | ⚠️ Source only | Examples |
 | **RevitMcpToolSet** | ⚠️ Source only | Examples |
 
@@ -128,10 +151,12 @@ pytest remote execution bridge:
 
 - **Source Code:** [../source/](../source/)
 - **Main engine:** `source/DevTools.Execution/`
+- **Shared presentation:** `source/DevTools.Presentation/`
 - **Logging library:** `source/DevTools.Logging/`
 - **MCP parser:** `source/DevTools.McpParser/`
 - **MCP server:** `source/DevTools.McpServer/`
 - **C# samples:** [../Samples/CSharpDemo/](../Samples/CSharpDemo/)
+- **C# script samples:** [../Samples/CSharpScriptDemo/](../Samples/CSharpScriptDemo/)
 - **F# samples:** [../Samples/FSharpDemo/](../Samples/FSharpDemo/)
 - **Python samples:** [../Samples/PythonDemo/commands/](../Samples/PythonDemo/commands/)
 
@@ -141,7 +166,7 @@ pytest remote execution bridge:
 
 1. **Read architecture docs** for the module you're modifying
 2. **Follow existing patterns** (Provider, Strategy, Composite, Observer)
-3. **Update docs** if you change internal design
+3. **Update docs** when changing important architecture or feature boundaries
 4. **Add demos** in `Samples/`
 5. **Update wiki** for user-facing changes
 
@@ -157,4 +182,4 @@ pytest remote execution bridge:
 
 ---
 
-_Last updated: 2026-05-03_
+_Last updated: 2026-05-29_

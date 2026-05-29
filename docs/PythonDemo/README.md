@@ -1,178 +1,136 @@
 # PythonDemo Architecture
 
-Python + WebView2 dashboard application demonstrating RevitDevTool's capabilities: code execution, dependency resolution, logging, and visualization.
+`Samples/PythonDemo/` demonstrates the Python runtime, PEP 723 dependency resolution, logging, visualization, WebView2 dashboard patterns, and Python MCP toolsets.
 
-**Source:** `Samples/PythonDemo/`
+Last updated: 2026-05-29
 
 ---
 
-## System Overview
+## Source Map
 
-```mermaid
-flowchart TB
-    subgraph Entry["Entry Point"]
-        Script["dashboard_script.py\n(PEP 723 metadata)"]
-        Cmds["17 demo scripts\n(*_script.py)"]
-    end
-
-    subgraph PythonBackend["Python Backend"]
-        Collector["data/collector.py\n(Revit element data)"]
-        Analytics["analytics/polars_engine.py\n(statistical analysis)"]
-        Exporter["data/exporter.py\n(Excel export)"]
-        Context["context.py\n(__revit__ bridge)"]
-    end
-
-    subgraph Dashboard["Dashboard App"]
-        WebView["WebView2 Control\n(embedded browser)"]
-        UI["revit_dashboard_ui/\n(React + TypeScript)"]
-    end
-
-    subgraph Output["Output Channels"]
-        Log["Trace Log Panel\n(print() output)"]
-        Viz["3D View\n(geometry visualization)"]
-        Excel["Excel File\n(OpenPyXL export)"]
-    end
-
-    Script --> Collector
-    Script --> WebView
-    Cmds --> Collector
-    Collector --> Analytics
-    Analytics --> UI
-    Collector --> Exporter
-    Exporter --> Excel
-    UI --> Log
-    UI --> Viz
-    Context -.-> Collector
-    Context -.-> Analytics
-```
+| Area | Path |
+|------|------|
+| Entry scripts | `Samples/PythonDemo/commands/` |
+| Dashboard backend | `Samples/PythonDemo/revit_dashboard/` |
+| Dashboard frontend | `Samples/PythonDemo/revit_dashboard_ui/` |
+| Python MCP toolset | `Samples/PythonDemo/mcp_toolset/` |
+| Import/dependency test module | `Samples/PythonDemo/test_module/` |
 
 ---
 
 ## Component Map
 
 ```mermaid
-flowchart LR
-    subgraph Samples["Samples/PythonDemo/"]
-        direction TB
-        Commands["commands/\n(17 entry scripts)"]
-        MCP["mcp_toolset/\n(Python MCP tools)"]
-        TestMod["test_module/\n(dependency test)"]
-        UI["revit_dashboard_ui/\n(React frontend)"]
-    end
+flowchart TB
+    Commands["commands/*_script.py"]
+    Runtime["DevTools.Execution Python runtime\nPixi first, pip fallback"]
+    Dashboard["revit_dashboard/\ncollector, analytics, export, WebView bridge"]
+    UI["revit_dashboard_ui/\nReact + TypeScript + Vite"]
+    MCP["mcp_toolset/\nPython MCP tools"]
+    TestModule["test_module/\nimport/dependency samples"]
+    Logging["Logging monitor"]
+    Viz["Revit visualization"]
 
-    Commands -->|"PEP 723 deps"| Pixi["Pixi/Pip\n(dependency resolution)"]
-    Commands -->|"exec()"| PythonRT["Python Runtime\n(pythonnet)"]
-    PythonRT -->|"print()"| Logging["Logging System"]
-    PythonRT -->|"print(geometry)"| Viz["Visualization"]
+    Commands --> Runtime
+    Runtime --> Dashboard
+    Dashboard --> UI
+    Runtime --> MCP
+    Runtime --> TestModule
+    Commands --> Logging
+    Commands --> Viz
 ```
 
 ---
 
-## Dashboard Data Flow
+## Entry Scripts
 
-```mermaid
-sequenceDiagram
-    participant User as User
-    participant Script as dashboard_script.py
-    participant Collector as collector.py
-    participant Polars as polars_engine.py
-    participant WebView as WebView2
-    participant UI as React Frontend
+`commands/` contains the executable script entries discovered by `ScriptExecutionProvider`.
 
-    User->>Script: Execute in RevitDevTool
-    Script->>Collector: collect_all_elements(doc)
-    Collector->>Collector: FilteredElementCollector → list[dict]
-    Collector-->>Script: element data
-    Script->>Polars: build_analytics_payload(elements)
-    Polars->>Polars: DataFrame → KPI + distributions
-    Polars-->>Script: analytics payload
-    Script->>WebView: Load dashboard UI
-    WebView->>UI: Pass payload via JS bridge
-    UI->>UI: Render charts (Recharts)
-    UI->>UI: Apply filters, recalculate
+| Script | Purpose |
+|--------|---------|
+| `dashboard_script.py` | Launches the WebView2 dashboard sample. |
+| `data_analysis_script.py` | Polars/data-analysis demo. |
+| `debugpy_script.py` | Debugger integration demo. |
+| `export_data_script.py` | Excel export demo. |
+| `fcl_script.py` | Geometry/collision dependency demo. |
+| `logging_batch_script.py` | Logging stress sample. |
+| `logging_format_script.py` | Logging format/severity sample. |
+| `modeless_script.py` | Modeless UI sample. |
+| `module_test_script.py` | Multi-file import/dependency sample. |
+| `pipe_bridge_script.py` | Named-pipe bridge sample. |
+| `selectionfilter_script.py` | Revit API interface sample. |
+| `shapely_script.py` | 2D geometry dependency sample. |
+| `sklearn_script.py` | ML dependency sample. |
+| `trimesh_script.py` | 3D mesh dependency sample. |
+| `visualization_curve_script.py` | Revit curve visualization. |
+| `visualization_solid_script.py` | Revit solid visualization. |
+| `visualization_xyz_script.py` | Revit point visualization. |
+
+---
+
+## Dashboard Backend
+
+`revit_dashboard/` is the Python backend used by `dashboard_script.py`.
+
+| Folder | Role |
+|--------|------|
+| `analytics/engine.py` | Builds analytics payloads. |
+| `contracts/payload.py` | Payload contracts exchanged with the frontend. |
+| `core/event_queue.py` | Queue/event support. |
+| `data/` | Category, collector, heavy-family, and warning data helpers. |
+| `export/excel_exporter.py` | Excel export path. |
+| `presentation/bridge.py` | Python to WebView bridge. |
+| `presentation/webview_host.py` | WebView host integration. |
+| `revit_api/handler.py` | Revit API interaction layer. |
+| `runner.py` | Dashboard runner orchestration. |
+
+---
+
+## Dashboard Frontend
+
+`revit_dashboard_ui/` is a Vite application.
+
+| Technology | Current role |
+|------------|--------------|
+| React 19 | UI runtime |
+| TypeScript 5.9 | Type checking |
+| Vite 7 | Build/dev tooling |
+| Recharts 3 | Charts |
+| Semi UI, Radix UI, lucide-react | UI controls/icons |
+| Tailwind CSS 4 | Styling pipeline |
+
+Quality gates:
+
+```powershell
+npm run quality
+npm run build
 ```
 
 ---
 
-## Entry Scripts (`commands/`)
+## Python MCP Toolset
 
-| Script | Module | Key Feature |
-|--------|--------|------------|
-| `dashboard_script.py` | All | WebView2 dashboard with analytics |
-| `data_analysis_script.py` | Execution | Polars DataFrame analysis |
-| `visualization_curve_script.py` | Visualization | Curve/edge display in 3D |
-| `visualization_solid_script.py` | Visualization | Solid decomposition display |
-| `visualization_xyz_script.py` | Visualization | Point cloud display |
-| `logging_format_script.py` | Logging | Color keywords + JSON output |
-| `logging_batch_script.py` | Logging | 10,000+ message stress test |
-| `debugpy_script.py` | Debugging | VSCode debugger integration |
-| `export_data_script.py` | Export | OpenPyXL Excel export |
-| `selectionfilter_script.py` | API | Interface implementation |
-| `shapely_script.py` | Geometry | 2D geometry operations |
-| `trimesh_script.py` | Geometry | 3D mesh processing |
-| `sklearn_script.py` | ML | scikit-learn integration |
-| `fcl_script.py` | .NET | Python.NET interop examples |
-| `modeless_script.py` | UI | Modeless dialog example |
-| `pipe_bridge_script.py` | IPC | Named Pipe bridge demo |
-| `module_test_script.py` | Testing | Import module test |
+`mcp_toolset/` contains parser samples and a larger Revit-oriented Python MCP toolset.
+
+Key folders:
+
+- `tools/` - MCP tool functions grouped by domain.
+- `services/` - Revit/API service logic behind tools.
+- `dto/` - DTO contracts.
+- `shared/` - common responses, constants, transactions, element helpers.
+- `parser_annotation_sample.py` and `parser_lowlevel_sample.py` - parser coverage samples.
 
 ---
 
-## MCP Toolset (`mcp_toolset/`)
+## Test Module
 
-Python-based MCP tool implementations consumed by the MCP registry:
-
-```
-mcp_toolset/
-├── revitdevtool_mcp.py       # MCP server entry point
-├── parser_annotation_sample.py
-├── parser_lowlevel_sample.py
-├── dto/                      # Data transfer objects (9 files)
-└── tools/                    # Tool implementations (10 files)
-```
+`test_module/` demonstrates multi-file Python imports and plugin-style dependency structure. It is a sample for script dependency behavior, not a deep test suite.
 
 ---
 
-## Test Module (`test_module/`)
+## Related Docs
 
-Demonstrates Python dependency resolution for multi-file projects:
-
-```
-test_module/
-├── __init__.py
-├── contracts.py
-├── diagnostics.py
-├── engine.py
-├── state.py
-└── plugins/
-    ├── __init__.py
-    ├── normalize.py
-    └── scale.py
-```
-
----
-
-## Dashboard Frontend (`revit_dashboard_ui/`)
-
-| Technology | Purpose |
-|-----------|---------|
-| **React 18** | Component-based UI |
-| **TypeScript** | Type-safe frontend code |
-| **Vite** | Build tool + dev server |
-| **Recharts** | Interactive charts (bar, pie, line) |
-| **CSS Modules** | Scoped styling |
-
-Quality gates: `npm run quality` (typecheck + lint), `npm run build` (production).
-
----
-
-## Related Modules
-
-- **[Execution Architecture](../Execution/README.md)** — PEP 723 dependency resolution + Python execution
-- **[MCP Architecture](../MCP/README.md)** — Python MCP toolset integration
-- **[Logging Architecture](../Logging/README.md)** — print() output capture
-- **[Visualization Architecture](../Visualization/README.md)** — Geometry display from scripts
-
----
-
-_Last updated: 2026-05-03_
+- `docs/Execution/README.md`
+- `docs/MCP/README.md`
+- `docs/Logging/README.md`
+- `docs/Visualization/README.md`

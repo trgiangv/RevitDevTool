@@ -1,182 +1,124 @@
 # Logging System Architecture
 
-Unified logging infrastructure built on .NET `System.Diagnostics.Trace` with multi-sink output, keyword detection, and geometry interception.
+Logging is split between shared sink/listener infrastructure in `DevTools.Logging` and host-specific lifecycle/context services in each host project.
 
-**Source:** `source/DevTools.Logging/` (shared library) + `source/RevitDevTool/Logging/` (add-in host)
+Last updated: 2026-05-29
 
 ---
 
-## Architecture Flow
+## Source Map
+
+| Area | Path |
+|------|------|
+| Shared logging library | `source/DevTools.Logging/` |
+| Shared presentation contracts | `source/DevTools.Presentation/Interfaces/` |
+| Revit logging lifecycle | `source/RevitDevTool/Logging/LoggingService.cs` |
+| Revit enrichers/linkify/geometry listener | `source/RevitDevTool/Logging/` |
+| AutoCAD logging lifecycle | `source/AcadDevTool/Logging/LoggingService.cs` |
+| AutoCAD enrichers | `source/AcadDevTool/Logging/` |
+
+---
+
+## Shared Logging Layer
 
 ```mermaid
 flowchart TB
-    subgraph Sources["Log Sources"]
-        CSharp["C#: Trace.Information()"]
-        Python["Python: print()"]
-        Console["Console.WriteLine()"]
-        Debug["Debug.WriteLine()"]
-    end
+    Trace["Trace / Debug / Console"]
+    Listener["LoggerTraceListener"]
+    Detector["LogLevelDetector"]
+    Monitor["MonitorLogTarget"]
+    File["FileLogProcessor"]
+    Http["HttpLogProcessor"]
+    Notify["NotifyListener"]
 
-    subgraph Listeners["Trace Listeners"]
-        Logger["LoggerTraceListener\n(format + route)"]
-        ConsoleR["ConsoleRedirector\n(intercept Console)"]
-        Geometry["GeometryListener\n(detect geometry)"]
-        Notify["NotifyListener\n(UI events)"]
-    end
-
-    subgraph LoggingLib["DevTools.Logging"]
-        Detector["LogLevelDetector\n(keyword scan)"]
-        Monitor["MonitorLogTarget\n(RichTextBox)"]
-        FileLog["FileLogProcessor\n(.log / .json)"]
-        HttpLog["HttpLogProcessor\n(remote)"]
-    end
-
-    subgraph RevitHost["RevitDevTool/Logging"]
-        LogSvc["LoggingService\n(orchestrator)"]
-        Linkify["RevitLinkifier\n(element links)"]
-    end
-
-    subgraph Viz["Visualization"]
-        Router["Type Router"]
-        DC3D["DirectContext3D"]
-    end
-
-    CSharp --> Logger
-    Python --> Logger
-    Console --> ConsoleR
-    ConsoleR --> Logger
-    Debug --> Logger
-    Logger --> Detector
+    Trace --> Listener
+    Listener --> Detector
     Detector --> Monitor
-    Detector --> FileLog
-    Detector --> HttpLog
-    Geometry --> Router
-    Router --> DC3D
-    Logger --> Notify
-    LogSvc -.-> Logger
-    LogSvc -.-> Geometry
-    Linkify -.-> Monitor
+    Detector --> File
+    Detector --> Http
+    Listener --> Notify
 ```
 
+`DevTools.Logging` owns:
+
+- `LoggerTraceListener`
+- `ConsoleRedirector`
+- `NotifyListener`
+- `LogLevelDetector`
+- monitor/file/http targets
+- `LoggingExtensions.AddLoggingProvider()`
+- sink options and save formats
+
+Host projects own when listeners are registered, which enrichers are active, and any host-specific linkification or geometry routing.
+
 ---
 
-## Core Components
-
-| Component | Location | Role |
-|-----------|----------|------|
-| `LoggingService` | `RevitDevTool/Logging/` | Lifecycle orchestrator — init, restart, register listeners |
-| `LoggerTraceListener` | `DevTools.Logging/Listeners/` | Captures all `.NET Trace` events, routes to sinks |
-| `ConsoleRedirector` | `DevTools.Logging/Listeners/` | Intercepts `Console.WriteLine()` + Python `print()` |
-| `GeometryListener` | `RevitDevTool/Logging/Listeners/` | Detects Revit geometry types in trace calls → routes to Visualization |
-| `NotifyListener` | `DevTools.Logging/Listeners/` | Broadcasts UI update events |
-| `LogLevelDetector` | `DevTools.Logging/` | Keyword-based severity detection |
-
----
-
-## Log Level Detection
-
-Keywords in message content determine severity level automatically:
+## Host Composition
 
 ```mermaid
 flowchart LR
-    Message["Trace.Write(msg)"] --> Scan["LogLevelDetector\nscans message text"]
-    Scan --> Tier1{"CRITICAL / FATAL?"}
-    Tier1 -->|yes| Critical["LogLevel.Critical"]
-    Tier1 -->|no| Tier2{"ERROR / FAILED?"}
-    Tier2 -->|yes| Error["LogLevel.Error"]
-    Tier2 -->|no| Tier3{"WARNING / DEPRECATED?"}
-    Tier3 -->|yes| Warning["LogLevel.Warning"]
-    Tier3 -->|no| Info["LogLevel.Information"]
+    Shared["DevTools.Logging\nshared sinks/listeners"]
+    Revit["Revit LoggingService\nGeometryListener\nRevitLinkifier\nRevitContextProvider"]
+    Acad["Acad LoggingService\nAcadContextProvider"]
+    UI["DevTools.Presentation\nLogViewModel + settings UI"]
+
+    Revit --> Shared
+    Acad --> Shared
+    UI --> Shared
 ```
 
-| Category | Keywords | Level |
-|----------|----------|-------|
-| **Critical** | CRITICAL, FATAL, PANIC, SECURITY, UNAUTHORIZED | `Critical` |
-| **Error** | ERROR, FAILED, EXCEPTION, TIMEOUT, INVALID, NOT FOUND | `Error` |
-| **Warning** | WARNING, DEPRECATED, OBSOLETE, MEMORY, LEAK, RETRY | `Warning` |
-| Default | Everything else | `Information` |
+Revit registration is in `RevitHostingExtensions.AddLoggingServices()`. AutoCAD registration is in `AcadHostingExtensions.AddLoggingServices()`.
 
 ---
 
-## Geometry Interception
+## Severity Detection
 
-```mermaid
-sequenceDiagram
-    participant Script as User Script
-    participant Trace as Trace.Write()
-    participant GL as GeometryListener
-    participant Router as Type Router
-    participant Server as VisualizationServer
-    participant DC3D as DirectContext3D
+`LogLevelDetector` scans message content and maps known keywords to levels. This is deliberately lightweight and host-neutral.
 
-    Script->>Trace: Trace.Write(curve)
-    Trace->>GL: Captures event
-    GL->>GL: Is geometry type? → yes
-    GL->>Router: Route to visualization
-    Router->>Server: Select server by type
-    Server->>DC3D: Tessellate + render
-    Note over GL: If not geometry → normal text log
-```
+| Level | Example keywords |
+|-------|------------------|
+| Critical | `CRITICAL`, `FATAL`, `PANIC`, `SECURITY` |
+| Error | `ERROR`, `FAILED`, `EXCEPTION`, `TIMEOUT`, `INVALID` |
+| Warning | `WARNING`, `DEPRECATED`, `OBSOLETE`, `MEMORY`, `RETRY` |
+| Information | default |
 
-Supported geometry types: `Curve`, `Face`, `Solid`, `Mesh`, `XYZ`, `BoundingBoxXYZ`. Each is routed to its dedicated `VisualizationServer<T>`.
+---
+
+## Revit-Specific Extensions
+
+Revit adds behavior that must not leak into shared logging:
+
+- `GeometryListener` intercepts Revit geometry objects written to `Trace`.
+- `RevitLinkifier` detects Revit element references in monitor text and creates clickable selection links.
+- `RevitContextProvider` enriches log records with selected Revit context fields.
+- Visualization routing sends geometry to DirectContext3D servers under `source/RevitDevTool/Visualization/`.
+
+AutoCAD has its own context provider/enricher path and does not share Revit geometry routing.
 
 ---
 
 ## Output Targets
 
-| Target | Implementation | Format | Use Case |
-|--------|---------------|--------|----------|
-| **Monitor** | `MonitorLogTarget` | Color-coded RichTextBox | Real-time UI display |
-| **File (.log)** | `FileLogProcessor` | Plain text | Persistent logging |
-| **File (.json)** | `FileLogProcessor` | Structured JSON | Machine-readable export |
-| **HTTP** | `HttpLogProcessor` | JSON over HTTP | Remote logging (future) |
+| Target | Implementation | Notes |
+|--------|----------------|-------|
+| Monitor | `MonitorLogTarget` | UI monitor through Scintilla/ZLogger integration. |
+| File | `FileLogProcessor` | Plain text or JSON based on settings. |
+| HTTP | `HttpLogProcessor` | Remote sink path. |
+| Notify | `NotifyListener` | UI update notifications. |
 
 ---
 
-## Service Composition
+## Change Rules
 
-```mermaid
-flowchart TB
-    subgraph Config["Host.ConfigureLogging()"]
-        direction LR
-        MonLog["MonitorLoggingOptions"]
-        FileLog["FileLoggingOptions"]
-        HttpLog["HttpLoggingOptions"]
-        Sink["LogSink selection"]
-    end
-
-    subgraph Init["LoggingService.Initialize()"]
-        Register["RegisterTraceListeners()"]
-        Level["SetMinimumLevel()"]
-    end
-
-    subgraph Runtime["Runtime"]
-        Capture["All Trace/Console/Debug\ncaptured by listeners"]
-        Process["LogLevelDetector\n+ Enrichment"]
-        Output["Route to configured sinks"]
-    end
-
-    Config --> Init
-    Init --> Runtime
-```
-
-DI registration via `Host.ConfigureLogging()` in `source/DevitDevTool/Host.cs`.
+- Keep shared logging host-neutral.
+- Put host document/context/linkification/geometry behavior in host projects.
+- If changing geometry routing, update `docs/Visualization/README.md` too.
+- If changing sinks or shared options, update this doc and `docs/ai/host-boundaries.md` when the boundary changes.
 
 ---
 
-## Linkify — Revit Element References
+## Related Docs
 
-`RevitLinkifier` (`source/RevitDevTool/Logging/Linkify/`) auto-detects Revit element IDs in log output and creates clickable links that select the element in Revit.
-
-Pattern: `<ElementId (12345)>` in log messages is automatically converted to a navigable link.
-
----
-
-## Related Modules
-
-- **[Execution Architecture](../Execution/README.md)** — Script execution triggers logging
-- **[Visualization Architecture](../Visualization/README.md)** — Geometry routing target
-
----
-
-_Last updated: 2026-05-03_
+- `docs/Visualization/README.md`
+- `docs/Execution/README.md`
+- `docs/ai/host-boundaries.md`

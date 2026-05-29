@@ -1,117 +1,62 @@
 # Visualization System Architecture
 
-Transient 3D geometry rendering via Revit's `DirectContext3D` API. Geometry is intercepted from log output and rendered without creating model elements.
+Visualization is currently a Revit-host feature. It renders transient geometry through Revit DirectContext3D when Revit geometry objects are written through the logging path.
 
-**Source:** `source/RevitDevTool/Visualization/`
+Last updated: 2026-05-29
 
 ---
 
-## Architecture Overview
+## Source Map
+
+| Area | Path |
+|------|------|
+| Revit geometry listener | `source/RevitDevTool/Logging/Listeners/GeometryListener.cs` |
+| Server base/contracts | `source/RevitDevTool/Visualization/Contracts/` |
+| Concrete servers | `source/RevitDevTool/Visualization/Server/` |
+| Render helpers | `source/RevitDevTool/Visualization/Helpers/` |
+| Render buffer cache | `source/RevitDevTool/Visualization/Render/RenderingBufferStorage.cs` |
+| Settings view models | `source/RevitDevTool/ViewModel/Settings/Visualization/` |
+| Settings views | `source/RevitDevTool/View/Settings/Visualization/` |
+
+---
+
+## Flow
 
 ```mermaid
 flowchart TB
-    subgraph Input["Input Channels"]
-        CSharp["C#: Trace.Write(curve)"]
-        Python["Python: print(curve)"]
-    end
+    Script["Script / command\nTrace.Write(geometry)"]
+    Listener["GeometryListener\nRevit host"]
+    Router["Type routing"]
+    Servers["Visualization servers\nCurve, Face, Solid, Mesh, XYZ, BoundingBox"]
+    Buffer["RenderingBufferStorage"]
+    DC3D["Revit DirectContext3D"]
+    Text["Normal text logging"]
 
-    subgraph Logging["Logging Layer"]
-        GL["GeometryListener\n(detects geometry types)"]
-        Filter{"Is Revit\ngeometry?"}
-        Text["→ Text log"]
-    end
-
-    subgraph Viz["Visualization Layer"]
-        Factory["VisualizationServerFactory\n(select by type)"]
-        Polyline["PolylineServer"]
-        Face["FaceServer"]
-        Solid["SolidServer"]
-        Mesh["MeshServer"]
-        XYZ["XyzServer"]
-        BBox["BoundingBoxServer"]
-    end
-
-    subgraph Render["Rendering Layer"]
-        Helper["RenderHelper\n(primitive draw calls)"]
-        Buffer["RenderingBufferStorage\n(cached tesselation)"]
-        DC3D["DirectContext3D\n(GPU)"]
-    end
-
-    CSharp --> GL
-    Python --> GL
-    GL --> Filter
-    Filter -->|no| Text
-    Filter -->|yes| Factory
-    Factory --> Polyline
-    Factory --> Face
-    Factory --> Solid
-    Factory --> Mesh
-    Factory --> XYZ
-    Factory --> BBox
-    Polyline --> Helper
-    Face --> Buffer
-    Solid --> Buffer
-    Mesh --> Buffer
-    XYZ --> Helper
-    BBox --> Helper
-    Helper --> DC3D
-    Buffer --> Helper
+    Script --> Listener
+    Listener -->|"Revit geometry"| Router
+    Listener -->|"not geometry"| Text
+    Router --> Servers
+    Servers --> Buffer
+    Servers --> DC3D
 ```
+
+Geometry visualization is coupled to Revit API types and DirectContext3D. Other hosts should add their own visualization adapters rather than reuse this implementation directly.
 
 ---
 
 ## Server-Per-Type Pattern
 
-Each geometry type has a dedicated `VisualizationServer<TGeometry>`:
+| Server | Geometry |
+|--------|----------|
+| `PolylineVisualizationServer` | Revit `Curve` / tessellated polyline |
+| `FaceVisualizationServer` | Revit `Face` |
+| `SolidVisualizationServer` | Revit `Solid` |
+| `MeshVisualizationServer` | Revit `Mesh` |
+| `XyzVisualizationServer` | Revit `XYZ` |
+| `BoundingBoxVisualizationServer` | Revit `BoundingBoxXYZ` |
+| `PlaneVisualizationServer` | Revit plane-like data |
 
-```mermaid
-classDiagram
-    class VisualizationServer~T~ {
-        +Open()
-        +Close()
-        +RenderScene()
-        #OnDrawFrame()
-        -IDirectContext3DServer
-    }
-    class PolylineVisualizationServer {
-        +Tessellate curve → polyline
-        +DrawLine() per segment
-    }
-    class FaceVisualizationServer {
-        +Triangulate face
-        +DrawTriangles()
-    }
-    class SolidVisualizationServer {
-        +Decompose solid → faces → edges
-        +DrawWireframe / DrawTriangles()
-    }
-    class MeshVisualizationServer {
-        +Direct mesh rendering
-        +Fastest path
-    }
-    class XyzVisualizationServer {
-        +DrawPoints()
-    }
-    class BoundingBoxVisualizationServer {
-        +DrawWireframeBox()
-    }
-
-    VisualizationServer~T~ <|-- PolylineVisualizationServer
-    VisualizationServer~T~ <|-- FaceVisualizationServer
-    VisualizationServer~T~ <|-- SolidVisualizationServer
-    VisualizationServer~T~ <|-- MeshVisualizationServer
-    VisualizationServer~T~ <|-- XyzVisualizationServer
-    VisualizationServer~T~ <|-- BoundingBoxVisualizationServer
-```
-
-| Server | Type | Rendering Method |
-|--------|------|-----------------|
-| `PolylineVisualizationServer` | `Curve` (Line, Arc, NurbSpline, HermiteSpline) | Tessellated polyline |
-| `FaceVisualizationServer` | `Face` (Planar, Cylindrical, Conical, Revolved, Ruled) | Triangulated mesh |
-| `SolidVisualizationServer` | `Solid` | Face decomposition → wireframe or filled |
-| `MeshVisualizationServer` | `Mesh` | Direct triangle rendering |
-| `XyzVisualizationServer` | `XYZ` | Point spheres |
-| `BoundingBoxVisualizationServer` | `BoundingBoxXYZ` | Wireframe edges |
+Servers are registered as concrete singletons in Revit host DI. Keep new Revit geometry types aligned with this pattern.
 
 ---
 
@@ -125,49 +70,37 @@ sequenceDiagram
     participant Helper as RenderHelper
     participant DC3D as DirectContext3D
 
-    loop Every Frame
-        Revit->>Server: OnDrawFrame()
-        Server->>Buffer: Get cached vertices/indices?
-        alt Cache hit
-            Buffer-->>Server: Cached data
-        else Cache miss
-            Server->>Server: Tessellate geometry
-            Server->>Buffer: Store vertices + indices
-        end
-        Server->>Helper: DrawTriangles() / DrawLine() / DrawPoints()
-        Helper->>DC3D: Issue primitive draw calls
-        DC3D->>Revit: GPU renders to viewport
+    Revit->>Server: Draw frame
+    Server->>Buffer: Query cached tessellation
+    alt Cache miss
+        Server->>Server: Tessellate geometry
+        Server->>Buffer: Store render data
     end
+    Server->>Helper: Build draw primitives
+    Helper->>DC3D: Issue draw calls
 ```
 
-**Key points:**
-- Transient content: geometry disappears each frame unless redrawn
-- Two-pass rendering: opaque pass (depth testing) then transparent pass (blending)
-- `RenderingBufferStorage` caches tessellation to avoid recomputation
-- Servers subscribe to `DrawFrame` events; unsubscribe on disposal
+`RenderingBufferStorage` avoids repeated tessellation where possible. Servers are responsible for lifecycle and frame rendering.
 
 ---
 
-## Integration with Logging
+## Settings
 
-```mermaid
-flowchart LR
-    Code["Trace.Write(geometry)"] --> GL["GeometryListener\n(in Logging module)"]
-    GL -->|"is geometry?"| Factory["VisualizationServerFactory"]
-    Factory --> Server["VisualizationServer&lt;T&gt;"]
-    Server --> View["3D View"]
-    GL -.->|"is text?"| Text["Trace Log Panel"]
-```
-
-The `GeometryListener` in the Logging module intercepts all `Trace.Write()` calls. If the value is a Revit geometry type (`Curve`, `Face`, `Solid`, etc.), it routes to Visualization instead of the text log.
+Visualization settings are Revit-host settings. View models live under `source/RevitDevTool/ViewModel/Settings/Visualization/` and are wired by `RevitHostingExtensions.AddApplicationServices()`.
 
 ---
 
-## Related Modules
+## Change Rules
 
-- **[Logging Architecture](../Logging/README.md)** — GeometryListener captures geometry from trace output
-- **[Execution Architecture](../Execution/README.md)** — Scripts produce geometry via Revit API
+- Do not move Revit API geometry types into shared `DevTools.Logging` or `DevTools.Presentation`.
+- Keep host-neutral logging behavior intact for non-geometry trace output.
+- Add new Revit geometry rendering as a dedicated server plus settings if needed.
+- For non-Revit hosts, create host-specific visualization adapters.
 
 ---
 
-_Last updated: 2026-05-03_
+## Related Docs
+
+- `docs/Logging/README.md`
+- `docs/ai/host-boundaries.md`
+- `docs/Execution/README.md`

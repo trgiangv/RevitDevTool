@@ -1,152 +1,153 @@
 # MCP Integration Architecture
 
-Model Context Protocol (MCP) integration enables external tools (Claude Desktop, VS Code extensions) to interact with Revit through a standardized protocol. Split across three source projects plus the add-in host.
+Model Context Protocol integration lets external clients talk to a running host through a standalone MCP server and the in-host named-pipe runtime.
+
+Current server tooling is still Revit-oriented in naming and built-in tools, but the runtime path in `DevTools.Execution` is host-agnostic and uses `IHostAppInfo` plus host adapters.
+
+Last updated: 2026-05-29
 
 ---
 
-## Architecture Overview
+## Source Map
+
+| Area | Path |
+|------|------|
+| Parser/contracts | `source/DevTools.McpParser/` |
+| Standalone MCP server | `source/DevTools.McpServer/` |
+| In-host runtime | `source/DevTools.Execution/External/Mcp/` |
+| Pipe server | `source/DevTools.Execution/External/DevToolsPipeServer.cs` |
+| Registry UI | `source/DevTools.Presentation/ViewModels/McpRegistryViewModel.cs` |
+| Python parser script | `source/DevTools.Execution/Resources/scripts/ToolParser.py` |
+
+---
+
+## Runtime Shape
 
 ```mermaid
 flowchart TB
-    Client["External MCP Client\n(Claude Desktop, VS Code)"]
-    
-    subgraph PipeServer["DevToolsPipeServer (in Revit)"]
-        direction LR
-        R1["tools/list"]
-        R2["tools/call"]
-        R3["prompts/list"]
-        R4["resources/list"]
-        R5["resources/read"]
-        R6["instance/info"]
-        R7["tests/discover"]
-        R8["tests/run"]
-    end
+    Client["MCP client"]
+    Server["DevTools.McpServer\nstandalone process"]
+    Pipe["DevToolsPipeServer\ninside host process"]
+    Registry["ToolRegistryStore"]
+    Providers["DotnetToolRegistryProvider\nPythonToolRegistryProvider"]
+    Dispatch["Tool/Prompt/Resource dispatchers"]
+    Host["Host context + Python executor"]
 
-    subgraph Backend["Backends"]
-        Registry["ToolRegistryStore\n(Discovery + Cache)"]
-        Pytest["PytestExecutionService\n(Python scope)"]
-    end
-
-    subgraph Providers["Tool Providers"]
-        DotNet["DotnetToolRegistryProvider\n(.NET tools from assemblies)"]
-        Python["PythonToolRegistryProvider\n(Python tools from directories)"]
-    end
-
-    Client -->|"Named Pipe (IPC)"| PipeServer
-    R1 --> Registry
-    R2 --> Registry
-    R3 --> Registry
-    R4 --> Registry
-    R5 --> Registry
-    R6 -->|"InstanceRequestHandler"| Client
-    R7 --> Pytest
-    R8 --> Pytest
-    Registry --> DotNet
-    Registry --> Python
+    Client --> Server
+    Server -->|"framed named pipe"| Pipe
+    Pipe --> Registry
+    Registry --> Providers
+    Pipe --> Dispatch
+    Dispatch --> Host
 ```
+
+The standalone MCP server owns MCP protocol routing and host instance selection. The host process owns actual execution, registry loading, and host-safe invocation.
 
 ---
 
-## Source Projects
+## Parser Library
 
-### DevTools.McpParser (`source/DevTools.McpParser/`)
+`source/DevTools.McpParser/` contains shared bridge and registry contracts:
 
-Message parsing library shared by both server and client:
-- **Models/** — Bridge message types, pipe connection protocol
-- **Dotnet/** — .NET tool parser (attribute-based discovery)
-- **Python/** — Python tool parser (annotation-based discovery)
-- **RequestContextFactory.cs** — Context factory for request handling
+- `Models/BridgeMessage.cs`, `BridgeMethods.cs`, `BridgePipeConnection.cs`
+- `Models/McpRegisteredTool.cs`, `McpRegisteredPrompt.cs`, `McpRegisteredResource.cs`
+- `Models/McpRegistryCatalog.cs`
+- `Dotnet/DotnetMcpAssemblyParser.cs`
+- `Python/PythonToolsetParser.cs`
+- `RequestContextFactory.cs`
 
-### DevTools.McpServer (`source/DevTools.McpServer/`)
-
-Standalone MCP server process (publishable binary):
-- **Program.cs** — Main entry point
-- **RoutingMcpServerTool/Prompt/Resource** — MCP routing handlers
-- **RevitBridgeClient.cs** — Client connecting back to Revit's pipe server
-- **CatalogService.cs** — Tool catalog management
-- **InstanceManager.cs** — Instance lifecycle
-- **GatewayTunnelClient.cs** — Gateway tunnel support
-
-### Add-in Host (`source/DevTools.Execution/External/Mcp/`)
-
-```mermaid
-flowchart LR
-    subgraph Registry["Registry"]
-        DotNetP["DotnetToolRegistryProvider"]
-        PythonP["PythonToolRegistryProvider"]
-        Catalog["ToolRegistryCatalogLoader"]
-    end
-
-    subgraph Dispatch["Dispatchers"]
-        ToolD["ToolExecutionDispatcher"]
-        PromptD["PromptExecutionDispatcher"]
-        ResourceD["ResourceExecutionDispatcher"]
-    end
-
-    subgraph Store["Store"]
-        Store["ToolRegistryStore\n(cache + change notif)"]
-    end
-
-    Registry --> Store
-    Store --> Dispatch
-```
+This library is shared by the standalone MCP server, in-host runtime, and tests.
 
 ---
 
-## Key Flows
-
-### Tool Discovery
+## Registry Flow
 
 ```mermaid
 sequenceDiagram
-    participant Client as MCP Client
-    participant Pipe as DevToolsPipeServer
-    participant Handler as RegistryRequestHandler
+    participant UI as Registry UI
     participant Store as ToolRegistryStore
-    participant DotNet as DotnetToolRegistryProvider
+    participant Loader as ToolRegistryCatalogLoader
+    participant Dotnet as DotnetToolRegistryProvider
     participant Python as PythonToolRegistryProvider
+    participant Settings as ISettingsService
 
-    Client->>Pipe: tools/list
-    Pipe->>Handler: HandleToolsListAsync()
-    Handler->>Store: EnsureLoaded()
-    Store->>DotNet: Discover .NET tools
-    Store->>Python: Discover Python tools
-    DotNet-->>Store: tools
-    Python-->>Store: tools
-    Store-->>Handler: cached tools
-    Handler-->>Pipe: JSON response
-    Pipe-->>Client: tool list
+    UI->>Store: AddPathAsync / ReloadAsync
+    Store->>Settings: Read configured paths
+    Store->>Loader: LoadCatalog(dotnetPaths, pythonPaths)
+    Loader->>Dotnet: Parse assemblies
+    Loader->>Python: Parse toolset directories
+    Python->>Python: Pre-resolve dependencies for MCP entry files
+    Loader-->>Store: McpRegistryCatalog
+    Store->>Settings: Persist accepted paths and prune invalid paths
+    Store-->>UI: ToolsChanged
 ```
 
-### Tool Execution
-
-```mermaid
-sequenceDiagram
-    participant Client as MCP Client
-    participant Pipe as DevToolsPipeServer
-    participant Handler as RegistryRequestHandler
-    participant Dispatch as ToolExecutionDispatcher
-    participant Context as Execution Context
-
-    Client->>Pipe: tools/call (name + args)
-    Pipe->>Handler: HandleToolsCallAsync()
-    Handler->>Dispatch: Dispatch(tool, args)
-    Dispatch->>Context: Execute in appropriate context
-    Context-->>Dispatch: result
-    Dispatch-->>Handler: result
-    Handler-->>Pipe: JSON response
-    Pipe-->>Client: tool result
-```
+`.NET` catalogs are parsed from assemblies. Python catalogs are parsed from directories through `ToolParser.py` and in-process Python execution.
 
 ---
 
-## Related Documentation
+## Dispatch Flow
 
-- **[Execution Architecture](../Execution/README.md)** — Execution engine and pipe server
-- **[PythonDemo Architecture](../PythonDemo/README.md)** — Python MCP toolset examples
-- **Samples/McpToolsetDemo/** — Demo MCP toolset assembly
-- **Samples/RevitMcpToolSet/** — Comprehensive MCP tool set
+`RegistryRequestHandler` handles pipe methods:
+
+- `tools/list`
+- `tools/call`
+- `prompts/list`
+- `prompts/get`
+- `resources/list`
+- `resources/templates/list`
+- `resources/read`
+
+Dispatchers split by primitive:
+
+| Dispatcher | .NET path | Python path |
+|------------|-----------|-------------|
+| `ToolExecutionDispatcher` | `DotnetMcpServerFactory` creates/caches `McpServerTool` wrappers | `PythonExecutor` invokes the Python binding |
+| `PromptExecutionDispatcher` | `McpServerPrompt` wrapper | Python prompt binding |
+| `ResourceExecutionDispatcher` | `McpServerResource` wrapper | Python resource binding |
+
+`McpPrimitiveBinding.CreatePrimitiveId()` normalizes IDs for stable lookup and duplicate handling.
 
 ---
 
-_Last updated: 2026-05-03_
+## Standalone Server
+
+`source/DevTools.McpServer/` contains:
+
+- `Program.cs`
+- `CatalogService.cs`
+- `InstanceManager.cs`
+- `RevitBridgeClient.cs`
+- routing primitives: `RoutingMcpServerTool`, `RoutingMcpServerPrompt`, `RoutingMcpServerResource`
+- built-in Revit file/launch tools under `Tools/` and `RevitFileInfo/`
+
+The built-in standalone tools are currently Revit-specific. Keep that distinction clear: the in-host MCP runtime is shared, while the current standalone helper tools target Revit workflows.
+
+---
+
+## Pytest Routes
+
+`DevToolsPipeServer` also routes `tests/discover` and `tests/run` to the pytest bridge. Those routes are documented in `docs/PyTest/README.md`.
+
+---
+
+## Verification Reality
+
+Current MCP tests mostly cover parser and contract shapes. They do not deeply prove live named-pipe dispatch, host threading, or end-to-end MCP client behavior.
+
+When changing MCP behavior:
+
+- Add focused parser/contract tests for schema or identity changes.
+- Build the host that owns the changed runtime.
+- State live-host or named-pipe verification gaps when they cannot be run.
+
+---
+
+## Related Docs
+
+- `docs/ai/mcp-pytest-bridge.md`
+- `docs/Execution/README.md`
+- `docs/PyTest/README.md`
+- `Samples/McpToolsetDemo/`
+- `Samples/PythonDemo/mcp_toolset/`
+- `Samples/RevitMcpToolSet/`
