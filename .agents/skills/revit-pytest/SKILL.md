@@ -9,26 +9,106 @@ description: >
   auto-rollback, dependency injection, and CLI options.
 ---
 
-# Revit API Testing with pytest via RevitDevTool
+# Revit API Testing with pytest
 
 ## How It Works
 
-1. pytest discovers tests locally as standard `.py` files
-2. `revitdevtool_pytest` plugin intercepts execution via `pytest_pyfunc_call`
-3. Test source is serialized and sent over Named Pipe to a live Revit process
-4. RevitDevTool add-in executes the test inside Revit's pythonnet environment
-5. Results map back to pytest pass/fail/skip
+```
+Local pytest (collect) → Named Pipe → Revit (PytestRunner.py) → Results → Local pytest (report)
+```
 
-## Critical Rules
+Tests are collected locally by pytest, then executed remotely inside a live Revit process via JSON-RPC over Named Pipes. Results (pass/fail/skip, stdout, tracebacks) return to the local pytest session.
 
-### Lazy imports — all Revit API imports MUST be inside function bodies
+## 1. Project Setup
+
+```bash
+# Create project with uv (recommended)
+uv init my-revit-tests
+cd my-revit-tests
+uv add revitdevtool_pytest
+```
+
+Or with pixi:
+
+```bash
+pixi init --format pyproject my-revit-tests
+cd my-revit-tests
+pixi add --pypi revitdevtool_pytest
+```
+
+## 2. Configure pyproject.toml
+
+Minimal config — only `revit_version` is required:
+
+```toml
+[tool.pytest.ini_options]
+revit_version = "2025"
+```
+
+Full options:
+
+```toml
+[tool.pytest.ini_options]
+revit_version = "2025"
+revit_launch = false
+revit_timeout = "60"
+revit_launch_timeout = "180"
+```
+
+| Option | Default | Description |
+|--------|---------|-------------|
+| `revit_version` | — | Revit year. Required when `revit_launch = true`. |
+| `revit_launch` | `false` | Force-launch a **new** Revit instance (ignores existing). |
+| `revit_timeout` | `"60"` | Per-test execution timeout (seconds). |
+| `revit_launch_timeout` | `"120"` | Seconds to wait for Revit to start. |
+| `revit_pipe` | — | Explicit pipe name (bypass auto-discovery). |
+
+## 3. Write conftest.py
 
 ```python
-# WRONG — fails at collection time (no Revit process yet)
-from Autodesk.Revit.DB import FilteredElementCollector
+# /// script
+# dependencies = [
+#   "numpy>=2.0",
+# ]
+# ///
+"""PEP 723 dependencies above are auto-installed by RevitDevTool."""
 
-# CORRECT — import inside the test function
-def test_walls(revit_doc):
+import pytest
+
+@pytest.fixture(scope="session")
+def revit_uiapp():
+    return __revit__  # noqa: F821
+
+@pytest.fixture(scope="session")
+def revit_app(revit_uiapp):
+    return revit_uiapp.Application
+
+@pytest.fixture(scope="session")
+def revit_doc(revit_uiapp):
+    return revit_uiapp.ActiveUIDocument.Document
+
+@pytest.fixture
+def revit_auto_rollback():
+    """Start undo tracking, revert after test."""
+    from RevitDevTool.Core import RevitTransactionService
+    RevitTransactionService.StartChanges()
+    try:
+        yield RevitTransactionService
+    finally:
+        RevitTransactionService.RevertChanges()
+```
+
+## 4. Write Tests
+
+**Critical rule: All Revit/.NET imports MUST be inside function bodies.**
+
+```python
+def test_active_view(revit_doc):
+    view = revit_doc.ActiveView
+    print(f"Active View: {view.Name}")
+    assert view is not None
+
+def test_wall_count(revit_doc):
     from Autodesk.Revit.DB import FilteredElementCollector, BuiltInCategory
 
     walls = list(
@@ -37,91 +117,59 @@ def test_walls(revit_doc):
         .WhereElementIsNotElementType()
     )
     assert len(walls) > 0
+
+def test_create_and_rollback(revit_doc, revit_auto_rollback):
+    from Autodesk.Revit.DB import Transaction
+    with Transaction(revit_doc, "Test") as t:
+        t.Start()
+        # modify model...
+        t.Commit()
+    # revit_auto_rollback reverts all changes after test
 ```
 
-This also applies to .NET imports (`System.Collections.Generic`, `RevitDevTool.Core`, etc.).
+## 5. Run Tests
 
-### `__revit__` global
+```powershell
+# Preferred: uv run
+uv run pytest -v
 
-`__revit__` is injected by RevitDevTool — provides `UIApplication`:
+# Or pixi:
+pixi run pytest -v
 
-```python
-def test_version():
-    app = __revit__.Application  # noqa: F821
-    assert "2025" in app.VersionName
+# Or activate venv manually:
+& ".venv\Scripts\pytest.exe" -v
+
+# Specific test:
+pytest tests/test_walls.py::test_wall_count -v
+
+# Override version for one run:
+pytest --revit-version=2026 -v
+
+# Force new Revit instance:
+pytest --revit-launch --revit-version=2025 -v
 ```
 
-### Fixtures (from conftest.py)
+## Key Behaviors
 
-| Fixture | Scope | Provides |
-|---------|-------|----------|
-| `revit_uiapp` | session | `UIApplication` (`__revit__`) |
-| `revit_app` | session | `Application` |
-| `revit_doc` | session | Target `Document` (opens RVT if needed) |
-| `revit_transaction_service` | function | `RevitTransactionService` |
-| `revit_auto_rollback` | function | Start undo tracking, always revert after test |
+### Print output
+`print()` inside tests is automatically captured and displayed in terminal output for both passing and failing tests. No extra flags needed.
 
-### PEP 723 dependencies in conftest.py
+### Connection
+- Default: plugin scans for running Revit matching `revit_version` via Named Pipe (`Revit_{year}_{pid}`)
+- `revit_launch = true`: spawns new Revit, waits for its specific PID pipe, ignores existing instances
+- `revit_pipe = "Revit_2025_12345"`: connect to exact pipe (skip discovery)
 
-Declare Python packages at the top of `conftest.py` — RevitDevTool auto-installs them:
+### Execution context
+- Tests run on Revit's main thread sequentially
+- `__revit__` is a builtin injected by RevitDevTool (always access via fixtures)
+- `--capture=sys` is used internally (fd capture doesn't work in embedded Python.NET)
 
-```python
-# /// script
-# dependencies = [
-#   "numpy>=2.0",
-#   "polars>=1.0",
-# ]
-# ///
-```
+## Common Mistakes
 
-## Running Tests
-
-```bash
-pytest --revit-launch --revit-version=2025 -v     # auto-launch Revit
-pytest --revit-version=2025 -v                      # detect running Revit
-pytest tests/test_smoke.py -v                       # single file
-pytest -k "test_wall" -v                            # by name pattern
-pytest --revit-pipe=Revit_2025_12345 -v             # explicit pipe
-pytest --collect-only                               # verify discovery only
-```
-
-| CLI Option | Description |
-|---|---|
-| `--revit-version` | Revit version year (e.g. 2025) |
-| `--revit-launch` | Auto-launch Revit if no instance found |
-| `--revit-timeout` | Per-test timeout seconds (default: 60) |
-| `--revit-launch-timeout` | Startup timeout seconds (default: 120) |
-| `--revit-pipe` | Explicit pipe name |
-
-Set defaults in `pyproject.toml`:
-
-```toml
-[tool.pytest.ini_options]
-testpaths = ["tests"]
-revit_version = "2025"
-revit_timeout = "60"
-revit_launch = true
-revit_launch_timeout = "180"
-addopts = "-v --tb=short -p no:warnings"
-```
-
-`print()` in tests is captured inside Revit and returned in `CaseResult.stdout`. Use `-s` to see it live. For details, see [Plugin Internals](./references/plugin-internals.md).
-
-## Quick Start — New Test File
-
-1. Create `tests/test_<feature>.py`
-2. Import `pytest` at top level only — all Revit imports inside functions
-3. Use fixtures: `revit_doc`, `revit_app`, `revit_uiapp`
-4. Use `revit_auto_rollback` if test modifies the model
-5. Use `pytest.skip()` for missing prerequisites
-
-For full examples, see [Test Patterns](./references/test-patterns.md).
-
-## Reference Files
-
-| File | When to Read |
-|------|-------------|
-| [Test Patterns](./references/test-patterns.md) | Writing new test files — examples for queries, transactions, exports, validation |
-| [Conftest & Fixtures](./references/conftest-guide.md) | Setting up conftest.py, adding fixtures, PEP 723 dependency declaration |
-| [Plugin Internals](./references/plugin-internals.md) | Debugging connection issues, Named Pipe protocol, suite leasing, output capture |
-| [Testing pyRevit Features](./references/test-pyrevit-patterns.md) | Dual-lib architecture for testing pyRevit IronPython code with Python 3.13 |
+| Mistake | Fix |
+|---------|-----|
+| Import Revit API at module level | Move to inside function body |
+| Use `__revit__` directly without `noqa` | Use `revit_uiapp` fixture |
+| Run bare `pytest` without venv | Use `uv run pytest` or activate venv |
+| Expect `revit_launch` to reuse instances | It always launches NEW (use default for reuse) |
+| Missing `revit_version` with `revit_launch` | Set `revit_version` in config or CLI |

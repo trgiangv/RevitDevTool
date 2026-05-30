@@ -25,6 +25,27 @@ Valid modes are `Debug` and `Release`, so full names look like `Debug.Autodesk.2
 - Release package: `scripts/agent/pack.ps1`.
 - Build pipeline with no args: `dotnet run -c Release` from `build/` compiles selected release configurations.
 
+## Kill Host Process Before Deploy
+
+Running Revit or AutoCAD locks loaded DLLs. Any build that deploys to the addin folder will fail or produce stale results if the host is still running.
+
+**Required step before build+deploy:**
+
+```powershell
+# Kill Revit (all versions)
+Get-Process -Name "Revit" -ErrorAction SilentlyContinue | Stop-Process -Force
+
+# Kill AutoCAD
+Get-Process -Name "acad" -ErrorAction SilentlyContinue | Stop-Process -Force
+```
+
+This applies to:
+- `scripts/agent/build-host.ps1` (deploys by default)
+- `scripts/agent/pack.ps1`
+- `dotnet build` without `-p:DeployRevitAddin=false`
+
+NOT needed when building with `-p:DeployRevitAddin=false -p:IsRepackable=false` (compile-only check).
+
 ## Compatibility Rule
 
 Any shared `DevTools.*` change can affect all target frameworks. If code is reachable from 2022-2024, verify .NET Framework compatibility and avoid newer BCL APIs unless the repo already has a compatibility helper or package.

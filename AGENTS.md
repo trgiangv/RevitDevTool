@@ -25,6 +25,7 @@
 - Autodesk 2022-2024 target `net48`; 2025-2026 target `net8.0-windows`; 2027 targets `net10.0-windows`.
 - Focused host build: `scripts/agent/build-host.ps1 -Year 2025`.
 - CI/package build: `scripts/agent/pack.ps1` or `dotnet run -c Release pack` from `build/`.
+- **Kill host process before deploy builds**: Running Revit/AutoCAD locks the DLL. Before any build that deploys to the addin folder, kill the host process first: `Get-Process -Name "Revit" -ErrorAction SilentlyContinue | Stop-Process -Force`. See `.agents/skills/revit-build/SKILL.md` for details.
 
 ## Verification
 - Do not guess commands. Prefer scripts in `scripts/agent/`.

@@ -89,6 +89,31 @@ Build project: `build/Build.csproj` targeting `net10.0`.
 
 ## Build Commands
 
+### CRITICAL: Kill host process before build+deploy
+
+The built DLL is loaded into the Revit/AutoCAD process. A running host **locks** the DLL file and prevents overwrite. Before building a configuration that deploys to the addin folder, you MUST kill the corresponding process:
+
+```powershell
+# Find and kill Revit for a specific version before building that version
+Get-Process -Name "Revit" -ErrorAction SilentlyContinue | Stop-Process -Force
+
+# If you know the specific PID (e.g. from Named Pipe name Revit_2025_16544):
+Stop-Process -Id 16544 -Force -ErrorAction SilentlyContinue
+
+# For AutoCAD:
+Get-Process -Name "acad" -ErrorAction SilentlyContinue | Stop-Process -Force
+```
+
+**When to kill:**
+- Before `scripts/agent/build-host.ps1` (always deploys to addin folder)
+- Before `dotnet build` with `DeployRevitAddin=true` (default for Debug builds)
+- Before `dotnet run --project build/Build.csproj -- pack`
+- NOT needed for builds with `-p:DeployRevitAddin=false`
+
+**Flow:** Kill process → Build → (optionally) Restart host to test
+
+### Commands
+
 ```bash
 # Compile all Release configurations
 dotnet run --project build/Build.csproj
