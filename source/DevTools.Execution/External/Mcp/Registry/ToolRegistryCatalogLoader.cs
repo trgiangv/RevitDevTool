@@ -21,7 +21,7 @@ public sealed class ToolRegistryCatalogLoader(IEnumerable<IMcpRegistryProvider> 
             try
             {
                 var catalog = provider.LoadCatalog();
-                Trace.TraceInformation(
+                Debug.WriteLine(
                     $"[MCP] Provider '{provider.Name}' returned {catalog.Tools.Count} tool(s), {catalog.Prompts.Count} prompt(s), {catalog.Resources.Count} resource(s).");
 
                 Collect(provider.Name, catalog.Tools, toolMap, tool => tool.Id, tool => tool.ProtocolTool.Name, "tool");
@@ -52,7 +52,7 @@ public sealed class ToolRegistryCatalogLoader(IEnumerable<IMcpRegistryProvider> 
                 .ToList(),
         };
 
-        Trace.TraceInformation(
+        Debug.WriteLine(
             $"[MCP] Tool store loaded {loaded.Tools.Count} tool(s), {loaded.Prompts.Count} prompt(s), {loaded.Resources.Count} resource(s).");
         return loaded;
     }

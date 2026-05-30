@@ -13,7 +13,7 @@ namespace DevTools.Execution.Providers.Python;
 /// </summary>
 public static class PythonInstaller
 {
-    private const string PixiVersion = "0.67.0";
+    private const string PixiVersion = "0.69.0";
     private const string PixiDownloadUrlTemplate = "https://github.com/prefix-dev/pixi/releases/download/v{0}/pixi-x86_64-pc-windows-msvc.zip";
 
     private static string GetBinPath() => Path.Combine(AppUtils.GetApplicationDataPath(), "bin");
