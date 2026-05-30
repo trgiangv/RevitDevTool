@@ -35,7 +35,8 @@ public sealed class FileLogProcessor(ILoggerFactory loggerFactory, IHostAppInfo 
             IncludeScopes = true,
             FilePathSelector = (dt, seq) =>
                 Path.Combine(folder, $"log_{app}_{ver}_{pid}_{dt:yyyyMMddTHHmmss}_{seq:D3}.{ext}"),
-            RollingInterval = fileOptions.RollingInterval
+            RollingInterval = fileOptions.RollingInterval,
+            FileShared = true
         };
 
         ConfigureFormatter(rollingOptions, fileOptions.Format);
