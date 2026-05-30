@@ -1,101 +1,112 @@
-<!-- gitnexus:start -->
-# GitNexus — Code Intelligence
+# AGENTS
 
-This project is indexed by GitNexus as **RevitDevTool.PyTest** (443 symbols, 1119 relationships, 38 execution flows). Use the GitNexus MCP tools to understand code, assess impact, and navigate safely.
+## Overview
 
-> If any GitNexus tool warns the index is stale, run `npx gitnexus analyze` in terminal first.
+This is the pytest client plugin for RevitDevTool. It bridges local pytest with a live Revit process via Named Pipe JSON-RPC.
 
-## Always Do
+## Architecture
 
-- **MUST run impact analysis before editing any symbol.** Before modifying a function, class, or method, run `gitnexus_impact({target: "symbolName", direction: "upstream"})` and report the blast radius (direct callers, affected processes, risk level) to the user.
-- **MUST run `gitnexus_detect_changes()` before committing** to verify your changes only affect expected symbols and execution flows.
-- **MUST warn the user** if impact analysis returns HIGH or CRITICAL risk before proceeding with edits.
-- When exploring unfamiliar code, use `gitnexus_query({query: "concept"})` to find execution flows instead of grepping. It returns process-grouped results ranked by relevance.
-- When you need full context on a specific symbol — callers, callees, which execution flows it participates in — use `gitnexus_context({name: "symbolName"})`.
-
-## When Debugging
-
-1. `gitnexus_query({query: "<error or symptom>"})` — find execution flows related to the issue
-2. `gitnexus_context({name: "<suspect function>"})` — see all callers, callees, and process participation
-3. `READ gitnexus://repo/RevitDevTool.PyTest/process/{processName}` — trace the full execution flow step by step
-4. For regressions: `gitnexus_detect_changes({scope: "compare", base_ref: "main"})` — see what your branch changed
-
-## When Refactoring
-
-- **Renaming**: MUST use `gitnexus_rename({symbol_name: "old", new_name: "new", dry_run: true})` first. Review the preview — graph edits are safe, text_search edits need manual review. Then run with `dry_run: false`.
-- **Extracting/Splitting**: MUST run `gitnexus_context({name: "target"})` to see all incoming/outgoing refs, then `gitnexus_impact({target: "target", direction: "upstream"})` to find all external callers before moving code.
-- After any refactor: run `gitnexus_detect_changes({scope: "all"})` to verify only expected files changed.
-
-## Never Do
-
-- NEVER edit a function, class, or method without first running `gitnexus_impact` on it.
-- NEVER ignore HIGH or CRITICAL risk warnings from impact analysis.
-- NEVER rename symbols with find-and-replace — use `gitnexus_rename` which understands the call graph.
-- NEVER commit changes without running `gitnexus_detect_changes()` to check affected scope.
-
-## Tools Quick Reference
-
-| Tool | When to use | Command |
-|------|-------------|---------|
-| `query` | Find code by concept | `gitnexus_query({query: "auth validation"})` |
-| `context` | 360-degree view of one symbol | `gitnexus_context({name: "validateUser"})` |
-| `impact` | Blast radius before editing | `gitnexus_impact({target: "X", direction: "upstream"})` |
-| `detect_changes` | Pre-commit scope check | `gitnexus_detect_changes({scope: "staged"})` |
-| `rename` | Safe multi-file rename | `gitnexus_rename({symbol_name: "old", new_name: "new", dry_run: true})` |
-| `cypher` | Custom graph queries | `gitnexus_cypher({query: "MATCH ..."})` |
-
-## Impact Risk Levels
-
-| Depth | Meaning | Action |
-|-------|---------|--------|
-| d=1 | WILL BREAK — direct callers/importers | MUST update these |
-| d=2 | LIKELY AFFECTED — indirect deps | Should test |
-| d=3 | MAY NEED TESTING — transitive | Test if critical path |
-
-## Resources
-
-| Resource | Use for |
-|----------|---------|
-| `gitnexus://repo/RevitDevTool.PyTest/context` | Codebase overview, check index freshness |
-| `gitnexus://repo/RevitDevTool.PyTest/clusters` | All functional areas |
-| `gitnexus://repo/RevitDevTool.PyTest/processes` | All execution flows |
-| `gitnexus://repo/RevitDevTool.PyTest/process/{name}` | Step-by-step execution trace |
-
-## Self-Check Before Finishing
-
-Before completing any code modification task, verify:
-1. `gitnexus_impact` was run for all modified symbols
-2. No HIGH/CRITICAL risk warnings were ignored
-3. `gitnexus_detect_changes()` confirms changes match expected scope
-4. All d=1 (WILL BREAK) dependents were updated
-
-## Keeping the Index Fresh
-
-After committing code changes, the GitNexus index becomes stale. Re-run analyze to update it:
-
-```bash
-npx gitnexus analyze
+```
+Local pytest (collect) → Named Pipe → Revit process (PytestRunner.py) → Results → Local pytest (report)
 ```
 
-If the index previously included embeddings, preserve them by adding `--embeddings`:
+### Module Map
+
+| Module | Role |
+|--------|------|
+| `plugin.py` | Hook orchestrator — lifecycle, options, bridge setup |
+| `connection.py` | Bridge lifecycle — discover, connect, lease, launch |
+| `bridge.py` | Wire protocol — Named Pipe framing, request/response |
+| `discovery.py` | Pipe scan, Revit registry lookup, process launch |
+| `reporting.py` | Map remote CaseResult → pytest TestReport |
+| `suite_leasing.py` | Cross-process Revit instance allocation (file-based) |
+| `suite_lock.py` | Windows mutex for same-suite concurrency guard |
+| `dialog_resolver.py` | Auto-dismiss Revit startup dialogs via Win32 |
+| `models.py` | Wire protocol data models (mirrors C# PytestContracts) |
+| `constants.py` | Shared constants, option names, defaults |
+
+### Revit-Side (in RevitDevTool repo)
+
+| File | Role |
+|------|------|
+| `PytestRunner.py` | Embedded script — runs `pytest.main()` inside Revit |
+| `SetupRevit.py` | Runtime setup — API refs, I/O redirection |
+| `PytestExecutionService.cs` | C# orchestrator — receives pipe request, invokes Python |
+| `PytestContracts.cs` | C# wire models (mirrors `models.py`) |
+
+## Key Design Decisions
+
+- **Dual pytest model**: Local pytest collects tests; remote pytest executes them. This enables IDE integration (test tree, navigation) while executing in Revit's thread.
+- **`--capture=sys`**: Required because fd-level capture (`os.dup2`) doesn't work in embedded Python.NET.
+- **`--disable-plugin-autoload`**: Prevents third-party plugins from interfering with in-Revit execution.
+- **`sys.__pytest_running__`**: Flag set by PytestRunner to prevent SetupRevit from hijacking stdout/stderr during test runs.
+- **Streaming vs batch**: CLI gets real-time progress notifications; IDE adapters get one batch to avoid double-counting.
+- **Suite leasing**: File-based lease store binds suite → Revit PID across processes. Mutex prevents same-suite parallel runs.
+- **force_launch**: When enabled, spawns new Revit and waits for its exact PID pipe (ignores existing instances).
+
+## Running Tests
 
 ```bash
-npx gitnexus analyze --embeddings
+# From project root with .venv activated:
+pytest
+
+# Or via uv / pixi:
+uv run pytest
+pixi run pytest
+
+# Specific test:
+pytest tests/test_active_state.py::test_active_view_info -v
 ```
 
-To check whether embeddings exist, inspect `.gitnexus/meta.json` — the `stats.embeddings` field shows the count (0 means no embeddings). **Running analyze without `--embeddings` will delete any previously generated embeddings.**
+Plugin auto-enables `-rP` (show captured stdout for passing tests).
 
-> Claude Code users: A PostToolUse hook handles this automatically after `git commit` and `git merge`.
+## Configuration
 
-## CLI
+All options in `pyproject.toml` under `[tool.pytest.ini_options]`:
 
-| Task | Read this skill file |
-|------|---------------------|
-| Understand architecture / "How does X work?" | `.claude/skills/gitnexus/gitnexus-exploring/SKILL.md` |
-| Blast radius / "What breaks if I change X?" | `.claude/skills/gitnexus/gitnexus-impact-analysis/SKILL.md` |
-| Trace bugs / "Why is X failing?" | `.claude/skills/gitnexus/gitnexus-debugging/SKILL.md` |
-| Rename / extract / split / refactor | `.claude/skills/gitnexus/gitnexus-refactoring/SKILL.md` |
-| Tools, resources, schema reference | `.claude/skills/gitnexus/gitnexus-guide/SKILL.md` |
-| Index, status, clean, wiki CLI commands | `.claude/skills/gitnexus/gitnexus-cli/SKILL.md` |
+```toml
+revit_version = "2025"        # Required for launch
+revit_launch = false           # true = always spawn new instance
+revit_timeout = "60"           # Per-test timeout (seconds)
+revit_launch_timeout = "180"   # Startup wait (seconds)
+revit_pipe = ""                # Explicit pipe (bypass discovery)
+```
 
-<!-- gitnexus:end -->
+## Fixtures Pattern
+
+```python
+# conftest.py
+@pytest.fixture(scope="session")
+def revit_uiapp():
+    return __revit__  # UIApplication injected by host
+
+@pytest.fixture(scope="session")
+def revit_doc(revit_uiapp):
+    return revit_uiapp.ActiveUIDocument.Document
+
+@pytest.fixture
+def revit_auto_rollback(revit_transaction_service):
+    """Start undo tracking, revert after test."""
+    revit_transaction_service.StartChanges()
+    try:
+        yield revit_transaction_service
+    finally:
+        revit_transaction_service.RevertChanges()
+```
+
+## Common Traps
+
+- Tests execute **inside Revit**, not locally. `import` statements for Revit API (`Autodesk.Revit.DB`) only work at test runtime.
+- `__revit__` is a builtin injected by SetupRevit — always access via fixtures, not direct import.
+- Revit API requires main-thread access. All tests run sequentially via FIFO queue (`IHostContextExecutor`).
+- Named Pipe format: `Revit_{year}_{pid}` (e.g. `Revit_2025_12345`).
+- PEP 723 dependencies in `conftest.py` are auto-installed by `PytestDependencyService` before execution.
+- `force_launch` requires `revit_version` to be set — otherwise exits with config error.
+- Print output inside tests is captured by pytest's `--capture=sys` mechanism and returned via `CaseResult.stdout`.
+
+## Change Rules
+
+- Wire protocol changes must update both `models.py` (Python) and `PytestContracts.cs` (C#).
+- Adding CLI options: register in both `pytest_addoption` (CLI) and `parser.addini` (INI).
+- Connection logic is stateless by design — all functions receive parameters, no module-level mutable state except `plugin.py` globals.
+- After modifying connection/discovery logic, manually test with both `revit_launch = true` and `false`.

@@ -9,7 +9,7 @@ def test_active_view_info(revit_doc):
     print(f"Document: {revit_doc.Title}")
     print(f"Active View: {view.Name}")
     print(f"View Type: {view.ViewType}")
-    print(f"View Id: {view.Id.IntegerValue}")
+    print(f"View Id: {view.Id.Value}")
 
     assert view.Name is not None
 
@@ -25,4 +25,4 @@ def test_selected_elements(revit_uiapp, revit_doc):
         elem = revit_doc.GetElement(eid)
         category = elem.Category.Name if elem.Category else "N/A"
         name = elem.Name if elem.Name else "N/A"
-        print(f"  [{eid.IntegerValue}] {category} — {name}")
+        print(f"  [{eid.Value}] {category} — {name}")
