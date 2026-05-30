@@ -250,6 +250,7 @@ def _build_args(request: dict[str, Any]) -> list[str]:
     args: list[str] = [
         "-p", "no:faulthandler",
         "--disable-plugin-autoload",
+        "--capture=sys",
         "-W", "ignore::pytest.PytestConfigWarning",
     ]
     args.extend(
@@ -293,12 +294,51 @@ def _prepare_paths(request: dict[str, Any]) -> tuple[str, str]:
     return test_root, saved_cwd
 
 
-def _patch_streams() -> None:
+def _enable_pytest_streams() -> tuple[Any, Any, Any]:
+    """Set pytest-mode flag and replace Trace-backed streams with standard I/O.
+
+    SetupRevit.py redirects builtins.print and sys.stdout/stderr to Trace.
+    Setting sys.__pytest_running__ prevents re-hijacking during the run.
+    Returns (saved_stdout, saved_stderr, saved_print) for restoration.
+    """
+    import builtins
+    import io
+
+    sys.__pytest_running__ = True  # type: ignore[attr-defined]
+
+    saved_stdout = sys.stdout
+    saved_stderr = sys.stderr
+    saved_print = builtins.print
+
+    def _real_print(*args: Any, sep: str = " ", end: str = "\n", file: Any = None, flush: bool = False) -> None:  # noqa: ANN401
+        target = file if file is not None else sys.stdout
+        text = sep.join(str(a) for a in args) + end
+        target.write(text)
+        if flush:
+            target.flush()
+
+    builtins.print = _real_print  # type: ignore[assignment]
+
+    sys.stdout = io.StringIO()
+    sys.stderr = io.StringIO()
+
     for stream in (sys.stdout, sys.stderr):
         if not hasattr(stream, "isatty"):
             stream.isatty = lambda: False  # type: ignore[attr-defined]
         if not hasattr(stream, "fileno"):
             stream.fileno = lambda: -1  # type: ignore[attr-defined]
+
+    return saved_stdout, saved_stderr, saved_print
+
+
+def _disable_pytest_streams(saved_stdout: Any, saved_stderr: Any, saved_print: Any) -> None:
+    """Restore Trace-backed streams and clear pytest-mode flag."""
+    import builtins
+
+    sys.__pytest_running__ = False  # type: ignore[attr-defined]
+    sys.stdout = saved_stdout
+    sys.stderr = saved_stderr
+    builtins.print = saved_print
 
 
 # ---------------------------------------------------------------------------
@@ -310,7 +350,15 @@ def _success_response(
     exit_code: int,
     plugin: _BridgePlugin,
     test_root: str,
+    *,
+    discover_only: bool = False,
 ) -> str:
+    if discover_only:
+        return json.dumps({
+            "rootdir": test_root,
+            "nodeids": plugin.nodeids,
+            "collection_errors": [e.to_dict() for e in plugin.collection_errors],
+        })
     return json.dumps({
         "exit_code": int(exit_code),
         "summary": plugin.summary,
@@ -320,17 +368,24 @@ def _success_response(
     })
 
 
-def _error_response(test_root: str, ex: Exception) -> str:
+def _error_response(test_root: str, ex: Exception, *, discover_only: bool = False) -> str:
+    error_entry = {
+        "nodeid": "",
+        "path": test_root,
+        "message": str(ex),
+        "traceback": traceback.format_exc(),
+    }
+    if discover_only:
+        return json.dumps({
+            "rootdir": test_root,
+            "nodeids": [],
+            "collection_errors": [error_entry],
+        })
     return json.dumps({
         "exit_code": 1,
         "summary": _EMPTY_SUMMARY,
         "results": [],
-        "collection_errors": [{
-            "nodeid": "",
-            "path": test_root,
-            "message": str(ex),
-            "traceback": traceback.format_exc(),
-        }],
+        "collection_errors": [error_entry],
         "rootdir": test_root,
     })
 
@@ -341,13 +396,18 @@ def _error_response(test_root: str, ex: Exception) -> str:
 
 
 def _run() -> str:
-    request = _load_request()
-    test_root, saved_cwd = _prepare_paths(request)
+    request: dict[str, Any] = {}
+    test_root = ""
+    saved_cwd = os.getcwd()
+    saved_streams: tuple[Any, Any, Any] | None = None
     try:
-        _patch_streams()
+        request = _load_request()
+        test_root, saved_cwd = _prepare_paths(request)
+        saved_streams = _enable_pytest_streams()
 
         import pytest
 
+        discover_only = bool(request.get("discover_only"))
         progress_callback = globals().get(_PROGRESS_CALLBACK)
         plugin = _BridgePlugin(progress_callback)
         args = _build_args(request)
@@ -355,10 +415,18 @@ def _run() -> str:
         try:
             exit_code = pytest.main(args, plugins=[plugin])
         except Exception as ex:  # noqa: BLE001
-            return _error_response(test_root, ex)
+            return _error_response(test_root, ex, discover_only=discover_only)
 
-        return _success_response(exit_code, plugin, test_root)
+        return _success_response(exit_code, plugin, test_root, discover_only=discover_only)
+    except Exception as ex:  # noqa: BLE001
+        return _error_response(
+            test_root or request.get("test_root", ""),
+            ex,
+            discover_only=bool(request.get("discover_only")),
+        )
     finally:
+        if saved_streams is not None:
+            _disable_pytest_streams(*saved_streams)
         os.chdir(saved_cwd)
 
 

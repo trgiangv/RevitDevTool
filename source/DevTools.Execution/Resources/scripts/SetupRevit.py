@@ -65,33 +65,33 @@ def custom_print(*args, sep=' ', end='\n', file=None, flush=False):  # pyright: 
     text = sep.join(str(arg) for arg in args) + end
     log_func(text)
 
-builtins.print = custom_print
+if not getattr(sys, '__pytest_running__', False):
+    builtins.print = custom_print
 
-# Redirect stdout/stderr
-class StdOutRedirector:
-    def __init__(self, log_func_provider):
-        self.log_func_provider = log_func_provider
-        self._buffer = []
+    class StdOutRedirector:
+        def __init__(self, log_func_provider):
+            self.log_func_provider = log_func_provider
+            self._buffer = []
 
-    def write(self, text):
-        if not hasattr(self.log_func_provider, _LOG_FUNC):
-            return
-        if not text:
-            return
-        self._buffer.append(text)
+        def write(self, text):
+            if not hasattr(self.log_func_provider, _LOG_FUNC):
+                return
+            if not text:
+                return
+            self._buffer.append(text)
 
-    def flush(self):
-        if not self._buffer:
-            return
-        log_func = getattr(self.log_func_provider, _LOG_FUNC, None)
-        if log_func is None:
+        def flush(self):
+            if not self._buffer:
+                return
+            log_func = getattr(self.log_func_provider, _LOG_FUNC, None)
+            if log_func is None:
+                self._buffer.clear()
+                return
+            merged = ''.join(self._buffer)
             self._buffer.clear()
-            return
-        merged = ''.join(self._buffer)
-        self._buffer.clear()
-        merged = merged.strip()
-        if merged:
-            log_func(merged)
+            merged = merged.strip()
+            if merged:
+                log_func(merged)
 
-sys.stdout = StdOutRedirector(builtins)
-sys.stderr = StdOutRedirector(builtins)
+    sys.stdout = StdOutRedirector(builtins)
+    sys.stderr = StdOutRedirector(builtins)
