@@ -13,7 +13,6 @@ import time
 from typing import Any, Callable
 
 from .constants import (
-    BRIDGE_METHOD_TESTS_DISCOVER,
     BRIDGE_METHOD_TESTS_RUN,
     BRIDGE_MSG_TYPE_NOTIFICATION,
     DEFAULT_CONNECT_TIMEOUT_MS,
@@ -24,8 +23,6 @@ from .models import (
     BridgeRequest,
     BridgeResponse,
     CollectionError,
-    DiscoverRequest,
-    DiscoverResponse,
     RunRequest,
     RunResponse,
 )
@@ -107,25 +104,6 @@ class RevitBridge:
 
     # -- Public RPC methods -------------------------------------------------
 
-    def discover_tests(
-        self,
-        workspace_root: str,
-        test_root: str,
-        *,
-        pytest_args: list[str] | None = None,
-        timeout_s: float = DEFAULT_TEST_TIMEOUT_S,
-    ) -> DiscoverResponse:
-        request = DiscoverRequest(
-            workspace_root=workspace_root,
-            test_root=test_root,
-            pytest_args=pytest_args or [],
-        )
-        response = self._request(
-            BridgeRequest(method=BRIDGE_METHOD_TESTS_DISCOVER, params=request.to_params()),
-            timeout_s,
-        )
-        return _parse_discover_response(response)
-
     def run_tests(
         self,
         workspace_root: str,
@@ -205,20 +183,6 @@ class RevitBridge:
 # ---------------------------------------------------------------------------
 # Response parsing helpers
 # ---------------------------------------------------------------------------
-
-
-def _parse_discover_response(response: BridgeResponse) -> DiscoverResponse:
-    if response.is_error:
-        return DiscoverResponse(
-            collection_errors=(CollectionError(message=response.error_message),),
-        )
-    if isinstance(response.result, dict):
-        return DiscoverResponse.from_dict(response.result)
-    return DiscoverResponse(
-        collection_errors=(
-            CollectionError(message=f"Unexpected response: {response.result}"),
-        ),
-    )
 
 
 def _parse_run_response(response: BridgeResponse) -> RunResponse:

@@ -57,36 +57,6 @@ class SuiteLeaseStore:
         self._state_file = state_file or _STATE_FILE
         self._leases = self._load_leases()
 
-    def resolve_existing(
-        self,
-        suite_key: str,
-        suite_path: str,
-        instances: list[RevitInstance],
-    ) -> RevitInstance | None:
-        active_by_pid = {instance.process_id: instance for instance in instances}
-        self._prune_stale(active_by_pid)
-
-        lease = self._leases.get(suite_key)
-        if lease is None:
-            return None
-
-        active = active_by_pid.get(lease.process_id)
-        if active is None:
-            self._leases.pop(suite_key, None)
-            self._save_leases()
-            return None
-
-        self._leases[suite_key] = SuiteLease(
-            suite_key=suite_key,
-            suite_path=suite_path,
-            pipe_name=active.pipe_name,
-            process_id=active.process_id,
-            assigned_at=lease.assigned_at,
-            last_seen_at=time.time(),
-        )
-        self._save_leases()
-        return active
-
     def find_free(
         self,
         suite_key: str,
@@ -118,10 +88,6 @@ class SuiteLeaseStore:
             last_seen_at=now,
         )
         self._save_leases()
-
-    def get_suite_process_id(self, suite_key: str) -> int | None:
-        lease = self._leases.get(suite_key)
-        return None if lease is None else lease.process_id
 
     def get_suite_lease(self, suite_key: str) -> SuiteLease | None:
         return self._leases.get(suite_key)

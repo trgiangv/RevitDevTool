@@ -266,7 +266,7 @@ def _build_longrepr(
     if outcome == OUTCOME_FAILED and (result.message or result.traceback):
         return result.traceback if result.traceback else result.message
     if outcome == OUTCOME_SKIPPED:
-        return ("", -1, f"Skipped: {result.message}" if result.message else "Skipped")
+        return "", -1, f"Skipped: {result.message}" if result.message else "Skipped"
     return None
 
 

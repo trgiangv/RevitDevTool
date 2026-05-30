@@ -218,7 +218,7 @@ def _try_reconnect_leased(
         store.clear_suite(suite_key)
         return None, False
 
-    bridge, _ = _connect_first_available([leased_instance])
+    bridge, _, _ = _connect_first_available([leased_instance])
     if bridge is not None:
         store.assign(suite_key, suite_path, leased_instance)
         log.info(
@@ -238,7 +238,7 @@ def _connect_and_lease(
     store: SuiteLeaseStore | None,
     label: str,
 ) -> tuple[RevitBridge | None, ConnectionError | None]:
-    bridge, selected, connect_error = _connect_first_available_with_instance(instances)
+    bridge, selected, connect_error = _connect_first_available(instances)
     if bridge is None or selected is None:
         return None, connect_error
     if store:
@@ -251,18 +251,6 @@ def _connect_and_lease(
 
 
 def _connect_first_available(
-    instances: list[RevitInstance],
-) -> tuple[RevitBridge | None, ConnectionError | None]:
-    last_error: ConnectionError | None = None
-    for instance in instances:
-        try:
-            return connect_pipe(instance.pipe_name), None
-        except ConnectionError as exc:
-            last_error = exc
-    return None, last_error
-
-
-def _connect_first_available_with_instance(
     instances: list[RevitInstance],
 ) -> tuple[RevitBridge | None, RevitInstance | None, ConnectionError | None]:
     last_error: ConnectionError | None = None
