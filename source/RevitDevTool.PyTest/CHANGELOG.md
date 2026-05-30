@@ -2,6 +2,34 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.2.0] - 2026-05-31
+
+### Added
+
+- **Auto print capture:** plugin automatically enables `-rP` behavior — captured `print()` output is shown for both passing and failing tests without any user configuration.
+- **PID-aware pipe discovery:** `wait_for_revit_pipe` can now wait for a specific process ID, ensuring `force_launch` connects to the newly spawned instance only.
+
+### Changed
+
+- **`revit_launch` → force_launch semantics:** renamed internal parameter from `prefer_fresh` to `force_launch`. When enabled, the plugin disconnects any existing bridge, spawns a new Revit instance, and waits for that exact PID's pipe — never reuses existing instances.
+- **`_opt_bool` fix:** corrected boolean option parsing so `revit_launch = true` in `pyproject.toml` is properly respected when no CLI flag is explicitly passed.
+- **Type annotations refactor:** resolved false-positive IDE warnings across `bridge.py`, `connection.py`, `suite_leasing.py`, and `dialog_resolver.py`.
+- **`SetupRevit.py` (Revit-side):** I/O hijacking is now conditional on `sys.__pytest_running__` flag — prevents conflict with pytest capture during test execution.
+- **`PytestRunner.py` (Revit-side):** sets `sys.__pytest_running__ = True` during execution; top-level error handling wraps entire `_run()` to always return structured JSON.
+
+### Removed
+
+- **`discover_tests()`** method from `bridge.py` (client-side dead code; server endpoint remains).
+- **`DiscoverRequest` / `DiscoverResponse`** classes from `models.py` (unused by client).
+- **`BRIDGE_METHOD_TESTS_DISCOVER`** constant (no longer referenced).
+- **`resolve_existing()` / `get_suite_process_id()` / `_prune_stale()`** from `suite_leasing.py` (unused).
+- **`launch_revit()`** from `discovery.py` (replaced by `start_revit` + PID tracking).
+- **`addopts = "-rP"`** from `pyproject.toml` (now automatic via plugin).
+
+### Fixed
+
+- **`revit_launch = true` in INI ignored:** `_opt_bool` now correctly reads INI value when CLI flag is not explicitly set.
+
 ## [0.1.0] - 2026-05-03
 
 ### Added
