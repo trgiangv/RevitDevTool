@@ -58,13 +58,17 @@ def ensure_bridge(
     explicit_pipe: str | None,
     suite_key: str,
     suite_path: str,
-    prefer_fresh: bool = False,
+    force_launch: bool = False,
 ) -> ConnectionResult:
-    """Main entry point: return a connected bridge or an error."""
-    if not prefer_fresh and current_bridge is not None and current_bridge.connected:
+    """Main entry point: return a connected bridge or an error.
+
+    When *force_launch* is True, skip reusing existing instances and always
+    spawn a fresh Revit process (requires --revit-version).
+    """
+    if not force_launch and current_bridge is not None and current_bridge.connected:
         return ConnectionResult(bridge=current_bridge)
 
-    if explicit_pipe and not prefer_fresh:
+    if explicit_pipe and not force_launch:
         return _connect_explicit_pipe_or_exit(explicit_pipe)
 
     return _connect_discovered_or_launched(
@@ -73,7 +77,7 @@ def ensure_bridge(
         lease_store=lease_store,
         version=version,
         launch_timeout_s=launch_timeout_s,
-        prefer_fresh=prefer_fresh,
+        force_launch=force_launch,
     )
 
 
@@ -84,17 +88,17 @@ def _connect_discovered_or_launched(
     lease_store: SuiteLeaseStore | None,
     version: int | None,
     launch_timeout_s: float,
-    prefer_fresh: bool,
+    force_launch: bool,
 ) -> ConnectionResult:
     instances = instances_for_version(version)
 
-    if lease_store is not None:
-        bridge, _ = _try_reconnect_leased(lease_store, suite_key, suite_path, instances)
-        if bridge is not None:
-            return ConnectionResult(bridge=bridge)
-        instances = instances_for_version(version)
+    if not force_launch:
+        if lease_store is not None:
+            bridge, _ = _try_reconnect_leased(lease_store, suite_key, suite_path, instances)
+            if bridge is not None:
+                return ConnectionResult(bridge=bridge)
+            instances = instances_for_version(version)
 
-    if not prefer_fresh:
         free = lease_store.find_free(suite_key, instances) if lease_store else instances
         bridge, error = _connect_and_lease(free, suite_key, suite_path, lease_store, "Assigned free instance")
         if bridge is not None:
@@ -136,7 +140,7 @@ def auto_launch(version: int, launch_timeout_s: float) -> LaunchResult:
     except ImportError:
         pass
 
-    instance = wait_for_revit_pipe(version, timeout_s=launch_timeout_s)
+    instance = wait_for_revit_pipe(version, timeout_s=launch_timeout_s, process_id=process_id)
     if instance is None:
         pytest.exit(
             f"{PLUGIN_NAME}: Revit {version} launched but Named Pipe did not appear within {launch_timeout_s}s.",

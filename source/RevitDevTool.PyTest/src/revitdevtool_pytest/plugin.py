@@ -74,7 +74,7 @@ def pytest_addoption(parser: pytest.Parser) -> None:
     )
     grp.addoption(
         "--revit-launch", dest=OPT_LAUNCH, action="store_true", default=False,
-        help="Auto-launch Revit if no running instance is found. Requires --revit-version.",
+        help="Force-launch a new Revit instance (skip reusing existing). Requires --revit-version.",
     )
     grp.addoption(
         "--revit-launch-timeout", dest=OPT_LAUNCH_TIMEOUT, default=None, type=float,
@@ -84,7 +84,7 @@ def pytest_addoption(parser: pytest.Parser) -> None:
     parser.addini(OPT_VERSION, "Revit version year", type="string", default=None)
     parser.addini(OPT_TIMEOUT, "Per-test timeout (seconds)", type="string", default=str(DEFAULT_TEST_TIMEOUT_S))
     parser.addini(OPT_PIPE, "Explicit pipe name", type="string", default=None)
-    parser.addini(OPT_LAUNCH, "Auto-launch Revit", type="bool", default=False)
+    parser.addini(OPT_LAUNCH, "Force-launch a new Revit instance (skip reusing existing)", type="bool", default=False)
     parser.addini(OPT_LAUNCH_TIMEOUT, "Launch timeout (seconds)", type="string", default=str(DEFAULT_LAUNCH_TIMEOUT_S))
 
 
@@ -95,6 +95,10 @@ def pytest_addoption(parser: pytest.Parser) -> None:
 
 def pytest_configure(config: pytest.Config) -> None:
     config.addinivalue_line("markers", "revit: mark test to run inside Revit process")
+
+    reportchars = getattr(config.option, "reportchars", "") or ""
+    if "P" not in reportchars:
+        config.option.reportchars = reportchars + "P"
 
     global _lease_store  # noqa: PLW0603
     _lease_store = SuiteLeaseStore()
@@ -192,6 +196,11 @@ def _ensure_bridge(session: pytest.Session) -> bool:
             returncode=EXIT_CODE_CONFIG_ERROR,
         )
 
+    force_launch = _opt_bool(config, OPT_LAUNCH, OPT_LAUNCH)
+    if force_launch and _bridge is not None:
+        _bridge.disconnect()
+        _bridge = None
+
     result = ensure_bridge(
         current_bridge=_bridge,
         lease_store=_lease_store,
@@ -200,6 +209,7 @@ def _ensure_bridge(session: pytest.Session) -> bool:
         explicit_pipe=explicit_pipe,
         suite_key=suite_key,
         suite_path=suite_path,
+        force_launch=force_launch,
     )
     if result.dialog_resolver is not None:
         _dialog_resolver = result.dialog_resolver
@@ -233,6 +243,14 @@ def _opt_int(config: pytest.Config, cli: str, ini: str) -> int | None:
 def _opt_float(config: pytest.Config, cli: str, ini: str) -> float | None:
     raw = _opt(config, cli, ini)
     return float(raw) if raw else None
+
+
+def _opt_bool(config: pytest.Config, cli: str, ini: str) -> bool:
+    cli_val = config.getoption(cli, default=None)
+    if cli_val:
+        return True
+    ini_val = config.getini(ini)
+    return bool(ini_val)
 
 
 def _is_collect_only(config: pytest.Config) -> bool:

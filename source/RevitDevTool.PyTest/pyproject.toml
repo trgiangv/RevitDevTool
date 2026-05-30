@@ -41,5 +41,5 @@ packages = ["src/revitdevtool_pytest"]
 testpaths = ["tests"]
 revit_version = "2025"
 revit_timeout = "60"
-revit_launch = true
+revit_launch = false
 revit_launch_timeout = "180"

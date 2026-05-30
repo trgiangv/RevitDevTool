@@ -91,11 +91,20 @@ def wait_for_revit_pipe(
     version: int | None = None,
     timeout_s: float = DEFAULT_LAUNCH_TIMEOUT_S,
     poll_interval_s: float = DEFAULT_POLL_INTERVAL_S,
+    process_id: int | None = None,
 ) -> RevitInstance | None:
-    """Block until a Revit pipe matching *version* appears."""
+    """Block until a Revit pipe appears.
+
+    When *process_id* is given, wait for that exact process to register its pipe.
+    Otherwise fall back to version-based selection.
+    """
     deadline = time.monotonic() + timeout_s
     while time.monotonic() < deadline:
-        match = select_instance(find_revit_pipes(), version)
+        instances = find_revit_pipes()
+        if process_id is not None:
+            match = next((i for i in instances if i.process_id == process_id), None)
+        else:
+            match = select_instance(instances, version)
         if match is not None:
             return match
         time.sleep(poll_interval_s)

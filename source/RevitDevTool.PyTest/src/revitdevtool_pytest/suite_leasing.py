@@ -99,18 +99,6 @@ class SuiteLeaseStore:
         self._leases.pop(suite_key, None)
         self._save_leases()
 
-    def _prune_stale(self, active_by_pid: dict[int, RevitInstance]) -> None:
-        stale = [
-            key
-            for key, lease in self._leases.items()
-            if lease.process_id not in active_by_pid
-        ]
-        if not stale:
-            return
-        for key in stale:
-            self._leases.pop(key, None)
-        self._save_leases()
-
     def _load_leases(self) -> dict[str, SuiteLease]:
         if not self._state_file.is_file():
             return {}
@@ -156,7 +144,7 @@ class SuiteLeaseStore:
             except PermissionError:
                 try:
                     tmp_file.unlink(missing_ok=True)
-                except Exception:
+                except Exception: # noqa
                     pass
                 if delay is None:
                     raise
