@@ -8,6 +8,7 @@ import random
 import time
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Any
 
 from .discovery import RevitInstance
 
@@ -28,7 +29,7 @@ class SuiteLease:
     assigned_at: float
     last_seen_at: float
 
-    def to_dict(self) -> dict[str, object]:
+    def to_dict(self) -> dict[str, Any]:
         return {
             "suite_key": self.suite_key,
             "suite_path": self.suite_path,
@@ -39,7 +40,7 @@ class SuiteLease:
         }
 
     @classmethod
-    def from_dict(cls, data: dict[str, object]) -> SuiteLease:
+    def from_dict(cls, data: dict[str, Any]) -> SuiteLease:
         return cls(
             suite_key=str(data.get("suite_key", "")),
             suite_path=str(data.get("suite_path", "")),
@@ -115,7 +116,7 @@ class SuiteLeaseStore:
             return {}
         try:
             payload = json.loads(self._state_file.read_text(encoding="utf-8"))
-        except Exception:
+        except Exception: # noqa
             return {}
 
         if not isinstance(payload, dict):
@@ -145,7 +146,8 @@ class SuiteLeaseStore:
         content = json.dumps(payload, ensure_ascii=False, indent=2)
         base_tmp = self._state_file.with_suffix(".tmp")
 
-        for attempt, delay in enumerate((*_SAVE_RETRY_DELAYS_S, None), start=1):
+        delays: tuple[float | None, ...] = (*_SAVE_RETRY_DELAYS_S, None)
+        for attempt, delay in enumerate(delays, start=1):
             tmp_file = base_tmp.with_name(f"{base_tmp.stem}.{os.getpid()}.{random.randint(1000, 9999)}{base_tmp.suffix}")
             try:
                 tmp_file.write_text(content, encoding="utf-8")

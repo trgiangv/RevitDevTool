@@ -8,6 +8,7 @@ import subprocess
 import time
 import winreg
 from dataclasses import dataclass
+from pathlib import Path
 
 from .constants import (
     DEFAULT_LAUNCH_TIMEOUT_S,
@@ -70,7 +71,7 @@ def find_revit_path(version: int) -> str | None:
     if path:
         return path
     default = f"C:\\Program Files\\Autodesk\\Revit {version}\\Revit.exe"
-    return default if os.path.isfile(default) else None
+    return default if Path(default).is_file() else None
 
 
 def start_revit(version: int) -> int:

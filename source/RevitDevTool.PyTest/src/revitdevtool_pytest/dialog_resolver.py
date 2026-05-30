@@ -112,8 +112,7 @@ class StartupDialogResolver:
     def _find_button(self, parent: int) -> int | None:
         result: list[tuple[int, int]] = []
 
-        @_EnumWindowsProc
-        def _cb(child: int, _: int) -> bool:
+        def _enum_cb(child: int, _: int) -> bool:
             score = _get_button_score(
                 child,
                 self._opts.preferred_button_keywords,
@@ -123,7 +122,7 @@ class StartupDialogResolver:
                 result.append((score, child))
             return True
 
-        _user32.EnumChildWindows(parent, _cb, 0)
+        _user32.EnumChildWindows(parent, _EnumWindowsProc(_enum_cb), 0)
         if not result:
             return None
 
@@ -133,13 +132,12 @@ class StartupDialogResolver:
     def _enum_dialog_windows(self) -> list[int]:
         windows: list[int] = []
 
-        @_EnumWindowsProc
-        def _cb(hwnd: int, _: int) -> bool:
+        def _enum_cb(hwnd: int, _: int) -> bool:
             if _is_target_dialog(hwnd, self._pid):
                 windows.append(hwnd)
             return True
 
-        _user32.EnumWindows(_cb, 0)
+        _user32.EnumWindows(_EnumWindowsProc(_enum_cb), 0)
         return windows
 
 

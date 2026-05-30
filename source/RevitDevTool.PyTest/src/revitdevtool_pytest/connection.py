@@ -294,7 +294,7 @@ def _resolve_launch_version(
     if version is not None:
         return version
     if instances:
-        return max(instances, key=lambda i: i.version).version
+        return max(instances, key=lambda i: i.version).version  # noqa
     pytest.exit(
         f"{PLUGIN_NAME}: --revit-version is required when no existing instances are available.",
         returncode=EXIT_CODE_CONFIG_ERROR,

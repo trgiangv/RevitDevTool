@@ -66,7 +66,7 @@ class RevitBridge:
                     self._handle, win32pipe.PIPE_READMODE_BYTE, None, None,
                 )
                 return
-            except Exception:
+            except Exception: # noqa
                 if time.monotonic() >= deadline:
                     raise ConnectionError(
                         f"Cannot connect to pipe '{self._pipe_name}' "
@@ -82,11 +82,11 @@ class RevitBridge:
 
         try:
             win32file.FlushFileBuffers(handle)
-        except Exception:  # noqa: BLE001
+        except Exception:  # noqa
             pass
         try:
             win32file.CloseHandle(handle)
-        except Exception:  # noqa: BLE001
+        except Exception:  # noqa
             pass
 
     @property
@@ -98,7 +98,7 @@ class RevitBridge:
 
             win32pipe.PeekNamedPipe(self._handle, 0)
             return True
-        except Exception:  # noqa: BLE001
+        except Exception:  # noqa
             log.debug("Pipe health check failed, marking as disconnected")
             return False
 
@@ -120,7 +120,7 @@ class RevitBridge:
             nodeids=nodeids,
             pytest_args=pytest_args or [],
         )
-        response = self._request(
+        response: BridgeResponse = self._request(
             BridgeRequest(method=BRIDGE_METHOD_TESTS_RUN, params=request.to_params()),
             timeout_s,
             on_notification=on_notification,
@@ -138,20 +138,17 @@ class RevitBridge:
     ) -> BridgeResponse:
         self._write_frame(req.to_json_bytes())
         deadline = time.monotonic() + timeout_s
-        while True:
-            remaining = deadline - time.monotonic()
-            if remaining <= 0:
-                raise TimeoutError(f"Timed out waiting for response to {req.id}")
-            data = self._read_frame(remaining)
+        while time.monotonic() < deadline:
+            data = self._read_frame(deadline - time.monotonic())
             parsed = json.loads(data)
 
             if parsed.get("type") == BRIDGE_MSG_TYPE_NOTIFICATION:
                 _dispatch_notification(parsed, on_notification)
                 continue
 
-            resp = BridgeResponse.from_json(parsed)
-            if resp.id == req.id:
-                return resp
+            return BridgeResponse.from_json(parsed)
+
+        raise TimeoutError(f"Timed out waiting for response to {req.id}")
 
     def _write_frame(self, body: bytes) -> None:
         import win32file  # type: ignore[import-untyped]
@@ -211,5 +208,5 @@ def _dispatch_notification(
     params = parsed.get("params")
     try:
         callback(method, params)
-    except Exception:  # noqa: BLE001
+    except Exception:  # noqa
         log.debug("Notification callback error for method=%s", method, exc_info=True)

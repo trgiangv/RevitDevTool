@@ -117,7 +117,7 @@ def pytest_runtestloop(session: pytest.Session) -> bool:
 
 
 @pytest.hookimpl(tryfirst=True)
-def pytest_runtest_protocol(item: pytest.Item, nextitem: pytest.Item | None) -> bool:  # noqa: ARG001
+def pytest_runtest_protocol(item: pytest.Item, nextitem: pytest.Item | None) -> bool:  # noqa
     results_by_nodeid = item.session.stash.get(_remote_results_key, None)
     if results_by_nodeid is None:
         return False
@@ -145,8 +145,8 @@ def _count_failures(item: pytest.Item, results: list[CaseResult]) -> None:
             item.session.testsfailed += 1
 
 
-def pytest_unconfigure(config: pytest.Config) -> None:  # noqa: ARG001
-    global _bridge, _dialog_resolver, _lease_store  # noqa: PLW0603
+def pytest_unconfigure(config: pytest.Config) -> None:  # noqa
+    global _bridge, _dialog_resolver, _lease_store
     _suite_mutex.release()
     if _dialog_resolver is not None:
         _dialog_resolver.stop()
