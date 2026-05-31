@@ -1,4 +1,5 @@
 using System.Reflection;
+using Autodesk.AutoCAD.DatabaseServices;
 using Autodesk.AutoCAD.Runtime;
 using DevTools.Execution.Interfaces;
 using DevTools.Logging;
@@ -9,7 +10,14 @@ public sealed class AcadCompiledScriptBridge(IHostAppInfo hostAppInfo) : ICompil
 {
     public IEnumerable<string> GetSessionReferences()
     {
+        // acmgd (Runtime — CommandMethodAttribute, ExtensionApplication)
         yield return typeof(CommandMethodAttribute).Assembly.Location;
+
+        // acdbmgd (DatabaseServices — Database, DBObject, Transaction)
+        yield return typeof(Database).Assembly.Location;
+
+        // accoremgd (ApplicationServices.Core — Application, DocumentManager)
+        yield return typeof(Autodesk.AutoCAD.ApplicationServices.Core.Application).Assembly.Location;
     }
 
     public Type? TryFindCommandType(Assembly assembly)
@@ -19,7 +27,7 @@ public sealed class AcadCompiledScriptBridge(IHostAppInfo hostAppInfo) : ICompil
             foreach (var type in assembly.GetTypes())
             {
                 if (type.IsAbstract || type.IsInterface) continue;
-                var methods = type.GetMethods(BindingFlags.Public | BindingFlags.Instance);
+                var methods = type.GetMethods(BindingFlags.Public | BindingFlags.Instance | BindingFlags.Static);
                 if (methods.Any(m => m.GetCustomAttributes(typeof(CommandMethodAttribute), false).Length > 0))
                     return type;
             }

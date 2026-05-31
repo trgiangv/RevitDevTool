@@ -1,5 +1,6 @@
 using System.IO;
 using System.Reflection;
+using Autodesk.AutoCAD.Runtime;
 using DevTools.Execution.Interfaces;
 using DevTools.Execution.Models;
 using DevTools.Execution.Providers.Dotnet;
@@ -34,12 +35,34 @@ public sealed class AcadCommandRunner : ICommandRunner
 
     public ExecutionResult RunCompiledCommand(object compiledCommand)
     {
-        var method = compiledCommand.GetType().GetMethod("Execute", BindingFlags.Public | BindingFlags.Instance);
-        if (method == null)
-            return ExecutionResult.Failed("Compiled command does not have an Execute method.");
+        var type = compiledCommand.GetType();
+        var method = FindCommandMethod(type);
+        if (method is null)
+            return ExecutionResult.Failed($"No [CommandMethod] method found on type '{type.Name}'.");
 
-        method.Invoke(compiledCommand, null);
+        var target = method.IsStatic ? null : compiledCommand;
+        InvokeMethod(method, target);
         return ExecutionResult.Succeeded();
+    }
+
+    private static MethodInfo? FindCommandMethod(Type type)
+    {
+        var methods = type.GetMethods(BindingFlags.Public | BindingFlags.Instance | BindingFlags.Static);
+        return methods.FirstOrDefault(m =>
+            m.GetCustomAttributes(typeof(CommandMethodAttribute), false).Length > 0 &&
+            m.GetParameters().Length == 0);
+    }
+
+    private static void InvokeMethod(MethodInfo method, object? target)
+    {
+        try
+        {
+            method.Invoke(target, null);
+        }
+        catch (TargetInvocationException ex) when (ex.InnerException is not null)
+        {
+            System.Runtime.ExceptionServices.ExceptionDispatchInfo.Capture(ex.InnerException).Throw();
+        }
     }
 
 #if NET
@@ -58,7 +81,7 @@ public sealed class AcadCommandRunner : ICommandRunner
             return ExecutionResult.Failed($"Method '{methodName}' not found on type '{typeName}'.");
 
         var instance = method.IsStatic ? null : Activator.CreateInstance(type);
-        method.Invoke(instance, null);
+        InvokeMethod(method, instance);
         return ExecutionResult.Succeeded();
     }
 #else
@@ -76,7 +99,7 @@ public sealed class AcadCommandRunner : ICommandRunner
             return ExecutionResult.Failed($"Method '{methodName}' not found on type '{typeName}'.");
 
         var instance = method.IsStatic ? null : Activator.CreateInstance(type);
-        method.Invoke(instance, null);
+        InvokeMethod(method, instance);
         return ExecutionResult.Succeeded();
     }
 #endif
