@@ -1,25 +1,33 @@
 using System.Text.Json;
+using DevTools.Logging;
+using DevTools.McpServer.AcadFileInfo;
 using DevTools.McpServer.RevitFileInfo;
 using ModelContextProtocol.Protocol;
 using ModelContextProtocol.Server;
 
 namespace DevTools.McpServer.Tools;
 
-public sealed class ReadRevitFileInfoTool : McpServerTool
+public sealed class ReadFileInfoTool : McpServerTool
 {
-    private static readonly HashSet<string> ValidExtensions = new(StringComparer.OrdinalIgnoreCase)
-        { ".rvt", ".rfa", ".rft", ".rte" };
+    private static readonly string[] AllExtensions = [".rvt", ".rfa", ".rft", ".rte", ".dwg"];
 
     public override Tool ProtocolTool { get; } = new()
     {
-        Name = "read_revit_file_info",
-        Description = "Read metadata directly from a Revit file without launching Revit. Useful for preflight checks before `launch_revit` or `open_revit_model`.",
+        Name = "read_file_info",
+        Description =
+            "Read metadata from a CAD/BIM file offline (no host launch needed). " +
+            "Revit (.rvt/.rfa/.rft/.rte): version, worksets, links, project info. " +
+            "AutoCAD (.dwg): version, layers, blocks, document properties.",
         InputSchema = JsonSerializer.SerializeToElement(new
         {
             type = "object",
             properties = new
             {
-                filePath = new { type = "string", description = "Full path to the Revit file (.rvt, .rfa, .rft, .rte)" }
+                filePath = new
+                {
+                    type = "string",
+                    description = "Full path to the file (.rvt, .rfa, .rft, .rte, .dwg)."
+                }
             },
             required = new[] { "filePath" }
         })
@@ -42,15 +50,28 @@ public sealed class ReadRevitFileInfoTool : McpServerTool
             return ValueTask.FromResult(ToolHelpers.ErrorResult($"File not found: {filePath}"));
 
         var ext = Path.GetExtension(filePath);
-        if (!ValidExtensions.Contains(ext))
-            return ValueTask.FromResult(ToolHelpers.ErrorResult($"Invalid file extension '{ext}'. Expected: .rvt, .rfa, .rft, .rte"));
+        var hostApp = HostAppExtensions.FromExtension(ext);
+
+        if (hostApp is null)
+        {
+            var supported = string.Join(", ", AllExtensions);
+            return ValueTask.FromResult(
+                ToolHelpers.ErrorResult($"Unsupported file extension '{ext}'. Supported: {supported}"));
+        }
 
         try
         {
-            var info = ReadFileInfo(filePath);
+            object info = hostApp.Value switch
+            {
+                HostApp.Revit => ReadRevitInfo(filePath),
+                _ when hostApp.Value.IsAcadFamily() => ReadDwgInfo(filePath),
+                _ => throw new NotSupportedException($"No reader for {hostApp}")
+            };
+
+            var json = JsonSerializer.Serialize(info, new JsonSerializerOptions { WriteIndented = true });
             return ValueTask.FromResult(new CallToolResult
             {
-                Content = [new TextContentBlock { Text = JsonSerializer.Serialize(info, new JsonSerializerOptions { WriteIndented = true }) }]
+                Content = [new TextContentBlock { Text = json }]
             });
         }
         catch (Exception ex)
@@ -59,7 +80,7 @@ public sealed class ReadRevitFileInfoTool : McpServerTool
         }
     }
 
-    private static object ReadFileInfo(string filePath)
+    private static object ReadRevitInfo(string filePath)
     {
         using var file = RevitCompoundFile.Open(filePath);
 
@@ -78,6 +99,7 @@ public sealed class ReadRevitFileInfoTool : McpServerTool
 
         return new
         {
+            hostApp = "Revit",
             filePath,
             fileName = Path.GetFileName(filePath),
             basicInfo,
@@ -86,6 +108,27 @@ public sealed class ReadRevitFileInfoTool : McpServerTool
             worksets,
             partitionSummary,
             browserOrganization
+        };
+    }
+
+    private static object ReadDwgInfo(string filePath)
+    {
+        var info = DwgFileInfoReader.Read(filePath);
+        return new
+        {
+            hostApp = "AutoCAD",
+            filePath,
+            fileName = Path.GetFileName(filePath),
+            info.AcadVersion,
+            info.Title,
+            info.Subject,
+            info.Author,
+            info.Keywords,
+            info.Comments,
+            info.LastSavedBy,
+            info.LayerCount,
+            info.BlockCount,
+            info.Layers
         };
     }
 }

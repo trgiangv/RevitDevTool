@@ -4,12 +4,14 @@ using ModelContextProtocol.Server;
 
 namespace DevTools.McpServer.Tools;
 
-public sealed class ListRevitInstancesTool(InstanceManager instanceManager) : McpServerTool
+public sealed class ListHostInstancesTool(InstanceManager instanceManager) : McpServerTool
 {
     public override Tool ProtocolTool { get; } = new()
     {
-        Name = "list_revit_instances",
-        Description = "List discovered and connected Revit instances managed by MCPServer. Use this first to choose a target `revitInstanceId` for tools that route into running Revit sessions.",
+        Name = "list_host_instances",
+        Description =
+            "List connected and discovered host instances. " +
+            "Returns hostApp, processId, and version for each instance.",
         InputSchema = JsonSerializer.SerializeToElement(new { type = "object", properties = new { } })
     };
 
@@ -20,18 +22,24 @@ public sealed class ListRevitInstancesTool(InstanceManager instanceManager) : Mc
         CancellationToken cancellationToken = default)
     {
         var instances = instanceManager.GetInstances();
-        var discoveredPipes = InstanceManager.DiscoverRevitPipes();
+        var discoveredPipes = InstanceManager.DiscoverHostPipes();
 
         var result = new
         {
             connectedInstances = instances.Select(i => new
             {
+                hostApp = i.HostApp ?? HostAppExtensions.FromPipeName(
+                    instanceManager.GetPipeNameByProcessId(i.ProcessId) ?? "")?.ToString(),
                 processId = i.ProcessId,
-                versionNumber = i.VersionNumber,
-                documentTitle = i.DocumentTitle ?? "(no document)",
-                documentPath = i.DocumentPath
+                versionNumber = i.VersionNumber
             }),
-            discoveredPipes = discoveredPipes.ToArray(),
+            discoveredPipes = discoveredPipes
+                .Select(p => new
+                {
+                    pipeName = p,
+                    hostApp = HostAppExtensions.FromPipeName(p)?.ToString()
+                })
+                .ToArray(),
             totalConnected = instances.Count,
             totalDiscovered = discoveredPipes.Count
         };

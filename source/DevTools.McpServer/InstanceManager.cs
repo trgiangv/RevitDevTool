@@ -9,14 +9,18 @@ namespace DevTools.McpServer;
 
 public sealed partial class InstanceManager(ILogger<InstanceManager> logger) : IAsyncDisposable
 {
-    [GeneratedRegex(@"^Revit_\d{4}_\d+$", RegexOptions.IgnoreCase)]
-    private static partial Regex RevitPipePattern();
+    /// <summary>
+    /// Matches pipe names produced by DevToolsPipeServer: {HostApp}_{Version}_{PID}.
+    /// Host is any word chars, version is flexible (year, semver, etc.), PID is digits.
+    /// </summary>
+    [GeneratedRegex(@"^\w+_[^_]+_\d+$", RegexOptions.IgnoreCase)]
+    private static partial Regex HostPipePattern();
 
-    private readonly ConcurrentDictionary<string, RevitBridgeClient> _clients = new(StringComparer.OrdinalIgnoreCase);
+    private readonly ConcurrentDictionary<string, HostBridgeClient> _clients = new(StringComparer.OrdinalIgnoreCase);
 
     public event Action? Changed;
 
-    public List<RevitBridgeClient> GetClients() => _clients.Values.ToList();
+    public List<HostBridgeClient> GetClients() => _clients.Values.ToList();
 
     public List<InstanceInfo> GetInstances() =>
         _clients.Values
@@ -24,10 +28,13 @@ public sealed partial class InstanceManager(ILogger<InstanceManager> logger) : I
             .Select(c => c.Info!)
             .ToList();
 
-    public RevitBridgeClient? GetByProcessId(int processId) =>
+    public HostBridgeClient? GetByProcessId(int processId) =>
         _clients.Values.FirstOrDefault(c => c.Info?.ProcessId == processId);
 
-    public RevitBridgeClient? GetDefault() =>
+    public string? GetPipeNameByProcessId(int processId) =>
+        _clients.FirstOrDefault(kvp => kvp.Value.Info?.ProcessId == processId).Key;
+
+    public HostBridgeClient? GetDefault() =>
         _clients.Count == 1 ? _clients.Values.First() : null;
 
     public async Task RunDiscoveryAsync(CancellationToken ct)
@@ -62,7 +69,7 @@ public sealed partial class InstanceManager(ILogger<InstanceManager> logger) : I
 
     private async Task SyncPipesAsync(HashSet<string> knownPipes, CancellationToken ct)
     {
-        var currentPipes = DiscoverRevitPipes(logger);
+        var currentPipes = DiscoverHostPipes(logger);
 
         foreach (var pipeName in knownPipes.Where(p => !currentPipes.Contains(p)).ToList())
         {
@@ -82,7 +89,7 @@ public sealed partial class InstanceManager(ILogger<InstanceManager> logger) : I
         try
         {
             logger.ZLogInformation($"Connecting to {pipeName}...");
-            var client = await RevitBridgeClient.ConnectAsync(pipeName, ct).ConfigureAwait(false);
+            var client = await HostBridgeClient.ConnectAsync(pipeName, ct).ConfigureAwait(false);
             client.ToolsChanged += () => Changed?.Invoke();
             client.DocumentChanged += _ => Changed?.Invoke();
             client.Disconnected += () =>
@@ -92,7 +99,7 @@ public sealed partial class InstanceManager(ILogger<InstanceManager> logger) : I
             };
 
             _clients[pipeName] = client;
-            logger.ZLogInformation($"Connected to {pipeName} (PID={client.Info?.ProcessId}, Doc={client.Info?.DocumentTitle})");
+            logger.ZLogInformation($"Connected to {pipeName} (PID={client.Info?.ProcessId}, Host={client.Info?.HostApp})");
 
             Changed?.Invoke();
         }
@@ -111,7 +118,7 @@ public sealed partial class InstanceManager(ILogger<InstanceManager> logger) : I
         }
     }
 
-    public static HashSet<string> DiscoverRevitPipes(ILogger? logger = null)
+    public static HashSet<string> DiscoverHostPipes(ILogger? logger = null)
     {
         var pipes = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         try
@@ -119,7 +126,7 @@ public sealed partial class InstanceManager(ILogger<InstanceManager> logger) : I
             foreach (var path in Directory.GetFiles(@"\\.\pipe\"))
             {
                 var name = Path.GetFileName(path);
-                if (IsRevitEntryPipe(name))
+                if (IsHostEntryPipe(name))
                     pipes.Add(name);
             }
         }
@@ -139,7 +146,7 @@ public sealed partial class InstanceManager(ILogger<InstanceManager> logger) : I
         return int.TryParse(element.GetString(), out var pid) ? pid : 0;
     }
 
-    private static bool IsRevitEntryPipe(string name) => RevitPipePattern().IsMatch(name);
+    private static bool IsHostEntryPipe(string name) => HostPipePattern().IsMatch(name);
 
     public async ValueTask DisposeAsync()
     {

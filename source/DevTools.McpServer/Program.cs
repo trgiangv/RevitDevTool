@@ -13,10 +13,10 @@ var instanceManager = new InstanceManager(instanceManagerLogger);
 
 var localTools = new McpServerTool[]
 {
-    new ListRevitInstancesTool(instanceManager),
-    new LaunchRevitTool(instanceManager),
-    new ReadRevitFileInfoTool(),
-    new OpenRevitModelTool(instanceManager)
+    new ListHostInstancesTool(instanceManager),
+    new LaunchHostTool(instanceManager),
+    new ReadFileInfoTool(),
+    new OpenModelTool(instanceManager)
 };
 
 var toolCollection = new McpServerPrimitiveCollection<McpServerTool>();

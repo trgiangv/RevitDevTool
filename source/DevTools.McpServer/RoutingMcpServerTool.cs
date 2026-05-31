@@ -43,7 +43,7 @@ public sealed class RoutingMcpServerTool(InstanceManager instanceManager, Tool t
         var instanceIdSchema = JsonSerializer.SerializeToElement(new
         {
             type = "integer",
-            description = "Target Revit process ID. Required when multiple instances are connected. Use list_revit_instances to discover."
+            description = "Target host process ID (use list_host_instances to find available instances)."
         });
 
         var existingSchema = original.InputSchema;
@@ -58,7 +58,7 @@ public sealed class RoutingMcpServerTool(InstanceManager instanceManager, Tool t
                         ?? new Dictionary<string, JsonElement>();
         }
 
-        propsDict["revitInstanceId"] = instanceIdSchema;
+        propsDict["hostInstanceId"] = instanceIdSchema;
         schemaDict["properties"] = JsonSerializer.SerializeToElement(propsDict);
 
         return new Tool

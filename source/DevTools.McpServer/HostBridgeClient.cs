@@ -5,7 +5,7 @@ using DevTools.McpParser.Models;
 
 namespace DevTools.McpServer;
 
-public sealed class RevitBridgeClient : IAsyncDisposable
+public sealed class HostBridgeClient : IAsyncDisposable
 {
     private readonly BridgePipeConnection _connection;
     private readonly ConcurrentDictionary<string, TaskCompletionSource<BridgeMessage>> _pending = new();
@@ -20,7 +20,7 @@ public sealed class RevitBridgeClient : IAsyncDisposable
     public InstanceInfo? Info { get; private set; }
     public bool IsConnected => _connected;
 
-    private RevitBridgeClient(string pipeName, BridgePipeConnection connection)
+    private HostBridgeClient(string pipeName, BridgePipeConnection connection)
     {
         PipeName = pipeName;
         _connection = connection;
@@ -31,13 +31,13 @@ public sealed class RevitBridgeClient : IAsyncDisposable
         _connection.StartReadLoop();
     }
 
-    public static async Task<RevitBridgeClient> ConnectAsync(string pipeName, CancellationToken ct = default)
+    public static async Task<HostBridgeClient> ConnectAsync(string pipeName, CancellationToken ct = default)
     {
         var pipe = new NamedPipeClientStream(".", pipeName, PipeDirection.InOut, PipeOptions.Asynchronous);
         await pipe.ConnectAsync(ct).ConfigureAwait(false);
 
         var connection = new BridgePipeConnection(pipe);
-        var client = new RevitBridgeClient(pipeName, connection);
+        var client = new HostBridgeClient(pipeName, connection);
 
         var infoResponse = await client.RequestAsync(BridgeMethods.InstanceInfo, ct: ct).ConfigureAwait(false);
         if (infoResponse.Result is { } result)

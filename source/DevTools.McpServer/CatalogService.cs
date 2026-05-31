@@ -58,7 +58,7 @@ public sealed class CatalogService(InstanceManager instanceManager,
     }
 
     private async Task FetchClientPrimitivesAsync(
-        RevitBridgeClient client,
+        HostBridgeClient client,
         Dictionary<string, McpServerTool> tools,
         Dictionary<string, McpServerPrompt> prompts,
         List<McpServerResource> resources)
@@ -76,27 +76,27 @@ public sealed class CatalogService(InstanceManager instanceManager,
         }
     }
 
-    private async Task FetchToolsAsync(RevitBridgeClient client, Dictionary<string, McpServerTool> tools)
+    private async Task FetchToolsAsync(HostBridgeClient client, Dictionary<string, McpServerTool> tools)
     {
         var response = await client.RequestAsync(BridgeMethods.ToolsList, ct: ct).ConfigureAwait(false);
         foreach (var tool in DeserializeResult<Tool>(response))
             tools.TryAdd(tool.Name, new RoutingMcpServerTool(instanceManager, tool));
     }
 
-    private async Task FetchPromptsAsync(RevitBridgeClient client, Dictionary<string, McpServerPrompt> prompts)
+    private async Task FetchPromptsAsync(HostBridgeClient client, Dictionary<string, McpServerPrompt> prompts)
     {
         var response = await client.RequestAsync(BridgeMethods.PromptsList, ct: ct).ConfigureAwait(false);
         foreach (var prompt in DeserializeResult<Prompt>(response))
             prompts.TryAdd(prompt.Name, new RoutingMcpServerPrompt(instanceManager, prompt));
     }
 
-    private async Task FetchResourcesAsync(RevitBridgeClient client, List<McpServerResource> resources)
+    private async Task FetchResourcesAsync(HostBridgeClient client, List<McpServerResource> resources)
     {
         var response = await client.RequestAsync(BridgeMethods.ResourcesList, ct: ct).ConfigureAwait(false);
         resources.AddRange(DeserializeResult<Resource>(response).Select(resource => new RoutingMcpServerResource(instanceManager, resource, null)));
     }
 
-    private async Task FetchResourceTemplatesAsync(RevitBridgeClient client, List<McpServerResource> resources)
+    private async Task FetchResourceTemplatesAsync(HostBridgeClient client, List<McpServerResource> resources)
     {
         var response = await client.RequestAsync(BridgeMethods.ResourceTemplatesList, ct: ct).ConfigureAwait(false);
         resources.AddRange(DeserializeResult<ResourceTemplate>(response).Select(template => new RoutingMcpServerResource(instanceManager, null, template)));

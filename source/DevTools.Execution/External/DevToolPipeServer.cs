@@ -59,7 +59,6 @@ public sealed class DevToolsPipeServer(
         state.SetEndpoint(_pipeName);
         state.SetConnectedState(0);
         state.SetQueueDepth(0);
-        instanceRequestHandler.InitializeFromContext();
         pytestRequestHandler.NotifySender = SendNotification;
 
         Task.Run(() =>
