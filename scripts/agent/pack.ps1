@@ -1,3 +1,13 @@
+<#
+.SYNOPSIS
+    Run the full release pack pipeline via ModularPipelines.
+.DESCRIPTION
+    Executes the build orchestrator with the 'pack' argument:
+    Clean → CreateBundle (all Release.Autodesk.* configs + MCPServer) → CreateInstaller.
+    Output goes to build/output/.
+.EXAMPLE
+    scripts/agent/pack.ps1
+#>
 param()
 
 $ErrorActionPreference = "Stop"

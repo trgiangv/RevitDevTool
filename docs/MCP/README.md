@@ -1,10 +1,10 @@
 # MCP Integration Architecture
 
-Model Context Protocol integration lets external clients talk to a running host through a standalone MCP server and the in-host named-pipe runtime.
+Model Context Protocol integration lets external AI clients (Claude Desktop, Cursor, etc.) talk to running host applications through a standalone MCP server and the in-host named-pipe runtime.
 
-Current server tooling is still Revit-oriented in naming and built-in tools, but the runtime path in `DevTools.Execution` is host-agnostic and uses `IHostAppInfo` plus host adapters.
+The entire MCP stack is designed to be host-agnostic. The standalone `MCPServer.exe` discovers and connects to any host pipe (`Revit_*`, `AutoCad_*`, `Civil3D_*`, etc.) via generic `HostBridgeClient`. The in-host runtime in `DevTools.Execution` uses `IHostAppInfo` and host adapters. Built-in standalone tools now support both Revit and AutoCAD-family products (launch, file info, instance discovery).
 
-Last updated: 2026-05-29
+Last updated: 2026-05-31
 
 ---
 
@@ -25,23 +25,33 @@ Last updated: 2026-05-29
 
 ```mermaid
 flowchart TB
-    Client["MCP client"]
-    Server["DevTools.McpServer\nstandalone process"]
-    Pipe["DevToolsPipeServer\ninside host process"]
+    Client["MCP client\nClaude Desktop / Cursor"]
+    Server["DevTools.McpServer\nstandalone MCPServer.exe"]
+    Discovery["InstanceManager\nscan \\.\pipe\\ for host pipes"]
+
+    subgraph hosts["Host processes"]
+        RevitPipe["DevToolsPipeServer\nRevit_2025_pid"]
+        AcadPipe["DevToolsPipeServer\nAutoCad_2026_pid"]
+    end
+
     Registry["ToolRegistryStore"]
     Providers["DotnetToolRegistryProvider\nPythonToolRegistryProvider"]
     Dispatch["Tool/Prompt/Resource dispatchers"]
     Host["Host context + Python executor"]
 
     Client --> Server
-    Server -->|"framed named pipe"| Pipe
-    Pipe --> Registry
+    Server --> Discovery
+    Discovery -->|"HostBridgeClient"| RevitPipe
+    Discovery -->|"HostBridgeClient"| AcadPipe
+    RevitPipe --> Registry
+    AcadPipe --> Registry
     Registry --> Providers
-    Pipe --> Dispatch
+    RevitPipe --> Dispatch
+    AcadPipe --> Dispatch
     Dispatch --> Host
 ```
 
-The standalone MCP server owns MCP protocol routing and host instance selection. The host process owns actual execution, registry loading, and host-safe invocation.
+The standalone MCP server owns MCP protocol routing and host instance selection. `InstanceManager` scans `\\.\pipe\` for pipes matching `{HostApp}_{Version}_{PID}` and connects via generic `HostBridgeClient`. The host process owns actual execution, registry loading, and host-safe invocation.
 
 ---
 
@@ -114,14 +124,36 @@ Dispatchers split by primitive:
 
 `source/DevTools.McpServer/` contains:
 
-- `Program.cs`
-- `CatalogService.cs`
-- `InstanceManager.cs`
-- `RevitBridgeClient.cs`
-- routing primitives: `RoutingMcpServerTool`, `RoutingMcpServerPrompt`, `RoutingMcpServerResource`
-- built-in Revit file/launch tools under `Tools/` and `RevitFileInfo/`
+- `Program.cs` — MCP stdio server entry, tool/prompt/resource routing
+- `CatalogService.cs` — aggregates tool catalogs from connected hosts
+- `InstanceManager.cs` — discovers host pipes, manages `HostBridgeClient` connections
+- `HostBridgeClient.cs` — generic named-pipe client (formerly `RevitBridgeClient`)
+- Routing primitives: `RoutingMcpServerTool`, `RoutingMcpServerPrompt`, `RoutingMcpServerResource`
 
-The built-in standalone tools are currently Revit-specific. Keep that distinction clear: the in-host MCP runtime is shared, while the current standalone helper tools target Revit workflows.
+### Built-in Standalone Tools
+
+Registered in `source/DevTools.McpServer/Program.cs`:
+
+| Tool | Host Support | Description |
+|------|-------------|-------------|
+| `list_host_instances` | All hosts | Lists connected instances + discovered pipes |
+| `launch_host` | Revit + AutoCAD family | Launches host with optional file path; supports AutoCad, Civil3D, Plant3D, etc. |
+| `read_file_info` | Revit (RVT/RFA) + AutoCAD (DWG) | Offline metadata reader via compound-file and ACadSharp |
+| `open_model` | Multi-host | Extension-based host detection; on a connected instance routes `open_document` via pipe; on cold start launches host with file as CLI arg |
+
+### Built-in In-Host Tools
+
+Registered in `source/DevTools.Execution/External/Mcp/BuiltIn/`:
+
+| Tool | Host Support | Description |
+|------|-------------|-------------|
+| `execute_csharp_code` | Revit + AutoCAD | Compiles and runs C# code with host API context |
+| `open_document` | Revit + AutoCAD | Opens a model file via `IDocumentBridge` (`RevitDocumentBridge` / `AcadDocumentBridge`) |
+
+### Host-Specific Gaps
+
+- No shipped AutoCAD MCP toolset equivalent to `Samples/RevitMcpToolSet/`
+- Navisworks listed in enums but launch returns "not yet supported"
 
 ---
 

@@ -27,3 +27,39 @@ Use this file for durable architecture decisions that affect agent behavior. Kee
 - `npx gitnexus analyze` fails in `scopeResolution` even after ignoring vendor `libs/` and cleaning `.gitnexus`.
 - `.gitnexusignore` excludes vendor/generated/runtime folders so future indexing should focus on repo-owned code.
 - Until analyzer failure is resolved, agents should inspect source directly and not rely on GitNexus graph freshness.
+
+## 2026-05-31: MCP multi-host readiness confirmed
+
+- `MCPServer.exe` is now host-agnostic at the protocol/runtime layer: `InstanceManager` discovers any host pipe, `HostBridgeClient` (formerly `RevitBridgeClient`) connects generically.
+- Standalone built-in tools: `list_host_instances`, `launch_host`, `read_file_info`, `open_model` (multi-host).
+- In-host built-in tools: `execute_csharp_code`, `open_document` (registered in `ExecutionExtensions.cs`).
+- In-host MCP dispatch runtime (`DevTools.Execution`) is fully shared — both `RevitDevTool` and `AcadDevTool` register the pipe server.
+- Startup dialog resolver and `open_document` are implemented for AutoCAD (merged keywords in default `StartupDialogResolverOptions`; `AcadDocumentBridge` + `OpenDocumentTool`).
+- Remaining AutoCAD gaps: no shipped MCP toolset. (pytest bridge client is now multi-host — scans all `{Host}_{Version}_{PID}` pipes.)
+- Design principle: every new MCP feature should be sharable by default.
+
+## 2026-05-31: Architecture docs audit and corrections
+
+- `RevitDevTool.Core` reclassified: it is Revit-only (transactions, dockable panes, image export), not a shared platform library. Only `RevitDevTool` references it; `AcadDevTool` does not.
+- Visualization confirmed as Revit-host only: lives entirely in `source/RevitDevTool/Visualization/`, not in shared code.
+- `DevTools.McpServer` standalone process clarified: runs outside hosts as `MCPServer.exe`; standalone built-in tools are multi-host, in-host MCP runtime is shared.
+- `docs/README.md` directory tree expanded to show all 8 `docs/ai/` digest files and `static/icons/` assets.
+- Documentation completeness table restructured: separated architecture modules, shared platform libraries, and sample projects.
+- All 6 `scripts/agent/*.ps1` scripts received PowerShell comment-based help (`.SYNOPSIS`, `.DESCRIPTION`, `.PARAMETER`, `.EXAMPLE`).
+- `AGENTS.md` Verification section now lists all 6 agent scripts.
+- `docs/ai/host-boundaries.md` updated with `RevitDevTool.Core`, visualization location, and standalone MCP server process.
+
+## 2026-05-31: Document bridge and startup dialog resolver
+
+- Added shared `IDocumentBridge` with `RevitDocumentBridge` and `AcadDocumentBridge`; in-host `OpenDocumentTool` (`open_document`) delegates to host implementations.
+- `StartupDialogResolver` simplified: merged Revit + AutoCAD keywords in default `StartupDialogResolverOptions`; removed `ForHost` host-specific option branching.
+
+## 2026-05-31: Multi-host pytest client refactor
+
+- `revitdevtool_pytest` v0.3.0 replaces all `--revit-*` CLI flags and `revit_*` INI options with `--host-*` / `host_*` equivalents.
+- Pipe pattern aligned with C# `InstanceManager`: `^\w+_[^_]+_\d+$` — version is `[^_]+` (any non-underscore string), not `\d{4}`. Supports year (2025), semver (8.0), dotted (2024.1), or prefixed (v3.2.1).
+- `HostInstance.version` changed from `int` to `str` throughout the Python client.
+- `HOST_REGISTRY` expanded beyond Autodesk: added Navisworks, Rhino, Tekla entries. Hosts without `exe_name` connect via pipe auto-discovery or explicit `--host-pipe` only.
+- `get_host_config()` returns a fallback `HostConfig(pipe_prefix=host_name)` for unknown hosts — any host exposing a DevToolsPipeServer pipe works without pre-registration.
+- `find_host_pipes()` no longer filters out unregistered pipe prefixes — returns all pipes matching the 3-part pattern, resolving host name from registry or using the raw prefix.
+- `HostConfig.exe_name` changed from required to `str | None` — hosts without exe discovery logic still work for connect-only scenarios.

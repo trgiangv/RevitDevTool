@@ -1,3 +1,15 @@
+<#
+.SYNOPSIS
+    Run Python parser/server tests.
+.DESCRIPTION
+    Prefers pixi if available, otherwise falls back to python -m pytest.
+    Default target: tests/RevitDevTool.PyServer.Tests (parser/contract tests, not live Revit bridge).
+.PARAMETER Path
+    Relative path to test directory.
+.EXAMPLE
+    scripts/agent/test-python.ps1
+    scripts/agent/test-python.ps1 -Path tests/some-other-tests
+#>
 param(
     [string]$Path = "tests/RevitDevTool.PyServer.Tests"
 )

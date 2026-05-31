@@ -4,7 +4,7 @@ The execution system is the shared runtime in `source/DevTools.Execution/`. It d
 
 The platform is not Revit-only. Revit and AutoCAD currently provide host adapters; future .NET-capable hosts should plug in through the same abstractions.
 
-Last updated: 2026-05-29
+Last updated: 2026-05-31
 
 ---
 
@@ -92,8 +92,14 @@ Shared execution depends on interfaces:
 | `IIronPythonBridge` | Configure IronPython runtime and search paths for the host. |
 | `IDebuggerBridge` | Open debugger/runtime hooks from shared UI. |
 | `IHostIdlingBridge` | Run UI/log updates on host idling when needed. |
+| `IDocumentBridge` | Open, close, and save documents in the host context (`source/DevTools.Execution/Interfaces/IDocumentBridge.cs`). |
 
 Revit wiring lives in `RevitHostingExtensions`. AutoCAD wiring lives in `AcadHostingExtensions`. New hosts should add their own adapter project or host project rather than leaking host APIs into `DevTools.Execution`.
+
+Document bridge implementations:
+
+- Revit: `RevitDocumentBridge` — `UIApplication.OpenAndActivateDocument`
+- AutoCAD: `AcadDocumentBridge` — `DocumentCollectionExtension.Open`
 
 ---
 
@@ -167,6 +173,8 @@ It exposes framed named-pipe routes for:
 - MCP: `tools/list`, `tools/call`, `prompts/list`, `prompts/get`, `resources/list`, `resources/templates/list`, `resources/read`
 - Instance info: `instance/info`
 - Pytest bridge: `tests/discover`, `tests/run`
+
+In-host built-in MCP tools registered in `ExecutionExtensions`: `CSharpCodeTool` (`execute_csharp_code`) and `OpenDocumentTool` (`open_document`), the latter delegating to `IDocumentBridge`.
 
 The pipe name is built from `IHostAppInfo`: `{Host}_{VersionNumber}_{ProcessId}`. This makes the same bridge model usable by multiple host processes.
 

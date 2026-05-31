@@ -1,3 +1,18 @@
+<#
+.SYNOPSIS
+    Record startup profiling notes and collect related logs.
+.DESCRIPTION
+    Placeholder for manual startup profiling workflow. Prints host/year/timestamp context
+    then delegates to collect-logs.ps1 to list recent log files.
+    This script does not perform automated timing — it provides a stable anchor
+    for recording and reviewing startup behavior.
+.PARAMETER Host
+    Target host application (Revit or AutoCAD).
+.PARAMETER Year
+    Autodesk product year.
+.EXAMPLE
+    scripts/agent/startup-profile.ps1 -Host Revit -Year 2025
+#>
 param(
     [ValidateSet("Revit", "AutoCAD")]
     [string]$Host = "Revit",

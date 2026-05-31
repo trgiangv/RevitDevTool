@@ -1,3 +1,15 @@
+<#
+.SYNOPSIS
+    List or copy RevitDevTool log files from %APPDATA%\RevitDevTool.
+.DESCRIPTION
+    Without -Destination: lists the 50 most recent .log/.txt files with timestamps and sizes.
+    With -Destination: copies those 50 files to the specified directory.
+.PARAMETER Destination
+    Target directory for copying logs. Created if it does not exist.
+.EXAMPLE
+    scripts/agent/collect-logs.ps1
+    scripts/agent/collect-logs.ps1 -Destination ./logs-snapshot
+#>
 param(
     [string]$Destination = ""
 )

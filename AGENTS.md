@@ -14,10 +14,12 @@
 
 ## Repo Shape
 - Revit host: `source/RevitDevTool/`.
+- Revit-only helpers: `source/RevitDevTool.Core/` (dockable panes, RevitContext, transaction service — not shared with AutoCAD).
 - AutoCAD host: `source/AcadDevTool/`.
 - Shared platform libraries: `source/DevTools.Execution/`, `source/DevTools.Logging/`, `source/DevTools.McpParser/`, `source/DevTools.McpServer/`, `source/DevTools.Presentation/`, `source/DevTools.Settings/`, `source/DevTools.Telemetry/`, `source/DevTools.UI/`, and `source/DevTools.Utilities/`.
 - Samples and demo toolsets live under `Samples/`, not under `source/`.
 - Build automation lives under `build/`; agent wrapper scripts live under `scripts/agent/`.
+- Vendored WPF libraries: `libs/MahApps.Metro`, `libs/ControlzEx`, `libs/XamlBehaviorsWpf`, `libs/pythonnet-stub-generator`.
 
 ## Build Matrix
 - Required SDK: .NET `10.0.0` via `global.json`.
@@ -35,14 +37,20 @@
 - Focused compile: `scripts/agent/build-host.ps1 -Year <2022-2027> [-Mode Debug|Release]`.
 - .NET tests: `scripts/agent/test-dotnet.ps1`.
 - Python parser tests: `scripts/agent/test-python.ps1`.
+- Release package: `scripts/agent/pack.ps1`.
+- Collect logs: `scripts/agent/collect-logs.ps1 [-Destination <path>]`.
+- Startup profiling anchor: `scripts/agent/startup-profile.ps1 [-Host Revit|AutoCAD] [-Year <year>]`.
 - Frontend sample quality gate: from `Samples/PythonDemo/revit_dashboard_ui/`, run `npm run quality`.
 - If a test fails due to known stale paths or missing local Pixi/Revit state, document that explicitly instead of changing unrelated code.
 
 ## Host Boundaries
+- Default stance: every feature should be sharable across hosts. Only features that inherently depend on a specific host API (e.g. Revit DirectContext3D) belong in host projects.
 - Shared execution depends on abstractions such as `IHostContextExecutor`, `ICommandDiscovery`, `ICommandRunner`, script bridges, and debugger bridges.
 - Host projects provide implementations for Revit, AutoCAD, and future .NET hosts.
+- `RevitDevTool.Core` is Revit-only (transactions, dockable panes, image export). It is NOT referenced by AutoCAD or shared libs.
 - New host support should add host-specific projects, adapters, and packaging rules without leaking host APIs into shared `DevTools.*` libraries.
-- Revit DirectContext3D visualization belongs in the Revit host. Other hosts should use their own rendering adapters.
+- Revit DirectContext3D visualization lives entirely in `source/RevitDevTool/Visualization/`, not in shared code. Other hosts should use their own rendering adapters.
+- Standalone MCP server (`DevTools.McpServer`) is host-agnostic: `InstanceManager` discovers any host pipe, `HostBridgeClient` connects generically. Built-in tools support Revit and AutoCAD-family products (launch, file info, C# execution). In-host MCP dispatch is fully shared.
 
 ## Common Traps
 - Do not use repo-root `.sln`; use `RevitDevTool.slnx`.

@@ -1,3 +1,18 @@
+<#
+.SYNOPSIS
+    Run .NET test projects.
+.DESCRIPTION
+    Without -Project: runs all three test projects (Execution, Server, Telemetry) sequentially.
+    With -Project: runs only the specified test project.
+    Stops on first failure.
+.PARAMETER Project
+    Relative path to a specific test .csproj (e.g. tests/RevitDevTool.Execution.Tests/RevitDevTool.Execution.Tests.csproj).
+.PARAMETER Configuration
+    Build configuration for tests (default: Debug).
+.EXAMPLE
+    scripts/agent/test-dotnet.ps1
+    scripts/agent/test-dotnet.ps1 -Project tests/RevitDevTool.Execution.Tests/RevitDevTool.Execution.Tests.csproj
+#>
 param(
     [string]$Project = "",
     [string]$Configuration = "Debug"

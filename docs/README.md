@@ -12,20 +12,33 @@ RevitDevTool is evolving into a reusable .NET host/dev-tool platform. Revit and 
 
 ```
 docs/
-├── ai/
-│   └── index.md           # Agent workflow routing and deterministic memory
+├── ai/                                # Agent workflow routing and deterministic memory
+│   ├── index.md                       # Task router — start here for agents
+│   ├── build-matrix.md                # SDK, TFM matrix, build/pack/deploy commands
+│   ├── verification.md                # Test reality, focused verification commands
+│   ├── execution-system.md            # Execution engine digest + change checklist
+│   ├── mcp-pytest-bridge.md           # MCP + pytest bridge digest
+│   ├── host-boundaries.md             # Shared vs host layer split
+│   ├── startup-performance.md         # Lazy-init rules, profiling commands
+│   ├── known-test-gaps.md             # Shallow coverage, stale paths, env deps
+│   └── decision-log.md               # Durable architecture decisions (ADRs)
 ├── Execution/
-│   └── README.md           # Execution engine architecture
+│   └── README.md                      # Execution engine architecture
 ├── Logging/
-│   └── README.md           # Logging system architecture
+│   └── README.md                      # Logging system architecture
 ├── Visualization/
-│   └── README.md           # DirectContext3D visualization
+│   └── README.md                      # DirectContext3D visualization (Revit-only)
 ├── PythonDemo/
-│   └── README.md           # Python + WebView2 dashboard
+│   └── README.md                      # Python + WebView2 dashboard samples
 ├── MCP/
-│   └── README.md           # MCP parser & server design
-└── PyTest/
-    └── README.md           # pytest bridge architecture
+│   └── README.md                      # MCP parser & server design
+├── PyTest/
+│   └── README.md                      # pytest bridge architecture
+└── static/icons/                      # Inkscape SVG sources for UI/installer icons
+    ├── Commands-*.svg                 # Commands panel icons
+    ├── DevTools-*.svg                 # Main DevTools tab icons
+    ├── StubBuilder-*.svg              # Stub builder icons
+    └── installer/                     # Installer banner/background
 ```
 
 ---
@@ -99,14 +112,14 @@ Model Context Protocol integration:
 - `ToolRegistryStore` — in-process tool discovery & caching
 - `.NET` + Python toolset providers
 - Tool/Prompt/Resource dispatch
-- Current standalone helper tools are Revit-oriented; in-host MCP runtime is shared
+- Standalone helper tools are multi-host (`launch_host` supports Revit and AutoCAD, `read_file_info` reads RVT/RFA/DWG metadata, `open_model` detects host from extension); in-host MCP runtime is shared
 
 ### PyTest
 **Path:** `PyTest/README.md`
 
 pytest remote execution bridge:
 - Named Pipe protocol
-- Revit-oriented `revitdevtool_pytest` client plugin
+- Multi-host `revitdevtool_pytest` client plugin (Revit, AutoCAD-family, extensible)
 - `PytestExecutionService` + `PytestRunner.py` server
 - Test progress streaming & result reporting
 - Current tests are smoke/contract level, not deep end-to-end assurance
@@ -117,48 +130,84 @@ pytest remote execution bridge:
 
 | I want to... | Read |
 |-------------|------|
+| Route an agent task | [ai/index.md](ai/index.md) |
+| Understand build/deploy | [ai/build-matrix.md](ai/build-matrix.md) |
 | Understand the execution engine | [Execution/README.md](Execution/README.md) |
 | Understand logging | [Logging/README.md](Logging/README.md) |
-| Understand visualization | [Visualization/README.md](Visualization/README.md) |
+| Understand visualization (Revit-only) | [Visualization/README.md](Visualization/README.md) |
 | Understand MCP integration | [MCP/README.md](MCP/README.md) |
 | Understand pytest bridge | [PyTest/README.md](PyTest/README.md) |
-| Understand AI harness rules | [ai/index.md](ai/index.md) |
-| Use RevitDevTool | [RevitDevTool.Wiki](https://github.com/trgiangv/RevitDevTool/wiki) |
+| Understand host boundaries | [ai/host-boundaries.md](ai/host-boundaries.md) |
+| Understand known test gaps | [ai/known-test-gaps.md](ai/known-test-gaps.md) |
+| Use RevitDevTool (end-user) | [RevitDevTool.Wiki](https://github.com/trgiangv/RevitDevTool/wiki) |
 
 ---
 
 ## Documentation Completeness
 
+### Architecture Modules
+
 | Module | Architecture Docs | Status |
 |--------|-------------------|--------|
-| **Execution** | ✅ `README.md` | Production |
-| **Logging** | ✅ `README.md` | Production |
-| **Visualization** | ✅ `README.md` | Production |
-| **PythonDemo** | ✅ `README.md` | Production |
-| **MCP** | ✅ `README.md` | Integration |
-| **PyTest** | ✅ `README.md` | Integration |
-| **AI Harness** | ✅ `index.md` | Agent workflow |
-| **CSharpDemo** | ⚠️ Source only | Examples |
-| **FSharpDemo** | ⚠️ Source only | Examples |
-| **FSharpScriptDemo** | ⚠️ Source only | Examples |
-| **CSharpScriptDemo** | ⚠️ Source only | Examples |
-| **McpToolsetDemo** | ⚠️ Source only | Examples |
-| **RevitMcpToolSet** | ⚠️ Source only | Examples |
+| **Execution** | ✅ `Execution/README.md` | Production |
+| **Logging** | ✅ `Logging/README.md` | Production |
+| **Visualization** | ✅ `Visualization/README.md` | Production (Revit-only) |
+| **MCP** | ✅ `MCP/README.md` | Production |
+| **PyTest** | ✅ `PyTest/README.md` | Production |
+| **PythonDemo** | ✅ `PythonDemo/README.md` | Samples |
+| **AI Harness** | ✅ `ai/index.md` + 8 digests | Agent workflow |
+
+### Shared Platform Libraries (no dedicated README — covered by module docs and AGENTS.md)
+
+| Library | Covered in | Notes |
+|---------|-----------|-------|
+| **DevTools.Presentation** | `Execution/README.md`, `Logging/README.md` | MVVM shell, ViewModels, host-neutral UI |
+| **DevTools.UI** | `AGENTS.md` | WPF controls, theme, MahApps integration |
+| **DevTools.Settings** | `Execution/README.md`, `MCP/README.md` | Configuration persistence |
+| **DevTools.Telemetry** | `AGENTS.md` | Sentry integration, path scrubbing |
+| **DevTools.Utilities** | `AGENTS.md` | Win32 helpers, assembly loading |
+| **DevTools.McpParser** | `MCP/README.md` | Shared bridge contracts and parsers |
+| **DevTools.McpServer** | `MCP/README.md`, `ai/build-matrix.md` | Standalone `MCPServer.exe` |
+| **RevitDevTool.Core** | `AGENTS.md` | Revit-only: transactions, dockable panes |
+
+### Sample Projects (source only, no architecture docs)
+
+| Sample | Type |
+|--------|------|
+| `Samples/CSharpDemo/` | Revit C# demo |
+| `Samples/AcadCSharpDemo/` | AutoCAD C# demo |
+| `Samples/FSharpDemo/` | Revit F# demo |
+| `Samples/CSharpScriptDemo/` | C# `.csx` script demo |
+| `Samples/McpToolsetDemo/` | MCP `[McpTool]` attribute demo |
+| `Samples/RevitMcpToolSet/` | Revit MCP toolset sample |
+| `Samples/PythonDemo/` | Python + React dashboard (not in `.slnx`) |
 
 ---
 
 ## Related Links
 
-- **Source Code:** [../source/](../source/)
-- **Main engine:** `source/DevTools.Execution/`
-- **Shared presentation:** `source/DevTools.Presentation/`
-- **Logging library:** `source/DevTools.Logging/`
-- **MCP parser:** `source/DevTools.McpParser/`
-- **MCP server:** `source/DevTools.McpServer/`
-- **C# samples:** [../Samples/CSharpDemo/](../Samples/CSharpDemo/)
-- **C# script samples:** [../Samples/CSharpScriptDemo/](../Samples/CSharpScriptDemo/)
-- **F# samples:** [../Samples/FSharpDemo/](../Samples/FSharpDemo/)
-- **Python samples:** [../Samples/PythonDemo/commands/](../Samples/PythonDemo/commands/)
+### Source Code
+
+| Project | Path | Layer |
+|---------|------|-------|
+| Execution engine | `source/DevTools.Execution/` | Shared |
+| Presentation (MVVM) | `source/DevTools.Presentation/` | Shared |
+| Logging | `source/DevTools.Logging/` | Shared |
+| MCP parser/contracts | `source/DevTools.McpParser/` | Shared |
+| MCP standalone server | `source/DevTools.McpServer/` | Standalone |
+| Settings | `source/DevTools.Settings/` | Shared |
+| Telemetry | `source/DevTools.Telemetry/` | Shared |
+| UI (WPF controls) | `source/DevTools.UI/` | Shared |
+| Utilities | `source/DevTools.Utilities/` | Shared |
+| Revit host | `source/RevitDevTool/` | Host |
+| Revit core helpers | `source/RevitDevTool.Core/` | Host (Revit-only) |
+| AutoCAD host | `source/AcadDevTool/` | Host |
+
+### Samples
+
+- [C# demo](../Samples/CSharpDemo/) | [C# scripts](../Samples/CSharpScriptDemo/) | [F# demo](../Samples/FSharpDemo/)
+- [Python demo](../Samples/PythonDemo/commands/) | [MCP toolset demo](../Samples/McpToolsetDemo/)
+- [Revit MCP toolset](../Samples/RevitMcpToolSet/) | [AutoCAD demo](../Samples/AcadCSharpDemo/)
 
 ---
 
@@ -174,12 +223,13 @@ pytest remote execution bridge:
 
 ## Design Philosophy
 
-1. **Separation of Concerns** — Each module has clear responsibilities
-2. **Extensibility** — Provider/Strategy patterns for pluggable behavior
-3. **Performance** — Buffering, caching, async throughout
-4. **Type Safety** — Strong typing with nullability annotations
-5. **Testability** — Dependency injection and mockable interfaces
+1. **Sharable by Default** — Every feature should be host-agnostic unless it inherently requires a specific host API. Only Revit-exclusive features (e.g. DirectContext3D) belong in host projects.
+2. **Separation of Concerns** — Each module has clear responsibilities; shared platform vs host adapters.
+3. **Extensibility** — Provider/Strategy patterns for pluggable behavior across hosts.
+4. **Performance** — Buffering, caching, async throughout.
+5. **Type Safety** — Strong typing with nullability annotations.
+6. **Testability** — Dependency injection and mockable interfaces.
 
 ---
 
-_Last updated: 2026-05-29_
+_Last updated: 2026-05-31_

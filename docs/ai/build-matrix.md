@@ -70,7 +70,7 @@ Get-Process -Name "acad" -ErrorAction SilentlyContinue | Stop-Process -Force
 ```
 
 This applies to:
-- `scripts/agent/build-host.ps1` (deploys by default)
+- `scripts/agent/build-host.ps1` (MSBuild `DeployRevitAddin` target deploys after build by default)
 - `scripts/agent/pack.ps1`
 - `dotnet build` without `-p:DeployRevitAddin=false`
 
