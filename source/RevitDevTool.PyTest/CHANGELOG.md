@@ -2,6 +2,42 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.3.0] - 2026-05-31
+
+### Added
+
+- **Multi-host support:** plugin now supports Revit, AutoCAD, Civil3D, Plant3D, Navisworks, Rhino, Tekla, and any host exposing a DevToolsPipeServer Named Pipe.
+- **`--host` option:** new CLI flag and `host_name` INI key to select the target host application (default: `revit`).
+- **`HostConfig` dataclass:** centralized executable discovery and launch configuration per host product, stored in `HOST_REGISTRY`.
+- **AutoCAD-family executable discovery:** registry-based resolver mirrors C# `AcadPathResolver` — enumerates `HKLM\SOFTWARE\Autodesk\AutoCAD` releases, matches product IDs (`ACAD-XXNN`), resolves install path via `GlobUPILocation` / `AcadLocation`.
+- **Open host registry:** `get_host_config()` returns a fallback `HostConfig(pipe_prefix=host_name)` for unknown host names — any host with a DevToolsPipeServer pipe works without pre-registration.
+- **Multi-host dialog resolver:** `StartupDialogResolver` keywords expanded to cover AutoCAD, Civil, and Plant startup dialogs.
+
+### Changed
+
+- **CLI/INI options renamed:** all `--revit-*` / `revit_*` options replaced with `--host-*` / `host_*` equivalents (`--host-version`, `--host-timeout`, `--host-pipe`, `--host-launch`, `--host-launch-timeout`).
+- **Flexible pipe pattern:** `PIPE_PATTERN` changed from `^\w+_\d{4}_\d+$` to `^\w+_[^_]+_\d+$` — version segment accepts any non-underscore string (year, semver, dotted), matching C# `InstanceManager`.
+- **`HostInstance.version` type:** changed from `int` to `str` to support non-year version formats (e.g. `8.0`, `2024.1`, `v3.2.1`).
+- **`--host-version` accepts string:** no longer restricted to 4-digit year integers.
+- **`RevitBridge` → `HostBridge`:** bridge class renamed for host-agnostic semantics.
+- **`RevitInstance` → `HostInstance`:** discovery dataclass renamed.
+- **`find_revit_pipes()` → `find_host_pipes()`:** accepts optional `host_name` filter; returns all matching pipes including unregistered prefixes.
+- **`find_revit_path()` → `find_host_executable()`:** dispatches to Revit registry, AutoCAD-family registry, or returns `None` for hosts without exe discovery.
+- **`start_revit()` → `start_host()`:** uses `HostConfig.launch_args` per host.
+- **`wait_for_revit_pipe()` → `wait_for_host_pipe()`:** host-agnostic pipe polling.
+- **`HostConfig.exe_name` optional:** hosts without a known executable (Rhino, Tekla, etc.) connect via pipe auto-discovery or `--host-pipe` only.
+- **`is_process_alive()`:** handles `exe_name=None` gracefully — checks PID liveness without executable name verification.
+
+### Removed
+
+- **`_opt_int()` helper:** version is now parsed as string, no integer conversion needed.
+
+### Notes
+
+- `0.3.0` is a breaking change from `0.2.x`: all CLI flags and INI keys are renamed. Existing `revit_*` / `--revit-*` options are no longer recognized.
+- The pipe pattern is now aligned with the C# `InstanceManager.HostPipePattern` regex (`^\w+_[^_]+_\d+$`).
+- Revit users: add `host_name = "revit"` to `pyproject.toml` (or rely on the default).
+
 ## [0.2.0] - 2026-05-31
 
 ### Added
