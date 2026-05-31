@@ -53,8 +53,7 @@ public sealed class RegistryRequestHandler(
         try
         {
             using var cts = new CancellationTokenSource(CallTimeout);
-            result = await hostContext
-                .ExecuteAsync(() => dispatcher.DispatchAsync(tool, payloadJson), cts.Token)
+            result = await dispatcher.DispatchAsync(tool, payloadJson, hostContext, cts.Token)
                 .ConfigureAwait(false);
         }
         catch (OperationCanceledException)

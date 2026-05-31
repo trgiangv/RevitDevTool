@@ -2,6 +2,7 @@
 using DevTools.Execution.External.Connections;
 using DevTools.Execution.External.Handlers;
 using DevTools.Execution.External.Mcp;
+using DevTools.Execution.External.Mcp.BuiltIn;
 using DevTools.Execution.External.Mcp.Dispatchers;
 using DevTools.Execution.External.Mcp.Handlers;
 using DevTools.Execution.External.Mcp.Registry;
@@ -71,10 +72,14 @@ public static class ExecutionExtensions
 
         services.AddSingleton<DotnetToolRegistryProvider>();
         services.AddSingleton<PythonToolRegistryProvider>();
+        services.AddSingleton<BuiltInToolRegistryProvider>();
         services.AddSingleton<IMcpRegistryProvider>(sp => sp.GetRequiredService<DotnetToolRegistryProvider>());
         services.AddSingleton<IMcpRegistryProvider>(sp => sp.GetRequiredService<PythonToolRegistryProvider>());
+        services.AddSingleton<IMcpRegistryProvider>(sp => sp.GetRequiredService<BuiltInToolRegistryProvider>());
         services.AddSingleton<ToolRegistryCatalogLoader>();
         services.AddSingleton<ToolRegistryStore>();
+        services.AddSingleton<CSharpCodeExecutor>();
+        services.AddSingleton<IBuiltInMcpTool, CSharpCodeTool>();
         services.AddSingleton<ToolExecutionDispatcher>();
         services.AddSingleton<PromptExecutionDispatcher>();
         services.AddSingleton<ResourceExecutionDispatcher>();

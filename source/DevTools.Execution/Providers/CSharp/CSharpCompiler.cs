@@ -92,7 +92,7 @@ internal static class CSharpCompiler
         if (commandType == null)
         {
             cleanup?.Dispose();
-            return ScriptCompilationResult.Failed("No type implementing IExternalCommand found in compiled script.");
+            return ScriptCompilationResult.Failed("No host command type found in compiled script.");
         }
 
         var instance = Activator.CreateInstance(commandType);
