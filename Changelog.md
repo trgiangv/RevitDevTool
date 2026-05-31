@@ -1,3 +1,101 @@
+# 3.0.0
+
+v3.0 transforms RevitDevTool from a Revit-only developer tool into a **development platform for .NET-based CAD/BIM applications**. The execution engine, logging, dependency management, AI integration, and remote testing are now shared across hosts. Revit remains the primary experience, AutoCAD-family products are fully supported, and the architecture is designed to extend to any .NET-capable host (Tekla, Bentley, Rhino, etc.).
+
+## Platform Architecture (new)
+
+Revit-specific code has been extracted into a host project. All reusable behavior now lives in shared `DevTools.*` libraries that multiple hosts consume:
+
+- **Shared platform**: `DevTools.Execution`, `DevTools.Logging`, `DevTools.McpParser`, `DevTools.McpServer`, `DevTools.Presentation`, `DevTools.Settings`, `DevTools.Telemetry`, `DevTools.UI`, `DevTools.Utilities`
+- **Host projects**: `RevitDevTool` (Revit), `AcadDevTool` (AutoCAD / Civil 3D / Plant 3D)
+- **Solution**: `RevitDevTool.slnx` replaces `RevitDevTool.sln`
+- **Build configurations**: `Debug.Autodesk.2022` through `Debug.Autodesk.2027`, `Release.Autodesk.2022` through `Release.Autodesk.2027` (replaces old `Release R25` naming)
+
+Adding a new host (Tekla, Bentley, etc.) requires only a host-specific adapter project — shared libraries stay untouched.
+
+## Multi-Host Support (new)
+
+### AutoCAD-Family
+
+Full add-in for AutoCAD, Civil 3D, Plant 3D, and all AutoCAD verticals (Architecture, MEP, Electrical, Mechanical, Map 3D). Shares the same execution engine, logging, MCP, and PyTest bridge as Revit.
+
+### Revit 2027 / .NET 10
+
+- Added Revit 2027 support targeting `net10.0-windows`
+- Build matrix: 2022–2024 → `net48`, 2025–2026 → `net8.0-windows`, 2027 → `net10.0-windows`
+
+## MCP — AI Tool Integration (new)
+
+### Standalone MCP Server
+
+`MCPServer.exe` runs outside host processes and exposes tools to AI assistants (Cursor, Claude Desktop, VS Code Copilot, any MCP client) via the Model Context Protocol:
+
+- **Multi-host discovery**: scans Named Pipes matching `{Host}_{Version}_{PID}` to find all running instances
+- **Built-in tools**: `list_host_instances`, `launch_host`, `open_model`, `read_file_info`
+- **Routing**: dispatches tool calls to the correct host instance
+
+### In-Host MCP Runtime
+
+Each host registers custom toolsets (Python and C#) that the server can dispatch to via Named Pipe:
+
+- **Built-in in-host tools**: `execute_csharp_code`, `open_document`
+- **Custom toolsets**: Python/C# MCP tools registered via folder convention (`mcp_tools/`)
+- **Document bridge**: `IDocumentBridge` — shared abstraction for opening documents (Revit projects, DWG files)
+
+## PyTest Bridge — Remote Testing (new)
+
+Run pytest tests inside live host processes via Named Pipe. Published as a separate package: [`revitdevtool_pytest`](https://github.com/trgiangv/RevitDevTool.PyTest) on [PyPI](https://pypi.org/project/revitdevtool_pytest/).
+
+- **Multi-host CLI**: `--host revit`, `--host autocad`, `--host civil3d`, `--host-version`, `--host-pipe`, `--host-launch`
+- **Auto-discovery**: finds running host instances and connects automatically
+- **Auto-launch**: spawns a new host process if none running
+- **IDE integration**: VS Code, Cursor, PyCharm test runners
+- **Flexible pipe pattern**: version accepts any string (year, semver, dotted)
+
+## Execution — New Script Runtimes
+
+### C# Scripts (new)
+
+Execute `.csx` files directly — Roslyn-based compilation without a project file.
+
+### F# Scripts (new)
+
+Execute `.fsx` files for interactive/functional scripting workflows.
+
+### IronPython (new)
+
+First-class script mode with pyRevit runtime support and IronPython 3.4.2 fallback. Runs `*_ipy_script.py` files.
+
+### Revit Command Browser (new)
+
+Searchable access to all registered Revit commands from the dockable panel.
+
+## Logging
+
+### High-Performance Log Monitor
+
+The logging subsystem has been re-architected for performance:
+
+- **ZLogger** replaces Serilog as the structured logging backend — significantly lower allocation and faster throughput
+- **Scintilla.NET** replaces WinForms RichTextBox as the log rendering surface — handles large volumes of output without UI freezing
+- Syntax highlighting, JSON formatting, and color keywords retain the same user experience on the new backend
+
+## Dependency Management
+
+### Pixi-First
+
+**Pixi** replaces UV as the primary dependency resolver:
+
+- Resolves from conda-forge + PyPI channels
+- Pixi environment managed under `%APPDATA%\RevitDevTool\pixi-env\`
+- PEP 723 inline dependencies auto-installed on script execution
+- pip/pyRevit CPython available as fallback
+
+## Bug Fixes
+
+- **Python state attribute**: unified to `sys.__devtool__` across all hosts (was `sys.__revitdevtool__` for Revit, `sys.__acaddevtool__` for AutoCAD — caused crashes on AutoCAD)
+- **Startup dialog resolver**: expanded keywords to cover AutoCAD, Civil 3D, Plant 3D startup dialogs
+
 # 2.2.0
 
 ## 🚀 Major Features
