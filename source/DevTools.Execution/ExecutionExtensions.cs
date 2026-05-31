@@ -80,6 +80,8 @@ public static class ExecutionExtensions
         services.AddSingleton<ToolRegistryStore>();
         services.AddSingleton<CSharpCodeExecutor>();
         services.AddSingleton<IBuiltInMcpTool, CSharpCodeTool>();
+        services.AddSingleton<IBuiltInMcpTool>(sp =>
+            new OpenDocumentTool(sp.GetService<IDocumentBridge>() ?? NullDocumentBridge.Instance));
         services.AddSingleton<ToolExecutionDispatcher>();
         services.AddSingleton<PromptExecutionDispatcher>();
         services.AddSingleton<ResourceExecutionDispatcher>();

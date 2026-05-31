@@ -116,6 +116,7 @@ internal static class RevitHostingExtensions
 
         services.AddSingleton<IDebuggerBridge, RevitDebuggerBridge>();
         services.AddSingleton<IHostContextExecutor, RevitHostContextExecutor>();
+        services.AddSingleton<IDocumentBridge, RevitDocumentBridge>();
         services.AddSingleton<ICommandRunner, RevitCommandRunner>();
         services.AddSingleton<ICommandDiscovery, RevitCommandDiscovery>();
         services.AddSingleton<ICompiledScriptBridge, RevitCompiledScriptBridge>();

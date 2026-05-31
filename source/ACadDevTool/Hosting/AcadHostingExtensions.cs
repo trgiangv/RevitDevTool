@@ -73,6 +73,7 @@ internal static class AcadHostingExtensions
 
         services.AddSingleton<IDebuggerBridge, AcadDebuggerBridge>();
         services.AddSingleton<IHostContextExecutor, AcadHostContextExecutor>();
+        services.AddSingleton<IDocumentBridge, AcadDocumentBridge>();
         services.AddSingleton<ICommandRunner, AcadCommandRunner>();
         services.AddSingleton<ICommandDiscovery, AcadCommandDiscovery>();
         services.AddSingleton<ICompiledScriptBridge, AcadCompiledScriptBridge>();
