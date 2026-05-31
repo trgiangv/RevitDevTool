@@ -1,3 +1,3 @@
-"""RevitDevTool.PyTest: Run pytest tests inside a live Revit process via Named Pipe bridge."""
+"""RevitDevTool.PyTest: Run pytest tests inside a live Autodesk host (Revit, AutoCAD, Civil3D, etc.) via Named Pipe bridge."""
 
-__version__ = "0.2.0"
+__version__ = "0.3.0"

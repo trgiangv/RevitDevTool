@@ -4,13 +4,13 @@ build-backend = "hatchling.build"
 
 [project]
 name = "revitdevtool_pytest"
-version = "0.2.0"
-description = "pytest plugin for testing Revit API code via RevitDevTool Named Pipe bridge"
+version = "0.3.0"
+description = "pytest plugin for testing CAD/BIM API code inside host applications via RevitDevTool Named Pipe bridge"
 readme = "README.md"
 license = "MIT"
 requires-python = ">=3.10"
 authors = [{ name = "Truong Giang Vu" }]
-keywords = ["pytest", "revit", "revit-api", "testing", "bim", "revitdevtool"]
+keywords = ["pytest", "revit", "autocad", "civil3d", "revit-api", "testing", "bim", "multi-host", "revitdevtool"]
 classifiers = [
     "Development Status :: 3 - Alpha",
     "Framework :: Pytest",
@@ -39,7 +39,8 @@ packages = ["src/revitdevtool_pytest"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-revit_version = "2025"
-revit_timeout = "60"
-revit_launch = false
-revit_launch_timeout = "180"
+host_name = "revit"
+host_version = "2025"
+host_timeout = "60"
+host_launch = false
+host_launch_timeout = "180"

@@ -1,4 +1,4 @@
-"""Discover running Revit instances and launch Revit if needed."""
+"""Discover running host instances and launch hosts if needed."""
 
 from __future__ import annotations
 
@@ -11,96 +11,120 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from .constants import (
+    ACAD_REGISTRY_ROOT,
     DEFAULT_LAUNCH_TIMEOUT_S,
     DEFAULT_POLL_INTERVAL_S,
+    HOST_REGISTRY,
     PIPE_DIR,
     PIPE_PATTERN,
-    REVIT_EXE,
-    REVIT_NOSPLASH,
-    REVIT_REGISTRY_KEY,
-    REVIT_REGISTRY_VALUE,
+    HostConfig,
+    _ACAD_EXE,
+    get_host_config,
 )
 
 _PIPE_RE = re.compile(PIPE_PATTERN)
+_ACAD_PRODUCT_KEY_RE = re.compile(r"ACAD-[0-9A-F]\d(?P<productId>\d{2})", re.IGNORECASE)
+
+_PREFIX_TO_HOST: dict[str, str] = {
+    cfg.pipe_prefix.lower(): name for name, cfg in HOST_REGISTRY.items()
+}
 
 
 @dataclass(frozen=True, slots=True)
-class RevitInstance:
+class HostInstance:
     pipe_name: str
-    version: int
+    host_name: str
+    version: str
     process_id: int
 
 
-def find_revit_pipes() -> list[RevitInstance]:
-    """Scan Named Pipes for pipes matching ``Revit_{year}_{pid}``."""
-    instances: list[RevitInstance] = []
+def find_host_pipes(host_name: str | None = None) -> list[HostInstance]:
+    """Scan Named Pipes for pipes matching ``{Host}_{Version}_{PID}``.
+
+    When *host_name* is given, only pipes whose prefix matches the
+    host's ``pipe_prefix`` are returned.
+    """
+    target_prefix: str | None = None
+    if host_name is not None:
+        cfg = get_host_config(host_name)
+        target_prefix = cfg.pipe_prefix.lower()
+
+    instances: list[HostInstance] = []
     for name in _list_named_pipes():
         m = _PIPE_RE.match(name)
-        if m:
-            process_id = int(m.group(2))
-            version = int(m.group(1))
-            instances.append(RevitInstance(name, version, process_id))
+        if not m:
+            continue
+        prefix_raw = m.group(1)
+        prefix_lower = prefix_raw.lower()
+        if target_prefix is not None and prefix_lower != target_prefix:
+            continue
+        resolved = _PREFIX_TO_HOST.get(prefix_lower, prefix_raw)
+        instances.append(HostInstance(
+            pipe_name=name,
+            host_name=resolved,
+            version=m.group(2),
+            process_id=int(m.group(3)),
+        ))
     return instances
 
 
 def select_instance(
-    instances: list[RevitInstance],
-    version: int | None = None,
-) -> RevitInstance | None:
-    """Find a running instance matching *version*, or the latest if unspecified.
-
-    When *version* is given, only an exact match is returned — no fallback.
-    """
+    instances: list[HostInstance],
+    version: str | None = None,
+) -> HostInstance | None:
+    """Find a running instance matching *version*, or the latest if unspecified."""
     if not instances:
         return None
     if version is not None:
         matches = [i for i in instances if i.version == version]
         if not matches:
             return None
-        # Deterministic selection for multiple instances of the same year:
-        # prefer highest PID (typically newest launched process).
         return max(matches, key=lambda i: i.process_id)
-
-    # Prefer newest version; tie-break by highest PID.
     return max(instances, key=lambda i: (i.version, i.process_id))
 
 
-def find_revit_path(version: int) -> str | None:
-    """Locate ``Revit.exe`` via registry, falling back to the default path."""
-    path = _find_from_registry(version)
-    if path:
-        return path
-    default = f"C:\\Program Files\\Autodesk\\Revit {version}\\Revit.exe"
-    return default if Path(default).is_file() else None
+def find_host_executable(host_name: str, version: str) -> str | None:
+    """Locate the host executable via registry, falling back to filesystem.
+
+    Returns None when the host has no registered exe discovery logic
+    (e.g. Rhino, Tekla — connect via explicit pipe or auto-discovery).
+    """
+    cfg = get_host_config(host_name)
+    if cfg.exe_name is None:
+        return None
+    if cfg.acad_product_ids is not None:
+        return _find_acad_family_exe(cfg, version)
+    return _find_generic_exe(cfg, version)
 
 
-def start_revit(version: int) -> int:
-    """Start Revit with ``/nosplash`` and return the spawned process id."""
-    exe_path = find_revit_path(version)
+def start_host(host_name: str, version: str) -> int:
+    """Start the host application and return the spawned process id."""
+    cfg = get_host_config(host_name)
+    exe_path = find_host_executable(host_name, version)
     if exe_path is None:
-        raise FileNotFoundError(f"Revit {version} installation not found.")
+        raise FileNotFoundError(f"{host_name} {version} installation not found.")
 
     process = subprocess.Popen(  # noqa: S603
-        [exe_path, REVIT_NOSPLASH],
+        [exe_path, *cfg.launch_args],
         creationflags=subprocess.DETACHED_PROCESS,
     )
     return int(process.pid)
 
 
-def wait_for_revit_pipe(
-    version: int | None = None,
+def wait_for_host_pipe(
+    host_name: str,
+    version: str | None = None,
     timeout_s: float = DEFAULT_LAUNCH_TIMEOUT_S,
     poll_interval_s: float = DEFAULT_POLL_INTERVAL_S,
     process_id: int | None = None,
-) -> RevitInstance | None:
-    """Block until a Revit pipe appears.
+) -> HostInstance | None:
+    """Block until a host pipe appears.
 
     When *process_id* is given, wait for that exact process to register its pipe.
-    Otherwise fall back to version-based selection.
     """
     deadline = time.monotonic() + timeout_s
     while time.monotonic() < deadline:
-        instances = find_revit_pipes()
+        instances = find_host_pipes(host_name)
         if process_id is not None:
             match = next((i for i in instances if i.process_id == process_id), None)
         else:
@@ -111,17 +135,164 @@ def wait_for_revit_pipe(
     return None
 
 
-def _find_from_registry(version: int) -> str | None:
+# ---------------------------------------------------------------------------
+# Generic exe resolver (Revit + any host with registry_key/default_dir)
+# ---------------------------------------------------------------------------
+
+def _find_generic_exe(cfg: HostConfig, version: str) -> str | None:
+    assert cfg.exe_name is not None
+    if cfg.registry_key and cfg.registry_value:
+        path = _exe_from_registry(cfg, version)
+        if path:
+            return path
+
+    program_files = os.environ.get("ProgramFiles", r"C:\Program Files")
+    autodesk_dir = os.path.join(program_files, "Autodesk")
+
+    if cfg.default_dir_pattern:
+        default = os.path.join(autodesk_dir, cfg.default_dir_pattern.format(version=version), cfg.exe_name)
+        if os.path.isfile(default):
+            return default
+
+    if cfg.default_dir_pattern and os.path.isdir(autodesk_dir):
+        pattern = f"{cfg.default_dir_pattern.format(version=version)}*"
+        for entry in sorted(Path(autodesk_dir).glob(pattern)):
+            exe = entry / cfg.exe_name
+            if exe.is_file():
+                return str(exe)
+
+    return None
+
+
+def _exe_from_registry(cfg: HostConfig, version: str) -> str | None:
+    assert cfg.registry_key is not None and cfg.registry_value is not None and cfg.exe_name is not None
     try:
         with winreg.OpenKey(
             winreg.HKEY_LOCAL_MACHINE,
-            REVIT_REGISTRY_KEY.format(version=version),
+            cfg.registry_key.format(version=version),
         ) as key:
-            install_dir, _ = winreg.QueryValueEx(key, REVIT_REGISTRY_VALUE)
-        exe = os.path.join(install_dir, REVIT_EXE)
+            install_dir, _ = winreg.QueryValueEx(key, cfg.registry_value)
+        exe = os.path.join(install_dir, cfg.exe_name)
         return exe if os.path.isfile(exe) else None
     except OSError:
         return None
+
+
+# ---------------------------------------------------------------------------
+# AutoCAD-family registry resolver (mirrors AcadPathResolver.cs)
+# ---------------------------------------------------------------------------
+
+def _find_acad_family_exe(cfg: HostConfig, version: str) -> str | None:
+    """Enumerate AutoCAD registry for a product matching *cfg.acad_product_ids* and *version*."""
+    exe = _acad_from_registry(cfg, version)
+    if exe:
+        return exe
+    return _acad_from_filesystem(version)
+
+
+def _acad_from_registry(cfg: HostConfig, version: str) -> str | None:
+    assert cfg.acad_product_ids is not None
+    target_ids = {pid.lower() for pid in cfg.acad_product_ids}
+
+    try:
+        root = winreg.OpenKey(winreg.HKEY_LOCAL_MACHINE, ACAD_REGISTRY_ROOT)
+    except OSError:
+        return None
+
+    try:
+        for i in range(_enum_count(root)):
+            release_name = winreg.EnumKey(root, i)
+            try:
+                release_key = winreg.OpenKey(root, release_name)
+            except OSError:
+                continue
+            try:
+                result = _scan_release_products(release_key, target_ids, version)
+                if result is not None:
+                    return result
+            finally:
+                winreg.CloseKey(release_key)
+    finally:
+        winreg.CloseKey(root)
+    return None
+
+
+def _scan_release_products(release_key: winreg.HKEYType, target_ids: set[str], version: str) -> str | None:
+    for j in range(_enum_count(release_key)):
+        product_key_name = winreg.EnumKey(release_key, j)
+        m = _ACAD_PRODUCT_KEY_RE.search(product_key_name)
+        if not m:
+            continue
+        product_id = m.group("productId").lower()
+        if product_id not in target_ids:
+            continue
+
+        try:
+            product_key = winreg.OpenKey(release_key, product_key_name)
+        except OSError:
+            continue
+        try:
+            year = _read_reg_str(product_key, "UPIRELEASE")
+            if year != version:
+                continue
+            exe = _resolve_acad_exe(product_key)
+            if exe:
+                return exe
+        finally:
+            winreg.CloseKey(product_key)
+    return None
+
+
+def _resolve_acad_exe(product_key: winreg.HKEYType) -> str | None:
+    for value_name, trim_trailing in [("GlobUPILocation", True), ("AcadLocation", False)]:
+        location = _read_reg_str(product_key, value_name)
+        if not location:
+            continue
+        if trim_trailing:
+            parent = os.path.dirname(location.rstrip("\\/"))
+            if parent:
+                exe = os.path.join(parent, _ACAD_EXE)
+                if os.path.isfile(exe):
+                    return exe
+        exe = os.path.join(location, _ACAD_EXE)
+        if os.path.isfile(exe):
+            return exe
+    return None
+
+
+def _acad_from_filesystem(version: str) -> str | None:
+    program_files = os.environ.get("ProgramFiles", r"C:\Program Files")
+    autodesk_dir = os.path.join(program_files, "Autodesk")
+    if not os.path.isdir(autodesk_dir):
+        return None
+
+    patterns = [f"AutoCAD {version}", f"AutoCAD {version} *"]
+    for pattern in patterns:
+        for entry in sorted(Path(autodesk_dir).glob(pattern)):
+            exe = entry / _ACAD_EXE
+            if exe.is_file():
+                return str(exe)
+    return None
+
+
+# ---------------------------------------------------------------------------
+# Helpers
+# ---------------------------------------------------------------------------
+
+def _read_reg_str(key: winreg.HKEYType, name: str) -> str | None:
+    try:
+        val, _ = winreg.QueryValueEx(key, name)
+        return val if isinstance(val, str) and val.strip() else None
+    except OSError:
+        return None
+
+
+def _enum_count(key: winreg.HKEYType) -> int:
+    try:
+        _, count, _ = winreg.QueryInfoKey(key)
+        return count
+    except OSError:
+        return 0
 
 
 def _list_named_pipes() -> list[str]:

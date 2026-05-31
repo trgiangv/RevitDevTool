@@ -1,4 +1,4 @@
-"""Named Pipe client for the RevitDevTool bridge.
+"""Named Pipe client for the DevTool bridge.
 
 Protocol: ``[4-byte LE body length][UTF-8 JSON body]``
 Matches ``RevitDevTool.McpParser.Models.BridgePipeConnection``.
@@ -36,8 +36,8 @@ _HEADER_LEN = struct.calcsize(_HEADER_FMT)
 NotificationCallback = Callable[[str, Any], None]
 
 
-class RevitBridge:
-    """Synchronous Named Pipe client for the RevitDevTool bridge."""
+class HostBridge:
+    """Synchronous Named Pipe client for the DevTool bridge."""
 
     def __init__(
         self, pipe_name: str, *, connect_timeout_ms: int = DEFAULT_CONNECT_TIMEOUT_MS,

@@ -1,4 +1,4 @@
-"""Map remote Revit test results to pytest reports.
+"""Map remote host test results to pytest reports.
 
 Pure functions — no module state, no globals. Every function receives
 what it needs as explicit parameters.
@@ -13,7 +13,7 @@ from typing import Any, Literal
 
 import pytest
 
-from .bridge import RevitBridge
+from .bridge import HostBridge
 from .constants import (
     BRIDGE_NOTIFY_TEST_PROGRESS,
     OUTCOME_ERROR,
@@ -41,7 +41,7 @@ _VALID_REPORT_OUTCOMES = frozenset({OUTCOME_PASSED, OUTCOME_FAILED, OUTCOME_SKIP
 
 def run_remote_session(
     session: pytest.Session,
-    bridge: RevitBridge,
+    bridge: HostBridge,
     timeout_per_test: float,
 ) -> tuple[dict[str, list[CaseResult]], set[str], bool, str | None]:
     """Run tests remotely, streaming progress as it arrives.
@@ -103,7 +103,7 @@ def _is_ide_adapter_active(session: pytest.Session) -> bool:
 
 
 def _request_remote_run(
-    bridge: RevitBridge,
+    bridge: HostBridge,
     workspace_root: str,
     nodeids: list[str],
     timeout_s: float,
@@ -194,7 +194,7 @@ def emit_item_reports(
         message = collection_error_message or "Remote collection failed before test execution."
         reports = [_emit_single(ihook, make_error_report(item, message))]
     elif not results:
-        reports = [_emit_single(ihook, make_error_report(item, "No result received from Revit for this test."))]
+        reports = [_emit_single(ihook, make_error_report(item, "No result received from host for this test."))]
     else:
         reports = [_emit_single(ihook, make_report(item, r)) for r in results]
 

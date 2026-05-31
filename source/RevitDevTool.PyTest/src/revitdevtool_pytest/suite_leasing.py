@@ -1,4 +1,4 @@
-"""Suite-to-Revit instance lease state management."""
+"""Suite-to-host instance lease state management."""
 
 from __future__ import annotations
 
@@ -10,7 +10,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-from .discovery import RevitInstance
+from .discovery import HostInstance
 
 _STATE_DIR = Path.home() / ".revitdevtool_pytest"
 _STATE_FILE = _STATE_DIR / "suite-leases.json"
@@ -20,7 +20,7 @@ _SAVE_RETRY_DELAYS_S = (0.02, 0.05, 0.1, 0.2)
 
 @dataclass(frozen=True, slots=True)
 class SuiteLease:
-    """Persistent lease binding a suite key to one Revit instance."""
+    """Persistent lease binding a suite key to one host instance."""
 
     suite_key: str
     suite_path: str
@@ -61,8 +61,8 @@ class SuiteLeaseStore:
     def find_free(
         self,
         suite_key: str,
-        instances: list[RevitInstance],
-    ) -> list[RevitInstance]:
+        instances: list[HostInstance],
+    ) -> list[HostInstance]:
         occupied = {
             lease.process_id
             for key, lease in self._leases.items()
@@ -75,7 +75,7 @@ class SuiteLeaseStore:
         self,
         suite_key: str,
         suite_path: str,
-        instance: RevitInstance,
+        instance: HostInstance,
     ) -> None:
         now = time.time()
         existing = self._leases.get(suite_key)

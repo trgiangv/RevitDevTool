@@ -1,8 +1,8 @@
-"""Auto-dismiss Revit startup dialogs via Win32 polling.
+"""Auto-dismiss host startup dialogs via Win32 polling.
 
 Ported from ``RevitDevTool.Console.Services.Hosting.StartupDialogResolver``.
 Runs in a background thread and clicks whitelisted buttons on known dialog
-windows belonging to the Revit process.
+windows belonging to the host process (Revit, AutoCAD, Civil3D, etc.).
 """
 
 from __future__ import annotations
@@ -57,7 +57,8 @@ def _send_click(hwnd: int) -> None:
 class DialogResolverOptions:
     poll_interval_s: float = 0.5
     dialog_title_keywords: list[str] = field(default_factory=lambda: [
-        "Autodesk", "Revit", "Load", "Security", "Warning", "Add-in", "Addin",
+        "Autodesk", "Revit", "AutoCAD", "Civil", "Plant",
+        "Load", "Security", "Warning", "Add-in", "Addin",
     ])
     preferred_button_keywords: list[str] = field(default_factory=lambda: [
         "Always Load", "Load Once", "Load", "OK", "Yes", "Accept", "Continue", "Close",
@@ -68,7 +69,7 @@ class DialogResolverOptions:
 
 
 class StartupDialogResolver:
-    """Poll for Revit startup dialogs and auto-click whitelisted buttons."""
+    """Poll for host startup dialogs and auto-click whitelisted buttons."""
 
     def __init__(self, process_id: int, options: DialogResolverOptions | None = None):
         self._pid = process_id
@@ -81,7 +82,7 @@ class StartupDialogResolver:
         if self._thread is not None:
             return
         self._stop.clear()
-        self._thread = threading.Thread(target=self._run, daemon=True, name="revit-dialog-resolver")
+        self._thread = threading.Thread(target=self._run, daemon=True, name="host-dialog-resolver")
         self._thread.start()
 
     def stop(self) -> None:

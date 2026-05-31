@@ -15,21 +15,22 @@ from typing import TYPE_CHECKING
 
 import pytest
 
-from .bridge import RevitBridge
+from .bridge import HostBridge
 from .constants import (
     EXIT_CODE_CONFIG_ERROR,
     PLUGIN_NAME,
+    get_host_config,
 )
 from .discovery import (
-    find_revit_path,
-    find_revit_pipes,
-    start_revit,
-    wait_for_revit_pipe,
+    find_host_executable,
+    find_host_pipes,
+    start_host,
+    wait_for_host_pipe,
 )
 
 if TYPE_CHECKING:
     from .dialog_resolver import StartupDialogResolver
-    from .discovery import RevitInstance
+    from .discovery import HostInstance
     from .suite_leasing import SuiteLeaseStore
 
 log = logging.getLogger(PLUGIN_NAME)
@@ -40,7 +41,7 @@ CONNECT_RETRY_DELAY_S = 1.0
 
 @dataclass
 class ConnectionResult:
-    bridge: RevitBridge | None = None
+    bridge: HostBridge | None = None
     dialog_resolver: StartupDialogResolver | None = None
     error: ConnectionError | None = None
 
@@ -51,10 +52,11 @@ class ConnectionResult:
 
 def ensure_bridge(
     *,
-    current_bridge: RevitBridge | None,
+    current_bridge: HostBridge | None,
     lease_store: SuiteLeaseStore | None,
     launch_timeout_s: float,
-    version: int | None,
+    host_name: str,
+    version: str | None,
     explicit_pipe: str | None,
     suite_key: str,
     suite_path: str,
@@ -63,7 +65,7 @@ def ensure_bridge(
     """Main entry point: return a connected bridge or an error.
 
     When *force_launch* is True, skip reusing existing instances and always
-    spawn a fresh Revit process (requires --revit-version).
+    spawn a fresh host process (requires --host-version).
     """
     if not force_launch and current_bridge is not None and current_bridge.connected:
         return ConnectionResult(bridge=current_bridge)
@@ -72,6 +74,7 @@ def ensure_bridge(
         return _connect_explicit_pipe_or_exit(explicit_pipe)
 
     return _connect_discovered_or_launched(
+        host_name=host_name,
         suite_key=suite_key,
         suite_path=suite_path,
         lease_store=lease_store,
@@ -83,21 +86,22 @@ def ensure_bridge(
 
 def _connect_discovered_or_launched(
     *,
+    host_name: str,
     suite_key: str,
     suite_path: str,
     lease_store: SuiteLeaseStore | None,
-    version: int | None,
+    version: str | None,
     launch_timeout_s: float,
     force_launch: bool,
 ) -> ConnectionResult:
-    instances = instances_for_version(version)
+    instances = instances_for_version(host_name, version)
 
     if not force_launch:
         if lease_store is not None:
-            bridge, _ = _try_reconnect_leased(lease_store, suite_key, suite_path, instances)
+            bridge, _ = _try_reconnect_leased(host_name, lease_store, suite_key, suite_path, instances)
             if bridge is not None:
                 return ConnectionResult(bridge=bridge)
-            instances = instances_for_version(version)
+            instances = instances_for_version(host_name, version)
 
         free = lease_store.find_free(suite_key, instances) if lease_store else instances
         bridge, error = _connect_and_lease(free, suite_key, suite_path, lease_store, "Assigned free instance")
@@ -106,8 +110,8 @@ def _connect_discovered_or_launched(
         if error is not None:
             return ConnectionResult(error=error)
 
-    launch_version = _resolve_launch_version(version, instances)
-    result = auto_launch(launch_version, launch_timeout_s)
+    launch_version = _resolve_launch_version(host_name, version, instances)
+    result = auto_launch(host_name, launch_version, launch_timeout_s)
     bridge, error = _connect_and_lease(
         [result.launched_instance], suite_key, suite_path, lease_store, "Spawned and leased",
     )
@@ -116,19 +120,19 @@ def _connect_discovered_or_launched(
 
 @dataclass
 class LaunchResult:
-    launched_instance: RevitInstance
+    launched_instance: HostInstance
     dialog_resolver: StartupDialogResolver | None = None
 
 
-def auto_launch(version: int, launch_timeout_s: float) -> LaunchResult:
-    if find_revit_path(version) is None:
+def auto_launch(host_name: str, version: str, launch_timeout_s: float) -> LaunchResult:
+    if find_host_executable(host_name, version) is None:
         pytest.exit(
-            f"{PLUGIN_NAME}: Revit {version} is not installed on this machine.",
+            f"{PLUGIN_NAME}: {host_name} {version} is not installed on this machine.",
             returncode=EXIT_CODE_CONFIG_ERROR,
         )
 
-    log.info("Launching Revit %d...", version)
-    process_id = start_revit(version)
+    log.info("Launching %s %s...", host_name, version)
+    process_id = start_host(host_name, version)
 
     dialog_resolver: StartupDialogResolver | None = None
     try:
@@ -140,45 +144,48 @@ def auto_launch(version: int, launch_timeout_s: float) -> LaunchResult:
     except ImportError:
         pass
 
-    instance = wait_for_revit_pipe(version, timeout_s=launch_timeout_s, process_id=process_id)
+    instance = wait_for_host_pipe(host_name, version, timeout_s=launch_timeout_s, process_id=process_id)
     if instance is None:
         pytest.exit(
-            f"{PLUGIN_NAME}: Revit {version} launched but Named Pipe did not appear within {launch_timeout_s}s.",
+            f"{PLUGIN_NAME}: {host_name} {version} launched but Named Pipe did not appear within {launch_timeout_s}s.",
             returncode=EXIT_CODE_CONFIG_ERROR,
         )
 
     # Pipe availability can precede full UI/API readiness during cold start.
     time.sleep(2.0)
 
-    log.info("Connected to Revit %d (pid=%d)", instance.version, instance.process_id)
+    log.info("Connected to %s %s (pid=%d)", host_name, instance.version, instance.process_id)
     return LaunchResult(launched_instance=instance, dialog_resolver=dialog_resolver)
 
 
 # ---------------------------------------------------------------------------
 # Discovery helpers
 # ---------------------------------------------------------------------------
-
-def instances_for_version(version: int | None) -> list[RevitInstance]:
-    instances = find_revit_pipes()
+def instances_for_version(host_name: str, version: str | None) -> list[HostInstance]:
+    instances = find_host_pipes(host_name)
     if version is not None:
         return [i for i in instances if i.version == version]
     return sorted(instances, key=lambda i: i.version, reverse=True)
 
 
 def find_instance_by_pid(
-    instances: list[RevitInstance], process_id: int,
-) -> RevitInstance | None:
+    instances: list[HostInstance], process_id: int,
+) -> HostInstance | None:
     for instance in instances:
         if instance.process_id == process_id:
             return instance
     return None
 
 
-def is_process_alive(process_id: int, expected_name: str = "Revit.exe") -> bool:
+def is_process_alive(process_id: int, host_name: str = "revit") -> bool:
     """Check if process is alive AND matches the expected executable name.
 
     Plain PID-alive checks are vulnerable to Windows PID reuse.
+    For hosts without a known exe_name, only checks PID liveness.
     """
+    cfg = get_host_config(host_name)
+    expected_name = cfg.exe_name
+
     PROCESS_QUERY_LIMITED_INFORMATION = 0x1000  # noqa: N806
     handle = ctypes.windll.kernel32.OpenProcess(  # type: ignore[attr-defined]
         PROCESS_QUERY_LIMITED_INFORMATION, False, int(process_id),
@@ -186,6 +193,8 @@ def is_process_alive(process_id: int, expected_name: str = "Revit.exe") -> bool:
     if handle == 0:
         return False
     try:
+        if expected_name is None:
+            return True
         buf = ctypes.create_unicode_buffer(260)
         size = ctypes.wintypes.DWORD(260)
         ok = ctypes.windll.kernel32.QueryFullProcessImageNameW(  # type: ignore[attr-defined]
@@ -201,19 +210,19 @@ def is_process_alive(process_id: int, expected_name: str = "Revit.exe") -> bool:
 # ---------------------------------------------------------------------------
 # Lease + connect internals
 # ---------------------------------------------------------------------------
-
 def _try_reconnect_leased(
+    host_name: str,
     store: SuiteLeaseStore,
     suite_key: str,
     suite_path: str,
-    instances: list[RevitInstance],
-) -> tuple[RevitBridge | None, bool]:
-    """Try reconnecting to a previously-leased Revit instance."""
+    instances: list[HostInstance],
+) -> tuple[HostBridge | None, bool]:
+    """Try reconnecting to a previously-leased host instance."""
     lease = store.get_suite_lease(suite_key)
     if lease is None:
         return None, False
 
-    if not is_process_alive(lease.process_id):
+    if not is_process_alive(lease.process_id, host_name):
         store.clear_suite(suite_key)
         return None, False
 
@@ -236,12 +245,12 @@ def _try_reconnect_leased(
 
 
 def _connect_and_lease(
-    instances: list[RevitInstance],
+    instances: list[HostInstance],
     suite_key: str,
     suite_path: str,
     store: SuiteLeaseStore | None,
     label: str,
-) -> tuple[RevitBridge | None, ConnectionError | None]:
+) -> tuple[HostBridge | None, ConnectionError | None]:
     bridge, selected, connect_error = _connect_first_available(instances)
     if bridge is None or selected is None:
         return None, connect_error
@@ -255,8 +264,8 @@ def _connect_and_lease(
 
 
 def _connect_first_available(
-    instances: list[RevitInstance],
-) -> tuple[RevitBridge | None, RevitInstance | None, ConnectionError | None]:
+    instances: list[HostInstance],
+) -> tuple[HostBridge | None, HostInstance | None, ConnectionError | None]:
     last_error: ConnectionError | None = None
     for instance in instances:
         try:
@@ -271,15 +280,15 @@ def _connect_explicit_pipe_or_exit(pipe_name: str) -> ConnectionResult:
         return ConnectionResult(bridge=connect_pipe(pipe_name))
     except ConnectionError as exc:
         pytest.exit(
-            f"{PLUGIN_NAME}: Could not connect to Revit: {exc}",
+            f"{PLUGIN_NAME}: Could not connect to host: {exc}",
             returncode=EXIT_CODE_CONFIG_ERROR,
         )
 
 
-def connect_pipe(pipe_name: str) -> RevitBridge:
+def connect_pipe(pipe_name: str) -> HostBridge:
     last_exc: ConnectionError | None = None
     for attempt in range(CONNECT_RETRIES):
-        bridge = RevitBridge(pipe_name)
+        bridge = HostBridge(pipe_name)
         try:
             bridge.connect()
             return bridge
@@ -293,13 +302,13 @@ def connect_pipe(pipe_name: str) -> RevitBridge:
 
 
 def _resolve_launch_version(
-    version: int | None, instances: list[RevitInstance],
-) -> int:
+    host_name: str, version: str | None, instances: list[HostInstance],
+) -> str:
     if version is not None:
         return version
     if instances:
-        return max(instances, key=lambda i: i.version).version  # noqa
+        return max(instances, key=lambda i: i.version).version
     pytest.exit(
-        f"{PLUGIN_NAME}: --revit-version is required when no existing instances are available.",
+        f"{PLUGIN_NAME}: --host-version is required when no existing {host_name} instances are available.",
         returncode=EXIT_CODE_CONFIG_ERROR,
     )
