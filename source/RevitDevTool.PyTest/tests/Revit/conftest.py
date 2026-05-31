@@ -21,7 +21,7 @@ import os
 
 import pytest
 
-DEFAULT_RVT_PATH = r"C:\Users\Giang.VuTruong\workspace\models\test_2025.rvt"
+DEFAULT_RVT_PATH = r"F:\Project1.rvt"
 RVT_PATH = os.environ.get("REVIT_TEST_MODEL_PATH", DEFAULT_RVT_PATH)
 
 
