@@ -8,7 +8,7 @@ using Sourcy.DotNet;
 namespace Build.Modules;
 
 /// <summary>
-///     Compile the add-in for each supported Revit configuration.
+///     Compile the add-in for each supported configuration.
 /// </summary>
 [DependsOn<ResolveVersioningModule>]
 [DependsOn<ResolveConfigurationsModule>]
@@ -29,9 +29,6 @@ public sealed class CompileProjectModule : Module
         }
     }
 
-    /// <summary>
-    ///     Compile the add-in project for the specified configuration.
-    /// </summary>
     private static async Task CompileAsync(IModuleContext context, ResolveVersioningResult versioning, string configuration, CancellationToken cancellationToken)
     {
         await context.DotNet().Build(new DotNetBuildOptions

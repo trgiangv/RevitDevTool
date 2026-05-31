@@ -26,6 +26,7 @@ public sealed partial class CreateBundleModule(IOptions<BuildOptions> buildOptio
     protected override async Task<string?> ExecuteAsync(IModuleContext context, CancellationToken cancellationToken)
     {
         var versioningResult = await context.GetModule<ResolveVersioningModule>();
+        var mcpServerResult = await context.GetModule<PublishMcpServerModule>();
         var versioning = versioningResult.ValueOrDefault!;
 
         var revitTarget = new File(Projects.RevitDevTool.FullName);
@@ -43,7 +44,7 @@ public sealed partial class CreateBundleModule(IOptions<BuildOptions> buildOptio
 
         PackFiles(revitPublishDirs, contentFolder);
         PackFiles(acadPublishDirs, contentFolder);
-        PackMcpServer(context, contentFolder);
+        PackMcpServer(mcpServerResult.ValueOrDefault!, contentFolder);
         CopyManifest(context, manifestFile, versioning);
 
         var outputFile = outputFolder.GetFile($"{bundleFolder.Name}.zip");
@@ -77,10 +78,9 @@ public sealed partial class CreateBundleModule(IOptions<BuildOptions> buildOptio
         }
     }
 
-    private void PackMcpServer(IModuleContext context, Folder contentFolder)
+    private static void PackMcpServer(string mcpPublishDir, Folder contentFolder)
     {
-        var mcpServerDir = context.Git().RootDirectory.GetFolder(buildOptions.Value.OutputDirectory).GetFolder("MCPServer");
-        var mcpExe = mcpServerDir.GetFile("MCPServer.exe");
+        var mcpExe = new File(Path.Combine(mcpPublishDir, "MCPServer.exe"));
         if (!mcpExe.Exists) return;
 
         mcpExe.CopyTo(contentFolder.GetFile("MCPServer.exe").Path);

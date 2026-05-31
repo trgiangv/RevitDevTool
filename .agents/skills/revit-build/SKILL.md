@@ -70,7 +70,7 @@ Build project: `build/Build.csproj` targeting `net10.0`.
 
 | Command | Modules |
 |---------|---------|
-| *(no args)* | `CompileProjectModule` |
+| *(no args)* | `CompileProjectModule` + `PublishMcpServerModule` |
 | `test` | `TestProjectModule` |
 | `pack` | `CleanProjectModule` → `CreateBundleModule` + `PublishMcpServerModule` → `CreateInstallerModule` |
 | `publish` | `PublishGithubModule` |
@@ -80,11 +80,11 @@ Build project: `build/Build.csproj` targeting `net10.0`.
 - **ResolveConfigurationsModule**: Reads `Release.Autodesk.*` configs from the `.slnx` solution file
 - **ResolveVersioningModule**: Resolves version from `BuildOptions.Version` or GitVersion tool
 - **CompileProjectModule**: Builds solution for each resolved configuration with version properties
+- **PublishMcpServerModule**: Publishes MCPServer as trimmed self-contained single-file (~52MB). Csproj `DeployMcpServer` target auto-kills running instance and copies to `%AppData%\...\RevitDevTool.bundle\Contents\`
 - **TestProjectModule**: Runs tests per configuration (skipped in CI)
 - **CleanProjectModule**: Cleans `bin`/`obj` and output directory (skipped in CI)
-- **CreateBundleModule**: Creates Autodesk `.bundle` package from publish outputs
-- **PublishMcpServerModule**: Publishes MCP server as self-contained executable
-- **CreateInstallerModule**: Creates `.msi` installer via WiX toolset
+- **CreateBundleModule**: Creates Autodesk `.bundle` package from publish outputs (uses `PublishMcpServerModule` result for MCPServer.exe)
+- **CreateInstallerModule**: Creates installer via Inno Setup
 - **PublishGithubModule**: Creates GitHub release with changelog and uploads artifacts
 
 ## Build Commands
@@ -159,4 +159,4 @@ Or run the full compile pipeline: `dotnet run --project build/Build.csproj`
 - **Framework mismatch**: Configuration must match pattern `Release.Autodesk.2025`, not old `Release R25`.
 - **ILRepack fails on Revit 2027**: Expected — `IsRepackable` is disabled for 2027 due to isolated context causing `System.BadImageFormatException`.
 - **Polyfill issues on net48**: Ensure `Polyfill` GlobalPackageReference is in `Directory.Packages.props`. Do not use PolySharp.
-- **Missing Revit API**: The project uses `Revit_All_Main_Versions_API_x64` (not the old `Nice3point.Revit.Api.*` API packages).
+- **Missing Revit API**: This project uses `Revit_All_Main_Versions_API_x64`. Both this and `Nice3point.Revit.Api.*` packages are valid choices.

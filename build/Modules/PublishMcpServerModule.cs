@@ -1,30 +1,25 @@
-using Build.Options;
-using Microsoft.Extensions.Options;
 using ModularPipelines.Attributes;
 using ModularPipelines.Context;
 using ModularPipelines.DotNet.Extensions;
 using ModularPipelines.DotNet.Options;
-using ModularPipelines.Git.Extensions;
 using ModularPipelines.Modules;
 using Sourcy.DotNet;
 
 namespace Build.Modules;
 
 /// <summary>
-///     Publish the MCP server as a self-contained single-file executable.
+///     Publish MCPServer as a trimmed self-contained single-file executable.
+///     The csproj DeployMcpServer target handles kill + copy to bundle Contents.
 /// </summary>
 [DependsOn<ResolveVersioningModule>]
 [DependsOn<CleanProjectModule>(Optional = true)]
 [UsedImplicitly]
-public sealed class PublishMcpServerModule(IOptions<BuildOptions> buildOptions) : Module<string>
+public sealed class PublishMcpServerModule : Module<string>
 {
     protected override async Task<string?> ExecuteAsync(IModuleContext context, CancellationToken cancellationToken)
     {
         var versioningResult = await context.GetModule<ResolveVersioningModule>();
         var versioning = versioningResult.ValueOrDefault!;
-
-        var outputFolder = context.Git().RootDirectory.GetFolder(buildOptions.Value.OutputDirectory);
-        var mcpServerOutputPath = outputFolder.GetFolder("MCPServer").Path;
 
         await context.DotNet().Publish(new DotNetPublishOptions
         {
@@ -33,11 +28,14 @@ public sealed class PublishMcpServerModule(IOptions<BuildOptions> buildOptions) 
             Properties =
             [
                 ("VersionPrefix", versioning.VersionPrefix),
-                ("VersionSuffix", versioning.VersionSuffix!),
-                ("PublishDir", mcpServerOutputPath)
+                ("VersionSuffix", versioning.VersionSuffix!)
             ]
         }, cancellationToken: cancellationToken);
 
-        return mcpServerOutputPath;
+        var bundleContents = Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
+            "Autodesk", "ApplicationPlugins", "RevitDevTool.bundle", "Contents");
+
+        return bundleContents;
     }
 }
