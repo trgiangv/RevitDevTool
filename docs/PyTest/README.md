@@ -2,7 +2,7 @@
 
 The pytest bridge lets an external pytest process discover and run tests inside a running host process through `DevToolsPipeServer`.
 
-The current client plugin and workflow are Revit-oriented, but the server-side bridge lives in shared `DevTools.Execution`.
+The client plugin (`revitdevtool_pytest`) supports multiple hosts — Revit, AutoCAD-family, and extensible to any host exposing a `DevToolsPipeServer` pipe. The server-side bridge lives in shared `DevTools.Execution`.
 
 Last updated: 2026-05-29
 

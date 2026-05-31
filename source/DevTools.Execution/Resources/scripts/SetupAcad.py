@@ -65,7 +65,8 @@ def custom_print(*args, sep=' ', end='\n', file=None, flush=False):  # pyright: 
     text = sep.join(str(arg) for arg in args) + end
     log_func(text)
 
-builtins.print = custom_print
+if not getattr(sys, '__pytest_running__', False):
+    builtins.print = custom_print
 
 # Redirect stdout/stderr
 class StdOutRedirector:
@@ -93,5 +94,6 @@ class StdOutRedirector:
         if merged:
             log_func(merged)
 
-sys.stdout = StdOutRedirector(builtins)
-sys.stderr = StdOutRedirector(builtins)
+if not getattr(sys, '__pytest_running__', False):
+    sys.stdout = StdOutRedirector(builtins)
+    sys.stderr = StdOutRedirector(builtins)

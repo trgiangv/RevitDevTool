@@ -1,23 +1,23 @@
 ---
 name: revit-pytest
 description: >
-  Create and run Revit API tests using pytest via RevitDevTool Named Pipe bridge.
-  Use when writing new pytest test files for Revit API, adding test fixtures for
-  Revit documents/elements, running tests against a live Revit instance, setting
-  up conftest.py with PEP 723 dependencies, or asking "how do I test Revit API
-  with pytest". Covers test structure, fixtures, lazy imports, transactions,
+  Create and run CAD/BIM API tests using pytest via RevitDevTool Named Pipe bridge.
+  Use when writing new pytest test files for Revit/AutoCAD/Civil3D API, adding test
+  fixtures for host documents/elements, running tests against a live host instance,
+  setting up conftest.py with PEP 723 dependencies, or asking "how do I test Revit
+  API with pytest". Covers test structure, fixtures, lazy imports, transactions,
   auto-rollback, dependency injection, and CLI options.
 ---
 
-# Revit API Testing with pytest
+# Host API Testing with pytest
 
 ## How It Works
 
 ```
-Local pytest (collect) → Named Pipe → Revit (PytestRunner.py) → Results → Local pytest (report)
+Local pytest (collect) → Named Pipe → Host (PytestRunner.py) → Results → Local pytest (report)
 ```
 
-Tests are collected locally by pytest, then executed remotely inside a live Revit process via JSON-RPC over Named Pipes. Results (pass/fail/skip, stdout, tracebacks) return to the local pytest session.
+Tests are collected locally by pytest, then executed remotely inside a live host process (Revit, AutoCAD, Civil3D, etc.) via JSON-RPC over Named Pipes. Results (pass/fail/skip, stdout, tracebacks) return to the local pytest session.
 
 ## 1. Project Setup
 
@@ -38,30 +38,32 @@ pixi add --pypi revitdevtool_pytest
 
 ## 2. Configure pyproject.toml
 
-Minimal config — only `revit_version` is required:
+Minimal config — only `host_version` is required:
 
 ```toml
 [tool.pytest.ini_options]
-revit_version = "2025"
+host_version = "2025"
 ```
 
 Full options:
 
 ```toml
 [tool.pytest.ini_options]
-revit_version = "2025"
-revit_launch = false
-revit_timeout = "60"
-revit_launch_timeout = "180"
+host_name = "revit"
+host_version = "2025"
+host_launch = false
+host_timeout = "60"
+host_launch_timeout = "180"
 ```
 
 | Option | Default | Description |
 |--------|---------|-------------|
-| `revit_version` | — | Revit year. Required when `revit_launch = true`. |
-| `revit_launch` | `false` | Force-launch a **new** Revit instance (ignores existing). |
-| `revit_timeout` | `"60"` | Per-test execution timeout (seconds). |
-| `revit_launch_timeout` | `"120"` | Seconds to wait for Revit to start. |
-| `revit_pipe` | — | Explicit pipe name (bypass auto-discovery). |
+| `host_name` | `"revit"` | Host application (`revit`, `autocad`, `civil3d`, `plant3d`, etc.) |
+| `host_version` | — | Host version (e.g. `2025`, `8.0`). Required when `host_launch = true`. |
+| `host_launch` | `false` | Force-launch a **new** host instance (ignores existing). |
+| `host_timeout` | `"60"` | Per-test execution timeout (seconds). |
+| `host_launch_timeout` | `"120"` | Seconds to wait for host to start. |
+| `host_pipe` | — | Explicit pipe name (bypass auto-discovery). |
 
 ## 3. Write conftest.py
 
@@ -100,7 +102,7 @@ def revit_auto_rollback():
 
 ## 4. Write Tests
 
-**Critical rule: All Revit/.NET imports MUST be inside function bodies.**
+**Critical rule: All host/.NET imports MUST be inside function bodies.**
 
 ```python
 def test_active_view(revit_doc):
@@ -143,10 +145,16 @@ pixi run pytest -v
 pytest tests/test_walls.py::test_wall_count -v
 
 # Override version for one run:
-pytest --revit-version=2026 -v
+pytest --host-version=2026 -v
 
-# Force new Revit instance:
-pytest --revit-launch --revit-version=2025 -v
+# Force new host instance:
+pytest --host-launch --host-version=2025 -v
+
+# Target AutoCAD:
+pytest --host autocad --host-version=2026 -v
+
+# Target Civil 3D:
+pytest --host civil3d --host-version=2026 -v
 ```
 
 ## Key Behaviors
@@ -155,21 +163,21 @@ pytest --revit-launch --revit-version=2025 -v
 `print()` inside tests is automatically captured and displayed in terminal output for both passing and failing tests. No extra flags needed.
 
 ### Connection
-- Default: plugin scans for running Revit matching `revit_version` via Named Pipe (`Revit_{year}_{pid}`)
-- `revit_launch = true`: spawns new Revit, waits for its specific PID pipe, ignores existing instances
-- `revit_pipe = "Revit_2025_12345"`: connect to exact pipe (skip discovery)
+- Default: plugin scans for running host matching `host_version` via Named Pipe (`{Host}_{Version}_{PID}`, e.g. `Revit_2025_12345`, `Rhino_8.0_9999`)
+- `host_launch = true`: spawns new host, waits for its specific PID pipe, ignores existing instances
+- `host_pipe = "Revit_2025_12345"`: connect to exact pipe (skip discovery). Any `{Host}_{Version}_{PID}` pipe works.
 
 ### Execution context
-- Tests run on Revit's main thread sequentially
-- `__revit__` is a builtin injected by RevitDevTool (always access via fixtures)
+- Tests run on the host's main thread sequentially
+- `__revit__` (Revit) or equivalent builtins are injected by host setup scripts (always access via fixtures)
 - `--capture=sys` is used internally (fd capture doesn't work in embedded Python.NET)
 
 ## Common Mistakes
 
 | Mistake | Fix |
 |---------|-----|
-| Import Revit API at module level | Move to inside function body |
+| Import host API at module level | Move to inside function body |
 | Use `__revit__` directly without `noqa` | Use `revit_uiapp` fixture |
 | Run bare `pytest` without venv | Use `uv run pytest` or activate venv |
-| Expect `revit_launch` to reuse instances | It always launches NEW (use default for reuse) |
-| Missing `revit_version` with `revit_launch` | Set `revit_version` in config or CLI |
+| Expect `host_launch` to reuse instances | It always launches NEW (use default for reuse) |
+| Missing `host_version` with `host_launch` | Set `host_version` in config or CLI |

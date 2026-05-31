@@ -3,11 +3,11 @@
 ## Architecture Overview
 
 ```
-pytest (local)                      Revit (remote)
+pytest (local)                      Host (remote)
   ├─ plugin.py (hooks)              ├─ RevitDevTool add-in
   ├─ connection.py (lifecycle)      │   ├─ Named Pipe server
   ├─ bridge.py (Named Pipe RPC)  ──►│   ├─ PytestDependencyService
-  ├─ discovery.py (find Revit)      │   ├─ pythonnet execution
+  ├─ discovery.py (find host)      │   ├─ pythonnet execution
   ├─ reporting.py (result mapping)  │   └─ BridgePipeConnection
   ├─ suite_lock.py (Windows Mutex)  │
   ├─ suite_leasing.py (instance)    │
@@ -20,17 +20,17 @@ Wire format: `[4-byte LE body length][UTF-8 JSON body]`
 
 Matches `RevitDevTool.McpParser.Models.BridgePipeConnection` on C# side.
 
-Pipe name pattern: `Revit_{version}_{processId}` (e.g. `Revit_2025_12345`)
+Pipe name pattern: `{Host}_{Version}_{PID}` (e.g. `Revit_2025_12345`, `AutoCad_2026_7890`, `Rhino_8.0_9999`)
 
 ## Connection Flow
 
-1. `plugin.pytest_runtestloop` calls `_ensure_bridge(session)`
+1. `plugin.pytest_runtestloop` calls `_ensure_bridge(session, host_name)`
 2. `connection.ensure_bridge()` resolves bridge via:
    - Reuse existing connected bridge
-   - Explicit pipe (`--revit-pipe`)
-   - Auto-discovery: scan `//./pipe` for `Revit_*` patterns
+   - Explicit pipe (`--host-pipe`)
+   - Auto-discovery: scan `//./pipe` for `{Host}_{Version}_{PID}` patterns
    - Lease store: reconnect to previously-leased instance
-   - Auto-launch: start Revit + dialog resolver + wait for pipe
+   - Auto-launch: start host + dialog resolver + wait for pipe
 3. Suite mutex prevents parallel pytest processes on same suite
 
 ## Bridge RPC Methods
@@ -43,13 +43,13 @@ Pipe name pattern: `Revit_{version}_{processId}` (e.g. `Revit_2025_12345`)
 ## Output Capture Flow
 
 ```
-test_foo.py              Revit (PytestRunner.py)           Named Pipe             Local pytest
+test_foo.py              Host (PytestRunner.py)           Named Pipe             Local pytest
   print("x")  ────►  _BridgePlugin.pytest_runtest_     ────►  progress        ────►  reporting.py
   assert ...          logreport() captures each phase          notification           _emit_streaming_report()
                       → _CaseResult(stdout, stderr,            per CaseResult         → pytest_runtest_logreport
                          traceback, message, outcome)                                 → terminal output
                       → _echo_to_log_viewer()
-                         (Revit Log Viewer)
+                         (Host Log Viewer)
                       → _emit_progress() → JSON
 ```
 
@@ -79,28 +79,28 @@ Each `_CaseResult.to_dict()` → JSON → `__progress_callback__` → C# `Pytest
 
 ## Suite Leasing
 
-Prevents multiple pytest sessions from fighting over the same Revit instance:
+Prevents multiple pytest sessions from fighting over the same host instance:
 
 - `SuiteMutex` — Windows named Mutex per suite key
-- `SuiteLeaseStore` — JSON file mapping suite → Revit PID/pipe
+- `SuiteLeaseStore` — JSON file mapping suite → host PID/pipe
 - Lease survives across test reruns, cleared on PID death
 
 ## Dialog Resolver
 
-During auto-launch, Revit may show security dialogs for unsigned add-ins.
+During auto-launch, hosts may show security dialogs for unsigned add-ins.
 `StartupDialogResolver` runs a background thread that:
-- Monitors Revit process windows
+- Monitors host process windows
 - Clicks safe actions: "Always Load", "Load Once"
 - Avoids destructive: "Do Not Load", "Cancel", "No"
 
 ## Troubleshooting
 
-### "Could not connect to Revit"
+### "Could not connect to host"
 
-1. Verify Revit is running with RevitDevTool installed
-2. Check pipe exists: `ls //./pipe/ | findstr Revit`
-3. Try explicit pipe: `pytest --revit-pipe=Revit_2025_<pid>`
-4. Check `--revit-version` matches running instance
+1. Verify host is running with RevitDevTool installed
+2. Check pipe exists: `ls //./pipe/ | findstr Revit` (or `AutoCad`, etc.)
+3. Try explicit pipe: `pytest --host-pipe=Revit_2025_<pid>`
+4. Check `--host-version` matches running instance
 
 ### "Suite is already running in another pytest process"
 
@@ -108,7 +108,7 @@ Another pytest session holds the suite mutex. Kill the other process or wait.
 
 ### Tests timeout
 
-Increase timeout: `pytest --revit-timeout=120`
+Increase timeout: `pytest --host-timeout=120`
 
 ### PEP 723 packages not found
 

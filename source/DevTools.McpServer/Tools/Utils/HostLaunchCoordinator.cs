@@ -57,15 +57,14 @@ internal static partial class HostLaunchCoordinator
 
     public static void StartDialogResolver(HostApp hostApp, int processId, CancellationToken cancellationToken)
     {
-        if (hostApp != HostApp.Revit) return;
+        if (hostApp != HostApp.Revit && !hostApp.IsAcadFamily()) return;
 
         Task.Run(async () =>
         {
             using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(90));
-            var options = new StartupDialogResolverOptions();
             try
             {
-                await StartupDialogResolver.RunAsync(processId, options, TimeSpan.FromSeconds(90), cts.Token)
+                await StartupDialogResolver.RunAsync(processId, new StartupDialogResolverOptions(), TimeSpan.FromSeconds(90), cts.Token)
                     .ConfigureAwait(false);
             }
             catch (OperationCanceledException) { }
@@ -157,7 +156,7 @@ internal static partial class HostLaunchCoordinator
         if (string.IsNullOrWhiteSpace(exePath))
             return (null, ToolHelpers.ErrorResult($"{hostApp} {version} installation not found."));
 
-        var arguments = new List<string>();
+        var arguments = new List<string> { "/nologo" };
         if (!string.IsNullOrWhiteSpace(filePath))
             arguments.Add(filePath);
 
