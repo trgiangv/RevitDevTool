@@ -38,7 +38,7 @@ public class PythonExecutor(PythonInitializer initializer)
                                  import sys
                                  import os
 
-                                 _rdt = sys.__revitdevtool__
+                                 _rdt = sys.__devtool__
                                  for prev in _rdt.get('added_roots', []):
                                      if prev in sys.path:
                                          sys.path.remove(prev)

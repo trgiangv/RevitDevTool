@@ -5,7 +5,7 @@ def _is_ironpython():
     return '.net' in sys.version.lower()
 
 _LOG_FUNC = '__log_func__'
-_RDT_STATE = '__acaddevtool__'
+_RDT_STATE = '__devtool__'
 
 if not _is_ironpython():
     import clr  # pyright: ignore[reportMissingImports] # noqa
@@ -34,7 +34,7 @@ if not _is_ironpython():
     if site_packages and os.path.isdir(site_packages):
         site.addsitedir(site_packages)
 
-    # Initialize sys.__acaddevtool__ namespace for scope-local state (not global builtins pollution)
+    # Initialize sys.__devtool__ namespace for scope-local state (not global builtins pollution)
     if not hasattr(sys, _RDT_STATE):
         setattr(sys, _RDT_STATE, {})
 
@@ -68,32 +68,32 @@ def custom_print(*args, sep=' ', end='\n', file=None, flush=False):  # pyright: 
 if not getattr(sys, '__pytest_running__', False):
     builtins.print = custom_print
 
-# Redirect stdout/stderr
-class StdOutRedirector:
-    def __init__(self, log_func_provider):
-        self.log_func_provider = log_func_provider
-        self._buffer = []
+    # Redirect stdout/stderr
+    class StdOutRedirector:
+        def __init__(self, log_func_provider):
+            self.log_func_provider = log_func_provider
+            self._buffer = []
 
-    def write(self, text):
-        if not hasattr(self.log_func_provider, _LOG_FUNC):
-            return
-        if not text:
-            return
-        self._buffer.append(text)
+        def write(self, text):
+            if not hasattr(self.log_func_provider, _LOG_FUNC):
+                return
+            if not text:
+                return
+            self._buffer.append(text)
 
-    def flush(self):
-        if not self._buffer:
-            return
-        log_func = getattr(self.log_func_provider, _LOG_FUNC, None)
-        if log_func is None:
+        def flush(self):
+            if not self._buffer:
+                return
+            log_func = getattr(self.log_func_provider, _LOG_FUNC, None)
+            if log_func is None:
+                self._buffer.clear()
+                return
+            merged = ''.join(self._buffer)
             self._buffer.clear()
-            return
-        merged = ''.join(self._buffer)
-        self._buffer.clear()
-        merged = merged.strip()
-        if merged:
-            log_func(merged)
+            merged = merged.strip()
+            if merged:
+                log_func(merged)
 
-if not getattr(sys, '__pytest_running__', False):
+
     sys.stdout = StdOutRedirector(builtins)
     sys.stderr = StdOutRedirector(builtins)

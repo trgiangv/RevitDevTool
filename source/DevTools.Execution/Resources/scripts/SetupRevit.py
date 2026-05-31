@@ -5,7 +5,7 @@ def _is_ironpython():
     return '.net' in sys.version.lower()
 
 _LOG_FUNC = '__log_func__'
-_RDT_STATE = '__revitdevtool__'
+_RDT_STATE = '__devtool__'
 
 if not _is_ironpython():
     import clr  # pyright: ignore[reportMissingImports] # noqa
@@ -34,7 +34,7 @@ if not _is_ironpython():
     if site_packages and os.path.isdir(site_packages):
         site.addsitedir(site_packages)
 
-    # Initialize sys.__revitdevtool__ namespace for scope-local state (not global builtins pollution)
+    # Initialize sys.__devtool__ namespace for scope-local state (not global builtins pollution)
     if not hasattr(sys, _RDT_STATE):
         setattr(sys, _RDT_STATE, {})
 
