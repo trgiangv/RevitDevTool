@@ -21,6 +21,7 @@ public sealed partial class McpRegistryViewModel : ObservableObject, IDisposable
 {
     private readonly ToolRegistryStore _toolStore;
     private readonly ConnectionState _bridgeState;
+    private readonly McpConfigViewModel _configurationViewModel;
     private readonly DispatcherTimer _searchDebounceTimer;
     private readonly DispatcherTimer _elapsedTimer;
     private readonly Dictionary<string, int> _callCounts = new(StringComparer.OrdinalIgnoreCase);
@@ -39,32 +40,22 @@ public sealed partial class McpRegistryViewModel : ObservableObject, IDisposable
     [ObservableProperty] private McpToolItem? _selectedTool;
     [ObservableProperty] private bool _isExecuting;
     [ObservableProperty] private string _executionStatusText = "Idle";
+    [ObservableProperty] private bool _isConfigMode;
+
     private ObservableCollection<McpToolItem> Tools { get; } = [];
     public ObservableCollection<McpToolItem> FilteredTools { get; } = [];
+    public McpConfigViewModel ConfigViewModel { get; }
     public bool ShowStatusPanel => IsBusy || IsExecuting;
     public string StatusPanelText => IsBusy ? BusyMessage : ExecutionStatusText;
 
-    private static readonly string McpServerPath = Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
-            "Autodesk", "ApplicationPlugins", "RevitDevTool.bundle", "Contents", "MCPServer.exe")
-        .Replace("\\", "/");
-
-    public string McpConfigSnippet { get; } = $$"""
-        {
-          "mcpServers": {
-            "revitdevtool": {
-              "type": "stdio",
-              "command": "{{McpServerPath}}",
-              "args": []
-            }
-          }
-        }
-        """;
-
-    public McpRegistryViewModel(ToolRegistryStore toolStore, ConnectionState bridgeState)
+    public McpRegistryViewModel(ToolRegistryStore toolStore, ConnectionState bridgeState, McpConfigViewModel configViewModel)
     {
         _toolStore = toolStore;
         _bridgeState = bridgeState;
+        _configurationViewModel = configViewModel;
+        ConfigViewModel = configViewModel;
+
+        _configurationViewModel.Applied += OnConfigurationApplied;
 
         _searchDebounceTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(500) };
         _searchDebounceTimer.Tick += (_, _) =>
@@ -141,6 +132,16 @@ public sealed partial class McpRegistryViewModel : ObservableObject, IDisposable
             using var _ = BeginBusy($"Parsing MCP toolset from '{Path.GetFileName(selectedFolder)}'...");
             await _toolStore.AddPathAsync(selectedFolder).ConfigureAwait(true);
         }
+    }
+
+    partial void OnIsConfigModeChanged(bool value)
+    {
+        if (value) _configurationViewModel.Load();
+    }
+
+    private void OnConfigurationApplied(object? sender, EventArgs e)
+    {
+        IsConfigMode = false;
     }
 
     private void OnRegistryChanged(object? sender, EventArgs e)
@@ -389,6 +390,7 @@ public sealed partial class McpRegistryViewModel : ObservableObject, IDisposable
         if (_disposed) return;
         _disposed = true;
         _elapsedTimer.Stop();
+        _configurationViewModel.Applied -= OnConfigurationApplied;
         _toolStore.ToolsChanged -= OnRegistryChanged;
         _bridgeState.PropertyChanged -= OnBridgeStateChanged;
         _bridgeState.ToolCalls.CollectionChanged -= OnToolCallsCollectionChanged;

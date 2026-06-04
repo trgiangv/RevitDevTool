@@ -30,6 +30,7 @@ public static class PresentationExtensions
         services.AddSingleton<PackageViewModel>();
         services.AddSingleton<MemoryViewModel>();
         services.AddSingleton<ExecutionViewModel>();
+        services.AddSingleton<McpConfigViewModel>();
         services.AddSingleton<McpRegistryViewModel>();
         services.AddSingleton<MainViewModel>();
 

@@ -1,0 +1,119 @@
+﻿<UserControl x:Class="DevTools.Presentation.Views.McpConfigView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:design="clr-namespace:DevTools.UI.Theme.Design;assembly=DevTools.UI"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:viewModels="clr-namespace:DevTools.Presentation.ViewModels"
+             d:Background="{DynamicResource DevTools.MahApps.Brushes.ThemeBackground}"
+             d:DataContext="{d:DesignInstance viewModels:McpConfigViewModel}"
+             d:DesignHeight="200"
+             d:DesignWidth="400"
+             mc:Ignorable="d">
+
+    <UserControl.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="/DevTools.UI;component/Theme/Theme.xaml" />
+                <design:IntellisenseResources Source="/DevTools.UI;component/Theme/Design/DesignTimeResources.xaml" />
+            </ResourceDictionary.MergedDictionaries>
+        </ResourceDictionary>
+    </UserControl.Resources>
+
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+
+        <!--  MCP Configuration  -->
+        <TextBlock Grid.Row="0"
+                   Margin="0,0,0,6"
+                   FontWeight="SemiBold"
+                   Foreground="{DynamicResource DevTools.MahApps.Brushes.ThemeForeground}"
+                   Text="Configuration" />
+        <Border Grid.Row="1"
+                Margin="0,0,0,10"
+                Padding="5"
+                BorderBrush="{DynamicResource DevTools.MahApps.Brushes.Gray8}"
+                BorderThickness="1"
+                CornerRadius="4">
+            <TextBox BorderThickness="0"
+                     FontFamily="Consolas"
+                     FontSize="10"
+                     Foreground="{DynamicResource DevTools.MahApps.Brushes.ThemeForeground}"
+                     IsReadOnly="True"
+                     Text="{Binding McpConfigSnippet, Mode=OneTime}"
+                     TextWrapping="NoWrap" />
+        </Border>
+
+        <!--  Loaded Sources  -->
+        <TextBlock Grid.Row="2"
+                   Margin="0,0,0,6"
+                   FontWeight="SemiBold"
+                   Foreground="{DynamicResource DevTools.MahApps.Brushes.ThemeForeground}"
+                   Text="Loaded Sources" />
+        <Border Grid.Row="3"
+                Padding="5"
+                BorderBrush="{DynamicResource DevTools.MahApps.Brushes.Gray8}"
+                BorderThickness="1"
+                CornerRadius="4">
+            <ListBox ItemsSource="{Binding ToolsetSources}"
+                     ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                     VirtualizingPanel.IsVirtualizing="True"
+                     VirtualizingPanel.VirtualizationMode="Recycling">
+                <ListBox.ItemContainerStyle>
+                    <Style BasedOn="{StaticResource {x:Type ListBoxItem}}"
+                           TargetType="ListBoxItem">
+                        <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+                        <Setter Property="Padding" Value="4,3" />
+                    </Style>
+                </ListBox.ItemContainerStyle>
+                <ListBox.ItemTemplate>
+                    <DataTemplate xmlns:sys="clr-namespace:System;assembly=mscorlib"
+                                  DataType="sys:String">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+
+                            <TextBlock Grid.Column="0"
+                                       VerticalAlignment="Center"
+                                       Foreground="{DynamicResource DevTools.MahApps.Brushes.ThemeForeground}"
+                                       Text="{Binding}"
+                                       TextTrimming="CharacterEllipsis"
+                                       ToolTip="{Binding}" />
+
+                            <Button Grid.Column="1"
+                                    Width="24"
+                                    Height="24"
+                                    Margin="6,0,0,0"
+                                    BorderBrush="Transparent"
+                                    BorderThickness="0"
+                                    Command="{Binding DataContext.RemoveToolsetSourceCommand, RelativeSource={RelativeSource AncestorType=ListBox}}"
+                                    CommandParameter="{Binding}"
+                                    ToolTip="Remove">
+                                <Path Width="10"
+                                      Height="10"
+                                      Data="{StaticResource Clear}"
+                                      Fill="{DynamicResource DevTools.MahApps.Brushes.ThemeForeground}"
+                                      Stretch="Uniform" />
+                            </Button>
+                        </Grid>
+                    </DataTemplate>
+                </ListBox.ItemTemplate>
+            </ListBox>
+        </Border>
+
+        <Button Grid.Row="4"
+                Width="60"
+                Margin="0,8,0,0"
+                HorizontalAlignment="Right"
+                Command="{Binding ApplyCommand}"
+                Content="OK" />
+    </Grid>
+</UserControl>
