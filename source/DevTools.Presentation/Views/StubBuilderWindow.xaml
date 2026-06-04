@@ -32,6 +32,7 @@
     <Grid Margin="5">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
             <RowDefinition Height="*" />
             <RowDefinition Height="Auto" />
             <RowDefinition Height="Auto" />
@@ -57,8 +58,16 @@
                     Content="Check None" />
         </StackPanel>
 
+        <!--  Search TextBox  -->
+        <TextBox Grid.Row="1"
+                 Margin="0,0,0,8"
+                 VerticalContentAlignment="Center"
+                 mah:TextBoxHelper.ClearTextButton="True"
+                 mah:TextBoxHelper.Watermark="Search assemblies..."
+                 Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}" />
+
         <!--  Assembly CheckListBox  -->
-        <ListBox Grid.Row="1"
+        <ListBox Grid.Row="2"
                  Margin="0,0,0,8"
                  ItemsSource="{Binding FilteredAssemblies}"
                  ScrollViewer.HorizontalScrollBarVisibility="Disabled"
@@ -96,7 +105,7 @@
         </ListBox>
 
         <!--  Output Path  -->
-        <Grid Grid.Row="2"
+        <Grid Grid.Row="3"
               Margin="0,0,0,8">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="Auto" />
@@ -123,7 +132,7 @@
         </Grid>
 
         <!--  Status Message  -->
-        <TextBlock Grid.Row="3"
+        <TextBlock Grid.Row="4"
                    Margin="0,0,0,8"
                    FontSize="11"
                    Foreground="{DynamicResource DevTools.MahApps.Brushes.Accent}"
@@ -131,7 +140,7 @@
                    TextWrapping="Wrap" />
 
         <!--  Bottom buttons  -->
-        <Grid Grid.Row="4">
+        <Grid Grid.Row="5">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="*" />
                 <ColumnDefinition Width="Auto" />

@@ -17,10 +17,12 @@ public partial class StubBuilderViewModel : ObservableObject
     [ObservableProperty] private string _statusMessage = string.Empty;
     [ObservableProperty] private double _progress;
     [ObservableProperty] private bool _hideUnchecked;
+    [ObservableProperty] private string _searchText = string.Empty;
 
     private ObservableCollection<AssemblyItem> AppDomainAssemblies { get; } = [];
     public ICollectionView FilteredAssemblies { get; }
     public Action? CloseAction { get; set; }
+    private CancellationTokenSource? _searchDebounceToken;
 
     public StubBuilderViewModel(string versionNumber)
     {
@@ -32,10 +34,34 @@ public partial class StubBuilderViewModel : ObservableObject
 
     partial void OnHideUncheckedChanged(bool value) => FilteredAssemblies.Refresh();
 
+    partial void OnSearchTextChanged(string value) => ApplySearchDebounce();
+
+    private void ApplySearchDebounce()
+    {
+        _searchDebounceToken?.Cancel();
+        _searchDebounceToken?.Dispose();
+        _searchDebounceToken = new CancellationTokenSource();
+
+        Task.Delay(300, _searchDebounceToken.Token).ContinueWith(_ =>
+        {
+            if (!_searchDebounceToken.Token.IsCancellationRequested)
+                FilteredAssemblies.Refresh();
+        }, TaskScheduler.FromCurrentSynchronizationContext());
+    }
+
     private bool FilterAssembly(object obj)
     {
         if (obj is not AssemblyItem item) return false;
-        return !HideUnchecked || item.IsSelected;
+        
+        if (HideUnchecked && !item.IsSelected)
+            return false;
+
+        if (string.IsNullOrWhiteSpace(SearchText)) return true;
+        var search = SearchText.Trim();
+        return item.Name.Contains(search, StringComparison.OrdinalIgnoreCase) ||
+               item.Location.Contains(search, StringComparison.OrdinalIgnoreCase) ||
+               item.FullName.Contains(search, StringComparison.OrdinalIgnoreCase);
+
     }
 
     private void LoadAppDomainAssemblies()
