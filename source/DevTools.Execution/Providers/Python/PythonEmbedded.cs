@@ -30,12 +30,11 @@ public static class PythonEmbedded
     private static string ToolInvokeSourcePath => $"{ExecutionScriptsPrefix}.ToolInvoke.py";
     private static string PytestRunnerSourcePath => $"{ExecutionScriptsPrefix}.PytestRunner.py";
 
-    private static string SetupSourcePath =>
-        _host switch
-        {
-            HostApp.Revit => $"{ExecutionScriptsPrefix}.SetupRevit.py",
-            _ => $"{ExecutionScriptsPrefix}.SetupAcad.py",
-        };
+    private static string SetupSourcePath => _host switch
+    {
+        HostApp.Revit => $"{ExecutionScriptsPrefix}.SetupRevit.py",
+        _ => $"{ExecutionScriptsPrefix}.SetupAcad.py",
+    };
 
     /// <summary>Short filename for stack traces (e.g. <c>SetupRevit.py</c>), matching <see cref="SetupSourcePath"/>.</summary>
     public static string SetupScriptFileName => GetFileName(SetupSourcePath);
@@ -60,13 +59,9 @@ public static class PythonEmbedded
         ResetSourcePath
     ];
 
-    private static string[] AlwaysOverwritePaths =>
+    private static string[] CopyPaths =>
     [
-        ParserSourcePath
-    ];
-
-    private static string[] CreateOnlyPaths =>
-    [
+        ParserSourcePath,
         PixiTomlSourcePath
     ];
 
@@ -74,7 +69,7 @@ public static class PythonEmbedded
     private static readonly ConcurrentDictionary<string, string> ScriptPathCache = new();
 
     private static bool IsCacheReady => CachePaths.All(ScriptCache.ContainsKey);
-    private static bool IsCopyReady => AlwaysOverwritePaths.Concat(CreateOnlyPaths).All(ScriptPathCache.ContainsKey);
+    private static bool IsCopyReady => CopyPaths.All(ScriptPathCache.ContainsKey);
 
     public static void EnsureExtracted()
     {
@@ -83,14 +78,60 @@ public static class PythonEmbedded
         if (!IsCacheReady)
             EnsureCacheScripts();
 
-        var targetDir = PixiEnvironmentProvider.PixiProjectDir;
-        Directory.CreateDirectory(targetDir);
+        var pixiEnvDir = PixiEnvironmentProvider.PixiProjectDir;
+        Directory.CreateDirectory(pixiEnvDir);
 
-        foreach (var path in AlwaysOverwritePaths)
-            CopyResource(path, targetDir, overwrite: true);
+        // Parser must be overwritten on every load to ensure latest version is used.
+        CopyResource(ParserSourcePath, pixiEnvDir, overwrite: true);
 
-        foreach (var path in CreateOnlyPaths)
-            CopyResource(path, targetDir, overwrite: false);
+        // Do not override to prevent re-install package already installed from previous session
+        CopyResource(PixiTomlSourcePath, pixiEnvDir, overwrite: false);
+
+        // https://pixi.prefix.dev/latest/reference/pixi_configuration/#tls-no-verify
+        // run once for each session, Required for corporate environments with custom CA certificates.
+        SetupPixiConfig();
+    }
+
+    private static void SetupPixiConfig()
+    {
+        try
+        {
+            var pixiConfigDir = Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
+                ".pixi"
+            );
+
+            Directory.CreateDirectory(pixiConfigDir);
+
+            const string rootCertsSystem = "tls-root-certs = \"system\"";
+            var configPath = Path.Combine(pixiConfigDir, "config.toml");
+
+            if (!File.Exists(configPath))
+            {
+                File.WriteAllText(configPath, rootCertsSystem + Environment.NewLine);
+                return;
+            }
+
+            var lines = File.ReadAllLines(configPath).ToList();
+
+            var tlsLineIndex = lines.FindIndex(line =>
+                line.TrimStart().TrimEnd().StartsWith("tls-root-certs", StringComparison.OrdinalIgnoreCase));
+
+            if (tlsLineIndex >= 0)
+            {
+                lines[tlsLineIndex] = rootCertsSystem;
+            }
+            else
+            {
+                lines.Add(rootCertsSystem);
+            }
+
+            File.WriteAllLines(configPath, lines);
+        }
+        catch (Exception ex)
+        {
+            Trace.TraceError($"Failed to setup Pixi user config: {ex.Message}");
+        }
     }
 
     private static void EnsureCacheScripts()
