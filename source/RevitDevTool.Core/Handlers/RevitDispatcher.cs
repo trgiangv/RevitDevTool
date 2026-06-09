@@ -2,10 +2,11 @@ namespace RevitDevTool.Core.Handlers;
 
 /// <summary>
 ///     Manages a FIFO queue of <see cref="IRevitRequest"/> items dispatched via
-///     <see cref="Autodesk.Revit.UI.ExternalEvent"/>. Caller threads enqueue work and call
-///     <see cref="Autodesk.Revit.UI.ExternalEvent.Raise"/>; Revit invokes <see cref="Autodesk.Revit.UI.IExternalEventHandler.Execute"/>
-///     on the main thread in a full API context. A <c>while</c> loop inside <c>Execute</c>
-///     drains items added during processing, maximising throughput through natural batching.
+///     <see cref="Autodesk.Revit.UI.ExternalEvent"/>. Callers enqueue work through this dispatcher;
+///     the dispatcher raises the external event, and Revit invokes
+///     <see cref="Autodesk.Revit.UI.IExternalEventHandler.Execute"/> on the main thread in a valid API context.
+///     A <c>while</c> loop inside <c>Execute</c> drains items added during processing,
+///     maximizing throughput through natural batching.
 /// </summary>
 internal sealed class RevitDispatcher : IExternalEventHandler
 {
@@ -217,28 +218,19 @@ internal sealed class RevitDispatcher : IExternalEventHandler
 
         lock (_gate)
         {
-            return _queue.Count == 0;
+            return _queue.Count == 0 && !_raisePending;
         }
     }
 
     private void Enqueue(IRevitRequest request)
     {
-        bool needRaise;
-
         lock (_gate)
         {
             _queue.Enqueue(request);
-            needRaise = !_raisePending;
-            if (needRaise) _raisePending = true;
+            if (_raisePending) return;
+            _raisePending = true;
         }
 
-        if (!needRaise) return;
-
-        var result = _event!.Raise();
-        
-        // If the event was denied, the Revit API is likely unavailable (e.g. modal dialog).
-        // drain when Revit available again to avoid starvation.
-        if (result != ExternalEventRequest.Denied) return;
-        lock (_gate) { _raisePending = false; }
+        _event!.Raise();
     }
 }

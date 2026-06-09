@@ -6,7 +6,7 @@ internal sealed class AsyncResultRequest<T> : IRevitRequest
     private readonly Func<UIApplication, Task<T>> _asyncHandler;
     private readonly TaskCompletionSource<T> _completionSource =
         new(TaskCreationOptions.RunContinuationsAsynchronously);
-    private readonly CancellationTokenRegistration _registration;
+    private CancellationTokenRegistration _registration;
 
     public AsyncResultRequest(Func<Task<T>> asyncHandler, CancellationToken token = default)
         : this(_ => asyncHandler(), token)

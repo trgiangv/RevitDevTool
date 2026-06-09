@@ -6,7 +6,7 @@ internal sealed class ResultRequest<T> : IRevitRequest
     private readonly Func<UIApplication, T> _handler;
     private readonly TaskCompletionSource<T> _completionSource =
         new(TaskCreationOptions.RunContinuationsAsynchronously);
-    private readonly CancellationTokenRegistration _registration;
+    private CancellationTokenRegistration _registration;
 
     public ResultRequest(Func<UIApplication, T> handler, CancellationToken token = default)
     {
