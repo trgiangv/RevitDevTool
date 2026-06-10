@@ -85,9 +85,6 @@
         <Project Path="tests/RevitDevTool.ExternalEvent.App/RevitDevTool.ExternalEvent.App.csproj">
             <Build Project="false" />
         </Project>
-        <Project Path="tests/RevitDevTool.ExternalEvent.HotReloadUi/RevitDevTool.ExternalEvent.HotReloadUi.csproj">
-            <Build Project="false" />
-        </Project>
         <Project Path="Tests/RevitDevTool.Server.Tests/RevitDevTool.Server.Tests.csproj">
             <BuildType Solution="Debug.Autodesk.2022|Any CPU" Project="Debug" />
             <BuildType Solution="Debug.Autodesk.2023|Any CPU" Project="Debug" />

@@ -4,13 +4,10 @@
         <UseRevit>true</UseRevit>
         <UseWpf>true</UseWpf>
         <IsRepackable>true</IsRepackable>
-        <RepackBinariesExcludes>RevitDevTool.ExternalEvent.HotReloadUi.dll</RepackBinariesExcludes>
         <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
         <UseWindowsForms>true</UseWindowsForms>
-        <!-- Revit.targets bundle deploy -> ApplicationPlugins\*.bundle ; this sample uses classic user Addins folder instead -->
         <DeployRevitAddin>false</DeployRevitAddin>
         <RevitUserAddinsFolder Condition="'$(RevitUserAddinsFolder)' == ''">$(AppData)\Autodesk\Revit\Addins\$(RevitVersion)</RevitUserAddinsFolder>
-        <!-- DLL/PDB only under this subfolder; *.addin stays in RevitUserAddinsFolder -->
         <RevitUserAddinPayloadFolder>$(RevitUserAddinsFolder)\$(AssemblyName)</RevitUserAddinPayloadFolder>
     </PropertyGroup>
 
@@ -31,7 +28,6 @@
 
     <ItemGroup>
       <ProjectReference Include="..\..\source\RevitDevTool.Core\RevitDevTool.Core.csproj" />
-      <ProjectReference Include="..\RevitDevTool.ExternalEvent.HotReloadUi\RevitDevTool.ExternalEvent.HotReloadUi.csproj" />
     </ItemGroup>
 
     <!-- Start Revit -->
@@ -41,31 +37,12 @@
         <StartArguments>/language ENG</StartArguments>
     </PropertyGroup>
 
-    <!-- Satellite UI DLL stays out of ILRepack and under HotReload\ for collectible reload -->
-    <Target Name="StageHotReloadSatelliteDll"
-            AfterTargets="RepackAddinFiles"
-            Condition="'$(IsRepackable)' == 'true'">
-        <PropertyGroup>
-            <HotReloadSatelliteAssemblyName>RevitDevTool.ExternalEvent.HotReloadUi</HotReloadSatelliteAssemblyName>
-            <HotReloadStageFolder>$(TargetDir)HotReload\</HotReloadStageFolder>
-        </PropertyGroup>
-        <MakeDir Directories="$(HotReloadStageFolder)" />
-        <Copy SourceFiles="$(TargetDir)$(HotReloadSatelliteAssemblyName).dll"
-              DestinationFolder="$(HotReloadStageFolder)"
-              SkipUnchangedFiles="false" />
-        <Copy SourceFiles="$(TargetDir)$(HotReloadSatelliteAssemblyName).pdb"
-              DestinationFolder="$(HotReloadStageFolder)"
-              SkipUnchangedFiles="true"
-              Condition="Exists('$(TargetDir)$(HotReloadSatelliteAssemblyName).pdb')" />
-    </Target>
-
     <!-- Manifest in Addins\{year}\ ; binaries in Addins\{year}\RevitDevTool.ExternalEvent.App\ -->
     <Target Name="DeployExternalEventAppToRevitUserAddins"
-            AfterTargets="StageHotReloadSatelliteDll"
+            AfterTargets="RepackAddinFiles"
             Condition="'$(RevitVersion)' != '' AND '$(IsRepackable)' == 'true'">
         <MakeDir Directories="$(RevitUserAddinsFolder)" />
         <MakeDir Directories="$(RevitUserAddinPayloadFolder)" />
-        <MakeDir Directories="$(RevitUserAddinPayloadFolder)\HotReload" />
         <Copy SourceFiles="$(TargetDir)$(AssemblyName).dll"
               DestinationFolder="$(RevitUserAddinPayloadFolder)"
               SkipUnchangedFiles="false" />
@@ -76,13 +53,6 @@
               DestinationFolder="$(RevitUserAddinPayloadFolder)"
               SkipUnchangedFiles="true"
               Condition="Exists('$(TargetDir)$(AssemblyName).pdb')" />
-        <Copy SourceFiles="$(TargetDir)HotReload\RevitDevTool.ExternalEvent.HotReloadUi.dll"
-              DestinationFolder="$(RevitUserAddinPayloadFolder)\HotReload"
-              SkipUnchangedFiles="false" />
-        <Copy SourceFiles="$(TargetDir)HotReload\RevitDevTool.ExternalEvent.HotReloadUi.pdb"
-              DestinationFolder="$(RevitUserAddinPayloadFolder)\HotReload"
-              SkipUnchangedFiles="true"
-              Condition="Exists('$(TargetDir)HotReload\RevitDevTool.ExternalEvent.HotReloadUi.pdb')" />
         <Message Text="$(AssemblyName) -> $(RevitUserAddinPayloadFolder)\ (+ manifest in $(RevitUserAddinsFolder)\)"
                  Importance="high" />
     </Target>

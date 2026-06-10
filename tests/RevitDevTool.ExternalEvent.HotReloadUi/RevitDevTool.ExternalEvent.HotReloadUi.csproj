@@ -1,9 +1,0 @@
-<Project Sdk="Microsoft.NET.Sdk">
-
-    <PropertyGroup>
-        <UseWpf>true</UseWpf>
-        <RootNamespace>RevitDevTool.ExternalEvent.HotReloadUi</RootNamespace>
-        <AssemblyName>RevitDevTool.ExternalEvent.HotReloadUi</AssemblyName>
-    </PropertyGroup>
-
-</Project>
