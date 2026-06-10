@@ -26,4 +26,20 @@ internal static class DotnetMcpServerFactory
         cache.TryAdd(cacheKey, server);
         return server;
     }
+    
+    public static T GetCompletedResult<T>(
+        ValueTask<T> task,
+        string kind,
+        string name)
+    {
+        if (!task.IsCompleted)
+        {
+            throw new NotSupportedException(
+                $".NET MCP {kind} '{name}' returned an incomplete async task. " +
+                "Async .NET MCP handlers are not supported through the synchronous host-context execution path. " +
+                "Make the handler complete synchronously, or split the workflow so async work runs outside the host context.");
+        }
+
+        return task.GetAwaiter().GetResult();
+    }
 }

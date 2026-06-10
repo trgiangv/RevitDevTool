@@ -1,4 +1,4 @@
-namespace RevitDevTool.Core.Handlers;
+namespace RevitDevTool.Core.Dispatchers;
 
 /// <summary>
 ///     Manages a FIFO queue of <see cref="IRevitRequest"/> items dispatched via
@@ -8,12 +8,13 @@ namespace RevitDevTool.Core.Handlers;
 ///     A <c>while</c> loop inside <c>Execute</c> drains items added during processing,
 ///     maximizing throughput through natural batching.
 /// </summary>
-internal sealed class RevitDispatcher : IExternalEventHandler
+internal sealed class RevitDispatcher : IExternalEventHandler, IRevitDispatcher, IDisposable
 {
     private readonly Lock _gate = new();
-    private bool _raisePending;
     private readonly Queue<IRevitRequest> _queue = new();
     private readonly ExternalEvent? _event;
+    private bool _raisePending;
+    private int _disposed;
 
     public RevitDispatcher()
     {
@@ -51,26 +52,30 @@ internal sealed class RevitDispatcher : IExternalEventHandler
     {
         if (action is null) throw new ArgumentNullException(nameof(action));
 
+        var request = new Request(action);
+
         if (AllowDirectInvocation())
         {
-            action(RevitContext.UiApplication);
+            request.Execute(RevitContext.UiApplication);
             return;
         }
 
-        Enqueue(new Request(action));
+        Enqueue(request);
     }
 
     public void Post(Action action)
     {
         if (action is null) throw new ArgumentNullException(nameof(action));
 
+        var request = new Request(_ => action());
+
         if (AllowDirectInvocation())
         {
-            action();
+            request.Execute(RevitContext.UiApplication);
             return;
         }
 
-        Enqueue(new Request(_ => action()));
+        Enqueue(request);
     }
 
     public Task InvokeAsync(Action<UIApplication> action, CancellationToken token = default)
@@ -163,49 +168,24 @@ internal sealed class RevitDispatcher : IExternalEventHandler
         return request.Task;
     }
 
-    public Task<T> InvokeAsync<T>(Func<Task<T>> asyncHandler, CancellationToken token = default)
+    public void Dispose()
     {
-        if (asyncHandler is null) throw new ArgumentNullException(nameof(asyncHandler));
+        if (Interlocked.Exchange(ref _disposed, 1) != 0)
+            return;
 
-        if (AllowDirectInvocation())
+        IRevitRequest[] pending;
+        lock (_gate)
         {
-            token.ThrowIfCancellationRequested();
-            return asyncHandler();
+            pending = _queue.ToArray();
+            _queue.Clear();
+            _raisePending = false;
         }
 
-        var request = new AsyncResultRequest<T>(asyncHandler, token);
-        Enqueue(request);
-        return request.Task;
-    }
+        var exception = new ObjectDisposedException(nameof(RevitDispatcher));
+        foreach (var request in pending)
+            request.Fail(exception);
 
-    public Task<T> InvokeAsync<T>(Func<UIApplication, Task<T>> asyncHandler, CancellationToken token = default)
-    {
-        if (asyncHandler is null) throw new ArgumentNullException(nameof(asyncHandler));
-
-        if (AllowDirectInvocation())
-        {
-            token.ThrowIfCancellationRequested();
-            return asyncHandler(RevitContext.UiApplication);
-        }
-
-        var request = new AsyncResultRequest<T>(asyncHandler, token);
-        Enqueue(request);
-        return request.Task;
-    }
-
-    public Task InvokeAsync(Func<Task> asyncAction, CancellationToken token = default)
-    {
-        if (asyncAction is null) throw new ArgumentNullException(nameof(asyncAction));
-
-        if (AllowDirectInvocation())
-        {
-            token.ThrowIfCancellationRequested();
-            return asyncAction();
-        }
-
-        var request = new AsyncRequest(asyncAction, token);
-        Enqueue(request);
-        return request.Task;
+        _event?.Dispose();
     }
 
     /// <returns>
@@ -214,6 +194,7 @@ internal sealed class RevitDispatcher : IExternalEventHandler
     /// </returns>
     private bool AllowDirectInvocation()
     {
+        if (_disposed != 0) return false;
         if (!RevitContext.IsRevitInApiMode) return false;
 
         lock (_gate)
@@ -224,13 +205,65 @@ internal sealed class RevitDispatcher : IExternalEventHandler
 
     private void Enqueue(IRevitRequest request)
     {
+        var shouldRaise = false;
+
         lock (_gate)
         {
+            if (_disposed != 0)
+            {
+                request.Fail(new ObjectDisposedException(nameof(RevitDispatcher)));
+                return;
+            }
+
             _queue.Enqueue(request);
-            if (_raisePending) return;
-            _raisePending = true;
+
+            if (!_raisePending)
+            {
+                _raisePending = true;
+                shouldRaise = true;
+            }
         }
 
-        _event!.Raise();
+        if (!shouldRaise)
+            return;
+
+        RaiseExternalEvent();
+    }
+
+    private void RaiseExternalEvent()
+    {
+        try
+        {
+            var request = _event!.Raise();
+            if (IsAcceptedRequest(request))
+                return;
+
+            FailPendingRequests(new InvalidOperationException(
+                $"ExternalEvent.Raise was not accepted. Request status: {request}."));
+        }
+        catch (Exception exception)
+        {
+            FailPendingRequests(exception);
+        }
+    }
+
+    private static bool IsAcceptedRequest(ExternalEventRequest request)
+    {
+        return request is ExternalEventRequest.Accepted or ExternalEventRequest.Pending;
+    }
+
+    private void FailPendingRequests(Exception exception)
+    {
+        IRevitRequest[] pending;
+
+        lock (_gate)
+        {
+            pending = _queue.ToArray();
+            _queue.Clear();
+            _raisePending = false;
+        }
+
+        foreach (var request in pending)
+            request.Fail(exception);
     }
 }

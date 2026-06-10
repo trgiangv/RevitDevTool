@@ -42,7 +42,7 @@ public sealed class ToolExecutionDispatcher(
             return tool.Binding.SourceKind switch
             {
                 ExecutionMode.Assembly => await hostContext
-                    .ExecuteAsync(() => InvokeDotnetToolAsync(tool, normalizedPayload), ct)
+                    .ExecuteAsync(() => InvokeDotnetTool(tool, normalizedPayload, ct), ct)
                     .ConfigureAwait(false),
                 ExecutionMode.Python => await hostContext
                     .ExecuteAsync(() => InvokePythonTool(executor, tool, normalizedPayload), ct)
@@ -66,20 +66,40 @@ public sealed class ToolExecutionDispatcher(
         }
     }
 
-    private async Task<McpToolExecutionResult> InvokeDotnetToolAsync(McpRegisteredTool tool, string normalizedPayload)
+    private McpToolExecutionResult InvokeDotnetTool(
+        McpRegisteredTool tool,
+        string normalizedPayload,
+        CancellationToken ct)
     {
         var serverTool = GetOrCreateServerTool(tool);
         if (serverTool is null)
-            return McpToolExecutionResult.Failed(ExecutionErrorCodes.ToolNotImplemented, $"No .NET tool method mapped for '{tool.ProtocolTool.Name}'.");
+        {
+            return McpToolExecutionResult.Failed(
+                ExecutionErrorCodes.ToolNotImplemented,
+                $"No .NET tool method mapped for '{tool.ProtocolTool.Name}'.");
+        }
 
         using var doc = JsonDocument.Parse(normalizedPayload);
+
         var arguments = new Dictionary<string, JsonElement>();
         foreach (var prop in doc.RootElement.EnumerateObject())
             arguments[prop.Name] = prop.Value;
 
-        var requestParams = new CallToolRequestParams { Name = tool.ProtocolTool.Name, Arguments = arguments };
-        var requestContext = RequestContextFactory.Create(requestParams, RequestMethods.ToolsCall);
-        var result = await serverTool.InvokeAsync(requestContext, CancellationToken.None).ConfigureAwait(false);
+        var requestParams = new CallToolRequestParams
+        {
+            Name = tool.ProtocolTool.Name,
+            Arguments = arguments
+        };
+
+        var requestContext = RequestContextFactory.Create(
+            requestParams,
+            RequestMethods.ToolsCall);
+
+        var result = DotnetMcpServerFactory.GetCompletedResult(
+            serverTool.InvokeAsync(requestContext, ct),
+            "tool",
+            tool.ProtocolTool.Name);
+
         return McpToolExecutionResult.Completed(result, $"Completed '{tool.ProtocolTool.Name}'.");
     }
 

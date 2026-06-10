@@ -1,4 +1,4 @@
-namespace RevitDevTool.Core.Handlers;
+namespace RevitDevTool.Core.Dispatchers;
 
 /// <summary>Awaitable request wrapping a synchronous or async action delegate.</summary>
 internal sealed class AsyncRequest : IRevitRequest
@@ -12,20 +12,26 @@ internal sealed class AsyncRequest : IRevitRequest
     public AsyncRequest(Action<UIApplication> action, CancellationToken token = default)
     {
         _action = action;
-        RegisterCancellation(token);
+        if (token.CanBeCanceled)
+            _registration = token.Register(() => _completionSource.TrySetCanceled(token));
     }
 
     public AsyncRequest(Func<Task> asyncAction, CancellationToken token = default)
     {
         _asyncAction = asyncAction;
-        RegisterCancellation(token);
+        if (token.CanBeCanceled)
+            _registration = token.Register(() => _completionSource.TrySetCanceled(token));
     }
 
     public Task Task => _completionSource.Task;
 
     public void Execute(UIApplication uiApplication)
     {
-        if (_completionSource.Task.IsCanceled) return;
+        if (_completionSource.Task.IsCanceled)
+        {
+            DisposeRegistration();
+            return;
+        }
 
         if (_asyncAction is not null)
         {
@@ -56,18 +62,17 @@ internal sealed class AsyncRequest : IRevitRequest
             SynchronizationContext.SetSynchronizationContext(null);
             try
             {
-                _asyncAction!()
-                    .ContinueWith(t =>
-                    {
-                        if (t.IsFaulted)
-                            _completionSource.TrySetException(t.Exception!.InnerExceptions);
-                        else if (t.IsCanceled)
-                            _completionSource.TrySetCanceled();
-                        else
-                            _completionSource.TrySetResult(true);
+                _asyncAction!().ContinueWith(t =>
+                {
+                    if (t.IsFaulted)
+                        _completionSource.TrySetException(t.Exception!.InnerExceptions);
+                    else if (t.IsCanceled)
+                        _completionSource.TrySetCanceled();
+                    else
+                        _completionSource.TrySetResult(true);
 
-                        DisposeRegistration();
-                    }, TaskContinuationOptions.ExecuteSynchronously);
+                    DisposeRegistration();
+                }, TaskContinuationOptions.ExecuteSynchronously);
             }
             finally
             {
@@ -81,10 +86,10 @@ internal sealed class AsyncRequest : IRevitRequest
         }
     }
 
-    private void RegisterCancellation(CancellationToken token)
+    public void Fail(Exception exception)
     {
-        if (token.CanBeCanceled)
-            _registration = token.Register(() => _completionSource.TrySetCanceled(token));
+        _completionSource.TrySetException(exception);
+        DisposeRegistration();
     }
 
     private void DisposeRegistration()

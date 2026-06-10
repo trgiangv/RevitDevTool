@@ -8,5 +8,4 @@ public interface IHostContextExecutor
 {
     Task<T> ExecuteAsync<T>(Func<T> handler, CancellationToken token = default);
     Task ExecuteAsync(Action action, CancellationToken token = default);
-    Task<T> ExecuteAsync<T>(Func<Task<T>> asyncHandler, CancellationToken token = default);
 }

@@ -1,4 +1,4 @@
-namespace RevitDevTool.Core.Handlers;
+namespace RevitDevTool.Core.Dispatchers;
 
 /// <summary>Awaitable request wrapping a synchronous function that returns <typeparamref name="T"/>.</summary>
 internal sealed class ResultRequest<T> : IRevitRequest
@@ -19,7 +19,12 @@ internal sealed class ResultRequest<T> : IRevitRequest
 
     public void Execute(UIApplication uiApplication)
     {
-        if (_completionSource.Task.IsCanceled) return;
+        if (_completionSource.Task.IsCanceled)
+        {
+            DisposeRegistration();
+            return;
+        }
+
         try
         {
             var result = _handler(uiApplication);
@@ -33,6 +38,12 @@ internal sealed class ResultRequest<T> : IRevitRequest
         {
             DisposeRegistration();
         }
+    }
+
+    public void Fail(Exception exception)
+    {
+        _completionSource.TrySetException(exception);
+        DisposeRegistration();
     }
 
     private void DisposeRegistration()

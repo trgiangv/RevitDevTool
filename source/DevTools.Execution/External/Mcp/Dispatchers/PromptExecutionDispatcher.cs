@@ -22,13 +22,15 @@ public sealed class PromptExecutionDispatcher(
     private static readonly JsonSerializerOptions JsonOptions = McpJsonUtilities.DefaultOptions;
     private readonly ConcurrentDictionary<string, McpServerPrompt> _cachedPrompts = new(StringComparer.OrdinalIgnoreCase);
 
-    public async Task<GetPromptResult> GetPromptAsync(
+    public GetPromptResult GetPrompt(
         McpRegisteredPrompt prompt,
-        IReadOnlyDictionary<string, JsonElement>? arguments)
+        IReadOnlyDictionary<string, JsonElement>? arguments,
+        CancellationToken ct = default)
     {
+        // ReSharper disable once SwitchExpressionHandlesSomeKnownEnumValuesWithExceptionInDefault
         return prompt.Binding.SourceKind switch
         {
-            ExecutionMode.Assembly => await InvokeDotnetPromptAsync(prompt, arguments).ConfigureAwait(false),
+            ExecutionMode.Assembly => InvokeDotnetPrompt(prompt, arguments, ct),
             ExecutionMode.Python => InvokePythonPrompt(prompt, arguments),
             _ => throw new InvalidOperationException($"Unsupported prompt execution source '{prompt.Binding.SourceKind}'.")
         };
@@ -36,21 +38,32 @@ public sealed class PromptExecutionDispatcher(
 
     public void ClearCache() => _cachedPrompts.Clear();
 
-    private async Task<GetPromptResult> InvokeDotnetPromptAsync(
+    private GetPromptResult InvokeDotnetPrompt(
         McpRegisteredPrompt prompt,
-        IReadOnlyDictionary<string, JsonElement>? arguments)
+        IReadOnlyDictionary<string, JsonElement>? arguments,
+        CancellationToken ct)
     {
         var serverPrompt = GetOrCreateServerPrompt(prompt);
         if (serverPrompt is null)
-            throw new InvalidOperationException($"No .NET prompt method mapped for '{prompt.ProtocolPrompt.Name}'.");
+        {
+            throw new InvalidOperationException(
+                $"No .NET prompt method mapped for '{prompt.ProtocolPrompt.Name}'.");
+        }
 
         var requestParams = new GetPromptRequestParams
         {
             Name = prompt.ProtocolPrompt.Name,
             Arguments = arguments?.ToDictionary(kv => kv.Key, kv => kv.Value)
         };
-        var requestContext = RequestContextFactory.Create(requestParams, RequestMethods.PromptsGet);
-        return await serverPrompt.GetAsync(requestContext, CancellationToken.None).ConfigureAwait(false);
+
+        var requestContext = RequestContextFactory.Create(
+            requestParams,
+            RequestMethods.PromptsGet);
+
+        return DotnetMcpServerFactory.GetCompletedResult(
+            serverPrompt.GetAsync(requestContext, ct),
+            "prompt",
+            prompt.ProtocolPrompt.Name);
     }
 
     private McpServerPrompt? GetOrCreateServerPrompt(McpRegisteredPrompt prompt)

@@ -22,31 +22,49 @@ public sealed class ResourceExecutionDispatcher(
     private static readonly JsonSerializerOptions JsonOptions = McpJsonUtilities.DefaultOptions;
     private readonly ConcurrentDictionary<string, McpServerResource> _cachedResources = new(StringComparer.OrdinalIgnoreCase);
 
-    public async Task<ReadResourceResult> ReadResourceAsync(
+    public ReadResourceResult ReadResource(
         McpRegisteredResource resource,
-        string uri)
+        string uri,
+        CancellationToken ct = default)
     {
+        // ReSharper disable once SwitchExpressionHandlesSomeKnownEnumValuesWithExceptionInDefault
         return resource.Binding.SourceKind switch
         {
-            ExecutionMode.Assembly => await InvokeDotnetResourceAsync(resource, uri).ConfigureAwait(false),
+            ExecutionMode.Assembly => InvokeDotnetResource(resource, uri, ct),
             ExecutionMode.Python => InvokePythonResource(resource, uri),
-            _ => throw new InvalidOperationException($"Unsupported resource execution source '{resource.Binding.SourceKind}'.")
+            _ => throw new InvalidOperationException(
+                $"Unsupported resource execution source '{resource.Binding.SourceKind}'.")
         };
     }
 
     public void ClearCache() => _cachedResources.Clear();
 
-    private async Task<ReadResourceResult> InvokeDotnetResourceAsync(
+    private ReadResourceResult InvokeDotnetResource(
         McpRegisteredResource resource,
-        string uri)
+        string uri,
+        CancellationToken ct)
     {
         var serverResource = GetOrCreateServerResource(resource);
         if (serverResource is null)
-            throw new InvalidOperationException($"No .NET resource method mapped for '{resource.ProtocolResource?.Name ?? resource.ProtocolTemplate?.Name}'.");
+        {
+            throw new InvalidOperationException(
+                $"No .NET resource method mapped for '{resource.ProtocolResource?.Name ?? resource.ProtocolTemplate?.Name}'.");
+        }
 
         var requestParams = new ReadResourceRequestParams { Uri = uri };
-        var requestContext = RequestContextFactory.Create(requestParams, RequestMethods.ResourcesRead);
-        return await serverResource.ReadAsync(requestContext, CancellationToken.None).ConfigureAwait(false);
+
+        var requestContext = RequestContextFactory.Create(
+            requestParams,
+            RequestMethods.ResourcesRead);
+
+        var name = resource.ProtocolResource?.Name
+                   ?? resource.ProtocolTemplate?.Name
+                   ?? uri;
+
+        return DotnetMcpServerFactory.GetCompletedResult(
+            serverResource.ReadAsync(requestContext, ct),
+            "resource",
+            name);
     }
 
     private McpServerResource? GetOrCreateServerResource(McpRegisteredResource resource)

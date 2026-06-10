@@ -1,5 +1,4 @@
-using RevitDevTool.Core.Handlers;
-
+using RevitDevTool.Core.Dispatchers;
 namespace RevitDevTool.Core;
 
 /// <summary>
@@ -84,42 +83,5 @@ public static class RevitContextExecutor
     public static Task<T> RaiseAsync<T>(Func<T> handler, CancellationToken token = default)
     {
         return Dispatcher.InvokeAsync(handler, token);
-    }
-
-    /// <summary>
-    ///     Queues an async delegate for execution on the Revit thread and returns a
-    ///     <see cref="Task{T}"/> containing the result.
-    ///     Revit API calls must occur in the synchronous part of <paramref name="asyncHandler"/>
-    ///     before the first <see langword="await"/>.
-    /// </summary>
-    /// <typeparam name="T">Return type of <paramref name="asyncHandler"/>.</typeparam>
-    /// <param name="asyncHandler">The async delegate to execute.</param>
-    /// <param name="token">Optional cancellation token.</param>
-    /// <exception cref="System.ArgumentNullException"><paramref name="asyncHandler"/> is <see langword="null"/>.</exception>
-    public static Task<T> RaiseAsync<T>(Func<Task<T>> asyncHandler, CancellationToken token = default)
-    {
-        return Dispatcher.InvokeAsync(asyncHandler, token);
-    }
-
-    /// <inheritdoc cref="RaiseAsync{T}(Func{Task{T}}, CancellationToken)"/>
-    /// <param name="asyncHandler">
-    ///     The async delegate to execute. Receives the current <see cref="UIApplication"/>.
-    /// </param>
-    /// <param name="token">Optional cancellation token.</param>
-    public static Task<T> RaiseAsync<T>(Func<UIApplication, Task<T>> asyncHandler, CancellationToken token = default)
-    {
-        return Dispatcher.InvokeAsync(asyncHandler, token);
-    }
-
-    /// <summary>
-    ///     Queues an async action (no return value) for execution on the Revit thread.
-    ///     Revit API calls must occur before the first <see langword="await"/>.
-    /// </summary>
-    /// <param name="asyncAction">The async delegate to execute.</param>
-    /// <param name="token">Optional cancellation token.</param>
-    /// <exception cref="System.ArgumentNullException"><paramref name="asyncAction"/> is <see langword="null"/>.</exception>
-    public static Task RaiseAsync(Func<Task> asyncAction, CancellationToken token = default)
-    {
-        return Dispatcher.InvokeAsync(asyncAction, token);
     }
 }

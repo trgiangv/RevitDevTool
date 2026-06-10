@@ -13,12 +13,15 @@ public sealed class RegistryRequestHandler(
     ToolRegistryStore toolStore,
     ConnectionState state,
     IHostContextExecutor hostContext,
-    ToolExecutionDispatcher dispatcher,
+    ToolExecutionDispatcher toolDispatcher,
     PromptExecutionDispatcher promptDispatcher,
     ResourceExecutionDispatcher resourceDispatcher,
     McpToolsetContextManager toolsetContextManager)
 {
     private static readonly TimeSpan CallTimeout = TimeSpan.FromSeconds(30);
+    private const string Name = "name";
+    private const string Args = "arguments";
+    private const string Uri = "uri";
 
     public Task<BridgeMessage> HandleToolsListAsync(string id)
     {
@@ -31,7 +34,7 @@ public sealed class RegistryRequestHandler(
     public async Task<BridgeMessage> HandleToolsCallAsync(string id, JsonElement? @params)
     {
         string? toolName = null;
-        if (@params?.TryGetProperty("name", out var nameElement) == true)
+        if (@params?.TryGetProperty(Name, out var nameElement) == true)
             toolName = nameElement.GetString();
         if (string.IsNullOrWhiteSpace(toolName))
             return BridgeMessage.Error(id, "Tool name is required.");
@@ -43,7 +46,7 @@ public sealed class RegistryRequestHandler(
             return BridgeMessage.Error(id, $"Tool '{resolvedToolName}' is not registered.");
 
         var payloadJson = "{}";
-        if (@params?.TryGetProperty("arguments", out var argsElement) == true)
+        if (@params?.TryGetProperty(Args, out var argsElement) == true)
             payloadJson = argsElement.GetRawText();
 
         using var scope = state.BeginExecution(resolvedToolName);
@@ -53,7 +56,7 @@ public sealed class RegistryRequestHandler(
         try
         {
             using var cts = new CancellationTokenSource(CallTimeout);
-            result = await dispatcher.DispatchAsync(tool, payloadJson, hostContext, cts.Token)
+            result = await toolDispatcher.DispatchAsync(tool, payloadJson, hostContext, cts.Token)
                 .ConfigureAwait(false);
         }
         catch (OperationCanceledException)
@@ -86,7 +89,7 @@ public sealed class RegistryRequestHandler(
     public async Task<BridgeMessage> HandlePromptsGetAsync(string id, JsonElement? @params)
     {
         string? promptName = null;
-        if (@params?.TryGetProperty("name", out var nameElement) == true)
+        if (@params?.TryGetProperty(Name, out var nameElement) == true)
             promptName = nameElement.GetString();
         if (string.IsNullOrWhiteSpace(promptName))
             return BridgeMessage.Error(id, "Prompt name is required.");
@@ -96,7 +99,7 @@ public sealed class RegistryRequestHandler(
             return BridgeMessage.Error(id, $"Prompt '{promptName}' is not registered.");
 
         Dictionary<string, JsonElement>? arguments = null;
-        if (@params?.TryGetProperty("arguments", out var argsElement) == true)
+        if (@params?.TryGetProperty(Args, out var argsElement) == true)
             arguments = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(argsElement.GetRawText());
 
         GetPromptResult result;
@@ -104,7 +107,7 @@ public sealed class RegistryRequestHandler(
         {
             using var cts = new CancellationTokenSource(CallTimeout);
             result = await hostContext
-                .ExecuteAsync(() => promptDispatcher.GetPromptAsync(prompt, arguments), cts.Token)
+                .ExecuteAsync(() => promptDispatcher.GetPrompt(prompt, arguments), cts.Token)
                 .ConfigureAwait(false);
         }
         catch (OperationCanceledException)
@@ -135,7 +138,7 @@ public sealed class RegistryRequestHandler(
     public async Task<BridgeMessage> HandleResourcesReadAsync(string id, JsonElement? @params)
     {
         string? uri = null;
-        if (@params?.TryGetProperty("uri", out var uriElement) == true)
+        if (@params?.TryGetProperty(Uri, out var uriElement) == true)
             uri = uriElement.GetString();
         if (string.IsNullOrWhiteSpace(uri))
             return BridgeMessage.Error(id, "Resource URI is required.");
@@ -151,7 +154,7 @@ public sealed class RegistryRequestHandler(
         {
             using var cts = new CancellationTokenSource(CallTimeout);
             result = await hostContext
-                .ExecuteAsync(() => resourceDispatcher.ReadResourceAsync(resource, resolvedUri), cts.Token)
+                .ExecuteAsync(() => resourceDispatcher.ReadResource(resource, resolvedUri), cts.Token)
                 .ConfigureAwait(false);
         }
         catch (OperationCanceledException)
@@ -165,7 +168,7 @@ public sealed class RegistryRequestHandler(
 
     public void ClearCaches()
     {
-        dispatcher.ClearCache();
+        toolDispatcher.ClearCache();
         promptDispatcher.ClearCache();
         resourceDispatcher.ClearCache();
         toolsetContextManager.Clear();

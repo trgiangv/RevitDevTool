@@ -1,4 +1,4 @@
-namespace RevitDevTool.Core.Handlers;
+namespace RevitDevTool.Core.Dispatchers;
 
 /// <summary>Awaitable request wrapping an async function that returns <typeparamref name="T"/>.</summary>
 internal sealed class AsyncResultRequest<T> : IRevitRequest
@@ -24,25 +24,29 @@ internal sealed class AsyncResultRequest<T> : IRevitRequest
 
     public void Execute(UIApplication uiApplication)
     {
-        if (_completionSource.Task.IsCanceled) return;
+        if (_completionSource.Task.IsCanceled)
+        {
+            DisposeRegistration();
+            return;
+        }
+
         try
         {
             var previousContext = SynchronizationContext.Current;
             SynchronizationContext.SetSynchronizationContext(null);
             try
             {
-                _asyncHandler(uiApplication)
-                    .ContinueWith(t =>
-                    {
-                        if (t.IsFaulted)
-                            _completionSource.TrySetException(t.Exception!.InnerExceptions);
-                        else if (t.IsCanceled)
-                            _completionSource.TrySetCanceled();
-                        else
-                            _completionSource.TrySetResult(t.Result);
+                _asyncHandler(uiApplication).ContinueWith(t =>
+                {
+                    if (t.IsFaulted)
+                        _completionSource.TrySetException(t.Exception!.InnerExceptions);
+                    else if (t.IsCanceled)
+                        _completionSource.TrySetCanceled();
+                    else
+                        _completionSource.TrySetResult(t.Result);
 
-                        DisposeRegistration();
-                    }, TaskContinuationOptions.ExecuteSynchronously);
+                    DisposeRegistration();
+                }, TaskContinuationOptions.ExecuteSynchronously);
             }
             finally
             {
@@ -54,6 +58,12 @@ internal sealed class AsyncResultRequest<T> : IRevitRequest
             _completionSource.TrySetException(exception);
             DisposeRegistration();
         }
+    }
+
+    public void Fail(Exception exception)
+    {
+        _completionSource.TrySetException(exception);
+        DisposeRegistration();
     }
 
     private void DisposeRegistration()

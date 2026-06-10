@@ -10,7 +10,4 @@ public sealed class RevitHostContextExecutor : IHostContextExecutor
 
     public Task ExecuteAsync(Action action, CancellationToken token = default)
         => RevitContextExecutor.RaiseAsync(action, token);
-
-    public Task<T> ExecuteAsync<T>(Func<Task<T>> asyncHandler, CancellationToken token = default)
-        => RevitContextExecutor.RaiseAsync(asyncHandler, token);
 }
