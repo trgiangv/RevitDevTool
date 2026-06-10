@@ -10,14 +10,14 @@ internal sealed class RevitToolkitAdapter : IDispatchAdapter
 
     public async Task<T> RunAsync<T>(Func<UIApplication, T> func, CancellationToken token = default)
     {
-        var evt = new AsyncRequestExternalEvent<T>(func);
+        var evt = new AsyncRequestExternalEvent<T>(func, ExternalEventOptions.AllowDirectInvocation);
         var task = evt.RaiseAsync();
         return await WaitWithTimeout(task);
     }
 
     public async Task RunAsync(Action<UIApplication> action, CancellationToken token = default)
     {
-        var evt = new AsyncExternalEvent(action);
+        var evt = new AsyncExternalEvent(action, ExternalEventOptions.AllowDirectInvocation);
         var task = evt.RaiseAsync();
         await WaitWithTimeout(task);
     }

@@ -11,6 +11,7 @@ internal struct RequestTiming
 
     public double EnqueueUs => TicksToUs(T1 - T0);
     public double EventLoopWaitUs => TicksToUs(T2 - T1);
+    public double CallbackUs => TicksToUs(T3 - T2);
     public double CompletionUs => TicksToUs(T4 - T3);
     public double LibraryTotalUs => EnqueueUs + CompletionUs;
     public double EndToEndUs => TicksToUs(T4 - T0);
@@ -28,17 +29,19 @@ internal static class TimingStats
         if (timings.Count == 0) return $"{label}: no data";
 
         var enqueue = timings.Select(t => t.EnqueueUs).OrderBy(x => x).ToArray();
+        var eventLoop = timings.Select(t => t.EventLoopWaitUs).OrderBy(x => x).ToArray();
+        var callback = timings.Select(t => t.CallbackUs).OrderBy(x => x).ToArray();
         var completion = timings.Select(t => t.CompletionUs).OrderBy(x => x).ToArray();
         var libTotal = timings.Select(t => t.LibraryTotalUs).OrderBy(x => x).ToArray();
         var e2E = timings.Select(t => t.EndToEndUs).OrderBy(x => x).ToArray();
-        var eventLoop = timings.Select(t => t.EventLoopWaitUs).OrderBy(x => x).ToArray();
 
         return $"""
             {label} ({timings.Count} requests)
               Enqueue     : {Fmt(enqueue)}
+              Event Loop  : {Fmt(eventLoop)}
+              Callback    : {Fmt(callback)}
               Completion  : {Fmt(completion)}
               Library Tot : {Fmt(libTotal)}
-              Event Loop  : {Fmt(eventLoop)}
               End-to-End  : {Fmt(e2E)}
             """;
     }

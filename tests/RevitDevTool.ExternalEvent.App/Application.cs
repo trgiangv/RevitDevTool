@@ -18,7 +18,6 @@ public class Application : ExternalApplication
         RevitTask.Initialize(Application);
         RicaunService = new RevitTaskService(Application);
         RicaunService.Initialize();
-        HotReloadDockablePane.Register(Application);
         CreateRibbon();
     }
 
@@ -27,14 +26,6 @@ public class Application : ExternalApplication
         var panel = Application.CreatePanel("External Tools");
 
         panel.AddPushButton<ExternalEventCommand>("Execute")
-            .SetImage("/RevitDevTool.ExternalEvent.App;component/Resources/Icons/RibbonIcon16.png")
-            .SetLargeImage("/RevitDevTool.ExternalEvent.App;component/Resources/Icons/RibbonIcon32.png");
-
-        panel.AddPushButton<ShowHotReloadPaneCommand>("Hot pane")
-            .SetImage("/RevitDevTool.ExternalEvent.App;component/Resources/Icons/RibbonIcon16.png")
-            .SetLargeImage("/RevitDevTool.ExternalEvent.App;component/Resources/Icons/RibbonIcon32.png");
-
-        panel.AddPushButton<ReloadHotReloadPaneCommand>("Reload pane")
             .SetImage("/RevitDevTool.ExternalEvent.App;component/Resources/Icons/RibbonIcon16.png")
             .SetLargeImage("/RevitDevTool.ExternalEvent.App;component/Resources/Icons/RibbonIcon32.png");
     }

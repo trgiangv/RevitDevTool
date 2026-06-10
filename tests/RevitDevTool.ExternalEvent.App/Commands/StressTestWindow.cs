@@ -24,8 +24,8 @@ internal sealed class StressTestWindow : Window
         _adapters = adapters;
 
         Title = "ExternalEvent Stress Test";
-        Width = 800;
-        Height = 600;
+        Width = 900;
+        Height = 700;
         WindowStartupLocation = WindowStartupLocation.CenterScreen;
 
         var root = new DockPanel { Margin = new Thickness(8) };
@@ -53,15 +53,19 @@ internal sealed class StressTestWindow : Window
         var buttonPanel = new WrapPanel { Margin = new Thickness(0, 0, 0, 8) };
         DockPanel.SetDock(buttonPanel, Dock.Top);
 
-        AddButton(buttonPanel, "Overhead Profile", RunOverheadProfile);
+        AddButton(buttonPanel, "Overhead", RunOverheadProfile);
         AddButton(buttonPanel, "Throughput", RunThroughput);
         AddButton(buttonPanel, "Burst", RunBurst);
-        AddButton(buttonPanel, "FIFO Order", RunFifoOrder);
-        AddButton(buttonPanel, "Cancellation", RunCancellation);
-        AddButton(buttonPanel, "Mixed Workload", RunMixedWorkload);
+        AddButton(buttonPanel, "FIFO", RunFifoOrder);
+        AddButton(buttonPanel, "Cancel", RunCancellation);
+        AddButton(buttonPanel, "Errors", RunErrorPropagation);
+        AddButton(buttonPanel, "Mixed", RunMixedWorkload);
+        AddButton(buttonPanel, "GC", RunGcPressure);
+        AddButton(buttonPanel, "Re-entry", RunRapidReentry);
+        AddButton(buttonPanel, "Sustained", RunSustainedLoad);
         AddButton(buttonPanel, "Run All", RunAllTests);
 
-        var cancelBtn = new Button { Content = "Cancel", Padding = new Thickness(8, 4, 8, 4), Margin = new Thickness(4) };
+        var cancelBtn = new Button { Content = "Stop", Padding = new Thickness(8, 4, 8, 4), Margin = new Thickness(4) };
         cancelBtn.Click += (_, _) => _runner?.Cancel();
         buttonPanel.Children.Add(cancelBtn);
 
@@ -104,7 +108,7 @@ internal sealed class StressTestWindow : Window
     {
         if (!Dispatcher.CheckAccess())
         {
-            Dispatcher.Invoke(() => Log(message));
+            Dispatcher.BeginInvoke(() => Log(message));
             return;
         }
         _output.AppendText(message + Environment.NewLine);
@@ -173,6 +177,15 @@ internal sealed class StressTestWindow : Window
         }
     }
 
+    private async Task RunErrorPropagation()
+    {
+        foreach (var adapter in GetSelectedAdapters())
+        {
+            _runner = new StressTestRunner(Log);
+            await _runner.RunErrorPropagation(adapter, 50);
+        }
+    }
+
     private async Task RunMixedWorkload()
     {
         var (req, _) = GetConfig();
@@ -180,6 +193,35 @@ internal sealed class StressTestWindow : Window
         {
             _runner = new StressTestRunner(Log);
             await _runner.RunMixedWorkload(adapter, Math.Min(req, 500), 4);
+        }
+    }
+
+    private async Task RunGcPressure()
+    {
+        var (req, _) = GetConfig();
+        foreach (var adapter in GetSelectedAdapters())
+        {
+            _runner = new StressTestRunner(Log);
+            await _runner.RunGcPressure(adapter, Math.Min(req, 500));
+        }
+    }
+
+    private async Task RunRapidReentry()
+    {
+        foreach (var adapter in GetSelectedAdapters())
+        {
+            _runner = new StressTestRunner(Log);
+            await _runner.RunRapidReentry(adapter, 100);
+        }
+    }
+
+    private async Task RunSustainedLoad()
+    {
+        var (_, prod) = GetConfig();
+        foreach (var adapter in GetSelectedAdapters())
+        {
+            _runner = new StressTestRunner(Log);
+            await _runner.RunSustainedLoad(adapter, 5, prod);
         }
     }
 
