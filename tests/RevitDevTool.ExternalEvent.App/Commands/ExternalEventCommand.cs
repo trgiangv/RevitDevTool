@@ -8,15 +8,20 @@ internal class ExternalEventCommand : IExternalCommand, IExternalCommandAvailabi
 {
     public Result Execute(ExternalCommandData commandData, ref string message, ElementSet elements)
     {
-        var adapters = new List<IDispatchAdapter>
+        var dispatchers = new List<IDispatchAdapter>
         {
             new RevitDevToolAdapter(),
-            new RevitToolkitAdapter(),
+            new RicaunTaskAdapter(Application.RicaunService!),
             new RevitAsyncAdapter(),
-            new RicaunTaskAdapter(Application.RicaunService!)
         };
-        
-        var window = new StressTestWindow(adapters)
+
+        var fixedAdapters = new List<IFixedEventAdapter>
+        {
+            new NativeExternalEventAdapter(),
+            new RevitToolkitAdapter(),
+        };
+
+        var window = new StressTestWindow(dispatchers, fixedAdapters)
         {
             Owner = MainWindow.getMainWnd()
         };

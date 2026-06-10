@@ -1,40 +1,41 @@
 using Nice3point.Revit.Toolkit.External;
 namespace RevitDevTool.ExternalEvent.App.Commands.Adapters;
 
-internal sealed class RevitToolkitAdapter : IDispatchAdapter
+/// <summary>
+/// Tests RevitToolkit as designed: create the AsyncExternalEvent once with a fixed handler,
+/// reuse it via RaiseAsync(). Measures event raise/dispatch overhead only.
+/// </summary>
+internal sealed class RevitToolkitAdapter : IFixedEventAdapter
 {
     private const int TimeoutMs = 10_000;
+    private readonly AsyncExternalEvent _voidEvent;
+    private readonly SemaphoreSlim _gate = new(1, 1);
+
+    public RevitToolkitAdapter()
+    {
+        _voidEvent = new AsyncExternalEvent(_ => { }, ExternalEventOptions.AllowDirectInvocation);
+    }
 
     public string Name => "RevitToolkit";
-    public bool SupportsCancellation => false;
+    public string DispatchModel => "AsyncExternalEvent fixed-handler reuse (intended usage)";
+    public bool SupportsDirectInvocation => true;
 
-    public async Task<T> RunAsync<T>(Func<UIApplication, T> func, CancellationToken token = default)
+    public async Task RaiseAndWaitAsync(CancellationToken token = default)
     {
-        var evt = new AsyncRequestExternalEvent<T>(func, ExternalEventOptions.AllowDirectInvocation);
-        var task = evt.RaiseAsync();
-        return await WaitWithTimeout(task);
+        await _gate.WaitAsync(token);
+        try
+        {
+            var task = _voidEvent.RaiseAsync();
+            var winner = await Task.WhenAny(task, Task.Delay(TimeoutMs));
+            if (winner != task)
+                throw new TimeoutException($"RevitToolkit: event hung for {TimeoutMs}ms");
+            await task;
+        }
+        finally
+        {
+            _gate.Release();
+        }
     }
 
-    public async Task RunAsync(Action<UIApplication> action, CancellationToken token = default)
-    {
-        var evt = new AsyncExternalEvent(action, ExternalEventOptions.AllowDirectInvocation);
-        var task = evt.RaiseAsync();
-        await WaitWithTimeout(task);
-    }
-
-    private static async Task<T> WaitWithTimeout<T>(Task<T> task)
-    {
-        var winner = await Task.WhenAny(task, Task.Delay(TimeoutMs));
-        if (winner != task)
-            throw new TimeoutException($"RevitToolkit: Raise() likely returned non-Accepted (hung {TimeoutMs}ms)");
-        return await task;
-    }
-
-    private static async Task WaitWithTimeout(Task task)
-    {
-        var winner = await Task.WhenAny(task, Task.Delay(TimeoutMs));
-        if (winner != task)
-            throw new TimeoutException($"RevitToolkit: Raise() likely returned non-Accepted (hung {TimeoutMs}ms)");
-        await task;
-    }
+    public void Dispose() => _gate.Dispose();
 }

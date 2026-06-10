@@ -3,18 +3,22 @@ namespace RevitDevTool.ExternalEvent.App.Commands;
 
 internal struct RequestTiming
 {
+    /// <summary>Before enqueue / adapter call.</summary>
     public long T0;
+    /// <summary>After enqueue returned (task obtained).</summary>
     public long T1;
+    /// <summary>Callback started executing on Revit thread.</summary>
     public long T2;
+    /// <summary>Callback finished.</summary>
     public long T3;
+    /// <summary>Awaited task completed.</summary>
     public long T4;
 
     public double EnqueueUs => TicksToUs(T1 - T0);
-    public double EventLoopWaitUs => TicksToUs(T2 - T1);
+    public double WaitUs => TicksToUs(T2 - T1);
     public double CallbackUs => TicksToUs(T3 - T2);
     public double CompletionUs => TicksToUs(T4 - T3);
-    public double LibraryTotalUs => EnqueueUs + CompletionUs;
-    public double EndToEndUs => TicksToUs(T4 - T0);
+    public double TotalUs => TicksToUs(T4 - T0);
 
     private static double TicksToUs(long ticks)
     {
@@ -22,6 +26,7 @@ internal struct RequestTiming
     }
 }
 
+#if DEBUG
 internal static class TimingStats
 {
     public static string Summarize(string label, IReadOnlyList<RequestTiming> timings)
@@ -29,39 +34,35 @@ internal static class TimingStats
         if (timings.Count == 0) return $"{label}: no data";
 
         var enqueue = timings.Select(t => t.EnqueueUs).OrderBy(x => x).ToArray();
-        var eventLoop = timings.Select(t => t.EventLoopWaitUs).OrderBy(x => x).ToArray();
+        var wait = timings.Select(t => t.WaitUs).OrderBy(x => x).ToArray();
         var callback = timings.Select(t => t.CallbackUs).OrderBy(x => x).ToArray();
         var completion = timings.Select(t => t.CompletionUs).OrderBy(x => x).ToArray();
-        var libTotal = timings.Select(t => t.LibraryTotalUs).OrderBy(x => x).ToArray();
-        var e2E = timings.Select(t => t.EndToEndUs).OrderBy(x => x).ToArray();
+        var total = timings.Select(t => t.TotalUs).OrderBy(x => x).ToArray();
 
         return $"""
             {label} ({timings.Count} requests)
-              Enqueue     : {Fmt(enqueue)}
-              Event Loop  : {Fmt(eventLoop)}
-              Callback    : {Fmt(callback)}
-              Completion  : {Fmt(completion)}
-              Library Tot : {Fmt(libTotal)}
-              End-to-End  : {Fmt(e2E)}
+              Enqueue    : {PercentileStats.FromSorted(enqueue)}
+              Wait       : {PercentileStats.FromSorted(wait)}
+              Callback   : {PercentileStats.FromSorted(callback)}
+              Completion : {PercentileStats.FromSorted(completion)}
+              Total      : {PercentileStats.FromSorted(total)}
             """;
     }
 
-    private static string Fmt(double[] sorted)
+    public static (PercentileStats enqueue, PercentileStats wait, PercentileStats execution, PercentileStats total)
+        ComputeStats(IReadOnlyList<RequestTiming> timings)
     {
-        var mean = sorted.Average();
-        var median = Percentile(sorted, 50);
-        var p95 = Percentile(sorted, 95);
-        var p99 = Percentile(sorted, 99);
-        return $"mean={mean:F1}us  med={median:F1}us  p95={p95:F1}us  p99={p99:F1}us";
-    }
+        var enqueue = timings.Select(t => t.EnqueueUs).OrderBy(x => x).ToArray();
+        var wait = timings.Select(t => t.WaitUs).OrderBy(x => x).ToArray();
+        var callback = timings.Select(t => t.CallbackUs).OrderBy(x => x).ToArray();
+        var total = timings.Select(t => t.TotalUs).OrderBy(x => x).ToArray();
 
-    private static double Percentile(double[] sorted, double p)
-    {
-        var index = (p / 100.0) * (sorted.Length - 1);
-        var lower = (int)Math.Floor(index);
-        var upper = (int)Math.Ceiling(index);
-        if (lower == upper) return sorted[lower];
-        var frac = index - lower;
-        return sorted[lower] * (1 - frac) + sorted[upper] * frac;
+        return (
+            PercentileStats.FromSorted(enqueue),
+            PercentileStats.FromSorted(wait),
+            PercentileStats.FromSorted(callback),
+            PercentileStats.FromSorted(total)
+        );
     }
 }
+#endif

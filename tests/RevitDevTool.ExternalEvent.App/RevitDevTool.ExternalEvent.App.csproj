@@ -17,8 +17,8 @@
         
         <!-- Revit Platform -->
         <PackageReference Include="Nice3point.Revit.Toolkit" VersionOverride="$(RevitVersion).*"/>
-        <PackageReference Include="Revit.Async"/>
-        <PackageReference Include="ricaun.Revit.UI.Tasks"/>
+        <PackageReference Include="Revit.Async" VersionOverride="2.1.1"/>
+        <PackageReference Include="ricaun.Revit.UI.Tasks" VersionOverride="1.0.1"/>
     </ItemGroup>
 
     <ItemGroup>

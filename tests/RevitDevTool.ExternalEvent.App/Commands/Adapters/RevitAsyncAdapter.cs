@@ -7,6 +7,8 @@ internal sealed class RevitAsyncAdapter : IDispatchAdapter
 
     public string Name => "Revit.Async";
     public bool SupportsCancellation => false;
+    public bool SupportsDirectInvocation => false;
+    public string DispatchModel => "FutureExternalEvent per RunAsync call";
 
     public async Task<T> RunAsync<T>(Func<UIApplication, T> func, CancellationToken token = default)
     {

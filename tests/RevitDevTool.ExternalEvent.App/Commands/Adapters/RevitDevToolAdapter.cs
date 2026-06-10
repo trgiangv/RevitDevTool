@@ -5,6 +5,8 @@ internal sealed class RevitDevToolAdapter : IDispatchAdapter
 {
     public string Name => "RevitDevTool.Core";
     public bool SupportsCancellation => true;
+    public bool SupportsDirectInvocation => true;
+    public string DispatchModel => "Central FIFO dispatcher with batch drain";
 
     public Task<T> RunAsync<T>(Func<UIApplication, T> func, CancellationToken token = default)
     {

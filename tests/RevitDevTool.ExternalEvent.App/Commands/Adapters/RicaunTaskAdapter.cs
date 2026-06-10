@@ -12,6 +12,8 @@ internal sealed class RicaunTaskAdapter : IDispatchAdapter
 
     public string Name => "ricaun.Revit.UI.Tasks";
     public bool SupportsCancellation => true;
+    public bool SupportsDirectInvocation => false;
+    public string DispatchModel => "Idling/event-creation service";
 
     public async Task<T> RunAsync<T>(Func<UIApplication, T> func, CancellationToken token = default)
     {
