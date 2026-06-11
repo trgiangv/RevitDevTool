@@ -96,7 +96,7 @@ internal sealed class RevitDispatcher : IExternalEventHandler, IRevitDispatcher,
             }
         }
 
-        var request = new AsyncRequest(action, token);
+        var request = new ActionRequest(action, token);
         Enqueue(request);
         return request.Task;
     }
@@ -119,7 +119,7 @@ internal sealed class RevitDispatcher : IExternalEventHandler, IRevitDispatcher,
             }
         }
 
-        var request = new AsyncRequest(_ => action(), token);
+        var request = new ActionRequest(_ => action(), token);
         Enqueue(request);
         return request.Task;
     }

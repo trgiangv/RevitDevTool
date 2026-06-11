@@ -11,6 +11,13 @@ namespace RevitDevTool.Core;
 ///         when the delegate finishes on the Revit thread.
 ///     </para>
 ///     <para>
+///         The public surface is intentionally sync-only: the delegate runs inside the Revit API
+///         callback, and the returned <see cref="Task"/> only represents completion, not an
+///         extended API-context lifetime. Do not assume any continuation after an awaited external
+///         operation is still inside a valid Revit API context unless you re-enter through another
+///         dispatcher call.
+///     </para>
+///     <para>
 ///         All requests are processed <b>FIFO</b>. If the caller is already on the Revit thread
 ///         inside an API context and no requests are pending, the delegate executes synchronously
 ///         without queuing.

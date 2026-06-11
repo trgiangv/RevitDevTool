@@ -2,6 +2,12 @@
 
 public interface IRevitDispatcher
 {
+    /// <remarks>
+    ///     These methods schedule work into a Revit API callback. The returned <see cref="Task"/>
+    ///     signals completion of the scheduled delegate only; it does not extend the API-context
+    ///     boundary beyond that delegate. If the delegate performs its own awaited work, any later
+    ///     Revit API access must re-enter through another dispatcher call.
+    /// </remarks>
     /// <summary>
     /// Queues a fire-and-forget action for execution in the Revit API context.
     /// Exceptions are traced but not propagated.

@@ -1,21 +1,21 @@
 namespace RevitDevTool.Core.Dispatchers;
 
-/// <summary>Awaitable request wrapping a synchronous function that returns <typeparamref name="T"/>.</summary>
-internal sealed class ResultRequest<T> : IRevitRequest
+/// <summary>Awaitable request wrapping a synchronous Revit API action delegate.</summary>
+internal sealed class ActionRequest : IRevitRequest
 {
-    private readonly Func<UIApplication, T> _handler;
-    private readonly TaskCompletionSource<T> _completionSource =
+    private readonly Action<UIApplication> _action;
+    private readonly TaskCompletionSource<bool> _completionSource =
         new(TaskCreationOptions.RunContinuationsAsynchronously);
     private readonly CancellationTokenRegistration _registration;
 
-    public ResultRequest(Func<UIApplication, T> handler, CancellationToken token = default)
+    public ActionRequest(Action<UIApplication> action, CancellationToken token = default)
     {
-        _handler = handler;
+        _action = action;
         if (token.CanBeCanceled)
             _registration = token.Register(() => _completionSource.TrySetCanceled(token));
     }
 
-    public Task<T> Task => _completionSource.Task;
+    public Task Task => _completionSource.Task;
 
     public void Execute(UIApplication uiApplication)
     {
@@ -27,8 +27,8 @@ internal sealed class ResultRequest<T> : IRevitRequest
 
         try
         {
-            var result = _handler(uiApplication);
-            _completionSource.TrySetResult(result);
+            _action(uiApplication);
+            _completionSource.TrySetResult(true);
         }
         catch (Exception exception)
         {
