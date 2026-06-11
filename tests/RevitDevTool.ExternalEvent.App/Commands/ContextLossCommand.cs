@@ -1,3 +1,5 @@
+using TaskDialog = Autodesk.Revit.UI.TaskDialog;
+using TaskDialogIcon = Autodesk.Revit.UI.TaskDialogIcon;
 namespace RevitDevTool.ExternalEvent.App.Commands;
 
 [UsedImplicitly]
@@ -6,8 +8,6 @@ internal class ContextLossCommand : IExternalCommand
 {
     public Result Execute(ExternalCommandData commandData, ref string message, ElementSet elements)
     {
-        var contextLoss = new ContextLostRepro();
-
         var dialog = new TaskDialog("Choose Repro")
         {
             MainInstruction = "Select which repro to run:",
@@ -20,11 +20,11 @@ internal class ContextLossCommand : IExternalCommand
         var result = dialog.Show();
         if (result == TaskDialogResult.CommandLink1)
         {
-            _ = contextLoss.Safe_AsyncDelegateOverload_ReenterBeforeWrite();
+            _ = ContextLostRepro.Safe_AsyncDelegateOverload_ReenterBeforeWrite();
         }
         else if (result == TaskDialogResult.CommandLink2)
         {
-            _ = contextLoss.Unsafe_AsyncDelegateOverload_ContextLoss();
+            _ = ContextLostRepro.Unsafe_AsyncDelegateOverload_ContextLoss();
         }
         
         return Result.Succeeded;

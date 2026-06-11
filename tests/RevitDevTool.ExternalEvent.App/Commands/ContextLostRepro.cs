@@ -1,35 +1,32 @@
-using System;
-using System.Threading.Tasks;
-using Autodesk.Revit.DB;
-using Autodesk.Revit.UI;
 using Revit.Async;
 
-public class ContextLostRepro
+namespace RevitDevTool.ExternalEvent.App.Commands;
+
+public static class ContextLostRepro
 {
-    public async Task Unsafe_AsyncDelegateOverload_ContextLoss()
+    public static async Task Unsafe_AsyncDelegateOverload_ContextLoss()
     {
         // Reproduce the context loss issue in this overload:
         // RevitTask.RunAsync<TResult>(Func<UIApplication, Task<TResult>> function)
         await RevitTask.RunAsync<string>(async app =>
         {
             var doc = app.ActiveUIDocument.Document;
-            var wall = new FilteredElementCollector(doc)
-                .OfClass(typeof(Wall))
-                .WhereElementIsNotElementType()
-                .FirstElement() as Wall;
 
-            if (wall is null)
+            if (new FilteredElementCollector(doc)
+                    .OfClass(typeof(Wall))
+                    .WhereElementIsNotElementType()
+                    .FirstElement() is not Wall wall)
                 throw new InvalidOperationException("No wall found for repro.");
 
             var viewName = doc.ActiveView?.Name ?? "<null view>";
-            Console.WriteLine($"[Advanced][Thread {System.Threading.Thread.CurrentThread.ManagedThreadId}] Selected wallId={wall.Id.IntegerValue}, view={viewName}");
+            Console.WriteLine($"[Advanced][Thread {Environment.CurrentManagedThreadId}] Selected wallId={wall.Id}, view={viewName}");
             var wallId = wall.Id;
 
             // Simulate async IO inside the async delegate of this overload.
             await Task.Delay(800).ConfigureAwait(false);
             var generatedComment = $"unsafe-tag-{DateTime.UtcNow:HHmmss}";
 
-            Console.WriteLine($"[Advanced][Thread {System.Threading.Thread.CurrentThread.ManagedThreadId}] After await in async delegate. Start transaction flow.");
+            Console.WriteLine($"[Advanced][Thread {Environment.CurrentManagedThreadId}] After await in async delegate. Start transaction flow.");
 
             // If the continuation has lost API context, the transaction flow below will fail.
             using var txGroup = new TransactionGroup(doc, "Advanced Unsafe Update Group");
@@ -66,7 +63,7 @@ public class ContextLostRepro
         });
     }
 
-    public async Task Safe_AsyncDelegateOverload_ReenterBeforeWrite()
+    public static async Task Safe_AsyncDelegateOverload_ReenterBeforeWrite()
     {
         // Step 1: Capture context and target in Revit API context.
         var payload = await RevitTask.RunAsync(app =>
@@ -81,7 +78,7 @@ public class ContextLostRepro
                 throw new InvalidOperationException("No wall found for repro.");
 
             var viewName = doc.ActiveView?.Name ?? "<null view>";
-            Console.WriteLine($"[Advanced][Thread {System.Threading.Thread.CurrentThread.ManagedThreadId}] [SAFE] Selected wallId={wall.Id.IntegerValue}, view={viewName}");
+            Console.WriteLine($"[Advanced][Thread {Environment.CurrentManagedThreadId}] [SAFE] Selected wallId={wall.Id}, view={viewName}");
             return new Payload(doc, wall.Id);
         });
 
@@ -89,10 +86,10 @@ public class ContextLostRepro
         await Task.Delay(800).ConfigureAwait(false);
         var generatedComment = $"safe-tag-{DateTime.UtcNow:HHmmss}";
 
-        Console.WriteLine($"[Advanced][Thread {System.Threading.Thread.CurrentThread.ManagedThreadId}] [SAFE] Outside API context, preparing data={generatedComment}");
+        Console.WriteLine($"[Advanced][Thread {Environment.CurrentManagedThreadId}] [SAFE] Outside API context, preparing data={generatedComment}");
 
         // Step 3: Re-enter Revit API context before starting transaction.
-        await RevitTask.RunAsync<string>(app =>
+        await RevitTask.RunAsync<string>(_ =>
         {
             var doc = payload.Document;
             var wallId = payload.WallId;
@@ -127,7 +124,7 @@ public class ContextLostRepro
             }
 
             txGroup.Assimilate();
-            Console.WriteLine($"[Advanced][Thread {System.Threading.Thread.CurrentThread.ManagedThreadId}] [SAFE] Transaction flow committed.");
+            Console.WriteLine($"[Advanced][Thread {Environment.CurrentManagedThreadId}] [SAFE] Transaction flow committed.");
             return "done";
         });
     }

@@ -39,14 +39,22 @@ internal static class TimingStats
         var completion = timings.Select(t => t.CompletionUs).OrderBy(x => x).ToArray();
         var total = timings.Select(t => t.TotalUs).OrderBy(x => x).ToArray();
 
-        return $"""
-            {label} ({timings.Count} requests)
-              Enqueue    : {PercentileStats.FromSorted(enqueue)}
-              Wait       : {PercentileStats.FromSorted(wait)}
-              Callback   : {PercentileStats.FromSorted(callback)}
-              Completion : {PercentileStats.FromSorted(completion)}
-              Total      : {PercentileStats.FromSorted(total)}
-            """;
+        var sb = new System.Text.StringBuilder();
+        sb.AppendLine($"**{label}** ({timings.Count} requests)");
+        sb.AppendLine();
+        sb.AppendLine("| Phase | mean | p50 | p95 | p99 | max |");
+        sb.AppendLine("|-------|------|-----|-----|-----|-----|");
+        AppendRow(sb, "Enqueue", PercentileStats.FromSorted(enqueue));
+        AppendRow(sb, "Wait", PercentileStats.FromSorted(wait));
+        AppendRow(sb, "Callback", PercentileStats.FromSorted(callback));
+        AppendRow(sb, "Completion", PercentileStats.FromSorted(completion));
+        AppendRow(sb, "Total", PercentileStats.FromSorted(total));
+        return sb.ToString();
+    }
+
+    private static void AppendRow(System.Text.StringBuilder sb, string phase, PercentileStats s)
+    {
+        sb.AppendLine($"| {phase} | {s.Mean:F1}μs | {s.Median:F1}μs | {s.P95:F1}μs | {s.P99:F1}μs | {s.Max:F1}μs |");
     }
 
     public static (PercentileStats enqueue, PercentileStats wait, PercentileStats execution, PercentileStats total)

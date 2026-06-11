@@ -1,8 +1,9 @@
 #if DEBUG
+using System.Text;
 using System.Windows;
 using System.Windows.Controls;
+using MdXaml;
 using Button = System.Windows.Controls.Button;
-using FontFamily = System.Windows.Media.FontFamily;
 using Orientation = System.Windows.Controls.Orientation;
 using TextBox = System.Windows.Controls.TextBox;
 
@@ -11,8 +12,9 @@ namespace RevitDevTool.ExternalEvent.App.Commands;
 internal sealed class StressTestWindow : Window
 {
     private readonly IReadOnlyList<IDispatchAdapter> _dispatchers;
-    private readonly IReadOnlyList<IFixedEventAdapter> _fixedAdapters;
-    private readonly TextBox _output;
+    private readonly IReadOnlyList<IInContextEventAdapter> _inContextAdapters;
+    private readonly MarkdownScrollViewer _mdViewer;
+    private readonly StringBuilder _mdBuffer = new();
     private readonly TextBox _requestCountBox;
     private readonly TextBox _producerCountBox;
     private StressTestRunner? _runner;
@@ -20,10 +22,10 @@ internal sealed class StressTestWindow : Window
 
     public StressTestWindow(
         IReadOnlyList<IDispatchAdapter> dispatchers,
-        IReadOnlyList<IFixedEventAdapter> fixedAdapters)
+        IReadOnlyList<IInContextEventAdapter> inContextAdapters)
     {
         _dispatchers = dispatchers;
-        _fixedAdapters = fixedAdapters;
+        _inContextAdapters = inContextAdapters;
 
         Title = "ExternalEvent Benchmark";
         Width = 900;
@@ -50,6 +52,7 @@ internal sealed class StressTestWindow : Window
         suite1Panel.Children.Add(SectionLbl("Dispatcher:"));
         AddBtn(suite1Panel, "Sequential", RunSequentialLatency);
         AddBtn(suite1Panel, "Seq+Read", RunSequentialLatencyLightRead);
+        AddBtn(suite1Panel, "Seq+Tx", RunSequentialLatencyTransaction);
         AddBtn(suite1Panel, "ProducerSeq", RunProducerSequential);
         AddBtn(suite1Panel, "TrueBurst", RunTrueBurst);
         AddBtn(suite1Panel, "Sustained", RunSustainedLoad);
@@ -58,16 +61,14 @@ internal sealed class StressTestWindow : Window
         AddBtn(suite1Panel, "Cancel", RunCancellationLifecycle);
         AddBtn(suite1Panel, "Errors", RunErrorPropagation);
         AddBtn(suite1Panel, "FIFO", RunFifoOrder);
-        AddBtn(suite1Panel, "GC", RunGcPressure);
         root.Children.Add(suite1Panel);
 
         var suite2Panel = new WrapPanel { Margin = new Thickness(0, 0, 0, 2) };
         DockPanel.SetDock(suite2Panel, Dock.Top);
-        suite2Panel.Children.Add(SectionLbl("Fixed Event:"));
-        AddBtn(suite2Panel, "SeqRaise", RunFixedSequentialRaise);
-        AddBtn(suite2Panel, "DirectInvoke", RunFixedDirectInvocation);
-        AddBtn(suite2Panel, "Concurrent", RunFixedConcurrentRaise);
-        AddBtn(suite2Panel, "GC", RunFixedGcPressure);
+        suite2Panel.Children.Add(SectionLbl("In-Context:"));
+        AddBtn(suite2Panel, "SeqRaise", RunInContextSequentialRaise);
+        AddBtn(suite2Panel, "DirectInvoke", RunInContextDirectInvocation);
+        AddBtn(suite2Panel, "Concurrent", RunInContextConcurrentRaise);
         root.Children.Add(suite2Panel);
 
         var controlPanel = new WrapPanel { Margin = new Thickness(0, 0, 0, 6) };
@@ -88,22 +89,18 @@ internal sealed class StressTestWindow : Window
         controlPanel.Children.Add(stop);
 
         var clear = new Button { Content = "Clear", Padding = new Thickness(8, 4, 8, 4), Margin = new Thickness(4) };
-        clear.Click += (_, _) => _output!.Clear();
+        clear.Click += (_, _) => { _mdBuffer.Clear(); _mdViewer!.Markdown = ""; };
         controlPanel.Children.Add(clear);
 
         root.Children.Add(controlPanel);
 
-        _output = new TextBox
+        _mdViewer = new MarkdownScrollViewer
         {
-            IsReadOnly = true,
+            Markdown = "",
             VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
             HorizontalScrollBarVisibility = ScrollBarVisibility.Auto,
-            FontFamily = new FontFamily("Consolas"),
-            FontSize = 12,
-            TextWrapping = TextWrapping.NoWrap,
-            AcceptsReturn = true,
         };
-        root.Children.Add(_output);
+        root.Children.Add(_mdViewer);
 
         Content = root;
     }
@@ -137,8 +134,8 @@ internal sealed class StressTestWindow : Window
             Dispatcher.BeginInvoke(() => Log(message));
             return;
         }
-        _output.AppendText(message + Environment.NewLine);
-        _output.ScrollToEnd();
+        _mdBuffer.AppendLine(message);
+        _mdViewer.Markdown = _mdBuffer.ToString();
     }
 
     private (int requestCount, int producerCount) GetConfig()
@@ -154,113 +151,95 @@ internal sealed class StressTestWindow : Window
         return _runner;
     }
 
+    private async Task ForEachDispatcher(Func<StressTestRunner, IDispatchAdapter, Task> action)
+    {
+        var r = NewRunner();
+        foreach (var a in _dispatchers) await action(r, a);
+    }
+
+    private async Task ForEachInContext(Func<StressTestRunner, IInContextEventAdapter, Task> action)
+    {
+        var r = NewRunner();
+        foreach (var a in _inContextAdapters) await action(r, a);
+    }
+
     private async Task RunSequentialLatency()
     {
         var (req, _) = GetConfig();
-        var r = NewRunner();
-        foreach (var a in _dispatchers) await r.RunSequentialLatency(a, req);
+        await ForEachDispatcher((r, a) => r.RunSequentialLatency(a, req));
     }
 
     private async Task RunSequentialLatencyLightRead()
     {
         var (req, _) = GetConfig();
-        var r = NewRunner();
-        foreach (var a in _dispatchers)
-            await r.RunSequentialLatencyWithWorkload(a, Math.Min(req, 200), WorkloadProfile.LightRevitRead);
+        await ForEachDispatcher((r, a) => r.RunSequentialLatency(a, Math.Min(req, 200), WorkloadProfile.LightRevitRead));
+    }
+
+    private async Task RunSequentialLatencyTransaction()
+    {
+        var (req, _) = GetConfig();
+        await ForEachDispatcher((r, a) => r.RunSequentialLatency(a, Math.Min(req, 50), WorkloadProfile.TransactionRollback));
     }
 
     private async Task RunProducerSequential()
     {
         var (req, prod) = GetConfig();
-        var r = NewRunner();
-        foreach (var a in _dispatchers) await r.RunProducerSequential(a, req, prod);
+        await ForEachDispatcher((r, a) => r.RunProducerSequential(a, req, prod));
     }
 
     private async Task RunTrueBurst()
     {
         var (req, prod) = GetConfig();
-        var r = NewRunner();
-        foreach (var a in _dispatchers) await r.RunTrueBurst(a, req, Math.Min(prod * 2, 16));
+        await ForEachDispatcher((r, a) => r.RunTrueBurst(a, req, Math.Min(prod * 2, 16)));
     }
 
     private async Task RunSustainedLoad()
     {
         var (_, prod) = GetConfig();
-        var r = NewRunner();
-        foreach (var a in _dispatchers) await r.RunSustainedLoad(a, 5, prod);
+        await ForEachDispatcher((r, a) => r.RunSustainedLoad(a, 5, prod));
     }
 
     private async Task RunDirectInvocation()
     {
         var (req, _) = GetConfig();
-        var r = NewRunner();
-        foreach (var a in _dispatchers) await r.RunDirectInvocation(a, Math.Min(req, 100));
+        await ForEachDispatcher((r, a) => r.RunDirectInvocation(a, Math.Min(req, 100)));
     }
 
-    private async Task RunNestedReentry()
-    {
-        var r = NewRunner();
-        foreach (var a in _dispatchers) await r.RunNestedReentry(a, 50);
-    }
+    private async Task RunNestedReentry() =>
+        await ForEachDispatcher((r, a) => r.RunNestedReentry(a, 50));
 
-    private async Task RunCancellationLifecycle()
-    {
-        var r = NewRunner();
-        foreach (var a in _dispatchers) await r.RunCancellationLifecycle(a, 100);
-    }
+    private async Task RunCancellationLifecycle() =>
+        await ForEachDispatcher((r, a) => r.RunCancellationLifecycle(a, 100));
 
-    private async Task RunErrorPropagation()
-    {
-        var r = NewRunner();
-        foreach (var a in _dispatchers) await r.RunErrorPropagation(a, 50);
-    }
+    private async Task RunErrorPropagation() =>
+        await ForEachDispatcher((r, a) => r.RunErrorPropagation(a, 50));
 
-    private async Task RunFifoOrder()
-    {
-        var r = NewRunner();
-        foreach (var a in _dispatchers) await r.RunFifoOrder(a, 200);
-    }
+    private async Task RunFifoOrder() =>
+        await ForEachDispatcher((r, a) => r.RunFifoOrder(a, 200));
 
-    private async Task RunGcPressure()
+    private async Task RunInContextSequentialRaise()
     {
         var (req, _) = GetConfig();
-        var r = NewRunner();
-        foreach (var a in _dispatchers) await r.RunGcPressure(a, Math.Min(req, 500));
+        await ForEachInContext((r, a) => r.RunInContextSequentialRaise(a, req));
     }
 
-    private async Task RunFixedSequentialRaise()
+    private async Task RunInContextDirectInvocation()
     {
         var (req, _) = GetConfig();
-        var r = NewRunner();
-        foreach (var a in _fixedAdapters) await r.RunFixedSequentialRaise(a, req);
+        await ForEachInContext((r, a) => r.RunInContextDirectInvocation(a, Math.Min(req, 100)));
     }
 
-    private async Task RunFixedDirectInvocation()
-    {
-        var (req, _) = GetConfig();
-        var r = NewRunner();
-        foreach (var a in _fixedAdapters) await r.RunFixedDirectInvocation(a, Math.Min(req, 100));
-    }
-
-    private async Task RunFixedConcurrentRaise()
+    private async Task RunInContextConcurrentRaise()
     {
         var (req, prod) = GetConfig();
-        var r = NewRunner();
-        foreach (var a in _fixedAdapters) await r.RunFixedConcurrentRaise(a, req, Math.Min(prod * 2, 16));
-    }
-
-    private async Task RunFixedGcPressure()
-    {
-        var (req, _) = GetConfig();
-        var r = NewRunner();
-        foreach (var a in _fixedAdapters) await r.RunFixedGcPressure(a, Math.Min(req, 500));
+        await ForEachInContext((r, a) => r.RunInContextConcurrentRaise(a, req, Math.Min(prod * 2, 16)));
     }
 
     private async Task RunAllTests()
     {
         var (req, prod) = GetConfig();
         var r = NewRunner();
-        await r.RunAll(_dispatchers, _fixedAdapters, req, prod);
+        await r.RunAll(_dispatchers, _inContextAdapters, req, prod);
     }
 }
 #endif

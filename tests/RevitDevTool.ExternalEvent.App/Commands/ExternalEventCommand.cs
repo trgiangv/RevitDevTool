@@ -15,13 +15,13 @@ internal class ExternalEventCommand : IExternalCommand, IExternalCommandAvailabi
             new RevitAsyncAdapter(),
         };
 
-        var fixedAdapters = new List<IFixedEventAdapter>
+        var inContextAdapters = new List<IInContextEventAdapter>
         {
             new NativeExternalEventAdapter(),
             new RevitToolkitAdapter(),
         };
 
-        var window = new StressTestWindow(dispatchers, fixedAdapters)
+        var window = new StressTestWindow(dispatchers, inContextAdapters)
         {
             Owner = MainWindow.getMainWnd()
         };

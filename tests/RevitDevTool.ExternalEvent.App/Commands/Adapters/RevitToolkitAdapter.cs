@@ -5,16 +5,11 @@ namespace RevitDevTool.ExternalEvent.App.Commands.Adapters;
 /// Tests RevitToolkit as designed: create the AsyncExternalEvent once with a fixed handler,
 /// reuse it via RaiseAsync(). Measures event raise/dispatch overhead only.
 /// </summary>
-internal sealed class RevitToolkitAdapter : IFixedEventAdapter
+internal sealed class RevitToolkitAdapter : IInContextEventAdapter
 {
     private const int TimeoutMs = 10_000;
-    private readonly AsyncExternalEvent _voidEvent;
+    private readonly AsyncExternalEvent _voidEvent = new(_ => { }, ExternalEventOptions.AllowDirectInvocation);
     private readonly SemaphoreSlim _gate = new(1, 1);
-
-    public RevitToolkitAdapter()
-    {
-        _voidEvent = new AsyncExternalEvent(_ => { }, ExternalEventOptions.AllowDirectInvocation);
-    }
 
     public string Name => "RevitToolkit";
     public string DispatchModel => "AsyncExternalEvent fixed-handler reuse (intended usage)";
@@ -26,7 +21,7 @@ internal sealed class RevitToolkitAdapter : IFixedEventAdapter
         try
         {
             var task = _voidEvent.RaiseAsync();
-            var winner = await Task.WhenAny(task, Task.Delay(TimeoutMs));
+            var winner = await Task.WhenAny(task, Task.Delay(TimeoutMs, token));
             if (winner != task)
                 throw new TimeoutException($"RevitToolkit: event hung for {TimeoutMs}ms");
             await task;

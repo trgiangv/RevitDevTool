@@ -13,7 +13,7 @@ internal sealed class RevitAsyncAdapter : IDispatchAdapter
     public async Task<T> RunAsync<T>(Func<UIApplication, T> func, CancellationToken token = default)
     {
         var task = RevitTask.RunAsync(func);
-        var winner = await Task.WhenAny(task, Task.Delay(TimeoutMs));
+        var winner = await Task.WhenAny(task, Task.Delay(TimeoutMs, token));
         if (winner != task)
             throw new TimeoutException($"Revit.Async: request hung for {TimeoutMs}ms");
         return await task;
@@ -22,7 +22,7 @@ internal sealed class RevitAsyncAdapter : IDispatchAdapter
     public async Task RunAsync(Action<UIApplication> action, CancellationToken token = default)
     {
         var task = RevitTask.RunAsync(action);
-        var winner = await Task.WhenAny(task, Task.Delay(TimeoutMs));
+        var winner = await Task.WhenAny(task, Task.Delay(TimeoutMs, token));
         if (winner != task)
             throw new TimeoutException($"Revit.Async: request hung for {TimeoutMs}ms");
         await task;
