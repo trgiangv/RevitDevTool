@@ -22,31 +22,31 @@ public sealed class OpenModelTool(InstanceManager instanceManager) : McpServerTo
             "Host is auto-detected from extension: .rvt/.rfa → Revit, .dwg/.dxf/.dwt → AutoCAD.",
         InputSchema = JsonSerializer.SerializeToElement(new
         {
-            type = "object",
+            type = JsonSchemaTypeNames.Object,
             properties = new
             {
                 filePath = new
                 {
-                    type = "string",
+                    type = JsonSchemaTypeNames.String,
                     description = "Full path to the model file."
                 },
                 hostInstanceId = new
                 {
-                    type = "integer",
+                    type = JsonSchemaTypeNames.Integer,
                     description = "Target host process ID (when multiple instances exist)."
                 },
                 versionNumber = new
                 {
-                    type = "string",
+                    type = JsonSchemaTypeNames.String,
                     description = "Version to launch if no instance is connected."
                 },
                 languageCode = new
                 {
-                    type = "string",
+                    type = JsonSchemaTypeNames.String,
                     description = "Revit-only: UI language code (default 'ENU')."
                 }
             },
-            required = new[] { "filePath" }
+            required = new[] { McpPropertyNames.FilePath }
         })
     };
 
@@ -58,7 +58,7 @@ public sealed class OpenModelTool(InstanceManager instanceManager) : McpServerTo
     {
         var args = request.Params.Arguments ?? new Dictionary<string, JsonElement>();
 
-        var filePath = ReadString(args, "filePath");
+        var filePath = ReadString(args, McpPropertyNames.FilePath);
         if (string.IsNullOrWhiteSpace(filePath))
             return ToolHelpers.ErrorResult("filePath is required.");
         if (!File.Exists(filePath))
@@ -81,8 +81,8 @@ public sealed class OpenModelTool(InstanceManager instanceManager) : McpServerTo
         IDictionary<string, JsonElement> args,
         CancellationToken cancellationToken)
     {
-        var versionNumber = ReadString(args, "versionNumber");
-        var languageCode = ReadString(args, "languageCode");
+        var versionNumber = ReadString(args, McpPropertyNames.VersionNumber);
+        var languageCode = ReadString(args, McpPropertyNames.LanguageCode);
 
         var resolved = HostLaunchCoordinator.Resolve(
             hostApp, versionNumber, languageCode, filePath, requireVersion: false);
@@ -121,10 +121,13 @@ public sealed class OpenModelTool(InstanceManager instanceManager) : McpServerTo
     private static async Task<CallToolResult> OpenViaConnectedInstanceAsync(
         HostBridgeClient client, string filePath, CancellationToken cancellationToken)
     {
-        var callParams = JsonSerializer.SerializeToElement(new
+        var callParams = JsonSerializer.SerializeToElement(new Dictionary<string, object?>
         {
-            name = "open_document",
-            arguments = new { file_path = filePath }
+            [McpPropertyNames.Name] = "open_document",
+            [McpPropertyNames.Arguments] = new Dictionary<string, object?>
+            {
+                [McpPropertyNames.FilePath] = filePath
+            }
         });
 
         try

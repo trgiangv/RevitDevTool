@@ -65,7 +65,8 @@ public sealed partial class RoutingMcpServerResource : McpServerResource
                      ?? throw new InvalidOperationException(ToolHelpers.FormatInstanceListing(_instanceManager));
 
         var targetUri = request.Params.Uri;
-        var callParams = JsonSerializer.SerializeToElement(new { uri = targetUri });
+        var callParams = JsonSerializer.SerializeToElement(
+            new Dictionary<string, object?> { [McpPropertyNames.Uri] = targetUri });
 
         var response = await client.RequestAsync(BridgeMethods.ResourcesRead, callParams, cancellationToken)
             .ConfigureAwait(false);

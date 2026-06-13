@@ -4,19 +4,27 @@ using Microsoft.Extensions.Logging;
 using ModelContextProtocol.Server;
 using ZLogger;
 using DevTools.McpServer;
+using DevTools.McpServer.Catalog;
 using DevTools.McpServer.Tools;
 
 var loggerFactory = LoggerFactory.Create(b => b.AddZLoggerConsole(o => o.LogToStandardErrorThreshold = LogLevel.Trace));
 var instanceManagerLogger = loggerFactory.CreateLogger<InstanceManager>();
 var catalogLogger = loggerFactory.CreateLogger<CatalogService>();
 var instanceManager = new InstanceManager(instanceManagerLogger);
+var dynamicToolCatalog = new DynamicToolCatalog();
+CatalogService? activeCatalogService = null;
 
 var localTools = new McpServerTool[]
 {
     new ListHostInstancesTool(instanceManager),
     new LaunchHostTool(instanceManager),
     new ReadFileInfoTool(),
-    new OpenModelTool(instanceManager)
+    new OpenModelTool(instanceManager),
+    new ListDynamicTools(dynamicToolCatalog),
+    new CallDynamicTool(instanceManager, dynamicToolCatalog),
+    new RefreshDynamicCatalog(
+        dynamicToolCatalog,
+        _ => activeCatalogService?.RebuildCatalogAsync() ?? Task.CompletedTask)
 };
 
 var toolCollection = new McpServerPrimitiveCollection<McpServerTool>();
@@ -47,6 +55,7 @@ async Task RunStdioModeAsync()
 
     builder.Services.AddMcpServer(options =>
     {
+        options.ConfigureDynamicCatalog();
         options.ToolCollection = toolCollection;
         options.PromptCollection = promptCollection;
         options.ResourceCollection = resourceCollection;
@@ -59,7 +68,8 @@ async Task RunStdioModeAsync()
     var host = builder.Build();
     var ct = host.Services.GetRequiredService<IHostApplicationLifetime>().ApplicationStopping;
 
-    var catalogService = new CatalogService(instanceManager, toolCollection, promptCollection, resourceCollection, localTools, catalogLogger, ct);
+    var catalogService = new CatalogService(instanceManager, toolCollection, promptCollection, resourceCollection, dynamicToolCatalog, localTools, catalogLogger, ct);
+    activeCatalogService = catalogService;
     instanceManager.Changed += catalogService.RequestRefresh;
 
     var discoveryTask = Task.Run(() => instanceManager.RunDiscoveryAsync(ct), ct);
@@ -73,21 +83,18 @@ async Task RunGatewayModeAsync(string url, string? token)
     using var shutdownSignal = new GracefulShutdown();
     var ct = shutdownSignal.Token;
 
-    var catalogService = new CatalogService(instanceManager, toolCollection, promptCollection, resourceCollection, localTools, catalogLogger, ct);
+    var catalogService = new CatalogService(instanceManager, toolCollection, promptCollection, resourceCollection, dynamicToolCatalog, localTools, catalogLogger, ct);
+    activeCatalogService = catalogService;
     instanceManager.Changed += catalogService.RequestRefresh;
 
     var discoveryTask = Task.Run(() => instanceManager.RunDiscoveryAsync(ct), ct);
 
     var tunnelLogger = loggerFactory.CreateLogger<GatewayTunnelClient>();
+    var options = ToolHelpers.ConfigureGatewayOptions(toolCollection, promptCollection, resourceCollection);
     var tunnel = new GatewayTunnelClient(
         new Uri(url),
         token,
-        new McpServerOptions
-        {
-            ToolCollection = toolCollection,
-            PromptCollection = promptCollection,
-            ResourceCollection = resourceCollection
-        },
+        options,
         loggerFactory,
         tunnelLogger);
 

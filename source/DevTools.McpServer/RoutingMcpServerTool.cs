@@ -21,9 +21,9 @@ public sealed class RoutingMcpServerTool(InstanceManager instanceManager, Tool t
         if (client is null)
             return ToolHelpers.ErrorResult(ToolHelpers.FormatInstanceListing(instanceManager));
 
-        var callParamsObj = new Dictionary<string, object?> { ["name"] = ProtocolTool.Name };
+        var callParamsObj = new Dictionary<string, object?> { [McpPropertyNames.Name] = ProtocolTool.Name };
         if (cleanedArgs.Count > 0)
-            callParamsObj["arguments"] = cleanedArgs;
+            callParamsObj[McpPropertyNames.Arguments] = cleanedArgs;
 
         var callParams = JsonSerializer.SerializeToElement(callParamsObj);
         var response = await client.RequestAsync(BridgeMethods.ToolsCall, callParams, cancellationToken)
@@ -42,7 +42,7 @@ public sealed class RoutingMcpServerTool(InstanceManager instanceManager, Tool t
     {
         var instanceIdSchema = JsonSerializer.SerializeToElement(new
         {
-            type = "integer",
+            type = JsonSchemaTypeNames.Integer,
             description = "Target host process ID (use list_host_instances to find available instances)."
         });
 
@@ -51,15 +51,15 @@ public sealed class RoutingMcpServerTool(InstanceManager instanceManager, Tool t
                          ?? new Dictionary<string, JsonElement>();
 
         var propsDict = new Dictionary<string, JsonElement>();
-        if (schemaDict.TryGetValue("properties", out var propsElement) &&
+        if (schemaDict.TryGetValue(McpPropertyNames.Properties, out var propsElement) &&
             propsElement.ValueKind == JsonValueKind.Object)
         {
             propsDict = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(propsElement.GetRawText())
                         ?? new Dictionary<string, JsonElement>();
         }
 
-        propsDict["hostInstanceId"] = instanceIdSchema;
-        schemaDict["properties"] = JsonSerializer.SerializeToElement(propsDict);
+        propsDict[McpPropertyNames.HostInstanceId] = instanceIdSchema;
+        schemaDict[McpPropertyNames.Properties] = JsonSerializer.SerializeToElement(propsDict);
 
         return new Tool
         {

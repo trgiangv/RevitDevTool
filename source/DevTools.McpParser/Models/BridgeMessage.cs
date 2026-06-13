@@ -8,25 +8,25 @@ public sealed class BridgeMessage
     public const string TypeResponse = "response";
     public const string TypeNotification = "notification";
 
-    [JsonPropertyName("type")]
+    [JsonPropertyName(McpPropertyNames.Type)]
     public string Type { get; init; } = string.Empty;
 
-    [JsonPropertyName("id")]
+    [JsonPropertyName(McpPropertyNames.Id)]
     public string? Id { get; init; }
 
-    [JsonPropertyName("method")]
+    [JsonPropertyName(McpPropertyNames.Method)]
     public string? Method { get; init; }
 
-    [JsonPropertyName("params")]
+    [JsonPropertyName(McpPropertyNames.Params)]
     public JsonElement? Params { get; init; }
 
-    [JsonPropertyName("result")]
+    [JsonPropertyName(McpPropertyNames.Result)]
     public JsonElement? Result { get; init; }
 
-    [JsonPropertyName("isError")]
+    [JsonPropertyName(McpPropertyNames.IsError)]
     public bool IsError { get; init; }
 
-    [JsonPropertyName("errorMessage")]
+    [JsonPropertyName(McpPropertyNames.ErrorMessage)]
     public string? ErrorMessage { get; init; }
 
     public static BridgeMessage Request(string id, string method, JsonElement? @params = null) =>

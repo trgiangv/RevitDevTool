@@ -20,16 +20,16 @@ public sealed class OpenDocumentTool(IDocumentBridge documentBridge) : IBuiltInM
             "AutoCAD: opens .dwg/.dxf/.dwt files via DocumentManager.",
         InputSchema = JsonSerializer.SerializeToElement(new
         {
-            type = "object",
+            type = JsonSchemaTypeNames.Object,
             properties = new
             {
-                file_path = new
+                filePath = new
                 {
-                    type = "string",
+                    type = JsonSchemaTypeNames.String,
                     description = "Full path to the document file."
                 }
             },
-            required = new[] { "file_path" }
+            required = new[] { McpPropertyNames.FilePath }
         }),
         Annotations = new ToolAnnotations
         {
@@ -42,17 +42,17 @@ public sealed class OpenDocumentTool(IDocumentBridge documentBridge) : IBuiltInM
     public async Task<McpToolExecutionResult> ExecuteAsync(string payloadJson, CancellationToken ct)
     {
         using var doc = JsonDocument.Parse(payloadJson);
-        if (!doc.RootElement.TryGetProperty("file_path", out var pathElement) ||
+        if (!doc.RootElement.TryGetProperty(McpPropertyNames.FilePath, out var pathElement) ||
             pathElement.ValueKind != JsonValueKind.String)
         {
             return McpToolExecutionResult.Failed(
-                ExecutionErrorCodes.ToolInvokeFailed, "Missing required 'file_path' parameter.");
+                ExecutionErrorCodes.ToolInvokeFailed, $"Missing required '{McpPropertyNames.FilePath}' parameter.");
         }
 
         var filePath = pathElement.GetString();
         if (string.IsNullOrWhiteSpace(filePath))
             return McpToolExecutionResult.Failed(
-                ExecutionErrorCodes.ToolInvokeFailed, "file_path must not be empty.");
+                ExecutionErrorCodes.ToolInvokeFailed, $"{McpPropertyNames.FilePath} must not be empty.");
 
         if (!File.Exists(filePath))
             return McpToolExecutionResult.Failed(

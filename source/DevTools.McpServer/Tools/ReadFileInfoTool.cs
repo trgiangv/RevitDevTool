@@ -1,6 +1,7 @@
 using System.Text.Json;
 using DevTools.Logging;
 using DevTools.McpServer.AcadFileInfo;
+using DevTools.McpParser.Models;
 using DevTools.McpServer.RevitFileInfo;
 using ModelContextProtocol.Protocol;
 using ModelContextProtocol.Server;
@@ -20,16 +21,16 @@ public sealed class ReadFileInfoTool : McpServerTool
             "AutoCAD (.dwg): version, layers, blocks, document properties.",
         InputSchema = JsonSerializer.SerializeToElement(new
         {
-            type = "object",
+            type = JsonSchemaTypeNames.Object,
             properties = new
             {
                 filePath = new
                 {
-                    type = "string",
+                    type = JsonSchemaTypeNames.String,
                     description = "Full path to the file (.rvt, .rfa, .rft, .rte, .dwg)."
                 }
             },
-            required = new[] { "filePath" }
+            required = new[] { McpPropertyNames.FilePath }
         })
     };
 
@@ -40,7 +41,7 @@ public sealed class ReadFileInfoTool : McpServerTool
         CancellationToken cancellationToken = default)
     {
         string? filePath = null;
-        if (request.Params.Arguments?.TryGetValue("filePath", out var filePathElement) == true)
+        if (request.Params.Arguments?.TryGetValue(McpPropertyNames.FilePath, out var filePathElement) == true)
             filePath = filePathElement.GetString();
 
         if (string.IsNullOrWhiteSpace(filePath))
@@ -68,7 +69,7 @@ public sealed class ReadFileInfoTool : McpServerTool
                 _ => throw new NotSupportedException($"No reader for {hostApp}")
             };
 
-            var json = JsonSerializer.Serialize(info, new JsonSerializerOptions { WriteIndented = true });
+            var json = JsonSerializer.Serialize(info, ToolHelpers.IndentedJsonOptions);
             return ValueTask.FromResult(new CallToolResult
             {
                 Content = [new TextContentBlock { Text = json }]

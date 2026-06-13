@@ -1,6 +1,7 @@
 using System.Runtime.Versioning;
 using System.Text.Json;
 using DevTools.Logging;
+using DevTools.McpParser.Models;
 using DevTools.McpServer.Tools.Utils;
 using ModelContextProtocol.Protocol;
 using ModelContextProtocol.Server;
@@ -22,31 +23,31 @@ public sealed class LaunchHostTool(InstanceManager instanceManager) : McpServerT
             "AutoCAD family: always uses latest installed unless versionNumber is specified.",
         InputSchema = JsonSerializer.SerializeToElement(new
         {
-            type = "object",
+            type = JsonSchemaTypeNames.Object,
             properties = new
             {
                 hostApp = new
                 {
-                    type = "string",
+                    type = JsonSchemaTypeNames.String,
                     description = "Revit, AutoCad, Civil3D, Plant3D, AcadArch, AcadMech, AcadElec, AcadMep, AcadMap3D, Navisworks"
                 },
                 versionNumber = new
                 {
-                    type = "string",
+                    type = JsonSchemaTypeNames.String,
                     description = "Version year (e.g. '2025'). Revit auto-detects from filePath; AutoCAD defaults to latest."
                 },
                 languageCode = new
                 {
-                    type = "string",
+                    type = JsonSchemaTypeNames.String,
                     description = "Revit-only: UI language code (default 'ENU')."
                 },
                 filePath = new
                 {
-                    type = "string",
+                    type = JsonSchemaTypeNames.String,
                     description = "Model file to open at startup."
                 }
             },
-            required = new[] { "hostApp" }
+            required = new[] { McpPropertyNames.HostApp }
         })
     };
 
@@ -57,10 +58,10 @@ public sealed class LaunchHostTool(InstanceManager instanceManager) : McpServerT
         CancellationToken cancellationToken = default)
     {
         var args = request.Params.Arguments;
-        var hostApp = HostAppExtensions.ParseHostApp(ReadString(args, "hostApp"));
-        var version = ReadString(args, "versionNumber");
-        var languageCode = ReadString(args, "languageCode");
-        var filePath = ReadString(args, "filePath");
+        var hostApp = HostAppExtensions.ParseHostApp(ReadString(args, McpPropertyNames.HostApp));
+        var version = ReadString(args, McpPropertyNames.VersionNumber);
+        var languageCode = ReadString(args, McpPropertyNames.LanguageCode);
+        var filePath = ReadString(args, McpPropertyNames.FilePath);
 
         if (hostApp is null)
             return ToolHelpers.ErrorResult(

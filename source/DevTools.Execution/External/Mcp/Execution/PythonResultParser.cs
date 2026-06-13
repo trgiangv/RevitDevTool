@@ -1,4 +1,5 @@
 using System.Text.Json;
+using DevTools.McpParser.Models;
 using ModelContextProtocol.Protocol;
 namespace DevTools.Execution.External.Mcp.Execution;
 
@@ -14,7 +15,7 @@ internal static class PythonResultParser
             JsonValueKind.Null => new CallToolResult(),
             JsonValueKind.String => new CallToolResult { Content = [new TextContentBlock { Text = root.GetString() ?? string.Empty }] },
             JsonValueKind.Array => new CallToolResult { Content = ParseContentBlocks(root) },
-            JsonValueKind.Object when root.TryGetProperty("content", out var contentProp) =>
+            JsonValueKind.Object when root.TryGetProperty(McpPropertyNames.Content, out var contentProp) =>
                 new CallToolResult { Content = ParseContentBlocks(contentProp) },
             _ => new CallToolResult { Content = [new TextContentBlock { Text = resultJson }] },
         };
@@ -26,9 +27,9 @@ internal static class PythonResultParser
         foreach (var element in array.EnumerateArray())
         {
             if (element.ValueKind == JsonValueKind.Object
-                && element.TryGetProperty("type", out var typeProp)
-                && typeProp.GetString() is "text"
-                && element.TryGetProperty("text", out var textProp))
+                && element.TryGetProperty(McpPropertyNames.Type, out var typeProp)
+                && typeProp.GetString() is McpPropertyNames.Text
+                && element.TryGetProperty(McpPropertyNames.Text, out var textProp))
             {
                 blocks.Add(new TextContentBlock { Text = textProp.GetString() ?? string.Empty });
             }

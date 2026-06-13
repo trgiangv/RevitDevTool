@@ -20,4 +20,10 @@
         <ProjectReference Include="..\..\source\DevTools.McpParser\DevTools.McpParser.csproj" />
     </ItemGroup>
 
+    <ItemGroup>
+        <Compile Include="..\..\source\DevTools.McpServer\McpServerConfiguration.cs" Link="McpServerConfiguration.cs" />
+        <Compile Include="..\..\source\DevTools.McpServer\Catalog\DynamicToolCatalog.cs" Link="DynamicToolCatalog.cs" />
+        <Compile Include="..\..\source\DevTools.McpServer\Catalog\DynamicToolCatalogModels.cs" Link="DynamicToolCatalogModels.cs" />
+    </ItemGroup>
+
 </Project>

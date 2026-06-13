@@ -1,4 +1,5 @@
 using System.Text.Json;
+using DevTools.McpParser.Models;
 using ModelContextProtocol.Protocol;
 using ModelContextProtocol.Server;
 
@@ -12,7 +13,7 @@ public sealed class ListHostInstancesTool(InstanceManager instanceManager) : Mcp
         Description =
             "List connected and discovered host instances. " +
             "Returns hostApp, processId, and version for each instance.",
-        InputSchema = JsonSerializer.SerializeToElement(new { type = "object", properties = new { } })
+        InputSchema = JsonSerializer.SerializeToElement(new { type = JsonSchemaTypeNames.Object, properties = new { } })
     };
 
     public override IReadOnlyList<object> Metadata => [];
@@ -46,7 +47,7 @@ public sealed class ListHostInstancesTool(InstanceManager instanceManager) : Mcp
 
         return ValueTask.FromResult(new CallToolResult
         {
-            Content = [new TextContentBlock { Text = JsonSerializer.Serialize(result, new JsonSerializerOptions { WriteIndented = true }) }]
+            Content = [new TextContentBlock { Text = JsonSerializer.Serialize(result, ToolHelpers.IndentedJsonOptions) }]
         });
     }
 }

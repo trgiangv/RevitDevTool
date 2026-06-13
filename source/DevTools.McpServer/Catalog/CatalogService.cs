@@ -5,12 +5,13 @@ using ModelContextProtocol.Server;
 using ZLogger;
 using DevTools.McpParser.Models;
 
-namespace DevTools.McpServer;
+namespace DevTools.McpServer.Catalog;
 
 public sealed class CatalogService(InstanceManager instanceManager, 
     McpServerPrimitiveCollection<McpServerTool> toolCollection, 
     McpServerPrimitiveCollection<McpServerPrompt> promptCollection, 
     McpServerResourceCollection resourceCollection, 
+    DynamicToolCatalog dynamicToolCatalog,
     IReadOnlyList<McpServerTool> localTools, 
     ILogger<CatalogService> logger, 
     CancellationToken ct)
@@ -38,20 +39,23 @@ public sealed class CatalogService(InstanceManager instanceManager,
         }
     }
 
-    private async Task RebuildCatalogAsync()
+    public async Task RebuildCatalogAsync()
     {
         var newTools = new Dictionary<string, McpServerTool>(StringComparer.OrdinalIgnoreCase);
         var newPrompts = new Dictionary<string, McpServerPrompt>(StringComparer.OrdinalIgnoreCase);
         var newResources = new List<McpServerResource>();
+        var dynamicRegistrations = new List<DynamicToolRegistration>();
 
         foreach (var local in localTools)
             newTools[local.ProtocolTool.Name] = local;
 
         foreach (var client in instanceManager.GetClients().Where(client => client.IsConnected))
         {
-            await FetchClientPrimitivesAsync(client, newTools, newPrompts, newResources).ConfigureAwait(false);
+            await FetchClientPrimitivesAsync(client, newTools, newPrompts, newResources, dynamicRegistrations)
+                .ConfigureAwait(false);
         }
 
+        dynamicToolCatalog.ReplaceSnapshot(dynamicRegistrations);
         ApplySnapshot(toolCollection, newTools.Values);
         ApplySnapshot(promptCollection, newPrompts.Values);
         ApplySnapshot(resourceCollection, newResources);
@@ -61,11 +65,12 @@ public sealed class CatalogService(InstanceManager instanceManager,
         HostBridgeClient client,
         Dictionary<string, McpServerTool> tools,
         Dictionary<string, McpServerPrompt> prompts,
-        List<McpServerResource> resources)
+        List<McpServerResource> resources,
+        List<DynamicToolRegistration> dynamicRegistrations)
     {
         try
         {
-            await FetchToolsAsync(client, tools).ConfigureAwait(false);
+            await FetchToolsAsync(client, tools, dynamicRegistrations).ConfigureAwait(false);
             await FetchPromptsAsync(client, prompts).ConfigureAwait(false);
             await FetchResourcesAsync(client, resources).ConfigureAwait(false);
             await FetchResourceTemplatesAsync(client, resources).ConfigureAwait(false);
@@ -76,11 +81,18 @@ public sealed class CatalogService(InstanceManager instanceManager,
         }
     }
 
-    private async Task FetchToolsAsync(HostBridgeClient client, Dictionary<string, McpServerTool> tools)
+    private async Task FetchToolsAsync(
+        HostBridgeClient client,
+        Dictionary<string, McpServerTool> tools,
+        List<DynamicToolRegistration> dynamicRegistrations)
     {
         var response = await client.RequestAsync(BridgeMethods.ToolsList, ct: ct).ConfigureAwait(false);
         foreach (var tool in DeserializeResult<Tool>(response))
+        {
             tools.TryAdd(tool.Name, new RoutingMcpServerTool(instanceManager, tool));
+            if (client.Info is not null)
+                dynamicRegistrations.Add(new DynamicToolRegistration(tool, client.Info, client.PipeName));
+        }
     }
 
     private async Task FetchPromptsAsync(HostBridgeClient client, Dictionary<string, McpServerPrompt> prompts)

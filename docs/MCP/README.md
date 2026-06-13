@@ -60,6 +60,7 @@ The standalone MCP server owns MCP protocol routing and host instance selection.
 `source/DevTools.McpParser/` contains shared bridge and registry contracts:
 
 - `Models/BridgeMessage.cs`, `BridgeMethods.cs`, `BridgePipeConnection.cs`
+- `Models/Constants.cs` — canonical bridge payload, MCP argument, content, and JSON Schema property names, JSON Schema type and MCP content type values
 - `Models/McpRegisteredTool.cs`, `McpRegisteredPrompt.cs`, `McpRegisteredResource.cs`
 - `Models/McpRegistryCatalog.cs`
 - `Dotnet/DotnetMcpAssemblyParser.cs`
@@ -67,6 +68,9 @@ The standalone MCP server owns MCP protocol routing and host instance selection.
 - `RequestContextFactory.cs`
 
 This library is shared by the standalone MCP server, in-host runtime, and tests.
+Wire-format property names shared by host and server belong in `McpPropertyNames`; do not duplicate them in
+`DevTools.Execution` or `DevTools.McpServer`.
+Shared C# MCP tool arguments use camelCase consistently; for example, document-opening tools use `filePath`.
 
 ---
 
@@ -125,10 +129,21 @@ Dispatchers split by primitive:
 `source/DevTools.McpServer/` contains:
 
 - `Program.cs` — MCP stdio server entry, tool/prompt/resource routing
-- `CatalogService.cs` — aggregates tool catalogs from connected hosts
+- `Catalog/` — per-instance dynamic catalog models, store, projections, and aggregation service
+- `McpServerConfiguration.cs` — MCP capability configuration
+- `McpJson.cs` — shared JSON serialization options
 - `InstanceManager.cs` — discovers host pipes, manages `HostBridgeClient` connections
 - `HostBridgeClient.cs` — generic named-pipe client (formerly `RevitBridgeClient`)
 - Routing primitives: `RoutingMcpServerTool`, `RoutingMcpServerPrompt`, `RoutingMcpServerResource`
+
+The standalone server advertises `listChanged` capabilities for tools, prompts, and resources. When host discovery or
+registry changes rebuild the dynamic catalog, the MCP SDK emits the corresponding list-changed notifications so clients
+can refresh cached primitives.
+
+Dynamic registrations are tracked per host instance using the `InstanceInfo` returned by that instance. A tool registered
+in one Revit process is not assumed to exist in another Revit process, and tools with the same name can coexist across
+Revit, AutoCAD-family, and future hosts. Host application identity belongs to the instance registration rather than the
+individual tool definition.
 
 ### Built-in Standalone Tools
 
@@ -140,6 +155,9 @@ Registered in `source/DevTools.McpServer/Program.cs`:
 | `launch_host` | Revit + AutoCAD family | Launches host with optional file path; supports AutoCad, Civil3D, Plant3D, etc. |
 | `read_file_info` | Revit (RVT/RFA) + AutoCAD (DWG) | Offline metadata reader via compound-file and ACadSharp |
 | `open_model` | Multi-host | Extension-based host detection; on a connected instance routes `open_document` via pipe; on cold start launches host with file as CLI arg |
+| `list_dynamic_tools` | All hosts | Lists dynamic tools and every host instance currently providing each tool |
+| `call_dynamic_tool` | All hosts | Calls a dynamic tool only on an instance that registered it |
+| `refresh_dynamic_catalog` | All hosts | Queries connected instances again and returns the refreshed per-instance catalog |
 
 ### Built-in In-Host Tools
 

@@ -19,19 +19,19 @@ public sealed class CSharpCodeTool(CSharpCodeExecutor executor) : IBuiltInMcpToo
             "Host API assemblies are auto-referenced. Use #r for extras, #r \"nuget:\" for packages.",
         InputSchema = JsonSerializer.SerializeToElement(new
         {
-            type = "object",
+            type = JsonSchemaTypeNames.Object,
             properties = new
             {
                 code = new
                 {
-                    type = "string",
+                    type = JsonSchemaTypeNames.String,
                     description =
                         "C# code with a host command class. " +
                         "Revit: IExternalCommand (output via 'message' ref param). " +
                         "AutoCAD: [CommandMethod]. Host assemblies auto-referenced. #r for extras."
                 }
             },
-            required = new[] { "code" }
+            required = new[] { McpPropertyNames.Code }
         }),
         Annotations = new ToolAnnotations
         {
@@ -45,7 +45,7 @@ public sealed class CSharpCodeTool(CSharpCodeExecutor executor) : IBuiltInMcpToo
         string payloadJson, CancellationToken ct)
     {
         using var doc = JsonDocument.Parse(payloadJson);
-        if (!doc.RootElement.TryGetProperty("code", out var codeElement) ||
+        if (!doc.RootElement.TryGetProperty(McpPropertyNames.Code, out var codeElement) ||
             codeElement.ValueKind != JsonValueKind.String)
         {
             return McpToolExecutionResult.Failed(

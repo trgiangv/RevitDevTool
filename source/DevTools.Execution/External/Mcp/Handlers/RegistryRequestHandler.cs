@@ -19,10 +19,6 @@ public sealed class RegistryRequestHandler(
     McpToolsetContextManager toolsetContextManager)
 {
     private static readonly TimeSpan CallTimeout = TimeSpan.FromSeconds(30);
-    private const string Name = "name";
-    private const string Args = "arguments";
-    private const string Uri = "uri";
-
     public Task<BridgeMessage> HandleToolsListAsync(string id)
     {
         toolStore.EnsureLoaded();
@@ -34,7 +30,7 @@ public sealed class RegistryRequestHandler(
     public async Task<BridgeMessage> HandleToolsCallAsync(string id, JsonElement? @params)
     {
         string? toolName = null;
-        if (@params?.TryGetProperty(Name, out var nameElement) == true)
+        if (@params?.TryGetProperty(McpPropertyNames.Name, out var nameElement) == true)
             toolName = nameElement.GetString();
         if (string.IsNullOrWhiteSpace(toolName))
             return BridgeMessage.Error(id, "Tool name is required.");
@@ -46,7 +42,7 @@ public sealed class RegistryRequestHandler(
             return BridgeMessage.Error(id, $"Tool '{resolvedToolName}' is not registered.");
 
         var payloadJson = "{}";
-        if (@params?.TryGetProperty(Args, out var argsElement) == true)
+        if (@params?.TryGetProperty(McpPropertyNames.Arguments, out var argsElement) == true)
             payloadJson = argsElement.GetRawText();
 
         using var scope = state.BeginExecution(resolvedToolName);
@@ -89,7 +85,7 @@ public sealed class RegistryRequestHandler(
     public async Task<BridgeMessage> HandlePromptsGetAsync(string id, JsonElement? @params)
     {
         string? promptName = null;
-        if (@params?.TryGetProperty(Name, out var nameElement) == true)
+        if (@params?.TryGetProperty(McpPropertyNames.Name, out var nameElement) == true)
             promptName = nameElement.GetString();
         if (string.IsNullOrWhiteSpace(promptName))
             return BridgeMessage.Error(id, "Prompt name is required.");
@@ -99,7 +95,7 @@ public sealed class RegistryRequestHandler(
             return BridgeMessage.Error(id, $"Prompt '{promptName}' is not registered.");
 
         Dictionary<string, JsonElement>? arguments = null;
-        if (@params?.TryGetProperty(Args, out var argsElement) == true)
+        if (@params?.TryGetProperty(McpPropertyNames.Arguments, out var argsElement) == true)
             arguments = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(argsElement.GetRawText());
 
         GetPromptResult result;
@@ -138,7 +134,7 @@ public sealed class RegistryRequestHandler(
     public async Task<BridgeMessage> HandleResourcesReadAsync(string id, JsonElement? @params)
     {
         string? uri = null;
-        if (@params?.TryGetProperty(Uri, out var uriElement) == true)
+        if (@params?.TryGetProperty(McpPropertyNames.Uri, out var uriElement) == true)
             uri = uriElement.GetString();
         if (string.IsNullOrWhiteSpace(uri))
             return BridgeMessage.Error(id, "Resource URI is required.");

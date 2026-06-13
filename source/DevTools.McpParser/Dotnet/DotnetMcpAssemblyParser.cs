@@ -298,10 +298,10 @@ public static class DotnetMcpAssemblyParser
         foreach (var p in parameters)
         {
             var schemaType = MapParameterTypeToJsonSchema(p.ParameterType);
-            var prop = new JsonObject { ["type"] = schemaType };
+            var prop = new JsonObject { [McpPropertyNames.Type] = schemaType };
             var desc = ReadDescription(p.CustomAttributes);
             if (!string.IsNullOrWhiteSpace(desc))
-                prop["description"] = desc;
+                prop[McpPropertyNames.Description] = desc;
 
             properties[p.Name ?? "arg"] = prop;
             if (p is { HasDefaultValue: false, IsOptional: false })
@@ -310,23 +310,23 @@ public static class DotnetMcpAssemblyParser
 
         var schema = new JsonObject
         {
-            ["type"] = "object",
-            ["properties"] = properties,
+            [McpPropertyNames.Type] = JsonSchemaTypeNames.Object,
+            [McpPropertyNames.Properties] = properties,
         };
         if (required.Count > 0)
-            schema["required"] = required;
+            schema[McpPropertyNames.Required] = required;
 
         return JsonSerializer.SerializeToElement(schema);
     }
 
     private static readonly Dictionary<string, string> JsonSchemaTypeMap = new(StringComparer.Ordinal)
     {
-        [typeof(string).FullName!] = "string",
-        [typeof(int).FullName!] = "integer",
-        [typeof(long).FullName!] = "integer",
-        [typeof(double).FullName!] = "number",
-        [typeof(float).FullName!] = "number",
-        [typeof(bool).FullName!] = "boolean",
+        [typeof(string).FullName!] = JsonSchemaTypeNames.String,
+        [typeof(int).FullName!] = JsonSchemaTypeNames.Integer,
+        [typeof(long).FullName!] = JsonSchemaTypeNames.Integer,
+        [typeof(double).FullName!] = JsonSchemaTypeNames.Number,
+        [typeof(float).FullName!] = JsonSchemaTypeNames.Number,
+        [typeof(bool).FullName!] = JsonSchemaTypeNames.Boolean,
     };
 
     private static string MapParameterTypeToJsonSchema(Type parameterType)
@@ -335,10 +335,10 @@ public static class DotnetMcpAssemblyParser
         {
             var fullName = parameterType.FullName ?? parameterType.Name;
             if (!parameterType.IsGenericType || parameterType.GetGenericArguments().Length <= 0) 
-                return JsonSchemaTypeMap.GetValueOrDefault(fullName, "string");
+                return JsonSchemaTypeMap.GetValueOrDefault(fullName, JsonSchemaTypeNames.String);
             var genericDefFullName = parameterType.GetGenericTypeDefinition().FullName;
             if (!string.Equals(genericDefFullName, NullableGenericFullName, StringComparison.Ordinal)) 
-                return JsonSchemaTypeMap.GetValueOrDefault(fullName, "string");
+                return JsonSchemaTypeMap.GetValueOrDefault(fullName, JsonSchemaTypeNames.String);
             parameterType = parameterType.GetGenericArguments()[0];
         }
     }
