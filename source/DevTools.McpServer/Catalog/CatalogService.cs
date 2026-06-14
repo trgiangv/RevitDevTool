@@ -39,8 +39,11 @@ public sealed class CatalogService(InstanceManager instanceManager,
         }
     }
 
-    public async Task RebuildCatalogAsync()
+    public async Task RebuildCatalogAsync(CancellationToken cancellationToken = default)
     {
+        var linked = CancellationTokenSource.CreateLinkedTokenSource(ct, cancellationToken);
+        var token = linked.Token;
+
         var newTools = new Dictionary<string, McpServerTool>(StringComparer.OrdinalIgnoreCase);
         var newPrompts = new Dictionary<string, McpServerPrompt>(StringComparer.OrdinalIgnoreCase);
         var newResources = new List<McpServerResource>();
@@ -51,7 +54,8 @@ public sealed class CatalogService(InstanceManager instanceManager,
 
         foreach (var client in instanceManager.GetClients().Where(client => client.IsConnected))
         {
-            await FetchClientPrimitivesAsync(client, newTools, newPrompts, newResources, dynamicRegistrations)
+            token.ThrowIfCancellationRequested();
+            await FetchClientPrimitivesAsync(client, newTools, newPrompts, newResources, dynamicRegistrations, token)
                 .ConfigureAwait(false);
         }
 
@@ -66,14 +70,15 @@ public sealed class CatalogService(InstanceManager instanceManager,
         Dictionary<string, McpServerTool> tools,
         Dictionary<string, McpServerPrompt> prompts,
         List<McpServerResource> resources,
-        List<DynamicToolRegistration> dynamicRegistrations)
+        List<DynamicToolRegistration> dynamicRegistrations,
+        CancellationToken token)
     {
         try
         {
-            await FetchToolsAsync(client, tools, dynamicRegistrations).ConfigureAwait(false);
-            await FetchPromptsAsync(client, prompts).ConfigureAwait(false);
-            await FetchResourcesAsync(client, resources).ConfigureAwait(false);
-            await FetchResourceTemplatesAsync(client, resources).ConfigureAwait(false);
+            await FetchToolsAsync(client, tools, dynamicRegistrations, token).ConfigureAwait(false);
+            await FetchPromptsAsync(client, prompts, token).ConfigureAwait(false);
+            await FetchResourcesAsync(client, resources, token).ConfigureAwait(false);
+            await FetchResourceTemplatesAsync(client, resources, token).ConfigureAwait(false);
         }
         catch (Exception ex)
         {
@@ -84,9 +89,10 @@ public sealed class CatalogService(InstanceManager instanceManager,
     private async Task FetchToolsAsync(
         HostBridgeClient client,
         Dictionary<string, McpServerTool> tools,
-        List<DynamicToolRegistration> dynamicRegistrations)
+        List<DynamicToolRegistration> dynamicRegistrations,
+        CancellationToken token)
     {
-        var response = await client.RequestAsync(BridgeMethods.ToolsList, ct: ct).ConfigureAwait(false);
+        var response = await client.RequestAsync(BridgeMethods.ToolsList, ct: token).ConfigureAwait(false);
         foreach (var tool in DeserializeResult<Tool>(response))
         {
             tools.TryAdd(tool.Name, new RoutingMcpServerTool(instanceManager, tool));
@@ -95,22 +101,22 @@ public sealed class CatalogService(InstanceManager instanceManager,
         }
     }
 
-    private async Task FetchPromptsAsync(HostBridgeClient client, Dictionary<string, McpServerPrompt> prompts)
+    private async Task FetchPromptsAsync(HostBridgeClient client, Dictionary<string, McpServerPrompt> prompts, CancellationToken token)
     {
-        var response = await client.RequestAsync(BridgeMethods.PromptsList, ct: ct).ConfigureAwait(false);
+        var response = await client.RequestAsync(BridgeMethods.PromptsList, ct: token).ConfigureAwait(false);
         foreach (var prompt in DeserializeResult<Prompt>(response))
             prompts.TryAdd(prompt.Name, new RoutingMcpServerPrompt(instanceManager, prompt));
     }
 
-    private async Task FetchResourcesAsync(HostBridgeClient client, List<McpServerResource> resources)
+    private async Task FetchResourcesAsync(HostBridgeClient client, List<McpServerResource> resources, CancellationToken token)
     {
-        var response = await client.RequestAsync(BridgeMethods.ResourcesList, ct: ct).ConfigureAwait(false);
+        var response = await client.RequestAsync(BridgeMethods.ResourcesList, ct: token).ConfigureAwait(false);
         resources.AddRange(DeserializeResult<Resource>(response).Select(resource => new RoutingMcpServerResource(instanceManager, resource, null)));
     }
 
-    private async Task FetchResourceTemplatesAsync(HostBridgeClient client, List<McpServerResource> resources)
+    private async Task FetchResourceTemplatesAsync(HostBridgeClient client, List<McpServerResource> resources, CancellationToken token)
     {
-        var response = await client.RequestAsync(BridgeMethods.ResourceTemplatesList, ct: ct).ConfigureAwait(false);
+        var response = await client.RequestAsync(BridgeMethods.ResourceTemplatesList, ct: token).ConfigureAwait(false);
         resources.AddRange(DeserializeResult<ResourceTemplate>(response).Select(template => new RoutingMcpServerResource(instanceManager, null, template)));
     }
 

@@ -1,10 +1,10 @@
 # MCP Integration Architecture
 
-Model Context Protocol integration lets external AI clients (Claude Desktop, Cursor, etc.) talk to running host applications through a standalone MCP server and the in-host named-pipe runtime.
+Model Context Protocol integration lets external AI clients (Claude Desktop, Cursor, ChatGPT, Perplexity, etc.) talk to running host applications through a standalone MCP server and the in-host named-pipe runtime.
 
 The entire MCP stack is designed to be host-agnostic. The standalone `MCPServer.exe` discovers and connects to any host pipe (`Revit_*`, `AutoCad_*`, `Civil3D_*`, etc.) via generic `HostBridgeClient`. The in-host runtime in `DevTools.Execution` uses `IHostAppInfo` and host adapters. Built-in standalone tools now support both Revit and AutoCAD-family products (launch, file info, instance discovery).
 
-Last updated: 2026-05-31
+Last updated: 2026-06-14
 
 ---
 
@@ -14,10 +14,74 @@ Last updated: 2026-05-31
 |------|------|
 | Parser/contracts | `source/DevTools.McpParser/` |
 | Standalone MCP server | `source/DevTools.McpServer/` |
+| Hosting modes | `source/DevTools.McpServer/Hosting/` |
+| Catalog service | `source/DevTools.McpServer/Catalog/` |
+| Built-in tools | `source/DevTools.McpServer/Tools/` |
 | In-host runtime | `source/DevTools.Execution/External/Mcp/` |
 | Pipe server | `source/DevTools.Execution/External/DevToolsPipeServer.cs` |
 | Registry UI | `source/DevTools.Presentation/ViewModels/McpRegistryViewModel.cs` |
 | Python parser script | `source/DevTools.Execution/Resources/scripts/ToolParser.py` |
+| Gateway relay (Deno) | `source/DevTools.McpGateway/` (separate repo) |
+
+---
+
+## Transport Modes
+
+MCPServer.exe supports two transport modes, selected by CLI args:
+
+```mermaid
+flowchart LR
+    subgraph Stdio Mode
+        Client1["MCP client<br/>Claude Desktop / Cursor"]
+        Server1["MCPServer.exe<br/>stdin/stdout"]
+        Client1 <-->|stdio| Server1
+    end
+
+    subgraph Gateway Mode
+        Client2["AI client<br/>ChatGPT / Perplexity"]
+        Gateway["Gateway relay<br/>Deno Deploy / VPS"]
+        Server2["MCPServer.exe<br/>--gateway wss://..."]
+        Client2 -->|"POST /mcp<br/>Streamable HTTP"| Gateway
+        Gateway <-->|"WebSocket<br/>NDJSON frames"| Server2
+    end
+```
+
+| Mode | Trigger | Transport | Use case |
+|------|---------|-----------|----------|
+| **Stdio** | No `--gateway` arg | stdin/stdout | Local MCP clients (Claude Desktop, Cursor, VS Code) |
+| **Gateway** | `--gateway <url> --token <secret>` | Outbound WebSocket to relay | Remote AI clients (ChatGPT, Perplexity) |
+
+### Stdio Mode (`StdioMode.cs`)
+
+Standard MCP transport. Uses `Microsoft.Extensions.Hosting` + `WithStdioServerTransport()`. Lifecycle managed by `IHostApplicationLifetime`.
+
+### Gateway Mode (`GatewayMode.cs` + `GatewayTunnelClient.cs`)
+
+Outbound WebSocket connection to a remote gateway relay:
+
+1. `GatewayTunnelClient` connects to `wss://<gateway>/tunnel` with Bearer token
+2. Wraps WebSocket frames as NDJSON streams via custom `WebSocketReadStream` / `WebSocketWriteStream`
+3. Creates a `StreamServerTransport` fed by those streams
+4. Runs full MCP server over that transport
+5. Auto-reconnects with exponential backoff (1s → 15s max) on failure
+
+```mermaid
+sequenceDiagram
+    participant MCP as MCPServer.exe
+    participant GW as Gateway Relay
+    participant AI as AI Client
+
+    MCP->>GW: WebSocket connect (Bearer TUNNEL_TOKEN)
+    GW-->>MCP: 101 Upgrade
+
+    AI->>GW: POST /mcp {initialize} (Bearer CLIENT_TOKEN)
+    GW->>MCP: WS text frame (compact JSON)
+    MCP-->>GW: WS text frame (response)
+    GW-->>AI: HTTP 200 {result}
+
+    Note over MCP,GW: KeepAlive ping every 15s
+    Note over MCP,GW: Auto-reconnect on disconnect
+```
 
 ---
 
@@ -25,17 +89,17 @@ Last updated: 2026-05-31
 
 ```mermaid
 flowchart TB
-    Client["MCP client\nClaude Desktop / Cursor"]
-    Server["DevTools.McpServer\nstandalone MCPServer.exe"]
-    Discovery["InstanceManager\nscan \\.\pipe\\ for host pipes"]
+    Client["MCP client<br/>Claude Desktop / Cursor / ChatGPT"]
+    Server["DevTools.McpServer<br/>standalone MCPServer.exe"]
+    Discovery["InstanceManager<br/>scan \\.\pipe\\ for host pipes"]
 
     subgraph hosts["Host processes"]
-        RevitPipe["DevToolsPipeServer\nRevit_2025_pid"]
-        AcadPipe["DevToolsPipeServer\nAutoCad_2026_pid"]
+        RevitPipe["DevToolsPipeServer<br/>Revit_2025_pid"]
+        AcadPipe["DevToolsPipeServer<br/>AutoCad_2026_pid"]
     end
 
     Registry["ToolRegistryStore"]
-    Providers["DotnetToolRegistryProvider\nPythonToolRegistryProvider"]
+    Providers["DotnetToolRegistryProvider<br/>PythonToolRegistryProvider"]
     Dispatch["Tool/Prompt/Resource dispatchers"]
     Host["Host context + Python executor"]
 
@@ -128,13 +192,20 @@ Dispatchers split by primitive:
 
 `source/DevTools.McpServer/` contains:
 
-- `Program.cs` — MCP stdio server entry, tool/prompt/resource routing
-- `Catalog/` — per-instance dynamic catalog models, store, projections, and aggregation service
-- `McpServerConfiguration.cs` — MCP capability configuration
-- `McpJson.cs` — shared JSON serialization options
-- `InstanceManager.cs` — discovers host pipes, manages `HostBridgeClient` connections
-- `HostBridgeClient.cs` — generic named-pipe client (formerly `RevitBridgeClient`)
-- Routing primitives: `RoutingMcpServerTool`, `RoutingMcpServerPrompt`, `RoutingMcpServerResource`
+| File/Folder | Role |
+|-------------|------|
+| `Program.cs` | Entry point — bootstrap, arg parsing, mode dispatch |
+| `Hosting/StdioMode.cs` | Stdio transport mode via `Microsoft.Extensions.Hosting` |
+| `Hosting/GatewayMode.cs` | Gateway transport mode — CatalogService + tunnel |
+| `Hosting/GatewayTunnelClient.cs` | WebSocket tunnel with auto-reconnect, custom stream adapters |
+| `Hosting/GracefulShutdown.cs` | Ctrl+C → CancellationToken for Gateway mode |
+| `Catalog/CatalogService.cs` | Aggregates tools/prompts/resources from all host instances |
+| `Catalog/DynamicToolCatalog.cs` | Per-instance dynamic tool registry + snapshot |
+| `InstanceManager.cs` | Discovers host pipes, manages `HostBridgeClient` connections |
+| `HostBridgeClient.cs` | Generic named-pipe client |
+| `ToolHelpers.cs` | Shared utilities (error result, client resolution, options config) |
+| `RoutingMcpServerTool/Prompt/Resource` | Routing wrappers that dispatch to correct host instance |
+| `Tools/` | Built-in tool implementations |
 
 The standalone server advertises `listChanged` capabilities for tools, prompts, and resources. When host discovery or
 registry changes rebuild the dynamic catalog, the MCP SDK emits the corresponding list-changed notifications so clients
@@ -172,6 +243,18 @@ Registered in `source/DevTools.Execution/External/Mcp/BuiltIn/`:
 
 - No shipped AutoCAD MCP toolset equivalent to `Samples/RevitMcpToolSet/`
 - Navisworks listed in enums but launch returns "not yet supported"
+
+---
+
+## CLI Usage
+
+```bash
+# Stdio mode (default) — for local MCP clients
+MCPServer.exe
+
+# Gateway mode — connects to remote relay for ChatGPT/Perplexity
+MCPServer.exe --gateway wss://mcpgateway.example.com/tunnel --token <TUNNEL_TOKEN>
+```
 
 ---
 
