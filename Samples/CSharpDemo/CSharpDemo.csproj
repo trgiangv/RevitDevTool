@@ -7,8 +7,6 @@
 
     <ItemGroup>
         <PackageReference Include="Nice3point.Revit.Toolkit" VersionOverride="$(RevitVersion).*"/>
-        <PackageReference Include="Revit.Async"/>
-        <PackageReference Include="ricaun.Revit.UI.Tasks"/>
         <PackageReference Include="ILRepack"/>
     </ItemGroup>
     

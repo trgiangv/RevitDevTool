@@ -37,6 +37,9 @@ pytest_cache/
 openspec/
 .gitnexus/
 .claude/
+.serena/
+artifacts/
+superpowers/
 
 # Code signing
 *.pfx

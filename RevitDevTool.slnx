@@ -1,321 +1,307 @@
 <Solution>
     <Configurations>
-        <BuildType Name="Debug.Autodesk.2022" />
-        <BuildType Name="Debug.Autodesk.2023" />
-        <BuildType Name="Debug.Autodesk.2024" />
-        <BuildType Name="Debug.Autodesk.2025" />
-        <BuildType Name="Debug.Autodesk.2026" />
-        <BuildType Name="Debug.Autodesk.2027" />
-        <BuildType Name="Release.Autodesk.2022" />
-        <BuildType Name="Release.Autodesk.2023" />
-        <BuildType Name="Release.Autodesk.2024" />
-        <BuildType Name="Release.Autodesk.2025" />
-        <BuildType Name="Release.Autodesk.2026" />
-        <BuildType Name="Release.Autodesk.2027" />
-        <Platform Name="Any CPU" />
+        <BuildType Name="Debug.Autodesk.2022"/>
+        <BuildType Name="Debug.Autodesk.2023"/>
+        <BuildType Name="Debug.Autodesk.2024"/>
+        <BuildType Name="Debug.Autodesk.2025"/>
+        <BuildType Name="Debug.Autodesk.2026"/>
+        <BuildType Name="Debug.Autodesk.2027"/>
+        <BuildType Name="Release.Autodesk.2022"/>
+        <BuildType Name="Release.Autodesk.2023"/>
+        <BuildType Name="Release.Autodesk.2024"/>
+        <BuildType Name="Release.Autodesk.2025"/>
+        <BuildType Name="Release.Autodesk.2026"/>
+        <BuildType Name="Release.Autodesk.2027"/>
+        <Platform Name="Any CPU"/>
     </Configurations>
     <Folder Name="/Automation/">
         <Project Path="build/Build.csproj">
-            <BuildType Solution="Debug.Autodesk.2022|Any CPU" Project="Debug" />
-            <BuildType Solution="Debug.Autodesk.2023|Any CPU" Project="Debug" />
-            <BuildType Solution="Debug.Autodesk.2024|Any CPU" Project="Debug" />
-            <BuildType Solution="Debug.Autodesk.2025|Any CPU" Project="Debug" />
-            <BuildType Solution="Debug.Autodesk.2026|Any CPU" Project="Debug" />
-            <BuildType Solution="Debug.Autodesk.2027|Any CPU" Project="Debug" />
-            <BuildType Solution="Release.Autodesk.2022|Any CPU" Project="Release" />
-            <BuildType Solution="Release.Autodesk.2023|Any CPU" Project="Release" />
-            <BuildType Solution="Release.Autodesk.2024|Any CPU" Project="Release" />
-            <BuildType Solution="Release.Autodesk.2025|Any CPU" Project="Release" />
-            <BuildType Solution="Release.Autodesk.2026|Any CPU" Project="Release" />
-            <BuildType Solution="Release.Autodesk.2027|Any CPU" Project="Release" />
-            <Build Project="false" />
+            <BuildType Solution="Debug.Autodesk.2022|Any CPU" Project="Debug"/>
+            <BuildType Solution="Debug.Autodesk.2023|Any CPU" Project="Debug"/>
+            <BuildType Solution="Debug.Autodesk.2024|Any CPU" Project="Debug"/>
+            <BuildType Solution="Debug.Autodesk.2025|Any CPU" Project="Debug"/>
+            <BuildType Solution="Debug.Autodesk.2026|Any CPU" Project="Debug"/>
+            <BuildType Solution="Debug.Autodesk.2027|Any CPU" Project="Debug"/>
+            <BuildType Solution="Release.Autodesk.2022|Any CPU" Project="Release"/>
+            <BuildType Solution="Release.Autodesk.2023|Any CPU" Project="Release"/>
+            <BuildType Solution="Release.Autodesk.2024|Any CPU" Project="Release"/>
+            <BuildType Solution="Release.Autodesk.2025|Any CPU" Project="Release"/>
+            <BuildType Solution="Release.Autodesk.2026|Any CPU" Project="Release"/>
+            <BuildType Solution="Release.Autodesk.2027|Any CPU" Project="Release"/>
+            <Build Project="false"/>
         </Project>
         <Project Path="install/Installer.csproj">
-            <BuildType Solution="Debug.Autodesk.2022|Any CPU" Project="Debug" />
-            <BuildType Solution="Debug.Autodesk.2023|Any CPU" Project="Debug" />
-            <BuildType Solution="Debug.Autodesk.2024|Any CPU" Project="Debug" />
-            <BuildType Solution="Debug.Autodesk.2025|Any CPU" Project="Debug" />
-            <BuildType Solution="Debug.Autodesk.2026|Any CPU" Project="Debug" />
-            <BuildType Solution="Debug.Autodesk.2027|Any CPU" Project="Debug" />
-            <BuildType Solution="Release.Autodesk.2022|Any CPU" Project="Release" />
-            <BuildType Solution="Release.Autodesk.2023|Any CPU" Project="Release" />
-            <BuildType Solution="Release.Autodesk.2024|Any CPU" Project="Release" />
-            <BuildType Solution="Release.Autodesk.2025|Any CPU" Project="Release" />
-            <BuildType Solution="Release.Autodesk.2026|Any CPU" Project="Release" />
-            <BuildType Solution="Release.Autodesk.2027|Any CPU" Project="Release" />
-            <Build Project="false" />
+            <BuildType Solution="Debug.Autodesk.2022|Any CPU" Project="Debug"/>
+            <BuildType Solution="Debug.Autodesk.2023|Any CPU" Project="Debug"/>
+            <BuildType Solution="Debug.Autodesk.2024|Any CPU" Project="Debug"/>
+            <BuildType Solution="Debug.Autodesk.2025|Any CPU" Project="Debug"/>
+            <BuildType Solution="Debug.Autodesk.2026|Any CPU" Project="Debug"/>
+            <BuildType Solution="Debug.Autodesk.2027|Any CPU" Project="Debug"/>
+            <BuildType Solution="Release.Autodesk.2022|Any CPU" Project="Release"/>
+            <BuildType Solution="Release.Autodesk.2023|Any CPU" Project="Release"/>
+            <BuildType Solution="Release.Autodesk.2024|Any CPU" Project="Release"/>
+            <BuildType Solution="Release.Autodesk.2025|Any CPU" Project="Release"/>
+            <BuildType Solution="Release.Autodesk.2026|Any CPU" Project="Release"/>
+            <BuildType Solution="Release.Autodesk.2027|Any CPU" Project="Release"/>
+            <Build Project="false"/>
         </Project>
     </Folder>
-    <Folder Name="/Samples/">
-        <Project Path="Samples/CSharpDemo/CSharpDemo.csproj">
-            <Build Project="false" />
+    <Folder Name="/Shared/">
+        <Project Path="source/DevTools.Logging/DevTools.Logging.csproj">
+            <BuildType Solution="Debug.Autodesk.2022|Any CPU" Project="Debug"/>
+            <BuildType Solution="Debug.Autodesk.2023|Any CPU" Project="Debug"/>
+            <BuildType Solution="Debug.Autodesk.2024|Any CPU" Project="Debug"/>
+            <BuildType Solution="Debug.Autodesk.2025|Any CPU" Project="Debug"/>
+            <BuildType Solution="Debug.Autodesk.2026|Any CPU" Project="Debug"/>
+            <BuildType Solution="Debug.Autodesk.2027|Any CPU" Project="Debug"/>
+            <BuildType Solution="Release.Autodesk.2022|Any CPU" Project="Release"/>
+            <BuildType Solution="Release.Autodesk.2023|Any CPU" Project="Release"/>
+            <BuildType Solution="Release.Autodesk.2024|Any CPU" Project="Release"/>
+            <BuildType Solution="Release.Autodesk.2025|Any CPU" Project="Release"/>
+            <BuildType Solution="Release.Autodesk.2026|Any CPU" Project="Release"/>
+            <BuildType Solution="Release.Autodesk.2027|Any CPU" Project="Release"/>
         </Project>
-        <Project Path="Samples/AcadCSharpDemo/AcadCSharpDemo.csproj">
-            <Build Project="false" />
+        <Project Path="source/DevTools.McpParser/DevTools.McpParser.csproj">
+            <BuildType Solution="Debug.Autodesk.2022|Any CPU" Project="Debug"/>
+            <BuildType Solution="Debug.Autodesk.2023|Any CPU" Project="Debug"/>
+            <BuildType Solution="Debug.Autodesk.2024|Any CPU" Project="Debug"/>
+            <BuildType Solution="Debug.Autodesk.2025|Any CPU" Project="Debug"/>
+            <BuildType Solution="Debug.Autodesk.2026|Any CPU" Project="Debug"/>
+            <BuildType Solution="Debug.Autodesk.2027|Any CPU" Project="Debug"/>
+            <BuildType Solution="Release.Autodesk.2022|Any CPU" Project="Release"/>
+            <BuildType Solution="Release.Autodesk.2023|Any CPU" Project="Release"/>
+            <BuildType Solution="Release.Autodesk.2024|Any CPU" Project="Release"/>
+            <BuildType Solution="Release.Autodesk.2025|Any CPU" Project="Release"/>
+            <BuildType Solution="Release.Autodesk.2026|Any CPU" Project="Release"/>
+            <BuildType Solution="Release.Autodesk.2027|Any CPU" Project="Release"/>
         </Project>
-        <Project Path="Samples/FSharpDemo/FSharpDemo.fsproj">
-            <Build Project="false" />
+        <Project Path="source/DevTools.McpServer/DevTools.McpServer.csproj">
+            <BuildType Solution="Debug.Autodesk.2022|Any CPU" Project="Debug"/>
+            <BuildType Solution="Debug.Autodesk.2023|Any CPU" Project="Debug"/>
+            <BuildType Solution="Debug.Autodesk.2024|Any CPU" Project="Debug"/>
+            <BuildType Solution="Debug.Autodesk.2025|Any CPU" Project="Debug"/>
+            <BuildType Solution="Debug.Autodesk.2026|Any CPU" Project="Debug"/>
+            <BuildType Solution="Debug.Autodesk.2027|Any CPU" Project="Debug"/>
+            <BuildType Solution="Release.Autodesk.2022|Any CPU" Project="Release"/>
+            <BuildType Solution="Release.Autodesk.2023|Any CPU" Project="Release"/>
+            <BuildType Solution="Release.Autodesk.2024|Any CPU" Project="Release"/>
+            <BuildType Solution="Release.Autodesk.2025|Any CPU" Project="Release"/>
+            <BuildType Solution="Release.Autodesk.2026|Any CPU" Project="Release"/>
+            <BuildType Solution="Release.Autodesk.2027|Any CPU" Project="Release"/>
         </Project>
-        <Project Path="Samples/McpToolsetDemo/McpToolsetDemo.csproj">
-            <Build Project="false" />
+        <Project Path="source/DevTools.UI/DevTools.UI.csproj">
+            <BuildType Solution="Debug.Autodesk.2022|Any CPU" Project="Debug"/>
+            <BuildType Solution="Debug.Autodesk.2023|Any CPU" Project="Debug"/>
+            <BuildType Solution="Debug.Autodesk.2024|Any CPU" Project="Debug"/>
+            <BuildType Solution="Debug.Autodesk.2025|Any CPU" Project="Debug"/>
+            <BuildType Solution="Debug.Autodesk.2026|Any CPU" Project="Debug"/>
+            <BuildType Solution="Debug.Autodesk.2027|Any CPU" Project="Debug"/>
+            <BuildType Solution="Release.Autodesk.2022|Any CPU" Project="Release"/>
+            <BuildType Solution="Release.Autodesk.2023|Any CPU" Project="Release"/>
+            <BuildType Solution="Release.Autodesk.2024|Any CPU" Project="Release"/>
+            <BuildType Solution="Release.Autodesk.2025|Any CPU" Project="Release"/>
+            <BuildType Solution="Release.Autodesk.2026|Any CPU" Project="Release"/>
+            <BuildType Solution="Release.Autodesk.2027|Any CPU" Project="Release"/>
         </Project>
-        <Project Path="Samples/RevitMcpToolSet/RevitMcpToolSet.csproj">
-            <Build Project="false" />
+        <Project Path="source/DevTools.Settings/DevTools.Settings.csproj">
+            <BuildType Solution="Debug.Autodesk.2022|Any CPU" Project="Debug"/>
+            <BuildType Solution="Debug.Autodesk.2023|Any CPU" Project="Debug"/>
+            <BuildType Solution="Debug.Autodesk.2024|Any CPU" Project="Debug"/>
+            <BuildType Solution="Debug.Autodesk.2025|Any CPU" Project="Debug"/>
+            <BuildType Solution="Debug.Autodesk.2026|Any CPU" Project="Debug"/>
+            <BuildType Solution="Debug.Autodesk.2027|Any CPU" Project="Debug"/>
+            <BuildType Solution="Release.Autodesk.2022|Any CPU" Project="Release"/>
+            <BuildType Solution="Release.Autodesk.2023|Any CPU" Project="Release"/>
+            <BuildType Solution="Release.Autodesk.2024|Any CPU" Project="Release"/>
+            <BuildType Solution="Release.Autodesk.2025|Any CPU" Project="Release"/>
+            <BuildType Solution="Release.Autodesk.2026|Any CPU" Project="Release"/>
+            <BuildType Solution="Release.Autodesk.2027|Any CPU" Project="Release"/>
+        </Project>
+        <Project Path="source/DevTools.Presentation/DevTools.Presentation.csproj">
+            <BuildType Solution="Debug.Autodesk.2022|Any CPU" Project="Debug"/>
+            <BuildType Solution="Debug.Autodesk.2023|Any CPU" Project="Debug"/>
+            <BuildType Solution="Debug.Autodesk.2024|Any CPU" Project="Debug"/>
+            <BuildType Solution="Debug.Autodesk.2025|Any CPU" Project="Debug"/>
+            <BuildType Solution="Debug.Autodesk.2026|Any CPU" Project="Debug"/>
+            <BuildType Solution="Debug.Autodesk.2027|Any CPU" Project="Debug"/>
+            <BuildType Solution="Release.Autodesk.2022|Any CPU" Project="Release"/>
+            <BuildType Solution="Release.Autodesk.2023|Any CPU" Project="Release"/>
+            <BuildType Solution="Release.Autodesk.2024|Any CPU" Project="Release"/>
+            <BuildType Solution="Release.Autodesk.2025|Any CPU" Project="Release"/>
+            <BuildType Solution="Release.Autodesk.2026|Any CPU" Project="Release"/>
+            <BuildType Solution="Release.Autodesk.2027|Any CPU" Project="Release"/>
+        </Project>
+        <Project Path="source/DevTools.Utilities/DevTools.Utilities.csproj">
+            <BuildType Solution="Debug.Autodesk.2022|Any CPU" Project="Debug"/>
+            <BuildType Solution="Debug.Autodesk.2023|Any CPU" Project="Debug"/>
+            <BuildType Solution="Debug.Autodesk.2024|Any CPU" Project="Debug"/>
+            <BuildType Solution="Debug.Autodesk.2025|Any CPU" Project="Debug"/>
+            <BuildType Solution="Debug.Autodesk.2026|Any CPU" Project="Debug"/>
+            <BuildType Solution="Debug.Autodesk.2027|Any CPU" Project="Debug"/>
+            <BuildType Solution="Release.Autodesk.2022|Any CPU" Project="Release"/>
+            <BuildType Solution="Release.Autodesk.2023|Any CPU" Project="Release"/>
+            <BuildType Solution="Release.Autodesk.2024|Any CPU" Project="Release"/>
+            <BuildType Solution="Release.Autodesk.2025|Any CPU" Project="Release"/>
+            <BuildType Solution="Release.Autodesk.2026|Any CPU" Project="Release"/>
+            <BuildType Solution="Release.Autodesk.2027|Any CPU" Project="Release"/>
+        </Project>
+        <Project Path="source/DevTools.Execution/DevTools.Execution.csproj">
+            <BuildType Solution="Debug.Autodesk.2022|Any CPU" Project="Debug"/>
+            <BuildType Solution="Debug.Autodesk.2023|Any CPU" Project="Debug"/>
+            <BuildType Solution="Debug.Autodesk.2024|Any CPU" Project="Debug"/>
+            <BuildType Solution="Debug.Autodesk.2025|Any CPU" Project="Debug"/>
+            <BuildType Solution="Debug.Autodesk.2026|Any CPU" Project="Debug"/>
+            <BuildType Solution="Debug.Autodesk.2027|Any CPU" Project="Debug"/>
+            <BuildType Solution="Release.Autodesk.2022|Any CPU" Project="Release"/>
+            <BuildType Solution="Release.Autodesk.2023|Any CPU" Project="Release"/>
+            <BuildType Solution="Release.Autodesk.2024|Any CPU" Project="Release"/>
+            <BuildType Solution="Release.Autodesk.2025|Any CPU" Project="Release"/>
+            <BuildType Solution="Release.Autodesk.2026|Any CPU" Project="Release"/>
+            <BuildType Solution="Release.Autodesk.2027|Any CPU" Project="Release"/>
+        </Project>
+        <Project Path="source/DevTools.Telemetry/DevTools.Telemetry.csproj">
+            <BuildType Solution="Debug.Autodesk.2022|Any CPU" Project="Debug"/>
+            <BuildType Solution="Debug.Autodesk.2023|Any CPU" Project="Debug"/>
+            <BuildType Solution="Debug.Autodesk.2024|Any CPU" Project="Debug"/>
+            <BuildType Solution="Debug.Autodesk.2025|Any CPU" Project="Debug"/>
+            <BuildType Solution="Debug.Autodesk.2026|Any CPU" Project="Debug"/>
+            <BuildType Solution="Debug.Autodesk.2027|Any CPU" Project="Debug"/>
+            <BuildType Solution="Release.Autodesk.2022|Any CPU" Project="Release"/>
+            <BuildType Solution="Release.Autodesk.2023|Any CPU" Project="Release"/>
+            <BuildType Solution="Release.Autodesk.2024|Any CPU" Project="Release"/>
+            <BuildType Solution="Release.Autodesk.2025|Any CPU" Project="Release"/>
+            <BuildType Solution="Release.Autodesk.2026|Any CPU" Project="Release"/>
+            <BuildType Solution="Release.Autodesk.2027|Any CPU" Project="Release"/>
         </Project>
     </Folder>
     <Folder Name="/Solution Items/">
-        <File Path=".editorconfig" />
-        <File Path=".gitignore" />
-        <File Path="build/appsettings.json" />
-        <File Path="Changelog.md" />
-        <File Path="Directory.Build.props" />
-        <File Path="Directory.Build.targets" />
-        <File Path="Directory.Packages.props" />
-        <File Path="Readme.md" />
+        <File Path=".editorconfig"/>
+        <File Path=".gitignore"/>
+        <File Path="build/appsettings.json"/>
+        <File Path="Changelog.md"/>
+        <File Path="Directory.Build.props"/>
+        <File Path="Directory.Build.targets"/>
+        <File Path="Directory.Packages.props"/>
+        <File Path="Readme.md"/>
     </Folder>
     <Folder Name="/Solution Items/props/">
-        <File Path="props/Common.props" />
-        <File Path="props/AutoCad.props" />
-        <File Path="props/AutoCad.targets" />
-        <File Path="props/Revit.props" />
-        <File Path="props/Revit.targets" />
-        <File Path="props/PackageContents.xml" />
+        <File Path="props/Common.props"/>
+        <File Path="props/AutoCad.props"/>
+        <File Path="props/AutoCad.targets"/>
+        <File Path="props/Revit.props"/>
+        <File Path="props/Revit.targets"/>
+        <File Path="props/PackageContents.xml"/>
     </Folder>
     <Folder Name="/Tests/">
         <Project Path="tests/RevitDevTool.ExternalEvent.App/RevitDevTool.ExternalEvent.App.csproj">
-            <Build Project="false" />
+            <Build Project="false"/>
         </Project>
         <Project Path="Tests/RevitDevTool.Server.Tests/RevitDevTool.Server.Tests.csproj">
-            <BuildType Solution="Debug.Autodesk.2022|Any CPU" Project="Debug" />
-            <BuildType Solution="Debug.Autodesk.2023|Any CPU" Project="Debug" />
-            <BuildType Solution="Debug.Autodesk.2024|Any CPU" Project="Debug" />
-            <BuildType Solution="Debug.Autodesk.2025|Any CPU" Project="Debug" />
-            <BuildType Solution="Debug.Autodesk.2026|Any CPU" Project="Debug" />
-            <BuildType Solution="Debug.Autodesk.2027|Any CPU" Project="Debug" />
-            <BuildType Solution="Release.Autodesk.2022|Any CPU" Project="Release" />
-            <BuildType Solution="Release.Autodesk.2023|Any CPU" Project="Release" />
-            <BuildType Solution="Release.Autodesk.2024|Any CPU" Project="Release" />
-            <BuildType Solution="Release.Autodesk.2025|Any CPU" Project="Release" />
-            <BuildType Solution="Release.Autodesk.2026|Any CPU" Project="Release" />
-            <BuildType Solution="Release.Autodesk.2027|Any CPU" Project="Release" />
-            <Build Project="false" />
+            <BuildType Solution="Debug.Autodesk.2022|Any CPU" Project="Debug"/>
+            <BuildType Solution="Debug.Autodesk.2023|Any CPU" Project="Debug"/>
+            <BuildType Solution="Debug.Autodesk.2024|Any CPU" Project="Debug"/>
+            <BuildType Solution="Debug.Autodesk.2025|Any CPU" Project="Debug"/>
+            <BuildType Solution="Debug.Autodesk.2026|Any CPU" Project="Debug"/>
+            <BuildType Solution="Debug.Autodesk.2027|Any CPU" Project="Debug"/>
+            <BuildType Solution="Release.Autodesk.2022|Any CPU" Project="Release"/>
+            <BuildType Solution="Release.Autodesk.2023|Any CPU" Project="Release"/>
+            <BuildType Solution="Release.Autodesk.2024|Any CPU" Project="Release"/>
+            <BuildType Solution="Release.Autodesk.2025|Any CPU" Project="Release"/>
+            <BuildType Solution="Release.Autodesk.2026|Any CPU" Project="Release"/>
+            <BuildType Solution="Release.Autodesk.2027|Any CPU" Project="Release"/>
+            <Build Project="false"/>
         </Project>
         <Project Path="Tests/RevitDevTool.Execution.Tests/RevitDevTool.Execution.Tests.csproj">
-            <BuildType Solution="Debug.Autodesk.2022|Any CPU" Project="Debug" />
-            <BuildType Solution="Debug.Autodesk.2023|Any CPU" Project="Debug" />
-            <BuildType Solution="Debug.Autodesk.2024|Any CPU" Project="Debug" />
-            <BuildType Solution="Debug.Autodesk.2025|Any CPU" Project="Debug" />
-            <BuildType Solution="Debug.Autodesk.2026|Any CPU" Project="Debug" />
-            <BuildType Solution="Debug.Autodesk.2027|Any CPU" Project="Debug" />
-            <BuildType Solution="Release.Autodesk.2022|Any CPU" Project="Release" />
-            <BuildType Solution="Release.Autodesk.2023|Any CPU" Project="Release" />
-            <BuildType Solution="Release.Autodesk.2024|Any CPU" Project="Release" />
-            <BuildType Solution="Release.Autodesk.2025|Any CPU" Project="Release" />
-            <BuildType Solution="Release.Autodesk.2026|Any CPU" Project="Release" />
-            <BuildType Solution="Release.Autodesk.2027|Any CPU" Project="Release" />
-            <Build Project="false" />
+            <BuildType Solution="Debug.Autodesk.2022|Any CPU" Project="Debug"/>
+            <BuildType Solution="Debug.Autodesk.2023|Any CPU" Project="Debug"/>
+            <BuildType Solution="Debug.Autodesk.2024|Any CPU" Project="Debug"/>
+            <BuildType Solution="Debug.Autodesk.2025|Any CPU" Project="Debug"/>
+            <BuildType Solution="Debug.Autodesk.2026|Any CPU" Project="Debug"/>
+            <BuildType Solution="Debug.Autodesk.2027|Any CPU" Project="Debug"/>
+            <BuildType Solution="Release.Autodesk.2022|Any CPU" Project="Release"/>
+            <BuildType Solution="Release.Autodesk.2023|Any CPU" Project="Release"/>
+            <BuildType Solution="Release.Autodesk.2024|Any CPU" Project="Release"/>
+            <BuildType Solution="Release.Autodesk.2025|Any CPU" Project="Release"/>
+            <BuildType Solution="Release.Autodesk.2026|Any CPU" Project="Release"/>
+            <BuildType Solution="Release.Autodesk.2027|Any CPU" Project="Release"/>
+            <Build Project="false"/>
         </Project>
         <Project Path="Tests/DevTools.Telemetry.Tests/DevTools.Telemetry.Tests.csproj">
-            <BuildType Solution="Debug.Autodesk.2022|Any CPU" Project="Debug" />
-            <BuildType Solution="Debug.Autodesk.2023|Any CPU" Project="Debug" />
-            <BuildType Solution="Debug.Autodesk.2024|Any CPU" Project="Debug" />
-            <BuildType Solution="Debug.Autodesk.2025|Any CPU" Project="Debug" />
-            <BuildType Solution="Debug.Autodesk.2026|Any CPU" Project="Debug" />
-            <BuildType Solution="Debug.Autodesk.2027|Any CPU" Project="Debug" />
-            <BuildType Solution="Release.Autodesk.2022|Any CPU" Project="Release" />
-            <BuildType Solution="Release.Autodesk.2023|Any CPU" Project="Release" />
-            <BuildType Solution="Release.Autodesk.2024|Any CPU" Project="Release" />
-            <BuildType Solution="Release.Autodesk.2025|Any CPU" Project="Release" />
-            <BuildType Solution="Release.Autodesk.2026|Any CPU" Project="Release" />
-            <BuildType Solution="Release.Autodesk.2027|Any CPU" Project="Release" />
-            <Build Project="false" />
+            <BuildType Solution="Debug.Autodesk.2022|Any CPU" Project="Debug"/>
+            <BuildType Solution="Debug.Autodesk.2023|Any CPU" Project="Debug"/>
+            <BuildType Solution="Debug.Autodesk.2024|Any CPU" Project="Debug"/>
+            <BuildType Solution="Debug.Autodesk.2025|Any CPU" Project="Debug"/>
+            <BuildType Solution="Debug.Autodesk.2026|Any CPU" Project="Debug"/>
+            <BuildType Solution="Debug.Autodesk.2027|Any CPU" Project="Debug"/>
+            <BuildType Solution="Release.Autodesk.2022|Any CPU" Project="Release"/>
+            <BuildType Solution="Release.Autodesk.2023|Any CPU" Project="Release"/>
+            <BuildType Solution="Release.Autodesk.2024|Any CPU" Project="Release"/>
+            <BuildType Solution="Release.Autodesk.2025|Any CPU" Project="Release"/>
+            <BuildType Solution="Release.Autodesk.2026|Any CPU" Project="Release"/>
+            <BuildType Solution="Release.Autodesk.2027|Any CPU" Project="Release"/>
+            <Build Project="false"/>
         </Project>
     </Folder>
     <Folder Name="/Libs/">
-        <Project Path="libs/pythonnet-stub-generator/csharp/PythonNetStubGenerator/PythonNetStubGenerator.csproj">
-            <BuildType Solution="Debug.Autodesk.2022|Any CPU" Project="Debug" />
-            <BuildType Solution="Debug.Autodesk.2023|Any CPU" Project="Debug" />
-            <BuildType Solution="Debug.Autodesk.2024|Any CPU" Project="Debug" />
-            <BuildType Solution="Debug.Autodesk.2025|Any CPU" Project="Debug" />
-            <BuildType Solution="Debug.Autodesk.2026|Any CPU" Project="Debug" />
-            <BuildType Solution="Debug.Autodesk.2027|Any CPU" Project="Debug" />
-            <BuildType Solution="Release.Autodesk.2022|Any CPU" Project="Release" />
-            <BuildType Solution="Release.Autodesk.2023|Any CPU" Project="Release" />
-            <BuildType Solution="Release.Autodesk.2024|Any CPU" Project="Release" />
-            <BuildType Solution="Release.Autodesk.2025|Any CPU" Project="Release" />
-            <BuildType Solution="Release.Autodesk.2026|Any CPU" Project="Release" />
-            <BuildType Solution="Release.Autodesk.2027|Any CPU" Project="Release" />
-        </Project>
+
         <Project Path="libs/MahApps.Metro/src/MahApps.Metro/MahApps.Metro.csproj">
-            <BuildType Solution="Debug.Autodesk.2022|Any CPU" Project="Debug" />
-            <BuildType Solution="Debug.Autodesk.2023|Any CPU" Project="Debug" />
-            <BuildType Solution="Debug.Autodesk.2024|Any CPU" Project="Debug" />
-            <BuildType Solution="Debug.Autodesk.2025|Any CPU" Project="Debug" />
-            <BuildType Solution="Debug.Autodesk.2026|Any CPU" Project="Debug" />
-            <BuildType Solution="Debug.Autodesk.2027|Any CPU" Project="Debug" />
-            <BuildType Solution="Release.Autodesk.2022|Any CPU" Project="Release" />
-            <BuildType Solution="Release.Autodesk.2023|Any CPU" Project="Release" />
-            <BuildType Solution="Release.Autodesk.2024|Any CPU" Project="Release" />
-            <BuildType Solution="Release.Autodesk.2025|Any CPU" Project="Release" />
-            <BuildType Solution="Release.Autodesk.2026|Any CPU" Project="Release" />
-            <BuildType Solution="Release.Autodesk.2027|Any CPU" Project="Release" />
+            <BuildType Solution="Debug.Autodesk.2022|Any CPU" Project="Debug"/>
+            <BuildType Solution="Debug.Autodesk.2023|Any CPU" Project="Debug"/>
+            <BuildType Solution="Debug.Autodesk.2024|Any CPU" Project="Debug"/>
+            <BuildType Solution="Debug.Autodesk.2025|Any CPU" Project="Debug"/>
+            <BuildType Solution="Debug.Autodesk.2026|Any CPU" Project="Debug"/>
+            <BuildType Solution="Debug.Autodesk.2027|Any CPU" Project="Debug"/>
+            <BuildType Solution="Release.Autodesk.2022|Any CPU" Project="Release"/>
+            <BuildType Solution="Release.Autodesk.2023|Any CPU" Project="Release"/>
+            <BuildType Solution="Release.Autodesk.2024|Any CPU" Project="Release"/>
+            <BuildType Solution="Release.Autodesk.2025|Any CPU" Project="Release"/>
+            <BuildType Solution="Release.Autodesk.2026|Any CPU" Project="Release"/>
+            <BuildType Solution="Release.Autodesk.2027|Any CPU" Project="Release"/>
         </Project>
         <Project Path="libs/ControlzEx/src/ControlzEx/ControlzEx.csproj">
-            <BuildType Solution="Debug.Autodesk.2022|Any CPU" Project="Debug" />
-            <BuildType Solution="Debug.Autodesk.2023|Any CPU" Project="Debug" />
-            <BuildType Solution="Debug.Autodesk.2024|Any CPU" Project="Debug" />
-            <BuildType Solution="Debug.Autodesk.2025|Any CPU" Project="Debug" />
-            <BuildType Solution="Debug.Autodesk.2026|Any CPU" Project="Debug" />
-            <BuildType Solution="Debug.Autodesk.2027|Any CPU" Project="Debug" />
-            <BuildType Solution="Release.Autodesk.2022|Any CPU" Project="Release" />
-            <BuildType Solution="Release.Autodesk.2023|Any CPU" Project="Release" />
-            <BuildType Solution="Release.Autodesk.2024|Any CPU" Project="Release" />
-            <BuildType Solution="Release.Autodesk.2025|Any CPU" Project="Release" />
-            <BuildType Solution="Release.Autodesk.2026|Any CPU" Project="Release" />
-            <BuildType Solution="Release.Autodesk.2027|Any CPU" Project="Release" />
+            <BuildType Solution="Debug.Autodesk.2022|Any CPU" Project="Debug"/>
+            <BuildType Solution="Debug.Autodesk.2023|Any CPU" Project="Debug"/>
+            <BuildType Solution="Debug.Autodesk.2024|Any CPU" Project="Debug"/>
+            <BuildType Solution="Debug.Autodesk.2025|Any CPU" Project="Debug"/>
+            <BuildType Solution="Debug.Autodesk.2026|Any CPU" Project="Debug"/>
+            <BuildType Solution="Debug.Autodesk.2027|Any CPU" Project="Debug"/>
+            <BuildType Solution="Release.Autodesk.2022|Any CPU" Project="Release"/>
+            <BuildType Solution="Release.Autodesk.2023|Any CPU" Project="Release"/>
+            <BuildType Solution="Release.Autodesk.2024|Any CPU" Project="Release"/>
+            <BuildType Solution="Release.Autodesk.2025|Any CPU" Project="Release"/>
+            <BuildType Solution="Release.Autodesk.2026|Any CPU" Project="Release"/>
+            <BuildType Solution="Release.Autodesk.2027|Any CPU" Project="Release"/>
         </Project>
         <Project Path="libs/XamlBehaviorsWpf/src/Microsoft.Xaml.Behaviors/Microsoft.Xaml.Behaviors.csproj">
-            <BuildType Solution="Debug.Autodesk.2022|Any CPU" Project="Debug" />
-            <BuildType Solution="Debug.Autodesk.2023|Any CPU" Project="Debug" />
-            <BuildType Solution="Debug.Autodesk.2024|Any CPU" Project="Debug" />
-            <BuildType Solution="Debug.Autodesk.2025|Any CPU" Project="Debug" />
-            <BuildType Solution="Debug.Autodesk.2026|Any CPU" Project="Debug" />
-            <BuildType Solution="Debug.Autodesk.2027|Any CPU" Project="Debug" />
-            <BuildType Solution="Release.Autodesk.2022|Any CPU" Project="Release" />
-            <BuildType Solution="Release.Autodesk.2023|Any CPU" Project="Release" />
-            <BuildType Solution="Release.Autodesk.2024|Any CPU" Project="Release" />
-            <BuildType Solution="Release.Autodesk.2025|Any CPU" Project="Release" />
-            <BuildType Solution="Release.Autodesk.2026|Any CPU" Project="Release" />
-            <BuildType Solution="Release.Autodesk.2027|Any CPU" Project="Release" />
+            <BuildType Solution="Debug.Autodesk.2022|Any CPU" Project="Debug"/>
+            <BuildType Solution="Debug.Autodesk.2023|Any CPU" Project="Debug"/>
+            <BuildType Solution="Debug.Autodesk.2024|Any CPU" Project="Debug"/>
+            <BuildType Solution="Debug.Autodesk.2025|Any CPU" Project="Debug"/>
+            <BuildType Solution="Debug.Autodesk.2026|Any CPU" Project="Debug"/>
+            <BuildType Solution="Debug.Autodesk.2027|Any CPU" Project="Debug"/>
+            <BuildType Solution="Release.Autodesk.2022|Any CPU" Project="Release"/>
+            <BuildType Solution="Release.Autodesk.2023|Any CPU" Project="Release"/>
+            <BuildType Solution="Release.Autodesk.2024|Any CPU" Project="Release"/>
+            <BuildType Solution="Release.Autodesk.2025|Any CPU" Project="Release"/>
+            <BuildType Solution="Release.Autodesk.2026|Any CPU" Project="Release"/>
+            <BuildType Solution="Release.Autodesk.2027|Any CPU" Project="Release"/>
         </Project>
-        <Project Path="source/DevTools.Logging/DevTools.Logging.csproj">
-            <BuildType Solution="Debug.Autodesk.2022|Any CPU" Project="Debug" />
-            <BuildType Solution="Debug.Autodesk.2023|Any CPU" Project="Debug" />
-            <BuildType Solution="Debug.Autodesk.2024|Any CPU" Project="Debug" />
-            <BuildType Solution="Debug.Autodesk.2025|Any CPU" Project="Debug" />
-            <BuildType Solution="Debug.Autodesk.2026|Any CPU" Project="Debug" />
-            <BuildType Solution="Debug.Autodesk.2027|Any CPU" Project="Debug" />
-            <BuildType Solution="Release.Autodesk.2022|Any CPU" Project="Release" />
-            <BuildType Solution="Release.Autodesk.2023|Any CPU" Project="Release" />
-            <BuildType Solution="Release.Autodesk.2024|Any CPU" Project="Release" />
-            <BuildType Solution="Release.Autodesk.2025|Any CPU" Project="Release" />
-            <BuildType Solution="Release.Autodesk.2026|Any CPU" Project="Release" />
-            <BuildType Solution="Release.Autodesk.2027|Any CPU" Project="Release" />
+        <Project Path="libs/pythonnet-stub-generator/csharp/PythonNetStubGenerator/PythonNetStubGenerator.csproj">
+            <BuildType Solution="Debug.Autodesk.2022|Any CPU" Project="Debug"/>
+            <BuildType Solution="Debug.Autodesk.2023|Any CPU" Project="Debug"/>
+            <BuildType Solution="Debug.Autodesk.2024|Any CPU" Project="Debug"/>
+            <BuildType Solution="Debug.Autodesk.2025|Any CPU" Project="Debug"/>
+            <BuildType Solution="Debug.Autodesk.2026|Any CPU" Project="Debug"/>
+            <BuildType Solution="Debug.Autodesk.2027|Any CPU" Project="Debug"/>
+            <BuildType Solution="Release.Autodesk.2022|Any CPU" Project="Release"/>
+            <BuildType Solution="Release.Autodesk.2023|Any CPU" Project="Release"/>
+            <BuildType Solution="Release.Autodesk.2024|Any CPU" Project="Release"/>
+            <BuildType Solution="Release.Autodesk.2025|Any CPU" Project="Release"/>
+            <BuildType Solution="Release.Autodesk.2026|Any CPU" Project="Release"/>
+            <BuildType Solution="Release.Autodesk.2027|Any CPU" Project="Release"/>
         </Project>
-        <Project Path="source/DevTools.McpParser/DevTools.McpParser.csproj">
-            <BuildType Solution="Debug.Autodesk.2022|Any CPU" Project="Debug" />
-            <BuildType Solution="Debug.Autodesk.2023|Any CPU" Project="Debug" />
-            <BuildType Solution="Debug.Autodesk.2024|Any CPU" Project="Debug" />
-            <BuildType Solution="Debug.Autodesk.2025|Any CPU" Project="Debug" />
-            <BuildType Solution="Debug.Autodesk.2026|Any CPU" Project="Debug" />
-            <BuildType Solution="Debug.Autodesk.2027|Any CPU" Project="Debug" />
-            <BuildType Solution="Release.Autodesk.2022|Any CPU" Project="Release" />
-            <BuildType Solution="Release.Autodesk.2023|Any CPU" Project="Release" />
-            <BuildType Solution="Release.Autodesk.2024|Any CPU" Project="Release" />
-            <BuildType Solution="Release.Autodesk.2025|Any CPU" Project="Release" />
-            <BuildType Solution="Release.Autodesk.2026|Any CPU" Project="Release" />
-            <BuildType Solution="Release.Autodesk.2027|Any CPU" Project="Release" />
-        </Project>
-        <Project Path="source/DevTools.McpServer/DevTools.McpServer.csproj">
-            <BuildType Solution="Debug.Autodesk.2022|Any CPU" Project="Debug" />
-            <BuildType Solution="Debug.Autodesk.2023|Any CPU" Project="Debug" />
-            <BuildType Solution="Debug.Autodesk.2024|Any CPU" Project="Debug" />
-            <BuildType Solution="Debug.Autodesk.2025|Any CPU" Project="Debug" />
-            <BuildType Solution="Debug.Autodesk.2026|Any CPU" Project="Debug" />
-            <BuildType Solution="Debug.Autodesk.2027|Any CPU" Project="Debug" />
-            <BuildType Solution="Release.Autodesk.2022|Any CPU" Project="Release" />
-            <BuildType Solution="Release.Autodesk.2023|Any CPU" Project="Release" />
-            <BuildType Solution="Release.Autodesk.2024|Any CPU" Project="Release" />
-            <BuildType Solution="Release.Autodesk.2025|Any CPU" Project="Release" />
-            <BuildType Solution="Release.Autodesk.2026|Any CPU" Project="Release" />
-            <BuildType Solution="Release.Autodesk.2027|Any CPU" Project="Release" />
-        </Project>
-        <Project Path="source/DevTools.UI/DevTools.UI.csproj">
-            <BuildType Solution="Debug.Autodesk.2022|Any CPU" Project="Debug" />
-            <BuildType Solution="Debug.Autodesk.2023|Any CPU" Project="Debug" />
-            <BuildType Solution="Debug.Autodesk.2024|Any CPU" Project="Debug" />
-            <BuildType Solution="Debug.Autodesk.2025|Any CPU" Project="Debug" />
-            <BuildType Solution="Debug.Autodesk.2026|Any CPU" Project="Debug" />
-            <BuildType Solution="Debug.Autodesk.2027|Any CPU" Project="Debug" />
-            <BuildType Solution="Release.Autodesk.2022|Any CPU" Project="Release" />
-            <BuildType Solution="Release.Autodesk.2023|Any CPU" Project="Release" />
-            <BuildType Solution="Release.Autodesk.2024|Any CPU" Project="Release" />
-            <BuildType Solution="Release.Autodesk.2025|Any CPU" Project="Release" />
-            <BuildType Solution="Release.Autodesk.2026|Any CPU" Project="Release" />
-            <BuildType Solution="Release.Autodesk.2027|Any CPU" Project="Release" />
-        </Project>
-        <Project Path="source/DevTools.Settings/DevTools.Settings.csproj" >
-            <BuildType Solution="Debug.Autodesk.2022|Any CPU" Project="Debug" />
-            <BuildType Solution="Debug.Autodesk.2023|Any CPU" Project="Debug" />
-            <BuildType Solution="Debug.Autodesk.2024|Any CPU" Project="Debug" />
-            <BuildType Solution="Debug.Autodesk.2025|Any CPU" Project="Debug" />
-            <BuildType Solution="Debug.Autodesk.2026|Any CPU" Project="Debug" />
-            <BuildType Solution="Debug.Autodesk.2027|Any CPU" Project="Debug" />
-            <BuildType Solution="Release.Autodesk.2022|Any CPU" Project="Release" />
-            <BuildType Solution="Release.Autodesk.2023|Any CPU" Project="Release" />
-            <BuildType Solution="Release.Autodesk.2024|Any CPU" Project="Release" />
-            <BuildType Solution="Release.Autodesk.2025|Any CPU" Project="Release" />
-            <BuildType Solution="Release.Autodesk.2026|Any CPU" Project="Release" />
-            <BuildType Solution="Release.Autodesk.2027|Any CPU" Project="Release" />
-        </Project>
-        <Project Path="source/DevTools.Presentation/DevTools.Presentation.csproj">
-            <BuildType Solution="Debug.Autodesk.2022|Any CPU" Project="Debug" />
-            <BuildType Solution="Debug.Autodesk.2023|Any CPU" Project="Debug" />
-            <BuildType Solution="Debug.Autodesk.2024|Any CPU" Project="Debug" />
-            <BuildType Solution="Debug.Autodesk.2025|Any CPU" Project="Debug" />
-            <BuildType Solution="Debug.Autodesk.2026|Any CPU" Project="Debug" />
-            <BuildType Solution="Debug.Autodesk.2027|Any CPU" Project="Debug" />
-            <BuildType Solution="Release.Autodesk.2022|Any CPU" Project="Release" />
-            <BuildType Solution="Release.Autodesk.2023|Any CPU" Project="Release" />
-            <BuildType Solution="Release.Autodesk.2024|Any CPU" Project="Release" />
-            <BuildType Solution="Release.Autodesk.2025|Any CPU" Project="Release" />
-            <BuildType Solution="Release.Autodesk.2026|Any CPU" Project="Release" />
-            <BuildType Solution="Release.Autodesk.2027|Any CPU" Project="Release" />
-        </Project>
-        <Project Path="source/DevTools.Utilities/DevTools.Utilities.csproj">
-            <BuildType Solution="Debug.Autodesk.2022|Any CPU" Project="Debug" />
-            <BuildType Solution="Debug.Autodesk.2023|Any CPU" Project="Debug" />
-            <BuildType Solution="Debug.Autodesk.2024|Any CPU" Project="Debug" />
-            <BuildType Solution="Debug.Autodesk.2025|Any CPU" Project="Debug" />
-            <BuildType Solution="Debug.Autodesk.2026|Any CPU" Project="Debug" />
-            <BuildType Solution="Debug.Autodesk.2027|Any CPU" Project="Debug" />
-            <BuildType Solution="Release.Autodesk.2022|Any CPU" Project="Release" />
-            <BuildType Solution="Release.Autodesk.2023|Any CPU" Project="Release" />
-            <BuildType Solution="Release.Autodesk.2024|Any CPU" Project="Release" />
-            <BuildType Solution="Release.Autodesk.2025|Any CPU" Project="Release" />
-            <BuildType Solution="Release.Autodesk.2026|Any CPU" Project="Release" />
-            <BuildType Solution="Release.Autodesk.2027|Any CPU" Project="Release" />
-        </Project>
-        <Project Path="source/DevTools.Execution/DevTools.Execution.csproj">
-            <BuildType Solution="Debug.Autodesk.2022|Any CPU" Project="Debug" />
-            <BuildType Solution="Debug.Autodesk.2023|Any CPU" Project="Debug" />
-            <BuildType Solution="Debug.Autodesk.2024|Any CPU" Project="Debug" />
-            <BuildType Solution="Debug.Autodesk.2025|Any CPU" Project="Debug" />
-            <BuildType Solution="Debug.Autodesk.2026|Any CPU" Project="Debug" />
-            <BuildType Solution="Debug.Autodesk.2027|Any CPU" Project="Debug" />
-            <BuildType Solution="Release.Autodesk.2022|Any CPU" Project="Release" />
-            <BuildType Solution="Release.Autodesk.2023|Any CPU" Project="Release" />
-            <BuildType Solution="Release.Autodesk.2024|Any CPU" Project="Release" />
-            <BuildType Solution="Release.Autodesk.2025|Any CPU" Project="Release" />
-            <BuildType Solution="Release.Autodesk.2026|Any CPU" Project="Release" />
-            <BuildType Solution="Release.Autodesk.2027|Any CPU" Project="Release" />
-        </Project>
-        <Project Path="source/DevTools.Telemetry/DevTools.Telemetry.csproj">
-            <BuildType Solution="Debug.Autodesk.2022|Any CPU" Project="Debug" />
-            <BuildType Solution="Debug.Autodesk.2023|Any CPU" Project="Debug" />
-            <BuildType Solution="Debug.Autodesk.2024|Any CPU" Project="Debug" />
-            <BuildType Solution="Debug.Autodesk.2025|Any CPU" Project="Debug" />
-            <BuildType Solution="Debug.Autodesk.2026|Any CPU" Project="Debug" />
-            <BuildType Solution="Debug.Autodesk.2027|Any CPU" Project="Debug" />
-            <BuildType Solution="Release.Autodesk.2022|Any CPU" Project="Release" />
-            <BuildType Solution="Release.Autodesk.2023|Any CPU" Project="Release" />
-            <BuildType Solution="Release.Autodesk.2024|Any CPU" Project="Release" />
-            <BuildType Solution="Release.Autodesk.2025|Any CPU" Project="Release" />
-            <BuildType Solution="Release.Autodesk.2026|Any CPU" Project="Release" />
-            <BuildType Solution="Release.Autodesk.2027|Any CPU" Project="Release" />
-        </Project>
-        <Project Path="source/RevitDevTool.Core/RevitDevTool.Core.csproj" />
+        <Project Path="source/RevitDevTool.Core/RevitDevTool.Core.csproj"/>
     </Folder>
-    <Project Path="source/RevitDevTool/RevitDevTool.csproj" />
-    <Project Path="source/AcadDevTool/AcadDevTool.csproj" />
+    <Project Path="source/RevitDevTool/RevitDevTool.csproj"/>
+    <Project Path="source/AcadDevTool/AcadDevTool.csproj"/>
 </Solution>

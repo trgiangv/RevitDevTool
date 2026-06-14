@@ -1,0 +1,31 @@
+<Solution>
+    <Configurations>
+        <BuildType Name="Debug.Autodesk.2022" />
+        <BuildType Name="Debug.Autodesk.2023" />
+        <BuildType Name="Debug.Autodesk.2024" />
+        <BuildType Name="Debug.Autodesk.2025" />
+        <BuildType Name="Debug.Autodesk.2026" />
+        <BuildType Name="Debug.Autodesk.2027" />
+        <BuildType Name="Release.Autodesk.2022" />
+        <BuildType Name="Release.Autodesk.2023" />
+        <BuildType Name="Release.Autodesk.2024" />
+        <BuildType Name="Release.Autodesk.2025" />
+        <BuildType Name="Release.Autodesk.2026" />
+        <BuildType Name="Release.Autodesk.2027" />
+    </Configurations>
+    <Project Path="CSharpDemo/CSharpDemo.csproj">
+        <Build Project="false" />
+    </Project>
+    <Project Path="AcadCSharpDemo/AcadCSharpDemo.csproj">
+        <Build Project="false" />
+    </Project>
+    <Project Path="FSharpDemo/FSharpDemo.fsproj">
+        <Build Project="false" />
+    </Project>
+    <Project Path="McpToolsetDemo/McpToolsetDemo.csproj">
+        <Build Project="false" />
+    </Project>
+    <Project Path="RevitMcpToolSet/RevitMcpToolSet.csproj">
+        <Build Project="false" />
+    </Project>
+</Solution>
