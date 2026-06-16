@@ -38,6 +38,16 @@ jobs:
           key: ${{ runner.os }}-nuget-${{ hashFiles('**/*.csproj', 'Directory.Build.props', 'Directory.Packages.props') }}
           restore-keys: ${{ runner.os }}-nuget-
 
+      - name: Inject Daemon config
+        shell: pwsh
+        run: |
+          $file = "source/DevTools.Daemon/appsettings.json"
+          $json = Get-Content $file | ConvertFrom-Json
+          $json.Auth.Issuer = "${{ secrets.AUTH_ISSUER }}"
+          $json.Auth.ClientId = "${{ secrets.AUTH_CLIENT_ID }}"
+          $json.Gateway.Url = "${{ secrets.GATEWAY_URL }}"
+          $json | ConvertTo-Json -Depth 10 | Set-Content $file
+
       - name: Publish packages
         run: dotnet run -c Release -- pack publish
         working-directory: "build"

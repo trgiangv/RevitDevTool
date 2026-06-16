@@ -18,7 +18,7 @@ builder.Services.AddOptions<PublishOptions>().Bind(builder.Configuration.GetSect
 if (args.Length == 0)
 {
     builder.Services.AddModule<CompileProjectModule>();
-    builder.Services.AddModule<PublishMcpServerModule>();
+    builder.Services.AddModule<PublishDaemonModule>();
 }
 
 if (args.Contains("test"))

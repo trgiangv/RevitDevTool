@@ -19,32 +19,39 @@ namespace Build.Modules;
 /// </summary>
 [DependsOn<ResolveVersioningModule>]
 [DependsOn<CompileProjectModule>]
-[DependsOn<PublishMcpServerModule>]
+[DependsOn<PublishDaemonModule>]
 [UsedImplicitly]
 public sealed partial class CreateBundleModule(IOptions<BuildOptions> buildOptions) : Module<string>
 {
+    private const string AdskBundleContentsFolder = "Contents";
+    private const string AdskAppVersionAttribute = "AppVersion";
+    private const string ManifestFile = "PackageContents.xml";
+    private const string BinFolder = "bin";
+    private const string PublishFolder = "publish";
+    private const string DaemonExecutable = "DevTools.Daemon.exe";
+    
     protected override async Task<string?> ExecuteAsync(IModuleContext context, CancellationToken cancellationToken)
     {
         var versioningResult = await context.GetModule<ResolveVersioningModule>();
-        var mcpServerResult = await context.GetModule<PublishMcpServerModule>();
+        var daemonResult = await context.GetModule<PublishDaemonModule>();
         var versioning = versioningResult.ValueOrDefault!;
 
         var revitTarget = new File(Projects.RevitDevTool.FullName);
         var acadTarget = new File(Path.Combine(revitTarget.Folder!.Parent!.Path, "AcadDevTool", "AcadDevTool.csproj"));
 
-        var revitPublishDirs = revitTarget.Folder!.GetFolder("bin").GetFolders(folder => folder.Name == "publish").ToArray();
-        var acadPublishDirs = acadTarget.Folder!.GetFolder("bin").GetFolders(folder => folder.Name == "publish").ToArray();
+        var revitPublishDirs = revitTarget.Folder!.GetFolder(BinFolder).GetFolders(folder => folder.Name == PublishFolder).ToArray();
+        var acadPublishDirs = acadTarget.Folder!.GetFolder(BinFolder).GetFolders(folder => folder.Name == PublishFolder).ToArray();
 
         revitPublishDirs.ShouldNotBeEmpty("No Revit content were found to create a bundle");
 
         var outputFolder = context.Git().RootDirectory.GetFolder(buildOptions.Value.OutputDirectory);
         var bundleFolder = outputFolder.CreateFolder($"{revitTarget.NameWithoutExtension}.bundle");
-        var contentFolder = bundleFolder.CreateFolder("Contents");
-        var manifestFile = bundleFolder.GetFile("PackageContents.xml");
+        var contentFolder = bundleFolder.CreateFolder(AdskBundleContentsFolder);
+        var manifestFile = bundleFolder.GetFile(ManifestFile);
 
         PackFiles(revitPublishDirs, contentFolder);
         PackFiles(acadPublishDirs, contentFolder);
-        PackMcpServer(mcpServerResult.ValueOrDefault!, contentFolder);
+        PackDaemon(daemonResult.ValueOrDefault!, contentFolder);
         CopyManifest(context, manifestFile, versioning);
 
         var outputFile = outputFolder.GetFile($"{bundleFolder.Name}.zip");
@@ -60,7 +67,7 @@ public sealed partial class CreateBundleModule(IOptions<BuildOptions> buildOptio
         {
             TryParseVersion(targetDirectory.Path, out var version).ShouldBeTrue($"Could not parse version from directory name: {targetDirectory.Path}");
 
-            var sourceDir = targetDirectory.GetFolder("Contents").GetFolder(version);
+            var sourceDir = targetDirectory.GetFolder(AdskBundleContentsFolder).GetFolder(version);
             if (!sourceDir.Exists) continue;
 
             var versionFolder = contentFolder.CreateFolder(version);
@@ -78,24 +85,24 @@ public sealed partial class CreateBundleModule(IOptions<BuildOptions> buildOptio
         }
     }
 
-    private static void PackMcpServer(string mcpPublishDir, Folder contentFolder)
+    private static void PackDaemon(string daemonPublishDir, Folder contentFolder)
     {
-        var mcpExe = new File(Path.Combine(mcpPublishDir, "MCPServer.exe"));
-        if (!mcpExe.Exists) return;
+        var daemonExe = new File(Path.Combine(daemonPublishDir, DaemonExecutable));
+        if (!daemonExe.Exists) return;
 
-        mcpExe.CopyTo(contentFolder.GetFile("MCPServer.exe").Path);
+        daemonExe.CopyTo(contentFolder.GetFile(DaemonExecutable).Path);
     }
 
     private static void CopyManifest(IModuleContext context, File manifestFile, ResolveVersioningResult versioning)
     {
         var propsDir = context.Git().RootDirectory.GetFolder("props");
-        var sourceManifest = propsDir.GetFile("PackageContents.xml");
+        var sourceManifest = propsDir.GetFile(ManifestFile);
 
         var xml = new XmlDocument();
         xml.Load(sourceManifest.Path);
 
         var root = xml.DocumentElement!;
-        root.SetAttribute("AppVersion", versioning.Version);
+        root.SetAttribute(AdskAppVersionAttribute, versioning.Version);
 
         xml.Save(manifestFile.Path);
     }

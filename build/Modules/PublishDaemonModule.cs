@@ -1,3 +1,4 @@
+using DevTools.Utilities;
 using ModularPipelines.Attributes;
 using ModularPipelines.Context;
 using ModularPipelines.DotNet.Extensions;
@@ -8,13 +9,13 @@ using Sourcy.DotNet;
 namespace Build.Modules;
 
 /// <summary>
-///     Publish MCPServer as a trimmed self-contained single-file executable.
-///     The csproj DeployMcpServer target handles kill + copy to bundle Contents.
+///     Publish DevTools.Daemon as a self-contained single-file executable.
+///     The csproj DeployDevToolsDaemon target handles kill + copy to bundle Contents.
 /// </summary>
 [DependsOn<ResolveVersioningModule>]
 [DependsOn<CleanProjectModule>(Optional = true)]
 [UsedImplicitly]
-public sealed class PublishMcpServerModule : Module<string>
+public sealed class PublishDaemonModule : Module<string>
 {
     protected override async Task<string?> ExecuteAsync(IModuleContext context, CancellationToken cancellationToken)
     {
@@ -23,7 +24,7 @@ public sealed class PublishMcpServerModule : Module<string>
 
         await context.DotNet().Publish(new DotNetPublishOptions
         {
-            ProjectSolution = Projects.DevTools_McpServer.FullName,
+            ProjectSolution = Projects.DevTools_Daemon.FullName,
             Configuration = "Release",
             Properties =
             [
@@ -32,10 +33,6 @@ public sealed class PublishMcpServerModule : Module<string>
             ]
         }, cancellationToken: cancellationToken);
 
-        var bundleContents = Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
-            "Autodesk", "ApplicationPlugins", "RevitDevTool.bundle", "Contents");
-
-        return bundleContents;
+        return AppUtils.GetBundleContentsPath();
     }
 }
