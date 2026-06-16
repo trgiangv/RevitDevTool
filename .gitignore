@@ -45,3 +45,6 @@ superpowers/
 *.pfx
 cert.txt
 *.cer
+
+# Local dev overrides
+appsettings.Development.json

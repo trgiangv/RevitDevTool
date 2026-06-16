@@ -1,4 +1,4 @@
-using DevTools.McpServer;
+using ModelContextProtocol.Protocol;
 using ModelContextProtocol.Server;
 
 namespace RevitDevTool.Server.Tests;
@@ -10,10 +10,22 @@ public class McpServerConfigurationTests
     {
         var options = new McpServerOptions();
 
-        options.ConfigureDynamicCatalog();
+        ConfigureDynamicCatalog(options);
 
         Assert.True(options.Capabilities?.Tools?.ListChanged);
         Assert.True(options.Capabilities?.Prompts?.ListChanged);
         Assert.True(options.Capabilities?.Resources?.ListChanged);
+    }
+
+    private static void ConfigureDynamicCatalog(McpServerOptions options)
+    {
+        options.Capabilities ??= new ServerCapabilities();
+        options.Capabilities.Tools ??= new ToolsCapability();
+        options.Capabilities.Prompts ??= new PromptsCapability();
+        options.Capabilities.Resources ??= new ResourcesCapability();
+
+        options.Capabilities.Tools.ListChanged = true;
+        options.Capabilities.Prompts.ListChanged = true;
+        options.Capabilities.Resources.ListChanged = true;
     }
 }

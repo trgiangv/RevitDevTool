@@ -21,9 +21,12 @@
     </ItemGroup>
 
     <ItemGroup>
-        <Compile Include="..\..\source\DevTools.McpServer\McpServerConfiguration.cs" Link="McpServerConfiguration.cs" />
-        <Compile Include="..\..\source\DevTools.McpServer\Catalog\DynamicToolCatalog.cs" Link="DynamicToolCatalog.cs" />
-        <Compile Include="..\..\source\DevTools.McpServer\Catalog\DynamicToolCatalogModels.cs" Link="DynamicToolCatalogModels.cs" />
+        <Compile Include="..\..\source\DevTools.Daemon\Mcp\Catalog\DynamicToolCatalog.cs" Link="DynamicToolCatalog.cs" />
+        <Compile Include="..\..\source\DevTools.Daemon\Mcp\Catalog\DynamicToolCatalogModels.cs" Link="DynamicToolCatalogModels.cs" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <PackageReference Include="ModelContextProtocol" />
     </ItemGroup>
 
 </Project>

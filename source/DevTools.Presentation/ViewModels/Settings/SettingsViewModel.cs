@@ -10,11 +10,14 @@ public partial class SettingsViewModel(
     IMessenger messenger,
     GeneralSettingsViewModel generalSettings,
     LogSettingsViewModel logSettings,
+    McpSettingViewModel mcpSettings,
     IVisualizationBridge? visualization = null) : ObservableObject
 {
     public GeneralSettingsViewModel GeneralSettings => generalSettings;
 
     public LogSettingsViewModel LogSettings => logSettings;
+
+    public McpSettingViewModel McpSettings => mcpSettings;
 
     [RelayCommand]
     private void ResetSettings()

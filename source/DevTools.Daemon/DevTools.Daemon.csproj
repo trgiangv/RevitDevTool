@@ -1,0 +1,64 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <!--
+          Build (dev):   dotnet build
+          Publish:       dotnet publish -c Release
+  
+          Usage:
+              DevTools.Daemon.exe                                           tray app (auto-start, gateway auth)
+              DevTools.Daemon.exe (spawned by AI client while daemon runs)  stdio proxy to running daemon
+    -->
+
+    <PropertyGroup>
+        <OutputType>WinExe</OutputType>
+        <TargetFramework>net10.0-windows</TargetFramework>
+        <RuntimeIdentifier>win-x64</RuntimeIdentifier>
+        <UseWPF>true</UseWPF>
+        <Nullable>enable</Nullable>
+        <ImplicitUsings>enable</ImplicitUsings>
+        <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+        <RootNamespace>DevTools.Daemon</RootNamespace>
+        <AssemblyName>DevTools.Daemon</AssemblyName>
+        <ApplicationIcon>..\DevTools.UI\Resources\icons\DevTools-32-Dark.ico</ApplicationIcon>
+        <SelfContained>true</SelfContained>
+        <PublishSingleFile>true</PublishSingleFile>
+        <PublishReadyToRun>true</PublishReadyToRun>
+        <EnableCompressionInSingleFile>true</EnableCompressionInSingleFile>
+        <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
+    </PropertyGroup>
+
+    <PropertyGroup>
+        <BundleContentsFolder>$(AppData)\Autodesk\ApplicationPlugins\RevitDevTool.bundle\Contents</BundleContentsFolder>
+    </PropertyGroup>
+
+    <PropertyGroup Condition="$(Configuration.Contains('Release'))">
+        <DebugType>none</DebugType>
+        <DebugSymbols>false</DebugSymbols>
+    </PropertyGroup>
+
+    <Target Name="DeployDevToolsDaemon" AfterTargets="Publish">
+        <Exec Command="taskkill /F /IM DevTools.Daemon.exe 2>nul &amp; ping -n 2 127.0.0.1 >nul" IgnoreExitCode="true"/>
+        <MakeDir Directories="$(BundleContentsFolder)"/>
+        <Copy SourceFiles="$(PublishDir)DevTools.Daemon.exe" DestinationFolder="$(BundleContentsFolder)" OverwriteReadOnlyFiles="true" Retries="3" RetryDelayMilliseconds="1000"/>
+        <Copy SourceFiles="appsettings.development.json" DestinationFolder="$(BundleContentsFolder)" Condition="Exists('appsettings.development.json')" OverwriteReadOnlyFiles="true"/>
+    </Target>
+    <ItemGroup>
+        <PackageReference Include="H.NotifyIcon.Wpf"/>
+        <PackageReference Include="CommunityToolkit.Mvvm"/>
+        <PackageReference Include="ModelContextProtocol"/>
+        <PackageReference Include="Duende.IdentityModel.OidcClient"/>
+        <PackageReference Include="ZLogger"/>
+        <PackageReference Include="Microsoft.Extensions.Hosting"/>
+        <PackageReference Include="OpenMcdf"/>
+        <PackageReference Include="ACadSharp"/>
+    </ItemGroup>
+    <ItemGroup>
+        <EmbeddedResource Include="appsettings.json" LogicalName="appsettings.json"/>
+    </ItemGroup>
+    <ItemGroup>
+        <ProjectReference Include="..\DevTools.UI\DevTools.UI.csproj"/>
+        <ProjectReference Include="..\DevTools.Utilities\DevTools.Utilities.csproj"/>
+        <ProjectReference Include="..\DevTools.McpParser\DevTools.McpParser.csproj"/>
+        <ProjectReference Include="..\DevTools.Logging\DevTools.Logging.csproj"/>
+    </ItemGroup>
+</Project>

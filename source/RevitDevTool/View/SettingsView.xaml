@@ -24,6 +24,9 @@
             <DataTemplate DataType="{x:Type settings:LogSettingsViewModel}">
                 <settings:LogSettingsView />
             </DataTemplate>
+            <DataTemplate DataType="{x:Type settings:McpSettingViewModel}">
+                <settings:McpSettingView />
+            </DataTemplate>
         </ResourceDictionary>
     </UserControl.Resources>
 
@@ -39,6 +42,9 @@
             </TabItem>
             <TabItem Header="Visualization">
                 <visualization:VisualizationSettingsView />
+            </TabItem>
+            <TabItem Header="MCP">
+                <ContentControl Content="{Binding McpSettings}" />
             </TabItem>
             <TabItem Header="Log">
                 <ContentControl Content="{Binding LogSettings}" />

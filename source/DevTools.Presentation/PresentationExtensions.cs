@@ -25,12 +25,12 @@ public static class PresentationExtensions
         services.AddTransient<SettingsViewModel>();
         services.AddTransient<GeneralSettingsViewModel>();
         services.AddSingleton<LogSettingsViewModel>();
+        services.AddSingleton<McpSettingViewModel>();
         services.AddSingleton<LogViewModel>();
         services.AddSingleton<CommandViewModel>();
         services.AddSingleton<PackageViewModel>();
         services.AddSingleton<MemoryViewModel>();
         services.AddSingleton<ExecutionViewModel>();
-        services.AddSingleton<McpConfigViewModel>();
         services.AddSingleton<McpRegistryViewModel>();
         services.AddSingleton<MainViewModel>();
 

@@ -1,6 +1,6 @@
 using System.Text.Json;
 using DevTools.McpParser.Models;
-using DevTools.McpServer.Catalog;
+using DevTools.Daemon.Mcp.Catalog;
 using ModelContextProtocol.Protocol;
 
 namespace RevitDevTool.Server.Tests;
