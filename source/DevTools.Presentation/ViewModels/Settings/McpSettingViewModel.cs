@@ -39,19 +39,6 @@ public sealed partial class McpSettingViewModel : ObservableObject, IDisposable
                                                }
                                                """;
 
-    /// <summary>Legacy stdio config for MCPServer.exe (deprecated; kept for backward compatibility).</summary>
-    public static string LegacyStdioConfigSnippet => """
-                                                     {
-                                                       "mcpServers": {
-                                                         "revitdevtool": {
-                                                           "type": "stdio",
-                                                           "command": "~/AppData/Roaming/Autodesk/ApplicationPlugins/RevitDevTool.bundle/Contents/MCPServer.exe",
-                                                           "args": []
-                                                         }
-                                                       }
-                                                     }
-                                                     """;
-
     public McpSettingViewModel(ISettingsService settingsService, ToolRegistryStore toolStore)
     {
         _settingsService = settingsService;

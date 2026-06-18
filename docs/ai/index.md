@@ -10,6 +10,7 @@ Use this directory as deterministic agent memory. It does not replace the archit
 | Shared library change | `host-boundaries.md`, `build-matrix.md` | `.agents/skills/host-boundary-review/SKILL.md`, `.agents/skills/net48-compat-review/SKILL.md` |
 | Execution provider/strategy/orchestrator | `execution-system.md`, `verification.md` | `.agents/skills/execution-system-change/SKILL.md` |
 | MCP registry/server/dispatch | `mcp-pytest-bridge.md` | `.agents/skills/mcp-bridge-change/SKILL.md` |
+| Daemon (auth, gateway, tray, control pipe) | `docs/MCP/README.md` | `.agents/skills/mcp-bridge-change/SKILL.md` |
 | pytest bridge/test runtime | `mcp-pytest-bridge.md`, `known-test-gaps.md` | `.agents/skills/pytest-bridge-change/SKILL.md` |
 | Logging or geometry visualization | `host-boundaries.md` | `.agents/skills/logging-visualization-review/SKILL.md` |
 | Startup, lazy loading, host boot | `startup-performance.md`, `host-boundaries.md` | No separate skill; keep this as architecture/performance judgment |
