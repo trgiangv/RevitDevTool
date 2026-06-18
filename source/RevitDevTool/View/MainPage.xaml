@@ -1,21 +1,21 @@
-<Page x:Class="RevitDevTool.View.MainPage"
-      xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-      xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-      xmlns:converters="clr-namespace:DevTools.UI.Converters;assembly=DevTools.UI"
-      xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
-      xmlns:design="clr-namespace:DevTools.UI.Theme.Design;assembly=DevTools.UI"
-      xmlns:mah="http://metro.devtools.ui/winfx/xaml/controls"
-      xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-      xmlns:system="clr-namespace:System;assembly=System.Runtime"
-      xmlns:view="clr-namespace:RevitDevTool.View"
-      xmlns:viewModels="http://devtools.presentation"
-      d:DataContext="{d:DesignInstance viewModels:MainViewModel}"
-      d:DesignHeight="600"
-      d:DesignWidth="450"
-      Background="{DynamicResource DevTools.MahApps.Brushes.ThemeBackground}"
-      mc:Ignorable="d">
+<UserControl x:Class="RevitDevTool.View.MainPage"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:converters="clr-namespace:DevTools.UI.Converters;assembly=DevTools.UI"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:design="clr-namespace:DevTools.UI.Theme.Design;assembly=DevTools.UI"
+             xmlns:mah="http://metro.devtools.ui/winfx/xaml/controls"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:system="clr-namespace:System;assembly=System.Runtime"
+             xmlns:view="clr-namespace:RevitDevTool.View"
+             xmlns:viewModels="http://devtools.presentation"
+             d:DataContext="{d:DesignInstance viewModels:MainViewModel}"
+             d:DesignHeight="600"
+             d:DesignWidth="450"
+             Background="{DynamicResource DevTools.MahApps.Brushes.ThemeBackground}"
+             mc:Ignorable="d">
 
-    <Page.Resources>
+    <UserControl.Resources>
         <ResourceDictionary>
             <ResourceDictionary.MergedDictionaries>
                 <ResourceDictionary Source="/DevTools.UI;component/Theme/Theme.xaml" />
@@ -25,7 +25,7 @@
             <converters:InverseBooleanToVisibilityConverter x:Key="InverseBoolToVisibility" />
             <converters:IntToVisibilityConverter x:Key="IntToVisibility" />
         </ResourceDictionary>
-    </Page.Resources>
+    </UserControl.Resources>
 
     <Grid>
         <Grid.RowDefinitions>
@@ -262,4 +262,4 @@
             </Border>
         </Grid>
     </Grid>
-</Page>
+</UserControl>

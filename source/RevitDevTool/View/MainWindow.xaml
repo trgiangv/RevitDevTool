@@ -27,8 +27,7 @@
     </Window.Resources>
 
     <Grid>
-        <Frame x:Name="ContentFrame"
-               Margin="0"
-               NavigationUIVisibility="Hidden" />
+        <ContentControl x:Name="ContentHost"
+                        Margin="0" />
     </Grid>
 </Window>

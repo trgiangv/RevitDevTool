@@ -9,7 +9,7 @@ public partial class MainWindow
     public MainWindow(MainPage main)
     {
         InitializeComponent();
-        ContentFrame.Navigate(main);
+        ContentHost.Content = main;
 
         Loaded += OnLoaded;
         ThemeManager.Current.ActualApplicationThemeChanged += OnThemeChanged;
