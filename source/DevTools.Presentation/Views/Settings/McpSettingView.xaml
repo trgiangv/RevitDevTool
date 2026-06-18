@@ -81,7 +81,7 @@
                     <TextBlock Margin="0,0,0,4"
                                FontSize="11"
                                Foreground="{DynamicResource DevTools.MahApps.Brushes.Gray}"
-                               Text="For local desktop AI clients that support stdio transport — Cursor, VS Code, OpenCode, Claude Desktop, Codex, Windsurf, and any MCP-compatible client. Use DevTools.Daemon.exe (requires the daemon tray app running). MCPServer.exe remains supported as a legacy alternative."
+                               Text="For local desktop AI clients that support stdio transport — Cursor, VS Code, OpenCode, Claude Desktop, Codex, Windsurf, and any MCP-compatible client. Point your AI client to DevTools.Daemon.exe (the daemon tray app must be running)."
                                TextWrapping="Wrap" />
                     <TextBox Margin="0,8,0,0"
                              FontFamily="Consolas"

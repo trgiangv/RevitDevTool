@@ -16,8 +16,8 @@
 - Revit host: `source/RevitDevTool/`.
 - Revit-only helpers: `source/RevitDevTool.Core/` (dockable panes, RevitContext, transaction service — not shared with AutoCAD).
 - AutoCAD host: `source/AcadDevTool/`.
-- Shared platform libraries: `source/DevTools.Execution/`, `source/DevTools.Logging/`, `source/DevTools.McpParser/`, `source/DevTools.McpServer/`, `source/DevTools.Presentation/`, `source/DevTools.Settings/`, `source/DevTools.Telemetry/`, `source/DevTools.UI/`, and `source/DevTools.Utilities/`.
-- Standalone daemon: `source/DevTools.Daemon/` (replaces MCPServer — tray app with auth, MCP engine, host discovery).
+- Shared platform libraries: `source/DevTools.Execution/`, `source/DevTools.Logging/`, `source/DevTools.McpParser/`, `source/DevTools.Presentation/`, `source/DevTools.Settings/`, `source/DevTools.Telemetry/`, `source/DevTools.UI/`, and `source/DevTools.Utilities/`.
+- Standalone daemon: `source/DevTools.Daemon/` (WPF tray app — auth, MCP engine, host discovery, auto-start).
 - Samples and demo toolsets live under `Samples/`, not under `source/`.
 - Build automation lives under `build/`; agent wrapper scripts live under `scripts/agent/`.
 - Vendored WPF libraries: `libs/MahApps.Metro`, `libs/ControlzEx`, `libs/XamlBehaviorsWpf`, `libs/pythonnet-stub-generator`.
@@ -28,9 +28,8 @@
 - Autodesk 2022-2024 target `net48`; 2025-2026 target `net8.0-windows`; 2027 targets `net10.0-windows`.
 - Focused host build: `scripts/agent/build-host.ps1 -Year 2025`.
 - CI/package build: `scripts/agent/pack.ps1` or `dotnet run -c Release pack` from `build/`.
-- Default pipeline (`dotnet run --project build`) compiles all configurations + publishes MCPServer and DevTools.Daemon to the bundle Contents folder.
+- Default pipeline (`dotnet run --project build`) compiles all configurations + publishes DevTools.Daemon to the bundle Contents folder.
 - Daemon publish: `dotnet publish source/DevTools.Daemon -c Release` — csproj target auto-kills running instance and deploys to `%AppData%\...\RevitDevTool.bundle\Contents\`.
-- MCPServer publish (deprecated): `dotnet publish source/DevTools.McpServer -c Release` — kept for backward compatibility during transition.
 - **Kill host process before deploy builds**: Running Revit/AutoCAD locks the DLL. Before any build that deploys to the addin folder, kill the host process first: `Get-Process -Name "Revit" -ErrorAction SilentlyContinue | Stop-Process -Force`. See `.agents/skills/revit-build/SKILL.md` for details.
 
 ## Verification
@@ -52,7 +51,7 @@
 - `RevitDevTool.Core` is Revit-only (transactions, dockable panes, image export). It is NOT referenced by AutoCAD or shared libs.
 - New host support should add host-specific projects, adapters, and packaging rules without leaking host APIs into shared `DevTools.*` libraries.
 - Revit DirectContext3D visualization lives entirely in `source/RevitDevTool/Visualization/`, not in shared code. Other hosts should use their own rendering adapters.
-- Standalone daemon (`DevTools.Daemon`) is host-agnostic: `InstanceManager` discovers any host pipe, `HostBridgeClient` connects generically. Built-in tools support Revit and AutoCAD-family products (launch, file info, C# execution). In-host MCP dispatch is fully shared. `DevTools.McpServer` (`MCPServer.exe`) is deprecated but still published for backward compatibility.
+- Standalone daemon (`DevTools.Daemon`) is host-agnostic: `InstanceManager` discovers any host pipe, `HostBridgeClient` connects generically. Built-in tools support Revit and AutoCAD-family products (launch, file info, C# execution). In-host MCP dispatch is fully shared.
 
 ## Common Traps
 - Do not use repo-root `.sln`; use `RevitDevTool.slnx`.

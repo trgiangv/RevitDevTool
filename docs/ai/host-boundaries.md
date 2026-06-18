@@ -9,7 +9,6 @@ Keep these host-neutral — this is the default for all new functionality:
 - `source/DevTools.Execution/`
 - `source/DevTools.Logging/`
 - `source/DevTools.McpParser/`
-- `source/DevTools.McpServer/`
 - `source/DevTools.Presentation/`
 - `source/DevTools.Settings/`
 - `source/DevTools.Telemetry/`
@@ -26,12 +25,12 @@ Host API references belong in host projects:
 - Visualization: `source/RevitDevTool/Visualization/` (DirectContext3D — entirely Revit-host, not in shared code)
 - Future hosts: add new host projects rather than extending shared code with platform-specific branches.
 
-## Standalone Process
+## Standalone Daemon
 
-- `source/DevTools.McpServer/` runs outside hosts as `MCPServer.exe`.
+- `source/DevTools.Daemon/` runs outside hosts as `DevTools.Daemon.exe` (WPF tray app).
 - `InstanceManager` discovers any host pipe via generic regex (`{HostApp}_{Version}_{PID}`).
 - `HostBridgeClient` connects to any host (formerly `RevitBridgeClient`).
-- Standalone built-in tools: `list_host_instances`, `launch_host`, `read_file_info`, `open_model` (multi-host).
+- Daemon built-in tools: `list_host_instances`, `launch_host`, `read_file_info`, `open_model`, `list_machines` (multi-host).
 - In-host built-in tools (shared runtime): `execute_csharp_code`, `open_document` via `IDocumentBridge`.
 - Startup dialog resolver uses merged keywords in default `StartupDialogResolverOptions` (Revit + AutoCAD).
 - Remaining gaps for AutoCAD: no shipped MCP toolset.

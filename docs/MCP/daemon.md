@@ -1,10 +1,10 @@
 # DevTools.Daemon
 
-Standalone WPF tray application that replaces `MCPServer.exe`. Hosts the MCP engine, authentication, and multi-machine gateway connectivity.
+Standalone WPF tray application that hosts the MCP engine, authentication, and multi-machine gateway connectivity.
 
 ## Capabilities
 
-1. **Auto-starts** with Windows (optional, via Registry Run key)
+1. **Auto-starts** with Windows (Registry Run key, set by installer)
 2. **Single-instance** enforced by global Mutex; secondary launches become stdio proxies
 3. **Owns authentication** — OIDC/PKCE flow via system browser, tokens stored with DPAPI
 4. **Hosts the MCP engine** — Stdio mode for local AI clients, Gateway mode for remote
@@ -22,18 +22,6 @@ Standalone WPF tray application that replaces `MCPServer.exe`. Hosts the MCP eng
 | Tray icon + menu | `source/DevTools.Daemon/Tray/` |
 | Dashboard (window + views) | `source/DevTools.Daemon/Dashboard/` |
 | Lifecycle (mutex, autostart, stdio proxy) | `source/DevTools.Daemon/Lifecycle/` |
-
-## Daemon vs MCPServer.exe
-
-| Aspect | DevTools.Daemon (new) | MCPServer.exe (deprecated) |
-|--------|----------------------|---------------------------|
-| Lifecycle | Auto-start, tray app, user-controlled | Launched by AI client or host add-in |
-| Auth | Built-in OIDC/PKCE, stores tokens | None (token passed via CLI arg) |
-| UI | System tray + Dashboard | None (console) |
-| Gateway | Connects with device metadata, multi-machine | Simple tunnel, single machine |
-| Host comms | Same InstanceManager + HostBridgeClient | Same |
-| Single instance | Mutex + stdio proxy | None |
-| Configuration | Embedded `appsettings.json` + CI/CD injection | CLI args |
 
 ## Configuration
 

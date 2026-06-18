@@ -21,7 +21,6 @@ Last updated: 2026-06-18
 |------|------|
 | **Daemon (primary)** | `source/DevTools.Daemon/` |
 | Parser/contracts | `source/DevTools.McpParser/` |
-| MCPServer (deprecated) | `source/DevTools.McpServer/` |
 | In-host runtime | `source/DevTools.Execution/External/Mcp/` |
 | Pipe server | `source/DevTools.Execution/External/DevToolsPipeServer.cs` |
 | Registry UI | `source/DevTools.Presentation/ViewModels/McpRegistryViewModel.cs` |

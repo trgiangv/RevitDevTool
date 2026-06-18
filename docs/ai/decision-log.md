@@ -63,3 +63,12 @@ Use this file for durable architecture decisions that affect agent behavior. Kee
 - `get_host_config()` returns a fallback `HostConfig(pipe_prefix=host_name)` for unknown hosts — any host exposing a DevToolsPipeServer pipe works without pre-registration.
 - `find_host_pipes()` no longer filters out unregistered pipe prefixes — returns all pipes matching the 3-part pattern, resolving host name from registry or using the raw prefix.
 - `HostConfig.exe_name` changed from required to `str | None` — hosts without exe discovery logic still work for connect-only scenarios.
+
+## 2026-06-18: DevTools.McpServer removed — Daemon is sole MCP host
+
+- `source/DevTools.McpServer/` deleted entirely. `DevTools.Daemon` is now the single MCP entry point for external AI clients.
+- `DevTools.Daemon.exe` is a standalone WPF tray app (not a console exe). It owns: auth (OIDC/PKCE), MCP engine (stdio + gateway), host discovery, multi-machine gateway, control pipe, dashboard UI.
+- Installer (`install/Setup.iss`) now installs `DevTools.Daemon.exe` to `{app}\Contents\`, registers auto-start (`HKCU\...\Run\DevToolsDaemon`), launches post-install, and unregisters on uninstall.
+- Build pipeline: `PublishMcpServerModule` removed; `PublishDaemonModule` is the sole publish step. `CreateBundleModule` packs only `DevTools.Daemon.exe`.
+- AI clients (Cursor, Claude Desktop) point their MCP config to `DevTools.Daemon.exe`. The Daemon's single-instance mutex ensures secondary launches become stdio proxies to the running instance.
+- No backward compatibility period — MCPServer.exe is gone from the codebase and installer.

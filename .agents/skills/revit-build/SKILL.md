@@ -70,9 +70,9 @@ Build project: `build/Build.csproj` targeting `net10.0`.
 
 | Command | Modules |
 |---------|---------|
-| *(no args)* | `CompileProjectModule` + `PublishMcpServerModule` |
+| *(no args)* | `CompileProjectModule` + `PublishDaemonModule` |
 | `test` | `TestProjectModule` |
-| `pack` | `CleanProjectModule` → `CreateBundleModule` + `PublishMcpServerModule` → `CreateInstallerModule` |
+| `pack` | `CleanProjectModule` → `CreateBundleModule` + `PublishDaemonModule` → `CreateInstallerModule` |
 | `publish` | `PublishGithubModule` |
 
 ### Key Modules
@@ -80,10 +80,10 @@ Build project: `build/Build.csproj` targeting `net10.0`.
 - **ResolveConfigurationsModule**: Reads `Release.Autodesk.*` configs from the `.slnx` solution file
 - **ResolveVersioningModule**: Resolves version from `BuildOptions.Version` or GitVersion tool
 - **CompileProjectModule**: Builds solution for each resolved configuration with version properties
-- **PublishMcpServerModule**: Publishes MCPServer as trimmed self-contained single-file (~52MB). Csproj `DeployMcpServer` target auto-kills running instance and copies to `%AppData%\...\RevitDevTool.bundle\Contents\`
+- **PublishDaemonModule**: Publishes DevTools.Daemon as self-contained single-file WPF tray app. Csproj `DeployDevToolsDaemon` target auto-kills running instance and copies to `%AppData%\...\RevitDevTool.bundle\Contents\`
 - **TestProjectModule**: Runs tests per configuration (skipped in CI)
 - **CleanProjectModule**: Cleans `bin`/`obj` and output directory (skipped in CI)
-- **CreateBundleModule**: Creates Autodesk `.bundle` package from publish outputs (uses `PublishMcpServerModule` result for MCPServer.exe)
+- **CreateBundleModule**: Creates Autodesk `.bundle` package from publish outputs (uses `PublishDaemonModule` result for DevTools.Daemon.exe)
 - **CreateInstallerModule**: Creates installer via Inno Setup
 - **PublishGithubModule**: Creates GitHub release with changelog and uploads artifacts
 

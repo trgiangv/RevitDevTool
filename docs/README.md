@@ -108,7 +108,7 @@ Python + WebView2 dashboard application:
 
 Model Context Protocol integration:
 - `DevTools.McpParser` — message parsing library
-- `DevTools.McpServer` — standalone server binary
+- `DevTools.Daemon` — standalone tray app (MCP engine, auth, gateway)
 - `ToolRegistryStore` — in-process tool discovery & caching
 - `.NET` + Python toolset providers
 - Tool/Prompt/Resource dispatch
@@ -167,7 +167,7 @@ pytest remote execution bridge:
 | **DevTools.Telemetry** | `AGENTS.md` | Sentry integration, path scrubbing |
 | **DevTools.Utilities** | `AGENTS.md` | Win32 helpers, assembly loading |
 | **DevTools.McpParser** | `MCP/README.md` | Shared bridge contracts and parsers |
-| **DevTools.McpServer** | `MCP/README.md`, `ai/build-matrix.md` | Standalone `MCPServer.exe` |
+| **DevTools.Daemon** | `MCP/daemon.md`, `ai/build-matrix.md` | Standalone tray app (MCP engine, auth, gateway) |
 | **RevitDevTool.Core** | `AGENTS.md` | Revit-only: transactions, dockable panes |
 
 ### Sample Projects (source only, no architecture docs)
@@ -194,7 +194,7 @@ pytest remote execution bridge:
 | Presentation (MVVM) | `source/DevTools.Presentation/` | Shared |
 | Logging | `source/DevTools.Logging/` | Shared |
 | MCP parser/contracts | `source/DevTools.McpParser/` | Shared |
-| MCP standalone server | `source/DevTools.McpServer/` | Standalone |
+| MCP daemon (tray app) | `source/DevTools.Daemon/` | Standalone |
 | Settings | `source/DevTools.Settings/` | Shared |
 | Telemetry | `source/DevTools.Telemetry/` | Shared |
 | UI (WPF controls) | `source/DevTools.UI/` | Shared |

@@ -5,14 +5,14 @@ Deep sources: `docs/MCP/README.md` and `docs/PyTest/README.md`.
 ## MCP
 
 - Parser library: `source/DevTools.McpParser/`.
-- Standalone MCP server: `source/DevTools.McpServer/`.
+- Standalone daemon: `source/DevTools.Daemon/`.
 - In-host runtime: `source/DevTools.Execution/External/Mcp/`.
 - Registry store: `ToolRegistryStore`.
 - Providers: `DotnetToolRegistryProvider` and `PythonToolRegistryProvider`.
 - Dispatchers: tool, prompt, and resource dispatch.
 - Bridge client: `HostBridgeClient` (generic, formerly `RevitBridgeClient`).
 
-External MCP clients call the standalone server, which discovers any host pipe (`Revit_*`, `AutoCad_*`, `Civil3D_*`, etc.) via `InstanceManager`. Standalone built-in tools (`MCPServer.exe`): `list_host_instances`, `launch_host`, `read_file_info`, `open_model` — multi-host (Revit + AutoCAD-family). In-host built-in tools registered in `ExecutionExtensions.cs`: `execute_csharp_code`, `open_document`. The in-host registry/dispatch runtime is fully shared.
+External MCP clients talk to `DevTools.Daemon`, which discovers any host pipe (`Revit_*`, `AutoCad_*`, `Civil3D_*`, etc.) via `InstanceManager`. Daemon built-in tools: `list_host_instances`, `launch_host`, `read_file_info`, `open_model`, `list_machines` — multi-host (Revit + AutoCAD-family). In-host built-in tools registered in `ExecutionExtensions.cs`: `execute_csharp_code`, `open_document`. The in-host registry/dispatch runtime is fully shared.
 
 ## PyTest Bridge
 

@@ -164,7 +164,7 @@ print(f"Found {walls.GetElementCount()} walls")
 ### AI Integration (MCP)
 
 - **Model Context Protocol** — AI assistants interact with live host instances
-- **Multi-host discovery** — standalone `MCPServer.exe` finds all running hosts
+- **Multi-host discovery** — `DevTools.Daemon` tray app finds all running hosts
 - **Built-in tools** — `list_host_instances`, `launch_host`, `open_model`, `execute_csharp_code`, `open_document`
 - **Custom toolsets** — Python/C# MCP tools registered via file convention
 - **Works with** — Cursor, Claude Desktop, VS Code Copilot, any MCP client

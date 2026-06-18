@@ -23,37 +23,37 @@ Valid modes are `Debug` and `Release`, so full names look like `Debug.Autodesk.2
 
 - Focused host compile: `scripts/agent/build-host.ps1 -Year 2025`.
 - Release package: `scripts/agent/pack.ps1`.
-- Build pipeline with no args: `dotnet run --project build` compiles all release configurations + publishes MCPServer.
+- Build pipeline with no args: `dotnet run --project build` compiles all release configurations + publishes DevTools.Daemon.
 
-## MCP Server
+## DevTools.Daemon
 
-`DevTools.McpServer` is an independent executable (`MCPServer.exe`) that runs outside host processes. It bridges AI clients (Claude Desktop, Cursor) with host applications via named pipes.
+`DevTools.Daemon` is a standalone WPF tray application (`DevTools.Daemon.exe`) that runs outside host processes. It bridges AI clients (Claude Desktop, Cursor) with host applications via named pipes, handles authentication, and manages multi-machine gateway connectivity.
 
 ### Publish & Deploy
 
-The csproj has a `DeployMcpServer` MSBuild target (`AfterTargets="Publish"`) that:
-1. Kills any running `MCPServer.exe` process (file lock prevention)
+The csproj has a `DeployDevToolsDaemon` MSBuild target (`AfterTargets="Publish"`) that:
+1. Kills any running `DevTools.Daemon.exe` process (file lock prevention)
 2. Copies the published single-file executable to `%AppData%\Autodesk\ApplicationPlugins\RevitDevTool.bundle\Contents\`
 
 ```bash
-# Publish MCPServer (triggers deploy automatically)
-dotnet publish source/DevTools.McpServer -c Release
+# Publish Daemon (triggers deploy automatically)
+dotnet publish source/DevTools.Daemon -c Release
 ```
 
 ### Build Characteristics
 
 - Target: `net10.0-windows` / `win-x64`
-- Self-contained single-file with trimming + compression (~52MB)
-- Properties: `PublishTrimmed=true`, `TrimMode=partial`, `EnableCompressionInSingleFile=true`
-- `JsonSerializerIsReflectionEnabledByDefault=true` (required — MCP SDK uses reflection-based JSON)
+- Self-contained single-file (~52MB)
+- WPF tray app with embedded `appsettings.json` (CI/CD injects secrets)
+- Properties: `PublishSingleFile=true`, `SelfContained=true`
 
 ### Pipeline Integration
 
-| Command | MCPServer behavior |
-|---------|-------------------|
-| `dotnet run --project build` (no args) | `PublishMcpServerModule` publishes + deploys to AppData |
-| `dotnet run --project build -- pack` | Same + `CreateBundleModule` packs MCPServer.exe into bundle zip |
-| `dotnet publish source/DevTools.McpServer -c Release` | Direct publish + deploy (csproj target) |
+| Command | Daemon behavior |
+|---------|-----------------|
+| `dotnet run --project build` (no args) | `PublishDaemonModule` publishes + deploys to AppData |
+| `dotnet run --project build -- pack` | Same + `CreateBundleModule` packs DevTools.Daemon.exe into bundle zip |
+| `dotnet publish source/DevTools.Daemon -c Release` | Direct publish + deploy (csproj target) |
 
 ## Kill Host Process Before Deploy
 
