@@ -98,8 +98,8 @@ Name: "autocad\2027"; Description: "2027";             Types: custom
 
 [Files]
 ; Core
-Source: "PackageContents.xml";    DestDir: "{app}";          Flags: ignoreversion
-Source: "Contents\MCPServer.exe"; DestDir: "{app}\Contents"; Flags: ignoreversion
+Source: "PackageContents.xml";          DestDir: "{app}";          Flags: ignoreversion
+Source: "Contents\DevTools.Daemon.exe"; DestDir: "{app}\Contents"; Flags: ignoreversion
 
 ; Shared year folders
 Source: "Contents\2022\*"; DestDir: "{app}\Contents\2022"; Flags: ignoreversion recursesubdirs; Components: revit\2022 or autocad\2022
@@ -110,6 +110,7 @@ Source: "Contents\2026\*"; DestDir: "{app}\Contents\2026"; Flags: ignoreversion 
 Source: "Contents\2027\*"; DestDir: "{app}\Contents\2027"; Flags: ignoreversion recursesubdirs; Components: revit\2027 or autocad\2027
 
 [Icons]
+Name: "{autoprograms}\{#AppName} Dashboard"; Filename: "{app}\Contents\DevTools.Daemon.exe"
 Name: "{autoprograms}\Uninstall {#AppName}"; Filename: "{uninstallexe}"
 
 ; ==============================================================================
@@ -118,6 +119,7 @@ Name: "{autoprograms}\Uninstall {#AppName}"; Filename: "{uninstallexe}"
 ;   Processes.inc — monitored EXEs; line = name - file version - PID: n; extend MONITORED_EXE_COUNT
 ;   Cleanup.inc   — Legacy RevitDevTool cleanup (OnPostInstall)
 ;   XmlFilter.inc — PackageContents.xml pruning
+;   Daemon.inc    — Auto-start registry, launch/stop DevTools.Daemon
 ;   Register.inc  — OnPostInstall, CurStepChanged
 ;   Hooks.inc     — InitializeSetup / InitializeUninstall
 ; ==============================================================================
@@ -127,5 +129,6 @@ Name: "{autoprograms}\Uninstall {#AppName}"; Filename: "{uninstallexe}"
 #include "includes\Processes.inc"
 #include "includes\XmlFilter.inc"
 #include "includes\Cleanup.inc"
+#include "includes\Daemon.inc"
 #include "includes\Register.inc"
 #include "includes\Hooks.inc"

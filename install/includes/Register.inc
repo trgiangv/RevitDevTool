@@ -26,4 +26,7 @@ begin
 
   for I := 0 to APP_COUNT - 1 do
     OnPostInstall(I);
+
+  RegisterDaemonAutoStart;
+  LaunchDaemonAfterInstall;
 end;

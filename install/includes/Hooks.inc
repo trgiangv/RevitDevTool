@@ -67,5 +67,6 @@ begin
     Sleep(500);
   end;
 
+  UnregisterDaemonAutoStart;
   Log('InitializeUninstall: no blocking processes, proceeding');
 end;

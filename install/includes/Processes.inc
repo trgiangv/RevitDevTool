@@ -12,7 +12,7 @@ begin
     0: Result := 'Revit.exe';
     1: Result := 'acad.exe';
     2: Result := 'acadlt.exe';
-    3: Result := 'MCPServer.exe';
+    3: Result := 'DevTools.Daemon.exe';
   else
     Result := '';
   end;
