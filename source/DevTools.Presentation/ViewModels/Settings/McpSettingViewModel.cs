@@ -2,9 +2,9 @@ using System.Collections.ObjectModel;
 using System.Text.Json;
 using System.Windows.Threading;
 using DevTools.Execution.External.Mcp;
+using DevTools.McpParser.Models;
 using DevTools.Presentation.Services;
 using DevTools.Settings;
-using static DevTools.Utilities.DaemonConstants;
 // ReSharper disable RedundantSuppressNullableWarningExpression
 
 namespace DevTools.Presentation.ViewModels.Settings;
@@ -23,7 +23,7 @@ public sealed partial class McpSettingViewModel : ObservableObject, IDisposable
     private CancellationTokenSource? _signInCts;
 
     [ObservableProperty]
-    public partial string DaemonStatus { get; set; } = StatusUnknown;
+    public partial string DaemonStatus { get; private set; } = StatusUnknown;
 
     [ObservableProperty]
     public partial bool IsSigningIn { get; set; }
@@ -66,7 +66,7 @@ public sealed partial class McpSettingViewModel : ObservableObject, IDisposable
         {
             var ct = _signInCts.Token;
             await DaemonClient.EnsureRunningAsync(ct).ConfigureAwait(true);
-            await DaemonClient.QueryAsync(Methods.SignIn, ct).ConfigureAwait(true);
+            await DaemonClient.QueryAsync(DaemonConstants.Methods.SignIn, ct).ConfigureAwait(true);
             await RefreshDaemonStatusAsync().ConfigureAwait(true);
         }
         finally
@@ -84,7 +84,7 @@ public sealed partial class McpSettingViewModel : ObservableObject, IDisposable
     private static async Task OpenDaemonDashboardAsync()
     {
         await DaemonClient.EnsureRunningAsync().ConfigureAwait(true);
-        await DaemonClient.QueryAsync(Methods.OpenDashboard).ConfigureAwait(true);
+        await DaemonClient.QueryAsync(DaemonConstants.Methods.OpenDashboard).ConfigureAwait(true);
     }
 
     [RelayCommand]
@@ -111,7 +111,7 @@ public sealed partial class McpSettingViewModel : ObservableObject, IDisposable
 
     private async Task RefreshDaemonStatusAsync()
     {
-        var response = await DaemonClient.QueryAsync(Methods.Status).ConfigureAwait(false);
+        var response = await DaemonClient.QueryAsync(DaemonConstants.Methods.Status).ConfigureAwait(false);
         var status = IsDaemonRunning(response) ? StatusRunning : StatusNotRunning;
 
         if (!_dispatcher.CheckAccess())
@@ -130,7 +130,7 @@ public sealed partial class McpSettingViewModel : ObservableObject, IDisposable
         try
         {
             using var doc = JsonDocument.Parse(response!);
-            return doc.RootElement.TryGetProperty(JsonProperties.IsRunning, out var running)
+            return doc.RootElement.TryGetProperty(DaemonConstants.JsonProperties.IsRunning, out var running)
                    && running.GetBoolean();
         }
         catch (JsonException)

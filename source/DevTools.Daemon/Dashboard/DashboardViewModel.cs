@@ -37,37 +37,31 @@ public partial class DashboardViewModel : ObservableObject
     private bool _suppressAutoStartSync;
 
     [ObservableProperty]
-    public partial object? CurrentView { get; set; }
-
-    [ObservableProperty]
     public partial int SelectedTabIndex { get; set; }
 
     [ObservableProperty]
     public partial bool IsAuthenticated { get; set; }
 
     [ObservableProperty]
-    public partial string? DisplayName { get; set; }
+    public partial string? DisplayName { get; private set; }
 
     [ObservableProperty]
-    public partial string? Email { get; set; }
+    public partial string? Email { get; private set; }
 
     [ObservableProperty]
-    public partial string? AvatarUrl { get; set; }
+    public partial ImageSource? AvatarImage { get; private set; }
 
     [ObservableProperty]
-    public partial ImageSource? AvatarImage { get; set; }
+    public partial int HostCount { get; private set; }
 
     [ObservableProperty]
-    public partial int HostCount { get; set; }
-
-    [ObservableProperty]
-    public partial string GatewayStatus { get; set; } = StatusDisconnected;
+    public partial string GatewayStatus { get; private set; } = StatusDisconnected;
 
     [ObservableProperty]
     public partial bool AutoStartEnabled { get; set; }
 
     [ObservableProperty]
-    public partial string Version { get; set; }
+    public partial string Version { get; private set; }
 
     [ObservableProperty]
     public partial AppTheme Theme { get; set; }
@@ -106,14 +100,12 @@ public partial class DashboardViewModel : ObservableObject
     private void ShowOverview()
     {
         SelectedTabIndex = 0;
-        CurrentView = new Views.OverviewView();
     }
 
     [RelayCommand]
     private void ShowHosts()
     {
         SelectedTabIndex = 1;
-        CurrentView = new Views.HostsView();
         RefreshHosts();
     }
 
@@ -121,7 +113,6 @@ public partial class DashboardViewModel : ObservableObject
     private void ShowSettings()
     {
         SelectedTabIndex = 2;
-        CurrentView = new Views.SettingsView();
         LoadAutoStartState();
     }
 
@@ -178,7 +169,7 @@ public partial class DashboardViewModel : ObservableObject
         Application.Current?.Dispatcher.Invoke(() => ApplyCurrentTheme(AppTheme.Auto));
     }
 
-    private void ApplyCurrentTheme(AppTheme value)
+    private static void ApplyCurrentTheme(AppTheme value)
     {
         var themeName = value switch
         {
@@ -190,13 +181,6 @@ public partial class DashboardViewModel : ObservableObject
         };
 
         ControlzEx.Theming.ThemeManager.Current.ChangeTheme(Application.Current, themeName);
-    }
-
-    partial void OnAvatarUrlChanged(string? value)
-    {
-        AvatarImage = string.IsNullOrWhiteSpace(value)
-            ? null
-            : new BitmapImage(new Uri(value, UriKind.Absolute));
     }
 
     private void LoadAutoStartState()
@@ -211,7 +195,9 @@ public partial class DashboardViewModel : ObservableObject
         IsAuthenticated = _authService.IsAuthenticated;
         DisplayName = _authService.DisplayName;
         Email = _authService.Email;
-        AvatarUrl = _authService.AvatarUrl;
+        AvatarImage = string.IsNullOrWhiteSpace(_authService.AvatarUrl)
+            ? null
+            : new BitmapImage(new Uri(_authService.AvatarUrl, UriKind.Absolute));
         GatewayStatus = _authService.IsAuthenticated ? StatusConnected : StatusNotSignedIn;
     }
 

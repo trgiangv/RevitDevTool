@@ -1,6 +1,7 @@
 <ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
                     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+                    xmlns:mah="http://metro.devtools.ui/winfx/xaml/controls"
                     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
                     xmlns:tb="http://www.hardcodet.net/taskbar"
                     xmlns:tray="clr-namespace:DevTools.Daemon.Tray"
@@ -8,22 +9,31 @@
 
     <BooleanToVisibilityConverter x:Key="BoolToVis" />
 
-    <ContextMenu x:Key="TrayMenu" x:Shared="false"
-                 d:DataContext="{d:DesignInstance tray:TrayViewModel}">
-        <MenuItem Header="Dashboard" Command="{Binding OpenDashboardCommand}" FontWeight="Bold" />
+    <ContextMenu x:Key="TrayMenu"
+                 d:DataContext="{d:DesignInstance tray:TrayViewModel}"
+                 mah:ControlsHelper.CornerRadius="6"
+                 x:Shared="false">
+        <MenuItem Margin="0,5,0,0"
+                  Command="{Binding OpenDashboardCommand}"
+                  FontWeight="Bold"
+                  Header="Dashboard" />
         <Separator />
-        <MenuItem Header="Sign In" Command="{Binding SignInCommand}" />
-        <MenuItem Header="Sign Out" Command="{Binding SignOutCommand}" />
+        <MenuItem Command="{Binding SignInCommand}"
+                  Header="Sign In" />
+        <MenuItem Command="{Binding SignOutCommand}"
+                  Header="Sign Out" />
         <Separator />
-        <MenuItem Header="Quit" Command="{Binding ExitApplicationCommand}" />
+        <MenuItem Margin="0,0,0,5"
+                  Command="{Binding ExitApplicationCommand}"
+                  Header="Quit" />
     </ContextMenu>
 
     <tb:TaskbarIcon x:Key="TrayIcon"
                     d:DataContext="{d:DesignInstance tray:TrayViewModel}"
+                    ContextMenu="{StaticResource TrayMenu}"
                     IconSource="{Binding TrayIconSource}"
-                    ToolTipText="{Binding StatusText}"
                     LeftClickCommand="{Binding OpenDashboardCommand}"
                     NoLeftClickDelay="True"
-                    ContextMenu="{StaticResource TrayMenu}" />
+                    ToolTipText="{Binding StatusText}" />
 
 </ResourceDictionary>

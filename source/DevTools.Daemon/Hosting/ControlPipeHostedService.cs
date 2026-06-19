@@ -1,9 +1,9 @@
 using System.IO.Pipes;
 using System.Text;
+using DevTools.McpParser.Models;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using ZLogger;
-using static DevTools.Utilities.DaemonConstants;
 
 namespace DevTools.Daemon.Hosting;
 
@@ -20,7 +20,7 @@ internal sealed class ControlPipeHostedService(ControlPipeHandler handler, ILogg
         while (!stoppingToken.IsCancellationRequested)
         {
             await using var server = new NamedPipeServerStream(
-                ControlPipeName,
+                DaemonConstants.ControlPipeName,
                 PipeDirection.InOut,
                 MaxServerInstances,
                 PipeTransmissionMode.Byte,

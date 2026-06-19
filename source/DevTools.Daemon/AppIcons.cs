@@ -14,8 +14,8 @@ public static class AppIcons
 
     public static ImageSource ForCurrentTheme()
     {
-        var isDark = !WindowsThemeHelper.AppsUseLightTheme();
-        return isDark ? Dark : Light;
+        var isLight = WindowsThemeHelper.AppsUseLightTheme();
+        return isLight ? Light : Dark;
     }
 
     private static BitmapImage CreateFrozen(string uri)

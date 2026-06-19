@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using System.IO.Pipes;
 using System.Text;
+using DevTools.McpParser.Models;
 using DevTools.Utilities;
 
 namespace DevTools.Presentation.Services;

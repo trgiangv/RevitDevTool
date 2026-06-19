@@ -21,20 +21,12 @@ public partial class TrayViewModel : ObservableObject
     public partial string StatusText { get; set; } = DefaultStatusText;
 
     [ObservableProperty]
-    public partial bool IsAuthenticated { get; set; }
-
-    [ObservableProperty]
-    public partial int HostCount { get; set; }
-
-    [ObservableProperty]
     public partial ImageSource TrayIconSource { get; set; } = AppIcons.ForCurrentTheme();
 
     public TrayViewModel(IAuthService authService, IServiceProvider services)
     {
         _authService = authService;
         _services = services;
-        IsAuthenticated = authService.IsAuthenticated;
-        authService.StateChanged += (_, args) => IsAuthenticated = args.IsAuthenticated;
 
         Microsoft.Win32.SystemEvents.UserPreferenceChanged += (_, _) =>
             Application.Current?.Dispatcher.Invoke(() => TrayIconSource = AppIcons.ForCurrentTheme());

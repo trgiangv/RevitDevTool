@@ -8,7 +8,7 @@ namespace DevTools.Daemon.Dashboard;
 
 public partial class DashboardWindow
 {
-    private DashboardViewModel? _vm;
+    private readonly DashboardViewModel? _vm;
 
     public DashboardWindow(DashboardViewModel vm)
     {

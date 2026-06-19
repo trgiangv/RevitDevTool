@@ -4,8 +4,8 @@ using DevTools.Daemon.Auth;
 using DevTools.Daemon.Mcp;
 using DevTools.Daemon.Mcp.Tools;
 using DevTools.Daemon.Tray;
+using DevTools.McpParser.Models;
 using H.NotifyIcon;
-using static DevTools.Utilities.DaemonConstants;
 
 namespace DevTools.Daemon.Hosting;
 
@@ -21,18 +21,18 @@ public sealed class ControlPipeHandler(IAuthService authService, McpEngine mcpEn
         try
         {
             using var request = JsonDocument.Parse(requestLine);
-            var method = request.RootElement.TryGetProperty(JsonProperties.Method, out var methodElement)
+            var method = request.RootElement.TryGetProperty(DaemonConstants.JsonProperties.Method, out var methodElement)
                 ? methodElement.GetString()
                 : null;
 
             return method switch
             {
-                Methods.Status => JsonSerializer.Serialize(new
+                DaemonConstants.Methods.Status => JsonSerializer.Serialize(new
                 {
                     isRunning = true,
                     version = typeof(ControlPipeHandler).Assembly.GetName().Version?.ToString() ?? DefaultVersion
                 }),
-                Methods.AuthState => JsonSerializer.Serialize(new
+                DaemonConstants.Methods.AuthState => JsonSerializer.Serialize(new
                 {
                     isAuthenticated = authService.IsAuthenticated,
                     userId = authService.UserId,
@@ -40,16 +40,16 @@ public sealed class ControlPipeHandler(IAuthService authService, McpEngine mcpEn
                     displayName = authService.DisplayName,
                     avatarUrl = authService.AvatarUrl
                 }),
-                Methods.SignIn => await HandleSignInAsync(ct).ConfigureAwait(false),
-                Methods.SignOut => await HandleSignOutAsync().ConfigureAwait(false),
-                Methods.ConnectedHosts => HandleConnectedHosts(),
-                Methods.OpenDashboard => HandleOpenDashboard(),
-                _ => JsonSerializer.Serialize(new { error = Errors.UnknownMethod })
+                DaemonConstants.Methods.SignIn => await HandleSignInAsync(ct).ConfigureAwait(false),
+                DaemonConstants.Methods.SignOut => await HandleSignOutAsync().ConfigureAwait(false),
+                DaemonConstants.Methods.ConnectedHosts => HandleConnectedHosts(),
+                DaemonConstants.Methods.OpenDashboard => HandleOpenDashboard(),
+                _ => JsonSerializer.Serialize(new { error = DaemonConstants.Errors.UnknownMethod })
             };
         }
         catch (JsonException)
         {
-            return JsonSerializer.Serialize(new { error = Errors.InvalidRequest });
+            return JsonSerializer.Serialize(new { error = DaemonConstants.Errors.InvalidRequest });
         }
     }
 
@@ -90,7 +90,7 @@ public sealed class ControlPipeHandler(IAuthService authService, McpEngine mcpEn
 
         app.Dispatcher.Invoke(() =>
         {
-            if (app.FindResource(TrayIconResourceKey) is TaskbarIcon { DataContext: TrayViewModel vm })
+            if (app.FindResource(DaemonConstants.TrayIconResourceKey) is TaskbarIcon { DataContext: TrayViewModel vm })
                 vm.OpenDashboardCommand.Execute(null);
         });
 
