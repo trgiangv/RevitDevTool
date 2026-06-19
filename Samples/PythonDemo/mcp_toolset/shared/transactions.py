@@ -9,13 +9,12 @@ T = TypeVar("T")
 
 
 def run_transaction(doc: DB.Document, name: str, operation: Callable[[], T]) -> T:
-    tx = DB.Transaction(doc, name)
-    tx.Start()
-    try:
-        result = operation()
-        tx.Commit()
-        return result
-    except Exception:
-        if tx.HasStarted() and not tx.HasEnded():
+    with DB.Transaction(doc, name) as tx:
+        tx.Start()
+        try:
+            result = operation()
+            tx.Commit()
+            return result
+        except Exception:
             tx.RollBack()
-        raise
+            raise

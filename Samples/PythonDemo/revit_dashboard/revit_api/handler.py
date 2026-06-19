@@ -32,27 +32,21 @@ if TYPE_CHECKING:
 
 
 def _run_transaction(doc: DB.Document, name: str, action: Callable[[], None]) -> None:
-    """Execute an action within a transaction safely (without using 'with' statement).
+    """Execute an action within a transaction.
     
     Args:
         doc: The Revit document (should be HOST_APP.doc, not cached).
         name: Transaction name.
         action: The action to execute within the transaction.
     """
-    t = DB.Transaction(doc, name)
-    try:
+    with DB.Transaction(doc, name) as t:
         t.Start()
-        action()
-        t.Commit()
-    except Exception as e:
-        print(f"[RevitAPI] Transaction error in '{name}': {e}")
-        if t.HasStarted():
+        try:
+            action()
+            t.Commit()
+        except Exception as e:
+            print(f"[RevitAPI] Transaction error in '{name}': {e}")
             t.RollBack()
-        raise
-    finally:
-        if not t.HasEnded():
-            t.RollBack()
-        t.Dispose()
 
 
 class RevitApiHandler:

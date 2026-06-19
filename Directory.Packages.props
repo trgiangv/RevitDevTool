@@ -7,17 +7,17 @@
         <!--Ioc-->
         <PackageVersion Include="Microsoft.Extensions.Hosting" Version="10.0.9"/>
         <!--Python-->
-        <PackageVersion Include="pythonnet" Version="3.0.5"/>
+        <PackageVersion Include="pythonnet" Version="3.1.0"/>
         <PackageVersion Include="IronPython" Version="3.4.2"/>
         <!--MCP-->
         <PackageVersion Include="ModelContextProtocol" Version="1.4.0"/>
         <!--FSharp-->
-        <PackageVersion Include="FSharp.Core" Version="10.1.203"/>
-        <PackageVersion Include="FSharp.Compiler.Service" Version="43.12.203"/>
+        <PackageVersion Include="FSharp.Core" Version="10.1.204"/>
+        <PackageVersion Include="FSharp.Compiler.Service" Version="43.12.204"/>
         <!--CSharp-->
         <PackageVersion Include="Microsoft.CodeAnalysis.CSharp" Version="5.3.0"/>
         <!--Telemetry-->
-        <PackageVersion Include="Sentry" Version="6.5.0"/>
+        <PackageVersion Include="Sentry" Version="6.6.0"/>
         <!--Logging-->
         <PackageVersion Include="ZLogger" Version="2.5.10"/>
         <PackageVersion Include="ZLogger.Scintilla" Version="0.0.6"/>
@@ -25,7 +25,7 @@
         <!--Utilities-->
         <PackageVersion Include="System.Diagnostics.DiagnosticSource" Version="10.0.9"/>
         <PackageVersion Include="System.Reflection.MetadataLoadContext" Version="10.0.9"/>
-        <PackageVersion Include="JetBrains.Annotations" Version="2025.2.4"/>
+        <PackageVersion Include="JetBrains.Annotations" Version="2026.2.0"/>
         <GlobalPackageReference Include="Polyfill" Version="10.10.0"/>
         <PackageVersion Include="Microsoft-WindowsAPICodePack-Shell" Version="1.1.5"/>
         <PackageVersion Include="System.Drawing.Common" Version="8.0.25"/>
@@ -38,9 +38,9 @@
         <!--UI-->
         <PackageVersion Include="CommunityToolkit.Mvvm" Version="8.4.2"/>
         <PackageVersion Include="H.NotifyIcon.Wpf" Version="2.4.1"/>
-        <PackageVersion Include="Microsoft.Web.WebView2" Version="1.0.3800.47"/>
+        <PackageVersion Include="Microsoft.Web.WebView2" Version="1.0.4022.49"/>
         <!--Build Tools-->
-        <PackageVersion Include="ILRepack" Version="2.0.44"/>
+        <PackageVersion Include="ILRepack" Version="2.0.45"/>
         <PackageVersion Include="Sourcy.DotNet" Version="1.1.1"/>
         <PackageVersion Include="Shouldly" Version="4.3.0"/>
         <PackageVersion Include="ModularPipelines" Version="3.2.8"/>
@@ -51,11 +51,11 @@
         <!--File IO-->
         <PackageVersion Include="OpenMcdf" Version="3.1.4"/>
         <!--AutoCad-->
-        <PackageVersion Include="ACadSharp" Version="3.6.12"/>
+        <PackageVersion Include="ACadSharp" Version="3.6.29"/>
         <PackageVersion Include="ricaun.AutoCAD.UI" Version="0.5.0"/>
         <!--Tests-->
-        <PackageVersion Include="coverlet.collector" Version="8.0.0"/>
-        <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="18.3.0"/>
+        <PackageVersion Include="coverlet.collector" Version="10.0.1"/>
+        <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="18.6.0"/>
         <PackageVersion Include="xunit.v3" Version="3.2.2"/>
         <PackageVersion Include="xunit.runner.visualstudio" Version="3.1.5"/>
     </ItemGroup>

@@ -14,7 +14,7 @@ class MySelectionFilter(ISelectionFilter):
 
 
 def main():
-    uiapp: UI.UIApplication = __revit__.ActiveUIDocument  # type: ignore  # noqa: F821
+    uiapp: UI.UIApplication = __revit__  # type: ignore  # noqa: F821
     seleted_refs = uiapp.ActiveUIDocument.Selection.PickObjects(
         ObjectType.Element, MySelectionFilter(), "Select walls"
     )

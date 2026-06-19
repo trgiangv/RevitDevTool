@@ -171,30 +171,30 @@ for key in list(my_dict.keys()):
 
 ```python
 def run_transaction(doc, name, action):
-    # type: (DB.Document, str, object) -> object
-    transaction = DB.Transaction(doc, name)
-    transaction.Start()
-    try:
-        result = action()
-        transaction.Commit()
-        return result
-    except Exception:
-        transaction.RollBack()
-        raise
+    # type: (DB.Document, str, callable) -> object
+    with DB.Transaction(doc, name) as transaction:
+        transaction.Start()
+        try:
+            result = action()
+            transaction.Commit()
+            return result
+        except Exception:
+            transaction.RollBack()
+            raise
 ```
 
 ### Transaction Group (multi-step)
 
 ```python
-group = DB.TransactionGroup(doc, "Operation Name")
-group.Start()
-try:
-    run_transaction(doc, "Step 1", step_1_action)
-    run_transaction(doc, "Step 2", step_2_action)
-    group.Assimilate()
-except Exception:
-    group.RollBack()
-    raise
+with DB.TransactionGroup(doc, "Operation Name") as group:
+    group.Start()
+    try:
+        run_transaction(doc, "Step 1", step_1_action)
+        run_transaction(doc, "Step 2", step_2_action)
+        group.Assimilate()
+    except Exception:
+        group.RollBack()
+        raise
 ```
 
 Transaction names should be descriptive: `"ToolName: action description"`.

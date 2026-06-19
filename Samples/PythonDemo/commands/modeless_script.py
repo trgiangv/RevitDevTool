@@ -58,18 +58,16 @@ class MyModelessForm(Window):
                 return
 
             line = DB.Line.CreateBound(DB.XYZ(0, 0, 0), DB.XYZ(10, 0, 0))
-            t = DB.Transaction(doc, "Create Wall Async") # with statement is not supported in pythonnet3, so we need to manually start and commit/rollback the transaction
-            try:
+            with DB.Transaction(doc, "Create Wall") as t:
                 t.Start()
-                DB.Wall.Create(doc, line, wall_type.Id, level.Id, 10, 0, False, False)
-                t.Commit()
-            except Exception as e:
-                print("Error creating wall:", e)
-                if t.HasStarted:
+                try:
+                    DB.Wall.Create(doc, line, wall_type.Id, level.Id, 10, 0, False, False)
+                    t.Commit()
+                except Exception as e:
+                    print("Error creating wall:", e)
                     t.RollBack()
-            finally:
-                if t.HasEnded:
-                    t.Dispose()
+            print("Wall created successfully")
+
         # 2. use RevitContextExecutor.Raise to run the wall creation code in Revit API context (preferred)
         RevitContextExecutor.Raise(Action[UI.UIApplication](create_wall_action))
 
