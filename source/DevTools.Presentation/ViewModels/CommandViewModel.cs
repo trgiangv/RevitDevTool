@@ -13,7 +13,7 @@ using DevTools.UI.Theme;
 
 namespace DevTools.Presentation.ViewModels;
 
-public partial class CommandViewModel : ObservableObject
+public partial class CommandViewModel : ObservableObject, IBusyViewModel
 {
     private readonly IExecutionOrchestrator _orchestrator;
     private readonly ISettingsService _settingsService;
@@ -21,15 +21,26 @@ public partial class CommandViewModel : ObservableObject
     private readonly IDebuggerBridge? _debugger;
     private readonly DispatcherTimer _searchDebounceTimer;
     private readonly DispatcherTimer? _debugStatusTimer;
-    private int _busyDepth;
 
-    [ObservableProperty] private ObservableCollection<ExecutionNodeBase> _treeRoot = [];
-    [ObservableProperty] private ExecutionNodeBase? _selectedNode;
-    [ObservableProperty] private string _searchText = string.Empty;
-    [ObservableProperty] private bool _isBusy;
-    [ObservableProperty] private string _busyMessage = string.Empty;
-    [ObservableProperty] private ExecutionMode? _busyProviderType;
-    [ObservableProperty] private bool _isDebuggerConnected;
+    private readonly ObservableCollection<ExecutionNodeBase> _treeRoot = [];
+
+    [ObservableProperty]
+    public partial ExecutionNodeBase? SelectedNode { get; set; }
+
+    [ObservableProperty]
+    public partial string SearchText { get; set; } = string.Empty;
+
+    [ObservableProperty]
+    public partial bool IsBusy { get; set; }
+
+    [ObservableProperty]
+    public partial string BusyMessage { get; set; } = string.Empty;
+
+    [ObservableProperty]
+    public partial ExecutionMode? BusyProviderType { get; set; }
+
+    [ObservableProperty]
+    public partial bool IsDebuggerConnected { get; set; }
 
     public bool HasDebugger => _debugger != null;
     public int DebugPort => _debugger?.DebugPort ?? 0;
@@ -71,15 +82,12 @@ public partial class CommandViewModel : ObservableObject
     {
         var config = _settingsService.ExecutionConfig;
         var allPaths = config.DotnetAssemblyPaths.Concat(config.ScriptFolderPaths).ToList();
-        using var _ = BeginBusy("Loading saved paths...");
-        var failedPaths = await _orchestrator.LoadSavedPathsAsync(allPaths);
-
-        foreach (var path in failedPaths)
+        await this.WhileBusy("Loading saved paths...", async () =>
         {
-            RemovePathFromSettings(path);
-        }
-
-        UpdateTreeRoot();
+            var failedPaths = await _orchestrator.LoadSavedPathsAsync(allPaths);
+            foreach (var path in failedPaths) RemovePathFromSettings(path);
+            UpdateTreeRoot();
+        });
     }
 
     [RelayCommand]
@@ -91,10 +99,12 @@ public partial class CommandViewModel : ObservableObject
             Title = "Select Assembly DLL"
         };
         if (dialog.ShowDialog() != true) return;
-        using var _ = BeginBusy("Loading assembly...");
-        await _orchestrator.LoadFromPathAsync(dialog.FileName);
-        SavePathToSettings(dialog.FileName, ExecutionMode.Assembly);
-        UpdateTreeRoot();
+        await this.WhileBusy("Loading assembly...", async () =>
+        {
+            await _orchestrator.LoadFromPathAsync(dialog.FileName);
+            SavePathToSettings(dialog.FileName, ExecutionMode.Assembly);
+            UpdateTreeRoot();
+        });
     }
 
     [RelayCommand]
@@ -102,10 +112,12 @@ public partial class CommandViewModel : ObservableObject
     {
         var selectedFolder = Utilities.AppUtils.SelectFolder("Select Scripts Folder");
         if (string.IsNullOrEmpty(selectedFolder)) return;
-        using var _ = BeginBusy("Loading scripts...");
-        await _orchestrator.LoadFromPathAsync(selectedFolder);
-        SavePathToSettings(selectedFolder, ExecutionMode.Script);
-        UpdateTreeRoot();
+        await this.WhileBusy("Loading scripts...", async () =>
+        {
+            await _orchestrator.LoadFromPathAsync(selectedFolder);
+            SavePathToSettings(selectedFolder, ExecutionMode.Script);
+            UpdateTreeRoot();
+        });
     }
 
     public async Task LoadFromPathAsync(string? path)
@@ -113,15 +125,19 @@ public partial class CommandViewModel : ObservableObject
         if (string.IsNullOrEmpty(path)) return;
         if (File.Exists(path) && path!.EndsWith(".dll", StringComparison.OrdinalIgnoreCase))
         {
-            using var _ = BeginBusy("Loading assembly...");
-            await _orchestrator.LoadFromPathAsync(path);
-            SavePathToSettings(path, ExecutionMode.Assembly);
+            await this.WhileBusy("Loading assembly...", async () =>
+            {
+                await _orchestrator.LoadFromPathAsync(path);
+                SavePathToSettings(path, ExecutionMode.Assembly);
+            });
         }
         else if (Directory.Exists(path))
         {
-            using var _ = BeginBusy("Loading scripts...");
-            await _orchestrator.LoadFromPathAsync(path!);
-            SavePathToSettings(path!, ExecutionMode.Script);
+            await this.WhileBusy("Loading scripts...", async () =>
+            {
+                await _orchestrator.LoadFromPathAsync(path!);
+                SavePathToSettings(path!, ExecutionMode.Script);
+            });
         }
         UpdateTreeRoot();
     }
@@ -132,10 +148,12 @@ public partial class CommandViewModel : ObservableObject
         var node = parameter as ExecutionNodeBase ?? SelectedNode;
         if (node is not { NodeType: NodeType.Executable }) return;
         using var memoryScope = _memoryViewModel.BeginOperation((node as ExecutionNode)?.ProviderType, node.Name);
-        using var _ = BeginBusy($"Executing '{node.Name}'...", (node as ExecutionNode)?.ProviderType);
-        var result = await _orchestrator.ExecuteAsync(node);
-        memoryScope.Complete(success: result.Success);
-        if (!result.Success) Trace.TraceWarning($"Execution failed: {result.Message}");
+        await WhileBusy($"Executing '{node.Name}'...", (node as ExecutionNode)?.ProviderType, async () =>
+        {
+            var result = await _orchestrator.ExecuteAsync(node);
+            memoryScope.Complete(success: result.Success);
+            if (!result.Success) Trace.TraceWarning($"Execution failed: {result.Message}");
+        });
     }
 
     private bool CanExecute() => !IsBusy && SelectedNode?.NodeType == NodeType.Executable;
@@ -144,15 +162,17 @@ public partial class CommandViewModel : ObservableObject
 
     private async Task ExecuteLastItemAsync()
     {
-        var lastExecuted = FindLastExecutedNode(TreeRoot);
+        var lastExecuted = FindLastExecutedNode(_treeRoot);
         if (lastExecuted == null) return;
         try
         {
             using var memoryScope = _memoryViewModel.BeginOperation((lastExecuted as ExecutionNode)?.ProviderType, lastExecuted.Name);
-            using var _ = BeginBusy($"Executing '{lastExecuted.Name}'...", (lastExecuted as ExecutionNode)?.ProviderType);
-            var result = await _orchestrator.ExecuteAsync(lastExecuted);
-            memoryScope.Complete(success: result.Success);
-            if (!result.Success) Trace.TraceWarning($"Execution failed: {result.Message}");
+            await WhileBusy($"Executing '{lastExecuted.Name}'...", (lastExecuted as ExecutionNode)?.ProviderType, async () =>
+            {
+                var result = await _orchestrator.ExecuteAsync(lastExecuted);
+                memoryScope.Complete(success: result.Success);
+                if (!result.Success) Trace.TraceWarning($"Execution failed: {result.Message}");
+            });
         }
         catch (Exception ex) { Trace.TraceError($"Failed to execute last item: {ex.Message}"); }
     }
@@ -171,9 +191,11 @@ public partial class CommandViewModel : ObservableObject
     [RelayCommand]
     private async Task ReloadAsync()
     {
-        using var _ = BeginBusy("Reloading nodes...");
-        await _orchestrator.ReloadAsync();
-        UpdateTreeRoot();
+        await this.WhileBusy("Reloading nodes...", async () =>
+        {
+            await _orchestrator.ReloadAsync();
+            UpdateTreeRoot();
+        });
     }
 
     [RelayCommand(CanExecute = nameof(CanRemove))]
@@ -198,8 +220,8 @@ public partial class CommandViewModel : ObservableObject
         UpdateTreeRoot();
     }
 
-    [RelayCommand] private void ExpandAll() => ExecutionTreeViewHelper.ExpandAll(TreeRoot);
-    [RelayCommand] private void CollapseAll() => ExecutionTreeViewHelper.CollapseAll(TreeRoot);
+    [RelayCommand] private void ExpandAll() => ExecutionTreeViewHelper.ExpandAll(_treeRoot);
+    [RelayCommand] private void CollapseAll() => ExecutionTreeViewHelper.CollapseAll(_treeRoot);
 
     [RelayCommand]
     private void ToggleAll()
@@ -247,8 +269,8 @@ public partial class CommandViewModel : ObservableObject
 
     private void UpdateTreeRoot()
     {
-        TreeRoot.Clear();
-        foreach (var node in _orchestrator.TreeRoot) TreeRoot.Add(node);
+        _treeRoot.Clear();
+        foreach (var node in _orchestrator.TreeRoot) _treeRoot.Add(node);
         RefreshFilteredItems();
     }
 
@@ -257,20 +279,23 @@ public partial class CommandViewModel : ObservableObject
         FilteredItems.Clear();
         if (string.IsNullOrWhiteSpace(SearchText))
         {
-            foreach (var node in TreeRoot)
+            foreach (var node in _treeRoot)
             {
                 ExecutionTreeViewHelper.SetVisibilityRecursive(node, true);
                 ExecutionTreeViewHelper.ClearHighlightsRecursive(node);
                 FilteredItems.Add(node);
             }
         }
-        else PerformSearch();
+        else
+        {
+            PerformSearch();
+        }
     }
 
     private void PerformSearch()
     {
         FilteredItems.Clear();
-        foreach (var node in TreeRoot)
+        foreach (var node in _treeRoot)
         {
             if (ExecutionTreeViewHelper.FilterNodeRecursive(node, SearchText, ThemeManager.Current.ActualApplicationTheme == AppTheme.Dark))
                 FilteredItems.Add(node);
@@ -313,27 +338,16 @@ public partial class CommandViewModel : ObservableObject
         config.ScriptFolderPaths.Clear();
     }
 
-    private BusyScope BeginBusy(string message, ExecutionMode? providerType = null)
+    private async Task WhileBusy(string message, ExecutionMode? providerType, Func<Task> action)
     {
-        _busyDepth++;
-        IsBusy = true;
-        BusyMessage = message;
         BusyProviderType = providerType;
-        return new BusyScope(this);
-    }
-
-    private void EndBusy()
-    {
-        _busyDepth = Math.Max(0, _busyDepth - 1);
-        if (_busyDepth != 0) return;
-        IsBusy = false;
-        BusyMessage = string.Empty;
-        BusyProviderType = null;
-    }
-
-    private sealed class BusyScope(CommandViewModel owner) : IDisposable
-    {
-        private CommandViewModel? _owner = owner;
-        public void Dispose() { _owner?.EndBusy(); _owner = null; }
+        try
+        {
+            await this.WhileBusy(message, action);
+        }
+        finally
+        {
+            BusyProviderType = null;
+        }
     }
 }

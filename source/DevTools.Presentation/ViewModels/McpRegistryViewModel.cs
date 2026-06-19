@@ -17,28 +17,50 @@ using DevTools.Utilities;
 
 namespace DevTools.Presentation.ViewModels;
 
-public sealed partial class McpRegistryViewModel : ObservableObject, IDisposable
+public sealed partial class McpRegistryViewModel : ObservableObject, IBusyViewModel, IDisposable
 {
     private readonly ToolRegistryStore _toolStore;
     private readonly ConnectionState _bridgeState;
     private readonly DispatcherTimer _searchDebounceTimer;
     private readonly DispatcherTimer _elapsedTimer;
     private readonly Dictionary<string, int> _callCounts = new(StringComparer.OrdinalIgnoreCase);
-    private int _busyDepth;
     private bool _disposed;
 
-    [ObservableProperty] private string _searchText = string.Empty;
-    [ObservableProperty] private bool _isConnected;
-    [ObservableProperty] private int _totalToolCount;
-    [ObservableProperty] private int _dotNetToolCount;
-    [ObservableProperty] private int _pythonToolCount;
-    [ObservableProperty] private int _totalCalled;
-    [ObservableProperty] private bool _isBusy;
-    [ObservableProperty] private string _busyMessage = string.Empty;
-    [ObservableProperty] private string _pipeName = "N/A";
-    [ObservableProperty] private McpToolItem? _selectedTool;
-    [ObservableProperty] private bool _isExecuting;
-    [ObservableProperty] private string _executionStatusText = "Idle";
+    [ObservableProperty]
+    public partial string SearchText { get; set; } = string.Empty;
+
+    [ObservableProperty]
+    public partial bool IsConnected { get; set; }
+
+    [ObservableProperty]
+    public partial int TotalToolCount { get; set; }
+
+    [ObservableProperty]
+    public partial int DotNetToolCount { get; set; }
+
+    [ObservableProperty]
+    public partial int PythonToolCount { get; set; }
+
+    [ObservableProperty]
+    public partial int TotalCalled { get; set; }
+
+    [ObservableProperty]
+    public partial bool IsBusy { get; set; }
+
+    [ObservableProperty]
+    public partial string BusyMessage { get; set; } = string.Empty;
+
+    [ObservableProperty]
+    public partial string PipeName { get; set; } = "N/A";
+
+    [ObservableProperty]
+    public partial McpToolItem? SelectedTool { get; set; }
+
+    [ObservableProperty]
+    public partial bool IsExecuting { get; set; }
+
+    [ObservableProperty]
+    public partial string ExecutionStatusText { get; set; } = "Idle";
     private ObservableCollection<McpToolItem> Tools { get; } = [];
     public ObservableCollection<McpToolItem> FilteredTools { get; } = [];
     public bool ShowStatusPanel => IsBusy || IsExecuting;
@@ -78,26 +100,32 @@ public sealed partial class McpRegistryViewModel : ObservableObject, IDisposable
 
     public async Task InitializeAsync()
     {
-        using var _ = BeginBusy("Loading MCP tools...");
-        await _toolStore.ReloadAsync().ConfigureAwait(true);
-        RebuildToolList();
+        await this.WhileBusy("Loading MCP tools...", async () =>
+        {
+            await _toolStore.ReloadAsync().ConfigureAwait(true);
+            RebuildToolList();
+        });
     }
 
     [RelayCommand]
     private void Reload()
     {
-        using var _ = BeginBusy("Reloading MCP tools...");
-        HostUiHelper.RunOnMainThread(async void () =>
+        this.WhileBusy("Reloading MCP tools...", () =>
         {
-            try { await _toolStore.ReloadAsync(); }
-            catch { /* ignore */ }
+            HostUiHelper.RunOnMainThread(async void () =>
+            {
+                try { await _toolStore.ReloadAsync(); }
+                catch { /* ignore */ }
+            });
         });
     }
 
     public async Task AddDroppedPathAsync(string path)
     {
-        using var _ = BeginBusy($"Parsing MCP toolset from '{Path.GetFileName(path)}'...");
-        await _toolStore.AddPathAsync(path).ConfigureAwait(true);
+        await this.WhileBusy($"Parsing MCP toolset from '{Path.GetFileName(path)}'...", async () =>
+        {
+            await _toolStore.AddPathAsync(path).ConfigureAwait(true);
+        });
     }
 
     [RelayCommand]
@@ -108,22 +136,22 @@ public sealed partial class McpRegistryViewModel : ObservableObject, IDisposable
             Filter = "DLL files (*.dll)|*.dll|All files (*.*)|*.*",
             Title = "Select .NET MCP Tool Assembly"
         };
-        if (dialog.ShowDialog() == true)
+        if (dialog.ShowDialog() != true) return;
+        await this.WhileBusy($"Loading MCP assembly '{Path.GetFileName(dialog.FileName)}'...", async () =>
         {
-            using var _ = BeginBusy($"Loading MCP assembly '{Path.GetFileName(dialog.FileName)}'...");
             await _toolStore.AddPathAsync(dialog.FileName).ConfigureAwait(true);
-        }
+        });
     }
 
     [RelayCommand]
     private async Task LoadPythonToolsetAsync()
     {
         var selectedFolder = AppUtils.SelectFolder("Select Python MCP Toolset Folder");
-        if (!string.IsNullOrWhiteSpace(selectedFolder))
+        if (string.IsNullOrWhiteSpace(selectedFolder)) return;
+        await this.WhileBusy($"Parsing MCP toolset from '{Path.GetFileName(selectedFolder)}'...", async () =>
         {
-            using var _ = BeginBusy($"Parsing MCP toolset from '{Path.GetFileName(selectedFolder)}'...");
             await _toolStore.AddPathAsync(selectedFolder).ConfigureAwait(true);
-        }
+        });
     }
 
     private void OnRegistryChanged(object? sender, EventArgs e)
@@ -343,28 +371,6 @@ public sealed partial class McpRegistryViewModel : ObservableObject, IDisposable
             return string.Join(Environment.NewLine, lines);
         }
         catch (JsonException) { return string.Empty; }
-    }
-
-    private BusyScope BeginBusy(string message)
-    {
-        _busyDepth++;
-        IsBusy = true;
-        BusyMessage = message;
-        return new BusyScope(this);
-    }
-
-    private void EndBusy()
-    {
-        _busyDepth = Math.Max(0, _busyDepth - 1);
-        if (_busyDepth != 0) return;
-        IsBusy = false;
-        BusyMessage = string.Empty;
-    }
-
-    private sealed class BusyScope(McpRegistryViewModel owner) : IDisposable
-    {
-        private McpRegistryViewModel? _owner = owner;
-        public void Dispose() { _owner?.EndBusy(); _owner = null; }
     }
 
     public void Dispose()

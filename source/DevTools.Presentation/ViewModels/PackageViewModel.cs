@@ -7,17 +7,23 @@ using DevTools.UI.Theme;
 
 namespace DevTools.Presentation.ViewModels;
 
-public partial class PackageViewModel : ObservableObject
+public partial class PackageViewModel : ObservableObject, IBusyViewModel
 {
     private readonly IPackageService _packageService;
     private readonly PythonInitializer _pythonInitializer;
     private IReadOnlyList<Package> _allPackages = [];
 
-    [ObservableProperty] private string _searchText = string.Empty;
-    [ObservableProperty] private bool _isBusy;
-    [ObservableProperty] private string _busyMessage = string.Empty;
-    [ObservableProperty] private PackageTreeNode? _selectedNode;
+    [ObservableProperty]
+    public partial string SearchText { get; set; } = string.Empty;
 
+    [ObservableProperty]
+    public partial bool IsBusy { get; set; }
+
+    [ObservableProperty]
+    public partial string BusyMessage { get; set; } = string.Empty;
+
+    [ObservableProperty]
+    public partial PackageTreeNode? SelectedNode { get; set; }
     public ObservableCollection<PackageTreeNode> FilteredItems { get; } = [];
 
     public PackageViewModel(IPackageService packageService, PythonInitializer pythonInitializer)
@@ -38,9 +44,11 @@ public partial class PackageViewModel : ObservableObject
     private async Task RemoveAsync()
     {
         if (SelectedNode is not PackageItemNode packageNode) return;
-        using var _ = BeginBusy($"Removing {packageNode.PackageId}...");
-        await _packageService.RemovePackageAsync(packageNode.ToRuntimePackage());
-        await LoadPackagesAsync();
+        await this.WhileBusy($"Removing {packageNode.PackageId}...", async () =>
+        {
+            await _packageService.RemovePackageAsync(packageNode.ToRuntimePackage());
+            await LoadPackagesAsync();
+        });
     }
 
     private bool CanRemove() => SelectedNode is PackageItemNode { IsProtected: false };
@@ -50,18 +58,22 @@ public partial class PackageViewModel : ObservableObject
     {
         if (SelectedNode is MarketplaceNode marketplaceNode)
         {
-            using var _ = BeginBusy($"Removing all packages from {marketplaceNode.Name}...");
-            await _packageService.RemoveAllAsync(marketplaceNode.Marketplace);
-            await LoadPackagesAsync();
+            await this.WhileBusy($"Removing all packages from {marketplaceNode.Name}...", async () =>
+            {
+                await _packageService.RemoveAllAsync(marketplaceNode.Marketplace);
+                await LoadPackagesAsync();
+            });
             return;
         }
 
-        using var allBusy = BeginBusy("Removing all runtime packages...");
-        await _packageService.RemoveAllAsync(Marketplace.NuGet);
-        if (_pythonInitializer.Provider?.Backend == PythonBackend.Pixi)
-            await _packageService.RemoveAllAsync(Marketplace.CondaForge);
-        await _packageService.RemoveAllAsync(Marketplace.PyPi);
-        await LoadPackagesAsync();
+        await this.WhileBusy("Removing all runtime packages...", async () =>
+        {
+            await _packageService.RemoveAllAsync(Marketplace.NuGet);
+            if (_pythonInitializer.Provider?.Backend == PythonBackend.Pixi)
+                await _packageService.RemoveAllAsync(Marketplace.CondaForge);
+            await _packageService.RemoveAllAsync(Marketplace.PyPi);
+            await LoadPackagesAsync();
+        });
     }
 
     private bool CanRemoveAll() => SelectedNode switch
@@ -75,9 +87,11 @@ public partial class PackageViewModel : ObservableObject
     private async Task UpdateAsync()
     {
         if (SelectedNode is not PackageItemNode packageNode) return;
-        using var _ = BeginBusy($"Updating {packageNode.PackageId} to latest...");
-        await _packageService.UpdateLatestAsync(packageNode.ToRuntimePackage());
-        await LoadPackagesAsync();
+        await this.WhileBusy($"Updating {packageNode.PackageId} to latest...", async () =>
+        {
+            await _packageService.UpdateLatestAsync(packageNode.ToRuntimePackage());
+            await LoadPackagesAsync();
+        });
     }
 
     private bool CanUpdate() => SelectedNode is PackageItemNode { IsLatest: false };
@@ -86,18 +100,22 @@ public partial class PackageViewModel : ObservableObject
     private async Task RepairAsync()
     {
         if (SelectedNode is not PackageItemNode packageNode) return;
-        using var _ = BeginBusy($"Repairing {packageNode.PackageId}...");
-        await _packageService.RepairAsync(packageNode.ToRuntimePackage());
-        await LoadPackagesAsync();
+        await this.WhileBusy($"Repairing {packageNode.PackageId}...", async () =>
+        {
+            await _packageService.RepairAsync(packageNode.ToRuntimePackage());
+            await LoadPackagesAsync();
+        });
     }
 
     private bool CanRepair() => SelectedNode is PackageItemNode;
 
     private async Task LoadPackagesAsync()
     {
-        using var _ = BeginBusy("Loading packages...");
-        _allPackages = await _packageService.ListInstalledPackagesAsync();
-        RefreshFilteredItems();
+        await this.WhileBusy("Loading packages...", async () =>
+        {
+            _allPackages = await _packageService.ListInstalledPackagesAsync();
+            RefreshFilteredItems();
+        });
     }
 
     private void RefreshFilteredItems()
@@ -160,22 +178,4 @@ public partial class PackageViewModel : ObservableObject
         if (!string.IsNullOrWhiteSpace(SearchText)) RefreshFilteredItems();
     }
 
-    private BusyScope BeginBusy(string message)
-    {
-        IsBusy = true;
-        BusyMessage = message;
-        return new BusyScope(this);
-    }
-
-    private void EndBusy()
-    {
-        IsBusy = false;
-        BusyMessage = string.Empty;
-    }
-
-    private sealed class BusyScope(PackageViewModel owner) : IDisposable
-    {
-        private PackageViewModel? _owner = owner;
-        public void Dispose() { _owner?.EndBusy(); _owner = null; }
-    }
 }
