@@ -11,23 +11,31 @@ public sealed partial class SolidVisualizationViewModel : ObservableObject, IVis
     public SolidVisualizationViewModel(IRevitSettingsService settingsService)
     {
         _settingsService = settingsService;
-
-        _scale = _settingsService.VisualizationConfig.SolidSettings.Scale;
-        _transparency = _settingsService.VisualizationConfig.SolidSettings.Transparency;
-        _faceColor = _settingsService.VisualizationConfig.SolidSettings.FaceColor;
-        _edgeColor = _settingsService.VisualizationConfig.SolidSettings.EdgeColor;
-        _showFace = _settingsService.VisualizationConfig.SolidSettings.ShowFace;
-        _showEdge = _settingsService.VisualizationConfig.SolidSettings.ShowEdge;
+        Scale = _settingsService.VisualizationConfig.SolidSettings.Scale;
+        Transparency = _settingsService.VisualizationConfig.SolidSettings.Transparency;
+        FaceColor = _settingsService.VisualizationConfig.SolidSettings.FaceColor;
+        EdgeColor = _settingsService.VisualizationConfig.SolidSettings.EdgeColor;
+        ShowFace = _settingsService.VisualizationConfig.SolidSettings.ShowFace;
+        ShowEdge = _settingsService.VisualizationConfig.SolidSettings.ShowEdge;
     }
 
-    [ObservableProperty] private double _scale;
-    [ObservableProperty] private double _transparency;
+    [ObservableProperty]
+    public partial double Scale { get; set; }
 
-    [ObservableProperty] private System.Windows.Media.Color _faceColor;
-    [ObservableProperty] private System.Windows.Media.Color _edgeColor;
+    [ObservableProperty]
+    public partial double Transparency { get; set; }
 
-    [ObservableProperty] private bool _showFace;
-    [ObservableProperty] private bool _showEdge;
+    [ObservableProperty]
+    public partial System.Windows.Media.Color FaceColor { get; set; }
+
+    [ObservableProperty]
+    public partial System.Windows.Media.Color EdgeColor { get; set; }
+
+    [ObservableProperty]
+    public partial bool ShowFace { get; set; }
+
+    [ObservableProperty]
+    public partial bool ShowEdge { get; set; }
 
     public void Initialize()
     {

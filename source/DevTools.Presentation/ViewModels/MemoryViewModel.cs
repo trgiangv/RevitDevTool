@@ -24,24 +24,59 @@ public partial class MemoryViewModel : ObservableObject
     private readonly DispatcherTimer _refreshTimer;
     private OperationSession? _activeSession;
 
-    [ObservableProperty] private double _workingSetMb;
-    [ObservableProperty] private double _privateMb;
-    [ObservableProperty] private double _managedMb;
-    [ObservableProperty] private int _handleCount;
-    [ObservableProperty] private int _threadCount;
-    [ObservableProperty] private string _lastOperationName = "N/A";
-    [ObservableProperty] private ExecutionMode? _lastOperationProvider;
-    [ObservableProperty] private bool _lastOperationSuccess;
-    [ObservableProperty] private long _lastOperationDurationMs;
-    [ObservableProperty] private double _lastDeltaPrivateMb;
-    [ObservableProperty] private double _lastDeltaManagedMb;
-    [ObservableProperty] private int _lastDeltaHandles;
-    [ObservableProperty] private double _lastPeakPrivateDeltaMb;
-    [ObservableProperty] private string _lastOutcomeText = "N/A";
-    [ObservableProperty] private Brush _lastOutcomeBrush = NeutralBrush;
-    [ObservableProperty] private Brush _lastDeltaPrivateBrush = NeutralBrush;
-    [ObservableProperty] private Brush _lastDeltaManagedBrush = NeutralBrush;
-    [ObservableProperty] private Brush _lastDeltaHandlesBrush = NeutralBrush;
+    [ObservableProperty]
+    public partial double WorkingSetMb { get; set; }
+
+    [ObservableProperty]
+    public partial double PrivateMb { get; set; }
+
+    [ObservableProperty]
+    public partial double ManagedMb { get; set; }
+
+    [ObservableProperty]
+    public partial int HandleCount { get; set; }
+
+    [ObservableProperty]
+    public partial int ThreadCount { get; set; }
+
+    [ObservableProperty]
+    public partial string LastOperationName { get; set; } = "N/A";
+
+    [ObservableProperty]
+    public partial ExecutionMode? LastOperationProvider { get; set; }
+
+    [ObservableProperty]
+    public partial bool LastOperationSuccess { get; set; }
+
+    [ObservableProperty]
+    public partial long LastOperationDurationMs { get; set; }
+
+    [ObservableProperty]
+    public partial double LastDeltaPrivateMb { get; set; }
+
+    [ObservableProperty]
+    public partial double LastDeltaManagedMb { get; set; }
+
+    [ObservableProperty]
+    public partial int LastDeltaHandles { get; set; }
+
+    [ObservableProperty]
+    public partial double LastPeakPrivateDeltaMb { get; set; }
+
+    [ObservableProperty]
+    public partial string LastOutcomeText { get; set; } = "N/A";
+
+    [ObservableProperty]
+    public partial Brush LastOutcomeBrush { get; set; } = NeutralBrush;
+
+    [ObservableProperty]
+    public partial Brush LastDeltaPrivateBrush { get; set; } = NeutralBrush;
+
+    [ObservableProperty]
+    public partial Brush LastDeltaManagedBrush { get; set; } = NeutralBrush;
+
+    [ObservableProperty]
+    public partial Brush LastDeltaHandlesBrush { get; set; } = NeutralBrush;
 
     public MemoryViewModel()
     {

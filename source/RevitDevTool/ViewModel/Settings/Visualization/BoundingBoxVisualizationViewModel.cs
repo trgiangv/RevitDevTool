@@ -11,27 +11,39 @@ public sealed partial class BoundingBoxVisualizationViewModel : ObservableObject
     public BoundingBoxVisualizationViewModel(IRevitSettingsService settingsService)
     {
         _settingsService = settingsService;
-
-        _transparency = _settingsService.VisualizationConfig.BoundingBoxSettings.Transparency;
-        _scale = _settingsService.VisualizationConfig.BoundingBoxSettings.Scale;
-        _surfaceColor = _settingsService.VisualizationConfig.BoundingBoxSettings.SurfaceColor;
-        _edgeColor = _settingsService.VisualizationConfig.BoundingBoxSettings.EdgeColor;
-        _axisColor = _settingsService.VisualizationConfig.BoundingBoxSettings.AxisColor;
-        _showSurface = _settingsService.VisualizationConfig.BoundingBoxSettings.ShowSurface;
-        _showEdge = _settingsService.VisualizationConfig.BoundingBoxSettings.ShowEdge;
-        _showAxis = _settingsService.VisualizationConfig.BoundingBoxSettings.ShowAxis;
+        Transparency = _settingsService.VisualizationConfig.BoundingBoxSettings.Transparency;
+        Scale = _settingsService.VisualizationConfig.BoundingBoxSettings.Scale;
+        SurfaceColor = _settingsService.VisualizationConfig.BoundingBoxSettings.SurfaceColor;
+        EdgeColor = _settingsService.VisualizationConfig.BoundingBoxSettings.EdgeColor;
+        AxisColor = _settingsService.VisualizationConfig.BoundingBoxSettings.AxisColor;
+        ShowSurface = _settingsService.VisualizationConfig.BoundingBoxSettings.ShowSurface;
+        ShowEdge = _settingsService.VisualizationConfig.BoundingBoxSettings.ShowEdge;
+        ShowAxis = _settingsService.VisualizationConfig.BoundingBoxSettings.ShowAxis;
     }
 
-    [ObservableProperty] private double _transparency;
-    [ObservableProperty] private double _scale;
+    [ObservableProperty]
+    public partial double Transparency { get; set; }
 
-    [ObservableProperty] private System.Windows.Media.Color _surfaceColor;
-    [ObservableProperty] private System.Windows.Media.Color _edgeColor;
-    [ObservableProperty] private System.Windows.Media.Color _axisColor;
+    [ObservableProperty]
+    public partial double Scale { get; set; }
 
-    [ObservableProperty] private bool _showSurface;
-    [ObservableProperty] private bool _showEdge;
-    [ObservableProperty] private bool _showAxis;
+    [ObservableProperty]
+    public partial System.Windows.Media.Color SurfaceColor { get; set; }
+
+    [ObservableProperty]
+    public partial System.Windows.Media.Color EdgeColor { get; set; }
+
+    [ObservableProperty]
+    public partial System.Windows.Media.Color AxisColor { get; set; }
+
+    [ObservableProperty]
+    public partial bool ShowSurface { get; set; }
+
+    [ObservableProperty]
+    public partial bool ShowEdge { get; set; }
+
+    [ObservableProperty]
+    public partial bool ShowAxis { get; set; }
 
     public void Initialize()
     {

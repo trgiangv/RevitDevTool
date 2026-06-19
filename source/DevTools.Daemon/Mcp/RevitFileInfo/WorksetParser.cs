@@ -29,6 +29,9 @@ internal static class WorksetParser
         return result;
     }
 
+    /// <summary>
+    /// Attempts to read a workset record from the given byte array at the specified offset.
+    /// </summary>
     /// <returns>Number of bytes to skip past this record, or 0 if not a valid record.</returns>
     private static int TryReadRecord(byte[] dec, int offset, HashSet<string> seen, List<WorksetInfo> result)
     {

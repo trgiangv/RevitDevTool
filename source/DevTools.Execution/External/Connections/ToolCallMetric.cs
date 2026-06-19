@@ -2,7 +2,12 @@
 
 public sealed partial class ToolCallMetric(string toolId, string toolName, int count) : ObservableObject
 {
-    [ObservableProperty] private string _toolId = toolId;
-    [ObservableProperty] private string _toolName = toolName;
-    [ObservableProperty] private int _count = count;
+    [ObservableProperty]
+    public partial string ToolId { get; set; } = toolId;
+
+    [ObservableProperty]
+    public partial string ToolName { get; set; } = toolName;
+
+    [ObservableProperty]
+    public partial int Count { get; set; } = count;
 }

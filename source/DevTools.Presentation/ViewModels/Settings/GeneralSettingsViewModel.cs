@@ -28,10 +28,17 @@ public partial class GeneralSettingsViewModel : ObservableValidator, IRecipient<
         }
     }
 
-    [ObservableProperty] private AppTheme _theme;
-    [ObservableProperty] private bool _useHardwareRendering;
-    [ObservableProperty] private bool _isMemoryEnabled;
-    [ObservableProperty] private bool _enableTelemetry;
+    [ObservableProperty]
+    public partial AppTheme Theme { get; set; }
+
+    [ObservableProperty]
+    public partial bool UseHardwareRendering { get; set; }
+
+    [ObservableProperty]
+    public partial bool IsMemoryEnabled { get; set; }
+
+    [ObservableProperty]
+    public partial bool EnableTelemetry { get; set; }
 
     partial void OnThemeChanged(AppTheme value)
     {

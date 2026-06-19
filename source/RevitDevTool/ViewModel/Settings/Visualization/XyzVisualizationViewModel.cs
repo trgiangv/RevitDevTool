@@ -11,24 +11,31 @@ public sealed partial class XyzVisualizationViewModel : ObservableObject, IVisua
     public XyzVisualizationViewModel(IRevitSettingsService settingsService)
     {
         _settingsService = settingsService;
-
-        _axisLength = _settingsService.VisualizationConfig.XyzSettings.AxisLength;
-        _transparency = _settingsService.VisualizationConfig.XyzSettings.Transparency;
-        _xColor = _settingsService.VisualizationConfig.XyzSettings.XColor;
-        _yColor = _settingsService.VisualizationConfig.XyzSettings.YColor;
-        _zColor = _settingsService.VisualizationConfig.XyzSettings.ZColor;
+        AxisLength = _settingsService.VisualizationConfig.XyzSettings.AxisLength;
+        Transparency = _settingsService.VisualizationConfig.XyzSettings.Transparency;
+        XColor = _settingsService.VisualizationConfig.XyzSettings.XColor;
+        YColor = _settingsService.VisualizationConfig.XyzSettings.YColor;
+        ZColor = _settingsService.VisualizationConfig.XyzSettings.ZColor;
         _showPlane = _settingsService.VisualizationConfig.XyzSettings.ShowPlane;
         _showXAxis = _settingsService.VisualizationConfig.XyzSettings.ShowXAxis;
         _showYAxis = _settingsService.VisualizationConfig.XyzSettings.ShowYAxis;
         _showZAxis = _settingsService.VisualizationConfig.XyzSettings.ShowZAxis;
     }
 
-    [ObservableProperty] private double _axisLength;
-    [ObservableProperty] private double _transparency;
+    [ObservableProperty]
+    public partial double AxisLength { get; set; }
 
-    [ObservableProperty] private System.Windows.Media.Color _xColor;
-    [ObservableProperty] private System.Windows.Media.Color _yColor;
-    [ObservableProperty] private System.Windows.Media.Color _zColor;
+    [ObservableProperty]
+    public partial double Transparency { get; set; }
+
+    [ObservableProperty]
+    public partial System.Windows.Media.Color XColor { get; set; }
+
+    [ObservableProperty]
+    public partial System.Windows.Media.Color YColor { get; set; }
+
+    [ObservableProperty]
+    public partial System.Windows.Media.Color ZColor { get; set; }
 
     [ObservableProperty] private bool _showPlane;
     [ObservableProperty] private bool _showXAxis;

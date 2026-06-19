@@ -12,13 +12,21 @@ namespace DevTools.Presentation.ViewModels;
 
 public partial class StubBuilderViewModel : ObservableObject
 {
-    [ObservableProperty] private string _outputPath;
-    [ObservableProperty] private bool _isGenerating;
-    [ObservableProperty] private string _statusMessage = string.Empty;
-    [ObservableProperty] private double _progress;
-    [ObservableProperty] private bool _hideUnchecked;
-    [ObservableProperty] private string _searchText = string.Empty;
+    [ObservableProperty]
+    public partial string OutputPath { get; set; }
 
+    [ObservableProperty]
+    public partial bool IsGenerating { get; set; }
+
+    [ObservableProperty] private string _statusMessage = string.Empty;
+    [ObservableProperty]
+    public partial double Progress { get; set; }
+
+    [ObservableProperty]
+    public partial bool HideUnchecked { get; set; }
+
+    [ObservableProperty]
+    public partial string SearchText { get; set; } = string.Empty;
     private ObservableCollection<AssemblyItem> AppDomainAssemblies { get; } = [];
     public ICollectionView FilteredAssemblies { get; }
     public Action? CloseAction { get; set; }
@@ -26,7 +34,7 @@ public partial class StubBuilderViewModel : ObservableObject
 
     public StubBuilderViewModel(string versionNumber)
     {
-        _outputPath = Path.Combine(AppUtils.GetContentRootPath(versionNumber), "Stubs");
+        OutputPath = Path.Combine(AppUtils.GetContentRootPath(versionNumber), "Stubs");
         FilteredAssemblies = CollectionViewSource.GetDefaultView(AppDomainAssemblies);
         FilteredAssemblies.Filter = FilterAssembly;
         LoadAppDomainAssemblies();

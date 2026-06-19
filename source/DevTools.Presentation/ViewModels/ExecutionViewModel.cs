@@ -5,8 +5,11 @@ public partial class ExecutionViewModel(CommandViewModel commandViewModel, Packa
     public CommandViewModel CommandViewModel { get; } = commandViewModel;
     public PackageViewModel PackageViewModel { get; } = packageViewModel;
 
-    [ObservableProperty] private bool _isPackageMode;
-    [ObservableProperty] private string _searchText = string.Empty;
+    [ObservableProperty]
+    public partial bool IsPackageMode { get; set; }
+
+    [ObservableProperty]
+    public partial string SearchText { get; set; } = string.Empty;
 
     public void ExecuteLastItem() => CommandViewModel.ExecuteLastItem();
 

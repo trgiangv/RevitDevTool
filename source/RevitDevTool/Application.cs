@@ -46,7 +46,7 @@ public class Application : IExternalApplication
             .SetAvailabilityController<DevToolsCommand>()
             .SetLargeImage("/DevTools.UI;component/Resources/Icons/DevTools-32-Light.png")
             .SetToolTip("Execute last command\nCtrl + click to Show/Hide DevTools");
-        
+
         var stack = panel.AddStackPanel();
 
         stack.AddPushButton<StubBuilderCommand>("StubBuilder")

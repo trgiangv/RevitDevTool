@@ -17,10 +17,17 @@ public partial class TrayViewModel : ObservableObject
     private readonly IAuthService _authService;
     private readonly IServiceProvider _services;
 
-    [ObservableProperty] private string _statusText = DefaultStatusText;
-    [ObservableProperty] private bool _isAuthenticated;
-    [ObservableProperty] private int _hostCount;
-    [ObservableProperty] private ImageSource _trayIconSource = AppIcons.ForCurrentTheme();
+    [ObservableProperty]
+    public partial string StatusText { get; set; } = DefaultStatusText;
+
+    [ObservableProperty]
+    public partial bool IsAuthenticated { get; set; }
+
+    [ObservableProperty]
+    public partial int HostCount { get; set; }
+
+    [ObservableProperty]
+    public partial ImageSource TrayIconSource { get; set; } = AppIcons.ForCurrentTheme();
 
     public TrayViewModel(IAuthService authService, IServiceProvider services)
     {

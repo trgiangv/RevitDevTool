@@ -21,9 +21,14 @@ public sealed partial class LogViewModel : ObservableObject, IDisposable,
 
     public bool HasVisualization => _visualization != null;
 
-    [ObservableProperty] private bool _isStarted;
-    [ObservableProperty] private LogLevel _logLevel = LogLevel.Debug;
-    [ObservableProperty] private int _geometryCount;
+    [ObservableProperty]
+    public partial bool IsStarted { get; set; }
+
+    [ObservableProperty]
+    public partial LogLevel LogLevel { get; set; } = LogLevel.Debug;
+
+    [ObservableProperty]
+    public partial int GeometryCount { get; set; }
 
     partial void OnLogLevelChanged(LogLevel value) => _loggingService.SetMinimumLevel(value);
 
@@ -46,8 +51,8 @@ public sealed partial class LogViewModel : ObservableObject, IDisposable,
         _messenger = messenger;
         _visualization = visualization;
         _idling = idling;
-        _isStarted = _settingsService.GeneralConfig.IsTraceEnabled;
-        if (_isStarted) StartTracing();
+        IsStarted = _settingsService.GeneralConfig.IsTraceEnabled;
+        if (IsStarted) StartTracing();
     }
 
     private void StartTracing()

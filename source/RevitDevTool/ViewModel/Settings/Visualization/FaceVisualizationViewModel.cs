@@ -11,22 +11,28 @@ public sealed partial class FaceVisualizationViewModel : ObservableObject, IVisu
     public FaceVisualizationViewModel(IRevitSettingsService settingsService)
     {
         _settingsService = settingsService;
-
-        _extrusion = _settingsService.VisualizationConfig.FaceSettings.Extrusion;
-        _transparency = _settingsService.VisualizationConfig.FaceSettings.Transparency;
-        _surfaceColor = _settingsService.VisualizationConfig.FaceSettings.SurfaceColor;
-        _meshColor = _settingsService.VisualizationConfig.FaceSettings.MeshColor;
+        Extrusion = _settingsService.VisualizationConfig.FaceSettings.Extrusion;
+        Transparency = _settingsService.VisualizationConfig.FaceSettings.Transparency;
+        SurfaceColor = _settingsService.VisualizationConfig.FaceSettings.SurfaceColor;
+        MeshColor = _settingsService.VisualizationConfig.FaceSettings.MeshColor;
         _normalVectorColor = _settingsService.VisualizationConfig.FaceSettings.NormalVectorColor;
         _showSurface = _settingsService.VisualizationConfig.FaceSettings.ShowSurface;
         _showMeshGrid = _settingsService.VisualizationConfig.FaceSettings.ShowMeshGrid;
         _showNormalVector = _settingsService.VisualizationConfig.FaceSettings.ShowNormalVector;
     }
 
-    [ObservableProperty] private double _extrusion;
-    [ObservableProperty] private double _transparency;
+    [ObservableProperty]
+    public partial double Extrusion { get; set; }
 
-    [ObservableProperty] private System.Windows.Media.Color _surfaceColor;
-    [ObservableProperty] private System.Windows.Media.Color _meshColor;
+    [ObservableProperty]
+    public partial double Transparency { get; set; }
+
+    [ObservableProperty]
+    public partial System.Windows.Media.Color SurfaceColor { get; set; }
+
+    [ObservableProperty]
+    public partial System.Windows.Media.Color MeshColor { get; set; }
+
     [ObservableProperty] private System.Windows.Media.Color _normalVectorColor;
 
     [ObservableProperty] private bool _showSurface;

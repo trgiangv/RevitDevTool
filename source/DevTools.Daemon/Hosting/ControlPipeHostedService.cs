@@ -59,7 +59,7 @@ internal sealed class ControlPipeHostedService(ControlPipeHandler handler, ILogg
         if (completed == monitorTask)
         {
             await linkedCts.CancelAsync().ConfigureAwait(false);
-            logger.ZLogWarning("Control pipe disconnected by client");
+            logger.ZLogWarning($"Control pipe disconnected by client");
             return;
         }
 

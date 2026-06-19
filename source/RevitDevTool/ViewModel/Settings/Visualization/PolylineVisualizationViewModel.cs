@@ -11,22 +11,28 @@ public sealed partial class PolylineVisualizationViewModel : ObservableObject, I
     public PolylineVisualizationViewModel(IRevitSettingsService settingsService)
     {
         _settingsService = settingsService;
-
-        _diameter = _settingsService.VisualizationConfig.PolylineSettings.Diameter;
-        _transparency = _settingsService.VisualizationConfig.PolylineSettings.Transparency;
-        _surfaceColor = _settingsService.VisualizationConfig.PolylineSettings.SurfaceColor;
-        _curveColor = _settingsService.VisualizationConfig.PolylineSettings.CurveColor;
+        Diameter = _settingsService.VisualizationConfig.PolylineSettings.Diameter;
+        Transparency = _settingsService.VisualizationConfig.PolylineSettings.Transparency;
+        SurfaceColor = _settingsService.VisualizationConfig.PolylineSettings.SurfaceColor;
+        CurveColor = _settingsService.VisualizationConfig.PolylineSettings.CurveColor;
         _directionColor = _settingsService.VisualizationConfig.PolylineSettings.DirectionColor;
         _showSurface = _settingsService.VisualizationConfig.PolylineSettings.ShowSurface;
         _showCurve = _settingsService.VisualizationConfig.PolylineSettings.ShowCurve;
         _showDirection = _settingsService.VisualizationConfig.PolylineSettings.ShowDirection;
     }
 
-    [ObservableProperty] private double _diameter;
-    [ObservableProperty] private double _transparency;
+    [ObservableProperty]
+    public partial double Diameter { get; set; }
 
-    [ObservableProperty] private System.Windows.Media.Color _surfaceColor;
-    [ObservableProperty] private System.Windows.Media.Color _curveColor;
+    [ObservableProperty]
+    public partial double Transparency { get; set; }
+
+    [ObservableProperty]
+    public partial System.Windows.Media.Color SurfaceColor { get; set; }
+
+    [ObservableProperty]
+    public partial System.Windows.Media.Color CurveColor { get; set; }
+
     [ObservableProperty] private System.Windows.Media.Color _directionColor;
 
     [ObservableProperty] private bool _showSurface;

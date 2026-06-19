@@ -6,15 +6,29 @@ namespace DevTools.Execution.External.Connections;
 
 public sealed partial class ConnectionState : ObservableObject
 {
-    [ObservableProperty] private bool _isConnected;
-    [ObservableProperty] private string _endpoint = string.Empty;
-    [ObservableProperty] private int _queueDepth;
-    [ObservableProperty] private int _totalToolCalls;
-    [ObservableProperty] private bool _isExecuting;
-    [ObservableProperty] private string _currentToolName = string.Empty;
-    [ObservableProperty] private string _currentStatusMessage = string.Empty;
-    [ObservableProperty] private DateTime _executionStartedAtUtc;
+    [ObservableProperty]
+    public partial bool IsConnected { get; set; }
 
+    [ObservableProperty]
+    public partial string Endpoint { get; set; } = string.Empty;
+
+    [ObservableProperty]
+    public partial int QueueDepth { get; set; }
+
+    [ObservableProperty]
+    public partial int TotalToolCalls { get; set; }
+
+    [ObservableProperty]
+    public partial bool IsExecuting { get; set; }
+
+    [ObservableProperty]
+    public partial string CurrentToolName { get; set; } = string.Empty;
+
+    [ObservableProperty]
+    public partial string CurrentStatusMessage { get; set; } = string.Empty;
+
+    [ObservableProperty]
+    public partial DateTime ExecutionStartedAtUtc { get; set; }
     public ObservableCollection<ToolCallMetric> ToolCalls { get; } = [];
 
     public void SetEndpoint(string endpoint)

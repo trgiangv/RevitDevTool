@@ -188,6 +188,9 @@ internal sealed class RevitDispatcher : IExternalEventHandler, IRevitDispatcher,
         _event?.Dispose();
     }
 
+    /// <summary>
+    /// Determines whether the caller is on the Revit thread in API mode and no requests are queued,
+    /// </summary>
     /// <returns>
     ///     <see langword="true"/> when the caller is on the Revit thread in API mode
     ///     and no requests are queued, allowing direct synchronous execution.

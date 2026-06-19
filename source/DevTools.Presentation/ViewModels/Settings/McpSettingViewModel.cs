@@ -22,9 +22,11 @@ public sealed partial class McpSettingViewModel : ObservableObject, IDisposable
 
     private CancellationTokenSource? _signInCts;
 
-    [ObservableProperty] private string _daemonStatus = StatusUnknown;
-    [ObservableProperty] private bool _isSigningIn;
+    [ObservableProperty]
+    public partial string DaemonStatus { get; set; } = StatusUnknown;
 
+    [ObservableProperty]
+    public partial bool IsSigningIn { get; set; }
     public ObservableCollection<string> ToolsetSources { get; } = [];
 
     public static string StdioConfigSnippet => """

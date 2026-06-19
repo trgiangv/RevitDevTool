@@ -23,12 +23,23 @@ public partial class MainViewModel : ObservableRecipient,
     public int ProcessId { get; } = Environment.ProcessId;
     public bool ShowLogMonitorOnly => !IsExecutionVisible && !IsMcpVisible;
 
-    [ObservableProperty] private object? _currentPage;
-    [ObservableProperty] private bool _isSettingsVisible;
-    [ObservableProperty] private bool _isExecutionVisible = true;
-    [ObservableProperty] private bool _isMcpVisible;
-    [ObservableProperty] private bool _isSaveLogEnabled;
-    [ObservableProperty] private bool _isMemoryEnabled;
+    [ObservableProperty]
+    public partial object? CurrentPage { get; set; }
+
+    [ObservableProperty]
+    public partial bool IsSettingsVisible { get; set; }
+
+    [ObservableProperty]
+    public partial bool IsExecutionVisible { get; set; } = true;
+
+    [ObservableProperty]
+    public partial bool IsMcpVisible { get; set; }
+
+    [ObservableProperty]
+    public partial bool IsSaveLogEnabled { get; set; }
+
+    [ObservableProperty]
+    public partial bool IsMemoryEnabled { get; set; }
 
     partial void OnIsSettingsVisibleChanged(bool value)
     {

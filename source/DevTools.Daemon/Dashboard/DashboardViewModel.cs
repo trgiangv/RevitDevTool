@@ -36,19 +36,41 @@ public partial class DashboardViewModel : ObservableObject
     private readonly DaemonSettings _settings;
     private bool _suppressAutoStartSync;
 
-    [ObservableProperty] private object? _currentView;
-    [ObservableProperty] private int _selectedTabIndex;
-    [ObservableProperty] private bool _isAuthenticated;
-    [ObservableProperty] private string? _displayName;
-    [ObservableProperty] private string? _email;
-    [ObservableProperty] private string? _avatarUrl;
-    [ObservableProperty] private ImageSource? _avatarImage;
-    [ObservableProperty] private int _hostCount;
-    [ObservableProperty] private string _gatewayStatus = StatusDisconnected;
-    [ObservableProperty] private bool _autoStartEnabled;
-    [ObservableProperty] private string _version = string.Empty;
-    [ObservableProperty] private AppTheme _theme = AppTheme.Auto;
+    [ObservableProperty]
+    public partial object? CurrentView { get; set; }
 
+    [ObservableProperty]
+    public partial int SelectedTabIndex { get; set; }
+
+    [ObservableProperty]
+    public partial bool IsAuthenticated { get; set; }
+
+    [ObservableProperty]
+    public partial string? DisplayName { get; set; }
+
+    [ObservableProperty]
+    public partial string? Email { get; set; }
+
+    [ObservableProperty]
+    public partial string? AvatarUrl { get; set; }
+
+    [ObservableProperty]
+    public partial ImageSource? AvatarImage { get; set; }
+
+    [ObservableProperty]
+    public partial int HostCount { get; set; }
+
+    [ObservableProperty]
+    public partial string GatewayStatus { get; set; } = StatusDisconnected;
+
+    [ObservableProperty]
+    public partial bool AutoStartEnabled { get; set; }
+
+    [ObservableProperty]
+    public partial string Version { get; set; }
+
+    [ObservableProperty]
+    public partial AppTheme Theme { get; set; }
     public List<AppTheme> Themes { get; } = Enum.GetValues<AppTheme>().ToList();
     public ObservableCollection<HostModel> Hosts { get; } = [];
 
@@ -57,7 +79,7 @@ public partial class DashboardViewModel : ObservableObject
         _authService = authService;
         _mcpEngine = mcpEngine;
         _settings = settings;
-        _theme = settings.Theme;
+        Theme = settings.Theme;
 
         RefreshAuthState();
         RefreshHostCount();

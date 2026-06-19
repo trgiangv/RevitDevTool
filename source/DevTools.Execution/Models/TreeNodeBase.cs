@@ -9,20 +9,19 @@ namespace DevTools.Execution.Models;
 public abstract partial class TreeNodeBase : ObservableObject
 {
     [ObservableProperty]
-    private string _name = string.Empty;
+    public partial string Name { get; set; } = string.Empty;
 
     [ObservableProperty]
-    private bool _isExpanded;
+    public partial bool IsExpanded { get; set; }
 
     [ObservableProperty]
-    private bool _isSelected;
+    public partial bool IsSelected { get; set; }
 
     [ObservableProperty]
-    private bool _isVisible = true;
+    public partial bool IsVisible { get; set; } = true;
 
     [ObservableProperty]
-    private HighlightRange? _highlightRange;
-
+    public partial HighlightRange? HighlightRange { get; set; }
     public abstract IEnumerable<TreeNodeBase> ChildNodes { get; }
 }
 
@@ -53,13 +52,13 @@ public abstract partial class ExecutionNodeBase : TreeNodeBase
     /// Whether this node is the last executed item (for UI indicator)
     /// </summary>
     [ObservableProperty]
-    private bool _isLastExecuted;
+    public partial bool IsLastExecuted { get; set; }
 
     /// <summary>
     /// Last executed time
     /// </summary>
     [ObservableProperty]
-    private DateTime? _lastExecutedTime;
+    public partial DateTime? LastExecutedTime { get; set; }
 
     /// <summary>
     /// Execution strategy (null for container nodes)

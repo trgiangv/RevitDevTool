@@ -4,16 +4,39 @@ namespace DevTools.Presentation.Models;
 
 public partial class McpToolItem : ObservableObject
 {
-    [ObservableProperty] private string _toolId = string.Empty;
-    [ObservableProperty] private string _name = string.Empty;
-    [ObservableProperty] private string _displayName = string.Empty;
-    [ObservableProperty] private string _sourceAddress = string.Empty;
-    [ObservableProperty] private string _groupName = string.Empty;
-    [ObservableProperty] private string _description = string.Empty;
-    [ObservableProperty] private string _toolTipText = string.Empty;
-    [ObservableProperty] private ExecutionMode _sourceKind = ExecutionMode.Python;
-    [ObservableProperty] private int _callCount;
-    [ObservableProperty] private string _inputSchemaJson = "{}";
-    [ObservableProperty] private HighlightRange? _nameHighlight;
-    [ObservableProperty] private HighlightRange? _groupNameHighlight;
+    [ObservableProperty]
+    public partial string ToolId { get; set; } = string.Empty;
+
+    [ObservableProperty]
+    public partial string Name { get; set; } = string.Empty;
+
+    [ObservableProperty]
+    public partial string DisplayName { get; set; } = string.Empty;
+
+    [ObservableProperty]
+    public partial string SourceAddress { get; set; } = string.Empty;
+
+    [ObservableProperty]
+    public partial string GroupName { get; set; } = string.Empty;
+
+    [ObservableProperty]
+    public partial string Description { get; set; } = string.Empty;
+
+    [ObservableProperty]
+    public partial string ToolTipText { get; set; } = string.Empty;
+
+    [ObservableProperty]
+    public partial ExecutionMode SourceKind { get; set; } = ExecutionMode.Python;
+
+    [ObservableProperty]
+    public partial int CallCount { get; set; }
+
+    [ObservableProperty]
+    public partial string InputSchemaJson { get; set; } = "{}";
+
+    [ObservableProperty]
+    public partial HighlightRange? NameHighlight { get; set; }
+
+    [ObservableProperty]
+    public partial HighlightRange? GroupNameHighlight { get; set; }
 }

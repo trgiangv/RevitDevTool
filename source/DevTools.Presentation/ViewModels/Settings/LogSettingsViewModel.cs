@@ -29,23 +29,53 @@ public partial class LogSettingsViewModel : ObservableObject, IDataErrorInfo, IR
     public IReadOnlyList<object> AvailableEnrichers => _enricherProvider?.AvailableEnrichers ?? [];
     public ObservableCollection<object> SelectedEnrichers { get; } = [];
 
-    [ObservableProperty] private LogLevel _logLevel;
-    [ObservableProperty] private bool _enableJson;
-    [ObservableProperty] private string _informationKeywords = string.Empty;
-    [ObservableProperty] private string _warningKeywords = string.Empty;
-    [ObservableProperty] private string _errorKeywords = string.Empty;
-    [ObservableProperty] private string _criticalKeywords = string.Empty;
-    [ObservableProperty] private bool _restartRequired;
-    [ObservableProperty] private bool _includeStackTrace;
-    [ObservableProperty] private SourceLevels _wpfTraceLevel;
-    [ObservableProperty] private bool _includeWpfTrace;
-    [ObservableProperty] private RollingInterval _timeInterval;
-    [ObservableProperty] private int _stackTraceDepth;
-    [ObservableProperty] private string _logFolder = string.Empty;
-    [ObservableProperty] private bool _autoClean;
-    [ObservableProperty] private string _httpEndpoint = string.Empty;
-    [ObservableProperty] private int _httpBatchSize = 100;
+    [ObservableProperty]
+    public partial LogLevel LogLevel { get; set; }
 
+    [ObservableProperty]
+    public partial bool EnableJson { get; set; }
+
+    [ObservableProperty]
+    public partial string InformationKeywords { get; set; } = string.Empty;
+
+    [ObservableProperty]
+    public partial string WarningKeywords { get; set; } = string.Empty;
+
+    [ObservableProperty]
+    public partial string ErrorKeywords { get; set; } = string.Empty;
+
+    [ObservableProperty]
+    public partial string CriticalKeywords { get; set; } = string.Empty;
+
+    [ObservableProperty]
+    public partial bool RestartRequired { get; set; }
+
+    [ObservableProperty]
+    public partial bool IncludeStackTrace { get; set; }
+
+    [ObservableProperty]
+    public partial SourceLevels WpfTraceLevel { get; set; }
+
+    [ObservableProperty]
+    public partial bool IncludeWpfTrace { get; set; }
+
+    [ObservableProperty]
+    public partial RollingInterval TimeInterval { get; set; }
+
+    [ObservableProperty]
+    public partial int StackTraceDepth { get; set; }
+
+    [ObservableProperty]
+    public partial string LogFolder { get; set; } = string.Empty;
+
+    [ObservableProperty]
+    public partial bool AutoClean { get; set; }
+
+    [ObservableProperty]
+    public partial string HttpEndpoint { get; set; } = string.Empty;
+
+    [ObservableProperty]
+    public partial int HttpBatchSize { get; set; } = 100;
     public ObservableCollection<LogSink> SelectedLogTargets { get; } = [];
 
     public bool IsFileTargetSelected => SelectedLogTargets.Contains(LogSink.File);
