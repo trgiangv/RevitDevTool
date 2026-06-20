@@ -27,7 +27,9 @@ public static class DaemonHostBuilder
 
         builder.Services.AddSingleton(singleInstance);
         builder.Services.AddHostedService<ControlPipeHostedService>();
-        builder.Services.AddHostedService<GatewayHostedService>();
+        builder.Services.AddSingleton<GatewayHostedService>();
+        builder.Services.AddHostedService(sp => sp.GetRequiredService<GatewayHostedService>());
+        builder.Services.AddSingleton<ITunnelStatusProvider>(sp => sp.GetRequiredService<GatewayHostedService>());
         builder.Services.AddSingleton<TrayViewModel>();
         builder.Services.AddTransient<DashboardViewModel>();
         builder.Services.AddTransient<DashboardWindow>();

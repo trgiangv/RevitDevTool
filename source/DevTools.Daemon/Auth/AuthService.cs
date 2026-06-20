@@ -11,7 +11,7 @@ using ZLogger;
 namespace DevTools.Daemon.Auth;
 
 /// <summary>
-/// OAuth 2.0 Authorization Code + PKCE via Duende OidcClient (RFC 8252).
+/// OAuth 2.1 Authorization Code + PKCE via Duende OidcClient (RFC 8252).
 /// Opens system browser for login, receives callback on 127.0.0.1.
 /// Tokens stored encrypted with DPAPI.
 /// </summary>

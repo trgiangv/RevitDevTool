@@ -15,7 +15,7 @@ namespace DevTools.Daemon.Hosting;
 /// </summary>
 public sealed class GatewayTunnelClient(
     Uri gatewayUri,
-    string? token,
+    Func<Task<string?>> tokenProvider,
     McpServerOptions serverOptions,
     ILoggerFactory loggerFactory,
     ILogger logger) : IAsyncDisposable
@@ -32,6 +32,17 @@ public sealed class GatewayTunnelClient(
     private const string CloseDescription = "Shutdown";
 
     private ClientWebSocket? _ws;
+    private bool _hasConnectedBefore;
+
+    public TunnelStatus Status { get; private set; } = TunnelStatus.Disconnected;
+    public event EventHandler<TunnelStatusChangedArgs>? StatusChanged;
+
+    private void SetStatus(TunnelStatus status)
+    {
+        if (Status == status) return;
+        Status = status;
+        StatusChanged?.Invoke(this, new TunnelStatusChangedArgs(status));
+    }
 
     public async Task RunAsync(CancellationToken ct)
     {
@@ -39,6 +50,8 @@ public sealed class GatewayTunnelClient(
 
         while (!ct.IsCancellationRequested)
         {
+            SetStatus(_hasConnectedBefore ? TunnelStatus.Reconnecting : TunnelStatus.Connecting);
+
             try
             {
                 await ConnectAndServeAsync(ct).ConfigureAwait(false);
@@ -47,15 +60,21 @@ public sealed class GatewayTunnelClient(
             }
             catch (OperationCanceledException) when (ct.IsCancellationRequested)
             {
+                SetStatus(TunnelStatus.Disconnected);
                 return;
             }
             catch (Exception ex)
             {
                 logger.ZLogWarning(ex, $"Tunnel lost, retrying in {delay}ms...");
+                SetStatus(TunnelStatus.Reconnecting);
             }
 
             try { await Task.Delay(delay, ct).ConfigureAwait(false); }
-            catch (OperationCanceledException) when (ct.IsCancellationRequested) { return; }
+            catch (OperationCanceledException) when (ct.IsCancellationRequested)
+            {
+                SetStatus(TunnelStatus.Disconnected);
+                return;
+            }
 
             delay = Math.Min(delay * 2, ReconnectMaxDelayMs);
         }
@@ -66,8 +85,9 @@ public sealed class GatewayTunnelClient(
         using var ws = new ClientWebSocket();
         ws.Options.KeepAliveInterval = TimeSpan.FromSeconds(15);
 
-        if (!string.IsNullOrWhiteSpace(token))
-            ws.Options.SetRequestHeader(AuthorizationHeader, $"{BearerScheme} {token}");
+        var currentToken = await tokenProvider().ConfigureAwait(false);
+        if (!string.IsNullOrWhiteSpace(currentToken))
+            ws.Options.SetRequestHeader(AuthorizationHeader, $"{BearerScheme} {currentToken}");
 
         _ws = ws;
 
@@ -76,8 +96,10 @@ public sealed class GatewayTunnelClient(
             logger.ZLogInformation($"Connecting to gateway {gatewayUri}...");
             await ws.ConnectAsync(gatewayUri, ct).ConfigureAwait(false);
             logger.ZLogInformation($"Connected to gateway");
+            _hasConnectedBefore = true;
 
             await SendRegisterAsync(ws, ct).ConfigureAwait(false);
+            SetStatus(TunnelStatus.Connected);
 
             using var heartbeatCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
             var heartbeatTask = HeartbeatLoopAsync(ws, heartbeatCts.Token);

@@ -16,10 +16,20 @@ internal sealed class GatewayHostedService(
     McpEngine engine,
     IOptions<GatewayOptions> gatewayOptions,
     ILoggerFactory loggerFactory,
-    ILogger<GatewayHostedService> logger) : BackgroundService
+    ILogger<GatewayHostedService> logger) : BackgroundService, ITunnelStatusProvider
 {
     private CancellationTokenSource? _tunnelCts;
     private Task? _tunnelTask;
+    private GatewayTunnelClient? _currentTunnel;
+
+    public TunnelStatus Status { get; private set; } = TunnelStatus.Disconnected;
+    public event EventHandler<TunnelStatusChangedArgs>? StatusChanged;
+
+    private void OnTunnelStatusChanged(object? sender, TunnelStatusChangedArgs args)
+    {
+        Status = args.Status;
+        StatusChanged?.Invoke(this, args);
+    }
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
@@ -71,10 +81,17 @@ internal sealed class GatewayHostedService(
 
         var tunnel = new GatewayTunnelClient(
             new Uri(url),
-            authService.AccessToken,
+            async () =>
+            {
+                await authService.RefreshAsync().ConfigureAwait(false);
+                return authService.AccessToken;
+            },
             options,
             loggerFactory,
             loggerFactory.CreateLogger<GatewayTunnelClient>());
+
+        tunnel.StatusChanged += OnTunnelStatusChanged;
+        _currentTunnel = tunnel;
 
         _tunnelTask = Task.Run(async () =>
         {
@@ -85,6 +102,10 @@ internal sealed class GatewayHostedService(
             catch (OperationCanceledException) when (ct.IsCancellationRequested) { }
             finally
             {
+                tunnel.StatusChanged -= OnTunnelStatusChanged;
+                _currentTunnel = null;
+                Status = TunnelStatus.Disconnected;
+                StatusChanged?.Invoke(this, new TunnelStatusChangedArgs(TunnelStatus.Disconnected));
                 await tunnel.DisposeAsync().ConfigureAwait(false);
             }
         }, ct);

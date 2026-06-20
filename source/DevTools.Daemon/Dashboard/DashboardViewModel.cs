@@ -34,6 +34,7 @@ public partial class DashboardViewModel : ObservableObject
     private readonly IAuthService _authService;
     private readonly McpEngine _mcpEngine;
     private readonly DaemonSettings _settings;
+    private readonly ITunnelStatusProvider? _tunnelStatus;
     private bool _suppressAutoStartSync;
 
     [ObservableProperty]
@@ -68,11 +69,16 @@ public partial class DashboardViewModel : ObservableObject
     public List<AppTheme> Themes { get; } = Enum.GetValues<AppTheme>().ToList();
     public ObservableCollection<HostModel> Hosts { get; } = [];
 
-    public DashboardViewModel(IAuthService authService, McpEngine mcpEngine, DaemonSettings settings)
+    public DashboardViewModel(
+        IAuthService authService,
+        McpEngine mcpEngine,
+        DaemonSettings settings,
+        ITunnelStatusProvider? tunnelStatus = null)
     {
         _authService = authService;
         _mcpEngine = mcpEngine;
         _settings = settings;
+        _tunnelStatus = tunnelStatus;
         Theme = settings.Theme;
 
         RefreshAuthState();
@@ -89,6 +95,12 @@ public partial class DashboardViewModel : ObservableObject
             RefreshHostCount();
             RefreshHosts();
         });
+
+        if (_tunnelStatus is not null)
+        {
+            _tunnelStatus.StatusChanged += (_, args) =>
+                Application.Current.Dispatcher.Invoke(() => RefreshGatewayStatus(args.Status));
+        }
 
         SystemEvents.UserPreferenceChanged += OnSystemThemeChanged;
 
@@ -198,7 +210,25 @@ public partial class DashboardViewModel : ObservableObject
         AvatarImage = string.IsNullOrWhiteSpace(_authService.AvatarUrl)
             ? null
             : new BitmapImage(new Uri(_authService.AvatarUrl, UriKind.Absolute));
-        GatewayStatus = _authService.IsAuthenticated ? StatusConnected : StatusNotSignedIn;
+
+        if (!_authService.IsAuthenticated)
+            GatewayStatus = StatusNotSignedIn;
+        else if (_tunnelStatus is not null)
+            RefreshGatewayStatus(_tunnelStatus.Status);
+        else
+            GatewayStatus = StatusConnected;
+    }
+
+    private void RefreshGatewayStatus(TunnelStatus status)
+    {
+        GatewayStatus = status switch
+        {
+            TunnelStatus.Connected => StatusConnected,
+            TunnelStatus.Connecting => "Connecting...",
+            TunnelStatus.Reconnecting => "Reconnecting...",
+            TunnelStatus.Disconnected => StatusDisconnected,
+            _ => StatusUnknown,
+        };
     }
 
     private void RefreshHostCount()
