@@ -34,7 +34,7 @@ public sealed class GatewayTunnelClient(
     private ClientWebSocket? _ws;
     private bool _hasConnectedBefore;
 
-    public TunnelStatus Status { get; private set; } = TunnelStatus.Disconnected;
+    private TunnelStatus Status { get; set; } = TunnelStatus.Disconnected;
     public event EventHandler<TunnelStatusChangedArgs>? StatusChanged;
 
     private void SetStatus(TunnelStatus status)

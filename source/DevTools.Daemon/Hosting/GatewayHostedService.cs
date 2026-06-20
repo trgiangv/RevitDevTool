@@ -20,7 +20,6 @@ internal sealed class GatewayHostedService(
 {
     private CancellationTokenSource? _tunnelCts;
     private Task? _tunnelTask;
-    private GatewayTunnelClient? _currentTunnel;
 
     public TunnelStatus Status { get; private set; } = TunnelStatus.Disconnected;
     public event EventHandler<TunnelStatusChangedArgs>? StatusChanged;
@@ -91,7 +90,6 @@ internal sealed class GatewayHostedService(
             loggerFactory.CreateLogger<GatewayTunnelClient>());
 
         tunnel.StatusChanged += OnTunnelStatusChanged;
-        _currentTunnel = tunnel;
 
         _tunnelTask = Task.Run(async () =>
         {
@@ -103,7 +101,6 @@ internal sealed class GatewayHostedService(
             finally
             {
                 tunnel.StatusChanged -= OnTunnelStatusChanged;
-                _currentTunnel = null;
                 Status = TunnelStatus.Disconnected;
                 StatusChanged?.Invoke(this, new TunnelStatusChangedArgs(TunnelStatus.Disconnected));
                 await tunnel.DisposeAsync().ConfigureAwait(false);

@@ -17,6 +17,7 @@
         <Nullable>enable</Nullable>
         <ImplicitUsings>enable</ImplicitUsings>
         <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+        <NoWarn>$(NoWarn);MCPEXP001</NoWarn>
         <RootNamespace>DevTools.Daemon</RootNamespace>
         <AssemblyName>DevTools.Daemon</AssemblyName>
         <ApplicationIcon>..\DevTools.UI\Resources\icons\DevTools-32-Dark.ico</ApplicationIcon>

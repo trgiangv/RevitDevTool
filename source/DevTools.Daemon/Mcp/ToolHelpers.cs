@@ -1,5 +1,6 @@
 using System.Text.Json;
 using DevTools.McpParser.Models;
+using ModelContextProtocol;
 using ModelContextProtocol.Protocol;
 using ModelContextProtocol.Server;
 
@@ -35,8 +36,8 @@ internal static class ToolHelpers
                string.Join(", ", instances.Select(i =>
                    $"PID {i.ProcessId} ({i.HostApp ?? "unknown"} {i.VersionNumber})"));
     }
-    
-    public static void ConfigureDynamicCatalog(this McpServerOptions options)
+
+    private static void ConfigureDynamicCatalog(this McpServerOptions options)
     {
         options.Capabilities ??= new ServerCapabilities();
         options.Capabilities.Tools ??= new ToolsCapability();
@@ -57,7 +58,8 @@ internal static class ToolHelpers
         {
             ToolCollection = toolCollection,
             PromptCollection = promptCollection,
-            ResourceCollection = resourceCollection
+            ResourceCollection = resourceCollection,
+            TaskStore = new InMemoryMcpTaskStore()
         };
         options.ConfigureDynamicCatalog();
         return options;

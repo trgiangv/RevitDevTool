@@ -19,6 +19,7 @@ public sealed class LaunchHostTool(InstanceManager instanceManager) : McpServerT
         Name = "launch_host",
         Description =
             "Launch a host application and wait for the DevTools bridge to connect. " +
+            "This is a long-running operation (typically 30-120 seconds for cold start). " +
             "Revit: version auto-detected from filePath when provided, otherwise latest installed. " +
             "AutoCAD family: always uses latest installed unless versionNumber is specified.",
         InputSchema = JsonSerializer.SerializeToElement(new
@@ -48,7 +49,8 @@ public sealed class LaunchHostTool(InstanceManager instanceManager) : McpServerT
                 }
             },
             required = new[] { McpPropertyNames.HostApp }
-        })
+        }),
+        Execution = new ToolExecution { TaskSupport = ToolTaskSupport.Optional }
     };
 
     public override IReadOnlyList<object> Metadata => [];

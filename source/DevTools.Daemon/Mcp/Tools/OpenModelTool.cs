@@ -19,6 +19,7 @@ public sealed class OpenModelTool(InstanceManager instanceManager) : McpServerTo
         Name = "open_model",
         Description =
             "Open a model file in a connected host or launch a new one. " +
+            "When launching a new host, this is a long-running operation (typically 30-120 seconds). " +
             "Host is auto-detected from extension: .rvt/.rfa → Revit, .dwg/.dxf/.dwt → AutoCAD.",
         InputSchema = JsonSerializer.SerializeToElement(new
         {
@@ -47,7 +48,8 @@ public sealed class OpenModelTool(InstanceManager instanceManager) : McpServerTo
                 }
             },
             required = new[] { McpPropertyNames.FilePath }
-        })
+        }),
+        Execution = new ToolExecution { TaskSupport = ToolTaskSupport.Optional }
     };
 
     public override IReadOnlyList<object> Metadata => [];

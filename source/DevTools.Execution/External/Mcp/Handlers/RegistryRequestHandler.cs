@@ -18,7 +18,7 @@ public sealed class RegistryRequestHandler(
     ResourceExecutionDispatcher resourceDispatcher,
     McpToolsetContextManager toolsetContextManager)
 {
-    private static readonly TimeSpan CallTimeout = TimeSpan.FromSeconds(30);
+    private static readonly TimeSpan CallTimeout = TimeSpan.FromSeconds(120);
     public Task<BridgeMessage> HandleToolsListAsync(string id)
     {
         toolStore.EnsureLoaded();

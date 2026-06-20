@@ -58,7 +58,7 @@ public sealed class HostBridgeClient : IAsyncDisposable
             await _connection.WriteAsync(request, ct).ConfigureAwait(false);
 
             using var cts = CancellationTokenSource.CreateLinkedTokenSource(ct);
-            cts.CancelAfter(TimeSpan.FromSeconds(60));
+            cts.CancelAfter(TimeSpan.FromSeconds(150));
             return await tcs.Task.WaitAsync(cts.Token).ConfigureAwait(false);
         }
         finally
