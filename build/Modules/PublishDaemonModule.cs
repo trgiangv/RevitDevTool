@@ -13,6 +13,7 @@ namespace Build.Modules;
 ///     The csproj DeployDevToolsDaemon target handles kill + copy to bundle Contents.
 /// </summary>
 [DependsOn<ResolveVersioningModule>]
+[DependsOn<CompileProjectModule>]
 [DependsOn<CleanProjectModule>(Optional = true)]
 [UsedImplicitly]
 public sealed class PublishDaemonModule : Module<string>

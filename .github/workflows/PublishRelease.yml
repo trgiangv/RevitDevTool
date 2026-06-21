@@ -7,9 +7,13 @@ on:
   workflow_dispatch:
     inputs:
       version:
-        description: "Release version (optional)"
+        description: "Release version (e.g. 3.1.0, 3.1.0-beta.1)"
         required: false
         type: string
+
+concurrency:
+  group: publish-release
+  cancel-in-progress: false
 
 jobs:
   windows:
@@ -53,5 +57,16 @@ jobs:
         working-directory: "build"
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          DOTNET_ENVIRONMENT: ${{ (github.ref_name == 'main' || github.ref_type == 'tag') && 'Production' || 'Development' }}
+          DOTNET_ENVIRONMENT: Production
           Build__Version: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.version || github.ref_name }}
+
+      - name: Fast-forward develop to include release tag
+        if: success()
+        shell: bash
+        run: |
+          set -e
+          TAG="${{ github.event_name == 'workflow_dispatch' && github.event.inputs.version || github.ref_name }}"
+          git fetch origin develop
+          git checkout develop
+          git merge --no-edit "tags/$TAG" || true
+          git push origin develop || echo "::warning::Could not push develop merge. Manual merge needed."
