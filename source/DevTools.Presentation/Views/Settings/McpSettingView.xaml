@@ -44,7 +44,7 @@
                                     Orientation="Horizontal">
                             <Button MinWidth="120"
                                     Command="{Binding TriggerDaemonSignInCommand}"
-                                    Content="Sign In via Daemon" />
+                                    Content="Sign In" />
                             <Button MinWidth="120"
                                     Margin="8,0,0,0"
                                     Command="{Binding OpenDaemonDashboardCommand}"
