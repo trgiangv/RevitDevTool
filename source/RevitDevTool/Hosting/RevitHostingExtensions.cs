@@ -70,7 +70,7 @@ internal static class RevitHostingExtensions
         services.AddSingleton<PanelController>();
 
         services.AddSingleton<IMessenger>(WeakReferenceMessenger.Default);
-        services.AddTransient<MainPage>();
+        services.AddSingleton<MainPage>();
         services.AddTransient<MainWindow>();
         services.AddPresentationServices();
 

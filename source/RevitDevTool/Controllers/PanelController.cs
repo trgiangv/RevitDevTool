@@ -182,6 +182,7 @@ public sealed class PanelController(LogViewModel logViewModel)
         {
             if (_floatingWindow is null) return;
             _floatingWindow.Closed -= OnFloatingWindowClosed;
+            _floatingWindow.ContentHost.Content = null;
             _floatingWindow.Close();
             _floatingWindow = null;
         });
@@ -191,6 +192,7 @@ public sealed class PanelController(LogViewModel logViewModel)
     {
         if (_floatingWindow == null) return;
         _floatingWindow.Closed -= OnFloatingWindowClosed;
+        _floatingWindow.ContentHost.Content = null;
         _floatingWindow = null;
         _displayMode = DisplayMode.Inactive;
     }

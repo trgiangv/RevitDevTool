@@ -35,6 +35,7 @@ public partial class MainWindow
 
     private void OnClosed(object? sender, EventArgs e)
     {
+        ContentHost.Content = null;
         ThemeManager.Current.ActualApplicationThemeChanged -= OnThemeChanged;
     }
 }
