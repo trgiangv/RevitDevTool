@@ -1,5 +1,4 @@
-﻿using DevTools.McpParser.Models;
-namespace DevTools.Execution.Models;
+﻿namespace DevTools.Execution.Models;
 
 /// <summary>
 /// Root node - represents an Assembly (.dll) or Root Folder for scripts
@@ -12,9 +11,9 @@ public sealed class ExecutionNodeRoot : ExecutionNodeBase
     public required string RootPath { get; init; }
 
     /// <summary>
-    /// Provider type (DotNet or Python)
+    /// How code is organized: Script (folder scan) or Assembly (.dll reflection)
     /// </summary>
-    public required ExecutionMode ProviderType { get; init; }
+    public required ContainerMode ContainerMode { get; init; }
 }
 
 /// <summary>
@@ -39,9 +38,14 @@ public sealed class ExecutionNode : ExecutionNodeBase
     public required string ExecutablePath { get; init; }
 
     /// <summary>
-    /// Provider type (DotNet or Python)
+    /// How code is organized: Script (folder scan) or Assembly (.dll reflection)
     /// </summary>
-    public required ExecutionMode ProviderType { get; init; }
+    public required ContainerMode ContainerMode { get; init; }
+
+    /// <summary>
+    /// How code is executed (Python, CSharp, Dotnet, etc.)
+    /// </summary>
+    public required ExecutionMode ExecutionMode { get; init; }
 
     /// <summary>
     /// Source file path (for open location)

@@ -2,7 +2,6 @@ using System.Diagnostics;
 using System.IO;
 using DevTools.Execution.Interfaces;
 using DevTools.Execution.Models;
-using DevTools.McpParser.Models;
 
 namespace DevTools.Execution.Providers;
 
@@ -93,7 +92,7 @@ public sealed class ScriptExecutionProvider(
                 Id = folderId,
                 Name = folderName,
                 RootPath = currentPath,
-                ProviderType = ExecutionMode.Script,
+                ContainerMode = ContainerMode.Script,
                 NodeType = NodeType.Container,
                 IsExpanded = true
             };
@@ -130,7 +129,8 @@ public sealed class ScriptExecutionProvider(
             Name = fileName,
             ExecutablePath = scriptPath,
             SourceFilePath = scriptPath,
-            ProviderType = mode,
+            ContainerMode = ContainerMode.Script,
+            ExecutionMode = mode,
             NodeType = NodeType.Executable,
             ExecutionStrategy = strategyFactory.Create(mode, scriptPath, rootPath)
         };

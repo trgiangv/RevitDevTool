@@ -36,7 +36,7 @@ public partial class CommandViewModel : ObservableObject, IBusyViewModel
     public partial string BusyMessage { get; set; } = string.Empty;
 
     [ObservableProperty]
-    public partial ExecutionMode? BusyProviderType { get; set; }
+    public partial ExecutionMode? BusyExecutionMode { get; set; }
 
     [ObservableProperty]
     public partial bool IsDebuggerConnected { get; set; }
@@ -101,7 +101,7 @@ public partial class CommandViewModel : ObservableObject, IBusyViewModel
         await this.WhileBusy("Loading assembly...", async () =>
         {
             await _orchestrator.LoadFromPathAsync(dialog.FileName);
-            SavePathToSettings(dialog.FileName, ExecutionMode.Assembly);
+            SavePathToSettings(dialog.FileName, ContainerMode.Assembly);
             UpdateTreeRoot();
         });
     }
@@ -114,7 +114,7 @@ public partial class CommandViewModel : ObservableObject, IBusyViewModel
         await this.WhileBusy("Loading scripts...", async () =>
         {
             await _orchestrator.LoadFromPathAsync(selectedFolder);
-            SavePathToSettings(selectedFolder, ExecutionMode.Script);
+            SavePathToSettings(selectedFolder, ContainerMode.Script);
             UpdateTreeRoot();
         });
     }
@@ -127,7 +127,7 @@ public partial class CommandViewModel : ObservableObject, IBusyViewModel
             await this.WhileBusy("Loading assembly...", async () =>
             {
                 await _orchestrator.LoadFromPathAsync(path);
-                SavePathToSettings(path, ExecutionMode.Assembly);
+                SavePathToSettings(path, ContainerMode.Assembly);
             });
         }
         else if (Directory.Exists(path))
@@ -135,7 +135,7 @@ public partial class CommandViewModel : ObservableObject, IBusyViewModel
             await this.WhileBusy("Loading scripts...", async () =>
             {
                 await _orchestrator.LoadFromPathAsync(path!);
-                SavePathToSettings(path!, ExecutionMode.Script);
+                SavePathToSettings(path!, ContainerMode.Script);
             });
         }
         UpdateTreeRoot();
@@ -146,8 +146,8 @@ public partial class CommandViewModel : ObservableObject, IBusyViewModel
     {
         var node = parameter as ExecutionNodeBase ?? SelectedNode;
         if (node is not { NodeType: NodeType.Executable }) return;
-        using var memoryScope = _memoryViewModel.BeginOperation((node as ExecutionNode)?.ProviderType, node.Name);
-        await WhileBusy($"Executing '{node.Name}'...", (node as ExecutionNode)?.ProviderType, async () =>
+        using var memoryScope = _memoryViewModel.BeginOperation((node as ExecutionNode)?.ExecutionMode, node.Name);
+        await WhileBusy($"Executing '{node.Name}'...", (node as ExecutionNode)?.ExecutionMode, async () =>
         {
             var result = await _orchestrator.ExecuteAsync(node);
             memoryScope.Complete(success: result.Success);
@@ -165,8 +165,8 @@ public partial class CommandViewModel : ObservableObject, IBusyViewModel
         if (lastExecuted == null) return;
         try
         {
-            using var memoryScope = _memoryViewModel.BeginOperation((lastExecuted as ExecutionNode)?.ProviderType, lastExecuted.Name);
-            await WhileBusy($"Executing '{lastExecuted.Name}'...", (lastExecuted as ExecutionNode)?.ProviderType, async () =>
+            using var memoryScope = _memoryViewModel.BeginOperation((lastExecuted as ExecutionNode)?.ExecutionMode, lastExecuted.Name);
+            await WhileBusy($"Executing '{lastExecuted.Name}'...", (lastExecuted as ExecutionNode)?.ExecutionMode, async () =>
             {
                 var result = await _orchestrator.ExecuteAsync(lastExecuted);
                 memoryScope.Complete(success: result.Success);
@@ -252,7 +252,7 @@ public partial class CommandViewModel : ObservableObject, IBusyViewModel
     private void OnRootRemoved(object? sender, RootRemovedEventArgs e)
     {
         RemovePathFromSettings(e.RootPath);
-        if (e.IsRename) SavePathToSettings(e.NewPath!, ExecutionMode.Script);
+        if (e.IsRename) SavePathToSettings(e.NewPath!, ContainerMode.Script);
     }
 
     private void OnThemeChanged(object? sender, EventArgs e)
@@ -311,14 +311,14 @@ public partial class CommandViewModel : ObservableObject, IBusyViewModel
     partial void OnIsBusyChanged(bool value) => ExecuteCommand.NotifyCanExecuteChanged();
     partial void OnSearchTextChanged(string value) => RefreshFilteredItems();
 
-    private void SavePathToSettings(string path, ExecutionMode mode)
+    private void SavePathToSettings(string path, ContainerMode container)
     {
         var config = _settingsService.ExecutionConfig;
-        var list = mode switch
+        var list = container switch
         {
-            ExecutionMode.Assembly => config.DotnetAssemblyPaths,
-            ExecutionMode.Script or ExecutionMode.IronPython => config.ScriptFolderPaths,
-            _ => throw new ArgumentOutOfRangeException(nameof(mode))
+            ContainerMode.Assembly => config.DotnetAssemblyPaths,
+            ContainerMode.Script => config.ScriptFolderPaths,
+            _ => throw new ArgumentOutOfRangeException(nameof(container))
         };
         if (!list.Contains(path, StringComparer.OrdinalIgnoreCase)) list.Add(path);
     }
@@ -337,16 +337,16 @@ public partial class CommandViewModel : ObservableObject, IBusyViewModel
         config.ScriptFolderPaths.Clear();
     }
 
-    private async Task WhileBusy(string message, ExecutionMode? providerType, Func<Task> action)
+    private async Task WhileBusy(string message, ExecutionMode? executionMode, Func<Task> action)
     {
-        BusyProviderType = providerType;
+        BusyExecutionMode = executionMode;
         try
         {
             await this.WhileBusy(message, action);
         }
         finally
         {
-            BusyProviderType = null;
+            BusyExecutionMode = null;
         }
     }
 }

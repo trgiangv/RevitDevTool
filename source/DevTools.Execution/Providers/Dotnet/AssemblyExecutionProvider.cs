@@ -2,7 +2,6 @@ using System.Diagnostics;
 using System.IO;
 using DevTools.Execution.Interfaces;
 using DevTools.Execution.Models;
-using DevTools.McpParser.Models;
 namespace DevTools.Execution.Providers.Dotnet;
 
 /// <summary>
@@ -66,7 +65,7 @@ public sealed class AssemblyExecutionProvider(
             Id = assemblyId,
             Name = assemblyName,
             RootPath = assemblyPath,
-            ProviderType = ExecutionMode.Assembly,
+            ContainerMode = ContainerMode.Assembly,
             NodeType = NodeType.Container
         };
 
@@ -112,7 +111,8 @@ public sealed class AssemblyExecutionProvider(
             Name = commandItem.Name,
             ExecutablePath = commandItem.FullClassName,
             SourceFilePath = commandItem.AssemblyPath,
-            ProviderType = ExecutionMode.Assembly,
+            ContainerMode = ContainerMode.Assembly,
+            ExecutionMode = ExecutionMode.Dotnet,
             NodeType = NodeType.Executable,
             ExecutionStrategy = new AssemblyExecutionStrategy(commandItem, hostContext, commandRunner)
         };

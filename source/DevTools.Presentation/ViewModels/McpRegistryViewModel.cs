@@ -17,7 +17,7 @@ namespace DevTools.Presentation.ViewModels;
 
 public sealed partial class McpRegistryViewModel : ObservableObject, IBusyViewModel, IDisposable
 {
-    private readonly ToolRegistryStore _toolStore;
+    private readonly McpCatalogStore _catalogStore;
     private readonly ConnectionState _bridgeState;
     private readonly DispatcherTimer _searchDebounceTimer;
     private readonly DispatcherTimer _elapsedTimer;
@@ -64,9 +64,9 @@ public sealed partial class McpRegistryViewModel : ObservableObject, IBusyViewMo
     public bool ShowStatusPanel => IsBusy || IsExecuting;
     public string StatusPanelText => IsBusy ? BusyMessage : ExecutionStatusText;
 
-    public McpRegistryViewModel(ToolRegistryStore toolStore, ConnectionState bridgeState)
+    public McpRegistryViewModel(McpCatalogStore catalogStore, ConnectionState bridgeState)
     {
-        _toolStore = toolStore;
+        _catalogStore = catalogStore;
         _bridgeState = bridgeState;
 
         _searchDebounceTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(500) };
@@ -79,7 +79,7 @@ public sealed partial class McpRegistryViewModel : ObservableObject, IBusyViewMo
         _elapsedTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(500) };
         _elapsedTimer.Tick += (_, _) => UpdateElapsedDisplay();
 
-        _toolStore.ToolsChanged += OnRegistryChanged;
+        _catalogStore.CatalogChanged += OnRegistryChanged;
         _bridgeState.PropertyChanged += OnBridgeStateChanged;
         _bridgeState.ToolCalls.CollectionChanged += OnToolCallsCollectionChanged;
         ThemeManager.Current.ActualApplicationThemeChanged += OnThemeChanged;
@@ -100,7 +100,7 @@ public sealed partial class McpRegistryViewModel : ObservableObject, IBusyViewMo
     {
         await this.WhileBusy("Loading MCP tools...", async () =>
         {
-            await _toolStore.ReloadAsync().ConfigureAwait(true);
+            await _catalogStore.ReloadAsync().ConfigureAwait(true);
             RebuildToolList();
         });
     }
@@ -112,7 +112,7 @@ public sealed partial class McpRegistryViewModel : ObservableObject, IBusyViewMo
         {
             HostUiHelper.RunOnMainThread(async void () =>
             {
-                try { await _toolStore.ReloadAsync(); }
+                try { await _catalogStore.ReloadAsync(); }
                 catch { /* ignore */ }
             });
         });
@@ -122,7 +122,7 @@ public sealed partial class McpRegistryViewModel : ObservableObject, IBusyViewMo
     {
         await this.WhileBusy($"Parsing MCP toolset from '{Path.GetFileName(path)}'...", async () =>
         {
-            await _toolStore.AddPathAsync(path).ConfigureAwait(true);
+            await _catalogStore.AddPathAsync(path).ConfigureAwait(true);
         });
     }
 
@@ -137,7 +137,7 @@ public sealed partial class McpRegistryViewModel : ObservableObject, IBusyViewMo
         if (dialog.ShowDialog() != true) return;
         await this.WhileBusy($"Loading MCP assembly '{Path.GetFileName(dialog.FileName)}'...", async () =>
         {
-            await _toolStore.AddPathAsync(dialog.FileName).ConfigureAwait(true);
+            await _catalogStore.AddPathAsync(dialog.FileName).ConfigureAwait(true);
         });
     }
 
@@ -148,7 +148,7 @@ public sealed partial class McpRegistryViewModel : ObservableObject, IBusyViewMo
         if (string.IsNullOrWhiteSpace(selectedFolder)) return;
         await this.WhileBusy($"Parsing MCP toolset from '{Path.GetFileName(selectedFolder)}'...", async () =>
         {
-            await _toolStore.AddPathAsync(selectedFolder).ConfigureAwait(true);
+            await _catalogStore.AddPathAsync(selectedFolder).ConfigureAwait(true);
         });
     }
 
@@ -165,7 +165,7 @@ public sealed partial class McpRegistryViewModel : ObservableObject, IBusyViewMo
     private void RebuildToolList()
     {
         Tools.Clear();
-        foreach (var tool in _toolStore.ToolCatalog)
+        foreach (var tool in _catalogStore.RegisteredTools)
         {
             var protocolTool = tool.ProtocolTool;
             var binding = tool.Binding;
@@ -186,7 +186,7 @@ public sealed partial class McpRegistryViewModel : ObservableObject, IBusyViewMo
         }
 
         TotalToolCount = Tools.Count;
-        DotNetToolCount = Tools.Count(item => item.SourceKind == ExecutionMode.Assembly);
+        DotNetToolCount = Tools.Count(item => item.SourceKind == ExecutionMode.Dotnet);
         PythonToolCount = Tools.Count(item => item.SourceKind == ExecutionMode.Python);
         ApplyFilter();
     }
@@ -376,7 +376,7 @@ public sealed partial class McpRegistryViewModel : ObservableObject, IBusyViewMo
         if (_disposed) return;
         _disposed = true;
         _elapsedTimer.Stop();
-        _toolStore.ToolsChanged -= OnRegistryChanged;
+        _catalogStore.CatalogChanged -= OnRegistryChanged;
         _bridgeState.PropertyChanged -= OnBridgeStateChanged;
         _bridgeState.ToolCalls.CollectionChanged -= OnToolCallsCollectionChanged;
         ThemeManager.Current.ActualApplicationThemeChanged -= OnThemeChanged;

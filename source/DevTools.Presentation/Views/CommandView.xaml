@@ -50,7 +50,7 @@
                     <Image Width="15"
                            Height="15"
                            Margin="0,0,5,0"
-                           Source="{Binding ProviderType, Converter={StaticResource ExecutionModeIconConverter}}" />
+                           Source="{Binding ExecutionMode, Converter={StaticResource ExecutionModeIconConverter}}" />
                     <TextBlock VerticalAlignment="Center"
                                behav:HighlightTextBlockBehavior.Range="{Binding HighlightRange}"
                                Text="{Binding Name}"
@@ -148,8 +148,8 @@
                     <Image Width="14"
                            Height="14"
                            Margin="0,0,6,0"
-                           Source="{Binding BusyProviderType, Converter={StaticResource ExecutionModeIconConverter}}"
-                           Visibility="{Binding BusyProviderType, Converter={StaticResource ExecutionModeVisibilityConverter}}" />
+                           Source="{Binding BusyExecutionMode, Converter={StaticResource ExecutionModeIconConverter}}"
+                           Visibility="{Binding BusyExecutionMode, Converter={StaticResource ExecutionModeVisibilityConverter}}" />
                     <TextBlock FontSize="9"
                                Foreground="{DynamicResource DevTools.MahApps.Brushes.ThemeForeground}"
                                Text="{Binding BusyMessage}"

@@ -237,8 +237,6 @@ public sealed class ExecutionOrchestrator : IExecutionOrchestrator, IDisposable
         _reloadGate.Dispose();
     }
 
-    #region Private Helpers
-
     private bool IsPathUnderExistingRoot(string path)
     {
         return _treeRoot
@@ -262,16 +260,16 @@ public sealed class ExecutionOrchestrator : IExecutionOrchestrator, IDisposable
     }
 
     private static string GetProviderKind(ExecutionNodeBase node) =>
-        node is ExecutionNode executable ? executable.ProviderType.ToString() : "unknown";
+        node is ExecutionNode executable ? executable.ExecutionMode.ToString() : "unknown";
 
     private async Task<ReloadRootResult> ReloadRootAsync(ExecutionNodeRoot currentExecutionNodeRoot, CancellationToken cancellationToken)
     {
         try
         {
-            var provider = _serviceProvider.GetKeyedService<IExecutionProvider>(currentExecutionNodeRoot.ProviderType);
+            var provider = _serviceProvider.GetKeyedService<IExecutionProvider>(currentExecutionNodeRoot.ContainerMode);
             if (provider == null)
             {
-                Trace.TraceWarning($"No keyed provider found for execution mode '{currentExecutionNodeRoot.ProviderType}'");
+                Trace.TraceWarning($"No keyed provider found for container mode '{currentExecutionNodeRoot.ContainerMode}'");
                 return ReloadRootResult.KeepCurrent();
             }
 
@@ -363,10 +361,10 @@ public sealed class ExecutionOrchestrator : IExecutionOrchestrator, IDisposable
         _fileWatcher.Unwatch(oldPath);
         TreeNodeOperations.RemoveNodeWithCascade(_treeRoot, renamedRoot, _ => { });
 
-        var provider = _serviceProvider.GetKeyedService<IExecutionProvider>(renamedRoot.ProviderType);
+        var provider = _serviceProvider.GetKeyedService<IExecutionProvider>(renamedRoot.ContainerMode);
         if (provider == null)
         {
-            Trace.TraceWarning($"No keyed provider found for execution mode '{renamedRoot.ProviderType}'");
+            Trace.TraceWarning($"No keyed provider found for container mode '{renamedRoot.ContainerMode}'");
             RootRemoved?.Invoke(this, new RootRemovedEventArgs(oldPath));
             return true;
         }
@@ -461,8 +459,6 @@ public sealed class ExecutionOrchestrator : IExecutionOrchestrator, IDisposable
             Path.TrimEndingDirectorySeparator(right),
             StringComparison.OrdinalIgnoreCase);
     }
-
-    #endregion
 
     private readonly record struct ReloadRootResult(ExecutionNodeRoot? RootNode, bool KeepExistingRoot)
     {

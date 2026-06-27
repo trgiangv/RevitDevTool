@@ -2,7 +2,6 @@ using CommunityToolkit.Mvvm.Messaging;
 using DevTools.Execution;
 using DevTools.Execution.Interfaces;
 using DevTools.Execution.Providers;
-using DevTools.McpParser.Models;
 using DevTools.Logging;
 using DevTools.Logging.Abstractions;
 using DevTools.Presentation;
@@ -126,7 +125,7 @@ internal static class RevitHostingExtensions
         services.AddExecutionServices(registerDefaultScriptProvider: false);
         services.AddSingleton<IScriptExecutionStrategyFactory, RevitScriptExecutionStrategyFactory>();
         services.AddSingleton<IExecutionProvider, ScriptExecutionProvider>();
-        services.AddKeyedSingleton<IExecutionProvider, ScriptExecutionProvider>(ExecutionMode.Script);
+        services.AddKeyedSingleton<IExecutionProvider, ScriptExecutionProvider>(ContainerMode.Script);
         return builder;
     }
 }

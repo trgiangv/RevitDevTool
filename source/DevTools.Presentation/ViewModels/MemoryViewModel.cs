@@ -42,7 +42,7 @@ public partial class MemoryViewModel : ObservableObject
     public partial string LastOperationName { get; set; } = "N/A";
 
     [ObservableProperty]
-    public partial ExecutionMode? LastOperationProvider { get; set; }
+    public partial ExecutionMode? LastExecutionMode { get; set; }
 
     [ObservableProperty]
     public partial bool LastOperationSuccess { get; set; }
@@ -99,11 +99,11 @@ public partial class MemoryViewModel : ObservableObject
         UpdateActiveSessionPeak(snapshot);
     }
 
-    public OperationScope BeginOperation(ExecutionMode? provider, string target)
+    public OperationScope BeginOperation(ExecutionMode? executionMode, string target)
     {
         var normalizedTarget = string.IsNullOrWhiteSpace(target) ? "-" : target;
         var before = CaptureSnapshot();
-        _activeSession = new OperationSession(provider, normalizedTarget, before);
+        _activeSession = new OperationSession(executionMode, normalizedTarget, before);
         return new OperationScope(this);
     }
 
@@ -115,7 +115,7 @@ public partial class MemoryViewModel : ObservableObject
         var peakPrivateMb = Math.Max(_activeSession.Value.Peak.PrivateMb, after.PrivateMb);
 
         LastOperationName = _activeSession.Value.Target;
-        LastOperationProvider = _activeSession.Value.Provider;
+        LastExecutionMode = _activeSession.Value.ExecutionMode;
         LastOperationSuccess = success;
         LastOperationDurationMs = durationMs;
         LastDeltaPrivateMb = after.PrivateMb - _activeSession.Value.Before.PrivateMb;
@@ -182,10 +182,10 @@ public partial class MemoryViewModel : ObservableObject
 
     private readonly record struct MemorySnapshot(double RamMb, double PrivateMb, double ManagedMb, int HandleCount, int ThreadCount);
 
-    private readonly record struct OperationSession(ExecutionMode? Provider, string Target, MemorySnapshot Before, MemorySnapshot Peak)
+    private readonly record struct OperationSession(ExecutionMode? ExecutionMode, string Target, MemorySnapshot Before, MemorySnapshot Peak)
     {
-        public OperationSession(ExecutionMode? provider, string target, MemorySnapshot before)
-            : this(provider, target, before, before) { }
+        public OperationSession(ExecutionMode? executionMode, string target, MemorySnapshot before)
+            : this(executionMode, target, before, before) { }
     }
 
     public sealed class OperationScope(MemoryViewModel owner) : IDisposable
