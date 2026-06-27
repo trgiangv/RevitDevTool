@@ -26,7 +26,7 @@ public sealed class PytestRequestHandler(
         if (string.Equals(method, PytestBridgeMethods.TestsRun, StringComparison.OrdinalIgnoreCase))
             return HandleRunAsync(requestId, @params);
 
-        return Task.FromResult(BridgeMessage.Error(requestId, "METHOD_NOT_FOUND", $"Unknown method: {method}"));
+        return Task.FromResult(BridgeMessage.Error(requestId, IpcErrorCodes.MethodNotFound, $"Unknown method: {method}"));
     }
 
     public async Task<BridgeMessage> HandleRunAsync(string id, JsonElement? @params)

@@ -156,7 +156,7 @@ public sealed class DevToolsPipeServer(
             }
             catch (Exception ex)
             {
-                response = BridgeMessage.Error(msg.Id!, "INTERNAL_ERROR", ex.Message);
+                response = BridgeMessage.Error(msg.Id!, IpcErrorCodes.InternalError, ex.Message);
             }
 
             try
@@ -179,7 +179,7 @@ public sealed class DevToolsPipeServer(
         var id = request.Id!;
         if (HandlerMap.TryGetValue(request.Method!, out var handler))
             return await handler.HandleAsync(id, request.Method!, request.Params).ConfigureAwait(false);
-        return BridgeMessage.Error(id, "METHOD_NOT_FOUND", $"Unknown method: {request.Method}");
+        return BridgeMessage.Error(id, IpcErrorCodes.MethodNotFound, $"Unknown method: {request.Method}");
     }
 
     private void OnCatalogChanged(object? sender, EventArgs e)

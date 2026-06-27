@@ -14,7 +14,7 @@ public sealed class InstanceRequestHandler(IHostAppInfo hostInfo) : IBridgeReque
         CancellationToken ct = default)
     {
         if (!string.Equals(method, IpcBridgeMethods.InstanceInfo, StringComparison.OrdinalIgnoreCase))
-            return Task.FromResult(BridgeMessage.Error(requestId, "METHOD_NOT_FOUND", $"Unknown method: {method}"));
+            return Task.FromResult(BridgeMessage.Error(requestId, IpcErrorCodes.MethodNotFound, $"Unknown method: {method}"));
 
         return Task.FromResult(HandleInstanceInfo(requestId));
     }
