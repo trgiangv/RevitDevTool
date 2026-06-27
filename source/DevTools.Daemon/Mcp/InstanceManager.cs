@@ -3,11 +3,10 @@ using System.Text.Json;
 using System.Text.RegularExpressions;
 using Microsoft.Extensions.Logging;
 using ZLogger;
-using DevTools.McpParser.Models;
 
 namespace DevTools.Daemon.Mcp;
 
-public sealed partial class InstanceManager(ILogger<InstanceManager> logger) : IAsyncDisposable
+public sealed partial class InstanceManager(ILogger<InstanceManager> logger) : IInstanceManager, IAsyncDisposable
 {
     /// <summary>
     /// Matches pipe names produced by DevToolsPipeServer: {HostApp}_{Version}_{PID}.
@@ -22,11 +21,13 @@ public sealed partial class InstanceManager(ILogger<InstanceManager> logger) : I
 
     public List<HostBridgeClient> GetClients() => _clients.Values.ToList();
 
-    public List<InstanceInfo> GetInstances() =>
+    public IReadOnlyCollection<InstanceInfo> GetInstances() =>
         _clients.Values
             .Where(c => c.Info is not null)
             .Select(c => c.Info!)
             .ToList();
+
+    IHostBridgeClient? IInstanceManager.GetByProcessId(int processId) => GetByProcessId(processId);
 
     public HostBridgeClient? GetByProcessId(int processId) =>
         _clients.Values.FirstOrDefault(c => c.Info?.ProcessId == processId);
@@ -34,8 +35,23 @@ public sealed partial class InstanceManager(ILogger<InstanceManager> logger) : I
     public string? GetPipeNameByProcessId(int processId) =>
         _clients.FirstOrDefault(kvp => kvp.Value.Info?.ProcessId == processId).Key;
 
-    public HostBridgeClient? GetDefault() =>
-        _clients.Count == 1 ? _clients.Values.First() : null;
+    IHostBridgeClient? IInstanceManager.GetDefault(string? hostApp) => GetDefault(hostApp);
+
+    public HostBridgeClient? GetDefault(string? hostApp = null)
+    {
+        if (string.IsNullOrWhiteSpace(hostApp))
+            return _clients.Count == 1 ? _clients.Values.First() : null;
+
+        var matches = _clients.Values
+            .Where(c => c.Info is not null &&
+                        string.Equals(c.Info.HostApp, hostApp, StringComparison.OrdinalIgnoreCase))
+            .ToArray();
+
+        return matches.Length == 1 ? matches[0] : null;
+    }
+
+    public IReadOnlyCollection<string> GetDiscoveredPipeNames() =>
+        DiscoverHostPipes(logger).ToArray();
 
     public async Task RunDiscoveryAsync(CancellationToken ct)
     {
@@ -136,14 +152,6 @@ public sealed partial class InstanceManager(ILogger<InstanceManager> logger) : I
         }
 
         return pipes;
-    }
-
-    public static int ParseProcessId(JsonElement element)
-    {
-        if (element.ValueKind == JsonValueKind.Number)
-            return element.GetInt32();
-
-        return int.TryParse(element.GetString(), out var pid) ? pid : 0;
     }
 
     private static bool IsHostEntryPipe(string name) => HostPipePattern().IsMatch(name);

@@ -1,6 +1,6 @@
-namespace DevTools.Daemon.Mcp.Catalog;
+namespace DevTools.Mcp.Routing;
 
-internal static class DynamicToolCatalogView
+public static class DynamicToolCatalogView
 {
     public static object Build(this DynamicToolCatalog catalog)
     {

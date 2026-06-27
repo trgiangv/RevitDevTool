@@ -4,6 +4,7 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <LangVersion>latest</LangVersion>
+    <NoWarn>$(NoWarn);MCPEXP001</NoWarn>
     <RootNamespace>DevTools.Mcp</RootNamespace>
     <UseWPF>false</UseWPF>
     <PolyUseEmbeddedAttribute>true</PolyUseEmbeddedAttribute>
@@ -14,6 +15,8 @@
       <ExcludeAssets>contentfiles</ExcludeAssets>
     </PackageReference>
     <PackageReference Include="ModelContextProtocol" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" />
+    <PackageReference Include="ZLogger" />
     <PackageReference Include="System.Reflection.MetadataLoadContext" />
     <PackageReference Include="System.Diagnostics.DiagnosticSource" />
     <PackageReference Update="Polyfill">
@@ -37,5 +40,6 @@
     <Using Include="DevTools.Mcp.BuiltIn" />
     <Using Include="DevTools.Mcp.Dispatch" />
     <Using Include="DevTools.Mcp.Execution" />
+    <Using Include="DevTools.Mcp.Routing" />
   </ItemGroup>
 </Project>

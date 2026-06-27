@@ -2,16 +2,17 @@ using System.Text.Json;
 using System.Text.RegularExpressions;
 using ModelContextProtocol.Protocol;
 using ModelContextProtocol.Server;
-using DevTools.McpParser.Models;
 
-namespace DevTools.Daemon.Mcp;
+namespace DevTools.Mcp.Routing;
 
-public sealed partial class RoutingMcpServerResource : McpServerResource
+public sealed class RoutingMcpServerResource : McpServerResource
 {
-    private readonly InstanceManager _instanceManager;
+    private static readonly Regex UriVariableRegex = new(@"\{[^}]+\}", RegexOptions.Compiled | RegexOptions.CultureInvariant);
+
+    private readonly IInstanceManager _instanceManager;
     private readonly Regex? _uriParser;
 
-    public RoutingMcpServerResource(InstanceManager instanceManager, Resource? resource, ResourceTemplate? template)
+    public RoutingMcpServerResource(IInstanceManager instanceManager, Resource? resource, ResourceTemplate? template)
     {
         _instanceManager = instanceManager;
 
@@ -68,7 +69,7 @@ public sealed partial class RoutingMcpServerResource : McpServerResource
         var callParams = JsonSerializer.SerializeToElement(
             new Dictionary<string, object?> { [McpPropertyNames.Uri] = targetUri });
 
-        var response = await client.RequestAsync(BridgeMethods.ResourcesRead, callParams, cancellationToken)
+        var response = await client.RequestAsync(McpBridgeMethods.ResourcesRead, callParams, cancellationToken)
             .ConfigureAwait(false);
 
         if (response.IsError)
@@ -81,7 +82,7 @@ public sealed partial class RoutingMcpServerResource : McpServerResource
 
     private static Regex CreateUriTemplateRegex(string uriTemplate)
     {
-        var literalParts = UriRegex().Split(uriTemplate);
+        var literalParts = UriVariableRegex.Split(uriTemplate);
         var patternBuilder = new System.Text.StringBuilder("^");
         for (var i = 0; i < literalParts.Length; i++)
         {
@@ -93,7 +94,4 @@ public sealed partial class RoutingMcpServerResource : McpServerResource
         patternBuilder.Append('$');
         return new Regex(patternBuilder.ToString(), RegexOptions.IgnoreCase);
     }
-
-    [GeneratedRegex(@"\{[^}]+\}")]
-    private static partial Regex UriRegex();
 }

@@ -1,7 +1,6 @@
-using DevTools.McpParser.Models;
 using ModelContextProtocol.Protocol;
 
-namespace DevTools.Daemon.Mcp.Catalog;
+namespace DevTools.Mcp.Routing;
 
 public sealed record DynamicToolRegistration(Tool Tool, InstanceInfo Instance, string PipeName);
 

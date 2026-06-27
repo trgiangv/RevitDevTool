@@ -1,11 +1,10 @@
 using System.Text.Json;
 using ModelContextProtocol.Protocol;
 using ModelContextProtocol.Server;
-using DevTools.McpParser.Models;
 
-namespace DevTools.Daemon.Mcp;
+namespace DevTools.Mcp.Routing;
 
-public sealed class RoutingMcpServerPrompt(InstanceManager instanceManager, Prompt protocolPrompt) : McpServerPrompt
+public sealed class RoutingMcpServerPrompt(IInstanceManager instanceManager, Prompt protocolPrompt) : McpServerPrompt
 {
     public override Prompt ProtocolPrompt { get; } = protocolPrompt;
 
@@ -28,7 +27,7 @@ public sealed class RoutingMcpServerPrompt(InstanceManager instanceManager, Prom
             [McpPropertyNames.Arguments] = cleanedArgs.Count > 0 ? cleanedArgs : null
         });
 
-        var response = await client.RequestAsync(BridgeMethods.PromptsGet, callParams, cancellationToken)
+        var response = await client.RequestAsync(McpBridgeMethods.PromptsGet, callParams, cancellationToken)
             .ConfigureAwait(false);
 
         if (response.IsError)

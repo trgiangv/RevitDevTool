@@ -23,7 +23,7 @@ public sealed class ListHostInstancesTool(InstanceManager instanceManager) : Mcp
         CancellationToken cancellationToken = default)
     {
         var instances = instanceManager.GetInstances();
-        var discoveredPipes = InstanceManager.DiscoverHostPipes();
+        var discoveredPipes = instanceManager.GetDiscoveredPipeNames();
 
         var result = new
         {

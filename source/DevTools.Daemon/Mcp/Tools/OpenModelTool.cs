@@ -121,7 +121,7 @@ public sealed class OpenModelTool(InstanceManager instanceManager) : McpServerTo
     }
 
     private static async Task<CallToolResult> OpenViaConnectedInstanceAsync(
-        HostBridgeClient client, string filePath, CancellationToken cancellationToken)
+        IHostBridgeClient client, string filePath, CancellationToken cancellationToken)
     {
         var callParams = JsonSerializer.SerializeToElement(new Dictionary<string, object?>
         {
@@ -134,7 +134,7 @@ public sealed class OpenModelTool(InstanceManager instanceManager) : McpServerTo
 
         try
         {
-            var response = await client.RequestAsync(BridgeMethods.ToolsCall, callParams, cancellationToken)
+            var response = await client.RequestAsync(McpBridgeMethods.ToolsCall, callParams, cancellationToken)
                 .ConfigureAwait(false);
 
             if (response.IsError)

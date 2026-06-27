@@ -1,33 +1,32 @@
 using System.Text.Json;
-using DevTools.McpParser.Models;
 using ModelContextProtocol;
 using ModelContextProtocol.Protocol;
 using ModelContextProtocol.Server;
 
-namespace DevTools.Daemon.Mcp;
+namespace DevTools.Mcp.Routing;
 
-internal static class ToolHelpers
+public static class ToolHelpers
 {
     public static JsonSerializerOptions IndentedJsonOptions { get; } = new()
     {
         WriteIndented = true
     };
-    
+
     public static CallToolResult ErrorResult(string message) =>
         new() { IsError = true, Content = [new TextContentBlock { Text = message }] };
 
-    public static HostBridgeClient? ResolveClient(
-        InstanceManager instanceManager,
+    public static IHostBridgeClient? ResolveClient(
+        IInstanceManager instanceManager,
         IDictionary<string, JsonElement> args,
         out Dictionary<string, JsonElement> cleanedArgs)
     {
         cleanedArgs = new Dictionary<string, JsonElement>(args);
         if (cleanedArgs.Remove(McpPropertyNames.HostInstanceId, out var pidElement))
-            return instanceManager.GetByProcessId(InstanceManager.ParseProcessId(pidElement));
+            return instanceManager.GetByProcessId(ParseProcessId(pidElement));
         return instanceManager.GetDefault();
     }
 
-    public static string FormatInstanceListing(InstanceManager instanceManager)
+    public static string FormatInstanceListing(IInstanceManager instanceManager)
     {
         var instances = instanceManager.GetInstances();
         if (instances.Count == 0)
@@ -35,6 +34,14 @@ internal static class ToolHelpers
         return $"Multiple host instances available. Specify '{McpPropertyNames.HostInstanceId}': " +
                string.Join(", ", instances.Select(i =>
                    $"PID {i.ProcessId} ({i.HostApp ?? "unknown"} {i.VersionNumber})"));
+    }
+
+    public static int ParseProcessId(JsonElement element)
+    {
+        if (element.ValueKind == JsonValueKind.Number)
+            return element.GetInt32();
+
+        return int.TryParse(element.GetString(), out var pid) ? pid : 0;
     }
 
     private static void ConfigureDynamicCatalog(this McpServerOptions options)
@@ -48,7 +55,7 @@ internal static class ToolHelpers
         options.Capabilities.Prompts.ListChanged = true;
         options.Capabilities.Resources.ListChanged = true;
     }
-    
+
     public static McpServerOptions ConfigureGatewayOptions(
         McpServerPrimitiveCollection<McpServerTool> toolCollection,
         McpServerPrimitiveCollection<McpServerPrompt> promptCollection,

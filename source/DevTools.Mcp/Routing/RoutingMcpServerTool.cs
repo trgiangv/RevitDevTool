@@ -1,11 +1,10 @@
 using System.Text.Json;
 using ModelContextProtocol.Protocol;
 using ModelContextProtocol.Server;
-using DevTools.McpParser.Models;
 
-namespace DevTools.Daemon.Mcp;
+namespace DevTools.Mcp.Routing;
 
-public sealed class RoutingMcpServerTool(InstanceManager instanceManager, Tool tool) : McpServerTool
+public sealed class RoutingMcpServerTool(IInstanceManager instanceManager, Tool tool) : McpServerTool
 {
     public override Tool ProtocolTool { get; } = InjectInstanceIdParam(tool);
 
@@ -26,7 +25,7 @@ public sealed class RoutingMcpServerTool(InstanceManager instanceManager, Tool t
             callParamsObj[McpPropertyNames.Arguments] = cleanedArgs;
 
         var callParams = JsonSerializer.SerializeToElement(callParamsObj);
-        var response = await client.RequestAsync(BridgeMethods.ToolsCall, callParams, cancellationToken)
+        var response = await client.RequestAsync(McpBridgeMethods.ToolsCall, callParams, cancellationToken)
             .ConfigureAwait(false);
 
         if (response.IsError)

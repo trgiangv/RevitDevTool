@@ -1,11 +1,10 @@
 using System.Collections.Concurrent;
 using System.IO.Pipes;
 using System.Text.Json;
-using DevTools.McpParser.Models;
 
 namespace DevTools.Daemon.Mcp;
 
-public sealed class HostBridgeClient : IAsyncDisposable
+public sealed class HostBridgeClient : IHostBridgeClient
 {
     private readonly BridgePipeConnection _connection;
     private readonly ConcurrentDictionary<string, TaskCompletionSource<BridgeMessage>> _pending = new();
@@ -18,6 +17,7 @@ public sealed class HostBridgeClient : IAsyncDisposable
 
     public string PipeName { get; }
     public InstanceInfo? Info { get; private set; }
+    InstanceInfo IHostBridgeClient.Info => Info ?? throw new InvalidOperationException("Instance info is not available.");
     public bool IsConnected => _connected;
 
     private HostBridgeClient(string pipeName, BridgePipeConnection connection)
@@ -39,14 +39,14 @@ public sealed class HostBridgeClient : IAsyncDisposable
         var connection = new BridgePipeConnection(pipe);
         var client = new HostBridgeClient(pipeName, connection);
 
-        var infoResponse = await client.RequestAsync(BridgeMethods.InstanceInfo, ct: ct).ConfigureAwait(false);
+        var infoResponse = await client.RequestAsync(IpcBridgeMethods.InstanceInfo, ct: ct).ConfigureAwait(false);
         if (infoResponse.Result is { } result)
             client.Info = JsonSerializer.Deserialize<InstanceInfo>(result.GetRawText(), BridgePipeConnection.JsonOptions);
 
         return client;
     }
 
-    public async Task<BridgeMessage> RequestAsync(string method, JsonElement? @params = null, CancellationToken ct = default)
+    public async Task<BridgeMessage> RequestAsync(string method, object? @params = null, CancellationToken ct = default)
     {
         var id = Interlocked.Increment(ref _idCounter).ToString();
         var tcs = new TaskCompletionSource<BridgeMessage>(TaskCreationOptions.RunContinuationsAsynchronously);
@@ -54,7 +54,7 @@ public sealed class HostBridgeClient : IAsyncDisposable
 
         try
         {
-            var request = BridgeMessage.Request(id, method, @params);
+            var request = BridgeMessage.Request(id, method, ToJsonElement(@params));
             await _connection.WriteAsync(request, ct).ConfigureAwait(false);
 
             using var cts = CancellationTokenSource.CreateLinkedTokenSource(ct);
@@ -66,6 +66,13 @@ public sealed class HostBridgeClient : IAsyncDisposable
             _pending.TryRemove(id, out _);
         }
     }
+
+    private static JsonElement? ToJsonElement(object? value) => value switch
+    {
+        null => null,
+        JsonElement element => element,
+        _ => JsonSerializer.SerializeToElement(value)
+    };
 
     private void OnMessageReceived(BridgeMessage msg)
     {
@@ -84,10 +91,10 @@ public sealed class HostBridgeClient : IAsyncDisposable
     {
         switch (msg.Method)
         {
-            case BridgeMethods.NotifyToolsChanged:
+            case McpBridgeMethods.NotifyToolsChanged:
                 ToolsChanged?.Invoke();
                 break;
-            case BridgeMethods.NotifyDocumentChanged:
+            case IpcBridgeMethods.NotifyDocumentChanged:
                 HandleDocumentChanged(msg.Params);
                 break;
         }

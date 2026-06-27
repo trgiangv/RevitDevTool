@@ -1,5 +1,4 @@
 using System.Text.Json;
-using DevTools.Daemon.Mcp.Catalog;
 using DevTools.McpParser.Models;
 using ModelContextProtocol.Protocol;
 using ModelContextProtocol.Server;
@@ -60,7 +59,7 @@ public sealed class CallDynamicTool(InstanceManager instanceManager, DynamicTool
             callParams[McpPropertyNames.Arguments] = toolArgs;
 
         var response = await client.RequestAsync(
-                BridgeMethods.ToolsCall,
+                McpBridgeMethods.ToolsCall,
                 JsonSerializer.SerializeToElement(callParams),
                 cancellationToken)
             .ConfigureAwait(false);

@@ -2,7 +2,6 @@ using DevTools.Daemon.Auth;
 using DevTools.Daemon.Hosting;
 using Microsoft.Extensions.Options;
 using ModelContextProtocol.Server;
-using DevTools.Daemon.Mcp.Catalog;
 using DevTools.Daemon.Mcp.Tools;
 
 namespace DevTools.Daemon.Mcp;

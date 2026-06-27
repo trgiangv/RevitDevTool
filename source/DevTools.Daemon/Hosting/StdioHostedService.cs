@@ -1,5 +1,4 @@
 using DevTools.Daemon.Mcp;
-using DevTools.Daemon.Mcp.Catalog;
 using DevTools.Daemon.Mcp.Tools;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
