@@ -1,11 +1,4 @@
-namespace DevTools.Execution.Interfaces;
+using System.Runtime.CompilerServices;
+using DevTools.Execution.Abstractions;
 
-/// <summary>
-/// Dispatches delegates to the host application's API thread.
-/// Revit uses ExternalEvent, AutoCAD uses Document.LockDocument(), etc.
-/// </summary>
-public interface IHostContextExecutor
-{
-    Task<T> ExecuteAsync<T>(Func<T> handler, CancellationToken token = default);
-    Task ExecuteAsync(Action action, CancellationToken token = default);
-}
+[assembly: TypeForwardedTo(typeof(IHostContextExecutor))]
