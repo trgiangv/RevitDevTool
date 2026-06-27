@@ -1,17 +1,38 @@
 using System.Text.Json;
 using DevTools.Execution.External.Testing;
 using DevTools.Execution.Interfaces;
+using DevTools.McpParser.Models;
 namespace DevTools.Execution.External.Handlers;
 
 public sealed class PytestRequestHandler(
     IHostContextExecutor hostContext,
     PytestDependencyService dependencyService,
-    PytestExecutionService executionService)
+    PytestExecutionService executionService) : IBridgeRequestHandler
 {
     /// <summary>
     /// Injected by the pipe server to broadcast notifications to connected clients.
     /// </summary>
     public Action<string, object?>? NotifySender { get; set; }
+
+    public IReadOnlyCollection<string> SupportedMethods { get; } =
+    [
+        BridgeMethods.TestsDiscover,
+        BridgeMethods.TestsRun,
+    ];
+
+    public Task<BridgeMessage> HandleAsync(
+        string requestId,
+        string method,
+        JsonElement? @params,
+        CancellationToken ct = default)
+    {
+        if (string.Equals(method, BridgeMethods.TestsDiscover, StringComparison.OrdinalIgnoreCase))
+            return HandleDiscoverAsync(requestId, @params);
+        if (string.Equals(method, BridgeMethods.TestsRun, StringComparison.OrdinalIgnoreCase))
+            return HandleRunAsync(requestId, @params);
+
+        return Task.FromResult(BridgeMessage.Error(requestId, $"Unknown method: {method}"));
+    }
 
     public async Task<BridgeMessage> HandleDiscoverAsync(string id, JsonElement? @params)
     {

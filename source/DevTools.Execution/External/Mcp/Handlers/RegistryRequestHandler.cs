@@ -15,9 +15,44 @@ public sealed class RegistryRequestHandler(
     ToolExecutionDispatcher toolDispatcher,
     PromptExecutionDispatcher promptDispatcher,
     ResourceExecutionDispatcher resourceDispatcher,
-    McpToolsetContextManager toolsetContextManager)
+    McpToolsetContextManager toolsetContextManager) : IBridgeRequestHandler
 {
     private static readonly TimeSpan CallTimeout = TimeSpan.FromSeconds(120);
+
+    public IReadOnlyCollection<string> SupportedMethods { get; } =
+    [
+        BridgeMethods.ToolsList,
+        BridgeMethods.ToolsCall,
+        BridgeMethods.PromptsList,
+        BridgeMethods.PromptsGet,
+        BridgeMethods.ResourcesList,
+        BridgeMethods.ResourceTemplatesList,
+        BridgeMethods.ResourcesRead,
+    ];
+
+    public Task<BridgeMessage> HandleAsync(
+        string requestId,
+        string method,
+        JsonElement? @params,
+        CancellationToken ct = default)
+    {
+        if (string.Equals(method, BridgeMethods.ToolsList, StringComparison.OrdinalIgnoreCase))
+            return HandleToolsListAsync(requestId);
+        if (string.Equals(method, BridgeMethods.ToolsCall, StringComparison.OrdinalIgnoreCase))
+            return HandleToolsCallAsync(requestId, @params);
+        if (string.Equals(method, BridgeMethods.PromptsList, StringComparison.OrdinalIgnoreCase))
+            return HandlePromptsListAsync(requestId);
+        if (string.Equals(method, BridgeMethods.PromptsGet, StringComparison.OrdinalIgnoreCase))
+            return HandlePromptsGetAsync(requestId, @params);
+        if (string.Equals(method, BridgeMethods.ResourcesList, StringComparison.OrdinalIgnoreCase))
+            return HandleResourcesListAsync(requestId);
+        if (string.Equals(method, BridgeMethods.ResourceTemplatesList, StringComparison.OrdinalIgnoreCase))
+            return HandleResourceTemplatesListAsync(requestId);
+        if (string.Equals(method, BridgeMethods.ResourcesRead, StringComparison.OrdinalIgnoreCase))
+            return HandleResourcesReadAsync(requestId, @params);
+
+        return Task.FromResult(BridgeMessage.Error(requestId, $"Unknown method: {method}"));
+    }
     public Task<BridgeMessage> HandleToolsListAsync(string id)
     {
         toolStore.EnsureLoaded();

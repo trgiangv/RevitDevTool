@@ -22,27 +22,18 @@ public sealed class DevToolsPipeServer(
     ToolRegistryStore toolStore,
     ConnectionState state,
     IHostAppInfo hostInfo,
-    InstanceRequestHandler instanceRequestHandler,
-    RegistryRequestHandler registryRequestHandler,
-    PytestRequestHandler pytestRequestHandler) : IHostedService, IDisposable
+    IEnumerable<IBridgeRequestHandler> handlers) : IHostedService, IDisposable
 {
     private const int MaxPipeInstances = 8;
-    private Dictionary<string, Func<string, JsonElement?, Task<BridgeMessage>>>? _handlers;
+    private readonly IEnumerable<IBridgeRequestHandler> _handlers = handlers;
+    private Dictionary<string, IBridgeRequestHandler>? _handlerMap;
 
-    private Dictionary<string, Func<string, JsonElement?, Task<BridgeMessage>>> Handlers =>
-        _handlers ??= new Dictionary<string, Func<string, JsonElement?, Task<BridgeMessage>>>(StringComparer.OrdinalIgnoreCase)
-        {
-            [BridgeMethods.ToolsList] = (id, _) => registryRequestHandler.HandleToolsListAsync(id),
-            [BridgeMethods.ToolsCall] = registryRequestHandler.HandleToolsCallAsync,
-            [BridgeMethods.PromptsList] = (id, _) => registryRequestHandler.HandlePromptsListAsync(id),
-            [BridgeMethods.PromptsGet] = registryRequestHandler.HandlePromptsGetAsync,
-            [BridgeMethods.ResourcesList] = (id, _) => registryRequestHandler.HandleResourcesListAsync(id),
-            [BridgeMethods.ResourceTemplatesList] = (id, _) => registryRequestHandler.HandleResourceTemplatesListAsync(id),
-            [BridgeMethods.ResourcesRead] = registryRequestHandler.HandleResourcesReadAsync,
-            [BridgeMethods.InstanceInfo] = (id, _) => Task.FromResult(instanceRequestHandler.HandleInstanceInfo(id)),
-            [BridgeMethods.TestsDiscover] = pytestRequestHandler.HandleDiscoverAsync,
-            [BridgeMethods.TestsRun] = pytestRequestHandler.HandleRunAsync,
-        };
+    private Dictionary<string, IBridgeRequestHandler> HandlerMap =>
+        _handlerMap ??= BuildHandlerMap();
+
+    private Dictionary<string, IBridgeRequestHandler> BuildHandlerMap()
+        => _handlers.SelectMany(h => h.SupportedMethods.Select(m => (method: m, handler: h)))
+            .ToDictionary(x => x.method, x => x.handler, StringComparer.OrdinalIgnoreCase);
 
     private CancellationTokenSource? _cts;
     private Task? _acceptLoopTask;
@@ -58,7 +49,10 @@ public sealed class DevToolsPipeServer(
         state.SetEndpoint(_pipeName);
         state.SetConnectedState(0);
         state.SetQueueDepth(0);
-        pytestRequestHandler.NotifySender = SendNotification;
+
+        var pytestHandler = _handlers.OfType<PytestRequestHandler>().SingleOrDefault();
+        if (pytestHandler is not null)
+            pytestHandler.NotifySender = SendNotification;
 
         Task.Run(() =>
         {
@@ -187,14 +181,14 @@ public sealed class DevToolsPipeServer(
     private async Task<BridgeMessage> HandleRequestAsync(BridgeMessage request)
     {
         var id = request.Id!;
-        if (Handlers.TryGetValue(request.Method!, out var handler))
-            return await handler(id, request.Params).ConfigureAwait(false);
+        if (HandlerMap.TryGetValue(request.Method!, out var handler))
+            return await handler.HandleAsync(id, request.Method!, request.Params).ConfigureAwait(false);
         return BridgeMessage.Error(id, $"Unknown method: {request.Method}");
     }
 
     private void OnToolsChanged(object? sender, EventArgs e)
     {
-        registryRequestHandler.ClearCaches();
+        _handlers.OfType<RegistryRequestHandler>().SingleOrDefault()?.ClearCaches();
         SendNotification(BridgeMethods.NotifyToolsChanged);
     }
 

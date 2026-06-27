@@ -63,11 +63,11 @@ public static class ExecutionExtensions
         }
 
         services.AddSingleton<ConnectionState>();
-        services.AddSingleton<InstanceRequestHandler>();
-        services.AddSingleton<RegistryRequestHandler>();
+        services.AddSingleton<IBridgeRequestHandler, InstanceRequestHandler>();
+        services.AddSingleton<IBridgeRequestHandler, RegistryRequestHandler>();
         services.AddSingleton<PytestDependencyService>();
         services.AddSingleton<PytestExecutionService>();
-        services.AddSingleton<PytestRequestHandler>();
+        services.AddSingleton<IBridgeRequestHandler, PytestRequestHandler>();
 
         services.AddSingleton<DotnetToolRegistryProvider>();
         services.AddSingleton<PythonToolRegistryProvider>();
