@@ -1,6 +1,6 @@
 using System.Reflection;
 
-namespace DevTools.McpParser.Dotnet;
+namespace DevTools.Mcp.Discovery;
 
 internal static class MetadataAssemblyPathCollector
 {

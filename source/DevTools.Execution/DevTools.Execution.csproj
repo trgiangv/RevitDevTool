@@ -52,6 +52,8 @@
         <Using Include="CommunityToolkit.Mvvm.Input" />
         <Using Include="DevTools.Execution.Abstractions" />
         <Using Include="DevTools.Ipc" />
+        <Using Include="DevTools.Mcp" />
+        <Using Include="DevTools.Mcp.Discovery" />
         <Using Include="DevTools.Mcp.Models" />
         <Using Include="JetBrains.Annotations" />
         <Using Include="System" />

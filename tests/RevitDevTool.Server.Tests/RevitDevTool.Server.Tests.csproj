@@ -16,6 +16,7 @@
         <Using Include="Xunit"/>
         <Using Include="DevTools.Execution.Abstractions"/>
         <Using Include="DevTools.Ipc"/>
+        <Using Include="DevTools.Mcp.Discovery"/>
     </ItemGroup>
 
     <ItemGroup>

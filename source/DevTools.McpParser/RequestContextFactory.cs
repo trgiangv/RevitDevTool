@@ -1,18 +1,4 @@
-using ModelContextProtocol.Protocol;
-using ModelContextProtocol.Server;
+using System.Runtime.CompilerServices;
+using DevTools.Mcp;
 
-namespace DevTools.McpParser;
-
-public static class RequestContextFactory
-{
-    public static RequestContext<T> Create<T>(T requestParams, string method)
-    {
-        var jsonRpcRequest = new JsonRpcRequest
-        {
-            Id = new RequestId(Guid.NewGuid().ToString("N")),
-            Method = method,
-            Params = null
-        };
-        return new RequestContext<T>(null!, jsonRpcRequest, requestParams);
-    }
-}
+[assembly: TypeForwardedTo(typeof(RequestContextFactory))]
