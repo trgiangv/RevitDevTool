@@ -70,11 +70,11 @@ public static class ExecutionExtensions
         services.AddSingleton<IBridgeRequestHandler, PytestRequestHandler>();
 
         services.AddSingleton<DotnetMcpRegistryProvider>();
-        services.AddSingleton<PythonToolRegistryProvider>();
-        services.AddSingleton<BuiltInToolRegistryProvider>();
+        services.AddSingleton<PythonMcpRegistryProvider>();
+        services.AddSingleton<BuiltInMcpRegistryProvider>();
         services.AddSingleton<IMcpRegistryProvider>(sp => sp.GetRequiredService<DotnetMcpRegistryProvider>());
-        services.AddSingleton<IMcpRegistryProvider>(sp => sp.GetRequiredService<PythonToolRegistryProvider>());
-        services.AddSingleton<IMcpRegistryProvider>(sp => sp.GetRequiredService<BuiltInToolRegistryProvider>());
+        services.AddSingleton<IMcpRegistryProvider>(sp => sp.GetRequiredService<PythonMcpRegistryProvider>());
+        services.AddSingleton<IMcpRegistryProvider>(sp => sp.GetRequiredService<BuiltInMcpRegistryProvider>());
         services.AddSingleton<McpCatalogLoader>();
         services.AddSingleton<McpCatalogStore>();
         services.AddSingleton<CSharpCodeExecutor>();

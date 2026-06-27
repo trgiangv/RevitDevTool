@@ -4,7 +4,7 @@ using DevTools.Execution.Providers.Python;
 using Python.Runtime;
 namespace DevTools.Execution.External.Mcp.Registry;
 
-public sealed class PythonToolRegistryProvider(
+public sealed class PythonMcpRegistryProvider(
     PythonInitializer pythonInitializer, PythonExecutor executor) : IMcpRegistryProvider
 {
     public string Name => "python-mcp";

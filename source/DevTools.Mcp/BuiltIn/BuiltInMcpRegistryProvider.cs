@@ -1,7 +1,7 @@
 namespace DevTools.Mcp.BuiltIn;
 
 /// <summary>Registers built-in MCP tools into the tool catalog.</summary>
-public sealed class BuiltInToolRegistryProvider(IEnumerable<IBuiltInMcpTool> builtInTools) : IMcpRegistryProvider
+public sealed class BuiltInMcpRegistryProvider(IEnumerable<IBuiltInMcpTool> builtInTools) : IMcpRegistryProvider
 {
     public string Name => "built-in";
     public ExecutionMode SourceKind => ExecutionMode.CSharp;

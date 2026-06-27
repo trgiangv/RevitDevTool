@@ -8,7 +8,7 @@ namespace RevitDevTool.Core.Dispatchers;
 ///     A <c>while</c> loop inside <c>Execute</c> drains items added during processing,
 ///     maximizing throughput through natural batching.
 /// </summary>
-internal sealed class RevitDispatcher : IExternalEventHandler, IRevitDispatcher, IDisposable
+internal sealed class RevitDispatcher : IExternalEventHandler, IDisposable
 {
     private readonly Lock _gate = new();
     private readonly Queue<IRevitRequest> _queue = new();
