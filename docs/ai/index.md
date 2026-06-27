@@ -4,16 +4,16 @@ Use this directory as deterministic agent memory. It does not replace the archit
 
 ## Task Routing
 
-| Task | Read | Skill |
-|------|------|-------|
-| Build/package/release | `build-matrix.md`, `verification.md` | `.agents/skills/packaging-release-review/SKILL.md` |
-| Shared library change | `host-boundaries.md`, `build-matrix.md` | `.agents/skills/host-boundary-review/SKILL.md`, `.agents/skills/net48-compat-review/SKILL.md` |
-| Execution provider/strategy/orchestrator | `execution-system.md`, `verification.md` | `.agents/skills/execution-system-change/SKILL.md` |
-| MCP registry/server/dispatch | `mcp-pytest-bridge.md` | `.agents/skills/mcp-bridge-change/SKILL.md` |
-| Daemon (auth, gateway, tray, control pipe) | `docs/MCP/README.md` | `.agents/skills/mcp-bridge-change/SKILL.md` |
-| pytest bridge/test runtime | `mcp-pytest-bridge.md`, `known-test-gaps.md` | `.agents/skills/pytest-bridge-change/SKILL.md` |
-| Logging or geometry visualization | `host-boundaries.md` | `.agents/skills/logging-visualization-review/SKILL.md` |
-| Startup, lazy loading, host boot | `startup-performance.md`, `host-boundaries.md` | No separate skill; keep this as architecture/performance judgment |
+| Task | Read | Projects | Skill |
+|------|------|----------|-------|
+| Build/package/release | `build-matrix.md`, `verification.md` | `build/`, `scripts/agent/` | `.agents/skills/packaging-release-review/SKILL.md` |
+| Shared library change | `host-boundaries.md`, `build-matrix.md` | `source/DevTools.*/` | `.agents/skills/host-boundary-review/SKILL.md`, `.agents/skills/net48-compat-review/SKILL.md` |
+| Execution provider/strategy/orchestrator | `execution-system.md`, `verification.md` | `source/DevTools.Execution/`, `source/DevTools.Execution.Abstractions/` | `.agents/skills/execution-system-change/SKILL.md` |
+| MCP registry/server/dispatch | `mcp-pytest-bridge.md` | `source/DevTools.Mcp/`, `source/DevTools.Ipc/` | `.agents/skills/mcp-bridge-change/SKILL.md` |
+| Daemon (auth, gateway, tray, control pipe) | `docs/MCP/README.md` | `source/DevTools.Daemon/` | `.agents/skills/mcp-bridge-change/SKILL.md` |
+| pytest bridge/test runtime | `mcp-pytest-bridge.md`, `known-test-gaps.md` | `source/DevTools.Pytest/`, `source/DevTools.Execution/External/Testing/` | `.agents/skills/pytest-bridge-change/SKILL.md` |
+| Logging or geometry visualization | `host-boundaries.md` | `source/DevTools.Logging/`, host `Visualization/` | `.agents/skills/logging-visualization-review/SKILL.md` |
+| Startup, lazy loading, host boot | `startup-performance.md`, `host-boundaries.md` | Host projects (`RevitDevTool/`, `AcadDevTool/`) | No separate skill; keep this as architecture/performance judgment |
 
 ## Operating Loop
 

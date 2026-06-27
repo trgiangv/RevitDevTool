@@ -16,7 +16,7 @@
 - Revit host: `source/RevitDevTool/`.
 - Revit-only helpers: `source/RevitDevTool.Core/` (dockable panes, RevitContext, transaction service — not shared with AutoCAD).
 - AutoCAD host: `source/AcadDevTool/`.
-- Shared platform libraries: `source/DevTools.Execution/`, `source/DevTools.Logging/`, `source/DevTools.McpParser/`, `source/DevTools.Presentation/`, `source/DevTools.Settings/`, `source/DevTools.Telemetry/`, `source/DevTools.UI/`, and `source/DevTools.Utilities/`.
+- Shared platform libraries: `source/DevTools.Execution/`, `source/DevTools.Execution.Abstractions/` (execution interfaces and enums), `source/DevTools.Ipc/` (IPC transport: BridgeMessage, BridgePipeConnection, pipe constants), `source/DevTools.Mcp/` (MCP protocol: catalog, discovery, registry, dispatch, routing), `source/DevTools.Pytest/` (Pytest bridge contracts and constants), `source/DevTools.Logging/`, `source/DevTools.McpParser/` (transitional forwarding assembly — prefer `DevTools.Mcp/` and `DevTools.Ipc/`), `source/DevTools.Presentation/`, `source/DevTools.Settings/`, `source/DevTools.Telemetry/`, `source/DevTools.UI/`, and `source/DevTools.Utilities/`.
 - Standalone daemon: `source/DevTools.Daemon/` (WPF tray app — auth, MCP engine, host discovery, auto-start).
 - Samples and demo toolsets live under `Samples/`, not under `source/`.
 - Build automation lives under `build/`; agent wrapper scripts live under `scripts/agent/`.
