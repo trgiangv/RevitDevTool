@@ -8,6 +8,7 @@
     <ItemGroup>
         <ProjectReference Include="..\DevTools.Utilities\DevTools.Utilities.csproj" />
         <ProjectReference Include="..\DevTools.UI\DevTools.UI.csproj" />
+        <ProjectReference Include="..\DevTools.Execution.Abstractions\DevTools.Execution.Abstractions.csproj" />
         <ProjectReference Include="..\DevTools.McpParser\DevTools.McpParser.csproj" />
         <ProjectReference Include="..\DevTools.Settings\DevTools.Settings.csproj" />
         <ProjectReference Include="..\DevTools.Execution\DevTools.Execution.csproj" />
@@ -18,6 +19,7 @@
     <ItemGroup>
         <Using Include="CommunityToolkit.Mvvm.ComponentModel" />
         <Using Include="CommunityToolkit.Mvvm.Input" />
+        <Using Include="DevTools.Execution.Abstractions" />
         <Using Include="JetBrains.Annotations" />
         <Using Include="System" />
     </ItemGroup>

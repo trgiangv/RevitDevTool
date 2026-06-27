@@ -7,4 +7,8 @@
     <RootNamespace>DevTools.Execution.Abstractions</RootNamespace>
     <UseWPF>false</UseWPF>
   </PropertyGroup>
+
+  <ItemGroup Condition="'$(TargetFramework)' == 'net48'">
+    <PackageReference Include="System.Text.Json" />
+  </ItemGroup>
 </Project>

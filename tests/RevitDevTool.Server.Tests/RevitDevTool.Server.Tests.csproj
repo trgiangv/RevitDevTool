@@ -14,9 +14,11 @@
 
     <ItemGroup>
         <Using Include="Xunit"/>
+        <Using Include="DevTools.Execution.Abstractions"/>
     </ItemGroup>
 
     <ItemGroup>
+        <ProjectReference Include="..\..\source\DevTools.Execution.Abstractions\DevTools.Execution.Abstractions.csproj" />
         <ProjectReference Include="..\..\source\DevTools.McpParser\DevTools.McpParser.csproj" />
     </ItemGroup>
 

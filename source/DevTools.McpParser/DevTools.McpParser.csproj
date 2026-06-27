@@ -16,6 +16,18 @@
     </PropertyGroup>
 
     <ItemGroup>
+        <ProjectReference Include="..\DevTools.Execution.Abstractions\DevTools.Execution.Abstractions.csproj" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\DevTools.Execution.Abstractions\DevTools.Execution.Abstractions.csproj" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <Using Include="DevTools.Execution.Abstractions" />
+    </ItemGroup>
+
+    <ItemGroup>
         <PackageReference Include="CliWrap"/>
         <PackageReference Include="System.Diagnostics.DiagnosticSource"/>
         <PackageReference Include="System.Reflection.MetadataLoadContext"/>

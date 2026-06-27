@@ -1,13 +1,4 @@
-using System.Text.Json.Serialization;
-namespace DevTools.McpParser.Models;
+using System.Runtime.CompilerServices;
+using DevTools.Execution.Abstractions;
 
-[JsonConverter(typeof(JsonStringEnumConverter<ExecutionState>))]
-public enum ExecutionState
-{
-    Queued,
-    Preparing,
-    Running,
-    Completed,
-    Failed,
-    Cancelled
-}
+[assembly: TypeForwardedTo(typeof(ExecutionState))]

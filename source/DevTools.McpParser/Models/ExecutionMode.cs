@@ -1,11 +1,4 @@
-namespace DevTools.McpParser.Models;
+using System.Runtime.CompilerServices;
+using DevTools.Execution.Abstractions;
 
-public enum ExecutionMode
-{
-    Script,
-    Assembly,
-    Python,
-    IronPython,
-    FSharp,
-    CSharp
-}
+[assembly: TypeForwardedTo(typeof(ExecutionMode))]
