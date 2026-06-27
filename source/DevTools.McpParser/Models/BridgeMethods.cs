@@ -36,8 +36,6 @@ public static class BridgeMethods
 
     // Re-export from DevTools.Pytest
 
-    public const string TestsDiscover = PytestBridgeMethods.TestsDiscover;
-
     public const string TestsRun = PytestBridgeMethods.TestsRun;
 
     public const string NotifyTestProgress = PytestBridgeMethods.NotifyTestProgress;

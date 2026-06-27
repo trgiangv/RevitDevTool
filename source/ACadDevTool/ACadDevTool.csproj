@@ -69,7 +69,6 @@
         <ProjectReference Include="..\DevTools.Execution\DevTools.Execution.csproj" />
         <ProjectReference Include="..\DevTools.Telemetry\DevTools.Telemetry.csproj" />
         <ProjectReference Include="..\DevTools.Execution.Abstractions\DevTools.Execution.Abstractions.csproj" />
-        <ProjectReference Include="..\DevTools.McpParser\DevTools.McpParser.csproj" />
     </ItemGroup>
 
     <ItemGroup>

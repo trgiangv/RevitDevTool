@@ -1,7 +1,6 @@
 using System.Diagnostics;
 using System.Windows.Media;
 using System.Windows.Threading;
-using DevTools.McpParser.Models;
 using Brush = System.Windows.Media.Brush;
 using Color = System.Windows.Media.Color;
 

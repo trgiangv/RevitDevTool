@@ -4,14 +4,6 @@ namespace DevTools.Execution.External.Testing;
 
 public sealed class PytestDependencyService(PythonInitializer pythonInitializer)
 {
-    public async Task PrepareDiscoverAsync(PytestDiscoverRequest request, CancellationToken cancellationToken = default)
-    {
-        await EnsurePythonReadyAsync().ConfigureAwait(false);
-
-        foreach (var path in GetDiscoverDependencyPaths(request))
-            await ResolveDependenciesAsync(path, cancellationToken).ConfigureAwait(false);
-    }
-
     public async Task PrepareRunAsync(PytestRunRequest request, CancellationToken cancellationToken = default)
     {
         await EnsurePythonReadyAsync().ConfigureAwait(false);
@@ -39,17 +31,6 @@ public sealed class PytestDependencyService(PythonInitializer pythonInitializer)
 
         if (!resolved)
             throw new InvalidOperationException($"Dependency resolution failed for '{path}'.");
-    }
-
-    private static IReadOnlyList<string> GetDiscoverDependencyPaths(PytestDiscoverRequest request)
-    {
-        var workspaceRoot = PytestPathResolver.ResolveWorkspaceRoot(request.WorkspaceRoot, request.TestRoot);
-        var testRoot = PytestPathResolver.ResolvePath(request.TestRoot, workspaceRoot);
-        var startDirectory = Directory.Exists(testRoot)
-            ? testRoot
-            : Path.GetDirectoryName(testRoot) ?? workspaceRoot;
-
-        return EnumerateConftestChain(startDirectory, workspaceRoot);
     }
 
     private static List<string> GetRunDependencyPaths(PytestRunRequest request)

@@ -10,7 +10,6 @@
         <ProjectReference Include="..\DevTools.UI\DevTools.UI.csproj" />
         <ProjectReference Include="..\DevTools.Execution.Abstractions\DevTools.Execution.Abstractions.csproj" />
         <ProjectReference Include="..\DevTools.Mcp\DevTools.Mcp.csproj" />
-        <ProjectReference Include="..\DevTools.McpParser\DevTools.McpParser.csproj" />
         <ProjectReference Include="..\DevTools.Settings\DevTools.Settings.csproj" />
         <ProjectReference Include="..\DevTools.Execution\DevTools.Execution.csproj" />
         <ProjectReference Include="..\DevTools.Logging\DevTools.Logging.csproj" />

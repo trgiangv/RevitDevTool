@@ -2,7 +2,6 @@ using System.Collections.ObjectModel;
 using System.Text.Json;
 using System.Windows.Threading;
 using DevTools.Mcp;
-using DevTools.McpParser.Models;
 using DevTools.Presentation.Services;
 using DevTools.Settings;
 // ReSharper disable RedundantSuppressNullableWarningExpression

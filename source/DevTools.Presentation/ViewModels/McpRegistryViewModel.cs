@@ -6,8 +6,6 @@ using System.Text;
 using System.Text.Json;
 using System.Windows.Threading;
 using DevTools.Execution.External.Connections;
-using DevTools.Mcp;
-using DevTools.McpParser.Models;
 using DevTools.Presentation.Models;
 using DevTools.UI.Behaviors;
 using DevTools.UI.Theme;

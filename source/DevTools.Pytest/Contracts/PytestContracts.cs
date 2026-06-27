@@ -3,23 +3,11 @@ using System.Text.Json.Serialization;
 namespace DevTools.Pytest.Contracts;
 
 [UsedImplicitly]
-public sealed record PytestDiscoverRequest(
-    [property: JsonPropertyName("workspace_root")] string WorkspaceRoot,
-    [property: JsonPropertyName("test_root")] string TestRoot,
-    [property: JsonPropertyName("pytest_args")] IReadOnlyList<string> PytestArgs);
-
-[UsedImplicitly]
 public sealed record PytestRunRequest(
     [property: JsonPropertyName("workspace_root")] string WorkspaceRoot,
     [property: JsonPropertyName("test_root")] string TestRoot,
     [property: JsonPropertyName("nodeids")] IReadOnlyList<string> NodeIds,
     [property: JsonPropertyName("pytest_args")] IReadOnlyList<string> PytestArgs);
-
-[UsedImplicitly]
-public sealed record PytestDiscoverResponse(
-    [property: JsonPropertyName("rootdir")] string Rootdir,
-    [property: JsonPropertyName("nodeids")] IReadOnlyList<string> NodeIds,
-    [property: JsonPropertyName("collection_errors")] IReadOnlyList<PytestCollectionError> CollectionErrors);
 
 [UsedImplicitly]
 public sealed record PytestRunResponse(

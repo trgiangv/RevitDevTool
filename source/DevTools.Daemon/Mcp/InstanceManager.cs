@@ -107,7 +107,6 @@ public sealed partial class InstanceManager(ILogger<InstanceManager> logger) : I
             logger.ZLogInformation($"Connecting to {pipeName}...");
             var client = await HostBridgeClient.ConnectAsync(pipeName, ct).ConfigureAwait(false);
             client.ToolsChanged += () => Changed?.Invoke();
-            client.DocumentChanged += _ => Changed?.Invoke();
             client.Disconnected += () =>
             {
                 _ = DisconnectAsync(pipeName);

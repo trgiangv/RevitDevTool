@@ -12,7 +12,6 @@ public sealed class HostBridgeClient : IHostBridgeClient
     private volatile bool _connected;
 
     public event Action? ToolsChanged;
-    public event Action<InstanceInfo>? DocumentChanged;
     public event Action? Disconnected;
 
     public string PipeName { get; }
@@ -94,19 +93,7 @@ public sealed class HostBridgeClient : IHostBridgeClient
             case McpBridgeMethods.NotifyToolsChanged:
                 ToolsChanged?.Invoke();
                 break;
-            case IpcBridgeMethods.NotifyDocumentChanged:
-                HandleDocumentChanged(msg.Params);
-                break;
         }
-    }
-
-    private void HandleDocumentChanged(JsonElement? @params)
-    {
-        if (@params is not { } p) return;
-        var info = JsonSerializer.Deserialize<InstanceInfo>(p.GetRawText(), BridgePipeConnection.JsonOptions);
-        if (info is null) return;
-        Info = info;
-        DocumentChanged?.Invoke(info);
     }
 
     private void CancelPendingRequests()

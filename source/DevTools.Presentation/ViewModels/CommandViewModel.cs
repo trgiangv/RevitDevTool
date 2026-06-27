@@ -5,7 +5,6 @@ using System.Windows.Threading;
 using DevTools.Execution.Interfaces;
 using DevTools.Execution.Models;
 using DevTools.Settings;
-using DevTools.McpParser.Models;
 using DevTools.Presentation.Interfaces;
 using DevTools.UI.Theme;
 // ReSharper disable UnusedParameterInPartialMethod

@@ -16,7 +16,6 @@ public sealed class PytestRequestHandler(
 
     public IReadOnlyCollection<string> SupportedMethods { get; } =
     [
-        BridgeMethods.TestsDiscover,
         BridgeMethods.TestsRun,
     ];
 
@@ -26,27 +25,10 @@ public sealed class PytestRequestHandler(
         JsonElement? @params,
         CancellationToken ct = default)
     {
-        if (string.Equals(method, BridgeMethods.TestsDiscover, StringComparison.OrdinalIgnoreCase))
-            return HandleDiscoverAsync(requestId, @params);
         if (string.Equals(method, BridgeMethods.TestsRun, StringComparison.OrdinalIgnoreCase))
             return HandleRunAsync(requestId, @params);
 
         return Task.FromResult(BridgeMessage.Error(requestId, $"Unknown method: {method}"));
-    }
-
-    public async Task<BridgeMessage> HandleDiscoverAsync(string id, JsonElement? @params)
-    {
-        if (!PytestExecutionService.TryParseDiscoverRequest(@params, out var request, out var error))
-            return BridgeMessage.Error(id, error ?? "Invalid pytest discover request.");
-
-        await dependencyService.PrepareDiscoverAsync(request!).ConfigureAwait(false);
-
-        var result = await hostContext
-            .ExecuteAsync(() => executionService.Discover(request!))
-            .ConfigureAwait(false);
-
-        var json = JsonSerializer.SerializeToElement(result);
-        return BridgeMessage.Response(id, json);
     }
 
     public async Task<BridgeMessage> HandleRunAsync(string id, JsonElement? @params)

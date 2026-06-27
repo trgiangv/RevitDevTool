@@ -15,39 +15,6 @@ public sealed class PytestExecutionService(PythonExecutor executor)
 
     private static readonly PytestSummary EmptySummary = new(0, 0, 0, 1, 0, 0);
 
-    public static bool TryParseDiscoverRequest(JsonElement? @params, out PytestDiscoverRequest? request, out string? error)
-    {
-        request = null;
-
-        if (@params is null)
-        {
-            error = "Pytest discover request is required.";
-            return false;
-        }
-
-        try
-        {
-            request = JsonSerializer.Deserialize<PytestDiscoverRequest>(@params.Value.GetRawText(), RequestOptions);
-        }
-        catch (Exception ex)
-        {
-            error = $"Invalid pytest discover request: {ex.Message}";
-            return false;
-        }
-
-        if (request is null || string.IsNullOrWhiteSpace(request.TestRoot))
-        {
-            error = "test_root is required.";
-            return false;
-        }
-
-        var workspaceRoot = PytestPathResolver.ResolveWorkspaceRoot(request.WorkspaceRoot, request.TestRoot);
-        var pytestArgs = request.PytestArgs?.Where(arg => !string.IsNullOrWhiteSpace(arg)).ToList() ?? [];
-        request = new PytestDiscoverRequest(workspaceRoot, PytestPathResolver.ResolvePath(request.TestRoot, workspaceRoot), pytestArgs);
-        error = null;
-        return true;
-    }
-
     public static bool TryParseRunRequest(JsonElement? @params, out PytestRunRequest? request, out string? error)
     {
         request = null;
@@ -86,18 +53,6 @@ public sealed class PytestExecutionService(PythonExecutor executor)
         request = new PytestRunRequest(workspaceRoot, PytestPathResolver.ResolvePath(request.TestRoot, workspaceRoot), nodeIds, pytestArgs);
         error = null;
         return true;
-    }
-
-    public PytestDiscoverResponse Discover(PytestDiscoverRequest request)
-    {
-        var runnerRequest = new PytestRunnerRequest(
-            request.WorkspaceRoot,
-            request.TestRoot,
-            [],
-            request.PytestArgs,
-            true);
-
-        return Execute<PytestDiscoverResponse>(runnerRequest, request.TestRoot);
     }
 
     public PytestRunResponse Run(PytestRunRequest request, Action<string>? progressCallback = null)
