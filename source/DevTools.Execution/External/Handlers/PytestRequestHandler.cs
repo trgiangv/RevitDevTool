@@ -1,7 +1,6 @@
 using System.Text.Json;
 using DevTools.Execution.External.Testing;
 using DevTools.Execution.Interfaces;
-using DevTools.McpParser.Models;
 namespace DevTools.Execution.External.Handlers;
 
 public sealed class PytestRequestHandler(
@@ -71,6 +70,6 @@ public sealed class PytestRequestHandler(
         if (sender is null)
             return null;
 
-        return resultJson => sender(BridgeMethods.NotifyTestProgress, resultJson);
+        return resultJson => sender(PytestBridgeMethods.NotifyTestProgress, resultJson);
     }
 }

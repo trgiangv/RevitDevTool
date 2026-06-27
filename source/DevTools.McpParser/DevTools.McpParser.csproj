@@ -40,6 +40,8 @@
 
         <ProjectReference Include="..\DevTools.Mcp\DevTools.Mcp.csproj" />
 
+        <ProjectReference Include="..\DevTools.Pytest\DevTools.Pytest.csproj" />
+
     </ItemGroup>
 
 
@@ -53,6 +55,8 @@
         <Using Include="DevTools.Mcp" />
 
         <Using Include="DevTools.Mcp.Models" />
+
+        <Using Include="DevTools.Pytest" />
 
     </ItemGroup>
 

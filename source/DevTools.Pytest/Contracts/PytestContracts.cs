@@ -1,5 +1,6 @@
 using System.Text.Json.Serialization;
-namespace DevTools.Execution.External.Testing;
+
+namespace DevTools.Pytest.Contracts;
 
 [UsedImplicitly]
 public sealed record PytestDiscoverRequest(
