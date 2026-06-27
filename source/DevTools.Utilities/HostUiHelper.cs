@@ -41,18 +41,6 @@ public static class HostUiHelper
     }
 
     /// <summary>
-    /// Executes an action on the Autodesk main UI thread with specified priority.
-    /// </summary>
-    public static void RunOnMainThread(Action action, DispatcherPriority priority)
-    {
-        if (HostDispatcher is null) return;
-        if (HostDispatcher.CheckAccess())
-            action();
-        else
-            HostDispatcher.BeginInvoke(action, priority);
-    }
-
-    /// <summary>
     /// Toggles WPF hardware/software rendering mode on the main UI thread.
     /// </summary>
     public static void ToggleHardwareRendering(bool useHardware)

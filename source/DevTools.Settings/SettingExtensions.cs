@@ -15,7 +15,6 @@ public static class SettingExtensions
     {
         services.Configure<PathOptions>(options =>
         {
-            options.RootDirectory = contentRoot;
             options.SettingsDirectory = Path.Combine(contentRoot, "Settings");
             options.LogsDirectory = Path.Combine(contentRoot, "Logs");
             options.EnsureDirectoriesExist();

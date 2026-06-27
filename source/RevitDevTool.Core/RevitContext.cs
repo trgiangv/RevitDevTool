@@ -83,10 +83,6 @@ public static class RevitContext
     /// </summary>
     public static Document? ActiveDocument => UiApplication.ActiveUIDocument?.Document;
 
-    /// <inheritdoc cref="ActiveDocument"/>
-    [Obsolete("Use RevitContext.ActiveDocument instead.")]
-    public static Document? Document => ActiveDocument;
-
     /// <summary>
     ///     Active <see cref="Autodesk.Revit.DB.View"/> of the active document, or <see langword="null"/>.
     /// </summary>
