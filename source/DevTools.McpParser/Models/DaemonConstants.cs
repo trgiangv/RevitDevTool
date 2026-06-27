@@ -1,4 +1,4 @@
 using System.Runtime.CompilerServices;
 using DevTools.Ipc;
 
-[assembly: TypeForwardedTo(typeof(BridgeMessage))]
+[assembly: TypeForwardedTo(typeof(DaemonConstants))]

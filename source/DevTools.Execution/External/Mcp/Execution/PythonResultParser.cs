@@ -27,7 +27,7 @@ internal static class PythonResultParser
         foreach (var element in array.EnumerateArray())
         {
             if (element.ValueKind == JsonValueKind.Object
-                && element.TryGetProperty(McpPropertyNames.Type, out var typeProp)
+                && element.TryGetProperty(IpcPropertyNames.Type, out var typeProp)
                 && typeProp.GetString() is McpPropertyNames.Text
                 && element.TryGetProperty(McpPropertyNames.Text, out var textProp))
             {

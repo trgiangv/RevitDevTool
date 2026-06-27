@@ -298,7 +298,7 @@ public static class DotnetMcpAssemblyParser
         foreach (var p in parameters)
         {
             var schemaType = MapParameterTypeToJsonSchema(p.ParameterType);
-            var prop = new JsonObject { [McpPropertyNames.Type] = schemaType };
+            var prop = new JsonObject { [IpcPropertyNames.Type] = schemaType };
             var desc = ReadDescription(p.CustomAttributes);
             if (!string.IsNullOrWhiteSpace(desc))
                 prop[McpPropertyNames.Description] = desc;
@@ -310,7 +310,7 @@ public static class DotnetMcpAssemblyParser
 
         var schema = new JsonObject
         {
-            [McpPropertyNames.Type] = JsonSchemaTypeNames.Object,
+            [IpcPropertyNames.Type] = JsonSchemaTypeNames.Object,
             [McpPropertyNames.Properties] = properties,
         };
         if (required.Count > 0)

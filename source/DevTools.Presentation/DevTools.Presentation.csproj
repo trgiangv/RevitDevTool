@@ -20,6 +20,7 @@
         <Using Include="CommunityToolkit.Mvvm.ComponentModel" />
         <Using Include="CommunityToolkit.Mvvm.Input" />
         <Using Include="DevTools.Execution.Abstractions" />
+        <Using Include="DevTools.Ipc" />
         <Using Include="JetBrains.Annotations" />
         <Using Include="System" />
     </ItemGroup>
