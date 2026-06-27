@@ -56,7 +56,7 @@ public sealed class BridgeMessage
     public static BridgeMessage Response(string id, JsonElement? result) =>
         new() { Type = TypeResponse, Id = id, Result = result };
 
-    public static BridgeMessage ErrorResponse(string id, string code, string message, JsonElement? data = null) =>
+    public static BridgeMessage Error(string id, string code, string message, JsonElement? data = null) =>
         new()
         {
             Type = TypeResponse,
@@ -65,9 +65,6 @@ public sealed class BridgeMessage
             ErrorMessage = message,
             ErrorDetail = new BridgeError { Code = code, Message = message, Data = data }
         };
-
-    public static BridgeMessage Error(string id, string message) =>
-        new() { Type = TypeResponse, Id = id, IsError = true, ErrorMessage = message };
 
     public static BridgeMessage Notification(string method, JsonElement? @params = null) =>
         new() { Type = TypeNotification, Method = method, Params = @params };

@@ -5,9 +5,6 @@ namespace DevTools.Execution.Abstractions;
 [JsonConverter(typeof(JsonStringEnumConverter<ExecutionState>))]
 public enum ExecutionState
 {
-    Queued,
-    Preparing,
-    Running,
     Completed,
     Failed,
     Cancelled

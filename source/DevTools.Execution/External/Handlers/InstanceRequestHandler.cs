@@ -14,12 +14,12 @@ public sealed class InstanceRequestHandler(IHostAppInfo hostInfo) : IBridgeReque
         CancellationToken ct = default)
     {
         if (!string.Equals(method, IpcBridgeMethods.InstanceInfo, StringComparison.OrdinalIgnoreCase))
-            return Task.FromResult(BridgeMessage.Error(requestId, $"Unknown method: {method}"));
+            return Task.FromResult(BridgeMessage.Error(requestId, "METHOD_NOT_FOUND", $"Unknown method: {method}"));
 
         return Task.FromResult(HandleInstanceInfo(requestId));
     }
 
-    public BridgeMessage HandleInstanceInfo(string id)
+    private BridgeMessage HandleInstanceInfo(string id)
     {
         var json = JsonSerializer.SerializeToElement(BuildInstanceInfo());
         return BridgeMessage.Response(id, json);

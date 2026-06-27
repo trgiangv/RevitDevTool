@@ -51,7 +51,7 @@ public sealed class McpBridgeRequestHandler(
             return HandleResourcesReadAsync(requestId, @params);
 
         return Task.FromResult(
-            BridgeMessage.ErrorResponse(requestId, McpExecutionErrorCodes.ToolUnknownSourceKind, $"Unknown method: {method}"));
+            BridgeMessage.Error(requestId, McpExecutionErrorCodes.ToolUnknownSourceKind, $"Unknown method: {method}"));
     }
 
     public Task<BridgeMessage> HandleToolsListAsync(string id)
@@ -68,13 +68,13 @@ public sealed class McpBridgeRequestHandler(
         if (@params?.TryGetProperty(McpPropertyNames.Name, out var nameElement) == true)
             toolName = nameElement.GetString();
         if (string.IsNullOrWhiteSpace(toolName))
-            return BridgeMessage.ErrorResponse(id, McpExecutionErrorCodes.ToolInvokeFailed, "Tool name is required.");
+            return BridgeMessage.Error(id, McpExecutionErrorCodes.ToolInvokeFailed, "Tool name is required.");
 
         var resolvedToolName = toolName!;
 
         catalogStore.EnsureLoaded();
         if (!catalogStore.TryGetTool(null, resolvedToolName, out var tool) || tool is null)
-            return BridgeMessage.ErrorResponse(id, McpExecutionErrorCodes.ToolNotFound, $"Tool '{resolvedToolName}' is not registered.");
+            return BridgeMessage.Error(id, McpExecutionErrorCodes.ToolNotFound, $"Tool '{resolvedToolName}' is not registered.");
 
         var payloadJson = "{}";
         if (@params?.TryGetProperty(McpPropertyNames.Arguments, out var argsElement) == true)
@@ -96,14 +96,14 @@ public sealed class McpBridgeRequestHandler(
                 McpExecutionErrorCodes.ToolInvokeFailed,
                 $"Tool '{resolvedToolName}' exceeded timeout ({CallTimeout.TotalSeconds:F0}s).");
             executionTracker.Complete(scope, failed);
-            return BridgeMessage.ErrorResponse(id, failed.Error?.Code ?? McpExecutionErrorCodes.ToolInvokeFailed,
+            return BridgeMessage.Error(id, failed.Error?.Code ?? McpExecutionErrorCodes.ToolInvokeFailed,
                 failed.Error?.Message ?? failed.Detail);
         }
 
         executionTracker.Complete(scope, result);
 
         if (result is not { State: ExecutionState.Completed })
-            return BridgeMessage.ErrorResponse(id,
+            return BridgeMessage.Error(id,
                 result.Error?.Code ?? McpExecutionErrorCodes.ToolInvokeFailed,
                 result.Error?.Message ?? result.Detail);
 
@@ -126,11 +126,11 @@ public sealed class McpBridgeRequestHandler(
         if (@params?.TryGetProperty(McpPropertyNames.Name, out var nameElement) == true)
             promptName = nameElement.GetString();
         if (string.IsNullOrWhiteSpace(promptName))
-            return BridgeMessage.ErrorResponse(id, McpExecutionErrorCodes.PromptInvokeFailed, "Prompt name is required.");
+            return BridgeMessage.Error(id, McpExecutionErrorCodes.PromptInvokeFailed, "Prompt name is required.");
 
         catalogStore.EnsureLoaded();
         if (!catalogStore.TryGetPrompt(null, promptName, out var prompt) || prompt is null)
-            return BridgeMessage.ErrorResponse(id, McpExecutionErrorCodes.PromptNotFound, $"Prompt '{promptName}' is not registered.");
+            return BridgeMessage.Error(id, McpExecutionErrorCodes.PromptNotFound, $"Prompt '{promptName}' is not registered.");
 
         Dictionary<string, JsonElement>? arguments = null;
         if (@params?.TryGetProperty(McpPropertyNames.Arguments, out var argsElement) == true)
@@ -146,7 +146,7 @@ public sealed class McpBridgeRequestHandler(
         }
         catch (OperationCanceledException)
         {
-            return BridgeMessage.ErrorResponse(id, McpExecutionErrorCodes.PromptInvokeFailed,
+            return BridgeMessage.Error(id, McpExecutionErrorCodes.PromptInvokeFailed,
                 $"Prompt '{promptName}' exceeded timeout ({CallTimeout.TotalSeconds:F0}s).");
         }
 
@@ -176,13 +176,13 @@ public sealed class McpBridgeRequestHandler(
         if (@params?.TryGetProperty(McpPropertyNames.Uri, out var uriElement) == true)
             uri = uriElement.GetString();
         if (string.IsNullOrWhiteSpace(uri))
-            return BridgeMessage.ErrorResponse(id, McpExecutionErrorCodes.ResourceReadFailed, "Resource URI is required.");
+            return BridgeMessage.Error(id, McpExecutionErrorCodes.ResourceReadFailed, "Resource URI is required.");
 
         var resolvedUri = uri!;
 
         catalogStore.EnsureLoaded();
         if (!catalogStore.TryResolveResourceByUri(resolvedUri, out var resource) || resource is null)
-            return BridgeMessage.ErrorResponse(id, McpExecutionErrorCodes.ResourceNotFound, $"Resource '{resolvedUri}' is not registered.");
+            return BridgeMessage.Error(id, McpExecutionErrorCodes.ResourceNotFound, $"Resource '{resolvedUri}' is not registered.");
 
         ReadResourceResult result;
         try
@@ -194,7 +194,7 @@ public sealed class McpBridgeRequestHandler(
         }
         catch (OperationCanceledException)
         {
-            return BridgeMessage.ErrorResponse(id, McpExecutionErrorCodes.ResourceReadFailed,
+            return BridgeMessage.Error(id, McpExecutionErrorCodes.ResourceReadFailed,
                 $"Resource '{resolvedUri}' exceeded timeout ({CallTimeout.TotalSeconds:F0}s).");
         }
 
@@ -202,5 +202,4 @@ public sealed class McpBridgeRequestHandler(
         return BridgeMessage.Response(id, json);
     }
 
-    public void ClearCaches() => dispatcher.ClearCaches();
 }
