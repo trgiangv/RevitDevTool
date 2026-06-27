@@ -7,28 +7,29 @@ public static class ExecutionErrorCodes
     public const string InvalidResponse = "bridge.invalid_response";
     public const string Error = "bridge.error";
 
-    public const string ToolInvalidRequest = "tool.invalid_request";
-    public const string ToolMissingName = "tool.missing_name";
-    public const string ToolNotFound = "tool.not_found";
-    public const string ToolFailed = "tool.failed";
-    public const string ToolCancelled = "tool.cancelled";
-    public const string ToolUnknownSourceKind = "tool.unknown_source_kind";
-    public const string ToolNotImplemented = "tool.not_implemented";
-    public const string ToolSourceNotFound = "tool.source_not_found";
-    public const string ToolPythonRuntimeUnavailable = "tool.python_runtime_unavailable";
-    public const string ToolInvokeFailed = "tool.invoke_failed";
-
-    public const string PromptInvalidRequest = "prompt.invalid_request";
-    public const string PromptMissingName = "prompt.missing_name";
-    public const string PromptNotFound = "prompt.not_found";
-    public const string PromptInvokeFailed = "prompt.invoke_failed";
-
-    public const string ResourceInvalidRequest = "resource.invalid_request";
-    public const string ResourceMissingUri = "resource.missing_uri";
-    public const string ResourceNotFound = "resource.not_found";
-    public const string ResourceReadFailed = "resource.read_failed";
-
     public const string ExecutionMissingId = "execution.missing_id";
     public const string ExecutionNotFound = "execution.not_found";
     public const string QueueExecutionFailed = "queue.execution_failed";
+
+    // Re-exports from DevTools.Mcp (backward compat)
+    public const string ToolInvalidRequest = McpExecutionErrorCodes.ToolInvalidRequest;
+    public const string ToolMissingName = McpExecutionErrorCodes.ToolMissingName;
+    public const string ToolNotFound = McpExecutionErrorCodes.ToolNotFound;
+    public const string ToolFailed = McpExecutionErrorCodes.ToolFailed;
+    public const string ToolCancelled = McpExecutionErrorCodes.ToolCancelled;
+    public const string ToolUnknownSourceKind = McpExecutionErrorCodes.ToolUnknownSourceKind;
+    public const string ToolNotImplemented = McpExecutionErrorCodes.ToolNotImplemented;
+    public const string ToolSourceNotFound = McpExecutionErrorCodes.ToolSourceNotFound;
+    public const string ToolPythonRuntimeUnavailable = McpExecutionErrorCodes.ToolPythonRuntimeUnavailable;
+    public const string ToolInvokeFailed = McpExecutionErrorCodes.ToolInvokeFailed;
+
+    public const string PromptInvalidRequest = McpExecutionErrorCodes.PromptInvalidRequest;
+    public const string PromptMissingName = McpExecutionErrorCodes.PromptMissingName;
+    public const string PromptNotFound = McpExecutionErrorCodes.PromptNotFound;
+    public const string PromptInvokeFailed = McpExecutionErrorCodes.PromptInvokeFailed;
+
+    public const string ResourceInvalidRequest = McpExecutionErrorCodes.ResourceInvalidRequest;
+    public const string ResourceMissingUri = McpExecutionErrorCodes.ResourceMissingUri;
+    public const string ResourceNotFound = McpExecutionErrorCodes.ResourceNotFound;
+    public const string ResourceReadFailed = McpExecutionErrorCodes.ResourceReadFailed;
 }

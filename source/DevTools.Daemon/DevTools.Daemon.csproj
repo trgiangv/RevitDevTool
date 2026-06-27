@@ -66,5 +66,6 @@
     <ItemGroup>
         <Using Include="DevTools.Execution.Abstractions" />
         <Using Include="DevTools.Ipc" />
+        <Using Include="DevTools.Mcp.Models" />
     </ItemGroup>
 </Project>

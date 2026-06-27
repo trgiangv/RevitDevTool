@@ -1,7 +1,26 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFrameworks>net48;net8.0-windows;net10.0-windows</TargetFrameworks>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <LangVersion>latest</LangVersion>
+    <RootNamespace>DevTools.Mcp</RootNamespace>
+    <UseWPF>false</UseWPF>
+  </PropertyGroup>
 
-    <PropertyGroup>
-        <TargetFrameworks>net48;net8.0-windows;net10.0-windows</TargetFrameworks>
-    </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="CliWrap" />
+    <PackageReference Include="ModelContextProtocol" />
+    <PackageReference Include="System.Reflection.MetadataLoadContext" />
+    <PackageReference Include="System.Diagnostics.DiagnosticSource" />
+  </ItemGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\DevTools.Ipc\DevTools.Ipc.csproj" />
+    <ProjectReference Include="..\DevTools.Execution.Abstractions\DevTools.Execution.Abstractions.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Using Include="DevTools.Execution.Abstractions" />
+  </ItemGroup>
 </Project>
