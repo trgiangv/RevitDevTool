@@ -106,15 +106,11 @@ public sealed partial class McpRegistryViewModel : ObservableObject, IBusyViewMo
     }
 
     [RelayCommand]
-    private void Reload()
+    private async Task ReloadAsync()
     {
-        this.WhileBusy("Reloading MCP tools...", () =>
+        await this.WhileBusy("Reloading MCP tools...", async () =>
         {
-            HostUiHelper.RunOnMainThread(async void () =>
-            {
-                try { await _catalogStore.ReloadAsync(); }
-                catch { /* ignore */ }
-            });
+            await _catalogStore.ReloadAsync().ConfigureAwait(true);
         });
     }
 
@@ -174,14 +170,11 @@ public sealed partial class McpRegistryViewModel : ObservableObject, IBusyViewMo
             {
                 ToolId = tool.Id,
                 Name = protocolTool.Name,
-                DisplayName = protocolTool.Title ?? protocolTool.Name,
                 SourceAddress = binding.SourceAddress,
                 GroupName = binding.GroupName,
-                Description = protocolTool.Description ?? string.Empty,
                 ToolTipText = BuildToolTipText(tool),
                 SourceKind = binding.SourceKind,
                 CallCount = count,
-                InputSchemaJson = protocolTool.InputSchema.GetRawText(),
             });
         }
 

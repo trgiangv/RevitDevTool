@@ -10,16 +10,10 @@ public partial class McpToolItem : ObservableObject
     public partial string Name { get; set; } = string.Empty;
 
     [ObservableProperty]
-    public partial string DisplayName { get; set; } = string.Empty;
-
-    [ObservableProperty]
     public partial string SourceAddress { get; set; } = string.Empty;
 
     [ObservableProperty]
     public partial string GroupName { get; set; } = string.Empty;
-
-    [ObservableProperty]
-    public partial string Description { get; set; } = string.Empty;
 
     [ObservableProperty]
     public partial string ToolTipText { get; set; } = string.Empty;
@@ -29,9 +23,6 @@ public partial class McpToolItem : ObservableObject
 
     [ObservableProperty]
     public partial int CallCount { get; set; }
-
-    [ObservableProperty]
-    public partial string InputSchemaJson { get; set; } = "{}";
 
     [ObservableProperty]
     public partial HighlightRange? NameHighlight { get; set; }
