@@ -3,7 +3,6 @@ using DevTools.Execution.External.Connections;
 using DevTools.Execution.External.Handlers;
 using DevTools.Execution.External.Mcp.BuiltIn;
 using DevTools.Execution.External.Mcp.Dispatchers;
-using DevTools.Execution.External.Mcp.Handlers;
 using DevTools.Execution.External.Mcp.Registry;
 using DevTools.Execution.External.Testing;
 using DevTools.Execution.Interfaces;
@@ -13,7 +12,7 @@ using DevTools.Execution.Providers.Dotnet;
 using DevTools.Execution.Providers.FSharp;
 using DevTools.Execution.Providers.Python;
 using DevTools.Execution.Services;
-using DevTools.McpParser.Models;
+using DevTools.Mcp.Handlers;
 using DevTools.Telemetry;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
@@ -54,36 +53,38 @@ public static class ExecutionExtensions
         services.AddSingleton<IPackageService, PackageService>();
 
         services.AddSingleton<IExecutionProvider, AssemblyExecutionProvider>();
-        services.AddKeyedSingleton<IExecutionProvider, AssemblyExecutionProvider>(ExecutionMode.Assembly);
+        services.AddKeyedSingleton<IExecutionProvider, AssemblyExecutionProvider>(ContainerMode.Assembly);
 
         if (registerDefaultScriptProvider)
         {
             services.AddSingleton<IExecutionProvider, ScriptExecutionProvider>();
-            services.AddKeyedSingleton<IExecutionProvider, ScriptExecutionProvider>(ExecutionMode.Script);
+            services.AddKeyedSingleton<IExecutionProvider, ScriptExecutionProvider>(ContainerMode.Script);
         }
 
         services.AddSingleton<ConnectionState>();
+        services.AddSingleton<IMcpExecutionTracker, ConnectionStateExecutionTracker>();
         services.AddSingleton<IBridgeRequestHandler, InstanceRequestHandler>();
-        services.AddSingleton<IBridgeRequestHandler, RegistryRequestHandler>();
+        services.AddSingleton<IBridgeRequestHandler, McpBridgeRequestHandler>();
         services.AddSingleton<PytestDependencyService>();
         services.AddSingleton<PytestExecutionService>();
         services.AddSingleton<IBridgeRequestHandler, PytestRequestHandler>();
 
-        services.AddSingleton<DotnetToolRegistryProvider>();
+        services.AddSingleton<DotnetMcpRegistryProvider>();
         services.AddSingleton<PythonToolRegistryProvider>();
         services.AddSingleton<BuiltInToolRegistryProvider>();
-        services.AddSingleton<IMcpRegistryProvider>(sp => sp.GetRequiredService<DotnetToolRegistryProvider>());
+        services.AddSingleton<IMcpRegistryProvider>(sp => sp.GetRequiredService<DotnetMcpRegistryProvider>());
         services.AddSingleton<IMcpRegistryProvider>(sp => sp.GetRequiredService<PythonToolRegistryProvider>());
         services.AddSingleton<IMcpRegistryProvider>(sp => sp.GetRequiredService<BuiltInToolRegistryProvider>());
-        services.AddSingleton<ToolRegistryCatalogLoader>();
-        services.AddSingleton<ToolRegistryStore>();
+        services.AddSingleton<McpCatalogLoader>();
+        services.AddSingleton<McpCatalogStore>();
         services.AddSingleton<CSharpCodeExecutor>();
         services.AddSingleton<IBuiltInMcpTool, CSharpCodeTool>();
         services.AddSingleton<IBuiltInMcpTool>(sp =>
             new OpenDocumentTool(sp.GetService<IDocumentBridge>() ?? NullDocumentBridge.Instance));
-        services.AddSingleton<ToolExecutionDispatcher>();
-        services.AddSingleton<PromptExecutionDispatcher>();
-        services.AddSingleton<ResourceExecutionDispatcher>();
+        services.AddSingleton<McpToolsetContextManager>();
+        services.AddSingleton<DotnetMethodResolver>();
+        services.AddSingleton<McpPrimitiveDispatcher>();
+        services.AddSingleton<IMcpPrimitiveDispatcher>(sp => sp.GetRequiredService<McpPrimitiveDispatcher>());
         services.AddSingleton<DevToolsPipeServer>();
         services.AddHostedService(sp => sp.GetRequiredService<DevToolsPipeServer>());
 

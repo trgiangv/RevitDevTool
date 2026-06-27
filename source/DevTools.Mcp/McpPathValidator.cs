@@ -1,5 +1,4 @@
 using System.Diagnostics;
-using System.IO;
 using DevTools.Settings.Configs;
 // ReSharper disable RedundantSuppressNullableWarningExpression
 
@@ -10,20 +9,14 @@ public static class McpPathValidator
     public const string PythonToolPattern = "*mcp.py";
     private const string DotnetToolPattern = ".dll";
 
-    public enum InputKind
-    {
-        Unsupported,
-        DotnetAssembly,
-        PythonToolset
-    }
-
-    public static InputKind ClassifyInputPath(string path)
+    public static ExecutionMode ClassifyInputPath(string path)
     {
         if (IsValidDotnetAssemblyPath(path))
-            return InputKind.DotnetAssembly;
+            return ExecutionMode.Dotnet;
         if (IsValidPythonToolsetPath(path))
-            return InputKind.PythonToolset;
-        return InputKind.Unsupported;
+            return ExecutionMode.Python;
+
+        return ExecutionMode.Unsupported;
     }
 
     public static bool IsValidDotnetAssemblyPath(string? path) =>
@@ -47,7 +40,7 @@ public static class McpPathValidator
             || catalog.Resources.Any(t => t.Binding.SourceKind == mode && IsItemFromPath(normalized, t.Binding.SourcePath));
     }
 
-    public static bool IsItemFromPath(string configuredPath, string? itemSourcePath)
+    private static bool IsItemFromPath(string configuredPath, string? itemSourcePath)
     {
         if (string.IsNullOrWhiteSpace(itemSourcePath))
             return false;
@@ -63,9 +56,8 @@ public static class McpPathValidator
         return normalizedItem.StartsWith(withSep, StringComparison.OrdinalIgnoreCase);
     }
 
-    public static bool RemoveInvalidPaths(List<string> paths, ExecutionMode mode, McpRegistryCatalog catalog)
+    private static void RemoveInvalidPaths(List<string> paths, ExecutionMode mode, McpRegistryCatalog catalog)
     {
-        var removed = false;
         for (var i = paths.Count - 1; i >= 0; i--)
         {
             if (PathProducesCatalogItems(paths[i], mode, catalog))
@@ -73,21 +65,18 @@ public static class McpPathValidator
 
             Trace.TraceInformation($"[MCP] Remove saved {mode} path '{paths[i]}' because it loaded no primitives.");
             paths.RemoveAt(i);
-            removed = true;
         }
-
-        return removed;
     }
 
     public static void PruneInvalidConfiguredPaths(
         McpRegistryConfig config,
         McpRegistryCatalog loadedCatalog)
     {
-        RemoveInvalidPaths(config.DotnetPaths, ExecutionMode.Assembly, loadedCatalog);
+        RemoveInvalidPaths(config.DotnetPaths, ExecutionMode.Dotnet, loadedCatalog);
         RemoveInvalidPaths(config.PythonToolsetPaths, ExecutionMode.Python, loadedCatalog);
     }
 
-    public static string NormalizePath(string path) =>
+    private static string NormalizePath(string path) =>
         Path.GetFullPath(path).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
 
     public static void AddDistinct(List<string> paths, string path)

@@ -1,6 +1,5 @@
 using System.Collections.ObjectModel;
 using System.Diagnostics;
-using DevTools.McpParser.Models;
 using DevTools.Utilities;
 namespace DevTools.Execution.External.Connections;
 
@@ -28,7 +27,7 @@ public sealed partial class ConnectionState : ObservableObject
     public partial string CurrentStatusMessage { get; set; } = string.Empty;
 
     [ObservableProperty]
-    public partial DateTime ExecutionStartedAtUtc { get; set; }
+    public partial DateTime ExecutionStartedAtUtc { get; private set; }
     public ObservableCollection<ToolCallMetric> ToolCalls { get; } = [];
 
     public void SetEndpoint(string endpoint)

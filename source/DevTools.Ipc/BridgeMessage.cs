@@ -3,6 +3,23 @@ using System.Text.Json.Serialization;
 
 namespace DevTools.Ipc;
 
+/// <summary>
+/// Structured error detail carried inside a <see cref="BridgeMessage"/> error response.
+/// Mirrors the shape of JSON-RPC error objects so the Daemon routing layer can
+/// forward meaningful error codes and optional data to external MCP clients.
+/// </summary>
+public sealed class BridgeError
+{
+    [JsonPropertyName("code")]
+    public string Code { get; init; } = string.Empty;
+
+    [JsonPropertyName("message")]
+    public string Message { get; init; } = string.Empty;
+
+    [JsonPropertyName("data")]
+    public JsonElement? Data { get; init; }
+}
+
 public sealed class BridgeMessage
 {
     public const string TypeRequest = "request";
@@ -30,11 +47,24 @@ public sealed class BridgeMessage
     [JsonPropertyName(IpcPropertyNames.ErrorMessage)]
     public string? ErrorMessage { get; init; }
 
+    [JsonPropertyName("error")]
+    public BridgeError? ErrorDetail { get; init; }
+
     public static BridgeMessage Request(string id, string method, JsonElement? @params = null) =>
         new() { Type = TypeRequest, Id = id, Method = method, Params = @params };
 
     public static BridgeMessage Response(string id, JsonElement? result) =>
         new() { Type = TypeResponse, Id = id, Result = result };
+
+    public static BridgeMessage ErrorResponse(string id, string code, string message, JsonElement? data = null) =>
+        new()
+        {
+            Type = TypeResponse,
+            Id = id,
+            IsError = true,
+            ErrorMessage = message,
+            ErrorDetail = new BridgeError { Code = code, Message = message, Data = data }
+        };
 
     public static BridgeMessage Error(string id, string message) =>
         new() { Type = TypeResponse, Id = id, IsError = true, ErrorMessage = message };

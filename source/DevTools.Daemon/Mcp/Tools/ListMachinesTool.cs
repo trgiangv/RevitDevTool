@@ -3,8 +3,6 @@ using System.Net.Http.Headers;
 using System.Text.Json;
 using DevTools.Daemon.Auth;
 using DevTools.Daemon.Hosting;
-using DevTools.McpParser.Models;
-using DevTools.Utilities;
 using Microsoft.Extensions.Options;
 using ModelContextProtocol.Protocol;
 using ModelContextProtocol.Server;

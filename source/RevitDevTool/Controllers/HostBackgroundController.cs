@@ -10,6 +10,7 @@ using DevTools.UI.Theme;
 
 namespace RevitDevTool.Controllers;
 
+[UsedImplicitly]
 public sealed class HostBackgroundController(
     IHostAppInfo hostAppInfo,
     IRevitSettingsService settingsService,

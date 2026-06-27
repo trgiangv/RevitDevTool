@@ -26,12 +26,26 @@ Registered in `source/DevTools.Execution/External/Mcp/BuiltIn/`:
 
 ## Dynamic Tools (User-Registered)
 
-Dynamic tools are loaded from user-configured paths via `ToolRegistryStore`:
+Dynamic tools are loaded from user-configured paths via `McpCatalogStore`:
 
 - **.NET assemblies** — parsed by `DotnetMcpAssemblyParser`
 - **Python toolsets** — parsed by `PythonToolsetParser` via `ToolParser.py`
 
 Dynamic registrations are tracked per host instance. A tool registered in one Revit process is not assumed to exist in another.
+
+## Routing Paths
+
+The Daemon exposes two complementary routing models:
+
+### Standard MCP Path (AI clients)
+
+`CatalogService` builds a flat `tools/list` + `tools/call` surface from all connected host instances. Each tool gets a `hostInstanceId` parameter injected for targeting a specific process. When multiple hosts register the same tool name, collisions are resolved by namespacing: `{toolName}@{hostApp}_{version}` (e.g. `execute_csharp_code@Revit_2025`).
+
+This is the path standard MCP AI clients (Claude, Cursor, ChatGPT) use.
+
+### Admin/Diagnostic Path
+
+`DynamicToolCatalog` + meta-tools (`list_dynamic_tools`, `call_dynamic_tool`) provide an explicit PID-based routing surface for diagnostics and multi-host orchestration. This is useful for admin tools and debugging but not the primary AI client path.
 
 ## Host-Specific Gaps
 

@@ -2,7 +2,7 @@ using System.IO;
 using System.Text.Json;
 using ModelContextProtocol.Protocol;
 
-namespace DevTools.Mcp.BuiltIn;
+namespace DevTools.Execution.External.Mcp.BuiltIn;
 
 /// <summary>Opens a document file in the running host process via <see cref="IDocumentBridge"/>.</summary>
 public sealed class OpenDocumentTool(IDocumentBridge documentBridge) : IBuiltInMcpTool

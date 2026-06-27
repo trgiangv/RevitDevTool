@@ -2,10 +2,10 @@ using System.Diagnostics;
 
 namespace DevTools.Mcp.Registry;
 
-public sealed class DotnetToolRegistryProvider : IMcpRegistryProvider
+public sealed class DotnetMcpRegistryProvider : IMcpRegistryProvider
 {
     public string Name => "dotnet-mcp";
-    public ExecutionMode SourceKind => ExecutionMode.Assembly;
+    public ExecutionMode SourceKind => ExecutionMode.Dotnet;
     private IReadOnlyList<string> AssemblyPaths { get; set; } = [];
 
     public void ConfigurePaths(IReadOnlyList<string> paths)

@@ -49,30 +49,34 @@ flowchart TB
 
 ---
 
-## Execution Modes
+## Execution Enums
 
-The current `ExecutionMode` enum is in `source/DevTools.McpParser/Models/ExecutionMode.cs`:
+Two enums in `source/DevTools.Execution.Abstractions/` separate container organisation from execution backend:
 
 ```csharp
-public enum ExecutionMode
-{
-    Script,
-    Assembly,
-    Python,
-    IronPython,
-    FSharp,
-    CSharp
-}
+// ContainerMode.cs — how code is organised / discovered
+public enum ContainerMode { Script, Assembly }
+
+// ExecutionMode.cs — how code is executed
+public enum ExecutionMode { Python, IronPython, FSharp, CSharp, Dotnet, Unsupported }
 ```
 
-| Mode | Discovered by | Strategy | Notes |
-|------|---------------|----------|-------|
-| `Assembly` | `AssemblyExecutionProvider` for `.dll` | `AssemblyExecutionStrategy` | Host-specific discovery: Revit scans `IExternalCommand`; AutoCAD scans command attributes. |
-| `Script` | Root folder container | n/a | The folder root groups script entries. |
-| `Python` | `*script.py` | `PythonExecutionStrategy` | CPython via pythonnet. Pixi first, pip/pyRevit fallback. |
-| `IronPython` | `*_ipy_script.py` | `IronPythonExecutionStrategy` | Host bridge injects host API builtins and references. |
-| `FSharp` | `*script.fsx` | `FSharpExecutionStrategy` | Compiles into a host command; NuGet resolution under app data. |
-| `CSharp` | `*script.csx` | `CSharpExecutionStrategy` | Roslyn compile with content-hash caching. |
+### ContainerMode
+
+| Mode | Provider | Notes |
+|------|----------|-------|
+| `Script` | `ScriptExecutionProvider` | Folder scan for `*script.py`, `*script.fsx`, `*script.csx`. |
+| `Assembly` | `AssemblyExecutionProvider` | `.dll` reflection. Host-specific `ICommandDiscovery`. |
+
+### ExecutionMode
+
+| Mode | Strategy | Notes |
+|------|----------|-------|
+| `Python` | `PythonExecutionStrategy` | CPython via pythonnet. Pixi first, pip/pyRevit fallback. |
+| `IronPython` | `IronPythonExecutionStrategy` | Host bridge injects host API builtins and references. |
+| `FSharp` | `FSharpExecutionStrategy` | Compiles into a host command; NuGet resolution under app data. |
+| `CSharp` | `CSharpExecutionStrategy` | Roslyn compile with content-hash caching. |
+| `Dotnet` | `AssemblyExecutionStrategy` | Load IL from .dll, invoke method. Also used as MCP source kind for .NET assembly tools. |
 
 `ScriptExecutionProvider` skips folders such as `docs`, `resources`, `bin`, `obj`, `packages`, `node_modules`, `output`, caches, virtualenvs, and agent/tool folders.
 

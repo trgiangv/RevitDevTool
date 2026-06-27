@@ -2,7 +2,7 @@ using System.Diagnostics;
 
 namespace DevTools.Mcp.Registry;
 
-public sealed class ToolRegistryCatalogLoader(IEnumerable<IMcpRegistryProvider> providers)
+public sealed class McpCatalogLoader(IEnumerable<IMcpRegistryProvider> providers)
 {
     private readonly IReadOnlyList<IMcpRegistryProvider> _providers = providers.ToList();
 
@@ -64,7 +64,7 @@ public sealed class ToolRegistryCatalogLoader(IEnumerable<IMcpRegistryProvider> 
 
         var pathsByMode = new Dictionary<ExecutionMode, IReadOnlyList<string>>
         {
-            [ExecutionMode.Assembly] = resolvedDotnet,
+            [ExecutionMode.Dotnet] = resolvedDotnet,
             [ExecutionMode.Python] = resolvedPython
         };
 

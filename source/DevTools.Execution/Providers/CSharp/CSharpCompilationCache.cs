@@ -3,7 +3,6 @@ using System.Diagnostics;
 using System.IO;
 using System.Runtime.CompilerServices;
 using System.Security.Cryptography;
-using DevTools.Execution.Interfaces;
 using DevTools.Execution.Models;
 
 namespace DevTools.Execution.Providers.CSharp;

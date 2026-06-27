@@ -4,7 +4,6 @@ using DevTools.Daemon.Auth;
 using DevTools.Daemon.Mcp;
 using DevTools.Daemon.Mcp.Tools;
 using DevTools.Daemon.Tray;
-using DevTools.McpParser.Models;
 using H.NotifyIcon;
 
 namespace DevTools.Daemon.Hosting;

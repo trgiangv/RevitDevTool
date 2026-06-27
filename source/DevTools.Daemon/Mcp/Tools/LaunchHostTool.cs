@@ -1,7 +1,6 @@
 using System.Runtime.Versioning;
 using System.Text.Json;
 using DevTools.Logging;
-using DevTools.McpParser.Models;
 using DevTools.Daemon.Mcp.Tools.Utils;
 using ModelContextProtocol.Protocol;
 using ModelContextProtocol.Server;

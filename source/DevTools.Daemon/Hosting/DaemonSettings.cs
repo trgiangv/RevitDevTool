@@ -1,7 +1,6 @@
 using System.Text.Json;
 using DevTools.UI.Theme;
 using DevTools.Utilities;
-using JetBrains.Annotations;
 
 namespace DevTools.Daemon.Hosting;
 

@@ -1,6 +1,5 @@
 using System.Collections.Concurrent;
 using System.Diagnostics;
-using JetBrains.Annotations;
 
 namespace DevTools.Mcp.Discovery;
 

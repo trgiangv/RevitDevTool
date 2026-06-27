@@ -1,5 +1,4 @@
 using System.Text.Json;
-using System.Text.Json.Serialization;
 
 namespace DevTools.Ipc;
 
@@ -13,11 +12,7 @@ public sealed class BridgePipeConnection(Stream stream) : IDisposable
 {
     private const int MaxMessageSize = 16 * 1024 * 1024;
 
-    public static readonly JsonSerializerOptions JsonOptions = new()
-    {
-        PropertyNameCaseInsensitive = true,
-        DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
-    };
+    public static readonly JsonSerializerOptions JsonOptions = IpcJsonContext.Default.Options;
 
     private readonly Stream _stream = stream ?? throw new ArgumentNullException(nameof(stream));
     private readonly SemaphoreSlim _writeLock = new(1, 1);
@@ -32,7 +27,7 @@ public sealed class BridgePipeConnection(Stream stream) : IDisposable
     public async Task WriteAsync(BridgeMessage message, CancellationToken ct = default)
     {
         if (_disposed) throw new ObjectDisposedException(nameof(BridgePipeConnection));
-        var body = JsonSerializer.SerializeToUtf8Bytes(message, JsonOptions);
+        var body = JsonSerializer.SerializeToUtf8Bytes(message, IpcJsonContext.Default.BridgeMessage);
         var header = BitConverter.GetBytes(body.Length);
 
         await _writeLock.WaitAsync(ct).ConfigureAwait(false);
@@ -84,7 +79,7 @@ public sealed class BridgePipeConnection(Stream stream) : IDisposable
 
         try
         {
-            return JsonSerializer.Deserialize<BridgeMessage>(body, JsonOptions);
+            return JsonSerializer.Deserialize(body, IpcJsonContext.Default.BridgeMessage);
         }
         catch (JsonException)
         {

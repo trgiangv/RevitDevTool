@@ -18,7 +18,7 @@ pytest (local)                      Host (remote)
 
 Wire format: `[4-byte LE body length][UTF-8 JSON body]`
 
-Matches `RevitDevTool.McpParser.Models.BridgePipeConnection` on C# side.
+Matches `DevTools.Ipc.BridgePipeConnection` on C# side.
 
 Pipe name pattern: `{Host}_{Version}_{PID}` (e.g. `Revit_2025_12345`, `AutoCad_2026_7890`, `Rhino_8.0_9999`)
 

@@ -1,7 +1,6 @@
 using System.Diagnostics;
 using System.IO;
 using System.Reflection;
-using DevTools.Execution.Interfaces;
 using DevTools.Execution.Models;
 using DevTools.Execution.Providers.FSharp;
 using Microsoft.CodeAnalysis;

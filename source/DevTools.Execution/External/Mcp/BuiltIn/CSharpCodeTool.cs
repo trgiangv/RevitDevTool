@@ -1,5 +1,4 @@
 using System.Text.Json;
-using DevTools.McpParser.Models;
 using ModelContextProtocol.Protocol;
 
 namespace DevTools.Execution.External.Mcp.BuiltIn;
@@ -49,13 +48,13 @@ public sealed class CSharpCodeTool(CSharpCodeExecutor executor) : IBuiltInMcpToo
             codeElement.ValueKind != JsonValueKind.String)
         {
             return McpToolExecutionResult.Failed(
-                ExecutionErrorCodes.ToolInvokeFailed, "Missing required 'code' parameter.");
+                McpExecutionErrorCodes.ToolInvokeFailed, "Missing required 'code' parameter.");
         }
 
         var code = codeElement.GetString();
         if (string.IsNullOrWhiteSpace(code))
             return McpToolExecutionResult.Failed(
-                ExecutionErrorCodes.ToolInvokeFailed, "Code parameter must not be empty.");
+                McpExecutionErrorCodes.ToolInvokeFailed, "Code parameter must not be empty.");
 
         var result = await executor.ExecuteAsync(code!, ct).ConfigureAwait(false);
 

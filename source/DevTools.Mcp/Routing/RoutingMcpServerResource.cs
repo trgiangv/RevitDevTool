@@ -62,7 +62,9 @@ public sealed class RoutingMcpServerResource : McpServerResource
         RequestContext<ReadResourceRequestParams> request,
         CancellationToken cancellationToken = default)
     {
-        var client = _instanceManager.GetDefault()
+        var meta = request.Params.Meta?.Deserialize<Dictionary<string, JsonElement>>();
+        var client = ToolHelpers.ResolveClientFromMeta(meta, _instanceManager)
+                     ?? _instanceManager.GetDefault()
                      ?? throw new InvalidOperationException(ToolHelpers.FormatInstanceListing(_instanceManager));
 
         var targetUri = request.Params.Uri;

@@ -1,7 +1,6 @@
 using System.Windows;
 using DevTools.Daemon.Hosting;
 using DevTools.Daemon.Tray;
-using DevTools.McpParser.Models;
 using H.NotifyIcon;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;

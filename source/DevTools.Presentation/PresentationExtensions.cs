@@ -2,6 +2,7 @@ using DevTools.Presentation.ViewModels;
 using DevTools.Presentation.ViewModels.Settings;
 using DevTools.Presentation.Views;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 
 namespace DevTools.Presentation;
 
@@ -18,8 +19,8 @@ public static class PresentationExtensions
         services.AddSingleton<MemoryView>();
         services.AddSingleton<ExecutionView>();
         services.AddSingleton<McpRegistryView>();
-        services.AddSingleton<McpToolsetContextManager>();
-        services.AddSingleton<DotnetMethodResolver>();
+        services.TryAddSingleton<McpToolsetContextManager>();
+        services.TryAddSingleton<DotnetMethodResolver>();
 
         services.AddTransient<SettingsViewModel>();
         services.AddTransient<GeneralSettingsViewModel>();

@@ -16,17 +16,15 @@
         <Using Include="Xunit"/>
         <Using Include="DevTools.Execution.Abstractions"/>
         <Using Include="DevTools.Ipc"/>
+        <Using Include="DevTools.Mcp.Models"/>
         <Using Include="DevTools.Mcp.Discovery"/>
+        <Using Include="DevTools.Mcp.Routing"/>
     </ItemGroup>
 
     <ItemGroup>
         <ProjectReference Include="..\..\source\DevTools.Execution.Abstractions\DevTools.Execution.Abstractions.csproj" />
-        <ProjectReference Include="..\..\source\DevTools.McpParser\DevTools.McpParser.csproj" />
-    </ItemGroup>
-
-    <ItemGroup>
-        <Compile Include="..\..\source\DevTools.Daemon\Mcp\Catalog\DynamicToolCatalog.cs" Link="DynamicToolCatalog.cs" />
-        <Compile Include="..\..\source\DevTools.Daemon\Mcp\Catalog\DynamicToolCatalogModels.cs" Link="DynamicToolCatalogModels.cs" />
+        <ProjectReference Include="..\..\source\DevTools.Ipc\DevTools.Ipc.csproj" />
+        <ProjectReference Include="..\..\source\DevTools.Mcp\DevTools.Mcp.csproj" />
     </ItemGroup>
 
     <ItemGroup>

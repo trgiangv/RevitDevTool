@@ -1,5 +1,4 @@
 using System.Collections.Concurrent;
-using System.Text.Json;
 using System.Text.RegularExpressions;
 using Microsoft.Extensions.Logging;
 using ZLogger;
@@ -37,7 +36,7 @@ public sealed partial class InstanceManager(ILogger<InstanceManager> logger) : I
 
     IHostBridgeClient? IInstanceManager.GetDefault(string? hostApp) => GetDefault(hostApp);
 
-    public HostBridgeClient? GetDefault(string? hostApp = null)
+    private HostBridgeClient? GetDefault(string? hostApp = null)
     {
         if (string.IsNullOrWhiteSpace(hostApp))
             return _clients.Count == 1 ? _clients.Values.First() : null;

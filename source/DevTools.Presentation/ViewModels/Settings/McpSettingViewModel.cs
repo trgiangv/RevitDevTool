@@ -16,7 +16,7 @@ public sealed partial class McpSettingViewModel : ObservableObject, IDisposable
     private const int SignInTimeoutSeconds = 120;
 
     private readonly ISettingsService _settingsService;
-    private readonly ToolRegistryStore _toolStore;
+    private readonly McpCatalogStore _catalogStore;
     private readonly Dispatcher _dispatcher = Dispatcher.CurrentDispatcher;
 
     private CancellationTokenSource? _signInCts;
@@ -40,11 +40,11 @@ public sealed partial class McpSettingViewModel : ObservableObject, IDisposable
                                                }
                                                """;
 
-    public McpSettingViewModel(ISettingsService settingsService, ToolRegistryStore toolStore)
+    public McpSettingViewModel(ISettingsService settingsService, McpCatalogStore catalogStore)
     {
         _settingsService = settingsService;
-        _toolStore = toolStore;
-        _toolStore.ToolsChanged += OnToolsChanged;
+        _catalogStore = catalogStore;
+        _catalogStore.CatalogChanged += OnCatalogChanged;
         LoadSources();
     }
 
@@ -95,7 +95,7 @@ public sealed partial class McpSettingViewModel : ObservableObject, IDisposable
         config.DotnetPaths = config.DotnetPaths.Where(p => p != source).ToList();
         config.PythonToolsetPaths = config.PythonToolsetPaths.Where(p => p != source).ToList();
 
-        await _toolStore.ReloadAsync().ConfigureAwait(true);
+        await _catalogStore.ReloadAsync().ConfigureAwait(true);
     }
 
     private void LoadSources()
@@ -138,7 +138,7 @@ public sealed partial class McpSettingViewModel : ObservableObject, IDisposable
         }
     }
 
-    private void OnToolsChanged(object? sender, EventArgs e)
+    private void OnCatalogChanged(object? sender, EventArgs e)
     {
         if (!_dispatcher.CheckAccess())
         {
@@ -149,5 +149,5 @@ public sealed partial class McpSettingViewModel : ObservableObject, IDisposable
         LoadSources();
     }
 
-    public void Dispose() => _toolStore.ToolsChanged -= OnToolsChanged;
+    public void Dispose() => _catalogStore.CatalogChanged -= OnCatalogChanged;
 }

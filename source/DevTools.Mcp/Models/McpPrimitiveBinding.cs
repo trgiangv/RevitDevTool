@@ -47,7 +47,7 @@ public sealed record McpPrimitiveBinding
     {
         var location = sourceKind switch
         {
-            ExecutionMode.Assembly => Path.GetFileName(sourcePath),
+            ExecutionMode.Dotnet => Path.GetFileName(sourcePath),
             _ => Path.GetFileNameWithoutExtension(sourcePath)
         };
 
@@ -60,7 +60,7 @@ public sealed record McpPrimitiveBinding
 
     private static string BuildFallbackGroupName(ExecutionMode sourceKind, string sourcePath, string containerType)
     {
-        var sourceName = sourceKind == ExecutionMode.Assembly
+        var sourceName = sourceKind == ExecutionMode.Dotnet
             ? Path.GetFileName(sourcePath)
             : Path.GetFileName(Path.GetDirectoryName(sourcePath) ?? string.Empty);
 

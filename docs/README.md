@@ -109,9 +109,9 @@ Python + WebView2 dashboard application:
 Model Context Protocol integration:
 - `DevTools.McpParser` — message parsing library
 - `DevTools.Daemon` — standalone tray app (MCP engine, auth, gateway)
-- `ToolRegistryStore` — in-process tool discovery & caching
+- `McpCatalogStore` — in-process tool/prompt/resource catalog & caching
 - `.NET` + Python toolset providers
-- Tool/Prompt/Resource dispatch
+- Unified `McpPrimitiveDispatcher` for tool/prompt/resource execution
 - Standalone helper tools are multi-host (`launch_host` supports Revit and AutoCAD, `read_file_info` reads RVT/RFA/DWG metadata, `open_model` detects host from extension); in-host MCP runtime is shared
 
 ### PyTest

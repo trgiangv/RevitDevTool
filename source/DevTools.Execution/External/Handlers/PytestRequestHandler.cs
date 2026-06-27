@@ -1,7 +1,5 @@
 using System.Text.Json;
 using DevTools.Execution.External.Testing;
-using DevTools.Execution.Interfaces;
-using DevTools.McpParser.Models;
 namespace DevTools.Execution.External.Handlers;
 
 public sealed class PytestRequestHandler(
@@ -16,7 +14,7 @@ public sealed class PytestRequestHandler(
 
     public IReadOnlyCollection<string> SupportedMethods { get; } =
     [
-        BridgeMethods.TestsRun,
+        PytestBridgeMethods.TestsRun,
     ];
 
     public Task<BridgeMessage> HandleAsync(
@@ -25,7 +23,7 @@ public sealed class PytestRequestHandler(
         JsonElement? @params,
         CancellationToken ct = default)
     {
-        if (string.Equals(method, BridgeMethods.TestsRun, StringComparison.OrdinalIgnoreCase))
+        if (string.Equals(method, PytestBridgeMethods.TestsRun, StringComparison.OrdinalIgnoreCase))
             return HandleRunAsync(requestId, @params);
 
         return Task.FromResult(BridgeMessage.Error(requestId, $"Unknown method: {method}"));

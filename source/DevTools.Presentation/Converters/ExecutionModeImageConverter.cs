@@ -35,6 +35,7 @@ public sealed class ExecutionModeImageConverter : IValueConverter
             ExecutionMode.IronPython => "IronPythonIcon",
             ExecutionMode.FSharp     => "FsharpIcon",
             ExecutionMode.CSharp     => "CsharpIcon",
+            ExecutionMode.Dotnet     => "DotnetIcon",
             _                        => "DotnetIcon",
         };
         return Icons[key];

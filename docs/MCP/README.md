@@ -20,7 +20,9 @@ Last updated: 2026-06-18
 | Area | Path |
 |------|------|
 | **Daemon (primary)** | `source/DevTools.Daemon/` |
-| Parser/contracts | `source/DevTools.McpParser/` |
+| IPC transport | `source/DevTools.Ipc/` |
+| MCP protocol | `source/DevTools.Mcp/` |
+| Pytest bridge | `source/DevTools.Pytest/` |
 | In-host runtime | `source/DevTools.Execution/External/Mcp/` |
 | Pipe server | `source/DevTools.Execution/External/DevToolsPipeServer.cs` |
 | Registry UI | `source/DevTools.Presentation/ViewModels/McpRegistryViewModel.cs` |

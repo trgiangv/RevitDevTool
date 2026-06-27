@@ -98,7 +98,20 @@ public sealed class CatalogService(
         var response = await client.RequestAsync(McpBridgeMethods.ToolsList, ct: token).ConfigureAwait(false);
         foreach (var tool in DeserializeResult<Tool>(response))
         {
-            tools.TryAdd(tool.Name, new RoutingMcpServerTool(instanceManager, tool));
+            var key = tool.Name;
+            if (!tools.TryAdd(key, new RoutingMcpServerTool(instanceManager, tool)))
+            {
+                var namespacedKey = $"{key}@{client.Info.HostApp}_{client.Info.VersionNumber}";
+                var namespacedTool = new Tool
+                {
+                    Name = namespacedKey,
+                    Description = tool.Description,
+                    InputSchema = tool.InputSchema,
+                    Annotations = tool.Annotations
+                };
+                tools.TryAdd(namespacedKey, new RoutingMcpServerTool(instanceManager, namespacedTool));
+                logger.ZLogWarning($"Tool name collision for '{key}', registered as '{namespacedKey}'");
+            }
             dynamicRegistrations.Add(new DynamicToolRegistration(tool, client.Info, client.PipeName));
         }
     }
@@ -107,7 +120,21 @@ public sealed class CatalogService(
     {
         var response = await client.RequestAsync(McpBridgeMethods.PromptsList, ct: token).ConfigureAwait(false);
         foreach (var prompt in DeserializeResult<Prompt>(response))
-            prompts.TryAdd(prompt.Name, new RoutingMcpServerPrompt(instanceManager, prompt));
+        {
+            var key = prompt.Name;
+            if (!prompts.TryAdd(key, new RoutingMcpServerPrompt(instanceManager, prompt)))
+            {
+                var namespacedKey = $"{key}@{client.Info.HostApp}_{client.Info.VersionNumber}";
+                var namespacedPrompt = new Prompt
+                {
+                    Name = namespacedKey,
+                    Description = prompt.Description,
+                    Arguments = prompt.Arguments
+                };
+                prompts.TryAdd(namespacedKey, new RoutingMcpServerPrompt(instanceManager, namespacedPrompt));
+                logger.ZLogWarning($"Prompt name collision for '{key}', registered as '{namespacedKey}'");
+            }
+        }
     }
 
     private async Task FetchResourcesAsync(IHostBridgeClient client, List<McpServerResource> resources, CancellationToken token)

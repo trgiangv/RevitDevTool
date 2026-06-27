@@ -21,7 +21,7 @@ public sealed class BuiltInToolRegistryProvider(IEnumerable<IBuiltInMcpTool> bui
                 sourcePath: null,
                 containerType: "BuiltIn",
                 methodName: builtIn.Name,
-                groupName: "DevTools Built-in");
+                groupName: "Built-in");
 
             var id = McpPrimitiveBinding.CreatePrimitiveId(builtIn.ProtocolTool.Name, binding.SourceAddress);
 

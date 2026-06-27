@@ -1,6 +1,5 @@
 using System.Diagnostics;
 using System.Reflection;
-using DevTools.Mcp.Models;
 using ModelContextProtocol.Server;
 
 namespace DevTools.Mcp.Discovery;

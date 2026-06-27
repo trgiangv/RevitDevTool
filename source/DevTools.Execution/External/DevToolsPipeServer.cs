@@ -7,32 +7,28 @@ using System.Security.Principal;
 using System.Text.Json;
 using DevTools.Logging;
 using DevTools.Execution.External.Connections;
-using DevTools.McpParser.Models;
 using DevTools.Execution.External.Handlers;
-using DevTools.Execution.External.Mcp.Handlers;
 using Microsoft.Extensions.Hosting;
 // ReSharper disable RedundantSuppressNullableWarningExpression
-// ReSharper disable ConditionalAccessQualifierIsNonNullableAccordingToAPIContract
-// ReSharper disable ReplaceWithFieldKeyword
 
 namespace DevTools.Execution.External;
 
 [UsedImplicitly]
 public sealed class DevToolsPipeServer(
-    ToolRegistryStore toolStore,
+    McpCatalogStore catalogStore,
     ConnectionState state,
     IHostAppInfo hostInfo,
+    IMcpPrimitiveDispatcher primitiveDispatcher,
+    McpToolsetContextManager toolsetContextManager,
     IEnumerable<IBridgeRequestHandler> handlers) : IHostedService, IDisposable
 {
     private const int MaxPipeInstances = 8;
-    private readonly IEnumerable<IBridgeRequestHandler> _handlers = handlers;
-    private Dictionary<string, IBridgeRequestHandler>? _handlerMap;
 
     private Dictionary<string, IBridgeRequestHandler> HandlerMap =>
-        _handlerMap ??= BuildHandlerMap();
+        field ??= BuildHandlerMap();
 
     private Dictionary<string, IBridgeRequestHandler> BuildHandlerMap()
-        => _handlers.SelectMany(h => h.SupportedMethods.Select(m => (method: m, handler: h)))
+        => handlers.SelectMany(h => h.SupportedMethods.Select(m => (method: m, handler: h)))
             .ToDictionary(x => x.method, x => x.handler, StringComparer.OrdinalIgnoreCase);
 
     private CancellationTokenSource? _cts;
@@ -50,7 +46,7 @@ public sealed class DevToolsPipeServer(
         state.SetConnectedState(0);
         state.SetQueueDepth(0);
 
-        var pytestHandler = _handlers.OfType<PytestRequestHandler>().SingleOrDefault();
+        var pytestHandler = handlers.OfType<PytestRequestHandler>().SingleOrDefault();
         if (pytestHandler is not null)
             pytestHandler.NotifySender = SendNotification;
 
@@ -58,7 +54,7 @@ public sealed class DevToolsPipeServer(
         {
             try
             {
-                toolStore.EnsureLoaded();
+                catalogStore.EnsureLoaded();
             }
             catch (Exception ex)
             {
@@ -66,7 +62,7 @@ public sealed class DevToolsPipeServer(
             }
         }, cancellationToken);
 
-        toolStore.ToolsChanged += OnToolsChanged;
+        catalogStore.CatalogChanged += OnCatalogChanged;
 
         _cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
         _acceptLoopTask = AcceptLoopAsync(_cts.Token);
@@ -77,7 +73,7 @@ public sealed class DevToolsPipeServer(
 
     public async Task StopAsync(CancellationToken cancellationToken)
     {
-        toolStore.ToolsChanged -= OnToolsChanged;
+        catalogStore.CatalogChanged -= OnCatalogChanged;
 
         _cts?.CancelAsync();
         foreach (var connection in _connections.Values)
@@ -186,10 +182,11 @@ public sealed class DevToolsPipeServer(
         return BridgeMessage.Error(id, $"Unknown method: {request.Method}");
     }
 
-    private void OnToolsChanged(object? sender, EventArgs e)
+    private void OnCatalogChanged(object? sender, EventArgs e)
     {
-        _handlers.OfType<RegistryRequestHandler>().SingleOrDefault()?.ClearCaches();
-        SendNotification(BridgeMethods.NotifyToolsChanged);
+        primitiveDispatcher.ClearCaches();
+        toolsetContextManager.Clear();
+        SendNotification(McpBridgeMethods.NotifyToolsChanged);
     }
 
     private async void SendNotification(string method, object? data = null)
@@ -252,7 +249,7 @@ public sealed class DevToolsPipeServer(
     {
         if (_disposed) return;
         _disposed = true;
-        toolStore.ToolsChanged -= OnToolsChanged;
+        catalogStore.CatalogChanged -= OnCatalogChanged;
         _cts?.Cancel();
         foreach (var connection in _connections.Values)
             connection.Dispose();

@@ -2,7 +2,6 @@ using System.Diagnostics;
 using System.IO;
 using System.Reflection;
 using System.Text;
-using DevTools.Execution.Interfaces;
 using FSharp.Compiler.Diagnostics;
 using FSharp.Compiler.Interactive;
 using Microsoft.FSharp.Core;

@@ -1,14 +1,12 @@
-using System.IO;
 using System.Text;
 using System.Text.RegularExpressions;
-using DevTools.Mcp.Registry;
 using DevTools.Settings;
 using ModelContextProtocol.Protocol;
 // ReSharper disable RedundantSuppressNullableWarningExpression
 
 namespace DevTools.Mcp;
 
-public sealed class ToolRegistryStore(ToolRegistryCatalogLoader catalogLoader, ISettingsService settingsService)
+public sealed class McpCatalogStore(McpCatalogLoader catalogLoader, ISettingsService settingsService)
 {
     private readonly SemaphoreSlim _gate = new(1, 1);
     private readonly Dictionary<string, McpRegisteredTool> _byToolId = new(StringComparer.OrdinalIgnoreCase);
@@ -17,9 +15,9 @@ public sealed class ToolRegistryStore(ToolRegistryCatalogLoader catalogLoader, I
     private readonly Dictionary<string, List<McpRegisteredPrompt>> _byPromptName = new(StringComparer.OrdinalIgnoreCase);
     private readonly Dictionary<string, McpRegisteredResource> _byResourceId = new(StringComparer.OrdinalIgnoreCase);
     private readonly Dictionary<string, List<McpRegisteredResource>> _byResourceName = new(StringComparer.OrdinalIgnoreCase);
-    public event EventHandler? ToolsChanged;
+    public event EventHandler? CatalogChanged;
 
-    public IReadOnlyList<McpRegisteredTool> ToolCatalog { get; private set; } = [];
+    public IReadOnlyList<McpRegisteredTool> RegisteredTools { get; private set; } = [];
     public IReadOnlyList<McpRegisteredPrompt> PromptCatalog { get; private set; } = [];
     public IReadOnlyList<McpRegisteredResource> ResourceCatalog { get; private set; } = [];
 
@@ -50,7 +48,7 @@ public sealed class ToolRegistryStore(ToolRegistryCatalogLoader catalogLoader, I
             _gate.Release();
         }
 
-        ToolsChanged?.Invoke(this, EventArgs.Empty);
+        CatalogChanged?.Invoke(this, EventArgs.Empty);
     }
 
     public async Task AddPathAsync(string path)
@@ -60,7 +58,7 @@ public sealed class ToolRegistryStore(ToolRegistryCatalogLoader catalogLoader, I
 
         var normalizedPath = Path.GetFullPath(path);
         var inputKind = McpPathValidator.ClassifyInputPath(normalizedPath);
-        if (inputKind == McpPathValidator.InputKind.Unsupported)
+        if (inputKind == ExecutionMode.Unsupported)
             return;
 
         await _gate.WaitAsync().ConfigureAwait(false);
@@ -69,9 +67,9 @@ public sealed class ToolRegistryStore(ToolRegistryCatalogLoader catalogLoader, I
             var dotnetCandidates = settingsService.McpRegistryConfig.DotnetPaths.ToList();
             var pythonCandidates = settingsService.McpRegistryConfig.PythonToolsetPaths.ToList();
 
-            if (inputKind == McpPathValidator.InputKind.DotnetAssembly)
+            if (inputKind == ExecutionMode.Dotnet)
                 McpPathValidator.AddDistinct(dotnetCandidates, normalizedPath);
-            else if (inputKind == McpPathValidator.InputKind.PythonToolset)
+            else if (inputKind == ExecutionMode.Python)
                 McpPathValidator.AddDistinct(pythonCandidates, normalizedPath);
 
             var loaded = await Task.Run(() => catalogLoader.LoadCatalog(dotnetCandidates, pythonCandidates)).ConfigureAwait(false);
@@ -85,7 +83,7 @@ public sealed class ToolRegistryStore(ToolRegistryCatalogLoader catalogLoader, I
             _gate.Release();
         }
 
-        ToolsChanged?.Invoke(this, EventArgs.Empty);
+        CatalogChanged?.Invoke(this, EventArgs.Empty);
     }
 
     public bool TryGetTool(string? toolId, string? toolName, out McpRegisteredTool? tool)
@@ -100,27 +98,19 @@ public sealed class ToolRegistryStore(ToolRegistryCatalogLoader catalogLoader, I
         return TryGet(promptId, promptName, _byPromptId, _byPromptName, out prompt);
     }
 
-    public bool TryGetResource(string? resourceId, string? resourceName, out McpRegisteredResource? resource)
-    {
-        EnsureLoaded();
-        return TryGet(resourceId, resourceName, _byResourceId, _byResourceName, out resource);
-    }
-
     public bool TryResolveResourceByUri(string uri, out McpRegisteredResource? resource)
     {
         EnsureLoaded();
 
-        resource = default;
+        resource = null;
         if (string.IsNullOrWhiteSpace(uri))
             return false;
 
         foreach (var candidate in ResourceCatalog)
         {
-            if (UriMatches(candidate, uri))
-            {
-                resource = candidate;
-                return true;
-            }
+            if (!UriMatches(candidate, uri)) continue;
+            resource = candidate;
+            return true;
         }
 
         return false;
@@ -153,7 +143,7 @@ public sealed class ToolRegistryStore(ToolRegistryCatalogLoader catalogLoader, I
         try
         {
             if (HasLoadedCatalog())
-                return ToolCatalog;
+                return RegisteredTools;
 
             var catalog = catalogLoader.LoadCatalog(
                 settingsService.McpRegistryConfig.DotnetPaths,
@@ -161,7 +151,7 @@ public sealed class ToolRegistryStore(ToolRegistryCatalogLoader catalogLoader, I
 
             ApplyCatalog(catalog);
             McpPathValidator.PruneInvalidConfiguredPaths(settingsService.McpRegistryConfig, catalog);
-            return ToolCatalog;
+            return RegisteredTools;
         }
         finally
         {
@@ -171,10 +161,10 @@ public sealed class ToolRegistryStore(ToolRegistryCatalogLoader catalogLoader, I
 
     private bool HasLoadedCatalog()
     {
-        if (ToolCatalog.Count == 0 && PromptCatalog.Count == 0 && ResourceCatalog.Count == 0)
+        if (RegisteredTools.Count == 0 && PromptCatalog.Count == 0 && ResourceCatalog.Count == 0)
             return false;
 
-        return ToolCatalog.Count == _byToolId.Count
+        return RegisteredTools.Count == _byToolId.Count
                && PromptCatalog.Count == _byPromptId.Count
                && ResourceCatalog.Count == _byResourceId.Count
                && IndexesMatchCatalog();
@@ -184,7 +174,7 @@ public sealed class ToolRegistryStore(ToolRegistryCatalogLoader catalogLoader, I
     {
         ClearIndexes();
 
-        ToolCatalog = catalog.Tools;
+        RegisteredTools = catalog.Tools;
         PromptCatalog = catalog.Prompts;
         ResourceCatalog = catalog.Resources;
 
@@ -202,7 +192,7 @@ public sealed class ToolRegistryStore(ToolRegistryCatalogLoader catalogLoader, I
 
     private bool IndexesMatchCatalog()
     {
-        foreach (var tool in ToolCatalog)
+        foreach (var tool in RegisteredTools)
         {
             if (!_byToolId.ContainsKey(tool.Id))
                 return false;
@@ -256,14 +246,14 @@ public sealed class ToolRegistryStore(ToolRegistryCatalogLoader catalogLoader, I
         }
     }
 
-    private void PersistAcceptedPath(McpPathValidator.InputKind kind, string normalizedPath, McpRegistryCatalog loadedCatalog)
+    private void PersistAcceptedPath(ExecutionMode kind, string normalizedPath, McpRegistryCatalog loadedCatalog)
     {
         switch (kind)
         {
-            case McpPathValidator.InputKind.DotnetAssembly when McpPathValidator.PathProducesCatalogItems(normalizedPath, ExecutionMode.Assembly, loadedCatalog):
+            case ExecutionMode.Dotnet when McpPathValidator.PathProducesCatalogItems(normalizedPath, ExecutionMode.Dotnet, loadedCatalog):
                 McpPathValidator.AddDistinct(settingsService.McpRegistryConfig.DotnetPaths, normalizedPath);
                 break;
-            case McpPathValidator.InputKind.PythonToolset when McpPathValidator.PathProducesCatalogItems(normalizedPath, ExecutionMode.Python, loadedCatalog):
+            case ExecutionMode.Python when McpPathValidator.PathProducesCatalogItems(normalizedPath, ExecutionMode.Python, loadedCatalog):
                 McpPathValidator.AddDistinct(settingsService.McpRegistryConfig.PythonToolsetPaths, normalizedPath);
                 break;
         }

@@ -1,7 +1,6 @@
 using System.Diagnostics;
 using System.IO;
 using System.Text.RegularExpressions;
-using DevTools.Execution.Interfaces;
 namespace DevTools.Execution.Providers.FSharp;
 
 internal static class FSharpDependencyResolver

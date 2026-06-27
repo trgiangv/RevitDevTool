@@ -26,6 +26,20 @@ public static class ToolHelpers
         return instanceManager.GetDefault();
     }
 
+    /// <summary>
+    /// Resolves a host bridge client from the request _meta bag (e.g. resource reads
+    /// that don't have tool arguments but may carry host instance hints).
+    /// </summary>
+    public static IHostBridgeClient? ResolveClientFromMeta(
+        IReadOnlyDictionary<string, JsonElement>? meta,
+        IInstanceManager instanceManager)
+    {
+        if (meta is null) return null;
+        if (!meta.TryGetValue(McpPropertyNames.HostInstanceId, out var pidElement)) return null;
+        var pid = ParseProcessId(pidElement);
+        return pid > 0 ? instanceManager.GetByProcessId(pid) : null;
+    }
+
     public static string FormatInstanceListing(IInstanceManager instanceManager)
     {
         var instances = instanceManager.GetInstances();

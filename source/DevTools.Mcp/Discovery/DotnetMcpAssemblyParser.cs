@@ -1,7 +1,6 @@
 using System.Reflection;
 using System.Text.Json;
 using System.Text.Json.Nodes;
-using DevTools.Mcp.Models;
 using Microsoft.Extensions.DependencyInjection;
 using ModelContextProtocol.Protocol;
 using ModelContextProtocol.Server;
@@ -247,7 +246,7 @@ public static class DotnetMcpAssemblyParser
         var assemblyName = Path.GetFileName(assemblyPath);
         var sourceAddress = $"{assemblyName}:{type.FullName}.{method.Name}";
         return McpPrimitiveBinding.Create(
-            ExecutionMode.Assembly,
+            ExecutionMode.Dotnet,
             assemblyPath,
             type.FullName,
             method.Name,

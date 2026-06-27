@@ -40,7 +40,7 @@ public sealed class HostBridgeClient : IHostBridgeClient
 
         var infoResponse = await client.RequestAsync(IpcBridgeMethods.InstanceInfo, ct: ct).ConfigureAwait(false);
         if (infoResponse.Result is { } result)
-            client.Info = JsonSerializer.Deserialize<InstanceInfo>(result.GetRawText(), BridgePipeConnection.JsonOptions);
+            client.Info = JsonSerializer.Deserialize(result.GetRawText(), IpcJsonContext.Default.InstanceInfo);
 
         return client;
     }

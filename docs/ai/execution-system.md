@@ -9,7 +9,7 @@ Deep source: `docs/Execution/README.md`.
 - Providers discover roots and nodes. Strategies execute selected nodes.
 - `AssemblyExecutionProvider` handles `.dll`.
 - `ScriptExecutionProvider` handles directories with `*script.py`, `*script.fsx`, and `*script.csx`.
-- `ExecutionMode` currently includes `Script`, `Assembly`, `Python`, `IronPython`, `FSharp`, and `CSharp`.
+- `ContainerMode` (`Script`, `Assembly`) describes how code is organised; `ExecutionMode` (`Python`, `IronPython`, `FSharp`, `CSharp`, `Dotnet`, `Unsupported`) describes the execution backend.
 
 ## Host Integration
 
