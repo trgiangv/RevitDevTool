@@ -1,7 +1,6 @@
-using DevTools.McpParser.Models;
 using ModelContextProtocol.Protocol;
 
-namespace DevTools.Execution.External.Mcp.BuiltIn;
+namespace DevTools.Mcp.BuiltIn;
 
 /// <summary>Self-describing built-in MCP tool, registered via DI.</summary>
 public interface IBuiltInMcpTool

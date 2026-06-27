@@ -1,10 +1,8 @@
 using System.IO;
 using System.Text.Json;
-using DevTools.Execution.Interfaces;
-using DevTools.McpParser.Models;
 using ModelContextProtocol.Protocol;
 
-namespace DevTools.Execution.External.Mcp.BuiltIn;
+namespace DevTools.Mcp.BuiltIn;
 
 /// <summary>Opens a document file in the running host process via <see cref="IDocumentBridge"/>.</summary>
 public sealed class OpenDocumentTool(IDocumentBridge documentBridge) : IBuiltInMcpTool
@@ -46,17 +44,17 @@ public sealed class OpenDocumentTool(IDocumentBridge documentBridge) : IBuiltInM
             pathElement.ValueKind != JsonValueKind.String)
         {
             return McpToolExecutionResult.Failed(
-                ExecutionErrorCodes.ToolInvokeFailed, $"Missing required '{McpPropertyNames.FilePath}' parameter.");
+                McpExecutionErrorCodes.ToolInvokeFailed, $"Missing required '{McpPropertyNames.FilePath}' parameter.");
         }
 
         var filePath = pathElement.GetString();
         if (string.IsNullOrWhiteSpace(filePath))
             return McpToolExecutionResult.Failed(
-                ExecutionErrorCodes.ToolInvokeFailed, $"{McpPropertyNames.FilePath} must not be empty.");
+                McpExecutionErrorCodes.ToolInvokeFailed, $"{McpPropertyNames.FilePath} must not be empty.");
 
         if (!File.Exists(filePath))
             return McpToolExecutionResult.Failed(
-                ExecutionErrorCodes.ToolInvokeFailed, $"File not found: {filePath}");
+                McpExecutionErrorCodes.ToolInvokeFailed, $"File not found: {filePath}");
 
         var result = await documentBridge.OpenDocumentAsync(filePath!, ct).ConfigureAwait(false);
 

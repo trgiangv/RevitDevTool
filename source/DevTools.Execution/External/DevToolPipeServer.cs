@@ -9,7 +9,6 @@ using DevTools.Logging;
 using DevTools.Execution.External.Connections;
 using DevTools.McpParser.Models;
 using DevTools.Execution.External.Handlers;
-using DevTools.Execution.External.Mcp;
 using DevTools.Execution.External.Mcp.Handlers;
 using Microsoft.Extensions.Hosting;
 // ReSharper disable RedundantSuppressNullableWarningExpression

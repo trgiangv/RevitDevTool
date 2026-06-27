@@ -6,7 +6,7 @@ using System.Text;
 using System.Text.Json;
 using System.Windows.Threading;
 using DevTools.Execution.External.Connections;
-using DevTools.Execution.External.Mcp;
+using DevTools.Mcp;
 using DevTools.McpParser.Models;
 using DevTools.Presentation.Models;
 using DevTools.UI.Behaviors;

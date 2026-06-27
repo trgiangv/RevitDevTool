@@ -1,7 +1,8 @@
 using System.Collections.Concurrent;
 using System.Reflection;
 using Microsoft.Extensions.DependencyInjection;
-namespace DevTools.Execution.External.Mcp.Execution;
+
+namespace DevTools.Mcp.Execution;
 
 internal static class DotnetMcpServerFactory
 {
@@ -26,7 +27,7 @@ internal static class DotnetMcpServerFactory
         cache.TryAdd(cacheKey, server);
         return server;
     }
-    
+
     public static T GetCompletedResult<T>(
         ValueTask<T> task,
         string kind,

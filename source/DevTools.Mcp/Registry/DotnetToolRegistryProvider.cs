@@ -1,6 +1,6 @@
 using System.Diagnostics;
-using DevTools.McpParser.Models;
-namespace DevTools.Execution.External.Mcp.Registry;
+
+namespace DevTools.Mcp.Registry;
 
 public sealed class DotnetToolRegistryProvider : IMcpRegistryProvider
 {

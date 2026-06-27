@@ -1,4 +1,4 @@
-namespace DevTools.Execution.External.Mcp.Dispatchers;
+namespace DevTools.Mcp.Dispatch;
 
 internal interface ICacheable
 {

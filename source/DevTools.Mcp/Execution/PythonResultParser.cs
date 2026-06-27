@@ -1,7 +1,7 @@
 using System.Text.Json;
-using DevTools.McpParser.Models;
 using ModelContextProtocol.Protocol;
-namespace DevTools.Execution.External.Mcp.Execution;
+
+namespace DevTools.Mcp.Execution;
 
 internal static class PythonResultParser
 {

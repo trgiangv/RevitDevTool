@@ -1,13 +1,12 @@
 using System.IO;
 using System.Text;
 using System.Text.RegularExpressions;
-using DevTools.Execution.External.Mcp.Registry;
+using DevTools.Mcp.Registry;
 using DevTools.Settings;
-using DevTools.McpParser.Models;
 using ModelContextProtocol.Protocol;
 // ReSharper disable RedundantSuppressNullableWarningExpression
 
-namespace DevTools.Execution.External.Mcp;
+namespace DevTools.Mcp;
 
 public sealed class ToolRegistryStore(ToolRegistryCatalogLoader catalogLoader, ISettingsService settingsService)
 {

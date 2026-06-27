@@ -1,7 +1,4 @@
-using DevTools.Execution.External.Mcp.Registry;
-using DevTools.McpParser.Models;
-
-namespace DevTools.Execution.External.Mcp.BuiltIn;
+namespace DevTools.Mcp.BuiltIn;
 
 /// <summary>Registers built-in MCP tools into the tool catalog.</summary>
 public sealed class BuiltInToolRegistryProvider(IEnumerable<IBuiltInMcpTool> builtInTools) : IMcpRegistryProvider

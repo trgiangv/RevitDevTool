@@ -1,10 +1,9 @@
 using System.Diagnostics;
 using System.IO;
 using DevTools.Settings.Configs;
-using DevTools.McpParser.Models;
 // ReSharper disable RedundantSuppressNullableWarningExpression
 
-namespace DevTools.Execution.External.Mcp;
+namespace DevTools.Mcp;
 
 public static class McpPathValidator
 {

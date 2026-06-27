@@ -1,5 +1,5 @@
 using System.Diagnostics;
-using DevTools.Execution.External.Mcp;
+using DevTools.Mcp;
 using DevTools.Presentation.ViewModels;
 using DataFormats = System.Windows.DataFormats;
 using DragEventArgs = System.Windows.DragEventArgs;
