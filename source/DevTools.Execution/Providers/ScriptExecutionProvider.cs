@@ -1,13 +1,15 @@
-using System.Diagnostics;
 using System.IO;
 using DevTools.Execution.Interfaces;
 using DevTools.Execution.Models;
+using Microsoft.Extensions.Logging;
+using ZLogger;
 
 namespace DevTools.Execution.Providers;
 
 /// <summary>Folder tree for <c>*script.py</c> (CPython or IronPython), <c>*script.fsx</c>, and <c>*script.csx</c>.</summary>
 public sealed class ScriptExecutionProvider(
-    IScriptExecutionStrategyFactory strategyFactory) : IExecutionProvider
+    IScriptExecutionStrategyFactory strategyFactory,
+    ILogger<ScriptExecutionProvider> logger) : IExecutionProvider
 {
     private static readonly string[] WatchPatterns = ["*script.py", "*script.fsx", "*script.csx"];
 
@@ -35,7 +37,7 @@ public sealed class ScriptExecutionProvider(
         {
             if (!Directory.Exists(path))
             {
-                Trace.TraceWarning($"Invalid directory path: {path}");
+                logger.ZLogWarning($"Invalid directory path: {path}");
                 return Enumerable.Empty<ExecutionNodeBase>();
             }
 
@@ -64,7 +66,7 @@ public sealed class ScriptExecutionProvider(
         return folderNode;
     }
 
-    private static bool ShouldSkipRootFolder(string rootPath, string currentPath)
+    private bool ShouldSkipRootFolder(string rootPath, string currentPath)
     {
         if (!currentPath.Equals(rootPath, StringComparison.OrdinalIgnoreCase))
             return false;
@@ -72,7 +74,7 @@ public sealed class ScriptExecutionProvider(
         if (HasAnyEntryScript(rootPath))
             return false;
 
-        Trace.TraceWarning($"No valid entry script found (*script.py, *script.fsx, or *script.csx) in: {rootPath}");
+        logger.ZLogWarning($"No valid entry script found (*script.py, *script.fsx, or *script.csx) in: {rootPath}");
         return true;
     }
 

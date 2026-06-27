@@ -1,11 +1,12 @@
-using System.Diagnostics;
 using System.IO;
 using System.Text.RegularExpressions;
+using Microsoft.Extensions.Logging;
+using ZLogger;
 namespace DevTools.Execution.Providers.FSharp;
 
-internal static class FSharpDependencyResolver
+public sealed class FSharpDependencyResolver(ILogger<FSharpDependencyResolver> logger, NugetManager nugetManager)
 {
-    public static async Task<FSharpNugetResolutionResult> ResolveAsync(
+    internal async Task<FSharpNugetResolutionResult> ResolveAsync(
         string entryScriptPath,
         LoadGraph graph,
         ICompiledScriptBridge bridgeSupport,
@@ -28,11 +29,11 @@ internal static class FSharpDependencyResolver
             foreach (var request in packageRequests)
             {
                 progress?.Report($"Resolving NuGet {request.PackageId} ({request.Version ?? "latest"})...");
-                var packageDlls = await NugetManager.ResolvePackageDllsAsync(request.PackageId, request.Version, ct).ConfigureAwait(false);
+                var packageDlls = await nugetManager.ResolvePackageDllsAsync(request.PackageId, request.Version, ct).ConfigureAwait(false);
                 foreach (var dllPath in packageDlls)
                     references.Add(dllPath);
 
-                Debug.WriteLine(
+                logger.ZLogDebug(
                     $"[NuGetResolver] {request.PackageId} {request.Version ?? "latest"}");
             }
 
@@ -48,7 +49,7 @@ internal static class FSharpDependencyResolver
         return new FSharpNugetResolutionResult(rewriteResult.EntryScriptPath, references.ToArray(), rewriteResult.Cleanup);
     }
 
-    private static IReadOnlyDictionary<string, IReadOnlyDictionary<int, string>> ResolveFileReferences(
+    private IReadOnlyDictionary<string, IReadOnlyDictionary<int, string>> ResolveFileReferences(
         IReadOnlyList<ReferenceDirective> directives,
         string? hostPattern,
         string hostReplacement,
@@ -69,9 +70,8 @@ internal static class FSharpDependencyResolver
 
             if (!File.Exists(resolved))
             {
-                Trace.TraceWarning(
-                    $"Could not resolve F# reference '{rewritten}' in {directive.FilePath} (line {directive.LineNumber}). " +
-                    "Keeping original #r directive for FSI.");
+                logger.ZLogWarning(
+                    $"Could not resolve F# reference '{rewritten}' in {directive.FilePath} (line {directive.LineNumber}). Keeping original #r directive for FSI.");
                 continue;
             }
 

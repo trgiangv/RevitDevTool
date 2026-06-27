@@ -1,6 +1,7 @@
-using System.Diagnostics;
 using System.IO;
 using DevTools.Presentation.ViewModels;
+using Microsoft.Extensions.Logging;
+using ZLogger;
 using DataFormats = System.Windows.DataFormats;
 using DragEventArgs = System.Windows.DragEventArgs;
 
@@ -8,13 +9,16 @@ namespace DevTools.Presentation.Views;
 
 public partial class CommandView
 {
+    private readonly ILogger<CommandView> _logger;
+
     private const string ValidDropTitle = "Drop to load";
     private const string ValidDropHint = ".dll files and folders are supported";
     private const string InvalidDropTitle = "Unsupported drop";
     private const string InvalidDropHint = "Only .dll files and folders are supported";
 
-    public CommandView()
+    public CommandView(ILogger<CommandView> logger)
     {
+        _logger = logger;
         InitializeComponent();
     }
 
@@ -39,7 +43,7 @@ public partial class CommandView
         }
         catch (Exception ex)
         {
-            Trace.TraceError($"Error handling drop event: {ex.Message}");
+            _logger.ZLogError($"Error handling drop event: {ex.Message}");
         }
     }
 
@@ -74,11 +78,11 @@ public partial class CommandView
 
     private void HideDropMask() => DropMask.Visibility = System.Windows.Visibility.Collapsed;
 
-    private static async Task ProcessDroppedItemAsync(string path, CommandViewModel viewModel)
+    private async Task ProcessDroppedItemAsync(string path, CommandViewModel viewModel)
     {
         if (!IsSupportedPath(path))
         {
-            Trace.TraceWarning($"Unsupported drop item: {path}. Only .dll files and folders are supported.");
+            _logger.ZLogWarning($"Unsupported drop item: {path}. Only .dll files and folders are supported.");
             return;
         }
         if (File.Exists(path))
@@ -87,11 +91,11 @@ public partial class CommandView
             await viewModel.LoadFromPathAsync(path);
     }
 
-    private static async Task ProcessDroppedDllFileAsync(string filePath, CommandViewModel viewModel)
+    private async Task ProcessDroppedDllFileAsync(string filePath, CommandViewModel viewModel)
     {
         if (Utilities.AssemblyLoader.IsManagedAssembly(filePath))
             await viewModel.LoadFromPathAsync(filePath);
         else
-            Trace.TraceWarning($"File {filePath} is not a valid managed assembly.");
+            _logger.ZLogWarning($"File {filePath} is not a valid managed assembly.");
     }
 }

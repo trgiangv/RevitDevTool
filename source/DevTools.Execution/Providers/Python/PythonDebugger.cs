@@ -1,14 +1,16 @@
-using System.Diagnostics;
 using System.Net;
 using System.Net.Sockets;
+using Microsoft.Extensions.Logging;
 using Python.Runtime;
+using ZLogger;
+
 namespace DevTools.Execution.Providers.Python;
 
 public static class PythonDebugger
 {
     public static int DebugPort { get; private set; }
 
-    public static void StartListening()
+    public static void StartListening(ILogger? logger = null)
     {
         DebugPort = FindAvailablePort();
 
@@ -29,11 +31,11 @@ public static class PythonDebugger
         }
         catch (Exception e)
         {
-            Trace.TraceError($"Failed to initialize debugpy: {e.Message}{Environment.NewLine}{e.StackTrace}");
+            logger?.ZLogError($"Failed to initialize debugpy: {e.Message}{Environment.NewLine}{e.StackTrace}");
         }
     }
 
-    public static bool IsConnected()
+    public static bool IsConnected(ILogger? logger = null)
     {
         if (!PythonEngine.IsInitialized) return false;
 
@@ -54,7 +56,7 @@ public static class PythonDebugger
             }
             catch (Exception ex)
             {
-                Trace.TraceWarning($"Failed to check debugger connection: {ex.Message}");
+                logger?.ZLogWarning($"Failed to check debugger connection: {ex.Message}");
                 return false;
             }
         }

@@ -1,14 +1,16 @@
-using System.Diagnostics;
 using System.IO;
 using CliWrap;
 using DevTools.Utilities;
+using Microsoft.Extensions.Logging;
+using ZLogger;
+
 namespace DevTools.Execution.Providers.Python;
 
 /// <summary>
 /// Pixi-based Python environment provider.
 /// Uses conda-forge first, PyPI fallback via pixi's embedded uv.
 /// </summary>
-public sealed class PixiEnvironmentProvider : PyEnvironmentProvider
+public sealed class PixiEnvironmentProvider(ILogger<PixiEnvironmentProvider> logger) : PyEnvironmentProvider
 {
     private const string PixiEnvDirName = "pixi-env";
 
@@ -17,27 +19,32 @@ public sealed class PixiEnvironmentProvider : PyEnvironmentProvider
 
     public override PythonBackend Backend => PythonBackend.Pixi;
 
-    public override bool IsEnvironmentReady() => File.Exists(PythonExe);
-
-    public PixiEnvironmentProvider()
+    public override bool IsEnvironmentReady()
     {
-        PythonHomePath = Path.Combine(PixiProjectDir, @".pixi\envs\default");
+        EnsurePythonHomeAssigned();
+        return File.Exists(PythonExe);
+    }
+
+    private void EnsurePythonHomeAssigned()
+    {
+        PythonHomePath ??= Path.Combine(PixiProjectDir, @".pixi\envs\default");
     }
 
     public override async Task SetupEnvironmentAsync()
     {
+        EnsurePythonHomeAssigned();
         PythonEmbedded.EnsureExtracted();
         await EnsureRequirePackagesAsync().ConfigureAwait(false);
 
         if (!IsEnvironmentReady())
         {
-            Debug.WriteLine("Running pixi install to bootstrap Python environment...");
+            logger.ZLogDebug($"Running pixi install to bootstrap Python environment...");
 
             var result = await Cli.Wrap(PythonInstaller.PixiExePath)
                 .WithArguments("install")
                 .WithWorkingDirectory(PixiProjectDir)
-                .WithStandardOutputPipe(PipeTarget.ToDelegate(line => Trace.TraceInformation($"[pixi] {line}")))
-                .WithStandardErrorPipe(PipeTarget.ToDelegate(line => Trace.TraceWarning($"[pixi] {line}")))
+                .WithStandardOutputPipe(PipeTarget.ToDelegate(line => logger.ZLogInformation($"[pixi] {line}")))
+                .WithStandardErrorPipe(PipeTarget.ToDelegate(line => logger.ZLogWarning($"[pixi] {line}")))
                 .WithValidation(CommandResultValidation.None)
                 .ExecuteAsync().ConfigureAwait(false);
 
@@ -48,10 +55,10 @@ public sealed class PixiEnvironmentProvider : PyEnvironmentProvider
         if (!IsEnvironmentReady())
             throw new InvalidOperationException("Python environment is not ready after pixi install.");
 
-        Debug.WriteLine("Pixi Python environment ready.");
+        logger.ZLogDebug($"Pixi Python environment ready.");
     }
 
-    private static async Task EnsureRequirePackagesAsync()
+    private async Task EnsureRequirePackagesAsync()
     {
         var args = new List<string> { "add" };
         args.AddRange(RequirePackages.Values);
@@ -59,13 +66,13 @@ public sealed class PixiEnvironmentProvider : PyEnvironmentProvider
         var result = await Cli.Wrap(PythonInstaller.PixiExePath)
             .WithArguments(args)
             .WithWorkingDirectory(PixiProjectDir)
-            .WithStandardOutputPipe(PipeTarget.ToDelegate(line => Trace.TraceInformation($"[pixi] {line}")))
-            .WithStandardErrorPipe(PipeTarget.ToDelegate(line => Trace.TraceWarning($"[pixi] {line}")))
+            .WithStandardOutputPipe(PipeTarget.ToDelegate(line => logger.ZLogInformation($"[pixi] {line}")))
+            .WithStandardErrorPipe(PipeTarget.ToDelegate(line => logger.ZLogWarning($"[pixi] {line}")))
             .WithValidation(CommandResultValidation.None)
             .ExecuteAsync().ConfigureAwait(false);
 
         if (result.ExitCode != 0)
-            Trace.TraceWarning($"[Pixi] Failed to ensure required packages (exit {result.ExitCode}), will proceed with pixi install.");
+            logger.ZLogWarning($"[Pixi] Failed to ensure required packages (exit {result.ExitCode}), will proceed with pixi install.");
     }
 
     public override async Task InstallPackagesAsync(

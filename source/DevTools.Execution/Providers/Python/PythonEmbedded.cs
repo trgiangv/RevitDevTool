@@ -1,8 +1,10 @@
 using System.Collections.Concurrent;
-using System.Diagnostics;
 using System.IO;
 using System.Reflection;
 using DevTools.Logging;
+using Microsoft.Extensions.Logging;
+using ZLogger;
+
 namespace DevTools.Execution.Providers.Python;
 
 public static class PythonEmbedded
@@ -71,28 +73,28 @@ public static class PythonEmbedded
     private static bool IsCacheReady => CachePaths.All(ScriptCache.ContainsKey);
     private static bool IsCopyReady => CopyPaths.All(ScriptPathCache.ContainsKey);
 
-    public static void EnsureExtracted()
+    public static void EnsureExtracted(ILogger? logger = null)
     {
         if (IsCacheReady && IsCopyReady) return;
 
         if (!IsCacheReady)
-            EnsureCacheScripts();
+            EnsureCacheScripts(logger);
 
         var pixiEnvDir = PixiEnvironmentProvider.PixiProjectDir;
         Directory.CreateDirectory(pixiEnvDir);
 
         // Parser must be overwritten on every load to ensure latest version is used.
-        CopyResource(ParserSourcePath, pixiEnvDir, overwrite: true);
+        CopyResource(ParserSourcePath, pixiEnvDir, overwrite: true, logger);
 
         // Do not override to prevent re-install package already installed from previous session
-        CopyResource(PixiTomlSourcePath, pixiEnvDir, overwrite: false);
+        CopyResource(PixiTomlSourcePath, pixiEnvDir, overwrite: false, logger);
 
         // https://pixi.prefix.dev/latest/reference/pixi_configuration/#tls-no-verify
         // run once for each session, Required for corporate environments with custom CA certificates.
-        SetupPixiConfig();
+        SetupPixiConfig(logger);
     }
 
-    private static void SetupPixiConfig()
+    private static void SetupPixiConfig(ILogger? logger = null)
     {
         try
         {
@@ -130,11 +132,11 @@ public static class PythonEmbedded
         }
         catch (Exception ex)
         {
-            Trace.TraceError($"Failed to setup Pixi user config: {ex.Message}");
+            logger?.ZLogError($"Failed to setup Pixi user config: {ex.Message}");
         }
     }
 
-    private static void EnsureCacheScripts()
+    private static void EnsureCacheScripts(ILogger? logger = null)
     {
         foreach (var path in CachePaths)
         {
@@ -147,12 +149,12 @@ public static class PythonEmbedded
             }
             catch (Exception ex)
             {
-                Trace.TraceError($"Failed to load embedded script '{path}': {ex.Message}");
+                logger?.ZLogError($"Failed to load embedded script '{path}': {ex.Message}");
             }
         }
     }
 
-    private static void CopyResource(string resourcePath, string targetDirectory, bool overwrite)
+    private static void CopyResource(string resourcePath, string targetDirectory, bool overwrite, ILogger? logger = null)
     {
         try
         {
@@ -173,7 +175,7 @@ public static class PythonEmbedded
         }
         catch (Exception ex)
         {
-            Trace.TraceError($"Failed to copy embedded resource '{resourcePath}': {ex.Message}");
+            logger?.ZLogError($"Failed to copy embedded resource '{resourcePath}': {ex.Message}");
         }
     }
 

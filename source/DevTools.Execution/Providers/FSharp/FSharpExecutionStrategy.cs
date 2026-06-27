@@ -2,6 +2,8 @@ using System.Diagnostics;
 using System.IO;
 using DevTools.Execution.Interfaces;
 using DevTools.Execution.Models;
+using Microsoft.Extensions.Logging;
+using ZLogger;
 namespace DevTools.Execution.Providers.FSharp;
 
 /// <summary>
@@ -12,7 +14,8 @@ public sealed class FSharpExecutionStrategy(
     string scriptPath,
     IHostContextExecutor hostContext,
     ICommandRunner commandRunner,
-    FSharpCompilationCache cache) : IExecutionStrategy
+    FSharpCompilationCache cache,
+    ILogger<FSharpExecutionStrategy> logger) : IExecutionStrategy
 {
     private static readonly TimeSpan CompileTimeout = TimeSpan.FromSeconds(30);
 
@@ -55,7 +58,7 @@ public sealed class FSharpExecutionStrategy(
         catch (Exception ex)
         {
             stopwatch.Stop();
-            Trace.TraceError($"F# execution failed: {ex}");
+            logger.ZLogError($"F# execution failed: {ex}");
             return ExecutionResult.Failed($"F# execution failed: {ex.Message}", ex, stopwatch.ElapsedMilliseconds);
         }
     }
@@ -74,7 +77,7 @@ public sealed class FSharpExecutionStrategy(
         }
         catch (OperationCanceledException) when (!ct.IsCancellationRequested)
         {
-            Trace.TraceError($"F# compilation timeout after {CompileTimeout.TotalSeconds:0}s for '{path}'.");
+            logger.ZLogError($"F# compilation timeout after {CompileTimeout.TotalSeconds:0}s for '{path}'.");
             return null;
         }
     }

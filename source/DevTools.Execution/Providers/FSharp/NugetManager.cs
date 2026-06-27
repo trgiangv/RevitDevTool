@@ -1,44 +1,52 @@
 using System.Collections.Concurrent;
-using System.Diagnostics;
 using System.IO;
 using CliWrap;
 using CliWrap.Buffered;
 using DevTools.Execution.Services;
 using DevTools.Utilities;
+using Microsoft.Extensions.Logging;
+using ZLogger;
 // ReSharper disable RedundantSuppressNullableWarningExpression
 namespace DevTools.Execution.Providers.FSharp;
 
-internal static class NugetManager
+public sealed class NugetManager(ILogger<NugetManager> logger)
 {
+    private const string NugetExeDownloadUrl = "https://dist.nuget.org/win-x86-commandline/latest/nuget.exe";
+
     private static readonly string NugetRoot = Path.Combine(AppUtils.GetApplicationDataPath(), "nuget");
     private static readonly string RestoreRoot = Path.Combine(NugetRoot, ".restore");
-    private static readonly ConcurrentDictionary<string, string[]> SessionCache = new();
 
-    public static async Task<string[]> ResolvePackageDllsAsync(string packageId, string? version, CancellationToken ct)
+    private readonly ConcurrentDictionary<string, string[]> _sessionCache = new();
+
+    private static string NugetExePath => Path.Combine(GetBinPath(), "nuget.exe");
+
+    private static string GetBinPath() => Path.Combine(AppUtils.GetApplicationDataPath(), "bin");
+
+    public async Task<string[]> ResolvePackageDllsAsync(string packageId, string? version, CancellationToken ct)
     {
-        await NugetInstaller.EnsureNugetAsync().ConfigureAwait(false);
+        await EnsureNugetAsync().ConfigureAwait(false);
 
         var resolvedVersion = version ?? await FetchLatestVersionAsync(packageId, ct).ConfigureAwait(false);
         if (string.IsNullOrWhiteSpace(resolvedVersion))
             throw new InvalidOperationException($"Could not resolve version for package '{packageId}'.");
 
         var cacheKey = $"{packageId.ToLowerInvariant()}/{resolvedVersion!.ToLowerInvariant()}";
-        if (SessionCache.TryGetValue(cacheKey, out var cached))
+        if (_sessionCache.TryGetValue(cacheKey, out var cached))
             return cached;
 
         var packageDirs = await RestorePackageGraphAsync(packageId, resolvedVersion, ct).ConfigureAwait(false);
         var dlls = ScanDlls(packageDirs, packageId, resolvedVersion);
-        SessionCache[cacheKey] = dlls;
+        _sessionCache[cacheKey] = dlls;
         return dlls;
     }
 
-    public static async Task<string?> FetchLatestVersionAsync(string packageId, CancellationToken ct)
+    public async Task<string?> FetchLatestVersionAsync(string packageId, CancellationToken ct)
     {
-        await NugetInstaller.EnsureNugetAsync().ConfigureAwait(false);
+        await EnsureNugetAsync().ConfigureAwait(false);
 
         return await NetworkService.WithRetryAsync(async () =>
         {
-            var result = await Cli.Wrap(NugetInstaller.NugetExePath)
+            var result = await Cli.Wrap(NugetExePath)
                 .WithArguments(["search", packageId, "-Source", "https://api.nuget.org/v3/index.json", "-Take", "10"])
                 .WithValidation(CommandResultValidation.None)
                 .ExecuteBufferedAsync(ct).ConfigureAwait(false);
@@ -51,7 +59,37 @@ internal static class NugetManager
         }).ConfigureAwait(false);
     }
 
-    private static async Task<string[]> RestorePackageGraphAsync(string packageId, string version, CancellationToken ct)
+    private async Task EnsureNugetAsync()
+    {
+        if (File.Exists(NugetExePath))
+            return;
+
+        var outputDir = GetBinPath();
+        Directory.CreateDirectory(outputDir);
+
+        logger.ZLogInformation($"Downloading nuget.exe...");
+        await DownloadNugetExeAsync().ConfigureAwait(false);
+        logger.ZLogInformation($"nuget.exe installed.");
+    }
+
+    private static async Task DownloadNugetExeAsync()
+    {
+        var tempPath = Path.Combine(Path.GetTempPath(), $"nuget-{Guid.NewGuid():N}.exe");
+        try
+        {
+            var bytes = await NetworkService.GetBytesAsync(NugetExeDownloadUrl).ConfigureAwait(false);
+            await File.WriteAllBytesAsync(tempPath, bytes).ConfigureAwait(false);
+            var dest = NugetExePath;
+            if (File.Exists(dest)) File.Delete(dest);
+            File.Copy(tempPath, dest, overwrite: true);
+        }
+        finally
+        {
+            if (File.Exists(tempPath)) File.Delete(tempPath);
+        }
+    }
+
+    private async Task<string[]> RestorePackageGraphAsync(string packageId, string version, CancellationToken ct)
     {
         Directory.CreateDirectory(NugetRoot);
         Directory.CreateDirectory(RestoreRoot);
@@ -98,11 +136,11 @@ internal static class NugetManager
             Path.GetFileName(path).Equals($"{packageId}.{version}", StringComparison.OrdinalIgnoreCase);
     }
 
-    private static async Task InstallPackageGraphAsync(string packageId, string version, string outputDirectory, CancellationToken ct)
+    private async Task InstallPackageGraphAsync(string packageId, string version, string outputDirectory, CancellationToken ct)
     {
         await NetworkService.WithRetryAsync(async () =>
         {
-            var result = await Cli.Wrap(NugetInstaller.NugetExePath)
+            var result = await Cli.Wrap(NugetExePath)
                 .WithArguments([
                     "install", packageId,
                     "-Version", version,
@@ -120,7 +158,7 @@ internal static class NugetManager
                 throw new InvalidOperationException(
                     $"nuget.exe install failed for '{packageId} {version}': {result.StandardError.Trim()}");
 
-            Trace.TraceInformation($"[NuGetResolver] Restored {packageId} {version} dependency graph");
+            logger.ZLogInformation($"[NuGetResolver] Restored {packageId} {version} dependency graph");
         }).ConfigureAwait(false);
     }
 
@@ -154,7 +192,7 @@ internal static class NugetManager
             ? path
             : path + Path.DirectorySeparatorChar;
 
-    private static void TryDeleteDirectory(string directory)
+    private void TryDeleteDirectory(string directory)
     {
         try
         {
@@ -163,11 +201,11 @@ internal static class NugetManager
         }
         catch (Exception ex)
         {
-            Trace.TraceWarning($"[NuGetResolver] Failed to delete restore directory '{directory}': {ex.Message}");
+            logger.ZLogWarning($"[NuGetResolver] Failed to delete restore directory '{directory}': {ex.Message}");
         }
     }
 
-    private static string[] ScanDlls(IReadOnlyList<string> packageDirs, string packageId, string version)
+    private string[] ScanDlls(IReadOnlyList<string> packageDirs, string packageId, string version)
     {
         var dlls = new List<string>();
 
@@ -175,19 +213,19 @@ internal static class NugetManager
             dlls.AddRange(ScanPackageDlls(packageDir));
 
         if (dlls.Count == 0)
-            Trace.TraceWarning($"[NuGetResolver] {packageId} {version}: no compatible DLLs found in restored package graph.");
+            logger.ZLogWarning($"[NuGetResolver] {packageId} {version}: no compatible DLLs found in restored package graph.");
 
         return dlls
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .ToArray();
     }
 
-    private static string[] ScanPackageDlls(string packageDir)
+    private string[] ScanPackageDlls(string packageDir)
     {
         var libDir = Path.Combine(packageDir, "lib");
         if (!Directory.Exists(libDir))
         {
-            Trace.TraceInformation($"[NuGetResolver] {Path.GetFileName(packageDir)}: no lib/ folder found.");
+            logger.ZLogInformation($"[NuGetResolver] {Path.GetFileName(packageDir)}: no lib/ folder found.");
             return [];
         }
 
@@ -199,13 +237,12 @@ internal static class NugetManager
 
             var dlls = Directory.GetFiles(tfmDir, "*.dll", SearchOption.TopDirectoryOnly);
             if (dlls.Length <= 0) continue;
-            Trace.TraceInformation($"[NuGetResolver] {Path.GetFileName(packageDir)}: using TFM '{tfm}'");
+            logger.ZLogInformation($"[NuGetResolver] {Path.GetFileName(packageDir)}: using TFM '{tfm}'");
             return dlls;
         }
 
-        Trace.TraceInformation(
-            $"[NuGetResolver] {Path.GetFileName(packageDir)}: no compatible lib TFM for " +
-            $"{System.Runtime.InteropServices.RuntimeInformation.FrameworkDescription}.");
+        logger.ZLogInformation(
+            $"[NuGetResolver] {Path.GetFileName(packageDir)}: no compatible lib TFM for {System.Runtime.InteropServices.RuntimeInformation.FrameworkDescription}.");
         return [];
     }
 

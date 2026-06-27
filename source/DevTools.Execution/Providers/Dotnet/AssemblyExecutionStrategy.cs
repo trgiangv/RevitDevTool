@@ -1,6 +1,8 @@
 using System.Diagnostics;
 using DevTools.Execution.Interfaces;
 using DevTools.Execution.Models;
+using Microsoft.Extensions.Logging;
+using ZLogger;
 namespace DevTools.Execution.Providers.Dotnet;
 
 /// <summary>
@@ -9,7 +11,8 @@ namespace DevTools.Execution.Providers.Dotnet;
 public sealed class AssemblyExecutionStrategy(
     CommandItem commandItem,
     IHostContextExecutor hostContext,
-    ICommandRunner commandRunner) : IExecutionStrategy
+    ICommandRunner commandRunner,
+    ILogger<AssemblyExecutionStrategy> logger) : IExecutionStrategy
 {
     public async Task<ExecutionResult> ExecuteAsync(IProgress<string>? progress = null, CancellationToken cancellationToken = default)
     {
@@ -41,7 +44,7 @@ public sealed class AssemblyExecutionStrategy(
         catch (Exception ex)
         {
             stopwatch.Stop();
-            Trace.TraceError($"Dotnet execution failed: {ex}");
+            logger.ZLogError($"Dotnet execution failed: {ex}");
             return ExecutionResult.Failed($"Dotnet execution failed: {ex.Message}", ex, stopwatch.ElapsedMilliseconds);
         }
     }

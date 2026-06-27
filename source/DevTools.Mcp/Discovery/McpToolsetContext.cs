@@ -1,8 +1,9 @@
-using System.Diagnostics;
 using System.Reflection;
 #if NET
 using System.Runtime.Loader;
 #endif
+using Microsoft.Extensions.Logging;
+using ZLogger;
 
 namespace DevTools.Mcp.Discovery;
 
@@ -11,8 +12,9 @@ namespace DevTools.Mcp.Discovery;
 /// .NET 8+: collectible AssemblyLoadContext with AssemblyDependencyResolver.
 /// .NET Framework: byte-array load with scoped AssemblyResolve handler.
 /// </summary>
-public sealed class McpToolsetContext(string toolsetDllPath) : IDisposable
+public sealed class McpToolsetContext(string toolsetDllPath, ILogger? logger = null) : IDisposable
 {
+    private readonly ILogger? _logger = logger;
     private readonly string _toolsetPath = Path.GetFullPath(toolsetDllPath);
     private Assembly? _loadedAssembly;
     private bool _disposed;
@@ -32,11 +34,11 @@ public sealed class McpToolsetContext(string toolsetDllPath) : IDisposable
 
 #if NET
         var fileName = Path.GetFileNameWithoutExtension(_toolsetPath);
-        _loadContext = new ToolsetLoadContext(_toolsetPath, $"McpToolset_{fileName}");
+        _loadContext = new ToolsetLoadContext(_toolsetPath, $"McpToolset_{fileName}", _logger);
         _loadedAssembly = _loadContext.LoadEntryAssembly();
 #else
         var toolsetDir = Path.GetDirectoryName(_toolsetPath) ?? string.Empty;
-        _resolveHandler = (_, args) => ResolveFromDirectory(toolsetDir, args);
+        _resolveHandler = (_, args) => ResolveFromDirectory(toolsetDir, args, _logger);
         AppDomain.CurrentDomain.AssemblyResolve += _resolveHandler;
         _loadedAssembly = Assembly.Load(File.ReadAllBytes(_toolsetPath));
 #endif
@@ -62,7 +64,7 @@ public sealed class McpToolsetContext(string toolsetDllPath) : IDisposable
     }
 
 #if NETFRAMEWORK
-    private static Assembly? ResolveFromDirectory(string directory, ResolveEventArgs args)
+    private static Assembly? ResolveFromDirectory(string directory, ResolveEventArgs args, ILogger? logger)
     {
         try
         {
@@ -75,7 +77,7 @@ public sealed class McpToolsetContext(string toolsetDllPath) : IDisposable
         }
         catch (Exception ex)
         {
-            Trace.TraceWarning($"[McpToolsetContext] Failed to resolve '{args.Name}': {ex.Message}");
+            logger?.ZLogWarning($"[McpToolsetContext] Failed to resolve '{args.Name}': {ex.Message}");
             return null;
         }
     }
@@ -88,6 +90,8 @@ public sealed class McpToolsetContext(string toolsetDllPath) : IDisposable
         private readonly string _toolsetDirectory;
         private readonly AssemblyDependencyResolver _resolver;
         private readonly bool _hasDepsJson;
+
+        private readonly ILogger? _logger;
 
         private static readonly string[] SharedPrefixes =
         [
@@ -139,12 +143,13 @@ public sealed class McpToolsetContext(string toolsetDllPath) : IDisposable
             return false;
         }
 
-        public ToolsetLoadContext(string toolsetPath, string name)
+        public ToolsetLoadContext(string toolsetPath, string name, ILogger? logger)
             : base(name, isCollectible: true)
         {
             _toolsetPath = toolsetPath;
             _toolsetDirectory = Path.GetDirectoryName(toolsetPath) ?? string.Empty;
             _resolver = new AssemblyDependencyResolver(toolsetPath);
+            _logger = logger;
 
             var depsPath = Path.ChangeExtension(toolsetPath, ".deps.json");
             _hasDepsJson = File.Exists(depsPath);
@@ -220,7 +225,7 @@ public sealed class McpToolsetContext(string toolsetDllPath) : IDisposable
             catch (Exception ex)
             {
                 var fileName = Path.GetFileName(assemblyPath);
-                Trace.TraceError($"[McpToolsetContext] Failed to load '{fileName}': {ex.Message}");
+                _logger?.ZLogError($"[McpToolsetContext] Failed to load '{fileName}': {ex.Message}");
                 throw;
             }
         }

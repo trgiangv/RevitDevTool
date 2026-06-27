@@ -1,9 +1,11 @@
 using System.Collections.ObjectModel;
 using System.Diagnostics;
 using DevTools.Utilities;
+using Microsoft.Extensions.Logging;
+using ZLogger;
 namespace DevTools.Execution.External.Connections;
 
-public sealed partial class ConnectionState : ObservableObject
+public sealed partial class ConnectionState(ILogger<ConnectionState> logger) : ObservableObject
 {
     [ObservableProperty]
     public partial bool IsConnected { get; set; }
@@ -54,7 +56,7 @@ public sealed partial class ConnectionState : ObservableObject
             CurrentStatusMessage = $"Queued '{toolName}'...";
             ExecutionStartedAtUtc = DateTime.UtcNow;
         });
-        return new ExecutionScope(this, toolName);
+        return new ExecutionScope(this, toolName, logger);
     }
 
     internal void UpdateExecution(string toolName, string statusMessage)
@@ -108,13 +110,15 @@ public sealed class ExecutionScope : IDisposable
 {
     private readonly ConnectionState _state;
     private readonly string _toolName;
+    private readonly ILogger? _logger;
     private readonly Stopwatch _stopwatch;
     private bool _completed;
 
-    internal ExecutionScope(ConnectionState state, string toolName)
+    internal ExecutionScope(ConnectionState state, string toolName, ILogger? logger = null)
     {
         _state = state;
         _toolName = toolName;
+        _logger = logger;
         _stopwatch = Stopwatch.StartNew();
     }
 
@@ -136,9 +140,9 @@ public sealed class ExecutionScope : IDisposable
 
         var traceMessage = $"[MCP] Tool '{_toolName}' {result.State} in {elapsed.TotalSeconds:F1}s. {detail}";
         if (result.State == ExecutionState.Completed)
-            Trace.TraceInformation(traceMessage);
+            _logger?.ZLogInformation($"{traceMessage}");
         else
-            Trace.TraceWarning(traceMessage);
+            _logger?.ZLogWarning($"{traceMessage}");
 
         _state.ResetExecution();
     }
@@ -148,7 +152,7 @@ public sealed class ExecutionScope : IDisposable
         if (_completed) return;
         _stopwatch.Stop();
 
-        Trace.TraceWarning(
+        _logger?.ZLogWarning(
             $"[MCP] Tool '{_toolName}' scope disposed without completion after {_stopwatch.Elapsed.TotalSeconds:F1}s.");
         _state.ResetExecution();
     }

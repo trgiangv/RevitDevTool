@@ -2,7 +2,10 @@ using System.Diagnostics;
 using System.IO;
 using DevTools.Execution.Interfaces;
 using DevTools.Execution.Models;
+using Microsoft.Extensions.Logging;
 using Python.Runtime;
+using ZLogger;
+
 namespace DevTools.Execution.Providers.Python;
 
 /// <summary>
@@ -14,7 +17,8 @@ public sealed class PythonExecutionStrategy(
     string rootPath,
     PythonInitializer pythonInitializer,
     PythonExecutor executor,
-    IHostContextExecutor hostContext)
+    IHostContextExecutor hostContext,
+    ILogger<PythonExecutionStrategy> logger)
     : IExecutionStrategy
 {
     public async Task<ExecutionResult> ExecuteAsync(IProgress<string>? progress = null, CancellationToken cancellationToken = default)
@@ -28,7 +32,7 @@ public sealed class PythonExecutionStrategy(
 
             var scriptContent = await File.ReadAllTextAsync(scriptPath, cancellationToken).ConfigureAwait(false);
 
-            var success = await ResolveDependenciesAsync(pythonInitializer, scriptPath, progress, cancellationToken).ConfigureAwait(false);
+            var success = await ResolveDependenciesAsync(pythonInitializer, scriptPath, progress, cancellationToken, logger).ConfigureAwait(false);
             if (!success)
             {
                 stopwatch.Stop();
@@ -70,7 +74,7 @@ public sealed class PythonExecutionStrategy(
         catch (Exception ex)
         {
             stopwatch.Stop();
-            Trace.TraceError($"Python execution pipeline failed: {ex.Message}{Environment.NewLine}{ex.StackTrace}");
+            logger.ZLogError($"Python execution pipeline failed: {ex.Message}{Environment.NewLine}{ex.StackTrace}");
             return ExecutionResult.Failed($"Python execution pipeline failed: {ex.Message}", ex, stopwatch.ElapsedMilliseconds);
         }
     }
@@ -79,7 +83,8 @@ public sealed class PythonExecutionStrategy(
         PythonInitializer pythonInitializer,
         string scriptPath,
         IProgress<string>? progress = null,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default,
+        ILogger? logger = null)
     {
         var provider = pythonInitializer.Provider
             ?? throw new InvalidOperationException("Python environment provider not initialized.");
@@ -92,7 +97,7 @@ public sealed class PythonExecutionStrategy(
         }
         catch (Exception ex)
         {
-            Trace.TraceError($"Failed to parse PEP 723 metadata: {ex.Message}");
+            logger?.ZLogError($"Failed to parse PEP 723 metadata: {ex.Message}");
             return false;
         }
 
@@ -100,15 +105,15 @@ public sealed class PythonExecutionStrategy(
             return true;
 
         var reporter = progress ?? new Progress<string>(_ => { });
-        Trace.TraceInformation($"Installing {dependencies.Count} dependency(s) via {provider.Backend}...");
+        logger?.ZLogInformation($"Installing {dependencies.Count} dependency(s) via {provider.Backend}...");
         reporter.Report($"Installing {dependencies.Count} dependency(s) via {provider.Backend}...");
         await PythonDepsManager.InstallDependenciesAsync(provider, dependencies, reporter, cancellationToken).ConfigureAwait(false);
 
-        RefreshImportCache(pythonInitializer);
+        RefreshImportCache(pythonInitializer, logger);
         return true;
     }
 
-    private static void RefreshImportCache(PythonInitializer pythonInitializer)
+    private static void RefreshImportCache(PythonInitializer pythonInitializer, ILogger? logger = null)
     {
         if (!pythonInitializer.IsInitialized) return;
 
@@ -132,7 +137,7 @@ public sealed class PythonExecutionStrategy(
         }
         catch (Exception ex)
         {
-            Trace.TraceWarning($"Failed to refresh Python import cache: {ex.Message}");
+            logger?.ZLogWarning($"Failed to refresh Python import cache: {ex.Message}");
         }
     }
 }

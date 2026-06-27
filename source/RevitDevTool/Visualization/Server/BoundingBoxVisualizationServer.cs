@@ -1,11 +1,12 @@
 using Autodesk.Revit.DB.DirectContext3D;
-using RevitDevTool.Settings;
 using DevTools.Utilities;
+using Microsoft.Extensions.Logging;
+using RevitDevTool.Core;
+using RevitDevTool.Settings;
 using RevitDevTool.Visualization.Contracts;
 using RevitDevTool.Visualization.Helpers;
 using RevitDevTool.Visualization.Render;
-using System.Diagnostics;
-using RevitDevTool.Core;
+using ZLogger;
 using Color = Autodesk.Revit.DB.Color;
 
 namespace RevitDevTool.Visualization.Server;
@@ -35,8 +36,9 @@ public sealed class BoundingBoxVisualizationServer : VisualizationServer<Boundin
     private Color _edgeColor;
     private Color _axisColor;
 
-    public BoundingBoxVisualizationServer(IRevitSettingsService settingsService)
+    public BoundingBoxVisualizationServer(IRevitSettingsService settingsService, ILogger<BoundingBoxVisualizationServer> logger)
     {
+        Logger = logger;
         var settings = settingsService.VisualizationConfig.BoundingBoxSettings;
         _transparency = settings.Transparency / 100;
         _scale = settings.Scale / 100;
@@ -181,7 +183,7 @@ public sealed class BoundingBoxVisualizationServer : VisualizationServer<Boundin
         }
         catch (Exception ex)
         {
-            Trace.TraceError($"Error mapping geometry buffer in BoundingBoxVisualizationServer: {ex}");
+            Logger?.ZLogError($"Error mapping geometry buffer in BoundingBoxVisualizationServer: {ex}");
         }
     }
 

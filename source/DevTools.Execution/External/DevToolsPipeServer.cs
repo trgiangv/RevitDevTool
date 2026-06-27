@@ -1,5 +1,4 @@
 using System.Collections.Concurrent;
-using System.Diagnostics;
 using System.IO;
 using System.IO.Pipes;
 using System.Security.AccessControl;
@@ -9,6 +8,8 @@ using DevTools.Logging;
 using DevTools.Execution.External.Connections;
 using DevTools.Execution.External.Handlers;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
+using ZLogger;
 // ReSharper disable RedundantSuppressNullableWarningExpression
 
 namespace DevTools.Execution.External;
@@ -20,7 +21,8 @@ public sealed class DevToolsPipeServer(
     IHostAppInfo hostInfo,
     IMcpPrimitiveDispatcher primitiveDispatcher,
     McpToolsetContextManager toolsetContextManager,
-    IEnumerable<IBridgeRequestHandler> handlers) : IHostedService, IDisposable
+    IEnumerable<IBridgeRequestHandler> handlers,
+    ILogger<DevToolsPipeServer> logger) : IHostedService, IDisposable
 {
     private const int MaxPipeInstances = 8;
 
@@ -58,7 +60,7 @@ public sealed class DevToolsPipeServer(
             }
             catch (Exception ex)
             {
-                Trace.TraceWarning($"[PipeServer] Catalog preload failed: {ex.Message}");
+                logger.ZLogWarning($"[PipeServer] Catalog preload failed: {ex.Message}");
             }
         }, cancellationToken);
 
@@ -67,7 +69,7 @@ public sealed class DevToolsPipeServer(
         _cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
         _acceptLoopTask = AcceptLoopAsync(_cts.Token);
 
-        Trace.TraceInformation($"[PipeServer] Listening on pipe '{_pipeName}'.");
+        logger.ZLogInformation($"[PipeServer] Listening on pipe '{_pipeName}'.");
         return Task.CompletedTask;
     }
 
@@ -117,7 +119,7 @@ public sealed class DevToolsPipeServer(
             }
             catch (Exception ex)
             {
-                Trace.TraceWarning($"[PipeServer] Accept loop error: {ex.Message}");
+                logger.ZLogWarning($"[PipeServer] Accept loop error: {ex.Message}");
                 await Task.Delay(500, ct).ConfigureAwait(false);
             }
         }
@@ -129,7 +131,7 @@ public sealed class DevToolsPipeServer(
         var connectionId = Interlocked.Increment(ref _nextConnectionId);
         _connections[connectionId] = conn;
         state.SetConnectedState(_connections.IsEmpty ? 0 : 1);
-        Trace.TraceInformation($"[PipeServer] Client connected. Active clients: {_connections.Count}");
+        logger.ZLogInformation($"[PipeServer] Client connected. Active clients: {_connections.Count}");
 
         conn.MessageReceived += msg => OnMessageReceived(conn, msg);
         conn.Disconnected += () =>
@@ -137,7 +139,7 @@ public sealed class DevToolsPipeServer(
             if (_connections.TryRemove(connectionId, out var disconnectedConnection))
                 disconnectedConnection.Dispose();
             state.SetConnectedState(_connections.IsEmpty ? 0 : 1);
-            Trace.TraceInformation($"[PipeServer] Client disconnected. Active clients: {_connections.Count}");
+            logger.ZLogInformation($"[PipeServer] Client disconnected. Active clients: {_connections.Count}");
         };
         conn.StartReadLoop();
     }
@@ -165,12 +167,12 @@ public sealed class DevToolsPipeServer(
             }
             catch (Exception ex)
             {
-                Trace.TraceWarning($"[PipeServer] Failed to send response: {ex.Message}");
+                logger.ZLogWarning($"[PipeServer] Failed to send response: {ex.Message}");
             }
         }
         catch (Exception ex)
         {
-            Trace.TraceError($"[PipeServer] Unhandled error in message handler: {ex}");
+            logger.ZLogError($"[PipeServer] Unhandled error in message handler: {ex}");
         }
     }
 
@@ -206,13 +208,13 @@ public sealed class DevToolsPipeServer(
                 }
                 catch (Exception ex)
                 {
-                    Trace.TraceWarning($"[PipeServer] Notification '{method}' failed: {ex.Message}");
+                    logger.ZLogWarning($"[PipeServer] Notification '{method}' failed: {ex.Message}");
                 }
             }
         }
         catch (Exception ex)
         {
-            Trace.TraceError($"[PipeServer] Unhandled error in SendNotification: {ex}");
+            logger.ZLogError($"[PipeServer] Unhandled error in SendNotification: {ex}");
         }
     }
 

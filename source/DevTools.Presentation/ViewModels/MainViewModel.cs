@@ -1,5 +1,7 @@
 using System.Diagnostics;
 using System.Windows;
+using Microsoft.Extensions.Logging;
+using ZLogger;
 using CommunityToolkit.Mvvm.Messaging;
 using DevTools.Presentation.Interfaces;
 using DevTools.Presentation.ViewModels.Messages;
@@ -14,6 +16,7 @@ public partial class MainViewModel : ObservableRecipient,
 {
     private readonly LogSettingsViewModel _logSettingsViewModel;
     private readonly ISettingsService _settingsService;
+    private readonly ILogger<MainViewModel> _logger;
     private bool _isInterlockingVisibility;
 
     public LogViewModel LogViewModel { get; }
@@ -67,7 +70,7 @@ public partial class MainViewModel : ObservableRecipient,
     {
         var logFolder = _settingsService.LogConfig.FileLogging.LogFolder;
         try { Process.Start("explorer.exe", logFolder); }
-        catch (Exception ex) { Trace.TraceError($"Failed to open log folder: {ex.Message}"); }
+        catch (Exception ex) { _logger.ZLogError($"Failed to open log folder: {ex.Message}"); }
     }
 
     private bool CanOpenLogFolder() => IsSaveLogEnabled;
@@ -78,7 +81,8 @@ public partial class MainViewModel : ObservableRecipient,
         McpRegistryView mcpRegistryView,
         MemoryView memoryView,
         LogSettingsViewModel logSettingsViewModel,
-        ISettingsService settingsService)
+        ISettingsService settingsService,
+        ILogger<MainViewModel> logger)
     {
         LogViewModel = logViewModel;
         ExecutionView = executionView;
@@ -86,6 +90,7 @@ public partial class MainViewModel : ObservableRecipient,
         MemoryView = memoryView;
         _logSettingsViewModel = logSettingsViewModel;
         _settingsService = settingsService;
+        _logger = logger;
         IsSaveLogEnabled = settingsService.LogConfig.FileLogging.Enabled;
         IsMemoryEnabled = settingsService.GeneralConfig.IsMemoryEnabled;
         IsActive = true;

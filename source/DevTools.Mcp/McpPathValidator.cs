@@ -1,5 +1,6 @@
-using System.Diagnostics;
 using DevTools.Settings.Configs;
+using Microsoft.Extensions.Logging;
+using ZLogger;
 // ReSharper disable RedundantSuppressNullableWarningExpression
 
 namespace DevTools.Mcp;
@@ -56,24 +57,29 @@ public static class McpPathValidator
         return normalizedItem.StartsWith(withSep, StringComparison.OrdinalIgnoreCase);
     }
 
-    private static void RemoveInvalidPaths(List<string> paths, ExecutionMode mode, McpRegistryCatalog catalog)
+    private static void RemoveInvalidPaths(
+        List<string> paths,
+        ExecutionMode mode,
+        McpRegistryCatalog catalog,
+        ILogger? logger = null)
     {
         for (var i = paths.Count - 1; i >= 0; i--)
         {
             if (PathProducesCatalogItems(paths[i], mode, catalog))
                 continue;
 
-            Trace.TraceInformation($"[MCP] Remove saved {mode} path '{paths[i]}' because it loaded no primitives.");
+            logger?.ZLogInformation($"[MCP] Remove saved {mode} path '{paths[i]}' because it loaded no primitives.");
             paths.RemoveAt(i);
         }
     }
 
     public static void PruneInvalidConfiguredPaths(
         McpRegistryConfig config,
-        McpRegistryCatalog loadedCatalog)
+        McpRegistryCatalog loadedCatalog,
+        ILogger? logger = null)
     {
-        RemoveInvalidPaths(config.DotnetPaths, ExecutionMode.Dotnet, loadedCatalog);
-        RemoveInvalidPaths(config.PythonToolsetPaths, ExecutionMode.Python, loadedCatalog);
+        RemoveInvalidPaths(config.DotnetPaths, ExecutionMode.Dotnet, loadedCatalog, logger);
+        RemoveInvalidPaths(config.PythonToolsetPaths, ExecutionMode.Python, loadedCatalog, logger);
     }
 
     private static string NormalizePath(string path) =>

@@ -1,11 +1,12 @@
 using Autodesk.Revit.DB.DirectContext3D;
-using RevitDevTool.Settings;
 using DevTools.Utilities;
+using Microsoft.Extensions.Logging;
+using RevitDevTool.Core;
+using RevitDevTool.Settings;
 using RevitDevTool.Visualization.Contracts;
 using RevitDevTool.Visualization.Helpers;
 using RevitDevTool.Visualization.Render;
-using System.Diagnostics;
-using RevitDevTool.Core;
+using ZLogger;
 using Color = Autodesk.Revit.DB.Color;
 
 namespace RevitDevTool.Visualization.Server;
@@ -27,8 +28,9 @@ public sealed class MeshVisualizationServer : VisualizationServer<Mesh>
     private Color _normalColor;
     private Color _surfaceColor;
 
-    public MeshVisualizationServer(IRevitSettingsService settingsService)
+    public MeshVisualizationServer(IRevitSettingsService settingsService, ILogger<MeshVisualizationServer> logger)
     {
+        Logger = logger;
         var settings = settingsService.VisualizationConfig.MeshSettings;
         _extrusion = settings.Extrusion / 12;
         _transparency = settings.Transparency / 100;
@@ -140,7 +142,7 @@ public sealed class MeshVisualizationServer : VisualizationServer<Mesh>
         }
         catch (Exception ex)
         {
-            Trace.TraceError($"Error mapping geometry buffer in MeshVisualizationServer: {ex}");
+            Logger?.ZLogError($"Error mapping geometry buffer in MeshVisualizationServer: {ex}");
         }
     }
 

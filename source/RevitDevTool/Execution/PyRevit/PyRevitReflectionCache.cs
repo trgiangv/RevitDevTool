@@ -7,6 +7,9 @@ using System.Runtime.CompilerServices;
 using System.Runtime.Serialization;
 #endif
 using DevTools.Execution.Models;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
+using ZLogger;
 // ReSharper disable RedundantSuppressNullableWarningExpression
 
 namespace RevitDevTool.Execution.PyRevit;
@@ -27,11 +30,16 @@ internal sealed class PyRevitReflectionCache
 
     private readonly RuntimeBinding? _runtime;
     private readonly LoaderBinding? _loader;
+    private readonly ILogger<PyRevitReflectionCache> _logger;
 
-    private PyRevitReflectionCache(RuntimeBinding? runtime, LoaderBinding? loader)
+    private PyRevitReflectionCache(
+        RuntimeBinding? runtime,
+        LoaderBinding? loader,
+        ILogger<PyRevitReflectionCache> logger)
     {
         _runtime = runtime;
         _loader = loader;
+        _logger = logger;
     }
 
     internal static PyRevitReflectionCache Instance
@@ -70,7 +78,7 @@ internal sealed class PyRevitReflectionCache
             if (PyRevitLibraryPaths.LoaderAssembly is { } loaderAssembly)
                 loader = LoaderBinding.TryLoad(loaderAssembly);
 
-            _instance = new PyRevitReflectionCache(runtime, loader);
+            _instance = new PyRevitReflectionCache(runtime, loader, NullLogger<PyRevitReflectionCache>.Instance);
         }
     }
 
@@ -297,7 +305,7 @@ internal sealed class PyRevitReflectionCache
     {
         if (!setters.TryGetValue(memberName, out var setter))
         {
-            Debug.WriteLine($"Warning: Member '{memberName}' was not found on type '{instance.GetType().FullName}'.");
+            _instance!._logger.ZLogDebug($"Warning: Member '{memberName}' was not found on type '{instance.GetType().FullName}'.");
             return;
         }
 

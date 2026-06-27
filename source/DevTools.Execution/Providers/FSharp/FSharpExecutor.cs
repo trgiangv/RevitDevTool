@@ -4,16 +4,18 @@ using System.Reflection;
 using System.Text;
 using FSharp.Compiler.Diagnostics;
 using FSharp.Compiler.Interactive;
+using Microsoft.Extensions.Logging;
 using Microsoft.FSharp.Core;
+using ZLogger;
 namespace DevTools.Execution.Providers.FSharp;
 
 /// <summary>
 /// Creates an FsiEvaluationSession and evaluates an F# script.
 /// Uses <see cref="ICompiledScriptBridge"/> for host-specific type discovery and session references.
 /// </summary>
-internal static class FSharpExecutor
+public sealed class FSharpExecutor(ILogger<FSharpExecutor> logger)
 {
-    public static FSharpCompilationOutput CreateSessionAndEvaluate(
+    internal FSharpCompilationOutput CreateSessionAndEvaluate(
         string resolvedScriptPath,
         string[] references,
         ICompiledScriptBridge bridgeSupport)
@@ -63,40 +65,38 @@ internal static class FSharpExecutor
             if (choice.IsChoice2Of2)
             {
                 var exn = ((FSharpChoice<Unit, Exception>.Choice2Of2)choice).Item;
-                Trace.TraceError($"F# script evaluation failed: {exn.Message}{Environment.NewLine}{exn.StackTrace}");
+                logger.ZLogError($"F# script evaluation failed: {exn.Message}{Environment.NewLine}{exn.StackTrace}");
                 DisposeSession(session);
                 return new FSharpCompilationOutput(null, null);
             }
 
-            var commandInstance = bridgeSupport.FindAndCreateCommand(assemblySnapshot);
+            var commandInstance = FindAndCreateCommand(bridgeSupport, assemblySnapshot);
             if (commandInstance != null)
                 return new FSharpCompilationOutput(commandInstance, session);
 
-            Trace.TraceError("No executable command type found in F# script.");
+            logger.ZLogError($"No executable command type found in F# script.");
             DisposeSession(session);
             return new FSharpCompilationOutput(null, null);
         }
         catch (Exception ex)
         {
             FlushOutput(sbOut, sbErr);
-            Trace.TraceError($"F# compilation error: {ex}");
+            logger.ZLogError($"F# compilation error: {ex}");
 
             var inner = ex.InnerException;
             while (inner != null)
             {
-                Trace.TraceError($"F# inner exception: {inner}");
+                logger.ZLogError($"F# inner exception: {inner}");
                 inner = inner.InnerException;
             }
 
-            Trace.TraceError(
-                $"F# runtime context -> CWD: '{Environment.CurrentDirectory}', " +
-                $"FSharp.Core: '{typeof(FSharpOption<>).Assembly.Location}', " +
-                $"FCS: '{typeof(Shell.FsiEvaluationSession).Assembly.Location}'");
+            logger.ZLogError(
+                $"F# runtime context -> CWD: '{Environment.CurrentDirectory}', FSharp.Core: '{typeof(FSharpOption<>).Assembly.Location}', FCS: '{typeof(Shell.FsiEvaluationSession).Assembly.Location}'");
             return new FSharpCompilationOutput(null, null);
         }
     }
-    
-    private static object? FindAndCreateCommand(this ICompiledScriptBridge fSharpBridge, HashSet<Assembly> assemblySnapshot)
+
+    private static object? FindAndCreateCommand(ICompiledScriptBridge fSharpBridge, HashSet<Assembly> assemblySnapshot)
     {
         var current = new HashSet<Assembly>(AppDomain.CurrentDomain.GetAssemblies());
         current.ExceptWith(assemblySnapshot);
@@ -130,7 +130,7 @@ internal static class FSharpExecutor
         return args.ToArray();
     }
 
-    private static void FlushOutput(StringBuilder sbOut, StringBuilder sbErr)
+    private void FlushOutput(StringBuilder sbOut, StringBuilder sbErr)
     {
         if (sbOut.Length > 0)
         {
@@ -139,21 +139,21 @@ internal static class FSharpExecutor
         }
 
         if (sbErr.Length <= 0) return;
-        Trace.TraceError(sbErr.ToString());
+        logger.ZLogError($"{sbErr.ToString()}");
         sbErr.Clear();
     }
 
-    private static void ReportDiagnostics(FSharpDiagnostic[] diagnostics)
+    private void ReportDiagnostics(FSharpDiagnostic[] diagnostics)
     {
         foreach (var diag in diagnostics)
         {
             var msg = ToDiagnosticMessage(diag);
             if (diag.Severity.IsError)
-                Trace.TraceError(msg);
+                logger.ZLogError($"{msg}");
             else if (diag.Severity.IsWarning)
-                Trace.TraceWarning(msg);
+                logger.ZLogWarning($"{msg}");
             else
-                Debug.WriteLine(msg);
+                logger.ZLogDebug($"{msg}");
         }
     }
 

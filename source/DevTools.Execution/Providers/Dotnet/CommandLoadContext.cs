@@ -1,8 +1,9 @@
 #if NET
-using System.Diagnostics;
 using System.IO;
 using System.Reflection;
 using System.Runtime.Loader;
+using Microsoft.Extensions.Logging;
+using ZLogger;
 namespace DevTools.Execution.Providers.Dotnet;
 
 /// <summary>
@@ -70,12 +71,15 @@ public class CommandLoadContext : AssemblyLoadContext
         return false;
     }
 
-    public CommandLoadContext(string pluginPath) : base(name: $"DevTools_{Guid.NewGuid():N}", isCollectible: true)
+    public CommandLoadContext(string pluginPath, ILogger? logger = null) : base(name: $"DevTools_{Guid.NewGuid():N}", isCollectible: true)
     {
         _resolver = new AssemblyDependencyResolver(pluginPath);
         var pluginDirectory = Path.GetDirectoryName(pluginPath) ?? string.Empty;
         PreloadAssemblies(this, pluginDirectory);
+        _logger = logger;
     }
+
+    private readonly ILogger? _logger;
 
     protected override Assembly? Load(AssemblyName assemblyName)
     {
@@ -125,7 +129,7 @@ public class CommandLoadContext : AssemblyLoadContext
         catch (Exception ex)
         {
             var fileName = Path.GetFileName(assemblyPath);
-            Trace.TraceError($"{nameof(CommandLoadContext)} Failed to load '{fileName}': {ex.Message}");
+            _logger?.ZLogError($"{nameof(CommandLoadContext)} Failed to load '{fileName}': {ex.Message}");
             return null;
         }
     }

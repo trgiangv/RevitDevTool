@@ -1,17 +1,18 @@
-using System.Diagnostics;
 using System.IO;
 using System.Text.Json;
 using CliWrap;
 using CliWrap.Buffered;
 using DevTools.Execution.Models;
 using DevTools.Execution.Providers.Python;
+using Microsoft.Extensions.Logging;
+using ZLogger;
 // ReSharper disable RedundantSuppressNullableWarningExpression
 
 namespace DevTools.Execution.Services;
 
-internal static class PixiPackageHelper
+public sealed class PixiPackageHelper(ILogger<PixiPackageHelper> logger)
 {
-    public static async Task<IReadOnlyList<Package>> ListPackagesAsync(CancellationToken cancellationToken)
+    public async Task<IReadOnlyList<Package>> ListPackagesAsync(CancellationToken cancellationToken)
     {
         if (!PythonInstaller.IsPixiInstalled() || !Directory.Exists(PixiEnvironmentProvider.PixiProjectDir))
             return [];
@@ -36,7 +37,11 @@ internal static class PixiPackageHelper
         }
     }
 
-    public static async Task InstallAsync(string packageId, string? declaredVersion, bool pypi, CancellationToken cancellationToken)
+    public async Task InstallAsync(
+        string packageId,
+        string? declaredVersion,
+        bool pypi,
+        CancellationToken cancellationToken)
     {
         if (string.IsNullOrWhiteSpace(packageId) || !IsAvailable())
             return;
@@ -58,7 +63,7 @@ internal static class PixiPackageHelper
     /// within the existing constraint range; user packages use <c>pixi add</c>
     /// to get the latest version.
     /// </summary>
-    public static async Task UpdateAsync(Package package, bool pypi, CancellationToken cancellationToken)
+    public async Task UpdateAsync(Package package, bool pypi, CancellationToken cancellationToken)
     {
         if (string.IsNullOrWhiteSpace(package.PackageId) || !IsAvailable())
             return;
@@ -77,7 +82,7 @@ internal static class PixiPackageHelper
         }
     }
 
-    public static async Task RemoveAsync(string packageId, bool pypi, CancellationToken cancellationToken)
+    public async Task RemoveAsync(string packageId, bool pypi, CancellationToken cancellationToken)
     {
         if (string.IsNullOrWhiteSpace(packageId) || !IsAvailable())
             return;
@@ -94,12 +99,12 @@ internal static class PixiPackageHelper
             .ExecuteAsync(cancellationToken).ConfigureAwait(false);
     }
 
-    private static bool IsAvailable()
+    private bool IsAvailable()
     {
         if (PythonInstaller.IsPixiInstalled() && Directory.Exists(PixiEnvironmentProvider.PixiProjectDir))
             return true;
 
-        Trace.TraceWarning("Pixi runtime is unavailable. Skipping operation.");
+        logger.ZLogWarning($"Pixi runtime is unavailable. Skipping operation.");
         return false;
     }
 

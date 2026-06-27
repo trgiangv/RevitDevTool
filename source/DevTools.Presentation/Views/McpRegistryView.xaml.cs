@@ -1,5 +1,6 @@
-using System.Diagnostics;
 using DevTools.Mcp;
+using Microsoft.Extensions.Logging;
+using ZLogger;
 using DevTools.Presentation.ViewModels;
 using DataFormats = System.Windows.DataFormats;
 using DragEventArgs = System.Windows.DragEventArgs;
@@ -8,13 +9,16 @@ namespace DevTools.Presentation.Views;
 
 public partial class McpRegistryView
 {
+    private readonly ILogger<McpRegistryView> _logger;
+
     private const string ValidDropTitle = "Drop to load";
     private const string ValidDropHint = "Direct .dll files or Python toolset folders are supported";
     private const string InvalidDropTitle = "Unsupported drop";
     private const string InvalidDropHint = "Only direct .dll files or Python toolset folders are supported";
 
-    public McpRegistryView(McpRegistryViewModel viewModel)
+    public McpRegistryView(McpRegistryViewModel viewModel, ILogger<McpRegistryView> logger)
     {
+        _logger = logger;
         DataContext = viewModel;
         InitializeComponent();
 
@@ -44,7 +48,7 @@ public partial class McpRegistryView
         }
         catch (Exception ex)
         {
-            Trace.TraceError($"Error handling MCP drop event: {ex.Message}");
+            _logger.ZLogError($"Error handling MCP drop event: {ex.Message}");
         }
     }
 

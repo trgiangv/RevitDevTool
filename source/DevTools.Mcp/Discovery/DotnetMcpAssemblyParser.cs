@@ -2,25 +2,27 @@ using System.Reflection;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using ModelContextProtocol.Protocol;
 using ModelContextProtocol.Server;
+using ZLogger;
 // ReSharper disable RedundantSuppressNullableWarningExpression
 namespace DevTools.Mcp.Discovery;
 
-public static class DotnetMcpAssemblyParser
+public sealed class DotnetMcpAssemblyParser(ILogger<DotnetMcpAssemblyParser> logger)
 {
-    private static readonly string McpToolTypeAttributeName = typeof(McpServerToolTypeAttribute).FullName!;
-    private static readonly string McpToolAttributeName = typeof(McpServerToolAttribute).FullName!;
-    private static readonly string McpPromptTypeAttributeName = typeof(McpServerPromptTypeAttribute).FullName!;
-    private static readonly string McpPromptAttributeName = typeof(McpServerPromptAttribute).FullName!;
-    private static readonly string McpResourceTypeAttributeName = typeof(McpServerResourceTypeAttribute).FullName!;
-    private static readonly string McpResourceAttributeName = typeof(McpServerResourceAttribute).FullName!;
-    private static readonly string McpMetaAttributeName = typeof(McpMetaAttribute).FullName!;
-    private static readonly string DescriptionAttributeTypeName = typeof(System.ComponentModel.DescriptionAttribute).FullName!;
-    private static readonly string FromKeyedServicesAttributeFullName = typeof(FromKeyedServicesAttribute).FullName!;
-    private static readonly string IProgressGenericFullName = typeof(IProgress<>).FullName!;
-    private static readonly string RequestContextGenericFullName = typeof(RequestContext<>).FullName!;
-    private static readonly string NullableGenericFullName = typeof(Nullable<>).FullName!;
+    private readonly string McpToolTypeAttributeName = typeof(McpServerToolTypeAttribute).FullName!;
+    private readonly string McpToolAttributeName = typeof(McpServerToolAttribute).FullName!;
+    private readonly string McpPromptTypeAttributeName = typeof(McpServerPromptTypeAttribute).FullName!;
+    private readonly string McpPromptAttributeName = typeof(McpServerPromptAttribute).FullName!;
+    private readonly string McpResourceTypeAttributeName = typeof(McpServerResourceTypeAttribute).FullName!;
+    private readonly string McpResourceAttributeName = typeof(McpServerResourceAttribute).FullName!;
+    private readonly string McpMetaAttributeName = typeof(McpMetaAttribute).FullName!;
+    private readonly string DescriptionAttributeTypeName = typeof(System.ComponentModel.DescriptionAttribute).FullName!;
+    private readonly string FromKeyedServicesAttributeFullName = typeof(FromKeyedServicesAttribute).FullName!;
+    private readonly string IProgressGenericFullName = typeof(IProgress<>).FullName!;
+    private readonly string RequestContextGenericFullName = typeof(RequestContext<>).FullName!;
+    private readonly string NullableGenericFullName = typeof(Nullable<>).FullName!;
     private const string IconSourceMemberName = "IconSource";
     private const string NameMemberName = "Name";
     private const string TitleMemberName = "Title";
@@ -28,7 +30,7 @@ public static class DotnetMcpAssemblyParser
     private const string UriTemplateMemberName = "UriTemplate";
     private const string MimeTypeMemberName = "MimeType";
 
-    public static McpRegistryCatalog ParseCatalogFromAssembly(string assemblyPath)
+    public McpRegistryCatalog ParseCatalogFromAssembly(string assemblyPath)
     {
         var tools = new List<McpRegisteredTool>();
         var prompts = new List<McpRegisteredPrompt>();
@@ -58,7 +60,7 @@ public static class DotnetMcpAssemblyParser
         };
     }
 
-    private static IEnumerable<McpRegisteredTool> ParseTools(Type type, string assemblyPath)
+    private IEnumerable<McpRegisteredTool> ParseTools(Type type, string assemblyPath)
     {
         foreach (var method in GetCandidateMethods(type))
         {
@@ -68,7 +70,7 @@ public static class DotnetMcpAssemblyParser
         }
     }
 
-    private static IEnumerable<McpRegisteredPrompt> ParsePrompts(Type type, string assemblyPath)
+    private IEnumerable<McpRegisteredPrompt> ParsePrompts(Type type, string assemblyPath)
     {
         foreach (var method in GetCandidateMethods(type))
         {
@@ -78,7 +80,7 @@ public static class DotnetMcpAssemblyParser
         }
     }
 
-    private static IEnumerable<McpRegisteredResource> ParseResources(Type type, string assemblyPath)
+    private IEnumerable<McpRegisteredResource> ParseResources(Type type, string assemblyPath)
     {
         foreach (var method in GetCandidateMethods(type))
         {
@@ -88,13 +90,13 @@ public static class DotnetMcpAssemblyParser
         }
     }
 
-    private static IEnumerable<MethodInfo> GetCandidateMethods(Type type)
+    private IEnumerable<MethodInfo> GetCandidateMethods(Type type)
     {
         return type.GetMethods(BindingFlags.Public | BindingFlags.Static | BindingFlags.Instance)
             .OrderBy(item => item.Name, StringComparer.OrdinalIgnoreCase);
     }
 
-    private static McpRegisteredTool? TryBuildTool(Type type, MethodInfo method, string assemblyPath)
+    private McpRegisteredTool? TryBuildTool(Type type, MethodInfo method, string assemblyPath)
     {
         try
         {
@@ -137,7 +139,7 @@ public static class DotnetMcpAssemblyParser
         }
     }
 
-    private static McpRegisteredPrompt? TryBuildPrompt(Type type, MethodInfo method, string assemblyPath)
+    private McpRegisteredPrompt? TryBuildPrompt(Type type, MethodInfo method, string assemblyPath)
     {
         try
         {
@@ -179,7 +181,7 @@ public static class DotnetMcpAssemblyParser
         }
     }
 
-    private static McpRegisteredResource? TryBuildResource(Type type, MethodInfo method, string assemblyPath)
+    private McpRegisteredResource? TryBuildResource(Type type, MethodInfo method, string assemblyPath)
     {
         try
         {
@@ -241,7 +243,7 @@ public static class DotnetMcpAssemblyParser
         }
     }
 
-    private static McpPrimitiveBinding BuildBinding(string assemblyPath, Type type, MethodInfo method)
+    private McpPrimitiveBinding BuildBinding(string assemblyPath, Type type, MethodInfo method)
     {
         var assemblyName = Path.GetFileName(assemblyPath);
         var sourceAddress = $"{assemblyName}:{type.FullName}.{method.Name}";
@@ -254,14 +256,14 @@ public static class DotnetMcpAssemblyParser
             assemblyName);
     }
 
-    private static readonly HashSet<string> InfrastructureTypeNames = new(StringComparer.Ordinal)
+    private readonly HashSet<string> InfrastructureTypeNames = new(StringComparer.Ordinal)
     {
         typeof(CancellationToken).FullName!,
         typeof(IServiceProvider).FullName!,
         typeof(McpServer).FullName!,
     };
 
-    private static bool IsInfrastructureParameter(ParameterInfo parameter)
+    private bool IsInfrastructureParameter(ParameterInfo parameter)
     {
         var paramType = parameter.ParameterType;
         var fullName = paramType.FullName ?? paramType.Name;
@@ -284,7 +286,7 @@ public static class DotnetMcpAssemblyParser
         return false;
     }
 
-    private static JsonElement BuildInputSchema(MethodInfo method)
+    private JsonElement BuildInputSchema(MethodInfo method)
     {
         var parameters = method.GetParameters()
             .Where(p => !IsInfrastructureParameter(p))
@@ -317,7 +319,7 @@ public static class DotnetMcpAssemblyParser
         return JsonSerializer.SerializeToElement(schema);
     }
 
-    private static readonly Dictionary<string, string> JsonSchemaTypeMap = new(StringComparer.Ordinal)
+    private readonly Dictionary<string, string> JsonSchemaTypeMap = new(StringComparer.Ordinal)
     {
         [typeof(string).FullName!] = JsonSchemaTypeNames.String,
         [typeof(int).FullName!] = JsonSchemaTypeNames.Integer,
@@ -327,7 +329,7 @@ public static class DotnetMcpAssemblyParser
         [typeof(bool).FullName!] = JsonSchemaTypeNames.Boolean,
     };
 
-    private static string MapParameterTypeToJsonSchema(Type parameterType)
+    private string MapParameterTypeToJsonSchema(Type parameterType)
     {
         while (true)
         {
@@ -341,14 +343,14 @@ public static class DotnetMcpAssemblyParser
         }
     }
 
-    private static IList<Icon>? ParseIcons(string? iconSource)
+    private IList<Icon>? ParseIcons(string? iconSource)
     {
         if (string.IsNullOrWhiteSpace(iconSource))
             return null;
         return [new Icon { Source = iconSource!.Trim() }];
     }
 
-    private static PromptArgument BuildPromptArgument(ParameterInfo parameter)
+    private PromptArgument BuildPromptArgument(ParameterInfo parameter)
     {
         return new PromptArgument
         {
@@ -358,7 +360,7 @@ public static class DotnetMcpAssemblyParser
         };
     }
 
-    private static string BuildFallbackUriTemplate(string name, MethodInfo method)
+    private string BuildFallbackUriTemplate(string name, MethodInfo method)
     {
         var normalizedName = string.IsNullOrWhiteSpace(name)
             ? method.Name.ToLowerInvariant()
@@ -373,12 +375,12 @@ public static class DotnetMcpAssemblyParser
             : $"resource://{normalizedName}/{string.Join("/", parameters)}";
     }
 
-    private static CustomAttributeData? FindAttribute(MemberInfo member, string attributeFullName)
+    private CustomAttributeData? FindAttribute(MemberInfo member, string attributeFullName)
     {
         return member.CustomAttributes.FirstOrDefault(attr => attr.AttributeType.FullName == attributeFullName);
     }
 
-    private static ToolAnnotations? BuildAnnotations(CustomAttributeData toolAttribute, string? title)
+    private ToolAnnotations? BuildAnnotations(CustomAttributeData toolAttribute, string? title)
     {
         var readOnlyHint = ExtractNamedValueArg<bool>(toolAttribute, "ReadOnly");
         var destructiveHint = ExtractNamedValueArg<bool>(toolAttribute, "Destructive");
@@ -404,7 +406,7 @@ public static class DotnetMcpAssemblyParser
         };
     }
 
-    private static JsonObject? BuildMeta(MethodInfo method)
+    private JsonObject? BuildMeta(MethodInfo method)
     {
         var metaAttributes = method.CustomAttributes
             .Where(attr => string.Equals(attr.AttributeType.FullName, McpMetaAttributeName, StringComparison.Ordinal))
@@ -426,7 +428,7 @@ public static class DotnetMcpAssemblyParser
         return metadata.Count == 0 ? null : metadata;
     }
 
-    private static string? ReadMetaJsonValue(CustomAttributeData attribute)
+    private string? ReadMetaJsonValue(CustomAttributeData attribute)
     {
         var namedJsonValue = ExtractNamedArg<string>(attribute, nameof(McpMetaAttribute.JsonValue));
         if (!string.IsNullOrWhiteSpace(namedJsonValue))
@@ -447,7 +449,7 @@ public static class DotnetMcpAssemblyParser
         return null;
     }
 
-    private static T? ExtractNamedArg<T>(CustomAttributeData? attr, string memberName) where T : class
+    private T? ExtractNamedArg<T>(CustomAttributeData? attr, string memberName) where T : class
     {
         var namedAgrs = attr?.NamedArguments;
         if (namedAgrs == null) return null;
@@ -460,7 +462,7 @@ public static class DotnetMcpAssemblyParser
         return null;
     }
 
-    private static T? ExtractNamedValueArg<T>(CustomAttributeData? attr, string memberName) where T : struct
+    private T? ExtractNamedValueArg<T>(CustomAttributeData? attr, string memberName) where T : struct
     {
         var namedAgrs = attr?.NamedArguments;
         if (namedAgrs == null) return null;
@@ -473,7 +475,7 @@ public static class DotnetMcpAssemblyParser
         return null;
     }
 
-    private static string? ReadDescription(IEnumerable<CustomAttributeData> customAttributes)
+    private string? ReadDescription(IEnumerable<CustomAttributeData> customAttributes)
     {
         return customAttributes
             .Where(attr => string.Equals(attr.AttributeType.FullName, DescriptionAttributeTypeName, StringComparison.Ordinal))
@@ -481,14 +483,14 @@ public static class DotnetMcpAssemblyParser
             .FirstOrDefault(text => !string.IsNullOrWhiteSpace(text));
     }
 
-    private static bool HasAttribute(IEnumerable<CustomAttributeData> attrs, string fullName)
+    private bool HasAttribute(IEnumerable<CustomAttributeData> attrs, string fullName)
     {
         return attrs.Any(attr => attr.AttributeType.FullName == fullName);
     }
 
-    private static void WarnSkipped(string kind, Type type, MethodInfo method, string assemblyPath, Exception ex)
+    private void WarnSkipped(string kind, Type type, MethodInfo method, string assemblyPath, Exception ex)
     {
-        System.Diagnostics.Trace.TraceWarning(
+        logger.ZLogWarning(
             $"[MCP] Skip .NET {kind} '{type.FullName}.{method.Name}' in '{assemblyPath}': {ex.Message}");
     }
 }

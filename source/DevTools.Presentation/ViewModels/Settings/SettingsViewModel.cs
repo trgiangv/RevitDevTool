@@ -1,5 +1,6 @@
-using System.Diagnostics;
 using CommunityToolkit.Mvvm.Messaging;
+using Microsoft.Extensions.Logging;
+using ZLogger;
 using DevTools.Presentation.Interfaces;
 using DevTools.Presentation.ViewModels.Messages;
 using DevTools.Settings;
@@ -11,6 +12,7 @@ public partial class SettingsViewModel(
     GeneralSettingsViewModel generalSettings,
     LogSettingsViewModel logSettings,
     McpSettingViewModel mcpSettings,
+    ILogger<SettingsViewModel> logger,
     IVisualizationBridge? visualization = null) : ObservableObject
 {
     public GeneralSettingsViewModel GeneralSettings => generalSettings;
@@ -25,6 +27,6 @@ public partial class SettingsViewModel(
         settingsService.ResetSettings();
         visualization?.Refresh();
         messenger.Send(new ResetSettingsMessage());
-        Trace.TraceInformation("Reset all settings to default");
+        logger.ZLogInformation($"Reset all settings to default");
     }
 }

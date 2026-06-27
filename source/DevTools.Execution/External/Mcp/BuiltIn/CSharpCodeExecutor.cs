@@ -12,6 +12,7 @@ namespace DevTools.Execution.External.Mcp.BuiltIn;
 /// </summary>
 public sealed class CSharpCodeExecutor(
     ICompiledScriptBridge scriptBridge,
+    CSharpCompiler compiler,
     IHostContextExecutor hostContext,
     ICommandRunner commandRunner)
 {
@@ -28,7 +29,7 @@ public sealed class CSharpCodeExecutor(
             using var timeoutCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
             timeoutCts.CancelAfter(CompileTimeout);
 
-            compilationResult = await CSharpCompiler
+            compilationResult = await compiler
                 .CompileAsync(tempFile, scriptBridge, ct: timeoutCts.Token)
                 .ConfigureAwait(false);
 

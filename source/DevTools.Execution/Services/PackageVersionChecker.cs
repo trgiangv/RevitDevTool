@@ -1,13 +1,17 @@
-using System.Diagnostics;
 using DevTools.Execution.Models;
 using DevTools.Execution.Providers.FSharp;
+using Microsoft.Extensions.Logging;
+using ZLogger;
 // ReSharper disable RedundantSuppressNullableWarningExpression
 
 namespace DevTools.Execution.Services;
 
-internal static class PackageVersionChecker
+public sealed class PackageVersionChecker(NugetManager nugetManager, ILogger<PackageVersionChecker> logger)
 {
-    public static async Task<IReadOnlyList<Package>> AttachLatestVersionsAsync(
+    private readonly NugetManager _nugetManager = nugetManager;
+    private readonly ILogger<PackageVersionChecker> _logger = logger;
+
+    public async Task<IReadOnlyList<Package>> AttachLatestVersionsAsync(
         IReadOnlyList<Package> packages,
         CancellationToken cancellationToken)
     {
@@ -42,7 +46,10 @@ internal static class PackageVersionChecker
             .ToArray();
     }
 
-    private static async Task<string?> FetchLatestAsync(Marketplace marketplace, string packageId, CancellationToken cancellationToken)
+    private async Task<string?> FetchLatestAsync(
+        Marketplace marketplace,
+        string packageId,
+        CancellationToken cancellationToken)
     {
         return marketplace switch
         {
@@ -53,20 +60,20 @@ internal static class PackageVersionChecker
         };
     }
 
-    private static async Task<string?> FetchNuGetAsync(string packageId, CancellationToken cancellationToken)
+    private async Task<string?> FetchNuGetAsync(string packageId, CancellationToken cancellationToken)
     {
         try
         {
-            return await NugetManager.FetchLatestVersionAsync(packageId, cancellationToken).ConfigureAwait(false);
+            return await _nugetManager.FetchLatestVersionAsync(packageId, cancellationToken).ConfigureAwait(false);
         }
         catch (Exception ex)
         {
-            Trace.TraceWarning($"[Package] NuGet lookup failed for '{packageId}': {ex.Message}");
+            _logger.ZLogWarning($"[Package] NuGet lookup failed for '{packageId}': {ex.Message}");
             return null;
         }
     }
 
-    private static async Task<string?> FetchPyPiAsync(string packageId, CancellationToken cancellationToken)
+    private async Task<string?> FetchPyPiAsync(string packageId, CancellationToken cancellationToken)
     {
         try
         {
@@ -81,12 +88,12 @@ internal static class PackageVersionChecker
         }
         catch (Exception ex)
         {
-            Trace.TraceWarning($"[Package] PyPI lookup failed for '{packageId}': {ex.Message}");
+            _logger.ZLogWarning($"[Package] PyPI lookup failed for '{packageId}': {ex.Message}");
             return null;
         }
     }
 
-    private static async Task<string?> FetchCondaAsync(string packageId, CancellationToken cancellationToken)
+    private async Task<string?> FetchCondaAsync(string packageId, CancellationToken cancellationToken)
     {
         try
         {
@@ -100,7 +107,7 @@ internal static class PackageVersionChecker
         }
         catch (Exception ex)
         {
-            Trace.TraceWarning($"[Package] Conda lookup failed for '{packageId}': {ex.Message}");
+            _logger.ZLogWarning($"[Package] Conda lookup failed for '{packageId}': {ex.Message}");
             return null;
         }
     }

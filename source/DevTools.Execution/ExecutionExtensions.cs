@@ -41,6 +41,14 @@ public static class ExecutionExtensions
         services.AddSingleton<PythonInitializer>();
         services.AddSingleton<PythonExecutor>();
 
+        services.AddSingleton<NugetManager>();
+        services.AddSingleton<PackageVersionChecker>();
+        services.AddSingleton<PixiPackageHelper>();
+        services.AddSingleton<FSharpDependencyResolver>();
+        services.AddSingleton<FSharpExecutor>();
+        services.AddSingleton<PythonToolsetParser>();
+        services.AddSingleton<DotnetMcpAssemblyParser>();
+        services.AddSingleton<CSharpCompiler>();
         services.AddSingleton<CSharpCompilationCache>();
         services.AddSingleton<FSharpCompilationCache>();
         services.AddSingleton<ScriptExecutionStrategyFactory>();

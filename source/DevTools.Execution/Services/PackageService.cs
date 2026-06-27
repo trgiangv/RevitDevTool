@@ -1,4 +1,3 @@
-using System.Diagnostics;
 using System.IO;
 using DevTools.Logging;
 using DevTools.Execution.Interfaces;
@@ -6,9 +5,17 @@ using DevTools.Execution.Models;
 using DevTools.Execution.Providers.FSharp;
 using DevTools.Execution.Providers.Python;
 using DevTools.Utilities;
+using Microsoft.Extensions.Logging;
+using ZLogger;
 namespace DevTools.Execution.Services;
 
-public sealed class PackageService(PythonInitializer pythonInitializer, IHostAppInfo hostAppInfo) : IPackageService
+public sealed class PackageService(
+    PythonInitializer pythonInitializer,
+    IHostAppInfo hostAppInfo,
+    NugetManager nugetManager,
+    PixiPackageHelper pixiPackageHelper,
+    PackageVersionChecker packageVersionChecker,
+    ILogger<PackageService> logger) : IPackageService
 {
     private static readonly string NuGetCacheRoot = Path.Combine(AppUtils.GetApplicationDataPath(), "nuget");
 
@@ -19,7 +26,7 @@ public sealed class PackageService(PythonInitializer pythonInitializer, IHostApp
     {
         var nugetTask = Task.Run(ListNuGetPackages, cancellationToken);
         var pythonTask = IsPixiBackend
-            ? PixiPackageHelper.ListPackagesAsync(cancellationToken)
+            ? pixiPackageHelper.ListPackagesAsync(cancellationToken)
             : Provider is not null
                 ? PipPackageHelper.ListPackagesAsync(Provider, cancellationToken)
                 : Task.FromResult<IReadOnlyList<Package>>([]);
@@ -30,7 +37,7 @@ public sealed class PackageService(PythonInitializer pythonInitializer, IHostApp
         packages.AddRange(nugetTask.Result);
         packages.AddRange(pythonTask.Result);
 
-        return await PackageVersionChecker.AttachLatestVersionsAsync(packages, cancellationToken).ConfigureAwait(false);
+        return await packageVersionChecker.AttachLatestVersionsAsync(packages, cancellationToken).ConfigureAwait(false);
     }
 
     public async Task RemovePackageAsync(Package package, CancellationToken cancellationToken = default)
@@ -44,11 +51,11 @@ public sealed class PackageService(PythonInitializer pythonInitializer, IHostApp
                 await RemoveNuGetPackageAsync(package, cancellationToken).ConfigureAwait(false);
                 break;
             case Marketplace.CondaForge:
-                await PixiPackageHelper.RemoveAsync(package.PackageId, pypi: false, cancellationToken).ConfigureAwait(false);
+                await pixiPackageHelper.RemoveAsync(package.PackageId, pypi: false, cancellationToken).ConfigureAwait(false);
                 break;
             case Marketplace.PyPi:
                 if (IsPixiBackend)
-                    await PixiPackageHelper.RemoveAsync(package.PackageId, pypi: true, cancellationToken).ConfigureAwait(false);
+                    await pixiPackageHelper.RemoveAsync(package.PackageId, pypi: true, cancellationToken).ConfigureAwait(false);
                 else if (Provider is not null)
                     await PipPackageHelper.RemoveAsync(Provider, package.PackageId, cancellationToken).ConfigureAwait(false);
                 break;
@@ -81,9 +88,9 @@ public sealed class PackageService(PythonInitializer pythonInitializer, IHostApp
     {
         return package.Marketplace switch
         {
-            Marketplace.NuGet => NugetManager.ResolvePackageDllsAsync(package.PackageId, null, cancellationToken),
-            Marketplace.CondaForge when IsPixiBackend => PixiPackageHelper.UpdateAsync(package, pypi: false, cancellationToken),
-            Marketplace.PyPi when IsPixiBackend => PixiPackageHelper.UpdateAsync(package, pypi: true, cancellationToken),
+            Marketplace.NuGet => nugetManager.ResolvePackageDllsAsync(package.PackageId, null, cancellationToken),
+            Marketplace.CondaForge when IsPixiBackend => pixiPackageHelper.UpdateAsync(package, pypi: false, cancellationToken),
+            Marketplace.PyPi when IsPixiBackend => pixiPackageHelper.UpdateAsync(package, pypi: true, cancellationToken),
             Marketplace.PyPi when Provider is not null => PipPackageHelper.UpdateAsync(Provider, package, cancellationToken),
             _ => Task.CompletedTask
         };
@@ -94,15 +101,15 @@ public sealed class PackageService(PythonInitializer pythonInitializer, IHostApp
         if (package.Marketplace == Marketplace.NuGet)
         {
             await RemoveNuGetPackageAsync(package, cancellationToken).ConfigureAwait(false);
-            await NugetManager.ResolvePackageDllsAsync(package.PackageId, package.Version, cancellationToken).ConfigureAwait(false);
+            await nugetManager.ResolvePackageDllsAsync(package.PackageId, package.Version, cancellationToken).ConfigureAwait(false);
             return;
         }
 
         if (IsPixiBackend)
         {
             var isPypi = package.Marketplace == Marketplace.PyPi;
-            await PixiPackageHelper.RemoveAsync(package.PackageId, isPypi, cancellationToken).ConfigureAwait(false);
-            await PixiPackageHelper.InstallAsync(package.PackageId, package.DeclaredVersion, isPypi, cancellationToken).ConfigureAwait(false);
+            await pixiPackageHelper.RemoveAsync(package.PackageId, isPypi, cancellationToken).ConfigureAwait(false);
+            await pixiPackageHelper.InstallAsync(package.PackageId, package.DeclaredVersion, isPypi, cancellationToken).ConfigureAwait(false);
         }
         else if (Provider is not null)
         {
@@ -183,7 +190,7 @@ public sealed class PackageService(PythonInitializer pythonInitializer, IHostApp
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
-            Trace.TraceWarning($"[PackageService] Could not delete '{path}': {ex.Message} (files may be locked by {hostAppInfo.Host})");
+            logger.ZLogWarning($"[PackageService] Could not delete '{path}': {ex.Message} (files may be locked by {hostAppInfo.Host})");
         }
     }
 }

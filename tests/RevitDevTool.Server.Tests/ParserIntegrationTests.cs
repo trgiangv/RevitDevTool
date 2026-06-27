@@ -1,12 +1,15 @@
 using System.Text.Json;
+using Microsoft.Extensions.Logging.Abstractions;
 namespace RevitDevTool.Server.Tests;
 
 public sealed class ParserIntegrationTests
 {
+    private static readonly PythonToolsetParser PythonParser = new(NullLogger<PythonToolsetParser>.Instance);
+    private static readonly DotnetMcpAssemblyParser DotnetParser = new(NullLogger<DotnetMcpAssemblyParser>.Instance);
     [Fact]
     public void DotnetParser_ExtractsSampleToolAnnotations()
     {
-        var tools = DotnetMcpAssemblyParser.ParseCatalogFromAssembly(GetSampleAssemblyPath()).Tools;
+        var tools = DotnetParser.ParseCatalogFromAssembly(GetSampleAssemblyPath()).Tools;
         var toolRegistration = tools.Single(item => item.ProtocolTool.Name == "get_demo_status");
         var advancedRegistration = tools.Single(item => item.ProtocolTool.Name == "get_advanced_demo_status");
         var tool = toolRegistration.ProtocolTool;
@@ -45,7 +48,7 @@ public sealed class ParserIntegrationTests
         Assert.True(Directory.Exists(toolsetDirectory), $"Expected Python sample toolset at '{toolsetDirectory}'.");
         Assert.True(File.Exists(sampleModulePath), $"Expected parser sample module at '{sampleModulePath}'.");
 
-        var tools = PythonToolsetParser.ParseDirectoryCatalog(toolsetDirectory, GetPythonExecutablePath(), GetToolParserScriptPath()).Tools;
+        var tools = PythonParser.ParseDirectoryCatalog(toolsetDirectory, GetPythonExecutablePath(), GetToolParserScriptPath()).Tools;
         var toolRegistration = tools.Single(item => item.ProtocolTool.Name == "get_parser_sample_status");
         var tool = toolRegistration.ProtocolTool;
 
@@ -69,7 +72,7 @@ public sealed class ParserIntegrationTests
     [Fact]
     public void PythonParser_ExtractsFastMcpPromptArguments()
     {
-        var prompts = PythonToolsetParser.ParseDirectoryCatalog(GetPythonToolsetDirectory(), GetPythonExecutablePath(), GetToolParserScriptPath()).Prompts;
+        var prompts = PythonParser.ParseDirectoryCatalog(GetPythonToolsetDirectory(), GetPythonExecutablePath(), GetToolParserScriptPath()).Prompts;
         var prompt = prompts.Single(item => item.ProtocolPrompt.Name == "summarize_parser_sample").ProtocolPrompt;
 
         Assert.Equal("Summarize Parser Sample", prompt.Title);
@@ -84,7 +87,7 @@ public sealed class ParserIntegrationTests
     [Fact]
     public void PythonParser_ExtractsFastMcpResources()
     {
-        var resources = PythonToolsetParser.ParseDirectoryCatalog(GetPythonToolsetDirectory(), GetPythonExecutablePath(), GetToolParserScriptPath()).Resources;
+        var resources = PythonParser.ParseDirectoryCatalog(GetPythonToolsetDirectory(), GetPythonExecutablePath(), GetToolParserScriptPath()).Resources;
         var directReg = resources.Single(item => item.ProtocolResource?.Name == "parser_status_resource");
         var templatedReg = resources.Single(item => item.ProtocolTemplate?.Name == "parser_view_resource");
         var direct = directReg.ProtocolResource!;
@@ -107,7 +110,7 @@ public sealed class ParserIntegrationTests
     [Fact]
     public void PythonParser_ExtractsLowLevelPromptsAndResources()
     {
-        var catalog = PythonToolsetParser.ParseDirectoryCatalog(GetPythonToolsetDirectory(), GetPythonExecutablePath(), GetToolParserScriptPath());
+        var catalog = PythonParser.ParseDirectoryCatalog(GetPythonToolsetDirectory(), GetPythonExecutablePath(), GetToolParserScriptPath());
 
         var tool = catalog.Tools.Single(item => item.ProtocolTool.Name == "parser_lowlevel_tool").ProtocolTool;
         var prompt = catalog.Prompts.Single(item => item.ProtocolPrompt.Name == "parser_lowlevel_prompt").ProtocolPrompt;
@@ -146,7 +149,7 @@ public sealed class ParserIntegrationTests
     [Fact]
     public void DotnetParser_ExtractsSamplePromptArguments()
     {
-        var prompts = DotnetMcpAssemblyParser.ParseCatalogFromAssembly(GetSampleAssemblyPath()).Prompts;
+        var prompts = DotnetParser.ParseCatalogFromAssembly(GetSampleAssemblyPath()).Prompts;
         var promptRegistration = prompts.Single(item => item.ProtocolPrompt.Name == "summarize_demo");
         var prompt = promptRegistration.ProtocolPrompt;
 
@@ -167,7 +170,7 @@ public sealed class ParserIntegrationTests
     [Fact]
     public void DotnetParser_ExtractsSampleResources()
     {
-        var resources = DotnetMcpAssemblyParser.ParseCatalogFromAssembly(GetSampleAssemblyPath()).Resources;
+        var resources = DotnetParser.ParseCatalogFromAssembly(GetSampleAssemblyPath()).Resources;
         var directRegistration = resources.Single(item => item.ProtocolResource?.Name == "demo_status");
         var templatedRegistration = resources.Single(item => item.ProtocolTemplate?.Name == "demo_view");
         var derivedRegistration = resources.Single(item => item.ProtocolTemplate?.Name == "demo_level");
@@ -199,7 +202,7 @@ public sealed class ParserIntegrationTests
     [Fact]
     public void DotnetParser_ToolAnnotations_AllHintsMapped()
     {
-        var catalog = DotnetMcpAssemblyParser.ParseCatalogFromAssembly(GetSampleAssemblyPath());
+        var catalog = DotnetParser.ParseCatalogFromAssembly(GetSampleAssemblyPath());
         var tool = catalog.Tools.Single(t => t.ProtocolTool.Name == "get_nested_meta").ProtocolTool;
 
         Assert.NotNull(tool.Annotations);
@@ -212,7 +215,7 @@ public sealed class ParserIntegrationTests
     [Fact]
     public void DotnetParser_InfrastructureParams_ExcludedFromSchema()
     {
-        var catalog = DotnetMcpAssemblyParser.ParseCatalogFromAssembly(GetSampleAssemblyPath());
+        var catalog = DotnetParser.ParseCatalogFromAssembly(GetSampleAssemblyPath());
         var tool = catalog.Tools.Single(t => t.ProtocolTool.Name == "get_advanced_demo_status").ProtocolTool;
         var schemaJson = tool.InputSchema.GetRawText();
 
@@ -227,7 +230,7 @@ public sealed class ParserIntegrationTests
     [Fact]
     public void DotnetParser_NullableParam_UnwrappedToBaseType()
     {
-        var catalog = DotnetMcpAssemblyParser.ParseCatalogFromAssembly(GetSampleAssemblyPath());
+        var catalog = DotnetParser.ParseCatalogFromAssembly(GetSampleAssemblyPath());
         var tool = catalog.Tools.Single(t => t.ProtocolTool.Name == "get_nullable_count").ProtocolTool;
         using var doc = JsonDocument.Parse(tool.InputSchema.GetRawText());
         var countProp = doc.RootElement.GetProperty("properties").GetProperty("count");
@@ -238,7 +241,7 @@ public sealed class ParserIntegrationTests
     [Fact]
     public void DotnetParser_ToolWithNoUserParams_ProducesEmptySchema()
     {
-        var catalog = DotnetMcpAssemblyParser.ParseCatalogFromAssembly(GetSampleAssemblyPath());
+        var catalog = DotnetParser.ParseCatalogFromAssembly(GetSampleAssemblyPath());
         var tool = catalog.Tools.Single(t => t.ProtocolTool.Name == "ping_infrastructure").ProtocolTool;
         using var doc = JsonDocument.Parse(tool.InputSchema.GetRawText());
 
@@ -251,7 +254,7 @@ public sealed class ParserIntegrationTests
     [Fact]
     public void DotnetParser_PromptArguments_CorrectRequiredFlag()
     {
-        var catalog = DotnetMcpAssemblyParser.ParseCatalogFromAssembly(GetSampleAssemblyPath());
+        var catalog = DotnetParser.ParseCatalogFromAssembly(GetSampleAssemblyPath());
         var prompt = catalog.Prompts.Single(p => p.ProtocolPrompt.Name == "summarize_demo").ProtocolPrompt;
 
         Assert.Equal(2, prompt.Arguments!.Count);
@@ -262,7 +265,7 @@ public sealed class ParserIntegrationTests
     [Fact]
     public void DotnetParser_AllOptionalPrompt_NoRequiredArgs()
     {
-        var catalog = DotnetMcpAssemblyParser.ParseCatalogFromAssembly(GetSampleAssemblyPath());
+        var catalog = DotnetParser.ParseCatalogFromAssembly(GetSampleAssemblyPath());
         var prompt = catalog.Prompts.Single(p => p.ProtocolPrompt.Name == "greet_optional").ProtocolPrompt;
 
         Assert.Equal(2, prompt.Arguments!.Count);
@@ -272,7 +275,7 @@ public sealed class ParserIntegrationTests
     [Fact]
     public void DotnetParser_Resource_VsResourceTemplate_Discrimination()
     {
-        var catalog = DotnetMcpAssemblyParser.ParseCatalogFromAssembly(GetSampleAssemblyPath());
+        var catalog = DotnetParser.ParseCatalogFromAssembly(GetSampleAssemblyPath());
 
         var directReg = catalog.Resources.Single(r => r.ProtocolResource?.Name == "demo_status");
         Assert.NotNull(directReg.ProtocolResource);
@@ -286,7 +289,7 @@ public sealed class ParserIntegrationTests
     [Fact]
     public void DotnetParser_Meta_MixedValueTypes()
     {
-        var catalog = DotnetMcpAssemblyParser.ParseCatalogFromAssembly(GetSampleAssemblyPath());
+        var catalog = DotnetParser.ParseCatalogFromAssembly(GetSampleAssemblyPath());
         var tool = catalog.Tools.Single(t => t.ProtocolTool.Name == "get_nested_meta").ProtocolTool;
 
         Assert.NotNull(tool.Meta);
@@ -300,7 +303,7 @@ public sealed class ParserIntegrationTests
     [Fact]
     public void DotnetParser_Icons_ParsedFromIconSource()
     {
-        var catalog = DotnetMcpAssemblyParser.ParseCatalogFromAssembly(GetSampleAssemblyPath());
+        var catalog = DotnetParser.ParseCatalogFromAssembly(GetSampleAssemblyPath());
         var tool = catalog.Tools.Single(t => t.ProtocolTool.Name == "get_advanced_demo_status").ProtocolTool;
 
         Assert.NotNull(tool.Icons);
@@ -311,7 +314,7 @@ public sealed class ParserIntegrationTests
     [Fact]
     public void DotnetParser_Title_FallsBackToName()
     {
-        var catalog = DotnetMcpAssemblyParser.ParseCatalogFromAssembly(GetSampleAssemblyPath());
+        var catalog = DotnetParser.ParseCatalogFromAssembly(GetSampleAssemblyPath());
         var tool = catalog.Tools.Single(t => t.ProtocolTool.Name == "get_nullable_count").ProtocolTool;
 
         Assert.Equal("get_nullable_count", tool.Title);
@@ -320,7 +323,7 @@ public sealed class ParserIntegrationTests
     [Fact]
     public void DotnetParser_Resource_WithoutUriTemplate_GetsFallback()
     {
-        var catalog = DotnetMcpAssemblyParser.ParseCatalogFromAssembly(GetSampleAssemblyPath());
+        var catalog = DotnetParser.ParseCatalogFromAssembly(GetSampleAssemblyPath());
         var healthReg = catalog.Resources.Single(r =>
             r.ProtocolResource?.Name == "demo_health" || r.ProtocolTemplate?.Name == "demo_health");
 

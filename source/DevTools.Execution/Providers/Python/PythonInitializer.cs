@@ -2,13 +2,16 @@ using System.Diagnostics;
 using System.IO;
 using DevTools.Execution.Interfaces;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using Python.Runtime;
+using ZLogger;
 namespace DevTools.Execution.Providers.Python;
 
 public sealed class PythonInitializer(
     [FromKeyedServices(PythonBackend.Pixi)] PyEnvironmentProvider pixiProvider,
     [FromKeyedServices(PythonBackend.Pip)] PyEnvironmentProvider pipProvider,
-    IPythonBridge bridge)
+    IPythonBridge bridge,
+    ILogger<PythonInitializer> logger)
 {
     private readonly SemaphoreSlim _initLock = new(1, 1);
 
@@ -26,7 +29,7 @@ public sealed class PythonInitializer(
             if (IsInitialized) return;
 
             Provider ??= await DetectProviderAsync().ConfigureAwait(false);
-            Trace.TraceInformation($"[Python] Using backend: {Provider.Backend}");
+            logger.ZLogInformation($"[Python] Using backend: {Provider.Backend}");
 
             if (!Provider.IsEnvironmentReady())
             {
@@ -45,12 +48,12 @@ public sealed class PythonInitializer(
             using (Py.GIL())
             {
                 SetupGlobalScope();
-                PythonDebugger.StartListening();
+                PythonDebugger.StartListening(logger);
             }
         }
         catch (Exception ex)
         {
-            Trace.TraceError($"[Python] Fatal init failure: {ex.Message}\n{ex.StackTrace}");
+            logger.ZLogError($"[Python] Fatal init failure: {ex.Message}\n{ex.StackTrace}");
         }
         finally
         {
@@ -74,7 +77,7 @@ public sealed class PythonInitializer(
         }
         catch (Exception ex)
         {
-            Trace.TraceWarning($"Python shutdown warning: {ex.Message}");
+            logger.ZLogWarning($"Python shutdown warning: {ex.Message}");
         }
         finally
         {
@@ -86,18 +89,18 @@ public sealed class PythonInitializer(
     {
         try
         {
-            await PythonInstaller.SetupPixiAsync().ConfigureAwait(false);
-            Trace.TraceInformation("[Python] Pixi is available.");
+            await PythonInstaller.SetupPixiAsync(logger).ConfigureAwait(false);
+            logger.ZLogInformation($"[Python] Pixi is available.");
             return pixiProvider;
         }
         catch (Exception ex)
         {
-            Trace.TraceWarning($"[Python] Pixi unavailable ({ex.GetType().Name}: {ex.Message}). Falling back to pip.");
+            logger.ZLogWarning($"[Python] Pixi unavailable ({ex.GetType().Name}: {ex.Message}). Falling back to pip.");
             return pipProvider;
         }
     }
 
-    private static void PrependPythonHomeToPath(string pythonHome)
+    private void PrependPythonHomeToPath(string pythonHome)
     {
         var libraryBin = Path.Combine(pythonHome, "Library", "bin");
 
@@ -112,7 +115,7 @@ public sealed class PythonInitializer(
 
         var newPath = string.Join(";", toAdd) + ";" + current;
         Environment.SetEnvironmentVariable("PATH", newPath);
-        Trace.TraceInformation($"[Python] Prepended to PATH: {string.Join("; ", toAdd)}");
+        logger.ZLogInformation($"[Python] Prepended to PATH: {string.Join("; ", toAdd)}");
     }
 
     private void SetupGlobalScope()

@@ -1,8 +1,9 @@
 using System.Collections.Concurrent;
-using System.Diagnostics;
 using System.IO;
 using System.Runtime.CompilerServices;
 using DevTools.Execution.Models;
+using Microsoft.Extensions.Logging;
+using ZLogger;
 namespace DevTools.Execution.Providers.FSharp;
 
 /// <summary>
@@ -11,7 +12,11 @@ namespace DevTools.Execution.Providers.FSharp;
 /// On invalidation, disposes the FsiEvaluationSession (releasing collectible assemblies on .NET Core)
 /// and any temp files from NuGet resolution.
 /// </summary>
-public sealed class FSharpCompilationCache(ICompiledScriptBridge bridge)
+public sealed class FSharpCompilationCache(
+    ICompiledScriptBridge bridge,
+    FSharpDependencyResolver dependencyResolver,
+    FSharpExecutor executor,
+    ILogger<FSharpCompilationCache> logger)
 {
     private readonly ConcurrentDictionary<string, CachedScript> _cache = new(StringComparer.OrdinalIgnoreCase);
     private readonly ConcurrentDictionary<string, SemaphoreSlim> _compileLocks = new(StringComparer.OrdinalIgnoreCase);
@@ -30,7 +35,7 @@ public sealed class FSharpCompilationCache(ICompiledScriptBridge bridge)
         if (_cache.TryGetValue(canonicalPath, out var cached) && cached.ContentHash == currentHash)
         {
             progress?.Report($"Using cached {scriptName}.");
-            Debug.WriteLine($"[FSharpCache] Hit for '{scriptName}' (hash: {currentHash[..16]})");
+            logger.ZLogDebug($"[FSharpCache] Hit for '{scriptName}' (hash: {currentHash[..16]})");
             return ScriptCompilationResult.Succeeded(cached.CreateCommand());
         }
 
@@ -41,25 +46,25 @@ public sealed class FSharpCompilationCache(ICompiledScriptBridge bridge)
             if (_cache.TryGetValue(canonicalPath, out cached) && cached.ContentHash == currentHash)
             {
                 progress?.Report($"Using cached {scriptName}.");
-                Debug.WriteLine($"[FSharpCache] Hit (after lock) for '{scriptName}'");
+                logger.ZLogDebug($"[FSharpCache] Hit (after lock) for '{scriptName}'");
                 return ScriptCompilationResult.Succeeded(cached.CreateCommand());
             }
 
             if (cached != null)
             {
-                Debug.WriteLine($"[FSharpCache] Miss (hash changed) for '{scriptName}'");
+                logger.ZLogDebug($"[FSharpCache] Miss (hash changed) for '{scriptName}'");
                 _cache.TryRemove(canonicalPath, out _);
                 InvalidateEntry(cached);
             }
             else
             {
-                Debug.WriteLine($"[FSharpCache] Miss (first compile) for '{scriptName}'");
+                logger.ZLogDebug($"[FSharpCache] Miss (first compile) for '{scriptName}'");
             }
 
-            var resolution = await FSharpDependencyResolver.ResolveAsync(canonicalPath, graph, bridge, progress, ct).ConfigureAwait(false);
+            var resolution = await dependencyResolver.ResolveAsync(canonicalPath, graph, bridge, progress, ct).ConfigureAwait(false);
             progress?.Report($"Compiling {scriptName}...");
 
-            var output = FSharpExecutor.CreateSessionAndEvaluate(resolution.ScriptPath, resolution.References, bridge);
+            var output = executor.CreateSessionAndEvaluate(resolution.ScriptPath, resolution.References, bridge);
             if (output.Command == null)
             {
                 (output.Session as IDisposable)?.Dispose();
@@ -73,10 +78,13 @@ public sealed class FSharpCompilationCache(ICompiledScriptBridge bridge)
                 () => Activator.CreateInstance(commandType)
                       ?? throw new InvalidOperationException($"Failed to create instance of {commandType.FullName}."),
                 output.Session,
-                resolution.Cleanup);
+                resolution.Cleanup)
+            {
+                Logger = logger
+            };
             _cache[canonicalPath] = entry;
 
-            Debug.WriteLine($"[FSharpCache] Cached '{scriptName}' (hash: {currentHash[..16]})");
+            logger.ZLogDebug($"[FSharpCache] Cached '{scriptName}' (hash: {currentHash[..16]})");
             return ScriptCompilationResult.Succeeded(output.Command);
         }
         finally

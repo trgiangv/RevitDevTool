@@ -1,12 +1,13 @@
-using System.Diagnostics;
 using System.IO;
 using System.Reflection;
 using DevTools.Execution.Interfaces;
 using DevTools.Execution.Providers.Dotnet;
+using Microsoft.Extensions.Logging;
+using ZLogger;
 
 namespace RevitDevTool.HostAdapters;
 
-public sealed class RevitCommandDiscovery : ICommandDiscovery
+public sealed class RevitCommandDiscovery(ILogger<RevitCommandDiscovery> logger) : ICommandDiscovery
 {
     private static readonly string CommandFullName = typeof(IExternalCommand).FullName!;
 
@@ -14,7 +15,7 @@ public sealed class RevitCommandDiscovery : ICommandDiscovery
     {
         if (!File.Exists(assemblyPath))
         {
-            Trace.TraceError($"Assembly file not found: {assemblyPath}");
+            logger.ZLogError($"Assembly file not found: {assemblyPath}");
             return [];
         }
 
@@ -32,7 +33,7 @@ public sealed class RevitCommandDiscovery : ICommandDiscovery
 
             if (iExternalCommandType == null)
             {
-                Trace.TraceError($"Could not find {CommandFullName} in metadata context");
+                logger.ZLogError($"Could not find {CommandFullName} in metadata context");
                 return commands;
             }
 
@@ -45,7 +46,7 @@ public sealed class RevitCommandDiscovery : ICommandDiscovery
         }
         catch (Exception ex)
         {
-            Trace.TraceError($"Failed to parse commands from '{assemblyPath}': {ex.Message}");
+            logger.ZLogError($"Failed to parse commands from '{assemblyPath}': {ex.Message}");
         }
 
         return commands;

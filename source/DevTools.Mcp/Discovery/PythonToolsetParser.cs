@@ -1,18 +1,22 @@
-using System.Diagnostics;
 using System.Text.Json;
 using CliWrap;
 using CliWrap.Buffered;
+using Microsoft.Extensions.Logging;
 using ModelContextProtocol;
 using ModelContextProtocol.Protocol;
+using ZLogger;
 
 namespace DevTools.Mcp.Discovery;
 
-public static class PythonToolsetParser
+public sealed class PythonToolsetParser(ILogger<PythonToolsetParser> logger)
 {
-    private static readonly JsonSerializerOptions CatalogJsonOptions = new(JsonSerializerDefaults.Web);
-    private static readonly JsonSerializerOptions SdkJsonOptions = McpJsonUtilities.DefaultOptions;
+    private readonly JsonSerializerOptions CatalogJsonOptions = new(JsonSerializerDefaults.Web);
+    private readonly JsonSerializerOptions SdkJsonOptions = McpJsonUtilities.DefaultOptions;
 
-    public static McpRegistryCatalog ParseDirectoryCatalog(string toolsetDirectory, string pythonExecutablePath, string parserScriptPath)
+    public McpRegistryCatalog ParseDirectoryCatalog(
+        string toolsetDirectory,
+        string pythonExecutablePath,
+        string parserScriptPath)
     {
         if (string.IsNullOrWhiteSpace(pythonExecutablePath))
             throw new ArgumentException("Python executable path is required.", nameof(pythonExecutablePath));
@@ -21,7 +25,9 @@ public static class PythonToolsetParser
         return BuildCatalogFromOutput(parserOutput, toolsetDirectory);
     }
 
-    public static McpRegistryCatalog ParseDirectoryCatalog(string toolsetDirectory, Func<string, string?> parserFunction)
+    public McpRegistryCatalog ParseDirectoryCatalog(
+        string toolsetDirectory,
+        Func<string, string?> parserFunction)
     {
         string? parserOutput;
         try
@@ -30,14 +36,14 @@ public static class PythonToolsetParser
         }
         catch (Exception ex)
         {
-            Trace.TraceError($"[MCP] In-process parser failed for '{toolsetDirectory}': {ex.Message}\n{ex.StackTrace}");
+            logger.ZLogError($"[MCP] In-process parser failed for '{toolsetDirectory}': {ex.Message}\n{ex.StackTrace}");
             return McpRegistryCatalog.Empty;
         }
 
         return BuildCatalogFromOutput(parserOutput, toolsetDirectory);
     }
 
-    private static McpRegistryCatalog BuildCatalogFromOutput(string? parserOutput, string toolsetDirectory)
+    private McpRegistryCatalog BuildCatalogFromOutput(string? parserOutput, string toolsetDirectory)
     {
         if (string.IsNullOrWhiteSpace(parserOutput))
             return McpRegistryCatalog.Empty;
@@ -55,7 +61,10 @@ public static class PythonToolsetParser
         };
     }
 
-    private static string? RunParserProcess(string directory, string pythonExecutablePath, string parserScriptPath)
+    private string? RunParserProcess(
+        string directory,
+        string pythonExecutablePath,
+        string parserScriptPath)
     {
         try
         {
@@ -68,7 +77,7 @@ public static class PythonToolsetParser
 
             if (result.ExitCode != 0)
             {
-                Trace.TraceError(
+                logger.ZLogError(
                     $"[MCP] Python parser execution failed for '{directory}' with exit code {result.ExitCode}: {result.StandardError}");
                 return null;
             }
@@ -77,33 +86,33 @@ public static class PythonToolsetParser
         }
         catch (Exception ex)
         {
-            Trace.TraceError($"[MCP] Unexpected parser failure for '{directory}': {ex.Message}");
+            logger.ZLogError($"[MCP] Unexpected parser failure for '{directory}': {ex.Message}");
             return null;
         }
     }
 
-    private static PythonParsedCatalog? DeserializeCatalog(string json, string directory)
+    private PythonParsedCatalog? DeserializeCatalog(string json, string directory)
     {
         try
         {
             var catalog = JsonSerializer.Deserialize<PythonParsedCatalog>(json, CatalogJsonOptions);
             if (catalog is not null) return catalog;
-            Trace.TraceWarning($"[MCP] Parser returned null catalog for '{directory}'.");
+            logger.ZLogWarning($"[MCP] Parser returned null catalog for '{directory}'.");
             return null;
         }
         catch (JsonException ex)
         {
-            Trace.TraceError($"[MCP] Failed to deserialize parser output for '{directory}': {ex.Message}");
+            logger.ZLogError($"[MCP] Failed to deserialize parser output for '{directory}': {ex.Message}");
             return null;
         }
     }
 
-    private static T? DeserializeSdkType<T>(JsonElement element)
+    private T? DeserializeSdkType<T>(JsonElement element)
     {
         return JsonSerializer.Deserialize<T>(element.GetRawText(), SdkJsonOptions);
     }
 
-    private static IReadOnlyList<T> NormalizeEntries<TEntry, T>(
+    private IReadOnlyList<T> NormalizeEntries<TEntry, T>(
         IReadOnlyList<TEntry> entries,
         string directory,
         Func<TEntry, JsonElement> getProtocol,
@@ -122,7 +131,7 @@ public static class PythonToolsetParser
         return result;
     }
 
-    private static IReadOnlyList<McpRegisteredTool> NormalizeTools(IReadOnlyList<PythonParsedToolEntry> entries, string directory)
+    private IReadOnlyList<McpRegisteredTool> NormalizeTools(IReadOnlyList<PythonParsedToolEntry> entries, string directory)
     {
         return NormalizeEntries(entries, directory,
             e => e.Protocol,
@@ -144,7 +153,7 @@ public static class PythonToolsetParser
             });
     }
 
-    private static IReadOnlyList<McpRegisteredPrompt> NormalizePrompts(IReadOnlyList<PythonParsedPromptEntry> entries, string directory)
+    private IReadOnlyList<McpRegisteredPrompt> NormalizePrompts(IReadOnlyList<PythonParsedPromptEntry> entries, string directory)
     {
         return NormalizeEntries(entries, directory,
             e => e.Protocol,
@@ -164,7 +173,7 @@ public static class PythonToolsetParser
             });
     }
 
-    private static IReadOnlyList<McpRegisteredResource> NormalizeResources(IReadOnlyList<PythonParsedResourceEntry> entries, string directory)
+    private IReadOnlyList<McpRegisteredResource> NormalizeResources(IReadOnlyList<PythonParsedResourceEntry> entries, string directory)
     {
         return NormalizeEntries(entries, directory,
             e => e.Protocol,
@@ -192,7 +201,7 @@ public static class PythonToolsetParser
             });
     }
 
-    private static McpPrimitiveBinding BuildBinding(string toolsetDirectory, PythonBindingInfo info)
+    private McpPrimitiveBinding BuildBinding(string toolsetDirectory, PythonBindingInfo info)
     {
         var sourcePath = string.IsNullOrWhiteSpace(info.SourcePath) ? toolsetDirectory : info.SourcePath;
         var methodName = string.IsNullOrWhiteSpace(info.MethodName) ? "unknown" : info.MethodName;
@@ -213,7 +222,7 @@ public static class PythonToolsetParser
             groupName);
     }
 
-    private static string GetRelativeModulePath(string rootDirectory, string sourcePath)
+    private string GetRelativeModulePath(string rootDirectory, string sourcePath)
     {
         var root = Path.GetFullPath(rootDirectory)
             .TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar)
@@ -225,7 +234,7 @@ public static class PythonToolsetParser
             : Path.GetFileName(fullSourcePath);
     }
 
-    private static string TrimPythonExtension(string path)
+    private string TrimPythonExtension(string path)
     {
         return path.EndsWith(".py", StringComparison.OrdinalIgnoreCase)
             ? path[..^3]

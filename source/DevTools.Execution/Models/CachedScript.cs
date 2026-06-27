@@ -1,4 +1,5 @@
-using System.Diagnostics;
+using Microsoft.Extensions.Logging;
+using ZLogger;
 
 namespace DevTools.Execution.Models;
 
@@ -9,6 +10,8 @@ namespace DevTools.Execution.Models;
 /// </summary>
 internal sealed class CachedScript(string contentHash, Func<object> createCommand, params IDisposable?[] cleanups) : IDisposable
 {
+    internal ILogger? Logger { get; init; }
+
     public string ContentHash { get; } = contentHash;
 
     public object CreateCommand() => createCommand();
@@ -23,7 +26,7 @@ internal sealed class CachedScript(string contentHash, Func<object> createComman
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"[CachedScript] Cleanup failed: {ex.Message}");
+                Logger?.ZLogDebug($"[CachedScript] Cleanup failed: {ex.Message}");
             }
         }
     }

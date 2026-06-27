@@ -1,12 +1,13 @@
 using Autodesk.Revit.DB.DirectContext3D;
-using RevitDevTool.Settings;
 using DevTools.Utilities;
+using Microsoft.Extensions.Logging;
+using Nice3point.Revit.Extensions;
+using RevitDevTool.Core;
+using RevitDevTool.Settings;
 using RevitDevTool.Visualization.Contracts;
 using RevitDevTool.Visualization.Helpers;
 using RevitDevTool.Visualization.Render;
-using System.Diagnostics;
-using Nice3point.Revit.Extensions;
-using RevitDevTool.Core;
+using ZLogger;
 using Color = Autodesk.Revit.DB.Color;
 
 namespace RevitDevTool.Visualization.Server;
@@ -28,8 +29,9 @@ public sealed class FaceVisualizationServer : VisualizationServer<Face>
     private bool _drawNormalVector;
     private bool _drawSurface;
 
-    public FaceVisualizationServer(IRevitSettingsService settingsService)
+    public FaceVisualizationServer(IRevitSettingsService settingsService, ILogger<FaceVisualizationServer> logger)
     {
+        Logger = logger;
         var settings = settingsService.VisualizationConfig.FaceSettings;
         _extrusion = settings.Extrusion / 12.0;
         _transparency = settings.Transparency / 100.0;
@@ -175,7 +177,7 @@ public sealed class FaceVisualizationServer : VisualizationServer<Face>
         }
         catch (Exception ex)
         {
-            Trace.TraceError($"Error mapping geometry buffer in FaceVisualizationServer: {ex}");
+            Logger?.ZLogError($"Error mapping geometry buffer in FaceVisualizationServer: {ex}");
         }
     }
 

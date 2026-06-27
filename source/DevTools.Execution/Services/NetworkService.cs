@@ -1,8 +1,9 @@
-using System.Diagnostics;
 using System.IO;
 using System.Net.Http;
 using System.Text.Json;
 using DevTools.Logging;
+using Microsoft.Extensions.Logging;
+using ZLogger;
 namespace DevTools.Execution.Services;
 
 /// <summary>
@@ -80,7 +81,8 @@ public static class NetworkService
     public static async Task<T> WithRetryAsync<T>(
         Func<Task<T>> operation,
         int maxRetries = DefaultMaxRetries,
-        int baseDelayMs = DefaultBaseDelayMs)
+        int baseDelayMs = DefaultBaseDelayMs,
+        ILogger? logger = null)
     {
         for (var attempt = 0; ; attempt++)
         {
@@ -91,7 +93,7 @@ public static class NetworkService
             catch (Exception ex) when (attempt < maxRetries - 1 && IsTransient(ex))
             {
                 var delay = baseDelayMs * (1 << attempt);
-                Trace.TraceWarning(
+                logger?.ZLogWarning(
                     $"[Network] Transient error (attempt {attempt + 1}/{maxRetries}): {ex.Message}. " +
                     $"Retrying in {delay}ms...");
                 await Task.Delay(delay).ConfigureAwait(false);

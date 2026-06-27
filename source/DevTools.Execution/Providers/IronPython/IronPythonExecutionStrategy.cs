@@ -2,6 +2,8 @@ using System.Diagnostics;
 using System.IO;
 using DevTools.Execution.Interfaces;
 using DevTools.Execution.Models;
+using Microsoft.Extensions.Logging;
+using ZLogger;
 
 namespace DevTools.Execution.Providers.IronPython;
 
@@ -10,8 +12,8 @@ public sealed class IronPythonExecutionStrategy(
     string scriptPath,
     string rootPath,
     IIronPythonBridge bridge,
-    IHostContextExecutor hostContext)
-    : IExecutionStrategy
+    IHostContextExecutor hostContext,
+    ILogger<IronPythonExecutionStrategy> logger) : IExecutionStrategy
 {
     public async Task<ExecutionResult> ExecuteAsync(IProgress<string>? progress = null, CancellationToken cancellationToken = default)
     {
@@ -42,7 +44,7 @@ public sealed class IronPythonExecutionStrategy(
         catch (Exception ex)
         {
             stopwatch.Stop();
-            Trace.TraceError($"IronPython execution pipeline failed: {ex.Message}{Environment.NewLine}{ex.StackTrace}");
+            logger.ZLogError($"IronPython execution pipeline failed: {ex.Message}{Environment.NewLine}{ex.StackTrace}");
             return ExecutionResult.Failed($"IronPython execution pipeline failed: {ex.Message}", ex, stopwatch.ElapsedMilliseconds);
         }
     }

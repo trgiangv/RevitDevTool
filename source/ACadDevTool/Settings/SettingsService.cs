@@ -5,11 +5,13 @@ using DevTools.Logging;
 using DevTools.Settings;
 using DevTools.Settings.Configs;
 using DevTools.UI.Theme;
+using Microsoft.Extensions.Logging;
+using ZLogger;
 using AppUtils = DevTools.Utilities.AppUtils;
 
 namespace AcadDevTool.Settings;
 
-public sealed class SettingsService(IFileConfig<PathOptions> fileConfig) : IAcadSettingsService
+public sealed class SettingsService(IFileConfig<PathOptions> fileConfig, ILogger<SettingsService> logger) : IAcadSettingsService
 {
     public HashSet<AcadEnricher> AcadEnrichers { get; set; } =
         [AcadEnricher.AcadVersion, AcadEnricher.AcadDocumentTitle];
@@ -117,7 +119,7 @@ public sealed class SettingsService(IFileConfig<PathOptions> fileConfig) : IAcad
     private void LoadApplicationSettings()
     {
         try { _generalConfig = fileConfig.Load<GeneralConfig>(); }
-        catch (Exception ex) { Trace.TraceError($"Application settings loading error: {ex.Message}"); }
+        catch (Exception ex) { logger.ZLogError($"Application settings loading error: {ex.Message}"); }
         _generalConfig ??= CreateDefaultGeneralConfig();
     }
 
@@ -129,7 +131,7 @@ public sealed class SettingsService(IFileConfig<PathOptions> fileConfig) : IAcad
     private void LoadLogSettings()
     {
         try { _logConfig = fileConfig.Load<LogConfig>(); }
-        catch (Exception ex) { Trace.TraceError($"Log settings loading error: {ex.Message}"); }
+        catch (Exception ex) { logger.ZLogError($"Log settings loading error: {ex.Message}"); }
 
         if (_logConfig is null)
         {
@@ -146,14 +148,14 @@ public sealed class SettingsService(IFileConfig<PathOptions> fileConfig) : IAcad
     private void LoadExecutionSettings()
     {
         try { _executionConfig = fileConfig.Load<AcadExecutionConfig>(); }
-        catch (Exception ex) { Trace.TraceError($"Code execute settings loading error: {ex.Message}"); }
+        catch (Exception ex) { logger.ZLogError($"Code execute settings loading error: {ex.Message}"); }
         _executionConfig ??= new AcadExecutionConfig();
     }
 
     private void LoadMcpRegistrySettings()
     {
         try { _mcpRegistryConfig = fileConfig.Load<AcadMcpRegistryConfig>(); }
-        catch (Exception ex) { Trace.TraceError($"MCP registry settings loading error: {ex.Message}"); }
+        catch (Exception ex) { logger.ZLogError($"MCP registry settings loading error: {ex.Message}"); }
         _mcpRegistryConfig ??= new AcadMcpRegistryConfig();
     }
 

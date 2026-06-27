@@ -1,8 +1,10 @@
 #if NET
-using System.Diagnostics;
 using System.IO;
 using System.Reflection;
 using System.Runtime.Loader;
+using Microsoft.Extensions.Logging;
+using ZLogger;
+
 namespace DevTools.Execution.Providers.CSharp;
 
 /// <summary>
@@ -13,10 +15,12 @@ namespace DevTools.Execution.Providers.CSharp;
 internal sealed class ScriptLoadContext : AssemblyLoadContext, IDisposable
 {
     private readonly Dictionary<string, string> _dependencyPaths;
+    private readonly ILogger _logger;
 
-    public ScriptLoadContext(IEnumerable<string> nugetDllPaths)
+    public ScriptLoadContext(IEnumerable<string> nugetDllPaths, ILogger logger)
         : base($"CsxScript_{Guid.NewGuid():N}", isCollectible: true)
     {
+        _logger = logger;
         _dependencyPaths = BuildDependencyPathMap(nugetDllPaths);
     }
 
@@ -40,12 +44,12 @@ internal sealed class ScriptLoadContext : AssemblyLoadContext, IDisposable
         }
         catch (Exception ex)
         {
-            Debug.WriteLine($"[ScriptLoadContext] Failed to load '{assemblyName.Name}' from '{dllPath}': {ex.Message}");
+            _logger.ZLogDebug($"[ScriptLoadContext] Failed to load '{assemblyName.Name}' from '{dllPath}': {ex.Message}");
             return null;
         }
     }
 
-    private static Dictionary<string, string> BuildDependencyPathMap(IEnumerable<string> dllPaths)
+    private Dictionary<string, string> BuildDependencyPathMap(IEnumerable<string> dllPaths)
     {
         var dependencyPaths = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
         foreach (var dllPath in dllPaths.Where(File.Exists))
@@ -60,7 +64,7 @@ internal sealed class ScriptLoadContext : AssemblyLoadContext, IDisposable
         return dependencyPaths;
     }
 
-    private static string? TryGetAssemblyName(string dllPath)
+    private string? TryGetAssemblyName(string dllPath)
     {
         try
         {
@@ -68,7 +72,7 @@ internal sealed class ScriptLoadContext : AssemblyLoadContext, IDisposable
         }
         catch (Exception ex)
         {
-            Debug.WriteLine($"[ScriptLoadContext] Failed to read assembly name from '{dllPath}': {ex.Message}");
+            _logger.ZLogDebug($"[ScriptLoadContext] Failed to read assembly name from '{dllPath}': {ex.Message}");
             return null;
         }
     }

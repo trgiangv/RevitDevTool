@@ -3,6 +3,7 @@ using DevTools.Execution.Providers.CSharp;
 using DevTools.Execution.Providers.FSharp;
 using DevTools.Execution.Providers.IronPython;
 using DevTools.Execution.Providers.Python;
+using Microsoft.Extensions.Logging;
 
 namespace DevTools.Execution.Providers;
 
@@ -13,7 +14,11 @@ public sealed class ScriptExecutionStrategyFactory(
     IHostContextExecutor hostContext,
     ICommandRunner commandRunner,
     CSharpCompilationCache csharpCache,
-    FSharpCompilationCache fsharpCache) : IScriptExecutionStrategyFactory
+    FSharpCompilationCache fsharpCache,
+    ILogger<CSharpExecutionStrategy> csharpLogger,
+    ILogger<FSharpExecutionStrategy> fsharpLogger,
+    ILogger<PythonExecutionStrategy> pythonExecutionLogger,
+    ILogger<IronPythonExecutionStrategy> ironPythonLogger) : IScriptExecutionStrategyFactory
 {
     public IExecutionStrategy Create(ExecutionMode mode, string scriptPath, string rootPath) =>
         mode switch
@@ -23,25 +28,29 @@ public sealed class ScriptExecutionStrategyFactory(
                 rootPath,
                 pythonInitializer,
                 pythonExecutor,
-                hostContext),
+                hostContext,
+                pythonExecutionLogger),
 
             ExecutionMode.IronPython => new IronPythonExecutionStrategy(
                 scriptPath,
                 rootPath,
                 ironPythonBridge,
-                hostContext),
+                hostContext,
+                ironPythonLogger),
 
             ExecutionMode.CSharp => new CSharpExecutionStrategy(
                 scriptPath,
                 hostContext,
                 commandRunner,
-                csharpCache),
+                csharpCache,
+                csharpLogger),
 
             ExecutionMode.FSharp => new FSharpExecutionStrategy(
                 scriptPath,
                 hostContext,
                 commandRunner,
-                fsharpCache),
+                fsharpCache,
+                fsharpLogger),
 
             _ => throw new NotSupportedException($"Unsupported script execution mode '{mode}'.")
         };

@@ -1,8 +1,9 @@
-using System.Diagnostics;
 using System.IO;
 using System.Text;
 using CliWrap;
 using DevTools.Execution.Services;
+using Microsoft.Extensions.Logging;
+using ZLogger;
 // ReSharper disable RedundantSuppressNullableWarningExpression
 
 namespace DevTools.Execution.Providers.Python;
@@ -13,7 +14,7 @@ namespace DevTools.Execution.Providers.Python;
 /// Discovers the CPython distribution shipped with pyRevit (cengines directory),
 /// bootstraps pip, and uses <c>python.exe -m pip</c> for package management.
 /// </summary>
-public sealed class PipEnvironmentProvider : PyEnvironmentProvider
+public sealed class PipEnvironmentProvider(ILogger<PipEnvironmentProvider> logger) : PyEnvironmentProvider
 {
     public override PythonBackend Backend => PythonBackend.Pip;
 
@@ -37,7 +38,7 @@ public sealed class PipEnvironmentProvider : PyEnvironmentProvider
     /// Queries attached pyRevit clones and picks the first CPython engine
     /// under <c>bin\cengines</c> that contains python.exe.
     /// </summary>
-    private static async Task<string> DiscoverPyRevitAsync()
+    private async Task<string> DiscoverPyRevitAsync()
     {
         var clonePaths = await GetAttachedClonePathsAsync().ConfigureAwait(false);
         var candidateDirectories = clonePaths
@@ -53,7 +54,7 @@ public sealed class PipEnvironmentProvider : PyEnvironmentProvider
             if (engineDir is null)
                 continue;
 
-            Trace.TraceInformation($"[Pip] Discovered pyRevit CPython at: {engineDir}");
+            logger.ZLogInformation($"[Pip] Discovered pyRevit CPython at: {engineDir}");
             return engineDir;
         }
 
@@ -114,8 +115,8 @@ public sealed class PipEnvironmentProvider : PyEnvironmentProvider
         var result = await Cli.Wrap(PythonExe)
             .WithArguments(args)
             .WithWorkingDirectory(PythonHome)
-            .WithStandardOutputPipe(PipeTarget.ToDelegate(line => Debug.WriteLine($"[pip] {line}")))
-            .WithStandardErrorPipe(PipeTarget.ToDelegate(line => Debug.WriteLine($"[pip] {line}")))
+            .WithStandardOutputPipe(PipeTarget.ToDelegate(line => logger.ZLogDebug($"[pip] {line}")))
+            .WithStandardErrorPipe(PipeTarget.ToDelegate(line => logger.ZLogDebug($"[pip] {line}")))
             .WithValidation(CommandResultValidation.None)
             .ExecuteAsync().ConfigureAwait(false);
 
@@ -148,13 +149,13 @@ public sealed class PipEnvironmentProvider : PyEnvironmentProvider
         progress.Report($"All {list.Count} package(s) installed via pip.");
     }
 
-    private static void RemovePthFile(string targetDir)
+    private void RemovePthFile(string targetDir)
     {
         var pthFile = Directory.EnumerateFiles(targetDir, "python*._pth").FirstOrDefault();
         if (pthFile is null) return;
 
         File.Delete(pthFile);
-        Debug.WriteLine($"[Pip] Removed {Path.GetFileName(pthFile)} to enable site-packages.");
+        logger.ZLogDebug($"[Pip] Removed {Path.GetFileName(pthFile)} to enable site-packages.");
     }
 
     private async Task<bool> IsPipAvailableAsync()
@@ -167,7 +168,7 @@ public sealed class PipEnvironmentProvider : PyEnvironmentProvider
 
         if (result.ExitCode != 0) return false;
 
-        Debug.WriteLine("[Pip] pip already available, skipping bootstrap.");
+        logger.ZLogDebug($"[Pip] pip already available, skipping bootstrap.");
         return true;
     }
 
@@ -180,29 +181,29 @@ public sealed class PipEnvironmentProvider : PyEnvironmentProvider
         if (await TryEnsurepipAsync().ConfigureAwait(false))
             return;
 
-        Trace.TraceInformation("[Pip] ensurepip unavailable, falling back to get-pip.py...");
+        logger.ZLogInformation($"[Pip] ensurepip unavailable, falling back to get-pip.py...");
         await GetPipAsync().ConfigureAwait(false);
     }
 
     private async Task<bool> TryEnsurepipAsync()
     {
-        Debug.WriteLine("[Pip] Trying ensurepip...");
+        logger.ZLogDebug($"[Pip] Trying ensurepip...");
 
         var result = await Cli.Wrap(PythonExe)
             .WithArguments(["-m", "ensurepip", "--upgrade"])
             .WithWorkingDirectory(PythonHome)
-            .WithStandardOutputPipe(PipeTarget.ToDelegate(line => Debug.WriteLine($"[ensurepip] {line}")))
-            .WithStandardErrorPipe(PipeTarget.ToDelegate(line => Debug.WriteLine($"[ensurepip] {line}")))
+            .WithStandardOutputPipe(PipeTarget.ToDelegate(line => logger.ZLogDebug($"[ensurepip] {line}")))
+            .WithStandardErrorPipe(PipeTarget.ToDelegate(line => logger.ZLogDebug($"[ensurepip] {line}")))
             .WithValidation(CommandResultValidation.None)
             .ExecuteAsync().ConfigureAwait(false);
 
         if (result.ExitCode != 0)
         {
-            Debug.WriteLine($"[Pip] ensurepip failed (exit {result.ExitCode}).");
+            logger.ZLogDebug($"[Pip] ensurepip failed (exit {result.ExitCode}).");
             return false;
         }
 
-        Trace.TraceInformation("[Pip] pip bootstrapped via ensurepip.");
+        logger.ZLogInformation($"[Pip] pip bootstrapped via ensurepip.");
         return true;
     }
 
@@ -213,7 +214,7 @@ public sealed class PipEnvironmentProvider : PyEnvironmentProvider
 
         if (!File.Exists(getPipPath))
         {
-            Debug.WriteLine("[Pip] Downloading get-pip.py...");
+            logger.ZLogDebug($"[Pip] Downloading get-pip.py...");
             var script = await NetworkService.GetStringAsync(getPipUrl).ConfigureAwait(false);
             await File.WriteAllTextAsync(getPipPath, script).ConfigureAwait(false);
         }
@@ -221,8 +222,8 @@ public sealed class PipEnvironmentProvider : PyEnvironmentProvider
         var result = await Cli.Wrap(PythonExe)
             .WithArguments([getPipPath, "--no-warn-script-location"])
             .WithWorkingDirectory(PythonHome)
-            .WithStandardOutputPipe(PipeTarget.ToDelegate(line => Debug.WriteLine($"[get-pip] {line}")))
-            .WithStandardErrorPipe(PipeTarget.ToDelegate(line => Debug.WriteLine($"[get-pip] {line}")))
+            .WithStandardOutputPipe(PipeTarget.ToDelegate(line => logger.ZLogDebug($"[get-pip] {line}")))
+            .WithStandardErrorPipe(PipeTarget.ToDelegate(line => logger.ZLogDebug($"[get-pip] {line}")))
             .WithValidation(CommandResultValidation.None)
             .ExecuteAsync().ConfigureAwait(false);
 
@@ -231,7 +232,7 @@ public sealed class PipEnvironmentProvider : PyEnvironmentProvider
                 $"get-pip.py failed (exit {result.ExitCode}). " +
                 "Cannot bootstrap pip into pyRevit CPython. Check network connectivity.");
 
-        Trace.TraceInformation("[Pip] pip bootstrapped via get-pip.py.");
+        logger.ZLogInformation($"[Pip] pip bootstrapped via get-pip.py.");
     }
 
     private async Task<(List<string> Succeeded, List<string> Failed)> TryPipInstallBatchAsync(

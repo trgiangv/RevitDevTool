@@ -1,5 +1,6 @@
 using System.Collections.Concurrent;
-using System.Diagnostics;
+using Microsoft.Extensions.Logging;
+using ZLogger;
 
 namespace DevTools.Mcp.Discovery;
 
@@ -8,7 +9,7 @@ namespace DevTools.Mcp.Discovery;
 /// Thread-safe: GetOrCreate and Clear can be called concurrently.
 /// </summary>
 [UsedImplicitly]
-public sealed class McpToolsetContextManager : IDisposable
+public sealed class McpToolsetContextManager(ILogger<McpToolsetContextManager> logger) : IDisposable
 {
     private volatile ConcurrentDictionary<string, Lazy<McpToolsetContext>> _contexts = new(StringComparer.OrdinalIgnoreCase);
 
@@ -16,7 +17,7 @@ public sealed class McpToolsetContextManager : IDisposable
     {
         var normalizedPath = Path.GetFullPath(toolsetDllPath);
         var lazy = _contexts.GetOrAdd(normalizedPath,
-            static path => new Lazy<McpToolsetContext>(() => new McpToolsetContext(path)));
+            path => new Lazy<McpToolsetContext>(() => new McpToolsetContext(path, logger)));
         return lazy.Value;
     }
 
@@ -40,7 +41,7 @@ public sealed class McpToolsetContextManager : IDisposable
             }
             catch (Exception ex)
             {
-                Trace.TraceWarning($"[McpToolsetContextManager] Failed to dispose context: {ex.Message}");
+                logger.ZLogWarning($"[McpToolsetContextManager] Failed to dispose context: {ex.Message}");
             }
         }
     }

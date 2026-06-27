@@ -1,11 +1,12 @@
 using Autodesk.Revit.DB.DirectContext3D;
-using RevitDevTool.Settings;
 using DevTools.Utilities;
+using Microsoft.Extensions.Logging;
+using RevitDevTool.Core;
+using RevitDevTool.Settings;
 using RevitDevTool.Visualization.Contracts;
 using RevitDevTool.Visualization.Helpers;
 using RevitDevTool.Visualization.Render;
-using System.Diagnostics;
-using RevitDevTool.Core;
+using ZLogger;
 using Color = Autodesk.Revit.DB.Color;
 
 namespace RevitDevTool.Visualization.Server;
@@ -28,8 +29,9 @@ public sealed class PolylineVisualizationServer : VisualizationServer<GeometryOb
     private bool _drawDirection;
     private bool _drawSurface;
 
-    public PolylineVisualizationServer(IRevitSettingsService settingsService)
+    public PolylineVisualizationServer(IRevitSettingsService settingsService, ILogger<PolylineVisualizationServer> logger)
     {
+        Logger = logger;
         var settings = settingsService.VisualizationConfig.PolylineSettings;
         _transparency = settings.Transparency / 100;
         _diameter = settings.Diameter / 12;
@@ -138,7 +140,7 @@ public sealed class PolylineVisualizationServer : VisualizationServer<GeometryOb
         }
         catch (Exception ex)
         {
-            Trace.TraceError($"Error mapping geometry buffer in PolylineVisualizationServer: {ex}");
+            Logger?.ZLogError($"Error mapping geometry buffer in PolylineVisualizationServer: {ex}");
         }
     }
 

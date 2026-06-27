@@ -1,9 +1,11 @@
 using System.Text.Json;
+using Microsoft.Extensions.Logging.Abstractions;
 using Python.Runtime;
 namespace RevitDevTool.Server.Tests;
 
 public sealed class PythonInProcessParserTests : IDisposable
 {
+    private static readonly PythonToolsetParser Parser = new(NullLogger<PythonToolsetParser>.Instance);
     private static readonly string PythonHome;
     private static readonly string PythonDll;
     private static readonly string ToolParserScript;
@@ -37,7 +39,7 @@ public sealed class PythonInProcessParserTests : IDisposable
         Assert.NotNull(result);
         Assert.False(string.IsNullOrWhiteSpace(result));
 
-        var catalog = PythonToolsetParser.ParseDirectoryCatalog(ToolsetDirectory, _ => result);
+        var catalog = Parser.ParseDirectoryCatalog(ToolsetDirectory, _ => result);
         var tool = catalog.Tools.SingleOrDefault(t => t.ProtocolTool.Name == "get_parser_sample_status");
 
         Assert.NotNull(tool);
@@ -54,7 +56,7 @@ public sealed class PythonInProcessParserTests : IDisposable
 
         Assert.NotNull(result);
 
-        var catalog = PythonToolsetParser.ParseDirectoryCatalog(ToolsetDirectory, _ => result);
+        var catalog = Parser.ParseDirectoryCatalog(ToolsetDirectory, _ => result);
         var prompt = catalog.Prompts.SingleOrDefault(p => p.ProtocolPrompt.Name == "summarize_parser_sample");
 
         Assert.NotNull(prompt);
@@ -69,7 +71,7 @@ public sealed class PythonInProcessParserTests : IDisposable
 
         Assert.NotNull(result);
 
-        var catalog = PythonToolsetParser.ParseDirectoryCatalog(ToolsetDirectory, _ => result);
+        var catalog = Parser.ParseDirectoryCatalog(ToolsetDirectory, _ => result);
         var direct = catalog.Resources.SingleOrDefault(r => r.ProtocolResource?.Name == "parser_status_resource");
         var template = catalog.Resources.SingleOrDefault(r => r.ProtocolTemplate?.Name == "parser_view_resource");
 
@@ -86,7 +88,7 @@ public sealed class PythonInProcessParserTests : IDisposable
 
         Assert.NotNull(result);
 
-        var catalog = PythonToolsetParser.ParseDirectoryCatalog(ToolsetDirectory, _ => result);
+        var catalog = Parser.ParseDirectoryCatalog(ToolsetDirectory, _ => result);
         var tool = catalog.Tools.SingleOrDefault(t => t.ProtocolTool.Name == "parser_lowlevel_tool");
         var prompt = catalog.Prompts.SingleOrDefault(p => p.ProtocolPrompt.Name == "parser_lowlevel_prompt");
         var resource = catalog.Resources.SingleOrDefault(r => r.ProtocolResource?.Name == "parser_lowlevel_resource");
@@ -119,12 +121,12 @@ public sealed class PythonInProcessParserTests : IDisposable
         Assert.True(File.Exists(pythonExe), $"Python executable not found at '{pythonExe}'.");
         Assert.True(File.Exists(toolParserScriptPath), $"ToolParser.py not found at '{toolParserScriptPath}'.");
 
-        var outOfProcess = PythonToolsetParser.ParseDirectoryCatalog(ToolsetDirectory, pythonExe, toolParserScriptPath);
+        var outOfProcess = Parser.ParseDirectoryCatalog(ToolsetDirectory, pythonExe, toolParserScriptPath);
         var inProcessJson = RunInProcessParser(ToolsetDirectory);
 
         Assert.NotNull(inProcessJson);
 
-        var inProcess = PythonToolsetParser.ParseDirectoryCatalog(ToolsetDirectory, _ => inProcessJson);
+        var inProcess = Parser.ParseDirectoryCatalog(ToolsetDirectory, _ => inProcessJson);
 
         Assert.Equal(outOfProcess.Tools.Count, inProcess.Tools.Count);
         Assert.Equal(outOfProcess.Prompts.Count, inProcess.Prompts.Count);

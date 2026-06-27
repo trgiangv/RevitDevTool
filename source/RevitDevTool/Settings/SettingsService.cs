@@ -2,14 +2,15 @@ using DevTools.Settings;
 using DevTools.Settings.Configs;
 using RevitDevTool.Logging.Enums;
 using RevitDevTool.Settings.Config;
-using System.Diagnostics;
 using System.IO;
 using DevTools.Utilities;
 using DevTools.Logging;
+using Microsoft.Extensions.Logging;
+using ZLogger;
 
 namespace RevitDevTool.Settings;
 
-public sealed class SettingsService(IFileConfig<PathOptions> fileConfig) : IRevitSettingsService
+public sealed class SettingsService(IFileConfig<PathOptions> fileConfig, ILogger<SettingsService> logger) : IRevitSettingsService
 {
     private GeneralConfig? _generalConfig;
     private LogConfig? _logConfig;
@@ -117,7 +118,7 @@ public sealed class SettingsService(IFileConfig<PathOptions> fileConfig) : IRevi
         }
         catch (Exception exception)
         {
-            Trace.TraceError($"Application settings loading error: {exception.Message}");
+            logger.ZLogError($"Application settings loading error: {exception.Message}");
         }
 
         if (_generalConfig is null)
@@ -134,7 +135,7 @@ public sealed class SettingsService(IFileConfig<PathOptions> fileConfig) : IRevi
         }
         catch (Exception exception)
         {
-            Trace.TraceError($"Visualization settings loading error: {exception.Message}");
+            logger.ZLogError($"Visualization settings loading error: {exception.Message}");
         }
 
         if (_visualizationConfig is null)
@@ -151,7 +152,7 @@ public sealed class SettingsService(IFileConfig<PathOptions> fileConfig) : IRevi
         }
         catch (Exception exception)
         {
-            Trace.TraceError($"Log settings loading error: {exception.Message}");
+            logger.ZLogError($"Log settings loading error: {exception.Message}");
         }
 
         if (_logConfig is null)
@@ -215,7 +216,7 @@ public sealed class SettingsService(IFileConfig<PathOptions> fileConfig) : IRevi
         }
         catch (Exception exception)
         {
-            Trace.TraceError($"Code execute settings loading error: {exception.Message}");
+            logger.ZLogError($"Code execute settings loading error: {exception.Message}");
         }
 
         _codeExecuteConfig ??= new ExecutionConfig();
@@ -244,7 +245,7 @@ public sealed class SettingsService(IFileConfig<PathOptions> fileConfig) : IRevi
         }
         catch (Exception exception)
         {
-            Trace.TraceError($"MCP registry settings loading error: {exception.Message}");
+            logger.ZLogError($"MCP registry settings loading error: {exception.Message}");
         }
 
         _mcpRegistryConfig ??= new McpRegistryConfig();

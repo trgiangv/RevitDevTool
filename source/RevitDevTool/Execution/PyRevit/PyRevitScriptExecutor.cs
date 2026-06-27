@@ -1,4 +1,5 @@
 using DevTools.Execution.Models;
+using Microsoft.Extensions.Logging;
 using RevitDevTool.Core;
 namespace RevitDevTool.Execution.PyRevit;
 
@@ -7,12 +8,12 @@ namespace RevitDevTool.Execution.PyRevit;
 /// </summary>
 internal static class PyRevitScriptExecutor
 {
-    internal static ExecutionResult Execute(string scriptPath, string rootPath)
+    internal static ExecutionResult Execute(string scriptPath, string rootPath, ILogger? logger = null)
     {
         var uiApplication = RevitContext.UiApplication;
         try
         {
-            PyRevitAssemblyLoader.EnsureLoaded(scriptPath);
+            PyRevitAssemblyLoader.EnsureLoaded(scriptPath, logger);
             var reflection = PyRevitReflectionCache.Instance;
 
             if (reflection.HasRuntime)

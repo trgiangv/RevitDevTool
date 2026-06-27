@@ -1,10 +1,11 @@
-using System.Diagnostics;
 using System.Reflection;
+using Microsoft.Extensions.Logging;
 using ModelContextProtocol.Server;
+using ZLogger;
 
 namespace DevTools.Mcp.Discovery;
 
-public sealed class DotnetMethodResolver(McpToolsetContextManager contextManager)
+public sealed class DotnetMethodResolver(McpToolsetContextManager contextManager, ILogger<DotnetMethodResolver> logger)
 {
     private static readonly string McpToolAttributeFullName = typeof(McpServerToolAttribute).FullName!;
     private static readonly string McpPromptAttributeFullName = typeof(McpServerPromptAttribute).FullName!;
@@ -123,7 +124,7 @@ public sealed class DotnetMethodResolver(McpToolsetContextManager contextManager
         }
         catch (Exception ex)
         {
-            Trace.TraceWarning(
+            logger.ZLogWarning(
                 $"[MCP] Failed to load toolset '{binding.SourcePath}': {ex.Message}");
             return null;
         }

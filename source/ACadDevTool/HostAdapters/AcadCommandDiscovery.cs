@@ -1,9 +1,10 @@
-using System.Diagnostics;
 using System.IO;
 using System.Reflection;
 using Autodesk.AutoCAD.Runtime;
 using DevTools.Execution.Interfaces;
 using DevTools.Execution.Providers.Dotnet;
+using Microsoft.Extensions.Logging;
+using ZLogger;
 // ReSharper disable RedundantSuppressNullableWarningExpression
 
 namespace AcadDevTool.HostAdapters;
@@ -15,7 +16,7 @@ namespace AcadDevTool.HostAdapters;
 /// <see cref="AcadCommandRunner"/> can split on the last dot into type and method (e.g.
 /// <c>MyNs.MyClass.DoWork</c> → type <c>MyNs.MyClass</c>, method <c>DoWork</c>).
 /// </summary>
-public sealed class AcadCommandDiscovery : ICommandDiscovery
+public sealed class AcadCommandDiscovery(ILogger<AcadCommandDiscovery> logger) : ICommandDiscovery
 {
     private static readonly string CommandMethodFullName = typeof(CommandMethodAttribute).FullName!;
     private static readonly string VoidFullName = typeof(void).FullName!;
@@ -24,7 +25,7 @@ public sealed class AcadCommandDiscovery : ICommandDiscovery
     {
         if (!File.Exists(assemblyPath))
         {
-            Trace.TraceError($"Assembly file not found: {assemblyPath}");
+            logger.ZLogError($"Assembly file not found: {assemblyPath}");
             return [];
         }
 
@@ -44,7 +45,7 @@ public sealed class AcadCommandDiscovery : ICommandDiscovery
         }
         catch (System.Exception ex)
         {
-            Trace.TraceError($"Failed to parse commands from '{assemblyPath}': {ex.Message}");
+            logger.ZLogError($"Failed to parse commands from '{assemblyPath}': {ex.Message}");
         }
 
         return commands;

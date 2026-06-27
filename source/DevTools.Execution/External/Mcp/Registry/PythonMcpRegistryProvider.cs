@@ -1,11 +1,15 @@
-using System.Diagnostics;
 using System.IO;
 using DevTools.Execution.Providers.Python;
+using Microsoft.Extensions.Logging;
 using Python.Runtime;
+using ZLogger;
 namespace DevTools.Execution.External.Mcp.Registry;
 
 public sealed class PythonMcpRegistryProvider(
-    PythonInitializer pythonInitializer, PythonExecutor executor) : IMcpRegistryProvider
+    PythonInitializer pythonInitializer,
+    PythonExecutor executor,
+    PythonToolsetParser toolsetParser,
+    ILogger<PythonMcpRegistryProvider> logger) : IMcpRegistryProvider
 {
     public string Name => "python-mcp";
     public ExecutionMode SourceKind => ExecutionMode.Python;
@@ -24,7 +28,7 @@ public sealed class PythonMcpRegistryProvider(
 
         if (pythonInitializer.Provider is null || !pythonInitializer.Provider.IsEnvironmentReady())
         {
-            Trace.TraceWarning("[MCP] Python environment is not ready. Skipping Python MCP registry discovery.");
+            logger.ZLogWarning($"[MCP] Python environment is not ready. Skipping Python MCP registry discovery.");
             return McpRegistryCatalog.Empty;
         }
 
@@ -39,11 +43,11 @@ public sealed class PythonMcpRegistryProvider(
         {
             try
             {
-                all = all.Merge(PythonToolsetParser.ParseDirectoryCatalog(dir, ParseDirectory));
+                all = all.Merge(toolsetParser.ParseDirectoryCatalog(dir, ParseDirectory));
             }
             catch (Exception ex)
             {
-                Trace.TraceWarning($"[MCP] Failed to parse toolset '{dir}': {ex.Message}\n{ex.StackTrace}");
+                logger.ZLogWarning($"[MCP] Failed to parse toolset '{dir}': {ex.Message}\n{ex.StackTrace}");
             }
         }
 
@@ -62,12 +66,12 @@ public sealed class PythonMcpRegistryProvider(
             {
                 try
                 {
-                    Trace.TraceInformation($"[MCP] Pre-resolving dependencies for '{entryFile}'...");
+                    logger.ZLogInformation($"[MCP] Pre-resolving dependencies for '{entryFile}'...");
                     PythonExecutionStrategy.ResolveDependenciesAsync(pythonInitializer, entryFile).GetAwaiter().GetResult();
                 }
                 catch (Exception ex)
                 {
-                    Trace.TraceWarning($"[MCP] Dependency pre-resolve failed for '{entryFile}': {ex.Message}");
+                    logger.ZLogWarning($"[MCP] Dependency pre-resolve failed for '{entryFile}': {ex.Message}");
                 }
             }
         }
@@ -106,7 +110,7 @@ public sealed class PythonMcpRegistryProvider(
                      .Distinct(StringComparer.OrdinalIgnoreCase)
                      .OrderBy(path => path, StringComparer.OrdinalIgnoreCase))
         {
-            Trace.TraceWarning($"[MCP] Toolset directory not found: {missingDir}");
+            logger.ZLogWarning($"[MCP] Toolset directory not found: {missingDir}");
         }
     }
 }

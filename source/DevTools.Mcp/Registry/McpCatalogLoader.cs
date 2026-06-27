@@ -1,8 +1,9 @@
-using System.Diagnostics;
+using Microsoft.Extensions.Logging;
+using ZLogger;
 
 namespace DevTools.Mcp.Registry;
 
-public sealed class McpCatalogLoader(IEnumerable<IMcpRegistryProvider> providers)
+public sealed class McpCatalogLoader(IEnumerable<IMcpRegistryProvider> providers, ILogger<McpCatalogLoader> logger)
 {
     private readonly IReadOnlyList<IMcpRegistryProvider> _providers = providers.ToList();
 
@@ -21,7 +22,7 @@ public sealed class McpCatalogLoader(IEnumerable<IMcpRegistryProvider> providers
             try
             {
                 var catalog = provider.LoadCatalog();
-                Debug.WriteLine(
+                logger.ZLogDebug(
                     $"[MCP] Provider '{provider.Name}' returned {catalog.Tools.Count} tool(s), {catalog.Prompts.Count} prompt(s), {catalog.Resources.Count} resource(s).");
 
                 Collect(provider.Name, catalog.Tools, toolMap, tool => tool.Id, tool => tool.ProtocolTool.Name, "tool");
@@ -31,7 +32,7 @@ public sealed class McpCatalogLoader(IEnumerable<IMcpRegistryProvider> providers
             }
             catch (Exception ex)
             {
-                Trace.TraceWarning($"[MCP] Provider '{provider.Name}' failed: {ex.Message}");
+                logger.ZLogWarning($"[MCP] Provider '{provider.Name}' failed: {ex.Message}");
             }
         }
 
@@ -52,7 +53,7 @@ public sealed class McpCatalogLoader(IEnumerable<IMcpRegistryProvider> providers
                 .ToList(),
         };
 
-        Debug.WriteLine(
+        logger.ZLogDebug(
             $"[MCP] Tool store loaded {loaded.Tools.Count} tool(s), {loaded.Prompts.Count} prompt(s), {loaded.Resources.Count} resource(s).");
         return loaded;
     }
@@ -75,7 +76,7 @@ public sealed class McpCatalogLoader(IEnumerable<IMcpRegistryProvider> providers
         }
     }
 
-    private static void Collect<T>(
+    private void Collect<T>(
         string providerName,
         IReadOnlyList<T> items,
         Dictionary<string, T> byId,
@@ -90,12 +91,12 @@ public sealed class McpCatalogLoader(IEnumerable<IMcpRegistryProvider> providers
 
             if (string.IsNullOrWhiteSpace(name))
             {
-                Trace.TraceWarning($"[MCP] Skip {kind} with empty name from provider='{providerName}'.");
+                logger.ZLogWarning($"[MCP] Skip {kind} with empty name from provider='{providerName}'.");
                 continue;
             }
 
             if (byId.TryAdd(id, item)) continue;
-            Trace.TraceWarning($"[MCP] Duplicate {kind} id '{id}' ignored.");
+            logger.ZLogWarning($"[MCP] Duplicate {kind} id '{id}' ignored.");
         }
     }
 }

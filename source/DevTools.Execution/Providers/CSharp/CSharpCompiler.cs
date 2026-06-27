@@ -1,10 +1,11 @@
-using System.Diagnostics;
 using System.IO;
 using System.Reflection;
 using DevTools.Execution.Models;
 using DevTools.Execution.Providers.FSharp;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
+using Microsoft.Extensions.Logging;
+using ZLogger;
 
 namespace DevTools.Execution.Providers.CSharp;
 
@@ -14,14 +15,14 @@ namespace DevTools.Execution.Providers.CSharp;
 /// collects AppDomain references, emits in-memory assembly, and finds IExternalCommand.
 /// On .NET Core+, loads into a collectible AssemblyLoadContext for proper unloading.
 /// </summary>
-internal static class CSharpCompiler
+public sealed class CSharpCompiler(ILogger<CSharpCompiler> logger, NugetManager nugetManager)
 {
     private static readonly LanguageVersion MaxLanguageVersion =
         Enum.GetValues<LanguageVersion>()
             .Where(v => v != LanguageVersion.LatestMajor && v != LanguageVersion.Latest && v != LanguageVersion.Preview && v != LanguageVersion.Default)
             .Max();
 
-    public static async Task<ScriptCompilationResult> CompileAsync(
+    public async Task<ScriptCompilationResult> CompileAsync(
         string scriptPath,
         ICompiledScriptBridge hostSupport,
         IProgress<string>? progress = null,
@@ -44,12 +45,12 @@ internal static class CSharpCompiler
         return LoadAndCreateCommand(peBytes, nugetDllPaths, hostSupport);
     }
 
-    private static ScriptCompilationResult LoadAndCreateCommand(
+    private ScriptCompilationResult LoadAndCreateCommand(
         // ReSharper disable once UnusedParameter.Local
         byte[] peBytes, IReadOnlyCollection<string> nugetDllPaths, ICompiledScriptBridge hostSupport)
     {
 #if NET
-        var context = new ScriptLoadContext(nugetDllPaths);
+        var context = new ScriptLoadContext(nugetDllPaths, logger);
         var assembly = context.LoadCompiledScript(peBytes);
         return CreateCommandResult(assembly, hostSupport, context);
 #else
@@ -58,7 +59,7 @@ internal static class CSharpCompiler
 #endif
     }
 
-    private static async Task<(HashSet<string> AllReferences, List<string> NugetDlls)> ResolveReferencesAsync(
+    private async Task<(HashSet<string> AllReferences, List<string> NugetDlls)> ResolveReferencesAsync(
         ScriptGraph graph, IProgress<string>? progress, CancellationToken ct)
     {
         var references = new HashSet<string>(graph.AssemblyReferences, StringComparer.OrdinalIgnoreCase);
@@ -72,7 +73,7 @@ internal static class CSharpCompiler
             {
                 if (!seen.Add(pkg.PackageId))
                     continue;
-                var dlls = await NugetManager.ResolvePackageDllsAsync(pkg.PackageId, pkg.Version, ct).ConfigureAwait(false);
+                var dlls = await nugetManager.ResolvePackageDllsAsync(pkg.PackageId, pkg.Version, ct).ConfigureAwait(false);
                 foreach (var dll in dlls)
                 {
                     references.Add(dll);
@@ -111,7 +112,7 @@ internal static class CSharpCompiler
             : $"Compiling {scriptName}...");
     }
 
-    private static byte[]? Compile(IReadOnlyList<SourceFileEntry> sourceFiles, HashSet<string> referencePaths, out List<string> diagnostics)
+    private byte[]? Compile(IReadOnlyList<SourceFileEntry> sourceFiles, HashSet<string> referencePaths, out List<string> diagnostics)
     {
         diagnostics = [];
 
@@ -148,14 +149,14 @@ internal static class CSharpCompiler
         return peStream.ToArray();
     }
 
-    private static List<MetadataReference> LoadMetadataReferences(HashSet<string> referencePaths)
+    private List<MetadataReference> LoadMetadataReferences(HashSet<string> referencePaths)
     {
         var refs = new List<MetadataReference>();
         foreach (var refPath in referencePaths)
         {
             if (!File.Exists(refPath))
             {
-                Debug.WriteLine($"[CSharpCompiler] Skipping missing reference: {refPath}");
+                logger.ZLogDebug($"[CSharpCompiler] Skipping missing reference: {refPath}");
                 continue;
             }
 
@@ -165,7 +166,7 @@ internal static class CSharpCompiler
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"[CSharpCompiler] Failed to load reference '{refPath}': {ex.Message}");
+                logger.ZLogDebug($"[CSharpCompiler] Failed to load reference '{refPath}': {ex.Message}");
             }
         }
         return refs;
@@ -186,7 +187,7 @@ internal static class CSharpCompiler
             }
             catch
             {
-                // Some assemblies may not have a location
+                // ignored
             }
         }
     }

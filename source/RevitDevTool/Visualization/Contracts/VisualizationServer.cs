@@ -1,13 +1,15 @@
 using Autodesk.Revit.DB.DirectContext3D;
 using Autodesk.Revit.DB.ExternalService;
+using Microsoft.Extensions.Logging;
 using RevitDevTool.Controllers;
-using System.Diagnostics;
 using RevitDevTool.Core;
+using ZLogger;
 
 namespace RevitDevTool.Visualization.Contracts;
 
 public abstract class VisualizationServer<Tg> : IDirectContext3DServer, IVisualizationServerLifeCycle
 {
+    protected ILogger? Logger { get; init; }
     protected readonly List<Tg> VisualizeGeometries = [];
     protected bool HasGeometryUpdates = true;
     protected bool HasEffectsUpdates = true;
@@ -46,7 +48,7 @@ public abstract class VisualizationServer<Tg> : IDirectContext3DServer, IVisuali
             }
             catch (Exception e)
             {
-                Trace.TraceError($"Error in {GetName()} RenderScene: {e}");
+                Logger?.ZLogError($"Error in {GetName()} RenderScene: {e}");
                 ClearGeometry();
             }
         }
@@ -67,7 +69,7 @@ public abstract class VisualizationServer<Tg> : IDirectContext3DServer, IVisuali
             }
             catch (Exception ex)
             {
-                Trace.TraceError($"Error in {GetName()} ClearGeometry: {ex}");
+                Logger?.ZLogError($"Error in {GetName()} ClearGeometry: {ex}");
             }
         }
     }
@@ -87,7 +89,7 @@ public abstract class VisualizationServer<Tg> : IDirectContext3DServer, IVisuali
             }
             catch (Exception ex)
             {
-                Trace.TraceError($"Error in {GetName()} AddGeometries: {ex}");
+                Logger?.ZLogError($"Error in {GetName()} AddGeometries: {ex}");
             }
         }
     }
@@ -108,7 +110,7 @@ public abstract class VisualizationServer<Tg> : IDirectContext3DServer, IVisuali
             }
             catch (Exception ex)
             {
-                Trace.TraceError($"Error in {GetName()} AddGeometry: {ex}");
+                Logger?.ZLogError($"Error in {GetName()} AddGeometry: {ex}");
             }
         }
     }
@@ -122,14 +124,14 @@ public abstract class VisualizationServer<Tg> : IDirectContext3DServer, IVisuali
             var serverIds = directContextService.GetActiveServerIds();
             if (directContextService.IsRegisteredServerId(GetServerId()))
             {
-                Debug.WriteLine($"{GetName()} already registered");
+                Logger?.ZLogDebug($"{GetName()} already registered");
                 return;
             }
             directContextService.AddServer(this);
             serverIds.Add(GetServerId());
             directContextService.SetActiveServers(serverIds);
 
-            Debug.WriteLine($"{GetName()} registered");
+            Logger?.ZLogDebug($"{GetName()} registered");
         });
     }
 
@@ -141,13 +143,13 @@ public abstract class VisualizationServer<Tg> : IDirectContext3DServer, IVisuali
                 ExternalServiceRegistry.GetService(ExternalServices.BuiltInExternalServices.DirectContext3DService);
             if (!directContextService.IsRegisteredServerId(GetServerId()))
             {
-                Debug.WriteLine($"{GetName()} already unregistered");
+                Logger?.ZLogDebug($"{GetName()} already unregistered");
                 return;
             }
 
             directContextService.RemoveServer(GetServerId());
 
-            Debug.WriteLine($"{GetName()} unregistered");
+            Logger?.ZLogDebug($"{GetName()} unregistered");
             application.ActiveUIDocument?.UpdateAllOpenViews();
         });
     }

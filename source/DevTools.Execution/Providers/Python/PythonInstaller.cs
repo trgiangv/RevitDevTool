@@ -1,8 +1,9 @@
-using System.Diagnostics;
 using System.IO;
 using System.IO.Compression;
 using DevTools.Execution.Services;
 using DevTools.Utilities;
+using Microsoft.Extensions.Logging;
+using ZLogger;
 
 // ReSharper disable RedundantSuppressNullableWarningExpression
 namespace DevTools.Execution.Providers.Python;
@@ -26,21 +27,21 @@ public static class PythonInstaller
     /// Uses a marker file to avoid spawning a child process on every startup.
     /// Downloads only when pixi.exe is missing or the marker version differs from <see cref="PixiVersion"/>.
     /// </summary>
-    public static async Task SetupPixiAsync()
+    public static async Task SetupPixiAsync(ILogger? logger = null)
     {
         var outputDir = GetBinPath();
         Directory.CreateDirectory(outputDir);
 
         if (IsPixiInstalled())
         {
-            Trace.TraceInformation($"[Pixi] v{PixiVersion} already installed.");
+            logger?.ZLogInformation($"[Pixi] v{PixiVersion} already installed.");
             return;
         }
 
-        Trace.TraceInformation($"[Pixi] Downloading v{PixiVersion}...");
+        logger?.ZLogInformation($"[Pixi] Downloading v{PixiVersion}...");
         await DownloadAndInstallAsync(PixiVersion).ConfigureAwait(false);
         await File.WriteAllTextAsync(VersionMarkerPath, PixiVersion).ConfigureAwait(false);
-        Trace.TraceInformation($"[Pixi] v{PixiVersion} installed.");
+        logger?.ZLogInformation($"[Pixi] v{PixiVersion} installed.");
     }
 
     private static bool IsMarkedVersion(string version)

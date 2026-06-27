@@ -1,8 +1,11 @@
-using System.Diagnostics;
+using Microsoft.Extensions.Logging;
+using ZLogger;
 
 namespace DevTools.Mcp.Registry;
 
-public sealed class DotnetMcpRegistryProvider : IMcpRegistryProvider
+public sealed class DotnetMcpRegistryProvider(
+    DotnetMcpAssemblyParser assemblyParser,
+    ILogger<DotnetMcpRegistryProvider> logger) : IMcpRegistryProvider
 {
     public string Name => "dotnet-mcp";
     public ExecutionMode SourceKind => ExecutionMode.Dotnet;
@@ -20,11 +23,11 @@ public sealed class DotnetMcpRegistryProvider : IMcpRegistryProvider
         {
             try
             {
-                catalog = catalog.Merge(DotnetMcpAssemblyParser.ParseCatalogFromAssembly(assemblyPath));
+                catalog = catalog.Merge(assemblyParser.ParseCatalogFromAssembly(assemblyPath));
             }
             catch (Exception ex)
             {
-                Trace.TraceWarning($"[MCP] Failed to parse .NET MCP tools from '{assemblyPath}': {ex.Message}");
+                logger.ZLogWarning($"[MCP] Failed to parse .NET MCP tools from '{assemblyPath}': {ex.Message}");
             }
         }
 

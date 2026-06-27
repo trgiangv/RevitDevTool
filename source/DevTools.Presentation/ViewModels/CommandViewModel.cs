@@ -2,6 +2,8 @@ using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.IO;
 using System.Windows.Threading;
+using Microsoft.Extensions.Logging;
+using ZLogger;
 using DevTools.Execution.Interfaces;
 using DevTools.Execution.Models;
 using DevTools.Settings;
@@ -18,6 +20,7 @@ public partial class CommandViewModel : ObservableObject, IBusyViewModel
     private readonly ISettingsService _settingsService;
     private readonly MemoryViewModel _memoryViewModel;
     private readonly IDebuggerBridge? _debugger;
+    private readonly ILogger<CommandViewModel> _logger;
     private readonly DispatcherTimer _searchDebounceTimer;
     private readonly DispatcherTimer? _debugStatusTimer;
 
@@ -49,11 +52,13 @@ public partial class CommandViewModel : ObservableObject, IBusyViewModel
         IExecutionOrchestrator orchestrator,
         ISettingsService settingsService,
         MemoryViewModel memoryViewModel,
+        ILogger<CommandViewModel> logger,
         IDebuggerBridge? debugger = null)
     {
         _orchestrator = orchestrator;
         _settingsService = settingsService;
         _memoryViewModel = memoryViewModel;
+        _logger = logger;
         _debugger = debugger;
         _orchestrator.TreeChanged += OnTreeChanged;
         _orchestrator.RootRemoved += OnRootRemoved;
@@ -151,7 +156,7 @@ public partial class CommandViewModel : ObservableObject, IBusyViewModel
         {
             var result = await _orchestrator.ExecuteAsync(node);
             memoryScope.Complete(success: result.Success);
-            if (!result.Success) Trace.TraceWarning($"Execution failed: {result.Message}");
+            if (!result.Success) _logger.ZLogWarning($"Execution failed: {result.Message}");
         });
     }
 
@@ -170,10 +175,10 @@ public partial class CommandViewModel : ObservableObject, IBusyViewModel
             {
                 var result = await _orchestrator.ExecuteAsync(lastExecuted);
                 memoryScope.Complete(success: result.Success);
-                if (!result.Success) Trace.TraceWarning($"Execution failed: {result.Message}");
+                if (!result.Success) _logger.ZLogWarning($"Execution failed: {result.Message}");
             });
         }
-        catch (Exception ex) { Trace.TraceError($"Failed to execute last item: {ex.Message}"); }
+        catch (Exception ex) { _logger.ZLogError($"Failed to execute last item: {ex.Message}"); }
     }
 
     private static ExecutionNodeBase? FindLastExecutedNode(IEnumerable<ExecutionNodeBase> nodes)

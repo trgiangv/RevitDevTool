@@ -40,7 +40,7 @@ public sealed class ConsoleRedirector : IDisposable
 
     private sealed class ConsoleTextWriter : TextWriter
     {
-        public override Encoding Encoding => System.Text.Encoding.UTF8;
+        public override Encoding Encoding => Encoding.UTF8;
 
         public override void Write(char value) => Trace.Write(value);
 
@@ -50,7 +50,7 @@ public sealed class ConsoleRedirector : IDisposable
                 Trace.Write(value);
         }
 
-        public override void Write(char[] buffer, int index, int count)
+        public override void Write(char[]? buffer, int index, int count)
         {
             if (buffer is null || count <= 0)
                 return;

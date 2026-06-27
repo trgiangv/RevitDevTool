@@ -1,11 +1,12 @@
 using System.Collections.ObjectModel;
-using System.Diagnostics;
 using System.IO;
 using DevTools.Execution.Interfaces;
 using DevTools.Execution.Models;
 using DevTools.Telemetry;
 using DevTools.Utilities;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
+using ZLogger;
 namespace DevTools.Execution.Services;
 
 /// <summary>
@@ -17,6 +18,7 @@ public sealed class ExecutionOrchestrator : IExecutionOrchestrator, IDisposable
     private readonly ITreeStateManager _stateManager;
     private readonly IFileWatcherService _fileWatcher;
     private readonly ITelemetry _telemetry;
+    private readonly ILogger<ExecutionOrchestrator> _logger;
     private readonly ObservableCollection<ExecutionNodeBase> _treeRoot = [];
     private readonly SemaphoreSlim _reloadGate = new(1, 1);
     private ExecutionNodeBase? _lastExecutedNode;
@@ -31,12 +33,14 @@ public sealed class ExecutionOrchestrator : IExecutionOrchestrator, IDisposable
         IServiceProvider serviceProvider,
         ITreeStateManager stateManager,
         IFileWatcherService fileWatcher,
-        ITelemetry telemetry)
+        ITelemetry telemetry,
+        ILogger<ExecutionOrchestrator> logger)
     {
         _serviceProvider = serviceProvider;
         _stateManager = stateManager;
         _fileWatcher = fileWatcher;
         _telemetry = telemetry;
+        _logger = logger;
         _fileWatcher.FileChanged += OnFileChanged;
     }
 
@@ -44,7 +48,7 @@ public sealed class ExecutionOrchestrator : IExecutionOrchestrator, IDisposable
     {
         if (IsPathUnderExistingRoot(path))
         {
-            Trace.TraceWarning($"Path '{path}' is already covered by an existing parent root. Skipping.");
+            _logger.ZLogWarning($"Path '{path}' is already covered by an existing parent root. Skipping.");
             return;
         }
 
@@ -92,7 +96,7 @@ public sealed class ExecutionOrchestrator : IExecutionOrchestrator, IDisposable
             }
             catch (Exception ex)
             {
-                Trace.TraceError($"Failed to load path '{path}': {ex.Message}");
+                _logger.ZLogError($"Failed to load path '{path}': {ex.Message}");
                 failed.Add(path);
                 continue;
             }
@@ -269,7 +273,7 @@ public sealed class ExecutionOrchestrator : IExecutionOrchestrator, IDisposable
             var provider = _serviceProvider.GetKeyedService<IExecutionProvider>(currentExecutionNodeRoot.ContainerMode);
             if (provider == null)
             {
-                Trace.TraceWarning($"No keyed provider found for container mode '{currentExecutionNodeRoot.ContainerMode}'");
+                _logger.ZLogWarning($"No keyed provider found for container mode '{currentExecutionNodeRoot.ContainerMode}'");
                 return ReloadRootResult.KeepCurrent();
             }
 
@@ -281,7 +285,7 @@ public sealed class ExecutionOrchestrator : IExecutionOrchestrator, IDisposable
         }
         catch (Exception ex)
         {
-            Trace.TraceError($"Failed to reload path '{currentExecutionNodeRoot.RootPath}': {ex.Message}");
+            _logger.ZLogError($"Failed to reload path '{currentExecutionNodeRoot.RootPath}': {ex.Message}");
             return ReloadRootResult.KeepCurrent();
         }
     }
@@ -299,7 +303,7 @@ public sealed class ExecutionOrchestrator : IExecutionOrchestrator, IDisposable
             }
             catch (Exception ex)
             {
-                Trace.TraceError($"Error reloading after file change: {ex.Message}");
+                _logger.ZLogError($"Error reloading after file change: {ex.Message}");
             }
         });
     }
@@ -364,7 +368,7 @@ public sealed class ExecutionOrchestrator : IExecutionOrchestrator, IDisposable
         var provider = _serviceProvider.GetKeyedService<IExecutionProvider>(renamedRoot.ContainerMode);
         if (provider == null)
         {
-            Trace.TraceWarning($"No keyed provider found for container mode '{renamedRoot.ContainerMode}'");
+            _logger.ZLogWarning($"No keyed provider found for container mode '{renamedRoot.ContainerMode}'");
             RootRemoved?.Invoke(this, new RootRemovedEventArgs(oldPath));
             return true;
         }

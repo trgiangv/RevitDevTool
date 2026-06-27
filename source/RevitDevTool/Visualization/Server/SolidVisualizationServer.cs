@@ -1,11 +1,12 @@
 using Autodesk.Revit.DB.DirectContext3D;
-using RevitDevTool.Settings;
 using DevTools.Utilities;
+using Microsoft.Extensions.Logging;
+using RevitDevTool.Core;
+using RevitDevTool.Settings;
 using RevitDevTool.Visualization.Contracts;
 using RevitDevTool.Visualization.Helpers;
 using RevitDevTool.Visualization.Render;
-using System.Diagnostics;
-using RevitDevTool.Core;
+using ZLogger;
 using Color = Autodesk.Revit.DB.Color;
 
 namespace RevitDevTool.Visualization.Server;
@@ -24,8 +25,9 @@ public sealed class SolidVisualizationServer : VisualizationServer<Solid>
     private bool _drawFace;
     private bool _drawEdge;
 
-    public SolidVisualizationServer(IRevitSettingsService settingsService)
+    public SolidVisualizationServer(IRevitSettingsService settingsService, ILogger<SolidVisualizationServer> logger)
     {
+        Logger = logger;
         var settings = settingsService.VisualizationConfig.SolidSettings;
         _transparency = settings.Transparency / 100;
         _scale = settings.Scale / 100;
@@ -47,7 +49,7 @@ public sealed class SolidVisualizationServer : VisualizationServer<Solid>
         {
             if (solid.Volume == 0)
             {
-                Debug.WriteLine("Solid with zero volume skipped in bounding box calculation.");
+                Logger?.ZLogDebug($"Solid with zero volume skipped in bounding box calculation.");
                 continue;
             }
             BoundingBoxXYZ boundingBox;

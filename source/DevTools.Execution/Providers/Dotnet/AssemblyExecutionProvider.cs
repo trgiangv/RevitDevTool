@@ -1,7 +1,8 @@
-using System.Diagnostics;
 using System.IO;
 using DevTools.Execution.Interfaces;
 using DevTools.Execution.Models;
+using Microsoft.Extensions.Logging;
+using ZLogger;
 namespace DevTools.Execution.Providers.Dotnet;
 
 /// <summary>
@@ -11,7 +12,9 @@ namespace DevTools.Execution.Providers.Dotnet;
 public sealed class AssemblyExecutionProvider(
     ICommandDiscovery commandDiscovery,
     IHostContextExecutor hostContext,
-    ICommandRunner commandRunner) : IExecutionProvider
+    ICommandRunner commandRunner,
+    ILogger<AssemblyExecutionStrategy> strategyLogger,
+    ILogger<AssemblyExecutionProvider> logger) : IExecutionProvider
 {
     public string Name => "DotNet";
 
@@ -26,14 +29,14 @@ public sealed class AssemblyExecutionProvider(
         {
             if (!File.Exists(path) || !path.EndsWith(".dll", StringComparison.OrdinalIgnoreCase))
             {
-                Trace.TraceWarning($"Invalid assembly path: {path}");
+                logger.ZLogWarning($"Invalid assembly path: {path}");
                 return [];
             }
             var addinItems = commandDiscovery.ParseCommands(path);
 
             if (addinItems.Count == 0)
             {
-                Trace.TraceWarning($"No commands found in assembly: {path}");
+                logger.ZLogWarning($"No commands found in assembly: {path}");
                 return Enumerable.Empty<ExecutionNodeBase>();
             }
 
@@ -114,7 +117,7 @@ public sealed class AssemblyExecutionProvider(
             ContainerMode = ContainerMode.Assembly,
             ExecutionMode = ExecutionMode.Dotnet,
             NodeType = NodeType.Executable,
-            ExecutionStrategy = new AssemblyExecutionStrategy(commandItem, hostContext, commandRunner)
+            ExecutionStrategy = new AssemblyExecutionStrategy(commandItem, hostContext, commandRunner, strategyLogger)
         };
     }
 

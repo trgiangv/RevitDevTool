@@ -1,11 +1,12 @@
 using Autodesk.Revit.DB.DirectContext3D;
-using RevitDevTool.Settings;
 using DevTools.Utilities;
+using Microsoft.Extensions.Logging;
+using RevitDevTool.Core;
+using RevitDevTool.Settings;
 using RevitDevTool.Visualization.Contracts;
 using RevitDevTool.Visualization.Helpers;
 using RevitDevTool.Visualization.Render;
-using System.Diagnostics;
-using RevitDevTool.Core;
+using ZLogger;
 using Color = Autodesk.Revit.DB.Color;
 
 namespace RevitDevTool.Visualization.Server;
@@ -35,8 +36,9 @@ public sealed class XyzVisualizationServer : VisualizationServer<XYZ>
     private bool _drawYAxis;
     private bool _drawZAxis;
 
-    public XyzVisualizationServer(IRevitSettingsService settingsService)
+    public XyzVisualizationServer(IRevitSettingsService settingsService, ILogger<XyzVisualizationServer> logger)
     {
+        Logger = logger;
         var settings = settingsService.VisualizationConfig.XyzSettings;
         _transparency = settings.Transparency / 100;
         _axisLength = settings.AxisLength / 12;
@@ -137,7 +139,7 @@ public sealed class XyzVisualizationServer : VisualizationServer<XYZ>
         }
         catch (Exception ex)
         {
-            Trace.TraceError($"Error updating geometry buffer in XyzVisualizationServer: {ex}");
+            Logger?.ZLogError($"Error updating geometry buffer in XyzVisualizationServer: {ex}");
         }
     }
 
