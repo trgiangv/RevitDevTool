@@ -191,14 +191,13 @@ public sealed class DevToolsPipeServer(
         SendNotification(McpBridgeMethods.NotifyToolsChanged);
     }
 
-    private async void SendNotification(string method, object? data = null)
+    private async void SendNotification(string method, JsonElement? data = null)
     {
         try
         {
             if (_connections.IsEmpty) return;
 
-            var @params = data is not null ? JsonSerializer.SerializeToElement(data) : (JsonElement?)null;
-            var notification = BridgeMessage.Notification(method, @params);
+            var notification = BridgeMessage.Notification(method, data);
 
             foreach (var connection in _connections.Values)
             {

@@ -10,7 +10,7 @@ public sealed class PytestRequestHandler(
     /// <summary>
     /// Injected by the pipe server to broadcast notifications to connected clients.
     /// </summary>
-    public Action<string, object?>? NotifySender { get; set; }
+    public Action<string, JsonElement?>? NotifySender { get; set; }
 
     public IReadOnlyCollection<string> SupportedMethods { get; } =
     [
@@ -71,6 +71,8 @@ public sealed class PytestRequestHandler(
         if (sender is null)
             return null;
 
-        return resultJson => sender(PytestBridgeMethods.NotifyTestProgress, resultJson);
+        return resultJson => sender(
+            PytestBridgeMethods.NotifyTestProgress,
+            JsonSerializer.Deserialize<JsonElement>(resultJson));
     }
 }

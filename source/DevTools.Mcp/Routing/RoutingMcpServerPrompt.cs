@@ -21,10 +21,10 @@ public sealed class RoutingMcpServerPrompt(IInstanceManager instanceManager, Pro
         var client = ToolHelpers.ResolveClient(instanceManager, args, out var cleanedArgs)
                      ?? throw new InvalidOperationException(ToolHelpers.FormatInstanceListing(instanceManager));
 
-        var callParams = JsonSerializer.SerializeToElement(new Dictionary<string, object?>
+        var callParams = JsonSerializer.SerializeToElement(new McpPromptsGetParams
         {
-            [McpPropertyNames.Name] = ProtocolPrompt.Name,
-            [McpPropertyNames.Arguments] = cleanedArgs.Count > 0 ? cleanedArgs : null
+            Name = ProtocolPrompt.Name,
+            Arguments = cleanedArgs.Count > 0 ? cleanedArgs : null
         });
 
         var response = await client.RequestAsync(McpBridgeMethods.PromptsGet, callParams, cancellationToken)

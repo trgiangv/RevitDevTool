@@ -1,4 +1,5 @@
 using System.Text.Json;
+using DevTools.Mcp.Schema;
 using ModelContextProtocol.Protocol;
 
 namespace DevTools.Execution.External.Mcp.BuiltIn;
@@ -16,22 +17,15 @@ public sealed class CSharpCodeTool(CSharpCodeExecutor executor) : IBuiltInMcpToo
             "Revit: implement IExternalCommand — set the 'message' ref parameter for output.\n" +
             "AutoCAD: use [CommandMethod].\n" +
             "Host API assemblies are auto-referenced. Use #r for extras, #r \"nuget:\" for packages.",
-        InputSchema = JsonSerializer.SerializeToElement(new
-        {
-            type = JsonSchemaTypeNames.Object,
-            properties = new
-            {
-                code = new
-                {
-                    type = JsonSchemaTypeNames.String,
-                    description =
-                        "C# code with a host command class. " +
-                        "Revit: IExternalCommand (output via 'message' ref param). " +
-                        "AutoCAD: [CommandMethod]. Host assemblies auto-referenced. #r for extras."
-                }
-            },
-            required = new[] { McpPropertyNames.Code }
-        }),
+        InputSchema = McpSchemaBuilder.Object(
+        [
+            McpSchemaBuilder.String(
+                McpPropertyNames.Code,
+                "C# code with a host command class. " +
+                "Revit: IExternalCommand (output via 'message' ref param). " +
+                "AutoCAD: [CommandMethod]. Host assemblies auto-referenced. #r for extras.")
+        ],
+        required: [McpPropertyNames.Code]),
         Annotations = new ToolAnnotations
         {
             Title = "Execute C# Code",

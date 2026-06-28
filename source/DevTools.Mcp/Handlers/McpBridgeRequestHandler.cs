@@ -63,21 +63,17 @@ public sealed class McpBridgeRequestHandler(
 
     private async Task<BridgeMessage> HandleToolsCallAsync(string id, JsonElement? @params)
     {
-        string? toolName = null;
-        if (@params?.TryGetProperty(McpPropertyNames.Name, out var nameElement) == true)
-            toolName = nameElement.GetString();
-        if (string.IsNullOrWhiteSpace(toolName))
+        var callParams = @params is { } p ? JsonSerializer.Deserialize<McpToolsCallParams>(p) : null;
+        if (callParams is null || string.IsNullOrWhiteSpace(callParams.Name))
             return BridgeMessage.Error(id, McpExecutionErrorCodes.ToolInvokeFailed, "Tool name is required.");
 
-        var resolvedToolName = toolName!;
+        var resolvedToolName = callParams.Name;
 
         catalogStore.EnsureLoaded();
         if (!catalogStore.TryGetTool(null, resolvedToolName, out var tool) || tool is null)
             return BridgeMessage.Error(id, McpExecutionErrorCodes.ToolNotFound, $"Tool '{resolvedToolName}' is not registered.");
 
-        var payloadJson = "{}";
-        if (@params?.TryGetProperty(McpPropertyNames.Arguments, out var argsElement) == true)
-            payloadJson = argsElement.GetRawText();
+        var payloadJson = callParams.Arguments is { } args ? JsonSerializer.Serialize(args) : "{}";
 
         using var scope = executionTracker.BeginExecution(resolvedToolName);
 
@@ -121,19 +117,17 @@ public sealed class McpBridgeRequestHandler(
 
     private async Task<BridgeMessage> HandlePromptsGetAsync(string id, JsonElement? @params)
     {
-        string? promptName = null;
-        if (@params?.TryGetProperty(McpPropertyNames.Name, out var nameElement) == true)
-            promptName = nameElement.GetString();
-        if (string.IsNullOrWhiteSpace(promptName))
+        var getParams = @params is { } p ? JsonSerializer.Deserialize<McpPromptsGetParams>(p) : null;
+        if (getParams is null || string.IsNullOrWhiteSpace(getParams.Name))
             return BridgeMessage.Error(id, McpExecutionErrorCodes.PromptInvokeFailed, "Prompt name is required.");
+
+        var promptName = getParams.Name;
 
         catalogStore.EnsureLoaded();
         if (!catalogStore.TryGetPrompt(null, promptName, out var prompt) || prompt is null)
             return BridgeMessage.Error(id, McpExecutionErrorCodes.PromptNotFound, $"Prompt '{promptName}' is not registered.");
 
-        Dictionary<string, JsonElement>? arguments = null;
-        if (@params?.TryGetProperty(McpPropertyNames.Arguments, out var argsElement) == true)
-            arguments = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(argsElement.GetRawText());
+        var arguments = getParams.Arguments;
 
         GetPromptResult result;
         try
@@ -172,13 +166,11 @@ public sealed class McpBridgeRequestHandler(
 
     private async Task<BridgeMessage> HandleResourcesReadAsync(string id, JsonElement? @params)
     {
-        string? uri = null;
-        if (@params?.TryGetProperty(McpPropertyNames.Uri, out var uriElement) == true)
-            uri = uriElement.GetString();
-        if (string.IsNullOrWhiteSpace(uri))
+        var readParams = @params is { } p ? JsonSerializer.Deserialize<McpResourcesReadParams>(p) : null;
+        if (readParams is null || string.IsNullOrWhiteSpace(readParams.Uri))
             return BridgeMessage.Error(id, McpExecutionErrorCodes.ResourceReadFailed, "Resource URI is required.");
 
-        var resolvedUri = uri!;
+        var resolvedUri = readParams.Uri;
 
         catalogStore.EnsureLoaded();
         if (!catalogStore.TryResolveResourceByUri(resolvedUri, out var resource) || resource is null)

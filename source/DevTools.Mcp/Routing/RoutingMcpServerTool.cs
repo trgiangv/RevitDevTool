@@ -1,4 +1,5 @@
 using System.Text.Json;
+using DevTools.Mcp.Schema;
 using ModelContextProtocol.Protocol;
 using ModelContextProtocol.Server;
 
@@ -20,11 +21,11 @@ public sealed class RoutingMcpServerTool(IInstanceManager instanceManager, Tool 
         if (client is null)
             return ToolHelpers.ErrorResult(ToolHelpers.FormatInstanceListing(instanceManager));
 
-        var callParamsObj = new Dictionary<string, object?> { [McpPropertyNames.Name] = ProtocolTool.Name };
-        if (cleanedArgs.Count > 0)
-            callParamsObj[McpPropertyNames.Arguments] = cleanedArgs;
-
-        var callParams = JsonSerializer.SerializeToElement(callParamsObj);
+        var callParams = JsonSerializer.SerializeToElement(new McpToolsCallParams
+        {
+            Name = ProtocolTool.Name,
+            Arguments = cleanedArgs.Count > 0 ? cleanedArgs : null
+        });
         var response = await client.RequestAsync(McpBridgeMethods.ToolsCall, callParams, cancellationToken)
             .ConfigureAwait(false);
 
@@ -39,11 +40,9 @@ public sealed class RoutingMcpServerTool(IInstanceManager instanceManager, Tool 
 
     private static Tool InjectInstanceIdParam(Tool original)
     {
-        var instanceIdSchema = JsonSerializer.SerializeToElement(new
-        {
-            type = JsonSchemaTypeNames.Integer,
-            description = "Target host process ID (use list_host_instances to find available instances)."
-        });
+        var instanceIdSchema = JsonSerializer.SerializeToElement(new PropertySchema(
+            "integer",
+            "Target host process ID (use list_host_instances to find available instances)."));
 
         var existingSchema = original.InputSchema;
         var schemaDict = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(existingSchema.GetRawText())

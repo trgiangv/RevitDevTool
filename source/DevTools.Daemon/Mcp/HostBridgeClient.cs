@@ -45,7 +45,7 @@ public sealed class HostBridgeClient : IHostBridgeClient
         return client;
     }
 
-    public async Task<BridgeMessage> RequestAsync(string method, object? @params = null, CancellationToken ct = default)
+    public async Task<BridgeMessage> RequestAsync(string method, JsonElement? @params = null, CancellationToken ct = default)
     {
         var id = Interlocked.Increment(ref _idCounter).ToString();
         var tcs = new TaskCompletionSource<BridgeMessage>(TaskCreationOptions.RunContinuationsAsynchronously);
@@ -53,7 +53,7 @@ public sealed class HostBridgeClient : IHostBridgeClient
 
         try
         {
-            var request = BridgeMessage.Request(id, method, ToJsonElement(@params));
+            var request = BridgeMessage.Request(id, method, @params);
             await _connection.WriteAsync(request, ct).ConfigureAwait(false);
 
             using var cts = CancellationTokenSource.CreateLinkedTokenSource(ct);
@@ -65,13 +65,6 @@ public sealed class HostBridgeClient : IHostBridgeClient
             _pending.TryRemove(id, out _);
         }
     }
-
-    private static JsonElement? ToJsonElement(object? value) => value switch
-    {
-        null => null,
-        JsonElement element => element,
-        _ => JsonSerializer.SerializeToElement(value)
-    };
 
     private void OnMessageReceived(BridgeMessage msg)
     {

@@ -1,8 +1,15 @@
 using System.IO;
 using System.Text.Json;
+using System.Text.Json.Serialization;
+using DevTools.Mcp.Schema;
 using ModelContextProtocol.Protocol;
 
 namespace DevTools.Execution.External.Mcp.BuiltIn;
+
+internal sealed record OpenDocumentResult(
+    [property: JsonPropertyName("success")] bool Success,
+    [property: JsonPropertyName("message")] string? Message,
+    [property: JsonPropertyName("documentTitle")] string? DocumentTitle);
 
 /// <summary>Opens a document file in the running host process via <see cref="IDocumentBridge"/>.</summary>
 public sealed class OpenDocumentTool(IDocumentBridge documentBridge) : IBuiltInMcpTool
@@ -16,19 +23,11 @@ public sealed class OpenDocumentTool(IDocumentBridge documentBridge) : IBuiltInM
             "Open a document file in the running host process.\n" +
             "Revit: opens .rvt/.rfa files via UIApplication.\n" +
             "AutoCAD: opens .dwg/.dxf/.dwt files via DocumentManager.",
-        InputSchema = JsonSerializer.SerializeToElement(new
-        {
-            type = JsonSchemaTypeNames.Object,
-            properties = new
-            {
-                filePath = new
-                {
-                    type = JsonSchemaTypeNames.String,
-                    description = "Full path to the document file."
-                }
-            },
-            required = new[] { McpPropertyNames.FilePath }
-        }),
+        InputSchema = McpSchemaBuilder.Object(
+        [
+            McpSchemaBuilder.String(McpPropertyNames.FilePath, "Full path to the document file.")
+        ],
+        required: [McpPropertyNames.FilePath]),
         Annotations = new ToolAnnotations
         {
             Title = "Open Document",
@@ -63,12 +62,10 @@ public sealed class OpenDocumentTool(IDocumentBridge documentBridge) : IBuiltInM
             IsError = !result.Success,
             Content = [new TextContentBlock
             {
-                Text = JsonSerializer.Serialize(new
-                {
-                    success = result.Success,
-                    message = result.Message,
-                    documentTitle = result.DocumentTitle
-                })
+                Text = JsonSerializer.Serialize(new OpenDocumentResult(
+                    result.Success,
+                    result.Message,
+                    result.DocumentTitle))
             }]
         };
 

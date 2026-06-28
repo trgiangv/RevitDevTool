@@ -1,5 +1,6 @@
 using System.Text.Json;
 using DevTools.Mcp.Routing.Catalog;
+using DevTools.Mcp.Schema;
 using ModelContextProtocol.Protocol;
 using ModelContextProtocol.Server;
 
@@ -13,17 +14,13 @@ public sealed class CallDynamicTool(InstanceManager instanceManager, DynamicTool
         Description =
             "Call a tool currently registered by a connected host instance. " +
             "Specify hostInstanceId when multiple instances provide the same tool.",
-        InputSchema = JsonSerializer.SerializeToElement(new
-        {
-            type = JsonSchemaTypeNames.Object,
-            properties = new
-            {
-                name = new { type = JsonSchemaTypeNames.String, description = "Registered dynamic tool name." },
-                hostInstanceId = new { type = JsonSchemaTypeNames.Integer, description = "Target host process ID." },
-                arguments = new { type = JsonSchemaTypeNames.Object, description = "Arguments passed to the dynamic tool." }
-            },
-            required = new[] { McpPropertyNames.Name }
-        })
+        InputSchema = McpSchemaBuilder.Object(
+        [
+            McpSchemaBuilder.String(McpPropertyNames.Name, "Registered dynamic tool name."),
+            McpSchemaBuilder.Integer(McpPropertyNames.HostInstanceId, "Target host process ID."),
+            McpSchemaBuilder.ObjectProp(McpPropertyNames.Arguments, "Arguments passed to the dynamic tool.")
+        ],
+        required: [McpPropertyNames.Name])
     };
 
     public override IReadOnlyList<object> Metadata => [];
@@ -62,13 +59,19 @@ public sealed class CallDynamicTool(InstanceManager instanceManager, DynamicTool
         if (client is null || !client.IsConnected)
             return ToolHelpers.ErrorResult($"Host instance {registration.Instance.ProcessId} is no longer connected.");
 
-        var callParams = new Dictionary<string, object?> { [McpPropertyNames.Name] = registration.Tool.Name };
+        Dictionary<string, JsonElement>? arguments = null;
         if (args?.TryGetValue(McpPropertyNames.Arguments, out var toolArgs) == true)
-            callParams[McpPropertyNames.Arguments] = toolArgs;
+            arguments = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(toolArgs.GetRawText());
+
+        var callParams = JsonSerializer.SerializeToElement(new McpToolsCallParams
+        {
+            Name = registration.Tool.Name,
+            Arguments = arguments
+        });
 
         var response = await client.RequestAsync(
                 McpBridgeMethods.ToolsCall,
-                JsonSerializer.SerializeToElement(callParams),
+                callParams,
                 cancellationToken)
             .ConfigureAwait(false);
 
@@ -81,7 +84,7 @@ public sealed class CallDynamicTool(InstanceManager instanceManager, DynamicTool
             : ToolHelpers.ErrorResult("Dynamic tool returned no result.");
     }
 
-    private static string FormatInstance(DynamicToolRegistration item) =>
+    private static string FormatInstance(DynamicToolCatalogEntry item) =>
         $"PID {item.Instance.ProcessId} ({item.Instance.HostApp ?? "unknown"} {item.Instance.VersionNumber})";
 
     private static string? ReadString(IDictionary<string, JsonElement>? args, string key) =>
