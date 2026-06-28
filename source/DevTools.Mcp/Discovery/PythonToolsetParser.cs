@@ -10,8 +10,8 @@ namespace DevTools.Mcp.Discovery;
 
 public sealed class PythonToolsetParser(ILogger<PythonToolsetParser> logger)
 {
-    private readonly JsonSerializerOptions CatalogJsonOptions = new(JsonSerializerDefaults.Web);
-    private readonly JsonSerializerOptions SdkJsonOptions = McpJsonUtilities.DefaultOptions;
+    private readonly JsonSerializerOptions catalogJsonOptions = new(JsonSerializerDefaults.Web);
+    private readonly JsonSerializerOptions sdkJsonOptions = McpJsonUtilities.DefaultOptions;
 
     public McpRegistryCatalog ParseDirectoryCatalog(
         string toolsetDirectory,
@@ -19,7 +19,7 @@ public sealed class PythonToolsetParser(ILogger<PythonToolsetParser> logger)
         string parserScriptPath)
     {
         if (string.IsNullOrWhiteSpace(pythonExecutablePath))
-            throw new ArgumentException("Python executable path is required.", nameof(pythonExecutablePath));
+            throw new ArgumentException(@"Python executable path is required.", nameof(pythonExecutablePath));
 
         var parserOutput = RunParserProcess(toolsetDirectory, pythonExecutablePath, parserScriptPath);
         return BuildCatalogFromOutput(parserOutput, toolsetDirectory);
@@ -95,7 +95,7 @@ public sealed class PythonToolsetParser(ILogger<PythonToolsetParser> logger)
     {
         try
         {
-            var catalog = JsonSerializer.Deserialize<PythonParsedCatalog>(json, CatalogJsonOptions);
+            var catalog = JsonSerializer.Deserialize<PythonParsedCatalog>(json, catalogJsonOptions);
             if (catalog is not null) return catalog;
             logger.ZLogWarning($"[MCP] Parser returned null catalog for '{directory}'.");
             return null;
@@ -109,7 +109,7 @@ public sealed class PythonToolsetParser(ILogger<PythonToolsetParser> logger)
 
     private T? DeserializeSdkType<T>(JsonElement element)
     {
-        return JsonSerializer.Deserialize<T>(element.GetRawText(), SdkJsonOptions);
+        return JsonSerializer.Deserialize<T>(element.GetRawText(), sdkJsonOptions);
     }
 
     private IReadOnlyList<T> NormalizeEntries<TEntry, T>(

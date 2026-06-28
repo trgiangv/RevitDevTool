@@ -33,6 +33,7 @@ public sealed class PixiPackageHelper(ILogger<PixiPackageHelper> logger)
         }
         catch
         {
+            logger.ZLogWarning($"Failed to parse Pixi package list output: {result.StandardOutput}");
             return [];
         }
     }
@@ -187,7 +188,7 @@ public sealed class PixiPackageHelper(ILogger<PixiPackageHelper> logger)
             return null;
 
         var normalized = spec!.Trim();
-        while (normalized.Length >= 2 && normalized[0] == '"' && normalized[^1] == '"')
+        while (normalized is ['"', _, ..] && normalized[^1] == '"')
             normalized = normalized[1..^1].Trim();
 
         return normalized.Length == 0 || normalized == "*" ? null : normalized;

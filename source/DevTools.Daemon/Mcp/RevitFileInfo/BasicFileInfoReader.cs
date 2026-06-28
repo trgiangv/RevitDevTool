@@ -135,7 +135,7 @@ internal static partial class BasicFileInfoReader
 }
 
 [PublicAPI]
-internal sealed record BasicFileInfo
+public sealed record BasicFileInfo
 {
     public int FileVersion { get; init; }
     public string? RevitVersion { get; init; }

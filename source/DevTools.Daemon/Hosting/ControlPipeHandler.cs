@@ -1,6 +1,7 @@
 using System.Text.Json;
 using System.Windows;
 using DevTools.Daemon.Auth;
+using DevTools.Daemon.Contracts;
 using DevTools.Daemon.Mcp;
 using DevTools.Daemon.Mcp.Tools;
 using DevTools.Daemon.Tray;
@@ -26,29 +27,20 @@ public sealed class ControlPipeHandler(IAuthService authService, McpEngine mcpEn
 
             return method switch
             {
-                DaemonConstants.Methods.Status => JsonSerializer.Serialize(new
-                {
-                    isRunning = true,
-                    version = typeof(ControlPipeHandler).Assembly.GetName().Version?.ToString() ?? DefaultVersion
-                }),
-                DaemonConstants.Methods.AuthState => JsonSerializer.Serialize(new
-                {
-                    isAuthenticated = authService.IsAuthenticated,
-                    userId = authService.UserId,
-                    email = authService.Email,
-                    displayName = authService.DisplayName,
-                    avatarUrl = authService.AvatarUrl
-                }),
+                DaemonConstants.Methods.Status => JsonSerializer.Serialize(new StatusResponse(
+                    true, typeof(ControlPipeHandler).Assembly.GetName().Version?.ToString() ?? DefaultVersion)),
+                DaemonConstants.Methods.AuthState => JsonSerializer.Serialize(new AuthStateResponse(
+                    authService.IsAuthenticated, authService.UserId, authService.Email, authService.DisplayName, authService.AvatarUrl)),
                 DaemonConstants.Methods.SignIn => await HandleSignInAsync(ct).ConfigureAwait(false),
                 DaemonConstants.Methods.SignOut => await HandleSignOutAsync().ConfigureAwait(false),
                 DaemonConstants.Methods.ConnectedHosts => HandleConnectedHosts(),
                 DaemonConstants.Methods.OpenDashboard => HandleOpenDashboard(),
-                _ => JsonSerializer.Serialize(new { error = DaemonConstants.Errors.UnknownMethod })
+                _ => JsonSerializer.Serialize(new ErrorResponse(DaemonConstants.Errors.UnknownMethod))
             };
         }
         catch (JsonException)
         {
-            return JsonSerializer.Serialize(new { error = DaemonConstants.Errors.InvalidRequest });
+            return JsonSerializer.Serialize(new ErrorResponse(DaemonConstants.Errors.InvalidRequest));
         }
     }
 
@@ -57,13 +49,11 @@ public sealed class ControlPipeHandler(IAuthService authService, McpEngine mcpEn
         var instanceManager = mcpEngine.InstanceManager;
         var hosts = instanceManager.GetClients()
             .Where(c => c.Info is not null)
-            .Select(c => new
-            {
-                hostApp = c.Info!.HostApp ?? HostAppExtensions.FromPipeName(c.PipeName)?.ToString(),
-                version = c.Info.VersionNumber,
-                pid = c.Info.ProcessId,
-                pipeName = c.PipeName
-            })
+            .Select(c => new HostInfoEntry(
+                HostAppExtensions.ParseHostApp(c.Info!.HostApp) ?? HostAppExtensions.FromPipeName(c.PipeName),
+                c.Info.VersionNumber,
+                c.Info.ProcessId,
+                c.PipeName))
             .ToArray();
 
         return JsonSerializer.Serialize(hosts);
@@ -72,20 +62,20 @@ public sealed class ControlPipeHandler(IAuthService authService, McpEngine mcpEn
     private async Task<string> HandleSignInAsync(CancellationToken ct)
     {
         var result = await authService.SignInAsync(ct).ConfigureAwait(false);
-        return JsonSerializer.Serialize(new { success = result.Success, error = result.Error });
+        return JsonSerializer.Serialize(new OperationResponse(result.Success, result.Error));
     }
 
     private async Task<string> HandleSignOutAsync()
     {
         await authService.SignOutAsync().ConfigureAwait(false);
-        return JsonSerializer.Serialize(new { success = true });
+        return JsonSerializer.Serialize(new OperationResponse(true));
     }
 
     private static string HandleOpenDashboard()
     {
         var app = Application.Current;
         if (app is null)
-            return JsonSerializer.Serialize(new { success = false });
+            return JsonSerializer.Serialize(new OperationResponse(false));
 
         app.Dispatcher.Invoke(() =>
         {
@@ -93,6 +83,6 @@ public sealed class ControlPipeHandler(IAuthService authService, McpEngine mcpEn
                 vm.OpenDashboardCommand.Execute(null);
         });
 
-        return JsonSerializer.Serialize(new { success = true });
+        return JsonSerializer.Serialize(new OperationResponse(true));
     }
 }

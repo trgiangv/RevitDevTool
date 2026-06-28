@@ -127,7 +127,7 @@ internal static class WorksetParser
 }
 
 [PublicAPI]
-internal sealed record WorksetInfo
+public sealed record WorksetInfo
 {
     public int? WorksetId { get; init; }
     public required string Name { get; init; }

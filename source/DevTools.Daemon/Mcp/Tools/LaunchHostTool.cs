@@ -1,7 +1,9 @@
 using System.Runtime.Versioning;
 using System.Text.Json;
+using DevTools.Daemon.Contracts;
 using DevTools.Logging;
 using DevTools.Daemon.Mcp.Tools.Utils;
+using DevTools.Mcp.Schema;
 using ModelContextProtocol.Protocol;
 using ModelContextProtocol.Server;
 
@@ -21,34 +23,22 @@ public sealed class LaunchHostTool(InstanceManager instanceManager) : McpServerT
             "This is a long-running operation (typically 30-120 seconds for cold start). " +
             "Revit: version auto-detected from filePath when provided, otherwise latest installed. " +
             "AutoCAD family: always uses latest installed unless versionNumber is specified.",
-        InputSchema = JsonSerializer.SerializeToElement(new
-        {
-            type = JsonSchemaTypeNames.Object,
-            properties = new
-            {
-                hostApp = new
-                {
-                    type = JsonSchemaTypeNames.String,
-                    description = "Revit, AutoCad, Civil3D, Plant3D, AcadArch, AcadMech, AcadElec, AcadMep, AcadMap3D, Navisworks"
-                },
-                versionNumber = new
-                {
-                    type = JsonSchemaTypeNames.String,
-                    description = "Version year (e.g. '2025'). Revit auto-detects from filePath; AutoCAD defaults to latest."
-                },
-                languageCode = new
-                {
-                    type = JsonSchemaTypeNames.String,
-                    description = "Revit-only: UI language code (default 'ENU')."
-                },
-                filePath = new
-                {
-                    type = JsonSchemaTypeNames.String,
-                    description = "Model file to open at startup."
-                }
-            },
-            required = new[] { McpPropertyNames.HostApp }
-        }),
+        InputSchema = McpSchemaBuilder.Object(
+        [
+            McpSchemaBuilder.String(
+                McpPropertyNames.HostApp,
+                "Revit, AutoCad, Civil3D, Plant3D, AcadArch, AcadMech, AcadElec, AcadMep, AcadMap3D, Navisworks"),
+            McpSchemaBuilder.String(
+                McpPropertyNames.VersionNumber,
+                "Version year (e.g. '2025'). Revit auto-detects from filePath; AutoCAD defaults to latest."),
+            McpSchemaBuilder.String(
+                McpPropertyNames.LanguageCode,
+                "Revit-only: UI language code (default 'ENU')."),
+            McpSchemaBuilder.String(
+                McpPropertyNames.FilePath,
+                "Model file to open at startup.")
+        ],
+        required: [McpPropertyNames.HostApp]),
         Execution = new ToolExecution { TaskSupport = ToolTaskSupport.Optional }
     };
 
@@ -86,16 +76,14 @@ public sealed class LaunchHostTool(InstanceManager instanceManager) : McpServerT
             return ToolHelpers.ErrorResult(
                 $"{hostApp} launched (PID={process.Id}) but bridge did not connect within timeout.");
 
-        var payload = new
-        {
-            hostApp = hostApp.Value.ToString(),
-            processId = process.Id,
-            version = context.Version,
-            path = context.ExePath,
-            arguments = string.Join(" ", context.Arguments),
-            languageCode = context.LanguageCode,
-            bridgeConnected = true
-        };
+        var payload = new LaunchHostResult(
+            hostApp.Value,
+            process.Id,
+            context.Version,
+            context.ExePath,
+            string.Join(" ", context.Arguments),
+            context.LanguageCode,
+            true);
 
         return new CallToolResult
         {

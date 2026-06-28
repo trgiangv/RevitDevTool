@@ -1,4 +1,6 @@
 using System.Text.Json;
+using DevTools.Daemon.Contracts;
+using DevTools.Mcp.Schema;
 using ModelContextProtocol.Protocol;
 using ModelContextProtocol.Server;
 
@@ -12,7 +14,7 @@ public sealed class ListHostInstancesTool(InstanceManager instanceManager) : Mcp
         Description =
             "List connected and discovered host instances. " +
             "Returns hostApp, processId, and version for each instance.",
-        InputSchema = JsonSerializer.SerializeToElement(new { type = JsonSchemaTypeNames.Object, properties = new { } })
+        InputSchema = McpSchemaBuilder.EmptyObject()
     };
 
     public override IReadOnlyList<object> Metadata => [];
@@ -24,25 +26,19 @@ public sealed class ListHostInstancesTool(InstanceManager instanceManager) : Mcp
         var instances = instanceManager.GetInstances();
         var discoveredPipes = instanceManager.GetDiscoveredPipeNames();
 
-        var result = new
-        {
-            connectedInstances = instances.Select(i => new
-            {
-                hostApp = i.HostApp ?? HostAppExtensions.FromPipeName(
-                    instanceManager.GetPipeNameByProcessId(i.ProcessId) ?? "")?.ToString(),
-                processId = i.ProcessId,
-                versionNumber = i.VersionNumber
-            }),
-            discoveredPipes = discoveredPipes
-                .Select(p => new
-                {
-                    pipeName = p,
-                    hostApp = HostAppExtensions.FromPipeName(p)?.ToString()
-                })
+        var result = new ListInstancesResult(
+            instances.Select(i => new ConnectedInstanceEntry(
+                HostAppExtensions.ParseHostApp(i.HostApp) ?? HostAppExtensions.FromPipeName(
+                    instanceManager.GetPipeNameByProcessId(i.ProcessId) ?? ""),
+                i.ProcessId,
+                i.VersionNumber)).ToArray(),
+            discoveredPipes
+                .Select(p => new DiscoveredPipeEntry(
+                    p,
+                    HostAppExtensions.FromPipeName(p)))
                 .ToArray(),
-            totalConnected = instances.Count,
-            totalDiscovered = discoveredPipes.Count
-        };
+            instances.Count,
+            discoveredPipes.Count);
 
         return ValueTask.FromResult(new CallToolResult
         {

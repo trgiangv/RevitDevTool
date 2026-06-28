@@ -1,5 +1,4 @@
 using System.Text.Json;
-using DevTools.Mcp.Dispatch;
 using ModelContextProtocol.Protocol;
 
 namespace DevTools.Mcp.Handlers;
@@ -54,7 +53,7 @@ public sealed class McpBridgeRequestHandler(
             BridgeMessage.Error(requestId, McpExecutionErrorCodes.ToolUnknownSourceKind, $"Unknown method: {method}"));
     }
 
-    public Task<BridgeMessage> HandleToolsListAsync(string id)
+    private Task<BridgeMessage> HandleToolsListAsync(string id)
     {
         catalogStore.EnsureLoaded();
         var tools = catalogStore.Tools.ToList();
@@ -62,7 +61,7 @@ public sealed class McpBridgeRequestHandler(
         return Task.FromResult(BridgeMessage.Response(id, json));
     }
 
-    public async Task<BridgeMessage> HandleToolsCallAsync(string id, JsonElement? @params)
+    private async Task<BridgeMessage> HandleToolsCallAsync(string id, JsonElement? @params)
     {
         string? toolName = null;
         if (@params?.TryGetProperty(McpPropertyNames.Name, out var nameElement) == true)
@@ -112,7 +111,7 @@ public sealed class McpBridgeRequestHandler(
         return BridgeMessage.Response(id, json);
     }
 
-    public Task<BridgeMessage> HandlePromptsListAsync(string id)
+    private Task<BridgeMessage> HandlePromptsListAsync(string id)
     {
         catalogStore.EnsureLoaded();
         var prompts = catalogStore.Prompts.ToList();
@@ -120,7 +119,7 @@ public sealed class McpBridgeRequestHandler(
         return Task.FromResult(BridgeMessage.Response(id, json));
     }
 
-    public async Task<BridgeMessage> HandlePromptsGetAsync(string id, JsonElement? @params)
+    private async Task<BridgeMessage> HandlePromptsGetAsync(string id, JsonElement? @params)
     {
         string? promptName = null;
         if (@params?.TryGetProperty(McpPropertyNames.Name, out var nameElement) == true)
@@ -140,8 +139,9 @@ public sealed class McpBridgeRequestHandler(
         try
         {
             using var cts = new CancellationTokenSource(CallTimeout);
+            var token = cts.Token;
             result = await hostContext
-                .ExecuteAsync(() => dispatcher.GetPrompt(prompt, arguments, cts.Token), cts.Token)
+                .ExecuteAsync(() => dispatcher.GetPrompt(prompt, arguments, token), token)
                 .ConfigureAwait(false);
         }
         catch (OperationCanceledException)
@@ -154,7 +154,7 @@ public sealed class McpBridgeRequestHandler(
         return BridgeMessage.Response(id, json);
     }
 
-    public Task<BridgeMessage> HandleResourcesListAsync(string id)
+    private Task<BridgeMessage> HandleResourcesListAsync(string id)
     {
         catalogStore.EnsureLoaded();
         var resources = catalogStore.DirectResources.ToList();
@@ -162,7 +162,7 @@ public sealed class McpBridgeRequestHandler(
         return Task.FromResult(BridgeMessage.Response(id, json));
     }
 
-    public Task<BridgeMessage> HandleResourceTemplatesListAsync(string id)
+    private Task<BridgeMessage> HandleResourceTemplatesListAsync(string id)
     {
         catalogStore.EnsureLoaded();
         var templates = catalogStore.ResourceTemplates.ToList();
@@ -170,7 +170,7 @@ public sealed class McpBridgeRequestHandler(
         return Task.FromResult(BridgeMessage.Response(id, json));
     }
 
-    public async Task<BridgeMessage> HandleResourcesReadAsync(string id, JsonElement? @params)
+    private async Task<BridgeMessage> HandleResourcesReadAsync(string id, JsonElement? @params)
     {
         string? uri = null;
         if (@params?.TryGetProperty(McpPropertyNames.Uri, out var uriElement) == true)
@@ -188,8 +188,9 @@ public sealed class McpBridgeRequestHandler(
         try
         {
             using var cts = new CancellationTokenSource(CallTimeout);
+            var token = cts.Token;
             result = await hostContext
-                .ExecuteAsync(() => dispatcher.ReadResource(resource, resolvedUri, cts.Token), cts.Token)
+                .ExecuteAsync(() => dispatcher.ReadResource(resource, resolvedUri, token), token)
                 .ConfigureAwait(false);
         }
         catch (OperationCanceledException)

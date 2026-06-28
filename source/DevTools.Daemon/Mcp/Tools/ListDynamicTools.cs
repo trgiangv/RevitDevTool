@@ -1,4 +1,5 @@
 using System.Text.Json;
+using DevTools.Mcp.Routing.Catalog;
 using ModelContextProtocol.Protocol;
 using ModelContextProtocol.Server;
 

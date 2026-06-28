@@ -2,6 +2,7 @@ using DevTools.Daemon.Auth;
 using DevTools.Daemon.Dashboard;
 using DevTools.Daemon.Mcp;
 using DevTools.Daemon.Tray;
+using DevTools.Mcp.Routing.Catalog;
 using DevTools.Utilities;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;

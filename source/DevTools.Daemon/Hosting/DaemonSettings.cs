@@ -7,7 +7,7 @@ namespace DevTools.Daemon.Hosting;
 /// <summary>
 /// Persisted user preferences for the Daemon. Stored as JSON in AppData.
 /// </summary>
-[UsedImplicitly(ImplicitUseTargetFlags.WithMembers)]
+[UsedImplicitly]
 public sealed class DaemonSettings
 {
     private const string SettingsFileName = "daemon-settings.json";
@@ -47,7 +47,7 @@ public sealed class DaemonSettings
         }
         catch
         {
-            // best-effort
+            // ignored
         }
     }
 }

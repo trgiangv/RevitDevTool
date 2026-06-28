@@ -1,4 +1,5 @@
 using System.Text.Json;
+using DevTools.Mcp.Routing.Catalog;
 using ModelContextProtocol.Protocol;
 using ModelContextProtocol.Server;
 
@@ -38,15 +39,23 @@ public sealed class CallDynamicTool(InstanceManager instanceManager, DynamicTool
 
         var hostInstanceId = ReadInt32(args, McpPropertyNames.HostInstanceId);
         var resolution = catalog.Resolve(name, hostInstanceId);
-        if (resolution.State == DynamicToolResolutionState.NotFound)
-            return ToolHelpers.ErrorResult(hostInstanceId is null
-                ? $"Dynamic tool '{name}' is not registered by any connected instance."
-                : $"Dynamic tool '{name}' is not registered by host instance {hostInstanceId}.");
 
-        if (resolution.State == DynamicToolResolutionState.Ambiguous)
-            return ToolHelpers.ErrorResult(
-                $"Dynamic tool '{name}' is available on multiple instances. Specify hostInstanceId: " +
-                string.Join(", ", resolution.Candidates.Select(FormatInstance)));
+        switch (resolution.State)
+        {
+            case DynamicToolResolutionState.NotFound:
+                return ToolHelpers.ErrorResult(hostInstanceId is null
+                    ? $"Dynamic tool '{name}' is not registered by any connected instance."
+                    : $"Dynamic tool '{name}' is not registered by host instance {hostInstanceId}.");
+            case DynamicToolResolutionState.Ambiguous:
+                return ToolHelpers.ErrorResult(
+                    $"Dynamic tool '{name}' is available on multiple instances. Specify hostInstanceId: " +
+                    string.Join(", ", resolution.Candidates.Select(FormatInstance)));
+            case DynamicToolResolutionState.Found:
+                break;
+            default:
+                throw new ArgumentOutOfRangeException($"Unexpected resolution state: {resolution.State}");
+        }
+
 
         var registration = resolution.Registration!;
         var client = instanceManager.GetByProcessId(registration.Instance.ProcessId);

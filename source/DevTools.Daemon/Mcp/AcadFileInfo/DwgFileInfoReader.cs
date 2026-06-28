@@ -33,7 +33,7 @@ internal static class DwgFileInfoReader
     }
 }
 
-internal sealed class DwgFileInfo
+public sealed class DwgFileInfo
 {
     public string? AcadVersion { get; init; }
     public string? Title { get; init; }
@@ -47,7 +47,7 @@ internal sealed class DwgFileInfo
     public List<DwgLayerInfo> Layers { get; init; } = [];
 }
 
-internal sealed class DwgLayerInfo
+public sealed class DwgLayerInfo
 {
     public string Name { get; init; } = string.Empty;
     public bool IsOn { get; init; }

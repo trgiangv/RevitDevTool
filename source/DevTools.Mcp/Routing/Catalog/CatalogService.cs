@@ -3,8 +3,7 @@ using Microsoft.Extensions.Logging;
 using ModelContextProtocol.Protocol;
 using ModelContextProtocol.Server;
 using ZLogger;
-
-namespace DevTools.Mcp.Routing;
+namespace DevTools.Mcp.Routing.Catalog;
 
 public sealed class CatalogService(
     IInstanceManager instanceManager,

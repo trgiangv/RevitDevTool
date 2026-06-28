@@ -1,7 +1,9 @@
 using System.Text.Json;
+using DevTools.Daemon.Contracts;
 using DevTools.Logging;
 using DevTools.Daemon.Mcp.AcadFileInfo;
 using DevTools.Daemon.Mcp.RevitFileInfo;
+using DevTools.Mcp.Schema;
 using ModelContextProtocol.Protocol;
 using ModelContextProtocol.Server;
 
@@ -18,19 +20,13 @@ public sealed class ReadFileInfoTool : McpServerTool
             "Read metadata from a CAD/BIM file offline (no host launch needed). " +
             "Revit (.rvt/.rfa/.rft/.rte): version, worksets, links, project info. " +
             "AutoCAD (.dwg): version, layers, blocks, document properties.",
-        InputSchema = JsonSerializer.SerializeToElement(new
-        {
-            type = JsonSchemaTypeNames.Object,
-            properties = new
-            {
-                filePath = new
-                {
-                    type = JsonSchemaTypeNames.String,
-                    description = "Full path to the file (.rvt, .rfa, .rft, .rte, .dwg)."
-                }
-            },
-            required = new[] { McpPropertyNames.FilePath }
-        })
+        InputSchema = McpSchemaBuilder.Object(
+        [
+            McpSchemaBuilder.String(
+                McpPropertyNames.FilePath,
+                "Full path to the file (.rvt, .rfa, .rft, .rte, .dwg).")
+        ],
+        required: [McpPropertyNames.FilePath])
     };
 
     public override IReadOnlyList<object> Metadata => [];
@@ -61,14 +57,14 @@ public sealed class ReadFileInfoTool : McpServerTool
 
         try
         {
-            object info = hostApp.Value switch
+            FileInfoResult info = hostApp.Value switch
             {
                 HostApp.Revit => ReadRevitInfo(filePath),
-                _ when hostApp.Value.IsAcadFamily() => ReadDwgInfo(filePath),
+                _ when hostApp.Value.IsAcadFamily() => ReadDwgInfo(hostApp.Value, filePath),
                 _ => throw new NotSupportedException($"No reader for {hostApp}")
             };
 
-            var json = JsonSerializer.Serialize(info, ToolHelpers.IndentedJsonOptions);
+            var json = JsonSerializer.Serialize(info, info.GetType(), ToolHelpers.IndentedJsonOptions);
             return ValueTask.FromResult(new CallToolResult
             {
                 Content = [new TextContentBlock { Text = json }]
@@ -80,7 +76,7 @@ public sealed class ReadFileInfoTool : McpServerTool
         }
     }
 
-    private static object ReadRevitInfo(string filePath)
+    private static RevitFileInfoResult ReadRevitInfo(string filePath)
     {
         using var file = RevitCompoundFile.Open(filePath);
 
@@ -97,38 +93,38 @@ public sealed class ReadFileInfoTool : McpServerTool
         var partitionSummary = PartitionTableReader.Read(ptDecompressed);
         var browserOrganization = BrowserOrganizationReader.Read(file);
 
-        return new
+        return new RevitFileInfoResult
         {
-            hostApp = "Revit",
-            filePath,
-            fileName = Path.GetFileName(filePath),
-            basicInfo,
-            transmissionData,
-            projectInformation,
-            worksets,
-            partitionSummary,
-            browserOrganization
+            HostApp = HostApp.Revit,
+            FilePath = filePath,
+            FileName = Path.GetFileName(filePath),
+            BasicInfo = basicInfo!,
+            TransmissionData = transmissionData,
+            ProjectInformation = projectInformation,
+            Worksets = worksets,
+            PartitionSummary = partitionSummary,
+            BrowserOrganization = browserOrganization
         };
     }
 
-    private static object ReadDwgInfo(string filePath)
+    private static DwgFileInfoResult ReadDwgInfo(HostApp hostApp, string filePath)
     {
         var info = DwgFileInfoReader.Read(filePath);
-        return new
+        return new DwgFileInfoResult
         {
-            hostApp = "AutoCAD",
-            filePath,
-            fileName = Path.GetFileName(filePath),
-            info.AcadVersion,
-            info.Title,
-            info.Subject,
-            info.Author,
-            info.Keywords,
-            info.Comments,
-            info.LastSavedBy,
-            info.LayerCount,
-            info.BlockCount,
-            info.Layers
+            HostApp = hostApp,
+            FilePath = filePath,
+            FileName = Path.GetFileName(filePath),
+            AcadVersion = info.AcadVersion,
+            Title = info.Title,
+            Subject = info.Subject,
+            Author = info.Author,
+            Keywords = info.Keywords,
+            Comments = info.Comments,
+            LastSavedBy = info.LastSavedBy,
+            LayerCount = info.LayerCount,
+            BlockCount = info.BlockCount,
+            Layers = info.Layers
         };
     }
 }

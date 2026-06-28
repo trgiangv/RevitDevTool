@@ -3,6 +3,7 @@ using DevTools.Daemon.Hosting;
 using Microsoft.Extensions.Options;
 using ModelContextProtocol.Server;
 using DevTools.Daemon.Mcp.Tools;
+using DevTools.Mcp.Routing.Catalog;
 
 namespace DevTools.Daemon.Mcp;
 

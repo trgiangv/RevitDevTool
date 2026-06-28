@@ -73,8 +73,8 @@ internal static class ProjectInformationReader
     }
 }
 
-[PublicAPI]
-internal sealed record ProjectInformation
+[UsedImplicitly(ImplicitUseTargetFlags.WithMembers)]
+public sealed record ProjectInformation
 {
     public string? Title { get; init; }
     public string? Updated { get; init; }

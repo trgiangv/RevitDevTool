@@ -139,7 +139,7 @@ internal static partial class PartitionTableReader
 }
 
 [PublicAPI]
-internal sealed record PartitionSummary
+public sealed record PartitionSummary
 {
     public IReadOnlyDictionary<string, IReadOnlyList<string>> Views { get; init; } =
         new Dictionary<string, IReadOnlyList<string>>();

@@ -1,4 +1,4 @@
-namespace DevTools.Mcp.Routing;
+namespace DevTools.Mcp.Routing.Catalog;
 
 public sealed class DynamicToolCatalog
 {

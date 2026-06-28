@@ -1,4 +1,5 @@
 using System.Reflection;
+// ReSharper disable RedundantSuppressNullableWarningExpression
 
 namespace DevTools.Mcp.Discovery;
 
@@ -13,7 +14,6 @@ internal static class MethodResolutionHelper
         return string.IsNullOrWhiteSpace(assemblyPath) ||
                string.Equals(
                    Path.GetFullPath(assemblyPath),
-                   // ReSharper disable once RedundantSuppressNullableWarningExpression
                    Path.GetFullPath(sourcePath!),
                    StringComparison.OrdinalIgnoreCase);
     }

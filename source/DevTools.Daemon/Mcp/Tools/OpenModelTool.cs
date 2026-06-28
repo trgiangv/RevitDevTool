@@ -1,6 +1,8 @@
 using System.Text.Json;
+using DevTools.Daemon.Contracts;
 using DevTools.Logging;
 using DevTools.Daemon.Mcp.Tools.Utils;
+using DevTools.Mcp.Schema;
 using ModelContextProtocol.Protocol;
 using ModelContextProtocol.Server;
 
@@ -20,34 +22,20 @@ public sealed class OpenModelTool(InstanceManager instanceManager) : McpServerTo
             "Open a model file in a connected host or launch a new one. " +
             "When launching a new host, this is a long-running operation (typically 30-120 seconds). " +
             "Host is auto-detected from extension: .rvt/.rfa → Revit, .dwg/.dxf/.dwt → AutoCAD.",
-        InputSchema = JsonSerializer.SerializeToElement(new
-        {
-            type = JsonSchemaTypeNames.Object,
-            properties = new
-            {
-                filePath = new
-                {
-                    type = JsonSchemaTypeNames.String,
-                    description = "Full path to the model file."
-                },
-                hostInstanceId = new
-                {
-                    type = JsonSchemaTypeNames.Integer,
-                    description = "Target host process ID (when multiple instances exist)."
-                },
-                versionNumber = new
-                {
-                    type = JsonSchemaTypeNames.String,
-                    description = "Version to launch if no instance is connected."
-                },
-                languageCode = new
-                {
-                    type = JsonSchemaTypeNames.String,
-                    description = "Revit-only: UI language code (default 'ENU')."
-                }
-            },
-            required = new[] { McpPropertyNames.FilePath }
-        }),
+        InputSchema = McpSchemaBuilder.Object(
+        [
+            McpSchemaBuilder.String(McpPropertyNames.FilePath, "Full path to the model file."),
+            McpSchemaBuilder.Integer(
+                McpPropertyNames.HostInstanceId,
+                "Target host process ID (when multiple instances exist)."),
+            McpSchemaBuilder.String(
+                McpPropertyNames.VersionNumber,
+                "Version to launch if no instance is connected."),
+            McpSchemaBuilder.String(
+                McpPropertyNames.LanguageCode,
+                "Revit-only: UI language code (default 'ENU').")
+        ],
+        required: [McpPropertyNames.FilePath]),
         Execution = new ToolExecution { TaskSupport = ToolTaskSupport.Optional }
     };
 
@@ -106,15 +94,13 @@ public sealed class OpenModelTool(InstanceManager instanceManager) : McpServerTo
         {
             Content = [new TextContentBlock
             {
-                Text = JsonSerializer.Serialize(new
-                {
-                    hostApp = hostApp.ToString(),
-                    processId = process.Id,
-                    version = context.Version,
-                    languageCode = context.LanguageCode,
+                Text = JsonSerializer.Serialize(new OpenModelResult(
+                    hostApp,
+                    process.Id,
+                    context.Version,
+                    context.LanguageCode,
                     filePath,
-                    bridgeConnected = true
-                })
+                    true))
             }]
         };
     }
@@ -122,12 +108,12 @@ public sealed class OpenModelTool(InstanceManager instanceManager) : McpServerTo
     private static async Task<CallToolResult> OpenViaConnectedInstanceAsync(
         IHostBridgeClient client, string filePath, CancellationToken cancellationToken)
     {
-        var callParams = JsonSerializer.SerializeToElement(new Dictionary<string, object?>
+        var callParams = JsonSerializer.SerializeToElement(new McpToolsCallParams
         {
-            [McpPropertyNames.Name] = "open_document",
-            [McpPropertyNames.Arguments] = new Dictionary<string, object?>
+            Name = "open_document",
+            Arguments = new Dictionary<string, JsonElement>
             {
-                [McpPropertyNames.FilePath] = filePath
+                [McpPropertyNames.FilePath] = JsonSerializer.SerializeToElement(filePath)
             }
         });
 

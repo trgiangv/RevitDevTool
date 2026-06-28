@@ -14,7 +14,6 @@ namespace DevTools.Mcp.Discovery;
 /// </summary>
 public sealed class McpToolsetContext(string toolsetDllPath, ILogger? logger = null) : IDisposable
 {
-    private readonly ILogger? _logger = logger;
     private readonly string _toolsetPath = Path.GetFullPath(toolsetDllPath);
     private Assembly? _loadedAssembly;
     private bool _disposed;
@@ -34,11 +33,11 @@ public sealed class McpToolsetContext(string toolsetDllPath, ILogger? logger = n
 
 #if NET
         var fileName = Path.GetFileNameWithoutExtension(_toolsetPath);
-        _loadContext = new ToolsetLoadContext(_toolsetPath, $"McpToolset_{fileName}", _logger);
+        _loadContext = new ToolsetLoadContext(_toolsetPath, $"McpToolset_{fileName}", logger);
         _loadedAssembly = _loadContext.LoadEntryAssembly();
 #else
         var toolsetDir = Path.GetDirectoryName(_toolsetPath) ?? string.Empty;
-        _resolveHandler = (_, args) => ResolveFromDirectory(toolsetDir, args, _logger);
+        _resolveHandler = (_, args) => ResolveFromDirectory(toolsetDir, args, logger);
         AppDomain.CurrentDomain.AssemblyResolve += _resolveHandler;
         _loadedAssembly = Assembly.Load(File.ReadAllBytes(_toolsetPath));
 #endif
@@ -179,6 +178,7 @@ public sealed class McpToolsetContext(string toolsetDllPath, ILogger? logger = n
                     return LoadFromAssemblyStream(siblingPath);
             }
 
+            _logger?.ZLogDebug($"[McpToolsetContext] Could not resolve assembly '{assemblyName.FullName}'");
             return null;
         }
 
