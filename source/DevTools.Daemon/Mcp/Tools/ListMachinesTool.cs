@@ -3,6 +3,7 @@ using System.Net.Http.Headers;
 using System.Text.Json;
 using DevTools.Daemon.Auth;
 using DevTools.Daemon.Hosting;
+using DevTools.Mcp.Schema;
 using Microsoft.Extensions.Options;
 using ModelContextProtocol.Protocol;
 using ModelContextProtocol.Server;
@@ -24,7 +25,7 @@ public sealed class ListMachinesTool(IAuthService authService, IOptions<GatewayO
     {
         Name = ToolMetadata.Name,
         Description = ToolMetadata.Description,
-        InputSchema = JsonSerializer.SerializeToElement(new { type = JsonSchemaTypeNames.Object, properties = new { } })
+        InputSchema = McpSchemaBuilder.EmptyObject()
     };
 
     public override IReadOnlyList<object> Metadata => [];

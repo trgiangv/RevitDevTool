@@ -46,7 +46,7 @@ public sealed class CatalogService(
         var newTools = new Dictionary<string, McpServerTool>(StringComparer.OrdinalIgnoreCase);
         var newPrompts = new Dictionary<string, McpServerPrompt>(StringComparer.OrdinalIgnoreCase);
         var newResources = new List<McpServerResource>();
-        var dynamicRegistrations = new List<DynamicToolRegistration>();
+        var dynamicRegistrations = new List<DynamicToolCatalogEntry>();
 
         foreach (var local in localTools)
             newTools[local.ProtocolTool.Name] = local;
@@ -72,7 +72,7 @@ public sealed class CatalogService(
         Dictionary<string, McpServerTool> tools,
         Dictionary<string, McpServerPrompt> prompts,
         List<McpServerResource> resources,
-        List<DynamicToolRegistration> dynamicRegistrations,
+        List<DynamicToolCatalogEntry> dynamicRegistrations,
         CancellationToken token)
     {
         try
@@ -91,7 +91,7 @@ public sealed class CatalogService(
     private async Task FetchToolsAsync(
         IHostBridgeClient client,
         Dictionary<string, McpServerTool> tools,
-        List<DynamicToolRegistration> dynamicRegistrations,
+        List<DynamicToolCatalogEntry> dynamicRegistrations,
         CancellationToken token)
     {
         var response = await client.RequestAsync(McpBridgeMethods.ToolsList, ct: token).ConfigureAwait(false);
@@ -111,7 +111,7 @@ public sealed class CatalogService(
                 tools.TryAdd(namespacedKey, new RoutingMcpServerTool(instanceManager, namespacedTool));
                 logger.ZLogWarning($"Tool name collision for '{key}', registered as '{namespacedKey}'");
             }
-            dynamicRegistrations.Add(new DynamicToolRegistration(tool, client.Info, client.PipeName));
+            dynamicRegistrations.Add(new DynamicToolCatalogEntry(tool, client.Info, client.PipeName));
         }
     }
 

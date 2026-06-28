@@ -2,31 +2,22 @@ namespace DevTools.Mcp.Routing.Catalog;
 
 public static class DynamicToolCatalogView
 {
-    public static object Build(this DynamicToolCatalog catalog)
+    public static DynamicCatalogSummary Build(this DynamicToolCatalog catalog)
     {
         var registrations = catalog.List();
         var tools = registrations
             .GroupBy(item => item.Tool.Name, StringComparer.OrdinalIgnoreCase)
-            .Select(group => new
-            {
-                name = group.Key,
-                registrations = group.Select(item => new
-                {
-                    hostInstanceId = item.Instance.ProcessId,
-                    hostApp = item.Instance.HostApp,
-                    versionNumber = item.Instance.VersionNumber,
-                    pipeName = item.PipeName,
-                    description = item.Tool.Description,
-                    inputSchema = item.Tool.InputSchema
-                }).ToArray()
-            })
+            .Select(group => new DynamicToolSummary(
+                group.Key,
+                group.Select(item => new DynamicToolRegistration(
+                    item.Instance.ProcessId,
+                    item.Instance.HostApp,
+                    item.Instance.VersionNumber,
+                    item.PipeName,
+                    item.Tool.Description,
+                    item.Tool.InputSchema)).ToArray()))
             .ToArray();
 
-        return new
-        {
-            tools,
-            toolCount = tools.Length,
-            registrationCount = registrations.Count
-        };
+        return new DynamicCatalogSummary(tools, tools.Length, registrations.Count);
     }
 }

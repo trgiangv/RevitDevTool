@@ -1,5 +1,6 @@
 using System.Text.Json;
 using DevTools.Mcp.Routing.Catalog;
+using DevTools.Mcp.Schema;
 using ModelContextProtocol.Protocol;
 using ModelContextProtocol.Server;
 
@@ -12,7 +13,7 @@ public sealed class RefreshDynamicCatalog(DynamicToolCatalog catalog) : McpServe
         Name = "refresh_dynamic_catalog",
         Description =
             "Query all connected host instances again and return the refreshed dynamic tool catalog.",
-        InputSchema = JsonSerializer.SerializeToElement(new { type = JsonSchemaTypeNames.Object, properties = new { } })
+        InputSchema = McpSchemaBuilder.EmptyObject()
     };
 
     public override IReadOnlyList<object> Metadata => [];

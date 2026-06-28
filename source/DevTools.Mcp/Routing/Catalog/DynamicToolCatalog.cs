@@ -3,9 +3,9 @@ namespace DevTools.Mcp.Routing.Catalog;
 public sealed class DynamicToolCatalog
 {
     private readonly Lock _gate = new();
-    private IReadOnlyList<DynamicToolRegistration> _registrations = [];
+    private IReadOnlyList<DynamicToolCatalogEntry> _registrations = [];
 
-    public void ReplaceSnapshot(IEnumerable<DynamicToolRegistration> registrations)
+    public void ReplaceSnapshot(IEnumerable<DynamicToolCatalogEntry> registrations)
     {
         var snapshot = registrations
             .OrderBy(item => item.Tool.Name, StringComparer.OrdinalIgnoreCase)
@@ -16,7 +16,7 @@ public sealed class DynamicToolCatalog
             _registrations = snapshot;
     }
 
-    public IReadOnlyList<DynamicToolRegistration> List()
+    public IReadOnlyList<DynamicToolCatalogEntry> List()
     {
         lock (_gate)
             return _registrations.ToArray();
@@ -24,7 +24,7 @@ public sealed class DynamicToolCatalog
 
     public DynamicToolResolution Resolve(string toolName, int? hostInstanceId)
     {
-        DynamicToolRegistration[] candidates;
+        DynamicToolCatalogEntry[] candidates;
         lock (_gate)
         {
             candidates = _registrations

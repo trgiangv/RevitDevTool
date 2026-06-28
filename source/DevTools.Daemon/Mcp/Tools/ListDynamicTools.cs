@@ -1,5 +1,6 @@
 using System.Text.Json;
 using DevTools.Mcp.Routing.Catalog;
+using DevTools.Mcp.Schema;
 using ModelContextProtocol.Protocol;
 using ModelContextProtocol.Server;
 
@@ -13,7 +14,7 @@ public sealed class ListDynamicTools(DynamicToolCatalog catalog) : McpServerTool
         Description =
             "List tools currently registered by each connected host instance. " +
             "Use hostInstanceId with call_dynamic_tool when a tool is available on multiple instances.",
-        InputSchema = JsonSerializer.SerializeToElement(new { type = JsonSchemaTypeNames.Object, properties = new { } })
+        InputSchema = McpSchemaBuilder.EmptyObject()
     };
 
     public override IReadOnlyList<object> Metadata => [];
