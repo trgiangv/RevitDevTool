@@ -1,46 +1,47 @@
 using System.Diagnostics.CodeAnalysis;
+using System.Windows.Controls;
 using Autodesk.Revit.DB.Events;
 using DevTools.Logging.Listeners;
 using DevTools.Utilities;
+using DevTools.Presentation.ViewModels;
+using Microsoft.Extensions.Logging;
 using RevitDevTool.Commands;
 using RevitDevTool.Core;
 using RevitDevTool.Utils;
-using DevTools.Presentation.ViewModels;
 using RevitDevTool.View;
+using ZLogger;
 
 namespace RevitDevTool.Controllers;
 
-public sealed class PanelController(LogViewModel logViewModel)
+public sealed class PanelController(LogViewModel logViewModel, ILogger<PanelController> logger)
 {
     private static readonly Guid PaneGuid = new("43AE2B41-0BE6-425A-B27A-724B2CE17351");
     private static readonly DockablePaneId PaneId = new(PaneGuid);
 
-    private enum DisplayMode
-    {
-        Uninitialized,
-        Docked,
-        Floating,
-        Hidden,
-        Inactive
-    }
+    private readonly ContentControl _paneProxy = new();
 
-    private DisplayMode _displayMode = DisplayMode.Uninitialized;
     private bool _paneRegistered;
+    private bool _userHidePane;
     private UIControlledApplication? _application;
     private MainWindow? _floatingWindow;
+    private MainPage? _mainPage;
 
     public static bool HasUiDocument => RevitContext.UiApplication.HasActiveUiDocument();
 
     public void Initialize(UIControlledApplication application)
     {
+        if (_paneRegistered) return;
+
         _application = application;
         logViewModel.Subscribe();
+        _mainPage = Host.GetService<MainPage>();
+        _paneProxy.Content = _mainPage;
 
         DockablePaneProvider
             .Register(application, PaneGuid, DevToolsCommand.CommandName)
             .SetConfiguration(data =>
             {
-                data.FrameworkElement = Host.GetService<MainPage>();
+                data.FrameworkElement = _paneProxy;
                 data.InitialState = new DockablePaneState
                 {
                     MinimumWidth = 550,
@@ -53,10 +54,7 @@ public sealed class PanelController(LogViewModel logViewModel)
         _paneRegistered = true;
 
         application.ControlledApplication.DocumentOpened += OnDocumentOpened;
-        application.ControlledApplication.DocumentClosed += OnDocumentClosed;
         NotifyListener.TraceReceived += OnTraceReceived;
-
-        _displayMode = HasUiDocument ? DisplayMode.Docked : DisplayMode.Inactive;
     }
 
     public void Shutdown()
@@ -66,7 +64,6 @@ public sealed class PanelController(LogViewModel logViewModel)
         if (_application is not null)
         {
             _application.ControlledApplication.DocumentOpened -= OnDocumentOpened;
-            _application.ControlledApplication.DocumentClosed -= OnDocumentClosed;
             _application = null;
         }
 
@@ -76,116 +73,121 @@ public sealed class PanelController(LogViewModel logViewModel)
 
     public void TogglePaneVisibility()
     {
-        if (!TryGetDockablePane(out var pane))
-            return;
+        if (!TryGetDockablePane(out var pane)) return;
 
         if (pane.IsShown())
         {
             pane.Hide();
-            _displayMode = DisplayMode.Hidden;
+            _userHidePane = true;
         }
         else
         {
-            logViewModel.Subscribe();
             pane.Show();
-            _displayMode = DisplayMode.Docked;
+            _userHidePane = false;
         }
     }
 
     public void ToggleFloatingWindow()
     {
-        if (_floatingWindow != null)
+        HostUiHelper.RunOnMainThread(() =>
         {
-            CloseFloatingWindow();
-            _displayMode = DisplayMode.Inactive;
-        }
-        else
-        {
-            logViewModel.Subscribe();
-            ShowFloatingWindow();
-            _displayMode = DisplayMode.Floating;
-        }
+            if (_floatingWindow != null)
+            {
+                CloseFloatingWindow();
+            }
+            else
+            {
+                ShowFloatingWindow();
+            }
+        });
     }
 
     private void OnTraceReceived()
     {
         if (!logViewModel.IsStarted) return;
-        if (_displayMode == DisplayMode.Hidden) return;
+        if (_userHidePane) return;
 
         if (HasUiDocument)
         {
-            CloseFloatingWindow();
-
             if (!TryGetDockablePane(out var pane)) return;
             if (!pane.IsShown()) pane.Show();
-
-            _displayMode = DisplayMode.Docked;
             return;
         }
 
         if (_floatingWindow != null) return;
-        if (_displayMode == DisplayMode.Docked) return;
 
-        logViewModel.Subscribe();
-        ShowFloatingWindow();
-        _displayMode = DisplayMode.Floating;
+        HostUiHelper.RunOnMainThread(ShowFloatingWindow);
     }
 
     private void OnDocumentOpened(object? sender, DocumentOpenedEventArgs args)
     {
         if (!HasUiDocument) return;
 
-        CloseFloatingWindow();
+        HostUiHelper.RunOnMainThread(() =>
+        {
+            CloseFloatingWindow();
 
-        if (!TryGetDockablePane(out var pane))
-        {
-            _displayMode = DisplayMode.Docked;
-            return;
-        }
+            if (!TryGetDockablePane(out var pane)) return;
 
-        if (_displayMode == DisplayMode.Hidden)
-        {
-            pane.Hide();
-        }
-        else
-        {
-            _displayMode = DisplayMode.Docked;
-            if (!pane.IsShown()) pane.Show();
-        }
+            if (_userHidePane)
+            {
+                pane.Hide();
+            }
+            else
+            {
+                if (!pane.IsShown()) pane.Show();
+            }
+        });
     }
 
-    private void OnDocumentClosed(object? sender, DocumentClosedEventArgs args)
-    {
-        if (HasUiDocument) return;
-        _displayMode = DisplayMode.Inactive;
-    }
-
+    /// <summary>
+    /// Transfers MainPage from pane proxy into a new floating window.
+    /// Must run on the UI thread.
+    /// </summary>
     private void ShowFloatingWindow()
     {
         if (_floatingWindow != null) return;
 
-        HostUiHelper.RunOnMainThread(() =>
+        try
         {
-            if (_floatingWindow != null) return;
+            _paneProxy.Content = null;
             _floatingWindow = Host.GetService<MainWindow>();
+            _floatingWindow.ContentHost.Content = _mainPage;
             _floatingWindow.Closed += OnFloatingWindowClosed;
             _floatingWindow.SetHostAppOwner();
             _floatingWindow.Show();
-        });
+        }
+        catch (Exception ex)
+        {
+            logger.ZLogError($"ShowFloatingWindow failed: {ex.Message}");
+            _floatingWindow = null;
+            _paneProxy.Content = _mainPage;
+        }
     }
 
+    /// <summary>
+    /// Transfers MainPage from floating window back into pane proxy.
+    /// Must run on the UI thread.
+    /// </summary>
     private void CloseFloatingWindow()
     {
         if (_floatingWindow is null) return;
 
-        HostUiHelper.RunOnMainThread(() =>
+        try
         {
-            if (_floatingWindow is null) return;
             _floatingWindow.Closed -= OnFloatingWindowClosed;
             _floatingWindow.ContentHost.Content = null;
             _floatingWindow.Close();
+        }
+        catch (Exception ex)
+        {
+            logger.ZLogError($"CloseFloatingWindow failed: {ex.Message}");
+        }
+        finally
+        {
             _floatingWindow = null;
-        });
+            _paneProxy.Content = _mainPage;
+        }
     }
 
     private void OnFloatingWindowClosed(object? sender, EventArgs e)
@@ -194,22 +196,16 @@ public sealed class PanelController(LogViewModel logViewModel)
         _floatingWindow.Closed -= OnFloatingWindowClosed;
         _floatingWindow.ContentHost.Content = null;
         _floatingWindow = null;
-        _displayMode = DisplayMode.Inactive;
+        _paneProxy.Content = _mainPage;
     }
 
     private bool TryGetDockablePane([NotNullWhen(true)] out DockablePane? pane)
     {
         pane = null;
         if (!_paneRegistered) return false;
-
-        try
-        {
-            pane = RevitContext.UiApplication.GetDockablePane(PaneId);
-            return true;
-        }
-        catch
-        {
-            return false;
-        }
+        if (!DockablePane.PaneIsRegistered(PaneId)) return false;
+        if (!DockablePane.PaneExists(PaneId)) return false;
+        pane = new DockablePane(PaneId);
+        return true;
     }
 }

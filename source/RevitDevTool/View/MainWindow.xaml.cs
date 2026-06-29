@@ -6,11 +6,9 @@ namespace RevitDevTool.View;
 
 public partial class MainWindow
 {
-    public MainWindow(MainPage main)
+    public MainWindow()
     {
         InitializeComponent();
-        ContentHost.Content = main;
-
         Loaded += OnLoaded;
         ThemeManager.Current.ActualApplicationThemeChanged += OnThemeChanged;
         Closed += OnClosed;

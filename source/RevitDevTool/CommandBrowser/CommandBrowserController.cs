@@ -31,6 +31,8 @@ public sealed class CommandBrowserController(
 
     public void Initialize(UIControlledApplication application)
     {
+        if (_initialized) return;
+
         _application = application;
         _desiredVisible = cache.IsBarVisible;
         _initialized = true;
