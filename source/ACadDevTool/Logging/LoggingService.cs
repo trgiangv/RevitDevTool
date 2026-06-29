@@ -23,6 +23,7 @@ public sealed class LoggingService(
 {
     private bool _disposed;
     private LoggerTraceListener? _loggerTraceListener;
+    private NotifyListener? _notifyListener;
     private ConsoleRedirector? _consoleRedirector;
 
     public FrameworkElement HostElement => monitor.HostElement;
@@ -30,6 +31,8 @@ public sealed class LoggingService(
     public void Initialize()
     {
         var config = settingsService.LogConfig;
+
+        loggingConfiguration.SetMinimumLevel(config.TraceListener.LogLevel);
 
         monitor.Enable(config.Monitor);
         SetTheme(ThemeManager.Current.ActualApplicationTheme == AppTheme.Dark);
@@ -87,12 +90,12 @@ public sealed class LoggingService(
     {
         TraceListenerHelper.RegisterTraceListeners(
             settingsService.LogConfig.TraceListener.IncludeWpfTrace,
-            _loggerTraceListener);
+            _loggerTraceListener, _notifyListener);
     }
 
     public void UnregisterTraceListeners()
     {
-        TraceListenerHelper.UnregisterTraceListeners(_loggerTraceListener);
+        TraceListenerHelper.UnregisterTraceListeners(_notifyListener, _loggerTraceListener);
     }
 
     public void ClearOutput()
@@ -104,9 +107,13 @@ public sealed class LoggingService(
     {
         UnregisterTraceListeners();
         _loggerTraceListener?.Dispose();
+        _loggerTraceListener = null;
+        _notifyListener?.Dispose();
+        _notifyListener = null;
 
         var logger = loggerFactory.CreateLogger("");
         _loggerTraceListener = new LoggerTraceListener(logger, config.TraceListener, telemetry.RecordLoggerTrace);
+        _notifyListener = new NotifyListener();
         RegisterTraceListeners();
     }
 
@@ -118,6 +125,8 @@ public sealed class LoggingService(
         UnregisterTraceListeners();
         _loggerTraceListener?.Dispose();
         _loggerTraceListener = null;
+        _notifyListener?.Dispose();
+        _notifyListener = null;
         fileLogTarget.Disable();
         httpLogTarget.Disable();
         monitor.Disable();

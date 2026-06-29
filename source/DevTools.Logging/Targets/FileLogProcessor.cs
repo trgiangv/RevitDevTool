@@ -15,8 +15,6 @@ public sealed class FileLogProcessor(ILoggerFactory loggerFactory, IHostAppInfo 
     private ZLoggerRollingFileLoggerProvider? _provider;
     private bool _disposed;
 
-    public bool IsEnabled => _provider != null;
-
     public void Enable<T>(T options)
     {
         if (options is not FileLoggingOptions fileOptions)

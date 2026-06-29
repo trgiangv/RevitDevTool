@@ -16,8 +16,6 @@ public sealed class HttpLogProcessor(ILoggerFactory loggerFactory) : IHttpLogTar
     private ZLoggerLogProcessorLoggerProvider? _provider;
     private bool _disposed;
 
-    public bool IsEnabled => _provider != null;
-
     public void Enable<T>(T options)
     {
         if (options is not HttpLoggingOptions httpOptions)

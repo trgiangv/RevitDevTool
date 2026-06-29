@@ -10,8 +10,6 @@ namespace DevTools.Logging.Targets;
 /// </summary>
 public sealed class MonitorLogTarget(ScintillaLogViewerWpf viewer) : IMonitorLogTarget
 {
-    public bool IsEnabled { get; private set; }
-
     public FrameworkElement HostElement =>
         viewer.HostElement as FrameworkElement
         ?? throw new InvalidOperationException("Viewer host element is not a FrameworkElement.");
@@ -19,13 +17,11 @@ public sealed class MonitorLogTarget(ScintillaLogViewerWpf viewer) : IMonitorLog
     public void Enable<T>(T options)
     {
         viewer.Start();
-        IsEnabled = true;
     }
 
     public void Disable()
     {
         viewer.Stop();
-        IsEnabled = false;
     }
 
     public void SetFilter(LogLevel level) => viewer.SetFilter(level);

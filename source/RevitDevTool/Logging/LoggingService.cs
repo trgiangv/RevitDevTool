@@ -40,6 +40,8 @@ public sealed class LoggingService(
 
         var config = settingsService.LogConfig;
 
+        loggingConfiguration.SetMinimumLevel(config.TraceListener.LogLevel);
+
         monitor.Enable(config.Monitor);
         SetTheme(ThemeManager.Current.ActualApplicationTheme == AppTheme.Dark);
         monitor.SetPrettyJson(config.Monitor.EnablePrettyJson);

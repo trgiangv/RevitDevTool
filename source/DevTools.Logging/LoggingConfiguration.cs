@@ -7,7 +7,11 @@ namespace DevTools.Logging;
 public sealed class LoggingConfiguration
 {
     private const string LevelKey = "Logging:LogLevel:Default";
+    private const string LoggingSectionKey = "Logging";
     private readonly MemoryConfigurationProvider _provider;
+    private readonly IConfigurationRoot _configuration;
+    
+    public IConfigurationSection LoggingSection { get; }
 
     public LoggingConfiguration(LogLevel initialLevel = LogLevel.Debug)
     {
@@ -21,16 +25,15 @@ public sealed class LoggingConfiguration
 
         var builder = new ConfigurationBuilder();
         builder.Add(source);
-        Configuration = builder.Build();
+        _configuration = builder.Build();
+        LoggingSection = _configuration.GetSection(LoggingSectionKey);
 
-        _provider = (MemoryConfigurationProvider)Configuration.Providers.First();
+        _provider = (MemoryConfigurationProvider)_configuration.Providers.First();
     }
-
-    public IConfigurationRoot Configuration { get; }
 
     public void SetMinimumLevel(LogLevel level)
     {
         _provider.Set(LevelKey, level.ToString());
-        Configuration.Reload();
+        _configuration.Reload();
     }
 }

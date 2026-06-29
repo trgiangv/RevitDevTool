@@ -1,8 +1,7 @@
 namespace DevTools.Logging.Abstractions;
 
-public interface IEnableable
+public interface IActivatable
 {
-    bool IsEnabled { get; }
     void Enable<T>(T options);
     void Disable();
 }

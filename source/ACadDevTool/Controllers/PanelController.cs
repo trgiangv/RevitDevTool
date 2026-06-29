@@ -1,6 +1,7 @@
 using System.Windows.Forms.Integration;
 using AcadDevTool.View;
 using Autodesk.AutoCAD.Windows;
+using DevTools.Logging.Listeners;
 namespace AcadDevTool.Controllers;
 
 public sealed class PanelController
@@ -29,6 +30,8 @@ public sealed class PanelController
 
         var host = new ElementHost { Child = _mainPage, Dock = DockStyle.Fill };
         _paletteSet.Add("DevTools", host);
+
+        NotifyListener.TraceReceived += OnTraceReceived;
     }
 
     public void Show()
@@ -51,11 +54,19 @@ public sealed class PanelController
 
     public void Shutdown()
     {
+        NotifyListener.TraceReceived -= OnTraceReceived;
+
         if (_paletteSet is null) return;
 
         _paletteSet.Visible = false;
         _paletteSet.Dispose();
         _paletteSet = null;
         _mainPage = null;
+    }
+
+    private void OnTraceReceived()
+    {
+        if (_paletteSet is null || _paletteSet.Visible) return;
+        _paletteSet.Visible = true;
     }
 }

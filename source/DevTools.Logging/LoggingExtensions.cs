@@ -1,4 +1,5 @@
 using DevTools.Logging.Extensions;
+using DevTools.Logging.Listeners;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
@@ -20,10 +21,13 @@ public static class LoggingExtensions
         Action<ScintillaOptions>? configureMonitor = null)
     {
         var loggingConfig = new LoggingConfiguration();
-        builder.Services.AddSingleton(loggingConfig);
+
+        builder.Services
+            .AddSingleton(loggingConfig)
+            .AddSingleton<ILoggerProvider, NotifyLoggerProvider>();
 
         builder.Logging
-            .AddConfiguration(loggingConfig.Configuration.GetSection("Logging"))
+            .AddConfiguration(loggingConfig.LoggingSection)
             .ClearProviders()
             .AddMonitorLogging(v =>
             {
