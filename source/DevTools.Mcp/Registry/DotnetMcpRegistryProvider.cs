@@ -27,7 +27,7 @@ public sealed class DotnetMcpRegistryProvider(
             }
             catch (Exception ex)
             {
-                logger.ZLogWarning($"[MCP] Failed to parse .NET MCP tools from '{assemblyPath}': {ex.Message}");
+                logger.ZLogWarning($"Failed to parse .NET MCP tools from '{assemblyPath}': {ex.Message}");
             }
         }
 

@@ -213,6 +213,7 @@
             <BuildType Solution="Release.Autodesk.2025|*" Project="Release" />
             <BuildType Solution="Release.Autodesk.2026|*" Project="Release" />
             <BuildType Solution="Release.Autodesk.2027|*" Project="Release" />
+            <Build Project="false" />
         </Project>
     </Folder>
     <Folder Name="/Solution Items/">

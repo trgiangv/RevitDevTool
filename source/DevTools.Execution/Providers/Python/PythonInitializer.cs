@@ -29,7 +29,7 @@ public sealed class PythonInitializer(
             if (IsInitialized) return;
 
             Provider ??= await DetectProviderAsync().ConfigureAwait(false);
-            logger.ZLogInformation($"[Python] Using backend: {Provider.Backend}");
+            logger.ZLogInformation($"Using backend: {Provider.Backend}");
 
             if (!Provider.IsEnvironmentReady())
             {
@@ -53,7 +53,7 @@ public sealed class PythonInitializer(
         }
         catch (Exception ex)
         {
-            logger.ZLogError($"[Python] Fatal init failure: {ex.Message}\n{ex.StackTrace}");
+            logger.ZLogError($"Fatal init failure: {ex.Message}\n{ex.StackTrace}");
         }
         finally
         {
@@ -90,12 +90,12 @@ public sealed class PythonInitializer(
         try
         {
             await PythonInstaller.SetupPixiAsync(logger).ConfigureAwait(false);
-            logger.ZLogInformation($"[Python] Pixi is available.");
+            logger.ZLogInformation($"Pixi is available.");
             return pixiProvider;
         }
         catch (Exception ex)
         {
-            logger.ZLogWarning($"[Python] Pixi unavailable ({ex.GetType().Name}: {ex.Message}). Falling back to pip.");
+            logger.ZLogWarning($"Pixi unavailable ({ex.GetType().Name}: {ex.Message}). Falling back to pip.");
             return pipProvider;
         }
     }
@@ -115,7 +115,7 @@ public sealed class PythonInitializer(
 
         var newPath = string.Join(";", toAdd) + ";" + current;
         Environment.SetEnvironmentVariable("PATH", newPath);
-        logger.ZLogInformation($"[Python] Prepended to PATH: {string.Join("; ", toAdd)}");
+        logger.ZLogInformation($"Prepended to PATH: {string.Join("; ", toAdd)}");
     }
 
     private void SetupGlobalScope()

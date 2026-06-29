@@ -68,7 +68,7 @@ public static class McpPathValidator
             if (PathProducesCatalogItems(paths[i], mode, catalog))
                 continue;
 
-            logger?.ZLogInformation($"[MCP] Remove saved {mode} path '{paths[i]}' because it loaded no primitives.");
+            logger?.ZLogInformation($"Remove saved {mode} path '{paths[i]}' because it loaded no primitives.");
             paths.RemoveAt(i);
         }
     }

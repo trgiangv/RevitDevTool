@@ -443,7 +443,7 @@ public sealed class DotnetMcpAssemblyParser(ILogger<DotnetMcpAssemblyParser> log
             };
         }
 
-        logger.ZLogDebug($"[MCP] Failed to read JSON value from attribute '{attribute.AttributeType.FullName}'");
+        logger.ZLogDebug($"Failed to read JSON value from attribute '{attribute.AttributeType.FullName}'");
         return null;
     }
 
@@ -457,7 +457,7 @@ public sealed class DotnetMcpAssemblyParser(ILogger<DotnetMcpAssemblyParser> log
                 return value;
         }
 
-        logger.ZLogDebug($"[MCP] Failed to extract named argument '{memberName}' of type '{typeof(T).FullName}' from attribute '{attr?.AttributeType.FullName}'");
+        logger.ZLogDebug($"Failed to extract named argument '{memberName}' of type '{typeof(T).FullName}' from attribute '{attr?.AttributeType.FullName}'");
         return null;
     }
 
@@ -471,7 +471,7 @@ public sealed class DotnetMcpAssemblyParser(ILogger<DotnetMcpAssemblyParser> log
                 return value;
         }
 
-        logger.ZLogDebug($"[MCP] Failed to extract named value argument '{memberName}' of type '{typeof(T).FullName}' from attribute '{attr?.AttributeType.FullName}'");
+        logger.ZLogDebug($"Failed to extract named value argument '{memberName}' of type '{typeof(T).FullName}' from attribute '{attr?.AttributeType.FullName}'");
         return null;
     }
 
@@ -491,6 +491,6 @@ public sealed class DotnetMcpAssemblyParser(ILogger<DotnetMcpAssemblyParser> log
     private void WarnSkipped(string kind, Type type, MethodInfo method, string assemblyPath, Exception ex)
     {
         logger.ZLogWarning(
-            $"[MCP] Skip .NET {kind} '{type.FullName}.{method.Name}' in '{assemblyPath}': {ex.Message}");
+            $"Skip .NET {kind} '{type.FullName}.{method.Name}' in '{assemblyPath}': {ex.Message}");
     }
 }

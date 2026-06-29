@@ -36,7 +36,7 @@ public sealed class PythonToolsetParser(ILogger<PythonToolsetParser> logger)
         }
         catch (Exception ex)
         {
-            logger.ZLogError($"[MCP] In-process parser failed for '{toolsetDirectory}': {ex.Message}\n{ex.StackTrace}");
+            logger.ZLogError($"In-process parser failed for '{toolsetDirectory}': {ex.Message}\n{ex.StackTrace}");
             return McpRegistryCatalog.Empty;
         }
 
@@ -78,7 +78,7 @@ public sealed class PythonToolsetParser(ILogger<PythonToolsetParser> logger)
             if (result.ExitCode != 0)
             {
                 logger.ZLogError(
-                    $"[MCP] Python parser execution failed for '{directory}' with exit code {result.ExitCode}: {result.StandardError}");
+                    $"Python parser execution failed for '{directory}' with exit code {result.ExitCode}: {result.StandardError}");
                 return null;
             }
 
@@ -86,7 +86,7 @@ public sealed class PythonToolsetParser(ILogger<PythonToolsetParser> logger)
         }
         catch (Exception ex)
         {
-            logger.ZLogError($"[MCP] Unexpected parser failure for '{directory}': {ex.Message}");
+            logger.ZLogError($"Unexpected parser failure for '{directory}': {ex.Message}");
             return null;
         }
     }
@@ -97,12 +97,12 @@ public sealed class PythonToolsetParser(ILogger<PythonToolsetParser> logger)
         {
             var catalog = JsonSerializer.Deserialize<PythonParsedCatalog>(json, catalogJsonOptions);
             if (catalog is not null) return catalog;
-            logger.ZLogWarning($"[MCP] Parser returned null catalog for '{directory}'.");
+            logger.ZLogWarning($"Parser returned null catalog for '{directory}'.");
             return null;
         }
         catch (JsonException ex)
         {
-            logger.ZLogError($"[MCP] Failed to deserialize parser output for '{directory}': {ex.Message}");
+            logger.ZLogError($"Failed to deserialize parser output for '{directory}': {ex.Message}");
             return null;
         }
     }

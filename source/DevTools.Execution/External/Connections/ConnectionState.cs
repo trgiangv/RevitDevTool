@@ -138,7 +138,7 @@ public sealed class ExecutionScope : IDisposable
             ? result.Detail
             : result.Error?.Message ?? string.Empty;
 
-        var traceMessage = $"[MCP] Tool '{_toolName}' {result.State} in {elapsed.TotalSeconds:F1}s. {detail}";
+        var traceMessage = $"Tool '{_toolName}' {result.State} in {elapsed.TotalSeconds:F1}s. {detail}";
         if (result.State == ExecutionState.Completed)
             _logger?.ZLogInformation($"{traceMessage}");
         else
@@ -153,7 +153,7 @@ public sealed class ExecutionScope : IDisposable
         _stopwatch.Stop();
 
         _logger?.ZLogWarning(
-            $"[MCP] Tool '{_toolName}' scope disposed without completion after {_stopwatch.Elapsed.TotalSeconds:F1}s.");
+            $"Tool '{_toolName}' scope disposed without completion after {_stopwatch.Elapsed.TotalSeconds:F1}s.");
         _state.ResetExecution();
     }
 }

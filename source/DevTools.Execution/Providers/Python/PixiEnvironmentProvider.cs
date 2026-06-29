@@ -43,8 +43,8 @@ public sealed class PixiEnvironmentProvider(ILogger<PixiEnvironmentProvider> log
             var result = await Cli.Wrap(PythonInstaller.PixiExePath)
                 .WithArguments("install")
                 .WithWorkingDirectory(PixiProjectDir)
-                .WithStandardOutputPipe(PipeTarget.ToDelegate(line => logger.ZLogInformation($"[pixi] {line}")))
-                .WithStandardErrorPipe(PipeTarget.ToDelegate(line => logger.ZLogWarning($"[pixi] {line}")))
+                .WithStandardOutputPipe(PipeTarget.ToDelegate(line => logger.ZLogInformation($"{line}")))
+                .WithStandardErrorPipe(PipeTarget.ToDelegate(line => logger.ZLogWarning($"{line}")))
                 .WithValidation(CommandResultValidation.None)
                 .ExecuteAsync().ConfigureAwait(false);
 
@@ -66,13 +66,13 @@ public sealed class PixiEnvironmentProvider(ILogger<PixiEnvironmentProvider> log
         var result = await Cli.Wrap(PythonInstaller.PixiExePath)
             .WithArguments(args)
             .WithWorkingDirectory(PixiProjectDir)
-            .WithStandardOutputPipe(PipeTarget.ToDelegate(line => logger.ZLogInformation($"[pixi] {line}")))
-            .WithStandardErrorPipe(PipeTarget.ToDelegate(line => logger.ZLogWarning($"[pixi] {line}")))
+            .WithStandardOutputPipe(PipeTarget.ToDelegate(line => logger.ZLogInformation($"{line}")))
+            .WithStandardErrorPipe(PipeTarget.ToDelegate(line => logger.ZLogWarning($"f{line}")))
             .WithValidation(CommandResultValidation.None)
             .ExecuteAsync().ConfigureAwait(false);
 
         if (result.ExitCode != 0)
-            logger.ZLogWarning($"[Pixi] Failed to ensure required packages (exit {result.ExitCode}), will proceed with pixi install.");
+            logger.ZLogWarning($"Failed to ensure required packages (exit {result.ExitCode}), will proceed with pixi install.");
     }
 
     public override async Task InstallPackagesAsync(

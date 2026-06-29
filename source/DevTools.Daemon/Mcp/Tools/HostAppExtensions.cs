@@ -47,12 +47,4 @@ internal static class HostAppExtensions
         if (string.IsNullOrWhiteSpace(value)) return null;
         return Enum.TryParse<HostApp>(value, ignoreCase: true, out var app) ? app : null;
     }
-
-    public static string[] SupportedExtensions(HostApp app)
-    {
-        if (app == HostApp.Revit) return [".rvt", ".rfa", ".rft", ".rte"];
-        if (app.IsAcadFamily()) return [".dwg", ".dxf", ".dwf", ".dwt"];
-        if (app == HostApp.Navisworks) return [".nwd", ".nwc", ".nwf"];
-        return [];
-    }
 }

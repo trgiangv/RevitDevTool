@@ -125,7 +125,7 @@ public sealed class DotnetMethodResolver(McpToolsetContextManager contextManager
         catch (Exception ex)
         {
             logger.ZLogWarning(
-                $"[MCP] Failed to load toolset '{binding.SourcePath}': {ex.Message}");
+                $"Failed to load toolset '{binding.SourcePath}': {ex.Message}");
             return null;
         }
     }

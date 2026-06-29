@@ -2,11 +2,11 @@ namespace DevTools.Daemon.Mcp.Tools.Utils;
 
 internal sealed class StartupDialogResolverOptions
 {
-    public TimeSpan PollInterval { get; init; } = TimeSpan.FromMilliseconds(500);
+    public TimeSpan PollInterval { get; } = TimeSpan.FromMilliseconds(500);
 
     public const int MaxNoButtonRetriesPerWindow = 3;
 
-    public IReadOnlyList<string> DialogTitleKeywords { get; init; } =
+    public IReadOnlyList<string> DialogTitleKeywords { get; } =
     [
         "autodesk",
         "revit",
@@ -24,7 +24,7 @@ internal sealed class StartupDialogResolverOptions
         "file loading"
     ];
 
-    public IReadOnlyList<string> PreferredButtonKeywords { get; init; } =
+    public IReadOnlyList<string> PreferredButtonKeywords { get; } =
     [
         "always load",
         "load once",
@@ -37,7 +37,7 @@ internal sealed class StartupDialogResolverOptions
         "skip"
     ];
 
-    public IReadOnlyList<string> BlockedButtonKeywords { get; init; } =
+    public IReadOnlyList<string> BlockedButtonKeywords { get; } =
     [
         "do not load",
         "cancel",

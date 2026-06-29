@@ -23,7 +23,7 @@ public sealed class McpCatalogLoader(IEnumerable<IMcpRegistryProvider> providers
             {
                 var catalog = provider.LoadCatalog();
                 logger.ZLogDebug(
-                    $"[MCP] Provider '{provider.Name}' returned {catalog.Tools.Count} tool(s), {catalog.Prompts.Count} prompt(s), {catalog.Resources.Count} resource(s).");
+                    $"Provider '{provider.Name}' returned {catalog.Tools.Count} tool(s), {catalog.Prompts.Count} prompt(s), {catalog.Resources.Count} resource(s).");
 
                 Collect(provider.Name, catalog.Tools, toolMap, tool => tool.Id, tool => tool.ProtocolTool.Name, "tool");
                 Collect(provider.Name, catalog.Prompts, promptMap, prompt => prompt.Id, prompt => prompt.ProtocolPrompt.Name, "prompt");
@@ -32,7 +32,7 @@ public sealed class McpCatalogLoader(IEnumerable<IMcpRegistryProvider> providers
             }
             catch (Exception ex)
             {
-                logger.ZLogWarning($"[MCP] Provider '{provider.Name}' failed: {ex.Message}");
+                logger.ZLogWarning($"Provider '{provider.Name}' failed: {ex.Message}");
             }
         }
 
@@ -54,7 +54,7 @@ public sealed class McpCatalogLoader(IEnumerable<IMcpRegistryProvider> providers
         };
 
         logger.ZLogDebug(
-            $"[MCP] Tool store loaded {loaded.Tools.Count} tool(s), {loaded.Prompts.Count} prompt(s), {loaded.Resources.Count} resource(s).");
+            $"Tool store loaded {loaded.Tools.Count} tool(s), {loaded.Prompts.Count} prompt(s), {loaded.Resources.Count} resource(s).");
         return loaded;
     }
 
@@ -91,12 +91,12 @@ public sealed class McpCatalogLoader(IEnumerable<IMcpRegistryProvider> providers
 
             if (string.IsNullOrWhiteSpace(name))
             {
-                logger.ZLogWarning($"[MCP] Skip {kind} with empty name from provider='{providerName}'.");
+                logger.ZLogWarning($"Skip {kind} with empty name from provider='{providerName}'.");
                 continue;
             }
 
             if (byId.TryAdd(id, item)) continue;
-            logger.ZLogWarning($"[MCP] Duplicate {kind} id '{id}' ignored.");
+            logger.ZLogWarning($"Duplicate {kind} id '{id}' ignored.");
         }
     }
 }

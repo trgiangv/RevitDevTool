@@ -34,14 +34,14 @@ public static class PythonInstaller
 
         if (IsPixiInstalled())
         {
-            logger?.ZLogInformation($"[Pixi] v{PixiVersion} already installed.");
+            logger?.ZLogInformation($"Pixi v{PixiVersion} already installed.");
             return;
         }
 
-        logger?.ZLogInformation($"[Pixi] Downloading v{PixiVersion}...");
+        logger?.ZLogInformation($"Downloading v{PixiVersion}...");
         await DownloadAndInstallAsync(PixiVersion).ConfigureAwait(false);
         await File.WriteAllTextAsync(VersionMarkerPath, PixiVersion).ConfigureAwait(false);
-        logger?.ZLogInformation($"[Pixi] v{PixiVersion} installed.");
+        logger?.ZLogInformation($"v{PixiVersion} installed.");
     }
 
     private static bool IsMarkedVersion(string version)

@@ -60,7 +60,7 @@ public sealed class DevToolsPipeServer(
             }
             catch (Exception ex)
             {
-                logger.ZLogWarning($"[PipeServer] Catalog preload failed: {ex.Message}");
+                logger.ZLogWarning($"Catalog preload failed: {ex.Message}");
             }
         }, cancellationToken);
 
@@ -69,7 +69,7 @@ public sealed class DevToolsPipeServer(
         _cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
         _acceptLoopTask = AcceptLoopAsync(_cts.Token);
 
-        logger.ZLogInformation($"[PipeServer] Listening on pipe '{_pipeName}'.");
+        logger.ZLogInformation($"Listening on pipe '{_pipeName}'.");
         return Task.CompletedTask;
     }
 
@@ -119,7 +119,7 @@ public sealed class DevToolsPipeServer(
             }
             catch (Exception ex)
             {
-                logger.ZLogWarning($"[PipeServer] Accept loop error: {ex.Message}");
+                logger.ZLogWarning($"Accept loop error: {ex.Message}");
                 await Task.Delay(500, ct).ConfigureAwait(false);
             }
         }
@@ -131,7 +131,7 @@ public sealed class DevToolsPipeServer(
         var connectionId = Interlocked.Increment(ref _nextConnectionId);
         _connections[connectionId] = conn;
         state.SetConnectedState(_connections.IsEmpty ? 0 : 1);
-        logger.ZLogInformation($"[PipeServer] Client connected. Active clients: {_connections.Count}");
+        logger.ZLogInformation($"Client connected. Active clients: {_connections.Count}");
 
         conn.MessageReceived += msg => OnMessageReceived(conn, msg);
         conn.Disconnected += () =>
@@ -139,7 +139,7 @@ public sealed class DevToolsPipeServer(
             if (_connections.TryRemove(connectionId, out var disconnectedConnection))
                 disconnectedConnection.Dispose();
             state.SetConnectedState(_connections.IsEmpty ? 0 : 1);
-            logger.ZLogInformation($"[PipeServer] Client disconnected. Active clients: {_connections.Count}");
+            logger.ZLogInformation($"Client disconnected. Active clients: {_connections.Count}");
         };
         conn.StartReadLoop();
     }
@@ -167,12 +167,12 @@ public sealed class DevToolsPipeServer(
             }
             catch (Exception ex)
             {
-                logger.ZLogWarning($"[PipeServer] Failed to send response: {ex.Message}");
+                logger.ZLogWarning($"Failed to send response: {ex.Message}");
             }
         }
         catch (Exception ex)
         {
-            logger.ZLogError($"[PipeServer] Unhandled error in message handler: {ex}");
+            logger.ZLogError($"Unhandled error in message handler: {ex}");
         }
     }
 
@@ -207,13 +207,13 @@ public sealed class DevToolsPipeServer(
                 }
                 catch (Exception ex)
                 {
-                    logger.ZLogWarning($"[PipeServer] Notification '{method}' failed: {ex.Message}");
+                    logger.ZLogWarning($"Notification '{method}' failed: {ex.Message}");
                 }
             }
         }
         catch (Exception ex)
         {
-            logger.ZLogError($"[PipeServer] Unhandled error in SendNotification: {ex}");
+            logger.ZLogError($"Unhandled error in SendNotification: {ex}");
         }
     }
 
