@@ -6,6 +6,12 @@ public sealed class NotifyListener : TraceListener
 {
     public static event Action? TraceReceived;
 
+    /// <summary>
+    /// Allows other listeners (e.g. <see cref="LoggerTraceListener"/>) to raise
+    /// the notification without going through <see cref="Trace"/>.
+    /// </summary>
+    public static void RaiseTraceReceived() => TraceReceived?.Invoke();
+
     public override bool IsThreadSafe => true;
 
     public override void Write(string? message)
