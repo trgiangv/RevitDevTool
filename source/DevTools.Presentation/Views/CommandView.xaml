@@ -112,11 +112,10 @@
                 </control:ExtendedTreeView.ContextMenu>
             </control:ExtendedTreeView>
 
-            <Border x:Name="DropMask"
-                    Panel.ZIndex="10"
+            <Border Panel.ZIndex="10"
                     Background="#AA1E1E1E"
                     IsHitTestVisible="False"
-                    Visibility="Collapsed">
+                    Visibility="{Binding IsDropMaskVisible, Converter={StaticResource BooleanToVisibilityConverter}}">
                 <StackPanel HorizontalAlignment="Center"
                             VerticalAlignment="Center">
                     <TextBlock x:Name="DropMaskTitle"

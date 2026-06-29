@@ -1,7 +1,6 @@
 using System.IO;
+using System.Windows;
 using DevTools.Presentation.ViewModels;
-using Microsoft.Extensions.Logging;
-using ZLogger;
 using DataFormats = System.Windows.DataFormats;
 using DragEventArgs = System.Windows.DragEventArgs;
 
@@ -9,65 +8,59 @@ namespace DevTools.Presentation.Views;
 
 public partial class CommandView
 {
-    private readonly ILogger<CommandView> _logger;
-
     private const string ValidDropTitle = "Drop to load";
     private const string ValidDropHint = ".dll files and folders are supported";
     private const string InvalidDropTitle = "Unsupported drop";
     private const string InvalidDropHint = "Only .dll files and folders are supported";
 
-    public CommandView(ILogger<CommandView> logger)
+    public CommandView()
     {
-        _logger = logger;
         InitializeComponent();
     }
 
-    private void AddinTreeView_DragEnter(object sender, DragEventArgs e) => UpdateDropMaskState(e);
+    private void AddinTreeView_DragEnter(object sender, DragEventArgs e)
+    {
+        if (!TryGetPaths(e, out var paths) || DataContext is not CommandViewModel vm) return;
+        var valid = paths.Length > 0 && paths.All(IsSupportedPath);
+        e.Effects = valid ? DragDropEffects.Copy : DragDropEffects.None;
+        UpdateDropMaskText(valid);
+        vm.ShowDropMask();
+    }
 
     private void AddinTreeView_DragOver(object sender, DragEventArgs e)
     {
-        UpdateDropMaskState(e);
+        if (TryGetPaths(e, out var paths) && DataContext is CommandViewModel vm)
+        {
+            var valid = paths.Length > 0 && paths.All(IsSupportedPath);
+            e.Effects = valid ? DragDropEffects.Copy : DragDropEffects.None;
+            UpdateDropMaskText(valid);
+            vm.ShowDropMask();
+        }
         e.Handled = true;
     }
 
-    private void AddinTreeView_DragLeave(object sender, DragEventArgs e) => HideDropMask();
+    private void AddinTreeView_DragLeave(object sender, DragEventArgs e)
+    {
+        if (DataContext is CommandViewModel vm) vm.IsDropMaskVisible = false;
+    }
 
     private async void AddinTreeView_Drop(object sender, DragEventArgs e)
     {
         try
         {
-            HideDropMask();
-            if (!TryGetDroppedPaths(e, out var droppedPaths) || DataContext is not CommandViewModel viewModel) return;
-            foreach (var droppedPath in droppedPaths)
-                await ProcessDroppedItemAsync(droppedPath, viewModel);
+            if (TryGetPaths(e, out var paths) && DataContext is CommandViewModel vm)
+                await vm.HandleDropAsync(paths, IsSupportedPath);
         }
-        catch (Exception ex)
+        catch
         {
-            _logger.ZLogError($"Error handling drop event: {ex.Message}");
+            // Ignored
         }
     }
 
-    private static bool TryGetDroppedPaths(DragEventArgs e, out string[] paths)
+    private void UpdateDropMaskText(bool isValid)
     {
-        paths = [];
-        if (!e.Data.GetDataPresent(DataFormats.FileDrop)) return false;
-        if (e.Data.GetData(DataFormats.FileDrop) is not string[] droppedFiles || droppedFiles.Length == 0) return false;
-        paths = droppedFiles;
-        return true;
-    }
-
-    private void UpdateDropMaskState(DragEventArgs e)
-    {
-        var isValid = IsValidDropData(e);
-        e.Effects = isValid ? System.Windows.DragDropEffects.Copy : System.Windows.DragDropEffects.None;
         DropMaskTitle.Text = isValid ? ValidDropTitle : InvalidDropTitle;
         DropMaskHint.Text = isValid ? ValidDropHint : InvalidDropHint;
-        DropMask.Visibility = System.Windows.Visibility.Visible;
-    }
-
-    private static bool IsValidDropData(DragEventArgs e)
-    {
-        return TryGetDroppedPaths(e, out var droppedPaths) && droppedPaths.All(IsSupportedPath);
     }
 
     private static bool IsSupportedPath(string path)
@@ -76,26 +69,12 @@ public partial class CommandView
         return File.Exists(path) && string.Equals(Path.GetExtension(path), ".dll", StringComparison.OrdinalIgnoreCase);
     }
 
-    private void HideDropMask() => DropMask.Visibility = System.Windows.Visibility.Collapsed;
-
-    private async Task ProcessDroppedItemAsync(string path, CommandViewModel viewModel)
+    private static bool TryGetPaths(DragEventArgs e, out string[] paths)
     {
-        if (!IsSupportedPath(path))
-        {
-            _logger.ZLogWarning($"Unsupported drop item: {path}. Only .dll files and folders are supported.");
-            return;
-        }
-        if (File.Exists(path))
-            await ProcessDroppedDllFileAsync(path, viewModel);
-        else if (Directory.Exists(path))
-            await viewModel.LoadFromPathAsync(path);
-    }
-
-    private async Task ProcessDroppedDllFileAsync(string filePath, CommandViewModel viewModel)
-    {
-        if (Utilities.AssemblyLoader.IsManagedAssembly(filePath))
-            await viewModel.LoadFromPathAsync(filePath);
-        else
-            _logger.ZLogWarning($"File {filePath} is not a valid managed assembly.");
+        paths = [];
+        if (!e.Data.GetDataPresent(DataFormats.FileDrop)) return false;
+        if (e.Data.GetData(DataFormats.FileDrop) is not string[] files || files.Length == 0) return false;
+        paths = files;
+        return true;
     }
 }

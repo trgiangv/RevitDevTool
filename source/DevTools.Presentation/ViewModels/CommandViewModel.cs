@@ -9,8 +9,8 @@ using DevTools.Execution.Models;
 using DevTools.Settings;
 using DevTools.Presentation.Interfaces;
 using DevTools.UI.Theme;
-// ReSharper disable UnusedParameterInPartialMethod
 // ReSharper disable RedundantSuppressNullableWarningExpression
+// ReSharper disable UnusedParameterInPartialMethod
 
 namespace DevTools.Presentation.ViewModels;
 
@@ -40,6 +40,9 @@ public partial class CommandViewModel : ObservableObject, IBusyViewModel
 
     [ObservableProperty]
     public partial ExecutionMode? BusyExecutionMode { get; set; }
+
+    [ObservableProperty]
+    public partial bool IsDropMaskVisible { get; set; }
 
     [ObservableProperty]
     public partial bool IsDebuggerConnected { get; set; }
@@ -124,7 +127,7 @@ public partial class CommandViewModel : ObservableObject, IBusyViewModel
         });
     }
 
-    public async Task LoadFromPathAsync(string? path)
+    private async Task LoadFromPathAsync(string? path)
     {
         if (string.IsNullOrEmpty(path)) return;
         if (File.Exists(path) && path!.EndsWith(".dll", StringComparison.OrdinalIgnoreCase))
@@ -353,5 +356,35 @@ public partial class CommandViewModel : ObservableObject, IBusyViewModel
         {
             BusyExecutionMode = null;
         }
+    }
+
+    public void ShowDropMask() => IsDropMaskVisible = true;
+
+    public async Task HandleDropAsync(string[] paths, Func<string, bool> isSupportedPath)
+    {
+        IsDropMaskVisible = false;
+        foreach (var path in paths)
+            await ProcessDroppedItemAsync(path, isSupportedPath);
+    }
+
+    private async Task ProcessDroppedItemAsync(string path, Func<string, bool> isSupportedPath)
+    {
+        if (!isSupportedPath(path))
+        {
+            _logger.ZLogWarning($"Unsupported drop item: {path}. Only .dll files and folders are supported.");
+            return;
+        }
+        if (File.Exists(path))
+            await ProcessDroppedDllFileAsync(path);
+        else if (Directory.Exists(path))
+            await LoadFromPathAsync(path);
+    }
+
+    private async Task ProcessDroppedDllFileAsync(string filePath)
+    {
+        if (Utilities.AssemblyLoader.IsManagedAssembly(filePath))
+            await LoadFromPathAsync(filePath);
+        else
+            _logger.ZLogWarning($"File {filePath} is not a valid managed assembly.");
     }
 }
