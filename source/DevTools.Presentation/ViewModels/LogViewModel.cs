@@ -52,7 +52,6 @@ public sealed partial class LogViewModel : ObservableObject, IDisposable,
         _visualization = visualization;
         _idling = idling;
         IsStarted = _settingsService.GeneralConfig.IsTraceEnabled;
-        if (IsStarted) StartTracing();
     }
 
     private void StartTracing()
@@ -76,6 +75,7 @@ public sealed partial class LogViewModel : ObservableObject, IDisposable,
         _idling?.Subscribe(OnIdling);
         _messenger.RegisterAll(this);
         _isSubscribed = true;
+        if (IsStarted) StartTracing();
     }
 
     public void Receive(GeometryCountChangedMessage message)

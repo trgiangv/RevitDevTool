@@ -33,7 +33,6 @@ public sealed class PanelController(LogViewModel logViewModel, ILogger<PanelCont
         if (_paneRegistered) return;
 
         _application = application;
-        logViewModel.Subscribe();
         _mainPage = Host.GetService<MainPage>();
         _paneProxy.Content = _mainPage;
 
@@ -53,8 +52,10 @@ public sealed class PanelController(LogViewModel logViewModel, ILogger<PanelCont
 
         _paneRegistered = true;
 
-        application.ControlledApplication.DocumentOpened += OnDocumentOpened;
         NotifyListener.TraceReceived += OnTraceReceived;
+        logViewModel.Subscribe();
+
+        application.ControlledApplication.DocumentOpened += OnDocumentOpened;
     }
 
     public void Shutdown()
@@ -114,7 +115,7 @@ public sealed class PanelController(LogViewModel logViewModel, ILogger<PanelCont
             return;
         }
 
-        if (_floatingWindow != null) return;
+        if (_floatingWindow != null || _mainPage is null) return;
 
         HostUiHelper.RunOnMainThread(ShowFloatingWindow);
     }

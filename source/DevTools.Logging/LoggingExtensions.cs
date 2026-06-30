@@ -23,12 +23,12 @@ public static class LoggingExtensions
         var loggingConfig = new LoggingConfiguration();
 
         builder.Services
-            .AddSingleton(loggingConfig)
-            .AddSingleton<ILoggerProvider, NotifyLoggerProvider>();
+            .AddSingleton(loggingConfig);
 
         builder.Logging
             .AddConfiguration(loggingConfig.LoggingSection)
             .ClearProviders()
+            .AddProvider(new NotifyLoggerProvider())
             .AddMonitorLogging(v =>
             {
                 v.Channel(capacity: 50_000, flushMs: 50, maxBatch: 800)
