@@ -2,7 +2,7 @@
 
 Logging uses `ILogger<T>` via Microsoft.Extensions.Logging (MEL) with ZLogger as the provider. All business code injects `ILogger<T>` through DI; a legacy `LoggerTraceListener` bridge remains for third-party/WPF trace sources only.
 
-Last updated: 2026-06-28
+Last updated: 2026-07-01
 
 ---
 
@@ -140,6 +140,61 @@ AutoCAD has its own context provider/enricher path and does not share Revit geom
 | File | `FileLogProcessor` | Plain text or JSON based on settings. |
 | HTTP | `HttpLogProcessor` | Remote sink path. |
 | Notify | `NotifyListener` | UI update notifications (bridge path only). |
+
+---
+
+## Third-Party Addin Logging Integration
+
+Third-party addins that want their log output to appear in the DevTools monitor and file sinks can bridge their own `ILogger<T>` + ZLogger pipeline into DevTools by routing log entries through `System.Diagnostics.Trace`.
+
+**Note:** Depending on the addin's architecture, you can wire logging through `Microsoft.Extensions.Hosting` or directly via `IServiceCollection`. The example below uses the simplest `ServiceCollection`-only approach.
+
+```csharp
+// In the third-party addin's service registration:
+private static ServiceProvider CreateServiceProvider()
+{
+    var services = new ServiceCollection();
+
+    services.AddLogging(builder =>
+    {
+        builder.SetMinimumLevel(LogLevel.Debug);
+        builder.AddZLoggerInMemory(
+            processorKey: null,
+            configure: options =>
+            {
+                options.UsePlainTextFormatter(formatter =>
+                {
+                    formatter.SetPrefixFormatter(
+                        $"[{0:short}] [{1}] ",
+                        (in template, in info) =>
+                            template.Format(info.LogLevel, info.Category));
+                });
+            },
+            configureProcessor: processor =>
+            {
+                processor.MessageReceived += msg =>
+                    System.Diagnostics.Trace.WriteLine(msg);
+            });
+    });
+
+    return services.BuildServiceProvider();
+}
+```
+
+**How it works:**
+
+1. The third-party addin uses its own `ILogger<T>` + ZLogger with an in-memory processor.
+2. `MessageReceived` writes each formatted log entry to `System.Diagnostics.Trace.WriteLine()`.
+3. DevTools' `LoggerTraceListener` (always active once `LoggingService.Initialize()` runs) intercepts `Trace` output and routes it into the shared MEL pipeline.
+4. The log entry flows through `LogLevelDetector` → `NotifyListener` (auto-show pane) → ZLogger providers → Monitor / File / HTTP sinks.
+
+**Key points:**
+
+- The third-party addin does **not** need a dependency on DevTools libraries.
+- Only `System.Diagnostics.Trace` and `ZLogger` are required.
+- The `NotifyListener.TraceReceived` event fires for every bridged entry, triggering auto-show of the DevTools dockable pane or floating window.
+- For addins that already use `Trace.Write`, no ZLogger setup is needed — `LoggerTraceListener` captures `Trace` output directly.
+- The `[level]` prefix in the formatter (`${0:short}`) is required: `Trace.WriteLine` does not carry level information, so `LogLevelDetector` scans the message for level prefixes like `[DBG]`, `[ERR]`, `[WRN]` to determine the correct MEL log level.
 
 ---
 

@@ -69,8 +69,13 @@ public sealed class FileLogProcessor(ILoggerFactory loggerFactory, IHostAppInfo 
         {
             options.UsePlainTextFormatter(formatter =>
                 formatter.SetPrefixFormatter(
-                    $"[{0:local-timeonly} {1:short}] ",
-                    (in t, in i) => t.Format(i.Timestamp, i.LogLevel)));
+                    $"[{0:local-timeonly} {1:short}]{2} ",
+                    (in t, in i) =>
+                    {
+                        var cat = i.Category.ToString();
+                        t.Format(i.Timestamp, i.LogLevel,
+                            string.IsNullOrEmpty(cat) ? "" : $" [{cat}]");
+                    }));
         }
     }
 }
