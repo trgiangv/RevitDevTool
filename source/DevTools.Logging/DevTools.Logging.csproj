@@ -9,6 +9,7 @@
         <PackageReference Include="Microsoft.Extensions.Hosting" />
         <PackageReference Include="ZLogger" />
         <PackageReference Include="ZLogger.Scintilla" />
+        <PackageReference Include="Scintilla5.NET" Condition="$(TargetFramework.StartsWith('net4'))" /> <!-- Just to ensure unmanaged dlls copy to output -->
     </ItemGroup>
 
     <ItemGroup Condition="'$(TargetFramework)' == 'net48'">

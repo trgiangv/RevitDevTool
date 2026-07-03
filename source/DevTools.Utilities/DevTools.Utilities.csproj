@@ -6,10 +6,6 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <Using Include="JetBrains.Annotations" />
-    </ItemGroup>
-
-    <ItemGroup>
         <PackageReference Include="Microsoft-WindowsAPICodePack-Shell" />
     </ItemGroup>
 

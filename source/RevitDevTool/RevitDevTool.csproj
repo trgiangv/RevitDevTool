@@ -29,33 +29,7 @@
         <PackageReference Include="ILRepack"/>
 
         <!--UI-->
-        <PackageReference Include="CommunityToolkit.Mvvm"/>
         <PackageReference Include="Microsoft.Web.WebView2" Condition="$(RevitVersion) &lt; 2024"/>
-
-        <!--Python-->
-        <PackageReference Include="IronPython"/>
-        <PackageReference Include="pythonnet"/>
-
-        <!--MCP-->
-        <PackageReference Include="ModelContextProtocol"/>
-
-        <!--FSharp-->
-        <PackageReference Include="FSharp.Core"/>
-        <PackageReference Include="FSharp.Compiler.Service"/>
-
-        <!--Logging-->
-        <PackageReference Include="ZLogger"/>
-        <PackageReference Include="ZLogger.Scintilla" />
-        <PackageReference Include="Scintilla5.NET" Condition="$(TargetFramework.StartsWith('net4'))" /> <!-- Just to ensure unmanaged dlls copy to output -->
-
-        <!--Ioc-->
-        <PackageReference Include="Microsoft.Extensions.Hosting"/>
-
-        <!-- Utils -->
-        <PackageReference Include="Microsoft-WindowsAPICodePack-Shell" Condition="$(TargetFramework.StartsWith('net4'))"/>
-        <PackageReference Include="System.Reflection.MetadataLoadContext"/>
-        <PackageReference Include="System.Net.Http" Condition="$(TargetFramework.StartsWith('net4'))"/>
-        <PackageReference Include="CliWrap"/>
     </ItemGroup>
 
     <ItemGroup Condition="$(TargetFramework.StartsWith('net4'))">

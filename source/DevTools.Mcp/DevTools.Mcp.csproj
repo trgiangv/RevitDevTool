@@ -1,45 +1,40 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
-  <PropertyGroup>
-    <TargetFrameworks>net48;net8.0-windows;net10.0-windows</TargetFrameworks>
-    <ImplicitUsings>enable</ImplicitUsings>
-    <Nullable>enable</Nullable>
-    <LangVersion>latest</LangVersion>
-    <NoWarn>$(NoWarn);MCPEXP001</NoWarn>
-    <RootNamespace>DevTools.Mcp</RootNamespace>
-    <UseWPF>false</UseWPF>
-    <PolyUseEmbeddedAttribute>true</PolyUseEmbeddedAttribute>
-  </PropertyGroup>
+    <PropertyGroup>
+        <TargetFrameworks>net48;net8.0-windows;net10.0-windows</TargetFrameworks>
+        <NoWarn>$(NoWarn);MCPEXP001</NoWarn>
+        <PolyUseEmbeddedAttribute>true</PolyUseEmbeddedAttribute>
+    </PropertyGroup>
 
-  <ItemGroup>
-    <PackageReference Include="CliWrap">
-      <ExcludeAssets>contentfiles</ExcludeAssets>
-    </PackageReference>
-    <PackageReference Include="ModelContextProtocol" />
-    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" />
-    <PackageReference Include="ZLogger" />
-    <PackageReference Include="System.Reflection.MetadataLoadContext" />
-    <PackageReference Include="System.Diagnostics.DiagnosticSource" />
-    <PackageReference Update="Polyfill">
-      <ExcludeAssets>all</ExcludeAssets>
-      <PrivateAssets>all</PrivateAssets>
-    </PackageReference>
-  </ItemGroup>
+    <ItemGroup>
+        <PackageReference Include="CliWrap">
+            <ExcludeAssets>contentfiles</ExcludeAssets>
+        </PackageReference>
+        <PackageReference Include="ModelContextProtocol"/>
+        <PackageReference Include="Microsoft.Extensions.Logging.Abstractions"/>
+        <PackageReference Include="ZLogger"/>
+        <PackageReference Include="System.Reflection.MetadataLoadContext"/>
+        <PackageReference Include="System.Diagnostics.DiagnosticSource"/>
+        <PackageReference Update="Polyfill">
+            <ExcludeAssets>all</ExcludeAssets>
+            <PrivateAssets>all</PrivateAssets>
+        </PackageReference>
+    </ItemGroup>
 
-  <ItemGroup>
-    <ProjectReference Include="..\DevTools.Ipc\DevTools.Ipc.csproj" />
-    <ProjectReference Include="..\DevTools.Execution.Abstractions\DevTools.Execution.Abstractions.csproj" />
-    <ProjectReference Include="..\DevTools.Settings\DevTools.Settings.csproj" />
-  </ItemGroup>
+    <ItemGroup>
+        <ProjectReference Include="..\DevTools.Ipc\DevTools.Ipc.csproj"/>
+        <ProjectReference Include="..\DevTools.Execution.Abstractions\DevTools.Execution.Abstractions.csproj"/>
+        <ProjectReference Include="..\DevTools.Settings\DevTools.Settings.csproj"/>
+    </ItemGroup>
 
-  <ItemGroup>
-    <Using Include="DevTools.Execution.Abstractions" />
-    <Using Include="DevTools.Ipc" />
-    <Using Include="DevTools.Mcp.Models" />
-    <Using Include="DevTools.Mcp.Discovery" />
-    <Using Include="DevTools.Mcp.Registry" />
-    <Using Include="DevTools.Mcp.BuiltIn" />
-    <Using Include="DevTools.Mcp.Dispatch" />
-    <Using Include="DevTools.Mcp.Execution" />
-    <Using Include="DevTools.Mcp.Routing" />
-  </ItemGroup>
+    <ItemGroup>
+        <Using Include="DevTools.Execution.Abstractions"/>
+        <Using Include="DevTools.Ipc"/>
+        <Using Include="DevTools.Mcp.Models"/>
+        <Using Include="DevTools.Mcp.Discovery"/>
+        <Using Include="DevTools.Mcp.Registry"/>
+        <Using Include="DevTools.Mcp.BuiltIn"/>
+        <Using Include="DevTools.Mcp.Dispatch"/>
+        <Using Include="DevTools.Mcp.Execution"/>
+        <Using Include="DevTools.Mcp.Routing"/>
+    </ItemGroup>
 </Project>

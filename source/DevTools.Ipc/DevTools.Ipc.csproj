@@ -1,11 +1,6 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
     <PropertyGroup>
         <TargetFrameworks>net48;net8.0-windows;net10.0-windows</TargetFrameworks>
-        <ImplicitUsings>enable</ImplicitUsings>
-        <Nullable>enable</Nullable>
-        <LangVersion>latest</LangVersion>
-        <RootNamespace>DevTools.Ipc</RootNamespace>
-        <UseWPF>false</UseWPF>
     </PropertyGroup>
 
     <ItemGroup Condition="'$(TargetFramework)' == 'net48'">

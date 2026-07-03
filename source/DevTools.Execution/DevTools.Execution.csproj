@@ -20,16 +20,8 @@
         <PackageReference Include="FSharp.Core"/>
         <PackageReference Include="FSharp.Compiler.Service"/>
 
-        <!--CSharp Scripting-->
+        <!--CSharp-->
         <PackageReference Include="Microsoft.CodeAnalysis.CSharp"/>
-
-        <!--Logging-->
-        <PackageReference Include="ZLogger"/>
-        <PackageReference Include="ZLogger.Scintilla" />
-        <PackageReference Include="Scintilla5.NET" Condition="$(TargetFramework.StartsWith('net4'))" /> <!-- Just to ensure unmanaged dlls copy to output -->
-
-        <!--Ioc-->
-        <PackageReference Include="Microsoft.Extensions.Hosting"/>
 
         <!-- Utils -->
         <PackageReference Include="System.Reflection.MetadataLoadContext"/>
