@@ -9,9 +9,5 @@
         <PackageReference Include="Nice3point.Revit.Toolkit" VersionOverride="$(RevitVersion).*"/>
         <PackageReference Include="ILRepack"/>
     </ItemGroup>
-    
-    <ItemGroup>
-      <ProjectReference Include="..\..\source\RevitDevTool.Core\RevitDevTool.Core.csproj" />
-    </ItemGroup>
 
 </Project>

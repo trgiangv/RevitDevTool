@@ -1,5 +1,6 @@
 using AcadDevTool.HostAdapters;
 using Microsoft.Extensions.DependencyInjection;
+using DevTools.Execution.Providers.Python;
 using DevTools.Telemetry;
 using DevTools.UI.Theme;
 using DevTools.Utilities;
@@ -34,7 +35,7 @@ public static class Host
         });
 
         builder.AddSettingServices(contentRoot)
-               .AddLoggingServices()
+               .AddLoggingServices(v => v.WithCustomSerializer(new PythonJsonSerializer()))
                .AddApplicationServices()
                .AddDevToolsTelemetry()
                .AddExecutionServices();

@@ -43,10 +43,27 @@ public sealed class GeometryListener : TraceListener
 
         // Mixed object collection (typically IronPython/Cpython lists)
         ICollection<object> objects => ProcessMixedCollection(objects),
-        PyObject pyObject when pyObject.IsIterable() => ProcessMixedCollection(pyObject.AsObjectCollection()),
+        PyObject pyObject => TryProcessPyObject(pyObject),
 
         _ => false
     };
+
+    private static bool TryProcessPyObject(PyObject pyObject)
+    {
+        try
+        {
+            using (Py.GIL())
+            {
+                if (!pyObject.IsIterable() && pyObject is PyString) return false;
+                var objects = pyObject.AsObjectCollection();
+                return objects.Count != 0 && ProcessMixedCollection(objects);
+            }
+        }
+        catch
+        {
+            return false;
+        }
+    }
 
     private static bool Trace<T>(T geometry)
     {

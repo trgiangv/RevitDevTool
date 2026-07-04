@@ -1,4 +1,5 @@
 using Microsoft.Extensions.DependencyInjection;
+using DevTools.Execution.Providers.Python;
 using DevTools.Telemetry;
 using DevTools.Utilities;
 using Microsoft.Extensions.Hosting;
@@ -32,7 +33,9 @@ public static class Host
         });
 
         builder.AddSettingServices(contentRoot)
-               .AddLoggingServices(v => v.WithLinkify(new RevitLinkifier()))
+               .AddLoggingServices(v => v
+                   .WithLinkify(new RevitLinkifier())
+                   .WithCustomSerializer(new PythonJsonSerializer()))
                .AddDevToolsTelemetry()
                .AddApplicationServices()
                .AddExecutionServices();
