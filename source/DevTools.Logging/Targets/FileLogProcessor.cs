@@ -1,8 +1,8 @@
 using System.IO;
 using DevTools.Logging.Abstractions;
+using DevTools.Logging.Extensions;
 using DevTools.Logging.Options;
 using Microsoft.Extensions.Logging;
-using ZLogger;
 using ZLogger.Providers;
 namespace DevTools.Logging.Targets;
 
@@ -37,7 +37,7 @@ public sealed class FileLogProcessor(ILoggerFactory loggerFactory, IHostAppInfo 
             FileShared = true
         };
 
-        ConfigureFormatter(rollingOptions, fileOptions.Format);
+        rollingOptions.ConfigureFormatter(fileOptions.Format);
 
         var newProvider = new ZLoggerRollingFileLoggerProvider(rollingOptions);
         loggerFactory.AddProvider(newProvider);
@@ -59,23 +59,4 @@ public sealed class FileLogProcessor(ILoggerFactory loggerFactory, IHostAppInfo 
         Disable();
     }
 
-    private static void ConfigureFormatter(ZLoggerOptions options, SaveFormat format)
-    {
-        if (format == SaveFormat.Json)
-        {
-            options.UseJsonFormatter();
-        }
-        else
-        {
-            options.UsePlainTextFormatter(formatter =>
-                formatter.SetPrefixFormatter(
-                    $"[{0:local-timeonly} {1:short}]{2} ",
-                    (in t, in i) =>
-                    {
-                        var cat = i.Category.ToString();
-                        t.Format(i.Timestamp, i.LogLevel,
-                            string.IsNullOrEmpty(cat) ? "" : $" [{cat}]");
-                    }));
-        }
-    }
 }

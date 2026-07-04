@@ -1,6 +1,8 @@
 using System.Buffers;
 using System.Net.Http;
+using System.Text;
 using DevTools.Logging.Abstractions;
+using DevTools.Logging.Extensions;
 using DevTools.Logging.Options;
 using Microsoft.Extensions.Logging;
 using ZLogger;
@@ -28,16 +30,13 @@ public sealed class HttpLogProcessor(ILoggerFactory loggerFactory) : IHttpLogTar
         }
 
         var zloggerOptions = new ZLoggerOptions { IncludeScopes = true };
-
-        if (httpOptions.Format == SaveFormat.Json)
-            zloggerOptions.UseJsonFormatter();
-        else
-            zloggerOptions.UsePlainTextFormatter();
+        zloggerOptions.ConfigureFormatter(httpOptions.Format);
 
         var processor = new HttpBatchProcessor(
             httpOptions.BatchSize > 0 ? httpOptions.BatchSize : 100,
             zloggerOptions,
-            httpOptions.Endpoint);
+            httpOptions.Endpoint,
+            httpOptions.Format);
 
         var newProvider = new ZLoggerLogProcessorLoggerProvider(processor, zloggerOptions);
         loggerFactory.AddProvider(newProvider);
@@ -59,21 +58,32 @@ public sealed class HttpLogProcessor(ILoggerFactory loggerFactory) : IHttpLogTar
         Disable();
     }
 
-    private sealed class HttpBatchProcessor(int batchSize, ZLoggerOptions options, string endpoint) : BatchingAsyncLogProcessor(batchSize, options)
+    private sealed class HttpBatchProcessor(int batchSize, ZLoggerOptions options, string endpoint, SaveFormat format) : BatchingAsyncLogProcessor(batchSize, options)
     {
+        private static readonly byte[] NewLine = "\n"u8.ToArray();
+
         private readonly HttpClient _httpClient = new();
         private readonly ArrayBufferWriter<byte> _buffer = new();
         private readonly IZLoggerFormatter _formatter = options.CreateFormatter();
 
+        private readonly string _contentType = format == SaveFormat.Json
+            ? "application/x-ndjson"
+            : "text/plain";
+
         protected override async ValueTask ProcessAsync(IReadOnlyList<INonReturnableZLoggerEntry> list)
         {
-            foreach (var item in list)
+            for (var i = 0; i < list.Count; i++)
             {
-                item.FormatUtf8(_buffer, _formatter);
+                list[i].FormatUtf8(_buffer, _formatter);
+                if (i < list.Count - 1)
+                    _buffer.Write(NewLine);
             }
 
             var content = new ByteArrayContent(_buffer.WrittenMemory.ToArray());
-            content.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue("application/json");
+            content.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue(_contentType)
+            {
+                CharSet = Encoding.UTF8.WebName
+            };
 
             try
             {
