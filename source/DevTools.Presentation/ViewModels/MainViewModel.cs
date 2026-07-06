@@ -3,7 +3,6 @@ using System.Windows;
 using Microsoft.Extensions.Logging;
 using ZLogger;
 using CommunityToolkit.Mvvm.Messaging;
-using DevTools.Presentation.Interfaces;
 using DevTools.Presentation.ViewModels.Messages;
 using DevTools.Presentation.ViewModels.Settings;
 using DevTools.Presentation.Views;
@@ -27,9 +26,6 @@ public partial class MainViewModel : ObservableRecipient,
     public bool ShowLogMonitorOnly => !IsExecutionVisible && !IsMcpVisible;
 
     [ObservableProperty]
-    public partial object? CurrentPage { get; set; }
-
-    [ObservableProperty]
     public partial bool IsSettingsVisible { get; set; }
 
     [ObservableProperty]
@@ -37,9 +33,6 @@ public partial class MainViewModel : ObservableRecipient,
 
     [ObservableProperty]
     public partial bool IsMcpVisible { get; set; }
-
-    [ObservableProperty]
-    public partial bool IsSaveLogEnabled { get; set; }
 
     [ObservableProperty]
     public partial bool IsMemoryEnabled { get; set; }
@@ -73,7 +66,7 @@ public partial class MainViewModel : ObservableRecipient,
         catch (Exception ex) { _logger.ZLogError($"Failed to open log folder: {ex.Message}"); }
     }
 
-    private bool CanOpenLogFolder() => IsSaveLogEnabled;
+    private bool CanOpenLogFolder() => _settingsService.LogConfig.FileLogging.Enabled;
 
     public MainViewModel(
         LogViewModel logViewModel,
@@ -91,7 +84,6 @@ public partial class MainViewModel : ObservableRecipient,
         _logSettingsViewModel = logSettingsViewModel;
         _settingsService = settingsService;
         _logger = logger;
-        IsSaveLogEnabled = settingsService.LogConfig.FileLogging.Enabled;
         IsMemoryEnabled = settingsService.GeneralConfig.IsMemoryEnabled;
         IsActive = true;
         ApplyMemoryMonitorState(IsMemoryEnabled);
@@ -99,7 +91,6 @@ public partial class MainViewModel : ObservableRecipient,
 
     public void Receive(IsSaveLogChangedMessage message)
     {
-        IsSaveLogEnabled = message.IsEnabled;
         OpenLogFolderCommand.NotifyCanExecuteChanged();
     }
 
@@ -111,10 +102,8 @@ public partial class MainViewModel : ObservableRecipient,
 
     private void ApplyMemoryMonitorState(bool enabled)
     {
-        if (MemoryView.DataContext is MemoryViewModel vm)
-        {
-            if (enabled) vm.Start();
-            else vm.Stop();
-        }
+        if (MemoryView.DataContext is not MemoryViewModel vm) return;
+        if (enabled) vm.Start();
+        else vm.Stop();
     }
 }

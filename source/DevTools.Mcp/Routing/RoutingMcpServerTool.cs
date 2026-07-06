@@ -40,30 +40,20 @@ public sealed class RoutingMcpServerTool(IInstanceManager instanceManager, Tool 
 
     private static Tool InjectInstanceIdParam(Tool original)
     {
-        var instanceIdSchema = JsonSerializer.SerializeToElement(new PropertySchema(
-            "integer",
-            "Target host process ID (use list_host_instances to find available instances)."));
+        var schema = JsonSchemaObject.TryParse(original.InputSchema.GetRawText()) ?? new JsonSchemaObject();
+        schema.Properties ??= new Dictionary<string, JsonSchemaProperty>();
 
-        var existingSchema = original.InputSchema;
-        var schemaDict = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(existingSchema.GetRawText())
-                         ?? new Dictionary<string, JsonElement>();
-
-        var propsDict = new Dictionary<string, JsonElement>();
-        if (schemaDict.TryGetValue(McpPropertyNames.Properties, out var propsElement) &&
-            propsElement.ValueKind == JsonValueKind.Object)
+        schema.Properties[McpPropertyNames.HostInstanceId] = new JsonSchemaProperty
         {
-            propsDict = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(propsElement.GetRawText())
-                        ?? new Dictionary<string, JsonElement>();
-        }
-
-        propsDict[McpPropertyNames.HostInstanceId] = instanceIdSchema;
-        schemaDict[McpPropertyNames.Properties] = JsonSerializer.SerializeToElement(propsDict);
+            Type = JsonSchemaTypeNames.Integer,
+            Description = "Target host process ID (use list_host_instances to find available instances)."
+        };
 
         return new Tool
         {
             Name = original.Name,
             Description = original.Description,
-            InputSchema = JsonSerializer.SerializeToElement(schemaDict),
+            InputSchema = schema.ToElement(),
             Annotations = original.Annotations
         };
     }

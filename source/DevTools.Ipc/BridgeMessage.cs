@@ -10,13 +10,13 @@ namespace DevTools.Ipc;
 /// </summary>
 public sealed class BridgeError
 {
-    [JsonPropertyName("code")]
+    [JsonPropertyName(IpcPropertyNames.Code)]
     public string Code { get; init; } = string.Empty;
 
-    [JsonPropertyName("message")]
+    [JsonPropertyName(IpcPropertyNames.Message)]
     public string Message { get; init; } = string.Empty;
 
-    [JsonPropertyName("data")]
+    [JsonPropertyName(IpcPropertyNames.Data)]
     public JsonElement? Data { get; init; }
 }
 
@@ -47,7 +47,7 @@ public sealed class BridgeMessage
     [JsonPropertyName(IpcPropertyNames.ErrorMessage)]
     public string? ErrorMessage { get; init; }
 
-    [JsonPropertyName("error")]
+    [JsonPropertyName(IpcPropertyNames.Error)]
     public BridgeError? ErrorDetail { get; init; }
 
     public static BridgeMessage Request(string id, string method, JsonElement? @params = null) =>

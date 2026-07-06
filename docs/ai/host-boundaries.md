@@ -10,7 +10,7 @@ Keep these host-neutral — this is the default for all new functionality:
 - `source/DevTools.Logging/`
 - `source/DevTools.Ipc/`
 - `source/DevTools.Mcp/`
-- `source/DevTools.Pytest/`
+- `source/DevTools.Execution/External/Testing/`
 - `source/DevTools.Presentation/`
 - `source/DevTools.Settings/`
 - `source/DevTools.Telemetry/`

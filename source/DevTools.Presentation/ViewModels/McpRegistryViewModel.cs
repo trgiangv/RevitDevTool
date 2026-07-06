@@ -3,9 +3,9 @@ using System.Collections.Specialized;
 using System.ComponentModel;
 using System.IO;
 using System.Text;
-using System.Text.Json;
 using System.Windows.Threading;
 using DevTools.Execution.External.Connections;
+using DevTools.Mcp.Schema;
 using DevTools.Presentation.Models;
 using DevTools.UI.Behaviors;
 using DevTools.UI.Theme;
@@ -31,16 +31,16 @@ public sealed partial class McpRegistryViewModel : ObservableObject, IBusyViewMo
     public partial bool IsConnected { get; set; }
 
     [ObservableProperty]
-    public partial int TotalToolCount { get; set; }
+    public partial int TotalToolCount { get; private set; }
 
     [ObservableProperty]
-    public partial int DotNetToolCount { get; set; }
+    public partial int DotNetToolCount { get; private set; }
 
     [ObservableProperty]
-    public partial int PythonToolCount { get; set; }
+    public partial int PythonToolCount { get; private set; }
 
     [ObservableProperty]
-    public partial int TotalCalled { get; set; }
+    public partial int TotalCalled { get; private set; }
 
     [ObservableProperty]
     public partial bool IsBusy { get; set; }
@@ -49,16 +49,13 @@ public sealed partial class McpRegistryViewModel : ObservableObject, IBusyViewMo
     public partial string BusyMessage { get; set; } = string.Empty;
 
     [ObservableProperty]
-    public partial string PipeName { get; set; } = "N/A";
+    public partial string PipeName { get; private set; }
 
     [ObservableProperty]
-    public partial McpToolItem? SelectedTool { get; set; }
+    private partial bool IsExecuting { get; set; }
 
     [ObservableProperty]
-    public partial bool IsExecuting { get; set; }
-
-    [ObservableProperty]
-    public partial string ExecutionStatusText { get; set; } = "Idle";
+    private partial string ExecutionStatusText { get; set; } = "Idle";
     private ObservableCollection<McpToolItem> Tools { get; } = [];
     public ObservableCollection<McpToolItem> FilteredTools { get; } = [];
     public bool ShowStatusPanel => IsBusy || IsExecuting;
@@ -332,36 +329,29 @@ public sealed partial class McpRegistryViewModel : ObservableObject, IBusyViewMo
         builder.AppendLine(string.IsNullOrWhiteSpace(protocolTool.Description) ? "No description." : protocolTool.Description!.Trim());
 
         var arguments = BuildArgumentSummary(protocolTool.InputSchema.GetRawText());
-        if (!string.IsNullOrWhiteSpace(arguments))
-        {
-            builder.AppendLine();
-            builder.AppendLine("Args:");
-            builder.Append(arguments);
-        }
+        if (string.IsNullOrWhiteSpace(arguments)) 
+            return builder.ToString().TrimEnd();
+        builder.AppendLine();
+        builder.AppendLine("Args:");
+        builder.Append(arguments);
         return builder.ToString().TrimEnd();
     }
 
     private static string BuildArgumentSummary(string? inputSchemaJson)
     {
-        if (string.IsNullOrWhiteSpace(inputSchemaJson)) return string.Empty;
-        try
-        {
-            using var doc = JsonDocument.Parse(inputSchemaJson!);
-            if (!doc.RootElement.TryGetProperty("properties", out var properties) || properties.ValueKind != JsonValueKind.Object)
-                return string.Empty;
+        var schema = JsonSchemaObject.TryParse(inputSchemaJson);
+        if (schema?.Properties is not { Count: > 0 } properties)
+            return string.Empty;
 
-            var lines = new List<string>();
-            foreach (var prop in properties.EnumerateObject())
-            {
-                var type = prop.Value.TryGetProperty("type", out var typeEl) ? typeEl.GetString() ?? "any" : "any";
-                var title = prop.Value.TryGetProperty("title", out var titleEl) ? titleEl.GetString() ?? prop.Name : prop.Name;
-                var desc = prop.Value.TryGetProperty("description", out var descEl) ? descEl.GetString() : null;
-                var descSuffix = string.IsNullOrWhiteSpace(desc) ? string.Empty : $" — {desc}";
-                lines.Add($"- {prop.Name}: {title} ({type}){descSuffix}");
-            }
-            return string.Join(Environment.NewLine, lines);
+        var lines = new List<string>();
+        foreach (var (name, prop) in properties)
+        {
+            var type = prop.Type ?? "any";
+            var title = prop.Title ?? name;
+            var descSuffix = string.IsNullOrWhiteSpace(prop.Description) ? string.Empty : $" — {prop.Description}";
+            lines.Add($"- {name}: {title} ({type}){descSuffix}");
         }
-        catch (JsonException) { return string.Empty; }
+        return string.Join(Environment.NewLine, lines);
     }
 
     public void Dispose()

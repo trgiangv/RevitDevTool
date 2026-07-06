@@ -16,11 +16,11 @@ public sealed class CallDynamicTool(InstanceManager instanceManager, DynamicTool
             "Specify hostInstanceId when multiple instances provide the same tool.",
         InputSchema = McpSchemaBuilder.Object(
         [
-            McpSchemaBuilder.String(McpPropertyNames.Name, "Registered dynamic tool name."),
+            McpSchemaBuilder.String(IpcPropertyNames.Name, "Registered dynamic tool name."),
             McpSchemaBuilder.Integer(McpPropertyNames.HostInstanceId, "Target host process ID."),
-            McpSchemaBuilder.ObjectProp(McpPropertyNames.Arguments, "Arguments passed to the dynamic tool.")
+            McpSchemaBuilder.ObjectProp(IpcPropertyNames.Arguments, "Arguments passed to the dynamic tool.")
         ],
-        required: [McpPropertyNames.Name])
+        required: [IpcPropertyNames.Name])
     };
 
     public override IReadOnlyList<object> Metadata => [];
@@ -30,7 +30,7 @@ public sealed class CallDynamicTool(InstanceManager instanceManager, DynamicTool
         CancellationToken cancellationToken = default)
     {
         var args = request.Params.Arguments;
-        var name = ReadString(args, McpPropertyNames.Name);
+        var name = ReadString(args, IpcPropertyNames.Name);
         if (string.IsNullOrWhiteSpace(name))
             return ToolHelpers.ErrorResult("Dynamic tool name is required.");
 
@@ -60,7 +60,7 @@ public sealed class CallDynamicTool(InstanceManager instanceManager, DynamicTool
             return ToolHelpers.ErrorResult($"Host instance {registration.Instance.ProcessId} is no longer connected.");
 
         Dictionary<string, JsonElement>? arguments = null;
-        if (args?.TryGetValue(McpPropertyNames.Arguments, out var toolArgs) == true)
+        if (args?.TryGetValue(IpcPropertyNames.Arguments, out var toolArgs) == true)
             arguments = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(toolArgs.GetRawText());
 
         var callParams = JsonSerializer.SerializeToElement(new McpToolsCallParams

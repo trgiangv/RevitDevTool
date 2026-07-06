@@ -19,8 +19,8 @@ External MCP clients talk to `DevTools.Daemon`, which discovers any host pipe (`
 
 ## PyTest Bridge
 
-- Pytest contracts: `source/DevTools.Pytest/Contracts/PytestContracts.cs`
-- Pytest bridge methods: `source/DevTools.Pytest/PytestBridgeMethods.cs`
+- Pytest contracts: `source/DevTools.Execution/External/Testing/PytestContracts.cs`
+- Pytest bridge methods: `source/DevTools.Execution/External/Testing/PytestBridgeMethods.cs`
 - Server side execution: `source/DevTools.Execution/External/Testing/`
 - Embedded runner: `source/DevTools.Execution/Resources/scripts/PytestRunner.py`
 - Protocol routes include `tests/discover` and `tests/run`.

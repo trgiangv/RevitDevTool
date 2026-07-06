@@ -6,11 +6,6 @@ using ModelContextProtocol.Protocol;
 
 namespace DevTools.Execution.External.Mcp.BuiltIn;
 
-internal sealed record OpenDocumentResult(
-    [property: JsonPropertyName("success")] bool Success,
-    [property: JsonPropertyName("message")] string? Message,
-    [property: JsonPropertyName("documentTitle")] string? DocumentTitle);
-
 /// <summary>Opens a document file in the running host process via <see cref="IDocumentBridge"/>.</summary>
 public sealed class OpenDocumentTool(IDocumentBridge documentBridge) : IBuiltInMcpTool
 {
@@ -71,4 +66,10 @@ public sealed class OpenDocumentTool(IDocumentBridge documentBridge) : IBuiltInM
 
         return McpToolExecutionResult.Completed(callResult, result.Message);
     }
+    
+    [UsedImplicitly(ImplicitUseTargetFlags.WithMembers)]
+    private sealed record OpenDocumentResult(
+        [property: JsonPropertyName(IpcPropertyNames.Success)] bool Success,
+        [property: JsonPropertyName(IpcPropertyNames.Message)] string? Message,
+        [property: JsonPropertyName("documentTitle")] string? DocumentTitle);
 }

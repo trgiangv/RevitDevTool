@@ -9,10 +9,10 @@ namespace DevTools.Ipc;
 [UsedImplicitly]
 public sealed class McpToolsCallParams
 {
-    [JsonPropertyName("name")]
+    [JsonPropertyName(IpcPropertyNames.Name)]
     public required string Name { get; init; }
 
-    [JsonPropertyName("arguments")]
+    [JsonPropertyName(IpcPropertyNames.Arguments)]
     public Dictionary<string, JsonElement>? Arguments { get; init; }
 }
 
@@ -22,10 +22,10 @@ public sealed class McpToolsCallParams
 [UsedImplicitly]
 public sealed class McpPromptsGetParams
 {
-    [JsonPropertyName("name")]
+    [JsonPropertyName(IpcPropertyNames.Name)]
     public required string Name { get; init; }
 
-    [JsonPropertyName("arguments")]
+    [JsonPropertyName(IpcPropertyNames.Arguments)]
     public Dictionary<string, JsonElement>? Arguments { get; init; }
 }
 
@@ -35,6 +35,6 @@ public sealed class McpPromptsGetParams
 [UsedImplicitly]
 public sealed class McpResourcesReadParams
 {
-    [JsonPropertyName("uri")]
+    [JsonPropertyName(IpcPropertyNames.Uri)]
     public required string Uri { get; init; }
 }

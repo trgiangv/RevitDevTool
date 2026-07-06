@@ -38,7 +38,6 @@
         <ProjectReference Include="..\DevTools.Mcp\DevTools.Mcp.csproj" />
         <ProjectReference Include="..\DevTools.Ipc\DevTools.Ipc.csproj" />
         <ProjectReference Include="..\DevTools.Telemetry\DevTools.Telemetry.csproj" />
-        <ProjectReference Include="..\DevTools.Pytest\DevTools.Pytest.csproj" />
     </ItemGroup>
 
     <ItemGroup>
@@ -53,8 +52,7 @@
         <Using Include="DevTools.Mcp.Execution" />
         <Using Include="DevTools.Mcp.Models" />
         <Using Include="DevTools.Mcp.Registry" />
-        <Using Include="DevTools.Pytest" />
-        <Using Include="DevTools.Pytest.Contracts" />
+        <Using Include="DevTools.Execution.External.Testing" />
         <Using Include="JetBrains.Annotations" />
         <Using Include="System" />
     </ItemGroup>

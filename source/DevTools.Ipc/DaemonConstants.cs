@@ -40,7 +40,6 @@ public static class DaemonConstants
 
     public static class JsonProperties
     {
-        public const string Method = "method";
         public const string IsRunning = "isRunning";
     }
 

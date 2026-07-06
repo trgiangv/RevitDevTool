@@ -4,12 +4,12 @@ namespace DevTools.Ipc;
 
 public sealed class InstanceInfo
 {
-    [JsonPropertyName("hostApp")]
+    [JsonPropertyName(IpcPropertyNames.HostApp)]
     public string? HostApp { get; init; }
 
-    [JsonPropertyName("processId")]
+    [JsonPropertyName(IpcPropertyNames.ProcessId)]
     public int ProcessId { get; init; }
 
-    [JsonPropertyName("versionNumber")]
+    [JsonPropertyName(IpcPropertyNames.VersionNumber)]
     public string VersionNumber { get; init; } = string.Empty;
 }

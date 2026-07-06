@@ -29,7 +29,7 @@ public sealed class OpenModelTool(InstanceManager instanceManager) : McpServerTo
                 McpPropertyNames.HostInstanceId,
                 "Target host process ID (when multiple instances exist)."),
             McpSchemaBuilder.String(
-                McpPropertyNames.VersionNumber,
+                IpcPropertyNames.VersionNumber,
                 "Version to launch if no instance is connected."),
             McpSchemaBuilder.String(
                 McpPropertyNames.LanguageCode,
@@ -70,7 +70,7 @@ public sealed class OpenModelTool(InstanceManager instanceManager) : McpServerTo
         IDictionary<string, JsonElement> args,
         CancellationToken cancellationToken)
     {
-        var versionNumber = ReadString(args, McpPropertyNames.VersionNumber);
+        var versionNumber = ReadString(args, IpcPropertyNames.VersionNumber);
         var languageCode = ReadString(args, McpPropertyNames.LanguageCode);
 
         var resolved = HostLaunchCoordinator.Resolve(

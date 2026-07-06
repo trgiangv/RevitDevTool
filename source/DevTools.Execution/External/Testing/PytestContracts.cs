@@ -1,6 +1,6 @@
 using System.Text.Json.Serialization;
 
-namespace DevTools.Pytest.Contracts;
+namespace DevTools.Execution.External.Testing;
 
 [UsedImplicitly]
 public sealed record PytestRunRequest(
@@ -34,14 +34,14 @@ public sealed record PytestCaseResult(
     [property: JsonPropertyName("duration_ms")] double DurationMs,
     [property: JsonPropertyName("stdout")] string Stdout,
     [property: JsonPropertyName("stderr")] string Stderr,
-    [property: JsonPropertyName("message")] string Message,
+    [property: JsonPropertyName(IpcPropertyNames.Message)] string Message,
     [property: JsonPropertyName("traceback")] string Traceback);
 
 [UsedImplicitly]
 public sealed record PytestCollectionError(
     [property: JsonPropertyName("nodeid")] string NodeId,
     [property: JsonPropertyName("path")] string Path,
-    [property: JsonPropertyName("message")] string Message,
+    [property: JsonPropertyName(IpcPropertyNames.Message)] string Message,
     [property: JsonPropertyName("traceback")] string Traceback);
 
 [UsedImplicitly]

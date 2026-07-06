@@ -21,7 +21,7 @@ public sealed class ControlPipeHandler(IAuthService authService, McpEngine mcpEn
         try
         {
             using var request = JsonDocument.Parse(requestLine);
-            var method = request.RootElement.TryGetProperty(DaemonConstants.JsonProperties.Method, out var methodElement)
+            var method = request.RootElement.TryGetProperty(IpcPropertyNames.Method, out var methodElement)
                 ? methodElement.GetString()
                 : null;
 

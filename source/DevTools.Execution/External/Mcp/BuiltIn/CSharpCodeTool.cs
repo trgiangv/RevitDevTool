@@ -20,12 +20,12 @@ public sealed class CSharpCodeTool(CSharpCodeExecutor executor) : IBuiltInMcpToo
         InputSchema = McpSchemaBuilder.Object(
         [
             McpSchemaBuilder.String(
-                McpPropertyNames.Code,
+                IpcPropertyNames.Code,
                 "C# code with a host command class. " +
                 "Revit: IExternalCommand (output via 'message' ref param). " +
                 "AutoCAD: [CommandMethod]. Host assemblies auto-referenced. #r for extras.")
         ],
-        required: [McpPropertyNames.Code]),
+        required: [IpcPropertyNames.Code]),
         Annotations = new ToolAnnotations
         {
             Title = "Execute C# Code",
@@ -38,7 +38,7 @@ public sealed class CSharpCodeTool(CSharpCodeExecutor executor) : IBuiltInMcpToo
         string payloadJson, CancellationToken ct)
     {
         using var doc = JsonDocument.Parse(payloadJson);
-        if (!doc.RootElement.TryGetProperty(McpPropertyNames.Code, out var codeElement) ||
+        if (!doc.RootElement.TryGetProperty(IpcPropertyNames.Code, out var codeElement) ||
             codeElement.ValueKind != JsonValueKind.String)
         {
             return McpToolExecutionResult.Failed(

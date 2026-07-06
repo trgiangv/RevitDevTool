@@ -60,7 +60,7 @@ public sealed class ExecutionOrchestrator : IExecutionOrchestrator, IDisposable
             .ToList();
 
         if (providers.Count == 0)
-            throw new ArgumentException($"No suitable provider found for path: {path}");
+            throw new ArgumentException($"No suitable provider found or path not exist: {path}");
 
         var state = _stateManager.CaptureState(_treeRoot);
         var allWatchPatterns = new List<string>();
@@ -96,7 +96,7 @@ public sealed class ExecutionOrchestrator : IExecutionOrchestrator, IDisposable
             }
             catch (Exception ex)
             {
-                _logger.ZLogError($"Failed to load path '{path}': {ex.Message}");
+                _logger.ZLogError($"{ex.Message}");
                 failed.Add(path);
                 continue;
             }

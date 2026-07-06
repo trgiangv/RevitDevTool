@@ -26,14 +26,14 @@ public sealed record DynamicCatalogSummary(
 
 [UsedImplicitly]
 public sealed record DynamicToolSummary(
-    [property: JsonPropertyName("name")] string Name,
+    [property: JsonPropertyName(IpcPropertyNames.Name)] string Name,
     [property: JsonPropertyName("registrations")] IReadOnlyList<DynamicToolRegistration> Registrations);
 
 [UsedImplicitly]
 public sealed record DynamicToolRegistration(
-    [property: JsonPropertyName("hostInstanceId")] int HostInstanceId,
-    [property: JsonPropertyName("hostApp")] string? HostApp,
-    [property: JsonPropertyName("versionNumber")] string? VersionNumber,
-    [property: JsonPropertyName("pipeName")] string PipeName,
-    [property: JsonPropertyName("description")] string? Description,
+    [property: JsonPropertyName(McpPropertyNames.HostInstanceId)] int HostInstanceId,
+    [property: JsonPropertyName(IpcPropertyNames.HostApp)] string? HostApp,
+    [property: JsonPropertyName(IpcPropertyNames.VersionNumber)] string? VersionNumber,
+    [property: JsonPropertyName(IpcPropertyNames.PipeName)] string PipeName,
+    [property: JsonPropertyName(McpPropertyNames.Description)] string? Description,
     [property: JsonPropertyName("inputSchema")] JsonElement InputSchema);

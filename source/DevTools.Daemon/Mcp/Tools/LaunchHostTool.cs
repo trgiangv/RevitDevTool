@@ -26,10 +26,10 @@ public sealed class LaunchHostTool(InstanceManager instanceManager) : McpServerT
         InputSchema = McpSchemaBuilder.Object(
         [
             McpSchemaBuilder.String(
-                McpPropertyNames.HostApp,
+                IpcPropertyNames.HostApp,
                 "Revit, AutoCad, Civil3D, Plant3D, AcadArch, AcadMech, AcadElec, AcadMep, AcadMap3D, Navisworks"),
             McpSchemaBuilder.String(
-                McpPropertyNames.VersionNumber,
+                IpcPropertyNames.VersionNumber,
                 "Version year (e.g. '2025'). Revit auto-detects from filePath; AutoCAD defaults to latest."),
             McpSchemaBuilder.String(
                 McpPropertyNames.LanguageCode,
@@ -38,7 +38,7 @@ public sealed class LaunchHostTool(InstanceManager instanceManager) : McpServerT
                 McpPropertyNames.FilePath,
                 "Model file to open at startup.")
         ],
-        required: [McpPropertyNames.HostApp]),
+        required: [IpcPropertyNames.HostApp]),
         Execution = new ToolExecution { TaskSupport = ToolTaskSupport.Optional }
     };
 
@@ -49,8 +49,8 @@ public sealed class LaunchHostTool(InstanceManager instanceManager) : McpServerT
         CancellationToken cancellationToken = default)
     {
         var args = request.Params.Arguments;
-        var hostApp = HostAppExtensions.ParseHostApp(ReadString(args, McpPropertyNames.HostApp));
-        var version = ReadString(args, McpPropertyNames.VersionNumber);
+        var hostApp = HostAppExtensions.ParseHostApp(ReadString(args, IpcPropertyNames.HostApp));
+        var version = ReadString(args, IpcPropertyNames.VersionNumber);
         var languageCode = ReadString(args, McpPropertyNames.LanguageCode);
         var filePath = ReadString(args, McpPropertyNames.FilePath);
 

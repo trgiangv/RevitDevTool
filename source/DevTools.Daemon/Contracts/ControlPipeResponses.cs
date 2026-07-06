@@ -5,8 +5,8 @@ namespace DevTools.Daemon.Contracts;
 
 [UsedImplicitly]
 public sealed record StatusResponse(
-    [property: JsonPropertyName("isRunning")] bool IsRunning,
-    [property: JsonPropertyName("version")] string Version);
+    [property: JsonPropertyName(DaemonConstants.JsonProperties.IsRunning)] bool IsRunning,
+    [property: JsonPropertyName(IpcPropertyNames.Version)] string Version);
 
 [UsedImplicitly]
 public sealed record AuthStateResponse(
@@ -18,18 +18,18 @@ public sealed record AuthStateResponse(
 
 [UsedImplicitly]
 public sealed record OperationResponse(
-    [property: JsonPropertyName("success")] bool Success,
-    [property: JsonPropertyName("error")] string? Error = null);
+    [property: JsonPropertyName(IpcPropertyNames.Success)] bool Success,
+    [property: JsonPropertyName(IpcPropertyNames.Error)] string? Error = null);
 
 [UsedImplicitly]
 public sealed record ErrorResponse(
-    [property: JsonPropertyName("error")] string Error);
+    [property: JsonPropertyName(IpcPropertyNames.Error)] string Error);
 
 [UsedImplicitly]
 public sealed record HostInfoEntry(
-    [property: JsonPropertyName("hostApp")]
+    [property: JsonPropertyName(IpcPropertyNames.HostApp)]
     [property: JsonConverter(typeof(JsonStringEnumConverter<HostApp>))]
     HostApp? HostApp,
-    [property: JsonPropertyName("version")] string? Version,
+    [property: JsonPropertyName(IpcPropertyNames.Version)] string? Version,
     [property: JsonPropertyName("pid")] int Pid,
-    [property: JsonPropertyName("pipeName")] string PipeName);
+    [property: JsonPropertyName(IpcPropertyNames.PipeName)] string PipeName);

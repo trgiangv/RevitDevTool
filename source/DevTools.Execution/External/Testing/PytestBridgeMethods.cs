@@ -1,4 +1,4 @@
-namespace DevTools.Pytest;
+namespace DevTools.Execution.External.Testing;
 
 public static class PytestBridgeMethods
 {
