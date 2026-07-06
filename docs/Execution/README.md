@@ -180,7 +180,7 @@ It exposes framed named-pipe routes for:
 
 In-host built-in MCP tools registered in `ExecutionExtensions`: `CSharpCodeTool` (`execute_csharp_code`) and `OpenDocumentTool` (`open_document`), the latter delegating to `IDocumentBridge`.
 
-The pipe name is built from `IHostAppInfo`: `{Host}_{VersionNumber}_{ProcessId}`. This makes the same bridge model usable by multiple host processes.
+The pipe name is built from `IHostAppInfo`: `DevTools_{Host}_{VersionNumber}_{ProcessId}`. This makes the same bridge model usable by multiple host processes.
 
 ---
 

@@ -10,8 +10,8 @@ flowchart TB
     Discovery["InstanceManager<br/>scan \\.\pipe\\ for host pipes"]
 
     subgraph hosts["Host processes"]
-        RevitPipe["DevToolsPipeServer<br/>Revit_2025_pid"]
-        AcadPipe["DevToolsPipeServer<br/>AutoCad_2026_pid"]
+        RevitPipe["DevToolsPipeServer<br/>DevTools_Revit_2025_pid"]
+        AcadPipe["DevToolsPipeServer<br/>DevTools_AutoCad_2026_pid"]
     end
 
     Registry["McpCatalogStore"]
@@ -30,7 +30,7 @@ flowchart TB
     Dispatch --> Host
 ```
 
-The Daemon owns MCP protocol routing and host instance selection. `InstanceManager` scans `\\.\pipe\` for pipes matching `{HostApp}_{Version}_{PID}` and connects via generic `HostBridgeClient`. The host process owns actual execution, registry loading, and host-safe invocation.
+The Daemon owns MCP protocol routing and host instance selection. `InstanceManager` scans `\\.\pipe\` for pipes matching `DevTools_{HostApp}_{Version}_{PID}` and connects via generic `HostBridgeClient`. The host process owns actual execution, registry loading, and host-safe invocation.
 
 ## Registry Flow
 

@@ -97,7 +97,7 @@ The built DLL is loaded into the Revit/AutoCAD process. A running host **locks**
 # Find and kill Revit for a specific version before building that version
 Get-Process -Name "Revit" -ErrorAction SilentlyContinue | Stop-Process -Force
 
-# If you know the specific PID (e.g. from Named Pipe name Revit_2025_16544):
+# If you know the specific PID (e.g. from Named Pipe name DevTools_Revit_2025_16544):
 Stop-Process -Id 16544 -Force -ErrorAction SilentlyContinue
 
 # For AutoCAD:

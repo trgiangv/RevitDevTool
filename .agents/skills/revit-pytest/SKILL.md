@@ -163,9 +163,9 @@ pytest --host civil3d --host-version=2026 -v
 `print()` inside tests is automatically captured and displayed in terminal output for both passing and failing tests. No extra flags needed.
 
 ### Connection
-- Default: plugin scans for running host matching `host_version` via Named Pipe (`{Host}_{Version}_{PID}`, e.g. `Revit_2025_12345`, `Rhino_8.0_9999`)
+- Default: plugin scans for running host matching `host_version` via Named Pipe (`DevTools_{Host}_{Version}_{PID}`, e.g. `DevTools_Revit_2025_12345`, `DevTools_Rhino_8.0_9999`)
 - `host_launch = true`: spawns new host, waits for its specific PID pipe, ignores existing instances
-- `host_pipe = "Revit_2025_12345"`: connect to exact pipe (skip discovery). Any `{Host}_{Version}_{PID}` pipe works.
+- `host_pipe = "DevTools_Revit_2025_12345"`: connect to exact pipe (skip discovery). Any `DevTools_{Host}_{Version}_{PID}` pipe works.
 
 ### Execution context
 - Tests run on the host's main thread sequentially

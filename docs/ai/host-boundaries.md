@@ -30,7 +30,7 @@ Host API references belong in host projects:
 ## Standalone Daemon
 
 - `source/DevTools.Daemon/` runs outside hosts as `DevTools.Daemon.exe` (WPF tray app).
-- `InstanceManager` discovers any host pipe via generic regex (`{HostApp}_{Version}_{PID}`).
+- `InstanceManager` discovers any host pipe via generic regex (`DevTools_{HostApp}_{Version}_{PID}`).
 - `HostBridgeClient` connects to any host (formerly `RevitBridgeClient`).
 - Daemon built-in tools: `list_host_instances`, `launch_host`, `read_file_info`, `open_model`, `list_machines` (multi-host).
 - In-host built-in tools (shared runtime): `execute_csharp_code`, `open_document` via `IDocumentBridge`.

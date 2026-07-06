@@ -36,9 +36,8 @@ internal static class HostAppExtensions
 
     public static HostApp? FromPipeName(string pipeName)
     {
-        var firstUnderscore = pipeName.IndexOf('_');
-        if (firstUnderscore <= 0) return null;
-        var hostSegment = pipeName[..firstUnderscore];
+        var hostSegment = HostPipeName.ExtractHost(pipeName);
+        if (hostSegment is null) return null;
         return Enum.TryParse<HostApp>(hostSegment, ignoreCase: true, out var app) ? app : null;
     }
 

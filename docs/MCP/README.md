@@ -2,7 +2,7 @@
 
 Model Context Protocol integration lets external AI clients (Claude Desktop, Cursor, ChatGPT, Perplexity, etc.) talk to running host applications through the standalone **DevTools.Daemon** and the in-host named-pipe runtime.
 
-The entire MCP stack is host-agnostic. The Daemon discovers and connects to any host pipe (`Revit_*`, `AutoCad_*`, `Civil3D_*`, etc.) via generic `HostBridgeClient`.
+The entire MCP stack is host-agnostic. The Daemon discovers and connects to any host pipe (`DevTools_Revit_*`, `DevTools_AutoCad_*`, `DevTools_Civil3D_*`, etc.) via generic `HostBridgeClient`.
 
 Last updated: 2026-06-18
 

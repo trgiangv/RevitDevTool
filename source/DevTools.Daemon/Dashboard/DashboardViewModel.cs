@@ -28,9 +28,6 @@ public partial class DashboardViewModel : ObservableObject
     private const string DefaultVersion = "1.0.0";
     private const string SignInFailedTitle = "Sign In Failed";
     private const string SignInFailedMessage = "Sign in failed.";
-    private const char PipeSeparator = '_';
-    private const int MinPipeParts = 3;
-
     private readonly IAuthService _authService;
     private readonly McpEngine _mcpEngine;
     private readonly DaemonSettings _settings;
@@ -257,7 +254,7 @@ public partial class DashboardViewModel : ObservableObject
 
         foreach (var pipe in InstanceManager.DiscoverHostPipes())
         {
-            if (!TryParseHostPipe(pipe, out var host, out var version, out var pid))
+            if (!HostPipeName.TryParse(pipe, out var host , out var version, out var pid))
                 continue;
 
             if (connectedPids.Contains(pid))
@@ -271,20 +268,5 @@ public partial class DashboardViewModel : ObservableObject
                 Status = StatusDiscovered
             });
         }
-    }
-
-    private static bool TryParseHostPipe(string pipeName, out string host, out string version, out int pid)
-    {
-        host = string.Empty;
-        version = string.Empty;
-        pid = 0;
-
-        var parts = pipeName.Split(PipeSeparator);
-        if (parts.Length < MinPipeParts || !int.TryParse(parts[^1], out pid))
-            return false;
-
-        host = parts[0];
-        version = string.Join(PipeSeparator, parts.Skip(1).Take(parts.Length - 2));
-        return true;
     }
 }

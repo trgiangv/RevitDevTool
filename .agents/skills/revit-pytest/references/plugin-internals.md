@@ -20,7 +20,7 @@ Wire format: `[4-byte LE body length][UTF-8 JSON body]`
 
 Matches `DevTools.Ipc.BridgePipeConnection` on C# side.
 
-Pipe name pattern: `{Host}_{Version}_{PID}` (e.g. `Revit_2025_12345`, `AutoCad_2026_7890`, `Rhino_8.0_9999`)
+Pipe name pattern: `DevTools_{Host}_{Version}_{PID}` (e.g. `DevTools_Revit_2025_12345`, `DevTools_AutoCad_2026_7890`, `DevTools_Rhino_8.0_9999`)
 
 ## Connection Flow
 
@@ -28,7 +28,7 @@ Pipe name pattern: `{Host}_{Version}_{PID}` (e.g. `Revit_2025_12345`, `AutoCad_2
 2. `connection.ensure_bridge()` resolves bridge via:
    - Reuse existing connected bridge
    - Explicit pipe (`--host-pipe`)
-   - Auto-discovery: scan `//./pipe` for `{Host}_{Version}_{PID}` patterns
+   - Auto-discovery: scan `//./pipe` for `DevTools_{Host}_{Version}_{PID}` patterns
    - Lease store: reconnect to previously-leased instance
    - Auto-launch: start host + dialog resolver + wait for pipe
 3. Suite mutex prevents parallel pytest processes on same suite

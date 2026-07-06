@@ -91,7 +91,7 @@ public sealed partial class McpRegistryViewModel : ObservableObject, IBusyViewMo
         }
 
         IsConnected = _bridgeState.IsConnected;
-        PipeName = string.IsNullOrWhiteSpace(_bridgeState.Endpoint) ? "N/A" : _bridgeState.Endpoint;
+        PipeName = FormatDisplayPipeName(_bridgeState.Endpoint);
         TotalCalled = _bridgeState.TotalToolCalls;
         RefreshExecutionState();
     }
@@ -238,7 +238,7 @@ public sealed partial class McpRegistryViewModel : ObservableObject, IBusyViewMo
         {
             case nameof(ConnectionState.IsConnected) or nameof(ConnectionState.Endpoint):
                 IsConnected = _bridgeState.IsConnected;
-                PipeName = string.IsNullOrWhiteSpace(_bridgeState.Endpoint) ? "N/A" : _bridgeState.Endpoint;
+                PipeName = FormatDisplayPipeName(_bridgeState.Endpoint);
                 break;
             case nameof(ConnectionState.TotalToolCalls):
                 TotalCalled = _bridgeState.TotalToolCalls;
@@ -376,4 +376,7 @@ public sealed partial class McpRegistryViewModel : ObservableObject, IBusyViewMo
         foreach (var item in _bridgeState.ToolCalls)
             item.PropertyChanged -= OnToolCallMetricChanged;
     }
+    
+    private static string FormatDisplayPipeName(string? endpoint)
+        => string.IsNullOrWhiteSpace(endpoint) ? "N/A" : HostPipeName.ToDisplayName(endpoint!);
 }

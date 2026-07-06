@@ -8,10 +8,10 @@ namespace DevTools.Daemon.Mcp;
 public sealed partial class InstanceManager(ILogger<InstanceManager> logger) : IInstanceManager, IAsyncDisposable
 {
     /// <summary>
-    /// Matches pipe names produced by DevToolsPipeServer: {HostApp}_{Version}_{PID}.
+    /// Matches pipe names produced by DevToolsPipeServer: DevTools_{HostApp}_{Version}_{PID}.
     /// Host is any word chars, version is flexible (year, semver, etc.), PID is digits.
     /// </summary>
-    [GeneratedRegex(@"^\w+_[^_]+_\d+$", RegexOptions.IgnoreCase)]
+    [GeneratedRegex(@"^DevTools_\w+_[^_]+_\d+$", RegexOptions.IgnoreCase)]
     private static partial Regex HostPipePattern();
 
     private readonly ConcurrentDictionary<string, HostBridgeClient> _clients = new(StringComparer.OrdinalIgnoreCase);

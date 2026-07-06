@@ -35,7 +35,7 @@ Use this file for durable architecture decisions that affect agent behavior. Kee
 - In-host built-in tools: `execute_csharp_code`, `open_document` (registered in `ExecutionExtensions.cs`).
 - In-host MCP dispatch runtime (`DevTools.Execution`) is fully shared — both `RevitDevTool` and `AcadDevTool` register the pipe server.
 - Startup dialog resolver and `open_document` are implemented for AutoCAD (merged keywords in default `StartupDialogResolverOptions`; `AcadDocumentBridge` + `OpenDocumentTool`).
-- Remaining AutoCAD gaps: no shipped MCP toolset. (pytest bridge client is now multi-host — scans all `{Host}_{Version}_{PID}` pipes.)
+- Remaining AutoCAD gaps: no shipped MCP toolset. (pytest bridge client is now multi-host — scans all `DevTools_{Host}_{Version}_{PID}` pipes.)
 - Design principle: every new MCP feature should be sharable by default.
 
 ## 2026-05-31: Architecture docs audit and corrections
@@ -57,7 +57,7 @@ Use this file for durable architecture decisions that affect agent behavior. Kee
 ## 2026-05-31: Multi-host pytest client refactor
 
 - `revitdevtool_pytest` v0.3.0 replaces all `--revit-*` CLI flags and `revit_*` INI options with `--host-*` / `host_*` equivalents.
-- Pipe pattern aligned with C# `InstanceManager`: `^\w+_[^_]+_\d+$` — version is `[^_]+` (any non-underscore string), not `\d{4}`. Supports year (2025), semver (8.0), dotted (2024.1), or prefixed (v3.2.1).
+- Pipe pattern aligned with C# `InstanceManager`: `^DevTools_\w+_[^_]+_\d+$` — vendor-prefixed to prevent false positives. Version is `[^_]+` (any non-underscore string), not `\d{4}`. Supports year (2025), semver (8.0), dotted (2024.1), or prefixed (v3.2.1).
 - `HostInstance.version` changed from `int` to `str` throughout the Python client.
 - `HOST_REGISTRY` expanded beyond Autodesk: added Navisworks, Rhino, Tekla entries. Hosts without `exe_name` connect via pipe auto-discovery or explicit `--host-pipe` only.
 - `get_host_config()` returns a fallback `HostConfig(pipe_prefix=host_name)` for unknown hosts — any host exposing a DevToolsPipeServer pipe works without pre-registration.

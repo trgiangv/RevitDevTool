@@ -6,6 +6,10 @@ namespace DevTools.Ipc;
 /// </summary>
 public static class DaemonConstants
 {
+    /// <summary>
+    /// Pipe name format: <c>{PipePrefix}_{Host}_{Version}_{PID}</c>
+    /// </summary>
+    public const string PipePrefix = "DevTools";
     public const string ControlPipeName = "DevToolsDaemon_Control";
     public const string TrayIconResourceKey = "TrayIcon";
     public const string StdioArg = "--stdio";
