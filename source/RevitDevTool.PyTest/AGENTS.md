@@ -59,13 +59,13 @@ Hosts without an `exe_name` (e.g. Rhino, Tekla) can only be connected via pipe a
 
 ### Pipe Name Format
 
-Pipes follow `{Host}_{Version}_{PID}` — mirrors C# `InstanceManager` pattern `^\w+_[^_]+_\d+$`.
+Pipes follow `DevTools_{Host}_{Version}_{PID}` — mirrors C# `InstanceManager` pattern `^DevTools_\w+_[^_]+_\d+$`.
 
 Examples:
-- `Revit_2025_12345` (year-based version)
-- `AutoCad_2026_7890` (year-based)
-- `Rhino_8.0_9999` (semver)
-- `Tekla_2024.1_1111` (dotted version)
+- `DevTools_Revit_2025_12345` (year-based version)
+- `DevTools_AutoCad_2026_7890` (year-based)
+- `DevTools_Rhino_8.0_9999` (semver)
+- `DevTools_Tekla_2024.1_1111` (dotted version)
 
 Version is any non-underscore string — not limited to 4-digit years.
 
@@ -149,7 +149,7 @@ def revit_auto_rollback(revit_transaction_service):
 - Tests execute **inside the host**, not locally. `import` statements for host APIs only work at test runtime.
 - `__revit__` (Revit) or equivalent builtins are injected by host setup scripts — always access via fixtures.
 - Host APIs require main-thread access. All tests run sequentially via FIFO queue (`IHostContextExecutor`).
-- Named Pipe format: `{Host}_{Version}_{PID}` (e.g. `Revit_2025_12345`, `Rhino_8.0_9999`). Version is any non-underscore string.
+- Named Pipe format: `DevTools_{Host}_{Version}_{PID}` (e.g. `DevTools_Revit_2025_12345`, `DevTools_Rhino_8.0_9999`). Version is any non-underscore string.
 - PEP 723 dependencies in `conftest.py` are auto-installed by `PytestDependencyService` before execution.
 - `--host-launch` requires `--host-version` to be set — otherwise exits with config error.
 - Print output inside tests is captured by pytest's `--capture=sys` mechanism and returned via `CaseResult.stdout`.

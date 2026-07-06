@@ -52,7 +52,7 @@ Any host name works — unknown names get a fallback config using the name as pi
 
 ### Pipe Name Format
 
-Pipes follow `{Host}_{Version}_{PID}` (e.g. `Revit_2025_12345`, `Rhino_8.0_9999`). Version can be any format — year, semver, etc.
+Pipes follow `DevTools_{Host}_{Version}_{PID}` (e.g. `DevTools_Revit_2025_12345`, `DevTools_Rhino_8.0_9999`). Version can be any format — year, semver, etc.
 
 ## Project Setup
 

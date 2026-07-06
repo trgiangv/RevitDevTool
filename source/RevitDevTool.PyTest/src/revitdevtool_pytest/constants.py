@@ -26,9 +26,11 @@ DEFAULT_POLL_INTERVAL_S: Final = 2.0
 
 PIPE_DIR: Final = r"//./pipe"
 
-# Mirrors C# InstanceManager: {Host}_{Version}_{PID}
+PIPE_PREFIX: Final = "DevTools"
+
+# Mirrors C# InstanceManager: DevTools_{Host}_{Version}_{PID}
 # Version is [^_]+ (any non-underscore chars) to support year, semver, etc.
-PIPE_PATTERN: Final = r"^(\w+)_([^_]+)_(\d+)$"
+PIPE_PATTERN: Final = rf"^{PIPE_PREFIX}_(\w+)_([^_]+)_(\d+)$"
 
 EXIT_CODE_CONFIG_ERROR: Final = 4
 
