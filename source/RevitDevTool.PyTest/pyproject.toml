@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "revitdevtool_pytest"
-version = "0.3.0"
+version = "0.3.1"
 description = "pytest plugin for testing CAD/BIM API code inside host applications via RevitDevTool Named Pipe bridge"
 readme = "README.md"
 license = "MIT"

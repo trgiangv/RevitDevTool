@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.3.0] - 2026-07-07
+
+### Changed
+
+- Update pipe name with prefix **DevTools_**
+
+
 ## [0.3.0] - 2026-05-31
 
 ### Added
