@@ -13,7 +13,6 @@ public sealed class AssemblyExecutionProvider(
     ICommandDiscovery commandDiscovery,
     IHostContextExecutor hostContext,
     ICommandRunner commandRunner,
-    ILogger<AssemblyExecutionStrategy> strategyLogger,
     ILogger<AssemblyExecutionProvider> logger) : IExecutionProvider
 {
     public string Name => "DotNet";
@@ -117,7 +116,7 @@ public sealed class AssemblyExecutionProvider(
             ContainerMode = ContainerMode.Assembly,
             ExecutionMode = ExecutionMode.Dotnet,
             NodeType = NodeType.Executable,
-            ExecutionStrategy = new AssemblyExecutionStrategy(commandItem, hostContext, commandRunner, strategyLogger)
+            ExecutionStrategy = new AssemblyExecutionStrategy(commandItem, hostContext, commandRunner)
         };
     }
 

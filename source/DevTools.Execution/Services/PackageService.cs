@@ -33,9 +33,9 @@ public sealed class PackageService(
 
         await Task.WhenAll(nugetTask, pythonTask).ConfigureAwait(false);
 
-        var packages = new List<Package>();
-        packages.AddRange(nugetTask.Result);
-        packages.AddRange(pythonTask.Result);
+        var packages = (await nugetTask.ConfigureAwait(false))
+            .Concat(await pythonTask.ConfigureAwait(false))
+            .ToList();
 
         return await packageVersionChecker.AttachLatestVersionsAsync(packages, cancellationToken).ConfigureAwait(false);
     }
@@ -155,7 +155,7 @@ public sealed class PackageService(
         return (nuspecName, null);
     }
 
-    private async Task RemoveNuGetPackageAsync(Package package, CancellationToken cancellationToken)
+    private Task RemoveNuGetPackageAsync(Package package, CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
 
@@ -164,7 +164,7 @@ public sealed class PackageService(
             : $"{package.PackageId}.{package.Version}";
 
         var packageDir = Path.Combine(NuGetCacheRoot, folderName);
-        await TryDeleteDirectoryAsync(packageDir, cancellationToken).ConfigureAwait(false);
+        return TryDeleteDirectoryAsync(packageDir, cancellationToken);
     }
 
     private async Task RemoveAllNuGetAsync(CancellationToken cancellationToken)

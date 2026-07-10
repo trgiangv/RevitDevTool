@@ -14,16 +14,51 @@ public sealed class RevitCommandRunner : ICommandRunner
 
     public ExecutionResult RunCommand(CommandItem commandItem)
     {
-        var message = string.Empty;
-        var data = GetExternalCommandData();
-        var elements = GetElementSet();
-
 #if NET
-        var alc = new CommandLoadContext(commandItem.AssemblyPath);
+        return RunInIsolatedContext(commandItem);
+#else
+        return RunInAppDomain(commandItem);
+#endif
+    }
+
+    public ExecutionResult RunCompiledCommand(object compiledCommand)
+    {
+        if (compiledCommand is not IExternalCommand command)
+            return ExecutionResult.Failed("Compiled type does not implement IExternalCommand.");
+
         try
         {
-            var result = ExecuteInIsolatedContext(alc, commandItem, data, ref message, elements);
+            return ExecuteCommand(command);
+        }
+        finally
+        {
+            RevitContext.Application.PurgeReleasedAPIObjects();
+        }
+    }
+
+    private static ExecutionResult ExecuteCommand(IExternalCommand command)
+    {
+        var message = string.Empty;
+        try
+        {
+            var result = command.Execute(GetExternalCommandData(), ref message, GetElementSet());
             return ToExecutionResult(result, message);
+        }
+        catch (Exception ex)
+        {
+            return ExecutionResult.Failed(
+                !string.IsNullOrEmpty(message) ? message : ex.Message,
+                ex);
+        }
+    }
+
+#if NET
+    private static ExecutionResult RunInIsolatedContext(CommandItem item)
+    {
+        var alc = new CommandLoadContext(item.AssemblyPath);
+        try
+        {
+            return LoadAndExecute(alc, item);
         }
         finally
         {
@@ -32,8 +67,59 @@ public sealed class RevitCommandRunner : ICommandRunner
             GC.Collect();
             GC.WaitForPendingFinalizers();
         }
-#else
-        var targetDir = Path.GetDirectoryName(commandItem.AssemblyPath)!;
+    }
+
+    [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.NoInlining)]
+    private static ExecutionResult LoadAndExecute(CommandLoadContext alc, CommandItem item)
+    {
+        var assembly = LoadAssemblyWithSymbols(alc, item.AssemblyPath);
+        var instance = assembly.CreateInstance(item.FullClassName)
+            ?? throw new InvalidOperationException($"Could not create instance of '{item.FullClassName}'.");
+
+        var message = string.Empty;
+        try
+        {
+            var result = instance switch
+            {
+                IExternalCommand command => command.Execute(
+                    GetExternalCommandData(), ref message, GetElementSet()),
+                _ => InvokeViaDuckTyping(instance, ref message)
+            };
+            return ToExecutionResult(result, message);
+        }
+        catch (Exception ex)
+        {
+            return ExecutionResult.Failed(
+                !string.IsNullOrEmpty(message) ? message : ex.Message,
+                ex);
+        }
+    }
+
+    private static Assembly LoadAssemblyWithSymbols(CommandLoadContext alc, string assemblyPath)
+    {
+        using var stream = new FileStream(assemblyPath, FileMode.Open, FileAccess.Read);
+        var pdbPath = Path.ChangeExtension(assemblyPath, ".pdb");
+        if (!File.Exists(pdbPath))
+            return alc.LoadFromStream(stream);
+
+        using var symbolStream = new FileStream(pdbPath, FileMode.Open, FileAccess.Read);
+        return alc.LoadFromStream(stream, symbolStream);
+    }
+
+    private static Result InvokeViaDuckTyping(object instance, ref string message)
+    {
+        var method = instance.GetType().GetMethod("Execute");
+        object[] parameters = [GetExternalCommandData(), message, GetElementSet()];
+        var invocationResult = method?.Invoke(instance, parameters);
+        message = (string)parameters[1];
+        return invocationResult is Result revitResult ? revitResult : Result.Succeeded;
+    }
+#endif
+
+#if NETFRAMEWORK
+    private static ExecutionResult RunInAppDomain(CommandItem item)
+    {
+        var targetDir = Path.GetDirectoryName(item.AssemblyPath)!;
         var loadedNativeHandles = new List<IntPtr>();
         ResolveEventHandler? assemblyResolver = null;
         try
@@ -42,16 +128,8 @@ public sealed class RevitCommandRunner : ICommandRunner
             assemblyResolver = (_, args) => ResolveAssembly(targetDir, args);
             AppDomain.CurrentDomain.AssemblyResolve += assemblyResolver;
 
-            var assemblyBytes = File.ReadAllBytes(commandItem.AssemblyPath);
-            var assembly = Assembly.Load(assemblyBytes);
-            var instance = assembly.CreateInstance(commandItem.FullClassName);
-            if (instance is IExternalCommand command)
-            {
-                var result = command.Execute(data, ref message, elements);
-                return ToExecutionResult(result, message);
-            }
-            throw new InvalidOperationException(
-                $"Failed to create IExternalCommand from '{commandItem.FullClassName}'.");
+            var command = LoadCommand(item);
+            return ExecuteCommand(command);
         }
         finally
         {
@@ -61,67 +139,17 @@ public sealed class RevitCommandRunner : ICommandRunner
             foreach (var hModule in loadedNativeHandles)
                 while (FreeLibrary(hModule)) { }
         }
-#endif
     }
 
-    public ExecutionResult RunCompiledCommand(object compiledCommand)
+    private static IExternalCommand LoadCommand(CommandItem item)
     {
-        if (compiledCommand is not IExternalCommand command)
-            return ExecutionResult.Failed($"Compiled type does not implement IExternalCommand.");
-
-        var message = string.Empty;
-        var data = GetExternalCommandData();
-        var elements = GetElementSet();
-        try
-        {
-            var result = command.Execute(data, ref message, elements);
-            return ToExecutionResult(result, message);
-        }
-        finally
-        {
-            RevitContext.Application.PurgeReleasedAPIObjects();
-        }
-    }
-
-#if NET
-    [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.NoInlining)]
-    private static Result ExecuteInIsolatedContext(
-        CommandLoadContext alc, CommandItem item, ExternalCommandData data, ref string message, ElementSet elements)
-    {
-        using var stream = new FileStream(item.AssemblyPath, FileMode.Open, FileAccess.Read);
-        var pdbPath = Path.ChangeExtension(item.AssemblyPath, ".pdb");
-
-        Assembly assembly;
-        if (File.Exists(pdbPath))
-        {
-            using var symbolStream = new FileStream(pdbPath, FileMode.Open, FileAccess.Read);
-            assembly = alc.LoadFromStream(stream, symbolStream);
-        }
-        else
-        {
-            assembly = alc.LoadFromStream(stream);
-        }
-
+        var assemblyBytes = File.ReadAllBytes(item.AssemblyPath);
+        var assembly = Assembly.Load(assemblyBytes);
         var instance = assembly.CreateInstance(item.FullClassName);
-        return instance switch
-        {
-            null => throw new Exception($"Could not create instance of {item.FullClassName}"),
-            IExternalCommand command => command.Execute(data, ref message, elements),
-            _ => InvokeViaDuckTyping(instance, data, ref message, elements)
-        };
+        return instance as IExternalCommand
+            ?? throw new InvalidOperationException($"Failed to create IExternalCommand from '{item.FullClassName}'.");
     }
 
-    private static Result InvokeViaDuckTyping(object instance, ExternalCommandData data, ref string message, ElementSet elements)
-    {
-        var method = instance.GetType().GetMethod("Execute");
-        object[] parameters = [data, message, elements];
-        var invocationResult = method?.Invoke(instance, parameters);
-        message = (string)parameters[1];
-        return invocationResult is Result revitResult ? revitResult : Result.Succeeded;
-    }
-#endif
-
-#if NETFRAMEWORK
     [System.Runtime.InteropServices.DllImport("kernel32.dll", CharSet = System.Runtime.InteropServices.CharSet.Auto, SetLastError = true)]
     private static extern IntPtr LoadLibrary(string lpFileName);
 
@@ -150,15 +178,12 @@ public sealed class RevitCommandRunner : ICommandRunner
     }
 #endif
 
-    private static ExecutionResult ToExecutionResult(Result result, string message)
+    private static ExecutionResult ToExecutionResult(Result result, string message) => result switch
     {
-        return result switch
-        {
-            Result.Succeeded => ExecutionResult.Succeeded(message),
-            Result.Cancelled => ExecutionResult.Cancelled(message),
-            _ => ExecutionResult.Failed(message)
-        };
-    }
+        Result.Succeeded => ExecutionResult.Succeeded(message),
+        Result.Cancelled => ExecutionResult.Cancelled(message),
+        _ => ExecutionResult.Failed(message)
+    };
 
     private static ExternalCommandData GetExternalCommandData()
     {
@@ -169,8 +194,8 @@ public sealed class RevitCommandRunner : ICommandRunner
         }
 
         var type = typeof(ExternalCommandData);
-        var ctors = type.GetConstructors(BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public);
-        var instance = (ExternalCommandData)ctors[0].Invoke(null);
+        var ctorInfos = type.GetConstructors(BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public);
+        var instance = (ExternalCommandData)ctorInfos[0].Invoke(null);
         instance.Application = RevitContext.UiApplication;
         instance.JournalData ??= new Dictionary<string, string>();
         instance.View = RevitContext.UiApplication.ActiveUIDocument?.ActiveView;

@@ -150,38 +150,37 @@ public partial class CommandViewModel : ObservableObject, IBusyViewModel
     }
 
     [RelayCommand(CanExecute = nameof(CanExecute))]
-    private async Task Execute(object? parameter)
+    private async Task ExecuteAsync(object? parameter)
     {
         var node = parameter as ExecutionNodeBase ?? SelectedNode;
         if (node is not { NodeType: NodeType.Executable }) return;
+        await ExecuteNodeAsync(node);
+    }
+
+    private bool CanExecute() => !IsBusy && SelectedNode?.NodeType == NodeType.Executable;
+
+    public async void ExecuteLastItem()
+    {
+        try
+        {
+            var lastExecuted = FindLastExecutedNode(_treeRoot);
+            if (lastExecuted != null) await ExecuteNodeAsync(lastExecuted);
+        }
+        catch (Exception e)
+        {
+            _logger.ZLogError(e, $"Execution last item failed: {e.Message}");
+        }
+    }
+
+    private async Task ExecuteNodeAsync(ExecutionNodeBase node)
+    {
         using var memoryScope = _memoryViewModel.BeginOperation((node as ExecutionNode)?.ExecutionMode, node.Name);
         await WhileBusy($"Executing '{node.Name}'...", (node as ExecutionNode)?.ExecutionMode, async () =>
         {
             var result = await _orchestrator.ExecuteAsync(node);
             memoryScope.Complete(success: result.Success);
-            if (!result.Success) _logger.ZLogWarning($"Execution failed: {result.Message}");
+            if (!result.Success) _logger.ZLogError(result.Exception, $"Execution failed '{node.Name}': {result.Message}");
         });
-    }
-
-    private bool CanExecute() => !IsBusy && SelectedNode?.NodeType == NodeType.Executable;
-
-    public void ExecuteLastItem() => _ = ExecuteLastItemAsync();
-
-    private async Task ExecuteLastItemAsync()
-    {
-        var lastExecuted = FindLastExecutedNode(_treeRoot);
-        if (lastExecuted == null) return;
-        try
-        {
-            using var memoryScope = _memoryViewModel.BeginOperation((lastExecuted as ExecutionNode)?.ExecutionMode, lastExecuted.Name);
-            await WhileBusy($"Executing '{lastExecuted.Name}'...", (lastExecuted as ExecutionNode)?.ExecutionMode, async () =>
-            {
-                var result = await _orchestrator.ExecuteAsync(lastExecuted);
-                memoryScope.Complete(success: result.Success);
-                if (!result.Success) _logger.ZLogWarning($"Execution failed: {result.Message}");
-            });
-        }
-        catch (Exception ex) { _logger.ZLogError($"Failed to execute last item: {ex.Message}"); }
     }
 
     private static ExecutionNodeBase? FindLastExecutedNode(IEnumerable<ExecutionNodeBase> nodes)
