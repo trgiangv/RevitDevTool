@@ -1,19 +1,19 @@
 # Transport Modes
 
-The Daemon runs both transport modes simultaneously when authenticated.
+The Daemon supports two independent transport modes. Stdio runs as a separate process; Gateway runs inside the tray host.
 
 ```mermaid
 flowchart LR
     subgraph Stdio Mode
         Client1["MCP client<br/>Claude Desktop / Cursor"]
-        Daemon1["DevTools.Daemon<br/>stdin proxy pipe"]
-        Client1 <-->|stdio| Daemon1
+        Daemon1["DevTools.Daemon --stdio<br/>direct StreamServerTransport"]
+        Client1 <-->|stdin/stdout| Daemon1
     end
 
     subgraph Gateway Mode
         Client2["AI client<br/>ChatGPT / Perplexity"]
         Gateway["McpGateway<br/>Cloudflare Workers"]
-        Daemon2["DevTools.Daemon<br/>WebSocket tunnel"]
+        Daemon2["DevTools.Daemon (tray)<br/>WebSocket tunnel"]
         Client2 -->|"POST /mcp<br/>Streamable HTTP"| Gateway
         Gateway <-->|"WebSocket<br/>NDJSON frames"| Daemon2
     end
@@ -21,12 +21,19 @@ flowchart LR
 
 | Mode | Trigger | Transport | Use case |
 |------|---------|-----------|----------|
-| **Stdio** | Secondary process launch | Named pipe (`DevToolsDaemon_Stdio`) to single instance | Local MCP clients (Claude Desktop, Cursor, VS Code) |
-| **Gateway** | Auto on sign-in | Outbound WebSocket to Cloudflare relay | Remote AI clients (ChatGPT, Perplexity) |
+| **Stdio** | `--stdio` arg | Direct `StreamServerTransport` on process stdin/stdout | Local MCP clients (Claude Desktop, Cursor, VS Code) |
+| **Gateway** | Auto on sign-in (tray host only) | Outbound WebSocket to Cloudflare relay | Remote AI clients (ChatGPT, Perplexity) |
 
 ## Stdio Mode
 
-When an AI client launches `DevTools.Daemon.exe`, the global Mutex detects a running instance. The secondary process becomes a stdio proxy: it relays stdin/stdout to the primary instance via the `DevToolsDaemon_Stdio` named pipe.
+When an AI client spawns `DevTools.Daemon.exe --stdio`, a **new process** runs a self-contained MCP server directly on stdin/stdout. It does **not** proxy to the tray app — it boots its own `McpEngine`, `InstanceManager`, and `DiscoveryHostedService` independently.
+
+Key properties:
+- Bypasses the `SingleInstance` mutex entirely — multiple stdio processes can coexist with each other and with the tray app.
+- Each stdio process discovers host pipes independently (same `DevTools_{Host}_{Version}_{PID}` scan).
+- Auth tokens are read from the shared DPAPI file on disk (sign-in via tray or browser still works).
+- Process exits when the MCP client disconnects (stdin EOF or cancellation).
+- No control pipe, no gateway tunnel, no tray icon in this mode.
 
 ## Gateway Mode
 

@@ -5,8 +5,8 @@
           Publish:       dotnet publish -c Release
   
           Usage:
-              DevTools.Daemon.exe                                           tray app (auto-start, gateway auth)
-              DevTools.Daemon.exe (spawned by AI client while daemon runs)  stdio proxy to running daemon
+              DevTools.Daemon.exe            tray app (single-instance, gateway, control pipe, UI)
+              DevTools.Daemon.exe - -stdio   direct MCP server on stdin/stdout (independent process)
     -->
 
     <PropertyGroup>

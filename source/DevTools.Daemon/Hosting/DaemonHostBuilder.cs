@@ -7,6 +7,7 @@ using DevTools.Utilities;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 using ZLogger;
 
 namespace DevTools.Daemon.Hosting;
@@ -41,6 +42,7 @@ public static class DaemonHostBuilder
     {
         var builder = CreateBuilder();
 
+        builder.Logging.ClearProviders();
         builder.Logging.AddZLoggerFile(
             Path.Combine(AppUtils.GetApplicationDataPath(), StdioLogFile));
 

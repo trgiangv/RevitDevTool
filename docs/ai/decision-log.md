@@ -70,5 +70,5 @@ Use this file for durable architecture decisions that affect agent behavior. Kee
 - `DevTools.Daemon.exe` is a standalone WPF tray app (not a console exe). It owns: auth (OIDC/PKCE), MCP engine (stdio + gateway), host discovery, multi-machine gateway, control pipe, dashboard UI.
 - Installer (`install/Setup.iss`) now installs `DevTools.Daemon.exe` to `{app}\Contents\`, registers auto-start (`HKCU\...\Run\DevToolsDaemon`), launches post-install, and unregisters on uninstall.
 - Build pipeline: `PublishMcpServerModule` removed; `PublishDaemonModule` is the sole publish step. `CreateBundleModule` packs only `DevTools.Daemon.exe`.
-- AI clients (Cursor, Claude Desktop) point their MCP config to `DevTools.Daemon.exe`. The Daemon's single-instance mutex ensures secondary launches become stdio proxies to the running instance.
+- AI clients (Cursor, Claude Desktop) point their MCP config to `DevTools.Daemon.exe --stdio`. The `--stdio` flag runs a direct MCP server on stdin/stdout (self-contained process, no proxy). The single-instance mutex only applies to tray mode — duplicate tray launches exit silently, but stdio processes are independent.
 - No backward compatibility period — MCPServer.exe is gone from the codebase and installer.

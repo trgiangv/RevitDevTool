@@ -5,23 +5,31 @@ Standalone WPF tray application that hosts the MCP engine, authentication, and m
 ## Capabilities
 
 1. **Auto-starts** with Windows (Registry Run key, set by installer)
-2. **Single-instance** enforced by global Mutex; secondary launches become stdio proxies
+2. **Single-instance tray** enforced by global Mutex (`DevToolsDaemon_v1`); duplicate tray launches exit silently
 3. **Owns authentication** — OIDC/PKCE flow via system browser, tokens stored with DPAPI
-4. **Hosts the MCP engine** — Stdio mode for local AI clients, Gateway mode for remote
+4. **Hosts the MCP engine** — Stdio mode (separate process) for local AI clients, Gateway mode (tray process) for remote
 5. **Multi-machine aware** — registers with Gateway including device metadata and host_apps
-6. **Exposes a control pipe** (`DevToolsDaemon_Control`) for host add-in communication
+6. **Exposes a control pipe** (`DevToolsDaemon_Control`) for host add-in communication (tray only)
 7. **Dashboard UI** — MahApps-themed window showing auth state, hosts, gateway status, settings
+
+## Startup Modes
+
+| Args | Behavior |
+|------|----------|
+| `--stdio` | Direct MCP server on stdin/stdout. Self-contained process, no mutex, exits on disconnect. |
+| _(none)_ | Tray host. Acquires mutex; if already held, exits silently. Runs gateway + control pipe + UI. |
+
+Stdio and tray processes are fully independent — no IPC between them. Both discover host pipes via their own `DiscoveryHostedService`.
 
 ## Source Map
 
 | Area | Path |
 |------|------|
+| Hosting (builders, services, single-instance) | `source/DevTools.Daemon/Hosting/` |
 | MCP engine | `source/DevTools.Daemon/Mcp/` |
 | Auth (OIDC/PKCE) | `source/DevTools.Daemon/Auth/` |
-| Control pipe server | `source/DevTools.Daemon/Control/` |
-| Tray icon + menu | `source/DevTools.Daemon/Tray/` |
 | Dashboard (window + views) | `source/DevTools.Daemon/Dashboard/` |
-| Lifecycle (mutex, autostart, stdio proxy) | `source/DevTools.Daemon/Lifecycle/` |
+| App entry point | `source/DevTools.Daemon/App.xaml.cs` |
 
 ## Configuration
 
@@ -35,7 +43,7 @@ Production config is embedded in the single-file EXE (`appsettings.json` as Embe
 
 ## Control Pipe API
 
-Host add-ins communicate via `DevToolsDaemon_Control` named pipe.  
+Host add-ins communicate via `DevToolsDaemon_Control` named pipe (tray mode only).  
 Protocol: one JSON request line → one JSON response line per connection.
 
 | Method | Response |
@@ -53,7 +61,6 @@ Protocol: one JSON request line → one JSON response line per connection.
 # Normal startup (tray icon, auto-connect gateway if authenticated)
 DevTools.Daemon.exe
 
-# Second launch becomes stdio proxy to running instance
-# AI clients like Cursor just point to DevTools.Daemon.exe path
-DevTools.Daemon.exe
+# Stdio mode — spawned by AI clients (Cursor, Claude Desktop)
+DevTools.Daemon.exe --stdio
 ```
