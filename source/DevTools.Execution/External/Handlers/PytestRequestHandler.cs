@@ -1,5 +1,4 @@
 using System.Text.Json;
-using DevTools.Execution.External.Testing;
 namespace DevTools.Execution.External.Handlers;
 
 public sealed class PytestRequestHandler(
@@ -23,13 +22,13 @@ public sealed class PytestRequestHandler(
         JsonElement? @params,
         CancellationToken ct = default)
     {
-        if (string.Equals(method, PytestBridgeMethods.TestsRun, StringComparison.OrdinalIgnoreCase))
-            return HandleRunAsync(requestId, @params);
+        return string.Equals(method, PytestBridgeMethods.TestsRun, StringComparison.OrdinalIgnoreCase) 
+            ? HandleRunAsync(requestId, @params) 
+            : Task.FromResult(BridgeMessage.Error(requestId, IpcErrorCodes.MethodNotFound, $"Unknown method: {method}"));
 
-        return Task.FromResult(BridgeMessage.Error(requestId, IpcErrorCodes.MethodNotFound, $"Unknown method: {method}"));
     }
 
-    public async Task<BridgeMessage> HandleRunAsync(string id, JsonElement? @params)
+    private async Task<BridgeMessage> HandleRunAsync(string id, JsonElement? @params)
     {
         if (!PytestExecutionService.TryParseRunRequest(@params, out var request, out var error))
         {
@@ -52,6 +51,7 @@ public sealed class PytestRequestHandler(
         PytestRunResponse result;
         try
         {
+            ExecutionGuardContext.Mode = ExecutionGuardMode.Suppress;
             result = await hostContext
                 .ExecuteAsync(() => executionService.Run(request!, CreateProgressCallback()))
                 .ConfigureAwait(false);

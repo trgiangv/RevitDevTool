@@ -63,7 +63,7 @@ public sealed class McpBridgeRequestHandler(
 
     private async Task<BridgeMessage> HandleToolsCallAsync(string id, JsonElement? @params)
     {
-        var callParams = @params is { } p ? JsonSerializer.Deserialize<McpToolsCallParams>(p) : null;
+        var callParams = @params is { } p ? p.Deserialize<McpToolsCallParams>() : null;
         if (callParams is null || string.IsNullOrWhiteSpace(callParams.Name))
             return BridgeMessage.Error(id, McpExecutionErrorCodes.ToolInvokeFailed, "Tool name is required.");
 
@@ -78,6 +78,7 @@ public sealed class McpBridgeRequestHandler(
         using var scope = executionTracker.BeginExecution(resolvedToolName);
 
         executionTracker.MarkRunning(scope);
+        ExecutionGuardContext.Mode = ExecutionGuardMode.Suppress;
         McpToolExecutionResult result;
         try
         {
@@ -117,7 +118,7 @@ public sealed class McpBridgeRequestHandler(
 
     private async Task<BridgeMessage> HandlePromptsGetAsync(string id, JsonElement? @params)
     {
-        var getParams = @params is { } p ? JsonSerializer.Deserialize<McpPromptsGetParams>(p) : null;
+        var getParams = @params is { } p ? p.Deserialize<McpPromptsGetParams>() : null;
         if (getParams is null || string.IsNullOrWhiteSpace(getParams.Name))
             return BridgeMessage.Error(id, McpExecutionErrorCodes.PromptInvokeFailed, "Prompt name is required.");
 
@@ -129,6 +130,7 @@ public sealed class McpBridgeRequestHandler(
 
         var arguments = getParams.Arguments;
 
+        ExecutionGuardContext.Mode = ExecutionGuardMode.Suppress;
         GetPromptResult result;
         try
         {
@@ -166,7 +168,7 @@ public sealed class McpBridgeRequestHandler(
 
     private async Task<BridgeMessage> HandleResourcesReadAsync(string id, JsonElement? @params)
     {
-        var readParams = @params is { } p ? JsonSerializer.Deserialize<McpResourcesReadParams>(p) : null;
+        var readParams = @params is { } p ? p.Deserialize<McpResourcesReadParams>() : null;
         if (readParams is null || string.IsNullOrWhiteSpace(readParams.Uri))
             return BridgeMessage.Error(id, McpExecutionErrorCodes.ResourceReadFailed, "Resource URI is required.");
 
@@ -176,6 +178,7 @@ public sealed class McpBridgeRequestHandler(
         if (!catalogStore.TryResolveResourceByUri(resolvedUri, out var resource) || resource is null)
             return BridgeMessage.Error(id, McpExecutionErrorCodes.ResourceNotFound, $"Resource '{resolvedUri}' is not registered.");
 
+        ExecutionGuardContext.Mode = ExecutionGuardMode.Suppress;
         ReadResourceResult result;
         try
         {
@@ -194,5 +197,4 @@ public sealed class McpBridgeRequestHandler(
         var json = JsonSerializer.SerializeToElement(result);
         return BridgeMessage.Response(id, json);
     }
-
 }

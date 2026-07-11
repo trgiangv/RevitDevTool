@@ -14,6 +14,7 @@ using RevitDevTool.CommandBrowser;
 using RevitDevTool.CommandBrowser.Services;
 using RevitDevTool.CommandBrowser.ViewModels;
 using RevitDevTool.Controllers;
+using RevitDevTool.Core.Execution;
 using RevitDevTool.HostAdapters;
 using RevitDevTool.Execution;
 using RevitDevTool.Logging;
@@ -114,6 +115,7 @@ internal static class RevitHostingExtensions
         var services = builder.Services;
 
         services.AddSingleton<IDebuggerBridge, RevitDebuggerBridge>();
+        services.AddSingleton<IExecutionGuard, ExecutionGuard>();
         services.AddSingleton<IHostContextExecutor, RevitHostContextExecutor>();
         services.AddSingleton<IDocumentBridge, RevitDocumentBridge>();
         services.AddSingleton<ICommandRunner, RevitCommandRunner>();
