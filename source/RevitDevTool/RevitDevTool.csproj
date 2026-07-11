@@ -47,6 +47,7 @@
         <ProjectReference Include="..\DevTools.Execution.Abstractions\DevTools.Execution.Abstractions.csproj" />
         <ProjectReference Include="..\..\libs\pythonnet-stub-generator\csharp\PythonNetStubGenerator\PythonNetStubGenerator.csproj" />
         <ProjectReference Include="..\RevitDevTool.Core\RevitDevTool.Core.csproj" />
+        <ProjectReference Include="..\DevTools.Agents.Revit\DevTools.Agents.Revit.csproj" />
     </ItemGroup>
 
     <ItemGroup>

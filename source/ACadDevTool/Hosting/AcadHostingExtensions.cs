@@ -1,8 +1,11 @@
 using CommunityToolkit.Mvvm.Messaging;
+using DevTools.Agents.Acad.Prompts;
+using DevTools.Agents.Acad.Resources;
 using DevTools.Execution;
 using DevTools.Execution.Interfaces;
 using DevTools.Logging;
 using DevTools.Logging.Abstractions;
+using DevTools.Mcp.BuiltIn;
 using DevTools.Presentation;
 using DevTools.Presentation.Interfaces;
 using DevTools.Settings;
@@ -81,6 +84,10 @@ internal static class AcadHostingExtensions
         services.AddSingleton<IIronPythonBridge, AcadIronPythonBridge>();
 
         services.AddExecutionServices();
+
+        services.AddSingleton<IBuiltInMcpResource, AcadApiCheatsheet>();
+        services.AddSingleton<IBuiltInMcpPrompt, AcadCodePrompt>();
+
         return builder;
     }
 }

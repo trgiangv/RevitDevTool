@@ -20,6 +20,8 @@ public sealed class McpPrimitiveDispatcher(
     PythonExecutor executor,
     DotnetMethodResolver methodResolver,
     IEnumerable<IBuiltInMcpTool> builtInTools,
+    IEnumerable<IBuiltInMcpResource> builtInResources,
+    IEnumerable<IBuiltInMcpPrompt> builtInPrompts,
     ITelemetry telemetry) : IMcpPrimitiveDispatcher
 {
     private static readonly JsonSerializerOptions JsonOptions = McpJsonUtilities.DefaultOptions;
@@ -27,7 +29,9 @@ public sealed class McpPrimitiveDispatcher(
     private readonly ConcurrentDictionary<string, McpServerTool> _cachedTools = new(StringComparer.OrdinalIgnoreCase);
     private readonly ConcurrentDictionary<string, McpServerPrompt> _cachedPrompts = new(StringComparer.OrdinalIgnoreCase);
     private readonly ConcurrentDictionary<string, McpServerResource> _cachedResources = new(StringComparer.OrdinalIgnoreCase);
-    private readonly Dictionary<string, IBuiltInMcpTool> _builtInIndex = builtInTools.ToDictionary(t => t.Name, StringComparer.OrdinalIgnoreCase);
+    private readonly Dictionary<string, IBuiltInMcpTool> _builtInToolIndex = builtInTools.ToDictionary(t => t.Name, StringComparer.OrdinalIgnoreCase);
+    private readonly Dictionary<string, IBuiltInMcpResource> _builtInResourceIndex = builtInResources.ToDictionary(r => r.UriTemplate, StringComparer.OrdinalIgnoreCase);
+    private readonly Dictionary<string, IBuiltInMcpPrompt> _builtInPromptIndex = builtInPrompts.ToDictionary(p => p.ProtocolPrompt.Name, StringComparer.OrdinalIgnoreCase);
 
     #region Tools
 
@@ -114,7 +118,7 @@ public sealed class McpPrimitiveDispatcher(
 
     private Task<McpToolExecutionResult> InvokeCSharpToolAsync(string toolName, string normalizedPayload, CancellationToken ct)
     {
-        if (!_builtInIndex.TryGetValue(toolName, out var tool))
+        if (!_builtInToolIndex.TryGetValue(toolName, out var tool))
             return Task.FromResult(McpToolExecutionResult.Failed(
                 McpExecutionErrorCodes.ToolNotImplemented, $"No C# tool registered for '{toolName}'."));
         return tool.ExecuteAsync(normalizedPayload, ct);
@@ -133,8 +137,16 @@ public sealed class McpPrimitiveDispatcher(
         {
             ExecutionMode.Dotnet => InvokeDotnetPrompt(prompt, arguments, ct),
             ExecutionMode.Python => InvokePythonPrompt(prompt, arguments),
+            ExecutionMode.CSharp => InvokeCSharpPrompt(prompt, arguments),
             _ => throw new InvalidOperationException($"Unsupported prompt execution source '{prompt.Binding.SourceKind}'.")
         };
+    }
+
+    private GetPromptResult InvokeCSharpPrompt(McpRegisteredPrompt prompt, IReadOnlyDictionary<string, JsonElement>? arguments)
+    {
+        if (!_builtInPromptIndex.TryGetValue(prompt.ProtocolPrompt.Name, out var builtIn))
+            throw new InvalidOperationException($"No built-in prompt registered for '{prompt.ProtocolPrompt.Name}'.");
+        return builtIn.Get(arguments);
     }
 
     private GetPromptResult InvokeDotnetPrompt(McpRegisteredPrompt prompt, IReadOnlyDictionary<string, JsonElement>? arguments, CancellationToken ct)
@@ -189,8 +201,17 @@ public sealed class McpPrimitiveDispatcher(
         {
             ExecutionMode.Dotnet => InvokeDotnetResource(resource, uri, ct),
             ExecutionMode.Python => InvokePythonResource(resource, uri),
+            ExecutionMode.CSharp => InvokeCSharpResource(resource, uri),
             _ => throw new InvalidOperationException($"Unsupported resource execution source '{resource.Binding.SourceKind}'.")
         };
+    }
+
+    private ReadResourceResult InvokeCSharpResource(McpRegisteredResource resource, string uri)
+    {
+        var resourceUri = resource.ProtocolResource?.Uri ?? resource.ProtocolTemplate?.UriTemplate ?? string.Empty;
+        if (!_builtInResourceIndex.TryGetValue(resourceUri, out var builtIn))
+            throw new InvalidOperationException($"No built-in resource registered for '{resourceUri}'.");
+        return builtIn.Read(uri);
     }
 
     private ReadResourceResult InvokeDotnetResource(McpRegisteredResource resource, string uri, CancellationToken ct)
