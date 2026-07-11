@@ -3,6 +3,8 @@
 ## Required Pattern (IExternalCommand)
 
 ```csharp
+using System;
+using System.Collections.Generic;
 using System.Linq;
 using Autodesk.Revit.DB;
 using Autodesk.Revit.UI;
@@ -22,6 +24,8 @@ public class Command : IExternalCommand
     }
 }
 ```
+
+**Always include all 6 usings above.** `System` provides `Math`, `Func<>`, `Action<>`. `System.Collections.Generic` provides `List<T>`, `Dictionary<K,V>`.
 
 ## Transaction Modes
 - `TransactionMode.Manual` — you open/commit transactions (most common)
