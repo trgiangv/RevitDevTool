@@ -55,6 +55,10 @@ Protocol: one JSON request line → one JSON response line per connection.
 | `daemon/connected_hosts` | `[{hostApp, version, pid, pipeName}, ...]` |
 | `daemon/open_dashboard` | `{success}` |
 
+## Built-in Tools
+
+See [tools.md](tools.md) for the complete tool, resource, and prompt catalog.
+
 ## Usage
 
 ```bash

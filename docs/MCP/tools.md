@@ -1,53 +1,113 @@
-# MCP Tools
+# MCP Tools, Resources, and Prompts
 
-## Built-in Daemon Tools
+## Daemon-Level Primitives
 
-Registered in `source/DevTools.Daemon/Mcp/McpEngine.cs`:
+Registered in `source/DevTools.Daemon/Mcp/McpEngine.cs`. Available regardless of host connection.
 
-| Tool | Host Support | Description |
-|------|-------------|-------------|
-| `list_host_instances` | All hosts | Lists connected instances + discovered pipes |
-| `launch_host` | Revit + AutoCAD family | Launches host with optional file path |
-| `read_file_info` | Revit (RVT/RFA) + AutoCAD (DWG) | Offline metadata reader |
-| `open_model` | Multi-host | Extension-based host detection + launch |
-| `list_dynamic_tools` | All hosts | Lists dynamic tools per instance |
-| `call_dynamic_tool` | All hosts | Calls a dynamic tool on its owning instance |
-| `refresh_dynamic_catalog` | All hosts | Re-queries all instances |
-| `list_machines` | Gateway only | Queries Gateway `/machines` endpoint for connected devices |
+### Infrastructure Tools
 
-## Built-in In-Host Tools
+| Tool | Description |
+|------|-------------|
+| `list_host_instances` | Lists connected instances + discovered pipes |
+| `launch_host` | Launches host (Revit, AutoCAD family) with optional file path |
+| `read_file_info` | Offline Revit/DWG metadata reader |
+| `open_model` | Extension-based host detection + file open |
+| `list_machines` | Queries Gateway for connected devices (requires auth) |
 
-Registered in `source/DevTools.Execution/External/Mcp/BuiltIn/`:
+### Symmetric Catalog Tools
 
-| Tool | Host Support | Description |
-|------|-------------|-------------|
-| `execute_csharp_code` | Revit + AutoCAD | Compiles and runs C# code with host API context |
-| `open_document` | Revit + AutoCAD | Opens a model file via `IDocumentBridge` |
+Each MCP primitive type has a consistent List + Invoke pair backed by a catalog:
+
+```
+DynamicXxxCatalog.Resolve(key, hostInstanceId?) → Found | NotFound | Ambiguous
+```
+
+| Tool | Catalog | Purpose |
+|------|---------|---------|
+| `list_dynamic_tools` | `DynamicToolCatalog` | List tools grouped by name per instance |
+| `call_dynamic_tool` | `DynamicToolCatalog` | Execute a tool (with multi-instance resolution) |
+| `list_dynamic_resources` | `DynamicResourceCatalog` | List resources grouped by URI per instance |
+| `read_dynamic_resource` | `DynamicResourceCatalog` | Read a resource (text or blob) |
+| `list_dynamic_prompts` | `DynamicPromptCatalog` | List prompts grouped by name per instance |
+| `get_dynamic_prompt` | `DynamicPromptCatalog` | Get prompt content |
+| `refresh_dynamic_catalog` | All three | Re-fetch all primitives from connected hosts |
+
+**Multi-instance resolution**: When multiple instances provide the same key, the caller must specify `hostInstanceId` (PID). Without it, single-instance resolves automatically; multiple returns `Ambiguous` with candidate PIDs.
+
+---
+
+## In-Host Tools
+
+Registered via DI in host projects (e.g., `RevitHostingExtensions.AddExecutionServices()`).
+
+### Built-in Tools (`IBuiltInMcpTool`)
+
+| Tool | Host | Description |
+|------|------|-------------|
+| `execute_csharp_code` | Revit + AutoCAD | Compile and run C# `IExternalCommand` with host API context |
+| `open_document` | Revit + AutoCAD | Open model file via `IDocumentBridge` |
+| `undo_changes` | Revit | Undo N transactions via `RevitTransactionService` |
+
+### Built-in Resources (`IBuiltInMcpResource`)
+
+| URI | Host | Description |
+|-----|------|-------------|
+| `revit://api-cheatsheet` | Revit | API patterns, usings, version pitfalls |
+| `revit://model/context` | Revit | Live model state: levels, categories, units, active view |
+| `revit://model/warnings` | Revit | Active constraint violations and element IDs |
+| `revit://version` | Revit | Host version, .NET runtime, API compatibility notes |
+| `revit://view/screenshot` | Revit | Active view as 1920px PNG (BlobResourceContents) |
+
+### Built-in Prompts (`IBuiltInMcpPrompt`)
+
+| Name | Host | Arguments | Description |
+|------|------|-----------|-------------|
+| `revit_code` | Revit | `task` (required), `mode` (optional) | Generate complete `IExternalCommand` C# code |
+
+---
 
 ## Dynamic Tools (User-Registered)
 
-Dynamic tools are loaded from user-configured paths via `McpCatalogStore`:
+Loaded from user-configured paths via `McpCatalogStore`:
 
-- **.NET assemblies** — parsed by `DotnetMcpAssemblyParser`
+- **.NET assemblies** — parsed by `DotnetMcpAssemblyParser` for `[McpTool]` attributes
 - **Python toolsets** — parsed by `PythonToolsetParser` via `ToolParser.py`
 
-Dynamic registrations are tracked per host instance. A tool registered in one Revit process is not assumed to exist in another.
+Dynamic registrations are tracked per host instance.
 
-## Routing Paths
+---
 
-The Daemon exposes two complementary routing models:
+## Routing Models
 
-### Standard MCP Path (AI clients)
+### Protocol-Native (Standard MCP)
 
-`CatalogService` builds a flat `tools/list` + `tools/call` surface from all connected host instances. Each tool gets a `hostInstanceId` parameter injected for targeting a specific process. When multiple hosts register the same tool name, collisions are resolved by namespacing: `{toolName}@{hostApp}_{version}` (e.g. `execute_csharp_code@Revit_2025`).
+`CatalogService` builds flat `tools/list`, `resources/list`, `prompts/list` surfaces from all connected hosts. Collision resolution:
 
-This is the path standard MCP AI clients (Claude, Cursor, ChatGPT) use.
+- Tools: namespace as `{toolName}@{hostApp}_{version}`
+- Resources: deduplicated by URI
+- Prompts: namespace as `{promptName}@{hostApp}_{version}`
 
-### Admin/Diagnostic Path
+This is the path standard MCP clients (Cursor, Claude Desktop) use directly.
 
-`DynamicToolCatalog` + meta-tools (`list_dynamic_tools`, `call_dynamic_tool`) provide an explicit PID-based routing surface for diagnostics and multi-host orchestration. This is useful for admin tools and debugging but not the primary AI client path.
+### Tool-Based Relay (Dynamic Catalog)
 
-## Host-Specific Gaps
+The `list_dynamic_*` + `call/read/get_dynamic_*` tools provide explicit PID-based routing for:
 
-- No shipped AutoCAD MCP toolset equivalent to `samples/RevitMcpToolSet/`
-- Navisworks listed in enums but launch returns "not yet supported"
+- Clients that need fine-grained multi-instance control
+- Diagnostic/admin workflows
+- Clients that don't natively surface resources/prompts in UI
+
+Both paths coexist — protocol-native works automatically, tool-based relay is available when needed.
+
+---
+
+## Source Map
+
+| Area | Path |
+|------|------|
+| Daemon tools | `source/DevTools.Daemon/Mcp/Tools/` |
+| Catalogs | `source/DevTools.Mcp/Routing/Catalog/` |
+| Catalog service | `source/DevTools.Mcp/Routing/Catalog/CatalogService.cs` |
+| Built-in tools | `source/DevTools.Execution/External/Mcp/BuiltIn/` |
+| Revit agents | `source/DevTools.Agents.Revit/` |
+| AutoCAD agents | `source/DevTools.Agents.Acad/` |

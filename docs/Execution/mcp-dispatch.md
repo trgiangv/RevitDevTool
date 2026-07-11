@@ -17,6 +17,9 @@ MCP (Model Context Protocol) tools, prompts, and resources execute inside the ho
 | `source/DevTools.Execution/External/Mcp/Dispatchers/McpPrimitiveDispatcher.cs` | Dispatch implementation |
 | `source/DevTools.Execution/External/Mcp/BuiltIn/CSharpCodeTool.cs` | Built-in: `execute_csharp_code` |
 | `source/DevTools.Execution/External/Mcp/BuiltIn/OpenDocumentTool.cs` | Built-in: `open_document` |
+| `source/DevTools.Agents.Revit/Tools/UndoChangesTool.cs` | Built-in: `undo_changes` (host-thread dispatch) |
+| `source/DevTools.Agents.Revit/Resources/` | Revit resources (context, warnings, version, cheatsheet, screenshot) |
+| `source/DevTools.Agents.Revit/Prompts/RevitCodePrompt.cs` | Prompt: `revit_code` |
 
 ---
 
@@ -63,13 +66,26 @@ sequenceDiagram
 
 ## Tool Source Kinds
 
-Tools come from different sources, all unified through the catalog:
+See [`docs/MCP/tools.md`](../MCP/tools.md) for the full catalog of tools, resources, and prompts.
 
-| Source | Description |
-|--------|-------------|
-| .NET Assembly | Reflected from `[McpTool]` attribute on methods in `.dll` toolsets |
-| Python | Parsed from `ToolParser.py` analysis of Python toolset scripts |
-| Built-in C# | Hardcoded tools: `execute_csharp_code`, `open_document` |
+### Threading Model for Built-in Tools
+
+`IBuiltInMcpTool.ExecuteAsync()` runs on a **background thread** (not the host main thread). Tools that need main-thread access (e.g., `undo_changes` which calls `QuickAccessToolBarService`) must internally dispatch via `IHostContextExecutor`:
+
+```csharp
+public sealed class UndoChangesTool(IHostContextExecutor hostContext) : IBuiltInMcpTool
+{
+    public async Task<McpToolExecutionResult> ExecuteAsync(string payload, CancellationToken ct)
+    {
+        var result = await hostContext.ExecuteAsync(() => {
+            RevitTransactionService.PerformUndo(count);
+            return ...;
+        }, ct);
+    }
+}
+```
+
+`CSharpCodeTool` handles this internally through `CSharpCodeExecutor` → `IHostContextExecutor`.
 
 ---
 

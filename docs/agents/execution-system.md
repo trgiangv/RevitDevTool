@@ -20,7 +20,7 @@ Shared execution does not own host APIs. It calls abstractions defined in `sourc
 - `ICommandRunner` — invoke a discovered command
 - `IDocumentBridge` — open/close documents (Revit/AutoCAD)
 - `ICompiledScriptBridge` — compiled script caching
-- `ExecutionGuardMode` — enum: `Passthrough`, `Suppress`, `Log`
+- `ExecutionGuardMode` — enum: `Passthrough`, `Suppress`
 - `ExecutionGuardContext` — ambient `AsyncLocal` propagating mode + feedback summary
 
 Additional interfaces in `source/DevTools.Execution/Interfaces/`:

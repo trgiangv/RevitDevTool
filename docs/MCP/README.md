@@ -10,10 +10,11 @@ Last updated: 2026-06-18
 
 | Document | Contents |
 |----------|----------|
-| [Daemon](daemon.md) | Architecture, lifecycle, auth, control pipe API, configuration |
-| [Transport](transport.md) | Stdio proxy, Gateway WebSocket, multi-machine routing |
-| [Tools](tools.md) | Built-in daemon tools, in-host tools, dynamic tool registry |
+| [Daemon](daemon.md) | Architecture, lifecycle, auth, control pipe API |
+| [Transport](transport.md) | Stdio mode, Gateway WebSocket, multi-machine routing |
+| [Tools](tools.md) | Full primitive catalog: tools, resources, prompts, routing models |
 | [In-Host Runtime](in-host-runtime.md) | Runtime shape, registry flow, dispatch flow, parser library |
+| [Workflows](workflows.md) | Practical AI agent patterns: code exec, vision, undo, full loop |
 
 ## Source Map
 
