@@ -75,7 +75,7 @@ public sealed partial class LogViewModel : ObservableObject, IDisposable,
         _idling?.Subscribe(OnIdling);
         _messenger.RegisterAll(this);
         _isSubscribed = true;
-        if (IsStarted) StartTracing();
+        if (IsStarted) _loggingService.RegisterTraceListeners();
     }
 
     public void Receive(GeometryCountChangedMessage message)
