@@ -7,8 +7,8 @@
 .PARAMETER Path
     Relative path to test directory.
 .EXAMPLE
-    scripts/agent/test-python.ps1
-    scripts/agent/test-python.ps1 -Path tests/some-other-tests
+    scripts/test-python.ps1
+    scripts/test-python.ps1 -Path tests/some-other-tests
 #>
 param(
     [string]$Path = "tests/RevitDevTool.PyServer.Tests"

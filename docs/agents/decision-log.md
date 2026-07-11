@@ -45,7 +45,7 @@ Use this file for durable architecture decisions that affect agent behavior. Kee
 - `DevTools.McpServer` standalone process clarified: runs outside hosts as `MCPServer.exe`; standalone built-in tools are multi-host, in-host MCP runtime is shared.
 - `docs/README.md` directory tree expanded to show all 8 `docs/agents/` digest files and `static/icons/` assets.
 - Documentation completeness table restructured: separated architecture modules, shared platform libraries, and sample projects.
-- All 6 `scripts/agent/*.ps1` scripts received PowerShell comment-based help (`.SYNOPSIS`, `.DESCRIPTION`, `.PARAMETER`, `.EXAMPLE`).
+- All 6 `scripts/*.ps1` scripts received PowerShell comment-based help (`.SYNOPSIS`, `.DESCRIPTION`, `.PARAMETER`, `.EXAMPLE`).
 - `AGENTS.md` Verification section now lists all 6 agent scripts.
 - `docs/agents/host-boundaries.md` updated with `RevitDevTool.Core`, visualization location, and standalone MCP server process.
 

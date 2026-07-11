@@ -299,7 +299,7 @@ git clone https://github.com/trgiangv/RevitDevTool.git
 cd RevitDevTool
 
 # Build for a specific Revit/AutoCAD year
-scripts/agent/build-host.ps1 -Year 2025
+scripts/build-host.ps1 -Year 2025
 
 # Or build directly
 dotnet build RevitDevTool.slnx -c "Debug.Autodesk.2025"

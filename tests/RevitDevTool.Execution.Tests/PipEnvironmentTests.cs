@@ -17,7 +17,7 @@ public sealed class PipEnvironmentTests : IAsyncLifetime, IDisposable
     private readonly string _testRoot = Path.Combine(Path.GetTempPath(), $"RevitDevTool-PipTest-{Guid.NewGuid():N}");
     private string PythonHome => Path.Combine(_testRoot, "envs", "default");
     private string PythonExe => Path.Combine(PythonHome, "python.exe");
-    private string ParserScriptPath => Path.Combine(FindRepositoryRoot(), "source", "RevitDevTool", "Resources", "scripts", "Parser.py");
+    private string ParserScriptPath => Path.Combine(FindRepositoryRoot(), "source", "DevTools.Execution", "Resources", "scripts", "Parser.py");
     private string FixturesPath => Path.Combine(AppContext.BaseDirectory, "Fixtures");
 
     public async ValueTask InitializeAsync()

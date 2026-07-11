@@ -11,7 +11,7 @@
 .PARAMETER Year
     Autodesk product year.
 .EXAMPLE
-    scripts/agent/startup-profile.ps1 -HostApp Revit -Year 2025
+    scripts/startup-profile.ps1 -HostApp Revit -Year 2025
 #>
 param(
     [ValidateSet("Revit", "AutoCAD")]

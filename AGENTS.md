@@ -19,29 +19,29 @@
 - Shared platform libraries: `source/DevTools.Execution/` (execution engine, pytest bridge in `External/Testing/`), `source/DevTools.Execution.Abstractions/` (execution interfaces and enums), `source/DevTools.Ipc/` (IPC transport: BridgeMessage, BridgePipeConnection, pipe constants, shared wire protocol property names), `source/DevTools.Mcp/` (MCP protocol: catalog, discovery, registry, dispatch, routing), `source/DevTools.Logging/`, `source/DevTools.Presentation/`, `source/DevTools.Settings/`, `source/DevTools.Telemetry/`, `source/DevTools.UI/`, and `source/DevTools.Utilities/`.
 - Standalone daemon: `source/DevTools.Daemon/` (WPF tray app — auth, MCP engine, host discovery, auto-start).
 - Samples and demo toolsets live under `samples/`, not under `source/`.
-- Build automation lives under `build/`; agent wrapper scripts live under `scripts/agent/`.
+- Build automation lives under `build/`; agent wrapper scripts live under `scripts/`.
 - Vendored WPF libraries: `libs/MahApps.Metro`, `libs/ControlzEx`, `libs/XamlBehaviorsWpf`, `libs/pythonnet-stub-generator`.
 
 ## Build Matrix
 - Required SDK: .NET `10.0.0` via `global.json`.
 - Supported Autodesk configurations: `Debug.Autodesk.2022` through `Debug.Autodesk.2027` and `Release.Autodesk.2022` through `Release.Autodesk.2027`.
 - Autodesk 2022-2024 target `net48`; 2025-2026 target `net8.0-windows`; 2027 targets `net10.0-windows`.
-- Focused host build: `scripts/agent/build-host.ps1 -Year 2025`.
-- CI/package build: `scripts/agent/pack.ps1` or `dotnet run -c Release pack` from `build/`.
+- Focused host build: `scripts/build-host.ps1 -Year 2025`.
+- CI/package build: `scripts/pack.ps1` or `dotnet run -c Release pack` from `build/`.
 - Default pipeline (`dotnet run --project build`) compiles all configurations + publishes DevTools.Daemon to the bundle Contents folder.
 - Daemon publish: `dotnet publish source/DevTools.Daemon -c Release` — csproj target auto-kills running instance and deploys to `%AppData%\...\RevitDevTool.bundle\Contents\`.
 - **Kill host process before deploy builds**: Running Revit/AutoCAD locks the DLL. Before any build that deploys to the addin folder, kill the host process first: `Get-Process -Name "Revit" -ErrorAction SilentlyContinue | Stop-Process -Force`. See `.agents/skills/revit-build/SKILL.md` for details.
 
 ## Verification
-- Do not guess commands. Prefer scripts in `scripts/agent/`.
+- Do not guess commands. Prefer scripts in `scripts/`.
 - Current test projects are shallow and partly smoke/placeholder coverage. Passing tests are useful but not strong proof. Use engineering judgment to add focused tests or manual verification notes when a change touches real behavior.
-- Focused compile: `scripts/agent/build-host.ps1 -Year <2022-2027> [-Mode Debug|Release]`.
-- .NET tests: `scripts/agent/test-dotnet.ps1`.
-- Python parser tests: `scripts/agent/test-python.ps1`.
-- Release package: `scripts/agent/pack.ps1`.
-- Collect logs: `scripts/agent/collect-logs.ps1 [-Destination <path>]`.
-- Kill host before deploy: `scripts/agent/kill-host.ps1 [-HostApp All|Revit|AutoCAD]`.
-- Startup profiling anchor: `scripts/agent/startup-profile.ps1 [-HostApp Revit|AutoCAD] [-Year <year>]`.
+- Focused compile: `scripts/build-host.ps1 -Year <2022-2027> [-Mode Debug|Release]`.
+- .NET tests: `scripts/test-dotnet.ps1`.
+- Python parser tests: `scripts/test-python.ps1`.
+- Release package: `scripts/pack.ps1`.
+- Collect logs: `scripts/collect-logs.ps1 [-Destination <path>]`.
+- Kill host before deploy: `scripts/kill-host.ps1 [-HostApp All|Revit|AutoCAD]`.
+- Startup profiling anchor: `scripts/startup-profile.ps1 [-HostApp Revit|AutoCAD] [-Year <year>]`.
 - Frontend sample quality gate: from `samples/PythonDemo/revit_dashboard_ui/`, run `npm run quality`.
 - If a test fails due to known stale paths or missing local Pixi/Revit state, document that explicitly instead of changing unrelated code.
 

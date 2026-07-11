@@ -7,9 +7,9 @@
 .PARAMETER HostApp
     Which host to kill. Default: All (both Revit and AutoCAD).
 .EXAMPLE
-    scripts/agent/kill-host.ps1
-    scripts/agent/kill-host.ps1 -HostApp Revit
-    scripts/agent/kill-host.ps1 -HostApp AutoCAD
+    scripts/kill-host.ps1
+    scripts/kill-host.ps1 -HostApp Revit
+    scripts/kill-host.ps1 -HostApp AutoCAD
 #>
 param(
     [ValidateSet("All", "Revit", "AutoCAD")]

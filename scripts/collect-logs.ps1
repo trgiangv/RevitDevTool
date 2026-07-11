@@ -7,8 +7,8 @@
 .PARAMETER Destination
     Target directory for copying logs. Created if it does not exist.
 .EXAMPLE
-    scripts/agent/collect-logs.ps1
-    scripts/agent/collect-logs.ps1 -Destination ./logs-snapshot
+    scripts/collect-logs.ps1
+    scripts/collect-logs.ps1 -Destination ./logs-snapshot
 #>
 param(
     [string]$Destination = ""

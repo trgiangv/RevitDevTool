@@ -10,8 +10,8 @@
 .PARAMETER Mode
     Debug or Release build mode.
 .EXAMPLE
-    scripts/agent/build-host.ps1 -Year 2025
-    scripts/agent/build-host.ps1 -Year 2024 -Mode Release
+    scripts/build-host.ps1 -Year 2025
+    scripts/build-host.ps1 -Year 2024 -Mode Release
 #>
 param(
     [ValidateSet("2022", "2023", "2024", "2025", "2026", "2027")]

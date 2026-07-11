@@ -10,8 +10,8 @@
 .PARAMETER Configuration
     Build configuration for tests (default: Debug).
 .EXAMPLE
-    scripts/agent/test-dotnet.ps1
-    scripts/agent/test-dotnet.ps1 -Project tests/RevitDevTool.Execution.Tests/RevitDevTool.Execution.Tests.csproj
+    scripts/test-dotnet.ps1
+    scripts/test-dotnet.ps1 -Project tests/RevitDevTool.Execution.Tests/RevitDevTool.Execution.Tests.csproj
 #>
 param(
     [string]$Project = "",

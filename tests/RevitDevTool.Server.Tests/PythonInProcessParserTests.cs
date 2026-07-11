@@ -19,7 +19,7 @@ public sealed class PythonInProcessParserTests : IDisposable
         PythonHome = Path.Combine(appData, "RevitDevTool", "pixi-env", ".pixi", "envs", "default");
         PythonDll = FindPythonDll(PythonHome);
         ToolParserScript = LoadToolParserScript();
-        ToolsetDirectory = Path.Combine(FindRepositoryRoot(), "source", "Samples", "PythonDemo", "mcp_toolset");
+        ToolsetDirectory = Path.Combine(FindRepositoryRoot(), "samples", "PythonDemo", "mcp_toolset");
     }
 
     public PythonInProcessParserTests()
@@ -116,7 +116,7 @@ public sealed class PythonInProcessParserTests : IDisposable
     public void InProcess_MatchesOutOfProcessOutput()
     {
         var pythonExe = Path.Combine(PythonHome, "python.exe");
-        var toolParserScriptPath = Path.Combine(FindRepositoryRoot(), "source", "RevitDevTool", "Resources", "scripts", "ToolParser.py");
+        var toolParserScriptPath = Path.Combine(FindRepositoryRoot(), "source", "DevTools.Execution", "Resources", "scripts", "ToolParser.py");
 
         Assert.True(File.Exists(pythonExe), $"Python executable not found at '{pythonExe}'.");
         Assert.True(File.Exists(toolParserScriptPath), $"ToolParser.py not found at '{toolParserScriptPath}'.");
@@ -197,7 +197,7 @@ public sealed class PythonInProcessParserTests : IDisposable
 
     private static string LoadToolParserScript()
     {
-        var path = Path.Combine(FindRepositoryRoot(), "source", "RevitDevTool", "Resources", "scripts", "ToolParser.py");
+        var path = Path.Combine(FindRepositoryRoot(), "source", "DevTools.Execution", "Resources", "scripts", "ToolParser.py");
         Assert.True(File.Exists(path), $"ToolParser.py not found at '{path}'.");
         return File.ReadAllText(path);
     }
@@ -207,7 +207,8 @@ public sealed class PythonInProcessParserTests : IDisposable
         var current = new DirectoryInfo(AppContext.BaseDirectory);
         while (current is not null)
         {
-            if (File.Exists(Path.Combine(current.FullName, "RevitDevTool.sln")))
+            if (File.Exists(Path.Combine(current.FullName, "RevitDevTool.slnx"))
+                || File.Exists(Path.Combine(current.FullName, "RevitDevTool.sln")))
                 return current.FullName;
             current = current.Parent;
         }

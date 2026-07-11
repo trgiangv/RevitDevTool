@@ -6,7 +6,7 @@
     Clean → CreateBundle (all Release.Autodesk.* configs + DevTools.Daemon) → CreateInstaller.
     Output goes to build/output/.
 .EXAMPLE
-    scripts/agent/pack.ps1
+    scripts/pack.ps1
 #>
 param()
 

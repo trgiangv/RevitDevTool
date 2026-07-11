@@ -203,7 +203,7 @@ Current tests are useful but shallow. They cover parser contracts, telemetry hel
 
 When changing execution behavior:
 
-- Build the most relevant host/year with `scripts/agent/build-host.ps1`.
+- Build the most relevant host/year with `scripts/build-host.ps1`.
 - Add a focused test for pure shared logic when practical.
 - Document live-host verification gaps explicitly.
 

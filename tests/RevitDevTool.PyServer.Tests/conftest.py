@@ -25,13 +25,13 @@ def repo_root() -> Path:
 
 @pytest.fixture(scope="session")
 def parser_module(repo_root: Path) -> ModuleType:
-    parser_path = repo_root / "source" / "RevitDevTool" / "Resources" / "scripts" / "ToolParser.py"
+    parser_path = repo_root / "source" / "DevTools.Execution" / "Resources" / "scripts" / "ToolParser.py"
     return _load_module(parser_path, "rdt_tool_parser_tests")
 
 
 @pytest.fixture(scope="session")
 def sample_toolset_dir(repo_root: Path) -> Path:
-    return repo_root / "Samples" / "PythonDemo" / "mcp_toolset"
+    return repo_root / "samples" / "PythonDemo" / "mcp_toolset"
 
 
 @pytest.fixture(scope="session")

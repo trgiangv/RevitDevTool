@@ -10,4 +10,4 @@ Use when editing build modules, installer creation, bundle layout, release publi
 - Remember Revit and AutoCAD currently publish into `RevitDevTool.bundle`.
 - Do not re-enable ILRepack for 2027 host projects without validating Autodesk isolated context behavior.
 - Update `docs/agents/build-matrix.md`, `docs/agents/verification.md`, or release/package docs when changing supported configurations, package layout, or release commands.
-- Run `scripts/agent/pack.ps1` for full package verification when practical.
+- Run `scripts/pack.ps1` for full package verification when practical.

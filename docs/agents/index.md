@@ -6,8 +6,8 @@ Use this directory as deterministic agent memory. It does not replace the archit
 
 | Task | Read | Projects | Skill |
 |------|------|----------|-------|
-| Build/compile host add-in | `build-matrix.md`, `verification.md` | `build/`, `scripts/agent/` | `.agents/skills/revit-build/SKILL.md` |
-| Package/release/installer | `build-matrix.md`, `verification.md` | `build/`, `scripts/agent/` | `.agents/skills/packaging-release-review/SKILL.md` |
+| Build/compile host add-in | `build-matrix.md`, `verification.md` | `build/`, `scripts/` | `.agents/skills/revit-build/SKILL.md` |
+| Package/release/installer | `build-matrix.md`, `verification.md` | `build/`, `scripts/` | `.agents/skills/packaging-release-review/SKILL.md` |
 | Shared library change | `host-boundaries.md`, `build-matrix.md` | `source/DevTools.*/` | `.agents/skills/host-boundary-review/SKILL.md`, `.agents/skills/net48-compat-review/SKILL.md` |
 | Execution provider/strategy/orchestrator | `execution-system.md`, `verification.md` | `source/DevTools.Execution/`, `source/DevTools.Execution.Abstractions/` | `.agents/skills/execution-system-change/SKILL.md` |
 | MCP registry/server/dispatch | `mcp-pytest-bridge.md` | `source/DevTools.Mcp/`, `source/DevTools.Ipc/` | `.agents/skills/mcp-bridge-change/SKILL.md` |

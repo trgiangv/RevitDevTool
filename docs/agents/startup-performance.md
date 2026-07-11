@@ -13,5 +13,5 @@ Startup-sensitive code includes host boot, DI registration, command discovery, P
 ## Verification
 
 - Build the touched host/year.
-- If startup behavior changed, collect logs with `scripts/agent/collect-logs.ps1`.
-- For manual profiling, use `scripts/agent/startup-profile.ps1` to record process timing notes and relevant log locations.
+- If startup behavior changed, collect logs with `scripts/collect-logs.ps1`.
+- For manual profiling, use `scripts/startup-profile.ps1` to record process timing notes and relevant log locations.

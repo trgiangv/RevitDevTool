@@ -336,8 +336,7 @@ public sealed class ParserIntegrationTests
     {
         var sampleAssembly = Path.Combine(
             FindRepositoryRoot(),
-            "source",
-            "Samples",
+            "samples",
             "McpToolsetDemo",
             "bin",
             "Debug",
@@ -352,8 +351,7 @@ public sealed class ParserIntegrationTests
     {
         return Path.Combine(
             FindRepositoryRoot(),
-            "source",
-            "Samples",
+            "samples",
             "PythonDemo",
             "mcp_toolset");
     }
@@ -368,7 +366,7 @@ public sealed class ParserIntegrationTests
 
     private static string GetToolParserScriptPath()
     {
-        var path = Path.Combine(FindRepositoryRoot(), "source", "RevitDevTool", "Resources", "scripts", "ToolParser.py");
+        var path = Path.Combine(FindRepositoryRoot(), "source", "DevTools.Execution", "Resources", "scripts", "ToolParser.py");
         Assert.True(File.Exists(path), $"Expected ToolParser.py at '{path}'.");
         return path;
     }
@@ -391,7 +389,8 @@ public sealed class ParserIntegrationTests
         var current = new DirectoryInfo(AppContext.BaseDirectory);
         while (current is not null)
         {
-            if (File.Exists(Path.Combine(current.FullName, "RevitDevTool.sln")))
+            if (File.Exists(Path.Combine(current.FullName, "RevitDevTool.slnx"))
+                || File.Exists(Path.Combine(current.FullName, "RevitDevTool.sln")))
                 return current.FullName;
 
             current = current.Parent;

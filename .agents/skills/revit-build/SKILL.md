@@ -104,8 +104,8 @@ Stop-Process -Id 16544 -Force -ErrorAction SilentlyContinue
 Get-Process -Name "acad" -ErrorAction SilentlyContinue | Stop-Process -Force
 ```
 
-**When to kill** (use `scripts/agent/kill-host.ps1`):
-- Before `scripts/agent/build-host.ps1` (always deploys to addin folder)
+**When to kill** (use `scripts/kill-host.ps1`):
+- Before `scripts/build-host.ps1` (always deploys to addin folder)
 - Before `dotnet build` with `DeployRevitAddin=true` or `DeployAutoCadBundle=true`
 - Before `dotnet run --project build/Build.csproj -- pack`
 - NOT needed for builds with `-p:DeployRevitAddin=false -p:DeployAutoCadBundle=false`

@@ -1,6 +1,6 @@
 # Verification
 
-Prefer scripts under `scripts/agent/` so agents do not guess command strings.
+Prefer scripts under `scripts/` so agents do not guess command strings.
 
 ## Test Reality
 
@@ -18,13 +18,13 @@ When a change touches real behavior:
 
 | Situation | Command |
 |-----------|---------|
-| Host compile for a year | `scripts/agent/build-host.ps1 -Year 2025` |
-| Host compile for .NET Framework compatibility | `scripts/agent/build-host.ps1 -Year 2024` |
-| All normal .NET tests | `scripts/agent/test-dotnet.ps1` |
-| One .NET test project | `scripts/agent/test-dotnet.ps1 -Project tests/RevitDevTool.Execution.Tests/RevitDevTool.Execution.Tests.csproj` |
-| Python parser tests | `scripts/agent/test-python.ps1` |
-| Package pipeline | `scripts/agent/pack.ps1` |
-| Collect local logs | `scripts/agent/collect-logs.ps1` |
+| Host compile for a year | `scripts/build-host.ps1 -Year 2025` |
+| Host compile for .NET Framework compatibility | `scripts/build-host.ps1 -Year 2024` |
+| All normal .NET tests | `scripts/test-dotnet.ps1` |
+| One .NET test project | `scripts/test-dotnet.ps1 -Project tests/RevitDevTool.Execution.Tests/RevitDevTool.Execution.Tests.csproj` |
+| Python parser tests | `scripts/test-python.ps1` |
+| Package pipeline | `scripts/pack.ps1` |
+| Collect local logs | `scripts/collect-logs.ps1` |
 
 ## Indexing
 

@@ -21,8 +21,8 @@ Valid modes are `Debug` and `Release`, so full names look like `Debug.Autodesk.2
 
 ## Commands
 
-- Focused host compile: `scripts/agent/build-host.ps1 -Year 2025`.
-- Release package: `scripts/agent/pack.ps1`.
+- Focused host compile: `scripts/build-host.ps1 -Year 2025`.
+- Release package: `scripts/pack.ps1`.
 - Build pipeline with no args: `dotnet run --project build` compiles all release configurations + publishes DevTools.Daemon.
 
 ## DevTools.Daemon
@@ -59,16 +59,16 @@ dotnet publish source/DevTools.Daemon -c Release
 
 Running Revit or AutoCAD locks loaded DLLs. Any build that deploys to the addin folder will fail or produce stale results if the host is still running.
 
-**Required step before build+deploy** — use `scripts/agent/kill-host.ps1`:
+**Required step before build+deploy** — use `scripts/kill-host.ps1`:
 
 ```powershell
-scripts/agent/kill-host.ps1                # Kill both Revit and AutoCAD
-scripts/agent/kill-host.ps1 -HostApp Revit # Kill only Revit
+scripts/kill-host.ps1                # Kill both Revit and AutoCAD
+scripts/kill-host.ps1 -HostApp Revit # Kill only Revit
 ```
 
 This applies to:
-- `scripts/agent/build-host.ps1` (MSBuild `DeployRevitAddin`/`DeployAutoCadBundle` target deploys after build)
-- `scripts/agent/pack.ps1`
+- `scripts/build-host.ps1` (MSBuild `DeployRevitAddin`/`DeployAutoCadBundle` target deploys after build)
+- `scripts/pack.ps1`
 - `dotnet build` without `-p:DeployRevitAddin=false -p:DeployAutoCadBundle=false`
 
 NOT needed when building with `-p:DeployRevitAddin=false -p:DeployAutoCadBundle=false -p:IsRepackable=false` (compile-only check).

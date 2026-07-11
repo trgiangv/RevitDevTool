@@ -11,4 +11,4 @@ Use when editing execution providers, strategies, node models, package handling,
 - Check Python/Pixi, F#/NuGet, and C#/Roslyn side effects when touching shared script code.
 - Existing tests may only cover happy paths. Add a focused unit/contract test for discovery rules, node merging, package parsing, or strategy selection when those behaviors change.
 - Update `docs/Execution/README.md` or `docs/agents/execution-system.md` when changing execution architecture, modes, provider/strategy responsibilities, or host-adapter boundaries.
-- Run `scripts/agent/build-host.ps1 -Year 2025` or the most relevant target year.
+- Run `scripts/build-host.ps1 -Year 2025` or the most relevant target year.
