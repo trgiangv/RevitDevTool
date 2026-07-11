@@ -1,105 +1,269 @@
 using System.ComponentModel;
-using System.Text.Json;
 using ModelContextProtocol;
 using ModelContextProtocol.Server;
 using Nice3point.Revit.Toolkit;
 using RevitMcpToolSet.Utilities;
+
 namespace RevitMcpToolSet.Tools;
 
 [McpServerToolType]
 [Description("Tools for creating and managing views, sheets, and viewports in Revit.")]
 public static class ViewSheetTools
 {
-    [McpServerTool(Name = "revit_create_floor_plan", Title = "Create Floor Plan", ReadOnly = false)]
-    [Description("Creates a floor plan view for a given level.")]
-    public static object CreateFloorPlan(
-        [Description("Level name for the floor plan")] string levelName,
-        [Description("Name for the new view (optional)")] string newName = "")
+    [McpServerTool(Name = "revit_create_view", Title = "Create View", ReadOnly = false)]
+    [Description("Creates a floor plan, section, or 3D view.")]
+    public static object CreateView(
+        [Description("View type: floor_plan, section, or 3d")] string viewType,
+        [Description("Level name (required for floor_plan)")] string? levelName = null,
+        [Description("Name for the new view")] string? viewName = null,
+        [Description("View template name to apply (floor_plan and 3d)")] string? templateName = null,
+        [Description("Section bounding box minimum [x, y, z]")] double[]? min = null,
+        [Description("Section bounding box maximum [x, y, z]")] double[]? max = null,
+        [Description("Section view direction angle in degrees (0=North/+Y, 90=West/-X)")] double? directionAngle = null,
+        [Description("Section depth (defaults to width)")] double? depth = null,
+        [Description("When false, creates a perspective 3D view; otherwise isometric")] bool? isBoundingBox = null)
     {
         var doc = RevitContext.ActiveDocument ?? throw new McpException("No active document.");
+        var normalizedType = NormalizeViewType(viewType);
 
-        var level = new FilteredElementCollector(doc).OfClass(typeof(Level))
-            .Cast<Level>().FirstOrDefault(l => l.Name.Equals(levelName, StringComparison.OrdinalIgnoreCase))
-            ?? throw new McpException($"Level '{levelName}' not found.");
-
-        var viewFamilyType = new FilteredElementCollector(doc).OfClass(typeof(ViewFamilyType))
-            .Cast<ViewFamilyType>().FirstOrDefault(vft => vft.ViewFamily == ViewFamily.FloorPlan)
-            ?? throw new McpException("No FloorPlan view family type found.");
-
-        using var tx = new Transaction(doc, "Create Floor Plan");
+        View view;
+        using var tx = new Transaction(doc, "MCP: revit_create_view");
         tx.Start();
-        var viewPlan = ViewPlan.Create(doc, viewFamilyType.Id, level.Id);
-        viewPlan.Name = string.IsNullOrEmpty(newName) ? $"Auto-Floor Plan - {level.Name}" : newName;
-        tx.Commit();
 
-        RevitContext.ActiveUiDocument?.RequestViewChange(viewPlan);
-        return new { elementId = viewPlan.Id.ToValue().ToString() };
+        view = normalizedType switch
+        {
+            "floor_plan" => CreateFloorPlanView(doc, levelName, viewName, templateName),
+            "section" => CreateSectionView(doc, min, max, directionAngle, depth, viewName),
+            "3d" => Create3DView(doc, viewName, templateName, isBoundingBox),
+            _ => throw new McpException($"Unsupported view type '{viewType}'. Use floor_plan, section, or 3d."),
+        };
+
+        tx.Commit();
+        return new { viewId = view.Id.ToValue(), viewName = view.Name };
     }
 
-    [McpServerTool(Name = "revit_create_floor_plan_templated", Title = "Create Floor Plan with Template", ReadOnly = false)]
-    [Description("Creates a floor plan view for a level and applies a view template to it.")]
-    public static object CreateFloorPlanTemplated(
-        [Description("Level name")] string levelName,
-        [Description("View template name (optional)")] string viewTemplateName = "")
+    [McpServerTool(Name = "revit_create_sheet", Title = "Create Sheet", ReadOnly = false)]
+    [Description("Creates a new drawing sheet with an optional title block.")]
+    public static object CreateSheet(
+        [Description("Title block family type ID (defaults to first available)")] long? titleBlockId = null)
     {
         var doc = RevitContext.ActiveDocument ?? throw new McpException("No active document.");
 
-        var level = new FilteredElementCollector(doc).OfClass(typeof(Level))
-            .Cast<Level>().FirstOrDefault(l => l.Name.Equals(levelName, StringComparison.OrdinalIgnoreCase))
-            ?? throw new McpException($"Level '{levelName}' not found.");
+        var titleBlockElementId = ResolveTitleBlockId(doc, titleBlockId);
 
-        var viewFamilyType = new FilteredElementCollector(doc).OfClass(typeof(ViewFamilyType))
-            .Cast<ViewFamilyType>().FirstOrDefault(vft => vft.ViewFamily == ViewFamily.FloorPlan)
-            ?? throw new McpException("No FloorPlan view family type found.");
+        using var tx = new Transaction(doc, "MCP: revit_create_sheet");
+        tx.Start();
+        var sheet = ViewSheet.Create(doc, titleBlockElementId);
+        tx.Commit();
 
-        View? template = null;
-        if (!string.IsNullOrEmpty(viewTemplateName))
+        return new { sheetId = sheet.Id.ToValue(), sheetNumber = sheet.SheetNumber };
+    }
+
+    [McpServerTool(Name = "revit_place_on_sheet", Title = "Place on Sheet", ReadOnly = false)]
+    [Description("Places a view or schedule onto a sheet.")]
+    public static object PlaceOnSheet(
+        [Description("Sheet element ID")] long sheetId,
+        [Description("View or schedule element ID")] long viewOrScheduleId,
+        [Description("Position on sheet [x, y] in feet")] double[]? position = null)
+    {
+        if (position is not null && position.Length < 2)
+            throw new McpException("position must have at least 2 values [x, y].");
+
+        var doc = RevitContext.ActiveDocument ?? throw new McpException("No active document.");
+        var sheet = doc.GetElement(sheetId.ToElementId()) as ViewSheet
+            ?? throw new McpException($"Sheet {sheetId} not found.");
+
+        var element = doc.GetElement(viewOrScheduleId.ToElementId())
+            ?? throw new McpException($"Element {viewOrScheduleId} not found.");
+
+        var placement = position is { Length: >= 2 }
+            ? new XYZ(position[0], position[1], 0.0)
+            : XYZ.Zero;
+
+        using var tx = new Transaction(doc, "MCP: revit_place_on_sheet");
+        tx.Start();
+
+        long viewportId;
+        if (element is ViewSchedule schedule)
         {
-            template = new FilteredElementCollector(doc).OfClass(typeof(View))
-                .Cast<View>().FirstOrDefault(v => v.IsTemplate && v.Name.Equals(viewTemplateName, StringComparison.OrdinalIgnoreCase)
-                    && v.ViewType == ViewType.FloorPlan)
-                ?? throw new McpException($"View template '{viewTemplateName}' not found or is not a FloorPlan template.");
+            var instance = ScheduleSheetInstance.Create(doc, sheet.Id, schedule.Id, placement);
+            viewportId = instance.Id.ToValue();
+        }
+        else if (element is View view)
+        {
+            if (view.IsTemplate)
+                throw new McpException("Cannot place a template view on a sheet.");
+            var viewport = Viewport.Create(doc, sheet.Id, view.Id, placement);
+            viewportId = viewport.Id.ToValue();
+        }
+        else
+        {
+            throw new McpException($"Element {viewOrScheduleId} is not a view or schedule.");
         }
 
-        using var tx = new Transaction(doc, "Create Floor Plan with Template");
-        tx.Start();
-        var viewPlan = ViewPlan.Create(doc, viewFamilyType.Id, level.Id);
-        viewPlan.Name = template is not null
-            ? $"Floor Plan - {level.Name} ({template.Name})"
-            : $"Auto-Floor Plan - {level.Name}";
-        if (template is not null)
-            viewPlan.ViewTemplateId = template.Id;
         tx.Commit();
-
-        RevitContext.ActiveView = viewPlan;
-        return new { elementId = viewPlan.Id.ToValue().ToString() };
+        RevitContext.ActiveUiDocument?.RequestViewChange(sheet);
+        return new { viewportId };
     }
 
-    [McpServerTool(Name = "revit_create_section", Title = "Create Section View", ReadOnly = false)]
-    [Description("Creates a section view defined by a bounding box and view direction angle.")]
-    public static object CreateSection(
-        [Description("Minimum X of bounding box")] double minX,
-        [Description("Minimum Y of bounding box")] double minY,
-        [Description("Minimum Z of bounding box")] double minZ,
-        [Description("Maximum X of bounding box")] double maxX,
-        [Description("Maximum Y of bounding box")] double maxY,
-        [Description("Maximum Z of bounding box")] double maxZ,
-        [Description("View direction angle in degrees (0=North/+Y, 90=West/-X)")] double viewDirectionAngle,
-        [Description("Custom view name (optional)")] string? viewName = null,
-        [Description("Section depth (optional, defaults to width)")] double? depth = null)
+    [McpServerTool(Name = "revit_apply_view_template", Title = "Apply View Template", ReadOnly = false)]
+    [Description("Applies a named view template to a view, or detaches when templateName is null.")]
+    public static object ApplyViewTemplate(
+        [Description("Target view element ID")] long viewId,
+        [Description("View template name (null to detach)")] string? templateName = null)
     {
+        var doc = RevitContext.ActiveDocument ?? throw new McpException("No active document.");
+        var view = doc.GetElement(viewId.ToElementId()) as View
+            ?? throw new McpException($"View {viewId} not found.");
+        if (view.IsTemplate)
+            throw new McpException("Cannot apply a template to a template view.");
+
+        using var tx = new Transaction(doc, "MCP: revit_apply_view_template");
+        tx.Start();
+
+        if (string.IsNullOrWhiteSpace(templateName))
+        {
+            view.ViewTemplateId = ElementId.InvalidElementId;
+            tx.Commit();
+            return new { applied = false };
+        }
+
+        var template = FindViewTemplate(doc, templateName, view.ViewType)
+            ?? throw new McpException($"View template '{templateName}' not found.");
+
+        try
+        {
+            view.ViewTemplateId = template.Id;
+            tx.Commit();
+            return new { applied = true };
+        }
+        catch (Exception ex)
+        {
+            if (tx.HasStarted()) tx.RollBack();
+            throw new McpException($"Failed to apply view template: {ex.Message}");
+        }
+    }
+
+    [McpServerTool(Name = "revit_list_views", Title = "List Views", ReadOnly = true)]
+    [Description("Lists views and optionally sheets and templates with metadata.")]
+    public static object ListViews(
+        [Description("Include drawing sheets in the result")] bool? includeSheets = null,
+        [Description("Include view templates in the result")] bool? includeTemplates = null)
+    {
+        var doc = RevitContext.ActiveDocument ?? throw new McpException("No active document.");
+        var includeSheetViews = includeSheets ?? false;
+        var includeTemplateViews = includeTemplates ?? false;
+
+        var views = new FilteredElementCollector(doc).OfClass(typeof(View))
+            .Cast<View>()
+            .Where(v => ShouldIncludeView(v, includeSheetViews, includeTemplateViews))
+            .OrderBy(v => v.Name, StringComparer.OrdinalIgnoreCase)
+            .Select(v => new
+            {
+                id = v.Id.ToValue(),
+                name = v.Name,
+                type = GetViewListType(v),
+                level = GetViewLevelName(doc, v),
+                isTemplate = v.IsTemplate,
+            })
+            .ToList();
+
+        return new { views };
+    }
+
+    [McpServerTool(Name = "revit_activate_view", Title = "Activate View", ReadOnly = false)]
+    [Description("Activates (opens) a view in the Revit UI.")]
+    public static object ActivateView(
+        [Description("View element ID")] long viewId)
+    {
+        var doc = RevitContext.ActiveDocument ?? throw new McpException("No active document.");
+        var uiDoc = RevitContext.ActiveUiDocument ?? throw new McpException("No active UI document.");
+        var view = doc.GetElement(viewId.ToElementId()) as View
+            ?? throw new McpException($"View {viewId} not found.");
+        if (view.IsTemplate)
+            throw new McpException("Cannot activate a template view.");
+
+        uiDoc.ActiveView = view;
+        return new { activated = true };
+    }
+
+    private static string NormalizeViewType(string viewType)
+    {
+        if (string.IsNullOrWhiteSpace(viewType))
+            throw new McpException("viewType is required.");
+
+        var normalized = viewType.Trim().ToLowerInvariant().Replace(" ", "_");
+        return normalized switch
+        {
+            "floorplan" or "floor-plan" => "floor_plan",
+            "three_d" or "three-d" => "3d",
+            _ => normalized,
+        };
+    }
+
+    private static ViewPlan CreateFloorPlanView(
+        Document doc,
+        string? levelName,
+        string? viewName,
+        string? templateName)
+    {
+        if (string.IsNullOrWhiteSpace(levelName))
+            throw new McpException("levelName is required for floor_plan views.");
+
+        var level = new FilteredElementCollector(doc).OfClass(typeof(Level))
+            .Cast<Level>()
+            .FirstOrDefault(l => l.Name.Equals(levelName, StringComparison.OrdinalIgnoreCase))
+            ?? throw new McpException($"Level '{levelName}' not found.");
+
+        var viewFamilyType = GetViewFamilyType(doc, ViewFamily.FloorPlan)
+            ?? throw new McpException("No FloorPlan view family type found.");
+
+        var viewPlan = ViewPlan.Create(doc, viewFamilyType.Id, level.Id);
+        viewPlan.Name = string.IsNullOrWhiteSpace(viewName)
+            ? $"Floor Plan - {level.Name}"
+            : viewName;
+
+        if (!string.IsNullOrWhiteSpace(templateName))
+        {
+            var template = FindViewTemplate(doc, templateName, ViewType.FloorPlan)
+                ?? throw new McpException($"View template '{templateName}' not found or is not a FloorPlan template.");
+            viewPlan.ViewTemplateId = template.Id;
+        }
+
+        return viewPlan;
+    }
+
+    private static ViewSection CreateSectionView(
+        Document doc,
+        double[]? min,
+        double[]? max,
+        double? directionAngle,
+        double? depth,
+        string? viewName)
+    {
+        if (min is null || min.Length < 3)
+            throw new McpException("min must have 3 values [x, y, z] for section views.");
+        if (max is null || max.Length < 3)
+            throw new McpException("max must have 3 values [x, y, z] for section views.");
+        if (!directionAngle.HasValue)
+            throw new McpException("directionAngle is required for section views.");
+
+        var minX = min[0];
+        var minY = min[1];
+        var minZ = min[2];
+        var maxX = max[0];
+        var maxY = max[1];
+        var maxZ = max[2];
+
         if (maxX <= minX || maxY <= minY || maxZ <= minZ)
             throw new McpException("Max values must be greater than min values.");
         if (depth.HasValue && depth.Value <= 0)
             throw new McpException("Depth must be positive.");
 
-        var doc = RevitContext.ActiveDocument ?? throw new McpException("No active document.");
-
-        var viewFamilyType = new FilteredElementCollector(doc).OfClass(typeof(ViewFamilyType))
-            .Cast<ViewFamilyType>().FirstOrDefault(vft => vft.ViewFamily == ViewFamily.Section)
+        var viewFamilyType = GetViewFamilyType(doc, ViewFamily.Section)
             ?? throw new McpException("No Section view family type found.");
 
-        var angleRad = viewDirectionAngle * Math.PI / 180.0;
+        var angleRad = directionAngle.Value * Math.PI / 180.0;
         var center = new XYZ((minX + maxX) / 2, (minY + maxY) / 2, (minZ + maxZ) / 2);
         var viewDir = new XYZ(-Math.Sin(angleRad), Math.Cos(angleRad), 0).Normalize();
         var rightDir = new XYZ(Math.Cos(angleRad), Math.Sin(angleRad), 0).Normalize();
@@ -115,315 +279,113 @@ public static class ViewSheetTools
         var height = maxZ - minZ;
         var sectionDepth = depth ?? width;
 
-        var bbXyz = new BoundingBoxXYZ
+        var boundingBox = new BoundingBoxXYZ
         {
             Transform = transform,
             Min = new XYZ(-width / 2, -height / 2, 0),
             Max = new XYZ(width / 2, height / 2, sectionDepth),
         };
 
-        using var tx = new Transaction(doc, "Create Section");
-        tx.Start();
-        var viewSection = ViewSection.CreateSection(doc, viewFamilyType.Id, bbXyz);
-        viewSection.Name = viewName ?? $"Section - {DateTime.Now:yyyy-MM-dd HH-mm-ss}";
-        tx.Commit();
-
-        return new { elementId = viewSection.Id.ToValue().ToString() };
+        var viewSection = ViewSection.CreateSection(doc, viewFamilyType.Id, boundingBox);
+        viewSection.Name = string.IsNullOrWhiteSpace(viewName)
+            ? $"Section - {DateTime.Now:yyyy-MM-dd HH-mm-ss}"
+            : viewName;
+        return viewSection;
     }
 
-    [McpServerTool(Name = "revit_create_sheet", Title = "Create Sheet", ReadOnly = false)]
-    [Description("Creates a new drawing sheet with an optional title block.")]
-    public static object CreateSheet(
-        [Description("Title block family type ID (-1 for default)")] long titleBlockId = -1L)
+    private static View3D Create3DView(
+        Document doc,
+        string? viewName,
+        string? templateName,
+        bool? isBoundingBox)
     {
-        var doc = RevitContext.ActiveDocument ?? throw new McpException("No active document.");
+        var viewFamilyType = GetViewFamilyType(doc, ViewFamily.ThreeDimensional)
+            ?? throw new McpException("No 3D view family type found.");
 
-        ElementId titleBlockElementId;
-        if (titleBlockId > 0)
+        var view3d = isBoundingBox == false
+            ? View3D.CreatePerspective(doc, viewFamilyType.Id)
+            : View3D.CreateIsometric(doc, viewFamilyType.Id);
+
+        view3d.Name = string.IsNullOrWhiteSpace(viewName)
+            ? $"3D View - {DateTime.Now:yyyy-MM-dd HH-mm-ss}"
+            : viewName;
+
+        if (!string.IsNullOrWhiteSpace(templateName))
         {
-            var element = doc.GetElement(titleBlockId.ToElementId());
-            titleBlockElementId = element is FamilySymbol ? titleBlockId.ToElementId() : ElementId.InvalidElementId;
+            var template = FindViewTemplate(doc, templateName, ViewType.ThreeD)
+                ?? throw new McpException($"View template '{templateName}' not found or is not a 3D template.");
+            view3d.ViewTemplateId = template.Id;
         }
-        else
+
+        return view3d;
+    }
+
+    private static ElementId ResolveTitleBlockId(Document doc, long? titleBlockId)
+    {
+        if (titleBlockId is > 0)
         {
-            titleBlockElementId = doc.GetDefaultFamilyTypeId(new ElementId(BuiltInCategory.OST_TitleBlocks));
+            var element = doc.GetElement(titleBlockId.Value.ToElementId());
+            if (element is FamilySymbol)
+                return titleBlockId.Value.ToElementId();
+            throw new McpException($"Title block {titleBlockId} not found.");
         }
 
-        using var tx = new Transaction(doc, "Create Sheet");
-        tx.Start();
-        var sheet = ViewSheet.Create(doc, titleBlockElementId);
-        tx.Commit();
+        var defaultId = doc.GetDefaultFamilyTypeId(new ElementId(BuiltInCategory.OST_TitleBlocks));
+        if (defaultId != ElementId.InvalidElementId)
+            return defaultId;
 
-        return new { sheetId = sheet.Id.ToValue().ToString() };
-    }
-
-    [McpServerTool(Name = "revit_place_view_on_sheet", Title = "Place View on Sheet", ReadOnly = false)]
-    [Description("Places a view onto a sheet as a viewport at the specified position.")]
-    public static object PlaceViewOnSheet(
-        [Description("Sheet element ID")] long sheetId,
-        [Description("View element ID")] long viewId,
-        [Description("Position on sheet [X, Y, Z] (Z forced to 0)")] double[] viewPosition)
-    {
-        if (viewPosition.Length < 3) throw new McpException("viewPosition must have at least 3 values [X, Y, Z].");
-
-        var doc = RevitContext.ActiveDocument ?? throw new McpException("No active document.");
-        var sheet = doc.GetElement(sheetId.ToElementId()) as ViewSheet
-            ?? throw new McpException($"Sheet {sheetId} not found.");
-        var view = doc.GetElement(viewId.ToElementId()) as View
-            ?? throw new McpException($"View {viewId} not found.");
-
-        var position = new XYZ(viewPosition[0], viewPosition[1], 0.0);
-
-        using var tx = new Transaction(doc, "Place View on Sheet");
-        tx.Start();
-        var viewport = Viewport.Create(doc, sheet.Id, view.Id, position);
-        tx.Commit();
-
-        RevitContext.ActiveUiDocument?.RequestViewChange(sheet);
-        return new { viewportId = viewport.Id.ToValue().ToString() };
-    }
-
-    [McpServerTool(Name = "revit_apply_view_template", Title = "Apply View Template", ReadOnly = false)]
-    [Description("Applies a named view template to a view.")]
-    public static object ApplyViewTemplate(
-        [Description("Target view element ID")] long viewId,
-        [Description("View template name")] string viewTemplateName)
-    {
-        var doc = RevitContext.ActiveDocument ?? throw new McpException("No active document.");
-        var view = doc.GetElement(viewId.ToElementId()) as View
-            ?? throw new McpException($"View {viewId} not found.");
-        if (view.IsTemplate) throw new McpException("Cannot apply a template to a template view.");
-
-        var template = new FilteredElementCollector(doc).OfClass(typeof(View))
-            .Cast<View>().FirstOrDefault(v => v.IsTemplate && v.Name.Equals(viewTemplateName, StringComparison.OrdinalIgnoreCase))
-            ?? throw new McpException($"View template '{viewTemplateName}' not found.");
-
-        using var tx = new Transaction(doc, "Apply View Template");
-        tx.Start();
-        try
-        {
-            view.ViewTemplateId = template.Id;
-            tx.Commit();
-            return new { result = $"Applied template '{viewTemplateName}' to view '{view.Name}'." };
-        }
-        catch (Exception ex)
-        {
-            if (tx.HasStarted()) tx.RollBack();
-            throw new McpException($"Failed to apply view template: {ex.Message}");
-        }
-    }
-
-    [McpServerTool(Name = "revit_detach_view_template", Title = "Detach View Template", ReadOnly = false)]
-    [Description("Removes the assigned view template from a view.")]
-    public static object DetachViewTemplate(
-        [Description("View element ID")] long viewId)
-    {
-        var doc = RevitContext.ActiveDocument ?? throw new McpException("No active document.");
-        var view = doc.GetElement(viewId.ToElementId()) as View
-            ?? throw new McpException($"View {viewId} not found.");
-
-        using var tx = new Transaction(doc, "Detach View Template");
-        tx.Start();
-        view.ViewTemplateId = ElementId.InvalidElementId;
-        tx.Commit();
-        return new { status = "Success" };
-    }
-
-    [McpServerTool(Name = "revit_activate_view", Title = "Activate View", ReadOnly = false)]
-    [Description("Activates (opens) a view in the Revit UI.")]
-    public static object ActivateView(
-        [Description("View element ID")] long viewId)
-    {
-        var doc = RevitContext.ActiveDocument ?? throw new McpException("No active document.");
-        var view = doc.GetElement(viewId.ToElementId()) as View
-            ?? throw new McpException($"View {viewId} not found.");
-        if (view.IsTemplate) throw new McpException("Cannot activate a template view.");
-
-        RevitContext.ActiveView = view;
-        return new { outcome = "Success", viewId = view.Id.ToValue(), viewName = view.Name, viewType = view.ViewType.ToString() };
-    }
-
-    [McpServerTool(Name = "revit_list_views", Title = "List Views", ReadOnly = true)]
-    [Description("Lists all non-template views in the document.")]
-    public static object ListViews()
-    {
-        var doc = RevitContext.ActiveDocument ?? throw new McpException("No active document.");
-        var activeViewId = doc.ActiveView?.Id;
-
-        var views = new FilteredElementCollector(doc).OfClass(typeof(View))
-            .Cast<View>()
-            .Where(v => !v.IsTemplate
-                && v is not ViewSchedule
-                && v is not ViewSheet
-                && v.ViewType != ViewType.Undefined
-                && v.ViewType != ViewType.Internal
-                && v.ViewType != ViewType.DrawingSheet
-                && v.Name is not null)
-            .OrderBy(v => v.Name)
-            .Select(v => new
-            {
-                Id = v.Id.ToValue(),
-                Name = v.Name,
-                Type = v.ViewType.ToString(),
-                IsActive = activeViewId is not null && v.Id == activeViewId,
-            })
-            .ToList();
-
-        return new { views = JsonSerializer.Serialize(views) };
-    }
-
-    [McpServerTool(Name = "revit_list_sheets", Title = "List Sheets", ReadOnly = true)]
-    [Description("Lists all drawing sheets in the document.")]
-    public static object ListSheets()
-    {
-        var doc = RevitContext.ActiveDocument ?? throw new McpException("No active document.");
-
-        var sheets = new FilteredElementCollector(doc).OfClass(typeof(ViewSheet))
-            .Cast<ViewSheet>()
-            .Select(s => new { Id = s.Id.ToValue(), Name = s.Name, Number = s.SheetNumber })
-            .ToList();
-
-        return new { sheets = JsonSerializer.Serialize(sheets) };
-    }
-
-    [McpServerTool(Name = "revit_list_view_templates", Title = "List View Templates", ReadOnly = true)]
-    [Description("Lists all view templates in the document.")]
-    public static object ListViewTemplates()
-    {
-        var doc = RevitContext.ActiveDocument ?? throw new McpException("No active document.");
-
-        var templates = new FilteredElementCollector(doc).OfClass(typeof(View))
-            .Cast<View>()
-            .Where(v => v.IsTemplate)
-            .OrderBy(v => v.ViewType.ToString()).ThenBy(v => v.Name)
-            .Select(v => new
-            {
-                Id = v.Id.ToValue(),
-                Name = v.Name,
-                ViewType = v.ViewType.ToString(),
-                ViewFamily = GetViewFamilyName(v),
-                Scale = v.Scale,
-                DetailLevel = v.DetailLevel.ToString(),
-                DisplayStyle = v.DisplayStyle.ToString(),
-            })
-            .ToList();
-
-        return new { templates = JsonSerializer.Serialize(templates) };
-    }
-
-    [McpServerTool(Name = "revit_list_viewports", Title = "List Viewports on Sheet", ReadOnly = true)]
-    [Description("Lists all viewports placed on a sheet.")]
-    public static object ListViewports(
-        [Description("Sheet element ID")] long sheetId)
-    {
-        var doc = RevitContext.ActiveDocument ?? throw new McpException("No active document.");
-        var sheet = doc.GetElement(sheetId.ToElementId()) as ViewSheet
-            ?? throw new McpException($"Sheet {sheetId} not found.");
-
-        var viewports = sheet.GetAllViewports()
-            .Select(vpId =>
-            {
-                var vp = doc.GetElement(vpId) as Viewport;
-                var center = vp?.GetBoxCenter();
-                return new
-                {
-                    ViewportId = vpId.ToValue(),
-                    ViewId = vp?.ViewId.ToValue(),
-                    Center = center is not null ? new { X = center.X, Y = center.Y } : null,
-                };
-            })
-            .ToList();
-
-        return new { viewports = JsonSerializer.Serialize(viewports) };
-    }
-
-    [McpServerTool(Name = "revit_list_placed_views", Title = "List Placed Views on Sheet", ReadOnly = true)]
-    [Description("Lists all views placed on a sheet with their names and types.")]
-    public static object ListPlacedViews(
-        [Description("Sheet element ID")] long sheetId)
-    {
-        var doc = RevitContext.ActiveDocument ?? throw new McpException("No active document.");
-        var sheet = doc.GetElement(sheetId.ToElementId()) as ViewSheet
-            ?? throw new McpException($"Sheet {sheetId} not found.");
-
-        var placedViews = sheet.GetAllViewports()
-            .Select(vpId =>
-            {
-                var vp = doc.GetElement(vpId) as Viewport;
-                var view = vp is not null ? doc.GetElement(vp.ViewId) as View : null;
-                return new
-                {
-                    ViewportId = vpId.ToValue(),
-                    ViewId = vp?.ViewId.ToValue(),
-                    ViewName = view?.Name,
-                    ViewType = view?.ViewType.ToString(),
-                };
-            })
-            .ToList();
-
-        return new { placedViews = JsonSerializer.Serialize(placedViews) };
-    }
-
-    [McpServerTool(Name = "revit_get_titleblock", Title = "Get Sheet Title Block", ReadOnly = true)]
-    [Description("Returns the title block element ID for a given sheet.")]
-    public static object GetTitleblock(
-        [Description("Sheet element ID")] long sheetId)
-    {
-        var doc = RevitContext.ActiveDocument ?? throw new McpException("No active document.");
-        var sheet = doc.GetElement(sheetId.ToElementId()) as ViewSheet
-            ?? throw new McpException($"Sheet {sheetId} not found.");
-
-        var titleBlock = new FilteredElementCollector(doc, sheet.Id)
+        var firstTitleBlock = new FilteredElementCollector(doc)
             .OfCategory(BuiltInCategory.OST_TitleBlocks)
-            .FirstElement();
-        return new { titleBlockId = titleBlock?.Id.ToValue().ToString() ?? "-1" };
+            .OfClass(typeof(FamilySymbol))
+            .Cast<FamilySymbol>()
+            .FirstOrDefault();
+
+        if (firstTitleBlock is null)
+            throw new McpException("No title block family types found.");
+
+        return firstTitleBlock.Id;
     }
 
-    [McpServerTool(Name = "revit_set_sheet_number", Title = "Set Sheet Number", ReadOnly = false)]
-    [Description("Sets the sheet number for a drawing sheet.")]
-    public static object SetSheetNumber(
-        [Description("Sheet element ID")] long sheetId,
-        [Description("New sheet number")] string sheetNumber)
-    {
-        var doc = RevitContext.ActiveDocument ?? throw new McpException("No active document.");
-        var sheet = doc.GetElement(sheetId.ToElementId()) as ViewSheet
-            ?? throw new McpException($"Sheet {sheetId} not found.");
+    private static ViewFamilyType? GetViewFamilyType(Document doc, ViewFamily family) =>
+        new FilteredElementCollector(doc).OfClass(typeof(ViewFamilyType))
+            .Cast<ViewFamilyType>()
+            .FirstOrDefault(vft => vft.ViewFamily == family);
 
-        using var tx = new Transaction(doc, "Set Sheet Number");
-        tx.Start();
-        sheet.SheetNumber = sheetNumber;
-        tx.Commit();
-        return new { };
+    private static View? FindViewTemplate(Document doc, string templateName, ViewType viewType) =>
+        new FilteredElementCollector(doc).OfClass(typeof(View))
+            .Cast<View>()
+            .FirstOrDefault(v => v.IsTemplate
+                && v.Name.Equals(templateName, StringComparison.OrdinalIgnoreCase)
+                && v.ViewType == viewType);
+
+    private static bool ShouldIncludeView(View view, bool includeSheets, bool includeTemplates)
+    {
+        if (view.ViewType is ViewType.Undefined or ViewType.Internal)
+            return false;
+        if (view is ViewSchedule)
+            return false;
+        if (view.IsTemplate)
+            return includeTemplates;
+        if (view is ViewSheet)
+            return includeSheets;
+        return view.Name is not null;
     }
 
-    [McpServerTool(Name = "revit_rename_sheet", Title = "Rename Sheet", ReadOnly = false)]
-    [Description("Renames a drawing sheet.")]
-    public static object RenameSheet(
-        [Description("Sheet element ID")] long sheetId,
-        [Description("New sheet name")] string newName)
+    private static string GetViewListType(View view) => view switch
     {
-        var doc = RevitContext.ActiveDocument ?? throw new McpException("No active document.");
-        var sheet = doc.GetElement(sheetId.ToElementId()) as ViewSheet
-            ?? throw new McpException($"Sheet {sheetId} not found.");
-
-        using var tx = new Transaction(doc, "Rename Sheet");
-        tx.Start();
-        sheet.Name = newName;
-        tx.Commit();
-        return new { };
-    }
-
-    private static string GetViewFamilyName(View view) => view.ViewType switch
-    {
-        ViewType.FloorPlan => "FloorPlan",
-        ViewType.CeilingPlan => "CeilingPlan",
-        ViewType.Elevation => "Elevation",
-        ViewType.ThreeD => "3D",
-        ViewType.Section => "Section",
-        ViewType.Detail => "Detail",
-        ViewType.DraftingView => "Drafting",
-        ViewType.Legend => "Legend",
-        ViewType.Schedule => "Schedule",
+        ViewSheet => "Sheet",
+        _ when view.IsTemplate => "Template",
         _ => view.ViewType.ToString(),
     };
+
+    private static string? GetViewLevelName(Document doc, View view)
+    {
+        if (view is ViewPlan viewPlan && viewPlan.GenLevel is not null)
+            return viewPlan.GenLevel.Name;
+
+        if (view.LevelId != ElementId.InvalidElementId)
+            return (doc.GetElement(view.LevelId) as Level)?.Name;
+
+        return null;
+    }
 }

@@ -1,23 +1,39 @@
+using RevitMcpToolSet.Data;
+
 namespace RevitMcpToolSet.Utilities;
 
 internal class OperationOutcome
 {
-    private readonly List<(bool success, string message, long elementId)> _results = [];
+    private int _successCount;
+    private readonly List<ToolError> _failures = [];
+
+    public void RecordSuccess() => _successCount++;
 
     public void Record(bool success, string message, long elementId)
-        => _results.Add((success, message, elementId));
-
-    public object Summarize(int maxErrorsToShow = 5)
     {
-        var successes = _results.Count(r => r.success);
-        var failures = _results.Where(r => !r.success).ToList();
-        return new
-        {
-            outcome = failures.Count == 0 ? "Success" : "Partial",
-            successCount = successes,
-            failureCount = failures.Count,
-            failures = failures.Take(maxErrorsToShow).Select(f => new { f.elementId, f.message }),
-            additionalFailures = Math.Max(0, failures.Count - maxErrorsToShow),
-        };
+        if (success)
+            _successCount++;
+        else
+            _failures.Add(ToolErrorHelper.FromMessage(message, elementId));
     }
+
+    public void RecordFailure(long elementId, Exception ex)
+        => _failures.Add(ToolErrorHelper.FromException(ex, elementId));
+
+    public void RecordFailure(long elementId, string message)
+        => _failures.Add(ToolErrorHelper.FromMessage(message, elementId));
+
+    public void RecordFailure(ToolError error)
+        => _failures.Add(error);
+
+    public object Summarize()
+        => new
+        {
+            success_count = _successCount,
+            failure_count = _failures.Count,
+            failures = _failures.Count > 0 ? _failures : null,
+        };
+
+    public int SuccessCount => _successCount;
+    public IReadOnlyList<ToolError> Failures => _failures;
 }

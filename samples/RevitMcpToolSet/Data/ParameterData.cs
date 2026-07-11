@@ -1,25 +1,25 @@
 using System.ComponentModel;
+using System.Text.Json.Serialization;
+
 namespace RevitMcpToolSet.Data;
 
-public enum MatchOperator
-{
-    Equals,
-    Contains,
-    StartsWith,
-    EndsWith,
-    GreaterThan,
-    LessThan,
-}
-
+/// <summary>
+/// Single parameter write for batch updates in <c>revit_write_parameters</c>.
+/// </summary>
 public class ParameterUpdate
 {
-    [Description("Parameter name")] public string ParameterName { get; set; } = "";
-    [Description("New value")] public string Value { get; set; } = "";
-}
+    [Description("Parameter name as shown in Revit Properties.")]
+    [JsonPropertyName("param_name")]
+    public string ParamName { get; set; } = "";
 
-public class ParameterCondition
-{
-    [Description("Parameter name to filter")] public string ParameterName { get; set; } = "";
-    [Description("Comparison type")] public MatchOperator ComparisonType { get; set; }
-    [Description("Value to compare")] public string Value { get; set; } = "";
+    [Description("New parameter value (string representation).")]
+    [JsonPropertyName("value")]
+    public string Value { get; set; } = "";
+
+    [JsonIgnore]
+    public string ParameterName
+    {
+        get => ParamName;
+        set => ParamName = value;
+    }
 }

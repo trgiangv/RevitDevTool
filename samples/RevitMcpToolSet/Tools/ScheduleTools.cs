@@ -4,53 +4,107 @@ using ModelContextProtocol.Server;
 using Nice3point.Revit.Toolkit;
 using RevitMcpToolSet.Data;
 using RevitMcpToolSet.Utilities;
+
 namespace RevitMcpToolSet.Tools;
 
 [McpServerToolType]
+[Description("Tools for creating and configuring schedules in Revit.")]
 public static class ScheduleTools
 {
     [McpServerTool(Name = "revit_create_schedule", Title = "Create Schedule", ReadOnly = false)]
-    [Description("Creates a new schedule for a category and adds specified fields.")]
+    [Description("Creates a new schedule and applies fields, sorting, grouping, and filters.")]
     public static object CreateSchedule(
-        [Description("Category name for the schedule")] string categoryName,
-        [Description("Field names to add to the schedule")] string[]? fieldNames = null)
+        [Description("Schedule configuration")] ScheduleConfig config)
     {
-        if (string.IsNullOrWhiteSpace(categoryName)) throw new McpException("Category name cannot be empty.");
+        if (string.IsNullOrWhiteSpace(config.CategoryName))
+            throw new McpException("config.categoryName is required.");
 
         var doc = RevitContext.ActiveDocument ?? throw new McpException("No active document.");
+        var category = FindCategory(doc, config.CategoryName)
+            ?? throw new McpException($"Category '{config.CategoryName}' not found.");
 
-        Category? category = null;
-        foreach (Category cat in doc.Settings.Categories)
-        {
-            if (cat.Name.Equals(categoryName, StringComparison.OrdinalIgnoreCase))
-            {
-                category = cat;
-                break;
-            }
-        }
-        if (category is null) throw new McpException($"Category '{categoryName}' not found.");
-
-        using var tx = new Transaction(doc, "Create Schedule");
+        using var tx = new Transaction(doc, "MCP: revit_create_schedule");
         tx.Start();
         try
         {
             var schedule = ViewSchedule.CreateSchedule(doc, category.Id);
-            schedule.Name = $"{categoryName} Schedule {DateTime.Now:yyyy-MM-dd_HH-mm-ss}";
+            schedule.Name = string.IsNullOrWhiteSpace(config.ScheduleName)
+                ? $"{config.CategoryName} Schedule {DateTime.Now:yyyy-MM-dd_HH-mm-ss}"
+                : config.ScheduleName;
 
-            if (fieldNames is { Length: > 0 })
+            var schedulableFields = schedule.Definition.GetSchedulableFields().ToList();
+            foreach (var fieldName in config.Fields)
             {
-                var schedulableFields = schedule.Definition.GetSchedulableFields();
-                foreach (var fieldName in fieldNames)
+                if (string.IsNullOrWhiteSpace(fieldName))
+                    continue;
+
+                var schedulableField = schedulableFields.FirstOrDefault(f =>
+                    f.GetName(doc).Equals(fieldName, StringComparison.OrdinalIgnoreCase));
+                if (schedulableField is not null)
+                    schedule.Definition.AddField(schedulableField);
+            }
+
+            foreach (var sortRule in config.SortRules)
+            {
+                if (string.IsNullOrWhiteSpace(sortRule.Field))
+                    continue;
+
+                var field = ScheduleUtils.FindScheduleField(schedule.Definition, sortRule.Field)
+                    ?? throw new McpException($"Sort field '{sortRule.Field}' not found in schedule.");
+                schedule.Definition.AddSortGroupField(
+                    new ScheduleSortGroupField(field.FieldId, sortRule.Direction));
+            }
+
+            foreach (var groupRule in config.GroupRules)
+            {
+                if (string.IsNullOrWhiteSpace(groupRule.Field))
+                    continue;
+
+                var field = ScheduleUtils.FindScheduleField(schedule.Definition, groupRule.Field)
+                    ?? throw new McpException($"Group field '{groupRule.Field}' not found in schedule.");
+                var sortGroupField = new ScheduleSortGroupField(field.FieldId, ScheduleSortOrder.Ascending)
                 {
-                    var sf = schedulableFields.FirstOrDefault(f =>
-                        f.GetName(doc).Equals(fieldName, StringComparison.OrdinalIgnoreCase));
-                    if (sf is not null)
-                        schedule.Definition.AddField(sf);
+                    ShowHeader = groupRule.ShowHeader,
+                    ShowFooter = groupRule.ShowFooter,
+                };
+                schedule.Definition.AddSortGroupField(sortGroupField);
+            }
+
+            foreach (var filterRule in config.FilterRules)
+            {
+                if (string.IsNullOrWhiteSpace(filterRule.Field))
+                    continue;
+
+                var field = ScheduleUtils.FindScheduleField(schedule.Definition, filterRule.Field)
+                    ?? throw new McpException($"Filter field '{filterRule.Field}' not found in schedule.");
+
+                var filterType = MapFilterType(filterRule.Operator);
+                ScheduleFilter scheduleFilter;
+                if (filterRule.IsNumeric)
+                {
+                    if (!double.TryParse(filterRule.Value, out var numericValue))
+                        throw new McpException($"Filter value '{filterRule.Value}' is not a valid numeric value.");
+                    scheduleFilter = new ScheduleFilter(field.FieldId, filterType, numericValue);
                 }
+                else
+                {
+                    scheduleFilter = new ScheduleFilter(field.FieldId, filterType, filterRule.Value);
+                }
+
+                schedule.Definition.AddFilter(scheduleFilter);
             }
 
             tx.Commit();
-            return new { status = "Success", scheduleId = schedule.Id.ToValue(), scheduleName = schedule.Name };
+            return new
+            {
+                scheduleId = schedule.Id.ToValue(),
+                fieldCount = schedule.Definition.GetFieldCount(),
+            };
+        }
+        catch (McpException)
+        {
+            if (tx.HasStarted()) tx.RollBack();
+            throw;
         }
         catch (Exception ex)
         {
@@ -59,67 +113,32 @@ public static class ScheduleTools
         }
     }
 
-    [McpServerTool(Name = "revit_list_schedules", Title = "List Schedules", ReadOnly = true)]
-    [Description("Returns all schedules in the document.")]
-    public static object GetAllSchedules()
-    {
-        var doc = RevitContext.ActiveDocument ?? throw new McpException("No active document.");
-
-        var schedules = new FilteredElementCollector(doc).OfClass(typeof(ViewSchedule))
-            .Cast<ViewSchedule>()
-            .Select(s => new { name = s.Name, id = s.Id.ToValue() })
-            .ToList();
-
-        return schedules.Count == 0
-            ? (object)new { message = "No schedules found in the document." }
-            : new { schedules };
-    }
-
-    [McpServerTool(Name = "revit_find_schedule", Title = "Find Schedule by Name", ReadOnly = true)]
-    [Description("Finds a schedule by name and returns its ID.")]
-    public static object GetScheduleByName(
-        [Description("Schedule name to find")] string scheduleName)
-    {
-        if (string.IsNullOrWhiteSpace(scheduleName)) throw new McpException("Schedule name cannot be empty.");
-
-        var doc = RevitContext.ActiveDocument ?? throw new McpException("No active document.");
-
-        var schedule = new FilteredElementCollector(doc).OfClass(typeof(ViewSchedule))
-            .Cast<ViewSchedule>()
-            .FirstOrDefault(s => s.Name.Equals(scheduleName, StringComparison.OrdinalIgnoreCase))
-            ?? throw new McpException($"Schedule with name '{scheduleName}' not found.");
-
-        return new { scheduleId = schedule.Id.ToValue() };
-    }
-
     [McpServerTool(Name = "revit_list_schedule_fields", Title = "List Schedulable Fields", ReadOnly = true)]
-    [Description("Returns all schedulable field names for a category.")]
-    public static object GetSchedulableFields(
+    [Description("Returns schedulable field names and types for a category.")]
+    public static object ListScheduleFields(
         [Description("Category name")] string categoryName)
     {
-        if (string.IsNullOrWhiteSpace(categoryName)) throw new McpException("Category name cannot be empty.");
+        if (string.IsNullOrWhiteSpace(categoryName))
+            throw new McpException("Category name cannot be empty.");
 
         var doc = RevitContext.ActiveDocument ?? throw new McpException("No active document.");
+        var category = FindCategory(doc, categoryName)
+            ?? throw new McpException($"Category '{categoryName}' not found.");
 
-        Category? category = null;
-        foreach (Category cat in doc.Settings.Categories)
-        {
-            if (cat.Name.Equals(categoryName, StringComparison.OrdinalIgnoreCase))
-            {
-                category = cat;
-                break;
-            }
-        }
-        if (category is null) throw new McpException($"Category '{categoryName}' not found.");
-
-        using var tx = new Transaction(doc, "Temporary Schedule for Field Discovery");
+        using var tx = new Transaction(doc, "MCP: revit_list_schedule_fields");
         tx.Start();
         try
         {
             var tempSchedule = ViewSchedule.CreateSchedule(doc, category.Id);
             var fields = tempSchedule.Definition.GetSchedulableFields()
-                .Select(f => f.GetName(doc))
-                .ToArray();
+                .Select(f => new
+                {
+                    name = f.GetName(doc),
+                    type = f.FieldType.ToString(),
+                })
+                .OrderBy(f => f.name, StringComparer.OrdinalIgnoreCase)
+                .ToList();
+
             return new { fields };
         }
         finally
@@ -128,184 +147,40 @@ public static class ScheduleTools
         }
     }
 
-    [McpServerTool(Name = "revit_sort_schedule", Title = "Sort Schedule", ReadOnly = false)]
-    [Description("Adds sort rules to an existing schedule.")]
-    public static object SortSchedule(
-        [Description("Schedule element ID")] long scheduleId,
-        [Description("Sort rule configurations")] ScheduleSortRule[] sortFields)
+    private static Category? FindCategory(Document doc, string categoryName)
     {
-        if (sortFields.Length == 0) throw new McpException("At least one sort field is required.");
-
-        var doc = RevitContext.ActiveDocument ?? throw new McpException("No active document.");
-        var schedule = doc.GetElement(scheduleId.ToElementId()) as ViewSchedule
-            ?? throw new McpException($"Schedule {scheduleId} not found.");
-
-        using var tx = new Transaction(doc, "Add Schedule Sorting");
-        tx.Start();
-        try
+        foreach (Category cat in doc.Settings.Categories)
         {
-            foreach (var sortInput in sortFields.OrderBy(s => s.SortOrder))
-            {
-                var field = ScheduleUtils.FindScheduleField(schedule.Definition, sortInput.FieldName)
-                    ?? throw new McpException($"Field '{sortInput.FieldName}' not found in schedule.");
-                var sortGroupField = new ScheduleSortGroupField(field.FieldId, sortInput.Direction);
-                schedule.Definition.AddSortGroupField(sortGroupField);
-            }
-            tx.Commit();
-            return new { status = "Success" };
+            if (cat.Name.Equals(categoryName, StringComparison.OrdinalIgnoreCase))
+                return cat;
         }
-        catch (Exception ex)
-        {
-            if (tx.HasStarted()) tx.RollBack();
-            throw new McpException($"Failed to add schedule sorting: {ex.Message}");
-        }
+
+        return null;
     }
 
-    [McpServerTool(Name = "revit_group_schedule", Title = "Group Schedule", ReadOnly = false)]
-    [Description("Adds grouping rules to an existing schedule.")]
-    public static object GroupSchedule(
-        [Description("Schedule element ID")] long scheduleId,
-        [Description("Group rule configurations")] ScheduleGroupRule[] groupFields)
+    private static ScheduleFilterType MapFilterType(string? operatorName)
     {
-        if (groupFields.Length == 0) throw new McpException("At least one group field is required.");
+        if (string.IsNullOrWhiteSpace(operatorName))
+            throw new McpException("Filter operator is required.");
 
-        var doc = RevitContext.ActiveDocument ?? throw new McpException("No active document.");
-        var schedule = doc.GetElement(scheduleId.ToElementId()) as ViewSchedule
-            ?? throw new McpException($"Schedule {scheduleId} not found.");
-
-        using var tx = new Transaction(doc, "Add Schedule Grouping");
-        tx.Start();
-        try
+        return operatorName.Trim().ToLowerInvariant().Replace(" ", "_") switch
         {
-            foreach (var groupInput in groupFields)
-            {
-                var field = ScheduleUtils.FindScheduleField(schedule.Definition, groupInput.FieldName)
-                    ?? throw new McpException($"Field '{groupInput.FieldName}' not found in schedule.");
-                var sortGroupField = new ScheduleSortGroupField(field.FieldId, ScheduleSortOrder.Ascending)
-                {
-                    ShowHeader = groupInput.ShowHeader,
-                    ShowFooter = groupInput.ShowFooter,
-                    ShowBlankLine = groupInput.ShowBlankLine,
-                };
-                schedule.Definition.AddSortGroupField(sortGroupField);
-            }
-            tx.Commit();
-            return new { status = "Success" };
-        }
-        catch (Exception ex)
-        {
-            if (tx.HasStarted()) tx.RollBack();
-            throw new McpException($"Failed to add schedule grouping: {ex.Message}");
-        }
-    }
-
-    [McpServerTool(Name = "revit_filter_schedule", Title = "Filter Schedule", ReadOnly = false)]
-    [Description("Adds filter conditions to an existing schedule.")]
-    public static object FilterSchedule(
-        [Description("Schedule element ID")] long scheduleId,
-        [Description("Filter rule configurations")] ScheduleFilterRule[] groupFields)
-    {
-        if (groupFields.Length == 0) throw new McpException("At least one filter is required.");
-
-        var doc = RevitContext.ActiveDocument ?? throw new McpException("No active document.");
-        var schedule = doc.GetElement(scheduleId.ToElementId()) as ViewSchedule
-            ?? throw new McpException($"Schedule {scheduleId} not found.");
-
-        var validFilterTypes = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
-        {
-            "Equal", "NotEqual", "Contains", "NotContains", "GreaterThan", "LessThan",
-            "GreaterThanOrEqual", "LessThanOrEqual", "BeginsWith", "EndsWith", "HasNoValue", "HasValue",
+            "equal" or "equals" => ScheduleFilterType.Equal,
+            "not_equal" or "not_equals" or "notequal" => ScheduleFilterType.NotEqual,
+            "contains" => ScheduleFilterType.Contains,
+            "not_contains" or "notcontains" => ScheduleFilterType.NotContains,
+            "greater_than" or "greaterthan" => ScheduleFilterType.GreaterThan,
+            "less_than" or "lessthan" => ScheduleFilterType.LessThan,
+            "greater_or_equal" or "greater_than_or_equal" or "greaterthanorequal" => ScheduleFilterType.GreaterThanOrEqual,
+            "less_or_equal" or "less_than_or_equal" or "lessthanorequal" => ScheduleFilterType.LessThanOrEqual,
+            "begins_with" or "beginswith" => ScheduleFilterType.BeginsWith,
+            "ends_with" or "endswith" => ScheduleFilterType.EndsWith,
+            "has_no_value" or "hasnovalue" => ScheduleFilterType.HasNoValue,
+            "has_value" or "hasvalue" => ScheduleFilterType.HasValue,
+            _ => throw new McpException(
+                $"Invalid filter operator '{operatorName}'. " +
+                "Valid values: equals, not_equals, contains, not_contains, greater_than, less_than, " +
+                "greater_or_equal, less_or_equal, begins_with, ends_with, has_no_value, has_value."),
         };
-
-        foreach (var f in groupFields)
-        {
-            if (!validFilterTypes.Contains(f.FilterType))
-                throw new McpException($"Invalid filter type '{f.FilterType}'. Valid values: {string.Join(", ", validFilterTypes)}");
-            if (f.IsNumeric && !double.TryParse(f.Value, out _))
-                throw new McpException($"Filter value '{f.Value}' is not a valid numeric value.");
-        }
-
-        using var tx = new Transaction(doc, "Add Schedule Filters");
-        tx.Start();
-        try
-        {
-            foreach (var filterInput in groupFields)
-            {
-                var field = ScheduleUtils.FindScheduleField(schedule.Definition, filterInput.FieldName)
-                    ?? throw new McpException($"Field '{filterInput.FieldName}' not found in schedule.");
-
-                var filterType = filterInput.FilterType.ToLowerInvariant() switch
-                {
-                    "equal" => ScheduleFilterType.Equal,
-                    "notequal" => ScheduleFilterType.NotEqual,
-                    "contains" => ScheduleFilterType.Contains,
-                    "notcontains" => ScheduleFilterType.NotContains,
-                    "greaterthan" => ScheduleFilterType.GreaterThan,
-                    "lessthan" => ScheduleFilterType.LessThan,
-                    "greaterthanorequal" => ScheduleFilterType.GreaterThanOrEqual,
-                    "lessthanorequal" => ScheduleFilterType.LessThanOrEqual,
-                    "beginswith" => ScheduleFilterType.BeginsWith,
-                    "endswith" => ScheduleFilterType.EndsWith,
-                    "hasnovalue" => ScheduleFilterType.HasNoValue,
-                    "hasvalue" => ScheduleFilterType.HasValue,
-                    _ => ScheduleFilterType.Equal,
-                };
-
-                ScheduleFilter scheduleFilter;
-                if (filterInput.IsNumeric)
-                {
-                    double.TryParse(filterInput.Value, out var numVal);
-                    scheduleFilter = new ScheduleFilter(field.FieldId, filterType, numVal);
-                }
-                else
-                {
-                    scheduleFilter = new ScheduleFilter(field.FieldId, filterType, filterInput.Value);
-                }
-
-                schedule.Definition.AddFilter(scheduleFilter);
-            }
-            tx.Commit();
-            return new { status = "Success" };
-        }
-        catch (Exception ex)
-        {
-            if (tx.HasStarted()) tx.RollBack();
-            throw new McpException($"Failed to add schedule filters: {ex.Message}");
-        }
-    }
-
-    [McpServerTool(Name = "revit_place_schedule_on_sheet", Title = "Place Schedule on Sheet", ReadOnly = false)]
-    [Description("Places a schedule onto a drawing sheet at a specified position.")]
-    public static object PlaceScheduleOnSheet(
-        [Description("Sheet element ID")] long sheetId,
-        [Description("Schedule element ID")] long scheduleId,
-        [Description("Position on sheet [X, Y] in feet (optional)")] double[]? schedulePosition = null)
-    {
-        if (schedulePosition is not null && schedulePosition.Length < 2)
-            throw new McpException("schedulePosition must have at least 2 values [X, Y].");
-
-        var doc = RevitContext.ActiveDocument ?? throw new McpException("No active document.");
-        var sheet = doc.GetElement(sheetId.ToElementId()) as ViewSheet
-            ?? throw new McpException($"Sheet {sheetId} not found.");
-        var schedule = doc.GetElement(scheduleId.ToElementId()) as ViewSchedule
-            ?? throw new McpException($"Schedule {scheduleId} not found.");
-
-        var position = schedulePosition is { Length: >= 2 }
-            ? new XYZ(schedulePosition[0], schedulePosition[1], 0)
-            : XYZ.Zero;
-
-        using var tx = new Transaction(doc, "Place Schedule On Sheet");
-        tx.Start();
-        try
-        {
-            var instance = ScheduleSheetInstance.Create(doc, sheet.Id, schedule.Id, position);
-            tx.Commit();
-            return new { status = "Success", instanceId = instance.Id.ToValue() };
-        }
-        catch (Exception ex)
-        {
-            if (tx.HasStarted()) tx.RollBack();
-            throw new McpException($"Failed to place schedule on sheet: {ex.Message}");
-        }
     }
 }

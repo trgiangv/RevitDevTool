@@ -4,6 +4,7 @@ using ModelContextProtocol.Server;
 using Nice3point.Revit.Toolkit;
 using RevitMcpToolSet.Data;
 using RevitMcpToolSet.Utilities;
+
 namespace RevitMcpToolSet.Tools;
 
 [McpServerToolType]
@@ -11,32 +12,6 @@ namespace RevitMcpToolSet.Tools;
 [PublicAPI]
 public static class ParameterTools
 {
-    [McpServerTool(Name = "revit_read_parameters", Title = "Read Element Parameters", ReadOnly = true)]
-    [Description("Reads all parameters for a given element and returns their names, values, and metadata.")]
-    public static object ReadParameters(
-        [Description("Element ID")] long elementId)
-    {
-        var doc = RevitContext.ActiveDocument ?? throw new McpException("No active document.");
-        var element = doc.GetElement(elementId.ToElementId())
-            ?? throw new McpException($"Element with ID {elementId} not found.");
-
-        var parameters = new List<ParameterEntry>();
-        foreach (Parameter param in element.Parameters)
-        {
-            parameters.Add(new ParameterEntry
-            {
-                Name = param.Definition.Name,
-                Value = ParameterAccessor.GetParameterValue(param),
-                StorageType = param.StorageType.ToString(),
-                IsReadOnly = param.IsReadOnly,
-                IsShared = param.IsShared,
-                HasValue = param.HasValue,
-                BuiltInParam = ParameterAccessor.GetBuiltInParam(param),
-            });
-        }
-        return new { outcome = "Success", instanceParameters = parameters };
-    }
-
     [McpServerTool(Name = "revit_write_parameters", Title = "Write Element Parameters", ReadOnly = false)]
     [Description("Writes parameter values to one or more elements.")]
     public static object WriteParameters(
@@ -48,17 +23,29 @@ public static class ParameterTools
         if (updates.Length == 0) throw new McpException("No parameter updates provided.");
 
         var outcome = new OperationOutcome();
-        using var tx = new Transaction(doc, "Write Element Parameters");
+        using var tx = new Transaction(doc, "MCP: revit_write_parameters");
         tx.Start();
         foreach (var eid in elementIds)
         {
             var element = doc.GetElement(eid.ToElementId());
-            if (element is null) { outcome.Record(false, $"Element {eid} not found", eid); continue; }
+            if (element is null)
+            {
+                outcome.RecordFailure(eid, $"Element {eid} not found");
+                continue;
+            }
 
             foreach (var update in updates)
             {
-                var (success, message) = ParameterAccessor.SetParameterValue(element, update.ParameterName, update.Value);
-                outcome.Record(success, message, eid);
+                try
+                {
+                    var (success, message) = ParameterAccessor.SetParameterValue(
+                        element, update.ParameterName, update.Value);
+                    outcome.Record(success, message, eid);
+                }
+                catch (Exception ex)
+                {
+                    outcome.RecordFailure(eid, ex);
+                }
             }
         }
         tx.Commit();
@@ -68,59 +55,105 @@ public static class ParameterTools
     [McpServerTool(Name = "revit_clone_parameters", Title = "Clone Parameters Between Elements", ReadOnly = false)]
     [Description("Copies parameter values from a source element to one or more target elements.")]
     public static object CloneParameters(
-        [Description("Source element ID")] long sourceElementId,
-        [Description("Target element IDs")] long[] targetElementIds,
-        [Description("Parameter names to copy")] string[] parameterNames)
+        [Description("Source element ID")] long sourceId,
+        [Description("Target element IDs")] long[] targetIds,
+        [Description("Parameter names to copy")] string[] paramNames)
     {
         var doc = RevitContext.ActiveDocument ?? throw new McpException("No active document.");
-        var source = doc.GetElement(sourceElementId.ToElementId())
-            ?? throw new McpException($"Source element {sourceElementId} not found.");
+        if (targetIds.Length == 0) throw new McpException("No target element IDs provided.");
+        if (paramNames.Length == 0) throw new McpException("No parameter names provided.");
+
+        var source = doc.GetElement(sourceId.ToElementId())
+            ?? throw new McpException($"Source element {sourceId} not found.");
 
         var sourceValues = new Dictionary<string, string>();
-        foreach (var name in parameterNames)
+        var skipped = new List<object>();
+        foreach (var name in paramNames)
         {
             var param = source.GetParameters(name).FirstOrDefault();
-            if (param is not null)
-                sourceValues[name] = ParameterAccessor.GetParameterValue(param);
+            if (param is null)
+            {
+                skipped.Add(new { paramName = name, reason = "Parameter not found on source element" });
+                continue;
+            }
+            sourceValues[name] = ParameterAccessor.GetParameterValue(param);
         }
 
-        var outcome = new OperationOutcome();
-        using var tx = new Transaction(doc, "Clone Parameters");
+        var successCount = 0;
+        using var tx = new Transaction(doc, "MCP: revit_clone_parameters");
         tx.Start();
-        foreach (var eid in targetElementIds)
+        foreach (var eid in targetIds)
         {
             var target = doc.GetElement(eid.ToElementId());
-            if (target is null) { outcome.Record(false, $"Element {eid} not found", eid); continue; }
+            if (target is null)
+            {
+                skipped.Add(new { elementId = eid, reason = "Target element not found" });
+                continue;
+            }
+
             foreach (var pair in sourceValues)
             {
-                var (success, message) = ParameterAccessor.SetParameterValue(target, pair.Key, pair.Value);
-                outcome.Record(success, message, eid);
+                try
+                {
+                    var (success, message) = ParameterAccessor.SetParameterValue(target, pair.Key, pair.Value);
+                    if (success)
+                        successCount++;
+                    else
+                        skipped.Add(new { elementId = eid, paramName = pair.Key, reason = message });
+                }
+                catch (Exception ex)
+                {
+                    skipped.Add(new { elementId = eid, paramName = pair.Key, reason = ex.Message });
+                }
             }
         }
         tx.Commit();
-        return outcome.Summarize();
+        return new { success_count = successCount, skipped };
     }
 
-    [McpServerTool(Name = "revit_swap_element_type", Title = "Swap Element Type", ReadOnly = false)]
+    [McpServerTool(Name = "revit_swap_type", Title = "Swap Element Type", ReadOnly = false)]
     [Description("Changes the family type of one or more elements to a different type.")]
-    public static object SwapElementType(
+    public static object SwapType(
         [Description("Element IDs to change")] long[] elementIds,
         [Description("New type element ID")] long newTypeId)
     {
         var doc = RevitContext.ActiveDocument ?? throw new McpException("No active document.");
         if (elementIds.Length == 0) throw new McpException("No element IDs provided.");
 
+        var newType = doc.GetElement(newTypeId.ToElementId());
+        if (newType is null)
+            throw new McpException($"Type element {newTypeId} not found.");
+
         var outcome = new OperationOutcome();
-        using var tx = new Transaction(doc, "Swap Element Type");
+        using var tx = new Transaction(doc, "MCP: revit_swap_type");
         tx.Start();
         foreach (var eid in elementIds)
         {
-            var element = doc.GetElement(eid.ToElementId());
-            if (element is null) { outcome.Record(false, $"Element {eid} not found", eid); continue; }
-            var (success, message, _) = ParameterAccessor.ChangeType(element, newTypeId);
-            outcome.Record(success, message, eid);
+            try
+            {
+                var element = doc.GetElement(eid.ToElementId());
+                if (element is null)
+                {
+                    outcome.RecordFailure(eid, $"Element {eid} not found");
+                    continue;
+                }
+
+                var (success, message, _) = ParameterAccessor.ChangeType(element, newTypeId);
+                if (success)
+                    outcome.RecordSuccess();
+                else
+                    outcome.RecordFailure(eid, message);
+            }
+            catch (Exception ex)
+            {
+                outcome.RecordFailure(eid, ex);
+            }
         }
         tx.Commit();
-        return new { outcome = "Success", newTypeId, results = outcome.Summarize() };
+        return new
+        {
+            swapped_count = outcome.SuccessCount,
+            failures = outcome.Failures.Count > 0 ? outcome.Failures : null,
+        };
     }
 }
