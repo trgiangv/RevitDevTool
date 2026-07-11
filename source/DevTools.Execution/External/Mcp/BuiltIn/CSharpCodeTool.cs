@@ -14,38 +14,16 @@ public sealed class CSharpCodeTool(CSharpCodeExecutor executor) : IBuiltInMcpToo
     {
         Name = "execute_csharp_code",
         Description =
-            "Compile and execute C# code in the running host process.\n" +
-            "Revit: implement IExternalCommand. Output via 'message' ref param.\n" +
-            "AutoCAD: use [CommandMethod].\n" +
-            "Host API assemblies auto-referenced. Use #r for extras, #r \"nuget:\" for packages.\n\n" +
-            "Example (Revit):\n" +
-            "```\n" +
-            "using System.Linq;\n" +
-            "using Autodesk.Revit.DB;\n" +
-            "using Autodesk.Revit.UI;\n" +
-            "using Autodesk.Revit.Attributes;\n\n" +
-            "[Transaction(TransactionMode.Manual)]\n" +
-            "public class Command : IExternalCommand\n" +
-            "{\n" +
-            "    public Result Execute(ExternalCommandData commandData, ref string message, ElementSet elements)\n" +
-            "    {\n" +
-            "        var doc = commandData.Application.ActiveUIDocument.Document;\n" +
-            "        // your code here\n" +
-            "        message = \"result output\";\n" +
-            "        return Result.Succeeded;\n" +
-            "    }\n" +
-            "}\n" +
-            "```\n\n" +
-            "Error types: compilation errors (fix code and retry), runtime exceptions (check logic), " +
-            "or transaction rollback (unresolvable Revit constraint violation).\n" +
-            "For read-only queries, use [Transaction(TransactionMode.ReadOnly)].",
+            "Compile and execute C# code in the running host process. " +
+            "Host API assemblies auto-referenced. Use #r for extras, #r \"nuget:\" for packages.\n" +
+            "IMPORTANT: Read the host's API cheat sheet resource (revit://api-cheatsheet or acad://api-cheatsheet) for required code patterns.\n" +
+            "Error responses: [COMPILATION ERROR] fix code, [RUNTIME ERROR] check logic, [ROLLBACK] constraint violation.",
         InputSchema = McpSchemaBuilder.Object(
         [
             McpSchemaBuilder.String(
                 IpcPropertyNames.Code,
-                "C# code implementing IExternalCommand (Revit) or [CommandMethod] (AutoCAD). " +
-                "Must include using directives, Transaction attribute, and class definition. " +
-                "Set 'message' ref param for output.")
+                "Complete C# source. Revit: implement IExternalCommand, set 'message' ref param. " +
+                "AutoCAD: use [CommandMethod]. Include all usings and attributes.")
         ],
         required: [IpcPropertyNames.Code]),
         Annotations = new ToolAnnotations
