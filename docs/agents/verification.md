@@ -32,7 +32,7 @@ GitNexus indexing is currently blocked by an analyzer `scopeResolution` failure.
 
 ## Frontend Sample
 
-The only JS/TS app is `Samples/PythonDemo/revit_dashboard_ui/`.
+The only JS/TS app is `samples/PythonDemo/revit_dashboard_ui/`.
 
 Run:
 

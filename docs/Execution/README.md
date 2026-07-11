@@ -211,8 +211,8 @@ When changing execution behavior:
 
 ## Related Docs
 
-- `docs/ai/execution-system.md`
-- `docs/ai/host-boundaries.md`
+- `docs/agents/execution-system.md`
+- `docs/agents/host-boundaries.md`
 - `docs/MCP/README.md`
 - `docs/PyTest/README.md`
 - `docs/Logging/README.md`

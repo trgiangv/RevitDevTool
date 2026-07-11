@@ -59,22 +59,23 @@ dotnet publish source/DevTools.Daemon -c Release
 
 Running Revit or AutoCAD locks loaded DLLs. Any build that deploys to the addin folder will fail or produce stale results if the host is still running.
 
-**Required step before build+deploy:**
+**Required step before build+deploy** — use `scripts/agent/kill-host.ps1`:
 
 ```powershell
-# Kill Revit (all versions)
-Get-Process -Name "Revit" -ErrorAction SilentlyContinue | Stop-Process -Force
-
-# Kill AutoCAD
-Get-Process -Name "acad" -ErrorAction SilentlyContinue | Stop-Process -Force
+scripts/agent/kill-host.ps1                # Kill both Revit and AutoCAD
+scripts/agent/kill-host.ps1 -HostApp Revit # Kill only Revit
 ```
 
 This applies to:
-- `scripts/agent/build-host.ps1` (MSBuild `DeployRevitAddin` target deploys after build by default)
+- `scripts/agent/build-host.ps1` (MSBuild `DeployRevitAddin`/`DeployAutoCadBundle` target deploys after build)
 - `scripts/agent/pack.ps1`
-- `dotnet build` without `-p:DeployRevitAddin=false`
+- `dotnet build` without `-p:DeployRevitAddin=false -p:DeployAutoCadBundle=false`
 
-NOT needed when building with `-p:DeployRevitAddin=false -p:IsRepackable=false` (compile-only check).
+NOT needed when building with `-p:DeployRevitAddin=false -p:DeployAutoCadBundle=false -p:IsRepackable=false` (compile-only check).
+
+## ILRepack
+
+ILRepack merges dependencies into a single DLL for host add-ins. **Disabled for 2027** due to Revit/AutoCAD isolated context causing `System.BadImageFormatException` with repacked assemblies. Property: `IsRepackable` (auto-set false when `RevitVersion`/`AutoCadVersion` >= 2027).
 
 ## Compatibility Rule
 

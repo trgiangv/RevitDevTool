@@ -102,5 +102,5 @@ Visualization settings are Revit-host settings. View models live under `source/R
 ## Related Docs
 
 - `docs/Logging/README.md`
-- `docs/ai/host-boundaries.md`
+- `docs/agents/host-boundaries.md`
 - `docs/Execution/README.md`

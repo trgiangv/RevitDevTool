@@ -253,7 +253,7 @@ print(f"Found {walls.GetElementCount()} walls")
 <td valign="top">
 
 ## Python
-**[Samples/PythonDemo/](Samples/PythonDemo)**
+**[samples/PythonDemo/](samples/PythonDemo)**
 
 - `dashboard_script.py` — Production BIM dashboard (WebView2 + React)
 - `data_analysis_script.py` — Polars data analysis
@@ -267,13 +267,13 @@ print(f"Found {walls.GetElementCount()} walls")
 <td valign="top">
 
 ## .NET
-**[Samples/CSharpDemo/](Samples/CSharpDemo)**
+**[samples/CSharpDemo/](samples/CSharpDemo)**
 
 - Logging sample with stack trace and JSON formatting
 - Geometry visualization sample
 
 ## MCP Toolsets
-**[Samples/PythonDemo/mcp_tools/](Samples/PythonDemo/mcp_tools)**
+**[samples/PythonDemo/mcp_tools/](samples/PythonDemo/mcp_tools)**
 
 - Python MCP toolsets for AI integration
 - Custom tools, prompts, resources

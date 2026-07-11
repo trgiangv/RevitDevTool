@@ -12,10 +12,10 @@ Deep sources: `docs/MCP/README.md` and `docs/PyTest/README.md`.
 - MCP catalog store: `DevTools.Mcp.McpCatalogStore`
 - MCP bridge handler: `DevTools.Mcp.Handlers.McpBridgeRequestHandler`
 - MCP primitive dispatcher: `DevTools.Mcp.Dispatch.IMcpPrimitiveDispatcher` (interface in Mcp, impl in Execution)
-- MCP routing (daemon): `DevTools.Mcp.Routing.CatalogService`
+- MCP routing (daemon): `DevTools.Mcp.Routing.Catalog.CatalogService`
 - Bridge client: `DevTools.Daemon.Mcp.HostBridgeClient` (implements `IHostBridgeClient`)
 
-External MCP clients talk to `DevTools.Daemon`, which discovers any host pipe (`DevTools_Revit_*`, `DevTools_AutoCad_*`, `DevTools_Civil3D_*`, etc.) via `InstanceManager`. Daemon built-in tools: `list_host_instances`, `launch_host`, `read_file_info`, `open_model`, `list_machines` — multi-host (Revit + AutoCAD-family). In-host built-in tools registered in `ExecutionExtensions.cs`: `execute_csharp_code`, `open_document`. The in-host registry/dispatch runtime is fully shared. The bridge handler lives in `DevTools.Mcp` (protocol layer) and depends on `IMcpPrimitiveDispatcher` for actual execution dispatch.
+External MCP clients talk to `DevTools.Daemon` (via `--stdio` or Gateway), which discovers any host pipe (`DevTools_Revit_*`, `DevTools_AutoCad_*`, `DevTools_Civil3D_*`, etc.) via `InstanceManager`. Daemon built-in tools: `list_host_instances`, `launch_host`, `read_file_info`, `open_model`, `list_machines`, `call_dynamic_tool`, `list_dynamic_tools`, `refresh_dynamic_catalog` — multi-host (Revit + AutoCAD-family). In-host built-in tools registered in `ExecutionExtensions.cs`: `execute_csharp_code`, `open_document`. The in-host registry/dispatch runtime is fully shared. The bridge handler lives in `DevTools.Mcp` (protocol layer) and depends on `IMcpPrimitiveDispatcher` for actual execution dispatch.
 
 ## PyTest Bridge
 
@@ -23,7 +23,7 @@ External MCP clients talk to `DevTools.Daemon`, which discovers any host pipe (`
 - Pytest bridge methods: `source/DevTools.Execution/External/Testing/PytestBridgeMethods.cs`
 - Server side execution: `source/DevTools.Execution/External/Testing/`
 - Embedded runner: `source/DevTools.Execution/Resources/scripts/PytestRunner.py`
-- Protocol routes include `tests/discover` and `tests/run`.
+- Protocol route: `tests/run` (with optional `discover_only` flag in the request payload for collection-only mode).
 - The client pytest process talks to the host through a framed named pipe.
 
 ## Change Checklist

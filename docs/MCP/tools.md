@@ -49,5 +49,5 @@ This is the path standard MCP AI clients (Claude, Cursor, ChatGPT) use.
 
 ## Host-Specific Gaps
 
-- No shipped AutoCAD MCP toolset equivalent to `Samples/RevitMcpToolSet/`
+- No shipped AutoCAD MCP toolset equivalent to `samples/RevitMcpToolSet/`
 - Navisworks listed in enums but launch returns "not yet supported"

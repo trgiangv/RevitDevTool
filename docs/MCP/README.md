@@ -38,7 +38,7 @@ Current MCP tests mostly cover parser and contract shapes. When changing MCP beh
 
 ## Related
 
-- `docs/ai/mcp-pytest-bridge.md`
+- `docs/agents/mcp-pytest-bridge.md`
 - `docs/Execution/README.md`
 - `docs/PyTest/README.md`
 - McpGateway repo: `docs/setup-guide.md`, `docs/architecture.md`, `docs/api.md`

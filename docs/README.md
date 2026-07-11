@@ -12,7 +12,7 @@ RevitDevTool is evolving into a reusable .NET host/dev-tool platform. Revit and 
 
 ```
 docs/
-├── ai/                                # Agent workflow routing and deterministic memory
+├── agents/                            # Agent workflow routing and deterministic memory
 │   ├── index.md                       # Task router — start here for agents
 │   ├── build-matrix.md                # SDK, TFM matrix, build/pack/deploy commands
 │   ├── verification.md                # Test reality, focused verification commands
@@ -45,8 +45,8 @@ docs/
 
 ## Module Documentation
 
-### AI Harness
-**Path:** `ai/index.md`
+### Agent Harness
+**Path:** `agents/index.md`
 
 Operational workflow for coding agents:
 - Task routing to module docs and skill checklists
@@ -130,15 +130,15 @@ pytest remote execution bridge:
 
 | I want to... | Read |
 |-------------|------|
-| Route an agent task | [ai/index.md](ai/index.md) |
-| Understand build/deploy | [ai/build-matrix.md](ai/build-matrix.md) |
+| Route an agent task | [agents/index.md](agents/index.md) |
+| Understand build/deploy | [agents/build-matrix.md](agents/build-matrix.md) |
 | Understand the execution engine | [Execution/README.md](Execution/README.md) |
 | Understand logging | [Logging/README.md](Logging/README.md) |
 | Understand visualization (Revit-only) | [Visualization/README.md](Visualization/README.md) |
 | Understand MCP integration | [MCP/README.md](MCP/README.md) |
 | Understand pytest bridge | [PyTest/README.md](PyTest/README.md) |
-| Understand host boundaries | [ai/host-boundaries.md](ai/host-boundaries.md) |
-| Understand known test gaps | [ai/known-test-gaps.md](ai/known-test-gaps.md) |
+| Understand host boundaries | [agents/host-boundaries.md](agents/host-boundaries.md) |
+| Understand known test gaps | [agents/known-test-gaps.md](agents/known-test-gaps.md) |
 | Use RevitDevTool (end-user) | [RevitDevTool.Wiki](https://github.com/trgiangv/RevitDevTool/wiki) |
 
 ---
@@ -155,7 +155,7 @@ pytest remote execution bridge:
 | **MCP** | ✅ `MCP/README.md` | Production |
 | **PyTest** | ✅ `PyTest/README.md` | Production |
 | **PythonDemo** | ✅ `PythonDemo/README.md` | Samples |
-| **AI Harness** | ✅ `ai/index.md` + 8 digests | Agent workflow |
+| **Agent Harness** | ✅ `agents/index.md` + 8 digests | Agent workflow |
 
 ### Shared Platform Libraries (no dedicated README — covered by module docs and AGENTS.md)
 
@@ -167,20 +167,20 @@ pytest remote execution bridge:
 | **DevTools.Telemetry** | `AGENTS.md` | Sentry integration, path scrubbing |
 | **DevTools.Utilities** | `AGENTS.md` | Win32 helpers, assembly loading |
 | **DevTools.McpParser** | `MCP/README.md` | Shared bridge contracts and parsers |
-| **DevTools.Daemon** | `MCP/daemon.md`, `ai/build-matrix.md` | Standalone tray app (MCP engine, auth, gateway) |
+| **DevTools.Daemon** | `MCP/daemon.md`, `agents/build-matrix.md` | Standalone tray app (MCP engine, auth, gateway) |
 | **RevitDevTool.Core** | `AGENTS.md` | Revit-only: transactions, dockable panes |
 
 ### Sample Projects (source only, no architecture docs)
 
 | Sample | Type |
 |--------|------|
-| `Samples/CSharpDemo/` | Revit C# demo |
-| `Samples/AcadCSharpDemo/` | AutoCAD C# demo |
-| `Samples/FSharpDemo/` | Revit F# demo |
-| `Samples/CSharpScriptDemo/` | C# `.csx` script demo |
-| `Samples/McpToolsetDemo/` | MCP `[McpTool]` attribute demo |
-| `Samples/RevitMcpToolSet/` | Revit MCP toolset sample |
-| `Samples/PythonDemo/` | Python + React dashboard (not in `.slnx`) |
+| `samples/CSharpDemo/` | Revit C# demo |
+| `samples/AcadCSharpDemo/` | AutoCAD C# demo |
+| `samples/FSharpDemo/` | Revit F# demo |
+| `samples/CSharpScriptDemo/` | C# `.csx` script demo |
+| `samples/McpToolsetDemo/` | MCP `[McpTool]` attribute demo |
+| `samples/RevitMcpToolSet/` | Revit MCP toolset sample |
+| `samples/PythonDemo/` | Python + React dashboard (not in `.slnx`) |
 
 ---
 
@@ -205,9 +205,9 @@ pytest remote execution bridge:
 
 ### Samples
 
-- [C# demo](../Samples/CSharpDemo/) | [C# scripts](../Samples/CSharpScriptDemo/) | [F# demo](../Samples/FSharpDemo/)
-- [Python demo](../Samples/PythonDemo/commands/) | [MCP toolset demo](../Samples/McpToolsetDemo/)
-- [Revit MCP toolset](../Samples/RevitMcpToolSet/) | [AutoCAD demo](../Samples/AcadCSharpDemo/)
+- [C# demo](../samples/CSharpDemo/) | [C# scripts](../samples/CSharpScriptDemo/) | [F# demo](../samples/FSharpDemo/)
+- [Python demo](../samples/PythonDemo/commands/) | [MCP toolset demo](../samples/McpToolsetDemo/)
+- [Revit MCP toolset](../samples/RevitMcpToolSet/) | [AutoCAD demo](../samples/AcadCSharpDemo/)
 
 ---
 
@@ -216,7 +216,7 @@ pytest remote execution bridge:
 1. **Read architecture docs** for the module you're modifying
 2. **Follow existing patterns** (Provider, Strategy, Composite, Observer)
 3. **Update docs** when changing important architecture or feature boundaries
-4. **Add demos** in `Samples/`
+4. **Add demos** in `samples/`
 5. **Update wiki** for user-facing changes
 
 ---

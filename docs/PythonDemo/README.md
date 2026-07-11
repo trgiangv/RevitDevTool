@@ -1,6 +1,6 @@
 # PythonDemo Architecture
 
-`Samples/PythonDemo/` demonstrates the Python runtime, PEP 723 dependency resolution, logging, visualization, WebView2 dashboard patterns, and Python MCP toolsets.
+`samples/PythonDemo/` demonstrates the Python runtime, PEP 723 dependency resolution, logging, visualization, WebView2 dashboard patterns, and Python MCP toolsets.
 
 Last updated: 2026-05-29
 
@@ -10,11 +10,11 @@ Last updated: 2026-05-29
 
 | Area | Path |
 |------|------|
-| Entry scripts | `Samples/PythonDemo/commands/` |
-| Dashboard backend | `Samples/PythonDemo/revit_dashboard/` |
-| Dashboard frontend | `Samples/PythonDemo/revit_dashboard_ui/` |
-| Python MCP toolset | `Samples/PythonDemo/mcp_toolset/` |
-| Import/dependency test module | `Samples/PythonDemo/test_module/` |
+| Entry scripts | `samples/PythonDemo/commands/` |
+| Dashboard backend | `samples/PythonDemo/revit_dashboard/` |
+| Dashboard frontend | `samples/PythonDemo/revit_dashboard_ui/` |
+| Python MCP toolset | `samples/PythonDemo/mcp_toolset/` |
+| Import/dependency test module | `samples/PythonDemo/test_module/` |
 
 ---
 

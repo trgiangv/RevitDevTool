@@ -13,7 +13,7 @@ These are known harness gaps. Do not paper over them by changing unrelated code.
 ## Stale Paths
 
 - Some tests still search upward for `RevitDevTool.sln` even though the current solution is `RevitDevTool.slnx`.
-- `ParserIntegrationTests` expects `Samples/McpToolsetDemo/bin/Debug/net8.0/McpToolsetDemo.dll`, but helper code still constructs a `source/Samples/...` path.
+- `ParserIntegrationTests` expects `samples/McpToolsetDemo/bin/Debug/net8.0/McpToolsetDemo.dll`, but helper code still constructs a `source/samples/...` path.
 - Python parser tests can still look for `source/RevitDevTool/Resources/scripts/ToolParser.py`; current embedded scripts live under `source/DevTools.Execution/Resources/scripts/`.
 
 ## Environment Dependencies

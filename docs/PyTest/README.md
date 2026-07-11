@@ -120,7 +120,7 @@ sequenceDiagram
 
 The in-repo tests are not a deep end-to-end pytest bridge suite yet. Several tests still have stale path assumptions or require a prepared Pixi environment and built sample assets. Treat them as contract/smoke checks.
 
-Known gaps are tracked in `docs/ai/known-test-gaps.md`.
+Known gaps are tracked in `docs/agents/known-test-gaps.md`.
 
 When changing the pytest bridge:
 
@@ -132,6 +132,6 @@ When changing the pytest bridge:
 
 ## Related Docs
 
-- `docs/ai/mcp-pytest-bridge.md`
+- `docs/agents/mcp-pytest-bridge.md`
 - `docs/Execution/README.md`
 - `docs/MCP/README.md`

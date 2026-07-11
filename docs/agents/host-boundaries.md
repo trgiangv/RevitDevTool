@@ -6,11 +6,11 @@ The platform is host-agnostic by design. Every feature should be sharable across
 
 Keep these host-neutral — this is the default for all new functionality:
 
-- `source/DevTools.Execution/`
+- `source/DevTools.Execution/` — execution engine, script providers, MCP in-host runtime
+- `source/DevTools.Execution.Abstractions/` — host-neutral contracts (`IHostContextExecutor`, `ICommandDiscovery`, `ICommandRunner`, `IDocumentBridge`, enums)
+- `source/DevTools.Ipc/` — IPC transport (BridgeMessage, pipe connection, wire protocol)
+- `source/DevTools.Mcp/` — MCP protocol (catalog, discovery, registry, dispatch, routing)
 - `source/DevTools.Logging/`
-- `source/DevTools.Ipc/`
-- `source/DevTools.Mcp/`
-- `source/DevTools.Execution/External/Testing/`
 - `source/DevTools.Presentation/`
 - `source/DevTools.Settings/`
 - `source/DevTools.Telemetry/`
@@ -32,7 +32,7 @@ Host API references belong in host projects:
 - `source/DevTools.Daemon/` runs outside hosts as `DevTools.Daemon.exe` (WPF tray app).
 - `InstanceManager` discovers any host pipe via generic regex (`DevTools_{HostApp}_{Version}_{PID}`).
 - `HostBridgeClient` connects to any host (formerly `RevitBridgeClient`).
-- Daemon built-in tools: `list_host_instances`, `launch_host`, `read_file_info`, `open_model`, `list_machines` (multi-host).
+- Daemon built-in tools: `list_host_instances`, `launch_host`, `read_file_info`, `open_model`, `list_machines`, `call_dynamic_tool`, `list_dynamic_tools`, `refresh_dynamic_catalog` (multi-host).
 - In-host built-in tools (shared runtime): `execute_csharp_code`, `open_document` via `IDocumentBridge`.
 - Startup dialog resolver uses merged keywords in default `StartupDialogResolverOptions` (Revit + AutoCAD).
 - Remaining gaps for AutoCAD: no shipped MCP toolset.

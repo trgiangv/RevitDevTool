@@ -104,11 +104,11 @@ Stop-Process -Id 16544 -Force -ErrorAction SilentlyContinue
 Get-Process -Name "acad" -ErrorAction SilentlyContinue | Stop-Process -Force
 ```
 
-**When to kill:**
+**When to kill** (use `scripts/agent/kill-host.ps1`):
 - Before `scripts/agent/build-host.ps1` (always deploys to addin folder)
-- Before `dotnet build` with `DeployRevitAddin=true` (default for Debug builds)
+- Before `dotnet build` with `DeployRevitAddin=true` or `DeployAutoCadBundle=true`
 - Before `dotnet run --project build/Build.csproj -- pack`
-- NOT needed for builds with `-p:DeployRevitAddin=false`
+- NOT needed for builds with `-p:DeployRevitAddin=false -p:DeployAutoCadBundle=false`
 
 **Flow:** Kill process → Build → (optionally) Restart host to test
 
@@ -121,7 +121,7 @@ dotnet run --project build/Build.csproj
 # Run tests
 dotnet run --project build/Build.csproj -- test
 
-# Pack (clean + bundle + MCP server + installer)
+# Pack (clean + bundle + DevTools.Daemon + installer)
 dotnet run --project build/Build.csproj -- pack
 
 # Publish to GitHub

@@ -5,7 +5,7 @@ Use this file for durable architecture decisions that affect agent behavior. Kee
 ## 2026-05-29: Repo-owned AI harness
 
 - `AGENTS.md` is the entry contract and router.
-- `docs/ai/` contains deterministic agent digests.
+- `docs/agents/` contains deterministic agent digests.
 - `.agents/skills/*/SKILL.md` contains task-specific checklists.
 - Tool-specific files should be thin adapters that point back to the repo-owned harness.
 
@@ -19,7 +19,7 @@ Use this file for durable architecture decisions that affect agent behavior. Kee
 
 - Important features and architecture changes should update the matching docs.
 - Module READMEs hold durable architecture.
-- `docs/ai/` holds agent workflow and decision context.
+- `docs/agents/` holds agent workflow and decision context.
 - Skills hold short task checklists.
 
 ## 2026-05-29: GitNexus unavailable for current index run
@@ -43,11 +43,11 @@ Use this file for durable architecture decisions that affect agent behavior. Kee
 - `RevitDevTool.Core` reclassified: it is Revit-only (transactions, dockable panes, image export), not a shared platform library. Only `RevitDevTool` references it; `AcadDevTool` does not.
 - Visualization confirmed as Revit-host only: lives entirely in `source/RevitDevTool/Visualization/`, not in shared code.
 - `DevTools.McpServer` standalone process clarified: runs outside hosts as `MCPServer.exe`; standalone built-in tools are multi-host, in-host MCP runtime is shared.
-- `docs/README.md` directory tree expanded to show all 8 `docs/ai/` digest files and `static/icons/` assets.
+- `docs/README.md` directory tree expanded to show all 8 `docs/agents/` digest files and `static/icons/` assets.
 - Documentation completeness table restructured: separated architecture modules, shared platform libraries, and sample projects.
 - All 6 `scripts/agent/*.ps1` scripts received PowerShell comment-based help (`.SYNOPSIS`, `.DESCRIPTION`, `.PARAMETER`, `.EXAMPLE`).
 - `AGENTS.md` Verification section now lists all 6 agent scripts.
-- `docs/ai/host-boundaries.md` updated with `RevitDevTool.Core`, visualization location, and standalone MCP server process.
+- `docs/agents/host-boundaries.md` updated with `RevitDevTool.Core`, visualization location, and standalone MCP server process.
 
 ## 2026-05-31: Document bridge and startup dialog resolver
 

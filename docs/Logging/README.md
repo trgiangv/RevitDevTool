@@ -218,7 +218,7 @@ Do **not** add new `Trace.TraceError/Warning/Information` or `Debug.WriteLine` c
 - Keep shared logging host-neutral.
 - Put host document/context/linkification/geometry behavior in host projects.
 - If changing geometry routing, update `docs/Visualization/README.md` too.
-- If changing sinks or shared options, update this doc and `docs/ai/host-boundaries.md` when the boundary changes.
+- If changing sinks or shared options, update this doc and `docs/agents/host-boundaries.md` when the boundary changes.
 
 ---
 
@@ -226,4 +226,4 @@ Do **not** add new `Trace.TraceError/Warning/Information` or `Debug.WriteLine` c
 
 - `docs/Visualization/README.md`
 - `docs/Execution/README.md`
-- `docs/ai/host-boundaries.md`
+- `docs/agents/host-boundaries.md`
