@@ -1,11 +1,12 @@
 <Project Sdk="Microsoft.NET.Sdk">
     <PropertyGroup>
-        <TargetFrameworks>net48;net8.0-windows;net10.0-windows</TargetFrameworks>
+        <UseRevit>true</UseRevit>
         <NoWarn>$(NoWarn);MCPEXP001</NoWarn>
     </PropertyGroup>
 
     <ItemGroup>
         <ProjectReference Include="..\DevTools.Mcp\DevTools.Mcp.csproj"/>
+        <ProjectReference Include="..\RevitDevTool.Core\RevitDevTool.Core.csproj"/>
     </ItemGroup>
 
     <ItemGroup>

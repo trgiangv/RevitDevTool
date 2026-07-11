@@ -48,6 +48,10 @@ public sealed class McpEngine
         new OpenModelTool(InstanceManager),
         new ListDynamicTools(DynamicToolCatalog),
         new CallDynamicTool(InstanceManager, DynamicToolCatalog),
-        new RefreshDynamicCatalog(DynamicToolCatalog)
+        new ListDynamicResources(ResourceCollection),
+        new ReadDynamicResource(InstanceManager),
+        new ListDynamicPrompts(PromptCollection),
+        new GetDynamicPrompt(InstanceManager),
+        new RefreshDynamicCatalog(DynamicToolCatalog, ResourceCollection, PromptCollection)
     ];
 }
