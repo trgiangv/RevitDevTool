@@ -52,12 +52,12 @@ def register_infrastructure_tools(mcp: FastMCP) -> None:
         save_local_before: Annotated[bool, Field(alias="saveLocalBefore")] = True,
     ) -> SyncResult:
         """Workshared sync."""
-        if save_local_before:
-            try:
-                docs.save_document()
-            except Exception:
-                pass
-        return docs.sync_with_central(comment=comment, compact=compact, relinquish_all=relinquish_all)
+        return docs.sync_with_central(
+            comment=comment,
+            compact=compact,
+            relinquish_all=relinquish_all,
+            save_local_before=save_local_before,
+        )
 
     @mcp.tool(annotations=ToolAnnotations(title="Generate Grids", destructiveHint=True), structured_output=True)
     async def revit_generate_grids(

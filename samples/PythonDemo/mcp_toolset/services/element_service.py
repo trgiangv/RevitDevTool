@@ -124,12 +124,14 @@ class ElementService:
                 try:
                     elem = doc.GetElement(DB.ElementId(eid))
                     if elem is None:
-                        failures.append({"elementId": eid, "message": "Element {} not found".format(eid)})
+                        failures.append(
+                            ToolErrorEntry.from_message("Element {} not found".format(eid), eid)
+                        )
                         continue
                     DB.ElementTransformUtils.MoveElement(doc, elem.Id, translation)
                     moved += 1
                 except Exception as exc:
-                    failures.append({"elementId": eid, "message": str(exc)})
+                    failures.append(ToolErrorEntry.from_exception(exc, eid))
 
         run_transaction(doc, "MCP: revit_move_elements", _operation)
         return MoveElementsResult(moved_count=moved, failures=failures or None)
@@ -159,12 +161,14 @@ class ElementService:
                 try:
                     elem = doc.GetElement(DB.ElementId(eid))
                     if elem is None:
-                        failures.append({"elementId": eid, "message": "Element {} not found".format(eid)})
+                        failures.append(
+                            ToolErrorEntry.from_message("Element {} not found".format(eid), eid)
+                        )
                         continue
                     DB.ElementTransformUtils.RotateElement(doc, elem.Id, axis, radians)
                     rotated += 1
                 except Exception as exc:
-                    failures.append({"elementId": eid, "message": str(exc)})
+                    failures.append(ToolErrorEntry.from_exception(exc, eid))
 
         run_transaction(doc, "MCP: revit_rotate_elements", _operation)
         return RotateElementsResult(rotated_count=rotated, failures=failures or None)

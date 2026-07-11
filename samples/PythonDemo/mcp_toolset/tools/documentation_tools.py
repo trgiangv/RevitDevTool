@@ -73,7 +73,7 @@ def register_documentation_tools(mcp: FastMCP) -> None:
 
     @mcp.tool(annotations=ToolAnnotations(title="List Views", readOnlyHint=True), structured_output=True)
     async def revit_list_views(
-        include_sheets: Annotated[bool | None, Field(alias="includeSheets")] = True,
+        include_sheets: Annotated[bool | None, Field(alias="includeSheets")] = False,
         include_templates: Annotated[bool | None, Field(alias="includeTemplates")] = False,
     ) -> ListViewsResult:
         """All views/sheets with metadata."""

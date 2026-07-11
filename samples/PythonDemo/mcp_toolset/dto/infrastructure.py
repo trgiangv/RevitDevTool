@@ -18,21 +18,18 @@ class StatusResult(BaseModel):
 
 
 class SaveDocumentResult(BaseModel):
-    document_title: str
-    saved_path: str | None = None
-    save_type: str
+    saved: bool
+    file_path: str = Field(alias="filePath")
+
+    model_config = {"populate_by_name": True}
 
 
 class CloseDocumentResult(BaseModel):
-    document_title: str
-    saved: bool
+    closed: bool
 
 
 class SyncResult(BaseModel):
-    document_title: str
-    comment: str
-    compacted: bool
-    relinquished_all: bool
+    synced: bool
 
 
 class GridAxisSpec(BaseModel):
