@@ -43,9 +43,9 @@ class ParameterNumericFilter(BaseModel):
     operator: Literal[
         "equals",
         "not_equals",
-        "greater",
+        "greater_than",
         "greater_or_equal",
-        "less",
+        "less_than",
         "less_or_equal",
     ] = Field(description="Numeric comparison operator")
     value: float = Field(description="Numeric value to compare against")
@@ -86,7 +86,7 @@ class ClassFilter(BaseModel):
 
 
 class BoundingBoxFilter(BaseModel):
-    """Filter elements whose bounding box intersects a 3D region."""
+    """Filter elements whose bounding box matches a 3D region."""
 
     type: Literal["bounding_box"] = "bounding_box"
     min_point: list[float] = Field(
@@ -98,6 +98,10 @@ class BoundingBoxFilter(BaseModel):
         description="[x, y, z] maximum corner in Revit internal units (feet)",
         min_length=3,
         max_length=3,
+    )
+    mode: Literal["inside", "intersecting"] = Field(
+        default="inside",
+        description="Spatial mode: inside (default) or intersecting",
     )
 
 
@@ -121,13 +125,11 @@ class ElementTypeFilter(BaseModel):
     )
 
 
-class PhysicalModelFilter(BaseModel):
-    """Built-in filter for physical model elements.
+class PhaseFilter(BaseModel):
+    """Filter elements associated with a specific phase."""
 
-    Excludes system categories, HVAC Zones, Lines, and Detail Components.
-    """
-
-    type: Literal["physical_model"] = "physical_model"
+    type: Literal["phase"] = "phase"
+    phase_name: str = Field(description="Exact phase name, e.g. 'New Construction'")
 
 
 class ExclusionFilter(BaseModel):
@@ -144,7 +146,7 @@ class WorksetFilter(BaseModel):
     workset_name: str = Field(description="Exact workset name")
 
 
-FilterSpec = Annotated[
+FilterItem = Annotated[
     Union[
         CategoryFilter,
         ParameterStringFilter,
@@ -155,7 +157,7 @@ FilterSpec = Annotated[
         BoundingBoxFilter,
         ViewFilter,
         ElementTypeFilter,
-        PhysicalModelFilter,
+        PhaseFilter,
         ExclusionFilter,
         WorksetFilter,
     ],
@@ -163,37 +165,14 @@ FilterSpec = Annotated[
 ]
 
 
-class FilterRequest(BaseModel):
+class FilterSpec(BaseModel):
     """Top-level request describing which elements to select.
 
     Combine multiple filters with AND or OR logic.
     """
 
-    filters: list[FilterSpec] = Field(description="List of filter specifications to apply")
+    filters: list[FilterItem] = Field(description="List of filter specifications to apply")
     logic: Literal["and", "or"] = Field(
         default="and",
         description="How to combine filters: 'and' = all must match, 'or' = any must match",
     )
-
-
-class FilteredExportResult(BaseModel):
-    """Result of a filtered element export to Excel."""
-
-    file_path: str = Field(description="Absolute path to the exported file")
-    format: str = Field(default="xlsx", description="Export format")
-    row_count: int = Field(description="Number of data rows exported")
-    column_count: int = Field(description="Number of columns exported")
-    filter_summary: str = Field(description="Human-readable summary of the applied filters")
-    file_size_bytes: int = Field(description="Size of the exported file in bytes")
-
-
-class QueryElementsResult(BaseModel):
-    """Result of a filtered element query (no file export)."""
-
-    total_elements: int = Field(description="Total number of elements matching the filter")
-    by_category: dict[str, int] = Field(description="Element count grouped by category name")
-    sample_elements: list[dict] = Field(
-        default_factory=list,
-        description="First N elements with basic info (ElementId, Name, Category)",
-    )
-    filter_summary: str = Field(description="Human-readable summary of the applied filters")

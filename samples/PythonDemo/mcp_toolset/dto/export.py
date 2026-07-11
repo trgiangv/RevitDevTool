@@ -1,14 +1,16 @@
+"""Export result DTOs."""
 from __future__ import annotations
+
 from pydantic import BaseModel, Field
 
 
 class ExportResult(BaseModel):
-    file_path: str = Field(description="Absolute path to the exported file")
-    format: str = Field(description="Export format: 'xlsx' or 'csv'")
-    row_count: int = Field(description="Number of data rows exported")
-    column_count: int = Field(description="Number of columns exported")
-    categories_exported: list[str] = Field(description="Revit categories included in the export")
-    file_size_bytes: int = Field(description="Size of the exported file in bytes")
+    file_path: str
+    format: str = "xlsx"
+    row_count: int
+    column_count: int
+    categories_exported: list[str] = Field(default_factory=list)
+    file_size_bytes: int
 
 
 class ScheduleExportResult(BaseModel):
@@ -17,3 +19,12 @@ class ScheduleExportResult(BaseModel):
     row_count: int
     column_count: int
     file_size_bytes: int
+
+
+class ExportPdfResult(BaseModel):
+    file_paths: list[str]
+    page_count: int
+
+
+class ExportImageResult(BaseModel):
+    file_paths: list[str]

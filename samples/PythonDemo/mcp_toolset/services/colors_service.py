@@ -1,46 +1,13 @@
-"""Service for color analysis and overrides."""
+"""Internal helpers for color analysis and graphic overrides."""
 
 from __future__ import annotations
 
-from collections import defaultdict
-
 from Autodesk.Revit import DB
 
-from dto.colors import (
-    CategoryParametersResult,
-    ClearColorsResult,
-    ColorAssignment,
-    ColorSplashResult,
-    ColorSplashStatistics,
-    ParameterInfo,
-)
-from shared.element_helpers import (
-    find_category_by_name,
-    normalize_string,
-    param_value_as_string,
-    require_active_view,
-    require_doc,
-)
-from shared.responses import ToolError
-from shared.transactions import run_transaction
+from shared.element_helpers import param_value_as_string
 
 
 class ColorsService:
-    def _require_category_elements(self, doc: DB.Document, category_name: str) -> tuple[DB.Category, list]:
-        category = find_category_by_name(doc, category_name)
-        if category is None:
-            raise ToolError("Category '{}' not found".format(category_name))
-
-        elements = (
-            DB.FilteredElementCollector(doc)
-            .OfCategoryId(category.Id)
-            .WhereElementIsNotElementType()
-            .ToElements()
-        )
-        if not elements:
-            raise ToolError("No elements found in category '{}'".format(category_name))
-        return category, elements
-
     @staticmethod
     def _hex_to_color(hex_color: str) -> DB.Color:
         value = (hex_color or "").strip().lstrip("#")
@@ -132,113 +99,6 @@ class ColorsService:
         return ColorsService._value_from_parameter(
             element_type.LookupParameter(parameter_name),
             element.Document,
-        )
-
-    def _collect_parameter_metadata(self, sample_element: DB.Element) -> list[ParameterInfo]:
-        parameters = []
-        seen_names = set()
-
-        def _append_parameters(parameter_source):
-            for parameter in parameter_source:
-                try:
-                    name = normalize_string(parameter.Definition.Name)
-                    if not name or name in seen_names:
-                        continue
-                    seen_names.add(name)
-                    parameters.append(
-                        ParameterInfo(
-                            name=name,
-                            storage_type=str(parameter.StorageType),
-                            has_value=bool(parameter.HasValue),
-                            sample_value=self._parameter_display_value(sample_element, name),
-                        )
-                    )
-                except Exception:
-                    continue
-
-        _append_parameters(sample_element.Parameters)
-        try:
-            element_type = sample_element.Document.GetElement(sample_element.GetTypeId())
-            if element_type is not None:
-                _append_parameters(element_type.Parameters)
-        except Exception:
-            pass
-
-        parameters.sort(key=lambda item: item.name)
-        return parameters
-
-    def list_category_parameters(self, category_name: str) -> CategoryParametersResult:
-        doc = require_doc()
-        _, elements = self._require_category_elements(doc, category_name)
-        parameters = self._collect_parameter_metadata(elements[0])
-        return CategoryParametersResult(
-            category=normalize_string(category_name),
-            parameter_count=len(parameters),
-            parameters=parameters,
-        )
-
-    def clear_colors(self, category_name: str) -> ClearColorsResult:
-        doc = require_doc()
-        _, elements = self._require_category_elements(doc, category_name)
-        active_view = require_active_view(doc)
-
-        def _operation():
-            empty_override = DB.OverrideGraphicSettings()
-            cleared_count = 0
-            for element in elements:
-                try:
-                    active_view.SetElementOverrides(element.Id, empty_override)
-                    cleared_count += 1
-                except Exception:
-                    continue
-            return cleared_count
-
-        cleared_count = run_transaction(doc, "Clear Element Colors", _operation)
-        return ClearColorsResult(
-            category=normalize_string(category_name),
-            elements_processed=cleared_count,
-        )
-
-    def color_splash(
-        self,
-        category_name: str,
-        parameter_name: str,
-        use_gradient: bool = False,
-        custom_colors: list[str] | None = None,
-    ) -> ColorSplashResult:
-        doc = require_doc()
-        _, elements = self._require_category_elements(doc, category_name)
-        active_view = require_active_view(doc)
-
-        grouped_elements = defaultdict(list)
-        for element in elements:
-            grouped_elements[self._parameter_display_value(element, parameter_name)].append(element)
-
-        unique_values = sorted(grouped_elements.keys(), key=lambda value: (value == "None", value.lower()))
-        if not unique_values:
-            raise ToolError("No parameter values found for '{}'".format(parameter_name))
-
-        colors = self._select_colors(unique_values, use_gradient, custom_colors)
-        solid_fill_id = self._solid_fill_pattern_id(doc)
-
-        def _operation():
-            return self._apply_color_overrides(active_view, grouped_elements, unique_values, colors, solid_fill_id)
-
-        color_assignments, colored_count = run_transaction(doc, "Color Elements by Parameter", _operation)
-        assignments_dto = {
-            k: ColorAssignment(color=v["color"], element_count=v["element_count"])
-            for k, v in color_assignments.items()
-        }
-        return ColorSplashResult(
-            category=normalize_string(category_name),
-            parameter=normalize_string(parameter_name),
-            color_assignments=assignments_dto,
-            statistics=ColorSplashStatistics(
-                total_elements=len(elements),
-                elements_colored=colored_count,
-                unique_parameter_values=len(unique_values),
-                use_gradient=bool(use_gradient),
-            ),
         )
 
     def _select_colors(
