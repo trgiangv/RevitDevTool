@@ -7,15 +7,15 @@ using ModelContextProtocol.Server;
 namespace DevTools.Daemon.Mcp.Tools;
 
 public sealed class RefreshDynamicCatalog(
-    DynamicToolCatalog catalog,
-    McpServerResourceCollection resourceCollection,
-    McpServerPrimitiveCollection<McpServerPrompt> promptCollection) : McpServerTool
+    DynamicToolCatalog toolCatalog,
+    DynamicResourceCatalog resourceCatalog,
+    DynamicPromptCatalog promptCatalog) : McpServerTool
 {
     public override Tool ProtocolTool { get; } = new()
     {
         Name = "refresh_dynamic_catalog",
         Description =
-            "Re-query all connected host instances and rebuild the full catalog (tools, resources, prompts). Returns the refreshed tool list.",
+            "Re-query all connected host instances and rebuild the full catalog (tools, resources, prompts).",
         InputSchema = McpSchemaBuilder.EmptyObject()
     };
 
@@ -35,9 +35,9 @@ public sealed class RefreshDynamicCatalog(
 
         var summary = new
         {
-            tools = catalog.Build(),
-            resources = resourceCollection.Count(),
-            prompts = promptCollection.Count()
+            tools = toolCatalog.List().Count,
+            resources = resourceCatalog.List().Count,
+            prompts = promptCatalog.List().Count
         };
 
         return new CallToolResult

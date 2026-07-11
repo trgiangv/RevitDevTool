@@ -15,6 +15,8 @@ public sealed class McpEngine
 {
     public InstanceManager InstanceManager { get; }
     public DynamicToolCatalog DynamicToolCatalog { get; }
+    public DynamicResourceCatalog DynamicResourceCatalog { get; }
+    public DynamicPromptCatalog DynamicPromptCatalog { get; }
     public McpServerPrimitiveCollection<McpServerTool> ToolCollection { get; }
     public McpServerPrimitiveCollection<McpServerPrompt> PromptCollection { get; }
     public McpServerResourceCollection ResourceCollection { get; }
@@ -23,11 +25,15 @@ public sealed class McpEngine
     public McpEngine(
         InstanceManager instanceManager,
         DynamicToolCatalog dynamicToolCatalog,
+        DynamicResourceCatalog dynamicResourceCatalog,
+        DynamicPromptCatalog dynamicPromptCatalog,
         IAuthService authService,
         IOptions<GatewayOptions> gatewayOptions)
     {
         InstanceManager = instanceManager;
         DynamicToolCatalog = dynamicToolCatalog;
+        DynamicResourceCatalog = dynamicResourceCatalog;
+        DynamicPromptCatalog = dynamicPromptCatalog;
         ToolCollection = [];
         PromptCollection = [];
         ResourceCollection = [];
@@ -48,10 +54,10 @@ public sealed class McpEngine
         new OpenModelTool(InstanceManager),
         new ListDynamicTools(DynamicToolCatalog),
         new CallDynamicTool(InstanceManager, DynamicToolCatalog),
-        new ListDynamicResources(ResourceCollection),
-        new ReadDynamicResource(InstanceManager),
-        new ListDynamicPrompts(PromptCollection),
-        new GetDynamicPrompt(InstanceManager),
-        new RefreshDynamicCatalog(DynamicToolCatalog, ResourceCollection, PromptCollection)
+        new ListDynamicResources(DynamicResourceCatalog),
+        new ReadDynamicResource(InstanceManager, DynamicResourceCatalog),
+        new ListDynamicPrompts(DynamicPromptCatalog),
+        new GetDynamicPrompt(InstanceManager, DynamicPromptCatalog),
+        new RefreshDynamicCatalog(DynamicToolCatalog, DynamicResourceCatalog, DynamicPromptCatalog)
     ];
 }

@@ -1,18 +1,19 @@
 using System.Text.Json;
+using DevTools.Mcp.Routing.Catalog;
 using DevTools.Mcp.Schema;
 using ModelContextProtocol.Protocol;
 using ModelContextProtocol.Server;
 
 namespace DevTools.Daemon.Mcp.Tools;
 
-public sealed class ListDynamicResources(McpServerResourceCollection resourceCollection) : McpServerTool
+public sealed class ListDynamicResources(DynamicResourceCatalog catalog) : McpServerTool
 {
     public override Tool ProtocolTool { get; } = new()
     {
         Name = "list_dynamic_resources",
         Description =
-            "List resources currently exposed by connected host instances. " +
-            "Returns URIs, names, and descriptions for each available resource.",
+            "List resources currently registered by each connected host instance. " +
+            "Use hostInstanceId with read_dynamic_resource when a resource is available on multiple instances.",
         InputSchema = McpSchemaBuilder.EmptyObject()
     };
 
@@ -22,13 +23,21 @@ public sealed class ListDynamicResources(McpServerResourceCollection resourceCol
         RequestContext<CallToolRequestParams> request,
         CancellationToken cancellationToken = default)
     {
-        var items = resourceCollection
-            .Select(r => new
+        var registrations = catalog.List();
+        var grouped = registrations
+            .GroupBy(r => r.Uri, StringComparer.OrdinalIgnoreCase)
+            .Select(g => new
             {
-                uri = r.ProtocolResource?.Uri ?? r.ProtocolResourceTemplate.UriTemplate,
-                name = r.ProtocolResource?.Name ?? r.ProtocolResourceTemplate.Name,
-                description = r.ProtocolResource?.Description ?? r.ProtocolResourceTemplate.Description,
-                mimeType = r.ProtocolResource?.MimeType ?? r.ProtocolResourceTemplate.MimeType
+                uri = g.Key,
+                name = g.First().Name,
+                description = g.First().Description,
+                mimeType = g.First().MimeType,
+                instances = g.Select(r => new
+                {
+                    hostInstanceId = r.Instance.ProcessId,
+                    hostApp = r.Instance.HostApp,
+                    version = r.Instance.VersionNumber
+                }).ToArray()
             })
             .ToArray();
 
@@ -39,7 +48,7 @@ public sealed class ListDynamicResources(McpServerResourceCollection resourceCol
                 new TextContentBlock
                 {
                     Text = JsonSerializer.Serialize(
-                        new { resources = items, count = items.Length },
+                        new { resources = grouped, count = grouped.Length },
                         ToolHelpers.IndentedJsonOptions)
                 }
             ]

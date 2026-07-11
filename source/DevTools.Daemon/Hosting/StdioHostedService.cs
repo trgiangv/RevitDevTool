@@ -37,7 +37,8 @@ internal sealed class StdioHostedService(
             var catalogLogger = loggerFactory.CreateLogger<CatalogService>();
             var catalogService = new CatalogService(
                 engine.InstanceManager, engine.ToolCollection, engine.PromptCollection,
-                engine.ResourceCollection, engine.DynamicToolCatalog, engine.LocalTools,
+                engine.ResourceCollection, engine.DynamicToolCatalog, engine.DynamicResourceCatalog,
+                engine.DynamicPromptCatalog, engine.LocalTools,
                 catalogLogger, stoppingToken);
             engine.InstanceManager.Changed += catalogService.RequestRefresh;
 

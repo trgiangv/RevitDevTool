@@ -23,6 +23,8 @@ internal sealed class DiscoveryHostedService(
             engine.PromptCollection,
             engine.ResourceCollection,
             engine.DynamicToolCatalog,
+            engine.DynamicResourceCatalog,
+            engine.DynamicPromptCatalog,
             engine.LocalTools,
             catalogLogger,
             stoppingToken);
