@@ -1,3 +1,8 @@
+---
+name: host-boundary-review
+description: Review checklist for host boundary changes (shared vs host-specific code, adding host support, moving code between layers). Use when editing source/DevTools.*/ and host projects simultaneously.
+---
+
 # Host Boundary Review
 
 Use when changing shared platform code, adding host support, or moving code between host projects and `DevTools.*`.

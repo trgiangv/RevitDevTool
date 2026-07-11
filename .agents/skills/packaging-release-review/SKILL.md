@@ -1,3 +1,8 @@
+---
+name: packaging-release-review
+description: Review checklist for packaging and release changes (build modules, installer, bundle layout, publishing). Use when editing build/, pack.ps1, CreateBundleModule, CreateInstallerModule, or PublishGithubModule.
+---
+
 # Packaging Release Review
 
 Use when editing build modules, installer creation, bundle layout, release publishing, or host packaging.

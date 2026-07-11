@@ -1,4 +1,5 @@
 using System.Text.Json;
+using DevTools.Mcp.Routing.Catalog;
 using ModelContextProtocol.Protocol;
 
 namespace RevitDevTool.Server.Tests;
@@ -63,7 +64,7 @@ public class DynamicToolCatalogTests
         Assert.Equal(DynamicToolResolutionState.Found, catalog.Resolve("new_tool", 101).State);
     }
 
-    private static DynamicToolRegistration Registration(string name, int processId, string hostApp) =>
+    private static DynamicToolCatalogEntry Registration(string name, int processId, string hostApp) =>
         new(
             new Tool
             {

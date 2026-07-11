@@ -13,20 +13,26 @@ Deep source: `docs/Execution/README.md`.
 
 ## Host Integration
 
-Shared execution does not own host APIs. It calls abstractions:
+Shared execution does not own host APIs. It calls abstractions defined in `source/DevTools.Execution.Abstractions/`:
 
-- `IHostContextExecutor`
-- `ICommandDiscovery`
-- `ICommandRunner`
-- `ICompiledScriptBridge`
-- `IPythonBridge`
-- `IIronPythonBridge`
-- `IDebuggerBridge`
+- `IHostContextExecutor` — run code on host main thread
+- `ICommandDiscovery` — discover executable nodes
+- `ICommandRunner` — invoke a discovered command
+- `IDocumentBridge` — open/close documents (Revit/AutoCAD)
+- `ICompiledScriptBridge` — compiled script caching
 
-Host projects register implementations:
+Additional interfaces in `source/DevTools.Execution/Interfaces/`:
+
+- `IPythonBridge` — Python.NET runtime
+- `IIronPythonBridge` — IronPython runtime
+- `IDebuggerBridge` (in `DevTools.Presentation.Interfaces`) — attach/detach debugger
+
+Host projects register implementations via `AddExecutionServices()`:
 
 - Revit: `source/RevitDevTool/Hosting/RevitHostingExtensions.cs`
 - AutoCAD: `source/AcadDevTool/Hosting/AcadHostingExtensions.cs`
+
+The `AddExecutionServices()` call is the central DI hub — it registers orchestrator, MCP in-host pipe server (`DevToolsPipeServer`), pytest handler, and all strategy factories.
 
 ## Script Modes
 

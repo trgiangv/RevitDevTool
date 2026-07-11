@@ -1,3 +1,8 @@
+---
+name: pytest-bridge-change
+description: Review checklist for pytest bridge changes (contracts, runner, pipe routes, dependency preparation, test discovery/run). Use when editing source/DevTools.Execution/External/Testing/ or PytestContracts/PytestRunner.
+---
+
 # PyTest Bridge Change
 
 Use when editing pytest bridge contracts, runner, named pipe test routes, dependency preparation, or test discovery/run behavior.

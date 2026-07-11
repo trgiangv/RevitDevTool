@@ -1,3 +1,8 @@
+---
+name: net48-compat-review
+description: Review checklist for .NET Framework 4.8 compatibility (Autodesk 2022-2024). Use when editing shared DevTools.* libraries that must work on net48.
+---
+
 # net48 Compatibility Review
 
 Use when editing shared libraries or code reachable from Autodesk 2022-2024.

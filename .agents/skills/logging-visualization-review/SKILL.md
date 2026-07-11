@@ -1,3 +1,8 @@
+---
+name: logging-visualization-review
+description: Review checklist for logging and visualization changes (sinks, trace listeners, monitor output, DirectContext3D rendering). Use when editing source/DevTools.Logging/ or source/RevitDevTool/Visualization/.
+---
+
 # Logging Visualization Review
 
 Use when editing logging sinks, trace listeners, monitor output, geometry visualization, or host rendering integration.

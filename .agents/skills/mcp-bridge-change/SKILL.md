@@ -1,3 +1,8 @@
+---
+name: mcp-bridge-change
+description: Review checklist for MCP bridge changes (protocol, catalog, dispatch, pipe server, daemon tools). Use when editing source/DevTools.Mcp/, source/DevTools.Ipc/, or source/DevTools.Daemon/Mcp/.
+---
+
 # MCP Bridge Change
 
 Use when editing MCP parser, registry, standalone server, pipe protocol, or tool/prompt/resource dispatch.

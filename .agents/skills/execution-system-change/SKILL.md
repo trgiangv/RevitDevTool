@@ -1,3 +1,8 @@
+---
+name: execution-system-change
+description: Review checklist for execution system changes (providers, strategies, node models, package handling, file watching, host adapters). Use when editing source/DevTools.Execution/ or source/DevTools.Execution.Abstractions/.
+---
+
 # Execution System Change
 
 Use when editing execution providers, strategies, node models, package handling, file watching, or host execution adapters.
