@@ -87,6 +87,7 @@ public static class ExecutionExtensions
         services.AddSingleton<McpCatalogStore>();
         services.AddSingleton<CSharpCodeExecutor>();
         services.AddSingleton<IBuiltInMcpTool, CSharpCodeTool>();
+        services.AddSingleton<IBuiltInMcpTool, PythonCodeTool>();
         services.AddSingleton<IBuiltInMcpTool>(sp =>
             new OpenDocumentTool(sp.GetService<IDocumentBridge>() ?? NullDocumentBridge.Instance));
         services.AddSingleton<McpToolsetContextManager>();

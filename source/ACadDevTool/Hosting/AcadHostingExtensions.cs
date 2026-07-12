@@ -86,6 +86,7 @@ internal static class AcadHostingExtensions
         services.AddExecutionServices();
 
         services.AddSingleton<IBuiltInMcpResource, AcadApiCheatsheet>();
+        services.AddSingleton<IBuiltInMcpResource, AcadPythonCheatsheet>();
         services.AddSingleton<IBuiltInMcpPrompt, AcadCodePrompt>();
 
         return builder;

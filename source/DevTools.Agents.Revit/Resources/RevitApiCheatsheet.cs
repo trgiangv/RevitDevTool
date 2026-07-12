@@ -13,13 +13,13 @@ public sealed class RevitApiCheatsheet : IBuiltInMcpResource
 {
     private static readonly Lazy<string> Content = new(LoadEmbeddedContent);
 
-    public string UriTemplate => "revit://api-cheatsheet";
+    public string UriTemplate => "revit://csharp-cheatsheet";
 
     public Resource ProtocolResource { get; } = new()
     {
-        Uri = "revit://api-cheatsheet",
-        Name = "Revit API Cheat Sheet",
-        Description = "Common Revit API patterns, transaction usage, units, query patterns, and version pitfalls. Read before writing execute_csharp_code.",
+        Uri = "revit://csharp-cheatsheet",
+        Name = "Revit C# Cheatsheet",
+        Description = "Common Revit C# API patterns, transaction usage, units, query patterns, and version pitfalls. Read before writing execute_csharp_code.",
         MimeType = "text/markdown"
     };
 

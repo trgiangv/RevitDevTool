@@ -16,7 +16,7 @@ public sealed class CSharpCodeTool(CSharpCodeExecutor executor) : IBuiltInMcpToo
         Description =
             "Compile and execute C# code in the running host process. " +
             "Host API assemblies auto-referenced. Use #r for extras, #r \"nuget:\" for packages.\n" +
-            "BEFORE WRITING CODE: Read available resources (list_dynamic_resources or resources/list) for model state, API patterns, and version compatibility.\n" +
+            "BEFORE WRITING CODE: Read available resources (list_dynamic_resources) for API patterns and model state.\n" +
             "Error responses: [COMPILATION ERROR] fix code, [RUNTIME ERROR] check logic, [ROLLBACK] constraint violation.",
         InputSchema = McpSchemaBuilder.Object(
         [
