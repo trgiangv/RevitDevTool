@@ -21,7 +21,7 @@ public sealed class PythonCodeTool(
             "Execute Python code in the host process via Python.NET. " +
             "Code runs in global scope with CLR references already added by host setup. " +
             "Use `# /// script` header for external packages (PEP 723).\n" +
-            "RULES: Always include explicit imports (from Autodesk.Revit import DB, UI). " +
+            "RULES: Always include explicit imports for the host API namespace. " +
             "Wrap logic in def run(): ... run(). Use print() for output.\n" +
             "BEFORE WRITING CODE: Read python-cheatsheet resource for host API patterns.\n" +
             "Error responses: [RUNTIME ERROR] check logic/imports.",
@@ -29,8 +29,8 @@ public sealed class PythonCodeTool(
         [
             McpSchemaBuilder.String(
                 IpcPropertyNames.Code,
-                "Python code with explicit imports. CLR references are pre-loaded; " +
-                "use `from Autodesk.Revit import DB, UI` etc. " +
+                "Python code with explicit imports. Host CLR references are pre-loaded; " +
+                "import the host API namespace you need (e.g. Autodesk.Revit or Autodesk.AutoCAD). " +
                 "Add PEP 723 `# /// script` metadata for external packages."),
             McpSchemaBuilder.String(
                 "description",
