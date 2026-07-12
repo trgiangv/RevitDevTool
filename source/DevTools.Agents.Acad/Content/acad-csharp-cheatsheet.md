@@ -1,6 +1,6 @@
 # AutoCAD API Cheat Sheet
 
-## Required Pattern (IExtensionApplication command)
+## Required Pattern
 
 ```csharp
 using System.Linq;
@@ -12,13 +12,14 @@ using Autodesk.AutoCAD.Runtime;
 
 public class Command
 {
-    [CommandMethod("MYCOMMAND")]
+    [CommandMethod("MYCOMMAND", CommandFlags.Session)]
     public void Execute()
     {
         var doc = Application.DocumentManager.MdiActiveDocument;
         var db = doc.Database;
         var ed = doc.Editor;
 
+        using (var docLock = doc.LockDocument())
         using (var tr = db.TransactionManager.StartTransaction())
         {
             // Your code here
@@ -28,6 +29,9 @@ public class Command
         ed.WriteMessage("\nResult text");
     }
 }
+```
+
+**Critical**: `CommandFlags.Session` and `doc.LockDocument()` are required because MCP execution runs on a background thread. Without them, you get "The calling thread cannot access this object because a different thread owns it".
 ```
 
 ## Transaction Pattern

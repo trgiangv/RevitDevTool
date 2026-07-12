@@ -52,12 +52,12 @@ run()
 
 ## Database / Transaction Pattern
 
-Always acquire the active document inside `run()` and use a transaction for modifications:
+Always acquire the active document inside `run()`, lock the document, and use a transaction for modifications:
 
 ```python
 def run():
     from Autodesk.AutoCAD.ApplicationServices.Core import Application
-    from Autodesk.AutoCAD.DatabaseServices import Transaction, OpenMode
+    from Autodesk.AutoCAD.DatabaseServices import Transaction, OpenMode, BlockTable, BlockTableRecord
 
     doc = Application.DocumentManager.MdiActiveDocument
     if doc is None:
@@ -65,23 +65,26 @@ def run():
         return
 
     db = doc.Database
-    tr = db.TransactionManager.StartTransaction()
-    try:
-        bt = tr.GetObject(db.BlockTableId, OpenMode.ForRead)
-        btr = tr.GetObject(bt[DB.BlockTableRecord.ModelSpace], OpenMode.ForWrite)
-        # create or modify entities here
-        tr.Commit()
-        print("Committed")
-    except Exception as ex:
-        print(f"Aborted: {ex}")
+    with doc.LockDocument():
+        tr = db.TransactionManager.StartTransaction()
+        try:
+            bt = tr.GetObject(db.BlockTableId, OpenMode.ForRead)
+            btr = tr.GetObject(bt[BlockTableRecord.ModelSpace], OpenMode.ForWrite)
+            # create or modify entities here
+            tr.Commit()
+            print("Committed")
+        except Exception as ex:
+            print(f"Aborted: {ex}")
 
 run()
 ```
 
+**Critical**: `doc.LockDocument()` is required because MCP execution runs on a background thread. Without it, you get "The calling thread cannot access this object because a different thread owns it".
+
 ### Open ModelSpace for writing
 ```python
 bt = tr.GetObject(db.BlockTableId, OpenMode.ForRead)
-btr = tr.GetObject(bt[DB.BlockTableRecord.ModelSpace], OpenMode.ForWrite)
+btr = tr.GetObject(bt[BlockTableRecord.ModelSpace], OpenMode.ForWrite)
 btr.AppendEntity(entity)
 tr.AddNewlyCreatedDBObject(entity, True)
 ```

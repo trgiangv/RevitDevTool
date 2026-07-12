@@ -109,16 +109,7 @@ public sealed class CatalogService(
             var key = tool.Name;
             if (!tools.TryAdd(key, new RoutingMcpServerTool(instanceManager, tool)))
             {
-                var namespacedKey = $"{key}@{client.Info.HostApp}_{client.Info.VersionNumber}";
-                var namespacedTool = new Tool
-                {
-                    Name = namespacedKey,
-                    Description = tool.Description,
-                    InputSchema = tool.InputSchema,
-                    Annotations = tool.Annotations
-                };
-                tools.TryAdd(namespacedKey, new RoutingMcpServerTool(instanceManager, namespacedTool));
-                logger.ZLogWarning($"Tool name collision for '{key}', registered as '{namespacedKey}'");
+                logger.ZLogDebug($"Tool '{key}' already registered, skipping duplicate from {client.Info.HostApp}_{client.Info.VersionNumber} (use call_dynamic_tool with hostInstanceId).");
             }
             dynamicRegistrations.Add(new DynamicToolCatalogEntry(tool, client.Info, client.PipeName));
         }
@@ -136,15 +127,7 @@ public sealed class CatalogService(
             var key = prompt.Name;
             if (!prompts.TryAdd(key, new RoutingMcpServerPrompt(instanceManager, prompt)))
             {
-                var namespacedKey = $"{key}@{client.Info.HostApp}_{client.Info.VersionNumber}";
-                var namespacedPrompt = new Prompt
-                {
-                    Name = namespacedKey,
-                    Description = prompt.Description,
-                    Arguments = prompt.Arguments
-                };
-                prompts.TryAdd(namespacedKey, new RoutingMcpServerPrompt(instanceManager, namespacedPrompt));
-                logger.ZLogWarning($"Prompt name collision for '{key}', registered as '{namespacedKey}'");
+                logger.ZLogDebug($"Prompt '{key}' already registered, skipping duplicate from {client.Info.HostApp}_{client.Info.VersionNumber}.");
             }
             dynamicPromptRegs.Add(new DynamicPromptCatalogEntry(key, prompt.Description, prompt, client.Info, client.PipeName));
         }
