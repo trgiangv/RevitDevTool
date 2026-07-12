@@ -88,6 +88,7 @@ internal static class AcadHostingExtensions
 
         services.AddSingleton<IBuiltInMcpResource, AcadCSharpCheatsheet>();
         services.AddSingleton<IBuiltInMcpResource, AcadPythonCheatsheet>();
+        services.AddSingleton<IBuiltInMcpResource, AcadViewScreenshot>();
         services.AddSingleton<IBuiltInMcpPrompt, AcadCodePrompt>();
         services.AddSingleton<AcadHistoryNavigator>();
         services.AddSingleton<IBuiltInMcpTool, NavigateHistoryTool>();

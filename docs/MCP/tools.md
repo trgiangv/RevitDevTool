@@ -53,11 +53,15 @@ Registered via DI in host projects (e.g., `RevitHostingExtensions.AddExecutionSe
 
 | URI | Host | Description |
 |-----|------|-------------|
-| `revit://api-cheatsheet` | Revit | API patterns, usings, version pitfalls |
+| `revit://csharp-cheatsheet` | Revit | C# API patterns, usings, version pitfalls |
+| `revit://python-cheatsheet` | Revit | Python API patterns, PEP 723, package lifecycle |
 | `revit://model/context` | Revit | Live model state: levels, categories, units, active view |
 | `revit://model/warnings` | Revit | Active constraint violations and element IDs |
 | `revit://version` | Revit | Host version, .NET runtime, API compatibility notes |
 | `revit://view/screenshot` | Revit | Active view as 1920px PNG (BlobResourceContents) |
+| `acad://csharp-cheatsheet` | AutoCAD | C# API patterns, doc lock, transactions |
+| `acad://python-cheatsheet` | AutoCAD | Python API patterns, PEP 723, package lifecycle |
+| `acad://view/screenshot` | AutoCAD | Active drawing window as 1920×1080 PNG via `CapturePreviewImage` |
 
 ### Built-in Prompts (`IBuiltInMcpPrompt`)
 
