@@ -1,4 +1,3 @@
-using System.IO;
 using System.Reflection;
 using DevTools.Mcp.BuiltIn;
 using ModelContextProtocol.Protocol;
@@ -6,10 +5,10 @@ using ModelContextProtocol.Protocol;
 namespace DevTools.Agents.Revit.Resources;
 
 /// <summary>
-/// Provides a Revit API cheat sheet as an MCP resource.
+/// Provides a Revit C# cheat sheet as an MCP resource.
 /// AI clients can read this before writing C# code to reduce trial-and-error.
 /// </summary>
-public sealed class RevitApiCheatsheet : IBuiltInMcpResource
+public sealed class RevitCSharpCheatsheet : IBuiltInMcpResource
 {
     private static readonly Lazy<string> Content = new(LoadEmbeddedContent);
 
@@ -43,7 +42,7 @@ public sealed class RevitApiCheatsheet : IBuiltInMcpResource
     {
         var assembly = Assembly.GetExecutingAssembly();
         var resourceName = assembly.GetManifestResourceNames()
-            .FirstOrDefault(n => n.EndsWith("revit-api-cheatsheet.md", StringComparison.OrdinalIgnoreCase));
+            .FirstOrDefault(n => n.EndsWith("revit-csharp-cheatsheet.md", StringComparison.OrdinalIgnoreCase));
 
         if (resourceName is null)
             return "# Revit API Cheat Sheet\n\nEmbedded content not found.";

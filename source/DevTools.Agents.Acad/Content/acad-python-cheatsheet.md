@@ -2,11 +2,13 @@
 
 ## Required Pattern
 
-Always wrap code in `def run():` and call it at the end. Do **not** create global variables or access the database at module level.
+Always include explicit imports and wrap code in `def run():`. Do **not** create global variables or access the database at module level.
 
 ```python
+from Autodesk.AutoCAD.ApplicationServices.Core import Application
+from Autodesk.AutoCAD.DatabaseServices import Transaction, OpenMode
+
 def run():
-    from Autodesk.AutoCAD.ApplicationServices.Core import Application
     doc = Application.DocumentManager.MdiActiveDocument
     if doc is None:
         print("No active document")
@@ -16,27 +18,21 @@ def run():
 run()
 ```
 
-## Available Builtins
+## Required Imports
 
-Inherited from the host Python runtime scope:
-
-| Name | Description |
-|------|-------------|
-| `DB` | AutoCAD database types (`Autodesk.AutoCAD.DatabaseServices`, etc.) |
-| `AcadContext` | Host context helpers for active document/editor (when injected by setup) |
-| `print()` | Captured and returned to the caller |
-
-Import namespaces inside `run()` when needed:
+CLR references are pre-loaded by the host setup script. You must explicitly import namespaces:
 
 ```python
-def run():
-    from Autodesk.AutoCAD.ApplicationServices.Core import Application
-    from Autodesk.AutoCAD.DatabaseServices import Transaction, OpenMode
-    doc = Application.DocumentManager.MdiActiveDocument
-    db = doc.Database
-    # ...
-run()
+from Autodesk.AutoCAD.ApplicationServices.Core import Application
+from Autodesk.AutoCAD.DatabaseServices import Transaction, OpenMode, BlockTableRecord
+from Autodesk.AutoCAD.Geometry import Point3d, Vector3d
 ```
+
+| Import | Provides |
+|--------|----------|
+| `Application` | Document manager, active document |
+| `DatabaseServices` | Transaction, OpenMode, Entity types, BlockTable |
+| `Geometry` | Point3d, Vector3d, Matrix3d |
 
 ## PEP 723 Dependencies
 
@@ -104,10 +100,19 @@ for obj_id in btr:
 doc.Editor.WriteMessage("\nResult text")
 ```
 
+## Package Lifecycle (PEP 723)
+
+- Packages declared in `# /// script` header are auto-installed on first use.
+- First install: 5–30s (network download). Subsequent imports: instant (cached in memory).
+- **Limitation**: Once a package is imported, its version is fixed for the entire host session. You cannot upgrade an already-imported package without restarting the host process.
+- **Limitation**: If multiple host instances run simultaneously, concurrent package installs may conflict. Pin exact versions to avoid ambiguity.
+- **Tip**: Use `pandas==2.2.0` (exact pin) rather than `pandas>=2.0` for reproducible behavior.
+
 ## Rules
 
-1. **Always** use `def run(): ... run()` — never execute host API at module level.
-2. **Never** assign to module-level globals (`doc = ...` outside a function).
-3. Acquire `Application.DocumentManager.MdiActiveDocument` **inside** `run()`.
-4. Use `print()` for output — stdout/stderr are captured and returned.
-5. Wrap all database reads/writes in `db.TransactionManager.StartTransaction()`.
+1. **Always** include explicit imports (`from Autodesk.AutoCAD.DatabaseServices import ...`).
+2. **Always** use `def run(): ... run()` — never execute host API at module level.
+3. **Never** assign to module-level globals (`doc = ...` outside a function).
+4. Acquire `Application.DocumentManager.MdiActiveDocument` **inside** `run()`.
+5. Use `print()` for output — stdout/stderr are captured and returned.
+6. Wrap all database reads/writes in `db.TransactionManager.StartTransaction()`.

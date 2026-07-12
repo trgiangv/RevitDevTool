@@ -6,10 +6,10 @@ using ModelContextProtocol.Protocol;
 namespace DevTools.Agents.Acad.Resources;
 
 /// <summary>
-/// Provides an AutoCAD API cheat sheet as an MCP resource.
+/// Provides an AutoCAD C# cheat sheet as an MCP resource.
 /// AI clients can read this before writing C# code to reduce trial-and-error.
 /// </summary>
-public sealed class AcadApiCheatsheet : IBuiltInMcpResource
+public sealed class AcadCSharpCheatsheet : IBuiltInMcpResource
 {
     private static readonly Lazy<string> Content = new(LoadEmbeddedContent);
 
@@ -43,7 +43,7 @@ public sealed class AcadApiCheatsheet : IBuiltInMcpResource
     {
         var assembly = Assembly.GetExecutingAssembly();
         var resourceName = assembly.GetManifestResourceNames()
-            .FirstOrDefault(n => n.EndsWith("acad-api-cheatsheet.md", StringComparison.OrdinalIgnoreCase));
+            .FirstOrDefault(n => n.EndsWith("acad-csharp-cheatsheet.md", StringComparison.OrdinalIgnoreCase));
 
         if (resourceName is null)
             return "# AutoCAD API Cheat Sheet\n\nEmbedded content not found.";

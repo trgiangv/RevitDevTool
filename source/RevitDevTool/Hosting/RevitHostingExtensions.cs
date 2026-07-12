@@ -132,7 +132,7 @@ internal static class RevitHostingExtensions
         services.AddSingleton<IExecutionProvider, ScriptExecutionProvider>();
         services.AddKeyedSingleton<IExecutionProvider, ScriptExecutionProvider>(ContainerMode.Script);
 
-        services.AddSingleton<IBuiltInMcpResource, RevitApiCheatsheet>();
+        services.AddSingleton<IBuiltInMcpResource, RevitCSharpCheatsheet>();
         services.AddSingleton<IBuiltInMcpResource, RevitPythonCheatsheet>();
         services.AddSingleton<IBuiltInMcpResource, RevitModelContext>();
         services.AddSingleton<IBuiltInMcpResource, RevitModelWarnings>();
