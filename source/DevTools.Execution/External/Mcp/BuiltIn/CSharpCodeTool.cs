@@ -1,13 +1,22 @@
+using System.Runtime.CompilerServices;
 using System.Text.Json;
-using DevTools.Execution.Abstractions;
+using DevTools.Execution.Interfaces;
+using DevTools.Execution.Models;
+using DevTools.Execution.Providers.CSharp;
 using DevTools.Mcp.Schema;
 using ModelContextProtocol.Protocol;
 
 namespace DevTools.Execution.External.Mcp.BuiltIn;
 
-/// <summary>Compiles and executes C# code in the host process.</summary>
-public sealed class CSharpCodeTool(CSharpCodeExecutor executor) : IBuiltInMcpTool
+/// <summary>Compiles and executes C# code in the host process via Roslyn.</summary>
+public sealed class CSharpCodeTool(
+    ICompiledScriptBridge scriptBridge,
+    CSharpCompiler compiler,
+    IHostContextExecutor hostContext,
+    ICommandRunner commandRunner) : IBuiltInMcpTool
 {
+    private static readonly TimeSpan CompileTimeout = TimeSpan.FromSeconds(30);
+
     public string Name => "execute_csharp_code";
 
     public Tool ProtocolTool { get; } = new()
@@ -50,41 +59,78 @@ public sealed class CSharpCodeTool(CSharpCodeExecutor executor) : IBuiltInMcpToo
             return McpToolExecutionResult.Failed(
                 McpExecutionErrorCodes.ToolInvokeFailed, "Code parameter must not be empty.");
 
-        var result = await executor.ExecuteAsync(code!, ct).ConfigureAwait(false);
-
-        if (!result.IsSuccess)
+        ScriptCompilationResult? compilationResult = null;
+        try
         {
-            var errorText = FormatError(result);
-            var errorResult = new CallToolResult
+            using var timeoutCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
+            timeoutCts.CancelAfter(CompileTimeout);
+
+            try
             {
-                IsError = true,
-                Content = [new TextContentBlock { Text = errorText }]
+                compilationResult = await compiler
+                    .CompileAsync(code!, scriptBridge, ct: timeoutCts.Token)
+                    .ConfigureAwait(false);
+            }
+            catch (OperationCanceledException) when (!ct.IsCancellationRequested)
+            {
+                return ErrorResult($"[COMPILATION ERROR] Timed out after {CompileTimeout.TotalSeconds}s. " +
+                    "Simplify code or reduce #r nuget dependencies.");
+            }
+
+            if (!compilationResult.Success || compilationResult.Command is null)
+            {
+                var diagnostics = compilationResult.FormatDiagnostics();
+                return ErrorResult($"[COMPILATION ERROR] Fix the code and retry.\n{diagnostics}");
+            }
+
+            var result = await hostContext
+                .ExecuteAsync(() => commandRunner.RunCompiledCommand(compilationResult.Command), ct)
+                .ConfigureAwait(false);
+
+            if (!result.Success)
+            {
+                var error = result.Message;
+                var prefix = error.Contains("rolled back", StringComparison.OrdinalIgnoreCase)
+                    ? "[ROLLBACK] Transaction failed due to unresolvable constraint.\n"
+                    : "[RUNTIME ERROR] ";
+                return ErrorResult($"{prefix}{error}");
+            }
+
+            var output = result.Message;
+            var rollback = ExecutionGuardContext.RollbackSummary;
+            if (!string.IsNullOrEmpty(rollback))
+                output = $"{output}\n\n⚠️ {rollback}";
+
+            var callResult = new CallToolResult
+            {
+                Content = [new TextContentBlock { Text = output }]
             };
-            return McpToolExecutionResult.Completed(errorResult, $"Failed '{Name}'.");
+            return McpToolExecutionResult.Completed(callResult, $"Completed '{Name}'.");
         }
-
-        var output = result.Output;
-        var rollback = ExecutionGuardContext.RollbackSummary;
-        if (!string.IsNullOrEmpty(rollback))
-            output = $"{output}\n\n⚠️ {rollback}";
-
-        var callResult = new CallToolResult
+        finally
         {
-            Content = [new TextContentBlock { Text = output }]
-        };
-        return McpToolExecutionResult.Completed(callResult, $"Completed '{Name}'.");
+            DisposeCompilation(compilationResult);
+        }
     }
 
-    private static string FormatError(CodeExecutionResult result)
+    private McpToolExecutionResult ErrorResult(string text)
     {
-        var error = result.Error ?? "Execution failed.";
+        var errorResult = new CallToolResult
+        {
+            IsError = true,
+            Content = [new TextContentBlock { Text = text }]
+        };
+        return McpToolExecutionResult.Completed(errorResult, $"Failed '{Name}'.");
+    }
 
-        if (error.Contains(": error CS"))
-            return $"[COMPILATION ERROR] Fix the code and retry.\n{error}";
+    [MethodImpl(MethodImplOptions.NoInlining)]
+    private static void DisposeCompilation(ScriptCompilationResult? result)
+    {
+        result?.Cleanup?.Dispose();
 
-        if (error.Contains("rolled back", StringComparison.OrdinalIgnoreCase))
-            return $"[ROLLBACK] Transaction failed due to unresolvable Revit constraint.\n{error}";
-
-        return $"[RUNTIME ERROR] {error}";
+#if NET
+        GC.Collect();
+        GC.WaitForPendingFinalizers();
+#endif
     }
 }

@@ -3,6 +3,8 @@ using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using CliWrap;
+using Python.Runtime;
+
 namespace DevTools.Execution.Providers.Python;
 
 public static class PythonDepsManager
@@ -15,22 +17,50 @@ public static class PythonDepsManager
     }
 
     /// <summary>
-    /// Resolves which packages from the PEP 723 metadata in <paramref name="scriptPath"/>
-    /// need to be installed.
-    /// Both backends pass their installed-package state via stdin so Parser.py
-    /// can filter locally: Pixi sends pixi.toml (TOML), Pip sends pip list JSON.
+    /// Resolves PEP 723 dependencies from a script file path or inline code string.
+    /// If <paramref name="scriptPathOrCode"/> is an existing file, uses it directly.
+    /// Otherwise treats it as inline code: skips if no PEP 723 marker present,
+    /// writes a temp file for the parser when needed, and cleans up after.
     /// </summary>
     public static async Task<List<string>> ResolveDependenciesAsync(
         PyEnvironmentProvider provider,
-        string scriptPath,
+        string scriptPathOrCode,
         CancellationToken cancellationToken = default)
     {
-        var stdinContent = provider.Backend == PythonBackend.Pixi
-            ? await RunPixiListAsync(cancellationToken).ConfigureAwait(false)
-            : await RunPipListAsync(provider, cancellationToken).ConfigureAwait(false);
+        string actualPath;
+        var isTemp = false;
 
-        var result = await RunParserAsync(provider, scriptPath, stdinContent, cancellationToken).ConfigureAwait(false);
-        return result.ToInstall;
+        if (File.Exists(scriptPathOrCode))
+        {
+            actualPath = scriptPathOrCode;
+        }
+        else
+        {
+            if (!scriptPathOrCode.Contains("# /// script"))
+                return [];
+
+            actualPath = Path.Combine(Path.GetTempPath(), $"pep723_{Guid.NewGuid():N}.py");
+            await File.WriteAllTextAsync(actualPath, scriptPathOrCode, cancellationToken).ConfigureAwait(false);
+            isTemp = true;
+        }
+
+        try
+        {
+            var stdinContent = provider.Backend == PythonBackend.Pixi
+                ? await RunPixiListAsync(cancellationToken).ConfigureAwait(false)
+                : await RunPipListAsync(provider, cancellationToken).ConfigureAwait(false);
+
+            var result = await RunParserAsync(provider, actualPath, stdinContent, cancellationToken).ConfigureAwait(false);
+            return result.ToInstall;
+        }
+        finally
+        {
+            if (isTemp)
+            {
+                try { File.Delete(actualPath); }
+                catch { /* best-effort */ }
+            }
+        }
     }
 
     /// <summary>
@@ -109,5 +139,26 @@ public static class PythonDepsManager
         if (string.IsNullOrEmpty(json)) return ParseResult.Empty;
 
         return JsonSerializer.Deserialize<ParseResult>(json) ?? ParseResult.Empty;
+    }
+
+    /// <summary>
+    /// Invalidate Python import caches and add site-packages to sys.path so newly
+    /// installed packages are importable in the current process.
+    /// </summary>
+    public static void RefreshImportCache(PythonInitializer initializer)
+    {
+        if (!initializer.IsInitialized) return;
+
+        using (Py.GIL())
+        {
+            using var scope = Py.CreateScope();
+            scope.Exec("""
+                import importlib, os, sys
+                importlib.invalidate_caches()
+                site_packages = os.path.join(sys.prefix, "Lib", "site-packages")
+                if os.path.isdir(site_packages) and site_packages not in sys.path:
+                    sys.path.insert(0, site_packages)
+                """);
+        }
     }
 }

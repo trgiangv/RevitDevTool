@@ -4,9 +4,14 @@ namespace DevTools.Execution.Providers.Python;
 
 public class PythonExecutor(PythonInitializer initializer)
 {
+    /// <summary>
+    /// Execute a callback within a fresh Python scope.
+    /// When <paramref name="rootFolder"/> is provided, resets module cache and configures sys.path
+    /// (for file-based scripts). When null, creates a minimal scope (for inline MCP code).
+    /// </summary>
     public T Execute<T>(
-        string anchorFile,
-        string rootFolder,
+        string anchorFileOrLabel,
+        string? rootFolder,
         Func<PyModule, T> action)
     {
         using (Py.GIL())
@@ -15,21 +20,17 @@ public class PythonExecutor(PythonInitializer initializer)
                 throw new InvalidOperationException("Python runtime not initialized.");
 
             using var scope = initializer.GlobalScope!.NewScope();
-            PrepareExecutionScope(scope, anchorFile, rootFolder);
+            scope.Set(PythonInstances.File, new PyString(anchorFileOrLabel));
+
+            if (rootFolder is not null)
+            {
+                scope.Set(PythonInstances.Root, new PyString(rootFolder));
+                ResetModuleCache(scope);
+                SetupScriptRoot(scope);
+            }
+
             return action(scope);
         }
-    }
-
-    private static void PrepareExecutionScope(
-        PyModule scope,
-        string scriptPath,
-        string? rootFolder = null)
-    {
-        rootFolder ??= Path.GetDirectoryName(scriptPath) ?? string.Empty;
-        scope.Set(PythonInstances.File, new PyString(scriptPath));
-        scope.Set(PythonInstances.Root, new PyString(rootFolder));
-        ResetModuleCache(scope);
-        SetupScriptRoot(scope);
     }
 
     private static void SetupScriptRoot(PyModule scope)

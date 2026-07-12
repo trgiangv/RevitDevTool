@@ -22,27 +22,57 @@ public sealed class CSharpCompiler(ILogger<CSharpCompiler> logger, NugetManager 
             .Where(v => v != LanguageVersion.LatestMajor && v != LanguageVersion.Latest && v != LanguageVersion.Preview && v != LanguageVersion.Default)
             .Max();
 
+    /// <summary>
+    /// Compiles a .csx script from a file path or inline code string.
+    /// If <paramref name="scriptPathOrCode"/> is an existing file, compiles directly.
+    /// Otherwise treats it as inline code: writes a temp file for the directive parser.
+    /// </summary>
     public async Task<ScriptCompilationResult> CompileAsync(
-        string scriptPath,
+        string scriptPathOrCode,
         ICompiledScriptBridge hostSupport,
         IProgress<string>? progress = null,
         CancellationToken ct = default)
     {
-        var scriptName = Path.GetFileName(scriptPath);
-        progress?.Report($"Resolving script graph for {scriptName}...");
+        string actualPath;
+        var isTemp = false;
 
-        var graph = CSharpDirectiveParser.ResolveGraph(
-            scriptPath, hostSupport.GetHostReferencePattern(), hostSupport.GetHostReferenceReplacement());
+        if (File.Exists(scriptPathOrCode))
+        {
+            actualPath = scriptPathOrCode;
+        }
+        else
+        {
+            actualPath = Path.Combine(Path.GetTempPath(), $"mcp_{Guid.NewGuid():N}_script.csx");
+            await File.WriteAllTextAsync(actualPath, scriptPathOrCode, ct).ConfigureAwait(false);
+            isTemp = true;
+        }
 
-        var (allReferences, nugetDllPaths) = await ResolveReferencesAsync(graph, progress, ct).ConfigureAwait(false);
+        try
+        {
+            var scriptName = Path.GetFileName(actualPath);
+            progress?.Report($"Resolving script graph for {scriptName}...");
 
-        ReportCompileProgress(progress, scriptName, graph.SourceFiles.Count);
-        var peBytes = Compile(graph.SourceFiles, allReferences, out var diagnostics);
+            var graph = CSharpDirectiveParser.ResolveGraph(
+                actualPath, hostSupport.GetHostReferencePattern(), hostSupport.GetHostReferenceReplacement());
 
-        if (peBytes == null)
-            return ScriptCompilationResult.Failed(diagnostics);
+            var (allReferences, nugetDllPaths) = await ResolveReferencesAsync(graph, progress, ct).ConfigureAwait(false);
 
-        return LoadAndCreateCommand(peBytes, nugetDllPaths, hostSupport);
+            ReportCompileProgress(progress, scriptName, graph.SourceFiles.Count);
+            var peBytes = Compile(graph.SourceFiles, allReferences, out var diagnostics);
+
+            if (peBytes == null)
+                return ScriptCompilationResult.Failed(diagnostics);
+
+            return LoadAndCreateCommand(peBytes, nugetDllPaths, hostSupport);
+        }
+        finally
+        {
+            if (isTemp)
+            {
+                try { File.Delete(actualPath); }
+                catch { /* best-effort cleanup */ }
+            }
+        }
     }
 
     private ScriptCompilationResult LoadAndCreateCommand(

@@ -109,35 +109,15 @@ public sealed class PythonExecutionStrategy(
         reporter.Report($"Installing {dependencies.Count} dependency(s) via {provider.Backend}...");
         await PythonDepsManager.InstallDependenciesAsync(provider, dependencies, reporter, cancellationToken).ConfigureAwait(false);
 
-        RefreshImportCache(pythonInitializer, logger);
-        return true;
-    }
-
-    private static void RefreshImportCache(PythonInitializer pythonInitializer, ILogger? logger = null)
-    {
-        if (!pythonInitializer.IsInitialized) return;
-
         try
         {
-            using (Py.GIL())
-            {
-                using var scope = Py.CreateScope();
-                scope.Exec("""
-                            import importlib
-                            import os
-                            import sys
-                             
-                            importlib.invalidate_caches()
-
-                            site_packages = os.path.join(sys.prefix, "Lib", "site-packages")
-                            if os.path.isdir(site_packages) and site_packages not in sys.path:
-                                sys.path.insert(0, site_packages)
-                            """);
-            }
+            PythonDepsManager.RefreshImportCache(pythonInitializer);
         }
         catch (Exception ex)
         {
             logger?.ZLogWarning($"Failed to refresh Python import cache: {ex.Message}");
         }
+
+        return true;
     }
 }
