@@ -1,6 +1,6 @@
 <Project Sdk="Microsoft.NET.Sdk">
     <PropertyGroup>
-        <TargetFrameworks>net48;net8.0-windows;net10.0-windows</TargetFrameworks>
+        <UseAutoCad>true</UseAutoCad>
         <NoWarn>$(NoWarn);MCPEXP001</NoWarn>
     </PropertyGroup>
 

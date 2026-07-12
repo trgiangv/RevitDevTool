@@ -50,18 +50,18 @@ flowchart LR
 flowchart LR
     A[Execute code] --> B{Result OK?}
     B -->|Yes| C[Continue]
-    B -->|No| D[call undo_changes count=1]
+    B -->|No| D[call navigate_history direction=back steps=1]
     D --> E[Verify model state]
     E --> F[Retry with corrected code]
 ```
 
 ### Key Points
 
-- `undo_changes` returns transaction names that were undone
-- `redo_available` count shows what can be redone
+- `navigate_history` unified contract: `direction="back"|"forward"`, `steps=N`
+- Same tool name on both Revit and AutoCAD — routed via `hostInstanceId` when multi-host
+- Revit: synchronous, returns exact stack state
+- AutoCAD: async queue, returns estimated stack state
 - Undo stack is per-document, not per-session
-- Must execute on host main thread (uses `IHostContextExecutor`)
-- `count=N` undoes N most recent transactions
 
 ---
 
@@ -77,7 +77,7 @@ flowchart TD
     Fix --> Code
     Check -->|Success| Verify[Read screenshot]
     Verify --> Visual{Looks right?}
-    Visual -->|No| Undo[undo_changes]
+    Visual -->|No| Undo[navigate_history direction=back]
     Undo --> Code
     Visual -->|Yes| Done[Report success]
 ```

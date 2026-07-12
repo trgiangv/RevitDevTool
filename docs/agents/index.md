@@ -6,6 +6,7 @@ Use this directory as deterministic agent memory. It does not replace the archit
 
 | Task | Read | Projects | Skill |
 |------|------|----------|-------|
+| MCP integration testing | `mcp-integration-test.md`, `verification.md` | All host + daemon projects | — |
 | Build/compile host add-in | `build-matrix.md`, `verification.md` | `build/`, `scripts/` | `.agents/skills/revit-build/SKILL.md` |
 | Package/release/installer | `build-matrix.md`, `verification.md` | `build/`, `scripts/` | `.agents/skills/packaging-release-review/SKILL.md` |
 | Shared library change | `host-boundaries.md`, `build-matrix.md` | `source/DevTools.*/` | `.agents/skills/host-boundary-review/SKILL.md`, `.agents/skills/net48-compat-review/SKILL.md` |

@@ -17,7 +17,8 @@ MCP (Model Context Protocol) tools, prompts, and resources execute inside the ho
 | `source/DevTools.Execution/External/Mcp/Dispatchers/McpPrimitiveDispatcher.cs` | Dispatch implementation |
 | `source/DevTools.Execution/External/Mcp/BuiltIn/CSharpCodeTool.cs` | Built-in: `execute_csharp_code` |
 | `source/DevTools.Execution/External/Mcp/BuiltIn/OpenDocumentTool.cs` | Built-in: `open_document` |
-| `source/DevTools.Agents.Revit/Tools/UndoChangesTool.cs` | Built-in: `undo_changes` (host-thread dispatch) |
+| `source/DevTools.Agents.Revit/Tools/NavigateHistoryTool.cs` | Built-in: `navigate_history` (host-thread dispatch) |
+| `source/DevTools.Agents.Acad/Tools/NavigateHistoryTool.cs` | Built-in: `navigate_history` (async queue) |
 | `source/DevTools.Agents.Revit/Resources/` | Revit resources (context, warnings, version, cheatsheet, screenshot) |
 | `source/DevTools.Agents.Revit/Prompts/RevitCodePrompt.cs` | Prompt: `revit_code` |
 
@@ -70,16 +71,16 @@ See [`docs/MCP/tools.md`](../MCP/tools.md) for the full catalog of tools, resour
 
 ### Threading Model for Built-in Tools
 
-`IBuiltInMcpTool.ExecuteAsync()` runs on a **background thread** (not the host main thread). Tools that need main-thread access (e.g., `undo_changes` which calls `QuickAccessToolBarService`) must internally dispatch via `IHostContextExecutor`:
+`IBuiltInMcpTool.ExecuteAsync()` runs on a **background thread** (not the host main thread). Tools that need main-thread access (e.g., `navigate_history` on Revit which calls `QuickAccessToolBarService`) must internally dispatch via `IHostContextExecutor`:
 
 ```csharp
-public sealed class UndoChangesTool(IHostContextExecutor hostContext) : IBuiltInMcpTool
+public sealed class NavigateHistoryTool(IHostContextExecutor hostContext) : IBuiltInMcpTool
 {
     public async Task<McpToolExecutionResult> ExecuteAsync(string payload, CancellationToken ct)
     {
         var result = await hostContext.ExecuteAsync(() => {
-            RevitTransactionService.PerformUndo(count);
-            return ...;
+            // Revit: synchronous undo via RevitTransactionService
+            return GoBack(steps);
         }, ct);
     }
 }

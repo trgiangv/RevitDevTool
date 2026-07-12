@@ -17,6 +17,7 @@ using AcadDevTool.HostAdapters;
 using AcadDevTool.Logging;
 using AcadDevTool.Logging.Enrichers;
 using AcadDevTool.Settings;
+using DevTools.Agents.Acad.Tools;
 using AcadDevTool.View;
 using ZLogger.Scintilla.Public;
 // ReSharper disable ConvertToExtensionBlock
@@ -88,6 +89,8 @@ internal static class AcadHostingExtensions
         services.AddSingleton<IBuiltInMcpResource, AcadCSharpCheatsheet>();
         services.AddSingleton<IBuiltInMcpResource, AcadPythonCheatsheet>();
         services.AddSingleton<IBuiltInMcpPrompt, AcadCodePrompt>();
+        services.AddSingleton<AcadHistoryNavigator>();
+        services.AddSingleton<IBuiltInMcpTool, NavigateHistoryTool>();
 
         return builder;
     }

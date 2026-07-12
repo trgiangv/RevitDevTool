@@ -139,7 +139,7 @@ internal static class RevitHostingExtensions
         services.AddSingleton<IBuiltInMcpResource, RevitVersionInfo>();
         services.AddSingleton<IBuiltInMcpResource, RevitViewScreenshot>();
         services.AddSingleton<IBuiltInMcpPrompt, RevitCodePrompt>();
-        services.AddSingleton<IBuiltInMcpTool, DevTools.Agents.Revit.Tools.UndoChangesTool>();
+        services.AddSingleton<IBuiltInMcpTool, DevTools.Agents.Revit.Tools.NavigateHistoryTool>();
 
         return builder;
     }

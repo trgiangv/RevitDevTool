@@ -45,8 +45,9 @@ Registered via DI in host projects (e.g., `RevitHostingExtensions.AddExecutionSe
 | Tool | Host | Description |
 |------|------|-------------|
 | `execute_csharp_code` | Revit + AutoCAD | Compile and run C# `IExternalCommand` with host API context |
+| `execute_python_code` | Revit + AutoCAD | Execute inline Python with PEP 723 deps |
 | `open_document` | Revit + AutoCAD | Open model file via `IDocumentBridge` |
-| `undo_changes` | Revit | Undo N transactions via `RevitTransactionService` |
+| `navigate_history` | Revit + AutoCAD | Navigate undo/redo: `direction="back"\|"forward"`, `steps=N` |
 
 ### Built-in Resources (`IBuiltInMcpResource`)
 
@@ -83,9 +84,9 @@ Dynamic registrations are tracked per host instance.
 
 `CatalogService` builds flat `tools/list`, `resources/list`, `prompts/list` surfaces from all connected hosts. Collision resolution:
 
-- Tools: namespace as `{toolName}@{hostApp}_{version}`
+- Tools: first-wins (same name from multiple instances uses first registered)
 - Resources: deduplicated by URI
-- Prompts: namespace as `{promptName}@{hostApp}_{version}`
+- Prompts: first-wins (same name from multiple instances uses first registered)
 
 This is the path standard MCP clients (Cursor, Claude Desktop) use directly.
 
