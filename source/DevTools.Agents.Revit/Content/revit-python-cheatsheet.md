@@ -150,6 +150,106 @@ if ui_doc:
 - **Limitation**: If multiple host instances run simultaneously, concurrent package installs may conflict. Pin exact versions to avoid ambiguity.
 - **Tip**: Use `pandas==2.2.0` (exact pin) rather than `pandas>=2.0` for reproducible behavior.
 
+## WPF UI (Custom Dialogs)
+
+Only use when creating custom windows/dialogs.
+
+### Namespace Conflicts (Critical)
+
+These WPF types shadow Revit API types — **never import both at module top level**:
+
+| Conflict | WPF | Revit |
+|----------|-----|-------|
+| `Grid` | `System.Windows.Controls.Grid` | `DB.Grid` |
+| `ComboBox` | `System.Windows.Controls.ComboBox` | `UI.ComboBox` |
+| `TextBox` | `System.Windows.Controls.TextBox` | `UI.TextBox` |
+| `Color` | `System.Windows.Media.Color` | `DB.Color` |
+| `Line` | `System.Windows.Shapes.Line` | `DB.Line` |
+| `Element` | `System.Windows.FrameworkElement` | `DB.Element` |
+| `Transform` | `System.Windows.Media.Transform` | `DB.Transform` |
+
+### Rules:
+1. Import WPF via module alias: `import System.Windows.Controls as Controls`
+2. Access WPF types qualified: `Controls.Grid()`, `Controls.Button()`
+3. Keep host API imports with short names: `DB.Grid`, `DB.Line`
+4. **Never** `from System.Windows.Controls import *`
+
+### Minimal Window Template
+
+```python
+import clr
+clr.AddReference('PresentationFramework')
+clr.AddReference('PresentationCore')
+clr.AddReference('WindowsBase')
+
+import System.Windows as Wpf
+import System.Windows.Controls as Controls
+from Autodesk.Revit import DB
+from RevitDevTool.Core import RevitContext
+
+def run():
+    doc = RevitContext.ActiveDocument
+    if doc is None:
+        print("No active document")
+        return
+
+    window = Wpf.Window()
+    window.Title = "My Tool"
+    window.Width = 400
+    window.Height = 300
+    window.WindowStartupLocation = Wpf.WindowStartupLocation.CenterScreen
+
+    stack = Controls.StackPanel()
+    stack.Margin = Wpf.Thickness(10)
+
+    label = Controls.TextBlock()
+    label.Text = f"Document: {doc.Title}"
+    stack.Children.Add(label)
+
+    btn = Controls.Button()
+    btn.Content = "OK"
+    btn.Margin = Wpf.Thickness(0, 10, 0, 0)
+    btn.Click += lambda s, e: window.Close()
+    stack.Children.Add(btn)
+
+    window.Content = stack
+    window.ShowDialog()
+    print("Dialog closed")
+
+run()
+```
+
+### Threading & Dialog Safety
+
+**`ShowDialog()` blocks the MCP execution thread.** If no user closes the window, the host freezes.
+
+**Never use `Show()`** — returns immediately, agent misses results, risks host crash on GC.
+
+**Every dialog MUST have a self-destruct timeout** — no exceptions:
+
+```python
+import System.Windows.Threading as Threading
+from System import TimeSpan
+
+# MANDATORY: always add auto-close timer to ANY dialog
+timer = Threading.DispatcherTimer()
+timer.Interval = TimeSpan.FromSeconds(30)  # 30s for forms, 10s for info
+def on_tick(s, e):
+    timer.Stop()
+    window.Close()
+timer.Tick += on_tick
+timer.Start()
+window.ShowDialog()  # guaranteed to close even if user is absent
+```
+
+| Intent | Timeout |
+|--------|---------|
+| Input form (user picks/types) | 30s |
+| Informational display (stats, results) | 10s |
+| No UI needed (autonomous) | Skip dialog, use `print()` |
+
+**Destructive operations**: Do NOT create confirmation dialogs in host. Agent handles user confirmation in chat before sending code. Host-side safety = transaction + undo (`navigate_history`).
+
 ## Rules
 
 1. **Always** include explicit imports (`from Autodesk.Revit import DB, UI`).

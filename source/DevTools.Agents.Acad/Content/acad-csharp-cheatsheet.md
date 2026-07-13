@@ -135,3 +135,98 @@ if (result.Status == PromptStatus.OK)
     }
 }
 ```
+
+## WPF UI (Custom Dialogs)
+
+Only use when creating custom windows/dialogs. Requires `#r` directives:
+
+```csharp
+#r "PresentationFramework"
+#r "PresentationCore"
+#r "WindowsBase"
+#r "System.Xaml"
+```
+
+### Namespace Conflicts (Critical)
+
+These WPF types shadow AutoCAD API types — **always use fully qualified names or aliases**:
+
+| Conflict | WPF (avoid bare import) | AutoCAD API |
+|----------|------------------------|-------------|
+| `Color` | `System.Windows.Media.Color` | `Autodesk.AutoCAD.Colors.Color` |
+| `Line` | `System.Windows.Shapes.Line` | `Autodesk.AutoCAD.DatabaseServices.Line` |
+| `Point` | `System.Windows.Point` | `Autodesk.AutoCAD.Geometry.Point3d` |
+| `Matrix` | `System.Windows.Media.Matrix` | `Autodesk.AutoCAD.Geometry.Matrix3d` |
+| `Application` | `System.Windows.Application` | `Autodesk.AutoCAD.ApplicationServices.Application` |
+
+### Rules:
+1. **Never** `using System.Windows.Controls;` alongside AutoCAD usings
+2. Use aliases: `using WpfColor = System.Windows.Media.Color;`
+3. Or fully qualify: `new System.Windows.Controls.Grid()`
+4. Keep AutoCAD usings without alias
+
+### Minimal Window Template (XAML-less)
+
+```csharp
+#r "PresentationFramework"
+#r "PresentationCore"
+#r "WindowsBase"
+using System;
+using System.Windows;
+using System.Windows.Controls;
+using Autodesk.AutoCAD.ApplicationServices;
+using Autodesk.AutoCAD.DatabaseServices;
+using Autodesk.AutoCAD.Runtime;
+using AcApp = Autodesk.AutoCAD.ApplicationServices.Core.Application;
+
+public class Command
+{
+    [CommandMethod("MYDIALOG", CommandFlags.Session)]
+    public void Execute()
+    {
+        var doc = AcApp.DocumentManager.MdiActiveDocument;
+
+        var window = new Window
+        {
+            Title = "My Tool",
+            Width = 400, Height = 300,
+            WindowStartupLocation = WindowStartupLocation.CenterScreen
+        };
+
+        var stack = new StackPanel { Margin = new Thickness(10) };
+        stack.Children.Add(new TextBlock { Text = $"Drawing: {doc.Name}" });
+        stack.Children.Add(new Button { Content = "OK", Margin = new Thickness(0, 10, 0, 0) });
+        ((Button)stack.Children[1]).Click += (s, e) => window.Close();
+
+        window.Content = stack;
+        window.ShowDialog();
+
+        doc.Editor.WriteMessage("\nDialog closed");
+    }
+}
+```
+
+### Threading & Dialog Safety
+
+**ShowDialog() blocks the MCP execution thread.** If no user closes the window, the host freezes.
+
+**Never use `Show()`** — returns immediately, agent misses results, risks host crash on GC.
+
+**Every dialog MUST have a self-destruct timeout** — no exceptions:
+
+```csharp
+// MANDATORY: always add auto-close timer to ANY dialog
+var timer = new System.Windows.Threading.DispatcherTimer();
+timer.Interval = TimeSpan.FromSeconds(30); // 30s for forms, 10s for info
+timer.Tick += (s, e) => { timer.Stop(); window.Close(); };
+timer.Start();
+window.ShowDialog(); // guaranteed to close even if user is absent
+```
+
+| Intent | Timeout |
+|--------|---------|
+| Input form (user picks/types) | 30s |
+| Informational display (stats, results) | 10s |
+| No UI needed (autonomous) | Skip dialog, use `ed.WriteMessage` |
+
+**Destructive operations**: Do NOT create confirmation dialogs in host. Agent handles user confirmation in chat before sending code. Host-side safety = transaction + undo (`navigate_history`).

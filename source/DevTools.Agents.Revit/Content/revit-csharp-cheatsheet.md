@@ -107,3 +107,105 @@ ElementId id = param.AsElementId();
 ## Warnings
 - `doc.GetWarnings()` returns active warnings (query after modifications)
 - Overlapping elements, duplicate marks, etc. are warnings (not errors)
+
+## WPF UI (Custom Dialogs)
+
+Only use when creating custom windows/dialogs. Requires `#r` directives:
+
+```csharp
+#r "PresentationFramework"
+#r "PresentationCore"
+#r "WindowsBase"
+#r "System.Xaml"
+```
+
+### Namespace Conflicts (Critical)
+
+These WPF types shadow Revit API types — **always use fully qualified names or aliases**:
+
+| Conflict | WPF (avoid bare import) | Revit API |
+|----------|------------------------|-----------|
+| `Grid` | `System.Windows.Controls.Grid` | `Autodesk.Revit.DB.Grid` |
+| `ComboBox` | `System.Windows.Controls.ComboBox` | `Autodesk.Revit.UI.ComboBox` |
+| `TextBox` | `System.Windows.Controls.TextBox` | `Autodesk.Revit.UI.TextBox` |
+| `Color` | `System.Windows.Media.Color` | `Autodesk.Revit.DB.Color` |
+| `Line` | `System.Windows.Shapes.Line` | `Autodesk.Revit.DB.Line` |
+| `Document` | `System.Windows.Documents.*` | `Autodesk.Revit.DB.Document` |
+| `Element` | `System.Windows.FrameworkElement` | `Autodesk.Revit.DB.Element` |
+| `Point` | `System.Windows.Point` | `Autodesk.Revit.DB.XYZ` |
+| `Transform` | `System.Windows.Media.Transform` | `Autodesk.Revit.DB.Transform` |
+
+### Rules:
+1. **Never** `using System.Windows.Controls;` alongside `using Autodesk.Revit.DB;` or `using Autodesk.Revit.UI;`
+2. Use aliases: `using WpfGrid = System.Windows.Controls.Grid;` `using WpfComboBox = System.Windows.Controls.ComboBox;` `using WpfTextBox = System.Windows.Controls.TextBox;`
+3. Or fully qualify: `new System.Windows.Controls.Grid()`
+4. Keep Revit usings short (`DB.Grid`, `DB.Line`)
+
+### Minimal Window Template (XAML-less)
+
+```csharp
+#r "PresentationFramework"
+#r "PresentationCore"
+#r "WindowsBase"
+using System;
+using System.Windows;
+using System.Windows.Controls;
+using Autodesk.Revit.DB;
+using Autodesk.Revit.UI;
+using Autodesk.Revit.Attributes;
+using WpfGrid = System.Windows.Controls.Grid;
+using WpfComboBox = System.Windows.Controls.ComboBox;
+using WpfTextBox = System.Windows.Controls.TextBox;
+
+[Transaction(TransactionMode.ReadOnly)]
+public class Command : IExternalCommand
+{
+    public Result Execute(ExternalCommandData commandData, ref string message, ElementSet elements)
+    {
+        var doc = commandData.Application.ActiveUIDocument.Document;
+
+        var window = new Window
+        {
+            Title = "My Tool",
+            Width = 400, Height = 300,
+            WindowStartupLocation = WindowStartupLocation.CenterScreen
+        };
+
+        var stack = new StackPanel { Margin = new Thickness(10) };
+        stack.Children.Add(new TextBlock { Text = $"Document: {doc.Title}" });
+        stack.Children.Add(new Button { Content = "OK", Margin = new Thickness(0, 10, 0, 0) });
+        ((Button)stack.Children[1]).Click += (s, e) => window.Close();
+
+        window.Content = stack;
+        window.ShowDialog();
+
+        message = "Dialog shown";
+        return Result.Succeeded;
+    }
+}
+```
+
+### Threading & Dialog Safety
+
+**ShowDialog() blocks the MCP execution thread.** If no user closes the window, the host freezes.
+
+**Never use `Show()`** — returns immediately, agent misses results, risks host crash on GC.
+
+**Every dialog MUST have a self-destruct timeout** — no exceptions:
+
+```csharp
+// MANDATORY: always add auto-close timer to ANY dialog
+var timer = new System.Windows.Threading.DispatcherTimer();
+timer.Interval = TimeSpan.FromSeconds(30); // 30s for forms, 10s for info
+timer.Tick += (s, e) => { timer.Stop(); window.Close(); };
+timer.Start();
+window.ShowDialog(); // guaranteed to close even if user is absent
+```
+
+| Intent | Timeout |
+|--------|---------|
+| Input form (user picks/types) | 30s |
+| Informational display (stats, results) | 10s |
+| No UI needed (autonomous) | Skip dialog, use `message`/`print` |
+
+**Destructive operations**: Do NOT create confirmation dialogs in host. Agent handles user confirmation in chat before sending code. Host-side safety = transaction + undo (`navigate_history`).
