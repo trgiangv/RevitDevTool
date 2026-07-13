@@ -44,27 +44,28 @@ public sealed class RevitModelWarnings : IBuiltInMcpResource
             .ToList();
 
         foreach (var group in grouped)
-        {
-            var count = group.Count();
-            sb.AppendLine($"## {group.Key} ({count})");
-            foreach (var warning in group.Take(3))
-            {
-                var elements = warning.GetFailingElements();
-                if (elements.Count > 0)
-                {
-                    var ids = string.Join(", ", elements.Select(e => e.Value));
-                    sb.AppendLine($"- Elements: [{ids}]");
-                }
-            }
-            if (count > 3)
-                sb.AppendLine($"- ... and {count - 3} more");
-            sb.AppendLine();
-        }
+            AppendWarningGroup(sb, group);
 
         if (warnings.Count > MaxWarnings)
             sb.AppendLine($"*Showing first {MaxWarnings} of {warnings.Count} warnings.*");
 
         return TextResult(uri, sb.ToString());
+    }
+
+    private static void AppendWarningGroup(StringBuilder sb, IGrouping<string, FailureMessage> group)
+    {
+        var count = group.Count();
+        sb.AppendLine($"## {group.Key} ({count})");
+        foreach (var warning in group.Take(3))
+        {
+            var elements = warning.GetFailingElements();
+            if (elements.Count <= 0) continue;
+            var ids = string.Join(", ", elements.Select(id => id.ToString()));
+            sb.AppendLine($"- Elements: [{ids}]");
+        }
+        if (count > 3)
+            sb.AppendLine($"- ... and {count - 3} more");
+        sb.AppendLine();
     }
 
     private static ReadResourceResult TextResult(string uri, string text) => new()

@@ -72,7 +72,7 @@ public sealed class RevitModelContext : IBuiltInMcpResource
         foreach (var level in levels)
         {
             var elevationMm = level.Elevation * 304.8;
-            sb.AppendLine($"- {level.Name}: {elevationMm:F0} mm (Id: {level.Id.Value})");
+            sb.AppendLine($"- {level.Name}: {elevationMm:F0} mm (Id: {level.Id})");
         }
         sb.AppendLine();
     }
@@ -84,13 +84,11 @@ public sealed class RevitModelContext : IBuiltInMcpResource
             .Cast<Phase>()
             .ToList();
 
-        if (phases.Count > 0)
-        {
-            sb.AppendLine($"## Phases ({phases.Count})");
-            foreach (var phase in phases)
-                sb.AppendLine($"- {phase.Name} (Id: {phase.Id.Value})");
-            sb.AppendLine();
-        }
+        if (phases.Count <= 0) return;
+        sb.AppendLine($"## Phases ({phases.Count})");
+        foreach (var phase in phases)
+            sb.AppendLine($"- {phase.Name} (Id: {phase.Id})");
+        sb.AppendLine();
     }
 
     private static void AppendActiveView(StringBuilder sb)
@@ -101,7 +99,7 @@ public sealed class RevitModelContext : IBuiltInMcpResource
             sb.AppendLine("## Active View");
             sb.AppendLine($"- Name: {view.Name}");
             sb.AppendLine($"- Type: {view.ViewType}");
-            sb.AppendLine($"- Id: {view.Id.Value}");
+            sb.AppendLine($"- Id: {view.Id}");
             sb.AppendLine();
         }
     }
