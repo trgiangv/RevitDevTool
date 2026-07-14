@@ -38,9 +38,9 @@ public static class DaemonHostBuilder
         return builder.Build();
     }
 
-    public static IHost CreateStdioHost()
+    public static IHost CreateStdioHost(string[]? args = null)
     {
-        var builder = CreateBuilder();
+        var builder = CreateBuilder(args);
 
         builder.Logging.ClearProviders();
         builder.Logging.AddZLoggerFile(
@@ -50,12 +50,12 @@ public static class DaemonHostBuilder
         return builder.Build();
     }
 
-    private static HostApplicationBuilder CreateBuilder()
+    private static HostApplicationBuilder CreateBuilder(string[]? args = null)
     {
         var builder = Host.CreateApplicationBuilder(new HostApplicationBuilderSettings
         {
             ContentRootPath = AppContext.BaseDirectory,
-            Args = []
+            Args = args ?? []
         });
 
         builder.Configuration.AddJsonStream(

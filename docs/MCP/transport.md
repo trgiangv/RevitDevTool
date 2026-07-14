@@ -6,7 +6,7 @@ The Daemon supports two independent transport modes. Stdio runs as a separate pr
 flowchart LR
     subgraph Stdio Mode
         Client1["MCP client<br/>Claude Desktop / Cursor"]
-        Daemon1["DevTools.Daemon --stdio<br/>direct StreamServerTransport"]
+        Daemon1["DevTools.Daemon --stdio<br/>headless MCP host"]
         Client1 <-->|stdin/stdout| Daemon1
     end
 
@@ -29,6 +29,7 @@ flowchart LR
 When an AI client spawns `DevTools.Daemon.exe --stdio`, a **new process** runs a self-contained MCP server directly on stdin/stdout. It does **not** proxy to the tray app — it boots its own `McpEngine`, `InstanceManager`, and `DiscoveryHostedService` independently.
 
 Key properties:
+- Uses a custom process entrypoint that handles `--stdio` before WPF `App.xaml` resources are initialized. Tray UI resources and single-instance startup are only loaded for tray mode.
 - Bypasses the `SingleInstance` mutex entirely — multiple stdio processes can coexist with each other and with the tray app.
 - Each stdio process discovers host pipes independently (same `DevTools_{Host}_{Version}_{PID}` scan).
 - Auth tokens are read from the shared DPAPI file on disk (sign-in via tray or browser still works).

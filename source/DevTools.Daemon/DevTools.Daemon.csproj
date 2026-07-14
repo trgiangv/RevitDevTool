@@ -20,6 +20,7 @@
         <NoWarn>$(NoWarn);MCPEXP001</NoWarn>
         <RootNamespace>DevTools.Daemon</RootNamespace>
         <AssemblyName>DevTools.Daemon</AssemblyName>
+        <StartupObject>DevTools.Daemon.Program</StartupObject>
         <ApplicationIcon>..\DevTools.UI\Resources\icons\DevTools-32-Dark.ico</ApplicationIcon>
         <SelfContained>true</SelfContained>
         <PublishSingleFile>true</PublishSingleFile>

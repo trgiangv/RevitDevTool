@@ -18,13 +18,6 @@ public partial class App
 
         try
         {
-            if (e.Args.Contains(DaemonConstants.StdioArg, StringComparer.OrdinalIgnoreCase))
-            {
-                await RunStdioHostAsync();
-                Shutdown();
-                return;
-            }
-
             var singleInstance = new SingleInstance();
             if (!singleInstance.IsFirstInstance)
             {
@@ -64,11 +57,5 @@ public partial class App
         }
 
         base.OnExit(e);
-    }
-
-    private static async Task RunStdioHostAsync()
-    {
-        using var host = DaemonHostBuilder.CreateStdioHost();
-        await host.RunAsync();
     }
 }
