@@ -15,7 +15,7 @@ Use this directory as deterministic agent memory. It does not replace the archit
 | Daemon (auth, gateway, tray, control pipe) | `docs/MCP/README.md` | `source/DevTools.Daemon/` | `.agents/skills/mcp-bridge-change/SKILL.md` |
 | pytest bridge/test runtime (server-side) | `mcp-pytest-bridge.md`, `known-test-gaps.md` | `source/DevTools.Execution/External/Testing/` | `.agents/skills/pytest-bridge-change/SKILL.md` |
 | Write pytest tests (client-side) | `RevitDevTool.PyTest/AGENTS.md` | `RevitDevTool.PyTest/` | `.agents/skills/revit-pytest/SKILL.md` |
-| Revit API documentation lookup | — | `.agents/mcp/revit-api-docs/` | `.agents/skills/revit-api-docs/SKILL.md` |
+| Revit API exploration + development | `docs/MCP/workflows.md` | External: `rvtdocs-mcp` repo | `.agents/skills/revit-developer/SKILL.md` |
 | pyRevit IronPython tools | — | External pyRevit extensions | `.agents/skills/pyrevit-ironpython/SKILL.md` |
 | Logging or geometry visualization | `host-boundaries.md` | `source/DevTools.Logging/`, host `Visualization/` | `.agents/skills/logging-visualization-review/SKILL.md` |
 | Startup, lazy loading, host boot | `startup-performance.md`, `host-boundaries.md` | Host projects (`RevitDevTool/`, `AcadDevTool/`) | No separate skill |
