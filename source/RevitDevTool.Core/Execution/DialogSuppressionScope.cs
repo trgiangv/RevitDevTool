@@ -22,11 +22,9 @@ internal sealed class DialogSuppressionScope : IDisposable
         lock (SyncRoot)
         {
             _refCount++;
-            if (_refCount == 1)
-            {
-                _handler = OnDialogBoxShowing;
-                RevitContext.UiApplication.DialogBoxShowing += _handler;
-            }
+            if (_refCount != 1) return;
+            _handler = OnDialogBoxShowing;
+            RevitContext.UiApplication.DialogBoxShowing += _handler;
         }
     }
 

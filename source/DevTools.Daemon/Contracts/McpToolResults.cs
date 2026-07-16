@@ -1,4 +1,5 @@
 using System.Text.Json.Serialization;
+using DevTools.Daemon.Mcp.Tools.Utils;
 using DevTools.Logging;
 
 namespace DevTools.Daemon.Contracts;
@@ -13,7 +14,8 @@ public sealed record LaunchHostResult(
     [property: JsonPropertyName("path")] string? Path,
     [property: JsonPropertyName(IpcPropertyNames.Arguments)] string? Arguments,
     [property: JsonPropertyName(McpPropertyNames.LanguageCode)] string? LanguageCode,
-    [property: JsonPropertyName(IpcPropertyNames.BridgeConnected)] bool BridgeConnected);
+    [property: JsonPropertyName(IpcPropertyNames.BridgeConnected)] bool BridgeConnected,
+    [property: JsonPropertyName("dialogResult")] StartupDialogResolverResult? DialogResult = null);
 
 [UsedImplicitly]
 public sealed record OpenModelResult(
@@ -24,7 +26,8 @@ public sealed record OpenModelResult(
     [property: JsonPropertyName(IpcPropertyNames.Version)] string? Version,
     [property: JsonPropertyName(McpPropertyNames.LanguageCode)] string? LanguageCode,
     [property: JsonPropertyName(McpPropertyNames.FilePath)] string FilePath,
-    [property: JsonPropertyName(IpcPropertyNames.BridgeConnected)] bool BridgeConnected);
+    [property: JsonPropertyName(IpcPropertyNames.BridgeConnected)] bool BridgeConnected,
+    [property: JsonPropertyName("dialogResult")] StartupDialogResolverResult? DialogResult = null);
 
 [UsedImplicitly]
 public sealed record ConnectedInstanceEntry(

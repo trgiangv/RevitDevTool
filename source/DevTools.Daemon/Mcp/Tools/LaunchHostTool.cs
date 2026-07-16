@@ -69,9 +69,10 @@ public sealed class LaunchHostTool(InstanceManager instanceManager) : McpServerT
             return started.Error;
 
         var process = started.Process!;
-        HostLaunchCoordinator.StartDialogResolver(hostApp.Value, process.Id, cancellationToken);
+        var dialogTask = HostLaunchCoordinator.StartDialogResolver(hostApp.Value, process.Id, cancellationToken);
 
         var connected = await WaitForInstanceConnectionAsync(process.Id, cancellationToken).ConfigureAwait(false);
+        var dialogResult = await HostLaunchCoordinator.TryAwaitResolverResultAsync(dialogTask, TimeSpan.FromSeconds(5)).ConfigureAwait(false);
         if (!connected)
             return ToolHelpers.ErrorResult(
                 $"{hostApp} launched (PID={process.Id}) but bridge did not connect within timeout.");
@@ -83,7 +84,8 @@ public sealed class LaunchHostTool(InstanceManager instanceManager) : McpServerT
             context.ExePath,
             string.Join(" ", context.Arguments),
             context.LanguageCode,
-            true);
+            true,
+            dialogResult);
 
         return new CallToolResult
         {

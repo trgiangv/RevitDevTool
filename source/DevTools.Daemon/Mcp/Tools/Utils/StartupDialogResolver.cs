@@ -1,171 +1,221 @@
+using Microsoft.Extensions.Logging;
+using ZLogger;
+
 namespace DevTools.Daemon.Mcp.Tools.Utils;
 
 internal sealed class StartupDialogResolverOptions
 {
     public TimeSpan PollInterval { get; } = TimeSpan.FromMilliseconds(500);
 
-    public const int MaxNoButtonRetriesPerWindow = 3;
+    /// <summary>Timeout for a single BM_CLICK before treating it as failed and retrying next poll.</summary>
+    public TimeSpan ClickTimeout { get; } = TimeSpan.FromSeconds(2);
 
+    /// <summary>
+    /// Autodesk add-in security dialogs only (e.g. "Security - Unsigned Add-In").
+    /// Intentionally narrow — we are not dismissing sign-in, journal, or license prompts.
+    /// </summary>
     public IReadOnlyList<string> DialogTitleKeywords { get; } =
     [
-        "autodesk",
-        "revit",
-        "autocad",
-        "load",
-        "security",
-        "security concern",
-        "warning",
-        "add-in",
-        "addin",
-        "questionable add-in",
         "unsigned add-in",
-        "executable",
-        "trust",
-        "file loading"
+        "questionable add-in"
     ];
 
+    /// <summary>Only "Always Load" — persists trust so subsequent launches stay unattended.</summary>
     public IReadOnlyList<string> PreferredButtonKeywords { get; } =
     [
-        "always load",
-        "load once",
-        "load",
-        "ok",
-        "yes",
-        "accept",
-        "close",
-        "continue",
-        "skip"
+        "always load"
     ];
 
     public IReadOnlyList<string> BlockedButtonKeywords { get; } =
     [
         "do not load",
+        "load once",
         "cancel",
         "no"
     ];
 }
 
+public enum DialogResolution
+{
+    ClickedPreferredButton,
+    Unresolved
+}
+
+public sealed record DialogEvent(DialogResolution Resolution);
+
+[UsedImplicitly(ImplicitUseTargetFlags.Members)]
+public sealed record StartupDialogResolverResult(
+    bool TimedOut,
+    IReadOnlyList<DialogEvent> Events)
+{
+    public bool HasUnresolvedDialogs => Events.Any(e => e.Resolution == DialogResolution.Unresolved);
+}
+
+/// <summary>
+/// Polls a process's top-level windows for Autodesk add-in security dialogs and clicks
+/// "Always Load" so unattended MCP launches are not blocked. Does not dismiss unrelated
+/// prompts (sign-in, journal, license).
+/// </summary>
 internal static class StartupDialogResolver
 {
-    public static async Task RunAsync(
+    public static async Task<StartupDialogResolverResult> RunAsync(
         int processId,
         StartupDialogResolverOptions options,
         TimeSpan duration,
-        CancellationToken cancellationToken)
+        ILogger? logger = null,
+        CancellationToken cancellationToken = default)
     {
         var deadline = DateTime.UtcNow + duration;
-        var retries = new Dictionary<nint, int>();
+        var clickedButtons = new HashSet<nint>();
+        var events = new List<DialogEvent>();
 
-        while (CanContinue(deadline, cancellationToken))
+        bool timedOut;
+        while (true)
         {
-            ScanAndHandleDialogs(processId, options, retries);
+            ScanAndHandleDialogs(processId, options, clickedButtons, events, logger);
+
+            if (cancellationToken.IsCancellationRequested)
+            {
+                timedOut = false;
+                break;
+            }
+
+            if (DateTime.UtcNow >= deadline)
+            {
+                timedOut = true;
+                break;
+            }
+
             await Task.Delay(options.PollInterval, cancellationToken).ConfigureAwait(false);
         }
-    }
 
-    private static bool CanContinue(DateTime deadline, CancellationToken cancellationToken)
-    {
-        return !cancellationToken.IsCancellationRequested && DateTime.UtcNow < deadline;
+        AppendUnresolvedForRemainingDialogs(processId, options, events, logger);
+        return new StartupDialogResolverResult(timedOut, events);
     }
 
     private static void ScanAndHandleDialogs(
         int processId,
         StartupDialogResolverOptions options,
-        Dictionary<nint, int> retries)
+        HashSet<nint> clickedButtons,
+        List<DialogEvent> events,
+        ILogger? logger)
     {
         foreach (var hwnd in EnumerateTopLevelWindowsForProcess(processId))
-            HandleDialogWindow(hwnd, options, retries);
+            HandleDialogWindow(hwnd, options, clickedButtons, events, logger);
     }
 
     private static void HandleDialogWindow(
         nint hwnd,
         StartupDialogResolverOptions options,
-        Dictionary<nint, int> retries)
+        HashSet<nint> clickedButtons,
+        List<DialogEvent> events,
+        ILogger? logger)
     {
-        if (!LooksLikeTargetDialog(hwnd, options.DialogTitleKeywords))
+        if (!IsTargetDialog(hwnd, options.DialogTitleKeywords, out var title))
             return;
 
-        if (TryClickPreferredButton(hwnd, options.PreferredButtonKeywords, options.BlockedButtonKeywords))
+        if (!TryClickPreferredButton(hwnd, options.PreferredButtonKeywords, options.BlockedButtonKeywords,
+                options.ClickTimeout, clickedButtons, out var clickedText))
             return;
 
-        IncreaseRetryCount(hwnd, StartupDialogResolverOptions.MaxNoButtonRetriesPerWindow, retries);
+        logger?.ZLogInformation($"Dismissed add-in security dialog {title} via {clickedText}");
+        events.Add(new DialogEvent(DialogResolution.ClickedPreferredButton));
     }
 
-    private static void IncreaseRetryCount(
-        nint hwnd,
-        int maxNoButtonRetriesPerWindow,
-        Dictionary<nint, int> retries)
+    private static void AppendUnresolvedForRemainingDialogs(
+        int processId,
+        StartupDialogResolverOptions options,
+        List<DialogEvent> events,
+        ILogger? logger)
     {
-        retries.TryGetValue(hwnd, out var count);
-        count++;
-
-        if (count > maxNoButtonRetriesPerWindow)
+        foreach (var hwnd in EnumerateTopLevelWindowsForProcess(processId))
         {
-            retries.Remove(hwnd);
-            return;
-        }
+            if (!IsTargetDialog(hwnd, options.DialogTitleKeywords, out var title))
+                continue;
 
-        retries[hwnd] = count;
+            logger?.ZLogWarning($"Add-in security dialog still present at resolver end: {title}");
+            events.Add(new DialogEvent(DialogResolution.Unresolved));
+        }
     }
 
-    private static bool LooksLikeTargetDialog(nint hwnd, IReadOnlyList<string> keywords)
+    private static bool IsTargetDialog(nint hwnd, IReadOnlyList<string> keywords, out string title)
     {
-        if (!string.Equals(NativeMethods.GetClassName(hwnd), "#32770", StringComparison.OrdinalIgnoreCase))
+        title = string.Empty;
+
+        if (!string.Equals(NativeMethods.GetClassName(hwnd), NativeMethods.Dialog, StringComparison.OrdinalIgnoreCase))
             return false;
 
-        var title = NativeMethods.GetWindowText(hwnd);
-        return !string.IsNullOrWhiteSpace(title) && keywords.Any(k => title.Contains(k, StringComparison.OrdinalIgnoreCase));
+        var windowTitle = NativeMethods.GetWindowText(hwnd);
+        if (string.IsNullOrWhiteSpace(windowTitle))
+            return false;
+
+        if (!keywords.Any(k => windowTitle.Contains(k, StringComparison.OrdinalIgnoreCase)))
+            return false;
+
+        title = windowTitle;
+        return true;
     }
 
     private static bool TryClickPreferredButton(
         nint dialogHwnd,
         IReadOnlyList<string> preferredKeywords,
-        IReadOnlyList<string> blockedKeywords)
+        IReadOnlyList<string> blockedKeywords,
+        TimeSpan clickTimeout,
+        HashSet<nint> clickedButtons,
+        out string? clickedText)
     {
+        clickedText = null;
         var bestButton = nint.Zero;
         var bestScore = int.MaxValue;
+        var bestText = string.Empty;
+
         foreach (var button in EnumerateChildButtons(dialogHwnd))
         {
-            var score = GetButtonScore(button, preferredKeywords, blockedKeywords);
+            if (clickedButtons.Contains(button))
+                continue;
+
+            var (score, text) = GetButtonScore(button, preferredKeywords, blockedKeywords);
             if (!score.HasValue)
                 continue;
             if (score.Value >= bestScore)
                 continue;
             bestScore = score.Value;
             bestButton = button;
+            bestText = text;
         }
 
         if (bestButton == nint.Zero)
             return false;
 
-        NativeMethods.SendMessage(bestButton, NativeMethods.BmClick, 0, 0);
+        if (!NativeMethods.TrySendMessageTimeout(bestButton, NativeMethods.BmClick, 0, 0, clickTimeout))
+            return false; // click didn't complete in time — treat as failed, retry next poll
+
+        clickedButtons.Add(bestButton);
+        clickedText = bestText;
         return true;
     }
 
-    private static int? GetButtonScore(
+    private static (int? Score, string Text) GetButtonScore(
         nint buttonHwnd,
         IReadOnlyList<string> preferredKeywords,
         IReadOnlyList<string> blockedKeywords)
     {
-        if (!string.Equals(NativeMethods.GetClassName(buttonHwnd), "button", StringComparison.OrdinalIgnoreCase))
-            return null;
+        if (!string.Equals(NativeMethods.GetClassName(buttonHwnd), NativeMethods.Button, StringComparison.OrdinalIgnoreCase))
+            return (null, string.Empty);
 
         var text = NativeMethods.GetWindowText(buttonHwnd);
-        if (string.IsNullOrWhiteSpace(text))
-            return null;
-
-        if (blockedKeywords.Any(keyword => text.Contains(keyword, StringComparison.OrdinalIgnoreCase)))
-            return null;
+        if (string.IsNullOrWhiteSpace(text) || blockedKeywords.Any(keyword => text.Contains(keyword, StringComparison.OrdinalIgnoreCase)))
+            return (null, string.Empty);
 
         var exactMatchIndex = IndexOfExactMatch(text, preferredKeywords);
         if (exactMatchIndex >= 0)
-            return exactMatchIndex;
+            return (exactMatchIndex, text);
 
         var containsMatchIndex = IndexOfContainsMatch(text, preferredKeywords);
         if (containsMatchIndex >= 0)
-            return containsMatchIndex + preferredKeywords.Count;
+            return (containsMatchIndex + preferredKeywords.Count, text);
 
-        return null;
+        return (null, string.Empty);
     }
 
     private static int IndexOfExactMatch(string text, IReadOnlyList<string> keywords)

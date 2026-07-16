@@ -84,9 +84,10 @@ public sealed class OpenModelTool(InstanceManager instanceManager) : McpServerTo
             return started.Error;
 
         var process = started.Process!;
-        HostLaunchCoordinator.StartDialogResolver(hostApp, process.Id, cancellationToken);
+        var dialogTask = HostLaunchCoordinator.StartDialogResolver(hostApp, process.Id, cancellationToken);
 
         var connected = await WaitForInstanceConnectionAsync(process.Id, cancellationToken).ConfigureAwait(false);
+        var dialogResult = await HostLaunchCoordinator.TryAwaitResolverResultAsync(dialogTask, TimeSpan.FromSeconds(5)).ConfigureAwait(false);
         if (!connected)
             return ToolHelpers.ErrorResult($"{hostApp} launched (PID={process.Id}) but bridge did not connect.");
 
@@ -100,7 +101,8 @@ public sealed class OpenModelTool(InstanceManager instanceManager) : McpServerTo
                     context.Version,
                     context.LanguageCode,
                     filePath,
-                    true))
+                    true,
+                    dialogResult))
             }]
         };
     }
