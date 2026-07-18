@@ -24,15 +24,4 @@ public sealed class GatewayContractTests
         Assert.Equal("heartbeat", heartbeat.GetProperty("type").GetString());
         Assert.Equal(inventory, heartbeat.GetProperty("host_apps").EnumerateArray().Select(value => value.GetString()).ToArray());
     }
-
-    [Fact]
-    public void MachineSelectionAndBrokerHostId_AreDistinctScopes()
-    {
-        var hostId = 4201;
-        var targetMachineHeader = "x-target-machine";
-
-        Assert.Equal(4201, hostId);
-        Assert.Equal("x-target-machine", targetMachineHeader);
-        Assert.True(hostId > 0, "hostId is a PID on the daemon selected by the gateway, not a gateway machine identifier.");
-    }
 }

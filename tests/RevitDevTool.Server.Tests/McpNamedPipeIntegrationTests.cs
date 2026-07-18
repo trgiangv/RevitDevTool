@@ -25,6 +25,7 @@ public sealed class McpPipeNameTests
     }
 }
 
+[Collection(HostMcpServerPipeCollection.Name)]
 public sealed class McpNamedPipeIntegrationTests
 {
     [Fact]
@@ -187,29 +188,46 @@ public sealed class McpNamedPipeIntegrationTests
     }
 
     [Fact]
-    public async Task HostMcpSession_CancellationShutdownAndReconnect_DisposeSdkPipeSessions()
+    public async Task HostMcpSession_PreCancelledConnectFailsImmediately()
     {
         using var cancelled = new CancellationTokenSource();
         cancelled.Cancel();
         await Assert.ThrowsAnyAsync<OperationCanceledException>(() =>
             HostMcpSession.ConnectAsync(McpPipeName.Format(Environment.ProcessId + 10_000), NullLoggerFactory.Instance, cancelled.Token));
+    }
 
-        var optionsFactory = new HostMcpServerOptionsFactory(new TestHostAppInfo(), [], [], []);
+    [Fact]
+    public async Task HostMcpSession_InFlightCallCompletesOnHostShutdownAndFreshSessionReacquiresPipe()
+    {
+        var blockingTool = new BlockingTool();
+        var optionsFactory = new HostMcpServerOptionsFactory(new TestHostAppInfo(), [blockingTool], [], []);
         using var serviceProvider = new ServiceCollection().BuildServiceProvider();
         await using var firstHost = new HostMcpServerHostedService(optionsFactory, NullLoggerFactory.Instance, serviceProvider);
         await firstHost.StartAsync(TestContext.Current.CancellationToken);
-        var disconnected = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
-        await using (var firstSession = await HostMcpSession.ConnectAsync(McpPipeName.Format(Environment.ProcessId), NullLoggerFactory.Instance, TestContext.Current.CancellationToken))
+        var firstSession = await HostMcpSession.ConnectAsync(McpPipeName.Format(Environment.ProcessId), NullLoggerFactory.Instance, TestContext.Current.CancellationToken);
+        try
         {
-            firstSession.Disconnected += () => disconnected.TrySetResult(true);
-            await firstHost.StopAsync(TestContext.Current.CancellationToken);
-            await disconnected.Task.WaitAsync(TestContext.Current.CancellationToken);
+            var pendingCall = firstSession.CallToolAsync("blocking_session_test", null, CancellationToken.None);
+            await blockingTool.Entered.Task.WaitAsync(TimeSpan.FromSeconds(5));
+
+            var shutdown = firstHost.StopAsync(TestContext.Current.CancellationToken);
+            var completed = await Task.WhenAny(pendingCall, Task.Delay(TimeSpan.FromSeconds(5), TestContext.Current.CancellationToken));
+            Assert.Same(pendingCall, completed);
+            await Assert.ThrowsAnyAsync<Exception>(() => pendingCall);
+            await shutdown.WaitAsync(TimeSpan.FromSeconds(5), TestContext.Current.CancellationToken);
+        }
+        finally
+        {
+            await firstSession.DisposeAsync();
         }
 
-        await using var secondHost = new HostMcpServerHostedService(optionsFactory, NullLoggerFactory.Instance, serviceProvider);
+        var replacementOptions = new HostMcpServerOptionsFactory(new TestHostAppInfo(), [new TestTool("reconnected_session_test")], [], []);
+        await using var secondHost = new HostMcpServerHostedService(replacementOptions, NullLoggerFactory.Instance, serviceProvider);
         await secondHost.StartAsync(TestContext.Current.CancellationToken);
         await using var reconnected = await HostMcpSession.ConnectAsync(McpPipeName.Format(Environment.ProcessId), NullLoggerFactory.Instance, TestContext.Current.CancellationToken);
         Assert.True(reconnected.IsConnected);
+        var result = await reconnected.CallToolAsync("reconnected_session_test", null, TestContext.Current.CancellationToken);
+        Assert.Equal("typed session", Assert.IsType<TextContentBlock>(Assert.Single(result.Content)).Text);
         await secondHost.StopAsync(TestContext.Current.CancellationToken);
     }
 
@@ -238,6 +256,28 @@ public sealed class McpNamedPipeIntegrationTests
             {
                 Content = [new TextContentBlock { Text = "typed session" }]
             });
+    }
+
+    private sealed class BlockingTool : McpServerTool
+    {
+        public TaskCompletionSource<bool> Entered { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        public override Tool ProtocolTool { get; } = new()
+        {
+            Name = "blocking_session_test",
+            InputSchema = JsonSerializer.SerializeToElement(new { type = "object" })
+        };
+
+        public override IReadOnlyList<object> Metadata => [];
+
+        public override async ValueTask<CallToolResult> InvokeAsync(
+            RequestContext<CallToolRequestParams> request,
+            CancellationToken cancellationToken = default)
+        {
+            Entered.TrySetResult(true);
+            await Task.Delay(Timeout.InfiniteTimeSpan, cancellationToken);
+            throw new InvalidOperationException("The blocking request should be cancelled by host shutdown.");
+        }
     }
 
     private static HostSessionManager CreateHostSessionManager(

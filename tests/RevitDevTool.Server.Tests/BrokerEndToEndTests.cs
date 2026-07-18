@@ -13,6 +13,7 @@ using ModelContextProtocol.Server;
 
 namespace RevitDevTool.Server.Tests;
 
+[Collection(HostMcpServerPipeCollection.Name)]
 public sealed class BrokerEndToEndTests
 {
     [Fact]
@@ -21,15 +22,25 @@ public sealed class BrokerEndToEndTests
         await using var fixture = await BrokerFixture.CreateAsync(TestContext.Current.CancellationToken);
 
         var search = await fixture.CallAsync("devtools_search", new Dictionary<string, object?> { ["query"] = "execute_csharp_code" });
+        var searchResponse = DeserializeSearchResponse(search);
         var listsAfterSearch = fixture.Session.ListCalls;
-        var invoke = await fixture.CallAsync("devtools_invoke", new Dictionary<string, object?> { ["target"] = "tool:execute_csharp_code" });
+        var host = Assert.Single(searchResponse.Hosts);
+        var discovered = Assert.Single(searchResponse.Items);
+        var invoke = await fixture.CallAsync("devtools_invoke", new Dictionary<string, object?> { ["target"] = discovered.Target });
 
         Assert.Equal(2, fixture.ExternalCallCount);
         Assert.Equal(["devtools_search", "devtools_invoke"], fixture.ExternalCallNames);
+        Assert.Equal(fixture.ExpectedSearchResponse.Revision, searchResponse.Revision);
+        Assert.Equal(fixture.Session.Instance, host);
+        Assert.Equal("tool:execute_csharp_code", discovered.Target);
+        Assert.Equal(fixture.Session.Instance.ProcessId, discovered.HostId);
+        Assert.Equal("Revit", discovered.HostApp);
+        Assert.Equal("2027", discovered.HostVersion);
+        Assert.NotNull(discovered.Schema);
+        Assert.Equal("object", discovered.Schema!.Value.GetProperty("type").GetString());
         Assert.Equal(1, fixture.Tool.InvocationCount);
         Assert.Equal(listsAfterSearch, fixture.Session.ListCalls);
         Assert.Equal("42", Assert.IsType<TextContentBlock>(Assert.Single(invoke.Content)).Text);
-        Assert.NotEmpty(search.Content);
     }
 
     [Fact]
@@ -54,11 +65,12 @@ public sealed class BrokerEndToEndTests
         private readonly HostMcpServerHostedService host;
         private readonly ServiceProvider services;
 
-        private BrokerFixture(CountingSession session, CountingTool tool, McpClient client, NamedPipeClientStream clientPipe,
+        private BrokerFixture(CountingSession session, CountingTool tool, BrokerSearchResponse expectedSearchResponse, McpClient client, NamedPipeClientStream clientPipe,
             HostMcpServerHostedService host, ServiceProvider services, Task daemonTask, CancellationTokenSource stop)
         {
             Session = session;
             Tool = tool;
+            ExpectedSearchResponse = expectedSearchResponse;
             this.client = client;
             this.clientPipe = clientPipe;
             this.host = host;
@@ -69,6 +81,7 @@ public sealed class BrokerEndToEndTests
 
         public CountingSession Session { get; }
         public CountingTool Tool { get; }
+        public BrokerSearchResponse ExpectedSearchResponse { get; }
         public int ExternalCallCount { get; private set; }
         public List<string> ExternalCallNames { get; } = [];
 
@@ -85,6 +98,7 @@ public sealed class BrokerEndToEndTests
             var broker = new BrokerCatalogIndex();
             broker.ReplaceSnapshots([HostCatalogSnapshot.Create(session.Instance,
                 await session.ListToolsAsync(ct), await session.ListPromptsAsync(ct), await session.ListResourcesAsync(ct), await session.ListResourceTemplatesAsync(ct))]);
+            var expectedSearchResponse = broker.Search(new BrokerSearchRequest("execute_csharp_code", null, null));
 
             var brokerTools = new DevToolsBrokerTools(broker, manager);
             McpServerPrimitiveCollection<McpServerTool> daemonTools =
@@ -98,7 +112,7 @@ public sealed class BrokerEndToEndTests
             await clientPipe.ConnectAsync(5000, ct);
             var client = await McpClient.CreateAsync(new StreamClientTransport(clientPipe, clientPipe, NullLoggerFactory.Instance),
                 new McpClientOptions { ClientInfo = new Implementation { Name = "external-test", Version = "1.0" } }, cancellationToken: ct);
-            return new BrokerFixture(session, tool, client, clientPipe, host, services, daemonTask, stop);
+            return new BrokerFixture(session, tool, expectedSearchResponse, client, clientPipe, host, services, daemonTask, stop);
         }
 
         public async Task<CallToolResult> CallAsync(string name, IReadOnlyDictionary<string, object?> arguments)
@@ -130,6 +144,13 @@ public sealed class BrokerEndToEndTests
             await using var server = McpServer.Create(transport, options, NullLoggerFactory.Instance, services);
             await server.RunAsync(ct);
         }
+    }
+
+    private static BrokerSearchResponse DeserializeSearchResponse(CallToolResult result)
+    {
+        Assert.True(result.StructuredContent.HasValue);
+        return Assert.IsType<BrokerSearchResponse>(JsonSerializer.Deserialize<BrokerSearchResponse>(
+            result.StructuredContent.Value.GetRawText(), new JsonSerializerOptions(JsonSerializerDefaults.Web)));
     }
 
     private sealed class HostInfo : IHostAppInfo
