@@ -2,6 +2,7 @@ using System.Collections.Concurrent;
 using System.IO;
 using System.Text.Json;
 using DevTools.Execution.Providers.Python;
+using DevTools.Execution.External.Mcp.Registry;
 using DevTools.Telemetry;
 using ModelContextProtocol;
 using ModelContextProtocol.Protocol;
@@ -98,20 +99,9 @@ public sealed class McpPrimitiveDispatcher(
 
     private McpToolExecutionResult InvokePythonTool(McpRegisteredTool tool, string normalizedPayload)
     {
-        var binding = tool.Binding;
-        if (string.IsNullOrWhiteSpace(binding.SourcePath) || !File.Exists(binding.SourcePath))
-            throw new InvalidOperationException($"Python MCP source file was not found: {binding.SourcePath}.");
-
-        var rootFolder = Path.GetDirectoryName(binding.SourcePath) ?? string.Empty;
-        var resultJson = executor.Execute(
-            binding.SourcePath, rootFolder,
-            scope =>
-            {
-                scope.Set(PythonInstances.ToolName, new PyString(tool.ProtocolTool.Name));
-                scope.Set(PythonInstances.PayloadJson, new PyString(normalizedPayload));
-                scope.Exec(PythonEmbedded.ToolInvokeScript);
-                return scope.Get(PythonInstances.ResultJson).As<string>();
-            });
+        using var document = JsonDocument.Parse(normalizedPayload);
+        var arguments = document.RootElement.EnumerateObject().ToDictionary(property => property.Name, property => property.Value);
+        var resultJson = PythonMcpInvoker.InvokeTool(executor, tool, arguments);
         var callResult = PythonResultParser.ParseCallToolResult(resultJson);
         return McpToolExecutionResult.Completed(callResult, $"Completed '{tool.ProtocolTool.Name}'.");
     }
@@ -169,21 +159,7 @@ public sealed class McpPrimitiveDispatcher(
 
     private GetPromptResult InvokePythonPrompt(McpRegisteredPrompt prompt, IReadOnlyDictionary<string, JsonElement>? arguments)
     {
-        var sourcePath = prompt.Binding.SourcePath;
-        if (string.IsNullOrWhiteSpace(sourcePath) || !File.Exists(sourcePath))
-            throw new InvalidOperationException($"Python MCP source file was not found: {sourcePath}.");
-
-        var rootFolder = Path.GetDirectoryName(sourcePath) ?? string.Empty;
-        var resultJson = executor.Execute(
-            sourcePath, rootFolder,
-            scope =>
-            {
-                scope.Set(PythonInstances.Operation, new PyString(PythonInstances.OperationPrompt));
-                scope.Set(PythonInstances.PromptName, new PyString(prompt.ProtocolPrompt.Name));
-                scope.Set(PythonInstances.ArgumentsJson, new PyString(SerializeJson(arguments ?? new Dictionary<string, JsonElement>())));
-                scope.Exec(PythonEmbedded.ToolInvokeScript);
-                return scope.Get(PythonInstances.ResultJson).As<string>();
-            });
+        var resultJson = PythonMcpInvoker.InvokePrompt(executor, prompt, arguments ?? new Dictionary<string, JsonElement>());
         return JsonSerializer.Deserialize<GetPromptResult>(resultJson, JsonOptions)
                ?? new GetPromptResult { Description = prompt.ProtocolPrompt.Description };
     }
@@ -232,22 +208,7 @@ public sealed class McpPrimitiveDispatcher(
 
     private ReadResourceResult InvokePythonResource(McpRegisteredResource resource, string uri)
     {
-        var sourcePath = resource.Binding.SourcePath;
-        if (string.IsNullOrWhiteSpace(sourcePath) || !File.Exists(sourcePath))
-            throw new InvalidOperationException($"Python MCP source file was not found: {sourcePath}.");
-
-        var rootFolder = Path.GetDirectoryName(sourcePath) ?? string.Empty;
-        var resultJson = executor.Execute(
-            sourcePath, rootFolder,
-            scope =>
-            {
-                var name = resource.ProtocolResource?.Name ?? resource.ProtocolTemplate?.Name ?? string.Empty;
-                scope.Set(PythonInstances.Operation, new PyString(PythonInstances.OperationResource));
-                scope.Set(PythonInstances.ResourceName, new PyString(name));
-                scope.Set(PythonInstances.ResourceUri, new PyString(uri));
-                scope.Exec(PythonEmbedded.ToolInvokeScript);
-                return scope.Get(PythonInstances.ResultJson).As<string>();
-            });
+        var resultJson = PythonMcpInvoker.InvokeResource(executor, resource, uri);
         return JsonSerializer.Deserialize<ReadResourceResult>(resultJson, JsonOptions) ?? new ReadResourceResult();
     }
 

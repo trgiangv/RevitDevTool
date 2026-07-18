@@ -12,6 +12,7 @@ public sealed class PythonMcpRegistryProvider(
     ILogger<PythonMcpRegistryProvider> logger) : IMcpRegistryProvider
 {
     public string Name => "python-mcp";
+    public int Priority => 200;
     public ExecutionMode SourceKind => ExecutionMode.Python;
 
     private IReadOnlyList<string> ToolsetDirectories { get; set; } = [];

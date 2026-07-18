@@ -2,11 +2,17 @@ using System.Text;
 using System.Text.RegularExpressions;
 using DevTools.Settings;
 using ModelContextProtocol.Protocol;
+using ModelContextProtocol.Server;
 // ReSharper disable RedundantSuppressNullableWarningExpression
 
 namespace DevTools.Mcp;
 
-public sealed class McpCatalogStore(McpCatalogLoader catalogLoader, ISettingsService settingsService)
+public sealed class McpCatalogStore(
+    McpCatalogLoader catalogLoader,
+    ISettingsService settingsService,
+    McpServerPrimitiveCollection<McpServerTool> serverTools,
+    McpServerPrimitiveCollection<McpServerPrompt> serverPrompts,
+    McpServerResourceCollection serverResources)
 {
     private readonly SemaphoreSlim _gate = new(1, 1);
     private readonly Dictionary<string, McpRegisteredTool> _byToolId = new(StringComparer.OrdinalIgnoreCase);
@@ -15,6 +21,8 @@ public sealed class McpCatalogStore(McpCatalogLoader catalogLoader, ISettingsSer
     private readonly Dictionary<string, List<McpRegisteredPrompt>> _byPromptName = new(StringComparer.OrdinalIgnoreCase);
     private readonly Dictionary<string, McpRegisteredResource> _byResourceId = new(StringComparer.OrdinalIgnoreCase);
     private readonly Dictionary<string, List<McpRegisteredResource>> _byResourceName = new(StringComparer.OrdinalIgnoreCase);
+    private McpPrimitiveSnapshot _snapshot = McpPrimitiveSnapshot.Empty;
+    private long _generation;
     public event EventHandler? CatalogChanged;
 
     public IReadOnlyList<McpRegisteredTool> RegisteredTools { get; private set; } = [];
@@ -25,6 +33,9 @@ public sealed class McpCatalogStore(McpCatalogLoader catalogLoader, ISettingsSer
     public IReadOnlyList<Prompt> Prompts { get; private set; } = [];
     public IReadOnlyList<Resource> DirectResources { get; private set; } = [];
     public IReadOnlyList<ResourceTemplate> ResourceTemplates { get; private set; } = [];
+    public IReadOnlyList<McpCatalogDiagnostic> Diagnostics => _snapshot.Diagnostics;
+    public bool IsLoaded => Volatile.Read(ref _generation) > 0;
+    public long Generation => Volatile.Read(ref _generation);
 
     public async Task ReloadAsync()
     {
@@ -33,12 +44,12 @@ public sealed class McpCatalogStore(McpCatalogLoader catalogLoader, ISettingsSer
         {
             var loaded = await Task.Run(() =>
             {
-                var catalog = catalogLoader.LoadCatalog(
+                var loaded = catalogLoader.LoadCatalog(
                     settingsService.McpRegistryConfig.DotnetPaths,
                     settingsService.McpRegistryConfig.PythonToolsetPaths);
 
-                McpPathValidator.PruneInvalidConfiguredPaths(settingsService.McpRegistryConfig, catalog);
-                return catalog;
+                McpPathValidator.PruneInvalidConfiguredPaths(settingsService.McpRegistryConfig, loaded.Catalog);
+                return loaded;
             }).ConfigureAwait(false);
 
             ApplyCatalog(loaded);
@@ -75,8 +86,8 @@ public sealed class McpCatalogStore(McpCatalogLoader catalogLoader, ISettingsSer
             var loaded = await Task.Run(() => catalogLoader.LoadCatalog(dotnetCandidates, pythonCandidates)).ConfigureAwait(false);
             ApplyCatalog(loaded);
 
-            PersistAcceptedPath(inputKind, normalizedPath, loaded);
-            McpPathValidator.PruneInvalidConfiguredPaths(settingsService.McpRegistryConfig, loaded);
+            PersistAcceptedPath(inputKind, normalizedPath, loaded.Catalog);
+            McpPathValidator.PruneInvalidConfiguredPaths(settingsService.McpRegistryConfig, loaded.Catalog);
         }
         finally
         {
@@ -142,15 +153,15 @@ public sealed class McpCatalogStore(McpCatalogLoader catalogLoader, ISettingsSer
         _gate.Wait();
         try
         {
-            if (HasLoadedCatalog())
+            if (IsLoaded)
                 return RegisteredTools;
 
-            var catalog = catalogLoader.LoadCatalog(
+            var loaded = catalogLoader.LoadCatalog(
                 settingsService.McpRegistryConfig.DotnetPaths,
                 settingsService.McpRegistryConfig.PythonToolsetPaths);
 
-            ApplyCatalog(catalog);
-            McpPathValidator.PruneInvalidConfiguredPaths(settingsService.McpRegistryConfig, catalog);
+            ApplyCatalog(loaded);
+            McpPathValidator.PruneInvalidConfiguredPaths(settingsService.McpRegistryConfig, loaded.Catalog);
             return RegisteredTools;
         }
         finally
@@ -159,19 +170,9 @@ public sealed class McpCatalogStore(McpCatalogLoader catalogLoader, ISettingsSer
         }
     }
 
-    private bool HasLoadedCatalog()
+    private void ApplyCatalog(McpCatalogLoadResult loaded)
     {
-        if (RegisteredTools.Count == 0 && PromptCatalog.Count == 0 && ResourceCatalog.Count == 0)
-            return false;
-
-        return RegisteredTools.Count == _byToolId.Count
-               && PromptCatalog.Count == _byPromptId.Count
-               && ResourceCatalog.Count == _byResourceId.Count
-               && IndexesMatchCatalog();
-    }
-
-    private void ApplyCatalog(McpRegistryCatalog catalog)
-    {
+        var catalog = loaded.Catalog;
         ClearIndexes();
 
         RegisteredTools = catalog.Tools;
@@ -188,29 +189,25 @@ public sealed class McpCatalogStore(McpCatalogLoader catalogLoader, ISettingsSer
         Prompts = catalog.Prompts.Select(p => p.ProtocolPrompt).ToList();
         DirectResources = catalog.Resources.Where(r => r.ProtocolResource is not null).Select(r => r.ProtocolResource!).ToList();
         ResourceTemplates = catalog.Resources.Where(r => r.ProtocolTemplate is not null).Select(r => r.ProtocolTemplate!).ToList();
+        ApplySnapshot(loaded.Snapshot);
     }
 
-    private bool IndexesMatchCatalog()
+    private void ApplySnapshot(McpPrimitiveSnapshot snapshot)
     {
-        foreach (var tool in RegisteredTools)
-        {
-            if (!_byToolId.ContainsKey(tool.Id))
-                return false;
-        }
+        serverTools.Clear();
+        foreach (var tool in snapshot.Tools)
+            serverTools.TryAdd(tool);
 
-        foreach (var prompt in PromptCatalog)
-        {
-            if (!_byPromptId.ContainsKey(prompt.Id))
-                return false;
-        }
+        serverPrompts.Clear();
+        foreach (var prompt in snapshot.Prompts)
+            serverPrompts.TryAdd(prompt);
 
-        foreach (var resource in ResourceCatalog)
-        {
-            if (!_byResourceId.ContainsKey(resource.Id))
-                return false;
-        }
+        serverResources.Clear();
+        foreach (var resource in snapshot.Resources)
+            serverResources.TryAdd(resource);
 
-        return true;
+        _snapshot = snapshot;
+        Interlocked.Increment(ref _generation);
     }
 
     private void ClearIndexes()

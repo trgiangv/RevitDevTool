@@ -7,6 +7,7 @@ public sealed class BuiltInMcpRegistryProvider(
     IEnumerable<IBuiltInMcpPrompt> builtInPrompts) : IMcpRegistryProvider
 {
     public string Name => "built-in";
+    public int Priority => 0;
     public ExecutionMode SourceKind => ExecutionMode.CSharp;
 
     public void ConfigurePaths(IReadOnlyList<string> paths)

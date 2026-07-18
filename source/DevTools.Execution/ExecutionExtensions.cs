@@ -85,6 +85,9 @@ public static class ExecutionExtensions
         services.AddSingleton<IMcpRegistryProvider>(sp => sp.GetRequiredService<DotnetMcpRegistryProvider>());
         services.AddSingleton<IMcpRegistryProvider>(sp => sp.GetRequiredService<PythonMcpRegistryProvider>());
         services.AddSingleton<IMcpRegistryProvider>(sp => sp.GetRequiredService<BuiltInMcpRegistryProvider>());
+        services.AddSingleton<IMcpServerPrimitiveAdapter, DotnetMcpServerPrimitiveAdapter>();
+        services.AddSingleton<IMcpServerPrimitiveAdapter, PythonMcpServerPrimitiveAdapter>();
+        services.AddSingleton<IMcpServerPrimitiveAdapter, BuiltInMcpServerAdapters>();
         services.AddSingleton<McpCatalogLoader>();
         services.AddSingleton<McpCatalogStore>();
         services.AddSingleton<IBuiltInMcpTool, CSharpCodeTool>();
