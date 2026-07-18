@@ -3,7 +3,7 @@ using DevTools.Logging;
 namespace DevTools.Daemon.Hosts;
 
 /// <summary>Deterministically resolves daemon host drivers by product or file extension.</summary>
-public sealed class HostDriverRegistry
+internal sealed class HostDriverRegistry
 {
     private readonly Dictionary<HostApp, IHostDriver> _driversByHostApp = [];
     private readonly Dictionary<string, IHostDriver> _driversByExtension =

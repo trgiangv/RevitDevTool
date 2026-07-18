@@ -5,7 +5,7 @@ using DevTools.Logging;
 namespace DevTools.Daemon.Hosts;
 
 /// <summary>Owns daemon-side launch and offline file metadata behavior for one host family.</summary>
-public interface IHostDriver
+internal interface IHostDriver
 {
     string HostId { get; }
     IReadOnlySet<HostApp> SupportedHostApps { get; }
@@ -16,14 +16,14 @@ public interface IHostDriver
 }
 
 /// <summary>Immutable input that keeps host-product and Revit language selection request-scoped.</summary>
-public sealed record HostLaunchRequest(
+internal sealed record HostLaunchRequest(
     HostApp RequestedHostApp,
     string? VersionNumber,
     string? LanguageCode,
     string? FilePath);
 
 /// <summary>Internal launch state used by product-neutral MCP tools to preserve their existing payloads.</summary>
-public sealed record HostLaunchResult(
+internal sealed record HostLaunchResult(
     HostApp HostApp,
     int ProcessId,
     string Version,
@@ -32,4 +32,4 @@ public sealed record HostLaunchResult(
     IReadOnlyList<string> Arguments,
     Task<StartupDialogResolverResult>? DialogTask);
 
-public sealed class HostDriverException(string message) : Exception(message);
+internal sealed class HostDriverException(string message) : Exception(message);

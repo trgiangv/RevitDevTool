@@ -6,7 +6,7 @@ using DevTools.Logging;
 
 namespace DevTools.Daemon.Hosts;
 
-public sealed class AcadHostDriver : IHostDriver
+internal sealed class AcadHostDriver : IHostDriver
 {
     public string HostId => nameof(HostApp.AutoCad);
     public IReadOnlySet<HostApp> SupportedHostApps { get; } = new HashSet<HostApp>

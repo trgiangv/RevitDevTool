@@ -1,5 +1,15 @@
+using System.Text.Json;
 using DevTools.Daemon.Contracts;
 using DevTools.Daemon.Hosts;
+using DevTools.Daemon.Mcp;
+using DevTools.Daemon.Mcp.Tools;
+using DevTools.Ipc;
+using DevTools.Logging;
+using DevTools.Mcp.Routing;
+using Microsoft.Extensions.Logging.Abstractions;
+using ModelContextProtocol.Client;
+using ModelContextProtocol.Protocol;
+using ModelContextProtocol.Server;
 
 namespace RevitDevTool.Server.Tests;
 
@@ -81,21 +91,76 @@ public sealed class HostDriverRegistryTests
         Assert.Null(registry.TryForHost(hostApp));
     }
 
-    [Theory]
-    [InlineData(HostApp.Revit, "FRA", "model.rvt")]
-    [InlineData(HostApp.Civil3D, "", "drawing.dwg")]
-    public async Task LaunchAsync_receives_the_requested_product_and_language_unchanged(
-        HostApp hostApp,
-        string languageCode,
-        string filePath)
+    [Fact]
+    public async Task OpenModel_forwards_a_connected_Navisworks_file_without_requiring_a_launch_driver()
     {
-        var driver = new CapturingHostDriver();
-        var registry = new HostDriverRegistry([driver]);
-        var request = new HostLaunchRequest(hostApp, "2025", languageCode, filePath);
+        var filePath = CreateTemporaryFile(".nwd");
+        var session = new CapturingSession(9001);
+        await using var instanceManager = await CreateHostSessionManagerAsync([session]);
+        var tool = new OpenModelTool(instanceManager, new HostDriverRegistry([]));
 
-        await registry.ForHost(hostApp).LaunchAsync(request, TestContext.Current.CancellationToken);
+        try
+        {
+            var result = await InvokeAsync(tool, new()
+            {
+                ["filePath"] = JsonSerializer.SerializeToElement(filePath)
+            });
 
-        Assert.Equal(request, driver.Request);
+            Assert.False(result.IsError ?? false);
+            var call = Assert.Single(session.ToolCalls);
+            Assert.Equal("open_document", call.Name);
+            Assert.Equal(filePath, call.Arguments["filePath"]);
+        }
+        finally
+        {
+            File.Delete(filePath);
+        }
+    }
+
+    [Fact]
+    public async Task LaunchHost_forwards_Revit_language_version_and_file_path_to_the_selected_driver()
+    {
+        var filePath = CreateTemporaryFile(".rvt");
+        var session = new CapturingSession(9002);
+        await using var instanceManager = await CreateHostSessionManagerAsync([session]);
+        var driver = new CapturingHostDriver(9002, HostApp.Revit);
+        var tool = new LaunchHostTool(instanceManager, new HostDriverRegistry([driver]));
+
+        try
+        {
+            var result = await InvokeAsync(tool, new()
+            {
+                ["hostApp"] = JsonSerializer.SerializeToElement("Revit"),
+                ["versionNumber"] = JsonSerializer.SerializeToElement("2025"),
+                ["languageCode"] = JsonSerializer.SerializeToElement("FRA"),
+                ["filePath"] = JsonSerializer.SerializeToElement(filePath)
+            });
+
+            Assert.False(result.IsError ?? false);
+            Assert.Equal(new HostLaunchRequest(HostApp.Revit, "2025", "FRA", filePath), driver.Request);
+        }
+        finally
+        {
+            File.Delete(filePath);
+        }
+    }
+
+    [Fact]
+    public async Task LaunchHost_preserves_the_requested_Civil3D_product_for_the_selected_driver()
+    {
+        var session = new CapturingSession(9003);
+        await using var instanceManager = await CreateHostSessionManagerAsync([session]);
+        var driver = new CapturingHostDriver(9003, HostApp.Civil3D);
+        var tool = new LaunchHostTool(instanceManager, new HostDriverRegistry([driver]));
+
+        var result = await InvokeAsync(tool, new()
+        {
+            ["hostApp"] = JsonSerializer.SerializeToElement("Civil3D"),
+            ["versionNumber"] = JsonSerializer.SerializeToElement("2025")
+        });
+
+        Assert.False(result.IsError ?? false);
+        Assert.Equal(HostApp.Civil3D, driver.Request?.RequestedHostApp);
     }
 
     private sealed class TestHostDriver(string hostId, IReadOnlySet<string> fileExtensions) : IHostDriver
@@ -110,10 +175,10 @@ public sealed class HostDriverRegistryTests
             throw new NotSupportedException();
     }
 
-    private sealed class CapturingHostDriver : IHostDriver
+    private sealed class CapturingHostDriver(int processId, params HostApp[] supportedHostApps) : IHostDriver
     {
         public string HostId => "Revit";
-        public IReadOnlySet<HostApp> SupportedHostApps { get; } = new HashSet<HostApp> { HostApp.Revit, HostApp.Civil3D };
+        public IReadOnlySet<HostApp> SupportedHostApps { get; } = new HashSet<HostApp>(supportedHostApps);
         public IReadOnlySet<string> FileExtensions { get; } = new HashSet<string> { ".rvt" };
         public HostLaunchRequest? Request { get; private set; }
         public bool SupportsVersion(string version) => true;
@@ -121,10 +186,90 @@ public sealed class HostDriverRegistryTests
         public Task<HostLaunchResult> LaunchAsync(HostLaunchRequest request, CancellationToken ct)
         {
             Request = request;
-            return Task.FromResult(default(HostLaunchResult)!);
+            return Task.FromResult(new HostLaunchResult(
+                request.RequestedHostApp,
+                processId,
+                request.VersionNumber ?? "2025",
+                "C:\\test-host.exe",
+                request.LanguageCode,
+                [],
+                null));
         }
 
         public Task<FileInfoResult> ReadFileInfoAsync(string filePath, CancellationToken ct) =>
             throw new NotSupportedException();
+    }
+
+    private static async Task<HostSessionManager> CreateHostSessionManagerAsync(IReadOnlyList<CapturingSession> sessions)
+    {
+        var sessionsByPipe = sessions.ToDictionary(session => session.Instance.PipeName, StringComparer.OrdinalIgnoreCase);
+        var instanceManager = new HostSessionManager(
+            NullLogger<HostSessionManager>.Instance,
+            NullLoggerFactory.Instance,
+            _ => [.. sessionsByPipe.Keys],
+            new DelegateHostSessionConnector((pipeName, _) => Task.FromResult<IHostMcpSession>(sessionsByPipe[pipeName])),
+            new ImmediateRetryClock());
+
+        await instanceManager.SyncMcpPipesAsync(TestContext.Current.CancellationToken);
+        return instanceManager;
+    }
+
+    private static async Task<CallToolResult> InvokeAsync(McpServerTool tool, IDictionary<string, JsonElement> arguments)
+    {
+        await using var input = new MemoryStream();
+        await using var output = new MemoryStream();
+        await using var transport = new StreamServerTransport(input, output);
+        await using var server = McpServer.Create(transport, new McpServerOptions());
+
+        return await tool.InvokeAsync(
+            new RequestContext<CallToolRequestParams>(
+                server,
+                new JsonRpcRequest { Id = new RequestId(Guid.NewGuid().ToString("N")), Method = RequestMethods.ToolsCall },
+                new CallToolRequestParams { Name = tool.ProtocolTool.Name, Arguments = arguments }),
+            TestContext.Current.CancellationToken);
+    }
+
+    private static string CreateTemporaryFile(string extension)
+    {
+        var filePath = Path.Combine(Path.GetTempPath(), $"{Guid.NewGuid():N}{extension}");
+        File.WriteAllText(filePath, string.Empty);
+        return filePath;
+    }
+
+    private sealed class DelegateHostSessionConnector(
+        Func<string, CancellationToken, Task<IHostMcpSession>> connectAsync) : IHostSessionConnector
+    {
+        public Task<IHostMcpSession> ConnectAsync(string pipeName, CancellationToken ct) => connectAsync(pipeName, ct);
+    }
+
+    private sealed class ImmediateRetryClock : IRetryClock
+    {
+        public DateTimeOffset UtcNow => DateTimeOffset.UtcNow;
+        public Task DelayAsync(TimeSpan delay, CancellationToken ct) => Task.CompletedTask;
+    }
+
+    private sealed class CapturingSession(int processId) : IHostMcpSession
+    {
+        public HostInstanceDescriptor Instance { get; } = new(processId, "TestHost", "1.0", McpPipeName.Format(processId));
+        public bool IsConnected => true;
+        public List<(string Name, IReadOnlyDictionary<string, object?> Arguments)> ToolCalls { get; } = [];
+        public event Action? CatalogChanged { add { } remove { } }
+        public event Action? Disconnected { add { } remove { } }
+
+        public Task<IList<McpClientTool>> ListToolsAsync(CancellationToken ct) => Task.FromResult<IList<McpClientTool>>([]);
+        public Task<IList<McpClientPrompt>> ListPromptsAsync(CancellationToken ct) => Task.FromResult<IList<McpClientPrompt>>([]);
+        public Task<IList<McpClientResource>> ListResourcesAsync(CancellationToken ct) => Task.FromResult<IList<McpClientResource>>([]);
+        public Task<IList<McpClientResourceTemplate>> ListResourceTemplatesAsync(CancellationToken ct) => Task.FromResult<IList<McpClientResourceTemplate>>([]);
+
+        public Task<CallToolResult> CallToolAsync(string name, IReadOnlyDictionary<string, object?>? arguments, CancellationToken ct)
+        {
+            ToolCalls.Add((name, arguments ?? new Dictionary<string, object?>()));
+            return Task.FromResult(new CallToolResult { Content = [new TextContentBlock { Text = "opened" }] });
+        }
+
+        public Task<GetPromptResult> GetPromptAsync(string name, IReadOnlyDictionary<string, object?>? arguments, CancellationToken ct) =>
+            throw new NotSupportedException();
+        public Task<ReadResourceResult> ReadResourceAsync(string uri, CancellationToken ct) => throw new NotSupportedException();
+        public ValueTask DisposeAsync() => ValueTask.CompletedTask;
     }
 }

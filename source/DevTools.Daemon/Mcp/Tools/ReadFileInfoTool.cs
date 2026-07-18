@@ -7,8 +7,15 @@ using ModelContextProtocol.Server;
 
 namespace DevTools.Daemon.Mcp.Tools;
 
-public sealed class ReadFileInfoTool(HostDriverRegistry drivers) : McpServerTool
+public sealed class ReadFileInfoTool : McpServerTool
 {
+    private readonly HostDriverRegistry drivers;
+
+    internal ReadFileInfoTool(HostDriverRegistry drivers)
+    {
+        this.drivers = drivers;
+    }
+
     private static readonly string[] AllExtensions = [".rvt", ".rfa", ".rft", ".rte", ".dwg"];
 
     public override Tool ProtocolTool { get; } = new()

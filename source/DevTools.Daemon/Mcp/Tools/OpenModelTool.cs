@@ -13,8 +13,17 @@ namespace DevTools.Daemon.Mcp.Tools;
 /// 1. Connected instance: routes <c>open_document</c> built-in tool via Named Pipe.
 /// 2. No instance: launches the host process with the file as a CLI argument.
 /// </summary>
-public sealed class OpenModelTool(HostSessionManager instanceManager, HostDriverRegistry drivers) : McpServerTool
+public sealed class OpenModelTool : McpServerTool
 {
+    private readonly HostSessionManager instanceManager;
+    private readonly HostDriverRegistry drivers;
+
+    internal OpenModelTool(HostSessionManager instanceManager, HostDriverRegistry drivers)
+    {
+        this.instanceManager = instanceManager;
+        this.drivers = drivers;
+    }
+
     public override Tool ProtocolTool { get; } = new()
     {
         Name = "open_model",
@@ -52,6 +61,10 @@ public sealed class OpenModelTool(HostSessionManager instanceManager, HostDriver
             return ToolHelpers.ErrorResult($"File not found: {filePath}");
 
         var hostApp = HostAppExtensions.FromExtension(Path.GetExtension(filePath));
+        var session = ResolveSession(args);
+        if (session is not null)
+            return await OpenViaConnectedInstanceAsync(session, filePath, cancellationToken).ConfigureAwait(false);
+
         var driver = drivers.TryForFile(filePath);
         if (driver is null)
         {
@@ -63,10 +76,6 @@ public sealed class OpenModelTool(HostSessionManager instanceManager, HostDriver
 
         if (hostApp is null)
             return ToolHelpers.ErrorResult($"Cannot determine host application from file extension '{Path.GetExtension(filePath)}'.");
-
-        var session = ResolveSession(args);
-        if (session is not null)
-            return await OpenViaConnectedInstanceAsync(session, filePath, cancellationToken).ConfigureAwait(false);
 
         return await LaunchAndOpenAsync(driver, hostApp.Value, filePath, args, cancellationToken).ConfigureAwait(false);
     }

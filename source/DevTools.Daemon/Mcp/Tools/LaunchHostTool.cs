@@ -10,8 +10,17 @@ using ModelContextProtocol.Server;
 namespace DevTools.Daemon.Mcp.Tools;
 
 [SupportedOSPlatform("windows")]
-public sealed class LaunchHostTool(HostSessionManager instanceManager, HostDriverRegistry drivers) : McpServerTool
+public sealed class LaunchHostTool : McpServerTool
 {
+    private readonly HostSessionManager instanceManager;
+    private readonly HostDriverRegistry drivers;
+
+    internal LaunchHostTool(HostSessionManager instanceManager, HostDriverRegistry drivers)
+    {
+        this.instanceManager = instanceManager;
+        this.drivers = drivers;
+    }
+
     private static readonly string[] HostAppEnumNames =
         Enum.GetValues<HostApp>().Select(h => h.ToString()).ToArray();
 

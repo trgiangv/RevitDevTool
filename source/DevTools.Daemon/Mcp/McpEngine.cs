@@ -6,6 +6,7 @@ using ModelContextProtocol.Server;
 using DevTools.Daemon.Mcp.Tools;
 using DevTools.Mcp.Routing.Catalog;
 using DevTools.Mcp.Routing.Broker;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace DevTools.Daemon.Mcp;
 
@@ -25,9 +26,9 @@ public sealed class McpEngine
     public McpEngine(
         HostSessionManager instanceManager,
         BrokerCatalogIndex brokerCatalog,
-        HostDriverRegistry hostDrivers,
         IAuthService authService,
-        IOptions<GatewayOptions> gatewayOptions)
+        IOptions<GatewayOptions> gatewayOptions,
+        IServiceProvider services)
     {
         InstanceManager = instanceManager;
         BrokerCatalog = brokerCatalog;
@@ -35,7 +36,11 @@ public sealed class McpEngine
         PromptCollection = [];
         ResourceCollection = [];
 
-        LocalTools = CreateLocalTools(authService, gatewayOptions, hostDrivers, new DevToolsBrokerTools(BrokerCatalog, InstanceManager));
+        LocalTools = CreateLocalTools(
+            authService,
+            gatewayOptions,
+            services.GetRequiredService<HostDriverRegistry>(),
+            new DevToolsBrokerTools(BrokerCatalog, InstanceManager));
         foreach (var tool in LocalTools)
         {
             ToolCollection.TryAdd(tool);

@@ -7,7 +7,7 @@ using DevTools.Logging;
 
 namespace DevTools.Daemon.Hosts;
 
-public sealed partial class RevitHostDriver : IHostDriver
+internal sealed partial class RevitHostDriver : IHostDriver
 {
     private static readonly HashSet<string> SupportedLanguageCodes =
     [
