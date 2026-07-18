@@ -24,7 +24,7 @@ pywin32 = "==311"
 olefile = "==0.47"
 mcp = "==1.26.0"
 structlog = "==25.5.0"
-pixi-pycharm = ">=0.0.10,<0.0.11"
+pixi-pycharm = "==0.0.12"
 
 [pypi-dependencies]
 manifold3d = "==3.4"
