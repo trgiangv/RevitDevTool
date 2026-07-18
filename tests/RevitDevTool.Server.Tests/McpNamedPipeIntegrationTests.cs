@@ -186,6 +186,33 @@ public sealed class McpNamedPipeIntegrationTests
         }
     }
 
+    [Fact]
+    public async Task HostMcpSession_CancellationShutdownAndReconnect_DisposeSdkPipeSessions()
+    {
+        using var cancelled = new CancellationTokenSource();
+        cancelled.Cancel();
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() =>
+            HostMcpSession.ConnectAsync(McpPipeName.Format(Environment.ProcessId + 10_000), NullLoggerFactory.Instance, cancelled.Token));
+
+        var optionsFactory = new HostMcpServerOptionsFactory(new TestHostAppInfo(), [], [], []);
+        using var serviceProvider = new ServiceCollection().BuildServiceProvider();
+        await using var firstHost = new HostMcpServerHostedService(optionsFactory, NullLoggerFactory.Instance, serviceProvider);
+        await firstHost.StartAsync(TestContext.Current.CancellationToken);
+        var disconnected = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+        await using (var firstSession = await HostMcpSession.ConnectAsync(McpPipeName.Format(Environment.ProcessId), NullLoggerFactory.Instance, TestContext.Current.CancellationToken))
+        {
+            firstSession.Disconnected += () => disconnected.TrySetResult(true);
+            await firstHost.StopAsync(TestContext.Current.CancellationToken);
+            await disconnected.Task.WaitAsync(TestContext.Current.CancellationToken);
+        }
+
+        await using var secondHost = new HostMcpServerHostedService(optionsFactory, NullLoggerFactory.Instance, serviceProvider);
+        await secondHost.StartAsync(TestContext.Current.CancellationToken);
+        await using var reconnected = await HostMcpSession.ConnectAsync(McpPipeName.Format(Environment.ProcessId), NullLoggerFactory.Instance, TestContext.Current.CancellationToken);
+        Assert.True(reconnected.IsConnected);
+        await secondHost.StopAsync(TestContext.Current.CancellationToken);
+    }
+
     private sealed class TestHostAppInfo : IHostAppInfo
     {
         public HostApp Host => HostApp.Revit;

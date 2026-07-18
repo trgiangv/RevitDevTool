@@ -25,11 +25,13 @@ public sealed class CatalogServiceSnapshotTests
         var catalog = CreateCatalog(manager, broker);
 
         await catalog.RebuildCatalogAsync(TestContext.Current.CancellationToken);
+        var expectedRevision = broker.Search(new BrokerSearchRequest(null, null, null)).Revision;
         failing.FailLists = true;
         await catalog.RebuildCatalogAsync(TestContext.Current.CancellationToken);
 
         Assert.Contains(broker.Search(new BrokerSearchRequest(null, null, null)).Items, entry => entry.Name == "healthy_tool");
         Assert.Contains(broker.Search(new BrokerSearchRequest(null, null, null)).Items, entry => entry.Name == "failing_tool");
+        Assert.Equal(expectedRevision, broker.Search(new BrokerSearchRequest(null, null, null)).Revision);
     }
 
     [Fact]
