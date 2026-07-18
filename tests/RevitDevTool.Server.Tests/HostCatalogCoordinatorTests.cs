@@ -27,4 +27,31 @@ public sealed class HostCatalogCoordinatorTests
 
         Assert.Equal(2, rebuilds);
     }
+
+    [Fact]
+    public async Task DisposeAsync_CancelsAndAwaitsBlockedRefresh()
+    {
+        var entered = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+        var cancelled = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+        var coordinator = new HostCatalogCoordinator(async ct =>
+        {
+            entered.TrySetResult(true);
+            try
+            {
+                await Task.Delay(Timeout.InfiniteTimeSpan, ct).ConfigureAwait(false);
+            }
+            catch (OperationCanceledException) when (ct.IsCancellationRequested)
+            {
+                cancelled.TrySetResult(true);
+                throw;
+            }
+        });
+
+        coordinator.RequestRefresh();
+        await entered.Task.WaitAsync(TestContext.Current.CancellationToken);
+
+        await coordinator.DisposeAsync();
+
+        await cancelled.Task.WaitAsync(TestContext.Current.CancellationToken);
+    }
 }

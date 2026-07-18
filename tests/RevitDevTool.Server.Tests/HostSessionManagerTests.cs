@@ -90,6 +90,136 @@ public sealed class HostSessionManagerTests
         Assert.Empty(manager.SessionSlots);
     }
 
+    [Fact]
+    public async Task PendingConnect_RemovedPipeDoesNotPublishOrLeakSession()
+    {
+        var pipeName = McpPipeName.Format(5105);
+        var discoveredPipes = new HashSet<string>([pipeName], StringComparer.OrdinalIgnoreCase);
+        var connector = new PendingConnector();
+        var clock = new FakeRetryClock();
+        await using var manager = CreateManager(discoveredPipes, connector, clock);
+
+        var connect = manager.SyncMcpPipesAsync(TestContext.Current.CancellationToken);
+        await connector.Entered.Task.WaitAsync(TestContext.Current.CancellationToken);
+
+        discoveredPipes.Clear();
+        var removal = manager.SyncMcpPipesAsync(TestContext.Current.CancellationToken);
+        Assert.False(removal.IsCompleted);
+        var session = new TestMcpSession(pipeName);
+        connector.Complete(session);
+        await removal;
+        await connect;
+
+        Assert.Empty(manager.SessionSlots);
+        Assert.Empty(manager.Sessions);
+        Assert.Equal(1, session.DisposeCount);
+    }
+
+    [Fact]
+    public async Task PendingConnect_ManagerShutdownCancelsAndAwaitsAttempt()
+    {
+        var pipeName = McpPipeName.Format(5106);
+        var connector = new PendingConnector(cancelWhenRequested: true);
+        var clock = new FakeRetryClock();
+        var manager = CreateManager(pipeName, connector, clock);
+
+        var connect = manager.SyncMcpPipesAsync(CancellationToken.None);
+        await connector.Entered.Task.WaitAsync(TestContext.Current.CancellationToken);
+
+        await manager.DisposeAsync();
+        await connect;
+
+        Assert.True(connector.CancellationRequested);
+        Assert.Empty(manager.SessionSlots);
+        Assert.Empty(manager.Sessions);
+    }
+
+    [Fact]
+    public async Task PendingConnect_StaleCompletionIsDisposedDuringShutdown()
+    {
+        var pipeName = McpPipeName.Format(5107);
+        var connector = new PendingConnector();
+        var clock = new FakeRetryClock();
+        var manager = CreateManager(pipeName, connector, clock);
+
+        var connect = manager.SyncMcpPipesAsync(CancellationToken.None);
+        await connector.Entered.Task.WaitAsync(TestContext.Current.CancellationToken);
+        var dispose = manager.DisposeAsync().AsTask();
+        Assert.False(dispose.IsCompleted);
+
+        var session = new TestMcpSession(pipeName);
+        connector.Complete(session);
+        await dispose;
+        await connect;
+
+        Assert.Empty(manager.SessionSlots);
+        Assert.Equal(1, session.DisposeCount);
+    }
+
+    [Fact]
+    public async Task RunAsync_UsesExactFirstRetryDeadline()
+    {
+        var pipeName = McpPipeName.Format(5108);
+        using var stop = new CancellationTokenSource();
+        var connector = new FakeConnector(pipeName, [ConnectResult.Failure(), ConnectResult.Success()]);
+        var clock = new RecordingRetryClock(stop, stopAfterDelays: 2);
+        await using var manager = CreateManager(pipeName, connector, clock);
+
+        await manager.RunAsync(stop.Token);
+
+        Assert.Equal(TimeSpan.FromMilliseconds(500), clock.Delays[0]);
+        Assert.Equal(2, connector.AttemptsFor(pipeName));
+    }
+
+    [Fact]
+    public async Task RunAsync_CapsRetryDeadlineAtFifteenSeconds()
+    {
+        var pipeName = McpPipeName.Format(5109);
+        using var stop = new CancellationTokenSource();
+        var clock = new RecordingRetryClock(stop, stopAfterDelays: int.MaxValue);
+        var attempts = new List<DateTimeOffset>();
+        var connector = new FakeConnector(
+            pipeName,
+            Enumerable.Repeat(ConnectResult.Failure(), 6),
+            () =>
+            {
+                attempts.Add(clock.UtcNow);
+                if (attempts.Count == 6)
+                    stop.Cancel();
+            });
+        await using var manager = CreateManager(pipeName, connector, clock);
+
+        await manager.RunAsync(stop.Token);
+
+        Assert.Equal(
+        [
+            DateTimeOffset.UnixEpoch,
+            DateTimeOffset.UnixEpoch.AddMilliseconds(500),
+            DateTimeOffset.UnixEpoch.AddSeconds(1.5),
+            DateTimeOffset.UnixEpoch.AddSeconds(3.5),
+            DateTimeOffset.UnixEpoch.AddSeconds(7.5),
+            DateTimeOffset.UnixEpoch.AddSeconds(15.5)
+        ],
+        attempts);
+    }
+
+    [Fact]
+    public async Task CancelledConnect_PropagatesCancellationWithoutBackoffState()
+    {
+        var pipeName = McpPipeName.Format(5110);
+        using var cancellation = new CancellationTokenSource();
+        var connector = new PendingConnector(cancelWhenRequested: true);
+        var clock = new FakeRetryClock();
+        await using var manager = CreateManager(pipeName, connector, clock);
+
+        var connect = manager.SyncMcpPipesAsync(cancellation.Token);
+        await connector.Entered.Task.WaitAsync(TestContext.Current.CancellationToken);
+        cancellation.Cancel();
+
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() => connect);
+        Assert.Empty(manager.SessionSlots);
+    }
+
     private static HostSessionManager CreateManager(
         string pipeName,
         IHostSessionConnector connector,
@@ -107,7 +237,10 @@ public sealed class HostSessionManagerTests
             connector,
             clock);
 
-    private sealed class FakeConnector(string expectedPipeName, IEnumerable<ConnectResult> results) : IHostSessionConnector
+    private sealed class FakeConnector(
+        string expectedPipeName,
+        IEnumerable<ConnectResult> results,
+        Action? onAttempt = null) : IHostSessionConnector
     {
         private readonly Queue<ConnectResult> _results = new(results);
         private readonly Dictionary<string, int> _attempts = new(StringComparer.OrdinalIgnoreCase);
@@ -116,6 +249,7 @@ public sealed class HostSessionManagerTests
         {
             Assert.Equal(expectedPipeName, pipeName);
             _attempts[pipeName] = AttemptsFor(pipeName) + 1;
+            onAttempt?.Invoke();
             var result = _results.Dequeue();
             return result.Exception is { } exception
                 ? Task.FromException<IHostMcpSession>(exception)
@@ -144,10 +278,49 @@ public sealed class HostSessionManagerTests
         public void Advance(TimeSpan duration) => UtcNow += duration;
     }
 
+    private sealed class RecordingRetryClock(CancellationTokenSource stop, int stopAfterDelays) : IRetryClock
+    {
+        private int _delayCount;
+
+        public DateTimeOffset UtcNow { get; private set; } = DateTimeOffset.UnixEpoch;
+        public List<TimeSpan> Delays { get; } = [];
+
+        public Task DelayAsync(TimeSpan delay, CancellationToken ct)
+        {
+            Delays.Add(delay);
+            UtcNow += delay;
+            if (Interlocked.Increment(ref _delayCount) >= stopAfterDelays)
+                stop.Cancel();
+            return Task.CompletedTask;
+        }
+    }
+
+    private sealed class PendingConnector(bool cancelWhenRequested = false) : IHostSessionConnector
+    {
+        private readonly TaskCompletionSource<IHostMcpSession> _completion = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        public TaskCompletionSource<bool> Entered { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        public bool CancellationRequested { get; private set; }
+
+        public Task<IHostMcpSession> ConnectAsync(string pipeName, CancellationToken ct)
+        {
+            Entered.TrySetResult(true);
+            if (cancelWhenRequested)
+                ct.Register(() =>
+                {
+                    CancellationRequested = true;
+                    _completion.TrySetCanceled(ct);
+                });
+            return _completion.Task;
+        }
+
+        public void Complete(IHostMcpSession session) => _completion.TrySetResult(session);
+    }
+
     private sealed class TestMcpSession(string pipeName) : IHostMcpSession
     {
         public HostInstanceDescriptor Instance { get; } = new(5100, "Test", "1.0", pipeName);
         public bool IsConnected { get; private set; } = true;
+        public int DisposeCount { get; private set; }
         public event Action? CatalogChanged { add { } remove { } }
         public event Action? Disconnected;
 
@@ -167,6 +340,7 @@ public sealed class HostSessionManagerTests
 
         public ValueTask DisposeAsync()
         {
+            DisposeCount++;
             IsConnected = false;
             return ValueTask.CompletedTask;
         }

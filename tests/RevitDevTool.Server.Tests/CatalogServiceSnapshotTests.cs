@@ -1,0 +1,133 @@
+using System.Text.Json;
+using System.Reflection;
+using System.Runtime.CompilerServices;
+using DevTools.Mcp;
+using DevTools.Mcp.Routing;
+using DevTools.Mcp.Routing.Catalog;
+using Microsoft.Extensions.Logging.Abstractions;
+using ModelContextProtocol.Client;
+using ModelContextProtocol.Protocol;
+using ModelContextProtocol.Server;
+
+namespace RevitDevTool.Server.Tests;
+
+public sealed class CatalogServiceSnapshotTests
+{
+    [Fact]
+    public async Task RebuildCatalog_RetainsOnlyFailingHostsPriorSnapshot()
+    {
+        var healthy = new SnapshotSession(5201, "healthy_tool");
+        var failing = new SnapshotSession(5202, "failing_tool");
+        var manager = new SnapshotInstanceManager([healthy, failing]);
+        var dynamicTools = new DynamicToolCatalog();
+        var catalog = CreateCatalog(manager, dynamicTools);
+
+        await catalog.RebuildCatalogAsync(TestContext.Current.CancellationToken);
+        failing.FailLists = true;
+        await catalog.RebuildCatalogAsync(TestContext.Current.CancellationToken);
+
+        Assert.Contains(dynamicTools.List(), entry => entry.Tool.Name == "healthy_tool");
+        Assert.Contains(dynamicTools.List(), entry => entry.Tool.Name == "failing_tool");
+    }
+
+    [Fact]
+    public async Task RebuildCatalog_RemovesFailedHostsSnapshotOnlyAfterDisconnect()
+    {
+        var healthy = new SnapshotSession(5203, "healthy_tool");
+        var failing = new SnapshotSession(5204, "failing_tool");
+        var manager = new SnapshotInstanceManager([healthy, failing]);
+        var dynamicTools = new DynamicToolCatalog();
+        var catalog = CreateCatalog(manager, dynamicTools);
+
+        await catalog.RebuildCatalogAsync(TestContext.Current.CancellationToken);
+        failing.FailLists = true;
+        await catalog.RebuildCatalogAsync(TestContext.Current.CancellationToken);
+        manager.Remove(failing);
+        await catalog.RebuildCatalogAsync(TestContext.Current.CancellationToken);
+
+        Assert.Contains(dynamicTools.List(), entry => entry.Tool.Name == "healthy_tool");
+        Assert.DoesNotContain(dynamicTools.List(), entry => entry.Tool.Name == "failing_tool");
+    }
+
+    private static CatalogService CreateCatalog(SnapshotInstanceManager manager, DynamicToolCatalog dynamicTools)
+    {
+        McpServerPrimitiveCollection<McpServerTool> tools = [];
+        McpServerPrimitiveCollection<McpServerPrompt> prompts = [];
+        McpServerResourceCollection resources = [];
+        return new CatalogService(
+            manager,
+            tools,
+            prompts,
+            resources,
+            dynamicTools,
+            new DynamicResourceCatalog(),
+            new DynamicPromptCatalog(),
+            [],
+            NullLogger<CatalogService>.Instance,
+            CancellationToken.None);
+    }
+
+    private sealed class SnapshotInstanceManager(IEnumerable<IHostMcpSession> sessions) : IInstanceManager
+    {
+        private readonly List<IHostMcpSession> sessions = [.. sessions];
+
+        public IReadOnlyCollection<IHostMcpSession> Sessions => sessions;
+        public event Action? SessionsChanged { add { } remove { } }
+        public event Action? Changed { add { } remove { } }
+        public IHostMcpSession? GetSessionByProcessId(int processId) =>
+            sessions.SingleOrDefault(session => session.Instance.ProcessId == processId);
+        public IReadOnlyCollection<InstanceInfo> GetInstances() => [];
+        public IHostBridgeClient? GetDefault(string? hostApp = null) => null;
+        public IHostBridgeClient? GetByProcessId(int processId) => null;
+        public IReadOnlyCollection<string> GetDiscoveredPipeNames() => [];
+        public void Remove(IHostMcpSession session) => sessions.Remove(session);
+    }
+
+    private sealed class SnapshotSession(int processId, string toolName) : IHostMcpSession
+    {
+        private readonly McpClientTool tool = CreateTool(toolName);
+
+        public HostInstanceDescriptor Instance { get; } = new(
+            processId,
+            "Test",
+            "1.0",
+            McpPipeName.Format(processId));
+        public bool IsConnected => true;
+        public bool FailLists { get; set; }
+        public event Action? CatalogChanged { add { } remove { } }
+        public event Action? Disconnected { add { } remove { } }
+
+        public Task<IList<McpClientTool>> ListToolsAsync(CancellationToken ct) =>
+            FailLists
+                ? Task.FromException<IList<McpClientTool>>(new IOException("Simulated list failure."))
+                : Task.FromResult<IList<McpClientTool>>([tool]);
+
+        public Task<IList<McpClientPrompt>> ListPromptsAsync(CancellationToken ct) =>
+            Task.FromResult<IList<McpClientPrompt>>([]);
+        public Task<IList<McpClientResource>> ListResourcesAsync(CancellationToken ct) =>
+            Task.FromResult<IList<McpClientResource>>([]);
+        public Task<IList<McpClientResourceTemplate>> ListResourceTemplatesAsync(CancellationToken ct) =>
+            Task.FromResult<IList<McpClientResourceTemplate>>([]);
+        public Task<CallToolResult> CallToolAsync(string name, IReadOnlyDictionary<string, object?>? arguments, CancellationToken ct) =>
+            throw new NotSupportedException();
+        public Task<GetPromptResult> GetPromptAsync(string name, IReadOnlyDictionary<string, object?>? arguments, CancellationToken ct) =>
+            throw new NotSupportedException();
+        public Task<ReadResourceResult> ReadResourceAsync(string uri, CancellationToken ct) =>
+            throw new NotSupportedException();
+        public ValueTask DisposeAsync() => ValueTask.CompletedTask;
+
+        private static McpClientTool CreateTool(string name)
+        {
+            var tool = (McpClientTool)RuntimeHelpers.GetUninitializedObject(typeof(McpClientTool));
+            var protocolTool = typeof(McpClientTool).GetField(
+                "<ProtocolTool>k__BackingField",
+                BindingFlags.Instance | BindingFlags.NonPublic)!;
+            protocolTool.SetValue(tool, new Tool
+            {
+                Name = name,
+                InputSchema = JsonSerializer.SerializeToElement(new { type = "object" })
+            });
+            return tool;
+        }
+    }
+}

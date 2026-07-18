@@ -22,7 +22,37 @@ internal sealed record HostSessionSlot(
     HostSessionState State,
     int FailureCount,
     DateTimeOffset RetryAt,
-    IHostMcpSession? Session);
+    IHostMcpSession? Session,
+    int Generation = 0,
+    SessionConnectionAttempt? Attempt = null);
+
+internal sealed class SessionConnectionAttempt : IDisposable
+{
+    private readonly CancellationTokenSource cancellation;
+
+    public SessionConnectionAttempt(int generation, CancellationToken cancellationToken)
+    {
+        Generation = generation;
+        cancellation = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+    }
+
+    public int Generation { get; }
+    public CancellationToken Token => cancellation.Token;
+    public TaskCompletionSource<bool> Completion { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+    public void Cancel()
+    {
+        try
+        {
+            cancellation.Cancel();
+        }
+        catch (ObjectDisposedException)
+        {
+        }
+    }
+
+    public void Dispose() => cancellation.Dispose();
+}
 
 internal enum HostSessionState
 {
@@ -42,6 +72,9 @@ public sealed partial class HostSessionManager : IInstanceManager, IAsyncDisposa
     private readonly IRetryClock retryClock;
     private readonly ConcurrentDictionary<string, HostSessionSlot> sessionSlots = new(StringComparer.OrdinalIgnoreCase);
     private readonly ConcurrentDictionary<string, HostBridgeClient> clients = new(StringComparer.OrdinalIgnoreCase);
+    private readonly CancellationTokenSource lifetimeCancellation = new();
+    private readonly Lock disposeGate = new();
+    private Task? disposeTask;
 
     public HostSessionManager(ILogger<HostSessionManager> logger, ILoggerFactory loggerFactory)
         : this(
@@ -120,15 +153,17 @@ public sealed partial class HostSessionManager : IInstanceManager, IAsyncDisposa
 
     public async Task RunAsync(CancellationToken ct)
     {
+        using var linked = CancellationTokenSource.CreateLinkedTokenSource(ct, lifetimeCancellation.Token);
+        var token = linked.Token;
         var knownLegacyPipes = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-        while (!ct.IsCancellationRequested)
+        while (!token.IsCancellationRequested)
         {
             try
             {
-                await SyncPipesAsync(knownLegacyPipes, ct).ConfigureAwait(false);
-                await SyncMcpPipesAsync(ct).ConfigureAwait(false);
+                await SyncPipesAsync(knownLegacyPipes, token).ConfigureAwait(false);
+                await SyncMcpPipesAsync(token).ConfigureAwait(false);
             }
-            catch (OperationCanceledException) when (ct.IsCancellationRequested)
+            catch (OperationCanceledException) when (token.IsCancellationRequested)
             {
                 return;
             }
@@ -139,9 +174,9 @@ public sealed partial class HostSessionManager : IInstanceManager, IAsyncDisposa
 
             try
             {
-                await retryClock.DelayAsync(DiscoveryInterval, ct).ConfigureAwait(false);
+                await retryClock.DelayAsync(GetNextDiscoveryDelay(), token).ConfigureAwait(false);
             }
-            catch (OperationCanceledException) when (ct.IsCancellationRequested)
+            catch (OperationCanceledException) when (token.IsCancellationRequested)
             {
                 return;
             }
@@ -188,6 +223,9 @@ public sealed partial class HostSessionManager : IInstanceManager, IAsyncDisposa
 
     internal async Task SyncMcpPipesAsync(CancellationToken ct)
     {
+        if (lifetimeCancellation.IsCancellationRequested)
+            return;
+
         var currentPipes = discoverMcpPipes(logger);
         foreach (var pipeName in sessionSlots.Keys.Where(pipe => !currentPipes.Contains(pipe)).ToArray())
             await RemoveSessionSlotAsync(pipeName).ConfigureAwait(false);
@@ -197,6 +235,9 @@ public sealed partial class HostSessionManager : IInstanceManager, IAsyncDisposa
             var slot = sessionSlots.GetOrAdd(
                 pipeName,
                 name => new HostSessionSlot(name, HostSessionState.Discovered, 0, retryClock.UtcNow, null));
+
+            if (slot.State == HostSessionState.Connecting)
+                continue;
 
             if (slot.State == HostSessionState.Connected && slot.Session is { IsConnected: true })
                 continue;
@@ -216,32 +257,73 @@ public sealed partial class HostSessionManager : IInstanceManager, IAsyncDisposa
 
     private async Task ConnectSessionAsync(string pipeName, HostSessionSlot slot, CancellationToken ct)
     {
-        sessionSlots[pipeName] = slot with { State = HostSessionState.Connecting, Session = null };
+        if (lifetimeCancellation.IsCancellationRequested)
+            return;
+
+        using var linked = CancellationTokenSource.CreateLinkedTokenSource(ct, lifetimeCancellation.Token);
+        var attempt = new SessionConnectionAttempt(slot.Generation + 1, linked.Token);
+        var connecting = slot with
+        {
+            State = HostSessionState.Connecting,
+            Session = null,
+            Generation = attempt.Generation,
+            Attempt = attempt
+        };
+        if (!sessionSlots.TryUpdate(pipeName, connecting, slot))
+        {
+            attempt.Dispose();
+            return;
+        }
+
         try
         {
             logger.ZLogInformation($"Connecting to MCP endpoint {pipeName}...");
-            var session = await sessionConnector.ConnectAsync(pipeName, ct).ConfigureAwait(false);
-            session.CatalogChanged += NotifySessionsChanged;
-            session.Disconnected += () => _ = HandleSessionDisconnectedAsync(pipeName, session);
-            sessionSlots[pipeName] = new HostSessionSlot(
+            var session = await sessionConnector.ConnectAsync(pipeName, attempt.Token).ConfigureAwait(false);
+            var connected = new HostSessionSlot(
                 pipeName,
                 HostSessionState.Connected,
                 0,
                 retryClock.UtcNow,
                 session);
+            if (attempt.Token.IsCancellationRequested)
+            {
+                await session.DisposeAsync().ConfigureAwait(false);
+                throw new OperationCanceledException(attempt.Token);
+            }
+
+            if (!sessionSlots.TryUpdate(pipeName, connected, connecting))
+            {
+                await session.DisposeAsync().ConfigureAwait(false);
+                return;
+            }
+
+            session.CatalogChanged += NotifySessionsChanged;
+            session.Disconnected += () => _ = HandleSessionDisconnectedAsync(pipeName, session);
             logger.ZLogInformation($"Connected to MCP endpoint {pipeName} (PID={session.Instance.ProcessId}, Host={session.Instance.HostApp})");
             NotifySessionsChanged();
+        }
+        catch (OperationCanceledException) when (attempt.Token.IsCancellationRequested)
+        {
+            RemoveAttemptIfCurrent(pipeName, connecting);
+            if (ct.IsCancellationRequested)
+                throw;
         }
         catch (Exception ex)
         {
             logger.ZLogWarning(ex, $"Failed to connect to MCP endpoint {pipeName}");
             var failureCount = slot.FailureCount + 1;
-            sessionSlots[pipeName] = new HostSessionSlot(
+            var backoff = new HostSessionSlot(
                 pipeName,
                 HostSessionState.Backoff,
                 failureCount,
                 retryClock.UtcNow + GetRetryDelay(failureCount),
                 null);
+            sessionSlots.TryUpdate(pipeName, backoff, connecting);
+        }
+        finally
+        {
+            attempt.Completion.TrySetResult(true);
+            attempt.Dispose();
         }
     }
 
@@ -256,12 +338,14 @@ public sealed partial class HostSessionManager : IInstanceManager, IAsyncDisposa
     private async Task MoveToBackoffAsync(string pipeName, HostSessionSlot slot)
     {
         var failureCount = slot.FailureCount + 1;
-        sessionSlots[pipeName] = new HostSessionSlot(
+        var backoff = new HostSessionSlot(
             pipeName,
             HostSessionState.Backoff,
             failureCount,
             retryClock.UtcNow + GetRetryDelay(failureCount),
             null);
+        if (!sessionSlots.TryUpdate(pipeName, backoff, slot))
+            return;
         if (slot.Session is not null)
             await slot.Session.DisposeAsync().ConfigureAwait(false);
         NotifySessionsChanged();
@@ -272,6 +356,12 @@ public sealed partial class HostSessionManager : IInstanceManager, IAsyncDisposa
         if (!sessionSlots.TryRemove(pipeName, out var slot))
             return;
 
+        if (slot.Attempt is { } attempt)
+        {
+            attempt.Cancel();
+            await attempt.Completion.Task.ConfigureAwait(false);
+        }
+
         if (slot.Session is not null)
         {
             await slot.Session.DisposeAsync().ConfigureAwait(false);
@@ -281,6 +371,27 @@ public sealed partial class HostSessionManager : IInstanceManager, IAsyncDisposa
 
     private static TimeSpan GetRetryDelay(int failureCount) =>
         TimeSpan.FromMilliseconds(Math.Min(250d * Math.Pow(2, failureCount), MaximumRetryDelay.TotalMilliseconds));
+
+    private TimeSpan GetNextDiscoveryDelay()
+    {
+        var now = retryClock.UtcNow;
+        var earliestRetry = sessionSlots.Values
+            .Where(slot => slot.State == HostSessionState.Backoff)
+            .Select(slot => slot.RetryAt > now ? slot.RetryAt - now : TimeSpan.Zero)
+            .DefaultIfEmpty(DiscoveryInterval)
+            .Min();
+        return earliestRetry < DiscoveryInterval ? earliestRetry : DiscoveryInterval;
+    }
+
+    private void RemoveAttemptIfCurrent(string pipeName, HostSessionSlot connecting)
+    {
+        if (sessionSlots.TryGetValue(pipeName, out var current) &&
+            ReferenceEquals(current.Attempt, connecting.Attempt))
+        {
+            ((ICollection<KeyValuePair<string, HostSessionSlot>>)sessionSlots)
+                .Remove(new KeyValuePair<string, HostSessionSlot>(pipeName, connecting));
+        }
+    }
 
     private async Task DisconnectAsync(string pipeName)
     {
@@ -333,8 +444,16 @@ public sealed partial class HostSessionManager : IInstanceManager, IAsyncDisposa
 
     private void NotifySessionsChanged() => SessionsChanged?.Invoke();
 
-    public async ValueTask DisposeAsync()
+    public ValueTask DisposeAsync()
     {
+        lock (disposeGate)
+            return new ValueTask(disposeTask ??= DisposeCoreAsync());
+    }
+
+    private async Task DisposeCoreAsync()
+    {
+        lifetimeCancellation.Cancel();
+
         foreach (var pair in clients.ToArray())
         {
             if (clients.TryRemove(pair.Key, out var client))
@@ -343,6 +462,8 @@ public sealed partial class HostSessionManager : IInstanceManager, IAsyncDisposa
 
         foreach (var pipeName in sessionSlots.Keys.ToArray())
             await RemoveSessionSlotAsync(pipeName).ConfigureAwait(false);
+
+        lifetimeCancellation.Dispose();
     }
 
     private sealed class HostMcpSessionConnector(ILoggerFactory loggerFactory) : IHostSessionConnector

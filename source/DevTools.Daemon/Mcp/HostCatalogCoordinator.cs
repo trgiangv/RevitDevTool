@@ -4,12 +4,15 @@ using Microsoft.Extensions.Logging;
 
 namespace DevTools.Daemon.Mcp;
 
-public sealed class HostCatalogCoordinator
+public sealed class HostCatalogCoordinator : IAsyncDisposable
 {
     private readonly SemaphoreSlim refreshGate = new(1, 1);
+    private readonly CancellationTokenSource lifetimeCancellation = new();
+    private readonly Lock refreshTaskGate = new();
     private readonly Func<CancellationToken, Task> rebuildSnapshotAsync;
     private readonly ILogger<HostCatalogCoordinator>? logger;
     private int refreshRequested;
+    private Task? refreshTask;
 
     public HostCatalogCoordinator(McpEngine engine, ILogger<CatalogService> catalogLogger, ILogger<HostCatalogCoordinator> logger)
     {
@@ -39,16 +42,23 @@ public sealed class HostCatalogCoordinator
 
     public void RequestRefresh()
     {
-        if (Interlocked.Exchange(ref refreshRequested, 1) == 0)
-            _ = RefreshLoopAsync();
+        lock (refreshTaskGate)
+        {
+            if (lifetimeCancellation.IsCancellationRequested)
+                return;
+
+            if (Interlocked.Exchange(ref refreshRequested, 1) == 0)
+                refreshTask = RefreshLoopAsync(lifetimeCancellation.Token);
+        }
     }
 
     public async Task RebuildSnapshotAsync(CancellationToken ct = default)
     {
-        await refreshGate.WaitAsync(ct).ConfigureAwait(false);
+        using var linked = CancellationTokenSource.CreateLinkedTokenSource(ct, lifetimeCancellation.Token);
+        await refreshGate.WaitAsync(linked.Token).ConfigureAwait(false);
         try
         {
-            await rebuildSnapshotAsync(ct).ConfigureAwait(false);
+            await rebuildSnapshotAsync(linked.Token).ConfigureAwait(false);
         }
         finally
         {
@@ -67,16 +77,22 @@ public sealed class HostCatalogCoordinator
         }
     }
 
-    private async Task RefreshLoopAsync()
+    private async Task RefreshLoopAsync(CancellationToken ct)
     {
-        await refreshGate.WaitAsync().ConfigureAwait(false);
+        var gateHeld = false;
         try
         {
+            await refreshGate.WaitAsync(ct).ConfigureAwait(false);
+            gateHeld = true;
             while (Interlocked.Exchange(ref refreshRequested, 0) != 0)
             {
                 try
                 {
-                    await rebuildSnapshotAsync(CancellationToken.None).ConfigureAwait(false);
+                    await rebuildSnapshotAsync(ct).ConfigureAwait(false);
+                }
+                catch (OperationCanceledException) when (ct.IsCancellationRequested)
+                {
+                    return;
                 }
                 catch (Exception ex)
                 {
@@ -86,7 +102,32 @@ public sealed class HostCatalogCoordinator
         }
         finally
         {
-            refreshGate.Release();
+            if (gateHeld)
+                refreshGate.Release();
         }
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        Task? task;
+        lock (refreshTaskGate)
+        {
+            lifetimeCancellation.Cancel();
+            task = refreshTask;
+        }
+
+        if (task is not null)
+        {
+            try
+            {
+                await task.ConfigureAwait(false);
+            }
+            catch (OperationCanceledException)
+            {
+            }
+        }
+
+        refreshGate.Dispose();
+        lifetimeCancellation.Dispose();
     }
 }
