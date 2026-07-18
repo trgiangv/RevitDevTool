@@ -25,6 +25,7 @@
 
     <ItemGroup>
         <ProjectReference Include="..\..\source\DevTools.Execution.Abstractions\DevTools.Execution.Abstractions.csproj" />
+        <ProjectReference Include="..\..\source\DevTools.Execution\DevTools.Execution.csproj" />
         <ProjectReference Include="..\..\source\DevTools.Daemon\DevTools.Daemon.csproj" />
         <ProjectReference Include="..\..\source\DevTools.Ipc\DevTools.Ipc.csproj" />
         <ProjectReference Include="..\..\source\DevTools.Mcp\DevTools.Mcp.csproj" />

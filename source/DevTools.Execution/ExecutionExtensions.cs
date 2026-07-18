@@ -3,6 +3,7 @@ using DevTools.Execution.External.Connections;
 using DevTools.Execution.External.Handlers;
 using DevTools.Execution.External.Mcp.BuiltIn;
 using DevTools.Execution.External.Mcp.Dispatchers;
+using DevTools.Execution.External.Mcp.Hosting;
 using DevTools.Execution.External.Mcp.Registry;
 using DevTools.Execution.External.Testing;
 using DevTools.Execution.Interfaces;
@@ -17,6 +18,7 @@ using DevTools.Telemetry;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
+using ModelContextProtocol.Server;
 
 namespace DevTools.Execution;
 
@@ -95,6 +97,12 @@ public static class ExecutionExtensions
         services.AddSingleton<IMcpPrimitiveDispatcher>(sp => sp.GetRequiredService<McpPrimitiveDispatcher>());
         services.AddSingleton<DevToolsPipeServer>();
         services.AddHostedService(sp => sp.GetRequiredService<DevToolsPipeServer>());
+        services.AddSingleton<McpServerPrimitiveCollection<McpServerTool>>(_ => []);
+        services.AddSingleton<McpServerPrimitiveCollection<McpServerPrompt>>(_ => []);
+        services.AddSingleton<McpServerResourceCollection>(_ => []);
+        services.AddSingleton<HostMcpServerOptionsFactory>();
+        services.AddSingleton<HostMcpServerHostedService>();
+        services.AddHostedService(sp => sp.GetRequiredService<HostMcpServerHostedService>());
 
         return services;
     }

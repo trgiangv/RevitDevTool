@@ -1,8 +1,6 @@
 using System.Collections.Concurrent;
 using System.IO;
 using System.IO.Pipes;
-using System.Security.AccessControl;
-using System.Security.Principal;
 using System.Text.Json;
 using DevTools.Logging;
 using DevTools.Execution.External.Connections;
@@ -108,7 +106,7 @@ public sealed class DevToolsPipeServer(
         {
             try
             {
-                var pipe = CreateServerPipe(_pipeName!);
+                var pipe = CurrentUserPipeFactory.CreateDuplexServer(_pipeName!, MaxPipeInstances);
                 await pipe.WaitForConnectionAsync(ct).ConfigureAwait(false);
                 RegisterConnection(pipe);
             }
@@ -215,27 +213,6 @@ public sealed class DevToolsPipeServer(
         {
             logger.ZLogError($"Unhandled error in SendNotification: {ex}");
         }
-    }
-
-    private static NamedPipeServerStream CreateServerPipe(string pipeName)
-    {
-        var security = new PipeSecurity();
-        var currentUser = WindowsIdentity.GetCurrent();
-        if (currentUser.User is null)
-            throw new InvalidOperationException("Cannot determine current user SID for pipe ACL.");
-
-        security.AddAccessRule(new PipeAccessRule(
-            currentUser.User,
-            PipeAccessRights.FullControl,
-            AccessControlType.Allow));
-
-#if NETFRAMEWORK
-        return new NamedPipeServerStream(pipeName, PipeDirection.InOut, MaxPipeInstances,
-            PipeTransmissionMode.Byte, PipeOptions.Asynchronous, 0, 0, security);
-#else
-        return NamedPipeServerStreamAcl.Create(pipeName, PipeDirection.InOut, MaxPipeInstances,
-            PipeTransmissionMode.Byte, PipeOptions.Asynchronous, 0, 0, security);
-#endif
     }
 
     private static bool IsPipeInstancesBusy(IOException ex)
