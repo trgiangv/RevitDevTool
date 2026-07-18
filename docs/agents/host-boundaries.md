@@ -1,48 +1,33 @@
 # Host Boundaries
 
-The platform is host-agnostic by design. Every feature should be sharable across hosts by default. Only features that inherently require a specific host API (e.g. Revit DirectContext3D geometry) belong in host projects. Revit and AutoCAD are current hosts; future hosts can be added through adapters.
+The platform is host-agnostic. Shared libraries depend on abstractions and ModelContextProtocol SDK types; Revit/AutoCAD API calls stay in host projects.
 
-## Shared Layer
+## Shared layer
 
-Keep these host-neutral — this is the default for all new functionality:
+- `source/DevTools.Execution/` — execution engine, host MCP server, and direct pytest server-side lane.
+- `source/DevTools.Execution.Abstractions/` — `IHostContextExecutor`, command/document abstractions, and execution contracts.
+- `source/DevTools.Ipc/` — pipe utilities plus the intentionally retained direct pytest `BridgeMessage`/framing lane; no MCP DTO ownership.
+- `source/DevTools.Mcp/` — host-neutral MCP catalog/routing primitives and SDK-oriented daemon routing.
+- `source/DevTools.Daemon/` — external MCP server, gateway lifecycle, host sessions, and product-neutral `IHostDriver` routing.
 
-- `source/DevTools.Execution/` — execution engine, script providers, MCP in-host runtime
-- `source/DevTools.Execution.Abstractions/` — host-neutral contracts (`IHostContextExecutor`, `ICommandDiscovery`, `ICommandRunner`, `IDocumentBridge`, enums)
-- `source/DevTools.Ipc/` — IPC transport (BridgeMessage, pipe connection, wire protocol)
-- `source/DevTools.Mcp/` — MCP protocol (catalog, discovery, registry, dispatch, routing)
-- `source/DevTools.Logging/`
-- `source/DevTools.Presentation/`
-- `source/DevTools.Settings/`
-- `source/DevTools.Telemetry/`
-- `source/DevTools.UI/`
-- `source/DevTools.Utilities/`
+## Host layer
 
-## Host Layer
+- Revit host: `source/RevitDevTool/`; Revit-only core: `source/RevitDevTool.Core/`.
+- AutoCAD host: `source/AcadDevTool/`.
+- Revit DirectContext3D rendering: `source/RevitDevTool/Visualization/` only.
+- Host projects implement host context execution, transactions, document access, script/debug adapters, and host-specific primitive registrations.
 
-Host API references belong in host projects:
+The shared host MCP server uses `IHostContextExecutor` only when a primitive requires host API context. It must not gain Autodesk API references. New daemon product behavior belongs in an `IHostDriver`; new host API support belongs in a host project/adapter, not a product branch in broker or shared routing code.
 
-- Revit host: `source/RevitDevTool/`
-- Revit-only core: `source/RevitDevTool.Core/` (RevitContext, RevitTransactionService, dockable pane loader, image exporter — not shared with other hosts)
-- AutoCAD host: `source/AcadDevTool/`
-- Visualization: `source/RevitDevTool/Visualization/` (DirectContext3D — entirely Revit-host, not in shared code)
-- Future hosts: add new host projects rather than extending shared code with platform-specific branches.
+## Runtime boundaries
 
-## Standalone Daemon
+- MCP Runtime V2: SDK sessions over `DevTools.Mcp.v2.{pid}` between daemon and host.
+- Direct pytest: independent `DevTools_{Host}_{Version}_{PID}` pipe, four-byte framed `BridgeMessage`, `tests/run`, and `notifications/tests/progress`.
+- Gateway `machine_id` selects a daemon before MCP initialization; broker `hostId` selects a host PID only within that daemon.
 
-- `source/DevTools.Daemon/` runs outside hosts as `DevTools.Daemon.exe` (WPF tray app).
-- `InstanceManager` discovers any host pipe via generic regex (`DevTools_{HostApp}_{Version}_{PID}`).
-- `HostBridgeClient` connects to any host (formerly `RevitBridgeClient`).
-- Daemon built-in tools: `list_host_instances`, `launch_host`, `read_file_info`, `open_model`, `list_machines`, `call_dynamic_tool`, `list_dynamic_tools`, `refresh_dynamic_catalog` (multi-host).
-- Daemon host launch and offline-file behavior is supplied by `IHostDriver` implementations in `source/DevTools.Daemon/Hosts/`; `HostDriverRegistry` maps host products and file extensions without adding product branches to MCP tools or broker routing.
-- In-host built-in tools (shared runtime): `execute_csharp_code`, `open_document` via `IDocumentBridge`.
-- Startup dialog resolver uses merged keywords in default `StartupDialogResolverOptions` (Revit + AutoCAD).
-- Remaining gaps for AutoCAD: no shipped MCP toolset.
+## Review checklist
 
-## Boundary Checklist
-
-- Default: new features go into shared `DevTools.*` libraries unless they require host-specific APIs.
-- Shared services should depend on interfaces, not Revit/AutoCAD/Tekla/Bentley APIs.
-- Host projects should implement adapters for command discovery, host context execution, script bridges, debugger bridges, document bridge (`IDocumentBridge`), and visualization.
-- UI/view models in shared presentation code should expose host-neutral behavior.
-- Host-specific rendering, transactions, threading, and document context must stay in host projects.
-- When adding a feature to one host, evaluate whether the design can be shared or extracted into a shared abstraction for future hosts.
+- Keep host API threading, transactions, document context, and rendering in host projects.
+- Check Revit and AutoCAD registration when adding shared primitive behavior.
+- Preserve shared target compatibility for Autodesk 2022–2024 (`net48`) as well as current `net8.0-windows` and `net10.0-windows` paths.
+- Use a focused host build and state any live-host/threading/packaging evidence gap.

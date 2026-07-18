@@ -191,20 +191,20 @@ For AutoCAD/Civil3D (same structure, different version folder):
 
 ```
 1. launch_host(hostApp="Revit", filePath="C:\Program Files\Autodesk\Revit 2025\Samples\Snowdon Towers Sample Architectural.rvt")
-2. list_dynamic_tools → confirm execute_csharp_code, execute_python_code, navigate_history, open_document
+2. devtools_search(query="execute") → confirm the expected cached targets
 3. Execute C# — create wall:
-   call_dynamic_tool(name="execute_csharp_code", arguments={code: <IExternalCommand creating a wall>})
+   devtools_invoke(target="tool:execute_csharp_code", arguments={code: <IExternalCommand creating a wall>})
    Expected: "Wall created" or similar success
 4. Execute C# — intentional error (missing using):
-   call_dynamic_tool(name="execute_csharp_code", arguments={code: <code without System.Collections.Generic>})
+   devtools_invoke(target="tool:execute_csharp_code", arguments={code: <code without System.Collections.Generic>})
    Expected: [COMPILATION ERROR] with CS0246
 5. Execute C# — fix and retry
    Expected: Success
 6. Execute Python — query elements:
-   call_dynamic_tool(name="execute_python_code", arguments={code: <query all walls, print count>})
+   devtools_invoke(target="tool:execute_python_code", arguments={code: <query all walls, print count>})
    Expected: Element count printed
 7. Execute Python — data analysis with PEP 723:
-   call_dynamic_tool(name="execute_python_code", arguments={code: <script with # /// script requiring polars>})
+   devtools_invoke(target="tool:execute_python_code", arguments={code: <script with # /// script requiring polars>})
    Expected: Package auto-installs, results printed
 ```
 
@@ -226,10 +226,10 @@ For AutoCAD/Civil3D (same structure, different version folder):
    Expected: "Nothing to redo. Forward stack is empty."
 ```
 
-Repeat with Civil 3D (PID routing via hostInstanceId):
+Repeat with Civil 3D (PID routing via `hostId`):
 ```
 6. Create entities in Civil 3D (line, circle, polyline)
-7. navigate_history(direction="back", steps=1, hostInstanceId=<civil3d_pid>)
+7. devtools_invoke(target="tool:navigate_history", hostId=<civil3d_pid>, arguments={direction="back", steps=1})
    Expected: {navigated: 1, operations: ["Group of commands"], ...}
 ```
 
@@ -297,8 +297,8 @@ Repeat with Civil 3D (PID routing via hostInstanceId):
 **Prerequisite**: McpRegistryConfig.json configured + host restarted.
 
 ```
-1. refresh_dynamic_catalog → confirm toolset loaded
-2. list_dynamic_tools → expect 42+ tools from RevitMcpToolSet
+1. devtools_search(query="revit") → confirm toolset targets are cached
+2. devtools_search(query="revit") → expect 42+ targets from RevitMcpToolSet
 3. revit_find_elements(category="Walls") → element IDs
 4. revit_get_element_info(elementIds=[...]) → parameters, geometry
 5. revit_create_element(category="Walls", ...) → new element
@@ -314,10 +314,10 @@ Repeat with Civil 3D (PID routing via hostInstanceId):
 ```
 1. launch_host(hostApp="Revit", filePath=<sample>)
 2. launch_host(hostApp="Civil3D")
-3. list_host_instances → confirm both connected
-4. list_dynamic_tools → see registrations with hostInstanceId
-5. Execute on Revit: call_dynamic_tool(name="execute_csharp_code", hostInstanceId=<revit_pid>, ...)
-6. Execute on Civil3D: call_dynamic_tool(name="execute_python_code", hostInstanceId=<civil3d_pid>, ...)
+3. devtools_search() → confirm both local host PIDs
+4. devtools_search(query="execute") → see target candidates and PIDs
+5. Execute on Revit: devtools_invoke(target="tool:execute_csharp_code", hostId=<revit_pid>, ...)
+6. Execute on Civil3D: devtools_invoke(target="tool:execute_python_code", hostId=<civil3d_pid>, ...)
 7. navigate_history on each host independently
 ```
 
@@ -429,4 +429,4 @@ Recommended sequence for a full integration pass:
 - **Large models (>50MB) take 30-60s to open** — `launch_host` timeout accounts for this
 - **AutoCAD undo is async** — `navigate_history` on AutoCAD queues commands, stack counts are estimates
 - **Revit undo is synchronous** — exact stack state returned immediately
-- **`hostInstanceId` is the PID** — use `list_host_instances` or `list_dynamic_tools` to discover
+- **`hostId` is the local PID** — use `devtools_search` to discover candidates

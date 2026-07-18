@@ -10,7 +10,7 @@ Practical patterns for AI agents using RevitDevTool MCP tools.
 flowchart LR
     A[Read API cheatsheet] --> B[Read model context]
     B --> C[Generate IExternalCommand code]
-    C --> D[call_dynamic_tool execute_csharp_code]
+    C --> D[devtools_invoke tool:execute_csharp_code]
     D -->|Success| E[Verify result]
     D -->|Compilation Error| C
     D -->|Runtime Error / Rollback| F[Read warnings → fix → retry]
@@ -58,7 +58,7 @@ flowchart LR
 ### Key Points
 
 - `navigate_history` unified contract: `direction="back"|"forward"`, `steps=N`
-- Same tool name on both Revit and AutoCAD — routed via `hostInstanceId` when multi-host
+- Same tool name on both Revit and AutoCAD — routed with daemon-local `hostId` when multi-host
 - Revit: synchronous, returns exact stack state
 - AutoCAD: async queue, returns estimated stack state
 - Undo stack is per-document, not per-session
@@ -88,7 +88,7 @@ flowchart TD
 
 1. **Read cheatsheet once per session** — cache it mentally, don't re-read every call
 2. **Read model context before each operation** — it's live and cheap (~200 tokens)
-3. **Use `refresh_dynamic_catalog` only after host reconnects** — not between every call
+3. **Use `devtools_search` against the cached catalog** — it needs no host roundtrip
 4. **Structured errors save retries** — read the error category before regenerating code
 5. **Screenshot is binary** — won't consume text tokens, but verify you have vision capability
 
@@ -96,13 +96,13 @@ flowchart TD
 
 ## Multi-Instance Scenarios
 
-When multiple hosts connect (e.g., Revit 2025 + Revit 2024), use `list_dynamic_tools` to see all registrations with their `hostInstanceId`, then pass `hostInstanceId` (PID) to disambiguate:
+When multiple hosts connect (e.g., Revit 2025 + Revit 2024), use `devtools_search` to obtain a target and its candidate local PIDs, then pass `hostId` to `devtools_invoke` to disambiguate:
 
 ```json
 {
-  "name": "execute_csharp_code",
+  "target": "tool:execute_csharp_code",
   "arguments": {"code": "..."},
-  "hostInstanceId": 12345
+  "hostId": 12345
 }
 ```
 
