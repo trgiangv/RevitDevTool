@@ -8,11 +8,15 @@ public sealed class HostCatalogCoordinator : IAsyncDisposable
 {
     private readonly SemaphoreSlim refreshGate = new(1, 1);
     private readonly CancellationTokenSource lifetimeCancellation = new();
-    private readonly Lock refreshTaskGate = new();
+    private readonly Lock lifecycleGate = new();
     private readonly Func<CancellationToken, Task> rebuildSnapshotAsync;
     private readonly ILogger<HostCatalogCoordinator>? logger;
     private int refreshRequested;
     private Task? refreshTask;
+    private Task? disposeTask;
+    private TaskCompletionSource<bool>? refreshesDrained;
+    private int activeRefreshes;
+    private bool disposing;
 
     public HostCatalogCoordinator(McpEngine engine, ILogger<CatalogService> catalogLogger, ILogger<HostCatalogCoordinator> logger)
     {
@@ -42,27 +46,47 @@ public sealed class HostCatalogCoordinator : IAsyncDisposable
 
     public void RequestRefresh()
     {
-        lock (refreshTaskGate)
+        lock (lifecycleGate)
         {
-            if (lifetimeCancellation.IsCancellationRequested)
+            if (disposing)
                 return;
 
             if (Interlocked.Exchange(ref refreshRequested, 1) == 0)
+            {
+                BeginRefreshLocked();
                 refreshTask = RefreshLoopAsync(lifetimeCancellation.Token);
+            }
         }
     }
 
-    public async Task RebuildSnapshotAsync(CancellationToken ct = default)
+    public Task RebuildSnapshotAsync(CancellationToken ct = default)
+    {
+        lock (lifecycleGate)
+        {
+            if (disposing)
+                return Task.FromCanceled(new CancellationToken(canceled: true));
+
+            BeginRefreshLocked();
+        }
+
+        return RebuildSnapshotCoreAsync(ct);
+    }
+
+    private async Task RebuildSnapshotCoreAsync(CancellationToken ct)
     {
         using var linked = CancellationTokenSource.CreateLinkedTokenSource(ct, lifetimeCancellation.Token);
-        await refreshGate.WaitAsync(linked.Token).ConfigureAwait(false);
+        var gateHeld = false;
         try
         {
+            await refreshGate.WaitAsync(linked.Token).ConfigureAwait(false);
+            gateHeld = true;
             await rebuildSnapshotAsync(linked.Token).ConfigureAwait(false);
         }
         finally
         {
-            refreshGate.Release();
+            if (gateHeld)
+                refreshGate.Release();
+            CompleteRefresh();
         }
     }
 
@@ -104,30 +128,49 @@ public sealed class HostCatalogCoordinator : IAsyncDisposable
         {
             if (gateHeld)
                 refreshGate.Release();
+            CompleteRefresh();
         }
     }
 
-    public async ValueTask DisposeAsync()
+    public ValueTask DisposeAsync()
     {
-        Task? task;
-        lock (refreshTaskGate)
+        lock (lifecycleGate)
         {
-            lifetimeCancellation.Cancel();
-            task = refreshTask;
-        }
+            if (disposeTask is not null)
+                return new ValueTask(disposeTask);
 
-        if (task is not null)
-        {
-            try
-            {
-                await task.ConfigureAwait(false);
-            }
-            catch (OperationCanceledException)
-            {
-            }
+            disposing = true;
+            lifetimeCancellation.Cancel();
+            disposeTask = DisposeCoreAsync(GetRefreshesDrainedTaskLocked());
+            return new ValueTask(disposeTask);
         }
+    }
+
+    private async Task DisposeCoreAsync(Task refreshesDrainedTask)
+    {
+        await refreshesDrainedTask.ConfigureAwait(false);
 
         refreshGate.Dispose();
         lifetimeCancellation.Dispose();
+    }
+
+    private void BeginRefreshLocked() => activeRefreshes++;
+
+    private void CompleteRefresh()
+    {
+        lock (lifecycleGate)
+        {
+            activeRefreshes--;
+            if (activeRefreshes == 0)
+                refreshesDrained?.TrySetResult(true);
+        }
+    }
+
+    private Task GetRefreshesDrainedTaskLocked()
+    {
+        if (activeRefreshes == 0)
+            return Task.CompletedTask;
+
+        return (refreshesDrained ??= new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously)).Task;
     }
 }

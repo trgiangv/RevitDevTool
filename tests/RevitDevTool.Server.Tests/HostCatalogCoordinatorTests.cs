@@ -54,4 +54,29 @@ public sealed class HostCatalogCoordinatorTests
 
         await cancelled.Task.WaitAsync(TestContext.Current.CancellationToken);
     }
+
+    [Fact]
+    public async Task DisposeAsync_AwaitsBlockedDirectRebuildBeforeDisposingGate()
+    {
+        var entered = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+        var release = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+        var rebuildCompleted = false;
+        var coordinator = new HostCatalogCoordinator(async _ =>
+        {
+            entered.TrySetResult(true);
+            await release.Task.ConfigureAwait(false);
+            rebuildCompleted = true;
+        });
+
+        var rebuild = coordinator.RebuildSnapshotAsync(TestContext.Current.CancellationToken);
+        await entered.Task.WaitAsync(TestContext.Current.CancellationToken);
+
+        var dispose = coordinator.DisposeAsync().AsTask();
+        Assert.False(dispose.IsCompleted);
+
+        release.TrySetResult(true);
+        await Task.WhenAll(rebuild, dispose);
+
+        Assert.True(rebuildCompleted);
+    }
 }

@@ -204,6 +204,38 @@ public sealed class HostSessionManagerTests
     }
 
     [Fact]
+    public async Task RunAsync_DisconnectDuringDiscoverySleepRetriesAtBackoffDeadline()
+    {
+        var pipeName = McpPipeName.Format(5111);
+        using var stop = new CancellationTokenSource();
+        var firstSession = new TestMcpSession(pipeName);
+        var connectorAttempts = 0;
+        var connector = new FakeConnector(
+            pipeName,
+            [ConnectResult.Success(firstSession), ConnectResult.Success()],
+            () =>
+            {
+                if (connectorAttempts++ == 1)
+                    stop.Cancel();
+            });
+        var clock = new ControllableRetryClock();
+        await using var manager = CreateManager(pipeName, connector, clock);
+
+        var run = manager.RunAsync(stop.Token);
+        await clock.WaitForDelayCountAsync(1, TestContext.Current.CancellationToken);
+
+        firstSession.Disconnect();
+        await clock.WaitForDelayCountAsync(2, TestContext.Current.CancellationToken, TimeSpan.FromSeconds(1));
+
+        Assert.Equal([TimeSpan.FromSeconds(2), TimeSpan.FromMilliseconds(500)], clock.Delays);
+
+        clock.CompleteDelay(1);
+        await run;
+
+        Assert.Equal(2, connector.AttemptsFor(pipeName));
+    }
+
+    [Fact]
     public async Task CancelledConnect_PropagatesCancellationWithoutBackoffState()
     {
         var pipeName = McpPipeName.Format(5110);
@@ -292,6 +324,62 @@ public sealed class HostSessionManagerTests
             if (Interlocked.Increment(ref _delayCount) >= stopAfterDelays)
                 stop.Cancel();
             return Task.CompletedTask;
+        }
+    }
+
+    private sealed class ControllableRetryClock : IRetryClock
+    {
+        private readonly List<TaskCompletionSource<bool>> completions = [];
+        private readonly SemaphoreSlim delayAdded = new(0);
+
+        public DateTimeOffset UtcNow { get; private set; } = DateTimeOffset.UnixEpoch;
+        public List<TimeSpan> Delays { get; } = [];
+
+        public Task DelayAsync(TimeSpan delay, CancellationToken ct)
+        {
+            var completion = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+            lock (completions)
+            {
+                Delays.Add(delay);
+                completions.Add(completion);
+                delayAdded.Release();
+            }
+
+            ct.Register(() => completion.TrySetCanceled(ct));
+            return completion.Task;
+        }
+
+        public async Task WaitForDelayCountAsync(int count, CancellationToken ct, TimeSpan? timeout = null)
+        {
+            using var waitTimeout = timeout is { } duration
+                ? CancellationTokenSource.CreateLinkedTokenSource(ct)
+                : null;
+            waitTimeout?.CancelAfter(timeout!.Value);
+            var waitToken = waitTimeout?.Token ?? ct;
+            while (true)
+            {
+                lock (completions)
+                {
+                    if (completions.Count >= count)
+                        return;
+                }
+
+                await delayAdded.WaitAsync(waitToken).ConfigureAwait(false);
+            }
+        }
+
+        public void CompleteDelay(int index)
+        {
+            TaskCompletionSource<bool> completion;
+            TimeSpan delay;
+            lock (completions)
+            {
+                completion = completions[index];
+                delay = Delays[index];
+            }
+
+            UtcNow += delay;
+            completion.TrySetResult(true);
         }
     }
 

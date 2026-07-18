@@ -73,7 +73,9 @@ public sealed partial class HostSessionManager : IInstanceManager, IAsyncDisposa
     private readonly ConcurrentDictionary<string, HostSessionSlot> sessionSlots = new(StringComparer.OrdinalIgnoreCase);
     private readonly ConcurrentDictionary<string, HostBridgeClient> clients = new(StringComparer.OrdinalIgnoreCase);
     private readonly CancellationTokenSource lifetimeCancellation = new();
+    private readonly Lock discoveryWaitGate = new();
     private readonly Lock disposeGate = new();
+    private CancellationTokenSource? discoveryWaitCancellation;
     private Task? disposeTask;
 
     public HostSessionManager(ILogger<HostSessionManager> logger, ILoggerFactory loggerFactory)
@@ -174,11 +176,34 @@ public sealed partial class HostSessionManager : IInstanceManager, IAsyncDisposa
 
             try
             {
-                await retryClock.DelayAsync(GetNextDiscoveryDelay(), token).ConfigureAwait(false);
+                await DelayUntilNextDiscoveryAsync(token).ConfigureAwait(false);
             }
             catch (OperationCanceledException) when (token.IsCancellationRequested)
             {
                 return;
+            }
+        }
+    }
+
+    private async Task DelayUntilNextDiscoveryAsync(CancellationToken ct)
+    {
+        using var waitCancellation = CancellationTokenSource.CreateLinkedTokenSource(ct);
+        lock (discoveryWaitGate)
+            discoveryWaitCancellation = waitCancellation;
+
+        try
+        {
+            await retryClock.DelayAsync(GetNextDiscoveryDelay(), waitCancellation.Token).ConfigureAwait(false);
+        }
+        catch (OperationCanceledException) when (waitCancellation.IsCancellationRequested && !ct.IsCancellationRequested)
+        {
+        }
+        finally
+        {
+            lock (discoveryWaitGate)
+            {
+                if (ReferenceEquals(discoveryWaitCancellation, waitCancellation))
+                    discoveryWaitCancellation = null;
             }
         }
     }
@@ -318,7 +343,8 @@ public sealed partial class HostSessionManager : IInstanceManager, IAsyncDisposa
                 failureCount,
                 retryClock.UtcNow + GetRetryDelay(failureCount),
                 null);
-            sessionSlots.TryUpdate(pipeName, backoff, connecting);
+            if (sessionSlots.TryUpdate(pipeName, backoff, connecting))
+                WakeDiscoveryLoop();
         }
         finally
         {
@@ -346,6 +372,7 @@ public sealed partial class HostSessionManager : IInstanceManager, IAsyncDisposa
             null);
         if (!sessionSlots.TryUpdate(pipeName, backoff, slot))
             return;
+        WakeDiscoveryLoop();
         if (slot.Session is not null)
             await slot.Session.DisposeAsync().ConfigureAwait(false);
         NotifySessionsChanged();
@@ -381,6 +408,12 @@ public sealed partial class HostSessionManager : IInstanceManager, IAsyncDisposa
             .DefaultIfEmpty(DiscoveryInterval)
             .Min();
         return earliestRetry < DiscoveryInterval ? earliestRetry : DiscoveryInterval;
+    }
+
+    private void WakeDiscoveryLoop()
+    {
+        lock (discoveryWaitGate)
+            discoveryWaitCancellation?.Cancel();
     }
 
     private void RemoveAttemptIfCurrent(string pipeName, HostSessionSlot connecting)
