@@ -1,5 +1,4 @@
 using System.Collections.Concurrent;
-using System.Text.RegularExpressions;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using ZLogger;
@@ -71,7 +70,6 @@ public sealed partial class HostSessionManager : IInstanceManager, IAsyncDisposa
     private readonly IHostSessionConnector sessionConnector;
     private readonly IRetryClock retryClock;
     private readonly ConcurrentDictionary<string, HostSessionSlot> sessionSlots = new(StringComparer.OrdinalIgnoreCase);
-    private readonly ConcurrentDictionary<string, HostBridgeClient> clients = new(StringComparer.OrdinalIgnoreCase);
     private readonly CancellationTokenSource lifetimeCancellation = new();
     private readonly Lock discoveryWaitGate = new();
     private readonly Lock disposeGate = new();
@@ -106,10 +104,6 @@ public sealed partial class HostSessionManager : IInstanceManager, IAsyncDisposa
         this.retryClock = retryClock;
     }
 
-    [GeneratedRegex(@"^DevTools_\w+_[^_]+_\d+$", RegexOptions.IgnoreCase)]
-    private static partial Regex HostPipePattern();
-
-    public event Action? Changed;
     public event Action? SessionsChanged;
 
     public IReadOnlyCollection<IHostMcpSession> Sessions => sessionSlots.Values
@@ -122,47 +116,14 @@ public sealed partial class HostSessionManager : IInstanceManager, IAsyncDisposa
     public IHostMcpSession? GetSessionByProcessId(int processId) =>
         Sessions.FirstOrDefault(session => session.Instance.ProcessId == processId);
 
-    public List<HostBridgeClient> GetClients() => clients.Values.ToList();
-
-    public IReadOnlyCollection<InstanceInfo> GetInstances() => clients.Values
-        .Where(client => client.Info is not null)
-        .Select(client => client.Info!)
-        .ToList();
-
-    IHostBridgeClient? IInstanceManager.GetByProcessId(int processId) => GetByProcessId(processId);
-
-    public HostBridgeClient? GetByProcessId(int processId) =>
-        clients.Values.FirstOrDefault(client => client.Info?.ProcessId == processId);
-
-    public string? GetPipeNameByProcessId(int processId) =>
-        clients.FirstOrDefault(pair => pair.Value.Info?.ProcessId == processId).Key;
-
-    IHostBridgeClient? IInstanceManager.GetDefault(string? hostApp) => GetDefault(hostApp);
-
-    private HostBridgeClient? GetDefault(string? hostApp = null)
-    {
-        if (string.IsNullOrWhiteSpace(hostApp))
-            return clients.Count == 1 ? clients.Values.First() : null;
-
-        var matches = clients.Values
-            .Where(client => client.Info is not null &&
-                             string.Equals(client.Info.HostApp, hostApp, StringComparison.OrdinalIgnoreCase))
-            .ToArray();
-        return matches.Length == 1 ? matches[0] : null;
-    }
-
-    public IReadOnlyCollection<string> GetDiscoveredPipeNames() => DiscoverHostPipes(logger).ToArray();
-
     public async Task RunAsync(CancellationToken ct)
     {
         using var linked = CancellationTokenSource.CreateLinkedTokenSource(ct, lifetimeCancellation.Token);
         var token = linked.Token;
-        var knownLegacyPipes = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         while (!token.IsCancellationRequested)
         {
             try
             {
-                await SyncPipesAsync(knownLegacyPipes, token).ConfigureAwait(false);
                 await SyncMcpPipesAsync(token).ConfigureAwait(false);
             }
             catch (OperationCanceledException) when (token.IsCancellationRequested)
@@ -205,44 +166,6 @@ public sealed partial class HostSessionManager : IInstanceManager, IAsyncDisposa
                 if (ReferenceEquals(discoveryWaitCancellation, waitCancellation))
                     discoveryWaitCancellation = null;
             }
-        }
-    }
-
-    private async Task SyncPipesAsync(HashSet<string> knownPipes, CancellationToken ct)
-    {
-        var currentPipes = DiscoverHostPipes(logger);
-        foreach (var pipeName in knownPipes.Where(pipe => !currentPipes.Contains(pipe)).ToList())
-        {
-            knownPipes.Remove(pipeName);
-            await DisconnectAsync(pipeName).ConfigureAwait(false);
-        }
-
-        foreach (var pipeName in currentPipes.Where(pipe => !knownPipes.Contains(pipe)).ToList())
-        {
-            knownPipes.Add(pipeName);
-            await TryConnectAsync(pipeName, ct).ConfigureAwait(false);
-        }
-    }
-
-    private async Task TryConnectAsync(string pipeName, CancellationToken ct)
-    {
-        try
-        {
-            logger.ZLogInformation($"Connecting to {pipeName}...");
-            var client = await HostBridgeClient.ConnectAsync(pipeName, ct).ConfigureAwait(false);
-            client.ToolsChanged += () => Changed?.Invoke();
-            client.Disconnected += () =>
-            {
-                _ = DisconnectAsync(pipeName);
-                Changed?.Invoke();
-            };
-            clients[pipeName] = client;
-            logger.ZLogInformation($"Connected to {pipeName} (PID={client.Info?.ProcessId}, Host={client.Info?.HostApp})");
-            Changed?.Invoke();
-        }
-        catch (Exception ex)
-        {
-            logger.ZLogWarning(ex, $"Failed to connect to {pipeName}");
         }
     }
 
@@ -426,34 +349,6 @@ public sealed partial class HostSessionManager : IInstanceManager, IAsyncDisposa
         }
     }
 
-    private async Task DisconnectAsync(string pipeName)
-    {
-        if (clients.TryRemove(pipeName, out var client))
-        {
-            await client.DisposeAsync().ConfigureAwait(false);
-            logger.ZLogInformation($"Disconnected from {pipeName}");
-        }
-    }
-
-    public static HashSet<string> DiscoverHostPipes(ILogger? logger = null)
-    {
-        var pipes = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-        try
-        {
-            foreach (var path in Directory.GetFiles(@"\\.\pipe\"))
-            {
-                var name = Path.GetFileName(path);
-                if (IsHostEntryPipe(name))
-                    pipes.Add(name);
-            }
-        }
-        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
-        {
-            logger?.ZLogWarning(ex, $"Pipe scan error");
-        }
-        return pipes;
-    }
-
     private static HashSet<string> DiscoverMcpPipes(ILogger? logger = null)
     {
         var pipes = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
@@ -473,8 +368,6 @@ public sealed partial class HostSessionManager : IInstanceManager, IAsyncDisposa
         return pipes;
     }
 
-    private static bool IsHostEntryPipe(string name) => HostPipePattern().IsMatch(name);
-
     private void NotifySessionsChanged() => SessionsChanged?.Invoke();
 
     public ValueTask DisposeAsync()
@@ -486,12 +379,6 @@ public sealed partial class HostSessionManager : IInstanceManager, IAsyncDisposa
     private async Task DisposeCoreAsync()
     {
         lifetimeCancellation.Cancel();
-
-        foreach (var pair in clients.ToArray())
-        {
-            if (clients.TryRemove(pair.Key, out var client))
-                await client.DisposeAsync().ConfigureAwait(false);
-        }
 
         foreach (var pipeName in sessionSlots.Keys.ToArray())
             await RemoveSessionSlotAsync(pipeName).ConfigureAwait(false);

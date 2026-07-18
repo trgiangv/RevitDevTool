@@ -10,13 +10,13 @@ namespace DevTools.Ipc;
 /// </summary>
 public sealed class BridgeError
 {
-    [JsonPropertyName(IpcPropertyNames.Code)]
+    [JsonPropertyName("code")]
     public string Code { get; init; } = string.Empty;
 
-    [JsonPropertyName(IpcPropertyNames.Message)]
+    [JsonPropertyName("message")]
     public string Message { get; init; } = string.Empty;
 
-    [JsonPropertyName(IpcPropertyNames.Data)]
+    [JsonPropertyName("data")]
     public JsonElement? Data { get; init; }
 }
 
@@ -26,28 +26,28 @@ public sealed class BridgeMessage
     public const string TypeResponse = "response";
     public const string TypeNotification = "notification";
 
-    [JsonPropertyName(IpcPropertyNames.Type)]
+    [JsonPropertyName("type")]
     public string Type { get; init; } = string.Empty;
 
-    [JsonPropertyName(IpcPropertyNames.Id)]
+    [JsonPropertyName("id")]
     public string? Id { get; init; }
 
-    [JsonPropertyName(IpcPropertyNames.Method)]
+    [JsonPropertyName("method")]
     public string? Method { get; init; }
 
-    [JsonPropertyName(IpcPropertyNames.Params)]
+    [JsonPropertyName("params")]
     public JsonElement? Params { get; init; }
 
-    [JsonPropertyName(IpcPropertyNames.Result)]
+    [JsonPropertyName("result")]
     public JsonElement? Result { get; init; }
 
-    [JsonPropertyName(IpcPropertyNames.IsError)]
+    [JsonPropertyName("isError")]
     public bool IsError { get; init; }
 
-    [JsonPropertyName(IpcPropertyNames.ErrorMessage)]
+    [JsonPropertyName("errorMessage")]
     public string? ErrorMessage { get; init; }
 
-    [JsonPropertyName(IpcPropertyNames.Error)]
+    [JsonPropertyName("error")]
     public BridgeError? ErrorDetail { get; init; }
 
     public static BridgeMessage Request(string id, string method, JsonElement? @params = null) =>

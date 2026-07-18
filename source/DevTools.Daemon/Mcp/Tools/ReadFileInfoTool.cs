@@ -3,7 +3,6 @@ using DevTools.Daemon.Contracts;
 using DevTools.Logging;
 using DevTools.Daemon.Mcp.AcadFileInfo;
 using DevTools.Daemon.Mcp.RevitFileInfo;
-using DevTools.Mcp.Schema;
 using ModelContextProtocol.Protocol;
 using ModelContextProtocol.Server;
 
@@ -20,13 +19,12 @@ public sealed class ReadFileInfoTool : McpServerTool
             "Read metadata from a CAD/BIM file offline (no host launch needed). " +
             "Revit (.rvt/.rfa/.rft/.rte): version, worksets, links, project info. " +
             "AutoCAD (.dwg): version, layers, blocks, document properties.",
-        InputSchema = McpSchemaBuilder.Object(
-        [
-            McpSchemaBuilder.String(
-                McpPropertyNames.FilePath,
-                "Full path to the file (.rvt, .rfa, .rft, .rte, .dwg).")
-        ],
-        required: [McpPropertyNames.FilePath])
+        InputSchema = JsonSerializer.SerializeToElement(new
+        {
+            type = "object",
+            properties = new { filePath = new { type = "string", description = "Full path to the file (.rvt, .rfa, .rft, .rte, .dwg)." } },
+            required = new[] { "filePath" }
+        })
     };
 
     public override IReadOnlyList<object> Metadata => [];
@@ -36,7 +34,7 @@ public sealed class ReadFileInfoTool : McpServerTool
         CancellationToken cancellationToken = default)
     {
         string? filePath = null;
-        if (request.Params.Arguments?.TryGetValue(McpPropertyNames.FilePath, out var filePathElement) == true)
+        if (request.Params.Arguments?.TryGetValue("filePath", out var filePathElement) == true)
             filePath = filePathElement.GetString();
 
         if (string.IsNullOrWhiteSpace(filePath))

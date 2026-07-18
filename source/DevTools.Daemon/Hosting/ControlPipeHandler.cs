@@ -21,7 +21,7 @@ public sealed class ControlPipeHandler(IAuthService authService, McpEngine mcpEn
         try
         {
             using var request = JsonDocument.Parse(requestLine);
-            var method = request.RootElement.TryGetProperty(IpcPropertyNames.Method, out var methodElement)
+            var method = request.RootElement.TryGetProperty("method", out var methodElement)
                 ? methodElement.GetString()
                 : null;
 
@@ -47,13 +47,12 @@ public sealed class ControlPipeHandler(IAuthService authService, McpEngine mcpEn
     private string HandleConnectedHosts()
     {
         var instanceManager = mcpEngine.InstanceManager;
-        var hosts = instanceManager.GetClients()
-            .Where(c => c.Info is not null)
-            .Select(c => new HostInfoEntry(
-                HostAppExtensions.ParseHostApp(c.Info!.HostApp) ?? HostAppExtensions.FromPipeName(c.PipeName),
-                c.Info.VersionNumber,
-                c.Info.ProcessId,
-                c.PipeName))
+        var hosts = instanceManager.Sessions
+            .Select(session => new HostInfoEntry(
+                HostAppExtensions.ParseHostApp(session.Instance.HostApp) ?? HostAppExtensions.FromPipeName(session.Instance.PipeName),
+                session.Instance.VersionNumber,
+                session.Instance.ProcessId,
+                session.Instance.PipeName))
             .ToArray();
 
         return JsonSerializer.Serialize(hosts);

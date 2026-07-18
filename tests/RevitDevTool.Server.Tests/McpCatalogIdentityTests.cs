@@ -390,7 +390,7 @@ public sealed class McpCatalogIdentityTests
                     Name = "open_document",
                     Arguments = new Dictionary<string, JsonElement>
                     {
-                        [McpPropertyNames.FilePath] = JsonSerializer.SerializeToElement(filePath)
+                        ["filePath"] = JsonSerializer.SerializeToElement(filePath)
                     }
                 }, RequestMethods.ToolsCall),
                 TestContext.Current.CancellationToken);

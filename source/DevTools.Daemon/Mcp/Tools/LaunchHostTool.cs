@@ -3,7 +3,6 @@ using System.Text.Json;
 using DevTools.Daemon.Contracts;
 using DevTools.Logging;
 using DevTools.Daemon.Mcp.Tools.Utils;
-using DevTools.Mcp.Schema;
 using ModelContextProtocol.Protocol;
 using ModelContextProtocol.Server;
 
@@ -23,22 +22,18 @@ public sealed class LaunchHostTool(HostSessionManager instanceManager) : McpServ
             "This is a long-running operation (typically 30-120 seconds for cold start). " +
             "Revit: version auto-detected from filePath when provided, otherwise latest installed. " +
             "AutoCAD family: always uses latest installed unless versionNumber is specified.",
-        InputSchema = McpSchemaBuilder.Object(
-        [
-            McpSchemaBuilder.String(
-                IpcPropertyNames.HostApp,
-                "Revit, AutoCad, Civil3D, Plant3D, AcadArch, AcadMech, AcadElec, AcadMep, AcadMap3D, Navisworks"),
-            McpSchemaBuilder.String(
-                IpcPropertyNames.VersionNumber,
-                "Version year (e.g. '2025'). Revit auto-detects from filePath; AutoCAD defaults to latest."),
-            McpSchemaBuilder.String(
-                McpPropertyNames.LanguageCode,
-                "Revit-only: UI language code (default 'ENU')."),
-            McpSchemaBuilder.String(
-                McpPropertyNames.FilePath,
-                "Model file to open at startup.")
-        ],
-        required: [IpcPropertyNames.HostApp]),
+        InputSchema = JsonSerializer.SerializeToElement(new
+        {
+            type = "object",
+            properties = new
+            {
+                hostApp = new { type = "string", description = "Revit, AutoCad, Civil3D, Plant3D, AcadArch, AcadMech, AcadElec, AcadMep, AcadMap3D, Navisworks" },
+                versionNumber = new { type = "string", description = "Version year (e.g. '2025'). Revit auto-detects from filePath; AutoCAD defaults to latest." },
+                languageCode = new { type = "string", description = "Revit-only: UI language code (default 'ENU')." },
+                filePath = new { type = "string", description = "Model file to open at startup." }
+            },
+            required = new[] { "hostApp" }
+        }),
         Execution = new ToolExecution { TaskSupport = ToolTaskSupport.Optional }
     };
 
@@ -49,10 +44,10 @@ public sealed class LaunchHostTool(HostSessionManager instanceManager) : McpServ
         CancellationToken cancellationToken = default)
     {
         var args = request.Params.Arguments;
-        var hostApp = HostAppExtensions.ParseHostApp(ReadString(args, IpcPropertyNames.HostApp));
-        var version = ReadString(args, IpcPropertyNames.VersionNumber);
-        var languageCode = ReadString(args, McpPropertyNames.LanguageCode);
-        var filePath = ReadString(args, McpPropertyNames.FilePath);
+        var hostApp = HostAppExtensions.ParseHostApp(ReadString(args, "hostApp"));
+        var version = ReadString(args, "versionNumber");
+        var languageCode = ReadString(args, "languageCode");
+        var filePath = ReadString(args, "filePath");
 
         if (hostApp is null)
             return ToolHelpers.ErrorResult(
@@ -98,7 +93,7 @@ public sealed class LaunchHostTool(HostSessionManager instanceManager) : McpServ
         var deadline = DateTime.UtcNow.AddMinutes(2);
         while (DateTime.UtcNow < deadline && !ct.IsCancellationRequested)
         {
-            if (instanceManager.GetByProcessId(processId) is not null)
+            if (instanceManager.GetSessionByProcessId(processId) is not null)
                 return true;
 
             try { await Task.Delay(500, ct).ConfigureAwait(false); }

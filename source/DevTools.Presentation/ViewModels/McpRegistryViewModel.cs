@@ -3,9 +3,9 @@ using System.Collections.Specialized;
 using System.ComponentModel;
 using System.IO;
 using System.Text;
+using System.Text.Json;
 using System.Windows.Threading;
 using DevTools.Execution.External.Connections;
-using DevTools.Mcp.Schema;
 using DevTools.Mcp.Registry;
 using DevTools.Presentation.Models;
 using DevTools.UI.Behaviors;
@@ -347,17 +347,23 @@ public sealed partial class McpRegistryViewModel : ObservableObject, IBusyViewMo
 
     private static string BuildArgumentSummary(string? inputSchemaJson)
     {
-        var schema = JsonSchemaObject.TryParse(inputSchemaJson);
-        if (schema?.Properties is not { Count: > 0 } properties)
+        if (string.IsNullOrWhiteSpace(inputSchemaJson))
+            return string.Empty;
+
+        using var document = JsonDocument.Parse(inputSchemaJson);
+        if (!document.RootElement.TryGetProperty("properties", out var properties) ||
+            properties.ValueKind != JsonValueKind.Object)
             return string.Empty;
 
         var lines = new List<string>();
-        foreach (var (name, prop) in properties)
+        foreach (var property in properties.EnumerateObject())
         {
-            var type = prop.Type ?? "any";
-            var title = prop.Title ?? name;
-            var descSuffix = string.IsNullOrWhiteSpace(prop.Description) ? string.Empty : $" — {prop.Description}";
-            lines.Add($"- {name}: {title} ({type}){descSuffix}");
+            var prop = property.Value;
+            var type = prop.TryGetProperty("type", out var typeElement) ? typeElement.GetString() ?? "any" : "any";
+            var title = prop.TryGetProperty("title", out var titleElement) ? titleElement.GetString() ?? property.Name : property.Name;
+            var description = prop.TryGetProperty("description", out var descriptionElement) ? descriptionElement.GetString() : null;
+            var descSuffix = string.IsNullOrWhiteSpace(description) ? string.Empty : $" — {description}";
+            lines.Add($"- {property.Name}: {title} ({type}){descSuffix}");
         }
         return string.Join(Environment.NewLine, lines);
     }

@@ -4,6 +4,36 @@ namespace RevitDevTool.Server.Tests;
 
 public class ContractTests
 {
+    [Theory]
+    [InlineData("McpBridgeMethods")]
+    [InlineData("IpcPropertyNames")]
+    [InlineData("McpPropertyNames")]
+    [InlineData("McpBridgeRequestHandler")]
+    public void RemovedMcpBridgeSymbols_DoNotAppearInProductionSource(string symbol)
+    {
+        var root = FindRepositoryRoot();
+        var matches = Directory.EnumerateFiles(Path.Combine(root, "source"), "*.cs", SearchOption.AllDirectories)
+            .Where(path => File.ReadAllText(path).Contains(symbol, StringComparison.Ordinal))
+            .ToArray();
+
+        Assert.Empty(matches);
+    }
+
+    [Fact]
+    public void BridgeMessage_RemainsOnlyInDirectPytestLane()
+    {
+        var root = FindRepositoryRoot();
+        var matches = Directory.EnumerateFiles(Path.Combine(root, "source"), "*.cs", SearchOption.AllDirectories)
+            .Where(path => File.ReadAllText(path).Contains("BridgeMessage", StringComparison.Ordinal))
+            .Select(path => Path.GetRelativePath(root, path).Replace('\\', '/'))
+            .ToArray();
+
+        Assert.All(matches, path => Assert.True(
+            path.StartsWith("source/DevTools.Ipc/", StringComparison.Ordinal) ||
+            path.StartsWith("source/DevTools.Execution/External/Handlers/Pytest", StringComparison.Ordinal) ||
+            path.Contains("DevToolsPipeServer", StringComparison.Ordinal), path));
+    }
+
     [Fact]
     public void McpRegistryCatalog_DefaultsAreEmpty()
     {
@@ -67,5 +97,16 @@ public class ContractTests
 
         var idWithName = McpPrimitiveBinding.CreatePrimitiveId("tool", null);
         Assert.Equal("tool_[unknown]", idWithName);
+    }
+
+    private static string FindRepositoryRoot()
+    {
+        for (var current = new DirectoryInfo(AppContext.BaseDirectory); current is not null; current = current.Parent)
+        {
+            if (File.Exists(Path.Combine(current.FullName, "RevitDevTool.slnx")))
+                return current.FullName;
+        }
+
+        throw new DirectoryNotFoundException("Could not locate the repository root.");
     }
 }

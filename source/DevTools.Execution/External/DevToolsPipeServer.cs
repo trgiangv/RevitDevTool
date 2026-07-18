@@ -14,11 +14,8 @@ namespace DevTools.Execution.External;
 
 [UsedImplicitly]
 public sealed class DevToolsPipeServer(
-    McpCatalogStore catalogStore,
     ConnectionState state,
     IHostAppInfo hostInfo,
-    IMcpPrimitiveDispatcher primitiveDispatcher,
-    McpToolsetContextManager toolsetContextManager,
     IEnumerable<IBridgeRequestHandler> handlers,
     ILogger<DevToolsPipeServer> logger) : IHostedService, IDisposable
 {
@@ -50,20 +47,6 @@ public sealed class DevToolsPipeServer(
         if (pytestHandler is not null)
             pytestHandler.NotifySender = SendNotification;
 
-        Task.Run(() =>
-        {
-            try
-            {
-                catalogStore.EnsureLoaded();
-            }
-            catch (Exception ex)
-            {
-                logger.ZLogWarning($"Catalog preload failed: {ex.Message}");
-            }
-        }, cancellationToken);
-
-        catalogStore.CatalogChanged += OnCatalogChanged;
-
         _cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
         _acceptLoopTask = AcceptLoopAsync(_cts.Token);
 
@@ -73,8 +56,6 @@ public sealed class DevToolsPipeServer(
 
     public async Task StopAsync(CancellationToken cancellationToken)
     {
-        catalogStore.CatalogChanged -= OnCatalogChanged;
-
         _cts?.CancelAsync();
         foreach (var connection in _connections.Values)
             connection.Dispose();
@@ -156,7 +137,7 @@ public sealed class DevToolsPipeServer(
             }
             catch (Exception ex)
             {
-                response = BridgeMessage.Error(msg.Id!, IpcErrorCodes.InternalError, ex.Message);
+                response = BridgeMessage.Error(msg.Id!, PytestBridgeMethods.InternalError, ex.Message);
             }
 
             try
@@ -179,14 +160,7 @@ public sealed class DevToolsPipeServer(
         var id = request.Id!;
         if (HandlerMap.TryGetValue(request.Method!, out var handler))
             return await handler.HandleAsync(id, request.Method!, request.Params).ConfigureAwait(false);
-        return BridgeMessage.Error(id, IpcErrorCodes.MethodNotFound, $"Unknown method: {request.Method}");
-    }
-
-    private void OnCatalogChanged(object? sender, EventArgs e)
-    {
-        primitiveDispatcher.ClearCaches();
-        toolsetContextManager.Clear();
-        SendNotification(McpBridgeMethods.NotifyToolsChanged);
+        return BridgeMessage.Error(id, PytestBridgeMethods.MethodNotFound, $"Unknown method: {request.Method}");
     }
 
     private async void SendNotification(string method, JsonElement? data = null)
@@ -227,7 +201,6 @@ public sealed class DevToolsPipeServer(
     {
         if (_disposed) return;
         _disposed = true;
-        catalogStore.CatalogChanged -= OnCatalogChanged;
         _cts?.Cancel();
         foreach (var connection in _connections.Values)
             connection.Dispose();

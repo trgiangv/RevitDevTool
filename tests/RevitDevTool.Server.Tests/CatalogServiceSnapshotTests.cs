@@ -110,13 +110,8 @@ public sealed class CatalogServiceSnapshotTests
 
         public IReadOnlyCollection<IHostMcpSession> Sessions => sessions;
         public event Action? SessionsChanged { add { } remove { } }
-        public event Action? Changed { add { } remove { } }
         public IHostMcpSession? GetSessionByProcessId(int processId) =>
             sessions.SingleOrDefault(session => session.Instance.ProcessId == processId);
-        public IReadOnlyCollection<InstanceInfo> GetInstances() => [];
-        public IHostBridgeClient? GetDefault(string? hostApp = null) => null;
-        public IHostBridgeClient? GetByProcessId(int processId) => null;
-        public IReadOnlyCollection<string> GetDiscoveredPipeNames() => [];
         public void Remove(IHostMcpSession session) => sessions.Remove(session);
     }
 

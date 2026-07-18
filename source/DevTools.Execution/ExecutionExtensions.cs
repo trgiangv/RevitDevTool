@@ -2,7 +2,6 @@
 using DevTools.Execution.External.Connections;
 using DevTools.Execution.External.Handlers;
 using DevTools.Execution.External.Mcp.BuiltIn;
-using DevTools.Execution.External.Mcp.Dispatchers;
 using DevTools.Execution.External.Mcp.Hosting;
 using DevTools.Execution.External.Mcp.Registry;
 using DevTools.Execution.External.Testing;
@@ -13,7 +12,6 @@ using DevTools.Execution.Providers.Dotnet;
 using DevTools.Execution.Providers.FSharp;
 using DevTools.Execution.Providers.Python;
 using DevTools.Execution.Services;
-using DevTools.Mcp.Handlers;
 using DevTools.Telemetry;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
@@ -73,8 +71,6 @@ public static class ExecutionExtensions
 
         services.AddSingleton<ConnectionState>();
         services.AddSingleton<IMcpExecutionTracker, ConnectionStateExecutionTracker>();
-        services.AddSingleton<IBridgeRequestHandler, InstanceRequestHandler>();
-        services.AddSingleton<IBridgeRequestHandler, McpBridgeRequestHandler>();
         services.AddSingleton<PytestDependencyService>();
         services.AddSingleton<PytestExecutionService>();
         services.AddSingleton<IBridgeRequestHandler, PytestRequestHandler>();
@@ -94,10 +90,6 @@ public static class ExecutionExtensions
         services.AddSingleton<IBuiltInMcpTool, PythonCodeTool>();
         services.AddSingleton<IBuiltInMcpTool>(sp =>
             new OpenDocumentTool(sp.GetService<IDocumentBridge>() ?? NullDocumentBridge.Instance));
-        services.AddSingleton<McpToolsetContextManager>();
-        services.AddSingleton<DotnetMethodResolver>();
-        services.AddSingleton<McpPrimitiveDispatcher>();
-        services.AddSingleton<IMcpPrimitiveDispatcher>(sp => sp.GetRequiredService<McpPrimitiveDispatcher>());
         services.AddSingleton<DevToolsPipeServer>();
         services.AddHostedService(sp => sp.GetRequiredService<DevToolsPipeServer>());
         services.AddSingleton<McpServerPrimitiveCollection<McpServerTool>>(_ => []);

@@ -45,7 +45,7 @@ public sealed class OpenDocumentTool(IDocumentBridge documentBridge) : IBuiltInM
     
     [UsedImplicitly(ImplicitUseTargetFlags.WithMembers)]
     private sealed record OpenDocumentResult(
-        [property: JsonPropertyName(IpcPropertyNames.Success)] bool Success,
-        [property: JsonPropertyName(IpcPropertyNames.Message)] string? Message,
+        [property: JsonPropertyName("success")] bool Success,
+        [property: JsonPropertyName("message")] string? Message,
         [property: JsonPropertyName("documentTitle")] string? DocumentTitle);
 }
