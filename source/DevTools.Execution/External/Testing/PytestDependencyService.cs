@@ -2,9 +2,9 @@ using System.IO;
 using DevTools.Execution.Providers.Python;
 namespace DevTools.Execution.External.Testing;
 
-public sealed class PytestDependencyService(PythonInitializer pythonInitializer)
+public class PytestDependencyService(PythonInitializer pythonInitializer)
 {
-    public async Task PrepareRunAsync(PytestRunRequest request, CancellationToken cancellationToken = default)
+    public virtual async Task PrepareRunAsync(PytestRunRequest request, CancellationToken cancellationToken = default)
     {
         await EnsurePythonReadyAsync().ConfigureAwait(false);
 

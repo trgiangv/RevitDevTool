@@ -2,6 +2,11 @@ using System.Text.Json.Serialization;
 
 namespace DevTools.Execution.External.Testing;
 
+public static class PytestWireProperties
+{
+    public const string Message = "message";
+}
+
 [UsedImplicitly]
 public sealed record PytestRunRequest(
     [property: JsonPropertyName("workspace_root")] string WorkspaceRoot,
@@ -34,14 +39,14 @@ public sealed record PytestCaseResult(
     [property: JsonPropertyName("duration_ms")] double DurationMs,
     [property: JsonPropertyName("stdout")] string Stdout,
     [property: JsonPropertyName("stderr")] string Stderr,
-    [property: JsonPropertyName(IpcPropertyNames.Message)] string Message,
+    [property: JsonPropertyName(PytestWireProperties.Message)] string Message,
     [property: JsonPropertyName("traceback")] string Traceback);
 
 [UsedImplicitly]
 public sealed record PytestCollectionError(
     [property: JsonPropertyName("nodeid")] string NodeId,
     [property: JsonPropertyName("path")] string Path,
-    [property: JsonPropertyName(IpcPropertyNames.Message)] string Message,
+    [property: JsonPropertyName(PytestWireProperties.Message)] string Message,
     [property: JsonPropertyName("traceback")] string Traceback);
 
 [UsedImplicitly]

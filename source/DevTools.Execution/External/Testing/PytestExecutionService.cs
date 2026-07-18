@@ -6,7 +6,7 @@ using Python.Runtime;
 
 namespace DevTools.Execution.External.Testing;
 
-public sealed class PytestExecutionService(PythonExecutor executor)
+public class PytestExecutionService(PythonExecutor executor)
 {
     private static readonly JsonSerializerOptions RequestOptions = new()
     {
@@ -55,7 +55,7 @@ public sealed class PytestExecutionService(PythonExecutor executor)
         return true;
     }
 
-    public PytestRunResponse Run(PytestRunRequest request, Action<string>? progressCallback = null)
+    public virtual PytestRunResponse Run(PytestRunRequest request, Action<string>? progressCallback = null)
     {
         var runnerRequest = new PytestRunnerRequest(
             request.WorkspaceRoot,
