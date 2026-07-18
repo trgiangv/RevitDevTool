@@ -51,6 +51,42 @@ public sealed class CatalogServiceSnapshotTests
         Assert.DoesNotContain(broker.Search(new BrokerSearchRequest(null, null, null)).Items, entry => entry.Name == "failing_tool");
     }
 
+    [Fact]
+    public async Task RebuildCatalog_NativeSurfaceUpdatesResourceCollectionAndRaisesListChanges()
+    {
+        var session = new NativeSnapshotSession(5205);
+        var manager = new SnapshotInstanceManager([session]);
+        var broker = new BrokerCatalogIndex();
+        McpServerResourceCollection resources = [];
+        var changes = 0;
+        resources.Changed += (_, _) => changes++;
+        var catalog = new CatalogService(
+            manager,
+            [],
+            [],
+            resources,
+            broker,
+            nativeSurface: true,
+            [],
+            NullLogger<CatalogService>.Instance,
+            CancellationToken.None);
+
+        await catalog.RebuildCatalogAsync(TestContext.Current.CancellationToken);
+
+        Assert.Equal(2, resources.Count);
+        Assert.Contains(resources, resource => resource.ProtocolResource?.Uri ==
+            "devtools://host/5205/resource/cmV2aXQ6Ly9tb2RlbC9jb250ZXh0");
+        Assert.Contains(resources, resource => resource.ProtocolResourceTemplate.UriTemplate.Contains("{id}", StringComparison.Ordinal));
+        Assert.True(changes >= 3);
+
+        session.IncludeDirectResource = false;
+        var changesBeforeRefresh = changes;
+        await catalog.RebuildCatalogAsync(TestContext.Current.CancellationToken);
+
+        Assert.Single(resources);
+        Assert.True(changes > changesBeforeRefresh);
+    }
+
     private static CatalogService CreateCatalog(SnapshotInstanceManager manager, BrokerCatalogIndex broker)
     {
         McpServerPrimitiveCollection<McpServerTool> tools = [];
@@ -129,6 +165,45 @@ public sealed class CatalogServiceSnapshotTests
                 InputSchema = JsonSerializer.SerializeToElement(new { type = "object" })
             });
             return tool;
+        }
+    }
+
+    private sealed class NativeSnapshotSession(int processId) : IHostMcpSession
+    {
+        private readonly McpClientResource direct = CreateResource("revit://model/context", "model_context");
+        private readonly McpClientResourceTemplate template = CreateTemplate("revit://model/elements/{id}", "element");
+
+        public HostInstanceDescriptor Instance { get; } = new(processId, "Test", "1.0", McpPipeName.Format(processId));
+        public bool IsConnected => true;
+        public bool IncludeDirectResource { get; set; } = true;
+        public event Action? CatalogChanged { add { } remove { } }
+        public event Action? Disconnected { add { } remove { } }
+
+        public Task<IList<McpClientTool>> ListToolsAsync(CancellationToken ct) => Task.FromResult<IList<McpClientTool>>([]);
+        public Task<IList<McpClientPrompt>> ListPromptsAsync(CancellationToken ct) => Task.FromResult<IList<McpClientPrompt>>([]);
+        public Task<IList<McpClientResource>> ListResourcesAsync(CancellationToken ct) =>
+            Task.FromResult<IList<McpClientResource>>(IncludeDirectResource ? [direct] : []);
+        public Task<IList<McpClientResourceTemplate>> ListResourceTemplatesAsync(CancellationToken ct) =>
+            Task.FromResult<IList<McpClientResourceTemplate>>([template]);
+        public Task<CallToolResult> CallToolAsync(string name, IReadOnlyDictionary<string, object?>? arguments, CancellationToken ct) => throw new NotSupportedException();
+        public Task<GetPromptResult> GetPromptAsync(string name, IReadOnlyDictionary<string, object?>? arguments, CancellationToken ct) => throw new NotSupportedException();
+        public Task<ReadResourceResult> ReadResourceAsync(string uri, CancellationToken ct) => throw new NotSupportedException();
+        public ValueTask DisposeAsync() => ValueTask.CompletedTask;
+
+        private static McpClientResource CreateResource(string uri, string name)
+        {
+            var resource = (McpClientResource)RuntimeHelpers.GetUninitializedObject(typeof(McpClientResource));
+            typeof(McpClientResource).GetField("<ProtocolResource>k__BackingField", BindingFlags.Instance | BindingFlags.NonPublic)!
+                .SetValue(resource, new Resource { Uri = uri, Name = name });
+            return resource;
+        }
+
+        private static McpClientResourceTemplate CreateTemplate(string uriTemplate, string name)
+        {
+            var template = (McpClientResourceTemplate)RuntimeHelpers.GetUninitializedObject(typeof(McpClientResourceTemplate));
+            typeof(McpClientResourceTemplate).GetField("<ProtocolResourceTemplate>k__BackingField", BindingFlags.Instance | BindingFlags.NonPublic)!
+                .SetValue(template, new ResourceTemplate { UriTemplate = uriTemplate, Name = name });
+            return template;
         }
     }
 }

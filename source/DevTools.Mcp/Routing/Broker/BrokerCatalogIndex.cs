@@ -133,7 +133,7 @@ public sealed class BrokerCatalogIndex
         var content = result.Contents.SelectMany(contents => contents switch
         {
             TextResourceContents text => new ContentBlock[] { new TextContentBlock { Text = text.Text } },
-            BlobResourceContents blob => new ContentBlock[] { ImageContentBlock.FromBytes(blob.DecodedData, blob.MimeType ?? "application/octet-stream") },
+            BlobResourceContents blob => new ContentBlock[] { new EmbeddedResourceBlock { Resource = blob } },
             _ => []
         }).ToArray();
         return new CallToolResult { Content = content.Length > 0 ? content : [new TextContentBlock { Text = "(empty resource)" }] };

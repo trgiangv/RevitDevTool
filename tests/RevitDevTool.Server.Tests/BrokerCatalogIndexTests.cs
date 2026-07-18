@@ -1,5 +1,6 @@
 using System.Reflection;
 using System.Runtime.CompilerServices;
+using System.Text;
 using System.Text.Json;
 using DevTools.Mcp;
 using DevTools.Mcp.Routing;
@@ -94,6 +95,35 @@ public sealed class BrokerCatalogIndexTests
     }
 
     [Fact]
+    public async Task Invoke_Resource_PreservesTextAndNonImageBlobContents()
+    {
+        const string uri = "revit://model/export";
+        var blob = new BlobResourceContents
+        {
+            Uri = uri,
+            MimeType = "application/pdf",
+            Blob = Encoding.UTF8.GetBytes(Convert.ToBase64String([0x25, 0x50, 0x44, 0x46]))
+        };
+        var session = new RecordingSession(5107, "unused_tool", uri, new ReadResourceResult
+        {
+            Contents =
+            [
+                new TextResourceContents { Uri = uri, MimeType = "text/plain", Text = "Export ready" },
+                blob
+            ]
+        });
+        var catalog = CreateCatalog(session);
+
+        var result = await catalog.InvokeAsync(new RecordingManager([session]),
+            BrokerPrimitiveTarget.Parse($"resource:{uri}"), null, null, TestContext.Current.CancellationToken);
+
+        var text = Assert.IsType<TextContentBlock>(result.Content[0]);
+        var embedded = Assert.IsType<EmbeddedResourceBlock>(result.Content[1]);
+        Assert.Equal("Export ready", text.Text);
+        Assert.Same(blob, embedded.Resource);
+    }
+
+    [Fact]
     public void Search_DefaultsToEightItemsAndIncludesSchemas()
     {
         var sessions = Enumerable.Range(0, 10)
@@ -142,12 +172,17 @@ public sealed class BrokerCatalogIndexTests
         public IReadOnlyCollection<string> GetDiscoveredPipeNames() => [];
     }
 
-    private sealed class RecordingSession(int processId, string toolName) : IHostMcpSession
+    private sealed class RecordingSession(
+        int processId,
+        string toolName,
+        string? resourceUri = null,
+        ReadResourceResult? resourceResult = null) : IHostMcpSession
     {
         private readonly McpClientTool tool = CreateTool(toolName);
+        private readonly McpClientResource? resource = resourceUri is null ? null : CreateResource(resourceUri);
 
         public HostInstanceDescriptor Instance { get; } = new(processId, "TestHost", "1.0", McpPipeName.Format(processId));
-        public HostCatalogSnapshot Snapshot => HostCatalogSnapshot.Create(Instance, [tool], [], [], []);
+        public HostCatalogSnapshot Snapshot => HostCatalogSnapshot.Create(Instance, [tool], [], resource is null ? [] : [resource], []);
         public bool IsConnected => true;
         public int CallCount { get; private set; }
         public event Action? CatalogChanged { add { } remove { } }
@@ -155,7 +190,8 @@ public sealed class BrokerCatalogIndexTests
 
         public Task<IList<McpClientTool>> ListToolsAsync(CancellationToken ct) => Task.FromResult<IList<McpClientTool>>([tool]);
         public Task<IList<McpClientPrompt>> ListPromptsAsync(CancellationToken ct) => Task.FromResult<IList<McpClientPrompt>>([]);
-        public Task<IList<McpClientResource>> ListResourcesAsync(CancellationToken ct) => Task.FromResult<IList<McpClientResource>>([]);
+        public Task<IList<McpClientResource>> ListResourcesAsync(CancellationToken ct) =>
+            Task.FromResult<IList<McpClientResource>>(resource is null ? [] : [resource]);
         public Task<IList<McpClientResourceTemplate>> ListResourceTemplatesAsync(CancellationToken ct) => Task.FromResult<IList<McpClientResourceTemplate>>([]);
         public Task<CallToolResult> CallToolAsync(string name, IReadOnlyDictionary<string, object?>? arguments, CancellationToken ct)
         {
@@ -163,7 +199,8 @@ public sealed class BrokerCatalogIndexTests
             return Task.FromResult(new CallToolResult { Content = [new TextContentBlock { Text = name }] });
         }
         public Task<GetPromptResult> GetPromptAsync(string name, IReadOnlyDictionary<string, object?>? arguments, CancellationToken ct) => throw new NotSupportedException();
-        public Task<ReadResourceResult> ReadResourceAsync(string uri, CancellationToken ct) => throw new NotSupportedException();
+        public Task<ReadResourceResult> ReadResourceAsync(string uri, CancellationToken ct) =>
+            resourceResult is null ? throw new NotSupportedException() : Task.FromResult(resourceResult);
         public ValueTask DisposeAsync() => ValueTask.CompletedTask;
 
         private static McpClientTool CreateTool(string name)
@@ -177,6 +214,14 @@ public sealed class BrokerCatalogIndexTests
                     InputSchema = JsonSerializer.SerializeToElement(new { type = "object" })
                 });
             return tool;
+        }
+
+        private static McpClientResource CreateResource(string uri)
+        {
+            var resource = (McpClientResource)RuntimeHelpers.GetUninitializedObject(typeof(McpClientResource));
+            typeof(McpClientResource).GetField("<ProtocolResource>k__BackingField", BindingFlags.Instance | BindingFlags.NonPublic)!
+                .SetValue(resource, new Resource { Uri = uri, Name = uri });
+            return resource;
         }
     }
 }
