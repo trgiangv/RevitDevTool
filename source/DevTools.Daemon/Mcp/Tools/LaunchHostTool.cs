@@ -10,7 +10,7 @@ using ModelContextProtocol.Server;
 namespace DevTools.Daemon.Mcp.Tools;
 
 [SupportedOSPlatform("windows")]
-public sealed class LaunchHostTool(InstanceManager instanceManager) : McpServerTool
+public sealed class LaunchHostTool(HostSessionManager instanceManager) : McpServerTool
 {
     private static readonly string[] HostAppEnumNames =
         Enum.GetValues<HostApp>().Select(h => h.ToString()).ToArray();

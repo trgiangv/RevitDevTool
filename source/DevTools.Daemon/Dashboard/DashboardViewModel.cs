@@ -252,7 +252,7 @@ public partial class DashboardViewModel : ObservableObject
             });
         }
 
-        foreach (var pipe in InstanceManager.DiscoverHostPipes())
+        foreach (var pipe in HostSessionManager.DiscoverHostPipes())
         {
             if (!HostPipeName.TryParse(pipe, out var host , out var version, out var pid))
                 continue;

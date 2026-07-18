@@ -32,7 +32,7 @@ public sealed class McpNamedPipeIntegrationTests
     {
         var pipeName = McpPipeName.Format(4217);
         var attempts = 0;
-        await using var manager = CreateInstanceManager(
+        await using var manager = CreateHostSessionManager(
             pipeName,
             (_, _) =>
             {
@@ -42,12 +42,10 @@ public sealed class McpNamedPipeIntegrationTests
 
                 return Task.FromResult<IHostMcpSession>(new TestMcpSession(pipeName));
             });
-        var knownPipes = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-
-        await manager.SyncMcpPipesAsync(knownPipes, TestContext.Current.CancellationToken);
+        await manager.SyncMcpPipesAsync(TestContext.Current.CancellationToken);
         Assert.Empty(manager.Sessions);
 
-        await manager.SyncMcpPipesAsync(knownPipes, TestContext.Current.CancellationToken);
+        await manager.SyncMcpPipesAsync(TestContext.Current.CancellationToken);
 
         Assert.Equal(2, attempts);
         Assert.Single(manager.Sessions);
@@ -59,12 +57,10 @@ public sealed class McpNamedPipeIntegrationTests
         var pipeName = McpPipeName.Format(4218);
         var attempts = 0;
         var firstSession = new TestMcpSession(pipeName);
-        await using var manager = CreateInstanceManager(
+        await using var manager = CreateHostSessionManager(
             pipeName,
             (_, _) => Task.FromResult<IHostMcpSession>(++attempts == 1 ? firstSession : new TestMcpSession(pipeName)));
-        var knownPipes = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-
-        await manager.SyncMcpPipesAsync(knownPipes, TestContext.Current.CancellationToken);
+        await manager.SyncMcpPipesAsync(TestContext.Current.CancellationToken);
         Assert.Same(firstSession, Assert.Single(manager.Sessions));
 
         var disconnected = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
@@ -76,7 +72,7 @@ public sealed class McpNamedPipeIntegrationTests
         firstSession.Disconnect();
         await disconnected.Task.WaitAsync(TestContext.Current.CancellationToken);
 
-        await manager.SyncMcpPipesAsync(knownPipes, TestContext.Current.CancellationToken);
+        await manager.SyncMcpPipesAsync(TestContext.Current.CancellationToken);
 
         Assert.Equal(2, attempts);
         Assert.Single(manager.Sessions);
@@ -217,14 +213,28 @@ public sealed class McpNamedPipeIntegrationTests
             });
     }
 
-    private static InstanceManager CreateInstanceManager(
+    private static HostSessionManager CreateHostSessionManager(
         string pipeName,
         Func<string, CancellationToken, Task<IHostMcpSession>> connectAsync) =>
         new(
-            NullLogger<InstanceManager>.Instance,
+            NullLogger<HostSessionManager>.Instance,
             NullLoggerFactory.Instance,
             _ => new HashSet<string>([pipeName], StringComparer.OrdinalIgnoreCase),
-            connectAsync);
+            new DelegateHostSessionConnector(connectAsync),
+            new ImmediateRetryClock());
+
+    private sealed class DelegateHostSessionConnector(
+        Func<string, CancellationToken, Task<IHostMcpSession>> connectAsync) : IHostSessionConnector
+    {
+        public Task<IHostMcpSession> ConnectAsync(string pipeName, CancellationToken ct) => connectAsync(pipeName, ct);
+    }
+
+    private sealed class ImmediateRetryClock : IRetryClock
+    {
+        private int _reads;
+        public DateTimeOffset UtcNow => DateTimeOffset.UnixEpoch.AddSeconds(Interlocked.Increment(ref _reads));
+        public Task DelayAsync(TimeSpan delay, CancellationToken ct) => Task.CompletedTask;
+    }
 
     private sealed class TestMcpSession(string pipeName) : IHostMcpSession
     {

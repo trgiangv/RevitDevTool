@@ -10,7 +10,7 @@ using ModelContextProtocol.Server;
 
 namespace DevTools.Daemon.Mcp.Tools;
 
-public sealed class ReadDynamicResource(InstanceManager instanceManager, DynamicResourceCatalog catalog) : McpServerTool
+public sealed class ReadDynamicResource(HostSessionManager instanceManager, DynamicResourceCatalog catalog) : McpServerTool
 {
     public override Tool ProtocolTool { get; } = new()
     {

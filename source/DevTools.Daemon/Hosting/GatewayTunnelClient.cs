@@ -132,7 +132,7 @@ public sealed class GatewayTunnelClient(
     private static async Task SendRegisterAsync(ClientWebSocket ws, CancellationToken ct)
     {
         var metadata = DeviceMetadata.Collect();
-        var hostApps = InstanceManager.DiscoverHostPipes();
+        var hostApps = HostSessionManager.DiscoverHostPipes();
 
         var register = new GatewayRegisterMessage(
             RegisterMessageType,
@@ -151,7 +151,7 @@ public sealed class GatewayTunnelClient(
         {
             await Task.Delay(HeartbeatIntervalMs, ct).ConfigureAwait(false);
 
-            var hostApps = InstanceManager.DiscoverHostPipes();
+            var hostApps = HostSessionManager.DiscoverHostPipes();
             var heartbeat = new GatewayHeartbeatMessage(HeartbeatMessageType, hostApps.ToList());
             var json = JsonSerializer.Serialize(heartbeat);
             var bytes = Encoding.UTF8.GetBytes(json);

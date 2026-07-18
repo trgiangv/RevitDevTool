@@ -10,7 +10,7 @@ using ModelContextProtocol.Server;
 
 namespace DevTools.Daemon.Mcp.Tools;
 
-public sealed class GetDynamicPrompt(InstanceManager instanceManager, DynamicPromptCatalog catalog) : McpServerTool
+public sealed class GetDynamicPrompt(HostSessionManager instanceManager, DynamicPromptCatalog catalog) : McpServerTool
 {
     public override Tool ProtocolTool { get; } = new()
     {

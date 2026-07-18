@@ -17,6 +17,7 @@ public sealed class CatalogService(
     CancellationToken ct)
 {
     private int _refreshPending;
+    private readonly Dictionary<string, HostCatalogSnapshot> _hostSnapshots = new(StringComparer.OrdinalIgnoreCase);
 
     public void RequestRefresh()
     {
@@ -54,16 +55,27 @@ public sealed class CatalogService(
         foreach (var local in localTools)
             newTools[local.ProtocolTool.Name] = local;
 
-        foreach (var session in instanceManager.Sessions)
-        {
-            if (!session.IsConnected)
-                continue;
+        var connectedSessions = instanceManager.Sessions
+            .Where(session => session.IsConnected)
+            .ToArray();
+        var connectedPipeNames = connectedSessions
+            .Select(session => session.Instance.PipeName)
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
 
+        foreach (var session in connectedSessions)
+        {
             token.ThrowIfCancellationRequested();
-            await FetchSessionPrimitivesAsync(session, newTools, newPrompts, newResources,
-                    dynamicToolRegistrations, dynamicResourceRegistrations, dynamicPromptRegistrations, token)
-                .ConfigureAwait(false);
+            var snapshot = await FetchSessionPrimitivesAsync(session, token).ConfigureAwait(false);
+            if (snapshot is not null)
+                _hostSnapshots[session.Instance.PipeName] = snapshot;
         }
+
+        foreach (var pipeName in _hostSnapshots.Keys.Where(pipe => !connectedPipeNames.Contains(pipe)).ToArray())
+            _hostSnapshots.Remove(pipeName);
+
+        foreach (var snapshot in _hostSnapshots.Values)
+            AddSnapshot(snapshot, newTools, newPrompts, newResources,
+                dynamicToolRegistrations, dynamicResourceRegistrations, dynamicPromptRegistrations);
 
         dynamicToolCatalog.ReplaceSnapshot(dynamicToolRegistrations);
         dynamicResourceCatalog.ReplaceSnapshot(dynamicResourceRegistrations);
@@ -73,14 +85,8 @@ public sealed class CatalogService(
         ApplySnapshot(resourceCollection, newResources);
     }
 
-    private async Task FetchSessionPrimitivesAsync(
+    private async Task<HostCatalogSnapshot?> FetchSessionPrimitivesAsync(
         IHostMcpSession session,
-        Dictionary<string, McpServerTool> tools,
-        Dictionary<string, McpServerPrompt> prompts,
-        List<McpServerResource> resources,
-        List<DynamicToolCatalogEntry> dynamicToolRegs,
-        List<DynamicResourceCatalogEntry> dynamicResourceRegs,
-        List<DynamicPromptCatalogEntry> dynamicPromptRegs,
         CancellationToken token)
     {
         try
@@ -98,11 +104,12 @@ public sealed class CatalogService(
                 await resourcesTask.ConfigureAwait(false),
                 await templatesTask.ConfigureAwait(false));
 
-            AddSnapshot(snapshot, tools, prompts, resources, dynamicToolRegs, dynamicResourceRegs, dynamicPromptRegs);
+            return snapshot;
         }
         catch (Exception ex)
         {
             logger.ZLogWarning(ex, $"Error fetching from {session.Instance.PipeName}");
+            return null;
         }
     }
 

@@ -71,11 +71,12 @@ public static class DaemonHostBuilder
 
         builder.Services.AddSingleton(_ => DaemonSettings.Load());
         builder.Services.AddSingleton<IAuthService, AuthService>();
-        builder.Services.AddSingleton<InstanceManager>();
+        builder.Services.AddSingleton<HostSessionManager>();
         builder.Services.AddSingleton<DynamicToolCatalog>();
         builder.Services.AddSingleton<DynamicResourceCatalog>();
         builder.Services.AddSingleton<DynamicPromptCatalog>();
         builder.Services.AddSingleton<McpEngine>();
+        builder.Services.AddSingleton<HostCatalogCoordinator>();
         builder.Services.AddSingleton<ControlPipeHandler>();
         builder.Services.AddHostedService<DiscoveryHostedService>();
 

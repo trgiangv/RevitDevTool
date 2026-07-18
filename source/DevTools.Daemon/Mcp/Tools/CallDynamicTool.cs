@@ -6,7 +6,7 @@ using ModelContextProtocol.Server;
 
 namespace DevTools.Daemon.Mcp.Tools;
 
-public sealed class CallDynamicTool(InstanceManager instanceManager, DynamicToolCatalog catalog) : McpServerTool
+public sealed class CallDynamicTool(HostSessionManager instanceManager, DynamicToolCatalog catalog) : McpServerTool
 {
     public override Tool ProtocolTool { get; } = new()
     {

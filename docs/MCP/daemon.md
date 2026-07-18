@@ -21,6 +21,18 @@ Standalone WPF tray application that hosts the MCP engine, authentication, and m
 
 Stdio and tray processes are fully independent — no IPC between them. Both discover host pipes via their own `DiscoveryHostedService`.
 
+## Host Session and Catalog Ownership
+
+Each daemon host composes one `HostSessionManager`, which owns typed MCP session
+slots, reconnect backoff, and the temporary legacy bridge-client surface. A
+single `HostCatalogCoordinator` subscribes only to `SessionsChanged` and
+serializes catalog rebuilds for that daemon host. `StdioHostedService` owns only
+the stdio transport; it does not create a catalog or subscribe to discovery.
+
+`CatalogService` retains the last successful snapshot for each still-connected
+host when that host's list operation fails. It removes that host snapshot only
+after the session is no longer connected.
+
 ## Source Map
 
 | Area | Path |

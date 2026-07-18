@@ -13,7 +13,7 @@ namespace DevTools.Daemon.Mcp.Tools;
 /// 1. Connected instance: routes <c>open_document</c> built-in tool via Named Pipe.
 /// 2. No instance: launches the host process with the file as a CLI argument.
 /// </summary>
-public sealed class OpenModelTool(InstanceManager instanceManager) : McpServerTool
+public sealed class OpenModelTool(HostSessionManager instanceManager) : McpServerTool
 {
     public override Tool ProtocolTool { get; } = new()
     {

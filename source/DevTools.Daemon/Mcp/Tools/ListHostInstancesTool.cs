@@ -6,7 +6,7 @@ using ModelContextProtocol.Server;
 
 namespace DevTools.Daemon.Mcp.Tools;
 
-public sealed class ListHostInstancesTool(InstanceManager instanceManager) : McpServerTool
+public sealed class ListHostInstancesTool(HostSessionManager instanceManager) : McpServerTool
 {
     public override Tool ProtocolTool { get; } = new()
     {

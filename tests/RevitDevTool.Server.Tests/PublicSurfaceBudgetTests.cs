@@ -13,7 +13,7 @@ public sealed class PublicSurfaceBudgetTests
     public void CurrentSurface_IsMeasuredBeforeReplacement()
     {
         var engine = new McpEngine(
-            new InstanceManager(NullLogger<InstanceManager>.Instance),
+            new HostSessionManager(NullLogger<HostSessionManager>.Instance),
             new DynamicToolCatalog(),
             new DynamicResourceCatalog(),
             new DynamicPromptCatalog(),

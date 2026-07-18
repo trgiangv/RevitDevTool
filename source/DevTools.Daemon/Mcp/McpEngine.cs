@@ -13,7 +13,7 @@ namespace DevTools.Daemon.Mcp;
 /// </summary>
 public sealed class McpEngine
 {
-    public InstanceManager InstanceManager { get; }
+    public HostSessionManager InstanceManager { get; }
     public DynamicToolCatalog DynamicToolCatalog { get; }
     public DynamicResourceCatalog DynamicResourceCatalog { get; }
     public DynamicPromptCatalog DynamicPromptCatalog { get; }
@@ -23,7 +23,7 @@ public sealed class McpEngine
     public IReadOnlyList<McpServerTool> LocalTools { get; }
 
     public McpEngine(
-        InstanceManager instanceManager,
+        HostSessionManager instanceManager,
         DynamicToolCatalog dynamicToolCatalog,
         DynamicResourceCatalog dynamicResourceCatalog,
         DynamicPromptCatalog dynamicPromptCatalog,
@@ -44,6 +44,11 @@ public sealed class McpEngine
             ToolCollection.TryAdd(tool);
         }
     }
+
+    public McpServerOptions CreateServerOptions() => ToolHelpers.ConfigureGatewayOptions(
+        ToolCollection,
+        PromptCollection,
+        ResourceCollection);
 
     private McpServerTool[] CreateLocalTools(IAuthService authService, IOptions<GatewayOptions> gatewayOptions) =>
     [
