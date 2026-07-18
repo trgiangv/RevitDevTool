@@ -19,7 +19,7 @@ param(
 )
 
 $ErrorActionPreference = "Stop"
-$repoRoot = Resolve-Path (Join-Path $PSScriptRoot "../..")
+$repoRoot = Resolve-Path (Join-Path $PSScriptRoot "..")
 
 if ($Project) {
     $target = Join-Path $repoRoot $Project
