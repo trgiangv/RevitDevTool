@@ -21,9 +21,10 @@ public sealed class BrokerEndToEndTests
     {
         await using var fixture = await BrokerFixture.CreateAsync(TestContext.Current.CancellationToken);
 
+        var listsBeforeSearch = fixture.Session.ListCalls;
         var search = await fixture.CallAsync("devtools_search", new Dictionary<string, object?> { ["query"] = "execute_csharp_code" });
         var searchResponse = DeserializeSearchResponse(search);
-        var listsAfterSearch = fixture.Session.ListCalls;
+        Assert.Equal(listsBeforeSearch, fixture.Session.ListCalls);
         var host = Assert.Single(searchResponse.Hosts);
         var discovered = Assert.Single(searchResponse.Items);
         var invoke = await fixture.CallAsync("devtools_invoke", new Dictionary<string, object?> { ["target"] = discovered.Target });
@@ -39,7 +40,7 @@ public sealed class BrokerEndToEndTests
         Assert.NotNull(discovered.Schema);
         Assert.Equal("object", discovered.Schema!.Value.GetProperty("type").GetString());
         Assert.Equal(1, fixture.Tool.InvocationCount);
-        Assert.Equal(listsAfterSearch, fixture.Session.ListCalls);
+        Assert.Equal(listsBeforeSearch, fixture.Session.ListCalls);
         Assert.Equal("42", Assert.IsType<TextContentBlock>(Assert.Single(invoke.Content)).Text);
     }
 
