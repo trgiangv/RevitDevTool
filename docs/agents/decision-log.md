@@ -32,11 +32,13 @@ Use this file for durable architecture decisions that affect agent behavior. Kee
 
 Superseded by [ADR 002: MCP Runtime V2](../Architecture/decisions/002-mcp-runtime-v2.md) and the [current MCP Runtime V2 documentation](../MCP/README.md). Do not use this legacy entry for operational guidance: the custom `MCPServer.exe` topology, `InstanceManager`, `HostBridgeClient`, and `list_host_instances` no longer describe the active MCP runtime. Use the V2 daemon Broker/Native architecture and its documented host-session flow instead.
 
-## 2026-05-31: Architecture docs audit and corrections
+## 2026-05-31: Architecture docs audit and corrections (partially superseded)
+
+The standalone `DevTools.McpServer`/`MCPServer.exe` bullet below is superseded by [ADR 002: MCP Runtime V2](../Architecture/decisions/002-mcp-runtime-v2.md) and the [current MCP Runtime V2 documentation](../MCP/README.md). The daemon is the sole external MCP host; retain the remaining bullets as historical documentation-audit facts.
 
 - `RevitDevTool.Core` reclassified: it is Revit-only (transactions, dockable panes, image export), not a shared platform library. Only `RevitDevTool` references it; `AcadDevTool` does not.
 - Visualization confirmed as Revit-host only: lives entirely in `source/RevitDevTool/Visualization/`, not in shared code.
-- `DevTools.McpServer` standalone process clarified: runs outside hosts as `MCPServer.exe`; standalone built-in tools are multi-host, in-host MCP runtime is shared.
+- Historical and superseded: `DevTools.McpServer` was described as running outside hosts as `MCPServer.exe`; do not use that deleted topology for current MCP work.
 - `docs/README.md` directory tree expanded to show all 8 `docs/agents/` digest files and `static/icons/` assets.
 - Documentation completeness table restructured: separated architecture modules, shared platform libraries, and sample projects.
 - All 6 `scripts/*.ps1` scripts received PowerShell comment-based help (`.SYNOPSIS`, `.DESCRIPTION`, `.PARAMETER`, `.EXAMPLE`).

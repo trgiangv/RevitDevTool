@@ -431,7 +431,7 @@ Recommended sequence for a full integration pass:
 - **Always kill host before build** — running host locks DLLs, build will fail
 - **Daemon publish kills the running instance** — client must reload MCP after
 - **McpRegistryConfig changes require host restart** — not hot-reloadable
-- **Civil 3D uses `acad.exe`** — same process name as AutoCAD, differentiated by pipe name
+- **Civil 3D uses `acad.exe`** — the V2 MCP pipe name is only `DevTools.Mcp.v2.{pid}`, so it does not identify host type or version. Use `devtools_search` host metadata and the daemon-local PID `hostId` to distinguish AutoCAD-family hosts. The descriptor-bearing `DevTools_{Host}_{Version}_{PID}` name belongs only to the separate direct pytest lane.
 - **Large models (>50MB) take 30-60s to open** — `launch_host` timeout accounts for this
 - **AutoCAD undo is async** — `navigate_history` on AutoCAD queues commands, stack counts are estimates
 - **Revit undo is synchronous** — exact stack state returned immediately
