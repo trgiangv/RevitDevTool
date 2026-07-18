@@ -4,9 +4,8 @@ using System.Text.Json.Serialization;
 namespace DevTools.Ipc;
 
 /// <summary>
-/// Structured error detail carried inside a <see cref="BridgeMessage"/> error response.
-/// Mirrors the shape of JSON-RPC error objects so the Daemon routing layer can
-/// forward meaningful error codes and optional data to external MCP clients.
+/// Structured error detail carried inside a direct pytest
+/// <see cref="BridgeMessage"/> error response.
 /// </summary>
 public sealed class BridgeError
 {

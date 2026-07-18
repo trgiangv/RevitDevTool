@@ -28,15 +28,9 @@ Use this file for durable architecture decisions that affect agent behavior. Kee
 - `.gitnexusignore` excludes vendor/generated/runtime folders so future indexing should focus on repo-owned code.
 - Until analyzer failure is resolved, agents should inspect source directly and not rely on GitNexus graph freshness.
 
-## 2026-05-31: MCP multi-host readiness confirmed
+## 2026-05-31: MCP multi-host readiness confirmed (superseded)
 
-- `MCPServer.exe` is now host-agnostic at the protocol/runtime layer: `InstanceManager` discovers any host pipe, `HostBridgeClient` (formerly `RevitBridgeClient`) connects generically.
-- Standalone built-in tools: `list_host_instances`, `launch_host`, `read_file_info`, `open_model` (multi-host).
-- In-host built-in tools: `execute_csharp_code`, `open_document` (registered in `ExecutionExtensions.cs`).
-- In-host MCP dispatch runtime (`DevTools.Execution`) is fully shared — both `RevitDevTool` and `AcadDevTool` register the pipe server.
-- Startup dialog resolver and `open_document` are implemented for AutoCAD (merged keywords in default `StartupDialogResolverOptions`; `AcadDocumentBridge` + `OpenDocumentTool`).
-- Remaining AutoCAD gaps: no shipped MCP toolset. (pytest bridge client is now multi-host — scans all `DevTools_{Host}_{Version}_{PID}` pipes.)
-- Design principle: every new MCP feature should be sharable by default.
+Superseded by [ADR 002: MCP Runtime V2](../Architecture/decisions/002-mcp-runtime-v2.md) and the [current MCP Runtime V2 documentation](../MCP/README.md). Do not use this legacy entry for operational guidance: the custom `MCPServer.exe` topology, `InstanceManager`, `HostBridgeClient`, and `list_host_instances` no longer describe the active MCP runtime. Use the V2 daemon Broker/Native architecture and its documented host-session flow instead.
 
 ## 2026-05-31: Architecture docs audit and corrections
 
