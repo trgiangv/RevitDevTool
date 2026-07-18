@@ -1,11 +1,14 @@
 using System.Text.Json;
 using System.Threading.Tasks.Sources;
 using DevTools.Mcp;
+using DevTools.Mcp.BuiltIn;
 using DevTools.Mcp.Models;
 using DevTools.Mcp.Registry;
 using DevTools.Presentation.ViewModels;
 using DevTools.Execution.External.Mcp.Registry;
+using DevTools.Execution.External.Mcp.BuiltIn;
 using DevTools.Execution.External.Connections;
+using DevTools.Execution.Interfaces;
 using DevTools.Settings;
 using DevTools.Settings.Configs;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -310,6 +313,119 @@ public sealed class McpCatalogIdentityTests
         Assert.Equal(2, hostContext.CallCount);
     }
 
+    [Fact]
+    public async Task StandardSdkBuiltInTool_AllowsAsyncPreparationAndPropagatesSuppressedGuardToItsHostCallback()
+    {
+        var hostContext = new RecordingHostContextExecutor();
+        var builtIn = new AsyncBuiltInTool(hostContext);
+        var tool = LoadBuiltInTool(builtIn, hostContext);
+        await using var input = new MemoryStream();
+        await using var output = new MemoryStream();
+        await using var transport = new StreamServerTransport(input, output);
+        await using var server = McpServer.Create(transport, new McpServerOptions());
+
+        var result = await tool.InvokeAsync(
+            CreateRequest(server, new CallToolRequestParams { Name = builtIn.Name }, RequestMethods.ToolsCall),
+            TestContext.Current.CancellationToken);
+
+        Assert.False(result.IsError ?? false);
+        Assert.Equal([false, false, true], builtIn.HostScopes);
+        Assert.All(builtIn.ObservedModes, mode => Assert.Equal(ExecutionGuardMode.Suppress, mode));
+        Assert.Equal(1, hostContext.CallCount);
+        Assert.Equal(1, hostContext.ScopeExitCount);
+        Assert.Equal(ExecutionGuardMode.Passthrough, ExecutionGuardContext.Mode);
+    }
+
+    [Fact]
+    public async Task StandardSdkBuiltInTool_PropagatesCancellationAfterAsyncPreparation()
+    {
+        var hostContext = new RecordingHostContextExecutor();
+        var tool = LoadBuiltInTool(new CancellableBuiltInTool(), hostContext);
+        await using var input = new MemoryStream();
+        await using var output = new MemoryStream();
+        await using var transport = new StreamServerTransport(input, output);
+        await using var server = McpServer.Create(transport, new McpServerOptions());
+        using var cancellation = new CancellationTokenSource();
+
+        var invocation = tool.InvokeAsync(
+            CreateRequest(server, new CallToolRequestParams { Name = "cancellable_built_in" }, RequestMethods.ToolsCall),
+            cancellation.Token).AsTask();
+        cancellation.Cancel();
+
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() => invocation);
+    }
+
+    [Fact]
+    public async Task StandardSdkBuiltInTool_PropagatesFaultAfterAsyncPreparation()
+    {
+        var hostContext = new RecordingHostContextExecutor();
+        var tool = LoadBuiltInTool(new FaultingBuiltInTool(), hostContext);
+        await using var input = new MemoryStream();
+        await using var output = new MemoryStream();
+        await using var transport = new StreamServerTransport(input, output);
+        await using var server = McpServer.Create(transport, new McpServerOptions());
+
+        var exception = await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            tool.InvokeAsync(CreateRequest(server, new CallToolRequestParams { Name = "faulting_built_in" }, RequestMethods.ToolsCall), TestContext.Current.CancellationToken).AsTask());
+
+        Assert.Equal("built-in failure", exception.Message);
+    }
+
+    [Fact]
+    public async Task StandardSdkCollection_InvokesOpenDocumentBuiltInThroughItsAsyncDocumentBridge()
+    {
+        var hostContext = new RecordingHostContextExecutor();
+        var documentBridge = new AsyncDocumentBridge();
+        var tool = LoadBuiltInTool(new OpenDocumentTool(documentBridge), hostContext);
+        await using var input = new MemoryStream();
+        await using var output = new MemoryStream();
+        await using var transport = new StreamServerTransport(input, output);
+        await using var server = McpServer.Create(transport, new McpServerOptions());
+        var filePath = Path.GetTempFileName();
+        try
+        {
+            var result = await tool.InvokeAsync(
+                CreateRequest(server, new CallToolRequestParams
+                {
+                    Name = "open_document",
+                    Arguments = new Dictionary<string, JsonElement>
+                    {
+                        [McpPropertyNames.FilePath] = JsonSerializer.SerializeToElement(filePath)
+                    }
+                }, RequestMethods.ToolsCall),
+                TestContext.Current.CancellationToken);
+
+            Assert.False(result.IsError ?? false);
+            Assert.Equal(filePath, documentBridge.OpenedPath);
+        }
+        finally
+        {
+            File.Delete(filePath);
+        }
+    }
+
+    private static McpServerTool LoadBuiltInTool(IBuiltInMcpTool builtIn, RecordingHostContextExecutor hostContext)
+    {
+        var adapterType = typeof(HostContextMcpExecution).Assembly.GetType(
+            "DevTools.Execution.External.Mcp.Registry.BuiltInMcpServerAdapters", throwOnError: true)!;
+        var adapter = (IMcpServerPrimitiveAdapter)Activator.CreateInstance(
+            adapterType,
+            System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic,
+            binder: null,
+            args: [new[] { builtIn }, Array.Empty<IBuiltInMcpPrompt>(), Array.Empty<IBuiltInMcpResource>()],
+            culture: null)!;
+        var loader = new McpCatalogLoader(
+            [new BuiltInMcpRegistryProvider([builtIn], [], [])],
+            NullLogger<McpCatalogLoader>.Instance,
+            [adapter]);
+        McpServerPrimitiveCollection<McpServerTool> tools = [];
+        var store = new McpCatalogStore(loader, new EmptySettingsService(), tools, [], []);
+
+        store.EnsureLoaded();
+
+        return Assert.Single(tools);
+    }
+
     private static async Task AssertIncompleteInvocationIsRejected<T>(
         Task<T> invocation,
         DeferredValueTaskSource<T> completion,
@@ -415,6 +531,72 @@ public sealed class McpCatalogIdentityTests
         public McpServerTool? CreateTool(McpRegisteredTool registration) => new ProbeTool([]) { ProtocolToolValue = registration.ProtocolTool };
         public McpServerPrompt? CreatePrompt(McpRegisteredPrompt registration) => new ProbePrompt([]) { ProtocolPromptValue = registration.ProtocolPrompt };
         public McpServerResource? CreateResource(McpRegisteredResource registration) => new ProbeResource([]) { ProtocolResourceValue = registration.ProtocolResource! };
+    }
+
+    private sealed class AsyncBuiltInTool(RecordingHostContextExecutor hostContext) : IBuiltInMcpTool
+    {
+        public string Name => "async_built_in";
+        public Tool ProtocolTool { get; } = new() { Name = "async_built_in", InputSchema = JsonSerializer.SerializeToElement(new { type = "object" }) };
+        public List<ExecutionGuardMode> ObservedModes { get; } = [];
+        public List<bool> HostScopes { get; } = [];
+
+        public async Task<McpToolExecutionResult> ExecuteAsync(string payloadJson, CancellationToken ct)
+        {
+            ObservedModes.Add(ExecutionGuardContext.Mode);
+            HostScopes.Add(hostContext.IsInScope);
+            await Task.Yield();
+            ObservedModes.Add(ExecutionGuardContext.Mode);
+            HostScopes.Add(hostContext.IsInScope);
+            await hostContext.ExecuteAsync(() =>
+            {
+                ObservedModes.Add(ExecutionGuardContext.Mode);
+                HostScopes.Add(hostContext.IsInScope);
+                return 0;
+            }, ct);
+            return McpToolExecutionResult.Completed(new CallToolResult(), "completed");
+        }
+    }
+
+    private sealed class CancellableBuiltInTool : IBuiltInMcpTool
+    {
+        public string Name => "cancellable_built_in";
+        public Tool ProtocolTool { get; } = new() { Name = "cancellable_built_in", InputSchema = JsonSerializer.SerializeToElement(new { type = "object" }) };
+
+        public async Task<McpToolExecutionResult> ExecuteAsync(string payloadJson, CancellationToken ct)
+        {
+            await Task.Delay(Timeout.InfiniteTimeSpan, ct);
+            throw new InvalidOperationException("Cancellation was not observed.");
+        }
+    }
+
+    private sealed class FaultingBuiltInTool : IBuiltInMcpTool
+    {
+        public string Name => "faulting_built_in";
+        public Tool ProtocolTool { get; } = new() { Name = "faulting_built_in", InputSchema = JsonSerializer.SerializeToElement(new { type = "object" }) };
+
+        public async Task<McpToolExecutionResult> ExecuteAsync(string payloadJson, CancellationToken ct)
+        {
+            await Task.Yield();
+            throw new InvalidOperationException("built-in failure");
+        }
+    }
+
+    private sealed class AsyncDocumentBridge : IDocumentBridge
+    {
+        public string? OpenedPath { get; private set; }
+
+        public async Task<DocumentOperationResult> OpenDocumentAsync(string filePath, CancellationToken ct = default)
+        {
+            await Task.Yield();
+            OpenedPath = filePath;
+            return new DocumentOperationResult(true, "opened", Path.GetFileName(filePath));
+        }
+
+        public Task<DocumentOperationResult> CloseDocumentAsync(bool save, CancellationToken ct = default) =>
+            Task.FromResult(new DocumentOperationResult(true, "closed"));
+
+        public Task<DocumentOperationResult> SaveDocumentAsync(string? savePath, CancellationToken ct = default) =>
+            Task.FromResult(new DocumentOperationResult(true, "saved"));
     }
 
     private sealed class ProbeTool(List<ExecutionGuardMode> observedModes) : McpServerTool

@@ -9,8 +9,7 @@ namespace DevTools.Execution.External.Mcp.Registry;
 internal sealed class BuiltInMcpServerAdapters(
     IEnumerable<IBuiltInMcpTool> tools,
     IEnumerable<IBuiltInMcpPrompt> prompts,
-    IEnumerable<IBuiltInMcpResource> resources,
-    IMcpHostExecution hostExecution) : IMcpServerPrimitiveAdapter
+    IEnumerable<IBuiltInMcpResource> resources) : IMcpServerPrimitiveAdapter
 {
     private readonly IReadOnlyDictionary<string, IBuiltInMcpTool> _tools = tools.ToDictionary(tool => tool.Name, StringComparer.OrdinalIgnoreCase);
     private readonly IReadOnlyDictionary<string, IBuiltInMcpPrompt> _prompts = prompts.ToDictionary(prompt => prompt.ProtocolPrompt.Name, StringComparer.OrdinalIgnoreCase);
@@ -19,15 +18,15 @@ internal sealed class BuiltInMcpServerAdapters(
     public ExecutionMode SourceKind => ExecutionMode.CSharp;
 
     public McpServerTool? CreateTool(McpRegisteredTool registration) =>
-        _tools.TryGetValue(registration.ProtocolTool.Name, out var tool) ? McpHostExecutionPrimitives.Wrap(new BuiltInMcpServerTool(tool), hostExecution) : null;
+        _tools.TryGetValue(registration.ProtocolTool.Name, out var tool) ? new BuiltInMcpServerTool(tool) : null;
 
     public McpServerPrompt? CreatePrompt(McpRegisteredPrompt registration) =>
-        _prompts.TryGetValue(registration.ProtocolPrompt.Name, out var prompt) ? McpHostExecutionPrimitives.Wrap(new BuiltInMcpServerPrompt(prompt), hostExecution) : null;
+        _prompts.TryGetValue(registration.ProtocolPrompt.Name, out var prompt) ? new BuiltInMcpServerPrompt(prompt) : null;
 
     public McpServerResource? CreateResource(McpRegisteredResource registration)
     {
         var key = registration.ProtocolResource?.Uri ?? registration.ProtocolTemplate?.UriTemplate;
-        return key is not null && _resources.TryGetValue(key, out var resource) ? McpHostExecutionPrimitives.Wrap(new BuiltInMcpServerResource(resource), hostExecution) : null;
+        return key is not null && _resources.TryGetValue(key, out var resource) ? new BuiltInMcpServerResource(resource) : null;
     }
 
     private sealed class BuiltInMcpServerTool(IBuiltInMcpTool tool) : McpServerTool
@@ -39,7 +38,8 @@ internal sealed class BuiltInMcpServerAdapters(
         {
             cancellationToken.ThrowIfCancellationRequested();
             var payload = JsonSerializer.Serialize(request.Params.Arguments ?? new Dictionary<string, JsonElement>(), McpJsonUtilities.DefaultOptions);
-            var result = await tool.ExecuteAsync(payload, cancellationToken).ConfigureAwait(false);
+            var result = await ExecuteWithSuppressedGuardAsync(
+                () => tool.ExecuteAsync(payload, cancellationToken)).ConfigureAwait(false);
             return result.Result ?? new CallToolResult
             {
                 IsError = true,
@@ -56,7 +56,7 @@ internal sealed class BuiltInMcpServerAdapters(
         {
             cancellationToken.ThrowIfCancellationRequested();
             var arguments = request.Params.Arguments?.ToDictionary(pair => pair.Key, pair => pair.Value);
-            return new ValueTask<GetPromptResult>(prompt.Get(arguments));
+            return new ValueTask<GetPromptResult>(ExecuteWithSuppressedGuard(() => prompt.Get(arguments)));
         }
     }
 
@@ -74,7 +74,35 @@ internal sealed class BuiltInMcpServerAdapters(
         public override ValueTask<ReadResourceResult> ReadAsync(RequestContext<ReadResourceRequestParams> request, CancellationToken cancellationToken = default)
         {
             cancellationToken.ThrowIfCancellationRequested();
-            return new ValueTask<ReadResourceResult>(resource.Read(request.Params.Uri));
+            return new ValueTask<ReadResourceResult>(ExecuteWithSuppressedGuard(() => resource.Read(request.Params.Uri)));
+        }
+    }
+
+    private static async Task<T> ExecuteWithSuppressedGuardAsync<T>(Func<Task<T>> operation)
+    {
+        var previousMode = ExecutionGuardContext.Mode;
+        ExecutionGuardContext.Mode = ExecutionGuardMode.Suppress;
+        try
+        {
+            return await operation().ConfigureAwait(false);
+        }
+        finally
+        {
+            ExecutionGuardContext.Mode = previousMode;
+        }
+    }
+
+    private static T ExecuteWithSuppressedGuard<T>(Func<T> operation)
+    {
+        var previousMode = ExecutionGuardContext.Mode;
+        ExecutionGuardContext.Mode = ExecutionGuardMode.Suppress;
+        try
+        {
+            return operation();
+        }
+        finally
+        {
+            ExecutionGuardContext.Mode = previousMode;
         }
     }
 }
