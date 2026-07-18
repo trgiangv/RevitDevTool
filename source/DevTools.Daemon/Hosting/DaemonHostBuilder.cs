@@ -1,5 +1,6 @@
 using DevTools.Daemon.Auth;
 using DevTools.Daemon.Dashboard;
+using DevTools.Daemon.Hosts;
 using DevTools.Daemon.Mcp;
 using DevTools.Daemon.Tray;
 using DevTools.Mcp.Routing.Catalog;
@@ -73,6 +74,9 @@ public static class DaemonHostBuilder
         builder.Services.AddSingleton(_ => DaemonSettings.Load());
         builder.Services.AddSingleton<IAuthService, AuthService>();
         builder.Services.AddSingleton<HostSessionManager>();
+        builder.Services.AddSingleton<IHostDriver, RevitHostDriver>();
+        builder.Services.AddSingleton<IHostDriver, AcadHostDriver>();
+        builder.Services.AddSingleton<HostDriverRegistry>();
         builder.Services.AddSingleton<BrokerCatalogIndex>();
         builder.Services.AddSingleton<McpEngine>();
         builder.Services.AddSingleton<HostCatalogCoordinator>();

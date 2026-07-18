@@ -1,6 +1,7 @@
 using System.Runtime.Versioning;
 using System.Text.Json;
 using DevTools.Daemon.Contracts;
+using DevTools.Daemon.Hosts;
 using DevTools.Logging;
 using DevTools.Daemon.Mcp.Tools.Utils;
 using ModelContextProtocol.Protocol;
@@ -9,7 +10,7 @@ using ModelContextProtocol.Server;
 namespace DevTools.Daemon.Mcp.Tools;
 
 [SupportedOSPlatform("windows")]
-public sealed class LaunchHostTool(HostSessionManager instanceManager) : McpServerTool
+public sealed class LaunchHostTool(HostSessionManager instanceManager, HostDriverRegistry drivers) : McpServerTool
 {
     private static readonly string[] HostAppEnumNames =
         Enum.GetValues<HostApp>().Select(h => h.ToString()).ToArray();
@@ -53,32 +54,37 @@ public sealed class LaunchHostTool(HostSessionManager instanceManager) : McpServ
             return ToolHelpers.ErrorResult(
                 $"Invalid hostApp. Supported values: {string.Join(", ", HostAppEnumNames)}");
 
-        var resolved = HostLaunchCoordinator.Resolve(
-            hostApp.Value, version, languageCode, filePath, requireVersion: false);
-        if (resolved.Error is not null)
-            return resolved.Error;
+        if (!string.IsNullOrWhiteSpace(filePath) && !File.Exists(filePath))
+            return ToolHelpers.ErrorResult($"File not found: {filePath}");
 
-        var context = resolved.Context!;
-        var started = HostLaunchCoordinator.StartProcess(context);
-        if (started.Error is not null)
-            return started.Error;
+        var driver = drivers.TryForHost(hostApp.Value);
+        if (driver is null)
+            return ToolHelpers.ErrorResult($"Launch not yet supported for {hostApp}.");
 
-        var process = started.Process!;
-        var dialogTask = HostLaunchCoordinator.StartDialogResolver(hostApp.Value, process.Id, cancellationToken);
+        HostLaunchResult launch;
+        try
+        {
+            launch = await driver.LaunchAsync(
+                new HostLaunchRequest(hostApp.Value, version, languageCode, filePath), cancellationToken).ConfigureAwait(false);
+        }
+        catch (HostDriverException ex)
+        {
+            return ToolHelpers.ErrorResult(ex.Message);
+        }
 
-        var connected = await WaitForInstanceConnectionAsync(process.Id, cancellationToken).ConfigureAwait(false);
-        var dialogResult = await HostLaunchCoordinator.TryAwaitResolverResultAsync(dialogTask, TimeSpan.FromSeconds(5)).ConfigureAwait(false);
+        var connected = await WaitForInstanceConnectionAsync(launch.ProcessId, cancellationToken).ConfigureAwait(false);
+        var dialogResult = await HostLaunchCoordinator.TryAwaitResolverResultAsync(launch.DialogTask, TimeSpan.FromSeconds(5)).ConfigureAwait(false);
         if (!connected)
             return ToolHelpers.ErrorResult(
-                $"{hostApp} launched (PID={process.Id}) but bridge did not connect within timeout.");
+                $"{hostApp} launched (PID={launch.ProcessId}) but bridge did not connect within timeout.");
 
         var payload = new LaunchHostResult(
             hostApp.Value,
-            process.Id,
-            context.Version,
-            context.ExePath,
-            string.Join(" ", context.Arguments),
-            context.LanguageCode,
+            launch.ProcessId,
+            launch.Version,
+            launch.ExePath,
+            string.Join(" ", launch.Arguments),
+            launch.LanguageCode,
             true,
             dialogResult);
 

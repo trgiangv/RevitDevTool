@@ -33,6 +33,7 @@ Host API references belong in host projects:
 - `InstanceManager` discovers any host pipe via generic regex (`DevTools_{HostApp}_{Version}_{PID}`).
 - `HostBridgeClient` connects to any host (formerly `RevitBridgeClient`).
 - Daemon built-in tools: `list_host_instances`, `launch_host`, `read_file_info`, `open_model`, `list_machines`, `call_dynamic_tool`, `list_dynamic_tools`, `refresh_dynamic_catalog` (multi-host).
+- Daemon host launch and offline-file behavior is supplied by `IHostDriver` implementations in `source/DevTools.Daemon/Hosts/`; `HostDriverRegistry` maps host products and file extensions without adding product branches to MCP tools or broker routing.
 - In-host built-in tools (shared runtime): `execute_csharp_code`, `open_document` via `IDocumentBridge`.
 - Startup dialog resolver uses merged keywords in default `StartupDialogResolverOptions` (Revit + AutoCAD).
 - Remaining gaps for AutoCAD: no shipped MCP toolset.

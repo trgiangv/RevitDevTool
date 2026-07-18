@@ -33,12 +33,19 @@ the stdio transport; it does not create a catalog or subscribe to discovery.
 host when that host's list operation fails. It removes that host snapshot only
 after the session is no longer connected.
 
+Daemon file and launch tools resolve product behavior through `HostDriverRegistry`.
+Each `IHostDriver` owns its file extensions, host-product membership, executable
+resolution, launch arguments, and offline metadata reader. The registry keeps MCP
+tool routing product-neutral, so a future host adds a driver rather than a broker or
+tool-routing branch.
+
 ## Source Map
 
 | Area | Path |
 |------|------|
 | Hosting (builders, services, single-instance) | `source/DevTools.Daemon/Hosting/` |
 | MCP engine | `source/DevTools.Daemon/Mcp/` |
+| Daemon host drivers | `source/DevTools.Daemon/Hosts/` |
 | Auth (OIDC/PKCE) | `source/DevTools.Daemon/Auth/` |
 | Dashboard (window + views) | `source/DevTools.Daemon/Dashboard/` |
 | App entry point | `source/DevTools.Daemon/App.xaml.cs` |

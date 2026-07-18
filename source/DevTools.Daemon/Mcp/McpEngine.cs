@@ -1,4 +1,5 @@
 using DevTools.Daemon.Auth;
+using DevTools.Daemon.Hosts;
 using DevTools.Daemon.Hosting;
 using Microsoft.Extensions.Options;
 using ModelContextProtocol.Server;
@@ -24,6 +25,7 @@ public sealed class McpEngine
     public McpEngine(
         HostSessionManager instanceManager,
         BrokerCatalogIndex brokerCatalog,
+        HostDriverRegistry hostDrivers,
         IAuthService authService,
         IOptions<GatewayOptions> gatewayOptions)
     {
@@ -33,7 +35,7 @@ public sealed class McpEngine
         PromptCollection = [];
         ResourceCollection = [];
 
-        LocalTools = CreateLocalTools(authService, gatewayOptions, new DevToolsBrokerTools(BrokerCatalog, InstanceManager));
+        LocalTools = CreateLocalTools(authService, gatewayOptions, hostDrivers, new DevToolsBrokerTools(BrokerCatalog, InstanceManager));
         foreach (var tool in LocalTools)
         {
             ToolCollection.TryAdd(tool);
@@ -45,13 +47,13 @@ public sealed class McpEngine
         PromptCollection,
         ResourceCollection);
 
-    private McpServerTool[] CreateLocalTools(IAuthService authService, IOptions<GatewayOptions> gatewayOptions, DevToolsBrokerTools broker) =>
+    private McpServerTool[] CreateLocalTools(IAuthService authService, IOptions<GatewayOptions> gatewayOptions, HostDriverRegistry hostDrivers, DevToolsBrokerTools broker) =>
     [
         McpServerTool.Create(typeof(DevToolsBrokerTools).GetMethod(nameof(DevToolsBrokerTools.Search))!, broker),
         McpServerTool.Create(typeof(DevToolsBrokerTools).GetMethod(nameof(DevToolsBrokerTools.InvokeAsync))!, broker),
         new ListMachinesTool(authService, gatewayOptions),
-        new LaunchHostTool(InstanceManager),
-        new ReadFileInfoTool(),
-        new OpenModelTool(InstanceManager)
+        new LaunchHostTool(InstanceManager, hostDrivers),
+        new ReadFileInfoTool(hostDrivers),
+        new OpenModelTool(InstanceManager, hostDrivers)
     ];
 }

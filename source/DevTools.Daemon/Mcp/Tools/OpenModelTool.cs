@@ -1,5 +1,6 @@
 using System.Text.Json;
 using DevTools.Daemon.Contracts;
+using DevTools.Daemon.Hosts;
 using DevTools.Logging;
 using DevTools.Daemon.Mcp.Tools.Utils;
 using ModelContextProtocol.Protocol;
@@ -12,7 +13,7 @@ namespace DevTools.Daemon.Mcp.Tools;
 /// 1. Connected instance: routes <c>open_document</c> built-in tool via Named Pipe.
 /// 2. No instance: launches the host process with the file as a CLI argument.
 /// </summary>
-public sealed class OpenModelTool(HostSessionManager instanceManager) : McpServerTool
+public sealed class OpenModelTool(HostSessionManager instanceManager, HostDriverRegistry drivers) : McpServerTool
 {
     public override Tool ProtocolTool { get; } = new()
     {
@@ -51,6 +52,15 @@ public sealed class OpenModelTool(HostSessionManager instanceManager) : McpServe
             return ToolHelpers.ErrorResult($"File not found: {filePath}");
 
         var hostApp = HostAppExtensions.FromExtension(Path.GetExtension(filePath));
+        var driver = drivers.TryForFile(filePath);
+        if (driver is null)
+        {
+            if (hostApp is not null)
+                return ToolHelpers.ErrorResult($"Launch not yet supported for {hostApp}.");
+
+            return ToolHelpers.ErrorResult($"Cannot determine host application from file extension '{Path.GetExtension(filePath)}'.");
+        }
+
         if (hostApp is null)
             return ToolHelpers.ErrorResult($"Cannot determine host application from file extension '{Path.GetExtension(filePath)}'.");
 
@@ -58,10 +68,11 @@ public sealed class OpenModelTool(HostSessionManager instanceManager) : McpServe
         if (session is not null)
             return await OpenViaConnectedInstanceAsync(session, filePath, cancellationToken).ConfigureAwait(false);
 
-        return await LaunchAndOpenAsync(hostApp.Value, filePath, args, cancellationToken).ConfigureAwait(false);
+        return await LaunchAndOpenAsync(driver, hostApp.Value, filePath, args, cancellationToken).ConfigureAwait(false);
     }
 
     private async Task<CallToolResult> LaunchAndOpenAsync(
+        IHostDriver driver,
         HostApp hostApp,
         string filePath,
         IDictionary<string, JsonElement> args,
@@ -70,23 +81,21 @@ public sealed class OpenModelTool(HostSessionManager instanceManager) : McpServe
         var versionNumber = ReadString(args, "versionNumber");
         var languageCode = ReadString(args, "languageCode");
 
-        var resolved = HostLaunchCoordinator.Resolve(
-            hostApp, versionNumber, languageCode, filePath, requireVersion: false);
-        if (resolved.Error is not null)
-            return resolved.Error;
+        HostLaunchResult launch;
+        try
+        {
+            launch = await driver.LaunchAsync(
+                new HostLaunchRequest(hostApp, versionNumber, languageCode, filePath), cancellationToken).ConfigureAwait(false);
+        }
+        catch (HostDriverException ex)
+        {
+            return ToolHelpers.ErrorResult(ex.Message);
+        }
 
-        var context = resolved.Context!;
-        var started = HostLaunchCoordinator.StartProcess(context);
-        if (started.Error is not null)
-            return started.Error;
-
-        var process = started.Process!;
-        var dialogTask = HostLaunchCoordinator.StartDialogResolver(hostApp, process.Id, cancellationToken);
-
-        var connected = await WaitForInstanceConnectionAsync(process.Id, cancellationToken).ConfigureAwait(false);
-        var dialogResult = await HostLaunchCoordinator.TryAwaitResolverResultAsync(dialogTask, TimeSpan.FromSeconds(5)).ConfigureAwait(false);
+        var connected = await WaitForInstanceConnectionAsync(launch.ProcessId, cancellationToken).ConfigureAwait(false);
+        var dialogResult = await HostLaunchCoordinator.TryAwaitResolverResultAsync(launch.DialogTask, TimeSpan.FromSeconds(5)).ConfigureAwait(false);
         if (!connected)
-            return ToolHelpers.ErrorResult($"{hostApp} launched (PID={process.Id}) but bridge did not connect.");
+            return ToolHelpers.ErrorResult($"{hostApp} launched (PID={launch.ProcessId}) but bridge did not connect.");
 
         return new CallToolResult
         {
@@ -94,9 +103,9 @@ public sealed class OpenModelTool(HostSessionManager instanceManager) : McpServe
             {
                 Text = JsonSerializer.Serialize(new OpenModelResult(
                     hostApp,
-                    process.Id,
-                    context.Version,
-                    context.LanguageCode,
+                    launch.ProcessId,
+                    launch.Version,
+                    launch.LanguageCode,
                     filePath,
                     true,
                     dialogResult))
