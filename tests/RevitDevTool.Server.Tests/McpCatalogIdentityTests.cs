@@ -404,6 +404,50 @@ public sealed class McpCatalogIdentityTests
         }
     }
 
+    [Fact]
+    public async Task StandardSdkBuiltInResource_RunsHostDependentReadInsideSuppressedHostScope()
+    {
+        var hostContext = new RecordingHostContextExecutor();
+        var builtIn = new HostDependentBuiltInResource(hostContext);
+        var resource = LoadBuiltInResource(builtIn, hostContext);
+        await using var input = new MemoryStream();
+        await using var output = new MemoryStream();
+        await using var transport = new StreamServerTransport(input, output);
+        await using var server = McpServer.Create(transport, new McpServerOptions());
+
+        await resource.ReadAsync(
+            CreateRequest(server, new ReadResourceRequestParams { Uri = builtIn.ProtocolResource.Uri }, RequestMethods.ResourcesRead),
+            TestContext.Current.CancellationToken);
+
+        Assert.Equal([true], builtIn.HostScopes);
+        Assert.Equal([ExecutionGuardMode.Suppress], builtIn.ObservedModes);
+        Assert.Equal(1, hostContext.CallCount);
+        Assert.Equal(1, hostContext.ScopeExitCount);
+        Assert.Equal(ExecutionGuardMode.Passthrough, ExecutionGuardContext.Mode);
+    }
+
+    [Fact]
+    public async Task StandardSdkBuiltInPrompt_RunsInsideSuppressedHostScope()
+    {
+        var hostContext = new RecordingHostContextExecutor();
+        var builtIn = new HostDependentBuiltInPrompt(hostContext);
+        var prompt = LoadBuiltInPrompt(builtIn, hostContext);
+        await using var input = new MemoryStream();
+        await using var output = new MemoryStream();
+        await using var transport = new StreamServerTransport(input, output);
+        await using var server = McpServer.Create(transport, new McpServerOptions());
+
+        await prompt.GetAsync(
+            CreateRequest(server, new GetPromptRequestParams { Name = builtIn.ProtocolPrompt.Name }, RequestMethods.PromptsGet),
+            TestContext.Current.CancellationToken);
+
+        Assert.Equal([true], builtIn.HostScopes);
+        Assert.Equal([ExecutionGuardMode.Suppress], builtIn.ObservedModes);
+        Assert.Equal(1, hostContext.CallCount);
+        Assert.Equal(1, hostContext.ScopeExitCount);
+        Assert.Equal(ExecutionGuardMode.Passthrough, ExecutionGuardContext.Mode);
+    }
+
     private static McpServerTool LoadBuiltInTool(IBuiltInMcpTool builtIn, RecordingHostContextExecutor hostContext)
     {
         var adapterType = typeof(HostContextMcpExecution).Assembly.GetType(
@@ -412,7 +456,7 @@ public sealed class McpCatalogIdentityTests
             adapterType,
             System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic,
             binder: null,
-            args: [new[] { builtIn }, Array.Empty<IBuiltInMcpPrompt>(), Array.Empty<IBuiltInMcpResource>()],
+            args: [new[] { builtIn }, Array.Empty<IBuiltInMcpPrompt>(), Array.Empty<IBuiltInMcpResource>(), new HostContextMcpExecution(hostContext)],
             culture: null)!;
         var loader = new McpCatalogLoader(
             [new BuiltInMcpRegistryProvider([builtIn], [], [])],
@@ -424,6 +468,50 @@ public sealed class McpCatalogIdentityTests
         store.EnsureLoaded();
 
         return Assert.Single(tools);
+    }
+
+    private static McpServerPrompt LoadBuiltInPrompt(IBuiltInMcpPrompt builtIn, RecordingHostContextExecutor hostContext)
+    {
+        var adapterType = typeof(HostContextMcpExecution).Assembly.GetType(
+            "DevTools.Execution.External.Mcp.Registry.BuiltInMcpServerAdapters", throwOnError: true)!;
+        var adapter = (IMcpServerPrimitiveAdapter)Activator.CreateInstance(
+            adapterType,
+            System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic,
+            binder: null,
+            args: [Array.Empty<IBuiltInMcpTool>(), new[] { builtIn }, Array.Empty<IBuiltInMcpResource>(), new HostContextMcpExecution(hostContext)],
+            culture: null)!;
+        var loader = new McpCatalogLoader(
+            [new BuiltInMcpRegistryProvider([], [], [builtIn])],
+            NullLogger<McpCatalogLoader>.Instance,
+            [adapter]);
+        McpServerPrimitiveCollection<McpServerPrompt> prompts = [];
+        var store = new McpCatalogStore(loader, new EmptySettingsService(), [], prompts, []);
+
+        store.EnsureLoaded();
+
+        return Assert.Single(prompts);
+    }
+
+    private static McpServerResource LoadBuiltInResource(IBuiltInMcpResource builtIn, RecordingHostContextExecutor hostContext)
+    {
+        var adapterType = typeof(HostContextMcpExecution).Assembly.GetType(
+            "DevTools.Execution.External.Mcp.Registry.BuiltInMcpServerAdapters", throwOnError: true)!;
+        var adapter = (IMcpServerPrimitiveAdapter)Activator.CreateInstance(
+            adapterType,
+            System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic,
+            binder: null,
+            args: [Array.Empty<IBuiltInMcpTool>(), Array.Empty<IBuiltInMcpPrompt>(), new[] { builtIn }, new HostContextMcpExecution(hostContext)],
+            culture: null)!;
+        var loader = new McpCatalogLoader(
+            [new BuiltInMcpRegistryProvider([], [builtIn], [])],
+            NullLogger<McpCatalogLoader>.Instance,
+            [adapter]);
+        McpServerResourceCollection resources = [];
+        var store = new McpCatalogStore(loader, new EmptySettingsService(), [], [], resources);
+
+        store.EnsureLoaded();
+
+        return Assert.Single(resources);
     }
 
     private static async Task AssertIncompleteInvocationIsRejected<T>(
@@ -597,6 +685,35 @@ public sealed class McpCatalogIdentityTests
 
         public Task<DocumentOperationResult> SaveDocumentAsync(string? savePath, CancellationToken ct = default) =>
             Task.FromResult(new DocumentOperationResult(true, "saved"));
+    }
+
+    private sealed class HostDependentBuiltInPrompt(RecordingHostContextExecutor hostContext) : IBuiltInMcpPrompt
+    {
+        public Prompt ProtocolPrompt { get; } = new() { Name = "host_dependent_prompt" };
+        public List<ExecutionGuardMode> ObservedModes { get; } = [];
+        public List<bool> HostScopes { get; } = [];
+
+        public GetPromptResult Get(IReadOnlyDictionary<string, JsonElement>? arguments)
+        {
+            ObservedModes.Add(ExecutionGuardContext.Mode);
+            HostScopes.Add(hostContext.IsInScope);
+            return new GetPromptResult();
+        }
+    }
+
+    private sealed class HostDependentBuiltInResource(RecordingHostContextExecutor hostContext) : IBuiltInMcpResource
+    {
+        public string UriTemplate => "revit://model/host-dependent";
+        public Resource ProtocolResource { get; } = new() { Uri = "revit://model/host-dependent", Name = "Host Dependent Resource" };
+        public List<ExecutionGuardMode> ObservedModes { get; } = [];
+        public List<bool> HostScopes { get; } = [];
+
+        public ReadResourceResult Read(string uri)
+        {
+            ObservedModes.Add(ExecutionGuardContext.Mode);
+            HostScopes.Add(hostContext.IsInScope);
+            return new ReadResourceResult();
+        }
     }
 
     private sealed class ProbeTool(List<ExecutionGuardMode> observedModes) : McpServerTool

@@ -9,7 +9,8 @@ namespace DevTools.Execution.External.Mcp.Registry;
 internal sealed class BuiltInMcpServerAdapters(
     IEnumerable<IBuiltInMcpTool> tools,
     IEnumerable<IBuiltInMcpPrompt> prompts,
-    IEnumerable<IBuiltInMcpResource> resources) : IMcpServerPrimitiveAdapter
+    IEnumerable<IBuiltInMcpResource> resources,
+    IMcpHostExecution hostExecution) : IMcpServerPrimitiveAdapter
 {
     private readonly IReadOnlyDictionary<string, IBuiltInMcpTool> _tools = tools.ToDictionary(tool => tool.Name, StringComparer.OrdinalIgnoreCase);
     private readonly IReadOnlyDictionary<string, IBuiltInMcpPrompt> _prompts = prompts.ToDictionary(prompt => prompt.ProtocolPrompt.Name, StringComparer.OrdinalIgnoreCase);
@@ -21,12 +22,16 @@ internal sealed class BuiltInMcpServerAdapters(
         _tools.TryGetValue(registration.ProtocolTool.Name, out var tool) ? new BuiltInMcpServerTool(tool) : null;
 
     public McpServerPrompt? CreatePrompt(McpRegisteredPrompt registration) =>
-        _prompts.TryGetValue(registration.ProtocolPrompt.Name, out var prompt) ? new BuiltInMcpServerPrompt(prompt) : null;
+        _prompts.TryGetValue(registration.ProtocolPrompt.Name, out var prompt)
+            ? McpHostExecutionPrimitives.Wrap(new BuiltInMcpServerPrompt(prompt), hostExecution)
+            : null;
 
     public McpServerResource? CreateResource(McpRegisteredResource registration)
     {
         var key = registration.ProtocolResource?.Uri ?? registration.ProtocolTemplate?.UriTemplate;
-        return key is not null && _resources.TryGetValue(key, out var resource) ? new BuiltInMcpServerResource(resource) : null;
+        return key is not null && _resources.TryGetValue(key, out var resource)
+            ? McpHostExecutionPrimitives.Wrap(new BuiltInMcpServerResource(resource), hostExecution)
+            : null;
     }
 
     private sealed class BuiltInMcpServerTool(IBuiltInMcpTool tool) : McpServerTool
