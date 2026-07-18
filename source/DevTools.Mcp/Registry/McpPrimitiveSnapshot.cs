@@ -31,6 +31,14 @@ public interface IMcpServerPrimitiveAdapter
     McpServerResource? CreateResource(McpRegisteredResource registration);
 }
 
+/// <summary>Provides SDK primitives already bound to built-in host services.</summary>
+public interface IMcpServerPrimitiveProvider
+{
+    McpServerTool? CreateTool(McpRegisteredTool registration);
+    McpServerPrompt? CreatePrompt(McpRegisteredPrompt registration);
+    McpServerResource? CreateResource(McpRegisteredResource registration);
+}
+
 public sealed class DotnetMcpServerPrimitiveAdapter(
     DotnetMethodResolver methodResolver,
     IServiceProvider serviceProvider,

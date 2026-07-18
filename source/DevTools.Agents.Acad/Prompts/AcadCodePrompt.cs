@@ -1,6 +1,7 @@
-using System.Text.Json;
+using System.ComponentModel;
 using DevTools.Mcp.BuiltIn;
 using ModelContextProtocol.Protocol;
+using ModelContextProtocol.Server;
 
 namespace DevTools.Agents.Acad.Prompts;
 
@@ -10,21 +11,15 @@ namespace DevTools.Agents.Acad.Prompts;
 /// </summary>
 public sealed class AcadCodePrompt : IBuiltInMcpPrompt
 {
-    public Prompt ProtocolPrompt { get; } = new()
-    {
-        Name = "acad_code",
-        Description = "Generate AutoCAD .NET command C# code for an automation task.",
-        Arguments =
-        [
-            new PromptArgument { Name = "task", Description = "What the code should accomplish in AutoCAD", Required = true },
-            new PromptArgument { Name = "mode", Description = "Operation mode: modify (transaction with commit) or readonly (read-only transaction)", Required = false }
-        ]
-    };
+    public McpServerPrompt Primitive => McpServerPrompt.Create(typeof(AcadCodePrompt).GetMethod(nameof(GetAcadCode))!, this);
 
-    public GetPromptResult Get(IReadOnlyDictionary<string, JsonElement>? arguments)
+    [McpServerPrompt(Name = "acad_code")]
+    [Description("Generate AutoCAD .NET command C# code for an automation task.")]
+    public GetPromptResult GetAcadCode(
+        [Description("What the code should accomplish in AutoCAD.")] string task,
+        [Description("Operation mode: modify or readonly.")] string mode = "modify")
     {
-        var task = arguments?.TryGetValue("task", out var taskEl) == true ? taskEl.GetString() ?? "query entities" : "query entities";
-        var mode = arguments?.TryGetValue("mode", out var modeEl) == true ? modeEl.GetString() ?? "modify" : "modify";
+        task = string.IsNullOrWhiteSpace(task) ? "query entities" : task;
 
         var isReadonly = mode.Equals("readonly", StringComparison.OrdinalIgnoreCase);
         var instructions = isReadonly

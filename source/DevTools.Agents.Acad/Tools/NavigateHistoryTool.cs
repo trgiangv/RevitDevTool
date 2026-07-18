@@ -1,7 +1,9 @@
 using System.Text.Json;
+using System.ComponentModel;
 using DevTools.Mcp.BuiltIn;
-using DevTools.Mcp.Models;
+using ModelContextProtocol;
 using ModelContextProtocol.Protocol;
+using ModelContextProtocol.Server;
 
 namespace DevTools.Agents.Acad.Tools;
 
@@ -12,43 +14,28 @@ namespace DevTools.Agents.Acad.Tools;
 /// </summary>
 public sealed class NavigateHistoryTool(AcadHistoryNavigator navigator) : IBuiltInMcpTool
 {
-    public string Name => "navigate_history";
+    public McpServerTool Primitive => McpServerTool.Create(typeof(NavigateHistoryTool).GetMethod(nameof(NavigateHistoryAsync))!, this);
 
-    public Tool ProtocolTool { get; } = new()
+    [McpServerTool(Name = "navigate_history")]
+    [Description("Navigate AutoCAD undo/redo history.")]
+    public Task<CallToolResult> NavigateHistoryAsync(
+        [Description("Navigation direction: back or forward.")] string direction,
+        [Description("Number of steps to navigate.")] int steps = 1,
+        CancellationToken cancellationToken = default)
     {
-        Name = "navigate_history",
-        Description =
-            "Navigate undo/redo history. " +
-            "direction='back' undoes operations, 'forward' redoes them. " +
-            "Returns the history stack state after queuing the navigation. " +
-            "Note: executes asynchronously — stack counts are estimates.",
-        InputSchema = DevTools.Mcp.Schema.McpSchemaBuilder.Object(
-        [
-            DevTools.Mcp.Schema.McpSchemaBuilder.Enum("direction",
-                "Navigation direction.", ["back", "forward"]),
-            DevTools.Mcp.Schema.McpSchemaBuilder.Integer("steps",
-                "Number of steps to navigate (default=1).")
-        ],
-        required: ["direction"]),
-        Annotations = new ToolAnnotations
-        {
-            Title = "Navigate History",
-            DestructiveHint = true
-        }
-    };
+        cancellationToken.ThrowIfCancellationRequested();
+        if (steps < 1) throw new McpException("steps must be at least 1.");
+        if (!string.Equals(direction, "back", StringComparison.OrdinalIgnoreCase) &&
+            !string.Equals(direction, "forward", StringComparison.OrdinalIgnoreCase))
+            throw new McpException("direction must be either 'back' or 'forward'.");
 
-    public Task<McpToolExecutionResult> ExecuteAsync(string payloadJson, CancellationToken ct)
-    {
-        ct.ThrowIfCancellationRequested();
-        var (direction, steps) = ParseArgs(payloadJson);
-
-        if (direction == "forward")
+        if (string.Equals(direction, "forward", StringComparison.OrdinalIgnoreCase))
             return Task.FromResult(GoForward(steps));
 
         return Task.FromResult(GoBack(steps));
     }
 
-    private McpToolExecutionResult GoBack(int steps)
+    private CallToolResult GoBack(int steps)
     {
         var stack = navigator.GetBackStack();
         if (stack.Count == 0)
@@ -70,7 +57,7 @@ public sealed class NavigateHistoryTool(AcadHistoryNavigator navigator) : IBuilt
         }, JsonOpts));
     }
 
-    private McpToolExecutionResult GoForward(int steps)
+    private CallToolResult GoForward(int steps)
     {
         var stack = navigator.GetForwardStack();
         if (stack.Count == 0)
@@ -92,27 +79,8 @@ public sealed class NavigateHistoryTool(AcadHistoryNavigator navigator) : IBuilt
         }, JsonOpts));
     }
 
-    private static McpToolExecutionResult Result(string text) =>
-        McpToolExecutionResult.Completed(
-            new CallToolResult { Content = [new TextContentBlock { Text = text }] },
-            text.Contains("Nothing") || text.Contains("Cannot") ? "Navigation failed." : "Navigation queued.");
-
-    private static (string direction, int steps) ParseArgs(string json)
-    {
-        var direction = "back";
-        var steps = 1;
-        try
-        {
-            using var doc = JsonDocument.Parse(json);
-            if (doc.RootElement.TryGetProperty("direction", out var d))
-                direction = d.GetString() ?? "back";
-            if (doc.RootElement.TryGetProperty("steps", out var s) && s.TryGetInt32(out var n))
-                steps = n;
-        }
-        catch { /* defaults */ }
-        if (steps < 1) steps = 1;
-        return (direction, steps);
-    }
+    private static CallToolResult Result(string text) =>
+        new() { Content = [new TextContentBlock { Text = text }] };
 
     private static readonly JsonSerializerOptions JsonOpts = new() { WriteIndented = true };
 }

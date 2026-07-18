@@ -1,56 +1,32 @@
 using System.IO;
+using System.ComponentModel;
 using System.Text.Json;
 using System.Text.Json.Serialization;
-using DevTools.Mcp.Schema;
+using DevTools.Mcp.BuiltIn;
+using ModelContextProtocol;
 using ModelContextProtocol.Protocol;
+using ModelContextProtocol.Server;
 
 namespace DevTools.Execution.External.Mcp.BuiltIn;
 
 /// <summary>Opens a document file in the running host process via <see cref="IDocumentBridge"/>.</summary>
 public sealed class OpenDocumentTool(IDocumentBridge documentBridge) : IBuiltInMcpTool
 {
-    public string Name => "open_document";
+    public McpServerTool Primitive => McpServerTool.Create(typeof(OpenDocumentTool).GetMethod(nameof(OpenDocumentAsync))!, this);
 
-    public Tool ProtocolTool { get; } = new()
+    [McpServerTool(Name = "open_document")]
+    [Description("Open a document file in the running CAD/BIM host.")]
+    public async Task<CallToolResult> OpenDocumentAsync(
+        [Description("Full path to the document file.")] string filePath,
+        CancellationToken cancellationToken = default)
     {
-        Name = "open_document",
-        Description =
-            "Open a document file in the running host process.\n" +
-            "Revit: opens .rvt/.rfa files via UIApplication.\n" +
-            "AutoCAD: opens .dwg/.dxf/.dwt files via DocumentManager.",
-        InputSchema = McpSchemaBuilder.Object(
-        [
-            McpSchemaBuilder.String(McpPropertyNames.FilePath, "Full path to the document file.")
-        ],
-        required: [McpPropertyNames.FilePath]),
-        Annotations = new ToolAnnotations
-        {
-            Title = "Open Document",
-            DestructiveHint = true,
-            OpenWorldHint = true
-        }
-    };
-
-    public async Task<McpToolExecutionResult> ExecuteAsync(string payloadJson, CancellationToken ct)
-    {
-        using var doc = JsonDocument.Parse(payloadJson);
-        if (!doc.RootElement.TryGetProperty(McpPropertyNames.FilePath, out var pathElement) ||
-            pathElement.ValueKind != JsonValueKind.String)
-        {
-            return McpToolExecutionResult.Failed(
-                McpExecutionErrorCodes.ToolInvokeFailed, $"Missing required '{McpPropertyNames.FilePath}' parameter.");
-        }
-
-        var filePath = pathElement.GetString();
         if (string.IsNullOrWhiteSpace(filePath))
-            return McpToolExecutionResult.Failed(
-                McpExecutionErrorCodes.ToolInvokeFailed, $"{McpPropertyNames.FilePath} must not be empty.");
+            throw new McpException("filePath must not be empty.");
 
         if (!File.Exists(filePath))
-            return McpToolExecutionResult.Failed(
-                McpExecutionErrorCodes.ToolInvokeFailed, $"File not found: {filePath}");
+            throw new McpException($"File not found: {filePath}");
 
-        var result = await documentBridge.OpenDocumentAsync(filePath!, ct).ConfigureAwait(false);
+        var result = await documentBridge.OpenDocumentAsync(filePath, cancellationToken).ConfigureAwait(false);
 
         var callResult = new CallToolResult
         {
@@ -64,7 +40,7 @@ public sealed class OpenDocumentTool(IDocumentBridge documentBridge) : IBuiltInM
             }]
         };
 
-        return McpToolExecutionResult.Completed(callResult, result.Message);
+        return callResult;
     }
     
     [UsedImplicitly(ImplicitUseTargetFlags.WithMembers)]

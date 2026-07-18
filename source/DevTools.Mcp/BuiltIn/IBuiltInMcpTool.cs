@@ -1,11 +1,9 @@
-using ModelContextProtocol.Protocol;
+using ModelContextProtocol.Server;
 
 namespace DevTools.Mcp.BuiltIn;
 
-/// <summary>Self-describing built-in MCP tool, registered via DI.</summary>
+/// <summary>Typed SDK-bound built-in MCP tool, registered via DI.</summary>
 public interface IBuiltInMcpTool
 {
-    string Name { get; }
-    Tool ProtocolTool { get; }
-    Task<McpToolExecutionResult> ExecuteAsync(string payloadJson, CancellationToken ct);
+    McpServerTool Primitive { get; }
 }

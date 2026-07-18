@@ -1,11 +1,9 @@
-using ModelContextProtocol.Protocol;
+using ModelContextProtocol.Server;
 
 namespace DevTools.Mcp.BuiltIn;
 
-/// <summary>Self-describing built-in MCP resource, registered via DI.</summary>
+/// <summary>Typed SDK-bound built-in MCP resource, registered via DI.</summary>
 public interface IBuiltInMcpResource
 {
-    string UriTemplate { get; }
-    Resource ProtocolResource { get; }
-    ReadResourceResult Read(string uri);
+    McpServerResource Primitive { get; }
 }

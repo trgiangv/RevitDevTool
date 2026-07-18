@@ -30,9 +30,9 @@ public sealed class McpPrimitiveDispatcher(
     private readonly ConcurrentDictionary<string, McpServerTool> _cachedTools = new(StringComparer.OrdinalIgnoreCase);
     private readonly ConcurrentDictionary<string, McpServerPrompt> _cachedPrompts = new(StringComparer.OrdinalIgnoreCase);
     private readonly ConcurrentDictionary<string, McpServerResource> _cachedResources = new(StringComparer.OrdinalIgnoreCase);
-    private readonly Dictionary<string, IBuiltInMcpTool> _builtInToolIndex = builtInTools.ToDictionary(t => t.Name, StringComparer.OrdinalIgnoreCase);
-    private readonly Dictionary<string, IBuiltInMcpResource> _builtInResourceIndex = builtInResources.ToDictionary(r => r.UriTemplate, StringComparer.OrdinalIgnoreCase);
-    private readonly Dictionary<string, IBuiltInMcpPrompt> _builtInPromptIndex = builtInPrompts.ToDictionary(p => p.ProtocolPrompt.Name, StringComparer.OrdinalIgnoreCase);
+    private readonly Dictionary<string, McpServerTool> _builtInToolIndex = builtInTools.ToDictionary(tool => tool.Primitive.ProtocolTool.Name, tool => tool.Primitive, StringComparer.OrdinalIgnoreCase);
+    private readonly Dictionary<string, McpServerResource> _builtInResourceIndex = builtInResources.ToDictionary(resource => resource.Primitive.ProtocolResource?.Uri ?? resource.Primitive.ProtocolResourceTemplate.UriTemplate, resource => resource.Primitive, StringComparer.OrdinalIgnoreCase);
+    private readonly Dictionary<string, McpServerPrompt> _builtInPromptIndex = builtInPrompts.ToDictionary(prompt => prompt.Primitive.ProtocolPrompt.Name, prompt => prompt.Primitive, StringComparer.OrdinalIgnoreCase);
 
     #region Tools
 
@@ -111,7 +111,20 @@ public sealed class McpPrimitiveDispatcher(
         if (!_builtInToolIndex.TryGetValue(toolName, out var tool))
             return Task.FromResult(McpToolExecutionResult.Failed(
                 McpExecutionErrorCodes.ToolNotImplemented, $"No C# tool registered for '{toolName}'."));
-        return tool.ExecuteAsync(normalizedPayload, ct);
+        return InvokeBuiltInToolAsync(tool, toolName, normalizedPayload, ct);
+    }
+
+    private static async Task<McpToolExecutionResult> InvokeBuiltInToolAsync(McpServerTool tool, string toolName, string normalizedPayload, CancellationToken ct)
+    {
+        using var document = JsonDocument.Parse(normalizedPayload);
+        var requestParams = new CallToolRequestParams
+        {
+            Name = toolName,
+            Arguments = document.RootElement.EnumerateObject().ToDictionary(property => property.Name, property => property.Value)
+        };
+        var request = RequestContextFactory.Create(requestParams, RequestMethods.ToolsCall);
+        var result = await tool.InvokeAsync(request, ct).ConfigureAwait(false);
+        return McpToolExecutionResult.Completed(result, $"Completed '{toolName}'.");
     }
 
     #endregion
@@ -136,7 +149,14 @@ public sealed class McpPrimitiveDispatcher(
     {
         if (!_builtInPromptIndex.TryGetValue(prompt.ProtocolPrompt.Name, out var builtIn))
             throw new InvalidOperationException($"No built-in prompt registered for '{prompt.ProtocolPrompt.Name}'.");
-        return builtIn.Get(arguments);
+        var requestParams = new GetPromptRequestParams
+        {
+            Name = prompt.ProtocolPrompt.Name,
+            Arguments = arguments?.ToDictionary(pair => pair.Key, pair => pair.Value)
+        };
+        return DotnetMcpServerFactory.GetCompletedResult(
+            builtIn.GetAsync(RequestContextFactory.Create(requestParams, RequestMethods.PromptsGet)),
+            "prompt", prompt.ProtocolPrompt.Name);
     }
 
     private GetPromptResult InvokeDotnetPrompt(McpRegisteredPrompt prompt, IReadOnlyDictionary<string, JsonElement>? arguments, CancellationToken ct)
@@ -187,7 +207,10 @@ public sealed class McpPrimitiveDispatcher(
         var resourceUri = resource.ProtocolResource?.Uri ?? resource.ProtocolTemplate?.UriTemplate ?? string.Empty;
         if (!_builtInResourceIndex.TryGetValue(resourceUri, out var builtIn))
             throw new InvalidOperationException($"No built-in resource registered for '{resourceUri}'.");
-        return builtIn.Read(uri);
+        var requestParams = new ReadResourceRequestParams { Uri = uri };
+        return DotnetMcpServerFactory.GetCompletedResult(
+            builtIn.ReadAsync(RequestContextFactory.Create(requestParams, RequestMethods.ResourcesRead)),
+            "resource", resourceUri);
     }
 
     private ReadResourceResult InvokeDotnetResource(McpRegisteredResource resource, string uri, CancellationToken ct)

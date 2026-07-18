@@ -1,6 +1,8 @@
 using System.Reflection;
+using System.ComponentModel;
 using DevTools.Mcp.BuiltIn;
 using ModelContextProtocol.Protocol;
+using ModelContextProtocol.Server;
 
 namespace DevTools.Agents.Revit.Resources;
 
@@ -12,17 +14,10 @@ public sealed class RevitCSharpCheatsheet : IBuiltInMcpResource
 {
     private static readonly Lazy<string> Content = new(LoadEmbeddedContent);
 
-    public string UriTemplate => "revit://csharp-cheatsheet";
+    public McpServerResource Primitive => McpServerResource.Create(typeof(RevitCSharpCheatsheet).GetMethod(nameof(ReadCSharpCheatsheet))!, this);
 
-    public Resource ProtocolResource { get; } = new()
-    {
-        Uri = "revit://csharp-cheatsheet",
-        Name = "Revit C# Cheatsheet",
-        Description = "Common Revit C# API patterns, transaction usage, units, query patterns, and version pitfalls. Read before writing execute_csharp_code.",
-        MimeType = "text/markdown"
-    };
-
-    public ReadResourceResult Read(string uri)
+    [McpServerResource(UriTemplate = "revit://csharp-cheatsheet", Name = "revit_csharp_cheatsheet")]
+    public ReadResourceResult ReadCSharpCheatsheet()
     {
         return new ReadResourceResult
         {
@@ -30,7 +25,7 @@ public sealed class RevitCSharpCheatsheet : IBuiltInMcpResource
             [
                 new TextResourceContents
                 {
-                    Uri = uri,
+                    Uri = "revit://csharp-cheatsheet",
                     MimeType = "text/markdown",
                     Text = Content.Value
                 }

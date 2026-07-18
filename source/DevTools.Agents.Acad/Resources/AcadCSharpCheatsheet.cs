@@ -1,7 +1,9 @@
 using System.IO;
 using System.Reflection;
+using System.ComponentModel;
 using DevTools.Mcp.BuiltIn;
 using ModelContextProtocol.Protocol;
+using ModelContextProtocol.Server;
 
 namespace DevTools.Agents.Acad.Resources;
 
@@ -13,17 +15,10 @@ public sealed class AcadCSharpCheatsheet : IBuiltInMcpResource
 {
     private static readonly Lazy<string> Content = new(LoadEmbeddedContent);
 
-    public string UriTemplate => "acad://csharp-cheatsheet";
+    public McpServerResource Primitive => McpServerResource.Create(typeof(AcadCSharpCheatsheet).GetMethod(nameof(ReadCSharpCheatsheet))!, this);
 
-    public Resource ProtocolResource { get; } = new()
-    {
-        Uri = "acad://csharp-cheatsheet",
-        Name = "AutoCAD C# Cheatsheet",
-        Description = "Common AutoCAD C# API patterns, transaction usage, entity creation, layer operations, and selection. Read before writing execute_csharp_code.",
-        MimeType = "text/markdown"
-    };
-
-    public ReadResourceResult Read(string uri)
+    [McpServerResource(UriTemplate = "acad://csharp-cheatsheet", Name = "acad_csharp_cheatsheet")]
+    public ReadResourceResult ReadCSharpCheatsheet()
     {
         return new ReadResourceResult
         {
@@ -31,7 +26,7 @@ public sealed class AcadCSharpCheatsheet : IBuiltInMcpResource
             [
                 new TextResourceContents
                 {
-                    Uri = uri,
+                    Uri = "acad://csharp-cheatsheet",
                     MimeType = "text/markdown",
                     Text = Content.Value
                 }

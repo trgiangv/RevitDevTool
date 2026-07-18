@@ -1,5 +1,7 @@
 using DevTools.Mcp.BuiltIn;
+using System.ComponentModel;
 using ModelContextProtocol.Protocol;
+using ModelContextProtocol.Server;
 using RevitDevTool.Core;
 
 namespace DevTools.Agents.Revit.Resources;
@@ -10,24 +12,18 @@ namespace DevTools.Agents.Revit.Resources;
 /// </summary>
 public sealed class RevitViewScreenshot : IBuiltInMcpResource
 {
-    public string UriTemplate => "revit://view/screenshot";
+    public McpServerResource Primitive => McpServerResource.Create(typeof(RevitViewScreenshot).GetMethod(nameof(ReadViewScreenshot))!, this);
 
-    public Resource ProtocolResource { get; } = new()
-    {
-        Uri = "revit://view/screenshot",
-        Name = "Revit View Screenshot",
-        Description = "Screenshot of the active view as PNG image. Use after modifications to visually verify results.",
-        MimeType = "image/png"
-    };
-
-    public ReadResourceResult Read(string uri)
+    [McpServerResource(UriTemplate = "revit://view/screenshot", Name = "revit_view_screenshot")]
+    [Description("PNG screenshot of the active Revit view.")]
+    public ReadResourceResult ReadViewScreenshot()
     {
         var view = RevitContext.ActiveView;
         if (view is null)
-            return ErrorResult(uri, "No active view available.");
+            return ErrorResult("revit://view/screenshot", "No active view available.");
 
         if (!RevitImageExporter.CanExport(view))
-            return ErrorResult(uri, $"View '{view.Name}' (type={view.ViewType}) cannot be exported as image.");
+            return ErrorResult("revit://view/screenshot", $"View '{view.Name}' (type={view.ViewType}) cannot be exported as image.");
 
         var result = RevitImageExporter.ExportActiveView(new ImageExportSettings
         {
@@ -40,7 +36,7 @@ public sealed class RevitViewScreenshot : IBuiltInMcpResource
         {
             Contents =
             [
-                BlobResourceContents.FromBytes(imageBytes, uri, "image/png")
+                BlobResourceContents.FromBytes(imageBytes, "revit://view/screenshot", "image/png")
             ]
         };
     }

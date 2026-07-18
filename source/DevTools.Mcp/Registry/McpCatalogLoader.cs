@@ -13,6 +13,7 @@ public sealed class McpCatalogLoader(
     private readonly IReadOnlyList<IMcpRegistryProvider> _providers = providers.ToList();
     private readonly IReadOnlyDictionary<ExecutionMode, IMcpServerPrimitiveAdapter> _adapters =
         (primitiveAdapters ?? []).GroupBy(adapter => adapter.SourceKind).ToDictionary(group => group.Key, group => group.First());
+    private readonly IReadOnlyList<IMcpServerPrimitiveProvider> _primitiveProviders = providers.OfType<IMcpServerPrimitiveProvider>().ToList();
 
     public McpCatalogLoadResult LoadCatalog(
         IEnumerable<string> dotnetPaths,
@@ -58,9 +59,9 @@ public sealed class McpCatalogLoader(
 
     private McpPrimitiveSnapshot BuildSnapshot(McpRegistryCatalog catalog, List<McpCatalogDiagnostic> diagnostics)
     {
-        var tools = BuildPrimitives(catalog.Tools, "tool", tool => tool.ProtocolTool.Name, tool => ResolveAdapter(tool.Binding.SourceKind)?.CreateTool(tool), diagnostics);
-        var prompts = BuildPrimitives(catalog.Prompts, "prompt", prompt => prompt.ProtocolPrompt.Name, prompt => ResolveAdapter(prompt.Binding.SourceKind)?.CreatePrompt(prompt), diagnostics);
-        var resources = BuildPrimitives(catalog.Resources, "resource", ResourceKey, resource => ResolveAdapter(resource.Binding.SourceKind)?.CreateResource(resource), diagnostics);
+        var tools = BuildPrimitives(catalog.Tools, "tool", tool => tool.ProtocolTool.Name, tool => CreateTool(tool), diagnostics);
+        var prompts = BuildPrimitives(catalog.Prompts, "prompt", prompt => prompt.ProtocolPrompt.Name, prompt => CreatePrompt(prompt), diagnostics);
+        var resources = BuildPrimitives(catalog.Resources, "resource", ResourceKey, resource => CreateResource(resource), diagnostics);
         return new McpPrimitiveSnapshot(tools, prompts, resources, diagnostics.ToList());
     }
 
@@ -99,6 +100,18 @@ public sealed class McpCatalogLoader(
 
     private IMcpServerPrimitiveAdapter? ResolveAdapter(ExecutionMode sourceKind) =>
         _adapters.TryGetValue(sourceKind, out var adapter) ? adapter : null;
+
+    private McpServerTool? CreateTool(McpRegisteredTool registration) =>
+        _primitiveProviders.Select(provider => provider.CreateTool(registration)).FirstOrDefault(primitive => primitive is not null)
+        ?? ResolveAdapter(registration.Binding.SourceKind)?.CreateTool(registration);
+
+    private McpServerPrompt? CreatePrompt(McpRegisteredPrompt registration) =>
+        _primitiveProviders.Select(provider => provider.CreatePrompt(registration)).FirstOrDefault(primitive => primitive is not null)
+        ?? ResolveAdapter(registration.Binding.SourceKind)?.CreatePrompt(registration);
+
+    private McpServerResource? CreateResource(McpRegisteredResource registration) =>
+        _primitiveProviders.Select(provider => provider.CreateResource(registration)).FirstOrDefault(primitive => primitive is not null)
+        ?? ResolveAdapter(registration.Binding.SourceKind)?.CreateResource(registration);
 
     private void ConfigureProviderPaths(IEnumerable<string> dotnetPaths, IEnumerable<string> pythonPaths)
     {

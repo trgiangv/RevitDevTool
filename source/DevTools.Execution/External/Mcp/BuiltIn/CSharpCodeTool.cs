@@ -1,10 +1,12 @@
 using System.Runtime.CompilerServices;
-using System.Text.Json;
+using System.ComponentModel;
 using DevTools.Execution.Interfaces;
 using DevTools.Execution.Models;
 using DevTools.Execution.Providers.CSharp;
-using DevTools.Mcp.Schema;
+using DevTools.Mcp.BuiltIn;
+using ModelContextProtocol;
 using ModelContextProtocol.Protocol;
+using ModelContextProtocol.Server;
 
 namespace DevTools.Execution.External.Mcp.BuiltIn;
 
@@ -17,61 +19,30 @@ public sealed class CSharpCodeTool(
 {
     private static readonly TimeSpan CompileTimeout = TimeSpan.FromSeconds(30);
 
-    public string Name => "execute_csharp_code";
+    public McpServerTool Primitive => McpServerTool.Create(typeof(CSharpCodeTool).GetMethod(nameof(ExecuteAsync))!, this);
 
-    public Tool ProtocolTool { get; } = new()
+    [McpServerTool(Name = "execute_csharp_code")]
+    [Description("Compile and execute C# code in the running CAD/BIM host.")]
+    public async Task<CallToolResult> ExecuteAsync(
+        [Description("Complete C# source code for the connected host.")] string code,
+        CancellationToken cancellationToken = default)
     {
-        Name = "execute_csharp_code",
-        Description =
-            "Compile and execute C# code in the running host process. " +
-            "Host API assemblies auto-referenced. Use #r for extras, #r \"nuget:\" for packages.\n" +
-            "BEFORE WRITING CODE: Read available resources (list_dynamic_resources) for API patterns and model state.\n" +
-            "Error responses: [COMPILATION ERROR] fix code, [RUNTIME ERROR] check logic, [ROLLBACK] constraint violation.",
-        InputSchema = McpSchemaBuilder.Object(
-        [
-            McpSchemaBuilder.String(
-                IpcPropertyNames.Code,
-                "Complete C# source. Revit: implement IExternalCommand, set 'message' ref param. " +
-                "AutoCAD: use [CommandMethod]. Include all usings and attributes.")
-        ],
-        required: [IpcPropertyNames.Code]),
-        Annotations = new ToolAnnotations
-        {
-            Title = "Execute C# Code",
-            DestructiveHint = true,
-            OpenWorldHint = true
-        }
-    };
-
-    public async Task<McpToolExecutionResult> ExecuteAsync(
-        string payloadJson, CancellationToken ct)
-    {
-        using var doc = JsonDocument.Parse(payloadJson);
-        if (!doc.RootElement.TryGetProperty(IpcPropertyNames.Code, out var codeElement) ||
-            codeElement.ValueKind != JsonValueKind.String)
-        {
-            return McpToolExecutionResult.Failed(
-                McpExecutionErrorCodes.ToolInvokeFailed, "Missing required 'code' parameter.");
-        }
-
-        var code = codeElement.GetString();
         if (string.IsNullOrWhiteSpace(code))
-            return McpToolExecutionResult.Failed(
-                McpExecutionErrorCodes.ToolInvokeFailed, "Code parameter must not be empty.");
+            throw new McpException("Code parameter must not be empty.");
 
         ScriptCompilationResult? compilationResult = null;
         try
         {
-            using var timeoutCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
+            using var timeoutCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
             timeoutCts.CancelAfter(CompileTimeout);
 
             try
             {
                 compilationResult = await compiler
-                    .CompileAsync(code!, scriptBridge, ct: timeoutCts.Token)
+                    .CompileAsync(code, scriptBridge, ct: timeoutCts.Token)
                     .ConfigureAwait(false);
             }
-            catch (OperationCanceledException) when (!ct.IsCancellationRequested)
+            catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
             {
                 return ErrorResult($"[COMPILATION ERROR] Timed out after {CompileTimeout.TotalSeconds}s. " +
                     "Simplify code or reduce #r nuget dependencies.");
@@ -84,7 +55,7 @@ public sealed class CSharpCodeTool(
             }
 
             var result = await hostContext
-                .ExecuteAsync(() => commandRunner.RunCompiledCommand(compilationResult.Command), ct)
+                .ExecuteAsync(() => commandRunner.RunCompiledCommand(compilationResult.Command), cancellationToken)
                 .ConfigureAwait(false);
 
             if (!result.Success)
@@ -105,7 +76,7 @@ public sealed class CSharpCodeTool(
             {
                 Content = [new TextContentBlock { Text = output }]
             };
-            return McpToolExecutionResult.Completed(callResult, $"Completed '{Name}'.");
+            return callResult;
         }
         finally
         {
@@ -113,14 +84,14 @@ public sealed class CSharpCodeTool(
         }
     }
 
-    private McpToolExecutionResult ErrorResult(string text)
+    private static CallToolResult ErrorResult(string text)
     {
         var errorResult = new CallToolResult
         {
             IsError = true,
             Content = [new TextContentBlock { Text = text }]
         };
-        return McpToolExecutionResult.Completed(errorResult, $"Failed '{Name}'.");
+        return errorResult;
     }
 
     [MethodImpl(MethodImplOptions.NoInlining)]
