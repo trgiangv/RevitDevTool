@@ -6,6 +6,7 @@ using System.Text;
 using System.Windows.Threading;
 using DevTools.Execution.External.Connections;
 using DevTools.Mcp.Schema;
+using DevTools.Mcp.Registry;
 using DevTools.Presentation.Models;
 using DevTools.UI.Behaviors;
 using DevTools.UI.Theme;
@@ -58,6 +59,8 @@ public sealed partial class McpRegistryViewModel : ObservableObject, IBusyViewMo
     private partial string ExecutionStatusText { get; set; } = "Idle";
     private ObservableCollection<McpToolItem> Tools { get; } = [];
     public ObservableCollection<McpToolItem> FilteredTools { get; } = [];
+    public ObservableCollection<McpCatalogDiagnostic> Diagnostics { get; } = [];
+    public bool HasDiagnostics => Diagnostics.Count > 0;
     public bool ShowStatusPanel => IsBusy || IsExecuting;
     public string StatusPanelText => IsBusy ? BusyMessage : ExecutionStatusText;
 
@@ -157,6 +160,11 @@ public sealed partial class McpRegistryViewModel : ObservableObject, IBusyViewMo
 
     private void RebuildToolList()
     {
+        Diagnostics.Clear();
+        foreach (var diagnostic in _catalogStore.Diagnostics)
+            Diagnostics.Add(diagnostic);
+        OnPropertyChanged(nameof(HasDiagnostics));
+
         Tools.Clear();
         foreach (var tool in _catalogStore.RegisteredTools)
         {

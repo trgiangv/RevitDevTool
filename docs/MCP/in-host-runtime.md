@@ -72,6 +72,10 @@ A single `McpPrimitiveDispatcher` (in `DevTools.Execution/External/Mcp/Dispatche
 
 `McpPrimitiveBinding.CreatePrimitiveId()` normalizes IDs for stable lookup and duplicate handling.
 
+## Standard SDK Primitive Execution
+
+The standard in-host SDK server receives concrete .NET, Python, and temporary built-in `McpServerTool`, `McpServerPrompt`, and `McpServerResource` instances from `McpCatalogStore`. Every invocation is decorated through `IMcpHostExecution`; `HostContextMcpExecution` sets `ExecutionGuardContext.Mode` to `Suppress` and delegates to the host-provided `IHostContextExecutor`. This keeps the registry host-neutral while preserving Revit/AutoCAD API-thread safety and cancellation for direct SDK calls. The registry UI exposes catalog diagnostics after every `CatalogChanged` event so rejected or failed registrations remain operator-visible.
+
 ## Parser Library
 
 `source/DevTools.Mcp/` and `source/DevTools.Ipc/` contain shared bridge and registry contracts:

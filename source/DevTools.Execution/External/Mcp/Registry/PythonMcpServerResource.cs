@@ -35,10 +35,10 @@ public sealed class PythonMcpServerResource(McpRegisteredResource registration, 
     }
 }
 
-internal sealed class PythonMcpServerPrimitiveAdapter(PythonExecutor executor) : IMcpServerPrimitiveAdapter
+internal sealed class PythonMcpServerPrimitiveAdapter(PythonExecutor executor, IMcpHostExecution hostExecution) : IMcpServerPrimitiveAdapter
 {
     public ExecutionMode SourceKind => ExecutionMode.Python;
-    public McpServerTool? CreateTool(McpRegisteredTool registration) => new PythonMcpServerTool(registration, executor);
-    public McpServerPrompt? CreatePrompt(McpRegisteredPrompt registration) => new PythonMcpServerPrompt(registration, executor);
-    public McpServerResource? CreateResource(McpRegisteredResource registration) => new PythonMcpServerResource(registration, executor);
+    public McpServerTool? CreateTool(McpRegisteredTool registration) => McpHostExecutionPrimitives.Wrap(new PythonMcpServerTool(registration, executor), hostExecution);
+    public McpServerPrompt? CreatePrompt(McpRegisteredPrompt registration) => McpHostExecutionPrimitives.Wrap(new PythonMcpServerPrompt(registration, executor), hostExecution);
+    public McpServerResource? CreateResource(McpRegisteredResource registration) => McpHostExecutionPrimitives.Wrap(new PythonMcpServerResource(registration, executor), hostExecution);
 }

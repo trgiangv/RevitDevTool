@@ -32,6 +32,7 @@
         <ProjectReference Include="..\..\source\DevTools.Daemon\DevTools.Daemon.csproj" />
         <ProjectReference Include="..\..\source\DevTools.Ipc\DevTools.Ipc.csproj" />
         <ProjectReference Include="..\..\source\DevTools.Mcp\DevTools.Mcp.csproj" />
+        <ProjectReference Include="..\..\source\DevTools.Presentation\DevTools.Presentation.csproj" />
     </ItemGroup>
 
     <ItemGroup>
