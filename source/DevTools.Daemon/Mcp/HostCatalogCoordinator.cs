@@ -1,5 +1,6 @@
 using DevTools.Daemon.Mcp.Tools;
 using DevTools.Mcp.Routing.Catalog;
+using DevTools.Daemon.Hosting;
 using Microsoft.Extensions.Logging;
 
 namespace DevTools.Daemon.Mcp;
@@ -18,25 +19,21 @@ public sealed class HostCatalogCoordinator : IAsyncDisposable
     private int activeRefreshes;
     private bool disposing;
 
-    public HostCatalogCoordinator(McpEngine engine, ILogger<CatalogService> catalogLogger, ILogger<HostCatalogCoordinator> logger)
+    public HostCatalogCoordinator(McpEngine engine, DaemonSettings settings, ILogger<CatalogService> catalogLogger, ILogger<HostCatalogCoordinator> logger)
     {
         var catalogService = new CatalogService(
             engine.InstanceManager,
             engine.ToolCollection,
             engine.PromptCollection,
             engine.ResourceCollection,
-            engine.DynamicToolCatalog,
-            engine.DynamicResourceCatalog,
-            engine.DynamicPromptCatalog,
+            engine.BrokerCatalog,
+            settings.McpSurface == McpSurfaceMode.Native,
             engine.LocalTools,
             catalogLogger,
             CancellationToken.None);
         rebuildSnapshotAsync = catalogService.RebuildCatalogAsync;
         this.logger = logger;
 
-        var refreshTool = engine.LocalTools.OfType<RefreshDynamicCatalog>().FirstOrDefault();
-        if (refreshTool is not null)
-            refreshTool.RefreshDelegate = RebuildSnapshotAsync;
     }
 
     internal HostCatalogCoordinator(Func<CancellationToken, Task> rebuildSnapshotAsync)

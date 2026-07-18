@@ -3,6 +3,7 @@ using DevTools.Daemon.Dashboard;
 using DevTools.Daemon.Mcp;
 using DevTools.Daemon.Tray;
 using DevTools.Mcp.Routing.Catalog;
+using DevTools.Mcp.Routing.Broker;
 using DevTools.Utilities;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -72,9 +73,7 @@ public static class DaemonHostBuilder
         builder.Services.AddSingleton(_ => DaemonSettings.Load());
         builder.Services.AddSingleton<IAuthService, AuthService>();
         builder.Services.AddSingleton<HostSessionManager>();
-        builder.Services.AddSingleton<DynamicToolCatalog>();
-        builder.Services.AddSingleton<DynamicResourceCatalog>();
-        builder.Services.AddSingleton<DynamicPromptCatalog>();
+        builder.Services.AddSingleton<BrokerCatalogIndex>();
         builder.Services.AddSingleton<McpEngine>();
         builder.Services.AddSingleton<HostCatalogCoordinator>();
         builder.Services.AddSingleton<ControlPipeHandler>();

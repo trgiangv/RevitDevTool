@@ -2,6 +2,7 @@ using System.Text.Json.Serialization;
 
 namespace DevTools.Daemon.Contracts;
 
+// Gateway wire names are stable; host_apps is populated from connected session metadata, not pipe names.
 [UsedImplicitly]
 public sealed record GatewayRegisterMessage(
     [property: JsonPropertyName(IpcPropertyNames.Type)] string Type,

@@ -86,6 +86,7 @@ internal sealed class GatewayHostedService(
                 return authService.AccessToken;
             },
             options,
+            engine.InstanceManager,
             loggerFactory,
             loggerFactory.CreateLogger<GatewayTunnelClient>());
 

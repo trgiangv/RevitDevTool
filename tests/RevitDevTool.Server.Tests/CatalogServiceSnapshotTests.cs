@@ -4,6 +4,8 @@ using System.Runtime.CompilerServices;
 using DevTools.Mcp;
 using DevTools.Mcp.Routing;
 using DevTools.Mcp.Routing.Catalog;
+using DevTools.Mcp.Routing.Broker;
+using DevTools.Daemon.Hosting;
 using Microsoft.Extensions.Logging.Abstractions;
 using ModelContextProtocol.Client;
 using ModelContextProtocol.Protocol;
@@ -19,15 +21,15 @@ public sealed class CatalogServiceSnapshotTests
         var healthy = new SnapshotSession(5201, "healthy_tool");
         var failing = new SnapshotSession(5202, "failing_tool");
         var manager = new SnapshotInstanceManager([healthy, failing]);
-        var dynamicTools = new DynamicToolCatalog();
-        var catalog = CreateCatalog(manager, dynamicTools);
+        var broker = new BrokerCatalogIndex();
+        var catalog = CreateCatalog(manager, broker);
 
         await catalog.RebuildCatalogAsync(TestContext.Current.CancellationToken);
         failing.FailLists = true;
         await catalog.RebuildCatalogAsync(TestContext.Current.CancellationToken);
 
-        Assert.Contains(dynamicTools.List(), entry => entry.Tool.Name == "healthy_tool");
-        Assert.Contains(dynamicTools.List(), entry => entry.Tool.Name == "failing_tool");
+        Assert.Contains(broker.Search(new BrokerSearchRequest(null, null, null)).Items, entry => entry.Name == "healthy_tool");
+        Assert.Contains(broker.Search(new BrokerSearchRequest(null, null, null)).Items, entry => entry.Name == "failing_tool");
     }
 
     [Fact]
@@ -36,8 +38,8 @@ public sealed class CatalogServiceSnapshotTests
         var healthy = new SnapshotSession(5203, "healthy_tool");
         var failing = new SnapshotSession(5204, "failing_tool");
         var manager = new SnapshotInstanceManager([healthy, failing]);
-        var dynamicTools = new DynamicToolCatalog();
-        var catalog = CreateCatalog(manager, dynamicTools);
+        var broker = new BrokerCatalogIndex();
+        var catalog = CreateCatalog(manager, broker);
 
         await catalog.RebuildCatalogAsync(TestContext.Current.CancellationToken);
         failing.FailLists = true;
@@ -45,11 +47,11 @@ public sealed class CatalogServiceSnapshotTests
         manager.Remove(failing);
         await catalog.RebuildCatalogAsync(TestContext.Current.CancellationToken);
 
-        Assert.Contains(dynamicTools.List(), entry => entry.Tool.Name == "healthy_tool");
-        Assert.DoesNotContain(dynamicTools.List(), entry => entry.Tool.Name == "failing_tool");
+        Assert.Contains(broker.Search(new BrokerSearchRequest(null, null, null)).Items, entry => entry.Name == "healthy_tool");
+        Assert.DoesNotContain(broker.Search(new BrokerSearchRequest(null, null, null)).Items, entry => entry.Name == "failing_tool");
     }
 
-    private static CatalogService CreateCatalog(SnapshotInstanceManager manager, DynamicToolCatalog dynamicTools)
+    private static CatalogService CreateCatalog(SnapshotInstanceManager manager, BrokerCatalogIndex broker)
     {
         McpServerPrimitiveCollection<McpServerTool> tools = [];
         McpServerPrimitiveCollection<McpServerPrompt> prompts = [];
@@ -59,9 +61,8 @@ public sealed class CatalogServiceSnapshotTests
             tools,
             prompts,
             resources,
-            dynamicTools,
-            new DynamicResourceCatalog(),
-            new DynamicPromptCatalog(),
+            broker,
+            nativeSurface: false,
             [],
             NullLogger<CatalogService>.Instance,
             CancellationToken.None);

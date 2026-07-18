@@ -16,7 +16,7 @@ public sealed class ListMachinesTool(IAuthService authService, IOptions<GatewayO
     {
         public const string Name = "list_machines";
         public const string Description =
-            "List all connected machines for this user. Returns device names and running host apps per machine.";
+            "List gateway machines after the gateway has selected this daemon. Machine selection uses x-target-machine before MCP initialization; hostId is only a local process ID.";
     }
 
     private static readonly HttpClient Http = new();

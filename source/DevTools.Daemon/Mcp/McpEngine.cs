@@ -4,6 +4,7 @@ using Microsoft.Extensions.Options;
 using ModelContextProtocol.Server;
 using DevTools.Daemon.Mcp.Tools;
 using DevTools.Mcp.Routing.Catalog;
+using DevTools.Mcp.Routing.Broker;
 
 namespace DevTools.Daemon.Mcp;
 
@@ -14,9 +15,7 @@ namespace DevTools.Daemon.Mcp;
 public sealed class McpEngine
 {
     public HostSessionManager InstanceManager { get; }
-    public DynamicToolCatalog DynamicToolCatalog { get; }
-    public DynamicResourceCatalog DynamicResourceCatalog { get; }
-    public DynamicPromptCatalog DynamicPromptCatalog { get; }
+    public BrokerCatalogIndex BrokerCatalog { get; }
     public McpServerPrimitiveCollection<McpServerTool> ToolCollection { get; }
     public McpServerPrimitiveCollection<McpServerPrompt> PromptCollection { get; }
     public McpServerResourceCollection ResourceCollection { get; }
@@ -24,21 +23,17 @@ public sealed class McpEngine
 
     public McpEngine(
         HostSessionManager instanceManager,
-        DynamicToolCatalog dynamicToolCatalog,
-        DynamicResourceCatalog dynamicResourceCatalog,
-        DynamicPromptCatalog dynamicPromptCatalog,
+        BrokerCatalogIndex brokerCatalog,
         IAuthService authService,
         IOptions<GatewayOptions> gatewayOptions)
     {
         InstanceManager = instanceManager;
-        DynamicToolCatalog = dynamicToolCatalog;
-        DynamicResourceCatalog = dynamicResourceCatalog;
-        DynamicPromptCatalog = dynamicPromptCatalog;
+        BrokerCatalog = brokerCatalog;
         ToolCollection = [];
         PromptCollection = [];
         ResourceCollection = [];
 
-        LocalTools = CreateLocalTools(authService, gatewayOptions);
+        LocalTools = CreateLocalTools(authService, gatewayOptions, new DevToolsBrokerTools(BrokerCatalog, InstanceManager));
         foreach (var tool in LocalTools)
         {
             ToolCollection.TryAdd(tool);
@@ -50,19 +45,13 @@ public sealed class McpEngine
         PromptCollection,
         ResourceCollection);
 
-    private McpServerTool[] CreateLocalTools(IAuthService authService, IOptions<GatewayOptions> gatewayOptions) =>
+    private McpServerTool[] CreateLocalTools(IAuthService authService, IOptions<GatewayOptions> gatewayOptions, DevToolsBrokerTools broker) =>
     [
+        McpServerTool.Create(typeof(DevToolsBrokerTools).GetMethod(nameof(DevToolsBrokerTools.Search))!, broker),
+        McpServerTool.Create(typeof(DevToolsBrokerTools).GetMethod(nameof(DevToolsBrokerTools.InvokeAsync))!, broker),
         new ListMachinesTool(authService, gatewayOptions),
-        new ListHostInstancesTool(InstanceManager),
         new LaunchHostTool(InstanceManager),
         new ReadFileInfoTool(),
-        new OpenModelTool(InstanceManager),
-        new ListDynamicTools(DynamicToolCatalog),
-        new CallDynamicTool(InstanceManager, DynamicToolCatalog),
-        new ListDynamicResources(DynamicResourceCatalog),
-        new ReadDynamicResource(InstanceManager, DynamicResourceCatalog),
-        new ListDynamicPrompts(DynamicPromptCatalog),
-        new GetDynamicPrompt(InstanceManager, DynamicPromptCatalog),
-        new RefreshDynamicCatalog(DynamicToolCatalog, DynamicResourceCatalog, DynamicPromptCatalog)
+        new OpenModelTool(InstanceManager)
     ];
 }

@@ -3,6 +3,7 @@ using System.Text;
 using System.Text.Json;
 using DevTools.Daemon.Contracts;
 using DevTools.Daemon.Mcp;
+using DevTools.Mcp.Routing;
 using Microsoft.Extensions.Logging;
 using ModelContextProtocol.Server;
 using ZLogger;
@@ -18,6 +19,7 @@ public sealed class GatewayTunnelClient(
     Uri gatewayUri,
     Func<Task<string?>> tokenProvider,
     McpServerOptions serverOptions,
+    IInstanceManager sessions,
     ILoggerFactory loggerFactory,
     ILogger logger) : IAsyncDisposable
 {
@@ -129,10 +131,10 @@ public sealed class GatewayTunnelClient(
         }
     }
 
-    private static async Task SendRegisterAsync(ClientWebSocket ws, CancellationToken ct)
+    private async Task SendRegisterAsync(ClientWebSocket ws, CancellationToken ct)
     {
         var metadata = DeviceMetadata.Collect();
-        var hostApps = HostSessionManager.DiscoverHostPipes();
+        var hostApps = GetHostApps();
 
         var register = new GatewayRegisterMessage(
             RegisterMessageType,
@@ -145,13 +147,13 @@ public sealed class GatewayTunnelClient(
         await ws.SendAsync(bytes, WebSocketMessageType.Text, true, ct).ConfigureAwait(false);
     }
 
-    private static async Task HeartbeatLoopAsync(ClientWebSocket ws, CancellationToken ct)
+    private async Task HeartbeatLoopAsync(ClientWebSocket ws, CancellationToken ct)
     {
         while (!ct.IsCancellationRequested && ws.State == WebSocketState.Open)
         {
             await Task.Delay(HeartbeatIntervalMs, ct).ConfigureAwait(false);
 
-            var hostApps = HostSessionManager.DiscoverHostPipes();
+            var hostApps = GetHostApps();
             var heartbeat = new GatewayHeartbeatMessage(HeartbeatMessageType, hostApps.ToList());
             var json = JsonSerializer.Serialize(heartbeat);
             var bytes = Encoding.UTF8.GetBytes(json);
@@ -163,6 +165,12 @@ public sealed class GatewayTunnelClient(
             catch { break; }
         }
     }
+
+    private IReadOnlyList<string> GetHostApps() => sessions.Sessions
+        .Where(session => session.IsConnected)
+        .Select(session => $"{session.Instance.HostApp}_{session.Instance.VersionNumber}_{session.Instance.ProcessId}")
+        .Order(StringComparer.Ordinal)
+        .ToArray();
 
     public async ValueTask DisposeAsync()
     {
