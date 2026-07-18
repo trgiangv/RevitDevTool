@@ -172,6 +172,7 @@ public sealed class McpCatalogStore(
 
     private void ApplyCatalog(McpCatalogLoadResult loaded)
     {
+        ApplySnapshot(loaded.Snapshot);
         var catalog = loaded.Catalog;
         ClearIndexes();
 
@@ -189,11 +190,12 @@ public sealed class McpCatalogStore(
         Prompts = catalog.Prompts.Select(p => p.ProtocolPrompt).ToList();
         DirectResources = catalog.Resources.Where(r => r.ProtocolResource is not null).Select(r => r.ProtocolResource!).ToList();
         ResourceTemplates = catalog.Resources.Where(r => r.ProtocolTemplate is not null).Select(r => r.ProtocolTemplate!).ToList();
-        ApplySnapshot(loaded.Snapshot);
     }
 
     private void ApplySnapshot(McpPrimitiveSnapshot snapshot)
     {
+        EnsureResourcesCanBeApplied(snapshot.Resources);
+
         serverTools.Clear();
         foreach (var tool in snapshot.Tools)
             serverTools.TryAdd(tool);
@@ -204,10 +206,19 @@ public sealed class McpCatalogStore(
 
         serverResources.Clear();
         foreach (var resource in snapshot.Resources)
-            serverResources.TryAdd(resource);
+            if (!serverResources.TryAdd(resource))
+                throw new InvalidOperationException($"Accepted MCP resource '{resource.ProtocolResource?.Uri ?? resource.ProtocolResourceTemplate.UriTemplate}' was rejected by the SDK resource collection.");
 
         _snapshot = snapshot;
         Interlocked.Increment(ref _generation);
+    }
+
+    private static void EnsureResourcesCanBeApplied(IReadOnlyList<McpServerResource> resources)
+    {
+        McpServerResourceCollection candidates = [];
+        foreach (var resource in resources)
+            if (!candidates.TryAdd(resource))
+                throw new InvalidOperationException($"Accepted MCP resource '{resource.ProtocolResource?.Uri ?? resource.ProtocolResourceTemplate.UriTemplate}' is not unique under the SDK resource identity rules.");
     }
 
     private void ClearIndexes()

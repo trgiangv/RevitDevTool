@@ -1,4 +1,5 @@
 using Microsoft.Extensions.Logging;
+using ModelContextProtocol.Protocol;
 using ModelContextProtocol.Server;
 using ZLogger;
 
@@ -22,7 +23,8 @@ public sealed class McpCatalogLoader(
         var diagnostics = new List<McpCatalogDiagnostic>();
         var toolMap = new Dictionary<string, McpRegisteredTool>(StringComparer.OrdinalIgnoreCase);
         var promptMap = new Dictionary<string, McpRegisteredPrompt>(StringComparer.OrdinalIgnoreCase);
-        var resourceMap = new Dictionary<string, McpRegisteredResource>(StringComparer.OrdinalIgnoreCase);
+        var resources = new List<McpRegisteredResource>();
+        McpServerResourceCollection resourceIdentities = [];
 
         foreach (var provider in _providers.OrderBy(provider => provider.Priority).ThenBy(provider => provider.Name, StringComparer.OrdinalIgnoreCase))
         {
@@ -33,7 +35,7 @@ public sealed class McpCatalogLoader(
 
                 Collect(provider, providerCatalog.Tools, toolMap, tool => tool.ProtocolTool.Name, "tool", diagnostics);
                 Collect(provider, providerCatalog.Prompts, promptMap, prompt => prompt.ProtocolPrompt.Name, "prompt", diagnostics);
-                Collect(provider, providerCatalog.Resources, resourceMap, ResourceKey, "resource", diagnostics);
+                CollectResources(provider, providerCatalog.Resources, resources, resourceIdentities, diagnostics);
             }
             catch (Exception ex)
             {
@@ -46,7 +48,7 @@ public sealed class McpCatalogLoader(
         {
             Tools = toolMap.Values.OrderBy(tool => tool.Binding.GroupName, StringComparer.OrdinalIgnoreCase).ThenBy(tool => tool.ProtocolTool.Name, StringComparer.OrdinalIgnoreCase).ToList(),
             Prompts = promptMap.Values.OrderBy(prompt => prompt.Binding.GroupName, StringComparer.OrdinalIgnoreCase).ThenBy(prompt => prompt.ProtocolPrompt.Name, StringComparer.OrdinalIgnoreCase).ToList(),
-            Resources = resourceMap.Values.OrderBy(resource => resource.Binding.GroupName, StringComparer.OrdinalIgnoreCase).ThenBy(ResourceKey, StringComparer.OrdinalIgnoreCase).ToList()
+            Resources = resources.OrderBy(resource => resource.Binding.GroupName, StringComparer.OrdinalIgnoreCase).ThenBy(ResourceKey, StringComparer.Ordinal).ToList()
         };
 
         var snapshot = BuildSnapshot(catalog, diagnostics);
@@ -133,6 +135,50 @@ public sealed class McpCatalogLoader(
         }
     }
 
+    private void CollectResources(
+        IMcpRegistryProvider provider,
+        IEnumerable<McpRegisteredResource> items,
+        List<McpRegisteredResource> accepted,
+        McpServerResourceCollection identities,
+        List<McpCatalogDiagnostic> diagnostics)
+    {
+        foreach (var item in items)
+        {
+            var key = ResourceKey(item);
+            if (string.IsNullOrWhiteSpace(key))
+            {
+                diagnostics.Add(new McpCatalogDiagnostic("invalid_primitive", "resource", string.Empty, provider.Name, "resource has an empty protocol identity."));
+                logger.ZLogWarning($"Skip resource with empty identity from provider='{provider.Name}'.");
+                continue;
+            }
+
+            if (identities.TryAdd(new ResourceIdentity(item)))
+            {
+                accepted.Add(item);
+                continue;
+            }
+
+            diagnostics.Add(new McpCatalogDiagnostic("duplicate_primitive", "resource", key, provider.Name,
+                $"resource '{key}' was rejected because an earlier provider reserved the protocol identity."));
+            logger.ZLogWarning($"Duplicate resource protocol identity '{key}' ignored from provider '{provider.Name}'.");
+        }
+    }
+
     private static string ResourceKey(McpRegisteredResource resource) =>
         resource.ProtocolResource?.Uri ?? resource.ProtocolTemplate?.UriTemplate ?? string.Empty;
+
+    private sealed class ResourceIdentity(McpRegisteredResource registration) : McpServerResource
+    {
+        public override Resource? ProtocolResource => registration.ProtocolResource;
+        public override ResourceTemplate ProtocolResourceTemplate => registration.ProtocolTemplate ?? new ResourceTemplate
+        {
+            UriTemplate = registration.ProtocolResource?.Uri ?? string.Empty,
+            Name = registration.ProtocolResource?.Name ?? string.Empty,
+            Description = registration.ProtocolResource?.Description
+        };
+        public override IReadOnlyList<object> Metadata => [];
+        public override bool IsMatch(string uri) => false;
+        public override ValueTask<ReadResourceResult> ReadAsync(RequestContext<ReadResourceRequestParams> request, CancellationToken cancellationToken = default) =>
+            throw new NotSupportedException("Resource identities are used only for catalog admission.");
+    }
 }

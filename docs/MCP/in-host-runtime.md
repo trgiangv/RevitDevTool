@@ -74,7 +74,7 @@ A single `McpPrimitiveDispatcher` (in `DevTools.Execution/External/Mcp/Dispatche
 
 ## Standard SDK Primitive Execution
 
-The standard in-host SDK server receives concrete .NET, Python, and temporary built-in `McpServerTool`, `McpServerPrompt`, and `McpServerResource` instances from `McpCatalogStore`. Every invocation is decorated through `IMcpHostExecution`; `HostContextMcpExecution` sets `ExecutionGuardContext.Mode` to `Suppress` and delegates to the host-provided `IHostContextExecutor`. This keeps the registry host-neutral while preserving Revit/AutoCAD API-thread safety and cancellation for direct SDK calls. The registry UI exposes catalog diagnostics after every `CatalogChanged` event so rejected or failed registrations remain operator-visible.
+The standard in-host SDK server receives concrete .NET, Python, and temporary built-in `McpServerTool`, `McpServerPrompt`, and `McpServerResource` instances from `McpCatalogStore`. Every invocation is decorated through `IMcpHostExecution`; `HostContextMcpExecution` sets `ExecutionGuardContext.Mode` to `Suppress` and delegates to the host-provided `IHostContextExecutor`. Because the host executor owns a synchronous host callback, a primitive must complete before that callback exits; incomplete `ValueTask` results are rejected rather than being awaited outside the host context. This keeps the registry host-neutral while preserving Revit/AutoCAD API-thread safety, cancellation, and exception propagation for direct SDK calls. The registry UI exposes catalog diagnostics after every `CatalogChanged` event so rejected or failed registrations remain operator-visible.
 
 ## Parser Library
 

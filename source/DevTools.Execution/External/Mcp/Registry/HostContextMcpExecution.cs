@@ -6,12 +6,6 @@ public sealed class HostContextMcpExecution(IHostContextExecutor hostContext) : 
     public Task<T> ExecuteAsync<T>(Func<T> handler, CancellationToken cancellationToken = default) =>
         ExecuteAsyncCore(() => hostContext.ExecuteAsync(handler, cancellationToken), cancellationToken);
 
-    public async Task<T> ExecuteAsync<T>(Func<Task<T>> handler, CancellationToken cancellationToken = default)
-    {
-        var operation = await ExecuteAsyncCore(() => hostContext.ExecuteAsync(handler, cancellationToken), cancellationToken).ConfigureAwait(false);
-        return await operation.ConfigureAwait(false);
-    }
-
     private static async Task<T> ExecuteAsyncCore<T>(Func<Task<T>> execute, CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();

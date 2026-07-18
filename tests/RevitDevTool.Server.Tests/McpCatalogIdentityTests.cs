@@ -1,4 +1,5 @@
 using System.Text.Json;
+using System.Threading.Tasks.Sources;
 using DevTools.Mcp;
 using DevTools.Mcp.Models;
 using DevTools.Mcp.Registry;
@@ -107,6 +108,68 @@ public sealed class McpCatalogIdentityTests
     }
 
     [Fact]
+    public void SdkEqualNormalizedDirectResourceUris_AreRejected()
+    {
+        const string firstUri = "revit://model/%7Econtext";
+        const string secondUri = "revit://model/~context";
+        var loader = new McpCatalogLoader(
+        [
+            Provider("first", Resource("first-resource", firstUri, ExecutionMode.Dotnet)),
+            Provider("second", Resource("second-resource", secondUri, ExecutionMode.Python))
+        ],
+        NullLogger<McpCatalogLoader>.Instance);
+
+        var result = loader.LoadCatalog([], []);
+
+        Assert.Single(result.Catalog.Resources);
+        Assert.Contains(result.Snapshot.Diagnostics, diagnostic =>
+            diagnostic.Code == "duplicate_primitive" && diagnostic.Kind == "resource" && diagnostic.Key == secondUri);
+    }
+
+    [Fact]
+    public void SdkDistinctDirectResourcePathCase_IsAccepted()
+    {
+        const string upperPathUri = "revit://model/Context";
+        const string lowerPathUri = "revit://model/context";
+        var loader = new McpCatalogLoader(
+        [
+            Provider("first", Resource("upper-resource", upperPathUri, ExecutionMode.CSharp)),
+            Provider("second", Resource("lower-resource", lowerPathUri, ExecutionMode.CSharp))
+        ],
+        NullLogger<McpCatalogLoader>.Instance,
+        [new TestPrimitiveAdapter()]);
+        McpServerPrimitiveCollection<McpServerTool> tools = [];
+        McpServerPrimitiveCollection<McpServerPrompt> prompts = [];
+        McpServerResourceCollection resources = [];
+        var store = new McpCatalogStore(loader, new EmptySettingsService(), tools, prompts, resources);
+
+        store.EnsureLoaded();
+
+        Assert.Equal(2, store.ResourceCatalog.Count);
+        Assert.Equal(2, resources.Count);
+        Assert.Contains(resources, resource => resource.ProtocolResource!.Uri == upperPathUri);
+        Assert.Contains(resources, resource => resource.ProtocolResource!.Uri == lowerPathUri);
+    }
+
+    [Fact]
+    public void TemplateResourceLiteralCase_IsAccepted()
+    {
+        const string upperTemplate = "revit://model/{Id}";
+        const string lowerTemplate = "revit://model/{id}";
+        var loader = new McpCatalogLoader(
+        [
+            Provider("first", TemplateResource("upper-template", upperTemplate, ExecutionMode.Dotnet)),
+            Provider("second", TemplateResource("lower-template", lowerTemplate, ExecutionMode.Python))
+        ],
+        NullLogger<McpCatalogLoader>.Instance);
+
+        var result = loader.LoadCatalog([], []);
+
+        Assert.Equal(2, result.Catalog.Resources.Count);
+        Assert.DoesNotContain(result.Snapshot.Diagnostics, diagnostic => diagnostic.Code == "duplicate_primitive");
+    }
+
+    [Fact]
     public void CatalogDiagnostics_AreOperatorVisibleInTheRegistryViewModel()
     {
         var loader = new McpCatalogLoader(
@@ -174,6 +237,91 @@ public sealed class McpCatalogIdentityTests
         Assert.Equal(3, hostContext.CallCount);
         Assert.All(observedModes, mode => Assert.Equal(ExecutionGuardMode.Suppress, mode));
         Assert.Equal(ExecutionGuardMode.Passthrough, ExecutionGuardContext.Mode);
+    }
+
+    [Fact]
+    public async Task DelayedTool_IsRejectedBeforeItCanRegisterAContinuationOutsideHostScope()
+    {
+        var hostContext = new RecordingHostContextExecutor();
+        var delayed = new DelayedTool();
+        await using var input = new MemoryStream();
+        await using var output = new MemoryStream();
+        await using var transport = new StreamServerTransport(input, output);
+        await using var server = McpServer.Create(transport, new McpServerOptions());
+        var tool = McpHostExecutionPrimitives.Wrap(delayed, new HostContextMcpExecution(hostContext));
+
+        await AssertIncompleteInvocationIsRejected(
+            tool.InvokeAsync(CreateRequest(server, new CallToolRequestParams { Name = "delayed_tool" }, RequestMethods.ToolsCall), TestContext.Current.CancellationToken).AsTask(),
+            delayed.Completion,
+            hostContext);
+    }
+
+    [Fact]
+    public async Task DelayedPrompt_IsRejectedBeforeItCanRegisterAContinuationOutsideHostScope()
+    {
+        var hostContext = new RecordingHostContextExecutor();
+        var delayed = new DelayedPrompt();
+        await using var input = new MemoryStream();
+        await using var output = new MemoryStream();
+        await using var transport = new StreamServerTransport(input, output);
+        await using var server = McpServer.Create(transport, new McpServerOptions());
+        var prompt = McpHostExecutionPrimitives.Wrap(delayed, new HostContextMcpExecution(hostContext));
+
+        await AssertIncompleteInvocationIsRejected(
+            prompt.GetAsync(CreateRequest(server, new GetPromptRequestParams { Name = "delayed_prompt" }, RequestMethods.PromptsGet), TestContext.Current.CancellationToken).AsTask(),
+            delayed.Completion,
+            hostContext);
+    }
+
+    [Fact]
+    public async Task DelayedResource_IsRejectedBeforeItCanRegisterAContinuationOutsideHostScope()
+    {
+        var hostContext = new RecordingHostContextExecutor();
+        var delayed = new DelayedResource();
+        await using var input = new MemoryStream();
+        await using var output = new MemoryStream();
+        await using var transport = new StreamServerTransport(input, output);
+        await using var server = McpServer.Create(transport, new McpServerOptions());
+        var resource = McpHostExecutionPrimitives.Wrap(delayed, new HostContextMcpExecution(hostContext));
+
+        await AssertIncompleteInvocationIsRejected(
+            resource.ReadAsync(CreateRequest(server, new ReadResourceRequestParams { Uri = "revit://delayed" }, RequestMethods.ResourcesRead), TestContext.Current.CancellationToken).AsTask(),
+            delayed.Completion,
+            hostContext);
+    }
+
+    [Fact]
+    public async Task CompletedCancellationAndException_ArePropagatedFromTheHostCallback()
+    {
+        var hostContext = new RecordingHostContextExecutor();
+        await using var input = new MemoryStream();
+        await using var output = new MemoryStream();
+        await using var transport = new StreamServerTransport(input, output);
+        await using var server = McpServer.Create(transport, new McpServerOptions());
+        var cancelled = McpHostExecutionPrimitives.Wrap(new CancelledTool(), new HostContextMcpExecution(hostContext));
+        var faulted = McpHostExecutionPrimitives.Wrap(new FaultedTool(), new HostContextMcpExecution(hostContext));
+
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() =>
+            cancelled.InvokeAsync(CreateRequest(server, new CallToolRequestParams { Name = "cancelled_tool" }, RequestMethods.ToolsCall), TestContext.Current.CancellationToken).AsTask());
+        var exception = await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            faulted.InvokeAsync(CreateRequest(server, new CallToolRequestParams { Name = "faulted_tool" }, RequestMethods.ToolsCall), TestContext.Current.CancellationToken).AsTask());
+
+        Assert.Equal("expected failure", exception.Message);
+        Assert.Equal(2, hostContext.CallCount);
+    }
+
+    private static async Task AssertIncompleteInvocationIsRejected<T>(
+        Task<T> invocation,
+        DeferredValueTaskSource<T> completion,
+        RecordingHostContextExecutor hostContext)
+    {
+        var completed = await Task.WhenAny(invocation, Task.Delay(TimeSpan.FromSeconds(1)));
+        Assert.Same(invocation, completed);
+        await Assert.ThrowsAsync<InvalidOperationException>(() => invocation);
+        Assert.Equal(0, completion.ContinuationRegistrationCount);
+        Assert.Equal(1, hostContext.ScopeExitCount);
+        Assert.False(hostContext.IsInScope);
+        completion.SetResult(default!);
     }
 
     private static RequestContext<T> CreateRequest<T>(McpServer server, T parameters, string method) =>
@@ -307,14 +455,81 @@ public sealed class McpCatalogIdentityTests
         }
     }
 
+    private sealed class DelayedTool : McpServerTool
+    {
+        public DeferredValueTaskSource<CallToolResult> Completion { get; } = new();
+        public override Tool ProtocolTool { get; } = new() { Name = "delayed_tool", InputSchema = JsonSerializer.SerializeToElement(new { type = "object" }) };
+        public override IReadOnlyList<object> Metadata => [];
+        public override ValueTask<CallToolResult> InvokeAsync(RequestContext<CallToolRequestParams> request, CancellationToken cancellationToken = default) => Completion.CreateValueTask();
+    }
+
+    private sealed class DelayedPrompt : McpServerPrompt
+    {
+        public DeferredValueTaskSource<GetPromptResult> Completion { get; } = new();
+        public override Prompt ProtocolPrompt { get; } = new() { Name = "delayed_prompt" };
+        public override IReadOnlyList<object> Metadata => [];
+        public override ValueTask<GetPromptResult> GetAsync(RequestContext<GetPromptRequestParams> request, CancellationToken cancellationToken = default) => Completion.CreateValueTask();
+    }
+
+    private sealed class DelayedResource : McpServerResource
+    {
+        public DeferredValueTaskSource<ReadResourceResult> Completion { get; } = new();
+        public override Resource? ProtocolResource { get; } = new() { Uri = "revit://delayed", Name = "delayed_resource" };
+        public override ResourceTemplate ProtocolResourceTemplate { get; } = new() { UriTemplate = "revit://delayed", Name = "delayed_resource" };
+        public override IReadOnlyList<object> Metadata => [];
+        public override bool IsMatch(string uri) => uri == ProtocolResource!.Uri;
+        public override ValueTask<ReadResourceResult> ReadAsync(RequestContext<ReadResourceRequestParams> request, CancellationToken cancellationToken = default) => Completion.CreateValueTask();
+    }
+
+    private sealed class CancelledTool : McpServerTool
+    {
+        public override Tool ProtocolTool { get; } = new() { Name = "cancelled_tool", InputSchema = JsonSerializer.SerializeToElement(new { type = "object" }) };
+        public override IReadOnlyList<object> Metadata => [];
+        public override ValueTask<CallToolResult> InvokeAsync(RequestContext<CallToolRequestParams> request, CancellationToken cancellationToken = default) => ValueTask.FromCanceled<CallToolResult>(new CancellationToken(true));
+    }
+
+    private sealed class FaultedTool : McpServerTool
+    {
+        public override Tool ProtocolTool { get; } = new() { Name = "faulted_tool", InputSchema = JsonSerializer.SerializeToElement(new { type = "object" }) };
+        public override IReadOnlyList<object> Metadata => [];
+        public override ValueTask<CallToolResult> InvokeAsync(RequestContext<CallToolRequestParams> request, CancellationToken cancellationToken = default) => ValueTask.FromException<CallToolResult>(new InvalidOperationException("expected failure"));
+    }
+
+    private sealed class DeferredValueTaskSource<T> : IValueTaskSource<T>
+    {
+        private ManualResetValueTaskSourceCore<T> _source = new() { RunContinuationsAsynchronously = true };
+        public int ContinuationRegistrationCount { get; private set; }
+
+        public ValueTask<T> CreateValueTask() => new(this, _source.Version);
+        public void SetResult(T result) => _source.SetResult(result);
+        public T GetResult(short token) => _source.GetResult(token);
+        public ValueTaskSourceStatus GetStatus(short token) => _source.GetStatus(token);
+        public void OnCompleted(Action<object?> continuation, object? state, short token, ValueTaskSourceOnCompletedFlags flags)
+        {
+            ContinuationRegistrationCount++;
+            _source.OnCompleted(continuation, state, token, flags);
+        }
+    }
+
     private sealed class RecordingHostContextExecutor : IHostContextExecutor
     {
         public int CallCount { get; private set; }
+        public int ScopeExitCount { get; private set; }
+        public bool IsInScope { get; private set; }
         public Task<T> ExecuteAsync<T>(Func<T> handler, CancellationToken token = default)
         {
             token.ThrowIfCancellationRequested();
             CallCount++;
-            return Task.FromResult(handler());
+            IsInScope = true;
+            try
+            {
+                return Task.FromResult(handler());
+            }
+            finally
+            {
+                IsInScope = false;
+                ScopeExitCount++;
+            }
         }
 
         public Task ExecuteAsync(Action action, CancellationToken token = default)

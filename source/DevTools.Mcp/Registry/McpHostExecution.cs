@@ -8,7 +8,6 @@ namespace DevTools.Mcp.Registry;
 public interface IMcpHostExecution
 {
     Task<T> ExecuteAsync<T>(Func<T> handler, CancellationToken cancellationToken = default);
-    Task<T> ExecuteAsync<T>(Func<Task<T>> handler, CancellationToken cancellationToken = default);
 }
 
 /// <summary>Decorates SDK primitives so every in-host invocation crosses the host execution boundary.</summary>
@@ -26,7 +25,9 @@ public static class McpHostExecutionPrimitives
         public override async ValueTask<CallToolResult> InvokeAsync(RequestContext<CallToolRequestParams> request, CancellationToken cancellationToken = default)
         {
             cancellationToken.ThrowIfCancellationRequested();
-            return await execution.ExecuteAsync(() => primitive.InvokeAsync(request, cancellationToken).AsTask(), cancellationToken).ConfigureAwait(false);
+            return await execution.ExecuteAsync(
+                () => GetCompletedResult(primitive.InvokeAsync(request, cancellationToken), "tool", primitive.ProtocolTool.Name),
+                cancellationToken).ConfigureAwait(false);
         }
     }
 
@@ -38,7 +39,9 @@ public static class McpHostExecutionPrimitives
         public override async ValueTask<GetPromptResult> GetAsync(RequestContext<GetPromptRequestParams> request, CancellationToken cancellationToken = default)
         {
             cancellationToken.ThrowIfCancellationRequested();
-            return await execution.ExecuteAsync(() => primitive.GetAsync(request, cancellationToken).AsTask(), cancellationToken).ConfigureAwait(false);
+            return await execution.ExecuteAsync(
+                () => GetCompletedResult(primitive.GetAsync(request, cancellationToken), "prompt", primitive.ProtocolPrompt.Name),
+                cancellationToken).ConfigureAwait(false);
         }
     }
 
@@ -52,7 +55,18 @@ public static class McpHostExecutionPrimitives
         public override async ValueTask<ReadResourceResult> ReadAsync(RequestContext<ReadResourceRequestParams> request, CancellationToken cancellationToken = default)
         {
             cancellationToken.ThrowIfCancellationRequested();
-            return await execution.ExecuteAsync(() => primitive.ReadAsync(request, cancellationToken).AsTask(), cancellationToken).ConfigureAwait(false);
+            var name = primitive.ProtocolResource?.Name ?? primitive.ProtocolResourceTemplate.Name;
+            return await execution.ExecuteAsync(
+                () => GetCompletedResult(primitive.ReadAsync(request, cancellationToken), "resource", name),
+                cancellationToken).ConfigureAwait(false);
         }
+    }
+
+    private static T GetCompletedResult<T>(ValueTask<T> operation, string kind, string name)
+    {
+        if (!operation.IsCompleted)
+            throw new InvalidOperationException($"MCP {kind} '{name}' returned an incomplete asynchronous result. Host-context MCP primitives must complete synchronously.");
+
+        return operation.GetAwaiter().GetResult();
     }
 }
