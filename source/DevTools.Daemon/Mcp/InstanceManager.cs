@@ -1,12 +1,20 @@
 using System.Collections.Concurrent;
 using System.Text.RegularExpressions;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using ZLogger;
 
 namespace DevTools.Daemon.Mcp;
 
-public sealed partial class InstanceManager(ILogger<InstanceManager> logger) : IInstanceManager, IAsyncDisposable
+public sealed partial class InstanceManager(
+    ILogger<InstanceManager> logger,
+    ILoggerFactory loggerFactory) : IInstanceManager, IAsyncDisposable
 {
+    public InstanceManager(ILogger<InstanceManager> logger)
+        : this(logger, NullLoggerFactory.Instance)
+    {
+    }
+
     /// <summary>
     /// Matches pipe names produced by DevToolsPipeServer: DevTools_{HostApp}_{Version}_{PID}.
     /// Host is any word chars, version is flexible (year, semver, etc.), PID is digits.
@@ -15,8 +23,15 @@ public sealed partial class InstanceManager(ILogger<InstanceManager> logger) : I
     private static partial Regex HostPipePattern();
 
     private readonly ConcurrentDictionary<string, HostBridgeClient> _clients = new(StringComparer.OrdinalIgnoreCase);
+    private readonly ConcurrentDictionary<string, IHostMcpSession> _sessions = new(StringComparer.OrdinalIgnoreCase);
 
     public event Action? Changed;
+    public event Action? SessionsChanged;
+
+    public IReadOnlyCollection<IHostMcpSession> Sessions => _sessions.Values.ToArray();
+
+    public IHostMcpSession? GetSessionByProcessId(int processId) =>
+        _sessions.Values.FirstOrDefault(session => session.Instance.ProcessId == processId);
 
     public List<HostBridgeClient> GetClients() => _clients.Values.ToList();
 
@@ -55,12 +70,14 @@ public sealed partial class InstanceManager(ILogger<InstanceManager> logger) : I
     public async Task RunDiscoveryAsync(CancellationToken ct)
     {
         var knownPipes = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var knownMcpPipes = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
         while (!ct.IsCancellationRequested)
         {
             try
             {
                 await SyncPipesAsync(knownPipes, ct).ConfigureAwait(false);
+                await SyncMcpPipesAsync(knownMcpPipes, ct).ConfigureAwait(false);
             }
             catch (OperationCanceledException) when (ct.IsCancellationRequested)
             {
@@ -123,12 +140,62 @@ public sealed partial class InstanceManager(ILogger<InstanceManager> logger) : I
         }
     }
 
+    private async Task SyncMcpPipesAsync(HashSet<string> knownPipes, CancellationToken ct)
+    {
+        var currentPipes = DiscoverMcpPipes(logger);
+
+        foreach (var pipeName in knownPipes.Where(pipe => !currentPipes.Contains(pipe)).ToList())
+        {
+            knownPipes.Remove(pipeName);
+            await DisconnectMcpAsync(pipeName).ConfigureAwait(false);
+        }
+
+        foreach (var pipeName in currentPipes.Where(pipe => !knownPipes.Contains(pipe)).ToList())
+        {
+            knownPipes.Add(pipeName);
+            await TryConnectMcpAsync(pipeName, ct).ConfigureAwait(false);
+        }
+    }
+
+    private async Task TryConnectMcpAsync(string pipeName, CancellationToken ct)
+    {
+        try
+        {
+            logger.ZLogInformation($"Connecting to MCP endpoint {pipeName}...");
+            var session = await HostMcpSession.ConnectAsync(pipeName, loggerFactory, ct).ConfigureAwait(false);
+            session.CatalogChanged += NotifySessionsChanged;
+            session.Disconnected += () =>
+            {
+                _ = DisconnectMcpAsync(pipeName);
+            };
+
+            _sessions[pipeName] = session;
+            logger.ZLogInformation(
+                $"Connected to MCP endpoint {pipeName} (PID={session.Instance.ProcessId}, Host={session.Instance.HostApp})");
+            NotifySessionsChanged();
+        }
+        catch (Exception ex)
+        {
+            logger.ZLogWarning(ex, $"Failed to connect to MCP endpoint {pipeName}");
+        }
+    }
+
     private async Task DisconnectAsync(string pipeName)
     {
         if (_clients.TryRemove(pipeName, out var client))
         {
             await client.DisposeAsync().ConfigureAwait(false);
             logger.ZLogInformation($"Disconnected from {pipeName}");
+        }
+    }
+
+    private async Task DisconnectMcpAsync(string pipeName)
+    {
+        if (_sessions.TryRemove(pipeName, out var session))
+        {
+            await session.DisposeAsync().ConfigureAwait(false);
+            logger.ZLogInformation($"Disconnected from MCP endpoint {pipeName}");
+            NotifySessionsChanged();
         }
     }
 
@@ -152,6 +219,32 @@ public sealed partial class InstanceManager(ILogger<InstanceManager> logger) : I
         return pipes;
     }
 
+    private static HashSet<string> DiscoverMcpPipes(ILogger? logger = null)
+    {
+        var pipes = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        try
+        {
+            foreach (var path in Directory.GetFiles(@"\\.\pipe\"))
+            {
+                var name = Path.GetFileName(path);
+                if (McpPipeName.TryParse(name, out _))
+                    pipes.Add(name);
+            }
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            logger?.ZLogWarning(ex, $"MCP pipe scan error");
+        }
+
+        return pipes;
+    }
+
+    private void NotifySessionsChanged()
+    {
+        SessionsChanged?.Invoke();
+        Changed?.Invoke();
+    }
+
     private static bool IsHostEntryPipe(string name) => HostPipePattern().IsMatch(name);
 
     public async ValueTask DisposeAsync()
@@ -160,6 +253,12 @@ public sealed partial class InstanceManager(ILogger<InstanceManager> logger) : I
         {
             if (_clients.TryRemove(kvp.Key, out var client))
                 await client.DisposeAsync().ConfigureAwait(false);
+        }
+
+        foreach (var kvp in _sessions.ToArray())
+        {
+            if (_sessions.TryRemove(kvp.Key, out var session))
+                await session.DisposeAsync().ConfigureAwait(false);
         }
     }
 }

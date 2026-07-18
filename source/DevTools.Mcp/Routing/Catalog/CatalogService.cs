@@ -1,4 +1,3 @@
-using System.Text.Json;
 using Microsoft.Extensions.Logging;
 using ModelContextProtocol.Protocol;
 using ModelContextProtocol.Server;
@@ -55,13 +54,13 @@ public sealed class CatalogService(
         foreach (var local in localTools)
             newTools[local.ProtocolTool.Name] = local;
 
-        foreach (var instance in instanceManager.GetInstances())
+        foreach (var session in instanceManager.Sessions)
         {
-            if (instanceManager.GetByProcessId(instance.ProcessId) is not { IsConnected: true } client)
+            if (!session.IsConnected)
                 continue;
 
             token.ThrowIfCancellationRequested();
-            await FetchClientPrimitivesAsync(client, newTools, newPrompts, newResources,
+            await FetchSessionPrimitivesAsync(session, newTools, newPrompts, newResources,
                     dynamicToolRegistrations, dynamicResourceRegistrations, dynamicPromptRegistrations, token)
                 .ConfigureAwait(false);
         }
@@ -74,8 +73,8 @@ public sealed class CatalogService(
         ApplySnapshot(resourceCollection, newResources);
     }
 
-    private async Task FetchClientPrimitivesAsync(
-        IHostBridgeClient client,
+    private async Task FetchSessionPrimitivesAsync(
+        IHostMcpSession session,
         Dictionary<string, McpServerTool> tools,
         Dictionary<string, McpServerPrompt> prompts,
         List<McpServerResource> resources,
@@ -86,89 +85,85 @@ public sealed class CatalogService(
     {
         try
         {
-            await FetchToolsAsync(client, tools, dynamicToolRegs, token).ConfigureAwait(false);
-            await FetchPromptsAsync(client, prompts, dynamicPromptRegs, token).ConfigureAwait(false);
-            await FetchResourcesAsync(client, resources, dynamicResourceRegs, token).ConfigureAwait(false);
-            await FetchResourceTemplatesAsync(client, resources, dynamicResourceRegs, token).ConfigureAwait(false);
+            var toolsTask = session.ListToolsAsync(token);
+            var promptsTask = session.ListPromptsAsync(token);
+            var resourcesTask = session.ListResourcesAsync(token);
+            var templatesTask = session.ListResourceTemplatesAsync(token);
+
+            await Task.WhenAll(toolsTask, promptsTask, resourcesTask, templatesTask).ConfigureAwait(false);
+            var snapshot = HostCatalogSnapshot.Create(
+                session.Instance,
+                await toolsTask.ConfigureAwait(false),
+                await promptsTask.ConfigureAwait(false),
+                await resourcesTask.ConfigureAwait(false),
+                await templatesTask.ConfigureAwait(false));
+
+            AddSnapshot(snapshot, tools, prompts, resources, dynamicToolRegs, dynamicResourceRegs, dynamicPromptRegs);
         }
         catch (Exception ex)
         {
-            logger.ZLogWarning(ex, $"Error fetching from {client.PipeName}");
+            logger.ZLogWarning(ex, $"Error fetching from {session.Instance.PipeName}");
         }
     }
 
-    private async Task FetchToolsAsync(
-        IHostBridgeClient client,
+    private void AddSnapshot(
+        HostCatalogSnapshot snapshot,
         Dictionary<string, McpServerTool> tools,
-        List<DynamicToolCatalogEntry> dynamicRegistrations,
-        CancellationToken token)
+        Dictionary<string, McpServerPrompt> prompts,
+        List<McpServerResource> resources,
+        List<DynamicToolCatalogEntry> dynamicToolRegistrations,
+        List<DynamicResourceCatalogEntry> dynamicResourceRegistrations,
+        List<DynamicPromptCatalogEntry> dynamicPromptRegistrations)
     {
-        var response = await client.RequestAsync(McpBridgeMethods.ToolsList, ct: token).ConfigureAwait(false);
-        foreach (var tool in DeserializeResult<Tool>(response))
+        var instance = ToLegacyInstanceInfo(snapshot.Instance);
+
+        foreach (var clientTool in snapshot.Tools)
         {
+            var tool = clientTool.ProtocolTool;
             var key = tool.Name;
             if (!tools.TryAdd(key, new RoutingMcpServerTool(instanceManager, tool)))
             {
-                logger.ZLogDebug($"Tool '{key}' already registered, skipping duplicate from {client.Info.HostApp}_{client.Info.VersionNumber} (use call_dynamic_tool with hostInstanceId).");
+                logger.ZLogDebug($"Tool '{key}' already registered, skipping duplicate from {snapshot.Instance.HostApp}_{snapshot.Instance.VersionNumber} (use call_dynamic_tool with hostInstanceId).");
             }
-            dynamicRegistrations.Add(new DynamicToolCatalogEntry(tool, client.Info, client.PipeName));
+            dynamicToolRegistrations.Add(new DynamicToolCatalogEntry(tool, instance, snapshot.Instance.PipeName));
         }
-    }
 
-    private async Task FetchPromptsAsync(
-        IHostBridgeClient client,
-        Dictionary<string, McpServerPrompt> prompts,
-        List<DynamicPromptCatalogEntry> dynamicPromptRegs,
-        CancellationToken token)
-    {
-        var response = await client.RequestAsync(McpBridgeMethods.PromptsList, ct: token).ConfigureAwait(false);
-        foreach (var prompt in DeserializeResult<Prompt>(response))
+        foreach (var clientPrompt in snapshot.Prompts)
         {
+            var prompt = clientPrompt.ProtocolPrompt;
             var key = prompt.Name;
             if (!prompts.TryAdd(key, new RoutingMcpServerPrompt(instanceManager, prompt)))
             {
-                logger.ZLogDebug($"Prompt '{key}' already registered, skipping duplicate from {client.Info.HostApp}_{client.Info.VersionNumber}.");
+                logger.ZLogDebug($"Prompt '{key}' already registered, skipping duplicate from {snapshot.Instance.HostApp}_{snapshot.Instance.VersionNumber}.");
             }
-            dynamicPromptRegs.Add(new DynamicPromptCatalogEntry(key, prompt.Description, prompt, client.Info, client.PipeName));
+            dynamicPromptRegistrations.Add(new DynamicPromptCatalogEntry(
+                key, prompt.Description, prompt, instance, snapshot.Instance.PipeName));
         }
-    }
 
-    private async Task FetchResourcesAsync(
-        IHostBridgeClient client,
-        List<McpServerResource> resources,
-        List<DynamicResourceCatalogEntry> dynamicResourceRegs,
-        CancellationToken token)
-    {
-        var response = await client.RequestAsync(McpBridgeMethods.ResourcesList, ct: token).ConfigureAwait(false);
-        foreach (var resource in DeserializeResult<Resource>(response))
+        foreach (var clientResource in snapshot.Resources)
         {
+            var resource = clientResource.ProtocolResource;
             resources.Add(new RoutingMcpServerResource(instanceManager, resource, null));
-            dynamicResourceRegs.Add(new DynamicResourceCatalogEntry(
-                resource.Uri, resource.Name, resource.Description, resource.MimeType, client.Info, client.PipeName));
+            dynamicResourceRegistrations.Add(new DynamicResourceCatalogEntry(
+                resource.Uri, resource.Name, resource.Description, resource.MimeType, instance, snapshot.Instance.PipeName));
         }
-    }
 
-    private async Task FetchResourceTemplatesAsync(
-        IHostBridgeClient client,
-        List<McpServerResource> resources,
-        List<DynamicResourceCatalogEntry> dynamicResourceRegs,
-        CancellationToken token)
-    {
-        var response = await client.RequestAsync(McpBridgeMethods.ResourceTemplatesList, ct: token).ConfigureAwait(false);
-        foreach (var template in DeserializeResult<ResourceTemplate>(response))
+        foreach (var clientTemplate in snapshot.ResourceTemplates)
         {
+            var template = clientTemplate.ProtocolResourceTemplate;
             resources.Add(new RoutingMcpServerResource(instanceManager, null, template));
-            dynamicResourceRegs.Add(new DynamicResourceCatalogEntry(
-                template.UriTemplate, template.Name, template.Description, template.MimeType, client.Info, client.PipeName));
+            dynamicResourceRegistrations.Add(new DynamicResourceCatalogEntry(
+                template.UriTemplate, template.Name, template.Description, template.MimeType, instance, snapshot.Instance.PipeName));
         }
     }
 
-    private static List<T> DeserializeResult<T>(BridgeMessage response)
-    {
-        if (response is { IsError: false, Result: { } result })
-            return JsonSerializer.Deserialize<List<T>>(result.GetRawText()) ?? [];
-        return [];
-    }
+    private static InstanceInfo ToLegacyInstanceInfo(HostInstanceDescriptor instance) =>
+        new()
+        {
+            ProcessId = instance.ProcessId,
+            HostApp = instance.HostApp,
+            VersionNumber = instance.VersionNumber
+        };
 
     private static void ApplySnapshot<T>(McpServerPrimitiveCollection<T> collection, IEnumerable<T> items)
         where T : IMcpServerPrimitive

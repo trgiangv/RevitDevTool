@@ -1,4 +1,6 @@
 using System.IO.Pipes;
+using System.Text.Json;
+using DevTools.Daemon.Mcp;
 using DevTools.Execution.External.Mcp.Hosting;
 using DevTools.Logging;
 using Microsoft.Extensions.DependencyInjection;
@@ -25,6 +27,49 @@ public sealed class McpPipeNameTests
 
 public sealed class McpNamedPipeIntegrationTests
 {
+    [Fact]
+    public async Task HostMcpSession_ListsCallsAndRaisesCatalogChanged()
+    {
+        var tools = new McpServerPrimitiveCollection<McpServerTool>
+        {
+            new TestTool("session_test")
+        };
+        var optionsFactory = new HostMcpServerOptionsFactory(new TestHostAppInfo(), tools, [], []);
+        using var serviceProvider = new ServiceCollection().BuildServiceProvider();
+        await using var hostedService = new HostMcpServerHostedService(
+            optionsFactory,
+            NullLoggerFactory.Instance,
+            serviceProvider);
+
+        await hostedService.StartAsync(TestContext.Current.CancellationToken);
+        try
+        {
+            await using var session = await HostMcpSession.ConnectAsync(
+                McpPipeName.Format(Environment.ProcessId),
+                NullLoggerFactory.Instance,
+                TestContext.Current.CancellationToken);
+
+            var listedTools = await session.ListToolsAsync(TestContext.Current.CancellationToken);
+            Assert.Contains(listedTools, tool => tool.ProtocolTool.Name == "session_test");
+
+            var result = await session.CallToolAsync(
+                "session_test",
+                null,
+                TestContext.Current.CancellationToken);
+            Assert.Equal("typed session", Assert.IsType<TextContentBlock>(Assert.Single(result.Content)).Text);
+
+            var catalogChanged = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+            session.CatalogChanged += () => catalogChanged.TrySetResult(true);
+            tools.Add(new TestTool("session_test_added"));
+
+            await catalogChanged.Task.WaitAsync(TestContext.Current.CancellationToken);
+        }
+        finally
+        {
+            await hostedService.StopAsync(TestContext.Current.CancellationToken);
+        }
+    }
+
     [Fact]
     public async Task HostedService_StopsCleanlyWhenShutdownFollowsRecoverableAcceptFailure()
     {
@@ -96,5 +141,24 @@ public sealed class McpNamedPipeIntegrationTests
         public string VersionNumber => "2027";
         public string? VersionBuild => null;
         public int ProcessId => Environment.ProcessId;
+    }
+
+    private sealed class TestTool(string name) : McpServerTool
+    {
+        public override Tool ProtocolTool { get; } = new()
+        {
+            Name = name,
+            InputSchema = JsonSerializer.SerializeToElement(new { type = "object" })
+        };
+
+        public override IReadOnlyList<object> Metadata => [];
+
+        public override ValueTask<CallToolResult> InvokeAsync(
+            RequestContext<CallToolRequestParams> request,
+            CancellationToken cancellationToken = default) =>
+            ValueTask.FromResult<CallToolResult>(new()
+            {
+                Content = [new TextContentBlock { Text = "typed session" }]
+            });
     }
 }
