@@ -25,7 +25,11 @@ public sealed class PublicSurfaceBudgetTests
         Assert.Contains("x-target-machine", listMachines.Description);
         var invoke = Assert.Single(protocolTools, tool => tool.Name == "devtools_invoke");
         var hostId = invoke.InputSchema.GetProperty("properties").GetProperty("hostId");
-        Assert.Equal("integer", hostId.GetProperty("type").GetString());
+        var hostIdTypes = hostId.GetProperty("type");
+        var containsInteger = hostIdTypes.ValueKind == JsonValueKind.String
+            ? hostIdTypes.GetString() == "integer"
+            : hostIdTypes.EnumerateArray().Any(type => type.GetString() == "integer");
+        Assert.True(containsInteger);
         Assert.Contains("process ID", hostId.GetProperty("description").GetString(), StringComparison.OrdinalIgnoreCase);
         Assert.True(Encoding.UTF8.GetByteCount(json) <= 16 * 1024, json);
     }

@@ -8,7 +8,7 @@
 .PARAMETER Project
     Relative path to a specific test .csproj (e.g. tests/RevitDevTool.Execution.Tests/RevitDevTool.Execution.Tests.csproj).
 .PARAMETER Configuration
-    Build configuration for tests (default: Debug).
+    Build configuration for tests (default: Debug). The server fixture maps generic Debug/Release to Autodesk 2027.
 .EXAMPLE
     scripts/test-dotnet.ps1
     scripts/test-dotnet.ps1 -Project tests/RevitDevTool.Execution.Tests/RevitDevTool.Execution.Tests.csproj
@@ -19,11 +19,30 @@ param(
 )
 
 $ErrorActionPreference = "Stop"
-$repoRoot = Resolve-Path (Join-Path $PSScriptRoot "..")
+$repoRoot = (Resolve-Path (Join-Path $PSScriptRoot "..")).Path
+$serverProject = [IO.Path]::GetFullPath((Join-Path $repoRoot "tests/RevitDevTool.Server.Tests/RevitDevTool.Server.Tests.csproj"))
+
+function Resolve-TestTarget([string]$Path) {
+    if ([IO.Path]::IsPathRooted($Path)) {
+        return [IO.Path]::GetFullPath($Path)
+    }
+
+    return [IO.Path]::GetFullPath((Join-Path $repoRoot $Path))
+}
+
+function Get-TestConfiguration([string]$Target) {
+    $normalizedTarget = [IO.Path]::GetFullPath($Target)
+    if ($normalizedTarget.Equals($serverProject, [StringComparison]::OrdinalIgnoreCase)) {
+        if ($Configuration -eq "Debug") { return "Debug.Autodesk.2027" }
+        if ($Configuration -eq "Release") { return "Release.Autodesk.2027" }
+    }
+
+    return $Configuration
+}
 
 if ($Project) {
-    $target = Join-Path $repoRoot $Project
-    dotnet test $target -c $Configuration
+    $target = Resolve-TestTarget $Project
+    dotnet test $target -c (Get-TestConfiguration $target)
     exit $LASTEXITCODE
 }
 
@@ -34,7 +53,7 @@ $projects = @(
 )
 
 foreach ($relative in $projects) {
-    $target = Join-Path $repoRoot $relative
-    dotnet test $target -c $Configuration
+    $target = Resolve-TestTarget $relative
+    dotnet test $target -c (Get-TestConfiguration $target)
     if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 }

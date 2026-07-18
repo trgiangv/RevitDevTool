@@ -19,6 +19,17 @@ namespace RevitDevTool.Server.Tests;
 
 public sealed class McpCatalogIdentityTests
 {
+    [Fact]
+    public void ArgumentSummary_HandlesNullEmptyAndValidSchemas()
+    {
+        var method = typeof(McpRegistryViewModel).GetMethod("BuildArgumentSummary", System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.NonPublic)!;
+
+        Assert.Equal(string.Empty, method.Invoke(null, [null]));
+        Assert.Equal(string.Empty, method.Invoke(null, [string.Empty]));
+        Assert.Equal("- code: Script (string) — Source text", method.Invoke(null,
+            ["{\"properties\":{\"code\":{\"type\":\"string\",\"title\":\"Script\",\"description\":\"Source text\"}}}"]));
+    }
+
     [Theory]
     [InlineData("tool", "execute_csharp_code")]
     [InlineData("prompt", "revit_code")]

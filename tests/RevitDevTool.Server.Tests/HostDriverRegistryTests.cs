@@ -101,7 +101,7 @@ public sealed class HostDriverRegistryTests
 
         try
         {
-            var result = await InvokeAsync(tool, new()
+            var result = await InvokeAsync(tool, new Dictionary<string, JsonElement>
             {
                 ["filePath"] = JsonSerializer.SerializeToElement(filePath)
             });
@@ -128,7 +128,7 @@ public sealed class HostDriverRegistryTests
 
         try
         {
-            var result = await InvokeAsync(tool, new()
+            var result = await InvokeAsync(tool, new Dictionary<string, JsonElement>
             {
                 ["hostApp"] = JsonSerializer.SerializeToElement("Revit"),
                 ["versionNumber"] = JsonSerializer.SerializeToElement("2025"),
@@ -153,7 +153,7 @@ public sealed class HostDriverRegistryTests
         var driver = new CapturingHostDriver(9003, HostApp.Civil3D);
         var tool = new LaunchHostTool(instanceManager, new HostDriverRegistry([driver]));
 
-        var result = await InvokeAsync(tool, new()
+        var result = await InvokeAsync(tool, new Dictionary<string, JsonElement>
         {
             ["hostApp"] = JsonSerializer.SerializeToElement("Civil3D"),
             ["versionNumber"] = JsonSerializer.SerializeToElement("2025")

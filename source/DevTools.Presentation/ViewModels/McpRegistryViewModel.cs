@@ -350,7 +350,8 @@ public sealed partial class McpRegistryViewModel : ObservableObject, IBusyViewMo
         if (string.IsNullOrWhiteSpace(inputSchemaJson))
             return string.Empty;
 
-        using var document = JsonDocument.Parse(inputSchemaJson);
+        var schemaJson = inputSchemaJson ?? string.Empty;
+        using var document = JsonDocument.Parse(schemaJson);
         if (!document.RootElement.TryGetProperty("properties", out var properties) ||
             properties.ValueKind != JsonValueKind.Object)
             return string.Empty;

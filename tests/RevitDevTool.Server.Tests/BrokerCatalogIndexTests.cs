@@ -94,6 +94,31 @@ public sealed class BrokerCatalogIndexTests
         Assert.Equal(1, second.CallCount);
     }
 
+    [Theory]
+    [InlineData(BrokerPrimitiveKind.Tool)]
+    [InlineData(BrokerPrimitiveKind.Resource)]
+    [InlineData(BrokerPrimitiveKind.Prompt)]
+    public async Task Invoke_CancelledHostOperation_PropagatesCancellation(BrokerPrimitiveKind kind)
+    {
+        using var cancellation = new CancellationTokenSource();
+        var session = new RecordingSession(5108, "execute_csharp_code", cancellationKind: kind);
+        var catalog = CreateCatalog(session);
+        var target = kind switch
+        {
+            BrokerPrimitiveKind.Tool => "tool:execute_csharp_code",
+            BrokerPrimitiveKind.Resource => "resource:revit://model/cancellable",
+            BrokerPrimitiveKind.Prompt => "prompt:cancellable_prompt",
+            _ => throw new ArgumentOutOfRangeException(nameof(kind))
+        };
+
+        var invocation = catalog.InvokeAsync(new RecordingManager([session]), BrokerPrimitiveTarget.Parse(target), null, null, cancellation.Token);
+        await session.InvocationEntered.Task.WaitAsync(TestContext.Current.CancellationToken);
+        cancellation.Cancel();
+
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() => invocation);
+        Assert.Equal(cancellation.Token, session.ObservedCancellationToken);
+    }
+
     [Fact]
     public async Task Invoke_Resource_PreservesTextAndNonImageBlobContents()
     {
@@ -171,15 +196,23 @@ public sealed class BrokerCatalogIndexTests
         int processId,
         string toolName,
         string? resourceUri = null,
-        ReadResourceResult? resourceResult = null) : IHostMcpSession
+        ReadResourceResult? resourceResult = null,
+        BrokerPrimitiveKind? cancellationKind = null) : IHostMcpSession
     {
         private readonly McpClientTool tool = CreateTool(toolName);
-        private readonly McpClientResource? resource = resourceUri is null ? null : CreateResource(resourceUri);
+        private readonly McpClientResource? resource = resourceUri is null && cancellationKind != BrokerPrimitiveKind.Resource
+            ? null
+            : CreateResource(resourceUri ?? "revit://model/cancellable");
+        private readonly McpClientPrompt? prompt = cancellationKind == BrokerPrimitiveKind.Prompt
+            ? CreatePrompt("cancellable_prompt")
+            : null;
 
         public HostInstanceDescriptor Instance { get; } = new(processId, "TestHost", "1.0", McpPipeName.Format(processId));
-        public HostCatalogSnapshot Snapshot => HostCatalogSnapshot.Create(Instance, [tool], [], resource is null ? [] : [resource], []);
+        public HostCatalogSnapshot Snapshot => HostCatalogSnapshot.Create(Instance, [tool], prompt is null ? [] : [prompt], resource is null ? [] : [resource], []);
         public bool IsConnected => true;
         public int CallCount { get; private set; }
+        public TaskCompletionSource<bool> InvocationEntered { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        public CancellationToken ObservedCancellationToken { get; private set; }
         public event Action? CatalogChanged { add { } remove { } }
         public event Action? Disconnected { add { } remove { } }
 
@@ -188,14 +221,21 @@ public sealed class BrokerCatalogIndexTests
         public Task<IList<McpClientResource>> ListResourcesAsync(CancellationToken ct) =>
             Task.FromResult<IList<McpClientResource>>(resource is null ? [] : [resource]);
         public Task<IList<McpClientResourceTemplate>> ListResourceTemplatesAsync(CancellationToken ct) => Task.FromResult<IList<McpClientResourceTemplate>>([]);
-        public Task<CallToolResult> CallToolAsync(string name, IReadOnlyDictionary<string, object?>? arguments, CancellationToken ct)
+        public async Task<CallToolResult> CallToolAsync(string name, IReadOnlyDictionary<string, object?>? arguments, CancellationToken ct)
         {
             CallCount++;
-            return Task.FromResult(new CallToolResult { Content = [new TextContentBlock { Text = name }] });
+            if (cancellationKind == BrokerPrimitiveKind.Tool)
+                return await WaitForCancellationAsync<CallToolResult>(ct);
+            return new CallToolResult { Content = [new TextContentBlock { Text = name }] };
         }
-        public Task<GetPromptResult> GetPromptAsync(string name, IReadOnlyDictionary<string, object?>? arguments, CancellationToken ct) => throw new NotSupportedException();
-        public Task<ReadResourceResult> ReadResourceAsync(string uri, CancellationToken ct) =>
-            resourceResult is null ? throw new NotSupportedException() : Task.FromResult(resourceResult);
+        public async Task<GetPromptResult> GetPromptAsync(string name, IReadOnlyDictionary<string, object?>? arguments, CancellationToken ct) =>
+            cancellationKind == BrokerPrimitiveKind.Prompt
+                ? await WaitForCancellationAsync<GetPromptResult>(ct)
+                : throw new NotSupportedException();
+        public async Task<ReadResourceResult> ReadResourceAsync(string uri, CancellationToken ct) =>
+            cancellationKind == BrokerPrimitiveKind.Resource
+                ? await WaitForCancellationAsync<ReadResourceResult>(ct)
+                : resourceResult is null ? throw new NotSupportedException() : resourceResult;
         public ValueTask DisposeAsync() => ValueTask.CompletedTask;
 
         private static McpClientTool CreateTool(string name)
@@ -217,6 +257,22 @@ public sealed class BrokerCatalogIndexTests
             typeof(McpClientResource).GetField("<ProtocolResource>k__BackingField", BindingFlags.Instance | BindingFlags.NonPublic)!
                 .SetValue(resource, new Resource { Uri = uri, Name = uri });
             return resource;
+        }
+
+        private static McpClientPrompt CreatePrompt(string name)
+        {
+            var prompt = (McpClientPrompt)RuntimeHelpers.GetUninitializedObject(typeof(McpClientPrompt));
+            typeof(McpClientPrompt).GetField("<ProtocolPrompt>k__BackingField", BindingFlags.Instance | BindingFlags.NonPublic)!
+                .SetValue(prompt, new Prompt { Name = name });
+            return prompt;
+        }
+
+        private async Task<T> WaitForCancellationAsync<T>(CancellationToken ct)
+        {
+            ObservedCancellationToken = ct;
+            InvocationEntered.TrySetResult(true);
+            await Task.Delay(Timeout.InfiniteTimeSpan, ct);
+            throw new InvalidOperationException("Cancellation was not observed.");
         }
     }
 }

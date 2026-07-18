@@ -54,6 +54,28 @@ public sealed class CatalogServiceSnapshotTests
     }
 
     [Fact]
+    public async Task RebuildCatalog_CancelledDuringFetch_DoesNotApplyNewSnapshot()
+    {
+        var session = new SnapshotSession(5206, "before_cancellation");
+        var manager = new SnapshotInstanceManager([session]);
+        var broker = new BrokerCatalogIndex();
+        var catalog = CreateCatalog(manager, broker);
+        await catalog.RebuildCatalogAsync(TestContext.Current.CancellationToken);
+        var before = broker.Search(new BrokerSearchRequest(null, null, null));
+
+        using var cancellation = new CancellationTokenSource();
+        session.ToolName = "after_cancellation";
+        session.CancelOnNextFetch = cancellation;
+
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() => catalog.RebuildCatalogAsync(cancellation.Token));
+
+        var after = broker.Search(new BrokerSearchRequest(null, null, null));
+        Assert.Equal(before.Revision, after.Revision);
+        Assert.Contains(after.Items, entry => entry.Name == "before_cancellation");
+        Assert.DoesNotContain(after.Items, entry => entry.Name == "after_cancellation");
+    }
+
+    [Fact]
     public async Task RebuildCatalog_NativeSurfaceUpdatesResourceCollectionAndRaisesListChanges()
     {
         var session = new NativeSnapshotSession(5205);
@@ -119,7 +141,7 @@ public sealed class CatalogServiceSnapshotTests
 
     private sealed class SnapshotSession(int processId, string toolName) : IHostMcpSession
     {
-        private readonly McpClientTool tool = CreateTool(toolName);
+        private McpClientTool tool = CreateTool(toolName);
 
         public HostInstanceDescriptor Instance { get; } = new(
             processId,
@@ -128,6 +150,8 @@ public sealed class CatalogServiceSnapshotTests
             McpPipeName.Format(processId));
         public bool IsConnected => true;
         public bool FailLists { get; set; }
+        public string ToolName { set => tool = CreateTool(value); }
+        public CancellationTokenSource? CancelOnNextFetch { get; set; }
         public event Action? CatalogChanged { add { } remove { } }
         public event Action? Disconnected { add { } remove { } }
 
@@ -140,8 +164,12 @@ public sealed class CatalogServiceSnapshotTests
             Task.FromResult<IList<McpClientPrompt>>([]);
         public Task<IList<McpClientResource>> ListResourcesAsync(CancellationToken ct) =>
             Task.FromResult<IList<McpClientResource>>([]);
-        public Task<IList<McpClientResourceTemplate>> ListResourceTemplatesAsync(CancellationToken ct) =>
-            Task.FromResult<IList<McpClientResourceTemplate>>([]);
+        public Task<IList<McpClientResourceTemplate>> ListResourceTemplatesAsync(CancellationToken ct)
+        {
+            CancelOnNextFetch?.Cancel();
+            CancelOnNextFetch = null;
+            return Task.FromResult<IList<McpClientResourceTemplate>>([]);
+        }
         public Task<CallToolResult> CallToolAsync(string name, IReadOnlyDictionary<string, object?>? arguments, CancellationToken ct) =>
             throw new NotSupportedException();
         public Task<GetPromptResult> GetPromptAsync(string name, IReadOnlyDictionary<string, object?>? arguments, CancellationToken ct) =>

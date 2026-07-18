@@ -49,6 +49,7 @@ public sealed class CatalogService(
         var newTools = new Dictionary<string, McpServerTool>(StringComparer.OrdinalIgnoreCase);
         var newPrompts = new Dictionary<string, McpServerPrompt>(StringComparer.OrdinalIgnoreCase);
         var newResources = new List<McpServerResource>();
+        var newHostSnapshots = new Dictionary<string, HostCatalogSnapshot>(_hostSnapshots, StringComparer.OrdinalIgnoreCase);
         foreach (var local in localTools)
             newTools[local.ProtocolTool.Name] = local;
 
@@ -63,22 +64,28 @@ public sealed class CatalogService(
         {
             token.ThrowIfCancellationRequested();
             var snapshot = await FetchSessionPrimitivesAsync(session, token).ConfigureAwait(false);
+            token.ThrowIfCancellationRequested();
             if (snapshot is not null)
-                _hostSnapshots[session.Instance.PipeName] = snapshot;
+                newHostSnapshots[session.Instance.PipeName] = snapshot;
         }
 
-        foreach (var pipeName in _hostSnapshots.Keys.Where(pipe => !connectedPipeNames.Contains(pipe)).ToArray())
-            _hostSnapshots.Remove(pipeName);
+        foreach (var pipeName in newHostSnapshots.Keys.Where(pipe => !connectedPipeNames.Contains(pipe)).ToArray())
+            newHostSnapshots.Remove(pipeName);
 
-        brokerCatalog.ReplaceSnapshots(_hostSnapshots.Values);
+        token.ThrowIfCancellationRequested();
+        brokerCatalog.ReplaceSnapshots(newHostSnapshots.Values);
         if (nativeSurface)
         {
-            foreach (var snapshot in _hostSnapshots.Values)
+            foreach (var snapshot in newHostSnapshots.Values)
                 AddNativeSnapshot(snapshot, connectedSessions, newTools, newPrompts, newResources);
             ApplySnapshot(toolCollection, newTools.Values);
             ApplySnapshot(promptCollection, newPrompts.Values);
             ApplySnapshot(resourceCollection, newResources);
         }
+
+        _hostSnapshots.Clear();
+        foreach (var pair in newHostSnapshots)
+            _hostSnapshots[pair.Key] = pair.Value;
     }
 
     private async Task<HostCatalogSnapshot?> FetchSessionPrimitivesAsync(
@@ -101,6 +108,10 @@ public sealed class CatalogService(
                 await templatesTask.ConfigureAwait(false));
 
             return snapshot;
+        }
+        catch (OperationCanceledException) when (token.IsCancellationRequested)
+        {
+            throw;
         }
         catch (Exception ex)
         {

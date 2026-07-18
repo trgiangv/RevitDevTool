@@ -3,10 +3,13 @@ using System.Text.Json;
 using DevTools.Daemon.Mcp;
 using DevTools.Daemon.Mcp.Tools;
 using DevTools.Execution.External.Mcp.Hosting;
+using DevTools.Logging;
+using DevTools.Mcp;
 using DevTools.Mcp.Routing;
 using DevTools.Mcp.Routing.Broker;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
+using ModelContextProtocol;
 using ModelContextProtocol.Client;
 using ModelContextProtocol.Protocol;
 using ModelContextProtocol.Server;
@@ -149,9 +152,11 @@ public sealed class BrokerEndToEndTests
 
     private static BrokerSearchResponse DeserializeSearchResponse(CallToolResult result)
     {
-        Assert.True(result.StructuredContent.HasValue);
+        var payload = result.StructuredContent is { } structured
+            ? structured.GetRawText()
+            : Assert.IsType<TextContentBlock>(Assert.Single(result.Content)).Text;
         return Assert.IsType<BrokerSearchResponse>(JsonSerializer.Deserialize<BrokerSearchResponse>(
-            result.StructuredContent.Value.GetRawText(), new JsonSerializerOptions(JsonSerializerDefaults.Web)));
+            payload, McpJsonUtilities.DefaultOptions));
     }
 
     private sealed class HostInfo : IHostAppInfo

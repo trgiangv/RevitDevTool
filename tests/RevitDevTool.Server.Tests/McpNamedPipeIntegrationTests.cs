@@ -208,7 +208,7 @@ public sealed class McpNamedPipeIntegrationTests
         try
         {
             var pendingCall = firstSession.CallToolAsync("blocking_session_test", null, CancellationToken.None);
-            await blockingTool.Entered.Task.WaitAsync(TimeSpan.FromSeconds(5));
+            await blockingTool.Entered.Task.WaitAsync(TimeSpan.FromSeconds(5), TestContext.Current.CancellationToken);
 
             var shutdown = firstHost.StopAsync(TestContext.Current.CancellationToken);
             var completed = await Task.WhenAny(pendingCall, Task.Delay(TimeSpan.FromSeconds(5), TestContext.Current.CancellationToken));

@@ -89,6 +89,10 @@ public sealed class BrokerCatalogIndex
                 _ => Error("Unsupported broker target.")
             };
         }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            throw;
+        }
         catch (Exception ex)
         {
             return Error($"Host invocation failed: {ex.Message}");
