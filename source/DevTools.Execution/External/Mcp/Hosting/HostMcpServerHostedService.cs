@@ -10,9 +10,12 @@ namespace DevTools.Execution.External.Mcp.Hosting;
 public sealed class HostMcpServerHostedService(
     HostMcpServerOptionsFactory optionsFactory,
     ILoggerFactory loggerFactory,
-    IServiceProvider serviceProvider) : IHostedService, IAsyncDisposable
+    IServiceProvider serviceProvider,
+    Func<string, NamedPipeServerStream>? createServerPipe = null) : IHostedService, IAsyncDisposable
 {
     private readonly ConcurrentDictionary<int, Task> _sessions = new();
+    private readonly Func<string, NamedPipeServerStream> _createServerPipe =
+        createServerPipe ?? (pipeName => CurrentUserPipeFactory.CreateDuplexServer(pipeName));
     private readonly ILogger _logger = loggerFactory.CreateLogger<HostMcpServerHostedService>();
     private readonly string _pipeName = McpPipeName.Format(Environment.ProcessId);
     private CancellationTokenSource? _stoppingSource;
@@ -71,7 +74,7 @@ public sealed class HostMcpServerHostedService(
             NamedPipeServerStream? pipe = null;
             try
             {
-                pipe = CurrentUserPipeFactory.CreateDuplexServer(_pipeName);
+                pipe = _createServerPipe(_pipeName);
                 await pipe.WaitForConnectionAsync(cancellationToken).ConfigureAwait(false);
 
                 var sessionId = Interlocked.Increment(ref _nextSessionId);
@@ -86,17 +89,29 @@ public sealed class HostMcpServerHostedService(
             }
             catch (IOException exception) when (IsPipeInstancesBusy(exception))
             {
-                await Task.Delay(200, cancellationToken).ConfigureAwait(false);
+                await DelayBeforeRetryAsync(200, cancellationToken).ConfigureAwait(false);
             }
             catch (Exception exception)
             {
                 _logger.LogWarning(exception, "Standard MCP pipe accept loop failed.");
-                await Task.Delay(500, cancellationToken).ConfigureAwait(false);
+                await DelayBeforeRetryAsync(500, cancellationToken).ConfigureAwait(false);
             }
             finally
             {
                 pipe?.Dispose();
             }
+        }
+    }
+
+    private static async Task DelayBeforeRetryAsync(int millisecondsDelay, CancellationToken cancellationToken)
+    {
+        try
+        {
+            await Task.Delay(millisecondsDelay, cancellationToken).ConfigureAwait(false);
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            // Host shutdown ends retry delays and the enclosing accept loop.
         }
     }
 

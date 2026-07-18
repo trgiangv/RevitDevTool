@@ -26,6 +26,28 @@ public sealed class McpPipeNameTests
 public sealed class McpNamedPipeIntegrationTests
 {
     [Fact]
+    public async Task HostedService_StopsCleanlyWhenShutdownFollowsRecoverableAcceptFailure()
+    {
+        var acceptFailureObserved = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+        var optionsFactory = new HostMcpServerOptionsFactory(new TestHostAppInfo(), [], [], []);
+        using var serviceProvider = new ServiceCollection().BuildServiceProvider();
+        await using var hostedService = new HostMcpServerHostedService(
+            optionsFactory,
+            NullLoggerFactory.Instance,
+            serviceProvider,
+            _ =>
+            {
+                acceptFailureObserved.TrySetResult(true);
+                throw new IOException("Simulated recoverable pipe creation failure.");
+            });
+
+        await hostedService.StartAsync(CancellationToken.None);
+        await acceptFailureObserved.Task.WaitAsync(TestContext.Current.CancellationToken);
+
+        await hostedService.StopAsync(CancellationToken.None);
+    }
+
+    [Fact]
     public async Task HostedService_InitializesSdkClientWithHostMetadata()
     {
         var hostInfo = new TestHostAppInfo();
