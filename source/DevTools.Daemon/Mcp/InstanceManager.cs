@@ -6,13 +6,40 @@ using ZLogger;
 
 namespace DevTools.Daemon.Mcp;
 
-public sealed partial class InstanceManager(
-    ILogger<InstanceManager> logger,
-    ILoggerFactory loggerFactory) : IInstanceManager, IAsyncDisposable
+public sealed partial class InstanceManager : IInstanceManager, IAsyncDisposable
 {
+    private readonly ILogger<InstanceManager> logger;
+    private readonly ILoggerFactory loggerFactory;
+    private readonly Func<ILogger?, HashSet<string>> discoverMcpPipes;
+    private readonly Func<string, CancellationToken, Task<IHostMcpSession>> connectMcpSessionAsync;
+
+    public InstanceManager(
+        ILogger<InstanceManager> logger,
+        ILoggerFactory loggerFactory)
+        : this(
+            logger,
+            loggerFactory,
+            DiscoverMcpPipes,
+            async (pipeName, ct) =>
+                await HostMcpSession.ConnectAsync(pipeName, loggerFactory, ct).ConfigureAwait(false))
+    {
+    }
+
     public InstanceManager(ILogger<InstanceManager> logger)
         : this(logger, NullLoggerFactory.Instance)
     {
+    }
+
+    internal InstanceManager(
+        ILogger<InstanceManager> logger,
+        ILoggerFactory loggerFactory,
+        Func<ILogger?, HashSet<string>> discoverMcpPipes,
+        Func<string, CancellationToken, Task<IHostMcpSession>> connectMcpSessionAsync)
+    {
+        this.logger = logger;
+        this.loggerFactory = loggerFactory;
+        this.discoverMcpPipes = discoverMcpPipes;
+        this.connectMcpSessionAsync = connectMcpSessionAsync;
     }
 
     /// <summary>
@@ -140,9 +167,9 @@ public sealed partial class InstanceManager(
         }
     }
 
-    private async Task SyncMcpPipesAsync(HashSet<string> knownPipes, CancellationToken ct)
+    internal async Task SyncMcpPipesAsync(HashSet<string> knownPipes, CancellationToken ct)
     {
-        var currentPipes = DiscoverMcpPipes(logger);
+        var currentPipes = discoverMcpPipes(logger);
 
         foreach (var pipeName in knownPipes.Where(pipe => !currentPipes.Contains(pipe)).ToList())
         {
@@ -150,9 +177,15 @@ public sealed partial class InstanceManager(
             await DisconnectMcpAsync(pipeName).ConfigureAwait(false);
         }
 
-        foreach (var pipeName in currentPipes.Where(pipe => !knownPipes.Contains(pipe)).ToList())
+        foreach (var pipeName in currentPipes)
         {
             knownPipes.Add(pipeName);
+            if (_sessions.TryGetValue(pipeName, out var session) && session.IsConnected)
+                continue;
+
+            if (session is not null)
+                await DisconnectMcpAsync(pipeName).ConfigureAwait(false);
+
             await TryConnectMcpAsync(pipeName, ct).ConfigureAwait(false);
         }
     }
@@ -162,7 +195,7 @@ public sealed partial class InstanceManager(
         try
         {
             logger.ZLogInformation($"Connecting to MCP endpoint {pipeName}...");
-            var session = await HostMcpSession.ConnectAsync(pipeName, loggerFactory, ct).ConfigureAwait(false);
+            var session = await connectMcpSessionAsync(pipeName, ct).ConfigureAwait(false);
             session.CatalogChanged += NotifySessionsChanged;
             session.Disconnected += () =>
             {

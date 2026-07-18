@@ -28,6 +28,61 @@ public sealed class McpPipeNameTests
 public sealed class McpNamedPipeIntegrationTests
 {
     [Fact]
+    public async Task InstanceManager_RetriesAdvertisedPipeAfterInitialConnectionFailure()
+    {
+        var pipeName = McpPipeName.Format(4217);
+        var attempts = 0;
+        await using var manager = CreateInstanceManager(
+            pipeName,
+            (_, _) =>
+            {
+                attempts++;
+                if (attempts == 1)
+                    throw new IOException("Simulated initial connection failure.");
+
+                return Task.FromResult<IHostMcpSession>(new TestMcpSession(pipeName));
+            });
+        var knownPipes = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+        await manager.SyncMcpPipesAsync(knownPipes, TestContext.Current.CancellationToken);
+        Assert.Empty(manager.Sessions);
+
+        await manager.SyncMcpPipesAsync(knownPipes, TestContext.Current.CancellationToken);
+
+        Assert.Equal(2, attempts);
+        Assert.Single(manager.Sessions);
+    }
+
+    [Fact]
+    public async Task InstanceManager_ReconnectsAdvertisedPipeAfterSessionDisconnects()
+    {
+        var pipeName = McpPipeName.Format(4218);
+        var attempts = 0;
+        var firstSession = new TestMcpSession(pipeName);
+        await using var manager = CreateInstanceManager(
+            pipeName,
+            (_, _) => Task.FromResult<IHostMcpSession>(++attempts == 1 ? firstSession : new TestMcpSession(pipeName)));
+        var knownPipes = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+        await manager.SyncMcpPipesAsync(knownPipes, TestContext.Current.CancellationToken);
+        Assert.Same(firstSession, Assert.Single(manager.Sessions));
+
+        var disconnected = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+        manager.SessionsChanged += () =>
+        {
+            if (manager.Sessions.Count == 0)
+                disconnected.TrySetResult(true);
+        };
+        firstSession.Disconnect();
+        await disconnected.Task.WaitAsync(TestContext.Current.CancellationToken);
+
+        await manager.SyncMcpPipesAsync(knownPipes, TestContext.Current.CancellationToken);
+
+        Assert.Equal(2, attempts);
+        Assert.Single(manager.Sessions);
+    }
+
+    [Fact]
     public async Task HostMcpSession_ListsCallsAndRaisesCatalogChanged()
     {
         var tools = new McpServerPrimitiveCollection<McpServerTool>
@@ -160,5 +215,65 @@ public sealed class McpNamedPipeIntegrationTests
             {
                 Content = [new TextContentBlock { Text = "typed session" }]
             });
+    }
+
+    private static InstanceManager CreateInstanceManager(
+        string pipeName,
+        Func<string, CancellationToken, Task<IHostMcpSession>> connectAsync) =>
+        new(
+            NullLogger<InstanceManager>.Instance,
+            NullLoggerFactory.Instance,
+            _ => new HashSet<string>([pipeName], StringComparer.OrdinalIgnoreCase),
+            connectAsync);
+
+    private sealed class TestMcpSession(string pipeName) : IHostMcpSession
+    {
+        public HostInstanceDescriptor Instance { get; } = new(4217, "Test", "1.0", pipeName);
+        public bool IsConnected { get; private set; } = true;
+        public event Action? CatalogChanged
+        {
+            add { }
+            remove { }
+        }
+        public event Action? Disconnected;
+
+        public Task<IList<McpClientTool>> ListToolsAsync(CancellationToken ct) =>
+            Task.FromResult<IList<McpClientTool>>([]);
+
+        public Task<IList<McpClientPrompt>> ListPromptsAsync(CancellationToken ct) =>
+            Task.FromResult<IList<McpClientPrompt>>([]);
+
+        public Task<IList<McpClientResource>> ListResourcesAsync(CancellationToken ct) =>
+            Task.FromResult<IList<McpClientResource>>([]);
+
+        public Task<IList<McpClientResourceTemplate>> ListResourceTemplatesAsync(CancellationToken ct) =>
+            Task.FromResult<IList<McpClientResourceTemplate>>([]);
+
+        public Task<CallToolResult> CallToolAsync(
+            string name,
+            IReadOnlyDictionary<string, object?>? arguments,
+            CancellationToken ct) =>
+            throw new NotSupportedException();
+
+        public Task<GetPromptResult> GetPromptAsync(
+            string name,
+            IReadOnlyDictionary<string, object?>? arguments,
+            CancellationToken ct) =>
+            throw new NotSupportedException();
+
+        public Task<ReadResourceResult> ReadResourceAsync(string uri, CancellationToken ct) =>
+            throw new NotSupportedException();
+
+        public void Disconnect()
+        {
+            IsConnected = false;
+            Disconnected?.Invoke();
+        }
+
+        public ValueTask DisposeAsync()
+        {
+            IsConnected = false;
+            return ValueTask.CompletedTask;
+        }
     }
 }

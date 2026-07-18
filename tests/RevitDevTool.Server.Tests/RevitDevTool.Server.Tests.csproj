@@ -12,6 +12,9 @@
         <PackageReference Include="xunit.v3"/>
         <PackageReference Include="xunit.runner.visualstudio"/>
         <PackageReference Include="pythonnet"/>
+        <GlobalPackageReference Update="Polyfill">
+            <ExcludeAssets>contentFiles</ExcludeAssets>
+        </GlobalPackageReference>
     </ItemGroup>
 
     <ItemGroup>
