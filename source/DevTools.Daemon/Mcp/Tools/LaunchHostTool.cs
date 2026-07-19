@@ -100,8 +100,11 @@ public sealed class LaunchHostTool
         }
 
         var connected = await WaitForInstanceConnectionAsync(launch.ProcessId, cancellationToken).ConfigureAwait(false);
-        var dialogResult = await HostLaunchCoordinator.TryAwaitResolverResultAsync(launch.DialogTask, TimeSpan.FromSeconds(5)).ConfigureAwait(false);
         if (connected is null)
+        {
+            var connectionTimeoutDialogResult = await HostLaunchCoordinator
+                .TryAwaitResolverResultAsync(launch.DialogTask, TimeSpan.FromSeconds(5))
+                .ConfigureAwait(false);
             return Result(new LaunchHostResult(
                 parsedHostApp.Value,
                 launch.ProcessId,
@@ -112,11 +115,20 @@ public sealed class LaunchHostTool
                 LaunchHostStatus.ConnectionTimeout,
                 false,
                 $"{parsedHostApp} launched (PID={launch.ProcessId}) but bridge did not connect within timeout.",
-                dialogResult));
+                connectionTimeoutDialogResult));
+        }
 
+        var dialogResultTask = HostLaunchCoordinator.TryAwaitResolverResultAsync(
+            launch.DialogTask,
+            TimeSpan.FromSeconds(5));
         var catalogState = await getCatalogCoordinator()
-            .WaitForFirstFetchAsync(launch.ProcessId, connected.Generation, catalogTimeout, cancellationToken)
+            .WaitForFirstFetchAsync(
+                launch.ProcessId,
+                connected.Generation,
+                catalogTimeout,
+                cancellationToken)
             .ConfigureAwait(false);
+        var dialogResult = await dialogResultTask.ConfigureAwait(false);
         var catalogReady = catalogState is HostCatalogState.Ready or HostCatalogState.Stale;
         var status = catalogReady
             ? LaunchHostStatus.ConnectedCatalogReady

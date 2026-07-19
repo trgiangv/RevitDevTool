@@ -4,6 +4,7 @@ using DevTools.Daemon.Hosting;
 using DevTools.Daemon.Hosts;
 using DevTools.Daemon.Mcp;
 using DevTools.Daemon.Mcp.Tools;
+using DevTools.Daemon.Mcp.Tools.Utils;
 using DevTools.Ipc;
 using DevTools.Logging;
 using DevTools.Mcp.Routing;
@@ -15,6 +16,7 @@ using Microsoft.Extensions.Options;
 using ModelContextProtocol.Client;
 using ModelContextProtocol.Protocol;
 using ModelContextProtocol.Server;
+using System.Diagnostics;
 using System.Text.Json;
 
 namespace RevitDevTool.Server.Tests;
@@ -244,6 +246,68 @@ public sealed class HostDriverRegistryTests
     }
 
     [Fact]
+    public async Task Launch_PostConnectionBarrierOverlapsDialogSnapshotWait()
+    {
+        var session = new CapturingSession(9009);
+        await using var instanceManager = await CreateHostSessionManagerAsync([session]);
+        await using var coordinator = new HostCatalogCoordinator(_ => Task.CompletedTask, instanceManager);
+        var dialogTask = Task.Run(async () =>
+        {
+            await Task.Delay(400, TestContext.Current.CancellationToken);
+            return new StartupDialogResolverResult(TimedOut: false, Events: []);
+        });
+        var driver = new CapturingHostDriver(9009, HostApp.Revit) { DialogTask = dialogTask };
+        var tool = new LaunchHostTool(
+            instanceManager,
+            new HostDriverRegistry([driver]),
+            coordinator,
+            catalogTimeout: TimeSpan.FromMilliseconds(500));
+        var timer = Stopwatch.StartNew();
+
+        var result = await tool.LaunchAsync("Revit", "2025", cancellationToken: TestContext.Current.CancellationToken);
+
+        Assert.Equal(LaunchHostStatus.ConnectedCatalogPending, ReadPayload(result).GetProperty("status").GetString());
+        Assert.InRange(timer.Elapsed, TimeSpan.FromMilliseconds(450), TimeSpan.FromMilliseconds(700));
+    }
+
+    [Fact]
+    public async Task Launch_PropagatesCallerCancellationWhileDialogAndCatalogArePending()
+    {
+        var session = new CapturingSession(9010);
+        await using var instanceManager = await CreateHostSessionManagerAsync([session]);
+        await using var coordinator = new HostCatalogCoordinator(_ => Task.CompletedTask, instanceManager);
+        var dialogTask = Task.Run(async () =>
+        {
+            await Task.Delay(500);
+            return new StartupDialogResolverResult(TimedOut: false, Events: []);
+        });
+        var driver = new CapturingHostDriver(9010, HostApp.Revit) { DialogTask = dialogTask };
+        var tool = new LaunchHostTool(
+            instanceManager,
+            new HostDriverRegistry([driver]),
+            coordinator,
+            catalogTimeout: TimeSpan.FromSeconds(5));
+        using var cancellation = new CancellationTokenSource(TimeSpan.FromMilliseconds(20));
+        var launch = tool.LaunchAsync("Revit", "2025", cancellationToken: cancellation.Token);
+
+        try
+        {
+            await Assert.ThrowsAnyAsync<OperationCanceledException>(
+                () => launch.WaitAsync(TimeSpan.FromMilliseconds(250), TestContext.Current.CancellationToken));
+        }
+        finally
+        {
+            try
+            {
+                await launch.WaitAsync(TimeSpan.FromSeconds(1), TestContext.Current.CancellationToken);
+            }
+            catch
+            {
+            }
+        }
+    }
+
+    [Fact]
     public async Task Launch_ReturnsLaunchFailedWhenDriverCannotStartProcess()
     {
         await using var instanceManager = await CreateHostSessionManagerAsync([]);
@@ -330,6 +394,7 @@ public sealed class HostDriverRegistryTests
         public IReadOnlySet<HostApp> SupportedHostApps { get; } = new HashSet<HostApp>(supportedHostApps);
         public IReadOnlySet<string> FileExtensions { get; } = new HashSet<string> { ".rvt" };
         public HostLaunchRequest? Request { get; private set; }
+        public Task<StartupDialogResolverResult>? DialogTask { get; init; }
         public bool SupportsVersion(string version) => true;
 
         public Task<HostLaunchResult> LaunchAsync(HostLaunchRequest request, CancellationToken ct)
@@ -342,7 +407,7 @@ public sealed class HostDriverRegistryTests
                 "C:\\test-host.exe",
                 request.LanguageCode,
                 [],
-                null));
+                DialogTask));
         }
 
         public Task<FileInfoResult> ReadFileInfoAsync(string filePath, CancellationToken ct) =>
