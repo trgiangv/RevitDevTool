@@ -16,6 +16,75 @@ namespace RevitDevTool.Server.Tests;
 public sealed class CatalogServiceSnapshotTests
 {
     [Fact]
+    public async Task RebuildCatalog_FetchesHostsConcurrently()
+    {
+        var barrier = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+        var first = new SnapshotSession(5101, "first_tool", fetchBarrier: barrier);
+        var second = new SnapshotSession(5102, "second_tool", fetchBarrier: barrier);
+        var catalog = CreateCatalog(new SnapshotInstanceManager([first, second]), new BrokerCatalogIndex());
+
+        var rebuild = catalog.RebuildCatalogAsync(TestContext.Current.CancellationToken);
+        try
+        {
+            await Task.WhenAll(first.FetchEntered.Task, second.FetchEntered.Task)
+                .WaitAsync(TimeSpan.FromSeconds(1), TestContext.Current.CancellationToken);
+        }
+        finally
+        {
+            barrier.TrySetResult(true);
+            await rebuild;
+        }
+    }
+
+    [Fact]
+    public async Task ReconnectFailure_DoesNotPublishPriorGenerationSnapshot()
+    {
+        var manager = new SnapshotInstanceManager([new SnapshotSession(5103, "old_tool", generation: 1)]);
+        var broker = new BrokerCatalogIndex();
+        var catalog = CreateCatalog(manager, broker);
+        await catalog.RebuildCatalogAsync(TestContext.Current.CancellationToken);
+
+        manager.SetSessions([new SnapshotSession(5103, "new_tool", generation: 2) { FailLists = true }]);
+        await catalog.RebuildCatalogAsync(TestContext.Current.CancellationToken);
+
+        var search = broker.Search(new BrokerSearchRequest(null, null, null));
+        Assert.DoesNotContain(search.Items, item => item.Name == "old_tool");
+        var status = Assert.Single(search.Catalogs!);
+        Assert.Equal(HostCatalogState.Unavailable, status.State);
+        Assert.Equal("catalog_fetch_failed", status.LastErrorCode);
+        Assert.DoesNotContain("Simulated", status.LastErrorCode, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task RebuildCatalog_PublishesNewIdentityRefreshingThenReady()
+    {
+        var barrier = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+        var session = new SnapshotSession(5104, "ready_tool", generation: 3, fetchBarrier: barrier);
+        var broker = new BrokerCatalogIndex();
+        var catalog = CreateCatalog(new SnapshotInstanceManager([session]), broker);
+        var changes = new List<HostCatalogPublication>();
+        catalog.PublicationChanged += changes.Add;
+
+        var rebuild = catalog.RebuildCatalogAsync(TestContext.Current.CancellationToken);
+        await session.FetchEntered.Task.WaitAsync(TestContext.Current.CancellationToken);
+
+        var refreshing = Assert.Single(changes);
+        Assert.Equal(new HostCatalogIdentity(session.Instance.PipeName, 3), refreshing.Identity);
+        Assert.Equal(HostCatalogState.Refreshing, refreshing.State);
+        Assert.Equal(HostCatalogState.Refreshing, Assert.Single(
+            broker.Search(new BrokerSearchRequest(null, null, null)).Catalogs!).State);
+
+        barrier.SetResult(true);
+        await rebuild;
+
+        Assert.Collection(changes,
+            publication => Assert.Equal(HostCatalogState.Refreshing, publication.State),
+            publication => Assert.Equal(HostCatalogState.Ready, publication.State));
+        Assert.Equal(HostCatalogState.Ready, Assert.Single(
+            broker.Search(new BrokerSearchRequest(null, null, null)).Catalogs!).State);
+    }
+
+    [Fact]
     public async Task RebuildCatalog_RetainsOnlyFailingHostsPriorSnapshot()
     {
         var healthy = new SnapshotSession(5201, "healthy_tool");
@@ -142,9 +211,18 @@ public sealed class CatalogServiceSnapshotTests
                 ? session
                 : null;
         public void Remove(IHostMcpSession session) => sessions.Remove(session);
+        public void SetSessions(IEnumerable<IHostMcpSession> replacements)
+        {
+            sessions.Clear();
+            sessions.AddRange(replacements);
+        }
     }
 
-    private sealed class SnapshotSession(int processId, string toolName) : IHostMcpSession
+    private sealed class SnapshotSession(
+        int processId,
+        string toolName,
+        int generation = 1,
+        TaskCompletionSource<bool>? fetchBarrier = null) : IHostMcpSession
     {
         private McpClientTool tool = CreateTool(toolName);
 
@@ -153,18 +231,24 @@ public sealed class CatalogServiceSnapshotTests
             "Test",
             "1.0",
             McpPipeName.Format(processId));
-        public int Generation { get; init; } = 1;
+        public int Generation { get; } = generation;
         public bool IsConnected => true;
         public bool FailLists { get; set; }
         public string ToolName { set => tool = CreateTool(value); }
         public CancellationTokenSource? CancelOnNextFetch { get; set; }
+        public TaskCompletionSource<bool> FetchEntered { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
         public event Action? CatalogChanged { add { } remove { } }
         public event Action? Disconnected { add { } remove { } }
 
-        public Task<IList<McpClientTool>> ListToolsAsync(CancellationToken ct) =>
-            FailLists
-                ? Task.FromException<IList<McpClientTool>>(new IOException("Simulated list failure."))
-                : Task.FromResult<IList<McpClientTool>>([tool]);
+        public async Task<IList<McpClientTool>> ListToolsAsync(CancellationToken ct)
+        {
+            FetchEntered.TrySetResult(true);
+            if (fetchBarrier is not null)
+                await fetchBarrier.Task.WaitAsync(ct);
+            if (FailLists)
+                throw new IOException("Simulated list failure.");
+            return [tool];
+        }
 
         public Task<IList<McpClientPrompt>> ListPromptsAsync(CancellationToken ct) =>
             Task.FromResult<IList<McpClientPrompt>>([]);

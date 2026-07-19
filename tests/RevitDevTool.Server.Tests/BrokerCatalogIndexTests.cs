@@ -5,6 +5,7 @@ using System.Text.Json;
 using DevTools.Mcp;
 using DevTools.Mcp.Routing;
 using DevTools.Mcp.Routing.Broker;
+using DevTools.Mcp.Routing.Catalog;
 using ModelContextProtocol.Client;
 using ModelContextProtocol.Protocol;
 
@@ -178,7 +179,14 @@ public sealed class BrokerCatalogIndexTests
     private static BrokerCatalogIndex CreateCatalog(params RecordingSession[] sessions)
     {
         var catalog = new BrokerCatalogIndex();
-        catalog.ReplaceSnapshots(sessions.Select(session => session.Snapshot));
+        catalog.ReplacePublications(sessions.Select(session => new HostCatalogPublication(
+            new HostCatalogIdentity(session.Instance.PipeName, session.Generation),
+            session.Instance,
+            HostCatalogState.Ready,
+            session.Snapshot,
+            DateTimeOffset.UtcNow,
+            null,
+            null)));
         return catalog;
     }
 

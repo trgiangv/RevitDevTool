@@ -7,6 +7,7 @@ using DevTools.Logging;
 using DevTools.Mcp;
 using DevTools.Mcp.Routing;
 using DevTools.Mcp.Routing.Broker;
+using DevTools.Mcp.Routing.Catalog;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
 using ModelContextProtocol;
@@ -100,8 +101,16 @@ public sealed class BrokerEndToEndTests
             var session = new CountingSession(realSession);
             var manager = new SingleSessionManager(session);
             var broker = new BrokerCatalogIndex();
-            broker.ReplaceSnapshots([HostCatalogSnapshot.Create(session.Instance,
-                await session.ListToolsAsync(ct), await session.ListPromptsAsync(ct), await session.ListResourcesAsync(ct), await session.ListResourceTemplatesAsync(ct))]);
+            var snapshot = HostCatalogSnapshot.Create(session.Instance,
+                await session.ListToolsAsync(ct), await session.ListPromptsAsync(ct), await session.ListResourcesAsync(ct), await session.ListResourceTemplatesAsync(ct));
+            broker.ReplacePublications([new HostCatalogPublication(
+                new HostCatalogIdentity(session.Instance.PipeName, session.Generation),
+                session.Instance,
+                HostCatalogState.Ready,
+                snapshot,
+                DateTimeOffset.UtcNow,
+                null,
+                null)]);
             var expectedSearchResponse = broker.Search(new BrokerSearchRequest("execute_csharp_code", null, null));
 
             var brokerTools = new DevToolsBrokerTools(broker, manager);

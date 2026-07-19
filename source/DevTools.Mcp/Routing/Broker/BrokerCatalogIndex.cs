@@ -1,6 +1,7 @@
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
+using DevTools.Mcp.Routing.Catalog;
 using ModelContextProtocol.Protocol;
 
 namespace DevTools.Mcp.Routing.Broker;
@@ -10,18 +11,31 @@ public sealed class BrokerCatalogIndex
     private readonly Lock gate = new();
     private BrokerSnapshot snapshot = BrokerSnapshot.Empty;
 
-    public void ReplaceSnapshots(IEnumerable<HostCatalogSnapshot> snapshots)
+    public void ReplacePublications(IEnumerable<HostCatalogPublication> publications)
     {
-        var hostSnapshots = snapshots.ToArray();
-        var entries = hostSnapshots
+        var hostPublications = publications.ToArray();
+        var availablePublications = hostPublications
+            .Where(publication => publication.State is HostCatalogState.Ready or HostCatalogState.Stale &&
+                                  publication.Snapshot is not null)
+            .ToArray();
+        var entries = availablePublications
             .SelectMany(CreateEntries)
             .OrderBy(entry => entry.Host.ProcessId)
             .ThenBy(entry => entry.Kind)
             .ThenBy(entry => entry.Key, StringComparer.OrdinalIgnoreCase)
             .ToArray();
-        var hosts = hostSnapshots.Select(snapshot => snapshot.Instance)
+        var hosts = hostPublications.Select(publication => publication.Instance)
             .DistinctBy(host => host.ProcessId)
             .OrderBy(host => host.ProcessId)
+            .ToArray();
+        var catalogs = hostPublications
+            .OrderBy(publication => publication.Instance.ProcessId)
+            .Select(publication => new HostCatalogStatus(
+                publication.Instance.ProcessId,
+                publication.State,
+                publication.UpdatedAt,
+                publication.StaleSince,
+                publication.LastErrorCode))
             .ToArray();
         var revisionInput = string.Join("\n", entries.Select(entry =>
             $"{entry.Host.ProcessId}\t{entry.Kind}\t{entry.Key}\t{entry.Schema?.GetRawText() ?? string.Empty}"));
@@ -33,7 +47,7 @@ public sealed class BrokerCatalogIndex
             .ToDictionary(group => group.Key, group => group.ToArray());
 
         lock (gate)
-            snapshot = new BrokerSnapshot(revision, hosts, entries, byTarget, byHost);
+            snapshot = new BrokerSnapshot(revision, hosts, entries, byTarget, byHost, catalogs);
     }
 
     public BrokerSearchResponse Search(BrokerSearchRequest request)
@@ -54,7 +68,12 @@ public sealed class BrokerCatalogIndex
             .ThenBy(match => match.Entry.Host.ProcessId)
             .ToArray();
         var selected = matches.Take(request.Limit).Select(match => ToItem(match.Entry, request.Detail)).ToArray();
-        return new BrokerSearchResponse(current.Revision, current.Hosts, selected, matches.Length > selected.Length);
+        return new BrokerSearchResponse(
+            current.Revision,
+            current.Hosts,
+            selected,
+            matches.Length > selected.Length,
+            current.Catalogs);
     }
 
     public async Task<CallToolResult> InvokeAsync(
@@ -99,20 +118,21 @@ public sealed class BrokerCatalogIndex
         }
     }
 
-    private static IEnumerable<BrokerEntry> CreateEntries(HostCatalogSnapshot host)
+    private static IEnumerable<BrokerEntry> CreateEntries(HostCatalogPublication publication)
     {
+        var host = publication.Snapshot!;
         foreach (var tool in host.Tools)
             yield return new BrokerEntry(BrokerPrimitiveKind.Tool, tool.ProtocolTool.Name, tool.ProtocolTool.Name,
-                tool.ProtocolTool.Description, tool.ProtocolTool.InputSchema, host.Instance);
+                tool.ProtocolTool.Description, tool.ProtocolTool.InputSchema, host.Instance, publication.Identity);
         foreach (var resource in host.Resources)
             yield return new BrokerEntry(BrokerPrimitiveKind.Resource, resource.ProtocolResource.Uri, resource.ProtocolResource.Name,
-                resource.ProtocolResource.Description, null, host.Instance);
+                resource.ProtocolResource.Description, null, host.Instance, publication.Identity);
         foreach (var template in host.ResourceTemplates)
             yield return new BrokerEntry(BrokerPrimitiveKind.Resource, template.ProtocolResourceTemplate.UriTemplate, template.ProtocolResourceTemplate.Name,
-                template.ProtocolResourceTemplate.Description, null, host.Instance);
+                template.ProtocolResourceTemplate.Description, null, host.Instance, publication.Identity);
         foreach (var prompt in host.Prompts)
             yield return new BrokerEntry(BrokerPrimitiveKind.Prompt, prompt.ProtocolPrompt.Name, prompt.ProtocolPrompt.Name,
-                prompt.ProtocolPrompt.Description, null, host.Instance);
+                prompt.ProtocolPrompt.Description, null, host.Instance, publication.Identity);
     }
 
     private static int Score(BrokerEntry entry, string? query)
@@ -162,17 +182,26 @@ public sealed class BrokerCatalogIndex
         Content = [new TextContentBlock { Text = message }]
     };
 
-    private sealed record BrokerEntry(BrokerPrimitiveKind Kind, string Key, string Name, string? Description, JsonElement? Schema, HostInstanceDescriptor Host);
+    private sealed record BrokerEntry(
+        BrokerPrimitiveKind Kind,
+        string Key,
+        string Name,
+        string? Description,
+        JsonElement? Schema,
+        HostInstanceDescriptor Host,
+        HostCatalogIdentity CatalogIdentity);
     private sealed record BrokerSnapshot(
         string Revision,
         IReadOnlyList<HostInstanceDescriptor> Hosts,
         IReadOnlyList<BrokerEntry> Entries,
         IReadOnlyDictionary<string, BrokerEntry[]> ByTarget,
-        IReadOnlyDictionary<int, BrokerEntry[]> ByHost)
+        IReadOnlyDictionary<int, BrokerEntry[]> ByHost,
+        IReadOnlyList<HostCatalogStatus> Catalogs)
     {
         public static BrokerSnapshot Empty { get; } = new(
             "e3b0c44298fc1c14", [], [],
             new Dictionary<string, BrokerEntry[]>(StringComparer.OrdinalIgnoreCase),
-            new Dictionary<int, BrokerEntry[]>());
+            new Dictionary<int, BrokerEntry[]>(),
+            []);
     }
 }
