@@ -39,7 +39,9 @@ openspec/
 .claude/
 .serena/
 artifacts/
+.superpowers/
 superpowers/
+.cocoindex_code/
 
 # Code signing
 *.pfx

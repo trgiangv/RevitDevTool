@@ -2,7 +2,6 @@ using System.IO;
 using System.ComponentModel;
 using System.Text.Json;
 using System.Text.Json.Serialization;
-using DevTools.Mcp.BuiltIn;
 using ModelContextProtocol;
 using ModelContextProtocol.Protocol;
 using ModelContextProtocol.Server;

@@ -143,7 +143,6 @@
                     <ListBox Grid.Row="1"
                              ItemsSource="{Binding FilteredTools}"
                              ScrollViewer.HorizontalScrollBarVisibility="Disabled"
-                             SelectedItem="{Binding SelectedTool, Mode=TwoWay}"
                              VirtualizingPanel.IsVirtualizing="True"
                              VirtualizingPanel.VirtualizationMode="Recycling">
                         <ListBox.ItemContainerStyle>
