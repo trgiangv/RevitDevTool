@@ -230,6 +230,57 @@ public sealed class BrokerInvokeResilienceTests
         Assert.Equal(0, session.CallCount);
     }
 
+    [Fact]
+    public async Task GenerationReplacementDuringConversion_IsRejectedBeforeDispatch()
+    {
+        var published = new TestSession(41110, "execute_csharp_code", generation: 1);
+        var replacement = new TestSession(41110, "execute_csharp_code", generation: 2);
+        var manager = new MutableManager(published);
+        var catalog = CreateCatalogWithConverter(arguments =>
+        {
+            manager.Replace(replacement);
+            return BrokerArgumentConverter.ToObjects(arguments);
+        }, published);
+
+        var result = await catalog.InvokeAsync(
+            manager,
+            BrokerPrimitiveTarget.Parse("tool:execute_csharp_code"),
+            null,
+            JsonSerializer.SerializeToElement(new { value = 42 }),
+            TimeSpan.FromMinutes(5),
+            TestContext.Current.CancellationToken);
+
+        Assert.True(result.IsError);
+        var payload = DeserializePayload(result);
+        Assert.Equal(BrokerInvokeStatus.HostDisconnected, payload.Status);
+        Assert.False(payload.MayHaveExecuted);
+        Assert.Equal(0, published.CallCount);
+        Assert.Equal(0, replacement.CallCount);
+    }
+
+    [Fact]
+    public async Task ClientCancellationDuringConversion_PropagatesBeforeDispatch()
+    {
+        using var cancellation = new CancellationTokenSource();
+        var session = new TestSession(41111, "execute_csharp_code");
+        var catalog = CreateCatalogWithConverter(arguments =>
+        {
+            cancellation.Cancel();
+            return BrokerArgumentConverter.ToObjects(arguments);
+        }, session);
+
+        var invocation = catalog.InvokeAsync(
+            new TestManager(session),
+            BrokerPrimitiveTarget.Parse("tool:execute_csharp_code"),
+            null,
+            JsonSerializer.SerializeToElement(new { value = 42 }),
+            TimeSpan.FromMinutes(5),
+            cancellation.Token);
+
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() => invocation);
+        Assert.Equal(0, session.CallCount);
+    }
+
     [Theory]
     [InlineData("io", BrokerInvokeStatus.ConnectionLost)]
     [InlineData("disposed", BrokerInvokeStatus.ConnectionLost)]
@@ -294,6 +345,24 @@ public sealed class BrokerInvokeResilienceTests
     private static BrokerCatalogIndex CreateCatalog(params TestSession[] sessions)
     {
         var catalog = new BrokerCatalogIndex();
+        Publish(catalog, sessions);
+        return catalog;
+    }
+
+    private static BrokerCatalogIndex CreateCatalogWithConverter(
+        Func<JsonElement?, IReadOnlyDictionary<string, object?>?> argumentConverter,
+        params TestSession[] sessions)
+    {
+        var constructor = typeof(BrokerCatalogIndex)
+            .GetConstructors(BindingFlags.Instance | BindingFlags.NonPublic)
+            .Single(candidate => candidate.GetParameters().Length == 2);
+        var catalog = Assert.IsType<BrokerCatalogIndex>(constructor.Invoke([null, argumentConverter]));
+        Publish(catalog, sessions);
+        return catalog;
+    }
+
+    private static void Publish(BrokerCatalogIndex catalog, params TestSession[] sessions)
+    {
         catalog.ReplacePublications(sessions.Select(session => new HostCatalogPublication(
             new HostCatalogIdentity(session.Instance.PipeName, session.Generation),
             session.Instance,
@@ -302,7 +371,18 @@ public sealed class BrokerInvokeResilienceTests
             DateTimeOffset.UtcNow,
             null,
             null)));
-        return catalog;
+    }
+
+    private sealed class MutableManager(IHostMcpSession current) : IInstanceManager
+    {
+        private IHostMcpSession current = current;
+        public IReadOnlyCollection<IHostMcpSession> Sessions => [current];
+        public event Action? SessionsChanged { add { } remove { } }
+        public void Replace(IHostMcpSession replacement) => current = replacement;
+        public IHostMcpSession? GetSessionByProcessId(int processId) =>
+            current.Instance.ProcessId == processId ? current : null;
+        public IHostMcpSession? GetSession(int processId, int generation) =>
+            current.Instance.ProcessId == processId && current.Generation == generation ? current : null;
     }
 
     private sealed class TestManager(params IHostMcpSession[] sessions) : IInstanceManager

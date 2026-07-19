@@ -9,10 +9,25 @@ using ModelContextProtocol.Protocol;
 
 namespace DevTools.Mcp.Routing.Broker;
 
-public sealed class BrokerCatalogIndex(ILogger<BrokerCatalogIndex>? logger = null)
+public sealed class BrokerCatalogIndex
 {
     private readonly Lock gate = new();
+    private readonly ILogger<BrokerCatalogIndex>? logger;
+    private readonly Func<JsonElement?, IReadOnlyDictionary<string, object?>?> convertArguments;
     private BrokerSnapshot snapshot = BrokerSnapshot.Empty;
+
+    public BrokerCatalogIndex(ILogger<BrokerCatalogIndex>? logger = null)
+        : this(logger, BrokerArgumentConverter.ToObjects)
+    {
+    }
+
+    internal BrokerCatalogIndex(
+        ILogger<BrokerCatalogIndex>? logger,
+        Func<JsonElement?, IReadOnlyDictionary<string, object?>?> argumentConverter)
+    {
+        this.logger = logger;
+        convertArguments = argumentConverter;
+    }
 
     public void ReplacePublications(IEnumerable<HostCatalogPublication> publications)
     {
@@ -112,17 +127,12 @@ public sealed class BrokerCatalogIndex(ILogger<BrokerCatalogIndex>? logger = nul
                 false);
 
         var candidate = candidates[0];
-        var session = sessions.GetSession(candidate.Host.ProcessId, candidate.SessionGeneration);
-        if (session is null || !session.IsConnected)
-            return InvokeResult(BrokerInvokeStatus.HostDisconnected, target, hostId, [], true, false);
-
-        cancellationToken.ThrowIfCancellationRequested();
         IReadOnlyDictionary<string, object?>? convertedArguments = null;
         if (candidate.Kind is BrokerPrimitiveKind.Tool or BrokerPrimitiveKind.Prompt)
         {
             try
             {
-                convertedArguments = BrokerArgumentConverter.ToObjects(arguments);
+                convertedArguments = convertArguments(arguments);
             }
             catch (Exception ex)
             {
@@ -131,8 +141,13 @@ public sealed class BrokerCatalogIndex(ILogger<BrokerCatalogIndex>? logger = nul
             }
         }
 
+        var session = sessions.GetSession(candidate.Host.ProcessId, candidate.SessionGeneration);
+        if (session is null || !session.IsConnected)
+            return InvokeResult(BrokerInvokeStatus.HostDisconnected, target, hostId, [], true, false);
+
         using var deadline = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
         deadline.CancelAfter(timeout);
+        cancellationToken.ThrowIfCancellationRequested();
 
         try
         {

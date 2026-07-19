@@ -61,6 +61,27 @@ public sealed class BrokerEndToEndTests
         Assert.Equal("42", Assert.IsType<TextContentBlock>(Assert.Single(result.Content)).Text);
     }
 
+    [Fact]
+    public async Task AmbiguousInvoke_RoundTripsStructuredSelectionThroughSdkTransport()
+    {
+        await using var fixture = await BrokerFixture.CreateAsync(
+            TestContext.Current.CancellationToken,
+            includeAmbiguousHost: true);
+
+        var result = await fixture.CallAsync(
+            "devtools_invoke",
+            new Dictionary<string, object?> { ["target"] = "tool:execute_csharp_code" });
+
+        Assert.False(result.IsError);
+        var payload = DeserializeInvokePayload(result);
+        Assert.Equal(BrokerInvokeStatus.HostSelectionRequired, payload.Status);
+        Assert.Equal(
+            [fixture.Session.Instance.ProcessId, fixture.Session.Instance.ProcessId + 1],
+            payload.Candidates.Select(candidate => candidate.HostId));
+        Assert.False(payload.MayHaveExecuted);
+        Assert.Equal(0, fixture.Tool.InvocationCount);
+    }
+
     private sealed class BrokerFixture : IAsyncDisposable
     {
         private readonly CancellationTokenSource stop = new();
@@ -90,7 +111,9 @@ public sealed class BrokerEndToEndTests
         public int ExternalCallCount { get; private set; }
         public List<string> ExternalCallNames { get; } = [];
 
-        public static async Task<BrokerFixture> CreateAsync(CancellationToken ct)
+        public static async Task<BrokerFixture> CreateAsync(
+            CancellationToken ct,
+            bool includeAmbiguousHost = false)
         {
             var tool = new CountingTool();
             var hostOptions = new HostMcpServerOptionsFactory(new HostInfo(), [tool], [], []);
@@ -103,14 +126,37 @@ public sealed class BrokerEndToEndTests
             var broker = new BrokerCatalogIndex();
             var snapshot = HostCatalogSnapshot.Create(session.Instance,
                 await session.ListToolsAsync(ct), await session.ListPromptsAsync(ct), await session.ListResourcesAsync(ct), await session.ListResourceTemplatesAsync(ct));
-            broker.ReplacePublications([new HostCatalogPublication(
+            var publications = new List<HostCatalogPublication> { new(
                 new HostCatalogIdentity(session.Instance.PipeName, session.Generation),
                 session.Instance,
                 HostCatalogState.Ready,
                 snapshot,
                 DateTimeOffset.UtcNow,
                 null,
-                null)]);
+                null) };
+            if (includeAmbiguousHost)
+            {
+                var alternate = session.Instance with
+                {
+                    ProcessId = session.Instance.ProcessId + 1,
+                    PipeName = McpPipeName.Format(session.Instance.ProcessId + 1)
+                };
+                var alternateSnapshot = HostCatalogSnapshot.Create(
+                    alternate,
+                    snapshot.Tools.ToList(),
+                    snapshot.Prompts.ToList(),
+                    snapshot.Resources.ToList(),
+                    snapshot.ResourceTemplates.ToList());
+                publications.Add(new HostCatalogPublication(
+                    new HostCatalogIdentity(alternate.PipeName, session.Generation),
+                    alternate,
+                    HostCatalogState.Ready,
+                    alternateSnapshot,
+                    DateTimeOffset.UtcNow,
+                    null,
+                    null));
+            }
+            broker.ReplacePublications(publications);
             var expectedSearchResponse = broker.Search(new BrokerSearchRequest("execute_csharp_code", null, null));
 
             var brokerTools = new DevToolsBrokerTools(broker, manager);
@@ -166,6 +212,13 @@ public sealed class BrokerEndToEndTests
             : Assert.IsType<TextContentBlock>(Assert.Single(result.Content)).Text;
         return Assert.IsType<BrokerSearchResponse>(JsonSerializer.Deserialize<BrokerSearchResponse>(
             payload, McpJsonUtilities.DefaultOptions));
+    }
+
+    private static BrokerInvokePayload DeserializeInvokePayload(CallToolResult result)
+    {
+        var structured = Assert.IsType<JsonElement>(result.StructuredContent);
+        return Assert.IsType<BrokerInvokePayload>(JsonSerializer.Deserialize<BrokerInvokePayload>(
+            structured, McpJsonUtilities.DefaultOptions));
     }
 
     private sealed class HostInfo : IHostAppInfo
