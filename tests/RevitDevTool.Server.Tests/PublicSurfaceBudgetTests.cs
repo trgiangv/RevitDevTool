@@ -33,6 +33,10 @@ public sealed class PublicSurfaceBudgetTests
             : hostIdTypes.EnumerateArray().Any(type => type.GetString() == "integer");
         Assert.True(containsInteger);
         Assert.Contains("process ID", hostId.GetProperty("description").GetString(), StringComparison.OrdinalIgnoreCase);
+        var timeout = invoke.InputSchema.GetProperty("properties").GetProperty("timeoutSeconds");
+        Assert.Equal(1, timeout.GetProperty("minimum").GetInt32());
+        Assert.Equal(900, timeout.GetProperty("maximum").GetInt32());
+        Assert.Equal(300, timeout.GetProperty("default").GetInt32());
 
         var launch = Assert.Single(protocolTools, tool => tool.Name == "launch_host");
         Assert.Equal(ToolTaskSupport.Optional, launch.Execution?.TaskSupport);

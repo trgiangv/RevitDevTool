@@ -1,12 +1,15 @@
+using System.Diagnostics;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using DevTools.Mcp.Routing.Catalog;
+using Microsoft.Extensions.Logging;
+using ModelContextProtocol;
 using ModelContextProtocol.Protocol;
 
 namespace DevTools.Mcp.Routing.Broker;
 
-public sealed class BrokerCatalogIndex
+public sealed class BrokerCatalogIndex(ILogger<BrokerCatalogIndex>? logger = null)
 {
     private readonly Lock gate = new();
     private BrokerSnapshot snapshot = BrokerSnapshot.Empty;
@@ -81,40 +84,89 @@ public sealed class BrokerCatalogIndex
         BrokerPrimitiveTarget target,
         int? hostId,
         JsonElement? arguments,
+        TimeSpan timeout,
         CancellationToken cancellationToken)
     {
         BrokerSnapshot current;
         lock (gate) current = snapshot;
-        if (!current.ByTarget.TryGetValue(target.ToString(), out var registered))
-            registered = [];
+        if (!current.ByTarget.TryGetValue(target.ToString(), out var registered) || registered.Length == 0)
+            return InvokeResult(BrokerInvokeStatus.TargetNotFound, target, hostId, [], true, false);
+
+        if (hostId is { } requestedHostId && registered.All(entry => entry.Host.ProcessId != requestedHostId))
+            return InvokeResult(
+                BrokerInvokeStatus.HostMismatch,
+                target,
+                hostId,
+                registered.Select(ToInvokeCandidate).ToArray(),
+                false,
+                false);
+
         var candidates = registered.Where(entry => hostId is null || entry.Host.ProcessId == hostId).ToArray();
-        if (candidates.Length == 0)
-            return Error($"Target '{target}' is not available on a connected host.");
         if (candidates.Length > 1)
-            return Ambiguous(target, candidates);
+            return InvokeResult(
+                BrokerInvokeStatus.HostSelectionRequired,
+                target,
+                hostId,
+                candidates.Select(ToInvokeCandidate).ToArray(),
+                false,
+                false);
 
         var candidate = candidates[0];
-        var session = sessions.GetSessionByProcessId(candidate.Host.ProcessId);
+        var session = sessions.GetSession(candidate.Host.ProcessId, candidate.SessionGeneration);
         if (session is null || !session.IsConnected)
-            return Error($"Host {candidate.Host.ProcessId} is no longer connected.");
+            return InvokeResult(BrokerInvokeStatus.HostDisconnected, target, hostId, [], true, false);
+
+        cancellationToken.ThrowIfCancellationRequested();
+        IReadOnlyDictionary<string, object?>? convertedArguments = null;
+        if (candidate.Kind is BrokerPrimitiveKind.Tool or BrokerPrimitiveKind.Prompt)
+        {
+            try
+            {
+                convertedArguments = BrokerArgumentConverter.ToObjects(arguments);
+            }
+            catch (Exception ex)
+            {
+                LogInvokeFailure(ex, BrokerInvokeStatus.HostFailed, target, candidate);
+                return InvokeResult(BrokerInvokeStatus.HostFailed, target, hostId, [], true, false);
+            }
+        }
+
+        using var deadline = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        deadline.CancelAfter(timeout);
 
         try
         {
             return candidate.Kind switch
             {
-                BrokerPrimitiveKind.Tool => await session.CallToolAsync(candidate.Key, BrokerArgumentConverter.ToObjects(arguments), cancellationToken).ConfigureAwait(false),
-                BrokerPrimitiveKind.Resource => ConvertResource(await session.ReadResourceAsync(candidate.Key, cancellationToken).ConfigureAwait(false)),
-                BrokerPrimitiveKind.Prompt => ConvertPrompt(await session.GetPromptAsync(candidate.Key, BrokerArgumentConverter.ToObjects(arguments), cancellationToken).ConfigureAwait(false)),
-                _ => Error("Unsupported broker target.")
+                BrokerPrimitiveKind.Tool => await session.CallToolAsync(candidate.Key, convertedArguments, deadline.Token).ConfigureAwait(false),
+                BrokerPrimitiveKind.Resource => ConvertResource(await session.ReadResourceAsync(candidate.Key, deadline.Token).ConfigureAwait(false)),
+                BrokerPrimitiveKind.Prompt => ConvertPrompt(await session.GetPromptAsync(candidate.Key, convertedArguments, deadline.Token).ConfigureAwait(false)),
+                _ => InvokeResult(BrokerInvokeStatus.HostFailed, target, hostId, [], true, true)
             };
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
             throw;
         }
+        catch (OperationCanceledException ex) when (deadline.IsCancellationRequested)
+        {
+            LogInvokeFailure(ex, BrokerInvokeStatus.TimedOut, target, candidate);
+            return InvokeResult(BrokerInvokeStatus.TimedOut, target, hostId, [], true, true);
+        }
+        catch (IOException ex)
+        {
+            LogInvokeFailure(ex, BrokerInvokeStatus.ConnectionLost, target, candidate);
+            return InvokeResult(BrokerInvokeStatus.ConnectionLost, target, hostId, [], true, true);
+        }
+        catch (ObjectDisposedException ex)
+        {
+            LogInvokeFailure(ex, BrokerInvokeStatus.ConnectionLost, target, candidate);
+            return InvokeResult(BrokerInvokeStatus.ConnectionLost, target, hostId, [], true, true);
+        }
         catch (Exception ex)
         {
-            return Error($"Host invocation failed: {ex.Message}");
+            LogInvokeFailure(ex, BrokerInvokeStatus.HostFailed, target, candidate);
+            return InvokeResult(BrokerInvokeStatus.HostFailed, target, hostId, [], true, true);
         }
     }
 
@@ -123,16 +175,16 @@ public sealed class BrokerCatalogIndex
         var host = publication.Snapshot!;
         foreach (var tool in host.Tools)
             yield return new BrokerEntry(BrokerPrimitiveKind.Tool, tool.ProtocolTool.Name, tool.ProtocolTool.Name,
-                tool.ProtocolTool.Description, tool.ProtocolTool.InputSchema, host.Instance, publication.Identity);
+                tool.ProtocolTool.Description, tool.ProtocolTool.InputSchema, host.Instance, publication.Identity.SessionGeneration);
         foreach (var resource in host.Resources)
             yield return new BrokerEntry(BrokerPrimitiveKind.Resource, resource.ProtocolResource.Uri, resource.ProtocolResource.Name,
-                resource.ProtocolResource.Description, null, host.Instance, publication.Identity);
+                resource.ProtocolResource.Description, null, host.Instance, publication.Identity.SessionGeneration);
         foreach (var template in host.ResourceTemplates)
             yield return new BrokerEntry(BrokerPrimitiveKind.Resource, template.ProtocolResourceTemplate.UriTemplate, template.ProtocolResourceTemplate.Name,
-                template.ProtocolResourceTemplate.Description, null, host.Instance, publication.Identity);
+                template.ProtocolResourceTemplate.Description, null, host.Instance, publication.Identity.SessionGeneration);
         foreach (var prompt in host.Prompts)
             yield return new BrokerEntry(BrokerPrimitiveKind.Prompt, prompt.ProtocolPrompt.Name, prompt.ProtocolPrompt.Name,
-                prompt.ProtocolPrompt.Description, null, host.Instance, publication.Identity);
+                prompt.ProtocolPrompt.Description, null, host.Instance, publication.Identity.SessionGeneration);
     }
 
     private static int Score(BrokerEntry entry, string? query)
@@ -169,18 +221,62 @@ public sealed class BrokerCatalogIndex
         StructuredContent = JsonSerializer.SerializeToElement(new { result.Description })
     };
 
-    private static CallToolResult Ambiguous(BrokerPrimitiveTarget target, IReadOnlyList<BrokerEntry> candidates) => new()
-    {
-        IsError = true,
-        Content = [new TextContentBlock { Text = $"Target '{target}' is available on multiple hosts. Specify hostId." }],
-        StructuredContent = JsonSerializer.SerializeToElement(new { candidates = candidates.Select(candidate => candidate.Host).ToArray() })
-    };
+    private static BrokerInvokeCandidate ToInvokeCandidate(BrokerEntry entry) =>
+        new(entry.Host.ProcessId, entry.Host.HostApp, entry.Host.VersionNumber);
 
-    private static CallToolResult Error(string message) => new()
+    private static CallToolResult InvokeResult(
+        string status,
+        BrokerPrimitiveTarget target,
+        int? requestedHostId,
+        IReadOnlyList<BrokerInvokeCandidate> candidates,
+        bool isError,
+        bool mayHaveExecuted,
+        string? errorCode = null)
     {
-        IsError = true,
-        Content = [new TextContentBlock { Text = message }]
-    };
+        var message = status switch
+        {
+            BrokerInvokeStatus.HostSelectionRequired =>
+                $"Target '{target}' is available on multiple hosts; retry with one of the candidate hostId values.",
+            BrokerInvokeStatus.HostMismatch =>
+                $"Target '{target}' is not available on host {requestedHostId}; retry with one of the candidate hostId values.",
+            BrokerInvokeStatus.TargetNotFound =>
+                $"Target '{target}' was not found; search the current broker catalog before retrying.",
+            BrokerInvokeStatus.HostDisconnected =>
+                $"The selected host disconnected before target '{target}' could be dispatched.",
+            BrokerInvokeStatus.ConnectionLost =>
+                $"The connection to the selected host was lost while invoking target '{target}'.",
+            BrokerInvokeStatus.TimedOut =>
+                $"Target '{target}' exceeded its broker deadline; confirm host state before retrying.",
+            _ => $"The selected host failed while invoking target '{target}'."
+        };
+        var payload = new BrokerInvokePayload(
+            status,
+            target.ToString(),
+            requestedHostId,
+            candidates,
+            mayHaveExecuted,
+            errorCode);
+        return new CallToolResult
+        {
+            IsError = isError,
+            Content = [new TextContentBlock { Text = message }],
+            StructuredContent = JsonSerializer.SerializeToElement(payload, McpJsonUtilities.DefaultOptions)
+        };
+    }
+
+    private void LogInvokeFailure(
+        Exception exception,
+        string status,
+        BrokerPrimitiveTarget target,
+        BrokerEntry candidate) =>
+        logger?.LogWarning(
+            exception,
+            "Broker invocation {Status} for target {Target} on PID {ProcessId}, generation {SessionGeneration}; correlation {CorrelationId}.",
+            status,
+            target.ToString(),
+            candidate.Host.ProcessId,
+            candidate.SessionGeneration,
+            Activity.Current?.Id ?? "none");
 
     private sealed record BrokerEntry(
         BrokerPrimitiveKind Kind,
@@ -189,7 +285,7 @@ public sealed class BrokerCatalogIndex
         string? Description,
         JsonElement? Schema,
         HostInstanceDescriptor Host,
-        HostCatalogIdentity CatalogIdentity);
+        int SessionGeneration);
     private sealed record BrokerSnapshot(
         string Revision,
         IReadOnlyList<HostInstanceDescriptor> Hosts,

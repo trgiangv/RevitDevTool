@@ -1,4 +1,5 @@
 using System.ComponentModel;
+using System.ComponentModel.DataAnnotations;
 using System.Text.Json;
 using DevTools.Mcp.Routing;
 using DevTools.Mcp.Routing.Broker;
@@ -26,6 +27,20 @@ public sealed class DevToolsBrokerTools(BrokerCatalogIndex catalog, IInstanceMan
         [Description("Target returned by devtools_search.")] string target,
         [Description("Optional host process ID when multiple hosts provide the target.")] int? hostId = null,
         [Description("Tool or prompt arguments. Resources ignore this value.")] JsonElement? arguments = null,
-        CancellationToken cancellationToken = default) =>
-        catalog.InvokeAsync(sessions, BrokerPrimitiveTarget.Parse(target), hostId, arguments, cancellationToken);
+        [Description("Deadline in seconds from 1 through 900; defaults to 300.")]
+        [Range(1, 900)]
+        int timeoutSeconds = 300,
+        CancellationToken cancellationToken = default)
+    {
+        if (timeoutSeconds is < 1 or > 900)
+            throw new ArgumentOutOfRangeException(nameof(timeoutSeconds), "timeoutSeconds must be between 1 and 900.");
+
+        return catalog.InvokeAsync(
+            sessions,
+            BrokerPrimitiveTarget.Parse(target),
+            hostId,
+            arguments,
+            TimeSpan.FromSeconds(timeoutSeconds),
+            cancellationToken);
+    }
 }

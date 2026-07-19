@@ -56,7 +56,7 @@ public sealed class BrokerCatalogIndexTests
         var catalog = CreateCatalog(session);
 
         var result = await catalog.InvokeAsync(new RecordingManager([session]),
-            BrokerPrimitiveTarget.Parse("tool:execute_csharp_code"), null, null, TestContext.Current.CancellationToken);
+            BrokerPrimitiveTarget.Parse("tool:execute_csharp_code"), null, null, TimeSpan.FromMinutes(5), TestContext.Current.CancellationToken);
 
         Assert.NotEqual(true, result.IsError);
         Assert.Equal(1, session.CallCount);
@@ -70,9 +70,9 @@ public sealed class BrokerCatalogIndexTests
         var catalog = CreateCatalog(first, second);
 
         var result = await catalog.InvokeAsync(new RecordingManager([first, second]),
-            BrokerPrimitiveTarget.Parse("tool:execute_csharp_code"), null, null, TestContext.Current.CancellationToken);
+            BrokerPrimitiveTarget.Parse("tool:execute_csharp_code"), null, null, TimeSpan.FromMinutes(5), TestContext.Current.CancellationToken);
 
-        Assert.True(result.IsError);
+        Assert.False(result.IsError);
         Assert.Equal(0, first.CallCount);
         Assert.Equal(0, second.CallCount);
         Assert.Contains("5103", JsonSerializer.Serialize(result.StructuredContent));
@@ -88,6 +88,7 @@ public sealed class BrokerCatalogIndexTests
 
         var result = await catalog.InvokeAsync(new RecordingManager([first, second]),
             BrokerPrimitiveTarget.Parse("tool:execute_csharp_code"), second.Instance.ProcessId, null,
+            TimeSpan.FromMinutes(5),
             TestContext.Current.CancellationToken);
 
         Assert.NotEqual(true, result.IsError);
@@ -112,12 +113,14 @@ public sealed class BrokerCatalogIndexTests
             _ => throw new ArgumentOutOfRangeException(nameof(kind))
         };
 
-        var invocation = catalog.InvokeAsync(new RecordingManager([session]), BrokerPrimitiveTarget.Parse(target), null, null, cancellation.Token);
+        var invocation = catalog.InvokeAsync(new RecordingManager([session]), BrokerPrimitiveTarget.Parse(target), null, null,
+            TimeSpan.FromMinutes(5), cancellation.Token);
         await session.InvocationEntered.Task.WaitAsync(TestContext.Current.CancellationToken);
         cancellation.Cancel();
 
         await Assert.ThrowsAnyAsync<OperationCanceledException>(() => invocation);
-        Assert.Equal(cancellation.Token, session.ObservedCancellationToken);
+        Assert.True(session.ObservedCancellationToken.CanBeCanceled);
+        Assert.NotEqual(cancellation.Token, session.ObservedCancellationToken);
     }
 
     [Fact]
@@ -141,7 +144,7 @@ public sealed class BrokerCatalogIndexTests
         var catalog = CreateCatalog(session);
 
         var result = await catalog.InvokeAsync(new RecordingManager([session]),
-            BrokerPrimitiveTarget.Parse($"resource:{uri}"), null, null, TestContext.Current.CancellationToken);
+            BrokerPrimitiveTarget.Parse($"resource:{uri}"), null, null, TimeSpan.FromMinutes(5), TestContext.Current.CancellationToken);
 
         var text = Assert.IsType<TextContentBlock>(result.Content[0]);
         var embedded = Assert.IsType<EmbeddedResourceBlock>(result.Content[1]);
