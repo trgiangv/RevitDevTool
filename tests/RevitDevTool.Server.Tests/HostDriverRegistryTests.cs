@@ -1,4 +1,3 @@
-using System.Text.Json;
 using DevTools.Daemon.Contracts;
 using DevTools.Daemon.Hosts;
 using DevTools.Daemon.Mcp;
@@ -101,10 +100,7 @@ public sealed class HostDriverRegistryTests
 
         try
         {
-            var result = await InvokeAsync(tool, new Dictionary<string, JsonElement>
-            {
-                ["filePath"] = JsonSerializer.SerializeToElement(filePath)
-            });
+            var result = await tool.OpenAsync(filePath, cancellationToken: TestContext.Current.CancellationToken);
 
             Assert.False(result.IsError ?? false);
             var call = Assert.Single(session.ToolCalls);
@@ -128,13 +124,7 @@ public sealed class HostDriverRegistryTests
 
         try
         {
-            var result = await InvokeAsync(tool, new Dictionary<string, JsonElement>
-            {
-                ["hostApp"] = JsonSerializer.SerializeToElement("Revit"),
-                ["versionNumber"] = JsonSerializer.SerializeToElement("2025"),
-                ["languageCode"] = JsonSerializer.SerializeToElement("FRA"),
-                ["filePath"] = JsonSerializer.SerializeToElement(filePath)
-            });
+            var result = await tool.LaunchAsync("Revit", "2025", "FRA", filePath, TestContext.Current.CancellationToken);
 
             Assert.False(result.IsError ?? false);
             Assert.Equal(new HostLaunchRequest(HostApp.Revit, "2025", "FRA", filePath), driver.Request);
@@ -153,11 +143,7 @@ public sealed class HostDriverRegistryTests
         var driver = new CapturingHostDriver(9003, HostApp.Civil3D);
         var tool = new LaunchHostTool(instanceManager, new HostDriverRegistry([driver]));
 
-        var result = await InvokeAsync(tool, new Dictionary<string, JsonElement>
-        {
-            ["hostApp"] = JsonSerializer.SerializeToElement("Civil3D"),
-            ["versionNumber"] = JsonSerializer.SerializeToElement("2025")
-        });
+        var result = await tool.LaunchAsync("Civil3D", "2025", cancellationToken: TestContext.Current.CancellationToken);
 
         Assert.False(result.IsError ?? false);
         Assert.Equal(HostApp.Civil3D, driver.Request?.RequestedHostApp);
@@ -212,21 +198,6 @@ public sealed class HostDriverRegistryTests
 
         await instanceManager.SyncMcpPipesAsync(TestContext.Current.CancellationToken);
         return instanceManager;
-    }
-
-    private static async Task<CallToolResult> InvokeAsync(McpServerTool tool, IDictionary<string, JsonElement> arguments)
-    {
-        await using var input = new MemoryStream();
-        await using var output = new MemoryStream();
-        await using var transport = new StreamServerTransport(input, output);
-        await using var server = McpServer.Create(transport, new McpServerOptions());
-
-        return await tool.InvokeAsync(
-            new RequestContext<CallToolRequestParams>(
-                server,
-                new JsonRpcRequest { Id = new RequestId(Guid.NewGuid().ToString("N")), Method = RequestMethods.ToolsCall },
-                new CallToolRequestParams { Name = tool.ProtocolTool.Name, Arguments = arguments }),
-            TestContext.Current.CancellationToken);
     }
 
     private static string CreateTemporaryFile(string extension)

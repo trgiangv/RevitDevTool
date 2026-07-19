@@ -1,3 +1,4 @@
+using System.ComponentModel;
 using System.Text.Json;
 using DevTools.Daemon.Contracts;
 using DevTools.Daemon.Hosts;
@@ -7,7 +8,8 @@ using ModelContextProtocol.Server;
 
 namespace DevTools.Daemon.Mcp.Tools;
 
-public sealed class ReadFileInfoTool : McpServerTool
+[McpServerToolType]
+public sealed class ReadFileInfoTool
 {
     private readonly HostDriverRegistry drivers;
 
@@ -18,31 +20,12 @@ public sealed class ReadFileInfoTool : McpServerTool
 
     private static readonly string[] AllExtensions = [".rvt", ".rfa", ".rft", ".rte", ".dwg"];
 
-    public override Tool ProtocolTool { get; } = new()
-    {
-        Name = "read_file_info",
-        Description =
-            "Read metadata from a CAD/BIM file offline (no host launch needed). " +
-            "Revit (.rvt/.rfa/.rft/.rte): version, worksets, links, project info. " +
-            "AutoCAD (.dwg): version, layers, blocks, document properties.",
-        InputSchema = JsonSerializer.SerializeToElement(new
-        {
-            type = "object",
-            properties = new { filePath = new { type = "string", description = "Full path to the file (.rvt, .rfa, .rft, .rte, .dwg)." } },
-            required = new[] { "filePath" }
-        })
-    };
-
-    public override IReadOnlyList<object> Metadata => [];
-
-    public override async ValueTask<CallToolResult> InvokeAsync(
-        RequestContext<CallToolRequestParams> request,
+    [McpServerTool(Name = "read_file_info")]
+    [Description("Read metadata from a CAD/BIM file offline without launching a host. Revit files return version, worksets, links, and project info; AutoCAD DWG files return version, layers, blocks, and document properties.")]
+    public async Task<CallToolResult> ReadAsync(
+        [Description("Full path to a supported .rvt, .rfa, .rft, .rte, or .dwg file.")] string filePath,
         CancellationToken cancellationToken = default)
     {
-        string? filePath = null;
-        if (request.Params.Arguments?.TryGetValue("filePath", out var filePathElement) == true)
-            filePath = filePathElement.GetString();
-
         if (string.IsNullOrWhiteSpace(filePath))
             return ToolHelpers.ErrorResult("filePath is required.");
 

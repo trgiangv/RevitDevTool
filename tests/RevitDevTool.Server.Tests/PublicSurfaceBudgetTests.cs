@@ -2,11 +2,13 @@ using DevTools.Daemon.Hosting;
 using DevTools.Daemon.Mcp;
 using Microsoft.Extensions.DependencyInjection;
 using ModelContextProtocol;
+using ModelContextProtocol.Protocol;
 using System.Text;
 using System.Text.Json;
 
 namespace RevitDevTool.Server.Tests;
 
+#pragma warning disable MCPEXP001
 public sealed class PublicSurfaceBudgetTests
 {
     [Fact]
@@ -31,6 +33,41 @@ public sealed class PublicSurfaceBudgetTests
             : hostIdTypes.EnumerateArray().Any(type => type.GetString() == "integer");
         Assert.True(containsInteger);
         Assert.Contains("process ID", hostId.GetProperty("description").GetString(), StringComparison.OrdinalIgnoreCase);
+
+        var launch = Assert.Single(protocolTools, tool => tool.Name == "launch_host");
+        Assert.Equal(ToolTaskSupport.Optional, launch.Execution?.TaskSupport);
+        Assert.Contains("hostApp", launch.InputSchema.GetProperty("required").EnumerateArray().Select(item => item.GetString()));
+
+        var open = Assert.Single(protocolTools, tool => tool.Name == "open_model");
+        Assert.Equal(ToolTaskSupport.Optional, open.Execution?.TaskSupport);
+        Assert.Contains("filePath", open.InputSchema.GetProperty("required").EnumerateArray().Select(item => item.GetString()));
+        var openHostId = open.InputSchema.GetProperty("properties").GetProperty("hostId").GetProperty("type");
+        Assert.Contains("integer", openHostId.ValueKind == JsonValueKind.Array
+            ? openHostId.EnumerateArray().Select(item => item.GetString())
+            : [openHostId.GetString()]);
+
+        var read = Assert.Single(protocolTools, tool => tool.Name == "read_file_info");
+        Assert.Contains("filePath", read.InputSchema.GetProperty("required").EnumerateArray().Select(item => item.GetString()));
+        Assert.Equal("object", Assert.Single(protocolTools, tool => tool.Name == "list_machines")
+            .InputSchema.GetProperty("type").GetString());
+
+        var root = FindRepositoryRoot();
+        foreach (var fileName in new[] { "LaunchHostTool.cs", "OpenModelTool.cs", "ReadFileInfoTool.cs", "ListMachinesTool.cs" })
+        {
+            var source = File.ReadAllText(Path.Combine(root, "source", "DevTools.Daemon", "Mcp", "Tools", fileName));
+            Assert.DoesNotContain(": McpServerTool", source, StringComparison.Ordinal);
+            Assert.DoesNotContain("InputSchema =", source, StringComparison.Ordinal);
+            Assert.Contains("[McpServerTool(", source, StringComparison.Ordinal);
+        }
         Assert.True(Encoding.UTF8.GetByteCount(json) <= 16 * 1024, json);
     }
+
+    private static string FindRepositoryRoot()
+    {
+        for (var current = new DirectoryInfo(AppContext.BaseDirectory); current is not null; current = current.Parent)
+            if (File.Exists(Path.Combine(current.FullName, "RevitDevTool.slnx")))
+                return current.FullName;
+        throw new DirectoryNotFoundException("RevitDevTool.slnx was not found.");
+    }
 }
+#pragma warning restore MCPEXP001

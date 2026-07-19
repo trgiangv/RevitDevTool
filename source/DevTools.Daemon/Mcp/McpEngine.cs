@@ -2,6 +2,7 @@ using DevTools.Daemon.Auth;
 using DevTools.Daemon.Hosts;
 using DevTools.Daemon.Hosting;
 using Microsoft.Extensions.Options;
+using ModelContextProtocol.Protocol;
 using ModelContextProtocol.Server;
 using DevTools.Daemon.Mcp.Tools;
 using DevTools.Mcp.Routing.Catalog;
@@ -36,11 +37,13 @@ public sealed class McpEngine
         PromptCollection = [];
         ResourceCollection = [];
 
+        var broker = new DevToolsBrokerTools(BrokerCatalog, InstanceManager);
         LocalTools = CreateLocalTools(
             authService,
             gatewayOptions,
             services.GetRequiredService<HostDriverRegistry>(),
-            new DevToolsBrokerTools(BrokerCatalog, InstanceManager));
+            broker,
+            InstanceManager);
         foreach (var tool in LocalTools)
         {
             ToolCollection.TryAdd(tool);
@@ -52,13 +55,37 @@ public sealed class McpEngine
         PromptCollection,
         ResourceCollection);
 
-    private McpServerTool[] CreateLocalTools(IAuthService authService, IOptions<GatewayOptions> gatewayOptions, HostDriverRegistry hostDrivers, DevToolsBrokerTools broker) =>
-    [
-        McpServerTool.Create(typeof(DevToolsBrokerTools).GetMethod(nameof(DevToolsBrokerTools.Search))!, broker),
-        McpServerTool.Create(typeof(DevToolsBrokerTools).GetMethod(nameof(DevToolsBrokerTools.InvokeAsync))!, broker),
-        new ListMachinesTool(authService, gatewayOptions),
-        new LaunchHostTool(InstanceManager, hostDrivers),
-        new ReadFileInfoTool(hostDrivers),
-        new OpenModelTool(InstanceManager, hostDrivers)
-    ];
+    private static McpServerTool[] CreateLocalTools(
+        IAuthService authService,
+        IOptions<GatewayOptions> gatewayOptions,
+        HostDriverRegistry hostDrivers,
+        DevToolsBrokerTools broker,
+        HostSessionManager instanceManager)
+    {
+        var listMachines = new ListMachinesTool(authService, gatewayOptions);
+        var launchHost = new LaunchHostTool(instanceManager, hostDrivers);
+        var readFileInfo = new ReadFileInfoTool(hostDrivers);
+        var openModel = new OpenModelTool(instanceManager, hostDrivers);
+
+        return
+        [
+            CreateTool(broker, nameof(DevToolsBrokerTools.Search)),
+            CreateTool(broker, nameof(DevToolsBrokerTools.InvokeAsync)),
+            CreateTool(listMachines, nameof(ListMachinesTool.ListAsync)),
+            CreateTool(launchHost, nameof(LaunchHostTool.LaunchAsync), supportsTasks: true),
+            CreateTool(readFileInfo, nameof(ReadFileInfoTool.ReadAsync)),
+            CreateTool(openModel, nameof(OpenModelTool.OpenAsync), supportsTasks: true)
+        ];
+    }
+
+    private static McpServerTool CreateTool<T>(T target, string methodName, bool supportsTasks = false)
+        where T : class
+    {
+        var method = typeof(T).GetMethod(methodName)
+            ?? throw new MissingMethodException(typeof(T).FullName, methodName);
+        var tool = McpServerTool.Create(method, target);
+        if (supportsTasks)
+            tool.ProtocolTool.Execution = new ToolExecution { TaskSupport = ToolTaskSupport.Optional };
+        return tool;
+    }
 }

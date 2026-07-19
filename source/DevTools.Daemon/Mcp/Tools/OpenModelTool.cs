@@ -1,3 +1,4 @@
+using System.ComponentModel;
 using System.Text.Json;
 using DevTools.Daemon.Contracts;
 using DevTools.Daemon.Hosts;
@@ -13,7 +14,8 @@ namespace DevTools.Daemon.Mcp.Tools;
 /// 1. Connected instance: routes <c>open_document</c> built-in tool via Named Pipe.
 /// 2. No instance: launches the host process with the file as a CLI argument.
 /// </summary>
-public sealed class OpenModelTool : McpServerTool
+[McpServerToolType]
+public sealed class OpenModelTool
 {
     private readonly HostSessionManager instanceManager;
     private readonly HostDriverRegistry drivers;
@@ -24,44 +26,22 @@ public sealed class OpenModelTool : McpServerTool
         this.drivers = drivers;
     }
 
-    public override Tool ProtocolTool { get; } = new()
-    {
-        Name = "open_model",
-        Description =
-            "Open a model file in a connected host or launch a new one. " +
-            "When launching a new host, this is a long-running operation (typically 30-120 seconds). " +
-            "Host is auto-detected from extension: .rvt/.rfa → Revit, .dwg/.dxf/.dwt → AutoCAD.",
-        InputSchema = JsonSerializer.SerializeToElement(new
-        {
-            type = "object",
-            properties = new
-            {
-                filePath = new { type = "string", description = "Full path to the model file." },
-                hostId = new { type = "integer", description = "Target host process ID (when multiple instances exist)." },
-                versionNumber = new { type = "string", description = "Version to launch if no instance is connected." },
-                languageCode = new { type = "string", description = "Revit-only: UI language code (default 'ENU')." }
-            },
-            required = new[] { "filePath" }
-        }),
-        Execution = new ToolExecution { TaskSupport = ToolTaskSupport.Optional }
-    };
-
-    public override IReadOnlyList<object> Metadata => [];
-
-    public override async ValueTask<CallToolResult> InvokeAsync(
-        RequestContext<CallToolRequestParams> request,
+    [McpServerTool(Name = "open_model")]
+    [Description("Open a model file in a connected host or launch a new one. When launching a new host, this is a long-running operation, typically 30-120 seconds. Host is auto-detected from extension: .rvt/.rfa uses Revit and .dwg/.dxf/.dwt uses AutoCAD.")]
+    public async Task<CallToolResult> OpenAsync(
+        [Description("Full path to the model file.")] string filePath,
+        [Description("Target host process ID when multiple instances exist.")] int? hostId = null,
+        [Description("Version to launch when no compatible instance is connected.")] string? versionNumber = null,
+        [Description("Revit UI language code; defaults to ENU.")] string? languageCode = null,
         CancellationToken cancellationToken = default)
     {
-        var args = request.Params.Arguments ?? new Dictionary<string, JsonElement>();
-
-        var filePath = ReadString(args, "filePath");
         if (string.IsNullOrWhiteSpace(filePath))
             return ToolHelpers.ErrorResult("filePath is required.");
         if (!File.Exists(filePath))
             return ToolHelpers.ErrorResult($"File not found: {filePath}");
 
         var hostApp = HostAppExtensions.FromExtension(Path.GetExtension(filePath));
-        var session = ResolveSession(args);
+        var session = ResolveSession(hostId);
         if (session is not null)
             return await OpenViaConnectedInstanceAsync(session, filePath, cancellationToken).ConfigureAwait(false);
 
@@ -77,19 +57,18 @@ public sealed class OpenModelTool : McpServerTool
         if (hostApp is null)
             return ToolHelpers.ErrorResult($"Cannot determine host application from file extension '{Path.GetExtension(filePath)}'.");
 
-        return await LaunchAndOpenAsync(driver, hostApp.Value, filePath, args, cancellationToken).ConfigureAwait(false);
+        return await LaunchAndOpenAsync(driver, hostApp.Value, filePath, versionNumber, languageCode, cancellationToken)
+            .ConfigureAwait(false);
     }
 
     private async Task<CallToolResult> LaunchAndOpenAsync(
         IHostDriver driver,
         HostApp hostApp,
         string filePath,
-        IDictionary<string, JsonElement> args,
+        string? versionNumber,
+        string? languageCode,
         CancellationToken cancellationToken)
     {
-        var versionNumber = ReadString(args, "versionNumber");
-        var languageCode = ReadString(args, "languageCode");
-
         HostLaunchResult launch;
         try
         {
@@ -153,18 +132,10 @@ public sealed class OpenModelTool : McpServerTool
         return false;
     }
 
-    private static string? ReadString(IDictionary<string, JsonElement>? args, string key) =>
-        args is not null && args.TryGetValue(key, out var element) ? element.GetString() : null;
-
-    private IHostMcpSession? ResolveSession(IDictionary<string, JsonElement> args)
+    private IHostMcpSession? ResolveSession(int? hostId)
     {
-        if (args.TryGetValue("hostId", out var hostId))
-        {
-            var processId = hostId.ValueKind == JsonValueKind.Number
-                ? hostId.GetInt32()
-                : int.TryParse(hostId.GetString(), out var value) ? value : 0;
-            return processId > 0 ? instanceManager.GetSessionByProcessId(processId) : null;
-        }
+        if (hostId is > 0)
+            return instanceManager.GetSessionByProcessId(hostId.Value);
 
         return instanceManager.Sessions.Count == 1 ? instanceManager.Sessions.Single() : null;
     }
