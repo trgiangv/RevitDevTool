@@ -6,10 +6,10 @@ namespace DevTools.Daemon;
 internal static class Program
 {
     [STAThread]
-    public static async Task<int> Main(string[] args)
+    public static int Main(string[] args)
     {
         if (args.Contains(DaemonConstants.StdioArg, StringComparer.OrdinalIgnoreCase))
-            return await RunStdioAsync(args).ConfigureAwait(false);
+            return RunStdioAsync(args).GetAwaiter().GetResult();
 
         var app = new App();
         app.InitializeComponent();
