@@ -1,6 +1,8 @@
+using System.Collections.Concurrent;
 using DevTools.Daemon.Mcp.Tools;
 using DevTools.Mcp.Routing.Catalog;
 using DevTools.Daemon.Hosting;
+using DevTools.Mcp;
 using Microsoft.Extensions.Logging;
 
 namespace DevTools.Daemon.Mcp;
@@ -9,8 +11,11 @@ public sealed class HostCatalogCoordinator : IAsyncDisposable
 {
     private readonly SemaphoreSlim refreshGate = new(1, 1);
     private readonly CancellationTokenSource lifetimeCancellation = new();
+    private readonly ConcurrentDictionary<HostCatalogIdentity, TaskCompletionSource<HostCatalogState>> firstFetches = new();
     private readonly Lock lifecycleGate = new();
     private readonly Func<CancellationToken, Task> rebuildSnapshotAsync;
+    private readonly IInstanceManager? instanceManager;
+    private readonly CatalogService? catalogService;
     private readonly ILogger<HostCatalogCoordinator>? logger;
     private int refreshRequested;
     private Task? refreshTask;
@@ -21,7 +26,7 @@ public sealed class HostCatalogCoordinator : IAsyncDisposable
 
     public HostCatalogCoordinator(McpEngine engine, DaemonSettings settings, ILogger<CatalogService> catalogLogger, ILogger<HostCatalogCoordinator> logger)
     {
-        var catalogService = new CatalogService(
+        catalogService = new CatalogService(
             engine.InstanceManager,
             engine.ToolCollection,
             engine.PromptCollection,
@@ -32,13 +37,22 @@ public sealed class HostCatalogCoordinator : IAsyncDisposable
             catalogLogger,
             CancellationToken.None);
         rebuildSnapshotAsync = catalogService.RebuildCatalogAsync;
+        instanceManager = engine.InstanceManager;
         this.logger = logger;
-
+        catalogService.PublicationChanged += PublishStatus;
     }
 
     internal HostCatalogCoordinator(Func<CancellationToken, Task> rebuildSnapshotAsync)
+        : this(rebuildSnapshotAsync, null)
+    {
+    }
+
+    internal HostCatalogCoordinator(
+        Func<CancellationToken, Task> rebuildSnapshotAsync,
+        IInstanceManager? instanceManager)
     {
         this.rebuildSnapshotAsync = rebuildSnapshotAsync;
+        this.instanceManager = instanceManager;
     }
 
     public void RequestRefresh()
@@ -48,6 +62,7 @@ public sealed class HostCatalogCoordinator : IAsyncDisposable
             if (disposing)
                 return;
 
+            ObserveConnectedSessions();
             if (Interlocked.Exchange(ref refreshRequested, 1) == 0)
             {
                 BeginRefreshLocked();
@@ -55,6 +70,75 @@ public sealed class HostCatalogCoordinator : IAsyncDisposable
             }
         }
     }
+
+    public async Task<HostCatalogState> WaitForFirstFetchAsync(
+        int processId,
+        int generation,
+        TimeSpan timeout,
+        CancellationToken ct)
+    {
+        ct.ThrowIfCancellationRequested();
+        if (timeout < Timeout.InfiniteTimeSpan)
+            throw new ArgumentOutOfRangeException(nameof(timeout));
+
+        IHostMcpSession? session;
+        lock (lifecycleGate)
+        {
+            if (disposing)
+                return HostCatalogState.Unavailable;
+
+            session = instanceManager?.GetSession(processId, generation);
+        }
+
+        if (session is null)
+            return HostCatalogState.Unavailable;
+
+        var identity = new HostCatalogIdentity(session.Instance.PipeName, generation);
+        TaskCompletionSource<HostCatalogState> firstFetch;
+        lock (lifecycleGate)
+        {
+            if (disposing)
+                return HostCatalogState.Unavailable;
+
+            var current = instanceManager?.GetSession(processId, generation);
+            if (current is null || !StringComparer.OrdinalIgnoreCase.Equals(current.Instance.PipeName, identity.PipeName))
+                return HostCatalogState.Unavailable;
+
+            firstFetch = firstFetches.GetOrAdd(identity, static _ => CreateFirstFetch());
+        }
+
+        using var timeoutCancellation = new CancellationTokenSource();
+        timeoutCancellation.CancelAfter(timeout);
+        using var linked = CancellationTokenSource.CreateLinkedTokenSource(ct, timeoutCancellation.Token);
+        try
+        {
+            return await firstFetch.Task.WaitAsync(linked.Token).ConfigureAwait(false);
+        }
+        catch (OperationCanceledException) when (timeoutCancellation.IsCancellationRequested && !ct.IsCancellationRequested)
+        {
+            return HostCatalogState.Refreshing;
+        }
+    }
+
+    internal void PublishStatus(HostCatalogIdentity identity, HostCatalogState state)
+    {
+        if (state is not (HostCatalogState.Ready or HostCatalogState.Stale or HostCatalogState.Unavailable))
+            return;
+
+        if (firstFetches.TryGetValue(identity, out var firstFetch))
+        {
+            firstFetch.TrySetResult(state);
+            return;
+        }
+
+        if (instanceManager?.Sessions.Any(session => IdentityOf(session) == identity) != true)
+            return;
+
+        firstFetches.GetOrAdd(identity, static _ => CreateFirstFetch()).TrySetResult(state);
+    }
+
+    private void PublishStatus(HostCatalogPublication publication) =>
+        PublishStatus(publication.Identity, publication.State);
 
     public Task RebuildSnapshotAsync(CancellationToken ct = default)
     {
@@ -147,6 +231,11 @@ public sealed class HostCatalogCoordinator : IAsyncDisposable
     {
         await refreshesDrainedTask.ConfigureAwait(false);
 
+        if (catalogService is not null)
+            catalogService.PublicationChanged -= PublishStatus;
+        foreach (var pair in firstFetches.ToArray())
+            CompleteAndRemove(pair.Key, pair.Value, HostCatalogState.Unavailable);
+
         refreshGate.Dispose();
         lifetimeCancellation.Dispose();
     }
@@ -170,4 +259,36 @@ public sealed class HostCatalogCoordinator : IAsyncDisposable
 
         return (refreshesDrained ??= new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously)).Task;
     }
+
+    private void ObserveConnectedSessions()
+    {
+        if (instanceManager is null)
+            return;
+
+        var connected = instanceManager.Sessions.Select(IdentityOf).ToHashSet();
+        foreach (var identity in connected)
+            firstFetches.GetOrAdd(identity, static _ => CreateFirstFetch());
+
+        foreach (var pair in firstFetches.ToArray())
+        {
+            if (!connected.Contains(pair.Key))
+                CompleteAndRemove(pair.Key, pair.Value, HostCatalogState.Unavailable);
+        }
+    }
+
+    private void CompleteAndRemove(
+        HostCatalogIdentity identity,
+        TaskCompletionSource<HostCatalogState> firstFetch,
+        HostCatalogState state)
+    {
+        firstFetch.TrySetResult(state);
+        ((ICollection<KeyValuePair<HostCatalogIdentity, TaskCompletionSource<HostCatalogState>>>)firstFetches)
+            .Remove(new KeyValuePair<HostCatalogIdentity, TaskCompletionSource<HostCatalogState>>(identity, firstFetch));
+    }
+
+    private static HostCatalogIdentity IdentityOf(IHostMcpSession session) =>
+        new(session.Instance.PipeName, session.Generation);
+
+    private static TaskCompletionSource<HostCatalogState> CreateFirstFetch() =>
+        new(TaskCreationOptions.RunContinuationsAsynchronously);
 }

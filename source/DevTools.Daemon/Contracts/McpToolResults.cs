@@ -4,6 +4,14 @@ using DevTools.Logging;
 
 namespace DevTools.Daemon.Contracts;
 
+public static class LaunchHostStatus
+{
+    public const string ConnectedCatalogReady = "connected_catalog_ready";
+    public const string ConnectedCatalogPending = "connected_catalog_pending";
+    public const string LaunchFailed = "launch_failed";
+    public const string ConnectionTimeout = "connection_timeout";
+}
+
 [UsedImplicitly]
 public sealed record LaunchHostResult(
     [property: JsonPropertyName("hostApp")]
@@ -14,7 +22,9 @@ public sealed record LaunchHostResult(
     [property: JsonPropertyName("path")] string? Path,
     [property: JsonPropertyName("arguments")] string? Arguments,
     [property: JsonPropertyName("languageCode")] string? LanguageCode,
+    [property: JsonPropertyName("status")] string Status,
     [property: JsonPropertyName("bridgeConnected")] bool BridgeConnected,
+    [property: JsonPropertyName("message")] string? Message = null,
     [property: JsonPropertyName("dialogResult")] StartupDialogResolverResult? DialogResult = null);
 
 [UsedImplicitly]

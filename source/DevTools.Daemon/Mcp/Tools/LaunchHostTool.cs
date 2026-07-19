@@ -5,6 +5,8 @@ using DevTools.Daemon.Contracts;
 using DevTools.Daemon.Hosts;
 using DevTools.Logging;
 using DevTools.Daemon.Mcp.Tools.Utils;
+using DevTools.Mcp;
+using DevTools.Mcp.Routing.Catalog;
 using ModelContextProtocol.Protocol;
 using ModelContextProtocol.Server;
 
@@ -14,13 +16,43 @@ namespace DevTools.Daemon.Mcp.Tools;
 [McpServerToolType]
 public sealed class LaunchHostTool
 {
+    private static readonly TimeSpan DefaultConnectionTimeout = TimeSpan.FromMinutes(2);
+    private static readonly TimeSpan DefaultConnectionPollInterval = TimeSpan.FromMilliseconds(500);
+    private static readonly TimeSpan DefaultCatalogTimeout = TimeSpan.FromSeconds(10);
     private readonly HostSessionManager instanceManager;
     private readonly HostDriverRegistry drivers;
+    private readonly Func<HostCatalogCoordinator> getCatalogCoordinator;
+    private readonly TimeSpan connectionTimeout;
+    private readonly TimeSpan connectionPollInterval;
+    private readonly TimeSpan catalogTimeout;
 
-    internal LaunchHostTool(HostSessionManager instanceManager, HostDriverRegistry drivers)
+    internal LaunchHostTool(
+        HostSessionManager instanceManager,
+        HostDriverRegistry drivers,
+        Func<HostCatalogCoordinator> getCatalogCoordinator)
     {
         this.instanceManager = instanceManager;
         this.drivers = drivers;
+        this.getCatalogCoordinator = getCatalogCoordinator;
+        connectionTimeout = DefaultConnectionTimeout;
+        connectionPollInterval = DefaultConnectionPollInterval;
+        catalogTimeout = DefaultCatalogTimeout;
+    }
+
+    internal LaunchHostTool(
+        HostSessionManager instanceManager,
+        HostDriverRegistry drivers,
+        HostCatalogCoordinator catalogCoordinator,
+        TimeSpan? catalogTimeout = null,
+        TimeSpan? connectionTimeout = null,
+        TimeSpan? connectionPollInterval = null)
+    {
+        this.instanceManager = instanceManager;
+        this.drivers = drivers;
+        getCatalogCoordinator = () => catalogCoordinator;
+        this.catalogTimeout = catalogTimeout ?? DefaultCatalogTimeout;
+        this.connectionTimeout = connectionTimeout ?? DefaultConnectionTimeout;
+        this.connectionPollInterval = connectionPollInterval ?? DefaultConnectionPollInterval;
     }
 
     private static readonly string[] HostAppEnumNames =
@@ -55,14 +87,43 @@ public sealed class LaunchHostTool
         }
         catch (HostDriverException ex)
         {
-            return ToolHelpers.ErrorResult(ex.Message);
+            return Result(new LaunchHostResult(
+                parsedHostApp.Value,
+                0,
+                versionNumber,
+                null,
+                null,
+                languageCode,
+                LaunchHostStatus.LaunchFailed,
+                false,
+                ex.Message));
         }
 
         var connected = await WaitForInstanceConnectionAsync(launch.ProcessId, cancellationToken).ConfigureAwait(false);
         var dialogResult = await HostLaunchCoordinator.TryAwaitResolverResultAsync(launch.DialogTask, TimeSpan.FromSeconds(5)).ConfigureAwait(false);
-        if (!connected)
-            return ToolHelpers.ErrorResult(
-                $"{parsedHostApp} launched (PID={launch.ProcessId}) but bridge did not connect within timeout.");
+        if (connected is null)
+            return Result(new LaunchHostResult(
+                parsedHostApp.Value,
+                launch.ProcessId,
+                launch.Version,
+                launch.ExePath,
+                string.Join(" ", launch.Arguments),
+                launch.LanguageCode,
+                LaunchHostStatus.ConnectionTimeout,
+                false,
+                $"{parsedHostApp} launched (PID={launch.ProcessId}) but bridge did not connect within timeout.",
+                dialogResult));
+
+        var catalogState = await getCatalogCoordinator()
+            .WaitForFirstFetchAsync(launch.ProcessId, connected.Generation, catalogTimeout, cancellationToken)
+            .ConfigureAwait(false);
+        var catalogReady = catalogState is HostCatalogState.Ready or HostCatalogState.Stale;
+        var status = catalogReady
+            ? LaunchHostStatus.ConnectedCatalogReady
+            : LaunchHostStatus.ConnectedCatalogPending;
+        var message = catalogReady
+            ? null
+            : $"Host connected (PID={launch.ProcessId}). Call devtools_search again; the host catalog is still refreshing.";
 
         var payload = new LaunchHostResult(
             parsedHostApp.Value,
@@ -71,27 +132,32 @@ public sealed class LaunchHostTool
             launch.ExePath,
             string.Join(" ", launch.Arguments),
             launch.LanguageCode,
+            status,
             true,
+            message,
             dialogResult);
 
-        return new CallToolResult
-        {
-            Content = [new TextContentBlock { Text = JsonSerializer.Serialize(payload) }]
-        };
+        return Result(payload);
     }
 
-    private async Task<bool> WaitForInstanceConnectionAsync(int processId, CancellationToken ct)
+    private async Task<IHostMcpSession?> WaitForInstanceConnectionAsync(int processId, CancellationToken ct)
     {
-        var deadline = DateTime.UtcNow.AddMinutes(2);
-        while (DateTime.UtcNow < deadline && !ct.IsCancellationRequested)
+        var deadline = DateTime.UtcNow.Add(connectionTimeout);
+        while (DateTime.UtcNow < deadline)
         {
-            if (instanceManager.GetSessionByProcessId(processId) is not null)
-                return true;
+            ct.ThrowIfCancellationRequested();
+            if (instanceManager.GetSessionByProcessId(processId) is { } session)
+                return session;
 
-            try { await Task.Delay(500, ct).ConfigureAwait(false); }
-            catch (OperationCanceledException) { return false; }
+            await Task.Delay(connectionPollInterval, ct).ConfigureAwait(false);
         }
 
-        return false;
+        ct.ThrowIfCancellationRequested();
+        return null;
     }
+
+    private static CallToolResult Result(LaunchHostResult payload) => new()
+    {
+        Content = [new TextContentBlock { Text = JsonSerializer.Serialize(payload) }]
+    };
 }

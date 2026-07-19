@@ -1,19 +1,86 @@
 using DevTools.Daemon.Contracts;
+using DevTools.Daemon.Auth;
+using DevTools.Daemon.Hosting;
 using DevTools.Daemon.Hosts;
 using DevTools.Daemon.Mcp;
 using DevTools.Daemon.Mcp.Tools;
 using DevTools.Ipc;
 using DevTools.Logging;
 using DevTools.Mcp.Routing;
+using DevTools.Mcp.Routing.Broker;
+using DevTools.Mcp.Routing.Catalog;
 using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
 using ModelContextProtocol.Client;
 using ModelContextProtocol.Protocol;
 using ModelContextProtocol.Server;
+using System.Text.Json;
 
 namespace RevitDevTool.Server.Tests;
 
 public sealed class HostDriverRegistryTests
 {
+    [Fact]
+    public void DaemonComposition_ResolvesCatalogCoordinatorBeforeEngineWithoutCycle()
+    {
+        using var host = DaemonHostBuilder.CreateStdioHost([]);
+
+        var coordinator = host.Services.GetRequiredService<HostCatalogCoordinator>();
+        var engine = host.Services.GetRequiredService<McpEngine>();
+
+        Assert.NotNull(coordinator);
+        Assert.NotNull(engine);
+    }
+
+    [Fact]
+    public async Task DiscoveryConnection_EagerlyPublishesFirstCatalogThroughCoordinatorSubscription()
+    {
+        var session = new CapturingSession(9008);
+        var manager = new HostSessionManager(
+            NullLogger<HostSessionManager>.Instance,
+            NullLoggerFactory.Instance,
+            _ => [session.Instance.PipeName],
+            new DelegateHostSessionConnector((_, _) => Task.FromResult<IHostMcpSession>(session)),
+            new BlockingRetryClock());
+        await using var ownedManager = manager;
+        using var services = new ServiceCollection()
+            .AddSingleton(new HostDriverRegistry([]))
+            .BuildServiceProvider();
+        var engine = new McpEngine(
+            manager,
+            new BrokerCatalogIndex(),
+            new TestAuthService(),
+            Options.Create(new GatewayOptions()),
+            services);
+        await using var coordinator = new HostCatalogCoordinator(
+            engine,
+            new DaemonSettings(),
+            NullLogger<CatalogService>.Instance,
+            NullLogger<HostCatalogCoordinator>.Instance);
+        var discovery = new DiscoveryHostedService(manager, coordinator);
+
+        await discovery.StartAsync(TestContext.Current.CancellationToken);
+        try
+        {
+            for (var attempt = 0; attempt < 100 && manager.GetSession(9008, 1) is null; attempt++)
+                await Task.Delay(10, TestContext.Current.CancellationToken);
+
+            var state = await coordinator.WaitForFirstFetchAsync(
+                session.Instance.ProcessId,
+                session.Generation,
+                TimeSpan.FromSeconds(1),
+                TestContext.Current.CancellationToken);
+
+            Assert.Equal(HostCatalogState.Ready, state);
+            Assert.Same(session, manager.GetSession(session.Instance.ProcessId, session.Generation));
+        }
+        finally
+        {
+            await discovery.StopAsync(TestContext.Current.CancellationToken);
+        }
+    }
+
     [Theory]
     [InlineData("model.rvt", typeof(RevitHostDriver))]
     [InlineData("family.rfa", typeof(RevitHostDriver))]
@@ -119,8 +186,9 @@ public sealed class HostDriverRegistryTests
         var filePath = CreateTemporaryFile(".rvt");
         var session = new CapturingSession(9002);
         await using var instanceManager = await CreateHostSessionManagerAsync([session]);
+        await using var coordinator = CreateCoordinatorWithStatus(instanceManager, session, HostCatalogState.Ready);
         var driver = new CapturingHostDriver(9002, HostApp.Revit);
-        var tool = new LaunchHostTool(instanceManager, new HostDriverRegistry([driver]));
+        var tool = new LaunchHostTool(instanceManager, new HostDriverRegistry([driver]), coordinator);
 
         try
         {
@@ -128,6 +196,7 @@ public sealed class HostDriverRegistryTests
 
             Assert.False(result.IsError ?? false);
             Assert.Equal(new HostLaunchRequest(HostApp.Revit, "2025", "FRA", filePath), driver.Request);
+            Assert.Equal(LaunchHostStatus.ConnectedCatalogReady, ReadPayload(result).GetProperty("status").GetString());
         }
         finally
         {
@@ -140,13 +209,107 @@ public sealed class HostDriverRegistryTests
     {
         var session = new CapturingSession(9003);
         await using var instanceManager = await CreateHostSessionManagerAsync([session]);
+        await using var coordinator = CreateCoordinatorWithStatus(instanceManager, session, HostCatalogState.Ready);
         var driver = new CapturingHostDriver(9003, HostApp.Civil3D);
-        var tool = new LaunchHostTool(instanceManager, new HostDriverRegistry([driver]));
+        var tool = new LaunchHostTool(instanceManager, new HostDriverRegistry([driver]), coordinator);
 
         var result = await tool.LaunchAsync("Civil3D", "2025", cancellationToken: TestContext.Current.CancellationToken);
 
         Assert.False(result.IsError ?? false);
         Assert.Equal(HostApp.Civil3D, driver.Request?.RequestedHostApp);
+    }
+
+    [Fact]
+    public async Task Launch_ReturnsPendingWhenFirstFetchExceedsTenSeconds()
+    {
+        var session = new CapturingSession(9004);
+        await using var instanceManager = await CreateHostSessionManagerAsync([session]);
+        await using var coordinator = new HostCatalogCoordinator(_ => Task.CompletedTask, instanceManager);
+        var driver = new CapturingHostDriver(9004, HostApp.Revit);
+        var tool = new LaunchHostTool(
+            instanceManager,
+            new HostDriverRegistry([driver]),
+            coordinator,
+            catalogTimeout: TimeSpan.FromMilliseconds(10));
+
+        var result = await tool.LaunchAsync("Revit", "2025", cancellationToken: TestContext.Current.CancellationToken);
+        var payload = ReadPayload(result);
+
+        Assert.Equal(LaunchHostStatus.ConnectedCatalogPending, payload.GetProperty("status").GetString());
+        Assert.Equal(9004, payload.GetProperty("processId").GetInt32());
+        Assert.Contains(
+            "Call devtools_search again; the host catalog is still refreshing.",
+            payload.GetProperty("message").GetString(),
+            StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task Launch_ReturnsLaunchFailedWhenDriverCannotStartProcess()
+    {
+        await using var instanceManager = await CreateHostSessionManagerAsync([]);
+        await using var coordinator = new HostCatalogCoordinator(_ => Task.CompletedTask, instanceManager);
+        var tool = new LaunchHostTool(
+            instanceManager,
+            new HostDriverRegistry([new FailingHostDriver()]),
+            coordinator);
+
+        var result = await tool.LaunchAsync("Revit", "2025", cancellationToken: TestContext.Current.CancellationToken);
+
+        Assert.Equal(LaunchHostStatus.LaunchFailed, ReadPayload(result).GetProperty("status").GetString());
+    }
+
+    [Fact]
+    public async Task Launch_ReturnsConnectionTimeoutWhenExactSessionDoesNotConnect()
+    {
+        await using var instanceManager = await CreateHostSessionManagerAsync([]);
+        await using var coordinator = new HostCatalogCoordinator(_ => Task.CompletedTask, instanceManager);
+        var driver = new CapturingHostDriver(9005, HostApp.Revit);
+        var tool = new LaunchHostTool(
+            instanceManager,
+            new HostDriverRegistry([driver]),
+            coordinator,
+            connectionTimeout: TimeSpan.FromMilliseconds(10),
+            connectionPollInterval: TimeSpan.FromMilliseconds(1));
+
+        var result = await tool.LaunchAsync("Revit", "2025", cancellationToken: TestContext.Current.CancellationToken);
+
+        Assert.Equal(LaunchHostStatus.ConnectionTimeout, ReadPayload(result).GetProperty("status").GetString());
+    }
+
+    [Fact]
+    public async Task Launch_PropagatesCallerCancellationWhileWaitingForConnection()
+    {
+        await using var instanceManager = await CreateHostSessionManagerAsync([]);
+        await using var coordinator = new HostCatalogCoordinator(_ => Task.CompletedTask, instanceManager);
+        var driver = new CapturingHostDriver(9007, HostApp.Revit);
+        var tool = new LaunchHostTool(
+            instanceManager,
+            new HostDriverRegistry([driver]),
+            coordinator,
+            connectionTimeout: TimeSpan.FromSeconds(10),
+            connectionPollInterval: TimeSpan.FromSeconds(5));
+        using var cancellation = new CancellationTokenSource(TimeSpan.FromMilliseconds(20));
+
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(
+            () => tool.LaunchAsync("Revit", "2025", cancellationToken: cancellation.Token));
+    }
+
+    [Theory]
+    [InlineData(HostCatalogState.Stale, LaunchHostStatus.ConnectedCatalogReady)]
+    [InlineData(HostCatalogState.Unavailable, LaunchHostStatus.ConnectedCatalogPending)]
+    public async Task Launch_MapsTerminalCatalogStateToUsability(
+        HostCatalogState catalogState,
+        string expectedStatus)
+    {
+        var session = new CapturingSession(9006);
+        await using var instanceManager = await CreateHostSessionManagerAsync([session]);
+        await using var coordinator = CreateCoordinatorWithStatus(instanceManager, session, catalogState);
+        var driver = new CapturingHostDriver(9006, HostApp.Revit);
+        var tool = new LaunchHostTool(instanceManager, new HostDriverRegistry([driver]), coordinator);
+
+        var result = await tool.LaunchAsync("Revit", "2025", cancellationToken: TestContext.Current.CancellationToken);
+
+        Assert.Equal(expectedStatus, ReadPayload(result).GetProperty("status").GetString());
     }
 
     private sealed class TestHostDriver(string hostId, IReadOnlySet<string> fileExtensions) : IHostDriver
@@ -186,6 +349,38 @@ public sealed class HostDriverRegistryTests
             throw new NotSupportedException();
     }
 
+    private sealed class FailingHostDriver : IHostDriver
+    {
+        public string HostId => "failing";
+        public IReadOnlySet<HostApp> SupportedHostApps { get; } = new HashSet<HostApp> { HostApp.Revit };
+        public IReadOnlySet<string> FileExtensions { get; } = new HashSet<string> { ".rvt" };
+        public bool SupportsVersion(string version) => true;
+        public Task<HostLaunchResult> LaunchAsync(HostLaunchRequest request, CancellationToken ct) =>
+            throw new HostDriverException("launch failed");
+        public Task<FileInfoResult> ReadFileInfoAsync(string filePath, CancellationToken ct) =>
+            throw new NotSupportedException();
+    }
+
+    private static HostCatalogCoordinator CreateCoordinatorWithStatus(
+        HostSessionManager instanceManager,
+        IHostMcpSession session,
+        HostCatalogState state)
+    {
+        var coordinator = new HostCatalogCoordinator(_ => Task.CompletedTask, instanceManager);
+        coordinator.RequestRefresh();
+        coordinator.PublishStatus(
+            new HostCatalogIdentity(session.Instance.PipeName, session.Generation),
+            state);
+        return coordinator;
+    }
+
+    private static JsonElement ReadPayload(CallToolResult result)
+    {
+        var content = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
+        using var document = JsonDocument.Parse(content.Text);
+        return document.RootElement.Clone();
+    }
+
     private static async Task<HostSessionManager> CreateHostSessionManagerAsync(IReadOnlyList<CapturingSession> sessions)
     {
         var sessionsByPipe = sessions.ToDictionary(session => session.Instance.PipeName, StringComparer.OrdinalIgnoreCase);
@@ -217,6 +412,26 @@ public sealed class HostDriverRegistryTests
     {
         public DateTimeOffset UtcNow => DateTimeOffset.UtcNow;
         public Task DelayAsync(TimeSpan delay, CancellationToken ct) => Task.CompletedTask;
+    }
+
+    private sealed class BlockingRetryClock : IRetryClock
+    {
+        public DateTimeOffset UtcNow => DateTimeOffset.UtcNow;
+        public Task DelayAsync(TimeSpan delay, CancellationToken ct) => Task.Delay(Timeout.InfiniteTimeSpan, ct);
+    }
+
+    private sealed class TestAuthService : IAuthService
+    {
+        public bool IsAuthenticated => false;
+        public string? AccessToken => null;
+        public string? UserId => null;
+        public string? Email => null;
+        public string? DisplayName => null;
+        public string? AvatarUrl => null;
+        public event EventHandler<AuthStateChangedArgs>? StateChanged { add { } remove { } }
+        public Task<AuthResult> SignInAsync(CancellationToken ct = default) => throw new NotSupportedException();
+        public Task SignOutAsync() => throw new NotSupportedException();
+        public Task<bool> RefreshAsync() => throw new NotSupportedException();
     }
 
     private sealed class CapturingSession(int processId) : IHostMcpSession

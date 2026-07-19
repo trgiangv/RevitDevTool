@@ -43,7 +43,8 @@ public sealed class McpEngine
             gatewayOptions,
             services.GetRequiredService<HostDriverRegistry>(),
             broker,
-            InstanceManager);
+            InstanceManager,
+            services);
         foreach (var tool in LocalTools)
         {
             ToolCollection.TryAdd(tool);
@@ -60,10 +61,14 @@ public sealed class McpEngine
         IOptions<GatewayOptions> gatewayOptions,
         HostDriverRegistry hostDrivers,
         DevToolsBrokerTools broker,
-        HostSessionManager instanceManager)
+        HostSessionManager instanceManager,
+        IServiceProvider services)
     {
         var listMachines = new ListMachinesTool(authService, gatewayOptions);
-        var launchHost = new LaunchHostTool(instanceManager, hostDrivers);
+        var launchHost = new LaunchHostTool(
+            instanceManager,
+            hostDrivers,
+            () => services.GetRequiredService<HostCatalogCoordinator>());
         var readFileInfo = new ReadFileInfoTool(hostDrivers);
         var openModel = new OpenModelTool(instanceManager, hostDrivers);
 
