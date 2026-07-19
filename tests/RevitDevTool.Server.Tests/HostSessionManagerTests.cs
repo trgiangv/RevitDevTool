@@ -9,6 +9,21 @@ namespace RevitDevTool.Server.Tests;
 public sealed class HostSessionManagerTests
 {
     [Fact]
+    public void Discovery_PassesVendorPrefixAndRejectsMalformedPid()
+    {
+        string? pattern = null;
+
+        var names = HostSessionManager.DiscoverHostPipesForTest(value =>
+        {
+            pattern = value;
+            return ["DevTools_Revit_2025_17", "DevTools_Revit_2025_zero"];
+        });
+
+        Assert.Equal("DevTools_*", pattern);
+        Assert.Equal(["DevTools_Revit_2025_17"], names);
+    }
+
+    [Fact]
     public async Task ProcessIndex_TracksConnectDisconnectAndReconnectGeneration()
     {
         var pipeName = McpPipeName.Format(42001);

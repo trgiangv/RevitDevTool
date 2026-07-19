@@ -63,6 +63,7 @@ internal enum HostSessionState
 
 public sealed partial class HostSessionManager : IInstanceManager, IAsyncDisposable
 {
+    private const string PipeSearchPattern = "DevTools_*";
     private static readonly TimeSpan DiscoveryInterval = TimeSpan.FromSeconds(2);
     private static readonly TimeSpan MaximumRetryDelay = TimeSpan.FromSeconds(15);
     private readonly ILogger<HostSessionManager> logger;
@@ -411,23 +412,29 @@ public sealed partial class HostSessionManager : IInstanceManager, IAsyncDisposa
         }
     }
 
+    internal static HashSet<string> DiscoverHostPipesForTest(Func<string, IEnumerable<string>> enumeratePipes) =>
+        DiscoverHostPipes(enumeratePipes);
+
     private static HashSet<string> DiscoverMcpPipes(ILogger? logger = null)
     {
-        var pipes = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         try
         {
-            foreach (var path in Directory.GetFiles(@"\\.\pipe\"))
-            {
-                var name = Path.GetFileName(path);
-                if (McpPipeName.TryParse(name, out _))
-                    pipes.Add(name);
-            }
+            return DiscoverHostPipes(pattern => Directory.EnumerateFiles(@"\\.\pipe\", pattern));
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
             logger?.ZLogWarning(ex, $"MCP pipe scan error");
+            return new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         }
-        return pipes;
+    }
+
+    private static HashSet<string> DiscoverHostPipes(Func<string, IEnumerable<string>> enumeratePipes)
+    {
+        return enumeratePipes(PipeSearchPattern)
+            .Select(Path.GetFileName)
+            .Where(name => name is not null && HostPipeName.TryParse(name, out _, out _, out _))
+            .Cast<string>()
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
     }
 
     private void NotifySessionsChanged() => SessionsChanged?.Invoke();
