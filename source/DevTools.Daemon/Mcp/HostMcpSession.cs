@@ -16,21 +16,24 @@ public sealed class HostMcpSession : IHostMcpSession
     private HostMcpSession(
         NamedPipeClientStream pipe,
         McpClient client,
-        HostInstanceDescriptor instance)
+        HostInstanceDescriptor instance,
+        int generation)
     {
         _pipe = pipe;
         _client = client;
         Instance = instance;
+        Generation = generation;
     }
 
     public HostInstanceDescriptor Instance { get; }
-    public int Generation { get; } = 1;
+    public int Generation { get; }
     public bool IsConnected => Volatile.Read(ref _disposed) == 0 && !_client.Completion.IsCompleted;
     public event Action? CatalogChanged;
     public event Action? Disconnected;
 
     public static async Task<HostMcpSession> ConnectAsync(
         string pipeName,
+        int generation,
         ILoggerFactory loggerFactory,
         CancellationToken ct)
     {
@@ -60,7 +63,8 @@ public sealed class HostMcpSession : IHostMcpSession
             var session = new HostMcpSession(
                 pipe,
                 client,
-                new HostInstanceDescriptor(processId, client.ServerInfo.Name, client.ServerInfo.Version, pipeName));
+                new HostInstanceDescriptor(processId, client.ServerInfo.Name, client.ServerInfo.Version, pipeName),
+                generation);
             await session.RegisterCatalogNotificationsAsync().ConfigureAwait(false);
             _ = session.ObserveDisconnectAsync();
             return session;

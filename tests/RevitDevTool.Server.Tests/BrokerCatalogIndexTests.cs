@@ -190,6 +190,11 @@ public sealed class BrokerCatalogIndexTests
         public event Action? SessionsChanged { add { } remove { } }
         public IHostMcpSession? GetSessionByProcessId(int processId) =>
             sessions.SingleOrDefault(session => session.Instance.ProcessId == processId);
+
+        public IHostMcpSession? GetSession(int processId, int generation) =>
+            GetSessionByProcessId(processId) is { Generation: var actual } session && actual == generation
+                ? session
+                : null;
     }
 
     private sealed class RecordingSession(

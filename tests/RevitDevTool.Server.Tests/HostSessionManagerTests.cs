@@ -9,6 +9,47 @@ namespace RevitDevTool.Server.Tests;
 public sealed class HostSessionManagerTests
 {
     [Fact]
+    public async Task ProcessIndex_TracksConnectDisconnectAndReconnectGeneration()
+    {
+        var pipeName = McpPipeName.Format(42001);
+        var first = new TestMcpSession(pipeName, generation: 1);
+        var second = new TestMcpSession(pipeName, generation: 2);
+        var connector = new FakeConnector(
+            pipeName,
+            [ConnectResult.Success(first), ConnectResult.Success(second)]);
+        var clock = new FakeRetryClock();
+        await using var manager = CreateManager(pipeName, connector, clock);
+
+        await manager.SyncMcpPipesAsync(TestContext.Current.CancellationToken);
+        Assert.Same(first, manager.GetSession(42001, 1));
+
+        first.Disconnect();
+        await Task.Yield();
+        clock.Advance(TimeSpan.FromSeconds(1));
+        await manager.SyncMcpPipesAsync(TestContext.Current.CancellationToken);
+
+        Assert.Null(manager.GetSession(42001, 1));
+        Assert.Same(second, manager.GetSession(42001, 2));
+    }
+
+    [Fact]
+    public async Task DuplicateLivePid_IsRejected()
+    {
+        var firstPipeName = McpPipeName.Format(42001);
+        var secondPipeName = McpPipeName.Format(42002);
+        var connector = new DelegateConnector((_, generation, _) =>
+            Task.FromResult<IHostMcpSession>(new TestMcpSession(firstPipeName, generation)));
+        var clock = new FakeRetryClock();
+        await using var manager = CreateManager(
+            new HashSet<string>([firstPipeName, secondPipeName], StringComparer.OrdinalIgnoreCase),
+            connector,
+            clock);
+
+        await Assert.ThrowsAsync<InvalidOperationException>(
+            () => manager.SyncMcpPipesAsync(TestContext.Current.CancellationToken));
+    }
+
+    [Fact]
     public async Task Discovered_ConnectsToConnectedSession()
     {
         var pipeName = McpPipeName.Format(5101);
@@ -277,7 +318,7 @@ public sealed class HostSessionManagerTests
         private readonly Queue<ConnectResult> _results = new(results);
         private readonly Dictionary<string, int> _attempts = new(StringComparer.OrdinalIgnoreCase);
 
-        public Task<IHostMcpSession> ConnectAsync(string pipeName, CancellationToken ct)
+        public Task<IHostMcpSession> ConnectAsync(string pipeName, int generation, CancellationToken ct)
         {
             Assert.Equal(expectedPipeName, pipeName);
             _attempts[pipeName] = AttemptsFor(pipeName) + 1;
@@ -285,7 +326,7 @@ public sealed class HostSessionManagerTests
             var result = _results.Dequeue();
             return result.Exception is { } exception
                 ? Task.FromException<IHostMcpSession>(exception)
-                : Task.FromResult<IHostMcpSession>(result.Session!);
+                : Task.FromResult<IHostMcpSession>(result.Session ?? new TestMcpSession(pipeName, generation));
         }
 
         public int AttemptsFor(string pipeName) => _attempts.GetValueOrDefault(pipeName);
@@ -294,7 +335,14 @@ public sealed class HostSessionManagerTests
     private sealed record ConnectResult(IHostMcpSession? Session, Exception? Exception)
     {
         public static ConnectResult Failure() => new(null, new IOException("Simulated connection failure."));
-        public static ConnectResult Success(IHostMcpSession? session = null) => new(session ?? new TestMcpSession(McpPipeName.Format(5102)), null);
+        public static ConnectResult Success(IHostMcpSession? session = null) => new(session, null);
+    }
+
+    private sealed class DelegateConnector(
+        Func<string, int, CancellationToken, Task<IHostMcpSession>> connectAsync) : IHostSessionConnector
+    {
+        public Task<IHostMcpSession> ConnectAsync(string pipeName, int generation, CancellationToken ct) =>
+            connectAsync(pipeName, generation, ct);
     }
 
     private sealed class FakeRetryClock : IRetryClock
@@ -389,7 +437,7 @@ public sealed class HostSessionManagerTests
         public TaskCompletionSource<bool> Entered { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
         public bool CancellationRequested { get; private set; }
 
-        public Task<IHostMcpSession> ConnectAsync(string pipeName, CancellationToken ct)
+        public Task<IHostMcpSession> ConnectAsync(string pipeName, int generation, CancellationToken ct)
         {
             Entered.TrySetResult(true);
             if (cancelWhenRequested)
@@ -404,10 +452,10 @@ public sealed class HostSessionManagerTests
         public void Complete(IHostMcpSession session) => _completion.TrySetResult(session);
     }
 
-    private sealed class TestMcpSession(string pipeName) : IHostMcpSession
+    private sealed class TestMcpSession(string pipeName, int generation = 1) : IHostMcpSession
     {
-        public HostInstanceDescriptor Instance { get; } = new(5100, "Test", "1.0", pipeName);
-        public int Generation { get; init; } = 1;
+        public HostInstanceDescriptor Instance { get; } = new(GetProcessId(pipeName), "Test", "1.0", pipeName);
+        public int Generation { get; } = generation;
         public bool IsConnected { get; private set; } = true;
         public int DisposeCount { get; private set; }
         public event Action? CatalogChanged { add { } remove { } }
@@ -432,6 +480,12 @@ public sealed class HostSessionManagerTests
             DisposeCount++;
             IsConnected = false;
             return ValueTask.CompletedTask;
+        }
+
+        private static int GetProcessId(string pipeName)
+        {
+            Assert.True(McpPipeName.TryParse(pipeName, out var processId));
+            return processId;
         }
     }
 }

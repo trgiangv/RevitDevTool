@@ -98,6 +98,7 @@ public sealed class McpNamedPipeIntegrationTests
         {
             await using var session = await HostMcpSession.ConnectAsync(
                 McpPipeName.Format(Environment.ProcessId),
+                generation: 1,
                 NullLoggerFactory.Instance,
                 TestContext.Current.CancellationToken);
 
@@ -193,7 +194,7 @@ public sealed class McpNamedPipeIntegrationTests
         using var cancelled = new CancellationTokenSource();
         cancelled.Cancel();
         await Assert.ThrowsAnyAsync<OperationCanceledException>(() =>
-            HostMcpSession.ConnectAsync(McpPipeName.Format(Environment.ProcessId + 10_000), NullLoggerFactory.Instance, cancelled.Token));
+            HostMcpSession.ConnectAsync(McpPipeName.Format(Environment.ProcessId + 10_000), generation: 1, NullLoggerFactory.Instance, cancelled.Token));
     }
 
     [Fact]
@@ -204,7 +205,7 @@ public sealed class McpNamedPipeIntegrationTests
         using var serviceProvider = new ServiceCollection().BuildServiceProvider();
         await using var firstHost = new HostMcpServerHostedService(optionsFactory, NullLoggerFactory.Instance, serviceProvider);
         await firstHost.StartAsync(TestContext.Current.CancellationToken);
-        var firstSession = await HostMcpSession.ConnectAsync(McpPipeName.Format(Environment.ProcessId), NullLoggerFactory.Instance, TestContext.Current.CancellationToken);
+        var firstSession = await HostMcpSession.ConnectAsync(McpPipeName.Format(Environment.ProcessId), generation: 1, NullLoggerFactory.Instance, TestContext.Current.CancellationToken);
         try
         {
             var pendingCall = firstSession.CallToolAsync("blocking_session_test", null, CancellationToken.None);
@@ -224,7 +225,7 @@ public sealed class McpNamedPipeIntegrationTests
         var replacementOptions = new HostMcpServerOptionsFactory(new TestHostAppInfo(), [new TestTool("reconnected_session_test")], [], []);
         await using var secondHost = new HostMcpServerHostedService(replacementOptions, NullLoggerFactory.Instance, serviceProvider);
         await secondHost.StartAsync(TestContext.Current.CancellationToken);
-        await using var reconnected = await HostMcpSession.ConnectAsync(McpPipeName.Format(Environment.ProcessId), NullLoggerFactory.Instance, TestContext.Current.CancellationToken);
+        await using var reconnected = await HostMcpSession.ConnectAsync(McpPipeName.Format(Environment.ProcessId), generation: 1, NullLoggerFactory.Instance, TestContext.Current.CancellationToken);
         Assert.True(reconnected.IsConnected);
         var result = await reconnected.CallToolAsync("reconnected_session_test", null, TestContext.Current.CancellationToken);
         Assert.Equal("typed session", Assert.IsType<TextContentBlock>(Assert.Single(result.Content)).Text);
@@ -293,7 +294,7 @@ public sealed class McpNamedPipeIntegrationTests
     private sealed class DelegateHostSessionConnector(
         Func<string, CancellationToken, Task<IHostMcpSession>> connectAsync) : IHostSessionConnector
     {
-        public Task<IHostMcpSession> ConnectAsync(string pipeName, CancellationToken ct) => connectAsync(pipeName, ct);
+        public Task<IHostMcpSession> ConnectAsync(string pipeName, int generation, CancellationToken ct) => connectAsync(pipeName, ct);
     }
 
     private sealed class ImmediateRetryClock : IRetryClock

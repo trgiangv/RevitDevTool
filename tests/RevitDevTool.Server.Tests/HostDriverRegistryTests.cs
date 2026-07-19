@@ -210,7 +210,7 @@ public sealed class HostDriverRegistryTests
     private sealed class DelegateHostSessionConnector(
         Func<string, CancellationToken, Task<IHostMcpSession>> connectAsync) : IHostSessionConnector
     {
-        public Task<IHostMcpSession> ConnectAsync(string pipeName, CancellationToken ct) => connectAsync(pipeName, ct);
+        public Task<IHostMcpSession> ConnectAsync(string pipeName, int generation, CancellationToken ct) => connectAsync(pipeName, ct);
     }
 
     private sealed class ImmediateRetryClock : IRetryClock

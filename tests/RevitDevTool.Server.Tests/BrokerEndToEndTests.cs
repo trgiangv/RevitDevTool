@@ -96,7 +96,7 @@ public sealed class BrokerEndToEndTests
             var services = new ServiceCollection().BuildServiceProvider();
             var host = new HostMcpServerHostedService(hostOptions, NullLoggerFactory.Instance, services);
             await host.StartAsync(ct);
-            var realSession = await HostMcpSession.ConnectAsync(McpPipeName.Format(Environment.ProcessId), NullLoggerFactory.Instance, ct);
+            var realSession = await HostMcpSession.ConnectAsync(McpPipeName.Format(Environment.ProcessId), generation: 1, NullLoggerFactory.Instance, ct);
             var session = new CountingSession(realSession);
             var manager = new SingleSessionManager(session);
             var broker = new BrokerCatalogIndex();
@@ -184,6 +184,10 @@ public sealed class BrokerEndToEndTests
         public IReadOnlyCollection<IHostMcpSession> Sessions => [session];
         public event Action? SessionsChanged { add { } remove { } }
         public IHostMcpSession? GetSessionByProcessId(int processId) => session.Instance.ProcessId == processId ? session : null;
+        public IHostMcpSession? GetSession(int processId, int generation) =>
+            GetSessionByProcessId(processId) is { Generation: var actual } current && actual == generation
+                ? current
+                : null;
     }
 
     private sealed class CountingSession(IHostMcpSession inner) : IHostMcpSession
