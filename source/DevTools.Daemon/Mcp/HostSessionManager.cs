@@ -71,6 +71,7 @@ public sealed partial class HostSessionManager : IInstanceManager, IAsyncDisposa
     private readonly IRetryClock retryClock;
     private readonly ConcurrentDictionary<string, HostSessionSlot> sessionSlots = new(StringComparer.OrdinalIgnoreCase);
     private readonly ConcurrentDictionary<int, IHostMcpSession> sessionsByProcessId = new();
+    private readonly ConcurrentDictionary<string, int> generationsByPipe = new(StringComparer.OrdinalIgnoreCase);
     private readonly CancellationTokenSource lifetimeCancellation = new();
     private readonly Lock discoveryWaitGate = new();
     private readonly Lock disposeGate = new();
@@ -215,7 +216,7 @@ public sealed partial class HostSessionManager : IInstanceManager, IAsyncDisposa
             return;
 
         using var linked = CancellationTokenSource.CreateLinkedTokenSource(ct, lifetimeCancellation.Token);
-        var attempt = new SessionConnectionAttempt(slot.Generation + 1, linked.Token);
+        var attempt = new SessionConnectionAttempt(GetNextGeneration(pipeName), linked.Token);
         var connecting = slot with
         {
             State = HostSessionState.Connecting,
@@ -255,7 +256,15 @@ public sealed partial class HostSessionManager : IInstanceManager, IAsyncDisposa
             if (!TryIndexSession(session))
             {
                 await MoveToBackoffAsync(pipeName, connected).ConfigureAwait(false);
-                throw new InvalidOperationException($"A live MCP session already owns process ID {session.Instance.ProcessId}.");
+                throw new DuplicateProcessIdException(session.Instance.ProcessId);
+            }
+
+            if (!IsCurrentSlot(pipeName, connected))
+            {
+                RemoveSessionByProcessId(session);
+                if (session.IsConnected)
+                    await session.DisposeAsync().ConfigureAwait(false);
+                return;
             }
 
             session.CatalogChanged += NotifySessionsChanged;
@@ -269,7 +278,11 @@ public sealed partial class HostSessionManager : IInstanceManager, IAsyncDisposa
             if (ct.IsCancellationRequested)
                 throw;
         }
-        catch (Exception ex) when (ex is not InvalidOperationException)
+        catch (DuplicateProcessIdException ex)
+        {
+            throw new InvalidOperationException(ex.Message, ex);
+        }
+        catch (Exception ex)
         {
             logger.ZLogWarning(ex, $"Failed to connect to MCP endpoint {pipeName}");
             var failureCount = slot.FailureCount + 1;
@@ -278,7 +291,8 @@ public sealed partial class HostSessionManager : IInstanceManager, IAsyncDisposa
                 HostSessionState.Backoff,
                 failureCount,
                 retryClock.UtcNow + GetRetryDelay(failureCount),
-                null);
+                null,
+                connecting.Generation);
             if (sessionSlots.TryUpdate(pipeName, backoff, connecting))
                 WakeDiscoveryLoop();
         }
@@ -305,7 +319,8 @@ public sealed partial class HostSessionManager : IInstanceManager, IAsyncDisposa
             HostSessionState.Backoff,
             failureCount,
             retryClock.UtcNow + GetRetryDelay(failureCount),
-            null);
+            null,
+            slot.Generation);
         if (!sessionSlots.TryUpdate(pipeName, backoff, slot))
             return;
         WakeDiscoveryLoop();
@@ -372,6 +387,12 @@ public sealed partial class HostSessionManager : IInstanceManager, IAsyncDisposa
         ((ICollection<KeyValuePair<int, IHostMcpSession>>)sessionsByProcessId)
             .Remove(new KeyValuePair<int, IHostMcpSession>(session.Instance.ProcessId, session));
 
+    private int GetNextGeneration(string pipeName) =>
+        generationsByPipe.AddOrUpdate(pipeName, 1, static (_, generation) => checked(generation + 1));
+
+    private bool IsCurrentSlot(string pipeName, HostSessionSlot slot) =>
+        sessionSlots.TryGetValue(pipeName, out var current) && ReferenceEquals(current, slot);
+
     private bool TryIndexSession(IHostMcpSession session)
     {
         while (true)
@@ -432,6 +453,9 @@ public sealed partial class HostSessionManager : IInstanceManager, IAsyncDisposa
         public async Task<IHostMcpSession> ConnectAsync(string pipeName, int generation, CancellationToken ct) =>
             await HostMcpSession.ConnectAsync(pipeName, generation, loggerFactory, ct).ConfigureAwait(false);
     }
+
+    private sealed class DuplicateProcessIdException(int processId)
+        : InvalidOperationException($"A live MCP session already owns process ID {processId}.");
 
     private sealed class SystemRetryClock : IRetryClock
     {
