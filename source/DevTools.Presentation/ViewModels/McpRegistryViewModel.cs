@@ -3,10 +3,10 @@ using System.Collections.Specialized;
 using System.ComponentModel;
 using System.IO;
 using System.Text;
-using System.Text.Json;
 using System.Windows.Threading;
 using DevTools.Execution.External.Connections;
 using DevTools.Mcp.Registry;
+using DevTools.Presentation.Formatting;
 using DevTools.Presentation.Models;
 using DevTools.UI.Behaviors;
 using DevTools.UI.Theme;
@@ -336,37 +336,13 @@ public sealed partial class McpRegistryViewModel : ObservableObject, IBusyViewMo
         builder.AppendLine();
         builder.AppendLine(string.IsNullOrWhiteSpace(protocolTool.Description) ? "No description." : protocolTool.Description!.Trim());
 
-        var arguments = BuildArgumentSummary(protocolTool.InputSchema.GetRawText());
+        var arguments = McpSchemaSummaryFormatter.Format(protocolTool.InputSchema);
         if (string.IsNullOrWhiteSpace(arguments)) 
             return builder.ToString().TrimEnd();
         builder.AppendLine();
         builder.AppendLine("Args:");
         builder.Append(arguments);
         return builder.ToString().TrimEnd();
-    }
-
-    private static string BuildArgumentSummary(string? inputSchemaJson)
-    {
-        if (string.IsNullOrWhiteSpace(inputSchemaJson))
-            return string.Empty;
-
-        var schemaJson = inputSchemaJson ?? string.Empty;
-        using var document = JsonDocument.Parse(schemaJson);
-        if (!document.RootElement.TryGetProperty("properties", out var properties) ||
-            properties.ValueKind != JsonValueKind.Object)
-            return string.Empty;
-
-        var lines = new List<string>();
-        foreach (var property in properties.EnumerateObject())
-        {
-            var prop = property.Value;
-            var type = prop.TryGetProperty("type", out var typeElement) ? typeElement.GetString() ?? "any" : "any";
-            var title = prop.TryGetProperty("title", out var titleElement) ? titleElement.GetString() ?? property.Name : property.Name;
-            var description = prop.TryGetProperty("description", out var descriptionElement) ? descriptionElement.GetString() : null;
-            var descSuffix = string.IsNullOrWhiteSpace(description) ? string.Empty : $" — {description}";
-            lines.Add($"- {property.Name}: {title} ({type}){descSuffix}");
-        }
-        return string.Join(Environment.NewLine, lines);
     }
 
     public void Dispose()

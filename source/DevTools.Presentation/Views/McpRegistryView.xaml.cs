@@ -21,10 +21,23 @@ public partial class McpRegistryView
         _logger = logger;
         DataContext = viewModel;
         InitializeComponent();
+        Loaded += OnLoaded;
+    }
 
-        Dispatcher.BeginInvoke(
-            System.Windows.Threading.DispatcherPriority.Loaded,
-            viewModel.InitializeAsync);
+    private async void OnLoaded(object sender, System.Windows.RoutedEventArgs e)
+    {
+        Loaded -= OnLoaded;
+        if (DataContext is not McpRegistryViewModel viewModel)
+            return;
+
+        try
+        {
+            await viewModel.InitializeAsync();
+        }
+        catch (Exception ex)
+        {
+            _logger.ZLogError(ex, $"MCP Registry initialization failed");
+        }
     }
 
     private void RegistryList_DragEnter(object sender, DragEventArgs e) => UpdateDropMaskState(e);
