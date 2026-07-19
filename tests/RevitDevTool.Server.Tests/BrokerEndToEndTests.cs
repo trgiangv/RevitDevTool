@@ -190,6 +190,7 @@ public sealed class BrokerEndToEndTests
     {
         public int ListCalls { get; private set; }
         public HostInstanceDescriptor Instance => inner.Instance;
+        public int Generation => inner.Generation;
         public bool IsConnected => inner.IsConnected;
         public event Action? CatalogChanged { add => inner.CatalogChanged += value; remove => inner.CatalogChanged -= value; }
         public event Action? Disconnected { add => inner.Disconnected += value; remove => inner.Disconnected -= value; }

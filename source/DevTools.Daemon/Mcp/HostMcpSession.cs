@@ -24,6 +24,7 @@ public sealed class HostMcpSession : IHostMcpSession
     }
 
     public HostInstanceDescriptor Instance { get; }
+    public int Generation { get; } = 1;
     public bool IsConnected => Volatile.Read(ref _disposed) == 0 && !_client.Completion.IsCompleted;
     public event Action? CatalogChanged;
     public event Action? Disconnected;

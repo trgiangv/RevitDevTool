@@ -148,6 +148,7 @@ public sealed class CatalogServiceSnapshotTests
             "Test",
             "1.0",
             McpPipeName.Format(processId));
+        public int Generation { get; init; } = 1;
         public bool IsConnected => true;
         public bool FailLists { get; set; }
         public string ToolName { set => tool = CreateTool(value); }
@@ -199,6 +200,7 @@ public sealed class CatalogServiceSnapshotTests
         private readonly McpClientResourceTemplate template = CreateTemplate("revit://model/elements/{id}", "element");
 
         public HostInstanceDescriptor Instance { get; } = new(processId, "Test", "1.0", McpPipeName.Format(processId));
+        public int Generation { get; init; } = 1;
         public bool IsConnected => true;
         public bool IncludeDirectResource { get; set; } = true;
         public event Action? CatalogChanged { add { } remove { } }

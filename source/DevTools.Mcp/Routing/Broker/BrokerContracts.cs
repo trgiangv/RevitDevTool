@@ -1,4 +1,5 @@
 using System.Text.Json;
+using DevTools.Mcp.Routing.Catalog;
 
 namespace DevTools.Mcp.Routing.Broker;
 
@@ -26,7 +27,8 @@ public sealed record BrokerSearchResponse(
     string Revision,
     IReadOnlyList<HostInstanceDescriptor> Hosts,
     IReadOnlyList<BrokerSearchItem> Items,
-    bool Truncated);
+    bool Truncated,
+    IReadOnlyList<HostCatalogStatus>? Catalogs = null);
 
 public static class BrokerSearchRequestParser
 {

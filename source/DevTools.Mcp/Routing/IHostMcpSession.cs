@@ -6,6 +6,7 @@ namespace DevTools.Mcp.Routing;
 public interface IHostMcpSession : IAsyncDisposable
 {
     HostInstanceDescriptor Instance { get; }
+    int Generation { get; }
     bool IsConnected { get; }
     Task<IList<McpClientTool>> ListToolsAsync(CancellationToken ct);
     Task<IList<McpClientPrompt>> ListPromptsAsync(CancellationToken ct);

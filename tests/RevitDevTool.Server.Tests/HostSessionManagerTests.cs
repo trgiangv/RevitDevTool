@@ -407,6 +407,7 @@ public sealed class HostSessionManagerTests
     private sealed class TestMcpSession(string pipeName) : IHostMcpSession
     {
         public HostInstanceDescriptor Instance { get; } = new(5100, "Test", "1.0", pipeName);
+        public int Generation { get; init; } = 1;
         public bool IsConnected { get; private set; } = true;
         public int DisposeCount { get; private set; }
         public event Action? CatalogChanged { add { } remove { } }

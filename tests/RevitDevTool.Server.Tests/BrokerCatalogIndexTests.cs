@@ -208,6 +208,7 @@ public sealed class BrokerCatalogIndexTests
             : null;
 
         public HostInstanceDescriptor Instance { get; } = new(processId, "TestHost", "1.0", McpPipeName.Format(processId));
+        public int Generation { get; init; } = 1;
         public HostCatalogSnapshot Snapshot => HostCatalogSnapshot.Create(Instance, [tool], prompt is null ? [] : [prompt], resource is null ? [] : [resource], []);
         public bool IsConnected => true;
         public int CallCount { get; private set; }

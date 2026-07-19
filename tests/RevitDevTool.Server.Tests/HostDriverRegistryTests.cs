@@ -222,6 +222,7 @@ public sealed class HostDriverRegistryTests
     private sealed class CapturingSession(int processId) : IHostMcpSession
     {
         public HostInstanceDescriptor Instance { get; } = new(processId, "TestHost", "1.0", McpPipeName.Format(processId));
+        public int Generation { get; init; } = 1;
         public bool IsConnected => true;
         public List<(string Name, IReadOnlyDictionary<string, object?> Arguments)> ToolCalls { get; } = [];
         public event Action? CatalogChanged { add { } remove { } }
