@@ -128,7 +128,8 @@ public sealed class LaunchHostTool
                 catalogTimeout,
                 cancellationToken)
             .ConfigureAwait(false);
-        var dialogResult = await dialogResultTask.ConfigureAwait(false);
+        cancellationToken.ThrowIfCancellationRequested();
+        var dialogResult = await dialogResultTask.WaitAsync(cancellationToken).ConfigureAwait(false);
         var catalogReady = catalogState is HostCatalogState.Ready or HostCatalogState.Stale;
         var status = catalogReady
             ? LaunchHostStatus.ConnectedCatalogReady

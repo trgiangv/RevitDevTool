@@ -7,6 +7,7 @@ using DevTools.Daemon.Mcp.Tools;
 using DevTools.Daemon.Mcp.Tools.Utils;
 using DevTools.Ipc;
 using DevTools.Logging;
+using DevTools.Mcp;
 using DevTools.Mcp.Routing;
 using DevTools.Mcp.Routing.Broker;
 using DevTools.Mcp.Routing.Catalog;
@@ -16,7 +17,6 @@ using Microsoft.Extensions.Options;
 using ModelContextProtocol.Client;
 using ModelContextProtocol.Protocol;
 using ModelContextProtocol.Server;
-using System.Diagnostics;
 using System.Text.Json;
 
 namespace RevitDevTool.Server.Tests;
@@ -246,57 +246,76 @@ public sealed class HostDriverRegistryTests
     }
 
     [Fact]
-    public async Task Launch_PostConnectionBarrierOverlapsDialogSnapshotWait()
+    public async Task Launch_StartsCatalogBarrierBeforeDialogSnapshotCompletes()
     {
         var session = new CapturingSession(9009);
         await using var instanceManager = await CreateHostSessionManagerAsync([session]);
-        await using var coordinator = new HostCatalogCoordinator(_ => Task.CompletedTask, instanceManager);
-        var dialogTask = Task.Run(async () =>
-        {
-            await Task.Delay(400, TestContext.Current.CancellationToken);
-            return new StartupDialogResolverResult(TimedOut: false, Events: []);
-        });
-        var driver = new CapturingHostDriver(9009, HostApp.Revit) { DialogTask = dialogTask };
-        var tool = new LaunchHostTool(
-            instanceManager,
-            new HostDriverRegistry([driver]),
-            coordinator,
-            catalogTimeout: TimeSpan.FromMilliseconds(500));
-        var timer = Stopwatch.StartNew();
-
-        var result = await tool.LaunchAsync("Revit", "2025", cancellationToken: TestContext.Current.CancellationToken);
-
-        Assert.Equal(LaunchHostStatus.ConnectedCatalogPending, ReadPayload(result).GetProperty("status").GetString());
-        Assert.InRange(timer.Elapsed, TimeSpan.FromMilliseconds(450), TimeSpan.FromMilliseconds(700));
-    }
-
-    [Fact]
-    public async Task Launch_PropagatesCallerCancellationWhileDialogAndCatalogArePending()
-    {
-        var session = new CapturingSession(9010);
-        await using var instanceManager = await CreateHostSessionManagerAsync([session]);
-        await using var coordinator = new HostCatalogCoordinator(_ => Task.CompletedTask, instanceManager);
-        var dialogTask = Task.Run(async () =>
-        {
-            await Task.Delay(500);
-            return new StartupDialogResolverResult(TimedOut: false, Events: []);
-        });
-        var driver = new CapturingHostDriver(9010, HostApp.Revit) { DialogTask = dialogTask };
+        var readinessStarted = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+        var readinessSessions = new SignalingInstanceManager(session, readinessStarted);
+        await using var coordinator = new HostCatalogCoordinator(_ => Task.CompletedTask, readinessSessions);
+        var dialogRelease = new TaskCompletionSource<StartupDialogResolverResult>(TaskCreationOptions.RunContinuationsAsynchronously);
+        var driver = new CapturingHostDriver(9009, HostApp.Revit) { DialogTask = dialogRelease.Task };
         var tool = new LaunchHostTool(
             instanceManager,
             new HostDriverRegistry([driver]),
             coordinator,
             catalogTimeout: TimeSpan.FromSeconds(5));
-        using var cancellation = new CancellationTokenSource(TimeSpan.FromMilliseconds(20));
+        var launch = tool.LaunchAsync("Revit", "2025", cancellationToken: TestContext.Current.CancellationToken);
+
+        try
+        {
+            await readinessStarted.Task.WaitAsync(TimeSpan.FromSeconds(1), TestContext.Current.CancellationToken);
+            coordinator.PublishStatus(
+                new HostCatalogIdentity(session.Instance.PipeName, session.Generation),
+                HostCatalogState.Ready);
+            dialogRelease.TrySetResult(new StartupDialogResolverResult(TimedOut: false, Events: []));
+
+            var result = await launch;
+
+            Assert.Equal(LaunchHostStatus.ConnectedCatalogReady, ReadPayload(result).GetProperty("status").GetString());
+        }
+        finally
+        {
+            coordinator.PublishStatus(
+                new HostCatalogIdentity(session.Instance.PipeName, session.Generation),
+                HostCatalogState.Ready);
+            dialogRelease.TrySetResult(new StartupDialogResolverResult(TimedOut: false, Events: []));
+            try
+            {
+                await launch.WaitAsync(TimeSpan.FromSeconds(1), TestContext.Current.CancellationToken);
+            }
+            catch
+            {
+            }
+        }
+    }
+
+    [Fact]
+    public async Task Launch_PropagatesCallerCancellationAfterTerminalCatalogWhileDialogIsPending()
+    {
+        var session = new CapturingSession(9010);
+        await using var instanceManager = await CreateHostSessionManagerAsync([session]);
+        await using var coordinator = CreateCoordinatorWithStatus(instanceManager, session, HostCatalogState.Ready);
+        var dialogRelease = new TaskCompletionSource<StartupDialogResolverResult>(TaskCreationOptions.RunContinuationsAsynchronously);
+        var driver = new CapturingHostDriver(9010, HostApp.Revit) { DialogTask = dialogRelease.Task };
+        var tool = new LaunchHostTool(
+            instanceManager,
+            new HostDriverRegistry([driver]),
+            coordinator,
+            catalogTimeout: TimeSpan.FromSeconds(5));
+        using var cancellation = new CancellationTokenSource();
         var launch = tool.LaunchAsync("Revit", "2025", cancellationToken: cancellation.Token);
 
         try
         {
+            Assert.False(launch.IsCompleted);
+            cancellation.Cancel();
             await Assert.ThrowsAnyAsync<OperationCanceledException>(
-                () => launch.WaitAsync(TimeSpan.FromMilliseconds(250), TestContext.Current.CancellationToken));
+                () => launch.WaitAsync(TimeSpan.FromSeconds(1), TestContext.Current.CancellationToken));
         }
         finally
         {
+            dialogRelease.TrySetResult(new StartupDialogResolverResult(TimedOut: false, Events: []));
             try
             {
                 await launch.WaitAsync(TimeSpan.FromSeconds(1), TestContext.Current.CancellationToken);
@@ -483,6 +502,25 @@ public sealed class HostDriverRegistryTests
     {
         public DateTimeOffset UtcNow => DateTimeOffset.UtcNow;
         public Task DelayAsync(TimeSpan delay, CancellationToken ct) => Task.Delay(Timeout.InfiniteTimeSpan, ct);
+    }
+
+    private sealed class SignalingInstanceManager(
+        IHostMcpSession session,
+        TaskCompletionSource<bool> readinessStarted) : IInstanceManager
+    {
+        public IReadOnlyCollection<IHostMcpSession> Sessions => [session];
+        public event Action? SessionsChanged { add { } remove { } }
+
+        public IHostMcpSession? GetSessionByProcessId(int processId) =>
+            processId == session.Instance.ProcessId ? session : null;
+
+        public IHostMcpSession? GetSession(int processId, int generation)
+        {
+            readinessStarted.TrySetResult(true);
+            return processId == session.Instance.ProcessId && generation == session.Generation
+                ? session
+                : null;
+        }
     }
 
     private sealed class TestAuthService : IAuthService
