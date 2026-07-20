@@ -21,14 +21,12 @@
     </ItemGroup>
 
     <ItemGroup>
-        <ProjectReference Include="..\DevTools.Ipc\DevTools.Ipc.csproj"/>
         <ProjectReference Include="..\DevTools.Execution.Abstractions\DevTools.Execution.Abstractions.csproj"/>
         <ProjectReference Include="..\DevTools.Settings\DevTools.Settings.csproj"/>
     </ItemGroup>
 
     <ItemGroup>
         <Using Include="DevTools.Execution.Abstractions"/>
-        <Using Include="DevTools.Ipc"/>
         <Using Include="DevTools.Mcp.Models"/>
         <Using Include="DevTools.Mcp.Discovery"/>
         <Using Include="DevTools.Mcp.Registry"/>

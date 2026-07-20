@@ -1,37 +1,22 @@
 using System.Net.Http;
 using System.Net.Http.Headers;
-using System.Text.Json;
+using System.ComponentModel;
 using DevTools.Daemon.Auth;
 using DevTools.Daemon.Hosting;
-using DevTools.Mcp.Schema;
 using Microsoft.Extensions.Options;
 using ModelContextProtocol.Protocol;
 using ModelContextProtocol.Server;
 
 namespace DevTools.Daemon.Mcp.Tools;
 
-public sealed class ListMachinesTool(IAuthService authService, IOptions<GatewayOptions> gatewayOptions) : McpServerTool
+[McpServerToolType]
+public sealed class ListMachinesTool(IAuthService authService, IOptions<GatewayOptions> gatewayOptions)
 {
-    private static class ToolMetadata
-    {
-        public const string Name = "list_machines";
-        public const string Description =
-            "List all connected machines for this user. Returns device names and running host apps per machine.";
-    }
-
     private static readonly HttpClient Http = new();
 
-    public override Tool ProtocolTool { get; } = new()
-    {
-        Name = ToolMetadata.Name,
-        Description = ToolMetadata.Description,
-        InputSchema = McpSchemaBuilder.EmptyObject()
-    };
-
-    public override IReadOnlyList<object> Metadata => [];
-
-    public override async ValueTask<CallToolResult> InvokeAsync(
-        RequestContext<CallToolRequestParams> request,
+    [McpServerTool(Name = "list_machines")]
+    [Description("List gateway machines after the gateway has selected this daemon. Machine selection uses x-target-machine before MCP initialization; hostId is only a local process ID.")]
+    public async Task<CallToolResult> ListAsync(
         CancellationToken cancellationToken = default)
     {
         if (!authService.IsAuthenticated || authService.AccessToken is not { } token)

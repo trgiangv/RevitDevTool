@@ -1,4 +1,3 @@
-using System.IO;
 using Python.Runtime;
 namespace DevTools.Execution.Providers.Python;
 

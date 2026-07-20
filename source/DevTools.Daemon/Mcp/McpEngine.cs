@@ -1,9 +1,13 @@
 using DevTools.Daemon.Auth;
+using DevTools.Daemon.Hosts;
 using DevTools.Daemon.Hosting;
 using Microsoft.Extensions.Options;
+using ModelContextProtocol.Protocol;
 using ModelContextProtocol.Server;
 using DevTools.Daemon.Mcp.Tools;
 using DevTools.Mcp.Routing.Catalog;
+using DevTools.Mcp.Routing.Broker;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace DevTools.Daemon.Mcp;
 
@@ -13,51 +17,81 @@ namespace DevTools.Daemon.Mcp;
 /// </summary>
 public sealed class McpEngine
 {
-    public InstanceManager InstanceManager { get; }
-    public DynamicToolCatalog DynamicToolCatalog { get; }
-    public DynamicResourceCatalog DynamicResourceCatalog { get; }
-    public DynamicPromptCatalog DynamicPromptCatalog { get; }
+    public HostSessionManager InstanceManager { get; }
+    public BrokerCatalogIndex BrokerCatalog { get; }
     public McpServerPrimitiveCollection<McpServerTool> ToolCollection { get; }
     public McpServerPrimitiveCollection<McpServerPrompt> PromptCollection { get; }
     public McpServerResourceCollection ResourceCollection { get; }
     public IReadOnlyList<McpServerTool> LocalTools { get; }
 
     public McpEngine(
-        InstanceManager instanceManager,
-        DynamicToolCatalog dynamicToolCatalog,
-        DynamicResourceCatalog dynamicResourceCatalog,
-        DynamicPromptCatalog dynamicPromptCatalog,
+        HostSessionManager instanceManager,
+        BrokerCatalogIndex brokerCatalog,
         IAuthService authService,
-        IOptions<GatewayOptions> gatewayOptions)
+        IOptions<GatewayOptions> gatewayOptions,
+        IServiceProvider services)
     {
         InstanceManager = instanceManager;
-        DynamicToolCatalog = dynamicToolCatalog;
-        DynamicResourceCatalog = dynamicResourceCatalog;
-        DynamicPromptCatalog = dynamicPromptCatalog;
+        BrokerCatalog = brokerCatalog;
         ToolCollection = [];
         PromptCollection = [];
         ResourceCollection = [];
 
-        LocalTools = CreateLocalTools(authService, gatewayOptions);
+        var broker = new DevToolsBrokerTools(BrokerCatalog, InstanceManager);
+        LocalTools = CreateLocalTools(
+            authService,
+            gatewayOptions,
+            services.GetRequiredService<HostDriverRegistry>(),
+            broker,
+            InstanceManager,
+            services);
         foreach (var tool in LocalTools)
         {
             ToolCollection.TryAdd(tool);
         }
     }
 
-    private McpServerTool[] CreateLocalTools(IAuthService authService, IOptions<GatewayOptions> gatewayOptions) =>
-    [
-        new ListMachinesTool(authService, gatewayOptions),
-        new ListHostInstancesTool(InstanceManager),
-        new LaunchHostTool(InstanceManager),
-        new ReadFileInfoTool(),
-        new OpenModelTool(InstanceManager),
-        new ListDynamicTools(DynamicToolCatalog),
-        new CallDynamicTool(InstanceManager, DynamicToolCatalog),
-        new ListDynamicResources(DynamicResourceCatalog),
-        new ReadDynamicResource(InstanceManager, DynamicResourceCatalog),
-        new ListDynamicPrompts(DynamicPromptCatalog),
-        new GetDynamicPrompt(InstanceManager, DynamicPromptCatalog),
-        new RefreshDynamicCatalog(DynamicToolCatalog, DynamicResourceCatalog, DynamicPromptCatalog)
-    ];
+    /// <summary>Creates a fresh SDK options instance for each external transport session.</summary>
+    public McpServerOptions CreateServerOptions() => ToolHelpers.ConfigureGatewayOptions(
+        ToolCollection,
+        PromptCollection,
+        ResourceCollection);
+
+    private static McpServerTool[] CreateLocalTools(
+        IAuthService authService,
+        IOptions<GatewayOptions> gatewayOptions,
+        HostDriverRegistry hostDrivers,
+        DevToolsBrokerTools broker,
+        HostSessionManager instanceManager,
+        IServiceProvider services)
+    {
+        var listMachines = new ListMachinesTool(authService, gatewayOptions);
+        var launchHost = new LaunchHostTool(
+            instanceManager,
+            hostDrivers,
+            () => services.GetRequiredService<HostCatalogCoordinator>());
+        var readFileInfo = new ReadFileInfoTool(hostDrivers);
+        var openModel = new OpenModelTool(instanceManager, hostDrivers);
+
+        return
+        [
+            CreateTool(broker, nameof(DevToolsBrokerTools.Search)),
+            CreateTool(broker, nameof(DevToolsBrokerTools.InvokeAsync)),
+            CreateTool(listMachines, nameof(ListMachinesTool.ListAsync)),
+            CreateTool(launchHost, nameof(LaunchHostTool.LaunchAsync), supportsTasks: true),
+            CreateTool(readFileInfo, nameof(ReadFileInfoTool.ReadAsync)),
+            CreateTool(openModel, nameof(OpenModelTool.OpenAsync), supportsTasks: true)
+        ];
+    }
+
+    private static McpServerTool CreateTool<T>(T target, string methodName, bool supportsTasks = false)
+        where T : class
+    {
+        var method = typeof(T).GetMethod(methodName)
+            ?? throw new MissingMethodException(typeof(T).FullName, methodName);
+        var tool = McpServerTool.Create(method, target);
+        if (supportsTasks)
+            tool.ProtocolTool.Execution = new ToolExecution { TaskSupport = ToolTaskSupport.Optional };
+        return tool;
+    }
 }

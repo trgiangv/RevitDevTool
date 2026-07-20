@@ -4,6 +4,43 @@ namespace RevitDevTool.Server.Tests;
 
 public class ContractTests
 {
+    [Theory]
+    [InlineData("McpBridgeMethods")]
+    [InlineData("IpcPropertyNames")]
+    [InlineData("McpPropertyNames")]
+    [InlineData("McpBridgeRequestHandler")]
+    public void RemovedMcpBridgeSymbols_DoNotAppearInProductionSource(string symbol)
+    {
+        var root = FindRepositoryRoot();
+        var matches = Directory.EnumerateFiles(Path.Combine(root, "source"), "*.cs", SearchOption.AllDirectories)
+            .Where(path => File.ReadAllText(path).Contains(symbol, StringComparison.Ordinal))
+            .ToArray();
+
+        Assert.Empty(matches);
+    }
+
+    [Theory]
+    [InlineData("BridgeMessage")]
+    [InlineData("BridgePipeConnection")]
+    [InlineData("DevToolsPipeServer")]
+    [InlineData("PytestRequestHandler")]
+    [InlineData("McpPipeName")]
+    [InlineData("tests/run")]
+    [InlineData("notifications/tests/progress")]
+    public void LegacyPytestAndPipeContracts_AreAbsentFromProductionSource(string forbidden)
+    {
+        Assert.DoesNotContain(ProductionSourceFiles(), path =>
+            File.ReadAllText(path).Contains(forbidden, StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void McpRuntimeV2Contracts_RemainInProductionSource()
+    {
+        Assert.Contains(ProductionSourceFiles(), path => File.ReadAllText(path).Contains("HostPipeName", StringComparison.Ordinal));
+        Assert.Contains(ProductionSourceFiles(), path => File.ReadAllText(path).Contains("HostMcpServerHostedService", StringComparison.Ordinal));
+        Assert.Contains(ProductionSourceFiles(), path => File.ReadAllText(path).Contains("pytest_run", StringComparison.Ordinal));
+    }
+
     [Fact]
     public void McpRegistryCatalog_DefaultsAreEmpty()
     {
@@ -67,5 +104,22 @@ public class ContractTests
 
         var idWithName = McpPrimitiveBinding.CreatePrimitiveId("tool", null);
         Assert.Equal("tool_[unknown]", idWithName);
+    }
+
+    private static string FindRepositoryRoot()
+    {
+        for (var current = new DirectoryInfo(AppContext.BaseDirectory); current is not null; current = current.Parent)
+        {
+            if (File.Exists(Path.Combine(current.FullName, "RevitDevTool.slnx")))
+                return current.FullName;
+        }
+
+        throw new DirectoryNotFoundException("Could not locate the repository root.");
+    }
+
+    private static IEnumerable<string> ProductionSourceFiles()
+    {
+        var root = FindRepositoryRoot();
+        return Directory.EnumerateFiles(Path.Combine(root, "source"), "*.cs", SearchOption.AllDirectories);
     }
 }

@@ -117,8 +117,8 @@ Model Context Protocol integration:
 ### PyTest
 **Path:** `PyTest/README.md`
 
-pytest remote execution bridge:
-- Named Pipe protocol
+pytest host execution:
+- Direct named-pipe MCP session to the canonical host pipe
 - Multi-host `revitdevtool_pytest` client plugin (Revit, AutoCAD-family, extensible)
 - `PytestExecutionService` + `PytestRunner.py` server
 - Test progress streaming & result reporting

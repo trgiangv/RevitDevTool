@@ -16,7 +16,7 @@
 - Revit host: `source/RevitDevTool/`.
 - Revit-only helpers: `source/RevitDevTool.Core/` (dockable panes, RevitContext, transaction service — not shared with AutoCAD).
 - AutoCAD host: `source/AcadDevTool/`.
-- Shared platform libraries: `source/DevTools.Execution/` (execution engine, pytest bridge in `External/Testing/`), `source/DevTools.Execution.Abstractions/` (execution interfaces and enums), `source/DevTools.Ipc/` (IPC transport: BridgeMessage, BridgePipeConnection, pipe constants, shared wire protocol property names), `source/DevTools.Mcp/` (MCP protocol: catalog, discovery, registry, dispatch, routing), `source/DevTools.Logging/`, `source/DevTools.Presentation/`, `source/DevTools.Settings/`, `source/DevTools.Telemetry/`, `source/DevTools.UI/`, and `source/DevTools.Utilities/`.
+- Shared platform libraries: `source/DevTools.Execution/` (execution engine, host MCP server, and host pytest MCP tool in `External/Mcp/`), `source/DevTools.Execution.Abstractions/` (execution interfaces and enums), `source/DevTools.Ipc/` (canonical host-pipe naming), `source/DevTools.Mcp/` (host-neutral MCP catalog and broker/native routing), `source/DevTools.Logging/`, `source/DevTools.Presentation/`, `source/DevTools.Settings/`, `source/DevTools.Telemetry/`, `source/DevTools.UI/`, and `source/DevTools.Utilities/`.
 - Standalone daemon: `source/DevTools.Daemon/` (WPF tray app — auth, MCP engine, host discovery, auto-start).
 - Samples and demo toolsets live under `samples/`, not under `source/`.
 - Build automation lives under `build/`; agent wrapper scripts live under `scripts/`.
@@ -52,12 +52,14 @@
 - `RevitDevTool.Core` is Revit-only (transactions, dockable panes, image export). It is NOT referenced by AutoCAD or shared libs.
 - New host support should add host-specific projects, adapters, and packaging rules without leaking host APIs into shared `DevTools.*` libraries.
 - Revit DirectContext3D visualization lives entirely in `source/RevitDevTool/Visualization/`, not in shared code. Other hosts should use their own rendering adapters.
-- Standalone daemon (`DevTools.Daemon`) is host-agnostic: `InstanceManager` discovers any host pipe, `HostBridgeClient` connects generically. Built-in tools support Revit and AutoCAD-family products (launch, file info, C# execution). In-host MCP dispatch is fully shared.
+- Standalone daemon (`DevTools.Daemon`) is host-agnostic: `HostSessionManager` discovers canonical `DevTools_{Host}_{Version}_{PID}` endpoints and `HostMcpSession` connects through the ModelContextProtocol SDK. Its fixed default Broker surface is `devtools_search`, `devtools_invoke`, `launch_host`, `open_model`, `read_file_info`, and `list_machines`; `IHostDriver` owns host-product launch/file behavior. Broker catalogs are immutable, generation-scoped full rebuilds for the fewer-than-20-host envelope, and PID dispatch is O(1). In-host MCP dispatch is fully shared.
 
 ## Common Traps
 - Do not use repo-root `.sln`; use `RevitDevTool.slnx`.
 - Do not assume paths under `source/samples/`; current samples are under `samples/`.
 - Embedded execution scripts currently live under `source/DevTools.Execution/Resources/scripts/`, but some tests still look under `source/RevitDevTool/Resources/scripts/`.
+- Pytest collection is independent and local, but host execution uses a direct standard-MCP session to `DevTools_{Host}_{Version}_{PID}` and the reserved `pytest_run` tool. It does not traverse `DevTools.Daemon`; case-event notifications require the advertised `experimental.devtools.pytest.caseEvents.version = "1"` capability.
+- Gateway `machineId` (`x-target-machine`) selects a daemon before MCP initialization; Broker `hostId` is only a PID within that selected daemon. `list_machines` is post-selection convenience, not multi-machine bootstrap.
 - `PythonInProcessParserTests` and parser integration tests expect `%APPDATA%\RevitDevTool\pixi-env\.pixi\envs\default`.
 - Some tests still search for `RevitDevTool.sln` instead of `.slnx`.
 - ILRepack is disabled for 2027 host projects because the Autodesk isolated context breaks repacked assemblies.

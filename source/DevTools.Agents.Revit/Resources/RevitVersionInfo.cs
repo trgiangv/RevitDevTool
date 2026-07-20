@@ -1,6 +1,8 @@
 using System.Text;
+using System.ComponentModel;
 using DevTools.Mcp.BuiltIn;
 using ModelContextProtocol.Protocol;
+using ModelContextProtocol.Server;
 using RevitDevTool.Core;
 
 namespace DevTools.Agents.Revit.Resources;
@@ -11,17 +13,11 @@ namespace DevTools.Agents.Revit.Resources;
 /// </summary>
 public sealed class RevitVersionInfo : IBuiltInMcpResource
 {
-    public string UriTemplate => "revit://version";
+    public McpServerResource Primitive => McpServerResource.Create(typeof(RevitVersionInfo).GetMethod(nameof(ReadVersionInfo))!, this);
 
-    public Resource ProtocolResource { get; } = new()
-    {
-        Uri = "revit://version",
-        Name = "Revit Version Info",
-        Description = "Host version, API version, runtime (.NET Framework or .NET 8+), and version-specific API notes.",
-        MimeType = "text/markdown"
-    };
-
-    public ReadResourceResult Read(string uri)
+    [McpServerResource(UriTemplate = "revit://version", Name = "revit_version_info")]
+    [Description("Revit host version, runtime, and API compatibility notes.")]
+    public ReadResourceResult ReadVersionInfo()
     {
         var app = RevitContext.Application;
         var sb = new StringBuilder();
@@ -69,7 +65,7 @@ public sealed class RevitVersionInfo : IBuiltInMcpResource
 
         return new ReadResourceResult
         {
-            Contents = [new TextResourceContents { Uri = uri, MimeType = "text/markdown", Text = sb.ToString() }]
+            Contents = [new TextResourceContents { Uri = "revit://version", MimeType = "text/markdown", Text = sb.ToString() }]
         };
     }
 }

@@ -16,6 +16,7 @@ internal sealed class GatewayHostedService(
     McpEngine engine,
     IOptions<GatewayOptions> gatewayOptions,
     ILoggerFactory loggerFactory,
+    IServiceProvider services,
     ILogger<GatewayHostedService> logger) : BackgroundService, ITunnelStatusProvider
 {
     private CancellationTokenSource? _tunnelCts;
@@ -75,9 +76,6 @@ internal sealed class GatewayHostedService(
         _tunnelCts = CancellationTokenSource.CreateLinkedTokenSource(stoppingToken);
         var ct = _tunnelCts.Token;
 
-        var options = ToolHelpers.ConfigureGatewayOptions(
-            engine.ToolCollection, engine.PromptCollection, engine.ResourceCollection);
-
         var tunnel = new GatewayTunnelClient(
             new Uri(url),
             async () =>
@@ -85,8 +83,10 @@ internal sealed class GatewayHostedService(
                 await authService.RefreshAsync().ConfigureAwait(false);
                 return authService.AccessToken;
             },
-            options,
+            engine.CreateServerOptions,
+            engine.InstanceManager,
             loggerFactory,
+            services,
             loggerFactory.CreateLogger<GatewayTunnelClient>());
 
         tunnel.StatusChanged += OnTunnelStatusChanged;

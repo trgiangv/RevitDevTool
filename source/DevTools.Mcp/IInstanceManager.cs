@@ -2,9 +2,8 @@ namespace DevTools.Mcp;
 
 public interface IInstanceManager
 {
-    IReadOnlyCollection<InstanceInfo> GetInstances();
-    IHostBridgeClient? GetDefault(string? hostApp = null);
-    IHostBridgeClient? GetByProcessId(int processId);
-    IReadOnlyCollection<string> GetDiscoveredPipeNames();
-    event Action? Changed;
+    IReadOnlyCollection<IHostMcpSession> Sessions { get; }
+    IHostMcpSession? GetSessionByProcessId(int processId);
+    IHostMcpSession? GetSession(int processId, int generation);
+    event Action? SessionsChanged;
 }

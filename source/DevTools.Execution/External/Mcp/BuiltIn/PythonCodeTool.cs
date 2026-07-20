@@ -1,7 +1,8 @@
-using System.Text.Json;
+using System.ComponentModel;
+using ModelContextProtocol;
 using DevTools.Execution.Providers.Python;
-using DevTools.Mcp.Schema;
 using ModelContextProtocol.Protocol;
+using ModelContextProtocol.Server;
 using Python.Runtime;
 
 namespace DevTools.Execution.External.Mcp.BuiltIn;
@@ -12,73 +13,35 @@ public sealed class PythonCodeTool(
     PythonExecutor executor,
     IHostContextExecutor hostContext) : IBuiltInMcpTool
 {
-    public string Name => "execute_python_code";
+    public McpServerTool Primitive => McpServerTool.Create(typeof(PythonCodeTool).GetMethod(nameof(ExecutePythonAsync))!, this);
 
-    public Tool ProtocolTool { get; } = new()
+    [McpServerTool(Name = "execute_python_code")]
+    [Description("Execute Python code in the running CAD/BIM host.")]
+    public async Task<CallToolResult> ExecutePythonAsync(
+        [Description("Python code with explicit host API imports.")] string code,
+        [Description("Short description of what the code does for logging.")] string? description = null,
+        CancellationToken cancellationToken = default)
     {
-        Name = "execute_python_code",
-        Description =
-            "Execute Python code in the host process via Python.NET. " +
-            "Code runs in global scope with CLR references already added by host setup. " +
-            "Use `# /// script` header for external packages (PEP 723).\n" +
-            "RULES: Always include explicit imports for the host API namespace. " +
-            "Wrap logic in def run(): ... run(). Use print() for output.\n" +
-            "BEFORE WRITING CODE: Read python-cheatsheet resource for host API patterns.\n" +
-            "Error responses: [RUNTIME ERROR] check logic/imports.",
-        InputSchema = McpSchemaBuilder.Object(
-        [
-            McpSchemaBuilder.String(
-                IpcPropertyNames.Code,
-                "Python code with explicit imports. Host CLR references are pre-loaded; " +
-                "import the host API namespace you need (e.g. Autodesk.Revit or Autodesk.AutoCAD). " +
-                "Add PEP 723 `# /// script` metadata for external packages."),
-            McpSchemaBuilder.String(
-                "description",
-                "Short description of what the code does (for logging).")
-        ],
-        required: [IpcPropertyNames.Code]),
-        Annotations = new ToolAnnotations
-        {
-            Title = "Execute Python Code",
-            DestructiveHint = true,
-            OpenWorldHint = true
-        }
-    };
-
-    public async Task<McpToolExecutionResult> ExecuteAsync(string payloadJson, CancellationToken ct)
-    {
-        using var doc = JsonDocument.Parse(payloadJson);
-        if (!doc.RootElement.TryGetProperty(IpcPropertyNames.Code, out var codeElement) ||
-            codeElement.ValueKind != JsonValueKind.String)
-        {
-            return McpToolExecutionResult.Failed(
-                McpExecutionErrorCodes.ToolInvokeFailed, "Missing required 'code' parameter.");
-        }
-
-        var code = codeElement.GetString();
         if (string.IsNullOrWhiteSpace(code))
-            return McpToolExecutionResult.Failed(
-                McpExecutionErrorCodes.ToolInvokeFailed, "Code parameter must not be empty.");
+            throw new McpException("Code parameter must not be empty.");
 
         await initializer.InitializeAsync().ConfigureAwait(false);
 
         if (!initializer.IsInitialized)
         {
-            return McpToolExecutionResult.Failed(
-                McpExecutionErrorCodes.ToolInvokeFailed,
-                "Python runtime not initialized. Ensure pixi environment is set up.");
+            return ErrorResult("Python runtime not initialized. Ensure pixi environment is set up.");
         }
 
-        if (!await ResolveDepsAsync(code!, ct).ConfigureAwait(false))
+        if (!await ResolveDepsAsync(code, cancellationToken).ConfigureAwait(false))
         {
             var detail = _lastDepError is not null
                 ? $"[DEPENDENCY ERROR] {_lastDepError}"
                 : "[DEPENDENCY ERROR] Failed to resolve or install PEP 723 dependencies.";
             _lastDepError = null;
-            return McpToolExecutionResult.Failed(McpExecutionErrorCodes.ToolInvokeFailed, detail);
+            return ErrorResult(detail);
         }
 
-        var result = await hostContext.ExecuteAsync(() => RunCode(code!), ct).ConfigureAwait(false);
+        var result = await hostContext.ExecuteAsync(() => RunCode(code), cancellationToken).ConfigureAwait(false);
 
         if (!result.Success)
         {
@@ -87,7 +50,7 @@ public sealed class PythonCodeTool(
                 IsError = true,
                 Content = [new TextContentBlock { Text = $"[RUNTIME ERROR] {result.Output}" }]
             };
-            return McpToolExecutionResult.Completed(errorResult, $"Failed '{Name}'.");
+            return errorResult;
         }
 
         var output = result.Output;
@@ -99,7 +62,7 @@ public sealed class PythonCodeTool(
         {
             Content = [new TextContentBlock { Text = output }]
         };
-        return McpToolExecutionResult.Completed(callResult, $"Completed '{Name}'.");
+        return callResult;
     }
 
     private async Task<bool> ResolveDepsAsync(string code, CancellationToken ct)
@@ -127,6 +90,12 @@ public sealed class PythonCodeTool(
     }
 
     private string? _lastDepError;
+
+    private static CallToolResult ErrorResult(string text) => new()
+    {
+        IsError = true,
+        Content = [new TextContentBlock { Text = text }]
+    };
 
     private PythonExecutionOutcome RunCode(string code)
     {

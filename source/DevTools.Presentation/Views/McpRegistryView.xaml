@@ -40,6 +40,7 @@
                         <RowDefinition Height="*" />
                         <RowDefinition Height="Auto" />
                         <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
                     </Grid.RowDefinitions>
 
                     <UniformGrid Grid.Row="0"
@@ -142,7 +143,6 @@
                     <ListBox Grid.Row="1"
                              ItemsSource="{Binding FilteredTools}"
                              ScrollViewer.HorizontalScrollBarVisibility="Disabled"
-                             SelectedItem="{Binding SelectedTool, Mode=TwoWay}"
                              VirtualizingPanel.IsVirtualizing="True"
                              VirtualizingPanel.VirtualizationMode="Recycling">
                         <ListBox.ItemContainerStyle>
@@ -205,6 +205,24 @@
 
                     <Border Grid.Row="2"
                             Margin="0,6,0,0"
+                            Padding="8,5"
+                            BorderBrush="#D89A3A"
+                            BorderThickness="1"
+                            Visibility="{Binding HasDiagnostics, Converter={StaticResource BooleanToVisibilityConverter}}">
+                        <ItemsControl ItemsSource="{Binding Diagnostics}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <TextBlock FontSize="10"
+                                               Foreground="#D89A3A"
+                                               Text="{Binding Message}"
+                                               TextTrimming="CharacterEllipsis" />
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </Border>
+
+                    <Border Grid.Row="3"
+                            Margin="0,6,0,0"
                             Padding="10,6"
                             Background="{DynamicResource DevTools.MahApps.Brushes.ThemeBackground}"
                             BorderThickness="1"
@@ -221,7 +239,7 @@
                         </StackPanel>
                     </Border>
 
-                    <Grid Grid.Row="3"
+                    <Grid Grid.Row="4"
                           Margin="0,6,0,0">
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="*" />

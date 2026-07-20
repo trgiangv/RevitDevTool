@@ -12,11 +12,11 @@ namespace DevTools.Daemon.Contracts;
 [UsedImplicitly(ImplicitUseTargetFlags.WithMembers)]
 public abstract class FileInfoResult
 {
-    [JsonPropertyName(IpcPropertyNames.HostApp)]
+    [JsonPropertyName("hostApp")]
     [JsonConverter(typeof(JsonStringEnumConverter<HostApp>))]
     public required HostApp HostApp { get; init; }
 
-    [JsonPropertyName(McpPropertyNames.FilePath)]
+    [JsonPropertyName("filePath")]
     public required string FilePath { get; init; }
 
     [JsonPropertyName("fileName")]
@@ -51,7 +51,7 @@ public sealed class DwgFileInfoResult : FileInfoResult
     [JsonPropertyName("acadVersion")]
     public string? AcadVersion { get; init; }
 
-    [JsonPropertyName(McpPropertyNames.Title)]
+    [JsonPropertyName("title")]
     public string? Title { get; init; }
 
     [JsonPropertyName("subject")]

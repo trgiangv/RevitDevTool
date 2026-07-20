@@ -1,118 +1,62 @@
-# MCP Tools, Resources, and Prompts
+# MCP Tools and Runtime Catalog
 
-## Daemon-Level Primitives
+## Stable daemon tools
 
-Registered in `source/DevTools.Daemon/Mcp/McpEngine.cs`. Available regardless of host connection.
+Default `Broker` mode exposes exactly six daemon tools. Its list is deliberately stable as hosts and host catalogs change.
 
-### Infrastructure Tools
+| Tool | Contract |
+|---|---|
+| `devtools_search` | Searches a cached snapshot. Optional `query`, `kinds`, daemon-local PID `hostId`, `detail`, and `limit` narrow results. |
+| `devtools_invoke` | Invokes a `tool:<name>`, `resource:<uri>`, or `prompt:<name>` target. Optional `hostId` disambiguates a PID; `arguments` apply to tools/prompts. |
+| `launch_host` | Uses a registered `IHostDriver` to launch a supported product. |
+| `open_model` | Resolves a compatible host driver from the model extension and opens it. |
+| `read_file_info` | Reads supported offline metadata through a host driver. |
+| `list_machines` | Calls the authenticated gateway machine endpoint after connection selection. |
 
-| Tool | Description |
-|------|-------------|
-| `list_host_instances` | Lists connected instances + discovered pipes |
-| `launch_host` | Launches host (Revit, AutoCAD family) with optional file path |
-| `read_file_info` | Offline Revit/DWG metadata reader |
-| `open_model` | Extension-based host detection + file open |
-| `list_machines` | Queries Gateway for connected devices (requires auth) |
+`devtools_search` uses only cached snapshots and returns target, kind, host metadata, and (at schema detail) tool input schema. `devtools_invoke` forwards exactly one standard MCP operation to the resolved host. If several hosts provide a target and no matching `hostId` is supplied, it returns an ambiguity result containing the local candidate PIDs.
 
-### Symmetric Catalog Tools
+`devtools_invoke.timeoutSeconds` is bounded from 1 through 900 seconds and defaults to 300. Its structured payload uses one of seven statuses:
 
-Each MCP primitive type has a consistent List + Invoke pair backed by a catalog:
+| Status | Meaning |
+|---|---|
+| `host_selection_required` | The target exists on multiple hosts; choose one candidate `hostId`. |
+| `host_mismatch` | The supplied `hostId` does not publish the target. |
+| `target_not_found` | The current cached catalog has no matching target. |
+| `host_disconnected` | The selected generation disconnected before dispatch. |
+| `connection_lost` | The host connection failed while dispatching. |
+| `timed_out` | The request exceeded its requested broker deadline. |
+| `host_failed` | Argument conversion or the host operation failed for another reason. |
 
-```
-DynamicXxxCatalog.Resolve(key, hostInstanceId?) → Found | NotFound | Ambiguous
-```
+The payload includes `mayHaveExecuted`. It is false until a request could have been dispatched and true for connection-loss, timeout, and host-failure results after dispatch. The broker deliberately does not retry any invocation: an ambiguous execution outcome must be resolved by the caller.
 
-| Tool | Catalog | Purpose |
-|------|---------|---------|
-| `list_dynamic_tools` | `DynamicToolCatalog` | List tools grouped by name per instance |
-| `call_dynamic_tool` | `DynamicToolCatalog` | Execute a tool (with multi-instance resolution) |
-| `list_dynamic_resources` | `DynamicResourceCatalog` | List resources grouped by URI per instance |
-| `read_dynamic_resource` | `DynamicResourceCatalog` | Read a resource (text or blob) |
-| `list_dynamic_prompts` | `DynamicPromptCatalog` | List prompts grouped by name per instance |
-| `get_dynamic_prompt` | `DynamicPromptCatalog` | Get prompt content |
-| `refresh_dynamic_catalog` | All three | Re-fetch all primitives from connected hosts |
+Search also includes generation-scoped catalog states: `refreshing`, `ready`, `stale`, and `unavailable`. `ready` and `stale` entries are searchable; `refreshing` and `unavailable` report status without primitive entries.
 
-**Multi-instance resolution**: When multiple instances provide the same key, the caller must specify `hostInstanceId` (PID). Without it, single-instance resolves automatically; multiple returns `Ambiguous` with candidate PIDs.
+The broker is a discovery and invocation surface, not a dynamic tool-list relay. Arbitrary primitives require search then invoke; known unique targets can be invoked directly.
 
----
+## Native mode
 
-## In-Host Tools
+The persisted daemon setting defaults to `Broker`. Opt-in `Native` mode retains the six daemon tools and adds namespaced SDK proxies for host tools, prompts, resources, and resource templates. It is suitable only for MCP clients that honor list-changed notifications. Do not make Native the compatibility default: runtime catalog changes must not invalidate clients that load `tools/list` once.
 
-Registered via DI in host projects (e.g., `RevitHostingExtensions.AddExecutionServices()`).
+## Host catalog
 
-### Built-in Tools (`IBuiltInMcpTool`)
+Hosts publish standard SDK primitives. Built-ins include the shared execution tools (`execute_csharp_code`, `execute_python_code`, `open_document`), host-provided navigation, resources, and prompts, plus .NET/Python primitives loaded from configured paths. The exact available host catalog depends on installed host integrations and configured toolsets.
 
-| Tool | Host | Description |
-|------|------|-------------|
-| `execute_csharp_code` | Revit + AutoCAD | Compile and run C# `IExternalCommand` with host API context |
-| `execute_python_code` | Revit + AutoCAD | Execute inline Python with PEP 723 deps |
-| `open_document` | Revit + AutoCAD | Open model file via `IDocumentBridge` |
-| `navigate_history` | Revit + AutoCAD | Navigate undo/redo: `direction="back"\|"forward"`, `steps=N` |
+Names and URIs are identities:
 
-### Built-in Resources (`IBuiltInMcpResource`)
+- Built-in names are reserved.
+- Dynamic duplicate names and URIs are rejected with diagnostics instead of shadowing another primitive.
+- Registry settings preserve accepted .NET/Python paths and prune invalid paths.
+- In `Broker` mode, the daemon snapshots host catalog entries by PID; in `Native` mode, it creates SDK proxies from those snapshots.
 
-| URI | Host | Description |
-|-----|------|-------------|
-| `revit://csharp-cheatsheet` | Revit | C# API patterns, usings, version pitfalls |
-| `revit://python-cheatsheet` | Revit | Python API patterns, PEP 723, package lifecycle |
-| `revit://model/context` | Revit | Live model state: levels, categories, units, active view |
-| `revit://model/warnings` | Revit | Active constraint violations and element IDs |
-| `revit://version` | Revit | Host version, .NET runtime, API compatibility notes |
-| `revit://view/screenshot` | Revit | Active view as 1920px PNG (BlobResourceContents) |
-| `acad://csharp-cheatsheet` | AutoCAD | C# API patterns, doc lock, transactions |
-| `acad://python-cheatsheet` | AutoCAD | Python API patterns, PEP 723, package lifecycle |
-| `acad://view/screenshot` | AutoCAD | Active drawing window as 1920×1080 PNG via `CapturePreviewImage` |
+## Scope of `hostId`
 
-### Built-in Prompts (`IBuiltInMcpPrompt`)
+`hostId` is an integer host PID local to one selected daemon. It is unrelated to
+the gateway's `machine_id`. For gateway use, first call authenticated `GET
+/machines`, select one `machine_id`, and send `x-target-machine` on MCP
+initialization. The returned `mcp-session-id` retains that binding for later
+HTTP requests. Only then can broker `hostId` choose a host process on that
+machine.
 
-| Name | Host | Arguments | Description |
-|------|------|-----------|-------------|
-| `revit_code` | Revit | `task` (required), `mode` (optional) | Generate complete `IExternalCommand` C# code |
+`list_machines` cannot bootstrap an unpinned multi-machine gateway connection: the gateway needs `x-target-machine` before it forwards any MCP request.
 
----
-
-## Dynamic Tools (User-Registered)
-
-Loaded from user-configured paths via `McpCatalogStore`:
-
-- **.NET assemblies** — parsed by `DotnetMcpAssemblyParser` for `[McpTool]` attributes
-- **Python toolsets** — parsed by `PythonToolsetParser` via `ToolParser.py`
-
-Dynamic registrations are tracked per host instance.
-
----
-
-## Routing Models
-
-### Protocol-Native (Standard MCP)
-
-`CatalogService` builds flat `tools/list`, `resources/list`, `prompts/list` surfaces from all connected hosts. Collision resolution:
-
-- Tools: first-wins (same name from multiple instances uses first registered)
-- Resources: deduplicated by URI
-- Prompts: first-wins (same name from multiple instances uses first registered)
-
-This is the path standard MCP clients (Cursor, Claude Desktop) use directly.
-
-### Tool-Based Relay (Dynamic Catalog)
-
-The `list_dynamic_*` + `call/read/get_dynamic_*` tools provide explicit PID-based routing for:
-
-- Clients that need fine-grained multi-instance control
-- Diagnostic/admin workflows
-- Clients that don't natively surface resources/prompts in UI
-
-Both paths coexist — protocol-native works automatically, tool-based relay is available when needed.
-
----
-
-## Source Map
-
-| Area | Path |
-|------|------|
-| Daemon tools | `source/DevTools.Daemon/Mcp/Tools/` |
-| Catalogs | `source/DevTools.Mcp/Routing/Catalog/` |
-| Catalog service | `source/DevTools.Mcp/Routing/Catalog/CatalogService.cs` |
-| Built-in tools | `source/DevTools.Execution/External/Mcp/BuiltIn/` |
-| Revit agents | `source/DevTools.Agents.Revit/` |
-| AutoCAD agents | `source/DevTools.Agents.Acad/` |
+There are no `dynamic_search` or `dynamic_invoke` aliases. Use the stable `devtools_search` and `devtools_invoke` names.

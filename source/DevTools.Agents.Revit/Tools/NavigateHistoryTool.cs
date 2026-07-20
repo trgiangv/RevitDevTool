@@ -1,8 +1,10 @@
 using System.Text.Json;
+using System.ComponentModel;
 using DevTools.Execution.Abstractions;
 using DevTools.Mcp.BuiltIn;
-using DevTools.Mcp.Models;
+using ModelContextProtocol;
 using ModelContextProtocol.Protocol;
+using ModelContextProtocol.Server;
 using RevitDevTool.Core;
 
 namespace DevTools.Agents.Revit.Tools;
@@ -14,48 +16,29 @@ namespace DevTools.Agents.Revit.Tools;
 /// </summary>
 public sealed class NavigateHistoryTool(IHostContextExecutor hostContext) : IBuiltInMcpTool
 {
-    public string Name => "navigate_history";
+    public McpServerTool Primitive => McpServerTool.Create(typeof(NavigateHistoryTool).GetMethod(nameof(NavigateHistoryAsync))!, this);
 
-    public Tool ProtocolTool { get; } = new()
+    [McpServerTool(Name = "navigate_history")]
+    [Description("Navigate Revit undo/redo history.")]
+    public async Task<CallToolResult> NavigateHistoryAsync(
+        [Description("Navigation direction: back or forward.")] string direction,
+        [Description("Number of steps to navigate.")] int steps = 1,
+        CancellationToken cancellationToken = default)
     {
-        Name = "navigate_history",
-        Description =
-            "Navigate undo/redo history. " +
-            "direction='back' undoes transactions, 'forward' redoes them. " +
-            "Returns the exact history stack state after the operation.",
-        InputSchema = DevTools.Mcp.Schema.McpSchemaBuilder.Object(
-        [
-            DevTools.Mcp.Schema.McpSchemaBuilder.Enum("direction",
-                "Navigation direction.", ["back", "forward"]),
-            DevTools.Mcp.Schema.McpSchemaBuilder.Integer("steps",
-                "Number of steps to navigate (default=1).")
-        ],
-        required: ["direction"]),
-        Annotations = new ToolAnnotations
-        {
-            Title = "Navigate History",
-            DestructiveHint = true
-        }
-    };
-
-    public async Task<McpToolExecutionResult> ExecuteAsync(string payloadJson, CancellationToken ct)
-    {
-        var (direction, steps) = ParseArgs(payloadJson);
-        if (steps < 1) steps = 1;
+        if (steps < 1) throw new McpException("steps must be at least 1.");
+        if (!string.Equals(direction, "back", StringComparison.OrdinalIgnoreCase) &&
+            !string.Equals(direction, "forward", StringComparison.OrdinalIgnoreCase))
+            throw new McpException("direction must be either 'back' or 'forward'.");
 
         var resultText = await hostContext.ExecuteAsync(() =>
         {
-            if (direction == "forward")
+            if (string.Equals(direction, "forward", StringComparison.OrdinalIgnoreCase))
                 return GoForward(steps);
 
             return GoBack(steps);
-        }, ct).ConfigureAwait(false);
+        }, cancellationToken).ConfigureAwait(false);
 
-        return McpToolExecutionResult.Completed(
-            new CallToolResult { Content = [new TextContentBlock { Text = resultText }] },
-            resultText.Contains("Nothing") || resultText.Contains("Cannot")
-                ? "Navigation failed."
-                : "Navigation completed.");
+        return new CallToolResult { Content = [new TextContentBlock { Text = resultText }] };
     }
 
     private static string GoBack(int steps)
@@ -95,22 +78,6 @@ public sealed class NavigateHistoryTool(IHostContextExecutor hostContext) : IBui
             back_remaining = RevitTransactionService.GetUndoStack().Count,
             forward_available = RevitTransactionService.GetCurrentRedoCount()
         }, JsonOpts);
-    }
-
-    private static (string direction, int steps) ParseArgs(string json)
-    {
-        var direction = "back";
-        var steps = 1;
-        try
-        {
-            using var doc = JsonDocument.Parse(json);
-            if (doc.RootElement.TryGetProperty("direction", out var d))
-                direction = d.GetString() ?? "back";
-            if (doc.RootElement.TryGetProperty("steps", out var s) && s.TryGetInt32(out var n))
-                steps = n;
-        }
-        catch { /* defaults */ }
-        return (direction, steps);
     }
 
     private static readonly JsonSerializerOptions JsonOpts = new() { WriteIndented = true };

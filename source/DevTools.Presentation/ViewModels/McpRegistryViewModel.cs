@@ -5,7 +5,8 @@ using System.IO;
 using System.Text;
 using System.Windows.Threading;
 using DevTools.Execution.External.Connections;
-using DevTools.Mcp.Schema;
+using DevTools.Mcp.Registry;
+using DevTools.Presentation.Formatting;
 using DevTools.Presentation.Models;
 using DevTools.UI.Behaviors;
 using DevTools.UI.Theme;
@@ -58,6 +59,8 @@ public sealed partial class McpRegistryViewModel : ObservableObject, IBusyViewMo
     private partial string ExecutionStatusText { get; set; } = "Idle";
     private ObservableCollection<McpToolItem> Tools { get; } = [];
     public ObservableCollection<McpToolItem> FilteredTools { get; } = [];
+    public ObservableCollection<McpCatalogDiagnostic> Diagnostics { get; } = [];
+    public bool HasDiagnostics => Diagnostics.Count > 0;
     public bool ShowStatusPanel => IsBusy || IsExecuting;
     public string StatusPanelText => IsBusy ? BusyMessage : ExecutionStatusText;
 
@@ -157,6 +160,11 @@ public sealed partial class McpRegistryViewModel : ObservableObject, IBusyViewMo
 
     private void RebuildToolList()
     {
+        Diagnostics.Clear();
+        foreach (var diagnostic in _catalogStore.Diagnostics)
+            Diagnostics.Add(diagnostic);
+        OnPropertyChanged(nameof(HasDiagnostics));
+
         Tools.Clear();
         foreach (var tool in _catalogStore.RegisteredTools)
         {
@@ -328,30 +336,13 @@ public sealed partial class McpRegistryViewModel : ObservableObject, IBusyViewMo
         builder.AppendLine();
         builder.AppendLine(string.IsNullOrWhiteSpace(protocolTool.Description) ? "No description." : protocolTool.Description!.Trim());
 
-        var arguments = BuildArgumentSummary(protocolTool.InputSchema.GetRawText());
+        var arguments = McpSchemaSummaryFormatter.Format(protocolTool.InputSchema);
         if (string.IsNullOrWhiteSpace(arguments)) 
             return builder.ToString().TrimEnd();
         builder.AppendLine();
         builder.AppendLine("Args:");
         builder.Append(arguments);
         return builder.ToString().TrimEnd();
-    }
-
-    private static string BuildArgumentSummary(string? inputSchemaJson)
-    {
-        var schema = JsonSchemaObject.TryParse(inputSchemaJson);
-        if (schema?.Properties is not { Count: > 0 } properties)
-            return string.Empty;
-
-        var lines = new List<string>();
-        foreach (var (name, prop) in properties)
-        {
-            var type = prop.Type ?? "any";
-            var title = prop.Title ?? name;
-            var descSuffix = string.IsNullOrWhiteSpace(prop.Description) ? string.Empty : $" — {prop.Description}";
-            lines.Add($"- {name}: {title} ({type}){descSuffix}");
-        }
-        return string.Join(Environment.NewLine, lines);
     }
 
     public void Dispose()

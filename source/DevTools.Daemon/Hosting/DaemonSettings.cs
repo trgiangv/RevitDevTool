@@ -1,6 +1,7 @@
 using System.Text.Json;
 using DevTools.UI.Theme;
 using DevTools.Utilities;
+using DevTools.Mcp.Routing.Broker;
 
 namespace DevTools.Daemon.Hosting;
 
@@ -20,6 +21,7 @@ public sealed class DaemonSettings
 
     public AppTheme Theme { get; set; } = AppTheme.Auto;
     public bool AutoStartEnabled { get; set; }
+    public McpSurfaceMode McpSurface { get; set; } = McpSurfaceMode.Broker;
 
     private static string FilePath =>
         Path.Combine(AppUtils.GetApplicationDataPath(), SettingsFileName);
@@ -50,4 +52,10 @@ public sealed class DaemonSettings
             // ignored
         }
     }
+}
+
+public enum McpSurfaceMode
+{
+    Broker,
+    Native
 }

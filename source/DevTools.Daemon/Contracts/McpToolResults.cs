@@ -4,43 +4,53 @@ using DevTools.Logging;
 
 namespace DevTools.Daemon.Contracts;
 
+public static class LaunchHostStatus
+{
+    public const string ConnectedCatalogReady = "connected_catalog_ready";
+    public const string ConnectedCatalogPending = "connected_catalog_pending";
+    public const string LaunchFailed = "launch_failed";
+    public const string ConnectionTimeout = "connection_timeout";
+}
+
 [UsedImplicitly]
 public sealed record LaunchHostResult(
-    [property: JsonPropertyName(IpcPropertyNames.HostApp)]
+    [property: JsonPropertyName("hostApp")]
     [property: JsonConverter(typeof(JsonStringEnumConverter<HostApp>))]
     HostApp HostApp,
-    [property: JsonPropertyName(IpcPropertyNames.ProcessId)] int ProcessId,
-    [property: JsonPropertyName(IpcPropertyNames.Version)] string? Version,
+    [property: JsonPropertyName("processId")] int ProcessId,
+    [property: JsonPropertyName("version")] string? Version,
     [property: JsonPropertyName("path")] string? Path,
-    [property: JsonPropertyName(IpcPropertyNames.Arguments)] string? Arguments,
-    [property: JsonPropertyName(McpPropertyNames.LanguageCode)] string? LanguageCode,
-    [property: JsonPropertyName(IpcPropertyNames.BridgeConnected)] bool BridgeConnected,
+    [property: JsonPropertyName("arguments")] string? Arguments,
+    [property: JsonPropertyName("languageCode")] string? LanguageCode,
+    [property: JsonPropertyName("status")] string Status,
+    [property: JsonPropertyName("bridgeConnected")] bool BridgeConnected,
+    [property: JsonPropertyName("message")] string? Message = null,
     [property: JsonPropertyName("dialogResult")] StartupDialogResolverResult? DialogResult = null);
 
 [UsedImplicitly]
 public sealed record OpenModelResult(
-    [property: JsonPropertyName(IpcPropertyNames.HostApp)]
+    [property: JsonPropertyName("hostApp")]
     [property: JsonConverter(typeof(JsonStringEnumConverter<HostApp>))]
     HostApp HostApp,
-    [property: JsonPropertyName(IpcPropertyNames.ProcessId)] int ProcessId,
-    [property: JsonPropertyName(IpcPropertyNames.Version)] string? Version,
-    [property: JsonPropertyName(McpPropertyNames.LanguageCode)] string? LanguageCode,
-    [property: JsonPropertyName(McpPropertyNames.FilePath)] string FilePath,
-    [property: JsonPropertyName(IpcPropertyNames.BridgeConnected)] bool BridgeConnected,
+    [property: JsonPropertyName("processId")] int ProcessId,
+    [property: JsonPropertyName("version")] string? Version,
+    [property: JsonPropertyName("languageCode")] string? LanguageCode,
+    [property: JsonPropertyName("filePath")] string FilePath,
+    [property: JsonPropertyName("bridgeConnected")] bool BridgeConnected,
     [property: JsonPropertyName("dialogResult")] StartupDialogResolverResult? DialogResult = null);
 
 [UsedImplicitly]
 public sealed record ConnectedInstanceEntry(
-    [property: JsonPropertyName(IpcPropertyNames.HostApp)]
+    [property: JsonPropertyName("hostApp")]
     [property: JsonConverter(typeof(JsonStringEnumConverter<HostApp>))]
     HostApp? HostApp,
-    [property: JsonPropertyName(IpcPropertyNames.ProcessId)] int ProcessId,
-    [property: JsonPropertyName(IpcPropertyNames.VersionNumber)] string? VersionNumber);
+    [property: JsonPropertyName("processId")] int ProcessId,
+    [property: JsonPropertyName("versionNumber")] string? VersionNumber);
 
 [UsedImplicitly]
 public sealed record DiscoveredPipeEntry(
-    [property: JsonPropertyName(IpcPropertyNames.PipeName)] string PipeName,
-    [property: JsonPropertyName(IpcPropertyNames.HostApp)]
+    [property: JsonPropertyName("pipeName")] string PipeName,
+    [property: JsonPropertyName("hostApp")]
     [property: JsonConverter(typeof(JsonStringEnumConverter<HostApp>))]
     HostApp? HostApp);
 

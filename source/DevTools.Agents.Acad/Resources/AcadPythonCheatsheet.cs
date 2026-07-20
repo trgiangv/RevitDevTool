@@ -1,7 +1,7 @@
-using System.IO;
 using System.Reflection;
 using DevTools.Mcp.BuiltIn;
 using ModelContextProtocol.Protocol;
+using ModelContextProtocol.Server;
 
 namespace DevTools.Agents.Acad.Resources;
 
@@ -13,17 +13,10 @@ public sealed class AcadPythonCheatsheet : IBuiltInMcpResource
 {
     private static readonly Lazy<string> Content = new(LoadEmbeddedContent);
 
-    public string UriTemplate => "acad://python-cheatsheet";
+    public McpServerResource Primitive => McpServerResource.Create(typeof(AcadPythonCheatsheet).GetMethod(nameof(ReadPythonCheatsheet))!, this);
 
-    public Resource ProtocolResource { get; } = new()
-    {
-        Uri = "acad://python-cheatsheet",
-        Name = "AutoCAD Python Cheatsheet",
-        Description = "AutoCAD Python.NET patterns, builtins, transactions, and PEP 723 deps. Read before writing execute_python_code.",
-        MimeType = "text/markdown"
-    };
-
-    public ReadResourceResult Read(string uri)
+    [McpServerResource(UriTemplate = "acad://python-cheatsheet", Name = "acad_python_cheatsheet")]
+    public ReadResourceResult ReadPythonCheatsheet()
     {
         return new ReadResourceResult
         {
@@ -31,7 +24,7 @@ public sealed class AcadPythonCheatsheet : IBuiltInMcpResource
             [
                 new TextResourceContents
                 {
-                    Uri = uri,
+                    Uri = "acad://python-cheatsheet",
                     MimeType = "text/markdown",
                     Text = Content.Value
                 }

@@ -1,11 +1,9 @@
-using System.Text.Json;
-using ModelContextProtocol.Protocol;
+using ModelContextProtocol.Server;
 
 namespace DevTools.Mcp.BuiltIn;
 
-/// <summary>Self-describing built-in MCP prompt, registered via DI.</summary>
+/// <summary>Typed SDK-bound built-in MCP prompt, registered via DI.</summary>
 public interface IBuiltInMcpPrompt
 {
-    Prompt ProtocolPrompt { get; }
-    GetPromptResult Get(IReadOnlyDictionary<string, JsonElement>? arguments);
+    McpServerPrompt Primitive { get; }
 }

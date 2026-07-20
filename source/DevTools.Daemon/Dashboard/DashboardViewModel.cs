@@ -87,7 +87,7 @@ public partial class DashboardViewModel : ObservableObject
         _authService.StateChanged += (_, _) =>
             Application.Current.Dispatcher.Invoke(RefreshAuthState);
 
-        _mcpEngine.InstanceManager.Changed += () => Application.Current.Dispatcher.Invoke(() =>
+        _mcpEngine.InstanceManager.SessionsChanged += () => Application.Current.Dispatcher.Invoke(() =>
         {
             RefreshHostCount();
             RefreshHosts();
@@ -230,42 +230,21 @@ public partial class DashboardViewModel : ObservableObject
 
     private void RefreshHostCount()
     {
-        HostCount = _mcpEngine.InstanceManager.GetInstances().Count;
+        HostCount = _mcpEngine.InstanceManager.Sessions.Count;
     }
 
     private void RefreshHosts()
     {
         Hosts.Clear();
 
-        var connectedPids = new HashSet<int>();
-        var instances = _mcpEngine.InstanceManager.GetInstances();
-
-        foreach (var instance in instances)
+        foreach (var session in _mcpEngine.InstanceManager.Sessions)
         {
-            connectedPids.Add(instance.ProcessId);
             Hosts.Add(new HostModel
             {
-                Host = instance.HostApp ?? StatusUnknown,
-                Version = instance.VersionNumber,
-                Pid = instance.ProcessId,
+                Host = session.Instance.HostApp,
+                Version = session.Instance.VersionNumber,
+                Pid = session.Instance.ProcessId,
                 Status = StatusConnected
-            });
-        }
-
-        foreach (var pipe in InstanceManager.DiscoverHostPipes())
-        {
-            if (!HostPipeName.TryParse(pipe, out var host , out var version, out var pid))
-                continue;
-
-            if (connectedPids.Contains(pid))
-                continue;
-
-            Hosts.Add(new HostModel
-            {
-                Host = host,
-                Version = version,
-                Pid = pid,
-                Status = StatusDiscovered
             });
         }
     }

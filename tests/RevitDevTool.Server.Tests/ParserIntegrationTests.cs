@@ -43,7 +43,10 @@ public sealed class ParserIntegrationTests
     public void PythonParser_ExtractsSampleToolAnnotations()
     {
         var toolsetDirectory = GetPythonToolsetDirectory();
-        var sampleModulePath = Path.Combine(toolsetDirectory, "parser_annotation_sample.py");
+        var sampleModulePath = Path.Combine(
+            toolsetDirectory,
+            "tests",
+            "parser_annotation_sample.py");
 
         Assert.True(Directory.Exists(toolsetDirectory), $"Expected Python sample toolset at '{toolsetDirectory}'.");
         Assert.True(File.Exists(sampleModulePath), $"Expected parser sample module at '{sampleModulePath}'.");
@@ -339,11 +342,11 @@ public sealed class ParserIntegrationTests
             "samples",
             "McpToolsetDemo",
             "bin",
-            "Debug",
-            "net8.0",
+            "Debug.Autodesk.2025",
             "McpToolsetDemo.dll");
 
-        Assert.True(File.Exists(sampleAssembly), $"Expected sample tool assembly at '{sampleAssembly}'. Build McpToolsetDemo before running this test.");
+        Assert.True(File.Exists(sampleAssembly),
+            $"Expected sample tool assembly at '{sampleAssembly}'. The test project must build Debug.Autodesk.2025 first.");
         return sampleAssembly;
     }
 

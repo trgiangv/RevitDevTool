@@ -8,6 +8,7 @@ public sealed class DotnetMcpRegistryProvider(
     ILogger<DotnetMcpRegistryProvider> logger) : IMcpRegistryProvider
 {
     public string Name => "dotnet-mcp";
+    public int Priority => 100;
     public ExecutionMode SourceKind => ExecutionMode.Dotnet;
     private IReadOnlyList<string> AssemblyPaths { get; set; } = [];
 

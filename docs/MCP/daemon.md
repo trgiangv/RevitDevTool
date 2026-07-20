@@ -1,70 +1,61 @@
 # DevTools.Daemon
 
-Standalone WPF tray application that hosts the MCP engine, authentication, and multi-machine gateway connectivity.
+DevTools.Daemon is the host-agnostic external MCP server. It owns external
+transport, authentication, gateway tunnel lifecycle, discovery of canonical
+host pipes (`DevTools_{Host}_{Version}_{PID}`), cached broker catalogs, and
+product-neutral launch/file tooling.
 
-## Capabilities
+`DevTools.Daemon.exe --stdio` runs an independent local server over stdin/stdout.
+The WPF tray process also owns an authenticated gateway tunnel; neither mode
+proxies through the other.
 
-1. **Auto-starts** with Windows (Registry Run key, set by installer)
-2. **Single-instance tray** enforced by global Mutex (`DevToolsDaemon_v1`); duplicate tray launches exit silently
-3. **Owns authentication** — OIDC/PKCE flow via system browser, tokens stored with DPAPI
-4. **Hosts the MCP engine** — Stdio mode (separate process) for local AI clients, Gateway mode (tray process) for remote
-5. **Multi-machine aware** — registers with Gateway including device metadata and host_apps
-6. **Exposes a control pipe** (`DevToolsDaemon_Control`) for host add-in communication (tray only)
-7. **Dashboard UI** — MahApps-themed window showing auth state, hosts, gateway status, settings
+## Logical gateway sessions
 
-## Startup Modes
+The gateway WebSocket is a v2 carrier, not an MCP session. When it receives
+`session.open`, the daemon creates one `GatewayMcpSession`: independent SDK
+server options, channels, cancellation state, initialization state, and
+disposal. `mcp.message` is delivered only to the named session and serialized
+responses are wrapped with that same `session_id`. Therefore two clients can
+both use JSON-RPC ID `1` without sharing server state.
 
-| Args | Behavior |
-|------|----------|
-| `--stdio` | Direct MCP server on stdin/stdout. Self-contained process, no mutex, exits on disconnect. |
-| _(none)_ | Tray host. Acquires mutex; if already held, exits silently. Runs gateway + control pipe + UI. |
+`session.close`, daemon shutdown, and tunnel loss deterministically dispose
+only the affected server (or all on carrier shutdown). A malformed text
+envelope is dropped before dispatch; a well-formed duplicate `session.open` or
+`mcp.message` for an unknown session receives `session.closed` with
+`unknown_session`. The daemon accepts/sends only v2 envelopes; raw v1 relay
+frames are not compatible.
 
-Stdio and tray processes are fully independent — no IPC between them. Both discover host pipes via their own `DiscoveryHostedService`.
+## Routing boundaries
 
-## Source Map
+The client selects a gateway `machine_id` with `x-target-machine` while
+initializing a remote MCP session. `hostId` remains a daemon-local host-process
+PID selected only by Broker invocation after that machine is selected. The
+daemon-to-host standard named pipe (`DevTools_{Host}_{Version}_{PID}`) and the
+local `DevToolsDaemon_Control` pipe are separate contracts. Discovery uses the
+`DevTools_*` prefix and validates the canonical identity before connecting.
+
+## Catalog lifecycle and launch readiness
+
+`HostSessionManager` keeps a generation-aware PID index, so broker dispatch
+looks up `hostId` in O(1) time. Each catalog publication is identified by pipe
+name plus generation; an old reconnect completion cannot replace the active
+generation. `CatalogService` publishes complete immutable snapshots rather
+than incrementally mutating a shared catalog. With fewer than 20 expected
+hosts, the full rebuild keeps concurrent readers simple and deterministic.
+
+The catalog state returned by `devtools_search.catalogs` is `refreshing`,
+`ready`, `stale`, or `unavailable`. A failed refresh retains a previous
+successful generation snapshot as `stale`; without one it is `unavailable`.
+`launch_host` waits for a connection and then gives the exact connected
+generation a 10-second first-catalog barrier. It returns
+`connected_catalog_ready` for `ready`/`stale`, otherwise
+`connected_catalog_pending`; callers must search again when pending.
+
+## Source map
 
 | Area | Path |
-|------|------|
-| Hosting (builders, services, single-instance) | `source/DevTools.Daemon/Hosting/` |
-| MCP engine | `source/DevTools.Daemon/Mcp/` |
-| Auth (OIDC/PKCE) | `source/DevTools.Daemon/Auth/` |
-| Dashboard (window + views) | `source/DevTools.Daemon/Dashboard/` |
-| App entry point | `source/DevTools.Daemon/App.xaml.cs` |
-
-## Configuration
-
-Production config is embedded in the single-file EXE (`appsettings.json` as EmbeddedResource).
-
-| Layer | File | Purpose |
-|-------|------|---------|
-| Production | `appsettings.json` (embedded) | Placeholder values, injected by CI/CD |
-| Development | `appsettings.Development.json` (git-ignored) | Local overrides for dev builds |
-| CI/CD | GitHub Secrets | `AUTH_ISSUER`, `AUTH_CLIENT_ID`, `GATEWAY_URL` |
-
-## Control Pipe API
-
-Host add-ins communicate via `DevToolsDaemon_Control` named pipe (tray mode only).  
-Protocol: one JSON request line → one JSON response line per connection.
-
-| Method | Response |
-|--------|----------|
-| `daemon/status` | `{isRunning, version}` |
-| `daemon/auth_state` | `{isAuthenticated, userId, email, displayName, avatarUrl}` |
-| `daemon/trigger_signin` | `{success, error}` |
-| `daemon/trigger_signout` | `{success}` |
-| `daemon/connected_hosts` | `[{hostApp, version, pid, pipeName}, ...]` |
-| `daemon/open_dashboard` | `{success}` |
-
-## Built-in Tools
-
-See [tools.md](tools.md) for the complete tool, resource, and prompt catalog.
-
-## Usage
-
-```bash
-# Normal startup (tray icon, auto-connect gateway if authenticated)
-DevTools.Daemon.exe
-
-# Stdio mode — spawned by AI clients (Cursor, Claude Desktop)
-DevTools.Daemon.exe --stdio
-```
+|---|---|
+| Gateway carrier/session manager | `source/DevTools.Daemon/Hosting/` |
+| MCP engine and cached catalog | `source/DevTools.Daemon/Mcp/` |
+| Host drivers | `source/DevTools.Daemon/Hosts/` |
+| Authentication | `source/DevTools.Daemon/Auth/` |

@@ -10,7 +10,7 @@ Startup-sensitive code includes host boot, DI registration, command discovery, P
 | Command discovery | `ExecutionOrchestrator` (started by FileWatcherService) | Scans configured roots for scripts/assemblies |
 | Python init | `PythonInitializer` via `PixiEnvironmentProvider` | First Python call resolves pixi env |
 | MCP catalog | `McpCatalogStore` / `McpCatalogLoader` | Loads tool/prompt/resource metadata from assemblies |
-| Pipe server | `DevToolsPipeServer` (hosted service) | Starts named pipe listener for external clients |
+| Pipe server | `HostMcpServerHostedService` (hosted service) | Starts the standard MCP named-pipe listener |
 | File watcher | `FileWatcherService` | Monitors configured roots with debounced events |
 | Script factories | `RevitScriptExecutionStrategyFactory` (Revit uses `registerDefaultScriptProvider: false`) | Defers strategy creation until first execution |
 

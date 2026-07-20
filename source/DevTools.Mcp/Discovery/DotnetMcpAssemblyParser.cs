@@ -281,10 +281,10 @@ public sealed class DotnetMcpAssemblyParser(ILogger<DotnetMcpAssemblyParser> log
         foreach (var p in parameters)
         {
             var schemaType = MapParameterTypeToJsonSchema(p.ParameterType);
-            var prop = new JsonObject { [IpcPropertyNames.Type] = schemaType };
+            var prop = new JsonObject { ["type"] = schemaType };
             var desc = ReadDescription(p.CustomAttributes);
             if (!string.IsNullOrWhiteSpace(desc))
-                prop[McpPropertyNames.Description] = desc;
+                prop["description"] = desc;
 
             properties[p.Name ?? "arg"] = prop;
             if (p is { HasDefaultValue: false, IsOptional: false })
@@ -293,11 +293,11 @@ public sealed class DotnetMcpAssemblyParser(ILogger<DotnetMcpAssemblyParser> log
 
         var schema = new JsonObject
         {
-            [IpcPropertyNames.Type] = JsonSchemaTypeNames.Object,
-            [McpPropertyNames.Properties] = properties,
+            ["type"] = JsonSchemaTypeNames.Object,
+            ["properties"] = properties,
         };
         if (required.Count > 0)
-            schema[McpPropertyNames.Required] = required;
+            schema["required"] = required;
 
         return JsonSerializer.SerializeToElement(schema);
     }

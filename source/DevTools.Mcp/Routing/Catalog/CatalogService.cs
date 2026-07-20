@@ -1,8 +1,10 @@
-using System.Text.Json;
+using System.Diagnostics;
 using Microsoft.Extensions.Logging;
 using ModelContextProtocol.Protocol;
 using ModelContextProtocol.Server;
 using ZLogger;
+using DevTools.Mcp.Routing.Broker;
+using DevTools.Mcp.Routing.Native;
 namespace DevTools.Mcp.Routing.Catalog;
 
 public sealed class CatalogService(
@@ -10,14 +12,16 @@ public sealed class CatalogService(
     McpServerPrimitiveCollection<McpServerTool> toolCollection,
     McpServerPrimitiveCollection<McpServerPrompt> promptCollection,
     McpServerResourceCollection resourceCollection,
-    DynamicToolCatalog dynamicToolCatalog,
-    DynamicResourceCatalog dynamicResourceCatalog,
-    DynamicPromptCatalog dynamicPromptCatalog,
+    BrokerCatalogIndex brokerCatalog,
+    bool nativeSurface,
     IReadOnlyList<McpServerTool> localTools,
     ILogger<CatalogService> logger,
     CancellationToken ct)
 {
     private int _refreshPending;
+    private readonly Dictionary<HostCatalogIdentity, HostCatalogPublication> publications = [];
+
+    public event Action<HostCatalogPublication>? PublicationChanged;
 
     public void RequestRefresh()
     {
@@ -42,132 +46,199 @@ public sealed class CatalogService(
 
     public async Task RebuildCatalogAsync(CancellationToken cancellationToken = default)
     {
+        var rebuildTimer = Stopwatch.StartNew();
         using var linked = CancellationTokenSource.CreateLinkedTokenSource(ct, cancellationToken);
         var token = linked.Token;
 
         var newTools = new Dictionary<string, McpServerTool>(StringComparer.OrdinalIgnoreCase);
         var newPrompts = new Dictionary<string, McpServerPrompt>(StringComparer.OrdinalIgnoreCase);
         var newResources = new List<McpServerResource>();
-        var dynamicToolRegistrations = new List<DynamicToolCatalogEntry>();
-        var dynamicResourceRegistrations = new List<DynamicResourceCatalogEntry>();
-        var dynamicPromptRegistrations = new List<DynamicPromptCatalogEntry>();
-
         foreach (var local in localTools)
             newTools[local.ProtocolTool.Name] = local;
 
-        foreach (var instance in instanceManager.GetInstances())
+        token.ThrowIfCancellationRequested();
+        var connectedSessions = instanceManager.Sessions
+            .Where(session => session.IsConnected)
+            .ToArray();
+        var connectedIdentities = connectedSessions.Select(IdentityOf).ToHashSet();
+        var interim = publications
+            .Where(pair => connectedIdentities.Contains(pair.Key))
+            .ToDictionary(pair => pair.Key, pair => pair.Value);
+        var refreshing = new List<HostCatalogPublication>();
+        foreach (var session in connectedSessions)
         {
-            if (instanceManager.GetByProcessId(instance.ProcessId) is not { IsConnected: true } client)
+            var identity = IdentityOf(session);
+            if (interim.ContainsKey(identity))
                 continue;
 
-            token.ThrowIfCancellationRequested();
-            await FetchClientPrimitivesAsync(client, newTools, newPrompts, newResources,
-                    dynamicToolRegistrations, dynamicResourceRegistrations, dynamicPromptRegistrations, token)
-                .ConfigureAwait(false);
+            var publication = new HostCatalogPublication(
+                identity,
+                session.Instance,
+                HostCatalogState.Refreshing,
+                null,
+                null,
+                null,
+                null);
+            interim.Add(identity, publication);
+            refreshing.Add(publication);
         }
 
-        dynamicToolCatalog.ReplaceSnapshot(dynamicToolRegistrations);
-        dynamicResourceCatalog.ReplaceSnapshot(dynamicResourceRegistrations);
-        dynamicPromptCatalog.ReplaceSnapshot(dynamicPromptRegistrations);
-        ApplySnapshot(toolCollection, newTools.Values);
-        ApplySnapshot(promptCollection, newPrompts.Values);
-        ApplySnapshot(resourceCollection, newResources);
+        InstallPublications(interim.Values);
+        foreach (var publication in refreshing)
+            PublicationChanged?.Invoke(publication);
+
+        var fetched = await Task.WhenAll(connectedSessions.Select(session =>
+                FetchPublicationAsync(session, interim.GetValueOrDefault(IdentityOf(session)), token)))
+            .ConfigureAwait(false);
+        token.ThrowIfCancellationRequested();
+        InstallPublications(fetched);
+
+        if (nativeSurface)
+        {
+            foreach (var publication in fetched.Where(publication =>
+                         publication.State is HostCatalogState.Ready or HostCatalogState.Stale &&
+                         publication.Snapshot is not null))
+                AddNativeSnapshot(publication.Snapshot!, connectedSessions, newTools, newPrompts, newResources);
+            ApplySnapshot(toolCollection, newTools.Values);
+            ApplySnapshot(promptCollection, newPrompts.Values);
+            ApplySnapshot(resourceCollection, newResources);
+        }
+
+        foreach (var publication in fetched)
+            PublicationChanged?.Invoke(publication);
+
+        LogAggregatePublication(fetched, rebuildTimer.Elapsed);
     }
 
-    private async Task FetchClientPrimitivesAsync(
-        IHostBridgeClient client,
-        Dictionary<string, McpServerTool> tools,
-        Dictionary<string, McpServerPrompt> prompts,
-        List<McpServerResource> resources,
-        List<DynamicToolCatalogEntry> dynamicToolRegs,
-        List<DynamicResourceCatalogEntry> dynamicResourceRegs,
-        List<DynamicPromptCatalogEntry> dynamicPromptRegs,
+    private async Task<HostCatalogPublication> FetchPublicationAsync(
+        IHostMcpSession session,
+        HostCatalogPublication? prior,
         CancellationToken token)
     {
+        var timer = Stopwatch.StartNew();
+        HostCatalogPublication publication;
         try
         {
-            await FetchToolsAsync(client, tools, dynamicToolRegs, token).ConfigureAwait(false);
-            await FetchPromptsAsync(client, prompts, dynamicPromptRegs, token).ConfigureAwait(false);
-            await FetchResourcesAsync(client, resources, dynamicResourceRegs, token).ConfigureAwait(false);
-            await FetchResourceTemplatesAsync(client, resources, dynamicResourceRegs, token).ConfigureAwait(false);
+            var toolsTask = session.ListToolsAsync(token);
+            var promptsTask = session.ListPromptsAsync(token);
+            var resourcesTask = session.ListResourcesAsync(token);
+            var templatesTask = session.ListResourceTemplatesAsync(token);
+
+            await Task.WhenAll(toolsTask, promptsTask, resourcesTask, templatesTask).ConfigureAwait(false);
+            var snapshot = HostCatalogSnapshot.Create(
+                session.Instance,
+                await toolsTask.ConfigureAwait(false),
+                await promptsTask.ConfigureAwait(false),
+                await resourcesTask.ConfigureAwait(false),
+                await templatesTask.ConfigureAwait(false));
+
+            publication = new HostCatalogPublication(
+                IdentityOf(session),
+                session.Instance,
+                HostCatalogState.Ready,
+                snapshot,
+                DateTimeOffset.UtcNow,
+                null,
+                null);
         }
         catch (Exception ex)
         {
-            logger.ZLogWarning(ex, $"Error fetching from {client.PipeName}");
+            var identity = IdentityOf(session);
+            var failedAt = DateTimeOffset.UtcNow;
+            var errorCode = !session.IsConnected
+                ? "host_disconnected"
+                : ex is OperationCanceledException
+                    ? "catalog_cancelled"
+                    : "catalog_fetch_failed";
+            publication = prior is { Snapshot: not null } && prior.Identity == identity
+                ? prior with
+                {
+                    State = HostCatalogState.Stale,
+                    StaleSince = prior.StaleSince ?? failedAt,
+                    LastErrorCode = errorCode
+                }
+                : new HostCatalogPublication(
+                    identity,
+                    session.Instance,
+                    HostCatalogState.Unavailable,
+                    null,
+                    null,
+                    null,
+                    errorCode);
+
+            if (ex is not OperationCanceledException)
+                logger.ZLogWarning(ex, $"Catalog fetch exception for {session.Instance.PipeName}");
         }
+
+        logger.ZLogInformation($"Catalog fetch PipeName={session.Instance.PipeName} PID={session.Instance.ProcessId} Generation={session.Generation} DurationMs={timer.ElapsedMilliseconds} State={publication.State} ErrorCode={publication.LastErrorCode}");
+        return publication;
     }
 
-    private async Task FetchToolsAsync(
-        IHostBridgeClient client,
+    private static HostCatalogIdentity IdentityOf(IHostMcpSession session) =>
+        new(session.Instance.PipeName, session.Generation);
+
+    private void InstallPublications(IEnumerable<HostCatalogPublication> replacement)
+    {
+        var complete = replacement.ToArray();
+        brokerCatalog.ReplacePublications(complete);
+        publications.Clear();
+        foreach (var publication in complete)
+            publications[publication.Identity] = publication;
+    }
+
+    private void LogAggregatePublication(IReadOnlyCollection<HostCatalogPublication> complete, TimeSpan duration)
+    {
+        var revision = brokerCatalog.Search(new BrokerSearchRequest(null, null, null, BrokerSearchDetail.Summary, 1)).Revision;
+        var primitiveCount = complete
+            .Where(publication => publication.State is HostCatalogState.Ready or HostCatalogState.Stale)
+            .Where(publication => publication.Snapshot is not null)
+            .Sum(publication => publication.Snapshot!.Tools.Count +
+                                publication.Snapshot.Prompts.Count +
+                                publication.Snapshot.Resources.Count +
+                                publication.Snapshot.ResourceTemplates.Count);
+        var refreshingCount = complete.Count(publication => publication.State == HostCatalogState.Refreshing);
+        var readyCount = complete.Count(publication => publication.State == HostCatalogState.Ready);
+        var staleCount = complete.Count(publication => publication.State == HostCatalogState.Stale);
+        var unavailableCount = complete.Count(publication => publication.State == HostCatalogState.Unavailable);
+        logger.ZLogInformation($"Catalog publication Revision={revision} HostCount={complete.Count} PrimitiveCount={primitiveCount} DurationMs={duration.TotalMilliseconds} RefreshingCount={refreshingCount} ReadyCount={readyCount} StaleCount={staleCount} UnavailableCount={unavailableCount}");
+    }
+
+    private static void AddNativeSnapshot(
+        HostCatalogSnapshot snapshot,
+        IReadOnlyCollection<IHostMcpSession> sessions,
         Dictionary<string, McpServerTool> tools,
-        List<DynamicToolCatalogEntry> dynamicRegistrations,
-        CancellationToken token)
-    {
-        var response = await client.RequestAsync(McpBridgeMethods.ToolsList, ct: token).ConfigureAwait(false);
-        foreach (var tool in DeserializeResult<Tool>(response))
-        {
-            var key = tool.Name;
-            if (!tools.TryAdd(key, new RoutingMcpServerTool(instanceManager, tool)))
-            {
-                logger.ZLogDebug($"Tool '{key}' already registered, skipping duplicate from {client.Info.HostApp}_{client.Info.VersionNumber} (use call_dynamic_tool with hostInstanceId).");
-            }
-            dynamicRegistrations.Add(new DynamicToolCatalogEntry(tool, client.Info, client.PipeName));
-        }
-    }
-
-    private async Task FetchPromptsAsync(
-        IHostBridgeClient client,
         Dictionary<string, McpServerPrompt> prompts,
-        List<DynamicPromptCatalogEntry> dynamicPromptRegs,
-        CancellationToken token)
+        List<McpServerResource> resources)
     {
-        var response = await client.RequestAsync(McpBridgeMethods.PromptsList, ct: token).ConfigureAwait(false);
-        foreach (var prompt in DeserializeResult<Prompt>(response))
-        {
-            var key = prompt.Name;
-            if (!prompts.TryAdd(key, new RoutingMcpServerPrompt(instanceManager, prompt)))
-            {
-                logger.ZLogDebug($"Prompt '{key}' already registered, skipping duplicate from {client.Info.HostApp}_{client.Info.VersionNumber}.");
-            }
-            dynamicPromptRegs.Add(new DynamicPromptCatalogEntry(key, prompt.Description, prompt, client.Info, client.PipeName));
-        }
-    }
+        var session = sessions.SingleOrDefault(item => item.Instance.ProcessId == snapshot.Instance.ProcessId);
+        if (session is null)
+            return;
 
-    private async Task FetchResourcesAsync(
-        IHostBridgeClient client,
-        List<McpServerResource> resources,
-        List<DynamicResourceCatalogEntry> dynamicResourceRegs,
-        CancellationToken token)
-    {
-        var response = await client.RequestAsync(McpBridgeMethods.ResourcesList, ct: token).ConfigureAwait(false);
-        foreach (var resource in DeserializeResult<Resource>(response))
+        foreach (var clientTool in snapshot.Tools)
         {
-            resources.Add(new RoutingMcpServerResource(instanceManager, resource, null));
-            dynamicResourceRegs.Add(new DynamicResourceCatalogEntry(
-                resource.Uri, resource.Name, resource.Description, resource.MimeType, client.Info, client.PipeName));
+            var tool = clientTool.ProtocolTool;
+            var proxy = new NativeHostToolProxy(session, tool);
+            tools[proxy.ProtocolTool.Name] = proxy;
         }
-    }
 
-    private async Task FetchResourceTemplatesAsync(
-        IHostBridgeClient client,
-        List<McpServerResource> resources,
-        List<DynamicResourceCatalogEntry> dynamicResourceRegs,
-        CancellationToken token)
-    {
-        var response = await client.RequestAsync(McpBridgeMethods.ResourceTemplatesList, ct: token).ConfigureAwait(false);
-        foreach (var template in DeserializeResult<ResourceTemplate>(response))
+        foreach (var clientPrompt in snapshot.Prompts)
         {
-            resources.Add(new RoutingMcpServerResource(instanceManager, null, template));
-            dynamicResourceRegs.Add(new DynamicResourceCatalogEntry(
-                template.UriTemplate, template.Name, template.Description, template.MimeType, client.Info, client.PipeName));
+            var prompt = clientPrompt.ProtocolPrompt;
+            var proxy = new NativeHostPromptProxy(session, prompt);
+            prompts[proxy.ProtocolPrompt.Name] = proxy;
         }
-    }
 
-    private static List<T> DeserializeResult<T>(BridgeMessage response)
-    {
-        if (response is { IsError: false, Result: { } result })
-            return JsonSerializer.Deserialize<List<T>>(result.GetRawText()) ?? [];
-        return [];
+        foreach (var clientResource in snapshot.Resources)
+        {
+            var resource = clientResource.ProtocolResource;
+            resources.Add(new NativeHostResourceProxy(session, resource, null));
+        }
+
+        foreach (var clientTemplate in snapshot.ResourceTemplates)
+        {
+            var template = clientTemplate.ProtocolResourceTemplate;
+            resources.Add(new NativeHostResourceProxy(session, null, template));
+        }
     }
 
     private static void ApplySnapshot<T>(McpServerPrimitiveCollection<T> collection, IEnumerable<T> items)

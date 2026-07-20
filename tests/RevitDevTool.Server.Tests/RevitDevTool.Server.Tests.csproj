@@ -2,6 +2,10 @@
 
     <PropertyGroup>
         <TargetFramework>net10.0-windows</TargetFramework>
+        <RuntimeIdentifier>win-x64</RuntimeIdentifier>
+        <SelfContained>true</SelfContained>
+        <!-- Host SDK packages expose .NET Framework assets that the host projects intentionally consume. -->
+        <NoWarn>$(NoWarn);NU1701</NoWarn>
     </PropertyGroup>
 
     <ItemGroup>
@@ -10,6 +14,9 @@
         <PackageReference Include="xunit.v3"/>
         <PackageReference Include="xunit.runner.visualstudio"/>
         <PackageReference Include="pythonnet"/>
+        <GlobalPackageReference Update="Polyfill">
+            <ExcludeAssets>contentFiles</ExcludeAssets>
+        </GlobalPackageReference>
     </ItemGroup>
 
     <ItemGroup>
@@ -23,12 +30,27 @@
 
     <ItemGroup>
         <ProjectReference Include="..\..\source\DevTools.Execution.Abstractions\DevTools.Execution.Abstractions.csproj" />
+        <ProjectReference Include="..\..\source\DevTools.Execution\DevTools.Execution.csproj" />
+        <ProjectReference Include="..\..\source\DevTools.Agents.Revit\DevTools.Agents.Revit.csproj">
+            <Aliases>RevitAgents</Aliases>
+        </ProjectReference>
+        <ProjectReference Include="..\..\source\DevTools.Agents.Acad\DevTools.Agents.Acad.csproj">
+            <Aliases>AcadAgents</Aliases>
+        </ProjectReference>
+        <ProjectReference Include="..\..\source\DevTools.Daemon\DevTools.Daemon.csproj" />
         <ProjectReference Include="..\..\source\DevTools.Ipc\DevTools.Ipc.csproj" />
         <ProjectReference Include="..\..\source\DevTools.Mcp\DevTools.Mcp.csproj" />
+        <ProjectReference Include="..\..\source\DevTools.Presentation\DevTools.Presentation.csproj" />
     </ItemGroup>
 
     <ItemGroup>
         <PackageReference Include="ModelContextProtocol" />
     </ItemGroup>
+
+    <Target Name="BuildMcpToolsetFixture" BeforeTargets="Build">
+        <MSBuild Projects="$(MSBuildProjectDirectory)\..\..\samples\McpToolsetDemo\McpToolsetDemo.csproj"
+                 Targets="Build"
+                 Properties="Configuration=Debug.Autodesk.2025" />
+    </Target>
 
 </Project>

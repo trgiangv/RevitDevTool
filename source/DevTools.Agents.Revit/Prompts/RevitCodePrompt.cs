@@ -1,6 +1,7 @@
-using System.Text.Json;
+using System.ComponentModel;
 using DevTools.Mcp.BuiltIn;
 using ModelContextProtocol.Protocol;
+using ModelContextProtocol.Server;
 
 namespace DevTools.Agents.Revit.Prompts;
 
@@ -10,21 +11,15 @@ namespace DevTools.Agents.Revit.Prompts;
 /// </summary>
 public sealed class RevitCodePrompt : IBuiltInMcpPrompt
 {
-    public Prompt ProtocolPrompt { get; } = new()
-    {
-        Name = "revit_code",
-        Description = "Generate IExternalCommand C# code for a Revit automation task.",
-        Arguments =
-        [
-            new PromptArgument { Name = "task", Description = "What the code should accomplish in Revit", Required = true },
-            new PromptArgument { Name = "mode", Description = "Transaction mode: manual (modifications) or readonly (queries only)", Required = false }
-        ]
-    };
+    public McpServerPrompt Primitive => McpServerPrompt.Create(typeof(RevitCodePrompt).GetMethod(nameof(GetRevitCode))!, this);
 
-    public GetPromptResult Get(IReadOnlyDictionary<string, JsonElement>? arguments)
+    [McpServerPrompt(Name = "revit_code")]
+    [Description("Generate IExternalCommand C# code for a Revit automation task.")]
+    public GetPromptResult GetRevitCode(
+        [Description("What the code should accomplish in Revit.")] string task,
+        [Description("Transaction mode: manual or readonly.")] string mode = "manual")
     {
-        var task = arguments?.TryGetValue("task", out var taskEl) == true ? taskEl.GetString() ?? "query elements" : "query elements";
-        var mode = arguments?.TryGetValue("mode", out var modeEl) == true ? modeEl.GetString() ?? "manual" : "manual";
+        task = string.IsNullOrWhiteSpace(task) ? "query elements" : task;
 
         var isReadonly = mode.Equals("readonly", StringComparison.OrdinalIgnoreCase);
         var transactionAttr = isReadonly ? "TransactionMode.ReadOnly" : "TransactionMode.Manual";

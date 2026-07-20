@@ -1,77 +1,52 @@
-# Transport Modes
+# MCP transport and gateway routing
 
-The Daemon supports two independent transport modes. Stdio runs as a separate process; Gateway runs inside the tray host.
+## Local transports
 
-```mermaid
-flowchart LR
-    subgraph Stdio Mode
-        Client1["MCP client<br/>Claude Desktop / Cursor"]
-        Daemon1["DevTools.Daemon --stdio<br/>headless MCP host"]
-        Client1 <-->|stdin/stdout| Daemon1
-    end
+`DevTools.Daemon.exe --stdio` is an MCP server over stdin/stdout. Its host
+connections and the pytest plugin's host connections are independent standard
+MCP sessions on `DevTools_{Host}_{Version}_{PID}`. The tray/control UI uses
+`DevToolsDaemon_Control` for control contracts only; it never carries MCP tool
+traffic.
 
-    subgraph Gateway Mode
-        Client2["AI client<br/>ChatGPT / Perplexity"]
-        Gateway["McpGateway<br/>Cloudflare Workers"]
-        Daemon2["DevTools.Daemon (tray)<br/>WebSocket tunnel"]
-        Client2 -->|"POST /mcp<br/>Streamable HTTP"| Gateway
-        Gateway <-->|"WebSocket<br/>NDJSON frames"| Daemon2
-    end
+```text
+RevitDevTool.PyTest -> direct named pipe MCP session -> DevTools_{HostApp}_{HostVersion}_{PID} -> pytest_run
+DevTools.Daemon     -> direct named pipe MCP session -> same pipe name -> host catalog/tools
+Tray/control UI      -> DevToolsDaemon_Control -> control contracts only
 ```
 
-| Mode | Trigger | Transport | Use case |
-|------|---------|-----------|----------|
-| **Stdio** | `--stdio` arg | Direct `StreamServerTransport` on process stdin/stdout | Local MCP clients (Claude Desktop, Cursor, VS Code) |
-| **Gateway** | Auto on sign-in (tray host only) | Outbound WebSocket to Cloudflare relay | Remote AI clients (ChatGPT, Perplexity) |
+## Remote Streamable HTTP
 
-## Stdio Mode
+External clients use McpGateway `/mcp` with an authenticated Streamable HTTP
+session. `POST` starts or sends a JSON-RPC message, `GET` opens the session's
+SSE stream, and `DELETE` cancels/closes the session. An initialize request uses
+`x-target-machine` only to bind the random `mcp-session-id` to one daemon and
+tunnel generation. Later requests identify that session with `mcp-session-id`;
+they do not repeat machine selection. A supplied target header after binding
+must match the binding.
 
-When an AI client spawns `DevTools.Daemon.exe --stdio`, a **new process** runs a self-contained MCP server directly on stdin/stdout. It does **not** proxy to the tray app — it boots its own `McpEngine`, `InstanceManager`, and `DiscoveryHostedService` independently.
-
-Key properties:
-- Uses a custom process entrypoint that handles `--stdio` before WPF `App.xaml` resources are initialized. Tray UI resources and single-instance startup are only loaded for tray mode.
-- Bypasses the `SingleInstance` mutex entirely — multiple stdio processes can coexist with each other and with the tray app.
-- Each stdio process discovers host pipes independently (same `DevTools_{Host}_{Version}_{PID}` scan).
-- Auth tokens are read from the shared DPAPI file on disk (sign-in via tray or browser still works).
-- Process exits when the MCP client disconnects (stdin EOF or cancellation).
-- No control pipe, no gateway tunnel, no tray icon in this mode.
-
-## Gateway Mode
-
-Outbound WebSocket connection to the McpGateway (Cloudflare Workers + Durable Objects):
-
-1. `GatewayTunnelClient` connects to `wss://<gateway>/tunnel` with Bearer token
-2. Sends `register` frame with `machine_id`, `machine_name`, `host_apps`
-3. Wraps WebSocket frames as NDJSON streams via custom adapters
-4. Runs full MCP server over that transport
-5. Auto-reconnects with exponential backoff (1s → 15s max) on failure
-6. Sends periodic `heartbeat` frames with updated `host_apps`
-
-```mermaid
-sequenceDiagram
-    participant Daemon as DevTools.Daemon
-    participant GW as McpGateway (CF Worker)
-    participant AI as AI Client
-
-    Daemon->>GW: WebSocket connect (Bearer JWT)
-    GW-->>Daemon: 101 Upgrade
-    Daemon->>GW: {"type":"register","machine_id":"...","machine_name":"...","host_apps":[...]}
-
-    AI->>GW: POST /mcp (Bearer JWT, x-target-machine: <id>)
-    GW->>Daemon: WS text frame (JSON-RPC)
-    Daemon-->>GW: WS text frame (response)
-    GW-->>AI: HTTP 200 {result}
-
-    loop Every 30s
-        Daemon->>GW: {"type":"heartbeat","host_apps":[...]}
-    end
-    Note over Daemon,GW: Auto-reconnect on disconnect
+```text
+External client -> Streamable HTTP session -> McpGateway -> tunnel v2 -> one daemon McpServer
 ```
 
-## Multi-Machine Routing
+The gateway returns the session and protocol headers on session responses. A
+missing required post-initialize session header is `400`; unknown, closed,
+expired, or generation-invalidated sessions are `404`. `hostId` is a separate
+integer PID inside the selected daemon. If several machines are connected, an
+unbound initialize requires `x-target-machine`; `GET /machines` lists
+candidates before initialization.
 
-One user can have Daemons on multiple machines connected to the same Gateway. The Gateway's Durable Object maintains a `Map<machine_id, WebSocket>`:
+Gateway enforces JWT authentication, its exact-origin allowlist for browser
+requests, a 1 MiB POST body limit, and per-user rate limiting. It correlates
+requests by `(session_id, JSON-RPC id)`, routes server notifications to the
+session's SSE stream, expires idle requests after 360 seconds, hard-expires
+them after 900 seconds, and expires unused sessions after 30 minutes.
 
-- **Single machine** → AI requests auto-route (no header needed)
-- **Multiple machines** → AI must include `x-target-machine: <machine_id>` header
-- **Discovery** → `GET /machines` or `list_machines` MCP tool lists connected machines
+The carrier is tunnel v2 only. One WebSocket text message contains exactly one
+JSON envelope with `v: 2`; raw JSON-RPC, newline framing, and v1 fallback are
+unsupported. `register`, `registered`, and `heartbeat` manage machine
+generations; `session.open`/`session.opened` create an independent daemon MCP
+server; `mcp.message` carries opaque scoped JSON-RPC; and
+`session.close`/`session.closed` dispose one logical session. A reconnect
+invalidates only sessions bound to its previous generation. Malformed daemon
+envelopes are dropped before dispatch; well-formed unknown daemon sessions are
+closed with `unknown_session`.

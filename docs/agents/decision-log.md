@@ -28,21 +28,17 @@ Use this file for durable architecture decisions that affect agent behavior. Kee
 - `.gitnexusignore` excludes vendor/generated/runtime folders so future indexing should focus on repo-owned code.
 - Until analyzer failure is resolved, agents should inspect source directly and not rely on GitNexus graph freshness.
 
-## 2026-05-31: MCP multi-host readiness confirmed
+## 2026-05-31: MCP multi-host readiness confirmed (superseded)
 
-- `MCPServer.exe` is now host-agnostic at the protocol/runtime layer: `InstanceManager` discovers any host pipe, `HostBridgeClient` (formerly `RevitBridgeClient`) connects generically.
-- Standalone built-in tools: `list_host_instances`, `launch_host`, `read_file_info`, `open_model` (multi-host).
-- In-host built-in tools: `execute_csharp_code`, `open_document` (registered in `ExecutionExtensions.cs`).
-- In-host MCP dispatch runtime (`DevTools.Execution`) is fully shared — both `RevitDevTool` and `AcadDevTool` register the pipe server.
-- Startup dialog resolver and `open_document` are implemented for AutoCAD (merged keywords in default `StartupDialogResolverOptions`; `AcadDocumentBridge` + `OpenDocumentTool`).
-- Remaining AutoCAD gaps: no shipped MCP toolset. (pytest bridge client is now multi-host — scans all `DevTools_{Host}_{Version}_{PID}` pipes.)
-- Design principle: every new MCP feature should be sharable by default.
+Superseded by [ADR 002: MCP Runtime V2](../Architecture/decisions/002-mcp-runtime-v2.md) and the [current MCP Runtime V2 documentation](../MCP/README.md). Do not use this legacy entry for operational guidance: the custom `MCPServer.exe` topology, `InstanceManager`, `HostBridgeClient`, and `list_host_instances` no longer describe the active MCP runtime. Use the V2 daemon Broker/Native architecture and its documented host-session flow instead.
 
-## 2026-05-31: Architecture docs audit and corrections
+## 2026-05-31: Architecture docs audit and corrections (partially superseded)
+
+The standalone `DevTools.McpServer`/`MCPServer.exe` bullet below is superseded by [ADR 002: MCP Runtime V2](../Architecture/decisions/002-mcp-runtime-v2.md) and the [current MCP Runtime V2 documentation](../MCP/README.md). The daemon is the sole external MCP host; retain the remaining bullets as historical documentation-audit facts.
 
 - `RevitDevTool.Core` reclassified: it is Revit-only (transactions, dockable panes, image export), not a shared platform library. Only `RevitDevTool` references it; `AcadDevTool` does not.
 - Visualization confirmed as Revit-host only: lives entirely in `source/RevitDevTool/Visualization/`, not in shared code.
-- `DevTools.McpServer` standalone process clarified: runs outside hosts as `MCPServer.exe`; standalone built-in tools are multi-host, in-host MCP runtime is shared.
+- Historical and superseded: `DevTools.McpServer` was described as running outside hosts as `MCPServer.exe`; do not use that deleted topology for current MCP work.
 - `docs/README.md` directory tree expanded to show all 8 `docs/agents/` digest files and `static/icons/` assets.
 - Documentation completeness table restructured: separated architecture modules, shared platform libraries, and sample projects.
 - All 6 `scripts/*.ps1` scripts received PowerShell comment-based help (`.SYNOPSIS`, `.DESCRIPTION`, `.PARAMETER`, `.EXAMPLE`).
@@ -60,8 +56,12 @@ Use this file for durable architecture decisions that affect agent behavior. Kee
 - Pipe pattern aligned with C# `InstanceManager`: `^DevTools_\w+_[^_]+_\d+$` — vendor-prefixed to prevent false positives. Version is `[^_]+` (any non-underscore string), not `\d{4}`. Supports year (2025), semver (8.0), dotted (2024.1), or prefixed (v3.2.1).
 - `HostInstance.version` changed from `int` to `str` throughout the Python client.
 - `HOST_REGISTRY` expanded beyond Autodesk: added Navisworks, Rhino, Tekla entries. Hosts without `exe_name` connect via pipe auto-discovery or explicit `--host-pipe` only.
-- `get_host_config()` returns a fallback `HostConfig(pipe_prefix=host_name)` for unknown hosts — any host exposing a DevToolsPipeServer pipe works without pre-registration.
-- `find_host_pipes()` no longer filters out unregistered pipe prefixes — returns all pipes matching the 3-part pattern, resolving host name from registry or using the raw prefix.
+- `get_host_config()` returns a fallback `HostConfig(pipe_prefix=host_name)` for
+  unknown hosts — any host exposing the canonical host MCP pipe works without
+  pre-registration.
+- `find_host_pipes()` does not filter out unregistered pipe prefixes — it
+  validates canonical four-segment names and resolves host name from the
+  registry or raw pipe identity.
 - `HostConfig.exe_name` changed from required to `str | None` — hosts without exe discovery logic still work for connect-only scenarios.
 
 ## 2026-06-18: DevTools.McpServer removed — Daemon is sole MCP host

@@ -1,6 +1,8 @@
 using System.Text;
+using System.ComponentModel;
 using DevTools.Mcp.BuiltIn;
 using ModelContextProtocol.Protocol;
+using ModelContextProtocol.Server;
 using RevitDevTool.Core;
 
 namespace DevTools.Agents.Revit.Resources;
@@ -11,22 +13,16 @@ namespace DevTools.Agents.Revit.Resources;
 /// </summary>
 public sealed class RevitModelContext : IBuiltInMcpResource
 {
-    public string UriTemplate => "revit://model/context";
+    public McpServerResource Primitive => McpServerResource.Create(typeof(RevitModelContext).GetMethod(nameof(ReadModelContext))!, this);
 
-    public Resource ProtocolResource { get; } = new()
-    {
-        Uri = "revit://model/context",
-        Name = "Revit Model Context",
-        Description = "Live model snapshot: levels, categories with element counts, units, phases, active view. Read before writing code to avoid guessing.",
-        MimeType = "text/markdown"
-    };
-
-    public ReadResourceResult Read(string uri)
+    [McpServerResource(UriTemplate = "revit://model/context", Name = "revit_model_context")]
+    [Description("Live Revit model snapshot including levels, units, phases, and active view.")]
+    public ReadResourceResult ReadModelContext()
     {
         var doc = RevitContext.ActiveDocument;
         if (doc is null)
         {
-            return TextResult(uri, "No document is currently open.");
+            return TextResult("revit://model/context", "No document is currently open.");
         }
 
         var sb = new StringBuilder();
@@ -40,7 +36,7 @@ public sealed class RevitModelContext : IBuiltInMcpResource
         AppendActiveView(sb);
         AppendCategorySummary(sb, doc);
 
-        return TextResult(uri, sb.ToString());
+        return TextResult("revit://model/context", sb.ToString());
     }
 
     private static void AppendUnits(StringBuilder sb, Document doc)

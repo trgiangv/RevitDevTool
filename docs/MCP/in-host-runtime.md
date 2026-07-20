@@ -1,90 +1,64 @@
-# In-Host MCP Runtime
+# In-host MCP runtime
 
-The in-host runtime runs inside Revit/AutoCAD and handles actual tool execution.
+Every supported host exposes one standard Model Context Protocol server on its
+canonical named pipe:
 
-## Runtime Shape
-
-```mermaid
-flowchart TB
-    Daemon["DevTools.Daemon"]
-    Discovery["InstanceManager<br/>scan \\.\pipe\\ for host pipes"]
-
-    subgraph hosts["Host processes"]
-        RevitPipe["DevToolsPipeServer<br/>DevTools_Revit_2025_pid"]
-        AcadPipe["DevToolsPipeServer<br/>DevTools_AutoCad_2026_pid"]
-    end
-
-    Registry["McpCatalogStore"]
-    Providers["DotnetMcpRegistryProvider<br/>PythonToolRegistryProvider"]
-    Dispatch["McpPrimitiveDispatcher<br/>(unified)"]
-    Host["Host context + Python executor"]
-
-    Daemon --> Discovery
-    Discovery -->|"HostBridgeClient"| RevitPipe
-    Discovery -->|"HostBridgeClient"| AcadPipe
-    RevitPipe --> Registry
-    AcadPipe --> Registry
-    Registry --> Providers
-    RevitPipe --> Dispatch
-    AcadPipe --> Dispatch
-    Dispatch --> Host
+```text
+DevTools_{HostApp}_{HostVersion}_{PID}
 ```
 
-The Daemon owns MCP protocol routing and host instance selection. `InstanceManager` scans `\\.\pipe\` for pipes matching `DevTools_{HostApp}_{Version}_{PID}` and connects via generic `HostBridgeClient`. The host process owns actual execution, registry loading, and host-safe invocation.
+`HostMcpServerHostedService` owns the accept loop and creates an independent
+SDK `McpServer` for each connection. A disconnect disposes only that MCP
+session; it does not disrupt the daemon or pytest clients connected to the
+same host. The pipe carries MCP exclusively. Pre-release framed bridge clients
+are intentionally unsupported.
 
-## Registry Flow
-
-```mermaid
-sequenceDiagram
-    participant UI as Registry UI
-    participant Store as McpCatalogStore
-    participant Loader as McpCatalogLoader
-    participant Dotnet as DotnetMcpRegistryProvider
-    participant Python as PythonToolRegistryProvider
-    participant Settings as ISettingsService
-
-    UI->>Store: AddPathAsync / ReloadAsync
-    Store->>Settings: Read configured paths
-    Store->>Loader: LoadCatalog(dotnetPaths, pythonPaths)
-    Loader->>Dotnet: Parse assemblies
-    Loader->>Python: Parse toolset directories
-    Python->>Python: Pre-resolve dependencies for MCP entry files
-    Loader-->>Store: McpRegistryCatalog
-    Store->>Settings: Persist accepted paths and prune invalid paths
-    Store-->>UI: CatalogChanged
+```text
+DevTools.Daemon or RevitDevTool.PyTest
+  -> standard named-pipe MCP client session
+  -> DevTools_{HostApp}_{HostVersion}_{PID}
+  -> independent host McpServer session
+  -> SDK primitive / IHostContextExecutor when required
 ```
 
-## Dispatch Flow
+## Pipe identity
 
-`McpBridgeRequestHandler` (in `DevTools.Mcp/Handlers/`) handles pipe methods:
+`.NET` `HostPipeName` is the canonical formatter and parser. A valid name has
+exactly four underscore-separated segments: literal `DevTools`, a nonblank host
+segment, a nonblank version segment, and a positive invariant-culture PID. Host
+and version cannot contain `_`; whitespace-only segments and zero/negative PIDs
+are invalid. The Python plugin's `pipe_name.py` independently mirrors this
+strict grammar and has parity tests for accepted and rejected names. The daemon
+and Python plugin parse the name before connection and cross-check initialized
+server metadata against the parsed host and version. They reject a mismatch
+rather than connect to an ambiguously named server.
 
-- `tools/list`, `tools/call`
-- `prompts/list`, `prompts/get`
-- `resources/list`, `resources/templates/list`, `resources/read`
+## Catalog and host execution
 
-A single `McpPrimitiveDispatcher` (in `DevTools.Execution/External/Mcp/Dispatchers/`) implements `IMcpPrimitiveDispatcher` and routes all primitives:
+`HostMcpServerOptionsFactory` publishes SDK tools, prompts, resources, and
+resource templates. Built-in names are reserved; duplicate dynamic names or
+resource URIs are rejected with diagnostics instead of shadowing a primitive.
+Registry paths remain persisted and invalid paths are pruned by the catalog
+flow.
 
-| Primitive | .NET path | Python path |
-|-----------|-----------|-------------|
-| Tool call | `DotnetMcpServerFactory` creates/caches `McpServerTool` wrappers | `PythonExecutor` invokes the Python binding |
-| Prompt get | `McpServerPrompt` wrapper | Python prompt binding |
-| Resource read | `McpServerResource` wrapper | Python resource binding |
+Host adapters own API threading, transactions, document context, and rendering.
+Shared MCP dispatch uses `IHostContextExecutor` only when a primitive needs a
+host API context. This keeps Revit and AutoCAD dependencies out of the shared
+runtime.
 
-`McpPrimitiveBinding.CreatePrimitiveId()` normalizes IDs for stable lookup and duplicate handling.
+## Pytest built-in
 
-## Parser Library
+`pytest_run` is a reserved in-host MCP tool, not a daemon broker alias. Its
+request carries locally collected `workspace_root`, `test_root`, `nodeids`, and
+`pytest_args`; its final response is `PytestRunResponse` with `exit_code`,
+`summary`, `results`, `collection_errors`, and `rootdir`. Domain test failures
+are returned in that response. Dependency preparation, host-context,
+serialization, runner, and host-shutdown failures use the documented
+infrastructure error codes instead.
 
-`source/DevTools.Mcp/` and `source/DevTools.Ipc/` contain shared bridge and registry contracts:
-
-- `BridgeMessage.cs`, `BridgeError.cs` — length-prefixed JSON envelope with structured error detail
-- `McpBridgeMethods.cs` — canonical bridge method names
-- `BridgePipeConnection.cs` — framed pipe I/O
-- `Models/McpRegisteredTool.cs`, `McpRegisteredPrompt.cs`, `McpRegisteredResource.cs`
-- `Models/McpRegistryCatalog.cs`
-- `Discovery/DotnetMcpAssemblyParser.cs`
-- `Discovery/PythonToolsetParser.cs`
-- `Dispatch/IMcpPrimitiveDispatcher.cs`, `IMcpExecutionTracker.cs`
-- `Handlers/McpBridgeRequestHandler.cs`
-- `RequestContextFactory.cs`
-
-Wire-format property names belong in `McpPropertyNames`; do not duplicate in other projects.
+The tool emits normal MCP progress for a request progress token. It emits
+`notifications/devtools/pytest/case` only when initialize advertises
+`experimental.devtools.pytest.caseEvents.version = "1"`; final results do not
+depend on that capability. Cancellation is forwarded to host execution, but a
+client timeout or Ctrl+C may close only its own MCP session after a short grace
+period. It never terminates the host process.
