@@ -7,13 +7,13 @@ External MCP client
   -> DevTools.Daemon MCP server
   -> devtools_search/devtools_invoke cached broker
   -> DevTools.Daemon McpClient
-  -> standard MCP over DevTools.Mcp.v2.{pid} named pipe
+  -> standard MCP over DevTools_{Host}_{Version}_{PID} named pipe
   -> host McpServer
   -> SDK primitive
   -> IHostContextExecutor when host API context is required
 ```
 
-The protocol server/client, initialization, errors, progress, list operations, and list-changed notifications use the ModelContextProtocol SDK. `DevTools.Ipc` deliberately does not own MCP DTOs; it retains the independent direct pytest envelope and framing compatibility lane.
+The protocol server/client, initialization, errors, progress, list operations, and list-changed notifications use the ModelContextProtocol SDK. `DevTools.Ipc` owns the canonical host-pipe name helper; it does not own MCP DTOs or a second pytest frame protocol.
 
 ## External surface
 
@@ -31,6 +31,23 @@ The default `Broker` surface is stable when hosts connect, disconnect, or reload
 Search does not contact a host; invocation makes one host MCP request. A known, uniquely resolved target can be invoked in one external call. When a target exists on multiple local hosts, `devtools_invoke` returns the candidate PIDs and requires `hostId`.
 
 `Native` is an opt-in surface mode. It keeps the six daemon tools and also exposes host primitives as namespaced SDK proxies. It is for clients that honor MCP list-changed notifications. The default `Broker` mode intentionally does **not** flatten runtime-changing primitives, so clients that load a tool list once keep a valid surface.
+
+## Broker readiness and failure contract
+
+`devtools_search` returns a cached, immutable publication. It never waits for or fetches a host catalog. Its `catalogs` array reports every known host publication as one of these states:
+
+| State | Meaning |
+|---|---|
+| `refreshing` | A connected generation has no completed first fetch yet. |
+| `ready` | The current generation has a successfully fetched catalog. |
+| `stale` | The current generation retains its last successful catalog after a refresh failure. |
+| `unavailable` | No usable catalog exists for the current generation. |
+
+The daemon identifies a publication by both canonical pipe name and session generation. A reconnect, including PID reuse, never dispatches a snapshot from the old generation. The session manager maintains a PID index for O(1) `hostId` lookup; catalog replacement deliberately rebuilds and swaps the full immutable snapshot. That is preferred over incremental mutation while the expected host count is below 20.
+
+`devtools_invoke` accepts `timeoutSeconds` from **1** through **900**, default **300**. Its structured error payload has exactly these statuses: `host_selection_required`, `host_mismatch`, `target_not_found`, `host_disconnected`, `connection_lost`, `timed_out`, and `host_failed`. `mayHaveExecuted` is false for selection/mismatch/not-found/disconnected results and true once a request could have reached the selected host. The broker never performs an automatic retry after dispatch: retrying an operation with an unknown execution outcome is unsafe.
+
+`launch_host` first waits for the host session connection, then waits at most 10 seconds for that exact generation's first catalog result. `ready` and `stale` yield `connected_catalog_ready`; `refreshing` or `unavailable` yield `connected_catalog_pending` and callers should search again. This readiness barrier overlaps the startup-dialog wait; it is not a guarantee that a cold host will have a usable catalog within ten seconds.
 
 ## Boundaries and identity
 
@@ -50,19 +67,19 @@ Authenticated client -> GET /machines -> choose machine_id
 
 `machineId` is a gateway identity selected by the client before MCP initialization. `hostId` is an integer PID scoped to the already selected daemon and never selects a gateway machine. With multiple gateway machines, an unpinned `/mcp` request is rejected before it can reach `list_machines`; therefore `list_machines` is post-selection convenience, not a bootstrap mechanism. Gateway tunnel register/heartbeat and the local daemon control pipe are separate retained contracts, not part of the removed MCP bridge.
 
-## Pytest is a separate supported lane
+## Pytest is a separate supported workflow
 
-Pytest does not initialize MCP or traverse `DevTools.Daemon`. It is independently process-triggered:
+Pytest collection remains local to the `RevitDevTool.PyTest` plugin. For tests that require the running host, the plugin opens a direct standard-MCP session to the canonical host pipe and calls the reserved `pytest_run` tool. It does not traverse `DevTools.Daemon` or the gateway:
 
 ```text
 pytest CLI -> RevitDevTool.PyTest local collection
   -> DevTools_{Host}_{Version}_{PID}
-  -> four-byte framed BridgeMessage tests/run request
-  -> notifications/tests/progress
-  -> PytestRunResponse final response
+  -> standard MCP initialize + pytest_run
+  -> optional notifications/devtools/pytest/case
+  -> PytestRunResponse final tool result
 ```
 
-See [PyTest](../PyTest/README.md) for its direct compatibility contract.
+Case events require the client capability `experimental.devtools.pytest.caseEvents.version = "1"`; final results work without it. See [PyTest](../PyTest/README.md) for the plugin workflow.
 
 ## Documentation map
 
@@ -82,5 +99,5 @@ See [PyTest](../PyTest/README.md) for its direct compatibility contract.
 | Daemon host drivers | `source/DevTools.Daemon/Hosts/` |
 | Shared MCP routing/catalog | `source/DevTools.Mcp/Routing/` |
 | Host MCP server | `source/DevTools.Execution/External/Mcp/` |
-| Direct pytest bridge | `source/DevTools.Execution/External/Testing/` |
-| Direct pytest pipe/envelope | `source/DevTools.Ipc/` |
+| Host pytest MCP tool | `source/DevTools.Execution/External/Mcp/BuiltIn/` |
+| Canonical host pipe helper | `source/DevTools.Ipc/HostPipeName.cs` |
