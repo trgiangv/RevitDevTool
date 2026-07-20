@@ -230,7 +230,7 @@ public sealed class CatalogServiceSnapshotTests
             processId,
             "Test",
             "1.0",
-            McpPipeName.Format(processId));
+            HostPipeName.Format("Test", "1.0", processId));
         public int Generation { get; } = generation;
         public bool IsConnected => true;
         public bool FailLists { get; set; }
@@ -288,7 +288,7 @@ public sealed class CatalogServiceSnapshotTests
         private readonly McpClientResource direct = CreateResource("revit://model/context", "model_context");
         private readonly McpClientResourceTemplate template = CreateTemplate("revit://model/elements/{id}", "element");
 
-        public HostInstanceDescriptor Instance { get; } = new(processId, "Test", "1.0", McpPipeName.Format(processId));
+        public HostInstanceDescriptor Instance { get; } = new(processId, "Test", "1.0", HostPipeName.Format("Test", "1.0", processId));
         public int Generation { get; init; } = 1;
         public bool IsConnected => true;
         public bool IncludeDirectResource { get; set; } = true;

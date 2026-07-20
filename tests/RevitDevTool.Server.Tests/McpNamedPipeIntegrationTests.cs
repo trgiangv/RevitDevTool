@@ -1,10 +1,10 @@
 using System.IO.Pipes;
+using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using DevTools.Daemon.Mcp;
 using DevTools.Execution;
 using DevTools.Execution.External;
-using DevTools.Execution.External.Handlers;
 using DevTools.Execution.External.Mcp.BuiltIn;
 using DevTools.Execution.External.Mcp.Hosting;
 using DevTools.Execution.External.Testing;
@@ -71,8 +71,6 @@ public sealed class ExecutionServiceRegistrationTests
 
         Assert.Contains(services, descriptor => descriptor.ServiceType == typeof(HostMcpServerHostedService));
         Assert.Single(services, descriptor => descriptor.ServiceType == typeof(IHostedService));
-        Assert.DoesNotContain(services, descriptor => descriptor.ServiceType == typeof(DevToolsPipeServer));
-        Assert.DoesNotContain(services, descriptor => descriptor.ServiceType == typeof(IBridgeRequestHandler));
         Assert.Contains(services, descriptor => descriptor.ServiceType == typeof(PytestDependencyService));
         Assert.Contains(services, descriptor => descriptor.ServiceType == typeof(PytestExecutionService));
     }

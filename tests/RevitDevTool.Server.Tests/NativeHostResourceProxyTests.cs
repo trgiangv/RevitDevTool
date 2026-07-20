@@ -48,7 +48,7 @@ public sealed class NativeHostResourceProxyTests
 
     private sealed class RecordingResourceSession : IHostMcpSession
     {
-        public HostInstanceDescriptor Instance { get; } = new(6101, "TestHost", "1.0", McpPipeName.Format(6101));
+        public HostInstanceDescriptor Instance { get; } = new(6101, "TestHost", "1.0", HostPipeName.Format("TestHost", "1.0", 6101));
         public int Generation { get; init; } = 1;
         public bool IsConnected => true;
         public List<string> RequestedUris { get; } = [];

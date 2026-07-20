@@ -11,8 +11,8 @@ public sealed class GatewayContractTests
     {
         var inventory = new[]
         {
-            new HostInstanceDescriptor(4201, "Revit", "2027", McpPipeName.Format(4201)),
-            new HostInstanceDescriptor(4202, "AutoCad", "2026", McpPipeName.Format(4202))
+            new HostInstanceDescriptor(4201, "Revit", "2027", HostPipeName.Format("Revit", "2027", 4201)),
+            new HostInstanceDescriptor(4202, "AutoCad", "2026", HostPipeName.Format("AutoCad", "2026", 4202))
         }.Select(host => $"{host.HostApp}_{host.VersionNumber}_{host.ProcessId}").Order().ToArray();
         var register = JsonSerializer.SerializeToElement(new GatewayRegisterMessage("register", "machine-1", "DESKTOP", inventory));
         var heartbeat = JsonSerializer.SerializeToElement(new GatewayHeartbeatMessage("heartbeat", inventory));

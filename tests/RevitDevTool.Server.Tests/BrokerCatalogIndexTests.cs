@@ -223,7 +223,7 @@ public sealed class BrokerCatalogIndexTests
             ? CreatePrompt("cancellable_prompt")
             : null;
 
-        public HostInstanceDescriptor Instance { get; } = new(processId, "TestHost", "1.0", McpPipeName.Format(processId));
+        public HostInstanceDescriptor Instance { get; } = new(processId, "TestHost", "1.0", HostPipeName.Format("TestHost", "1.0", processId));
         public int Generation { get; init; } = 1;
         public HostCatalogSnapshot Snapshot => HostCatalogSnapshot.Create(Instance, [tool], prompt is null ? [] : [prompt], resource is null ? [] : [resource], []);
         public bool IsConnected => true;

@@ -19,19 +19,26 @@ public class ContractTests
         Assert.Empty(matches);
     }
 
-    [Fact]
-    public void BridgeMessage_RemainsOnlyInDirectPytestLane()
+    [Theory]
+    [InlineData("BridgeMessage")]
+    [InlineData("BridgePipeConnection")]
+    [InlineData("DevToolsPipeServer")]
+    [InlineData("PytestRequestHandler")]
+    [InlineData("McpPipeName")]
+    [InlineData("tests/run")]
+    [InlineData("notifications/tests/progress")]
+    public void LegacyPytestAndPipeContracts_AreAbsentFromProductionSource(string forbidden)
     {
-        var root = FindRepositoryRoot();
-        var matches = Directory.EnumerateFiles(Path.Combine(root, "source"), "*.cs", SearchOption.AllDirectories)
-            .Where(path => File.ReadAllText(path).Contains("BridgeMessage", StringComparison.Ordinal))
-            .Select(path => Path.GetRelativePath(root, path).Replace('\\', '/'))
-            .ToArray();
+        Assert.DoesNotContain(ProductionSourceFiles(), path =>
+            File.ReadAllText(path).Contains(forbidden, StringComparison.Ordinal));
+    }
 
-        Assert.All(matches, path => Assert.True(
-            path.StartsWith("source/DevTools.Ipc/", StringComparison.Ordinal) ||
-            path.StartsWith("source/DevTools.Execution/External/Handlers/Pytest", StringComparison.Ordinal) ||
-            path.Contains("DevToolsPipeServer", StringComparison.Ordinal), path));
+    [Fact]
+    public void McpRuntimeV2Contracts_RemainInProductionSource()
+    {
+        Assert.Contains(ProductionSourceFiles(), path => File.ReadAllText(path).Contains("HostPipeName", StringComparison.Ordinal));
+        Assert.Contains(ProductionSourceFiles(), path => File.ReadAllText(path).Contains("HostMcpServerHostedService", StringComparison.Ordinal));
+        Assert.Contains(ProductionSourceFiles(), path => File.ReadAllText(path).Contains("pytest_run", StringComparison.Ordinal));
     }
 
     [Fact]
@@ -108,5 +115,11 @@ public class ContractTests
         }
 
         throw new DirectoryNotFoundException("Could not locate the repository root.");
+    }
+
+    private static IEnumerable<string> ProductionSourceFiles()
+    {
+        var root = FindRepositoryRoot();
+        return Directory.EnumerateFiles(Path.Combine(root, "source"), "*.cs", SearchOption.AllDirectories);
     }
 }

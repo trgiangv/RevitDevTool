@@ -411,7 +411,7 @@ public sealed class BrokerInvokeResilienceTests
         private readonly McpClientTool tool = CreateTool(toolName);
 
         public HostInstanceDescriptor Instance { get; } =
-            new(processId, "TestHost", "1.0", McpPipeName.Format(processId));
+            new(processId, "TestHost", "1.0", HostPipeName.Format("TestHost", "1.0", processId));
         public int Generation { get; } = generation;
         public bool IsConnected => isConnected;
         public int CallCount { get; private set; }
