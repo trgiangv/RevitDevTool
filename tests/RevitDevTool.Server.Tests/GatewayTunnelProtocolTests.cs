@@ -34,4 +34,13 @@ public sealed class GatewayTunnelProtocolTests
         Assert.False(GatewayTunnelEnvelope.TryParse(document.RootElement, out _, out var error));
         Assert.Equal("invalid_tunnel_frame", error);
     }
+
+    [Fact]
+    public void RejectsNonStringHostAppsWithoutThrowing()
+    {
+        using var document = JsonDocument.Parse("""{"v":2,"type":"heartbeat","host_apps":["Revit_2027_1",42]}""");
+
+        Assert.False(GatewayTunnelEnvelope.TryParse(document.RootElement, out _, out var error));
+        Assert.Equal("invalid_tunnel_frame", error);
+    }
 }

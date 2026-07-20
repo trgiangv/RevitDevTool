@@ -75,6 +75,7 @@ public sealed record GatewayTunnelEnvelope(
             if ((type == Register && (string.IsNullOrWhiteSpace(machineId) || string.IsNullOrWhiteSpace(machineName))) ||
                 !value.TryGetProperty("host_apps", out var appsValue) || appsValue.ValueKind != JsonValueKind.Array)
                 return false;
+            if (appsValue.EnumerateArray().Any(app => app.ValueKind != JsonValueKind.String)) return false;
             hostApps = appsValue.EnumerateArray().Select(app => app.GetString()!).ToArray();
             if (hostApps.Any(string.IsNullOrWhiteSpace)) return false;
         }
