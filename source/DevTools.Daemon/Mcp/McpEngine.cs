@@ -51,6 +51,7 @@ public sealed class McpEngine
         }
     }
 
+    /// <summary>Creates a fresh SDK options instance for each external transport session.</summary>
     public McpServerOptions CreateServerOptions() => ToolHelpers.ConfigureGatewayOptions(
         ToolCollection,
         PromptCollection,
