@@ -89,7 +89,9 @@ public sealed class GatewayTunnelClient(
             hasConnectedBefore = true;
 
             await SendEnvelopeAsync(socket, CreateRegisterEnvelope(), cancellationToken).ConfigureAwait(false);
-            var registered = await ReceiveEnvelopeAsync(socket, cancellationToken).ConfigureAwait(false);
+            GatewayTunnelEnvelope? registered;
+            do { registered = await ReceiveEnvelopeAsync(socket, cancellationToken).ConfigureAwait(false); }
+            while (registered is null);
             if (registered.Type != GatewayTunnelEnvelope.Registered)
                 throw new InvalidDataException("Gateway did not acknowledge v2 tunnel registration.");
 
@@ -100,7 +102,11 @@ public sealed class GatewayTunnelClient(
             try
             {
                 while (!cancellationToken.IsCancellationRequested && socket.State == WebSocketState.Open)
-                    await DispatchAsync(manager, socket, await ReceiveEnvelopeAsync(socket, cancellationToken).ConfigureAwait(false), cancellationToken).ConfigureAwait(false);
+                {
+                    var envelope = await ReceiveEnvelopeAsync(socket, cancellationToken).ConfigureAwait(false);
+                    if (envelope is not null)
+                        await DispatchAsync(manager, socket, envelope, cancellationToken).ConfigureAwait(false);
+                }
             }
             finally
             {
@@ -181,7 +187,7 @@ public sealed class GatewayTunnelClient(
         finally { sendLock.Release(); }
     }
 
-    private static async Task<GatewayTunnelEnvelope> ReceiveEnvelopeAsync(ClientWebSocket socket, CancellationToken cancellationToken)
+    private async Task<GatewayTunnelEnvelope?> ReceiveEnvelopeAsync(ClientWebSocket socket, CancellationToken cancellationToken)
     {
         var bytes = new byte[64 * 1024];
         using var payload = new MemoryStream();
@@ -195,10 +201,16 @@ public sealed class GatewayTunnelClient(
             payload.Write(bytes, 0, result.Count);
         } while (!result.EndOfMessage);
 
-        using var document = JsonDocument.Parse(payload.ToArray());
-        if (!GatewayTunnelEnvelope.TryParse(document.RootElement, out var envelope, out var error))
-            throw new InvalidDataException(error);
-        return envelope!;
+        try
+        {
+            using var document = JsonDocument.Parse(payload.ToArray());
+            if (GatewayTunnelEnvelope.TryParse(document.RootElement, out var envelope, out _))
+                return envelope;
+        }
+        catch (JsonException) { }
+
+        logger.ZLogWarning($"Dropping malformed gateway tunnel envelope");
+        return null;
     }
 
     public async ValueTask DisposeAsync()

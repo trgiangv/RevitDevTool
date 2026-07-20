@@ -61,6 +61,19 @@ public sealed class GatewaySessionManagerTests
         Assert.Equal(GatewayTunnelEnvelope.UnknownSession, GatewayTunnelEnvelope.Closed("gw_missing", GatewayTunnelEnvelope.UnknownSession).Reason);
     }
 
+    [Fact]
+    public async Task MalformedCarrierFrame_DoesNotCloseAnOpenLogicalSession()
+    {
+        await using var services = new ServiceCollection().BuildServiceProvider();
+        await using var manager = new GatewaySessionManager(() => new McpServerOptions(), NullLoggerFactory.Instance, services);
+        await manager.OpenAsync("gw_a", (_, _) => ValueTask.CompletedTask, TestContext.Current.CancellationToken);
+        using var malformed = JsonDocument.Parse("""{"v":2,"type":"heartbeat","host_apps":[42]}""");
+
+        Assert.False(GatewayTunnelEnvelope.TryParse(malformed.RootElement, out _, out _));
+        Assert.True(manager.Contains("gw_a"));
+        Assert.True(await manager.RouteAsync("gw_a", PingMessage(1), TestContext.Current.CancellationToken));
+    }
+
     private static JsonElement InitializeMessage(int id) => JsonSerializer.SerializeToElement(new
     {
         jsonrpc = "2.0", id, method = "initialize",
