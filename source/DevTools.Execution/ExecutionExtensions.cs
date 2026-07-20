@@ -83,6 +83,7 @@ public static class ExecutionExtensions
         services.AddSingleton<IMcpServerPrimitiveAdapter, PythonMcpServerPrimitiveAdapter>();
         services.AddSingleton<McpCatalogLoader>();
         services.AddSingleton<McpCatalogStore>();
+        services.AddSingleton<IBuiltInMcpTool, PytestRunTool>();
         services.AddSingleton<IBuiltInMcpTool, CSharpCodeTool>();
         services.AddSingleton<IBuiltInMcpTool, PythonCodeTool>();
         services.AddSingleton<IBuiltInMcpTool>(sp =>
