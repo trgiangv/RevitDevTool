@@ -342,6 +342,122 @@ public sealed class McpNamedPipeIntegrationTests
     }
 
     [Fact]
+    public async Task DaemonSession_RemainsUsableAfterConcurrentPytestClientCancelsAndDisconnects()
+    {
+        var hostInfo = new TestHostAppInfo();
+        var execution = new BlockingPytestExecutionService();
+        var pytestTool = new PytestRunTool(
+            new ImmediateHostContextExecutor(),
+            new ReadyDependencyService(),
+            execution,
+            NullLogger<PytestRunTool>.Instance);
+        var optionsFactory = new HostMcpServerOptionsFactory(
+            hostInfo,
+            [new TestTool("daemon_session_test"), pytestTool.Primitive],
+            [],
+            []);
+        using var serviceProvider = new ServiceCollection().BuildServiceProvider();
+        await using var hostedService = new HostMcpServerHostedService(
+            optionsFactory,
+            hostInfo,
+            NullLoggerFactory.Instance,
+            serviceProvider);
+
+        await hostedService.StartAsync(TestContext.Current.CancellationToken);
+        try
+        {
+            var pipeName = PipeName(hostInfo);
+            await using var daemon = await HostMcpSession.ConnectAsync(
+                pipeName,
+                generation: 11,
+                NullLoggerFactory.Instance,
+                TestContext.Current.CancellationToken);
+            var pytest = await TestClientConnection.ConnectAsync(pipeName, TestContext.Current.CancellationToken);
+            try
+            {
+                using var pytestCancellation = new CancellationTokenSource();
+                var pytestRun = RunPytestAsync(pytest.Client, "tests/test_pytest_session.py::test_run", pytestCancellation.Token);
+                await execution.Entered.Task.WaitAsync(TimeSpan.FromSeconds(5), TestContext.Current.CancellationToken);
+
+                var toolsWhilePytestRuns = await daemon.ListToolsAsync(TestContext.Current.CancellationToken);
+                Assert.Contains(toolsWhilePytestRuns, tool => tool.ProtocolTool.Name == "daemon_session_test");
+
+                pytestCancellation.Cancel();
+                execution.Release.TrySetResult(true);
+                await Record.ExceptionAsync(() => pytestRun);
+                await pytest.DisposeAsync();
+                Assert.True(pytestCancellation.IsCancellationRequested);
+
+                var toolsAfterPytestDisconnects = await daemon.ListToolsAsync(TestContext.Current.CancellationToken);
+                Assert.Contains(toolsAfterPytestDisconnects, tool => tool.ProtocolTool.Name == "daemon_session_test");
+                var result = await daemon.CallToolAsync(
+                    "daemon_session_test",
+                    null,
+                    TestContext.Current.CancellationToken);
+                Assert.Equal("typed session", Assert.IsType<TextContentBlock>(Assert.Single(result.Content)).Text);
+            }
+            finally
+            {
+                execution.Release.TrySetResult(true);
+                await pytest.DisposeAsync();
+            }
+        }
+        finally
+        {
+            await hostedService.StopAsync(TestContext.Current.CancellationToken);
+        }
+    }
+
+    [Fact]
+    public async Task HostedService_RejectsLengthPrefixedLegacyBridgeFrame()
+    {
+        var hostInfo = new TestHostAppInfo();
+        var optionsFactory = new HostMcpServerOptionsFactory(hostInfo, [], [], []);
+        using var serviceProvider = new ServiceCollection().BuildServiceProvider();
+        await using var hostedService = new HostMcpServerHostedService(
+            optionsFactory,
+            hostInfo,
+            NullLoggerFactory.Instance,
+            serviceProvider);
+
+        await hostedService.StartAsync(TestContext.Current.CancellationToken);
+        try
+        {
+            await using var pipe = new NamedPipeClientStream(
+                ".",
+                PipeName(hostInfo),
+                PipeDirection.InOut,
+                PipeOptions.Asynchronous);
+            await pipe.ConnectAsync(5000, TestContext.Current.CancellationToken);
+
+            var legacyBridgeMessage = Encoding.UTF8.GetBytes(
+                "{\"id\":\"legacy\",\"method\":\"tests/run\",\"payload\":{}}\n");
+            var frame = BitConverter.GetBytes(legacyBridgeMessage.Length)
+                .Concat(legacyBridgeMessage)
+                .ToArray();
+            await pipe.WriteAsync(frame, TestContext.Current.CancellationToken);
+            await pipe.FlushAsync(TestContext.Current.CancellationToken);
+
+            using var timeout = CancellationTokenSource.CreateLinkedTokenSource(TestContext.Current.CancellationToken);
+            timeout.CancelAfter(TimeSpan.FromSeconds(5));
+            var response = new byte[1];
+            try
+            {
+                var bytesRead = await pipe.ReadAsync(response, timeout.Token);
+                Assert.Equal(0, bytesRead);
+            }
+            catch (OperationCanceledException) when (timeout.IsCancellationRequested)
+            {
+                // A standard MCP server may retain the transport while it ignores an invalid frame.
+            }
+        }
+        finally
+        {
+            await hostedService.StopAsync(TestContext.Current.CancellationToken);
+        }
+    }
+
+    [Fact]
     public async Task CaseEvents_DoNotCrossConcurrentSessions()
     {
         var hostInfo = new TestHostAppInfo();
@@ -653,6 +769,29 @@ public sealed class McpNamedPipeIntegrationTests
             cancellationToken.ThrowIfCancellationRequested();
             progressCallback?.Invoke(JsonSerializer.Serialize(new PytestCaseResult(
                 request.NodeIds[0], "passed", "call", 1, "", "", "", "")));
+            return new PytestRunResponse(
+                0,
+                new PytestSummary(1, 0, 0, 0, 0, 0),
+                [],
+                [],
+                request.TestRoot);
+        }
+    }
+
+    private sealed class BlockingPytestExecutionService : PytestExecutionService
+    {
+        public BlockingPytestExecutionService() : base(null!) { }
+
+        public TaskCompletionSource<bool> Entered { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        public TaskCompletionSource<bool> Release { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        public override PytestRunResponse Run(
+            PytestRunRequest request,
+            Action<string>? progressCallback,
+            CancellationToken cancellationToken)
+        {
+            Entered.TrySetResult(true);
+            Release.Task.GetAwaiter().GetResult();
             return new PytestRunResponse(
                 0,
                 new PytestSummary(1, 0, 0, 0, 0, 0),

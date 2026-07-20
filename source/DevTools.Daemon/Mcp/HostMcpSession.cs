@@ -10,6 +10,7 @@ public sealed class HostMcpSession : IHostMcpSession
 {
     private readonly NamedPipeClientStream _pipe;
     private readonly McpClient _client;
+    private readonly ILogger<HostMcpSession> _logger;
     private readonly List<IAsyncDisposable> _notificationHandlers = [];
     private int _disposed;
 
@@ -17,10 +18,12 @@ public sealed class HostMcpSession : IHostMcpSession
         NamedPipeClientStream pipe,
         McpClient client,
         HostInstanceDescriptor instance,
-        int generation)
+        int generation,
+        ILogger<HostMcpSession> logger)
     {
         _pipe = pipe;
         _client = client;
+        _logger = logger;
         Instance = instance;
         Generation = generation;
     }
@@ -70,8 +73,14 @@ public sealed class HostMcpSession : IHostMcpSession
                 pipe,
                 client,
                 new HostInstanceDescriptor(processId, hostApp, hostVersion, pipeName),
-                generation);
+                generation,
+                loggerFactory.CreateLogger<HostMcpSession>());
             await session.RegisterCatalogNotificationsAsync().ConfigureAwait(false);
+            session._logger.LogInformation(
+                "Host MCP session connected. PipeName={PipeName} ProcessId={ProcessId} Generation={Generation}",
+                session.Instance.PipeName,
+                session.Instance.ProcessId,
+                session.Generation);
             _ = session.ObserveDisconnectAsync();
             return session;
         }
@@ -140,6 +149,14 @@ public sealed class HostMcpSession : IHostMcpSession
         finally
         {
             if (Volatile.Read(ref _disposed) == 0)
+            {
+                _logger.LogInformation(
+                    "Host MCP session disconnected. PipeName={PipeName} ProcessId={ProcessId} Generation={Generation}",
+                    Instance.PipeName,
+                    Instance.ProcessId,
+                    Generation);
+            }
+            if (Volatile.Read(ref _disposed) == 0)
                 Disconnected?.Invoke();
         }
     }
@@ -148,6 +165,12 @@ public sealed class HostMcpSession : IHostMcpSession
     {
         if (Interlocked.Exchange(ref _disposed, 1) != 0)
             return;
+
+        _logger.LogInformation(
+            "Host MCP session disconnected. PipeName={PipeName} ProcessId={ProcessId} Generation={Generation}",
+            Instance.PipeName,
+            Instance.ProcessId,
+            Generation);
 
         foreach (var registration in _notificationHandlers)
             await registration.DisposeAsync().ConfigureAwait(false);

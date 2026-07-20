@@ -2,6 +2,7 @@ using System.Text.Json;
 using DevTools.Execution.Abstractions;
 using DevTools.Execution.External.Mcp.BuiltIn;
 using DevTools.Execution.External.Testing;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using ModelContextProtocol;
 using ModelContextProtocol.Protocol;
@@ -220,17 +221,48 @@ public sealed class PytestMcpToolTests
         Assert.All(progress.Values, item => Assert.True(item.Progress <= item.Total));
     }
 
+    [Fact]
+    public async Task Logging_RecordsSafeRequestLifecycleWithoutPytestSourcesOrArguments()
+    {
+        var logger = new RecordingLogger<PytestRunTool>();
+        var tool = CreateTool(logger: logger);
+        var workspaceRoot = Path.GetTempPath();
+        const string nodeId = "private_tests/test_internal.py::test_never_log_me";
+        const string pytestArgument = "--sensitive-option=do-not-log";
+
+        await tool.RunAsync(
+            workspaceRoot,
+            workspaceRoot,
+            [nodeId],
+            [pytestArgument],
+            null!,
+            null!,
+            null!,
+            TestContext.Current.CancellationToken);
+
+        var messages = string.Join(Environment.NewLine, logger.Messages);
+        Assert.Contains("Pytest MCP request started. NodeCount=1", messages);
+        Assert.Contains("Pytest MCP request ended.", messages);
+        Assert.Contains("ExitCode=0", messages);
+        Assert.Contains("Passed=1", messages);
+        Assert.Contains("Cancelled=False", messages);
+        Assert.DoesNotContain(workspaceRoot, messages, StringComparison.Ordinal);
+        Assert.DoesNotContain(nodeId, messages, StringComparison.Ordinal);
+        Assert.DoesNotContain(pytestArgument, messages, StringComparison.Ordinal);
+    }
+
     private static PytestRunTool CreateTool(
         PytestRunResponse? response = null,
         IHostContextExecutor? host = null,
         PytestDependencyService? dependencies = null,
-        PytestExecutionService? execution = null)
+        PytestExecutionService? execution = null,
+        ILogger<PytestRunTool>? logger = null)
     {
         return new PytestRunTool(
             host ?? new RecordingHostContextExecutor(),
             dependencies ?? new RecordingDependencyService(),
             execution ?? new RecordingExecutionService(response ?? PassingCase()),
-            NullLogger<PytestRunTool>.Instance);
+            logger ?? NullLogger<PytestRunTool>.Instance);
     }
 
     private static async Task<CallToolResult> InvokeAsync(
@@ -395,6 +427,29 @@ public sealed class PytestMcpToolTests
             Values.Add(value);
             events.Add("progress");
         }
+    }
+
+    private sealed class RecordingLogger<T> : ILogger<T>
+    {
+        public List<string> Messages { get; } = [];
+
+        public IDisposable BeginScope<TState>(TState state) where TState : notnull => NoopDisposable.Instance;
+
+        public bool IsEnabled(LogLevel logLevel) => true;
+
+        public void Log<TState>(
+            LogLevel logLevel,
+            EventId eventId,
+            TState state,
+            Exception? exception,
+            Func<TState, Exception?, string> formatter) => Messages.Add(formatter(state, exception));
+    }
+
+    private sealed class NoopDisposable : IDisposable
+    {
+        public static NoopDisposable Instance { get; } = new();
+
+        public void Dispose() { }
     }
 }
 #pragma warning restore MCPEXP001
