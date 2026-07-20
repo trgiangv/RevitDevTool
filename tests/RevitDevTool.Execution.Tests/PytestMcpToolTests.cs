@@ -180,11 +180,51 @@ public sealed class PytestMcpToolTests
         Assert.True(execution.Executed);
     }
 
+    [Fact]
+    public async Task Cancellation_AfterHostCallbackEntryWaitsForRunnerCleanup()
+    {
+        using var cancellation = new CancellationTokenSource();
+        var host = new EarlyCancellationHostContextExecutor();
+        var execution = new BlockingExecutionService();
+        var tool = CreateTool(host: host, execution: execution);
+
+        var invocation = InvokeAsync(tool, cancellation.Token);
+        await execution.Entered.Task.WaitAsync(TestContext.Current.CancellationToken);
+        cancellation.Cancel();
+        await host.CancellationCompletionSignaled.Task.WaitAsync(TestContext.Current.CancellationToken);
+
+        Assert.False(invocation.IsCompleted);
+        execution.Release.TrySetResult(true);
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() => invocation);
+        Assert.True(execution.CleanupObserved);
+    }
+
+    [Fact]
+    public async Task Progress_CountsEachNodeOnceAcrossPhasesAndSetupFailure()
+    {
+        var events = new List<string>();
+        var progress = new RecordingProgress(events);
+        var execution = new RecordingExecutionService(
+            PassingCases(2),
+            [
+                Result("first", "passed", "setup"),
+                Result("first", "passed", "call"),
+                Result("first", "passed", "teardown"),
+                Result("second", "error", "setup")
+            ]);
+        var tool = CreateTool(execution: execution);
+
+        await InvokeAsync(tool, TestContext.Current.CancellationToken, progress, ["first", "second"]);
+
+        Assert.Equal([0f, 1f, 2f, 3f], progress.Values.Select(item => item.Progress));
+        Assert.All(progress.Values, item => Assert.True(item.Progress <= item.Total));
+    }
+
     private static PytestRunTool CreateTool(
         PytestRunResponse? response = null,
-        RecordingHostContextExecutor? host = null,
-        RecordingDependencyService? dependencies = null,
-        RecordingExecutionService? execution = null)
+        IHostContextExecutor? host = null,
+        PytestDependencyService? dependencies = null,
+        PytestExecutionService? execution = null)
     {
         return new PytestRunTool(
             host ?? new RecordingHostContextExecutor(),
@@ -227,6 +267,9 @@ public sealed class PytestMcpToolTests
 
     private static PytestCaseResult PassingResult(string nodeId) => new(nodeId, "passed", "call", 1, "", "", "", "");
 
+    private static PytestCaseResult Result(string nodeId, string outcome, string phase) =>
+        new(nodeId, outcome, phase, 1, "", "", "", "");
+
     private static PytestRunResponse OneFailedCase() => new(
         1,
         new PytestSummary(0, 1, 0, 0, 0, 0),
@@ -253,6 +296,40 @@ public sealed class PytestMcpToolTests
             action();
             return Task.CompletedTask;
         }
+    }
+
+    private sealed class EarlyCancellationHostContextExecutor : IHostContextExecutor
+    {
+        public TaskCompletionSource<bool> CancellationCompletionSignaled { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        public Task<T> ExecuteAsync<T>(Func<T> handler, CancellationToken token = default)
+        {
+            var completion = new TaskCompletionSource<T>(TaskCreationOptions.RunContinuationsAsynchronously);
+            token.Register(() =>
+            {
+                completion.TrySetCanceled(token);
+                CancellationCompletionSignaled.TrySetResult(true);
+            });
+            _ = Task.Run(() =>
+            {
+                try
+                {
+                    completion.TrySetResult(handler());
+                }
+                catch (Exception ex)
+                {
+                    completion.TrySetException(ex);
+                }
+            });
+            return completion.Task;
+        }
+
+        public Task ExecuteAsync(Action action, CancellationToken token = default) =>
+            ExecuteAsync(() =>
+            {
+                action();
+                return true;
+            }, token);
     }
 
     private sealed class RecordingDependencyService(Exception? failure = null) : PytestDependencyService(null!)
@@ -286,6 +363,26 @@ public sealed class PytestMcpToolTests
             if (failure is not null)
                 throw failure;
             return response;
+        }
+    }
+
+    private sealed class BlockingExecutionService : PytestExecutionService
+    {
+        public BlockingExecutionService() : base(null!) { }
+
+        public TaskCompletionSource<bool> Entered { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        public TaskCompletionSource<bool> Release { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        public bool CleanupObserved { get; private set; }
+
+        public override PytestRunResponse Run(
+            PytestRunRequest request,
+            Action<string>? progressCallback,
+            CancellationToken cancellationToken)
+        {
+            Entered.TrySetResult(true);
+            Release.Task.GetAwaiter().GetResult();
+            CleanupObserved = true;
+            return PassingCase();
         }
     }
 

@@ -49,6 +49,8 @@ public sealed class PytestRunTool(
         var request = PytestExecutionService.NormalizeRunRequest(rawRequest);
         var total = request.NodeIds.Count + 1;
         var completed = 0;
+        var completedNodeIds = new HashSet<string>(StringComparer.Ordinal);
+        var caseSequence = 0;
         var caseEvents = TryGetCaseEventContext(server, requestContext, out var progressToken);
         progress?.Report(new ProgressNotificationValue
         {
@@ -85,7 +87,8 @@ public sealed class PytestRunTool(
         }
 
         PytestRunResponse response;
-        var runnerStarted = false;
+        var runnerStarted = 0;
+        var runnerCompletion = new TaskCompletionSource<PytestRunResponse>(TaskCreationOptions.RunContinuationsAsynchronously);
         var previousMode = ExecutionGuardContext.Mode;
         try
         {
@@ -93,25 +96,40 @@ public sealed class PytestRunTool(
             response = await hostContext.ExecuteAsync(
                 () =>
                 {
-                    runnerStarted = true;
-                    return executionService.Run(
-                        request,
-                        resultJson => completed = PublishCaseResult(
-                            resultJson,
-                            progress,
-                            total,
-                            completed,
-                            caseEvents,
-                            server,
-                            progressToken,
-                            cancellationToken),
-                        cancellationToken);
+                    Interlocked.Exchange(ref runnerStarted, 1);
+                    try
+                    {
+                        var result = executionService.Run(
+                            request,
+                            resultJson => completed = PublishCaseResult(
+                                resultJson,
+                                progress,
+                                total,
+                                completed,
+                                completedNodeIds,
+                                ++caseSequence,
+                                caseEvents,
+                                server,
+                                progressToken,
+                                cancellationToken),
+                            CancellationToken.None);
+                        runnerCompletion.TrySetResult(result);
+                        return result;
+                    }
+                    catch (Exception ex)
+                    {
+                        runnerCompletion.TrySetException(ex);
+                        throw;
+                    }
                 },
                 cancellationToken).ConfigureAwait(false);
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
-            throw;
+            if (Volatile.Read(ref runnerStarted) == 0)
+                throw;
+
+            response = await runnerCompletion.Task.ConfigureAwait(false);
         }
         catch (OperationCanceledException ex)
         {
@@ -125,10 +143,10 @@ public sealed class PytestRunTool(
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, "Pytest MCP {FailurePhase} failed.", runnerStarted ? "runner" : "host context");
+            logger.LogError(ex, "Pytest MCP {FailurePhase} failed.", runnerStarted != 0 ? "runner" : "host context");
             return InfrastructureError(
-                runnerStarted ? PytestMcpErrorCodes.RunnerFailed : PytestMcpErrorCodes.HostContextUnavailable,
-                runnerStarted ? "Pytest execution failed in the host." : "The host context is unavailable.");
+                runnerStarted != 0 ? PytestMcpErrorCodes.RunnerFailed : PytestMcpErrorCodes.HostContextUnavailable,
+                runnerStarted != 0 ? "Pytest execution failed in the host." : "The host context is unavailable.");
         }
         finally
         {
@@ -168,6 +186,8 @@ public sealed class PytestRunTool(
         IProgress<ProgressNotificationValue>? progress,
         int total,
         int completed,
+        ISet<string> completedNodeIds,
+        int caseSequence,
         bool caseEvents,
         McpServer? server,
         ProgressToken progressToken,
@@ -189,26 +209,36 @@ public sealed class PytestRunTool(
         if (caseResult is null || cancellationToken.IsCancellationRequested)
             return completed;
 
-        completed++;
-        progress?.Report(new ProgressNotificationValue
+        if (CompletesNode(caseResult) && completedNodeIds.Add(caseResult.NodeId))
         {
-            Progress = completed,
-            Total = total,
-            Message = caseResult.NodeId
-        });
+            completed++;
+            progress?.Report(new ProgressNotificationValue
+            {
+                Progress = completed,
+                Total = total,
+                Message = caseResult.NodeId
+            });
+        }
 
         if (!caseEvents || server is null || cancellationToken.IsCancellationRequested)
             return completed;
 
         server.SendNotificationAsync(
                 "notifications/devtools/pytest/case",
-                new PytestCaseEvent(progressToken, completed - 1, caseResult),
+                new PytestCaseEvent(progressToken, caseSequence, caseResult),
                 cancellationToken: cancellationToken)
             .GetAwaiter()
             .GetResult();
 
         return completed;
     }
+
+    private static bool CompletesNode(PytestCaseResult caseResult) =>
+        string.Equals(caseResult.Phase, "call", StringComparison.Ordinal)
+        || (string.Equals(caseResult.Phase, "setup", StringComparison.Ordinal)
+            && (string.Equals(caseResult.Outcome, "failed", StringComparison.Ordinal)
+                || string.Equals(caseResult.Outcome, "error", StringComparison.Ordinal)
+                || string.Equals(caseResult.Outcome, "skipped", StringComparison.Ordinal)));
 
     private static bool TryGetCaseEventContext(
         McpServer? server,
