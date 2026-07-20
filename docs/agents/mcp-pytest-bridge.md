@@ -19,7 +19,12 @@ Deep sources: `docs/MCP/README.md` and `docs/PyTest/README.md`.
 - Built-in primitive names are reserved; dynamic duplicate names/URIs are rejected with diagnostics. .NET/Python configured path persistence and invalid-path pruning are preserved.
 - Add a daemon host product through `IHostDriver`, not host-specific broker branches.
 
-Gateway selection is a prior transport decision: call authenticated `GET /machines`, choose a `machine_id`, then send `x-target-machine` on initialize and every later HTTP request. `list_machines` is post-selection only; it cannot bootstrap an unpinned connection when multiple gateway machines are online. Do not overload `hostId` with `machine_id`.
+Gateway selection is an initialize-time transport decision: call authenticated
+`GET /machines`, choose a `machine_id`, then send `x-target-machine` on
+initialize. The returned `mcp-session-id` retains the binding for later HTTP
+requests. `list_machines` is post-selection only; it cannot bootstrap an
+unpinned connection when multiple gateway machines are online. Do not overload
+`hostId` with `machine_id`.
 
 ## Direct host pytest workflow
 

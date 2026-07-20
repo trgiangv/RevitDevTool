@@ -1,30 +1,63 @@
-# In-Host MCP Runtime
+# In-host MCP runtime
 
-Each host exposes a standard MCP server on `DevTools.Mcp.v2.{pid}`. This is a separate endpoint from the direct pytest pipe.
+Every supported host exposes one standard Model Context Protocol server on its
+canonical named pipe:
 
-```mermaid
-flowchart LR
-    D["DevTools.Daemon"] --> C["McpClient"]
-    C --> P["DevTools.Mcp.v2.{pid}"]
-    P --> S["Host McpServer"]
-    S --> R["SDK primitives"]
-    R --> H["IHostContextExecutor when required"]
+```text
+DevTools_{HostApp}_{HostVersion}_{PID}
 ```
 
-`HostMcpServerHostedService` owns the named-pipe accept loop and creates a ModelContextProtocol SDK `McpServer` for every session. `HostSessionManager` discovers V2 pipe names, opens `HostMcpSession` SDK clients, reconnects with backoff after transient failure, and raises catalog changes to the daemon coordinator.
+`HostMcpServerHostedService` owns the accept loop and creates an independent
+SDK `McpServer` for each connection. A disconnect disposes only that MCP
+session; it does not disrupt the daemon or pytest clients connected to the
+same host. The pipe carries MCP exclusively. Pre-release framed bridge clients
+are intentionally unsupported.
 
-## Primitive registration and execution
+```text
+DevTools.Daemon or RevitDevTool.PyTest
+  -> standard named-pipe MCP client session
+  -> DevTools_{HostApp}_{HostVersion}_{PID}
+  -> independent host McpServer session
+  -> SDK primitive / IHostContextExecutor when required
+```
 
-`HostMcpServerOptionsFactory` provides SDK tool, prompt, resource, and resource-template collections with list-changed capability. Built-in, .NET, and Python registrations produce SDK primitives directly; MCP DTOs, request handling, errors, progress, and notifications use SDK types and semantics.
+## Pipe identity
 
-Dynamic registry loads retain configured .NET/Python paths and prune invalid paths. Built-in names are reserved. Duplicate dynamic names and resource URIs are rejected with diagnostics, rather than overwriting an existing entry.
+`HostPipeName` is the only formatter and parser. A valid name has exactly four
+underscore-separated segments: literal `DevTools`, a nonblank host segment, a
+nonblank version segment, and a positive invariant-culture PID. Host and
+version cannot contain `_`; whitespace-only segments and zero/negative PIDs
+are invalid. The daemon and Python plugin parse the name before connection and
+cross-check the initialized server metadata against the parsed host and
+version. They reject a mismatch rather than connect to an ambiguously named
+server.
 
-When a primitive requires a host API context, its host-safe execution adapter uses `IHostContextExecutor` with `ExecutionGuardMode.Suppress`. Host API threading, transactions, document context, and rendering remain host responsibilities; the shared registry and MCP transport contain no Revit/AutoCAD API dependency.
+## Catalog and host execution
 
-## Daemon catalog behavior
+`HostMcpServerOptionsFactory` publishes SDK tools, prompts, resources, and
+resource templates. Built-in names are reserved; duplicate dynamic names or
+resource URIs are rejected with diagnostics instead of shadowing a primitive.
+Registry paths remain persisted and invalid paths are pruned by the catalog
+flow.
 
-The daemon obtains tool, prompt, resource, and template lists through the SDK client and builds cached host snapshots. Searches use the snapshot without a host roundtrip. Failed refreshes retain the last successful snapshot while that host remains connected; disconnect removes it. In default Broker mode the snapshot feeds `devtools_search` and `devtools_invoke`; Native mode additionally projects host primitives as namespaced SDK proxies for notification-aware clients.
+Host adapters own API threading, transactions, document context, and rendering.
+Shared MCP dispatch uses `IHostContextExecutor` only when a primitive needs a
+host API context. This keeps Revit and AutoCAD dependencies out of the shared
+runtime.
 
-## Direct pytest is not this runtime
+## Pytest built-in
 
-`DevTools.Ipc` retains `BridgeMessage`, four-byte framing, and host pipe naming for the independent pytest lane only. Pytest uses `DevTools_{Host}_{Version}_{PID}` and `tests/run`; it does not connect to `DevTools.Mcp.v2.{pid}`, initialize MCP, or go through the daemon.
+`pytest_run` is a reserved in-host MCP tool, not a daemon broker alias. Its
+request carries locally collected `workspace_root`, `test_root`, `nodeids`, and
+`pytest_args`; its final response is `PytestRunResponse` with `exit_code`,
+`summary`, `results`, `collection_errors`, and `rootdir`. Domain test failures
+are returned in that response. Dependency preparation, host-context,
+serialization, runner, and host-shutdown failures use the documented
+infrastructure error codes instead.
+
+The tool emits normal MCP progress for a request progress token. It emits
+`notifications/devtools/pytest/case` only when initialize advertises
+`experimental.devtools.pytest.caseEvents.version = "1"`; final results do not
+depend on that capability. Cancellation is forwarded to host execution, but a
+client timeout or Ctrl+C may close only its own MCP session after a short grace
+period. It never terminates the host process.

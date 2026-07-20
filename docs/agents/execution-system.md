@@ -34,7 +34,9 @@ Host projects register implementations via `AddExecutionServices()`:
 - Revit: `source/RevitDevTool/Hosting/RevitHostingExtensions.cs`
 - AutoCAD: `source/AcadDevTool/Hosting/AcadHostingExtensions.cs`
 
-The `AddExecutionServices()` call is the central DI hub — it registers orchestrator, MCP in-host pipe server (`DevToolsPipeServer`), pytest handler, and all strategy factories.
+The `AddExecutionServices()` call is the central DI hub: it registers the
+orchestrator, `HostMcpServerHostedService`, pytest host-execution services, and
+all strategy factories.
 
 ## Execution Guard (Dialog & Failure Suppression)
 

@@ -50,7 +50,12 @@ Names and URIs are identities:
 
 ## Scope of `hostId`
 
-`hostId` is an integer host PID local to one selected daemon. It is unrelated to the gateway's `machine_id`. For gateway use, first call authenticated `GET /machines`, select one `machine_id`, then send `x-target-machine` on MCP initialization and every later HTTP request. Only then can broker `hostId` choose a host process on that machine.
+`hostId` is an integer host PID local to one selected daemon. It is unrelated to
+the gateway's `machine_id`. For gateway use, first call authenticated `GET
+/machines`, select one `machine_id`, and send `x-target-machine` on MCP
+initialization. The returned `mcp-session-id` retains that binding for later
+HTTP requests. Only then can broker `hostId` choose a host process on that
+machine.
 
 `list_machines` cannot bootstrap an unpinned multi-machine gateway connection: the gateway needs `x-target-machine` before it forwards any MCP request.
 

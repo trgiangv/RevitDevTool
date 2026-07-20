@@ -1,33 +1,34 @@
-# Host Boundaries
+# Host boundaries
 
-The platform is host-agnostic. Shared libraries depend on abstractions and ModelContextProtocol SDK types; Revit/AutoCAD API calls stay in host projects.
+## Ownership
 
-## Shared layer
-
-- `source/DevTools.Execution/` — execution engine, host MCP server, and direct pytest server-side lane.
-- `source/DevTools.Execution.Abstractions/` — `IHostContextExecutor`, command/document abstractions, and execution contracts.
-- `source/DevTools.Ipc/` — pipe utilities plus the intentionally retained direct pytest `BridgeMessage`/framing lane; no MCP DTO ownership.
-- `source/DevTools.Mcp/` — host-neutral MCP catalog/routing primitives and SDK-oriented daemon routing.
-- `source/DevTools.Daemon/` — external MCP server, gateway lifecycle, host sessions, and product-neutral `IHostDriver` routing.
-
-## Host layer
-
-- Revit host: `source/RevitDevTool/`; Revit-only core: `source/RevitDevTool.Core/`.
-- AutoCAD host: `source/AcadDevTool/`.
-- Revit DirectContext3D rendering: `source/RevitDevTool/Visualization/` only.
-- Host projects implement host context execution, transactions, document access, script/debug adapters, and host-specific primitive registrations.
-
-The shared host MCP server uses `IHostContextExecutor` only when a primitive requires host API context. It must not gain Autodesk API references. New daemon product behavior belongs in an `IHostDriver`; new host API support belongs in a host project/adapter, not a product branch in broker or shared routing code.
+- `source/DevTools.Execution/` owns shared execution, the host MCP server, and
+  pytest host execution services.
+- `source/DevTools.Execution.Abstractions/` owns host-neutral execution
+  contracts such as `IHostContextExecutor`.
+- `source/DevTools.Ipc/` owns current-user named-pipe security and the
+  canonical `HostPipeName` contract; it owns no MCP DTOs or legacy framed lane.
+- `source/DevTools.Mcp/` owns host-neutral catalog and Broker routing.
+- `source/DevTools.Daemon/` owns the external MCP server, host sessions,
+  gateway lifecycle, and product-neutral `IHostDriver` routing.
+- Host projects own Revit/AutoCAD APIs, API-thread implementations,
+  transactions, and rendering.
 
 ## Runtime boundaries
 
-- MCP Runtime V2: SDK sessions over `DevTools.Mcp.v2.{pid}` between daemon and host.
-- Direct pytest: independent `DevTools_{Host}_{Version}_{PID}` pipe, four-byte framed `BridgeMessage`, `tests/run`, and `notifications/tests/progress`.
-- Gateway `machine_id` selects a daemon before MCP initialization; broker `hostId` selects a host PID only within that daemon.
+- One host data pipe, `DevTools_{Host}_{Version}_{PID}`, carries standard MCP
+  sessions for both daemon catalog/tool access and direct pytest `pytest_run`.
+- `RevitDevTool.PyTest` owns local collection and reporting; its direct MCP
+  session never traverses the daemon or gateway.
+- `DevToolsDaemon_Control` is a separate control-only pipe.
+- Gateway `machine_id` binds an HTTP MCP session at initialize time; Broker
+  `hostId` selects a host PID only within that daemon.
 
 ## Review checklist
 
-- Keep host API threading, transactions, document context, and rendering in host projects.
-- Check Revit and AutoCAD registration when adding shared primitive behavior.
-- Preserve shared target compatibility for Autodesk 2022–2024 (`net48`) as well as current `net8.0-windows` and `net10.0-windows` paths.
-- Use a focused host build and state any live-host/threading/packaging evidence gap.
+- Keep host API threading, transactions, document context, and rendering in
+  host projects.
+- Keep shared libraries compatible with Autodesk 2022–2024 (`net48`) as well
+  as current `net8.0-windows` and `net10.0-windows` paths.
+- Use a focused host build and state any unavailable live-host/threading or
+  packaging evidence precisely.

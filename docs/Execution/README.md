@@ -15,9 +15,8 @@ Last updated: 2026-07-11
 | Shared registrations | `source/DevTools.Execution/ExecutionExtensions.cs` |
 | Orchestrator | `source/DevTools.Execution/Services/ExecutionOrchestrator.cs` |
 | Providers | `source/DevTools.Execution/Providers/` |
-| External pipe server | `source/DevTools.Execution/External/DevToolsPipeServer.cs` |
-| MCP runtime | `source/DevTools.Execution/External/Mcp/` |
-| Pytest bridge | `source/DevTools.Execution/External/Testing/` |
+| Host MCP runtime | `source/DevTools.Execution/External/Mcp/` |
+| Pytest host execution | `source/DevTools.Execution/External/Testing/` |
 | Embedded scripts | `source/DevTools.Execution/Resources/scripts/` |
 | Execution guard | `source/RevitDevTool.Core/Execution/` |
 | Revit adapters | `source/RevitDevTool/HostAdapters/`, `source/RevitDevTool/Hosting/` |
@@ -36,7 +35,7 @@ flowchart TB
     Host["Host adapters\nIHostContextExecutor, ICommandDiscovery, ICommandRunner, script bridges"]
     Guard["ExecutionGuard\nDialog + Failure suppression"]
     Services["TreeStateManager\nFileWatcherService\nPackageService"]
-    External["DevToolsPipeServer\nMCP + pytest routes"]
+    External["Host MCP server\nstandard SDK sessions"]
 
     UI --> Orch
     Orch --> Providers

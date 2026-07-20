@@ -56,8 +56,12 @@ The standalone `DevTools.McpServer`/`MCPServer.exe` bullet below is superseded b
 - Pipe pattern aligned with C# `InstanceManager`: `^DevTools_\w+_[^_]+_\d+$` — vendor-prefixed to prevent false positives. Version is `[^_]+` (any non-underscore string), not `\d{4}`. Supports year (2025), semver (8.0), dotted (2024.1), or prefixed (v3.2.1).
 - `HostInstance.version` changed from `int` to `str` throughout the Python client.
 - `HOST_REGISTRY` expanded beyond Autodesk: added Navisworks, Rhino, Tekla entries. Hosts without `exe_name` connect via pipe auto-discovery or explicit `--host-pipe` only.
-- `get_host_config()` returns a fallback `HostConfig(pipe_prefix=host_name)` for unknown hosts — any host exposing a DevToolsPipeServer pipe works without pre-registration.
-- `find_host_pipes()` no longer filters out unregistered pipe prefixes — returns all pipes matching the 3-part pattern, resolving host name from registry or using the raw prefix.
+- `get_host_config()` returns a fallback `HostConfig(pipe_prefix=host_name)` for
+  unknown hosts — any host exposing the canonical host MCP pipe works without
+  pre-registration.
+- `find_host_pipes()` does not filter out unregistered pipe prefixes — it
+  validates canonical four-segment names and resolves host name from the
+  registry or raw pipe identity.
 - `HostConfig.exe_name` changed from required to `str | None` — hosts without exe discovery logic still work for connect-only scenarios.
 
 ## 2026-06-18: DevTools.McpServer removed — Daemon is sole MCP host

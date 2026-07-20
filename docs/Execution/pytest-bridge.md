@@ -1,32 +1,18 @@
-# Pytest Bridge: Independent In-Host Test Execution
+# Pytest MCP execution boundary
 
-The pytest bridge is a direct compatibility protocol, separate from MCP and DevTools.Daemon.
+The shared execution layer provides the in-host half of pytest execution. It
+does not collect tests and it does not own Python plugin discovery, retries, or
+pytest reporting. `RevitDevTool.PyTest` collects locally and calls the host's
+reserved `pytest_run` MCP tool over the canonical named pipe.
 
-```text
-pytest CLI -> RevitDevTool.PyTest local collection
-  -> DevTools_{Host}_{Version}_{PID}
-  -> four-byte little-endian frame + UTF-8 BridgeMessage
-  -> tests/run
-  -> notifications/tests/progress
-  -> PytestRunResponse final response
-```
+`PytestDependencyService` prepares declared dependencies before
+`PytestExecutionService` enters the host-safe execution path. The embedded
+`PytestRunner.py` runs selected node IDs in the host Python runtime and returns
+typed `PytestRunResponse` domain data. `PytestRunTool` maps infrastructure
+failures to stable MCP error codes and emits token-scoped standard progress;
+case events are optional negotiated MCP notifications.
 
-The plugin collects node IDs locally, then asks a live host to execute the selected IDs. It does not initialize MCP, use an MCP progress notification, or traverse the daemon.
-
-## Direct wire contract
-
-| Item | Current contract |
-|---|---|
-| Endpoint | `DevTools_{Host}_{Version}_{PID}` |
-| Envelope | UTF-8 `BridgeMessage` in a four-byte little-endian length frame |
-| Request | `tests/run` with `workspace_root`, `test_root`, `nodeids`, and `pytest_args` |
-| Progress | `notifications/tests/progress` carries case-result data before the final response |
-| Final result | `PytestRunResponse` with `exit_code`, `summary`, `results`, `collection_errors`, and `rootdir` |
-
-`PytestRequestHandler` exposes `tests/run` only. Earlier `tests/discover` documentation is stale: collection is local to the plugin, while selected node IDs are remotely executed through `tests/run`.
-
-Before in-host execution, `PytestDependencyService` prepares PEP 723 dependencies. The handler then executes `PytestExecutionService` inside `IHostContextExecutor` under `ExecutionGuardMode.Suppress`; embedded `PytestRunner.py` runs pytest inside the host Python runtime and returns the final typed response.
-
-## Compatibility and verification
-
-`DevTools.Ipc` intentionally retains the direct pytest envelope, framing, pipe helpers, and property names required by this lane. This is not an MCP compatibility adapter. Live verification requires an already running/launchable host and its Python environment; protocol or ordering changes require coordinated testing with the separate `RevitDevTool.PyTest` repository.
+There is one host data-plane transport: standard MCP on
+`DevTools_{Host}_{Version}_{PID}`. The former framed pytest bridge has no
+compatibility decoder or fallback. This document supersedes historical prose
+that described direct bridge envelopes.

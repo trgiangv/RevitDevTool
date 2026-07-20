@@ -60,12 +60,21 @@ The daemon identifies a publication by both canonical pipe name and session gene
 
 ```text
 Authenticated client -> GET /machines -> choose machine_id
-  -> x-target-machine on MCP initialize and every later HTTP request
+  -> x-target-machine on MCP initialize
+  -> retain mcp-session-id for later HTTP requests
   -> selected DevTools.Daemon
   -> broker hostId selects one local host PID
 ```
 
-`machineId` is a gateway identity selected by the client before MCP initialization. `hostId` is an integer PID scoped to the already selected daemon and never selects a gateway machine. With multiple gateway machines, an unpinned `/mcp` request is rejected before it can reach `list_machines`; therefore `list_machines` is post-selection convenience, not a bootstrap mechanism. Gateway tunnel register/heartbeat and the local daemon control pipe are separate retained contracts, not part of the removed MCP bridge.
+`machineId` is a gateway identity selected only while initializing a new HTTP
+session. The resulting `mcp-session-id` is bound to that daemon and generation;
+later requests use the session header, not repeated machine selection. `hostId`
+is an integer PID scoped to the already selected daemon and never selects a
+gateway machine. With multiple gateway machines, an unpinned `/mcp` initialize
+is rejected before it can reach `list_machines`; therefore `list_machines` is
+post-selection convenience, not a bootstrap mechanism. Gateway tunnel
+register/heartbeat and the local daemon control pipe are separate retained
+contracts, not part of the removed MCP bridge.
 
 ## Pytest is a separate supported workflow
 

@@ -1,53 +1,55 @@
-# PyTest Bridge Architecture
+# Pytest host execution
 
-`RevitDevTool.PyTest` is an independently invoked pytest plugin that executes selected tests inside a live CAD/BIM host. It is not an MCP client or tool.
+`RevitDevTool.PyTest` is a pytest plugin: it owns local collection, pytest
+reporting, host discovery/launch, suite leasing, and direct Python client
+behavior. For selected tests requiring host APIs, it opens a standard MCP
+session directly to the host and invokes the reserved `pytest_run` tool. It
+does not traverse `DevTools.Daemon` or McpGateway.
 
-```mermaid
-sequenceDiagram
-    participant CLI as pytest CLI
-    participant Plugin as RevitDevTool.PyTest
-    participant Pipe as DevTools_{Host}_{Version}_{PID}
-    participant Server as DevToolsPipeServer
-    participant Handler as PytestRequestHandler
-    participant Host as Host Python runtime
-
-    CLI->>Plugin: local collection
-    Plugin->>Pipe: four-byte frame + BridgeMessage tests/run
-    Pipe->>Server: request
-    Server->>Handler: tests/run
-    Handler->>Host: prepare then execute selected node IDs
-    Host-->>Plugin: notifications/tests/progress
-    Host-->>Plugin: final PytestRunResponse
-    Plugin-->>CLI: pytest reports
+```text
+pytest CLI -> local collection -> RevitDevTool.PyTest
+  -> direct named-pipe MCP session -> DevTools_{Host}_{Version}_{PID}
+  -> pytest_run -> PytestRunner.py in the host -> pytest reports
 ```
 
-## Source map
+## Contract
 
-| Area | Path |
+The canonical pipe grammar is exactly `DevTools_{Host}_{Version}_{PID}`. Host
+and version are nonblank and contain no underscore; PID is positive. The
+plugin parses the pipe, initializes MCP, then cross-checks server metadata so a
+matching name cannot silently select the wrong host. Multiple daemon and
+pytest sessions may use the same pipe concurrently.
+
+`pytest_run` receives `workspace_root`, `test_root`, selected `nodeids`, and
+`pytest_args`. Its final `PytestRunResponse` returns `exit_code`, `summary`,
+per-case results, collection errors, and `rootdir`. Test failures, skips, and
+collection outcomes are domain data in that result and become ordinary pytest
+reports. Infrastructure failures such as dependency preparation, missing host
+context, runner failure, serialization failure, or host shutdown are MCP tool
+errors with stable `pytest_*` codes.
+
+The tool sends standard MCP progress for the request token. Optional per-case
+notifications use `notifications/devtools/pytest/case` when the client
+advertises `experimental.devtools.pytest.caseEvents.version = "1"`; the final
+result works without this capability. Cancellation is sent through MCP. On a
+client deadline or Ctrl+C, the plugin can close only its own session after a
+short grace period; it never kills the CAD/BIM host.
+
+## Ownership and source map
+
+| Concern | Owner |
 |---|---|
-| Direct pipe host | `source/DevTools.Execution/External/DevToolsPipeServer.cs` |
-| Request handler | `source/DevTools.Execution/External/Handlers/PytestRequestHandler.cs` |
-| Test execution and contracts | `source/DevTools.Execution/External/Testing/` |
-| Embedded runner | `source/DevTools.Execution/Resources/scripts/PytestRunner.py` |
-| Envelope/framing | `source/DevTools.Ipc/BridgeMessage.cs`, `BridgePipeConnection.cs` |
-| Client plugin | Separate `RevitDevTool.PyTest` repository |
+| Local collection, discovery, lease, connection, reporting | `RevitDevTool.PyTest` |
+| Named-pipe identity | `DevTools.Ipc/HostPipeName.cs` and plugin `pipe_name.py` |
+| Host MCP accept loop and built-in tool | `DevTools.Execution/External/Mcp/` |
+| Dependency preparation and in-host pytest execution | `PytestDependencyService`, `PytestExecutionService`, `PytestRunner.py` |
 
-## Supported direct contract
+Old four-byte framed bridge requests, `BridgeMessage`, `tests/run`, and
+`notifications/tests/progress` are intentionally unsupported. Historical
+plans mentioning them are superseded by ADR 002.
 
-| Concern | Contract |
-|---|---|
-| Pipe | `DevTools_{Host}_{Version}_{PID}` |
-| Frame | Four-byte little-endian UTF-8 frame containing a `BridgeMessage` |
-| Request | `tests/run`: `workspace_root`, `test_root`, `nodeids`, `pytest_args` |
-| Progress | `notifications/tests/progress` notifications before the final response |
-| Final result | `PytestRunResponse`: `exit_code`, `summary`, `results`, `collection_errors`, `rootdir` |
+## Verification limits
 
-The plugin collects locally and sends its selected node IDs in `tests/run`. `tests/discover` is not a public bridge route; any prose describing remote discovery is stale. The host prepares dependencies before it enters host-context execution, runs pytest in its embedded Python runtime with failure/dialog suppression, and returns typed results for the plugin to map to normal pytest reports.
-
-## Explicit separation from MCP
-
-Pytest does not initialize MCP, invoke a daemon MCP tool, or traverse `DevTools.Daemon`. MCP Runtime V2 uses a different pipe (`DevTools.Mcp.v2.{pid}`) and SDK session. `DevTools.Ipc` retains `BridgeMessage` and framing intentionally for this direct lane.
-
-## Current test reality
-
-The in-repository tests are contract/smoke coverage, not comprehensive live-host assurance. Some suites require a prepared Pixi/Python environment, built assets, and a live host. Keep dependency preparation separate from execution, preserve progress-before-final-response ordering, and report an unavailable host/pipe/environment precisely rather than changing unrelated infrastructure. See `docs/agents/known-test-gaps.md`.
+Unit tests prove contract parsing, connection/session behavior, and reporting.
+Live proof additionally needs a compatible running or launchable host and its
+embedded Python environment. Preserve that distinction when reporting results.
