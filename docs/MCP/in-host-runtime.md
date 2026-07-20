@@ -23,14 +23,15 @@ DevTools.Daemon or RevitDevTool.PyTest
 
 ## Pipe identity
 
-`HostPipeName` is the only formatter and parser. A valid name has exactly four
-underscore-separated segments: literal `DevTools`, a nonblank host segment, a
-nonblank version segment, and a positive invariant-culture PID. Host and
-version cannot contain `_`; whitespace-only segments and zero/negative PIDs
-are invalid. The daemon and Python plugin parse the name before connection and
-cross-check the initialized server metadata against the parsed host and
-version. They reject a mismatch rather than connect to an ambiguously named
-server.
+`.NET` `HostPipeName` is the canonical formatter and parser. A valid name has
+exactly four underscore-separated segments: literal `DevTools`, a nonblank host
+segment, a nonblank version segment, and a positive invariant-culture PID. Host
+and version cannot contain `_`; whitespace-only segments and zero/negative PIDs
+are invalid. The Python plugin's `pipe_name.py` independently mirrors this
+strict grammar and has parity tests for accepted and rejected names. The daemon
+and Python plugin parse the name before connection and cross-check initialized
+server metadata against the parsed host and version. They reject a mismatch
+rather than connect to an ambiguously named server.
 
 ## Catalog and host execution
 
