@@ -1,3 +1,40 @@
+# 4.0.0 (Breaking coordinated release)
+
+## Unified MCP runtime
+
+This release makes standard MCP the sole host data-plane protocol. A host now
+publishes exactly one canonical pipe, `DevTools_{HostApp}_{HostVersion}_{PID}`.
+The retained pipe-name format carries MCP only; it is not a compatibility
+bridge.
+
+### Breaking changes
+
+- `DevTools.Mcp.v2.{PID}` has been removed.
+- The framed Python pytest bridge and its clients are unsupported.
+- There is no protocol fallback, alias, sniffing path, or `dynamic_*` tool
+  alias.
+- Gateway tunnel v1 daemons cannot connect to Gateway v2. They disconnect with
+  `unsupported_tunnel_protocol` until upgraded.
+- The installer upgrades compatible desktop components together; deploy the
+  matching `revitdevtool_pytest` 0.4.0 and McpGateway 2.0.0 release set.
+
+### Deployment window
+
+Prepare the desktop installer and Python plugin artifacts, enter the declared
+maintenance window, deploy Gateway v2, then release and announce the matching
+desktop components. Do not mix old daemon binaries with Gateway v2.
+
+The root package version remains GitVersion/tag-derived. `4.0.0` is the
+coordinated release tag; no source constant or host-pipe protocol version is
+introduced for this release.
+
+### Acceptance status
+
+Automated compatibility and artifact evidence is recorded in
+[the 4.0.0 release gate](docs/MCP/release-4.0.0.md). Publication remains
+blocked until the listed live Revit/AutoCAD and authenticated Gateway scenarios
+are performed.
+
 # 3.0.0
 
 v3.0 transforms RevitDevTool from a Revit-only developer tool into a **development platform for .NET-based CAD/BIM applications**. The execution engine, logging, dependency management, AI integration, and remote testing are now shared across hosts. Revit remains the primary experience, AutoCAD-family products are fully supported, and the architecture is designed to extend to any .NET-capable host (Tekla, Bentley, Rhino, etc.).
