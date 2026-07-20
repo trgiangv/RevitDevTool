@@ -26,7 +26,7 @@ public sealed class HostSessionManagerTests
     [Fact]
     public async Task ProcessIndex_TracksConnectDisconnectAndReconnectGeneration()
     {
-        var pipeName = McpPipeName.Format(42001);
+        var pipeName = PipeName(42001);
         var connector = new FakeConnector(
             pipeName,
             [ConnectResult.Success(), ConnectResult.Success()]);
@@ -51,7 +51,7 @@ public sealed class HostSessionManagerTests
     [Fact]
     public async Task RediscoveredPipe_AssignsNextGeneration()
     {
-        var pipeName = McpPipeName.Format(42003);
+        var pipeName = PipeName(42003);
         var discoveredPipes = new HashSet<string>([pipeName], StringComparer.OrdinalIgnoreCase);
         var connector = new FakeConnector(pipeName, [ConnectResult.Success(), ConnectResult.Success()]);
         var clock = new FakeRetryClock();
@@ -71,8 +71,8 @@ public sealed class HostSessionManagerTests
     [Fact]
     public async Task DuplicateLivePid_IsRejected()
     {
-        var firstPipeName = McpPipeName.Format(42001);
-        var secondPipeName = McpPipeName.Format(42002);
+        var firstPipeName = PipeName(42001);
+        var secondPipeName = PipeName(42002);
         var connector = new DelegateConnector((_, generation, _) =>
             Task.FromResult<IHostMcpSession>(new TestMcpSession(firstPipeName, generation)));
         var clock = new FakeRetryClock();
@@ -88,7 +88,7 @@ public sealed class HostSessionManagerTests
     [Fact]
     public async Task SlotRemovalDuringPidPublication_DoesNotAnnounceRemovedSession()
     {
-        var pipeName = McpPipeName.Format(42004);
+        var pipeName = PipeName(42004);
         var discoveredPipes = new HashSet<string>([pipeName], StringComparer.OrdinalIgnoreCase);
         HostSessionManager? manager = null;
         Task? removal = null;
@@ -117,7 +117,7 @@ public sealed class HostSessionManagerTests
     [Fact]
     public async Task ConnectorInvalidOperationException_TransitionsToBackoff()
     {
-        var pipeName = McpPipeName.Format(42005);
+        var pipeName = PipeName(42005);
         var connector = new FakeConnector(pipeName, [ConnectResult.InvalidOperationFailure()]);
         var clock = new FakeRetryClock();
         await using var manager = CreateManager(pipeName, connector, clock);
@@ -130,7 +130,7 @@ public sealed class HostSessionManagerTests
     [Fact]
     public async Task Discovered_ConnectsToConnectedSession()
     {
-        var pipeName = McpPipeName.Format(5101);
+        var pipeName = PipeName(5101);
         var connector = new FakeConnector(pipeName, [ConnectResult.Success()]);
         var clock = new FakeRetryClock();
         await using var manager = CreateManager(pipeName, connector, clock);
@@ -145,7 +145,7 @@ public sealed class HostSessionManagerTests
     [Fact]
     public async Task Backoff_RetriesContinuouslyDiscoveredPipeAndConnects()
     {
-        var pipeName = McpPipeName.Format(5102);
+        var pipeName = PipeName(5102);
         var connector = new FakeConnector(pipeName, [ConnectResult.Failure(), ConnectResult.Success()]);
         var clock = new FakeRetryClock();
         await using var manager = CreateManager(pipeName, connector, clock);
@@ -165,7 +165,7 @@ public sealed class HostSessionManagerTests
     [Fact]
     public async Task DisconnectedSession_TransitionsThroughBackoffAndReconnects()
     {
-        var pipeName = McpPipeName.Format(5103);
+        var pipeName = PipeName(5103);
         var firstSession = new TestMcpSession(pipeName);
         var connector = new FakeConnector(pipeName,
         [
@@ -193,7 +193,7 @@ public sealed class HostSessionManagerTests
     [Fact]
     public async Task BackoffSlot_IsRemovedWhenPipeDisappears()
     {
-        var pipeName = McpPipeName.Format(5104);
+        var pipeName = PipeName(5104);
         var discoveredPipes = new HashSet<string>([pipeName], StringComparer.OrdinalIgnoreCase);
         var connector = new FakeConnector(pipeName, [ConnectResult.Failure()]);
         var clock = new FakeRetryClock();
@@ -212,7 +212,7 @@ public sealed class HostSessionManagerTests
     [Fact]
     public async Task PendingConnect_RemovedPipeDoesNotPublishOrLeakSession()
     {
-        var pipeName = McpPipeName.Format(5105);
+        var pipeName = PipeName(5105);
         var discoveredPipes = new HashSet<string>([pipeName], StringComparer.OrdinalIgnoreCase);
         var connector = new PendingConnector();
         var clock = new FakeRetryClock();
@@ -237,7 +237,7 @@ public sealed class HostSessionManagerTests
     [Fact]
     public async Task PendingConnect_ManagerShutdownCancelsAndAwaitsAttempt()
     {
-        var pipeName = McpPipeName.Format(5106);
+        var pipeName = PipeName(5106);
         var connector = new PendingConnector(cancelWhenRequested: true);
         var clock = new FakeRetryClock();
         var manager = CreateManager(pipeName, connector, clock);
@@ -256,7 +256,7 @@ public sealed class HostSessionManagerTests
     [Fact]
     public async Task PendingConnect_StaleCompletionIsDisposedDuringShutdown()
     {
-        var pipeName = McpPipeName.Format(5107);
+        var pipeName = PipeName(5107);
         var connector = new PendingConnector();
         var clock = new FakeRetryClock();
         var manager = CreateManager(pipeName, connector, clock);
@@ -278,7 +278,7 @@ public sealed class HostSessionManagerTests
     [Fact]
     public async Task RunAsync_UsesExactFirstRetryDeadline()
     {
-        var pipeName = McpPipeName.Format(5108);
+        var pipeName = PipeName(5108);
         using var stop = new CancellationTokenSource();
         var connector = new FakeConnector(pipeName, [ConnectResult.Failure(), ConnectResult.Success()]);
         var clock = new RecordingRetryClock(stop, stopAfterDelays: 2);
@@ -293,7 +293,7 @@ public sealed class HostSessionManagerTests
     [Fact]
     public async Task RunAsync_CapsRetryDeadlineAtFifteenSeconds()
     {
-        var pipeName = McpPipeName.Format(5109);
+        var pipeName = PipeName(5109);
         using var stop = new CancellationTokenSource();
         var clock = new RecordingRetryClock(stop, stopAfterDelays: int.MaxValue);
         var attempts = new List<DateTimeOffset>();
@@ -325,7 +325,7 @@ public sealed class HostSessionManagerTests
     [Fact]
     public async Task RunAsync_DisconnectDuringDiscoverySleepRetriesAtBackoffDeadline()
     {
-        var pipeName = McpPipeName.Format(5111);
+        var pipeName = PipeName(5111);
         using var stop = new CancellationTokenSource();
         var firstSession = new TestMcpSession(pipeName);
         var connectorAttempts = 0;
@@ -357,7 +357,7 @@ public sealed class HostSessionManagerTests
     [Fact]
     public async Task CancelledConnect_PropagatesCancellationWithoutBackoffState()
     {
-        var pipeName = McpPipeName.Format(5110);
+        var pipeName = PipeName(5110);
         using var cancellation = new CancellationTokenSource();
         var connector = new PendingConnector(cancelWhenRequested: true);
         var clock = new FakeRetryClock();
@@ -579,8 +579,11 @@ public sealed class HostSessionManagerTests
 
         private static int GetProcessId(string pipeName)
         {
-            Assert.True(McpPipeName.TryParse(pipeName, out var processId));
+            Assert.True(HostPipeName.TryParse(pipeName, out _, out _, out var processId));
             return processId;
         }
     }
+
+    private static string PipeName(int processId) =>
+        HostPipeName.Format("TestHost", "1.0", processId);
 }

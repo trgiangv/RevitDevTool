@@ -1,6 +1,5 @@
 ﻿using DevTools.Execution.External;
 using DevTools.Execution.External.Connections;
-using DevTools.Execution.External.Handlers;
 using DevTools.Execution.External.Mcp.BuiltIn;
 using DevTools.Execution.External.Mcp.Hosting;
 using DevTools.Execution.External.Mcp.Registry;
@@ -72,7 +71,6 @@ public static class ExecutionExtensions
         services.AddSingleton<IMcpExecutionTracker, ConnectionStateExecutionTracker>();
         services.AddSingleton<PytestDependencyService>();
         services.AddSingleton<PytestExecutionService>();
-        services.AddSingleton<IBridgeRequestHandler, PytestRequestHandler>();
 
         services.AddSingleton<DotnetMcpRegistryProvider>();
         services.AddSingleton<PythonMcpRegistryProvider>();
@@ -89,8 +87,6 @@ public static class ExecutionExtensions
         services.AddSingleton<IBuiltInMcpTool, PythonCodeTool>();
         services.AddSingleton<IBuiltInMcpTool>(sp =>
             new OpenDocumentTool(sp.GetService<IDocumentBridge>() ?? NullDocumentBridge.Instance));
-        services.AddSingleton<DevToolsPipeServer>();
-        services.AddHostedService(sp => sp.GetRequiredService<DevToolsPipeServer>());
         services.AddSingleton<McpServerPrimitiveCollection<McpServerTool>>(_ => []);
         services.AddSingleton<McpServerPrimitiveCollection<McpServerPrompt>>(_ => []);
         services.AddSingleton<McpServerResourceCollection>(_ => []);

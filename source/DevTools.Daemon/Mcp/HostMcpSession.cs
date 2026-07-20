@@ -37,7 +37,7 @@ public sealed class HostMcpSession : IHostMcpSession
         ILoggerFactory loggerFactory,
         CancellationToken ct)
     {
-        if (!McpPipeName.TryParse(pipeName, out var processId))
+        if (!HostPipeName.TryParse(pipeName, out var hostApp, out var hostVersion, out var processId))
             throw new ArgumentException("Invalid MCP host pipe name.", nameof(pipeName));
 
         var pipe = new NamedPipeClientStream(".", pipeName, PipeDirection.InOut, PipeOptions.Asynchronous);
@@ -60,10 +60,16 @@ public sealed class HostMcpSession : IHostMcpSession
                     ct)
                 .ConfigureAwait(false);
 
+            if (!string.Equals(client.ServerInfo.Name, hostApp, StringComparison.OrdinalIgnoreCase) ||
+                !string.Equals(client.ServerInfo.Version, hostVersion, StringComparison.OrdinalIgnoreCase))
+            {
+                throw new HostIdentityException("host_identity_mismatch", pipeName);
+            }
+
             var session = new HostMcpSession(
                 pipe,
                 client,
-                new HostInstanceDescriptor(processId, client.ServerInfo.Name, client.ServerInfo.Version, pipeName),
+                new HostInstanceDescriptor(processId, hostApp, hostVersion, pipeName),
                 generation);
             await session.RegisterCatalogNotificationsAsync().ConfigureAwait(false);
             _ = session.ObserveDisconnectAsync();

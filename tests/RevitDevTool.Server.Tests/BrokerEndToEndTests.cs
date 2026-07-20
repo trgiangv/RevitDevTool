@@ -116,11 +116,16 @@ public sealed class BrokerEndToEndTests
             bool includeAmbiguousHost = false)
         {
             var tool = new CountingTool();
-            var hostOptions = new HostMcpServerOptionsFactory(new HostInfo(), [tool], [], []);
+            var hostInfo = new HostInfo();
+            var hostOptions = new HostMcpServerOptionsFactory(hostInfo, [tool], [], []);
             var services = new ServiceCollection().BuildServiceProvider();
-            var host = new HostMcpServerHostedService(hostOptions, NullLoggerFactory.Instance, services);
+            var host = new HostMcpServerHostedService(hostOptions, hostInfo, NullLoggerFactory.Instance, services);
             await host.StartAsync(ct);
-            var realSession = await HostMcpSession.ConnectAsync(McpPipeName.Format(Environment.ProcessId), generation: 1, NullLoggerFactory.Instance, ct);
+            var realSession = await HostMcpSession.ConnectAsync(
+                HostPipeName.Format(hostInfo.Host.ToString(), hostInfo.VersionNumber, Environment.ProcessId),
+                generation: 1,
+                NullLoggerFactory.Instance,
+                ct);
             var session = new CountingSession(realSession);
             var manager = new SingleSessionManager(session);
             var broker = new BrokerCatalogIndex();
@@ -139,7 +144,7 @@ public sealed class BrokerEndToEndTests
                 var alternate = session.Instance with
                 {
                     ProcessId = session.Instance.ProcessId + 1,
-                    PipeName = McpPipeName.Format(session.Instance.ProcessId + 1)
+                    PipeName = HostPipeName.Format("Revit", "2027", session.Instance.ProcessId + 1)
                 };
                 var alternateSnapshot = HostCatalogSnapshot.Create(
                     alternate,

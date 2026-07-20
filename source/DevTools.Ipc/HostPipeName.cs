@@ -1,3 +1,5 @@
+using System.Globalization;
+
 namespace DevTools.Ipc;
 
 /// <summary>
@@ -7,11 +9,24 @@ namespace DevTools.Ipc;
 public static class HostPipeName
 {
     private const char Separator = '_';
-    private const int MinSegments = 4; // prefix, host, version, pid
 
     /// <summary>Build a pipe name from components.</summary>
     public static string Format(string host, string version, int processId)
-        => $"{DaemonConstants.PipePrefix}{Separator}{host}{Separator}{version}{Separator}{processId}";
+    {
+        ValidateSegment(host, nameof(host));
+        ValidateSegment(version, nameof(version));
+        if (processId <= 0)
+            throw new ArgumentOutOfRangeException(nameof(processId));
+
+        return string.Concat(
+            DaemonConstants.PipePrefix,
+            Separator,
+            host,
+            Separator,
+            version,
+            Separator,
+            processId.ToString(CultureInfo.InvariantCulture));
+    }
 
     /// <summary>
     /// Parse a full pipe name into host, version, and PID.
@@ -23,16 +38,27 @@ public static class HostPipeName
         version = string.Empty;
         pid = 0;
 
-        if (!pipeName.StartsWith(DaemonConstants.PipePrefix + Separator, StringComparison.OrdinalIgnoreCase))
+        if (pipeName is null)
             return false;
 
         var parts = pipeName.Split(Separator);
-        if (parts.Length < MinSegments || !int.TryParse(parts[^1], out pid))
+        if (parts.Length != 4 ||
+            !parts[0].Equals(DaemonConstants.PipePrefix, StringComparison.OrdinalIgnoreCase) ||
+            string.IsNullOrWhiteSpace(parts[1]) ||
+            string.IsNullOrWhiteSpace(parts[2]) ||
+            !int.TryParse(parts[3], NumberStyles.None, CultureInfo.InvariantCulture, out pid) ||
+            pid <= 0)
             return false;
 
-        host = parts[^3];
-        version = parts[^2];
+        host = parts[1];
+        version = parts[2];
         return true;
+    }
+
+    private static void ValidateSegment(string value, string parameterName)
+    {
+        if (string.IsNullOrWhiteSpace(value) || value.IndexOf(Separator) >= 0)
+            throw new ArgumentException("Pipe identity segments must be nonempty and cannot contain '_'.", parameterName);
     }
 
     /// <summary>

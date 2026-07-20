@@ -1,9 +1,14 @@
 using System.IO.Pipes;
 using System.Text.Json;
 using DevTools.Daemon.Mcp;
+using DevTools.Execution;
+using DevTools.Execution.External;
+using DevTools.Execution.External.Handlers;
 using DevTools.Execution.External.Mcp.Hosting;
+using DevTools.Execution.External.Testing;
 using DevTools.Logging;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging.Abstractions;
 using ModelContextProtocol.Client;
 using ModelContextProtocol.Protocol;
@@ -11,17 +16,63 @@ using ModelContextProtocol.Server;
 
 namespace RevitDevTool.Server.Tests;
 
-public sealed class McpPipeNameTests
+public sealed class HostPipeNameTests
+{
+    [Theory]
+    [InlineData("DevTools_Revit_2025_4217", "Revit", "2025", 4217)]
+    [InlineData("DevTools_Rhino_8.0_99", "Rhino", "8.0", 99)]
+    public void FormatAndParse_UseCanonicalHostIdentity(string name, string host, string version, int pid)
+    {
+        Assert.Equal(name, HostPipeName.Format(host, version, pid));
+        Assert.True(HostPipeName.TryParse(name, out var actualHost, out var actualVersion, out var actualPid));
+        Assert.Equal((host, version, pid), (actualHost, actualVersion, actualPid));
+    }
+
+    [Theory]
+    [InlineData("DevTools.Mcp.v2.4217")]
+    [InlineData("DevTools__2025_4217")]
+    [InlineData("DevTools_Revit__4217")]
+    [InlineData("DevTools_Revit_2025_0")]
+    [InlineData("DevTools_Revit_2025_-1")]
+    [InlineData("DevTools_Revit_2025_4217_extra")]
+    [InlineData("DevTools_Revit_LT_2025_4217")]
+    public void TryParse_RejectsNonCanonicalNames(string name) =>
+        Assert.False(HostPipeName.TryParse(name, out _, out _, out _));
+
+    [Theory]
+    [InlineData(null, "2025", 4217)]
+    [InlineData("", "2025", 4217)]
+    [InlineData(" ", "2025", 4217)]
+    [InlineData("Revit_LT", "2025", 4217)]
+    [InlineData("Revit", null, 4217)]
+    [InlineData("Revit", "", 4217)]
+    [InlineData("Revit", " ", 4217)]
+    [InlineData("Revit", "20_25", 4217)]
+    public void Format_RejectsInvalidIdentitySegments(string? host, string? version, int pid) =>
+        Assert.Throws<ArgumentException>(() => HostPipeName.Format(host!, version!, pid));
+
+    [Theory]
+    [InlineData(0)]
+    [InlineData(-1)]
+    public void Format_RejectsNonPositiveProcessId(int pid) =>
+        Assert.Throws<ArgumentOutOfRangeException>(() => HostPipeName.Format("Revit", "2025", pid));
+}
+
+public sealed class ExecutionServiceRegistrationTests
 {
     [Fact]
-    public void FormatAndParse_UseProtocolVersionAndPidOnly()
+    public void AddExecutionServices_RegistersOnlyCanonicalMcpDataPlaneHost()
     {
-        var name = McpPipeName.Format(4217);
+        var services = new ServiceCollection();
 
-        Assert.Equal("DevTools.Mcp.v2.4217", name);
-        Assert.True(McpPipeName.TryParse(name, out var processId));
-        Assert.Equal(4217, processId);
-        Assert.False(McpPipeName.TryParse("DevTools_Mcp_Revit_2025_4217", out _));
+        services.AddExecutionServices();
+
+        Assert.Contains(services, descriptor => descriptor.ServiceType == typeof(HostMcpServerHostedService));
+        Assert.Single(services, descriptor => descriptor.ServiceType == typeof(IHostedService));
+        Assert.DoesNotContain(services, descriptor => descriptor.ServiceType == typeof(DevToolsPipeServer));
+        Assert.DoesNotContain(services, descriptor => descriptor.ServiceType == typeof(IBridgeRequestHandler));
+        Assert.Contains(services, descriptor => descriptor.ServiceType == typeof(PytestDependencyService));
+        Assert.Contains(services, descriptor => descriptor.ServiceType == typeof(PytestExecutionService));
     }
 }
 
@@ -31,7 +82,7 @@ public sealed class McpNamedPipeIntegrationTests
     [Fact]
     public async Task InstanceManager_RetriesAdvertisedPipeAfterInitialConnectionFailure()
     {
-        var pipeName = McpPipeName.Format(4217);
+        var pipeName = HostPipeName.Format("Revit", "2027", 4217);
         var attempts = 0;
         await using var manager = CreateHostSessionManager(
             pipeName,
@@ -55,7 +106,7 @@ public sealed class McpNamedPipeIntegrationTests
     [Fact]
     public async Task InstanceManager_ReconnectsAdvertisedPipeAfterSessionDisconnects()
     {
-        var pipeName = McpPipeName.Format(4218);
+        var pipeName = HostPipeName.Format("Revit", "2027", 4218);
         var attempts = 0;
         var firstSession = new TestMcpSession(pipeName);
         await using var manager = CreateHostSessionManager(
@@ -82,14 +133,16 @@ public sealed class McpNamedPipeIntegrationTests
     [Fact]
     public async Task HostMcpSession_ListsCallsAndRaisesCatalogChanged()
     {
+        var hostInfo = new TestHostAppInfo();
         var tools = new McpServerPrimitiveCollection<McpServerTool>
         {
             new TestTool("session_test")
         };
-        var optionsFactory = new HostMcpServerOptionsFactory(new TestHostAppInfo(), tools, [], []);
+        var optionsFactory = new HostMcpServerOptionsFactory(hostInfo, tools, [], []);
         using var serviceProvider = new ServiceCollection().BuildServiceProvider();
         await using var hostedService = new HostMcpServerHostedService(
             optionsFactory,
+            hostInfo,
             NullLoggerFactory.Instance,
             serviceProvider);
 
@@ -97,10 +150,15 @@ public sealed class McpNamedPipeIntegrationTests
         try
         {
             await using var session = await HostMcpSession.ConnectAsync(
-                McpPipeName.Format(Environment.ProcessId),
+                PipeName(hostInfo),
                 generation: 1,
                 NullLoggerFactory.Instance,
                 TestContext.Current.CancellationToken);
+
+            Assert.Equal(
+                new HostInstanceDescriptor(Environment.ProcessId, "Revit", "2027", PipeName(hostInfo)),
+                session.Instance);
+            Assert.Equal(1, session.Generation);
 
             var listedTools = await session.ListToolsAsync(TestContext.Current.CancellationToken);
             Assert.Contains(listedTools, tool => tool.ProtocolTool.Name == "session_test");
@@ -127,10 +185,12 @@ public sealed class McpNamedPipeIntegrationTests
     public async Task HostedService_StopsCleanlyWhenShutdownFollowsRecoverableAcceptFailure()
     {
         var acceptFailureObserved = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
-        var optionsFactory = new HostMcpServerOptionsFactory(new TestHostAppInfo(), [], [], []);
+        var hostInfo = new TestHostAppInfo();
+        var optionsFactory = new HostMcpServerOptionsFactory(hostInfo, [], [], []);
         using var serviceProvider = new ServiceCollection().BuildServiceProvider();
         await using var hostedService = new HostMcpServerHostedService(
             optionsFactory,
+            hostInfo,
             NullLoggerFactory.Instance,
             serviceProvider,
             _ =>
@@ -157,6 +217,7 @@ public sealed class McpNamedPipeIntegrationTests
         using var serviceProvider = new ServiceCollection().BuildServiceProvider();
         await using var hostedService = new HostMcpServerHostedService(
             optionsFactory,
+            hostInfo,
             NullLoggerFactory.Instance,
             serviceProvider);
 
@@ -165,7 +226,7 @@ public sealed class McpNamedPipeIntegrationTests
         {
             await using var pipe = new NamedPipeClientStream(
                 ".",
-                McpPipeName.Format(Environment.ProcessId),
+                PipeName(hostInfo),
                 PipeDirection.InOut,
                 PipeOptions.Asynchronous);
             await pipe.ConnectAsync(5000, TestContext.Current.CancellationToken);
@@ -189,23 +250,120 @@ public sealed class McpNamedPipeIntegrationTests
     }
 
     [Fact]
+    public async Task HostMcpSession_RejectsServerMetadataThatDoesNotMatchPipeIdentity()
+    {
+        var pipeIdentity = new TestHostAppInfo();
+        var advertisedIdentity = new MismatchedHostAppInfo();
+        var optionsFactory = new HostMcpServerOptionsFactory(advertisedIdentity, [], [], []);
+        using var serviceProvider = new ServiceCollection().BuildServiceProvider();
+        await using var hostedService = new HostMcpServerHostedService(
+            optionsFactory,
+            pipeIdentity,
+            NullLoggerFactory.Instance,
+            serviceProvider);
+
+        await hostedService.StartAsync(TestContext.Current.CancellationToken);
+        try
+        {
+            var pipeName = PipeName(pipeIdentity);
+            var exception = await Assert.ThrowsAsync<HostIdentityException>(() =>
+                HostMcpSession.ConnectAsync(
+                    pipeName,
+                    generation: 7,
+                    NullLoggerFactory.Instance,
+                    TestContext.Current.CancellationToken));
+
+            Assert.Equal("host_identity_mismatch", exception.Code);
+            Assert.Equal(pipeName, exception.PipeName);
+            Assert.DoesNotContain("Rhino", exception.Message, StringComparison.Ordinal);
+            Assert.DoesNotContain("8.0", exception.Message, StringComparison.Ordinal);
+        }
+        finally
+        {
+            await hostedService.StopAsync(TestContext.Current.CancellationToken);
+        }
+    }
+
+    [Fact]
+    public async Task HostedService_KeepsConcurrentMcpClientsIsolated()
+    {
+        var hostInfo = new TestHostAppInfo();
+        var blockingTool = new ConcurrentClientTool();
+        var optionsFactory = new HostMcpServerOptionsFactory(hostInfo, [blockingTool], [], []);
+        using var serviceProvider = new ServiceCollection().BuildServiceProvider();
+        await using var hostedService = new HostMcpServerHostedService(
+            optionsFactory,
+            hostInfo,
+            NullLoggerFactory.Instance,
+            serviceProvider);
+
+        await hostedService.StartAsync(TestContext.Current.CancellationToken);
+        try
+        {
+            var pipeName = PipeName(hostInfo);
+            var first = await TestClientConnection.ConnectAsync(pipeName, TestContext.Current.CancellationToken);
+            await using var second = await TestClientConnection.ConnectAsync(pipeName, TestContext.Current.CancellationToken);
+            try
+            {
+                Assert.Equal(second.Client.ServerInfo.Name, first.Client.ServerInfo.Name);
+                Assert.Equal(second.Client.ServerInfo.Version, first.Client.ServerInfo.Version);
+                Assert.Equal("Revit", first.Client.ServerInfo.Name);
+                Assert.Equal("2027", first.Client.ServerInfo.Version);
+
+                var firstCall = first.Client.CallToolAsync(
+                    "concurrent_client_test",
+                    cancellationToken: CancellationToken.None).AsTask();
+                var secondCall = second.Client.CallToolAsync(
+                    "concurrent_client_test",
+                    cancellationToken: TestContext.Current.CancellationToken).AsTask();
+                await blockingTool.BothEntered.Task.WaitAsync(
+                    TimeSpan.FromSeconds(5),
+                    TestContext.Current.CancellationToken);
+
+                await first.DisposeAsync();
+                blockingTool.Release.TrySetResult(true);
+
+                var result = await secondCall.WaitAsync(
+                    TimeSpan.FromSeconds(5),
+                    TestContext.Current.CancellationToken);
+                Assert.Equal("second client remains connected", Assert.IsType<TextContentBlock>(Assert.Single(result.Content)).Text);
+                await Assert.ThrowsAnyAsync<Exception>(() => firstCall);
+            }
+            finally
+            {
+                await first.DisposeAsync();
+                blockingTool.Release.TrySetResult(true);
+            }
+        }
+        finally
+        {
+            await hostedService.StopAsync(TestContext.Current.CancellationToken);
+        }
+    }
+
+    [Fact]
     public async Task HostMcpSession_PreCancelledConnectFailsImmediately()
     {
         using var cancelled = new CancellationTokenSource();
         cancelled.Cancel();
         await Assert.ThrowsAnyAsync<OperationCanceledException>(() =>
-            HostMcpSession.ConnectAsync(McpPipeName.Format(Environment.ProcessId + 10_000), generation: 1, NullLoggerFactory.Instance, cancelled.Token));
+            HostMcpSession.ConnectAsync(
+                HostPipeName.Format("Revit", "2027", Environment.ProcessId + 10_000),
+                generation: 1,
+                NullLoggerFactory.Instance,
+                cancelled.Token));
     }
 
     [Fact]
     public async Task HostMcpSession_InFlightCallCompletesOnHostShutdownAndFreshSessionReacquiresPipe()
     {
         var blockingTool = new BlockingTool();
-        var optionsFactory = new HostMcpServerOptionsFactory(new TestHostAppInfo(), [blockingTool], [], []);
+        var hostInfo = new TestHostAppInfo();
+        var optionsFactory = new HostMcpServerOptionsFactory(hostInfo, [blockingTool], [], []);
         using var serviceProvider = new ServiceCollection().BuildServiceProvider();
-        await using var firstHost = new HostMcpServerHostedService(optionsFactory, NullLoggerFactory.Instance, serviceProvider);
+        await using var firstHost = new HostMcpServerHostedService(optionsFactory, hostInfo, NullLoggerFactory.Instance, serviceProvider);
         await firstHost.StartAsync(TestContext.Current.CancellationToken);
-        var firstSession = await HostMcpSession.ConnectAsync(McpPipeName.Format(Environment.ProcessId), generation: 1, NullLoggerFactory.Instance, TestContext.Current.CancellationToken);
+        var firstSession = await HostMcpSession.ConnectAsync(PipeName(hostInfo), generation: 1, NullLoggerFactory.Instance, TestContext.Current.CancellationToken);
         try
         {
             var pendingCall = firstSession.CallToolAsync("blocking_session_test", null, CancellationToken.None);
@@ -222,10 +380,10 @@ public sealed class McpNamedPipeIntegrationTests
             await firstSession.DisposeAsync();
         }
 
-        var replacementOptions = new HostMcpServerOptionsFactory(new TestHostAppInfo(), [new TestTool("reconnected_session_test")], [], []);
-        await using var secondHost = new HostMcpServerHostedService(replacementOptions, NullLoggerFactory.Instance, serviceProvider);
+        var replacementOptions = new HostMcpServerOptionsFactory(hostInfo, [new TestTool("reconnected_session_test")], [], []);
+        await using var secondHost = new HostMcpServerHostedService(replacementOptions, hostInfo, NullLoggerFactory.Instance, serviceProvider);
         await secondHost.StartAsync(TestContext.Current.CancellationToken);
-        await using var reconnected = await HostMcpSession.ConnectAsync(McpPipeName.Format(Environment.ProcessId), generation: 1, NullLoggerFactory.Instance, TestContext.Current.CancellationToken);
+        await using var reconnected = await HostMcpSession.ConnectAsync(PipeName(hostInfo), generation: 1, NullLoggerFactory.Instance, TestContext.Current.CancellationToken);
         Assert.True(reconnected.IsConnected);
         var result = await reconnected.CallToolAsync("reconnected_session_test", null, TestContext.Current.CancellationToken);
         Assert.Equal("typed session", Assert.IsType<TextContentBlock>(Assert.Single(result.Content)).Text);
@@ -236,6 +394,14 @@ public sealed class McpNamedPipeIntegrationTests
     {
         public HostApp Host => HostApp.Revit;
         public string VersionNumber => "2027";
+        public string? VersionBuild => null;
+        public int ProcessId => Environment.ProcessId;
+    }
+
+    private sealed class MismatchedHostAppInfo : IHostAppInfo
+    {
+        public HostApp Host => HostApp.Rhino;
+        public string VersionNumber => "8.0";
         public string? VersionBuild => null;
         public int ProcessId => Environment.ProcessId;
     }
@@ -280,6 +446,81 @@ public sealed class McpNamedPipeIntegrationTests
             throw new InvalidOperationException("The blocking request should be cancelled by host shutdown.");
         }
     }
+
+    private sealed class ConcurrentClientTool : McpServerTool
+    {
+        private int _enteredCount;
+
+        public TaskCompletionSource<bool> BothEntered { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        public TaskCompletionSource<bool> Release { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        public override Tool ProtocolTool { get; } = new()
+        {
+            Name = "concurrent_client_test",
+            InputSchema = JsonSerializer.SerializeToElement(new { type = "object" })
+        };
+
+        public override IReadOnlyList<object> Metadata => [];
+
+        public override async ValueTask<CallToolResult> InvokeAsync(
+            RequestContext<CallToolRequestParams> request,
+            CancellationToken cancellationToken = default)
+        {
+            if (Interlocked.Increment(ref _enteredCount) == 2)
+                BothEntered.TrySetResult(true);
+
+            await Release.Task.WaitAsync(cancellationToken);
+            return new CallToolResult
+            {
+                Content = [new TextContentBlock { Text = "second client remains connected" }]
+            };
+        }
+    }
+
+    private sealed class TestClientConnection(NamedPipeClientStream pipe, McpClient client) : IAsyncDisposable
+    {
+        private int _disposed;
+
+        public McpClient Client { get; } = client;
+
+        public static async Task<TestClientConnection> ConnectAsync(string pipeName, CancellationToken ct)
+        {
+            var pipe = new NamedPipeClientStream(".", pipeName, PipeDirection.InOut, PipeOptions.Asynchronous);
+            McpClient? client = null;
+            try
+            {
+                await pipe.ConnectAsync(5000, ct);
+                var transport = new StreamClientTransport(pipe, pipe, NullLoggerFactory.Instance);
+                client = await McpClient.CreateAsync(
+                    transport,
+                    new McpClientOptions
+                    {
+                        ClientInfo = new Implementation { Name = "integration-test", Version = "1.0" }
+                    },
+                    cancellationToken: ct);
+                return new TestClientConnection(pipe, client);
+            }
+            catch
+            {
+                if (client is not null)
+                    await client.DisposeAsync();
+                await pipe.DisposeAsync();
+                throw;
+            }
+        }
+
+        public async ValueTask DisposeAsync()
+        {
+            if (Interlocked.Exchange(ref _disposed, 1) != 0)
+                return;
+
+            await Client.DisposeAsync();
+            await pipe.DisposeAsync();
+        }
+    }
+
+    private static string PipeName(IHostAppInfo hostInfo) =>
+        HostPipeName.Format(hostInfo.Host.ToString(), hostInfo.VersionNumber, Environment.ProcessId);
 
     private static HostSessionManager CreateHostSessionManager(
         string pipeName,

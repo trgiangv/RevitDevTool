@@ -1,6 +1,7 @@
 using System.Collections.Concurrent;
 using System.IO;
 using System.IO.Pipes;
+using DevTools.Logging;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using ModelContextProtocol.Server;
@@ -9,6 +10,7 @@ namespace DevTools.Execution.External.Mcp.Hosting;
 
 public sealed class HostMcpServerHostedService(
     HostMcpServerOptionsFactory optionsFactory,
+    IHostAppInfo hostInfo,
     ILoggerFactory loggerFactory,
     IServiceProvider serviceProvider,
     Func<string, NamedPipeServerStream>? createServerPipe = null) : IHostedService, IAsyncDisposable
@@ -17,7 +19,10 @@ public sealed class HostMcpServerHostedService(
     private readonly Func<string, NamedPipeServerStream> _createServerPipe =
         createServerPipe ?? (pipeName => CurrentUserPipeFactory.CreateDuplexServer(pipeName));
     private readonly ILogger _logger = loggerFactory.CreateLogger<HostMcpServerHostedService>();
-    private readonly string _pipeName = McpPipeName.Format(Environment.ProcessId);
+    private readonly string _pipeName = HostPipeName.Format(
+        hostInfo.Host.ToString(),
+        hostInfo.VersionNumber,
+        Environment.ProcessId);
     private CancellationTokenSource? _stoppingSource;
     private Task? _acceptLoopTask;
     private int _nextSessionId;
