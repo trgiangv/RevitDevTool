@@ -384,9 +384,9 @@ public sealed class McpNamedPipeIntegrationTests
 
                 pytestCancellation.Cancel();
                 execution.Release.TrySetResult(true);
-                await Record.ExceptionAsync(() => pytestRun);
+                var pytestFailure = await Record.ExceptionAsync(() => pytestRun);
+                Assert.IsAssignableFrom<OperationCanceledException>(pytestFailure);
                 await pytest.DisposeAsync();
-                Assert.True(pytestCancellation.IsCancellationRequested);
 
                 var toolsAfterPytestDisconnects = await daemon.ListToolsAsync(TestContext.Current.CancellationToken);
                 Assert.Contains(toolsAfterPytestDisconnects, tool => tool.ProtocolTool.Name == "daemon_session_test");
@@ -435,21 +435,23 @@ public sealed class McpNamedPipeIntegrationTests
             var frame = BitConverter.GetBytes(legacyBridgeMessage.Length)
                 .Concat(legacyBridgeMessage)
                 .ToArray();
-            await pipe.WriteAsync(frame, TestContext.Current.CancellationToken);
-            await pipe.FlushAsync(TestContext.Current.CancellationToken);
-
-            using var timeout = CancellationTokenSource.CreateLinkedTokenSource(TestContext.Current.CancellationToken);
-            timeout.CancelAfter(TimeSpan.FromSeconds(5));
-            var response = new byte[1];
+            var connectionClosed = false;
             try
             {
-                var bytesRead = await pipe.ReadAsync(response, timeout.Token);
-                Assert.Equal(0, bytesRead);
+                await pipe.WriteAsync(frame, TestContext.Current.CancellationToken);
+                await pipe.FlushAsync(TestContext.Current.CancellationToken);
+
+                using var timeout = CancellationTokenSource.CreateLinkedTokenSource(TestContext.Current.CancellationToken);
+                timeout.CancelAfter(TimeSpan.FromSeconds(5));
+                var response = new byte[1];
+                connectionClosed = await pipe.ReadAsync(response, timeout.Token) == 0;
             }
-            catch (OperationCanceledException) when (timeout.IsCancellationRequested)
+            catch (IOException)
             {
-                // A standard MCP server may retain the transport while it ignores an invalid frame.
+                connectionClosed = true;
             }
+
+            Assert.True(connectionClosed, "The canonical MCP server must close a legacy length-prefixed frame.");
         }
         finally
         {

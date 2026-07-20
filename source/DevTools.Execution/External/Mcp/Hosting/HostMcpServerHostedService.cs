@@ -143,9 +143,78 @@ public sealed class HostMcpServerHostedService(
     private async Task RunSessionAsync(NamedPipeServerStream pipe, CancellationToken cancellationToken)
     {
         using var ownedPipe = pipe;
-        await using var transport = new StreamServerTransport(ownedPipe, ownedPipe, _pipeName, loggerFactory);
+        var input = await CreateMcpInputStreamAsync(ownedPipe, cancellationToken).ConfigureAwait(false);
+        if (input is null)
+            return;
+
+        await using var transport = new StreamServerTransport(input, ownedPipe, _pipeName, loggerFactory);
         await using var server = McpServer.Create(transport, optionsFactory.Create(), loggerFactory, serviceProvider);
         await server.RunAsync(cancellationToken).ConfigureAwait(false);
+    }
+
+    private async Task<Stream?> CreateMcpInputStreamAsync(NamedPipeServerStream pipe, CancellationToken cancellationToken)
+    {
+        var prefix = new byte[4];
+        var offset = 0;
+        while (offset < prefix.Length)
+        {
+            var read = await pipe.ReadAsync(prefix, offset, prefix.Length - offset, cancellationToken).ConfigureAwait(false);
+            if (read == 0)
+                return null;
+            offset += read;
+        }
+
+        if (prefix.Contains((byte)0))
+        {
+            _logger.LogWarning("Rejected a non-MCP frame on pipe '{PipeName}'.", _pipeName);
+            return null;
+        }
+
+        return new PrefixReadStream(pipe, prefix);
+    }
+
+    private sealed class PrefixReadStream(Stream inner, byte[] prefix) : Stream
+    {
+        private int _offset;
+
+        public override bool CanRead => inner.CanRead;
+        public override bool CanSeek => false;
+        public override bool CanWrite => inner.CanWrite;
+        public override long Length => throw new NotSupportedException();
+        public override long Position
+        {
+            get => throw new NotSupportedException();
+            set => throw new NotSupportedException();
+        }
+
+        public override void Flush() => inner.Flush();
+        public override Task FlushAsync(CancellationToken cancellationToken) => inner.FlushAsync(cancellationToken);
+        public override int Read(byte[] buffer, int offset, int count)
+        {
+            if (_offset >= prefix.Length)
+                return inner.Read(buffer, offset, count);
+
+            var copied = Math.Min(count, prefix.Length - _offset);
+            Buffer.BlockCopy(prefix, _offset, buffer, offset, copied);
+            _offset += copied;
+            return copied;
+        }
+
+        public override Task<int> ReadAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken) =>
+            _offset >= prefix.Length
+                ? inner.ReadAsync(buffer, offset, count, cancellationToken)
+                : Task.FromResult(Read(buffer, offset, count));
+
+        public override long Seek(long offset, SeekOrigin origin) => throw new NotSupportedException();
+        public override void SetLength(long value) => throw new NotSupportedException();
+        public override void Write(byte[] buffer, int offset, int count) => inner.Write(buffer, offset, count);
+        public override Task WriteAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken) =>
+            inner.WriteAsync(buffer, offset, count, cancellationToken);
+
+        protected override void Dispose(bool disposing)
+        {
+            // The owning session disposes the named pipe after the MCP transport has completed.
+        }
     }
 
     private static bool IsPipeInstancesBusy(IOException exception)
