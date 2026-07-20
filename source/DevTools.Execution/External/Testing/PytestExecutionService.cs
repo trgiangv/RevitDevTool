@@ -98,8 +98,17 @@ public class PytestExecutionService(PythonExecutor executor)
             pytestArgs);
     }
 
-    public virtual PytestRunResponse Run(PytestRunRequest request, Action<string>? progressCallback = null)
+    public virtual PytestRunResponse Run(
+        PytestRunRequest request,
+        Action<string>? progressCallback = null) =>
+        Run(request, progressCallback, CancellationToken.None);
+
+    public virtual PytestRunResponse Run(
+        PytestRunRequest request,
+        Action<string>? progressCallback,
+        CancellationToken cancellationToken)
     {
+        cancellationToken.ThrowIfCancellationRequested();
         var runnerRequest = new PytestRunnerRequest(
             request.WorkspaceRoot,
             request.TestRoot,
@@ -107,7 +116,7 @@ public class PytestExecutionService(PythonExecutor executor)
             request.PytestArgs,
             false);
 
-        return Execute<PytestRunResponse>(runnerRequest, request.TestRoot, progressCallback);
+        return Execute<PytestRunResponse>(runnerRequest, request.TestRoot, progressCallback, cancellationToken);
     }
 
     public static PytestRunResponse Error(string phase, string message, string? details = null)
@@ -120,8 +129,13 @@ public class PytestExecutionService(PythonExecutor executor)
             string.Empty);
     }
 
-    private T Execute<T>(PytestRunnerRequest request, string anchorPath, Action<string>? progressCallback = null)
+    private T Execute<T>(
+        PytestRunnerRequest request,
+        string anchorPath,
+        Action<string>? progressCallback,
+        CancellationToken cancellationToken)
     {
+        cancellationToken.ThrowIfCancellationRequested();
         var rootFolder = ResolveRootFolder(request);
         var anchorFile = ResolveAnchorFile(anchorPath, rootFolder);
 
@@ -130,11 +144,13 @@ public class PytestExecutionService(PythonExecutor executor)
             rootFolder,
             scope =>
             {
+                cancellationToken.ThrowIfCancellationRequested();
                 scope.Set(PythonInstances.PytestRequestJson, new PyString(JsonSerializer.Serialize(request)));
 
                 if (progressCallback is not null)
                     scope.Set(PythonInstances.ProgressCallback, progressCallback.ToPython());
 
+                cancellationToken.ThrowIfCancellationRequested();
                 scope.Exec(PythonEmbedded.PytestRunnerScript);
 
                 var resultJson = scope.Get(PythonInstances.ResultJson).As<string>();

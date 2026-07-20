@@ -47,10 +47,27 @@ public sealed class PytestRunTool(
         }
 
         var request = PytestExecutionService.NormalizeRunRequest(rawRequest);
+        var total = request.NodeIds.Count + 1;
+        var completed = 0;
+        var caseEvents = TryGetCaseEventContext(server, requestContext, out var progressToken);
+        progress?.Report(new ProgressNotificationValue
+        {
+            Progress = completed,
+            Total = total,
+            Message = "Preparing pytest dependencies."
+        });
+
         try
         {
             cancellationToken.ThrowIfCancellationRequested();
             await dependencyService.PrepareRunAsync(request, cancellationToken).ConfigureAwait(false);
+            completed++;
+            progress?.Report(new ProgressNotificationValue
+            {
+                Progress = completed,
+                Total = total,
+                Message = "Pytest dependencies are ready."
+            });
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
@@ -77,7 +94,18 @@ public sealed class PytestRunTool(
                 () =>
                 {
                     runnerStarted = true;
-                    return executionService.Run(request);
+                    return executionService.Run(
+                        request,
+                        resultJson => completed = PublishCaseResult(
+                            resultJson,
+                            progress,
+                            total,
+                            completed,
+                            caseEvents,
+                            server,
+                            progressToken,
+                            cancellationToken),
+                        cancellationToken);
                 },
                 cancellationToken).ConfigureAwait(false);
         }
@@ -107,6 +135,8 @@ public sealed class PytestRunTool(
             ExecutionGuardContext.Mode = previousMode;
         }
 
+        cancellationToken.ThrowIfCancellationRequested();
+
         try
         {
             var structuredContent = JsonSerializer.SerializeToElement(response);
@@ -132,4 +162,73 @@ public sealed class PytestRunTool(
         Content = [new TextContentBlock { Text = message }],
         StructuredContent = JsonSerializer.SerializeToElement(new { status = code })
     };
+
+    private static int PublishCaseResult(
+        string resultJson,
+        IProgress<ProgressNotificationValue>? progress,
+        int total,
+        int completed,
+        bool caseEvents,
+        McpServer? server,
+        ProgressToken progressToken,
+        CancellationToken cancellationToken)
+    {
+        if (cancellationToken.IsCancellationRequested)
+            return completed;
+
+        PytestCaseResult? caseResult;
+        try
+        {
+            caseResult = JsonSerializer.Deserialize<PytestCaseResult>(resultJson);
+        }
+        catch (JsonException)
+        {
+            return completed;
+        }
+
+        if (caseResult is null || cancellationToken.IsCancellationRequested)
+            return completed;
+
+        completed++;
+        progress?.Report(new ProgressNotificationValue
+        {
+            Progress = completed,
+            Total = total,
+            Message = caseResult.NodeId
+        });
+
+        if (!caseEvents || server is null || cancellationToken.IsCancellationRequested)
+            return completed;
+
+        server.SendNotificationAsync(
+                "notifications/devtools/pytest/case",
+                new PytestCaseEvent(progressToken, completed - 1, caseResult),
+                cancellationToken: cancellationToken)
+            .GetAwaiter()
+            .GetResult();
+
+        return completed;
+    }
+
+    private static bool TryGetCaseEventContext(
+        McpServer? server,
+        RequestContext<CallToolRequestParams>? requestContext,
+        out ProgressToken progressToken)
+    {
+        progressToken = default;
+        if (server?.ClientCapabilities?.Experimental is null
+            || requestContext?.Params?.ProgressToken is not { } requestProgressToken)
+        {
+            return false;
+        }
+
+        progressToken = requestProgressToken;
+        var experimental = JsonSerializer.SerializeToElement(server.ClientCapabilities.Experimental);
+        return experimental.TryGetProperty("devtools", out var devtools)
+               && devtools.TryGetProperty("pytest", out var pytest)
+               && pytest.TryGetProperty("caseEvents", out var caseEvents)
+               && caseEvents.TryGetProperty("version", out var version)
+               && version.ValueKind == JsonValueKind.String
+               && string.Equals(version.GetString(), "1", StringComparison.Ordinal);
+    }
 }

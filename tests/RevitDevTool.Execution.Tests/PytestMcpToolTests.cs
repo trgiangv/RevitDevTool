@@ -3,7 +3,9 @@ using DevTools.Execution.Abstractions;
 using DevTools.Execution.External.Mcp.BuiltIn;
 using DevTools.Execution.External.Testing;
 using Microsoft.Extensions.Logging.Abstractions;
+using ModelContextProtocol;
 using ModelContextProtocol.Protocol;
+using ModelContextProtocol.Server;
 
 namespace RevitDevTool.Execution.Tests;
 
@@ -126,8 +128,8 @@ public sealed class PytestMcpToolTests
         using var cancellation = new CancellationTokenSource();
         var tool = CreateTool(execution: new RecordingExecutionService(
             PassingCase(),
-            new OperationCanceledException(cancellation.Token),
-            cancellation.Cancel));
+            failure: new OperationCanceledException(cancellation.Token),
+            beforeFailure: cancellation.Cancel));
 
         await Assert.ThrowsAnyAsync<OperationCanceledException>(() => InvokeAsync(tool, cancellation.Token));
     }
@@ -144,6 +146,40 @@ public sealed class PytestMcpToolTests
         Assert.Equal(TestContext.Current.CancellationToken, host.ObservedToken);
     }
 
+    [Fact]
+    public async Task Progress_IsMonotonicAndStopsBeforeFinalResult()
+    {
+        var events = new List<string>();
+        var progress = new RecordingProgress(events);
+        var execution = new RecordingExecutionService(
+            PassingCases(2),
+            [PassingResult("tests/test_sample.py::first"), PassingResult("tests/test_sample.py::second")]);
+        var tool = CreateTool(execution: execution);
+
+        await InvokeAsync(
+            tool,
+            TestContext.Current.CancellationToken,
+            progress,
+            ["tests/test_sample.py::first", "tests/test_sample.py::second"]);
+        events.Add("result");
+
+        Assert.Equal([0f, 1f, 2f, 3f], progress.Values.Select(item => item.Progress));
+        Assert.All(progress.Values, item => Assert.Equal((float?)3f, item.Total));
+        Assert.Equal(["progress", "progress", "progress", "progress", "result"], events);
+    }
+
+    [Fact]
+    public async Task Cancellation_DuringExecutionCompletesCleanupBeforePropagation()
+    {
+        using var cancellation = new CancellationTokenSource();
+        var execution = new RecordingExecutionService(PassingCase(), beforeFailure: cancellation.Cancel);
+        var tool = CreateTool(execution: execution);
+
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() => InvokeAsync(tool, cancellation.Token));
+
+        Assert.True(execution.Executed);
+    }
+
     private static PytestRunTool CreateTool(
         PytestRunResponse? response = null,
         RecordingHostContextExecutor? host = null,
@@ -157,15 +193,19 @@ public sealed class PytestMcpToolTests
             NullLogger<PytestRunTool>.Instance);
     }
 
-    private static async Task<CallToolResult> InvokeAsync(PytestRunTool tool, CancellationToken cancellationToken = default)
+    private static async Task<CallToolResult> InvokeAsync(
+        PytestRunTool tool,
+        CancellationToken cancellationToken = default,
+        IProgress<ProgressNotificationValue>? progress = null,
+        string[]? nodeIds = null)
     {
         var workspaceRoot = Path.GetTempPath();
         return await tool.RunAsync(
             workspaceRoot,
             workspaceRoot,
-            ["tests/test_sample.py::test_runs"],
+            nodeIds ?? ["tests/test_sample.py::test_runs"],
             ["-q"],
-            null!,
+            progress!,
             null!,
             null!,
             cancellationToken == default ? TestContext.Current.CancellationToken : cancellationToken);
@@ -177,6 +217,15 @@ public sealed class PytestMcpToolTests
         [],
         [],
         Path.GetTempPath());
+
+    private static PytestRunResponse PassingCases(int count) => new(
+        0,
+        new PytestSummary(count, 0, 0, 0, 0, 0),
+        [],
+        [],
+        Path.GetTempPath());
+
+    private static PytestCaseResult PassingResult(string nodeId) => new(nodeId, "passed", "call", 1, "", "", "", "");
 
     private static PytestRunResponse OneFailedCase() => new(
         1,
@@ -219,18 +268,35 @@ public sealed class PytestMcpToolTests
 
     private sealed class RecordingExecutionService(
         PytestRunResponse response,
+        IReadOnlyList<PytestCaseResult>? progressResults = null,
         Exception? failure = null,
         Action? beforeFailure = null) : PytestExecutionService(null!)
     {
         public bool Executed { get; private set; }
 
-        public override PytestRunResponse Run(PytestRunRequest request, Action<string>? progressCallback = null)
+        public override PytestRunResponse Run(
+            PytestRunRequest request,
+            Action<string>? progressCallback,
+            CancellationToken cancellationToken)
         {
             Executed = true;
+            foreach (var progressResult in progressResults ?? [])
+                progressCallback?.Invoke(JsonSerializer.Serialize(progressResult));
             beforeFailure?.Invoke();
             if (failure is not null)
                 throw failure;
             return response;
+        }
+    }
+
+    private sealed class RecordingProgress(IList<string> events) : IProgress<ProgressNotificationValue>
+    {
+        public List<ProgressNotificationValue> Values { get; } = [];
+
+        public void Report(ProgressNotificationValue value)
+        {
+            Values.Add(value);
+            events.Add("progress");
         }
     }
 }

@@ -1,9 +1,11 @@
 using System.IO.Pipes;
 using System.Text.Json;
+using System.Text.Json.Nodes;
 using DevTools.Daemon.Mcp;
 using DevTools.Execution;
 using DevTools.Execution.External;
 using DevTools.Execution.External.Handlers;
+using DevTools.Execution.External.Mcp.BuiltIn;
 using DevTools.Execution.External.Mcp.Hosting;
 using DevTools.Execution.External.Testing;
 using DevTools.Logging;
@@ -342,6 +344,51 @@ public sealed class McpNamedPipeIntegrationTests
     }
 
     [Fact]
+    public async Task CaseEvents_DoNotCrossConcurrentSessions()
+    {
+        var hostInfo = new TestHostAppInfo();
+        var tool = new PytestRunTool(
+            new ImmediateHostContextExecutor(),
+            new ReadyDependencyService(),
+            new CaseEventExecutionService(),
+            NullLogger<PytestRunTool>.Instance);
+        var optionsFactory = new HostMcpServerOptionsFactory(hostInfo, [tool.Primitive], [], []);
+        using var serviceProvider = new ServiceCollection().BuildServiceProvider();
+        await using var hostedService = new HostMcpServerHostedService(
+            optionsFactory,
+            hostInfo,
+            NullLoggerFactory.Instance,
+            serviceProvider);
+
+        await hostedService.StartAsync(TestContext.Current.CancellationToken);
+        try
+        {
+            var pipeName = PipeName(hostInfo);
+            var firstCases = new List<string>();
+            var secondCases = new List<string>();
+            await using var first = await TestClientConnection.ConnectAsync(
+                pipeName,
+                CaseEventOptions(firstCases),
+                TestContext.Current.CancellationToken);
+            await using var second = await TestClientConnection.ConnectAsync(
+                pipeName,
+                CaseEventOptions(secondCases),
+                TestContext.Current.CancellationToken);
+
+            await Task.WhenAll(
+                RunPytestAsync(first.Client, "first", TestContext.Current.CancellationToken),
+                RunPytestAsync(second.Client, "second", TestContext.Current.CancellationToken));
+
+            Assert.Equal(["first"], firstCases);
+            Assert.Equal(["second"], secondCases);
+        }
+        finally
+        {
+            await hostedService.StopAsync(TestContext.Current.CancellationToken);
+        }
+    }
+
+    [Fact]
     public async Task HostMcpSession_PreCancelledConnectFailsImmediately()
     {
         using var cancelled = new CancellationTokenSource();
@@ -483,7 +530,15 @@ public sealed class McpNamedPipeIntegrationTests
 
         public McpClient Client { get; } = client;
 
-        public static async Task<TestClientConnection> ConnectAsync(string pipeName, CancellationToken ct)
+        public static async Task<TestClientConnection> ConnectAsync(
+            string pipeName,
+            CancellationToken ct) =>
+            await ConnectAsync(pipeName, null, ct);
+
+        public static async Task<TestClientConnection> ConnectAsync(
+            string pipeName,
+            McpClientOptions? options,
+            CancellationToken ct)
         {
             var pipe = new NamedPipeClientStream(".", pipeName, PipeDirection.InOut, PipeOptions.Asynchronous);
             McpClient? client = null;
@@ -493,7 +548,7 @@ public sealed class McpNamedPipeIntegrationTests
                 var transport = new StreamClientTransport(pipe, pipe, NullLoggerFactory.Instance);
                 client = await McpClient.CreateAsync(
                     transport,
-                    new McpClientOptions
+                    options ?? new McpClientOptions
                     {
                         ClientInfo = new Implementation { Name = "integration-test", Version = "1.0" }
                     },
@@ -516,6 +571,96 @@ public sealed class McpNamedPipeIntegrationTests
 
             await Client.DisposeAsync();
             await pipe.DisposeAsync();
+        }
+    }
+
+    private static McpClientOptions CaseEventOptions(ICollection<string> cases) => new()
+    {
+        ClientInfo = new Implementation { Name = "case-event-client", Version = "1.0" },
+        Capabilities = new ClientCapabilities
+        {
+            Experimental = new Dictionary<string, object>
+            {
+                ["devtools"] = JsonSerializer.SerializeToElement(new
+                {
+                    pytest = new { caseEvents = new { version = "1" } }
+                })
+            }
+        },
+        Handlers = new McpClientHandlers
+        {
+            NotificationHandlers = new Dictionary<string, Func<JsonRpcNotification, CancellationToken, ValueTask>>
+            {
+                ["notifications/devtools/pytest/case"] = (notification, _) =>
+                {
+                    cases.Add(notification.Params!["case"]!["nodeid"]!.GetValue<string>());
+                    return ValueTask.CompletedTask;
+                }
+            }
+        }
+    };
+
+    private static Task<CallToolResult> RunPytestAsync(McpClient client, string nodeId, CancellationToken cancellationToken) =>
+        client.CallToolAsync(
+            new CallToolRequestParams
+            {
+                Name = "pytest_run",
+                Meta = new JsonObject { ["progressToken"] = nodeId },
+                Arguments = new Dictionary<string, JsonElement>
+                {
+                    ["workspace_root"] = JsonSerializer.SerializeToElement(Path.GetTempPath()),
+                    ["test_root"] = JsonSerializer.SerializeToElement(Path.GetTempPath()),
+                    ["nodeids"] = JsonSerializer.SerializeToElement(new[] { nodeId }),
+                    ["pytest_args"] = JsonSerializer.SerializeToElement(Array.Empty<string>())
+                }
+            },
+            cancellationToken).AsTask();
+
+    private sealed class ImmediateHostContextExecutor : IHostContextExecutor
+    {
+        public Task<T> ExecuteAsync<T>(Func<T> handler, CancellationToken token = default)
+        {
+            token.ThrowIfCancellationRequested();
+            return Task.FromResult(handler());
+        }
+
+        public Task ExecuteAsync(Action action, CancellationToken token = default)
+        {
+            token.ThrowIfCancellationRequested();
+            action();
+            return Task.CompletedTask;
+        }
+    }
+
+    private sealed class ReadyDependencyService : PytestDependencyService
+    {
+        public ReadyDependencyService() : base(null!) { }
+
+        public override Task PrepareRunAsync(PytestRunRequest request, CancellationToken cancellationToken = default)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            return Task.CompletedTask;
+        }
+    }
+
+    private sealed class CaseEventExecutionService : PytestExecutionService
+    {
+        public CaseEventExecutionService() : base(null!) { }
+
+        public override PytestRunResponse Run(
+            PytestRunRequest request,
+            Action<string>? progressCallback,
+            CancellationToken cancellationToken)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            progressCallback?.Invoke(JsonSerializer.Serialize(new PytestCaseResult(
+                request.NodeIds[0], "passed", "call", 1, "", "", "", "")));
+            return new PytestRunResponse(
+                0,
+                new PytestSummary(1, 0, 0, 0, 0, 0),
+                [],
+                [],
+                request.TestRoot);
         }
     }
 
