@@ -24,7 +24,8 @@ multiple machines are online, an unpinned initialize is rejected; `GET
 
 The gateway applies exact-origin allowlist CORS, JWT validation, a 1 MiB POST
 limit, and per-user rate limiting. It exposes session/protocol/request headers
-to browsers. The daemon/WebSocket tunnel carries only opaque v2 envelopes:
+to browsers. Each daemon send is one JSON WebSocket text message containing one
+opaque v2 envelope (not newline-delimited framing):
 
 | Frame | Meaning |
 |---|---|
@@ -42,3 +43,6 @@ an old socket close cannot remove the replacement.
 There is no v1 tunnel compatibility or raw unscoped JSON-RPC fallback. A live
 two-client smoke run requires configured OIDC credentials, an allowed browser
 origin, and a daemon tunnel; static checks cannot prove that deployment path.
+Malformed daemon text envelopes are dropped before dispatch. A well-formed
+duplicate open or `mcp.message` for an unknown daemon session receives
+`session.closed: unknown_session`; an unknown Gateway HTTP session is `404`.

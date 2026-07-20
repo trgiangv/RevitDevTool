@@ -18,9 +18,11 @@ responses are wrapped with that same `session_id`. Therefore two clients can
 both use JSON-RPC ID `1` without sharing server state.
 
 `session.close`, daemon shutdown, and tunnel loss deterministically dispose
-only the affected server (or all on carrier shutdown). Unknown messages receive
-`session.closed` with `unknown_session`. The daemon accepts/sends only v2
-envelopes; raw v1 relay frames are not compatible.
+only the affected server (or all on carrier shutdown). A malformed text
+envelope is dropped before dispatch; a well-formed duplicate `session.open` or
+`mcp.message` for an unknown session receives `session.closed` with
+`unknown_session`. The daemon accepts/sends only v2 envelopes; raw v1 relay
+frames are not compatible.
 
 ## Routing boundaries
 
