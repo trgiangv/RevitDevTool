@@ -26,7 +26,7 @@ public sealed class PytestMcpToolTests
     {
         var tool = CreateTool(response: OneFailedCase());
 
-        var result = await InvokeAsync(tool);
+        var result = await InvokeAsync(tool, TestContext.Current.CancellationToken);
 
         Assert.NotEqual(true, result.IsError);
         Assert.Equal(1, result.StructuredContent!.Value.GetProperty("exit_code").GetInt32());
@@ -103,11 +103,33 @@ public sealed class PytestMcpToolTests
     {
         var tool = CreateTool(dependencies: new RecordingDependencyService(new InvalidOperationException("Pixi unavailable")));
 
-        var result = await InvokeAsync(tool);
+        var result = await InvokeAsync(tool, TestContext.Current.CancellationToken);
 
         Assert.True(result.IsError);
         Assert.Equal(PytestMcpErrorCodes.DependencyPreparationFailed, result.StructuredContent!.Value.GetProperty("status").GetString());
         Assert.DoesNotContain("Pixi unavailable", Assert.IsType<TextContentBlock>(Assert.Single(result.Content)).Text, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task CallerCancellationDuringPreparation_IsPropagatedInsteadOfReturningInfrastructureError()
+    {
+        using var cancellation = new CancellationTokenSource();
+        cancellation.Cancel();
+        var tool = CreateTool();
+
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() => InvokeAsync(tool, cancellation.Token));
+    }
+
+    [Fact]
+    public async Task CallerCancellationDuringRunner_IsPropagatedInsteadOfReturningInfrastructureError()
+    {
+        using var cancellation = new CancellationTokenSource();
+        var tool = CreateTool(execution: new RecordingExecutionService(
+            PassingCase(),
+            new OperationCanceledException(cancellation.Token),
+            cancellation.Cancel));
+
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() => InvokeAsync(tool, cancellation.Token));
     }
 
     [Fact]
@@ -116,7 +138,7 @@ public sealed class PytestMcpToolTests
         var host = new RecordingHostContextExecutor();
         var tool = CreateTool(host: host);
 
-        await InvokeAsync(tool);
+        await InvokeAsync(tool, TestContext.Current.CancellationToken);
 
         Assert.Equal(ExecutionGuardMode.Suppress, host.ObservedMode);
         Assert.Equal(TestContext.Current.CancellationToken, host.ObservedToken);
@@ -135,7 +157,7 @@ public sealed class PytestMcpToolTests
             NullLogger<PytestRunTool>.Instance);
     }
 
-    private static async Task<CallToolResult> InvokeAsync(PytestRunTool tool)
+    private static async Task<CallToolResult> InvokeAsync(PytestRunTool tool, CancellationToken cancellationToken = default)
     {
         var workspaceRoot = Path.GetTempPath();
         return await tool.RunAsync(
@@ -146,7 +168,7 @@ public sealed class PytestMcpToolTests
             null!,
             null!,
             null!,
-            TestContext.Current.CancellationToken);
+            cancellationToken == default ? TestContext.Current.CancellationToken : cancellationToken);
     }
 
     private static PytestRunResponse PassingCase() => new(
@@ -195,13 +217,19 @@ public sealed class PytestMcpToolTests
         }
     }
 
-    private sealed class RecordingExecutionService(PytestRunResponse response) : PytestExecutionService(null!)
+    private sealed class RecordingExecutionService(
+        PytestRunResponse response,
+        Exception? failure = null,
+        Action? beforeFailure = null) : PytestExecutionService(null!)
     {
         public bool Executed { get; private set; }
 
         public override PytestRunResponse Run(PytestRunRequest request, Action<string>? progressCallback = null)
         {
             Executed = true;
+            beforeFailure?.Invoke();
+            if (failure is not null)
+                throw failure;
             return response;
         }
     }

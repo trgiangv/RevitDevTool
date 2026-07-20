@@ -52,8 +52,13 @@ public sealed class PytestRunTool(
             cancellationToken.ThrowIfCancellationRequested();
             await dependencyService.PrepareRunAsync(request, cancellationToken).ConfigureAwait(false);
         }
-        catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
+            throw;
+        }
+        catch (OperationCanceledException ex)
+        {
+            logger.LogInformation(ex, "Host shut down while preparing pytest MCP run dependencies.");
             return InfrastructureError(PytestMcpErrorCodes.HostShuttingDown, "The host is shutting down.");
         }
         catch (Exception ex)
@@ -76,8 +81,13 @@ public sealed class PytestRunTool(
                 },
                 cancellationToken).ConfigureAwait(false);
         }
-        catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
+            throw;
+        }
+        catch (OperationCanceledException ex)
+        {
+            logger.LogInformation(ex, "Host shut down while executing pytest MCP run.");
             return InfrastructureError(PytestMcpErrorCodes.HostShuttingDown, "The host is shutting down.");
         }
         catch (ObjectDisposedException ex)
