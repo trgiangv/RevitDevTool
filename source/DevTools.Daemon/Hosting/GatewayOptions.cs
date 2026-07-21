@@ -10,5 +10,5 @@ public sealed class GatewayOptions
 
     public string Url { get; init; } = string.Empty;
 
-    public string HttpBaseUrl => Url.Replace(WssScheme, HttpsScheme).Replace(DaemonConstants.RoutePaths.Tunnel, string.Empty);
+    public string HttpBaseUrl => Url.Replace(WssScheme, HttpsScheme).Replace(GatewayRouteConstants.Tunnel, string.Empty);
 }

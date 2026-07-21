@@ -2,17 +2,30 @@
 
 ## Ownership
 
-- `source/DevTools.Execution/` owns shared execution, the host MCP server, and
-  pytest host execution services.
+- `source/DevTools.Execution/` owns shared execution runtime (providers, orchestrator, script engines).
+- `source/DevTools.Execution.Pytest/` owns host-side pytest runner, `pytest_run` tool, and embedded `PytestRunner.py`.
 - `source/DevTools.Execution.Abstractions/` owns host-neutral execution
-  contracts such as `IHostContextExecutor`.
+  contracts such as `IHostContextExecutor` and `TextHighlightRange`.
 - `source/DevTools.Ipc/` owns current-user named-pipe security and the
   canonical `HostPipeName` contract; it owns no MCP DTOs or legacy framed lane.
 - `source/DevTools.Mcp/` owns host-neutral catalog and Broker routing.
+- `source/DevTools.Mcp.Hosting/` owns the in-host named-pipe MCP server accept loop
+  (`HostMcpServerHostedService`) — not Execution.
 - `source/DevTools.Daemon/` owns the external MCP server, host sessions,
   gateway lifecycle, and product-neutral `IHostDriver` routing.
 - Host projects own Revit/AutoCAD APIs, API-thread implementations,
   transactions, and rendering.
+- WPF UI concerns (`DevTools.UI`, Presentation) must not be referenced by Execution.
+
+## DI composition
+
+Hosts call, in order:
+
+1. `AddExecutionCore` — providers/orchestrator/script runtimes
+2. `AddInHostMcpServer` — catalog + built-in execute tools + pipe server
+3. `AddPytestHostRunner` — pytest MCP (from `DevTools.Execution.Pytest`)
+
+`AddExecutionServices()` remains a shim for (1)+(2) only.
 
 ## Runtime boundaries
 
@@ -23,6 +36,12 @@
 - `DevToolsDaemon_Control` is a separate control-only pipe.
 - Gateway `machine_id` binds an HTTP MCP session at initialize time; Broker
   `hostId` selects a host PID only within that daemon.
+
+## Wave 2 decorator seams (in-host)
+
+- Primary: `McpHostExecutionPrimitives` in `DevTools.Mcp`
+- Built-in guard: `BuiltInToolExecution` in `DevTools.Mcp`
+- Pipe accept: `HostMcpServerHostedService` in `DevTools.Mcp.Hosting`
 
 ## Review checklist
 

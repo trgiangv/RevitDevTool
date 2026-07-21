@@ -24,7 +24,7 @@ public sealed class ListMachinesTool(IAuthService authService, IOptions<GatewayO
 
         try
         {
-            var url = $"{gatewayOptions.Value.HttpBaseUrl}{DaemonConstants.RoutePaths.Machines}";
+            var url = $"{gatewayOptions.Value.HttpBaseUrl}{GatewayRouteConstants.Machines}";
             using var httpRequest = new HttpRequestMessage(HttpMethod.Get, url);
             httpRequest.Headers.Authorization = new AuthenticationHeaderValue(GatewayTunnelClient.BearerScheme, token);
 

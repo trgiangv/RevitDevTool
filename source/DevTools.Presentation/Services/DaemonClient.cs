@@ -42,7 +42,7 @@ public static class DaemonClient
 #else
             using var pipe = new NamedPipeClientStream(
 #endif
-                ".", DaemonConstants.ControlPipeName, PipeDirection.InOut, PipeOptions.Asynchronous);
+                ".", ControlPipeConstants.ControlPipeName, PipeDirection.InOut, PipeOptions.Asynchronous);
             await pipe.ConnectAsync(ConnectTimeoutMs, ct).ConfigureAwait(false);
 
             var request = Encoding.UTF8.GetBytes($"{{\"method\":\"{method}\"}}\n");
@@ -82,7 +82,7 @@ public static class DaemonClient
 #else
             using var pipe = new NamedPipeClientStream(
 #endif
-                ".", DaemonConstants.ControlPipeName, PipeDirection.InOut, PipeOptions.Asynchronous);
+                ".", ControlPipeConstants.ControlPipeName, PipeDirection.InOut, PipeOptions.Asynchronous);
             await pipe.ConnectAsync(QuickProbeTimeoutMs, ct).ConfigureAwait(false);
             return true;
         }

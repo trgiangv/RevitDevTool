@@ -1,6 +1,7 @@
 using System.IO;
 using System.Text.Json;
 using DevTools.Execution.Providers.Python;
+using DevTools.Execution.Pytest;
 using Python.Runtime;
 // ReSharper disable ConditionalAccessQualifierIsNonNullableAccordingToAPIContract
 
@@ -151,7 +152,7 @@ public class PytestExecutionService(PythonExecutor executor)
                     scope.Set(PythonInstances.ProgressCallback, progressCallback.ToPython());
 
                 cancellationToken.ThrowIfCancellationRequested();
-                scope.Exec(PythonEmbedded.PytestRunnerScript);
+                scope.Exec(PytestEmbedded.PytestRunnerScript);
 
                 var resultJson = scope.Get(PythonInstances.ResultJson).As<string>();
                 var response = JsonSerializer.Deserialize<T>(resultJson, RequestOptions);

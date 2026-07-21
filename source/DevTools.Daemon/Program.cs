@@ -8,7 +8,7 @@ internal static class Program
     [STAThread]
     public static int Main(string[] args)
     {
-        if (args.Contains(DaemonConstants.StdioArg, StringComparer.OrdinalIgnoreCase))
+        if (args.Contains(TrayUiConstants.StdioArg, StringComparer.OrdinalIgnoreCase))
             return RunStdioAsync(args).GetAwaiter().GetResult();
 
         var app = new App();

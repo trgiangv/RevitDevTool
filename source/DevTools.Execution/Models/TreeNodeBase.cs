@@ -1,6 +1,6 @@
 using System.Collections.ObjectModel;
 using DevTools.Execution.Interfaces;
-using DevTools.UI.Behaviors;
+
 namespace DevTools.Execution.Models;
 
 /// <summary>
@@ -21,7 +21,7 @@ public abstract partial class TreeNodeBase : ObservableObject
     public partial bool IsVisible { get; set; } = true;
 
     [ObservableProperty]
-    public partial HighlightRange? HighlightRange { get; set; }
+    public partial TextHighlightRange? HighlightRange { get; set; }
     public abstract IEnumerable<TreeNodeBase> ChildNodes { get; }
 }
 

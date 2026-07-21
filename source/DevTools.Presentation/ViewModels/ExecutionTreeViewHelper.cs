@@ -1,5 +1,6 @@
+using DevTools.Execution.Abstractions;
 using DevTools.Execution.Models;
-using DevTools.UI.Behaviors;
+
 namespace DevTools.Presentation.ViewModels;
 
 internal static class ExecutionTreeViewHelper
@@ -45,7 +46,7 @@ internal static class ExecutionTreeViewHelper
         var currentMatches = index >= 0;
 
         node.HighlightRange = currentMatches
-            ? new HighlightRange(index, index + search.Length) { DarkSkin = isDarkTheme }
+            ? new TextHighlightRange(index, index + search.Length) { DarkSkin = isDarkTheme }
             : null;
 
         if (currentMatches)

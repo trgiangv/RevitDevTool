@@ -127,7 +127,9 @@ internal static class RevitHostingExtensions
         services.AddSingleton<IPythonBridge, RevitPythonBridge>();
         services.AddSingleton<IIronPythonBridge, RevitIronPythonBridge>();
 
-        services.AddExecutionServices(registerDefaultScriptProvider: false);
+        services.AddExecutionCore(registerDefaultScriptProvider: false);
+        services.AddInHostMcpServer();
+        services.AddPytestHostRunner();
         services.AddSingleton<IScriptExecutionStrategyFactory, RevitScriptExecutionStrategyFactory>();
         services.AddSingleton<IExecutionProvider, ScriptExecutionProvider>();
         services.AddKeyedSingleton<IExecutionProvider, ScriptExecutionProvider>(ContainerMode.Script);

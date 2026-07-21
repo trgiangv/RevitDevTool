@@ -31,6 +31,7 @@
     <ItemGroup>
         <ProjectReference Include="..\..\source\DevTools.Execution.Abstractions\DevTools.Execution.Abstractions.csproj" />
         <ProjectReference Include="..\..\source\DevTools.Execution\DevTools.Execution.csproj" />
+        <ProjectReference Include="..\..\source\DevTools.Execution.Pytest\DevTools.Execution.Pytest.csproj" />
         <ProjectReference Include="..\..\source\DevTools.Agents.Revit\DevTools.Agents.Revit.csproj">
             <Aliases>RevitAgents</Aliases>
         </ProjectReference>

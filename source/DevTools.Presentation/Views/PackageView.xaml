@@ -7,7 +7,7 @@
              xmlns:design="clr-namespace:DevTools.UI.Theme.Design;assembly=DevTools.UI"
              xmlns:mah="http://metro.devtools.ui/winfx/xaml/controls"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-             xmlns:models="http://devtools.execution/models"
+             xmlns:models="clr-namespace:DevTools.Execution.Models;assembly=DevTools.Execution"
              xmlns:viewModels="clr-namespace:DevTools.Presentation.ViewModels"
              d:DataContext="{d:DesignInstance viewModels:PackageViewModel}"
              d:DesignHeight="500"
