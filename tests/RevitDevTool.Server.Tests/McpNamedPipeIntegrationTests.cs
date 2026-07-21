@@ -58,6 +58,62 @@ public sealed class HostPipeNameTests
     [InlineData(-1)]
     public void Format_RejectsNonPositiveProcessId(int pid) =>
         Assert.Throws<ArgumentOutOfRangeException>(() => HostPipeName.Format("Revit", "2025", pid));
+
+    [Theory]
+    [InlineData("DevTools_Revit_2025_4217", "Revit", "2025", 4217)]
+    [InlineData("devtools_AutoCad_2026_99", "AutoCad", "2026", 99)]
+    public void TryParse_AcceptsCaseInsensitivePrefixAndPreservesSegments(
+        string name,
+        string expectedHost,
+        string expectedVersion,
+        int expectedPid)
+    {
+        Assert.True(HostPipeName.TryParse(name, out var host, out var version, out var pid));
+        Assert.Equal((expectedHost, expectedVersion, expectedPid), (host, version, pid));
+    }
+
+    [Theory]
+    [InlineData("Revit", "revit", true)]
+    [InlineData("AutoCad", "AUTOCAD", true)]
+    [InlineData("Revit", "Rhino", false)]
+    public void HostSegmentEquals_IsCaseInsensitive(string left, string right, bool expected) =>
+        Assert.Equal(expected, HostPipeName.HostSegmentEquals(left, right));
+
+    [Theory]
+    [InlineData("2025", "2025", true)]
+    [InlineData("2025", "2025.1", false)]
+    public void VersionSegmentEquals_IsCaseInsensitive(string left, string right, bool expected) =>
+        Assert.Equal(expected, HostPipeName.VersionSegmentEquals(left, right));
+
+    [Fact]
+    public void IdentityEquals_MatchesCaseInsensitiveHostAndVersion()
+    {
+        Assert.True(HostPipeName.IdentityEquals("Revit", "2025", 42, "revit", "2025", 42));
+        Assert.False(HostPipeName.IdentityEquals("Revit", "2025", 42, "Revit", "2025", 43));
+        Assert.False(HostPipeName.IdentityEquals("Revit", "2025", 42, "AutoCad", "2025", 42));
+    }
+
+    [Theory]
+    [MemberData(nameof(RegisteredHostPipePrefixes))]
+    public void Format_UsesHostAppPublishCasing(string hostPrefix)
+    {
+        const string version = "2025";
+        const int pid = 4217;
+        var pipeName = HostPipeName.Format(hostPrefix, version, pid);
+
+        Assert.Equal($"DevTools_{hostPrefix}_{version}_{pid}", pipeName);
+        Assert.True(HostPipeName.TryParse(pipeName, out var host, out var parsedVersion, out var parsedPid));
+        Assert.Equal((hostPrefix, version, pid), (host, parsedVersion, parsedPid));
+        Assert.True(HostPipeName.HostSegmentEquals(hostPrefix, host));
+    }
+
+    public static TheoryData<string> RegisteredHostPipePrefixes()
+    {
+        var data = new TheoryData<string>();
+        foreach (var host in Enum.GetValues<HostApp>())
+            data.Add(host.ToString());
+        return data;
+    }
 }
 
 public sealed class ExecutionServiceRegistrationTests
