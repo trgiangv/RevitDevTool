@@ -27,20 +27,20 @@ public sealed class ControlPipeHandler(IAuthService authService, McpEngine mcpEn
 
             return method switch
             {
-                DaemonConstants.Methods.Status => JsonSerializer.Serialize(new StatusResponse(
+                ControlPipeConstants.Methods.Status => JsonSerializer.Serialize(new StatusResponse(
                     true, typeof(ControlPipeHandler).Assembly.GetName().Version?.ToString() ?? DefaultVersion)),
-                DaemonConstants.Methods.AuthState => JsonSerializer.Serialize(new AuthStateResponse(
+                ControlPipeConstants.Methods.AuthState => JsonSerializer.Serialize(new AuthStateResponse(
                     authService.IsAuthenticated, authService.UserId, authService.Email, authService.DisplayName, authService.AvatarUrl)),
-                DaemonConstants.Methods.SignIn => await HandleSignInAsync(ct).ConfigureAwait(false),
-                DaemonConstants.Methods.SignOut => await HandleSignOutAsync().ConfigureAwait(false),
-                DaemonConstants.Methods.ConnectedHosts => HandleConnectedHosts(),
-                DaemonConstants.Methods.OpenDashboard => HandleOpenDashboard(),
-                _ => JsonSerializer.Serialize(new ErrorResponse(DaemonConstants.Errors.UnknownMethod))
+                ControlPipeConstants.Methods.SignIn => await HandleSignInAsync(ct).ConfigureAwait(false),
+                ControlPipeConstants.Methods.SignOut => await HandleSignOutAsync().ConfigureAwait(false),
+                ControlPipeConstants.Methods.ConnectedHosts => HandleConnectedHosts(),
+                ControlPipeConstants.Methods.OpenDashboard => HandleOpenDashboard(),
+                _ => JsonSerializer.Serialize(new ErrorResponse(ControlPipeConstants.Errors.UnknownMethod))
             };
         }
         catch (JsonException)
         {
-            return JsonSerializer.Serialize(new ErrorResponse(DaemonConstants.Errors.InvalidRequest));
+            return JsonSerializer.Serialize(new ErrorResponse(ControlPipeConstants.Errors.InvalidRequest));
         }
     }
 
@@ -78,7 +78,7 @@ public sealed class ControlPipeHandler(IAuthService authService, McpEngine mcpEn
 
         app.Dispatcher.Invoke(() =>
         {
-            if (app.FindResource(DaemonConstants.TrayIconResourceKey) is TaskbarIcon { DataContext: TrayViewModel vm })
+            if (app.FindResource(TrayUiConstants.TrayIconResourceKey) is TaskbarIcon { DataContext: TrayViewModel vm })
                 vm.OpenDashboardCommand.Execute(null);
         });
 

@@ -1,12 +1,11 @@
 using System.Collections.Concurrent;
 using System.IO;
 using System.IO.Pipes;
-using DevTools.Logging;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using ModelContextProtocol.Server;
 
-namespace DevTools.Execution.External.Mcp.Hosting;
+namespace DevTools.Mcp.Hosting;
 
 public sealed class HostMcpServerHostedService(
     HostMcpServerOptionsFactory optionsFactory,
@@ -166,7 +165,9 @@ public sealed class HostMcpServerHostedService(
 
         if (prefix.Contains((byte)0))
         {
-            _logger.LogWarning("Rejected a non-MCP frame on pipe '{PipeName}'.", _pipeName);
+            _logger.LogWarning(
+                "Rejected a non-MCP frame on pipe '{PipeName}'. Clients must speak standard MCP NDJSON; legacy framed bridges are not supported.",
+                _pipeName);
             return null;
         }
 

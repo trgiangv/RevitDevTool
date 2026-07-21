@@ -6,7 +6,7 @@
              xmlns:converters="clr-namespace:DevTools.Presentation.Converters"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:design="clr-namespace:DevTools.UI.Theme.Design;assembly=DevTools.UI"
-             xmlns:executionModels="http://devtools.execution/models"
+             xmlns:executionModels="clr-namespace:DevTools.Execution.Models;assembly=DevTools.Execution"
              xmlns:mah="http://metro.devtools.ui/winfx/xaml/controls"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:viewModels="clr-namespace:DevTools.Presentation.ViewModels"

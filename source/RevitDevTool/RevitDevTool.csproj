@@ -43,6 +43,7 @@
         <ProjectReference Include="..\DevTools.Logging\DevTools.Logging.csproj" />
         <ProjectReference Include="..\DevTools.Settings\DevTools.Settings.csproj" />
         <ProjectReference Include="..\DevTools.Execution\DevTools.Execution.csproj" />
+        <ProjectReference Include="..\DevTools.Execution.Pytest\DevTools.Execution.Pytest.csproj" />
         <ProjectReference Include="..\DevTools.Telemetry\DevTools.Telemetry.csproj" />
         <ProjectReference Include="..\DevTools.Execution.Abstractions\DevTools.Execution.Abstractions.csproj" />
         <ProjectReference Include="..\..\libs\pythonnet-stub-generator\csharp\PythonNetStubGenerator\PythonNetStubGenerator.csproj" />
@@ -54,6 +55,7 @@
         <Using Include="CommunityToolkit.Mvvm.ComponentModel" />
         <Using Include="CommunityToolkit.Mvvm.Input" />
         <Using Include="DevTools.Execution.Abstractions" />
+        <Using Include="DevTools.Execution.Pytest" />
     </ItemGroup>
 
     <!-- Start Revit -->

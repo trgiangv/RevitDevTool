@@ -84,7 +84,9 @@ internal static class AcadHostingExtensions
         services.AddSingleton<IPythonBridge, AcadPythonBridge>();
         services.AddSingleton<IIronPythonBridge, AcadIronPythonBridge>();
 
-        services.AddExecutionServices();
+        services.AddExecutionCore();
+        services.AddInHostMcpServer();
+        services.AddPytestHostRunner();
 
         services.AddSingleton<IBuiltInMcpResource, AcadCSharpCheatsheet>();
         services.AddSingleton<IBuiltInMcpResource, AcadPythonCheatsheet>();

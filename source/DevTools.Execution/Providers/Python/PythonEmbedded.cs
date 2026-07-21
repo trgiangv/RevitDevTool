@@ -30,7 +30,6 @@ public static class PythonEmbedded
     private static string ParserSourcePath => $"{ExecutionScriptsPrefix}.Parser.py";
     private static string ToolParserSourcePath => $"{ExecutionScriptsPrefix}.ToolParser.py";
     private static string ToolInvokeSourcePath => $"{ExecutionScriptsPrefix}.ToolInvoke.py";
-    private static string PytestRunnerSourcePath => $"{ExecutionScriptsPrefix}.PytestRunner.py";
 
     private static string SetupSourcePath => _host switch
     {
@@ -47,7 +46,6 @@ public static class PythonEmbedded
     public static string ParserScriptPath => TryGetCached(ParserSourcePath, ScriptPathCache);
     public static string PixiTomlPath => TryGetCached(PixiTomlSourcePath, ScriptPathCache);
     public static string ToolInvokeScript => TryGetCached(ToolInvokeSourcePath, ScriptCache);
-    public static string PytestRunnerScript => TryGetCached(PytestRunnerSourcePath, ScriptCache);
     public static string SetupScript => TryGetCached(SetupSourcePath, ScriptCache);
     public static string ResetScript => TryGetCached(ResetSourcePath, ScriptCache);
     public static string ToolParserScript => TryGetCached(ToolParserSourcePath, ScriptCache);
@@ -56,7 +54,6 @@ public static class PythonEmbedded
     [
         ToolParserSourcePath,
         ToolInvokeSourcePath,
-        PytestRunnerSourcePath,
         SetupSourcePath,
         ResetSourcePath
     ];

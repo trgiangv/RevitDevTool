@@ -29,13 +29,13 @@ public partial class App
             _host = DaemonHostBuilder.CreateTrayHost(singleInstance);
             await _host.StartAsync();
 
-            var trayIcon = (TaskbarIcon)FindResource(DaemonConstants.TrayIconResourceKey)!;
+            var trayIcon = (TaskbarIcon)FindResource(TrayUiConstants.TrayIconResourceKey)!;
             trayIcon.ForceCreate();
             trayIcon.DataContext = _host.Services.GetRequiredService<TrayViewModel>();
         }
         catch (Exception ex)
         {
-            MessageBox.Show(ex.ToString(), DaemonConstants.StartupErrorTitle,
+            MessageBox.Show(ex.ToString(), TrayUiConstants.StartupErrorTitle,
                 MessageBoxButton.OK, MessageBoxImage.Error);
             Shutdown(1);
         }
@@ -47,7 +47,7 @@ public partial class App
         {
             if (_host is not null)
             {
-                await _host.StopAsync(TimeSpan.FromSeconds(DaemonConstants.ShutdownTimeoutSeconds));
+                await _host.StopAsync(TimeSpan.FromSeconds(TrayUiConstants.ShutdownTimeoutSeconds));
                 _host.Dispose();
             }
         }

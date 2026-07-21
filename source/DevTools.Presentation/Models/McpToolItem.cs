@@ -1,4 +1,5 @@
-using DevTools.UI.Behaviors;
+using DevTools.Execution.Abstractions;
+
 namespace DevTools.Presentation.Models;
 
 public partial class McpToolItem : ObservableObject
@@ -25,8 +26,8 @@ public partial class McpToolItem : ObservableObject
     public partial int CallCount { get; set; }
 
     [ObservableProperty]
-    public partial HighlightRange? NameHighlight { get; set; }
+    public partial TextHighlightRange? NameHighlight { get; set; }
 
     [ObservableProperty]
-    public partial HighlightRange? GroupNameHighlight { get; set; }
+    public partial TextHighlightRange? GroupNameHighlight { get; set; }
 }

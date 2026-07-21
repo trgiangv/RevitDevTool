@@ -1,0 +1,24 @@
+<Project Sdk="Microsoft.NET.Sdk">
+    <PropertyGroup>
+        <TargetFrameworks>net48;net8.0-windows;net10.0-windows</TargetFrameworks>
+        <NoWarn>$(NoWarn);MCPEXP001</NoWarn>
+        <RootNamespace>DevTools.Mcp.Hosting</RootNamespace>
+        <AssemblyName>DevTools.Mcp.Hosting</AssemblyName>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <PackageReference Include="ModelContextProtocol"/>
+        <PackageReference Include="Microsoft.Extensions.Hosting"/>
+        <PackageReference Include="Microsoft.Extensions.Logging.Abstractions"/>
+    </ItemGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\DevTools.Ipc\DevTools.Ipc.csproj"/>
+        <ProjectReference Include="..\DevTools.Logging\DevTools.Logging.csproj"/>
+    </ItemGroup>
+
+    <ItemGroup>
+        <Using Include="DevTools.Ipc"/>
+        <Using Include="DevTools.Logging"/>
+    </ItemGroup>
+</Project>

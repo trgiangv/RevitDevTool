@@ -4,11 +4,11 @@ using System.ComponentModel;
 using System.IO;
 using System.Text;
 using System.Windows.Threading;
+using DevTools.Execution.Abstractions;
 using DevTools.Execution.External.Connections;
 using DevTools.Mcp.Registry;
 using DevTools.Presentation.Formatting;
 using DevTools.Presentation.Models;
-using DevTools.UI.Behaviors;
 using DevTools.UI.Theme;
 using DevTools.Utilities;
 // ReSharper disable UnusedParameterInPartialMethod
@@ -217,11 +217,11 @@ public sealed partial class McpRegistryViewModel : ObservableObject, IBusyViewMo
         }
     }
 
-    private static HighlightRange? BuildHighlight(string text, string queryLower, bool hasQuery, bool isDark)
+    private static TextHighlightRange? BuildHighlight(string text, string queryLower, bool hasQuery, bool isDark)
     {
         if (!hasQuery || string.IsNullOrEmpty(text)) return null;
         var idx = text.ToLowerInvariant().IndexOf(queryLower, StringComparison.Ordinal);
-        return idx < 0 ? null : new HighlightRange(idx, idx + queryLower.Length) { DarkSkin = isDark };
+        return idx < 0 ? null : new TextHighlightRange(idx, idx + queryLower.Length) { DarkSkin = isDark };
     }
 
     partial void OnSearchTextChanged(string value) { _searchDebounceTimer.Stop(); _searchDebounceTimer.Start(); }

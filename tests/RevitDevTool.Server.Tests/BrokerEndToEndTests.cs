@@ -2,7 +2,7 @@ using System.IO.Pipes;
 using System.Text.Json;
 using DevTools.Daemon.Mcp;
 using DevTools.Daemon.Mcp.Tools;
-using DevTools.Execution.External.Mcp.Hosting;
+using DevTools.Mcp.Hosting;
 using DevTools.Logging;
 using DevTools.Mcp;
 using DevTools.Mcp.Routing;

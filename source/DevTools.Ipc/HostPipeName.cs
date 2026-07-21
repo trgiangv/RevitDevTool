@@ -19,7 +19,7 @@ public static class HostPipeName
             throw new ArgumentOutOfRangeException(nameof(processId));
 
         return string.Concat(
-            DaemonConstants.PipePrefix,
+            ControlPipeConstants.PipePrefix,
             Separator,
             host,
             Separator,
@@ -43,7 +43,7 @@ public static class HostPipeName
 
         var parts = pipeName.Split(Separator);
         if (parts.Length != 4 ||
-            !parts[0].Equals(DaemonConstants.PipePrefix, StringComparison.OrdinalIgnoreCase) ||
+            !parts[0].Equals(ControlPipeConstants.PipePrefix, StringComparison.OrdinalIgnoreCase) ||
             string.IsNullOrWhiteSpace(parts[1]) ||
             string.IsNullOrWhiteSpace(parts[2]) ||
             !int.TryParse(parts[3], NumberStyles.None, CultureInfo.InvariantCulture, out pid) ||
@@ -97,7 +97,7 @@ public static class HostPipeName
     /// </summary>
     public static string ToDisplayName(string pipeName)
     {
-        var prefix = DaemonConstants.PipePrefix + Separator;
+        var prefix = ControlPipeConstants.PipePrefix + Separator;
         return pipeName.StartsWith(prefix, StringComparison.OrdinalIgnoreCase)
             ? pipeName.Substring(prefix.Length)
             : pipeName;

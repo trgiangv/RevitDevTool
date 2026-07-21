@@ -1,7 +1,7 @@
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
-using DevTools.UI;
+using DevTools.Execution.Abstractions;
 using Brush = System.Windows.Media.Brush;
 using TextElement = System.Windows.Documents.TextElement;
 using TextRange = System.Windows.Documents.TextRange;
@@ -9,23 +9,23 @@ using TextRange = System.Windows.Documents.TextRange;
 namespace DevTools.UI.Behaviors;
 
 /// <summary>
-/// Attached behavior to highlight matching text in a TextBlock based on an <see cref="HighlightRange"/>.
+/// Attached behavior to highlight matching text in a TextBlock based on a <see cref="TextHighlightRange"/>.
 /// </summary>
 public static class HighlightTextBlockBehavior
 {
     public static readonly DependencyProperty RangeProperty =
         DependencyProperty.RegisterAttached(
             "Range",
-            typeof(HighlightRange),
+            typeof(TextHighlightRange),
             typeof(HighlightTextBlockBehavior),
             new PropertyMetadata(null, OnRangeChanged));
 
-    public static HighlightRange? GetRange(DependencyObject obj)
+    public static TextHighlightRange? GetRange(DependencyObject obj)
     {
-        return (HighlightRange?)obj.GetValue(RangeProperty);
+        return (TextHighlightRange?)obj.GetValue(RangeProperty);
     }
 
-    public static void SetRange(DependencyObject obj, HighlightRange? value)
+    public static void SetRange(DependencyObject obj, TextHighlightRange? value)
     {
         obj.SetValue(RangeProperty, value);
     }
@@ -36,13 +36,7 @@ public static class HighlightTextBlockBehavior
             return;
 
         var range = GetRange(d);
-
-        // Get transparent background for normal text
         var normalBackGround = new SolidColorBrush(Color.FromArgb(0, 0, 0, 0));
-        if (range != null && range.NormalBackground != default)
-        {
-            normalBackGround = new SolidColorBrush(range.NormalBackground);
-        }
 
         // Reset highlighting first
         var txtRange = new TextRange(txtBlock.ContentStart, txtBlock.ContentEnd);
@@ -53,7 +47,10 @@ public static class HighlightTextBlockBehavior
 
         try
         {
-            Brush selectionBackground = new SolidColorBrush(range.SelectionBackground);
+            Brush selectionBackground = new SolidColorBrush(
+                range.DarkSkin
+                    ? Colors.DarkOrange
+                    : Color.FromRgb(0xF5, 0x9E, 0x0B));
 
             var startPos = txtBlock.ContentStart.GetPositionAtOffset(range.Start + 1);
             var endPos = txtBlock.ContentStart.GetPositionAtOffset(range.End + 1);

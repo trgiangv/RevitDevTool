@@ -1,20 +1,16 @@
 namespace DevTools.Ipc;
 
 /// <summary>
-/// Shared constants for Daemon control pipe communication.
-/// Used by both the Daemon itself and host add-in clients.
+/// Shared constants for daemon control pipe communication.
+/// Used by both the daemon and host add-in clients.
 /// </summary>
-public static class DaemonConstants
+public static class ControlPipeConstants
 {
     /// <summary>
     /// Pipe name format: <c>{PipePrefix}_{Host}_{Version}_{PID}</c>
     /// </summary>
     public const string PipePrefix = "DevTools";
     public const string ControlPipeName = "DevToolsDaemon_Control";
-    public const string TrayIconResourceKey = "TrayIcon";
-    public const string StdioArg = "--stdio";
-    public const string StartupErrorTitle = "DevTools Daemon \u2014 Startup Error";
-    public const int ShutdownTimeoutSeconds = 5;
 
     /// <summary>
     /// Method names for the daemon's control pipe commands.
@@ -27,15 +23,6 @@ public static class DaemonConstants
         public const string SignOut = "daemon/trigger_signout";
         public const string ConnectedHosts = "daemon/connected_hosts";
         public const string OpenDashboard = "daemon/open_dashboard";
-    }
-
-    /// <summary>
-    /// Route paths for the daemon's HTTP API endpoints.
-    /// </summary>
-    public static class RoutePaths
-    {
-        public const string Tunnel = "/tunnel";
-        public const string Machines = "/machines";
     }
 
     public static class JsonProperties

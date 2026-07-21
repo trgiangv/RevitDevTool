@@ -1,0 +1,32 @@
+<Project Sdk="Microsoft.NET.Sdk">
+    <PropertyGroup>
+        <TargetFrameworks>net48;net8.0-windows;net10.0-windows</TargetFrameworks>
+        <NoWarn>$(NoWarn);MCPEXP001</NoWarn>
+        <RootNamespace>DevTools.Execution.Pytest</RootNamespace>
+        <AssemblyName>DevTools.Execution.Pytest</AssemblyName>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <PackageReference Include="ModelContextProtocol"/>
+        <PackageReference Include="pythonnet"/>
+        <PackageReference Include="Microsoft.Extensions.Hosting"/>
+        <PackageReference Include="Microsoft.Extensions.Logging.Abstractions"/>
+    </ItemGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\DevTools.Execution\DevTools.Execution.csproj"/>
+        <ProjectReference Include="..\DevTools.Mcp\DevTools.Mcp.csproj"/>
+        <ProjectReference Include="..\DevTools.Execution.Abstractions\DevTools.Execution.Abstractions.csproj"/>
+    </ItemGroup>
+
+    <ItemGroup>
+        <EmbeddedResource Include="Resources\scripts\*.*" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <Using Include="DevTools.Execution.Abstractions"/>
+        <Using Include="DevTools.Execution.External.Testing"/>
+        <Using Include="DevTools.Mcp.BuiltIn"/>
+        <Using Include="JetBrains.Annotations"/>
+    </ItemGroup>
+</Project>

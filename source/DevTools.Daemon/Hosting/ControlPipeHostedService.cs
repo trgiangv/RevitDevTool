@@ -20,7 +20,7 @@ internal sealed class ControlPipeHostedService(ControlPipeHandler handler, ILogg
         while (!stoppingToken.IsCancellationRequested)
         {
             await using var server = CurrentUserPipeFactory.CreateDuplexServer(
-                DaemonConstants.ControlPipeName,
+                ControlPipeConstants.ControlPipeName,
                 MaxServerInstances);
 
             try

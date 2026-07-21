@@ -6,8 +6,10 @@ using DevTools.Daemon.Mcp;
 using DevTools.Execution;
 using DevTools.Execution.External;
 using DevTools.Execution.External.Mcp.BuiltIn;
-using DevTools.Execution.External.Mcp.Hosting;
 using DevTools.Execution.External.Testing;
+using DevTools.Execution.Interfaces;
+using DevTools.Execution.Pytest;
+using DevTools.Mcp.Hosting;
 using DevTools.Logging;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -124,11 +126,35 @@ public sealed class ExecutionServiceRegistrationTests
         var services = new ServiceCollection();
 
         services.AddExecutionServices();
+        services.AddPytestHostRunner();
 
         Assert.Contains(services, descriptor => descriptor.ServiceType == typeof(HostMcpServerHostedService));
         Assert.Single(services, descriptor => descriptor.ServiceType == typeof(IHostedService));
         Assert.Contains(services, descriptor => descriptor.ServiceType == typeof(PytestDependencyService));
         Assert.Contains(services, descriptor => descriptor.ServiceType == typeof(PytestExecutionService));
+    }
+
+    [Fact]
+    public void SplitRegistrations_ComposeSameSurfaceAsAddExecutionServices()
+    {
+        var bundled = new ServiceCollection();
+        bundled.AddExecutionServices();
+        bundled.AddPytestHostRunner();
+
+        var split = new ServiceCollection();
+        split.AddExecutionCore();
+        split.AddInHostMcpServer();
+        split.AddPytestHostRunner();
+
+        Assert.Equal(
+            bundled.Count(d => d.ServiceType == typeof(HostMcpServerHostedService)),
+            split.Count(d => d.ServiceType == typeof(HostMcpServerHostedService)));
+        Assert.Equal(
+            bundled.Count(d => d.ServiceType == typeof(PytestExecutionService)),
+            split.Count(d => d.ServiceType == typeof(PytestExecutionService)));
+        Assert.Equal(
+            bundled.Count(d => d.ServiceType == typeof(IExecutionOrchestrator)),
+            split.Count(d => d.ServiceType == typeof(IExecutionOrchestrator)));
     }
 }
 

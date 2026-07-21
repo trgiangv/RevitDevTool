@@ -5,7 +5,7 @@ namespace DevTools.Daemon.Contracts;
 
 [UsedImplicitly]
 public sealed record StatusResponse(
-    [property: JsonPropertyName(DaemonConstants.JsonProperties.IsRunning)] bool IsRunning,
+    [property: JsonPropertyName(ControlPipeConstants.JsonProperties.IsRunning)] bool IsRunning,
     [property: JsonPropertyName("version")] string Version);
 
 [UsedImplicitly]

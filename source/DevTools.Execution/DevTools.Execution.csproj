@@ -2,7 +2,6 @@
 
     <PropertyGroup>
         <TargetFrameworks>net48;net8.0-windows;net10.0-windows</TargetFrameworks>
-        <UseWpf>true</UseWpf>
     </PropertyGroup>
 
     <ItemGroup>
@@ -32,10 +31,10 @@
     <ItemGroup>
         <ProjectReference Include="..\DevTools.Execution.Abstractions\DevTools.Execution.Abstractions.csproj" />
         <ProjectReference Include="..\DevTools.Settings\DevTools.Settings.csproj" />
-        <ProjectReference Include="..\DevTools.UI\DevTools.UI.csproj" />
         <ProjectReference Include="..\DevTools.Logging\DevTools.Logging.csproj" />
         <ProjectReference Include="..\DevTools.Utilities\DevTools.Utilities.csproj" />
         <ProjectReference Include="..\DevTools.Mcp\DevTools.Mcp.csproj" />
+        <ProjectReference Include="..\DevTools.Mcp.Hosting\DevTools.Mcp.Hosting.csproj" />
         <ProjectReference Include="..\DevTools.Ipc\DevTools.Ipc.csproj" />
         <ProjectReference Include="..\DevTools.Telemetry\DevTools.Telemetry.csproj" />
     </ItemGroup>
@@ -52,7 +51,6 @@
         <Using Include="DevTools.Mcp.Execution" />
         <Using Include="DevTools.Mcp.Models" />
         <Using Include="DevTools.Mcp.Registry" />
-        <Using Include="DevTools.Execution.External.Testing" />
         <Using Include="JetBrains.Annotations" />
         <Using Include="System" />
     </ItemGroup>

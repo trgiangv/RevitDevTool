@@ -1,7 +1,6 @@
 ﻿using DevTools.Execution.External;
 using DevTools.Execution.External.Connections;
 using DevTools.Execution.External.Mcp.BuiltIn;
-using DevTools.Execution.External.Mcp.Hosting;
 using DevTools.Execution.External.Mcp.Registry;
 using DevTools.Execution.Interfaces;
 using DevTools.Execution.Providers;
@@ -10,10 +9,10 @@ using DevTools.Execution.Providers.Dotnet;
 using DevTools.Execution.Providers.FSharp;
 using DevTools.Execution.Providers.Python;
 using DevTools.Execution.Services;
+using DevTools.Mcp.Hosting;
 using DevTools.Telemetry;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
-using Microsoft.Extensions.Hosting;
 using ModelContextProtocol.Server;
 
 namespace DevTools.Execution;
@@ -21,14 +20,28 @@ namespace DevTools.Execution;
 /// <summary>
 /// Shared execution registrations for <see cref="IServiceCollection"/> (same layering as host apps wiring inside <c>ConfigureServices</c>).
 /// Host-specific adapters (<see cref="IHostContextExecutor"/>, <see cref="ICommandDiscovery"/>, …) belong in the add-in.
+/// Pytest host runner lives in <c>DevTools.Execution.Pytest</c> (<c>AddPytestHostRunner</c>).
 /// </summary>
 public static class ExecutionExtensions
 {
     /// <summary>
-    /// Registers execution orchestration, script/assembly providers, MCP registry, and in-proc pipe server.
-    /// From the add-in host: after registering bridges/adapters on <see cref="HostApplicationBuilder.Services"/>, call <c>services.AddExecutionServices()</c>.
+    /// Registers execution core and in-host MCP server.
+    /// Prefer calling <see cref="AddExecutionCore"/> and <see cref="AddInHostMcpServer"/> separately when composing selectively.
+    /// Call <c>AddPytestHostRunner</c> from DevTools.Execution.Pytest when pytest MCP is required.
     /// </summary>
     public static IServiceCollection AddExecutionServices(
+        this IServiceCollection services,
+        bool registerDefaultScriptProvider = true)
+    {
+        services.AddExecutionCore(registerDefaultScriptProvider);
+        services.AddInHostMcpServer();
+        return services;
+    }
+
+    /// <summary>
+    /// Script/assembly providers, orchestrator, packages, and Python/C#/F# runtimes.
+    /// </summary>
+    public static IServiceCollection AddExecutionCore(
         this IServiceCollection services,
         bool registerDefaultScriptProvider = true)
     {
@@ -67,10 +80,16 @@ public static class ExecutionExtensions
             services.AddKeyedSingleton<IExecutionProvider, ScriptExecutionProvider>(ContainerMode.Script);
         }
 
+        return services;
+    }
+
+    /// <summary>
+    /// In-host MCP catalog, registry providers, built-in execute tools, and named-pipe MCP server.
+    /// </summary>
+    public static IServiceCollection AddInHostMcpServer(this IServiceCollection services)
+    {
         services.AddSingleton<ConnectionState>();
         services.AddSingleton<IMcpExecutionTracker, ConnectionStateExecutionTracker>();
-        services.AddSingleton<PytestDependencyService>();
-        services.AddSingleton<PytestExecutionService>();
 
         services.AddSingleton<DotnetMcpRegistryProvider>();
         services.AddSingleton<PythonMcpRegistryProvider>();
@@ -83,7 +102,6 @@ public static class ExecutionExtensions
         services.AddSingleton<IMcpServerPrimitiveAdapter, PythonMcpServerPrimitiveAdapter>();
         services.AddSingleton<McpCatalogLoader>();
         services.AddSingleton<McpCatalogStore>();
-        services.AddSingleton<IBuiltInMcpTool, PytestRunTool>();
         services.AddSingleton<IBuiltInMcpTool, CSharpCodeTool>();
         services.AddSingleton<IBuiltInMcpTool, PythonCodeTool>();
         services.AddSingleton<IBuiltInMcpTool>(sp =>
@@ -91,9 +109,7 @@ public static class ExecutionExtensions
         services.AddSingleton<McpServerPrimitiveCollection<McpServerTool>>(_ => []);
         services.AddSingleton<McpServerPrimitiveCollection<McpServerPrompt>>(_ => []);
         services.AddSingleton<McpServerResourceCollection>(_ => []);
-        services.AddSingleton<HostMcpServerOptionsFactory>();
-        services.AddSingleton<HostMcpServerHostedService>();
-        services.AddHostedService(sp => sp.GetRequiredService<HostMcpServerHostedService>());
+        services.AddHostMcpPipeServer();
 
         return services;
     }

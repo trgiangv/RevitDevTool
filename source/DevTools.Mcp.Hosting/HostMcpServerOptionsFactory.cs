@@ -1,9 +1,8 @@
-using DevTools.Logging;
 using ModelContextProtocol;
 using ModelContextProtocol.Protocol;
 using ModelContextProtocol.Server;
 
-namespace DevTools.Execution.External.Mcp.Hosting;
+namespace DevTools.Mcp.Hosting;
 
 public sealed class HostMcpServerOptionsFactory(
     IHostAppInfo hostInfo,
