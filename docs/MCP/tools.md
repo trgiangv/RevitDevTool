@@ -33,9 +33,9 @@ Search also includes generation-scoped catalog states: `refreshing`, `ready`, `s
 
 The broker is a discovery and invocation surface, not a dynamic tool-list relay. Arbitrary primitives require search then invoke; known unique targets can be invoked directly.
 
-## Native mode
+## Native mode (experimental)
 
-The persisted daemon setting defaults to `Broker`. Opt-in `Native` mode retains the six daemon tools and adds namespaced SDK proxies for host tools, prompts, resources, and resource templates. It is suitable only for MCP clients that honor list-changed notifications. Do not make Native the compatibility default: runtime catalog changes must not invalidate clients that load `tools/list` once.
+The persisted daemon setting defaults to `Broker` (production). Opt-in **`Native` is experimental**: it retains the six daemon tools and adds namespaced SDK proxies for host tools, prompts, resources, and resource templates. Use it only for debug/development MCP clients that honor list-changed notifications. Native is **not** a public production contract and must not become the compatibility default: runtime catalog changes must not invalidate clients that load `tools/list` once.
 
 ## Host catalog
 

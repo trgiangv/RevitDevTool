@@ -21,6 +21,11 @@ public sealed class DaemonSettings
 
     public AppTheme Theme { get; set; } = AppTheme.Auto;
     public bool AutoStartEnabled { get; set; }
+
+    /// <summary>
+    /// MCP client surface. Default is <see cref="McpSurfaceMode.Broker"/> (production).
+    /// <see cref="McpSurfaceMode.Native"/> is experimental — opt-in debug only.
+    /// </summary>
     public McpSurfaceMode McpSurface { get; set; } = McpSurfaceMode.Broker;
 
     private static string FilePath =>
@@ -56,6 +61,12 @@ public sealed class DaemonSettings
 
 public enum McpSurfaceMode
 {
+    /// <summary>Production default: stable six-tool broker surface.</summary>
     Broker,
+
+    /// <summary>
+    /// Experimental opt-in for debug/development clients that honor dynamic
+    /// tool-list / list-changed notifications. Not a public production contract.
+    /// </summary>
     Native
 }
