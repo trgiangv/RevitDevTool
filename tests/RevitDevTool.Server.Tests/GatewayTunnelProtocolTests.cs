@@ -27,12 +27,36 @@ public sealed class GatewayTunnelProtocolTests
     }
 
     [Fact]
-    public void RegisteredEnvelope_RequiresConnectionGeneration()
+    public void RegisteredEnvelope_RequiresConnectionGenerationAndGatewayVersion()
     {
-        using var document = JsonDocument.Parse("""{"v":2,"type":"registered"}""");
-
-        Assert.False(GatewayTunnelEnvelope.TryParse(document.RootElement, out _, out var error));
+        using var missingGeneration = JsonDocument.Parse("""{"v":2,"type":"registered","gateway_version":"2.0.0"}""");
+        Assert.False(GatewayTunnelEnvelope.TryParse(missingGeneration.RootElement, out _, out var error));
         Assert.Equal("invalid_tunnel_frame", error);
+
+        using var missingGatewayVersion = JsonDocument.Parse("""{"v":2,"type":"registered","connection_generation":1}""");
+        Assert.False(GatewayTunnelEnvelope.TryParse(missingGatewayVersion.RootElement, out _, out error));
+        Assert.Equal("invalid_tunnel_frame", error);
+
+        using var valid = JsonDocument.Parse("""{"v":2,"type":"registered","connection_generation":1,"gateway_version":"2.0.0"}""");
+        Assert.True(GatewayTunnelEnvelope.TryParse(valid.RootElement, out var envelope, out error));
+        Assert.Equal(GatewayTunnelEnvelope.Registered, envelope!.Type);
+        Assert.Equal(1, envelope.ConnectionGeneration);
+        Assert.Equal("2.0.0", envelope.GatewayVersion);
+        Assert.Null(error);
+    }
+
+    [Fact]
+    public void RegisterEnvelope_RequiresDaemonVersion()
+    {
+        using var missing = JsonDocument.Parse("""{"v":2,"type":"register","machine_id":"m1","machine_name":"pc","host_apps":["Revit"]}""");
+        Assert.False(GatewayTunnelEnvelope.TryParse(missing.RootElement, out _, out var error));
+        Assert.Equal("invalid_tunnel_frame", error);
+
+        using var valid = JsonDocument.Parse("""{"v":2,"type":"register","machine_id":"m1","machine_name":"pc","host_apps":["Revit"],"daemon_version":"4.0.0"}""");
+        Assert.True(GatewayTunnelEnvelope.TryParse(valid.RootElement, out var envelope, out error));
+        Assert.Equal(GatewayTunnelEnvelope.Register, envelope!.Type);
+        Assert.Equal("4.0.0", envelope.DaemonVersion);
+        Assert.Null(error);
     }
 
     [Fact]

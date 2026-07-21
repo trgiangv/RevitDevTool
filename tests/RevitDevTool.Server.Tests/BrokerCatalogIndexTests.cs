@@ -6,6 +6,7 @@ using DevTools.Mcp;
 using DevTools.Mcp.Routing;
 using DevTools.Mcp.Routing.Broker;
 using DevTools.Mcp.Routing.Catalog;
+using ModelContextProtocol;
 using ModelContextProtocol.Client;
 using ModelContextProtocol.Protocol;
 
@@ -63,20 +64,19 @@ public sealed class BrokerCatalogIndexTests
     }
 
     [Fact]
-    public async Task Invoke_AmbiguousTool_ReturnsCandidatesWithoutCallingHosts()
+    public async Task Invoke_AmbiguousTool_ThrowsMcpExceptionWithoutCallingHosts()
     {
         var first = new RecordingSession(5103, "execute_csharp_code");
         var second = new RecordingSession(5104, "execute_csharp_code");
         var catalog = CreateCatalog(first, second);
 
-        var result = await catalog.InvokeAsync(new RecordingManager([first, second]),
-            BrokerPrimitiveTarget.Parse("tool:execute_csharp_code"), null, null, TimeSpan.FromMinutes(5), TestContext.Current.CancellationToken);
+        var exception = await Assert.ThrowsAsync<McpException>(() => catalog.InvokeAsync(new RecordingManager([first, second]),
+            BrokerPrimitiveTarget.Parse("tool:execute_csharp_code"), null, null, TimeSpan.FromMinutes(5), TestContext.Current.CancellationToken));
 
-        Assert.False(result.IsError);
+        Assert.Contains("5103", exception.Message);
+        Assert.Contains("5104", exception.Message);
         Assert.Equal(0, first.CallCount);
         Assert.Equal(0, second.CallCount);
-        Assert.Contains("5103", JsonSerializer.Serialize(result.StructuredContent));
-        Assert.Contains("5104", JsonSerializer.Serialize(result.StructuredContent));
     }
 
     [Fact]

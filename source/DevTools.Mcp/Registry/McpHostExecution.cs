@@ -22,13 +22,15 @@ public static class McpHostExecutionPrimitives
         public override Tool ProtocolTool => primitive.ProtocolTool;
         public override IReadOnlyList<object> Metadata => primitive.Metadata;
 
-        public override async ValueTask<CallToolResult> InvokeAsync(RequestContext<CallToolRequestParams> request, CancellationToken cancellationToken = default)
-        {
-            cancellationToken.ThrowIfCancellationRequested();
-            return await execution.ExecuteAsync(
-                () => GetCompletedResult(primitive.InvokeAsync(request, cancellationToken), "tool", primitive.ProtocolTool.Name),
-                cancellationToken).ConfigureAwait(false);
-        }
+        public override ValueTask<CallToolResult> InvokeAsync(RequestContext<CallToolRequestParams> request, CancellationToken cancellationToken = default) =>
+            McpExecutionDispatch.InvokeToolAsync(
+                request,
+                primitive.ProtocolTool.Name,
+                toolId: null,
+                async () => await execution.ExecuteAsync(
+                    () => GetCompletedResult(primitive.InvokeAsync(request, cancellationToken), "tool", primitive.ProtocolTool.Name),
+                    cancellationToken).ConfigureAwait(false),
+                cancellationToken);
     }
 
     private sealed class HostPrompt(McpServerPrompt primitive, IMcpHostExecution execution) : McpServerPrompt

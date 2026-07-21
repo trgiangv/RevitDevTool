@@ -15,73 +15,101 @@ namespace RevitDevTool.Server.Tests;
 public sealed class BrokerInvokeResilienceTests
 {
     [Fact]
-    public async Task AmbiguousTarget_IsReadableNonErrorWithCandidates()
+    public async Task InfrastructureFailure_PropagatesAsMcpException_NotCallToolResultIsError()
     {
-        var first = new TestSession(5103, "execute_csharp_code");
-        var second = new TestSession(5104, "execute_csharp_code");
-        var catalog = CreateCatalog(first, second);
+        var session = new TestSession(42000, "another_tool");
+        var catalog = CreateCatalog(session);
 
-        var result = await catalog.InvokeAsync(
-            new TestManager(first, second),
-            BrokerPrimitiveTarget.Parse("tool:execute_csharp_code"),
+        var exception = await Assert.ThrowsAsync<McpException>(() => catalog.InvokeAsync(
+            new TestManager(session),
+            BrokerPrimitiveTarget.Parse("tool:missing_tool"),
             null,
             null,
             TimeSpan.FromMinutes(5),
-            TestContext.Current.CancellationToken);
+            TestContext.Current.CancellationToken));
 
-        Assert.False(result.IsError);
-        var payload = DeserializePayload(result);
-        Assert.Equal(BrokerInvokeStatus.HostSelectionRequired, payload.Status);
-        Assert.Equal([5103, 5104], payload.Candidates.Select(candidate => candidate.HostId));
-        Assert.All(payload.Candidates, candidate =>
-        {
-            Assert.Equal("TestHost", candidate.HostApp);
-            Assert.Equal("1.0", candidate.VersionNumber);
-        });
-        Assert.Equal(0, first.CallCount);
-        Assert.Equal(0, second.CallCount);
+        Assert.Contains("not found", exception.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.Equal(0, session.CallCount);
     }
 
     [Fact]
-    public async Task WrongHostId_ReturnsActualHostsWithoutSecondSearch()
+    public async Task TargetToolDomainFailure_PreservesCallToolResultIsError()
     {
-        var actual = new TestSession(41100, "execute_csharp_code");
-        var catalog = CreateCatalog(actual);
-
-        var result = await catalog.InvokeAsync(
-            new TestManager(actual),
-            BrokerPrimitiveTarget.Parse("tool:execute_csharp_code"),
-            23856,
-            null,
-            TimeSpan.FromMinutes(5),
-            TestContext.Current.CancellationToken);
-
-        Assert.False(result.IsError);
-        var payload = DeserializePayload(result);
-        Assert.Equal(BrokerInvokeStatus.HostMismatch, payload.Status);
-        Assert.Equal(41100, Assert.Single(payload.Candidates).HostId);
-        Assert.Equal(0, actual.CallCount);
-    }
-
-    [Fact]
-    public async Task MissingTarget_IsStructuredErrorWithoutExecutionUncertainty()
-    {
-        var session = new TestSession(41108, "another_tool");
+        var session = new TestSession(42001, "execute_csharp_code", invocation: _ =>
+            Task.FromResult(new CallToolResult
+            {
+                IsError = true,
+                Content = [new TextContentBlock { Text = "domain failure" }]
+            }));
         var catalog = CreateCatalog(session);
 
         var result = await catalog.InvokeAsync(
             new TestManager(session),
-            BrokerPrimitiveTarget.Parse("tool:missing_tool"),
+            BrokerPrimitiveTarget.Parse("tool:execute_csharp_code"),
             null,
             null,
             TimeSpan.FromMinutes(5),
             TestContext.Current.CancellationToken);
 
         Assert.True(result.IsError);
-        var payload = DeserializePayload(result);
-        Assert.Equal(BrokerInvokeStatus.TargetNotFound, payload.Status);
-        Assert.False(payload.MayHaveExecuted);
-        Assert.Empty(payload.Candidates);
+        Assert.Equal("domain failure", Assert.IsType<TextContentBlock>(Assert.Single(result.Content)).Text);
+        Assert.Equal(1, session.CallCount);
+    }
+
+    [Fact]
+    public async Task AmbiguousTarget_ThrowsMcpExceptionWithCandidates()
+    {
+        var first = new TestSession(5103, "execute_csharp_code");
+        var second = new TestSession(5104, "execute_csharp_code");
+        var catalog = CreateCatalog(first, second);
+
+        var exception = await Assert.ThrowsAsync<McpException>(() => catalog.InvokeAsync(
+            new TestManager(first, second),
+            BrokerPrimitiveTarget.Parse("tool:execute_csharp_code"),
+            null,
+            null,
+            TimeSpan.FromMinutes(5),
+            TestContext.Current.CancellationToken));
+
+        Assert.Contains("5103", exception.Message);
+        Assert.Contains("5104", exception.Message);
+        Assert.Equal(0, first.CallCount);
+        Assert.Equal(0, second.CallCount);
+    }
+
+    [Fact]
+    public async Task WrongHostId_ThrowsMcpExceptionWithActualHost()
+    {
+        var actual = new TestSession(41100, "execute_csharp_code");
+        var catalog = CreateCatalog(actual);
+
+        var exception = await Assert.ThrowsAsync<McpException>(() => catalog.InvokeAsync(
+            new TestManager(actual),
+            BrokerPrimitiveTarget.Parse("tool:execute_csharp_code"),
+            23856,
+            null,
+            TimeSpan.FromMinutes(5),
+            TestContext.Current.CancellationToken));
+
+        Assert.Contains("41100", exception.Message);
+        Assert.Equal(0, actual.CallCount);
+    }
+
+    [Fact]
+    public async Task MissingTarget_ThrowsMcpExceptionWithoutCallingHost()
+    {
+        var session = new TestSession(41108, "another_tool");
+        var catalog = CreateCatalog(session);
+
+        var exception = await Assert.ThrowsAsync<McpException>(() => catalog.InvokeAsync(
+            new TestManager(session),
+            BrokerPrimitiveTarget.Parse("tool:missing_tool"),
+            null,
+            null,
+            TimeSpan.FromMinutes(5),
+            TestContext.Current.CancellationToken));
+
+        Assert.Contains("not found", exception.Message, StringComparison.OrdinalIgnoreCase);
         Assert.Equal(0, session.CallCount);
     }
 
@@ -105,18 +133,15 @@ public sealed class BrokerInvokeResilienceTests
         var catalog = CreateCatalog(published);
         var manager = new TestManager(replacement);
 
-        var result = await catalog.InvokeAsync(
+        var exception = await Assert.ThrowsAsync<McpException>(() => catalog.InvokeAsync(
             manager,
             BrokerPrimitiveTarget.Parse("tool:execute_csharp_code"),
             41101,
             null,
             TimeSpan.FromMinutes(5),
-            TestContext.Current.CancellationToken);
+            TestContext.Current.CancellationToken));
 
-        Assert.True(result.IsError);
-        var payload = DeserializePayload(result);
-        Assert.Equal(BrokerInvokeStatus.HostDisconnected, payload.Status);
-        Assert.False(payload.MayHaveExecuted);
+        Assert.Contains("disconnected", exception.Message, StringComparison.OrdinalIgnoreCase);
         Assert.Equal([(41101, 1)], manager.ExactLookups);
         Assert.Equal(0, replacement.CallCount);
     }
@@ -127,18 +152,15 @@ public sealed class BrokerInvokeResilienceTests
         var session = new TestSession(41102, "execute_csharp_code", isConnected: false);
         var catalog = CreateCatalog(session);
 
-        var result = await catalog.InvokeAsync(
+        var exception = await Assert.ThrowsAsync<McpException>(() => catalog.InvokeAsync(
             new TestManager(session),
             BrokerPrimitiveTarget.Parse("tool:execute_csharp_code"),
             null,
             null,
             TimeSpan.FromMinutes(5),
-            TestContext.Current.CancellationToken);
+            TestContext.Current.CancellationToken));
 
-        Assert.True(result.IsError);
-        var payload = DeserializePayload(result);
-        Assert.Equal(BrokerInvokeStatus.HostDisconnected, payload.Status);
-        Assert.False(payload.MayHaveExecuted);
+        Assert.Contains("disconnected", exception.Message, StringComparison.OrdinalIgnoreCase);
         Assert.Equal(0, session.CallCount);
     }
 
@@ -148,18 +170,16 @@ public sealed class BrokerInvokeResilienceTests
         var session = new TestSession(41103, "execute_csharp_code", invocation: WaitForBrokerCancellationAsync);
         var catalog = CreateCatalog(session);
 
-        var result = await catalog.InvokeAsync(
+        var exception = await Assert.ThrowsAsync<McpException>(() => catalog.InvokeAsync(
             new TestManager(session),
             BrokerPrimitiveTarget.Parse("tool:execute_csharp_code"),
             null,
             null,
             TimeSpan.FromMilliseconds(25),
-            TestContext.Current.CancellationToken);
+            TestContext.Current.CancellationToken));
 
-        Assert.True(result.IsError);
-        var payload = DeserializePayload(result);
-        Assert.Equal(BrokerInvokeStatus.TimedOut, payload.Status);
-        Assert.True(payload.MayHaveExecuted);
+        Assert.Contains("deadline", exception.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("may have executed", exception.Message, StringComparison.OrdinalIgnoreCase);
         Assert.Equal(1, session.CallCount);
     }
 
@@ -215,18 +235,15 @@ public sealed class BrokerInvokeResilienceTests
         var session = new TestSession(41109, "execute_csharp_code");
         var catalog = CreateCatalog(session);
 
-        var result = await catalog.InvokeAsync(
+        var exception = await Assert.ThrowsAsync<McpException>(() => catalog.InvokeAsync(
             new TestManager(session),
             BrokerPrimitiveTarget.Parse("tool:execute_csharp_code"),
             null,
             document.RootElement,
             TimeSpan.FromMinutes(5),
-            TestContext.Current.CancellationToken);
+            TestContext.Current.CancellationToken));
 
-        Assert.True(result.IsError);
-        var payload = DeserializePayload(result);
-        Assert.Equal(BrokerInvokeStatus.HostFailed, payload.Status);
-        Assert.False(payload.MayHaveExecuted);
+        Assert.Contains("failed", exception.Message, StringComparison.OrdinalIgnoreCase);
         Assert.Equal(0, session.CallCount);
     }
 
@@ -242,18 +259,15 @@ public sealed class BrokerInvokeResilienceTests
             return BrokerArgumentConverter.ToObjects(arguments);
         }, published);
 
-        var result = await catalog.InvokeAsync(
+        var exception = await Assert.ThrowsAsync<McpException>(() => catalog.InvokeAsync(
             manager,
             BrokerPrimitiveTarget.Parse("tool:execute_csharp_code"),
             null,
             JsonSerializer.SerializeToElement(new { value = 42 }),
             TimeSpan.FromMinutes(5),
-            TestContext.Current.CancellationToken);
+            TestContext.Current.CancellationToken));
 
-        Assert.True(result.IsError);
-        var payload = DeserializePayload(result);
-        Assert.Equal(BrokerInvokeStatus.HostDisconnected, payload.Status);
-        Assert.False(payload.MayHaveExecuted);
+        Assert.Contains("disconnected", exception.Message, StringComparison.OrdinalIgnoreCase);
         Assert.Equal(0, published.CallCount);
         Assert.Equal(0, replacement.CallCount);
     }
@@ -282,10 +296,10 @@ public sealed class BrokerInvokeResilienceTests
     }
 
     [Theory]
-    [InlineData("io", BrokerInvokeStatus.ConnectionLost)]
-    [InlineData("disposed", BrokerInvokeStatus.ConnectionLost)]
-    [InlineData("host", BrokerInvokeStatus.HostFailed)]
-    public async Task PostDispatchFailure_IsClassifiedWithoutRetry(string failureKind, string expectedStatus)
+    [InlineData("io")]
+    [InlineData("disposed")]
+    [InlineData("host")]
+    public async Task PostDispatchFailure_IsClassifiedWithoutRetry(string failureKind)
     {
         var session = new TestSession(41106, "execute_csharp_code", invocation: _ => failureKind switch
         {
@@ -295,18 +309,23 @@ public sealed class BrokerInvokeResilienceTests
         });
         var catalog = CreateCatalog(session);
 
-        var result = await catalog.InvokeAsync(
+        var exception = await Assert.ThrowsAsync<McpException>(() => catalog.InvokeAsync(
             new TestManager(session),
             BrokerPrimitiveTarget.Parse("tool:execute_csharp_code"),
             null,
             null,
             TimeSpan.FromMinutes(5),
-            TestContext.Current.CancellationToken);
+            TestContext.Current.CancellationToken));
 
-        Assert.True(result.IsError);
-        var payload = DeserializePayload(result);
-        Assert.Equal(expectedStatus, payload.Status);
-        Assert.True(payload.MayHaveExecuted);
+        Assert.Contains(
+            failureKind switch
+            {
+                "io" or "disposed" => "connection",
+                _ => "failed"
+            },
+            exception.Message,
+            StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("may have executed", exception.Message, StringComparison.OrdinalIgnoreCase);
         Assert.Equal(1, session.CallCount);
     }
 
@@ -323,13 +342,6 @@ public sealed class BrokerInvokeResilienceTests
                 "tool:execute_csharp_code",
                 timeoutSeconds: timeoutSeconds,
                 cancellationToken: TestContext.Current.CancellationToken));
-    }
-
-    private static BrokerInvokePayload DeserializePayload(CallToolResult result)
-    {
-        var structured = Assert.IsType<JsonElement>(result.StructuredContent);
-        return Assert.IsType<BrokerInvokePayload>(
-            JsonSerializer.Deserialize<BrokerInvokePayload>(structured, McpJsonUtilities.DefaultOptions));
     }
 
     private static async Task<CallToolResult> WaitForBrokerCancellationAsync(CancellationToken ct)

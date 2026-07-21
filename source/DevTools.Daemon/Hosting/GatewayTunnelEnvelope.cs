@@ -1,5 +1,6 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using DevTools.Ipc;
 
 namespace DevTools.Daemon.Hosting;
 
@@ -13,6 +14,8 @@ public sealed record GatewayTunnelEnvelope(
     [property: JsonPropertyName("machine_id")] string? MachineId = null,
     [property: JsonPropertyName("machine_name")] string? MachineName = null,
     [property: JsonPropertyName("host_apps")] IReadOnlyList<string>? HostApps = null,
+    [property: JsonPropertyName("daemon_version")] string? DaemonVersion = null,
+    [property: JsonPropertyName("gateway_version")] string? GatewayVersion = null,
     [property: JsonPropertyName("connection_generation")] long? ConnectionGeneration = null)
 {
     public const int ProtocolVersion = 2;
@@ -69,6 +72,8 @@ public sealed record GatewayTunnelEnvelope(
 
         var machineId = ReadString(value, "machine_id");
         var machineName = ReadString(value, "machine_name");
+        var daemonVersion = ReadString(value, "daemon_version");
+        var gatewayVersion = ReadString(value, "gateway_version");
         IReadOnlyList<string>? hostApps = null;
         if (type is Register or Heartbeat)
         {
@@ -78,6 +83,7 @@ public sealed record GatewayTunnelEnvelope(
             if (appsValue.EnumerateArray().Any(app => app.ValueKind != JsonValueKind.String)) return false;
             hostApps = appsValue.EnumerateArray().Select(app => app.GetString()!).ToArray();
             if (hostApps.Any(string.IsNullOrWhiteSpace)) return false;
+            if (type == Register && string.IsNullOrWhiteSpace(daemonVersion)) return false;
         }
 
         long? generation = null;
@@ -87,9 +93,10 @@ public sealed record GatewayTunnelEnvelope(
             generation = parsedGeneration;
         }
         if (type == Registered && generation is not > 0) return false;
+        if (type == Registered && string.IsNullOrWhiteSpace(gatewayVersion)) return false;
 
         envelope = new GatewayTunnelEnvelope(
-            parsedVersion, type, sessionId, message, ReadString(value, "reason"), machineId, machineName, hostApps, generation);
+            parsedVersion, type, sessionId, message, ReadString(value, "reason"), machineId, machineName, hostApps, daemonVersion, gatewayVersion, generation);
         error = null;
         return true;
     }

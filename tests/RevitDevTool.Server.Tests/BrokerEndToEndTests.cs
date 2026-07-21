@@ -62,23 +62,17 @@ public sealed class BrokerEndToEndTests
     }
 
     [Fact]
-    public async Task AmbiguousInvoke_RoundTripsStructuredSelectionThroughSdkTransport()
+    public async Task AmbiguousInvoke_PropagatesMcpExceptionThroughSdkTransport()
     {
         await using var fixture = await BrokerFixture.CreateAsync(
             TestContext.Current.CancellationToken,
             includeAmbiguousHost: true);
 
-        var result = await fixture.CallAsync(
+        var exception = await Assert.ThrowsAsync<McpException>(() => fixture.CallAsync(
             "devtools_invoke",
-            new Dictionary<string, object?> { ["target"] = "tool:execute_csharp_code" });
+            new Dictionary<string, object?> { ["target"] = "tool:execute_csharp_code" }));
 
-        Assert.False(result.IsError);
-        var payload = DeserializeInvokePayload(result);
-        Assert.Equal(BrokerInvokeStatus.HostSelectionRequired, payload.Status);
-        Assert.Equal(
-            [fixture.Session.Instance.ProcessId, fixture.Session.Instance.ProcessId + 1],
-            payload.Candidates.Select(candidate => candidate.HostId));
-        Assert.False(payload.MayHaveExecuted);
+        Assert.Contains("multiple hosts", exception.Message, StringComparison.OrdinalIgnoreCase);
         Assert.Equal(0, fixture.Tool.InvocationCount);
     }
 
@@ -217,13 +211,6 @@ public sealed class BrokerEndToEndTests
             : Assert.IsType<TextContentBlock>(Assert.Single(result.Content)).Text;
         return Assert.IsType<BrokerSearchResponse>(JsonSerializer.Deserialize<BrokerSearchResponse>(
             payload, McpJsonUtilities.DefaultOptions));
-    }
-
-    private static BrokerInvokePayload DeserializeInvokePayload(CallToolResult result)
-    {
-        var structured = Assert.IsType<JsonElement>(result.StructuredContent);
-        return Assert.IsType<BrokerInvokePayload>(JsonSerializer.Deserialize<BrokerInvokePayload>(
-            structured, McpJsonUtilities.DefaultOptions));
     }
 
     private sealed class HostInfo : IHostAppInfo

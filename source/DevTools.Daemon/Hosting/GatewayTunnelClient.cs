@@ -2,6 +2,7 @@ using System.Net.WebSockets;
 using System.Text;
 using System.Text.Json;
 using DevTools.Daemon.Mcp;
+using DevTools.Ipc;
 using DevTools.Mcp.Routing;
 using Microsoft.Extensions.Logging;
 using ModelContextProtocol.Server;
@@ -95,6 +96,13 @@ public sealed class GatewayTunnelClient(
             if (registered.Type != GatewayTunnelEnvelope.Registered)
                 throw new InvalidDataException("Gateway did not acknowledge v2 tunnel registration.");
 
+            if (!ProtocolCompatibility.IsAtLeast(registered.GatewayVersion, ProtocolCompatibility.MinGatewayVersion))
+            {
+                throw new ProtocolCompatibilityException(
+                    "gateway_version_mismatch",
+                    ProtocolCompatibility.FormatMismatch("gateway", registered.GatewayVersion, ProtocolCompatibility.MinGatewayVersion));
+            }
+
             SetStatus(TunnelStatus.Connected);
             await using var manager = new GatewaySessionManager(optionsFactory, loggerFactory, services);
             using var heartbeatCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
@@ -155,12 +163,14 @@ public sealed class GatewayTunnelClient(
     private GatewayTunnelEnvelope CreateRegisterEnvelope()
     {
         var metadata = DeviceMetadata.Collect();
+        var daemonVersion = typeof(GatewayTunnelClient).Assembly.GetName().Version?.ToString() ?? "0.0.0";
         return new GatewayTunnelEnvelope(
             GatewayTunnelEnvelope.ProtocolVersion,
             GatewayTunnelEnvelope.Register,
             MachineId: metadata.MachineId,
             MachineName: metadata.MachineName,
-            HostApps: GetHostApps());
+            HostApps: GetHostApps(),
+            DaemonVersion: daemonVersion);
     }
 
     private async Task HeartbeatLoopAsync(ClientWebSocket socket, CancellationToken cancellationToken)

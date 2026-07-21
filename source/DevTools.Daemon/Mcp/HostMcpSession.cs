@@ -1,4 +1,5 @@
 using System.IO.Pipes;
+using DevTools.Ipc;
 using DevTools.Mcp.Routing;
 using Microsoft.Extensions.Logging;
 using ModelContextProtocol.Client;
@@ -68,6 +69,8 @@ public sealed class HostMcpSession : IHostMcpSession
             {
                 throw new HostIdentityException("host_identity_mismatch", pipeName);
             }
+
+            ProtocolVersionValidation.RequireHostProtocolVersion(client.ServerCapabilities, pipeName);
 
             var session = new HostMcpSession(
                 pipe,

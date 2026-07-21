@@ -1,3 +1,5 @@
+using System.Text.Json;
+using DevTools.Ipc;
 using ModelContextProtocol;
 using ModelContextProtocol.Protocol;
 using ModelContextProtocol.Server;
@@ -27,7 +29,14 @@ public sealed class HostMcpServerOptionsFactory(
             {
                 Tools = new ToolsCapability { ListChanged = true },
                 Prompts = new PromptsCapability { ListChanged = true },
-                Resources = new ResourcesCapability { ListChanged = true }
+                Resources = new ResourcesCapability { ListChanged = true },
+                Experimental = new Dictionary<string, object>
+                {
+                    ["devtools"] = JsonSerializer.SerializeToElement(new
+                    {
+                        protocol = new { version = ProtocolCompatibility.HostProtocolVersion }
+                    })
+                }
             }
         };
 

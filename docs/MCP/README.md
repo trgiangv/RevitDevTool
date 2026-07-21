@@ -98,6 +98,7 @@ Case events require the client capability `experimental.devtools.pytest.caseEven
 | [Transport](transport.md) | Stdio, gateway routing, and machine selection. |
 | [Tools](tools.md) | Broker, Native, targets, and host selection. |
 | [Inspector](inspector.md) | How to attach MCP Inspector (daemon/gateway; no stdio-pipe shim). |
+| [Compatibility](compatibility.md) | Coordinated min versions and handshake checks. |
 | [In-host runtime](in-host-runtime.md) | SDK server, registry, identity, and host execution. |
 | [Workflows](workflows.md) | Practical agent workflows. |
 
@@ -108,6 +109,8 @@ Case events require the client capability `experimental.devtools.pytest.caseEven
 | Daemon MCP server/session manager | `source/DevTools.Daemon/Mcp/` |
 | Daemon host drivers | `source/DevTools.Daemon/Hosts/` |
 | Shared MCP routing/catalog | `source/DevTools.Mcp/Routing/` |
-| Host MCP server | `source/DevTools.Execution/External/Mcp/` |
-| Host pytest MCP tool | `source/DevTools.Execution/External/Mcp/BuiltIn/` |
+| Host MCP pipe server | `source/DevTools.Mcp.Hosting/` |
+| Host MCP tools/registry | `source/DevTools.Execution/External/Mcp/` |
+| Host pytest MCP tool | `source/DevTools.Execution.Pytest/` |
+| Protocol compatibility constants | `source/DevTools.Ipc/ProtocolCompatibility.cs` |
 | Canonical host pipe helper | `source/DevTools.Ipc/HostPipeName.cs` |

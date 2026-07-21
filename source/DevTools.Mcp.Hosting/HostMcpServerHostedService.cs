@@ -1,6 +1,7 @@
 using System.Collections.Concurrent;
 using System.IO;
 using System.IO.Pipes;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using ModelContextProtocol.Server;
@@ -146,9 +147,18 @@ public sealed class HostMcpServerHostedService(
         if (input is null)
             return;
 
-        await using var transport = new StreamServerTransport(input, ownedPipe, _pipeName, loggerFactory);
-        await using var server = McpServer.Create(transport, optionsFactory.Create(), loggerFactory, serviceProvider);
-        await server.RunAsync(cancellationToken).ConfigureAwait(false);
+        var sessionLifecycle = serviceProvider.GetService<IMcpSessionLifecycle>();
+        sessionLifecycle?.OnSessionAccepted();
+        try
+        {
+            await using var transport = new StreamServerTransport(input, ownedPipe, _pipeName, loggerFactory);
+            await using var server = McpServer.Create(transport, optionsFactory.Create(), loggerFactory, serviceProvider);
+            await server.RunAsync(cancellationToken).ConfigureAwait(false);
+        }
+        finally
+        {
+            sessionLifecycle?.OnSessionEnded();
+        }
     }
 
     private async Task<Stream?> CreateMcpInputStreamAsync(NamedPipeServerStream pipe, CancellationToken cancellationToken)

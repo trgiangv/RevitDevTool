@@ -15,10 +15,12 @@
     <ItemGroup>
         <ProjectReference Include="..\DevTools.Ipc\DevTools.Ipc.csproj"/>
         <ProjectReference Include="..\DevTools.Logging\DevTools.Logging.csproj"/>
+        <ProjectReference Include="..\DevTools.Mcp\DevTools.Mcp.csproj"/>
     </ItemGroup>
 
     <ItemGroup>
         <Using Include="DevTools.Ipc"/>
         <Using Include="DevTools.Logging"/>
+        <Using Include="DevTools.Mcp.Dispatch"/>
     </ItemGroup>
 </Project>
