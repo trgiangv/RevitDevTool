@@ -29,9 +29,11 @@ public sealed class HostDriverRegistryTests
         using var host = DaemonHostBuilder.CreateStdioHost([]);
 
         var coordinator = host.Services.GetRequiredService<HostCatalogCoordinator>();
+        var catalogService = host.Services.GetRequiredService<CatalogService>();
         var engine = host.Services.GetRequiredService<McpEngine>();
 
         Assert.NotNull(coordinator);
+        Assert.NotNull(catalogService);
         Assert.NotNull(engine);
     }
 
@@ -55,10 +57,19 @@ public sealed class HostDriverRegistryTests
             new TestAuthService(),
             Options.Create(new GatewayOptions()),
             services);
-        await using var coordinator = new HostCatalogCoordinator(
-            engine,
-            new DaemonSettings(),
+        var catalogService = new CatalogService(
+            engine.InstanceManager,
+            engine.ToolCollection,
+            engine.PromptCollection,
+            engine.ResourceCollection,
+            engine.BrokerCatalog,
+            nativeSurface: false,
+            engine.LocalTools,
             NullLogger<CatalogService>.Instance,
+            CancellationToken.None);
+        await using var coordinator = new HostCatalogCoordinator(
+            catalogService,
+            engine,
             NullLogger<HostCatalogCoordinator>.Instance);
         var discovery = new DiscoveryHostedService(manager, coordinator);
 

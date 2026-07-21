@@ -79,6 +79,21 @@ public static class DaemonHostBuilder
         builder.Services.AddSingleton<HostDriverRegistry>();
         builder.Services.AddSingleton<BrokerCatalogIndex>();
         builder.Services.AddSingleton<McpEngine>();
+        builder.Services.AddSingleton<CatalogService>(sp =>
+        {
+            var engine = sp.GetRequiredService<McpEngine>();
+            var settings = sp.GetRequiredService<DaemonSettings>();
+            return new CatalogService(
+                engine.InstanceManager,
+                engine.ToolCollection,
+                engine.PromptCollection,
+                engine.ResourceCollection,
+                engine.BrokerCatalog,
+                settings.McpSurface == McpSurfaceMode.Native,
+                engine.LocalTools,
+                sp.GetRequiredService<ILogger<CatalogService>>(),
+                CancellationToken.None);
+        });
         builder.Services.AddSingleton<HostCatalogCoordinator>();
         builder.Services.AddSingleton<ControlPipeHandler>();
         builder.Services.AddHostedService<DiscoveryHostedService>();
