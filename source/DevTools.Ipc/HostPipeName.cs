@@ -68,6 +68,29 @@ public static class HostPipeName
     public static string? ExtractHost(string pipeName)
         => TryParse(pipeName, out var host, out _, out _) ? host : null;
 
+    /// <summary>Compare host segments for discovery/matching (case-insensitive).</summary>
+    public static bool HostSegmentEquals(string left, string right) =>
+        string.Equals(left, right, StringComparison.OrdinalIgnoreCase);
+
+    /// <summary>Compare version segments for discovery/matching (case-insensitive).</summary>
+    public static bool VersionSegmentEquals(string left, string right) =>
+        string.Equals(left, right, StringComparison.OrdinalIgnoreCase);
+
+    /// <summary>
+    /// Compare parsed identity segments for discovery/matching.
+    /// Host and version use case-insensitive comparison; PID is exact.
+    /// </summary>
+    public static bool IdentityEquals(
+        string host,
+        string version,
+        int processId,
+        string otherHost,
+        string otherVersion,
+        int otherProcessId) =>
+        HostSegmentEquals(host, otherHost) &&
+        VersionSegmentEquals(version, otherVersion) &&
+        processId == otherProcessId;
+
     /// <summary>
     /// Strip the <c>DevTools_</c> vendor prefix for UI display.
     /// Returns the input unchanged when it does not carry the prefix.
