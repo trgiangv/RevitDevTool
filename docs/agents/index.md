@@ -1,41 +1,32 @@
 # Agent Harness Index
 
-Use this directory as deterministic agent memory. It does not replace the architecture docs under `docs/`; it routes agents to the right context, boundaries, and verification commands.
+Use this directory as deterministic agent memory. It routes agents to context and verification. Routine compile feedback comes from `.cursor/hooks/` — do not open a build skill for that.
 
 ## Task Routing
 
-| Task | Read | Projects | Skill |
-|------|------|----------|-------|
-| MCP integration testing | `mcp-integration-test.md`, `verification.md` | All host + daemon projects | — |
-| Build/compile host add-in | `build-matrix.md`, `verification.md` | `build/`, `scripts/` | `.agents/skills/revit-build/SKILL.md` |
-| Package/release/installer | `build-matrix.md`, `verification.md` | `build/`, `scripts/` | `.agents/skills/packaging-release-review/SKILL.md` |
-| Shared library change | `host-boundaries.md`, `build-matrix.md` | `source/DevTools.*/` | `.agents/skills/host-boundary-review/SKILL.md`, `.agents/skills/net48-compat-review/SKILL.md` |
-| Execution provider/strategy/orchestrator | `execution-system.md`, `verification.md` | `source/DevTools.Execution/`, `source/DevTools.Execution.Abstractions/` | `.agents/skills/execution-system-change/SKILL.md` |
-| MCP registry/server/dispatch | `mcp-pytest-bridge.md` | `source/DevTools.Mcp/`, `source/DevTools.Ipc/` | `.agents/skills/mcp-bridge-change/SKILL.md` |
-| Daemon (auth, gateway, tray, control pipe) | `docs/MCP/README.md` | `source/DevTools.Daemon/` | `.agents/skills/mcp-bridge-change/SKILL.md` |
-| pytest bridge/test runtime (server-side) | `mcp-pytest-bridge.md`, `known-test-gaps.md` | `source/DevTools.Execution/External/Testing/` | `.agents/skills/pytest-bridge-change/SKILL.md` |
-| Write pytest tests (client-side) | `RevitDevTool.PyTest/AGENTS.md` | `RevitDevTool.PyTest/` | `.agents/skills/revit-pytest/SKILL.md` |
-| Revit API exploration + development | `docs/MCP/workflows.md` | External: `rvtdocs-mcp` repo | `.agents/skills/revit-developer/SKILL.md` |
-| pyRevit IronPython tools | — | External pyRevit extensions | `.agents/skills/pyrevit-ironpython/SKILL.md` |
-| Logging or geometry visualization | `host-boundaries.md` | `source/DevTools.Logging/`, host `Visualization/` | `.agents/skills/logging-visualization-review/SKILL.md` |
-| Startup, lazy loading, host boot | `startup-performance.md`, `host-boundaries.md` | Host projects (`RevitDevTool/`, `AcadDevTool/`) | No separate skill |
+| Task | Read | Projects |
+|------|------|----------|
+| MCP integration testing | `mcp-integration-test.md`, `verification.md` | Host + daemon |
+| Compile / deploy host | `build-matrix.md`, `verification.md` | `build/`, `scripts/` |
+| Package / release | `build-matrix.md`, `verification.md` | `build/`, `scripts/` |
+| Shared / host-boundary / execution / MCP / pytest-bridge / logging | Matching `docs/agents/*.md` + module README | `source/DevTools.*`, hosts |
+| Write pytest tests (client) | `RevitDevTool.PyTest/AGENTS.md` | Sibling `RevitDevTool.PyTest/` |
+| Revit API explore + live execute | `docs/MCP/workflows.md` | MCP + `rvtdocs-mcp` |
+| Startup / lazy load | `startup-performance.md`, `host-boundaries.md` | Host projects |
+
+When a task matches a packaged workflow, read the relevant `.agents/skills/*/SKILL.md`. The skill set may grow over time — do not hardcode or invent skill names in docs.
 
 ## Operating Loop
 
-1. Classify the task and read the files above.
-2. Identify host-specific vs shared code before editing.
-3. Choose the smallest verification command from `verification.md`.
-4. Decide whether existing tests are meaningful for this change; add a focused test when the current suite only gives smoke coverage.
-5. Run the command or explain the environmental blocker.
-6. Update architecture docs when the change affects an important feature, boundary, flow, or long-term decision.
-7. Summarize changed files, verification, known risks, and follow-up work.
+1. Classify the task; read the digest above (not a build skill).
+2. Edit; let the stop-hook compile (Revit API → 2022/2025/2027; shared → Debug/Release).
+3. Fix hook-reported errors; use `scripts/` for deploy, tests, pack.
+4. Client pytest: `uv run pytest` in `RevitDevTool.PyTest` only.
+5. Update architecture docs when boundaries/flows change; summarize risks.
 
 ## Documentation Rule
 
-Architecture docs are part of the engineering source of truth, not optional prose. If a change teaches future agents how the system should evolve, record it in the right layer:
-
-- `docs/*/README.md` for durable module architecture.
-- `docs/agents/*.md` for agent workflow, traps, verification, and decision context.
-- `.agents/skills/*/SKILL.md` for short task checklists.
-
-Do not update every layer by default. Update the layer that future work will actually consult.
+- `docs/*/README.md` — durable module architecture.
+- `docs/agents/*.md` — agent workflow, traps, verification.
+- `.agents/skills/*/SKILL.md` — domain workflows; read the matching skill when the task fits.
+- `.cursor/hooks/` — automatic compile verify (replaces build-skill roundtrips).

@@ -6,7 +6,7 @@ Use this file for durable architecture decisions that affect agent behavior. Kee
 
 - `AGENTS.md` is the entry contract and router.
 - `docs/agents/` contains deterministic agent digests.
-- `.agents/skills/*/SKILL.md` contains task-specific checklists.
+- `.agents/skills/` holds domain workflows only. Routine compile is `.cursor/hooks/` (stop verify).
 - Tool-specific files should be thin adapters that point back to the repo-owned harness.
 
 ## 2026-05-29: Host-agnostic direction
@@ -20,9 +20,14 @@ Use this file for durable architecture decisions that affect agent behavior. Kee
 - Important features and architecture changes should update the matching docs.
 - Module READMEs hold durable architecture.
 - `docs/agents/` holds agent workflow and decision context.
-- Skills hold short task checklists.
+- Skills hold domain workflows under `.agents/skills/`; compile verify is hook-driven.
 
-## 2026-05-29: GitNexus unavailable for current index run
+## 2026-07-21: Hook-first compile harness
+
+- Removed `revit-build`, `net48-compat-review`, `pyrevit-ironpython`, and six thin `*-change/review` skills; added `platform-change`.
+- `.cursor/hooks/` tracks edits and on agent stop compiles: Revit/AutoCAD API → Autodesk 2022/2025/2027; shared → Debug/Release. Deploy stays manual via `scripts/kill-host.ps1` + `scripts/build-host.ps1`.
+- Client pytest path hardened to `uv run pytest` in `RevitDevTool.PyTest` only.
+
 
 - `npx gitnexus analyze` fails in `scopeResolution` even after ignoring vendor `libs/` and cleaning `.gitnexus`.
 - `.gitnexusignore` excludes vendor/generated/runtime folders so future indexing should focus on repo-owned code.
@@ -45,7 +50,7 @@ Use this file for durable architecture decisions that affect agent behavior. Kee
 - `DevTools.McpServer` standalone process clarified: runs outside hosts as `MCPServer.exe`; standalone built-in tools are multi-host, in-host MCP runtime is shared.
 - `docs/README.md` directory tree expanded to show all 8 `docs/agents/` digest files and `static/icons/` assets.
 - Documentation completeness table restructured: separated architecture modules, shared platform libraries, and sample projects.
-- All 6 `scripts/*.ps1` scripts received PowerShell comment-based help (`.SYNOPSIS`, `.DESCRIPTION`, `.PARAMETER`, `.EXAMPLE`).
+- All 7 `scripts/*.ps1` agent scripts received PowerShell comment-based help (`.SYNOPSIS`, `.DESCRIPTION`, `.PARAMETER`, `.EXAMPLE`).
 - `AGENTS.md` Verification section now lists all 6 agent scripts.
 - `docs/agents/host-boundaries.md` updated with `RevitDevTool.Core`, visualization location, and standalone MCP server process.
 

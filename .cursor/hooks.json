@@ -1,0 +1,24 @@
+{
+  "version": 1,
+  "hooks": {
+    "sessionStart": [
+      {
+        "command": "powershell.exe -NoProfile -ExecutionPolicy Bypass -Sta -File ./.cursor/hooks/session-start.ps1",
+        "timeout": 15
+      }
+    ],
+    "afterFileEdit": [
+      {
+        "command": "powershell.exe -NoProfile -ExecutionPolicy Bypass -Sta -File ./.cursor/hooks/track-edit.ps1",
+        "timeout": 20
+      }
+    ],
+    "stop": [
+      {
+        "command": "powershell.exe -NoProfile -ExecutionPolicy Bypass -Sta -File ./.cursor/hooks/verify-build.ps1",
+        "timeout": 600,
+        "loop_limit": 3
+      }
+    ]
+  }
+}

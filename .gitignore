@@ -41,6 +41,7 @@ openspec/
 artifacts/
 superpowers/
 .cocoindex_code/
+.cursor/hooks-state/
 
 # Code signing
 *.pfx

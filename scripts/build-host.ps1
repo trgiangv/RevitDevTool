@@ -3,13 +3,14 @@
     Build RevitDevTool.slnx for a single Autodesk host year.
 .DESCRIPTION
     Compiles the solution with configuration {Mode}.Autodesk.{Year}.
-    MSBuild targets may deploy to the addin folder — kill host processes first
+    MSBuild targets may deploy to the addin folder — run scripts/kill-host.ps1 first
     if Revit/AutoCAD is running (DLL file locks).
 .PARAMETER Year
     Autodesk product year (2022-2024 = net48, 2025-2026 = net8.0, 2027 = net10.0).
 .PARAMETER Mode
     Debug or Release build mode.
 .EXAMPLE
+    scripts/kill-host.ps1
     scripts/build-host.ps1 -Year 2025
     scripts/build-host.ps1 -Year 2024 -Mode Release
 #>
@@ -22,8 +23,10 @@ param(
 )
 
 $ErrorActionPreference = "Stop"
-$repoRoot = Resolve-Path (Join-Path $PSScriptRoot "../..")
-$solution = Join-Path $repoRoot "RevitDevTool.slnx"
+. (Join-Path $PSScriptRoot '_lib.ps1')
+Assert-RepoRoot
+
+$solution = Join-RepoPath 'RevitDevTool.slnx'
 $configuration = "$Mode.Autodesk.$Year"
 
 dotnet build $solution -c $configuration

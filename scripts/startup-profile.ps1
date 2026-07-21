@@ -4,7 +4,7 @@
 .DESCRIPTION
     Placeholder for manual startup profiling workflow. Prints host/year/timestamp context
     then delegates to collect-logs.ps1 to list recent log files.
-    This script does not perform automated timing — it provides a stable anchor
+    This script does not perform automated timing - it provides a stable anchor
     for recording and reviewing startup behavior.
 .PARAMETER HostApp
     Target host application (Revit or AutoCAD).

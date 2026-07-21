@@ -4,6 +4,7 @@
 .DESCRIPTION
     Without -Destination: lists the 50 most recent .log/.txt files with timestamps and sizes.
     With -Destination: copies those 50 files to the specified directory.
+    Log root also includes daemon-tray.log and daemon-stdio.log when the Daemon is used.
 .PARAMETER Destination
     Target directory for copying logs. Created if it does not exist.
 .EXAMPLE
@@ -17,15 +18,17 @@ param(
 $ErrorActionPreference = "Stop"
 $logRoot = Join-Path $env:APPDATA "RevitDevTool"
 
-if (-not (Test-Path $logRoot)) {
+if (-not (Test-Path -LiteralPath $logRoot)) {
     Write-Warning "Log root not found: $logRoot"
     exit 0
 }
 
+$recentLogs = Get-ChildItem -LiteralPath $logRoot -Recurse -File -Include *.log, *.txt |
+    Sort-Object LastWriteTime -Descending |
+    Select-Object -First 50
+
 if (-not $Destination) {
-    Get-ChildItem $logRoot -Recurse -File -Include *.log,*.txt |
-        Sort-Object LastWriteTime -Descending |
-        Select-Object -First 50 FullName, LastWriteTime, Length
+    $recentLogs | Select-Object FullName, LastWriteTime, Length
     exit 0
 }
 
@@ -35,7 +38,4 @@ if (-not $destPath) {
     $destPath = Resolve-Path -LiteralPath $Destination
 }
 
-Get-ChildItem $logRoot -Recurse -File -Include *.log,*.txt |
-    Sort-Object LastWriteTime -Descending |
-    Select-Object -First 50 |
-    Copy-Item -Destination $destPath -Force
+$recentLogs | Copy-Item -Destination $destPath -Force
