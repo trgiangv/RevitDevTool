@@ -1,7 +1,6 @@
 using System.Collections.Concurrent;
 using DevTools.Daemon.Mcp.Tools;
 using DevTools.Mcp.Routing.Catalog;
-using DevTools.Daemon.Hosting;
 using DevTools.Mcp;
 using Microsoft.Extensions.Logging;
 
@@ -24,18 +23,12 @@ public sealed class HostCatalogCoordinator : IAsyncDisposable
     private int activeRefreshes;
     private bool disposing;
 
-    public HostCatalogCoordinator(McpEngine engine, DaemonSettings settings, ILogger<CatalogService> catalogLogger, ILogger<HostCatalogCoordinator> logger)
+    public HostCatalogCoordinator(
+        CatalogService catalogService,
+        McpEngine engine,
+        ILogger<HostCatalogCoordinator> logger)
     {
-        catalogService = new CatalogService(
-            engine.InstanceManager,
-            engine.ToolCollection,
-            engine.PromptCollection,
-            engine.ResourceCollection,
-            engine.BrokerCatalog,
-            settings.McpSurface == McpSurfaceMode.Native,
-            engine.LocalTools,
-            catalogLogger,
-            CancellationToken.None);
+        this.catalogService = catalogService;
         rebuildSnapshotAsync = catalogService.RebuildCatalogAsync;
         instanceManager = engine.InstanceManager;
         this.logger = logger;
