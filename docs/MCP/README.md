@@ -97,6 +97,7 @@ Case events require the client capability `experimental.devtools.pytest.caseEven
 | [Daemon](daemon.md) | Daemon ownership, lifecycle, and host sessions. |
 | [Transport](transport.md) | Stdio, gateway routing, and machine selection. |
 | [Tools](tools.md) | Broker, Native, targets, and host selection. |
+| [Inspector](inspector.md) | How to attach MCP Inspector (daemon/gateway; no stdio-pipe shim). |
 | [In-host runtime](in-host-runtime.md) | SDK server, registry, identity, and host execution. |
 | [Workflows](workflows.md) | Practical agent workflows. |
 
