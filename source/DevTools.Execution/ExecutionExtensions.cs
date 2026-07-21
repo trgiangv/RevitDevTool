@@ -9,6 +9,7 @@ using DevTools.Execution.Providers.Dotnet;
 using DevTools.Execution.Providers.FSharp;
 using DevTools.Execution.Providers.Python;
 using DevTools.Execution.Services;
+using DevTools.Mcp.Dispatch;
 using DevTools.Mcp.Hosting;
 using DevTools.Telemetry;
 using Microsoft.Extensions.DependencyInjection;
@@ -90,6 +91,8 @@ public static class ExecutionExtensions
     {
         services.AddSingleton<ConnectionState>();
         services.AddSingleton<IMcpExecutionTracker, ConnectionStateExecutionTracker>();
+        services.AddSingleton<IMcpSessionLifecycle, ConnectionStateSessionLifecycle>();
+        services.AddSingleton<IMcpHostIdentity, McpHostIdentity>();
 
         services.AddSingleton<DotnetMcpRegistryProvider>();
         services.AddSingleton<PythonMcpRegistryProvider>();

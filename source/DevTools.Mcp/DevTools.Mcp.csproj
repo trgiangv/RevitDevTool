@@ -22,6 +22,7 @@
 
     <ItemGroup>
         <ProjectReference Include="..\DevTools.Execution.Abstractions\DevTools.Execution.Abstractions.csproj"/>
+        <ProjectReference Include="..\DevTools.Ipc\DevTools.Ipc.csproj"/>
         <ProjectReference Include="..\DevTools.Settings\DevTools.Settings.csproj"/>
     </ItemGroup>
 

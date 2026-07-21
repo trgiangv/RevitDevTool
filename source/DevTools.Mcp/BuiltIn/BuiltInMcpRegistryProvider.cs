@@ -119,18 +119,24 @@ internal static class BuiltInToolExecution
         public override Tool ProtocolTool => primitive.ProtocolTool;
         public override IReadOnlyList<object> Metadata => primitive.Metadata;
 
-        public override async ValueTask<CallToolResult> InvokeAsync(RequestContext<CallToolRequestParams> request, CancellationToken cancellationToken = default)
-        {
-            var previousMode = ExecutionGuardContext.Mode;
-            ExecutionGuardContext.Mode = ExecutionGuardMode.Suppress;
-            try
-            {
-                return await primitive.InvokeAsync(request, cancellationToken).ConfigureAwait(false);
-            }
-            finally
-            {
-                ExecutionGuardContext.Mode = previousMode;
-            }
-        }
+        public override ValueTask<CallToolResult> InvokeAsync(RequestContext<CallToolRequestParams> request, CancellationToken cancellationToken = default) =>
+            McpExecutionDispatch.InvokeToolAsync(
+                request,
+                primitive.ProtocolTool.Name,
+                toolId: null,
+                async () =>
+                {
+                    var previousMode = ExecutionGuardContext.Mode;
+                    ExecutionGuardContext.Mode = ExecutionGuardMode.Suppress;
+                    try
+                    {
+                        return await primitive.InvokeAsync(request, cancellationToken).ConfigureAwait(false);
+                    }
+                    finally
+                    {
+                        ExecutionGuardContext.Mode = previousMode;
+                    }
+                },
+                cancellationToken);
     }
 }

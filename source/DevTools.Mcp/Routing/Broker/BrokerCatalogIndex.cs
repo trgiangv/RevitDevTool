@@ -105,26 +105,22 @@ public sealed class BrokerCatalogIndex
         BrokerSnapshot current;
         lock (gate) current = snapshot;
         if (!current.ByTarget.TryGetValue(target.ToString(), out var registered) || registered.Length == 0)
-            return InvokeResult(BrokerInvokeStatus.TargetNotFound, target, hostId, [], true, false);
+            throw CreateInfrastructureFailure(BrokerInvokeStatus.TargetNotFound, target, hostId, []);
 
         if (hostId is { } requestedHostId && registered.All(entry => entry.Host.ProcessId != requestedHostId))
-            return InvokeResult(
+            throw CreateInfrastructureFailure(
                 BrokerInvokeStatus.HostMismatch,
                 target,
                 hostId,
-                registered.Select(ToInvokeCandidate).ToArray(),
-                false,
-                false);
+                registered.Select(ToInvokeCandidate).ToArray());
 
         var candidates = registered.Where(entry => hostId is null || entry.Host.ProcessId == hostId).ToArray();
         if (candidates.Length > 1)
-            return InvokeResult(
+            throw CreateInfrastructureFailure(
                 BrokerInvokeStatus.HostSelectionRequired,
                 target,
                 hostId,
-                candidates.Select(ToInvokeCandidate).ToArray(),
-                false,
-                false);
+                candidates.Select(ToInvokeCandidate).ToArray());
 
         var candidate = candidates[0];
         IReadOnlyDictionary<string, object?>? convertedArguments = null;
@@ -137,13 +133,13 @@ public sealed class BrokerCatalogIndex
             catch (Exception ex)
             {
                 LogInvokeFailure(ex, BrokerInvokeStatus.HostFailed, target, candidate);
-                return InvokeResult(BrokerInvokeStatus.HostFailed, target, hostId, [], true, false);
+                throw CreateInfrastructureFailure(BrokerInvokeStatus.HostFailed, target, hostId, []);
             }
         }
 
         var session = sessions.GetSession(candidate.Host.ProcessId, candidate.SessionGeneration);
         if (session is null || !session.IsConnected)
-            return InvokeResult(BrokerInvokeStatus.HostDisconnected, target, hostId, [], true, false);
+            throw CreateInfrastructureFailure(BrokerInvokeStatus.HostDisconnected, target, hostId, []);
 
         using var deadline = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
         deadline.CancelAfter(timeout);
@@ -156,7 +152,7 @@ public sealed class BrokerCatalogIndex
                 BrokerPrimitiveKind.Tool => await session.CallToolAsync(candidate.Key, convertedArguments, deadline.Token).ConfigureAwait(false),
                 BrokerPrimitiveKind.Resource => ConvertResource(await session.ReadResourceAsync(candidate.Key, deadline.Token).ConfigureAwait(false)),
                 BrokerPrimitiveKind.Prompt => ConvertPrompt(await session.GetPromptAsync(candidate.Key, convertedArguments, deadline.Token).ConfigureAwait(false)),
-                _ => InvokeResult(BrokerInvokeStatus.HostFailed, target, hostId, [], true, true)
+                _ => throw CreateInfrastructureFailure(BrokerInvokeStatus.HostFailed, target, hostId, [], mayHaveExecuted: true)
             };
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
@@ -166,22 +162,22 @@ public sealed class BrokerCatalogIndex
         catch (OperationCanceledException ex) when (deadline.IsCancellationRequested)
         {
             LogInvokeFailure(ex, BrokerInvokeStatus.TimedOut, target, candidate);
-            return InvokeResult(BrokerInvokeStatus.TimedOut, target, hostId, [], true, true);
+            throw CreateInfrastructureFailure(BrokerInvokeStatus.TimedOut, target, hostId, [], mayHaveExecuted: true);
         }
         catch (IOException ex)
         {
             LogInvokeFailure(ex, BrokerInvokeStatus.ConnectionLost, target, candidate);
-            return InvokeResult(BrokerInvokeStatus.ConnectionLost, target, hostId, [], true, true);
+            throw CreateInfrastructureFailure(BrokerInvokeStatus.ConnectionLost, target, hostId, [], mayHaveExecuted: true);
         }
         catch (ObjectDisposedException ex)
         {
             LogInvokeFailure(ex, BrokerInvokeStatus.ConnectionLost, target, candidate);
-            return InvokeResult(BrokerInvokeStatus.ConnectionLost, target, hostId, [], true, true);
+            throw CreateInfrastructureFailure(BrokerInvokeStatus.ConnectionLost, target, hostId, [], mayHaveExecuted: true);
         }
         catch (Exception ex)
         {
             LogInvokeFailure(ex, BrokerInvokeStatus.HostFailed, target, candidate);
-            return InvokeResult(BrokerInvokeStatus.HostFailed, target, hostId, [], true, true);
+            throw CreateInfrastructureFailure(BrokerInvokeStatus.HostFailed, target, hostId, [], mayHaveExecuted: true);
         }
     }
 
@@ -239,21 +235,26 @@ public sealed class BrokerCatalogIndex
     private static BrokerInvokeCandidate ToInvokeCandidate(BrokerEntry entry) =>
         new(entry.Host.ProcessId, entry.Host.HostApp, entry.Host.VersionNumber);
 
-    private static CallToolResult InvokeResult(
+    private static McpException CreateInfrastructureFailure(
         string status,
         BrokerPrimitiveTarget target,
         int? requestedHostId,
         IReadOnlyList<BrokerInvokeCandidate> candidates,
-        bool isError,
-        bool mayHaveExecuted,
-        string? errorCode = null)
+        bool mayHaveExecuted = false)
     {
+        var candidateIds = candidates.Count > 0
+            ? string.Join(", ", candidates.Select(candidate => candidate.HostId))
+            : null;
         var message = status switch
         {
             BrokerInvokeStatus.HostSelectionRequired =>
-                $"Target '{target}' is available on multiple hosts; retry with one of the candidate hostId values.",
+                candidateIds is null
+                    ? $"Target '{target}' is available on multiple hosts; retry with one of the candidate hostId values."
+                    : $"Target '{target}' is available on multiple hosts ({candidateIds}); retry with one of those hostId values.",
             BrokerInvokeStatus.HostMismatch =>
-                $"Target '{target}' is not available on host {requestedHostId}; retry with one of the candidate hostId values.",
+                candidateIds is null
+                    ? $"Target '{target}' is not available on host {requestedHostId}; retry with one of the candidate hostId values."
+                    : $"Target '{target}' is not available on host {requestedHostId}; retry with hostId {candidateIds}.",
             BrokerInvokeStatus.TargetNotFound =>
                 $"Target '{target}' was not found; search the current broker catalog before retrying.",
             BrokerInvokeStatus.HostDisconnected =>
@@ -264,19 +265,10 @@ public sealed class BrokerCatalogIndex
                 $"Target '{target}' exceeded its broker deadline; confirm host state before retrying.",
             _ => $"The selected host failed while invoking target '{target}'."
         };
-        var payload = new BrokerInvokePayload(
-            status,
-            target.ToString(),
-            requestedHostId,
-            candidates,
-            mayHaveExecuted,
-            errorCode);
-        return new CallToolResult
-        {
-            IsError = isError,
-            Content = [new TextContentBlock { Text = message }],
-            StructuredContent = JsonSerializer.SerializeToElement(payload, McpJsonUtilities.DefaultOptions)
-        };
+        if (mayHaveExecuted)
+            message += " The target may have executed before the failure.";
+
+        return new McpException(message);
     }
 
     private void LogInvokeFailure(
