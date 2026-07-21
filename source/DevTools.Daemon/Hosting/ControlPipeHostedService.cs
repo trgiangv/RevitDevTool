@@ -1,5 +1,6 @@
 using System.IO.Pipes;
 using System.Text;
+using DevTools.Ipc;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using ZLogger;
@@ -18,12 +19,9 @@ internal sealed class ControlPipeHostedService(ControlPipeHandler handler, ILogg
     {
         while (!stoppingToken.IsCancellationRequested)
         {
-            await using var server = new NamedPipeServerStream(
+            await using var server = CurrentUserPipeFactory.CreateDuplexServer(
                 DaemonConstants.ControlPipeName,
-                PipeDirection.InOut,
-                MaxServerInstances,
-                PipeTransmissionMode.Byte,
-                PipeOptions.Asynchronous);
+                MaxServerInstances);
 
             try
             {
