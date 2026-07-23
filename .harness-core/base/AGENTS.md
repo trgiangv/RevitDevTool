@@ -30,27 +30,3 @@ SQLite intake, story, trace, scoring, audit, and proposal commands are optional
 compatibility features. Use them only when explicitly requested or required by
 an external orchestrator.
 <!-- HARNESS:END -->
-
-## Domain Map
-
-- Product behavior: `docs/product/`
-- Architecture modules: `docs/ARCHITECTURE.md` → `docs/architecture/*`
-- Agent task routing: `docs/agents/index.md`
-- Lasting decisions: `docs/decisions/`
-- Durable plans: `docs/plans/active/`
-- Domain skills: `.agents/skills/*/SKILL.md` (do not invent a build skill)
-- Compile verify: `.cursor/hooks/` on agent stop — do not ad-hoc MSBuild for routine verify
-
-## Platform Pointers
-
-- Host/dev-tool platform (not Revit-only). Shared code in `source/DevTools.*`; host API in `source/RevitDevTool/` and `source/AcadDevTool/`.
-- Solution truth: `RevitDevTool.slnx` (no root `.sln`).
-- Build/verify commands: `docs/agents/build-matrix.md`, `docs/agents/verification.md`
-- Client pytest: `uv run pytest` from sibling `RevitDevTool.PyTest` only
-- Stale paths and traps: `docs/agents/known-test-gaps.md`
-
-## Doc Update Rule
-
-When behavior, boundaries, or agent workflow change, update the matching layer only
-(`docs/product/`, `docs/architecture/<Module>/`, `docs/agents/`, or `docs/decisions/`).
-Do not duplicate the same truth in multiple places.

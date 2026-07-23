@@ -1,6 +1,6 @@
 # MCP And PyTest Bridge Digest
 
-Deep sources: `docs/MCP/README.md` and `docs/PyTest/README.md`.
+Deep sources: `docs/architecture/MCP/README.md` and `docs/architecture/PyTest/README.md`.
 
 ## MCP
 
@@ -15,7 +15,7 @@ Deep sources: `docs/MCP/README.md` and `docs/PyTest/README.md`.
 - MCP routing (daemon): `DevTools.Mcp.Routing.Catalog.CatalogService`
 - Bridge client: `DevTools.Daemon.Mcp.HostBridgeClient` (implements `IHostBridgeClient`)
 
-External MCP clients talk to `DevTools.Daemon` (via `--stdio` or Gateway), which discovers any host pipe (`DevTools_Revit_*`, `DevTools_AutoCad_*`, `DevTools_Civil3D_*`, etc.) via `InstanceManager`. Daemon tools include infrastructure (`list_host_instances`, `launch_host`, `read_file_info`, `open_model`, `list_machines`) and symmetric catalog tools (`list_dynamic_tools`, `call_dynamic_tool`, `list_dynamic_resources`, `read_dynamic_resource`, `list_dynamic_prompts`, `get_dynamic_prompt`, `refresh_dynamic_catalog`). In-host built-in primitives: tools (`execute_csharp_code`, `execute_python_code`, `open_document`, `navigate_history`), resources (`revit://csharp-cheatsheet`, `revit://python-cheatsheet`, `revit://model/context`, `revit://model/warnings`, `revit://version`, `revit://view/screenshot`), prompts (`revit_code`). See [`docs/MCP/tools.md`](../MCP/tools.md) for full catalog. The bridge handler lives in `DevTools.Mcp` (protocol layer) and depends on `IMcpPrimitiveDispatcher` for actual execution dispatch.
+External MCP clients talk to `DevTools.Daemon` (via `--stdio` or Gateway), which discovers any host pipe (`DevTools_Revit_*`, `DevTools_AutoCad_*`, `DevTools_Civil3D_*`, etc.) via `InstanceManager`. Daemon tools include infrastructure (`list_host_instances`, `launch_host`, `read_file_info`, `open_model`, `list_machines`) and symmetric catalog tools (`list_dynamic_tools`, `call_dynamic_tool`, `list_dynamic_resources`, `read_dynamic_resource`, `list_dynamic_prompts`, `get_dynamic_prompt`, `refresh_dynamic_catalog`). In-host built-in primitives: tools (`execute_csharp_code`, `execute_python_code`, `open_document`, `navigate_history`), resources (`revit://csharp-cheatsheet`, `revit://python-cheatsheet`, `revit://model/context`, `revit://model/warnings`, `revit://version`, `revit://view/screenshot`), prompts (`revit_code`). See [`docs/architecture/MCP/tools.md`](../architecture/MCP/tools.md) for full catalog. The bridge handler lives in `DevTools.Mcp` (protocol layer) and depends on `IMcpPrimitiveDispatcher` for actual execution dispatch.
 
 ## PyTest Bridge
 

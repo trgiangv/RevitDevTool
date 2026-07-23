@@ -12,7 +12,7 @@ description: >
 
 ## Before editing
 
-1. Read the matching digest only: `docs/agents/execution-system.md`, `mcp-pytest-bridge.md`, `host-boundaries.md`, `build-matrix.md`, or module `docs/*/README.md`.
+1. Read `docs/WORKFLOW.md` for work shape, then the matching digest only: `docs/agents/execution-system.md`, `mcp-pytest-bridge.md`, `host-boundaries.md`, `build-matrix.md`, `docs/product/<domain>.md`, or `docs/architecture/<Module>/README.md`.
 2. Classify shared vs host-specific before moving code.
 
 ## Rules
@@ -28,4 +28,4 @@ description: >
 - Let the stop-hook compile; fix reported errors.
 - Deploy only with `scripts/kill-host.ps1` + `scripts/build-host.ps1`.
 - Add a focused test when contracts/discovery/dispatch change; otherwise document host blockers.
-- Update the one doc layer future agents will read (module README **or** `docs/agents/` — not both by default).
+- Update the one matching doc layer (`docs/product/`, `docs/architecture/<Module>/`, `docs/agents/`, or `docs/decisions/`) — not multiple layers by default.

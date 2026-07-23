@@ -1,0 +1,45 @@
+# MCP Integration Architecture
+
+Model Context Protocol integration lets external AI clients (Claude Desktop, Cursor, ChatGPT, Perplexity, etc.) talk to running host applications through the standalone **DevTools.Daemon** and the in-host named-pipe runtime.
+
+The entire MCP stack is host-agnostic. The Daemon discovers and connects to any host pipe (`DevTools_Revit_*`, `DevTools_AutoCad_*`, `DevTools_Civil3D_*`, etc.) via generic `HostBridgeClient`.
+
+Last updated: 2026-06-18
+
+## Documentation
+
+| Document | Contents |
+|----------|----------|
+| [Daemon](daemon.md) | Architecture, lifecycle, auth, control pipe API |
+| [Transport](transport.md) | Stdio mode, Gateway WebSocket, multi-machine routing |
+| [Tools](tools.md) | Full primitive catalog: tools, resources, prompts, routing models |
+| [In-Host Runtime](in-host-runtime.md) | Runtime shape, registry flow, dispatch flow, parser library |
+| [Workflows](workflows.md) | Practical AI agent patterns: code exec, vision, undo, full loop |
+
+## Source Map
+
+| Area | Path |
+|------|------|
+| **Daemon (primary)** | `source/DevTools.Daemon/` |
+| IPC transport | `source/DevTools.Ipc/` |
+| MCP protocol | `source/DevTools.Mcp/` |
+| Pytest bridge | `source/DevTools.Execution/External/Testing/` |
+| In-host runtime | `source/DevTools.Execution/External/Mcp/` |
+| Pipe server | `source/DevTools.Execution/External/DevToolsPipeServer.cs` |
+| Registry UI | `source/DevTools.Presentation/ViewModels/McpRegistryViewModel.cs` |
+| Gateway relay | Separate repo: `McpGateway` (Cloudflare Workers + Durable Objects) |
+
+## Verification
+
+Current MCP tests mostly cover parser and contract shapes. When changing MCP behavior:
+
+- Add focused parser/contract tests for schema or identity changes
+- Build the host that owns the changed runtime
+- State live-host or named-pipe verification gaps when they cannot be run
+
+## Related
+
+- `docs/agents/mcp-pytest-bridge.md`
+- `docs/architecture/Execution/README.md`
+- `docs/architecture/PyTest/README.md`
+- McpGateway repo: `docs/setup-guide.md`, `docs/architecture.md`, `docs/api.md`

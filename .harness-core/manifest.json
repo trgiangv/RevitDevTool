@@ -1,0 +1,46 @@
+{
+  "schema_version": 1,
+  "core_version": "0.1.6",
+  "files": [
+    {
+      "path": "AGENTS.md",
+      "upstream_sha256": "2646756f67855980f128212cffcc81a1ade5f68450e1925ebd53473454960625"
+    },
+    {
+      "path": "docs/WORKFLOW.md",
+      "upstream_sha256": "042eacb6f0153983a97ef2e7fd798daec118b6ae7d1fe1f17c53629ad91c587d"
+    },
+    {
+      "path": "docs/README.md",
+      "upstream_sha256": "d1660dc1b649762ca1f6b9e42a667062693d47ebed47e3480dd66dc618379815"
+    },
+    {
+      "path": "docs/product/README.md",
+      "upstream_sha256": "49acff8da61ce2e0d2bd5017ea08a90deed4c6824a6544709c27a79eae781ccc"
+    },
+    {
+      "path": "docs/plans/README.md",
+      "upstream_sha256": "c9fe0ded2e1d323e96830b3398bfbc4af64e11b714e07c84e7d1428eb0618bac"
+    },
+    {
+      "path": "docs/plans/active/README.md",
+      "upstream_sha256": "a7e31f51ed20ff032e3fe1eca921d5bf76838c11636cb9387e996b8d08b210ea"
+    },
+    {
+      "path": "docs/plans/completed/README.md",
+      "upstream_sha256": "bb30420bf45a9b0c18de8350727debf730d1b7beadd026e5126943e2ade90a62"
+    },
+    {
+      "path": "docs/decisions/README.md",
+      "upstream_sha256": "46bab599431d5ee6c9aa54bdcaba62fc6b8fb8ced10677c569d8abd08eb7a047"
+    },
+    {
+      "path": "docs/templates/decision.md",
+      "upstream_sha256": "6e0e645d09bebf8db1bb43498950dbecd1924cef13367bcefa7488c6297f25f3"
+    },
+    {
+      "path": "docs/templates/exec-plan.md",
+      "upstream_sha256": "2dcb127cf7910d3ea9d095663d1613ceeff79e168e206bac442bad1fe59c54b8"
+    }
+  ]
+}

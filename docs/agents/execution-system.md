@@ -1,6 +1,6 @@
 # Execution System Digest
 
-Deep source: `docs/Execution/README.md` and sub-pages (`code-execution.md`, `execution-guard.md`, `pytest-bridge.md`, `mcp-dispatch.md`).
+Deep source: `docs/architecture/Execution/README.md` and sub-pages (`code-execution.md`, `execution-guard.md`, `pytest-bridge.md`, `mcp-dispatch.md`).
 
 ## Core Shape
 

@@ -168,7 +168,7 @@ print(f"Found {walls.GetElementCount()} walls")
 - **Built-in tools** — `list_host_instances`, `launch_host`, `open_model`, `execute_csharp_code`, `open_document`
 - **Custom toolsets** — Python/C# MCP tools registered via file convention
 - **Works with** — Cursor, Claude Desktop, VS Code Copilot, any MCP client
-- **Architecture docs**: [MCP Architecture](docs/MCP/README.md)
+- **Architecture docs**: [MCP Architecture](docs/architecture/MCP/README.md)
 
 ### Remote Testing (PyTest)
 
@@ -178,7 +178,7 @@ print(f"Found {walls.GetElementCount()} walls")
 - **Auto-launch** — spawns host process if needed
 - **IDE integration** — VS Code, Cursor, PyCharm test runners
 - **Separate repo**: [`RevitDevTool.PyTest`](https://github.com/trgiangv/RevitDevTool.PyTest) | PyPI: [`revitdevtool_pytest`](https://pypi.org/project/revitdevtool_pytest/)
-- **Architecture docs**: [PyTest Bridge](docs/PyTest/README.md)
+- **Architecture docs**: [PyTest Bridge](docs/architecture/PyTest/README.md)
 
 ### Logging System
 
