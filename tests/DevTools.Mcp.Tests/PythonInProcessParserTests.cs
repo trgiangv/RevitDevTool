@@ -1,7 +1,7 @@
 using System.Text.Json;
 using Microsoft.Extensions.Logging.Abstractions;
 using Python.Runtime;
-namespace RevitDevTool.Server.Tests;
+namespace DevTools.Mcp.Tests;
 
 public sealed class PythonInProcessParserTests : IDisposable
 {

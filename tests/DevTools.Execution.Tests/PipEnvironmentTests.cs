@@ -2,7 +2,7 @@ using System.Text;
 using System.Text.Json;
 using CliWrap;
 
-namespace RevitDevTool.Execution.Tests;
+namespace DevTools.Execution.Tests;
 
 /// <summary>
 /// Integration tests for the Pip-based Python environment provider workflow.

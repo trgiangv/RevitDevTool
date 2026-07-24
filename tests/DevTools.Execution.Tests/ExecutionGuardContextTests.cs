@@ -1,6 +1,6 @@
 using DevTools.Execution.Abstractions;
 
-namespace RevitDevTool.Execution.Tests;
+namespace DevTools.Execution.Tests;
 
 /// <summary>
 /// Unit tests for <see cref="ExecutionGuardContext"/> ambient context behavior.

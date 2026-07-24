@@ -1,6 +1,6 @@
 using ModelContextProtocol.Protocol;
 
-namespace RevitDevTool.Server.Tests;
+namespace DevTools.Mcp.Tests;
 
 public class ContractTests
 {

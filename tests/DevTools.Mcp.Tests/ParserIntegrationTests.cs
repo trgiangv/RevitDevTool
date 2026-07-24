@@ -1,6 +1,6 @@
 using System.Text.Json;
 using Microsoft.Extensions.Logging.Abstractions;
-namespace RevitDevTool.Server.Tests;
+namespace DevTools.Mcp.Tests;
 
 public sealed class ParserIntegrationTests
 {

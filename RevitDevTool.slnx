@@ -201,8 +201,8 @@
             <BuildType Solution="Release.Autodesk.2027|*" Project="Release" />
             <Build Project="false" />
         </Project>
-        <Project Path="source/DevTools.Agents.Revit/DevTools.Agents.Revit.csproj"/>
-        <Project Path="source/DevTools.Agents.Acad/DevTools.Agents.Acad.csproj"/>
+        <Project Path="source/DevTools.Agents.Revit/DevTools.Agents.Revit.csproj" />
+        <Project Path="source/DevTools.Agents.Acad/DevTools.Agents.Acad.csproj" />
     </Folder>
     <Folder Name="/Solution Items/">
         <File Path=".editorconfig" />
@@ -226,7 +226,7 @@
         <Project Path="tests/RevitDevTool.ExternalEvent.App/RevitDevTool.ExternalEvent.App.csproj">
             <Build Project="false" />
         </Project>
-        <Project Path="Tests/RevitDevTool.Server.Tests/RevitDevTool.Server.Tests.csproj">
+        <Project Path="Tests/DevTools.Execution.Tests/DevTools.Execution.Tests.csproj">
             <BuildType Solution="Debug.Autodesk.2022|*" Project="Debug" />
             <BuildType Solution="Debug.Autodesk.2023|*" Project="Debug" />
             <BuildType Solution="Debug.Autodesk.2024|*" Project="Debug" />
@@ -241,7 +241,7 @@
             <BuildType Solution="Release.Autodesk.2027|*" Project="Release" />
             <Build Project="false" />
         </Project>
-        <Project Path="Tests/RevitDevTool.Execution.Tests/RevitDevTool.Execution.Tests.csproj">
+        <Project Path="Tests/DevTools.Mcp.Tests/DevTools.Mcp.Tests.csproj">
             <BuildType Solution="Debug.Autodesk.2022|*" Project="Debug" />
             <BuildType Solution="Debug.Autodesk.2023|*" Project="Debug" />
             <BuildType Solution="Debug.Autodesk.2024|*" Project="Debug" />

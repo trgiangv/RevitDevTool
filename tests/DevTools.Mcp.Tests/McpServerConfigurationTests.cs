@@ -1,7 +1,7 @@
 using ModelContextProtocol.Protocol;
 using ModelContextProtocol.Server;
 
-namespace RevitDevTool.Server.Tests;
+namespace DevTools.Mcp.Tests;
 
 public class McpServerConfigurationTests
 {

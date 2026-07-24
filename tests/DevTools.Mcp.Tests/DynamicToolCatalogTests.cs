@@ -2,7 +2,7 @@ using System.Text.Json;
 using DevTools.Mcp.Routing.Catalog;
 using ModelContextProtocol.Protocol;
 
-namespace RevitDevTool.Server.Tests;
+namespace DevTools.Mcp.Tests;
 
 public class DynamicToolCatalogTests
 {
