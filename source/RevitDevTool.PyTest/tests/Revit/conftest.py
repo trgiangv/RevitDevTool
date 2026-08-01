@@ -63,7 +63,7 @@ def revit_doc(revit_uiapp):
 @pytest.fixture(scope="session")
 def source_schedule(revit_doc):
     """Return the source schedule element for testing."""
-    from tests.schedule.constants import SOURCE_SCHEDULE_ID
+    from schedule.constants import SOURCE_SCHEDULE_ID
     from Autodesk.Revit import DB
 
     return revit_doc.GetElement(DB.ElementId(SOURCE_SCHEDULE_ID))
@@ -72,7 +72,7 @@ def source_schedule(revit_doc):
 @pytest.fixture(scope="session")
 def target_schedule(revit_doc):
     """Return the target schedule element for testing."""
-    from tests.schedule.constants import TARGET_SCHEDULE_ID
+    from schedule.constants import TARGET_SCHEDULE_ID
     from Autodesk.Revit import DB
 
     return revit_doc.GetElement(DB.ElementId(TARGET_SCHEDULE_ID))

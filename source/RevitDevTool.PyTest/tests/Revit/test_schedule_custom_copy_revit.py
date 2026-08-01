@@ -1,14 +1,14 @@
 import pytest
 
-from tests.schedule.constants import HEADER_COPY_CASES
-from tests.schedule.custom_workflow import CustomCopyService
-from tests.schedule.custom_workflow import OPTION_COLUMN_GROUPING
-from tests.schedule.custom_workflow import OPTION_COLUMN_TITLE
-from tests.schedule.field_mapping import FieldMappingService
-from tests.schedule.model import get_schedule
-from tests.schedule.model import get_section
-from tests.schedule.serializer import serialize_fields
-from tests.schedule.table_cell import TableCellCopier
+from schedule.constants import HEADER_COPY_CASES
+from schedule.custom_workflow import CustomCopyService
+from schedule.custom_workflow import OPTION_COLUMN_GROUPING
+from schedule.custom_workflow import OPTION_COLUMN_TITLE
+from schedule.field_mapping import FieldMappingService
+from schedule.model import get_schedule
+from schedule.model import get_section
+from schedule.serializer import serialize_fields
+from schedule.table_cell import TableCellCopier
 
 
 pytestmark = pytest.mark.usefixtures("revit_auto_rollback")

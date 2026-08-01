@@ -2,13 +2,13 @@ import os
 
 import pytest
 
-from tests.schedule.constants import SOURCE_SCHEDULE_ID
-from tests.schedule.constants import TARGET_SCHEDULE_ID
-from tests.schedule.model import get_schedule
-from tests.schedule.serializer import SNAPSHOT_FILE
-from tests.schedule.serializer import schedule_snapshot_key
-from tests.schedule.serializer import serialize_schedule_list
-from tests.schedule.serializer import write_snapshot_file
+from schedule.constants import SOURCE_SCHEDULE_ID
+from schedule.constants import TARGET_SCHEDULE_ID
+from schedule.model import get_schedule
+from schedule.serializer import SNAPSHOT_FILE
+from schedule.serializer import schedule_snapshot_key
+from schedule.serializer import serialize_schedule_list
+from schedule.serializer import write_snapshot_file
 
 
 pytestmark = pytest.mark.usefixtures("revit_auto_rollback")

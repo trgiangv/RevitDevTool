@@ -2,43 +2,77 @@
 
 ## Overview
 
-This is the pytest client plugin for RevitDevTool. It bridges local pytest with a live host process via Named Pipe JSON-RPC. Supports Revit, AutoCAD-family, and any host that exposes a `DevToolsPipeServer` pipe.
+pytest client plugin for [RevitDevTool](https://github.com/trgiangv/RevitDevTool). Collects tests locally, executes them inside a live host via Named Pipe JSON-RPC (`BridgeMessage` framing).
+
+**Supported today:** **Revit** and **AutoCAD family** (AutoCAD, Civil 3D, Plant 3D, Architecture / Mechanical / MEP / Electrical / Map 3D). Other hosts may appear in the registry but are **in progress** — not validated end-to-end yet.
+
+**Package:** `revitdevtool_pytest` (PyPI) · **Entry point:** `revitdevtool` · **Version:** see `pyproject.toml`
 
 ## Architecture
 
 ```
-Local pytest (collect) → Named Pipe → Host process (PytestRunner.py) → Results → Local pytest (report)
+Local pytest (collect) → Named Pipe (DevTools_*) → Host PytestRunner.py → Results → Local pytest (report)
 ```
 
-### Module Map
+Do **not** connect to `DevToolsMcp_*` — that pipe is for the MCP SDK (`HostMcpPipeServer`). Pytest uses `DevTools_{Host}_{Version}_{PID}` on `DevToolsPipeServer`.
+
+### Client modules (`src/revitdevtool_pytest/`)
 
 | Module | Role |
 |--------|------|
 | `plugin.py` | Hook orchestrator — lifecycle, options, bridge setup |
-| `connection.py` | Bridge lifecycle — discover, connect, lease, launch |
-| `bridge.py` | Wire protocol — Named Pipe framing, request/response |
-| `discovery.py` | Pipe scan, host registry lookup, process launch |
-| `reporting.py` | Map remote CaseResult → pytest TestReport |
-| `suite_leasing.py` | Cross-process host instance allocation (file-based) |
-| `suite_lock.py` | Windows mutex for same-suite concurrency guard |
-| `dialog_resolver.py` | Auto-dismiss host startup dialogs via Win32 |
-| `models.py` | Wire protocol data models (mirrors C# PytestContracts) |
-| `constants.py` | Shared constants, option names, host registry, defaults |
+| `connection.py` | Discover, connect, lease, launch, retry |
+| `bridge.py` | Named Pipe framing, `tests/run` RPC |
+| `discovery.py` | Pipe scan, host registry, process launch |
+| `reporting.py` | Remote `CaseResult` → pytest `TestReport` |
+| `suite_leasing.py` | File-based suite → host PID allocation |
+| `suite_lock.py` | Windows mutex — same suite, one pytest process |
+| `dialog_resolver.py` | Auto-dismiss host startup dialogs (Win32) |
+| `models.py` | Wire models (mirror C# `PytestContracts`) |
+| `constants.py` | Options, host registry, pipe pattern |
 
-### Host-Side (in RevitDevTool repo)
+### Host-side (RevitDevTool repo)
 
-| File | Role |
-|------|------|
-| `PytestRunner.py` | Embedded script — runs `pytest.main()` inside host |
-| `SetupRevit.py` / `SetupAcad.py` | Runtime setup — API refs, I/O redirection |
-| `PytestExecutionService.cs` | C# orchestrator — receives pipe request, invokes Python |
-| `PytestContracts.cs` | C# wire models (mirrors `models.py`) |
+| Location | Role |
+|----------|------|
+| `DevTools.Execution/External/DevToolsPipeServer.cs` | Pytest/control pipe server |
+| `DevTools.Execution/External/Handlers/PytestRequestHandler.cs` | Routes `tests/run` |
+| `DevTools.Execution/External/Testing/` | `PytestExecutionService`, `PytestContracts`, `PytestDependencyService` |
+| `DevTools.Execution/Resources/scripts/PytestRunner.py` | In-host `pytest.main()` runner |
+| `SetupRevit.py` / `SetupAcad.py` | API refs, I/O setup |
 
-## Multi-Host Support
+Wire method: `tests/run`. Progress notifications: `notifications/tests/progress`.
 
-The plugin supports any host that registers a DevToolsPipeServer Named Pipe.
+## This repo layout
 
-### Pre-registered Hosts
+Integration tests for the plugin — not shipped in the wheel.
+
+```
+tests/
+  Revit/                 # default testpaths in pyproject.toml
+    conftest.py          # PEP 723 deps, revit_doc, rollback fixtures
+    schedule/            # shared schedule helpers (import as schedule.*)
+    test_*.py
+  Civil3d/
+    conftest.py          # acad_app, acad_doc, transaction fixtures
+    test_*.py
+```
+
+Switch suites via `pyproject.toml`:
+
+```toml
+testpaths = ["tests/Revit"]   # or tests/Civil3d
+host_name = "revit"           # or civil3d, autocad, …
+host_version = "2025"
+```
+
+Schedule helpers live under `tests/Revit/schedule/`. Imports use the `schedule` package name (e.g. `from schedule.constants import …`), with `pythonpath = ["tests/Revit"]` in `pyproject.toml`.
+
+`revit_doc` opens `REVIT_TEST_MODEL_PATH` (default `F:\Project1.rvt`) when set.
+
+## Host support
+
+### Supported (tested)
 
 | Host Name | Pipe Prefix | Executable | Product ID |
 |-----------|------------|------------|------------|
@@ -51,84 +85,72 @@ The plugin supports any host that registers a DevToolsPipeServer Named Pipe.
 | `acadmep` | `AcadMep` | `acad.exe` | `06` |
 | `acadelec` | `AcadElec` | `acad.exe` | `07` |
 | `acadmap3d` | `AcadMap3D` | `acad.exe` | `02` |
-| `navisworks` | `Navisworks` | — | — |
-| `rhino` | `Rhino` | — | — |
-| `tekla` | `Tekla` | — | — |
 
-Hosts without an `exe_name` (e.g. Rhino, Tekla) can only be connected via pipe auto-discovery or `--host-pipe`. Any unknown host name also gets a fallback config using the host name as pipe prefix.
+### In progress (not supported yet)
 
-### Pipe Name Format
+| Host Name | Pipe Prefix | Notes |
+|-----------|------------|--------|
+| `navisworks` | `Navisworks` | Registry stub only |
+| `rhino` | `Rhino` | Registry stub only |
+| `tekla` | `Tekla` | Registry stub only |
 
-Pipes follow `DevTools_{Host}_{Version}_{PID}` — mirrors C# `InstanceManager` pattern `^DevTools_\w+_[^_]+_\d+$`.
+Unknown host names still get a fallback `HostConfig(pipe_prefix=host_name)` for experimentation, but are not supported. Do not document or rely on them until promoted to **Supported**.
 
-Examples:
-- `DevTools_Revit_2025_12345` (year-based version)
-- `DevTools_AutoCad_2026_7890` (year-based)
-- `DevTools_Rhino_8.0_9999` (semver)
-- `DevTools_Tekla_2024.1_1111` (dotted version)
+### Pipe format
 
-Version is any non-underscore string — not limited to 4-digit years.
+`DevTools_{Host}_{Version}_{PID}` — regex `^DevTools_\w+_[^_]+_\d+$`
 
-### Executable Discovery
+Examples: `DevTools_Revit_2025_12345`, `DevTools_AutoCad_2026_7890`
 
-- **Revit**: `HKLM\SOFTWARE\Autodesk\Revit\Autodesk Revit {version}` → `InstallationLocation`
-- **AutoCAD family**: `HKLM\SOFTWARE\Autodesk\AutoCAD` → enumerate releases → match product ID via `ACAD-XXNN` pattern → `GlobUPILocation` / `AcadLocation`
-- **Generic**: Hosts with `registry_key` + `registry_value` use registry lookup, then filesystem fallback under `Program Files\Autodesk\`
-- **No exe_name**: Discovery returns `None`; connect via existing pipes only
+## Key design decisions
 
-## Key Design Decisions
+- **Dual pytest model:** collect locally, execute in-host (IDE tree + host thread).
+- **`--capture=sys`:** required in embedded Python.NET (no fd-level `dup2`).
+- **`sys.__pytest_running__`:** set by `PytestRunner.py`; setup scripts skip I/O hijack during runs.
+- **Streaming vs batch:** CLI streams progress; IDE adapters (`vscode_pytest`, `TEST_RUN_PIPE`) get one batch.
+- **Suite leasing + mutex:** cross-process PID binding; one pytest process per suite path.
+- **`host_launch`:** force new host + wait for that PID's pipe; skip reuse.
+- **No matching instance:** after discovery fails, plugin auto-launches when `host_version` is set.
 
-- **Dual pytest model**: Local pytest collects tests; remote pytest executes them. This enables IDE integration (test tree, navigation) while executing in the host's thread.
-- **`--capture=sys`**: Required because fd-level capture (`os.dup2`) doesn't work in embedded Python.NET.
-- **`--disable-plugin-autoload`**: Prevents third-party plugins from interfering with in-host execution.
-- **`sys.__pytest_running__`**: Flag set by PytestRunner to prevent setup scripts from hijacking stdout/stderr during test runs.
-- **Streaming vs batch**: CLI gets real-time progress notifications; IDE adapters get one batch to avoid double-counting.
-- **Suite leasing**: File-based lease store binds suite → host PID across processes. Mutex prevents same-suite parallel runs.
-- **force_launch**: When enabled, spawns new host and waits for its exact PID pipe (ignores existing instances).
-- **Open host registry**: Unknown host names get a fallback `HostConfig(pipe_prefix=host_name)` — any host exposing a DevToolsPipeServer pipe works without pre-registration.
+## Running tests
 
-## Running Tests
+Always **`uv run pytest`** from this repo root — do not use system Python or bare `pytest`.
 
-```bash
-# From project root with .venv activated:
-pytest
-
-# Or via uv / pixi:
-uv run pytest
-pixi run pytest
-
-# Specific test:
-pytest tests/test_active_state.py::test_active_view_info -v
-
-# Target a different host:
-pytest --host autocad --host-version 2026
-pytest --host rhino --host-version 8.0
+```powershell
+cd c:\Users\truon\source\repos\RevitDevTool.PyTest
+uv run pytest -v
+uv run pytest tests/Revit/test_active_state.py::test_active_view_info -v
+uv run pytest --host-version=2025 -v
+uv run pytest --host autocad --host-version 2026 -v
+uv run pytest --host-launch --host-version=2025 -v
 ```
 
-Plugin auto-enables `-rP` (show captured stdout for passing tests).
+Plugin auto-enables `-rP` (stdout for passing tests).
 
 ## Configuration
 
-All options in `pyproject.toml` under `[tool.pytest.ini_options]`:
+`[tool.pytest.ini_options]` in `pyproject.toml`:
 
 ```toml
-host_name = "revit"            # Host to connect to (revit, autocad, civil3d, rhino, etc.)
-host_version = "2025"          # Required for launch (accepts any string: year, semver, etc.)
-host_launch = false            # true = always spawn new instance
-host_timeout = "60"            # Per-test timeout (seconds)
-host_launch_timeout = "180"    # Startup wait (seconds)
-host_pipe = ""                 # Explicit pipe (bypass discovery)
+testpaths = ["tests/Revit"]
+pythonpath = ["tests/Revit"]
+host_name = "revit"
+host_version = "2025"
+host_launch = false
+host_timeout = "60"
+host_launch_timeout = "180"
+host_pipe = ""
 ```
 
-CLI equivalents: `--host`, `--host-version`, `--host-timeout`, `--host-pipe`, `--host-launch`, `--host-launch-timeout`.
+CLI: `--host`, `--host-version`, `--host-timeout`, `--host-pipe`, `--host-launch`, `--host-launch-timeout`.
 
-## Fixtures Pattern
+## Fixtures pattern
 
 ```python
 # conftest.py (Revit)
 @pytest.fixture(scope="session")
 def revit_uiapp():
-    return __revit__  # UIApplication injected by host
+    return __revit__  # noqa: F821
 
 @pytest.fixture(scope="session")
 def revit_doc(revit_uiapp):
@@ -136,7 +158,6 @@ def revit_doc(revit_uiapp):
 
 @pytest.fixture
 def revit_auto_rollback(revit_transaction_service):
-    """Start undo tracking, revert after test."""
     revit_transaction_service.StartChanges()
     try:
         yield revit_transaction_service
@@ -144,21 +165,22 @@ def revit_auto_rollback(revit_transaction_service):
         revit_transaction_service.RevertChanges()
 ```
 
-## Common Traps
+Host API imports belong **inside test bodies** (or fixture bodies), not at module top level.
 
-- Tests execute **inside the host**, not locally. `import` statements for host APIs only work at test runtime.
-- `__revit__` (Revit) or equivalent builtins are injected by host setup scripts — always access via fixtures.
-- Host APIs require main-thread access. All tests run sequentially via FIFO queue (`IHostContextExecutor`).
-- Named Pipe format: `DevTools_{Host}_{Version}_{PID}` (e.g. `DevTools_Revit_2025_12345`, `DevTools_Rhino_8.0_9999`). Version is any non-underscore string.
-- PEP 723 dependencies in `conftest.py` are auto-installed by `PytestDependencyService` before execution.
-- `--host-launch` requires `--host-version` to be set — otherwise exits with config error.
-- Print output inside tests is captured by pytest's `--capture=sys` mechanism and returned via `CaseResult.stdout`.
+## Common traps
 
-## Change Rules
+- Tests run **inside the host**, not locally.
+- `__revit__` only exists at runtime — use fixtures.
+- Host APIs need the main thread; execution is sequential via `IHostContextExecutor`.
+- Pytest pipe ≠ MCP pipe (`DevTools_*` vs `DevToolsMcp_*`).
+- PEP 723 deps in `conftest.py` are installed by `PytestDependencyService` before run.
+- `--host-launch` requires `--host-version`.
+- `print()` captured via `--capture=sys` → `CaseResult.stdout`.
 
-- Wire protocol changes must update both `models.py` (Python) and `PytestContracts.cs` (C#).
-- Adding CLI options: register in both `pytest_addoption` (CLI) and `parser.addini` (INI).
-- Connection logic is stateless by design — all functions receive parameters, no module-level mutable state except `plugin.py` globals.
-- After modifying connection/discovery logic, manually test with both `host_launch = true` and `false`.
-- Host registry changes: keep `HOST_REGISTRY` in `constants.py` in sync with `HostApp` enum and `AcadPathResolver.ProductIdMap` in the C# codebase.
-- Any host with a DevToolsPipeServer pipe can be reached without pre-registration (fallback config).
+## Change rules
+
+- Wire protocol: sync `models.py` ↔ `PytestContracts.cs` / `PytestBridgeMethods.cs`.
+- New CLI options: `pytest_addoption` + `parser.addini`.
+- `connection.py` stays stateless; only `plugin.py` holds session globals.
+- After connection/discovery changes: test `host_launch = true` and `false`.
+- `HOST_REGISTRY` ↔ C# `HostApp` enum + `AcadPathResolver.ProductIdMap`.

@@ -1,11 +1,11 @@
 import pytest
 
-from tests.schedule.constants import HEADER_COPY_CASES
-from tests.schedule.contracts import HeaderContractInspector
-from tests.schedule.field_mapping import FieldMappingService
-from tests.schedule.header_workflow import copy_header_title_rows
-from tests.schedule.model import get_schedule
-from tests.schedule.model import get_section
+from schedule.constants import HEADER_COPY_CASES
+from schedule.contracts import HeaderContractInspector
+from schedule.field_mapping import FieldMappingService
+from schedule.header_workflow import copy_header_title_rows
+from schedule.model import get_schedule
+from schedule.model import get_section
 
 
 pytestmark = pytest.mark.usefixtures("revit_auto_rollback")

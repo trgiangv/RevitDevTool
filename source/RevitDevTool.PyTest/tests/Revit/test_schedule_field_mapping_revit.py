@@ -1,8 +1,8 @@
 import pytest
 
-from tests.schedule.constants import HEADER_COPY_CASES
-from tests.schedule.field_mapping import FieldMappingService
-from tests.schedule.model import get_schedule
+from schedule.constants import HEADER_COPY_CASES
+from schedule.field_mapping import FieldMappingService
+from schedule.model import get_schedule
 
 
 pytestmark = pytest.mark.usefixtures("revit_auto_rollback")

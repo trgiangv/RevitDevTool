@@ -1,8 +1,8 @@
 """Test-side custom schedule copy workflows using Revit API only."""
 
-from tests.schedule.field_mapping import FieldMappingService
-from tests.schedule.model import get_section
-from tests.schedule.table_cell import TableCellCopier
+from schedule.field_mapping import FieldMappingService
+from schedule.model import get_section
+from schedule.table_cell import TableCellCopier
 
 
 OPTION_COLUMN_TITLE = "Column Title"

@@ -4,9 +4,9 @@ import copy
 import json
 import os
 
-from tests.schedule.model import element_id_value
-from tests.schedule.model import get_section
-from tests.schedule.model import table_section_names
+from schedule.model import element_id_value
+from schedule.model import get_section
+from schedule.model import table_section_names
 
 
 SNAPSHOT_FILE = os.path.join(os.path.dirname(__file__), "test.json")

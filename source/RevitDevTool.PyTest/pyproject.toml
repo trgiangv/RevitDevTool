@@ -39,9 +39,11 @@ packages = ["src/revitdevtool_pytest"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests/Revit"]
+pythonpath = ["tests/Revit"]
 host_name = "revit"
 host_version = "2025"
 # testpaths = ["tests/Civil3d"]
+# pythonpath = ["tests/Civil3d"]
 # host_name = "civil3d"
 # host_version = "2026"
 host_timeout = "60"

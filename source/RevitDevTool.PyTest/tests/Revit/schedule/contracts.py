@@ -2,7 +2,7 @@
 
 import copy
 
-from tests.schedule.model import get_section
+from schedule.model import get_section
 
 
 class HeaderContractInspector(object):

@@ -1,37 +1,34 @@
 # RevitDevTool.PyTest
 
-[![PyPI version](https://img.shields.io/pypi/v/RevitDevTool.PyTest)](https://pypi.org/project/RevitDevTool.PyTest/)
-[![Python](https://img.shields.io/pypi/pyversions/RevitDevTool.PyTest)](https://pypi.org/project/RevitDevTool.PyTest/)
+[![PyPI version](https://img.shields.io/pypi/v/revitdevtool_pytest)](https://pypi.org/project/revitdevtool-pytest/)
+[![Python](https://img.shields.io/pypi/pyversions/revitdevtool_pytest)](https://pypi.org/project/revitdevtool-pytest/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
-pytest plugin for testing CAD/BIM API code inside host applications via RevitDevTool Named Pipe bridge.
-Supports Revit, AutoCAD-family, and any host exposing a DevToolsPipeServer pipe.
-Tests run inside a live host process — write standard pytest, execute remotely.
+pytest plugin for testing CAD/BIM API code inside live host applications via the RevitDevTool Named Pipe bridge.
+
+Write tests locally with pytest; execution happens inside the host process. **Currently supported:** **Revit** and **AutoCAD family** only. Navisworks, Rhino, Tekla, and other hosts are **in progress**.
 
 ## Installation
 
 ```bash
 pip install revitdevtool_pytest
+# or
+uv add revitdevtool_pytest
 ```
 
-## Dependencies
-
-| Package | Version |
+| Requirement | Version |
 |---|---|
 | Python | >= 3.10 |
 | pytest | >= 9.0 |
 | pywin32 | >= 311 |
+| OS | Windows (Named Pipes) |
+| Host | [RevitDevTool](https://github.com/trgiangv/RevitDevTool) add-in loaded |
 
-## Requirements
+## Supported hosts
 
-- Windows (Named Pipes)
-- A host application with [RevitDevTool](https://github.com/trgiangv/RevitDevTool) add-in installed and loaded
+### Supported today
 
-## Supported Hosts
-
-### Pre-registered
-
-| Host Name | Application | Pipe Prefix |
+| `host_name` | Application | Pipe prefix |
 |---|---|---|
 | `revit` | Autodesk Revit | `Revit` |
 | `autocad` | AutoCAD | `AutoCad` |
@@ -42,165 +39,154 @@ pip install revitdevtool_pytest
 | `acadmep` | AutoCAD MEP | `AcadMep` |
 | `acadelec` | AutoCAD Electrical | `AcadElec` |
 | `acadmap3d` | AutoCAD Map 3D | `AcadMap3D` |
-| `navisworks` | Navisworks | `Navisworks` |
-| `rhino` | Rhino | `Rhino` |
-| `tekla` | Tekla Structures | `Tekla` |
 
-### Any host
+### In progress
 
-Any host name works — unknown names get a fallback config using the name as pipe prefix. Connect via auto-discovery or `--host-pipe`.
+| `host_name` | Application | Status |
+|---|---|---|
+| `navisworks` | Navisworks | Not validated |
+| `rhino` | Rhino | Not validated |
+| `tekla` | Tekla Structures | Not validated |
 
-### Pipe Name Format
+The plugin registry may list additional names for future work. Treat them as experimental until documented here as **Supported today**.
 
-Pipes follow `DevTools_{Host}_{Version}_{PID}` (e.g. `DevTools_Revit_2025_12345`, `DevTools_Rhino_8.0_9999`). Version can be any format — year, semver, etc.
+### Pipe names (pytest only)
 
-## Project Setup
+The plugin connects to the **pytest/control** pipe:
 
-**Recommended:** scaffold your project with [uv](https://docs.astral.sh/uv/) or [pixi](https://pixi.sh/):
+`DevTools_{Host}_{Version}_{PID}`
+
+Examples: `DevTools_Revit_2025_12345`, `DevTools_AutoCad_2026_7890`
+
+MCP clients use a separate pipe: `DevToolsMcp_{Host}_{Version}_{PID}`. Do not point pytest at an MCP pipe.
+
+## Quick start (consumer project)
 
 ```bash
-# uv
-uv init my-revit-tests
-cd my-revit-tests
-uv add revitdevtool_pytest
-
-# pixi (uses pyproject.toml as manifest)
-pixi init --format pyproject my-revit-tests
-cd my-revit-tests
-pixi add --pypi revitdevtool_pytest
+uv init my-host-tests && cd my-host-tests
+uv add revitdevtool_pytest pytest
 ```
 
-## Configuration
-
-Add plugin settings to `[tool.pytest.ini_options]` in your `pyproject.toml`:
+`pyproject.toml`:
 
 ```toml
 [tool.pytest.ini_options]
 host_name = "revit"
 host_version = "2025"
 host_launch = false
+host_timeout = "60"
 host_launch_timeout = "180"
 ```
 
-| Option | Type | Default | Description |
-|---|---|---|---|
-| `host_name` | string | `"revit"` | Host application name (see Supported Hosts above). |
-| `host_version` | string | — | Host version (e.g. `"2025"`, `"8.0"`). Required when `host_launch = true`. |
-| `host_launch` | bool | `false` | Force-launch a **new** host instance (skip reusing existing free instances). |
-| `host_timeout` | string | `"60"` | Per-test execution timeout in seconds. |
-| `host_launch_timeout` | string | `"120"` | Seconds to wait for host to start. |
-| `host_pipe` | string | — | Explicit pipe name (bypasses auto-discovery). |
-
-CLI flags override INI settings:
-
-```bash
-# Revit
-pytest --host-launch --host-version=2025 -v
-
-# AutoCAD
-pytest --host autocad --host-version=2026 -v
-
-# Civil 3D
-pytest --host civil3d --host-version=2026 -v
-```
-
-### Connection Behavior
-
-- **Default** (`host_launch = false`): plugin auto-discovers a running host instance matching `host_version` via Named Pipe scan. If none found, exits with error.
-- **Force launch** (`host_launch = true`): always spawns a new host process, waits for its pipe to appear, then connects. Existing instances are ignored.
-
-### Print Output
-
-Captured `print()` output from tests running inside the host is automatically shown in the terminal for passing tests (equivalent to `-rP`). No extra flags needed.
-
-## Usage
-
-### Fixtures
-
-Define fixtures in `conftest.py` that provide host API objects:
+`tests/conftest.py`:
 
 ```python
 import pytest
 
-# Revit fixtures
 @pytest.fixture(scope="session")
 def revit_uiapp():
-    return __revit__  # UIApplication injected by RevitDevTool
-
-@pytest.fixture(scope="session")
-def revit_app(revit_uiapp):
-    return revit_uiapp.Application
+    return __revit__
 
 @pytest.fixture(scope="session")
 def revit_doc(revit_uiapp):
     return revit_uiapp.ActiveUIDocument.Document
 ```
 
-### Writing Tests
+`tests/test_smoke.py`:
 
 ```python
 def test_active_view(revit_doc):
-    view = revit_doc.ActiveView
-    print(f"Active View: {view.Name}")
-    assert view.Name is not None
-
-def test_revit_version(revit_app):
-    assert "2025" in revit_app.VersionName
+    assert revit_doc.ActiveView is not None
 ```
 
-### PEP 723 Dependencies
+```bash
+uv run pytest -v
+```
 
-Declare test-suite dependencies in `conftest.py` using PEP 723 metadata. RevitDevTool auto-installs them before test execution:
+## Configuration
+
+| Option | Default | Description |
+|---|---|---|
+| `host_name` | `"revit"` | Target host — use **Supported today** names only. |
+| `host_version` | — | Version string (`"2025"`, `"8.0"`, …). Required for launch. |
+| `host_launch` | `false` | Force a **new** host instance (ignore existing). |
+| `host_timeout` | `"60"` | Per-test timeout (seconds). |
+| `host_launch_timeout` | `"180"` | Startup wait when launching (seconds). |
+| `host_pipe` | — | Explicit pipe name (skip discovery). |
+
+CLI flags override INI: `--host`, `--host-version`, `--host-launch`, `--host-pipe`, etc.
+
+### Connection behavior
+
+1. **`host_launch = false` (default):** scan for `DevTools_*` pipes matching `host_name` / `host_version`, reuse a free instance (suite leasing), or reconnect to a leased PID.
+2. **No matching instance:** auto-launch host when `host_version` is set (unless `--host-pipe` pins an existing pipe).
+3. **`host_launch = true`:** always spawn a new process and wait for its pipe.
+
+### Print output
+
+Captured `print()` from in-host tests is shown for passing tests (same as `-rP`). No extra flags needed.
+
+## Writing tests
+
+- Put **host API imports inside functions** — collection runs on your machine, execution in the host.
+- Use fixtures for `__revit__`, documents, and rollback helpers.
+- Declare suite dependencies with **PEP 723** in `conftest.py`; RevitDevTool installs them before run:
 
 ```python
 # /// script
-# dependencies = [
-#   "numpy>=2.0",
-#   "polars>=1.0",
-# ]
+# dependencies = ["numpy>=2.0", "polars>=1.0"]
 # ///
 ```
 
-### Running Tests
+### Revit rollback fixture
 
-```bash
-# With pyproject.toml configured:
-pytest
-
-# Override version for a single run:
-pytest --host-version=2026 -v
-
-# Target a different host:
-pytest --host autocad --host-version=2026 -v
-
-# Using uv or pixi:
-uv run pytest
-pixi run pytest
+```python
+@pytest.fixture
+def revit_auto_rollback(revit_transaction_service):
+    revit_transaction_service.StartChanges()
+    try:
+        yield revit_transaction_service
+    finally:
+        revit_transaction_service.RevertChanges()
 ```
 
-## How It Works
+## How it works
 
-1. pytest discovers and collects tests locally
-2. Plugin intercepts `pytest_runtestloop`, connects to the host via Named Pipe
-3. Test nodeids are sent to the host's `PytestRunner.py` (embedded in RevitDevTool)
-4. Tests execute inside the host's Python.NET environment with full API access
-5. Results (pass/fail/skip, stdout, stderr, tracebacks) are returned via pipe
-6. Plugin maps results back to standard pytest reports
+1. Local pytest collects tests.
+2. Plugin connects to `DevTools_{Host}_{Version}_{PID}`.
+3. Node IDs sent via JSON-RPC method `tests/run` (`BridgeMessage` length-prefixed frames).
+4. Host runs `PytestRunner.py` embedded in RevitDevTool (`PytestExecutionService` on main thread).
+5. Results and optional progress notifications return to the client.
+6. Plugin maps `CaseResult` → standard pytest reports.
 
-## IDE Integration
+## Developing this repository
 
-### VS Code / Cursor
+Clone and run integration tests against a live host:
 
-```json
-{
-    "python.testing.pytestEnabled": true,
-    "python.testing.pytestArgs": ["tests"]
-}
+```powershell
+cd RevitDevTool.PyTest
+uv run pytest -v                          # Revit suite (default)
+uv run pytest tests/Revit/test_smoke.py -v
+uv run pytest --host civil3d --host-version 2026  # after switching testpaths/host in pyproject.toml
 ```
 
-### PyCharm
+### Layout
 
-Enable pytest as the test runner. Plugin auto-detects IDE adapters and disables streaming to avoid duplicate results in the test tree.
+| Path | Purpose |
+|---|---|
+| `src/revitdevtool_pytest/` | Plugin source (published wheel) |
+| `tests/Revit/` | Revit integration tests + `schedule/` helpers |
+| `tests/Civil3d/` | Civil 3D / AutoCAD API tests |
+
+Revit suite settings in `pyproject.toml`: `testpaths = ["tests/Revit"]`, `pythonpath = ["tests/Revit"]` for local `schedule` imports.
+
+Optional env: `REVIT_TEST_MODEL_PATH` — path to `.rvt` for `revit_doc` fixture (default `F:\Project1.rvt`).
+
+## IDE integration
+
+**VS Code / Cursor** — `python.testing.pytestEnabled: true`. Plugin detects `vscode_pytest` / `TEST_RUN_PIPE` and disables CLI streaming to avoid duplicate tree entries.
+
+**PyCharm** — enable pytest as test runner.
 
 ## License
 

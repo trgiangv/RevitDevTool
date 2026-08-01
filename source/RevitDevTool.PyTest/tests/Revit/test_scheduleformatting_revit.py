@@ -2,20 +2,20 @@
 
 import pytest
 
-from tests.schedule.constants import FIELD_REQUIRED_OPTIONS
-from tests.schedule.constants import FORMATTING_REQUIRED_OPTIONS
-from tests.schedule.constants import OPTION_APPEARANCE
-from tests.schedule.constants import OPTION_FIELDS
-from tests.schedule.constants import OPTION_FILTER
-from tests.schedule.constants import OPTION_FORMATTING
-from tests.schedule.constants import OPTION_HEADER
-from tests.schedule.constants import OPTION_PHASE_FILTER
-from tests.schedule.constants import OPTION_SORTING_GROUPING
-from tests.schedule.constants import TEMPLATE_OPTIONS
-from tests.schedule.template_workflow import exercise_temp_template_workflow
-from tests.schedule.template_workflow import selected_option_flags
-from tests.schedule.template_workflow import slugify_option_name
-from tests.schedule.template_workflow import template_copy_options
+from schedule.constants import FIELD_REQUIRED_OPTIONS
+from schedule.constants import FORMATTING_REQUIRED_OPTIONS
+from schedule.constants import OPTION_APPEARANCE
+from schedule.constants import OPTION_FIELDS
+from schedule.constants import OPTION_FILTER
+from schedule.constants import OPTION_FORMATTING
+from schedule.constants import OPTION_HEADER
+from schedule.constants import OPTION_PHASE_FILTER
+from schedule.constants import OPTION_SORTING_GROUPING
+from schedule.constants import TEMPLATE_OPTIONS
+from schedule.template_workflow import exercise_temp_template_workflow
+from schedule.template_workflow import selected_option_flags
+from schedule.template_workflow import slugify_option_name
+from schedule.template_workflow import template_copy_options
 
 
 pytestmark = pytest.mark.usefixtures("revit_auto_rollback")
@@ -89,8 +89,8 @@ def test_schedule_header_child_turns_off_without_formatting():
 def test_schedule_template_single_option_workflow(
     revit_doc, option_name, selected_names
 ):
-    from tests.schedule.constants import SOURCE_SCHEDULE_ID
-    from tests.schedule.constants import TARGET_SCHEDULE_ID
+    from schedule.constants import SOURCE_SCHEDULE_ID
+    from schedule.constants import TARGET_SCHEDULE_ID
 
     result = exercise_temp_template_workflow(
         revit_doc,

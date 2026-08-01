@@ -1,16 +1,16 @@
 """Test-side header copy workflow using Revit API only."""
 
-from tests.schedule.field_mapping import FieldMappingService
+from schedule.field_mapping import FieldMappingService
 
 
 def get_header_section(schedule):
-    from tests.schedule.model import get_section
+    from schedule.model import get_section
 
     return get_section(schedule, "Header")
 
 
 def get_body_section(schedule):
-    from tests.schedule.model import get_section
+    from schedule.model import get_section
 
     return get_section(schedule, "Body")
 

@@ -1,11 +1,11 @@
 """Template option helpers for schedule formatting tests."""
 
-from tests.schedule.constants import FIELD_REQUIRED_OPTIONS
-from tests.schedule.constants import OPTION_FIELDS
-from tests.schedule.constants import TEMPLATE_OPTIONS
-from tests.schedule.constants import get_option_builtin_parameters
-from tests.schedule.model import element_id_value
-from tests.schedule.model import get_schedule
+from schedule.constants import FIELD_REQUIRED_OPTIONS
+from schedule.constants import OPTION_FIELDS
+from schedule.constants import TEMPLATE_OPTIONS
+from schedule.constants import get_option_builtin_parameters
+from schedule.model import element_id_value
+from schedule.model import get_schedule
 
 
 class ScheduleTemplateOptions(object):

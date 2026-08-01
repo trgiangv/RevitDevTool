@@ -1,6 +1,6 @@
 """Test-side schedule field mapping helpers using Revit API only."""
 
-from tests.schedule.model import element_id_value
+from schedule.model import element_id_value
 
 
 def get_field_order(schedule):
