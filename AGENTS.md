@@ -1,56 +1,51 @@
 # Agent Instructions
 
-<!-- HARNESS:BEGIN -->
-## Harness
+Entry point for agents working in this repo. Behavior truth lives in code and
+`docs/product/`; structure in `docs/architecture/`; how to prove work in
+`.agents/skills/build/SKILL.md` and `docs/agents/`.
 
-Start with the requested outcome, then use the repository as the system of
-record. Read `docs/WORKFLOW.md` and only the product, design, plan,
-code, and validation material relevant to the task.
+## Start here
 
-- Answers, explanations, reviews, diagnoses, plans, and status reports are
-  read-only. Inspect only what is needed and do not mutate repository or Harness
-  state.
-- For a bounded change, use an ephemeral plan: inspect the affected behavior and
-  existing proof, implement the change, and run behavior-appropriate validation.
-  No control-plane operation is required.
-- Create or update one file under `docs/plans/active/` when work spans sessions,
-  needs coordination or an ordered sequence, has meaningful dependencies, or
-  requires explicit recovery steps. Move it to `docs/plans/completed/` only
-  after validation.
-- Before editing, identify repository authority for each new externally
-  observable policy. If materially different choices remain open, stop before
-  edits; configurable defaults are not authority.
-- Also pause when product intent remains ambiguous, an action is difficult to
-  recover, validation would be weakened, or the request does not authorize the
-  needed action.
-- Claim completion only with relevant executable or observable evidence. Report
-  the outcome, important changed surfaces, validation, and unresolved risks.
+| Intent | Go to |
+|--------|--------|
+| What should the product do? | `docs/product/<domain>.md` |
+| How is it wired? | `docs/ARCHITECTURE.md` → `docs/architecture/<Module>/` |
+| Which digest for this task? | `docs/agents/index.md` |
+| Multi-session / risky work | `docs/WORKFLOW.md` → `docs/plans/active/` |
+| Lasting policy | `docs/decisions/` |
 
-SQLite intake, story, trace, scoring, audit, and proposal commands are optional
-compatibility features. Use them only when explicitly requested or required by
-an external orchestrator.
-<!-- HARNESS:END -->
+Read the **minimum** layer for the task. Do not duplicate docs into chat.
 
-## Domain Map
+## Problems you will hit
 
-- Product behavior: `docs/product/`
-- Architecture modules: `docs/ARCHITECTURE.md` → `docs/architecture/*`
-- Agent task routing: `docs/agents/index.md`
-- Lasting decisions: `docs/decisions/`
-- Durable plans: `docs/plans/active/`
-- Domain skills: `.agents/skills/*/SKILL.md` (do not invent a build skill)
-- Compile verify: `.cursor/hooks/` on agent stop — do not ad-hoc MSBuild for routine verify
+| Problem | Fast fix |
+|---------|----------|
+| Don't know where code belongs | `docs/agents/host-boundaries.md` — shared `DevTools.*` vs `RevitDevTool` / `AcadDevTool` |
+| Build fails / unsure what to run | `.agents/skills/build/SKILL.md` |
+| Test path looks wrong | `docs/agents/known-test-gaps.md` |
+| MCP live behavior | `docs/agents/mcp-integration-test.md` |
+| Need logs to diagnose host/Daemon | `docs/agents/verification.md` → Diagnostic logs |
+| Host pytest/control pipe (in-repo) | `docs/agents/mcp-pytest-bridge.md` |
+| Revit API + execute in host | `.agents/skills/revit-developer/SKILL.md` |
+| Platform / IPC / packaging edit | `.agents/skills/platform-change/SKILL.md` |
 
-## Platform Pointers
+## Verify before done
 
-- Host/dev-tool platform (not Revit-only). Shared code in `source/DevTools.*`; host API in `source/RevitDevTool/` and `source/AcadDevTool/`.
-- Solution truth: `RevitDevTool.slnx` (no root `.sln`).
-- Build/verify commands: `docs/agents/build-matrix.md`, `docs/agents/verification.md`
-- Client pytest: `uv run pytest` from sibling `RevitDevTool.PyTest` only
-- Stale paths and traps: `docs/agents/known-test-gaps.md`
+1. After `.cs` / `.csproj` / `.xaml` edits → run compile from **build skill** (touched csproj minimum).
+2. Contract or dispatch change → add/run focused test (`scripts/test-dotnet.ps1 -Project …`).
+3. Daemon or host MCP surface → compile + `mcp-integration-test.md` checklist when host available.
+4. Report **evidence** (command + pass/fail). If blocked, state exact missing env (host PID, pixi, file lock).
 
-## Doc Update Rule
+Do not claim completion from diff alone.
 
-When behavior, boundaries, or agent workflow change, update the matching layer only
-(`docs/product/`, `docs/architecture/<Module>/`, `docs/agents/`, or `docs/decisions/`).
-Do not duplicate the same truth in multiple places.
+## Repo anchors
+
+- Solution: `RevitDevTool.slnx` (no root `.sln`).
+- Shared platform: `source/DevTools.*` · Revit host: `source/RevitDevTool/` · AutoCAD: `source/AcadDevTool/`.
+- Scripts: `scripts/` · Samples: `samples/` (not `source/samples/`).
+
+## Doc update rule
+
+When observable behavior or boundaries change, update **one** layer only:
+`docs/product/`, `docs/architecture/<Module>/`, `docs/agents/`, or `docs/decisions/`.
+Link across layers; do not copy the same truth twice.

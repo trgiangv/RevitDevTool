@@ -1,57 +1,78 @@
 # Verification
 
-Prefer scripts under `scripts/` and the Cursor compile hook. Do not guess command strings.
+Commands and traps. Symptom-first table: `.agents/skills/build/SKILL.md`.
+Known test failures: `known-test-gaps.md`. Do not invent MSBuild flags.
 
-## Compile Hook (default)
+## After code edits
 
-After agent edits under `source/`, `tests/`, `build/`, or `install/`, the stop hook compiles queued projects.
-
-Hook uses **3 representative years** (`2022`, `2025`, `2027` — one per TFM: net48 / net8 / net10), not the full six-year matrix. All `2022`–`2027` configs remain supported for manual and CI builds; see `build-matrix.md`.
-
-| Edit target | Configs (compile-only, deploy off) |
-|-------------|-------------------------------------|
-| `UseRevit` projects | `{Debug\|Release}.Autodesk.2022`, `.2025`, `.2027` |
-| `UseAutoCad` projects | same year matrix |
-| Shared / multi-TFM | `Debug` (or `Release` if edits were under `build/`/`install/`) |
-
-Manual compile-only when the hook did not run:
+Compile the **csproj you changed** (deploy/repack off for host projects):
 
 ```powershell
-dotnet build source/DevTools.Execution/DevTools.Execution.csproj -c Debug -p:DeployRevitAddin=false -p:DeployAutoCadBundle=false -p:IsRepackable=false
-dotnet build source/RevitDevTool/RevitDevTool.csproj -c Debug.Autodesk.2025 -p:DeployRevitAddin=false -p:DeployAutoCadBundle=false -p:IsRepackable=false
+dotnet build <path/to/Project.csproj> -c Debug -p:DeployRevitAddin=false -p:DeployAutoCadBundle=false -p:IsRepackable=false
 ```
 
-## Deploy / package
+| Project kind | Config |
+|--------------|--------|
+| `UseRevit` / `UseAutoCad` | `Debug.Autodesk.2025` (spot-check `2022` + `2027` if TFM-sensitive) |
+| Shared multi-TFM `DevTools.*` | `Debug` |
+| `build/` / `install/` | `Release` |
+
+Host API matrix (all years): `build-matrix.md`.
+
+## Scripts
 
 | Situation | Command |
 |-----------|---------|
-| Kill host locks | `scripts/kill-host.ps1` / `-HostApp Revit\|AutoCAD` |
+| File lock / deploy failed | `scripts/kill-host.ps1` |
 | Build + deploy one year | `scripts/kill-host.ps1`; `scripts/build-host.ps1 -Year 2025` |
-| .NET tests | `scripts/test-dotnet.ps1` |
-| One .NET test project | `scripts/test-dotnet.ps1 -Project <csproj>` |
-| Python parser tests (this repo) | `scripts/test-python.ps1` (requires `pixi`; repo-root `pixi.toml`) |
-| Package pipeline | `scripts/pack.ps1` |
-| Collect logs | `scripts/collect-logs.ps1` |
+| .NET tests (all) | `scripts/test-dotnet.ps1` |
+| One test project | `scripts/test-dotnet.ps1 -Project <csproj>` |
+| MCP tests | `scripts/test-dotnet.ps1 -Project tests/DevTools.Mcp.Tests/DevTools.Mcp.Tests.csproj` |
+| Python parser (this repo) | `scripts/test-python.ps1` |
+| Package | `scripts/pack.ps1` |
+| Daemon publish | `dotnet publish source/DevTools.Daemon -c Release` |
 
-## Client pytest (RevitDevTool.PyTest)
+Build sample toolsets before parser/spike tests — see `known-test-gaps.md`.
 
-Always use **uv** from the PyTest repo root. Do not search for system Python or run bare `pytest`.
+## Proof bar
+
+| Change type | Minimum proof |
+|-------------|---------------|
+| Refactor / local fix | Compile touched projects |
+| Wire contract / parser | + focused test project (check gaps table first) |
+| MCP daemon/host surface | + `mcp-integration-test.md` when host available |
+
+Passing smoke tests ≠ live host proof. Name blockers with test name + missing path.
+
+## Diagnostic logs
+
+When investigating host or MCP failures, read the **newest** log for the process
+under test — do not guess paths.
+
+| Process | Default folder | Newest file |
+|---------|----------------|-------------|
+| Host (Revit / AutoCAD) | `%APPDATA%\RevitDevTool\{Year}\Logs\` | Highest `LastWriteTime` matching `log_*` (`.log` or `.json`) |
+| Daemon | `%APPDATA%\RevitDevTool\mcp-server\` | Highest `LastWriteTime` matching `log_*.log` |
+
+`{Year}` is the host product year (e.g. `2025`). Host folder may differ if the user
+changed **Settings → Logging**; Daemon always uses `mcp-server\`. Match **PID** in the
+filename when several sessions are open.
 
 ```powershell
-cd c:\Users\truon\source\repos\RevitDevTool.PyTest
-uv run pytest -v
-uv run pytest tests/Revit/<file>.py -v
-uv run pytest --host-version=2025 -v
+# Host (adjust year)
+Get-ChildItem "$env:APPDATA\RevitDevTool\2025\Logs\log_*" |
+    Sort-Object LastWriteTime -Descending | Select-Object -First 1
+
+# Daemon
+Get-ChildItem "$env:APPDATA\RevitDevTool\mcp-server\log_*.log" |
+    Sort-Object LastWriteTime -Descending | Select-Object -First 1
+
+# Both trees — list 50 newest under %APPDATA%\RevitDevTool
+scripts/collect-logs.ps1
 ```
 
-## Test Reality
+Reproduce the failure before collecting; cite log path + relevant lines in the report.
 
-Smoke/parser tests are one signal, not full host/MCP/packaging proof. Add focused tests when behavior changes; if a live host is required and unavailable, document the blocker.
-
-## Frontend Sample
+## Frontend sample
 
 `samples/PythonDemo/revit_dashboard_ui/`: `npm run quality`
-
-## Reporting Failures
-
-Report the exact blocker: missing SDK, missing Pixi env, stale test path, Revit not running, named pipe unavailable, or hook compile errors already injected.

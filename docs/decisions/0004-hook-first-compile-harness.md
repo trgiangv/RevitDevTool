@@ -4,24 +4,27 @@ Date: 2026-07-21
 
 ## Status
 
-Accepted
+Superseded (2026-08-03) — see build skill below.
 
 ## Context
 
 Build skills created round-trips and duplicated matrix knowledge already owned
-by scripts and project configuration.
+by scripts and project configuration. Cursor stop hooks were added to automate
+compile on agent stop.
 
-## Decision
+## Decision (historical)
 
-- Removed `revit-build`, `net48-compat-review`, `pyrevit-ironpython`, and thin
-  `*-change/review` skills; added `platform-change`.
-- `.cursor/hooks/` tracks edits and on agent stop compiles: Revit/AutoCAD API →
-  Autodesk 2022/2025/2027; shared → Debug/Release.
-- Deploy stays manual via `scripts/kill-host.ps1` + `scripts/build-host.ps1`.
-- Client pytest path is `uv run pytest` in `RevitDevTool.PyTest` only.
+- Removed thin `*-change/review` skills; added `platform-change`.
+- `.cursor/hooks/` tracked edits and compiled on agent stop.
+- Deploy stayed manual via `scripts/kill-host.ps1` + `scripts/build-host.ps1`.
 
-## Consequences
+## Superseded by
 
-Positive: fewer agent tokens on routine compile; consistent matrix.
+- **2026-08-03:** Removed `.cursor/hooks/` — agents compile explicitly via
+  `.agents/skills/build/SKILL.md` (symptom → command table, no hidden stop hook).
+- Routine verify is intentional `dotnet build` on touched csproj, not deferred to IDE lifecycle.
 
-Tradeoffs: agents must wait for hook feedback instead of inventing MSBuild.
+## Consequences (still valid)
+
+- Deploy stays manual via scripts.
+- In-repo tests via `scripts/test-dotnet.ps1` / `scripts/test-python.ps1`; see `known-test-gaps.md`.

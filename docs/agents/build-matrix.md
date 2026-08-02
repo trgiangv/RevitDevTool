@@ -79,8 +79,10 @@ ILRepack merges dependencies into a single DLL for host add-ins. **Disabled for 
 
 ## Compatibility Rule
 
-Any shared `DevTools.*` change can affect all target frameworks. Polyfill covers most modern C# on net48. Prefer the Cursor stop-hook compile (multi-TFM `Debug`/`Release`, or Autodesk 2022/2025/2027 for host API projects) over speculative API reviews. Avoid newer BCL APIs only when the compile fails and no Polyfill/helper exists.
+Any shared `DevTools.*` change can affect all target frameworks. Polyfill covers most modern C# on net48. After edits, compile via `.agents/skills/build/SKILL.md` (multi-TFM `Debug`, or Autodesk 2022/2025/2027 for host API projects). Avoid newer BCL APIs only when compile fails and no Polyfill/helper exists.
 
-## Agent Compile Hook
+## Agent compile verify
 
-`.cursor/hooks/` queues edits and verifies on agent stop (deploy/ILRepack off). Builds `2022` / `2025` / `2027` as a representative sample (one config per TFM), not an exhaustive year list — see `verification.md`. Do not maintain a separate build skill for routine compile checks.
+Agents run `dotnet build` on touched projects (deploy/ILRepack off) per the **build**
+skill. Spot-check `2022` / `2025` / `2027` for host API projects when TFM-sensitive.
+Full command reference: `verification.md`.

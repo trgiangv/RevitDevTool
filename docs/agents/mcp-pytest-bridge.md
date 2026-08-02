@@ -18,26 +18,25 @@ Deep sources: `docs/architecture/MCP/README.md` and `docs/architecture/PyTest/RE
 External MCP clients talk to `DevTools.Daemon` (via `--stdio` or Gateway). The daemon
 exposes infrastructure tools plus exactly `search_dynamic` and `invoke_dynamic`.
 Fixed prompts (`revit_code`, `acad_code`) are daemon-owned. Host capabilities stay
-in `HostCatalog` and are refreshed on SDK list-changed notifications for that host
+in `ConnectedHostCatalog` and are refreshed on host list-changed notifications for that host
 only; external daemon collections do not advertise `ListChanged`.
 
 In-host built-ins: tools (`execute_csharp_code`, `execute_python_code`,
 `open_document`, `navigate_history`) and resources (cheatsheets, model context,
 warnings, version, screenshots). See [`docs/architecture/MCP/tools.md`](../architecture/MCP/tools.md).
 
-## PyTest Bridge
+## PyTest bridge (host side, this repo)
 
-- Pytest contracts: `source/DevTools.Execution/External/Testing/PytestContracts.cs`
-- Pytest bridge methods: `source/DevTools.Execution/External/Testing/PytestBridgeMethods.cs`
-- Server side execution: `source/DevTools.Execution/External/Testing/`
-- Embedded runner: `source/DevTools.Execution/Resources/scripts/PytestRunner.py`
-- Protocol route: `tests/run` (optional `discover_only`) over length-prefixed `BridgeMessage` frames
-- The client pytest process talks to the host through the pytest Named Pipe only
+- Contracts: `source/DevTools.Execution/External/Testing/PytestContracts.cs`
+- Methods: `PytestBridgeMethods.cs`
+- Server: `PytestExecutionService`, `DevToolsPipeServer` on `DevTools_{Host}_{Version}_{PID}`
+- Runner: `source/DevTools.Execution/Resources/scripts/PytestRunner.py`
+- Wire: `tests/run` over length-prefixed `BridgeMessage` — **not** the MCP `DevToolsMcp_*` pipe
 
-## Change Checklist
+## Change checklist
 
-- For MCP parser changes, verify parser/contract tests and at least one sample catalog path.
-- For host SDK / broker changes, verify `tests/DevTools.Mcp.Tests` (catalog, stream, named-pipe, framing).
-- For pytest bridge changes, verify discovery and run paths separately when possible.
-- Never mix SDK NDJSON with pytest `BridgeMessage` framing on the same pipe.
-- If a live host is required and unavailable, report the named pipe/host blocker precisely.
+- MCP parser: `scripts/test-dotnet.ps1 -Project tests/DevTools.Mcp.Tests/...` + build `samples/McpToolsetDemo` if needed.
+- Host wire / broker: `DevTools.Mcp.Tests` (catalog, stream, named-pipe, framing).
+- Pytest bridge: sync `PytestContracts.cs` ↔ `models.py` when wire shape changes; run in-repo tests if present.
+- Never mix MCP NDJSON with `BridgeMessage` on the same pipe.
+- See `known-test-gaps.md` for tests that fail without pixi, built samples, or live host.

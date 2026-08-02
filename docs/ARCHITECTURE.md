@@ -33,7 +33,6 @@ stay in host projects. Visualization (DirectContext3D) is Revit-host only.
 | Host boundaries | [agents/host-boundaries.md](agents/host-boundaries.md) |
 | Build / TFM matrix | [agents/build-matrix.md](agents/build-matrix.md) |
 | Verification | [agents/verification.md](agents/verification.md) |
-| Startup / lazy load | [agents/startup-performance.md](agents/startup-performance.md) |
 | Known test gaps | [agents/known-test-gaps.md](agents/known-test-gaps.md) |
 | Lasting decisions | [decisions/](decisions/README.md) |
 

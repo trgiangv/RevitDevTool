@@ -15,8 +15,7 @@ tool-specific rule adapters that drift apart.
 
 - `AGENTS.md` is the entry contract and router.
 - `docs/agents/` contains deterministic agent digests.
-- `.agents/skills/` holds domain workflows only. Routine compile is
-  `.cursor/hooks/` (stop verify).
+- `.agents/skills/` holds domain workflows; compile/deploy proof via `build` skill.
 - Tool-specific files should be thin adapters that point back to the repo-owned
   harness.
 

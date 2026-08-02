@@ -14,9 +14,9 @@ and process overhead.
 - `docs/agents/`: agent task router and operational digests.
 - `docs/plans/active/`: complex work currently in progress.
 - `docs/plans/completed/`: completed execution history worth retaining.
-- Project code, tests, CI, hooks, and runtime signals: executable truth.
-- `docs/agents/verification.md` and `docs/agents/build-matrix.md`: verify/build
-  commands for this repository.
+- Project code, tests, CI, and runtime signals: executable truth.
+- `.agents/skills/build/SKILL.md` and `docs/agents/verification.md`: compile/deploy
+  proof for this repository.
 
 Use `docs/README.md` for the map; prefer targeted search.
 
@@ -63,9 +63,9 @@ Also pause when:
 Choose proof from the affected behavior:
 
 - focused tests for local rules;
-- compile-hook feedback for .NET API/shared edits;
+- compile feedback for .NET API/shared edits (build skill / `dotnet build`);
 - integration tests for persistence and service boundaries;
-- host pytest (`uv run pytest` in `RevitDevTool.PyTest`) for bridge/host API;
+- live host checklist (`mcp-integration-test.md`) for MCP wire and tool surface;
 - recovery rehearsal for migrations and destructive operations; and
 - runtime measurements for reliability or performance claims.
 
@@ -91,7 +91,7 @@ Discovery never grants authority to fix what it finds.
 2. Read the relevant product or architecture material, `docs/agents/` digest,
    affected code, adjacent patterns, and existing tests.
 3. Make the smallest coherent change that satisfies the outcome.
-4. Run focused proof plus repository-required checks (prefer compile hooks).
+4. Run focused proof plus repository-required checks (build skill or scripts).
 5. If behavior or boundaries changed, update the matching doc layer only.
 6. Report the outcome, important changed surfaces, proof, and known limitations.
 
