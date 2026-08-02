@@ -39,7 +39,7 @@ stay in host projects. Visualization (DirectContext3D) is Revit-host only.
 
 ## Source Layout
 
-- Shared: `source/DevTools.*` (Execution, Execution.Abstractions, Ipc, Mcp, Logging, Presentation, Settings, Telemetry, UI, Utilities, Daemon)
+- Shared: `source/DevTools.*` (Execution, Execution.Abstractions, Ipc, Mcp.Core/Catalog/Adapter/Client/Server, FileMetadata.Core/Revit/Acad, Logging, Presentation, Settings, Telemetry, UI, Utilities, Daemon)
 - Revit host: `source/RevitDevTool/`; Revit-only helpers: `source/RevitDevTool.Core/`
 - AutoCAD host: `source/AcadDevTool/`
 - Samples: `samples/`; build: `build/`; scripts: `scripts/`

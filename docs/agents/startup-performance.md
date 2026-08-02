@@ -9,7 +9,7 @@ Startup-sensitive code includes host boot, DI registration, command discovery, P
 | Host DI registration | `RevitHostingExtensions.AddExecutionServices()` / `AcadHostingExtensions` | Registers all services; keep cheap |
 | Command discovery | `ExecutionOrchestrator` (started by FileWatcherService) | Scans configured roots for scripts/assemblies |
 | Python init | `PythonInitializer` via `PixiEnvironmentProvider` | First Python call resolves pixi env |
-| MCP catalog | `McpCatalogStore` / `McpCatalogLoader` | Loads tool/prompt/resource metadata from assemblies |
+| MCP catalog | `McpCatalogStore` / `McpCatalogLoader` | Loads tool/resource metadata from assemblies |
 | Pipe server | `DevToolsPipeServer` (hosted service) | Starts named pipe listener for external clients |
 | File watcher | `FileWatcherService` | Monitors configured roots with debounced events |
 | Script factories | `RevitScriptExecutionStrategyFactory` (Revit uses `registerDefaultScriptProvider: false`) | Defers strategy creation until first execution |
@@ -27,4 +27,4 @@ Startup-sensitive code includes host boot, DI registration, command discovery, P
 - Build the touched host/year.
 - If startup behavior changed, collect logs with `scripts/collect-logs.ps1`.
 - For manual profiling, use `scripts/startup-profile.ps1` to record process timing notes and relevant log locations.
-- Log root: `%APPDATA%\RevitDevTool` (contains `daemon-tray.log`, `daemon-stdio.log`, host-specific logs).
+- Log root: `%APPDATA%\RevitDevTool` (host logs + `mcp-server/` for Daemon hourly rolling files `log_{pid}_{yyyyMMddHH}_{seq}.log`).

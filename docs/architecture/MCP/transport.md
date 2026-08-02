@@ -1,6 +1,7 @@
 # Transport Modes
 
-The Daemon supports two independent transport modes. Stdio runs as a separate process; Gateway runs inside the tray host.
+The Daemon supports two independent transport modes for external MCP clients.
+Separately, host connectivity uses **two named-pipe protocols** that must not be mixed.
 
 ```mermaid
 flowchart LR
@@ -17,24 +18,42 @@ flowchart LR
         Client2 -->|"POST /mcp<br/>Streamable HTTP"| Gateway
         Gateway <-->|"WebSocket<br/>NDJSON frames"| Daemon2
     end
+
+    subgraph HostPipes
+        Daemon1 --> McpPipe["DevToolsMcp_* SDK NDJSON"]
+        Daemon2 --> McpPipe
+        PytestClient["pytest / control"] --> PytestPipe["DevTools_* BridgeMessage"]
+        McpPipe --> HostWire["HostMcpPipeServer + McpHandler"]
+        PytestPipe --> PytestServer["DevToolsPipeServer"]
+    end
 ```
 
 | Mode | Trigger | Transport | Use case |
 |------|---------|-----------|----------|
-| **Stdio** | `--stdio` arg | Direct `StreamServerTransport` on process stdin/stdout | Local MCP clients (Claude Desktop, Cursor, VS Code) |
-| **Gateway** | Auto on sign-in (tray host only) | Outbound WebSocket to Cloudflare relay | Remote AI clients (ChatGPT, Perplexity) |
+| **Stdio** | `--stdio` arg | Direct `StreamServerTransport` on process stdin/stdout | Local MCP clients |
+| **Gateway** | Auto on sign-in (tray host only) | Outbound WebSocket to Cloudflare relay | Remote AI clients |
+
+## Dual Host Pipe Protocols
+
+| Pipe | Format | Protocol | Owner |
+|------|--------|----------|-------|
+| `DevTools_{Host}_{Version}_{PID}` | Length-prefixed `BridgeMessage` | Pytest + control IPC | `DevToolsPipeServer` |
+| `DevToolsMcp_{Host}_{Version}_{PID}` | Newline-delimited JSON-RPC | Spec wire `2026-07-28` (`server/discover`) | `HostMcpPipeServer` + `McpHandler` |
+
+Do not multiplex SDK frames onto the pytest pipe (or the reverse).
 
 ## Stdio Mode
 
-When an AI client spawns `DevTools.Daemon.exe --stdio`, a **new process** runs a self-contained MCP server directly on stdin/stdout. It does **not** proxy to the tray app — it boots its own `McpEngine`, `InstanceManager`, and `DiscoveryHostedService` independently.
+When an AI client spawns `DevTools.Daemon.exe --stdio`, a **new process** runs a self-contained MCP server on stdin/stdout. It boots its own `McpEngine`, `HostBroker`, and `DiscoveryHostedService` independently.
 
 Key properties:
-- Uses a custom process entrypoint that handles `--stdio` before WPF `App.xaml` resources are initialized. Tray UI resources and single-instance startup are only loaded for tray mode.
-- Bypasses the `SingleInstance` mutex entirely — multiple stdio processes can coexist with each other and with the tray app.
-- Each stdio process discovers host pipes independently (same `DevTools_{Host}_{Version}_{PID}` scan).
-- Auth tokens are read from the shared DPAPI file on disk (sign-in via tray or browser still works).
-- Process exits when the MCP client disconnects (stdin EOF or cancellation).
-- No control pipe, no gateway tunnel, no tray icon in this mode.
+- Custom process entrypoint handles `--stdio` before WPF tray startup.
+- Bypasses the `SingleInstance` mutex.
+- Discovers `DevToolsMcp_*` pipes independently.
+- Auth tokens are read from the shared DPAPI file.
+- Process exits when the MCP client disconnects.
+- No control pipe, gateway tunnel, or tray icon in this mode.
+- External tool/prompt surface is fixed (`ListChanged = false`).
 
 ## Gateway Mode
 
@@ -44,29 +63,8 @@ Outbound WebSocket connection to the McpGateway (Cloudflare Workers + Durable Ob
 2. Sends `register` frame with `machine_id`, `machine_name`, `host_apps`
 3. Wraps WebSocket frames as NDJSON streams via custom adapters
 4. Runs full MCP server over that transport
-5. Auto-reconnects with exponential backoff (1s → 15s max) on failure
+5. Auto-reconnects with exponential backoff on failure
 6. Sends periodic `heartbeat` frames with updated `host_apps`
-
-```mermaid
-sequenceDiagram
-    participant Daemon as DevTools.Daemon
-    participant GW as McpGateway (CF Worker)
-    participant AI as AI Client
-
-    Daemon->>GW: WebSocket connect (Bearer JWT)
-    GW-->>Daemon: 101 Upgrade
-    Daemon->>GW: {"type":"register","machine_id":"...","machine_name":"...","host_apps":[...]}
-
-    AI->>GW: POST /mcp (Bearer JWT, x-target-machine: <id>)
-    GW->>Daemon: WS text frame (JSON-RPC)
-    Daemon-->>GW: WS text frame (response)
-    GW-->>AI: HTTP 200 {result}
-
-    loop Every 30s
-        Daemon->>GW: {"type":"heartbeat","host_apps":[...]}
-    end
-    Note over Daemon,GW: Auto-reconnect on disconnect
-```
 
 ## Multi-Machine Routing
 
@@ -75,3 +73,4 @@ One user can have Daemons on multiple machines connected to the same Gateway. Th
 - **Single machine** → AI requests auto-route (no header needed)
 - **Multiple machines** → AI must include `x-target-machine: <machine_id>` header
 - **Discovery** → `GET /machines` or `list_machines` MCP tool lists connected machines
+- **Dynamic invoke** → `search_dynamic` / `invoke_dynamic` include `machineId` + `hostInstanceId`

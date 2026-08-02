@@ -4,7 +4,7 @@
 .DESCRIPTION
     Without -Destination: lists the 50 most recent .log/.txt files with timestamps and sizes.
     With -Destination: copies those 50 files to the specified directory.
-    Log root also includes daemon-tray.log and daemon-stdio.log when the Daemon is used.
+    Log root also includes mcp-server/log_{pid}_{yyyyMMddHH}_{seq}.log (Daemon hourly rolling).
 .PARAMETER Destination
     Target directory for copying logs. Created if it does not exist.
 .EXAMPLE

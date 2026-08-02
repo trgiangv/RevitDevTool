@@ -1,36 +1,40 @@
 # In-Host MCP Runtime
 
-The in-host runtime runs inside Revit/AutoCAD and handles actual tool execution.
+The in-host runtime runs inside Revit/AutoCAD and handles actual tool/resource execution
+behind a spec-first MCP handler on `DevToolsMcp_*` (protocol `2026-07-28`).
 
 ## Runtime Shape
 
 ```mermaid
 flowchart TB
     Daemon["DevTools.Daemon"]
-    Discovery["InstanceManager<br/>scan \\.\pipe\\ for host pipes"]
+    Broker["HostBroker<br/>scan DevToolsMcp_*"]
+    Catalog["ConnectedHostCatalog"]
 
     subgraph hosts["Host processes"]
-        RevitPipe["DevToolsPipeServer<br/>DevTools_Revit_2025_pid"]
-        AcadPipe["DevToolsPipeServer<br/>DevTools_AutoCad_2026_pid"]
+        McpPipe["HostMcpPipeServer<br/>DevToolsMcp_Revit_2025_pid"]
+        PytestPipe["DevToolsPipeServer<br/>DevTools_Revit_2025_pid<br/>(pytest/control only)"]
     end
 
     Registry["McpCatalogStore"]
     Providers["DotnetMcpRegistryProvider<br/>PythonToolRegistryProvider"]
-    Dispatch["McpPrimitiveDispatcher<br/>(unified)"]
+    Dispatch["McpPrimitiveDispatcher"]
     Host["Host context + Python executor"]
 
-    Daemon --> Discovery
-    Discovery -->|"HostBridgeClient"| RevitPipe
-    Discovery -->|"HostBridgeClient"| AcadPipe
-    RevitPipe --> Registry
-    AcadPipe --> Registry
+    Daemon --> Broker
+    Broker --> Catalog
+    Broker -->|"SDK McpClient"| McpPipe
+    McpPipe --> Registry
     Registry --> Providers
-    RevitPipe --> Dispatch
-    AcadPipe --> Dispatch
+    McpPipe --> Dispatch
     Dispatch --> Host
+    Pytest["pytest client"] --> PytestPipe
 ```
 
-The Daemon owns MCP protocol routing and host instance selection. `InstanceManager` scans `\\.\pipe\` for pipes matching `DevTools_{HostApp}_{Version}_{PID}` and connects via generic `HostBridgeClient`. The host process owns actual execution, registry loading, and host-safe invocation.
+The Daemon owns external MCP protocol routing and host selection. `HostBroker`
+scans for `DevToolsMcp_{Host}_{Version}_{PID}`, connects with `StreamClientTransport`,
+and hydrates `ConnectedHostCatalog`. The host process owns execution, registry loading, and
+host-safe invocation. Pytest/control remains on the `DevTools_*` pipe.
 
 ## Registry Flow
 
@@ -42,49 +46,36 @@ sequenceDiagram
     participant Dotnet as DotnetMcpRegistryProvider
     participant Python as PythonToolRegistryProvider
     participant Settings as ISettingsService
+    participant HostServer as HostMcpPipeServer
 
     UI->>Store: AddPathAsync / ReloadAsync
     Store->>Settings: Read configured paths
     Store->>Loader: LoadCatalog(dotnetPaths, pythonPaths)
     Loader->>Dotnet: Parse assemblies
     Loader->>Python: Parse toolset directories
-    Python->>Python: Pre-resolve dependencies for MCP entry files
     Loader-->>Store: McpRegistryCatalog
-    Store->>Settings: Persist accepted paths and prune invalid paths
-    Store-->>UI: CatalogChanged
+    Store->>Settings: Persist accepted paths
+    Store-->>HostServer: CatalogChanged
+    HostServer->>HostServer: Invalidate cached primitive lists
+    HostServer-->>HostServer: tools/list_changed notifications
 ```
 
 ## Dispatch Flow
 
-`McpBridgeRequestHandler` (in `DevTools.Mcp/Handlers/`) handles pipe methods:
+`HostMcpPipeServer` delegates JSON-RPC to `McpHandler`, which encodes list/read/call
+responses from `McpCatalogStore` and `IMcpPrimitiveDispatcher` on the host thread.
+Cancellation is the request token; tool-internal timeouts stay on the tool.
 
-- `tools/list`, `tools/call`
-- `prompts/list`, `prompts/get`
-- `resources/list`, `resources/templates/list`, `resources/read`
-
-A single `McpPrimitiveDispatcher` (in `DevTools.Execution/External/Mcp/Dispatchers/`) implements `IMcpPrimitiveDispatcher` and routes all primitives:
+Host prompts are not registered; guidance lives in daemon fixed prompts.
 
 | Primitive | .NET path | Python path |
 |-----------|-----------|-------------|
-| Tool call | `DotnetMcpServerFactory` creates/caches `McpServerTool` wrappers | `PythonExecutor` invokes the Python binding |
-| Prompt get | `McpServerPrompt` wrapper | Python prompt binding |
-| Resource read | `McpServerResource` wrapper | Python resource binding |
+| Tool call (built-in) | `IBuiltInMcpTool` via dispatcher | `PythonExecutor` binding |
+| Tool call (.NET toolset, ALC) | `ToolsetInvoker` + `ToolsetResultSerializer` JSON bridge | — |
+| Resource read | Dispatcher resource path | Python resource binding |
 
-`McpPrimitiveBinding.CreatePrimitiveId()` normalizes IDs for stable lookup and duplicate handling.
+See [Platform boundaries](platform-boundaries.md) for ALC and MRTR detail.
 
 ## Parser Library
 
-`source/DevTools.Mcp/` and `source/DevTools.Ipc/` contain shared bridge and registry contracts:
-
-- `BridgeMessage.cs`, `BridgeError.cs` — length-prefixed JSON envelope with structured error detail
-- `McpBridgeMethods.cs` — canonical bridge method names
-- `BridgePipeConnection.cs` — framed pipe I/O
-- `Models/McpRegisteredTool.cs`, `McpRegisteredPrompt.cs`, `McpRegisteredResource.cs`
-- `Models/McpRegistryCatalog.cs`
-- `Discovery/DotnetMcpAssemblyParser.cs`
-- `Discovery/PythonToolsetParser.cs`
-- `Dispatch/IMcpPrimitiveDispatcher.cs`, `IMcpExecutionTracker.cs`
-- `Handlers/McpBridgeRequestHandler.cs`
-- `RequestContextFactory.cs`
-
-Wire-format property names belong in `McpPropertyNames`; do not duplicate in other projects.
+MCP contracts live in `source/DevTools.Mcp.Core/`; catalog/discovery lives in `DevTools.Mcp.Catalog/`; the daemon-side capability index is in `DevTools.Mcp.Client/`; and SDK host adapters, including `HostMcpPipeServer`, are in `DevTools.Mcp.Adapter/`. `source/DevTools.Ipc/` owns `BridgeMessage.cs`, `BridgePipeConnection.cs`, `HostPipeName.cs`, and the dual pipe prefixes. Wire-format property names belong in Core's `McpSpecKeys` (`DevTools.Mcp.Core/Protocol/`). Daemon-specific contract keys live in `DaemonPropertyNames`.

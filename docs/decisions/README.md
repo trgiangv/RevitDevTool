@@ -21,6 +21,7 @@ here.
 | [0009](0009-multi-host-pytest-client.md) | Multi-host pytest client | Accepted |
 | [0010](0010-daemon-sole-mcp-host.md) | Daemon is sole MCP host | Accepted |
 | [0011](0011-hybrid-repository-harness-layout.md) | Hybrid repository-harness docs layout | Accepted |
+| [0012](0012-host-mcp-spec-engine.md) | Host MCP spec engine (no SDK on host) | Accepted |
 
 Historical short-form log (superseded as authority):
 [`docs/agents/decision-log.md`](../agents/decision-log.md).

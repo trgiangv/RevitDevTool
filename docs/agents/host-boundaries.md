@@ -9,7 +9,7 @@ Keep these host-neutral — this is the default for all new functionality:
 - `source/DevTools.Execution/` — execution engine, script providers, MCP in-host runtime
 - `source/DevTools.Execution.Abstractions/` — host-neutral contracts (`IHostContextExecutor`, `ICommandDiscovery`, `ICommandRunner`, `IDocumentBridge`, enums)
 - `source/DevTools.Ipc/` — IPC transport (BridgeMessage, pipe connection, wire protocol)
-- `source/DevTools.Mcp/` — MCP protocol (catalog, discovery, registry, dispatch, routing)
+- `source/DevTools.Mcp.Core/`, `DevTools.Mcp.Catalog/`, `DevTools.Mcp.Adapter/`, `DevTools.Mcp.Client/`, `DevTools.Mcp.Server/` — MCP platform modules
 - `source/DevTools.Logging/`
 - `source/DevTools.Presentation/`
 - `source/DevTools.Settings/`
@@ -30,9 +30,10 @@ Host API references belong in host projects:
 ## Standalone Daemon
 
 - `source/DevTools.Daemon/` runs outside hosts as `DevTools.Daemon.exe` (WPF tray app).
-- `InstanceManager` discovers any host pipe via generic regex (`DevTools_{HostApp}_{Version}_{PID}`).
-- `HostBridgeClient` connects to any host (formerly `RevitBridgeClient`).
-- Daemon built-in tools: `list_host_instances`, `launch_host`, `read_file_info`, `open_model`, `list_machines`, `call_dynamic_tool`, `list_dynamic_tools`, `refresh_dynamic_catalog` (multi-host).
+- `HostBroker` discovers SDK MCP pipes (`DevToolsMcp_{Host}_{Version}_{PID}`) and owns `HostCatalog`.
+- Pytest/control uses `DevTools_{Host}_{Version}_{PID}` (`DevToolsPipeServer`).
+- Daemon external tools: infrastructure (`list_host_instances`, `launch_host`, `read_file_info`, `list_machines`) plus `search_dynamic` / `invoke_dynamic`.
+- Fixed prompts (`revit_code`, `acad_code`) are daemon-owned.
 - In-host built-in tools (shared runtime): `execute_csharp_code`, `open_document` via `IDocumentBridge`.
 - Startup dialog resolver uses merged keywords in default `StartupDialogResolverOptions` (Revit + AutoCAD).
 - Remaining gaps for AutoCAD: no shipped MCP toolset.

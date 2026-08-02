@@ -5,17 +5,25 @@ Deep sources: `docs/architecture/MCP/README.md` and `docs/architecture/PyTest/RE
 ## MCP
 
 - IPC transport layer: `source/DevTools.Ipc/`
-- MCP protocol library: `source/DevTools.Mcp/`
+- MCP platform: `source/DevTools.Mcp.Core/`, `Catalog/`, `Adapter/`, `Client/`, `Server/`
 - Execution abstractions: `source/DevTools.Execution.Abstractions/`
 - Standalone daemon: `source/DevTools.Daemon/`
 - In-host runtime: `source/DevTools.Execution/External/`
-- MCP catalog store: `DevTools.Mcp.McpCatalogStore`
-- MCP bridge handler: `DevTools.Mcp.Handlers.McpBridgeRequestHandler`
-- MCP primitive dispatcher: `DevTools.Mcp.Dispatch.IMcpPrimitiveDispatcher` (interface in Mcp, impl in Execution)
-- MCP routing (daemon): `DevTools.Mcp.Routing.Catalog.CatalogService`
-- Bridge client: `DevTools.Daemon.Mcp.HostBridgeClient` (implements `IHostBridgeClient`)
+- Host spec pipe: `HostMcpPipeServer` + `McpHandler` on `DevToolsMcp_{Host}_{Version}_{PID}`
+- Pytest/control pipe: `DevToolsPipeServer` on `DevTools_{Host}_{Version}_{PID}`
+- Connected catalog index: `DevTools.Mcp.Client.ConnectedHostCatalog` (owned by `HostBroker`)
+- In-host registry: `DevTools.Mcp.Catalog.McpCatalogStore`
+- Primitive dispatcher: `DevTools.Mcp.Core.Invocation.IMcpPrimitiveDispatcher` (impl in Execution)
 
-External MCP clients talk to `DevTools.Daemon` (via `--stdio` or Gateway), which discovers any host pipe (`DevTools_Revit_*`, `DevTools_AutoCad_*`, `DevTools_Civil3D_*`, etc.) via `InstanceManager`. Daemon tools include infrastructure (`list_host_instances`, `launch_host`, `read_file_info`, `open_model`, `list_machines`) and symmetric catalog tools (`list_dynamic_tools`, `call_dynamic_tool`, `list_dynamic_resources`, `read_dynamic_resource`, `list_dynamic_prompts`, `get_dynamic_prompt`, `refresh_dynamic_catalog`). In-host built-in primitives: tools (`execute_csharp_code`, `execute_python_code`, `open_document`, `navigate_history`), resources (`revit://csharp-cheatsheet`, `revit://python-cheatsheet`, `revit://model/context`, `revit://model/warnings`, `revit://version`, `revit://view/screenshot`), prompts (`revit_code`). See [`docs/architecture/MCP/tools.md`](../architecture/MCP/tools.md) for full catalog. The bridge handler lives in `DevTools.Mcp` (protocol layer) and depends on `IMcpPrimitiveDispatcher` for actual execution dispatch.
+External MCP clients talk to `DevTools.Daemon` (via `--stdio` or Gateway). The daemon
+exposes infrastructure tools plus exactly `search_dynamic` and `invoke_dynamic`.
+Fixed prompts (`revit_code`, `acad_code`) are daemon-owned. Host capabilities stay
+in `HostCatalog` and are refreshed on SDK list-changed notifications for that host
+only; external daemon collections do not advertise `ListChanged`.
+
+In-host built-ins: tools (`execute_csharp_code`, `execute_python_code`,
+`open_document`, `navigate_history`) and resources (cheatsheets, model context,
+warnings, version, screenshots). See [`docs/architecture/MCP/tools.md`](../architecture/MCP/tools.md).
 
 ## PyTest Bridge
 
@@ -23,12 +31,13 @@ External MCP clients talk to `DevTools.Daemon` (via `--stdio` or Gateway), which
 - Pytest bridge methods: `source/DevTools.Execution/External/Testing/PytestBridgeMethods.cs`
 - Server side execution: `source/DevTools.Execution/External/Testing/`
 - Embedded runner: `source/DevTools.Execution/Resources/scripts/PytestRunner.py`
-- Protocol route: `tests/run` (with optional `discover_only` flag in the request payload for collection-only mode).
-- The client pytest process talks to the host through a framed named pipe.
+- Protocol route: `tests/run` (optional `discover_only`) over length-prefixed `BridgeMessage` frames
+- The client pytest process talks to the host through the pytest Named Pipe only
 
 ## Change Checklist
 
-- For MCP parser changes, verify parser library tests and at least one sample catalog path.
-- For runtime registry/dispatch changes, verify both standalone server assumptions and in-host pipe flow.
+- For MCP parser changes, verify parser/contract tests and at least one sample catalog path.
+- For host SDK / broker changes, verify `tests/DevTools.Mcp.Tests` (catalog, stream, named-pipe, framing).
 - For pytest bridge changes, verify discovery and run paths separately when possible.
+- Never mix SDK NDJSON with pytest `BridgeMessage` framing on the same pipe.
 - If a live host is required and unavailable, report the named pipe/host blocker precisely.

@@ -8,9 +8,9 @@ Practical patterns for AI agents using RevitDevTool MCP tools.
 
 ```mermaid
 flowchart LR
-    A[Read API cheatsheet] --> B[Read model context]
-    B --> C[Generate IExternalCommand code]
-    C --> D[call_dynamic_tool execute_csharp_code]
+    A[search_dynamic resources] --> B[invoke_dynamic read cheatsheet/context]
+    B --> C[Optional: prompts/get revit_code]
+    C --> D[invoke_dynamic tool execute_csharp_code]
     D -->|Success| E[Verify result]
     D -->|Compilation Error| C
     D -->|Runtime Error / Rollback| F[Read warnings → fix → retry]
@@ -18,10 +18,10 @@ flowchart LR
 
 ### Key Points
 
-- Always read `revit://api-cheatsheet` before first code generation (saves retries)
-- Read `revit://model/context` for live state (levels, categories, active view)
+- Discover host targets with `search_dynamic` (includes `machineId` + `hostInstanceId`)
+- Read resources via `invoke_dynamic` with `kind=resource` (or `resource_template`)
+- Execute with `invoke_dynamic` `kind=tool` `target=execute_csharp_code`
 - Error responses are categorized: `[COMPILATION ERROR]`, `[RUNTIME ERROR]`, `[ROLLBACK]`
-- Rollback means ExecutionGuard resolved a constraint violation automatically
 
 ---
 
@@ -29,18 +29,11 @@ flowchart LR
 
 ```mermaid
 flowchart LR
-    A[Execute code changes] --> B[Read revit://view/screenshot]
+    A[Execute code changes] --> B[invoke_dynamic tool view_screenshot]
     B --> C{AI inspects image}
     C -->|Looks correct| D[Done]
     C -->|Issues found| E[Undo + retry]
 ```
-
-### Key Points
-
-- `revit://view/screenshot` returns 1920px PNG of the active view
-- Size changes between calls indicate model state actually changed
-- Use after creating geometry to confirm placement
-- Non-exportable views (Project Browser, Templates) return text error
 
 ---
 
@@ -50,18 +43,15 @@ flowchart LR
 flowchart LR
     A[Execute code] --> B{Result OK?}
     B -->|Yes| C[Continue]
-    B -->|No| D[call navigate_history direction=back steps=1]
+    B -->|No| D[invoke_dynamic navigate_history]
     D --> E[Verify model state]
     E --> F[Retry with corrected code]
 ```
 
 ### Key Points
 
-- `navigate_history` unified contract: `direction="back"|"forward"`, `steps=N`
-- Same tool name on both Revit and AutoCAD — routed via `hostInstanceId` when multi-host
-- Revit: synchronous, returns exact stack state
-- AutoCAD: async queue, returns estimated stack state
-- Undo stack is per-document, not per-session
+- `navigate_history`: `direction="back"|"forward"`, `steps=N`
+- Always pass `hostInstanceId` when multiple hosts are connected
 
 ---
 
@@ -69,15 +59,16 @@ flowchart LR
 
 ```mermaid
 flowchart TD
-    Start[Task received] --> Read[Read resources: cheatsheet + context + version]
+    Start[Task received] --> Search[search_dynamic for tools/resources]
+    Search --> Read[invoke_dynamic read cheatsheet + context + version]
     Read --> Plan[Plan implementation]
-    Plan --> Code[Generate and execute code]
+    Plan --> Code[Generate and execute via invoke_dynamic]
     Code --> Check{Success?}
     Check -->|Error| Fix[Read error details → fix → retry]
     Fix --> Code
-    Check -->|Success| Verify[Read screenshot]
+    Check -->|Success| Verify[invoke_dynamic view_screenshot]
     Verify --> Visual{Looks right?}
-    Visual -->|No| Undo[navigate_history direction=back]
+    Visual -->|No| Undo[navigate_history back]
     Undo --> Code
     Visual -->|Yes| Done[Report success]
 ```
@@ -86,25 +77,28 @@ flowchart TD
 
 ## Token Efficiency Tips
 
-1. **Read cheatsheet once per session** — cache it mentally, don't re-read every call
-2. **Read model context before each operation** — it's live and cheap (~200 tokens)
-3. **Use `refresh_dynamic_catalog` only after host reconnects** — not between every call
-4. **Structured errors save retries** — read the error category before regenerating code
-5. **Screenshot is binary** — won't consume text tokens, but verify you have vision capability
+1. **search_dynamic is local** — repeated searches do not open host pipes
+2. **Read cheatsheet once per session** — cache it, don't re-read every call
+3. **Read model context before each operation** — live and cheap
+4. **Do not expect external tool list changes** — `ConnectedHostCatalog` refreshes internally only
+5. **Structured errors save retries** — read the error category before regenerating code
 
 ---
 
 ## Multi-Instance Scenarios
 
-When multiple hosts connect (e.g., Revit 2025 + Revit 2024), use `list_dynamic_tools` to see all registrations with their `hostInstanceId`, then pass `hostInstanceId` (PID) to disambiguate:
-
 ```json
 {
-  "name": "execute_csharp_code",
-  "arguments": {"code": "..."},
-  "hostInstanceId": 12345
+  "name": "invoke_dynamic",
+  "arguments": {
+    "capabilityId": "<from search_dynamic>",
+    "hostInstanceId": 12345,
+    "arguments": { "code": "..." }
+  }
 }
 ```
+
+Use `list_host_instances` or `search_dynamic` to discover PIDs and capability IDs.
 
 ---
 

@@ -8,14 +8,14 @@ Last updated: 2026-07-01
 
 ## Source Map
 
-| Area | Path |
-|------|------|
-| Shared logging library | `source/DevTools.Logging/` |
-| Shared presentation contracts | `source/DevTools.Presentation/Interfaces/` |
-| Revit logging lifecycle | `source/RevitDevTool/Logging/LoggingService.cs` |
-| Revit enrichers/linkify/geometry listener | `source/RevitDevTool/Logging/` |
-| AutoCAD logging lifecycle | `source/AcadDevTool/Logging/LoggingService.cs` |
-| AutoCAD enrichers | `source/AcadDevTool/Logging/` |
+| Area                                      | Path                                              |
+| ----------------------------------------- | ------------------------------------------------- |
+| Shared logging library                    | `source/DevTools.Logging/`                      |
+| Shared presentation contracts             | `source/DevTools.Presentation/Interfaces/`      |
+| Revit logging lifecycle                   | `source/RevitDevTool/Logging/LoggingService.cs` |
+| Revit enrichers/linkify/geometry listener | `source/RevitDevTool/Logging/`                  |
+| AutoCAD logging lifecycle                 | `source/AcadDevTool/Logging/LoggingService.cs`  |
+| AutoCAD enrichers                         | `source/AcadDevTool/Logging/`                   |
 
 ---
 
@@ -110,12 +110,12 @@ Revit registration is in `RevitHostingExtensions.AddLoggingServices()`. AutoCAD 
 
 `LogLevelDetector` scans bridged Trace message content and maps known keywords to MEL levels. Only applies to the `LoggerTraceListener` bridge path — `ILogger<T>` calls already carry explicit levels.
 
-| Level | Example keywords |
-|-------|------------------|
-| Critical | `CRITICAL`, `FATAL`, `PANIC`, `SECURITY` |
-| Error | `ERROR`, `FAILED`, `EXCEPTION`, `TIMEOUT`, `INVALID` |
-| Warning | `WARNING`, `DEPRECATED`, `OBSOLETE`, `MEMORY`, `RETRY` |
-| Information | default |
+| Level       | Example keywords                                                 |
+| ----------- | ---------------------------------------------------------------- |
+| Critical    | `CRITICAL`, `FATAL`, `PANIC`, `SECURITY`                 |
+| Error       | `ERROR`, `FAILED`, `EXCEPTION`, `TIMEOUT`, `INVALID`   |
+| Warning     | `WARNING`, `DEPRECATED`, `OBSOLETE`, `MEMORY`, `RETRY` |
+| Information | default                                                          |
 
 ---
 
@@ -134,12 +134,12 @@ AutoCAD has its own context provider/enricher path and does not share Revit geom
 
 ## Output Targets
 
-| Target | Implementation | Notes |
-|--------|----------------|-------|
+| Target  | Implementation       | Notes                                             |
+| ------- | -------------------- | ------------------------------------------------- |
 | Monitor | `MonitorLogTarget` | UI monitor through Scintilla/ZLogger integration. |
-| File | `FileLogProcessor` | Plain text or JSON based on settings. |
-| HTTP | `HttpLogProcessor` | Remote sink path. |
-| Notify | `NotifyListener` | UI update notifications (bridge path only). |
+| File    | `FileLogProcessor` | Plain text or JSON based on settings.             |
+| HTTP    | `HttpLogProcessor` | Remote sink path.                                 |
+| Notify  | `NotifyListener`   | UI update notifications (bridge path only).       |
 
 ---
 

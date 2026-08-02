@@ -20,7 +20,7 @@ Two MCP servers work together for complete Revit API development:
 3. read revit://csharp-cheatsheet           → get code patterns (once per session)
 4. read revit://model/context               → get live model state
 5. execute_csharp_code(code)                → run in Revit
-6. read revit://view/screenshot             → verify visually
+6. view_screenshot                          → verify visually
 7. navigate_history(direction="back")       → undo if wrong
 ```
 
@@ -132,7 +132,7 @@ After runtime errors: `navigate_history(direction="back", steps=1)` to undo.
 | `revit://model/context` | Before each operation (live state) |
 | `revit://model/warnings` | After operations to check issues |
 | `revit://version` | To confirm API version |
-| `revit://view/screenshot` | To verify visual results |
+| `view_screenshot` | To verify visual results (1280 px PNG MCP image via single `invoke_dynamic`) |
 
 ## Multi-Host
 
@@ -140,7 +140,8 @@ When multiple Revit instances or Revit + AutoCAD are connected:
 
 ```
 list_host_instances → see all PIDs
-call_dynamic_tool(name="execute_csharp_code", hostInstanceId=<PID>, arguments={...})
+search_dynamic(query="execute", hostInstanceId=<PID>) → capabilityId
+invoke_dynamic(capabilityId=<id>, arguments={...})
 ```
 
 ## Common Workflows

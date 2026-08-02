@@ -28,4 +28,13 @@ decision into `docs/decisions/`; keep task-local choices in the plan.
 
 ## Active Plans
 
-No active execution plans are currently indexed.
+| Plan | Status |
+|------|--------|
+| [2026-07-27-mcp-dynamic-discovery-and-python-toolset.md](active/2026-07-27-mcp-dynamic-discovery-and-python-toolset.md) | Active — Python alias fix + hybrid search + round-trip cuts |
+| [2026-07-26-mcp-agent-efficiency.md](active/2026-07-26-mcp-agent-efficiency.md) | Active — Phase 1 MCP re-measure / Phase 3 optional pending |
+
+## Recently Completed
+
+| Plan | Completed |
+|------|-----------|
+| [2026-07-25-mcp-call-observability.md](completed/2026-07-25-mcp-call-observability.md) | 2026-07-25 |

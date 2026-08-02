@@ -9,6 +9,7 @@ feedback comes from `.cursor/hooks/` — do not open a build skill for that.
 | Task | Read | Projects |
 |------|------|----------|
 | MCP integration testing | `mcp-integration-test.md`, `verification.md` | Host + daemon |
+| MCP agent efficiency (token/latency) | `docs/plans/completed/2026-07-26-mcp-agent-efficiency.md`, `mcp-integration-test.md` | `DevTools.Mcp.*`, `DevTools.Daemon`, `DevTools.Agents.Revit` |
 | Compile / deploy host | `build-matrix.md`, `verification.md` | `build/`, `scripts/` |
 | Package / release | `build-matrix.md`, `verification.md` | `build/`, `scripts/` |
 | Shared / host-boundary / execution / MCP / pytest-bridge / logging | Matching `docs/agents/*.md` + `docs/architecture/<Module>/README.md` + `docs/product/<domain>.md` | `source/DevTools.*`, hosts |

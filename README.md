@@ -165,7 +165,7 @@ print(f"Found {walls.GetElementCount()} walls")
 
 - **Model Context Protocol** — AI assistants interact with live host instances
 - **Multi-host discovery** — `DevTools.Daemon` tray app finds all running hosts
-- **Built-in tools** — `list_host_instances`, `launch_host`, `open_model`, `execute_csharp_code`, `open_document`
+- **Built-in tools** — `list_host_instances`, `launch_host`, `execute_csharp_code`, `open_document`
 - **Custom toolsets** — Python/C# MCP tools registered via file convention
 - **Works with** — Cursor, Claude Desktop, VS Code Copilot, any MCP client
 - **Architecture docs**: [MCP Architecture](docs/architecture/MCP/README.md)
@@ -276,7 +276,7 @@ print(f"Found {walls.GetElementCount()} walls")
 **[samples/PythonDemo/mcp_tools/](samples/PythonDemo/mcp_tools)**
 
 - Python MCP toolsets for AI integration
-- Custom tools, prompts, resources
+- Custom tools and resources
 
 </td>
 </tr>

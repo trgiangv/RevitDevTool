@@ -1,6 +1,6 @@
 # DevTools.Daemon
 
-Standalone WPF tray application that hosts the MCP engine, authentication, and multi-machine gateway connectivity.
+Standalone WPF tray application that composes the external MCP server, hosts authentication, and manages multi-machine gateway connectivity.
 
 ## Capabilities
 
@@ -26,7 +26,7 @@ Stdio and tray processes are fully independent — no IPC between them. Both dis
 | Area | Path |
 |------|------|
 | Hosting (builders, services, single-instance) | `source/DevTools.Daemon/Hosting/` |
-| MCP engine | `source/DevTools.Daemon/Mcp/` |
+| External MCP surface | `source/DevTools.Mcp.Server/` |
 | Auth (OIDC/PKCE) | `source/DevTools.Daemon/Auth/` |
 | Dashboard (window + views) | `source/DevTools.Daemon/Dashboard/` |
 | App entry point | `source/DevTools.Daemon/App.xaml.cs` |
