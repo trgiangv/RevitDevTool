@@ -1,223 +1,176 @@
 using System.Text.Json;
+using DevTools.Mcp.Core.Protocol;
 using Microsoft.Extensions.Logging.Abstractions;
 namespace DevTools.Mcp.Tests;
 
 public sealed class ParserIntegrationTests
 {
     private static readonly PythonToolsetParser PythonParser = new(NullLogger<PythonToolsetParser>.Instance);
-    private static readonly DotnetMcpAssemblyParser DotnetParser = new(NullLogger<DotnetMcpAssemblyParser>.Instance);
+    private static readonly McpAssemblyParser Parser = new(NullLogger<McpAssemblyParser>.Instance);
     [Fact]
     public void DotnetParser_ExtractsSampleToolAnnotations()
     {
-        var tools = DotnetParser.ParseCatalogFromAssembly(GetSampleAssemblyPath()).Tools;
-        var toolRegistration = tools.Single(item => item.ProtocolTool.Name == "get_demo_status");
-        var advancedRegistration = tools.Single(item => item.ProtocolTool.Name == "get_advanced_demo_status");
-        var tool = toolRegistration.ProtocolTool;
-        var advanced = advancedRegistration.ProtocolTool;
-        var protocolTool = toolRegistration.ProtocolTool;
+        var tools = Parser.ParseCatalogFromAssembly(GetSampleAssemblyPath()).Tools;
+        var toolRegistration = tools.Single(item => item.Descriptor.Name == "get_demo_status");
+        var advancedRegistration = tools.Single(item => item.Descriptor.Name == "get_advanced_demo_status");
+        var tool = toolRegistration.Descriptor;
+        var advanced = advancedRegistration.Descriptor;
+        var protocolTool = toolRegistration.Descriptor;
 
         Assert.Equal("Get Demo Status", tool.Annotations!.Title);
         Assert.Equal("Get Demo Status", tool.Title);
-        Assert.True(tool.Annotations.ReadOnlyHint);
-        Assert.True(tool.Annotations.IdempotentHint);
-        Assert.False(tool.Annotations.OpenWorldHint);
-        Assert.Null(tool.Annotations.DestructiveHint);
+        Assert.True(tool.Annotations.ReadOnly);
+        Assert.True(tool.Annotations.Idempotent);
+        Assert.False(tool.Annotations.OpenWorld);
+        Assert.Null(tool.Annotations.Destructive);
         Assert.Equal("get_demo_status", protocolTool.Name);
         Assert.Equal("Get Demo Status", protocolTool.Title);
-        Assert.True(protocolTool.Annotations!.ReadOnlyHint);
-        Assert.True(protocolTool.Annotations.IdempotentHint);
-        Assert.False(protocolTool.Annotations.OpenWorldHint);
-        Assert.Equal(JsonValueKind.Object, protocolTool.InputSchema.ValueKind);
+        Assert.True(protocolTool.Annotations!.ReadOnly);
+        Assert.True(protocolTool.Annotations.Idempotent);
+        Assert.False(protocolTool.Annotations.OpenWorld);
+        Assert.Equal(JsonValueKind.Object, protocolTool.InputSchema!.Value.ValueKind);
 
         Assert.Equal("1.0", advanced.Meta?["version"]?.GetValue<string>());
         Assert.True(advanced.Meta?["isBeta"]?.GetValue<bool>() ?? false);
-        AssertJsonObjectHasProperty(advanced.InputSchema.GetRawText(), "properties", "topic");
-        AssertJsonMissingNestedProperty(advanced.InputSchema.GetRawText(), "properties", "cancellationToken");
-        AssertJsonMissingNestedProperty(advanced.InputSchema.GetRawText(), "properties", "serviceProvider");
-        AssertJsonMissingNestedProperty(advanced.InputSchema.GetRawText(), "properties", "server");
-        AssertJsonMissingNestedProperty(advanced.InputSchema.GetRawText(), "properties", "progress");
-        AssertJsonMissingNestedProperty(advanced.InputSchema.GetRawText(), "properties", "dependency");
+        AssertJsonObjectHasProperty(advanced.InputSchema!.Value.GetRawText(), "properties", "topic");
+        AssertJsonMissingNestedProperty(advanced.InputSchema!.Value.GetRawText(), "properties", "cancellationToken");
+        AssertJsonMissingNestedProperty(advanced.InputSchema!.Value.GetRawText(), "properties", "serviceProvider");
+        AssertJsonMissingNestedProperty(advanced.InputSchema!.Value.GetRawText(), "properties", "server");
+        AssertJsonMissingNestedProperty(advanced.InputSchema!.Value.GetRawText(), "properties", "progress");
+        AssertJsonMissingNestedProperty(advanced.InputSchema!.Value.GetRawText(), "properties", "dependency");
     }
 
     [Fact]
     public void PythonParser_ExtractsSampleToolAnnotations()
     {
         var toolsetDirectory = GetPythonToolsetDirectory();
-        var sampleModulePath = Path.Combine(toolsetDirectory, "parser_annotation_sample.py");
+        var sampleModulePath = Path.Combine(toolsetDirectory, "tests", "parser_annotation_sample.py");
 
         Assert.True(Directory.Exists(toolsetDirectory), $"Expected Python sample toolset at '{toolsetDirectory}'.");
         Assert.True(File.Exists(sampleModulePath), $"Expected parser sample module at '{sampleModulePath}'.");
 
         var tools = PythonParser.ParseDirectoryCatalog(toolsetDirectory, GetPythonExecutablePath(), GetToolParserScriptPath()).Tools;
-        var toolRegistration = tools.Single(item => item.ProtocolTool.Name == "get_parser_sample_status");
-        var tool = toolRegistration.ProtocolTool;
+        var toolRegistration = tools.Single(item => item.Descriptor.Name == "get_parser_sample_status");
+        var tool = toolRegistration.Descriptor;
 
         Assert.NotNull(tool.Annotations);
         Assert.Equal("Get Parser Sample Status", tool.Annotations!.Title);
         Assert.Equal("Get Parser Sample Status", tool.Title);
-        Assert.True(tool.Annotations.ReadOnlyHint);
-        Assert.True(tool.Annotations.IdempotentHint);
-        Assert.False(tool.Annotations.OpenWorldHint);
-        Assert.Null(tool.Annotations.DestructiveHint);
+        Assert.True(tool.Annotations.ReadOnly);
+        Assert.True(tool.Annotations.Idempotent);
+        Assert.False(tool.Annotations.OpenWorld);
+        Assert.Null(tool.Annotations.Destructive);
         Assert.NotNull(tool.OutputSchema);
         AssertJsonObjectHasProperty(tool.OutputSchema!.Value.GetRawText(), "properties", "status");
-        Assert.Equal("https://example.com/icons/tool.png", tool.Icons?[0].Source);
+        Assert.Equal("https://example.com/icons/tool.png", tool.Icons![0]![McpSpecKeys.Icon.Src]!.GetValue<string>());
         Assert.Equal("fastmcp", tool.Meta?["feature"]?.GetValue<string>());
         Assert.Equal("get_parser_sample_status", tool.Name);
         Assert.Equal("Get Parser Sample Status", tool.Title);
-        Assert.True(tool.Annotations.ReadOnlyHint);
+        Assert.True(tool.Annotations.ReadOnly);
         Assert.Equal(JsonValueKind.Object, tool.OutputSchema!.Value.ValueKind);
     }
 
     [Fact]
-    public void PythonParser_ExtractsFastMcpPromptArguments()
+    public void PythonParser_ExtractsLowLevelToolsAndResources()
     {
-        var prompts = PythonParser.ParseDirectoryCatalog(GetPythonToolsetDirectory(), GetPythonExecutablePath(), GetToolParserScriptPath()).Prompts;
-        var prompt = prompts.Single(item => item.ProtocolPrompt.Name == "summarize_parser_sample").ProtocolPrompt;
+        var catalog = PythonParser.ParseDirectoryCatalog(GetPythonToolsetDirectory(), GetPythonExecutablePath(), GetToolParserScriptPath());
 
-        Assert.Equal("Summarize Parser Sample", prompt.Title);
-        Assert.Equal(2, prompt.Arguments!.Count);
-        Assert.Equal("topic", prompt.Arguments[0].Name);
-        Assert.True(prompt.Arguments[0].Required);
-        Assert.Equal("audience", prompt.Arguments[1].Name);
-        Assert.False(prompt.Arguments[1].Required);
-        Assert.Equal("https://example.com/icons/prompt.png", prompt.Icons?[0].Source);
+        var tool = catalog.Tools.Single(item => item.Descriptor.Name == "parser_lowlevel_tool").Descriptor;
+        var directResource = catalog.Resources.Single(item => item.Descriptor?.Name == "parser_lowlevel_resource").Descriptor!;
+        var templateResource = catalog.Resources.Single(item => item.TemplateDescriptor?.Name == "parser_lowlevel_template").TemplateDescriptor!;
+
+        Assert.Equal("Parser Low-Level Tool", tool.Title);
+        Assert.True(tool.Annotations!.ReadOnly);
+        Assert.True(tool.Annotations.Idempotent);
+        AssertJsonObjectHasProperty(tool.OutputSchema!.Value.GetRawText(), "properties", "status");
+        Assert.Equal("https://example.com/icons/lowlevel-tool.png", tool.Icons![0]![McpSpecKeys.Icon.Src]!.GetValue<string>());
+        Assert.Equal("lowlevel", tool.Meta?["feature"]?.GetValue<string>());
+
+        Assert.Equal("sample://lowlevel/status", directResource.Uri);
+        Assert.Equal("text/plain", directResource.MimeType);
+        Assert.Equal(128, directResource.Size);
+        Assert.Equal("https://example.com/icons/lowlevel-resource.png", directResource.Icons![0]![McpSpecKeys.Icon.Src]!.GetValue<string>());
+        Assert.Equal("resource", directResource.Meta?["kind"]?.GetValue<string>());
+        Assert.Equal(0.8, directResource.Annotations?.Priority ?? 0, 3);
+
+        Assert.Equal("sample://lowlevel/items/{item_id}", templateResource.UriTemplate);
+        Assert.Equal("application/json", templateResource.MimeType);
+        Assert.Equal("https://example.com/icons/lowlevel-template.png", templateResource.Icons![0]![McpSpecKeys.Icon.Src]!.GetValue<string>());
+        Assert.Equal("template", templateResource.Meta?["kind"]?.GetValue<string>());
+        Assert.Equal(0.5, templateResource.Annotations?.Priority ?? 0, 3);
     }
 
     [Fact]
     public void PythonParser_ExtractsFastMcpResources()
     {
         var resources = PythonParser.ParseDirectoryCatalog(GetPythonToolsetDirectory(), GetPythonExecutablePath(), GetToolParserScriptPath()).Resources;
-        var directReg = resources.Single(item => item.ProtocolResource?.Name == "parser_status_resource");
-        var templatedReg = resources.Single(item => item.ProtocolTemplate?.Name == "parser_view_resource");
-        var direct = directReg.ProtocolResource!;
-        var templated = templatedReg.ProtocolTemplate!;
+        var directReg = resources.Single(item => item.Descriptor?.Name == "parser_status_resource");
+        var templatedReg = resources.Single(item => item.TemplateDescriptor?.Name == "parser_view_resource");
+        var direct = directReg.Descriptor!;
+        var templated = templatedReg.TemplateDescriptor!;
 
         Assert.Equal("sample://parser/status", direct.Uri);
         Assert.Equal("application/json", direct.MimeType);
-        Assert.Equal("https://example.com/icons/resource-status.png", direct.Icons?[0].Source);
+        Assert.Equal("https://example.com/icons/resource-status.png", direct.Icons![0]![McpSpecKeys.Icon.Src]!.GetValue<string>());
         Assert.Equal("status", direct.Meta?["kind"]?.GetValue<string>());
         Assert.Equal(0.9, direct.Annotations?.Priority ?? 0, 3);
 
-        Assert.True(templated.IsTemplated);
         Assert.Equal("sample://parser/views/{view_id}", templated.UriTemplate);
         Assert.Equal("application/json", templated.MimeType);
-        Assert.Equal("https://example.com/icons/resource-view.png", templated.Icons?[0].Source);
+        Assert.Equal("https://example.com/icons/resource-view.png", templated.Icons![0]![McpSpecKeys.Icon.Src]!.GetValue<string>());
         Assert.Equal("view", templated.Meta?["kind"]?.GetValue<string>());
         Assert.Equal(0.6, templated.Annotations?.Priority ?? 0, 3);
     }
 
     [Fact]
-    public void PythonParser_ExtractsLowLevelPromptsAndResources()
-    {
-        var catalog = PythonParser.ParseDirectoryCatalog(GetPythonToolsetDirectory(), GetPythonExecutablePath(), GetToolParserScriptPath());
-
-        var tool = catalog.Tools.Single(item => item.ProtocolTool.Name == "parser_lowlevel_tool").ProtocolTool;
-        var prompt = catalog.Prompts.Single(item => item.ProtocolPrompt.Name == "parser_lowlevel_prompt").ProtocolPrompt;
-        var directResource = catalog.Resources.Single(item => item.ProtocolResource?.Name == "parser_lowlevel_resource").ProtocolResource!;
-        var templateResource = catalog.Resources.Single(item => item.ProtocolTemplate?.Name == "parser_lowlevel_template").ProtocolTemplate!;
-
-        Assert.Equal("Parser Low-Level Tool", tool.Title);
-        Assert.True(tool.Annotations!.ReadOnlyHint);
-        Assert.True(tool.Annotations.IdempotentHint);
-        AssertJsonObjectHasProperty(tool.OutputSchema!.Value.GetRawText(), "properties", "status");
-        Assert.Equal("https://example.com/icons/lowlevel-tool.png", tool.Icons?[0].Source);
-        Assert.Equal("lowlevel", tool.Meta?["feature"]?.GetValue<string>());
-
-        Assert.Equal("Parser Low-Level Prompt", prompt.Title);
-        var promptArgs = Assert.Single(prompt.Arguments ?? []);
-        Assert.Equal("topic", promptArgs.Name);
-        Assert.True(promptArgs.Required);
-        Assert.Equal("https://example.com/icons/lowlevel-prompt.png", prompt.Icons?[0].Source);
-        Assert.Equal("prompt", prompt.Meta?["kind"]?.GetValue<string>());
-
-        Assert.Equal("sample://lowlevel/status", directResource.Uri);
-        Assert.Equal("text/plain", directResource.MimeType);
-        Assert.Equal(128, directResource.Size);
-        Assert.Equal("https://example.com/icons/lowlevel-resource.png", directResource.Icons?[0].Source);
-        Assert.Equal("resource", directResource.Meta?["kind"]?.GetValue<string>());
-        Assert.Equal(0.8, directResource.Annotations?.Priority ?? 0, 3);
-
-        Assert.True(templateResource.IsTemplated);
-        Assert.Equal("sample://lowlevel/items/{item_id}", templateResource.UriTemplate);
-        Assert.Equal("application/json", templateResource.MimeType);
-        Assert.Equal("https://example.com/icons/lowlevel-template.png", templateResource.Icons?[0].Source);
-        Assert.Equal("template", templateResource.Meta?["kind"]?.GetValue<string>());
-        Assert.Equal(0.5, templateResource.Annotations?.Priority ?? 0, 3);
-    }
-
-    [Fact]
-    public void DotnetParser_ExtractsSamplePromptArguments()
-    {
-        var prompts = DotnetParser.ParseCatalogFromAssembly(GetSampleAssemblyPath()).Prompts;
-        var promptRegistration = prompts.Single(item => item.ProtocolPrompt.Name == "summarize_demo");
-        var prompt = promptRegistration.ProtocolPrompt;
-
-        Assert.False(string.IsNullOrWhiteSpace(prompt.Title));
-        Assert.Equal(2, prompt.Arguments!.Count);
-        Assert.Equal("topic", prompt.Arguments[0].Name);
-        Assert.True(prompt.Arguments[0].Required);
-        Assert.Equal("audience", prompt.Arguments[1].Name);
-        Assert.False(prompt.Arguments[1].Required);
-        Assert.Equal("https://example.com/icons/prompt.png", prompt.Icons?[0].Source);
-        Assert.Equal("demo", prompt.Meta?["promptCategory"]?.GetValue<string>());
-        Assert.Equal("summarize_demo", prompt.Name);
-        Assert.Equal("Summarize Demo Context", prompt.Title);
-        Assert.Equal(2, prompt.Arguments!.Count);
-        Assert.Equal("topic", prompt.Arguments[0].Name);
-    }
-
-    [Fact]
     public void DotnetParser_ExtractsSampleResources()
     {
-        var resources = DotnetParser.ParseCatalogFromAssembly(GetSampleAssemblyPath()).Resources;
-        var directRegistration = resources.Single(item => item.ProtocolResource?.Name == "demo_status");
-        var templatedRegistration = resources.Single(item => item.ProtocolTemplate?.Name == "demo_view");
-        var derivedRegistration = resources.Single(item => item.ProtocolTemplate?.Name == "demo_level");
-        var direct = directRegistration.ProtocolResource!;
-        var templated = templatedRegistration.ProtocolTemplate!;
-        var derived = derivedRegistration.ProtocolTemplate!;
+        var resources = Parser.ParseCatalogFromAssembly(GetSampleAssemblyPath()).Resources;
+        var directRegistration = resources.Single(item => item.Descriptor?.Name == "demo_status");
+        var templatedRegistration = resources.Single(item => item.TemplateDescriptor?.Name == "demo_view");
+        var derivedRegistration = resources.Single(item => item.TemplateDescriptor?.Name == "demo_level");
+        var direct = directRegistration.Descriptor!;
+        var templated = templatedRegistration.TemplateDescriptor!;
+        var derived = derivedRegistration.TemplateDescriptor!;
 
         Assert.Equal("sample://demo/status", direct.Uri);
-        Assert.Equal("https://example.com/icons/resource-status.png", direct.Icons?[0].Source);
+        Assert.Equal("https://example.com/icons/resource-status.png", direct.Icons![0]![McpSpecKeys.Icon.Src]!.GetValue<string>());
         Assert.Equal("status", direct.Meta?["resourceKind"]?.GetValue<string>());
-        Assert.NotNull(directRegistration.ProtocolResource);
-        Assert.Null(directRegistration.ProtocolTemplate);
-        Assert.Equal("sample://demo/status", directRegistration.ProtocolResource!.Uri);
+        Assert.NotNull(directRegistration.Descriptor);
+        Assert.Null(directRegistration.TemplateDescriptor);
+        Assert.Equal("sample://demo/status", directRegistration.Descriptor!.Uri);
 
-        Assert.True(templated.IsTemplated);
         Assert.Equal("sample://demo/views/{viewId}", templated.UriTemplate);
         Assert.Equal("application/json", templated.MimeType);
-        Assert.Equal("https://example.com/icons/resource-view.png", templated.Icons?[0].Source);
+        Assert.Equal("https://example.com/icons/resource-view.png", templated.Icons![0]![McpSpecKeys.Icon.Src]!.GetValue<string>());
         Assert.Equal("view", templated.Meta?["resourceKind"]?.GetValue<string>());
-        Assert.Null(templatedRegistration.ProtocolResource);
-        Assert.NotNull(templatedRegistration.ProtocolTemplate);
-        Assert.Equal("sample://demo/views/{viewId}", templatedRegistration.ProtocolTemplate!.UriTemplate);
+        Assert.Null(templatedRegistration.Descriptor);
+        Assert.NotNull(templatedRegistration.TemplateDescriptor);
+        Assert.Equal("sample://demo/views/{viewId}", templatedRegistration.TemplateDescriptor!.UriTemplate);
 
-        Assert.True(derived.IsTemplated);
         Assert.Equal("resource://demo_level/{levelId}", derived.UriTemplate);
-        Assert.NotNull(derivedRegistration.ProtocolTemplate);
+        Assert.NotNull(derivedRegistration.TemplateDescriptor);
     }
 
     [Fact]
     public void DotnetParser_ToolAnnotations_AllHintsMapped()
     {
-        var catalog = DotnetParser.ParseCatalogFromAssembly(GetSampleAssemblyPath());
-        var tool = catalog.Tools.Single(t => t.ProtocolTool.Name == "get_nested_meta").ProtocolTool;
+        var catalog = Parser.ParseCatalogFromAssembly(GetSampleAssemblyPath());
+        var tool = catalog.Tools.Single(t => t.Descriptor.Name == "get_nested_meta").Descriptor;
 
         Assert.NotNull(tool.Annotations);
-        Assert.True(tool.Annotations!.DestructiveHint);
-        Assert.True(tool.Annotations.OpenWorldHint);
-        Assert.Null(tool.Annotations.ReadOnlyHint);
-        Assert.Null(tool.Annotations.IdempotentHint);
+        Assert.True(tool.Annotations!.Destructive);
+        Assert.True(tool.Annotations.OpenWorld);
+        Assert.Null(tool.Annotations.ReadOnly);
+        Assert.Null(tool.Annotations.Idempotent);
     }
 
     [Fact]
     public void DotnetParser_InfrastructureParams_ExcludedFromSchema()
     {
-        var catalog = DotnetParser.ParseCatalogFromAssembly(GetSampleAssemblyPath());
-        var tool = catalog.Tools.Single(t => t.ProtocolTool.Name == "get_advanced_demo_status").ProtocolTool;
-        var schemaJson = tool.InputSchema.GetRawText();
+        var catalog = Parser.ParseCatalogFromAssembly(GetSampleAssemblyPath());
+        var tool = catalog.Tools.Single(t => t.Descriptor.Name == "get_advanced_demo_status").Descriptor;
+        var schemaJson = tool.InputSchema!.Value.GetRawText();
 
         AssertJsonObjectHasProperty(schemaJson, "properties", "topic");
         AssertJsonMissingNestedProperty(schemaJson, "properties", "cancellationToken");
@@ -230,9 +183,9 @@ public sealed class ParserIntegrationTests
     [Fact]
     public void DotnetParser_NullableParam_UnwrappedToBaseType()
     {
-        var catalog = DotnetParser.ParseCatalogFromAssembly(GetSampleAssemblyPath());
-        var tool = catalog.Tools.Single(t => t.ProtocolTool.Name == "get_nullable_count").ProtocolTool;
-        using var doc = JsonDocument.Parse(tool.InputSchema.GetRawText());
+        var catalog = Parser.ParseCatalogFromAssembly(GetSampleAssemblyPath());
+        var tool = catalog.Tools.Single(t => t.Descriptor.Name == "get_nullable_count").Descriptor;
+        using var doc = JsonDocument.Parse(tool.InputSchema!.Value.GetRawText());
         var countProp = doc.RootElement.GetProperty("properties").GetProperty("count");
 
         Assert.Equal("integer", countProp.GetProperty("type").GetString());
@@ -241,9 +194,9 @@ public sealed class ParserIntegrationTests
     [Fact]
     public void DotnetParser_ToolWithNoUserParams_ProducesEmptySchema()
     {
-        var catalog = DotnetParser.ParseCatalogFromAssembly(GetSampleAssemblyPath());
-        var tool = catalog.Tools.Single(t => t.ProtocolTool.Name == "ping_infrastructure").ProtocolTool;
-        using var doc = JsonDocument.Parse(tool.InputSchema.GetRawText());
+        var catalog = Parser.ParseCatalogFromAssembly(GetSampleAssemblyPath());
+        var tool = catalog.Tools.Single(t => t.Descriptor.Name == "ping_infrastructure").Descriptor;
+        using var doc = JsonDocument.Parse(tool.InputSchema!.Value.GetRawText());
 
         Assert.Equal("object", doc.RootElement.GetProperty("type").GetString());
         Assert.False(doc.RootElement.TryGetProperty("required", out _));
@@ -252,45 +205,24 @@ public sealed class ParserIntegrationTests
     }
 
     [Fact]
-    public void DotnetParser_PromptArguments_CorrectRequiredFlag()
-    {
-        var catalog = DotnetParser.ParseCatalogFromAssembly(GetSampleAssemblyPath());
-        var prompt = catalog.Prompts.Single(p => p.ProtocolPrompt.Name == "summarize_demo").ProtocolPrompt;
-
-        Assert.Equal(2, prompt.Arguments!.Count);
-        Assert.True(prompt.Arguments[0].Required);
-        Assert.False(prompt.Arguments[1].Required);
-    }
-
-    [Fact]
-    public void DotnetParser_AllOptionalPrompt_NoRequiredArgs()
-    {
-        var catalog = DotnetParser.ParseCatalogFromAssembly(GetSampleAssemblyPath());
-        var prompt = catalog.Prompts.Single(p => p.ProtocolPrompt.Name == "greet_optional").ProtocolPrompt;
-
-        Assert.Equal(2, prompt.Arguments!.Count);
-        Assert.All(prompt.Arguments, arg => Assert.False(arg.Required));
-    }
-
-    [Fact]
     public void DotnetParser_Resource_VsResourceTemplate_Discrimination()
     {
-        var catalog = DotnetParser.ParseCatalogFromAssembly(GetSampleAssemblyPath());
+        var catalog = Parser.ParseCatalogFromAssembly(GetSampleAssemblyPath());
 
-        var directReg = catalog.Resources.Single(r => r.ProtocolResource?.Name == "demo_status");
-        Assert.NotNull(directReg.ProtocolResource);
-        Assert.Null(directReg.ProtocolTemplate);
+        var directReg = catalog.Resources.Single(r => r.Descriptor?.Name == "demo_status");
+        Assert.NotNull(directReg.Descriptor);
+        Assert.Null(directReg.TemplateDescriptor);
 
-        var templatedReg = catalog.Resources.Single(r => r.ProtocolTemplate?.Name == "demo_view");
-        Assert.Null(templatedReg.ProtocolResource);
-        Assert.NotNull(templatedReg.ProtocolTemplate);
+        var templatedReg = catalog.Resources.Single(r => r.TemplateDescriptor?.Name == "demo_view");
+        Assert.Null(templatedReg.Descriptor);
+        Assert.NotNull(templatedReg.TemplateDescriptor);
     }
 
     [Fact]
     public void DotnetParser_Meta_MixedValueTypes()
     {
-        var catalog = DotnetParser.ParseCatalogFromAssembly(GetSampleAssemblyPath());
-        var tool = catalog.Tools.Single(t => t.ProtocolTool.Name == "get_nested_meta").ProtocolTool;
+        var catalog = Parser.ParseCatalogFromAssembly(GetSampleAssemblyPath());
+        var tool = catalog.Tools.Single(t => t.Descriptor.Name == "get_nested_meta").Descriptor;
 
         Assert.NotNull(tool.Meta);
         Assert.Equal(JsonValueKind.String, tool.Meta!["version"]!.GetValueKind());
@@ -303,19 +235,19 @@ public sealed class ParserIntegrationTests
     [Fact]
     public void DotnetParser_Icons_ParsedFromIconSource()
     {
-        var catalog = DotnetParser.ParseCatalogFromAssembly(GetSampleAssemblyPath());
-        var tool = catalog.Tools.Single(t => t.ProtocolTool.Name == "get_advanced_demo_status").ProtocolTool;
+        var catalog = Parser.ParseCatalogFromAssembly(GetSampleAssemblyPath());
+        var tool = catalog.Tools.Single(t => t.Descriptor.Name == "get_advanced_demo_status").Descriptor;
 
         Assert.NotNull(tool.Icons);
         Assert.Single(tool.Icons);
-        Assert.Equal("https://dohoasaigon.com/wp-content/uploads/2025/03/revit-2024.png", tool.Icons[0].Source);
+        Assert.Equal("https://dohoasaigon.com/wp-content/uploads/2025/03/revit-2024.png", tool.Icons[0]![McpSpecKeys.Icon.Src]!.GetValue<string>());
     }
 
     [Fact]
     public void DotnetParser_Title_FallsBackToName()
     {
-        var catalog = DotnetParser.ParseCatalogFromAssembly(GetSampleAssemblyPath());
-        var tool = catalog.Tools.Single(t => t.ProtocolTool.Name == "get_nullable_count").ProtocolTool;
+        var catalog = Parser.ParseCatalogFromAssembly(GetSampleAssemblyPath());
+        var tool = catalog.Tools.Single(t => t.Descriptor.Name == "get_nullable_count").Descriptor;
 
         Assert.Equal("get_nullable_count", tool.Title);
     }
@@ -323,28 +255,26 @@ public sealed class ParserIntegrationTests
     [Fact]
     public void DotnetParser_Resource_WithoutUriTemplate_GetsFallback()
     {
-        var catalog = DotnetParser.ParseCatalogFromAssembly(GetSampleAssemblyPath());
+        var catalog = Parser.ParseCatalogFromAssembly(GetSampleAssemblyPath());
         var healthReg = catalog.Resources.Single(r =>
-            r.ProtocolResource?.Name == "demo_health" || r.ProtocolTemplate?.Name == "demo_health");
+            r.Descriptor?.Name == "demo_health" || r.TemplateDescriptor?.Name == "demo_health");
 
-        Assert.NotNull(healthReg.ProtocolResource);
-        Assert.Null(healthReg.ProtocolTemplate);
-        Assert.Equal("text/plain", healthReg.ProtocolResource!.MimeType);
+        Assert.NotNull(healthReg.Descriptor);
+        Assert.Null(healthReg.TemplateDescriptor);
+        Assert.Equal("text/plain", healthReg.Descriptor!.MimeType);
     }
 
     private static string GetSampleAssemblyPath()
     {
-        var sampleAssembly = Path.Combine(
-            FindRepositoryRoot(),
-            "samples",
-            "McpToolsetDemo",
-            "bin",
-            "Debug",
-            "net8.0",
-            "McpToolsetDemo.dll");
+        var candidates = new[]
+        {
+            Path.Combine(FindRepositoryRoot(), "samples", "McpToolsetDemo", "bin", "Debug.Autodesk.2025", "McpToolsetDemo.dll"),
+            Path.Combine(FindRepositoryRoot(), "samples", "McpToolsetDemo", "bin", "Debug", "net8.0", "McpToolsetDemo.dll"),
+        };
 
-        Assert.True(File.Exists(sampleAssembly), $"Expected sample tool assembly at '{sampleAssembly}'. Build McpToolsetDemo before running this test.");
-        return sampleAssembly;
+        var sampleAssembly = candidates.FirstOrDefault(File.Exists);
+        Assert.True(sampleAssembly is not null, $"Expected sample tool assembly at one of: {string.Join(", ", candidates)}. Build McpToolsetDemo before running this test.");
+        return sampleAssembly!;
     }
 
     private static string GetPythonToolsetDirectory()

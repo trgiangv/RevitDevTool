@@ -40,28 +40,13 @@ public sealed class PythonInProcessParserTests : IDisposable
         Assert.False(string.IsNullOrWhiteSpace(result));
 
         var catalog = Parser.ParseDirectoryCatalog(ToolsetDirectory, _ => result);
-        var tool = catalog.Tools.SingleOrDefault(t => t.ProtocolTool.Name == "get_parser_sample_status");
+        var tool = catalog.Tools.SingleOrDefault(t => t.Descriptor.Name == "get_parser_sample_status");
 
         Assert.NotNull(tool);
-        Assert.Equal("Get Parser Sample Status", tool.ProtocolTool.Annotations!.Title);
-        Assert.True(tool.ProtocolTool.Annotations.ReadOnlyHint);
-        Assert.True(tool.ProtocolTool.Annotations.IdempotentHint);
-        Assert.False(tool.ProtocolTool.Annotations.OpenWorldHint);
-    }
-
-    [Fact]
-    public void InProcess_ParsesAnnotationSample_Prompts()
-    {
-        var result = RunInProcessParser(ToolsetDirectory);
-
-        Assert.NotNull(result);
-
-        var catalog = Parser.ParseDirectoryCatalog(ToolsetDirectory, _ => result);
-        var prompt = catalog.Prompts.SingleOrDefault(p => p.ProtocolPrompt.Name == "summarize_parser_sample");
-
-        Assert.NotNull(prompt);
-        Assert.Equal("Summarize Parser Sample", prompt.ProtocolPrompt.Title);
-        Assert.Equal(2, prompt.ProtocolPrompt.Arguments!.Count);
+        Assert.Equal("Get Parser Sample Status", tool.Descriptor.Annotations!.Title);
+        Assert.True(tool.Descriptor.Annotations.ReadOnly);
+        Assert.True(tool.Descriptor.Annotations.Idempotent);
+        Assert.False(tool.Descriptor.Annotations.OpenWorld);
     }
 
     [Fact]
@@ -72,13 +57,13 @@ public sealed class PythonInProcessParserTests : IDisposable
         Assert.NotNull(result);
 
         var catalog = Parser.ParseDirectoryCatalog(ToolsetDirectory, _ => result);
-        var direct = catalog.Resources.SingleOrDefault(r => r.ProtocolResource?.Name == "parser_status_resource");
-        var template = catalog.Resources.SingleOrDefault(r => r.ProtocolTemplate?.Name == "parser_view_resource");
+        var direct = catalog.Resources.SingleOrDefault(r => r.Descriptor?.Name == "parser_status_resource");
+        var template = catalog.Resources.SingleOrDefault(r => r.TemplateDescriptor?.Name == "parser_view_resource");
 
         Assert.NotNull(direct);
         Assert.NotNull(template);
-        Assert.Equal("sample://parser/status", direct.ProtocolResource!.Uri);
-        Assert.True(template.ProtocolTemplate!.IsTemplated);
+        Assert.Equal("sample://parser/status", direct.Descriptor!.Uri);
+        Assert.NotNull(template.TemplateDescriptor);
     }
 
     [Fact]
@@ -89,14 +74,12 @@ public sealed class PythonInProcessParserTests : IDisposable
         Assert.NotNull(result);
 
         var catalog = Parser.ParseDirectoryCatalog(ToolsetDirectory, _ => result);
-        var tool = catalog.Tools.SingleOrDefault(t => t.ProtocolTool.Name == "parser_lowlevel_tool");
-        var prompt = catalog.Prompts.SingleOrDefault(p => p.ProtocolPrompt.Name == "parser_lowlevel_prompt");
-        var resource = catalog.Resources.SingleOrDefault(r => r.ProtocolResource?.Name == "parser_lowlevel_resource");
+        var tool = catalog.Tools.SingleOrDefault(t => t.Descriptor.Name == "parser_lowlevel_tool");
+        var resource = catalog.Resources.SingleOrDefault(r => r.Descriptor?.Name == "parser_lowlevel_resource");
 
         Assert.NotNull(tool);
-        Assert.NotNull(prompt);
         Assert.NotNull(resource);
-        Assert.Equal("Parser Low-Level Tool", tool.ProtocolTool.Title);
+        Assert.Equal("Parser Low-Level Tool", tool.Descriptor.Title);
     }
 
     [Fact]
@@ -108,8 +91,8 @@ public sealed class PythonInProcessParserTests : IDisposable
 
         var doc = JsonDocument.Parse(result);
         Assert.True(doc.RootElement.TryGetProperty("tools", out _));
-        Assert.True(doc.RootElement.TryGetProperty("prompts", out _));
         Assert.True(doc.RootElement.TryGetProperty("resources", out _));
+        Assert.False(doc.RootElement.TryGetProperty("prompts", out _));
     }
 
     [Fact]
@@ -129,15 +112,14 @@ public sealed class PythonInProcessParserTests : IDisposable
         var inProcess = Parser.ParseDirectoryCatalog(ToolsetDirectory, _ => inProcessJson);
 
         Assert.Equal(outOfProcess.Tools.Count, inProcess.Tools.Count);
-        Assert.Equal(outOfProcess.Prompts.Count, inProcess.Prompts.Count);
         Assert.Equal(outOfProcess.Resources.Count, inProcess.Resources.Count);
 
         foreach (var oopTool in outOfProcess.Tools)
         {
-            var ipTool = inProcess.Tools.SingleOrDefault(t => t.ProtocolTool.Name == oopTool.ProtocolTool.Name);
+            var ipTool = inProcess.Tools.SingleOrDefault(t => t.Descriptor.Name == oopTool.Descriptor.Name);
             Assert.NotNull(ipTool);
-            Assert.Equal(oopTool.ProtocolTool.Title, ipTool.ProtocolTool.Title);
-            Assert.Equal(oopTool.ProtocolTool.Description, ipTool.ProtocolTool.Description);
+            Assert.Equal(oopTool.Descriptor.Title, ipTool.Descriptor.Title);
+            Assert.Equal(oopTool.Descriptor.Description, ipTool.Descriptor.Description);
         }
     }
 

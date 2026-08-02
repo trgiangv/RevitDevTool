@@ -2,6 +2,8 @@
 
     <PropertyGroup>
         <TargetFramework>net10.0-windows</TargetFramework>
+        <SelfContained>true</SelfContained>
+        <RuntimeIdentifier>win-x64</RuntimeIdentifier>
     </PropertyGroup>
 
     <ItemGroup>
@@ -10,25 +12,40 @@
         <PackageReference Include="xunit.v3"/>
         <PackageReference Include="xunit.runner.visualstudio"/>
         <PackageReference Include="pythonnet"/>
+        <PackageReference Include="ModelContextProtocol" />
+        <PackageReference Include="ModelContextProtocol.Extensions.Tasks" />
+        <PackageReference Include="Microsoft.Extensions.DependencyInjection"/>
+        <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions"/>
+        <PackageReference Include="Moq" />
+        <PackageReference Include="Bogus" />
+        <PackageReference Remove="Polyfill" />
     </ItemGroup>
 
     <ItemGroup>
         <Using Include="Xunit"/>
         <Using Include="DevTools.Execution.Abstractions"/>
         <Using Include="DevTools.Ipc"/>
-        <Using Include="DevTools.Mcp.Models"/>
-        <Using Include="DevTools.Mcp.Discovery"/>
-        <Using Include="DevTools.Mcp.Routing"/>
+        <Using Include="DevTools.Mcp.Core"/>
+        <Using Include="DevTools.Mcp.Catalog"/>
+        <Using Include="DevTools.Mcp.Catalog.Discovery"/>
+        <Using Include="DevTools.Mcp.Core.Utils"/>
+        <Using Include="DevTools.Mcp.Server.Hosting"/>
     </ItemGroup>
 
     <ItemGroup>
-        <ProjectReference Include="..\..\source\DevTools.Execution.Abstractions\DevTools.Execution.Abstractions.csproj" />
+        <ProjectReference Include="..\..\source\DevTools.Execution\DevTools.Execution.csproj" />
+        <ProjectReference Include="..\..\source\DevTools.Presentation\DevTools.Presentation.csproj" />
+        <ProjectReference Include="..\..\source\DevTools.Logging\DevTools.Logging.csproj" />
         <ProjectReference Include="..\..\source\DevTools.Ipc\DevTools.Ipc.csproj" />
-        <ProjectReference Include="..\..\source\DevTools.Mcp\DevTools.Mcp.csproj" />
-    </ItemGroup>
-
-    <ItemGroup>
-        <PackageReference Include="ModelContextProtocol" />
+        <ProjectReference Include="..\..\source\DevTools.Daemon\DevTools.Daemon.csproj" AdditionalProperties="SelfContained=false;PublishSingleFile=false" />
+        <ProjectReference Include="..\..\source\DevTools.Mcp.Core\DevTools.Mcp.Core.csproj" />
+        <ProjectReference Include="..\..\source\DevTools.Mcp.Catalog\DevTools.Mcp.Catalog.csproj" />
+        <ProjectReference Include="..\..\source\DevTools.Mcp.Adapter\DevTools.Mcp.Adapter.csproj" />
+        <ProjectReference Include="..\..\source\DevTools.Mcp.Client\DevTools.Mcp.Client.csproj" />
+        <ProjectReference Include="..\..\source\DevTools.Mcp.Server\DevTools.Mcp.Server.csproj" />
+        <ProjectReference Include="..\..\source\DevTools.FileMetadata.Core\DevTools.FileMetadata.Core.csproj" />
+        <ProjectReference Include="..\..\source\DevTools.FileMetadata.Revit\DevTools.FileMetadata.Revit.csproj" />
+        <ProjectReference Include="..\..\source\DevTools.FileMetadata.Acad\DevTools.FileMetadata.Acad.csproj" />
     </ItemGroup>
 
 </Project>
