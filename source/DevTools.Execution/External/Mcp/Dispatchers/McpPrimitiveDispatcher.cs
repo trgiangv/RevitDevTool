@@ -1,7 +1,12 @@
 using System.Collections.Concurrent;
 using System.IO;
+using System.Reflection;
 using System.Text.Json;
 using DevTools.Execution.Providers.Python;
+using DevTools.Mcp.Adapter.Execution;
+using DevTools.Mcp.Catalog.Bridging;
+using Microsoft.Extensions.DependencyInjection;
+using DevTools.Mcp.Core.Protocol;
 using DevTools.Telemetry;
 using ModelContextProtocol;
 using ModelContextProtocol.Protocol;
@@ -12,7 +17,7 @@ using Python.Runtime;
 namespace DevTools.Execution.External.Mcp.Dispatchers;
 
 /// <summary>
-/// Unified dispatcher for all MCP primitive invocations (tools, prompts, resources).
+/// Unified dispatcher for MCP primitive invocations (tools, resources).
 /// Routes to .NET assembly, Python, or built-in C# execution backends.
 /// </summary>
 public sealed class McpPrimitiveDispatcher(
@@ -21,23 +26,21 @@ public sealed class McpPrimitiveDispatcher(
     DotnetMethodResolver methodResolver,
     IEnumerable<IBuiltInMcpTool> builtInTools,
     IEnumerable<IBuiltInMcpResource> builtInResources,
-    IEnumerable<IBuiltInMcpPrompt> builtInPrompts,
     ITelemetry telemetry) : IMcpPrimitiveDispatcher
 {
     private static readonly JsonSerializerOptions JsonOptions = McpJsonUtilities.DefaultOptions;
 
-    private readonly ConcurrentDictionary<string, McpServerTool> _cachedTools = new(StringComparer.OrdinalIgnoreCase);
-    private readonly ConcurrentDictionary<string, McpServerPrompt> _cachedPrompts = new(StringComparer.OrdinalIgnoreCase);
+    private readonly ConcurrentDictionary<string, (MethodInfo Method, object? Target)> _cachedToolInvocations =
+        new(StringComparer.OrdinalIgnoreCase);
     private readonly ConcurrentDictionary<string, McpServerResource> _cachedResources = new(StringComparer.OrdinalIgnoreCase);
     private readonly Dictionary<string, IBuiltInMcpTool> _builtInToolIndex = builtInTools.ToDictionary(t => t.Name, StringComparer.OrdinalIgnoreCase);
     private readonly Dictionary<string, IBuiltInMcpResource> _builtInResourceIndex = builtInResources.ToDictionary(r => r.UriTemplate, StringComparer.OrdinalIgnoreCase);
-    private readonly Dictionary<string, IBuiltInMcpPrompt> _builtInPromptIndex = builtInPrompts.ToDictionary(p => p.ProtocolPrompt.Name, StringComparer.OrdinalIgnoreCase);
 
     #region Tools
 
-    public async Task<McpToolExecutionResult> DispatchToolAsync(
+    public async Task<McpResult<McpInvocationResponse>> DispatchToolAsync(
         McpRegisteredTool tool,
-        string? payloadJson,
+        McpInvocationRequest request,
         IHostContextExecutor hostContext,
         CancellationToken ct = default)
     {
@@ -45,21 +48,30 @@ public sealed class McpPrimitiveDispatcher(
 
         try
         {
-            var normalizedPayload = NormalizePayload(payloadJson);
+            var normalizedPayload = PythonInvocationPayload.ToJson(request);
 
             return tool.Binding.SourceKind switch
             {
                 ExecutionMode.Dotnet => await hostContext
-                    .ExecuteAsync(() => InvokeDotnetTool(tool, normalizedPayload, ct), ct)
+                    .ExecuteAsync(() => InvokeDotnetTool(tool, request, ct), ct)
                     .ConfigureAwait(false),
                 ExecutionMode.Python => await hostContext
                     .ExecuteAsync(() => InvokePythonTool(tool, normalizedPayload), ct)
                     .ConfigureAwait(false),
-                ExecutionMode.CSharp => await InvokeCSharpToolAsync(tool.ProtocolTool.Name, normalizedPayload, ct)
+                ExecutionMode.CSharp => await InvokeCSharpToolAsync(tool.Descriptor.Name, request, ct)
                     .ConfigureAwait(false),
-                _ => McpToolExecutionResult.Failed(McpExecutionErrorCodes.ToolUnknownSourceKind,
-                    $"Unknown or unsupported MCP tool execution: '{tool.Binding.SourceKind}'.")
+                _ => McpResult<McpInvocationResponse>.Failure(new McpError(DevTools.Mcp.Core.McpErrorCode.ExecutionFailed,
+                    $"Unknown or unsupported MCP tool execution: '{tool.Binding.SourceKind}'.", []))
             };
+        }
+        catch (InputRequiredException ex)
+        {
+            return McpResult<McpInvocationResponse>.Success(ToolsetMrtrBridge.ToInputRequiredResponse(ex));
+        }
+        catch (Exception ex) when (ToolsetMrtrBridge.IsForeignInputRequired(ex))
+        {
+            return McpResult<McpInvocationResponse>.Success(
+                ToolsetMrtrBridge.ToInputRequiredResponse(ToolsetMrtrBridge.ToHostException(ex)));
         }
         catch (Exception ex)
         {
@@ -71,32 +83,61 @@ public sealed class McpPrimitiveDispatcher(
                     new Dictionary<string, string> { [TelemetryKeys.Tag.Provider] = tool.Binding.SourceKind.ToString() });
             }
 
-            return McpToolExecutionResult.Failed(McpExecutionErrorCodes.ToolInvokeFailed, ex.Message, ex.StackTrace);
+            return McpResult<McpInvocationResponse>.Failure(new McpError(DevTools.Mcp.Core.McpErrorCode.ExecutionFailed, ex.Message, []));
         }
     }
 
-    private McpToolExecutionResult InvokeDotnetTool(McpRegisteredTool tool, string normalizedPayload, CancellationToken ct)
+    private McpResult<McpInvocationResponse> InvokeDotnetTool(
+        McpRegisteredTool tool,
+        McpInvocationRequest request,
+        CancellationToken ct)
     {
-        var serverTool = DotnetMcpServerFactory.GetOrCreate(
-            _cachedTools, tool.Id, tool, methodResolver.ResolveTool, serviceProvider,
-            (method, target) => McpServerTool.Create(method, target));
+        var sdkRequest = SdkInvocationRequest.ToToolContext(tool.Descriptor.Name, request);
+        var invocation = GetOrCreateToolInvocation(tool);
+        if (invocation is null)
+            return McpResult<McpInvocationResponse>.Failure(new McpError(DevTools.Mcp.Core.McpErrorCode.ExecutionFailed,
+                $"No .NET tool method mapped for '{tool.Descriptor.Name}'.", []));
 
-        if (serverTool is null)
-            return McpToolExecutionResult.Failed(McpExecutionErrorCodes.ToolNotImplemented,
-                $"No .NET tool method mapped for '{tool.ProtocolTool.Name}'.");
-
-        using var doc = JsonDocument.Parse(normalizedPayload);
-        var arguments = new Dictionary<string, JsonElement>();
-        foreach (var prop in doc.RootElement.EnumerateObject())
-            arguments[prop.Name] = prop.Value;
-
-        var requestParams = new CallToolRequestParams { Name = tool.ProtocolTool.Name, Arguments = arguments };
-        var requestContext = RequestContextFactory.Create(requestParams, RequestMethods.ToolsCall);
-        var result = DotnetMcpServerFactory.GetCompletedResult(serverTool.InvokeAsync(requestContext, ct), "tool", tool.ProtocolTool.Name);
-        return McpToolExecutionResult.Completed(result, $"Completed '{tool.ProtocolTool.Name}'.");
+        try
+        {
+            var raw = ToolsetInvoker.InvokeRaw(
+                invocation.Value.Method,
+                invocation.Value.Target,
+                sdkRequest,
+                serviceProvider,
+                ct);
+            var response = ToolsetResultSerializer.ToInvocationResponse(raw, tool.Descriptor.OutputSchema);
+            return McpResult<McpInvocationResponse>.Success(response);
+        }
+        catch (InputRequiredException ex)
+        {
+            return McpResult<McpInvocationResponse>.Success(ToolsetMrtrBridge.ToInputRequiredResponse(ex));
+        }
+        catch (Exception ex) when (ToolsetMrtrBridge.IsForeignInputRequired(ex))
+        {
+            return McpResult<McpInvocationResponse>.Success(
+                ToolsetMrtrBridge.ToInputRequiredResponse(ToolsetMrtrBridge.ToHostException(ex)));
+        }
     }
 
-    private McpToolExecutionResult InvokePythonTool(McpRegisteredTool tool, string normalizedPayload)
+    private (MethodInfo Method, object? Target)? GetOrCreateToolInvocation(McpRegisteredTool tool)
+    {
+        if (_cachedToolInvocations.TryGetValue(tool.Id, out var cached))
+            return cached;
+
+        var method = methodResolver.ResolveTool(tool);
+        if (method is null)
+            return null;
+
+        var target = method.IsStatic
+            ? null
+            : ActivatorUtilities.CreateInstance(serviceProvider, method.DeclaringType!);
+        var entry = (method, target);
+        _cachedToolInvocations.TryAdd(tool.Id, entry);
+        return entry;
+    }
+
+    private McpResult<McpInvocationResponse> InvokePythonTool(McpRegisteredTool tool, string normalizedPayload)
     {
         var binding = tool.Binding;
         if (string.IsNullOrWhiteSpace(binding.SourcePath) || !File.Exists(binding.SourcePath))
@@ -107,127 +148,95 @@ public sealed class McpPrimitiveDispatcher(
             binding.SourcePath, rootFolder,
             scope =>
             {
-                scope.Set(PythonInstances.ToolName, new PyString(tool.ProtocolTool.Name));
+                scope.Set(PythonInstances.ToolName, new PyString(tool.Descriptor.Name));
                 scope.Set(PythonInstances.PayloadJson, new PyString(normalizedPayload));
                 scope.Exec(PythonEmbedded.ToolInvokeScript);
                 return scope.Get(PythonInstances.ResultJson).As<string>();
             });
         var callResult = PythonResultParser.ParseCallToolResult(resultJson);
-        return McpToolExecutionResult.Completed(callResult, $"Completed '{tool.ProtocolTool.Name}'.");
+        return McpResult<McpInvocationResponse>.Success(
+            ToolsetResultSerializer.ToInvocationResponse(callResult, tool.Descriptor.OutputSchema));
     }
 
-    private Task<McpToolExecutionResult> InvokeCSharpToolAsync(string toolName, string normalizedPayload, CancellationToken ct)
+    private async Task<McpResult<McpInvocationResponse>> InvokeCSharpToolAsync(
+        string toolName,
+        McpInvocationRequest request,
+        CancellationToken ct)
     {
         if (!_builtInToolIndex.TryGetValue(toolName, out var tool))
-            return Task.FromResult(McpToolExecutionResult.Failed(
-                McpExecutionErrorCodes.ToolNotImplemented, $"No C# tool registered for '{toolName}'."));
-        return tool.ExecuteAsync(normalizedPayload, ct);
-    }
+            return McpResult<McpInvocationResponse>.Failure(new McpError(
+                DevTools.Mcp.Core.McpErrorCode.ExecutionFailed, $"No C# tool registered for '{toolName}'.", []));
 
-    #endregion
-
-    #region Prompts
-
-    public GetPromptResult GetPrompt(
-        McpRegisteredPrompt prompt,
-        IReadOnlyDictionary<string, JsonElement>? arguments,
-        CancellationToken ct = default)
-    {
-        return prompt.Binding.SourceKind switch
-        {
-            ExecutionMode.Dotnet => InvokeDotnetPrompt(prompt, arguments, ct),
-            ExecutionMode.Python => InvokePythonPrompt(prompt, arguments),
-            ExecutionMode.CSharp => InvokeCSharpPrompt(prompt, arguments),
-            _ => throw new InvalidOperationException($"Unsupported prompt execution source '{prompt.Binding.SourceKind}'.")
-        };
-    }
-
-    private GetPromptResult InvokeCSharpPrompt(McpRegisteredPrompt prompt, IReadOnlyDictionary<string, JsonElement>? arguments)
-    {
-        if (!_builtInPromptIndex.TryGetValue(prompt.ProtocolPrompt.Name, out var builtIn))
-            throw new InvalidOperationException($"No built-in prompt registered for '{prompt.ProtocolPrompt.Name}'.");
-        return builtIn.Get(arguments);
-    }
-
-    private GetPromptResult InvokeDotnetPrompt(McpRegisteredPrompt prompt, IReadOnlyDictionary<string, JsonElement>? arguments, CancellationToken ct)
-    {
-        var serverPrompt = DotnetMcpServerFactory.GetOrCreate(
-            _cachedPrompts, prompt.Id, prompt, methodResolver.ResolvePrompt, serviceProvider,
-            (method, target) => McpServerPrompt.Create(method, target));
-
-        if (serverPrompt is null)
-            throw new InvalidOperationException($"No .NET prompt method mapped for '{prompt.ProtocolPrompt.Name}'.");
-
-        var requestParams = new GetPromptRequestParams
-        {
-            Name = prompt.ProtocolPrompt.Name,
-            Arguments = arguments?.ToDictionary(kv => kv.Key, kv => kv.Value)
-        };
-        var requestContext = RequestContextFactory.Create(requestParams, RequestMethods.PromptsGet);
-        return DotnetMcpServerFactory.GetCompletedResult(serverPrompt.GetAsync(requestContext, ct), "prompt", prompt.ProtocolPrompt.Name);
-    }
-
-    private GetPromptResult InvokePythonPrompt(McpRegisteredPrompt prompt, IReadOnlyDictionary<string, JsonElement>? arguments)
-    {
-        var sourcePath = prompt.Binding.SourcePath;
-        if (string.IsNullOrWhiteSpace(sourcePath) || !File.Exists(sourcePath))
-            throw new InvalidOperationException($"Python MCP source file was not found: {sourcePath}.");
-
-        var rootFolder = Path.GetDirectoryName(sourcePath) ?? string.Empty;
-        var resultJson = executor.Execute(
-            sourcePath, rootFolder,
-            scope =>
-            {
-                scope.Set(PythonInstances.Operation, new PyString(PythonInstances.OperationPrompt));
-                scope.Set(PythonInstances.PromptName, new PyString(prompt.ProtocolPrompt.Name));
-                scope.Set(PythonInstances.ArgumentsJson, new PyString(SerializeJson(arguments ?? new Dictionary<string, JsonElement>())));
-                scope.Exec(PythonEmbedded.ToolInvokeScript);
-                return scope.Get(PythonInstances.ResultJson).As<string>();
-            });
-        return JsonSerializer.Deserialize<GetPromptResult>(resultJson, JsonOptions)
-               ?? new GetPromptResult { Description = prompt.ProtocolPrompt.Description };
+        var sdkRequest = SdkInvocationRequest.ToToolContext(toolName, request);
+        var result = await tool.ServerTool.InvokeAsync(sdkRequest, ct).ConfigureAwait(false);
+        return McpResult<McpInvocationResponse>.Success(ToolsetResultSerializer.ToInvocationResponse(result, null));
     }
 
     #endregion
 
     #region Resources
 
-    public ReadResourceResult ReadResource(
+    public McpReadResourceResponse ReadResource(
         McpRegisteredResource resource,
         string uri,
         CancellationToken ct = default)
     {
-        return resource.Binding.SourceKind switch
+        var result = resource.Binding.SourceKind switch
         {
             ExecutionMode.Dotnet => InvokeDotnetResource(resource, uri, ct),
             ExecutionMode.Python => InvokePythonResource(resource, uri),
             ExecutionMode.CSharp => InvokeCSharpResource(resource, uri),
             _ => throw new InvalidOperationException($"Unsupported resource execution source '{resource.Binding.SourceKind}'.")
         };
+        return MapReadResourceResult(result);
+    }
+
+    private static McpReadResourceResponse MapReadResourceResult(ReadResourceResult result)
+    {
+        var contents = new List<McpReadResourceContent>(result.Contents.Count);
+        foreach (var item in result.Contents)
+        {
+            switch (item)
+            {
+                case TextResourceContents text:
+                    contents.Add(new McpReadResourceTextContent(text.Uri, text.Text, text.MimeType));
+                    break;
+                case BlobResourceContents blob:
+                    contents.Add(new McpReadResourceBlobContent(blob.Uri, blob.DecodedData.ToArray(), blob.MimeType));
+                    break;
+            }
+        }
+
+        return new McpReadResourceResponse { Contents = contents };
     }
 
     private ReadResourceResult InvokeCSharpResource(McpRegisteredResource resource, string uri)
     {
-        var resourceUri = resource.ProtocolResource?.Uri ?? resource.ProtocolTemplate?.UriTemplate ?? string.Empty;
+        var resourceUri = resource.Descriptor?.Uri ?? resource.TemplateDescriptor?.UriTemplate ?? string.Empty;
         if (!_builtInResourceIndex.TryGetValue(resourceUri, out var builtIn))
             throw new InvalidOperationException($"No built-in resource registered for '{resourceUri}'.");
         return builtIn.Read(uri);
     }
 
-    private ReadResourceResult InvokeDotnetResource(McpRegisteredResource resource, string uri, CancellationToken ct)
+    private ReadResourceResult InvokeDotnetResource(
+        McpRegisteredResource resource,
+        string uri,
+        CancellationToken ct)
     {
+        var request = SdkInvocationRequest.ToResourceContext(uri);
         var serverResource = DotnetMcpServerFactory.GetOrCreate(
             _cachedResources, resource.Id, resource, methodResolver.ResolveResource, serviceProvider,
-            (method, target) => McpServerResource.Create(method, target));
+            (method, target) => McpServerResource.Create(
+                method,
+                target,
+                McpCatalogCreateOptions.ForResource(resource, serviceProvider)));
 
         if (serverResource is null)
             throw new InvalidOperationException(
-                $"No .NET resource method mapped for '{resource.ProtocolResource?.Name ?? resource.ProtocolTemplate?.Name}'.");
+                $"No .NET resource method mapped for '{resource.DisplayName}'.");
 
-        var requestParams = new ReadResourceRequestParams { Uri = uri };
-        var requestContext = RequestContextFactory.Create(requestParams, RequestMethods.ResourcesRead);
-        var name = resource.ProtocolResource?.Name ?? resource.ProtocolTemplate?.Name ?? uri;
-        return DotnetMcpServerFactory.GetCompletedResult(serverResource.ReadAsync(requestContext, ct), "resource", name);
+        var name = resource.DisplayName;
+        return DotnetMcpServerFactory.GetCompletedResult(serverResource.ReadAsync(request, ct), "resource", name);
     }
 
     private ReadResourceResult InvokePythonResource(McpRegisteredResource resource, string uri)
@@ -241,7 +250,7 @@ public sealed class McpPrimitiveDispatcher(
             sourcePath, rootFolder,
             scope =>
             {
-                var name = resource.ProtocolResource?.Name ?? resource.ProtocolTemplate?.Name ?? string.Empty;
+                var name = resource.DisplayName;
                 scope.Set(PythonInstances.Operation, new PyString(PythonInstances.OperationResource));
                 scope.Set(PythonInstances.ResourceName, new PyString(name));
                 scope.Set(PythonInstances.ResourceUri, new PyString(uri));
@@ -255,18 +264,7 @@ public sealed class McpPrimitiveDispatcher(
 
     public void ClearCaches()
     {
-        _cachedTools.Clear();
-        _cachedPrompts.Clear();
+        _cachedToolInvocations.Clear();
         _cachedResources.Clear();
     }
-
-    private static string NormalizePayload(string? payloadJson)
-    {
-        using var doc = JsonDocument.Parse(string.IsNullOrWhiteSpace(payloadJson) ? "{}" : payloadJson!);
-        return doc.RootElement.ValueKind != JsonValueKind.Object
-            ? throw new JsonException("Tool payload must be a JSON object.")
-            : doc.RootElement.GetRawText();
-    }
-
-    private static string SerializeJson<T>(T value) => JsonSerializer.Serialize(value, JsonOptions);
 }

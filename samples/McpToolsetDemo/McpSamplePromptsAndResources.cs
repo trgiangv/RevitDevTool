@@ -4,38 +4,6 @@ using ModelContextProtocol.Server;
 
 namespace McpToolsetDemo;
 
-[McpServerPromptType]
-public static class McpSamplePrompts
-{
-    [McpServerPrompt(
-        Name = "summarize_demo",
-        Title = "Summarize Demo Context",
-        IconSource = "https://example.com/icons/prompt.png")]
-    [McpMeta("promptCategory", "demo")]
-    [Description("Builds a parser-focused demo prompt with optional topic selection.")]
-    public static string SummarizeDemo(
-        [Description("Topic to summarize.")] string topic,
-        [Description("Audience style.")] string? audience = null,
-        CancellationToken cancellationToken = default,
-        IServiceProvider? serviceProvider = null,
-        McpServer? server = null)
-    {
-        cancellationToken.ThrowIfCancellationRequested();
-        _ = serviceProvider;
-        _ = server;
-        return $"Summarize '{topic}' for audience '{audience ?? "general"}'.";
-    }
-
-    [McpServerPrompt(Name = "greet_optional")]
-    [Description("Prompt with all-optional arguments for parser validation.")]
-    public static string GreetOptional(
-        [Description("Greeting style.")] string? style = null,
-        [Description("Language preference.")] string? language = null)
-    {
-        return $"Greet in '{language ?? "en"}' style '{style ?? "casual"}'.";
-    }
-}
-
 [McpServerResourceType]
 public static class McpSampleResources
 {

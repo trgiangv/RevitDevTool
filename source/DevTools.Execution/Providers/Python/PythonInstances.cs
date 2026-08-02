@@ -12,13 +12,10 @@ public static class PythonInstances
     public const string Root = "__root__";
 
     // MCP operations
-    public const string OperationPrompt = "prompt";
     public const string OperationResource = "resource";
     public const string Operation = "__operation__";
     public const string ToolName = "__tool_name__";
     public const string PayloadJson = "__payload_json__";
-    public const string PromptName = "__prompt_name__";
-    public const string ArgumentsJson = "__arguments_json__";
     public const string ResourceName = "__resource_name__";
     public const string ResourceUri = "__resource_uri__";
     public const string ResultJson = "__result_json__";

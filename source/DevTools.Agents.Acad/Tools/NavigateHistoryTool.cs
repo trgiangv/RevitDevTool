@@ -1,7 +1,8 @@
-using System.Text.Json;
-using DevTools.Mcp.BuiltIn;
-using DevTools.Mcp.Models;
+using System.ComponentModel;
+using DevTools.Mcp.Catalog;
+using DevTools.Mcp.Core.Utils;
 using ModelContextProtocol.Protocol;
+using ModelContextProtocol.Server;
 
 namespace DevTools.Agents.Acad.Tools;
 
@@ -10,109 +11,84 @@ namespace DevTools.Agents.Acad.Tools;
 /// Does NOT use IHostContextExecutor — Internal.Utils operates at application level
 /// and SendMenuStringToExecute conflicts with document lock.
 /// </summary>
-public sealed class NavigateHistoryTool(AcadHistoryNavigator navigator) : IBuiltInMcpTool
+public sealed class NavigateHistoryTool : IBuiltInMcpTool
 {
-    public string Name => "navigate_history";
+    private readonly AcadHistoryNavigator _navigator;
 
-    public Tool ProtocolTool { get; } = new()
+    public NavigateHistoryTool(AcadHistoryNavigator navigator)
     {
-        Name = "navigate_history",
-        Description =
-            "Navigate undo/redo history. " +
-            "direction='back' undoes operations, 'forward' redoes them. " +
-            "Returns the history stack state after queuing the navigation. " +
-            "Note: executes asynchronously — stack counts are estimates.",
-        InputSchema = DevTools.Mcp.Schema.McpSchemaBuilder.Object(
-        [
-            DevTools.Mcp.Schema.McpSchemaBuilder.Enum("direction",
-                "Navigation direction.", ["back", "forward"]),
-            DevTools.Mcp.Schema.McpSchemaBuilder.Integer("steps",
-                "Number of steps to navigate (default=1).")
-        ],
-        required: ["direction"]),
-        Annotations = new ToolAnnotations
-        {
-            Title = "Navigate History",
-            DestructiveHint = true
-        }
-    };
-
-    public Task<McpToolExecutionResult> ExecuteAsync(string payloadJson, CancellationToken ct)
-    {
-        ct.ThrowIfCancellationRequested();
-        var (direction, steps) = ParseArgs(payloadJson);
-
-        if (direction == "forward")
-            return Task.FromResult(GoForward(steps));
-
-        return Task.FromResult(GoBack(steps));
+        _navigator = navigator;
+        ServerTool = McpServerTool.Create(
+            Navigate,
+            new McpServerToolCreateOptions
+            {
+                Name = "navigate_history",
+                Title = "Navigate History",
+                Description =
+                    "Navigate undo/redo history. " +
+                    "direction='back' undoes operations, 'forward' redoes them. " +
+                    "Returns the history stack state after queuing the navigation. " +
+                    "Note: executes asynchronously — stack counts are estimates.",
+                Destructive = true,
+                OpenWorld = false
+            });
     }
 
-    private McpToolExecutionResult GoBack(int steps)
+    public string Name => "navigate_history";
+    public McpServerTool ServerTool { get; }
+
+    [Description("Navigate undo/redo history.")]
+    private CallToolResult Navigate(
+        [Description("Navigation direction: back | forward.")] string direction,
+        [Description("Number of steps to navigate (default=1).")] int steps = 1)
     {
-        var stack = navigator.GetBackStack();
+        if (steps < 1) steps = 1;
+        return string.Equals(direction, "forward", StringComparison.OrdinalIgnoreCase)
+            ? GoForward(steps)
+            : GoBack(steps);
+    }
+
+    private CallToolResult GoBack(int steps)
+    {
+        var stack = _navigator.GetBackStack();
         if (stack.Count == 0)
-            return Result("Nothing to undo. History stack is empty.");
+            return ToolHelpers.Result("Nothing to undo. History stack is empty.");
 
         var actual = Math.Min(steps, stack.Count);
         var names = stack.Take(actual).ToList();
 
-        if (!navigator.GoBack(actual))
-            return Result("Cannot navigate back: host is not in quiescent state.");
+        if (!_navigator.GoBack(actual))
+            return ToolHelpers.Result("Cannot navigate back: host is not in quiescent state.");
 
-        return Result(JsonSerializer.Serialize(new
+        return ToolHelpers.Result(new
         {
             direction = "back",
             navigated = actual,
             operations = names,
             back_remaining = Math.Max(0, stack.Count - actual),
-            forward_available = navigator.GetForwardStack().Count + actual
-        }, JsonOpts));
+            forward_available = _navigator.GetForwardStack().Count + actual
+        });
     }
 
-    private McpToolExecutionResult GoForward(int steps)
+    private CallToolResult GoForward(int steps)
     {
-        var stack = navigator.GetForwardStack();
+        var stack = _navigator.GetForwardStack();
         if (stack.Count == 0)
-            return Result("Nothing to redo. Forward stack is empty.");
+            return ToolHelpers.Result("Nothing to redo. Forward stack is empty.");
 
         var actual = Math.Min(steps, stack.Count);
         var names = stack.Take(actual).ToList();
 
-        if (!navigator.GoForward(actual))
-            return Result("Cannot navigate forward: host is not in quiescent state.");
+        if (!_navigator.GoForward(actual))
+            return ToolHelpers.Result("Cannot navigate forward: host is not in quiescent state.");
 
-        return Result(JsonSerializer.Serialize(new
+        return ToolHelpers.Result(new
         {
             direction = "forward",
             navigated = actual,
             operations = names,
-            back_remaining = navigator.GetBackStack().Count + actual,
+            back_remaining = _navigator.GetBackStack().Count + actual,
             forward_available = Math.Max(0, stack.Count - actual)
-        }, JsonOpts));
+        });
     }
-
-    private static McpToolExecutionResult Result(string text) =>
-        McpToolExecutionResult.Completed(
-            new CallToolResult { Content = [new TextContentBlock { Text = text }] },
-            text.Contains("Nothing") || text.Contains("Cannot") ? "Navigation failed." : "Navigation queued.");
-
-    private static (string direction, int steps) ParseArgs(string json)
-    {
-        var direction = "back";
-        var steps = 1;
-        try
-        {
-            using var doc = JsonDocument.Parse(json);
-            if (doc.RootElement.TryGetProperty("direction", out var d))
-                direction = d.GetString() ?? "back";
-            if (doc.RootElement.TryGetProperty("steps", out var s) && s.TryGetInt32(out var n))
-                steps = n;
-        }
-        catch { /* defaults */ }
-        if (steps < 1) steps = 1;
-        return (direction, steps);
-    }
-
-    private static readonly JsonSerializerOptions JsonOpts = new() { WriteIndented = true };
 }

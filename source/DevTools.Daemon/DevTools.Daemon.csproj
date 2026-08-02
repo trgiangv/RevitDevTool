@@ -17,7 +17,6 @@
         <Nullable>enable</Nullable>
         <ImplicitUsings>enable</ImplicitUsings>
         <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
-        <NoWarn>$(NoWarn);MCPEXP001</NoWarn>
         <RootNamespace>DevTools.Daemon</RootNamespace>
         <AssemblyName>DevTools.Daemon</AssemblyName>
         <StartupObject>DevTools.Daemon.Program</StartupObject>
@@ -27,6 +26,7 @@
         <PublishReadyToRun>true</PublishReadyToRun>
         <EnableCompressionInSingleFile>true</EnableCompressionInSingleFile>
         <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
+        <PolyUseEmbeddedAttribute>true</PolyUseEmbeddedAttribute>
     </PropertyGroup>
 
     <PropertyGroup>
@@ -48,6 +48,7 @@
         <PackageReference Include="H.NotifyIcon.Wpf"/>
         <PackageReference Include="CommunityToolkit.Mvvm"/>
         <PackageReference Include="ModelContextProtocol"/>
+        <PackageReference Include="ModelContextProtocol.Extensions.Tasks"/>
         <PackageReference Include="Duende.IdentityModel.OidcClient"/>
         <PackageReference Include="ZLogger"/>
         <PackageReference Include="Microsoft.Extensions.Hosting"/>
@@ -61,13 +62,22 @@
         <ProjectReference Include="..\DevTools.UI\DevTools.UI.csproj"/>
         <ProjectReference Include="..\DevTools.Utilities\DevTools.Utilities.csproj"/>
         <ProjectReference Include="..\DevTools.Ipc\DevTools.Ipc.csproj"/>
-        <ProjectReference Include="..\DevTools.Mcp\DevTools.Mcp.csproj"/>
+        <ProjectReference Include="..\DevTools.Mcp.Core\DevTools.Mcp.Core.csproj" SetTargetFramework="TargetFramework=$(TargetFramework)" />
+        <ProjectReference Include="..\DevTools.Mcp.Catalog\DevTools.Mcp.Catalog.csproj" SetTargetFramework="TargetFramework=$(TargetFramework)" />
+        <ProjectReference Include="..\DevTools.Mcp.Client\DevTools.Mcp.Client.csproj" SetTargetFramework="TargetFramework=$(TargetFramework)" />
+        <ProjectReference Include="..\DevTools.Mcp.Server\DevTools.Mcp.Server.csproj" SetTargetFramework="TargetFramework=$(TargetFramework)" />
+        <ProjectReference Include="..\DevTools.FileMetadata.Core\DevTools.FileMetadata.Core.csproj" SetTargetFramework="TargetFramework=$(TargetFramework)" />
+        <ProjectReference Include="..\DevTools.FileMetadata.Revit\DevTools.FileMetadata.Revit.csproj" SetTargetFramework="TargetFramework=$(TargetFramework)" />
+        <ProjectReference Include="..\DevTools.FileMetadata.Acad\DevTools.FileMetadata.Acad.csproj" SetTargetFramework="TargetFramework=$(TargetFramework)" />
         <ProjectReference Include="..\DevTools.Logging\DevTools.Logging.csproj"/>
     </ItemGroup>
     <ItemGroup>
         <Using Include="DevTools.Ipc" />
-        <Using Include="DevTools.Mcp.Models" />
-        <Using Include="DevTools.Mcp" />
-        <Using Include="DevTools.Mcp.Routing" />
+        <Using Include="DevTools.Mcp.Core" />
+        <Using Include="DevTools.Mcp.Core.Utils" />
+        <Using Include="DevTools.Mcp.Catalog" />
+        <Using Include="DevTools.Mcp.Server" />
+        <Using Include="DevTools.Mcp.Server.Hosting" />
+        <Using Include="DevTools.Mcp.Server.Prompts" />
     </ItemGroup>
 </Project>

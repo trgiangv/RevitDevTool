@@ -1,4 +1,4 @@
-﻿using UIFramework;
+using UIFramework;
 using TaskDialogResult = Autodesk.Revit.UI.TaskDialogResult;
 // ReSharper disable ConvertToExtensionBlock
 

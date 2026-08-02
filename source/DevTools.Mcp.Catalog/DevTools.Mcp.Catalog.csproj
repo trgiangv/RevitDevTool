@@ -1,0 +1,29 @@
+<Project Sdk="Microsoft.NET.Sdk">
+    <PropertyGroup>
+        <TargetFrameworks>net48;net8.0-windows;net10.0-windows</TargetFrameworks>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <PackageReference Include="CliWrap" />
+        <PackageReference Include="ModelContextProtocol" />
+        <PackageReference Include="ModelContextProtocol.Extensions.Tasks" />
+        <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" />
+        <PackageReference Include="System.Reflection.MetadataLoadContext" />
+        <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" />
+        <PackageReference Include="ZLogger" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <Using Include="DevTools.Execution.Abstractions" />
+        <Using Include="DevTools.Ipc" />
+        <Using Include="DevTools.Mcp.Core" />
+        <Using Include="DevTools.Mcp.Core.Protocol" />
+        <Using Include="DevTools.Mcp.Catalog.Discovery" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\DevTools.Mcp.Core\DevTools.Mcp.Core.csproj" SetTargetFramework="TargetFramework=$(TargetFramework)" />
+        <ProjectReference Include="..\DevTools.Execution.Abstractions\DevTools.Execution.Abstractions.csproj" />
+        <ProjectReference Include="..\DevTools.Settings\DevTools.Settings.csproj" />
+    </ItemGroup>
+</Project>

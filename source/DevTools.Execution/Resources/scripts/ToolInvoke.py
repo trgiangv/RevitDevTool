@@ -4,16 +4,17 @@ import json
 import sys
 import uuid
 from types import ModuleType
-from typing import Any, Mapping, TypeAlias
+from typing import Any, Mapping, TypeAlias, cast
 
 from pydantic import BaseModel
 from mcp import types
-from mcp.server.fastmcp import FastMCP
+from mcp.server.context import ServerRequestContext
 from mcp.server.lowlevel import Server as LowLevelServer
+from mcp.server.mcpserver import MCPServer
 
 JsonScalar: TypeAlias = str | int | float | bool | None
 JsonValue: TypeAlias = JsonScalar | dict[str, "JsonValue"] | list["JsonValue"]
-PrimitiveServer: TypeAlias = FastMCP | LowLevelServer[Any]
+PrimitiveServer: TypeAlias = MCPServer | LowLevelServer[Any]
 InvokeScope: TypeAlias = Mapping[str, object]
 
 _SCOPE_FILE = "__file__"
@@ -22,13 +23,13 @@ _SCOPE_SOURCE_FILE = "__source_file__"
 _SCOPE_OPERATION = "__operation__"
 _SCOPE_TOOL_NAME = "__tool_name__"
 _SCOPE_PAYLOAD_JSON = "__payload_json__"
-_SCOPE_PROMPT_NAME = "__prompt_name__"
-_SCOPE_ARGUMENTS_JSON = "__arguments_json__"
 _SCOPE_RESOURCE_URI = "__resource_uri__"
 
 _OP_TOOL = "tool"
-_OP_PROMPT = "prompt"
 _OP_RESOURCE = "resource"
+
+_LOWLEVEL_METHOD_CALL_TOOL = "tools/call"
+_LOWLEVEL_METHOD_READ_RESOURCE = "resources/read"
 
 
 def __normalize(value: object) -> JsonValue:
@@ -58,26 +59,13 @@ def __parse_payload(payload_json: str) -> dict[str, object]:
     return payload
 
 
-def __parse_optional_payload(payload_json: str) -> dict[str, object] | None:
-    if not payload_json:
-        return None
-
-    payload = json.loads(payload_json)
-    if payload is None:
-        return None
-    if not isinstance(payload, dict):
-        raise RuntimeError("Primitive payload must be a JSON object.")
-
-    return payload
-
-
 def __add_root_to_sys_path(root_path: str) -> None:
     if root_path and root_path not in sys.path:
         sys.path.insert(0, root_path)
 
 
 def __is_supported_server(obj: object) -> bool:
-    return isinstance(obj, (FastMCP, LowLevelServer))
+    return isinstance(obj, (MCPServer, LowLevelServer))
 
 
 def __find_server(module: ModuleType) -> PrimitiveServer | None:
@@ -98,88 +86,91 @@ def __load_module(module_path: str) -> ModuleType:
     return module
 
 
-def __invoke_fastmcp(server: FastMCP, tool_name: str, payload: dict[str, object]) -> object:
-    return anyio.run(server.call_tool, tool_name, payload)
+def __make_lowlevel_context(method: str, protocol_version: str = "2025-11-25") -> ServerRequestContext[Any]:
+    return ServerRequestContext(
+        session=cast(Any, None),
+        lifespan_context={},
+        protocol_version=protocol_version,
+        method=method,
+    )
+
+
+def __build_call_tool_params(tool_name: str, payload: dict[str, object]) -> types.CallToolRequestParams:
+    input_responses_raw = payload.get("inputResponses")
+    if input_responses_raw is None:
+        input_responses_raw = payload.get("input_responses")
+    request_state_raw = payload.get("requestState")
+    if request_state_raw is None:
+        request_state_raw = payload.get("request_state")
+    has_mrtr = input_responses_raw is not None or request_state_raw is not None
+
+    if not has_mrtr:
+        return types.CallToolRequestParams(name=tool_name, arguments=dict(payload))
+
+    arguments_raw = payload.get("arguments")
+    arguments = dict(arguments_raw) if isinstance(arguments_raw, dict) else {}
+    kwargs: dict[str, object] = {"name": tool_name, "arguments": arguments}
+    if input_responses_raw is not None:
+        kwargs["input_responses"] = input_responses_raw
+    if isinstance(request_state_raw, str):
+        kwargs["request_state"] = request_state_raw
+    return types.CallToolRequestParams.model_validate(kwargs)
+
+
+def __invoke_mcpserver(server: MCPServer, params: types.CallToolRequestParams, has_mrtr: bool) -> object:
+    if has_mrtr:
+        entry = server._lowlevel_server.get_request_handler(_LOWLEVEL_METHOD_CALL_TOOL)
+        if entry is None:
+            raise RuntimeError("MCPServer does not register a tools/call handler.")
+        ctx = __make_lowlevel_context(_LOWLEVEL_METHOD_CALL_TOOL, "2026-07-28")
+        return anyio.run(entry.handler, ctx, params)
+
+    return anyio.run(server.call_tool, params.name, params.arguments or {})
 
 
 def __invoke_lowlevel(
     server: LowLevelServer[Any],
-    tool_name: str,
-    payload: dict[str, object],
+    params: types.CallToolRequestParams,
+    has_mrtr: bool,
 ) -> object:
-    handler = server.request_handlers.get(types.CallToolRequest)
-    if handler is None:
+    entry = server.get_request_handler(_LOWLEVEL_METHOD_CALL_TOOL)
+    if entry is None:
         raise RuntimeError("Low-level MCP server does not register a tools/call handler.")
 
-    request = types.CallToolRequest(
-        params=types.CallToolRequestParams(name=tool_name, arguments=payload)
-    )
-    result = anyio.run(handler, request)
-    return result.root if result is not None else None
+    protocol_version = "2026-07-28" if has_mrtr else "2025-11-25"
+    ctx = __make_lowlevel_context(_LOWLEVEL_METHOD_CALL_TOOL, protocol_version)
+    return anyio.run(entry.handler, ctx, params)
 
 
 def __invoke_server(server: PrimitiveServer, tool_name: str, payload: dict[str, object]) -> object:
-    if isinstance(server, FastMCP):
-        return __invoke_fastmcp(server, tool_name, payload)
+    params = __build_call_tool_params(tool_name, payload)
+    has_mrtr = params.input_responses is not None or params.request_state is not None
+    if isinstance(server, MCPServer):
+        return __invoke_mcpserver(server, params, has_mrtr)
     if isinstance(server, LowLevelServer):
-        return __invoke_lowlevel(server, tool_name, payload)
+        return __invoke_lowlevel(server, params, has_mrtr)
 
     raise RuntimeError(f"Unsupported MCP server type: {type(server)!r}")
 
 
-def __invoke_fastmcp_prompt(server: FastMCP, prompt_name: str, arguments: dict[str, object] | None) -> object:
-    return anyio.run(server.get_prompt, prompt_name, arguments)
-
-
-def __invoke_lowlevel_prompt(
-    server: LowLevelServer[Any],
-    prompt_name: str,
-    arguments: dict[str, object] | None,
-) -> object:
-    handler = server.request_handlers.get(types.GetPromptRequest)
-    if handler is None:
-        raise RuntimeError("Low-level MCP server does not register a prompts/get handler.")
-
-    request = types.GetPromptRequest(
-        params=types.GetPromptRequestParams(name=prompt_name, arguments=arguments)
-    )
-    result = anyio.run(handler, request)
-    return result.root if result is not None else None
-
-
-def __invoke_prompt_server(
-    server: PrimitiveServer,
-    prompt_name: str,
-    arguments: dict[str, object] | None,
-) -> object:
-    if isinstance(server, FastMCP):
-        return __invoke_fastmcp_prompt(server, prompt_name, arguments)
-    if isinstance(server, LowLevelServer):
-        return __invoke_lowlevel_prompt(server, prompt_name, arguments)
-
-    raise RuntimeError(f"Unsupported MCP server type: {type(server)!r}")
-
-
-def __invoke_fastmcp_resource(server: FastMCP, uri: str) -> object:
+def __invoke_mcpserver_resource(server: MCPServer, uri: str) -> object:
     contents = anyio.run(server.read_resource, uri)
     return {"contents": __normalize(list(contents))}
 
 
 def __invoke_lowlevel_resource(server: LowLevelServer[Any], uri: str) -> object:
-    handler = server.request_handlers.get(types.ReadResourceRequest)
-    if handler is None:
+    entry = server.get_request_handler(_LOWLEVEL_METHOD_READ_RESOURCE)
+    if entry is None:
         raise RuntimeError("Low-level MCP server does not register a resources/read handler.")
 
-    request = types.ReadResourceRequest(
-        params=types.ReadResourceRequestParams(uri=uri)
-    )
-    result = anyio.run(handler, request)
-    return result.root if result is not None else None
+    params = types.ReadResourceRequestParams(uri=uri)
+    ctx = __make_lowlevel_context(_LOWLEVEL_METHOD_READ_RESOURCE)
+    return anyio.run(entry.handler, ctx, params)
 
 
 def __invoke_resource_server(server: PrimitiveServer, uri: str) -> object:
-    if isinstance(server, FastMCP):
-        return __invoke_fastmcp_resource(server, uri)
+    if isinstance(server, MCPServer):
+        return __invoke_mcpserver_resource(server, uri)
     if isinstance(server, LowLevelServer):
         return __invoke_lowlevel_resource(server, uri)
 
@@ -202,24 +193,6 @@ def __invoke_tool(
 
     call_result = __invoke_server(server, tool_name, payload)
     return json.dumps(__normalize(call_result))
-
-
-def __invoke_prompt(
-    module_path: str,
-    root_path: str,
-    source_file: str,
-    prompt_name: str,
-    arguments_json: str,
-) -> str:
-    arguments = __parse_optional_payload(arguments_json)
-    __add_root_to_sys_path(root_path)
-    module = __load_module(module_path)
-    server = __find_server(module)
-    if server is None:
-        raise RuntimeError(f"No supported MCP server found in '{source_file}'.")
-
-    prompt_result = __invoke_prompt_server(server, prompt_name, arguments)
-    return json.dumps(__normalize(prompt_result))
 
 
 def __invoke_resource(
@@ -245,8 +218,6 @@ def __invoke_from_scope(scope: InvokeScope) -> str:
     operation = __read_scope_string(scope, _SCOPE_OPERATION, _OP_TOOL)
     tool_name = __read_scope_string(scope, _SCOPE_TOOL_NAME)
     payload_json = __read_scope_string(scope, _SCOPE_PAYLOAD_JSON)
-    prompt_name = __read_scope_string(scope, _SCOPE_PROMPT_NAME)
-    arguments_json = __read_scope_string(scope, _SCOPE_ARGUMENTS_JSON)
     resource_uri = __read_scope_string(scope, _SCOPE_RESOURCE_URI)
 
     if not module_path:
@@ -255,10 +226,6 @@ def __invoke_from_scope(scope: InvokeScope) -> str:
         if not tool_name:
             raise RuntimeError("Tool name is required.")
         return __invoke_tool(module_path, root_path, source_file, tool_name, payload_json)
-    if operation == _OP_PROMPT:
-        if not prompt_name:
-            raise RuntimeError("Prompt name is required.")
-        return __invoke_prompt(module_path, root_path, source_file, prompt_name, arguments_json)
     if operation == _OP_RESOURCE:
         if not resource_uri:
             raise RuntimeError("Resource URI is required.")

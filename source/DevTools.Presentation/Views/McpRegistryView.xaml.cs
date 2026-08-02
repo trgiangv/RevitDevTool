@@ -1,4 +1,4 @@
-using DevTools.Mcp;
+using DevTools.Mcp.Catalog;
 using Microsoft.Extensions.Logging;
 using ZLogger;
 using DevTools.Presentation.ViewModels;

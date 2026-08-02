@@ -13,6 +13,8 @@ internal static class EmbeddedContent
     public static string PatternsExport => Load("patterns-export.md");
     public static string Errors => Load("errors.md");
     public static string Units => Load("units.md");
+    public static string CSharpCheatsheet => Load("revit-csharp-cheatsheet.md");
+    public static string PythonCheatsheet => Load("revit-python-cheatsheet.md");
 
     private static string Load(string fileName)
     {

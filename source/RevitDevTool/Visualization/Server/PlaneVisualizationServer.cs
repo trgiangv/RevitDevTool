@@ -1,4 +1,4 @@
-﻿using Autodesk.Revit.DB.DirectContext3D;
+using Autodesk.Revit.DB.DirectContext3D;
 using DevTools.Utilities;
 using Microsoft.Extensions.Logging;
 using RevitDevTool.Core;

@@ -1,4 +1,4 @@
-﻿namespace RevitDevTool.Core.Dispatchers;
+namespace RevitDevTool.Core.Dispatchers;
 
 public interface IRevitDispatcher
 {

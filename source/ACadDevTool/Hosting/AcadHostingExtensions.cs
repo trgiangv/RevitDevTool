@@ -1,16 +1,16 @@
 using CommunityToolkit.Mvvm.Messaging;
-using DevTools.Agents.Acad.Prompts;
 using DevTools.Agents.Acad.Resources;
 using DevTools.Execution;
 using DevTools.Execution.Interfaces;
 using DevTools.Logging;
 using DevTools.Logging.Abstractions;
-using DevTools.Mcp.BuiltIn;
+using DevTools.Mcp.Catalog;
 using DevTools.Presentation;
 using DevTools.Presentation.Interfaces;
 using DevTools.Settings;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 using AcadDevTool.Bridges;
 using AcadDevTool.Controllers;
 using AcadDevTool.HostAdapters;
@@ -41,6 +41,7 @@ internal static class AcadHostingExtensions
         Action<ScintillaOptions>? configureMonitor = null)
     {
         builder.AddLoggingProvider(configureMonitor);
+        builder.Logging.AddFilter("ModelContextProtocol", LogLevel.Warning);
 
         var services = builder.Services;
         services.AddSingleton<LoggingService>();
@@ -88,10 +89,9 @@ internal static class AcadHostingExtensions
 
         services.AddSingleton<IBuiltInMcpResource, AcadCSharpCheatsheet>();
         services.AddSingleton<IBuiltInMcpResource, AcadPythonCheatsheet>();
-        services.AddSingleton<IBuiltInMcpResource, AcadViewScreenshot>();
-        services.AddSingleton<IBuiltInMcpPrompt, AcadCodePrompt>();
         services.AddSingleton<AcadHistoryNavigator>();
         services.AddSingleton<IBuiltInMcpTool, NavigateHistoryTool>();
+        services.AddSingleton<IBuiltInMcpTool, ViewScreenshotTool>();
 
         return builder;
     }

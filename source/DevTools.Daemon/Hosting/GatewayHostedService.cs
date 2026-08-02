@@ -1,5 +1,7 @@
 using DevTools.Daemon.Auth;
-using DevTools.Daemon.Mcp;
+using DevTools.Mcp.Server.Hosting;
+using DevTools.Mcp.Client;
+using DevTools.Mcp.Server.Hosting;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -14,8 +16,10 @@ namespace DevTools.Daemon.Hosting;
 internal sealed class GatewayHostedService(
     IAuthService authService,
     McpEngine engine,
+    IMcpPipeScanner pipeScanner,
     IOptions<GatewayOptions> gatewayOptions,
     ILoggerFactory loggerFactory,
+    IServiceProvider appServices,
     ILogger<GatewayHostedService> logger) : BackgroundService, ITunnelStatusProvider
 {
     private CancellationTokenSource? _tunnelCts;
@@ -75,8 +79,8 @@ internal sealed class GatewayHostedService(
         _tunnelCts = CancellationTokenSource.CreateLinkedTokenSource(stoppingToken);
         var ct = _tunnelCts.Token;
 
-        var options = ToolHelpers.ConfigureGatewayOptions(
-            engine.ToolCollection, engine.PromptCollection, engine.ResourceCollection);
+        var options = McpServerFactory.CreateOptions(
+            engine.ToolCollection, engine.PromptCollection, appServices);
 
         var tunnel = new GatewayTunnelClient(
             new Uri(url),
@@ -86,7 +90,9 @@ internal sealed class GatewayHostedService(
                 return authService.AccessToken;
             },
             options,
+            pipeScanner,
             loggerFactory,
+            appServices,
             loggerFactory.CreateLogger<GatewayTunnelClient>());
 
         tunnel.StatusChanged += OnTunnelStatusChanged;

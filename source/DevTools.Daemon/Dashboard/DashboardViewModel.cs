@@ -10,7 +10,8 @@ using CommunityToolkit.Mvvm.Input;
 using DevTools.Daemon.Auth;
 using DevTools.Daemon.Dashboard.Models;
 using DevTools.Daemon.Hosting;
-using DevTools.Daemon.Mcp;
+using DevTools.Mcp.Client;
+using DevTools.Mcp.Core;
 using DevTools.UI.Theme;
 using Microsoft.Win32;
 
@@ -29,7 +30,8 @@ public partial class DashboardViewModel : ObservableObject
     private const string SignInFailedTitle = "Sign In Failed";
     private const string SignInFailedMessage = "Sign in failed.";
     private readonly IAuthService _authService;
-    private readonly McpEngine _mcpEngine;
+    private readonly IHostBroker _hostBroker;
+    private readonly IMcpPipeScanner _pipeScanner;
     private readonly DaemonSettings _settings;
     private readonly ITunnelStatusProvider? _tunnelStatus;
     private bool _suppressAutoStartSync;
@@ -68,12 +70,14 @@ public partial class DashboardViewModel : ObservableObject
 
     public DashboardViewModel(
         IAuthService authService,
-        McpEngine mcpEngine,
+        IHostBroker hostBroker,
+        IMcpPipeScanner pipeScanner,
         DaemonSettings settings,
         ITunnelStatusProvider? tunnelStatus = null)
     {
         _authService = authService;
-        _mcpEngine = mcpEngine;
+        _hostBroker = hostBroker;
+        _pipeScanner = pipeScanner;
         _settings = settings;
         _tunnelStatus = tunnelStatus;
         Theme = settings.Theme;
@@ -87,7 +91,7 @@ public partial class DashboardViewModel : ObservableObject
         _authService.StateChanged += (_, _) =>
             Application.Current.Dispatcher.Invoke(RefreshAuthState);
 
-        _mcpEngine.InstanceManager.Changed += () => Application.Current.Dispatcher.Invoke(() =>
+        _hostBroker.Changed += () => Application.Current.Dispatcher.Invoke(() =>
         {
             RefreshHostCount();
             RefreshHosts();
@@ -230,7 +234,7 @@ public partial class DashboardViewModel : ObservableObject
 
     private void RefreshHostCount()
     {
-        HostCount = _mcpEngine.InstanceManager.GetInstances().Count;
+        HostCount = _hostBroker.Catalog.List().Count;
     }
 
     private void RefreshHosts()
@@ -238,21 +242,19 @@ public partial class DashboardViewModel : ObservableObject
         Hosts.Clear();
 
         var connectedPids = new HashSet<int>();
-        var instances = _mcpEngine.InstanceManager.GetInstances();
-
-        foreach (var instance in instances)
+        foreach (var entry in _hostBroker.Catalog.List())
         {
-            connectedPids.Add(instance.ProcessId);
+            connectedPids.Add(entry.Instance.ProcessId);
             Hosts.Add(new HostModel
             {
-                Host = instance.HostApp ?? StatusUnknown,
-                Version = instance.VersionNumber,
-                Pid = instance.ProcessId,
+                Host = entry.Instance.HostApp ?? StatusUnknown,
+                Version = entry.Instance.VersionNumber,
+                Pid = entry.Instance.ProcessId,
                 Status = StatusConnected
             });
         }
 
-        foreach (var pipe in InstanceManager.DiscoverHostPipes())
+        foreach (var pipe in _pipeScanner.Discover())
         {
             if (!HostPipeName.TryParse(pipe, out var host , out var version, out var pid))
                 continue;

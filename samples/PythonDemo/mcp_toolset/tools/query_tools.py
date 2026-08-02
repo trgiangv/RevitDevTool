@@ -2,24 +2,22 @@
 from __future__ import annotations
 from typing import Annotated
 
-from mcp.server.fastmcp import FastMCP
-from mcp.types import ToolAnnotations
+from mcp.server.mcpserver import MCPServer
+from mcp.types import CallToolResult, TextContent, ToolAnnotations
 from pydantic import Field
 
 from dto.filters import FilterSpec
 from dto.query import (
-    FindElementsResult,
     ListCategoryParametersResult,
     ListLinksResult,
     ListRoomsResult,
     ListTypesResult,
     ModelSummaryResult,
-    ReadParametersResult,
 )
 from services.query_service import QueryService
 
 
-def register_query_tools(mcp: FastMCP) -> None:
+def register_query_tools(mcp: MCPServer) -> None:
     service = QueryService()
 
     @mcp.tool(annotations=ToolAnnotations(title="Get Model Summary", readOnlyHint=True), structured_output=True)
@@ -30,15 +28,15 @@ def register_query_tools(mcp: FastMCP) -> None:
     @mcp.tool(annotations=ToolAnnotations(title="Find Elements", readOnlyHint=True), structured_output=True)
     async def revit_find_elements(
         filters: Annotated[FilterSpec | None, Field(description="Composable filter specification")] = None,
-        selected_only: Annotated[bool, Field(alias="selectedOnly")] = False,
-        max_results: Annotated[int, Field(alias="maxResults", ge=1, le=10000)] = 500,
+        selected_only: Annotated[bool, Field(description="Limit results to the current Revit selection")] = False,
+        max_results: Annotated[int, Field(ge=1, le=10000)] = 500,
         offset: Annotated[int, Field(ge=0, description="Pagination offset — skip this many matches")] = 0,
-        include_types: Annotated[bool, Field(alias="includeTypes")] = False,
-        include_instances: Annotated[bool, Field(alias="includeInstances")] = True,
+        include_types: Annotated[bool, Field(description="Include element types")] = False,
+        include_instances: Annotated[bool, Field(description="Include element instances")] = True,
         fields: Annotated[list[str] | None, Field(description="Fields to return")] = None,
-    ) -> FindElementsResult:
+    ) -> CallToolResult:
         """Structured element search with composable FilterSpec."""
-        return service.find_elements(
+        result = service.find_elements(
             filters,
             selected_only=selected_only,
             include_types=include_types,
@@ -47,14 +45,36 @@ def register_query_tools(mcp: FastMCP) -> None:
             offset=offset,
             fields=fields,
         )
+        structured = result.model_dump(by_alias=True)
+        return CallToolResult(
+            content=[
+                TextContent(
+                    type="text",
+                    text="Found {} elements (total {}, truncated={})".format(
+                        len(result.elements), result.count, str(result.truncated).lower()
+                    ),
+                )
+            ],
+            structured_content=structured,
+        )
 
     @mcp.tool(annotations=ToolAnnotations(title="Read Parameters", readOnlyHint=True), structured_output=True)
     async def revit_read_parameters(
-        element_ids: Annotated[list[int], Field(alias="elementIds")],
-        param_names: Annotated[list[str] | None, Field(alias="paramNames")] = None,
-    ) -> ReadParametersResult:
+        element_ids: Annotated[list[int], Field(description="Element ids")],
+        param_names: Annotated[list[str] | None, Field(description="Optional parameter name filter")] = None,
+    ) -> CallToolResult:
         """Get all params of element(s) with metadata."""
-        return service.read_parameters(element_ids, param_names)
+        result = service.read_parameters(element_ids, param_names)
+        structured = result.model_dump(by_alias=True)
+        return CallToolResult(
+            content=[
+                TextContent(
+                    type="text",
+                    text="Parameters for {} elements".format(len(result.elements)),
+                )
+            ],
+            structured_content=structured,
+        )
 
     @mcp.tool(annotations=ToolAnnotations(title="List Types", readOnlyHint=True), structured_output=True)
     async def revit_list_types(
@@ -66,7 +86,7 @@ def register_query_tools(mcp: FastMCP) -> None:
 
     @mcp.tool(annotations=ToolAnnotations(title="List Category Parameters", readOnlyHint=True), structured_output=True)
     async def revit_list_category_parameters(
-        category_name: Annotated[str, Field(alias="categoryName")],
+        category_name: Annotated[str, Field(description="Category display name")],
     ) -> ListCategoryParametersResult:
         """Schedulable parameter names for a category."""
         return service.list_category_parameters(category_name)
@@ -80,4 +100,3 @@ def register_query_tools(mcp: FastMCP) -> None:
     async def revit_list_links() -> ListLinksResult:
         """Revit links and CAD imports with load status."""
         return service.list_links()
-

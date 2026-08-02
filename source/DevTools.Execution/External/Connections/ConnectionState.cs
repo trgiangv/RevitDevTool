@@ -5,13 +5,24 @@ using Microsoft.Extensions.Logging;
 using ZLogger;
 namespace DevTools.Execution.External.Connections;
 
-public sealed partial class ConnectionState(ILogger<ConnectionState> logger) : ObservableObject
+public sealed partial class ConnectionState(ILogger<ConnectionState> logger)
+    : ObservableObject, IMcpPipeConnectionTracker
 {
     [ObservableProperty]
     public partial bool IsConnected { get; set; }
 
     [ObservableProperty]
     public partial string Endpoint { get; set; } = string.Empty;
+
+    [ObservableProperty]
+    public partial string McpEndpoint { get; set; } = string.Empty;
+
+    [ObservableProperty]
+    public partial int McpClientCount { get; set; }
+
+    public bool McpIsConnected => McpClientCount > 0;
+
+    public bool McpIsListening => !string.IsNullOrWhiteSpace(McpEndpoint);
 
     [ObservableProperty]
     public partial int QueueDepth { get; set; }
@@ -35,6 +46,36 @@ public sealed partial class ConnectionState(ILogger<ConnectionState> logger) : O
     public void SetEndpoint(string endpoint)
     {
         UpdateUiState(() => Endpoint = endpoint);
+    }
+
+    public void SetMcpEndpoint(string endpoint)
+    {
+        UpdateUiState(() =>
+        {
+            McpEndpoint = endpoint;
+            OnPropertyChanged(nameof(McpIsListening));
+            OnPropertyChanged(nameof(McpIsConnected));
+        });
+    }
+
+    public void SetMcpClientCount(int clientCount)
+    {
+        UpdateUiState(() =>
+        {
+            McpClientCount = Math.Max(0, clientCount);
+            OnPropertyChanged(nameof(McpIsConnected));
+        });
+    }
+
+    public void ClearMcpState()
+    {
+        UpdateUiState(() =>
+        {
+            McpEndpoint = string.Empty;
+            McpClientCount = 0;
+            OnPropertyChanged(nameof(McpIsListening));
+            OnPropertyChanged(nameof(McpIsConnected));
+        });
     }
 
     public void SetConnectedState(int connectedClients)
@@ -127,19 +168,16 @@ public sealed class ExecutionScope : IDisposable
         _state.UpdateExecution(_toolName, $"Running '{_toolName}'...");
     }
 
-    public void Complete(McpToolExecutionResult result)
+    public void Complete(McpInvocation invocation, McpResult<McpInvocationResponse> result, string detail)
     {
         if (_completed) return;
         _completed = true;
         _stopwatch.Stop();
 
         var elapsed = _stopwatch.Elapsed;
-        var detail = !string.IsNullOrWhiteSpace(result.Detail)
-            ? result.Detail
-            : result.Error?.Message ?? string.Empty;
-
-        var traceMessage = $"Tool '{_toolName}' {result.State} in {elapsed.TotalSeconds:F1}s. {detail}";
-        if (result.State == ExecutionState.Completed)
+        var message = !string.IsNullOrWhiteSpace(detail) ? detail : result.Error?.Message ?? string.Empty;
+        var traceMessage = $"Tool '{_toolName}' {invocation.ExecutionState} in {elapsed.TotalSeconds:F1}s. {message}";
+        if (invocation.ExecutionState == ExecutionState.Completed)
             _logger?.ZLogInformation($"{traceMessage}");
         else
             _logger?.ZLogWarning($"{traceMessage}");

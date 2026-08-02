@@ -1,5 +1,5 @@
 using System.Text;
-using DevTools.Mcp.BuiltIn;
+using DevTools.Mcp.Catalog;
 using ModelContextProtocol.Protocol;
 using RevitDevTool.Core;
 
@@ -11,6 +11,22 @@ namespace DevTools.Agents.Revit.Resources;
 /// </summary>
 public sealed class RevitModelContext : IBuiltInMcpResource
 {
+    private static readonly (string Name, BuiltInCategory Cat)[] TrackedCategories =
+    [
+        ("Walls", BuiltInCategory.OST_Walls),
+        ("Floors", BuiltInCategory.OST_Floors),
+        ("Roofs", BuiltInCategory.OST_Roofs),
+        ("Columns", BuiltInCategory.OST_Columns),
+        ("Structural Framing", BuiltInCategory.OST_StructuralFraming),
+        ("Doors", BuiltInCategory.OST_Doors),
+        ("Windows", BuiltInCategory.OST_Windows),
+        ("Rooms", BuiltInCategory.OST_Rooms),
+        ("Furniture", BuiltInCategory.OST_Furniture),
+        ("Generic Models", BuiltInCategory.OST_GenericModel),
+        ("Ducts", BuiltInCategory.OST_DuctCurves),
+        ("Pipes", BuiltInCategory.OST_PipeCurves),
+    ];
+
     public string UriTemplate => "revit://model/context";
 
     public Resource ProtocolResource { get; } = new()
@@ -106,24 +122,8 @@ public sealed class RevitModelContext : IBuiltInMcpResource
 
     private static void AppendCategorySummary(StringBuilder sb, Document doc)
     {
-        var categories = new (string Name, BuiltInCategory Cat)[]
-        {
-            ("Walls", BuiltInCategory.OST_Walls),
-            ("Floors", BuiltInCategory.OST_Floors),
-            ("Roofs", BuiltInCategory.OST_Roofs),
-            ("Columns", BuiltInCategory.OST_Columns),
-            ("Structural Framing", BuiltInCategory.OST_StructuralFraming),
-            ("Doors", BuiltInCategory.OST_Doors),
-            ("Windows", BuiltInCategory.OST_Windows),
-            ("Rooms", BuiltInCategory.OST_Rooms),
-            ("Furniture", BuiltInCategory.OST_Furniture),
-            ("Generic Models", BuiltInCategory.OST_GenericModel),
-            ("Ducts", BuiltInCategory.OST_DuctCurves),
-            ("Pipes", BuiltInCategory.OST_PipeCurves),
-        };
-
         sb.AppendLine("## Element Counts");
-        foreach (var (name, cat) in categories)
+        foreach (var (name, cat) in TrackedCategories)
         {
             var count = new FilteredElementCollector(doc)
                 .OfCategory(cat)

@@ -1,4 +1,4 @@
-﻿namespace DevTools.Execution.External.Connections;
+namespace DevTools.Execution.External.Connections;
 
 public sealed partial class ToolCallMetric(string toolId, string toolName, int count) : ObservableObject
 {

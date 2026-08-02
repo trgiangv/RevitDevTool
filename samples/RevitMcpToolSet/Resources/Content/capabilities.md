@@ -1,6 +1,19 @@
 # Revit MCP Toolset — Capabilities
 
-42 structured tools for repeatable BIM workflows. Use toolset tools first; fall back to built-in `execute_csharp_code` only for exotic one-offs.
+45 structured tools for repeatable BIM workflows. Use toolset tools first; fall back to built-in `execute_csharp_code` only for exotic one-offs.
+
+## MCP content types (SDK 2.0)
+
+| Content block | Example tool | Practical value |
+|---------------|--------------|-----------------|
+| **Text** | `revit_find_elements` | Human-readable JSON summaries for the model |
+| **Structured** | `revit_get_model_summary`, `revit_model_digest` | Machine-parseable fields alongside text (counts, IDs) — clients skip JSON parsing |
+| **Image** | `revit_capture_view`, built-in `view_screenshot` | Vision verification after edits — inline preview in Cursor/Claude |
+| **Embedded resource** | `revit_preview_schedule` | Small CSV/text payloads inline — no `resources/read` or temp-file roundtrip |
+| **Resource link** | `revit_model_digest` | Pointer to `revit://model/views` — summary in tool result, full JSON via resource read |
+| **Audio** | — | Not used in BIM workflows (reserved for voice/alert demos) |
+
+File-based exports (`revit_export_pdf`, `revit_export_image`) still return **text** with paths — appropriate for large deliverables on disk.
 
 ## Decision Tree: Toolset vs God Tool
 
@@ -33,6 +46,16 @@ Task requested
 | `revit_list_category_parameters` | Schedulable parameter names for a category | Discover param names for filters, schedules, color splash |
 | `revit_list_rooms` | Rooms with name, number, area, level, department | Room QA, department coloring, area reports |
 | `revit_list_links` | Revit links and CAD imports with load status | Coordination setup; verify link paths |
+
+### Multimodal content (SDK 2.0)
+
+| Tool | Content returned | When to use |
+|------|------------------|-------------|
+| `revit_capture_view` | **Image** (inline PNG) | Vision check after view changes — prefer over `revit_export_image` for agents |
+| `revit_preview_schedule` | **Text** + **embedded CSV** | Quick schedule QA without filesystem export |
+| `revit_model_digest` | **Text** + **resource link** + **structured** counts | Start documentation flow; follow link to `revit://model/views` |
+
+`revit_get_model_summary` also emits **structuredContent** for reliable parsing of project overview fields.
 
 ---
 

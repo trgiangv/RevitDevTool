@@ -1,0 +1,26 @@
+<Project Sdk="Microsoft.NET.Sdk">
+    <PropertyGroup>
+        <TargetFramework>net10.0-windows</TargetFramework>
+        <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+        <PolyUseEmbeddedAttribute>true</PolyUseEmbeddedAttribute>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <PackageReference Include="ModelContextProtocol" />
+        <PackageReference Include="ModelContextProtocol.Extensions.Tasks" />
+        <PackageReference Include="Microsoft.Extensions.DependencyInjection" />
+        <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" />
+        <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" />
+        <PackageReference Include="Microsoft.Extensions.Options" />
+        <PackageReference Include="ZLogger" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\DevTools.Mcp.Core\DevTools.Mcp.Core.csproj" />
+        <ProjectReference Include="..\DevTools.FileMetadata.Core\DevTools.FileMetadata.Core.csproj" />
+        <ProjectReference Include="..\DevTools.Mcp.Client\DevTools.Mcp.Client.csproj" SetTargetFramework="TargetFramework=net10.0-windows" />
+        <ProjectReference Include="..\DevTools.FileMetadata.Revit\DevTools.FileMetadata.Revit.csproj" />
+        <ProjectReference Include="..\DevTools.Logging\DevTools.Logging.csproj" />
+        <ProjectReference Include="..\DevTools.Ipc\DevTools.Ipc.csproj" />
+    </ItemGroup>
+</Project>

@@ -1,4 +1,4 @@
-﻿using System.Reflection;
+using System.Reflection;
 namespace DevTools.Presentation.Models;
 
 public partial class AssemblyItem : ObservableObject

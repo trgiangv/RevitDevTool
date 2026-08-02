@@ -1,4 +1,4 @@
-﻿namespace RevitDevTool.Core;
+namespace RevitDevTool.Core;
 
 /// <summary>
 ///     Provides access to create a new dockable pane to the Revit user interface.

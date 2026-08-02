@@ -7,9 +7,17 @@ namespace DevTools.Ipc;
 public static class DaemonConstants
 {
     /// <summary>
-    /// Pipe name format: <c>{PipePrefix}_{Host}_{Version}_{PID}</c>
+    /// Pytest/control pipe prefix (length-prefixed <c>BridgeMessage</c>).
+    /// Format: <c>{PytestPipePrefix}_{Host}_{Version}_{PID}</c>
     /// </summary>
-    public const string PipePrefix = "DevTools";
+    public const string PytestPipePrefix = "DevTools";
+
+    /// <summary>
+    /// SDK MCP pipe prefix (newline-delimited JSON-RPC).
+    /// Format: <c>{McpPipePrefix}_{Host}_{Version}_{PID}</c>
+    /// </summary>
+    public const string McpPipePrefix = "DevToolsMcp";
+
     public const string ControlPipeName = "DevToolsDaemon_Control";
     public const string TrayIconResourceKey = "TrayIcon";
     public const string StdioArg = "--stdio";

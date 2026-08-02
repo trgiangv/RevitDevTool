@@ -1,17 +1,17 @@
 using CommunityToolkit.Mvvm.Messaging;
-using DevTools.Agents.Revit.Prompts;
 using DevTools.Agents.Revit.Resources;
 using DevTools.Execution;
 using DevTools.Execution.Interfaces;
 using DevTools.Execution.Providers;
 using DevTools.Logging;
 using DevTools.Logging.Abstractions;
-using DevTools.Mcp.BuiltIn;
+using DevTools.Mcp.Catalog;
 using DevTools.Presentation;
 using DevTools.Presentation.Interfaces;
 using DevTools.Settings;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 using RevitDevTool.Bridges;
 using RevitDevTool.CommandBrowser;
 using RevitDevTool.CommandBrowser.Services;
@@ -49,6 +49,7 @@ internal static class RevitHostingExtensions
         Action<ScintillaOptions>? configureMonitor = null)
     {
         builder.AddLoggingProvider(configureMonitor);
+        builder.Logging.AddFilter("ModelContextProtocol", LogLevel.Warning);
 
         var services = builder.Services;
         services.AddSingleton<LoggingService>();
@@ -137,9 +138,8 @@ internal static class RevitHostingExtensions
         services.AddSingleton<IBuiltInMcpResource, RevitModelContext>();
         services.AddSingleton<IBuiltInMcpResource, RevitModelWarnings>();
         services.AddSingleton<IBuiltInMcpResource, RevitVersionInfo>();
-        services.AddSingleton<IBuiltInMcpResource, RevitViewScreenshot>();
-        services.AddSingleton<IBuiltInMcpPrompt, RevitCodePrompt>();
         services.AddSingleton<IBuiltInMcpTool, DevTools.Agents.Revit.Tools.NavigateHistoryTool>();
+        services.AddSingleton<IBuiltInMcpTool, DevTools.Agents.Revit.Tools.ViewScreenshotTool>();
 
         return builder;
     }

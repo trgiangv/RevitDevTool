@@ -4,7 +4,7 @@
 class ToolError(Exception):
     """Raised when a tool encounters an expected operational error.
 
-    FastMCP catches exceptions and returns them as error content to the MCP client.
+    MCPServer catches exceptions and returns them as error content to the MCP client.
     """
 
     def __init__(self, message: str, *, code: str = "tool.error"):

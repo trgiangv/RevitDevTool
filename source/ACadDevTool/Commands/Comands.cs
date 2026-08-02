@@ -1,4 +1,4 @@
-﻿using AcadDevTool.Controllers;
+using AcadDevTool.Controllers;
 using AcadDevTool.HostAdapters;
 using Autodesk.AutoCAD.Runtime;
 using DevTools.Utilities;

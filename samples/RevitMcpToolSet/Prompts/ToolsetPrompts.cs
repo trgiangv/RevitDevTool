@@ -31,8 +31,9 @@ public static class ToolsetPrompts
 
             ### Pre-flight
             1. `revit_get_status` — confirm active document, worksharing state, and units.
-            2. Read `revit://toolset/patterns/{{resolvedDomain}}` for domain-specific FilterSpec and chaining examples.
-            3. If scope is unclear, read `revit://model/selection` or `revit://model/context` for engineer intent.
+            2. Batch prefetch (one `invoke_dynamic` with `reads[]`): `revit://toolset/capabilities`, `revit://model/context`, `revit://model/selection`.
+            3. Read `revit://toolset/patterns/{{resolvedDomain}}` for domain-specific FilterSpec and chaining examples.
+            4. If scope is unclear, use `search_dynamic(kinds=["resource","resource_template"])` then batch-read selection/context templates.
 
             ### Steps
             {{steps}}
@@ -45,8 +46,10 @@ public static class ToolsetPrompts
 
             ### Performance notes
             - Paginate `revit_find_elements` with `offset` when results exceed 500.
+            - After find: batch-read `revit://element/{elementId}` for top 5 IDs instead of `revit_read_parameters` when only summary fields are needed.
             - Sample with `revit_read_parameters` on a subset before batch writes.
             - Read `revit://toolset/capabilities` before attempting exotic operations.
+            - Bulk delete (&gt;50 IDs): structured warning JSON — use `dryRun=true` first to preview scope before deleting.
             """;
     }
 
@@ -286,12 +289,13 @@ public static class ToolsetPrompts
                 - Coordinate with engineer before borrowing from shared/system worksets.
                 """,
 
-            "open" or "open_model" => """
+            "open" => """
                 ### Opening a Workshared Model
-                1. Use `open_document` or `open_model` with correct central path.
-                2. Choose appropriate worksets — do not load all worksets unless needed.
-                3. `revit_get_status` — confirm worksharing enabled and local path.
-                4. Read `revit://model/worksets` — understand ownership before any writes.
+                1. If the host is not running: `launch_host` with `filePath` (host inferred from extension).
+                2. If the host is already running: `invoke_dynamic` on `open_document` with the central path.
+                3. Choose appropriate worksets — do not load all worksets unless needed.
+                4. `revit_get_status` — confirm worksharing enabled and local path.
+                5. Read `revit://model/worksets` — understand ownership before any writes.
 
                 **Etiquette:**
                 - Open only required worksets to reduce contention.

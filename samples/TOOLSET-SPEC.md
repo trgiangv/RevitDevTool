@@ -4,7 +4,7 @@ Single source of truth for both `RevitMcpToolSet` (C#) and `PythonDemo/mcp_tools
 
 Both toolsets MUST implement the same tool surface with identical intent, parameters, and response shapes. Only one toolset is loaded at a time per host instance.
 
-Last updated: 2026-07-11
+Last updated: 2026-08-02
 
 ---
 
@@ -17,15 +17,59 @@ Last updated: 2026-07-11
 5. **Safe by default**: Read-only tools never mutate. Write tools default to explicit scope (IDs or criteria, never whole model). Export tools validate paths via `PathGuard`.
 6. **Partial-success reporting**: Write tools return `success_count` + `failures[]` with per-element error details.
 7. **Collaboration-aware**: Tools respect worksets, selection state, and borrowed elements.
+8. **MCP package identity (2027 validation path)**: Host and sample .NET toolsets disable ILRepack for Revit **2027** (`IsRepackable` only when `RevitVersion < 2027`). Runtime shares host-loaded `ModelContextProtocol*` via ALC. Pre-2027 ILRepacked toolsets still work through `DotnetToolsetReturnMapper` / `InputRequiredBridge`. Keep returning `CallToolResult` / low-level `InputRequiredException` as usual.
 
 ---
 
+## Packaging (.NET toolsets)
+
+| Rule | Why |
+|------|-----|
+| `IsRepackable` only when `RevitVersion < 2027` | Same as host — 2027 isolated context rejects ILRepack (`BadImageFormatException`) |
+| 2027 output keeps NuGet MCP (+ deps) as sibling DLLs | Shared type identity with host for `McpServer` / `RequestContext` DI and native `InputRequiredException` |
+| Pre-2027 may still ILRepack (incl. MCP) | Platform bridges foreign `CallToolResult` / `InputRequiredException`; augmented DI params may not bind |
+
+Do **not** invent a private MCP package version — pin centrally in `Directory.Packages.props`.
+
+---
 ## Naming Convention
 
 - Tool names: `revit_{domain}_{action}` — e.g. `revit_find_elements`, `revit_place_duct`
 - All snake_case, `revit_` prefix mandatory
 - Resource URIs: `revit://toolset/{topic}` for static patterns, `revit://model/{topic}` for live queries
+- Resource template URIs: `revit://element/{elementId}`, `revit://schedule/{scheduleId}/preview`
 - Prompt names: `revit_{purpose}`
+
+---
+
+## Resource Templates
+
+Parameterized reads for one element or schedule without a dedicated tool. Discovered via
+`search_dynamic` with `kinds=["resource_template"]`; resolved with `invoke_dynamic` and
+template arguments (or batched in `reads[]` alongside fixed resources).
+
+| URI template | MIME | Purpose |
+|--------------|------|---------|
+| `revit://element/{elementId}` | `application/json` | Compact element summary: id, category, family/type, level, pinned, workset, bounding box |
+| `revit://schedule/{scheduleId}/preview` | `text/csv` | CSV header + first 30 body rows for a `ViewSchedule` (prefer over `revit_preview_schedule` when batching) |
+
+**Chaining example** (after `revit_find_elements` returns IDs):
+
+```
+1. search_dynamic(query="element", kinds=["resource_template"])
+   → capabilityId for revit://element/{elementId}
+2. invoke_dynamic(capabilityId=<element_template_id>, arguments={elementId: 12345})
+   → JSON element summary
+3. invoke_dynamic(reads=[
+     { capabilityId: <capabilities_id> },
+     { capabilityId: <selection_id> },
+     { capabilityId: <element_template_id>, arguments: { elementId: 12345 } }
+   ])
+   → batch: toolset scope + engineer selection + element detail in one round-trip
+```
+
+Use fixed `revit://model/*` resources for unparameterized snapshots (levels, selection, types).
+Use templates when you already have element or schedule IDs from a tool result.
 
 ---
 

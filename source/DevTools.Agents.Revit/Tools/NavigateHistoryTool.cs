@@ -1,8 +1,9 @@
-using System.Text.Json;
+using System.ComponentModel;
 using DevTools.Execution.Abstractions;
-using DevTools.Mcp.BuiltIn;
-using DevTools.Mcp.Models;
+using DevTools.Mcp.Catalog;
+using DevTools.Mcp.Core.Utils;
 using ModelContextProtocol.Protocol;
+using ModelContextProtocol.Server;
 using RevitDevTool.Core;
 
 namespace DevTools.Agents.Revit.Tools;
@@ -12,50 +13,46 @@ namespace DevTools.Agents.Revit.Tools;
 /// Synchronous — operates on main thread via IHostContextExecutor.
 /// Returns exact stack state after completion.
 /// </summary>
-public sealed class NavigateHistoryTool(IHostContextExecutor hostContext) : IBuiltInMcpTool
+public sealed class NavigateHistoryTool : IBuiltInMcpTool
 {
+    private readonly IHostContextExecutor _hostContext;
+
+    public NavigateHistoryTool(IHostContextExecutor hostContext)
+    {
+        _hostContext = hostContext;
+        ServerTool = McpServerTool.Create(
+            NavigateAsync,
+            new McpServerToolCreateOptions
+            {
+                Name = "navigate_history",
+                Title = "Navigate History",
+                Description =
+                    "Navigate undo/redo history. " +
+                    "direction='back' undoes transactions, 'forward' redoes them. " +
+                    "Returns the exact history stack state after the operation.",
+                Destructive = true,
+                OpenWorld = false
+            });
+    }
+
     public string Name => "navigate_history";
+    public McpServerTool ServerTool { get; }
 
-    public Tool ProtocolTool { get; } = new()
+    [Description("Navigate undo/redo history.")]
+    private async Task<CallToolResult> NavigateAsync(
+        [Description("Navigation direction: back | forward.")] string direction,
+        [Description("Number of steps to navigate (default=1).")] int steps = 1,
+        CancellationToken cancellationToken = default)
     {
-        Name = "navigate_history",
-        Description =
-            "Navigate undo/redo history. " +
-            "direction='back' undoes transactions, 'forward' redoes them. " +
-            "Returns the exact history stack state after the operation.",
-        InputSchema = DevTools.Mcp.Schema.McpSchemaBuilder.Object(
-        [
-            DevTools.Mcp.Schema.McpSchemaBuilder.Enum("direction",
-                "Navigation direction.", ["back", "forward"]),
-            DevTools.Mcp.Schema.McpSchemaBuilder.Integer("steps",
-                "Number of steps to navigate (default=1).")
-        ],
-        required: ["direction"]),
-        Annotations = new ToolAnnotations
-        {
-            Title = "Navigate History",
-            DestructiveHint = true
-        }
-    };
-
-    public async Task<McpToolExecutionResult> ExecuteAsync(string payloadJson, CancellationToken ct)
-    {
-        var (direction, steps) = ParseArgs(payloadJson);
         if (steps < 1) steps = 1;
+        var dir = string.Equals(direction, "forward", StringComparison.OrdinalIgnoreCase)
+            ? "forward"
+            : "back";
 
-        var resultText = await hostContext.ExecuteAsync(() =>
-        {
-            if (direction == "forward")
-                return GoForward(steps);
+        var resultText = await _hostContext.ExecuteAsync(() =>
+            dir == "forward" ? GoForward(steps) : GoBack(steps), cancellationToken).ConfigureAwait(false);
 
-            return GoBack(steps);
-        }, ct).ConfigureAwait(false);
-
-        return McpToolExecutionResult.Completed(
-            new CallToolResult { Content = [new TextContentBlock { Text = resultText }] },
-            resultText.Contains("Nothing") || resultText.Contains("Cannot")
-                ? "Navigation failed."
-                : "Navigation completed.");
+        return ToolHelpers.Result(resultText);
     }
 
     private static string GoBack(int steps)
@@ -69,14 +66,14 @@ public sealed class NavigateHistoryTool(IHostContextExecutor hostContext) : IBui
         RevitTransactionService.PerformUndo(actual);
 
         var stackAfter = RevitTransactionService.GetUndoStack();
-        return JsonSerializer.Serialize(new
+        return ToolHelpers.Serialize(new
         {
             direction = "back",
             navigated = actual,
             operations = names,
             back_remaining = stackAfter.Count,
             forward_available = RevitTransactionService.GetCurrentRedoCount()
-        }, JsonOpts);
+        });
     }
 
     private static string GoForward(int steps)
@@ -88,30 +85,12 @@ public sealed class NavigateHistoryTool(IHostContextExecutor hostContext) : IBui
         var actual = Math.Min(steps, redoCount);
         RevitTransactionService.PerformRedo(actual);
 
-        return JsonSerializer.Serialize(new
+        return ToolHelpers.Serialize(new
         {
             direction = "forward",
             navigated = actual,
             back_remaining = RevitTransactionService.GetUndoStack().Count,
             forward_available = RevitTransactionService.GetCurrentRedoCount()
-        }, JsonOpts);
+        });
     }
-
-    private static (string direction, int steps) ParseArgs(string json)
-    {
-        var direction = "back";
-        var steps = 1;
-        try
-        {
-            using var doc = JsonDocument.Parse(json);
-            if (doc.RootElement.TryGetProperty("direction", out var d))
-                direction = d.GetString() ?? "back";
-            if (doc.RootElement.TryGetProperty("steps", out var s) && s.TryGetInt32(out var n))
-                steps = n;
-        }
-        catch { /* defaults */ }
-        return (direction, steps);
-    }
-
-    private static readonly JsonSerializerOptions JsonOpts = new() { WriteIndented = true };
 }

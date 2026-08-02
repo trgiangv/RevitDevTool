@@ -2,12 +2,18 @@
 
     <PropertyGroup>
         <UseRevit>true</UseRevit>
-        <IsRepackable>true</IsRepackable>
+        <!-- Match host: ILRepack off for 2027 isolated context (shared MCP DLL identity). -->
+        <IsRepackable Condition="$(RevitVersion) &lt; 2027">true</IsRepackable>
     </PropertyGroup>
 
     <ItemGroup>
         <PackageReference Include="Nice3point.Revit.Toolkit" VersionOverride="$(RevitVersion).*"/>
-        <PackageReference Include="ModelContextProtocol" />
+        <PackageReference Include="ModelContextProtocol">
+            <ExcludeAssets>runtime</ExcludeAssets>
+        </PackageReference>
+        <PackageReference Include="ModelContextProtocol.Extensions.Tasks">
+            <ExcludeAssets>runtime</ExcludeAssets>
+        </PackageReference>
         <PackageReference Include="ILRepack"/>
     </ItemGroup>
 

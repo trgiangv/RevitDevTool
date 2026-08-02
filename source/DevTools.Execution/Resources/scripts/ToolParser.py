@@ -1,10 +1,10 @@
-"""In-process MCP primitive parser for Python.NET (mcp == 1.26.0).
+"""In-process MCP primitive parser for Python.NET (mcp == 2.0.0).
 
 Supports the two official authoring workflows exposed by the Python SDK:
-``FastMCP`` and the low-level ``Server`` API.
+``MCPServer`` and the low-level ``Server`` API.
 
 Output format: SDK-shaped JSON where the ``protocol`` field is a direct
-``model_dump()`` of the Python SDK object (Tool, Prompt, Resource/ResourceTemplate)
+``model_dump()`` of the Python SDK object (Tool, Resource/ResourceTemplate)
 and ``binding`` carries the metadata needed for C# invocation.
 """
 import asyncio
@@ -17,26 +17,21 @@ import traceback
 import types
 import uuid
 from pathlib import Path
-from typing import Any, Callable, Generator, Mapping, TypeAlias
+from typing import Any, Generator, TypeAlias, cast
 
-from mcp.server.fastmcp import FastMCP
+from mcp.server.context import ServerRequestContext
 from mcp.server.lowlevel import Server as LowLevelServer
-from mcp.types import (
-    ListPromptsRequest,
-    ListResourceTemplatesRequest,
-    ListResourcesRequest,
-    ListToolsRequest,
-    Prompt,
-    Resource,
-    ResourceTemplate,
-    Tool,
-)
+from mcp.server.mcpserver import MCPServer
+from mcp.types import Resource, ResourceTemplate, Tool
 
-PrimitiveServer: TypeAlias = FastMCP | LowLevelServer[Any]
-LowLevelRequestHandler: TypeAlias = Callable[[Any], Any]
+PrimitiveServer: TypeAlias = MCPServer | LowLevelServer[Any]
 
 _SCOPE_TOOLSET_DIRECTORY = "__toolset_directory__"
 _SCOPE_PARSER_RESULT = "__parser_result__"
+
+_LOWLEVEL_METHOD_LIST_TOOLS = "tools/list"
+_LOWLEVEL_METHOD_LIST_RESOURCES = "resources/list"
+_LOWLEVEL_METHOD_LIST_RESOURCE_TEMPLATES = "resources/templates/list"
 
 EntryDict: TypeAlias = dict[str, Any]
 CatalogDict: TypeAlias = dict[str, list[EntryDict]]
@@ -59,7 +54,7 @@ def _find_servers(module: types.ModuleType) -> list[PrimitiveServer]:
     def _collect(obj: object) -> None:
         if obj is None or inspect.isclass(obj) or id(obj) in seen:
             return
-        if isinstance(obj, (FastMCP, LowLevelServer)):
+        if isinstance(obj, (MCPServer, LowLevelServer)):
             seen.add(id(obj))
             result.append(obj)
 
@@ -89,13 +84,6 @@ def _build_tool_entry(tool: Tool, server_name: str, source_path: str) -> EntryDi
     }
 
 
-def _build_prompt_entry(prompt: Prompt, server_name: str, source_path: str) -> EntryDict:
-    return {
-        "protocol": _dump_protocol(prompt),
-        "binding": _make_binding(server_name, str(prompt.name), source_path),
-    }
-
-
 def _build_resource_entry(
     resource: Resource | ResourceTemplate,
     server_name: str,
@@ -109,23 +97,40 @@ def _build_resource_entry(
     }
 
 
-def _server_name(server: PrimitiveServer, fallback: str = "FastMCP") -> str:
+def _server_name(server: PrimitiveServer, fallback: str = "MCPServer") -> str:
     return server.name if server.name else fallback
 
 
-def _extract_fastmcp_tools(server: FastMCP, source_path: str) -> list[EntryDict]:
+def _make_lowlevel_context(method: str) -> ServerRequestContext[Any]:
+    return ServerRequestContext(
+        session=cast(Any, None),
+        lifespan_context={},
+        protocol_version="2025-11-25",
+        method=method,
+    )
+
+
+def _run_lowlevel_handler(
+    server: LowLevelServer[Any],
+    method: str,
+    params: Any | None = None,
+) -> Any:
+    entry = server.get_request_handler(method)
+    if entry is None:
+        return None
+    if params is None:
+        params = entry.params_type()
+    ctx = _make_lowlevel_context(method)
+    return asyncio.run(entry.handler(ctx, params))
+
+
+def _extract_mcpserver_tools(server: MCPServer, source_path: str) -> list[EntryDict]:
     tools: list[Tool] = asyncio.run(server.list_tools())
     name = _server_name(server)
     return [_build_tool_entry(t, name, source_path) for t in tools]
 
 
-def _extract_fastmcp_prompts(server: FastMCP, source_path: str) -> list[EntryDict]:
-    prompts: list[Prompt] = asyncio.run(server.list_prompts())
-    name = _server_name(server)
-    return [_build_prompt_entry(p, name, source_path) for p in prompts]
-
-
-def _extract_fastmcp_resources(server: FastMCP, source_path: str) -> list[EntryDict]:
+def _extract_mcpserver_resources(server: MCPServer, source_path: str) -> list[EntryDict]:
     name = _server_name(server)
     entries: list[EntryDict] = []
     direct: list[Resource] = asyncio.run(server.list_resources())
@@ -135,50 +140,24 @@ def _extract_fastmcp_resources(server: FastMCP, source_path: str) -> list[EntryD
     return entries
 
 
-def _get_lowlevel_request_handlers(server: LowLevelServer[Any]) -> Mapping[type[Any], LowLevelRequestHandler]:
-    return server.request_handlers
-
-
-def _run_lowlevel_handler(handler: LowLevelRequestHandler, request: Any) -> Any:
-    return asyncio.run(handler(request))
-
-
 def _extract_lowlevel_tools(server: LowLevelServer[Any], source_path: str) -> list[EntryDict]:
-    handler = _get_lowlevel_request_handlers(server).get(ListToolsRequest)
-    if handler is None:
-        return []
-    result = _run_lowlevel_handler(handler, ListToolsRequest())
-    tools = result.root.tools if result is not None else []
+    result = _run_lowlevel_handler(server, _LOWLEVEL_METHOD_LIST_TOOLS)
+    tools = result.tools if result is not None else []
     name = _server_name(server, "Server")
     return [_build_tool_entry(t, name, source_path) for t in tools]
-
-
-def _extract_lowlevel_prompts(server: LowLevelServer[Any], source_path: str) -> list[EntryDict]:
-    handler = _get_lowlevel_request_handlers(server).get(ListPromptsRequest)
-    if handler is None:
-        return []
-    result = _run_lowlevel_handler(handler, ListPromptsRequest())
-    prompts = result.root.prompts if result is not None else []
-    name = _server_name(server, "Server")
-    return [_build_prompt_entry(p, name, source_path) for p in prompts]
 
 
 def _extract_lowlevel_resources(server: LowLevelServer[Any], source_path: str) -> list[EntryDict]:
     entries: list[EntryDict] = []
     name = _server_name(server, "Server")
-    handlers = _get_lowlevel_request_handlers(server)
 
-    list_handler = handlers.get(ListResourcesRequest)
-    if list_handler is not None:
-        result = _run_lowlevel_handler(list_handler, ListResourcesRequest())
-        resources = result.root.resources if result is not None else []
-        entries.extend(_build_resource_entry(r, name, source_path) for r in resources)
+    list_result = _run_lowlevel_handler(server, _LOWLEVEL_METHOD_LIST_RESOURCES)
+    resources = list_result.resources if list_result is not None else []
+    entries.extend(_build_resource_entry(r, name, source_path) for r in resources)
 
-    template_handler = handlers.get(ListResourceTemplatesRequest)
-    if template_handler is not None:
-        result = _run_lowlevel_handler(template_handler, ListResourceTemplatesRequest())
-        templates = result.root.resourceTemplates if result is not None else []
-        entries.extend(_build_resource_entry(t, name, source_path) for t in templates)
+    template_result = _run_lowlevel_handler(server, _LOWLEVEL_METHOD_LIST_RESOURCE_TEMPLATES)
+    templates = template_result.resource_templates if template_result is not None else []
+    entries.extend(_build_resource_entry(t, name, source_path) for t in templates)
 
     return entries
 
@@ -217,25 +196,22 @@ def _extract_from_file(
     try:
         mod = _load_module(str(py_file))
         tools: list[EntryDict] = []
-        prompts: list[EntryDict] = []
         resources: list[EntryDict] = []
         for server in _find_servers(mod):
             if id(server) in seen_servers:
                 continue
             seen_servers.add(id(server))
-            if isinstance(server, FastMCP):
-                tools.extend(_extract_fastmcp_tools(server, str(py_file)))
-                prompts.extend(_extract_fastmcp_prompts(server, str(py_file)))
-                resources.extend(_extract_fastmcp_resources(server, str(py_file)))
+            if isinstance(server, MCPServer):
+                tools.extend(_extract_mcpserver_tools(server, str(py_file)))
+                resources.extend(_extract_mcpserver_resources(server, str(py_file)))
             else:
                 tools.extend(_extract_lowlevel_tools(server, str(py_file)))
-                prompts.extend(_extract_lowlevel_prompts(server, str(py_file)))
                 resources.extend(_extract_lowlevel_resources(server, str(py_file)))
-        return {"tools": tools, "prompts": prompts, "resources": resources}
+        return {"tools": tools, "resources": resources}
     except Exception:  # noqa: BLE001
         sys.stderr.write(traceback.format_exc())
         sys.stderr.flush()
-        return {"tools": [], "prompts": [], "resources": []}
+        return {"tools": [], "resources": []}
     finally:
         _remove_sys_path(inserted)
 
@@ -244,12 +220,11 @@ def parse_directory(toolset_path: str) -> str:
     root = Path(toolset_path)
     root_dir: Path = root.parent if root.is_file() else root
     seen_servers: set[int] = set()
-    catalog: CatalogDict = {"tools": [], "prompts": [], "resources": []}
+    catalog: CatalogDict = {"tools": [], "resources": []}
 
     for py_file in _iter_tool_files(root):
         extracted = _extract_from_file(py_file, root_dir, seen_servers)
         catalog["tools"].extend(extracted["tools"])
-        catalog["prompts"].extend(extracted["prompts"])
         catalog["resources"].extend(extracted["resources"])
 
     return json.dumps(catalog)

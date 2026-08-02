@@ -15,17 +15,17 @@ Export options for PDF, image, Excel, and schedule outputs. All export tools are
 
 ```json
 {
-  "viewIds": [123456, 234567, 345678],
+  "view_ids": [123456, 234567, 345678],
   "directory": "C:\\Export\\Drawings",
-  "combineIntoSingle": true
+  "combine_into_single": true
 }
 ```
 
 | Parameter | Default | Notes |
 |-----------|---------|-------|
-| `viewIds` | active view | Array of view element IDs |
+| `view_ids` | active view | Array of view element IDs |
 | `directory` | temp | Output folder |
-| `combineIntoSingle` | false | Single PDF vs one per view |
+| `combine_into_single` | false | Single PDF vs one per view |
 
 **Return:**
 ```json
@@ -43,7 +43,7 @@ Export options for PDF, image, Excel, and schedule outputs. All export tools are
 
 ```json
 {
-  "viewIds": [123456],
+  "view_ids": [123456],
   "format": "png",
   "directory": "C:\\Export\\Images",
   "resolution": 150
@@ -92,27 +92,27 @@ revit_export_to_excel(filters=doors_L1, outputPath=doors_L1.xlsx)
 
 ```json
 {
-  "scheduleId": 456789,
+  "schedule_id": 456789,
   "format": "xlsx",
-  "outputPath": "C:\\Export\\door_schedule.xlsx"
+  "output_path": "C:\\Export\\door_schedule.xlsx"
 }
 ```
 
 | Parameter | Notes |
 |-----------|-------|
-| `scheduleId` | ViewSchedule element ID |
+| `schedule_id` | ViewSchedule element ID |
 | `format` | `csv` or `xlsx` |
-| `outputPath` | null = temp path |
+| `output_path` | null = temp path |
 
 ---
 
 ## Batch Export Workflow
 
 ```
-revit_list_views() → collect viewIds for sheets
-→ revit_export_pdf(viewIds, directory, combineIntoSingle=true)
+revit_list_views() → collect view_ids for sheets
+→ revit_export_pdf(view_ids, directory, combine_into_single=true)
 → revit_find_elements(walls filter) → revit_export_to_excel
-→ revit_export_schedule(scheduleId, xlsx)
+→ revit_export_schedule(schedule_id, xlsx)
 ```
 
 ---

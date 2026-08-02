@@ -41,3 +41,13 @@ def register_model_resources(mcp) -> None:
     async def get_model_grids() -> str:
         """Grid names, IDs, and geometry."""
         return service.get_grids()
+
+    @mcp.resource("revit://element/{element_id}")
+    async def get_element_resource(element_id: str) -> str:
+        """Compact element summary: category, family/type, level, pinned, workset, bounding box."""
+        return service.get_element(int(element_id))
+
+    @mcp.resource("revit://schedule/{schedule_id}/preview")
+    async def get_schedule_preview_resource(schedule_id: str) -> str:
+        """CSV preview of schedule body rows (default 30 rows)."""
+        return service.get_schedule_preview(int(schedule_id))

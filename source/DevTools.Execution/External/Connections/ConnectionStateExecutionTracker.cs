@@ -15,10 +15,10 @@ public sealed class ConnectionStateExecutionTracker(ConnectionState state) : IMc
             execScope.MarkRunning();
     }
 
-    public void Complete(IDisposable scope, McpToolExecutionResult result)
+    public void Complete(IDisposable scope, McpInvocation invocation, McpResult<McpInvocationResponse> result, string detail)
     {
         if (scope is ExecutionScope execScope)
-            execScope.Complete(result);
+            execScope.Complete(invocation, result, detail);
     }
 
     public void RecordCall(string toolId, string toolName) => state.RecordCall(toolId, toolName);

@@ -172,20 +172,6 @@
             <BuildType Solution="Release.Autodesk.2026|*" Project="Release" />
             <BuildType Solution="Release.Autodesk.2027|*" Project="Release" />
         </Project>
-        <Project Path="source/DevTools.Mcp/DevTools.Mcp.csproj">
-            <BuildType Solution="Debug.Autodesk.2022|*" Project="Debug" />
-            <BuildType Solution="Debug.Autodesk.2023|*" Project="Debug" />
-            <BuildType Solution="Debug.Autodesk.2024|*" Project="Debug" />
-            <BuildType Solution="Debug.Autodesk.2025|*" Project="Debug" />
-            <BuildType Solution="Debug.Autodesk.2026|*" Project="Debug" />
-            <BuildType Solution="Debug.Autodesk.2027|*" Project="Debug" />
-            <BuildType Solution="Release.Autodesk.2022|*" Project="Release" />
-            <BuildType Solution="Release.Autodesk.2023|*" Project="Release" />
-            <BuildType Solution="Release.Autodesk.2024|*" Project="Release" />
-            <BuildType Solution="Release.Autodesk.2025|*" Project="Release" />
-            <BuildType Solution="Release.Autodesk.2026|*" Project="Release" />
-            <BuildType Solution="Release.Autodesk.2027|*" Project="Release" />
-        </Project>
         <Project Path="source/DevTools.Daemon/DevTools.Daemon.csproj">
             <BuildType Solution="Debug.Autodesk.2022|*" Project="Debug" />
             <BuildType Solution="Debug.Autodesk.2023|*" Project="Debug" />
@@ -201,8 +187,122 @@
             <BuildType Solution="Release.Autodesk.2027|*" Project="Release" />
             <Build Project="false" />
         </Project>
-        <Project Path="source/DevTools.Agents.Revit/DevTools.Agents.Revit.csproj" />
+    </Folder>
+    <Folder Name="/Shared/MCP Platform/">
+        <Project Path="source/DevTools.Mcp.Core/DevTools.Mcp.Core.csproj">
+            <BuildType Solution="Debug.Autodesk.2022|*" Project="Debug" />
+            <BuildType Solution="Debug.Autodesk.2023|*" Project="Debug" />
+            <BuildType Solution="Debug.Autodesk.2024|*" Project="Debug" />
+            <BuildType Solution="Debug.Autodesk.2025|*" Project="Debug" />
+            <BuildType Solution="Debug.Autodesk.2026|*" Project="Debug" />
+            <BuildType Solution="Debug.Autodesk.2027|*" Project="Debug" />
+            <BuildType Solution="Release.Autodesk.2022|*" Project="Release" />
+            <BuildType Solution="Release.Autodesk.2023|*" Project="Release" />
+            <BuildType Solution="Release.Autodesk.2024|*" Project="Release" />
+            <BuildType Solution="Release.Autodesk.2025|*" Project="Release" />
+            <BuildType Solution="Release.Autodesk.2026|*" Project="Release" />
+            <BuildType Solution="Release.Autodesk.2027|*" Project="Release" />
+        </Project>
+        <Project Path="source/DevTools.Mcp.Catalog/DevTools.Mcp.Catalog.csproj">
+            <BuildType Solution="Debug.Autodesk.2022|*" Project="Debug" />
+            <BuildType Solution="Debug.Autodesk.2023|*" Project="Debug" />
+            <BuildType Solution="Debug.Autodesk.2024|*" Project="Debug" />
+            <BuildType Solution="Debug.Autodesk.2025|*" Project="Debug" />
+            <BuildType Solution="Debug.Autodesk.2026|*" Project="Debug" />
+            <BuildType Solution="Debug.Autodesk.2027|*" Project="Debug" />
+            <BuildType Solution="Release.Autodesk.2022|*" Project="Release" />
+            <BuildType Solution="Release.Autodesk.2023|*" Project="Release" />
+            <BuildType Solution="Release.Autodesk.2024|*" Project="Release" />
+            <BuildType Solution="Release.Autodesk.2025|*" Project="Release" />
+            <BuildType Solution="Release.Autodesk.2026|*" Project="Release" />
+            <BuildType Solution="Release.Autodesk.2027|*" Project="Release" />
+        </Project>
+        <Project Path="source/DevTools.Mcp.Adapter/DevTools.Mcp.Adapter.csproj">
+            <BuildType Solution="Debug.Autodesk.2022|*" Project="Debug" />
+            <BuildType Solution="Debug.Autodesk.2023|*" Project="Debug" />
+            <BuildType Solution="Debug.Autodesk.2024|*" Project="Debug" />
+            <BuildType Solution="Debug.Autodesk.2025|*" Project="Debug" />
+            <BuildType Solution="Debug.Autodesk.2026|*" Project="Debug" />
+            <BuildType Solution="Debug.Autodesk.2027|*" Project="Debug" />
+            <BuildType Solution="Release.Autodesk.2022|*" Project="Release" />
+            <BuildType Solution="Release.Autodesk.2023|*" Project="Release" />
+            <BuildType Solution="Release.Autodesk.2024|*" Project="Release" />
+            <BuildType Solution="Release.Autodesk.2025|*" Project="Release" />
+            <BuildType Solution="Release.Autodesk.2026|*" Project="Release" />
+            <BuildType Solution="Release.Autodesk.2027|*" Project="Release" />
+        </Project>
+        <Project Path="source/DevTools.Mcp.Client/DevTools.Mcp.Client.csproj">
+            <BuildType Solution="Debug.Autodesk.2022|*" Project="Debug" />
+            <BuildType Solution="Debug.Autodesk.2023|*" Project="Debug" />
+            <BuildType Solution="Debug.Autodesk.2024|*" Project="Debug" />
+            <BuildType Solution="Debug.Autodesk.2025|*" Project="Debug" />
+            <BuildType Solution="Debug.Autodesk.2026|*" Project="Debug" />
+            <BuildType Solution="Debug.Autodesk.2027|*" Project="Debug" />
+            <BuildType Solution="Release.Autodesk.2022|*" Project="Release" />
+            <BuildType Solution="Release.Autodesk.2023|*" Project="Release" />
+            <BuildType Solution="Release.Autodesk.2024|*" Project="Release" />
+            <BuildType Solution="Release.Autodesk.2025|*" Project="Release" />
+            <BuildType Solution="Release.Autodesk.2026|*" Project="Release" />
+            <BuildType Solution="Release.Autodesk.2027|*" Project="Release" />
+        </Project>
+        <Project Path="source/DevTools.Mcp.Server/DevTools.Mcp.Server.csproj">
+            <BuildType Solution="Debug.Autodesk.2022|*" Project="Debug" />
+            <BuildType Solution="Debug.Autodesk.2023|*" Project="Debug" />
+            <BuildType Solution="Debug.Autodesk.2024|*" Project="Debug" />
+            <BuildType Solution="Debug.Autodesk.2025|*" Project="Debug" />
+            <BuildType Solution="Debug.Autodesk.2026|*" Project="Debug" />
+            <BuildType Solution="Debug.Autodesk.2027|*" Project="Debug" />
+            <BuildType Solution="Release.Autodesk.2022|*" Project="Release" />
+            <BuildType Solution="Release.Autodesk.2023|*" Project="Release" />
+            <BuildType Solution="Release.Autodesk.2024|*" Project="Release" />
+            <BuildType Solution="Release.Autodesk.2025|*" Project="Release" />
+            <BuildType Solution="Release.Autodesk.2026|*" Project="Release" />
+            <BuildType Solution="Release.Autodesk.2027|*" Project="Release" />
+        </Project>
+        <Project Path="source/DevTools.FileMetadata.Core/DevTools.FileMetadata.Core.csproj">
+            <BuildType Solution="Debug.Autodesk.2022|*" Project="Debug" />
+            <BuildType Solution="Debug.Autodesk.2023|*" Project="Debug" />
+            <BuildType Solution="Debug.Autodesk.2024|*" Project="Debug" />
+            <BuildType Solution="Debug.Autodesk.2025|*" Project="Debug" />
+            <BuildType Solution="Debug.Autodesk.2026|*" Project="Debug" />
+            <BuildType Solution="Debug.Autodesk.2027|*" Project="Debug" />
+            <BuildType Solution="Release.Autodesk.2022|*" Project="Release" />
+            <BuildType Solution="Release.Autodesk.2023|*" Project="Release" />
+            <BuildType Solution="Release.Autodesk.2024|*" Project="Release" />
+            <BuildType Solution="Release.Autodesk.2025|*" Project="Release" />
+            <BuildType Solution="Release.Autodesk.2026|*" Project="Release" />
+            <BuildType Solution="Release.Autodesk.2027|*" Project="Release" />
+        </Project>
+        <Project Path="source/DevTools.FileMetadata.Revit/DevTools.FileMetadata.Revit.csproj">
+            <BuildType Solution="Debug.Autodesk.2022|*" Project="Debug" />
+            <BuildType Solution="Debug.Autodesk.2023|*" Project="Debug" />
+            <BuildType Solution="Debug.Autodesk.2024|*" Project="Debug" />
+            <BuildType Solution="Debug.Autodesk.2025|*" Project="Debug" />
+            <BuildType Solution="Debug.Autodesk.2026|*" Project="Debug" />
+            <BuildType Solution="Debug.Autodesk.2027|*" Project="Debug" />
+            <BuildType Solution="Release.Autodesk.2022|*" Project="Release" />
+            <BuildType Solution="Release.Autodesk.2023|*" Project="Release" />
+            <BuildType Solution="Release.Autodesk.2024|*" Project="Release" />
+            <BuildType Solution="Release.Autodesk.2025|*" Project="Release" />
+            <BuildType Solution="Release.Autodesk.2026|*" Project="Release" />
+            <BuildType Solution="Release.Autodesk.2027|*" Project="Release" />
+        </Project>
         <Project Path="source/DevTools.Agents.Acad/DevTools.Agents.Acad.csproj" />
+        <Project Path="source/DevTools.Agents.Revit/DevTools.Agents.Revit.csproj" />
+        <Project Path="source/DevTools.FileMetadata.Acad/DevTools.FileMetadata.Acad.csproj">
+            <BuildType Solution="Debug.Autodesk.2022|*" Project="Debug" />
+            <BuildType Solution="Debug.Autodesk.2023|*" Project="Debug" />
+            <BuildType Solution="Debug.Autodesk.2024|*" Project="Debug" />
+            <BuildType Solution="Debug.Autodesk.2025|*" Project="Debug" />
+            <BuildType Solution="Debug.Autodesk.2026|*" Project="Debug" />
+            <BuildType Solution="Debug.Autodesk.2027|*" Project="Debug" />
+            <BuildType Solution="Release.Autodesk.2022|*" Project="Release" />
+            <BuildType Solution="Release.Autodesk.2023|*" Project="Release" />
+            <BuildType Solution="Release.Autodesk.2024|*" Project="Release" />
+            <BuildType Solution="Release.Autodesk.2025|*" Project="Release" />
+            <BuildType Solution="Release.Autodesk.2026|*" Project="Release" />
+            <BuildType Solution="Release.Autodesk.2027|*" Project="Release" />
+        </Project>
     </Folder>
     <Folder Name="/Solution Items/">
         <File Path=".editorconfig" />

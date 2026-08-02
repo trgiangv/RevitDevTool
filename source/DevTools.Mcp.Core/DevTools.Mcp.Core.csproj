@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk">
+    <PropertyGroup>
+        <TargetFrameworks>net48;net8.0-windows;net10.0-windows</TargetFrameworks>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <PackageReference Include="ModelContextProtocol" />
+        <PackageReference Include="ModelContextProtocol.Extensions.Tasks" />
+        <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\DevTools.Execution.Abstractions\DevTools.Execution.Abstractions.csproj" />
+        <ProjectReference Include="..\DevTools.Ipc\DevTools.Ipc.csproj" />
+    </ItemGroup>
+</Project>

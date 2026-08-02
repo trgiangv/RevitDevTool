@@ -30,7 +30,9 @@ def register_toolset_prompts(mcp) -> None:
         }.get(resolved, "1. `revit_get_model_summary` → 2. `revit_find_elements` → 3. `revit_read_parameters`")
         return (
             "## Workflow for: {}\n\n**Domain:** {}\n\n### Pre-flight\n"
-            "1. `revit_get_status`\n2. Read `revit://toolset/patterns/{}`\n\n### Steps\n{}\n\n"
+            "1. `revit_get_status`\n"
+            "2. Batch `invoke_dynamic(reads=[capabilities, model/context, model/selection])`\n"
+            "3. Read `revit://toolset/patterns/{}`\n\n### Steps\n{}\n\n"
             "### Verification\n1. Re-query with `revit_find_elements`\n2. On failure: `revit_undo_recovery` + `undo_changes`"
         ).format(task, resolved, resolved, steps)
 
@@ -49,7 +51,7 @@ def register_toolset_prompts(mcp) -> None:
         return (
             "## Batch Operation Plan\n\n**Operation:** {}\n**Criteria:** {}\n**Updates:** {}\n\n"
             "### Phase 1 — Discover\n1. `revit_find_elements` with FilterSpec (max_results: 50)\n\n"
-            "### Phase 2 — Sample\n1. `revit_read_parameters` on 5–10 IDs\n\n"
+            "### Phase 2 — Sample\n1. Batch-read `revit://element/{elementId}` for 5 IDs, or `revit_read_parameters` when full params needed\n\n"
             "### Phase 3 — Execute\n1. Chunk IDs (50–100)\n2. Call `{}`\n\n"
             "### Phase 4 — Verify\n1. `revit_read_parameters` sample\n2. On failure: `undo_changes`"
         ).format(operation, criteria, updates or "(none)", write_tool)

@@ -5,7 +5,6 @@ using System.IO;
 using System.Text;
 using System.Windows.Threading;
 using DevTools.Execution.External.Connections;
-using DevTools.Mcp.Schema;
 using DevTools.Presentation.Models;
 using DevTools.UI.Behaviors;
 using DevTools.UI.Theme;
@@ -28,10 +27,13 @@ public sealed partial class McpRegistryViewModel : ObservableObject, IBusyViewMo
     public partial string SearchText { get; set; } = string.Empty;
 
     [ObservableProperty]
-    public partial bool IsConnected { get; set; }
+    public partial bool McpIsConnected { get; private set; }
 
     [ObservableProperty]
-    public partial int TotalToolCount { get; private set; }
+    public partial bool McpIsListening { get; private set; }
+
+    [ObservableProperty]
+    public partial string McpPipeTooltip { get; private set; } = string.Empty;
 
     [ObservableProperty]
     public partial int DotNetToolCount { get; private set; }
@@ -49,7 +51,7 @@ public sealed partial class McpRegistryViewModel : ObservableObject, IBusyViewMo
     public partial string BusyMessage { get; set; } = string.Empty;
 
     [ObservableProperty]
-    public partial string PipeName { get; private set; }
+    public partial int TotalToolCount { get; private set; }
 
     [ObservableProperty]
     private partial bool IsExecuting { get; set; }
@@ -87,8 +89,7 @@ public sealed partial class McpRegistryViewModel : ObservableObject, IBusyViewMo
             _callCounts[item.ToolId] = item.Count;
         }
 
-        IsConnected = _bridgeState.IsConnected;
-        PipeName = FormatDisplayPipeName(_bridgeState.Endpoint);
+        RefreshMcpConnectionDisplay();
         TotalCalled = _bridgeState.TotalToolCalls;
         RefreshExecutionState();
     }
@@ -160,7 +161,7 @@ public sealed partial class McpRegistryViewModel : ObservableObject, IBusyViewMo
         Tools.Clear();
         foreach (var tool in _catalogStore.RegisteredTools)
         {
-            var protocolTool = tool.ProtocolTool;
+            var protocolTool = tool.Descriptor;
             var binding = tool.Binding;
             _callCounts.TryGetValue(tool.Id, out var count);
             Tools.Add(new McpToolItem
@@ -233,9 +234,9 @@ public sealed partial class McpRegistryViewModel : ObservableObject, IBusyViewMo
 
         switch (e.PropertyName)
         {
-            case nameof(ConnectionState.IsConnected) or nameof(ConnectionState.Endpoint):
-                IsConnected = _bridgeState.IsConnected;
-                PipeName = FormatDisplayPipeName(_bridgeState.Endpoint);
+            case nameof(ConnectionState.McpEndpoint):
+            case nameof(ConnectionState.McpClientCount):
+                RefreshMcpConnectionDisplay();
                 break;
             case nameof(ConnectionState.TotalToolCalls):
                 TotalCalled = _bridgeState.TotalToolCalls;
@@ -283,6 +284,15 @@ public sealed partial class McpRegistryViewModel : ObservableObject, IBusyViewMo
             _callCounts[call.ToolId] = call.Count;
     }
 
+    private void RefreshMcpConnectionDisplay()
+    {
+        McpIsListening = _bridgeState.McpIsListening;
+        McpIsConnected = _bridgeState.McpIsConnected;
+        McpPipeTooltip = string.IsNullOrWhiteSpace(_bridgeState.McpEndpoint)
+            ? "N/A"
+            : _bridgeState.McpEndpoint;
+    }
+
     private void RefreshExecutionState()
     {
         IsExecuting = _bridgeState.IsExecuting;
@@ -319,7 +329,7 @@ public sealed partial class McpRegistryViewModel : ObservableObject, IBusyViewMo
 
     private static string BuildToolTipText(McpRegisteredTool tool)
     {
-        var protocolTool = tool.ProtocolTool;
+        var protocolTool = tool.Descriptor;
         var binding = tool.Binding;
         var builder = new StringBuilder();
         builder.AppendLine(protocolTool.Name);
@@ -328,7 +338,9 @@ public sealed partial class McpRegistryViewModel : ObservableObject, IBusyViewMo
         builder.AppendLine();
         builder.AppendLine(string.IsNullOrWhiteSpace(protocolTool.Description) ? "No description." : protocolTool.Description!.Trim());
 
-        var arguments = BuildArgumentSummary(protocolTool.InputSchema.GetRawText());
+        var arguments = protocolTool.InputSchema is { } inputSchema
+            ? BuildArgumentSummary(inputSchema.GetRawText())
+            : string.Empty;
         if (string.IsNullOrWhiteSpace(arguments)) 
             return builder.ToString().TrimEnd();
         builder.AppendLine();
@@ -366,7 +378,4 @@ public sealed partial class McpRegistryViewModel : ObservableObject, IBusyViewMo
         foreach (var item in _bridgeState.ToolCalls)
             item.PropertyChanged -= OnToolCallMetricChanged;
     }
-    
-    private static string FormatDisplayPipeName(string? endpoint)
-        => string.IsNullOrWhiteSpace(endpoint) ? "N/A" : HostPipeName.ToDisplayName(endpoint!);
 }

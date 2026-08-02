@@ -2,9 +2,9 @@ using System.Text.Json;
 using System.Windows;
 using DevTools.Daemon.Auth;
 using DevTools.Daemon.Contracts;
-using DevTools.Daemon.Mcp;
-using DevTools.Daemon.Mcp.Tools;
+using DevTools.Mcp.Server.Utils;
 using DevTools.Daemon.Tray;
+using DevTools.Mcp.Core;
 using H.NotifyIcon;
 
 namespace DevTools.Daemon.Hosting;
@@ -12,7 +12,7 @@ namespace DevTools.Daemon.Hosting;
 /// <summary>
 /// Handles individual control pipe requests. Stateless — one method per JSON-RPC method.
 /// </summary>
-public sealed class ControlPipeHandler(IAuthService authService, McpEngine mcpEngine)
+public sealed class ControlPipeHandler(IAuthService authService, IHostBroker hostBroker)
 {
     private const string DefaultVersion = "0.0.0";
 
@@ -46,14 +46,13 @@ public sealed class ControlPipeHandler(IAuthService authService, McpEngine mcpEn
 
     private string HandleConnectedHosts()
     {
-        var instanceManager = mcpEngine.InstanceManager;
-        var hosts = instanceManager.GetClients()
-            .Where(c => c.Info is not null)
-            .Select(c => new HostInfoEntry(
-                HostAppExtensions.ParseHostApp(c.Info!.HostApp) ?? HostAppExtensions.FromPipeName(c.PipeName),
-                c.Info.VersionNumber,
-                c.Info.ProcessId,
-                c.PipeName))
+        var hosts = hostBroker.Catalog.List()
+            .Select(e => new HostInfoEntry(
+                HostAppExtensions.ParseHostApp(e.Instance.HostApp)
+                ?? HostAppExtensions.FromPipeName(e.PipeName),
+                e.Instance.VersionNumber,
+                e.Instance.ProcessId,
+                e.PipeName))
             .ToArray();
 
         return JsonSerializer.Serialize(hosts);

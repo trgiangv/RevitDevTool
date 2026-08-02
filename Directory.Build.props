@@ -10,7 +10,10 @@
         <Prefer32Bit>false</Prefer32Bit>
         <ImplicitUsings>true</ImplicitUsings>
         <Nullable>enable</Nullable>
-        <NoWarn>NU1903</NoWarn>
+        <!-- NU1903: transitive package advisory (tracked separately).
+             MCPEXP002: MCP SDK experimental extensibility (RequestHandlers for Tasks extension).
+             MCP9005: obsolete sampling block types referenced only to reject at content boundaries. -->
+        <NoWarn>$(NoWarn);NU1903;MCPEXP002;MCP9005</NoWarn>
         <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
         <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
         <EnableDynamicLoading>true</EnableDynamicLoading>

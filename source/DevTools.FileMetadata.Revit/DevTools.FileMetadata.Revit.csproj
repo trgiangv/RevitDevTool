@@ -1,0 +1,15 @@
+<Project Sdk="Microsoft.NET.Sdk">
+    <PropertyGroup>
+        <TargetFramework>net10.0-windows</TargetFramework>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <PackageReference Include="OpenMcdf" />
+        <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\DevTools.FileMetadata.Core\DevTools.FileMetadata.Core.csproj" SetTargetFramework="TargetFramework=$(TargetFramework)" />
+    </ItemGroup>
+
+</Project>

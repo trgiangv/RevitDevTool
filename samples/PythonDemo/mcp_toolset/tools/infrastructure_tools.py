@@ -3,8 +3,8 @@ from __future__ import annotations
 
 from typing import Annotated
 
-from mcp.server.fastmcp import FastMCP
-from mcp.types import ToolAnnotations
+from mcp.server.mcpserver import MCPServer
+from mcp.types import CallToolResult, TextContent, ToolAnnotations
 from pydantic import Field
 
 from dto.infrastructure import (
@@ -14,25 +14,44 @@ from dto.infrastructure import (
     GridAxisSpec,
     LevelSpec,
     SaveDocumentResult,
-    StatusResult,
     SyncResult,
 )
 from services.document_service import DocumentService
 from services.infrastructure_service import InfrastructureService
+from shared.mcp_task_execution_meta import McpTaskExecutionMeta
 
 
-def register_infrastructure_tools(mcp: FastMCP) -> None:
+def register_infrastructure_tools(mcp: MCPServer) -> None:
     infra = InfrastructureService()
     docs = DocumentService()
 
     @mcp.tool(annotations=ToolAnnotations(title="Get Status", readOnlyHint=True), structured_output=True)
-    async def revit_get_status() -> StatusResult:
+    async def revit_get_status() -> CallToolResult:
         """Health + worksharing + selection info."""
-        return infra.get_status()
+        result = infra.get_status()
+        structured = result.model_dump(by_alias=True)
+        if not result.healthy and not result.document_title:
+            summary = "No active document"
+        elif result.healthy:
+            try:
+                from RevitDevTool.Core import RevitContext
+
+                doc = RevitContext.ActiveDocument
+                warnings = doc.GetWarnings() if doc is not None else None
+                warning_count = len(warnings) if warnings else 0
+            except Exception:
+                warning_count = 0
+            summary = "Model healthy, {} warnings".format(warning_count)
+        else:
+            summary = "Model unhealthy"
+        return CallToolResult(
+            content=[TextContent(type="text", text=summary)],
+            structured_content=structured,
+        )
 
     @mcp.tool(annotations=ToolAnnotations(title="Save Document", destructiveHint=True), structured_output=True)
     async def revit_save_document(
-        file_path: Annotated[str | None, Field(alias="filePath", description="SaveAs path; omit for in-place")] = None,
+        file_path: Annotated[str | None, Field(description="SaveAs path; omit for in-place")] = None,
     ) -> SaveDocumentResult:
         """Save or SaveAs."""
         return docs.save_document(file_path)
@@ -44,12 +63,16 @@ def register_infrastructure_tools(mcp: FastMCP) -> None:
         """Close active document."""
         return docs.close_document(save)
 
-    @mcp.tool(annotations=ToolAnnotations(title="Sync With Central", destructiveHint=True), structured_output=True)
+    @mcp.tool(
+        annotations=ToolAnnotations(title="Sync With Central", destructiveHint=True),
+        structured_output=True,
+        meta=McpTaskExecutionMeta.OptionalMeta,
+    )
     async def revit_sync_with_central(
         comment: Annotated[str, Field()] = "",
         compact: Annotated[bool, Field()] = False,
-        relinquish_all: Annotated[bool, Field(alias="relinquishAll")] = False,
-        save_local_before: Annotated[bool, Field(alias="saveLocalBefore")] = True,
+        relinquish_all: Annotated[bool, Field(description="Relinquish all borrowed worksets")] = False,
+        save_local_before: Annotated[bool, Field(description="Save local file before sync")] = True,
     ) -> SyncResult:
         """Workshared sync."""
         return docs.sync_with_central(

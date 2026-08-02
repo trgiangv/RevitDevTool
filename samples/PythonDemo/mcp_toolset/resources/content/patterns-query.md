@@ -145,7 +145,7 @@ All walls except known IDs:
 Respect engineer's current selection:
 
 ```
-revit_find_elements({ "filters": { "filters": [], "logic": "and" }, "selectedOnly": true })
+revit_find_elements({ "filters": { "filters": [], "logic": "and" }, "selected_only": true })
 ```
 
 Check `revit://model/selection` first to understand intent.
@@ -156,11 +156,11 @@ Check `revit://model/selection` first to understand intent.
 
 | Guideline | Detail |
 |-----------|--------|
-| Default limit | 500 results; set `maxResults` and `offset` for pagination |
+| Default limit | 500 results; set `max_results` and `offset` for pagination |
 | Narrow early | Combine `category` + `level` before broad param filters |
 | Avoid whole-model scans | Never query without at least one narrowing filter |
 | Field selection | Request only needed `fields` to reduce payload |
-| Types vs instances | Set `includeTypes` / `includeInstances` explicitly |
+| Types vs instances | Set `include_types` / `include_instances` explicitly |
 | Chunk reads | For >100 elements, sample with `revit_read_parameters` before batch writes |
 | Spatial pre-filter | Use `bounding_box` to limit MEP/coordination queries |
 

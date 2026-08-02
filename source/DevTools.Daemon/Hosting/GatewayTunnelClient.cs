@@ -2,7 +2,7 @@ using System.Net.WebSockets;
 using System.Text;
 using System.Text.Json;
 using DevTools.Daemon.Contracts;
-using DevTools.Daemon.Mcp;
+using DevTools.Mcp.Client;
 using Microsoft.Extensions.Logging;
 using ModelContextProtocol.Server;
 using ZLogger;
@@ -18,7 +18,9 @@ public sealed class GatewayTunnelClient(
     Uri gatewayUri,
     Func<Task<string?>> tokenProvider,
     McpServerOptions serverOptions,
+    IMcpPipeScanner pipeScanner,
     ILoggerFactory loggerFactory,
+    IServiceProvider appServices,
     ILogger logger) : IAsyncDisposable
 {
     private const int ReconnectBaseDelayMs = 1_000;
@@ -99,18 +101,20 @@ public sealed class GatewayTunnelClient(
             logger.ZLogInformation($"Connected to gateway");
             _hasConnectedBefore = true;
 
-            await SendRegisterAsync(ws, ct).ConfigureAwait(false);
+            await SendRegisterAsync(ws, pipeScanner, ct).ConfigureAwait(false);
             SetStatus(TunnelStatus.Connected);
 
             using var heartbeatCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
-            var heartbeatTask = HeartbeatLoopAsync(ws, heartbeatCts.Token);
+            var heartbeatTask = HeartbeatLoopAsync(ws, pipeScanner, heartbeatCts.Token);
 
             var inbound = new WebSocketReadStream(ws, MaxMessageSize);
             var outbound = new WebSocketWriteStream(ws, logger);
 
             await using var server = McpServer.Create(
                 new StreamServerTransport(inbound, outbound, TransportName, loggerFactory),
-                serverOptions);
+                serverOptions,
+                loggerFactory,
+                appServices);
 
             try
             {
@@ -129,10 +133,10 @@ public sealed class GatewayTunnelClient(
         }
     }
 
-    private static async Task SendRegisterAsync(ClientWebSocket ws, CancellationToken ct)
+    private static async Task SendRegisterAsync(ClientWebSocket ws, IMcpPipeScanner pipeScanner, CancellationToken ct)
     {
         var metadata = DeviceMetadata.Collect();
-        var hostApps = InstanceManager.DiscoverHostPipes();
+        var hostApps = pipeScanner.Discover();
 
         var register = new GatewayRegisterMessage(
             RegisterMessageType,
@@ -145,13 +149,13 @@ public sealed class GatewayTunnelClient(
         await ws.SendAsync(bytes, WebSocketMessageType.Text, true, ct).ConfigureAwait(false);
     }
 
-    private static async Task HeartbeatLoopAsync(ClientWebSocket ws, CancellationToken ct)
+    private static async Task HeartbeatLoopAsync(ClientWebSocket ws, IMcpPipeScanner pipeScanner, CancellationToken ct)
     {
         while (!ct.IsCancellationRequested && ws.State == WebSocketState.Open)
         {
             await Task.Delay(HeartbeatIntervalMs, ct).ConfigureAwait(false);
 
-            var hostApps = InstanceManager.DiscoverHostPipes();
+            var hostApps = pipeScanner.Discover();
             var heartbeat = new GatewayHeartbeatMessage(HeartbeatMessageType, hostApps.ToList());
             var json = JsonSerializer.Serialize(heartbeat);
             var bytes = Encoding.UTF8.GetBytes(json);

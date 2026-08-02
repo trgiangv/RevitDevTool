@@ -1,0 +1,43 @@
+<Project Sdk="Microsoft.NET.Sdk">
+    <PropertyGroup>
+        <TargetFrameworks>net48;net8.0-windows;net10.0-windows</TargetFrameworks>
+        <PolyUseEmbeddedAttribute>true</PolyUseEmbeddedAttribute>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <PackageReference Include="ModelContextProtocol" />
+        <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" />
+        <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" />
+        <PackageReference Include="Microsoft.Extensions.Hosting" />
+        <PackageReference Include="Microsoft.Extensions.Options" />
+        <PackageReference Include="Microsoft.Extensions.Options.ConfigurationExtensions" />
+        <PackageReference Include="ZLogger" />
+        <PackageReference Update="Polyfill">
+            <ExcludeAssets>all</ExcludeAssets>
+            <PrivateAssets>all</PrivateAssets>
+        </PackageReference>
+    </ItemGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\DevTools.Execution.Abstractions\DevTools.Execution.Abstractions.csproj" />
+        <ProjectReference Include="..\DevTools.Ipc\DevTools.Ipc.csproj" />
+        <ProjectReference Include="..\DevTools.Logging\DevTools.Logging.csproj" />
+        <ProjectReference Include="..\DevTools.Mcp.Core\DevTools.Mcp.Core.csproj" SetTargetFramework="TargetFramework=$(TargetFramework)" />
+        <ProjectReference Include="..\DevTools.Mcp.Catalog\DevTools.Mcp.Catalog.csproj" SetTargetFramework="TargetFramework=$(TargetFramework)" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <Using Include="DevTools.Execution.Abstractions" />
+        <Using Include="DevTools.Ipc" />
+        <Using Include="DevTools.Logging" />
+        <Using Include="DevTools.Mcp.Catalog" />
+        <Using Include="DevTools.Mcp.Catalog.Discovery" />
+        <Using Include="DevTools.Mcp.Core" />
+        <Using Include="DevTools.Mcp.Core.Utils" />
+        <Using Include="JetBrains.Annotations" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <Folder Include="DependencyInjection\" />
+    </ItemGroup>
+</Project>

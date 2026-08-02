@@ -1,4 +1,4 @@
-﻿using UIFrameworkServices;
+using UIFrameworkServices;
 namespace RevitDevTool.Core;
 
 /// <summary>

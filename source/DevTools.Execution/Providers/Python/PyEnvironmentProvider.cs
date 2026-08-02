@@ -23,7 +23,7 @@ public abstract class PyEnvironmentProvider
     public static IReadOnlyDictionary<string, string> RequirePackages { get; } =
         new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
         {
-            ["mcp"] = "mcp>=1.27,<2",
+            ["mcp"] = "mcp>=2.0,<3",
             ["pytest"] = "pytest>=9.0.3,<10",
             ["debugpy"] = "debugpy>=1.8,<2",
             ["packaging"] = "packaging>=26.0,<27",

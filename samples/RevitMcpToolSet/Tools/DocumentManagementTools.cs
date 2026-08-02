@@ -2,6 +2,7 @@ using System.ComponentModel;
 using ModelContextProtocol;
 using ModelContextProtocol.Server;
 using Nice3point.Revit.Toolkit;
+using RevitMcpToolSet.Mcp;
 using RevitMcpToolSet.Utilities;
 
 namespace RevitMcpToolSet.Tools;
@@ -25,7 +26,7 @@ public static class DocumentManagementTools
                 return new { saved = true, filePath = doc.PathName };
             }
 
-            var targetPath = PathGuard.SanitizeFilePath(filePath);
+            var targetPath = PathGuard.SanitizeFilePath(filePath!);
             var options = new SaveAsOptions { OverwriteExistingFile = true };
             if (doc.IsWorkshared)
             {
@@ -61,6 +62,7 @@ public static class DocumentManagementTools
     }
 
     [McpServerTool(Name = "revit_sync_with_central", Title = "Sync With Central", ReadOnly = false)]
+    [McpMeta(McpTaskExecutionMeta.MetaKey, McpTaskExecutionMeta.Mode.Optional)]
     [Description("Synchronizes a workshared document with the central model.")]
     public static object SyncWithCentral(
         [Description("Sync comment recorded in the worksharing history.")] string? comment = null,

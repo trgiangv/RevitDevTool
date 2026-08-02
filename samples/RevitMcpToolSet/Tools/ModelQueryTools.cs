@@ -2,6 +2,7 @@ using System.ComponentModel;
 using Autodesk.Revit.DB.Mechanical;
 using Autodesk.Revit.DB.Plumbing;
 using ModelContextProtocol;
+using ModelContextProtocol.Protocol;
 using ModelContextProtocol.Server;
 using Nice3point.Revit.Toolkit;
 using RevitMcpToolSet.Data;
@@ -15,7 +16,7 @@ public static class ModelQueryTools
 {
     private static readonly string[] DefaultFields = ["id", "category", "family", "type", "level", "name", "workset", "bbox"];
 
-    [McpServerTool(Name = "revit_get_model_summary", Title = "Get Model Summary", ReadOnly = true)]
+    [McpServerTool(Name = "revit_get_model_summary", Title = "Get Model Summary", ReadOnly = true, UseStructuredContent = true)]
     [Description("Returns a project overview: project info, category counts, warnings count, levels, phases, worksets, and links.")]
     public static object GetModelSummary()
     {
@@ -76,9 +77,9 @@ public static class ModelQueryTools
         };
     }
 
-    [McpServerTool(Name = "revit_find_elements", Title = "Find Elements", ReadOnly = true)]
+    [McpServerTool(Name = "revit_find_elements", Title = "Find Elements", ReadOnly = true, UseStructuredContent = true)]
     [Description("Structured element search using composable FilterSpec filters.")]
-    public static object FindElements(
+    public static CallToolResult FindElements(
         [Description("Composable filter specification")] FilterSpec? filters = null,
         [Description("Limit results to the current Revit selection")] bool selectedOnly = false,
         [Description("Include element types in results")] bool includeTypes = false,
@@ -109,12 +110,15 @@ public static class ModelQueryTools
         var truncated = offset + page.Count < count;
 
         var elements = page.Select(e => ProjectElementFields(doc, e, requestedFields)).ToList();
-        return new { count, truncated, elements };
+        var structured = new { count, truncated, elements };
+        return StructuredToolResults.Create(
+            structured,
+            $"Found {elements.Count} elements (total {count}, truncated={truncated}, offset={offset})");
     }
 
-    [McpServerTool(Name = "revit_read_parameters", Title = "Read Element Parameters", ReadOnly = true)]
+    [McpServerTool(Name = "revit_read_parameters", Title = "Read Element Parameters", ReadOnly = true, UseStructuredContent = true)]
     [Description("Returns parameters for one or more elements. Omit paramNames to return all parameters.")]
-    public static object ReadParameters(
+    public static CallToolResult ReadParameters(
         [Description("Element IDs to read")] long[] elementIds,
         [Description("Optional parameter names to include (null = all)")] string[]? paramNames = null)
     {
@@ -155,7 +159,9 @@ public static class ModelQueryTools
             elements.Add(new { id = element.Id.ToValue(), @params = parameters });
         }
 
-        return new { elements };
+        return StructuredToolResults.Create(
+            new { elements },
+            $"Parameters for {elementIds.Length} elements");
     }
 
     [McpServerTool(Name = "revit_list_types", Title = "List Types", ReadOnly = true)]
@@ -242,7 +248,7 @@ public static class ModelQueryTools
 
         if (!string.IsNullOrWhiteSpace(categoryName))
         {
-            var category = FindCategory(doc, categoryName)
+            var category = FindCategory(doc, categoryName!)
                 ?? throw new McpException($"Category '{categoryName}' not found.");
             collector = collector.OfCategoryId(category.Id);
         }

@@ -1,9 +1,9 @@
 from pydantic import BaseModel
-from mcp.server.fastmcp import FastMCP
+from mcp.server.mcpserver import MCPServer
 from mcp.types import Annotations, Icon, ToolAnnotations
 
 
-mcp = FastMCP("Parser Annotation Sample")
+mcp = MCPServer("Parser Annotation Sample")
 
 
 class ParserStatusOutput(BaseModel):
@@ -18,7 +18,7 @@ class ParserStatusOutput(BaseModel):
         openWorldHint=False,
     ),
     icons=[Icon(src="https://example.com/icons/tool.png", mimeType="image/png", sizes=["16x16"])],
-    meta={"feature": "fastmcp", "version": 1},
+    meta={"feature": "mcpserver", "version": 2},
     structured_output=True,
 )
 async def get_parser_sample_status() -> ParserStatusOutput:

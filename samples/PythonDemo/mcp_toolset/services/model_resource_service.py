@@ -6,6 +6,7 @@ import json
 from Autodesk.Revit import DB
 from RevitDevTool.Core import RevitContext
 
+from services.content_service import ContentService
 from services.query_service import QueryService, _external_path, _import_path, _is_revit_link_loaded
 from shared.element_helpers import category_display_name, element_id_value, normalize_string, require_doc
 from shared.responses import ToolError
@@ -139,6 +140,65 @@ class ModelResourceService:
             grids.append({"id": element_id_value(grid.Id), "name": normalize_string(grid.Name), "geometry": geometry})
         grids.sort(key=lambda item: item["name"].lower())
         return _serialize({"grids": grids})
+
+    def get_element(self, element_id: int) -> str:
+        doc = require_doc()
+        element = doc.GetElement(DB.ElementId(element_id))
+        if element is None:
+            raise ToolError("Element {} not found".format(element_id))
+
+        family: str | None = None
+        type_name: str | None = None
+        if isinstance(element, DB.FamilyInstance):
+            family = element.Symbol.FamilyName
+            type_name = element.Symbol.Name
+
+        level_name: str | None = None
+        if element.LevelId and element.LevelId != DB.ElementId.InvalidElementId:
+            level = doc.GetElement(element.LevelId)
+            if isinstance(level, DB.Level):
+                level_name = level.Name
+
+        workset_name: str | None = None
+        if doc.IsWorkshared:
+            try:
+                workset_table = doc.GetWorksetTable()
+                workset_id = workset_table.GetWorksetId(element.Id)
+                workset = workset_table.GetWorkset(workset_id)
+                if workset is not None:
+                    workset_name = workset.Name
+            except Exception:
+                workset_name = None
+
+        bounding_box: dict | None = None
+        box = element.get_BoundingBox(None)
+        if box is not None:
+            bounding_box = {
+                "min": [box.Min.X, box.Min.Y, box.Min.Z],
+                "max": [box.Max.X, box.Max.Y, box.Max.Z],
+            }
+
+        category = ""
+        if element.Category is not None:
+            category = element.Category.Name or ""
+
+        return _serialize(
+            {
+                "id": element_id_value(element.Id),
+                "name": element.Name or "",
+                "category": category,
+                "family": family,
+                "type": type_name,
+                "level": level_name,
+                "pinned": bool(element.Pinned),
+                "workset": workset_name,
+                "boundingBox": bounding_box,
+            }
+        )
+
+    def get_schedule_preview(self, schedule_id: int) -> str:
+        _, csv_text, _, _, _ = ContentService().preview_schedule(schedule_id, max_rows=30)
+        return csv_text
 
 
 def _serialize(data: object) -> str:

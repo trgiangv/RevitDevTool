@@ -26,12 +26,14 @@ public partial class App
                 return;
             }
 
-            _host = DaemonHostBuilder.CreateTrayHost(singleInstance);
-            await _host.StartAsync();
+            _host = ServerHostBuilder.CreateTrayHost(singleInstance);
 
+            // Tray icon must be created on the WPF STA thread before any await.
             var trayIcon = (TaskbarIcon)FindResource(DaemonConstants.TrayIconResourceKey)!;
             trayIcon.ForceCreate();
             trayIcon.DataContext = _host.Services.GetRequiredService<TrayViewModel>();
+
+            await _host.StartAsync();
         }
         catch (Exception ex)
         {

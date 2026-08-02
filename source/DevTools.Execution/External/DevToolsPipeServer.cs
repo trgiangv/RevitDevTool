@@ -7,6 +7,7 @@ using System.Text.Json;
 using DevTools.Logging;
 using DevTools.Execution.External.Connections;
 using DevTools.Execution.External.Handlers;
+using DevTools.Mcp.Adapter.External;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using ZLogger;
@@ -14,13 +15,14 @@ using ZLogger;
 
 namespace DevTools.Execution.External;
 
+/// <summary>
+/// Host-side pytest/control pipe server over <c>DevTools_{Host}_{Version}_{PID}</c>
+/// (length-prefixed <see cref="BridgeMessage"/>). MCP uses <see cref="HostMcpPipeServer"/>.
+/// </summary>
 [UsedImplicitly]
 public sealed class DevToolsPipeServer(
-    McpCatalogStore catalogStore,
     ConnectionState state,
     IHostAppInfo hostInfo,
-    IMcpPrimitiveDispatcher primitiveDispatcher,
-    McpToolsetContextManager toolsetContextManager,
     IEnumerable<IBridgeRequestHandler> handlers,
     ILogger<DevToolsPipeServer> logger) : IHostedService, IDisposable
 {
@@ -43,7 +45,7 @@ public sealed class DevToolsPipeServer(
     public Task StartAsync(CancellationToken cancellationToken)
     {
         if (_cts is not null) return Task.CompletedTask;
-        _pipeName = HostPipeName.Format(hostInfo.Host.ToString(), hostInfo.VersionNumber, Environment.ProcessId);
+        _pipeName = HostPipeName.FormatPytest(hostInfo.Host.ToString(), hostInfo.VersionNumber, Environment.ProcessId);
         state.SetEndpoint(_pipeName);
         state.SetConnectedState(0);
         state.SetQueueDepth(0);
@@ -51,20 +53,6 @@ public sealed class DevToolsPipeServer(
         var pytestHandler = handlers.OfType<PytestRequestHandler>().SingleOrDefault();
         if (pytestHandler is not null)
             pytestHandler.NotifySender = SendNotification;
-
-        Task.Run(() =>
-        {
-            try
-            {
-                catalogStore.EnsureLoaded();
-            }
-            catch (Exception ex)
-            {
-                logger.ZLogWarning($"Catalog preload failed: {ex.Message}");
-            }
-        }, cancellationToken);
-
-        catalogStore.CatalogChanged += OnCatalogChanged;
 
         _cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
         _acceptLoopTask = AcceptLoopAsync(_cts.Token);
@@ -75,8 +63,6 @@ public sealed class DevToolsPipeServer(
 
     public async Task StopAsync(CancellationToken cancellationToken)
     {
-        catalogStore.CatalogChanged -= OnCatalogChanged;
-
         _cts?.CancelAsync();
         foreach (var connection in _connections.Values)
             connection.Dispose();
@@ -184,13 +170,6 @@ public sealed class DevToolsPipeServer(
         return BridgeMessage.Error(id, IpcErrorCodes.MethodNotFound, $"Unknown method: {request.Method}");
     }
 
-    private void OnCatalogChanged(object? sender, EventArgs e)
-    {
-        primitiveDispatcher.ClearCaches();
-        toolsetContextManager.Clear();
-        SendNotification(McpBridgeMethods.NotifyToolsChanged);
-    }
-
     private async void SendNotification(string method, JsonElement? data = null)
     {
         try
@@ -250,7 +229,6 @@ public sealed class DevToolsPipeServer(
     {
         if (_disposed) return;
         _disposed = true;
-        catalogStore.CatalogChanged -= OnCatalogChanged;
         _cts?.Cancel();
         foreach (var connection in _connections.Values)
             connection.Dispose();

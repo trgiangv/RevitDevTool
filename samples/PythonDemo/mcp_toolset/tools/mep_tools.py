@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from typing import Annotated
 
-from mcp.server.fastmcp import FastMCP
+from mcp.server.mcpserver import MCPServer
 from mcp.types import ToolAnnotations
 from pydantic import Field
 
@@ -18,7 +18,7 @@ from dto.mep import (
 from services.mep_service import MepService
 
 
-def register_mep_tools(mcp: FastMCP) -> None:
+def register_mep_tools(mcp: MCPServer) -> None:
     service = MepService()
 
     @mcp.tool(annotations=ToolAnnotations(title="Place Duct", destructiveHint=True), structured_output=True)
@@ -45,8 +45,8 @@ def register_mep_tools(mcp: FastMCP) -> None:
 
     @mcp.tool(annotations=ToolAnnotations(title="Insulate Duct System", destructiveHint=True), structured_output=True)
     async def revit_insulate_duct_system(
-        system_id: Annotated[int, Field(alias="systemId")],
-        thickness_mm: Annotated[float, Field(alias="thickness_mm")],
+        system_id: Annotated[int, Field(description="MEP system element id")],
+        thickness_mm: Annotated[float, Field(description="Insulation thickness in millimeters")],
     ) -> InsulateDuctResult:
         """Apply duct insulation."""
         return service.insulate_duct_system(system_id, thickness_mm)

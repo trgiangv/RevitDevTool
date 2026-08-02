@@ -9,7 +9,8 @@
         <ProjectReference Include="..\DevTools.Utilities\DevTools.Utilities.csproj" />
         <ProjectReference Include="..\DevTools.UI\DevTools.UI.csproj" />
         <ProjectReference Include="..\DevTools.Execution.Abstractions\DevTools.Execution.Abstractions.csproj" />
-        <ProjectReference Include="..\DevTools.Mcp\DevTools.Mcp.csproj" />
+        <ProjectReference Include="..\DevTools.Mcp.Catalog\DevTools.Mcp.Catalog.csproj" SetTargetFramework="TargetFramework=$(TargetFramework)" />
+        <ProjectReference Include="..\DevTools.Mcp.Core\DevTools.Mcp.Core.csproj" SetTargetFramework="TargetFramework=$(TargetFramework)" />
         <ProjectReference Include="..\DevTools.Settings\DevTools.Settings.csproj" />
         <ProjectReference Include="..\DevTools.Execution\DevTools.Execution.csproj" />
         <ProjectReference Include="..\DevTools.Logging\DevTools.Logging.csproj" />
@@ -21,9 +22,9 @@
         <Using Include="CommunityToolkit.Mvvm.Input" />
         <Using Include="DevTools.Execution.Abstractions" />
         <Using Include="DevTools.Ipc" />
-        <Using Include="DevTools.Mcp" />
-        <Using Include="DevTools.Mcp.Discovery" />
-        <Using Include="DevTools.Mcp.Models" />
+        <Using Include="DevTools.Mcp.Catalog" />
+        <Using Include="DevTools.Mcp.Catalog.Discovery" />
+        <Using Include="DevTools.Mcp.Core" />
         <Using Include="JetBrains.Annotations" />
         <Using Include="System" />
     </ItemGroup>

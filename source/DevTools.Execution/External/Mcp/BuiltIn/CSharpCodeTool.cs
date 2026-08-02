@@ -1,90 +1,90 @@
+using System.ComponentModel;
 using System.Runtime.CompilerServices;
-using System.Text.Json;
 using DevTools.Execution.Interfaces;
 using DevTools.Execution.Models;
 using DevTools.Execution.Providers.CSharp;
-using DevTools.Mcp.Schema;
 using ModelContextProtocol.Protocol;
+using ModelContextProtocol.Server;
 
 namespace DevTools.Execution.External.Mcp.BuiltIn;
 
 /// <summary>Compiles and executes C# code in the host process via Roslyn.</summary>
-public sealed class CSharpCodeTool(
-    ICompiledScriptBridge scriptBridge,
-    CSharpCompiler compiler,
-    IHostContextExecutor hostContext,
-    ICommandRunner commandRunner) : IBuiltInMcpTool
+public sealed class CSharpCodeTool : IBuiltInMcpTool
 {
     private static readonly TimeSpan CompileTimeout = TimeSpan.FromSeconds(30);
 
+    private readonly ICompiledScriptBridge _scriptBridge;
+    private readonly CSharpCompiler _compiler;
+    private readonly IHostContextExecutor _hostContext;
+    private readonly ICommandRunner _commandRunner;
+
+    public CSharpCodeTool(
+        ICompiledScriptBridge scriptBridge,
+        CSharpCompiler compiler,
+        IHostContextExecutor hostContext,
+        ICommandRunner commandRunner)
+    {
+        _scriptBridge = scriptBridge;
+        _compiler = compiler;
+        _hostContext = hostContext;
+        _commandRunner = commandRunner;
+        ServerTool = McpServerTool.Create(
+            ExecuteAsync,
+            new McpServerToolCreateOptions
+            {
+                Name = "execute_csharp_code",
+                Title = "Execute C# Code",
+                Description =
+                    "Compile and execute C# code in the running host process. " +
+                    "Host API assemblies auto-referenced. Use #r for extras, #r \"nuget:\" for packages.\n" +
+                    "BEFORE WRITING CODE: Use search_dynamic / invoke_dynamic for resources with API patterns and model state.\n" +
+                    "Error responses: [COMPILATION ERROR] fix code, [RUNTIME ERROR] check logic, [ROLLBACK] constraint violation.",
+                Destructive = true,
+                OpenWorld = true
+            });
+    }
+
     public string Name => "execute_csharp_code";
+    public McpServerTool ServerTool { get; }
 
-    public Tool ProtocolTool { get; } = new()
+    [McpMeta(McpTaskExecutionMeta.MetaKey, McpTaskExecutionMeta.Mode.Optional)]
+    [Description("Compile and execute C# code in the running host process.")]
+    private async Task<CallToolResult> ExecuteAsync(
+        [Description(
+            "Complete C# source. Revit: implement IExternalCommand, set 'message' ref param. " +
+            "AutoCAD: use [CommandMethod]. Include all usings and attributes.")]
+        string code,
+        CancellationToken cancellationToken = default)
     {
-        Name = "execute_csharp_code",
-        Description =
-            "Compile and execute C# code in the running host process. " +
-            "Host API assemblies auto-referenced. Use #r for extras, #r \"nuget:\" for packages.\n" +
-            "BEFORE WRITING CODE: Read available resources (list_dynamic_resources) for API patterns and model state.\n" +
-            "Error responses: [COMPILATION ERROR] fix code, [RUNTIME ERROR] check logic, [ROLLBACK] constraint violation.",
-        InputSchema = McpSchemaBuilder.Object(
-        [
-            McpSchemaBuilder.String(
-                IpcPropertyNames.Code,
-                "Complete C# source. Revit: implement IExternalCommand, set 'message' ref param. " +
-                "AutoCAD: use [CommandMethod]. Include all usings and attributes.")
-        ],
-        required: [IpcPropertyNames.Code]),
-        Annotations = new ToolAnnotations
-        {
-            Title = "Execute C# Code",
-            DestructiveHint = true,
-            OpenWorldHint = true
-        }
-    };
-
-    public async Task<McpToolExecutionResult> ExecuteAsync(
-        string payloadJson, CancellationToken ct)
-    {
-        using var doc = JsonDocument.Parse(payloadJson);
-        if (!doc.RootElement.TryGetProperty(IpcPropertyNames.Code, out var codeElement) ||
-            codeElement.ValueKind != JsonValueKind.String)
-        {
-            return McpToolExecutionResult.Failed(
-                McpExecutionErrorCodes.ToolInvokeFailed, "Missing required 'code' parameter.");
-        }
-
-        var code = codeElement.GetString();
         if (string.IsNullOrWhiteSpace(code))
-            return McpToolExecutionResult.Failed(
-                McpExecutionErrorCodes.ToolInvokeFailed, "Code parameter must not be empty.");
+            return ToolHelpers.ErrorResult("[COMPILATION ERROR] Code parameter must not be empty.");
 
         ScriptCompilationResult? compilationResult = null;
         try
         {
-            using var timeoutCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
+            using var timeoutCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
             timeoutCts.CancelAfter(CompileTimeout);
 
             try
             {
-                compilationResult = await compiler
-                    .CompileAsync(code!, scriptBridge, ct: timeoutCts.Token)
+                compilationResult = await _compiler
+                    .CompileAsync(code, _scriptBridge, ct: timeoutCts.Token)
                     .ConfigureAwait(false);
             }
-            catch (OperationCanceledException) when (!ct.IsCancellationRequested)
+            catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
             {
-                return ErrorResult($"[COMPILATION ERROR] Timed out after {CompileTimeout.TotalSeconds}s. " +
+                return ToolHelpers.ErrorResult($"[COMPILATION ERROR] Timed out after {CompileTimeout.TotalSeconds}s. " +
                     "Simplify code or reduce #r nuget dependencies.");
             }
 
             if (!compilationResult.Success || compilationResult.Command is null)
             {
                 var diagnostics = compilationResult.FormatDiagnostics();
-                return ErrorResult($"[COMPILATION ERROR] Fix the code and retry.\n{diagnostics}");
+                return ToolHelpers.ErrorResult($"[COMPILATION ERROR] Fix the code and retry.\n{diagnostics}");
             }
 
-            var result = await hostContext
-                .ExecuteAsync(() => commandRunner.RunCompiledCommand(compilationResult.Command), ct)
+            var result = await _hostContext
+                .ExecuteAsync(() => _commandRunner.RunCompiledCommand(compilationResult.Command), cancellationToken)
                 .ConfigureAwait(false);
 
             if (!result.Success)
@@ -93,7 +93,7 @@ public sealed class CSharpCodeTool(
                 var prefix = error.Contains("rolled back", StringComparison.OrdinalIgnoreCase)
                     ? "[ROLLBACK] Transaction failed due to unresolvable constraint.\n"
                     : "[RUNTIME ERROR] ";
-                return ErrorResult($"{prefix}{error}");
+                return ToolHelpers.ErrorResult($"{prefix}{error}");
             }
 
             var output = result.Message;
@@ -101,26 +101,12 @@ public sealed class CSharpCodeTool(
             if (!string.IsNullOrEmpty(rollback))
                 output = $"{output}\n\n⚠️ {rollback}";
 
-            var callResult = new CallToolResult
-            {
-                Content = [new TextContentBlock { Text = output }]
-            };
-            return McpToolExecutionResult.Completed(callResult, $"Completed '{Name}'.");
+            return ToolHelpers.Result(output);
         }
         finally
         {
             DisposeCompilation(compilationResult);
         }
-    }
-
-    private McpToolExecutionResult ErrorResult(string text)
-    {
-        var errorResult = new CallToolResult
-        {
-            IsError = true,
-            Content = [new TextContentBlock { Text = text }]
-        };
-        return McpToolExecutionResult.Completed(errorResult, $"Failed '{Name}'.");
     }
 
     [MethodImpl(MethodImplOptions.NoInlining)]

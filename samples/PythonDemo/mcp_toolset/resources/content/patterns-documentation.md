@@ -150,15 +150,15 @@ Place schedule on sheet with same `revit_place_on_sheet` call.
 
 ```json
 {
-  "viewIds": [123456, 234567],
+  "view_ids": [123456, 234567],
   "directory": "C:\\Export\\Package",
-  "combineIntoSingle": true
+  "combine_into_single": true
 }
 ```
 
-- `viewIds`: null = active view only
+- `view_ids`: null = active view only
 - `directory`: null = temp directory (PathGuard validated)
-- `combineIntoSingle`: true = one PDF, false = one per view
+- `combine_into_single`: true = one PDF, false = one per view
 
 ---
 
@@ -173,7 +173,7 @@ revit_list_views(includeSheets=true)
 → revit_list_schedule_fields("Doors")
 → revit_create_schedule(config)
 → revit_place_on_sheet(sheetId, scheduleId)
-→ revit_export_pdf(viewIds, directory, combineIntoSingle=true)
+→ revit_export_pdf(view_ids, directory, combine_into_single=true)
 ```
 
 ---

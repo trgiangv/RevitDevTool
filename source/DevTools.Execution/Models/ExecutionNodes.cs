@@ -1,4 +1,4 @@
-﻿namespace DevTools.Execution.Models;
+namespace DevTools.Execution.Models;
 
 /// <summary>
 /// Root node - represents an Assembly (.dll) or Root Folder for scripts

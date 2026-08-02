@@ -1,6 +1,6 @@
 using System.IO;
 using System.Reflection;
-using DevTools.Mcp.BuiltIn;
+using DevTools.Mcp.Catalog;
 using ModelContextProtocol.Protocol;
 
 namespace DevTools.Agents.Acad.Resources;

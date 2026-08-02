@@ -1,0 +1,17 @@
+<Project Sdk="Microsoft.NET.Sdk">
+    <PropertyGroup>
+        <TargetFrameworks>net48;net8.0-windows;net10.0-windows</TargetFrameworks>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <PackageReference Include="ModelContextProtocol" />
+        <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" />
+        <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" />
+        <PackageReference Include="ZLogger" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\DevTools.Ipc\DevTools.Ipc.csproj" />
+        <ProjectReference Include="..\DevTools.Mcp.Catalog\DevTools.Mcp.Catalog.csproj" SetTargetFramework="TargetFramework=$(TargetFramework)" />
+    </ItemGroup>
+</Project>

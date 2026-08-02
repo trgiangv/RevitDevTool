@@ -1,11 +1,10 @@
 <Project Sdk="Microsoft.NET.Sdk">
     <PropertyGroup>
         <UseRevit>true</UseRevit>
-        <NoWarn>$(NoWarn);MCPEXP001</NoWarn>
     </PropertyGroup>
 
     <ItemGroup>
-        <ProjectReference Include="..\DevTools.Mcp\DevTools.Mcp.csproj"/>
+        <ProjectReference Include="..\DevTools.Mcp.Catalog\DevTools.Mcp.Catalog.csproj" SetTargetFramework="TargetFramework=$(TargetFramework)" />
         <ProjectReference Include="..\RevitDevTool.Core\RevitDevTool.Core.csproj"/>
     </ItemGroup>
 

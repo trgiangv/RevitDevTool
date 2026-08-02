@@ -1,4 +1,4 @@
-﻿using Autodesk.Revit.DB.DirectContext3D;
+using Autodesk.Revit.DB.DirectContext3D;
 using Nice3point.Revit.Extensions.Runtime;
 using RevitDevTool.Visualization.Render;
 
