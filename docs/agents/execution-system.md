@@ -85,7 +85,7 @@ Only **unresolvable failure rollbacks** are surfaced to AI callers via `Executio
 
 ## Script Modes
 
-- Python: PEP 723 dependencies through `Parser.py`, Pixi preferred, pip/pyRevit fallback.
+- Python: PEP 723 dependencies through `Parser.py`, Pixi preferred, pip/pyRevit fallback. Startup runs `pixi --version` after install check; non-zero exit → pip backend.
 - IronPython: Python files ending `_ipy_script.py`.
 - F#: `.fsx`, NuGet resolution under `%APPDATA%\RevitDevTool\nuget`, 30 second compile timeout.
 - C#: `.csx`, Roslyn compilation cache, 30 second compile timeout.

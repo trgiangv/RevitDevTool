@@ -1,5 +1,6 @@
 using System.IO;
 using System.IO.Compression;
+using CliWrap;
 using DevTools.Execution.Services;
 using DevTools.Utilities;
 using Microsoft.Extensions.Logging;
@@ -23,9 +24,9 @@ public static class PythonInstaller
     private static string VersionMarkerPath => Path.Combine(GetBinPath(), ".pixi-version");
 
     /// <summary>
-    /// Ensures pixi is installed at the locked version.
-    /// Uses a marker file to avoid spawning a child process on every startup.
-    /// Downloads only when pixi.exe is missing or the marker version differs from <see cref="PixiVersion"/>.
+    /// Ensures pixi is installed at the locked version and can execute.
+    /// Downloads when pixi.exe is missing or the marker version differs from <see cref="PixiVersion"/>.
+    /// Runs <c>pixi --version</c> on every call so enterprise blocks on unknown exe trigger pip fallback.
     /// </summary>
     public static async Task SetupPixiAsync(ILogger? logger = null)
     {
@@ -35,13 +36,33 @@ public static class PythonInstaller
         if (IsPixiInstalled())
         {
             logger?.ZLogInformation($"Pixi v{PixiVersion} already installed.");
-            return;
+        }
+        else
+        {
+            logger?.ZLogInformation($"Downloading v{PixiVersion}...");
+            await DownloadAndInstallAsync(PixiVersion).ConfigureAwait(false);
+            await File.WriteAllTextAsync(VersionMarkerPath, PixiVersion).ConfigureAwait(false);
+            logger?.ZLogInformation($"v{PixiVersion} installed.");
         }
 
-        logger?.ZLogInformation($"Downloading v{PixiVersion}...");
-        await DownloadAndInstallAsync(PixiVersion).ConfigureAwait(false);
-        await File.WriteAllTextAsync(VersionMarkerPath, PixiVersion).ConfigureAwait(false);
-        logger?.ZLogInformation($"v{PixiVersion} installed.");
+        await VerifyPixiRunnableAsync(logger).ConfigureAwait(false);
+    }
+
+    private static async Task VerifyPixiRunnableAsync(ILogger? logger = null)
+    {
+        var result = await Cli.Wrap(PixiExePath)
+            .WithArguments("--version")
+            .WithValidation(CommandResultValidation.None)
+            .ExecuteAsync()
+            .ConfigureAwait(false);
+
+        if (result.ExitCode != 0)
+        {
+            throw new InvalidOperationException(
+                $"pixi --version failed with exit code {result.ExitCode}.");
+        }
+
+        logger?.ZLogDebug($"Pixi runtime verified (exit {result.ExitCode}).");
     }
 
     private static bool IsMarkedVersion(string version)
