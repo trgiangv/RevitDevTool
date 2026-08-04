@@ -45,6 +45,45 @@ public sealed class NamedPipeIntegrationTests
         await cts.CancelAsync();
     }
 
+    [Fact]
+    public async Task NamedPipe_ClientReceivesToolListChangedNotification()
+    {
+        var pipeName = HostPipeName.FormatMcp("TestHost", Guid.NewGuid().ToString("N")[..8], Environment.ProcessId);
+        using var cts = CancellationTokenSource.CreateLinkedTokenSource(TestContext.Current.CancellationToken);
+        cts.CancelAfter(TimeSpan.FromSeconds(20));
+
+        var (handler, _) = McpHostTestHarness.CreateWithTool("ping", "pong", "Ping");
+
+        await using var serverPipe = CreateServerPipe(pipeName);
+        var acceptTask = serverPipe.WaitForConnectionAsync(cts.Token);
+
+        await using var clientPipe = new NamedPipeClientStream(".", pipeName, PipeDirection.InOut, PipeOptions.Asynchronous);
+        await clientPipe.ConnectAsync(cts.Token);
+        await acceptTask;
+
+        await using var session = McpPipeSession.Start(serverPipe, handler, cts.Token);
+
+        await using var client = await McpClient.CreateAsync(
+            new StreamClientTransport(clientPipe, clientPipe, NullLoggerFactory.Instance),
+            loggerFactory: NullLoggerFactory.Instance,
+            cancellationToken: cts.Token);
+
+        var notificationReceived = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        await using var registration = client.RegisterNotificationHandler(
+            NotificationMethods.ToolListChangedNotification,
+            (_, _) =>
+            {
+                notificationReceived.TrySetResult();
+                return default;
+            });
+
+        await session.SendNotificationAsync(NotificationMethods.ToolListChangedNotification, cts.Token);
+        await notificationReceived.Task.WaitAsync(TimeSpan.FromSeconds(5), cts.Token);
+
+        await client.DisposeAsync();
+        await cts.CancelAsync();
+    }
+
     private static NamedPipeServerStream CreateServerPipe(string pipeName)
     {
         var security = new PipeSecurity();

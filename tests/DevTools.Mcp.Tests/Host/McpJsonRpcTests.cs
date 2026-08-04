@@ -59,16 +59,26 @@ public sealed class McpJsonRpcTests
     [Fact]
     public void NotificationEnvelope_HasNoId_AndSerializesMethodOnly()
     {
-        var notification = new JsonObject
-        {
-            ["jsonrpc"] = "2.0",
-            ["method"] = "notifications/initialized",
-        };
+        var notification = McpJsonRpc.CreateNotification("notifications/initialized");
 
         var serialized = McpJsonRpc.Serialize(notification);
         var roundTrip = McpJsonRpc.ParseRequest(serialized);
 
         Assert.False(McpJsonRpc.HasId(roundTrip));
         Assert.Equal("notifications/initialized", roundTrip["method"]!.GetValue<string>());
+    }
+
+    [Fact]
+    public void CreateNotification_RoundTrips_WithoutId()
+    {
+        var notification = McpJsonRpc.CreateNotification(
+            "notifications/tools/list_changed",
+            new JsonObject { ["cursor"] = "abc" });
+        var serialized = McpJsonRpc.Serialize(notification);
+        var roundTrip = McpJsonRpc.ParseRequest(serialized);
+
+        Assert.False(McpJsonRpc.HasId(roundTrip));
+        Assert.Equal("notifications/tools/list_changed", roundTrip["method"]!.GetValue<string>());
+        Assert.Equal("abc", roundTrip["params"]!["cursor"]!.GetValue<string>());
     }
 }

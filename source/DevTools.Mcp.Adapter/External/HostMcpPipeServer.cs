@@ -6,6 +6,7 @@ using DevTools.Mcp.Adapter.Host;
 using DevTools.Mcp.Core.Protocol;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using ModelContextProtocol.Protocol;
 using ZLogger;
 namespace DevTools.Mcp.Adapter.External;
 
@@ -27,7 +28,7 @@ public sealed class HostMcpPipeServer(
 
     private CancellationTokenSource? _cts;
     private Task? _acceptLoopTask;
-    private readonly ConcurrentDictionary<int, IAsyncDisposable> _sessions = new();
+    private readonly ConcurrentDictionary<int, McpPipeSession> _sessions = new();
     private int _nextSessionId;
     private string? _pipeName;
     private bool _disposed;
@@ -111,12 +112,11 @@ public sealed class HostMcpPipeServer(
     private async Task HandleConnectionAsync(NamedPipeServerStream pipe, CancellationToken ct)
     {
         var sessionId = Interlocked.Increment(ref _nextSessionId);
-        IAsyncDisposable? session = null;
+        McpPipeSession? pipeSession = null;
         try
         {
-            var pipeSession = McpPipeSession.Start(pipe, mcpHandler, ct);
-            session = pipeSession;
-            _sessions[sessionId] = session;
+            pipeSession = McpPipeSession.Start(pipe, mcpHandler, ct);
+            _sessions[sessionId] = pipeSession;
             connectionTracker.SetMcpClientCount(_sessions.Count);
 
             logger.ZLogInformation($"MCP client connected. Active sessions: {_sessions.Count}");
@@ -129,10 +129,10 @@ public sealed class HostMcpPipeServer(
         }
         finally
         {
-            if (session is not null)
+            if (pipeSession is not null)
             {
                 _sessions.TryRemove(sessionId, out _);
-                await session.DisposeAsync().ConfigureAwait(false);
+                await pipeSession.DisposeAsync().ConfigureAwait(false);
             }
             else
             {
@@ -150,12 +150,29 @@ public sealed class HostMcpPipeServer(
         {
             primitiveDispatcher.ClearCaches();
             toolsetContextManager.Clear();
+            _ = BroadcastCatalogListChangedNotificationsAsync();
             logger.ZLogInformation(
                 $"MCP host catalog reloaded ({catalogStore.ToolDescriptors.Count} tools, {catalogStore.ResourceDescriptors.Count} resources).");
         }
         catch (Exception ex)
         {
             logger.ZLogError(ex, $"Failed to reload MCP host catalog");
+        }
+    }
+
+    private async Task BroadcastCatalogListChangedNotificationsAsync()
+    {
+        foreach (var session in _sessions.Values)
+        {
+            try
+            {
+                await session.SendNotificationAsync(NotificationMethods.ToolListChangedNotification).ConfigureAwait(false);
+                await session.SendNotificationAsync(NotificationMethods.ResourceListChangedNotification).ConfigureAwait(false);
+            }
+            catch (Exception ex)
+            {
+                logger.ZLogWarning($"Failed to notify MCP client of catalog change: {ex.Message}");
+            }
         }
     }
 
