@@ -1,4 +1,5 @@
 using System.IO;
+using System.Text;
 using CliWrap;
 using DevTools.Utilities;
 using Microsoft.Extensions.Logging;
@@ -8,7 +9,7 @@ namespace DevTools.Execution.Providers.Python;
 
 /// <summary>
 /// Pixi-based Python environment provider.
-/// Uses conda-forge first, PyPI fallback via pixi's embedded uv.
+/// Policy: skip when already listed; otherwise search-first conda vs PyPI (not try-first).
 /// </summary>
 public sealed class PixiEnvironmentProvider(ILogger<PixiEnvironmentProvider> logger) : PyEnvironmentProvider
 {
@@ -19,37 +20,25 @@ public sealed class PixiEnvironmentProvider(ILogger<PixiEnvironmentProvider> log
 
     public override PythonBackend Backend => PythonBackend.Pixi;
 
-    public override bool IsEnvironmentReady()
-    {
-        EnsurePythonHomeAssigned();
-        return File.Exists(PythonExe);
-    }
-
-    private void EnsurePythonHomeAssigned()
-    {
-        PythonHomePath ??= Path.Combine(PixiProjectDir, @".pixi\envs\default");
-    }
+    protected override Task<string> ResolvePythonHomeAsync()
+        => Task.FromResult(Path.Combine(PixiProjectDir, @".pixi\envs\default"));
 
     public override async Task SetupEnvironmentAsync()
     {
-        EnsurePythonHomeAssigned();
+        await EnsurePythonHomeAsync().ConfigureAwait(false);
         PythonEmbedded.EnsureExtracted();
         await EnsureRequirePackagesAsync().ConfigureAwait(false);
 
         if (!IsEnvironmentReady())
         {
             logger.ZLogDebug($"Running pixi install to bootstrap Python environment...");
-
-            var result = await Cli.Wrap(PythonInstaller.PixiExePath)
-                .WithArguments("install")
-                .WithWorkingDirectory(PixiProjectDir)
-                .WithStandardOutputPipe(PipeTarget.ToDelegate(line => logger.ZLogInformation($"{line}")))
-                .WithStandardErrorPipe(PipeTarget.ToDelegate(line => logger.ZLogWarning($"{line}")))
-                .WithValidation(CommandResultValidation.None)
-                .ExecuteAsync().ConfigureAwait(false);
-
-            if (result.ExitCode != 0)
-                throw new InvalidOperationException($"pixi install failed with exit code {result.ExitCode}.");
+            var exit = await RunPixiAsync(
+                    ["install"],
+                    line => logger.ZLogInformation($"{line}"),
+                    line => logger.ZLogWarning($"{line}"))
+                .ConfigureAwait(false);
+            if (exit != 0)
+                throw new InvalidOperationException($"pixi install failed with exit code {exit}.");
         }
 
         if (!IsEnvironmentReady())
@@ -60,19 +49,24 @@ public sealed class PixiEnvironmentProvider(ILogger<PixiEnvironmentProvider> log
 
     private async Task EnsureRequirePackagesAsync()
     {
+        var installed = await GetInstalledNamesAsync().ConfigureAwait(false);
+        var missing = RequirePackages.Values
+            .Where(spec => !installed.Contains(ExtractPackageName(spec)))
+            .ToList();
+
+        if (missing.Count == 0)
+        {
+            logger.ZLogDebug($"Require packages already installed — skipping pixi add.");
+            return;
+        }
+
         var args = new List<string> { "add" };
-        args.AddRange(RequirePackages.Values);
+        args.AddRange(missing);
+        var exit = await RunPixiAsync(args, line => logger.ZLogInformation($"{line}"), line => logger.ZLogWarning($"{line}"))
+            .ConfigureAwait(false);
 
-        var result = await Cli.Wrap(PythonInstaller.PixiExePath)
-            .WithArguments(args)
-            .WithWorkingDirectory(PixiProjectDir)
-            .WithStandardOutputPipe(PipeTarget.ToDelegate(line => logger.ZLogInformation($"{line}")))
-            .WithStandardErrorPipe(PipeTarget.ToDelegate(line => logger.ZLogWarning($"f{line}")))
-            .WithValidation(CommandResultValidation.None)
-            .ExecuteAsync().ConfigureAwait(false);
-
-        if (result.ExitCode != 0)
-            logger.ZLogWarning($"Failed to ensure required packages (exit {result.ExitCode}), will proceed with pixi install.");
+        if (exit != 0)
+            logger.ZLogWarning($"Failed to ensure required packages (exit {exit}), will proceed with pixi install.");
     }
 
     public override async Task InstallPackagesAsync(
@@ -80,86 +74,184 @@ public sealed class PixiEnvironmentProvider(ILogger<PixiEnvironmentProvider> log
         IProgress<string> progress,
         CancellationToken cancellationToken)
     {
-        var list = packages.ToList();
-        if (list.Count == 0) return;
+        var requested = packages.ToList();
+        if (requested.Count == 0) return;
 
-        var pixi = PythonInstaller.PixiExePath;
-
-        progress.Report($"Trying conda-forge for {list.Count} package(s): {string.Join(", ", list)}");
-
-        var (condaSuccess, condaFailed) = await TryPixiAddBatchAsync(
-            pixi, list, pypi: false, progress, cancellationToken).ConfigureAwait(false);
-
-        if (condaFailed.Count == 0)
+        var installed = await GetInstalledNamesAsync(cancellationToken).ConfigureAwait(false);
+        var missing = requested.Where(spec => !installed.Contains(ExtractPackageName(spec))).ToList();
+        if (missing.Count == 0)
         {
-            progress.Report($"All {list.Count} package(s) installed from conda-forge.");
+            progress.Report("All requested packages already installed.");
             return;
         }
 
-        if (condaSuccess.Count > 0)
-            progress.Report($"conda-forge: {string.Join(", ", condaSuccess)}");
+        var (condaSpecs, pypiSpecs) = await PartitionBySearchAsync(missing, progress, cancellationToken)
+            .ConfigureAwait(false);
 
-        progress.Report($"Falling back to PyPI for: {string.Join(", ", condaFailed)}");
+        if (condaSpecs.Count > 0)
+        {
+            progress.Report($"Installing from conda: {string.Join(", ", condaSpecs)}");
+            var (_, failed) = await TryAddBatchAsync(condaSpecs, pypi: false, progress, cancellationToken)
+                .ConfigureAwait(false);
+            if (failed.Count > 0)
+            {
+                progress.Report($"Conda add failed; PyPI fallback for: {string.Join(", ", failed)}");
+                pypiSpecs.AddRange(failed);
+            }
+        }
 
-        var (pypiSuccess, pypiFailed) = await TryPixiAddBatchAsync(
-            pixi, condaFailed, pypi: true, progress, cancellationToken).ConfigureAwait(false);
+        if (pypiSpecs.Count > 0)
+        {
+            progress.Report($"Installing from PyPI: {string.Join(", ", pypiSpecs)}");
+            var (_, failed) = await TryAddBatchAsync(pypiSpecs, pypi: true, progress, cancellationToken)
+                .ConfigureAwait(false);
+            if (failed.Count > 0)
+                throw new InvalidOperationException(
+                    $"Failed to install the following package(s): {string.Join(", ", failed)}");
+        }
 
-        if (pypiSuccess.Count > 0)
-            progress.Report($"PyPI: {string.Join(", ", pypiSuccess)}");
-
-        if (pypiFailed.Count > 0)
-            throw new InvalidOperationException($"Failed to install the following package(s): {string.Join(", ", pypiFailed)}");
-
-        progress.Report($"All {list.Count} package(s) installed.");
+        progress.Report($"All {requested.Count} package(s) processed.");
     }
 
-    private static async Task<(List<string> Succeeded, List<string> Failed)> TryPixiAddBatchAsync(
-        string pixiExe,
+    /// <inheritdoc />
+    public override async Task<string> GetListJsonAsync(CancellationToken cancellationToken = default)
+    {
+        if (!PythonInstaller.IsPixiInstalled() || !Directory.Exists(PixiProjectDir))
+            return string.Empty;
+
+        var stdout = new StringBuilder();
+        var exit = await Cli.Wrap(PythonInstaller.PixiExePath)
+            .WithArguments(["list", "--json"])
+            .WithWorkingDirectory(PixiProjectDir)
+            .WithStandardOutputPipe(PipeTarget.ToStringBuilder(stdout))
+            .WithValidation(CommandResultValidation.None)
+            .ExecuteAsync(cancellationToken)
+            .ConfigureAwait(false);
+
+        return exit.ExitCode == 0 ? stdout.ToString().Trim() : string.Empty;
+    }
+
+    /// <summary>Split specs by conda availability (testable without pixi.exe).</summary>
+    public static (List<string> Conda, List<string> Pypi) PartitionByAvailability(
+        IEnumerable<string> specs,
+        Func<string, bool> isOnConda)
+    {
+        var conda = new List<string>();
+        var pypi = new List<string>();
+        var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+        foreach (var spec in specs)
+        {
+            var name = ExtractPackageName(spec);
+            if (string.IsNullOrEmpty(name) || !seen.Add(name))
+                continue;
+
+            if (isOnConda(name))
+                conda.Add(spec);
+            else
+                pypi.Add(spec);
+        }
+
+        return (conda, pypi);
+    }
+
+    private static async Task<(List<string> Conda, List<string> Pypi)> PartitionBySearchAsync(
+        List<string> missing,
+        IProgress<string> progress,
+        CancellationToken cancellationToken)
+    {
+        var onConda = new Dictionary<string, bool>(StringComparer.OrdinalIgnoreCase);
+
+        foreach (var spec in missing)
+        {
+            var name = ExtractPackageName(spec);
+            if (string.IsNullOrEmpty(name) || onConda.ContainsKey(name))
+                continue;
+
+            progress.Report($"Searching conda for {name}...");
+            onConda[name] = await IsOnCondaAsync(name, cancellationToken).ConfigureAwait(false);
+        }
+
+        return PartitionByAvailability(missing, onConda.GetValueOrDefault);
+    }
+
+    private static async Task<bool> IsOnCondaAsync(string packageName, CancellationToken cancellationToken)
+    {
+        // Exit code only — avoid --json (no --limit combo; can dump multi-MB).
+        var result = await Cli.Wrap(PythonInstaller.PixiExePath)
+            .WithArguments(["search", "--limit", "1", packageName])
+            .WithWorkingDirectory(PixiProjectDir)
+            .WithValidation(CommandResultValidation.None)
+            .ExecuteAsync(cancellationToken)
+            .ConfigureAwait(false);
+
+        return result.ExitCode == 0;
+    }
+
+    private static async Task<(List<string> Succeeded, List<string> Failed)> TryAddBatchAsync(
         List<string> pkgs,
         bool pypi,
         IProgress<string> progress,
         CancellationToken cancellationToken)
     {
-        var batchResult = await Cli.Wrap(pixiExe)
-            .WithArguments(BuildPixiAddArgs(pkgs, pypi))
-            .WithWorkingDirectory(PixiProjectDir)
-            .WithStandardOutputPipe(PipeTarget.ToDelegate(line => progress.Report($"  {line}")))
-            .WithStandardErrorPipe(PipeTarget.ToDelegate(line => progress.Report($"  {line}")))
-            .WithValidation(CommandResultValidation.None)
-            .ExecuteAsync(cancellationToken).ConfigureAwait(false);
+        if (pkgs.Count == 0)
+            return ([], []);
 
-        if (batchResult.ExitCode == 0)
+        var args = BuildAddArgs(pkgs, pypi);
+        var batchExit = await RunPixiAsync(
+                args,
+                line => progress.Report($"  {line}"),
+                line => progress.Report($"  {line}"),
+                cancellationToken)
+            .ConfigureAwait(false);
+
+        if (batchExit == 0)
             return (pkgs, []);
 
         var succeeded = new List<string>();
         var failed = new List<string>();
-
         foreach (var pkg in pkgs)
         {
             cancellationToken.ThrowIfCancellationRequested();
+            var exit = await RunPixiAsync(
+                    BuildAddArgs([pkg], pypi),
+                    line => progress.Report($"  {line}"),
+                    line => progress.Report($"  {line}"),
+                    cancellationToken)
+                .ConfigureAwait(false);
 
-            var singleResult = await Cli.Wrap(pixiExe)
-                .WithArguments(BuildPixiAddArgs([pkg], pypi))
-                .WithWorkingDirectory(PixiProjectDir)
-                .WithStandardOutputPipe(PipeTarget.ToDelegate(line => progress.Report($"  {line}")))
-                .WithStandardErrorPipe(PipeTarget.ToDelegate(line => progress.Report($"  {line}")))
-                .WithValidation(CommandResultValidation.None)
-                .ExecuteAsync(cancellationToken).ConfigureAwait(false);
-
-            if (singleResult.ExitCode == 0)
-                succeeded.Add(pkg);
-            else
-                failed.Add(pkg);
+            if (exit == 0) succeeded.Add(pkg);
+            else failed.Add(pkg);
         }
 
         return (succeeded, failed);
     }
 
-    private static List<string> BuildPixiAddArgs(IEnumerable<string> pkgs, bool pypi)
+    private static List<string> BuildAddArgs(IEnumerable<string> pkgs, bool pypi)
     {
         var args = new List<string> { "add" };
         if (pypi) args.Add("--pypi");
         args.AddRange(pkgs);
         return args;
+    }
+
+    private static async Task<int> RunPixiAsync(
+        IReadOnlyList<string> args,
+        Action<string>? onStdout = null,
+        Action<string>? onStderr = null,
+        CancellationToken cancellationToken = default)
+    {
+        var cmd = Cli.Wrap(PythonInstaller.PixiExePath)
+            .WithArguments(args)
+            .WithWorkingDirectory(PixiProjectDir)
+            .WithValidation(CommandResultValidation.None);
+
+        if (onStdout is not null)
+            cmd = cmd.WithStandardOutputPipe(PipeTarget.ToDelegate(onStdout));
+        if (onStderr is not null)
+            cmd = cmd.WithStandardErrorPipe(PipeTarget.ToDelegate(onStderr));
+
+        var result = await cmd.ExecuteAsync(cancellationToken).ConfigureAwait(false);
+        return result.ExitCode;
     }
 }

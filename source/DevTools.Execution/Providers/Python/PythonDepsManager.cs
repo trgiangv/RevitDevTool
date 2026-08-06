@@ -46,10 +46,7 @@ public static class PythonDepsManager
 
         try
         {
-            var stdinContent = provider.Backend == PythonBackend.Pixi
-                ? await RunPixiListAsync(cancellationToken).ConfigureAwait(false)
-                : await RunPipListAsync(provider, cancellationToken).ConfigureAwait(false);
-
+            var stdinContent = await provider.GetListJsonAsync(cancellationToken).ConfigureAwait(false);
             var result = await RunParserAsync(provider, actualPath, stdinContent, cancellationToken).ConfigureAwait(false);
             return result.ToInstall;
         }
@@ -84,30 +81,6 @@ public static class PythonDepsManager
         await provider.InstallPackagesAsync(depList, progress, cancellationToken).ConfigureAwait(false);
 
         progress.Report($"All {depList.Count} package(s) installed.");
-    }
-
-    private static async Task<string> RunPipListAsync(
-        PyEnvironmentProvider provider,
-        CancellationToken cancellationToken)
-    {
-        if (!provider.IsEnvironmentReady()) return string.Empty;
-
-        var stdout = new StringBuilder();
-        var result = await Cli.Wrap(provider.PythonExe)
-            .WithArguments(["-m", "pip", "list", "--format=json"])
-            .WithWorkingDirectory(provider.PythonHome)
-            .WithStandardOutputPipe(PipeTarget.ToStringBuilder(stdout))
-            .WithValidation(CommandResultValidation.None)
-            .ExecuteAsync(cancellationToken).ConfigureAwait(false);
-
-        return result.ExitCode == 0 ? stdout.ToString().Trim() : string.Empty;
-    }
-
-    private static async Task<string> RunPixiListAsync(CancellationToken cancellationToken)
-    {
-        var path = PythonEmbedded.PixiTomlPath;
-        if (!File.Exists(path)) return string.Empty;
-        return await File.ReadAllTextAsync(path, cancellationToken).ConfigureAwait(false);
     }
 
     private static async Task<ParseResult> RunParserAsync(

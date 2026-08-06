@@ -13,15 +13,19 @@ namespace DevTools.Execution.Providers.Python;
 /// where pixi.exe cannot execute due to security policies.
 /// Discovers the CPython distribution shipped with pyRevit (cengines directory),
 /// bootstraps pip, and uses <c>python.exe -m pip</c> for package management.
+/// Policy: skip if listed; otherwise pip install (single channel — no search-first).
 /// </summary>
 public sealed class PipEnvironmentProvider(ILogger<PipEnvironmentProvider> logger) : PyEnvironmentProvider
 {
     public override PythonBackend Backend => PythonBackend.Pip;
 
+    protected override Task<string> ResolvePythonHomeAsync()
+        => DiscoverPyRevitAsync();
+
     public override async Task SetupEnvironmentAsync()
     {
-        PythonHomePath = await DiscoverPyRevitAsync().ConfigureAwait(false);
-        RemovePthFile(PythonHomePath);
+        await EnsurePythonHomeAsync().ConfigureAwait(false);
+        RemovePthFile(PythonHome);
 
         if (!await IsPipAvailableAsync().ConfigureAwait(false))
             await BootstrapPipAsync().ConfigureAwait(false);
@@ -105,12 +109,19 @@ public sealed class PipEnvironmentProvider(ILogger<PipEnvironmentProvider> logge
 
     private async Task EnsureRequirePackagesAsync()
     {
-        // pip install is idempotent with version constraints:
-        // no-op if constraint is already satisfied, upgrades if version falls outside range.
-        var specs = RequirePackages.Values.ToList();
+        var installed = await GetInstalledNamesAsync().ConfigureAwait(false);
+        var missing = RequirePackages.Values
+            .Where(spec => !installed.Contains(ExtractPackageName(spec)))
+            .ToList();
+
+        if (missing.Count == 0)
+        {
+            logger.ZLogDebug($"[Pip] Require packages already installed — skipping pip install.");
+            return;
+        }
 
         var args = new List<string> { "-m", "pip", "install", "--prefer-binary", "--no-warn-script-location" };
-        args.AddRange(specs);
+        args.AddRange(missing);
 
         var result = await Cli.Wrap(PythonExe)
             .WithArguments(args)
@@ -121,7 +132,7 @@ public sealed class PipEnvironmentProvider(ILogger<PipEnvironmentProvider> logge
             .ExecuteAsync().ConfigureAwait(false);
 
         if (result.ExitCode != 0)
-            throw new InvalidOperationException($"Failed to verify required packages: {string.Join(", ", specs)}");
+            throw new InvalidOperationException($"Failed to verify required packages: {string.Join(", ", missing)}");
     }
 
     public override async Task InstallPackagesAsync(
@@ -129,13 +140,21 @@ public sealed class PipEnvironmentProvider(ILogger<PipEnvironmentProvider> logge
         IProgress<string> progress,
         CancellationToken cancellationToken)
     {
-        var list = packages.ToList();
-        if (list.Count == 0) return;
+        var requested = packages.ToList();
+        if (requested.Count == 0) return;
 
-        progress.Report($"Installing {list.Count} package(s) via pip: {string.Join(", ", list)}");
+        var installed = await GetInstalledNamesAsync(cancellationToken).ConfigureAwait(false);
+        var missing = requested.Where(spec => !installed.Contains(ExtractPackageName(spec))).ToList();
+        if (missing.Count == 0)
+        {
+            progress.Report("All requested packages already installed.");
+            return;
+        }
+
+        progress.Report($"Installing {missing.Count} package(s) via pip: {string.Join(", ", missing)}");
 
         var (succeeded, failed) = await TryPipInstallBatchAsync(
-            list, progress, cancellationToken).ConfigureAwait(false);
+            missing, progress, cancellationToken).ConfigureAwait(false);
 
         if (succeeded.Count > 0 && failed.Count > 0)
             progress.Report($"pip: {string.Join(", ", succeeded)}");
@@ -146,7 +165,25 @@ public sealed class PipEnvironmentProvider(ILogger<PipEnvironmentProvider> logge
                 $"Failed to install the following package(s): {string.Join(", ", failed)}");
         }
 
-        progress.Report($"All {list.Count} package(s) installed via pip.");
+        progress.Report($"All {requested.Count} package(s) processed via pip.");
+    }
+
+    /// <inheritdoc />
+    public override async Task<string> GetListJsonAsync(CancellationToken cancellationToken = default)
+    {
+        if (!IsEnvironmentReady())
+            return string.Empty;
+
+        var stdout = new StringBuilder();
+        var result = await Cli.Wrap(PythonExe)
+            .WithArguments(["-m", "pip", "list", "--format=json"])
+            .WithWorkingDirectory(PythonHome)
+            .WithStandardOutputPipe(PipeTarget.ToStringBuilder(stdout))
+            .WithValidation(CommandResultValidation.None)
+            .ExecuteAsync(cancellationToken)
+            .ConfigureAwait(false);
+
+        return result.ExitCode == 0 ? stdout.ToString().Trim() : string.Empty;
     }
 
     private void RemovePthFile(string targetDir)

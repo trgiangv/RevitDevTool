@@ -107,6 +107,42 @@ public sealed class PipEnvironmentTests : IAsyncLifetime, IDisposable
     }
 
     [Fact]
+    public async Task Parser_WithPixiListJson_SkipsAlreadyInstalled()
+    {
+        // Same shape as `pixi list --json` — installed-state path (decision 0014-B)
+        var listJson = """
+            [
+              {"name": "packaging", "version": "26.0", "kind": "conda"},
+              {"name": "pip", "version": "25.0", "kind": "pypi"}
+            ]
+            """;
+
+        var result = await RunParserAsync(Path.Combine(FixturesPath, "pep723_sample.py"), listJson);
+        Assert.Equal(0, result.ExitCode);
+
+        var packages = JsonDocument.Parse(result.Stdout).RootElement
+            .GetProperty("to_install").EnumerateArray()
+            .Select(e => e.GetString()!).ToList();
+
+        Assert.DoesNotContain(packages, p => p.Equals("packaging", StringComparison.OrdinalIgnoreCase));
+        Assert.Contains(packages, p => p.StartsWith("requests", StringComparison.OrdinalIgnoreCase));
+    }
+
+    [Fact]
+    public async Task Parser_WithEmptyPixiListJson_InstallsAllPep723Deps()
+    {
+        var result = await RunParserAsync(Path.Combine(FixturesPath, "pep723_sample.py"), "[]");
+        Assert.Equal(0, result.ExitCode);
+
+        var packages = JsonDocument.Parse(result.Stdout).RootElement
+            .GetProperty("to_install").EnumerateArray()
+            .Select(e => e.GetString()!).ToList();
+
+        Assert.Contains(packages, p => p.StartsWith("requests"));
+        Assert.Contains(packages, p => p == "packaging");
+    }
+
+    [Fact]
     public async Task Parser_ReturnsEmpty_WhenNoPep723Block()
     {
         var scriptPath = Path.Combine(FixturesPath, "pep723_no_deps.py");

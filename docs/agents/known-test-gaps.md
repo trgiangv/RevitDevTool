@@ -71,7 +71,9 @@ Thin unit layer (`tests/DevTools.Execution.Tests`, ~23 cases).
 
 ### Well covered
 
-- **Python environment** — pip/pixi path resolution, env probing
+- **Python environment** — pip fixtures; Pixi helper unit tests (`PartitionByAvailability`,
+  `ExtractPackageName`); Parser installed-state via list JSON; opt-in smoke
+  (`RUN_PIXI_SMOKE=1` → setup + Python.NET import)
 - **Execution guard** — `ExecutionGuardContext` ambient mode / rollback summary
 
 ### Gaps (low automated coverage)
@@ -81,6 +83,7 @@ Thin unit layer (`tests/DevTools.Execution.Tests`, ~23 cases).
 - **Host threading** — `IHostContextExecutor`, main-thread marshaling for API calls
 - **MCP dispatch from execution** — `McpPrimitiveDispatcher`, `ToolInvoke.py` payload path
 - **Built-in tools** — open document, registry providers
+- **Pixi AppData ensure/install** — opt-in smoke only; no CI coverage of cold wipe or search-first add
 
 `tests/RevitDevTool.PyServer.Tests/` — small Python parser check only.
 

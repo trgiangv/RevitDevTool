@@ -22,3 +22,4 @@ here.
 | [0010](0010-daemon-sole-mcp-host.md) | Daemon is sole MCP host | Accepted |
 | [0011](0011-hybrid-repository-harness-layout.md) | Hybrid repository-harness docs layout | Accepted |
 | [0012](0012-host-mcp-spec-engine.md) | Host MCP spec engine (no SDK on host) | Accepted |
+| [0014](0014-pep723-skip-if-listed-search-first.md) | Skip-if-listed + search-first (Pixi/Pip) | Accepted |

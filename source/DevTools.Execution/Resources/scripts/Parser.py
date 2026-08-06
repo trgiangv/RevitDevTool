@@ -6,8 +6,8 @@ Usage:
 
 stdin:
     Installed-package state in one of two formats (auto-detected):
-      - JSON array from ``pip list --format=json``  (Pip backend)
-      - TOML content of pixi.toml                   (Pixi backend)
+      - JSON array from ``pip list --format=json`` or ``pixi list --json``
+      - TOML content of pixi.toml (legacy)
       - Empty string when no state is available.
 
 Output (stdout, JSON):
@@ -94,9 +94,10 @@ def _parse_specifier(val: object) -> SpecifierSet:
 def _managed_packages(stdin_content: str) -> dict[str, SpecifierSet]:
     """Return {canonical_name: SpecifierSet} for packages already managed.
 
-    Accepts two formats (auto-detected):
-      - JSON array from ``pip list --format=json``
-      - TOML from pixi.toml
+    Accepts (auto-detected):
+      - JSON array from ``pip list --format=json`` or ``pixi list --json``
+      - TOML from pixi.toml (legacy / fixtures)
+      - Empty string when no state is available.
 
     Returns empty dict when content is empty or unparseable.
     """
@@ -104,7 +105,7 @@ def _managed_packages(stdin_content: str) -> dict[str, SpecifierSet]:
     if not text:
         return {}
 
-    if text.startswith("[{"):
+    if text.startswith("["):
         return _parse_pip_json(text)
 
     return _parse_pixi_toml(text)
