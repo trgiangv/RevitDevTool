@@ -1,9 +1,10 @@
 using DevTools.Logging;
+using DevTools.Utilities.Hosting.Resolver;
 
-namespace DevTools.Mcp.Server.Utils;
+namespace DevTools.Utilities.Hosting;
 
 /// <summary>Startup dialog auto-dismiss for launched host processes.</summary>
-internal static class HostLaunchCoordinator
+public static class HostLaunchCoordinator
 {
     /// <summary>
     /// Starts a PID-scoped dialog resolver that outlives the MCP request.
@@ -30,7 +31,7 @@ internal static class HostLaunchCoordinator
         TimeSpan wait)
     {
         if (task is null) return null;
-        if (task.IsCompletedSuccessfully) return task.Result;
+        if (task.Status == TaskStatus.RanToCompletion) return task.Result;
         try
         {
             using var cts = new CancellationTokenSource(wait);

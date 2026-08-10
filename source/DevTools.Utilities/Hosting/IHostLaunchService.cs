@@ -1,8 +1,7 @@
 using System.Diagnostics;
 using DevTools.Logging;
-using DevTools.Mcp.Server.Utils;
 
-namespace DevTools.Mcp.Server.Hosting;
+namespace DevTools.Utilities.Hosting;
 
 public interface IHostLaunchService
 {

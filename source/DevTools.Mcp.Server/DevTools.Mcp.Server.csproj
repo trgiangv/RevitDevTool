@@ -19,8 +19,8 @@
         <ProjectReference Include="..\DevTools.Mcp.Core\DevTools.Mcp.Core.csproj" />
         <ProjectReference Include="..\DevTools.FileMetadata.Core\DevTools.FileMetadata.Core.csproj" />
         <ProjectReference Include="..\DevTools.Mcp.Client\DevTools.Mcp.Client.csproj" SetTargetFramework="TargetFramework=net10.0-windows" />
-        <ProjectReference Include="..\DevTools.FileMetadata.Revit\DevTools.FileMetadata.Revit.csproj" />
         <ProjectReference Include="..\DevTools.Logging\DevTools.Logging.csproj" />
         <ProjectReference Include="..\DevTools.Ipc\DevTools.Ipc.csproj" />
+        <ProjectReference Include="..\DevTools.Utilities\DevTools.Utilities.csproj" />
     </ItemGroup>
 </Project>

@@ -1,12 +1,1 @@
-<Project Sdk="Microsoft.NET.Sdk">
-
-    <PropertyGroup>
-        <TargetFrameworks>net48;net8.0-windows;net10.0-windows</TargetFrameworks>
-        <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
-    </PropertyGroup>
-
-    <ItemGroup>
-        <PackageReference Include="Microsoft-WindowsAPICodePack-Shell" />
-    </ItemGroup>
-
-</Project>
+<Project Sdk="Microsoft.NET.Sdk">    <PropertyGroup>        <TargetFrameworks>net48;net8.0-windows;net10.0-windows</TargetFrameworks>        <AllowUnsafeBlocks>true</AllowUnsafeBlocks>    </PropertyGroup>    <ItemGroup>        <PackageReference Include="Microsoft-WindowsAPICodePack-Shell"/>        <PackageReference Include="Microsoft.Extensions.Logging.Abstractions"/>    </ItemGroup>    <ItemGroup>        <ProjectReference Include="..\DevTools.Logging\DevTools.Logging.csproj"/>        <ProjectReference Include="..\DevTools.FileMetadata.Revit\DevTools.FileMetadata.Revit.csproj"/>    </ItemGroup></Project>

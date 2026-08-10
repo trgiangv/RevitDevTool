@@ -3,7 +3,7 @@ using System.Text.RegularExpressions;
 
 namespace DevTools.FileMetadata.Revit;
 
-internal static partial class BasicFileInfoReader
+internal static class BasicFileInfoReader
 {
     private const string StreamName = "BasicFileInfo";
 

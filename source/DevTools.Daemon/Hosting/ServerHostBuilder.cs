@@ -8,6 +8,7 @@ using DevTools.Mcp.Catalog;
 using DevTools.Mcp.Client;
 using DevTools.Mcp.Server.Contracts;
 using DevTools.Mcp.Server.Hosting;
+using DevTools.Utilities.Hosting;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;

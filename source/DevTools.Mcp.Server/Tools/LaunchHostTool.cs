@@ -5,8 +5,8 @@ using DevTools.Mcp.Client;
 using DevTools.Mcp.Core;
 using DevTools.Mcp.Core.Utils;
 using DevTools.Mcp.Server.Contracts;
-using DevTools.Mcp.Server.Hosting;
 using DevTools.Mcp.Server.Utils;
+using DevTools.Utilities.Hosting;
 using ModelContextProtocol.Protocol;
 using ModelContextProtocol.Server;
 

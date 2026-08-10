@@ -1,9 +1,8 @@
 using Microsoft.Extensions.Logging;
-using ZLogger;
 
-namespace DevTools.Mcp.Server.Utils;
+namespace DevTools.Utilities.Hosting;
 
-internal sealed class StartupDialogResolverOptions
+public sealed class StartupDialogResolverOptions
 {
     public TimeSpan PollInterval { get; } = TimeSpan.FromMilliseconds(500);
 
@@ -44,7 +43,6 @@ public enum DialogResolution
 
 public sealed record DialogEvent(DialogResolution Resolution);
 
-[UsedImplicitly(ImplicitUseTargetFlags.Members)]
 public sealed record StartupDialogResolverResult(
     bool TimedOut,
     IReadOnlyList<DialogEvent> Events)
@@ -54,10 +52,10 @@ public sealed record StartupDialogResolverResult(
 
 /// <summary>
 /// Polls a process's top-level windows for Autodesk add-in security dialogs and clicks
-/// "Always Load" so unattended MCP launches are not blocked. Does not dismiss unrelated
+/// "Always Load" so unattended launches are not blocked. Does not dismiss unrelated
 /// prompts (sign-in, journal, license).
 /// </summary>
-internal static class StartupDialogResolver
+public static class StartupDialogResolver
 {
     public static async Task<StartupDialogResolverResult> RunAsync(
         int processId,
@@ -67,7 +65,7 @@ internal static class StartupDialogResolver
         CancellationToken cancellationToken = default)
     {
         var deadline = DateTime.UtcNow + duration;
-        var clickedButtons = new HashSet<nint>();
+        var clickedButtons = new HashSet<IntPtr>();
         var events = new List<DialogEvent>();
 
         bool timedOut;
@@ -97,7 +95,7 @@ internal static class StartupDialogResolver
     private static void ScanAndHandleDialogs(
         int processId,
         StartupDialogResolverOptions options,
-        HashSet<nint> clickedButtons,
+        HashSet<IntPtr> clickedButtons,
         List<DialogEvent> events,
         ILogger? logger)
     {
@@ -106,9 +104,9 @@ internal static class StartupDialogResolver
     }
 
     private static void HandleDialogWindow(
-        nint hwnd,
+        IntPtr hwnd,
         StartupDialogResolverOptions options,
-        HashSet<nint> clickedButtons,
+        HashSet<IntPtr> clickedButtons,
         List<DialogEvent> events,
         ILogger? logger)
     {
@@ -119,7 +117,7 @@ internal static class StartupDialogResolver
                 options.ClickTimeout, clickedButtons, out var clickedText))
             return;
 
-        logger?.ZLogInformation($"Dismissed add-in security dialog {title} via {clickedText}");
+        logger?.LogInformation("Dismissed add-in security dialog {Title} via {Button}", title, clickedText);
         events.Add(new DialogEvent(DialogResolution.ClickedPreferredButton));
     }
 
@@ -134,19 +132,19 @@ internal static class StartupDialogResolver
             if (!IsTargetDialog(hwnd, options.DialogTitleKeywords, out var title))
                 continue;
 
-            logger?.ZLogWarning($"Add-in security dialog still present at resolver end: {title}");
+            logger?.LogWarning("Add-in security dialog still present at resolver end: {Title}", title);
             events.Add(new DialogEvent(DialogResolution.Unresolved));
         }
     }
 
-    private static bool IsTargetDialog(nint hwnd, IReadOnlyList<string> keywords, out string title)
+    private static bool IsTargetDialog(IntPtr hwnd, IReadOnlyList<string> keywords, out string title)
     {
         title = string.Empty;
 
-        if (!string.Equals(NativeMethods.GetClassName(hwnd), NativeMethods.Dialog, StringComparison.OrdinalIgnoreCase))
+        if (!string.Equals(Win32Utils.GetClassName(hwnd), Win32Utils.DialogClass, StringComparison.OrdinalIgnoreCase))
             return false;
 
-        var windowTitle = NativeMethods.GetWindowText(hwnd);
+        var windowTitle = Win32Utils.GetWindowText(hwnd);
         if (string.IsNullOrWhiteSpace(windowTitle))
             return false;
 
@@ -158,15 +156,15 @@ internal static class StartupDialogResolver
     }
 
     private static bool TryClickPreferredButton(
-        nint dialogHwnd,
+        IntPtr dialogHwnd,
         IReadOnlyList<string> preferredKeywords,
         IReadOnlyList<string> blockedKeywords,
         TimeSpan clickTimeout,
-        HashSet<nint> clickedButtons,
+        HashSet<IntPtr> clickedButtons,
         out string? clickedText)
     {
         clickedText = null;
-        var bestButton = nint.Zero;
+        var bestButton = IntPtr.Zero;
         var bestScore = int.MaxValue;
         var bestText = string.Empty;
 
@@ -185,10 +183,10 @@ internal static class StartupDialogResolver
             bestText = text;
         }
 
-        if (bestButton == nint.Zero)
+        if (bestButton == IntPtr.Zero)
             return false;
 
-        if (!NativeMethods.TrySendMessageTimeout(bestButton, NativeMethods.BmClick, 0, 0, clickTimeout))
+        if (!Win32Utils.TrySendMessageTimeout(bestButton, Win32Utils.BmClick, IntPtr.Zero, IntPtr.Zero, clickTimeout))
             return false;
 
         clickedButtons.Add(bestButton);
@@ -197,14 +195,14 @@ internal static class StartupDialogResolver
     }
 
     private static (int? Score, string Text) GetButtonScore(
-        nint buttonHwnd,
+        IntPtr buttonHwnd,
         IReadOnlyList<string> preferredKeywords,
         IReadOnlyList<string> blockedKeywords)
     {
-        if (!string.Equals(NativeMethods.GetClassName(buttonHwnd), NativeMethods.Button, StringComparison.OrdinalIgnoreCase))
+        if (!string.Equals(Win32Utils.GetClassName(buttonHwnd), Win32Utils.ButtonClass, StringComparison.OrdinalIgnoreCase))
             return (null, string.Empty);
 
-        var text = NativeMethods.GetWindowText(buttonHwnd);
+        var text = Win32Utils.GetWindowText(buttonHwnd);
         if (string.IsNullOrWhiteSpace(text) || blockedKeywords.Any(keyword => text.Contains(keyword, StringComparison.OrdinalIgnoreCase)))
             return (null, string.Empty);
 
@@ -241,30 +239,30 @@ internal static class StartupDialogResolver
         return -1;
     }
 
-    private static List<nint> EnumerateTopLevelWindowsForProcess(int processId)
+    private static List<IntPtr> EnumerateTopLevelWindowsForProcess(int processId)
     {
-        var windows = new List<nint>();
-        NativeMethods.EnumWindows((hWnd, _) =>
+        var windows = new List<IntPtr>();
+        Win32Utils.EnumWindows((hWnd, _) =>
         {
-            NativeMethods.GetWindowThreadProcessId(hWnd, out var pid);
-            if (pid != processId || !NativeMethods.IsWindowVisible(hWnd))
+            Win32Utils.GetWindowThreadProcessId(hWnd, out var pid);
+            if (pid != processId || !Win32Utils.IsWindowVisible(hWnd))
                 return true;
 
             windows.Add(hWnd);
             return true;
-        }, nint.Zero);
+        }, IntPtr.Zero);
 
         return windows;
     }
 
-    private static List<nint> EnumerateChildButtons(nint dialogHwnd)
+    private static List<IntPtr> EnumerateChildButtons(IntPtr dialogHwnd)
     {
-        var buttons = new List<nint>();
-        NativeMethods.EnumChildWindows(dialogHwnd, (childHwnd, _) =>
+        var buttons = new List<IntPtr>();
+        Win32Utils.EnumChildWindows(dialogHwnd, (childHwnd, _) =>
         {
             buttons.Add(childHwnd);
             return true;
-        }, nint.Zero);
+        }, IntPtr.Zero);
 
         return buttons;
     }

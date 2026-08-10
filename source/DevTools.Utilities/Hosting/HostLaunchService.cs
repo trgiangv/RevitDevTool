@@ -1,11 +1,13 @@
 using System.Diagnostics;
 using System.Text.RegularExpressions;
 using DevTools.Logging;
-using DevTools.Mcp.Server.Utils;
+using DevTools.Utilities.Hosting.Resolver;
 using DevTools.FileMetadata.Revit;
+// ReSharper disable RedundantSuppressNullableWarningExpression
 
-namespace DevTools.Mcp.Server.Hosting;
+namespace DevTools.Utilities.Hosting;
 
+// ReSharper disable once PartialTypeWithSinglePart
 public sealed partial class HostLaunchService : IHostLaunchService
 {
     public HostProcessStart Start(
@@ -91,16 +93,16 @@ public sealed partial class HostLaunchService : IHostLaunchService
 
         var language = string.IsNullOrWhiteSpace(languageCode)
             ? "ENU"
-            : languageCode.Trim().ToUpperInvariant();
+            : languageCode!.Trim().ToUpperInvariant();
         if (!SupportedLanguageCodes.Contains(language))
             throw new InvalidOperationException(
                 $"Unsupported language code '{language}'. Supported: {string.Join(", ", SupportedLanguageCodes)}");
 
         var arguments = new List<string> { "/nosplash", "/language", language };
         if (!string.IsNullOrWhiteSpace(filePath))
-            arguments.Add(filePath);
+            arguments.Add(filePath!);
 
-        return new HostLaunchPlan(HostApp.Revit, version, exePath, language, arguments);
+        return new HostLaunchPlan(HostApp.Revit, version, exePath!, language, arguments);
     }
 
     private static string? ResolveRevitVersion(string? requestedVersion, string? filePath)
@@ -114,7 +116,7 @@ public sealed partial class HostLaunchService : IHostLaunchService
         if (string.IsNullOrWhiteSpace(filePath) || !File.Exists(filePath))
             return installedVersions.FirstOrDefault();
 
-        var fileVersion = ReadRevitFileVersion(filePath);
+        var fileVersion = ReadRevitFileVersion(filePath!);
         if (fileVersion is null || !int.TryParse(fileVersion, out var fileYear))
             return installedVersions.FirstOrDefault();
 
@@ -129,12 +131,17 @@ public sealed partial class HostLaunchService : IHostLaunchService
     {
         var revitVersion = RevitFileMetadataReader.TryReadRevitVersion(filePath);
         if (revitVersion is null) return null;
-        var match = RevitVersionPattern().Match(revitVersion);
+        var match = RevitVersionRegex.Match(revitVersion);
         return match.Success ? match.Value : null;
     }
 
+#if NET7_0_OR_GREATER
     [GeneratedRegex(@"20\d{2}")]
     private static partial Regex RevitVersionPattern();
+    private static readonly Regex RevitVersionRegex = RevitVersionPattern();
+#else
+    private static readonly Regex RevitVersionRegex = new(@"20\d{2}", RegexOptions.Compiled);
+#endif
 
     #endregion
 
@@ -152,9 +159,9 @@ public sealed partial class HostLaunchService : IHostLaunchService
 
         var arguments = new List<string> { "/nologo" };
         if (!string.IsNullOrWhiteSpace(filePath))
-            arguments.Add(filePath);
+            arguments.Add(filePath!);
 
-        return new HostLaunchPlan(hostApp, version, exePath, null, arguments);
+        return new HostLaunchPlan(hostApp, version, exePath!, null, arguments);
     }
 
     private static string? ResolveAcadVersion(string? requestedVersion)

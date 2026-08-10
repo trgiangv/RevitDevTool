@@ -1,10 +1,10 @@
 using System.Text.RegularExpressions;
 using DevTools.Logging;
 using Microsoft.Win32;
-
-namespace DevTools.Mcp.Server.Utils;
+namespace DevTools.Utilities.Hosting.Resolver;
 
 /// <summary>Discovers AutoCAD-family installations via registry and filesystem.</summary>
+// ReSharper disable once PartialTypeWithSinglePart
 internal static partial class AcadPathResolver
 {
     private const string AutoCadRegistryRoot = @"SOFTWARE\Autodesk\AutoCAD";
@@ -21,6 +21,15 @@ internal static partial class AcadPathResolver
         ["07"] = HostApp.AcadElec,
         ["17"] = HostApp.Plant3D,
     };
+    
+    private static readonly HashSet<HostApp> AcadFamily =
+    [
+        HostApp.AutoCad, HostApp.Civil3D, HostApp.Plant3D,
+        HostApp.AcadArch, HostApp.AcadMech, HostApp.AcadElec,
+        HostApp.AcadMep, HostApp.AcadMap3D
+    ];
+
+    public static bool IsAcadFamily(this HostApp app) => AcadFamily.Contains(app);
 
 #if NET7_0_OR_GREATER
     [GeneratedRegex(@"ACAD-[0-9A-F]\d(?<productId>\d{2})", RegexOptions.IgnoreCase)]
@@ -94,7 +103,7 @@ internal static partial class AcadPathResolver
 
         var hostApp = DetectProduct(productKeyName);
 
-        return new AcadInstallation(versionYear, hostApp, acadExe);
+        return new AcadInstallation(versionYear!, hostApp, acadExe);
     }
 
     private static HostApp DetectProduct(string productKeyName)
@@ -117,7 +126,7 @@ internal static partial class AcadPathResolver
 
         if (trimTrailingSlash)
         {
-            var dir = Path.GetDirectoryName(location.TrimEnd('\\', '/'));
+            var dir = Path.GetDirectoryName(location!.TrimEnd('\\', '/'));
             if (dir is not null)
             {
                 var exe = Path.Combine(dir, "acad.exe");

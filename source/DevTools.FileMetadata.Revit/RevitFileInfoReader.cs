@@ -71,7 +71,7 @@ public sealed class RevitFileMetadataReader : IFileReader
                 Locale = full.BasicInfo.Locale
             },
             ProjectTitle = full.ProjectInformation?.Title,
-            ProjectName = full.ProjectInformation?.Parameters?.GetValueOrDefault("Project Name"),
+            ProjectName = full.ProjectInformation?.Parameters.GetValueOrDefault("Project Name"),
             ExternalReferenceCount = full.TransmissionData?.ExternalFileReferences.Count ?? 0,
             ExternalReferences = full.TransmissionData?.ExternalFileReferences
                 .Select(r => new ExternalReferenceSummary

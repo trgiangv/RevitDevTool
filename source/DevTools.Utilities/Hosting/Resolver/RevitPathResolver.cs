@@ -1,5 +1,5 @@
 using Microsoft.Win32;
-namespace DevTools.Mcp.Server.Utils;
+namespace DevTools.Utilities.Hosting.Resolver;
 
 internal static class RevitPathResolver
 {

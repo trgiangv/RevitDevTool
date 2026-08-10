@@ -3,7 +3,7 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace DevTools.FileMetadata.Revit;
 
-public static class RevitFileMetadataServiceCollectionExtensions
+public static class RevitFileMetadataExtensions
 {
     public static IServiceCollection AddRevitFileMetadataReader(this IServiceCollection services)
     {

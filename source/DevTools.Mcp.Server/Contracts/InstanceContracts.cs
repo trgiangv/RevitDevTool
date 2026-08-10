@@ -1,7 +1,7 @@
 using System.Text.Json.Serialization;
 using DevTools.Ipc;
 using DevTools.Logging;
-using DevTools.Mcp.Server.Utils;
+using DevTools.Utilities.Hosting;
 
 namespace DevTools.Mcp.Server.Contracts;
 

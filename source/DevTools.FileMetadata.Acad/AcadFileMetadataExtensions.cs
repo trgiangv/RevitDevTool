@@ -3,7 +3,7 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace DevTools.FileMetadata.Acad;
 
-public static class AcadFileMetadataServiceCollectionExtensions
+public static class AcadFileMetadataExtensions
 {
     public static IServiceCollection AddAcadFileMetadataReader(this IServiceCollection services)
     {

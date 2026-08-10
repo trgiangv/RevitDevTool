@@ -1,11 +1,15 @@
 <Project Sdk="Microsoft.NET.Sdk">
     <PropertyGroup>
-        <TargetFramework>net10.0-windows</TargetFramework>
+        <TargetFrameworks>net48;net8.0-windows;net10.0-windows</TargetFrameworks>
     </PropertyGroup>
 
     <ItemGroup>
         <PackageReference Include="OpenMcdf" />
         <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" />
+    </ItemGroup>
+
+    <ItemGroup Condition="$(TargetFramework.StartsWith('net4'))">
+        <Reference Include="System.IO.Compression" />
     </ItemGroup>
 
     <ItemGroup>
