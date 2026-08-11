@@ -1,1 +1,9 @@
-namespace DevTools.Presentation.Views.Settings;public partial class LogSettingsView{    public LogSettingsView()    {        InitializeComponent();    }}
+namespace DevTools.Presentation.Views.Settings;
+
+public partial class LogSettingsView
+{
+    public LogSettingsView()
+    {
+        InitializeComponent();
+    }
+}
