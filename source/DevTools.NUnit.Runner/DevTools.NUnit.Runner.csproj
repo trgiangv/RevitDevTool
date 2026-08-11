@@ -1,0 +1,52 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <!--
+          Build (dev):   dotnet build
+          Publish:       dotnet publish -c Release -r win-x64
+          Deploy:        copies to RevitDevTool.bundle/Contents beside DevTools.Daemon.exe
+    -->
+
+    <PropertyGroup>
+        <OutputType>Exe</OutputType>
+        <TargetFramework>net10.0-windows</TargetFramework>
+        <RuntimeIdentifier>win-x64</RuntimeIdentifier>
+        <AssemblyName>DevTools.NUnit.Runner</AssemblyName>
+        <RootNamespace>DevTools.NUnit.Runner</RootNamespace>
+        <SelfContained>true</SelfContained>
+        <PublishSingleFile>true</PublishSingleFile>
+        <PublishReadyToRun>true</PublishReadyToRun>
+        <EnableCompressionInSingleFile>true</EnableCompressionInSingleFile>
+        <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
+        <PolyUseEmbeddedAttribute>true</PolyUseEmbeddedAttribute>
+    </PropertyGroup>
+
+    <PropertyGroup>
+        <BundleContentsFolder>$(AppData)\Autodesk\ApplicationPlugins\RevitDevTool.bundle\Contents</BundleContentsFolder>
+    </PropertyGroup>
+
+    <PropertyGroup Condition="$(Configuration.Contains('Release'))">
+        <DebugType>none</DebugType>
+        <DebugSymbols>false</DebugSymbols>
+    </PropertyGroup>
+
+    <Target Name="DeployDevToolsNUnitRunner" AfterTargets="Publish">
+        <MakeDir Directories="$(BundleContentsFolder)"/>
+        <Copy SourceFiles="$(PublishDir)DevTools.NUnit.Runner.exe"
+              DestinationFolder="$(BundleContentsFolder)"
+              OverwriteReadOnlyFiles="true"
+              Retries="3"
+              RetryDelayMilliseconds="1000"/>
+    </Target>
+
+    <ItemGroup>
+        <ProjectReference Include="..\DevTools.NUnit.Core\DevTools.NUnit.Core.csproj" SetTargetFramework="TargetFramework=net10.0-windows"/>
+        <ProjectReference Include="..\DevTools.Ipc\DevTools.Ipc.csproj" SetTargetFramework="TargetFramework=net10.0-windows"/>
+        <ProjectReference Include="..\DevTools.Logging\DevTools.Logging.csproj" SetTargetFramework="TargetFramework=net10.0-windows"/>
+        <ProjectReference Include="..\DevTools.Utilities\DevTools.Utilities.csproj" SetTargetFramework="TargetFramework=net10.0-windows"/>
+    </ItemGroup>
+
+    <ItemGroup>
+        <Using Include="DevTools.Ipc"/>
+    </ItemGroup>
+
+</Project>

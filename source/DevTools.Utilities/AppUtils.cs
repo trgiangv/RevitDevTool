@@ -23,6 +23,8 @@ public static class AppUtils
         "Autodesk", "ApplicationPlugins", "RevitDevTool.bundle", "Contents");
 
     public static string GetDaemonExePath() => Path.Combine(GetBundleContentsPath(), "DevTools.Daemon.exe");
+
+    public static string GetNUnitRunnerExePath() => Path.Combine(GetBundleContentsPath(), "DevTools.NUnit.Runner.exe");
     
     public static bool IsValidPath(string? path)
     {
