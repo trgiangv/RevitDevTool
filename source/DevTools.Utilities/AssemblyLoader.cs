@@ -7,9 +7,10 @@ using System.Runtime.Loader;
 namespace DevTools.Utilities;
 
 /// <summary>
-/// Assembly loader for isolating plugin dependencies.
-/// .NET 8+: Uses AssemblyLoadContext
-/// .NET Framework: Uses AppDomain.AssemblyResolve
+/// Assembly loader for plugin deploy-folder dependencies
+/// (<c>.../ApplicationPlugins/RevitDevTool.bundle/Contents/{year}</c>).
+/// .NET 8+: ALC LoadFromAssemblyPath. .NET Framework: Assembly.LoadFrom.
+/// Probe/test directories use DirectoryAssemblyLoad (LoadFile) instead — never mix the two.
 /// </summary>
 public static class AssemblyLoader
 {
