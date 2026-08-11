@@ -103,7 +103,7 @@
     </PropertyGroup>
 
     <Target Name="PublishAutoCadBundleFiles"
-            AfterTargets="CoreBuild"
+            AfterTargets="Build"
             Condition="$(PublishAutoCadBundle) == 'true' AND '$(AutoCadVersion)' != '' AND '$(TargetFramework)' != ''">
 
         <ItemGroup>
@@ -115,6 +115,8 @@
             <BundlePublishDir>$(PublishDir)</BundlePublishDir>
             <BundleVersionDir>$(BundlePublishDir)Contents\$(AutoCadVersion)\</BundleVersionDir>
         </PropertyGroup>
+
+        <RemoveDir Directories="$(BundleVersionDir)" Condition="Exists('$(BundleVersionDir)')"/>
 
         <Copy SourceFiles="@(PackageContentsFile)"
               DestinationFolder="$(BundlePublishDir)"/>

@@ -95,7 +95,7 @@
     </PropertyGroup>
 
     <Target Name="PublishRevitAddinFiles"
-            AfterTargets="CoreBuild"
+            AfterTargets="Build"
             Condition="$(PublishRevitAddin) == 'true' AND '$(RevitVersion)' != ''">
 
         <ItemGroup>
@@ -113,6 +113,8 @@
         <PropertyGroup>
             <BundleVersionDir>$(PublishDir)Contents\$(RevitVersion)\</BundleVersionDir>
         </PropertyGroup>
+
+        <RemoveDir Directories="$(BundleVersionDir)" Condition="Exists('$(BundleVersionDir)')"/>
 
         <Copy SourceFiles="@(PackageContentsFile)"
               DestinationFolder="$(PublishDir)"/>
@@ -136,7 +138,10 @@
 
         <PropertyGroup>
             <BundleDestinationFolder Condition="'$(BundleDestinationFolder)' == ''">$(AppData)\Autodesk\ApplicationPlugins\$(MSBuildProjectName).bundle</BundleDestinationFolder>
+            <BundleVersionDeployDir>$(BundleDestinationFolder)\Contents\$(RevitVersion)</BundleVersionDeployDir>
         </PropertyGroup>
+
+        <RemoveDir Directories="$(BundleVersionDeployDir)" Condition="Exists('$(BundleVersionDeployDir)')"/>
 
         <ItemGroup>
             <RevitBundleDeployItems Include="$(PublishDir)**\*"/>

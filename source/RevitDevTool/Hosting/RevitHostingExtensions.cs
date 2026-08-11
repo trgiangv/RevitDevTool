@@ -6,6 +6,7 @@ using DevTools.Execution.Providers;
 using DevTools.Logging;
 using DevTools.Logging.Abstractions;
 using DevTools.Mcp.Catalog;
+using DevTools.NUnit.Host;
 using DevTools.Presentation;
 using DevTools.Presentation.Interfaces;
 using DevTools.Settings;
@@ -129,6 +130,7 @@ internal static class RevitHostingExtensions
         services.AddSingleton<IIronPythonBridge, RevitIronPythonBridge>();
 
         services.AddExecutionServices(registerDefaultScriptProvider: false);
+        services.AddNUnitHostServices();
         services.AddSingleton<IScriptExecutionStrategyFactory, RevitScriptExecutionStrategyFactory>();
         services.AddSingleton<IExecutionProvider, ScriptExecutionProvider>();
         services.AddKeyedSingleton<IExecutionProvider, ScriptExecutionProvider>(ContainerMode.Script);

@@ -1,4 +1,4 @@
-﻿using System.Diagnostics.CodeAnalysis;
+using System.Diagnostics.CodeAnalysis;
 using System.Text.RegularExpressions;
 using System.Xml;
 using Build.Options;
@@ -29,6 +29,7 @@ public sealed partial class CreateBundleModule(IOptions<BuildOptions> buildOptio
     private const string BinFolder = "bin";
     private const string PublishFolder = "publish";
     private const string DaemonExecutable = "DevTools.Daemon.exe";
+    private const string NUnitRunnerExecutable = "DevTools.NUnit.Runner.exe";
     
     protected override async Task<string?> ExecuteAsync(IModuleContext context, CancellationToken cancellationToken)
     {
@@ -52,6 +53,7 @@ public sealed partial class CreateBundleModule(IOptions<BuildOptions> buildOptio
         PackFiles(revitPublishDirs, contentFolder);
         PackFiles(acadPublishDirs, contentFolder);
         PackDaemon(daemonResult.ValueOrDefault!, contentFolder);
+        PackNUnitRunner(daemonResult.ValueOrDefault!, contentFolder);
         CopyManifest(context, manifestFile, versioning);
 
         var outputFile = outputFolder.GetFile($"{bundleFolder.Name}.zip");
@@ -91,6 +93,14 @@ public sealed partial class CreateBundleModule(IOptions<BuildOptions> buildOptio
         if (!daemonExe.Exists) return;
 
         daemonExe.CopyTo(contentFolder.GetFile(DaemonExecutable).Path);
+    }
+
+    private static void PackNUnitRunner(string daemonPublishDir, Folder contentFolder)
+    {
+        var runnerExe = new File(Path.Combine(daemonPublishDir, NUnitRunnerExecutable));
+        if (!runnerExe.Exists) return;
+
+        runnerExe.CopyTo(contentFolder.GetFile(NUnitRunnerExecutable).Path);
     }
 
     private static void CopyManifest(IModuleContext context, File manifestFile, ResolveVersioningResult versioning)

@@ -16,6 +16,7 @@
     <Project Path="CSharpDemo/CSharpDemo.csproj">
         <Build Project="false" />
     </Project>
+    <Project Path="../source/DevTools.NUnit.TestAdapter/DevTools.NUnit.TestAdapter.csproj" />
     <Project Path="AcadCSharpDemo/AcadCSharpDemo.csproj">
         <Build Project="false" />
     </Project>
@@ -26,6 +27,9 @@
         <Build Project="false" />
     </Project>
     <Project Path="RevitMcpToolSet/RevitMcpToolSet.csproj">
+        <Build Project="false" />
+    </Project>
+    <Project Path="DevTools.NUnit.SampleTests/DevTools.NUnit.SampleTests.csproj">
         <Build Project="false" />
     </Project>
 </Solution>

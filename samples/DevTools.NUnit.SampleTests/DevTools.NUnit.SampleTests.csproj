@@ -1,0 +1,24 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <UseRevit>true</UseRevit>
+        <IsTestProject>true</IsTestProject>
+        <HostName>Revit</HostName>
+        <HostVersion>$(RevitVersion)</HostVersion>
+        <HostLaunch>false</HostLaunch>
+        <HostTimeout>60</HostTimeout>
+        <HostLaunchTimeout>180</HostLaunchTimeout>
+    </PropertyGroup>
+
+    <Import Project="..\..\source\DevTools.NUnit.TestAdapter\build\DevTools.NUnit.TestAdapter.targets"/>
+
+    <ItemGroup>
+        <PackageReference Include="Nice3point.Revit.Toolkit" VersionOverride="$(RevitVersion).*"/>
+        <PackageReference Include="Microsoft.NET.Test.Sdk"/>
+        <PackageReference Include="NUnit"/>
+        <ProjectReference Include="..\..\source\DevTools.NUnit.TestAdapter\DevTools.NUnit.TestAdapter.csproj">
+            <Private>true</Private>
+            <PrivateAssets>true</PrivateAssets>
+        </ProjectReference>
+    </ItemGroup>
+</Project>
