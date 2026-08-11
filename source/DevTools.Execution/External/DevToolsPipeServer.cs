@@ -50,9 +50,9 @@ public sealed class DevToolsPipeServer(
         state.SetConnectedState(0);
         state.SetQueueDepth(0);
 
-        var pytestHandler = handlers.OfType<PytestRequestHandler>().SingleOrDefault();
-        if (pytestHandler is not null)
-            pytestHandler.NotifySender = SendNotification;
+        var notificationPublishers = handlers.OfType<IBridgeNotificationPublisher>().ToList();
+        foreach (var publisher in notificationPublishers)
+            publisher.NotificationSender = SendNotification;
 
         _cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
         _acceptLoopTask = AcceptLoopAsync(_cts.Token);

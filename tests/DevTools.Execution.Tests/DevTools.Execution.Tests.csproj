@@ -16,6 +16,7 @@
     <ItemGroup>
         <ProjectReference Include="..\..\source\DevTools.Execution.Abstractions\DevTools.Execution.Abstractions.csproj" />
         <ProjectReference Include="..\..\source\DevTools.Execution\DevTools.Execution.csproj" />
+        <ProjectReference Include="..\..\source\DevTools.NUnit.Host\DevTools.NUnit.Host.csproj" />
     </ItemGroup>
 
     <ItemGroup>

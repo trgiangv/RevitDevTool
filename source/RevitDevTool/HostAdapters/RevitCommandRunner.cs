@@ -3,6 +3,7 @@ using System.Reflection;
 using DevTools.Execution.Interfaces;
 using DevTools.Execution.Models;
 using DevTools.Execution.Providers.Dotnet;
+using DevTools.Utilities.AssemblyLoading;
 using RevitDevTool.Core;
 
 namespace RevitDevTool.HostAdapters;
@@ -95,16 +96,8 @@ public sealed class RevitCommandRunner : ICommandRunner
         }
     }
 
-    private static Assembly LoadAssemblyWithSymbols(CommandLoadContext alc, string assemblyPath)
-    {
-        using var stream = new FileStream(assemblyPath, FileMode.Open, FileAccess.Read);
-        var pdbPath = Path.ChangeExtension(assemblyPath, ".pdb");
-        if (!File.Exists(pdbPath))
-            return alc.LoadFromStream(stream);
-
-        using var symbolStream = new FileStream(pdbPath, FileMode.Open, FileAccess.Read);
-        return alc.LoadFromStream(stream, symbolStream);
-    }
+    private static Assembly LoadAssemblyWithSymbols(CommandLoadContext alc, string assemblyPath) =>
+        ByteAssemblyLoader.LoadFromFileStream(alc, assemblyPath);
 
     private static Result InvokeViaDuckTyping(object instance, ref string message)
     {
@@ -143,8 +136,7 @@ public sealed class RevitCommandRunner : ICommandRunner
 
     private static IExternalCommand LoadCommand(CommandItem item)
     {
-        var assemblyBytes = File.ReadAllBytes(item.AssemblyPath);
-        var assembly = Assembly.Load(assemblyBytes);
+        var assembly = ByteAssemblyLoader.LoadFromFile(item.AssemblyPath);
         var instance = assembly.CreateInstance(item.FullClassName);
         return instance as IExternalCommand
             ?? throw new InvalidOperationException($"Failed to create IExternalCommand from '{item.FullClassName}'.");
@@ -168,13 +160,10 @@ public sealed class RevitCommandRunner : ICommandRunner
 
     private static Assembly? ResolveAssembly(string targetDir, ResolveEventArgs args)
     {
-        try
-        {
-            var assemblyName = new AssemblyName(args.Name);
-            var dllPath = Path.Combine(targetDir, assemblyName.Name + ".dll");
-            return File.Exists(dllPath) ? Assembly.Load(File.ReadAllBytes(dllPath)) : null;
-        }
-        catch { return null; }
+        if (args.Name is null)
+            return null;
+
+        return DirectoryAssemblyLoad.TryLoad(targetDir, new AssemblyName(args.Name));
     }
 #endif
 

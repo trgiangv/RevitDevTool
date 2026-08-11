@@ -4,12 +4,9 @@ namespace DevTools.Execution.External.Handlers;
 public sealed class PytestRequestHandler(
     IHostContextExecutor hostContext,
     PytestDependencyService dependencyService,
-    PytestExecutionService executionService) : IBridgeRequestHandler
+    PytestExecutionService executionService) : IBridgeRequestHandler, IBridgeNotificationPublisher
 {
-    /// <summary>
-    /// Injected by the pipe server to broadcast notifications to connected clients.
-    /// </summary>
-    public Action<string, JsonElement?>? NotifySender { get; set; }
+    public Action<string, JsonElement?>? NotificationSender { get; set; }
 
     public IReadOnlyCollection<string> SupportedMethods { get; } =
     [
@@ -67,7 +64,7 @@ public sealed class PytestRequestHandler(
 
     private Action<string>? CreateProgressCallback()
     {
-        var sender = NotifySender;
+        var sender = NotificationSender;
         if (sender is null)
             return null;
 
