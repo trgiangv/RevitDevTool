@@ -43,6 +43,8 @@ superpowers/
 .superpowers/
 .cocoindex_code/
 .cursor/hooks-state/
+.artifacts/
+.tmp/
 
 # Code signing
 *.pfx

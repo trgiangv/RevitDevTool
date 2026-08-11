@@ -1,4 +1,11 @@
 {
+    "files.eol": "\n",
+    "files.insertFinalNewline": false,
+    "files.trimTrailingWhitespace": true,
+    "editor.formatOnSave": true,
+    "[csharp]": {
+        "files.eol": "\n"
+    },
     "python.autoComplete.extraPaths": [
         "~/AppData/Roaming/RevitDevTool/2025/Stubs",
         "~/AppData/Roaming/pyRevit-Master/pyrevitlib",
