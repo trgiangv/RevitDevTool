@@ -1,0 +1,77 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+
+    <!--
+      Merge all output DLLs except RepackBinariesExcludes (VSTest platform assemblies stay external).
+      Pattern matches props/Revit.targets RepackAddinFiles.
+    -->
+    <Target Name="RepackAdapterFiles"
+            AfterTargets="Build"
+            Condition="'$(IsRepackable)' == 'true'">
+
+        <ItemGroup>
+            <ILRepackVersion Include="@(PackageVersion)"
+                             Condition="'%(PackageVersion.Identity)' == 'ILRepack'"/>
+        </ItemGroup>
+
+        <ItemGroup Condition="'@(ILRepackVersion->Count())' == '0'">
+            <ILRepackVersion Include="@(PackageReference)"
+                             Condition="'%(PackageReference.Identity)' == 'ILRepack'"/>
+        </ItemGroup>
+
+        <Error Condition="'@(ILRepackVersion->Count())' == '0'"
+               Text="ILRepack is required but not installed. Set IsRepackable=false or add a PackageReference to ILRepack."/>
+
+        <ItemGroup>
+            <ILRepackInputNamesExcludes Include="$(RepackBinariesExcludes.Split(';'))"/>
+            <ILRepackInputAssembliesExcludes
+                Include="$(OutputPath)%(ILRepackInputNamesExcludes.Identity)"/>
+        </ItemGroup>
+
+        <ItemGroup>
+            <ILRepackInputAssemblies Include="$(OutputPath)$(AssemblyName).dll"/>
+            <ILRepackInputAssemblies Include="$(OutputPath)*.dll"
+                                     Exclude="@(ILRepackInputAssembliesExcludes)"/>
+        </ItemGroup>
+
+        <PropertyGroup>
+            <ILRepackOutputName>$(AssemblyName)</ILRepackOutputName>
+            <ILRepackOutput>/out:&quot;$(OutputPath)$(ILRepackOutputName).dll&quot;</ILRepackOutput>
+            <ILRepackInput>@(ILRepackInputAssemblies -> '&quot;%(FullPath)&quot;', ' ')</ILRepackInput>
+            <ILRepackPath>&quot;$(NuGetPackageRoot)ilrepack\%(ILRepackVersion.Version)\tools\ILRepack.exe&quot;</ILRepackPath>
+            <ILRepackLib>@(ReferencePath->'%(RelativeDir)'->Distinct()->'/lib:&quot;%(identity) &quot;', ' ')</ILRepackLib>
+        </PropertyGroup>
+
+        <Message Text="Repacking $(MSBuildProjectDirectory)\$(OutputPath)$(AssemblyName).dll"
+                 Importance="high"/>
+
+        <Exec
+            Command="$(ILRepackPath) /internalize /union /illink /parallel $(ILRepackOutput) $(ILRepackLib) $(ILRepackInput)"
+            Condition="$(Configuration.Contains('Debug'))"/>
+
+        <Exec
+            Command="$(ILRepackPath) /internalize /union /illink /parallel /noRepackRes /ndebug $(ILRepackOutput) $(ILRepackLib) $(ILRepackInput)"
+            StandardOutputImportance="Low"
+            Condition="$(Configuration.Contains('Release'))"/>
+
+        <ItemGroup>
+            <RepackedFiles
+                Include="@(ILRepackInputAssemblies -> '%(RootDir)%(Directory)%(Filename).dll')"
+                Condition="%(Filename) != $(ILRepackOutputName)"/>
+            <RepackedFiles
+                Include="@(ILRepackInputAssemblies -> '%(RootDir)%(Directory)%(Filename).pdb')"
+                Condition="%(Filename) != $(ILRepackOutputName)"/>
+        </ItemGroup>
+
+        <Delete Files="@(RepackedFiles)"/>
+
+        <!-- Excluded assemblies must not ship beside the repacked adapter. -->
+        <Delete Files="@(ILRepackInputAssembliesExcludes)"/>
+
+        <ItemGroup>
+            <RepackedSatelliteDirs Include="$(OutputPath)cs;$(OutputPath)de;$(OutputPath)es;$(OutputPath)fr;$(OutputPath)it;$(OutputPath)ja;$(OutputPath)ko;$(OutputPath)pl;$(OutputPath)pt-BR;$(OutputPath)ru;$(OutputPath)tr;$(OutputPath)zh-Hans;$(OutputPath)zh-Hant"/>
+        </ItemGroup>
+        <RemoveDir Directories="@(RepackedSatelliteDirs)" Condition="Exists('%(Identity)')"/>
+    </Target>
+
+</Project>

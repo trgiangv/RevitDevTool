@@ -1,0 +1,27 @@
+<Project>
+  <Import Project="$(MSBuildThisFileDirectory)DevTools.NUnit.TestAdapter.props"
+          Condition="'$(DevToolsNUnitTestAdapterPropsImported)' != 'true'"/>
+
+  <Target Name="GenerateDevToolsNUnitRunSettings"
+          BeforeTargets="PrepareForBuild;Build;VSTest;GenerateRunSettings"
+          Condition="'$(IsTestProject)' == 'true'">
+
+    <Error
+        Condition="'$(HostName)' == ''"
+        Text="DevTools.NUnit test projects must declare &lt;HostName&gt; (for example Revit) in the .csproj." />
+    <Error
+        Condition="'$(HostVersion)' == ''"
+        Text="DevTools.NUnit test projects must declare &lt;HostVersion&gt; in the .csproj (for example &lt;HostVersion&gt;2024&lt;/HostVersion&gt; or &lt;HostVersion&gt;$(RevitVersion)&lt;/HostVersion&gt;). Build with an Autodesk configuration so MSBuild properties expand before runsettings are generated." />
+
+    <PropertyGroup>
+      <_DevToolsNUnitRunnerPath Condition="'$(DevToolsNUnitRunnerPath)' != ''">$(DevToolsNUnitRunnerPath)</_DevToolsNUnitRunnerPath>
+      <_DevToolsNUnitRunnerPath Condition="'$(_DevToolsNUnitRunnerPath)' == ''">%APPDATA%\Autodesk\ApplicationPlugins\RevitDevTool.bundle\Contents\DevTools.NUnit.Runner.exe</_DevToolsNUnitRunnerPath>
+      <RunSettingsFilePath>$(DevToolsNUnitGeneratedRunSettingsPath)</RunSettingsFilePath>
+    </PropertyGroup>
+
+    <WriteLinesToFile
+        File="$(DevToolsNUnitGeneratedRunSettingsPath)"
+        Lines="&lt;?xml version=&quot;1.0&quot; encoding=&quot;utf-8&quot;?&gt;&#xD;&#xA;&lt;RunSettings&gt;&#xD;&#xA;  &lt;RunConfiguration&gt;&#xD;&#xA;    &lt;CollectSourceInformation&gt;true&lt;/CollectSourceInformation&gt;&#xD;&#xA;  &lt;/RunConfiguration&gt;&#xD;&#xA;  &lt;DevToolsNUnit&gt;&#xD;&#xA;    &lt;HostName&gt;$(HostName)&lt;/HostName&gt;&#xD;&#xA;    &lt;HostVersion&gt;$(HostVersion)&lt;/HostVersion&gt;&#xD;&#xA;    &lt;HostLaunch&gt;$(HostLaunch)&lt;/HostLaunch&gt;&#xD;&#xA;    &lt;HostTimeout&gt;$(HostTimeout)&lt;/HostTimeout&gt;&#xD;&#xA;    &lt;HostLaunchTimeout&gt;$(HostLaunchTimeout)&lt;/HostLaunchTimeout&gt;&#xD;&#xA;    &lt;RunnerPath&gt;$(_DevToolsNUnitRunnerPath)&lt;/RunnerPath&gt;&#xD;&#xA;  &lt;/DevToolsNUnit&gt;&#xD;&#xA;&lt;/RunSettings&gt;"
+        Overwrite="true"/>
+  </Target>
+</Project>
