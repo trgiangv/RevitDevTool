@@ -69,9 +69,13 @@ scripts/kill-host.ps1 -HostApp Revit # Kill only Revit
 This applies to:
 - `scripts/build-host.ps1` (MSBuild `DeployRevitAddin`/`DeployAutoCadBundle` target deploys after build)
 - `scripts/pack.ps1`
-- `dotnet build` without `-p:DeployRevitAddin=false -p:DeployAutoCadBundle=false`
+- `dotnet build` on a **`UseRevit` / `UseAutoCad`** project without compile-only `-p:Deploy*=false`
 
-NOT needed when building with `-p:DeployRevitAddin=false -p:DeployAutoCadBundle=false -p:IsRepackable=false` (compile-only check).
+NOT needed when:
+- Building shared `DevTools.*` (no deploy targets imported), or
+- Building a host project with `-p:DeployRevitAddin=false -p:DeployAutoCadBundle=false -p:IsRepackable=false` (compile-only)
+
+Do not cargo-cult those `-p` flags onto every `dotnet build`. See `.agents/skills/build/SKILL.md`.
 
 ## ILRepack
 
@@ -83,6 +87,7 @@ Any shared `DevTools.*` change can affect all target frameworks. Polyfill covers
 
 ## Agent compile verify
 
-Agents run `dotnet build` on touched projects (deploy/ILRepack off) per the **build**
-skill. Spot-check `2022` / `2025` / `2027` for host API projects when TFM-sensitive.
-Full command reference: `verification.md`.
+Agents run `dotnet build` on touched projects per the **build** skill: shared
+libraries without deploy props; host `UseRevit`/`UseAutoCad` projects with
+deploy/ILRepack off for compile-only proof. Spot-check `2022` / `2025` / `2027`
+for host API projects when TFM-sensitive. Full command reference: `verification.md`.
