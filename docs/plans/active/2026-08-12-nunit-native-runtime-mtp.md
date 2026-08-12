@@ -241,11 +241,12 @@ cast remains valid across ALC/no-context boundaries.
 - Test: `tests/DevTools.NUnit.Core.Tests/`
 - Test: `tests/DevTools.NUnit.Host.Tests/`
 
-- [x] Add a failing contract-boundary test proving Core references neither`n  ``DevTools.Ipc`` nor ``System.Text.Json``.
-- [ ] Make Core contain only plain DTOs, runtime interfaces, protocol constants,
+- [x] Add a failing contract-boundary test proving Core references neither
+  `DevTools.Ipc` nor `System.Text.Json`.
+- [x] Make Core contain only plain DTOs, runtime interfaces, protocol constants,
   and transport-neutral compatibility data.
-- [ ] Keep exactly one loose Core assembly for Host and Runtime type identity.
-- [ ] Add failing generation tests proving package assemblies such as
+- [x] Keep exactly one loose Core assembly for Host and Runtime type identity.
+- [x] Add failing generation tests proving package assemblies such as
   `System.Reflection.Metadata` are generation-private while true platform and
   Autodesk API assemblies remain host-shared.
 - [x] Package the complete Runtime private dependency closure rather than only
