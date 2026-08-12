@@ -10,13 +10,14 @@ public interface INUnitHost
 
     NUnitRunResponse Run(
         NUnitRunRequest request,
-        Action<NUnitProgressEvent> publish);
+        Action<NUnitProgressEvent> publish,
+        CancellationToken cancellationToken = default);
 
     void Cancel(Guid runId);
 }
 
 public sealed class NUnitHost(
-    NUnitReflectionRunner runner,
+    NUnitRuntimeManager runtimeManager,
     ILogger<NUnitHost>? logger = null) : INUnitHost
 {
     private readonly ILogger<NUnitHost> _logger = logger ?? NullLogger<NUnitHost>.Instance;
@@ -25,7 +26,7 @@ public sealed class NUnitHost(
     {
         try
         {
-            return runner.Discover(request.AssemblyPath, request.Filter);
+            return runtimeManager.Discover(request);
         }
         catch (NUnitAssemblyLoadException)
         {
@@ -39,18 +40,12 @@ public sealed class NUnitHost(
 
     public NUnitRunResponse Run(
         NUnitRunRequest request,
-        Action<NUnitProgressEvent> publish)
+        Action<NUnitProgressEvent> publish,
+        CancellationToken cancellationToken = default)
     {
         try
         {
-            if (request.WaitForDebugger)
-            {
-                _logger.LogWarning(
-                    "NUnit run {RunId}: wait_for_debugger is ignored (host-process debugging deferred).",
-                    request.RunId);
-            }
-
-            return runner.Run(request.RunId, request.AssemblyPath, request.Filter, publish);
+            return runtimeManager.Run(request, publish, cancellationToken);
         }
         catch (NUnitAssemblyLoadException)
         {
@@ -62,7 +57,7 @@ public sealed class NUnitHost(
         }
     }
 
-    public void Cancel(Guid runId) => runner.Cancel(runId);
+    public void Cancel(Guid runId) => runtimeManager.Cancel(runId);
 
     private static NUnitAssemblyLoadException CreateLoadException(string assemblyPath, Exception ex) =>
         new(NUnitAssemblyPreflightResult.Failed(

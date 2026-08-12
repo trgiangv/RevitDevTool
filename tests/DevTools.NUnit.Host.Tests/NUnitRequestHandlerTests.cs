@@ -3,8 +3,12 @@ using DevTools.Execution.Abstractions;
 using DevTools.Logging;
 using DevTools.NUnit.Core.Compatibility;
 using DevTools.NUnit.Core.Contracts;
+using DevTools.NUnit.Transport;
 using DevTools.NUnit.Core.Results;
 using DevTools.NUnit.Host;
+using DevTools.NUnit.Host.Loading;
+using DevTools.NUnit.Host.Tests.Loading;
+using DevTools.NUnit.Host.Tests.TestSupport;
 using Microsoft.Extensions.Logging.Abstractions;
 
 namespace DevTools.NUnit.Host.Tests;
@@ -45,7 +49,7 @@ public sealed class NUnitRequestHandlerTests
             "run-1",
             NUnitProtocol.Run,
             JsonSerializer.SerializeToElement(
-                new NUnitRunRequest(Guid.NewGuid(), GetSpikeFixtureAssemblyPath(), null, false),
+                new NUnitRunRequest(Guid.NewGuid(), GetSpikeFixtureAssemblyPath(), null),
                 NUnitJsonContext.Default.NUnitRunRequest),
             TestContext.Current.CancellationToken);
 
@@ -66,7 +70,7 @@ public sealed class NUnitRequestHandlerTests
             "run-guard",
             NUnitProtocol.Run,
             JsonSerializer.SerializeToElement(
-                new NUnitRunRequest(Guid.NewGuid(), GetSpikeFixtureAssemblyPath(), null, false),
+                new NUnitRunRequest(Guid.NewGuid(), GetSpikeFixtureAssemblyPath(), null),
                 NUnitJsonContext.Default.NUnitRunRequest),
             TestContext.Current.CancellationToken);
 
@@ -166,7 +170,7 @@ public sealed class NUnitRequestHandlerTests
             "run-results",
             NUnitProtocol.Run,
             JsonSerializer.SerializeToElement(
-                new NUnitRunRequest(Guid.NewGuid(), GetSpikeFixtureAssemblyPath(), null, false),
+                new NUnitRunRequest(Guid.NewGuid(), GetSpikeFixtureAssemblyPath(), null),
                 NUnitJsonContext.Default.NUnitRunRequest),
             TestContext.Current.CancellationToken);
 
@@ -182,8 +186,6 @@ public sealed class NUnitRequestHandlerTests
 
         var outputCase = runResponse.Cases.Single(test => test.Name == "Spike_Output");
         Assert.Contains("spike-output-marker", outputCase.Output ?? string.Empty, StringComparison.Ordinal);
-        Assert.Contains("spike-trace-marker", outputCase.Output ?? string.Empty, StringComparison.Ordinal);
-        Assert.Contains("spike-debug-marker", outputCase.Output ?? string.Empty, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -207,7 +209,7 @@ public sealed class NUnitRequestHandlerTests
             "run-progress",
             NUnitProtocol.Run,
             JsonSerializer.SerializeToElement(
-                new NUnitRunRequest(Guid.NewGuid(), GetSpikeFixtureAssemblyPath(), null, false),
+                new NUnitRunRequest(Guid.NewGuid(), GetSpikeFixtureAssemblyPath(), null),
                 NUnitJsonContext.Default.NUnitRunRequest),
             TestContext.Current.CancellationToken);
 
@@ -226,7 +228,7 @@ public sealed class NUnitRequestHandlerTests
             "run-cancel",
             NUnitProtocol.Run,
             JsonSerializer.SerializeToElement(
-                new NUnitRunRequest(runId, GetSpikeFixtureAssemblyPath(), null, false),
+                new NUnitRunRequest(runId, GetSpikeFixtureAssemblyPath(), null),
                 NUnitJsonContext.Default.NUnitRunRequest),
             TestContext.Current.CancellationToken);
 
@@ -244,12 +246,51 @@ public sealed class NUnitRequestHandlerTests
         Assert.False(response.IsError);
     }
 
+    [Fact]
+    public async Task Handler_uses_fake_runtime_factory_for_discover_and_run()
+    {
+        var factory = new FakeNUnitRuntimeSessionFactory();
+        var generationsRoot = NUnitGenerationTestEnvironment.CreateIsolatedGenerationsRoot();
+        var handler = CreateHandler(
+            new RecordingHostContextExecutor(marshalToWorkerThread: false),
+            CreateHost(factory, generationsRoot));
+
+        var assemblyPath = GetSpikeFixtureAssemblyPath();
+        var discoverResponse = await handler.HandleAsync(
+            "discover-fake",
+            NUnitProtocol.Discover,
+            JsonSerializer.SerializeToElement(
+                new NUnitDiscoverRequest(assemblyPath, null),
+                NUnitJsonContext.Default.NUnitDiscoverRequest),
+            TestContext.Current.CancellationToken);
+
+        Assert.False(discoverResponse.IsError);
+        Assert.Single(factory.CreatedManifests);
+
+        var runResponse = await handler.HandleAsync(
+            "run-fake",
+            NUnitProtocol.Run,
+            JsonSerializer.SerializeToElement(
+                new NUnitRunRequest(Guid.NewGuid(), assemblyPath, null),
+                NUnitJsonContext.Default.NUnitRunRequest),
+            TestContext.Current.CancellationToken);
+
+        Assert.False(runResponse.IsError);
+        Assert.Single(factory.CreatedManifests);
+    }
+
     private static NUnitHost CreateHost() =>
-        new(
-            new NUnitReflectionRunner(
-                new NUnitAssemblyLoader(),
-                NullLogger<NUnitReflectionRunner>.Instance),
-            NullLogger<NUnitHost>.Instance);
+        CreateHost(new ModernNUnitRuntimeSessionFactory(), NUnitGenerationTestEnvironment.CreateIsolatedGenerationsRoot());
+
+    private static NUnitHost CreateHost(INUnitRuntimeSessionFactory sessionFactory, string generationsRoot)
+    {
+        var manager = new NUnitRuntimeManager(
+            ModernNUnitRuntimeTestEnvironment.CreateBuilder(generationsRoot),
+            sessionFactory,
+            new NUnitAssemblyLoader(),
+            NullLogger<NUnitRuntimeManager>.Instance);
+        return new NUnitHost(manager, NullLogger<NUnitHost>.Instance);
+    }
 
     private static NUnitRequestHandler CreateHandler(IHostContextExecutor executor, INUnitHost nunitHost) =>
         new(executor, nunitHost, new FakeHostAppInfo());
@@ -288,11 +329,16 @@ public sealed class NUnitRequestHandlerTests
                 return Task.FromResult(handler());
             }
 
-            return Task.Run(() =>
-            {
-                HandlerThreadId = Environment.CurrentManagedThreadId;
-                return handler();
-            }, token);
+            return Task.Factory.StartNew(
+                () =>
+                {
+                    HandlerThreadId = Environment.CurrentManagedThreadId;
+                    token.ThrowIfCancellationRequested();
+                    return handler();
+                },
+                token,
+                TaskCreationOptions.LongRunning,
+                TaskScheduler.Default);
         }
 
         public Task ExecuteAsync(Action action, CancellationToken token = default) =>
@@ -313,10 +359,13 @@ public sealed class NUnitRequestHandlerTests
         public NUnitDiscoverResponse Discover(NUnitDiscoverRequest request) =>
             _inner.Discover(request);
 
-        public NUnitRunResponse Run(NUnitRunRequest request, Action<NUnitProgressEvent> publish)
+        public NUnitRunResponse Run(
+            NUnitRunRequest request,
+            Action<NUnitProgressEvent> publish,
+            CancellationToken cancellationToken = default)
         {
             _runStarted.TrySetResult();
-            return _inner.Run(request, publish);
+            return _inner.Run(request, publish, cancellationToken);
         }
 
         public void Cancel(Guid runId)

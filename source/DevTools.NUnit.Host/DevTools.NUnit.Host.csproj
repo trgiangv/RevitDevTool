@@ -9,10 +9,16 @@
     </ItemGroup>
 
     <ItemGroup>
+        <InternalsVisibleTo Include="DevTools.NUnit.Host.NetFramework.Tests"/>
+        <InternalsVisibleTo Include="NetFrameworkGenerationProbe"/>
         <ProjectReference Include="..\DevTools.NUnit.Core\DevTools.NUnit.Core.csproj" SetTargetFramework="TargetFramework=$(TargetFramework)"/>
+        <ProjectReference Include="..\DevTools.NUnit.Transport\DevTools.NUnit.Transport.csproj" SetTargetFramework="TargetFramework=$(TargetFramework)"/>
         <ProjectReference Include="..\DevTools.Ipc\DevTools.Ipc.csproj"/>
         <ProjectReference Include="..\DevTools.Execution.Abstractions\DevTools.Execution.Abstractions.csproj"/>
         <ProjectReference Include="..\DevTools.Logging\DevTools.Logging.csproj"/>
+        <ProjectReference Include="..\DevTools.NUnit.Runtime\DevTools.NUnit.Runtime.csproj"
+                          ReferenceOutputAssembly="false"
+                          SetTargetFramework="TargetFramework=$(TargetFramework)"/>
         <ProjectReference Include="..\DevTools.Utilities\DevTools.Utilities.csproj"/>
     </ItemGroup>
 </Project>

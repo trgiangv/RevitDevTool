@@ -1,0 +1,17 @@
+<Project>
+  <!--
+    Assemblies owned by the host add-in surface:
+    - DevTools.NUnit.Core: one shared type identity (loose beside the add-in)
+    - Transport/JSON polyfills: ILRepack into the main host DLL
+
+    Never place these inside NUnitRuntimePayload / NUnitRuntime\.
+  -->
+  <ItemGroup>
+    <NUnitHostOwnedAssembly Include="DevTools.NUnit.Core" />
+    <NUnitHostOwnedAssembly Include="DevTools.Ipc" />
+    <NUnitHostOwnedAssembly Include="System.Text.Json" />
+    <NUnitHostOwnedAssembly Include="System.Text.Encodings.Web" />
+    <NUnitHostOwnedAssembly Include="System.IO.Pipelines" />
+    <NUnitHostOwnedAssembly Include="Microsoft.Bcl.AsyncInterfaces" />
+  </ItemGroup>
+</Project>

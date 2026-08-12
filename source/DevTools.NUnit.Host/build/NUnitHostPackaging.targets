@@ -1,0 +1,77 @@
+<Project>
+  <Import Project="$(MSBuildThisFileDirectory)NUnitHostMergedAssemblies.props" />
+
+  <PropertyGroup>
+    <NUnitRuntimeProject Condition="'$(NUnitRuntimeProject)' == ''">$(MSBuildThisFileDirectory)..\..\DevTools.NUnit.Runtime\DevTools.NUnit.Runtime.csproj</NUnitRuntimeProject>
+  </PropertyGroup>
+
+  <!--
+    Copy Runtime-owned payload into $(TargetDir)NUnitRuntime\.
+    Never use bare $(OutputPath) — when empty, MSBuild resolves relative to the
+    project directory and creates a stray source/NUnitRuntime folder.
+    Host JSON/IPC deps stay merged into the main add-in; Core stays loose beside the add-in.
+  -->
+  <Target Name="CopyNUnitRuntimeBootstrap"
+          AfterTargets="Build"
+          BeforeTargets="RepackAddinFiles"
+          Condition="'$(TargetPath)' != '' AND '$(TargetDir)' != ''">
+    <PropertyGroup>
+      <_NUnitRuntimeDeployDir>$([System.IO.Path]::GetFullPath('$(TargetDir)NUnitRuntime\'))</_NUnitRuntimeDeployDir>
+      <_NUnitHostOutputDir>$([System.IO.Path]::GetFullPath('$(TargetDir)'))</_NUnitHostOutputDir>
+    </PropertyGroup>
+
+    <MSBuild Projects="$(NUnitRuntimeProject)"
+             Targets="GetNUnitRuntimePayload"
+             Properties="Configuration=$(Configuration);TargetFramework=$(TargetFramework)">
+      <Output TaskParameter="TargetOutputs" ItemName="_NUnitRuntimePayload" />
+    </MSBuild>
+
+    <ItemGroup>
+      <_NUnitRuntimePayloadAbsolute Include="@(_NUnitRuntimePayload->'%(FullPath)')"
+                                    Condition="Exists('%(FullPath)')" />
+      <_NUnitRuntimePayloadAbsolute Include="@(_NUnitRuntimePayload)"
+                                    Condition="!Exists('%(FullPath)') AND Exists('%(Identity)')" />
+      <_StaleFlatRuntime Include="$(_NUnitHostOutputDir)DevTools.NUnit.Runtime.dll"
+                         Condition="Exists('$(_NUnitHostOutputDir)DevTools.NUnit.Runtime.dll')" />
+      <_StaleFlatRuntime Include="$(_NUnitHostOutputDir)DevTools.NUnit.Runtime.pdb"
+                         Condition="Exists('$(_NUnitHostOutputDir)DevTools.NUnit.Runtime.pdb')" />
+    </ItemGroup>
+
+    <Error Condition="'@(_NUnitRuntimePayloadAbsolute)' == ''"
+           Text="NUnit runtime payload from '$(NUnitRuntimeProject)' was empty (TargetFramework=$(TargetFramework))." />
+
+    <RemoveDir Directories="$(_NUnitRuntimeDeployDir)" Condition="Exists('$(_NUnitRuntimeDeployDir)')" />
+    <MakeDir Directories="$(_NUnitRuntimeDeployDir)" />
+    <Copy SourceFiles="@(_NUnitRuntimePayloadAbsolute)"
+          DestinationFolder="$(_NUnitRuntimeDeployDir)"
+          SkipUnchangedFiles="false" />
+    <Delete Files="@(_StaleFlatRuntime)" />
+  </Target>
+
+  <Target Name="AssertNUnitHostDependencyOwnership"
+          AfterTargets="RepackAddinFiles"
+          Condition="'$(IsRepackable)' == 'true' AND '$(TargetPath)' != '' AND '$(TargetDir)' != ''">
+    <PropertyGroup>
+      <_NUnitHostOutputDir>$([System.IO.Path]::GetFullPath('$(TargetDir)'))</_NUnitHostOutputDir>
+    </PropertyGroup>
+    <ItemGroup>
+      <_ForbiddenLooseHostDependency Include="$(_NUnitHostOutputDir)%(NUnitHostOwnedAssembly.Identity).dll"
+                                     Condition="'%(NUnitHostOwnedAssembly.Identity)' != 'DevTools.NUnit.Core'
+                                                AND Exists('$(_NUnitHostOutputDir)%(NUnitHostOwnedAssembly.Identity).dll')" />
+      <_ForbiddenLooseHostDependency Include="$(_NUnitHostOutputDir)NUnitRuntime\%(NUnitHostOwnedAssembly.Identity).dll"
+                                     Condition="Exists('$(_NUnitHostOutputDir)NUnitRuntime\%(NUnitHostOwnedAssembly.Identity).dll')" />
+      <_ForbiddenLooseHostDependency Include="$(_NUnitHostOutputDir)DevTools.NUnit.Runtime.dll"
+                                     Condition="Exists('$(_NUnitHostOutputDir)DevTools.NUnit.Runtime.dll')" />
+      <_RequiredLooseNUnitAssembly Include="$(_NUnitHostOutputDir)DevTools.NUnit.Core.dll"
+                                   Condition="!Exists('$(_NUnitHostOutputDir)DevTools.NUnit.Core.dll')" />
+      <_RequiredLooseNUnitAssembly Include="$(_NUnitHostOutputDir)NUnitRuntime\DevTools.NUnit.Runtime.dll"
+                                   Condition="!Exists('$(_NUnitHostOutputDir)NUnitRuntime\DevTools.NUnit.Runtime.dll')" />
+      <_RequiredLooseNUnitAssembly Include="$(_NUnitHostOutputDir)NUnitRuntime\nunit.framework.dll"
+                                   Condition="!Exists('$(_NUnitHostOutputDir)NUnitRuntime\nunit.framework.dll')" />
+    </ItemGroup>
+    <Error Condition="'@(_ForbiddenLooseHostDependency)' != ''"
+           Text="Host-owned dependencies must stay merged (or Core-only loose), never dual-copied: @(_ForbiddenLooseHostDependency)" />
+    <Error Condition="'@(_RequiredLooseNUnitAssembly)' != ''"
+           Text="DevTools.NUnit.Core must stay loose beside the add-in and Runtime private closure under NUnitRuntime\: @(_RequiredLooseNUnitAssembly)" />
+  </Target>
+</Project>

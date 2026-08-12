@@ -1,0 +1,31 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <TargetFramework>net48</TargetFramework>
+        <IsPackable>false</IsPackable>
+        <DefaultItemExcludes>$(DefaultItemExcludes);Fixtures\**\*</DefaultItemExcludes>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <Compile Remove="Fixtures\**\*.cs"/>
+    </ItemGroup>
+
+    <ItemGroup>
+        <PackageReference Include="Microsoft.NET.Test.Sdk"/>
+        <PackageReference Include="NUnit"/>
+        <PackageReference Include="NUnit3TestAdapter"/>
+        <GlobalPackageReference Remove="Polyfill"/>
+    </ItemGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\..\source\DevTools.NUnit.Host\DevTools.NUnit.Host.csproj" SetTargetFramework="TargetFramework=net48"/>
+        <ProjectReference Include="..\..\source\DevTools.NUnit.Core\DevTools.NUnit.Core.csproj" SetTargetFramework="TargetFramework=net48"/>
+        <ProjectReference Include="..\..\source\DevTools.NUnit.Runtime\DevTools.NUnit.Runtime.csproj" ReferenceOutputAssembly="false" SetTargetFramework="TargetFramework=net48"/>
+        <ProjectReference Include="..\DevTools.NUnit.Runtime.Fixtures\DevTools.NUnit.Runtime.Fixtures.csproj" ReferenceOutputAssembly="false"/>
+        <ProjectReference Include="Fixtures\ConflictingNUnitFramework\ConflictingNUnitFramework.csproj" ReferenceOutputAssembly="false"/>
+        <ProjectReference Include="Fixtures\GenerationPrivateDependency\GenerationPrivateDependency.csproj" ReferenceOutputAssembly="false"/>
+        <ProjectReference Include="Fixtures\DependencyConsumer\DependencyConsumer.csproj" ReferenceOutputAssembly="false"/>
+        <ProjectReference Include="Fixtures\NetFrameworkGenerationProbe\NetFrameworkGenerationProbe.csproj" ReferenceOutputAssembly="false"/>
+    </ItemGroup>
+
+</Project>

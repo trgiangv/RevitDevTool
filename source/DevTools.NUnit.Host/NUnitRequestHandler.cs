@@ -3,6 +3,7 @@ using DevTools.Execution.Abstractions;
 using DevTools.Logging;
 using DevTools.NUnit.Core.Compatibility;
 using DevTools.NUnit.Core.Contracts;
+using DevTools.NUnit.Transport;
 
 namespace DevTools.NUnit.Host;
 
@@ -71,7 +72,7 @@ public sealed class NUnitRequestHandler(
 
         var compatibilityError = ProtocolCompatibility.Validate(request!.ProtocolVersion);
         if (compatibilityError is not null)
-            return ProtocolCompatibility.CreateErrorResponse(requestId, request.ProtocolVersion);
+            return NUnitProtocolBridge.CreateIncompatibleResponse(requestId, request.ProtocolVersion);
 
         var response = new NUnitHelloResponse(
             ProtocolVersion: NUnitProtocol.CurrentVersion,
@@ -129,7 +130,7 @@ public sealed class NUnitRequestHandler(
             {
                 ExecutionGuardContext.Mode = ExecutionGuardMode.Suppress;
                 response = await hostContext
-                    .ExecuteAsync(() => nunitHost.Run(request!, PublishProgress), ct)
+                    .ExecuteAsync(() => nunitHost.Run(request!, PublishProgress, ct), ct)
                     .ConfigureAwait(false);
             }
             catch (NUnitAssemblyLoadException ex)

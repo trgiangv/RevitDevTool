@@ -1,0 +1,193 @@
+#if NETFRAMEWORK
+using System.Reflection;
+using DevTools.NUnit.Core.Contracts;
+using DevTools.NUnit.Core.Runtime;
+
+namespace DevTools.NUnit.Host.Loading;
+
+internal sealed class NetFrameworkRunnerBindingDiagnostic
+{
+    internal NetFrameworkRunnerBindingDiagnostic(
+        Assembly runnerAssembly,
+        Assembly generationFrameworkAssembly)
+    {
+        RunnerAssembly = runnerAssembly ?? throw new ArgumentNullException(nameof(runnerAssembly));
+        GenerationFrameworkAssembly = generationFrameworkAssembly
+            ?? throw new ArgumentNullException(nameof(generationFrameworkAssembly));
+    }
+
+    internal Assembly RunnerAssembly { get; }
+
+    internal Assembly GenerationFrameworkAssembly { get; }
+}
+
+internal sealed class NetFrameworkNUnitSessionHandle : INUnitRuntimeSession
+{
+    private const string RunnerFieldName = "_runner";
+
+    private INUnitRuntimeSession _inner;
+    private readonly NUnitGenerationRegistry _registry;
+    private bool _disposed;
+
+    internal NetFrameworkNUnitSessionHandle(
+        INUnitRuntimeSession inner,
+        NUnitGenerationRegistry registry,
+        NetFrameworkNUnitGeneration generation)
+    {
+        _inner = inner ?? throw new ArgumentNullException(nameof(inner));
+        _registry = registry ?? throw new ArgumentNullException(nameof(registry));
+        Generation = generation ?? throw new ArgumentNullException(nameof(generation));
+    }
+
+    internal NetFrameworkNUnitGeneration Generation { get; }
+
+    internal NUnitGenerationRegistry Registry => _registry;
+
+    public string GenerationId => _inner.GenerationId;
+
+    internal Assembly GetLoadedTestAssembly() => Generation.TestAssembly;
+
+    internal Assembly GetLoadedFrameworkAssembly() => Generation.GetLoadedFrameworkAssembly();
+
+    internal Assembly GetLoadedRuntimeAssembly() => Generation.RuntimeAssembly;
+
+    internal NetFrameworkRunnerBindingDiagnostic GetRunnerBindingDiagnostic()
+    {
+        var runnerField = _inner.GetType().GetField(RunnerFieldName, BindingFlags.Instance | BindingFlags.NonPublic)
+            ?? throw new InvalidOperationException("Runtime session runner field was not found.");
+
+        var runner = runnerField.GetValue(_inner)
+            ?? throw new InvalidOperationException("Runtime session runner was not initialized.");
+
+        return new NetFrameworkRunnerBindingDiagnostic(
+            runner.GetType().Assembly,
+            Generation.GetLoadedFrameworkAssembly());
+    }
+
+    public NUnitDiscoverResponse Discover(NUnitDiscoverRequest request) => _inner.Discover(request);
+
+    public NUnitRunResponse Run(
+        NUnitRunRequest request,
+        INUnitRuntimeEventSink eventSink,
+        CancellationToken cancellationToken) =>
+        _inner.Run(request, eventSink, cancellationToken);
+
+    public void Cancel(Guid runId) => _inner.Cancel(runId);
+
+    public void Dispose()
+    {
+        if (_disposed)
+            return;
+
+        _disposed = true;
+
+        try
+        {
+            _inner.Dispose();
+        }
+        finally
+        {
+            _inner = null!;
+        }
+    }
+
+    internal NUnitRuntimeDiagnostic CreateRetainedDiagnostic() => _registry.CreateRetainedDiagnostic();
+}
+
+public sealed class NetFrameworkNUnitRuntimeSessionFactory : INUnitRuntimeSessionFactory, IDisposable
+{
+    private const string RuntimeSessionTypeName = "DevTools.NUnit.Runtime.NUnitRuntimeSession";
+
+    private readonly NUnitGenerationRegistry _registry = new();
+    private readonly ResolveEventHandler _resolveHandler;
+    private readonly object _lifecycleLock = new();
+    private bool _disposed;
+
+    public NetFrameworkNUnitRuntimeSessionFactory()
+    {
+        _resolveHandler = OnAssemblyResolve;
+        _registry.RegisterAssemblyResolveHandler(_resolveHandler);
+    }
+
+    public int RetainedGenerationCount => _registry.RetainedGenerationCount;
+
+    internal bool HandlerIsRegisteredForTesting => _registry.HandlerIsRegisteredForTesting;
+
+    internal IReadOnlyList<GenerationAssemblyResolutionRecord> LazyResolutionRecords =>
+        _registry.LazyResolutionRecords;
+
+    public INUnitRuntimeSession Create(NUnitGenerationManifest generation)
+    {
+        if (generation is null)
+            throw new ArgumentNullException(nameof(generation));
+
+        lock (_lifecycleLock)
+        {
+            if (_disposed)
+                throw new ObjectDisposedException(nameof(NetFrameworkNUnitRuntimeSessionFactory));
+
+            var loadedGeneration = _registry.GetOrCreate(generation);
+            loadedGeneration.EnsureLoaded(_registry);
+
+            var inner = CreateRuntimeSession(loadedGeneration, _registry);
+            return new NetFrameworkNUnitSessionHandle(inner, _registry, loadedGeneration);
+        }
+    }
+
+    public NUnitRuntimeDiagnostic CreateRetainedDiagnostic() => _registry.CreateRetainedDiagnostic();
+
+    public void Dispose()
+    {
+        lock (_lifecycleLock)
+        {
+            if (_disposed)
+                return;
+
+            _disposed = true;
+            _registry.UnregisterAssemblyResolveHandler(_resolveHandler);
+        }
+    }
+
+    private Assembly? OnAssemblyResolve(object? sender, ResolveEventArgs args) =>
+        _registry.ResolveAssembly(sender, args);
+
+    private static INUnitRuntimeSession CreateRuntimeSession(
+        NetFrameworkNUnitGeneration generation,
+        NUnitGenerationRegistry registry)
+    {
+        var runtimeAssembly = generation.RuntimeAssembly;
+        var testAssembly = generation.TestAssembly;
+        var sessionType = runtimeAssembly.GetType(RuntimeSessionTypeName, throwOnError: true)!;
+
+        var hostCore = typeof(INUnitRuntimeSession).Assembly;
+        var runtimeCore = sessionType.Assembly.GetReferencedAssemblies()
+            .FirstOrDefault(reference =>
+                string.Equals(
+                    reference.Name,
+                    hostCore.GetName().Name,
+                    StringComparison.OrdinalIgnoreCase));
+
+        if (runtimeCore is not null
+            && !string.Equals(runtimeCore.FullName, hostCore.FullName, StringComparison.OrdinalIgnoreCase))
+        {
+            throw new NUnitGenerationAssemblyResolutionException(
+                "Generation runtime must bind DevTools.NUnit.Core to the host copy.");
+        }
+
+        registry.SetActiveLoadingGeneration(generation);
+        try
+        {
+            return (INUnitRuntimeSession)Activator.CreateInstance(
+                sessionType,
+                BindingFlags.Instance | BindingFlags.Public,
+                binder: null,
+                args: new object[] { testAssembly, generation.Manifest.ShadowAssemblyPath, generation.GenerationId },
+                culture: null)!;
+        }
+        finally
+        {
+            registry.ClearActiveLoadingGeneration(generation);
+        }
+    }
+}
+#endif

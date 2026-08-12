@@ -1,0 +1,26 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <OutputType>Exe</OutputType>
+        <TargetFramework>net48</TargetFramework>
+        <IsPackable>false</IsPackable>
+        <AssemblyName>NetFrameworkGenerationProbe</AssemblyName>
+        <RootNamespace>DevTools.NUnit.Host.NetFramework.Tests.Probe</RootNamespace>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <GlobalPackageReference Remove="Polyfill"/>
+    </ItemGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\..\..\..\source\DevTools.NUnit.Host\DevTools.NUnit.Host.csproj" SetTargetFramework="TargetFramework=net48"/>
+        <ProjectReference Include="..\..\..\..\source\DevTools.NUnit.Core\DevTools.NUnit.Core.csproj" SetTargetFramework="TargetFramework=net48"/>
+        <ProjectReference Include="..\ConflictingNUnitFramework\ConflictingNUnitFramework.csproj" ReferenceOutputAssembly="false"/>
+        <ProjectReference Include="..\..\..\DevTools.NUnit.Runtime.Fixtures\DevTools.NUnit.Runtime.Fixtures.csproj" ReferenceOutputAssembly="false"/>
+    </ItemGroup>
+
+    <ItemGroup>
+        <Compile Include="..\..\NetFrameworkGenerationTestEnvironment.cs" Link="NetFrameworkGenerationTestEnvironment.cs"/>
+    </ItemGroup>
+
+</Project>

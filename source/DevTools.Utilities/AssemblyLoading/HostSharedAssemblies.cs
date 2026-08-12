@@ -62,6 +62,13 @@ public static class HostSharedAssemblies
     }
 
     /// <summary>
+    /// Returns whether the name is an explicit host API/add-in assembly, without
+    /// applying the broad System/Microsoft convenience prefixes used by command loading.
+    /// </summary>
+    public static bool IsExplicitHostAssembly(string assemblyName) =>
+        !string.IsNullOrWhiteSpace(assemblyName) && SharedAssemblyNames.Contains(assemblyName);
+
+    /// <summary>
     /// Returns a host/shared assembly already loaded in the current AppDomain.
     /// Never loads from disk.
     /// </summary>

@@ -3,7 +3,12 @@
     <PropertyGroup>
         <TargetFramework>net10.0-windows</TargetFramework>
         <IsPackable>false</IsPackable>
+        <DefaultItemExcludes>$(DefaultItemExcludes);Loading\Stubs\**\*</DefaultItemExcludes>
     </PropertyGroup>
+
+    <ItemGroup>
+        <Compile Remove="Loading\Stubs\**\*.cs"/>
+    </ItemGroup>
 
     <ItemGroup>
         <PackageReference Include="coverlet.collector"/>
@@ -17,9 +22,14 @@
     <ItemGroup>
         <ProjectReference Include="..\..\source\DevTools.NUnit.Host\DevTools.NUnit.Host.csproj" SetTargetFramework="TargetFramework=net10.0-windows"/>
         <ProjectReference Include="..\..\source\DevTools.NUnit.Core\DevTools.NUnit.Core.csproj" SetTargetFramework="TargetFramework=net10.0-windows"/>
+        <ProjectReference Include="..\..\source\DevTools.NUnit.Transport\DevTools.NUnit.Transport.csproj" SetTargetFramework="TargetFramework=net10.0-windows"/>
         <ProjectReference Include="..\..\source\DevTools.Execution.Abstractions\DevTools.Execution.Abstractions.csproj"/>
         <ProjectReference Include="..\..\source\DevTools.Logging\DevTools.Logging.csproj"/>
         <ProjectReference Include="..\DevTools.NUnit.Host.Spike.Fixtures\DevTools.NUnit.Host.Spike.Fixtures.csproj"/>
+        <ProjectReference Include="..\..\source\DevTools.NUnit.Runtime\DevTools.NUnit.Runtime.csproj" ReferenceOutputAssembly="false" SetTargetFramework="TargetFramework=net10.0-windows"/>
+        <ProjectReference Include="..\DevTools.NUnit.Runtime.Fixtures\DevTools.NUnit.Runtime.Fixtures.csproj" ReferenceOutputAssembly="false"/>
+        <ProjectReference Include="Loading\Stubs\ConflictingNUnitFramework\ConflictingNUnitFramework.csproj" ReferenceOutputAssembly="false"/>
+        <ProjectReference Include="Loading\Stubs\GenerationPrivateDependency\GenerationPrivateDependency.csproj" ReferenceOutputAssembly="false"/>
     </ItemGroup>
 
     <ItemGroup>

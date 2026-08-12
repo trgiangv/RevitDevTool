@@ -1,0 +1,12 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <TargetFramework>net48</TargetFramework>
+        <AssemblyName>nunit.framework</AssemblyName>
+        <Version>3.14.0</Version>
+        <AssemblyVersion>3.14.0.0</AssemblyVersion>
+        <FileVersion>3.14.0.0</FileVersion>
+        <IsPackable>false</IsPackable>
+    </PropertyGroup>
+
+</Project>
