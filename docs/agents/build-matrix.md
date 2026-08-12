@@ -23,7 +23,7 @@ Valid modes are `Debug` and `Release`, so full names look like `Debug.Autodesk.2
 
 - Focused host compile: `scripts/build-host.ps1 -Year 2025`.
 - Release package: `scripts/pack.ps1`.
-- Build pipeline with no args: `dotnet run --project build` compiles all release configurations + publishes DevTools.Daemon.
+- Build pipeline with no args: `dotnet run --project build` compiles all release configurations + publishes DevTools.Daemon and DevTools.NUnit.Runner.
 
 ## DevTools.Daemon
 
@@ -49,11 +49,30 @@ dotnet publish source/DevTools.Daemon -c Release
 
 ### Pipeline Integration
 
-| Command | Daemon behavior |
+| Command | Daemon / Runner behavior |
 |---------|-----------------|
-| `dotnet run --project build` (no args) | `PublishDaemonModule` publishes + deploys to AppData |
-| `dotnet run --project build -- pack` | Same + `CreateBundleModule` packs DevTools.Daemon.exe into bundle zip |
-| `dotnet publish source/DevTools.Daemon -c Release` | Direct publish + deploy (csproj target) |
+| `dotnet run --project build` (no args) | `PublishDaemonModule` + `PublishNUnitRunnerModule` publish + deploy to AppData Contents |
+| `dotnet run --project build -- pack` | Same + `CreateBundleModule` packs both exes into bundle zip |
+| `dotnet publish source/DevTools.Daemon -c Release` | Direct Daemon publish + deploy (csproj target) |
+| `dotnet publish source/DevTools.NUnit.Runner -c Release` | Direct Runner publish + deploy (csproj target) |
+
+## DevTools.NUnit.Runner
+
+`DevTools.NUnit.Runner` is the host NUnit CLI (`DevTools.NUnit.Runner.exe`). It locates/reuses Revit or AutoCAD pipes and is installed beside Daemon under bundle `Contents\`.
+
+### Publish & Deploy
+
+The csproj has a `DeployDevToolsNUnitRunner` MSBuild target (`AfterTargets="Publish"`) that kills a running Runner process (file lock) and copies the single-file exe to `%AppData%\Autodesk\ApplicationPlugins\RevitDevTool.bundle\Contents\`.
+
+```bash
+dotnet publish source/DevTools.NUnit.Runner -c Release
+```
+
+### Build Characteristics
+
+- Target: `net10.0-windows` / `win-x64`
+- Self-contained single-file
+- Properties: `PublishSingleFile=true`, `SelfContained=true`
 
 ## Kill Host Process Before Deploy
 

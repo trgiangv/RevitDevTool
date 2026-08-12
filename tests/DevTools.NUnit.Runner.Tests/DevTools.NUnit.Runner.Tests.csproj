@@ -13,16 +13,22 @@
     </ItemGroup>
 
     <ItemGroup>
+        <ProjectReference Include="..\..\source\DevTools.Ipc\DevTools.Ipc.csproj"/>
         <ProjectReference Include="..\..\source\DevTools.NUnit.Core\DevTools.NUnit.Core.csproj"/>
     </ItemGroup>
 
     <ItemGroup>
         <Compile Include="..\..\source\DevTools.NUnit.Runner\Parsing\RunnerCommandParser.cs"
                  Link="Parsing\RunnerCommandParser.cs" />
+        <Compile Include="..\..\source\DevTools.NUnit.Runner\Services\NUnitPipeClient.cs"
+                 Link="Services\NUnitPipeClient.cs" />
+        <Compile Include="..\..\source\DevTools.NUnit.Runner\Services\NUnitRunnerFilter.cs"
+                 Link="Services\NUnitRunnerFilter.cs" />
     </ItemGroup>
 
     <ItemGroup>
         <Using Include="Xunit"/>
+        <Using Include="DevTools.Ipc"/>
     </ItemGroup>
 
 </Project>

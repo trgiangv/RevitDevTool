@@ -15,7 +15,7 @@ scripts/test-dotnet.ps1 -Project tests/DevTools.NUnit.Core.Tests/DevTools.NUnit.
 ```
 
 Deploy **Revit/Acad host** after Host DLL changes land in the add-in: `scripts/build-host.ps1 -Year <year>`.
-Publish Runner to bundle: `dotnet publish source/DevTools.NUnit.Runner -c Release`.
+Publish Runner to bundle: `dotnet publish source/DevTools.NUnit.Runner -c Release` (or `dotnet run --project build`, which runs `PublishNUnitRunnerModule`).
 
 Build flag rules: `.agents/skills/build/SKILL.md` (deploy props only for `UseRevit` / `UseAutoCad` projects).
 

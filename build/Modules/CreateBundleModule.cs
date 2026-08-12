@@ -20,6 +20,7 @@ namespace Build.Modules;
 [DependsOn<ResolveVersioningModule>]
 [DependsOn<CompileProjectModule>]
 [DependsOn<PublishDaemonModule>]
+[DependsOn<PublishNUnitRunnerModule>]
 [UsedImplicitly]
 public sealed partial class CreateBundleModule(IOptions<BuildOptions> buildOptions) : Module<string>
 {
@@ -35,6 +36,7 @@ public sealed partial class CreateBundleModule(IOptions<BuildOptions> buildOptio
     {
         var versioningResult = await context.GetModule<ResolveVersioningModule>();
         var daemonResult = await context.GetModule<PublishDaemonModule>();
+        var nunitRunnerResult = await context.GetModule<PublishNUnitRunnerModule>();
         var versioning = versioningResult.ValueOrDefault!;
 
         var revitTarget = new File(Projects.RevitDevTool.FullName);
@@ -53,7 +55,7 @@ public sealed partial class CreateBundleModule(IOptions<BuildOptions> buildOptio
         PackFiles(revitPublishDirs, contentFolder);
         PackFiles(acadPublishDirs, contentFolder);
         PackDaemon(daemonResult.ValueOrDefault!, contentFolder);
-        PackNUnitRunner(daemonResult.ValueOrDefault!, contentFolder);
+        PackNUnitRunner(nunitRunnerResult.ValueOrDefault!, contentFolder);
         CopyManifest(context, manifestFile, versioning);
 
         var outputFile = outputFolder.GetFile($"{bundleFolder.Name}.zip");
@@ -95,10 +97,11 @@ public sealed partial class CreateBundleModule(IOptions<BuildOptions> buildOptio
         daemonExe.CopyTo(contentFolder.GetFile(DaemonExecutable).Path);
     }
 
-    private static void PackNUnitRunner(string daemonPublishDir, Folder contentFolder)
+    private static void PackNUnitRunner(string runnerPublishDir, Folder contentFolder)
     {
-        var runnerExe = new File(Path.Combine(daemonPublishDir, NUnitRunnerExecutable));
-        if (!runnerExe.Exists) return;
+        var runnerExe = new File(Path.Combine(runnerPublishDir, NUnitRunnerExecutable));
+        runnerExe.Exists.ShouldBeTrue(
+            $"Expected {NUnitRunnerExecutable} at '{runnerExe.Path}' after PublishNUnitRunnerModule.");
 
         runnerExe.CopyTo(contentFolder.GetFile(NUnitRunnerExecutable).Path);
     }

@@ -30,6 +30,7 @@ public sealed class HostSmokeTests
             valuetest.Append("devtools-nunit-trace-marker\n");
         }
         Console.WriteLine(RevitApiContext.Application.VersionBuild);
+        Console.WriteLine($"host-pid={Process.GetCurrentProcess().Id}");
         Console.WriteLine(valuetest.ToString());
         Trace.WriteLine("devtools-nunit-trace-marker");
         Debug.WriteLine("devtools-nunit-debug-marker");

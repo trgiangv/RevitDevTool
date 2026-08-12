@@ -19,8 +19,7 @@ public interface IRunnerClient
     RemoteRunResult Run(
         string source,
         string? filter,
-        RunnerHostOptions options,
-        bool waitForDebugger);
+        RunnerHostOptions options);
 
     void Cancel();
 }

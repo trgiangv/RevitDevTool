@@ -1,4 +1,5 @@
 using System.Text.Json;
+using DevTools.NUnit.Transport;
 using DevTools.Logging;
 using DevTools.NUnit.Core;
 using DevTools.NUnit.Core.Contracts;
@@ -23,6 +24,12 @@ public static class DiscoverCommand
         if (!TryParseHost(options.Host, out var hostApp, out var hostError))
         {
             await Console.Error.WriteLineAsync(hostError).ConfigureAwait(false);
+            return RunnerCommandParser.ExitCliError;
+        }
+
+        if (!NUnitRunnerFilter.TryNormalize(options.Filter, out _, out var filterError))
+        {
+            await Console.Error.WriteLineAsync(filterError).ConfigureAwait(false);
             return RunnerCommandParser.ExitCliError;
         }
 

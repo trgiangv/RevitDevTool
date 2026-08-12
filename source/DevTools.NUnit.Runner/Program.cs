@@ -44,8 +44,8 @@ internal static class Program
             DevTools.NUnit.Runner — host NUnit test controller
 
             Usage:
-              DevTools.NUnit.Runner discover <assembly> --host <Revit|AutoCAD> --version <year> [--filter <nunit-where>]
-              DevTools.NUnit.Runner run <assembly> --host <Revit|AutoCAD> --version <year> [--filter <nunit-where>]
+              DevTools.NUnit.Runner discover <assembly> --host <Revit|AutoCAD> --version <year> [--filter <nunit-framework-filter-xml>]
+              DevTools.NUnit.Runner run <assembly> --host <Revit|AutoCAD> --version <year> [--filter <nunit-framework-filter-xml>]
 
             Options:
               --host-launch                Always launch a new host (skip reusing existing instances)

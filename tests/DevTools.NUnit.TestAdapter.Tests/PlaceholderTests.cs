@@ -38,7 +38,7 @@ public class TestAdapterLayoutTests
         Assert.Contains("<HostVersion>$(RevitVersion)</HostVersion>", sampleProject);
         Assert.Contains("<HostLaunch>false</HostLaunch>", sampleProject);
         Assert.Contains("<HostTimeout>60</HostTimeout>", sampleProject);
-        Assert.Contains("<HostLaunchTimeout>180</HostLaunchTimeout>", sampleProject);
+        Assert.Contains("<HostLaunchTimeout>360</HostLaunchTimeout>", sampleProject);
         Assert.Contains("GenerateDevToolsNUnitRunSettings", targets);
         Assert.DoesNotContain("GenerateDevToolsNUnitAdapterBindingRedirects", targets);
         Assert.Contains("$(DevToolsNUnitGeneratedRunSettingsPath)", targets);

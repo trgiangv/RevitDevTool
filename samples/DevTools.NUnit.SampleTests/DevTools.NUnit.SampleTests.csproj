@@ -7,7 +7,7 @@
         <HostVersion>$(RevitVersion)</HostVersion>
         <HostLaunch>false</HostLaunch>
         <HostTimeout>60</HostTimeout>
-        <HostLaunchTimeout>180</HostLaunchTimeout>
+        <HostLaunchTimeout>360</HostLaunchTimeout>
     </PropertyGroup>
 
     <Import Project="..\..\source\DevTools.NUnit.TestAdapter\build\DevTools.NUnit.TestAdapter.targets"/>

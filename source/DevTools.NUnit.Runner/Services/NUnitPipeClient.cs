@@ -1,20 +1,26 @@
 using System.Collections.Concurrent;
 using System.IO.Pipes;
 using System.Text.Json;
+using DevTools.NUnit.Transport;
 using DevTools.NUnit.Core.Compatibility;
 using DevTools.NUnit.Core;
 using DevTools.NUnit.Core.Contracts;
+using DevTools.NUnit.Core.Results;
 
 namespace DevTools.NUnit.Runner.Services;
 
 public sealed class NUnitPipeClient : IAsyncDisposable
 {
+    private const int MaxPendingDiscardedResponses = 32;
+    private static readonly TimeSpan CancelSendTimeout = TimeSpan.FromSeconds(2);
+
     private readonly BridgePipeConnection _connection;
-    private readonly NamedPipeClientStream _pipe;
+    private readonly Stream? _pipe;
     private readonly ConcurrentQueue<BridgeMessage> _inbox = new();
+    private readonly ConcurrentDictionary<string, byte> _discardedResponseIds = new(StringComparer.Ordinal);
     private volatile bool _disconnected;
 
-    private NUnitPipeClient(NamedPipeClientStream pipe, BridgePipeConnection connection)
+    private NUnitPipeClient(Stream? pipe, BridgePipeConnection connection)
     {
         _pipe = pipe;
         _connection = connection;
@@ -35,32 +41,44 @@ public sealed class NUnitPipeClient : IAsyncDisposable
         return client;
     }
 
+    internal static NUnitPipeClient ConnectForTesting(Stream stream)
+    {
+        var connection = new BridgePipeConnection(stream);
+        var client = new NUnitPipeClient(pipe: null, connection);
+        connection.StartReadLoop();
+        return client;
+    }
+
     public async Task<NUnitHelloResponse> HelloAsync(CancellationToken ct = default)
     {
         var response = await SendRequestAsync(
-            "hello",
+            CreateRequestId("hello"),
             NUnitProtocol.Hello,
             JsonSerializer.SerializeToElement(
                 new NUnitHelloRequest(NUnitProtocol.CurrentVersion),
                 NUnitJsonContext.Default.NUnitHelloRequest),
             progress: null,
-            debugReady: null,
+            activeRunId: null,
             ct).ConfigureAwait(false);
 
-        return response.Result!.Value.Deserialize(NUnitJsonContext.Default.NUnitHelloResponse)
+        var hello = response.Result!.Value.Deserialize(NUnitJsonContext.Default.NUnitHelloResponse)
             ?? throw new InvalidOperationException("Empty hello response.");
+
+        ValidateHelloProtocolVersion(hello);
+        return hello;
     }
 
     public async Task<NUnitDiscoverResponse> DiscoverAsync(string assemblyPath, string? filter, CancellationToken ct = default)
     {
+        var normalizedFilter = NUnitRunnerFilter.Normalize(filter);
         var response = await SendRequestAsync(
-            "discover",
+            CreateRequestId("discover"),
             NUnitProtocol.Discover,
             JsonSerializer.SerializeToElement(
-                new NUnitDiscoverRequest(assemblyPath, filter),
+                new NUnitDiscoverRequest(assemblyPath, normalizedFilter),
                 NUnitJsonContext.Default.NUnitDiscoverRequest),
             progress: null,
-            debugReady: null,
+            activeRunId: null,
             ct).ConfigureAwait(false);
 
         return response.Result!.Value.Deserialize(NUnitJsonContext.Default.NUnitDiscoverResponse)
@@ -70,36 +88,53 @@ public sealed class NUnitPipeClient : IAsyncDisposable
     public Task<NUnitRunResponse> RunAsync(
         string assemblyPath,
         string? filter,
-        bool waitForDebugger,
         IProgress<NUnitProgressEvent>? progress,
-        IProgress<NUnitDebugReadyEvent>? debugReady = null,
-        CancellationToken ct = default)
-    {
-        var runId = Guid.NewGuid();
-        return SendRunAsync(runId, assemblyPath, filter, waitForDebugger, progress, debugReady, ct);
-    }
+        CancellationToken ct = default) =>
+        SendRunAsync(Guid.NewGuid(), assemblyPath, filter, progress, ct);
+
+    public Task CancelAsync(Guid runId, CancellationToken ct = default) =>
+        SendCancelAsync(runId, ct);
 
     private async Task<NUnitRunResponse> SendRunAsync(
         Guid runId,
         string assemblyPath,
         string? filter,
-        bool waitForDebugger,
         IProgress<NUnitProgressEvent>? progress,
-        IProgress<NUnitDebugReadyEvent>? debugReady,
         CancellationToken ct)
     {
-        var response = await SendRequestAsync(
-            "run",
-            NUnitProtocol.Run,
-            JsonSerializer.SerializeToElement(
-                new NUnitRunRequest(runId, assemblyPath, filter, waitForDebugger),
-                NUnitJsonContext.Default.NUnitRunRequest),
-            progress,
-            debugReady,
-            ct).ConfigureAwait(false);
+        var normalizedFilter = NUnitRunnerFilter.Normalize(filter);
+        var terminalCaseIds = new HashSet<string>(StringComparer.Ordinal);
+        var requestId = CreateRequestId("run");
+        var runRequestSent = false;
 
-        return response.Result!.Value.Deserialize(NUnitJsonContext.Default.NUnitRunResponse)
-            ?? throw new InvalidOperationException("Empty run response.");
+        try
+        {
+            await _connection.WriteAsync(
+                BridgeMessage.Request(
+                    requestId,
+                    NUnitProtocol.Run,
+                    JsonSerializer.SerializeToElement(
+                        new NUnitRunRequest(runId, assemblyPath, normalizedFilter),
+                        NUnitJsonContext.Default.NUnitRunRequest)),
+                ct).ConfigureAwait(false);
+            runRequestSent = true;
+
+            var response = await WaitForResponseAsync(
+                requestId,
+                progress,
+                activeRunId: runId,
+                ct,
+                terminalCaseIds).ConfigureAwait(false);
+
+            return response.Result!.Value.Deserialize(NUnitJsonContext.Default.NUnitRunResponse)
+                ?? throw new InvalidOperationException("Empty run response.");
+        }
+        catch (OperationCanceledException) when (runRequestSent)
+        {
+            MarkResponseDiscarded(requestId);
+            await TrySendCancelBestEffortAsync(runId).ConfigureAwait(false);
+            throw;
+        }
     }
 
     private async Task<BridgeMessage> SendRequestAsync(
@@ -107,11 +142,20 @@ public sealed class NUnitPipeClient : IAsyncDisposable
         string method,
         JsonElement parameters,
         IProgress<NUnitProgressEvent>? progress,
-        IProgress<NUnitDebugReadyEvent>? debugReady,
+        Guid? activeRunId,
         CancellationToken ct)
     {
         await _connection.WriteAsync(BridgeMessage.Request(id, method, parameters), ct).ConfigureAwait(false);
+        return await WaitForResponseAsync(id, progress, activeRunId, ct).ConfigureAwait(false);
+    }
 
+    private async Task<BridgeMessage> WaitForResponseAsync(
+        string requestId,
+        IProgress<NUnitProgressEvent>? progress,
+        Guid? activeRunId,
+        CancellationToken ct,
+        HashSet<string>? terminalCaseIds = null)
+    {
         while (true)
         {
             ct.ThrowIfCancellationRequested();
@@ -123,24 +167,85 @@ public sealed class NUnitPipeClient : IAsyncDisposable
                 continue;
             }
 
-            if (TryConsumeInboxMessage(message, id, progress, debugReady, out var response))
+            if (TryConsumeDiscardedResponse(message))
+                continue;
+
+            if (TryConsumeInboxMessage(message, requestId, progress, activeRunId, terminalCaseIds, out var response))
                 return response!;
+
+            _inbox.Enqueue(message);
+            await Task.Delay(NUnitHostTiming.HostRequestPollIntervalMilliseconds, ct).ConfigureAwait(false);
         }
     }
 
+    private bool TryConsumeDiscardedResponse(BridgeMessage message)
+    {
+        if (message.Type != BridgeMessage.TypeResponse || message.Id is null)
+            return false;
+
+        return _discardedResponseIds.TryRemove(message.Id, out _);
+    }
+
+    private void MarkResponseDiscarded(string requestId)
+    {
+        _discardedResponseIds.TryAdd(requestId, 0);
+        DrainInboxForDiscardedResponses();
+        TrimExcessDiscardedResponseIds();
+    }
+
+    private void DrainInboxForDiscardedResponses()
+    {
+        if (_inbox.IsEmpty)
+            return;
+
+        var pending = new List<BridgeMessage>();
+        while (_inbox.TryDequeue(out var message))
+            pending.Add(message);
+
+        foreach (var message in pending)
+        {
+            if (!TryConsumeDiscardedResponse(message))
+                _inbox.Enqueue(message);
+        }
+    }
+
+    private void TrimExcessDiscardedResponseIds()
+    {
+        while (_discardedResponseIds.Count > MaxPendingDiscardedResponses)
+        {
+            var removed = false;
+            foreach (var requestId in _discardedResponseIds.Keys)
+            {
+                if (_discardedResponseIds.TryRemove(requestId, out _))
+                {
+                    removed = true;
+                    break;
+                }
+            }
+
+            if (!removed)
+                break;
+        }
+    }
+
+    internal int PendingDiscardedResponseCountForTesting => _discardedResponseIds.Count;
+
+    internal int InboxDepthForTesting => _inbox.Count;
+
     private static bool TryConsumeInboxMessage(
         BridgeMessage message,
-        string id,
+        string requestId,
         IProgress<NUnitProgressEvent>? progress,
-        IProgress<NUnitDebugReadyEvent>? debugReady,
+        Guid? activeRunId,
+        HashSet<string>? terminalCaseIds,
         out BridgeMessage? response)
     {
         response = null;
 
-        if (TryReportNotification(message, progress, debugReady))
+        if (TryReportNotification(message, progress, activeRunId, terminalCaseIds))
             return false;
 
-        if (!IsMatchingResponse(message, id))
+        if (!IsMatchingResponse(message, requestId))
             return false;
 
         EnsureSuccess(message);
@@ -151,32 +256,82 @@ public sealed class NUnitPipeClient : IAsyncDisposable
     private static bool TryReportNotification(
         BridgeMessage message,
         IProgress<NUnitProgressEvent>? progress,
-        IProgress<NUnitDebugReadyEvent>? debugReady)
+        Guid? activeRunId,
+        HashSet<string>? terminalCaseIds)
     {
         if (message.Type != BridgeMessage.TypeNotification || message.Params is null)
             return false;
 
-        if (message.Method == NUnitProtocol.Progress)
+        if (message.Method != NUnitProtocol.Progress)
+            return false;
+
+        var progressEvent = message.Params.Value.Deserialize(NUnitJsonContext.Default.NUnitProgressEvent);
+        if (progressEvent is null)
+            return true;
+
+        if (activeRunId is null || progressEvent.RunId != activeRunId)
+            return true;
+
+        if (terminalCaseIds is not null
+            && IsTerminalOutcome(progressEvent.Case.Outcome)
+            && !terminalCaseIds.Add(progressEvent.Case.Id))
         {
-            var progressEvent = message.Params.Value.Deserialize(NUnitJsonContext.Default.NUnitProgressEvent);
-            if (progressEvent is not null)
-                progress?.Report(progressEvent);
             return true;
         }
 
-        if (message.Method == NUnitProtocol.DebugReady)
-        {
-            var debugEvent = message.Params.Value.Deserialize(NUnitJsonContext.Default.NUnitDebugReadyEvent);
-            if (debugEvent is not null)
-                debugReady?.Report(debugEvent);
-            return true;
-        }
-
-        return false;
+        progress?.Report(progressEvent);
+        return true;
     }
 
-    private static bool IsMatchingResponse(BridgeMessage message, string id) =>
-        message.Type == BridgeMessage.TypeResponse && message.Id == id;
+    private static bool IsTerminalOutcome(string outcome) =>
+        outcome is NUnitOutcomes.Passed
+            or NUnitOutcomes.Failed
+            or NUnitOutcomes.Skipped
+            or NUnitOutcomes.Inconclusive
+            or NUnitOutcomes.Error
+            or NUnitOutcomes.Cancelled;
+
+    private static bool IsMatchingResponse(BridgeMessage message, string requestId) =>
+        message.Type == BridgeMessage.TypeResponse && message.Id == requestId;
+
+    private async Task TrySendCancelBestEffortAsync(Guid runId)
+    {
+        try
+        {
+            await SendCancelAsync(runId, CancellationToken.None).ConfigureAwait(false);
+        }
+        catch
+        {
+            // Best effort only; never mask the original OperationCanceledException.
+        }
+    }
+
+    private async Task SendCancelAsync(Guid runId, CancellationToken ct)
+    {
+        var cancelRequestId = CreateRequestId("cancel");
+        _discardedResponseIds.TryAdd(cancelRequestId, 0);
+
+        using var timeoutCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
+        timeoutCts.CancelAfter(CancelSendTimeout);
+
+        await _connection.WriteAsync(
+            BridgeMessage.Request(
+                cancelRequestId,
+                NUnitProtocol.Cancel,
+                JsonSerializer.SerializeToElement(
+                    new NUnitCancelRequest(runId),
+                    NUnitJsonContext.Default.NUnitCancelRequest)),
+            timeoutCts.Token).ConfigureAwait(false);
+    }
+
+    private static void ValidateHelloProtocolVersion(NUnitHelloResponse hello)
+    {
+        var compatibilityError = ProtocolCompatibility.Validate(hello.ProtocolVersion);
+        if (compatibilityError is null)
+            return;
+
+        throw new InvalidOperationException(compatibilityError.Message);
+    }
 
     private void Enqueue(BridgeMessage message) => _inbox.Enqueue(message);
 
@@ -217,12 +372,14 @@ public sealed class NUnitPipeClient : IAsyncDisposable
         return details.GetString();
     }
 
+    private static string CreateRequestId(string prefix) => $"{prefix}-{Guid.NewGuid():N}";
+
     public ValueTask DisposeAsync()
     {
         _connection.Disconnected -= OnDisconnected;
         _connection.MessageReceived -= Enqueue;
         _connection.Dispose();
-        _pipe.Dispose();
+        _pipe?.Dispose();
         return ValueTask.CompletedTask;
     }
 }

@@ -35,14 +35,20 @@ internal static class VSTestCaseMapper
 
     public static string? BuildFilter(IEnumerable<TestCase> tests)
     {
-        var clauses = tests
+        var fullNames = tests
             .Select(test => test.GetPropertyValue<string>(TestFullNameProperty, null) ?? test.FullyQualifiedName)
             .Where(name => !string.IsNullOrWhiteSpace(name))
-            .Distinct()
-            .Select(name => $"test == '{EscapeWhereLiteral(name!)}'")
+            .Distinct(StringComparer.Ordinal)
             .ToList();
 
-        return clauses.Count == 0 ? null : string.Join(" | ", clauses);
+        if (fullNames.Count == 0)
+            return null;
+
+        if (fullNames.Count == 1)
+            return $"<filter><test>{EscapeXml(fullNames[0]!)}</test></filter>";
+
+        var testsXml = string.Concat(fullNames.Select(name => $"<test>{EscapeXml(name!)}</test>"));
+        return $"<filter><or>{testsXml}</or></filter>";
     }
 
     public static TestResult ToTestResult(TestCase testCase, Runner.RemoteTestCaseResult remoteCase)
@@ -84,5 +90,9 @@ internal static class VSTestCaseMapper
             _ => TestOutcome.Failed,
         };
 
-    private static string EscapeWhereLiteral(string value) => value.Replace("'", "''");
+    private static string EscapeXml(string value) =>
+        value
+            .Replace("&", "&amp;")
+            .Replace("<", "&lt;")
+            .Replace(">", "&gt;");
 }

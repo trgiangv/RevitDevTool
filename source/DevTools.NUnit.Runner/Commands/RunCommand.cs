@@ -1,4 +1,5 @@
 using System.Text.Json;
+using DevTools.NUnit.Transport;
 using DevTools.Logging;
 using DevTools.NUnit.Core;
 using DevTools.NUnit.Core.Contracts;
@@ -23,6 +24,12 @@ public static class RunCommand
         if (!Enum.TryParse(options.Host, ignoreCase: true, out HostApp hostApp))
         {
             await Console.Error.WriteLineAsync($"Unsupported host '{options.Host}'.").ConfigureAwait(false);
+            return RunnerCommandParser.ExitCliError;
+        }
+
+        if (!NUnitRunnerFilter.TryNormalize(options.Filter, out _, out var filterError))
+        {
+            await Console.Error.WriteLineAsync(filterError).ConfigureAwait(false);
             return RunnerCommandParser.ExitCliError;
         }
 
@@ -63,9 +70,7 @@ public static class RunCommand
             var response = await client.RunAsync(
                 options.AssemblyPath,
                 options.Filter,
-                waitForDebugger: false,
                 progress,
-                debugReady: null,
                 requestTimeout.Token).ConfigureAwait(false);
 
             Console.WriteLine(JsonSerializer.Serialize(response, NUnitJsonContext.Default.NUnitRunResponse));

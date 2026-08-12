@@ -30,6 +30,7 @@
     </PropertyGroup>
 
     <Target Name="DeployDevToolsNUnitRunner" AfterTargets="Publish">
+        <Exec Command="taskkill /F /IM DevTools.NUnit.Runner.exe 2>nul &amp; ping -n 2 127.0.0.1 >nul" IgnoreExitCode="true"/>
         <MakeDir Directories="$(BundleContentsFolder)"/>
         <Copy SourceFiles="$(PublishDir)DevTools.NUnit.Runner.exe"
               DestinationFolder="$(BundleContentsFolder)"
@@ -40,6 +41,7 @@
 
     <ItemGroup>
         <ProjectReference Include="..\DevTools.NUnit.Core\DevTools.NUnit.Core.csproj" SetTargetFramework="TargetFramework=net10.0-windows"/>
+        <ProjectReference Include="..\DevTools.NUnit.Transport\DevTools.NUnit.Transport.csproj" SetTargetFramework="TargetFramework=net10.0-windows"/>
         <ProjectReference Include="..\DevTools.Ipc\DevTools.Ipc.csproj" SetTargetFramework="TargetFramework=net10.0-windows"/>
         <ProjectReference Include="..\DevTools.Logging\DevTools.Logging.csproj" SetTargetFramework="TargetFramework=net10.0-windows"/>
         <ProjectReference Include="..\DevTools.Utilities\DevTools.Utilities.csproj" SetTargetFramework="TargetFramework=net10.0-windows"/>

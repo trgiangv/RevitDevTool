@@ -8,7 +8,6 @@ public sealed record RunnerCommandLine(
     string Host,
     string Version,
     string? Filter,
-    bool WaitForDebugger,
     bool HostLaunch,
     int HostTimeoutSeconds,
     int HostLaunchTimeoutSeconds);
@@ -47,7 +46,6 @@ public static class RunnerCommandParser
             options.Host!.Trim(),
             options.Version!.Trim(),
             options.Filter,
-            WaitForDebugger: false,
             options.HostLaunch,
             options.HostTimeoutSeconds,
             options.HostLaunchTimeoutSeconds);

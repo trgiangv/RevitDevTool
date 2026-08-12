@@ -11,6 +11,7 @@ public sealed class ProcessRunnerClient : IRunnerClient, IDisposable
     private static readonly JsonSerializerOptions WireJsonOptions = new()
     {
         PropertyNameCaseInsensitive = true,
+        PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower,
     };
 
     private readonly string _runnerPath;
@@ -40,8 +41,7 @@ public sealed class ProcessRunnerClient : IRunnerClient, IDisposable
     public RemoteRunResult Run(
         string source,
         string? filter,
-        RunnerHostOptions options,
-        bool waitForDebugger)
+        RunnerHostOptions options)
     {
         var args = BuildHostArguments("run", source, options);
 
@@ -144,17 +144,28 @@ public sealed class ProcessRunnerClient : IRunnerClient, IDisposable
                 // Best effort — process may already be gone.
             }
 
-            Task.WaitAll(stdoutTask, stderrTask);
+            // Bounded drain after kill so a wedged reader cannot hang the adapter forever.
+            // Parallel ReadToEnd on stdout+stderr is correct (avoids classic Process deadlock);
+            // unbounded WaitAll after Kill is what could stall the adapter.
+            _ = Task.WaitAll([stdoutTask, stderrTask], 5_000);
             lock (_processLock)
                 _activeProcess = null;
 
-            var stderr = stderrTask.Result;
+            var stderr = stdoutTask.IsCompleted && stderrTask.IsCompleted
+                ? stderrTask.Result
+                : string.Empty;
             var detail = string.IsNullOrWhiteSpace(stderr) ? string.Empty : $"{Environment.NewLine}{stderr.Trim()}";
             throw new TimeoutException(
                 $"DevTools.NUnit.Runner did not exit within {timeoutMs / 1000}s.{detail}");
         }
 
-        Task.WaitAll(stdoutTask, stderrTask);
+        if (!Task.WaitAll([stdoutTask, stderrTask], 30_000))
+        {
+            lock (_processLock)
+                _activeProcess = null;
+            throw new TimeoutException("Timed out draining DevTools.NUnit.Runner stdout/stderr.");
+        }
+
         var stdout = stdoutTask.Result;
         var stderrOutput = stderrTask.Result;
 
@@ -172,19 +183,16 @@ public sealed class ProcessRunnerClient : IRunnerClient, IDisposable
         return stdout.Trim();
     }
 
-    private static int ComputeRunnerTimeoutMs(RunnerHostOptions options)
-    {
-        var launchBudgetSeconds = options.HostLaunch
-            ? options.HostLaunchTimeoutSeconds
-            : NUnitHostTiming.RunnerExistingHostBudgetSeconds;
-        return (launchBudgetSeconds + options.HostTimeoutSeconds + NUnitHostTiming.RunnerProcessTimeoutSlackSeconds) * 1000;
-    }
+    private static int ComputeRunnerTimeoutMs(RunnerHostOptions options) =>
+        NUnitHostTiming.ComputeAdapterRunnerProcessTimeoutSeconds(
+            options.HostLaunchTimeoutSeconds,
+            options.HostTimeoutSeconds) * 1000;
 
     private static RemoteTestCaseResult MapCase(NUnitCaseResult result) =>
         new(
             result.Name,
             result.Outcome,
-            result.DurationMilliseconds,
+            result.DurationMs,
             result.Message,
             result.StackTrace,
             result.Output);

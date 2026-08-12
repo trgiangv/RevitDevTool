@@ -28,7 +28,7 @@ public sealed class RunnerCommandParserTests
                 "--version",
                 "2025",
                 "--filter",
-                "cat==Smoke",
+                "<filter><cat>Smoke</cat></filter>",
                 "--host-launch",
                 "--host-timeout",
                 "90",
@@ -43,8 +43,7 @@ public sealed class RunnerCommandParserTests
         Assert.Equal("run", command!.Command);
         Assert.Equal("Revit", command.Host);
         Assert.Equal("2025", command.Version);
-        Assert.Equal("cat==Smoke", command.Filter);
-        Assert.False(command.WaitForDebugger);
+        Assert.Equal("<filter><cat>Smoke</cat></filter>", command.Filter);
         Assert.True(command.HostLaunch);
         Assert.Equal(90, command.HostTimeoutSeconds);
         Assert.Equal(120, command.HostLaunchTimeoutSeconds);

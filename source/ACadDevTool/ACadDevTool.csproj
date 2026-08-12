@@ -18,6 +18,8 @@
             DevTools.Microsoft.Xaml.Behaviors.dll;
             FSharp.Core.dll;
             DevTools.UI.dll;
+            DevTools.NUnit.Core.dll;
+            DevTools.NUnit.Runtime.dll;
         </RepackBinariesExcludes>
     </PropertyGroup>
 
@@ -54,6 +56,8 @@
         <Using Include="DevTools.Execution.Abstractions" />
         <Using Include="ZLogger.Providers" />
     </ItemGroup>
+
+    <Import Project="..\DevTools.NUnit.Host\build\NUnitHostPackaging.targets" />
 
     <!-- Start AutoCad -->
     <PropertyGroup>

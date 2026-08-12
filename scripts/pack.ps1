@@ -3,7 +3,7 @@
     Run the full release pack pipeline via ModularPipelines.
 .DESCRIPTION
     Executes the build orchestrator with the 'pack' argument:
-    Clean -> CreateBundle (all Release.Autodesk.* configs + DevTools.Daemon) -> CreateInstaller.
+    Clean -> CreateBundle (all Release.Autodesk.* configs + DevTools.Daemon + DevTools.NUnit.Runner) -> CreateInstaller.
     Output goes to build/output/. Run scripts/kill-host.ps1 first if hosts are running.
 .EXAMPLE
     scripts/kill-host.ps1

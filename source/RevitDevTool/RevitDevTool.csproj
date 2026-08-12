@@ -18,6 +18,8 @@
             DevTools.Microsoft.Xaml.Behaviors.dll;
             FSharp.Core.dll;
             DevTools.UI.dll;
+            DevTools.NUnit.Core.dll;
+            DevTools.NUnit.Runtime.dll;
             IronPython*.dll;
             Microsoft.Dynamic.dll;
             Microsoft.Scripting*.dll;
@@ -56,6 +58,8 @@
         <Using Include="CommunityToolkit.Mvvm.Input" />
         <Using Include="DevTools.Execution.Abstractions" />
     </ItemGroup>
+
+    <Import Project="..\DevTools.NUnit.Host\build\NUnitHostPackaging.targets" />
 
     <!-- Start Revit -->
     <PropertyGroup>

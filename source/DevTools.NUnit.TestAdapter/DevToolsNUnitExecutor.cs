@@ -76,8 +76,7 @@ public sealed class DevToolsNUnitExecutor : ITestExecutor
 
         try
         {
-            // Host-process debugging is deferred; never forward VSTest debug intent.
-            var result = GetClient().Run(source, filter, options, waitForDebugger: false);
+            var result = GetClient().Run(source, filter, options);
             ReportResults(tests, result, frameworkHandle);
         }
         catch (Exception ex)
