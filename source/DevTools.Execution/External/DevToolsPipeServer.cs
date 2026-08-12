@@ -6,7 +6,6 @@ using System.Security.Principal;
 using System.Text.Json;
 using DevTools.Logging;
 using DevTools.Execution.External.Connections;
-using DevTools.Execution.External.Handlers;
 using DevTools.Mcp.Adapter.External;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
@@ -37,10 +36,16 @@ public sealed class DevToolsPipeServer(
 
     private CancellationTokenSource? _cts;
     private Task? _acceptLoopTask;
-    private readonly ConcurrentDictionary<int, BridgePipeConnection> _connections = new();
+    private readonly ConcurrentDictionary<int, ConnectionEntry> _connections = new();
     private int _nextConnectionId;
     private string? _pipeName;
     private bool _disposed;
+
+    private sealed class ConnectionEntry(BridgePipeConnection connection, CancellationTokenSource requestCts)
+    {
+        public BridgePipeConnection Connection { get; } = connection;
+        public CancellationTokenSource RequestCts { get; } = requestCts;
+    }
 
     public Task StartAsync(CancellationToken cancellationToken)
     {
@@ -64,8 +69,12 @@ public sealed class DevToolsPipeServer(
     public async Task StopAsync(CancellationToken cancellationToken)
     {
         _cts?.CancelAsync();
-        foreach (var connection in _connections.Values)
-            connection.Dispose();
+        foreach (var entry in _connections.Values)
+        {
+            try { await entry.RequestCts.CancelAsync().ConfigureAwait(false); } catch { /* best effort */ }
+            entry.Connection.Dispose();
+            entry.RequestCts.Dispose();
+        }
         _connections.Clear();
 
         if (_acceptLoopTask is not null)
@@ -114,23 +123,34 @@ public sealed class DevToolsPipeServer(
     private void RegisterConnection(NamedPipeServerStream pipe)
     {
         var conn = new BridgePipeConnection(pipe);
+        var requestCts = CancellationTokenSource.CreateLinkedTokenSource(_cts!.Token);
         var connectionId = Interlocked.Increment(ref _nextConnectionId);
-        _connections[connectionId] = conn;
+        _connections[connectionId] = new ConnectionEntry(conn, requestCts);
         state.SetConnectedState(_connections.IsEmpty ? 0 : 1);
         logger.ZLogInformation($"Client connected. Active clients: {_connections.Count}");
 
-        conn.MessageReceived += msg => OnMessageReceived(conn, msg);
+        // Disconnect must cancel the connection token so host handlers (NUnit run, etc.)
+        // stop instead of holding the Revit executor after Runner/adapter kill.
+        conn.MessageReceived += msg => OnMessageReceived(conn, requestCts.Token, msg);
         conn.Disconnected += () =>
         {
-            if (_connections.TryRemove(connectionId, out var disconnectedConnection))
-                disconnectedConnection.Dispose();
+            try { requestCts.Cancel(); } catch { /* best effort */ }
+            if (_connections.TryRemove(connectionId, out var entry))
+            {
+                entry.Connection.Dispose();
+                entry.RequestCts.Dispose();
+            }
+
             state.SetConnectedState(_connections.IsEmpty ? 0 : 1);
             logger.ZLogInformation($"Client disconnected. Active clients: {_connections.Count}");
         };
         conn.StartReadLoop();
     }
 
-    private async void OnMessageReceived(BridgePipeConnection connection, BridgeMessage msg)
+    private async void OnMessageReceived(
+        BridgePipeConnection connection,
+        CancellationToken requestCt,
+        BridgeMessage msg)
     {
         try
         {
@@ -140,7 +160,14 @@ public sealed class DevToolsPipeServer(
             BridgeMessage response;
             try
             {
-                response = await HandleRequestAsync(msg).ConfigureAwait(false);
+                response = await HandleRequestAsync(msg, requestCt).ConfigureAwait(false);
+            }
+            catch (OperationCanceledException) when (requestCt.IsCancellationRequested)
+            {
+                response = BridgeMessage.Error(
+                    msg.Id!,
+                    IpcErrorCodes.InternalError,
+                    "Request cancelled because the client disconnected.");
             }
             catch (Exception ex)
             {
@@ -149,7 +176,8 @@ public sealed class DevToolsPipeServer(
 
             try
             {
-                await connection.WriteAsync(response).ConfigureAwait(false);
+                if (!requestCt.IsCancellationRequested)
+                    await connection.WriteAsync(response, requestCt).ConfigureAwait(false);
             }
             catch (Exception ex)
             {
@@ -162,11 +190,11 @@ public sealed class DevToolsPipeServer(
         }
     }
 
-    private async Task<BridgeMessage> HandleRequestAsync(BridgeMessage request)
+    private async Task<BridgeMessage> HandleRequestAsync(BridgeMessage request, CancellationToken ct)
     {
         var id = request.Id!;
         if (HandlerMap.TryGetValue(request.Method!, out var handler))
-            return await handler.HandleAsync(id, request.Method!, request.Params).ConfigureAwait(false);
+            return await handler.HandleAsync(id, request.Method!, request.Params, ct).ConfigureAwait(false);
         return BridgeMessage.Error(id, IpcErrorCodes.MethodNotFound, $"Unknown method: {request.Method}");
     }
 
@@ -178,11 +206,11 @@ public sealed class DevToolsPipeServer(
 
             var notification = BridgeMessage.Notification(method, data);
 
-            foreach (var connection in _connections.Values)
+            foreach (var entry in _connections.Values)
             {
                 try
                 {
-                    await connection.WriteAsync(notification).ConfigureAwait(false);
+                    await entry.Connection.WriteAsync(notification).ConfigureAwait(false);
                 }
                 catch (Exception ex)
                 {
@@ -230,8 +258,12 @@ public sealed class DevToolsPipeServer(
         if (_disposed) return;
         _disposed = true;
         _cts?.Cancel();
-        foreach (var connection in _connections.Values)
-            connection.Dispose();
+        foreach (var entry in _connections.Values)
+        {
+            try { entry.RequestCts.Cancel(); } catch { /* best effort */ }
+            entry.Connection.Dispose();
+            entry.RequestCts.Dispose();
+        }
         _connections.Clear();
         _cts?.Dispose();
     }

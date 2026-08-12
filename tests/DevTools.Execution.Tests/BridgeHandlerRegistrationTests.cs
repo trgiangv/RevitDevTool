@@ -75,7 +75,8 @@ public sealed class BridgeHandlerRegistrationTests
 
         public NUnitRunResponse Run(
             NUnitRunRequest request,
-            Action<NUnitProgressEvent> publish) =>
+            Action<NUnitProgressEvent> publish,
+            CancellationToken cancellationToken = default) =>
             new(request.RunId, new NUnitRunSummary(0, 0, 0, 0, 0, 0), Array.Empty<NUnitCaseResult>());
 
         public void Cancel(Guid runId)
