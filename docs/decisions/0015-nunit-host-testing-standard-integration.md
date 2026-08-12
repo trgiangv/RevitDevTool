@@ -5,7 +5,12 @@ Amended: 2026-08-12
 
 ## Status
 
-Accepted (amended) — **experimental**; adapter NuGet not published.
+Partially superseded (2026-08-12) by
+[`0016-nunit-native-runtime-and-mtp-first-integration.md`](0016-nunit-native-runtime-and-mtp-first-integration.md).
+
+The pipe, host-context execution, host-neutral project boundaries, and single
+public consumer-package direction remain valid. The reflective NUnit execution
+strategy, VSTest-first priority, and deferred-debugging policy are historical.
 
 ## Context
 

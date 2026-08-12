@@ -4,7 +4,10 @@ Date: 2026-08-10
 
 ## Status
 
-Active — design and scope gates accepted; implementation started (Scope 0).
+Superseded on 2026-08-12 by
+[`2026-08-12-nunit-native-runtime-mtp.md`](2026-08-12-nunit-native-runtime-mtp.md).
+Preserve completed scope evidence below; do not continue the VSTest-first,
+reflection-runner, or generic debugger work from this plan.
 
 ## Outcome
 

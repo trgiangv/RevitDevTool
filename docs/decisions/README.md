@@ -23,4 +23,5 @@ here.
 | [0011](0011-hybrid-repository-harness-layout.md) | Hybrid repository-harness docs layout | Accepted |
 | [0012](0012-host-mcp-spec-engine.md) | Host MCP spec engine (no SDK on host) | Accepted |
 | [0014](0014-pep723-skip-if-listed-search-first.md) | Skip-if-listed + search-first (Pixi/Pip) | Accepted |
-| [0015](0015-nunit-host-testing-standard-integration.md) | NUnit host testing through standard .NET test integrations | Accepted (amended; experimental) |
+| [0015](0015-nunit-host-testing-standard-integration.md) | NUnit host testing through standard .NET test integrations | Partially superseded by 0016 |
+| [0016](0016-nunit-native-runtime-and-mtp-first-integration.md) | Native NUnit runtime with MTP-first integration | Accepted |
