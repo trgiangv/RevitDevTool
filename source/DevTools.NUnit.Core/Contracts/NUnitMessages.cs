@@ -1,71 +1,88 @@
-using System.Text.Json.Serialization;
-
 namespace DevTools.NUnit.Core.Contracts;
 
 [UsedImplicitly(ImplicitUseTargetFlags.WithMembers)]
-public sealed record NUnitHelloRequest(
-    [property: JsonPropertyName("protocol_version")] int ProtocolVersion);
+public sealed record NUnitHelloRequest(int ProtocolVersion);
 
 [UsedImplicitly(ImplicitUseTargetFlags.WithMembers)]
 public sealed record NUnitHelloResponse(
-    [property: JsonPropertyName("protocol_version")] int ProtocolVersion,
-    [property: JsonPropertyName("host")] string Host,
-    [property: JsonPropertyName("host_version")] string HostVersion,
-    [property: JsonPropertyName("process_id")] int ProcessId,
-    [property: JsonPropertyName("is_busy")] bool IsBusy);
+    int ProtocolVersion,
+    string Host,
+    string HostVersion,
+    int ProcessId,
+    bool IsBusy);
 
 [UsedImplicitly(ImplicitUseTargetFlags.WithMembers)]
-public sealed record NUnitDiscoverRequest(
-    [property: JsonPropertyName("assembly_path")] string AssemblyPath,
-    [property: JsonPropertyName("filter")] string? Filter);
+public sealed record NUnitDiscoverRequest(string AssemblyPath, string? Filter);
+
+[UsedImplicitly(ImplicitUseTargetFlags.WithMembers)]
+public sealed record NUnitTrait(string Name, string Value);
+
+[UsedImplicitly(ImplicitUseTargetFlags.WithMembers)]
+public sealed record NUnitSourceLocation(string File, int Line);
+
+[UsedImplicitly(ImplicitUseTargetFlags.WithMembers)]
+public sealed record NUnitAttachment(
+    string Name,
+    string? ContentType,
+    string? Path,
+    string? Base64);
+
+[UsedImplicitly(ImplicitUseTargetFlags.WithMembers)]
+public sealed record NUnitRuntimeDiagnostic(string Code, string Message);
 
 [UsedImplicitly(ImplicitUseTargetFlags.WithMembers)]
 public sealed record NUnitDiscoveredTest(
-    [property: JsonPropertyName("id")] string Id,
-    [property: JsonPropertyName("name")] string Name,
-    [property: JsonPropertyName("full_name")] string FullName);
+    string Id,
+    string Name,
+    string FullName,
+    string? ParentTestId = null,
+    IReadOnlyList<NUnitTrait>? Traits = null,
+    NUnitSourceLocation? Source = null,
+    string? SkipReason = null);
 
 [UsedImplicitly(ImplicitUseTargetFlags.WithMembers)]
 public sealed record NUnitDiscoverResponse(
-    [property: JsonPropertyName("cases")] IReadOnlyList<NUnitDiscoveredTest> Cases);
+    IReadOnlyList<NUnitDiscoveredTest> Cases,
+    string? GenerationId = null,
+    NUnitRuntimeDiagnostic? RuntimeDiagnostic = null);
 
 [UsedImplicitly(ImplicitUseTargetFlags.WithMembers)]
-public sealed record NUnitRunRequest(
-    [property: JsonPropertyName("run_id")] Guid RunId,
-    [property: JsonPropertyName("assembly_path")] string AssemblyPath,
-    [property: JsonPropertyName("filter")] string? Filter,
-    [property: JsonPropertyName("wait_for_debugger")] bool WaitForDebugger);
+public sealed record NUnitRunRequest(Guid RunId, string AssemblyPath, string? Filter);
 
 [UsedImplicitly(ImplicitUseTargetFlags.WithMembers)]
 public sealed record NUnitRunSummary(
-    [property: JsonPropertyName("passed")] int Passed,
-    [property: JsonPropertyName("failed")] int Failed,
-    [property: JsonPropertyName("skipped")] int Skipped,
-    [property: JsonPropertyName("inconclusive")] int Inconclusive,
-    [property: JsonPropertyName("errors")] int Errors,
-    [property: JsonPropertyName("cancelled")] int Cancelled);
+    int Passed,
+    int Failed,
+    int Skipped,
+    int Inconclusive,
+    int Errors,
+    int Cancelled);
 
 [UsedImplicitly(ImplicitUseTargetFlags.WithMembers)]
 public sealed record NUnitCaseResult(
-    [property: JsonPropertyName("id")] string Id,
-    [property: JsonPropertyName("name")] string Name,
-    [property: JsonPropertyName("outcome")] string Outcome,
-    [property: JsonPropertyName("duration_ms")] double DurationMilliseconds,
-    [property: JsonPropertyName(IpcPropertyNames.Message)] string? Message,
-    [property: JsonPropertyName("stack_trace")] string? StackTrace,
-    [property: JsonPropertyName("output")] string? Output);
+    string Id,
+    string Name,
+    string Outcome,
+    double DurationMs,
+    string? Message,
+    string? StackTrace,
+    string? Output,
+    string? ParentTestId = null,
+    IReadOnlyList<NUnitTrait>? Traits = null,
+    NUnitSourceLocation? Source = null,
+    string? SkipReason = null,
+    IReadOnlyList<NUnitAttachment>? Attachments = null);
 
 [UsedImplicitly(ImplicitUseTargetFlags.WithMembers)]
 public sealed record NUnitRunResponse(
-    [property: JsonPropertyName("run_id")] Guid RunId,
-    [property: JsonPropertyName("summary")] NUnitRunSummary Summary,
-    [property: JsonPropertyName("cases")] IReadOnlyList<NUnitCaseResult> Cases);
+    Guid RunId,
+    NUnitRunSummary Summary,
+    IReadOnlyList<NUnitCaseResult> Cases,
+    string? GenerationId = null,
+    NUnitRuntimeDiagnostic? RuntimeDiagnostic = null);
 
 [UsedImplicitly(ImplicitUseTargetFlags.WithMembers)]
-public sealed record NUnitProgressEvent(
-    [property: JsonPropertyName("run_id")] Guid RunId,
-    [property: JsonPropertyName("case")] NUnitCaseResult Case);
+public sealed record NUnitProgressEvent(Guid RunId, NUnitCaseResult Case);
 
 [UsedImplicitly(ImplicitUseTargetFlags.WithMembers)]
-public sealed record NUnitCancelRequest(
-    [property: JsonPropertyName("run_id")] Guid RunId);
+public sealed record NUnitCancelRequest(Guid RunId);

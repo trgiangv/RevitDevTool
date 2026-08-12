@@ -15,9 +15,16 @@ public static class NUnitHostTiming
     /// <summary>Poll interval while waiting for a pipe response or disconnect.</summary>
     public const int HostRequestPollIntervalMilliseconds = 25;
 
-    /// <summary>Adapter budget when reusing an existing host (no <c>--host-launch</c>).</summary>
-    public const int RunnerExistingHostBudgetSeconds = 30;
-
     /// <summary>Extra slack added to adapter runner-process kill timeout.</summary>
     public const int RunnerProcessTimeoutSlackSeconds = 30;
+
+    /// <summary>
+    /// Adapter <c>WaitForExit</c> budget for the Runner process.
+    /// Always includes launch timeout: <c>HostLaunch=false</c> still cold-starts
+    /// when no existing host pipe is found.
+    /// </summary>
+    public static int ComputeAdapterRunnerProcessTimeoutSeconds(
+        int hostLaunchTimeoutSeconds,
+        int hostTimeoutSeconds) =>
+        hostLaunchTimeoutSeconds + hostTimeoutSeconds + RunnerProcessTimeoutSlackSeconds;
 }

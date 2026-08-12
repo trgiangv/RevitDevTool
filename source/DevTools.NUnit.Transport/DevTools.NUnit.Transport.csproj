@@ -1,0 +1,11 @@
+<Project Sdk="Microsoft.NET.Sdk">
+    <PropertyGroup>
+        <TargetFrameworks>net48;net8.0-windows;net10.0-windows</TargetFrameworks>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <PackageReference Include="System.Text.Json"/>
+        <ProjectReference Include="..\DevTools.Ipc\DevTools.Ipc.csproj"/>
+        <ProjectReference Include="..\DevTools.NUnit.Core\DevTools.NUnit.Core.csproj"/>
+    </ItemGroup>
+</Project>

@@ -1,4 +1,3 @@
-using System.Text.Json;
 using DevTools.NUnit.Core.Contracts;
 
 namespace DevTools.NUnit.Core.Compatibility;
@@ -22,17 +21,6 @@ public static class ProtocolCompatibility
             protocolVersion,
             NUnitProtocol.CurrentVersion);
     }
-
-    public static BridgeMessage CreateErrorResponse(string requestId, int protocolVersion) =>
-        BridgeMessage.Error(
-            requestId,
-            IncompatibleCode,
-            CreateMessage(protocolVersion),
-            JsonSerializer.SerializeToElement(new
-            {
-                requested = protocolVersion,
-                expected = NUnitProtocol.CurrentVersion,
-            }));
 
     private static string CreateMessage(int protocolVersion) =>
         $"NUnit protocol version {protocolVersion} is not supported. Expected {NUnitProtocol.CurrentVersion}.";
