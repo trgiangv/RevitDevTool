@@ -1,4 +1,4 @@
-# NUnit Native Runtime And MTP-First Integration Plan
+﻿# NUnit Native Runtime And MTP-First Integration Plan
 
 **Goal:** Run full NUnit 4.6.1 semantics inside Autodesk hosts through a native
 framework runtime, with MTP as the sole IDE/Test Explorer compatibility layer.
@@ -16,7 +16,7 @@ Date: 2026-08-12
 
 ## Status
 
-Accepted — **P0 implementation largely landed in tree; Task 8 live matrix not
+Accepted â€” **P0 implementation largely landed in tree; Task 8 live matrix not
 fully closed.** See Progress and Remaining Gaps below. Do not start P1 MTP
 work until Task 8 open gaps are resolved or explicitly waived.
 
@@ -225,7 +225,7 @@ public sealed record NUnitRuntimeEvent(
 its reference to `DevTools.NUnit.Core` to the already-loaded host copy so the
 cast remains valid across ALC/no-context boundaries.
 
-## P0 — Correct NUnit Runtime
+## P0 â€” Correct NUnit Runtime
 
 ### Task 0: Correct assembly ownership before extending the runtime
 
@@ -241,8 +241,7 @@ cast remains valid across ALC/no-context boundaries.
 - Test: `tests/DevTools.NUnit.Core.Tests/`
 - Test: `tests/DevTools.NUnit.Host.Tests/`
 
-- [ ] Add a failing contract-boundary test proving Core references neither
-  `DevTools.Ipc` nor `System.Text.Json`.
+- [x] Add a failing contract-boundary test proving Core references neither`n  ``DevTools.Ipc`` nor ``System.Text.Json``.
 - [ ] Make Core contain only plain DTOs, runtime interfaces, protocol constants,
   and transport-neutral compatibility data.
 - [ ] Keep exactly one loose Core assembly for Host and Runtime type identity.
@@ -313,8 +312,8 @@ and matching PDBs.
 - Modify: `tests/DevTools.NUnit.Core.Tests/NUnitProtocolGoldenTests.cs`
 - Modify: `tests/DevTools.NUnit.Core.Tests/ProtocolCompatibilityTests.cs`
 
-**Produces:** protocol version `2` and the interfaces listed in “Runtime
-Interfaces”.
+**Produces:** protocol version `2` and the interfaces listed in â€œRuntime
+Interfacesâ€.
 
 - [x] First add golden JSON tests for traits/properties, source file/line,
   parent test ID, skip reason, attachments, generation ID, and runtime
@@ -618,7 +617,7 @@ P0 live verification does not depend on the later MTP `serve` endpoint.
 - Update progress/evidence in this plan after each run.
 
 Evidence pack (2026-08-12): `docs/agents/nunit-native-runtime-verification.md` +
-`%LOCALAPPDATA%\RevitDevTool\task8-evidence\`. **Not fully closed** — see verdict.
+`%LOCALAPPDATA%\RevitDevTool\task8-evidence\`. **Not fully closed** â€” see verdict.
 
 - [x] Revit 2023: let Runner locate/reuse or launch Revit with the installed
   Dynamo add-in loaded; do not start Revit directly. Record the selected PID
@@ -628,7 +627,7 @@ Evidence pack (2026-08-12): `docs/agents/nunit-native-runtime-verification.md` +
   Dynamo 2.6.3 on disk under `AddIns\DynamoForRevit`, not loaded this session.)_
 - [~] Revit 2023: discover and run the Task 1 net48 fixture; record expanded
   cases, lifecycle log, result summary, generation manifest, and host PID.
-  _(Discover 31 cases; sync matrix 25/2/1/1 — async fixtures hang on UI executor.)_
+  _(Discover 31 cases; sync matrix 25/2/1/1 â€” async fixtures hang on UI executor.)_
 - [x] Revit 2023: rebuild to generation two without restarting Revit and prove
   new IL plus generation-specific dependency behavior.
   _(gen2 marker on same PID; new `generation_id`.)_
@@ -645,7 +644,7 @@ Evidence pack (2026-08-12): `docs/agents/nunit-native-runtime-verification.md` +
   logic in the selected Revit PID. The default P0 bridge is the passing smoke
   case in `samples/DevTools.NUnit.SampleTests`; exclude its deliberate demo
   failure from the acceptance invocation.
-  _(Arithmetic Passed, `host-pid=45108`; adapter still ran siblings — filter gap.)_
+  _(Arithmetic Passed, `host-pid=45108`; adapter still ran siblings â€” filter gap.)_
 - [x] Before each deploy, kill Revit and rebuild the add-in for the target year.
   After deployment, allow only Runner to establish the live session. Reuse that
   session for generation-two proof; do not kill it merely to rebuild a test
@@ -654,7 +653,7 @@ Evidence pack (2026-08-12): `docs/agents/nunit-native-runtime-verification.md` +
 - [ ] Stop P1 if Revit 2023 plus Dynamo or Revit 2025 fails. Choose between a
   documented net48 host-restart requirement and a reduced support matrix;
   never expand reflection emulation.
-  _(2023+Dynamo coexistence OK for this pack; modern ALC unload not clean —
+  _(2023+Dynamo coexistence OK for this pack; modern ALC unload not clean â€”
   hold P1 on unload/async gaps.)_
 
 Required compile proof follows `.agents/skills/build/SKILL.md`:
@@ -693,13 +692,13 @@ Tracked evidence: [`docs/agents/nunit-native-runtime-verification.md`](../../age
 | Modern ALC reports `generation.retained` | **P0 blocker** | Revit 2026 (net8 proxy for 2025) switches generations but unload verifier never sees collect. Diagnose retain roots; do not treat as unload pass. |
 | Task1 full suite (incl. async) not green live | P0 | Blocked by async hang; sync matrix already recorded. |
 | Adapter/`dotnet test` filter runs sibling sample tests | P1-adjacent | Arithmetic smoke OK on PID; filter still executes demo fail. |
-| Revit 2027 live | Env blocker | Not installed — record only. |
+| Revit 2027 live | Env blocker | Not installed â€” record only. |
 | AutoCAD smoke | Optional / blocker | Not run. |
 | Cancel-on-disconnect | Done (hardening) | Pipe CT + RuntimeManager CT; live Infinite-sleep probe on 2023 passed. |
 
 **Hold P1** until async executor + ALC unload gaps are closed or the support matrix is explicitly reduced in ADR/plan.
 
-## P1 — MTP-Only IDE Integration
+## P1 â€” MTP-Only IDE Integration
 
 ### Task 9: Make Runner the explicit host-process owner
 
@@ -750,7 +749,7 @@ public sealed record NUnitRunnerHostInfo(
   existing explicit launch/cancellation policy. Never terminate a reused host.
 - [ ] Add a framed Runner endpoint for hello, discover, run, cancel, and
   shutdown. Forward host progress without converting it to console prose.
-- [ ] Record the package launcher → `Runner serve` boundary in the architecture
+- [ ] Record the package launcher â†’ `Runner serve` boundary in the architecture
   document. Prove that MTP can neither start nor stop the endpoint and that
   endpoint shutdown policy stays with Runner and its external launcher.
 - [ ] Include authoritative Autodesk host PID and ownership in every session
@@ -911,7 +910,7 @@ P1 exit gate: Visual Studio MTP run passes on Revit 2024 and 2025, Rider MTP run
 passes without native-provider hijack, C# Dev Kit MTP run passes on Revit 2025,
 and logs prove MTP delegated process policy to Runner in every case.
 
-## P2 — Packaging And Optional Ergonomics
+## P2 â€” Packaging And Optional Ergonomics
 
 ### Task 13: Package one consumer surface and retire the emulator
 
@@ -1031,9 +1030,9 @@ and clean sample restore/run evidence.
 - [x] Prioritized execution plan drafted for review.
 - [x] Plan accepted.
 - [x] On acceptance, mark the 2026-08-10 active plan superseded.
-- [x] Tasks 0–7A implemented in tree (Core/Transport, Runtime, generation
+- [x] Tasks 0â€“7A implemented in tree (Core/Transport, Runtime, generation
   loading, Host manager, Runner CLI v2, packaging ownership).
-- [~] Task 8 live host matrix — partial evidence recorded; **not closed**
+- [~] Task 8 live host matrix â€” partial evidence recorded; **not closed**
   (async UI deadlock, `generation.retained`, 2027/AutoCAD blockers).
 - [ ] P0 exit gate complete (blocked on Task 8 remaining gaps).
 - [ ] P1 Runner activation/ownership boundary complete.
@@ -1050,7 +1049,7 @@ and clean sample restore/run evidence.
 - Runtime proof: full NUnit semantics fixture, real IL generation change,
   dependency-version change, conflicting NUnit identity, and modern ALC unload.
 - Live proof: Revit 2023 plus Dynamo recorded; Revit 2025 substituted by
-  Revit 2026 (net8) per operator — unload still `generation.retained`.
+  Revit 2026 (net8) per operator â€” unload still `generation.retained`.
 - Operational live proof: agents use Runner rather than directly starting
   Revit, keep the live lane serialized, record the selected host PID, and kill
   the host before deploying changed add-in binaries.
