@@ -1,0 +1,27 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <TargetFrameworks>net48;net8.0-windows;net10.0-windows</TargetFrameworks>
+        <RootNamespace>DevTools.NUnit.Runtime</RootNamespace>
+        <AssemblyName>DevTools.NUnit.Runtime</AssemblyName>
+        <IsPackable>false</IsPackable>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <PackageReference Include="NUnit"/>
+        <PackageReference Include="System.Reflection.Metadata"/>
+    </ItemGroup>
+
+    <ItemGroup>
+        <!-- Core keeps one host-shared identity; do not copy into Runtime output/payload. -->
+        <ProjectReference Include="..\DevTools.NUnit.Core\DevTools.NUnit.Core.csproj"
+                          Private="false"/>
+    </ItemGroup>
+
+    <ItemGroup>
+        <InternalsVisibleTo Include="DevTools.NUnit.Runtime.Tests"/>
+    </ItemGroup>
+
+    <Import Project="build\NUnitRuntimePayload.targets"/>
+
+</Project>

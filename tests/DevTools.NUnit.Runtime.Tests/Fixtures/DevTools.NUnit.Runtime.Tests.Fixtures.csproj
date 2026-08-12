@@ -1,0 +1,30 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+
+
+    <PropertyGroup>
+
+        <TargetFramework>net10.0-windows</TargetFramework>
+
+        <RootNamespace>DevTools.NUnit.Runtime.Tests.Fixtures</RootNamespace>
+
+        <AssemblyName>DevTools.NUnit.Runtime.Tests.Fixtures</AssemblyName>
+
+        <IsPackable>false</IsPackable>
+
+        <IsTestProject>false</IsTestProject>
+
+    </PropertyGroup>
+
+
+
+    <ItemGroup>
+
+        <PackageReference Include="NUnit"/>
+
+    </ItemGroup>
+
+
+
+</Project>
+
