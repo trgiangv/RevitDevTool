@@ -39,8 +39,7 @@ the native NUnit/MTP release.
   [`0015-nunit-host-testing-standard-integration.md`](../../decisions/0015-nunit-host-testing-standard-integration.md)
 - Current product behavior:
   [`nunit-host-testing.md`](../../product/nunit-host-testing.md)
-- Native host path: `NUnitRuntimeManager` + TFM session factory (reflection
-  runner is DI-dead; delete in Task 13).
+- Native host path: `NUnitRuntimeManager` + TFM session factory (`NUnitReflectionRunner` deleted).
 - Public consumer package (P1): `DevTools.NUnit` from `source/DevTools.NUnit.Mtp/`.
 - Current probe loader:
   `source/DevTools.Utilities/AssemblyLoading/DirectoryAssemblyLoad.cs`
@@ -939,7 +938,7 @@ and logs prove MTP delegated process policy to Runner in every case.
 - [ ] Restore a clean sample from the produced local nupkg, activate Runner
   through the selected non-MTP owner, and run MTP against a fake Runner before
   any publication.
-- [ ] Delete `NUnitReflectionRunner`, attribute-name helpers, and tests that
+- [x] Delete `NUnitReflectionRunner`, attribute-name helpers, and tests that
   validate emulated lifecycle semantics after P0/P1 evidence is recorded.
 - [ ] Remove unused `NUnit.Engine` and `NUnit.Engine.Api` central package pins
   only after `rg` proves no project reference remains.

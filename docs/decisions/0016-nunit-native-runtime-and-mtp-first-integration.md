@@ -8,6 +8,11 @@ Accepted. Supersedes the NUnit execution strategy, VSTest-first priority, and
 debugging deferral in
 [`0015-nunit-host-testing-standard-integration.md`](0015-nunit-host-testing-standard-integration.md).
 
+Implementation notes (2026-08-14): `NUnitReflectionRunner` is gone. The
+unpublished VSTest adapter remains in-tree (product samples); Decision 8
+(MTP-only, remove VSTest) is not executed. Test stdout vs host pane:
+[`0017`](0017-nunit-host-test-output-routing.md).
+
 ## Context
 
 The experimental NUnit host integration currently executes a small NUnit

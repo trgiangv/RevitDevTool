@@ -36,3 +36,5 @@ Host DLL changes: `scripts/build-host.ps1 -Year <year>`. Runner: `dotnet publish
 - MTP samples are `OutputType=Exe`. Generation snapshot must treat `.exe` as a managed test assembly and skip `Log/` / `TestResults/` / `*.diag`.
 - Live `nunit/run` is marshaled through `IHostContextExecutor` with NUnit `RunOnMainThread`. WPF `Dispatcher.Invoke` is not a Revit API context. Runtime unit tests keep the worker dispatcher so cancel still works.
 - Stream-load leaves `Assembly.Location` empty. Tests that locate assets must use NUnit `TestContext.WorkDirectory` (the generation shadow, which copies output including Content).
+- Do not add a Host `TraceListener` or `ILogger` dump of `CaseResult.Output` to “help” the pane. Trace/Debug already fan out; Console is write-through at case finish ([0017](../decisions/0017-nunit-host-test-output-routing.md)).
+- `NUnitRunTraceScope` is IDE stdout capture only. net48 has no ALC; ALC also does not isolate `Trace.Listeners`.

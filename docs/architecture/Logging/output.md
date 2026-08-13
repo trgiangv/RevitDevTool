@@ -2,7 +2,7 @@
 
 Examples of log output for each logging API, showing both file log and monitor (Scintilla) display.
 
-Last updated: 2026-07-01
+Last updated: 2026-08-14
 
 ---
 
@@ -60,6 +60,12 @@ Level is determined by `TraceEventType`, not message content. `TraceError` → `
 *Level detected by `LogLevelDetector`.
 
 `ConsoleRedirector` redirects `Console.Out` and `Console.Error` to `Trace.Write()`, which then flows through `LoggerTraceListener`.
+
+During `nunit/run`, NUnit replaces `Console.Out`. Console then reaches the
+monitor only via Runtime write-through of `ITestResult.Output` (trailing
+newlines stripped). `Trace` / `Debug` still use this table unchanged.
+See [0017](../../decisions/0017-nunit-host-test-output-routing.md) and
+[product/nunit-host-testing.md](../../product/nunit-host-testing.md#test-output).
 
 ---
 

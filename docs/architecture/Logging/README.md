@@ -2,7 +2,7 @@
 
 Logging uses `ILogger<T>` via Microsoft.Extensions.Logging (MEL) with ZLogger as the provider. All business code injects `ILogger<T>` through DI; a legacy `LoggerTraceListener` bridge remains for third-party/WPF trace sources only.
 
-Last updated: 2026-07-01
+Last updated: 2026-08-14
 
 ---
 
@@ -78,7 +78,7 @@ flowchart TB
 
 - ZLogger provider registration (`LoggingExtensions.AddLoggingProvider()`)
 - `LoggerTraceListener` (bridge for third-party Trace sources only)
-- `ConsoleRedirector` (captures Console.Out → Trace for third-party libs)
+- `ConsoleRedirector` (captures Console.Out → Trace for third-party libs; NUnit run is an exception — [output.md](output.md#consolewriteline-captured-by-consoleredirector))
 - `NotifyListener`
 - `LogLevelDetector` (keyword-based level for bridged Trace messages)
 - Monitor/file/HTTP targets

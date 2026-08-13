@@ -24,6 +24,7 @@ stay in host projects. Visualization (DirectContext3D) is Revit-host only.
 | PyTest bridge | [architecture/PyTest](architecture/PyTest/README.md) | [product/pytest-bridge.md](product/pytest-bridge.md) | [agents/mcp-pytest-bridge.md](agents/mcp-pytest-bridge.md) |
 | Logging | [architecture/Logging](architecture/Logging/README.md) | [product/logging.md](product/logging.md) | — |
 | Visualization | [architecture/Visualization](architecture/Visualization/README.md) | [product/visualization.md](product/visualization.md) | — |
+| NUnit host testing | — | [product/nunit-host-testing.md](product/nunit-host-testing.md) | [agents/nunit-host-testing.md](agents/nunit-host-testing.md) |
 | PythonDemo | [architecture/PythonDemo](architecture/PythonDemo/README.md) | — | — |
 
 ## Cross-Cutting

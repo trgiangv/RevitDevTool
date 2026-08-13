@@ -142,6 +142,19 @@ for smoke). `nunit/run` is marshaled through `IHostContextExecutor` with NUnit
 `RevitContext`), not from adapter injection. NUnit MainThread dispatch cannot
 cancel an in-flight test.
 
+## Test output
+
+IDE Test Explorer / MTP stdout and the host log pane are different sinks.
+
+| API in the test | IDE stdout (`CaseResult.Output`) | Host pane (tracing on) |
+|-----------------|----------------------------------|------------------------|
+| `Console.WriteLine` / `TestContext.WriteLine` | NUnit `ITestResult.Output` | Forwarded once at case finish via `Trace.Write` |
+| `Trace.WriteLine` / `Debug.WriteLine` | Runtime `NUnitRunTraceScope` merge | Process `Trace.Listeners` |
+
+Do not echo `CaseResult.Output` through Host `ILogger` (duplicates pane Trace;
+can include `Revit.exe Error: 0 :`). Pane lines are not prefixed with the NUnit
+test name; grouping is the IDE node. Policy: [0017](../decisions/0017-nunit-host-test-output-routing.md).
+
 **DevTools advantages:** shared pipe/DI/execution guard with pytest and MCP;
 stamp-keyed per-file shadow (no whole-folder zip round-trip); multi-host Runner
 options; one intended adapter package aligned with the rest of RevitDevTool.
@@ -170,6 +183,7 @@ so `dotnet test` uses MTP.
 
 ## Related
 
-- Decision: [`docs/decisions/0015-nunit-host-testing-standard-integration.md`](../decisions/0015-nunit-host-testing-standard-integration.md)
+- Decision: [`docs/decisions/0016-nunit-native-runtime-and-mtp-first-integration.md`](../decisions/0016-nunit-native-runtime-and-mtp-first-integration.md)
+- Output routing: [`docs/decisions/0017-nunit-host-test-output-routing.md`](../decisions/0017-nunit-host-test-output-routing.md)
 - Agent notes: [`docs/agents/nunit-host-testing.md`](../agents/nunit-host-testing.md)
 - Pytest sibling: [`pytest-bridge.md`](pytest-bridge.md)
