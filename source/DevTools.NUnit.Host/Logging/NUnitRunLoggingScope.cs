@@ -1,14 +1,14 @@
 using System.Diagnostics;
 using DevTools.Logging.Listeners;
+using DevTools.NUnit.Core.Contracts;
 using Microsoft.Extensions.Logging;
 using MsLogger = Microsoft.Extensions.Logging.ILogger;
 
 namespace DevTools.NUnit.Host.Logging;
 
 /// <summary>
-/// Installs DevTools.Logging-compatible output capture for an NUnit run session.
-/// Trace, Debug, and Console (when not already redirected) flow into <see cref="ILogger"/>
-/// and per-test buffers merged into <see cref="NUnitCaseResult.Output"/>.
+/// Routes Trace/Debug (and optional Console) into <see cref="ILogger"/> for the host log.
+/// Per-case <see cref="NUnitCaseResult.Output"/> is captured in Runtime, not here.
 /// </summary>
 public sealed class NUnitRunLoggingScope : IDisposable
 {
@@ -29,7 +29,7 @@ public sealed class NUnitRunLoggingScope : IDisposable
             _consoleRedirector = new ConsoleRedirector();
     }
 
-    public NUnitRunOutputTracker Tracker { get; }
+    internal NUnitRunOutputTracker Tracker { get; }
 
     public void Dispose()
     {

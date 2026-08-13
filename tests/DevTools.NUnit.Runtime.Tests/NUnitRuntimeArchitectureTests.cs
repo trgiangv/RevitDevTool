@@ -74,7 +74,7 @@ public sealed class NUnitRuntimeArchitectureTests
     }
 
     [Fact]
-    public void HostManualNUnitExecution_IsIsolatedToReflectionRunnerRollback()
+    public void HostManualNUnitExecution_IsNotPresent()
     {
         var hostDirectory = Path.Combine(RepositoryRoot, "source", "DevTools.NUnit.Host");
         var forbiddenPatterns = new[]
@@ -88,7 +88,7 @@ public sealed class NUnitRuntimeArchitectureTests
 
         var offenders = Directory
             .EnumerateFiles(hostDirectory, "*.cs", SearchOption.AllDirectories)
-            .Where(path => !path.EndsWith("NUnitReflectionRunner.cs", StringComparison.OrdinalIgnoreCase))
+            .Where(path => !IsAllowedHostBootstrapPath(path))
             .Select(path => (path, content: File.ReadAllText(path)))
             .SelectMany(file => forbiddenPatterns
                 .Where(pattern => file.content.Contains(pattern, StringComparison.Ordinal))
@@ -96,5 +96,13 @@ public sealed class NUnitRuntimeArchitectureTests
             .ToList();
 
         Assert.Empty(offenders);
+    }
+
+    private static bool IsAllowedHostBootstrapPath(string path)
+    {
+        // Collectible/no-context loaders must Activator.CreateInstance the Runtime session
+        // type across the ALC boundary; that is not reflective NUnit lifecycle emulation.
+        return path.EndsWith("NUnitRuntimeSessionFactory.cs", StringComparison.OrdinalIgnoreCase)
+            || path.EndsWith("NetfxNUnitRuntimeSessionFactory.cs", StringComparison.OrdinalIgnoreCase);
     }
 }

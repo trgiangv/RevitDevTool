@@ -1,0 +1,50 @@
+<Project Sdk="Microsoft.NET.Sdk">
+    <PropertyGroup>
+        <TargetFrameworks>net48;net8.0-windows;net10.0-windows</TargetFrameworks>
+        <!-- Independent package: do not inherit Autodesk flatten. Parallel TFMs
+             must not share obj/bin or VS races CSC (CS2012 / MSB3713). -->
+        <AppendTargetFrameworkToOutputPath>true</AppendTargetFrameworkToOutputPath>
+        <RootNamespace>DevTools.NUnit.Mtp</RootNamespace>
+        <AssemblyName>DevTools.NUnit.Mtp</AssemblyName>
+        <PackageId>DevTools.NUnit</PackageId>
+        <IsPackable>true</IsPackable>
+        <DevelopmentDependency>true</DevelopmentDependency>
+        <Description>Microsoft.Testing.Platform framework that runs NUnit tests inside Revit/AutoCAD hosts. Requires RevitDevTool (https://github.com/trgiangv/RevitDevTool).</Description>
+        <PackageTags>nunit;revit;autocad;testing;mtp</PackageTags>
+        <PackageReadmeFile>README.md</PackageReadmeFile>
+        <EnableDynamicLoading>false</EnableDynamicLoading>
+        <IsTestProject>false</IsTestProject>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <None Include="build\DevTools.NUnit.props" Pack="true" PackagePath="build\"/>
+        <None Include="build\DevTools.NUnit.targets" Pack="true" PackagePath="build\"/>
+        <None Include="README.md" Pack="true" PackagePath="\"/>
+    </ItemGroup>
+
+    <ItemGroup>
+        <!-- Compile against the platform; consumers supply it at runtime via Microsoft.Testing.Platform.MSBuild. -->
+        <PackageReference Include="Microsoft.Testing.Platform">
+            <PrivateAssets>all</PrivateAssets>
+            <ExcludeAssets>runtime</ExcludeAssets>
+        </PackageReference>
+        <!-- net48 has no inbox STJ / PE metadata; keep runtime copy-local for the test exe. -->
+        <PackageReference Include="System.Text.Json" Condition="'$(TargetFramework)' == 'net48'">
+            <PrivateAssets>all</PrivateAssets>
+        </PackageReference>
+        <PackageReference Include="System.Reflection.Metadata" Condition="'$(TargetFramework)' == 'net48'">
+            <PrivateAssets>all</PrivateAssets>
+        </PackageReference>
+        <PackageReference Include="System.Runtime.CompilerServices.Unsafe" Condition="'$(TargetFramework)' == 'net48'">
+            <PrivateAssets>all</PrivateAssets>
+        </PackageReference>
+        <InternalsVisibleTo Include="DevTools.NUnit.Mtp.Tests"/>
+    </ItemGroup>
+
+    <ItemGroup>
+        <Compile Include="..\DevTools.NUnit.Core\Contracts\NUnitMessages.cs" Link="Core\NUnitMessages.cs"/>
+        <Compile Include="..\DevTools.NUnit.Core\Contracts\NUnitRunnerCli.cs" Link="Core\NUnitRunnerCli.cs"/>
+        <Compile Include="..\DevTools.NUnit.Core\NUnitHostTiming.cs" Link="Core\NUnitHostTiming.cs"/>
+        <Compile Include="..\DevTools.NUnit.Core\Discovery\NUnitMetadataDiscoverer.cs" Link="Core\Discovery\NUnitMetadataDiscoverer.cs"/>
+    </ItemGroup>
+</Project>

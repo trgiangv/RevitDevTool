@@ -71,7 +71,8 @@ public sealed record NUnitCaseResult(
     IReadOnlyList<NUnitTrait>? Traits = null,
     NUnitSourceLocation? Source = null,
     string? SkipReason = null,
-    IReadOnlyList<NUnitAttachment>? Attachments = null);
+    IReadOnlyList<NUnitAttachment>? Attachments = null,
+    string? FullName = null);
 
 [UsedImplicitly(ImplicitUseTargetFlags.WithMembers)]
 public sealed record NUnitRunResponse(

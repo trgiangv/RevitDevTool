@@ -20,8 +20,8 @@ public static class NUnitHostTiming
 
     /// <summary>
     /// Adapter <c>WaitForExit</c> budget for the Runner process.
-    /// Always includes launch timeout: <c>HostLaunch=false</c> still cold-starts
-    /// when no existing host pipe is found.
+    /// Includes launch timeout because both modes may start a host: <c>HostLaunch=true</c>
+    /// always does; <c>HostLaunch=false</c> still cold-starts when no matching pipe exists.
     /// </summary>
     public static int ComputeAdapterRunnerProcessTimeoutSeconds(
         int hostLaunchTimeoutSeconds,

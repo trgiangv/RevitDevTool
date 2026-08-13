@@ -309,9 +309,9 @@ public sealed class NUnitRuntimeManagerTests
             "generation-two");
         var manager = CreateManagerWithRealFactory(workspace.GenerationsRoot);
 
-        var generationOneManifest = ModernNUnitRuntimeTestEnvironment.CreateBuilder(workspace.GenerationsRoot)
+        var generationOneManifest = NUnitRuntimeTestEnvironment.CreateBuilder(workspace.GenerationsRoot)
             .Build(generationOneAssembly);
-        var generationTwoManifest = ModernNUnitRuntimeTestEnvironment.CreateBuilder(workspace.GenerationsRoot)
+        var generationTwoManifest = NUnitRuntimeTestEnvironment.CreateBuilder(workspace.GenerationsRoot)
             .Build(generationTwoAssembly);
 
         var filter = "<filter><test>DevTools.NUnit.Runtime.Fixtures.FullSemanticsFixture.GenerationMarker_IsReported</test></filter>";
@@ -334,6 +334,11 @@ public sealed class NUnitRuntimeManagerTests
         Assert.Equal(NUnitOutcomes.Passed, generationTwoRun.Cases.Single().Outcome);
         Assert.Contains("generation-one", generationOneRun.Cases.Single().Output ?? string.Empty, StringComparison.Ordinal);
         Assert.Contains("generation-two", generationTwoRun.Cases.Single().Output ?? string.Empty, StringComparison.Ordinal);
+
+#if NET
+        Assert.Null(generationOneRun.RuntimeDiagnostic);
+        Assert.NotNull(generationTwoRun.RuntimeDiagnostic);
+#endif
     }
 
     private static NUnitRuntimeManager CreateManagerWithFakeFactory(
@@ -346,17 +351,15 @@ public sealed class NUnitRuntimeManagerTests
 
     private static NUnitRuntimeManager CreateManagerWithRealFactory(string generationsRoot) =>
         new(
-            ModernNUnitRuntimeTestEnvironment.CreateBuilder(generationsRoot),
-            new ModernNUnitRuntimeSessionFactory(),
-            new NUnitAssemblyLoader());
+            NUnitRuntimeTestEnvironment.CreateBuilder(generationsRoot),
+            new NUnitRuntimeSessionFactory());
 
     private static NUnitRuntimeManager CreateManager(
         FakeNUnitRuntimeSessionFactory factory,
         string generationsRoot) =>
         new(
-            ModernNUnitRuntimeTestEnvironment.CreateBuilder(generationsRoot),
-            factory,
-            new NUnitAssemblyLoader());
+            NUnitRuntimeTestEnvironment.CreateBuilder(generationsRoot),
+            factory);
 
     private sealed class TempWorkspace : IDisposable
     {

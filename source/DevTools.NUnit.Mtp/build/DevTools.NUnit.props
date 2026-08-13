@@ -1,0 +1,33 @@
+<Project>
+  <PropertyGroup>
+    <DevToolsNUnitPropsImported>true</DevToolsNUnitPropsImported>
+    <IsTestingPlatformApplication Condition="'$(IsTestingPlatformApplication)' == ''">true</IsTestingPlatformApplication>
+    <EnableMicrosoftTestingPlatform Condition="'$(EnableMicrosoftTestingPlatform)' == ''">true</EnableMicrosoftTestingPlatform>
+    <TestingPlatformDotnetTestSupport Condition="'$(TestingPlatformDotnetTestSupport)' == ''">true</TestingPlatformDotnetTestSupport>
+    <GenerateTestingPlatformEntryPoint Condition="'$(GenerateTestingPlatformEntryPoint)' == ''">true</GenerateTestingPlatformEntryPoint>
+    <OutputType>Exe</OutputType>
+    <!-- OutputType is set after Sdk.props, so net48 exes skip binding redirects
+         unless this is explicit. STJ 9 needs Unsafe 6.0; NUnit copies 4.x. -->
+    <AutoGenerateBindingRedirects Condition="$(TargetFramework.StartsWith('net4'))">true</AutoGenerateBindingRedirects>
+    <GenerateBindingRedirectsOutputType Condition="$(TargetFramework.StartsWith('net4'))">true</GenerateBindingRedirectsOutputType>
+    <EnableDynamicLoading>false</EnableDynamicLoading>
+    <HostLaunch Condition="'$(HostLaunch)' == ''">false</HostLaunch>
+    <HostTimeout Condition="'$(HostTimeout)' == ''">60</HostTimeout>
+    <HostLaunchTimeout Condition="'$(HostLaunchTimeout)' == ''">180</HostLaunchTimeout>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <TestingPlatformBuilderHook Include="51ad4b4c-87f1-4554-9aa4-e7a54bd732f5">
+      <DisplayName>DevTools.NUnit</DisplayName>
+      <TypeFullName>DevTools.NUnit.Mtp.TestingPlatformBuilderHook</TypeFullName>
+    </TestingPlatformBuilderHook>
+  </ItemGroup>
+
+  <!-- Direct reference wins MSBuild copy over NUnit's Unsafe 4.x (MSB3277). -->
+  <ItemGroup Condition="$(TargetFramework.StartsWith('net4')) and '$(ManagePackageVersionsCentrally)' == 'true'">
+    <PackageReference Include="System.Runtime.CompilerServices.Unsafe" VersionOverride="6.1.2"/>
+  </ItemGroup>
+  <ItemGroup Condition="$(TargetFramework.StartsWith('net4')) and '$(ManagePackageVersionsCentrally)' != 'true'">
+    <PackageReference Include="System.Runtime.CompilerServices.Unsafe" Version="6.1.2"/>
+  </ItemGroup>
+</Project>

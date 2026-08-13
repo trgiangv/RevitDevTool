@@ -1,6 +1,5 @@
 using System.Collections.Concurrent;
 using System.Reflection.Metadata;
-using System.Reflection.Metadata.Ecma335;
 using System.Reflection.PortableExecutable;
 
 namespace DevTools.NUnit.TestAdapter;

@@ -39,11 +39,11 @@ public sealed class NUnitRequestHandlerTests
     }
 
     [Fact]
-    public async Task Run_marshals_through_host_context_executor_and_not_on_pipe_thread()
+    public async Task Run_marshals_through_host_context_executor()
     {
         var executor = new RecordingHostContextExecutor(marshalToWorkerThread: true);
-        var handler = CreateHandler(executor, CreateHost());
-        var pipeThreadId = Environment.CurrentManagedThreadId;
+        var host = new GuardModeCapturingHost(CreateHost());
+        var handler = CreateHandler(executor, host);
 
         var response = await handler.HandleAsync(
             "run-1",
@@ -53,29 +53,9 @@ public sealed class NUnitRequestHandlerTests
                 NUnitJsonContext.Default.NUnitRunRequest),
             TestContext.Current.CancellationToken);
 
-        Assert.Equal(pipeThreadId, executor.CallingThreadId);
         Assert.Equal(1, executor.ExecuteCount);
-        Assert.NotEqual(executor.CallingThreadId, executor.HandlerThreadId);
+        Assert.Equal(ExecutionGuardMode.Suppress, host.CapturedGuardMode);
         Assert.False(response.IsError);
-    }
-
-    [Fact]
-    public async Task Run_sets_execution_guard_to_suppress()
-    {
-        ExecutionGuardContext.Mode = ExecutionGuardMode.Passthrough;
-        var executor = new RecordingHostContextExecutor(marshalToWorkerThread: false);
-        var handler = CreateHandler(executor, CreateHost());
-
-        _ = await handler.HandleAsync(
-            "run-guard",
-            NUnitProtocol.Run,
-            JsonSerializer.SerializeToElement(
-                new NUnitRunRequest(Guid.NewGuid(), GetSpikeFixtureAssemblyPath(), null),
-                NUnitJsonContext.Default.NUnitRunRequest),
-            TestContext.Current.CancellationToken);
-
-        Assert.Equal(ExecutionGuardMode.Suppress, executor.CapturedGuardMode);
-        ExecutionGuardContext.Mode = ExecutionGuardMode.Passthrough;
     }
 
     [Fact]
@@ -186,6 +166,8 @@ public sealed class NUnitRequestHandlerTests
 
         var outputCase = runResponse.Cases.Single(test => test.Name == "Spike_Output");
         Assert.Contains("spike-output-marker", outputCase.Output ?? string.Empty, StringComparison.Ordinal);
+        Assert.Contains("spike-trace-marker", outputCase.Output ?? string.Empty, StringComparison.Ordinal);
+        Assert.Contains("spike-debug-marker", outputCase.Output ?? string.Empty, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -280,14 +262,13 @@ public sealed class NUnitRequestHandlerTests
     }
 
     private static NUnitHost CreateHost() =>
-        CreateHost(new ModernNUnitRuntimeSessionFactory(), NUnitGenerationTestEnvironment.CreateIsolatedGenerationsRoot());
+        CreateHost(new NUnitRuntimeSessionFactory(), NUnitGenerationTestEnvironment.CreateIsolatedGenerationsRoot());
 
     private static NUnitHost CreateHost(INUnitRuntimeSessionFactory sessionFactory, string generationsRoot)
     {
         var manager = new NUnitRuntimeManager(
-            ModernNUnitRuntimeTestEnvironment.CreateBuilder(generationsRoot),
+            NUnitRuntimeTestEnvironment.CreateBuilder(generationsRoot),
             sessionFactory,
-            new NUnitAssemblyLoader(),
             NullLogger<NUnitRuntimeManager>.Instance);
         return new NUnitHost(manager, NullLogger<NUnitHost>.Instance);
     }
@@ -347,6 +328,25 @@ public sealed class NUnitRequestHandlerTests
                 action();
                 return true;
             }, token);
+    }
+
+    private sealed class GuardModeCapturingHost(INUnitHost inner) : INUnitHost
+    {
+        public ExecutionGuardMode CapturedGuardMode { get; private set; }
+
+        public NUnitDiscoverResponse Discover(NUnitDiscoverRequest request) =>
+            inner.Discover(request);
+
+        public NUnitRunResponse Run(
+            NUnitRunRequest request,
+            Action<NUnitProgressEvent> publish,
+            CancellationToken cancellationToken = default)
+        {
+            CapturedGuardMode = ExecutionGuardContext.Mode;
+            return inner.Run(request, publish, cancellationToken);
+        }
+
+        public void Cancel(Guid runId) => inner.Cancel(runId);
     }
 
     private sealed class CancellableNUnitHost : INUnitHost

@@ -14,7 +14,6 @@ public sealed class NUnitRuntimeManager : IDisposable
 
     private readonly INUnitGenerationBuilder _generationBuilder;
     private readonly INUnitRuntimeSessionFactory _sessionFactory;
-    private readonly NUnitAssemblyLoader _assemblyLoader;
     private readonly ILogger<NUnitRuntimeManager> _logger;
     private readonly SemaphoreSlim _operationLock = new(1, 1);
     private readonly object _stateLock = new();
@@ -27,12 +26,10 @@ public sealed class NUnitRuntimeManager : IDisposable
     public NUnitRuntimeManager(
         INUnitGenerationBuilder generationBuilder,
         INUnitRuntimeSessionFactory sessionFactory,
-        NUnitAssemblyLoader assemblyLoader,
         ILogger<NUnitRuntimeManager>? logger = null)
     {
         _generationBuilder = generationBuilder ?? throw new ArgumentNullException(nameof(generationBuilder));
         _sessionFactory = sessionFactory ?? throw new ArgumentNullException(nameof(sessionFactory));
-        _assemblyLoader = assemblyLoader ?? throw new ArgumentNullException(nameof(assemblyLoader));
         _logger = logger ?? NullLogger<NUnitRuntimeManager>.Instance;
     }
 
@@ -49,17 +46,21 @@ public sealed class NUnitRuntimeManager : IDisposable
             ThrowIfDisposed();
             var session = AcquireSession(request.AssemblyPath);
             session.BeginRequest();
+            NUnitDiscoverResponse response;
             try
             {
                 var discoverRequest = new NUnitDiscoverRequest(session.ShadowAssemblyPath, request.Filter);
-                var response = session.Session.Discover(discoverRequest);
-                return EnrichDiscoverResponse(response, session);
+                response = session.Session.Discover(discoverRequest);
             }
             finally
             {
                 session.EndRequest();
+                // Release before enrich so unload diagnostics attach to this response,
+                // not the next discover/run.
                 ReleaseObsoleteSessions();
             }
+
+            return EnrichDiscoverResponse(response, session);
         }
         finally
         {
@@ -85,21 +86,25 @@ public sealed class NUnitRuntimeManager : IDisposable
             var session = AcquireSession(request.AssemblyPath);
             session.BeginRequest();
             RegisterActiveRun(request.RunId, session);
-            using var loggingScope = new NUnitRunLoggingScope(_logger);
+            NUnitRunResponse response;
             try
             {
+                using var loggingScope = new NUnitRunLoggingScope(_logger, redirectConsole: false);
                 var sink = new ProtocolEventSink(request.RunId, publish, _logger);
                 var runRequest = new NUnitRunRequest(request.RunId, session.ShadowAssemblyPath, request.Filter);
                 // Honor client disconnect / adapter cancel so the host executor is not left busy.
-                var response = session.Session.Run(runRequest, sink, cancellationToken);
-                return EnrichRunResponse(response, session);
+                response = session.Session.Run(runRequest, sink, cancellationToken);
             }
             finally
             {
                 UnregisterActiveRun(request.RunId);
                 session.EndRequest();
+                // Release after logging scope disposal and before enrich so unload
+                // diagnostics attach to this response, not the next discover/run.
                 ReleaseObsoleteSessions();
             }
+
+            return EnrichRunResponse(response, session);
         }
         finally
         {
@@ -141,7 +146,7 @@ public sealed class NUnitRuntimeManager : IDisposable
             {
                 _logger.LogWarning(
                     ex,
-                    "Failed to cancel NUnit run {RunId} while disposing the runtime manager.",
+                    "Failed to cancel NUnit run {RunId} while disposing the runtime manager",
                     activeRun.RunId);
             }
         }
@@ -161,8 +166,10 @@ public sealed class NUnitRuntimeManager : IDisposable
             foreach (var session in sessions)
                 session.DisposeSession();
 
+#if NETFRAMEWORK
             if (_sessionFactory is IDisposable disposableFactory)
                 disposableFactory.Dispose();
+#endif
         }
         finally
         {
@@ -172,8 +179,8 @@ public sealed class NUnitRuntimeManager : IDisposable
 
     private ManagedSession AcquireSession(string assemblyPath)
     {
-        var sourceAssemblyPath = _assemblyLoader.ResolveAssemblyPath(assemblyPath);
-        _assemblyLoader.EnsureLoadable(sourceAssemblyPath);
+        var sourceAssemblyPath = NUnitAssemblyLoader.ResolveAssemblyPath(assemblyPath);
+        NUnitAssemblyLoader.EnsureLoadable(sourceAssemblyPath);
 
         NUnitGenerationManifest manifest;
         try
@@ -272,8 +279,7 @@ public sealed class NUnitRuntimeManager : IDisposable
         {
             obsoleteSessions = _sessionsByGenerationId.Values
                 .Where(session =>
-                    !session.IsCurrent
-                    && session.ActiveRequestCount == 0
+                    session is { IsCurrent: false, ActiveRequestCount: 0 }
                     && !session.GenerationId.Equals(_currentGenerationId, StringComparison.Ordinal))
                 .ToList();
         }
@@ -391,7 +397,7 @@ public sealed class NUnitRuntimeManager : IDisposable
             _logger = logger;
         }
 
-        internal NUnitGenerationManifest Manifest { get; }
+        private NUnitGenerationManifest Manifest { get; }
 
         internal INUnitRuntimeSession Session { get; }
 
@@ -421,25 +427,23 @@ public sealed class NUnitRuntimeManager : IDisposable
             }
             catch (Exception ex)
             {
-                _logger.LogWarning(ex, "Failed to dispose NUnit runtime session for generation {GenerationId}.", GenerationId);
+                _logger.LogWarning(ex, "Failed to dispose NUnit runtime session for generation {GenerationId}", GenerationId);
             }
 
-#if NET
-            if (Session is NUnitRuntimeSessionHandle modernHandle)
+#if DEBUG && NET
+            if (Session is NUnitRuntimeSessionHandle sessionHandle)
             {
-                diagnostic = modernHandle.VerifyUnload();
+                diagnostic = sessionHandle.VerifyUnload();
                 if (string.Equals(diagnostic.Code, NUnitRuntimeUnloadVerifier.RetainedCode, StringComparison.Ordinal))
                     _logger.LogInformation(
                         "Generation {GenerationId} ALC retained after session disposal: {Message}",
                         GenerationId,
                         diagnostic.Message);
             }
-#endif
-
-#if NETFRAMEWORK
-            if (Session is NetFrameworkNUnitSessionHandle net48Handle)
+#elif DEBUG && NETFRAMEWORK
+            if (Session is NetfxNUnitSessionHandle netfxHandle)
             {
-                diagnostic = net48Handle.CreateRetainedDiagnostic();
+                diagnostic = netfxHandle.CreateRetainedDiagnostic();
                 _logger.LogInformation(
                     "Generation {GenerationId} retained in AppDomain after session disposal: {Message}",
                     GenerationId,

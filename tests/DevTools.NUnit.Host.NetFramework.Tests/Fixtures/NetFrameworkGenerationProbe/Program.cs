@@ -52,9 +52,9 @@ internal static class Program
         if (conflicting.Location.StartsWith(manifest.ShadowDirectory, StringComparison.OrdinalIgnoreCase))
             return 3;
 
-        using var factory = new NetFrameworkNUnitRuntimeSessionFactory();
+        using var factory = new NetfxNUnitRuntimeSessionFactory();
         using var session = factory.Create(manifest);
-        var handle = (NetFrameworkNUnitSessionHandle)session;
+        var handle = (NetfxNUnitSessionHandle)session;
 
         var run = session.Run(
             new NUnitRunRequest(
@@ -109,7 +109,7 @@ internal static class Program
         var generationOne = NetFrameworkGenerationTestEnvironment.BuildFixtureGenerationOne();
         var generationTwo = NetFrameworkGenerationTestEnvironment.BuildFixtureGenerationTwo();
 
-        using var factory = new NetFrameworkNUnitRuntimeSessionFactory();
+        using var factory = new NetfxNUnitRuntimeSessionFactory();
         INUnitRuntimeSession? sessionOne = null;
         INUnitRuntimeSession? sessionTwo = null;
 
@@ -120,8 +120,8 @@ internal static class Program
         if (sessionOne is null || sessionTwo is null)
             return 1;
 
-        var handleOne = (NetFrameworkNUnitSessionHandle)sessionOne;
-        var handleTwo = (NetFrameworkNUnitSessionHandle)sessionTwo;
+        var handleOne = (NetfxNUnitSessionHandle)sessionOne;
+        var handleTwo = (NetfxNUnitSessionHandle)sessionTwo;
 
         try
         {

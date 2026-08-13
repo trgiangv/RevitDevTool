@@ -4,7 +4,7 @@ using DevTools.NUnit.Core.Runtime;
 
 namespace DevTools.NUnit.Host.Loading;
 
-public sealed class ModernNUnitRuntimeSessionFactory : INUnitRuntimeSessionFactory
+public sealed class NUnitRuntimeSessionFactory : INUnitRuntimeSessionFactory
 {
     private const string RuntimeSessionTypeName = "DevTools.NUnit.Runtime.NUnitRuntimeSession";
 
@@ -23,7 +23,7 @@ public sealed class ModernNUnitRuntimeSessionFactory : INUnitRuntimeSessionFacto
                 sessionType,
                 BindingFlags.Instance | BindingFlags.Public,
                 binder: null,
-                args: [testAssembly, generation.ShadowAssemblyPath, generation.GenerationId],
+                args: [testAssembly, generation.ShadowAssemblyPath, generation.GenerationId, true],
                 culture: null)!;
 
             return new NUnitRuntimeSessionHandle(inner, loadContext);

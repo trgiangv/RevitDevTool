@@ -35,43 +35,80 @@ internal static class NUnitGenerationNativeAssetResolver
         string shadowDirectory,
         IReadOnlyDictionary<string, IReadOnlyList<string>> nativeAssetsByFileName)
     {
-        var lookupKeys = BuildLookupKeys(unmanagedDllName);
-        IReadOnlyList<string>? matchedPaths = null;
+        if (!TryFindUniqueFilenameGroup(unmanagedDllName, nativeAssetsByFileName, out var matchedPaths))
+            return null;
 
-        foreach (var lookupKey in lookupKeys)
+        var candidate = RequireSingleManifestPath(unmanagedDllName, matchedPaths);
+        return TryAcceptManifestNativePath(candidate, manifestNativeAssetPaths, shadowDirectory, out var acceptedPath)
+            ? acceptedPath
+            : null;
+    }
+
+    private static bool TryFindUniqueFilenameGroup(
+        string unmanagedDllName,
+        IReadOnlyDictionary<string, IReadOnlyList<string>> nativeAssetsByFileName,
+        out IReadOnlyList<string> matchedPaths)
+    {
+        IReadOnlyList<string>? matched = null;
+        foreach (var lookupKey in BuildLookupKeys(unmanagedDllName))
         {
-            if (!nativeAssetsByFileName.TryGetValue(lookupKey, out var candidates) || candidates.Count == 0)
+            if (!TryGetFilenameCandidates(lookupKey, nativeAssetsByFileName, out var candidates))
                 continue;
 
-            if (matchedPaths is not null)
-            {
-                if (!PathsEquivalent(matchedPaths, candidates))
-                {
-                    throw new NUnitGenerationLoadException(
-                        $"Ambiguous native asset lookup for '{unmanagedDllName}'. Multiple manifest filename groups match.");
-                }
+            MergeFilenameGroup(unmanagedDllName, ref matched, candidates);
+        }
 
-                continue;
-            }
+        if (matched is null || matched.Count == 0)
+        {
+            matchedPaths = Array.Empty<string>();
+            return false;
+        }
 
+        matchedPaths = matched;
+        return true;
+    }
+
+    private static bool TryGetFilenameCandidates(
+        string lookupKey,
+        IReadOnlyDictionary<string, IReadOnlyList<string>> nativeAssetsByFileName,
+        out IReadOnlyList<string> candidates)
+    {
+        if (nativeAssetsByFileName.TryGetValue(lookupKey, out var found) && found.Count > 0)
+        {
+            candidates = found;
+            return true;
+        }
+
+        candidates = Array.Empty<string>();
+        return false;
+    }
+
+    private static void MergeFilenameGroup(
+        string unmanagedDllName,
+        ref IReadOnlyList<string>? matchedPaths,
+        IReadOnlyList<string> candidates)
+    {
+        if (matchedPaths is null)
+        {
             matchedPaths = candidates;
+            return;
         }
 
-        if (matchedPaths is null || matchedPaths.Count == 0)
-            return null;
+        if (PathsEquivalent(matchedPaths, candidates))
+            return;
 
-        if (matchedPaths.Count > 1)
-        {
-            throw new NUnitGenerationLoadException(
-                $"Ambiguous native asset '{unmanagedDllName}' maps to {matchedPaths.Count} manifest paths: "
-                + string.Join(", ", matchedPaths));
-        }
+        throw new NUnitGenerationLoadException(
+            $"Ambiguous native asset lookup for '{unmanagedDllName}'. Multiple manifest filename groups match.");
+    }
 
-        var candidate = matchedPaths[0];
-        if (!TryAcceptManifestNativePath(candidate, manifestNativeAssetPaths, shadowDirectory, out var acceptedPath))
-            return null;
+    private static string RequireSingleManifestPath(string unmanagedDllName, IReadOnlyList<string> matchedPaths)
+    {
+        if (matchedPaths.Count == 1)
+            return matchedPaths[0];
 
-        return acceptedPath;
+        throw new NUnitGenerationLoadException(
+            $"Ambiguous native asset '{unmanagedDllName}' maps to {matchedPaths.Count} manifest paths: "
+            + string.Join(", ", matchedPaths));
     }
 
     private static bool TryAcceptManifestNativePath(

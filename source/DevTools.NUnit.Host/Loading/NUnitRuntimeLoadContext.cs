@@ -4,6 +4,7 @@ using System.Reflection;
 using System.Runtime.Loader;
 using DevTools.NUnit.Core.Contracts;
 using DevTools.NUnit.Core.Runtime;
+using DevTools.Utilities.AssemblyLoading;
 
 namespace DevTools.NUnit.Host.Loading;
 
@@ -47,7 +48,8 @@ internal sealed class NUnitRuntimeLoadContext : AssemblyLoadContext
                 normalizedPath);
         }
 
-        return LoadFromAssemblyPath(normalizedPath);
+        // Stream-load so shadow copies are not locked for the next generation rebuild.
+        return ByteAssemblyLoader.LoadFromStream(this, normalizedPath);
     }
 
     internal Assembly? ResolveAssemblyForTesting(AssemblyName assemblyName) => ResolveAssembly(assemblyName);
@@ -98,6 +100,12 @@ internal sealed class NUnitRuntimeLoadContext : AssemblyLoadContext
         if (NUnitSharedAssemblyPolicy.IsShared(simpleName))
             return NUnitSharedAssemblyResolver.TryResolveFromDefault(assemblyName);
 
+        // Keep nunit.framework out of the collectible ALC: AsyncLocal/statics on a
+        // generation-private copy pin unload inside Autodesk hosts. Still load OUR
+        // shadow version (not Dynamo's) into the non-collectible Plugin/Default ALC.
+        if (NUnitFrameworkHostShare.IsFrameworkSimpleName(simpleName))
+            return ResolveHostSharedFramework(assemblyName);
+
         var resolverPath = _resolver.ResolveAssemblyToPath(assemblyName);
         if (resolverPath is not null && TryLoadShadowAssembly(resolverPath, assemblyName, out var resolvedAssembly))
             return resolvedAssembly;
@@ -110,6 +118,18 @@ internal sealed class NUnitRuntimeLoadContext : AssemblyLoadContext
         // null preserves normal CLR resolution for dependencies outside both
         // the host-shared policy and this immutable generation.
         return null;
+    }
+
+    private Assembly ResolveHostSharedFramework(AssemblyName requested)
+    {
+        var shared = NUnitFrameworkHostShare.GetOrLoadFromShadow(_manifest.FrameworkAssemblyPath);
+        if (!NUnitGenerationManagedAssemblyIndex.IsCompatibleIdentity(requested, shared.GetName()))
+        {
+            throw new NUnitGenerationAssemblyResolutionException(
+                $"Host-shared nunit.framework '{shared.FullName}' is incompatible with requested '{requested.FullName}'.");
+        }
+
+        return shared;
     }
 
     private bool TryLoadShadowAssembly(string absolutePath, AssemblyName requested, out Assembly assembly)
@@ -127,13 +147,20 @@ internal sealed class NUnitRuntimeLoadContext : AssemblyLoadContext
                 $"Generation shadow path '{normalizedPath}' contains allowlisted shared assembly '{identity.Name}'.");
         }
 
+        if (NUnitFrameworkHostShare.IsFrameworkSimpleName(identity.Name))
+        {
+            // Never stream-load nunit into the collectible generation ALC.
+            assembly = ResolveHostSharedFramework(requested);
+            return true;
+        }
+
         if (!NUnitGenerationManagedAssemblyIndex.IsCompatibleIdentity(requested, identity))
         {
             throw new NUnitGenerationAssemblyResolutionException(
                 $"Generation shadow path '{normalizedPath}' identity '{identity.FullName}' is incompatible with requested '{requested.FullName}'.");
         }
 
-        assembly = LoadFromAssemblyPath(normalizedPath);
+        assembly = ByteAssemblyLoader.LoadFromStream(this, normalizedPath);
         return true;
     }
 
@@ -203,14 +230,10 @@ internal sealed class NUnitRuntimeSessionHandle : INUnitRuntimeSession
     {
         _inner = inner ?? throw new ArgumentNullException(nameof(inner));
         _loadContext = loadContext ?? throw new ArgumentNullException(nameof(loadContext));
-        _loadContextWeakReference = new WeakReference(loadContext);
+        _loadContextWeakReference = new WeakReference(loadContext, trackResurrection: true);
     }
 
     public string GenerationId => _inner.GenerationId;
-
-    internal WeakReference LoadContextWeakReference => _loadContextWeakReference;
-
-    internal NUnitRuntimeDiagnostic? UnloadDiagnostic => _unloadDiagnostic;
 
     internal Assembly GetLoadedTestAssembly()
     {
@@ -222,15 +245,13 @@ internal sealed class NUnitRuntimeSessionHandle : INUnitRuntimeSession
 
     internal Assembly GetLoadedFrameworkAssembly()
     {
-        var testAssembly = GetLoadedTestAssembly();
-        var loadContext = AssemblyLoadContext.GetLoadContext(testAssembly)
-            ?? throw new InvalidOperationException("Generation test assembly has no load context.");
+        if (!NUnitFrameworkHostShare.TryGetLoaded(out var shared))
+        {
+            throw new InvalidOperationException(
+                "Host-shared nunit.framework has not been loaded for this generation.");
+        }
 
-        return loadContext.Assemblies.Single(assembly =>
-            string.Equals(
-                assembly.GetName().Name,
-                Path.GetFileNameWithoutExtension(NUnitGenerationBuilder.FrameworkAssemblyFileName),
-                StringComparison.OrdinalIgnoreCase));
+        return shared;
     }
 
     internal Assembly GetLoadedRuntimeAssembly() =>
@@ -270,7 +291,7 @@ internal sealed class NUnitRuntimeSessionHandle : INUnitRuntimeSession
 
     public NUnitRuntimeDiagnostic VerifyUnload()
     {
-        ObjectDisposedException.ThrowIf(_disposed == false, this);
+        ObjectDisposedException.ThrowIf(!_disposed, this);
 
         return _unloadDiagnostic ??= NUnitRuntimeUnloadVerifier.Verify(_loadContextWeakReference);
     }

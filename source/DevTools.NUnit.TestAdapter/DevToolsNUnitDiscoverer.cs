@@ -18,16 +18,18 @@ public sealed class DevToolsNUnitDiscoverer : ITestDiscoverer
         ITestCaseDiscoverySink discoverySink)
     {
         AdapterSettings.Apply(discoveryContext.RunSettings);
-        if (!AdapterSettings.IsConfigured)
-            return;
 
         foreach (var source in sources)
         {
             try
             {
+                AdapterSettings.TryApplyFromAssembly(source);
+                if (!AdapterSettings.IsConfigured)
+                    continue;
+
                 SetWorkingDirectory(source);
                 foreach (var test in LocalNUnitTestDiscoverer.Discover(source))
-                    discoverySink.SendTestCase(VSTestCaseMapper.ToTestCase(test));
+                    discoverySink.SendTestCase(VsTestCaseMapper.ToTestCase(test));
             }
             catch (Exception ex)
             {

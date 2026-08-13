@@ -10,7 +10,7 @@ namespace DevTools.NUnit.TestAdapter;
 public sealed class DevToolsNUnitExecutor : ITestExecutor
 {
     private IRunnerClient? _client;
-    private readonly object _clientLock = new();
+    private readonly Lock _clientLock = new();
 
     public void RunTests(IEnumerable<TestCase>? tests, IRunContext? runContext, IFrameworkHandle? frameworkHandle)
     {
@@ -18,12 +18,16 @@ public sealed class DevToolsNUnitExecutor : ITestExecutor
             return;
 
         AdapterSettings.Apply(runContext.RunSettings);
-        if (!AdapterSettings.IsConfigured)
-            return;
 
         var grouped = tests.GroupBy(test => test.Source).ToList();
         foreach (var group in grouped)
-            RunSource(group.Key, group.ToList(), runContext, frameworkHandle);
+        {
+            AdapterSettings.TryApplyFromAssembly(group.Key);
+            if (!AdapterSettings.IsConfigured)
+                continue;
+
+            RunSource(group.Key, group.ToList(), frameworkHandle);
+        }
     }
 
     public void RunTests(IEnumerable<string>? sources, IRunContext? runContext, IFrameworkHandle? frameworkHandle)
@@ -32,18 +36,21 @@ public sealed class DevToolsNUnitExecutor : ITestExecutor
             return;
 
         AdapterSettings.Apply(runContext.RunSettings);
-        if (!AdapterSettings.IsConfigured)
-            return;
 
         foreach (var source in sources)
         {
             try
             {
+                AdapterSettings.TryApplyFromAssembly(source);
+                if (!AdapterSettings.IsConfigured)
+                    continue;
+
                 SetWorkingDirectory(source);
                 var testCases = LocalNUnitTestDiscoverer.Discover(source)
-                    .Select(VSTestCaseMapper.ToTestCase)
+                    .Select(VsTestCaseMapper.ToTestCase)
+                    .Where(test => MatchesFilter(test, runContext))
                     .ToList();
-                RunSource(source, testCases, runContext, frameworkHandle);
+                RunSource(source, testCases, frameworkHandle);
             }
             catch (Exception ex)
             {
@@ -61,7 +68,6 @@ public sealed class DevToolsNUnitExecutor : ITestExecutor
     private void RunSource(
         string source,
         IReadOnlyList<TestCase> tests,
-        IRunContext runContext,
         IFrameworkHandle frameworkHandle)
     {
         if (tests.Count == 0)
@@ -69,14 +75,14 @@ public sealed class DevToolsNUnitExecutor : ITestExecutor
 
         var settings = AdapterSettings.Current;
         var options = settings.ToRunnerHostOptions();
-        var filter = VSTestCaseMapper.BuildFilter(tests);
+        var filter = VsTestCaseMapper.BuildFilter(tests);
 
         foreach (var test in tests)
             frameworkHandle.RecordStart(test);
 
         try
         {
-            var result = GetClient().Run(source, filter, options);
+            var result = GetClient().Run(source, options, filter);
             ReportResults(tests, result, frameworkHandle);
         }
         catch (Exception ex)
@@ -107,7 +113,7 @@ public sealed class DevToolsNUnitExecutor : ITestExecutor
             if (!byName.TryGetValue(remoteCase.Name, out var testCase))
                 continue;
 
-            frameworkHandle.RecordResult(VSTestCaseMapper.ToTestResult(testCase, remoteCase));
+            frameworkHandle.RecordResult(VsTestCaseMapper.ToTestResult(testCase, remoteCase));
             reported.Add(remoteCase.Name);
         }
 
@@ -129,6 +135,38 @@ public sealed class DevToolsNUnitExecutor : ITestExecutor
         lock (_clientLock)
             return _client ??= RunnerClientFactory.Create();
     }
+
+    private static bool MatchesFilter(TestCase test, IRunContext runContext)
+    {
+        var filter = runContext.GetTestCaseFilter(FilterPropertyNames, ResolveFilterProperty);
+        if (filter is null)
+            return true;
+
+        return filter.MatchTestCase(test, name => GetFilterPropertyValue(test, name));
+    }
+
+    private static readonly string[] FilterPropertyNames =
+    [
+        "FullyQualifiedName",
+        "DisplayName",
+        "Name",
+    ];
+
+    private static TestProperty? ResolveFilterProperty(string name) =>
+        name.ToUpperInvariant() switch
+        {
+            "FULLYQUALIFIEDNAME" => TestCaseProperties.FullyQualifiedName,
+            "DISPLAYNAME" or "NAME" => TestCaseProperties.DisplayName,
+            _ => null,
+        };
+
+    private static object? GetFilterPropertyValue(TestCase test, string name) =>
+        name.ToUpperInvariant() switch
+        {
+            "FULLYQUALIFIEDNAME" => test.FullyQualifiedName,
+            "DISPLAYNAME" or "NAME" => test.DisplayName,
+            _ => null,
+        };
 
     private static void SetWorkingDirectory(string source)
     {

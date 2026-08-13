@@ -34,15 +34,15 @@ internal sealed class GenerationAssemblyResolutionRecord
 internal sealed class NUnitGenerationRegistry
 {
     private readonly object _sync = new();
-    private readonly Dictionary<string, NetFrameworkNUnitGeneration> _generationsById =
+    private readonly Dictionary<string, NetfxNUnitGeneration> _generationsById =
         new(StringComparer.Ordinal);
 
-    private readonly Dictionary<Assembly, NetFrameworkNUnitGeneration> _generationByAssembly =
+    private readonly Dictionary<Assembly, NetfxNUnitGeneration> _generationByAssembly =
         new(AssemblyReferenceEqualityComparer.Instance);
 
     private readonly List<GenerationAssemblyResolutionRecord> _lazyResolutionRecords = new List<GenerationAssemblyResolutionRecord>();
 
-    private NetFrameworkNUnitGeneration? _activeLoadingGeneration;
+    private NetfxNUnitGeneration? _activeLoadingGeneration;
 
     internal int RetainedGenerationCount
     {
@@ -64,7 +64,7 @@ internal sealed class NUnitGenerationRegistry
         }
     }
 
-    internal NetFrameworkNUnitGeneration GetOrCreate(NUnitGenerationManifest manifest)
+    internal NetfxNUnitGeneration GetOrCreate(NUnitGenerationManifest manifest)
     {
         if (manifest is null)
             throw new ArgumentNullException(nameof(manifest));
@@ -74,13 +74,13 @@ internal sealed class NUnitGenerationRegistry
             if (_generationsById.TryGetValue(manifest.GenerationId, out var existing))
                 return existing;
 
-            var generation = new NetFrameworkNUnitGeneration(manifest);
+            var generation = new NetfxNUnitGeneration(manifest);
             _generationsById[manifest.GenerationId] = generation;
             return generation;
         }
     }
 
-    internal void RegisterOwnedAssembly(NetFrameworkNUnitGeneration generation, Assembly assembly)
+    internal void RegisterOwnedAssembly(NetfxNUnitGeneration generation, Assembly assembly)
     {
         if (generation is null)
             throw new ArgumentNullException(nameof(generation));
@@ -91,7 +91,7 @@ internal sealed class NUnitGenerationRegistry
             _generationByAssembly[assembly] = generation;
     }
 
-    internal void SetActiveLoadingGeneration(NetFrameworkNUnitGeneration generation)
+    internal void SetActiveLoadingGeneration(NetfxNUnitGeneration generation)
     {
         if (generation is null)
             throw new ArgumentNullException(nameof(generation));
@@ -100,7 +100,7 @@ internal sealed class NUnitGenerationRegistry
             _activeLoadingGeneration = generation;
     }
 
-    internal void ClearActiveLoadingGeneration(NetFrameworkNUnitGeneration generation)
+    internal void ClearActiveLoadingGeneration(NetfxNUnitGeneration generation)
     {
         if (generation is null)
             throw new ArgumentNullException(nameof(generation));
@@ -112,7 +112,7 @@ internal sealed class NUnitGenerationRegistry
         }
     }
 
-    internal NetFrameworkNUnitGeneration? TryGetGenerationForRequestingAssembly(Assembly? requestingAssembly)
+    internal NetfxNUnitGeneration? TryGetGenerationForRequestingAssembly(Assembly? requestingAssembly)
     {
         if (requestingAssembly is null)
             return null;
@@ -125,7 +125,7 @@ internal sealed class NUnitGenerationRegistry
         }
     }
 
-    internal NetFrameworkNUnitGeneration? TryGetActiveLoadingGeneration()
+    internal NetfxNUnitGeneration? TryGetActiveLoadingGeneration()
     {
         lock (_sync)
             return _activeLoadingGeneration;
@@ -166,59 +166,85 @@ internal sealed class NUnitGenerationRegistry
 
     internal Assembly? ResolveAssembly(object? sender, ResolveEventArgs args)
     {
-        if (string.IsNullOrWhiteSpace(args.Name))
-            return null;
-
-        AssemblyName requested;
-        try
-        {
-            requested = new AssemblyName(args.Name);
-        }
-        catch
-        {
-            return null;
-        }
-
-        var simpleName = requested.Name;
-        if (string.IsNullOrWhiteSpace(simpleName))
+        if (!TryParseRequestedAssemblyName(args.Name, out var requested, out var simpleName))
             return null;
 
         if (NUnitSharedAssemblyPolicy.IsShared(simpleName))
-            return NetFrameworkNUnitSharedAssemblyResolver.TryResolveFromAppDomain(requested);
+            return NetfxNUnitSharedAssemblyResolver.TryResolveFromAppDomain(requested);
 
-        NetFrameworkNUnitGeneration? generation;
-        lock (_sync)
-        {
-            generation = TryGetGenerationForRequestingAssembly(args.RequestingAssembly)
-                ?? _activeLoadingGeneration;
-        }
-
+        var generation = GetGenerationForResolve(args.RequestingAssembly);
         if (generation is null)
             return null;
 
-        if (string.Equals(simpleName, "nunit.framework", StringComparison.OrdinalIgnoreCase)
-            && args.RequestingAssembly is not null
-            && generation.OwnsAssembly(args.RequestingAssembly))
-        {
-            var framework = generation.GetLoadedFrameworkAssembly();
-            RegisterOwnedAssembly(generation, framework);
+        if (TryResolveOwnedFramework(generation, simpleName, args.RequestingAssembly, out var framework))
             return framework;
-        }
+
+        return ResolveGenerationDependency(generation, requested, args.RequestingAssembly);
+    }
+
+    private static bool TryParseRequestedAssemblyName(
+        string? name,
+        out AssemblyName requested,
+        out string simpleName)
+    {
+        requested = new AssemblyName();
+        simpleName = string.Empty;
+        if (string.IsNullOrWhiteSpace(name))
+            return false;
 
         try
         {
-            var resolved = generation.ResolveDependency(this, requested, args.RequestingAssembly);
+            requested = new AssemblyName(name);
+        }
+        catch
+        {
+            return false;
+        }
+
+        simpleName = requested.Name ?? string.Empty;
+        return simpleName.Length > 0;
+    }
+
+    private NetfxNUnitGeneration? GetGenerationForResolve(Assembly? requestingAssembly)
+    {
+        lock (_sync)
+        {
+            return TryGetGenerationForRequestingAssembly(requestingAssembly)
+                ?? _activeLoadingGeneration;
+        }
+    }
+
+    private bool TryResolveOwnedFramework(
+        NetfxNUnitGeneration generation,
+        string simpleName,
+        Assembly? requestingAssembly,
+        out Assembly framework)
+    {
+        framework = null!;
+        if (!string.Equals(simpleName, "nunit.framework", StringComparison.OrdinalIgnoreCase))
+            return false;
+
+        if (requestingAssembly is null || !generation.OwnsAssembly(requestingAssembly))
+            return false;
+
+        framework = generation.GetLoadedFrameworkAssembly();
+        RegisterOwnedAssembly(generation, framework);
+        return true;
+    }
+
+    private Assembly? ResolveGenerationDependency(
+        NetfxNUnitGeneration generation,
+        AssemblyName requested,
+        Assembly? requestingAssembly)
+    {
+        try
+        {
+            var resolved = generation.ResolveDependency(this, requested, requestingAssembly);
             if (resolved is null)
                 return null;
 
             RegisterOwnedAssembly(generation, resolved);
-
-            if (args.RequestingAssembly is not null)
-            {
-                RecordLazyResolution(generation, requested, args.RequestingAssembly, resolved.Location);
-                generation.RecordLazyResolution();
-            }
-
+            RecordRequestingResolution(generation, requested, requestingAssembly, resolved);
             return resolved;
         }
         catch (NUnitGenerationAssemblyResolutionException)
@@ -233,6 +259,19 @@ internal sealed class NUnitGenerationRegistry
         }
     }
 
+    private void RecordRequestingResolution(
+        NetfxNUnitGeneration generation,
+        AssemblyName requested,
+        Assembly? requestingAssembly,
+        Assembly resolved)
+    {
+        if (requestingAssembly is null)
+            return;
+
+        RecordLazyResolution(generation, requested, requestingAssembly, resolved.Location);
+        generation.RecordLazyResolution();
+    }
+
     internal NUnitRuntimeDiagnostic CreateRetainedDiagnostic()
     {
         var count = RetainedGenerationCount;
@@ -242,7 +281,7 @@ internal sealed class NUnitGenerationRegistry
     }
 
     private void RecordLazyResolution(
-        NetFrameworkNUnitGeneration generation,
+        NetfxNUnitGeneration generation,
         AssemblyName requested,
         Assembly requestingAssembly,
         string resolvedAssemblyLocation)

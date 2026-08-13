@@ -1,4 +1,5 @@
 using System.Reflection;
+using System.Runtime.Loader;
 using DevTools.Utilities.AssemblyLoading;
 
 namespace DevTools.Utilities.Tests;
@@ -19,6 +20,17 @@ public sealed class AssemblyLoadingTests
     {
         Assert.True(HostSharedAssemblies.IsShared("System.Text.Json"));
         Assert.False(HostSharedAssemblies.IsShared("MyCustomPlugin"));
+    }
+
+    [Fact]
+    public void HostSharedAssemblies_package_prefix_excludes_microsoft_extensions()
+    {
+        Assert.True(HostSharedAssemblies.IsShared("Microsoft.Extensions.Logging.Abstractions"));
+        Assert.False(HostSharedAssemblies.MatchesHostPackagePrefix("Microsoft.Extensions.Logging.Abstractions"));
+        Assert.True(HostSharedAssemblies.MatchesHostPackagePrefix("Autodesk.Revit.DB"));
+        Assert.True(HostSharedAssemblies.MatchesHostPackagePrefix("MahApps.Metro"));
+        Assert.True(HostSharedAssemblies.MatchesHostPackagePrefix("ControlzEx.Theming"));
+        Assert.True(HostSharedAssemblies.MatchesHostPackagePrefix("CommunityToolkit.Mvvm"));
     }
 
     [Fact]
@@ -85,13 +97,34 @@ public sealed class AssemblyLoadingTests
     }
 
     [Fact]
-    public void ByteAssemblyLoader_loads_assembly_from_file()
+    public void ByteAssemblyLoader_LoadFromStream_does_not_lock_source_file()
     {
-        var assemblyPath = typeof(AssemblyLoadingTests).Assembly.Location;
-        var loaded = ByteAssemblyLoader.LoadFromFile(assemblyPath);
+        var source = typeof(AssemblyLoadingTests).Assembly.Location;
+        var tempDir = Path.Combine(Path.GetTempPath(), "devtools-byte-load-" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(tempDir);
+        var alc = new AssemblyLoadContext("byte-load-" + Guid.NewGuid().ToString("N"), isCollectible: true);
+        try
+        {
+            var probePath = Path.Combine(tempDir, Path.GetFileName(source));
+            File.Copy(source, probePath);
 
-        Assert.Equal(
-            typeof(AssemblyLoadingTests).Assembly.GetName().Name,
-            loaded.GetName().Name);
+            var loaded = ByteAssemblyLoader.LoadFromStream(alc, probePath);
+            Assert.Equal(typeof(AssemblyLoadingTests).Assembly.GetName().Name, loaded.GetName().Name);
+
+            using var stream = new FileStream(probePath, FileMode.Open, FileAccess.Write, FileShare.Read);
+            stream.SetLength(stream.Length);
+        }
+        finally
+        {
+            alc.Unload();
+            try
+            {
+                Directory.Delete(tempDir, true);
+            }
+            catch
+            {
+                // best-effort cleanup
+            }
+        }
     }
 }

@@ -1,5 +1,4 @@
 using System.Reflection;
-using DevTools.Utilities.AssemblyLoading;
 
 namespace DevTools.NUnit.Host;
 
@@ -31,11 +30,11 @@ public sealed class NUnitAssemblyLoadException : Exception
 }
 
 /// <summary>
-/// Validates test assembly paths and installs a scoped resolve from the test output directory.
+/// Validates test assembly paths before generation load.
 /// </summary>
 public sealed class NUnitAssemblyLoader
 {
-    public NUnitAssemblyPreflightResult Preflight(string assemblyPath)
+    public static NUnitAssemblyPreflightResult Preflight(string? assemblyPath)
     {
         if (string.IsNullOrWhiteSpace(assemblyPath))
         {
@@ -54,7 +53,7 @@ public sealed class NUnitAssemblyLoader
 
         try
         {
-            _ = AssemblyName.GetAssemblyName(fullPath);
+            AssemblyName.GetAssemblyName(fullPath);
             return NUnitAssemblyPreflightResult.Succeeded(fullPath);
         }
         catch (Exception ex)
@@ -66,64 +65,18 @@ public sealed class NUnitAssemblyLoader
         }
     }
 
-    public void EnsureLoadable(string assemblyPath)
+    public static void EnsureLoadable(string assemblyPath)
     {
         var result = Preflight(assemblyPath);
         if (!result.Success)
             throw new NUnitAssemblyLoadException(result);
     }
 
-    public string ResolveAssemblyPath(string assemblyPath)
+    public static string ResolveAssemblyPath(string assemblyPath)
     {
         if (string.IsNullOrWhiteSpace(assemblyPath))
             throw new ArgumentException("Assembly path is required.", nameof(assemblyPath));
 
         return Path.GetFullPath(assemblyPath);
-    }
-
-    internal T ExecuteWithHostResolve<T>(Func<AssemblyResolveScope, T> action, string? testAssemblyPath = null)
-    {
-        var probeDirectory = GetProbeDirectory(testAssemblyPath);
-        using var scope = BeginResolveScope(probeDirectory);
-        var previous = Environment.CurrentDirectory;
-        try
-        {
-            if (probeDirectory is not null)
-                Environment.CurrentDirectory = probeDirectory;
-
-            return action(scope);
-        }
-        finally
-        {
-            try
-            {
-                Environment.CurrentDirectory = previous;
-            }
-            catch
-            {
-                // Host processes may deny directory restore; ignore.
-            }
-        }
-    }
-
-    private static string? GetProbeDirectory(string? testAssemblyPath)
-    {
-        if (string.IsNullOrWhiteSpace(testAssemblyPath))
-            return null;
-
-        return Path.GetDirectoryName(Path.GetFullPath(testAssemblyPath));
-    }
-
-    private static AssemblyResolveScope BeginResolveScope(string? probeDirectory)
-    {
-        return new AssemblyResolveScope(Resolve);
-
-        Assembly? Resolve(AssemblyName name)
-        {
-            if (probeDirectory is null)
-                return null;
-
-            return DirectoryAssemblyLoad.TryLoad(probeDirectory, name);
-        }
     }
 }

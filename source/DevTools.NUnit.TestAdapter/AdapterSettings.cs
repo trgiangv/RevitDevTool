@@ -27,9 +27,39 @@ internal static class AdapterSettings
         }
     }
 
-    public static void Apply(IRunSettings? runSettings)
+    public static void Apply(IRunSettings? runSettings) => ApplyXml(runSettings?.SettingsXml);
+
+    public static void TryApplyFromAssembly(string assemblyPath)
     {
-        var parsed = RunSettingsParser.Parse(runSettings?.SettingsXml);
+        if (IsConfigured)
+            return;
+
+        if (string.IsNullOrWhiteSpace(assemblyPath))
+            return;
+
+        var directory = Path.GetDirectoryName(Path.GetFullPath(assemblyPath));
+        if (string.IsNullOrWhiteSpace(directory))
+            return;
+
+        var sidecar = Path.Combine(directory, DevToolsNUnitConstants.SidecarRunSettingsFileName);
+        if (!File.Exists(sidecar))
+            return;
+
+        ApplyXml(File.ReadAllText(sidecar));
+    }
+
+    public static void Reset()
+    {
+        lock (Gate)
+        {
+            _isConfigured = false;
+            _current = DevToolsNUnitSettings.CreateDefault();
+        }
+    }
+
+    private static void ApplyXml(string? settingsXml)
+    {
+        var parsed = RunSettingsParser.Parse(settingsXml);
         if (!parsed.IsDevToolsNUnitEnabled)
         {
             lock (Gate)
@@ -47,15 +77,6 @@ internal static class AdapterSettings
         {
             _current = DevToolsNUnitSettings.FromModel(parsed.DevToolsNUnit, parsed.RunConfiguration);
             _isConfigured = true;
-        }
-    }
-
-    public static void Reset()
-    {
-        lock (Gate)
-        {
-            _isConfigured = false;
-            _current = DevToolsNUnitSettings.CreateDefault();
         }
     }
 

@@ -26,35 +26,27 @@ public sealed class ProcessRunnerClient : IRunnerClient, IDisposable
         _runnerPath = runnerPath;
     }
 
-    public IReadOnlyList<RemoteTestCase> Discover(string source, RunnerHostOptions options)
+    public IReadOnlyList<RemoteTestCase> Discover(
+        string assemblyPath,
+        RunnerHostOptions options,
+        RunnerTestFilter filter)
     {
-        var output = RunRunner(options, [.. BuildHostArguments("discover", source, options)]);
-
+        var output = RunRunner(options, BuildHostArguments(NUnitRunnerCli.DiscoverCommand, assemblyPath, options, filter));
         var response = JsonSerializer.Deserialize<NUnitDiscoverResponse>(output, WireJsonOptions)
             ?? throw new InvalidOperationException("Runner discover returned empty JSON.");
-
         return response.Cases
-            .Select(test => new RemoteTestCase(test.Id, test.Name, test.FullName, source))
+            .Select(test => new RemoteTestCase(test.Id, test.Name, test.FullName, assemblyPath))
             .ToList();
     }
 
     public RemoteRunResult Run(
-        string source,
-        string? filter,
-        RunnerHostOptions options)
+        string assemblyPath,
+        RunnerHostOptions options,
+        RunnerTestFilter filter)
     {
-        var args = BuildHostArguments("run", source, options);
-
-        if (!string.IsNullOrWhiteSpace(filter))
-        {
-            args.Add("--filter");
-            args.Add(filter!);
-        }
-
-        var output = RunRunner(options, [.. args]);
+        var output = RunRunner(options, BuildHostArguments(NUnitRunnerCli.RunCommand, assemblyPath, options, filter));
         var response = JsonSerializer.Deserialize<NUnitRunResponse>(output, WireJsonOptions)
             ?? throw new InvalidOperationException("Runner run returned empty JSON.");
-
         return new RemoteRunResult(response.Cases.Select(MapCase).ToList());
     }
 
@@ -81,31 +73,42 @@ public sealed class ProcessRunnerClient : IRunnerClient, IDisposable
 
     public void Dispose() => Cancel();
 
-    private static List<string> BuildHostArguments(string command, string source, RunnerHostOptions options)
-    {
-        var hostTimeoutSeconds = options.HostTimeoutSeconds;
-
-        var args = new List<string>
-        {
+    private static IReadOnlyList<string> BuildHostArguments(
+        string command,
+        string source,
+        RunnerHostOptions options,
+        RunnerTestFilter filter) =>
+        NUnitRunnerCli.BuildArguments(
             command,
             source,
-            "--host",
             options.Host,
-            "--version",
             options.HostVersion,
-            "--host-timeout",
-            hostTimeoutSeconds.ToString(),
-            "--host-launch-timeout",
-            options.HostLaunchTimeoutSeconds.ToString(),
-        };
+            options.HostTimeoutSeconds,
+            options.HostLaunchTimeoutSeconds,
+            options.HostLaunch,
+            filter.Names,
+            filter.FullNames);
 
-        if (options.HostLaunch)
-            args.Add("--host-launch");
+    internal static string ResolveRunnerPath(RunnerHostOptions options)
+    {
+        if (IsRunnable(options.RunnerPath))
+            return Path.GetFullPath(options.RunnerPath!);
 
-        return args;
+        var bundlePath = Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
+            "Autodesk",
+            "ApplicationPlugins",
+            "RevitDevTool.bundle",
+            "Contents",
+            "DevTools.NUnit.Runner.exe");
+        if (IsRunnable(bundlePath))
+            return bundlePath;
+
+        throw new InvalidOperationException(
+            "RevitDevTool is not installed. Install it from https://github.com/trgiangv/RevitDevTool");
     }
 
-    private string RunRunner(RunnerHostOptions options, params string[] arguments)
+    private string RunRunner(RunnerHostOptions options, IReadOnlyList<string> arguments)
     {
         var startInfo = new ProcessStartInfo
         {
@@ -119,7 +122,7 @@ public sealed class ProcessRunnerClient : IRunnerClient, IDisposable
         };
 
         foreach (var argument in arguments)
-            startInfo.ArgumentList.Add(argument);
+            AddArgument(startInfo, argument);
 
         using var process = new Process();
         process.StartInfo = startInfo;
@@ -128,11 +131,12 @@ public sealed class ProcessRunnerClient : IRunnerClient, IDisposable
 
         process.Start();
 
-        // Read both streams in parallel to avoid deadlock when runner writes progress to stderr.
-        var stdoutTask = Task.Run(() => process.StandardOutput.ReadToEnd());
-        var stderrTask = Task.Run(() => process.StandardError.ReadToEnd());
+        var stdoutTask = process.StandardOutput.ReadToEndAsync();
+        var stderrTask = process.StandardError.ReadToEndAsync();
+        var timeoutMs = NUnitHostTiming.ComputeAdapterRunnerProcessTimeoutSeconds(
+            options.HostLaunchTimeoutSeconds,
+            options.HostTimeoutSeconds) * 1000;
 
-        var timeoutMs = ComputeRunnerTimeoutMs(options);
         if (!process.WaitForExit(timeoutMs))
         {
             try
@@ -141,12 +145,9 @@ public sealed class ProcessRunnerClient : IRunnerClient, IDisposable
             }
             catch
             {
-                // Best effort — process may already be gone.
+                // Best effort.
             }
 
-            // Bounded drain after kill so a wedged reader cannot hang the adapter forever.
-            // Parallel ReadToEnd on stdout+stderr is correct (avoids classic Process deadlock);
-            // unbounded WaitAll after Kill is what could stall the adapter.
             _ = Task.WaitAll([stdoutTask, stderrTask], 5_000);
             lock (_processLock)
                 _activeProcess = null;
@@ -156,14 +157,14 @@ public sealed class ProcessRunnerClient : IRunnerClient, IDisposable
                 : string.Empty;
             var detail = string.IsNullOrWhiteSpace(stderr) ? string.Empty : $"{Environment.NewLine}{stderr.Trim()}";
             throw new TimeoutException(
-                $"DevTools.NUnit.Runner did not exit within {timeoutMs / 1000}s.{detail}");
+                $"The RevitDevTool host test run did not finish within {timeoutMs / 1000}s.{detail}");
         }
 
         if (!Task.WaitAll([stdoutTask, stderrTask], 30_000))
         {
             lock (_processLock)
                 _activeProcess = null;
-            throw new TimeoutException("Timed out draining DevTools.NUnit.Runner stdout/stderr.");
+            throw new TimeoutException("Timed out reading host test output.");
         }
 
         var stdout = stdoutTask.Result;
@@ -175,7 +176,7 @@ public sealed class ProcessRunnerClient : IRunnerClient, IDisposable
         if (string.IsNullOrWhiteSpace(stdout))
         {
             var details = string.IsNullOrWhiteSpace(stderrOutput)
-                ? $"Runner exited with code {process.ExitCode}."
+                ? $"Host test process exited with code {process.ExitCode}."
                 : stderrOutput.Trim();
             throw new InvalidOperationException(details);
         }
@@ -183,10 +184,29 @@ public sealed class ProcessRunnerClient : IRunnerClient, IDisposable
         return stdout.Trim();
     }
 
-    private static int ComputeRunnerTimeoutMs(RunnerHostOptions options) =>
-        NUnitHostTiming.ComputeAdapterRunnerProcessTimeoutSeconds(
-            options.HostLaunchTimeoutSeconds,
-            options.HostTimeoutSeconds) * 1000;
+    private static bool IsRunnable(string? path) =>
+        !string.IsNullOrWhiteSpace(path) && File.Exists(path);
+
+    private static void AddArgument(ProcessStartInfo startInfo, string argument)
+    {
+#if NETFRAMEWORK
+        if (startInfo.Arguments.Length > 0)
+            startInfo.Arguments += " ";
+        startInfo.Arguments += QuoteArgument(argument);
+#else
+        startInfo.ArgumentList.Add(argument);
+#endif
+    }
+
+#if NETFRAMEWORK
+    private static string QuoteArgument(string value)
+    {
+        if (value.Length > 0 && value.IndexOfAny([' ', '\t', '"']) < 0)
+            return value;
+
+        return "\"" + value.Replace("\"", "\\\"") + "\"";
+    }
+#endif
 
     private static RemoteTestCaseResult MapCase(NUnitCaseResult result) =>
         new(

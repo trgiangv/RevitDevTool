@@ -1,0 +1,45 @@
+<Project>
+  <Import Project="$(MSBuildThisFileDirectory)DevTools.NUnit.props"
+          Condition="'$(DevToolsNUnitPropsImported)' != 'true'"/>
+
+  <Target Name="DevToolsNUnitRejectConflictingTestFrameworks"
+          BeforeTargets="PrepareForBuild;Build"
+          Condition="'$(IsTestProject)' == 'true' or '$(IsTestingPlatformApplication)' == 'true'">
+    <Error
+        Condition="@(PackageReference->AnyHaveMetadataValue('Identity', 'NUnit3TestAdapter'))"
+        Text="DevTools.NUnit cannot share a test project with NUnit3TestAdapter. Remove the VSTest adapter reference." />
+    <Error
+        Condition="@(PackageReference->AnyHaveMetadataValue('Identity', 'ricaun.RevitTest.TestAdapter'))"
+        Text="DevTools.NUnit cannot share a test project with ricaun.RevitTest.TestAdapter. Keep host-test projects on one framework." />
+    <Error
+        Condition="@(PackageReference->AnyHaveMetadataValue('Identity', 'NUnit.Microsoft.Testing.Platform'))"
+        Text="DevTools.NUnit cannot share a test project with NUnit.Microsoft.Testing.Platform. DevTools owns host execution." />
+    <Error
+        Condition="@(PackageReference->AnyHaveMetadataValue('Identity', 'Microsoft.Testing.Extensions.VSTestBridge'))"
+        Text="DevTools.NUnit cannot share a test project with Microsoft.Testing.Extensions.VSTestBridge." />
+  </Target>
+
+  <Target Name="GenerateDevToolsNUnitHostOptions"
+          BeforeTargets="PrepareForBuild;Build"
+          Condition="'$(IsTestingPlatformApplication)' == 'true'">
+    <Error
+        Condition="'$(HostName)' == ''"
+        Text="DevTools.NUnit test projects must declare &lt;HostName&gt; (for example Revit) in the .csproj." />
+    <Error
+        Condition="'$(HostVersion)' == ''"
+        Text="DevTools.NUnit test projects must declare &lt;HostVersion&gt; in the .csproj (for example &lt;HostVersion&gt;2024&lt;/HostVersion&gt; or &lt;HostVersion&gt;$(RevitVersion)&lt;/HostVersion&gt;)." />
+
+    <PropertyGroup>
+      <_DevToolsNUnitRunnerPath Condition="'$(DevToolsNUnitRunnerPath)' != ''">$(DevToolsNUnitRunnerPath)</_DevToolsNUnitRunnerPath>
+      <_DevToolsNUnitRunnerPath Condition="'$(_DevToolsNUnitRunnerPath)' == ''">%APPDATA%/Autodesk/ApplicationPlugins/RevitDevTool.bundle/Contents/DevTools.NUnit.Runner.exe</_DevToolsNUnitRunnerPath>
+      <_DevToolsNUnitRunnerPathJson>$(_DevToolsNUnitRunnerPath.Replace('\', '\\'))</_DevToolsNUnitRunnerPathJson>
+      <_DevToolsNUnitHostOptionsRelPath>$(OutputPath)devtools.nunit.host.json</_DevToolsNUnitHostOptionsRelPath>
+    </PropertyGroup>
+
+    <WriteLinesToFile
+        File="$(_DevToolsNUnitHostOptionsRelPath)"
+        Lines="{&#xA;  &quot;host&quot;: &quot;$(HostName)&quot;,&#xA;  &quot;hostVersion&quot;: &quot;$(HostVersion)&quot;,&#xA;  &quot;hostLaunch&quot;: $(HostLaunch),&#xA;  &quot;hostTimeoutSeconds&quot;: $(HostTimeout),&#xA;  &quot;hostLaunchTimeoutSeconds&quot;: $(HostLaunchTimeout),&#xA;  &quot;runnerPath&quot;: &quot;$(_DevToolsNUnitRunnerPathJson)&quot;&#xA;}"
+        Overwrite="true"
+        Encoding="UTF-8"/>
+  </Target>
+</Project>

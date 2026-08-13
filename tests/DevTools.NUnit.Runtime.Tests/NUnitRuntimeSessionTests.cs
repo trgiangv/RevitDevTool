@@ -25,7 +25,7 @@ public sealed class NUnitRuntimeSessionTests
         var response = session.Discover(new NUnitDiscoverRequest(FixtureTestHarness.FixtureAssemblyPath, null));
 
         Assert.Equal(FixtureTestHarness.GenerationId, response.GenerationId);
-        Assert.Equal(30, response.Cases.Count);
+        Assert.Equal(31, response.Cases.Count);
 
         var fullNames = response.Cases.Select(test => test.FullName).OrderBy(name => name, StringComparer.Ordinal).ToList();
         Assert.Equal(ExpectedDiscoveryFullNames, fullNames);
@@ -69,8 +69,8 @@ public sealed class NUnitRuntimeSessionTests
             CancellationToken.None);
 
         Assert.Equal(FixtureTestHarness.GenerationId, response.GenerationId);
-        Assert.Equal(30, response.Cases.Count);
-        Assert.Equal(26, response.Summary.Passed);
+        Assert.Equal(31, response.Cases.Count);
+        Assert.Equal(27, response.Summary.Passed);
         Assert.Equal(0, response.Summary.Failed);
         Assert.Equal(2, response.Summary.Skipped);
         Assert.Equal(1, response.Summary.Inconclusive);
@@ -102,6 +102,8 @@ public sealed class NUnitRuntimeSessionTests
 
         var output = Assert.Single(response.Cases, test => test.Name == "Output_IsWrittenToTestContext");
         Assert.Contains("acceptance-output-marker", output.Output, StringComparison.Ordinal);
+        Assert.Contains("acceptance-trace-marker", output.Output, StringComparison.Ordinal);
+        Assert.Contains("acceptance-debug-marker", output.Output, StringComparison.Ordinal);
 
         var retryCase = Assert.Single(response.Cases, test => test.Name == "Retry_EventuallyPasses");
         Assert.Equal(NUnitOutcomes.Passed, retryCase.Outcome);
@@ -165,6 +167,7 @@ public sealed class NUnitRuntimeSessionTests
         "DevTools.NUnit.Runtime.Fixtures.FullSemanticsFixture.ExecutableCases_alpha",
         "DevTools.NUnit.Runtime.Fixtures.FullSemanticsFixture.ExecutableCases_beta",
         "DevTools.NUnit.Runtime.Fixtures.FullSemanticsFixture.Explicit_RequiresExplicitSelection",
+        "DevTools.NUnit.Runtime.Fixtures.FullSemanticsFixture.GenerationMarker_IsReported",
         "DevTools.NUnit.Runtime.Fixtures.FullSemanticsFixture.Ignored_IsSkipped",
         "DevTools.NUnit.Runtime.Fixtures.FullSemanticsFixture.Inconclusive_TerminatesAsInconclusive",
         "DevTools.NUnit.Runtime.Fixtures.FullSemanticsFixture.Lifecycle_SetUpPrecedesTearDown_ForThisTest",

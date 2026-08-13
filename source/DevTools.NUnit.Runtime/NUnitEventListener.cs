@@ -11,19 +11,23 @@ internal sealed class NUnitEventListener : ITestListener
     private readonly INUnitRuntimeEventSink _eventSink;
     private readonly NUnitTestIdentityRegistry _identityRegistry;
     private readonly NUnitSourceLocationProvider? _sourceLocationProvider;
+    private readonly NUnitRunTraceScope _traceScope;
     private readonly HashSet<string> _terminalCaseIds = new(StringComparer.Ordinal);
     private readonly Dictionary<string, ITest> _startedCases = new(StringComparer.Ordinal);
+    private readonly Dictionary<string, string?> _traceByTestId = new(StringComparer.Ordinal);
 
     public NUnitEventListener(
         Guid runId,
         INUnitRuntimeEventSink eventSink,
         NUnitTestIdentityRegistry identityRegistry,
-        NUnitSourceLocationProvider? sourceLocationProvider)
+        NUnitSourceLocationProvider? sourceLocationProvider,
+        NUnitRunTraceScope traceScope)
     {
         _runId = runId;
         _eventSink = eventSink;
         _identityRegistry = identityRegistry;
         _sourceLocationProvider = sourceLocationProvider;
+        _traceScope = traceScope;
     }
 
     public void TestStarted(ITest test)
@@ -41,6 +45,10 @@ internal sealed class NUnitEventListener : ITestListener
 
         var testId = _identityRegistry.GetTestId(result.Test);
         _startedCases.Remove(testId);
+
+        var traceOutput = _traceScope.CompleteCase();
+        if (!string.IsNullOrWhiteSpace(traceOutput))
+            _traceByTestId[result.Test.FullName] = traceOutput;
 
         if (!_terminalCaseIds.Add(testId))
             return;
@@ -66,6 +74,8 @@ internal sealed class NUnitEventListener : ITestListener
         }
 
         var mapped = NUnitResultMapper.MapCaseResult(result, _identityRegistry, _sourceLocationProvider);
+        if (_traceByTestId.TryGetValue(result.Test.FullName, out var captured))
+            mapped = mapped with { Output = MergeOutput(mapped.Output, captured) };
         _eventSink.Publish(new NUnitRuntimeEvent(_runId, NUnitRuntimeEventKinds.CaseFinished, mapped, null, null));
     }
 
@@ -106,9 +116,40 @@ internal sealed class NUnitEventListener : ITestListener
                 null,
                 NUnitResultMapper.MapDiscoveredTest(test, _identityRegistry, _sourceLocationProvider).Source,
                 null,
-                null));
+                null,
+                test.FullName));
         }
 
         return cases;
+    }
+
+    internal IReadOnlyList<NUnitCaseResult> ApplyTraceOutput(IReadOnlyList<NUnitCaseResult> cases)
+    {
+        if (_traceByTestId.Count == 0)
+            return cases;
+
+        var merged = new List<NUnitCaseResult>(cases.Count);
+        foreach (var testCase in cases)
+        {
+            var fullName = testCase.FullName;
+            merged.Add(
+                fullName is not null
+                && _traceByTestId.TryGetValue(fullName, out var traceOutput)
+                    ? testCase with { Output = MergeOutput(testCase.Output, traceOutput) }
+                    : testCase);
+        }
+
+        return merged;
+    }
+
+    private static string? MergeOutput(string? nunitOutput, string? traceOutput)
+    {
+        var hasNunit = !string.IsNullOrWhiteSpace(nunitOutput);
+        var hasTrace = !string.IsNullOrWhiteSpace(traceOutput);
+        if (hasNunit && hasTrace)
+            return nunitOutput!.TrimEnd() + Environment.NewLine + traceOutput!.TrimEnd();
+        if (hasNunit)
+            return nunitOutput;
+        return hasTrace ? traceOutput : null;
     }
 }

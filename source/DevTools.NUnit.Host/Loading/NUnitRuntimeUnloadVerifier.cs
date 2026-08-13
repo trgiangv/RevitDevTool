@@ -3,25 +3,25 @@ namespace DevTools.NUnit.Host.Loading;
 
 internal static class NUnitRuntimeUnloadVerifier
 {
-    internal const int MaxVerificationCycles = 10;
+    private const int MaxVerificationCycles = 10;
 
-    internal const string UnloadedCode = "generation.unloaded";
+    private const string UnloadedCode = "generation.unloaded";
     internal const string RetainedCode = "generation.retained";
 
-    internal static DevTools.NUnit.Core.Contracts.NUnitRuntimeDiagnostic Verify(WeakReference loadContextReference)
+    internal static Core.Contracts.NUnitRuntimeDiagnostic Verify(WeakReference loadContextReference)
     {
         ArgumentNullException.ThrowIfNull(loadContextReference);
 
         return IsCollected(loadContextReference)
-            ? new DevTools.NUnit.Core.Contracts.NUnitRuntimeDiagnostic(
+            ? new Core.Contracts.NUnitRuntimeDiagnostic(
                 UnloadedCode,
                 "Generation ALC was collected after unload verification.")
-            : new DevTools.NUnit.Core.Contracts.NUnitRuntimeDiagnostic(
+            : new Core.Contracts.NUnitRuntimeDiagnostic(
                 RetainedCode,
                 "Generation ALC retained after unload verification.");
     }
 
-    internal static bool IsCollected(WeakReference loadContextReference)
+    private static bool IsCollected(WeakReference loadContextReference)
     {
         ArgumentNullException.ThrowIfNull(loadContextReference);
 

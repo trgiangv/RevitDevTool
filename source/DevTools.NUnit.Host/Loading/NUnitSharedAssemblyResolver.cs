@@ -19,22 +19,30 @@ internal static class NUnitSharedAssemblyResolver
                 $"Assembly '{simpleName}' is not allowlisted for default-context sharing.");
         }
 
-        foreach (var loaded in AssemblyLoadContext.Default.Assemblies)
-        {
-            if (string.Equals(
-                    simpleName,
-                    loaded.GetName().Name,
-                    StringComparison.OrdinalIgnoreCase))
-            {
-                return loaded;
-            }
-        }
+        var fromDefault = FindLoaded(AssemblyLoadContext.Default, simpleName);
+        if (fromDefault is not null)
+            return fromDefault;
 
-        // Shared policy never loads another copy from disk. Returning null lets
-        // the CLR handle platform assemblies that are not materialized in
-        // Default.Assemblies yet.
+        // Plugin ALC (RevitDevTool bundle) often owns Roslyn/SRM copies that Default
+        // has not materialized yet. Prefer those over a generation-private load.
+        var pluginContext = AssemblyLoadContext.GetLoadContext(typeof(NUnitSharedAssemblyResolver).Assembly);
+        if (pluginContext is not null && !ReferenceEquals(pluginContext, AssemblyLoadContext.Default))
+            return FindLoaded(pluginContext, simpleName);
+
+        // Returning null lets the CLR continue with Default for platform facades
+        // that are not materialized in Default/Plugin yet.
         return null;
     }
 
+    private static Assembly? FindLoaded(AssemblyLoadContext context, string simpleName)
+    {
+        foreach (var loaded in context.Assemblies)
+        {
+            if (string.Equals(simpleName, loaded.GetName().Name, StringComparison.OrdinalIgnoreCase))
+                return loaded;
+        }
+
+        return null;
+    }
 }
 #endif

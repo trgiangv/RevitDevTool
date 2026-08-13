@@ -1,7 +1,10 @@
 # NUnit Host Testing
 
-Experimental in-host NUnit for Revit / AutoCAD-family via DevTools Named Pipe +
-VSTest adapter. Local `testhost` discovers tests; the live host executes them.
+Experimental in-host NUnit for Revit / AutoCAD-family via DevTools Named Pipe,
+with MTP (`DevTools.NUnit`) and VSTest (`DevTools.NUnit.TestAdapter`) consumers.
+The MTP package requires
+[RevitDevTool](https://github.com/trgiangv/RevitDevTool); the host-test
+controller ships in that installer. The live CAD host executes the tests.
 
 ## Status
 
@@ -9,39 +12,91 @@ VSTest adapter. Local `testhost` discovers tests; the live host executes them.
 package is **not published** yet — consume from source / local pack only until
 the first supported release.
 
-Host-process debugging (Test Explorer “Debug”, `--debug wait`, DTE attach) is
-**deferred** and rejected/ignored in this release.
+Host-process debugging is **out of scope**. There is no `--debug` CLI, no Test
+Explorer Debug attach, and no IDE SDK. Attach the IDE debugger to the host
+PID yourself if needed; that is not a product feature.
+
+Two consumer surfaces share the same Runner/Host: MTP (`DevTools.NUnit`) and
+VSTest (`DevTools.NUnit.TestAdapter`). Keep them on **separate** test projects.
+Neither package is published yet.
 
 ## Modules
 
 | Project | Role |
 |---------|------|
 | `DevTools.NUnit.Core` | `nunit/*` wire contracts, timing, protocol version |
-| `DevTools.NUnit.Host` | Reflective runner, assembly preflight, bridge handler |
+| `DevTools.NUnit.Host` | Native NUnit runtime in the CAD host |
 | `DevTools.NUnit.Runner` | CLI controller: find/launch host pipe, discover/run |
-| `DevTools.NUnit.TestAdapter` | VSTest discoverer/executor (proxies to Runner) |
+| `DevTools.NUnit.Mtp` | MTP framework (`PackageId=DevTools.NUnit`); proxies to Runner |
+| `DevTools.NUnit.TestAdapter` | VSTest adapter; same Runner/Host contract |
 
-Sample: `samples/DevTools.NUnit.SampleTests` (import adapter props/targets,
-declare `<HostName>` / `<HostVersion>`).
+`DevTools.NUnit` is an independent test-platform package. Consumers set
+`HostName` / `HostVersion` / launch timeouts; the package does not read this
+repo's `UseRevit` / `UseAutoCad`. MTP never loads into the CAD host, so it is
+not ILRepacked. `Microsoft.Testing.Platform` is compile-only
+(`PrivateAssets=all` + `ExcludeAssets=runtime`); consumers supply it via
+`Microsoft.Testing.Platform.MSBuild`. net48 `System.Text.Json` is
+`PrivateAssets=all` but keeps runtime copy-local (no inbox STJ). Adapter
+ILRepack isolates VSTest testhost, not Revit.
+
+Samples declare the host-run contract (`HostName`, `HostVersion`, `HostLaunch`,
+`HostTimeout`, `HostLaunchTimeout`). MTP writes those to `devtools.nunit.host.json`
+beside the test exe; VSTest writes a generated `.runsettings` (obj path plus
+`DevTools.NUnit.runsettings` beside the test DLL so IDE discovery does not need
+MSBuild `RunSettingsFilePath`). Props still supply fallbacks if a property is omitted.
+
+Four live samples — two adapters × two hosts. Do not mix MTP and VSTest on one project.
+
+| Sample | Adapter | Host |
+|--------|---------|------|
+| `samples/DevTools.NUnit.SampleTests` | MTP (`DevTools.NUnit`) | Revit |
+| `samples/DevTools.NUnit.Civil3D.SampleTests` | MTP | Civil 3D |
+| `samples/DevTools.NUnit.VSTest.SampleTests` | VSTest (`DevTools.NUnit.TestAdapter`) | Revit |
+| `samples/DevTools.NUnit.VSTest.Civil3D.SampleTests` | VSTest | Civil 3D |
+
+MTP samples are `OutputType=Exe` with a scoped `global.json`. VSTest samples are
+libraries (adapter discovers `.dll` only) and must **not** sit under an MTP `global.json`.
+Each VSTest project compiles the matching host's `HostSmokeTests.cs` via a linked file;
+adapter packages are the only project difference.
+
+```text
+cd samples/DevTools.NUnit.SampleTests
+dotnet test --project DevTools.NUnit.SampleTests.csproj -c Debug.Autodesk.2026 --filter Arithmetic_runs_inside_host
+
+cd samples/DevTools.NUnit.VSTest.SampleTests
+dotnet test DevTools.NUnit.VSTest.SampleTests.csproj -c Debug.Autodesk.2026 --filter FullyQualifiedName~Arithmetic_runs_inside_host
+```
+
+MTP `--filter` is the NUnit method name. VSTest `--filter` uses `FullyQualifiedName`.
+IDE selected-run uses FullName. Runner composes NUnit `TestFilter` XML for the host.
 
 ## Behavior
 
-- Discover locally (metadata / portable PDB navigation); execute in host.
+- IDE / `dotnet test --list-tests` discovery reads PE metadata locally. It does
+  **not** start a host process. Runner contacts the host only when tests execute.
+- `HostLaunch=false` reuses a running host with the same `HostName` +
+  `HostVersion`; if none exists, it starts one. `HostLaunch=true` always starts
+  a new host (skip reuse).
+- MTP exe never runs NUnit test bodies locally; Runner executes them in the host.
 - Pipe: `DevTools_{Host}_{Version}_{PID}` (same control pipe family as pytest,
   **not** `DevToolsMcp_*`).
 - Methods: `nunit/hello`, `nunit/discover`, `nunit/run`, `nunit/cancel`,
   `nunit/progress`.
-- In-host: stamp-keyed **shadow copy** + `LoadFile` for test probe DLLs; pin
-  `nunit.framework` major.minor beside the test assembly. Deploy-folder DLLs
-  stay on `AssemblyLoader` (LoadFrom/ALC) — never shadow MahApps/UI.
-- Attribute subset (v1): `[Test]` / `[TestCase]`, SetUp / TearDown /
-  OneTimeSetUp / OneTimeTearDown. Not full NUnit.Engine.
+- In-host: content-addressed **generation shadow** of the test output plus
+  `DevTools.NUnit.Runtime`. Pin **NUnit 4.6.1** (`nunit.framework` file version
+  `4.6.1.0`) beside the test assembly. Deploy-folder DLLs stay on
+  `AssemblyLoader` (LoadFrom/ALC) — never shadow MahApps/UI.
+- Native NUnit 4.6.1 runtime (not `NUnit.Engine`, not a reflective attribute
+  subset). Discovery in the IDE is local PE metadata; execution is in-host
+  NUnit.
 
 ## CLI
 
+CLI tokens and argument layout: `NUnitRunnerCli` in Core. MTP and Runner must not duplicate those flags.
+
 ```text
 DevTools.NUnit.Runner discover <assembly> --host Revit --version 2024
-DevTools.NUnit.Runner run <assembly> --host Revit --version 2024 [--filter ...]
+DevTools.NUnit.Runner run <assembly> --host Revit --version 2026 [--name Arithmetic_runs_inside_host]
 ```
 
 Runner ships under the ApplicationPlugins bundle `Contents` folder (publish
@@ -51,11 +106,11 @@ Runner ships under the ApplicationPlugins bundle `Contents` folder (publish
 
 | Topic | ricaun.RevitTest | DevTools.NUnit |
 |-------|------------------|----------------|
-| In-host engine | `ricaun.NUnit` reflective (`TestEngine` / attributes) | Reflective runner; **no** `NUnit.Engine` in host |
-| Probe load | **Also shadows**: zip test folder → `%TEMP%\RevitTest\` → extract → `Assembly.LoadFile` on the temp copy (then optional zip-back) | Stamp-keyed per-file shadow via `DirectoryAssemblyLoad` → `LoadFile` |
+| In-host engine | `ricaun.NUnit` reflective (`TestEngine` / attributes) | Native NUnit 4.6.1 runtime; **no** `NUnit.Engine` in host |
+| Probe load | **Also shadows**: zip test folder → `%TEMP%\RevitTest\` → extract → `Assembly.LoadFile` on the temp copy (then optional zip-back) | Content-addressed generation shadow of test output + Runtime |
 | Transport | Own Console + `PipeTestServer`/`PipeTestClient` (process-named pipe) | Existing `DevToolsPipeServer` + `IHostContextExecutor` |
-| IDE surface | VS-oriented + EnvDTE attach | VSTest proxy; debugging deferred |
-| Package | ricaun NuGet ecosystem | Intended: one `DevTools.NUnit.TestAdapter` NuGet (**unpublished**) |
+| IDE surface | VS-oriented + EnvDTE attach | MTP + VSTest samples; no debugger integration |
+| Package | ricaun NuGet ecosystem | Intended: `DevTools.NUnit` (MTP) NuGet (**unpublished**); VSTest adapter in-tree |
 | Hosts | Revit-focused product | Revit + AutoCAD family on shared DevTools platform |
 
 **Conflict / coexistence (what actually breaks):**
@@ -70,10 +125,22 @@ Runner ships under the ApplicationPlugins bundle `Contents` folder (publish
 - Both can load different `nunit.framework` identities in the same Revit (Dynamo,
   DevTools host, ricaun Application). DevTools avoids `NUnit.Engine`
   `FrameworkController` for that reason.
-- VSTest can load **both** adapters if a project references both; wrong adapter
-  may own the run (DevTools Runner vs ricaun Console).
+- A project that references both ricaun’s VSTest adapter and `DevTools.NUnit`
+  can split ownership; keep host-test projects on one framework.
 
 Do not depend on `ricaun.NUnit` / `ricaun.RevitTest` packages for DevTools NUnit.
+The MTP targets fail the build if `ricaun.RevitTest.TestAdapter` is referenced.
+
+The host generation snapshot requires **NUnit 4.6.1** beside the test output
+(`nunit.framework` file version `4.6.1.0`). Consumer projects must pin that
+package version. `HostTimeout` is the pipe timeout for the **entire**
+`nunit/run` request — raise it for large suites (default 60s is only enough
+for smoke). `nunit/run` is marshaled through `IHostContextExecutor` with NUnit
+`RunOnMainThread`, so test bodies run in the Autodesk API context. WPF
+`Dispatcher.Invoke` is not an API context. Host-test projects should read
+`Application` from the host's own context type (for example Inspexel
+`RevitContext`), not from adapter injection. NUnit MainThread dispatch cannot
+cancel an in-flight test.
 
 **DevTools advantages:** shared pipe/DI/execution guard with pytest and MCP;
 stamp-keyed per-file shadow (no whole-folder zip round-trip); multi-host Runner
@@ -83,23 +150,23 @@ options; one intended adapter package aligned with the rest of RevitDevTool.
 
 | Package | Publish status |
 |---------|----------------|
-| `DevTools.NUnit.TestAdapter` | **Not published** — experimental; local/source only |
+| `DevTools.NUnit` (`DevTools.NUnit.Mtp`) | **Not published** — experimental; local/source only |
+| `DevTools.NUnit.TestAdapter` | **Not published** — in-tree VSTest samples only |
 | Core / Host / Runner | Not consumer NuGet APIs |
 
-When publishing later: pack the TestAdapter only; document Runner install path
-and required `<HostVersion>` in test projects.
+When publishing later: pack `DevTools.NUnit` only. Consumers add NUnit,
+`DevTools.NUnit`, and `Microsoft.Testing.Platform.MSBuild`; install
+[RevitDevTool](https://github.com/trgiangv/RevitDevTool); set the host-run
+properties (`HostName`, `HostVersion`, `HostLaunch`, timeouts); and keep a
+test-directory `global.json` with `"test": { "runner": "Microsoft.Testing.Platform" }`
+so `dotnet test` uses MTP.
 
 ## Gaps (not done)
 
-- Host-process **debugging** (attach + breakpoint bind with shadow load)
-- Microsoft Testing Platform (MTP) adapter mode
-- Rider-specific proof / packaging beyond VSTest proxy
+- Microsoft Testing Platform / VSTest IDE matrix (VS / Rider / C# Dev Kit)
 - Full NUnit attribute matrix (Theory, explicit, categories, parallel, …)
 - Broader automated host-matrix CI (years × hosts) for NUnit beyond sample smoke
-- Public NuGet feed + versioning / changelog for the adapter
-- Deeper unit coverage for TestAdapter execute path (layout/source-assert tests only today)
-- Guard so a machine-local / VSTest-discovered adapter does not hijack unrelated `dotnet test` runs (can yield exit code 1 when Runner is invoked on non-NUnit assemblies)
-- Optional: debug-mode load-from-bin (no shadow) if debugging returns
+- Public NuGet feed + versioning / changelog
 
 ## Related
 

@@ -19,10 +19,24 @@ public static class HostSharedAssemblies
         "acdbmgdbrep"
     };
 
-    private static readonly string[] SharedPrefixes =
+    /// <summary>
+    /// Common NuGet packages loaded by host WPF apps, plus Autodesk APIs already
+    /// in the host process. Shared by command loading and NUnit generations.
+    /// Does not include <c>System.</c> / <c>Microsoft.</c> — those would swallow
+    /// generation-private <c>Microsoft.Extensions.*</c> if reused by NUnit.
+    /// </summary>
+    public static readonly string[] HostPackagePrefixes =
     [
-        "System.", "Microsoft.", "MahApps.", "ControlzEx.",
-        "CommunityToolkit.", "Autodesk."
+        "MahApps.",
+        "ControlzEx.",
+        "CommunityToolkit.",
+        "Autodesk.",
+    ];
+
+    private static readonly string[] FrameworkPrefixes =
+    [
+        "System.",
+        "Microsoft.",
     ];
 
     private static readonly object InitLock = new();
@@ -52,7 +66,24 @@ public static class HostSharedAssemblies
         if (SharedAssemblyNames.Contains(assemblyName))
             return true;
 
-        foreach (var prefix in SharedPrefixes)
+        if (MatchesHostPackagePrefix(assemblyName))
+            return true;
+
+        foreach (var prefix in FrameworkPrefixes)
+        {
+            if (assemblyName.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
+                return true;
+        }
+
+        return false;
+    }
+
+    public static bool MatchesHostPackagePrefix(string assemblyName)
+    {
+        if (string.IsNullOrWhiteSpace(assemblyName))
+            return false;
+
+        foreach (var prefix in HostPackagePrefixes)
         {
             if (assemblyName.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
                 return true;

@@ -3,7 +3,7 @@ using Microsoft.VisualStudio.TestPlatform.ObjectModel.Utilities;
 
 namespace DevTools.NUnit.TestAdapter;
 
-internal static class VSTestCaseMapper
+internal static class VsTestCaseMapper
 {
     private static readonly Uri ExecutorUri = new(DevToolsNUnitConstants.ExecutorUri);
 
@@ -11,13 +11,13 @@ internal static class VSTestCaseMapper
         DevToolsNUnitConstants.TestIdProperty,
         DevToolsNUnitConstants.TestIdProperty,
         typeof(string),
-        typeof(VSTestCaseMapper));
+        typeof(VsTestCaseMapper));
 
     private static readonly TestProperty TestFullNameProperty = TestProperty.Register(
         DevToolsNUnitConstants.TestFullNameProperty,
         DevToolsNUnitConstants.TestFullNameProperty,
         typeof(string),
-        typeof(VSTestCaseMapper));
+        typeof(VsTestCaseMapper));
 
     public static TestCase ToTestCase(Runner.RemoteTestCase test)
     {
@@ -33,23 +33,9 @@ internal static class VSTestCaseMapper
         return testCase;
     }
 
-    public static string? BuildFilter(IEnumerable<TestCase> tests)
-    {
-        var fullNames = tests
-            .Select(test => test.GetPropertyValue<string>(TestFullNameProperty, null) ?? test.FullyQualifiedName)
-            .Where(name => !string.IsNullOrWhiteSpace(name))
-            .Distinct(StringComparer.Ordinal)
-            .ToList();
-
-        if (fullNames.Count == 0)
-            return null;
-
-        if (fullNames.Count == 1)
-            return $"<filter><test>{EscapeXml(fullNames[0]!)}</test></filter>";
-
-        var testsXml = string.Concat(fullNames.Select(name => $"<test>{EscapeXml(name!)}</test>"));
-        return $"<filter><or>{testsXml}</or></filter>";
-    }
+    public static Runner.RunnerTestFilter BuildFilter(IEnumerable<TestCase> tests) =>
+        Runner.RunnerTestFilter.FromFullNames(
+            tests.Select(test => test.GetPropertyValue<string>(TestFullNameProperty, null) ?? test.FullyQualifiedName));
 
     public static TestResult ToTestResult(TestCase testCase, Runner.RemoteTestCaseResult remoteCase)
     {
@@ -90,9 +76,4 @@ internal static class VSTestCaseMapper
             _ => TestOutcome.Failed,
         };
 
-    private static string EscapeXml(string value) =>
-        value
-            .Replace("&", "&amp;")
-            .Replace("<", "&lt;")
-            .Replace(">", "&gt;");
 }

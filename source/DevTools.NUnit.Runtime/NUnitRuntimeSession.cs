@@ -24,11 +24,18 @@ public sealed class NUnitRuntimeSession : INUnitRuntimeSession
     private volatile bool _disposing;
     private volatile bool _disposed;
 
-    public NUnitRuntimeSession(Assembly testAssembly, string assemblyPath, string generationId)
+    private readonly bool _runOnCallingThread;
+
+    public NUnitRuntimeSession(
+        Assembly testAssembly,
+        string assemblyPath,
+        string generationId,
+        bool runOnCallingThread = false)
     {
         _testAssembly = Guard.NotNull(testAssembly, nameof(testAssembly));
         _assemblyPath = Path.GetFullPath(Guard.NotNullOrWhiteSpace(assemblyPath, nameof(assemblyPath)));
         GenerationId = Guard.NotNullOrWhiteSpace(generationId, nameof(generationId));
+        _runOnCallingThread = runOnCallingThread;
         _sourceLocationProvider = new NUnitSourceLocationProvider(_assemblyPath);
         _runner = new NUnitTestAssemblyRunner(new DefaultTestAssemblyBuilder());
     }
@@ -66,15 +73,21 @@ public sealed class NUnitRuntimeSession : INUnitRuntimeSession
             var identityRegistry = EnsureLoaded();
 
             var filter = NUnitFilterFactory.Create(request.Filter);
-            var listener = new NUnitEventListener(request.RunId, eventSink, identityRegistry, _sourceLocationProvider);
+            using var traceScope = new NUnitRunTraceScope();
+            var listener = new NUnitEventListener(
+                request.RunId,
+                eventSink,
+                identityRegistry,
+                _sourceLocationProvider,
+                traceScope);
 
-            var runStarted = false;
             BeginRun(request.RunId, cancellationToken.IsCancellationRequested);
 
             try
             {
                 using var cancellationRegistration = cancellationToken.Register(() => Cancel(request.RunId));
 
+                bool runStarted;
                 lock (_runControl)
                 {
                     runStarted = !_stopPending && _runLifecycleState == RunLifecycleState.Accepted;
@@ -107,7 +120,8 @@ public sealed class NUnitRuntimeSession : INUnitRuntimeSession
                     ? Array.Empty<NUnitCaseResult>()
                     : NUnitResultMapper.MapRunResults(result, identityRegistry, _sourceLocationProvider);
 
-                var cases = NUnitRunResultMerger.Merge(frameworkCases, listener.GetAbortedCaseResults());
+                var cases = listener.ApplyTraceOutput(
+                    NUnitRunResultMerger.Merge(frameworkCases, listener.GetAbortedCaseResults()));
 
                 return new NUnitRunResponse(
                     request.RunId,
@@ -230,12 +244,19 @@ public sealed class NUnitRuntimeSession : INUnitRuntimeSession
         if (!_runner.IsTestRunning)
             return;
 
-        _runner.StopRun(false);
-        for (var attempt = 0; attempt < 20 && _runner.IsTestRunning; attempt++)
-            Thread.Sleep(50);
+        try
+        {
+            _runner.StopRun(false);
+            for (var attempt = 0; attempt < 20 && _runner.IsTestRunning; attempt++)
+                Thread.Sleep(50);
 
-        if (_runner.IsTestRunning)
-            _runner.StopRun(true);
+            if (_runner.IsTestRunning)
+                _runner.StopRun(true);
+        }
+        catch (NotSupportedException)
+        {
+            // NUnit MainThreadWorkItemDispatcher cannot cancel in-flight tests.
+        }
     }
 
     private void ValidateAssemblyPath(string requestAssemblyPath)
@@ -254,7 +275,7 @@ public sealed class NUnitRuntimeSession : INUnitRuntimeSession
         if (_loaded && _identityRegistry is not null)
             return _identityRegistry;
 
-        var settings = NUnitRuntimeSettings.Create(Path.GetDirectoryName(_assemblyPath)!);
+        var settings = NUnitRuntimeSettings.Create(Path.GetDirectoryName(_assemblyPath)!, _runOnCallingThread);
         _runner.Load(_testAssembly, settings);
         var root = _runner.ExploreTests(TestFilter.Empty);
         _identityRegistry = NUnitTestIdentityRegistry.Build(root);

@@ -18,9 +18,8 @@ public sealed class HostSmokeTests
         Assert.That(
             revitApi,
             Is.Not.Null,
-            "RevitAPI is not loaded in this process. Host tests must execute inside Revit via DevTools.NUnit.TestAdapter "
-            + "(executor://DevTools.NUnit.V1/). Enable VSTest in your IDE and run through the DevTools adapter, "
-            + "not the built-in NUnit runner.");
+            "RevitAPI is not loaded in this process. Host tests must execute inside Revit via DevTools.NUnit "
+            + "(MTP or VSTest adapter), not a local NUnit runner.");
 
         //TaskDialog.Show("HostSmokeTests", "This test is running inside Revit. Click OK to continue.");
         var valuetest = new StringBuilder();
@@ -48,7 +47,7 @@ public sealed class HostSmokeTests
     {
         Console.WriteLine("devtools-nunit-sample-output");
         Trace.WriteLine("devtools-nunit-sample-trace");
-        Debug.WriteLine("devtools-nunit-sample-debug");
+        Debug.WriteLine("ERR devtools-nunit-sample-debug");
         Assert.Pass();
     }
 }

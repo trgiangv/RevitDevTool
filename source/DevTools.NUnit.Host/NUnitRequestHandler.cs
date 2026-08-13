@@ -15,14 +15,14 @@ public static class NUnitErrorCodes
 
 /// <summary>
 /// Bridge handler for the <c>nunit/*</c> host-test protocol.
-/// Discover and run requests are marshaled through <see cref="IHostContextExecutor"/>.
+/// Discover and run are marshaled through <see cref="IHostContextExecutor"/>.
+/// Combined with NUnit <c>RunOnMainThread</c>, tests execute in the Autodesk API context.
 /// </summary>
 /// <remarks>
-/// <para>
 /// On Revit, <see cref="ExecutionGuardContext.Mode"/> is set to
 /// <see cref="ExecutionGuardMode.Suppress"/> during <c>nunit/run</c>, matching pytest behavior.
 /// AutoCAD does not yet provide an equivalent execution guard; the mode is still set but has no effect there.
-/// </para>
+/// NUnit MainThread dispatcher cannot cancel in-flight tests.
 /// </remarks>
 public sealed class NUnitRequestHandler(
     IHostContextExecutor hostContext,
@@ -136,6 +136,10 @@ public sealed class NUnitRequestHandler(
             catch (NUnitAssemblyLoadException ex)
             {
                 return CreateAssemblyLoadError(requestId, ex.Result);
+            }
+            catch (OperationCanceledException) when (ct.IsCancellationRequested)
+            {
+                return BridgeMessage.Error(requestId, IpcErrorCodes.InternalError, "NUnit run was cancelled.");
             }
             catch (Exception ex)
             {

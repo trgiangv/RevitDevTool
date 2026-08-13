@@ -5,9 +5,10 @@ using DevTools.NUnit.Core.Runtime;
 
 namespace DevTools.NUnit.Host.Loading;
 
-internal sealed class NetFrameworkRunnerBindingDiagnostic
+[UsedImplicitly(ImplicitUseTargetFlags.WithMembers)]
+internal sealed class NetfxRunnerBindingDiagnostic
 {
-    internal NetFrameworkRunnerBindingDiagnostic(
+    internal NetfxRunnerBindingDiagnostic(
         Assembly runnerAssembly,
         Assembly generationFrameworkAssembly)
     {
@@ -21,27 +22,26 @@ internal sealed class NetFrameworkRunnerBindingDiagnostic
     internal Assembly GenerationFrameworkAssembly { get; }
 }
 
-internal sealed class NetFrameworkNUnitSessionHandle : INUnitRuntimeSession
+internal sealed class NetfxNUnitSessionHandle : INUnitRuntimeSession
 {
     private const string RunnerFieldName = "_runner";
 
     private INUnitRuntimeSession _inner;
-    private readonly NUnitGenerationRegistry _registry;
     private bool _disposed;
 
-    internal NetFrameworkNUnitSessionHandle(
+    internal NetfxNUnitSessionHandle(
         INUnitRuntimeSession inner,
         NUnitGenerationRegistry registry,
-        NetFrameworkNUnitGeneration generation)
+        NetfxNUnitGeneration generation)
     {
         _inner = inner ?? throw new ArgumentNullException(nameof(inner));
-        _registry = registry ?? throw new ArgumentNullException(nameof(registry));
+        Registry = registry ?? throw new ArgumentNullException(nameof(registry));
         Generation = generation ?? throw new ArgumentNullException(nameof(generation));
     }
 
-    internal NetFrameworkNUnitGeneration Generation { get; }
+    internal NetfxNUnitGeneration Generation { get; }
 
-    internal NUnitGenerationRegistry Registry => _registry;
+    private NUnitGenerationRegistry Registry { get; }
 
     public string GenerationId => _inner.GenerationId;
 
@@ -51,7 +51,8 @@ internal sealed class NetFrameworkNUnitSessionHandle : INUnitRuntimeSession
 
     internal Assembly GetLoadedRuntimeAssembly() => Generation.RuntimeAssembly;
 
-    internal NetFrameworkRunnerBindingDiagnostic GetRunnerBindingDiagnostic()
+    [UsedImplicitly]
+    internal NetfxRunnerBindingDiagnostic GetRunnerBindingDiagnostic()
     {
         var runnerField = _inner.GetType().GetField(RunnerFieldName, BindingFlags.Instance | BindingFlags.NonPublic)
             ?? throw new InvalidOperationException("Runtime session runner field was not found.");
@@ -59,7 +60,7 @@ internal sealed class NetFrameworkNUnitSessionHandle : INUnitRuntimeSession
         var runner = runnerField.GetValue(_inner)
             ?? throw new InvalidOperationException("Runtime session runner was not initialized.");
 
-        return new NetFrameworkRunnerBindingDiagnostic(
+        return new NetfxRunnerBindingDiagnostic(
             runner.GetType().Assembly,
             Generation.GetLoadedFrameworkAssembly());
     }
@@ -91,10 +92,10 @@ internal sealed class NetFrameworkNUnitSessionHandle : INUnitRuntimeSession
         }
     }
 
-    internal NUnitRuntimeDiagnostic CreateRetainedDiagnostic() => _registry.CreateRetainedDiagnostic();
+    internal NUnitRuntimeDiagnostic CreateRetainedDiagnostic() => Registry.CreateRetainedDiagnostic();
 }
 
-public sealed class NetFrameworkNUnitRuntimeSessionFactory : INUnitRuntimeSessionFactory, IDisposable
+public sealed class NetfxNUnitRuntimeSessionFactory : INUnitRuntimeSessionFactory, IDisposable
 {
     private const string RuntimeSessionTypeName = "DevTools.NUnit.Runtime.NUnitRuntimeSession";
 
@@ -103,7 +104,7 @@ public sealed class NetFrameworkNUnitRuntimeSessionFactory : INUnitRuntimeSessio
     private readonly object _lifecycleLock = new();
     private bool _disposed;
 
-    public NetFrameworkNUnitRuntimeSessionFactory()
+    public NetfxNUnitRuntimeSessionFactory()
     {
         _resolveHandler = OnAssemblyResolve;
         _registry.RegisterAssemblyResolveHandler(_resolveHandler);
@@ -124,13 +125,13 @@ public sealed class NetFrameworkNUnitRuntimeSessionFactory : INUnitRuntimeSessio
         lock (_lifecycleLock)
         {
             if (_disposed)
-                throw new ObjectDisposedException(nameof(NetFrameworkNUnitRuntimeSessionFactory));
+                throw new ObjectDisposedException(nameof(NetfxNUnitRuntimeSessionFactory));
 
             var loadedGeneration = _registry.GetOrCreate(generation);
             loadedGeneration.EnsureLoaded(_registry);
 
             var inner = CreateRuntimeSession(loadedGeneration, _registry);
-            return new NetFrameworkNUnitSessionHandle(inner, _registry, loadedGeneration);
+            return new NetfxNUnitSessionHandle(inner, _registry, loadedGeneration);
         }
     }
 
@@ -152,7 +153,7 @@ public sealed class NetFrameworkNUnitRuntimeSessionFactory : INUnitRuntimeSessio
         _registry.ResolveAssembly(sender, args);
 
     private static INUnitRuntimeSession CreateRuntimeSession(
-        NetFrameworkNUnitGeneration generation,
+        NetfxNUnitGeneration generation,
         NUnitGenerationRegistry registry)
     {
         var runtimeAssembly = generation.RuntimeAssembly;
@@ -181,7 +182,7 @@ public sealed class NetFrameworkNUnitRuntimeSessionFactory : INUnitRuntimeSessio
                 sessionType,
                 BindingFlags.Instance | BindingFlags.Public,
                 binder: null,
-                args: new object[] { testAssembly, generation.Manifest.ShadowAssemblyPath, generation.GenerationId },
+                args: [testAssembly, generation.Manifest.ShadowAssemblyPath, generation.GenerationId, true],
                 culture: null)!;
         }
         finally

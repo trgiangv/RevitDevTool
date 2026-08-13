@@ -15,6 +15,7 @@
     <ItemGroup>
         <ProjectReference Include="..\..\source\DevTools.Ipc\DevTools.Ipc.csproj"/>
         <ProjectReference Include="..\..\source\DevTools.NUnit.Core\DevTools.NUnit.Core.csproj"/>
+        <ProjectReference Include="..\..\source\DevTools.NUnit.Transport\DevTools.NUnit.Transport.csproj"/>
     </ItemGroup>
 
     <ItemGroup>
@@ -29,6 +30,7 @@
     <ItemGroup>
         <Using Include="Xunit"/>
         <Using Include="DevTools.Ipc"/>
+        <Using Include="DevTools.NUnit.Transport"/>
     </ItemGroup>
 
 </Project>

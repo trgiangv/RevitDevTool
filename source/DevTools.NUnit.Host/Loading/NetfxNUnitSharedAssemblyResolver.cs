@@ -6,7 +6,7 @@ namespace DevTools.NUnit.Host.Loading;
 /// <summary>
 /// Reuses host/shared assemblies already loaded in the current AppDomain for net48.
 /// </summary>
-internal static class NetFrameworkNUnitSharedAssemblyResolver
+internal static class NetfxNUnitSharedAssemblyResolver
 {
     internal static Assembly? TryResolveFromAppDomain(AssemblyName requested)
     {

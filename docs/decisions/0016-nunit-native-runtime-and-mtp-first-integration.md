@@ -87,11 +87,18 @@ matrix.
 
 4. **Modern hosts use one collectible framework ALC per generation.** On
    `net8.0-windows` and `net10.0-windows`, the bootstrap, test assembly,
-   `nunit.framework`, NUnit runner component, and private test dependencies are
-   loaded into one collectible `AssemblyLoadContext`. Autodesk host APIs and a
-   minimal DevTools contract allowlist resolve from the default context. The
-   implementation must prove unload with a weak-reference collection test and
-   report retained generations rather than claim unload from `Unload()` alone.
+   NUnit runner component, and private test dependencies are loaded into one
+   collectible `AssemblyLoadContext`. `nunit.framework` 4.6 is host-shared into
+   a non-collectible Plugin/Default context so Dynamo's copy is not bound.
+   Autodesk host APIs and a minimal DevTools contract allowlist resolve from
+   the default context. CLR collectible unload is cooperative: live Autodesk
+   hosts may retain the ALC (`generation.retained`) because ThreadPool /
+   `AsyncLocal` roots survive `Unload()`. That is expected, not a closable
+   defect. The modern-host gate is **generation isolation** (new
+   `generation_id` plus new IL on the same host PID). Report retained
+   generations rather than claim unload from `Unload()` alone. A quiet-process
+   weak-reference collection test may still observe unload; it is not required
+   live.
 
 5. **.NET Framework uses a coherent, non-unloadable generation.** On `net48`,
    every framework generation is copied into one generation directory and
@@ -120,11 +127,15 @@ matrix.
    safety decision and host proof.
 
 8. **MTP is the only supported IDE/test-platform integration.** After the
-   native host runtime passes its first live gate, DevTools will expose
-   discovery, selection, execution, cancellation, output, and attachments
-   through an MTP extension. The experimental VSTest adapter is removed rather
-   than retained as a compatibility bridge. Supported tooling therefore has an
-   explicit modern-version floor instead of carrying two test-platform stacks.
+   native host runtime passes its first live gate, DevTools exposes discovery,
+   selection, execution, cancellation, output, and attachments through an MTP
+   extension. The public consumer package is **`DevTools.NUnit`** (project
+   `DevTools.NUnit.Mtp`), not `DevTools.NUnit.TestAdapter`. The experimental
+   VSTest adapter is removed rather than retained as a compatibility bridge.
+   The MTP assembly may start the installed **Runner CLI as a one-shot child**
+   (same as the unpublished adapter). It must not locate, launch, reuse, or
+   kill Autodesk hosts — Runner still owns that policy. A long-lived
+   `Runner serve` endpoint is not required to replace VSTest.
 
 9. **Source generation is optional metadata only.** A source generator may be
    introduced only when it measurably improves stable source navigation,
@@ -167,8 +178,9 @@ matrix.
    modern collectible ALC, coherent net48 generation, and representative
    framework-semantics fixtures.
 2. **P0 — Live conflict and reload proof:** Revit 2024 plus Dynamo conflict,
-   Revit 2025 collectible ALC, Revit 2027 compile/runtime compatibility when
-   available, and two-generation rebuild behavior.
+   Revit 2025/2026 generation isolation (new id + new IL; live
+   `generation.unloaded` is not required), Revit 2027 compile plus net10 tests
+   when the host is not installed, and two-generation rebuild behavior.
 3. **P1 — MTP-only integration:** one MTP surface backed by Runner and the
    native framework driver; remove the experimental VSTest adapter.
 4. **P1 — IDE run matrix:** Visual Studio first, Rider through its MTP/custom
@@ -211,7 +223,8 @@ attach convenience cannot precede correct NUnit execution.
 Positive:
 
 - NUnit remains the single authority for its discovery and execution behavior.
-- Modern hosts gain an actual unloadable dependency island.
+- Modern hosts isolate rebuilt generations without restarting the process.
+  Live ALC collection is best-effort and may remain `generation.retained`.
 - net48 limitations are explicit, measurable, and cannot silently turn into
   more reflection emulation.
 - MTP and CLI reach one Runner/host protocol and result model without a VSTest

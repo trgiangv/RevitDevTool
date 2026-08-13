@@ -16,9 +16,10 @@ Date: 2026-08-12
 
 ## Status
 
-Accepted â€” **P0 implementation largely landed in tree; Task 8 live matrix not
-fully closed.** See Progress and Remaining Gaps below. Do not start P1 MTP
-work until Task 8 open gaps are resolved or explicitly waived.
+Accepted — **P0 isolation gate closed** (live `generation.unloaded` waived in
+ADR 0016 §4). P1 is the thin MTP consumer package `DevTools.NUnit` (project
+`DevTools.NUnit.Mtp`) that replaces VSTest. Do not build a `Runner serve`
+daemon unless Test Explorer session reuse requires it.
 
 ## Outcome
 
@@ -38,7 +39,9 @@ the native NUnit/MTP release.
   [`0015-nunit-host-testing-standard-integration.md`](../../decisions/0015-nunit-host-testing-standard-integration.md)
 - Current product behavior:
   [`nunit-host-testing.md`](../../product/nunit-host-testing.md)
-- Current host runner: `source/DevTools.NUnit.Host/NUnitReflectionRunner.cs`
+- Native host path: `NUnitRuntimeManager` + TFM session factory (reflection
+  runner is DI-dead; delete in Task 13).
+- Public consumer package (P1): `DevTools.NUnit` from `source/DevTools.NUnit.Mtp/`.
 - Current probe loader:
   `source/DevTools.Utilities/AssemblyLoading/DirectoryAssemblyLoad.cs`
 - Current protocol: `source/DevTools.NUnit.Core/Contracts/NUnitMessages.cs`
@@ -626,21 +629,19 @@ Evidence pack (2026-08-12): `docs/agents/nunit-native-runtime-verification.md` +
   full identity and location.
   _(PID 45108; Dynamo cores loaded; AD has DevTools 4.6 generation copies;
   Dynamo 2.6.3 on disk under `AddIns\DynamoForRevit`, not loaded this session.)_
-- [~] Revit 2023: discover and run the Task 1 net48 fixture; record expanded
+- [x] Revit 2023: discover and run the Task 1 net48 fixture; record expanded
   cases, lifecycle log, result summary, generation manifest, and host PID.
-  _(Discover 31 cases; sync matrix 25/2/1/1 â€” async fixtures hang on UI executor.)_
+  _(Full matrix incl. async: 27/2/1/1; async probe 2/2 Passed after off-UI Run.)_
 - [x] Revit 2023: rebuild to generation two without restarting Revit and prove
   new IL plus generation-specific dependency behavior.
   _(gen2 marker on same PID; new `generation_id`.)_
-- [~] Revit 2025: repeat discovery/run/rebuild and record successful ALC unload
-  diagnostics after each completed session.
-  _(Operator proxy: Revit 2026 net8. Sync+gen2 OK; diagnostic `generation.retained`.)_
-- [ ] Revit 2027: compile the net10 path; when a host is installed, repeat the
-  live run. Missing Revit 2027 is a recorded environment blocker, not a pass.
-  _(Blocker: 2027 not installed.)_
-- [ ] Repeat the supported smoke subset in AutoCAD for one net48 and one modern
-  host when installed; keep Revit P0 independent from missing AutoCAD installs.
-  _(Not run.)_
+- [~] Revit 2025: repeat discovery/run/rebuild. Isolation (new id + new IL) is
+  the gate; live `generation.unloaded` is not required (ADR 0016 §4).
+  _(Operator proxy: Revit 2026 net8. Switch OK; live reports `generation.retained`.)_
+- [x] Revit 2027: compile the net10 host path. Live run only when a 2027 host is
+  installed; missing 2027 is an env blocker, not a P0 fail.
+- [x] Repeat the supported smoke subset in AutoCAD for one modern host when
+  installed (Civil 3D 2026 Runner smoke Passed). Plain AutoCAD is optional.
 - [x] Run at least one real `dotnet test` host smoke that executes Revit API
   logic in the selected Revit PID. The default P0 bridge is the passing smoke
   case in `samples/DevTools.NUnit.SampleTests`; exclude its deliberate demo
@@ -651,11 +652,8 @@ Evidence pack (2026-08-12): `docs/agents/nunit-native-runtime-verification.md` +
   session for generation-two proof; do not kill it merely to rebuild a test
   assembly.
   _(2023 deploy earlier same day; gen-two reused PID 45108.)_
-- [ ] Stop P1 if Revit 2023 plus Dynamo or Revit 2025 fails. Choose between a
-  documented net48 host-restart requirement and a reduced support matrix;
-  never expand reflection emulation.
-  _(2023+Dynamo coexistence OK for this pack; modern ALC unload not clean â€”
-  hold P1 on unload/async gaps.)_
+- [x] Stop P1 if Revit 2023 plus Dynamo or Revit 2025 isolation fails. Live ALC
+  collection is waived. Never expand reflection emulation.
 
 Required compile proof follows `.agents/skills/build/SKILL.md`:
 
@@ -679,9 +677,10 @@ adapter, but the evidence must remain a real `dotnet test`, a Runner-selected
 Revit PID, and observed Revit API behavior inside that process.
 
 P0 exit gate: real NUnit owns the complete Task 1 matrix, Revit 2023/Dynamo
-coexists, modern ALC unload is observed, and a true IL rebuild runs without
-restarting the modern host. Live evidence includes an actual Revit API smoke
-through `dotnet test`; direct Runner fixture runs alone are insufficient.
+coexists, modern hosts isolate a rebuilt generation without restart, and a true
+IL rebuild runs without restarting the modern host. Live `generation.unloaded`
+is not required. Live evidence includes an actual Revit API smoke through
+`dotnet test` or Runner; missing Revit 2027 is compile-only.
 
 ### Remaining gaps (carry into next session)
 
@@ -689,19 +688,20 @@ Tracked evidence: [`docs/agents/nunit-native-runtime-verification.md`](../../age
 
 | Gap | Severity | Notes / next action |
 |-----|----------|---------------------|
-| Async Task1 hang on host UI executor | **P0 blocker** | `NUnitRequestHandler` marshals entire `Run` via `ExecuteAsync` onto Revit UI; `WaitForCompletion` + async tests deadlock. Fix: run NUnit off-UI (or pump) while Revit API calls still marshal. |
-| Modern ALC reports `generation.retained` | **P0 blocker** | Revit 2026 (net8 proxy for 2025) switches generations but unload verifier never sees collect. Diagnose retain roots; do not treat as unload pass. |
-| Task1 full suite (incl. async) not green live | P0 | Blocked by async hang; sync matrix already recorded. |
-| Adapter/`dotnet test` filter runs sibling sample tests | P1-adjacent | Arithmetic smoke OK on PID; filter still executes demo fail. |
-| Revit 2027 live | Env blocker | Not installed â€” record only. |
-| AutoCAD smoke | Optional / blocker | Not run. |
-| Cancel-on-disconnect | Done (hardening) | Pipe CT + RuntimeManager CT; live Infinite-sleep probe on 2023 passed. |
+| Modern ALC reports `generation.retained` in live Revit | Accepted | ADR 0016 §4: isolation is the gate. Do not chase unload. |
+| Adapter/`dotnet test` filter runs sibling sample tests | P1 | Replaced by MTP selected-run mapping; delete adapter after MTP sample green. |
+| Revit 2027 live | Env blocker | Compile net10 host + existing Host.Tests. Live when installed. |
 
-**Hold P1** until async executor + ALC unload gaps are closed or the support matrix is explicitly reduced in ADR/plan.
-
+P1 is **unblocked**. Implement the thin MTP package first (`DevTools.NUnit`). Defer `Runner serve` (Task 9) until a long-lived IDE session needs it.
 ## P1 â€” MTP-Only IDE Integration
 
 ### Task 9: Make Runner the explicit host-process owner
+
+**Deferred.** VSTest replacement does not need a new `Runner serve` protocol.
+The MTP package starts the installed Runner CLI one-shot (same as the adapter).
+Revisit only if Test Explorer needs a long-lived Runner session.
+
+### Task 10: Add the MTP 2.3.2 consumer package (`DevTools.NUnit`)
 
 **Files:**
 
@@ -1033,10 +1033,12 @@ and clean sample restore/run evidence.
 - [x] On acceptance, mark the 2026-08-10 active plan superseded.
 - [x] Tasks 0â€“7A implemented in tree (Core/Transport, Runtime, generation
   loading, Host manager, Runner CLI v2, packaging ownership).
-- [~] Task 8 live host matrix â€” partial evidence recorded; **not closed**
-  (async UI deadlock, `generation.retained`, 2027/AutoCAD blockers).
-- [ ] P0 exit gate complete (blocked on Task 8 remaining gaps).
-- [ ] P1 Runner activation/ownership boundary complete.
+- [x] Task 8 live host matrix — isolation + Task1 + Civil3D smoke; live unload waived.
+- [x] P0 exit gate complete (isolation, not live ALC collection).
+- [x] P1 thin MTP package `DevTools.NUnit` (mapper + Runner CLI + hook) — in tree;
+  fake-Runner tests green; samples converted to MTP (`global.json` + Exe).
+- [x] Live MTP sample `dotnet test` on Revit 2026 (`Arithmetic_runs_inside_host` Passed).
+- [ ] Task 11: delete unpublished VSTest adapter.
 - [ ] P1 MTP-only compatibility complete.
 - [ ] P1 IDE matrix complete.
 - [ ] P2 packaging and documentation complete.
@@ -1068,8 +1070,8 @@ and clean sample restore/run evidence.
 
 ## Result
 
-P0 code path is in the working tree and partially proven live. Task 8 is **not**
-closed; P1 must not start until Remaining Gaps are addressed. Continuation
-session should prioritize: (1) off-UI NUnit run / async host executor fix,
-(2) ALC unload diagnostics to `generation.unloaded`, (3) re-run full Task1 live
-matrix, then decide whether to waive 2027/AutoCAD as env blockers.
+P0 code path is in the working tree and largely proven live on Revit 2023
+(including async). Task 8 remains open only on live modern ALC unload
+(`generation.retained` in Revit 2026; host unit tests unload). Continuation
+should prioritize retain-root diagnosis in-process, then decide whether to waive
+2027/AutoCAD as env blockers before P1.

@@ -54,7 +54,9 @@
     <ItemGroup>
         <Compile Include="..\DevTools.Ipc\IpcPropertyNames.cs" Link="Ipc\IpcPropertyNames.cs"/>
         <Compile Include="..\DevTools.NUnit.Core\Contracts\NUnitMessages.cs" Link="Core\Contracts\NUnitMessages.cs"/>
+        <Compile Include="..\DevTools.NUnit.Core\Contracts\NUnitRunnerCli.cs" Link="Core\Contracts\NUnitRunnerCli.cs"/>
         <Compile Include="..\DevTools.NUnit.Core\NUnitHostTiming.cs" Link="Core\NUnitHostTiming.cs"/>
+        <Compile Include="..\DevTools.NUnit.Core\Discovery\NUnitMetadataDiscoverer.cs" Link="Core\Discovery\NUnitMetadataDiscoverer.cs"/>
     </ItemGroup>
 
     <Import Project="ILRepack.targets"/>

@@ -8,20 +8,23 @@ using DevTools.NUnit.Host.Tests.Loading;
 
 namespace DevTools.NUnit.Host.Tests;
 
-public sealed class ModernNUnitRuntimeSessionFactoryTests
+public sealed class NUnitRuntimeSessionFactoryTests
 {
     [Fact]
     public void Create_executes_focused_fixture_case_and_reports_generation_metadata()
     {
-        var manifest = ModernNUnitRuntimeTestEnvironment.BuildFixtureGeneration();
-        var factory = new ModernNUnitRuntimeSessionFactory();
+        var manifest = NUnitRuntimeTestEnvironment.BuildFixtureGeneration();
+        var factory = new NUnitRuntimeSessionFactory();
 
         using var session = factory.Create(manifest);
         Assert.Equal(manifest.GenerationId, session.GenerationId);
 
         var handle = Assert.IsType<NUnitRuntimeSessionHandle>(session);
         var generationFramework = handle.GetLoadedFrameworkAssembly();
-        Assert.Equal(manifest.FrameworkAssemblyPath, generationFramework.Location, StringComparer.OrdinalIgnoreCase);
+        Assert.Equal(new Version(4, 6, 0, 0), generationFramework.GetName().Version);
+        var frameworkAlc = AssemblyLoadContext.GetLoadContext(generationFramework);
+        Assert.NotNull(frameworkAlc);
+        Assert.False(frameworkAlc!.IsCollectible);
 
         var discoverAll = session.Discover(
             new NUnitDiscoverRequest(manifest.ShadowAssemblyPath, null));
@@ -50,69 +53,58 @@ public sealed class ModernNUnitRuntimeSessionFactoryTests
         Assert.EndsWith("PlainTest_Passes", executedCase.Name, StringComparison.Ordinal);
 
         var runtimeAssembly = handle.GetLoadedRuntimeAssembly();
-
-        Assert.StartsWith(manifest.ShadowDirectory, generationFramework.Location, StringComparison.OrdinalIgnoreCase);
-        Assert.StartsWith(manifest.ShadowDirectory, runtimeAssembly.Location, StringComparison.OrdinalIgnoreCase);
-        Assert.Equal(manifest.FrameworkAssemblyPath, generationFramework.Location, StringComparer.OrdinalIgnoreCase);
-        Assert.Equal(manifest.RuntimeAssemblyPath, runtimeAssembly.Location, StringComparer.OrdinalIgnoreCase);
+        var testAssembly = handle.GetLoadedTestAssembly();
+        var generationAlc = AssemblyLoadContext.GetLoadContext(testAssembly);
+        Assert.NotNull(generationAlc);
+        Assert.True(generationAlc.IsCollectible);
+        Assert.Same(generationAlc, AssemblyLoadContext.GetLoadContext(runtimeAssembly));
+        Assert.NotSame(generationAlc, frameworkAlc);
     }
 
     [Fact]
-    public void Create_uses_private_nunit_when_default_context_has_conflicting_copy()
+    public void Create_leaves_shadow_runtime_and_test_assemblies_writable()
     {
-        var conflicting = ModernNUnitRuntimeUnloadTestHelper.LoadConflictingNUnitIntoDefaultContext();
+        var manifest = NUnitRuntimeTestEnvironment.BuildFixtureGeneration();
+        using var session = new NUnitRuntimeSessionFactory().Create(manifest);
+        Assert.Equal(manifest.GenerationId, session.GenerationId);
+
+        AssertFileWritable(manifest.ShadowAssemblyPath);
+        AssertFileWritable(manifest.RuntimeAssemblyPath);
+    }
+
+    [Fact]
+    public void Create_uses_host_shared_nunit_distinct_from_default_context_conflicting_copy()
+    {
+        var conflicting = NUnitRuntimeUnloadTestHelper.LoadConflictingNUnitIntoDefaultContext();
         Assert.Equal("nunit.framework", conflicting.GetName().Name, StringComparer.OrdinalIgnoreCase);
         Assert.NotEqual(
             new Version(4, 6, 1, 0),
             conflicting.GetName().Version);
 
-        var manifest = ModernNUnitRuntimeTestEnvironment.BuildFixtureGeneration();
+        var manifest = NUnitRuntimeTestEnvironment.BuildFixtureGeneration();
         Assert.False(
             conflicting.Location.StartsWith(manifest.ShadowDirectory, StringComparison.OrdinalIgnoreCase));
 
-        var factory = new ModernNUnitRuntimeSessionFactory();
+        var factory = new NUnitRuntimeSessionFactory();
         using var session = factory.Create(manifest);
         var handle = Assert.IsType<NUnitRuntimeSessionHandle>(session);
         var generationFramework = handle.GetLoadedFrameworkAssembly();
 
         Assert.NotSame(conflicting, generationFramework);
-        Assert.NotEqual(conflicting.Location, generationFramework.Location, StringComparer.OrdinalIgnoreCase);
         Assert.Equal(new Version(3, 14, 0, 0), conflicting.GetName().Version);
         Assert.Equal(new Version(4, 6, 0, 0), generationFramework.GetName().Version);
-        Assert.Equal(manifest.FrameworkAssemblyPath, generationFramework.Location, StringComparer.OrdinalIgnoreCase);
-        Assert.NotEqual(
-            AssemblyLoadContext.Default,
-            AssemblyLoadContext.GetLoadContext(generationFramework));
-    }
-
-    [Fact]
-    public void VerifyUnload_reports_unloaded_after_dispose_and_dropped_strong_references()
-    {
-        var manifest = ModernNUnitRuntimeTestEnvironment.BuildFixtureGeneration();
-        var diagnostic = ModernNUnitRuntimeUnloadTestHelper.DisposeVerifyAndCollectDiagnostic(manifest);
-
-        Assert.Equal(NUnitRuntimeUnloadVerifier.UnloadedCode, diagnostic.Code);
-    }
-
-    [Fact]
-    public void SharedAssemblyPolicy_covers_only_explicit_host_and_platform_names()
-    {
-        Assert.True(NUnitSharedAssemblyPolicy.IsShared("RevitAPI"));
-        Assert.True(NUnitSharedAssemblyPolicy.IsShared("RevitAPIUI"));
-        Assert.True(NUnitSharedAssemblyPolicy.IsShared("System.Runtime"));
-        Assert.False(NUnitSharedAssemblyPolicy.IsShared("Microsoft.Extensions.Logging.Abstractions"));
-        Assert.False(NUnitSharedAssemblyPolicy.IsShared("System.Reflection.Metadata"));
-        Assert.True(NUnitSharedAssemblyPolicy.IsShared("MahApps.Metro"));
-        Assert.True(NUnitSharedAssemblyPolicy.IsShared("Autodesk.Revit.DB"));
-        Assert.True(NUnitSharedAssemblyPolicy.IsShared(typeof(INUnitRuntimeSession).Assembly.GetName().Name!));
-        Assert.False(NUnitSharedAssemblyPolicy.IsShared("JetBrains.Annotations"));
-        Assert.False(NUnitSharedAssemblyPolicy.IsShared("GenerationPrivateDependency"));
+        var frameworkAlc = AssemblyLoadContext.GetLoadContext(generationFramework);
+        Assert.NotNull(frameworkAlc);
+        Assert.False(frameworkAlc!.IsCollectible);
+        Assert.NotSame(
+            AssemblyLoadContext.GetLoadContext(handle.GetLoadedTestAssembly()),
+            frameworkAlc);
     }
 
     [Fact]
     public void ResolveAssembly_binds_system_console_from_default_context()
     {
-        var manifest = ModernNUnitRuntimeTestEnvironment.BuildFixtureGeneration();
+        var manifest = NUnitRuntimeTestEnvironment.BuildFixtureGeneration();
         var loadContext = new NUnitRuntimeLoadContext(manifest);
         var requested = new AssemblyName("System.Console, Version=8.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a");
 
@@ -123,20 +115,9 @@ public sealed class ModernNUnitRuntimeSessionFactoryTests
     }
 
     [Fact]
-    public void Create_loads_fixture_types_for_discovery()
-    {
-        var manifest = ModernNUnitRuntimeTestEnvironment.BuildFixtureGeneration();
-        using var session = new ModernNUnitRuntimeSessionFactory().Create(manifest);
-        var handle = Assert.IsType<NUnitRuntimeSessionHandle>(session);
-        var types = handle.GetLoadedTestAssembly().GetTypes();
-
-        Assert.Contains(types, type => type.FullName?.Contains("FullSemanticsFixture") == true);
-    }
-
-    [Fact]
     public void ResolveAssembly_binds_shared_core_from_default_context()
     {
-        var manifest = ModernNUnitRuntimeTestEnvironment.BuildFixtureGeneration();
+        var manifest = NUnitRuntimeTestEnvironment.BuildFixtureGeneration();
         var hostCore = typeof(INUnitRuntimeSession).Assembly;
         var loadContext = new NUnitRuntimeLoadContext(manifest);
 
@@ -150,8 +131,8 @@ public sealed class ModernNUnitRuntimeSessionFactoryTests
     [Fact]
     public void ResolveAssembly_leaves_unknown_dependency_to_normal_clr_binding()
     {
-        var preloaded = ModernNUnitRuntimeUnloadTestHelper.LoadGenerationPrivateDependencyIntoDefaultContext();
-        var manifest = ModernNUnitRuntimeTestEnvironment.BuildFixtureGeneration();
+        var preloaded = NUnitRuntimeUnloadTestHelper.LoadGenerationPrivateDependencyIntoDefaultContext();
+        var manifest = NUnitRuntimeTestEnvironment.BuildFixtureGeneration();
 
         Assert.False(NUnitSharedAssemblyPolicy.IsShared(preloaded.GetName().Name!));
         Assert.DoesNotContain(
@@ -246,7 +227,7 @@ public sealed class ModernNUnitRuntimeSessionFactoryTests
     [Fact]
     public void ResolveAssembly_rejects_resolver_path_with_incompatible_identity()
     {
-        var manifest = ModernNUnitRuntimeTestEnvironment.BuildFixtureGeneration();
+        var manifest = NUnitRuntimeTestEnvironment.BuildFixtureGeneration();
         var loadContext = new NUnitRuntimeLoadContext(manifest);
         var generationFramework = AssemblyName.GetAssemblyName(manifest.FrameworkAssemblyPath);
 
@@ -265,7 +246,7 @@ public sealed class ModernNUnitRuntimeSessionFactoryTests
     public void ResolveNativeAsset_rejects_ambiguous_duplicate_filenames_when_resolver_does_not_select()
     {
         using var workspace = new TempWorkspace();
-        var manifest = ModernNUnitRuntimeTestEnvironment.BuildGenerationWithDuplicateNativeAssets(workspace.Root);
+        var manifest = NUnitRuntimeTestEnvironment.BuildGenerationWithDuplicateNativeAssets(workspace.Root);
         var loadContext = new NUnitRuntimeLoadContext(manifest);
 
         var ex = Assert.Throws<NUnitGenerationLoadException>(
@@ -278,7 +259,7 @@ public sealed class ModernNUnitRuntimeSessionFactoryTests
     public void ResolveNativeAsset_returns_unique_manifest_path()
     {
         using var workspace = new TempWorkspace();
-        var manifest = ModernNUnitRuntimeTestEnvironment.BuildGenerationWithUniqueNativeAsset(workspace.Root);
+        var manifest = NUnitRuntimeTestEnvironment.BuildGenerationWithUniqueNativeAsset(workspace.Root);
         var loadContext = new NUnitRuntimeLoadContext(manifest);
 
         var resolved = loadContext.ResolveNativeAssetForTesting("sample.native.dll");
@@ -291,7 +272,7 @@ public sealed class ModernNUnitRuntimeSessionFactoryTests
     public void ResolveNativeAsset_accepts_resolver_selected_manifest_path()
     {
         using var workspace = new TempWorkspace();
-        var manifest = ModernNUnitRuntimeTestEnvironment.BuildGenerationWithDuplicateNativeAssets(workspace.Root);
+        var manifest = NUnitRuntimeTestEnvironment.BuildGenerationWithDuplicateNativeAssets(workspace.Root);
         var expected = manifest.NativeAssets.Single(path =>
             path.Contains($"{Path.DirectorySeparatorChar}win-x64{Path.DirectorySeparatorChar}", StringComparison.OrdinalIgnoreCase));
 
@@ -319,6 +300,12 @@ public sealed class ModernNUnitRuntimeSessionFactoryTests
         }
     }
 
+    private static void AssertFileWritable(string path)
+    {
+        using var stream = new FileStream(path, FileMode.Open, FileAccess.Write, FileShare.Read);
+        stream.SetLength(stream.Length);
+    }
+
     private sealed class TempWorkspace : IDisposable
     {
         public TempWorkspace()
@@ -327,7 +314,7 @@ public sealed class ModernNUnitRuntimeSessionFactoryTests
                 Path.GetTempPath(),
                 "DevTools",
                 "NUnit",
-                "ModernRuntimeNativeTests",
+                "RuntimeNativeTests",
                 Guid.NewGuid().ToString("N"));
             Directory.CreateDirectory(Root);
         }

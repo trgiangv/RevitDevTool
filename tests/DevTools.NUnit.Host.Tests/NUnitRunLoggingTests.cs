@@ -16,10 +16,10 @@ public sealed class NUnitRunLoggingTests
     public void OutputTracker_buffers_trace_for_active_test()
     {
         var tracker = new NUnitRunOutputTracker();
-        tracker.BeginTest("1", "Sample");
+        tracker.BeginTest();
         tracker.Append("trace-line");
 
-        var output = tracker.Complete("1");
+        var output = tracker.Complete();
 
         Assert.Equal("trace-line", output);
     }

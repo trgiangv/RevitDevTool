@@ -82,7 +82,8 @@ internal static class NUnitResultMapper
             MapTraits(test),
             MapSource(test, sourceLocationProvider),
             MapSkipReason(test, result.ResultState),
-            MapAttachments(result));
+            MapAttachments(result),
+            test.FullName);
     }
 
     public static NUnitDiscoveredTest MapDiscoveredTest(
@@ -171,19 +172,15 @@ internal static class NUnitResultMapper
             || resultState == ResultState.NotRunnable)
             return NUnitOutcomes.Error;
 
-        if (resultState.Status == TestStatus.Failed)
-            return NUnitOutcomes.Failed;
+        return resultState.Status switch
+        {
+            TestStatus.Failed => NUnitOutcomes.Failed,
+            TestStatus.Skipped => NUnitOutcomes.Skipped,
+            TestStatus.Inconclusive => NUnitOutcomes.Inconclusive,
+            TestStatus.Passed or TestStatus.Warning => NUnitOutcomes.Passed,
+            _ => NUnitOutcomes.Failed
+        };
 
-        if (resultState.Status == TestStatus.Skipped)
-            return NUnitOutcomes.Skipped;
-
-        if (resultState.Status == TestStatus.Inconclusive)
-            return NUnitOutcomes.Inconclusive;
-
-        if (resultState.Status == TestStatus.Passed || resultState.Status == TestStatus.Warning)
-            return NUnitOutcomes.Passed;
-
-        return NUnitOutcomes.Failed;
     }
 
     private static string? MapMessage(ITestResult result)
@@ -277,7 +274,7 @@ internal static class NUnitResultMapper
             if (!IsPublicTrait(key))
                 continue;
 
-            if (!properties.TryGet(key, out var values) || values is null)
+            if (!properties.TryGet(key, out var values))
                 continue;
 
             foreach (var value in values)

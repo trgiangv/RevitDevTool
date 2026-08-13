@@ -1,6 +1,7 @@
 using DevTools.NUnit.Runner.Commands;
 using DevTools.NUnit.Runner.Parsing;
 using DevTools.NUnit.Core;
+using DevTools.NUnit.Core.Contracts;
 using DevTools.NUnit.Runner.Services;
 using DevTools.Utilities;
 using DevTools.Utilities.Hosting;
@@ -31,8 +32,8 @@ internal static class Program
         var hostSession = new HostSession(new HostLaunchService());
         return command!.Command switch
         {
-            "discover" => await DiscoverCommand.ExecuteAsync(command, hostSession).ConfigureAwait(false),
-            "run" => await RunCommand.ExecuteAsync(command, hostSession).ConfigureAwait(false),
+            NUnitRunnerCli.DiscoverCommand => await DiscoverCommand.ExecuteAsync(command, hostSession).ConfigureAwait(false),
+            NUnitRunnerCli.RunCommand => await RunCommand.ExecuteAsync(command, hostSession).ConfigureAwait(false),
             _ => RunnerCommandParser.ExitCliError
         };
     }
@@ -44,18 +45,18 @@ internal static class Program
             DevTools.NUnit.Runner — host NUnit test controller
 
             Usage:
-              DevTools.NUnit.Runner discover <assembly> --host <Revit|AutoCAD> --version <year> [--filter <nunit-framework-filter-xml>]
-              DevTools.NUnit.Runner run <assembly> --host <Revit|AutoCAD> --version <year> [--filter <nunit-framework-filter-xml>]
+              DevTools.NUnit.Runner {NUnitRunnerCli.DiscoverCommand} <assembly> {NUnitRunnerCli.HostOption} <Revit|AutoCAD> {NUnitRunnerCli.VersionOption} <year> [{NUnitRunnerCli.NameOption} <method>] [{NUnitRunnerCli.TestOption} <fullname>]
+              DevTools.NUnit.Runner {NUnitRunnerCli.RunCommand} <assembly> {NUnitRunnerCli.HostOption} <Revit|AutoCAD> {NUnitRunnerCli.VersionOption} <year> [{NUnitRunnerCli.NameOption} <method>] [{NUnitRunnerCli.TestOption} <fullname>]
 
             Options:
-              --host-launch                Always launch a new host (skip reusing existing instances)
-              --host-timeout <seconds>     Pipe request timeout for discover/run (default {NUnitHostTiming.DefaultHostRequestTimeoutSeconds})
-              --host-launch-timeout <seconds>  Wait for host pipe after launch (default {NUnitHostTiming.DefaultHostLaunchTimeoutSeconds})
-              --version, -v                Show version
+              {NUnitRunnerCli.NameOption} <method>              Repeatable NUnit test Name (method)
+              {NUnitRunnerCli.TestOption} <fullname>            Repeatable NUnit FullName
+              {NUnitRunnerCli.FilterOption} <xml>               Raw NUnit TestFilter XML (do not mix with {NUnitRunnerCli.NameOption}/{NUnitRunnerCli.TestOption})
+              {NUnitRunnerCli.HostLaunchOption}                Always launch a new host (skip reusing existing instances)
+              {NUnitRunnerCli.HostTimeoutOption} <seconds>     Pipe request timeout for discover/run (default {NUnitHostTiming.DefaultHostRequestTimeoutSeconds})
+              {NUnitRunnerCli.HostLaunchTimeoutOption} <seconds>  Wait for host pipe after launch (default {NUnitHostTiming.DefaultHostLaunchTimeoutSeconds})
+              {NUnitRunnerCli.VersionOption}, -v                Show version
               --help, -h                   Show this help
-
-            Note:
-              Host-process debugging (--debug) is deferred in this experimental release.
 
             Install location:
             """ + AppUtils.GetBundleContentsPath());

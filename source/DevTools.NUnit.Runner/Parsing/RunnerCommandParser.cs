@@ -1,4 +1,6 @@
 using DevTools.NUnit.Core;
+using DevTools.NUnit.Core.Contracts;
+using DevTools.NUnit.Runner.Services;
 
 namespace DevTools.NUnit.Runner.Parsing;
 
@@ -20,8 +22,8 @@ public static class RunnerCommandParser
     public const int ExitNoHost = 3;
     public const int ExitHostTimeout = 4;
 
-    public const int DefaultHostTimeoutSeconds = NUnitHostTiming.DefaultHostRequestTimeoutSeconds;
-    public const int DefaultHostLaunchTimeoutSeconds = NUnitHostTiming.DefaultHostLaunchTimeoutSeconds;
+    private const int DefaultHostTimeoutSeconds = NUnitHostTiming.DefaultHostRequestTimeoutSeconds;
+    private const int DefaultHostLaunchTimeoutSeconds = NUnitHostTiming.DefaultHostLaunchTimeoutSeconds;
 
     public static bool TryParse(string[] args, out RunnerCommandLine? command, out string? error)
     {
@@ -37,7 +39,10 @@ public static class RunnerCommandParser
         if (!TryParseOptions(args, out var options, out error))
             return false;
 
-        if (!TryValidateOptions(commandName!, options, out error))
+        if (!TryValidateOptions(options, out error))
+            return false;
+
+        if (!NUnitRunnerFilter.TryCompose(options.Names, options.Tests, options.Filter, out var filter, out error))
             return false;
 
         command = new RunnerCommandLine(
@@ -45,7 +50,7 @@ public static class RunnerCommandParser
             Path.GetFullPath(assemblyPath!),
             options.Host!.Trim(),
             options.Version!.Trim(),
-            options.Filter,
+            filter,
             options.HostLaunch,
             options.HostTimeoutSeconds,
             options.HostLaunchTimeoutSeconds);
@@ -87,7 +92,7 @@ public static class RunnerCommandParser
         }
 
         commandName = args[0];
-        if (commandName is not ("discover" or "run"))
+        if (commandName is not (NUnitRunnerCli.DiscoverCommand or NUnitRunnerCli.RunCommand))
         {
             error = $"Unknown command '{commandName}'.";
             return false;
@@ -123,48 +128,63 @@ public static class RunnerCommandParser
         var token = args[index];
         switch (token)
         {
-            case "--host":
-                return RequireValue(args, ref index, "--host", out options.Host, out error);
-            case "--version":
-                return RequireValue(args, ref index, "--version", out options.Version, out error);
-            case "--filter":
-                return RequireValue(args, ref index, "--filter", out options.Filter, out error);
-            case "--host-launch":
+            case NUnitRunnerCli.HostOption:
+                return RequireValue(args, ref index, NUnitRunnerCli.HostOption, out options.Host, out error);
+            case NUnitRunnerCli.VersionOption:
+                return RequireValue(args, ref index, NUnitRunnerCli.VersionOption, out options.Version, out error);
+            case NUnitRunnerCli.FilterOption:
+                return RequireValue(args, ref index, NUnitRunnerCli.FilterOption, out options.Filter, out error);
+            case NUnitRunnerCli.NameOption:
+                return RequireAppend(args, ref index, NUnitRunnerCli.NameOption, options.Names, out error);
+            case NUnitRunnerCli.TestOption:
+                return RequireAppend(args, ref index, NUnitRunnerCli.TestOption, options.Tests, out error);
+            case NUnitRunnerCli.HostLaunchOption:
                 options.HostLaunch = true;
                 return true;
-            case "--host-timeout":
-                return RequirePositiveInt(args, ref index, "--host-timeout", out options.HostTimeoutSeconds, out error);
-            case "--host-launch-timeout":
+            case NUnitRunnerCli.HostTimeoutOption:
+                return RequirePositiveInt(args, ref index, NUnitRunnerCli.HostTimeoutOption, out options.HostTimeoutSeconds, out error);
+            case NUnitRunnerCli.HostLaunchTimeoutOption:
                 return RequirePositiveInt(
                     args,
                     ref index,
-                    "--host-launch-timeout",
+                    NUnitRunnerCli.HostLaunchTimeoutOption,
                     out options.HostLaunchTimeoutSeconds,
                     out error);
-            case "--debug":
-                error = "Host-process debugging is not supported in this experimental release.";
-                return false;
             default:
                 error = $"Unknown option '{token}'.";
                 return false;
         }
     }
 
-    private static bool TryValidateOptions(string commandName, ParsedOptions options, out string? error)
+    private static bool TryValidateOptions(ParsedOptions options, out string? error)
     {
         error = null;
         if (string.IsNullOrWhiteSpace(options.Host))
         {
-            error = "--host is required.";
+            error = $"{NUnitRunnerCli.HostOption} is required.";
             return false;
         }
 
         if (string.IsNullOrWhiteSpace(options.Version))
         {
-            error = "--version is required.";
+            error = $"{NUnitRunnerCli.VersionOption} is required.";
             return false;
         }
 
+        return true;
+    }
+
+    private static bool RequireAppend(
+        string[] args,
+        ref int index,
+        string option,
+        List<string> values,
+        out string? error)
+    {
+        if (!RequireValue(args, ref index, option, out var value, out error))
+            return false;
+
+        values.Add(value!);
         return true;
     }
 
@@ -223,6 +243,8 @@ public static class RunnerCommandParser
         public string? Host;
         public string? Version;
         public string? Filter;
+        public readonly List<string> Names = [];
+        public readonly List<string> Tests = [];
         public bool HostLaunch;
         public int HostTimeoutSeconds = DefaultHostTimeoutSeconds;
         public int HostLaunchTimeoutSeconds = DefaultHostLaunchTimeoutSeconds;

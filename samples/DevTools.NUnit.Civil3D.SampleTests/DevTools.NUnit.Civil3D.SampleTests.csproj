@@ -1,0 +1,20 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <UseAutoCad>true</UseAutoCad>
+        <IsTestProject>true</IsTestProject>
+        <HostName>Civil3D</HostName>
+        <HostVersion>$(AutoCadVersion)</HostVersion>
+        <HostLaunch>false</HostLaunch>
+        <HostTimeout>60</HostTimeout>
+        <HostLaunchTimeout>360</HostLaunchTimeout>
+    </PropertyGroup>
+
+    <Import Project="..\..\source\DevTools.NUnit.Mtp\build\DevTools.NUnit.targets"/>
+
+    <ItemGroup>
+        <PackageReference Include="Microsoft.Testing.Platform.MSBuild"/>
+        <PackageReference Include="NUnit"/>
+        <ProjectReference Include="..\..\source\DevTools.NUnit.Mtp\DevTools.NUnit.Mtp.csproj"/>
+    </ItemGroup>
+</Project>

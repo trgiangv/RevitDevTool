@@ -5,7 +5,8 @@ namespace DevTools.NUnit.Runner.Services;
 
 /// <summary>
 /// Locates a running host pipe or launches a host without blocking on startup dialogs.
-/// <c>false</c> reuses an existing instance when available, otherwise launches;
+/// <c>false</c> reuses a matching-version instance when one is already running,
+/// otherwise starts a new host.
 /// <c>true</c> always starts a new host and waits for that process pipe.
 /// </summary>
 public sealed class HostSession(IHostLaunchService launchService)

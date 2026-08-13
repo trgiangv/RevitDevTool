@@ -4,11 +4,11 @@ using System.Runtime.CompilerServices;
 
 namespace DevTools.NUnit.Host.Loading;
 
-internal sealed class NetFrameworkNUnitGeneration
+internal sealed class NetfxNUnitGeneration
 {
     private readonly NUnitGenerationManifest _manifest;
     private readonly string _shadowDirectory;
-    private readonly NetFrameworkNUnitManagedAssemblyIndex _assemblyIndex;
+    private readonly NUnitGenerationManagedAssemblyIndex _assemblyIndex;
     private readonly Dictionary<string, Assembly> _loadedByPath;
     private readonly HashSet<Assembly> _ownedAssemblies;
     private readonly object _loadLock = new();
@@ -17,11 +17,11 @@ internal sealed class NetFrameworkNUnitGeneration
     private Assembly? _runtimeAssembly;
     private Assembly? _testAssembly;
 
-    internal NetFrameworkNUnitGeneration(NUnitGenerationManifest manifest)
+    internal NetfxNUnitGeneration(NUnitGenerationManifest manifest)
     {
         _manifest = manifest ?? throw new ArgumentNullException(nameof(manifest));
         _shadowDirectory = Path.GetFullPath(manifest.ShadowDirectory);
-        _assemblyIndex = NetFrameworkNUnitManagedAssemblyIndex.Create(manifest.ManagedAssemblies);
+        _assemblyIndex = NUnitGenerationManagedAssemblyIndex.Create(manifest.ManagedAssemblies);
         _loadedByPath = new Dictionary<string, Assembly>(StringComparer.OrdinalIgnoreCase);
         _ownedAssemblies = new HashSet<Assembly>(AssemblyReferenceEqualityComparer.Instance);
     }
@@ -86,7 +86,7 @@ internal sealed class NetFrameworkNUnitGeneration
             return null;
 
         if (NUnitSharedAssemblyPolicy.IsShared(simpleName))
-            return NetFrameworkNUnitSharedAssemblyResolver.TryResolveFromAppDomain(requested);
+            return NetfxNUnitSharedAssemblyResolver.TryResolveFromAppDomain(requested);
 
         if (requestingAssembly is not null && !OwnsAssembly(requestingAssembly))
             return null;
@@ -136,7 +136,7 @@ internal sealed class NetFrameworkNUnitGeneration
         }
 
         if (requested is not null
-            && !NetFrameworkNUnitManagedAssemblyIndex.IsCompatibleIdentity(requested, identity))
+            && !NUnitGenerationManagedAssemblyIndex.IsCompatibleIdentity(requested, identity))
         {
             throw new NUnitGenerationAssemblyResolutionException(
                 $"Generation shadow path '{normalizedPath}' identity '{identity.FullName}' is incompatible with requested '{requested.FullName}'.");
@@ -194,12 +194,11 @@ internal sealed class NetFrameworkNUnitGeneration
     }
 
     private static IReadOnlyList<string> GetBootstrapLoadPaths(NUnitGenerationManifest manifest) =>
-        new[]
-        {
-            Path.GetFullPath(manifest.FrameworkAssemblyPath),
+    [
+        Path.GetFullPath(manifest.FrameworkAssemblyPath),
             Path.GetFullPath(manifest.RuntimeAssemblyPath),
-            Path.GetFullPath(manifest.ShadowAssemblyPath),
-        };
+            Path.GetFullPath(manifest.ShadowAssemblyPath)
+    ];
 }
 
 internal sealed class AssemblyReferenceEqualityComparer : IEqualityComparer<Assembly>

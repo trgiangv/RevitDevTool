@@ -13,8 +13,8 @@ internal sealed record DevToolsNUnitSettings(
     string? RunnerPath,
     bool CollectSourceInformation)
 {
-    public const int DefaultHostTimeoutSeconds = NUnitHostTiming.DefaultHostRequestTimeoutSeconds;
-    public const int DefaultHostLaunchTimeoutSeconds = NUnitHostTiming.DefaultHostLaunchTimeoutSeconds;
+    private const int DefaultHostTimeoutSeconds = NUnitHostTiming.DefaultHostRequestTimeoutSeconds;
+    private const int DefaultHostLaunchTimeoutSeconds = NUnitHostTiming.DefaultHostLaunchTimeoutSeconds;
 
     public static DevToolsNUnitSettings CreateDefault() =>
         new(
@@ -28,7 +28,7 @@ internal sealed record DevToolsNUnitSettings(
 
     public static DevToolsNUnitSettings FromModel(DevToolsNUnitSettingsModel settings, RunConfigurationModel runConfiguration) =>
         new(
-            HostNameResolver.Resolve(Require(settings.HostName, nameof(settings.HostName))),
+            Require(settings.HostName, nameof(settings.HostName)),
             Require(settings.HostVersion, nameof(settings.HostVersion)),
             ReadBool(settings.HostLaunch, false),
             ReadPositiveInt(settings.HostTimeout, DefaultHostTimeoutSeconds),
@@ -81,5 +81,5 @@ internal sealed record DevToolsNUnitSettings(
     }
 
     public RunnerHostOptions ToRunnerHostOptions() =>
-        new(Host, HostVersion, HostLaunch, HostTimeoutSeconds, HostLaunchTimeoutSeconds);
+        new(Host, HostVersion, HostLaunch, HostTimeoutSeconds, HostLaunchTimeoutSeconds, RunnerPath);
 }

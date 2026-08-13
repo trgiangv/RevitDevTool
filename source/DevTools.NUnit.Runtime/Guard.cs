@@ -15,10 +15,4 @@ internal static class Guard
             throw new ArgumentException("Value cannot be null or whitespace.", paramName);
         return value!;
     }
-
-    public static void NotDisposed(bool disposed, object instance)
-    {
-        if (disposed)
-            throw new ObjectDisposedException(instance.GetType().FullName);
-    }
 }

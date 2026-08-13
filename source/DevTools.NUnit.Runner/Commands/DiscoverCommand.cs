@@ -2,7 +2,6 @@ using System.Text.Json;
 using DevTools.NUnit.Transport;
 using DevTools.Logging;
 using DevTools.NUnit.Core;
-using DevTools.NUnit.Core.Contracts;
 using DevTools.NUnit.Runner.Parsing;
 using DevTools.NUnit.Runner.Services;
 

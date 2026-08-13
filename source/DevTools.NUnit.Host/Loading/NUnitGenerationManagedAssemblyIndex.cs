@@ -1,6 +1,5 @@
-#if NET
-using System.Collections.Frozen;
 using System.Reflection;
+// ReSharper disable RedundantSuppressNullableWarningExpression
 
 namespace DevTools.NUnit.Host.Loading;
 
@@ -8,10 +7,10 @@ internal readonly record struct ManagedAssemblyEntry(AssemblyName Identity, stri
 
 internal sealed class NUnitGenerationManagedAssemblyIndex
 {
-    private readonly FrozenDictionary<string, IReadOnlyList<ManagedAssemblyEntry>> _entriesBySimpleName;
+    private readonly Dictionary<string, IReadOnlyList<ManagedAssemblyEntry>> _entriesBySimpleName;
 
     private NUnitGenerationManagedAssemblyIndex(
-        FrozenDictionary<string, IReadOnlyList<ManagedAssemblyEntry>> entriesBySimpleName)
+        Dictionary<string, IReadOnlyList<ManagedAssemblyEntry>> entriesBySimpleName)
     {
         _entriesBySimpleName = entriesBySimpleName;
     }
@@ -59,12 +58,11 @@ internal sealed class NUnitGenerationManagedAssemblyIndex
             }
         }
 
-        var frozenGroups = groups.ToDictionary(
-            static pair => pair.Key,
-            static pair => (IReadOnlyList<ManagedAssemblyEntry>)pair.Value.ToList(),
-            StringComparer.OrdinalIgnoreCase);
-
-        return new NUnitGenerationManagedAssemblyIndex(frozenGroups.ToFrozenDictionary(StringComparer.OrdinalIgnoreCase));
+        return new NUnitGenerationManagedAssemblyIndex(
+            groups.ToDictionary(
+                static pair => pair.Key,
+                static pair => (IReadOnlyList<ManagedAssemblyEntry>)pair.Value.ToList(),
+                StringComparer.OrdinalIgnoreCase));
     }
 
     internal string? ResolvePath(AssemblyName requested)
@@ -86,10 +84,7 @@ internal sealed class NUnitGenerationManagedAssemblyIndex
                 $"Ambiguous managed assembly matches for '{requested.FullName}' in generation manifest.");
         }
 
-        if (compatible.Count == 1)
-            return compatible[0].Path;
-
-        return null;
+        return compatible.Count == 1 ? compatible[0].Path : null;
     }
 
     internal static bool IsCompatibleIdentity(AssemblyName requested, AssemblyName candidate)
@@ -100,8 +95,6 @@ internal sealed class NUnitGenerationManagedAssemblyIndex
         if (requested.Version is not null && !VersionEquals(requested.Version, candidate.Version))
             return false;
 
-        // Satellite assemblies share a simple name (*.resources) but differ by culture.
-        // Always compare normalized cultures so neutral requests do not match every satellite.
         if (!string.Equals(
                 NormalizeCulture(requested.CultureName),
                 NormalizeCulture(candidate.CultureName),
@@ -115,7 +108,7 @@ internal sealed class NUnitGenerationManagedAssemblyIndex
         {
             var candidateToken = candidate.GetPublicKeyToken();
             if (candidateToken is not { Length: > 0 }
-                || !requestedToken.AsSpan().SequenceEqual(candidateToken))
+                || !requestedToken.SequenceEqual(candidateToken))
             {
                 return false;
             }
@@ -191,7 +184,6 @@ internal sealed class NUnitGenerationManagedAssemblyIndex
         if (!leftSpecified)
             return true;
 
-        return left!.AsSpan().SequenceEqual(right!);
+        return left!.SequenceEqual(right!);
     }
 }
-#endif

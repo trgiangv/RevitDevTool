@@ -3,4 +3,9 @@
         <TargetFrameworks>net48;net8.0-windows;net10.0-windows</TargetFrameworks>
     </PropertyGroup>
 
+    <!-- Linked into MTP / VSTest adapter only; do not ship PE discovery in the host Core DLL. -->
+    <ItemGroup>
+        <Compile Remove="Discovery\**"/>
+        <None Include="Discovery\**" />
+    </ItemGroup>
 </Project>

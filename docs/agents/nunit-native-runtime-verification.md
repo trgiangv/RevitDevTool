@@ -3,94 +3,129 @@
 Evidence for plan Task 8 (`docs/plans/active/2026-08-12-nunit-native-runtime-mtp.md`).
 Raw artifacts: `%LOCALAPPDATA%\RevitDevTool\task8-evidence\`.
 
-## Environment (2026-08-12)
+## Environment (2026-08-12, continuation)
 
-| Host | PID | Build | Notes |
-|------|-----|-------|-------|
-| Revit 2023 | 45108 | 23.1.90.15 | net48; Dynamo cores loaded |
-| Revit 2026 | 43776 | (running) | net8 proxy for plan’s Revit 2025 ALC row (operator decision: same TFM) |
-| Revit 2025 | — | — | Not run; substituted by 2026 |
-| Revit 2027 | — | — | Not installed — environment blocker |
-| AutoCAD | — | — | Not run — optional / blocker |
+| Host | Status | Notes |
+|------|--------|-------|
+| Revit 2023 | Live | net48; async + full Task1 matrix green after off-UI Run fix |
+| Revit 2026 | Live | net8 proxy for plan’s Revit 2025 ALC row |
+| Revit 2025 | — | Substituted by 2026 |
+| Revit 2027 | — | Not installed — environment blocker |
+| AutoCAD / Civil 3D 2026 | Live | Runner smoke Passed — see below |
 
-## Revit 2023 + Dynamo / `nunit.framework`
+## Civil 3D 2026 smoke (continuation)
 
-Dynamo add-in assemblies loaded in-process (13 name matches including `DynamoCore`, `DynamoRevitDS`, …).
+- Sample: `samples/DevTools.NUnit.Civil3D.SampleTests`
+- Runner: `--host Civil3D --version 2026 --host-launch`
+- Case `Arithmetic_runs_inside_civil3d_host` **Passed** (`EXIT=0`)
+- Output: `acad-version=25.1.0.0`, `host-pid=38048`, `process-name=acad`,
+  `civil-assembly=AeccUiWindows`
+- Evidence: `%LOCALAPPDATA%\RevitDevTool\task8-evidence\civil3d-2026-arithmetic-smoke.txt`
 
-**On disk (Dynamo):**
+## Fixes landed this session
 
-`C:\Program Files\Autodesk\Revit 2023\AddIns\DynamoForRevit\nunit.framework.dll`  
-→ `nunit.framework, Version=2.6.3.13283, Culture=neutral, PublicKeyToken=96d09a1eb7f44a77`
+1. **Off-UI `nunit/run`** — `NUnitRequestHandler` no longer marshals the whole NUnit
+   session onto Revit Idling via `IHostContextExecutor`. Discover still marshals;
+   Run uses `Task.Run` with `ExecutionGuardMode.Suppress` on the async flow.
+2. **Unload diagnostic timing** — `NUnitRuntimeManager` releases obsolete generations
+   before enriching the response so `runtime_diagnostic` appears on the switching
+   response (not the next request).
+3. Host/unit coverage updated for off-UI Run. Unload-after-run is not a unit gate.
 
-**Loaded in AppDomain after Task1 + gen-two runs:** only DevTools generation copies  
-`nunit.framework, Version=4.6.0.0, Culture=neutral, PublicKeyToken=2638cd05610744eb` under  
-`%TEMP%\…\DevTools\NUnit\Generations\<generation_id>\nunit.framework.dll`  
-(count grew with generations; Dynamo’s 2.6.3 identity was **not** loaded into the AppDomain during this session).
+## Revit 2023 — async + full Task1
 
-Coexistence claim for this run: Dynamo is loaded; DevTools owns its private 4.6 generation `nunit.framework` identities; Dynamo’s older framework stays on disk until a Dynamo test path loads it.
+- Async probe (`AsyncTest_Completes` + `AsyncLifecycle_TestCompletes`): **2 Passed**.
+  File: `2023-async-probe-out.txt`.
+- Full Task1 matrix: **27 Passed / 2 Skipped / 1 Inconclusive / 1 Error** (deliberate).
+  File: `2023-task1-full-out.txt`. Includes async fixtures — prior UI deadlock closed.
+- Gen-two marker (same host, no restart): `generation-marker=generation-two`, new
+  `generation_id`. File: `2023-gen2-marker-out.json`.
 
-## Task 1 fixture (net48) on Revit 2023
+## Revit 2026 — generation switch + ALC unload
 
-- Discover: **31** cases, `generation_id=cd071c38…982e`.
-- Sync matrix (exclude `AsyncLifecycleFixture` + `FullSemanticsFixture.AsyncTest_Completes`):
+- Gen1 → gen2 marker switch works; diagnostic now on gen2 response.
+- Files: `2026-alc-gen1.json`, `2026-alc-gen2.json`, plus retry / stream-load /
+  host-share packs (`2026-alc-gen*-hostshare.txt`, `2026-alc-gen*-hostshare2.txt`).
+- Host unit tests (`DevTools.NUnit.Host.Tests`) prove isolation and host-share;
+  they do not require `generation.unloaded` after Run.
+- Live Revit 2026 after option-1 host-share still reports
+  **`generation.retained`**. Scan shrunk from
+  `[Runtime, Fixtures, nunit.framework]` to `[Runtime, Fixtures]` — NUnit is
+  no longer inside the collectible ALC. No scanner-visible host static remains.
 
-| Outcome | Count |
-|---------|-------|
-| Passed | 25 |
-| Skipped (Ignore/Explicit) | 2 |
-| Inconclusive | 1 |
-| Error (deliberate unexpected exception) | 1 |
+## System-level unload assessment (2026-08-13)
 
-Summary file: `2023-task1-sync-out.json`. Host PID **45108**.
+CLR collectible unload is **cooperative**, not forced
+([Microsoft: assembly unloadability](https://learn.microsoft.com/dotnet/standard/assembly/unloadability)).
+`AssemblyLoadContext.Unload()` only *starts* unload. It finishes only when:
 
-### Async hang (open gap)
+1. No thread has a collectible method on its stack.
+2. No outside strong ref / strong `GCHandle` points at a collectible assembly,
+   type, or instance (stack/JIT locals, statics, `AsyncLocal` / ExecutionContext,
+   `RegisteredWaitHandle`, fields on the ALC subclass itself).
 
-Running `AsyncTest_Completes` / `AsyncLifecycleFixture` alone times out: NUnit `Run` is marshaled onto the Revit UI executor (`ExecuteAsync`), so `WaitForCompletion` blocks Idling while async continuations cannot complete → **UI-thread deadlock**. Full Task1 including async is blocked until Run is off-UI or async fixtures are adjusted.
+That is a different contract from net48 AppDomain unload (forced abort).
 
-## Generation-two (same Revit 2023 PID)
+### What option 1 actually proved
 
-Without restarting Revit 45108:
+| Layer | Result |
+|-------|--------|
+| Isolation | **Proven live** — new `generation_id` + `generation-two` IL on same PID |
+| Host-share versioned `nunit.framework` (not Dynamo 3.x) | **Works** — unit tests keep 4.6 vs stub 3.14 distinct; live scan dropped `nunit.framework` from the collectible ALC |
+| NUnit `TestMetadataCache` / `MethodInfoCache` / `AsyncLocal` | Real pins, but **not chased in product code** — reflection clears only helped quiet unit processes; live Revit still retained |
+| Live `generation.unloaded` | **Not achieved** — still `[Runtime, Fixtures]` after host-share |
 
-| Assembly | Marker output | `generation_id` |
-|----------|---------------|-----------------|
-| staged `net48-gen1` | (prior sync run) | `cd071c38…982e` |
-| staged `net48-gen2` | `generation-marker=generation-two` | `0e48aa2f…039a` |
+### Why unit unloads and Revit does not
 
-File: `2023-gen2-marker-out.json`.
+Isolated unit tests are a quiet process and may still collect a generation ALC
+after discover+dispose. Live `nunit/run` uses `Task.Run` onto Revit’s
+**persistent ThreadPool**, plus NUnit `RunAsync` / timeout / async fixtures which
+hop more pool threads. NUnit 4 stores `TestExecutionContext` in `AsyncLocal`;
+idle pool workers keep the previous ExecutionContext. That is why live reports
+`generation.retained` with `alc-assemblies=[Runtime, Fixtures]`.
 
-## Revit 2026 (net8 / 2025 proxy)
+This is not a missing allowlist entry we failed to scrub. Further NUnit static
+hunting will not close the live P0.
 
-- Sync Task1 matrix: same outcomes as 2023 (`2026-task1-sync-out.json`).
-- Gen-two marker: `generation-marker=generation-two`, new `generation_id`.
-- ALC unload diagnostic after generation switch: **`generation.retained`**  
-  (`Generation ALC retained after unload verification.`) — observed twice  
-  (`2026-gen2-marker-out.json`, `2026-gen1-again-out.json`).  
-  Generation switch works; clean ALC collect was **not** observed.
+### Kept vs stripped after accepting the gap
 
-## `dotnet test` Revit API smoke (2023)
+**Keep (observable impact):** host-share versioned `nunit.framework`; off-UI
+`Task.Run` for `nunit/run`; stream-load shadow assemblies; share SRM/Immutable
+and host NuGet prefixes on modern TFMs; release obsolete sessions before enrich.
 
-```powershell
-dotnet test samples/DevTools.NUnit.SampleTests/DevTools.NUnit.SampleTests.csproj `
-  -c Debug.Autodesk.2023 --filter "FullyQualifiedName~Arithmetic_runs_inside_host"
-```
+**Strip (live-unload overlays):** retain-root scanner, dedicated verify thread,
+`ExecutionContext.SuppressFlow`, NUnit private-cache reflection, session field
+nulling, MethodInfo-avoiding source lookup, 40-cycle verify.
 
-- `Arithmetic_runs_inside_host` **Passed**; stdout includes `23.1.90.15` and `host-pid=45108`.
-- Adapter still executed sibling sample tests in the same run (`Intentional_failure_for_demo` failed, `Writes_output` passed) — filter/adapter gap; acceptance evidence is the Arithmetic case + PID match.
+### Can it be fixed thoroughly?
 
-## Cancel-on-disconnect (related hardening)
+| Approach | Thorough? | Notes |
+|----------|-----------|--------|
+| More NUnit cache / AsyncLocal clears | No | Already sufficient for unit; live pin is off-scanner |
+| Flood ThreadPool to overwrite ExecutionContext | Partial / unsafe | Might confirm the theory; cannot cover UI thread; steals Revit pool threads |
+| Host-share Runtime too (fixtures-only collectible ALC) | Smaller surface, same class of pin | Fixture `Type` still lives in NUnit `AsyncLocal` on pool threads |
+| Dedicated run thread + Join (mirror unit helper) | Better, not closed-world | NUnit internals still use ThreadPool |
+| `!gcroot` on live `LoaderAllocator` | Diagnostic only | Microsoft’s prescribed confirmation; does not itself unload |
+| Out-of-process NUnit Engine | Out of ADR | Tests must run inside the Autodesk host |
+| **Waive live `generation.unloaded`; keep isolation as the gate** | Product-honest | Matches net48 model (ADR 0016 §5) and CLR cooperative unload. Requires an ADR 0016 §4 amendment |
 
-Earlier same day: Infinite-sleep CancelProbe entered on PID 45108 → concurrent discover blocked → kill Runner → discover completed ~8.8s → MCP execute responsive. See session notes; not re-run in this evidence pack.
+**Recommendation:** stop treating live `generation.unloaded` as a closable code P0. Keep reporting `generation.retained` when the weak ref stays alive. Treat **generation isolation** (new id + new IL, already live-proven) as the hard modern-host gate. Optional later: WinDbg `!gcroot` if we need a named root for the diagnostic, not as a path to a guaranteed unload.
 
 ## Task 8 close criteria vs this pack
 
 | Plan item | Status |
 |-----------|--------|
-| 2023 Dynamo + `nunit.framework` inventory | Done (Dynamo loaded; 2.6.3 on disk; 4.6 generations in AD) |
-| 2023 Task1 discover/run | Sync matrix done; **async excluded** (deadlock) |
+| 2023 Dynamo + `nunit.framework` inventory | Done (prior pack) |
+| 2023 Task1 discover/run **including async** | **Done** |
 | 2023 generation-two same PID | Done |
-| 2025 ALC unload | **Proxy 2026**: switch OK, diagnostic **`generation.retained`** |
+| 2025/2026 ALC unload | Switch OK; live still **`generation.retained`** |
 | 2027 live | Blocker — not installed |
-| AutoCAD smoke | Blocker / not run |
-| `dotnet test` Revit API smoke | Arithmetic Passed on PID 45108 (filter imperfect) |
+| AutoCAD smoke | **Done (Civil 3D 2026)** — Runner arithmetic Passed on PID 38048 |
+| `dotnet test` Revit API smoke | Done (prior pack; filter still imperfect) |
 
-**Verdict:** do **not** treat Task 8 as fully closed. P0 live path is largely proven on 2023 + 2026, but async UI deadlock, ALC `generation.retained`, and 2027/AutoCAD blockers remain.
+**Verdict:** async P0 blocker closed. Isolation on modern hosts is live-proven.
+Strict live `generation.unloaded` is **not a closable code defect** under CLR
+cooperative unload inside Revit (ThreadPool / ExecutionContext). ADR 0016 §4
+now matches that: isolation is the gate; `generation.retained` is expected live.
+P1 (thin MTP package `DevTools.NUnit`) is unblocked. Do not continue NUnit
+static-scrub loops.

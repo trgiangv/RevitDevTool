@@ -1,7 +1,6 @@
 using DevTools.NUnit.Host.Loading;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
-using Microsoft.Extensions.Logging;
 
 namespace DevTools.NUnit.Host;
 
@@ -13,14 +12,12 @@ public static class NUnitHostingExtensions
     /// </summary>
     public static IServiceCollection AddNUnitHostServices(this IServiceCollection services)
     {
-        services.TryAddSingleton<NUnitAssemblyLoader>();
-        services.TryAddSingleton<INUnitGenerationBuilder>(sp =>
+        services.TryAddSingleton<INUnitGenerationBuilder>(_ =>
             new NUnitGenerationBuilder(ResolveHostRuntimeSourcePath));
-        services.TryAddSingleton<INUnitRuntimeSessionFactory>(sp =>
 #if NETFRAMEWORK
-            new NetFrameworkNUnitRuntimeSessionFactory());
+        services.TryAddSingleton<INUnitRuntimeSessionFactory, NetfxNUnitRuntimeSessionFactory>();
 #else
-            new ModernNUnitRuntimeSessionFactory());
+        services.TryAddSingleton<INUnitRuntimeSessionFactory, NUnitRuntimeSessionFactory>();
 #endif
         services.TryAddSingleton<NUnitRuntimeManager>();
         services.TryAddSingleton<INUnitHost, NUnitHost>();

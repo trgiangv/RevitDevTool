@@ -58,7 +58,7 @@ internal sealed class NUnitSourceLocationProvider
         }
     }
 
-    public bool TryGetSourceLocation(string fullTestName, out string? filePath, out int lineNumber)
+    private bool TryGetSourceLocation(string fullTestName, out string? filePath, out int lineNumber)
     {
         filePath = null;
         lineNumber = 0;

@@ -29,7 +29,7 @@ public class TestAdapterLayoutTests
     public void Source_sample_uses_msbuild_props_and_adapter_reference()
     {
         var repositoryRoot = FindRepositoryRoot();
-        var sampleProject = File.ReadAllText(Path.Combine(repositoryRoot, "samples", "DevTools.NUnit.SampleTests", "DevTools.NUnit.SampleTests.csproj"));
+        var sampleProject = File.ReadAllText(Path.Combine(repositoryRoot, "samples", "DevTools.NUnit.VSTest.SampleTests", "DevTools.NUnit.VSTest.SampleTests.csproj"));
         var targets = File.ReadAllText(Path.Combine(repositoryRoot, "source", "DevTools.NUnit.TestAdapter", "build", "DevTools.NUnit.TestAdapter.targets"));
         var props = File.ReadAllText(Path.Combine(repositoryRoot, "source", "DevTools.NUnit.TestAdapter", "build", "DevTools.NUnit.TestAdapter.props"));
 
@@ -40,6 +40,12 @@ public class TestAdapterLayoutTests
         Assert.Contains("<HostTimeout>60</HostTimeout>", sampleProject);
         Assert.Contains("<HostLaunchTimeout>360</HostLaunchTimeout>", sampleProject);
         Assert.Contains("GenerateDevToolsNUnitRunSettings", targets);
+        Assert.Contains("$(TargetDir)DevTools.NUnit.runsettings", targets);
+        Assert.Contains("TryApplyFromAssembly", File.ReadAllText(Path.Combine(
+            repositoryRoot,
+            "source",
+            "DevTools.NUnit.TestAdapter",
+            "DevToolsNUnitDiscoverer.cs")));
         Assert.DoesNotContain("GenerateDevToolsNUnitAdapterBindingRedirects", targets);
         Assert.Contains("$(DevToolsNUnitGeneratedRunSettingsPath)", targets);
         Assert.Contains("obj\\$(_DevToolsNUnitConfig)\\DevTools.NUnit.generated.runsettings", props);
@@ -53,7 +59,7 @@ public class TestAdapterLayoutTests
         Assert.DoesNotContain("DevTools.NUnit.Client", sampleProject);
         Assert.DoesNotContain("DevTools.NUnit.runsettings", sampleProject);
         Assert.DoesNotContain("AssemblyInfo.cs", Directory.GetFiles(
-            Path.Combine(repositoryRoot, "samples", "DevTools.NUnit.SampleTests")).Select(Path.GetFileName));
+            Path.Combine(repositoryRoot, "samples", "DevTools.NUnit.VSTest.SampleTests")).Select(Path.GetFileName));
     }
 
     [Fact]
@@ -67,7 +73,15 @@ public class TestAdapterLayoutTests
             "DevToolsNUnitDiscoverer.cs"));
 
         Assert.Contains("LocalNUnitTestDiscoverer.Discover", discoverer);
+        Assert.Contains("TryApplyFromAssembly", discoverer);
         Assert.DoesNotContain("client.Discover", discoverer);
+        Assert.DoesNotContain("ProcessRunnerClient", discoverer);
+        Assert.True(File.Exists(Path.Combine(
+            repositoryRoot,
+            "source",
+            "DevTools.NUnit.Core",
+            "Discovery",
+            "NUnitMetadataDiscoverer.cs")));
         Assert.True(File.Exists(Path.Combine(
             repositoryRoot,
             "source",

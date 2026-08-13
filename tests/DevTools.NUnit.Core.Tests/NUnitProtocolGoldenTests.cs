@@ -267,7 +267,8 @@ public sealed class NUnitProtocolGoldenTests
             Attachments:
             [
                 new NUnitAttachment("log", "text/plain", "C:\\temp\\fail.log", null),
-            ]);
+            ],
+            FullName: "SampleTests.Fixture.Fail");
 
         var json = JsonSerializer.Serialize(original, NUnitJsonContext.Default.NUnitCaseResult);
         var roundTrip = JsonSerializer.Deserialize(json, NUnitJsonContext.Default.NUnitCaseResult);
@@ -284,6 +285,7 @@ public sealed class NUnitProtocolGoldenTests
         Assert.NotNull(roundTrip.Attachments);
         Assert.Single(roundTrip.Attachments);
         Assert.Equal("log", roundTrip.Attachments[0].Name);
+        Assert.Equal("SampleTests.Fixture.Fail", roundTrip.FullName);
     }
 
     [Fact]

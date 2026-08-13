@@ -3,25 +3,18 @@ using System.Text;
 namespace DevTools.NUnit.Host.Logging;
 
 /// <summary>
-/// Buffers Trace/Debug output per active NUnit test-case id during a run session.
+/// Buffers Trace/Debug text for the in-flight NUnit case. Tests run sequentially
+/// on the Autodesk thread, so one current buffer is enough.
 /// </summary>
 public sealed class NUnitRunOutputTracker
 {
     private readonly object _sync = new();
-    private readonly Dictionary<string, StringBuilder> _buffersByTestId = new(StringComparer.Ordinal);
-    private string? _activeTestId;
+    private StringBuilder? _current;
 
-    public void BeginTest(string id, string name)
+    public void BeginTest()
     {
-        if (string.IsNullOrWhiteSpace(id))
-            return;
-
         lock (_sync)
-        {
-            _activeTestId = id;
-            if (!_buffersByTestId.ContainsKey(id))
-                _buffersByTestId[id] = new StringBuilder();
-        }
+            _current = new StringBuilder();
     }
 
     public void Append(string? text)
@@ -31,24 +24,18 @@ public sealed class NUnitRunOutputTracker
 
         lock (_sync)
         {
-            if (_activeTestId is null || !_buffersByTestId.TryGetValue(_activeTestId, out var buffer))
-                return;
-
-            buffer.Append(text);
+            _current ??= new StringBuilder();
+            _current.Append(text);
         }
     }
 
-    public string? Complete(string id)
+    public string? Complete()
     {
-        if (string.IsNullOrWhiteSpace(id))
-            return null;
-
         lock (_sync)
         {
-            if (string.Equals(_activeTestId, id, StringComparison.Ordinal))
-                _activeTestId = null;
-
-            if (!_buffersByTestId.Remove(id, out var buffer))
+            var buffer = _current;
+            _current = null;
+            if (buffer is null)
                 return null;
 
             var text = buffer.ToString();

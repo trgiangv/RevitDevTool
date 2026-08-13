@@ -4,16 +4,20 @@ using DevTools.Utilities.AssemblyLoading;
 namespace DevTools.NUnit.Host.Loading;
 
 /// <summary>
-/// Identifies known host/platform assemblies that should reuse an assembly
-/// already loaded by the host instead of taking a generation-private copy.
-/// This is a preference for known cases, not a closed-world dependency policy.
+/// Host/platform assemblies that should reuse the host-loaded copy.
+/// Host NuGet/API prefixes come from <see cref="HostSharedAssemblies.HostPackagePrefixes"/>.
+/// <c>System.*</c> facades are shared; <c>Microsoft.*</c> is not.
+/// On net48, NuGet BCL polyfills stay generation-private.
 /// </summary>
 public static class NUnitSharedAssemblyPolicy
 {
-    private const string RuntimeAssemblyFileName = "DevTools.NUnit.Runtime.dll";
     private static readonly string CoreContractAssemblyName =
         typeof(INUnitRuntimeSession).Assembly.GetName().Name!;
 
+    /// <summary>
+    /// BCL names that are not <c>System.*</c> (no dot after System, or netstandard).
+    /// <c>System.*</c> facades are matched by prefix in <see cref="IsShared"/>.
+    /// </summary>
     private static readonly HashSet<string> PlatformAssemblyNames = new(StringComparer.OrdinalIgnoreCase)
     {
         "mscorlib",
@@ -21,47 +25,31 @@ public static class NUnitSharedAssemblyPolicy
         "System",
         "System.Core",
         "System.Private.CoreLib",
-        "System.Runtime",
-        "System.Console",
-        "System.Collections",
-        "System.Collections.Concurrent",
-        "System.Collections.Specialized",
-        "System.ComponentModel.Primitives",
-        "System.ComponentModel.TypeConverter",
-        "System.Diagnostics.Process",
-        "System.Diagnostics.TextWriterTraceListener",
-        "System.IO.Compression",
-        "System.IO.Compression.FileSystem",
-        "System.IO.Compression.ZipFile",
-        "System.IO.MemoryMappedFiles",
-        "System.Linq",
-        "System.Linq.Expressions",
-        "System.Net.Http",
-        "System.Net.Primitives",
-        "System.Runtime.InteropServices",
-        "System.Runtime.Loader",
-        "System.Security.Cryptography",
-        "System.Text.Encoding.Extensions",
-        "System.Text.RegularExpressions",
-        "System.Threading",
-        "System.Threading.Thread",
-        "System.Web",
-        "System.Windows.Forms",
-        "System.Xml",
-        "System.Xml.Linq",
-        "System.Xml.ReaderWriter",
-        "System.Xml.XmlSerializer",
         "Microsoft.Win32.Registry",
     };
+
+#if NETFRAMEWORK
+    /// <summary>
+    /// NuGet polyfills that must stay generation-private on net48 so Runtime binds
+    /// coherently. On modern TFMs the host/Default copy is preferred instead.
+    /// </summary>
+    private static readonly HashSet<string> NetfxPrivateFacades = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "System.Reflection.Metadata",
+        "System.Collections.Immutable",
+        "System.Memory",
+        "System.Buffers",
+        "System.Runtime.CompilerServices.Unsafe",
+        "System.Numerics.Vectors",
+        "System.Text.Encoding.CodePages",
+    };
+#endif
 
     public static bool IsShared(string assemblySimpleName)
     {
         if (string.IsNullOrWhiteSpace(assemblySimpleName))
             return false;
 
-        // The neutral contract must retain one type identity across the load
-        // boundary. Derive its name from the loaded contract instead of
-        // maintaining another assembly-name list.
         if (string.Equals(
                 assemblySimpleName,
                 CoreContractAssemblyName,
@@ -69,27 +57,30 @@ public static class NUnitSharedAssemblyPolicy
             return true;
 
         if (PlatformAssemblyNames.Contains(assemblySimpleName)
-            || HostSharedAssemblies.IsExplicitHostAssembly(assemblySimpleName))
+            || HostSharedAssemblies.IsExplicitHostAssembly(assemblySimpleName)
+            || HostSharedAssemblies.MatchesHostPackagePrefix(assemblySimpleName))
             return true;
 
-        return assemblySimpleName.StartsWith("Autodesk.", StringComparison.OrdinalIgnoreCase)
-            || assemblySimpleName.StartsWith("MahApps.", StringComparison.OrdinalIgnoreCase)
-            || assemblySimpleName.StartsWith("ControlzEx.", StringComparison.OrdinalIgnoreCase)
-            || assemblySimpleName.StartsWith("CommunityToolkit.", StringComparison.OrdinalIgnoreCase);
-    }
+        if (!assemblySimpleName.StartsWith("System.", StringComparison.OrdinalIgnoreCase))
+            return false;
 
-    internal static bool IsCoreContract(string assemblySimpleName) =>
-        string.Equals(
-            assemblySimpleName,
-            CoreContractAssemblyName,
-            StringComparison.OrdinalIgnoreCase);
+#if NETFRAMEWORK
+        if (NetfxPrivateFacades.Contains(assemblySimpleName))
+            return false;
+#endif
+
+        return true;
+    }
 
     public static bool ShouldExcludeFromGenerationCopy(string filePath)
     {
         if (!string.Equals(Path.GetExtension(filePath), ".dll", StringComparison.OrdinalIgnoreCase))
             return false;
 
-        if (string.Equals(Path.GetFileName(filePath), RuntimeAssemblyFileName, StringComparison.OrdinalIgnoreCase))
+        if (string.Equals(
+                Path.GetFileName(filePath),
+                NUnitGenerationBuilder.RuntimeAssemblyFileName,
+                StringComparison.OrdinalIgnoreCase))
             return true;
 
         if (!TryGetManagedAssemblyIdentity(filePath, out var identity) || identity is null)
@@ -101,7 +92,7 @@ public static class NUnitSharedAssemblyPolicy
     internal static bool TryGetManagedAssemblyIdentity(string filePath, out string? identity)
     {
         identity = null;
-        if (!string.Equals(Path.GetExtension(filePath), ".dll", StringComparison.OrdinalIgnoreCase))
+        if (!IsManagedAssemblyFile(filePath))
             return false;
 
         try
@@ -117,5 +108,12 @@ public static class NUnitSharedAssemblyPolicy
         {
             return false;
         }
+    }
+
+    internal static bool IsManagedAssemblyFile(string filePath)
+    {
+        var extension = Path.GetExtension(filePath);
+        return extension.Equals(".dll", StringComparison.OrdinalIgnoreCase)
+            || extension.Equals(".exe", StringComparison.OrdinalIgnoreCase);
     }
 }

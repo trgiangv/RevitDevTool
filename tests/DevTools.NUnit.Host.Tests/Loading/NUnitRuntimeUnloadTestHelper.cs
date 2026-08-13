@@ -1,12 +1,9 @@
 using System.Reflection;
-using System.Runtime.CompilerServices;
-using System.Runtime.Loader;
-using DevTools.NUnit.Core.Contracts;
 using DevTools.NUnit.Host.Loading;
 
 namespace DevTools.NUnit.Host.Tests.Loading;
 
-internal static class ModernNUnitRuntimeUnloadTestHelper
+internal static class NUnitRuntimeUnloadTestHelper
 {
     public static string ConflictingNUnitStubPath { get; } = Path.Combine(
         NUnitGenerationTestEnvironment.RepositoryRoot,
@@ -32,35 +29,6 @@ internal static class ModernNUnitRuntimeUnloadTestHelper
         "net10.0",
         "GenerationPrivateDependency.dll");
 
-    [MethodImpl(MethodImplOptions.NoInlining)]
-    public static NUnitRuntimeDiagnostic DisposeVerifyAndCollectDiagnostic(NUnitGenerationManifest manifest)
-    {
-        NUnitRuntimeDiagnostic? diagnostic = null;
-        RunDiscoverDisposeAndVerify(manifest, ref diagnostic);
-        return diagnostic!;
-    }
-
-    [MethodImpl(MethodImplOptions.NoInlining)]
-    private static void RunDiscoverDisposeAndVerify(
-        NUnitGenerationManifest manifest,
-        ref NUnitRuntimeDiagnostic? diagnostic)
-    {
-        var factory = new ModernNUnitRuntimeSessionFactory();
-        NUnitRuntimeSessionHandle? session = (NUnitRuntimeSessionHandle)factory.Create(manifest);
-
-        var discover = session.Discover(
-            new NUnitDiscoverRequest(
-                manifest.ShadowAssemblyPath,
-                "<filter><test>DevTools.NUnit.Runtime.Fixtures.FullSemanticsFixture.PlainTest_Passes</test></filter>"));
-
-        Assert.Equal(manifest.GenerationId, discover.GenerationId);
-        Assert.Single(discover.Cases);
-
-        session.Dispose();
-        diagnostic = session.VerifyUnload();
-        session = null;
-    }
-
     internal static Assembly LoadConflictingNUnitIntoDefaultContext()
     {
         if (!File.Exists(ConflictingNUnitStubPath))
@@ -70,7 +38,6 @@ internal static class ModernNUnitRuntimeUnloadTestHelper
                 ConflictingNUnitStubPath);
         }
 
-        var stubDirectory = Path.GetDirectoryName(ConflictingNUnitStubPath)!;
         var isolatedCopyDirectory = Path.Combine(
             Path.GetTempPath(),
             "DevTools",

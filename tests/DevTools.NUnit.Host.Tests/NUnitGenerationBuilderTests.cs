@@ -1,4 +1,5 @@
 using System.Collections.Concurrent;
+using DevTools.NUnit.Core.Runtime;
 using DevTools.NUnit.Host.Loading;
 
 namespace DevTools.NUnit.Host.Tests;
@@ -255,7 +256,7 @@ public sealed class NUnitGenerationBuilderTests
     }
 
     [Fact]
-    public void Build_copies_runtime_private_dependency_closure_from_runtime_source_directory()
+    public void Build_excludes_shared_runtime_framework_dependencies_from_generation_copy()
     {
         using var workspace = new TempWorkspace();
         var testAssembly = NUnitGenerationTestEnvironment.CreateFixtureWorkspace(
@@ -291,12 +292,14 @@ public sealed class NUnitGenerationBuilderTests
 
         var manifest = builder.Build(testAssembly);
 
-        Assert.Contains(
+        Assert.DoesNotContain(
             manifest.ManagedAssemblies,
             path => path.EndsWith("System.Reflection.Metadata.dll", StringComparison.OrdinalIgnoreCase));
-        Assert.Contains(
+        Assert.DoesNotContain(
             manifest.ManagedAssemblies,
             path => path.EndsWith("System.Collections.Immutable.dll", StringComparison.OrdinalIgnoreCase));
+        Assert.False(File.Exists(Path.Combine(manifest.ShadowDirectory, "System.Reflection.Metadata.dll")));
+        Assert.False(File.Exists(Path.Combine(manifest.ShadowDirectory, "System.Collections.Immutable.dll")));
     }
 
     [Fact]
@@ -315,8 +318,8 @@ public sealed class NUnitGenerationBuilderTests
             ("alpha.bin", fileOne),
         };
 
-        var first = NUnitGenerationBuilder.ComputeGenerationIdForTesting(entries);
-        var second = NUnitGenerationBuilder.ComputeGenerationIdForTesting(
+        var first = NUnitGenerationContentHash.ComputeGenerationId(entries);
+        var second = NUnitGenerationContentHash.ComputeGenerationId(
             entries.Select(entry => (NUnitGenerationBuilder.NormalizeRelativePath(entry.RelativePath), entry.AbsolutePath)).ToList());
 
         Assert.Equal(first, second);
@@ -331,13 +334,13 @@ public sealed class NUnitGenerationBuilderTests
         Directory.CreateDirectory(Path.GetDirectoryName(betaPath)!);
         File.WriteAllBytes(betaPath, [0x10, 0x20, 0x30]);
 
-        var forwardSlash = NUnitGenerationBuilder.ComputeGenerationIdForTesting([
+        var forwardSlash = NUnitGenerationContentHash.ComputeGenerationId([
             ("Nested/Beta.bin", betaPath),
         ]);
-        var lowerCase = NUnitGenerationBuilder.ComputeGenerationIdForTesting([
+        var lowerCase = NUnitGenerationContentHash.ComputeGenerationId([
             ("nested/beta.bin", betaPath),
         ]);
-        var backslash = NUnitGenerationBuilder.ComputeGenerationIdForTesting([
+        var backslash = NUnitGenerationContentHash.ComputeGenerationId([
             (@"nested\beta.bin", betaPath),
         ]);
 
@@ -389,6 +392,37 @@ public sealed class NUnitGenerationBuilderTests
 
         var renamedCorePath = Path.Combine(workspace.Root, "shared-renamed", "PrivateDependency.dll");
         Assert.True(NUnitSharedAssemblyPolicy.ShouldExcludeFromGenerationCopy(renamedCorePath));
+    }
+
+    [Fact]
+    public void Build_accepts_exe_test_assembly_and_skips_diagnostic_logs()
+    {
+        using var workspace = new TempWorkspace();
+        var dll = NUnitGenerationTestEnvironment.CreateFixtureWorkspace(
+            workspace.Root,
+            "mtp-exe",
+            outputDirectory =>
+            {
+                var logDirectory = Path.Combine(outputDirectory, "Log");
+                Directory.CreateDirectory(logDirectory);
+                File.WriteAllText(Path.Combine(logDirectory, "run.diag"), "volatile");
+                var resultsDirectory = Path.Combine(outputDirectory, "TestResults");
+                Directory.CreateDirectory(resultsDirectory);
+                File.WriteAllText(Path.Combine(resultsDirectory, "out.txt"), "skip");
+            });
+
+        var exe = Path.Combine(Path.GetDirectoryName(dll)!, "DevTools.NUnit.SampleTests.exe");
+        File.Copy(dll, exe, overwrite: true);
+
+        var generationsRoot = NUnitGenerationTestEnvironment.CreateIsolatedGenerationsRoot();
+        var builder = NUnitGenerationTestEnvironment.CreateBuilder(generationsRoot, workspace.Root);
+        var manifest = builder.Build(exe);
+
+        Assert.Equal(".exe", Path.GetExtension(manifest.ShadowAssemblyPath));
+        Assert.True(File.Exists(manifest.ShadowAssemblyPath));
+        Assert.Contains(manifest.ShadowAssemblyPath, manifest.ManagedAssemblies);
+        Assert.False(Directory.Exists(Path.Combine(manifest.ShadowDirectory, "Log")));
+        Assert.False(Directory.Exists(Path.Combine(manifest.ShadowDirectory, "TestResults")));
     }
 
     [Fact]
@@ -480,7 +514,7 @@ public sealed class NUnitGenerationBuilderTests
             .Select(path => (RelativePath: NUnitGenerationBuilder.NormalizeRelativePath(Path.GetRelativePath(manifest.ShadowDirectory, path)), AbsolutePath: path))
             .ToList();
 
-        Assert.Equal(manifest.GenerationId, NUnitGenerationBuilder.ComputeGenerationIdForTesting(publishedContentPaths));
+        Assert.Equal(manifest.GenerationId, NUnitGenerationContentHash.ComputeGenerationId(publishedContentPaths));
         Assert.All(
             Directory.GetDirectories(generationsRoot),
             directory => Assert.True(VerifyPublishedDirectoryMatchesId(directory)));
@@ -523,15 +557,23 @@ public sealed class NUnitGenerationBuilderTests
     }
 
     [Fact]
-    public void SharedAssemblyPolicy_uses_explicit_platform_and_host_names()
+    public void SharedAssemblyPolicy_shares_host_packages_and_system_prefix_not_microsoft_extensions()
     {
         Assert.True(NUnitSharedAssemblyPolicy.IsShared("System"));
         Assert.True(NUnitSharedAssemblyPolicy.IsShared("System.Private.CoreLib"));
-        Assert.False(NUnitSharedAssemblyPolicy.IsShared("System.Custom"));
-        Assert.False(NUnitSharedAssemblyPolicy.IsShared("System.Reflection.Metadata"));
-        Assert.False(NUnitSharedAssemblyPolicy.IsShared("Microsoft.Extensions.Logging.Abstractions"));
+        Assert.True(NUnitSharedAssemblyPolicy.IsShared("System.Runtime"));
+        Assert.True(NUnitSharedAssemblyPolicy.IsShared("System.Custom"));
+        Assert.True(NUnitSharedAssemblyPolicy.IsShared("System.Reflection.Metadata"));
+        Assert.True(NUnitSharedAssemblyPolicy.IsShared("System.Collections.Immutable"));
         Assert.True(NUnitSharedAssemblyPolicy.IsShared("Microsoft.Win32.Registry"));
+        Assert.True(NUnitSharedAssemblyPolicy.IsShared("RevitAPI"));
+        Assert.True(NUnitSharedAssemblyPolicy.IsShared("MahApps.Metro"));
+        Assert.True(NUnitSharedAssemblyPolicy.IsShared("Autodesk.Revit.DB"));
+        Assert.True(NUnitSharedAssemblyPolicy.IsShared(typeof(INUnitRuntimeSession).Assembly.GetName().Name!));
+        Assert.False(NUnitSharedAssemblyPolicy.IsShared("Microsoft.Extensions.Logging.Abstractions"));
         Assert.False(NUnitSharedAssemblyPolicy.IsShared("ThirdParty.Custom"));
+        Assert.False(NUnitSharedAssemblyPolicy.IsShared("JetBrains.Annotations"));
+        Assert.False(NUnitSharedAssemblyPolicy.IsShared("nunit.framework"));
     }
 
     [Fact]
@@ -593,7 +635,7 @@ public sealed class NUnitGenerationBuilderTests
             .ToList();
 
         return string.Equals(
-            NUnitGenerationBuilder.ComputeGenerationIdForTesting(contentPaths),
+            NUnitGenerationContentHash.ComputeGenerationId(contentPaths),
             generationId,
             StringComparison.Ordinal);
     }

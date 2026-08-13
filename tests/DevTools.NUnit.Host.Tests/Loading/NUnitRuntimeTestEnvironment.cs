@@ -2,7 +2,7 @@ using DevTools.NUnit.Host.Loading;
 
 namespace DevTools.NUnit.Host.Tests.Loading;
 
-internal static class ModernNUnitRuntimeTestEnvironment
+internal static class NUnitRuntimeTestEnvironment
 {
     public static string RuntimeAssemblyPath { get; } = Path.Combine(
         NUnitGenerationTestEnvironment.RepositoryRoot,
@@ -136,7 +136,7 @@ internal static class ModernNUnitRuntimeTestEnvironment
                 Path.GetTempPath(),
                 "DevTools",
                 "NUnit",
-                "ModernRuntimeTests",
+                "RuntimeTests",
                 Guid.NewGuid().ToString("N"));
             Directory.CreateDirectory(Root);
         }

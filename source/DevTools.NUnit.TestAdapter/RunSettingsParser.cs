@@ -1,4 +1,3 @@
-using System.IO;
 using System.Xml.Serialization;
 using DevTools.NUnit.TestAdapter.Models;
 
@@ -17,8 +16,8 @@ internal static class RunSettingsParser
             var serializer = new XmlSerializer(typeof(RunSettingsModel));
             if (serializer.Deserialize(reader) is RunSettingsModel model)
                 return new ParsedRunSettings(
-                    model.DevToolsNUnit ?? new DevToolsNUnitSettingsModel(),
-                    model.RunConfiguration ?? new RunConfigurationModel());
+                    model.DevToolsNUnit,
+                    model.RunConfiguration);
         }
         catch
         {
