@@ -1,3 +1,5 @@
+using System.Diagnostics;
+using System.Text;
 using DevTools.NUnit.Core.Contracts;
 using DevTools.NUnit.Core.Results;
 using DevTools.NUnit.Core.Runtime;
@@ -101,6 +103,7 @@ public sealed class NUnitRuntimeSessionTests
         Assert.Equal("acceptance-explicit", explicitTest.SkipReason);
 
         var output = Assert.Single(response.Cases, test => test.Name == "Output_IsWrittenToTestContext");
+        Assert.Contains("acceptance-console-marker", output.Output, StringComparison.Ordinal);
         Assert.Contains("acceptance-output-marker", output.Output, StringComparison.Ordinal);
         Assert.Contains("acceptance-trace-marker", output.Output, StringComparison.Ordinal);
         Assert.Contains("acceptance-debug-marker", output.Output, StringComparison.Ordinal);
@@ -157,6 +160,64 @@ public sealed class NUnitRuntimeSessionTests
             sink.Events,
             runtimeEvent => runtimeEvent.Kind == NUnitRuntimeEventKinds.CaseFinished);
         Assert.Equal(NUnitOutcomes.Passed, finished.Case!.Outcome);
+    }
+
+    [Fact]
+    public void Run_forwards_console_output_to_process_trace()
+    {
+        var captured = new StringBuilder();
+        var listener = new RecordingTraceListener(captured);
+        Trace.Listeners.Add(listener);
+        try
+        {
+            using var session = FixtureTestHarness.CreateSession();
+            var response = session.Run(
+                new NUnitRunRequest(
+                    Guid.NewGuid(),
+                    FixtureTestHarness.FixtureAssemblyPath,
+                    "<filter><test>DevTools.NUnit.Runtime.Fixtures.FullSemanticsFixture.Output_IsWrittenToTestContext</test></filter>"),
+                new RecordingEventSink(),
+                CancellationToken.None);
+
+            var pane = captured.ToString();
+            Assert.Contains("acceptance-console-marker", pane, StringComparison.Ordinal);
+            Assert.Contains("acceptance-output-marker", pane, StringComparison.Ordinal);
+            Assert.False(pane.EndsWith('\n') || pane.EndsWith('\r'));
+
+            var output = Assert.Single(response.Cases);
+            var ide = output.Output ?? string.Empty;
+            Assert.Equal(1, CountOccurrences(ide, "acceptance-console-marker"));
+            Assert.Equal(1, CountOccurrences(ide, "acceptance-output-marker"));
+        }
+        finally
+        {
+            Trace.Listeners.Remove(listener);
+            listener.Dispose();
+        }
+    }
+
+    private static int CountOccurrences(string text, string value)
+    {
+        var count = 0;
+        for (var index = 0; (index = text.IndexOf(value, index, StringComparison.Ordinal)) >= 0; index += value.Length)
+            count++;
+        return count;
+    }
+
+    private sealed class RecordingTraceListener : TraceListener
+    {
+        private readonly StringBuilder _buffer;
+
+        public RecordingTraceListener(StringBuilder buffer) => _buffer = buffer;
+
+        public override void Write(string? message)
+        {
+            if (!string.IsNullOrEmpty(message))
+                _buffer.Append(message);
+        }
+
+        public override void WriteLine(string? message) =>
+            Write(string.IsNullOrEmpty(message) ? Environment.NewLine : message + Environment.NewLine);
     }
 
     private static readonly string[] ExpectedDiscoveryFullNames =

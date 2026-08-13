@@ -81,6 +81,7 @@ public sealed class FullSemanticsFixture
     [Test]
     public void Output_IsWrittenToTestContext()
     {
+        Console.WriteLine("acceptance-console-marker");
         TestContext.WriteLine("acceptance-output-marker");
         System.Diagnostics.Trace.WriteLine("acceptance-trace-marker");
         System.Diagnostics.Debug.WriteLine("acceptance-debug-marker");

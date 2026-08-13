@@ -2,7 +2,6 @@ using System.Collections.Concurrent;
 using DevTools.NUnit.Core.Contracts;
 using DevTools.NUnit.Core.Runtime;
 using DevTools.NUnit.Host.Loading;
-using DevTools.NUnit.Host.Logging;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 
@@ -89,8 +88,7 @@ public sealed class NUnitRuntimeManager : IDisposable
             NUnitRunResponse response;
             try
             {
-                using var loggingScope = new NUnitRunLoggingScope(_logger, redirectConsole: false);
-                var sink = new ProtocolEventSink(request.RunId, publish, _logger);
+                var sink = new ProtocolEventSink(request.RunId, publish);
                 var runRequest = new NUnitRunRequest(request.RunId, session.ShadowAssemblyPath, request.Filter);
                 // Honor client disconnect / adapter cancel so the host executor is not left busy.
                 response = session.Session.Run(runRequest, sink, cancellationToken);
@@ -99,8 +97,8 @@ public sealed class NUnitRuntimeManager : IDisposable
             {
                 UnregisterActiveRun(request.RunId);
                 session.EndRequest();
-                // Release after logging scope disposal and before enrich so unload
-                // diagnostics attach to this response, not the next discover/run.
+                // Release before enrich so unload diagnostics attach to this response,
+                // not the next discover/run.
                 ReleaseObsoleteSessions();
             }
 
@@ -459,18 +457,15 @@ public sealed class NUnitRuntimeManager : IDisposable
     {
         private readonly Guid _runId;
         private readonly Action<NUnitProgressEvent> _publish;
-        private readonly ILogger _logger;
         private readonly ConcurrentDictionary<string, byte> _publishedTerminalCaseIds =
             new(StringComparer.Ordinal);
 
         internal ProtocolEventSink(
             Guid runId,
-            Action<NUnitProgressEvent> publish,
-            ILogger logger)
+            Action<NUnitProgressEvent> publish)
         {
             _runId = runId;
             _publish = publish;
-            _logger = logger;
         }
 
         public void Publish(NUnitRuntimeEvent runtimeEvent)
@@ -487,11 +482,7 @@ public sealed class NUnitRuntimeManager : IDisposable
             if (!_publishedTerminalCaseIds.TryAdd(runtimeEvent.Case.Id, 0))
                 return;
 
-            var result = runtimeEvent.Case;
-            if (!string.IsNullOrWhiteSpace(result.Output))
-                _logger.LogInformation("[NUnit:{TestName}] {Output}", result.Name, result.Output!.TrimEnd());
-
-            _publish(new NUnitProgressEvent(_runId, result));
+            _publish(new NUnitProgressEvent(_runId, runtimeEvent.Case));
         }
     }
 }

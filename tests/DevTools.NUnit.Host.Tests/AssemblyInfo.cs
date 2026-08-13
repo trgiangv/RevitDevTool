@@ -1,4 +1,4 @@
 using Xunit;
 
-// NUnitRunLoggingScope redirects process-wide Console/Trace; parallel runs race on SetOut.
+// Runtime NUnitRunTraceScope mutates process-wide Trace.Listeners during host spike runs.
 [assembly: CollectionBehavior(DisableTestParallelization = true)]

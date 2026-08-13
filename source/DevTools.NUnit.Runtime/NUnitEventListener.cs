@@ -55,6 +55,7 @@ internal sealed class NUnitEventListener : ITestListener
 
         if (!string.IsNullOrWhiteSpace(result.Output))
         {
+            _traceScope.WriteThrough(result.Output);
             _eventSink.Publish(new NUnitRuntimeEvent(
                 _runId,
                 NUnitRuntimeEventKinds.CaseOutput,

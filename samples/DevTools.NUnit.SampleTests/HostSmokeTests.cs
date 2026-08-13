@@ -46,7 +46,7 @@ public sealed class HostSmokeTests
     public void Writes_output()
     {
         Console.WriteLine("devtools-nunit-sample-output");
-        Trace.WriteLine("devtools-nunit-sample-trace");
+        Trace.WriteLine("ERR devtools-nunit-sample-trace");
         Debug.WriteLine("ERR devtools-nunit-sample-debug");
         Assert.Pass();
     }
