@@ -1,6 +1,7 @@
 # NUnit Host Testing (Agent Digest)
 
 Experimental. Product: `docs/product/nunit-host-testing.md`.
+Run: `.agents/skills/revit-nunit/SKILL.md`.
 
 ## Verify
 
