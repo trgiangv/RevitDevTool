@@ -71,8 +71,6 @@
         <PackageVersion Include="xunit.runner.visualstudio" Version="3.1.5"/>
         <PackageVersion Include="NUnit" Version="4.6.1"/>
         <PackageVersion Include="NUnit3TestAdapter" Version="6.2.0"/>
-        <PackageVersion Include="NUnit.Engine" Version="3.22.0"/>
-        <PackageVersion Include="NUnit.Engine.Api" Version="3.22.0"/>
         <PackageVersion Include="Microsoft.Testing.Platform" Version="2.3.2"/>
         <PackageVersion Include="Microsoft.Testing.Platform.MSBuild" Version="2.3.2"/>
         <PackageVersion Include="Moq" Version="4.20.72"/>

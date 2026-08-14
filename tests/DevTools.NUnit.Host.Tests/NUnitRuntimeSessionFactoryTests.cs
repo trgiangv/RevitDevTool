@@ -20,7 +20,7 @@ public sealed class NUnitRuntimeSessionFactoryTests
         Assert.Equal(manifest.GenerationId, session.GenerationId);
 
         var handle = Assert.IsType<NUnitRuntimeSessionHandle>(session);
-        var generationFramework = handle.GetLoadedFrameworkAssembly();
+        var generationFramework = NUnitRuntimeSessionHandle.GetLoadedFrameworkAssembly();
         Assert.Equal(new Version(4, 6, 0, 0), generationFramework.GetName().Version);
         var frameworkAlc = AssemblyLoadContext.GetLoadContext(generationFramework);
         Assert.NotNull(frameworkAlc);
@@ -88,7 +88,7 @@ public sealed class NUnitRuntimeSessionFactoryTests
         var factory = new NUnitRuntimeSessionFactory();
         using var session = factory.Create(manifest);
         var handle = Assert.IsType<NUnitRuntimeSessionHandle>(session);
-        var generationFramework = handle.GetLoadedFrameworkAssembly();
+        var generationFramework = NUnitRuntimeSessionHandle.GetLoadedFrameworkAssembly();
 
         Assert.NotSame(conflicting, generationFramework);
         Assert.Equal(new Version(3, 14, 0, 0), conflicting.GetName().Version);

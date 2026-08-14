@@ -243,7 +243,7 @@ internal sealed class NUnitRuntimeSessionHandle : INUnitRuntimeSession
         return (Assembly)field.GetValue(_inner)!;
     }
 
-    internal Assembly GetLoadedFrameworkAssembly()
+    internal static Assembly GetLoadedFrameworkAssembly()
     {
         if (!NUnitFrameworkHostShare.TryGetLoaded(out var shared))
         {
