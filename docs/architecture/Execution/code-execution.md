@@ -46,7 +46,7 @@ flowchart LR
 
 - `PythonInitializer` chooses Pixi first, then pip-backed pyRevit CPython if Pixi cannot run.
 - `PythonEmbedded` extracts `Parser.py`, `ToolParser.py`, `PytestRunner.py`, setup scripts, and `pixi.toml`.
-- `PythonDepsManager` parses PEP 723 dependencies through `Parser.py`.
+- `PythonDepsManager` parses PEP 723 dependencies through `Parser.py`. Installed-state JSON may include conda git-describe versions; Parser treats those as unconstrained instead of failing the resolve.
 - Pixi uses conda-forge first and PyPI fallback.
 - Pip fallback depends on `pyrevit.exe attached` to locate `bin/cengines/CPY*/python.exe`.
 

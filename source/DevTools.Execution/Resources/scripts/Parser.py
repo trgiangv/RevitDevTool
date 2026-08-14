@@ -27,12 +27,12 @@ import json
 import re
 import sys
 from pathlib import Path
-import tomllib
 
-from packaging.requirements import Requirement, InvalidRequirement
-from packaging.utils import canonicalize_name
+import tomllib
+from packaging.requirements import InvalidRequirement, Requirement
 from packaging.specifiers import SpecifierSet
-from packaging.version import Version, InvalidVersion
+from packaging.utils import canonicalize_name
+from packaging.version import InvalidVersion, Version
 
 _BLOCK_RE = re.compile(
     r"^#\s*///\s*script\s*\n"
@@ -63,7 +63,10 @@ def _parse_script(script_path: Path) -> tuple[str, list[Requirement]]:
         try:
             reqs.append(Requirement(raw.strip()))
         except InvalidRequirement as e:
-            print(json.dumps({"error": f"Invalid dependency '{raw}': {e}"}), file=sys.stderr)
+            print(
+                json.dumps({"error": f"Invalid dependency '{raw}': {e}"}),
+                file=sys.stderr,
+            )
             sys.exit(1)
 
     return metadata.get("requires-python", ""), reqs
@@ -87,7 +90,7 @@ def _parse_specifier(val: object) -> SpecifierSet:
 
     try:
         return SpecifierSet(spec_str)
-    except Exception:
+    except Exception:  # noqa: BLE001
         return SpecifierSet()
 
 
@@ -117,6 +120,10 @@ def _parse_pip_json(text: str) -> dict[str, SpecifierSet]:
     pip list returns ``[{"name": "foo", "version": "1.2.3"}, ...]``.
     We build an exact ``==version`` specifier so _needs_install can do
     proper version comparison.
+
+    conda-forge git-describe versions (e.g. libwinpthread
+    ``12.0.0.r4.gg4f2fc60ca``) are valid in ``pixi list --json`` but not
+    PEP 440. Treat those as unconstrained rather than failing the resolve.
     """
     try:
         entries = json.loads(text)
@@ -129,7 +136,7 @@ def _parse_pip_json(text: str) -> dict[str, SpecifierSet]:
         version = entry.get("version", "")
         if not name:
             continue
-        spec = SpecifierSet(f"=={version}") if version else SpecifierSet()
+        spec = _parse_specifier(f"=={version}") if version else SpecifierSet()
         managed[canonicalize_name(name)] = spec
     return managed
 
@@ -147,8 +154,7 @@ def _parse_pixi_toml(text: str) -> dict[str, SpecifierSet]:
         for name, val in data.get(section, {}).items()
     }
 
-    if "python" in managed:
-        del managed["python"]
+    managed.pop("python", None)
     return managed
 
 
@@ -220,6 +226,6 @@ if __name__ == "__main__":
 
     try:
         main(path, stdin_content)
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001
         print(json.dumps({"error": str(e)}), file=sys.stderr)
         sys.exit(1)

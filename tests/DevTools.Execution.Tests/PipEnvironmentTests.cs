@@ -129,6 +129,31 @@ public sealed class PipEnvironmentTests : IAsyncLifetime, IDisposable
     }
 
     [Fact]
+    public async Task Parser_WithCondaGitDescribeVersion_DoesNotFail()
+    {
+        // conda-forge win-64 libwinpthread uses git-describe versions that are
+        // not PEP 440; pixi list --json still emits them. Parser must skip the
+        // invalid specifier and keep resolving PEP 723 deps.
+        var listJson = """
+            [
+              {"name": "libwinpthread", "version": "12.0.0.r4.gg4f2fc60ca", "kind": "conda"},
+              {"name": "packaging", "version": "26.0", "kind": "conda"}
+            ]
+            """;
+
+        var result = await RunParserAsync(Path.Combine(FixturesPath, "pep723_sample.py"), listJson);
+        Assert.Equal(0, result.ExitCode);
+        Assert.DoesNotContain("Invalid specifier", result.Stderr, StringComparison.Ordinal);
+
+        var packages = JsonDocument.Parse(result.Stdout).RootElement
+            .GetProperty("to_install").EnumerateArray()
+            .Select(e => e.GetString()!).ToList();
+
+        Assert.DoesNotContain(packages, p => p.Equals("packaging", StringComparison.OrdinalIgnoreCase));
+        Assert.Contains(packages, p => p.StartsWith("requests", StringComparison.OrdinalIgnoreCase));
+    }
+
+    [Fact]
     public async Task Parser_WithEmptyPixiListJson_InstallsAllPep723Deps()
     {
         var result = await RunParserAsync(Path.Combine(FixturesPath, "pep723_sample.py"), "[]");
