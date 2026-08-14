@@ -19,73 +19,7 @@
     </PropertyGroup>
 
     <!-- ============================================== -->
-    <!-- 2. ILRepack                                    -->
-    <!-- ============================================== -->
-
-    <Target Name="RepackAddinFiles"
-            AfterTargets="Build"
-            BeforeTargets="PublishRevitAddinFiles"
-            Condition="'$(IsRepackable)' == 'true'">
-
-        <ItemGroup>
-            <ILRepackVersion Include="@(PackageVersion)"
-                             Condition="'%(PackageVersion.Identity)' == 'ILRepack'"/>
-        </ItemGroup>
-
-        <ItemGroup Condition="'@(ILRepackVersion->Count())' == '0'">
-            <ILRepackVersion Include="@(PackageReference)"
-                             Condition="'%(PackageReference.Identity)' == 'ILRepack'"/>
-        </ItemGroup>
-
-        <Error Condition="'@(ILRepackVersion->Count())' == '0'"
-               Text="ILRepack is required but not installed. The IsRepackable property is set to true. Add a PackageReference to ILRepack, or unset IsRepackable."/>
-
-        <ItemGroup>
-            <ILRepackInputNamesExcludes Include="$(RepackBinariesExcludes.Split(';'))"/>
-            <ILRepackInputAssembliesExcludes
-                    Include="$(OutputPath)%(ILRepackInputNamesExcludes.Identity)"/>
-        </ItemGroup>
-
-        <ItemGroup>
-            <ILRepackInputAssemblies Include="$(OutputPath)$(AssemblyName).dll"/>
-            <ILRepackInputAssemblies Include="$(OutputPath)*.dll"
-                                     Exclude="@(ILRepackInputAssembliesExcludes)"/>
-        </ItemGroup>
-
-        <PropertyGroup>
-            <ILRepackOutputName>$(AssemblyName)</ILRepackOutputName>
-            <ILRepackOutput>/out:&quot;$(OutputPath)$(ILRepackOutputName).dll&quot;</ILRepackOutput>
-            <ILRepackInput>@(ILRepackInputAssemblies -> '&quot;%(FullPath)&quot;', ' ')</ILRepackInput>
-            <ILRepackPath>&quot;$(NuGetPackageRoot)\ilrepack\%(ILRepackVersion.Version)\tools\ILRepack.exe&quot;</ILRepackPath>
-            <ILRepackLib>@(ReferencePath->'%(RelativeDir)'->Distinct()->'/lib:&quot;%(identity) &quot;', ' ')</ILRepackLib>
-        </PropertyGroup>
-
-        <Message Text="Repacking $(MSBuildProjectDirectory)\$(OutputPath)$(AssemblyName).dll"
-                 Importance="high"/>
-
-        <Exec
-                Command="$(ILRepackPath) /union /illink /parallel $(ILRepackOutput) $(ILRepackLib) $(ILRepackInput)"
-                Condition="$(Configuration.Contains('Debug'))"/>
-
-        <Exec
-                Command="$(ILRepackPath) /union /illink /parallel /noRepackRes /ndebug $(ILRepackOutput) $(ILRepackLib) $(ILRepackInput)"
-                StandardOutputImportance="Low"
-                Condition="$(Configuration.Contains('Release'))"/>
-
-        <ItemGroup>
-            <RepackedFiles
-                    Include="@(ILRepackInputAssemblies -> '%(RootDir)%(Directory)%(Filename).dll')"
-                    Condition="%(Filename) != $(ILRepackOutputName)"/>
-            <RepackedFiles
-                    Include="@(ILRepackInputAssemblies -> '%(RootDir)%(Directory)%(Filename).pdb')"
-                    Condition="%(Filename) != $(ILRepackOutputName)"/>
-        </ItemGroup>
-
-        <Delete Files="@(RepackedFiles)"/>
-    </Target>
-
-    <!-- ============================================== -->
-    <!-- 3. Deploy Bundle / Addin                       -->
+    <!-- 2. Deploy Bundle / Addin                       -->
     <!-- ============================================== -->
 
     <PropertyGroup>
@@ -169,7 +103,7 @@
     </Target>
 
     <!-- ============================================== -->
-    <!-- 4. Define Constants                            -->
+    <!-- 3. Define Constants                            -->
     <!-- ============================================== -->
 
     <Target Name="GenerateRevitCompatibleDefineConstants"

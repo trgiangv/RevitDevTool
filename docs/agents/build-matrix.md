@@ -98,7 +98,15 @@ Do not cargo-cult those `-p` flags onto every `dotnet build`. See `.agents/skill
 
 ## ILRepack
 
-ILRepack merges dependencies into a single DLL for host add-ins. **Disabled for 2027** due to Revit/AutoCAD isolated context causing `System.BadImageFormatException` with repacked assemblies. Property: `IsRepackable` (auto-set false when `RevitVersion`/`AutoCadVersion` >= 2027).
+ILRepack lives in `props/ILRepack.targets` (imported for every project). Opt in
+with `IsRepackable=true` and list loose DLLs in `RepackBinariesExcludes`. Add a
+`PackageReference` to `ILRepack`. Host add-ins leave merged types public so
+excluded UI / NUnit DLLs stay beside the add-in. Private packages (TestAdapter)
+also set `ILRepackInternalize=true`. **Disabled for 2027** due to Revit/AutoCAD
+isolated context causing `System.BadImageFormatException` with repacked
+assemblies (`IsRepackable` only when `RevitVersion`/`AutoCadVersion` is below 2027).
+MTP net48 opts in the same way (`IsRepackable` when `TargetFramework` is `net48`);
+consumers of `RevitDevTool.NUnit` do not.
 
 ## Compatibility Rule
 

@@ -1,0 +1,97 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+
+    <PropertyGroup>
+        <!-- Opt-in merge. Needs PackageReference ILRepack on the csproj. -->
+        <IsRepackable Condition="'$(IsRepackable)' == ''">false</IsRepackable>
+        <!-- Merged types become internal. Leftover excludes + satellite folders are deleted. -->
+        <ILRepackInternalize Condition="'$(ILRepackInternalize)' == ''">false</ILRepackInternalize>
+    </PropertyGroup>
+
+    <!-- After Build, before host publish so the bundle is the merged DLL. -->
+    <Target Name="RepackAddinFiles"
+            AfterTargets="Build"
+            BeforeTargets="PublishRevitAddinFiles;PublishAutoCadBundleFiles"
+            Condition="'$(IsRepackable)' == 'true'">
+
+        <ItemGroup>
+            <_ILRepackVersion Include="@(PackageVersion)"
+                              Condition="'%(PackageVersion.Identity)' == 'ILRepack'"/>
+        </ItemGroup>
+        <ItemGroup Condition="'@(_ILRepackVersion->Count())' == '0'">
+            <_ILRepackVersion Include="@(PackageReference)"
+                              Condition="'%(PackageReference.Identity)' == 'ILRepack'"/>
+        </ItemGroup>
+
+        <PropertyGroup>
+            <_ILRepackVer>%(_ILRepackVersion.Version)</_ILRepackVer>
+            <_ILRepackVer Condition="'$(_ILRepackVer)' == ''">%(_ILRepackVersion.VersionOverride)</_ILRepackVer>
+            <_ILRepackVer Condition="'$(_ILRepackVer)' == ''">2.0.45</_ILRepackVer>
+            <!-- Optional absolute path to ILRepack.exe; otherwise NuGet tools/. -->
+            <_ILRepackExe Condition="'$(ILRepackExe)' != ''">$(ILRepackExe)</_ILRepackExe>
+            <_ILRepackExe Condition="'$(_ILRepackExe)' == ''">$(NuGetPackageRoot)ilrepack\$(_ILRepackVer)\tools\ILRepack.exe</_ILRepackExe>
+        </PropertyGroup>
+
+        <Error Condition="'@(_ILRepackVersion->Count())' == '0'"
+               Text="ILRepack is required but not installed. IsRepackable is true. Add a PackageReference to ILRepack, or set IsRepackable=false."/>
+        <Error Condition="!Exists('$(_ILRepackExe)')"
+               Text="ILRepack.exe not found at $(_ILRepackExe). Restore the ILRepack package, or set IsRepackable=false."/>
+
+        <ItemGroup>
+            <!-- Compile-only attributes. Never merge, never leave loose. -->
+            <_ILRepackExclude Include="$(TargetDir)JetBrains.Annotations.dll"/>
+            <!-- Semicolon list of DLLs to leave beside the output (e.g. MahApps pack://). -->
+            <_ILRepackExcludeNames Include="$(RepackBinariesExcludes.Split(';'))"/>
+            <_ILRepackExclude Include="$(TargetDir)%(_ILRepackExcludeNames.Identity)"/>
+            <_ILRepackInput Include="$(TargetPath)"/>
+            <_ILRepackInput Include="$(TargetDir)*.dll"
+                            Exclude="@(_ILRepackExclude);$(TargetPath)"/>
+        </ItemGroup>
+
+        <PropertyGroup>
+            <!-- /union: duplicate types OK. /illink: drop unused IL. -->
+            <_ILRepackFlags>/union /illink /parallel</_ILRepackFlags>
+            <!-- Merged input types become internal in the primary assembly. -->
+            <_ILRepackFlags Condition="'$(ILRepackInternalize)' == 'true'">/internalize $(_ILRepackFlags)</_ILRepackFlags>
+            <_ILRepackOut>/out:&quot;$(TargetPath)&quot;</_ILRepackOut>
+            <_ILRepackIn>@(_ILRepackInput -> '&quot;%(FullPath)&quot;', ' ')</_ILRepackIn>
+            <_ILRepackLib>@(ReferencePath->'%(RelativeDir)'->Distinct()->'/lib:&quot;%(identity) &quot;', ' ')</_ILRepackLib>
+            <_ILRepackCmd>&quot;$(_ILRepackExe)&quot; $(_ILRepackFlags) $(_ILRepackOut) $(_ILRepackLib) $(_ILRepackIn)</_ILRepackCmd>
+        </PropertyGroup>
+
+        <Message Text="Repacking $(TargetPath)" Importance="high"/>
+
+        <!-- ILRepack writes "warning :" on stdout; TreatWarningsAsErrors would fail a successful pack. -->
+        <Exec Command="$(_ILRepackCmd)"
+              IgnoreStandardErrorWarningFormat="true"
+              Condition="$(Configuration.Contains('Debug'))"/>
+        <!-- Release omits PDB and Win32 resources from the merge. -->
+        <Exec Command="$(_ILRepackCmd) /noRepackRes /ndebug"
+              IgnoreStandardErrorWarningFormat="true"
+              StandardOutputImportance="Low"
+              Condition="$(Configuration.Contains('Release'))"/>
+
+        <ItemGroup>
+            <_ILRepackedFiles
+                Include="@(_ILRepackInput -> '%(RootDir)%(Directory)%(Filename).dll')"
+                Condition="%(Filename) != $(AssemblyName)"/>
+            <_ILRepackedFiles
+                Include="@(_ILRepackInput -> '%(RootDir)%(Directory)%(Filename).pdb')"
+                Condition="%(Filename) != $(AssemblyName)"/>
+            <_ILRepackedFiles Include="$(TargetDir)JetBrains.Annotations.dll"/>
+            <_ILRepackedFiles Include="$(TargetDir)JetBrains.Annotations.pdb"/>
+        </ItemGroup>
+        <Delete Files="@(_ILRepackedFiles)"/>
+
+        <!-- Output is self-contained: drop leftover excludes and STJ satellite folders. -->
+        <ItemGroup Condition="'$(ILRepackInternalize)' == 'true'">
+            <_ILRepackRemoveExcludes Include="@(_ILRepackExclude)"/>
+            <_ILRepackSatelliteDirs Include="$(TargetDir)cs;$(TargetDir)de;$(TargetDir)es;$(TargetDir)fr;$(TargetDir)it;$(TargetDir)ja;$(TargetDir)ko;$(TargetDir)pl;$(TargetDir)pt-BR;$(TargetDir)ru;$(TargetDir)tr;$(TargetDir)zh-Hans;$(TargetDir)zh-Hant"/>
+        </ItemGroup>
+        <Delete Files="@(_ILRepackRemoveExcludes)"
+                Condition="'$(ILRepackInternalize)' == 'true'"/>
+        <RemoveDir Directories="@(_ILRepackSatelliteDirs)"
+                   Condition="'$(ILRepackInternalize)' == 'true' and Exists('%(Identity)')"/>
+    </Target>
+
+</Project>

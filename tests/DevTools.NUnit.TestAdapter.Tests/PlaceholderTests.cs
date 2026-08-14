@@ -14,14 +14,33 @@ public class TestAdapterLayoutTests
         Assert.Contains("DevTools.NUnit.TestAdapter.targets", adapterProject);
         Assert.Contains("ILRepack", adapterProject);
         Assert.Contains("RepackBinariesExcludes", adapterProject);
+        Assert.Contains("ILRepackInternalize", adapterProject);
         Assert.Contains("System.Text.Json", adapterProject);
         Assert.DoesNotContain("Newtonsoft.Json", adapterProject);
         Assert.DoesNotContain("VersionOverride", adapterProject);
-        Assert.True(File.Exists(Path.Combine(
+        Assert.True(File.Exists(Path.Combine(repositoryRoot, "props", "ILRepack.targets")));
+        Assert.False(File.Exists(Path.Combine(
             repositoryRoot,
             "source",
             "DevTools.NUnit.TestAdapter",
             "ILRepack.targets")));
+        var sharedRepack = File.ReadAllText(Path.Combine(repositoryRoot, "props", "ILRepack.targets"));
+        var revitTargets = File.ReadAllText(Path.Combine(repositoryRoot, "props", "Revit.targets"));
+        var acadTargets = File.ReadAllText(Path.Combine(repositoryRoot, "props", "AutoCad.targets"));
+        Assert.Contains("Target Name=\"RepackAddinFiles\"", sharedRepack, StringComparison.Ordinal);
+        Assert.Contains("JetBrains.Annotations.dll", sharedRepack, StringComparison.Ordinal);
+        Assert.DoesNotContain("RepackAddinFiles", revitTargets, StringComparison.Ordinal);
+        Assert.DoesNotContain("RepackAddinFiles", acadTargets, StringComparison.Ordinal);
+        Assert.DoesNotContain("ILRepack.exe", revitTargets, StringComparison.Ordinal);
+        Assert.DoesNotContain("ILRepack.exe", acadTargets, StringComparison.Ordinal);
+        var extraRepackTargets = Directory
+            .EnumerateFiles(repositoryRoot, "ILRepack.targets", SearchOption.AllDirectories)
+            .Select(path => Path.GetRelativePath(repositoryRoot, path).Replace('\\', '/'))
+            .Where(path => !path.Equals("props/ILRepack.targets", StringComparison.Ordinal)
+                           && path.IndexOf("/bin/", StringComparison.OrdinalIgnoreCase) < 0
+                           && path.IndexOf("/obj/", StringComparison.OrdinalIgnoreCase) < 0)
+            .ToList();
+        Assert.Empty(extraRepackTargets);
         Assert.DoesNotContain("TargetsForTfmSpecificContentInPackage", adapterProject);
     }
 

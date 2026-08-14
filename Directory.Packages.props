@@ -51,7 +51,6 @@
         <PackageVersion Include="Microsoft.Web.WebView2" Version="1.0.4078.44"/>
         <!--Build Tools-->
         <PackageVersion Include="ILRepack" Version="2.0.45"/>
-        <PackageVersion Include="ILRepack.Lib.MSBuild.Task" Version="2.0.45"/>
         <PackageVersion Include="Sourcy.DotNet" Version="1.1.1"/>
         <PackageVersion Include="Shouldly" Version="4.3.0"/>
         <PackageVersion Include="ModularPipelines" Version="3.2.8"/>

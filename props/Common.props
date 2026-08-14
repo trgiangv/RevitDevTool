@@ -11,7 +11,7 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <PackageReference Include="JetBrains.Annotations" PrivateAssets="All" />
+        <PackageReference Include="JetBrains.Annotations" PrivateAssets="All" ExcludeAssets="runtime" />
         <Using Include="JetBrains.Annotations" />
     </ItemGroup>
 

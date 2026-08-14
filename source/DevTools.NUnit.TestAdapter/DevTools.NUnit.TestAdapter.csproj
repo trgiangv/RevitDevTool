@@ -11,17 +11,16 @@
         <EnableDynamicLoading>false</EnableDynamicLoading>
         <SuppressDependenciesWhenPacking>true</SuppressDependenciesWhenPacking>
         <IsRepackable>true</IsRepackable>
+        <ILRepackInternalize>true</ILRepackInternalize>
         <!--
           Never merge (stay external to the repacked adapter):
-          - Microsoft.TestPlatform.* / ObjectModel: loaded by VSTest testhost; merging breaks adapter reflection.
-          - JetBrains.Annotations: compile-time only; deleted after repack, not shipped.
-          Merge everything else in $(OutputPath)*.dll (STJ, Reflection.Metadata, Bcl.AsyncInterfaces, …) with /internalize.
+          Microsoft.TestPlatform.* / ObjectModel — loaded by VSTest testhost;
+          merging breaks adapter reflection.
         -->
         <RepackBinariesExcludes>
             Microsoft.TestPlatform.CoreUtilities.dll;
             Microsoft.TestPlatform.PlatformAbstractions.dll;
-            Microsoft.VisualStudio.TestPlatform.ObjectModel.dll;
-            JetBrains.Annotations.dll
+            Microsoft.VisualStudio.TestPlatform.ObjectModel.dll
         </RepackBinariesExcludes>
     </PropertyGroup>
 
@@ -58,7 +57,5 @@
         <Compile Include="..\DevTools.NUnit.Core\NUnitHostTiming.cs" Link="Core\NUnitHostTiming.cs"/>
         <Compile Include="..\DevTools.NUnit.Core\Discovery\NUnitMetadataDiscoverer.cs" Link="Core\Discovery\NUnitMetadataDiscoverer.cs"/>
     </ItemGroup>
-
-    <Import Project="ILRepack.targets"/>
 
 </Project>

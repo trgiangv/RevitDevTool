@@ -3,6 +3,7 @@
 
     <!-- Common -->
     <Import Project="$(MSBuildThisFileDirectory)props\Common.props" />
+    <Import Project="$(MSBuildThisFileDirectory)props\ILRepack.targets" />
 
     <!-- Revit -->
     <Import Condition="'$(UseRevit)' == 'true'" Project="$(MSBuildThisFileDirectory)props\Revit.props" />
