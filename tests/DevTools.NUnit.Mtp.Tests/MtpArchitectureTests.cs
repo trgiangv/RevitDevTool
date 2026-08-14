@@ -56,5 +56,39 @@ public sealed class MtpArchitectureTests
 
         Assert.Contains("GenerateBindingRedirectsOutputType", props, StringComparison.Ordinal);
         Assert.Contains("System.Runtime.CompilerServices.Unsafe", props, StringComparison.Ordinal);
+        Assert.Contains("DevToolsNUnitRepack", props, StringComparison.Ordinal);
+        Assert.Contains("ILRepack", props, StringComparison.Ordinal);
+        Assert.DoesNotContain("IsRepackable", props, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Net48_consumer_targets_ilrepack_test_exe_not_nunit_or_host_apis()
+    {
+        var buildDir = Path.Combine(
+            RepositoryRoot,
+            "source",
+            "DevTools.NUnit.Mtp",
+            "build");
+        var targets = File.ReadAllText(Path.Combine(buildDir, "RevitDevTool.NUnit.targets"));
+        var ilrepack = File.ReadAllText(Path.Combine(buildDir, "ILRepack.targets"));
+        var csproj = File.ReadAllText(Path.Combine(
+            RepositoryRoot,
+            "source",
+            "DevTools.NUnit.Mtp",
+            "DevTools.NUnit.Mtp.csproj"));
+
+        Assert.Contains("ILRepack.targets", targets, StringComparison.Ordinal);
+        Assert.Contains("build\\ILRepack.targets", csproj, StringComparison.Ordinal);
+        Assert.Contains("PkgILRepack", csproj, StringComparison.Ordinal);
+        Assert.Contains("PackDevToolsNUnitILRepackTool", csproj, StringComparison.Ordinal);
+        Assert.Contains("PackagePath=\"tools/%(Filename)%(Extension)\"", csproj, StringComparison.Ordinal);
+        Assert.Contains("/internalize", ilrepack, StringComparison.Ordinal);
+        Assert.Contains("$(TargetPath)", ilrepack, StringComparison.Ordinal);
+        Assert.Contains("nunit.framework.dll", ilrepack, StringComparison.Ordinal);
+        Assert.Contains("Autodesk.*.dll", ilrepack, StringComparison.Ordinal);
+        Assert.Contains("MahApps", ilrepack, StringComparison.Ordinal);
+        Assert.Contains("StartsWith('net4')", ilrepack, StringComparison.Ordinal);
+        Assert.Contains("DevToolsNUnitRepack", ilrepack, StringComparison.Ordinal);
+        Assert.DoesNotContain("IsRepackable", ilrepack, StringComparison.Ordinal);
     }
 }

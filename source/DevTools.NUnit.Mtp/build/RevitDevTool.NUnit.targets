@@ -42,4 +42,6 @@
         Overwrite="true"
         Encoding="UTF-8"/>
   </Target>
+
+  <Import Project="$(MSBuildThisFileDirectory)ILRepack.targets"/>
 </Project>
