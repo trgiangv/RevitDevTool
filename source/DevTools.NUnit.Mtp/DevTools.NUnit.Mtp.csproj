@@ -7,8 +7,13 @@
         <RootNamespace>DevTools.NUnit.Mtp</RootNamespace>
         <AssemblyName>DevTools.NUnit.Mtp</AssemblyName>
         <PackageId>DevTools.NUnit</PackageId>
+        <!-- Bump this before running .github/workflows/PublishNUnit.yml.
+             Independent of the RevitDevTool installer GitVersion. -->
+        <Version>0.0.1</Version>
         <IsPackable>true</IsPackable>
         <DevelopmentDependency>true</DevelopmentDependency>
+        <PackageLicenseExpression>MIT</PackageLicenseExpression>
+        <PackageProjectUrl>https://github.com/trgiangv/RevitDevTool</PackageProjectUrl>
         <Description>Microsoft.Testing.Platform framework that runs NUnit tests inside Revit/AutoCAD hosts. Requires RevitDevTool (https://github.com/trgiangv/RevitDevTool).</Description>
         <PackageTags>nunit;revit;autocad;testing;mtp</PackageTags>
         <PackageReadmeFile>README.md</PackageReadmeFile>

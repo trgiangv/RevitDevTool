@@ -1,0 +1,99 @@
+name: Publish NUnit
+
+on:
+  workflow_dispatch:
+    inputs:
+      push:
+        description: "Push DevTools.NUnit to nuget.org (OIDC Trusted Publishing)"
+        type: boolean
+        default: true
+      nuget_user:
+        description: "nuget.org username (profile name, not email). Required when pushing unless NUGET_USER secret exists."
+        required: false
+        type: string
+
+concurrency:
+  group: publish-nunit
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  windows:
+    name: windows-2025
+    runs-on: windows-2025
+    steps:
+
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Cache packages
+        uses: actions/cache@v5
+        with:
+          path: ~/.nuget/packages
+          key: ${{ runner.os }}-nuget-nunit-${{ hashFiles('source/DevTools.NUnit.Mtp/**/*.csproj', 'Directory.Build.props', 'Directory.Packages.props') }}
+          restore-keys: ${{ runner.os }}-nuget-
+
+      - name: Test MTP
+        run: dotnet test tests/DevTools.NUnit.Mtp.Tests/DevTools.NUnit.Mtp.Tests.csproj -c Release
+
+      - name: Pack DevTools.NUnit
+        id: pack
+        shell: pwsh
+        run: |
+          $csproj = "source/DevTools.NUnit.Mtp/DevTools.NUnit.Mtp.csproj"
+          $version = (dotnet msbuild $csproj -nologo -v:q -getProperty:Version).Trim()
+          if ([string]::IsNullOrWhiteSpace($version)) {
+            throw "Could not read Version from $csproj"
+          }
+          "version=$version" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+          Write-Host "Package version from csproj: $version"
+          ./scripts/pack-nunit.ps1
+
+      - name: Upload nupkg
+        uses: actions/upload-artifact@v4
+        with:
+          name: DevTools.NUnit.${{ steps.pack.outputs.version }}
+          path: output/nuget/DevTools.NUnit.${{ steps.pack.outputs.version }}.nupkg
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Resolve nuget.org user
+        id: nuget-user
+        if: ${{ github.event.inputs.push == 'true' }}
+        shell: pwsh
+        env:
+          NUGET_USER_SECRET: ${{ secrets.NUGET_USER }}
+          NUGET_USER_INPUT: ${{ inputs.nuget_user }}
+        run: |
+          $user = if (-not [string]::IsNullOrWhiteSpace($env:NUGET_USER_SECRET)) {
+            $env:NUGET_USER_SECRET
+          } else {
+            $env:NUGET_USER_INPUT
+          }
+          if ([string]::IsNullOrWhiteSpace($user)) {
+            throw "Enter nuget.org profile name in the nuget_user input (not email), or set repository secret NUGET_USER."
+          }
+          "user=$user" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+
+      - name: NuGet login (OIDC)
+        if: ${{ github.event.inputs.push == 'true' }}
+        uses: NuGet/login@v1
+        id: login
+        with:
+          user: ${{ steps.nuget-user.outputs.user }}
+
+      - name: Push nuget.org
+        if: ${{ github.event.inputs.push == 'true' }}
+        shell: pwsh
+        env:
+          NUGET_API_KEY: ${{ steps.login.outputs.NUGET_API_KEY }}
+          PACKAGE_VERSION: ${{ steps.pack.outputs.version }}
+        run: |
+          $nupkg = "output/nuget/DevTools.NUnit.$($env:PACKAGE_VERSION).nupkg"
+          if (-not (Test-Path -LiteralPath $nupkg)) {
+            throw "Missing $nupkg"
+          }
+          dotnet nuget push $nupkg --source https://api.nuget.org/v3/index.json --api-key $env:NUGET_API_KEY

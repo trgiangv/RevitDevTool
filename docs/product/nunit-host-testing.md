@@ -8,9 +8,12 @@ controller ships in that installer. The live CAD host executes the tests.
 
 ## Status
 
-**Experimental.** Discover / run / progress work end-to-end. The public NuGet
-package is **not published** yet — consume from source / local pack only until
-the first supported release.
+**Experimental.** Discover / run / progress work end-to-end. `DevTools.NUnit`
+(MTP) is published independently of the RevitDevTool installer. Version is
+`<Version>` in `source/DevTools.NUnit.Mtp/DevTools.NUnit.Mtp.csproj` (starts at
+`0.0.1`). Run `.github/workflows/PublishNUnit.yml` from GitHub Actions to pack
+and push nuget.org (OIDC Trusted Publishing). VSTest stays in-tree and is not
+published.
 
 Host-process debugging is **out of scope**. There is no `--debug` CLI, no Test
 Explorer Debug attach, and no IDE SDK. Attach the IDE debugger to the host
@@ -18,7 +21,6 @@ PID yourself if needed; that is not a product feature.
 
 Two consumer surfaces share the same Runner/Host: MTP (`DevTools.NUnit`) and
 VSTest (`DevTools.NUnit.TestAdapter`). Keep them on **separate** test projects.
-Neither package is published yet.
 
 ## Modules
 
@@ -110,7 +112,7 @@ Runner ships under the ApplicationPlugins bundle `Contents` folder (publish
 | Probe load | **Also shadows**: zip test folder → `%TEMP%\RevitTest\` → extract → `Assembly.LoadFile` on the temp copy (then optional zip-back) | Content-addressed generation shadow of test output + Runtime |
 | Transport | Own Console + `PipeTestServer`/`PipeTestClient` (process-named pipe) | Existing `DevToolsPipeServer` + `IHostContextExecutor` |
 | IDE surface | VS-oriented + EnvDTE attach | MTP + VSTest samples; no debugger integration |
-| Package | ricaun NuGet ecosystem | Intended: `DevTools.NUnit` (MTP) NuGet (**unpublished**); VSTest adapter in-tree |
+| Package | ricaun NuGet ecosystem | `DevTools.NUnit` (MTP) NuGet, versioned in the MTP csproj; VSTest adapter in-tree |
 | Hosts | Revit-focused product | Revit + AutoCAD family on shared DevTools platform |
 
 **Conflict / coexistence (what actually breaks):**
@@ -163,13 +165,31 @@ options; one intended adapter package aligned with the rest of RevitDevTool.
 
 | Package | Publish status |
 |---------|----------------|
-| `DevTools.NUnit` (`DevTools.NUnit.Mtp`) | **Not published** — experimental; local/source only |
+| `DevTools.NUnit` (`DevTools.NUnit.Mtp`) | Independent of installer tags. Version = csproj `<Version>`. Workflow: `PublishNUnit.yml` |
 | `DevTools.NUnit.TestAdapter` | **Not published** — in-tree VSTest samples only |
 | Core / Host / Runner | Not consumer NuGet APIs |
 
-When publishing later: pack `DevTools.NUnit` only. Consumers add NUnit,
-`DevTools.NUnit`, and `Microsoft.Testing.Platform.MSBuild`; install
-[RevitDevTool](https://github.com/trgiangv/RevitDevTool); set the host-run
+Bump `<Version>` in `source/DevTools.NUnit.Mtp/DevTools.NUnit.Mtp.csproj`, commit,
+then run **Actions → Publish NUnit**. The workflow reads that property, packs
+`DevTools.NUnit.{version}.nupkg`, and pushes nuget.org via
+[Trusted Publishing](https://learn.microsoft.com/en-us/nuget/nuget-org/trusted-publishing)
+(OIDC; no long-lived API key). Uncheck **Push to nuget.org** to pack-only.
+Do not use installer tags or `scripts/pack.ps1` for this package. Local pack:
+`scripts/pack-nunit.ps1`.
+
+One-time nuget.org setup before the first push:
+
+1. nuget.org → account → **Trusted Publishing** → add policy:
+   - Repository Owner: `trgiangv`
+   - Repository: `RevitDevTool`
+   - Workflow File: `PublishNUnit.yml` (file name only)
+   - Environment: leave empty
+2. Run the workflow with **nuget_user** = nuget.org **profile name** (not email).
+   Optional later: store that name as repo secret `NUGET_USER`.
+   This repo is public; the policy should show **Active** after Create.
+
+Consumers add NUnit, `DevTools.NUnit`, and `Microsoft.Testing.Platform.MSBuild`;
+install [RevitDevTool](https://github.com/trgiangv/RevitDevTool); set the host-run
 properties (`HostName`, `HostVersion`, `HostLaunch`, timeouts); and keep a
 test-directory `global.json` with `"test": { "runner": "Microsoft.Testing.Platform" }`
 so `dotnet test` uses MTP.
@@ -179,7 +199,8 @@ so `dotnet test` uses MTP.
 - Microsoft Testing Platform / VSTest IDE matrix (VS / Rider / C# Dev Kit)
 - Full NUnit attribute matrix (Theory, explicit, categories, parallel, …)
 - Broader automated host-matrix CI (years × hosts) for NUnit beyond sample smoke
-- Public NuGet feed + versioning / changelog
+- nuget.org listing after the first `Publish NUnit` run (`0.0.1`)
+- Package changelog separate from the installer Changelog.md
 
 ## Related
 
