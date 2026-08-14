@@ -9,7 +9,7 @@
         <PackageId>RevitDevTool.NUnit</PackageId>
         <!-- Bump this before running .github/workflows/PublishNUnit.yml.
              Independent of the RevitDevTool installer GitVersion. -->
-        <Version>0.0.1</Version>
+        <Version>0.0.2</Version>
         <IsPackable>true</IsPackable>
         <DevelopmentDependency>true</DevelopmentDependency>
         <PackageLicenseExpression>MIT</PackageLicenseExpression>
@@ -33,16 +33,10 @@
             <PrivateAssets>all</PrivateAssets>
             <ExcludeAssets>runtime</ExcludeAssets>
         </PackageReference>
-        <!-- net48 has no inbox STJ / PE metadata; keep runtime copy-local for the test exe. -->
-        <PackageReference Include="System.Text.Json" Condition="'$(TargetFramework)' == 'net48'">
-            <PrivateAssets>all</PrivateAssets>
-        </PackageReference>
-        <PackageReference Include="System.Reflection.Metadata" Condition="'$(TargetFramework)' == 'net48'">
-            <PrivateAssets>all</PrivateAssets>
-        </PackageReference>
-        <PackageReference Include="System.Runtime.CompilerServices.Unsafe" Condition="'$(TargetFramework)' == 'net48'">
-            <PrivateAssets>all</PrivateAssets>
-        </PackageReference>
+        <!-- net48 has no inbox STJ / PE metadata; these must flow to the test exe. -->
+        <PackageReference Include="System.Text.Json" Condition="'$(TargetFramework)' == 'net48'"/>
+        <PackageReference Include="System.Reflection.Metadata" Condition="'$(TargetFramework)' == 'net48'"/>
+        <PackageReference Include="System.Runtime.CompilerServices.Unsafe" Condition="'$(TargetFramework)' == 'net48'"/>
         <InternalsVisibleTo Include="DevTools.NUnit.Mtp.Tests"/>
     </ItemGroup>
 
