@@ -1,4 +1,3 @@
-using Microsoft.Testing.Platform.Capabilities.TestFramework;
 using Microsoft.Testing.Platform.CommandLine;
 using Microsoft.Testing.Platform.Extensions.Messages;
 using Microsoft.Testing.Platform.Extensions.TestFramework;
@@ -17,11 +16,9 @@ internal sealed class DevToolsNUnitFramework : ITestFramework, IDataProducer
     private HostRunOptions? _options;
 
     internal DevToolsNUnitFramework(
-        ITestFrameworkCapabilities capabilities,
         IServiceProvider serviceProvider,
         IRunnerTransport? transport = null)
     {
-        _ = capabilities;
         _commandLine = serviceProvider.GetService(typeof(ICommandLineOptions)) as ICommandLineOptions;
         _injectedTransport = transport;
     }

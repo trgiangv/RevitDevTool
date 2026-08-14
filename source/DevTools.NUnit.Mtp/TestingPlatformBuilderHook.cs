@@ -1,4 +1,5 @@
 using Microsoft.Testing.Platform.Builder;
+using Microsoft.Testing.Platform.Capabilities.TestFramework;
 
 namespace DevTools.NUnit.Mtp;
 
@@ -10,8 +11,9 @@ public static class TestingPlatformBuilderHook
         if (testApplicationBuilder is null)
             throw new ArgumentNullException(nameof(testApplicationBuilder));
         testApplicationBuilder.CommandLine.AddProvider(() => new DevToolsNUnitCommandLineProvider());
+        // Empty capabilities: discover/run still work.
         testApplicationBuilder.RegisterTestFramework(
-            _ => new DevToolsNUnitFrameworkCapabilities(),
-            (capabilities, serviceProvider) => new DevToolsNUnitFramework(capabilities, serviceProvider));
+            _ => new TestFrameworkCapabilities(),
+            (_, serviceProvider) => new DevToolsNUnitFramework(serviceProvider));
     }
 }

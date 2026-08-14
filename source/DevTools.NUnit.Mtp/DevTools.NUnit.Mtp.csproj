@@ -18,28 +18,17 @@
         <PackageTags>nunit;revit;autocad;testing;mtp</PackageTags>
         <PackageReadmeFile>README.md</PackageReadmeFile>
         <EnableDynamicLoading>false</EnableDynamicLoading>
+        <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
         <IsTestProject>false</IsTestProject>
+        <IsRepackable Condition="'$(TargetFramework)' == 'net48'">true</IsRepackable>
+        <ILRepackInternalize Condition="'$(TargetFramework)' == 'net48'">true</ILRepackInternalize>
     </PropertyGroup>
 
     <ItemGroup>
         <None Include="build\RevitDevTool.NUnit.props" Pack="true" PackagePath="build\"/>
         <None Include="build\RevitDevTool.NUnit.targets" Pack="true" PackagePath="build\"/>
-        <None Include="build\ILRepack.targets" Pack="true" PackagePath="build\"/>
         <None Include="README.md" Pack="true" PackagePath="\"/>
     </ItemGroup>
-
-    <Target Name="PackDevToolsNUnitILRepackTool" BeforeTargets="_GetPackageFiles">
-        <PropertyGroup>
-            <_DevToolsNUnitILRepackToolsDir Condition="'$(PkgILRepack)' != ''">$(PkgILRepack)\tools</_DevToolsNUnitILRepackToolsDir>
-            <_DevToolsNUnitILRepackToolsDir Condition="'$(_DevToolsNUnitILRepackToolsDir)' == ''">$(NuGetPackageRoot)ilrepack\2.0.45\tools</_DevToolsNUnitILRepackToolsDir>
-        </PropertyGroup>
-        <Error Condition="!Exists('$(_DevToolsNUnitILRepackToolsDir)\ILRepack.exe')"
-               Text="Cannot pack ILRepack.exe from $(_DevToolsNUnitILRepackToolsDir). Restore the ILRepack package first."/>
-        <ItemGroup>
-            <_PackageFiles Include="$(_DevToolsNUnitILRepackToolsDir)\*"
-                           PackagePath="tools/%(Filename)%(Extension)"/>
-        </ItemGroup>
-    </Target>
 
     <ItemGroup>
         <!-- Compile against the platform; consumers supply it at runtime via Microsoft.Testing.Platform.MSBuild. -->
@@ -47,13 +36,18 @@
             <PrivateAssets>all</PrivateAssets>
             <ExcludeAssets>runtime</ExcludeAssets>
         </PackageReference>
-        <!-- net48 has no inbox STJ / PE metadata; these must flow to the test exe. -->
-        <PackageReference Include="System.Text.Json" Condition="'$(TargetFramework)' == 'net48'"/>
-        <PackageReference Include="System.Reflection.Metadata" Condition="'$(TargetFramework)' == 'net48'"/>
-        <PackageReference Include="System.Runtime.CompilerServices.Unsafe" Condition="'$(TargetFramework)' == 'net48'"/>
-        <PackageReference Include="ILRepack">
+        <!-- net48: merged into DevTools.NUnit.Mtp.dll via props/ILRepack.targets. -->
+        <PackageReference Include="System.Text.Json" Condition="'$(TargetFramework)' == 'net48'">
             <PrivateAssets>all</PrivateAssets>
-            <GeneratePathProperty>true</GeneratePathProperty>
+        </PackageReference>
+        <PackageReference Include="System.Reflection.Metadata" Condition="'$(TargetFramework)' == 'net48'">
+            <PrivateAssets>all</PrivateAssets>
+        </PackageReference>
+        <PackageReference Include="System.Runtime.CompilerServices.Unsafe" Condition="'$(TargetFramework)' == 'net48'">
+            <PrivateAssets>all</PrivateAssets>
+        </PackageReference>
+        <PackageReference Include="ILRepack" Condition="'$(TargetFramework)' == 'net48'">
+            <PrivateAssets>all</PrivateAssets>
         </PackageReference>
         <InternalsVisibleTo Include="DevTools.NUnit.Mtp.Tests"/>
     </ItemGroup>

@@ -45,14 +45,6 @@ MSBuild flags for the runner.
 Build writes `devtools.nunit.host.json` beside the test exe. Do not edit it
 by hand.
 
-On **net48**, package targets ILRepack the test exe and delete merged DLLs
-(`System.Text.Json`, product libraries, MTP, …). Keep `nunit.framework`
-4.6.1 loose — do not merge it. Do not add a separate `System.Text.Json`
-PackageReference to “fix” host `FileNotFoundException`. Skip merge with
-`<DevToolsNUnitRepack>false</DevToolsNUnitRepack>`. Extra exclude names:
-`DevToolsNUnitRepackBinariesExcludes` (semicolon-separated file names).
-This is not add-in `IsRepackable`.
-
 ## global.json
 
 Create it **in the test project folder** (beside the `.csproj`). Do **not**

@@ -35,14 +35,11 @@ VSTest (`DevTools.NUnit.TestAdapter`). Keep them on **separate** test projects.
 `RevitDevTool.NUnit` is an independent test-platform package. Consumers set
 `HostName` / `HostVersion` / launch timeouts; the package does not read this
 repo's `UseRevit` / `UseAutoCad`. The MTP assembly itself never loads into the
-CAD host. On **net48**, package targets ILRepack the consumer **test exe**
-(`/internalize /union /illink`) and delete merged DLLs so the host generation
-does not copy BCL polyfills (`System.Text.Json`, `Unsafe`, product libraries,
-…). `nunit.framework` 4.6.1 stays loose beside the exe. Autodesk APIs and
-host-shared WPF (`MahApps`, `ControlzEx`, `Xaml.Behaviors`) are not merged.
-Disable with `DevToolsNUnitRepack=false`. Do not use add-in `IsRepackable` for
-this. net8+ / 2027 test TFMs skip ILRepack (ALC / isolated context).
-`Microsoft.Testing.Platform` is compile-only
+CAD host. On **net48**, pack/build ILRepacks `DevTools.NUnit.Mtp.dll`
+(STJ / metadata polyfills) via the repo `IsRepackable` path, same as
+the VSTest adapter. Consumers do not ILRepack. Host `FileNotFoundException`
+for product STJ is the add-in's packing, not this merge. net8+ MTP TFMs skip
+ILRepack. `Microsoft.Testing.Platform` is compile-only
 (`PrivateAssets=all` + `ExcludeAssets=runtime`); consumers supply it via
 `Microsoft.Testing.Platform.MSBuild`. Adapter ILRepack isolates VSTest
 testhost, not Revit.

@@ -11,8 +11,6 @@
     <AutoGenerateBindingRedirects Condition="$(TargetFramework.StartsWith('net4'))">true</AutoGenerateBindingRedirects>
     <GenerateBindingRedirectsOutputType Condition="$(TargetFramework.StartsWith('net4'))">true</GenerateBindingRedirectsOutputType>
     <EnableDynamicLoading>false</EnableDynamicLoading>
-    <!-- net48: merge copy-local DLLs into the test exe. Separate from host add-in packing. -->
-    <DevToolsNUnitRepack Condition="'$(DevToolsNUnitRepack)' == '' and $(TargetFramework.StartsWith('net4'))">true</DevToolsNUnitRepack>
     <HostLaunch Condition="'$(HostLaunch)' == ''">false</HostLaunch>
     <HostTimeout Condition="'$(HostTimeout)' == ''">60</HostTimeout>
     <HostLaunchTimeout Condition="'$(HostLaunchTimeout)' == ''">180</HostLaunchTimeout>
@@ -28,14 +26,8 @@
   <!-- Direct reference wins MSBuild copy over NUnit's Unsafe 4.x (MSB3277). -->
   <ItemGroup Condition="$(TargetFramework.StartsWith('net4')) and '$(ManagePackageVersionsCentrally)' == 'true'">
     <PackageReference Include="System.Runtime.CompilerServices.Unsafe" VersionOverride="6.1.2"/>
-    <PackageReference Include="ILRepack" VersionOverride="2.0.45">
-      <PrivateAssets>all</PrivateAssets>
-    </PackageReference>
   </ItemGroup>
   <ItemGroup Condition="$(TargetFramework.StartsWith('net4')) and '$(ManagePackageVersionsCentrally)' != 'true'">
     <PackageReference Include="System.Runtime.CompilerServices.Unsafe" Version="6.1.2"/>
-    <PackageReference Include="ILRepack" Version="2.0.45">
-      <PrivateAssets>all</PrivateAssets>
-    </PackageReference>
   </ItemGroup>
 </Project>
