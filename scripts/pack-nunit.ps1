@@ -1,6 +1,6 @@
 <#
 .SYNOPSIS
-    Pack the DevTools.NUnit NuGet package from DevTools.NUnit.Mtp.
+    Pack the RevitDevTool.NUnit NuGet package from DevTools.NUnit.Mtp.
 .DESCRIPTION
     Uses <Version> in source/DevTools.NUnit.Mtp/DevTools.NUnit.Mtp.csproj.
     Does not push. Does not run the RevitDevTool installer pack pipeline.
@@ -25,14 +25,14 @@ if ([string]::IsNullOrWhiteSpace($version)) {
     throw "Could not read Version from $csproj"
 }
 
-Write-Host "Packing DevTools.NUnit $version"
+Write-Host "Packing RevitDevTool.NUnit $version"
 dotnet pack $csproj -c Release -o $outDir
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
-$nupkg = Get-ChildItem -LiteralPath $outDir -Filter "DevTools.NUnit.$version.nupkg" |
+$nupkg = Get-ChildItem -LiteralPath $outDir -Filter "RevitDevTool.NUnit.$version.nupkg" |
     Select-Object -First 1
 if (-not $nupkg) {
-    throw "Expected $outDir/DevTools.NUnit.$version.nupkg"
+    throw "Expected $outDir/RevitDevTool.NUnit.$version.nupkg"
 }
 
 Write-Host "Packed $($nupkg.FullName)"

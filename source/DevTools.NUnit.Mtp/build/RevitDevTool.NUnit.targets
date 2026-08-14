@@ -1,5 +1,5 @@
 <Project>
-  <Import Project="$(MSBuildThisFileDirectory)DevTools.NUnit.props"
+  <Import Project="$(MSBuildThisFileDirectory)RevitDevTool.NUnit.props"
           Condition="'$(DevToolsNUnitPropsImported)' != 'true'"/>
 
   <Target Name="DevToolsNUnitRejectConflictingTestFrameworks"
@@ -7,16 +7,16 @@
           Condition="'$(IsTestProject)' == 'true' or '$(IsTestingPlatformApplication)' == 'true'">
     <Error
         Condition="@(PackageReference->AnyHaveMetadataValue('Identity', 'NUnit3TestAdapter'))"
-        Text="DevTools.NUnit cannot share a test project with NUnit3TestAdapter. Remove the VSTest adapter reference." />
+        Text="RevitDevTool.NUnit cannot share a test project with NUnit3TestAdapter. Remove the VSTest adapter reference." />
     <Error
         Condition="@(PackageReference->AnyHaveMetadataValue('Identity', 'ricaun.RevitTest.TestAdapter'))"
-        Text="DevTools.NUnit cannot share a test project with ricaun.RevitTest.TestAdapter. Keep host-test projects on one framework." />
+        Text="RevitDevTool.NUnit cannot share a test project with ricaun.RevitTest.TestAdapter. Keep host-test projects on one framework." />
     <Error
         Condition="@(PackageReference->AnyHaveMetadataValue('Identity', 'NUnit.Microsoft.Testing.Platform'))"
-        Text="DevTools.NUnit cannot share a test project with NUnit.Microsoft.Testing.Platform. DevTools owns host execution." />
+        Text="RevitDevTool.NUnit cannot share a test project with NUnit.Microsoft.Testing.Platform. DevTools owns host execution." />
     <Error
         Condition="@(PackageReference->AnyHaveMetadataValue('Identity', 'Microsoft.Testing.Extensions.VSTestBridge'))"
-        Text="DevTools.NUnit cannot share a test project with Microsoft.Testing.Extensions.VSTestBridge." />
+        Text="RevitDevTool.NUnit cannot share a test project with Microsoft.Testing.Extensions.VSTestBridge." />
   </Target>
 
   <Target Name="GenerateDevToolsNUnitHostOptions"
@@ -24,10 +24,10 @@
           Condition="'$(IsTestingPlatformApplication)' == 'true'">
     <Error
         Condition="'$(HostName)' == ''"
-        Text="DevTools.NUnit test projects must declare &lt;HostName&gt; (for example Revit) in the .csproj." />
+        Text="RevitDevTool.NUnit test projects must declare &lt;HostName&gt; (for example Revit) in the .csproj." />
     <Error
         Condition="'$(HostVersion)' == ''"
-        Text="DevTools.NUnit test projects must declare &lt;HostVersion&gt; in the .csproj (for example &lt;HostVersion&gt;2024&lt;/HostVersion&gt; or &lt;HostVersion&gt;$(RevitVersion)&lt;/HostVersion&gt;)." />
+        Text="RevitDevTool.NUnit test projects must declare &lt;HostVersion&gt; in the .csproj (for example &lt;HostVersion&gt;2024&lt;/HostVersion&gt; or &lt;HostVersion&gt;$(RevitVersion)&lt;/HostVersion&gt;)." />
 
     <PropertyGroup>
       <_DevToolsNUnitRunnerPath Condition="'$(DevToolsNUnitRunnerPath)' != ''">$(DevToolsNUnitRunnerPath)</_DevToolsNUnitRunnerPath>

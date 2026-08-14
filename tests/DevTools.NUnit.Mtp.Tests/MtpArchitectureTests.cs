@@ -52,7 +52,7 @@ public sealed class MtpArchitectureTests
             "source",
             "DevTools.NUnit.Mtp",
             "build",
-            "DevTools.NUnit.props"));
+            "RevitDevTool.NUnit.props"));
 
         Assert.Contains("GenerateBindingRedirectsOutputType", props, StringComparison.Ordinal);
         Assert.Contains("System.Runtime.CompilerServices.Unsafe", props, StringComparison.Ordinal);

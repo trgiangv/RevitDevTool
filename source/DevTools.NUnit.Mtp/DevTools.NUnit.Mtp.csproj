@@ -6,7 +6,7 @@
         <AppendTargetFrameworkToOutputPath>true</AppendTargetFrameworkToOutputPath>
         <RootNamespace>DevTools.NUnit.Mtp</RootNamespace>
         <AssemblyName>DevTools.NUnit.Mtp</AssemblyName>
-        <PackageId>DevTools.NUnit</PackageId>
+        <PackageId>RevitDevTool.NUnit</PackageId>
         <!-- Bump this before running .github/workflows/PublishNUnit.yml.
              Independent of the RevitDevTool installer GitVersion. -->
         <Version>0.0.1</Version>
@@ -22,8 +22,8 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <None Include="build\DevTools.NUnit.props" Pack="true" PackagePath="build\"/>
-        <None Include="build\DevTools.NUnit.targets" Pack="true" PackagePath="build\"/>
+        <None Include="build\RevitDevTool.NUnit.props" Pack="true" PackagePath="build\"/>
+        <None Include="build\RevitDevTool.NUnit.targets" Pack="true" PackagePath="build\"/>
         <None Include="README.md" Pack="true" PackagePath="\"/>
     </ItemGroup>
 

@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       push:
-        description: "Push DevTools.NUnit to nuget.org (OIDC Trusted Publishing)"
+        description: "Push RevitDevTool.NUnit to nuget.org (OIDC Trusted Publishing)"
         type: boolean
         default: true
       nuget_user:
@@ -39,7 +39,7 @@ jobs:
       - name: Test MTP
         run: dotnet test tests/DevTools.NUnit.Mtp.Tests/DevTools.NUnit.Mtp.Tests.csproj -c Release
 
-      - name: Pack DevTools.NUnit
+      - name: Pack RevitDevTool.NUnit
         id: pack
         shell: pwsh
         run: |
@@ -55,8 +55,8 @@ jobs:
       - name: Upload nupkg
         uses: actions/upload-artifact@v4
         with:
-          name: DevTools.NUnit.${{ steps.pack.outputs.version }}
-          path: output/nuget/DevTools.NUnit.${{ steps.pack.outputs.version }}.nupkg
+          name: RevitDevTool.NUnit.${{ steps.pack.outputs.version }}
+          path: output/nuget/RevitDevTool.NUnit.${{ steps.pack.outputs.version }}.nupkg
           if-no-files-found: error
           retention-days: 14
 
@@ -92,7 +92,7 @@ jobs:
           NUGET_API_KEY: ${{ steps.login.outputs.NUGET_API_KEY }}
           PACKAGE_VERSION: ${{ steps.pack.outputs.version }}
         run: |
-          $nupkg = "output/nuget/DevTools.NUnit.$($env:PACKAGE_VERSION).nupkg"
+          $nupkg = "output/nuget/RevitDevTool.NUnit.$($env:PACKAGE_VERSION).nupkg"
           if (-not (Test-Path -LiteralPath $nupkg)) {
             throw "Missing $nupkg"
           }

@@ -20,7 +20,7 @@ Host DLL changes: `scripts/build-host.ps1 -Year <year>`. Runner: `dotnet publish
 
 ## Pattern
 
-- Package contract: `HostName`, `HostVersion`, `HostLaunch`, timeouts + NUnit. MTP consumers add `DevTools.NUnit`; VSTest consumers add `DevTools.NUnit.TestAdapter` + `Microsoft.NET.Test.Sdk`. `UseRevit`/`UseAutoCad` are this repo's sample compile flags, not package settings.
+- Package contract: `HostName`, `HostVersion`, `HostLaunch`, timeouts + NUnit. MTP consumers add `RevitDevTool.NUnit`; VSTest consumers add `DevTools.NUnit.TestAdapter` + `Microsoft.NET.Test.Sdk`. `UseRevit`/`UseAutoCad` are this repo's sample compile flags, not package settings.
 - MTP `--filter` = NUnit method name. VSTest `--filter` = `FullyQualifiedName~…`. Runner owns NUnit XML (`--name` / `--test`).
 - MTP: `dotnet test` from the sample directory (scoped `global.json`). VSTest: run from that sample directory or repo root — never from an MTP sample folder.
 - Four samples: MTP×Revit, MTP×Civil3D, VSTest×Revit, VSTest×Civil3D. Do not mix adapters on one project.

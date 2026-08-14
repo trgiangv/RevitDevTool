@@ -1,4 +1,4 @@
-# DevTools.NUnit
+# RevitDevTool.NUnit
 
 Runs NUnit tests inside a live Revit or AutoCAD-family host. Requires
 [RevitDevTool](https://github.com/trgiangv/RevitDevTool) (the host-test
@@ -15,7 +15,7 @@ controller ships in that installer). Do not also reference
   <HostLaunchTimeout>360</HostLaunchTimeout>
 </PropertyGroup>
 <ItemGroup>
-  <PackageReference Include="DevTools.NUnit" />
+  <PackageReference Include="RevitDevTool.NUnit" />
   <PackageReference Include="Microsoft.Testing.Platform.MSBuild" />
   <PackageReference Include="NUnit" />
 </ItemGroup>

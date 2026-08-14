@@ -10,7 +10,7 @@
         <HostLaunchTimeout>360</HostLaunchTimeout>
     </PropertyGroup>
 
-    <Import Project="..\..\source\DevTools.NUnit.Mtp\build\DevTools.NUnit.targets"/>
+    <Import Project="..\..\source\DevTools.NUnit.Mtp\build\RevitDevTool.NUnit.targets"/>
 
     <ItemGroup>
         <PackageReference Include="Nice3point.Revit.Toolkit" VersionOverride="$(RevitVersion).*"/>

@@ -1,14 +1,14 @@
 # NUnit Host Testing
 
 Experimental in-host NUnit for Revit / AutoCAD-family via DevTools Named Pipe,
-with MTP (`DevTools.NUnit`) and VSTest (`DevTools.NUnit.TestAdapter`) consumers.
+with MTP (`RevitDevTool.NUnit`) and VSTest (`DevTools.NUnit.TestAdapter`) consumers.
 The MTP package requires
 [RevitDevTool](https://github.com/trgiangv/RevitDevTool); the host-test
 controller ships in that installer. The live CAD host executes the tests.
 
 ## Status
 
-**Experimental.** Discover / run / progress work end-to-end. `DevTools.NUnit`
+**Experimental.** Discover / run / progress work end-to-end. `RevitDevTool.NUnit`
 (MTP) is published independently of the RevitDevTool installer. Version is
 `<Version>` in `source/DevTools.NUnit.Mtp/DevTools.NUnit.Mtp.csproj` (starts at
 `0.0.1`). Run `.github/workflows/PublishNUnit.yml` from GitHub Actions to pack
@@ -19,7 +19,7 @@ Host-process debugging is **out of scope**. There is no `--debug` CLI, no Test
 Explorer Debug attach, and no IDE SDK. Attach the IDE debugger to the host
 PID yourself if needed; that is not a product feature.
 
-Two consumer surfaces share the same Runner/Host: MTP (`DevTools.NUnit`) and
+Two consumer surfaces share the same Runner/Host: MTP (`RevitDevTool.NUnit`) and
 VSTest (`DevTools.NUnit.TestAdapter`). Keep them on **separate** test projects.
 
 ## Modules
@@ -29,10 +29,10 @@ VSTest (`DevTools.NUnit.TestAdapter`). Keep them on **separate** test projects.
 | `DevTools.NUnit.Core` | `nunit/*` wire contracts, timing, protocol version |
 | `DevTools.NUnit.Host` | Native NUnit runtime in the CAD host |
 | `DevTools.NUnit.Runner` | CLI controller: find/launch host pipe, discover/run |
-| `DevTools.NUnit.Mtp` | MTP framework (`PackageId=DevTools.NUnit`); proxies to Runner |
+| `DevTools.NUnit.Mtp` | MTP framework (`PackageId=RevitDevTool.NUnit`); proxies to Runner |
 | `DevTools.NUnit.TestAdapter` | VSTest adapter; same Runner/Host contract |
 
-`DevTools.NUnit` is an independent test-platform package. Consumers set
+`RevitDevTool.NUnit` is an independent test-platform package. Consumers set
 `HostName` / `HostVersion` / launch timeouts; the package does not read this
 repo's `UseRevit` / `UseAutoCad`. MTP never loads into the CAD host, so it is
 not ILRepacked. `Microsoft.Testing.Platform` is compile-only
@@ -51,7 +51,7 @@ Four live samples — two adapters × two hosts. Do not mix MTP and VSTest on on
 
 | Sample | Adapter | Host |
 |--------|---------|------|
-| `samples/DevTools.NUnit.SampleTests` | MTP (`DevTools.NUnit`) | Revit |
+| `samples/DevTools.NUnit.SampleTests` | MTP (`RevitDevTool.NUnit`) | Revit |
 | `samples/DevTools.NUnit.Civil3D.SampleTests` | MTP | Civil 3D |
 | `samples/DevTools.NUnit.VSTest.SampleTests` | VSTest (`DevTools.NUnit.TestAdapter`) | Revit |
 | `samples/DevTools.NUnit.VSTest.Civil3D.SampleTests` | VSTest | Civil 3D |
@@ -112,7 +112,7 @@ Runner ships under the ApplicationPlugins bundle `Contents` folder (publish
 | Probe load | **Also shadows**: zip test folder → `%TEMP%\RevitTest\` → extract → `Assembly.LoadFile` on the temp copy (then optional zip-back) | Content-addressed generation shadow of test output + Runtime |
 | Transport | Own Console + `PipeTestServer`/`PipeTestClient` (process-named pipe) | Existing `DevToolsPipeServer` + `IHostContextExecutor` |
 | IDE surface | VS-oriented + EnvDTE attach | MTP + VSTest samples; no debugger integration |
-| Package | ricaun NuGet ecosystem | `DevTools.NUnit` (MTP) NuGet, versioned in the MTP csproj; VSTest adapter in-tree |
+| Package | ricaun NuGet ecosystem | `RevitDevTool.NUnit` (MTP) NuGet, versioned in the MTP csproj; VSTest adapter in-tree |
 | Hosts | Revit-focused product | Revit + AutoCAD family on shared DevTools platform |
 
 **Conflict / coexistence (what actually breaks):**
@@ -127,7 +127,7 @@ Runner ships under the ApplicationPlugins bundle `Contents` folder (publish
 - Both can load different `nunit.framework` identities in the same Revit (Dynamo,
   DevTools host, ricaun Application). DevTools avoids `NUnit.Engine`
   `FrameworkController` for that reason.
-- A project that references both ricaun’s VSTest adapter and `DevTools.NUnit`
+- A project that references both ricaun’s VSTest adapter and `RevitDevTool.NUnit`
   can split ownership; keep host-test projects on one framework.
 
 Do not depend on `ricaun.NUnit` / `ricaun.RevitTest` packages for DevTools NUnit.
@@ -165,13 +165,13 @@ options; one intended adapter package aligned with the rest of RevitDevTool.
 
 | Package | Publish status |
 |---------|----------------|
-| `DevTools.NUnit` (`DevTools.NUnit.Mtp`) | Independent of installer tags. Version = csproj `<Version>`. Workflow: `PublishNUnit.yml` |
+| `RevitDevTool.NUnit` (`DevTools.NUnit.Mtp`) | Independent of installer tags. Version = csproj `<Version>`. Workflow: `PublishNUnit.yml` |
 | `DevTools.NUnit.TestAdapter` | **Not published** — in-tree VSTest samples only |
 | Core / Host / Runner | Not consumer NuGet APIs |
 
 Bump `<Version>` in `source/DevTools.NUnit.Mtp/DevTools.NUnit.Mtp.csproj`, commit,
 then run **Actions → Publish NUnit**. The workflow reads that property, packs
-`DevTools.NUnit.{version}.nupkg`, and pushes nuget.org via
+`RevitDevTool.NUnit.{version}.nupkg`, and pushes nuget.org via
 [Trusted Publishing](https://learn.microsoft.com/en-us/nuget/nuget-org/trusted-publishing)
 (OIDC; no long-lived API key). Uncheck **Push to nuget.org** to pack-only.
 Do not use installer tags or `scripts/pack.ps1` for this package. Local pack:
@@ -188,7 +188,7 @@ One-time nuget.org setup before the first push:
    Optional later: store that name as repo secret `NUGET_USER`.
    This repo is public; the policy should show **Active** after Create.
 
-Consumers add NUnit, `DevTools.NUnit`, and `Microsoft.Testing.Platform.MSBuild`;
+Consumers add NUnit, `RevitDevTool.NUnit`, and `Microsoft.Testing.Platform.MSBuild`;
 install [RevitDevTool](https://github.com/trgiangv/RevitDevTool); set the host-run
 properties (`HostName`, `HostVersion`, `HostLaunch`, timeouts); and keep a
 test-directory `global.json` with `"test": { "runner": "Microsoft.Testing.Platform" }`

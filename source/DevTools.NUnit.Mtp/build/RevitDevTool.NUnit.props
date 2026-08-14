@@ -18,7 +18,7 @@
 
   <ItemGroup>
     <TestingPlatformBuilderHook Include="51ad4b4c-87f1-4554-9aa4-e7a54bd732f5">
-      <DisplayName>DevTools.NUnit</DisplayName>
+      <DisplayName>RevitDevTool.NUnit</DisplayName>
       <TypeFullName>DevTools.NUnit.Mtp.TestingPlatformBuilderHook</TypeFullName>
     </TestingPlatformBuilderHook>
   </ItemGroup>
