@@ -1,95 +1,78 @@
 using System.Text.Json;
-using DevTools.NUnit.Transport;
-using DevTools.Logging;
+using System.Xml.Linq;
 using DevTools.NUnit.Core;
+using DevTools.NUnit.Core.Contracts;
 using DevTools.NUnit.Runner.Parsing;
 using DevTools.NUnit.Runner.Services;
+using DevTools.NUnit.Transport;
 
 namespace DevTools.NUnit.Runner.Commands;
 
+/// <summary>
+/// Local PE discovery. Must not locate, launch, or talk to an Autodesk host.
+/// In-host NUnit explore happens inside <c>nunit/run</c> (<c>EnsureLoaded</c>), not this command.
+/// </summary>
 public static class DiscoverCommand
 {
     public static async Task<int> ExecuteAsync(
         RunnerCommandLine options,
-        HostSession hostSession,
         CancellationToken cancellationToken = default)
     {
+        cancellationToken.ThrowIfCancellationRequested();
+
         if (!File.Exists(options.AssemblyPath))
         {
             await Console.Error.WriteLineAsync($"Assembly not found: {options.AssemblyPath}").ConfigureAwait(false);
             return RunnerExitCode.CliError;
         }
 
-        if (!TryParseHost(options.Host, out var hostApp, out var hostError))
-        {
-            await Console.Error.WriteLineAsync(hostError).ConfigureAwait(false);
-            return RunnerExitCode.CliError;
-        }
-
-        if (!NUnitRunnerFilter.TryNormalize(options.Filter, out _, out var filterError))
+        if (!NUnitRunnerFilter.TryNormalize(options.Filter, out var filter, out var filterError))
         {
             await Console.Error.WriteLineAsync(filterError).ConfigureAwait(false);
             return RunnerExitCode.CliError;
         }
 
-        HostPipeInstance pipe;
-        try
-        {
-            pipe = await hostSession.EnsurePipeAsync(
-                    hostApp,
-                    options.Version,
-                    options.HostLaunch,
-                    TimeSpan.FromSeconds(options.HostLaunchTimeoutSeconds),
-                    cancellationToken)
-                .ConfigureAwait(false);
-        }
-        catch (Exception ex)
-        {
-            await Console.Error.WriteLineAsync(ex.Message).ConfigureAwait(false);
-            return RunnerExitCode.NoHost;
-        }
+        SplitNameAndTestFilter(filter, out var names, out var fullNames);
+        var cases = NUnitMetadataDiscoverer.Filter(
+            NUnitMetadataDiscoverer.Discover(options.AssemblyPath),
+            names,
+            fullNames);
 
-        using var requestTimeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-        requestTimeout.CancelAfter(TimeSpan.FromSeconds(options.HostTimeoutSeconds));
-
-        try
-        {
-            await using var client = await NUnitPipeClient.ConnectAsync(
-                    pipe.PipeName,
-                    TimeSpan.FromSeconds(NUnitHostTiming.HostPipeConnectTimeoutSeconds),
-                    requestTimeout.Token)
-                .ConfigureAwait(false);
-            await client.HelloAsync(requestTimeout.Token).ConfigureAwait(false);
-            var response = await client.DiscoverAsync(options.AssemblyPath, options.Filter, requestTimeout.Token)
-                .ConfigureAwait(false);
-
-            Console.WriteLine(JsonSerializer.Serialize(response, NUnitJsonContext.Default.NUnitDiscoverResponse));
-            return RunnerExitCode.Ok;
-        }
-        catch (IOException ex)
-        {
-            await Console.Error.WriteLineAsync(ex.Message).ConfigureAwait(false);
-            return RunnerExitCode.NoHost;
-        }
-        catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
-        {
-            await Console.Error.WriteLineAsync(
-                    $"Host request timed out after {options.HostTimeoutSeconds}s.")
-                .ConfigureAwait(false);
-            return RunnerExitCode.HostTimeout;
-        }
+        Console.WriteLine(JsonSerializer.Serialize(
+            new NUnitDiscoverResponse(cases),
+            NUnitJsonContext.Default.NUnitDiscoverResponse));
+        return RunnerExitCode.Ok;
     }
 
-    private static bool TryParseHost(string host, out HostApp hostApp, out string error)
+    internal static void SplitNameAndTestFilter(
+        string? filterXml,
+        out IReadOnlyList<string> names,
+        out IReadOnlyList<string> fullNames)
     {
-        if (Enum.TryParse(host, ignoreCase: true, out hostApp))
-        {
-            error = string.Empty;
-            return true;
-        }
+        names = [];
+        fullNames = [];
+        if (string.IsNullOrWhiteSpace(filterXml))
+            return;
 
-        hostApp = default;
-        error = $"Unsupported host '{host}'.";
-        return false;
+        try
+        {
+            var root = XElement.Parse(filterXml);
+            var nameValues = root.Descendants("name")
+                .Select(element => element.Value.Trim())
+                .Where(value => value.Length > 0)
+                .Distinct(StringComparer.Ordinal)
+                .ToList();
+            var testValues = root.Descendants("test")
+                .Select(element => element.Value.Trim())
+                .Where(value => value.Length > 0)
+                .Distinct(StringComparer.Ordinal)
+                .ToList();
+            names = nameValues;
+            fullNames = testValues;
+        }
+        catch (System.Xml.XmlException)
+        {
+            // Leave empty → unfiltered PE list.
+        }
     }
 }

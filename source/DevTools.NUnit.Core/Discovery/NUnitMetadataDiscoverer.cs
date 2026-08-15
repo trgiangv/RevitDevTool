@@ -7,7 +7,8 @@ namespace DevTools.NUnit.Core;
 
 /// <summary>
 /// Discovers NUnit tests from PE metadata without loading the assembly or
-/// contacting a host process. Used by VSTest and MTP Test Explorer refresh.
+/// contacting a host process. Used by VSTest, MTP Test Explorer refresh, and
+/// <c>Runner discover</c>.
 /// </summary>
 public static class NUnitMetadataDiscoverer
 {
@@ -19,10 +20,7 @@ public static class NUnitMetadataDiscoverer
 
         using var stream = File.OpenRead(assemblyPath);
         using var peReader = new PEReader(stream);
-        if (!peReader.HasMetadata)
-            return [];
-
-        return DiscoverFromMetadata(peReader.GetMetadataReader());
+        return !peReader.HasMetadata ? [] : DiscoverFromMetadata(peReader.GetMetadataReader());
     }
 
     public static IReadOnlyList<NUnitDiscoveredTest> Filter(
@@ -40,7 +38,7 @@ public static class NUnitMetadataDiscoverer
             .ToList();
     }
 
-    private static IReadOnlyList<NUnitDiscoveredTest> DiscoverFromMetadata(MetadataReader metadata)
+    private static List<NUnitDiscoveredTest> DiscoverFromMetadata(MetadataReader metadata)
     {
         var tests = new List<NUnitDiscoveredTest>();
         foreach (var typeHandle in metadata.TypeDefinitions)

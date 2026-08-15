@@ -58,6 +58,11 @@
     </ItemGroup>
 
     <ItemGroup>
+        <Compile Include="..\DevTools.NUnit.Core\Discovery\NUnitMetadataDiscoverer.cs"
+                 Link="Discovery\NUnitMetadataDiscoverer.cs"/>
+    </ItemGroup>
+
+    <ItemGroup>
         <Using Include="DevTools.Ipc"/>
     </ItemGroup>
 

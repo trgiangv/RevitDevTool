@@ -19,8 +19,14 @@
     </ItemGroup>
 
     <ItemGroup>
+        <Compile Include="..\..\source\DevTools.NUnit.Core\Discovery\NUnitMetadataDiscoverer.cs"
+                 Link="Discovery\NUnitMetadataDiscoverer.cs" />
+        <Compile Include="..\..\source\DevTools.NUnit.Runner\Commands\DiscoverCommand.cs"
+                 Link="Commands\DiscoverCommand.cs" />
         <Compile Include="..\..\source\DevTools.NUnit.Runner\Parsing\RunnerCommandLine.cs"
                  Link="Parsing\RunnerCommandLine.cs" />
+        <Compile Include="..\..\source\DevTools.NUnit.Runner\Parsing\RunnerExitCode.cs"
+                 Link="Parsing\RunnerExitCode.cs" />
         <Compile Include="..\..\source\DevTools.NUnit.Runner\Services\NUnitPipeClient.cs"
                  Link="Services\NUnitPipeClient.cs" />
         <Compile Include="..\..\source\DevTools.NUnit.Runner\Services\NUnitRunnerFilter.cs"

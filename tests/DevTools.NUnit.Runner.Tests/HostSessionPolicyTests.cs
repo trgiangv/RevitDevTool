@@ -28,6 +28,24 @@ public sealed class HostSessionPolicyTests
     }
 
     [Fact]
+    public void DiscoverCommand_does_not_locate_or_launch_a_host()
+    {
+        var source = File.ReadAllText(Path.Combine(
+            FindRepositoryRoot(),
+            "source",
+            "DevTools.NUnit.Runner",
+            "Commands",
+            "DiscoverCommand.cs"));
+
+        Assert.Contains("NUnitMetadataDiscoverer.Discover", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("EnsurePipeAsync", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("HostLocator", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("HostSession", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("launchService.Start", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("NUnitPipeClient", source, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void HostLocator_prefers_oldest_matching_pid()
     {
         var source = File.ReadAllText(Path.Combine(

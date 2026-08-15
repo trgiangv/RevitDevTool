@@ -15,13 +15,13 @@ public static class RunCommand
         RunnerCommandLine options,
         HostSession hostSession,
         CancellationToken cancellationToken = default) =>
-        ExecuteAsync(options, hostSession, cancellationToken, debugger: null);
+        ExecuteAsync(options, hostSession, debugger: null, cancellationToken);
 
     internal static async Task<int> ExecuteAsync(
         RunnerCommandLine options,
         HostSession hostSession,
-        CancellationToken cancellationToken,
-        IVisualStudioAttach? debugger)
+        IVisualStudioAttach? debugger,
+        CancellationToken cancellationToken)
     {
         if (!File.Exists(options.AssemblyPath))
         {

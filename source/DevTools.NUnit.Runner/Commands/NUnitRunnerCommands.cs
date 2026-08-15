@@ -12,7 +12,7 @@ internal sealed class NUnitRunnerCommands
     private readonly HostSession _hosts = new(new HostLaunchService());
 
     /// <summary>
-    /// Discover NUnit tests inside the Autodesk host. Does not attach a debugger.
+    /// Discover NUnit tests from PE metadata. Does not start or contact a host.
     /// </summary>
     /// <param name="assembly">Test assembly path.</param>
     /// <param name="host">Host app (Revit, AutoCAD, Civil3D, ...).</param>
@@ -20,9 +20,9 @@ internal sealed class NUnitRunnerCommands
     /// <param name="name">NUnit method Name values (JSON array or a single name).</param>
     /// <param name="test">NUnit FullName values (JSON array or a single name).</param>
     /// <param name="filter">Raw NUnit TestFilter XML. Do not mix with --name/--test.</param>
-    /// <param name="hostLaunch">Always launch a new host (skip reuse).</param>
-    /// <param name="hostTimeout">Pipe request timeout in seconds.</param>
-    /// <param name="hostLaunchTimeout">Wait for host pipe after launch, in seconds.</param>
+    /// <param name="hostLaunch">Ignored on discover. Required by shared CLI parsing with run.</param>
+    /// <param name="hostTimeout">Ignored on discover.</param>
+    /// <param name="hostLaunchTimeout">Ignored on discover.</param>
     [Command("discover")]
     public Task<int> Discover(
         [Argument] string assembly,
@@ -130,6 +130,6 @@ internal sealed class NUnitRunnerCommands
 
         return command == NUnitRunnerCli.RunCommand
             ? await RunCommand.ExecuteAsync(options!, _hosts, cancellationToken).ConfigureAwait(false)
-            : await DiscoverCommand.ExecuteAsync(options!, _hosts, cancellationToken).ConfigureAwait(false);
+            : await DiscoverCommand.ExecuteAsync(options!, cancellationToken).ConfigureAwait(false);
     }
 }
