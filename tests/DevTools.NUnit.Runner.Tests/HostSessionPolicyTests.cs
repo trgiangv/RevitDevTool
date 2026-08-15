@@ -27,6 +27,56 @@ public sealed class HostSessionPolicyTests
         Assert.DoesNotContain("launchService.Start", reuseBlock, StringComparison.Ordinal);
     }
 
+    [Fact]
+    public void HostLocator_prefers_oldest_matching_pid()
+    {
+        var source = File.ReadAllText(Path.Combine(
+            FindRepositoryRoot(),
+            "source",
+            "DevTools.NUnit.Runner",
+            "Services",
+            "HostLocator.cs"));
+
+        Assert.Contains("OrderBy(instance => instance.ProcessId)", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("OrderByDescending", source, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void HostLaunch_starts_the_host_exe_as_a_direct_child()
+    {
+        var source = File.ReadAllText(Path.Combine(
+            FindRepositoryRoot(),
+            "source",
+            "DevTools.Utilities",
+            "Hosting",
+            "HostLaunchService.cs"));
+
+        Assert.Contains("UseShellExecute = false", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("UseShellExecute = true", source, StringComparison.Ordinal);
+        Assert.Contains("RedirectStandardOutput = true", source, StringComparison.Ordinal);
+        Assert.Contains("StandardInput.Close()", source, StringComparison.Ordinal);
+        Assert.Contains("StdioInheritance.Suppress()", source, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void RunCommand_attaches_after_pipe_ensure_and_before_host_run()
+    {
+        var source = File.ReadAllText(Path.Combine(
+            FindRepositoryRoot(),
+            "source",
+            "DevTools.NUnit.Runner",
+            "Commands",
+            "RunCommand.cs"));
+
+        var ensure = source.IndexOf("EnsurePipeAsync", StringComparison.Ordinal);
+        var attach = source.IndexOf("HostDebugAttachScope.TryBegin", StringComparison.Ordinal);
+        var run = source.IndexOf("client.RunAsync", StringComparison.Ordinal);
+        Assert.True(ensure >= 0 && attach > ensure && run > attach);
+        Assert.Contains("options.Debug", source, StringComparison.Ordinal);
+        Assert.Contains("options.DebugParentPid", source, StringComparison.Ordinal);
+        Assert.Contains("pipe.ProcessId", source, StringComparison.Ordinal);
+    }
+
     private static string FindRepositoryRoot()
     {
         var directory = new DirectoryInfo(AppContext.BaseDirectory);

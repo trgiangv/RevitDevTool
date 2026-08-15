@@ -2,6 +2,10 @@ namespace DevTools.NUnit.Runner.Services;
 
 public static class HostLocator
 {
+    /// <summary>
+    /// Matching control pipes for <paramref name="host"/> + <paramref name="version"/>.
+    /// Oldest matching session first (lowest PID). There is no PID picker or fan-out.
+    /// </summary>
     public static IReadOnlyList<HostPipeInstance> Discover(string host, string version)
     {
         var expectedPrefix = $"{DaemonConstants.PytestPipePrefix}_{host}_{version}_";
@@ -20,7 +24,7 @@ public static class HostLocator
         }
 
         return instances
-            .OrderByDescending(instance => instance.ProcessId)
+            .OrderBy(instance => instance.ProcessId)
             .ToList();
     }
 }

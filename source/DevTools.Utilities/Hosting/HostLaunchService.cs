@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.Runtime.InteropServices;
 using System.Text.RegularExpressions;
 using DevTools.Logging;
 using DevTools.Utilities.Hosting.Resolver;
@@ -51,17 +52,36 @@ public sealed partial class HostLaunchService : IHostLaunchService
     {
         try
         {
+            // Direct child so Process.Id is the host and ArgumentList is honored.
+            // Redirect stdio to pipes we drain: a parent with redirected output
+            // (MTP → Runner, or Daemon stdio) must not leak those handles into Revit,
+            // or the parent hangs on ReadToEnd after the launcher exits.
             var startInfo = new ProcessStartInfo
             {
                 FileName = plan.ExePath,
-                UseShellExecute = true,
+                UseShellExecute = false,
+                CreateNoWindow = false,
+                RedirectStandardInput = true,
+                RedirectStandardOutput = true,
+                RedirectStandardError = true,
                 WorkingDirectory = Path.GetDirectoryName(plan.ExePath) ?? Environment.CurrentDirectory,
             };
             foreach (var arg in plan.Arguments)
                 startInfo.ArgumentList.Add(arg);
 
-            return Process.Start(startInfo)
-                ?? throw new InvalidOperationException($"Failed to start {plan.HostApp} process.");
+            // CreateProcess inherits every inheritable handle. MTP/Daemon redirect
+            // Runner stdout; without clearing HANDLE_FLAG_INHERIT the host keeps
+            // that pipe open and the parent hangs on ReadToEnd after Runner exits.
+            Process process;
+            using (StdioInheritance.Suppress())
+            {
+                process = Process.Start(startInfo)
+                    ?? throw new InvalidOperationException($"Failed to start {plan.HostApp} process.");
+            }
+            process.StandardInput.Close();
+            process.StandardOutput.ReadToEndAsync();
+            process.StandardError.ReadToEndAsync();
+            return process;
         }
         catch (InvalidOperationException)
         {
@@ -174,6 +194,46 @@ public sealed partial class HostLaunchService : IHostLaunchService
     }
 
     #endregion
+
+    private static class StdioInheritance
+    {
+        private const uint HandleFlagInherit = 1;
+
+        [DllImport("kernel32.dll", SetLastError = true)]
+        private static extern IntPtr GetStdHandle(int nStdHandle);
+
+        [DllImport("kernel32.dll", SetLastError = true)]
+        private static extern bool GetHandleInformation(IntPtr hObject, out uint lpdwFlags);
+
+        [DllImport("kernel32.dll", SetLastError = true)]
+        private static extern bool SetHandleInformation(IntPtr hObject, uint dwMask, uint dwFlags);
+
+        public static IDisposable Suppress()
+        {
+            var previous = new List<(IntPtr Handle, uint Flags)>();
+            foreach (var std in new[] { -10, -11, -12 })
+            {
+                var handle = GetStdHandle(std);
+                if (handle == IntPtr.Zero || handle == new IntPtr(-1))
+                    continue;
+                if (!GetHandleInformation(handle, out var flags))
+                    continue;
+                previous.Add((handle, flags));
+                SetHandleInformation(handle, HandleFlagInherit, 0);
+            }
+
+            return new Restore(previous);
+        }
+
+        private sealed class Restore(List<(IntPtr Handle, uint Flags)> previous) : IDisposable
+        {
+            public void Dispose()
+            {
+                foreach (var entry in previous)
+                    SetHandleInformation(entry.Handle, HandleFlagInherit, entry.Flags & HandleFlagInherit);
+            }
+        }
+    }
 
     private sealed record HostLaunchPlan(
         HostApp HostApp,
