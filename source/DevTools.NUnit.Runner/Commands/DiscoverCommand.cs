@@ -17,19 +17,19 @@ public static class DiscoverCommand
         if (!File.Exists(options.AssemblyPath))
         {
             await Console.Error.WriteLineAsync($"Assembly not found: {options.AssemblyPath}").ConfigureAwait(false);
-            return RunnerCommandParser.ExitCliError;
+            return RunnerExitCode.CliError;
         }
 
         if (!TryParseHost(options.Host, out var hostApp, out var hostError))
         {
             await Console.Error.WriteLineAsync(hostError).ConfigureAwait(false);
-            return RunnerCommandParser.ExitCliError;
+            return RunnerExitCode.CliError;
         }
 
         if (!NUnitRunnerFilter.TryNormalize(options.Filter, out _, out var filterError))
         {
             await Console.Error.WriteLineAsync(filterError).ConfigureAwait(false);
-            return RunnerCommandParser.ExitCliError;
+            return RunnerExitCode.CliError;
         }
 
         HostPipeInstance pipe;
@@ -46,7 +46,7 @@ public static class DiscoverCommand
         catch (Exception ex)
         {
             await Console.Error.WriteLineAsync(ex.Message).ConfigureAwait(false);
-            return RunnerCommandParser.ExitNoHost;
+            return RunnerExitCode.NoHost;
         }
 
         using var requestTimeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
@@ -64,19 +64,19 @@ public static class DiscoverCommand
                 .ConfigureAwait(false);
 
             Console.WriteLine(JsonSerializer.Serialize(response, NUnitJsonContext.Default.NUnitDiscoverResponse));
-            return RunnerCommandParser.ExitOk;
+            return RunnerExitCode.Ok;
         }
         catch (IOException ex)
         {
             await Console.Error.WriteLineAsync(ex.Message).ConfigureAwait(false);
-            return RunnerCommandParser.ExitNoHost;
+            return RunnerExitCode.NoHost;
         }
         catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
         {
             await Console.Error.WriteLineAsync(
                     $"Host request timed out after {options.HostTimeoutSeconds}s.")
                 .ConfigureAwait(false);
-            return RunnerCommandParser.ExitHostTimeout;
+            return RunnerExitCode.HostTimeout;
         }
     }
 

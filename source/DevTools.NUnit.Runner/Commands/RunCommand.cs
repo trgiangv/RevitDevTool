@@ -3,6 +3,7 @@ using DevTools.NUnit.Transport;
 using DevTools.Logging;
 using DevTools.NUnit.Core;
 using DevTools.NUnit.Core.Contracts;
+using DevTools.NUnit.Runner.Debugging;
 using DevTools.NUnit.Runner.Parsing;
 using DevTools.NUnit.Runner.Services;
 
@@ -10,27 +11,34 @@ namespace DevTools.NUnit.Runner.Commands;
 
 public static class RunCommand
 {
-    public static async Task<int> ExecuteAsync(
+    public static Task<int> ExecuteAsync(
         RunnerCommandLine options,
         HostSession hostSession,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default) =>
+        ExecuteAsync(options, hostSession, cancellationToken, debugger: null);
+
+    internal static async Task<int> ExecuteAsync(
+        RunnerCommandLine options,
+        HostSession hostSession,
+        CancellationToken cancellationToken,
+        IVisualStudioAttach? debugger)
     {
         if (!File.Exists(options.AssemblyPath))
         {
             await Console.Error.WriteLineAsync($"Assembly not found: {options.AssemblyPath}").ConfigureAwait(false);
-            return RunnerCommandParser.ExitCliError;
+            return RunnerExitCode.CliError;
         }
 
         if (!Enum.TryParse(options.Host, ignoreCase: true, out HostApp hostApp))
         {
             await Console.Error.WriteLineAsync($"Unsupported host '{options.Host}'.").ConfigureAwait(false);
-            return RunnerCommandParser.ExitCliError;
+            return RunnerExitCode.CliError;
         }
 
         if (!NUnitRunnerFilter.TryNormalize(options.Filter, out _, out var filterError))
         {
             await Console.Error.WriteLineAsync(filterError).ConfigureAwait(false);
-            return RunnerCommandParser.ExitCliError;
+            return RunnerExitCode.CliError;
         }
 
         HostPipeInstance pipe;
@@ -47,8 +55,15 @@ public static class RunCommand
         catch (Exception ex)
         {
             await Console.Error.WriteLineAsync(ex.Message).ConfigureAwait(false);
-            return RunnerCommandParser.ExitNoHost;
+            return RunnerExitCode.NoHost;
         }
+
+        using var debugAttach = HostDebugAttachScope.TryBegin(
+            options.Debug,
+            pipe.ProcessId,
+            options.DebugParentPid,
+            debugger ?? VisualStudioAttach.Instance,
+            Console.Error);
 
         using var requestTimeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
         requestTimeout.CancelAfter(TimeSpan.FromSeconds(options.HostTimeoutSeconds));
@@ -78,20 +93,20 @@ public static class RunCommand
             return response.Summary.Failed > 0
                 || response.Summary.Errors > 0
                 || response.Summary.Cancelled > 0
-                ? RunnerCommandParser.ExitTestFailure
-                : RunnerCommandParser.ExitOk;
+                ? RunnerExitCode.TestFailure
+                : RunnerExitCode.Ok;
         }
         catch (IOException ex)
         {
             await Console.Error.WriteLineAsync(ex.Message).ConfigureAwait(false);
-            return RunnerCommandParser.ExitNoHost;
+            return RunnerExitCode.NoHost;
         }
         catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
         {
             await Console.Error.WriteLineAsync(
                     $"Host request timed out after {options.HostTimeoutSeconds}s.")
                 .ConfigureAwait(false);
-            return RunnerCommandParser.ExitHostTimeout;
+            return RunnerExitCode.HostTimeout;
         }
     }
 }

@@ -26,7 +26,7 @@ public sealed class DevToolsNUnitExecutor : ITestExecutor
             if (!AdapterSettings.IsConfigured)
                 continue;
 
-            RunSource(group.Key, group.ToList(), frameworkHandle);
+            RunSource(group.Key, group.ToList(), runContext, frameworkHandle);
         }
     }
 
@@ -50,7 +50,7 @@ public sealed class DevToolsNUnitExecutor : ITestExecutor
                     .Select(VsTestCaseMapper.ToTestCase)
                     .Where(test => MatchesFilter(test, runContext))
                     .ToList();
-                RunSource(source, testCases, frameworkHandle);
+                RunSource(source, testCases, runContext, frameworkHandle);
             }
             catch (Exception ex)
             {
@@ -68,6 +68,7 @@ public sealed class DevToolsNUnitExecutor : ITestExecutor
     private void RunSource(
         string source,
         IReadOnlyList<TestCase> tests,
+        IRunContext runContext,
         IFrameworkHandle frameworkHandle)
     {
         if (tests.Count == 0)
@@ -75,6 +76,9 @@ public sealed class DevToolsNUnitExecutor : ITestExecutor
 
         var settings = AdapterSettings.Current;
         var options = settings.ToRunnerHostOptions();
+        if (runContext.IsBeingDebugged)
+            options = options with { DebugParentPid = Environment.ProcessId };
+
         var filter = VsTestCaseMapper.BuildFilter(tests);
 
         foreach (var test in tests)

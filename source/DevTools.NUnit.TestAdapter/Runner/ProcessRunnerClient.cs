@@ -73,7 +73,7 @@ public sealed class ProcessRunnerClient : IRunnerClient, IDisposable
 
     public void Dispose() => Cancel();
 
-    private static IReadOnlyList<string> BuildHostArguments(
+    internal static IReadOnlyList<string> BuildHostArguments(
         string command,
         string source,
         RunnerHostOptions options,
@@ -87,7 +87,8 @@ public sealed class ProcessRunnerClient : IRunnerClient, IDisposable
             options.HostLaunchTimeoutSeconds,
             options.HostLaunch,
             filter.Names,
-            filter.FullNames);
+            filter.FullNames,
+            debugParentPid: command == NUnitRunnerCli.RunCommand ? options.DebugParentPid : null);
 
     internal static string ResolveRunnerPath(RunnerHostOptions options)
     {

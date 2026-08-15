@@ -18,15 +18,17 @@ internal sealed class ProcessRunnerClient : IRunnerTransport, IDisposable
     };
 
     private readonly string _runnerPath;
+    private readonly IDebugSession _debugSession;
     private Process? _activeProcess;
     private readonly Lock _processLock = new();
 
-    internal ProcessRunnerClient(string runnerPath)
+    internal ProcessRunnerClient(string runnerPath, IDebugSession? debugSession = null)
     {
         if (string.IsNullOrWhiteSpace(runnerPath))
             throw new ArgumentException("Runner path is required.", nameof(runnerPath));
 
         _runnerPath = runnerPath;
+        _debugSession = debugSession ?? SystemDebugSession.Instance;
     }
 
     public IReadOnlyList<NUnitDiscoveredTest> Discover(
@@ -45,7 +47,9 @@ internal sealed class ProcessRunnerClient : IRunnerTransport, IDisposable
         HostRunOptions options,
         RunnerTestFilter filter)
     {
-        var output = RunRunner(options, BuildHostArguments(NUnitRunnerCli.RunCommand, assemblyPath, options, filter));
+        var output = RunRunner(
+            options,
+            BuildHostArguments(NUnitRunnerCli.RunCommand, assemblyPath, options, filter, _debugSession));
         var response = JsonSerializer.Deserialize<NUnitRunResponse>(output, WireJsonOptions)
             ?? throw new InvalidOperationException("Runner run returned empty JSON.");
         return response.Cases;
@@ -78,8 +82,13 @@ internal sealed class ProcessRunnerClient : IRunnerTransport, IDisposable
         string command,
         string source,
         HostRunOptions options,
-        RunnerTestFilter filter) =>
-        NUnitRunnerCli.BuildArguments(
+        RunnerTestFilter filter,
+        IDebugSession? debugSession = null)
+    {
+        var debugParentPid = command == NUnitRunnerCli.RunCommand && debugSession?.IsAttached == true
+            ? debugSession.ProcessId
+            : (int?)null;
+        return NUnitRunnerCli.BuildArguments(
             command,
             source,
             options.Host,
@@ -88,7 +97,9 @@ internal sealed class ProcessRunnerClient : IRunnerTransport, IDisposable
             options.HostLaunchTimeoutSeconds,
             options.HostLaunch,
             filter.Names,
-            filter.FullNames);
+            filter.FullNames,
+            debugParentPid: debugParentPid);
+    }
 
     internal static string ResolveRunnerPath(HostRunOptions options)
     {

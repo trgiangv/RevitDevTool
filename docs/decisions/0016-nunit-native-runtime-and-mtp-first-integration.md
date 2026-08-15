@@ -150,25 +150,33 @@ matrix.
 
 10. **The DevTools MTP extension owns no process lifecycle.** The MTP project
     contains no process activation, host locator, launch, reuse, termination,
-    or debugger-attach logic. It translates IDE/Test Explorer requests into the
+    or debugger-attach implementation. It may pass Runner `--debug-parent-pid`
+    when the northbound process already has a debugger
+    (decision 11); it does not reference EnvDTE or attach to the Autodesk host.
+    It translates IDE/Test Explorer requests into the
     installed Runner protocol through a transport supplied by the hosting
     package. Runner and its launcher infrastructure own Runner activation and
     Autodesk host-session policy. Runner distinguishes a host it launched from
     a pre-existing host it merely reused. MTP never treats Runner, Revit, or
     AutoCAD as its child.
 
-11. **Debugging is an optional final phase with IDE-specific interop.** Core,
-    Host, Runtime, Runner protocol, and MTP do not define a generic debugger
-    attach abstraction or `debug-ready` handshake. A Visual Studio, Rider, or
-    C# Dev Kit integration may ask Runner to ensure/locate a host and return its
-    PID, attach through that IDE's supported API, wait for that IDE's attach
-    completion, and only then issue the normal run request. IDE SDK/interop
-    dependencies are allowed only in that optional IDE-specific project.
+11. **Visual Studio host-process debugging is Runner-owned EnvDTE attach.**
+    MTP 2.3 has no public API for `client/attachDebugger`. Until it does,
+    Test Explorer **Debug** is implemented as: MTP/VSTest pass `--debug-parent-pid`
+    when the northbound process already has a debugger attached (that flag implies
+    debug); Runner locates or launches the Autodesk host, then attaches the
+    Visual Studio instance that is debugging that parent PID to the host PID
+    **before** `nunit/run`, and detaches after. `Microsoft.VisualStudio.Interop`
+    and EnvDTE live only in `DevTools.NUnit.Runner/Debugging/`. MTP and the
+    host pipe protocol do not reference Interop, do not define a generic
+    debugger abstraction, and do not add a `debug-ready` handshake. Attach
+    failure warns and the run continues. Revisit this placement if MTP exposes
+    a public attach-debugger API.
 
 12. **Debug-visible generations remain file-backed.** Runtime generations use
     coherent shadow directories and file-backed module/PDB paths even when no
-    debugger feature is installed. This keeps later IDE-specific attachment
-    possible without adding debugger behavior to the runtime protocol.
+    debugger feature is installed. This keeps Visual Studio attachment able to
+    resolve test modules without adding debugger behavior to the runtime protocol.
 
 13. **Native module ownership is explicit.** A `LoadLibrary` call owns one
     reference and must never be balanced by repeated `FreeLibrary` calls.
@@ -191,8 +199,8 @@ matrix.
 4. **P1 — IDE run matrix:** Visual Studio first, Rider through its MTP/custom
    framework route rather than its native NUnit provider, then C# Dev Kit for
    SDK-style modern test projects.
-5. **P2 — Optional IDE-specific debugging:** prove attach-before-run separately
-   for each IDE; accept IDE SDK/interop only inside that IDE integration.
+5. **P2 — Visual Studio Debug:** Runner `--debug` attach-before-run. Rider /
+   C# Dev Kit attach remain separate; do not invent a generic debugger protocol.
 6. **P2 — Optional ergonomics:** source-navigation metadata and source
    generation only after measured need.
 
@@ -234,8 +242,9 @@ Positive:
   more reflection emulation.
 - MTP and CLI reach one Runner/host protocol and result model without a VSTest
   compatibility layer.
-- All process activation and ownership remain outside the IDE compatibility
-  extension.
+- All Autodesk host locate/launch/reuse remains in Runner. MTP never treats
+  Runner, Revit, or AutoCAD as its child. Visual Studio attach is also
+  Runner-owned (`--debug`), not an MTP/Interop package dependency.
 
 Tradeoffs:
 
@@ -247,8 +256,9 @@ Tradeoffs:
   the supported tooling floor.
 - Rider and C# Dev Kit support are release gates backed by live evidence, not
   inferred from an adapter compiling or appearing in the test tree.
-- Debugger automation may differ by IDE or remain unsupported without blocking
-  the core NUnit/MTP release.
+- Visual Studio host Debug uses EnvDTE until MTP exposes `client/attachDebugger`.
+  Attach failure does not fail the test run. Rider / C# Dev Kit are unsupported
+  for automatic host attach.
 - File-backed shadow generations consume temporary disk space until a safe
   cleanup policy can remove generations no longer used by any process.
 

@@ -32,6 +32,22 @@ public sealed class ProcessRunnerClientTests
         Assert.Contains("filter.FullNames", mtp);
         Assert.Contains("ReadToEndAsync()", mtp);
         Assert.Contains("AddArgument(startInfo, argument)", mtp);
+        Assert.Contains("options.DebugParentPid", client);
+        Assert.Contains("command == NUnitRunnerCli.RunCommand ? options.DebugParentPid", client);
+    }
+
+    [Fact]
+    public void Executor_passes_debug_flags_when_run_context_is_being_debugged()
+    {
+        var source = File.ReadAllText(Path.Combine(
+            FindRepositoryRoot(),
+            "source",
+            "DevTools.NUnit.TestAdapter",
+            "DevToolsNUnitExecutor.cs"));
+
+        Assert.Contains("runContext.IsBeingDebugged", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("Debug = true", source, StringComparison.Ordinal);
+        Assert.Contains("DebugParentPid = Environment.ProcessId", source, StringComparison.Ordinal);
     }
 
     private static string FindRepositoryRoot()

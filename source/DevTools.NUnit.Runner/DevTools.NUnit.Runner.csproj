@@ -18,6 +18,8 @@
         <EnableCompressionInSingleFile>true</EnableCompressionInSingleFile>
         <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
         <PolyUseEmbeddedAttribute>true</PolyUseEmbeddedAttribute>
+        <GenerateDocumentationFile>true</GenerateDocumentationFile>
+        <NoWarn>$(NoWarn);1591;1573</NoWarn>
     </PropertyGroup>
 
     <PropertyGroup>
@@ -38,6 +40,14 @@
               Retries="3"
               RetryDelayMilliseconds="1000"/>
     </Target>
+
+    <ItemGroup>
+        <PackageReference Include="Microsoft.VisualStudio.Interop"/>
+        <PackageReference Include="ConsoleAppFramework">
+            <PrivateAssets>all</PrivateAssets>
+            <IncludeAssets>runtime; build; native; contentfiles; analyzers</IncludeAssets>
+        </PackageReference>
+    </ItemGroup>
 
     <ItemGroup>
         <ProjectReference Include="..\DevTools.NUnit.Core\DevTools.NUnit.Core.csproj" SetTargetFramework="TargetFramework=net10.0-windows"/>

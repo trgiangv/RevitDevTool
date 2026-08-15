@@ -15,9 +15,14 @@ controller ships in that installer. The live CAD host executes the tests.
 and push nuget.org (OIDC Trusted Publishing). VSTest stays in-tree and is not
 published.
 
-Host-process debugging is **out of scope**. There is no `--debug` CLI, no Test
-Explorer Debug attach, and no IDE SDK. Attach the IDE debugger to the host
-PID yourself if needed; that is not a product feature.
+Host-process debugging in **Visual Studio Test Explorer Debug** attaches the
+debugger to the Autodesk host before `nunit/run`. MTP/VSTest pass
+`--debug-parent-pid` (that flag implies debug) when the test exe/testhost already
+has a debugger; Runner uses EnvDTE to attach that Visual Studio instance to the
+host PID. `--debug` without a parent PID is for a manual Runner CLI (active Visual
+Studio). Attach failure warns and the tests still run. Rider and C# Dev Kit do
+not get this automatic attach — use **Attach to Process** on the host PID if
+needed. There is no `--debug` wait-for-attach handshake on the host pipe.
 
 Two consumer surfaces share the same Runner/Host: MTP (`RevitDevTool.NUnit`) and
 VSTest (`DevTools.NUnit.TestAdapter`). Keep them on **separate** test projects.
@@ -80,8 +85,10 @@ IDE selected-run uses FullName. Runner composes NUnit `TestFilter` XML for the h
 - IDE / `dotnet test --list-tests` discovery reads PE metadata locally. It does
   **not** start a host process. Runner contacts the host only when tests execute.
 - `HostLaunch=false` reuses a running host with the same `HostName` +
-  `HostVersion`; if none exists, it starts one. `HostLaunch=true` always starts
-  a new host (skip reuse).
+  `HostVersion` (oldest matching PID; no session picker). If none exists, it
+  starts one. `HostLaunch=true` starts a new host for that Runner invocation
+  and waits for that PID's pipe. Launch is a direct child and does not inherit
+  the Runner stdio pipes. Cancel kills the Runner only — not the host.
 - MTP exe never runs NUnit test bodies locally; Runner executes them in the host.
 - Pipe: `DevTools_{Host}_{Version}_{PID}` (same control pipe family as pytest,
   **not** `DevToolsMcp_*`).
@@ -98,11 +105,18 @@ IDE selected-run uses FullName. Runner composes NUnit `TestFilter` XML for the h
 ## CLI
 
 CLI tokens and argument layout: `NUnitRunnerCli` in Core. MTP and Runner must not duplicate those flags.
+The Runner executable is parsed by ConsoleAppFramework; `--version` is the tool version.
 
 ```text
-DevTools.NUnit.Runner discover <assembly> --host Revit --version 2024
-DevTools.NUnit.Runner run <assembly> --host Revit --version 2026 [--name Arithmetic_runs_inside_host]
+DevTools.NUnit.Runner discover <assembly> --host Revit --host-version 2024
+DevTools.NUnit.Runner run <assembly> --host Revit --host-version 2026 [--name Arithmetic_runs_inside_host]
+DevTools.NUnit.Runner run <assembly> --host Revit --host-version 2026 --debug-parent-pid <testhostPid>
 ```
+
+`--debug-parent-pid` is added automatically when Visual Studio Test Explorer **Debug**s an
+MTP or in-tree VSTest project. Do not pass it for ordinary `dotnet test` runs.
+`--debug` without a PID attaches using the active Visual Studio instance (manual CLI).
+`--host-version` is the Autodesk year; `Runner --version` is the tool version.
 
 Runner ships under the ApplicationPlugins bundle `Contents` folder (publish
 `DevTools.NUnit.Runner`).
@@ -114,7 +128,7 @@ Runner ships under the ApplicationPlugins bundle `Contents` folder (publish
 | In-host engine | `ricaun.NUnit` reflective (`TestEngine` / attributes) | Native NUnit 4.6.1 runtime; **no** `NUnit.Engine` in host |
 | Probe load | **Also shadows**: zip test folder → `%TEMP%\RevitTest\` → extract → `Assembly.LoadFile` on the temp copy (then optional zip-back) | Content-addressed generation shadow of test output + Runtime |
 | Transport | Own Console + `PipeTestServer`/`PipeTestClient` (process-named pipe) | Existing `DevToolsPipeServer` + `IHostContextExecutor` |
-| IDE surface | VS-oriented + EnvDTE attach | MTP + VSTest samples; no debugger integration |
+| IDE surface | VS-oriented + EnvDTE attach | MTP + VSTest; VS Test Explorer Debug → Runner `--debug-parent-pid` EnvDTE attach |
 | Package | ricaun NuGet ecosystem | `RevitDevTool.NUnit` (MTP) NuGet, versioned in the MTP csproj; VSTest adapter in-tree |
 | Hosts | Revit-focused product | Revit + AutoCAD family on shared DevTools platform |
 
@@ -200,6 +214,7 @@ so `dotnet test` uses MTP.
 ## Gaps (not done)
 
 - Microsoft Testing Platform / VSTest IDE matrix (VS / Rider / C# Dev Kit)
+- Rider / C# Dev Kit automatic host attach (Visual Studio Test Explorer Debug is implemented)
 - Full NUnit attribute matrix (Theory, explicit, categories, parallel, …)
 - Broader automated host-matrix CI (years × hosts) for NUnit beyond sample smoke
 - nuget.org listing after the first `Publish NUnit` run (`0.0.1`)

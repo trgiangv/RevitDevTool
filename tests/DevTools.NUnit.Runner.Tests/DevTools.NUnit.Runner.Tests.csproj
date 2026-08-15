@@ -19,12 +19,16 @@
     </ItemGroup>
 
     <ItemGroup>
-        <Compile Include="..\..\source\DevTools.NUnit.Runner\Parsing\RunnerCommandParser.cs"
-                 Link="Parsing\RunnerCommandParser.cs" />
+        <Compile Include="..\..\source\DevTools.NUnit.Runner\Parsing\RunnerCommandLine.cs"
+                 Link="Parsing\RunnerCommandLine.cs" />
         <Compile Include="..\..\source\DevTools.NUnit.Runner\Services\NUnitPipeClient.cs"
                  Link="Services\NUnitPipeClient.cs" />
         <Compile Include="..\..\source\DevTools.NUnit.Runner\Services\NUnitRunnerFilter.cs"
                  Link="Services\NUnitRunnerFilter.cs" />
+        <Compile Include="..\..\source\DevTools.NUnit.Runner\Debugging\IVisualStudioAttach.cs"
+                 Link="Debugging\IVisualStudioAttach.cs" />
+        <Compile Include="..\..\source\DevTools.NUnit.Runner\Debugging\HostDebugAttachScope.cs"
+                 Link="Debugging\HostDebugAttachScope.cs" />
     </ItemGroup>
 
     <ItemGroup>

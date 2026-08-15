@@ -95,7 +95,7 @@ public sealed class ProcessRunnerClientTests
                 @"C:\tests\HostTests.dll",
                 "--host",
                 "Revit",
-                "--version",
+                "--host-version",
                 "2026",
                 "--host-timeout",
                 "60",
@@ -103,11 +103,58 @@ public sealed class ProcessRunnerClientTests
                 "180",
                 "--host-launch",
                 "--name",
-                "Arithmetic_runs_inside_host",
+                """["Arithmetic_runs_inside_host"]""",
                 "--test",
-                "HostSmokeTests.Arithmetic",
+                """["HostSmokeTests.Arithmetic"]""",
             ],
             args);
+    }
+
+    [Fact]
+    public void BuildHostArguments_run_adds_debug_flags_when_debugger_is_attached()
+    {
+        var options = new HostRunOptions("Revit", "2026", false, 60, 180, @"C:\Runner.exe");
+        var args = ProcessRunnerClient.BuildHostArguments(
+            "run",
+            @"C:\tests\HostTests.dll",
+            options,
+            RunnerTestFilter.Empty,
+            new FakeDebugSession(attached: true, processId: 4242));
+
+        Assert.DoesNotContain("--debug", args);
+        Assert.Contains("--debug-parent-pid", args);
+        Assert.Contains("4242", args);
+    }
+
+    [Fact]
+    public void BuildHostArguments_omits_debug_flags_when_debugger_is_not_attached()
+    {
+        var options = new HostRunOptions("Revit", "2026", false, 60, 180, @"C:\Runner.exe");
+        var args = ProcessRunnerClient.BuildHostArguments(
+            "run",
+            @"C:\tests\HostTests.dll",
+            options,
+            RunnerTestFilter.Empty,
+            new FakeDebugSession(attached: false, processId: 4242));
+
+        Assert.DoesNotContain("--debug", args);
+        Assert.DoesNotContain("--debug-parent-pid", args);
+        Assert.DoesNotContain("4242", args);
+    }
+
+    [Fact]
+    public void BuildHostArguments_discover_never_adds_debug_flags()
+    {
+        var options = new HostRunOptions("Revit", "2026", false, 60, 180, @"C:\Runner.exe");
+        var args = ProcessRunnerClient.BuildHostArguments(
+            "discover",
+            @"C:\tests\HostTests.dll",
+            options,
+            RunnerTestFilter.Empty,
+            new FakeDebugSession(attached: true, processId: 4242));
+
+        Assert.DoesNotContain("--debug", args);
+        Assert.DoesNotContain("--debug-parent-pid", args);
     }
 }
 
@@ -269,6 +316,13 @@ internal sealed class FakeRunnerTransport : IRunnerTransport
     }
 
     public void Cancel() => Cancelled = true;
+}
+
+internal sealed class FakeDebugSession(bool attached, int processId) : IDebugSession
+{
+    public bool IsAttached { get; } = attached;
+
+    public int ProcessId { get; } = processId;
 }
 
 internal sealed class TempDirectory : IDisposable

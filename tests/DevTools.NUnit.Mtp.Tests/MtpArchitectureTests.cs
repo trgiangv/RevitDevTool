@@ -16,6 +16,10 @@ public sealed class MtpArchitectureTests
             "Revit.exe",
             "acad.exe",
             "Microsoft.Win32.Registry",
+            "EnvDTE",
+            "Microsoft.VisualStudio.Interop",
+            "GetActiveObject",
+            "VisualStudio.DTE",
         };
 
         var offenders = Directory
@@ -76,5 +80,33 @@ public sealed class MtpArchitectureTests
         Assert.Contains("'$(TargetFramework)' == 'net48'", csproj, StringComparison.Ordinal);
         Assert.True(File.Exists(Path.Combine(RepositoryRoot, "props", "ILRepack.targets")));
         Assert.False(File.Exists(Path.Combine(mtpDir, "ILRepack.targets")));
+    }
+
+    [Fact]
+    public void Runner_owns_visual_studio_interop()
+    {
+        var debugging = Path.Combine(
+            RepositoryRoot,
+            "source",
+            "DevTools.NUnit.Runner",
+            "Debugging",
+            "VisualStudioAttach.cs");
+        var attach = File.ReadAllText(debugging);
+        Assert.Contains("EnvDTE", attach, StringComparison.Ordinal);
+        Assert.Contains("DebuggedProcesses", attach, StringComparison.Ordinal);
+
+        var runnerCsproj = File.ReadAllText(Path.Combine(
+            RepositoryRoot,
+            "source",
+            "DevTools.NUnit.Runner",
+            "DevTools.NUnit.Runner.csproj"));
+        Assert.Contains("Microsoft.VisualStudio.Interop", runnerCsproj, StringComparison.Ordinal);
+
+        var mtpCsproj = File.ReadAllText(Path.Combine(
+            RepositoryRoot,
+            "source",
+            "DevTools.NUnit.Mtp",
+            "DevTools.NUnit.Mtp.csproj"));
+        Assert.DoesNotContain("Microsoft.VisualStudio.Interop", mtpCsproj, StringComparison.Ordinal);
     }
 }

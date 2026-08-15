@@ -50,4 +50,5 @@ public sealed record RunnerHostOptions(
     bool HostLaunch,
     int HostTimeoutSeconds,
     int HostLaunchTimeoutSeconds,
-    string? RunnerPath);
+    string? RunnerPath,
+    int? DebugParentPid = null);

@@ -7,10 +7,10 @@ public static class NUnitRunnerFilter
     private const string InvalidFilterMessage =
         "Filter must be empty, --name/--test selection, or NUnit framework filter XML (starting with '<').";
 
-    private const string MixedFilterMessage =
+    internal const string MixedFilterMessage =
         "Specify --name/--test or --filter, not both.";
 
-    private static string? Compose(
+    internal static string? Compose(
         IReadOnlyList<string>? names,
         IReadOnlyList<string>? tests,
         string? xml)
