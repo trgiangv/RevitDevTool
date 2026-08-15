@@ -1,6 +1,7 @@
 using System.Text.RegularExpressions;
 using DevTools.Logging;
 using Microsoft.Win32;
+// ReSharper disable RedundantSuppressNullableWarningExpression
 namespace DevTools.Utilities.Hosting.Resolver;
 
 /// <summary>Discovers AutoCAD-family installations via registry and filesystem.</summary>
