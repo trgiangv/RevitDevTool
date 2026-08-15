@@ -1,3 +1,4 @@
+using DevTools.NUnit.Core;
 using DevTools.NUnit.TestAdapter.Models;
 using Microsoft.VisualStudio.TestPlatform.ObjectModel.Adapter;
 
@@ -82,14 +83,11 @@ internal static class AdapterSettings
 
     private static void ApplyEnvironmentOverrides(DevToolsNUnitSettingsModel model)
     {
-        model.HostName = ReadEnvironment(DevToolsNUnitConstants.HostEnvironmentVariable, model.HostName);
-        model.HostVersion = ReadEnvironment(DevToolsNUnitConstants.HostVersionEnvironmentVariable, model.HostVersion);
-        model.RunnerPath = ReadEnvironment(DevToolsNUnitConstants.RunnerPathEnvironmentVariable, model.RunnerPath);
-    }
-
-    private static string? ReadEnvironment(string variable, string? current)
-    {
-        var value = Environment.GetEnvironmentVariable(variable);
-        return string.IsNullOrWhiteSpace(value) ? current : value.Trim();
+        model.HostName = NUnitRunnerPaths.ReadEnvironment(NUnitRunnerPaths.HostEnvironmentVariable)
+            ?? model.HostName;
+        model.HostVersion = NUnitRunnerPaths.ReadEnvironment(NUnitRunnerPaths.HostVersionEnvironmentVariable)
+            ?? model.HostVersion;
+        model.RunnerPath = NUnitRunnerPaths.ReadEnvironment(NUnitRunnerPaths.RunnerPathEnvironmentVariable)
+            ?? model.RunnerPath;
     }
 }

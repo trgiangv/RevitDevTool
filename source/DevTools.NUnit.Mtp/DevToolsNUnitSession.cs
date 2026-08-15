@@ -1,3 +1,4 @@
+using DevTools.NUnit.Core;
 using DevTools.NUnit.Core.Contracts;
 
 namespace DevTools.NUnit.Mtp;
@@ -10,12 +11,6 @@ internal sealed class DevToolsNUnitSession
     {
         _transport = transport ?? throw new ArgumentNullException(nameof(transport));
     }
-
-    internal IReadOnlyList<NUnitDiscoveredTest> Discover(
-        string assemblyPath,
-        HostRunOptions options,
-        RunnerTestFilter filter) =>
-        _transport.Discover(RequireAssembly(assemblyPath), options, filter);
 
     internal IReadOnlyList<NUnitCaseResult> Run(
         string assemblyPath,

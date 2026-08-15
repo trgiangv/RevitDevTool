@@ -257,9 +257,6 @@ internal sealed class NUnitRuntimeSessionHandle : INUnitRuntimeSession
     internal Assembly GetLoadedRuntimeAssembly() =>
         _inner.GetType().Assembly;
 
-    internal NUnitRuntimeLoadContext GetLoadContext() =>
-        _loadContext ?? throw new ObjectDisposedException(nameof(NUnitRuntimeSessionHandle));
-
     public NUnitDiscoverResponse Discover(NUnitDiscoverRequest request) => _inner.Discover(request);
 
     public NUnitRunResponse Run(

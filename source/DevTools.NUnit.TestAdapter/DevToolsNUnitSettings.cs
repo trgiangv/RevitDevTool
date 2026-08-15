@@ -1,6 +1,5 @@
 using DevTools.NUnit.Core;
 using DevTools.NUnit.TestAdapter.Models;
-using DevTools.NUnit.TestAdapter.Runner;
 
 namespace DevTools.NUnit.TestAdapter;
 
@@ -33,16 +32,8 @@ internal sealed record DevToolsNUnitSettings(
             ReadBool(settings.HostLaunch, false),
             ReadPositiveInt(settings.HostTimeout, DefaultHostTimeoutSeconds),
             ReadPositiveInt(settings.HostLaunchTimeout, DefaultHostLaunchTimeoutSeconds),
-            ExpandPath(settings.RunnerPath),
+            NUnitRunnerPaths.ExpandPath(settings.RunnerPath),
             ReadCollectSourceInformation(runConfiguration.CollectSourceInformation));
-
-    private static string? ExpandPath(string? value)
-    {
-        if (string.IsNullOrWhiteSpace(value))
-            return null;
-
-        return Environment.ExpandEnvironmentVariables(value!.Trim());
-    }
 
     private static string Require(string? value, string settingName)
     {
@@ -80,6 +71,6 @@ internal sealed record DevToolsNUnitSettings(
         return !bool.TryParse(value!.Trim(), out var parsed) || parsed;
     }
 
-    public RunnerHostOptions ToRunnerHostOptions() =>
+    public HostRunOptions ToHostRunOptions() =>
         new(Host, HostVersion, HostLaunch, HostTimeoutSeconds, HostLaunchTimeoutSeconds, RunnerPath);
 }

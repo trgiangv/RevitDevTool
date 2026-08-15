@@ -9,30 +9,6 @@ namespace DevTools.NUnit.Mtp.Tests;
 public sealed class DevToolsNUnitSessionTests
 {
     [Fact]
-    public void Discover_forwards_assembly_and_filter_to_transport()
-    {
-        var transport = new FakeRunnerTransport
-        {
-            Discovered =
-            [
-                new NUnitDiscoveredTest("id-1", "Arithmetic", "HostSmokeTests.Arithmetic"),
-            ],
-        };
-        var session = new DevToolsNUnitSession(transport);
-        var assembly = Path.Combine(Path.GetTempPath(), "sample.dll");
-        var options = new HostRunOptions("Revit", "2026", false, 60, 180, @"C:\Runner.exe");
-
-        var cases = session.Discover(
-            assembly,
-            options,
-            RunnerTestFilter.FromFullNames("HostSmokeTests.Arithmetic"));
-
-        Assert.Equal(Path.GetFullPath(assembly), transport.LastAssemblyPath);
-        Assert.Equal(["HostSmokeTests.Arithmetic"], transport.LastFilter.FullNames.ToArray());
-        Assert.Equal("Arithmetic", Assert.Single(cases).Name);
-    }
-
-    [Fact]
     public void Metadata_filter_keeps_matching_names()
     {
         var tests = new[]
@@ -84,7 +60,6 @@ public sealed class ProcessRunnerClientTests
     {
         var options = new HostRunOptions("Revit", "2026", true, 60, 180, @"C:\Runner.exe");
         var args = ProcessRunnerClient.BuildHostArguments(
-            "run",
             @"C:\tests\HostTests.dll",
             options,
             new RunnerTestFilter(["Arithmetic_runs_inside_host"], ["HostSmokeTests.Arithmetic"]));
@@ -111,15 +86,13 @@ public sealed class ProcessRunnerClientTests
     }
 
     [Fact]
-    public void BuildHostArguments_run_adds_debug_flags_when_debugger_is_attached()
+    public void BuildHostArguments_run_adds_debug_flags_when_parent_pid_is_set()
     {
-        var options = new HostRunOptions("Revit", "2026", false, 60, 180, @"C:\Runner.exe");
+        var options = new HostRunOptions("Revit", "2026", false, 60, 180, @"C:\Runner.exe", DebugParentPid: 4242);
         var args = ProcessRunnerClient.BuildHostArguments(
-            "run",
             @"C:\tests\HostTests.dll",
             options,
-            RunnerTestFilter.Empty,
-            new FakeDebugSession(attached: true, processId: 4242));
+            RunnerTestFilter.Empty);
 
         Assert.DoesNotContain("--debug", args);
         Assert.Contains("--debug-parent-pid", args);
@@ -127,34 +100,17 @@ public sealed class ProcessRunnerClientTests
     }
 
     [Fact]
-    public void BuildHostArguments_omits_debug_flags_when_debugger_is_not_attached()
+    public void BuildHostArguments_omits_debug_flags_when_parent_pid_is_absent()
     {
         var options = new HostRunOptions("Revit", "2026", false, 60, 180, @"C:\Runner.exe");
         var args = ProcessRunnerClient.BuildHostArguments(
-            "run",
             @"C:\tests\HostTests.dll",
             options,
-            RunnerTestFilter.Empty,
-            new FakeDebugSession(attached: false, processId: 4242));
+            RunnerTestFilter.Empty);
 
         Assert.DoesNotContain("--debug", args);
         Assert.DoesNotContain("--debug-parent-pid", args);
         Assert.DoesNotContain("4242", args);
-    }
-
-    [Fact]
-    public void BuildHostArguments_discover_never_adds_debug_flags()
-    {
-        var options = new HostRunOptions("Revit", "2026", false, 60, 180, @"C:\Runner.exe");
-        var args = ProcessRunnerClient.BuildHostArguments(
-            "discover",
-            @"C:\tests\HostTests.dll",
-            options,
-            RunnerTestFilter.Empty,
-            new FakeDebugSession(attached: true, processId: 4242));
-
-        Assert.DoesNotContain("--debug", args);
-        Assert.DoesNotContain("--debug-parent-pid", args);
     }
 }
 
@@ -291,19 +247,7 @@ internal sealed class FakeRunnerTransport : IRunnerTransport
 
     internal bool Cancelled { get; private set; }
 
-    internal IReadOnlyList<NUnitDiscoveredTest> Discovered { get; set; } = [];
-
     internal IReadOnlyList<NUnitCaseResult> Results { get; set; } = [];
-
-    public IReadOnlyList<NUnitDiscoveredTest> Discover(
-        string assemblyPath,
-        HostRunOptions options,
-        RunnerTestFilter filter)
-    {
-        LastAssemblyPath = assemblyPath;
-        LastFilter = filter;
-        return Discovered;
-    }
 
     public IReadOnlyList<NUnitCaseResult> Run(
         string assemblyPath,
@@ -316,13 +260,6 @@ internal sealed class FakeRunnerTransport : IRunnerTransport
     }
 
     public void Cancel() => Cancelled = true;
-}
-
-internal sealed class FakeDebugSession(bool attached, int processId) : IDebugSession
-{
-    public bool IsAttached { get; } = attached;
-
-    public int ProcessId { get; } = processId;
 }
 
 internal sealed class TempDirectory : IDisposable

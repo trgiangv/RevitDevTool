@@ -44,8 +44,52 @@ public sealed class MtpArchitectureTests
 
         Assert.Contains("NUnitMetadataDiscoverer.Discover", framework, StringComparison.Ordinal);
         Assert.DoesNotContain("session.Discover", framework, StringComparison.Ordinal);
+        Assert.DoesNotContain("_transport.Discover", framework, StringComparison.Ordinal);
+        Assert.DoesNotContain("IDebugSession", framework, StringComparison.Ordinal);
+        Assert.DoesNotContain("SystemDebugSession", framework, StringComparison.Ordinal);
+        Assert.Contains("Debugger.IsAttached", framework, StringComparison.Ordinal);
         Assert.Contains("EnsureSession()", framework, StringComparison.Ordinal);
         Assert.Contains("PublishRunAsync(EnsureSession()", framework, StringComparison.Ordinal);
+        Assert.Contains("ApplyDebugParent", framework, StringComparison.Ordinal);
+
+        var session = File.ReadAllText(Path.Combine(
+            RepositoryRoot,
+            "source",
+            "DevTools.NUnit.Mtp",
+            "DevToolsNUnitSession.cs"));
+        Assert.DoesNotContain("Discover(", session, StringComparison.Ordinal);
+
+        var client = File.ReadAllText(Path.Combine(
+            RepositoryRoot,
+            "source",
+            "DevTools.NUnit.Core",
+            "Client",
+            "ProcessRunnerClient.cs"));
+        Assert.DoesNotContain("NUnitRunnerCli.DiscoverCommand", client, StringComparison.Ordinal);
+        Assert.DoesNotContain("IReadOnlyList<NUnitDiscoveredTest> Discover", client, StringComparison.Ordinal);
+
+        var transport = File.ReadAllText(Path.Combine(
+            RepositoryRoot,
+            "source",
+            "DevTools.NUnit.Core",
+            "Client",
+            "IRunnerTransport.cs"));
+        Assert.DoesNotContain("Discover(", transport, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Mtp_and_vstest_share_the_runner_client_via_linked_core_files()
+    {
+        var client = Path.Combine(RepositoryRoot, "source", "DevTools.NUnit.Core", "Client", "ProcessRunnerClient.cs");
+        Assert.True(File.Exists(client));
+
+        var coreCsproj = File.ReadAllText(Path.Combine(
+            RepositoryRoot, "source", "DevTools.NUnit.Core", "DevTools.NUnit.Core.csproj"));
+        Assert.Contains("Compile Remove=\"Client\\**\"", coreCsproj, StringComparison.Ordinal);
+
+        Assert.False(File.Exists(Path.Combine(
+            RepositoryRoot, "source", "DevTools.NUnit.Mtp", "ProcessRunnerClient.cs")));
+        Assert.False(Directory.Exists(Path.Combine(RepositoryRoot, "source", "DevTools.NUnit.Client")));
     }
 
     [Fact]

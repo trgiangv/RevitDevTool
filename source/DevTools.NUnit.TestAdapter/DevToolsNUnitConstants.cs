@@ -8,9 +8,9 @@ public static class DevToolsNUnitConstants
     public const string TestIdProperty = "DevTools.NUnit.TestId";
     public const string TestFullNameProperty = "DevTools.NUnit.FullName";
 
-    public const string HostEnvironmentVariable = "DEVTOOLS_NUNIT_HOST";
-    public const string HostVersionEnvironmentVariable = "DEVTOOLS_NUNIT_HOST_VERSION";
-    public const string RunnerPathEnvironmentVariable = "DEVTOOLS_NUNIT_RUNNER_PATH";
+    public const string HostEnvironmentVariable = NUnitRunnerPaths.HostEnvironmentVariable;
+    public const string HostVersionEnvironmentVariable = NUnitRunnerPaths.HostVersionEnvironmentVariable;
+    public const string RunnerPathEnvironmentVariable = NUnitRunnerPaths.RunnerPathEnvironmentVariable;
 
     public const string SidecarRunSettingsFileName = "DevTools.NUnit.runsettings";
 

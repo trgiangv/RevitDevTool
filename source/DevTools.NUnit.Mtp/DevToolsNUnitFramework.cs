@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using Microsoft.Testing.Platform.CommandLine;
 using Microsoft.Testing.Platform.Extensions.Messages;
 using Microsoft.Testing.Platform.Extensions.TestFramework;
@@ -104,8 +105,8 @@ internal sealed class DevToolsNUnitFramework : ITestFramework, IDataProducer
         RunTestExecutionRequest request,
         ExecuteRequestContext context)
     {
-        var options = _options
-            ?? throw new InvalidOperationException("Host run options were not loaded.");
+        var options = ApplyDebugParent(
+            _options ?? throw new InvalidOperationException("Host run options were not loaded."));
         var filter = ResolveRunnerFilter(request.Filter);
         IReadOnlyList<NUnitCaseResult> results;
         try
@@ -167,6 +168,11 @@ internal sealed class DevToolsNUnitFramework : ITestFramework, IDataProducer
             ? arguments[0]
             : null;
     }
+
+    private static HostRunOptions ApplyDebugParent(HostRunOptions options) =>
+        Debugger.IsAttached
+            ? options with { DebugParentPid = Environment.ProcessId }
+            : options;
 
     private DevToolsNUnitSession EnsureSession()
     {

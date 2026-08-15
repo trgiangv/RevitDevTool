@@ -1,10 +1,12 @@
+using DevTools.NUnit.Core;
+
 namespace DevTools.NUnit.TestAdapter.Runner;
 
-public static class RunnerClientFactory
+internal static class RunnerClientFactory
 {
-    public static IRunnerClient Create()
+    public static ProcessRunnerClient Create()
     {
-        var options = AdapterSettings.Current.ToRunnerHostOptions();
+        var options = AdapterSettings.Current.ToHostRunOptions();
         return new ProcessRunnerClient(ProcessRunnerClient.ResolveRunnerPath(options));
     }
 }

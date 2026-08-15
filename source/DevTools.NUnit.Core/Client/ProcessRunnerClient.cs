@@ -1,12 +1,15 @@
 using System.Diagnostics;
 using System.Text;
 using System.Text.Json;
-using DevTools.NUnit.Core;
 using DevTools.NUnit.Core.Contracts;
 
-namespace DevTools.NUnit.TestAdapter.Runner;
+namespace DevTools.NUnit.Core;
 
-public sealed class ProcessRunnerClient : IRunnerClient, IDisposable
+/// <summary>
+/// Spawns the bundled Runner exe for <c>run</c>, captures JSON stdout, and kills the child on cancel.
+/// Linked into MTP and VSTest; not compiled into the in-host Core DLL.
+/// </summary>
+internal sealed class ProcessRunnerClient : IRunnerTransport, IDisposable
 {
     private static readonly JsonSerializerOptions WireJsonOptions = new()
     {
@@ -18,7 +21,7 @@ public sealed class ProcessRunnerClient : IRunnerClient, IDisposable
     private Process? _activeProcess;
     private readonly Lock _processLock = new();
 
-    public ProcessRunnerClient(string runnerPath)
+    internal ProcessRunnerClient(string runnerPath)
     {
         if (string.IsNullOrWhiteSpace(runnerPath))
             throw new ArgumentException("Runner path is required.", nameof(runnerPath));
@@ -26,28 +29,15 @@ public sealed class ProcessRunnerClient : IRunnerClient, IDisposable
         _runnerPath = runnerPath;
     }
 
-    public IReadOnlyList<RemoteTestCase> Discover(
+    public IReadOnlyList<NUnitCaseResult> Run(
         string assemblyPath,
-        RunnerHostOptions options,
+        HostRunOptions options,
         RunnerTestFilter filter)
     {
-        var output = RunRunner(options, BuildHostArguments(NUnitRunnerCli.DiscoverCommand, assemblyPath, options, filter));
-        var response = JsonSerializer.Deserialize<NUnitDiscoverResponse>(output, WireJsonOptions)
-            ?? throw new InvalidOperationException("Runner discover returned empty JSON.");
-        return response.Cases
-            .Select(test => new RemoteTestCase(test.Id, test.Name, test.FullName, assemblyPath))
-            .ToList();
-    }
-
-    public RemoteRunResult Run(
-        string assemblyPath,
-        RunnerHostOptions options,
-        RunnerTestFilter filter)
-    {
-        var output = RunRunner(options, BuildHostArguments(NUnitRunnerCli.RunCommand, assemblyPath, options, filter));
+        var output = RunRunner(options, BuildHostArguments(assemblyPath, options, filter));
         var response = JsonSerializer.Deserialize<NUnitRunResponse>(output, WireJsonOptions)
             ?? throw new InvalidOperationException("Runner run returned empty JSON.");
-        return new RemoteRunResult(response.Cases.Select(MapCase).ToList());
+        return response.Cases;
     }
 
     public void Cancel()
@@ -74,12 +64,11 @@ public sealed class ProcessRunnerClient : IRunnerClient, IDisposable
     public void Dispose() => Cancel();
 
     internal static IReadOnlyList<string> BuildHostArguments(
-        string command,
         string source,
-        RunnerHostOptions options,
+        HostRunOptions options,
         RunnerTestFilter filter) =>
         NUnitRunnerCli.BuildArguments(
-            command,
+            NUnitRunnerCli.RunCommand,
             source,
             options.Host,
             options.HostVersion,
@@ -88,28 +77,12 @@ public sealed class ProcessRunnerClient : IRunnerClient, IDisposable
             options.HostLaunch,
             filter.Names,
             filter.FullNames,
-            debugParentPid: command == NUnitRunnerCli.RunCommand ? options.DebugParentPid : null);
+            debugParentPid: options.DebugParentPid);
 
-    internal static string ResolveRunnerPath(RunnerHostOptions options)
-    {
-        if (IsRunnable(options.RunnerPath))
-            return Path.GetFullPath(options.RunnerPath!);
+    internal static string ResolveRunnerPath(HostRunOptions options) =>
+        NUnitRunnerPaths.ResolveRunnerPath(options.RunnerPath);
 
-        var bundlePath = Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
-            "Autodesk",
-            "ApplicationPlugins",
-            "RevitDevTool.bundle",
-            "Contents",
-            "DevTools.NUnit.Runner.exe");
-        if (IsRunnable(bundlePath))
-            return bundlePath;
-
-        throw new InvalidOperationException(
-            "RevitDevTool is not installed. Install it from https://github.com/trgiangv/RevitDevTool");
-    }
-
-    private string RunRunner(RunnerHostOptions options, IReadOnlyList<string> arguments)
+    private string RunRunner(HostRunOptions options, IReadOnlyList<string> arguments)
     {
         var startInfo = new ProcessStartInfo
         {
@@ -149,7 +122,7 @@ public sealed class ProcessRunnerClient : IRunnerClient, IDisposable
                 // Best effort.
             }
 
-            _ = Task.WaitAll([stdoutTask, stderrTask], 5_000);
+            Task.WaitAll([stdoutTask, stderrTask], 5_000);
             lock (_processLock)
                 _activeProcess = null;
 
@@ -185,9 +158,6 @@ public sealed class ProcessRunnerClient : IRunnerClient, IDisposable
         return stdout.Trim();
     }
 
-    private static bool IsRunnable(string? path) =>
-        !string.IsNullOrWhiteSpace(path) && File.Exists(path);
-
     private static void AddArgument(ProcessStartInfo startInfo, string argument)
     {
 #if NETFRAMEWORK
@@ -208,13 +178,4 @@ public sealed class ProcessRunnerClient : IRunnerClient, IDisposable
         return "\"" + value.Replace("\"", "\\\"") + "\"";
     }
 #endif
-
-    private static RemoteTestCaseResult MapCase(NUnitCaseResult result) =>
-        new(
-            result.Name,
-            result.Outcome,
-            result.DurationMs,
-            result.Message,
-            result.StackTrace,
-            result.Output);
 }

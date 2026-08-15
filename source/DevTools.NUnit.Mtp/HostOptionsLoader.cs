@@ -1,12 +1,10 @@
 using System.Text.Json;
+using DevTools.NUnit.Core;
 
 namespace DevTools.NUnit.Mtp;
 
 internal static class HostOptionsLoader
 {
-    private const string HostEnvironmentVariable = "DEVTOOLS_NUNIT_HOST";
-    private const string HostVersionEnvironmentVariable = "DEVTOOLS_NUNIT_HOST_VERSION";
-    private const string RunnerPathEnvironmentVariable = "DEVTOOLS_NUNIT_RUNNER_PATH";
     internal const string OptionsFileName = "devtools.nunit.host.json";
 
     private const string MissingConfigMessage =
@@ -25,9 +23,11 @@ internal static class HostOptionsLoader
             throw new InvalidOperationException(MissingConfigMessage);
 
         var options = ReadFile(path);
-        var host = ReadEnvironment(HostEnvironmentVariable) ?? options.Host;
-        var hostVersion = ReadEnvironment(HostVersionEnvironmentVariable) ?? options.HostVersion;
-        var runnerPath = ReadEnvironment(RunnerPathEnvironmentVariable) ?? options.RunnerPath;
+        var host = NUnitRunnerPaths.ReadEnvironment(NUnitRunnerPaths.HostEnvironmentVariable) ?? options.Host;
+        var hostVersion = NUnitRunnerPaths.ReadEnvironment(NUnitRunnerPaths.HostVersionEnvironmentVariable)
+            ?? options.HostVersion;
+        var runnerPath = NUnitRunnerPaths.ReadEnvironment(NUnitRunnerPaths.RunnerPathEnvironmentVariable)
+            ?? options.RunnerPath;
 
         if (string.IsNullOrWhiteSpace(host) || string.IsNullOrWhiteSpace(hostVersion))
             throw new InvalidOperationException(MissingConfigMessage);
@@ -36,7 +36,7 @@ internal static class HostOptionsLoader
         {
             Host = host.Trim(),
             HostVersion = hostVersion.Trim(),
-            RunnerPath = ExpandPath(runnerPath),
+            RunnerPath = NUnitRunnerPaths.ExpandPath(runnerPath),
         };
     }
 
@@ -58,21 +58,7 @@ internal static class HostOptionsLoader
             model.HostLaunch,
             model.HostTimeoutSeconds,
             model.HostLaunchTimeoutSeconds,
-            ExpandPath(model.RunnerPath));
-    }
-
-    private static string? ReadEnvironment(string variable)
-    {
-        var value = Environment.GetEnvironmentVariable(variable);
-        return string.IsNullOrWhiteSpace(value) ? null : value.Trim();
-    }
-
-    private static string? ExpandPath(string? value)
-    {
-        if (string.IsNullOrWhiteSpace(value))
-            return null;
-
-        return Environment.ExpandEnvironmentVariables(value!.Trim());
+            NUnitRunnerPaths.ExpandPath(model.RunnerPath));
     }
 
     [UsedImplicitly(ImplicitUseTargetFlags.Members)]

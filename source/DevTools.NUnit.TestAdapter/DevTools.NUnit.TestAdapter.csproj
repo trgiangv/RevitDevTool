@@ -56,6 +56,11 @@
         <Compile Include="..\DevTools.NUnit.Core\Contracts\NUnitRunnerCli.cs" Link="Core\Contracts\NUnitRunnerCli.cs"/>
         <Compile Include="..\DevTools.NUnit.Core\NUnitHostTiming.cs" Link="Core\NUnitHostTiming.cs"/>
         <Compile Include="..\DevTools.NUnit.Core\Discovery\NUnitMetadataDiscoverer.cs" Link="Core\Discovery\NUnitMetadataDiscoverer.cs"/>
+        <Compile Include="..\DevTools.NUnit.Core\Client\HostRunOptions.cs" Link="Core\Client\HostRunOptions.cs"/>
+        <Compile Include="..\DevTools.NUnit.Core\Client\RunnerTestFilter.cs" Link="Core\Client\RunnerTestFilter.cs"/>
+        <Compile Include="..\DevTools.NUnit.Core\Client\IRunnerTransport.cs" Link="Core\Client\IRunnerTransport.cs"/>
+        <Compile Include="..\DevTools.NUnit.Core\Client\NUnitRunnerPaths.cs" Link="Core\Client\NUnitRunnerPaths.cs"/>
+        <Compile Include="..\DevTools.NUnit.Core\Client\ProcessRunnerClient.cs" Link="Core\Client\ProcessRunnerClient.cs"/>
     </ItemGroup>
 
 </Project>

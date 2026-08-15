@@ -1,3 +1,5 @@
+using DevTools.NUnit.Core;
+using DevTools.NUnit.Core.Contracts;
 using DevTools.NUnit.TestAdapter.Runner;
 using Microsoft.VisualStudio.TestPlatform.ObjectModel;
 using Microsoft.VisualStudio.TestPlatform.ObjectModel.Adapter;
@@ -9,7 +11,7 @@ namespace DevTools.NUnit.TestAdapter;
 [UsedImplicitly]
 public sealed class DevToolsNUnitExecutor : ITestExecutor
 {
-    private IRunnerClient? _client;
+    private ProcessRunnerClient? _client;
     private readonly Lock _clientLock = new();
 
     public void RunTests(IEnumerable<TestCase>? tests, IRunContext? runContext, IFrameworkHandle? frameworkHandle)
@@ -75,7 +77,7 @@ public sealed class DevToolsNUnitExecutor : ITestExecutor
             return;
 
         var settings = AdapterSettings.Current;
-        var options = settings.ToRunnerHostOptions();
+        var options = settings.ToHostRunOptions();
         if (runContext.IsBeingDebugged)
             options = options with { DebugParentPid = Environment.ProcessId };
 
@@ -104,7 +106,7 @@ public sealed class DevToolsNUnitExecutor : ITestExecutor
 
     private static void ReportResults(
         IReadOnlyList<TestCase> requestedTests,
-        RemoteRunResult result,
+        IReadOnlyList<NUnitCaseResult> result,
         IFrameworkHandle frameworkHandle)
     {
         var byName = requestedTests
@@ -112,7 +114,7 @@ public sealed class DevToolsNUnitExecutor : ITestExecutor
             .ToDictionary(group => group.Key, group => group.First(), StringComparer.Ordinal);
 
         var reported = new HashSet<string>(StringComparer.Ordinal);
-        foreach (var remoteCase in result.Cases)
+        foreach (var remoteCase in result)
         {
             if (!byName.TryGetValue(remoteCase.Name, out var testCase))
                 continue;
@@ -134,7 +136,7 @@ public sealed class DevToolsNUnitExecutor : ITestExecutor
         }
     }
 
-    private IRunnerClient GetClient()
+    private ProcessRunnerClient GetClient()
     {
         lock (_clientLock)
             return _client ??= RunnerClientFactory.Create();
