@@ -10,8 +10,8 @@ controller ships in that installer. The live CAD host executes the tests.
 
 **Experimental.** Discover / run / progress work end-to-end. `RevitDevTool.NUnit`
 (MTP) is published independently of the RevitDevTool installer. Version is
-`<Version>` in `source/DevTools.NUnit.Mtp/DevTools.NUnit.Mtp.csproj` (starts at
-`0.0.1`). Run `.github/workflows/PublishNUnit.yml` from GitHub Actions to pack
+`<Version>` in `source/DevTools.NUnit.Mtp/DevTools.NUnit.Mtp.csproj` (currently
+`0.0.4`). Run `.github/workflows/PublishNUnit.yml` from GitHub Actions to pack
 and push nuget.org (OIDC Trusted Publishing). VSTest stays in-tree and is not
 published.
 
@@ -31,11 +31,11 @@ VSTest (`DevTools.NUnit.TestAdapter`). Keep them on **separate** test projects.
 
 | Project | Role |
 |---------|------|
-| `DevTools.NUnit.Core` | `nunit/*` wire contracts, timing, protocol version |
+| `DevTools.NUnit.Core` | `nunit/*` wire contracts, timing, protocol version. Out-of-process Runner client (`Client/`, linked into MTP/VSTest, not in the host DLL) |
 | `DevTools.NUnit.Host` | Native NUnit runtime in the CAD host |
-| `DevTools.NUnit.Runner` | CLI controller: find/launch host pipe, discover/run |
-| `DevTools.NUnit.Mtp` | MTP framework (`PackageId=RevitDevTool.NUnit`); proxies to Runner |
-| `DevTools.NUnit.TestAdapter` | VSTest adapter; same Runner/Host contract |
+| `DevTools.NUnit.Runner` | CLI: PE discover locally; find/launch host pipe only on **run** |
+| `DevTools.NUnit.Mtp` | MTP framework (`PackageId=RevitDevTool.NUnit`); PE discover in-process; Runner only on **run** |
+| `DevTools.NUnit.TestAdapter` | VSTest adapter; same PE discover + Runner **run** contract |
 
 `RevitDevTool.NUnit` is an independent test-platform package. Consumers set
 `HostName` / `HostVersion` / launch timeouts; the package does not read this
@@ -82,8 +82,8 @@ IDE selected-run uses FullName. Runner composes NUnit `TestFilter` XML for the h
 
 ## Behavior
 
-- IDE / `dotnet test --list-tests` discovery reads PE metadata locally. It does
-  **not** start a host process. Runner contacts the host only when tests execute.
+- IDE / `dotnet test --list-tests` / `Runner discover` read PE metadata locally.
+  They do **not** start a host process. Runner contacts the host only on `run`.
 - `HostLaunch=false` reuses a running host with the same `HostName` +
   `HostVersion` (oldest matching PID; no session picker). If none exists, it
   starts one. `HostLaunch=true` starts a new host for that Runner invocation
