@@ -10,7 +10,6 @@ using DevTools.NUnit.Host;
 using DevTools.Presentation;
 using DevTools.Presentation.Interfaces;
 using DevTools.Settings;
-using DevTools.Utilities.AssemblyLoading;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
@@ -25,9 +24,9 @@ using AcadDevTool.View;
 using ZLogger.Scintilla.Public;
 // ReSharper disable ConvertToExtensionBlock
 
-namespace AcadDevTool.Hosting;
+namespace AcadDevTool.Composition;
 
-internal static class AcadHostingExtensions
+internal static class AcadServiceRegistration
 {
     internal static HostApplicationBuilder AddSettingServices(this HostApplicationBuilder builder, string contentRoot)
     {
@@ -60,7 +59,6 @@ internal static class AcadHostingExtensions
     {
         var services = builder.Services;
 
-        services.AddAutocadInProcess();
         services.AddHostedService<HostBackgroundController>();
         services.AddSingleton<IHostAppInfo, AcadHostAppInfo>();
         services.AddSingleton<IContextEnricher>(sp =>
@@ -101,11 +99,4 @@ internal static class AcadHostingExtensions
 
         return builder;
     }
-
-    internal static IServiceCollection AddAutocadInProcess(this IServiceCollection services)
-    {
-        HostSharedAssemblies.Use(new AcadSharedAssemblyPolicy());
-        return services;
-    }
 }
-

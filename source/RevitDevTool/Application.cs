@@ -1,8 +1,10 @@
 using DevTools.Utilities;
+using DevTools.Utilities.AssemblyLoading;
 using Nice3point.Revit.Extensions.UI;
 using Autodesk.Revit.DB.Events;
 using RevitDevTool.CommandBrowser;
 using RevitDevTool.Commands;
+using RevitDevTool.Composition;
 using RevitDevTool.Controllers;
 
 namespace RevitDevTool;
@@ -16,6 +18,7 @@ public class Application : IExternalApplication
     {
         _application = application;
         AssemblyLoader.Initialize();
+        HostSharedAssemblies.Use(RevitHostApiAssemblies.Set);
         Host.Start();
         AddButtons(application);
         application.ControlledApplication.ApplicationInitialized += OnApplicationInitialized;

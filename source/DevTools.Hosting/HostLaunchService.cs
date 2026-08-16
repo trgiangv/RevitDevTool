@@ -42,13 +42,7 @@ public sealed class HostLaunchService : IHostLaunchService
         if (pathResolver is null || argumentBuilder is null)
             throw new InvalidOperationException($"Launch not yet supported for {request.HostApp}.");
 
-        var version = request.Version;
-        if (string.IsNullOrWhiteSpace(version))
-        {
-            var installed = pathResolver.GetInstalledVersions(request.HostApp);
-            version = installed.Count > 0 ? installed[0] : null;
-        }
-
+        var version = ResolveVersion(request, pathResolver);
         if (string.IsNullOrWhiteSpace(version))
             throw new InvalidOperationException($"No compatible {request.HostApp} version found.");
 
@@ -72,6 +66,20 @@ public sealed class HostLaunchService : IHostLaunchService
             resolved.LanguageCulture,
             arguments,
             dialogSession);
+    }
+
+    /// <summary>
+    /// Newest installed year when the request omits Version.
+    /// Revit file-year selection lives in Hosting.Revit
+    /// (<c>RevitFileAwareHostLaunchService</c>) and supplies Version before this runs.
+    /// </summary>
+    private static string? ResolveVersion(HostLaunchRequest request, IHostPathResolver pathResolver)
+    {
+        if (!string.IsNullOrWhiteSpace(request.Version))
+            return request.Version;
+
+        var installed = pathResolver.GetInstalledVersions(request.HostApp);
+        return installed.Count > 0 ? installed[0] : null;
     }
 
     private static Process StartProcess(HostApp hostApp, string exePath, IReadOnlyList<string> arguments)

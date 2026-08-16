@@ -41,14 +41,14 @@ public sealed class ListHostInstancesTool(IHostBroker hostBroker, IMcpPipeScanne
 
         var result = new ListInstancesResult(
             connected.Select(e => new ConnectedInstanceEntry(
-                (HostAppExtensions.ParseHostApp(e.Instance.HostApp)
-                    ?? HostAppExtensions.FromPipeName(e.PipeName))?.ToString(),
+                (HostAppParsing.ParseHostApp(e.Instance.HostApp)
+                    ?? HostAppParsing.FromPipeName(e.PipeName))?.ToString(),
                 e.Instance.ProcessId,
                 e.Instance.VersionNumber)).ToArray(),
             discoveredPipes
                 .Select(p => new DiscoveredPipeEntry(
                     p,
-                    HostAppExtensions.FromPipeName(p)?.ToString()))
+                    HostAppParsing.FromPipeName(p)?.ToString()))
                 .ToArray(),
             connected.Count,
             discoveredPipes.Count);

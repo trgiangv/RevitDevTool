@@ -9,15 +9,11 @@ public sealed class HostSharedAssembliesCollection;
 public sealed class HostSharedAssemblyPolicyTests
 {
     [Fact]
-    public void Add_ins_call_in_process_and_not_launch()
+    public void Add_ins_call_use_at_startup_and_not_launch()
     {
         var root = RepositoryRoot.Find();
-        AssertAddIn(
-            Path.Combine(root, "source", "RevitDevTool"),
-            "AddRevitInProcess");
-        AssertAddIn(
-            Path.Combine(root, "source", "AcadDevTool"),
-            "AddAutocadInProcess");
+        AssertAddIn(Path.Combine(root, "source", "RevitDevTool"));
+        AssertAddIn(Path.Combine(root, "source", "AcadDevTool"));
     }
 
     [Fact]
@@ -30,8 +26,7 @@ public sealed class HostSharedAssemblyPolicyTests
                          Path.Combine(root, "source", project), "*.cs", SearchOption.AllDirectories))
             {
                 var text = File.ReadAllText(path);
-                Assert.DoesNotContain("AddRevitInProcess", text, StringComparison.Ordinal);
-                Assert.DoesNotContain("AddAutocadInProcess", text, StringComparison.Ordinal);
+                Assert.DoesNotContain("HostSharedAssemblies.Use", text, StringComparison.Ordinal);
             }
         }
     }
@@ -43,7 +38,7 @@ public sealed class HostSharedAssemblyPolicyTests
         foreach (var path in Directory.GetFiles(hostingDir, "*.cs", SearchOption.AllDirectories))
         {
             var text = File.ReadAllText(path);
-            Assert.DoesNotContain("IHostSharedAssemblyPolicy", text, StringComparison.Ordinal);
+            Assert.DoesNotContain("HostApiAssemblySet", text, StringComparison.Ordinal);
             Assert.DoesNotContain("HostSharedAssemblies", text, StringComparison.Ordinal);
         }
     }
@@ -60,15 +55,16 @@ public sealed class HostSharedAssemblyPolicyTests
         Assert.DoesNotContain(@"..\DevTools.Execution\DevTools.Execution.csproj", csproj, StringComparison.Ordinal);
     }
 
-    private static void AssertAddIn(string projectDir, string inProcessMethod)
+    private static void AssertAddIn(string projectDir)
     {
         var sources = Directory.GetFiles(projectDir, "*.cs", SearchOption.AllDirectories);
         Assert.NotEmpty(sources);
         var combined = string.Join('\n', sources.Select(File.ReadAllText));
-        Assert.Contains(inProcessMethod, combined, StringComparison.Ordinal);
         Assert.Contains("HostSharedAssemblies.Use", combined, StringComparison.Ordinal);
         Assert.DoesNotContain("AddRevitLaunch", combined, StringComparison.Ordinal);
         Assert.DoesNotContain("AddAutocadFamilyLaunch", combined, StringComparison.Ordinal);
         Assert.DoesNotContain("AddHostLaunchCore", combined, StringComparison.Ordinal);
+        Assert.DoesNotContain("AddRevitInProcess", combined, StringComparison.Ordinal);
+        Assert.DoesNotContain("AddAutocadInProcess", combined, StringComparison.Ordinal);
     }
 }

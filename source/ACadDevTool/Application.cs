@@ -1,7 +1,9 @@
+using AcadDevTool.Composition;
 using AcadDevTool.Controllers;
 using Autodesk.AutoCAD.Runtime;
 using Autodesk.Windows;
 using DevTools.Utilities;
+using DevTools.Utilities.AssemblyLoading;
 using ricaun.AutoCAD.UI;
 using Application = AcadDevTool.Application;
 [assembly: ExtensionApplication(typeof(Application))]
@@ -13,6 +15,7 @@ public class Application : ExtensionApplication
     public override void OnStartup(RibbonControl ribbonControl)
     {
         AssemblyLoader.Initialize();
+        HostSharedAssemblies.Use(AcadHostApiAssemblies.Set);
         Host.Start();
         Host.GetService<PanelController>().Initialize();
         AddButtons(ribbonControl);

@@ -51,6 +51,16 @@ public sealed class HostLaunchSupportTests
     }
 
     [Fact]
+    public void AddAutocadFamilyLaunch_registers_core_engine()
+    {
+        var services = new ServiceCollection();
+        services.AddAutocadFamilyLaunch();
+        using var provider = services.BuildServiceProvider();
+        Assert.NotNull(provider.GetService<IHostLaunchService>());
+        Assert.NotNull(provider.GetService<HostLaunchService>());
+    }
+
+    [Fact]
     public void HostLaunchService_throws_when_path_or_args_are_missing()
     {
         var service = new HostLaunchService([], [], []);

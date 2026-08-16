@@ -1,1 +1,0 @@
-namespace DevTools.FileMetadata.Core;

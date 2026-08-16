@@ -1,34 +1,14 @@
 using System.Reflection;
-#if NET
-using System.Runtime.Loader;
-#endif
 
 namespace DevTools.Utilities.AssemblyLoading;
 
 /// <summary>
-/// Reuses assemblies already loaded in the current <see cref="AppDomain"/>.
-/// First step for any host-aware resolve — never reload host or third-party DLLs.
+/// Looks up assemblies already loaded in the current <see cref="AppDomain"/>.
+/// Command ALC returns null for shared names so the default context supplies
+/// the host copy — this type does not register process-wide resolve hooks.
 /// </summary>
 public static class HostAssemblyResolver
 {
-    private static int _registered;
-
-    /// <summary>
-    /// Registers process-wide resolve hooks that reuse already-loaded <em>host/shared</em> assemblies.
-    /// Does not bind arbitrary names (for example <c>nunit.framework</c>).
-    /// Safe to call multiple times.
-    /// </summary>
-    public static void EnsureRegistered()
-    {
-        if (Interlocked.Exchange(ref _registered, 1) != 0)
-            return;
-
-        AppDomain.CurrentDomain.AssemblyResolve += OnAssemblyResolve;
-#if NET
-        AssemblyLoadContext.Default.Resolving += (_, name) => HostSharedAssemblies.TryResolveFromHost(name);
-#endif
-    }
-
     /// <summary>
     /// Returns an already-loaded assembly with the same simple name.
     /// </summary>
@@ -47,7 +27,4 @@ public static class HostAssemblyResolver
 
         return null;
     }
-
-    private static Assembly? OnAssemblyResolve(object? sender, ResolveEventArgs args) =>
-        args.Name is null ? null : HostSharedAssemblies.TryResolveFromHost(new AssemblyName(args.Name));
 }

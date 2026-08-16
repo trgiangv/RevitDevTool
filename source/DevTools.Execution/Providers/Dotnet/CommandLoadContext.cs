@@ -15,9 +15,6 @@ public class CommandLoadContext : AssemblyLoadContext
 {
     private readonly AssemblyDependencyResolver _resolver;
 
-    public static void Configure(string hostApiDirectory, string hostAddinDirectory) =>
-        HostSharedAssemblies.Configure(hostApiDirectory, hostAddinDirectory);
-
     public CommandLoadContext(string pluginPath, ILogger? logger = null) : base(name: $"DevTools_{Guid.NewGuid():N}", isCollectible: true)
     {
         _resolver = new AssemblyDependencyResolver(pluginPath);

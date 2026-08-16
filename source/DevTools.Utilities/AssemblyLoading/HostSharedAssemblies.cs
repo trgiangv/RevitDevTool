@@ -1,19 +1,14 @@
-using System.Reflection;
-using DevTools.Execution.Abstractions;
-
 namespace DevTools.Utilities.AssemblyLoading;
 
 /// <summary>
 /// Identifies host API and framework assemblies that must be resolved from the
 /// running host process, never from a plugin or test output directory.
-/// Host-API names come from <see cref="IHostSharedAssemblyPolicy"/> after
-/// <see cref="Use"/>; UI-package prefixes are owned by Execution.
-/// There is no Revit+Acad fallback list — each add-in calls <see cref="Use"/> with its own policy.
+/// Host-API names come from <see cref="HostApiAssemblySet"/> after
+/// <see cref="Use"/>. There is no Revit+Acad fallback list — each add-in
+/// calls <see cref="Use"/> with its own set.
 /// </summary>
 public static class HostSharedAssemblies
 {
-    private static readonly HashSet<string> DiscoveredNames = new(StringComparer.OrdinalIgnoreCase);
-
     private static readonly string[] FrameworkPrefixes =
     [
         "System.",
@@ -21,39 +16,19 @@ public static class HostSharedAssemblies
     ];
 
     private static readonly object InitLock = new();
-    private static bool _configured;
-    private static IHostSharedAssemblyPolicy? _policy;
+    private static HostApiAssemblySet? _set;
 
     /// <summary>
-    /// Sets the ambient host-API policy for static ALC hooks. Add-ins call this
-    /// at startup before first load.
+    /// Sets the ambient host-API names for static ALC hooks. Add-ins call this
+    /// at startup before first load, next to <c>AssemblyLoader.Initialize()</c>.
     /// </summary>
-    public static void Use(IHostSharedAssemblyPolicy policy)
+    public static void Use(HostApiAssemblySet set)
     {
-        if (policy is null)
-            throw new ArgumentNullException(nameof(policy));
+        if (set is null)
+            throw new ArgumentNullException(nameof(set));
         lock (InitLock)
         {
-            _policy = policy;
-        }
-    }
-
-    /// <summary>
-    /// Registers additional shared assembly simple names discovered in host directories.
-    /// Safe to call multiple times; only the first call applies.
-    /// </summary>
-    public static void Configure(string hostApiDirectory, string hostAddinDirectory)
-    {
-        lock (InitLock)
-        {
-            if (_configured)
-                return;
-
-            PopulateSharedNames(hostApiDirectory);
-            if (!string.Equals(hostApiDirectory, hostAddinDirectory, StringComparison.OrdinalIgnoreCase))
-                PopulateSharedNames(hostAddinDirectory);
-
-            _configured = true;
+            _set = set;
         }
     }
 
@@ -95,7 +70,7 @@ public static class HostSharedAssemblies
     }
 
     /// <summary>
-    /// Returns whether the name is an explicit host API/add-in assembly, without
+    /// Returns whether the name is an explicit host API assembly, without
     /// applying the broad System/Microsoft convenience prefixes used by command loading.
     /// </summary>
     public static bool IsExplicitHostAssembly(string assemblyName)
@@ -103,32 +78,16 @@ public static class HostSharedAssemblies
         if (string.IsNullOrWhiteSpace(assemblyName))
             return false;
 
-        if (DiscoveredNames.Contains(assemblyName))
-            return true;
-
-        var policy = _policy;
-        return policy is not null && ContainsIgnoreCase(policy.HostApiSimpleNames, assemblyName);
-    }
-
-    /// <summary>
-    /// Returns a host/shared assembly already loaded in the current AppDomain.
-    /// Never loads from disk.
-    /// </summary>
-    public static Assembly? TryResolveFromHost(AssemblyName assemblyName)
-    {
-        var simpleName = assemblyName.Name;
-        if (string.IsNullOrWhiteSpace(simpleName) || !IsShared(simpleName))
-            return null;
-
-        return HostAssemblyResolver.ResolveFromAppDomain(assemblyName);
+        var set = _set;
+        return set is not null && ContainsIgnoreCase(set.SimpleNames, assemblyName);
     }
 
     private static IReadOnlyCollection<string> HostApiPrefixes
     {
         get
         {
-            var policy = _policy;
-            return policy is not null ? policy.HostApiPrefixes : [];
+            var set = _set;
+            return set is not null ? set.Prefixes : [];
         }
     }
 
@@ -141,14 +100,5 @@ public static class HostSharedAssemblies
         }
 
         return false;
-    }
-
-    private static void PopulateSharedNames(string directory)
-    {
-        if (string.IsNullOrEmpty(directory) || !Directory.Exists(directory))
-            return;
-
-        foreach (var dll in Directory.GetFiles(directory, "*.dll"))
-            DiscoveredNames.Add(Path.GetFileNameWithoutExtension(dll));
     }
 }

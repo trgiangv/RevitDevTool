@@ -48,8 +48,8 @@ public sealed class ControlPipeHandler(IAuthService authService, IHostBroker hos
     {
         var hosts = hostBroker.Catalog.List()
             .Select(e => new HostInfoEntry(
-                HostAppExtensions.ParseHostApp(e.Instance.HostApp)
-                ?? HostAppExtensions.FromPipeName(e.PipeName),
+                HostAppParsing.ParseHostApp(e.Instance.HostApp)
+                ?? HostAppParsing.FromPipeName(e.PipeName),
                 e.Instance.VersionNumber,
                 e.Instance.ProcessId,
                 e.PipeName))

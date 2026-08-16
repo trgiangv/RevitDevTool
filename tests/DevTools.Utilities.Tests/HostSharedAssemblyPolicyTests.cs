@@ -9,9 +9,9 @@ public sealed class HostSharedAssembliesCollection;
 public sealed class HostSharedAssemblyPolicyTests
 {
     [Fact]
-    public void Use_revit_policy_shares_RevitAPI_not_acmgd()
+    public void Use_revit_set_shares_RevitAPI_not_acmgd()
     {
-        HostSharedAssemblies.Use(new StubPolicy(["RevitAPI", "RevitAPIUI", "AdWindows"], ["Autodesk."]));
+        HostSharedAssemblies.Use(new HostApiAssemblySet(["RevitAPI", "RevitAPIUI", "AdWindows"], ["Autodesk."]));
         Assert.True(HostSharedAssemblies.IsShared("RevitAPI"));
         Assert.True(HostSharedAssemblies.IsExplicitHostAssembly("RevitAPI"));
         Assert.True(HostSharedAssemblies.IsShared("Autodesk.Revit.DB"));
@@ -20,9 +20,9 @@ public sealed class HostSharedAssemblyPolicyTests
     }
 
     [Fact]
-    public void Use_acad_policy_shares_acmgd_not_RevitAPI()
+    public void Use_acad_set_shares_acmgd_not_RevitAPI()
     {
-        HostSharedAssemblies.Use(new StubPolicy(["acmgd", "acdbmgd"], ["Autodesk."]));
+        HostSharedAssemblies.Use(new HostApiAssemblySet(["acmgd", "acdbmgd"], ["Autodesk."]));
         Assert.True(HostSharedAssemblies.IsShared("acmgd"));
         Assert.True(HostSharedAssemblies.IsExplicitHostAssembly("acmgd"));
         Assert.True(HostSharedAssemblies.IsShared("Autodesk.AutoCAD.DatabaseServices"));
@@ -30,21 +30,22 @@ public sealed class HostSharedAssemblyPolicyTests
     }
 
     [Fact]
-    public void Without_policy_host_api_names_are_not_shared()
+    public void Without_names_host_api_assemblies_are_not_shared()
     {
-        HostSharedAssemblies.Use(new StubPolicy([], []));
+        HostSharedAssemblies.Use(new HostApiAssemblySet([], []));
         Assert.False(HostSharedAssemblies.IsExplicitHostAssembly("RevitAPI"));
         Assert.False(HostSharedAssemblies.IsExplicitHostAssembly("acmgd"));
         Assert.True(HostSharedAssemblies.IsShared("MahApps.Metro"));
     }
 
     [Fact]
-    public void Execution_Abstractions_owns_ui_package_prefixes()
+    public void Utilities_owns_ui_package_prefixes()
     {
         var path = Path.Combine(
             RepositoryRoot.Find(),
             "source",
-            "DevTools.Execution.Abstractions",
+            "DevTools.Utilities",
+            "AssemblyLoading",
             "HostPackagePrefixes.cs");
         var text = File.ReadAllText(path);
         Assert.Contains("MahApps.", text, StringComparison.Ordinal);
@@ -53,7 +54,7 @@ public sealed class HostSharedAssemblyPolicyTests
     }
 
     [Fact]
-    public void Utilities_does_not_reference_Hosting()
+    public void Utilities_does_not_reference_Hosting_or_Execution()
     {
         var csproj = File.ReadAllText(Path.Combine(
             RepositoryRoot.Find(),
@@ -61,13 +62,6 @@ public sealed class HostSharedAssemblyPolicyTests
             "DevTools.Utilities",
             "DevTools.Utilities.csproj"));
         Assert.DoesNotContain("DevTools.Hosting.csproj", csproj, StringComparison.Ordinal);
-    }
-
-    private sealed class StubPolicy(
-        IReadOnlyCollection<string> names,
-        IReadOnlyCollection<string> prefixes) : IHostSharedAssemblyPolicy
-    {
-        public IReadOnlyCollection<string> HostApiSimpleNames => names;
-        public IReadOnlyCollection<string> HostApiPrefixes => prefixes;
+        Assert.DoesNotContain("DevTools.Execution.Abstractions.csproj", csproj, StringComparison.Ordinal);
     }
 }

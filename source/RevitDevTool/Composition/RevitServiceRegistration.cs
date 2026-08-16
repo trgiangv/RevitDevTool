@@ -11,7 +11,6 @@ using DevTools.NUnit.Host;
 using DevTools.Presentation;
 using DevTools.Presentation.Interfaces;
 using DevTools.Settings;
-using DevTools.Utilities.AssemblyLoading;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
@@ -33,9 +32,9 @@ using RevitDevTool.Visualization.Server;
 using ZLogger.Scintilla.Public;
 // ReSharper disable ConvertToExtensionBlock
 
-namespace RevitDevTool.Hosting;
+namespace RevitDevTool.Composition;
 
-internal static class RevitHostingExtensions
+internal static class RevitServiceRegistration
 {
     internal static HostApplicationBuilder AddSettingServices(this HostApplicationBuilder builder, string contentRoot)
     {
@@ -68,7 +67,6 @@ internal static class RevitHostingExtensions
     {
         var services = builder.Services;
 
-        services.AddRevitInProcess();
         services.AddHostedService<HostBackgroundController>();
         services.AddSingleton<IHostAppInfo, RevitHostAppInfo>();
         services.AddSingleton<IContextEnricher>(sp =>
@@ -84,7 +82,7 @@ internal static class RevitHostingExtensions
         services.AddPresentationServices();
 
         services.AddSingleton<IVisualizationBridge, RevitVisualizationBridge>();
-        
+
         // Servers
         services.AddSingleton<BoundingBoxVisualizationServer>();
         services.AddSingleton<FaceVisualizationServer>();
@@ -93,7 +91,7 @@ internal static class RevitHostingExtensions
         services.AddSingleton<PolylineVisualizationServer>();
         services.AddSingleton<SolidVisualizationServer>();
         services.AddSingleton<XyzVisualizationServer>();
-        
+
         // ViewModels
         services.AddSingleton<BoundingBoxVisualizationViewModel>();
         services.AddSingleton<FaceVisualizationViewModel>();
@@ -101,7 +99,7 @@ internal static class RevitHostingExtensions
         services.AddSingleton<PolylineVisualizationViewModel>();
         services.AddSingleton<SolidVisualizationViewModel>();
         services.AddSingleton<XyzVisualizationViewModel>();
-        
+
         // Views
         services.AddTransient<BoundingBoxVisualizationSettingsView>();
         services.AddTransient<FaceVisualizationSettingsView>();
@@ -109,7 +107,7 @@ internal static class RevitHostingExtensions
         services.AddTransient<PolylineVisualizationSettingsView>();
         services.AddTransient<SolidVisualizationSettingsView>();
         services.AddTransient<XyzVisualizationSettingsView>();
-        
+
         // Command Browser
         services.AddSingleton<RibbonSnoopService>();
         services.AddSingleton<CommandBrowserCache>();
@@ -149,11 +147,4 @@ internal static class RevitHostingExtensions
 
         return builder;
     }
-
-    internal static IServiceCollection AddRevitInProcess(this IServiceCollection services)
-    {
-        HostSharedAssemblies.Use(new RevitSharedAssemblyPolicy());
-        return services;
-    }
 }
-

@@ -5,7 +5,7 @@ using DevTools.UI;
 using DevTools.Utilities;
 using Microsoft.Extensions.Hosting;
 using RevitDevTool.Core;
-using RevitDevTool.Hosting;
+using RevitDevTool.Composition;
 using RevitDevTool.Logging.Linkify;
 using RevitDevTool.Settings;
 

@@ -90,8 +90,8 @@ public sealed class LoggingAssemblyBoundaryTests
         var root = RepositoryRoot.Find();
         string[] hosts =
         [
-            Path.Combine(root, "source", "RevitDevTool", "Hosting", "RevitHostingExtensions.cs"),
-            Path.Combine(root, "source", "AcadDevTool", "Hosting", "AcadHostingExtensions.cs"),
+            Path.Combine(root, "source", "RevitDevTool", "Composition", "RevitServiceRegistration.cs"),
+            Path.Combine(root, "source", "AcadDevTool", "Composition", "AcadServiceRegistration.cs"),
         ];
 
         foreach (var path in hosts)

@@ -7,7 +7,7 @@ using DevTools.UI;
 using DevTools.UI.Theme;
 using DevTools.Utilities;
 using Microsoft.Extensions.Hosting;
-using AcadDevTool.Hosting;
+using AcadDevTool.Composition;
 using AcadApp = Autodesk.AutoCAD.ApplicationServices.Core.Application;
 
 namespace AcadDevTool;

@@ -5,6 +5,7 @@ using DevTools.Mcp.Client;
 using DevTools.Mcp.Core;
 using DevTools.Mcp.Core.Utils;
 using DevTools.Mcp.Server.Contracts;
+using DevTools.Mcp.Server.Utils;
 using ModelContextProtocol.Protocol;
 using ModelContextProtocol.Server;
 
@@ -49,7 +50,7 @@ public sealed class LaunchHostTool(IHostBroker hostBroker, IHostLaunchService la
         string? filePath = null,
         CancellationToken cancellationToken = default)
     {
-        var parsedHost = DevTools.Mcp.Server.Utils.HostAppExtensions.ParseHostApp(hostApp);
+        var parsedHost = HostAppParsing.ParseHostApp(hostApp);
         if (parsedHost is null && !string.IsNullOrWhiteSpace(filePath))
             parsedHost = HostAppExtensions.FromExtension(Path.GetExtension(filePath));
 

@@ -3,7 +3,7 @@ using DevTools.Ipc;
 
 namespace DevTools.Mcp.Server.Utils;
 
-public static class HostAppExtensions
+public static class HostAppParsing
 {
     public static HostApp? FromPipeName(string pipeName)
     {

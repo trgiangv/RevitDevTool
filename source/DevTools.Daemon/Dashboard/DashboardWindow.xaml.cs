@@ -1,5 +1,6 @@
 using System.ComponentModel;
 using ControlzEx.Theming;
+using DevTools.UI;
 using DevTools.UI.Theme;
 using DevTools.Utilities;
 using Microsoft.Win32;

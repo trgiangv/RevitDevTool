@@ -6,6 +6,7 @@ public static class AcadLaunchServiceCollectionExtensions
 {
     public static IServiceCollection AddAutocadFamilyLaunch(this IServiceCollection services)
     {
+        services.AddHostLaunchCore();
         services.AddSingleton<IHostPathResolver, AcadPathResolver>();
         services.AddSingleton<IHostArgumentBuilder, AcadArgumentBuilder>();
         services.AddSingleton<IHostStartupDialogSpec, AcadStartupDialogSpec>();
