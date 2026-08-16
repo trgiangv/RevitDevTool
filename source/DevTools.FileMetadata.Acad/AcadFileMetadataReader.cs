@@ -1,5 +1,6 @@
 using ACadSharp.IO;
 using DevTools.FileMetadata.Core;
+using DevTools.Hosting;
 
 namespace DevTools.FileMetadata.Acad;
 
@@ -19,7 +20,7 @@ public sealed class AcadFileMetadataReader : IFileReader
         var doc = reader.Read();
         return new DwgFileInfoResult
         {
-            HostApplication = FileHostApplication.AutoCad,
+            HostApplication = HostApp.AutoCad,
             FilePath = filePath,
             FileName = Path.GetFileName(filePath),
             AcadVersion = doc.Header.Version.ToString(),

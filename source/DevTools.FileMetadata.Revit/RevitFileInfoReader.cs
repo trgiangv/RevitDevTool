@@ -1,4 +1,5 @@
 using DevTools.FileMetadata.Core;
+using DevTools.Hosting;
 
 namespace DevTools.FileMetadata.Revit;
 
@@ -44,7 +45,7 @@ public sealed class RevitFileMetadataReader : IFileReader
 
         return new RevitFileInfoResult
         {
-            HostApplication = FileHostApplication.Revit,
+            HostApplication = HostApp.Revit,
             FilePath = filePath,
             FileName = Path.GetFileName(filePath),
             BasicInfo = basicInfo!,

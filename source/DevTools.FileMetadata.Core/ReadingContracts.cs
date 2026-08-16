@@ -1,4 +1,5 @@
 using System.Text.Json.Serialization;
+using DevTools.Hosting;
 
 namespace DevTools.FileMetadata.Core;
 
@@ -8,19 +9,13 @@ public enum FileInfoDetail
     Full
 }
 
-public enum FileHostApplication
-{
-    Revit,
-    AutoCad
-}
-
 public sealed record FileInfoRequest(string FilePath, FileInfoDetail Detail);
 
 public abstract class FileInfoResult
 {
     [JsonPropertyName("hostApp")]
-    [JsonConverter(typeof(JsonStringEnumConverter<FileHostApplication>))]
-    public required FileHostApplication HostApplication { get; init; }
+    [JsonConverter(typeof(JsonStringEnumConverter<HostApp>))]
+    public required HostApp HostApplication { get; init; }
     public required string FilePath { get; init; }
     public required string FileName { get; init; }
 }
