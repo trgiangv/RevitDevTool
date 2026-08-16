@@ -14,7 +14,7 @@ namespace RevitDevTool.Execution.PyRevit;
 /// </summary>
 internal static class PyRevitAssemblyLoader
 {
-    private static readonly Lock LoadLock = new();
+    private static readonly object LoadLock = new();
     private static readonly HashSet<string> LoadedNames = new(StringComparer.OrdinalIgnoreCase);
     private static bool _initialized;
 

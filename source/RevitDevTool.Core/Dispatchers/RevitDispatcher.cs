@@ -10,7 +10,7 @@ namespace RevitDevTool.Core.Dispatchers;
 /// </summary>
 internal sealed class RevitDispatcher : IExternalEventHandler, IRevitDispatcher, IDisposable
 {
-    private readonly Lock _gate = new();
+    private readonly object _gate = new();
     private readonly Queue<IRevitRequest> _queue = new();
     private readonly ExternalEvent? _event;
     private bool _raisePending;

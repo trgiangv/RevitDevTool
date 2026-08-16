@@ -63,7 +63,7 @@ public static class NUnitRunnerFilter
             return null;
 
         var trimmed = filter.Trim();
-        if (!trimmed.StartsWith('<', StringComparison.Ordinal))
+        if (!trimmed.StartsWith("<", StringComparison.Ordinal))
             throw new ArgumentException(InvalidFilterMessage, nameof(filter));
 
         return trimmed;

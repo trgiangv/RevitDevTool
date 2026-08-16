@@ -25,7 +25,7 @@ internal sealed class PyRevitReflectionCache
     private const string EngineConfigsJson =
         "{\"clean\":true,\"persistent\":false,\"full_frame\":false,\"type\":\"IronPython\",\"type_explicit\":true}";
 
-    private static readonly Lock InitLock = new();
+    private static readonly object InitLock = new();
     private static PyRevitReflectionCache? _instance;
 
     private readonly RuntimeBinding? _runtime;

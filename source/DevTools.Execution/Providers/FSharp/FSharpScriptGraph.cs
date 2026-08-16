@@ -77,7 +77,7 @@ internal static partial class FSharpScriptGraph
             hash.AppendData([0]);
         }
 
-        return Convert.ToHexStringLower(hash.GetHashAndReset());
+        return Convert.ToHexString(hash.GetHashAndReset()).ToLowerInvariant();
     }
 
     public static async Task<RewriteResult> RewriteGraphAsync(

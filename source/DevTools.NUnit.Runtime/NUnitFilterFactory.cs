@@ -15,7 +15,7 @@ internal static class NUnitFilterFactory
             return TestFilter.Empty;
 
         var trimmed = filterExpression!.Trim();
-        if (!trimmed.StartsWith('<', StringComparison.Ordinal))
+        if (!trimmed.StartsWith("<", StringComparison.Ordinal))
             throw new ArgumentException(UnsupportedFilterMessage, nameof(filterExpression));
 
         return TestFilter.FromXml(trimmed);

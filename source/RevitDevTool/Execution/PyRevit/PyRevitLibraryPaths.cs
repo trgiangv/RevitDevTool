@@ -13,7 +13,7 @@ internal static class PyRevitLibraryPaths
     private const string RootMarkerFile = "pyRevitfile";
     private const string RuntimeAssemblyPrefix = "PyRevitLabs.PyRevit.Runtime";
 
-    private static readonly Lock ResolveLock = new();
+    private static readonly object ResolveLock = new();
     private static bool _resolved;
     private static Assembly? _loaderAssembly;
     private static Assembly? _runtimeAssembly;

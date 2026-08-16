@@ -21,7 +21,7 @@ public static class RevitTransactionService
 {
     private static int _count;
     private static readonly Dictionary<string, int> CountDic = new();
-    private static readonly Lock Lock = new();
+    private static readonly object Lock = new();
 
     /// <summary>
     /// Start tracking changes from the current undo stack position (synchronous).

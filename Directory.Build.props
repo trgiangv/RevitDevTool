@@ -3,7 +3,7 @@
     <PropertyGroup>
         <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
     </PropertyGroup>
-    
+
     <PropertyGroup>
         <LangVersion>latest</LangVersion>
         <PlatformTarget>x64</PlatformTarget>

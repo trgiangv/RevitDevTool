@@ -15,4 +15,18 @@
         <Using Include="JetBrains.Annotations" />
     </ItemGroup>
 
+    <!--
+      Scintilla5.NET 7 copies runtimes/win-{x86,x64,arm64}/ via build targets (net48)
+      or SDK RID assets (net8+). Keep win-x64 only. AfterTargets CopyFilesToOutputDirectory
+      runs during Build, so ILRepack / publish see the pruned tree with no extra hooks.
+    -->
+    <Target Name="KeepScintillaWinX64Native"
+            AfterTargets="CopyFilesToOutputDirectory"
+            Condition="'$(TargetDir)' != ''">
+        <RemoveDir Directories="$(TargetDir)runtimes\win-x86"
+                   Condition="Exists('$(TargetDir)runtimes\win-x86')"/>
+        <RemoveDir Directories="$(TargetDir)runtimes\win-arm64"
+                   Condition="Exists('$(TargetDir)runtimes\win-arm64')"/>
+    </Target>
+
 </Project>
