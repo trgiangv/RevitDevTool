@@ -1,4 +1,5 @@
 using AcadDevTool.HostAdapters;
+using AcadDevTool.Settings;
 using Microsoft.Extensions.DependencyInjection;
 using DevTools.Execution.Providers.Python;
 using DevTools.Telemetry;
@@ -38,7 +39,9 @@ public static class Host
         builder.AddSettingServices(contentRoot)
                .AddLoggingServices(v => v.WithCustomSerializer(new PythonJsonSerializer()))
                .AddApplicationServices()
-               .AddDevToolsTelemetry()
+               .AddDevToolsTelemetry(
+                   sp => sp.GetRequiredService<IAcadSettingsService>().GeneralConfig.EnableTelemetry,
+                   _ => BuiltInSentryDsn.Value)
                .AddExecutionServices();
 
         _host = builder.Build();
