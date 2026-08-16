@@ -1,5 +1,3 @@
-using DevTools.Utilities;
-
 namespace DevTools.Telemetry;
 
 /// <summary>
@@ -17,7 +15,7 @@ public static class InstallationId
             return _cached;
         }
 
-        var dir = AppUtils.GetApplicationDataPath();
+        var dir = GetApplicationDataPath();
         var path = Path.Combine(dir, FileName);
         try
         {
@@ -39,5 +37,13 @@ public static class InstallationId
             // Fall back to volatile id if disk is not writable (telemetry still works per process).
             return _cached = Guid.NewGuid().ToString("N");
         }
+    }
+
+    private static string GetApplicationDataPath()
+    {
+        var appData = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
+        var rootPath = Path.Combine(appData, "RevitDevTool");
+        Directory.CreateDirectory(rootPath);
+        return rootPath;
     }
 }

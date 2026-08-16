@@ -11,9 +11,6 @@
 
     <ItemGroup>
         <ProjectReference Include="..\DevTools.Hosting\DevTools.Hosting.csproj" />
-        <ProjectReference Include="..\DevTools.Logging\DevTools.Logging.csproj" />
-        <ProjectReference Include="..\DevTools.Settings\DevTools.Settings.csproj" />
-        <ProjectReference Include="..\DevTools.Utilities\DevTools.Utilities.csproj" />
     </ItemGroup>
 
 </Project>

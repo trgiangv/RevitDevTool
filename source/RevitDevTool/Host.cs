@@ -7,6 +7,7 @@ using Microsoft.Extensions.Hosting;
 using RevitDevTool.Core;
 using RevitDevTool.Hosting;
 using RevitDevTool.Logging.Linkify;
+using RevitDevTool.Settings;
 
 namespace RevitDevTool;
 
@@ -37,7 +38,9 @@ public static class Host
                .AddLoggingServices(v => v
                    .WithLinkify(new RevitLinkifier())
                    .WithCustomSerializer(new PythonJsonSerializer()))
-               .AddDevToolsTelemetry()
+               .AddDevToolsTelemetry(
+                   sp => sp.GetRequiredService<IRevitSettingsService>().GeneralConfig.EnableTelemetry,
+                   _ => BuiltInSentryDsn.Value)
                .AddApplicationServices()
                .AddExecutionServices();
 
