@@ -17,7 +17,7 @@ Last updated: 2026-08-02
 5. **Safe by default**: Read-only tools never mutate. Write tools default to explicit scope (IDs or criteria, never whole model). Export tools validate paths via `PathGuard`.
 6. **Partial-success reporting**: Write tools return `success_count` + `failures[]` with per-element error details.
 7. **Collaboration-aware**: Tools respect worksets, selection state, and borrowed elements.
-8. **MCP package identity (2027 validation path)**: Host and sample .NET toolsets disable ILRepack for Revit **2027** (`IsRepackable` only when `RevitVersion < 2027`). Runtime shares host-loaded `ModelContextProtocol*` via ALC. Pre-2027 ILRepacked toolsets still work through `DotnetToolsetReturnMapper` / `InputRequiredBridge`. Keep returning `CallToolResult` / low-level `InputRequiredException` as usual.
+8. **Packaging:** .NET toolsets ILRepack like other add-ins (`ILRepackable`) but MCP is compile-only (`ExcludeAssets=runtime`). Host Catalog reflects and invokes; collectible ALC binds `ModelContextProtocol*` from the host load context. Do not ship MCP siblings. Do not gate ILRepack on Autodesk year. Merge policy: `docs/decisions/0019-ilrepack-and-polyfill-isolated-alc.md`. Host wire types: `docs/decisions/0012-host-mcp-spec-engine.md`. Keep returning `CallToolResult` / low-level `InputRequiredException` as usual.
 
 ---
 
@@ -25,9 +25,9 @@ Last updated: 2026-08-02
 
 | Rule | Why |
 |------|-----|
-| `IsRepackable` only when `RevitVersion < 2027` | Same as host — 2027 isolated context rejects ILRepack (`BadImageFormatException`) |
-| 2027 output keeps NuGet MCP (+ deps) as sibling DLLs | Shared type identity with host for `McpServer` / `RequestContext` DI and native `InputRequiredException` |
-| Pre-2027 may still ILRepack (incl. MCP) | Platform bridges foreign `CallToolResult` / `InputRequiredException`; augmented DI params may not bind |
+| `ILRepackable=true` like other add-ins | One merge pipeline ([0019](../docs/decisions/0019-ilrepack-and-polyfill-isolated-alc.md)) |
+| MCP `ExcludeAssets=runtime` | Compile attributes only — host reflects; ALC shares host MCP |
+| Do not year-gate `ILRepackable` | Isolated ALC uses Polyfill net4-only + sidecar, not skip-pack |
 
 Do **not** invent a private MCP package version — pin centrally in `Directory.Packages.props`.
 

@@ -3,7 +3,7 @@
     <PropertyGroup>
         <UseRevit>true</UseRevit>
         <UseWpf>true</UseWpf>
-        <IsRepackable>true</IsRepackable>
+        <ILRepackable>true</ILRepackable>
         <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
         <UseWindowsForms>true</UseWindowsForms>
         <DeployRevitAddin>false</DeployRevitAddin>
@@ -12,9 +12,6 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <!--Build-->
-        <PackageReference Include="ILRepack"/>
-        
         <!-- Revit Platform -->
         <PackageReference Include="Nice3point.Revit.Toolkit" VersionOverride="$(RevitVersion).*"/>
         <PackageReference Include="Revit.Async" VersionOverride="2.1.1"/>
@@ -41,7 +38,7 @@
     <!-- Manifest in Addins\{year}\ ; binaries in Addins\{year}\RevitDevTool.ExternalEvent.App\ -->
     <Target Name="DeployExternalEventAppToRevitUserAddins"
             AfterTargets="RepackAddinFiles"
-            Condition="'$(RevitVersion)' != '' AND '$(IsRepackable)' == 'true'">
+            Condition="'$(RevitVersion)' != '' AND '$(ILRepackable)' == 'true'">
         <MakeDir Directories="$(RevitUserAddinsFolder)" />
         <MakeDir Directories="$(RevitUserAddinPayloadFolder)" />
         <Copy SourceFiles="$(TargetDir)$(AssemblyName).dll"

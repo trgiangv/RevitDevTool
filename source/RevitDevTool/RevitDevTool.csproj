@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
     <PropertyGroup>
         <UseRevit>true</UseRevit>
@@ -10,8 +10,7 @@
     </PropertyGroup>
 
     <PropertyGroup>
-        <!-- Revit 2027 have new isolated context, that have issue with ILRepack -> System.BadImageFormatException: Invalid token -->
-        <IsRepackable Condition="$(RevitVersion) &lt; 2027">true</IsRepackable>
+        <ILRepackable>true</ILRepackable>
         <RepackBinariesExcludes>
             DevTools.MahApps.Metro.dll;
             DevTools.ControlzEx.dll;
@@ -24,12 +23,13 @@
             Microsoft.Dynamic.dll;
             Microsoft.Scripting*.dll;
         </RepackBinariesExcludes>
+        <RepackBinariesExcludes Condition="$(TargetFramework.StartsWith('net10'))">
+            $(RepackBinariesExcludes)
+            Nice3point.Revit.Extensions.dll;
+        </RepackBinariesExcludes>
     </PropertyGroup>
 
     <ItemGroup>
-        <!--Build-->
-        <PackageReference Include="ILRepack"/>
-
         <!--UI-->
         <PackageReference Include="Microsoft.Web.WebView2" Condition="$(RevitVersion) &lt; 2024"/>
     </ItemGroup>
@@ -37,7 +37,7 @@
     <ItemGroup Condition="$(TargetFramework.StartsWith('net4'))">
         <Reference Include="System.IO.Compression" />
     </ItemGroup>
-    
+
     <ItemGroup>
         <ProjectReference Include="..\DevTools.Presentation\DevTools.Presentation.csproj" />
         <ProjectReference Include="..\DevTools.UI\DevTools.UI.csproj" />

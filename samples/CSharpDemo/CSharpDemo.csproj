@@ -2,12 +2,11 @@
 
     <PropertyGroup>
         <UseRevit>true</UseRevit>
-        <IsRepackable>true</IsRepackable>
+        <ILRepackable>true</ILRepackable>
     </PropertyGroup>
 
     <ItemGroup>
         <PackageReference Include="Nice3point.Revit.Toolkit" VersionOverride="$(RevitVersion).*"/>
-        <PackageReference Include="ILRepack"/>
     </ItemGroup>
 
 </Project>

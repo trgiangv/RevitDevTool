@@ -106,7 +106,7 @@ public sealed class MtpArchitectureTests
         Assert.Contains("System.Runtime.CompilerServices.Unsafe", props, StringComparison.Ordinal);
         Assert.DoesNotContain("ILRepack", props, StringComparison.Ordinal);
         Assert.DoesNotContain("DevToolsNUnitRepack", props, StringComparison.Ordinal);
-        Assert.DoesNotContain("IsRepackable", props, StringComparison.Ordinal);
+        Assert.DoesNotContain("ILRepackable", props, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -115,11 +115,14 @@ public sealed class MtpArchitectureTests
         var mtpDir = Path.Combine(RepositoryRoot, "source", "DevTools.NUnit.Mtp");
         var targets = File.ReadAllText(Path.Combine(mtpDir, "build", "RevitDevTool.NUnit.targets"));
         var csproj = File.ReadAllText(Path.Combine(mtpDir, "DevTools.NUnit.Mtp.csproj"));
+        var ilRepackTargets = File.ReadAllText(Path.Combine(RepositoryRoot, "props", "ILRepack.targets"));
 
         Assert.DoesNotContain("ILRepack", targets, StringComparison.Ordinal);
         Assert.DoesNotContain("ILRepack.Lib.MSBuild.Task", csproj, StringComparison.Ordinal);
-        Assert.Contains("<PackageReference Include=\"ILRepack\"", csproj, StringComparison.Ordinal);
-        Assert.Contains("IsRepackable", csproj, StringComparison.Ordinal);
+        Assert.DoesNotContain("<PackageReference Include=\"ILRepack\"", csproj, StringComparison.Ordinal);
+        Assert.Contains("<PackageReference Include=\"ILRepack\"", ilRepackTargets, StringComparison.Ordinal);
+        Assert.DoesNotContain("IsRepackable", ilRepackTargets, StringComparison.Ordinal);
+        Assert.Contains("ILRepackable", csproj, StringComparison.Ordinal);
         Assert.Contains("ILRepackInternalize", csproj, StringComparison.Ordinal);
         Assert.Contains("'$(TargetFramework)' == 'net48'", csproj, StringComparison.Ordinal);
         Assert.True(File.Exists(Path.Combine(RepositoryRoot, "props", "ILRepack.targets")));

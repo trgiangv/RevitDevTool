@@ -10,7 +10,7 @@
         <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
         <EnableDynamicLoading>false</EnableDynamicLoading>
         <SuppressDependenciesWhenPacking>true</SuppressDependenciesWhenPacking>
-        <IsRepackable>true</IsRepackable>
+        <ILRepackable>true</ILRepackable>
         <ILRepackInternalize>true</ILRepackInternalize>
         <!--
           Never merge (stay external to the repacked adapter):
@@ -43,9 +43,6 @@
             <PrivateAssets>all</PrivateAssets>
         </PackageReference>
         <PackageReference Include="System.Reflection.Metadata">
-            <PrivateAssets>all</PrivateAssets>
-        </PackageReference>
-        <PackageReference Include="ILRepack">
             <PrivateAssets>all</PrivateAssets>
         </PackageReference>
     </ItemGroup>

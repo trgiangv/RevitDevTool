@@ -20,7 +20,7 @@
         <EnableDynamicLoading>false</EnableDynamicLoading>
         <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
         <IsTestProject>false</IsTestProject>
-        <IsRepackable Condition="'$(TargetFramework)' == 'net48'">true</IsRepackable>
+        <ILRepackable Condition="'$(TargetFramework)' == 'net48'">true</ILRepackable>
         <ILRepackInternalize Condition="'$(TargetFramework)' == 'net48'">true</ILRepackInternalize>
     </PropertyGroup>
 
@@ -44,9 +44,6 @@
             <PrivateAssets>all</PrivateAssets>
         </PackageReference>
         <PackageReference Include="System.Runtime.CompilerServices.Unsafe" Condition="'$(TargetFramework)' == 'net48'">
-            <PrivateAssets>all</PrivateAssets>
-        </PackageReference>
-        <PackageReference Include="ILRepack" Condition="'$(TargetFramework)' == 'net48'">
             <PrivateAssets>all</PrivateAssets>
         </PackageReference>
         <InternalsVisibleTo Include="DevTools.NUnit.Mtp.Tests"/>

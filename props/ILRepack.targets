@@ -2,17 +2,25 @@
 <Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
 
     <PropertyGroup>
-        <!-- Opt-in merge. Needs PackageReference ILRepack on the csproj. -->
-        <IsRepackable Condition="'$(IsRepackable)' == ''">false</IsRepackable>
-        <!-- Merged types become internal. Leftover excludes + satellite folders are deleted. -->
+        <!-- Defaults live here (0019). A csproj may set ILRepackable, ILRepackInternalize=true,
+             and RepackBinariesExcludes. Do not restate Union / ILLink / Parallel / Internalize=false. -->
+        <ILRepackable Condition="'$(ILRepackable)' == ''">false</ILRepackable>
         <ILRepackInternalize Condition="'$(ILRepackInternalize)' == ''">false</ILRepackInternalize>
+        <ILRepackUnion Condition="'$(ILRepackUnion)' == ''">true</ILRepackUnion>
+        <ILRepackILLink Condition="'$(ILRepackILLink)' == ''">false</ILRepackILLink>
+        <ILRepackParallel Condition="'$(ILRepackParallel)' == ''">true</ILRepackParallel>
     </PropertyGroup>
+
+    <!-- Restore must see this at evaluation time; it cannot live inside RepackAddinFiles. -->
+    <ItemGroup Condition="'$(ILRepackable)' == 'true'">
+        <PackageReference Include="ILRepack" PrivateAssets="all"/>
+    </ItemGroup>
 
     <!-- After Build, before host publish so the bundle is the merged DLL. -->
     <Target Name="RepackAddinFiles"
             AfterTargets="Build"
             BeforeTargets="PublishRevitAddinFiles;PublishAutoCadBundleFiles"
-            Condition="'$(IsRepackable)' == 'true'">
+            Condition="'$(ILRepackable)' == 'true'">
 
         <ItemGroup>
             <_ILRepackVersion Include="@(PackageVersion)"
@@ -26,20 +34,16 @@
         <PropertyGroup>
             <_ILRepackVer>%(_ILRepackVersion.Version)</_ILRepackVer>
             <_ILRepackVer Condition="'$(_ILRepackVer)' == ''">%(_ILRepackVersion.VersionOverride)</_ILRepackVer>
-            <_ILRepackVer Condition="'$(_ILRepackVer)' == ''">2.0.45</_ILRepackVer>
+            <_ILRepackVer Condition="'$(_ILRepackVer)' == ''">2.0.46</_ILRepackVer>
             <!-- Optional absolute path to ILRepack.exe; otherwise NuGet tools/. -->
             <_ILRepackExe Condition="'$(ILRepackExe)' != ''">$(ILRepackExe)</_ILRepackExe>
             <_ILRepackExe Condition="'$(_ILRepackExe)' == ''">$(NuGetPackageRoot)ilrepack\$(_ILRepackVer)\tools\ILRepack.exe</_ILRepackExe>
         </PropertyGroup>
 
-        <Error Condition="'@(_ILRepackVersion->Count())' == '0'"
-               Text="ILRepack is required but not installed. IsRepackable is true. Add a PackageReference to ILRepack, or set IsRepackable=false."/>
         <Error Condition="!Exists('$(_ILRepackExe)')"
-               Text="ILRepack.exe not found at $(_ILRepackExe). Restore the ILRepack package, or set IsRepackable=false."/>
+               Text="ILRepack.exe not found at $(_ILRepackExe). Restore with ILRepackable=true, or set ILRepackable=false."/>
 
         <ItemGroup>
-            <!-- Compile-only attributes. Never merge, never leave loose. -->
-            <_ILRepackExclude Include="$(TargetDir)JetBrains.Annotations.dll"/>
             <!-- Semicolon list of DLLs to leave beside the output (e.g. MahApps pack://). -->
             <_ILRepackExcludeNames Include="$(RepackBinariesExcludes.Split(';'))"/>
             <_ILRepackExclude Include="$(TargetDir)%(_ILRepackExcludeNames.Identity)"/>
@@ -49,9 +53,11 @@
         </ItemGroup>
 
         <PropertyGroup>
-            <!-- /union: duplicate types OK. /illink: drop unused IL. -->
-            <_ILRepackFlags>/union /illink /parallel</_ILRepackFlags>
-            <!-- Merged input types become internal in the primary assembly. -->
+            <_ILRepackFlags>$(ILRepackExtraFlags)</_ILRepackFlags>
+            <_ILRepackFlags Condition="'$(ILRepackUnion)' == 'true'">/union $(_ILRepackFlags)</_ILRepackFlags>
+            <!-- /illink merges ILLink XML; it does not strip unused IL. -->
+            <_ILRepackFlags Condition="'$(ILRepackILLink)' == 'true'">/illink $(_ILRepackFlags)</_ILRepackFlags>
+            <_ILRepackFlags Condition="'$(ILRepackParallel)' == 'true'">/parallel $(_ILRepackFlags)</_ILRepackFlags>
             <_ILRepackFlags Condition="'$(ILRepackInternalize)' == 'true'">/internalize $(_ILRepackFlags)</_ILRepackFlags>
             <_ILRepackOut>/out:&quot;$(TargetPath)&quot;</_ILRepackOut>
             <_ILRepackIn>@(_ILRepackInput -> '&quot;%(FullPath)&quot;', ' ')</_ILRepackIn>
@@ -59,7 +65,7 @@
             <_ILRepackCmd>&quot;$(_ILRepackExe)&quot; $(_ILRepackFlags) $(_ILRepackOut) $(_ILRepackLib) $(_ILRepackIn)</_ILRepackCmd>
         </PropertyGroup>
 
-        <Message Text="Repacking $(TargetPath)" Importance="high"/>
+        <Message Text="Repacking $(TargetPath) flags=$(_ILRepackFlags)" Importance="high"/>
 
         <!-- ILRepack writes "warning :" on stdout; TreatWarningsAsErrors would fail a successful pack. -->
         <Exec Command="$(_ILRepackCmd)"
@@ -78,8 +84,6 @@
             <_ILRepackedFiles
                 Include="@(_ILRepackInput -> '%(RootDir)%(Directory)%(Filename).pdb')"
                 Condition="%(Filename) != $(AssemblyName)"/>
-            <_ILRepackedFiles Include="$(TargetDir)JetBrains.Annotations.dll"/>
-            <_ILRepackedFiles Include="$(TargetDir)JetBrains.Annotations.pdb"/>
         </ItemGroup>
         <Delete Files="@(_ILRepackedFiles)"/>
 

@@ -50,7 +50,7 @@
 
   <Target Name="AssertNUnitHostDependencyOwnership"
           AfterTargets="RepackAddinFiles"
-          Condition="'$(IsRepackable)' == 'true' AND '$(TargetPath)' != '' AND '$(TargetDir)' != ''">
+          Condition="'$(ILRepackable)' == 'true' AND '$(TargetPath)' != '' AND '$(TargetDir)' != ''">
     <PropertyGroup>
       <_NUnitHostOutputDir>$([System.IO.Path]::GetFullPath('$(TargetDir)'))</_NUnitHostOutputDir>
     </PropertyGroup>

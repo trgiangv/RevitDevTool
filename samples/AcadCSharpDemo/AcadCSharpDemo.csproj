@@ -2,11 +2,7 @@
 
     <PropertyGroup>
         <UseAutoCad>true</UseAutoCad>
-        <IsRepackable>true</IsRepackable>
+        <ILRepackable>true</ILRepackable>
     </PropertyGroup>
-
-    <ItemGroup>
-        <PackageReference Include="ILRepack"/>
-    </ItemGroup>
 
 </Project>

@@ -18,7 +18,7 @@ public sealed class HostPackagingOwnershipTests
 
     [Theory]
     [InlineData("source/RevitDevTool/RevitDevTool.csproj")]
-    [InlineData("source/ACadDevTool/ACadDevTool.csproj")]
+    [InlineData("source/AcadDevTool/AcadDevTool.csproj")]
     public void Host_projects_import_shared_nunit_packaging_targets(string relativeProjectPath)
     {
         var projectPath = Path.Combine(FindRepoRoot(), relativeProjectPath.Replace('/', Path.DirectorySeparatorChar));
@@ -30,6 +30,23 @@ public sealed class HostPackagingOwnershipTests
         Assert.DoesNotContain("nunit-core-satellites", projectText, StringComparison.Ordinal);
         Assert.DoesNotContain("System.Text.Json.dll", projectText, StringComparison.Ordinal);
         Assert.Contains("NUnitHostPackaging.targets", projectText, StringComparison.Ordinal);
+    }
+
+    [Theory]
+    [InlineData("source/RevitDevTool/RevitDevTool.csproj")]
+    [InlineData("source/AcadDevTool/AcadDevTool.csproj")]
+    public void Host_projects_do_not_restate_ilrepack_driver_defaults(string relativeProjectPath)
+    {
+        var projectPath = Path.Combine(FindRepoRoot(), relativeProjectPath.Replace('/', Path.DirectorySeparatorChar));
+        Assert.True(File.Exists(projectPath), $"Missing project: {projectPath}");
+
+        var projectText = File.ReadAllText(projectPath);
+        Assert.Contains("<ILRepackable>true</ILRepackable>", projectText, StringComparison.Ordinal);
+        Assert.Contains("RepackBinariesExcludes", projectText, StringComparison.Ordinal);
+        Assert.DoesNotContain("ILRepackUnion", projectText, StringComparison.Ordinal);
+        Assert.DoesNotContain("ILRepackInternalize", projectText, StringComparison.Ordinal);
+        Assert.DoesNotContain("ILRepackILLink", projectText, StringComparison.Ordinal);
+        Assert.DoesNotContain("ILRepackParallel", projectText, StringComparison.Ordinal);
     }
 
     [Fact]

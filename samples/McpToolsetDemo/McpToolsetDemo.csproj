@@ -2,19 +2,16 @@
 
     <PropertyGroup>
         <UseRevit>true</UseRevit>
-        <!-- Match host: ILRepack off for 2027 isolated context (shared MCP DLL identity). -->
-        <IsRepackable Condition="$(RevitVersion) &lt; 2027">true</IsRepackable>
+        <ILRepackable>true</ILRepackable>
     </PropertyGroup>
 
     <ItemGroup>
-        <!-- Compile-only: runtime MCP types resolve from host via McpToolsetContext AssemblyResolve. -->
         <PackageReference Include="ModelContextProtocol">
             <ExcludeAssets>runtime</ExcludeAssets>
         </PackageReference>
         <PackageReference Include="ModelContextProtocol.Extensions.Tasks">
             <ExcludeAssets>runtime</ExcludeAssets>
         </PackageReference>
-        <PackageReference Include="ILRepack"/>
     </ItemGroup>
 
 </Project>
