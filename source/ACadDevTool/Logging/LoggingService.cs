@@ -7,6 +7,7 @@ using DevTools.Logging.Options;
 using DevTools.Settings.Configs;
 using DevTools.Telemetry;
 using DevTools.UI.Theme;
+using DevTools.Presentation;
 using DevTools.Presentation.Interfaces;
 using Microsoft.Extensions.Logging;
 
@@ -88,7 +89,8 @@ public sealed class LoggingService(
 
     public void RegisterTraceListeners()
     {
-        TraceListenerHelper.RegisterTraceListeners(
+        TraceListenerHelper.RegisterTraceListeners(_loggerTraceListener, _notifyListener);
+        PresentationTraceListenerHelper.RegisterWpfTraceListeners(
             settingsService.LogConfig.TraceListener.IncludeWpfTrace,
             _loggerTraceListener, _notifyListener);
     }
@@ -96,6 +98,7 @@ public sealed class LoggingService(
     public void UnregisterTraceListeners()
     {
         TraceListenerHelper.UnregisterTraceListeners(_notifyListener, _loggerTraceListener);
+        PresentationTraceListenerHelper.UnregisterWpfTraceListeners(_notifyListener, _loggerTraceListener);
     }
 
     public void ClearOutput()

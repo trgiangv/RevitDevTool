@@ -1,7 +1,7 @@
 using System.Diagnostics;
 using System.IO;
 using AcadDevTool.Logging.Enums;
-using DevTools.Logging;
+using DevTools.Presentation;
 using DevTools.Settings;
 using DevTools.Settings.Configs;
 using Microsoft.Extensions.Logging;
@@ -79,7 +79,7 @@ public sealed class SettingsService(IFileConfig<PathOptions> fileConfig, ILogger
         _logConfig = new LogConfig();
         EnsureLogFolder(_logConfig);
         PresentationTraceSources.DataBindingSource.Switch.Level = _logConfig.TraceListener.WpfTraceLevel;
-        TraceListenerHelper.ApplyPresentationTraceSwitches(_logConfig.TraceListener.WpfTraceLevel);
+        PresentationTraceListenerHelper.ApplyPresentationTraceSwitches(_logConfig.TraceListener.WpfTraceLevel);
     }
 
     private void SaveConfig<T>(T? config) where T : class

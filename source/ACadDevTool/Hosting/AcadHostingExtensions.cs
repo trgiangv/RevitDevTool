@@ -43,7 +43,8 @@ internal static class AcadHostingExtensions
         this HostApplicationBuilder builder,
         Action<ScintillaOptions>? configureMonitor = null)
     {
-        builder.AddLoggingProvider(configureMonitor);
+        builder.AddLoggingProvider();
+        builder.AddMonitorLogging(configureMonitor);
         builder.Logging.AddFilter("ModelContextProtocol", LogLevel.Warning);
 
         var services = builder.Services;
