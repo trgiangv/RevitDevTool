@@ -15,7 +15,15 @@ public sealed class RunnerAssemblyBoundaryTests
             "DevTools.NUnit.Runner",
             "DevTools.NUnit.Runner.csproj"));
         Assert.DoesNotContain("DevTools.Logging.csproj", csproj, StringComparison.Ordinal);
+        Assert.DoesNotContain("FileMetadata", csproj, StringComparison.Ordinal);
+        Assert.DoesNotContain("Microsoft-WindowsAPICodePack-Shell", csproj, StringComparison.Ordinal);
+        Assert.DoesNotContain("DevTools.Utilities.csproj", csproj, StringComparison.Ordinal);
         Assert.Contains("DevTools.Hosting.csproj", csproj, StringComparison.Ordinal);
+        Assert.Contains("Microsoft.Extensions.DependencyInjection", csproj, StringComparison.Ordinal);
+
+        var commands = File.ReadAllText(Path.Combine(
+            root, "source", "DevTools.NUnit.Runner", "Commands", "NUnitRunnerCommands.cs"));
+        Assert.DoesNotContain("new HostLaunchService()", commands, StringComparison.Ordinal);
 
         var dll = Directory.GetFiles(
                 Path.Combine(root, "source", "DevTools.NUnit.Runner", "bin"),
@@ -27,6 +35,8 @@ public sealed class RunnerAssemblyBoundaryTests
 
         var references = ReadAssemblyReferences(dll!);
         Assert.DoesNotContain("DevTools.Logging", references);
+        Assert.DoesNotContain("DevTools.FileMetadata.Revit", references);
+        Assert.DoesNotContain("DevTools.FileMetadata.Core", references);
         Assert.Contains("DevTools.Hosting", references);
     }
 

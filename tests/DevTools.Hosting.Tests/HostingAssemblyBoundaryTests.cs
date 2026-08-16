@@ -20,4 +20,32 @@ public sealed class HostingAssemblyBoundaryTests
         Assert.DoesNotContain("PresentationFramework", references);
         Assert.DoesNotContain("MahApps.Metro", references);
     }
+
+    [Fact]
+    public void Generic_Hosting_source_has_no_product_dialog_or_api_keywords()
+    {
+        var hostingDir = Path.Combine(RepositoryRoot.Find(), "source", "DevTools.Hosting");
+        var sources = Directory.GetFiles(hostingDir, "*.cs", SearchOption.AllDirectories);
+        Assert.NotEmpty(sources);
+
+        string[] forbidden =
+        [
+            "unsigned add-in",
+            "unsigned executable file",
+            "questionable add-in",
+            "#32770",
+            "RevitAPI",
+            "acmgd",
+            "IHostSharedAssemblyPolicy",
+        ];
+
+        foreach (var path in sources)
+        {
+            var text = File.ReadAllText(path);
+            foreach (var token in forbidden)
+            {
+                Assert.DoesNotContain(token, text, StringComparison.OrdinalIgnoreCase);
+            }
+        }
+    }
 }

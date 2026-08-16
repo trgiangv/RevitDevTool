@@ -1,10 +1,16 @@
 using Microsoft.Win32;
-namespace DevTools.Utilities.Hosting.Resolver;
 
-internal static class RevitPathResolver
+namespace DevTools.Hosting.Revit;
+
+public sealed class RevitPathResolver : IHostPathResolver
 {
-    public static string? FindRevitPath(string version)
+    public bool Supports(HostApp hostApp) => hostApp == HostApp.Revit;
+
+    public string? FindExecutable(HostApp hostApp, string version)
     {
+        if (!Supports(hostApp))
+            return null;
+
         var registryPath = FindFromRegistry(version);
         if (!string.IsNullOrWhiteSpace(registryPath))
             return registryPath;
@@ -22,11 +28,13 @@ internal static class RevitPathResolver
                 .FirstOrDefault(File.Exists);
     }
 
-    public static List<string> GetInstalledVersions()
+    public IReadOnlyList<string> GetInstalledVersions(HostApp hostApp)
     {
+        if (!Supports(hostApp))
+            return [];
+
         var programFiles = Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles);
         var autodeskDir = Path.Combine(programFiles, "Autodesk");
-
         if (!Directory.Exists(autodeskDir))
             return [];
 
@@ -34,7 +42,7 @@ internal static class RevitPathResolver
             .Select(dir => Path.GetFileName(dir).Replace("Revit ", ""))
             .Where(v => int.TryParse(v, out var year) && year >= 2022)
             .OrderByDescending(v => v, StringComparer.OrdinalIgnoreCase)
-            .ToList();
+            .ToArray();
     }
 
     private static string? FindFromRegistry(string version)

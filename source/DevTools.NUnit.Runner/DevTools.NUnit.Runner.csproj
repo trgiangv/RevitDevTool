@@ -43,6 +43,7 @@
 
     <ItemGroup>
         <PackageReference Include="Microsoft.VisualStudio.Interop"/>
+        <PackageReference Include="Microsoft.Extensions.DependencyInjection"/>
         <PackageReference Include="ConsoleAppFramework">
             <PrivateAssets>all</PrivateAssets>
             <IncludeAssets>runtime; build; native; contentfiles; analyzers</IncludeAssets>
@@ -54,7 +55,8 @@
         <ProjectReference Include="..\DevTools.NUnit.Transport\DevTools.NUnit.Transport.csproj" SetTargetFramework="TargetFramework=net10.0-windows"/>
         <ProjectReference Include="..\DevTools.Ipc\DevTools.Ipc.csproj" SetTargetFramework="TargetFramework=net10.0-windows"/>
         <ProjectReference Include="..\DevTools.Hosting\DevTools.Hosting.csproj" SetTargetFramework="TargetFramework=net10.0-windows"/>
-        <ProjectReference Include="..\DevTools.Utilities\DevTools.Utilities.csproj" SetTargetFramework="TargetFramework=net10.0-windows"/>
+        <ProjectReference Include="..\DevTools.Hosting.Revit\DevTools.Hosting.Revit.csproj" SetTargetFramework="TargetFramework=net10.0-windows"/>
+        <ProjectReference Include="..\DevTools.Hosting.Acad\DevTools.Hosting.Acad.csproj" SetTargetFramework="TargetFramework=net10.0-windows"/>
     </ItemGroup>
 
     <ItemGroup>

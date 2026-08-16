@@ -71,6 +71,8 @@
         <ProjectReference Include="..\DevTools.FileMetadata.Revit\DevTools.FileMetadata.Revit.csproj" SetTargetFramework="TargetFramework=$(TargetFramework)" />
         <ProjectReference Include="..\DevTools.FileMetadata.Acad\DevTools.FileMetadata.Acad.csproj" SetTargetFramework="TargetFramework=$(TargetFramework)" />
         <ProjectReference Include="..\DevTools.Hosting\DevTools.Hosting.csproj"/>
+        <ProjectReference Include="..\DevTools.Hosting.Revit\DevTools.Hosting.Revit.csproj"/>
+        <ProjectReference Include="..\DevTools.Hosting.Acad\DevTools.Hosting.Acad.csproj"/>
         <ProjectReference Include="..\DevTools.Logging\DevTools.Logging.csproj"/>
     </ItemGroup>
     <ItemGroup>

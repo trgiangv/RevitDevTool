@@ -3,14 +3,11 @@ using DevTools.NUnit.Core;
 using DevTools.NUnit.Core.Contracts;
 using DevTools.NUnit.Runner.Parsing;
 using DevTools.NUnit.Runner.Services;
-using DevTools.Utilities.Hosting;
 
 namespace DevTools.NUnit.Runner.Commands;
 
-internal sealed class NUnitRunnerCommands
+internal sealed class NUnitRunnerCommands(HostSession hosts)
 {
-    private readonly HostSession _hosts = new(new HostLaunchService());
-
     /// <summary>
     /// Discover NUnit tests from PE metadata. Does not start or contact a host.
     /// </summary>
@@ -129,7 +126,7 @@ internal sealed class NUnitRunnerCommands
         }
 
         return command == NUnitRunnerCli.RunCommand
-            ? await RunCommand.ExecuteAsync(options!, _hosts, cancellationToken).ConfigureAwait(false)
+            ? await RunCommand.ExecuteAsync(options!, hosts, cancellationToken).ConfigureAwait(false)
             : await DiscoverCommand.ExecuteAsync(options!, cancellationToken).ConfigureAwait(false);
     }
 }

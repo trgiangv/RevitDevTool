@@ -1,5 +1,4 @@
 using DevTools.Hosting;
-using DevTools.Utilities.Hosting;
 
 namespace DevTools.NUnit.Runner.Services;
 
@@ -27,29 +26,34 @@ public sealed class HostSession(IHostLaunchService launchService)
                 return existing;
         }
 
-        var started = launchService.Start(hostApp, version, languageCode: null, filePath: null, cancellationToken);
-        _ = started.DialogResolver;
+        var started = launchService.Start(
+            new HostLaunchRequest(hostApp, version, FilePath: null, Options: null),
+            cancellationToken);
 
-        var deadline = DateTime.UtcNow + launchTimeout;
-        while (DateTime.UtcNow < deadline)
+        try
         {
-            cancellationToken.ThrowIfCancellationRequested();
+            var status = await HostLaunchWait.UntilAsync(
+                    started.Process,
+                    () => HostLocator.Discover(hostName, version)
+                        .Any(instance => instance.ProcessId == started.Process.Id),
+                    launchTimeout,
+                    cancellationToken)
+                .ConfigureAwait(false);
 
-            var match = HostLocator.Discover(hostName, version)
-                .FirstOrDefault(instance => instance.ProcessId == started.Process.Id);
-            if (match is not null)
-                return match;
-
-            if (started.Process.HasExited)
+            return status switch
             {
-                throw new InvalidOperationException(
-                    $"{hostApp} exited before the DevTools control pipe became available (PID={started.Process.Id}).");
-            }
-
-            await Task.Delay(500, cancellationToken).ConfigureAwait(false);
+                HostReadyStatus.Ready => HostLocator.Discover(hostName, version)
+                    .First(instance => instance.ProcessId == started.Process.Id),
+                HostReadyStatus.Exited => throw new InvalidOperationException(
+                    $"{hostApp} exited before the DevTools control pipe became available (PID={started.Process.Id})."),
+                HostReadyStatus.Cancelled => throw new OperationCanceledException(cancellationToken),
+                _ => throw new TimeoutException(
+                    $"{hostApp} {version} launched (PID={started.Process.Id}) but no control pipe appeared within {launchTimeout.TotalSeconds:0}s.")
+            };
         }
-
-        throw new TimeoutException(
-            $"{hostApp} {version} launched (PID={started.Process.Id}) but no control pipe appeared within {launchTimeout.TotalSeconds:0}s.");
+        finally
+        {
+            started.DialogResolver?.Dispose();
+        }
     }
 }

@@ -25,6 +25,10 @@ public sealed class HostSessionPolicyTests
         Assert.Contains("return existing", reuseBlock, StringComparison.Ordinal);
         Assert.DoesNotContain("throw new InvalidOperationException", reuseBlock, StringComparison.Ordinal);
         Assert.DoesNotContain("launchService.Start", reuseBlock, StringComparison.Ordinal);
+        Assert.Contains("FilePath: null", source, StringComparison.Ordinal);
+        Assert.Contains("HostLaunchWait.UntilAsync", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("languageCode: \"ENU\"", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("new HostLaunchService()", source, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -65,8 +69,7 @@ public sealed class HostSessionPolicyTests
         var source = File.ReadAllText(Path.Combine(
             FindRepositoryRoot(),
             "source",
-            "DevTools.Utilities",
-            "Hosting",
+            "DevTools.Hosting",
             "HostLaunchService.cs"));
 
         Assert.Contains("UseShellExecute = false", source, StringComparison.Ordinal);

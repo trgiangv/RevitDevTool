@@ -1,16 +1,10 @@
 using System.Diagnostics;
-using DevTools.Hosting;
 
-namespace DevTools.Utilities.Hosting;
+namespace DevTools.Hosting;
 
 public interface IHostLaunchService
 {
-    HostProcessStart Start(
-        HostApp hostApp,
-        string? version,
-        string? languageCode,
-        string? filePath,
-        CancellationToken cancellationToken);
+    HostProcessStart Start(HostLaunchRequest request, CancellationToken cancellationToken);
 }
 
 /// <summary>OS process started from a resolved launch plan.</summary>
@@ -20,4 +14,4 @@ public sealed record HostProcessStart(
     string ExePath,
     string? LanguageCode,
     IReadOnlyList<string> Arguments,
-    Task<StartupDialogResolverResult>? DialogResolver);
+    StartupDialogResolverHandle? DialogResolver);

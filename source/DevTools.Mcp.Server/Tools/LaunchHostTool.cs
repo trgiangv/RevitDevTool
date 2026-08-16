@@ -5,7 +5,6 @@ using DevTools.Mcp.Client;
 using DevTools.Mcp.Core;
 using DevTools.Mcp.Core.Utils;
 using DevTools.Mcp.Server.Contracts;
-using DevTools.Utilities.Hosting;
 using ModelContextProtocol.Protocol;
 using ModelContextProtocol.Server;
 
@@ -14,6 +13,7 @@ namespace DevTools.Mcp.Server.Tools;
 [SupportedOSPlatform("windows")]
 public sealed class LaunchHostTool(IHostBroker hostBroker, IHostLaunchService launchService)
 {
+    private static readonly TimeSpan BridgeTimeout = TimeSpan.FromMinutes(2);
     private static readonly string[] HostAppEnumNames =
         Enum.GetValues<HostApp>().Select(h => h.ToString()).ToArray();
 
@@ -30,6 +30,7 @@ public sealed class LaunchHostTool(IHostBroker hostBroker, IHostLaunchService la
                     "This is a long-running operation (typically 30-120 seconds for cold start). " +
                     "hostApp is required unless filePath is set — then the host is inferred from the extension " +
                     "(.rvt/.rfa → Revit, .dwg/.dxf/.dwt → AutoCAD). " +
+                    "languageCode is a .NET culture name such as en-US (default en-US). " +
                     "To open a file in an already-running host, use invoke_dynamic on open_document instead.",
                 Destructive = true,
                 OpenWorld = true
@@ -42,7 +43,7 @@ public sealed class LaunchHostTool(IHostBroker hostBroker, IHostLaunchService la
         string? hostApp = null,
         [Description("Version year (e.g. '2025'). Revit auto-detects from filePath; AutoCAD defaults to latest.")]
         string? versionNumber = null,
-        [Description("Revit-only: UI language code (default 'ENU').")]
+        [Description("UI language as a .NET culture name (default 'en-US').")]
         string? languageCode = null,
         [Description("Model file to open at startup. When set without hostApp, host is inferred from the extension.")]
         string? filePath = null,
@@ -56,49 +57,67 @@ public sealed class LaunchHostTool(IHostBroker hostBroker, IHostLaunchService la
             return ToolHelpers.ErrorResult(
                 $"hostApp is required (or provide filePath with a known extension). Supported values: {string.Join(", ", HostAppEnumNames)}");
 
+        IReadOnlyDictionary<string, string>? options = string.IsNullOrWhiteSpace(languageCode)
+            ? null
+            : new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+            {
+                [HostLaunchRequest.LanguageOptionKey] = languageCode.Trim()
+            };
+
+        var request = new HostLaunchRequest(
+            parsedHost.Value,
+            versionNumber ?? "",
+            filePath,
+            options);
+
         HostProcessStart started;
         try
         {
-            started = launchService.Start(
-                parsedHost.Value, versionNumber, languageCode, filePath, cancellationToken);
+            started = launchService.Start(request, cancellationToken);
         }
         catch (InvalidOperationException ex)
         {
             return ToolHelpers.ErrorResult(ex.Message);
         }
 
-        var connected = await WaitForInstanceConnectionAsync(started.Process.Id, cancellationToken).ConfigureAwait(false);
-        var dialogResult = await HostLaunchCoordinator.TryAwaitResolverResultAsync(
-            started.DialogResolver, TimeSpan.FromSeconds(5)).ConfigureAwait(false);
-        if (!connected)
-            return ToolHelpers.ErrorResult(
-                $"{parsedHost} launched (PID={started.Process.Id}) but bridge did not connect within timeout.");
-
-        var payload = new LaunchHostResult(
-            parsedHost.Value,
-            started.Process.Id,
-            started.Version,
-            started.ExePath,
-            string.Join(" ", started.Arguments),
-            started.LanguageCode,
-            true,
-            dialogResult);
-
-        return ToolHelpers.Result(payload);
-    }
-
-    private async Task<bool> WaitForInstanceConnectionAsync(int processId, CancellationToken ct)
-    {
-        var deadline = DateTime.UtcNow.AddMinutes(2);
-        while (DateTime.UtcNow < deadline && !ct.IsCancellationRequested)
+        try
         {
-            if (hostBroker.GetByProcessId(processId) is not null)
-                return true;
+            var status = await HostLaunchWait.UntilAsync(
+                    started.Process,
+                    () => hostBroker.GetByProcessId(started.Process.Id) is not null,
+                    BridgeTimeout,
+                    cancellationToken)
+                .ConfigureAwait(false);
 
-            try { await Task.Delay(500, ct).ConfigureAwait(false); }
-            catch (OperationCanceledException) { return false; }
+            var dialogResult = await HostLaunchCoordinator.TryAwaitResolverResultAsync(
+                started.DialogResolver, TimeSpan.FromSeconds(5)).ConfigureAwait(false);
+
+            if (status is not HostReadyStatus.Ready)
+            {
+                var reason = status switch
+                {
+                    HostReadyStatus.Exited => $"{parsedHost} launched (PID={started.Process.Id}) but exited before the bridge connected.",
+                    HostReadyStatus.Cancelled => $"{parsedHost} launch was cancelled (PID={started.Process.Id}).",
+                    _ => $"{parsedHost} launched (PID={started.Process.Id}) but bridge did not connect within timeout."
+                };
+                return ToolHelpers.ErrorResult(reason);
+            }
+
+            var payload = new LaunchHostResult(
+                parsedHost.Value,
+                started.Process.Id,
+                started.Version,
+                started.ExePath,
+                string.Join(" ", started.Arguments),
+                started.LanguageCode,
+                true,
+                dialogResult);
+
+            return ToolHelpers.Result(payload);
         }
-
-        return false;
+        finally
+        {
+            started.DialogResolver?.Dispose();
+        }
     }
 }

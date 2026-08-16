@@ -21,6 +21,5 @@
         <ProjectReference Include="..\DevTools.Mcp.Client\DevTools.Mcp.Client.csproj" SetTargetFramework="TargetFramework=net10.0-windows" />
         <ProjectReference Include="..\DevTools.Hosting\DevTools.Hosting.csproj" />
         <ProjectReference Include="..\DevTools.Ipc\DevTools.Ipc.csproj" />
-        <ProjectReference Include="..\DevTools.Utilities\DevTools.Utilities.csproj" />
     </ItemGroup>
 </Project>

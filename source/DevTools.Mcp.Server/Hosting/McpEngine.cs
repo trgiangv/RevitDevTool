@@ -1,10 +1,10 @@
 using DevTools.FileMetadata.Core;
+using DevTools.Hosting;
 using DevTools.Mcp.Client;
 using DevTools.Mcp.Core;
 using DevTools.Mcp.Server.Contracts;
 using DevTools.Mcp.Server.Prompts;
 using DevTools.Mcp.Server.Tools;
-using DevTools.Utilities.Hosting;
 using ModelContextProtocol.Server;
 
 namespace DevTools.Mcp.Server.Hosting;

@@ -1,7 +1,6 @@
 using System.Text.Json.Serialization;
 using DevTools.Ipc;
 using DevTools.Hosting;
-using DevTools.Utilities.Hosting;
 
 namespace DevTools.Mcp.Server.Contracts;
 
