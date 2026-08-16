@@ -5,7 +5,7 @@ namespace DevTools.NUnit.Host.Loading;
 
 /// <summary>
 /// Host/platform assemblies that should reuse the host-loaded copy.
-/// Host NuGet/API prefixes come from <see cref="HostSharedAssemblies.HostPackagePrefixes"/>.
+/// Host NuGet/API prefixes come from <see cref="HostSharedAssemblies.MatchesHostPackagePrefix"/>.
 /// <c>System.*</c> facades are shared; <c>Microsoft.*</c> is not.
 /// On net48, NuGet BCL polyfills stay generation-private.
 /// </summary>

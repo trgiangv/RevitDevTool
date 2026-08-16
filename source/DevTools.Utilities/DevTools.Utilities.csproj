@@ -5,4 +5,9 @@
         <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     </PropertyGroup>
 
+    <ItemGroup>
+        <ProjectReference Include="..\DevTools.Execution.Abstractions\DevTools.Execution.Abstractions.csproj"/>
+        <ProjectReference Include="..\DevTools.Hosting\DevTools.Hosting.csproj"/>
+    </ItemGroup>
+
 </Project>

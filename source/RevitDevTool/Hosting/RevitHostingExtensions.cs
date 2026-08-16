@@ -4,6 +4,7 @@ using DevTools.Execution;
 using DevTools.Execution.Interfaces;
 using DevTools.Execution.Providers;
 using DevTools.Hosting;
+using DevTools.Hosting.Revit;
 using DevTools.Logging;
 using DevTools.Logging.Abstractions;
 using DevTools.Mcp.Catalog;
@@ -66,6 +67,7 @@ internal static class RevitHostingExtensions
     {
         var services = builder.Services;
 
+        services.AddRevitInProcess();
         services.AddHostedService<HostBackgroundController>();
         services.AddSingleton<IHostAppInfo, RevitHostAppInfo>();
         services.AddSingleton<IContextEnricher>(sp =>

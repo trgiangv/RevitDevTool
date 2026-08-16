@@ -36,7 +36,9 @@ public sealed class HostingAssemblyBoundaryTests
             "#32770",
             "RevitAPI",
             "acmgd",
-            "IHostSharedAssemblyPolicy",
+            "MahApps",
+            "ControlzEx",
+            "CommunityToolkit",
         ];
 
         foreach (var path in sources)
