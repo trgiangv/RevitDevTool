@@ -3,6 +3,7 @@ using DevTools.Agents.Acad.Resources;
 using DevTools.Execution;
 using DevTools.Execution.Interfaces;
 using DevTools.Hosting;
+using DevTools.Hosting.Acad;
 using DevTools.Logging;
 using DevTools.Logging.Abstractions;
 using DevTools.Mcp.Catalog;
@@ -58,6 +59,7 @@ internal static class AcadHostingExtensions
     {
         var services = builder.Services;
 
+        services.AddAutocadInProcess();
         services.AddHostedService<HostBackgroundController>();
         services.AddSingleton<IHostAppInfo, AcadHostAppInfo>();
         services.AddSingleton<IContextEnricher>(sp =>
