@@ -12,6 +12,7 @@ here is in scope.
 | Area | Relative coverage | Notes |
 |------|-------------------|-------|
 | MCP | **Medium–high** | Strong on contracts, parsers, harnesses; weak on live host E2E |
+| NUnit host | **Medium** | In-process spike/load coverage; one Trace capture case is suite-order sensitive |
 | Pytest bridge | **Low** | Framing + pipe naming only |
 | Execution | **Low** | Pip/guard smoke; script engines largely untested |
 
@@ -43,6 +44,28 @@ Largest test surface (`tests/DevTools.Mcp.Tests`, ~180 cases).
 - **End-to-end toolset invoke** — catalog discovery → host dispatch → Revit API (no single CI test)
 
 **Prerequisites:** build `samples/McpToolsetDemo` and/or `samples/RevitMcpToolSet` for parser/spike tests; pixi env at `%APPDATA%\RevitDevTool\pixi-env` for Python parser tests (`scripts/test-python.ps1`).
+
+---
+
+## NUnit host
+
+`tests/DevTools.NUnit.Host.Tests` (~62 cases). Parallelization is already off
+(`CollectionBehavior`) because `NUnitRunTraceScope` mutates process-wide
+`Trace.Listeners`.
+
+### Partial / fragile
+
+- **`Run_reports_pass_and_fail_results`** — Console capture (`spike-output-marker`)
+  is stable. `Trace` / `Debug` markers (`spike-trace-marker`, `spike-debug-marker`)
+  pass when that test is filtered alone and fail in the full Debug suite with
+  output `"spike-output-marker\r\n"` only. Same on `HEAD` and on Hosting identity
+  work. Capture lives in `NUnit.Runtime` (`NUnitRunTraceScope`), **not**
+  `DevTools.Logging`. Do not drop the Trace/Debug asserts (ADR 0017 contract)
+  and do not treat a missing Logging IL ref as the cause.
+
+`scripts/test-dotnet.ps1` does not forward `--filter`. Extra tokens bind to
+`-Configuration` (e.g. `-filter` → `bin\-filter\`), which compiles Spike
+fixtures without `TRACE`/`DEBUG` and looks like the same failure.
 
 ---
 

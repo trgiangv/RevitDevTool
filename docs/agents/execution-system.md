@@ -31,8 +31,8 @@ Additional interfaces in `source/DevTools.Execution/Interfaces/`:
 
 Host projects register implementations via `AddExecutionServices()`:
 
-- Revit: `source/RevitDevTool/Hosting/RevitHostingExtensions.cs`
-- AutoCAD: `source/AcadDevTool/Hosting/AcadHostingExtensions.cs`
+- Revit: `source/RevitDevTool/Composition/RevitServiceRegistration.cs`
+- AutoCAD: `source/AcadDevTool/Composition/AcadServiceRegistration.cs`
 
 The `AddExecutionServices()` call is the central DI hub — it registers orchestrator, MCP in-host pipe server (`DevToolsPipeServer`), pytest handler, and all strategy factories.
 

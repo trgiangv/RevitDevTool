@@ -6,6 +6,8 @@ The platform is host-agnostic by design. Every feature should be sharable across
 
 Keep these host-neutral — this is the default for all new functionality:
 
+- `source/DevTools.Hosting/` — `HostApp`, `IHostAppInfo`, generic launch engine (`AddHostLaunchCore`, `HostLaunchWait`). No Revit/Acad product strings, dialog catalogs, or assembly-load policy.
+- `source/DevTools.FileMetadata.Core/` — `IFileReader` / `FileInfoResult` (MCP `read_file_info`). Takes `HostApp` as a result field only.
 - `source/DevTools.Execution/` — execution engine, script providers, MCP in-host runtime
 - `source/DevTools.Execution.Abstractions/` — host-neutral contracts (`IHostContextExecutor`, `ICommandDiscovery`, `ICommandRunner`, `IDocumentBridge`, enums)
 - `source/DevTools.Ipc/` — IPC transport (BridgeMessage, pipe connection, wire protocol)
@@ -15,7 +17,7 @@ Keep these host-neutral — this is the default for all new functionality:
 - `source/DevTools.Settings/`
 - `source/DevTools.Telemetry/`
 - `source/DevTools.UI/`
-- `source/DevTools.Utilities/`
+- `source/DevTools.Utilities/` — helpers + `AssemblyLoading` (`HostSharedAssemblies`, `HostApiAssemblySet`). Leaf: no Hosting, no Execution.Abstractions.
 
 ## Host Layer
 
@@ -24,8 +26,24 @@ Host API references belong in host projects:
 - Revit host: `source/RevitDevTool/`
 - Revit-only core: `source/RevitDevTool.Core/` (RevitContext, RevitTransactionService, dockable pane loader, image exporter — not shared with other hosts)
 - AutoCAD host: `source/AcadDevTool/`
+- Launch specs (path / argv / dialog catalog): `source/DevTools.Hosting.Revit/`, `source/DevTools.Hosting.Acad/`. Daemon and NUnit Runner call `AddRevitLaunch` / `AddAutocadFamilyLaunch`. Add-ins do **not**.
+- Offline file parse: `source/DevTools.FileMetadata.Revit/` (OpenMcdf) and `FileMetadata.Acad` (ACadSharp). Parsers stay **HostApp-free**. Daemon wires `RevitFileMetadataReader.TryReadRevitVersion` into `AddRevitLaunch`; Runner passes `null`. Do not ProjectReference FileMetadata from `Hosting.Revit`.
+- Add-in composition: `source/RevitDevTool/Composition/`, `source/AcadDevTool/Composition/` (`RevitServiceRegistration` / `AcadServiceRegistration`). Not `DevTools.Hosting`.
+- In-process host-API names: `RevitHostApiAssemblies.Set` / `AcadHostApiAssemblies.Set` passed to `HostSharedAssemblies.Use` in `Application.OnStartup` next to `AssemblyLoader.Initialize()`. Not DI. Not launch.
 - Visualization: `source/RevitDevTool/Visualization/` (DirectContext3D — entirely Revit-host, not in shared code)
 - Future hosts: add new host projects rather than extending shared code with platform-specific branches.
+
+## Assembly load (three jobs)
+
+Do not add a fourth path. Directory scan (`Configure`) is deleted — names come only from `Use(set)`.
+
+| Job | Entry |
+|-----|--------|
+| Add-in deploy folder, once | `Utilities/AssemblyLoader.Initialize()` |
+| Dynamic / command ALC | `Utilities/AssemblyLoading/*` + ambient `HostSharedAssemblies.Use(HostApiAssemblySet)` |
+| NUnit generation | `NUnit.Host` loaders (do not redesign here) |
+
+Native dialog/stdio P/Invoke for **launch** stays inside `DevTools.Hosting` (`DialogNative`, `HostLaunchService.StdioInheritance`). Do not create `Hosting → Utilities` for Interop. WPF owner/title-bar stays `DevTools.UI/Win32Utils`.
 
 ## Standalone Daemon
 
@@ -35,7 +53,7 @@ Host API references belong in host projects:
 - Daemon external tools: infrastructure (`list_host_instances`, `launch_host`, `read_file_info`, `list_machines`) plus `search_dynamic` / `invoke_dynamic`.
 - Fixed prompts (`revit_code`, `acad_code`) are daemon-owned.
 - In-host built-in tools (shared runtime): `execute_csharp_code`, `open_document` via `IDocumentBridge`.
-- Startup dialog resolver uses merged keywords in default `StartupDialogResolverOptions` (Revit + AutoCAD). It has **no self-timeout** (pytest style). MCP and NUnit share `HostLaunchWait.UntilAsync` (one wait loop, caller ready-probe). Timeout remains the safety valve (`launch_host` 2 min, NUnit `HostLaunchTimeout`).
+- Startup dialog catalogs are **per host spec** (`RevitStartupDialogSpec` / `AcadStartupDialogSpec`), not a merged Autodesk bag. Generic Hosting polls EnumWindows + BM_CLICK with **no** product keywords and **no** self-timeout. MCP and NUnit share `HostLaunchWait.UntilAsync` (one wait loop, caller ready-probe). Timeout is the safety valve (`launch_host` 2 min, NUnit `HostLaunchTimeout`). See [0018](../decisions/0018-host-identity-and-out-of-process-infrastructure.md).
 - Remaining gaps for AutoCAD: no shipped MCP toolset.
 
 ## Boundary Checklist

@@ -14,6 +14,10 @@ Host projects (RevitDevTool, AcadDevTool)
 
 Default: features are sharable. Host API, threading, and host-specific rendering
 stay in host projects. Visualization (DirectContext3D) is Revit-host only.
+Process identity and generic host launch live in `DevTools.Hosting`; Revit/Acad
+launch specs are `DevTools.Hosting.Revit` / `Hosting.Acad`; offline file parse
+stays `FileMetadata.*`; add-in DI lives in `RevitDevTool/Composition` /
+`AcadDevTool/Composition` ([0018](decisions/0018-host-identity-and-out-of-process-infrastructure.md)).
 
 ## Module Map
 
@@ -39,7 +43,7 @@ stay in host projects. Visualization (DirectContext3D) is Revit-host only.
 
 ## Source Layout
 
-- Shared: `source/DevTools.*` (Execution, Execution.Abstractions, Ipc, Mcp.Core/Catalog/Adapter/Client/Server, FileMetadata.Core/Revit/Acad, Logging, Presentation, Settings, Telemetry, UI, Utilities, Daemon)
+- Shared: `source/DevTools.*` (Hosting, Hosting.Revit, Hosting.Acad, Execution, Execution.Abstractions, Ipc, Mcp.Core/Catalog/Adapter/Client/Server, FileMetadata.Core/Revit/Acad, Logging, Presentation, Settings, Telemetry, UI, Utilities, Daemon)
 - Revit host: `source/RevitDevTool/`; Revit-only helpers: `source/RevitDevTool.Core/`
 - AutoCAD host: `source/AcadDevTool/`
 - Samples: `samples/`; build: `build/`; scripts: `scripts/`

@@ -30,6 +30,7 @@ decision into `docs/decisions/`; keep task-local choices in the plan.
 
 | Plan | Status |
 |------|--------|
+| [2026-08-15-host-identity-ui-free-infrastructure.md](active/2026-08-15-host-identity-ui-free-infrastructure.md) | In progress — A–I/J + slim + graph follow-up + G on `develop`; F optional; K rejected |
 | [2026-08-02-mrtr-implementation.md](active/2026-08-02-mrtr-implementation.md) | Active — G1 closed; G3/G4 open |
 
 ## Recently Completed

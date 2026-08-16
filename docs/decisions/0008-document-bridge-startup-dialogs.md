@@ -4,7 +4,9 @@ Date: 2026-05-31
 
 ## Status
 
-Accepted
+Accepted. Dialog-catalog half is **superseded by
+[0018](0018-host-identity-and-out-of-process-infrastructure.md)** (per-host
+specs). `IDocumentBridge` / `open_document` still stands.
 
 ## Context
 
@@ -15,8 +17,10 @@ across Revit and AutoCAD.
 
 - Shared `IDocumentBridge` with host implementations; in-host `open_document`
   delegates to the active host bridge.
-- `StartupDialogResolver` uses merged Revit + AutoCAD keywords in default
-  options rather than host-specific option branching.
+- `StartupDialogResolver` is a generic poller. Dialog catalogs are per-host
+  (`RevitStartupDialogSpec` / `AcadStartupDialogSpec`). The merged
+  Autodesk keyword bag in this ADR is **superseded by
+  [0018](0018-host-identity-and-out-of-process-infrastructure.md)**.
 
 ## Consequences
 
