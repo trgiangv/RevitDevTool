@@ -5,14 +5,4 @@
         <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     </PropertyGroup>
 
-    <ItemGroup>
-        <PackageReference Include="Microsoft-WindowsAPICodePack-Shell"/>
-        <PackageReference Include="Microsoft.Extensions.Logging.Abstractions"/>
-    </ItemGroup>
-
-    <ItemGroup>
-        <ProjectReference Include="..\DevTools.Hosting\DevTools.Hosting.csproj"/>
-        <ProjectReference Include="..\DevTools.Logging\DevTools.Logging.csproj"/>
-    </ItemGroup>
-
 </Project>

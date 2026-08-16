@@ -292,7 +292,7 @@ public partial class LogSettingsViewModel : ObservableObject, IDataErrorInfo, IR
     [RelayCommand]
     private void BrowseFolder()
     {
-        var selectedFolder = Utilities.AppUtils.SelectFolder("Select Log Folder");
+        var selectedFolder = AppUtils.SelectFolder("Select Log Folder");
         if (!string.IsNullOrEmpty(selectedFolder))
             LogFolder = selectedFolder;
     }

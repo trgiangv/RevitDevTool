@@ -4,7 +4,6 @@ using System.IO;
 using System.Reflection;
 using System.Windows.Data;
 using DevTools.Presentation.Models;
-using DevTools.Utilities;
 using PythonNetStubGenerator;
 // ReSharper disable UnusedParameterInPartialMethod
 
@@ -34,7 +33,7 @@ public partial class StubBuilderViewModel : ObservableObject
 
     public StubBuilderViewModel(string versionNumber)
     {
-        OutputPath = Path.Combine(AppUtils.GetContentRootPath(versionNumber), "Stubs");
+        OutputPath = Path.Combine(Utilities.AppUtils.GetContentRootPath(versionNumber), "Stubs");
         FilteredAssemblies = CollectionViewSource.GetDefaultView(AppDomainAssemblies);
         FilteredAssemblies.Filter = FilterAssembly;
         LoadAppDomainAssemblies();

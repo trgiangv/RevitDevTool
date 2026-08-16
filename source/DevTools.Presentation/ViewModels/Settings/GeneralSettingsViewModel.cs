@@ -4,7 +4,7 @@ using DevTools.Presentation.Interfaces;
 using DevTools.Settings;
 using DevTools.Presentation.ViewModels.Messages;
 using DevTools.UI.Theme;
-using DevTools.Utilities;
+using DevTools.UI;
 namespace DevTools.Presentation.ViewModels.Settings;
 
 public partial class GeneralSettingsViewModel : ObservableValidator, IRecipient<ResetSettingsMessage>

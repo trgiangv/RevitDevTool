@@ -5,7 +5,7 @@ using System.Windows.Input;
 using DevTools.Presentation.Models;
 using DevTools.Presentation.ViewModels;
 using DevTools.UI.Theme;
-using DevTools.Utilities;
+using DevTools.UI;
 namespace DevTools.Presentation.Views;
 
 public partial class StubBuilderWindow

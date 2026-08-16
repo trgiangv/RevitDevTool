@@ -21,7 +21,7 @@ public static class DaemonClient
     {
         if (await IsReadyAsync(ct).ConfigureAwait(false)) return;
 
-        var exePath = AppUtils.GetDaemonExePath();
+        var exePath = Utilities.AppUtils.GetDaemonExePath();
         if (!System.IO.File.Exists(exePath)) return;
 
         Process.Start(new ProcessStartInfo(exePath) { UseShellExecute = true });

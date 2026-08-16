@@ -8,7 +8,6 @@ using DevTools.Execution.External.Connections;
 using DevTools.Presentation.Models;
 using DevTools.UI.Behaviors;
 using DevTools.UI.Theme;
-using DevTools.Utilities;
 // ReSharper disable UnusedParameterInPartialMethod
 // ReSharper disable RedundantSuppressNullableWarningExpression
 

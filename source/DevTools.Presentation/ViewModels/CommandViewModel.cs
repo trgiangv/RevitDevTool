@@ -117,7 +117,7 @@ public partial class CommandViewModel : ObservableObject, IBusyViewModel
     [RelayCommand]
     private async Task LoadScriptsAsync()
     {
-        var selectedFolder = Utilities.AppUtils.SelectFolder("Select Scripts Folder");
+        var selectedFolder = AppUtils.SelectFolder("Select Scripts Folder");
         if (string.IsNullOrEmpty(selectedFolder)) return;
         await this.WhileBusy("Loading scripts...", async () =>
         {

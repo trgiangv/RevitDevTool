@@ -1,8 +1,9 @@
+using System.Reflection;
 using System.Windows.Interop;
 using System.Windows.Media;
 using System.Windows.Threading;
 
-namespace DevTools.Utilities;
+namespace DevTools.UI;
 
 /// <summary>
 /// Helper class for dispatching actions to the Autodesk UI thread.
@@ -15,12 +16,12 @@ public static class HostUiHelper
     /// Gets the Autodesk UI thread dispatcher.
     /// </summary>
     public static Dispatcher? HostDispatcher { get; private set; }
-    
+
     /// <summary>
     /// Gets the handle of the Host main window.
     /// </summary>
     public static IntPtr MainWindowHandle { get; private set; }
-    
+
     public static void Initialize(IntPtr mainWindowHandle, Dispatcher dispatcher)
     {
         HostDispatcher = dispatcher;
@@ -60,6 +61,16 @@ public static class HostUiHelper
             return;
         }
 
+        // AutoCAD/Civil3D can enter IExtensionApplication while dispatcher processing is
+        // suspended. PushFrame then throws InvalidOperationException. Revit Host.Start
+        // still uses the message-pump path when the dispatcher is not suspended.
+        var dispatcher = Dispatcher.FromThread(Thread.CurrentThread);
+        if (dispatcher is not null && IsProcessingSuspended(dispatcher))
+        {
+            task.GetAwaiter().GetResult();
+            return;
+        }
+
         var frame = new DispatcherFrame();
 
         // TaskScheduler.Default ensures continuation runs on ThreadPool, not UI thread.
@@ -70,5 +81,13 @@ public static class HostUiHelper
         Dispatcher.PushFrame(frame);
 
         task.GetAwaiter().GetResult();
+    }
+
+    private static bool IsProcessingSuspended(Dispatcher dispatcher)
+    {
+        var field = typeof(Dispatcher).GetField(
+            "_disableProcessingCount",
+            BindingFlags.Instance | BindingFlags.NonPublic);
+        return field?.GetValue(dispatcher) is int count && count > 0;
     }
 }
