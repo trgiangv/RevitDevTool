@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
     <PropertyGroup>
         <UseAutoCad>true</UseAutoCad>
@@ -10,8 +10,7 @@
     </PropertyGroup>
 
     <PropertyGroup>
-        <!-- AutoCAD 2027 has new isolated context, that has issue with ILRepack -> System.BadImageFormatException: Invalid token -->
-        <IsRepackable Condition="$(AutoCadVersion) &lt; 2027">true</IsRepackable>
+        <ILRepackable>true</ILRepackable>
         <RepackBinariesExcludes>
             DevTools.MahApps.Metro.dll;
             DevTools.ControlzEx.dll;
@@ -24,9 +23,6 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <!--Build-->
-        <PackageReference Include="ILRepack"/>
-
         <!--UI-->
         <PackageReference Include="Microsoft.Web.WebView2" Condition="$(AutoCadVersion) &lt; 2023"/>
         <PackageReference Include="ricaun.AutoCAD.UI"/>
