@@ -35,7 +35,7 @@ public sealed class LoggingService(
         loggingConfiguration.SetMinimumLevel(config.TraceListener.LogLevel);
 
         monitor.Enable(config.Monitor);
-        SetTheme(ThemeManager.Current.ActualApplicationTheme == AppTheme.Dark);
+        SetTheme(ThemeManager.Current.ActualApplicationTheme == DevTools.UI.Theme.AppTheme.Dark);
         monitor.SetPrettyJson(config.Monitor.EnablePrettyJson);
         monitor.SetFilter(config.TraceListener.LogLevel);
 

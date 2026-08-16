@@ -4,7 +4,6 @@ using AcadDevTool.Logging.Enums;
 using DevTools.Logging;
 using DevTools.Settings;
 using DevTools.Settings.Configs;
-using DevTools.UI.Theme;
 using Microsoft.Extensions.Logging;
 using ZLogger;
 using AppUtils = DevTools.Utilities.AppUtils;

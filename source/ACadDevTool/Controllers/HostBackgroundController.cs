@@ -24,7 +24,7 @@ public sealed class HostBackgroundController(
         PythonEmbedded.Configure(hostApp);
 
         settingsService.LoadSettings();
-        ThemeManager.Current.ApplySettingsTheme(settingsService.GeneralConfig.Theme);
+        ThemeManager.Current.ApplySettingsTheme((AppTheme)settingsService.GeneralConfig.Theme);
         HostUiHelper.ToggleHardwareRendering(settingsService.GeneralConfig.UseHardwareRendering);
         await pythonInitializer.InitializeAsync().ConfigureAwait(false);
     }
