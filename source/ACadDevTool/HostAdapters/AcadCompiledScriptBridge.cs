@@ -2,7 +2,7 @@ using System.Reflection;
 using Autodesk.AutoCAD.DatabaseServices;
 using Autodesk.AutoCAD.Runtime;
 using DevTools.Execution.Interfaces;
-using DevTools.Logging;
+using DevTools.Hosting;
 
 namespace AcadDevTool.HostAdapters;
 

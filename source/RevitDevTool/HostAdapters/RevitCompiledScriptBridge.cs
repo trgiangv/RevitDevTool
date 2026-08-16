@@ -1,6 +1,6 @@
 using System.Reflection;
 using DevTools.Execution.Interfaces;
-using DevTools.Logging;
+using DevTools.Hosting;
 
 namespace RevitDevTool.HostAdapters;
 

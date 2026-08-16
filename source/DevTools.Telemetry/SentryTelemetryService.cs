@@ -1,4 +1,4 @@
-using DevTools.Logging;
+using DevTools.Hosting;
 using Microsoft.Extensions.Logging;
 
 namespace DevTools.Telemetry;

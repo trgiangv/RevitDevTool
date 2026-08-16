@@ -1,4 +1,4 @@
-using DevTools.Logging;
+using DevTools.Hosting;
 using DevTools.Settings;
 using Microsoft.Extensions.DependencyInjection;
 

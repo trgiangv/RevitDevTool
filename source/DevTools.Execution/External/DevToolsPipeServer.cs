@@ -4,7 +4,7 @@ using System.IO.Pipes;
 using System.Security.AccessControl;
 using System.Security.Principal;
 using System.Text.Json;
-using DevTools.Logging;
+using DevTools.Hosting;
 using DevTools.Execution.External.Connections;
 using DevTools.Mcp.Adapter.External;
 using Microsoft.Extensions.Hosting;

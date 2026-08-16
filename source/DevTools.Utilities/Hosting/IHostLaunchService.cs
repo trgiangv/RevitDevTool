@@ -1,5 +1,5 @@
 using System.Diagnostics;
-using DevTools.Logging;
+using DevTools.Hosting;
 
 namespace DevTools.Utilities.Hosting;
 

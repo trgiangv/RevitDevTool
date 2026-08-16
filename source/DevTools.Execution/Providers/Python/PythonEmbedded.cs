@@ -1,7 +1,7 @@
 using System.Collections.Concurrent;
 using System.IO;
 using System.Reflection;
-using DevTools.Logging;
+using DevTools.Hosting;
 using Microsoft.Extensions.Logging;
 using ZLogger;
 
@@ -18,7 +18,7 @@ public static class PythonEmbedded
     private static HostApp _host;
 
     /// <summary>
-    /// Configures host-specific setup script from <see cref="DevTools.Logging.IHostAppInfo.Host"/>. Must run before any script access.
+    /// Configures host-specific setup script from <see cref="DevTools.Hosting.IHostAppInfo.Host"/>. Must run before any script access.
     /// </summary>
     public static void Configure(HostApp host)
     {

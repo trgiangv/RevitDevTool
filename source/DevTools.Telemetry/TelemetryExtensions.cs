@@ -5,7 +5,7 @@ using Microsoft.Extensions.Hosting;
 namespace DevTools.Telemetry;
 
 /// <summary>
-/// Host wiring shared by Revit, AutoCAD, and any other host that registers <see cref="ISettingsService"/> and <see cref="Logging.IHostAppInfo"/>.
+/// Host wiring shared by Revit, AutoCAD, and any other host that registers <see cref="ISettingsService"/> and <see cref="DevTools.Hosting.IHostAppInfo"/>.
 /// </summary>
 public static class TelemetryExtensions
 {

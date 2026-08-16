@@ -53,7 +53,7 @@
         <ProjectReference Include="..\DevTools.NUnit.Core\DevTools.NUnit.Core.csproj" SetTargetFramework="TargetFramework=net10.0-windows"/>
         <ProjectReference Include="..\DevTools.NUnit.Transport\DevTools.NUnit.Transport.csproj" SetTargetFramework="TargetFramework=net10.0-windows"/>
         <ProjectReference Include="..\DevTools.Ipc\DevTools.Ipc.csproj" SetTargetFramework="TargetFramework=net10.0-windows"/>
-        <ProjectReference Include="..\DevTools.Logging\DevTools.Logging.csproj" SetTargetFramework="TargetFramework=net10.0-windows"/>
+        <ProjectReference Include="..\DevTools.Hosting\DevTools.Hosting.csproj" SetTargetFramework="TargetFramework=net10.0-windows"/>
         <ProjectReference Include="..\DevTools.Utilities\DevTools.Utilities.csproj" SetTargetFramework="TargetFramework=net10.0-windows"/>
     </ItemGroup>
 

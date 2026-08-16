@@ -3,6 +3,7 @@ using DevTools.Agents.Revit.Resources;
 using DevTools.Execution;
 using DevTools.Execution.Interfaces;
 using DevTools.Execution.Providers;
+using DevTools.Hosting;
 using DevTools.Logging;
 using DevTools.Logging.Abstractions;
 using DevTools.Mcp.Catalog;

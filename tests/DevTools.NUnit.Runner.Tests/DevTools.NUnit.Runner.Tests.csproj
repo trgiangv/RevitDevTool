@@ -18,6 +18,14 @@
         <ProjectReference Include="..\..\source\DevTools.NUnit.Transport\DevTools.NUnit.Transport.csproj"/>
     </ItemGroup>
 
+    <!-- NETSDK1151: a non-self-contained test project cannot ProjectReference the self-contained Runner exe
+         (AdditionalProperties / ReferenceOutputAssembly=false do not suppress the check). -->
+    <Target Name="EnsureRunnerBuilt" BeforeTargets="Build">
+        <MSBuild Projects="..\..\source\DevTools.NUnit.Runner\DevTools.NUnit.Runner.csproj"
+                 Targets="Build"
+                 Properties="Configuration=$(Configuration)"/>
+    </Target>
+
     <ItemGroup>
         <Compile Include="..\..\source\DevTools.NUnit.Core\Discovery\NUnitMetadataDiscoverer.cs"
                  Link="Discovery\NUnitMetadataDiscoverer.cs" />

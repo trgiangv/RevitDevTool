@@ -1,4 +1,4 @@
-using DevTools.Logging;
+using DevTools.Hosting;
 using DevTools.Utilities.Hosting.Resolver;
 
 namespace DevTools.Utilities.Hosting;

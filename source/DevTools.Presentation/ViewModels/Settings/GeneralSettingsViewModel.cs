@@ -1,5 +1,5 @@
 using CommunityToolkit.Mvvm.Messaging;
-using DevTools.Logging;
+using DevTools.Hosting;
 using DevTools.Presentation.Interfaces;
 using DevTools.Settings;
 using DevTools.Presentation.ViewModels.Messages;

@@ -1,5 +1,5 @@
 using System.Text.Json;
-using DevTools.Logging;
+using DevTools.Hosting;
 namespace DevTools.Execution.External.Handlers;
 
 public sealed class InstanceRequestHandler(IHostAppInfo hostInfo) : IBridgeRequestHandler

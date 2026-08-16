@@ -1,7 +1,7 @@
 using System.Text.RegularExpressions;
 using Autodesk.AutoCAD.DatabaseServices;
 using Autodesk.AutoCAD.Runtime;
-using DevTools.Logging;
+using DevTools.Hosting;
 using AcadApp = Autodesk.AutoCAD.ApplicationServices.Core.Application;
 
 namespace AcadDevTool.HostAdapters;

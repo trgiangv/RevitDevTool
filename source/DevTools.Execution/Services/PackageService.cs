@@ -1,5 +1,5 @@
 using System.IO;
-using DevTools.Logging;
+using DevTools.Hosting;
 using DevTools.Execution.Interfaces;
 using DevTools.Execution.Models;
 using DevTools.Execution.Providers.FSharp;

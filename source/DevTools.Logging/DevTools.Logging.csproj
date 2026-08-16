@@ -16,4 +16,8 @@
         <Reference Include="System.Net.Http" />
     </ItemGroup>
 
+    <ItemGroup>
+        <ProjectReference Include="..\DevTools.Hosting\DevTools.Hosting.csproj" />
+    </ItemGroup>
+
 </Project>

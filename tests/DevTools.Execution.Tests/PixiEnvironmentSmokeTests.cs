@@ -1,5 +1,5 @@
 using DevTools.Execution.Providers.Python;
-using DevTools.Logging;
+using DevTools.Hosting;
 using Microsoft.Extensions.Logging.Abstractions;
 using Python.Runtime;
 

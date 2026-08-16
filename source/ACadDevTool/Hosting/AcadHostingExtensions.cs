@@ -2,6 +2,7 @@ using CommunityToolkit.Mvvm.Messaging;
 using DevTools.Agents.Acad.Resources;
 using DevTools.Execution;
 using DevTools.Execution.Interfaces;
+using DevTools.Hosting;
 using DevTools.Logging;
 using DevTools.Logging.Abstractions;
 using DevTools.Mcp.Catalog;

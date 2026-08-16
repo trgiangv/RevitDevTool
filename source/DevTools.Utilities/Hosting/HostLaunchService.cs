@@ -1,7 +1,7 @@
 using System.Diagnostics;
 using System.Runtime.InteropServices;
 using System.Text.RegularExpressions;
-using DevTools.Logging;
+using DevTools.Hosting;
 using DevTools.Utilities.Hosting.Resolver;
 using DevTools.FileMetadata.Revit;
 // ReSharper disable RedundantSuppressNullableWarningExpression

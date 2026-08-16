@@ -1,6 +1,6 @@
 using System.Text.Json;
 using DevTools.NUnit.Transport;
-using DevTools.Logging;
+using DevTools.Hosting;
 using DevTools.NUnit.Core;
 using DevTools.NUnit.Core.Contracts;
 using DevTools.NUnit.Runner.Debugging;

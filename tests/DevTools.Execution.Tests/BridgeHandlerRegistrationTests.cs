@@ -3,7 +3,7 @@ using DevTools.Execution.Abstractions;
 using DevTools.Execution.External.Handlers;
 using DevTools.Execution.External.Testing;
 using DevTools.Ipc;
-using DevTools.Logging;
+using DevTools.Hosting;
 using DevTools.NUnit.Core.Contracts;
 using DevTools.NUnit.Host;
 using Microsoft.Extensions.DependencyInjection;

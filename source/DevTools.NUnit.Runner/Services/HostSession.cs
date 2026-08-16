@@ -1,4 +1,4 @@
-using DevTools.Logging;
+using DevTools.Hosting;
 using DevTools.Utilities.Hosting;
 
 namespace DevTools.NUnit.Runner.Services;
