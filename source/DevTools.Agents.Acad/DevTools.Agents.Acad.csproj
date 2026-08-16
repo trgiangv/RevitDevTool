@@ -5,6 +5,7 @@
 
     <ItemGroup>
         <ProjectReference Include="..\DevTools.Mcp.Catalog\DevTools.Mcp.Catalog.csproj" SetTargetFramework="TargetFramework=$(TargetFramework)" />
+        <PackageReference Include="System.Drawing.Common" ExcludeAssets="runtime"/>
     </ItemGroup>
 
     <ItemGroup>

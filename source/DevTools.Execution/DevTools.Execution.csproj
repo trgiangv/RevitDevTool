@@ -29,6 +29,7 @@
         <PackageReference Include="System.Reflection.MetadataLoadContext"/>
         <PackageReference Include="System.Net.Http" Condition="$(TargetFramework.StartsWith('net4'))"/>
         <PackageReference Include="CliWrap"/>
+        <PackageReference Include="ZLogger.Scintilla"/>
     </ItemGroup>
 
     <ItemGroup>

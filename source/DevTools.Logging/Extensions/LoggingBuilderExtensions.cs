@@ -1,9 +1,7 @@
 using DevTools.Logging.Abstractions;
 using DevTools.Logging.Targets;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Logging;
-using ZLogger.Scintilla.Public;
 
 namespace DevTools.Logging.Extensions;
 
@@ -11,19 +9,6 @@ public static class LoggingBuilderExtensions
 {
     extension(ILoggingBuilder builder)
     {
-        /// <summary>
-        /// Adds monitor logging backed by <see cref="ScintillaLogViewerWpf"/>.
-        /// ScintillaOptions are immutable after viewer creation.
-        /// </summary>
-        public ILoggingBuilder AddMonitorLogging(Action<ScintillaOptions>? configure = null)
-        {
-            builder.AddZLoggerScintillaWpf(configure);
-
-            builder.Services.TryAddSingleton<IMonitorLogTarget>(sp =>
-                new MonitorLogTarget(sp.GetRequiredService<ScintillaLogViewerWpf>()));
-
-            return builder;
-        }
         /// <summary>
         /// Adds file logging via <see cref="FileLogProcessor"/>.
         /// Runtime <c>Enable&lt;FileLoggingOptions&gt;(options)</c> activates the sink.

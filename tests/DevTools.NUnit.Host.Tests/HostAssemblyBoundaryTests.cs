@@ -10,8 +10,7 @@ public sealed class HostAssemblyBoundaryTests
         // NUnit.Host must keep a DevTools.Logging ProjectReference (headless ZLogger after H).
         // Host code currently consumes IHostAppInfo from Hosting and ILogger<T> from MEL, so
         // GetReferencedAssemblies omits unused Logging. Direct Presentation/UI/Scintilla refs
-        // are forbidden now. Transitive WPF via Utilities/Logging is expected until E+H —
-        // this is not a full UI-free claim.
+        // are forbidden. After E+H, Logging no longer UseWPF so this is the UI-free graph.
         var csproj = File.ReadAllText(Path.Combine(
             FindRepositoryRoot(),
             "source",

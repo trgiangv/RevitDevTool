@@ -4,9 +4,10 @@ using RevitDevTool.Logging.Enums;
 using RevitDevTool.Settings.Config;
 using System.IO;
 using DevTools.Utilities;
-using DevTools.Logging;
+using DevTools.Presentation;
 using Microsoft.Extensions.Logging;
 using ZLogger;
+using AppUtils = DevTools.Utilities.AppUtils;
 
 namespace RevitDevTool.Settings;
 
@@ -101,7 +102,7 @@ public sealed class SettingsService(IFileConfig<PathOptions> fileConfig, ILogger
     {
         if (_logConfig is null) return;
         fileConfig.Save(_logConfig);
-        TraceListenerHelper.ApplyPresentationTraceSwitches(_logConfig.TraceListener.WpfTraceLevel);
+        PresentationTraceListenerHelper.ApplyPresentationTraceSwitches(_logConfig.TraceListener.WpfTraceLevel);
     }
 
     private void SaveVisualizationSettings()
@@ -162,7 +163,7 @@ public sealed class SettingsService(IFileConfig<PathOptions> fileConfig, ILogger
         else
         {
             EnsureLogFolder(_logConfig);
-            TraceListenerHelper.ApplyPresentationTraceSwitches(_logConfig.TraceListener.WpfTraceLevel);
+            PresentationTraceListenerHelper.ApplyPresentationTraceSwitches(_logConfig.TraceListener.WpfTraceLevel);
         }
     }
 
@@ -178,7 +179,7 @@ public sealed class SettingsService(IFileConfig<PathOptions> fileConfig, ILogger
     {
         _logConfig = new LogConfig();
         EnsureLogFolder(_logConfig);
-        TraceListenerHelper.ApplyPresentationTraceSwitches(_logConfig.TraceListener.WpfTraceLevel);
+        PresentationTraceListenerHelper.ApplyPresentationTraceSwitches(_logConfig.TraceListener.WpfTraceLevel);
     }
 
     private void ResetVisualizationSettings()

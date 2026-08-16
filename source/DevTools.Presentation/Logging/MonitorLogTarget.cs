@@ -1,12 +1,12 @@
 using System.Windows;
-using DevTools.Logging.Abstractions;
+using DevTools.Presentation.Interfaces;
 using Microsoft.Extensions.Logging;
 using ZLogger.Scintilla.Public;
-namespace DevTools.Logging.Targets;
+
+namespace DevTools.Presentation.Logging;
 
 /// <summary>
 /// Thin wrapper around <see cref="ScintillaLogViewerWpf"/> implementing <see cref="IMonitorLogTarget"/>.
-/// Moves Scintilla-specific knowledge into DevTools.Logging so consumers only see the interface.
 /// </summary>
 public sealed class MonitorLogTarget(ScintillaLogViewerWpf viewer) : IMonitorLogTarget
 {

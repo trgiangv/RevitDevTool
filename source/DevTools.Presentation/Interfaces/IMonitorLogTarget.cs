@@ -1,6 +1,8 @@
 using System.Windows;
+using DevTools.Logging.Abstractions;
 using Microsoft.Extensions.Logging;
-namespace DevTools.Logging.Abstractions;
+
+namespace DevTools.Presentation.Interfaces;
 
 public interface IMonitorLogTarget : IDisposable, IActivatable
 {

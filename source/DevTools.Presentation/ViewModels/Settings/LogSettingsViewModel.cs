@@ -4,6 +4,7 @@ using System.Diagnostics;
 using CommunityToolkit.Mvvm.Messaging;
 using DevTools.Logging;
 using DevTools.Logging.Options;
+using DevTools.Presentation;
 using DevTools.Presentation.Interfaces;
 using DevTools.Settings;
 using DevTools.Presentation.ViewModels.Messages;
@@ -137,7 +138,7 @@ public partial class LogSettingsViewModel : ObservableObject, IDataErrorInfo, IR
     partial void OnWpfTraceLevelChanged(SourceLevels value)
     {
         _settingsService.LogConfig.TraceListener.WpfTraceLevel = value;
-        TraceListenerHelper.ApplyPresentationTraceSwitches(value);
+        PresentationTraceListenerHelper.ApplyPresentationTraceSwitches(value);
     }
 
     partial void OnIncludeWpfTraceChanged(bool value) => UpdateHasPendingChanges();

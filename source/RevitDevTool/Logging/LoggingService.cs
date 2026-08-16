@@ -9,6 +9,7 @@ using Microsoft.Extensions.Logging;
 using RevitDevTool.Logging.Listeners;
 using RevitDevTool.Settings;
 using DevTools.UI.Theme;
+using DevTools.Presentation;
 using DevTools.Presentation.Interfaces;
 
 namespace RevitDevTool.Logging;
@@ -113,7 +114,8 @@ public sealed class LoggingService(
 
     public void RegisterTraceListeners()
     {
-        TraceListenerHelper.RegisterTraceListeners(
+        TraceListenerHelper.RegisterTraceListeners(_loggerTraceListener, _geometryListener, _notifyListener);
+        PresentationTraceListenerHelper.RegisterWpfTraceListeners(
             settingsService.LogConfig.TraceListener.IncludeWpfTrace,
             _loggerTraceListener, _geometryListener, _notifyListener);
     }
@@ -123,6 +125,7 @@ public sealed class LoggingService(
         // Remove NotifyListener first
         // with Trace and would otherwise raise TraceReceived during teardown.
         TraceListenerHelper.UnregisterTraceListeners(_notifyListener, _geometryListener, _loggerTraceListener);
+        PresentationTraceListenerHelper.UnregisterWpfTraceListeners(_notifyListener, _geometryListener, _loggerTraceListener);
     }
 
     public void ClearOutput()

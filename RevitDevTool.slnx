@@ -517,6 +517,21 @@
             <BuildType Solution="Release.Autodesk.2027|*" Project="Release" />
             <Build Project="false" />
         </Project>
+        <Project Path="tests/DevTools.Logging.Tests/DevTools.Logging.Tests.csproj">
+            <BuildType Solution="Debug.Autodesk.2022|*" Project="Debug" />
+            <BuildType Solution="Debug.Autodesk.2023|*" Project="Debug" />
+            <BuildType Solution="Debug.Autodesk.2024|*" Project="Debug" />
+            <BuildType Solution="Debug.Autodesk.2025|*" Project="Debug" />
+            <BuildType Solution="Debug.Autodesk.2026|*" Project="Debug" />
+            <BuildType Solution="Debug.Autodesk.2027|*" Project="Debug" />
+            <BuildType Solution="Release.Autodesk.2022|*" Project="Release" />
+            <BuildType Solution="Release.Autodesk.2023|*" Project="Release" />
+            <BuildType Solution="Release.Autodesk.2024|*" Project="Release" />
+            <BuildType Solution="Release.Autodesk.2025|*" Project="Release" />
+            <BuildType Solution="Release.Autodesk.2026|*" Project="Release" />
+            <BuildType Solution="Release.Autodesk.2027|*" Project="Release" />
+            <Build Project="false" />
+        </Project>
         <Project Path="tests/DevTools.Hosting.Tests/DevTools.Hosting.Tests.csproj">
             <BuildType Solution="Debug.Autodesk.2022|*" Project="Debug" />
             <BuildType Solution="Debug.Autodesk.2023|*" Project="Debug" />

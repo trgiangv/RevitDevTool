@@ -2,7 +2,7 @@
 
 Logging uses `ILogger<T>` via Microsoft.Extensions.Logging (MEL) with ZLogger as the provider. All business code injects `ILogger<T>` through DI; a legacy `LoggerTraceListener` bridge remains for third-party/WPF trace sources only.
 
-Last updated: 2026-08-14
+Last updated: 2026-08-16
 
 ---
 
@@ -11,6 +11,7 @@ Last updated: 2026-08-14
 | Area                                      | Path                                              |
 | ----------------------------------------- | ------------------------------------------------- |
 | Shared logging library                    | `source/DevTools.Logging/`                      |
+| Monitor pane (Scintilla / WPF trace)      | `source/DevTools.Presentation/Logging/`         |
 | Shared presentation contracts             | `source/DevTools.Presentation/Interfaces/`      |
 | Revit logging lifecycle                   | `source/RevitDevTool/Logging/LoggingService.cs` |
 | Revit enrichers/linkify/geometry listener | `source/RevitDevTool/Logging/`                  |
@@ -74,17 +75,18 @@ flowchart TB
     Listener --> Notify
 ```
 
-`DevTools.Logging` owns:
+`DevTools.Logging` owns the headless pipeline:
 
-- ZLogger provider registration (`LoggingExtensions.AddLoggingProvider()`)
+- ZLogger provider registration (`LoggingExtensions.AddLoggingProvider()` — config, notify, file, HTTP; no monitor)
 - `LoggerTraceListener` (bridge for third-party Trace sources only)
 - `ConsoleRedirector` (captures Console.Out → Trace for third-party libs; NUnit run is an exception — [output.md](output.md#consolewriteline-captured-by-consoleredirector))
 - `NotifyListener`
 - `LogLevelDetector` (keyword-based level for bridged Trace messages)
-- Monitor/file/HTTP targets
-- Sink options and save formats
+- File/HTTP targets and sink options
 
-Host projects own when listeners are registered, which enrichers are active, and any host-specific linkification or geometry routing.
+`DevTools.Presentation` owns the monitor pane (`IMonitorLogTarget`, `MonitorLogTarget`, `AddMonitorLogging`) and WPF `PresentationTraceSources` attach/detach.
+
+Host projects own when listeners are registered, which enrichers are active, and any host-specific linkification or geometry routing. Hosts call `AddLoggingProvider()` then `AddMonitorLogging`.
 
 ---
 
@@ -92,14 +94,18 @@ Host projects own when listeners are registered, which enrichers are active, and
 
 ```mermaid
 flowchart LR
-    Shared["DevTools.Logging\nZLogger sinks/bridge"]
+    Shared["DevTools.Logging\nheadless ZLogger sinks/bridge"]
+    Pane["DevTools.Presentation\nmonitor + WPF trace"]
     Revit["Revit LoggingService\nGeometryListener\nRevitLinkifier\nRevitContextProvider"]
     Acad["Acad LoggingService\nAcadContextProvider"]
     UI["DevTools.Presentation\nLogViewModel + settings UI"]
 
     Revit --> Shared
     Acad --> Shared
+    Revit --> Pane
+    Acad --> Pane
     UI --> Shared
+    UI --> Pane
 ```
 
 Revit registration is in `RevitHostingExtensions.AddLoggingServices()`. AutoCAD registration is in `AcadHostingExtensions.AddLoggingServices()`.
@@ -136,7 +142,7 @@ AutoCAD has its own context provider/enricher path and does not share Revit geom
 
 | Target  | Implementation       | Notes                                             |
 | ------- | -------------------- | ------------------------------------------------- |
-| Monitor | `MonitorLogTarget` | UI monitor through Scintilla/ZLogger integration. |
+| Monitor | `MonitorLogTarget` (Presentation) | UI monitor through Scintilla/ZLogger integration. |
 | File    | `FileLogProcessor` | Plain text or JSON based on settings.             |
 | HTTP    | `HttpLogProcessor` | Remote sink path.                                 |
 | Notify  | `NotifyListener`   | UI update notifications (bridge path only).       |
