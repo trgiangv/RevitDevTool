@@ -1,6 +1,8 @@
-namespace DevTools.Hosting.Revit;
+using DevTools.Utilities.AssemblyLoading;
 
-public sealed class RevitSharedAssemblyPolicy : IHostSharedAssemblyPolicy
+namespace RevitDevTool.Hosting;
+
+internal sealed class RevitSharedAssemblyPolicy : IHostSharedAssemblyPolicy
 {
     public IReadOnlyCollection<string> HostApiSimpleNames { get; } =
     [

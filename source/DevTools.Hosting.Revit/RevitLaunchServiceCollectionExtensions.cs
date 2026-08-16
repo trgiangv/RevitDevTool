@@ -11,11 +11,11 @@ public static class RevitLaunchServiceCollectionExtensions
         services.AddHostLaunchCore();
         services.AddSingleton<IHostPathResolver, RevitPathResolver>();
         services.AddSingleton<IHostArgumentBuilder, RevitArgumentBuilder>();
-        services.AddSingleton<IHostStartupDialogStrategy, RevitStartupDialogStrategy>();
+        services.AddSingleton<IHostStartupDialogSpec, RevitStartupDialogSpec>();
         services.AddSingleton<IHostLaunchService>(sp =>
         {
             var engine = sp.GetRequiredService<HostLaunchService>();
-            var resolver = HostLaunchSupport.FindSingle(
+            var resolver = HostLaunchService.SingleFor(
                 sp.GetServices<IHostPathResolver>(),
                 HostApp.Revit,
                 r => r.Supports(HostApp.Revit))

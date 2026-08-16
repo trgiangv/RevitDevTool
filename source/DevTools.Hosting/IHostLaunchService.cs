@@ -12,6 +12,6 @@ public sealed record HostProcessStart(
     Process Process,
     string Version,
     string ExePath,
-    string? LanguageCode,
+    string? LanguageCulture,
     IReadOnlyList<string> Arguments,
-    StartupDialogResolverHandle? DialogResolver);
+    StartupDialogResolver.Session? DialogResolver);

@@ -1,6 +1,7 @@
 using System.Collections.Concurrent;
 using DevTools.NUnit.Core.Runtime;
 using DevTools.NUnit.Host.Loading;
+using DevTools.Utilities.AssemblyLoading;
 
 namespace DevTools.NUnit.Host.Tests;
 
@@ -559,6 +560,7 @@ public sealed class NUnitGenerationBuilderTests
     [Fact]
     public void SharedAssemblyPolicy_shares_host_packages_and_system_prefix_not_microsoft_extensions()
     {
+        HostSharedAssemblies.Use(new TestRevitPolicy());
         Assert.True(NUnitSharedAssemblyPolicy.IsShared("System"));
         Assert.True(NUnitSharedAssemblyPolicy.IsShared("System.Private.CoreLib"));
         Assert.True(NUnitSharedAssemblyPolicy.IsShared("System.Runtime"));
@@ -688,4 +690,10 @@ public sealed class NUnitGenerationBuilderTests
             }
         }
     }
+}
+
+file sealed class TestRevitPolicy : IHostSharedAssemblyPolicy
+{
+    public IReadOnlyCollection<string> HostApiSimpleNames { get; } = ["RevitAPI"];
+    public IReadOnlyCollection<string> HostApiPrefixes { get; } = ["Autodesk."];
 }

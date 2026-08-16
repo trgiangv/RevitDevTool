@@ -8,7 +8,7 @@ public static class AcadLaunchServiceCollectionExtensions
     {
         services.AddSingleton<IHostPathResolver, AcadPathResolver>();
         services.AddSingleton<IHostArgumentBuilder, AcadArgumentBuilder>();
-        services.AddSingleton<IHostStartupDialogStrategy, AcadStartupDialogStrategy>();
+        services.AddSingleton<IHostStartupDialogSpec, AcadStartupDialogSpec>();
         return services;
     }
 }

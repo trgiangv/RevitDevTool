@@ -15,7 +15,7 @@ public sealed record LaunchHostResult(
     [property: JsonPropertyName(IpcPropertyNames.Arguments)] string? Arguments,
     [property: JsonPropertyName("languageCode")] string? LanguageCode,
     [property: JsonPropertyName(IpcPropertyNames.BridgeConnected)] bool BridgeConnected,
-    [property: JsonPropertyName("dialogResult")] StartupDialogResolverResult? DialogResult = null);
+    [property: JsonPropertyName("dialogResult")] StartupDialogResult? DialogResult = null);
 
 [UsedImplicitly]
 public sealed record ConnectedInstanceEntry(

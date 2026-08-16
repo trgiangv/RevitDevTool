@@ -1,34 +1,18 @@
 using System.Reflection;
 using DevTools.Execution.Abstractions;
-using DevTools.Hosting;
 
 namespace DevTools.Utilities.AssemblyLoading;
 
 /// <summary>
 /// Identifies host API and framework assemblies that must be resolved from the
 /// running host process, never from a plugin or test output directory.
-/// Host-API names come from <see cref="DevTools.Hosting.IHostSharedAssemblyPolicy"/> after
+/// Host-API names come from <see cref="IHostSharedAssemblyPolicy"/> after
 /// <see cref="Use"/>; UI-package prefixes are owned by Execution.
+/// There is no Revit+Acad fallback list — each add-in calls <see cref="Use"/> with its own policy.
 /// </summary>
 public static class HostSharedAssemblies
 {
-    private static readonly HashSet<string> FallbackHostApiNames = new(StringComparer.OrdinalIgnoreCase)
-    {
-        "RevitAPI",
-        "RevitAPIUI",
-        "AdWindows",
-        "acmgd",
-        "acdbmgd",
-        "accoremgd",
-        "acdbmgdbrep"
-    };
-
     private static readonly HashSet<string> DiscoveredNames = new(StringComparer.OrdinalIgnoreCase);
-
-    private static readonly string[] FallbackHostApiPrefixes =
-    [
-        "Autodesk.",
-    ];
 
     private static readonly string[] FrameworkPrefixes =
     [
@@ -42,7 +26,7 @@ public static class HostSharedAssemblies
 
     /// <summary>
     /// Sets the ambient host-API policy for static ALC hooks. Add-ins call this
-    /// from <c>AddRevitInProcess</c> / <c>AddAutocadInProcess</c> before first load.
+    /// at startup before first load.
     /// </summary>
     public static void Use(IHostSharedAssemblyPolicy policy)
     {
@@ -123,10 +107,7 @@ public static class HostSharedAssemblies
             return true;
 
         var policy = _policy;
-        if (policy is not null)
-            return ContainsIgnoreCase(policy.HostApiSimpleNames, assemblyName);
-
-        return FallbackHostApiNames.Contains(assemblyName);
+        return policy is not null && ContainsIgnoreCase(policy.HostApiSimpleNames, assemblyName);
     }
 
     /// <summary>
@@ -147,7 +128,7 @@ public static class HostSharedAssemblies
         get
         {
             var policy = _policy;
-            return policy is not null ? policy.HostApiPrefixes : FallbackHostApiPrefixes;
+            return policy is not null ? policy.HostApiPrefixes : [];
         }
     }
 

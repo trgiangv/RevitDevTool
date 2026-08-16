@@ -2,6 +2,14 @@ using System.Diagnostics;
 
 namespace DevTools.Hosting;
 
+public enum HostReadyStatus
+{
+    Ready,
+    Exited,
+    TimedOut,
+    Cancelled
+}
+
 /// <summary>
 /// Single wait loop for launched host processes. Ready probes stay at the caller.
 /// </summary>

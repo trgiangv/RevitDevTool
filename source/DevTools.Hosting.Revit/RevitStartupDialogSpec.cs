@@ -1,10 +1,10 @@
 namespace DevTools.Hosting.Revit;
 
-public sealed class RevitStartupDialogStrategy : IHostStartupDialogStrategy
+public sealed class RevitStartupDialogSpec : IHostStartupDialogSpec
 {
     public bool Supports(HostApp hostApp) => hostApp == HostApp.Revit;
 
-    public StartupDialogResolverOptions CreateOptions() => new()
+    public StartupDialogOptions CreateOptions() => new()
     {
         DialogTitleKeywords = ["unsigned add-in"],
         PreferredButtonKeywords = ["always load"],

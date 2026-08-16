@@ -6,6 +6,5 @@
     <ItemGroup>
         <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions"/>
         <ProjectReference Include="..\DevTools.Hosting\DevTools.Hosting.csproj"/>
-        <ProjectReference Include="..\DevTools.Utilities\DevTools.Utilities.csproj"/>
     </ItemGroup>
 </Project>

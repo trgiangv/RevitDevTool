@@ -3,7 +3,6 @@ using DevTools.Agents.Acad.Resources;
 using DevTools.Execution;
 using DevTools.Execution.Interfaces;
 using DevTools.Hosting;
-using DevTools.Hosting.Acad;
 using DevTools.Logging;
 using DevTools.Logging.Abstractions;
 using DevTools.Mcp.Catalog;
@@ -11,6 +10,7 @@ using DevTools.NUnit.Host;
 using DevTools.Presentation;
 using DevTools.Presentation.Interfaces;
 using DevTools.Settings;
+using DevTools.Utilities.AssemblyLoading;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
@@ -100,6 +100,12 @@ internal static class AcadHostingExtensions
         services.AddSingleton<IBuiltInMcpTool, ViewScreenshotTool>();
 
         return builder;
+    }
+
+    internal static IServiceCollection AddAutocadInProcess(this IServiceCollection services)
+    {
+        HostSharedAssemblies.Use(new AcadSharedAssemblyPolicy());
+        return services;
     }
 }
 

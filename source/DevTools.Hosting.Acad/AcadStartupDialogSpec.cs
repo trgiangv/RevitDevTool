@@ -1,10 +1,10 @@
 namespace DevTools.Hosting.Acad;
 
-public sealed class AcadStartupDialogStrategy : IHostStartupDialogStrategy
+public sealed class AcadStartupDialogSpec : IHostStartupDialogSpec
 {
     public bool Supports(HostApp hostApp) => hostApp.IsAcadFamily();
 
-    public StartupDialogResolverOptions CreateOptions() => new()
+    public StartupDialogOptions CreateOptions() => new()
     {
         DialogTitleKeywords = ["unsigned executable file"],
         PreferredButtonKeywords = ["always load"],

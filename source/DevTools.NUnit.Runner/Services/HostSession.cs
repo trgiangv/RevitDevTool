@@ -8,6 +8,8 @@ namespace DevTools.NUnit.Runner.Services;
 /// (oldest PID / first listed pipe), otherwise starts a new host.
 /// <c>true</c> always starts a new host for this Runner invocation and waits
 /// for that process pipe. Does not kill an existing session.
+/// Wait/dialog lifetime is <see cref="HostLaunchWait"/> (pytest style).
+/// Oldest-PID reuse stays Runner policy, not Hosting.
 /// </summary>
 public sealed class HostSession(IHostLaunchService launchService)
 {

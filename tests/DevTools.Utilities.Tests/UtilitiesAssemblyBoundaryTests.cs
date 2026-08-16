@@ -12,7 +12,7 @@ public sealed class UtilitiesAssemblyBoundaryTests
 
         Assert.DoesNotContain("PresentationFramework", references);
         Assert.DoesNotContain("DevTools.UI", references);
-        Assert.DoesNotContain("DevTools.Logging", references);
+        Assert.DoesNotContain("DevTools.Hosting", references);
         Assert.DoesNotContain("DevTools.FileMetadata.Core", references);
         Assert.DoesNotContain("DevTools.FileMetadata.Revit", references);
         Assert.DoesNotContain("DevTools.FileMetadata.Acad", references);

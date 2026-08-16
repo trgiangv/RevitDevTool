@@ -89,8 +89,9 @@ public sealed class LaunchHostTool(IHostBroker hostBroker, IHostLaunchService la
                     cancellationToken)
                 .ConfigureAwait(false);
 
-            var dialogResult = await HostLaunchCoordinator.TryAwaitResolverResultAsync(
-                started.DialogResolver, TimeSpan.FromSeconds(5)).ConfigureAwait(false);
+            var dialogResult = started.DialogResolver is null
+                ? null
+                : await started.DialogResolver.TryGetResultAsync(TimeSpan.FromSeconds(5)).ConfigureAwait(false);
 
             if (status is not HostReadyStatus.Ready)
             {
@@ -109,7 +110,7 @@ public sealed class LaunchHostTool(IHostBroker hostBroker, IHostLaunchService la
                 started.Version,
                 started.ExePath,
                 string.Join(" ", started.Arguments),
-                started.LanguageCode,
+                started.LanguageCulture,
                 true,
                 dialogResult);
 

@@ -1,5 +1,7 @@
 using System.Diagnostics;
 using System.Runtime.InteropServices;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 
 namespace DevTools.Hosting;
 
@@ -7,16 +9,27 @@ public sealed class HostLaunchService : IHostLaunchService
 {
     private readonly IReadOnlyList<IHostPathResolver> _pathResolvers;
     private readonly IReadOnlyList<IHostArgumentBuilder> _argumentBuilders;
-    private readonly IReadOnlyList<IHostStartupDialogStrategy> _dialogStrategies;
+    private readonly IReadOnlyList<IHostStartupDialogSpec> _dialogSpecs;
 
     public HostLaunchService(
         IEnumerable<IHostPathResolver> pathResolvers,
         IEnumerable<IHostArgumentBuilder> argumentBuilders,
-        IEnumerable<IHostStartupDialogStrategy> dialogStrategies)
+        IEnumerable<IHostStartupDialogSpec> dialogSpecs)
     {
         _pathResolvers = pathResolvers as IReadOnlyList<IHostPathResolver> ?? pathResolvers.ToArray();
         _argumentBuilders = argumentBuilders as IReadOnlyList<IHostArgumentBuilder> ?? argumentBuilders.ToArray();
-        _dialogStrategies = dialogStrategies as IReadOnlyList<IHostStartupDialogStrategy> ?? dialogStrategies.ToArray();
+        _dialogSpecs = dialogSpecs as IReadOnlyList<IHostStartupDialogSpec> ?? dialogSpecs.ToArray();
+    }
+
+    public static T? SingleFor<T>(IEnumerable<T> items, HostApp hostApp, Func<T, bool> supports)
+    {
+        return items.Where(supports).ToArray() switch
+        {
+            [] => default,
+            [var one] => one,
+            _ => throw new InvalidOperationException(
+                $"Multiple {typeof(T).Name} registrations support {hostApp}."),
+        };
     }
 
     public HostProcessStart Start(HostLaunchRequest request, CancellationToken cancellationToken)
@@ -24,8 +37,8 @@ public sealed class HostLaunchService : IHostLaunchService
         if (!string.IsNullOrWhiteSpace(request.FilePath) && !File.Exists(request.FilePath))
             throw new InvalidOperationException($"File not found: {request.FilePath}");
 
-        var pathResolver = HostLaunchSupport.FindSingle(_pathResolvers, request.HostApp, r => r.Supports(request.HostApp));
-        var argumentBuilder = HostLaunchSupport.FindSingle(_argumentBuilders, request.HostApp, b => b.Supports(request.HostApp));
+        var pathResolver = SingleFor(_pathResolvers, request.HostApp, r => r.Supports(request.HostApp));
+        var argumentBuilder = SingleFor(_argumentBuilders, request.HostApp, b => b.Supports(request.HostApp));
         if (pathResolver is null || argumentBuilder is null)
             throw new InvalidOperationException($"Launch not yet supported for {request.HostApp}.");
 
@@ -49,10 +62,8 @@ public sealed class HostLaunchService : IHostLaunchService
             throw new InvalidOperationException($"Launch not yet supported for {request.HostApp}.");
 
         var process = StartProcess(request.HostApp, exePath!, arguments);
-        var dialogStrategy = HostLaunchSupport.FindSingle(
-            _dialogStrategies, request.HostApp, s => s.Supports(request.HostApp));
-        var dialogHandle = HostLaunchCoordinator.StartDialogResolver(
-            dialogStrategy, process.Id, cancellationToken);
+        var dialogSpec = SingleFor(_dialogSpecs, request.HostApp, s => s.Supports(request.HostApp));
+        var dialogSession = StartupDialogResolver.Start(dialogSpec, process.Id, cancellationToken);
 
         return new HostProcessStart(
             process,
@@ -60,7 +71,7 @@ public sealed class HostLaunchService : IHostLaunchService
             exePath!,
             resolved.LanguageCulture,
             arguments,
-            dialogHandle);
+            dialogSession);
     }
 
     private static Process StartProcess(HostApp hostApp, string exePath, IReadOnlyList<string> arguments)
@@ -140,5 +151,15 @@ public sealed class HostLaunchService : IHostLaunchService
                     SetHandleInformation(entry.Handle, HandleFlagInherit, entry.Flags & HandleFlagInherit);
             }
         }
+    }
+}
+
+public static class HostLaunchServiceCollectionExtensions
+{
+    public static IServiceCollection AddHostLaunchCore(this IServiceCollection services)
+    {
+        services.TryAddSingleton<HostLaunchService>();
+        services.TryAddSingleton<IHostLaunchService>(static sp => sp.GetRequiredService<HostLaunchService>());
+        return services;
     }
 }

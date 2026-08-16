@@ -1,6 +1,8 @@
-namespace DevTools.Hosting.Acad;
+using DevTools.Utilities.AssemblyLoading;
 
-public sealed class AcadSharedAssemblyPolicy : IHostSharedAssemblyPolicy
+namespace AcadDevTool.Hosting;
+
+internal sealed class AcadSharedAssemblyPolicy : IHostSharedAssemblyPolicy
 {
     public IReadOnlyCollection<string> HostApiSimpleNames { get; } =
     [

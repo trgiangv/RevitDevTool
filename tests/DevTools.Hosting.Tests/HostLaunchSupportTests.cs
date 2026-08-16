@@ -8,7 +8,7 @@ namespace DevTools.Hosting.Tests;
 public sealed class HostLaunchSupportTests
 {
     [Fact]
-    public void FindSingle_returns_the_only_match()
+    public void SingleFor_returns_the_only_match()
     {
         var items = new[]
         {
@@ -16,12 +16,12 @@ public sealed class HostLaunchSupportTests
             new FakeSupport(HostApp.AutoCad),
         };
 
-        var match = HostLaunchSupport.FindSingle(items, HostApp.Revit, item => item.Supports(HostApp.Revit));
+        var match = HostLaunchService.SingleFor(items, HostApp.Revit, item => item.Supports(HostApp.Revit));
         Assert.Same(items[0], match);
     }
 
     [Fact]
-    public void FindSingle_throws_when_two_contracts_support_the_same_host()
+    public void SingleFor_throws_when_two_contracts_support_the_same_host()
     {
         var items = new[]
         {
@@ -30,7 +30,7 @@ public sealed class HostLaunchSupportTests
         };
 
         Assert.Throws<InvalidOperationException>(
-            () => HostLaunchSupport.FindSingle(items, HostApp.Revit, item => item.Supports(HostApp.Revit)));
+            () => HostLaunchService.SingleFor(items, HostApp.Revit, item => item.Supports(HostApp.Revit)));
     }
 
     [Fact]
@@ -46,7 +46,7 @@ public sealed class HostLaunchSupportTests
         {
             Assert.InRange(provider.GetServices<IHostPathResolver>().Count(r => r.Supports(host)), 0, 1);
             Assert.InRange(provider.GetServices<IHostArgumentBuilder>().Count(b => b.Supports(host)), 0, 1);
-            Assert.InRange(provider.GetServices<IHostStartupDialogStrategy>().Count(s => s.Supports(host)), 0, 1);
+            Assert.InRange(provider.GetServices<IHostStartupDialogSpec>().Count(s => s.Supports(host)), 0, 1);
         }
     }
 

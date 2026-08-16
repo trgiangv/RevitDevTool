@@ -4,6 +4,7 @@ using DevTools.Utilities.AssemblyLoading;
 
 namespace DevTools.Utilities.Tests;
 
+[Collection("HostSharedAssemblies")]
 public sealed class AssemblyLoadingTests
 {
     [Fact]
@@ -27,7 +28,6 @@ public sealed class AssemblyLoadingTests
     {
         Assert.True(HostSharedAssemblies.IsShared("Microsoft.Extensions.Logging.Abstractions"));
         Assert.False(HostSharedAssemblies.MatchesHostPackagePrefix("Microsoft.Extensions.Logging.Abstractions"));
-        Assert.True(HostSharedAssemblies.MatchesHostPackagePrefix("Autodesk.Revit.DB"));
         Assert.True(HostSharedAssemblies.MatchesHostPackagePrefix("MahApps.Metro"));
         Assert.True(HostSharedAssemblies.MatchesHostPackagePrefix("ControlzEx.Theming"));
         Assert.True(HostSharedAssemblies.MatchesHostPackagePrefix("CommunityToolkit.Mvvm"));

@@ -4,7 +4,6 @@ using DevTools.Execution;
 using DevTools.Execution.Interfaces;
 using DevTools.Execution.Providers;
 using DevTools.Hosting;
-using DevTools.Hosting.Revit;
 using DevTools.Logging;
 using DevTools.Logging.Abstractions;
 using DevTools.Mcp.Catalog;
@@ -12,6 +11,7 @@ using DevTools.NUnit.Host;
 using DevTools.Presentation;
 using DevTools.Presentation.Interfaces;
 using DevTools.Settings;
+using DevTools.Utilities.AssemblyLoading;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
@@ -148,6 +148,12 @@ internal static class RevitHostingExtensions
         services.AddSingleton<IBuiltInMcpTool, DevTools.Agents.Revit.Tools.ViewScreenshotTool>();
 
         return builder;
+    }
+
+    internal static IServiceCollection AddRevitInProcess(this IServiceCollection services)
+    {
+        HostSharedAssemblies.Use(new RevitSharedAssemblyPolicy());
+        return services;
     }
 }
 

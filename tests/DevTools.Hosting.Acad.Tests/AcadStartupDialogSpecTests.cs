@@ -3,12 +3,12 @@ using DevTools.Hosting.Acad;
 
 namespace DevTools.Hosting.Acad.Tests;
 
-public sealed class AcadStartupDialogStrategyTests
+public sealed class AcadStartupDialogSpecTests
 {
     [Fact]
     public void Catalog_is_unsigned_executable_file_only_with_closed_blocked_pair()
     {
-        var options = new AcadStartupDialogStrategy().CreateOptions();
+        var options = new AcadStartupDialogSpec().CreateOptions();
         Assert.Equal(["unsigned executable file"], options.DialogTitleKeywords);
         Assert.Equal(["always load"], options.PreferredButtonKeywords);
         Assert.Equal(["do not load", "load once"], options.BlockedButtonKeywords);
@@ -21,10 +21,10 @@ public sealed class AcadStartupDialogStrategyTests
     [Fact]
     public void Supports_all_autocad_family_hosts()
     {
-        var strategy = new AcadStartupDialogStrategy();
+        var spec = new AcadStartupDialogSpec();
         foreach (var host in Enum.GetValues<HostApp>().Where(h => h.IsAcadFamily()))
-            Assert.True(strategy.Supports(host));
-        Assert.False(strategy.Supports(HostApp.Revit));
+            Assert.True(spec.Supports(host));
+        Assert.False(spec.Supports(HostApp.Revit));
     }
 
     [Fact]
