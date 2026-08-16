@@ -80,7 +80,7 @@ public partial class DashboardViewModel : ObservableObject
         _pipeScanner = pipeScanner;
         _settings = settings;
         _tunnelStatus = tunnelStatus;
-        Theme = settings.Theme;
+        Theme = (AppTheme)settings.Theme;
 
         RefreshAuthState();
         RefreshHostCount();
@@ -169,7 +169,7 @@ public partial class DashboardViewModel : ObservableObject
 
     partial void OnThemeChanged(AppTheme value)
     {
-        _settings.Theme = value;
+        _settings.Theme = (DevTools.Settings.Configs.AppTheme)value;
         _settings.Save();
         ApplyCurrentTheme(value);
     }

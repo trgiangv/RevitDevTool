@@ -1,5 +1,5 @@
 using System.Text.Json;
-using DevTools.UI.Theme;
+using DevTools.Settings.Configs;
 using DevTools.Utilities;
 
 namespace DevTools.Daemon.Hosting;

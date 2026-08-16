@@ -10,7 +10,6 @@
 
     <ItemGroup>
         <ProjectReference Include="..\DevTools.Logging\DevTools.Logging.csproj"/>
-        <ProjectReference Include="..\DevTools.UI\DevTools.UI.csproj"/>
     </ItemGroup>
 
     <ItemGroup>

@@ -42,7 +42,7 @@ public partial class GeneralSettingsViewModel : ObservableValidator, IRecipient<
 
     partial void OnThemeChanged(AppTheme value)
     {
-        _settingsService.GeneralConfig.Theme = value;
+        _settingsService.GeneralConfig.Theme = (DevTools.Settings.Configs.AppTheme)value;
         ThemeManager.Current.ApplySettingsTheme(value);
     }
 
@@ -87,7 +87,7 @@ public partial class GeneralSettingsViewModel : ObservableValidator, IRecipient<
 
     private void LoadFromConfig()
     {
-        Theme = _settingsService.GeneralConfig.Theme;
+        Theme = (AppTheme)_settingsService.GeneralConfig.Theme;
         UseHardwareRendering = _settingsService.GeneralConfig.UseHardwareRendering;
         IsMemoryEnabled = _settingsService.GeneralConfig.IsMemoryEnabled;
         EnableTelemetry = _settingsService.GeneralConfig.EnableTelemetry;

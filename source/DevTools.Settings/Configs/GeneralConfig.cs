@@ -1,5 +1,5 @@
 using System.Text.Json.Serialization;
-using DevTools.UI.Theme;
+
 namespace DevTools.Settings.Configs;
 
 [Serializable]

@@ -170,7 +170,7 @@ public sealed class SettingsService(IFileConfig<PathOptions> fileConfig, ILogger
     {
         _generalConfig = new GeneralConfig();
 #if REVIT2024_OR_GREATER
-        _generalConfig.Theme = DevTools.UI.Theme.AppTheme.Auto;
+        _generalConfig.Theme = AppTheme.Auto;
 #endif
     }
 

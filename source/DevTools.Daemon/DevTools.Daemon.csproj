@@ -60,6 +60,7 @@
     </ItemGroup>
     <ItemGroup>
         <ProjectReference Include="..\DevTools.UI\DevTools.UI.csproj"/>
+        <ProjectReference Include="..\DevTools.Settings\DevTools.Settings.csproj"/>
         <ProjectReference Include="..\DevTools.Utilities\DevTools.Utilities.csproj"/>
         <ProjectReference Include="..\DevTools.Ipc\DevTools.Ipc.csproj"/>
         <ProjectReference Include="..\DevTools.Mcp.Core\DevTools.Mcp.Core.csproj" SetTargetFramework="TargetFramework=$(TargetFramework)" />

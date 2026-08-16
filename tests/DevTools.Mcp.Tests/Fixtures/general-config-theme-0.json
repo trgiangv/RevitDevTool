@@ -1,0 +1,7 @@
+{
+  "theme": 0,
+  "useHardwareRendering": true,
+  "isTraceEnabled": true,
+  "isMemoryEnabled": true,
+  "enableTelemetry": true
+}

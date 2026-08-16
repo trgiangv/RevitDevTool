@@ -43,9 +43,14 @@
         <ProjectReference Include="..\..\source\DevTools.Mcp.Adapter\DevTools.Mcp.Adapter.csproj" />
         <ProjectReference Include="..\..\source\DevTools.Mcp.Client\DevTools.Mcp.Client.csproj" />
         <ProjectReference Include="..\..\source\DevTools.Mcp.Server\DevTools.Mcp.Server.csproj" />
+        <ProjectReference Include="..\..\source\DevTools.Settings\DevTools.Settings.csproj" />
         <ProjectReference Include="..\..\source\DevTools.FileMetadata.Core\DevTools.FileMetadata.Core.csproj" />
         <ProjectReference Include="..\..\source\DevTools.FileMetadata.Revit\DevTools.FileMetadata.Revit.csproj" />
         <ProjectReference Include="..\..\source\DevTools.FileMetadata.Acad\DevTools.FileMetadata.Acad.csproj" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <None Update="Fixtures\**\*" CopyToOutputDirectory="PreserveNewest" />
     </ItemGroup>
 
 </Project>
