@@ -657,9 +657,9 @@ Evidence pack (2026-08-12): `docs/agents/nunit-native-runtime-verification.md` +
 Required compile proof follows `.agents/skills/build/SKILL.md`:
 
 ```powershell
-dotnet build source/RevitDevTool/RevitDevTool.csproj -c Debug.Autodesk.2022 -p:DeployRevitAddin=false -p:DeployAutoCadBundle=false -p:IsRepackable=false
-dotnet build source/RevitDevTool/RevitDevTool.csproj -c Debug.Autodesk.2025 -p:DeployRevitAddin=false -p:DeployAutoCadBundle=false -p:IsRepackable=false
-dotnet build source/RevitDevTool/RevitDevTool.csproj -c Debug.Autodesk.2027 -p:DeployRevitAddin=false -p:DeployAutoCadBundle=false -p:IsRepackable=false
+dotnet build source/RevitDevTool/RevitDevTool.csproj -c Debug.Autodesk.2022 -p:DeployRevitAddin=false -p:DeployAutoCadBundle=false -p:ILRepackable=false
+dotnet build source/RevitDevTool/RevitDevTool.csproj -c Debug.Autodesk.2025 -p:DeployRevitAddin=false -p:DeployAutoCadBundle=false -p:ILRepackable=false
+dotnet build source/RevitDevTool/RevitDevTool.csproj -c Debug.Autodesk.2027 -p:DeployRevitAddin=false -p:DeployAutoCadBundle=false -p:ILRepackable=false
 ```
 
 Required deploy and live smoke pattern for each installed host year:
@@ -877,7 +877,7 @@ Run:
 
 ```powershell
 rg -n "Microsoft.TestPlatform.ObjectModel|VSTestBridge|ITestDiscoverer|ITestExecutor|NUnit3TestAdapter" source tests samples Directory.Packages.props
-dotnet build RevitDevTool.slnx -p:DeployRevitAddin=false -p:DeployAutoCadBundle=false -p:IsRepackable=false
+dotnet build RevitDevTool.slnx -p:DeployRevitAddin=false -p:DeployAutoCadBundle=false -p:ILRepackable=false
 ```
 
 Expected: the search returns no production VSTest integration and the solution

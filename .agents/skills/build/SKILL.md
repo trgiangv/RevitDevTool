@@ -31,21 +31,22 @@ Run proof **before** claiming done. Pick the smallest command that matches what 
 
 `Directory.Build.targets` imports `props/Revit.targets` / `AutoCad.targets` **only** if
 the project sets `UseRevit=true` or `UseAutoCad=true`. Those targets own
-`DeployRevitAddin`, `DeployAutoCadBundle`, and host `IsRepackable`.
+`DeployRevitAddin` and `DeployAutoCadBundle`. `ILRepackable` lives in
+`props/ILRepack.targets` (imported for every project; default false).
 
 | Project | Needs compile-only `-p:…=false`? |
 |---------|----------------------------------|
 | Shared `DevTools.*` (no `UseRevit` / `UseAutoCad`) | **No** — flags are no-ops |
 | `RevitDevTool`, `RevitDevTool.Core`, `DevTools.Agents.Revit` | **Yes** — otherwise may deploy + ILRepack |
 | `AcadDevTool`, `DevTools.Agents.Acad` | **Yes** — same for AutoCAD bundle |
-| Projects with their own `IsRepackable=true` (e.g. `DevTools.NUnit.TestAdapter`) | Only `-p:IsRepackable=false` if you want to skip repack |
+| Projects with their own `ILRepackable=true` (e.g. `DevTools.NUnit.TestAdapter`) | Only `-p:ILRepackable=false` if you want to skip repack |
 
 Do **not** paste deploy flags onto every shared library build.
 
 Compile-only props (host / UseRevit|UseAutoCad only):
 
 ```text
--p:DeployRevitAddin=false -p:DeployAutoCadBundle=false -p:IsRepackable=false
+-p:DeployRevitAddin=false -p:DeployAutoCadBundle=false -p:ILRepackable=false
 ```
 
 `--nologo` is optional CLI noise reduction (hides the .NET banner). It does **not**
@@ -67,7 +68,7 @@ dotnet build source/DevTools.NUnit.Host/DevTools.NUnit.Host.csproj -c Debug
 dotnet build source/DevTools.Mcp.Server/DevTools.Mcp.Server.csproj -c Debug
 
 # Host entrypoint — compile only (do not deploy while host may be running)
-dotnet build source/RevitDevTool/RevitDevTool.csproj -c Debug.Autodesk.2025 -p:DeployRevitAddin=false -p:DeployAutoCadBundle=false -p:IsRepackable=false
+dotnet build source/RevitDevTool/RevitDevTool.csproj -c Debug.Autodesk.2025 -p:DeployRevitAddin=false -p:DeployAutoCadBundle=false -p:ILRepackable=false
 ```
 
 Focused MCP tests (no full solution):

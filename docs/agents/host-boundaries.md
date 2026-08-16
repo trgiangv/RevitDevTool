@@ -35,7 +35,7 @@ Host API references belong in host projects:
 - Daemon external tools: infrastructure (`list_host_instances`, `launch_host`, `read_file_info`, `list_machines`) plus `search_dynamic` / `invoke_dynamic`.
 - Fixed prompts (`revit_code`, `acad_code`) are daemon-owned.
 - In-host built-in tools (shared runtime): `execute_csharp_code`, `open_document` via `IDocumentBridge`.
-- Startup dialog resolver uses merged keywords in default `StartupDialogResolverOptions` (Revit + AutoCAD).
+- Startup dialog resolver uses merged keywords in default `StartupDialogResolverOptions` (Revit + AutoCAD). It has **no self-timeout** (pytest style). MCP and NUnit share `HostLaunchWait.UntilAsync` (one wait loop, caller ready-probe). Timeout remains the safety valve (`launch_host` 2 min, NUnit `HostLaunchTimeout`).
 - Remaining gaps for AutoCAD: no shipped MCP toolset.
 
 ## Boundary Checklist

@@ -91,7 +91,7 @@ changing host behavior.
 
 **Tests and acceptance gate:**
 
-- [ ] `dotnet build RevitDevTool.slnx -p:DeployRevitAddin=false -p:DeployAutoCadBundle=false -p:IsRepackable=false` succeeds.
+- [ ] `dotnet build RevitDevTool.slnx -p:DeployRevitAddin=false -p:DeployAutoCadBundle=false -p:ILRepackable=false` succeeds.
 - [ ] `dotnet pack source/DevTools.NUnit.Client/DevTools.NUnit.Client.csproj --no-build` produces exactly one `DevTools.NUnit.Client.*.nupkg` and no standalone DevTools.NUnit package.
 - [ ] Inspect the nupkg: it contains package metadata and no RevitAPI/AcMgd DLL.
 
@@ -569,12 +569,12 @@ Implementation through Scope 2 (2026-08-10).
 ### Verified commands
 
 ```powershell
-dotnet build RevitDevTool.slnx -p:DeployRevitAddin=false -p:DeployAutoCadBundle=false -p:IsRepackable=false
+dotnet build RevitDevTool.slnx -p:DeployRevitAddin=false -p:DeployAutoCadBundle=false -p:ILRepackable=false
 scripts/test-dotnet.ps1 -Project tests/DevTools.NUnit.Core.Tests/DevTools.NUnit.Core.Tests.csproj   # 30 passed
 scripts/test-dotnet.ps1 -Project tests/DevTools.NUnit.Host.Tests/DevTools.NUnit.Host.Tests.csproj   # 12 passed
 scripts/test-dotnet.ps1 -Project tests/DevTools.Execution.Tests/DevTools.Execution.Tests.csproj -Filter BridgeHandlerRegistration  # 1 passed
-dotnet build source/RevitDevTool/RevitDevTool.csproj -c Debug.Autodesk.2025 -p:DeployRevitAddin=false -p:DeployAutoCadBundle=false -p:IsRepackable=false
-dotnet build source/DevTools.NUnit.Client/DevTools.NUnit.Client.csproj -c Release -p:DeployRevitAddin=false -p:DeployAutoCadBundle=false -p:IsRepackable=false
+dotnet build source/RevitDevTool/RevitDevTool.csproj -c Debug.Autodesk.2025 -p:DeployRevitAddin=false -p:DeployAutoCadBundle=false -p:ILRepackable=false
+dotnet build source/DevTools.NUnit.Client/DevTools.NUnit.Client.csproj -c Release -p:DeployRevitAddin=false -p:DeployAutoCadBundle=false -p:ILRepackable=false
 dotnet pack source/DevTools.NUnit.Client/DevTools.NUnit.Client.csproj --no-build -c Release
 ```
 

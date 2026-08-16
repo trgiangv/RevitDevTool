@@ -6,7 +6,7 @@ Known test failures: `known-test-gaps.md`. Do not invent MSBuild flags.
 ## After code edits
 
 Compile the **csproj you changed**. Deploy/repack `-p:…=false` only for projects
-with `UseRevit` / `UseAutoCad` (or their own `IsRepackable=true`). Shared
+with `UseRevit` / `UseAutoCad` (or their own `ILRepackable=true`). Shared
 `DevTools.*` does not import those targets — omit the props. Details:
 `.agents/skills/build/SKILL.md`.
 
@@ -15,7 +15,7 @@ with `UseRevit` / `UseAutoCad` (or their own `IsRepackable=true`). Shared
 dotnet build <path/to/DevTools.*.csproj> -c Debug
 
 # Host entrypoint (compile only)
-dotnet build source/RevitDevTool/RevitDevTool.csproj -c Debug.Autodesk.2025 -p:DeployRevitAddin=false -p:DeployAutoCadBundle=false -p:IsRepackable=false
+dotnet build source/RevitDevTool/RevitDevTool.csproj -c Debug.Autodesk.2025 -p:DeployRevitAddin=false -p:DeployAutoCadBundle=false -p:ILRepackable=false
 ```
 
 | Project kind | Config |

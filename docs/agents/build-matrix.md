@@ -92,21 +92,24 @@ This applies to:
 
 NOT needed when:
 - Building shared `DevTools.*` (no deploy targets imported), or
-- Building a host project with `-p:DeployRevitAddin=false -p:DeployAutoCadBundle=false -p:IsRepackable=false` (compile-only)
+- Building a host project with `-p:DeployRevitAddin=false -p:DeployAutoCadBundle=false -p:ILRepackable=false` (compile-only)
 
 Do not cargo-cult those `-p` flags onto every `dotnet build`. See `.agents/skills/build/SKILL.md`.
 
 ## ILRepack
 
 ILRepack lives in `props/ILRepack.targets` (imported for every project). Opt in
-with `IsRepackable=true` and list loose DLLs in `RepackBinariesExcludes`. Add a
-`PackageReference` to `ILRepack`. Host add-ins leave merged types public so
-excluded UI / NUnit DLLs stay beside the add-in. Private packages (TestAdapter)
-also set `ILRepackInternalize=true`. **Disabled for 2027** due to Revit/AutoCAD
-isolated context causing `System.BadImageFormatException` with repacked
-assemblies (`IsRepackable` only when `RevitVersion`/`AutoCadVersion` is below 2027).
-MTP net48 opts in the same way (`IsRepackable` when `TargetFramework` is `net48`);
-consumers of `RevitDevTool.NUnit` do not.
+with `ILRepackable=true` and list loose DLLs in `RepackBinariesExcludes`. The
+driver adds the `ILRepack` PackageReference when that flag is true. Policy for
+`/union`, Polyfill, and net10 isolated ALC:
+[0019](../decisions/0019-ilrepack-and-polyfill-isolated-alc.md).
+MTP net48 opts in the same way (`ILRepackable` when `TargetFramework` is
+`net48`); consumers of `RevitDevTool.NUnit` do not.
+
+Scintilla5.NET 7 natives stay under `runtimes/win-x64/native/` (not output root).
+`DevTools.Logging` has a direct `Scintilla5.NET` PackageReference so
+`build/scintilla5.net.targets` copies them (needed on net48). `Common.props`
+then drops `win-x86` / `win-arm64` on every TFM after `CopyFilesToOutputDirectory`.
 
 ## Compatibility Rule
 

@@ -41,7 +41,7 @@ VSTest (`DevTools.NUnit.TestAdapter`). Keep them on **separate** test projects.
 `HostName` / `HostVersion` / launch timeouts; the package does not read this
 repo's `UseRevit` / `UseAutoCad`. The MTP assembly itself never loads into the
 CAD host. On **net48**, pack/build ILRepacks `DevTools.NUnit.Mtp.dll`
-(STJ / metadata polyfills) via the repo `IsRepackable` path, same as
+(STJ / metadata polyfills) via the repo `ILRepackable` path, same as
 the VSTest adapter. Consumers do not ILRepack. Host `FileNotFoundException`
 for product STJ is the add-in's packing, not this merge. net8+ MTP TFMs skip
 ILRepack. `Microsoft.Testing.Platform` is compile-only

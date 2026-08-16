@@ -26,3 +26,4 @@ here.
 | [0015](0015-nunit-host-testing-standard-integration.md) | NUnit host testing through standard .NET test integrations | Partially superseded by 0016 |
 | [0016](0016-nunit-native-runtime-and-mtp-first-integration.md) | Native NUnit runtime with MTP-first integration | Accepted |
 | [0017](0017-nunit-host-test-output-routing.md) | NUnit host test output routing (pane vs IDE) | Accepted |
+| [0019](0019-ilrepack-and-polyfill-isolated-alc.md) | ILRepack and Polyfill on isolated load contexts | Accepted |

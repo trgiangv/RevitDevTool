@@ -20,7 +20,7 @@ description: >
 - Shared `DevTools.*`: no Revit/AutoCAD API types; host adapters own threading, docs, rendering.
 - MCP/IPC: keep wire contracts in sync (`BridgeMessage`, `PytestContracts`, MCP pipe names).
 - Pytest bridge: treat discover and run as separate flows; do not “fix” stale path gaps with unrelated edits.
-- Packaging: `build/Modules/*` + `RevitDevTool.slnx` are source of truth; ILRepack stays off for 2027 hosts.
+- Packaging: `build/Modules/*` + `RevitDevTool.slnx` are source of truth; ILRepack + Polyfill policy is `docs/decisions/0019-ilrepack-and-polyfill-isolated-alc.md`.
 - net48: rely on Polyfill + hook/multi-TFM compile; do not speculative-polyfill.
 
 ## After editing
