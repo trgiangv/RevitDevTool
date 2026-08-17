@@ -62,6 +62,7 @@ public sealed class ProcessTestRunnerClientTests
         Assert.Contains("--framework", captured, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("nunit", captured, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("--host", captured, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("--test", captured, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("discover", captured, StringComparison.OrdinalIgnoreCase);
     }
 

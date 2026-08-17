@@ -1,6 +1,8 @@
 using DevTools.NUnit.Core;
 using DevTools.NUnit.Core.Contracts;
 using DevTools.NUnit.Mtp;
+using DevTools.Testing.Abstractions.Contracts;
+using DevTools.Testing.Transport;
 using Microsoft.Testing.Platform.Extensions.Messages;
 using Microsoft.Testing.Platform.Requests;
 
@@ -24,32 +26,80 @@ public sealed class DevToolsNUnitSessionTests
     [Fact]
     public void Run_returns_pass_fail_skip_and_error_from_transport()
     {
-        var transport = new FakeRunnerTransport
+        var transport = new FakeTestRunnerTransport
         {
-            Results =
-            [
-                new NUnitCaseResult("1", "Pass", "Passed", 10, null, null, null),
-                new NUnitCaseResult("2", "Fail", "Failed", 20, "boom", "at Foo", null),
-                new NUnitCaseResult("3", "Skip", "Skipped", 0, "ignored", null, null, SkipReason: "ignored"),
-                new NUnitCaseResult("4", "Err", "Error", 5, "init", null, null),
-            ],
+            Response = new TestingRunResponse(
+                Guid.NewGuid(),
+                TestingFrameworkIds.NUnit,
+                "gen",
+                [
+                    new TestingCaseResult("1", "Pass", "Passed", 10, null, null, null, null, [], []),
+                    new TestingCaseResult("2", "Fail", "Failed", 20, "boom", "at Foo", null, null, [], []),
+                    new TestingCaseResult("3", "Skip", "Skipped", 0, "ignored", null, null, null, [], []),
+                    new TestingCaseResult("4", "Err", "Error", 5, "init", null, null, null, [], []),
+                ],
+                TestingCancellationState.None,
+                null,
+                null),
         };
         var session = new DevToolsNUnitSession(transport);
 
-        var results = session.Run(
+        var response = session.Run(
             "C:\\tests\\a.dll",
-            new HostRunOptions("Revit", "2026", false, 60, 180, @"C:\Runner.exe"),
-            RunnerTestFilter.Empty);
+            new TestingHostOptions("Revit", "2026", false, 60, 180, @"C:\Runner.exe"),
+            new TestingSelection([], null));
 
-        Assert.Equal(["Passed", "Failed", "Skipped", "Error"], results.Select(result => result.Outcome).ToArray());
+        Assert.Equal(TestingFrameworkIds.NUnit, transport.LastRequest!.FrameworkId);
+        Assert.Equal(["Passed", "Failed", "Skipped", "Error"], response.Results.Select(result => result.Outcome).ToArray());
     }
 
     [Fact]
-    public void Cancel_forwards_to_transport()
+    public void DiscoverNodes_completes_when_runner_path_cannot_be_read()
     {
-        var transport = new FakeRunnerTransport();
-        new DevToolsNUnitSession(transport).Cancel();
-        Assert.True(transport.Cancelled);
+        var runnerPath = Path.Combine(Path.GetTempPath(), "devtools-mtp-locked-runner-" + Guid.NewGuid().ToString("N") + ".exe");
+        File.WriteAllBytes(runnerPath, [0x4D, 0x5A]);
+        try
+        {
+            using (new FileStream(runnerPath, FileMode.Open, FileAccess.ReadWrite, FileShare.None))
+            {
+                var nodes = DevToolsNUnitFramework.DiscoverNodes(
+                    typeof(DevToolsNUnitSessionTests).Assembly.Location,
+                    RunnerTestFilter.Empty);
+                Assert.NotNull(nodes);
+            }
+        }
+        finally
+        {
+            try { File.Delete(runnerPath); } catch { /* best effort */ }
+        }
+    }
+
+    [Fact]
+    public void Run_sends_nunit_framework_id_to_generic_transport()
+    {
+        var transport = new FakeTestRunnerTransport();
+        var session = new DevToolsNUnitSession(transport);
+
+        session.Run(
+            "C:\\tests\\a.dll",
+            new TestingHostOptions("Revit", "2026", false, 60, 180, @"C:\missing-devtools-testrunner.exe"),
+            new TestingSelection(["HostSmokeTests.Arithmetic"], null));
+
+        Assert.Equal(TestingFrameworkIds.NUnit, transport.LastRequest!.FrameworkId);
+        Assert.Equal(["HostSmokeTests.Arithmetic"], transport.LastRequest.Selection.TestIds.ToArray());
+    }
+
+    [Fact]
+    public void Name_filter_round_trips_through_generic_selection()
+    {
+        var original = RunnerTestFilter.FromNames("Arithmetic_runs_inside_host");
+        var selection = NUnitMtpMapping.ToSelection(original);
+        var restored = NUnitMtpMapping.ToRunnerFilter(selection);
+
+        Assert.Empty(selection.TestIds);
+        Assert.Contains("<name>Arithmetic_runs_inside_host</name>", selection.ProviderPayload, StringComparison.Ordinal);
+        Assert.Equal(["Arithmetic_runs_inside_host"], restored.Names.ToArray());
+        Assert.Empty(restored.FullNames);
     }
 }
 
@@ -236,6 +286,43 @@ public sealed class TestNodeMapperTests
         var selection = DevToolsNUnitFramework.ToRunnerFilter(null, nameFilter: "Arithmetic_runs_inside_host");
         Assert.Equal(["Arithmetic_runs_inside_host"], selection.Names.ToArray());
         Assert.Empty(selection.FullNames);
+    }
+}
+
+internal sealed class FakeTestRunnerTransport : ITestRunnerTransport
+{
+    internal TestingRunRequest? LastRequest { get; private set; }
+
+    internal TestingHostOptions? LastHostOptions { get; private set; }
+
+    internal bool Cancelled { get; private set; }
+
+    internal TestingRunResponse? Response { get; set; }
+
+    public TestingRunResponse Run(
+        TestingRunRequest request,
+        TestingHostOptions hostOptions,
+        Action<TestingCaseResult> onResult)
+    {
+        LastRequest = request;
+        LastHostOptions = hostOptions;
+        var response = Response ?? new TestingRunResponse(
+            request.RunId,
+            request.FrameworkId,
+            null,
+            [],
+            TestingCancellationState.None,
+            null,
+            null);
+        foreach (var result in response.Results)
+            onResult(result);
+        return response;
+    }
+
+    public void Cancel(Guid runId) => Cancelled = true;
+
+    public void Dispose()
+    {
     }
 }
 

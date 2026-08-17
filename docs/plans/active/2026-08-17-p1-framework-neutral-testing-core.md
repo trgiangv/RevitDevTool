@@ -47,7 +47,7 @@ Date: 2026-08-17
 
 ## Status
 
-Active — P0 CLI exit gate is complete. Tasks 1-4 landed; remaining work is NUnit provider parity and MTP/VSTest cutover.
+Active — P0 CLI exit gate is complete. Tasks 1-6 landed; remaining work is VSTest cutover, host composition, and live NUnit parity.
 
 ## Harness Execution Rules
 
@@ -435,15 +435,15 @@ public sealed record TestingRuntimePayload(
 - Produces reusable helpers only; `DevTools.Testing.Mtp` does not register a
   universal `ITestFramework`.
 
-- [ ] Add architecture tests rejecting NUnit/xUnit/Autodesk/process references
+- [x] Add architecture tests rejecting NUnit/xUnit/Autodesk/process references
   from Testing.Mtp.
-- [ ] Extract session close/cancel, error node, timing, output, attachment,
+- [x] Extract session close/cancel, error node, timing, output, attachment,
   source, and trait mapping that is genuinely framework-neutral.
-- [ ] Keep NUnit metadata discovery, NUnit stable IDs, filter semantics, and
+- [x] Keep NUnit metadata discovery, NUnit stable IDs, filter semantics, and
   NUnit builder-hook registration inside `DevTools.NUnit.Mtp`.
-- [ ] Add a no-host discovery test with a fake Runner path that throws if read;
+- [x] Add a no-host discovery test with a fake Runner path that throws if read;
   a `DiscoverTestExecutionRequest` must still complete.
-- [ ] Add a run test proving `RunTestExecutionRequest` starts the generic
+- [x] Add a run test proving `RunTestExecutionRequest` starts the generic
   TestRunner transport with framework ID `nunit`.
 
 ### Task 7: Migrate retained VSTest callers without removing them
@@ -514,6 +514,7 @@ public sealed record TestingRuntimePayload(
 - [x] Direct TestRunner rename complete.
 - [x] Generic Host complete.
 - [x] NUnit provider adapter complete; MTP/VSTest cutover still open.
+- [x] Shared MTP helpers extracted; NUnit MTP run uses generic transport + `nunit` framework id.
 - [ ] VSTest-only compatibility path passes.
 - [ ] Packaging and live host matrix pass.
 
@@ -524,6 +525,7 @@ public sealed record TestingRuntimePayload(
 - 2026-08-17 Task 3: `DevTools.NUnit.Runner` renamed to `DevTools.TestRunner`. Build Debug passed. TestRunner tests passed 53. `rg DevTools.NUnit.Runner` is clean in source/tests/build/samples/docs/product/docs/agents. `--framework` defaults to `nunit`; `--debug` / `--debug-parent-pid` unchanged. Legacy NUnit CLI still omits `--framework`.
 - 2026-08-17 Task 4: Testing.Host built net48/net8/net10. Host tests passed 15 (registry, cancellation, testing/* + nunit/* adapter, no discovery, generation snapshot). NUnit.Host still owns live nunit/* dispatch until Task 5 provider cutover.
 - 2026-08-17 Task 5: `NUnitHostTestFrameworkProvider` wraps `INUnitHost`. TestIds become `<test>` XML (never `<name>`/display name); `ProviderPayload` is raw NUnit filter XML. Mapper keeps protocol `Id` as `TestId`. DI registers the provider + `TestingProviderRegistry`; `testing/*` is not on the pipe yet (needs host-thread marshal in Task 8, and `includeLegacyNunitEnvelopes: false` so `nunit/*` stays unique). NUnit staging kept. Proof: NUnit.Host Debug build all TFMs; new Host tests 14 (mapper/filter/provider/focused fixture); Testing.Host 16; Execution registration 1; net48 Host 13. Runtime 34 tests passed then MTP leftover-thread exit 1 (pre-existing). Host.Tests full suite still has pre-existing `Run_reports_pass_and_fail_results` trace-marker miss. Core STJ boundary fail is pre-existing.
+- 2026-08-17 Task 6: `DevTools.Testing.Mtp` helpers only (error node, result properties, `TestingRunnerSession`). No universal `ITestFramework`. NUnit MTP keeps local PE discovery, FullName UIDs, builder hook. Run injects `ITestRunnerTransport` with `TestingFrameworkIds.NUnit`. Live TestRunner still emits NUnit JSON, so production MTP uses `NUnitProcessTransportAdapter` over `ProcessRunnerClient` until Task 8. Name filters round-trip via `ProviderPayload` XML. Proof: Testing.Mtp Debug all TFMs; Testing.Mtp tests 5; NUnit.Mtp tests 25; Transport tests 16 (`--framework` + `--test`).
 
 ## Decisions
 
@@ -537,6 +539,8 @@ public sealed record TestingRuntimePayload(
 - 2026-08-17: csproj `HostTimeout` / `HostLaunchTimeout` are forwarded to
   TestRunner as pipe/launch budgets. Adapter `WaitForExit` adds local I/O slack
   (`TestingHostTiming`) and must not mutate those CLI values.
+- 2026-08-17: Keep `NUnitProcessTransportAdapter` until TestRunner serializes
+  `testing/*` JSON. Do not deserialize live NUnit stdout as `TestingRunResponse`.
 
 ## Validation
 

@@ -44,4 +44,23 @@ public sealed class TestingHostTimingTests
         Assert.DoesNotContain("450", args);
         Assert.DoesNotContain("30", args);
     }
+
+    [Fact]
+    public void Cli_emits_test_ids_and_provider_payload()
+    {
+        var args = TestingRunnerCli.BuildRunArguments(
+            new TestingRunRequest(
+                TestingProtocol.CurrentVersion,
+                Guid.Empty,
+                TestingFrameworkIds.NUnit,
+                new TestingAssemblyReference("C:\\tests\\Sample.dll", null, null),
+                new TestingSelection(["HostSmokeTests.Arithmetic"], "<filter><name>Arithmetic</name></filter>"),
+                new Dictionary<string, string>()),
+            new TestingHostOptions("Revit", "2025", false, 60, 180, null));
+
+        Assert.Contains("--test", args);
+        Assert.Equal("""["HostSmokeTests.Arithmetic"]""", args[args.IndexOf("--test") + 1]);
+        Assert.Contains("--filter", args);
+        Assert.Equal("<filter><name>Arithmetic</name></filter>", args[args.IndexOf("--filter") + 1]);
+    }
 }

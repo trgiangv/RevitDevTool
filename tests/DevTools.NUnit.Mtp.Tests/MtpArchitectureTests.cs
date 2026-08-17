@@ -51,6 +51,12 @@ public sealed class MtpArchitectureTests
         Assert.Contains("EnsureSession()", framework, StringComparison.Ordinal);
         Assert.Contains("PublishRunAsync(EnsureSession()", framework, StringComparison.Ordinal);
         Assert.Contains("ApplyDebugParent", framework, StringComparison.Ordinal);
+        Assert.Contains("ITestRunnerTransport", framework, StringComparison.Ordinal);
+        Assert.Contains("TestingFrameworkIds.NUnit", File.ReadAllText(Path.Combine(
+            RepositoryRoot,
+            "source",
+            "DevTools.NUnit.Mtp",
+            "DevToolsNUnitSession.cs")), StringComparison.Ordinal);
 
         var session = File.ReadAllText(Path.Combine(
             RepositoryRoot,

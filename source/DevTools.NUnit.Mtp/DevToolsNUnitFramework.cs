@@ -5,20 +5,23 @@ using Microsoft.Testing.Platform.Extensions.TestFramework;
 using Microsoft.Testing.Platform.Requests;
 using DevTools.NUnit.Core;
 using DevTools.NUnit.Core.Contracts;
+using DevTools.Testing.Abstractions.Contracts;
+using DevTools.Testing.Mtp;
+using DevTools.Testing.Transport;
 
 namespace DevTools.NUnit.Mtp;
 
 internal sealed class DevToolsNUnitFramework : ITestFramework, IDataProducer
 {
-    private readonly IRunnerTransport? _injectedTransport;
+    private readonly ITestRunnerTransport? _injectedTransport;
     private readonly ICommandLineOptions? _commandLine;
     private DevToolsNUnitSession? _session;
-    private ProcessRunnerClient? _ownedClient;
+    private ITestRunnerTransport? _ownedTransport;
     private HostRunOptions? _options;
 
     internal DevToolsNUnitFramework(
         IServiceProvider serviceProvider,
-        IRunnerTransport? transport = null)
+        ITestRunnerTransport? transport = null)
     {
         _commandLine = serviceProvider.GetService(typeof(ICommandLineOptions)) as ICommandLineOptions;
         _injectedTransport = transport;
@@ -72,10 +75,19 @@ internal sealed class DevToolsNUnitFramework : ITestFramework, IDataProducer
     public Task<CloseTestSessionResult> CloseTestSessionAsync(CloseTestSessionContext context)
     {
         _session?.Cancel();
-        _ownedClient?.Dispose();
+        _ownedTransport?.Dispose();
         _session = null;
-        _ownedClient = null;
+        _ownedTransport = null;
         return Task.FromResult(new CloseTestSessionResult { IsSuccess = true });
+    }
+
+    internal static IReadOnlyList<TestNode> DiscoverNodes(string assemblyPath, RunnerTestFilter filter)
+    {
+        var cases = NUnitMetadataDiscoverer.Filter(
+            NUnitMetadataDiscoverer.Discover(assemblyPath),
+            filter.Names,
+            filter.FullNames);
+        return cases.Select(discovered => ToDiscoveredNode(discovered, assemblyPath)).ToList();
     }
 
     private async Task PublishDiscoveredAsync(
@@ -84,17 +96,11 @@ internal sealed class DevToolsNUnitFramework : ITestFramework, IDataProducer
         ExecuteRequestContext context)
     {
         var filter = ResolveRunnerFilter(request.Filter);
-        var cases = NUnitMetadataDiscoverer.Filter(
-            NUnitMetadataDiscoverer.Discover(assemblyPath),
-            filter.Names,
-            filter.FullNames);
-        foreach (var discovered in cases)
+        foreach (var node in DiscoverNodes(assemblyPath, filter))
         {
             await context.MessageBus.PublishAsync(
                     this,
-                    new TestNodeUpdateMessage(
-                        request.Session.SessionUid,
-                        ToDiscoveredNode(discovered, assemblyPath)))
+                    new TestNodeUpdateMessage(request.Session.SessionUid, node))
                 .ConfigureAwait(false);
         }
     }
@@ -108,10 +114,13 @@ internal sealed class DevToolsNUnitFramework : ITestFramework, IDataProducer
         var options = ApplyDebugParent(
             _options ?? throw new InvalidOperationException("Host run options were not loaded."));
         var filter = ResolveRunnerFilter(request.Filter);
-        IReadOnlyList<NUnitCaseResult> results;
+        TestingRunResponse response;
         try
         {
-            results = session.Run(assemblyPath, options, filter);
+            response = session.Run(
+                assemblyPath,
+                NUnitMtpMapping.ToHostOptions(options),
+                NUnitMtpMapping.ToSelection(filter));
         }
         catch (Exception ex)
         {
@@ -119,17 +128,12 @@ internal sealed class DevToolsNUnitFramework : ITestFramework, IDataProducer
                     this,
                     new TestNodeUpdateMessage(
                         request.Session.SessionUid,
-                        new TestNode
-                        {
-                            Uid = new TestNodeUid("devtools.nunit.runner"),
-                            DisplayName = "DevTools.NUnit",
-                            Properties = new PropertyBag(new ErrorTestNodeStateProperty(ex)),
-                        }))
+                        TestingMtpSession.CreateErrorNode("devtools.nunit.runner", "DevTools.NUnit", ex)))
                 .ConfigureAwait(false);
             return;
         }
 
-        foreach (var result in results)
+        foreach (var result in response.Results)
         {
             await context.MessageBus.PublishAsync(
                     this,
@@ -186,8 +190,10 @@ internal sealed class DevToolsNUnitFramework : ITestFramework, IDataProducer
             return _session;
         }
 
-        _ownedClient = new ProcessRunnerClient(ProcessRunnerClient.ResolveRunnerPath(_options));
-        _session = new DevToolsNUnitSession(_ownedClient);
+        var runnerPath = ProcessRunnerClient.ResolveRunnerPath(_options);
+        var processClient = new ProcessRunnerClient(runnerPath);
+        _ownedTransport = new NUnitProcessTransportAdapter(processClient);
+        _session = new DevToolsNUnitSession(_ownedTransport);
         return _session;
     }
 
@@ -205,43 +211,26 @@ internal sealed class DevToolsNUnitFramework : ITestFramework, IDataProducer
         };
     }
 
-    internal static TestNode ToResultNode(NUnitCaseResult result, string? assemblyPath = null)
+    internal static TestNode ToResultNode(NUnitCaseResult result, string? assemblyPath = null) =>
+        ToResultNode(NUnitMtpMapping.ToTesting(result), assemblyPath, result.FullName, result.Id, result.Name);
+
+    internal static TestNode ToResultNode(
+        TestingCaseResult result,
+        string? assemblyPath = null,
+        string? fullName = null,
+        string? protocolId = null,
+        string? methodName = null)
     {
-        var properties = new List<IProperty> { ToStateProperty(result) };
-        AddSource(properties, result.Source);
-        AddTraits(properties, result.Traits);
-        AddMethodIdentifier(properties, result.FullName, result.Name, assemblyPath);
-
-        var duration = TimeSpan.FromMilliseconds(result.DurationMs);
-        var end = DateTimeOffset.UtcNow;
-        properties.Add(new TimingProperty(new TimingInfo(end - duration, end, duration)));
-
-        if (!string.IsNullOrWhiteSpace(result.Output))
-            properties.Add(new StandardOutputProperty(result.Output!));
+        var properties = new List<IProperty>();
+        TestingNodeProperties.AddCommonResultProperties(properties, result);
+        AddMethodIdentifier(properties, fullName ?? result.TestId, methodName ?? result.DisplayName, assemblyPath);
 
         return new TestNode
         {
-            Uid = new TestNodeUid(StableUid(result.FullName, result.Id, result.Name)),
-            DisplayName = result.Name,
+            Uid = new TestNodeUid(StableUid(fullName, protocolId ?? result.TestId, methodName ?? result.DisplayName)),
+            DisplayName = result.DisplayName,
             Properties = new PropertyBag(properties),
         };
-    }
-
-    private static IProperty ToStateProperty(NUnitCaseResult result) =>
-        result.Outcome switch
-        {
-            "Passed" => PassedTestNodeStateProperty.CachedInstance,
-            "Skipped" => new SkippedTestNodeStateProperty(result.SkipReason ?? result.Message),
-            "Failed" => new FailedTestNodeStateProperty(CreateException(result)),
-            _ => new ErrorTestNodeStateProperty(CreateException(result)),
-        };
-
-    private static Exception CreateException(NUnitCaseResult result)
-    {
-        if (string.IsNullOrWhiteSpace(result.StackTrace))
-            return new InvalidOperationException(result.Message ?? result.Outcome);
-
-        return new InvalidOperationException($"{result.Message}{Environment.NewLine}{result.StackTrace}");
     }
 
     private static string StableUid(string? fullName, string id, string name)
@@ -311,10 +300,7 @@ internal sealed class DevToolsNUnitFramework : ITestFramework, IDataProducer
         if (source is null || string.IsNullOrWhiteSpace(source.File))
             return;
 
-        var line = Math.Max(source.Line, 1);
-        properties.Add(new TestFileLocationProperty(
-            source.File,
-            new LinePositionSpan(new LinePosition(line, 1), new LinePosition(line, 1))));
+        TestingNodeProperties.AddSource(properties, new TestingSourceLocation(source.File, source.Line));
     }
 
     private static void AddTraits(List<IProperty> properties, IReadOnlyList<NUnitTrait>? traits)
@@ -322,8 +308,9 @@ internal sealed class DevToolsNUnitFramework : ITestFramework, IDataProducer
         if (traits is null)
             return;
 
-        foreach (var trait in traits)
-            properties.Add(new TestMetadataProperty(trait.Name, trait.Value));
+        TestingNodeProperties.AddTraits(
+            properties,
+            traits.Select(trait => new TestingTrait(trait.Name, trait.Value)).ToList());
     }
 
     private static string ResolveTestAssemblyPath()

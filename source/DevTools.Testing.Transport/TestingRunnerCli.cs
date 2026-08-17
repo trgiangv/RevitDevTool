@@ -49,6 +49,25 @@ public static class TestingRunnerCli
             args.Add(hostOptions.DebugParentPid.Value.ToString());
         }
 
+        var selection = request.Selection;
+        var testIds = (selection?.TestIds ?? Array.Empty<string>())
+            .Where(id => !string.IsNullOrWhiteSpace(id))
+            .Select(id => id.Trim())
+            .Distinct(StringComparer.Ordinal)
+            .ToList();
+        if (testIds.Count > 0)
+        {
+            args.Add("--test");
+            args.Add(System.Text.Json.JsonSerializer.Serialize(testIds));
+        }
+
+        var payload = selection?.ProviderPayload;
+        if (!string.IsNullOrWhiteSpace(payload))
+        {
+            args.Add("--filter");
+            args.Add(payload!.Trim());
+        }
+
         return args;
     }
 }

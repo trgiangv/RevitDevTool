@@ -1,26 +1,41 @@
 using DevTools.NUnit.Core;
 using DevTools.NUnit.Core.Contracts;
+using DevTools.Testing.Abstractions.Contracts;
+using DevTools.Testing.Mtp;
+using DevTools.Testing.Transport;
 
 namespace DevTools.NUnit.Mtp;
 
 internal sealed class DevToolsNUnitSession
 {
-    private readonly IRunnerTransport _transport;
+    readonly TestingRunnerSession _session;
 
-    internal DevToolsNUnitSession(IRunnerTransport transport)
+    internal DevToolsNUnitSession(ITestRunnerTransport transport)
     {
-        _transport = transport ?? throw new ArgumentNullException(nameof(transport));
+        _session = new TestingRunnerSession(transport);
     }
 
-    internal IReadOnlyList<NUnitCaseResult> Run(
+    internal TestingRunResponse Run(
         string assemblyPath,
-        HostRunOptions options,
-        RunnerTestFilter filter) =>
-        _transport.Run(RequireAssembly(assemblyPath), options, filter);
+        TestingHostOptions hostOptions,
+        TestingSelection selection)
+    {
+        var request = new TestingRunRequest(
+            TestingProtocol.CurrentVersion,
+            Guid.NewGuid(),
+            TestingFrameworkIds.NUnit,
+            new TestingAssemblyReference(RequireAssembly(assemblyPath), null, null),
+            selection,
+            new Dictionary<string, string>());
 
-    internal void Cancel() => _transport.Cancel();
+        return _session.Run(request, hostOptions);
+    }
 
-    private static string RequireAssembly(string assemblyPath)
+    internal void Cancel() => _session.Cancel(Guid.Empty);
+
+    internal void Dispose() => _session.Dispose();
+
+    static string RequireAssembly(string assemblyPath)
     {
         if (string.IsNullOrWhiteSpace(assemblyPath))
             throw new ArgumentException("Test assembly path is required.", nameof(assemblyPath));
