@@ -15,7 +15,7 @@ public class Application : ExtensionApplication
     public override void OnStartup(RibbonControl ribbonControl)
     {
         AssemblyLoader.Initialize();
-        HostSharedAssemblies.Use(AcadHostApiAssemblies.Set);
+        HostSharedAssemblies.Use(AcadHostApiAssemblies.Names);
         Host.Start();
         Host.GetService<PanelController>().Initialize();
         AddButtons(ribbonControl);
