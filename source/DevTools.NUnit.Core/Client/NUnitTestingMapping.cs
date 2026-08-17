@@ -1,13 +1,22 @@
 using System.Xml.Linq;
-using DevTools.NUnit.Core;
 using DevTools.NUnit.Core.Contracts;
 using DevTools.Testing.Abstractions.Contracts;
 
-namespace DevTools.NUnit.Mtp;
+namespace DevTools.NUnit.Core;
 
-internal static class NUnitMtpMapping
+internal static class NUnitTestingMapping
 {
     internal static TestingHostOptions ToHostOptions(HostRunOptions options) =>
+        new(
+            options.Host,
+            options.HostVersion,
+            options.HostLaunch,
+            options.HostTimeoutSeconds,
+            options.HostLaunchTimeoutSeconds,
+            options.RunnerPath,
+            options.DebugParentPid);
+
+    internal static HostRunOptions ToHostRunOptions(TestingHostOptions options) =>
         new(
             options.Host,
             options.HostVersion,

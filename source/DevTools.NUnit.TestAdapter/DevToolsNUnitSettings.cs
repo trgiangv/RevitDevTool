@@ -1,5 +1,6 @@
 using DevTools.NUnit.Core;
 using DevTools.NUnit.TestAdapter.Models;
+using DevTools.Testing.Abstractions.Contracts;
 
 namespace DevTools.NUnit.TestAdapter;
 
@@ -73,4 +74,7 @@ internal sealed record DevToolsNUnitSettings(
 
     public HostRunOptions ToHostRunOptions() =>
         new(Host, HostVersion, HostLaunch, HostTimeoutSeconds, HostLaunchTimeoutSeconds, RunnerPath);
+
+    public TestingHostOptions ToTestingHostOptions(int? debugParentPid = null) =>
+        new(Host, HostVersion, HostLaunch, HostTimeoutSeconds, HostLaunchTimeoutSeconds, RunnerPath, debugParentPid);
 }

@@ -1,6 +1,7 @@
 using DevTools.NUnit.Core;
-using DevTools.NUnit.Core.Contracts;
 using DevTools.NUnit.TestAdapter.Runner;
+using DevTools.Testing.Abstractions.Contracts;
+using DevTools.Testing.Transport;
 using Microsoft.VisualStudio.TestPlatform.ObjectModel;
 using Microsoft.VisualStudio.TestPlatform.ObjectModel.Adapter;
 using Microsoft.VisualStudio.TestPlatform.ObjectModel.Logging;
@@ -11,8 +12,17 @@ namespace DevTools.NUnit.TestAdapter;
 [UsedImplicitly]
 public sealed class DevToolsNUnitExecutor : ITestExecutor
 {
-    private ProcessRunnerClient? _client;
+    private ITestRunnerTransport? _client;
     private readonly object _clientLock = new();
+
+    public DevToolsNUnitExecutor()
+    {
+    }
+
+    internal DevToolsNUnitExecutor(ITestRunnerTransport transport)
+    {
+        _client = transport ?? throw new ArgumentNullException(nameof(transport));
+    }
 
     public void RunTests(IEnumerable<TestCase>? tests, IRunContext? runContext, IFrameworkHandle? frameworkHandle)
     {
@@ -64,7 +74,7 @@ public sealed class DevToolsNUnitExecutor : ITestExecutor
     public void Cancel()
     {
         lock (_clientLock)
-            _client?.Cancel();
+            _client?.Cancel(Guid.Empty);
     }
 
     private void RunSource(
@@ -77,19 +87,23 @@ public sealed class DevToolsNUnitExecutor : ITestExecutor
             return;
 
         var settings = AdapterSettings.Current;
-        var options = settings.ToHostRunOptions();
-        if (runContext.IsBeingDebugged)
-            options = options with { DebugParentPid = Environment.ProcessId };
-
-        var filter = VsTestCaseMapper.BuildFilter(tests);
+        var hostOptions = settings.ToTestingHostOptions(
+            runContext.IsBeingDebugged ? Environment.ProcessId : null);
+        var request = new TestingRunRequest(
+            TestingProtocol.CurrentVersion,
+            Guid.NewGuid(),
+            TestingFrameworkIds.NUnit,
+            new TestingAssemblyReference(source, null, null),
+            NUnitTestingMapping.ToSelection(VsTestCaseMapper.BuildFilter(tests)),
+            new Dictionary<string, string>());
 
         foreach (var test in tests)
             frameworkHandle.RecordStart(test);
 
         try
         {
-            var result = GetClient().Run(source, options, filter);
-            ReportResults(tests, result, frameworkHandle);
+            var result = GetClient().Run(request, hostOptions, _ => { });
+            ReportResults(tests, result.Results, frameworkHandle);
         }
         catch (Exception ex)
         {
@@ -106,7 +120,7 @@ public sealed class DevToolsNUnitExecutor : ITestExecutor
 
     private static void ReportResults(
         IReadOnlyList<TestCase> requestedTests,
-        IReadOnlyList<NUnitCaseResult> result,
+        IReadOnlyList<TestingCaseResult> result,
         IFrameworkHandle frameworkHandle)
     {
         var byName = requestedTests
@@ -116,11 +130,11 @@ public sealed class DevToolsNUnitExecutor : ITestExecutor
         var reported = new HashSet<string>(StringComparer.Ordinal);
         foreach (var remoteCase in result)
         {
-            if (!byName.TryGetValue(remoteCase.Name, out var testCase))
+            if (!byName.TryGetValue(remoteCase.DisplayName, out var testCase))
                 continue;
 
             frameworkHandle.RecordResult(VsTestCaseMapper.ToTestResult(testCase, remoteCase));
-            reported.Add(remoteCase.Name);
+            reported.Add(remoteCase.DisplayName);
         }
 
         foreach (var test in requestedTests)
@@ -136,7 +150,7 @@ public sealed class DevToolsNUnitExecutor : ITestExecutor
         }
     }
 
-    private ProcessRunnerClient GetClient()
+    private ITestRunnerTransport GetClient()
     {
         lock (_clientLock)
             return _client ??= RunnerClientFactory.Create();

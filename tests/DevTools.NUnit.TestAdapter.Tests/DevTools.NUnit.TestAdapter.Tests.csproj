@@ -3,6 +3,8 @@
     <PropertyGroup>
         <TargetFramework>net10.0-windows</TargetFramework>
         <IsPackable>false</IsPackable>
+        <GenerateTargetPlatformAttribute>false</GenerateTargetPlatformAttribute>
+        <GenerateSupportedOSPlatformAttribute>false</GenerateSupportedOSPlatformAttribute>
     </PropertyGroup>
 
     <ItemGroup>
@@ -10,6 +12,13 @@
         <PackageReference Include="Microsoft.NET.Test.Sdk"/>
         <PackageReference Include="xunit.v3"/>
         <PackageReference Include="xunit.runner.visualstudio"/>
+        <PackageReference Include="Microsoft.TestPlatform.ObjectModel"/>
+    </ItemGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\..\source\DevTools.NUnit.TestAdapter\DevTools.NUnit.TestAdapter.csproj"
+                          AdditionalProperties="ILRepackable=false"/>
+        <ProjectReference Include="..\DevTools.NUnit.Runtime.Fixtures\DevTools.NUnit.Runtime.Fixtures.csproj"/>
     </ItemGroup>
 
     <ItemGroup>

@@ -47,7 +47,7 @@ Date: 2026-08-17
 
 ## Status
 
-Active — P0 CLI exit gate is complete. Tasks 1-6 landed; remaining work is VSTest cutover, host composition, and live NUnit parity.
+Active — P0 CLI exit gate is complete. Tasks 1-7 landed; remaining work is host composition, packaging, and live NUnit parity.
 
 ## Harness Execution Rules
 
@@ -455,13 +455,13 @@ public sealed record TestingRuntimePayload(
 - Modify: the four VSTest-only sample/test projects only where runner paths or
   contracts changed
 
-- [ ] Keep `Microsoft.TestPlatform.ObjectModel`, Test SDK, and NUnit adapter
+- [x] Keep `Microsoft.TestPlatform.ObjectModel`, Test SDK, and NUnit adapter
   dependencies only in the approved VSTest surface.
-- [ ] Replace NUnit-named process transport/path types with
+- [x] Replace NUnit-named process transport/path types with
   `ITestRunnerTransport`, `TestingHostOptions`, and `DevTools.TestRunner.exe`.
-- [ ] Keep discovery local; add a test that VSTest discovery succeeds when the
+- [x] Keep discovery local; add a test that VSTest discovery succeeds when the
   configured TestRunner and Autodesk executable paths do not exist.
-- [ ] Run TestAdapter tests and net48 VSTest discovery before proceeding.
+- [x] Run TestAdapter tests and net48 VSTest discovery before proceeding.
 
 ### Task 8: Compose, package, and prove host parity
 
@@ -515,7 +515,7 @@ public sealed record TestingRuntimePayload(
 - [x] Generic Host complete.
 - [x] NUnit provider adapter complete; MTP/VSTest cutover still open.
 - [x] Shared MTP helpers extracted; NUnit MTP run uses generic transport + `nunit` framework id.
-- [ ] VSTest-only compatibility path passes.
+- [x] VSTest-only compatibility path passes.
 - [ ] Packaging and live host matrix pass.
 
 ## Task-local evidence
@@ -526,6 +526,7 @@ public sealed record TestingRuntimePayload(
 - 2026-08-17 Task 4: Testing.Host built net48/net8/net10. Host tests passed 15 (registry, cancellation, testing/* + nunit/* adapter, no discovery, generation snapshot). NUnit.Host still owns live nunit/* dispatch until Task 5 provider cutover.
 - 2026-08-17 Task 5: `NUnitHostTestFrameworkProvider` wraps `INUnitHost`. TestIds become `<test>` XML (never `<name>`/display name); `ProviderPayload` is raw NUnit filter XML. Mapper keeps protocol `Id` as `TestId`. DI registers the provider + `TestingProviderRegistry`; `testing/*` is not on the pipe yet (needs host-thread marshal in Task 8, and `includeLegacyNunitEnvelopes: false` so `nunit/*` stays unique). NUnit staging kept. Proof: NUnit.Host Debug build all TFMs; new Host tests 14 (mapper/filter/provider/focused fixture); Testing.Host 16; Execution registration 1; net48 Host 13. Runtime 34 tests passed then MTP leftover-thread exit 1 (pre-existing). Host.Tests full suite still has pre-existing `Run_reports_pass_and_fail_results` trace-marker miss. Core STJ boundary fail is pre-existing.
 - 2026-08-17 Task 6: `DevTools.Testing.Mtp` helpers only (error node, result properties, `TestingRunnerSession`). No universal `ITestFramework`. NUnit MTP keeps local PE discovery, FullName UIDs, builder hook. Run injects `ITestRunnerTransport` with `TestingFrameworkIds.NUnit`. Live TestRunner still emits NUnit JSON, so production MTP uses `NUnitProcessTransportAdapter` over `ProcessRunnerClient` until Task 8. Name filters round-trip via `ProviderPayload` XML. Proof: Testing.Mtp Debug all TFMs; Testing.Mtp tests 5; NUnit.Mtp tests 25; Transport tests 16 (`--framework` + `--test`).
+- 2026-08-17 Task 7: VSTest executor/settings use `ITestRunnerTransport` + `TestingHostOptions` + `TestingFrameworkIds.NUnit`. Shared `NUnitProcessTransportAdapter` / `NUnitTestingMapping` live in Core `Client/` and are linked into MTP and the adapter. Discovery stays local PE. Proof: TestAdapter tests 8; NUnit.Mtp tests 25; package policy 3; net48 VSTest `--list-tests` listed `Arithmetic_runs_inside_host`, `Intentional_failure_for_demo`, `Writes_output`.
 
 ## Decisions
 
@@ -541,6 +542,9 @@ public sealed record TestingRuntimePayload(
   (`TestingHostTiming`) and must not mutate those CLI values.
 - 2026-08-17: Keep `NUnitProcessTransportAdapter` until TestRunner serializes
   `testing/*` JSON. Do not deserialize live NUnit stdout as `TestingRunResponse`.
+- 2026-08-17: Enable Polyfill for `netstandard2.0` as well as net4x so the
+  VSTest adapter can compile records. ProcessRunnerClient uses the quoted
+  `Arguments` path on netstandard.
 
 ## Validation
 

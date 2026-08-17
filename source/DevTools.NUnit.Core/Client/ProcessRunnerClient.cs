@@ -160,7 +160,7 @@ internal sealed class ProcessRunnerClient : IRunnerTransport, IDisposable
 
     private static void AddArgument(ProcessStartInfo startInfo, string argument)
     {
-#if NETFRAMEWORK
+#if NETFRAMEWORK || NETSTANDARD
         if (startInfo.Arguments.Length > 0)
             startInfo.Arguments += " ";
         startInfo.Arguments += QuoteArgument(argument);
@@ -169,7 +169,7 @@ internal sealed class ProcessRunnerClient : IRunnerTransport, IDisposable
 #endif
     }
 
-#if NETFRAMEWORK
+#if NETFRAMEWORK || NETSTANDARD
     private static string QuoteArgument(string value)
     {
         if (value.Length > 0 && value.IndexOfAny([' ', '\t', '"']) < 0)

@@ -95,6 +95,10 @@ public sealed class MtpArchitectureTests
 
         Assert.False(File.Exists(Path.Combine(
             RepositoryRoot, "source", "DevTools.NUnit.Mtp", "ProcessRunnerClient.cs")));
+        Assert.False(File.Exists(Path.Combine(
+            RepositoryRoot, "source", "DevTools.NUnit.Mtp", "NUnitProcessTransportAdapter.cs")));
+        Assert.True(File.Exists(Path.Combine(
+            RepositoryRoot, "source", "DevTools.NUnit.Core", "Client", "NUnitProcessTransportAdapter.cs")));
         Assert.False(Directory.Exists(Path.Combine(RepositoryRoot, "source", "DevTools.NUnit.Client")));
     }
 

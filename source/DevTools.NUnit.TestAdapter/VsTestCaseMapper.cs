@@ -1,6 +1,6 @@
 using DevTools.NUnit.Core;
-using DevTools.NUnit.Core.Contracts;
 using DevTools.NUnit.TestAdapter.Runner;
+using DevTools.Testing.Abstractions.Contracts;
 using Microsoft.VisualStudio.TestPlatform.ObjectModel;
 using Microsoft.VisualStudio.TestPlatform.ObjectModel.Utilities;
 
@@ -40,12 +40,12 @@ internal static class VsTestCaseMapper
         RunnerTestFilter.FromFullNames(
             tests.Select(test => test.GetPropertyValue<string>(TestFullNameProperty, null) ?? test.FullyQualifiedName));
 
-    public static TestResult ToTestResult(TestCase testCase, NUnitCaseResult remoteCase)
+    public static TestResult ToTestResult(TestCase testCase, TestingCaseResult remoteCase)
     {
         var result = new TestResult(testCase)
         {
             Outcome = MapOutcome(remoteCase.Outcome),
-            Duration = TimeSpan.FromMilliseconds(remoteCase.DurationMs),
+            Duration = TimeSpan.FromMilliseconds(remoteCase.DurationMilliseconds),
             ErrorMessage = remoteCase.Message,
             ErrorStackTrace = remoteCase.StackTrace,
         };

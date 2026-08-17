@@ -1,8 +1,7 @@
-using DevTools.NUnit.Core;
 using DevTools.Testing.Abstractions.Contracts;
 using DevTools.Testing.Transport;
 
-namespace DevTools.NUnit.Mtp;
+namespace DevTools.NUnit.Core;
 
 /// <summary>
 /// Adapts the NUnit-JSON TestRunner client onto <see cref="ITestRunnerTransport"/>
@@ -29,9 +28,9 @@ internal sealed class NUnitProcessTransportAdapter : ITestRunnerTransport
 
         var cases = _client.Run(
             request.Assembly.Path,
-            ToHostRunOptions(hostOptions),
-            NUnitMtpMapping.ToRunnerFilter(request.Selection));
-        var mapped = cases.Select(NUnitMtpMapping.ToTesting).ToList();
+            NUnitTestingMapping.ToHostRunOptions(hostOptions),
+            NUnitTestingMapping.ToRunnerFilter(request.Selection));
+        var mapped = cases.Select(NUnitTestingMapping.ToTesting).ToList();
         foreach (var result in mapped)
             onResult(result);
 
@@ -48,14 +47,4 @@ internal sealed class NUnitProcessTransportAdapter : ITestRunnerTransport
     public void Cancel(Guid runId) => _client.Cancel();
 
     public void Dispose() => _client.Dispose();
-
-    static HostRunOptions ToHostRunOptions(TestingHostOptions options) =>
-        new(
-            options.Host,
-            options.HostVersion,
-            options.HostLaunch,
-            options.HostTimeoutSeconds,
-            options.HostLaunchTimeoutSeconds,
-            options.RunnerPath,
-            options.DebugParentPid);
 }

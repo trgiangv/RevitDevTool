@@ -39,6 +39,15 @@ public sealed class ProcessRunnerClientTests
             repositoryRoot, "source", "DevTools.NUnit.TestAdapter", "DevTools.NUnit.TestAdapter.csproj"));
         Assert.Contains("Core\\Client\\ProcessRunnerClient.cs", mtp);
         Assert.Contains("Core\\Client\\ProcessRunnerClient.cs", adapter);
+        Assert.Contains("Core\\Client\\NUnitProcessTransportAdapter.cs", adapter);
+        Assert.Contains("Core\\Client\\NUnitTestingMapping.cs", adapter);
+        Assert.Contains("Testing\\ITestRunnerTransport.cs", adapter);
+        Assert.Contains("DevTools.TestRunner.exe", File.ReadAllText(Path.Combine(
+            repositoryRoot,
+            "source",
+            "DevTools.NUnit.TestAdapter",
+            "build",
+            "DevTools.NUnit.TestAdapter.targets")));
         Assert.Contains("Core\\Client\\HostRunOptions.cs", mtp);
         Assert.Contains("Core\\Client\\HostRunOptions.cs", adapter);
         Assert.Contains("Core\\Client\\NUnitRunnerPaths.cs", mtp);
@@ -56,7 +65,10 @@ public sealed class ProcessRunnerClientTests
 
         Assert.Contains("runContext.IsBeingDebugged", source, StringComparison.Ordinal);
         Assert.DoesNotContain("Debug = true", source, StringComparison.Ordinal);
-        Assert.Contains("DebugParentPid = Environment.ProcessId", source, StringComparison.Ordinal);
+        Assert.Contains("ToTestingHostOptions", source, StringComparison.Ordinal);
+        Assert.Contains("Environment.ProcessId", source, StringComparison.Ordinal);
+        Assert.Contains("ITestRunnerTransport", source, StringComparison.Ordinal);
+        Assert.Contains("TestingFrameworkIds.NUnit", source, StringComparison.Ordinal);
         Assert.DoesNotContain("GetClient().Discover", source, StringComparison.Ordinal);
         Assert.Contains("LocalNUnitTestDiscoverer.Discover", source, StringComparison.Ordinal);
     }

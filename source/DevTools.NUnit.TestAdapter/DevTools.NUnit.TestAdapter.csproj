@@ -58,6 +58,11 @@
         <Compile Include="..\DevTools.NUnit.Core\Client\IRunnerTransport.cs" Link="Core\Client\IRunnerTransport.cs"/>
         <Compile Include="..\DevTools.NUnit.Core\Client\NUnitRunnerPaths.cs" Link="Core\Client\NUnitRunnerPaths.cs"/>
         <Compile Include="..\DevTools.NUnit.Core\Client\ProcessRunnerClient.cs" Link="Core\Client\ProcessRunnerClient.cs"/>
+        <Compile Include="..\DevTools.NUnit.Core\Client\NUnitTestingMapping.cs" Link="Core\Client\NUnitTestingMapping.cs"/>
+        <Compile Include="..\DevTools.NUnit.Core\Client\NUnitProcessTransportAdapter.cs" Link="Core\Client\NUnitProcessTransportAdapter.cs"/>
+        <Compile Include="..\DevTools.Testing.Abstractions\Contracts\TestingContracts.cs" Link="Testing\TestingContracts.cs"/>
+        <Compile Include="..\DevTools.Testing.Transport\ITestRunnerTransport.cs" Link="Testing\ITestRunnerTransport.cs"/>
+        <Compile Include="..\DevTools.Testing.Transport\TestingProtocol.cs" Link="Testing\TestingProtocol.cs"/>
     </ItemGroup>
 
 </Project>

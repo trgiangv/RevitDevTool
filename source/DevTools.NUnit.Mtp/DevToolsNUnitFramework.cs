@@ -119,8 +119,8 @@ internal sealed class DevToolsNUnitFramework : ITestFramework, IDataProducer
         {
             response = session.Run(
                 assemblyPath,
-                NUnitMtpMapping.ToHostOptions(options),
-                NUnitMtpMapping.ToSelection(filter));
+                NUnitTestingMapping.ToHostOptions(options),
+                NUnitTestingMapping.ToSelection(filter));
         }
         catch (Exception ex)
         {
@@ -212,7 +212,7 @@ internal sealed class DevToolsNUnitFramework : ITestFramework, IDataProducer
     }
 
     internal static TestNode ToResultNode(NUnitCaseResult result, string? assemblyPath = null) =>
-        ToResultNode(NUnitMtpMapping.ToTesting(result), assemblyPath, result.FullName, result.Id, result.Name);
+        ToResultNode(NUnitTestingMapping.ToTesting(result), assemblyPath, result.FullName, result.Id, result.Name);
 
     internal static TestNode ToResultNode(
         TestingCaseResult result,

@@ -28,7 +28,8 @@ public class TestAdapterLayoutTests
         var revitTargets = File.ReadAllText(Path.Combine(repositoryRoot, "props", "Revit.targets"));
         var acadTargets = File.ReadAllText(Path.Combine(repositoryRoot, "props", "AutoCad.targets"));
         Assert.Contains("Target Name=\"RepackAddinFiles\"", sharedRepack, StringComparison.Ordinal);
-        Assert.Contains("JetBrains.Annotations.dll", sharedRepack, StringComparison.Ordinal);
+        Assert.Contains("ILRepackInternalize", sharedRepack, StringComparison.Ordinal);
+        Assert.Contains("/internalize", sharedRepack, StringComparison.Ordinal);
         Assert.DoesNotContain("RepackAddinFiles", revitTargets, StringComparison.Ordinal);
         Assert.DoesNotContain("RepackAddinFiles", acadTargets, StringComparison.Ordinal);
         Assert.DoesNotContain("ILRepack.exe", revitTargets, StringComparison.Ordinal);

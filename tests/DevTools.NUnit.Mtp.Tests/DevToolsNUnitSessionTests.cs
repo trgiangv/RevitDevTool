@@ -93,8 +93,8 @@ public sealed class DevToolsNUnitSessionTests
     public void Name_filter_round_trips_through_generic_selection()
     {
         var original = RunnerTestFilter.FromNames("Arithmetic_runs_inside_host");
-        var selection = NUnitMtpMapping.ToSelection(original);
-        var restored = NUnitMtpMapping.ToRunnerFilter(selection);
+        var selection = NUnitTestingMapping.ToSelection(original);
+        var restored = NUnitTestingMapping.ToRunnerFilter(selection);
 
         Assert.Empty(selection.TestIds);
         Assert.Contains("<name>Arithmetic_runs_inside_host</name>", selection.ProviderPayload, StringComparison.Ordinal);
