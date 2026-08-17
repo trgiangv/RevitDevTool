@@ -47,7 +47,7 @@ Date: 2026-08-17
 
 ## Status
 
-Active — P0 CLI exit gate is complete. Tasks 1-3 landed; remaining work is Testing.Host and NUnit parity cutover.
+Active — P0 CLI exit gate is complete. Tasks 1-4 landed; remaining work is NUnit provider parity and MTP/VSTest cutover.
 
 ## Harness Execution Rules
 
@@ -376,16 +376,16 @@ public sealed record TestingRuntimePayload(
     IReadOnlyList<string> AdditionalProbeRoots);
 ```
 
-- [ ] Write tests for duplicate/unknown framework IDs, case-stable IDs,
+- [x] Write tests for duplicate/unknown framework IDs, case-stable IDs,
   cancellation routing and the ordered
   `Requested -> Acknowledged -> Completed|Poisoned` transition, provider
   exceptions, and poisoned-session responses.
-- [ ] Extract content hash, immutable snapshot copy, managed/native asset index,
+- [x] Extract content hash, immutable snapshot copy, managed/native asset index,
   and generation manifest mechanics from NUnit Host. Keep provider-owned
   framework validation and load-context policy outside generic staging.
-- [ ] Implement `testing/*` handling and route legacy `nunit/*` envelopes to
+- [x] Implement `testing/*` handling and route legacy `nunit/*` envelopes to
   the NUnit provider through a compatibility adapter.
-- [ ] Assert there is no discovery endpoint and no host-locate/process API in
+- [x] Assert there is no discovery endpoint and no host-locate/process API in
   Testing.Host.
 
 ### Task 5: Adapt NUnit Host/Runtime to the provider contract
@@ -512,7 +512,7 @@ public sealed record TestingRuntimePayload(
 - [x] Neutral contracts and boundary tests complete.
 - [x] Generic Transport complete.
 - [x] Direct TestRunner rename complete.
-- [ ] Generic Host complete.
+- [x] Generic Host complete.
 - [ ] NUnit provider and MTP migration pass parity.
 - [ ] VSTest-only compatibility path passes.
 - [ ] Packaging and live host matrix pass.
@@ -522,6 +522,7 @@ public sealed record TestingRuntimePayload(
 - 2026-08-17 Task 1: Abstractions built net48/net8/net10. Abstractions tests passed 10.
 - 2026-08-17 Task 2: Transport built all three TFMs. Transport tests passed 12 (golden JSON, cancellation states, protocol 1 vs 2, no `testing/discover`, fake-runner capture). `NUnitProtocolGoldenTests` still passed 11. Legacy `nunit/*` serializer stays in `DevTools.NUnit.Transport` so Testing.Transport does not reference NUnit.
 - 2026-08-17 Task 3: `DevTools.NUnit.Runner` renamed to `DevTools.TestRunner`. Build Debug passed. TestRunner tests passed 53. `rg DevTools.NUnit.Runner` is clean in source/tests/build/samples/docs/product/docs/agents. `--framework` defaults to `nunit`; `--debug` / `--debug-parent-pid` unchanged. Legacy NUnit CLI still omits `--framework`.
+- 2026-08-17 Task 4: Testing.Host built net48/net8/net10. Host tests passed 15 (registry, cancellation, testing/* + nunit/* adapter, no discovery, generation snapshot). NUnit.Host still owns live nunit/* dispatch until Task 5 provider cutover.
 
 ## Decisions
 

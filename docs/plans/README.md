@@ -31,7 +31,7 @@ decision into `docs/decisions/`; keep task-local choices in the plan.
 | Plan | Status |
 |------|--------|
 | [2026-08-17-p0-xunit4-repository-mtp-baseline.md](active/2026-08-17-p0-xunit4-repository-mtp-baseline.md) | Active — CLI complete; IDE smoke open |
-| [2026-08-17-p1-framework-neutral-testing-core.md](active/2026-08-17-p1-framework-neutral-testing-core.md) | Active — Tasks 1-3 landed |
+| [2026-08-17-p1-framework-neutral-testing-core.md](active/2026-08-17-p1-framework-neutral-testing-core.md) | Active — Tasks 1-4 landed |
 | [2026-08-17-p2-xunit4-host-provider.md](active/2026-08-17-p2-xunit4-host-provider.md) | Blocked by P1 |
 | [2026-08-02-mrtr-implementation.md](active/2026-08-02-mrtr-implementation.md) | Active — G1 closed; G3/G4 open |
 
