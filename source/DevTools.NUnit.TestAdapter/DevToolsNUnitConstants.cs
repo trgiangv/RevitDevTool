@@ -1,6 +1,7 @@
 namespace DevTools.NUnit.TestAdapter;
 
-using DevTools.NUnit.Core;
+using DevTools.NUnit.Provider;
+using DevTools.Testing.Transport;
 
 public static class DevToolsNUnitConstants
 {
@@ -16,6 +17,6 @@ public static class DevToolsNUnitConstants
 
     public const string DefaultHost = "Revit";
     public const string DefaultHostVersion = "2025";
-    public const int DefaultHostTimeoutSeconds = NUnitHostTiming.DefaultHostRequestTimeoutSeconds;
-    public const int DefaultHostLaunchTimeoutSeconds = NUnitHostTiming.DefaultHostLaunchTimeoutSeconds;
+    public const int DefaultHostTimeoutSeconds = TestingHostTiming.DefaultHostRequestTimeoutSeconds;
+    public const int DefaultHostLaunchTimeoutSeconds = TestingHostTiming.DefaultHostLaunchTimeoutSeconds;
 }

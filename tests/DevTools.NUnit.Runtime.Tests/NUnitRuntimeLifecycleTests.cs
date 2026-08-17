@@ -1,4 +1,4 @@
-using DevTools.NUnit.Core.Contracts;
+using DevTools.NUnit.Transport.Contracts;
 using DevTools.NUnit.Runtime;
 using BlockingRunState = DevTools.NUnit.Runtime.Tests.Fixtures.BlockingRunState;
 using CancellationProbeState = DevTools.NUnit.Runtime.Tests.Fixtures.CancellationProbeState;

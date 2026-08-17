@@ -31,7 +31,7 @@ public sealed class MarshaledTestingRequestHandlerTests
         var executor = new TrackingExecutor();
         var handler = CreateHandler(executor, new RecordingProvider());
         var hello = JsonSerializer.SerializeToElement(
-            new TestingHelloRequest(TestingProtocol.CurrentVersion, TestingFrameworkIds.NUnit),
+            new TestingHelloRequest(TestingProtocol.CurrentVersion, NUnitFramework.Id),
             TestingJsonContext.Default.TestingHelloRequest);
 
         var response = await handler.HandleAsync(
@@ -56,7 +56,7 @@ public sealed class MarshaledTestingRequestHandlerTests
             new TestingRunRequest(
                 TestingProtocol.CurrentVersion,
                 runId,
-                TestingFrameworkIds.NUnit,
+                NUnitFramework.Id,
                 new TestingAssemblyReference(@"C:\tests\Sample.dll", "net10.0-windows", "hash"),
                 new TestingSelection(["opaque-id"]),
                 new Dictionary<string, string>()),
@@ -103,7 +103,7 @@ public sealed class MarshaledTestingRequestHandlerTests
 
     private sealed class RecordingProvider : IHostTestFrameworkProvider
     {
-        public string FrameworkId => TestingFrameworkIds.NUnit;
+        public string FrameworkId => NUnitFramework.Id;
         public bool RunCalled { get; private set; }
         public Guid? LastRunId { get; private set; }
 

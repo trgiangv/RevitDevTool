@@ -1,7 +1,7 @@
 using System.Text.Json;
 using DevTools.Testing.Abstractions.Contracts;
 using DevTools.Testing.Transport;
-using DevTools.TestRunner.Services;
+using DevTools.TestRunner.Core.Services;
 
 namespace DevTools.TestRunner.Tests;
 
@@ -21,14 +21,14 @@ public sealed class TestingPipeClientTests
 
                 var hello = request.Params!.Value.Deserialize(TestingJsonContext.Default.TestingHelloRequest);
                 Assert.Equal(TestingProtocol.CurrentVersion, hello!.ProtocolVersion);
-                Assert.Equal(TestingFrameworkIds.NUnit, hello.FrameworkId);
+                Assert.Equal("nunit", hello.FrameworkId);
 
                 await server.SendResponseAsync(
                     request.Id!,
                     JsonSerializer.SerializeToElement(
                         new TestingHelloResponse(
                             TestingProtocol.CurrentVersion,
-                            TestingFrameworkIds.NUnit,
+                            "nunit",
                             "Revit",
                             "2025",
                             1234,
@@ -38,11 +38,11 @@ public sealed class TestingPipeClientTests
             });
 
             var response = await client.HelloAsync(
-                TestingFrameworkIds.NUnit,
+                "nunit",
                 TestContext.Current.CancellationToken);
 
             Assert.Equal(TestingProtocol.CurrentVersion, response.ProtocolVersion);
-            Assert.Equal(TestingFrameworkIds.NUnit, response.FrameworkId);
+            Assert.Equal("nunit", response.FrameworkId);
             Assert.Equal("Revit", response.Host);
             Assert.Equal("2025", response.HostVersion);
             Assert.Equal(1234, response.ProcessId);
@@ -62,7 +62,7 @@ public sealed class TestingPipeClientTests
             {
                 Assert.Equal(TestingProtocol.Run, request.Method);
                 var run = request.Params!.Value.Deserialize(TestingJsonContext.Default.TestingRunRequest);
-                Assert.Equal(TestingFrameworkIds.NUnit, run!.FrameworkId);
+                Assert.Equal("nunit", run!.FrameworkId);
                 Assert.Equal(@"C:\tests\Sample.dll", run.Assembly.Path);
                 Assert.Equal("<filter><test>HostSmokeTests.Arithmetic</test></filter>", run.Selection.ProviderPayload);
 
@@ -71,7 +71,7 @@ public sealed class TestingPipeClientTests
                     JsonSerializer.SerializeToElement(
                         new TestingRunResponse(
                             run.RunId,
-                            TestingFrameworkIds.NUnit,
+                            "nunit",
                             "generation-one",
                             [
                                 new TestingCaseResult(
@@ -97,7 +97,7 @@ public sealed class TestingPipeClientTests
                 new TestingRunRequest(
                     TestingProtocol.CurrentVersion,
                     runId,
-                    TestingFrameworkIds.NUnit,
+                    "nunit",
                     new TestingAssemblyReference(@"C:\tests\Sample.dll", null, null),
                     new TestingSelection([], "<filter><test>HostSmokeTests.Arithmetic</test></filter>"),
                     new Dictionary<string, string>()),
@@ -126,7 +126,7 @@ public sealed class TestingPipeClientTests
                     JsonSerializer.SerializeToElement(
                         new TestingHelloResponse(
                             ProtocolVersion: 1,
-                            FrameworkId: TestingFrameworkIds.NUnit,
+                            FrameworkId: "nunit",
                             Host: "Revit",
                             HostVersion: "2025",
                             ProcessId: 1234,
@@ -136,7 +136,7 @@ public sealed class TestingPipeClientTests
             });
 
             var exception = await Assert.ThrowsAsync<InvalidOperationException>(() =>
-                client.HelloAsync(TestingFrameworkIds.NUnit, TestContext.Current.CancellationToken));
+                client.HelloAsync("nunit", TestContext.Current.CancellationToken));
 
             Assert.Contains("not supported", exception.Message, StringComparison.OrdinalIgnoreCase);
             Assert.Contains("1", exception.Message, StringComparison.Ordinal);

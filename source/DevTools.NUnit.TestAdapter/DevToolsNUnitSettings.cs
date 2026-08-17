@@ -1,6 +1,7 @@
-using DevTools.NUnit.Core;
+using DevTools.NUnit.Provider;
 using DevTools.NUnit.TestAdapter.Models;
 using DevTools.Testing.Abstractions.Contracts;
+using DevTools.Testing.Transport;
 
 namespace DevTools.NUnit.TestAdapter;
 
@@ -13,8 +14,8 @@ internal sealed record DevToolsNUnitSettings(
     string? RunnerPath,
     bool CollectSourceInformation)
 {
-    private const int DefaultHostTimeoutSeconds = NUnitHostTiming.DefaultHostRequestTimeoutSeconds;
-    private const int DefaultHostLaunchTimeoutSeconds = NUnitHostTiming.DefaultHostLaunchTimeoutSeconds;
+    private const int DefaultHostTimeoutSeconds = TestingHostTiming.DefaultHostRequestTimeoutSeconds;
+    private const int DefaultHostLaunchTimeoutSeconds = TestingHostTiming.DefaultHostLaunchTimeoutSeconds;
 
     public static DevToolsNUnitSettings CreateDefault() =>
         new(
@@ -71,9 +72,6 @@ internal sealed record DevToolsNUnitSettings(
 
         return !bool.TryParse(value!.Trim(), out var parsed) || parsed;
     }
-
-    public HostRunOptions ToHostRunOptions() =>
-        new(Host, HostVersion, HostLaunch, HostTimeoutSeconds, HostLaunchTimeoutSeconds, RunnerPath);
 
     public TestingHostOptions ToTestingHostOptions(int? debugParentPid = null) =>
         new(Host, HostVersion, HostLaunch, HostTimeoutSeconds, HostLaunchTimeoutSeconds, RunnerPath, debugParentPid);

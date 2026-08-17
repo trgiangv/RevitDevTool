@@ -1,6 +1,6 @@
 using System.Text.Json;
 using DevTools.Ipc;
-using DevTools.NUnit.Core.Compatibility;
+using DevTools.NUnit.Transport.Compatibility;
 
 namespace DevTools.NUnit.Transport;
 
@@ -14,6 +14,6 @@ public static class NUnitProtocolBridge
             JsonSerializer.SerializeToElement(new
             {
                 requested = protocolVersion,
-                expected = Core.Contracts.NUnitProtocol.CurrentVersion,
+                expected = Contracts.NUnitProtocol.CurrentVersion,
             }));
 }

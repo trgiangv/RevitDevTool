@@ -1,8 +1,8 @@
 using System.Text.Json;
 using DevTools.Execution.Abstractions;
 using DevTools.Hosting;
-using DevTools.NUnit.Core.Compatibility;
-using DevTools.NUnit.Core.Contracts;
+using DevTools.NUnit.Transport.Compatibility;
+using DevTools.NUnit.Transport.Contracts;
 using DevTools.NUnit.Transport;
 
 namespace DevTools.NUnit.Host;

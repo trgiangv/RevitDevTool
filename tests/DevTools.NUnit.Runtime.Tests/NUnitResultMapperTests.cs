@@ -1,4 +1,4 @@
-using DevTools.NUnit.Core.Results;
+using DevTools.NUnit.Transport.Results;
 using DevTools.NUnit.Runtime;
 using NUnit.Framework.Interfaces;
 

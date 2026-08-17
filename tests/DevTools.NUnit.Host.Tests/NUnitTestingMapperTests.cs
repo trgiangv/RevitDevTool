@@ -1,5 +1,5 @@
-using DevTools.NUnit.Core.Contracts;
-using DevTools.NUnit.Core.Results;
+using DevTools.NUnit.Transport.Contracts;
+using DevTools.NUnit.Transport.Results;
 using DevTools.Testing.Abstractions.Contracts;
 
 namespace DevTools.NUnit.Host.Tests;
@@ -25,7 +25,7 @@ public sealed class NUnitTestingMapperTests
             ],
             Source: new NUnitSourceLocation("FullSemanticsFixture.cs", 42),
             SkipReason: null,
-            Attachments: [new NUnitAttachment("log", "text/plain", @"C:\tmp\log.txt", null)],
+            Attachments: [new NUnitAttachment("log", "text/plain", @"C:\tmp\log.txt", "bG9n")],
             FullName: "DevTools.NUnit.Runtime.Fixtures.FullSemanticsFixture.PlainTest_Passes");
 
         var mapped = NUnitTestingMapper.ToTesting(nunit);
@@ -38,6 +38,10 @@ public sealed class NUnitTestingMapperTests
         Assert.Equal(nunit.Message, mapped.Message);
         Assert.Equal(nunit.StackTrace, mapped.StackTrace);
         Assert.Equal(nunit.Output, mapped.Output);
+        Assert.Equal(nunit.ParentTestId, mapped.ParentTestId);
+        Assert.Equal(nunit.FullName, mapped.FullName);
+        Assert.Equal(nunit.SkipReason, mapped.SkipReason);
+        Assert.Null(mapped.ProviderPayload);
         Assert.Equal(nunit.Source!.File, mapped.Source!.File);
         Assert.Equal(nunit.Source.Line, mapped.Source.Line);
         Assert.Equal(2, mapped.Traits.Count);
@@ -45,6 +49,8 @@ public sealed class NUnitTestingMapperTests
         var attachment = Assert.Single(mapped.Attachments);
         Assert.Equal(@"C:\tmp\log.txt", attachment.Path);
         Assert.Equal("log", attachment.Description);
+        Assert.Equal("text/plain", attachment.ContentType);
+        Assert.Equal("bG9n", attachment.Base64);
     }
 
     [Fact]
@@ -61,7 +67,8 @@ public sealed class NUnitTestingMapperTests
             SkipReason: "acceptance-ignore");
 
         var mapped = NUnitTestingMapper.ToTesting(nunit);
-        Assert.Equal("acceptance-ignore", mapped.Message);
+        Assert.Null(mapped.Message);
+        Assert.Equal("acceptance-ignore", mapped.SkipReason);
     }
 
     [Fact]
@@ -76,10 +83,10 @@ public sealed class NUnitTestingMapperTests
             "generation-1",
             new NUnitRuntimeDiagnostic("code", "detail"));
 
-        var mapped = NUnitTestingMapper.ToTesting(response, TestingFrameworkIds.NUnit);
+        var mapped = NUnitTestingMapper.ToTesting(response, NUnitFramework.Id);
 
         Assert.Equal(runId, mapped.RunId);
-        Assert.Equal(TestingFrameworkIds.NUnit, mapped.FrameworkId);
+        Assert.Equal(NUnitFramework.Id, mapped.FrameworkId);
         Assert.Equal("generation-1", mapped.GenerationId);
         Assert.Equal(TestingCancellationState.Completed, mapped.CancellationState);
         Assert.Equal("code", mapped.DiagnosticCode);

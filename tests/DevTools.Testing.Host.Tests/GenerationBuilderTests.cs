@@ -17,24 +17,27 @@ public sealed class GenerationBuilderTests
 
         var assembly = CopySelf(output, "Sample.Tests.dll");
         var runtime = CopySelf(output, "Runtime.dll");
-        var framework = CopySelf(output, "framework.dll");
+            var framework = CopySelf(output, "provider-support.dll");
         File.WriteAllText(Path.Combine(output, "Log", "noise.log"), "skip");
         File.WriteAllText(Path.Combine(output, "readme.txt"), "content");
 
         try
         {
             var builder = new TestingGenerationBuilder(generations);
-            var manifest = builder.Build(new TestingRuntimePayload(
-                TestingFrameworkIds.NUnit,
+            var manifest = builder.Build(new FixedPolicy(new TestingGenerationPlan(
+                "provider.example",
                 assembly,
-                runtime,
-                framework,
-                []));
+                [
+                    new TestingGenerationFile(assembly, "Sample.Tests.dll", TestingGenerationFileKind.Managed),
+                    new TestingGenerationFile(runtime, "Runtime.dll", TestingGenerationFileKind.Managed),
+                    new TestingGenerationFile(framework, "provider-support.dll", TestingGenerationFileKind.Managed),
+                    new TestingGenerationFile(Path.Combine(output, "readme.txt"), "readme.txt", TestingGenerationFileKind.Other),
+                ],
+                "Runtime.dll")), assembly);
 
             Assert.False(string.IsNullOrWhiteSpace(manifest.GenerationId));
             Assert.True(File.Exists(manifest.ShadowAssemblyPath));
             Assert.True(File.Exists(manifest.RuntimeAssemblyPath));
-            Assert.True(File.Exists(manifest.FrameworkAssemblyPath));
             Assert.Contains(manifest.ManagedAssemblies, path => path.EndsWith("Sample.Tests.dll", StringComparison.OrdinalIgnoreCase));
             Assert.False(Directory.Exists(Path.Combine(manifest.ShadowDirectory, "Log")));
             Assert.True(File.Exists(Path.Combine(manifest.ShadowDirectory, "readme.txt")));
@@ -51,5 +54,11 @@ public sealed class GenerationBuilderTests
         var destination = Path.Combine(outputDirectory, fileName);
         File.Copy(typeof(GenerationBuilderTests).Assembly.Location, destination, overwrite: true);
         return destination;
+    }
+
+    private sealed class FixedPolicy(TestingGenerationPlan plan) : ITestingGenerationPolicy
+    {
+        public TestingGenerationPlan CreatePlan(string testAssemblyPath) => plan;
+        public void ValidatePublished(TestingGenerationManifest manifest) { }
     }
 }

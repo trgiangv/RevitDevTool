@@ -1,5 +1,5 @@
-using DevTools.NUnit.Core.Contracts;
-using DevTools.NUnit.Core.Results;
+using DevTools.NUnit.Transport.Contracts;
+using DevTools.NUnit.Transport.Results;
 using NUnit.Framework.Interfaces;
 using NUnit.Framework.Internal;
 

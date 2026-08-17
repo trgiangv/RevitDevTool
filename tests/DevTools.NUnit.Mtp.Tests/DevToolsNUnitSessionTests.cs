@@ -1,5 +1,5 @@
-using DevTools.NUnit.Core;
-using DevTools.NUnit.Core.Contracts;
+using DevTools.NUnit.Provider;
+using DevTools.NUnit.Transport.Contracts;
 using DevTools.NUnit.Mtp;
 using DevTools.Testing.Abstractions.Contracts;
 using DevTools.Testing.Transport;
@@ -10,6 +10,59 @@ namespace DevTools.NUnit.Mtp.Tests;
 
 public sealed class DevToolsNUnitSessionTests
 {
+    [Fact]
+    public void Legacy_result_mapping_preserves_provider_and_mtp_capabilities()
+    {
+        var legacy = new NUnitCaseResult(
+            "case-id",
+            "Display",
+            "Skipped",
+            42.5,
+            "message",
+            "stack",
+            "output",
+            ParentTestId: "parent-id",
+            Traits: [new NUnitTrait("Category", "Integration")],
+            Source: new NUnitSourceLocation("Test.cs", 17),
+            SkipReason: "explicit skip reason",
+            Attachments:
+            [
+                new NUnitAttachment("file attachment", "text/plain", "C:\\logs\\result.txt", null),
+                new NUnitAttachment("inline attachment", "application/json", null, "eyJvayI6dHJ1ZX0="),
+            ],
+            FullName: "Fixture.Display");
+
+        var mapped = NUnitTestingMapping.ToTesting(legacy);
+        var node = DevToolsNUnitFramework.ToResultNode(legacy);
+
+        Assert.Equal(legacy.Id, mapped.TestId);
+        Assert.Equal(legacy.Name, mapped.DisplayName);
+        Assert.Equal(legacy.Message, mapped.Message);
+        Assert.Equal(legacy.SkipReason, mapped.SkipReason);
+        Assert.Equal(legacy.ParentTestId, mapped.ParentTestId);
+        Assert.Equal(legacy.FullName, mapped.FullName);
+        Assert.Equal(legacy.Source!.File, mapped.Source!.File);
+        Assert.Equal(legacy.Source.Line, mapped.Source.Line);
+        Assert.Equal(legacy.Traits!.Single().Value, mapped.Traits.Single().Value);
+        Assert.Collection(
+            mapped.Attachments,
+            attachment =>
+            {
+                Assert.Equal("C:\\logs\\result.txt", attachment.Path);
+                Assert.Equal("file attachment", attachment.Description);
+                Assert.Equal("text/plain", attachment.ContentType);
+                Assert.Null(attachment.Base64);
+            },
+            attachment =>
+            {
+                Assert.Null(attachment.Path);
+                Assert.Equal("inline attachment", attachment.Description);
+                Assert.Equal("application/json", attachment.ContentType);
+                Assert.Equal("eyJvayI6dHJ1ZX0=", attachment.Base64);
+            });
+        Assert.Equal(legacy.FullName, node.Uid.Value);
+    }
+
     [Fact]
     public void Metadata_filter_keeps_matching_names()
     {
@@ -30,7 +83,7 @@ public sealed class DevToolsNUnitSessionTests
         {
             Response = new TestingRunResponse(
                 Guid.NewGuid(),
-                TestingFrameworkIds.NUnit,
+                "nunit",
                 "gen",
                 [
                     new TestingCaseResult("1", "Pass", "Passed", 10, null, null, null, null, [], []),
@@ -49,7 +102,7 @@ public sealed class DevToolsNUnitSessionTests
             new TestingHostOptions("Revit", "2026", false, 60, 180, @"C:\Runner.exe"),
             new TestingSelection([], null));
 
-        Assert.Equal(TestingFrameworkIds.NUnit, transport.LastRequest!.FrameworkId);
+        Assert.Equal("nunit", transport.LastRequest!.FrameworkId);
         Assert.Equal(["Passed", "Failed", "Skipped", "Error"], response.Results.Select(result => result.Outcome).ToArray());
     }
 
@@ -85,7 +138,7 @@ public sealed class DevToolsNUnitSessionTests
             new TestingHostOptions("Revit", "2026", false, 60, 180, @"C:\missing-devtools-testrunner.exe"),
             new TestingSelection(["HostSmokeTests.Arithmetic"], null));
 
-        Assert.Equal(TestingFrameworkIds.NUnit, transport.LastRequest!.FrameworkId);
+        Assert.Equal("nunit", transport.LastRequest!.FrameworkId);
         Assert.Equal(["HostSmokeTests.Arithmetic"], transport.LastRequest.Selection.TestIds.ToArray());
     }
 
@@ -112,7 +165,7 @@ public sealed class ProcessTestRunnerCliTests
             new TestingRunRequest(
                 TestingProtocol.CurrentVersion,
                 Guid.NewGuid(),
-                TestingFrameworkIds.NUnit,
+                "nunit",
                 new TestingAssemblyReference(@"C:\tests\HostTests.dll", null, null),
                 new TestingSelection(["HostSmokeTests.Arithmetic"]),
                 new Dictionary<string, string>()),
@@ -120,7 +173,7 @@ public sealed class ProcessTestRunnerCliTests
 
         Assert.Equal("run", args[0]);
         Assert.Contains("--framework", args);
-        Assert.Contains(TestingFrameworkIds.NUnit, args);
+        Assert.Contains("nunit", args);
         Assert.Contains(@"C:\tests\HostTests.dll", args);
         Assert.Contains("--host", args);
         Assert.Contains("Revit", args);
@@ -138,7 +191,7 @@ public sealed class ProcessTestRunnerCliTests
             new TestingRunRequest(
                 TestingProtocol.CurrentVersion,
                 Guid.NewGuid(),
-                TestingFrameworkIds.NUnit,
+                "nunit",
                 new TestingAssemblyReference(@"C:\tests\HostTests.dll", null, null),
                 new TestingSelection([]),
                 new Dictionary<string, string>()),
@@ -156,7 +209,7 @@ public sealed class ProcessTestRunnerCliTests
             new TestingRunRequest(
                 TestingProtocol.CurrentVersion,
                 Guid.NewGuid(),
-                TestingFrameworkIds.NUnit,
+                "nunit",
                 new TestingAssemblyReference(@"C:\tests\HostTests.dll", null, null),
                 new TestingSelection([]),
                 new Dictionary<string, string>()),

@@ -1,6 +1,6 @@
-using DevTools.NUnit.Core.Contracts;
-using DevTools.NUnit.Core.Results;
-using DevTools.NUnit.Core.Runtime;
+using DevTools.NUnit.Transport.Contracts;
+using DevTools.NUnit.Transport.Results;
+using DevTools.NUnit.Transport.Runtime;
 using NUnit.Framework.Interfaces;
 
 namespace DevTools.NUnit.Runtime;

@@ -1,6 +1,7 @@
-using DevTools.TestRunner.Commands;
-using DevTools.TestRunner.Parsing;
-using DevTools.TestRunner.Services;
+using DevTools.NUnit.Runner.Commands;
+using DevTools.NUnit.Runner.Parsing;
+using DevTools.NUnit.Runner.Services;
+using DevTools.TestRunner.Core.Parsing;
 
 namespace DevTools.TestRunner.Tests;
 

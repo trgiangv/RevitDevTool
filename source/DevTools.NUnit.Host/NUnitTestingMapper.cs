@@ -1,5 +1,5 @@
-using DevTools.NUnit.Core.Contracts;
-using DevTools.NUnit.Core.Results;
+using DevTools.NUnit.Transport.Contracts;
+using DevTools.NUnit.Transport.Results;
 using DevTools.Testing.Abstractions.Contracts;
 using DevTools.Testing.Abstractions.Providers;
 
@@ -17,12 +17,15 @@ internal static class NUnitTestingMapper
             result.Name,
             result.Outcome,
             result.DurationMs,
-            result.Message ?? result.SkipReason,
+            result.Message,
             result.StackTrace,
             result.Output,
             ToTesting(result.Source),
             ToTesting(result.Traits),
-            ToTesting(result.Attachments));
+            ToTesting(result.Attachments),
+            result.ParentTestId,
+            result.FullName,
+            result.SkipReason);
     }
 
     public static TestingEvent ToTesting(NUnitProgressEvent progressEvent)
@@ -98,8 +101,11 @@ internal static class NUnitTestingMapper
             return Array.Empty<TestingAttachment>();
 
         return attachments
-            .Where(attachment => !string.IsNullOrWhiteSpace(attachment.Path))
-            .Select(attachment => new TestingAttachment(attachment.Path!, attachment.Name))
+            .Select(attachment => new TestingAttachment(
+                attachment.Path,
+                attachment.Name,
+                attachment.ContentType,
+                attachment.Base64))
             .ToList();
     }
 }

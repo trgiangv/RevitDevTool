@@ -1,4 +1,3 @@
-using DevTools.Testing.Abstractions.Contracts;
 using DevTools.Testing.Abstractions.Providers;
 
 namespace DevTools.Testing.Host;
@@ -57,8 +56,6 @@ public sealed class TestingProviderRegistry
     private static string Normalize(string frameworkId)
     {
         var trimmed = frameworkId?.Trim() ?? string.Empty;
-        if (string.Equals(trimmed, TestingFrameworkIds.NUnit, StringComparison.OrdinalIgnoreCase))
-            return TestingFrameworkIds.NUnit;
         return trimmed.ToLowerInvariant();
     }
 }

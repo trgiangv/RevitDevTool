@@ -52,7 +52,7 @@ public sealed class MtpArchitectureTests
         Assert.Contains("PublishRunAsync(EnsureSession()", framework, StringComparison.Ordinal);
         Assert.Contains("ApplyDebugParent", framework, StringComparison.Ordinal);
         Assert.Contains("ITestRunnerTransport", framework, StringComparison.Ordinal);
-        Assert.Contains("TestingFrameworkIds.NUnit", File.ReadAllText(Path.Combine(
+        Assert.Contains("\"nunit\"", File.ReadAllText(Path.Combine(
             RepositoryRoot,
             "source",
             "DevTools.NUnit.Mtp",
@@ -89,17 +89,6 @@ public sealed class MtpArchitectureTests
             RepositoryRoot, "source", "DevTools.Testing.Transport", "ProcessTestRunnerClient.cs");
         Assert.True(File.Exists(client));
         Assert.False(File.Exists(Path.Combine(
-            RepositoryRoot, "source", "DevTools.NUnit.Core", "Client", "ProcessRunnerClient.cs")));
-        Assert.False(File.Exists(Path.Combine(
-            RepositoryRoot, "source", "DevTools.NUnit.Core", "Client", "NUnitProcessTransportAdapter.cs")));
-        Assert.False(File.Exists(Path.Combine(
-            RepositoryRoot, "source", "DevTools.NUnit.Core", "Client", "IRunnerTransport.cs")));
-
-        var coreCsproj = File.ReadAllText(Path.Combine(
-            RepositoryRoot, "source", "DevTools.NUnit.Core", "DevTools.NUnit.Core.csproj"));
-        Assert.Contains("Compile Remove=\"Client\\**\"", coreCsproj, StringComparison.Ordinal);
-
-        Assert.False(File.Exists(Path.Combine(
             RepositoryRoot, "source", "DevTools.NUnit.Mtp", "ProcessRunnerClient.cs")));
         Assert.False(File.Exists(Path.Combine(
             RepositoryRoot, "source", "DevTools.NUnit.Mtp", "NUnitProcessTransportAdapter.cs")));
@@ -109,8 +98,10 @@ public sealed class MtpArchitectureTests
             RepositoryRoot, "source", "DevTools.NUnit.Mtp", "DevTools.NUnit.Mtp.csproj"));
         var adapter = File.ReadAllText(Path.Combine(
             RepositoryRoot, "source", "DevTools.NUnit.TestAdapter", "DevTools.NUnit.TestAdapter.csproj"));
+        Assert.Contains("DevTools.NUnit.Provider", mtp, StringComparison.Ordinal);
+        Assert.Contains("DevTools.NUnit.Provider", adapter, StringComparison.Ordinal);
         Assert.Contains("DevTools.Testing.Transport", mtp, StringComparison.Ordinal);
-        Assert.Contains("ProcessTestRunnerClient.cs", adapter, StringComparison.Ordinal);
+        Assert.Contains("DevTools.Testing.Transport", adapter, StringComparison.Ordinal);
         Assert.DoesNotContain("NUnitProcessTransportAdapter.cs", mtp, StringComparison.Ordinal);
         Assert.DoesNotContain("NUnitProcessTransportAdapter.cs", adapter, StringComparison.Ordinal);
     }
@@ -158,7 +149,7 @@ public sealed class MtpArchitectureTests
         var debugging = Path.Combine(
             RepositoryRoot,
             "source",
-            "DevTools.TestRunner",
+            "DevTools.TestRunner.Core",
             "Debugging",
             "VisualStudioAttach.cs");
         var attach = File.ReadAllText(debugging);
@@ -168,8 +159,8 @@ public sealed class MtpArchitectureTests
         var runnerCsproj = File.ReadAllText(Path.Combine(
             RepositoryRoot,
             "source",
-            "DevTools.TestRunner",
-            "DevTools.TestRunner.csproj"));
+            "DevTools.TestRunner.Core",
+            "DevTools.TestRunner.Core.csproj"));
         Assert.Contains("Microsoft.VisualStudio.Interop", runnerCsproj, StringComparison.Ordinal);
 
         var mtpCsproj = File.ReadAllText(Path.Combine(

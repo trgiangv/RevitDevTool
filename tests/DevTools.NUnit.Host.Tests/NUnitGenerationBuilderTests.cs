@@ -1,5 +1,5 @@
 using System.Collections.Concurrent;
-using DevTools.NUnit.Core.Runtime;
+using DevTools.NUnit.Transport.Runtime;
 using DevTools.NUnit.Host.Loading;
 using DevTools.Utilities.AssemblyLoading;
 
@@ -7,6 +7,26 @@ namespace DevTools.NUnit.Host.Tests;
 
 public sealed class NUnitGenerationBuilderTests
 {
+    [Fact]
+    public void Policy_creates_a_neutral_plan_with_the_native_nunit_runtime_path()
+    {
+        using var workspace = new TempWorkspace();
+        var testAssembly = NUnitGenerationTestEnvironment.CreateGenerationOneAssembly(
+            workspace.Root,
+            "neutral-policy");
+        var runtimeSource = NUnitGenerationTestEnvironment.CreateRuntimeStub(workspace.Root);
+
+        var policy = new NUnitGenerationPolicy(() => runtimeSource);
+
+        var plan = policy.CreatePlan(testAssembly);
+
+        Assert.Equal("nunit", plan.FrameworkId);
+        Assert.Equal(testAssembly, plan.SourceAssemblyPath);
+        Assert.Equal(NUnitGenerationPolicy.RuntimeAssemblyFileName, plan.RuntimeAssemblyRelativePath);
+        Assert.Contains(plan.Files, file =>
+            string.Equals(file.RelativePath, NUnitGenerationPolicy.FrameworkAssemblyFileName, StringComparison.OrdinalIgnoreCase));
+    }
+
     [Fact]
     public void Build_creates_distinct_generations_for_same_name_and_version_with_different_il()
     {
@@ -207,7 +227,7 @@ public sealed class NUnitGenerationBuilderTests
             {
                 File.Copy(
                     NUnitGenerationTestEnvironment.CoreAssemblyPath,
-                    Path.Combine(outputDirectory, "DevTools.NUnit.Core.dll"),
+                    Path.Combine(outputDirectory, "DevTools.NUnit.Transport.dll"),
                     overwrite: true);
             });
 
@@ -216,11 +236,11 @@ public sealed class NUnitGenerationBuilderTests
         var manifest = builder.Build(testAssembly);
 
         Assert.False(NUnitSharedAssemblyPolicy.IsShared("nunit.framework"));
-        Assert.True(NUnitSharedAssemblyPolicy.IsShared("DevTools.NUnit.Core"));
-        Assert.False(File.Exists(Path.Combine(manifest.ShadowDirectory, "DevTools.NUnit.Core.dll")));
+        Assert.True(NUnitSharedAssemblyPolicy.IsShared("DevTools.NUnit.Transport"));
+        Assert.False(File.Exists(Path.Combine(manifest.ShadowDirectory, "DevTools.NUnit.Transport.dll")));
         Assert.DoesNotContain(
             manifest.ManagedAssemblies,
-            path => path.EndsWith("DevTools.NUnit.Core.dll", StringComparison.OrdinalIgnoreCase));
+            path => path.EndsWith("DevTools.NUnit.Transport.dll", StringComparison.OrdinalIgnoreCase));
         Assert.True(File.Exists(manifest.FrameworkAssemblyPath));
     }
 
@@ -396,6 +416,30 @@ public sealed class NUnitGenerationBuilderTests
     }
 
     [Fact]
+    public void Build_excludes_loose_testing_abstractions_identity_even_when_renamed_on_disk()
+    {
+        using var workspace = new TempWorkspace();
+        var testAssembly = NUnitGenerationTestEnvironment.CreateFixtureWorkspace(
+            workspace.Root,
+            "testing-abstractions-shared",
+            outputDirectory =>
+            {
+                File.Copy(
+                    typeof(DevTools.Testing.Abstractions.Contracts.TestingRunRequest).Assembly.Location,
+                    Path.Combine(outputDirectory, "PrivateTestingContract.dll"),
+                    overwrite: true);
+            });
+
+        var builder = NUnitGenerationTestEnvironment.CreateBuilder(
+            NUnitGenerationTestEnvironment.CreateIsolatedGenerationsRoot(), workspace.Root);
+        var manifest = builder.Build(testAssembly);
+
+        Assert.False(File.Exists(Path.Combine(manifest.ShadowDirectory, "PrivateTestingContract.dll")));
+        Assert.True(NUnitSharedAssemblyPolicy.ShouldExcludeFromGenerationCopy(
+            Path.Combine(workspace.Root, "testing-abstractions-shared", "PrivateTestingContract.dll")));
+    }
+
+    [Fact]
     public void Build_accepts_exe_test_assembly_and_skips_diagnostic_logs()
     {
         using var workspace = new TempWorkspace();
@@ -438,7 +482,7 @@ public sealed class NUnitGenerationBuilderTests
             {
                 File.Copy(
                     privateAssembly,
-                    Path.Combine(outputDirectory, "DevTools.NUnit.Core.dll"),
+                    Path.Combine(outputDirectory, "DevTools.NUnit.Transport.dll"),
                     overwrite: true);
             });
 
@@ -446,7 +490,7 @@ public sealed class NUnitGenerationBuilderTests
         var builder = NUnitGenerationTestEnvironment.CreateBuilder(generationsRoot, workspace.Root);
         var manifest = builder.Build(testAssembly);
 
-        var shadowPath = Path.Combine(manifest.ShadowDirectory, "DevTools.NUnit.Core.dll");
+        var shadowPath = Path.Combine(manifest.ShadowDirectory, "DevTools.NUnit.Transport.dll");
         Assert.True(File.Exists(shadowPath));
         Assert.Contains(shadowPath, manifest.ManagedAssemblies);
         Assert.False(NUnitSharedAssemblyPolicy.IsShared(

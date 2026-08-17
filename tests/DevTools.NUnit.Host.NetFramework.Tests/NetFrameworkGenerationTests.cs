@@ -1,9 +1,9 @@
 using System.Diagnostics;
 using System.Reflection;
 using System.Runtime.InteropServices;
-using DevTools.NUnit.Core.Contracts;
-using DevTools.NUnit.Core.Results;
-using DevTools.NUnit.Core.Runtime;
+using DevTools.NUnit.Transport.Contracts;
+using DevTools.NUnit.Transport.Results;
+using DevTools.NUnit.Transport.Runtime;
 using DevTools.NUnit.Host;
 using DevTools.NUnit.Host.Loading;
 using DevTools.Testing.Abstractions.Contracts;
@@ -80,6 +80,32 @@ public sealed class NetFrameworkGenerationTests
 
             Assert.That(File.Exists(Path.Combine(manifest.ShadowDirectory, "System.Text.Json.dll")), Is.True);
             Assert.That(File.Exists(Path.Combine(manifest.ShadowDirectory, "Microsoft.Bcl.AsyncInterfaces.dll")), Is.True);
+        }
+        finally
+        {
+            if (Directory.Exists(workspace))
+                Directory.Delete(workspace, recursive: true);
+        }
+    }
+
+    [Test]
+    public void GenerationBuilder_excludes_loose_testing_abstractions_identity_from_netfx_generation()
+    {
+        var workspace = Path.Combine(Path.GetTempPath(), "DevTools", "NUnit", Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(workspace);
+        try
+        {
+            var testAssembly = NetFrameworkGenerationTestEnvironment.CreateGenerationOneAssembly(workspace, "testing-abstractions-shared");
+            var outputDirectory = Path.GetDirectoryName(testAssembly)!;
+            var renamedPath = Path.Combine(outputDirectory, "PrivateTestingContract.dll");
+            File.Copy(typeof(TestingRunRequest).Assembly.Location, renamedPath, overwrite: true);
+
+            var manifest = NetFrameworkGenerationTestEnvironment.CreateBuilder(
+                NetFrameworkGenerationTestEnvironment.CreateIsolatedGenerationsRoot()).Build(testAssembly);
+
+            Assert.That(File.Exists(Path.Combine(manifest.ShadowDirectory, "PrivateTestingContract.dll")), Is.False);
+            Assert.That(NUnitSharedAssemblyPolicy.ShouldExcludeFromGenerationCopy(renamedPath), Is.True);
+            Assert.That(NUnitSharedAssemblyPolicy.IsShared(typeof(TestingRunRequest).Assembly.GetName().Name!), Is.True);
         }
         finally
         {
@@ -394,6 +420,15 @@ public sealed class NetFrameworkGenerationTests
         Assert.That(resolved, Is.SameAs(hostCore));
     }
 
+    [Test]
+    public void ResolveAssembly_binds_shared_testing_abstractions_from_host_appdomain()
+    {
+        var hostAbstractions = typeof(TestingRunRequest).Assembly;
+        var resolved = NetfxNUnitSharedAssemblyResolver.TryResolveFromAppDomain(hostAbstractions.GetName());
+
+        Assert.That(resolved, Is.SameAs(hostAbstractions));
+    }
+
     private static Assembly? FindTestHostNUnitAssembly() =>
         AppDomain.CurrentDomain.GetAssemblies()
             .FirstOrDefault(assembly =>
@@ -474,7 +509,7 @@ public sealed class NetFrameworkGenerationTests
                 new TestingRunRequest(
                     2,
                     Guid.NewGuid(),
-                    TestingFrameworkIds.NUnit,
+                    NUnitFramework.Id,
                     new TestingAssemblyReference(testAssembly, "net48", null),
                     new TestingSelection(new[] { fullName }, null),
                     new Dictionary<string, string>()),

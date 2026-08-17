@@ -1,6 +1,6 @@
-using DevTools.NUnit.Core.Contracts;
-using DevTools.NUnit.Core.Results;
-using DevTools.NUnit.Core.Runtime;
+using DevTools.NUnit.Transport.Contracts;
+using DevTools.NUnit.Transport.Results;
+using DevTools.NUnit.Transport.Runtime;
 using DevTools.NUnit.Host.Loading;
 using DevTools.NUnit.Host.Tests.Loading;
 using DevTools.NUnit.Host.Tests.TestSupport;
@@ -21,6 +21,24 @@ public sealed class NUnitRuntimeManagerTests
         Assert.Single(factory.CreatedManifests);
         Assert.Equal(factory.CreatedManifests[0].GenerationId, response.GenerationId);
         Assert.NotEmpty(response.Cases);
+    }
+
+    [Fact]
+    public void Discover_uses_and_disposes_a_one_shot_compatibility_session_without_host_contact()
+    {
+        using var workspace = new TempWorkspace();
+        var testAssembly = NUnitGenerationTestEnvironment.CreateGenerationOneAssembly(workspace.Root, "discover-one-shot");
+        var factory = new FakeNUnitRuntimeSessionFactory();
+        FakeNUnitRuntimeSession? created = null;
+        factory.CreateImpl = generation => created = new FakeNUnitRuntimeSession(generation.GenerationId, generation.ShadowAssemblyPath);
+        using var manager = CreateManager(factory, workspace.GenerationsRoot);
+
+        var response = manager.Discover(new NUnitDiscoverRequest(testAssembly, null));
+
+        Assert.NotEmpty(response.Cases);
+        Assert.NotNull(created);
+        Assert.True(created!.IsDisposed);
+        Assert.False(manager.IsOperationActive);
     }
 
     [Fact]
@@ -285,11 +303,11 @@ public sealed class NUnitRuntimeManagerTests
 
         var manager = CreateManager(factory, workspace.GenerationsRoot);
 
-        manager.Discover(new NUnitDiscoverRequest(generationOneAssembly, null));
-        manager.Discover(new NUnitDiscoverRequest(generationOneAssembly, null));
+        manager.Run(new NUnitRunRequest(Guid.NewGuid(), generationOneAssembly, null), _ => { }, TestContext.Current.CancellationToken);
+        manager.Run(new NUnitRunRequest(Guid.NewGuid(), generationOneAssembly, null), _ => { }, TestContext.Current.CancellationToken);
         Assert.Single(factory.CreatedManifests);
 
-        manager.Discover(new NUnitDiscoverRequest(generationTwoAssembly, null));
+        manager.Run(new NUnitRunRequest(Guid.NewGuid(), generationTwoAssembly, null), _ => { }, TestContext.Current.CancellationToken);
         Assert.Equal(2, factory.CreatedManifests.Count);
         Assert.Contains(factory.CreatedManifests[0].GenerationId, disposedGenerationIds, StringComparer.Ordinal);
         Assert.DoesNotContain(factory.CreatedManifests[1].GenerationId, disposedGenerationIds, StringComparer.Ordinal);

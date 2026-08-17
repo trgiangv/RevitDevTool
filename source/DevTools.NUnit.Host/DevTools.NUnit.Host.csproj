@@ -12,7 +12,6 @@
         <InternalsVisibleTo Include="DevTools.NUnit.Host.Tests"/>
         <InternalsVisibleTo Include="DevTools.NUnit.Host.NetFramework.Tests"/>
         <InternalsVisibleTo Include="NetFrameworkGenerationProbe"/>
-        <ProjectReference Include="..\DevTools.NUnit.Core\DevTools.NUnit.Core.csproj" SetTargetFramework="TargetFramework=$(TargetFramework)"/>
         <ProjectReference Include="..\DevTools.NUnit.Transport\DevTools.NUnit.Transport.csproj" SetTargetFramework="TargetFramework=$(TargetFramework)"/>
         <ProjectReference Include="..\DevTools.Testing.Abstractions\DevTools.Testing.Abstractions.csproj"/>
         <ProjectReference Include="..\DevTools.Testing.Host\DevTools.Testing.Host.csproj"/>

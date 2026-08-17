@@ -9,7 +9,7 @@ public sealed class HostSessionPolicyTests
         var source = File.ReadAllText(Path.Combine(
             repositoryRoot,
             "source",
-            "DevTools.TestRunner",
+            "DevTools.TestRunner.Core",
             "Services",
             "HostSession.cs"));
 
@@ -37,7 +37,7 @@ public sealed class HostSessionPolicyTests
         var source = File.ReadAllText(Path.Combine(
             FindRepositoryRoot(),
             "source",
-            "DevTools.TestRunner",
+            "DevTools.NUnit.Runner",
             "Commands",
             "DiscoverCommand.cs"));
 
@@ -55,7 +55,7 @@ public sealed class HostSessionPolicyTests
         var source = File.ReadAllText(Path.Combine(
             FindRepositoryRoot(),
             "source",
-            "DevTools.TestRunner",
+            "DevTools.TestRunner.Core",
             "Services",
             "HostLocator.cs"));
 
@@ -80,22 +80,32 @@ public sealed class HostSessionPolicyTests
     }
 
     [Fact]
-    public void RunCommand_attaches_after_pipe_ensure_and_before_host_run()
+    public void Core_execution_coordinator_attaches_after_pipe_ensure_and_before_provider_operation()
     {
+        var repositoryRoot = FindRepositoryRoot();
         var source = File.ReadAllText(Path.Combine(
-            FindRepositoryRoot(),
+            repositoryRoot,
             "source",
-            "DevTools.TestRunner",
+            "DevTools.TestRunner.Core",
+            "Services",
+            "HostExecutionCoordinator.cs"));
+        var providerSource = File.ReadAllText(Path.Combine(
+            repositoryRoot,
+            "source",
+            "DevTools.NUnit.Runner",
             "Commands",
             "RunCommand.cs"));
 
         var ensure = source.IndexOf("EnsurePipeAsync", StringComparison.Ordinal);
         var attach = source.IndexOf("HostDebugAttachScope.TryBegin", StringComparison.Ordinal);
-        var run = source.IndexOf("client.RunAsync", StringComparison.Ordinal);
+        var run = source.IndexOf("await operation", StringComparison.Ordinal);
         Assert.True(ensure >= 0 && attach > ensure && run > attach);
-        Assert.Contains("options.Debug", source, StringComparison.Ordinal);
-        Assert.Contains("options.DebugParentPid", source, StringComparison.Ordinal);
+        Assert.Contains("context.Debug", source, StringComparison.Ordinal);
+        Assert.Contains("context.DebugParentPid", source, StringComparison.Ordinal);
         Assert.Contains("pipe.ProcessId", source, StringComparison.Ordinal);
+        Assert.Contains("RunTestingAsync", providerSource, StringComparison.Ordinal);
+        Assert.Contains("ExecuteAsync(", providerSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("EnsurePipeAsync", providerSource, StringComparison.Ordinal);
     }
 
     private static string FindRepositoryRoot()

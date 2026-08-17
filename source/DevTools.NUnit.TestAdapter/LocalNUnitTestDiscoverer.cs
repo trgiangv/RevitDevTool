@@ -1,4 +1,4 @@
-using DevTools.NUnit.Core;
+using DevTools.NUnit.Provider;
 using DevTools.NUnit.TestAdapter.Runner;
 
 namespace DevTools.NUnit.TestAdapter;

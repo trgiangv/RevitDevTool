@@ -1,10 +1,5 @@
 namespace DevTools.Testing.Abstractions.Contracts;
 
-public static class TestingFrameworkIds
-{
-    public const string NUnit = "nunit";
-}
-
 public sealed record TestingHostOptions(
     string Host,
     string HostVersion,
@@ -23,17 +18,54 @@ public sealed record TestingSelection(
     IReadOnlyList<string> TestIds,
     string? ProviderPayload = null);
 
-public sealed record TestingRunRequest(
-    int ProtocolVersion,
-    Guid RunId,
-    string FrameworkId,
-    TestingAssemblyReference Assembly,
-    TestingSelection Selection,
-    IReadOnlyDictionary<string, string> FrameworkOptions);
+public sealed record TestingRunRequest
+{
+    private string _frameworkId = string.Empty;
 
-public sealed record TestingAttachment(string Path, string? Description);
+    public TestingRunRequest(
+        int ProtocolVersion,
+        Guid RunId,
+        string FrameworkId,
+        TestingAssemblyReference Assembly,
+        TestingSelection Selection,
+        IReadOnlyDictionary<string, string> FrameworkOptions)
+    {
+        this.ProtocolVersion = ProtocolVersion;
+        this.RunId = RunId;
+        this.FrameworkId = FrameworkId;
+        this.Assembly = Assembly;
+        this.Selection = Selection;
+        this.FrameworkOptions = FrameworkOptions;
+    }
+
+    public int ProtocolVersion { get; init; }
+    public Guid RunId { get; init; }
+    public string FrameworkId
+    {
+        get => _frameworkId;
+        init => _frameworkId = ValidateFrameworkId(value);
+    }
+    public TestingAssemblyReference Assembly { get; init; }
+    public TestingSelection Selection { get; init; }
+    public IReadOnlyDictionary<string, string> FrameworkOptions { get; init; }
+
+    private static string ValidateFrameworkId(string frameworkId)
+    {
+        if (string.IsNullOrWhiteSpace(frameworkId))
+            throw new ArgumentException("Framework ID is required.", nameof(FrameworkId));
+
+        return frameworkId;
+    }
+}
+
+public sealed record TestingAttachment(
+    string? Path,
+    string? Description,
+    string? ContentType = null,
+    string? Base64 = null);
 public sealed record TestingSourceLocation(string File, int Line);
 public sealed record TestingTrait(string Name, string Value);
+public sealed record TestingProviderPayload(string Format, int Version, string Data);
 
 public sealed record TestingCaseResult(
     string TestId,
@@ -45,7 +77,11 @@ public sealed record TestingCaseResult(
     string? Output,
     TestingSourceLocation? Source,
     IReadOnlyList<TestingTrait> Traits,
-    IReadOnlyList<TestingAttachment> Attachments);
+    IReadOnlyList<TestingAttachment> Attachments,
+    string? ParentTestId = null,
+    string? FullName = null,
+    string? SkipReason = null,
+    TestingProviderPayload? ProviderPayload = null);
 
 public enum TestingCancellationState
 {

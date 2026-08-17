@@ -7,13 +7,13 @@ namespace DevTools.Testing.Host.Tests;
 public sealed class ProviderRegistryTests
 {
     [Fact]
-    public void GetRequired_is_case_stable()
+    public void GetRequired_normalizes_arbitrary_provider_ids_by_trim_and_invariant_lowercase()
     {
-        var provider = new FakeProvider(TestingFrameworkIds.NUnit);
+        var provider = new FakeProvider("  Provider.Example  ");
         var registry = new TestingProviderRegistry([provider]);
 
-        Assert.Same(provider, registry.GetRequired("NUnit"));
-        Assert.Same(provider, registry.GetRequired("nunit"));
+        Assert.Same(provider, registry.GetRequired("provider.example"));
+        Assert.Same(provider, registry.GetRequired(" PROVIDER.EXAMPLE "));
     }
 
     [Fact]
@@ -22,8 +22,8 @@ public sealed class ProviderRegistryTests
         var ex = Assert.Throws<ArgumentException>(() =>
             new TestingProviderRegistry(
             [
-                new FakeProvider(TestingFrameworkIds.NUnit),
-                new FakeProvider("NUnit"),
+                new FakeProvider("provider.example"),
+                new FakeProvider(" PROVIDER.EXAMPLE "),
             ]));
 
         Assert.Contains("Duplicate", ex.Message, StringComparison.Ordinal);
@@ -32,7 +32,7 @@ public sealed class ProviderRegistryTests
     [Fact]
     public void GetRequired_unknown_id_throws()
     {
-        var registry = new TestingProviderRegistry([new FakeProvider(TestingFrameworkIds.NUnit)]);
+        var registry = new TestingProviderRegistry([new FakeProvider("provider.example")]);
         Assert.Throws<KeyNotFoundException>(() => registry.GetRequired("unregistered"));
     }
 
@@ -41,11 +41,11 @@ public sealed class ProviderRegistryTests
     {
         var runId = Guid.NewGuid();
         var observed = new List<(string FrameworkId, Guid RunId)>();
-        var first = new FakeProvider(TestingFrameworkIds.NUnit)
+        var first = new FakeProvider("provider.example")
         {
             OnCancel = id =>
             {
-                observed.Add((TestingFrameworkIds.NUnit, id));
+                observed.Add(("provider.example", id));
                 return false;
             },
         };
@@ -63,7 +63,7 @@ public sealed class ProviderRegistryTests
 
         Assert.True(acknowledged);
         Assert.Equal(
-            [(TestingFrameworkIds.NUnit, runId), ("future-provider", runId)],
+            [("provider.example", runId), ("future-provider", runId)],
             observed);
     }
 }

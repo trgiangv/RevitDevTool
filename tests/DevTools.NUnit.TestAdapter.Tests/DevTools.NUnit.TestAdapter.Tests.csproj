@@ -5,6 +5,7 @@
         <IsPackable>false</IsPackable>
         <GenerateTargetPlatformAttribute>false</GenerateTargetPlatformAttribute>
         <GenerateSupportedOSPlatformAttribute>false</GenerateSupportedOSPlatformAttribute>
+        <NoWarn>$(NoWarn);CA1416</NoWarn>
     </PropertyGroup>
 
     <ItemGroup>

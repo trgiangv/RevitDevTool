@@ -1,9 +1,9 @@
 using System.Text.Json;
 using DevTools.Ipc;
-using DevTools.NUnit.Core.Compatibility;
-using DevTools.NUnit.Core.Contracts;
-using DevTools.NUnit.Core.Results;
-using DevTools.TestRunner.Services;
+using DevTools.NUnit.Transport.Compatibility;
+using DevTools.NUnit.Transport.Contracts;
+using DevTools.NUnit.Transport.Results;
+using DevTools.NUnit.Runner.Services;
 
 namespace DevTools.TestRunner.Tests;
 
@@ -417,6 +417,7 @@ public sealed class NUnitPipeClientTests
             runCts.Cancel();
 
             await Assert.ThrowsAnyAsync<OperationCanceledException>(() => runTask);
+            await cancelObserved.Task.WaitAsync(TimeSpan.FromSeconds(5), TestContext.Current.CancellationToken);
             Assert.Equal(activeRunId, Assert.Single(server.ObservedCancelRunIds));
         }
     }

@@ -24,14 +24,14 @@ public sealed class TestingMtpHelperTests
         var request = new TestingRunRequest(
             TestingProtocol.CurrentVersion,
             Guid.NewGuid(),
-            TestingFrameworkIds.NUnit,
+            "provider.example",
             new TestingAssemblyReference(@"C:\tests\a.dll", null, null),
             new TestingSelection(["id-1"], null),
             new Dictionary<string, string>());
 
         session.Run(request, new TestingHostOptions("Revit", "2025", false, 60, 180, @"C:\Runner.exe"));
 
-        Assert.Equal(TestingFrameworkIds.NUnit, transport.LastRequest!.FrameworkId);
+        Assert.Equal("provider.example", transport.LastRequest!.FrameworkId);
         Assert.Equal(["id-1"], transport.LastRequest.Selection.TestIds.ToArray());
     }
 

@@ -1,9 +1,10 @@
-using ConsoleAppFramework;
 using DevTools.Hosting;
 using DevTools.Hosting.Acad;
 using DevTools.Hosting.Revit;
-using DevTools.TestRunner.Commands;
-using DevTools.TestRunner.Services;
+using DevTools.NUnit.Runner;
+using DevTools.TestRunner.Core.Composition;
+using DevTools.TestRunner.Core.Debugging;
+using DevTools.TestRunner.Core.Services;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace DevTools.TestRunner;
@@ -16,12 +17,15 @@ internal static class Program
         services.AddHostLaunchCore();
         services.AddRevitLaunch(readDocumentYear: null);
         services.AddAutocadFamilyLaunch();
-        services.AddSingleton<HostSession>();
-        ConsoleApp.ServiceProvider = services.BuildServiceProvider();
+        services.AddSingleton<IHostSession, HostSession>();
+        services.AddSingleton<IHostExecutionCoordinator, HostExecutionCoordinator>();
+        services.AddSingleton<IVisualStudioAttach>(VisualStudioAttach.Instance);
+        var modules = new RunnerModuleRegistry();
+        modules.Register(new NUnitRunnerModule(), isDefault: true);
+        services.AddSingleton(modules);
+        modules.RegisterServices(services);
+        var serviceProvider = services.BuildServiceProvider();
 
-        var app = ConsoleApp.Create();
-        app.Add<TestRunnerCommands>();
-        await app.RunAsync(args).ConfigureAwait(false);
-        return Environment.ExitCode;
+        return await modules.RunAsync(args, serviceProvider).ConfigureAwait(false);
     }
 }

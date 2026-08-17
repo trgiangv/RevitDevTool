@@ -1,10 +1,11 @@
 using System.Text.Json;
 using DevTools.Ipc;
-using DevTools.NUnit.Core.Compatibility;
-using DevTools.NUnit.Core.Contracts;
-using DevTools.NUnit.Core.Results;
+using DevTools.NUnit.Transport.Compatibility;
+using DevTools.NUnit.Transport.Contracts;
+using DevTools.NUnit.Transport.Results;
 using DevTools.Testing.Transport;
-using DevTools.TestRunner.Services;
+using DevTools.NUnit.Runner.Services;
+using DevTools.TestRunner.Core.Services;
 
 namespace DevTools.TestRunner.Tests;
 

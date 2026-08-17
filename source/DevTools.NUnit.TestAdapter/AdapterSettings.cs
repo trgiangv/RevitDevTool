@@ -1,4 +1,4 @@
-using DevTools.NUnit.Core;
+using DevTools.NUnit.Provider;
 using DevTools.NUnit.TestAdapter.Models;
 using Microsoft.VisualStudio.TestPlatform.ObjectModel.Adapter;
 

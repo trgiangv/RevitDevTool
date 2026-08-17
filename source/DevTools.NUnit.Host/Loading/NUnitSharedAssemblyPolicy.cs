@@ -1,4 +1,5 @@
-using DevTools.NUnit.Core.Runtime;
+using DevTools.NUnit.Transport.Runtime;
+using DevTools.Testing.Abstractions.Contracts;
 using DevTools.Utilities.AssemblyLoading;
 
 namespace DevTools.NUnit.Host.Loading;
@@ -11,8 +12,11 @@ namespace DevTools.NUnit.Host.Loading;
 /// </summary>
 public static class NUnitSharedAssemblyPolicy
 {
-    private static readonly string CoreContractAssemblyName =
+    private static readonly string NUnitTransportAssemblyName =
         typeof(INUnitRuntimeSession).Assembly.GetName().Name!;
+
+    private static readonly string TestingContractAssemblyName =
+        typeof(TestingRunRequest).Assembly.GetName().Name!;
 
     /// <summary>
     /// Runtime assemblies with fixed platform ownership, rather than a namespace prefix.
@@ -33,7 +37,11 @@ public static class NUnitSharedAssemblyPolicy
 
         if (string.Equals(
                 assemblySimpleName,
-                CoreContractAssemblyName,
+                NUnitTransportAssemblyName,
+                StringComparison.OrdinalIgnoreCase)
+            || string.Equals(
+                assemblySimpleName,
+                TestingContractAssemblyName,
                 StringComparison.OrdinalIgnoreCase))
             return true;
 

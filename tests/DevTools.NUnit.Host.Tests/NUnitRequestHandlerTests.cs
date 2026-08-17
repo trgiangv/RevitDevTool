@@ -1,10 +1,10 @@
 using System.Text.Json;
 using DevTools.Execution.Abstractions;
 using DevTools.Hosting;
-using DevTools.NUnit.Core.Compatibility;
-using DevTools.NUnit.Core.Contracts;
+using DevTools.NUnit.Transport.Compatibility;
+using DevTools.NUnit.Transport.Contracts;
 using DevTools.NUnit.Transport;
-using DevTools.NUnit.Core.Results;
+using DevTools.NUnit.Transport.Results;
 using DevTools.NUnit.Host;
 using DevTools.NUnit.Host.Loading;
 using DevTools.NUnit.Host.Tests.Loading;
@@ -258,7 +258,7 @@ public sealed class NUnitRequestHandlerTests
             TestContext.Current.CancellationToken);
 
         Assert.False(runResponse.IsError);
-        Assert.Single(factory.CreatedManifests);
+        Assert.Equal(2, factory.CreatedManifests.Count);
     }
 
     private static NUnitHost CreateHost() =>

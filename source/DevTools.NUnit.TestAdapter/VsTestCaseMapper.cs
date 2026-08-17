@@ -1,4 +1,4 @@
-using DevTools.NUnit.Core;
+using DevTools.NUnit.Provider;
 using DevTools.NUnit.TestAdapter.Runner;
 using DevTools.Testing.Abstractions.Contracts;
 using Microsoft.VisualStudio.TestPlatform.ObjectModel;

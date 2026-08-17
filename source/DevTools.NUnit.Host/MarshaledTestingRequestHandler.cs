@@ -30,8 +30,7 @@ public sealed class MarshaledTestingRequestHandler : IBridgeRequestHandler, IBri
         _inner = new TestingRequestHandler(
             registry,
             hostInfo.Host.ToString(),
-            hostInfo.VersionNumber,
-            includeLegacyNunitEnvelopes: false);
+            hostInfo.VersionNumber);
         _hostContext = hostContext ?? throw new ArgumentNullException(nameof(hostContext));
     }
 

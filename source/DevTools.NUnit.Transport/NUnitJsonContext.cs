@@ -1,5 +1,5 @@
 using System.Text.Json.Serialization;
-using DevTools.NUnit.Core.Contracts;
+using DevTools.NUnit.Transport.Contracts;
 
 namespace DevTools.NUnit.Transport;
 

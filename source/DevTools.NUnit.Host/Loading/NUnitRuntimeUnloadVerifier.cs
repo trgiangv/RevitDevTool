@@ -8,15 +8,15 @@ internal static class NUnitRuntimeUnloadVerifier
     private const string UnloadedCode = "generation.unloaded";
     internal const string RetainedCode = "generation.retained";
 
-    internal static Core.Contracts.NUnitRuntimeDiagnostic Verify(WeakReference loadContextReference)
+    internal static DevTools.NUnit.Transport.Contracts.NUnitRuntimeDiagnostic Verify(WeakReference loadContextReference)
     {
         ArgumentNullException.ThrowIfNull(loadContextReference);
 
         return IsCollected(loadContextReference)
-            ? new Core.Contracts.NUnitRuntimeDiagnostic(
+            ? new DevTools.NUnit.Transport.Contracts.NUnitRuntimeDiagnostic(
                 UnloadedCode,
                 "Generation ALC was collected after unload verification.")
-            : new Core.Contracts.NUnitRuntimeDiagnostic(
+            : new DevTools.NUnit.Transport.Contracts.NUnitRuntimeDiagnostic(
                 RetainedCode,
                 "Generation ALC retained after unload verification.");
     }

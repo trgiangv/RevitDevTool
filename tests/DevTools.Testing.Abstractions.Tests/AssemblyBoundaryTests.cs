@@ -8,6 +8,7 @@ public sealed class AssemblyBoundaryTests
     static readonly string[] ForbiddenAssemblyPrefixes =
     [
         "Microsoft.Testing",
+        "NUnit",
         "nunit",
         "xunit",
         "Autodesk",
@@ -54,6 +55,8 @@ public sealed class AssemblyBoundaryTests
         string[] forbidden =
         [
             "Microsoft.Testing",
+            "NUnit",
+            "nunit",
             "NUnit.",
             "Xunit.",
             "Autodesk.",

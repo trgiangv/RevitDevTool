@@ -1,4 +1,4 @@
-using DevTools.TestRunner.Debugging;
+using DevTools.TestRunner.Core.Debugging;
 
 namespace DevTools.TestRunner.Tests;
 

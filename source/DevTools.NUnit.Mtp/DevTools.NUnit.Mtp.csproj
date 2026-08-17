@@ -1,6 +1,10 @@
 <Project Sdk="Microsoft.NET.Sdk">
     <PropertyGroup>
         <TargetFrameworks>net48;net8.0-windows;net10.0-windows</TargetFrameworks>
+        <!-- The SDK evaluates Windows 7.0 package assets.  Preserve that version
+             when Pack invokes a per-TFM inner build from these shorthand TFMs. -->
+        <TargetPlatformVersion Condition="'$(TargetFramework)' == 'net8.0-windows' and '$(TargetPlatformVersion)' == ''">7.0</TargetPlatformVersion>
+        <TargetPlatformVersion Condition="'$(TargetFramework)' == 'net10.0-windows' and '$(TargetPlatformVersion)' == ''">7.0</TargetPlatformVersion>
         <!-- Independent package: do not inherit Autodesk flatten. Parallel TFMs
              must not share obj/bin or VS races CSC (CS2012 / MSB3713). -->
         <AppendTargetFrameworkToOutputPath>true</AppendTargetFrameworkToOutputPath>
@@ -19,6 +23,14 @@
         <PackageReadmeFile>README.md</PackageReadmeFile>
         <EnableDynamicLoading>false</EnableDynamicLoading>
         <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
+        <!-- RevitDevTool.NUnit is the sole published package.  Its internal
+             DevTools runtime closure is packed below, not emitted as packages
+             that the release workflow does not publish. -->
+        <SuppressDependenciesWhenPacking>true</SuppressDependenciesWhenPacking>
+        <!-- The package intentionally has no dependency groups: its modern internal
+             closure is runtime-only under build/runtime; net48 is ILRepack-merged below. -->
+        <NoPackageAnalysis>true</NoPackageAnalysis>
+        <TargetsForTfmSpecificContentInPackage>$(TargetsForTfmSpecificContentInPackage);PackDevToolsNUnitRuntimeClosure</TargetsForTfmSpecificContentInPackage>
         <IsTestProject>false</IsTestProject>
         <ILRepackable Condition="'$(TargetFramework)' == 'net48'">true</ILRepackable>
         <ILRepackInternalize Condition="'$(TargetFramework)' == 'net48'">true</ILRepackInternalize>
@@ -30,6 +42,29 @@
         <None Include="README.md" Pack="true" PackagePath="\"/>
     </ItemGroup>
 
+    <Target Name="PackDevToolsNUnitRuntimeClosure"
+            Condition="'$(TargetFramework)' != '' and !$(TargetFramework.StartsWith('net4'))">
+        <PropertyGroup>
+            <_MetadataRuntimeTfm>net$(TargetFrameworkVersion.Substring(1))</_MetadataRuntimeTfm>
+            <_DevToolsNUnitRuntimeTfm>net$(TargetFrameworkVersion.Substring(1))-windows7.0</_DevToolsNUnitRuntimeTfm>
+        </PropertyGroup>
+        <ItemGroup>
+            <!-- net48 is merged by the established ILRepack target.  Modern
+                 runtime-only implementation assets must not become NuGet lib
+                 compile references. -->
+            <TfmSpecificPackageFile Include="$(TargetDir)*.dll" Exclude="$(TargetPath)">
+                <PackagePath>build/runtime/$(_DevToolsNUnitRuntimeTfm)</PackagePath>
+            </TfmSpecificPackageFile>
+            <!-- Newer TFMs resolve this API to a reference-pack facade, while its
+                 implementation is not in the shared runtime.  Add the matching
+                 package implementation only when it was not copy-local already. -->
+            <TfmSpecificPackageFile Include="$(PkgSystem_Reflection_Metadata)\lib\$(_MetadataRuntimeTfm)\System.Reflection.Metadata.dll"
+                                    Condition="!Exists('$(TargetDir)System.Reflection.Metadata.dll')">
+                <PackagePath>build/runtime/$(_DevToolsNUnitRuntimeTfm)</PackagePath>
+            </TfmSpecificPackageFile>
+        </ItemGroup>
+    </Target>
+
     <ItemGroup>
         <!-- Compile against the platform; consumers supply it at runtime via Microsoft.Testing.Platform.MSBuild. -->
         <PackageReference Include="Microsoft.Testing.Platform">
@@ -40,7 +75,9 @@
         <PackageReference Include="System.Text.Json" Condition="'$(TargetFramework)' == 'net48'">
             <PrivateAssets>all</PrivateAssets>
         </PackageReference>
-        <PackageReference Include="System.Reflection.Metadata" Condition="'$(TargetFramework)' == 'net48'">
+        <!-- Keep the metadata reader copy-local for the self-contained modern
+             package closure as well as the established net48 merge. -->
+        <PackageReference Include="System.Reflection.Metadata" GeneratePathProperty="true">
             <PrivateAssets>all</PrivateAssets>
         </PackageReference>
         <PackageReference Include="System.Runtime.CompilerServices.Unsafe" Condition="'$(TargetFramework)' == 'net48'">
@@ -50,14 +87,8 @@
     </ItemGroup>
 
     <ItemGroup>
-        <Compile Include="..\DevTools.NUnit.Core\Contracts\NUnitMessages.cs" Link="Core\NUnitMessages.cs"/>
-        <Compile Include="..\DevTools.NUnit.Core\Contracts\NUnitRunnerCli.cs" Link="Core\NUnitRunnerCli.cs"/>
-        <Compile Include="..\DevTools.NUnit.Core\NUnitHostTiming.cs" Link="Core\NUnitHostTiming.cs"/>
-        <Compile Include="..\DevTools.NUnit.Core\Discovery\NUnitMetadataDiscoverer.cs" Link="Core\Discovery\NUnitMetadataDiscoverer.cs"/>
-        <Compile Include="..\DevTools.NUnit.Core\Client\HostRunOptions.cs" Link="Core\Client\HostRunOptions.cs"/>
-        <Compile Include="..\DevTools.NUnit.Core\Client\RunnerTestFilter.cs" Link="Core\Client\RunnerTestFilter.cs"/>
-        <Compile Include="..\DevTools.NUnit.Core\Client\NUnitRunnerPaths.cs" Link="Core\Client\NUnitRunnerPaths.cs"/>
-        <Compile Include="..\DevTools.NUnit.Core\Client\NUnitTestingMapping.cs" Link="Core\Client\NUnitTestingMapping.cs"/>
+        <ProjectReference Include="..\DevTools.NUnit.Provider\DevTools.NUnit.Provider.csproj"/>
+        <ProjectReference Include="..\DevTools.NUnit.Transport\DevTools.NUnit.Transport.csproj"/>
         <ProjectReference Include="..\DevTools.Testing.Abstractions\DevTools.Testing.Abstractions.csproj"/>
         <ProjectReference Include="..\DevTools.Testing.Transport\DevTools.Testing.Transport.csproj"/>
         <ProjectReference Include="..\DevTools.Testing.Mtp\DevTools.Testing.Mtp.csproj"/>

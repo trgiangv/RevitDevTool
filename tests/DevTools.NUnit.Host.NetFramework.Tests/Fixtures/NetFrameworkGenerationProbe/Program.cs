@@ -1,8 +1,8 @@
 using System.Reflection;
 using System.Runtime.InteropServices;
-using DevTools.NUnit.Core.Contracts;
-using DevTools.NUnit.Core.Results;
-using DevTools.NUnit.Core.Runtime;
+using DevTools.NUnit.Transport.Contracts;
+using DevTools.NUnit.Transport.Results;
+using DevTools.NUnit.Transport.Runtime;
 using DevTools.NUnit.Host.Loading;
 using DevTools.NUnit.Host.NetFramework.Tests;
 

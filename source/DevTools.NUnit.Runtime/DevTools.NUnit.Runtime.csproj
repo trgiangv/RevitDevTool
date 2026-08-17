@@ -13,8 +13,11 @@
     </ItemGroup>
 
     <ItemGroup>
-        <!-- Core keeps one host-shared identity; do not copy into Runtime output/payload. -->
-        <ProjectReference Include="..\DevTools.NUnit.Core\DevTools.NUnit.Core.csproj"
+        <!-- Legacy NUnit contract stays host-shared; do not copy into Runtime output/payload. -->
+        <ProjectReference Include="..\DevTools.NUnit.Transport\DevTools.NUnit.Transport.csproj"
+                          Private="false"/>
+        <!-- Neutral cross-load-context identity remains host-shared, never payload-private. -->
+        <ProjectReference Include="..\DevTools.Testing.Abstractions\DevTools.Testing.Abstractions.csproj"
                           Private="false"/>
     </ItemGroup>
 

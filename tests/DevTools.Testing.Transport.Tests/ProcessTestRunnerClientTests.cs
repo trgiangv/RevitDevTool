@@ -16,7 +16,7 @@ public sealed class ProcessTestRunnerClientTests
         var runId = Guid.Parse("aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee");
         var response = new TestingRunResponse(
             runId,
-            TestingFrameworkIds.NUnit,
+            "provider.example",
             "gen-1",
             [
                 new TestingCaseResult(
@@ -48,7 +48,7 @@ public sealed class ProcessTestRunnerClientTests
             new TestingRunRequest(
                 TestingProtocol.CurrentVersion,
                 runId,
-                TestingFrameworkIds.NUnit,
+                "provider.example",
                 new TestingAssemblyReference(@"C:\tests\Sample.dll", "net10.0-windows", "hash"),
                 new TestingSelection(["opaque-id"]),
                 new Dictionary<string, string>()),
@@ -60,7 +60,7 @@ public sealed class ProcessTestRunnerClientTests
         Assert.Equal("opaque-id", observed[0].TestId);
         var captured = File.ReadAllText(argsPath);
         Assert.Contains("--framework", captured, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("nunit", captured, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("provider.example", captured, StringComparison.Ordinal);
         Assert.Contains("--host", captured, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("--test", captured, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("discover", captured, StringComparison.OrdinalIgnoreCase);

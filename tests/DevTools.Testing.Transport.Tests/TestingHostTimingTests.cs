@@ -31,7 +31,7 @@ public sealed class TestingHostTimingTests
             new TestingRunRequest(
                 TestingProtocol.CurrentVersion,
                 Guid.Empty,
-                TestingFrameworkIds.NUnit,
+                "provider.example",
                 new TestingAssemblyReference("C:\\tests\\Sample.dll", null, null),
                 new TestingSelection([]),
                 new Dictionary<string, string>()),
@@ -52,7 +52,7 @@ public sealed class TestingHostTimingTests
             new TestingRunRequest(
                 TestingProtocol.CurrentVersion,
                 Guid.Empty,
-                TestingFrameworkIds.NUnit,
+                "provider.example",
                 new TestingAssemblyReference("C:\\tests\\Sample.dll", null, null),
                 new TestingSelection(["HostSmokeTests.Arithmetic"], "<filter><name>Arithmetic</name></filter>"),
                 new Dictionary<string, string>()),

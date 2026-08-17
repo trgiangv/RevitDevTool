@@ -1,7 +1,7 @@
 #if NETFRAMEWORK
 using System.Reflection;
-using DevTools.NUnit.Core.Contracts;
-using DevTools.NUnit.Core.Runtime;
+using DevTools.NUnit.Transport.Contracts;
+using DevTools.NUnit.Transport.Runtime;
 
 namespace DevTools.NUnit.Host.Loading;
 
@@ -172,7 +172,7 @@ public sealed class NetfxNUnitRuntimeSessionFactory : INUnitRuntimeSessionFactor
             && !string.Equals(runtimeCore.FullName, hostCore.FullName, StringComparison.OrdinalIgnoreCase))
         {
             throw new NUnitGenerationAssemblyResolutionException(
-                "Generation runtime must bind DevTools.NUnit.Core to the host copy.");
+                "Generation runtime must bind DevTools.NUnit.Transport to the host copy.");
         }
 
         registry.SetActiveLoadingGeneration(generation);

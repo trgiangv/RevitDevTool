@@ -22,11 +22,11 @@ internal static class NUnitGenerationTestEnvironment
     public static string CoreAssemblyPath { get; } = Path.Combine(
         RepositoryRoot,
         "source",
-        "DevTools.NUnit.Core",
+        "DevTools.NUnit.Transport",
         "bin",
         "Debug",
         "net10.0-windows",
-        "DevTools.NUnit.Core.dll");
+        "DevTools.NUnit.Transport.dll");
 
     public static string CreateIsolatedGenerationsRoot()
     {

@@ -10,6 +10,10 @@
          unless this is explicit. STJ 9 needs Unsafe 6.0; NUnit copies 4.x. -->
     <AutoGenerateBindingRedirects Condition="$(TargetFramework.StartsWith('net4'))">true</AutoGenerateBindingRedirects>
     <GenerateBindingRedirectsOutputType Condition="$(TargetFramework.StartsWith('net4'))">true</GenerateBindingRedirectsOutputType>
+    <!-- NUnit 4 and Microsoft.Testing.Platform.MSBuild carry compatible
+         System.ValueTuple facade versions on net48.  Let RAR choose the unified
+         runtime assembly that the generated binding redirect already declares. -->
+    <AutoUnifyAssemblyReferences Condition="$(TargetFramework.StartsWith('net4'))">true</AutoUnifyAssemblyReferences>
     <EnableDynamicLoading>false</EnableDynamicLoading>
     <HostLaunch Condition="'$(HostLaunch)' == ''">false</HostLaunch>
     <HostTimeout Condition="'$(HostTimeout)' == ''">60</HostTimeout>

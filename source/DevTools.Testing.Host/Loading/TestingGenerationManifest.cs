@@ -7,6 +7,7 @@ public sealed record TestingGenerationManifest(
     string ShadowDirectory,
     string ShadowAssemblyPath,
     string RuntimeAssemblyPath,
-    string FrameworkAssemblyPath,
     IReadOnlyList<string> ManagedAssemblies,
-    IReadOnlyList<string> NativeAssets);
+    IReadOnlyList<string> NativeAssets,
+    IReadOnlyList<string> SymbolFiles,
+    IReadOnlyList<string> OtherFiles);

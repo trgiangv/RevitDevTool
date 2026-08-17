@@ -1,6 +1,5 @@
-using DevTools.NUnit.Core.Contracts;
-using DevTools.Testing.Abstractions.Contracts;
-using DevTools.TestRunner.Parsing;
+using DevTools.NUnit.Runner;
+using DevTools.NUnit.Runner.Parsing;
 
 namespace DevTools.TestRunner.Tests;
 
@@ -101,7 +100,7 @@ public sealed class RunnerCommandLineTests
             out var error);
 
         Assert.False(ok);
-        Assert.Equal(DevTools.TestRunner.Services.NUnitRunnerFilter.MixedFilterMessage, error);
+        Assert.Equal(DevTools.NUnit.Runner.Services.NUnitRunnerFilter.MixedFilterMessage, error);
     }
 
     [Fact]
@@ -263,7 +262,7 @@ public sealed class RunnerCommandLineTests
             out var error);
 
         Assert.True(ok, error);
-        Assert.Equal(TestingFrameworkIds.NUnit, command!.FrameworkId);
+        Assert.Equal("nunit", command!.FrameworkId);
         Assert.False(command.UseGenericProtocol);
     }
 
@@ -285,10 +284,10 @@ public sealed class RunnerCommandLineTests
             debugParentPid: null,
             out var command,
             out var error,
-            framework: TestingFrameworkIds.NUnit);
+            framework: "nunit");
 
         Assert.True(ok, error);
-        Assert.Equal(TestingFrameworkIds.NUnit, command!.FrameworkId);
+        Assert.Equal("nunit", command!.FrameworkId);
         Assert.True(command.UseGenericProtocol);
     }
 
@@ -313,7 +312,7 @@ public sealed class RunnerCommandLineTests
             framework: "NUnit");
 
         Assert.True(ok, error);
-        Assert.Equal(TestingFrameworkIds.NUnit, command!.FrameworkId);
+        Assert.Equal("nunit", command!.FrameworkId);
         Assert.True(command.UseGenericProtocol);
     }
 

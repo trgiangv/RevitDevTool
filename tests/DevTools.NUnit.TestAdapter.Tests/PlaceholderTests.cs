@@ -99,8 +99,7 @@ public class TestAdapterLayoutTests
         Assert.True(File.Exists(Path.Combine(
             repositoryRoot,
             "source",
-            "DevTools.NUnit.Core",
-            "Discovery",
+            "DevTools.NUnit.Provider",
             "NUnitMetadataDiscoverer.cs")));
         Assert.True(File.Exists(Path.Combine(
             repositoryRoot,

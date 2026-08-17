@@ -16,11 +16,11 @@ public sealed class TestingProtocolGoldenTests
             "1",
             TestingProtocol.Hello,
             JsonSerializer.SerializeToElement(
-                new TestingHelloRequest(TestingProtocol.CurrentVersion, TestingFrameworkIds.NUnit),
+                new TestingHelloRequest(TestingProtocol.CurrentVersion, "provider.example"),
                 TestingJsonContext.Default.TestingHelloRequest));
 
         Assert.Equal(
-            """{"type":"request","id":"1","method":"testing/hello","params":{"protocol_version":2,"framework_id":"nunit"},"isError":false}""",
+            """{"type":"request","id":"1","method":"testing/hello","params":{"protocol_version":2,"framework_id":"provider.example"},"isError":false}""",
             Serialize(message));
         Assert.DoesNotContain("testing/discover", Serialize(message), StringComparison.Ordinal);
     }
@@ -41,7 +41,7 @@ public sealed class TestingProtocolGoldenTests
         Assert.Equal(request.Selection.TestIds[0], roundTrip.Selection.TestIds[0]);
         Assert.Equal(request.Selection.TestIds[1], roundTrip.Selection.TestIds[1]);
         Assert.Contains("\"protocol_version\":2", json, StringComparison.Ordinal);
-        Assert.Contains("\"framework_id\":\"nunit\"", json, StringComparison.Ordinal);
+        Assert.Contains("\"framework_id\":\"provider.example\"", json, StringComparison.Ordinal);
         Assert.DoesNotContain("testing/discover", json, StringComparison.Ordinal);
     }
 
@@ -131,7 +131,7 @@ public sealed class TestingProtocolGoldenTests
         new(
             protocolVersion,
             SampleRunId,
-            TestingFrameworkIds.NUnit,
+            "provider.example",
             new TestingAssemblyReference(@"C:\tests\Sample.dll", "net10.0-windows", "abc123"),
             new TestingSelection(testIds, ProviderPayload: "opaque-bytes"),
             new Dictionary<string, string> { ["preEnumerateTheories"] = "false" });

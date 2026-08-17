@@ -5,6 +5,20 @@ public sealed class NUnitRuntimeArchitectureTests
     private static readonly string RepositoryRoot = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", ".."));
 
     [Fact]
+    public void Runtime_session_exposes_a_nunit_free_neutral_runtime_contract()
+    {
+        var contract = typeof(DevTools.Testing.Abstractions.Runtime.ITestingRuntimeSession);
+
+        Assert.Contains(contract, typeof(NUnitRuntimeSession).GetInterfaces());
+        Assert.All(contract.GetMethods(), method =>
+        {
+            Assert.DoesNotContain("NUnit", method.ReturnType.FullName ?? string.Empty, StringComparison.Ordinal);
+            Assert.All(method.GetParameters(), parameter =>
+                Assert.DoesNotContain("NUnit", parameter.ParameterType.FullName ?? string.Empty, StringComparison.Ordinal));
+        });
+    }
+
+    [Fact]
     public void OnlyRuntimeProjectReferencesNUnitInProductionSource()
     {
         var offenders = Directory
@@ -30,7 +44,7 @@ public sealed class NUnitRuntimeArchitectureTests
     }
 
     [Theory]
-    [InlineData("source/DevTools.NUnit.Core")]
+    [InlineData("source/DevTools.NUnit.Provider")]
     [InlineData("source/DevTools.TestRunner")]
     [InlineData("source/DevTools.NUnit.TestAdapter")]
     public void ForbiddenManualNUnitExecutionPatternsStayOutOfBoundary(string relativeProjectPath)

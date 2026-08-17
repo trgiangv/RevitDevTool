@@ -1,5 +1,3 @@
-using System.Reflection;
-
 namespace DevTools.Testing.Host.Loading;
 
 internal static class TestingGenerationSnapshot
@@ -23,21 +21,6 @@ internal static class TestingGenerationSnapshot
             FileShare.Read);
 
         source.CopyTo(destination);
-    }
-
-    internal static bool TryGetManagedAssemblyName(string path, out string? simpleName)
-    {
-        simpleName = null;
-        try
-        {
-            var identity = AssemblyName.GetAssemblyName(path);
-            simpleName = identity.Name;
-            return !string.IsNullOrWhiteSpace(simpleName);
-        }
-        catch
-        {
-            return false;
-        }
     }
 
     internal static string ComputeGenerationId(string snapshotDirectory, IReadOnlyList<string> contentRelativePaths)
@@ -85,6 +68,27 @@ internal static class TestingGenerationSnapshot
         catch (IOException) when (Directory.Exists(shadowDirectory))
         {
             // Another process published the same generation first.
+        }
+    }
+
+    internal static void EnsurePublishedIsValid(string shadowDirectory, string expectedGenerationId)
+    {
+        if (!Directory.Exists(shadowDirectory)
+            || !File.Exists(Path.Combine(shadowDirectory, TestingGenerationPaths.GenerationCompleteMarkerFileName)))
+        {
+            throw new TestingGenerationBuildException(
+                $"Expected a complete published generation at '{shadowDirectory}'.");
+        }
+
+        var actualGenerationId = ComputeGenerationId(
+            shadowDirectory,
+            ReadContentRelativePaths(shadowDirectory));
+        if (!string.Equals(actualGenerationId, expectedGenerationId, StringComparison.Ordinal))
+        {
+            throw new TestingGenerationCorruptionException(
+                shadowDirectory,
+                expectedGenerationId,
+                actualGenerationId);
         }
     }
 }

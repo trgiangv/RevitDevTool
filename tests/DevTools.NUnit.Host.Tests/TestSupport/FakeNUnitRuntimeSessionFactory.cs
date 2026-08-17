@@ -1,6 +1,6 @@
-using DevTools.NUnit.Core.Contracts;
-using DevTools.NUnit.Core.Results;
-using DevTools.NUnit.Core.Runtime;
+using DevTools.NUnit.Transport.Contracts;
+using DevTools.NUnit.Transport.Results;
+using DevTools.NUnit.Transport.Runtime;
 using DevTools.NUnit.Host.Loading;
 
 namespace DevTools.NUnit.Host.Tests.TestSupport;
@@ -39,6 +39,7 @@ internal sealed class FakeNUnitRuntimeSession : INUnitRuntimeSession
     internal int RunCount { get; private set; }
 
     internal bool CancelRequested { get; private set; }
+    internal bool IsDisposed => _disposed;
 
     internal Func<NUnitRunRequest, INUnitRuntimeEventSink, NUnitRunResponse>? RunImpl { get; set; }
 

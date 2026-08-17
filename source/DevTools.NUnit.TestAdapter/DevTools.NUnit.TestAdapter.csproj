@@ -48,22 +48,9 @@
     </ItemGroup>
 
     <ItemGroup>
-        <Compile Include="..\DevTools.Ipc\IpcPropertyNames.cs" Link="Ipc\IpcPropertyNames.cs"/>
-        <Compile Include="..\DevTools.NUnit.Core\Contracts\NUnitMessages.cs" Link="Core\Contracts\NUnitMessages.cs"/>
-        <Compile Include="..\DevTools.NUnit.Core\Contracts\NUnitRunnerCli.cs" Link="Core\Contracts\NUnitRunnerCli.cs"/>
-        <Compile Include="..\DevTools.NUnit.Core\NUnitHostTiming.cs" Link="Core\NUnitHostTiming.cs"/>
-        <Compile Include="..\DevTools.NUnit.Core\Discovery\NUnitMetadataDiscoverer.cs" Link="Core\Discovery\NUnitMetadataDiscoverer.cs"/>
-        <Compile Include="..\DevTools.NUnit.Core\Client\HostRunOptions.cs" Link="Core\Client\HostRunOptions.cs"/>
-        <Compile Include="..\DevTools.NUnit.Core\Client\RunnerTestFilter.cs" Link="Core\Client\RunnerTestFilter.cs"/>
-        <Compile Include="..\DevTools.NUnit.Core\Client\NUnitRunnerPaths.cs" Link="Core\Client\NUnitRunnerPaths.cs"/>
-        <Compile Include="..\DevTools.NUnit.Core\Client\NUnitTestingMapping.cs" Link="Core\Client\NUnitTestingMapping.cs"/>
-        <Compile Include="..\DevTools.Testing.Abstractions\Contracts\TestingContracts.cs" Link="Testing\TestingContracts.cs"/>
-        <Compile Include="..\DevTools.Testing.Transport\ITestRunnerTransport.cs" Link="Testing\ITestRunnerTransport.cs"/>
-        <Compile Include="..\DevTools.Testing.Transport\TestingProtocol.cs" Link="Testing\TestingProtocol.cs"/>
-        <Compile Include="..\DevTools.Testing.Transport\TestingJsonContext.cs" Link="Testing\TestingJsonContext.cs"/>
-        <Compile Include="..\DevTools.Testing.Transport\TestingRunnerCli.cs" Link="Testing\TestingRunnerCli.cs"/>
-        <Compile Include="..\DevTools.Testing.Transport\TestingHostTiming.cs" Link="Testing\TestingHostTiming.cs"/>
-        <Compile Include="..\DevTools.Testing.Transport\ProcessTestRunnerClient.cs" Link="Testing\ProcessTestRunnerClient.cs"/>
+        <ProjectReference Include="..\DevTools.NUnit.Provider\DevTools.NUnit.Provider.csproj"/>
+        <ProjectReference Include="..\DevTools.Testing.Abstractions\DevTools.Testing.Abstractions.csproj"/>
+        <ProjectReference Include="..\DevTools.Testing.Transport\DevTools.Testing.Transport.csproj"/>
     </ItemGroup>
 
 </Project>

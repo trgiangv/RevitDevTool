@@ -44,30 +44,14 @@
     <ItemGroup>
         <PackageReference Include="Microsoft.VisualStudio.Interop"/>
         <PackageReference Include="Microsoft.Extensions.DependencyInjection"/>
-        <PackageReference Include="ConsoleAppFramework">
-            <PrivateAssets>all</PrivateAssets>
-            <IncludeAssets>runtime; build; native; contentfiles; analyzers</IncludeAssets>
-        </PackageReference>
     </ItemGroup>
 
     <ItemGroup>
-        <ProjectReference Include="..\DevTools.Testing.Abstractions\DevTools.Testing.Abstractions.csproj" SetTargetFramework="TargetFramework=net10.0-windows"/>
-        <ProjectReference Include="..\DevTools.Testing.Transport\DevTools.Testing.Transport.csproj" SetTargetFramework="TargetFramework=net10.0-windows"/>
-        <ProjectReference Include="..\DevTools.NUnit.Core\DevTools.NUnit.Core.csproj" SetTargetFramework="TargetFramework=net10.0-windows"/>
-        <ProjectReference Include="..\DevTools.NUnit.Transport\DevTools.NUnit.Transport.csproj" SetTargetFramework="TargetFramework=net10.0-windows"/>
-        <ProjectReference Include="..\DevTools.Ipc\DevTools.Ipc.csproj" SetTargetFramework="TargetFramework=net10.0-windows"/>
+        <ProjectReference Include="..\DevTools.TestRunner.Core\DevTools.TestRunner.Core.csproj" SetTargetFramework="TargetFramework=net10.0-windows"/>
+        <ProjectReference Include="..\DevTools.NUnit.Runner\DevTools.NUnit.Runner.csproj" SetTargetFramework="TargetFramework=net10.0-windows"/>
         <ProjectReference Include="..\DevTools.Hosting\DevTools.Hosting.csproj" SetTargetFramework="TargetFramework=net10.0-windows"/>
         <ProjectReference Include="..\DevTools.Hosting.Revit\DevTools.Hosting.Revit.csproj" SetTargetFramework="TargetFramework=net10.0-windows"/>
         <ProjectReference Include="..\DevTools.Hosting.Acad\DevTools.Hosting.Acad.csproj" SetTargetFramework="TargetFramework=net10.0-windows"/>
-    </ItemGroup>
-
-    <ItemGroup>
-        <Compile Include="..\DevTools.NUnit.Core\Discovery\NUnitMetadataDiscoverer.cs"
-                 Link="Discovery\NUnitMetadataDiscoverer.cs"/>
-    </ItemGroup>
-
-    <ItemGroup>
-        <Using Include="DevTools.Ipc"/>
     </ItemGroup>
 
 </Project>

@@ -1,5 +1,5 @@
-using DevTools.NUnit.Core;
-using DevTools.NUnit.Core.Contracts;
+using DevTools.NUnit.Provider;
+using DevTools.NUnit.Transport.Contracts;
 using DevTools.Testing.Abstractions.Contracts;
 using DevTools.Testing.Mtp;
 using DevTools.Testing.Transport;
@@ -23,7 +23,7 @@ internal sealed class DevToolsNUnitSession
         var request = new TestingRunRequest(
             TestingProtocol.CurrentVersion,
             Guid.NewGuid(),
-            TestingFrameworkIds.NUnit,
+            "nunit",
             new TestingAssemblyReference(RequireAssembly(assemblyPath), null, null),
             selection,
             new Dictionary<string, string>());

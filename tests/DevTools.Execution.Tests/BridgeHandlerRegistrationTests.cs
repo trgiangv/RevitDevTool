@@ -4,7 +4,7 @@ using DevTools.Execution.External.Handlers;
 using DevTools.Execution.External.Testing;
 using DevTools.Ipc;
 using DevTools.Hosting;
-using DevTools.NUnit.Core.Contracts;
+using DevTools.NUnit.Transport.Contracts;
 using DevTools.NUnit.Host;
 using DevTools.Testing.Abstractions.Contracts;
 using DevTools.Testing.Abstractions.Providers;
@@ -55,8 +55,7 @@ public sealed class BridgeHandlerRegistrationTests
             .Concat(new TestingRequestHandler(
                 new TestingProviderRegistry([new NoOpTestingProvider()]),
                 "Revit",
-                "2025",
-                includeLegacyNunitEnvelopes: false).SupportedMethods)
+                "2025").SupportedMethods)
             .ToList();
 
         Assert.Contains(PytestBridgeMethods.TestsRun, methods, StringComparer.OrdinalIgnoreCase);
@@ -109,7 +108,7 @@ public sealed class BridgeHandlerRegistrationTests
 
     private sealed class NoOpTestingProvider : IHostTestFrameworkProvider
     {
-        public string FrameworkId => TestingFrameworkIds.NUnit;
+        public string FrameworkId => "provider.example";
 
         public TestingRunResponse Run(
             TestingRunRequest request,

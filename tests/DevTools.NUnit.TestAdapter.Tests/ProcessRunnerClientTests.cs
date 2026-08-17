@@ -24,9 +24,9 @@ public sealed class ProcessTestRunnerClientLinkTests
         Assert.DoesNotContain("IReadOnlyList<NUnitDiscoveredTest> Discover", client);
 
         Assert.False(File.Exists(Path.Combine(
-            repositoryRoot, "source", "DevTools.NUnit.Core", "Client", "ProcessRunnerClient.cs")));
+            repositoryRoot, "source", "DevTools.NUnit.Provider", "ProcessRunnerClient.cs")));
         Assert.False(File.Exists(Path.Combine(
-            repositoryRoot, "source", "DevTools.NUnit.Core", "Client", "NUnitProcessTransportAdapter.cs")));
+            repositoryRoot, "source", "DevTools.NUnit.Provider", "NUnitProcessTransportAdapter.cs")));
         Assert.False(File.Exists(Path.Combine(
             repositoryRoot, "source", "DevTools.NUnit.Mtp", "ProcessRunnerClient.cs")));
         Assert.False(File.Exists(Path.Combine(
@@ -37,9 +37,8 @@ public sealed class ProcessTestRunnerClientLinkTests
         var adapter = File.ReadAllText(Path.Combine(
             repositoryRoot, "source", "DevTools.NUnit.TestAdapter", "DevTools.NUnit.TestAdapter.csproj"));
         Assert.Contains("DevTools.Testing.Transport", mtp);
-        Assert.Contains("ProcessTestRunnerClient.cs", adapter);
-        Assert.Contains("TestingJsonContext.cs", adapter);
-        Assert.Contains("TestingRunnerCli.cs", adapter);
+        Assert.Contains("DevTools.NUnit.Provider", adapter);
+        Assert.Contains("DevTools.Testing.Transport", adapter);
         Assert.DoesNotContain("NUnitProcessTransportAdapter.cs", adapter);
         Assert.Contains("DevTools.TestRunner.exe", File.ReadAllText(Path.Combine(
             repositoryRoot,
@@ -47,10 +46,8 @@ public sealed class ProcessTestRunnerClientLinkTests
             "DevTools.NUnit.TestAdapter",
             "build",
             "DevTools.NUnit.TestAdapter.targets")));
-        Assert.Contains("Core\\Client\\HostRunOptions.cs", mtp);
-        Assert.Contains("Core\\Client\\HostRunOptions.cs", adapter);
-        Assert.Contains("Core\\Client\\NUnitRunnerPaths.cs", mtp);
-        Assert.Contains("Core\\Client\\NUnitRunnerPaths.cs", adapter);
+        Assert.DoesNotContain("Compile Include=", mtp);
+        Assert.DoesNotContain("Compile Include=", adapter);
     }
 
     [Fact]
@@ -67,7 +64,7 @@ public sealed class ProcessTestRunnerClientLinkTests
         Assert.Contains("ToTestingHostOptions", source, StringComparison.Ordinal);
         Assert.Contains("Environment.ProcessId", source, StringComparison.Ordinal);
         Assert.Contains("ITestRunnerTransport", source, StringComparison.Ordinal);
-        Assert.Contains("TestingFrameworkIds.NUnit", source, StringComparison.Ordinal);
+        Assert.Contains("\"nunit\"", source, StringComparison.Ordinal);
         Assert.DoesNotContain("GetClient().Discover", source, StringComparison.Ordinal);
         Assert.Contains("LocalNUnitTestDiscoverer.Discover", source, StringComparison.Ordinal);
     }

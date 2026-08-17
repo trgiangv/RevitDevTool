@@ -2,8 +2,8 @@
 using System.Collections.Frozen;
 using System.Reflection;
 using System.Runtime.Loader;
-using DevTools.NUnit.Core.Contracts;
-using DevTools.NUnit.Core.Runtime;
+using DevTools.NUnit.Transport.Contracts;
+using DevTools.NUnit.Transport.Runtime;
 using DevTools.Utilities.AssemblyLoading;
 
 namespace DevTools.NUnit.Host.Loading;

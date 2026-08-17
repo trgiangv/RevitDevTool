@@ -16,44 +16,54 @@ public sealed class RequestHandlerTests
             "1",
             TestingProtocol.Hello,
             JsonSerializer.SerializeToElement(
-                new TestingHelloRequest(TestingProtocol.CurrentVersion, TestingFrameworkIds.NUnit),
+                new TestingHelloRequest(TestingProtocol.CurrentVersion, "provider.example"),
                 TestingJsonContext.Default.TestingHelloRequest));
 
         Assert.False(response.IsError);
         var hello = response.Result!.Value.Deserialize(TestingJsonContext.Default.TestingHelloResponse);
-        Assert.Equal(TestingFrameworkIds.NUnit, hello!.FrameworkId);
+        Assert.Equal("provider.example", hello!.FrameworkId);
         Assert.Equal("Revit", hello.Host);
     }
 
     [Fact]
-    public async Task Legacy_nunit_hello_defaults_to_nunit_provider()
+    public async Task Legacy_nunit_hello_is_not_routed_by_the_generic_handler()
     {
         var handler = CreateHandler(out _);
         using var document = JsonDocument.Parse("""{"protocol_version":2}""");
-        var response = await Handle(handler,"1", TestingRequestHandler.LegacyNunitHello, document.RootElement);
+        var response = await Handle(handler,"1", "nunit/hello", document.RootElement);
 
-        Assert.False(response.IsError, response.ErrorMessage);
-        var hello = response.Result!.Value.Deserialize(TestingJsonContext.Default.TestingHelloResponse);
-        Assert.Equal(TestingFrameworkIds.NUnit, hello!.FrameworkId);
+        Assert.True(response.IsError);
+        Assert.Equal(IpcErrorCodes.MethodNotFound, response.ErrorDetail!.Code);
+    }
+
+    [Fact]
+    public async Task Hello_does_not_default_a_missing_provider_id()
+    {
+        var handler = new TestingRequestHandler(
+            new TestingProviderRegistry([new FakeProvider("nunit")]),
+            "Revit",
+            "2025");
+        using var document = JsonDocument.Parse("""{"protocol_version":2,"framework_id":""}""");
+
+        var response = await Handle(handler, "1", TestingProtocol.Hello, document.RootElement);
+
+        Assert.True(response.IsError);
+        Assert.Equal(TestingErrorCodes.InvalidRequest, response.ErrorDetail!.Code);
     }
 
     [Fact]
     public async Task Discover_methods_are_rejected()
     {
         var handler = CreateHandler(out _);
-        var nunit = await Handle(handler, "1", TestingRequestHandler.LegacyNunitDiscover, null);
         var testing = await Handle(handler, "2", "testing/discover", null);
 
-        Assert.True(nunit.IsError);
-        Assert.Equal(TestingErrorCodes.NoDiscovery, nunit.ErrorDetail!.Code);
         Assert.True(testing.IsError);
         Assert.Equal(TestingErrorCodes.NoDiscovery, testing.ErrorDetail!.Code);
         Assert.DoesNotContain("testing/discover", handler.SupportedMethods);
-        Assert.DoesNotContain(TestingRequestHandler.LegacyNunitDiscover, handler.SupportedMethods);
     }
 
     [Fact]
-    public async Task Legacy_nunit_run_routes_to_nunit_provider()
+    public async Task Legacy_nunit_run_is_not_routed_by_the_generic_handler()
     {
         var handler = CreateHandler(out var provider);
         TestingRunRequest? seen = null;
@@ -70,16 +80,15 @@ public sealed class RequestHandlerTests
                 null);
         };
 
-        var request = CreateRunRequest(TestingFrameworkIds.NUnit);
+        var request = CreateRunRequest("provider.example");
         var response = await Handle(handler,
             "1",
-            TestingRequestHandler.LegacyNunitRun,
+            "nunit/run",
             JsonSerializer.SerializeToElement(request, TestingJsonContext.Default.TestingRunRequest));
 
-        Assert.False(response.IsError, response.ErrorMessage);
-        Assert.NotNull(seen);
-        Assert.Equal(TestingFrameworkIds.NUnit, seen!.FrameworkId);
-        Assert.Equal(request.Assembly.Path, seen.Assembly.Path);
+        Assert.True(response.IsError);
+        Assert.Equal(IpcErrorCodes.MethodNotFound, response.ErrorDetail!.Code);
+        Assert.Null(seen);
     }
 
     [Fact]
@@ -93,7 +102,7 @@ public sealed class RequestHandlerTests
             "1",
             TestingProtocol.Run,
             JsonSerializer.SerializeToElement(
-                CreateRunRequest(TestingFrameworkIds.NUnit),
+                CreateRunRequest("provider.example"),
                 TestingJsonContext.Default.TestingRunRequest));
 
         Assert.True(failed.IsError);
@@ -105,7 +114,7 @@ public sealed class RequestHandlerTests
             "2",
             TestingProtocol.Run,
             JsonSerializer.SerializeToElement(
-                CreateRunRequest(TestingFrameworkIds.NUnit),
+                CreateRunRequest("provider.example"),
                 TestingJsonContext.Default.TestingRunRequest));
 
         Assert.True(poisoned.IsError);
@@ -137,25 +146,21 @@ public sealed class RequestHandlerTests
     }
 
     [Fact]
-    public void IncludeLegacy_false_omits_nunit_methods()
+    public void Supported_methods_are_testing_only()
     {
         var handler = new TestingRequestHandler(
-            new TestingProviderRegistry([new FakeProvider(TestingFrameworkIds.NUnit)]),
+            new TestingProviderRegistry([new FakeProvider("provider.example")]),
             "Revit",
-            "2025",
-            includeLegacyNunitEnvelopes: false);
+            "2025");
 
         Assert.Equal(
             new[] { TestingProtocol.Hello, TestingProtocol.Run, TestingProtocol.Cancel },
             handler.SupportedMethods.ToArray());
-        Assert.DoesNotContain(TestingRequestHandler.LegacyNunitHello, handler.SupportedMethods);
-        Assert.DoesNotContain(TestingRequestHandler.LegacyNunitRun, handler.SupportedMethods);
-        Assert.DoesNotContain(TestingRequestHandler.LegacyNunitCancel, handler.SupportedMethods);
     }
 
     static TestingRequestHandler CreateHandler(out FakeProvider provider)
     {
-        provider = new FakeProvider(TestingFrameworkIds.NUnit);
+        provider = new FakeProvider("provider.example");
         return new TestingRequestHandler(
             new TestingProviderRegistry([provider]),
             "Revit",

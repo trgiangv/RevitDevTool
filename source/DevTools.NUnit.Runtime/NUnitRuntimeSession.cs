@@ -1,12 +1,14 @@
 using System.Reflection;
-using DevTools.NUnit.Core.Contracts;
-using DevTools.NUnit.Core.Runtime;
+using DevTools.NUnit.Transport.Contracts;
+using DevTools.NUnit.Transport.Runtime;
+using DevTools.Testing.Abstractions.Contracts;
+using DevTools.Testing.Abstractions.Runtime;
 using NUnit.Framework.Api;
 using NUnit.Framework.Internal;
 
 namespace DevTools.NUnit.Runtime;
 
-public sealed class NUnitRuntimeSession : INUnitRuntimeSession
+public sealed class NUnitRuntimeSession : INUnitRuntimeSession, ITestingRuntimeSession
 {
     private readonly Assembly _testAssembly;
     private readonly string _assemblyPath;
@@ -134,6 +136,25 @@ public sealed class NUnitRuntimeSession : INUnitRuntimeSession
                 EndRun(request.RunId);
             }
         }
+    }
+
+    TestingRunResponse ITestingRuntimeSession.Run(
+        TestingRunRequest request,
+        ITestingRuntimeEventSink eventSink,
+        CancellationToken cancellationToken)
+    {
+        var response = Run(
+            new NUnitRunRequest(request.RunId, _assemblyPath, request.Selection.ProviderPayload),
+            new TestingEventSink(eventSink),
+            cancellationToken);
+        return new TestingRunResponse(
+            response.RunId,
+            request.FrameworkId,
+            response.GenerationId,
+            response.Cases.Select(ToTestingCase).ToList(),
+            response.Summary.Cancelled > 0 ? TestingCancellationState.Completed : TestingCancellationState.None,
+            response.RuntimeDiagnostic?.Code,
+            response.RuntimeDiagnostic?.Message);
     }
 
     public void Cancel(Guid runId)
@@ -281,6 +302,40 @@ public sealed class NUnitRuntimeSession : INUnitRuntimeSession
         _identityRegistry = NUnitTestIdentityRegistry.Build(root);
         _loaded = true;
         return _identityRegistry;
+    }
+
+    private static TestingCaseResult ToTestingCase(NUnitCaseResult testCase) => new(
+        testCase.Id,
+        testCase.Name,
+        testCase.Outcome,
+        testCase.DurationMs,
+        testCase.Message,
+        testCase.StackTrace,
+        testCase.Output,
+        testCase.Source is null ? null : new TestingSourceLocation(testCase.Source.File, testCase.Source.Line),
+        testCase.Traits?.Select(trait => new TestingTrait(trait.Name, trait.Value)).ToList() ?? [],
+        testCase.Attachments?.Select(attachment => new TestingAttachment(
+            attachment.Path,
+            attachment.Name,
+            attachment.ContentType,
+            attachment.Base64)).ToList() ?? [],
+        testCase.ParentTestId,
+        testCase.FullName,
+        testCase.SkipReason);
+
+    private sealed class TestingEventSink(ITestingRuntimeEventSink sink) : INUnitRuntimeEventSink
+    {
+        public void Publish(NUnitRuntimeEvent runtimeEvent) => sink.Publish(new TestingRuntimeEvent(
+            runtimeEvent.RunId,
+            runtimeEvent.Kind,
+            runtimeEvent.Case is null ? null : ToTestingCase(runtimeEvent.Case),
+            runtimeEvent.Message,
+            runtimeEvent.Attachment is null ? null : new TestingAttachment(
+                runtimeEvent.Attachment.Path,
+                runtimeEvent.Attachment.Name,
+                runtimeEvent.Attachment.ContentType,
+                runtimeEvent.Attachment.Base64),
+            TestingCancellationState.None));
     }
 
     private enum RunLifecycleState

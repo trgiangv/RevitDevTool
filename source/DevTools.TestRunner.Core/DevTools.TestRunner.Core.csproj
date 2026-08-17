@@ -1,0 +1,21 @@
+<Project Sdk="Microsoft.NET.Sdk">
+    <PropertyGroup>
+        <TargetFramework>net10.0-windows</TargetFramework>
+        <RootNamespace>DevTools.TestRunner.Core</RootNamespace>
+        <GenerateDocumentationFile>true</GenerateDocumentationFile>
+        <NoWarn>$(NoWarn);1591</NoWarn>
+    </PropertyGroup>
+    <ItemGroup>
+        <PackageReference Include="Microsoft.VisualStudio.Interop" />
+        <PackageReference Include="Microsoft.Extensions.DependencyInjection" />
+    </ItemGroup>
+    <ItemGroup>
+        <Using Include="DevTools.Ipc" />
+    </ItemGroup>
+    <ItemGroup>
+        <ProjectReference Include="..\DevTools.Testing.Abstractions\DevTools.Testing.Abstractions.csproj" />
+        <ProjectReference Include="..\DevTools.Testing.Transport\DevTools.Testing.Transport.csproj" />
+        <ProjectReference Include="..\DevTools.Ipc\DevTools.Ipc.csproj" />
+        <ProjectReference Include="..\DevTools.Hosting\DevTools.Hosting.csproj" />
+    </ItemGroup>
+</Project>

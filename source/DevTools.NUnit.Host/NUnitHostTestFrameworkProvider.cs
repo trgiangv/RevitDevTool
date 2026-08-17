@@ -1,8 +1,13 @@
-using DevTools.NUnit.Core.Contracts;
+using DevTools.NUnit.Transport.Contracts;
 using DevTools.Testing.Abstractions.Contracts;
 using DevTools.Testing.Abstractions.Providers;
 
 namespace DevTools.NUnit.Host;
+
+public static class NUnitFramework
+{
+    public const string Id = "nunit";
+}
 
 /// <summary>
 /// Thin <see cref="IHostTestFrameworkProvider"/> over <see cref="INUnitHost"/>.
@@ -18,7 +23,7 @@ public sealed class NUnitHostTestFrameworkProvider : IHostTestFrameworkProvider
         _host = host ?? throw new ArgumentNullException(nameof(host));
     }
 
-    public string FrameworkId => TestingFrameworkIds.NUnit;
+    public string FrameworkId => NUnitFramework.Id;
 
     public TestingRunResponse Run(
         TestingRunRequest request,
@@ -32,7 +37,7 @@ public sealed class NUnitHostTestFrameworkProvider : IHostTestFrameworkProvider
         if (request.Assembly is null)
             throw new ArgumentException("Assembly is required.", nameof(request));
 
-        if (!string.Equals(request.FrameworkId, TestingFrameworkIds.NUnit, StringComparison.OrdinalIgnoreCase))
+        if (!string.Equals(request.FrameworkId, NUnitFramework.Id, StringComparison.OrdinalIgnoreCase))
         {
             throw new ArgumentException(
                 $"NUnit provider cannot execute framework '{request.FrameworkId}'.",
@@ -46,7 +51,7 @@ public sealed class NUnitHostTestFrameworkProvider : IHostTestFrameworkProvider
             progress => NUnitTestingMapper.Publish(progress, eventSink),
             cancellationToken);
 
-        return NUnitTestingMapper.ToTesting(response, TestingFrameworkIds.NUnit);
+        return NUnitTestingMapper.ToTesting(response, NUnitFramework.Id);
     }
 
     public bool Cancel(Guid runId)

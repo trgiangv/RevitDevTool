@@ -1,4 +1,4 @@
-using DevTools.TestRunner.Services;
+using DevTools.NUnit.Runner.Services;
 
 namespace DevTools.TestRunner.Tests;
 

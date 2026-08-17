@@ -15,49 +15,30 @@ public static class TestingErrorCodes
 }
 
 /// <summary>
-/// Host-side handler for <c>testing/*</c>. Legacy <c>nunit/hello|run|cancel</c>
-/// envelopes are rewritten onto the NUnit provider; <c>nunit/discover</c> is rejected.
+/// Host-side handler for the framework-neutral <c>testing/*</c> protocol.
 /// </summary>
 public sealed class TestingRequestHandler : IBridgeRequestHandler, IBridgeNotificationPublisher
 {
-    public const string LegacyNunitHello = "nunit/hello";
-    public const string LegacyNunitDiscover = "nunit/discover";
-    public const string LegacyNunitRun = "nunit/run";
-    public const string LegacyNunitCancel = "nunit/cancel";
-
     private readonly TestingProviderRegistry _registry;
     private readonly string _host;
     private readonly string _hostVersion;
-    private readonly bool _includeLegacyNunitEnvelopes;
     private readonly TestingCancellationStateMachine _cancellation = new();
     private int _isBusy;
 
     public TestingRequestHandler(
         TestingProviderRegistry registry,
         string host,
-        string hostVersion,
-        bool includeLegacyNunitEnvelopes = true)
+        string hostVersion)
     {
         _registry = registry ?? throw new ArgumentNullException(nameof(registry));
         _host = host ?? throw new ArgumentNullException(nameof(host));
         _hostVersion = hostVersion ?? throw new ArgumentNullException(nameof(hostVersion));
-        _includeLegacyNunitEnvelopes = includeLegacyNunitEnvelopes;
-        SupportedMethods = includeLegacyNunitEnvelopes
-            ?
-            [
-                TestingProtocol.Hello,
-                TestingProtocol.Run,
-                TestingProtocol.Cancel,
-                LegacyNunitHello,
-                LegacyNunitRun,
-                LegacyNunitCancel,
-            ]
-            :
-            [
-                TestingProtocol.Hello,
-                TestingProtocol.Run,
-                TestingProtocol.Cancel,
-            ];
+        SupportedMethods =
+        [
+            TestingProtocol.Hello,
+            TestingProtocol.Run,
+            TestingProtocol.Cancel,
+        ];
     }
 
     public Action<string, JsonElement?>? NotificationSender { get; set; }
@@ -72,8 +53,7 @@ public sealed class TestingRequestHandler : IBridgeRequestHandler, IBridgeNotifi
         JsonElement? @params,
         CancellationToken ct = default)
     {
-        if (string.Equals(method, LegacyNunitDiscover, StringComparison.OrdinalIgnoreCase)
-            || string.Equals(method, "testing/discover", StringComparison.OrdinalIgnoreCase))
+        if (string.Equals(method, "testing/discover", StringComparison.OrdinalIgnoreCase))
         {
             return Task.FromResult(BridgeMessage.Error(
                 requestId,
@@ -90,10 +70,10 @@ public sealed class TestingRequestHandler : IBridgeRequestHandler, IBridgeNotifi
         }
 
         if (string.Equals(testingMethod, TestingProtocol.Hello, StringComparison.Ordinal))
-            return Task.FromResult(HandleHello(requestId, @params, method));
+            return Task.FromResult(HandleHello(requestId, @params));
 
         if (string.Equals(testingMethod, TestingProtocol.Run, StringComparison.Ordinal))
-            return Task.FromResult(HandleRun(requestId, @params, method, ct));
+            return Task.FromResult(HandleRun(requestId, @params, ct));
 
         if (string.Equals(testingMethod, TestingProtocol.Cancel, StringComparison.Ordinal))
             return Task.FromResult(HandleCancel(requestId, @params));
@@ -104,18 +84,26 @@ public sealed class TestingRequestHandler : IBridgeRequestHandler, IBridgeNotifi
             $"Unknown method: {method}"));
     }
 
-    private BridgeMessage HandleHello(string requestId, JsonElement? @params, string originalMethod)
+    private BridgeMessage HandleHello(string requestId, JsonElement? @params)
     {
-        if (!TryReadHello(originalMethod, @params, out var request, out var error))
+        if (!TryReadHello(@params, out var request, out var error))
             return Invalid(requestId, error);
 
         if (!TestingProtocolBridge.IsCompatible(request!.ProtocolVersion))
             return TestingProtocolBridge.CreateIncompatibleResponse(requestId, request.ProtocolVersion);
 
-        var frameworkId = string.IsNullOrWhiteSpace(request.FrameworkId)
-            ? TestingFrameworkIds.NUnit
-            : request.FrameworkId;
-        _registry.GetRequired(frameworkId);
+        if (string.IsNullOrWhiteSpace(request!.FrameworkId))
+            return Invalid(requestId, "Framework ID is required.");
+
+        string frameworkId;
+        try
+        {
+            frameworkId = _registry.GetRequired(request.FrameworkId).FrameworkId;
+        }
+        catch (KeyNotFoundException ex)
+        {
+            return Invalid(requestId, ex.Message);
+        }
 
         var response = new TestingHelloResponse(
             ProtocolVersion: TestingProtocol.CurrentVersion,
@@ -133,7 +121,6 @@ public sealed class TestingRequestHandler : IBridgeRequestHandler, IBridgeNotifi
     private BridgeMessage HandleRun(
         string requestId,
         JsonElement? @params,
-        string originalMethod,
         CancellationToken cancellationToken)
     {
         if (_cancellation.State == TestingCancellationState.Poisoned)
@@ -144,7 +131,7 @@ public sealed class TestingRequestHandler : IBridgeRequestHandler, IBridgeNotifi
                 "The testing session is poisoned.");
         }
 
-        if (!TryReadRun(originalMethod, @params, out var request, out var error))
+        if (!TryReadRun(@params, out var request, out var error))
             return Invalid(requestId, error);
 
         IHostTestFrameworkProvider provider;
@@ -204,37 +191,15 @@ public sealed class TestingRequestHandler : IBridgeRequestHandler, IBridgeNotifi
         return BridgeMessage.Response(requestId, null);
     }
 
-    private bool TryMapMethod(string method, out string testingMethod)
+    private static bool TryMapMethod(string method, out string testingMethod)
     {
         testingMethod = method;
-        if (_includeLegacyNunitEnvelopes
-            && string.Equals(method, LegacyNunitHello, StringComparison.OrdinalIgnoreCase))
-        {
-            testingMethod = TestingProtocol.Hello;
-            return true;
-        }
-
-        if (_includeLegacyNunitEnvelopes
-            && string.Equals(method, LegacyNunitRun, StringComparison.OrdinalIgnoreCase))
-        {
-            testingMethod = TestingProtocol.Run;
-            return true;
-        }
-
-        if (_includeLegacyNunitEnvelopes
-            && string.Equals(method, LegacyNunitCancel, StringComparison.OrdinalIgnoreCase))
-        {
-            testingMethod = TestingProtocol.Cancel;
-            return true;
-        }
-
         return string.Equals(method, TestingProtocol.Hello, StringComparison.OrdinalIgnoreCase)
             || string.Equals(method, TestingProtocol.Run, StringComparison.OrdinalIgnoreCase)
             || string.Equals(method, TestingProtocol.Cancel, StringComparison.OrdinalIgnoreCase);
     }
 
     private static bool TryReadHello(
-        string originalMethod,
         JsonElement? @params,
         out TestingHelloRequest? request,
         out string error)
@@ -256,11 +221,6 @@ public sealed class TestingRequestHandler : IBridgeRequestHandler, IBridgeNotifi
                 return false;
             }
 
-            if (IsLegacyNunit(originalMethod) && string.IsNullOrWhiteSpace(request.FrameworkId))
-            {
-                request = request with { FrameworkId = TestingFrameworkIds.NUnit };
-            }
-
             return true;
         }
         catch (Exception ex)
@@ -271,7 +231,6 @@ public sealed class TestingRequestHandler : IBridgeRequestHandler, IBridgeNotifi
     }
 
     private static bool TryReadRun(
-        string originalMethod,
         JsonElement? @params,
         out TestingRunRequest? request,
         out string error)
@@ -291,11 +250,6 @@ public sealed class TestingRequestHandler : IBridgeRequestHandler, IBridgeNotifi
             {
                 error = "Empty run request.";
                 return false;
-            }
-
-            if (IsLegacyNunit(originalMethod) && string.IsNullOrWhiteSpace(request.FrameworkId))
-            {
-                request = request with { FrameworkId = TestingFrameworkIds.NUnit };
             }
 
             return true;
@@ -337,9 +291,6 @@ public sealed class TestingRequestHandler : IBridgeRequestHandler, IBridgeNotifi
             return false;
         }
     }
-
-    private static bool IsLegacyNunit(string method) =>
-        method.StartsWith("nunit/", StringComparison.OrdinalIgnoreCase);
 
     private static BridgeMessage Invalid(string requestId, string error) =>
         BridgeMessage.Error(requestId, TestingErrorCodes.InvalidRequest, error);

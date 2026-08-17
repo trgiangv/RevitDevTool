@@ -1,8 +1,8 @@
 using System.Reflection;
 using System.Runtime.Loader;
-using DevTools.NUnit.Core.Contracts;
-using DevTools.NUnit.Core.Results;
-using DevTools.NUnit.Core.Runtime;
+using DevTools.NUnit.Transport.Contracts;
+using DevTools.NUnit.Transport.Results;
+using DevTools.NUnit.Transport.Runtime;
 using DevTools.NUnit.Host.Loading;
 using DevTools.NUnit.Host.Tests.Loading;
 
@@ -125,6 +125,19 @@ public sealed class NUnitRuntimeSessionFactoryTests
 
         Assert.Same(hostCore, resolvedCore);
         Assert.Same(AssemblyLoadContext.Default, AssemblyLoadContext.GetLoadContext(resolvedCore!));
+    }
+
+    [Fact]
+    public void ResolveAssembly_binds_shared_testing_abstractions_from_default_context()
+    {
+        var manifest = NUnitRuntimeTestEnvironment.BuildFixtureGeneration();
+        var hostAbstractions = typeof(DevTools.Testing.Abstractions.Contracts.TestingRunRequest).Assembly;
+        var loadContext = new NUnitRuntimeLoadContext(manifest);
+
+        var resolved = loadContext.ResolveAssemblyForTesting(hostAbstractions.GetName());
+
+        Assert.Same(hostAbstractions, resolved);
+        Assert.Same(AssemblyLoadContext.Default, AssemblyLoadContext.GetLoadContext(resolved!));
     }
 
     [Fact]

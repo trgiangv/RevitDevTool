@@ -15,7 +15,6 @@
             <ExcludeAssets>runtime</ExcludeAssets>
         </PackageReference>
         <InternalsVisibleTo Include="DevTools.Testing.Mtp.Tests"/>
-        <InternalsVisibleTo Include="DevTools.NUnit.Mtp.Tests"/>
         <ProjectReference Include="..\DevTools.Testing.Abstractions\DevTools.Testing.Abstractions.csproj"/>
         <ProjectReference Include="..\DevTools.Testing.Transport\DevTools.Testing.Transport.csproj"/>
     </ItemGroup>

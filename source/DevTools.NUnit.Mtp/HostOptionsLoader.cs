@@ -1,5 +1,5 @@
 using System.Text.Json;
-using DevTools.NUnit.Core;
+using DevTools.NUnit.Provider;
 
 namespace DevTools.NUnit.Mtp;
 

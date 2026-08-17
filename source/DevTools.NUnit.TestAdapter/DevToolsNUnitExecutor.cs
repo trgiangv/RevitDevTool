@@ -1,4 +1,4 @@
-using DevTools.NUnit.Core;
+using DevTools.NUnit.Provider;
 using DevTools.NUnit.TestAdapter.Runner;
 using DevTools.Testing.Abstractions.Contracts;
 using DevTools.Testing.Transport;
@@ -92,7 +92,7 @@ public sealed class DevToolsNUnitExecutor : ITestExecutor
         var request = new TestingRunRequest(
             TestingProtocol.CurrentVersion,
             Guid.NewGuid(),
-            TestingFrameworkIds.NUnit,
+            "nunit",
             new TestingAssemblyReference(source, null, null),
             NUnitTestingMapping.ToSelection(VsTestCaseMapper.BuildFilter(tests)),
             new Dictionary<string, string>());

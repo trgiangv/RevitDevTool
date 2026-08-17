@@ -56,7 +56,7 @@ public sealed class VsTestGenericContractTests
             new CollectingHandle());
 
         Assert.NotNull(transport.LastRequest);
-        Assert.Equal(TestingFrameworkIds.NUnit, transport.LastRequest!.FrameworkId);
+        Assert.Equal("nunit", transport.LastRequest!.FrameworkId);
         Assert.Equal(TestingProtocol.CurrentVersion, transport.LastRequest.ProtocolVersion);
         Assert.Equal(["FullSemanticsFixture.PlainTest_Passes"], transport.LastRequest.Selection.TestIds.ToArray());
         Assert.Equal(MissingRunnerPath, transport.LastHostOptions!.RunnerPath);

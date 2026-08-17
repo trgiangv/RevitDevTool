@@ -1,6 +1,6 @@
-using DevTools.NUnit.Core.Contracts;
-using DevTools.NUnit.Core.Results;
-using DevTools.NUnit.Core.Runtime;
+using DevTools.NUnit.Transport.Contracts;
+using DevTools.NUnit.Transport.Results;
+using DevTools.NUnit.Transport.Runtime;
 using DevTools.NUnit.Host.Loading;
 using DevTools.NUnit.Host.Tests.Loading;
 using DevTools.NUnit.Host.Tests.TestSupport;
@@ -21,7 +21,7 @@ public sealed class NUnitHostTestFrameworkProviderTests
     {
         using var workspace = new TempWorkspace();
         var provider = CreateProvider(workspace, new FakeNUnitRuntimeSessionFactory());
-        Assert.Equal(TestingFrameworkIds.NUnit, provider.FrameworkId);
+        Assert.Equal(NUnitFramework.Id, provider.FrameworkId);
     }
 
     [Fact]
@@ -90,6 +90,7 @@ public sealed class NUnitHostTestFrameworkProviderTests
             hostResponse.Cases[0].Traits![0].Value,
             testingResponse.Results[0].Traits[0].Value);
         Assert.Equal(hostResponse.Cases[0].Attachments![0].Path, testingResponse.Results[0].Attachments[0].Path);
+        Assert.Equal(hostResponse.Cases[0].Attachments![0].ContentType, testingResponse.Results[0].Attachments[0].ContentType);
         Assert.Equal(hostCases[0].Case.Id, Assert.Single(sink.Events).Case!.TestId);
         Assert.Equal(TestingCancellationState.None, testingResponse.CancellationState);
     }
@@ -195,7 +196,7 @@ public sealed class NUnitHostTestFrameworkProviderTests
         new(
             TestingProtocol.CurrentVersion,
             runId,
-            TestingFrameworkIds.NUnit,
+            NUnitFramework.Id,
             new TestingAssemblyReference(assemblyPath, "net10.0-windows", null),
             selection,
             EmptyOptions);
