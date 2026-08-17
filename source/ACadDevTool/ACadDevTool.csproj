@@ -19,6 +19,7 @@
             DevTools.UI.dll;
             DevTools.NUnit.Core.dll;
             DevTools.NUnit.Runtime.dll;
+            DevTools.Testing.Abstractions.dll;
         </RepackBinariesExcludes>
     </PropertyGroup>
 

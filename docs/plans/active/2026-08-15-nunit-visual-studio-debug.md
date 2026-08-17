@@ -4,7 +4,7 @@ Date: 2026-08-15
 
 ## Status
 
-Active
+Active. Executable name is `DevTools.TestRunner` (renamed in P1 2026-08-17).
 
 ## Outcome
 
@@ -64,7 +64,7 @@ and does not fail the run.
 
 ## Validation
 
-- Compile (pass): `dotnet build source/DevTools.NUnit.Runner/DevTools.NUnit.Runner.csproj -c Debug`; same for MTP and TestAdapter
+- Compile (pass): `dotnet build source/DevTools.TestRunner/DevTools.TestRunner.csproj -c Debug`; same for MTP and TestAdapter
 - MTP tests (pass 24): `scripts/test-dotnet.ps1 -Project tests/DevTools.NUnit.Mtp.Tests/DevTools.NUnit.Mtp.Tests.csproj`
 - TestAdapter tests (pass 6): `scripts/test-dotnet.ps1 -Project tests/DevTools.NUnit.TestAdapter.Tests/DevTools.NUnit.TestAdapter.Tests.csproj`
 - Runner tests: 39 pass excluding pre-existing flake `NUnitPipeClientTests.RunAsync_caller_cancellation_sends_cancel_for_active_run_id` (fails intermittently in the full suite; passes alone)

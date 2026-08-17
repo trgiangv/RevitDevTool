@@ -2,6 +2,7 @@
   <!--
     Assemblies owned by the host add-in surface:
     - DevTools.NUnit.Core: one shared type identity (loose beside the add-in)
+    - DevTools.Testing.Abstractions: one shared type identity (loose beside the add-in)
     - Transport/JSON polyfills: ILRepack into the main host DLL
 
     Never place these inside NUnitRuntimePayload / NUnitRuntime\.
@@ -13,5 +14,6 @@
     <NUnitHostOwnedAssembly Include="System.Text.Encodings.Web" />
     <NUnitHostOwnedAssembly Include="System.IO.Pipelines" />
     <NUnitHostOwnedAssembly Include="Microsoft.Bcl.AsyncInterfaces" />
+    <TestingSharedAssembly Include="DevTools.Testing.Abstractions" />
   </ItemGroup>
 </Project>

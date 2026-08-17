@@ -14,9 +14,9 @@ public static class NUnitHostingExtensions
     /// hosting after <c>AddExecutionServices()</c>.
     /// </summary>
     /// <remarks>
-    /// <c>testing/*</c> is not registered here. Host composition must add
-    /// <see cref="TestingRequestHandler"/> with legacy NUnit envelopes disabled
-    /// and host-thread marshaling so <c>nunit/*</c> methods stay unique.
+    /// <c>testing/*</c> is not registered here. Call
+    /// <see cref="AddGenericTestingHostServices"/> after this method so
+    /// <c>nunit/*</c> methods stay unique.
     /// </remarks>
     public static IServiceCollection AddNUnitHostServices(this IServiceCollection services)
     {
@@ -32,6 +32,16 @@ public static class NUnitHostingExtensions
         services.TryAddSingleton<IHostTestFrameworkProvider, NUnitHostTestFrameworkProvider>();
         services.TryAddSingleton<TestingProviderRegistry>();
         services.AddSingleton<IBridgeRequestHandler, NUnitRequestHandler>();
+        return services;
+    }
+
+    /// <summary>
+    /// Registers <c>testing/*</c> once with legacy NUnit envelopes disabled.
+    /// Call after <see cref="AddNUnitHostServices"/> so the NUnit provider exists.
+    /// </summary>
+    public static IServiceCollection AddGenericTestingHostServices(this IServiceCollection services)
+    {
+        services.AddSingleton<IBridgeRequestHandler, MarshaledTestingRequestHandler>();
         return services;
     }
 

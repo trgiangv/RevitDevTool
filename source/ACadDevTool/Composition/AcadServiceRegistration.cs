@@ -90,6 +90,7 @@ internal static class AcadServiceRegistration
 
         services.AddExecutionServices();
         services.AddNUnitHostServices();
+        services.AddGenericTestingHostServices();
 
         services.AddSingleton<IBuiltInMcpResource, AcadCSharpCheatsheet>();
         services.AddSingleton<IBuiltInMcpResource, AcadPythonCheatsheet>();

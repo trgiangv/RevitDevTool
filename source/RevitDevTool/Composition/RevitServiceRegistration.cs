@@ -133,6 +133,7 @@ internal static class RevitServiceRegistration
 
         services.AddExecutionServices(registerDefaultScriptProvider: false);
         services.AddNUnitHostServices();
+        services.AddGenericTestingHostServices();
         services.AddSingleton<IScriptExecutionStrategyFactory, RevitScriptExecutionStrategyFactory>();
         services.AddSingleton<IExecutionProvider, ScriptExecutionProvider>();
         services.AddKeyedSingleton<IExecutionProvider, ScriptExecutionProvider>(ContainerMode.Script);

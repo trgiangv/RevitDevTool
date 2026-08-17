@@ -47,7 +47,7 @@ Date: 2026-08-17
 
 ## Status
 
-Active — P0 CLI exit gate is complete. Tasks 1-7 landed; remaining work is host composition, packaging, and live NUnit parity.
+Active — Tasks 1-8 landed. Stop for user review before P2. TestRunner stdout is still `nunit/*` JSON (`NUnitProcessTransportAdapter` remains).
 
 ## Harness Execution Rules
 
@@ -475,20 +475,20 @@ public sealed record TestingRuntimePayload(
   document, but only one architecture layer
 - Update: the two predecessor NUnit active plans after parity
 
-- [ ] Register Testing.Host once and NUnit provider once in each Autodesk host.
-- [ ] Package `DevTools.Testing.Abstractions` loose exactly once; keep NUnit
+- [x] Register Testing.Host once and NUnit provider once in each Autodesk host.
+- [x] Package `DevTools.Testing.Abstractions` loose exactly once; keep NUnit
   runtime/framework assemblies in the NUnit runtime folder and generation.
-- [ ] Add package-layout tests rejecting duplicate Abstractions, merged NUnit,
+- [x] Add package-layout tests rejecting duplicate Abstractions, merged NUnit,
   old Runner executable, and missing provider runtime assets.
-- [ ] Compile Revit 2022, 2025, and 2027 plus affected AutoCAD composition using
+- [x] Compile Revit 2022, 2025, and 2027 plus affected AutoCAD composition using
   the build skill's compile-only flags.
-- [ ] Execute discovery with no Autodesk process running and prove no host
+- [x] Execute discovery with no Autodesk process running and prove no host
   starts.
-- [ ] Run the existing Revit NUnit MTP sample and record host PID, Runner PID,
+- [x] Run the existing Revit NUnit MTP sample and record host PID, Runner PID,
   framework ID, generation ID, and result.
-- [ ] After parity, mark the remaining neutralization work in the 2026-08-12
+- [x] After parity, mark the remaining neutralization work in the 2026-08-12
   plan superseded and update the 2026-08-15 debug plan's Runner name.
-- [ ] Stop for user review; do not commit or start P2 without authorization.
+- [x] Stop for user review; do not commit or start P2 without authorization.
 
 ## Risks And Recovery
 
@@ -516,7 +516,7 @@ public sealed record TestingRuntimePayload(
 - [x] NUnit provider adapter complete; MTP/VSTest cutover still open.
 - [x] Shared MTP helpers extracted; NUnit MTP run uses generic transport + `nunit` framework id.
 - [x] VSTest-only compatibility path passes.
-- [ ] Packaging and live host matrix pass.
+- [x] Packaging and live host matrix pass.
 
 ## Task-local evidence
 
@@ -527,6 +527,7 @@ public sealed record TestingRuntimePayload(
 - 2026-08-17 Task 5: `NUnitHostTestFrameworkProvider` wraps `INUnitHost`. TestIds become `<test>` XML (never `<name>`/display name); `ProviderPayload` is raw NUnit filter XML. Mapper keeps protocol `Id` as `TestId`. DI registers the provider + `TestingProviderRegistry`; `testing/*` is not on the pipe yet (needs host-thread marshal in Task 8, and `includeLegacyNunitEnvelopes: false` so `nunit/*` stays unique). NUnit staging kept. Proof: NUnit.Host Debug build all TFMs; new Host tests 14 (mapper/filter/provider/focused fixture); Testing.Host 16; Execution registration 1; net48 Host 13. Runtime 34 tests passed then MTP leftover-thread exit 1 (pre-existing). Host.Tests full suite still has pre-existing `Run_reports_pass_and_fail_results` trace-marker miss. Core STJ boundary fail is pre-existing.
 - 2026-08-17 Task 6: `DevTools.Testing.Mtp` helpers only (error node, result properties, `TestingRunnerSession`). No universal `ITestFramework`. NUnit MTP keeps local PE discovery, FullName UIDs, builder hook. Run injects `ITestRunnerTransport` with `TestingFrameworkIds.NUnit`. Live TestRunner still emits NUnit JSON, so production MTP uses `NUnitProcessTransportAdapter` over `ProcessRunnerClient` until Task 8. Name filters round-trip via `ProviderPayload` XML. Proof: Testing.Mtp Debug all TFMs; Testing.Mtp tests 5; NUnit.Mtp tests 25; Transport tests 16 (`--framework` + `--test`).
 - 2026-08-17 Task 7: VSTest executor/settings use `ITestRunnerTransport` + `TestingHostOptions` + `TestingFrameworkIds.NUnit`. Shared `NUnitProcessTransportAdapter` / `NUnitTestingMapping` live in Core `Client/` and are linked into MTP and the adapter. Discovery stays local PE. Proof: TestAdapter tests 8; NUnit.Mtp tests 25; package policy 3; net48 VSTest `--list-tests` listed `Arithmetic_runs_inside_host`, `Intentional_failure_for_demo`, `Writes_output`.
+- 2026-08-17 Task 8: `MarshaledTestingRequestHandler` registers `testing/*` once (`includeLegacyNunitEnvelopes: false`); `nunit/*` stays on `NUnitRequestHandler`. `DevTools.Testing.Abstractions.dll` is ILRepack-excluded and asserted loose exactly once; NUnit runtime stays under `NUnitRuntime\`. Proof: marshal tests 3; registration 1; packaging ownership 8; Revit 2022/2025/2027 compile (2025 ILRepacked); Acad 2025 compile-only; `--list-tests` with no Autodesk process (3 tests, no host start). Live MTP `Arithmetic_runs_inside_host` passed in Revit 2025 PID **39752**; follow-up TestRunner PID **56500**, framework **nunit**, generation **`2c1b2b2210c684865ff58694ff392e75d0674bc8ff2b6fe53341336f7ceef161`**, outcome Passed. TestRunner stdout remains `NUnitRunResponse` JSON.
 
 ## Decisions
 

@@ -21,6 +21,11 @@ ADR 0016 §4). P1 is the thin MTP consumer package `DevTools.NUnit` (project
 `DevTools.NUnit.Mtp`) that replaces VSTest. Do not build a `Runner serve`
 daemon unless Test Explorer session reuse requires it.
 
+**Superseded 2026-08-17:** remaining framework-neutral extraction, Runner
+rename to `DevTools.TestRunner`, and generic `testing/*` host protocol live in
+[2026-08-17 P1](2026-08-17-p1-framework-neutral-testing-core.md). Do not resume
+those items here. VSTest removal (Task 11) remains a separate decision.
+
 ## Outcome
 
 Replace the in-host NUnit reflection emulator with the real NUnit 4.6.1

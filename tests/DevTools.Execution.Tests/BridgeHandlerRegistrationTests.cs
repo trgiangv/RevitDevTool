@@ -24,6 +24,7 @@ public sealed class BridgeHandlerRegistrationTests
         services.AddSingleton<IHostContextExecutor, NoOpHostContextExecutor>();
         services.AddExecutionServices();
         services.AddNUnitHostServices();
+        services.AddGenericTestingHostServices();
 
         var implementationTypes = services
             .Where(descriptor => descriptor.ServiceType == typeof(IBridgeRequestHandler))
@@ -35,6 +36,7 @@ public sealed class BridgeHandlerRegistrationTests
         Assert.Contains(typeof(InstanceRequestHandler), implementationTypes);
         Assert.Contains(typeof(PytestRequestHandler), implementationTypes);
         Assert.Contains(typeof(NUnitRequestHandler), implementationTypes);
+        Assert.Contains(typeof(MarshaledTestingRequestHandler), implementationTypes);
 
         Assert.Contains(
             services,

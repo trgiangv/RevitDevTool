@@ -31,9 +31,12 @@ VSTest (`DevTools.NUnit.TestAdapter`). Keep them on **separate** test projects.
 
 | Project | Role |
 |---------|------|
-| `DevTools.NUnit.Core` | `nunit/*` wire contracts, timing, protocol version. Out-of-process Runner client (`Client/`, linked into MTP/VSTest, not in the host DLL) |
-| `DevTools.NUnit.Host` | Native NUnit runtime in the CAD host |
-| `DevTools.TestRunner` | CLI: PE discover locally; find/launch host pipe only on **run** |
+| `DevTools.Testing.Abstractions` | Framework-neutral DTOs and provider contracts. Packaged **loose exactly once** beside the host add-in |
+| `DevTools.Testing.Transport` | `testing/*` JSON/IPC; merged into the host add-in |
+| `DevTools.Testing.Host` | Provider registry and `testing/*` dispatch; merged into the host add-in |
+| `DevTools.NUnit.Core` | `nunit/*` wire contracts, timing, protocol version. Out-of-process Runner client (`Client/`, linked into MTP/VSTest, not in the host DLL). Loose beside the add-in |
+| `DevTools.NUnit.Host` | Native NUnit runtime provider plus marshaled `testing/*` handler. NUnit runtime stays under `NUnitRuntime\` |
+| `DevTools.TestRunner` | CLI: PE discover locally; find/launch host pipe only on **run**. One executable: `DevTools.TestRunner.exe` |
 | `DevTools.NUnit.Mtp` | MTP framework (`PackageId=RevitDevTool.NUnit`); PE discover in-process; Runner only on **run** |
 | `DevTools.NUnit.TestAdapter` | VSTest adapter; same PE discover + Runner **run** contract |
 
@@ -92,8 +95,10 @@ IDE selected-run uses FullName. Runner composes NUnit `TestFilter` XML for the h
 - MTP exe never runs NUnit test bodies locally; Runner executes them in the host.
 - Pipe: `DevTools_{Host}_{Version}_{PID}` (same control pipe family as pytest,
   **not** `DevToolsMcp_*`).
-- Methods: `nunit/hello`, `nunit/discover`, `nunit/run`, `nunit/cancel`,
-  `nunit/progress`.
+- Methods: generic `testing/hello`, `testing/run`, `testing/cancel`,
+  `testing/progress` (no `testing/discover`). Legacy `nunit/hello`,
+  `nunit/discover`, `nunit/run`, `nunit/cancel`, `nunit/progress` remain on
+  `NUnitRequestHandler` until TestRunner stdout is `testing/*` JSON.
 - In-host: content-addressed **generation shadow** of the test output plus
   `DevTools.NUnit.Runtime`. Pin **NUnit 4.6.1** (`nunit.framework` file version
   `4.6.1.0`) beside the test assembly. Deploy-folder DLLs stay on

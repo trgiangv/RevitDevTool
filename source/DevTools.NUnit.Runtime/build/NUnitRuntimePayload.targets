@@ -21,6 +21,8 @@
                                      Condition="Exists('$(_NUnitHostOutputDir)$(TargetName).pdb')" />
       <_NUnitRuntimePayloadExclude Include="$(_NUnitHostOutputDir)%(NUnitHostOwnedAssembly.Identity).dll" />
       <_NUnitRuntimePayloadExclude Include="$(_NUnitHostOutputDir)%(NUnitHostOwnedAssembly.Identity).pdb" />
+      <_NUnitRuntimePayloadExclude Include="$(_NUnitHostOutputDir)%(TestingSharedAssembly.Identity).dll" />
+      <_NUnitRuntimePayloadExclude Include="$(_NUnitHostOutputDir)%(TestingSharedAssembly.Identity).pdb" />
       <_NUnitRuntimePayload Include="@(_NUnitRuntimePayloadCandidate)"
                             Exclude="@(_NUnitRuntimePayloadExclude)" />
     </ItemGroup>
