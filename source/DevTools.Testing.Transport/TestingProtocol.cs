@@ -10,6 +10,12 @@ public static class TestingProtocol
     public const string Progress = "testing/progress";
 
     public const string IncompatibleCode = "testing/protocol_incompatible";
+
+    public static bool IsCompatible(int protocolVersion) =>
+        protocolVersion == CurrentVersion;
+
+    public static string CreateUnsupportedMessage(int protocolVersion) =>
+        $"Testing protocol version {protocolVersion} is not supported. Expected {CurrentVersion}.";
 }
 
 public sealed record TestingHelloRequest(int ProtocolVersion, string FrameworkId);

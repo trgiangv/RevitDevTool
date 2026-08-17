@@ -32,7 +32,7 @@ public sealed class ProcessTestRunnerClient : ITestRunnerTransport
         if (onResult is null)
             throw new ArgumentNullException(nameof(onResult));
 
-        if (!TestingProtocolBridge.IsCompatible(request.ProtocolVersion))
+        if (!TestingProtocol.IsCompatible(request.ProtocolVersion))
         {
             return new TestingRunResponse(
                 request.RunId,
@@ -41,7 +41,7 @@ public sealed class ProcessTestRunnerClient : ITestRunnerTransport
                 Results: [],
                 CancellationState: TestingCancellationState.None,
                 DiagnosticCode: TestingProtocol.IncompatibleCode,
-                DiagnosticMessage: TestingProtocolBridge.CreateMessage(request.ProtocolVersion));
+                DiagnosticMessage: TestingProtocol.CreateUnsupportedMessage(request.ProtocolVersion));
         }
 
         var output = RunProcess(hostOptions, TestingRunnerCli.BuildRunArguments(request, hostOptions), request.RunId);
@@ -166,7 +166,7 @@ public sealed class ProcessTestRunnerClient : ITestRunnerTransport
 
     static void AddArgument(ProcessStartInfo startInfo, string argument)
     {
-#if NETFRAMEWORK
+#if NETFRAMEWORK || NETSTANDARD
         if (startInfo.Arguments.Length > 0)
             startInfo.Arguments += " ";
         startInfo.Arguments += QuoteArgument(argument);
@@ -175,7 +175,7 @@ public sealed class ProcessTestRunnerClient : ITestRunnerTransport
 #endif
     }
 
-#if NETFRAMEWORK
+#if NETFRAMEWORK || NETSTANDARD
     static string QuoteArgument(string value)
     {
         if (value.Length > 0 && value.IndexOfAny([' ', '\t', '"']) < 0)

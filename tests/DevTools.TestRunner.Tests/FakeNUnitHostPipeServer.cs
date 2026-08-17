@@ -3,6 +3,7 @@ using DevTools.Ipc;
 using DevTools.NUnit.Core.Compatibility;
 using DevTools.NUnit.Core.Contracts;
 using DevTools.NUnit.Core.Results;
+using DevTools.Testing.Transport;
 using DevTools.TestRunner.Services;
 
 namespace DevTools.TestRunner.Tests;
@@ -21,6 +22,16 @@ internal sealed class FakeNUnitHostPipeServer : IAsyncDisposable
         _duplex = duplex;
         _connection.MessageReceived += message => _ = HandleAsync(message);
         _connection.StartReadLoop();
+    }
+
+    public static async Task<(FakeNUnitHostPipeServer Server, TestingPipeClient Client)> CreateTestingConnectedPairAsync()
+    {
+        var duplex = new DuplexMemoryStream();
+        var server = new FakeNUnitHostPipeServer(new BridgePipeConnection(duplex.Server), duplex);
+        var client = TestingPipeClient.ConnectForTesting(duplex.Client);
+        server._connected.TrySetResult();
+        await server._connected.Task.WaitAsync(TimeSpan.FromSeconds(5));
+        return (server, client);
     }
 
     public static async Task<(FakeNUnitHostPipeServer Server, NUnitPipeClient Client)> CreateConnectedPairAsync()
@@ -63,6 +74,14 @@ internal sealed class FakeNUnitHostPipeServer : IAsyncDisposable
         if (message.Method == NUnitProtocol.Cancel)
         {
             var cancel = message.Params?.Deserialize(NUnitJsonContext.Default.NUnitCancelRequest);
+            if (cancel is not null)
+                lock (_observedCancelRunIds)
+                    _observedCancelRunIds.Add(cancel.RunId);
+        }
+
+        if (message.Method == TestingProtocol.Cancel)
+        {
+            var cancel = message.Params?.Deserialize(TestingJsonContext.Default.TestingCancelRequest);
             if (cancel is not null)
                 lock (_observedCancelRunIds)
                     _observedCancelRunIds.Add(cancel.RunId);

@@ -14,7 +14,8 @@ public sealed record RunnerCommandLine(
     int HostLaunchTimeoutSeconds,
     bool Debug = false,
     int? DebugParentPid = null,
-    string FrameworkId = TestingFrameworkIds.NUnit)
+    string FrameworkId = TestingFrameworkIds.NUnit,
+    bool UseGenericProtocol = false)
 {
     public static bool TryCreate(
         string command,
@@ -60,6 +61,7 @@ public sealed record RunnerCommandLine(
             return false;
         }
 
+        var useGenericProtocol = !string.IsNullOrWhiteSpace(framework);
         if (!TryNormalizeFramework(framework, out var frameworkId, out error))
             return false;
 
@@ -85,7 +87,8 @@ public sealed record RunnerCommandLine(
             hostLaunchTimeoutSeconds,
             debug || parentPid is not null,
             parentPid,
-            frameworkId);
+            frameworkId,
+            useGenericProtocol);
         return true;
     }
 

@@ -190,9 +190,8 @@ internal sealed class DevToolsNUnitFramework : ITestFramework, IDataProducer
             return _session;
         }
 
-        var runnerPath = ProcessRunnerClient.ResolveRunnerPath(_options);
-        var processClient = new ProcessRunnerClient(runnerPath);
-        _ownedTransport = new NUnitProcessTransportAdapter(processClient);
+        var runnerPath = NUnitRunnerPaths.ResolveRunnerPath(_options.RunnerPath);
+        _ownedTransport = new ProcessTestRunnerClient(runnerPath);
         _session = new DevToolsNUnitSession(_ownedTransport);
         return _session;
     }

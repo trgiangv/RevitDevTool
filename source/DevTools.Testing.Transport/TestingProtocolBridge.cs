@@ -6,7 +6,7 @@ namespace DevTools.Testing.Transport;
 public static class TestingProtocolBridge
 {
     public static bool IsCompatible(int protocolVersion) =>
-        protocolVersion == TestingProtocol.CurrentVersion;
+        TestingProtocol.IsCompatible(protocolVersion);
 
     public static BridgeMessage CreateIncompatibleResponse(string requestId, int protocolVersion) =>
         BridgeMessage.Error(
@@ -20,5 +20,5 @@ public static class TestingProtocolBridge
             }));
 
     public static string CreateMessage(int protocolVersion) =>
-        $"Testing protocol version {protocolVersion} is not supported. Expected {TestingProtocol.CurrentVersion}.";
+        TestingProtocol.CreateUnsupportedMessage(protocolVersion);
 }

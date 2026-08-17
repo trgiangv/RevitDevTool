@@ -1,7 +1,6 @@
 using ConsoleAppFramework;
 using DevTools.NUnit.Core;
 using DevTools.NUnit.Core.Contracts;
-using DevTools.Testing.Abstractions.Contracts;
 using DevTools.TestRunner.Parsing;
 using DevTools.TestRunner.Services;
 
@@ -33,7 +32,7 @@ internal sealed class TestRunnerCommands(HostSession hosts)
         bool hostLaunch = false,
         int hostTimeout = NUnitHostTiming.DefaultHostRequestTimeoutSeconds,
         int hostLaunchTimeout = NUnitHostTiming.DefaultHostLaunchTimeoutSeconds,
-        string framework = TestingFrameworkIds.NUnit,
+        string framework = "",
         CancellationToken cancellationToken = default) =>
         ExecuteAsync(
             NUnitRunnerCli.DiscoverCommand,
@@ -79,7 +78,7 @@ internal sealed class TestRunnerCommands(HostSession hosts)
         int hostLaunchTimeout = NUnitHostTiming.DefaultHostLaunchTimeoutSeconds,
         bool debug = false,
         int? debugParentPid = null,
-        string framework = TestingFrameworkIds.NUnit,
+        string framework = "",
         CancellationToken cancellationToken = default) =>
         ExecuteAsync(
             NUnitRunnerCli.RunCommand,

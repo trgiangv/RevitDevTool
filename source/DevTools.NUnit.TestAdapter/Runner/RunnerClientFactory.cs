@@ -7,8 +7,7 @@ internal static class RunnerClientFactory
 {
     public static ITestRunnerTransport Create()
     {
-        var options = AdapterSettings.Current.ToHostRunOptions();
-        return new NUnitProcessTransportAdapter(
-            new ProcessRunnerClient(ProcessRunnerClient.ResolveRunnerPath(options)));
+        var options = AdapterSettings.Current;
+        return new ProcessTestRunnerClient(NUnitRunnerPaths.ResolveRunnerPath(options.RunnerPath));
     }
 }

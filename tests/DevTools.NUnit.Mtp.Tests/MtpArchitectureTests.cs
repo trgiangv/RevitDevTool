@@ -68,26 +68,32 @@ public sealed class MtpArchitectureTests
         var client = File.ReadAllText(Path.Combine(
             RepositoryRoot,
             "source",
-            "DevTools.NUnit.Core",
-            "Client",
-            "ProcessRunnerClient.cs"));
+            "DevTools.Testing.Transport",
+            "ProcessTestRunnerClient.cs"));
         Assert.DoesNotContain("NUnitRunnerCli.DiscoverCommand", client, StringComparison.Ordinal);
         Assert.DoesNotContain("IReadOnlyList<NUnitDiscoveredTest> Discover", client, StringComparison.Ordinal);
+        Assert.Contains("TestingRunnerCli.BuildRunArguments", client, StringComparison.Ordinal);
 
         var transport = File.ReadAllText(Path.Combine(
             RepositoryRoot,
             "source",
-            "DevTools.NUnit.Core",
-            "Client",
-            "IRunnerTransport.cs"));
+            "DevTools.Testing.Transport",
+            "ITestRunnerTransport.cs"));
         Assert.DoesNotContain("Discover(", transport, StringComparison.Ordinal);
     }
 
     [Fact]
-    public void Mtp_and_vstest_share_the_runner_client_via_linked_core_files()
+    public void Mtp_and_vstest_share_the_generic_runner_client()
     {
-        var client = Path.Combine(RepositoryRoot, "source", "DevTools.NUnit.Core", "Client", "ProcessRunnerClient.cs");
+        var client = Path.Combine(
+            RepositoryRoot, "source", "DevTools.Testing.Transport", "ProcessTestRunnerClient.cs");
         Assert.True(File.Exists(client));
+        Assert.False(File.Exists(Path.Combine(
+            RepositoryRoot, "source", "DevTools.NUnit.Core", "Client", "ProcessRunnerClient.cs")));
+        Assert.False(File.Exists(Path.Combine(
+            RepositoryRoot, "source", "DevTools.NUnit.Core", "Client", "NUnitProcessTransportAdapter.cs")));
+        Assert.False(File.Exists(Path.Combine(
+            RepositoryRoot, "source", "DevTools.NUnit.Core", "Client", "IRunnerTransport.cs")));
 
         var coreCsproj = File.ReadAllText(Path.Combine(
             RepositoryRoot, "source", "DevTools.NUnit.Core", "DevTools.NUnit.Core.csproj"));
@@ -97,9 +103,16 @@ public sealed class MtpArchitectureTests
             RepositoryRoot, "source", "DevTools.NUnit.Mtp", "ProcessRunnerClient.cs")));
         Assert.False(File.Exists(Path.Combine(
             RepositoryRoot, "source", "DevTools.NUnit.Mtp", "NUnitProcessTransportAdapter.cs")));
-        Assert.True(File.Exists(Path.Combine(
-            RepositoryRoot, "source", "DevTools.NUnit.Core", "Client", "NUnitProcessTransportAdapter.cs")));
         Assert.False(Directory.Exists(Path.Combine(RepositoryRoot, "source", "DevTools.NUnit.Client")));
+
+        var mtp = File.ReadAllText(Path.Combine(
+            RepositoryRoot, "source", "DevTools.NUnit.Mtp", "DevTools.NUnit.Mtp.csproj"));
+        var adapter = File.ReadAllText(Path.Combine(
+            RepositoryRoot, "source", "DevTools.NUnit.TestAdapter", "DevTools.NUnit.TestAdapter.csproj"));
+        Assert.Contains("DevTools.Testing.Transport", mtp, StringComparison.Ordinal);
+        Assert.Contains("ProcessTestRunnerClient.cs", adapter, StringComparison.Ordinal);
+        Assert.DoesNotContain("NUnitProcessTransportAdapter.cs", mtp, StringComparison.Ordinal);
+        Assert.DoesNotContain("NUnitProcessTransportAdapter.cs", adapter, StringComparison.Ordinal);
     }
 
     [Fact]

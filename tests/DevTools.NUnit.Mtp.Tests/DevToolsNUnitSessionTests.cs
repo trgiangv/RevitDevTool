@@ -103,46 +103,46 @@ public sealed class DevToolsNUnitSessionTests
     }
 }
 
-public sealed class ProcessRunnerClientTests
+public sealed class ProcessTestRunnerCliTests
 {
     [Fact]
-    public void BuildHostArguments_sends_name_and_test_tokens()
+    public void BuildRunArguments_sends_framework_and_test_tokens()
     {
-        var options = new HostRunOptions("Revit", "2026", true, 60, 180, @"C:\Runner.exe");
-        var args = ProcessRunnerClient.BuildHostArguments(
-            @"C:\tests\HostTests.dll",
-            options,
-            new RunnerTestFilter(["Arithmetic_runs_inside_host"], ["HostSmokeTests.Arithmetic"]));
+        var args = TestingRunnerCli.BuildRunArguments(
+            new TestingRunRequest(
+                TestingProtocol.CurrentVersion,
+                Guid.NewGuid(),
+                TestingFrameworkIds.NUnit,
+                new TestingAssemblyReference(@"C:\tests\HostTests.dll", null, null),
+                new TestingSelection(["HostSmokeTests.Arithmetic"]),
+                new Dictionary<string, string>()),
+            new TestingHostOptions("Revit", "2026", true, 60, 180, @"C:\Runner.exe"));
 
-        Assert.Equal(
-            [
-                "run",
-                @"C:\tests\HostTests.dll",
-                "--host",
-                "Revit",
-                "--host-version",
-                "2026",
-                "--host-timeout",
-                "60",
-                "--host-launch-timeout",
-                "180",
-                "--host-launch",
-                "--name",
-                """["Arithmetic_runs_inside_host"]""",
-                "--test",
-                """["HostSmokeTests.Arithmetic"]""",
-            ],
-            args);
+        Assert.Equal("run", args[0]);
+        Assert.Contains("--framework", args);
+        Assert.Contains(TestingFrameworkIds.NUnit, args);
+        Assert.Contains(@"C:\tests\HostTests.dll", args);
+        Assert.Contains("--host", args);
+        Assert.Contains("Revit", args);
+        Assert.Contains("--host-launch", args);
+        Assert.Contains("--test", args);
+        Assert.Contains("""["HostSmokeTests.Arithmetic"]""", args);
+        Assert.DoesNotContain("--name", args);
+        Assert.DoesNotContain("discover", args);
     }
 
     [Fact]
-    public void BuildHostArguments_run_adds_debug_flags_when_parent_pid_is_set()
+    public void BuildRunArguments_run_adds_debug_flags_when_parent_pid_is_set()
     {
-        var options = new HostRunOptions("Revit", "2026", false, 60, 180, @"C:\Runner.exe", DebugParentPid: 4242);
-        var args = ProcessRunnerClient.BuildHostArguments(
-            @"C:\tests\HostTests.dll",
-            options,
-            RunnerTestFilter.Empty);
+        var args = TestingRunnerCli.BuildRunArguments(
+            new TestingRunRequest(
+                TestingProtocol.CurrentVersion,
+                Guid.NewGuid(),
+                TestingFrameworkIds.NUnit,
+                new TestingAssemblyReference(@"C:\tests\HostTests.dll", null, null),
+                new TestingSelection([]),
+                new Dictionary<string, string>()),
+            new TestingHostOptions("Revit", "2026", false, 60, 180, @"C:\Runner.exe", DebugParentPid: 4242));
 
         Assert.DoesNotContain("--debug", args);
         Assert.Contains("--debug-parent-pid", args);
@@ -150,13 +150,17 @@ public sealed class ProcessRunnerClientTests
     }
 
     [Fact]
-    public void BuildHostArguments_omits_debug_flags_when_parent_pid_is_absent()
+    public void BuildRunArguments_omits_debug_flags_when_parent_pid_is_absent()
     {
-        var options = new HostRunOptions("Revit", "2026", false, 60, 180, @"C:\Runner.exe");
-        var args = ProcessRunnerClient.BuildHostArguments(
-            @"C:\tests\HostTests.dll",
-            options,
-            RunnerTestFilter.Empty);
+        var args = TestingRunnerCli.BuildRunArguments(
+            new TestingRunRequest(
+                TestingProtocol.CurrentVersion,
+                Guid.NewGuid(),
+                TestingFrameworkIds.NUnit,
+                new TestingAssemblyReference(@"C:\tests\HostTests.dll", null, null),
+                new TestingSelection([]),
+                new Dictionary<string, string>()),
+            new TestingHostOptions("Revit", "2026", false, 60, 180, @"C:\Runner.exe"));
 
         Assert.DoesNotContain("--debug", args);
         Assert.DoesNotContain("--debug-parent-pid", args);
@@ -324,29 +328,6 @@ internal sealed class FakeTestRunnerTransport : ITestRunnerTransport
     public void Dispose()
     {
     }
-}
-
-internal sealed class FakeRunnerTransport : IRunnerTransport
-{
-    internal string? LastAssemblyPath { get; private set; }
-
-    internal RunnerTestFilter LastFilter { get; private set; }
-
-    internal bool Cancelled { get; private set; }
-
-    internal IReadOnlyList<NUnitCaseResult> Results { get; set; } = [];
-
-    public IReadOnlyList<NUnitCaseResult> Run(
-        string assemblyPath,
-        HostRunOptions options,
-        RunnerTestFilter filter)
-    {
-        LastAssemblyPath = assemblyPath;
-        LastFilter = filter;
-        return Results;
-    }
-
-    public void Cancel() => Cancelled = true;
 }
 
 internal sealed class TempDirectory : IDisposable

@@ -264,6 +264,32 @@ public sealed class RunnerCommandLineTests
 
         Assert.True(ok, error);
         Assert.Equal(TestingFrameworkIds.NUnit, command!.FrameworkId);
+        Assert.False(command.UseGenericProtocol);
+    }
+
+    [Fact]
+    public void TryCreate_explicit_framework_uses_generic_protocol()
+    {
+        var ok = RunnerCommandLine.TryCreate(
+            "run",
+            @"C:\tests\Sample.dll",
+            "Revit",
+            "2026",
+            names: null,
+            tests: null,
+            filterXml: null,
+            hostLaunch: false,
+            hostTimeoutSeconds: 60,
+            hostLaunchTimeoutSeconds: 180,
+            debug: false,
+            debugParentPid: null,
+            out var command,
+            out var error,
+            framework: TestingFrameworkIds.NUnit);
+
+        Assert.True(ok, error);
+        Assert.Equal(TestingFrameworkIds.NUnit, command!.FrameworkId);
+        Assert.True(command.UseGenericProtocol);
     }
 
     [Fact]
@@ -288,6 +314,7 @@ public sealed class RunnerCommandLineTests
 
         Assert.True(ok, error);
         Assert.Equal(TestingFrameworkIds.NUnit, command!.FrameworkId);
+        Assert.True(command.UseGenericProtocol);
     }
 
     [Fact]

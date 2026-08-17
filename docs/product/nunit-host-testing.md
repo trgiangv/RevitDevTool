@@ -98,7 +98,9 @@ IDE selected-run uses FullName. Runner composes NUnit `TestFilter` XML for the h
 - Methods: generic `testing/hello`, `testing/run`, `testing/cancel`,
   `testing/progress` (no `testing/discover`). Legacy `nunit/hello`,
   `nunit/discover`, `nunit/run`, `nunit/cancel`, `nunit/progress` remain on
-  `NUnitRequestHandler` until TestRunner stdout is `testing/*` JSON.
+  `NUnitRequestHandler`. TestRunner stdout is `testing/*` JSON when
+  `--framework nunit` is set (MTP and VSTest always pass it). Omit
+  `--framework` to keep the legacy `nunit/*` stdout path.
 - In-host: content-addressed **generation shadow** of the test output plus
   `DevTools.NUnit.Runtime`. Pin **NUnit 4.6.1** (`nunit.framework` file version
   `4.6.1.0`) beside the test assembly. Deploy-folder DLLs stay on
@@ -123,8 +125,9 @@ DevTools.TestRunner run --framework nunit <assembly> --host Revit --host-version
 MTP or in-tree VSTest project. Do not pass it for ordinary `dotnet test` runs.
 `--debug` without a PID attaches using the active Visual Studio instance (manual CLI).
 `--host-version` is the Autodesk year; `Runner --version` is the tool version.
-`--framework` selects the host-test provider; omit it or pass `nunit` for the
-legacy NUnit call path.
+`--framework` selects the host-test provider and stdout contract. Omit it for
+the legacy `nunit/*` JSON path. Pass `--framework nunit` for `testing/*` JSON
+(`TestingRunResponse`). MTP and VSTest always pass `--framework nunit`.
 
 Runner ships under the ApplicationPlugins bundle `Contents` folder (publish
 `DevTools.TestRunner`).

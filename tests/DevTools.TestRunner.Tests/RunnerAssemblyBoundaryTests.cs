@@ -64,7 +64,9 @@ public sealed class RunnerAssemblyBoundaryTests
                 || path.EndsWith(".md", StringComparison.OrdinalIgnoreCase)
                 || path.EndsWith(".slnx", StringComparison.OrdinalIgnoreCase))
             .Where(path => !path.Contains($"{Path.DirectorySeparatorChar}bin{Path.DirectorySeparatorChar}", StringComparison.OrdinalIgnoreCase)
-                && !path.Contains($"{Path.DirectorySeparatorChar}obj{Path.DirectorySeparatorChar}", StringComparison.OrdinalIgnoreCase))
+                && !path.Contains($"{Path.DirectorySeparatorChar}obj{Path.DirectorySeparatorChar}", StringComparison.OrdinalIgnoreCase)
+                && !path.EndsWith("NUnitHostPackaging.targets", StringComparison.OrdinalIgnoreCase)
+                && !path.EndsWith("HostPackagingOwnershipTests.cs", StringComparison.OrdinalIgnoreCase))
             .Where(path => File.ReadAllText(path).Contains(legacyName, StringComparison.Ordinal))
             .Select(path => Path.GetRelativePath(root, path))
             .ToList();

@@ -47,7 +47,7 @@ Date: 2026-08-17
 
 ## Status
 
-Active — Tasks 1-8 landed. Stop for user review before P2. TestRunner stdout is still `nunit/*` JSON (`NUnitProcessTransportAdapter` remains).
+Active — Tasks 1-8 plus TestRunner `testing/*` stdout cutover landed. NUnit parity unblocks P2.
 
 ## Harness Execution Rules
 
@@ -517,6 +517,7 @@ public sealed record TestingRuntimePayload(
 - [x] Shared MTP helpers extracted; NUnit MTP run uses generic transport + `nunit` framework id.
 - [x] VSTest-only compatibility path passes.
 - [x] Packaging and live host matrix pass.
+- [x] TestRunner `--framework nunit` emits `testing/*` JSON; MTP/VSTest drop `NUnitProcessTransportAdapter`.
 
 ## Task-local evidence
 
@@ -528,6 +529,7 @@ public sealed record TestingRuntimePayload(
 - 2026-08-17 Task 6: `DevTools.Testing.Mtp` helpers only (error node, result properties, `TestingRunnerSession`). No universal `ITestFramework`. NUnit MTP keeps local PE discovery, FullName UIDs, builder hook. Run injects `ITestRunnerTransport` with `TestingFrameworkIds.NUnit`. Live TestRunner still emits NUnit JSON, so production MTP uses `NUnitProcessTransportAdapter` over `ProcessRunnerClient` until Task 8. Name filters round-trip via `ProviderPayload` XML. Proof: Testing.Mtp Debug all TFMs; Testing.Mtp tests 5; NUnit.Mtp tests 25; Transport tests 16 (`--framework` + `--test`).
 - 2026-08-17 Task 7: VSTest executor/settings use `ITestRunnerTransport` + `TestingHostOptions` + `TestingFrameworkIds.NUnit`. Shared `NUnitProcessTransportAdapter` / `NUnitTestingMapping` live in Core `Client/` and are linked into MTP and the adapter. Discovery stays local PE. Proof: TestAdapter tests 8; NUnit.Mtp tests 25; package policy 3; net48 VSTest `--list-tests` listed `Arithmetic_runs_inside_host`, `Intentional_failure_for_demo`, `Writes_output`.
 - 2026-08-17 Task 8: `MarshaledTestingRequestHandler` registers `testing/*` once (`includeLegacyNunitEnvelopes: false`); `nunit/*` stays on `NUnitRequestHandler`. `DevTools.Testing.Abstractions.dll` is ILRepack-excluded and asserted loose exactly once; NUnit runtime stays under `NUnitRuntime\`. Proof: marshal tests 3; registration 1; packaging ownership 8; Revit 2022/2025/2027 compile (2025 ILRepacked); Acad 2025 compile-only; `--list-tests` with no Autodesk process (3 tests, no host start). Live MTP `Arithmetic_runs_inside_host` passed in Revit 2025 PID **39752**; follow-up TestRunner PID **56500**, framework **nunit**, generation **`2c1b2b2210c684865ff58694ff392e75d0674bc8ff2b6fe53341336f7ceef161`**, outcome Passed. TestRunner stdout remains `NUnitRunResponse` JSON.
+- 2026-08-17 testing/* stdout cutover: omit `--framework` keeps legacy `nunit/*` JSON; `--framework nunit` uses `TestingPipeClient` and prints `TestingRunResponse`. MTP uses `ProcessTestRunnerClient`; VSTest links the same Transport files (`netstandard2.0` cannot ProjectReference the multi-TFM Transport). Deleted `NUnitProcessTransportAdapter`, `ProcessRunnerClient`, and `IRunnerTransport`. Proof: TestRunner tests 57; Testing.Transport 16; NUnit.Mtp 25; TestAdapter 8. Live CLI `--framework nunit --name Arithmetic_runs_inside_host` against Revit 2025 PID **39752** returned `framework_id=nunit`, generation **`c999020215eb6ec657b837d0c2eb03cc064064d5b2fbc29edef595a2de0be050`**, outcome Passed. Live MTP sample filter passed 1/1.
 
 ## Decisions
 
@@ -544,8 +546,11 @@ public sealed record TestingRuntimePayload(
 - 2026-08-17: Keep `NUnitProcessTransportAdapter` until TestRunner serializes
   `testing/*` JSON. Do not deserialize live NUnit stdout as `TestingRunResponse`.
 - 2026-08-17: Enable Polyfill for `netstandard2.0` as well as net4x so the
-  VSTest adapter can compile records. ProcessRunnerClient uses the quoted
-  `Arguments` path on netstandard.
+  VSTest adapter can compile records. ProcessTestRunnerClient uses the quoted
+  `Arguments` path on netframework and netstandard.
+- 2026-08-17: Explicit `--framework nunit` is the generic `testing/*` stdout
+  path. Omitted `--framework` stays on legacy `nunit/*` JSON. MTP/VSTest always
+  pass `--framework nunit`. `NUnitProcessTransportAdapter` is removed.
 
 ## Validation
 

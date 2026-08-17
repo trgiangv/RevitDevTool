@@ -1,33 +1,32 @@
 namespace DevTools.NUnit.TestAdapter.Tests;
 
-public sealed class ProcessRunnerClientTests
+public sealed class ProcessTestRunnerClientLinkTests
 {
     [Fact]
-    public void Mtp_and_vstest_link_the_same_runner_client()
+    public void Mtp_and_vstest_use_the_generic_runner_client()
     {
         var repositoryRoot = FindRepositoryRoot();
         var shared = Path.Combine(
             repositoryRoot,
             "source",
-            "DevTools.NUnit.Core",
-            "Client",
-            "ProcessRunnerClient.cs");
+            "DevTools.Testing.Transport",
+            "ProcessTestRunnerClient.cs");
         Assert.True(File.Exists(shared));
 
         var client = File.ReadAllText(shared);
-        Assert.Contains("internal static IReadOnlyList<string> BuildHostArguments", client);
-        Assert.Contains("filter.Names", client);
-        Assert.Contains("filter.FullNames", client);
-        Assert.DoesNotContain("filterXml", client);
+        Assert.Contains("TestingRunnerCli.BuildRunArguments", client);
         Assert.Contains("ReadToEndAsync()", client);
-        Assert.DoesNotContain("Task.Run(() => process.StandardOutput.ReadToEnd())", client);
         Assert.Contains("AddArgument(startInfo, argument)", client);
-        Assert.Contains("The RevitDevTool host test run did not finish within", client);
-        Assert.Contains("Timed out reading host test output.", client);
-        Assert.Contains("options.DebugParentPid", client);
+        Assert.Contains("The DevTools TestRunner process did not finish within", client);
+        Assert.Contains("Timed out reading TestRunner output.", client);
+        Assert.Contains("NETFRAMEWORK || NETSTANDARD", client);
         Assert.DoesNotContain("NUnitRunnerCli.DiscoverCommand", client);
         Assert.DoesNotContain("IReadOnlyList<NUnitDiscoveredTest> Discover", client);
 
+        Assert.False(File.Exists(Path.Combine(
+            repositoryRoot, "source", "DevTools.NUnit.Core", "Client", "ProcessRunnerClient.cs")));
+        Assert.False(File.Exists(Path.Combine(
+            repositoryRoot, "source", "DevTools.NUnit.Core", "Client", "NUnitProcessTransportAdapter.cs")));
         Assert.False(File.Exists(Path.Combine(
             repositoryRoot, "source", "DevTools.NUnit.Mtp", "ProcessRunnerClient.cs")));
         Assert.False(File.Exists(Path.Combine(
@@ -37,11 +36,11 @@ public sealed class ProcessRunnerClientTests
             repositoryRoot, "source", "DevTools.NUnit.Mtp", "DevTools.NUnit.Mtp.csproj"));
         var adapter = File.ReadAllText(Path.Combine(
             repositoryRoot, "source", "DevTools.NUnit.TestAdapter", "DevTools.NUnit.TestAdapter.csproj"));
-        Assert.Contains("Core\\Client\\ProcessRunnerClient.cs", mtp);
-        Assert.Contains("Core\\Client\\ProcessRunnerClient.cs", adapter);
-        Assert.Contains("Core\\Client\\NUnitProcessTransportAdapter.cs", adapter);
-        Assert.Contains("Core\\Client\\NUnitTestingMapping.cs", adapter);
-        Assert.Contains("Testing\\ITestRunnerTransport.cs", adapter);
+        Assert.Contains("DevTools.Testing.Transport", mtp);
+        Assert.Contains("ProcessTestRunnerClient.cs", adapter);
+        Assert.Contains("TestingJsonContext.cs", adapter);
+        Assert.Contains("TestingRunnerCli.cs", adapter);
+        Assert.DoesNotContain("NUnitProcessTransportAdapter.cs", adapter);
         Assert.Contains("DevTools.TestRunner.exe", File.ReadAllText(Path.Combine(
             repositoryRoot,
             "source",
