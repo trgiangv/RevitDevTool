@@ -560,7 +560,7 @@ public sealed class NUnitGenerationBuilderTests
     [Fact]
     public void SharedAssemblyPolicy_shares_host_packages_and_system_prefix_not_microsoft_extensions()
     {
-        HostSharedAssemblies.Use(new HostApiAssemblySet(["RevitAPI"], ["Autodesk."]));
+        HostSharedAssemblies.Use(new HostSharedAssemblyNames(["RevitAPI"], ["Autodesk."]));
         Assert.True(NUnitSharedAssemblyPolicy.IsShared("System"));
         Assert.True(NUnitSharedAssemblyPolicy.IsShared("System.Private.CoreLib"));
         Assert.True(NUnitSharedAssemblyPolicy.IsShared("System.Runtime"));

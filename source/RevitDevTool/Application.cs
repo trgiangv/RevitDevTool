@@ -18,7 +18,7 @@ public class Application : IExternalApplication
     {
         _application = application;
         AssemblyLoader.Initialize();
-        HostSharedAssemblies.Use(RevitHostApiAssemblies.Set);
+        HostSharedAssemblies.Use(RevitHostApiAssemblies.Names);
         Host.Start();
         AddButtons(application);
         application.ControlledApplication.ApplicationInitialized += OnApplicationInitialized;

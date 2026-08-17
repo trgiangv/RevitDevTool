@@ -4,7 +4,7 @@ namespace RevitDevTool.Composition;
 
 internal static class RevitHostApiAssemblies
 {
-    public static readonly HostApiAssemblySet Set = new(
+    public static readonly HostSharedAssemblyNames Names = new(
         ["RevitAPI", "RevitAPIUI", "AdWindows"],
         ["Autodesk."]);
 }

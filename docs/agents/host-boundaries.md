@@ -6,8 +6,8 @@ The platform is host-agnostic by design. Every feature should be sharable across
 
 Keep these host-neutral — this is the default for all new functionality:
 
-- `source/DevTools.Hosting/` — `HostApp`, `IHostAppInfo`, generic launch engine (`AddHostLaunchCore`, `HostLaunchWait`). No Revit/Acad product strings, dialog catalogs, or assembly-load policy.
-- `source/DevTools.FileMetadata.Core/` — `IFileReader` / `FileInfoResult` (MCP `read_file_info`). Takes `HostApp` as a result field only.
+- `source/DevTools.Hosting/` — `HostApp`, `IHostAppInfo`, generic launch engine (`AddHostLaunchCore`, `HostLaunchWait`). No Revit/Acad product strings, dialog catalogs, or assembly-load policy. Stays `net48;net8.0-windows;net10.0-windows` because add-ins and NUnit.Host load identity types in-process.
+- `source/DevTools.FileMetadata.Core/` — `IFileReader` / `FileInfoResult` (MCP `read_file_info`). Takes `HostApp` as a result field only. `net10.0-windows` only (Daemon / Mcp.Server / Runner).
 - `source/DevTools.Execution/` — execution engine, script providers, MCP in-host runtime
 - `source/DevTools.Execution.Abstractions/` — host-neutral contracts (`IHostContextExecutor`, `ICommandDiscovery`, `ICommandRunner`, `IDocumentBridge`, enums)
 - `source/DevTools.Ipc/` — IPC transport (BridgeMessage, pipe connection, wire protocol)
@@ -17,7 +17,7 @@ Keep these host-neutral — this is the default for all new functionality:
 - `source/DevTools.Settings/`
 - `source/DevTools.Telemetry/`
 - `source/DevTools.UI/`
-- `source/DevTools.Utilities/` — helpers + `AssemblyLoading` (`HostSharedAssemblies`, `HostApiAssemblySet`). Leaf: no Hosting, no Execution.Abstractions.
+- `source/DevTools.Utilities/` — helpers + `AssemblyLoading` (`HostSharedAssemblies`, `HostSharedAssemblyNames`). Leaf: no Hosting, no Execution.Abstractions.
 
 ## Host Layer
 
@@ -26,22 +26,22 @@ Host API references belong in host projects:
 - Revit host: `source/RevitDevTool/`
 - Revit-only core: `source/RevitDevTool.Core/` (RevitContext, RevitTransactionService, dockable pane loader, image exporter — not shared with other hosts)
 - AutoCAD host: `source/AcadDevTool/`
-- Launch specs (path / argv / dialog catalog): `source/DevTools.Hosting.Revit/`, `source/DevTools.Hosting.Acad/`. Daemon and NUnit Runner call `AddRevitLaunch` / `AddAutocadFamilyLaunch`. Add-ins do **not**.
-- Offline file parse: `source/DevTools.FileMetadata.Revit/` (OpenMcdf) and `FileMetadata.Acad` (ACadSharp). Parsers stay **HostApp-free**. Daemon wires `RevitFileMetadataReader.TryReadRevitVersion` into `AddRevitLaunch`; Runner passes `null`. Do not ProjectReference FileMetadata from `Hosting.Revit`.
+- Launch specs (path / argv / dialog catalog): `source/DevTools.Hosting.Revit/`, `source/DevTools.Hosting.Acad/`. `net10.0-windows` only. Daemon and NUnit Runner call `AddRevitLaunch` / `AddAutocadFamilyLaunch`. Add-ins do **not**.
+- Offline file parse: `source/DevTools.FileMetadata.Revit/` (OpenMcdf) and `FileMetadata.Acad` (ACadSharp). `net10.0-windows` only. Parsers stay **HostApp-free**. Daemon wires `RevitFileMetadataReader.TryReadRevitVersion` into `AddRevitLaunch`; Runner passes `null`. Do not ProjectReference FileMetadata from `Hosting.Revit`.
 - Add-in composition: `source/RevitDevTool/Composition/`, `source/AcadDevTool/Composition/` (`RevitServiceRegistration` / `AcadServiceRegistration`). Not `DevTools.Hosting`.
-- In-process host-API names: `RevitHostApiAssemblies.Set` / `AcadHostApiAssemblies.Set` passed to `HostSharedAssemblies.Use` in `Application.OnStartup` next to `AssemblyLoader.Initialize()`. Not DI. Not launch.
+- In-process host-API names: `RevitHostApiAssemblies.Names` / `AcadHostApiAssemblies.Names` passed to `HostSharedAssemblies.Use` in `Application.OnStartup` next to `AssemblyLoader.Initialize()`. Not DI. Not launch.
 - In-host MCP tools (host-bound): `source/DevTools.Mcp.Revit/`, `source/DevTools.Mcp.Acad/` (`IBuiltInMcpTool` / `IBuiltInMcpResource`). Registered from add-in `Composition/`. The `Mcp.*` prefix is not a neutrality claim.
 - Visualization: `source/RevitDevTool/Visualization/` (DirectContext3D — entirely Revit-host, not in shared code)
 - Future hosts: add new host projects rather than extending shared code with platform-specific branches.
 
 ## Assembly load (three jobs)
 
-Do not add a fourth path. Directory scan (`Configure`) is deleted — names come only from `Use(set)`.
+Do not add a fourth path. Directory scan (`Configure`) is deleted — names come only from `Use(names)`.
 
 | Job | Entry |
 |-----|--------|
 | Add-in deploy folder, once | `Utilities/AssemblyLoader.Initialize()` |
-| Dynamic / command ALC | `Utilities/AssemblyLoading/*` + ambient `HostSharedAssemblies.Use(HostApiAssemblySet)` |
+| Dynamic / command ALC | `Utilities/AssemblyLoading/*` + ambient `HostSharedAssemblies.Use(HostSharedAssemblyNames)` |
 | NUnit generation | `NUnit.Host` loaders (do not redesign here) |
 
 Native dialog/stdio P/Invoke for **launch** stays inside `DevTools.Hosting` (`DialogNative`, `HostLaunchService.StdioInheritance`). Do not create `Hosting → Utilities` for Interop. WPF owner/title-bar stays `DevTools.UI/Win32Utils`.

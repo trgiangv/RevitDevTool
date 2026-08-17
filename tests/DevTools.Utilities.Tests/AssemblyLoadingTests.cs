@@ -34,30 +34,30 @@ public sealed class AssemblyLoadingTests
     }
 
     [Fact]
-    public void DirectoryAssemblyLoad_returns_already_loaded_assembly_from_same_directory()
+    public void DirectoryAssemblyLoader_returns_already_loaded_assembly_from_same_directory()
     {
         var assembly = typeof(AssemblyLoadingTests).Assembly;
         var directory = Path.GetDirectoryName(assembly.Location)
             ?? throw new InvalidOperationException("Test assembly location is unavailable.");
 
-        var resolved = DirectoryAssemblyLoad.TryLoad(directory, assembly.GetName());
+        var resolved = DirectoryAssemblyLoader.TryLoad(directory, assembly.GetName());
 
         Assert.NotNull(resolved);
         Assert.Equal(assembly.GetName().Name, resolved!.GetName().Name);
-        Assert.Same(resolved, DirectoryAssemblyLoad.TryLoad(directory, assembly.GetName()));
+        Assert.Same(resolved, DirectoryAssemblyLoader.TryLoad(directory, assembly.GetName()));
     }
 
     [Fact]
-    public void DirectoryAssemblyLoad_skips_shared_assemblies_not_in_appdomain()
+    public void DirectoryAssemblyLoader_skips_shared_assemblies_not_in_appdomain()
     {
         var directory = Path.GetTempPath();
-        var resolved = DirectoryAssemblyLoad.TryLoad(directory, new AssemblyName("System.Text.Json"));
+        var resolved = DirectoryAssemblyLoader.TryLoad(directory, new AssemblyName("System.Text.Json"));
 
         Assert.Null(resolved);
     }
 
     [Fact]
-    public void DirectoryAssemblyLoad_shadow_load_does_not_lock_source_and_reloads_on_change()
+    public void DirectoryAssemblyLoader_shadow_load_does_not_lock_source_and_reloads_on_change()
     {
         var source = typeof(AssemblyLoadingTests).Assembly.Location;
         var tempDir = Path.Combine(Path.GetTempPath(), "devtools-dir-load-" + Guid.NewGuid().ToString("N"));
@@ -67,9 +67,9 @@ public sealed class AssemblyLoadingTests
             var probePath = Path.Combine(tempDir, Path.GetFileName(source));
             File.Copy(source, probePath);
 
-            var first = DirectoryAssemblyLoad.LoadPath(probePath);
+            var first = DirectoryAssemblyLoader.LoadPath(probePath);
             Assert.Equal(typeof(AssemblyLoadingTests).Assembly.GetName().Name, first.GetName().Name);
-            Assert.Same(first, DirectoryAssemblyLoad.LoadPath(probePath));
+            Assert.Same(first, DirectoryAssemblyLoader.LoadPath(probePath));
 
             // Source must remain writable (shadow LoadFile locks only the temp copy).
             using (var stream = new FileStream(probePath, FileMode.Open, FileAccess.Write, FileShare.Read))
@@ -79,7 +79,7 @@ public sealed class AssemblyLoadingTests
 
             // Force a new stamp and a different shadow identity.
             File.SetLastWriteTimeUtc(probePath, DateTime.UtcNow.AddMinutes(1));
-            var second = DirectoryAssemblyLoad.LoadPath(probePath);
+            var second = DirectoryAssemblyLoader.LoadPath(probePath);
             Assert.NotSame(first, second);
             Assert.Equal(first.GetName().Name, second.GetName().Name);
         }

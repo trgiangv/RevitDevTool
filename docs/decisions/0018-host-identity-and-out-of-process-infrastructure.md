@@ -801,7 +801,7 @@ Do not start **F** before **A** if both touch host csproj in the same week.
 
 **Keep:** FileMetadata parsers, `IFileReader` catalog, pipe name format,
 `IHostLaunchService` (no oldest-PID policy inside it), the three launch
-contracts + `AddXxxLaunch()` (no `IHostPlugin`), `HostApiAssemblySet`
+contracts + `AddXxxLaunch()` (no `IHostPlugin`), `HostSharedAssemblyNames`
 + `HostSharedAssemblies.Use` at add-in startup, `HostLaunchWait` / `HostReadyStatus` (one
 wait loop; caller probe), EnvDTE in Runner, dialog resolver Win32 engine
 (no self-timeout; lifetime = wait; **no default** product catalogs or class
@@ -894,7 +894,7 @@ Positive:
   identity home.
 - Adding a host is: enum member + `DevTools.Hosting.<Host>` +
   `AddXxxLaunch()` (path, args, dialog) + composition-root one-liner, then
-  `HostSharedAssemblies.Use(HostApiAssemblySet)` in that host’s
+  `HostSharedAssemblies.Use(HostSharedAssemblyNames)` in that host’s
   `Application.OnStartup` when the ALC name list exists. Not a rewrite of
   generic Hosting, Logging, NUnit.Core, or a new wait loop in MCP/Runner.
 
@@ -914,7 +914,7 @@ Tradeoffs:
 - Generic Hosting now owns `Process.Start` and Win32 dialog polling.
   Identity consumers of Hosting do not use those types; the widened surface
   is the launch engine, not `HostApp`.
-- Shared-assembly remains ambient (`Use(HostApiAssemblySet)`), not constructor DI, because
+- Shared-assembly remains ambient (`Use(HostSharedAssemblyNames)`), not constructor DI, because
   ALC resolve events are static. D2 does not pretend otherwise.
 - Runner takes `Microsoft.Extensions.DependencyInjection` (C+D).
 
@@ -927,8 +927,8 @@ without parser packages).
 
 Landed:
 
-- `IHostSharedAssemblyPolicy` → `HostApiAssemblySet` record in Utilities.
-- `HostSharedAssemblies.Use(set)` in `Application.OnStartup` next to
+- `IHostSharedAssemblyPolicy` → `HostSharedAssemblyNames` record in Utilities.
+- `HostSharedAssemblies.Use(names)` in `Application.OnStartup` next to
   `AssemblyLoader.Initialize()`. No `AddRevitInProcess` / `AddAutocadInProcess`
   (those were fake DI).
 - `HostPackagePrefixes` moved to `Utilities/AssemblyLoading/`. Utilities is a

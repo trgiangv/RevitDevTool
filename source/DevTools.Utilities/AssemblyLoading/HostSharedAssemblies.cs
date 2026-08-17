@@ -3,9 +3,9 @@ namespace DevTools.Utilities.AssemblyLoading;
 /// <summary>
 /// Identifies host API and framework assemblies that must be resolved from the
 /// running host process, never from a plugin or test output directory.
-/// Host-API names come from <see cref="HostApiAssemblySet"/> after
+/// Host-API names come from <see cref="HostSharedAssemblyNames"/> after
 /// <see cref="Use"/>. There is no Revit+Acad fallback list — each add-in
-/// calls <see cref="Use"/> with its own set.
+/// calls <see cref="Use"/> with its own names.
 /// </summary>
 public static class HostSharedAssemblies
 {
@@ -16,19 +16,19 @@ public static class HostSharedAssemblies
     ];
 
     private static readonly object InitLock = new();
-    private static HostApiAssemblySet? _set;
+    private static HostSharedAssemblyNames? _names;
 
     /// <summary>
     /// Sets the ambient host-API names for static ALC hooks. Add-ins call this
     /// at startup before first load, next to <c>AssemblyLoader.Initialize()</c>.
     /// </summary>
-    public static void Use(HostApiAssemblySet set)
+    public static void Use(HostSharedAssemblyNames names)
     {
-        if (set is null)
-            throw new ArgumentNullException(nameof(set));
+        if (names is null)
+            throw new ArgumentNullException(nameof(names));
         lock (InitLock)
         {
-            _set = set;
+            _names = names;
         }
     }
 
@@ -78,16 +78,16 @@ public static class HostSharedAssemblies
         if (string.IsNullOrWhiteSpace(assemblyName))
             return false;
 
-        var set = _set;
-        return set is not null && ContainsIgnoreCase(set.SimpleNames, assemblyName);
+        var names = _names;
+        return names is not null && ContainsIgnoreCase(names.ExactNames, assemblyName);
     }
 
     private static IReadOnlyCollection<string> HostApiPrefixes
     {
         get
         {
-            var set = _set;
-            return set is not null ? set.Prefixes : [];
+            var names = _names;
+            return names is not null ? names.Prefixes : [];
         }
     }
 

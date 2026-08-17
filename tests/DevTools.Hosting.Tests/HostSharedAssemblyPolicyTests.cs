@@ -38,7 +38,7 @@ public sealed class HostSharedAssemblyPolicyTests
         foreach (var path in Directory.GetFiles(hostingDir, "*.cs", SearchOption.AllDirectories))
         {
             var text = File.ReadAllText(path);
-            Assert.DoesNotContain("HostApiAssemblySet", text, StringComparison.Ordinal);
+            Assert.DoesNotContain("HostSharedAssemblyNames", text, StringComparison.Ordinal);
             Assert.DoesNotContain("HostSharedAssemblies", text, StringComparison.Ordinal);
         }
     }

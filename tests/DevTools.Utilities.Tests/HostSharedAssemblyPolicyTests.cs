@@ -11,7 +11,7 @@ public sealed class HostSharedAssemblyPolicyTests
     [Fact]
     public void Use_revit_set_shares_RevitAPI_not_acmgd()
     {
-        HostSharedAssemblies.Use(new HostApiAssemblySet(["RevitAPI", "RevitAPIUI", "AdWindows"], ["Autodesk."]));
+        HostSharedAssemblies.Use(new HostSharedAssemblyNames(["RevitAPI", "RevitAPIUI", "AdWindows"], ["Autodesk."]));
         Assert.True(HostSharedAssemblies.IsShared("RevitAPI"));
         Assert.True(HostSharedAssemblies.IsExplicitHostAssembly("RevitAPI"));
         Assert.True(HostSharedAssemblies.IsShared("Autodesk.Revit.DB"));
@@ -22,7 +22,7 @@ public sealed class HostSharedAssemblyPolicyTests
     [Fact]
     public void Use_acad_set_shares_acmgd_not_RevitAPI()
     {
-        HostSharedAssemblies.Use(new HostApiAssemblySet(["acmgd", "acdbmgd"], ["Autodesk."]));
+        HostSharedAssemblies.Use(new HostSharedAssemblyNames(["acmgd", "acdbmgd"], ["Autodesk."]));
         Assert.True(HostSharedAssemblies.IsShared("acmgd"));
         Assert.True(HostSharedAssemblies.IsExplicitHostAssembly("acmgd"));
         Assert.True(HostSharedAssemblies.IsShared("Autodesk.AutoCAD.DatabaseServices"));
@@ -32,7 +32,7 @@ public sealed class HostSharedAssemblyPolicyTests
     [Fact]
     public void Without_names_host_api_assemblies_are_not_shared()
     {
-        HostSharedAssemblies.Use(new HostApiAssemblySet([], []));
+        HostSharedAssemblies.Use(new HostSharedAssemblyNames([], []));
         Assert.False(HostSharedAssemblies.IsExplicitHostAssembly("RevitAPI"));
         Assert.False(HostSharedAssemblies.IsExplicitHostAssembly("acmgd"));
         Assert.True(HostSharedAssemblies.IsShared("MahApps.Metro"));

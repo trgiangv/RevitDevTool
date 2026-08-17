@@ -163,7 +163,7 @@ public sealed class RevitCommandRunner : ICommandRunner
         if (args.Name is null)
             return null;
 
-        return DirectoryAssemblyLoad.TryLoad(targetDir, new AssemblyName(args.Name));
+        return DirectoryAssemblyLoader.TryLoad(targetDir, new AssemblyName(args.Name));
     }
 #endif
 

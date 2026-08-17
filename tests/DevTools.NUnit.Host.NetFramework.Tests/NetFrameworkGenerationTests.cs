@@ -19,7 +19,7 @@ public sealed class NetFrameworkGenerationTests
     [Test]
     public void SharedAssemblyPolicy_keeps_netfx_polyfills_generation_private()
     {
-        HostSharedAssemblies.Use(new HostApiAssemblySet(["RevitAPI"], ["Autodesk."]));
+        HostSharedAssemblies.Use(new HostSharedAssemblyNames(["RevitAPI"], ["Autodesk."]));
         Assert.That(NUnitSharedAssemblyPolicy.IsShared("System.Runtime"), Is.True);
         Assert.That(NUnitSharedAssemblyPolicy.IsShared("System.Memory"), Is.False);
         Assert.That(NUnitSharedAssemblyPolicy.IsManagedAssemblyFile("HostSmokeTests.exe"), Is.True);

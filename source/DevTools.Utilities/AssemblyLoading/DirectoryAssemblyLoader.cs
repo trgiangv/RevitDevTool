@@ -16,7 +16,7 @@ namespace DevTools.Utilities.AssemblyLoading;
 /// yields a fresh assembly identity when the source DLL changes (byte-load of the
 /// same AssemblyName cannot reload new IL on .NET Framework).
 /// </remarks>
-public static class DirectoryAssemblyLoad
+public static class DirectoryAssemblyLoader
 {
     private static readonly ConcurrentDictionary<string, CacheEntry> LoadedBySourcePath =
         new(StringComparer.OrdinalIgnoreCase);

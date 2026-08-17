@@ -42,7 +42,7 @@ the native NUnit/MTP release.
 - Native host path: `NUnitRuntimeManager` + TFM session factory (`NUnitReflectionRunner` deleted).
 - Public consumer package (P1): `DevTools.NUnit` from `source/DevTools.NUnit.Mtp/`.
 - Current probe loader:
-  `source/DevTools.Utilities/AssemblyLoading/DirectoryAssemblyLoad.cs`
+  `source/DevTools.Utilities/AssemblyLoading/DirectoryAssemblyLoader.cs`
 - Current protocol: `source/DevTools.NUnit.Core/Contracts/NUnitMessages.cs`
 - Existing IDE evidence: Rider selected its native NUnit provider and executed
   outside Revit even though the DevTools VSTest adapter was present.
