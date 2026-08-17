@@ -1,0 +1,13 @@
+<Project Sdk="Microsoft.NET.Sdk">
+    <PropertyGroup>
+        <TargetFrameworks>net48;net8.0-windows;net10.0-windows</TargetFrameworks>
+        <RootNamespace>DevTools.Testing.Transport</RootNamespace>
+        <AssemblyName>DevTools.Testing.Transport</AssemblyName>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <PackageReference Include="System.Text.Json"/>
+        <ProjectReference Include="..\DevTools.Ipc\DevTools.Ipc.csproj"/>
+        <ProjectReference Include="..\DevTools.Testing.Abstractions\DevTools.Testing.Abstractions.csproj"/>
+    </ItemGroup>
+</Project>
