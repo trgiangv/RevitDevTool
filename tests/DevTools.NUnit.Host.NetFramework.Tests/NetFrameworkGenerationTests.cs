@@ -4,7 +4,10 @@ using System.Runtime.InteropServices;
 using DevTools.NUnit.Core.Contracts;
 using DevTools.NUnit.Core.Results;
 using DevTools.NUnit.Core.Runtime;
+using DevTools.NUnit.Host;
 using DevTools.NUnit.Host.Loading;
+using DevTools.Testing.Abstractions.Contracts;
+using DevTools.Testing.Abstractions.Providers;
 using DevTools.Utilities.AssemblyLoading;
 using NUnit.Framework;
 
@@ -442,6 +445,64 @@ public sealed class NetFrameworkGenerationTests
         return (process.ExitCode, output + error);
     }
 
+    [Test]
+    public void Provider_run_matches_host_run_for_focused_fixture_case()
+    {
+        var workspace = Path.Combine(Path.GetTempPath(), "DevTools", "NUnit", Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(workspace);
+        var generationsRoot = NetFrameworkGenerationTestEnvironment.CreateIsolatedGenerationsRoot();
+        try
+        {
+            var testAssembly = NetFrameworkGenerationTestEnvironment.CreateGenerationOneAssembly(
+                workspace,
+                "provider-parity");
+            using var manager = new NUnitRuntimeManager(
+                NetFrameworkGenerationTestEnvironment.CreateBuilder(generationsRoot),
+                new NetfxNUnitRuntimeSessionFactory());
+            var host = new NUnitHost(manager);
+            var provider = new NUnitHostTestFrameworkProvider(host);
+            const string fullName = "DevTools.NUnit.Runtime.Fixtures.FullSemanticsFixture.PlainTest_Passes";
+            var hostRun = host.Run(
+                new NUnitRunRequest(
+                    Guid.NewGuid(),
+                    testAssembly,
+                    "<filter><test>" + fullName + "</test></filter>"),
+                _ => { },
+                CancellationToken.None);
+
+            var testingRun = provider.Run(
+                new TestingRunRequest(
+                    2,
+                    Guid.NewGuid(),
+                    TestingFrameworkIds.NUnit,
+                    new TestingAssemblyReference(testAssembly, "net48", null),
+                    new TestingSelection(new[] { fullName }, null),
+                    new Dictionary<string, string>()),
+                new NoOpTestingSink(),
+                CancellationToken.None);
+
+            Assert.That(hostRun.Cases.Single().Outcome, Is.EqualTo(NUnitOutcomes.Passed));
+            Assert.That(testingRun.Results.Single().Outcome, Is.EqualTo(NUnitOutcomes.Passed));
+            Assert.That(testingRun.Results.Single().TestId, Is.EqualTo(hostRun.Cases.Single().Id));
+            Assert.That(testingRun.Results.Single().DisplayName, Is.EqualTo(hostRun.Cases.Single().Name));
+            Assert.That(testingRun.GenerationId, Is.EqualTo(hostRun.GenerationId));
+        }
+        finally
+        {
+            try
+            {
+                if (Directory.Exists(workspace))
+                    Directory.Delete(workspace, recursive: true);
+                if (Directory.Exists(generationsRoot))
+                    Directory.Delete(generationsRoot, recursive: true);
+            }
+            catch
+            {
+                // Best-effort cleanup.
+            }
+        }
+    }
+
     private static string ReadGenerationMarker(Assembly testAssembly)
     {
         const string markerTypeName = "DevTools.NUnit.Runtime.Fixtures.GenerationMarker";
@@ -499,6 +560,13 @@ public sealed class NetFrameworkGenerationTests
     private sealed class NoOpEventSink : INUnitRuntimeEventSink
     {
         public void Publish(NUnitRuntimeEvent runtimeEvent)
+        {
+        }
+    }
+
+    private sealed class NoOpTestingSink : ITestingEventSink
+    {
+        public void Publish(TestingEvent testingEvent)
         {
         }
     }

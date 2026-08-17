@@ -53,6 +53,8 @@ internal enum SnapshotCopyPhase
 
 public sealed class NUnitGenerationBuilder : INUnitGenerationBuilder
 {
+    // Generic snapshot/hash/publish lives in Testing.Host. This builder keeps
+    // NUnit 4.6.1 framework-version validation and NUnitRuntime asset policy.
     public const string RuntimeAssemblyFileName = "DevTools.NUnit.Runtime.dll";
     public const string RuntimeSymbolFileName = "DevTools.NUnit.Runtime.pdb";
     public const string FrameworkAssemblyFileName = "nunit.framework.dll";

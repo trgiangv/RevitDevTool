@@ -17,6 +17,9 @@
         <ProjectReference Include="..\..\source\DevTools.Execution.Abstractions\DevTools.Execution.Abstractions.csproj" />
         <ProjectReference Include="..\..\source\DevTools.Execution\DevTools.Execution.csproj" />
         <ProjectReference Include="..\..\source\DevTools.NUnit.Host\DevTools.NUnit.Host.csproj" />
+        <ProjectReference Include="..\..\source\DevTools.Testing.Host\DevTools.Testing.Host.csproj" />
+        <ProjectReference Include="..\..\source\DevTools.Testing.Abstractions\DevTools.Testing.Abstractions.csproj" />
+        <ProjectReference Include="..\..\source\DevTools.Testing.Transport\DevTools.Testing.Transport.csproj" />
     </ItemGroup>
 
     <ItemGroup>

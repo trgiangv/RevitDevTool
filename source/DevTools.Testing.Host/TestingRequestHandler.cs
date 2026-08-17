@@ -28,30 +28,41 @@ public sealed class TestingRequestHandler : IBridgeRequestHandler, IBridgeNotifi
     private readonly TestingProviderRegistry _registry;
     private readonly string _host;
     private readonly string _hostVersion;
+    private readonly bool _includeLegacyNunitEnvelopes;
     private readonly TestingCancellationStateMachine _cancellation = new();
     private int _isBusy;
 
     public TestingRequestHandler(
         TestingProviderRegistry registry,
         string host,
-        string hostVersion)
+        string hostVersion,
+        bool includeLegacyNunitEnvelopes = true)
     {
         _registry = registry ?? throw new ArgumentNullException(nameof(registry));
         _host = host ?? throw new ArgumentNullException(nameof(host));
         _hostVersion = hostVersion ?? throw new ArgumentNullException(nameof(hostVersion));
+        _includeLegacyNunitEnvelopes = includeLegacyNunitEnvelopes;
+        SupportedMethods = includeLegacyNunitEnvelopes
+            ?
+            [
+                TestingProtocol.Hello,
+                TestingProtocol.Run,
+                TestingProtocol.Cancel,
+                LegacyNunitHello,
+                LegacyNunitRun,
+                LegacyNunitCancel,
+            ]
+            :
+            [
+                TestingProtocol.Hello,
+                TestingProtocol.Run,
+                TestingProtocol.Cancel,
+            ];
     }
 
     public Action<string, JsonElement?>? NotificationSender { get; set; }
 
-    public IReadOnlyCollection<string> SupportedMethods { get; } =
-    [
-        TestingProtocol.Hello,
-        TestingProtocol.Run,
-        TestingProtocol.Cancel,
-        LegacyNunitHello,
-        LegacyNunitRun,
-        LegacyNunitCancel,
-    ];
+    public IReadOnlyCollection<string> SupportedMethods { get; }
 
     public TestingCancellationState CancellationState => _cancellation.State;
 
@@ -205,22 +216,25 @@ public sealed class TestingRequestHandler : IBridgeRequestHandler, IBridgeNotifi
         return BridgeMessage.Response(requestId, null);
     }
 
-    private static bool TryMapMethod(string method, out string testingMethod)
+    private bool TryMapMethod(string method, out string testingMethod)
     {
         testingMethod = method;
-        if (string.Equals(method, LegacyNunitHello, StringComparison.OrdinalIgnoreCase))
+        if (_includeLegacyNunitEnvelopes
+            && string.Equals(method, LegacyNunitHello, StringComparison.OrdinalIgnoreCase))
         {
             testingMethod = TestingProtocol.Hello;
             return true;
         }
 
-        if (string.Equals(method, LegacyNunitRun, StringComparison.OrdinalIgnoreCase))
+        if (_includeLegacyNunitEnvelopes
+            && string.Equals(method, LegacyNunitRun, StringComparison.OrdinalIgnoreCase))
         {
             testingMethod = TestingProtocol.Run;
             return true;
         }
 
-        if (string.Equals(method, LegacyNunitCancel, StringComparison.OrdinalIgnoreCase))
+        if (_includeLegacyNunitEnvelopes
+            && string.Equals(method, LegacyNunitCancel, StringComparison.OrdinalIgnoreCase))
         {
             testingMethod = TestingProtocol.Cancel;
             return true;

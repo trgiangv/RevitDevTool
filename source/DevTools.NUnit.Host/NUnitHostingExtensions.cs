@@ -1,4 +1,6 @@
 using DevTools.NUnit.Host.Loading;
+using DevTools.Testing.Abstractions.Providers;
+using DevTools.Testing.Host;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 
@@ -7,9 +9,15 @@ namespace DevTools.NUnit.Host;
 public static class NUnitHostingExtensions
 {
     /// <summary>
-    /// Registers the native NUnit runtime manager, generation builder, and bridge handler.
-    /// Call from Revit/AutoCAD hosting after <c>AddExecutionServices()</c>.
+    /// Registers the native NUnit runtime manager, generation builder, NUnit
+    /// provider, and <c>nunit/*</c> bridge handler. Call from Revit/AutoCAD
+    /// hosting after <c>AddExecutionServices()</c>.
     /// </summary>
+    /// <remarks>
+    /// <c>testing/*</c> is not registered here. Host composition must add
+    /// <see cref="TestingRequestHandler"/> with legacy NUnit envelopes disabled
+    /// and host-thread marshaling so <c>nunit/*</c> methods stay unique.
+    /// </remarks>
     public static IServiceCollection AddNUnitHostServices(this IServiceCollection services)
     {
         services.TryAddSingleton<INUnitGenerationBuilder>(_ =>
@@ -21,6 +29,8 @@ public static class NUnitHostingExtensions
 #endif
         services.TryAddSingleton<NUnitRuntimeManager>();
         services.TryAddSingleton<INUnitHost, NUnitHost>();
+        services.TryAddSingleton<IHostTestFrameworkProvider, NUnitHostTestFrameworkProvider>();
+        services.TryAddSingleton<TestingProviderRegistry>();
         services.AddSingleton<IBridgeRequestHandler, NUnitRequestHandler>();
         return services;
     }

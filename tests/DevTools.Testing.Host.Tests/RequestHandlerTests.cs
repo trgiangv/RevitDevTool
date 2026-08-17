@@ -136,6 +136,23 @@ public sealed class RequestHandlerTests
         Assert.Equal(TestingCancellationState.Acknowledged, handler.CancellationState);
     }
 
+    [Fact]
+    public void IncludeLegacy_false_omits_nunit_methods()
+    {
+        var handler = new TestingRequestHandler(
+            new TestingProviderRegistry([new FakeProvider(TestingFrameworkIds.NUnit)]),
+            "Revit",
+            "2025",
+            includeLegacyNunitEnvelopes: false);
+
+        Assert.Equal(
+            new[] { TestingProtocol.Hello, TestingProtocol.Run, TestingProtocol.Cancel },
+            handler.SupportedMethods.ToArray());
+        Assert.DoesNotContain(TestingRequestHandler.LegacyNunitHello, handler.SupportedMethods);
+        Assert.DoesNotContain(TestingRequestHandler.LegacyNunitRun, handler.SupportedMethods);
+        Assert.DoesNotContain(TestingRequestHandler.LegacyNunitCancel, handler.SupportedMethods);
+    }
+
     static TestingRequestHandler CreateHandler(out FakeProvider provider)
     {
         provider = new FakeProvider(TestingFrameworkIds.NUnit);

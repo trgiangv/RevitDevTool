@@ -21,6 +21,8 @@
 
     <ItemGroup>
         <ProjectReference Include="..\..\source\DevTools.NUnit.Host\DevTools.NUnit.Host.csproj" SetTargetFramework="TargetFramework=net10.0-windows"/>
+        <ProjectReference Include="..\..\source\DevTools.Testing.Abstractions\DevTools.Testing.Abstractions.csproj" SetTargetFramework="TargetFramework=net10.0-windows"/>
+        <ProjectReference Include="..\..\source\DevTools.Testing.Transport\DevTools.Testing.Transport.csproj" SetTargetFramework="TargetFramework=net10.0-windows"/>
         <ProjectReference Include="..\..\source\DevTools.Hosting\DevTools.Hosting.csproj" SetTargetFramework="TargetFramework=net10.0-windows"/>
         <ProjectReference Include="..\..\source\DevTools.NUnit.Core\DevTools.NUnit.Core.csproj" SetTargetFramework="TargetFramework=net10.0-windows"/>
         <ProjectReference Include="..\..\source\DevTools.NUnit.Transport\DevTools.NUnit.Transport.csproj" SetTargetFramework="TargetFramework=net10.0-windows"/>

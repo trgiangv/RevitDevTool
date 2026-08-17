@@ -19,6 +19,7 @@
 
     <ItemGroup>
         <ProjectReference Include="..\..\source\DevTools.NUnit.Host\DevTools.NUnit.Host.csproj" SetTargetFramework="TargetFramework=net48"/>
+        <ProjectReference Include="..\..\source\DevTools.Testing.Abstractions\DevTools.Testing.Abstractions.csproj" SetTargetFramework="TargetFramework=net48"/>
         <ProjectReference Include="..\..\source\DevTools.NUnit.Core\DevTools.NUnit.Core.csproj" SetTargetFramework="TargetFramework=net48"/>
         <ProjectReference Include="..\..\source\DevTools.NUnit.Runtime\DevTools.NUnit.Runtime.csproj" ReferenceOutputAssembly="false" SetTargetFramework="TargetFramework=net48"/>
         <ProjectReference Include="..\DevTools.NUnit.Runtime.Fixtures\DevTools.NUnit.Runtime.Fixtures.csproj" ReferenceOutputAssembly="false"/>

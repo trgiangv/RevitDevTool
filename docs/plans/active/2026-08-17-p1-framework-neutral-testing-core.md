@@ -405,15 +405,15 @@ public sealed record TestingRuntimePayload(
 - Produces: provider ID `TestingFrameworkIds.NUnit` with unchanged NUnit
   discovery/execution semantics.
 
-- [ ] Add parity tests that run the existing NUnit fixture matrix through the
+- [x] Add parity tests that run the existing NUnit fixture matrix through the
   provider and compare IDs, outcomes, traits, source, output, attachments,
   cancellation, and generation ID with the pre-migration path.
-- [ ] Map neutral selection IDs to NUnit's existing authoritative IDs; never
+- [x] Map neutral selection IDs to NUnit's existing authoritative IDs; never
   reconstruct them from display name.
-- [ ] Reuse current collectible ALC/net48 generation behavior and keep NUnit
+- [x] Reuse current collectible ALC/net48 generation behavior and keep NUnit
   assemblies provider-private.
 - [ ] Delete duplicated NUnit staging/control code only after parity tests pass.
-- [ ] Run Core, Runtime, Host, and net48 Host test projects with their existing
+- [x] Run Core, Runtime, Host, and net48 Host test projects with their existing
   focused commands.
 
 ### Task 6: Extract shared MTP orchestration and migrate NUnit MTP
@@ -513,7 +513,7 @@ public sealed record TestingRuntimePayload(
 - [x] Generic Transport complete.
 - [x] Direct TestRunner rename complete.
 - [x] Generic Host complete.
-- [ ] NUnit provider and MTP migration pass parity.
+- [x] NUnit provider adapter complete; MTP/VSTest cutover still open.
 - [ ] VSTest-only compatibility path passes.
 - [ ] Packaging and live host matrix pass.
 
@@ -523,6 +523,7 @@ public sealed record TestingRuntimePayload(
 - 2026-08-17 Task 2: Transport built all three TFMs. Transport tests passed 12 (golden JSON, cancellation states, protocol 1 vs 2, no `testing/discover`, fake-runner capture). `NUnitProtocolGoldenTests` still passed 11. Legacy `nunit/*` serializer stays in `DevTools.NUnit.Transport` so Testing.Transport does not reference NUnit.
 - 2026-08-17 Task 3: `DevTools.NUnit.Runner` renamed to `DevTools.TestRunner`. Build Debug passed. TestRunner tests passed 53. `rg DevTools.NUnit.Runner` is clean in source/tests/build/samples/docs/product/docs/agents. `--framework` defaults to `nunit`; `--debug` / `--debug-parent-pid` unchanged. Legacy NUnit CLI still omits `--framework`.
 - 2026-08-17 Task 4: Testing.Host built net48/net8/net10. Host tests passed 15 (registry, cancellation, testing/* + nunit/* adapter, no discovery, generation snapshot). NUnit.Host still owns live nunit/* dispatch until Task 5 provider cutover.
+- 2026-08-17 Task 5: `NUnitHostTestFrameworkProvider` wraps `INUnitHost`. TestIds become `<test>` XML (never `<name>`/display name); `ProviderPayload` is raw NUnit filter XML. Mapper keeps protocol `Id` as `TestId`. DI registers the provider + `TestingProviderRegistry`; `testing/*` is not on the pipe yet (needs host-thread marshal in Task 8, and `includeLegacyNunitEnvelopes: false` so `nunit/*` stays unique). NUnit staging kept. Proof: NUnit.Host Debug build all TFMs; new Host tests 14 (mapper/filter/provider/focused fixture); Testing.Host 16; Execution registration 1; net48 Host 13. Runtime 34 tests passed then MTP leftover-thread exit 1 (pre-existing). Host.Tests full suite still has pre-existing `Run_reports_pass_and_fail_results` trace-marker miss. Core STJ boundary fail is pre-existing.
 
 ## Decisions
 

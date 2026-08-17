@@ -6,6 +6,10 @@ using DevTools.Ipc;
 using DevTools.Hosting;
 using DevTools.NUnit.Core.Contracts;
 using DevTools.NUnit.Host;
+using DevTools.Testing.Abstractions.Contracts;
+using DevTools.Testing.Abstractions.Providers;
+using DevTools.Testing.Host;
+using DevTools.Testing.Transport;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace DevTools.Execution.Tests;
@@ -32,12 +36,25 @@ public sealed class BridgeHandlerRegistrationTests
         Assert.Contains(typeof(PytestRequestHandler), implementationTypes);
         Assert.Contains(typeof(NUnitRequestHandler), implementationTypes);
 
+        Assert.Contains(
+            services,
+            descriptor => descriptor.ServiceType == typeof(IHostTestFrameworkProvider)
+                && descriptor.ImplementationType == typeof(NUnitHostTestFrameworkProvider));
+        Assert.Contains(
+            services,
+            descriptor => descriptor.ServiceType == typeof(TestingProviderRegistry));
+
         var methods = new InstanceRequestHandler(new FakeHostAppInfo()).SupportedMethods
             .Concat(new NUnitRequestHandler(
                 new NoOpHostContextExecutor(),
                 new NoOpNUnitHost(),
                 new FakeHostAppInfo()).SupportedMethods)
             .Concat([PytestBridgeMethods.TestsRun])
+            .Concat(new TestingRequestHandler(
+                new TestingProviderRegistry([new NoOpTestingProvider()]),
+                "Revit",
+                "2025",
+                includeLegacyNunitEnvelopes: false).SupportedMethods)
             .ToList();
 
         Assert.Contains(PytestBridgeMethods.TestsRun, methods, StringComparer.OrdinalIgnoreCase);
@@ -45,6 +62,10 @@ public sealed class BridgeHandlerRegistrationTests
         Assert.Contains(NUnitProtocol.Discover, methods, StringComparer.OrdinalIgnoreCase);
         Assert.Contains(NUnitProtocol.Run, methods, StringComparer.OrdinalIgnoreCase);
         Assert.Contains(NUnitProtocol.Cancel, methods, StringComparer.OrdinalIgnoreCase);
+        Assert.Contains(TestingProtocol.Hello, methods, StringComparer.OrdinalIgnoreCase);
+        Assert.Contains(TestingProtocol.Run, methods, StringComparer.OrdinalIgnoreCase);
+        Assert.Contains(TestingProtocol.Cancel, methods, StringComparer.OrdinalIgnoreCase);
+        Assert.DoesNotContain("testing/discover", methods, StringComparer.OrdinalIgnoreCase);
         Assert.Equal(methods.Count, methods.Distinct(StringComparer.OrdinalIgnoreCase).Count());
     }
 
@@ -82,5 +103,25 @@ public sealed class BridgeHandlerRegistrationTests
         public void Cancel(Guid runId)
         {
         }
+    }
+
+    private sealed class NoOpTestingProvider : IHostTestFrameworkProvider
+    {
+        public string FrameworkId => TestingFrameworkIds.NUnit;
+
+        public TestingRunResponse Run(
+            TestingRunRequest request,
+            ITestingEventSink eventSink,
+            CancellationToken cancellationToken) =>
+            new(
+                request.RunId,
+                FrameworkId,
+                null,
+                Array.Empty<TestingCaseResult>(),
+                TestingCancellationState.None,
+                null,
+                null);
+
+        public bool Cancel(Guid runId) => false;
     }
 }

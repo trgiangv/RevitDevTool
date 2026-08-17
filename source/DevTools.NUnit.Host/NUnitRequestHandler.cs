@@ -23,6 +23,9 @@ public static class NUnitErrorCodes
 /// <see cref="ExecutionGuardMode.Suppress"/> during <c>nunit/run</c>, matching pytest behavior.
 /// AutoCAD does not yet provide an equivalent execution guard; the mode is still set but has no effect there.
 /// NUnit MainThread dispatcher cannot cancel in-flight tests.
+/// Generic <c>testing/*</c> runs through <see cref="NUnitHostTestFrameworkProvider"/>
+/// over the same <see cref="INUnitHost"/>. This handler keeps the NUnit JSON
+/// envelope so fields the generic DTO cannot represent are not round-tripped.
 /// </remarks>
 public sealed class NUnitRequestHandler(
     IHostContextExecutor hostContext,
