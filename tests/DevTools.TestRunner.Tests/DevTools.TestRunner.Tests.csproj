@@ -1,0 +1,55 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <TargetFramework>net10.0-windows</TargetFramework>
+        <IsPackable>false</IsPackable>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <PackageReference Include="coverlet.collector"/>
+        <PackageReference Include="Microsoft.NET.Test.Sdk"/>
+        <PackageReference Include="xunit.v3"/>
+        <PackageReference Include="xunit.runner.visualstudio"/>
+    </ItemGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\..\source\DevTools.Ipc\DevTools.Ipc.csproj"/>
+        <ProjectReference Include="..\..\source\DevTools.Testing.Abstractions\DevTools.Testing.Abstractions.csproj"/>
+        <ProjectReference Include="..\..\source\DevTools.NUnit.Core\DevTools.NUnit.Core.csproj"/>
+        <ProjectReference Include="..\..\source\DevTools.NUnit.Transport\DevTools.NUnit.Transport.csproj"/>
+    </ItemGroup>
+
+    <!-- NETSDK1151: a non-self-contained test project cannot ProjectReference the self-contained Runner exe
+         (AdditionalProperties / ReferenceOutputAssembly=false do not suppress the check). -->
+    <Target Name="EnsureRunnerBuilt" BeforeTargets="Build">
+        <MSBuild Projects="..\..\source\DevTools.TestRunner\DevTools.TestRunner.csproj"
+                 Targets="Build"
+                 Properties="Configuration=$(Configuration)"/>
+    </Target>
+
+    <ItemGroup>
+        <Compile Include="..\..\source\DevTools.NUnit.Core\Discovery\NUnitMetadataDiscoverer.cs"
+                 Link="Discovery\NUnitMetadataDiscoverer.cs" />
+        <Compile Include="..\..\source\DevTools.TestRunner\Commands\DiscoverCommand.cs"
+                 Link="Commands\DiscoverCommand.cs" />
+        <Compile Include="..\..\source\DevTools.TestRunner\Parsing\RunnerCommandLine.cs"
+                 Link="Parsing\RunnerCommandLine.cs" />
+        <Compile Include="..\..\source\DevTools.TestRunner\Parsing\RunnerExitCode.cs"
+                 Link="Parsing\RunnerExitCode.cs" />
+        <Compile Include="..\..\source\DevTools.TestRunner\Services\NUnitPipeClient.cs"
+                 Link="Services\NUnitPipeClient.cs" />
+        <Compile Include="..\..\source\DevTools.TestRunner\Services\NUnitRunnerFilter.cs"
+                 Link="Services\NUnitRunnerFilter.cs" />
+        <Compile Include="..\..\source\DevTools.TestRunner\Debugging\IVisualStudioAttach.cs"
+                 Link="Debugging\IVisualStudioAttach.cs" />
+        <Compile Include="..\..\source\DevTools.TestRunner\Debugging\HostDebugAttachScope.cs"
+                 Link="Debugging\HostDebugAttachScope.cs" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <Using Include="Xunit"/>
+        <Using Include="DevTools.Ipc"/>
+        <Using Include="DevTools.NUnit.Transport"/>
+    </ItemGroup>
+
+</Project>

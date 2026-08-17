@@ -8,7 +8,7 @@ Run: `.agents/skills/revit-nunit/SKILL.md`.
 ```powershell
 dotnet build source/DevTools.NUnit.Host/DevTools.NUnit.Host.csproj -c Debug
 scripts/test-dotnet.ps1 -Project tests/DevTools.NUnit.Mtp.Tests/DevTools.NUnit.Mtp.Tests.csproj
-scripts/test-dotnet.ps1 -Project tests/DevTools.NUnit.Runner.Tests/DevTools.NUnit.Runner.Tests.csproj
+scripts/test-dotnet.ps1 -Project tests/DevTools.TestRunner.Tests/DevTools.TestRunner.Tests.csproj
 # Live MTP (host running; scoped global.json):
 cd samples/DevTools.NUnit.SampleTests
 dotnet test --project DevTools.NUnit.SampleTests.csproj -c Debug.Autodesk.2026 --filter Arithmetic_runs_inside_host
@@ -17,7 +17,7 @@ cd samples/DevTools.NUnit.VSTest.SampleTests
 dotnet test DevTools.NUnit.VSTest.SampleTests.csproj -c Debug.Autodesk.2026 --filter FullyQualifiedName~Arithmetic_runs_inside_host
 ```
 
-Host DLL changes: `scripts/build-host.ps1 -Year <year>`. Runner: `dotnet publish source/DevTools.NUnit.Runner -c Release`.
+Host DLL changes: `scripts/build-host.ps1 -Year <year>`. Runner: `dotnet publish source/DevTools.TestRunner -c Release`.
 
 ## Pattern
 

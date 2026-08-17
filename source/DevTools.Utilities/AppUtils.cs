@@ -24,7 +24,7 @@ public static class AppUtils
 
     public static string GetDaemonExePath() => Path.Combine(GetBundleContentsPath(), "DevTools.Daemon.exe");
 
-    public static string GetNUnitRunnerExePath() => Path.Combine(GetBundleContentsPath(), "DevTools.NUnit.Runner.exe");
+    public static string GetTestRunnerExePath() => Path.Combine(GetBundleContentsPath(), "DevTools.TestRunner.exe");
     
     public static bool IsValidPath(string? path)
     {

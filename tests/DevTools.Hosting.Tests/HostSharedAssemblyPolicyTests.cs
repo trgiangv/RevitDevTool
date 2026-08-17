@@ -20,7 +20,7 @@ public sealed class HostSharedAssemblyPolicyTests
     public void Out_of_process_hosts_do_not_register_in_process_policy()
     {
         var root = RepositoryRoot.Find();
-        foreach (var project in new[] { "DevTools.Daemon", "DevTools.NUnit.Runner", "DevTools.Mcp.Server" })
+        foreach (var project in new[] { "DevTools.Daemon", "DevTools.TestRunner", "DevTools.Mcp.Server" })
         {
             foreach (var path in Directory.GetFiles(
                          Path.Combine(root, "source", project), "*.cs", SearchOption.AllDirectories))

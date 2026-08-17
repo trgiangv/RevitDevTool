@@ -22,7 +22,7 @@
 
     <PropertyGroup>
       <_DevToolsNUnitRunnerPath Condition="'$(DevToolsNUnitRunnerPath)' != ''">$(DevToolsNUnitRunnerPath)</_DevToolsNUnitRunnerPath>
-      <_DevToolsNUnitRunnerPath Condition="'$(_DevToolsNUnitRunnerPath)' == ''">%APPDATA%\Autodesk\ApplicationPlugins\RevitDevTool.bundle\Contents\DevTools.NUnit.Runner.exe</_DevToolsNUnitRunnerPath>
+      <_DevToolsNUnitRunnerPath Condition="'$(_DevToolsNUnitRunnerPath)' == ''">%APPDATA%\Autodesk\ApplicationPlugins\RevitDevTool.bundle\Contents\DevTools.TestRunner.exe</_DevToolsNUnitRunnerPath>
       <_DevToolsNUnitOutputRunSettings Condition="'$(TargetDir)' != ''">$(TargetDir)DevTools.NUnit.runsettings</_DevToolsNUnitOutputRunSettings>
       <_DevToolsNUnitOutputRunSettings Condition="'$(_DevToolsNUnitOutputRunSettings)' == '' AND '$(OutputPath)' != ''">$(OutputPath)DevTools.NUnit.runsettings</_DevToolsNUnitOutputRunSettings>
       <RunSettingsFilePath>$(DevToolsNUnitGeneratedRunSettingsPath)</RunSettingsFilePath>

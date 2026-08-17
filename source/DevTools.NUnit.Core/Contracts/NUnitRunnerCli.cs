@@ -3,7 +3,7 @@ using System.Text.Json;
 namespace DevTools.NUnit.Core.Contracts;
 
 /// <summary>
-/// Shared DevTools.NUnit.Runner CLI tokens and argument layout.
+/// Shared DevTools.TestRunner CLI tokens and argument layout.
 /// MTP, Runner, and the VSTest adapter must use this instead of duplicating flags.
 /// </summary>
 public static class NUnitRunnerCli

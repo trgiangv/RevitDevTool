@@ -3,7 +3,7 @@ using DevTools.NUnit.Core.Contracts;
 namespace DevTools.NUnit.Core;
 
 /// <summary>
-/// Spawns <c>DevTools.NUnit.Runner</c> for <c>run</c> only. Shared by MTP and VSTest.
+/// Spawns <c>DevTools.TestRunner</c> for <c>run</c> only. Shared by MTP and VSTest.
 /// Discovery is local PE metadata, not this transport.
 /// </summary>
 public interface IRunnerTransport

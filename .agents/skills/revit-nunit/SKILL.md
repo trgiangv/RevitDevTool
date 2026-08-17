@@ -14,7 +14,7 @@ Standalone consumer skill. Copy this folder into any repo (or
 `~/.agents/skills/revit-nunit/`).
 
 ```
-dotnet test (MTP exe) → installed DevTools.NUnit.Runner → host pipe → NUnit 4.6.1
+dotnet test (MTP exe) → installed DevTools.TestRunner → host pipe → NUnit 4.6.1
 ```
 
 The MTP exe never runs test bodies locally. Requires

@@ -10,5 +10,5 @@ parallel duplicate plans for the same workstream, and move a plan to
 | Priority | Decision | Plan | Gate |
 |---|---|---|---|
 | P0 | [0022](../../decisions/0022-repository-tests-use-xunit4-native-mtp.md) | [xUnit 4 repository baseline](2026-08-17-p0-xunit4-repository-mtp-baseline.md) | CLI complete; IDE provider smoke still open |
-| P1 | [0020](../../decisions/0020-framework-neutral-mtp-host-testing.md) | [Framework-neutral testing core](2026-08-17-p1-framework-neutral-testing-core.md) | Active — Tasks 1-2 landed |
+| P1 | [0020](../../decisions/0020-framework-neutral-mtp-host-testing.md) | [Framework-neutral testing core](2026-08-17-p1-framework-neutral-testing-core.md) | Active — Tasks 1-3 landed |
 | P2 | [0021](../../decisions/0021-xunit4-host-testing-provider.md) | [xUnit 4 host provider](2026-08-17-p2-xunit4-host-provider.md) | Blocked by P1 NUnit parity |

@@ -135,7 +135,7 @@ public sealed class MtpArchitectureTests
         var debugging = Path.Combine(
             RepositoryRoot,
             "source",
-            "DevTools.NUnit.Runner",
+            "DevTools.TestRunner",
             "Debugging",
             "VisualStudioAttach.cs");
         var attach = File.ReadAllText(debugging);
@@ -145,8 +145,8 @@ public sealed class MtpArchitectureTests
         var runnerCsproj = File.ReadAllText(Path.Combine(
             RepositoryRoot,
             "source",
-            "DevTools.NUnit.Runner",
-            "DevTools.NUnit.Runner.csproj"));
+            "DevTools.TestRunner",
+            "DevTools.TestRunner.csproj"));
         Assert.Contains("Microsoft.VisualStudio.Interop", runnerCsproj, StringComparison.Ordinal);
 
         var mtpCsproj = File.ReadAllText(Path.Combine(

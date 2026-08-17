@@ -31,7 +31,7 @@
 
     <PropertyGroup>
       <_DevToolsNUnitRunnerPath Condition="'$(DevToolsNUnitRunnerPath)' != ''">$(DevToolsNUnitRunnerPath)</_DevToolsNUnitRunnerPath>
-      <_DevToolsNUnitRunnerPath Condition="'$(_DevToolsNUnitRunnerPath)' == ''">%APPDATA%/Autodesk/ApplicationPlugins/RevitDevTool.bundle/Contents/DevTools.NUnit.Runner.exe</_DevToolsNUnitRunnerPath>
+      <_DevToolsNUnitRunnerPath Condition="'$(_DevToolsNUnitRunnerPath)' == ''">%APPDATA%/Autodesk/ApplicationPlugins/RevitDevTool.bundle/Contents/DevTools.TestRunner.exe</_DevToolsNUnitRunnerPath>
       <_DevToolsNUnitRunnerPathJson>$(_DevToolsNUnitRunnerPath.Replace('\', '\\'))</_DevToolsNUnitRunnerPathJson>
       <_DevToolsNUnitHostOptionsRelPath>$(OutputPath)devtools.nunit.host.json</_DevToolsNUnitHostOptionsRelPath>
     </PropertyGroup>

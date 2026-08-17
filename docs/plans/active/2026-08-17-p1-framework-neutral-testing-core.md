@@ -47,7 +47,7 @@ Date: 2026-08-17
 
 ## Status
 
-Active — P0 CLI exit gate is complete. Tasks 1-2 landed; remaining work is the TestRunner rename and NUnit parity cutover.
+Active — P0 CLI exit gate is complete. Tasks 1-3 landed; remaining work is Testing.Host and NUnit parity cutover.
 
 ## Harness Execution Rules
 
@@ -323,17 +323,17 @@ public interface ITestRunnerTransport : IDisposable
 - Consumes: `ITestRunnerTransport` and neutral contracts.
 - Produces: exactly one installed executable named `DevTools.TestRunner.exe`.
 
-- [ ] First update Runner path/assembly tests to require
+- [x] First update Runner path/assembly tests to require
   `DevTools.TestRunner.exe` and reject `DevTools.NUnit.Runner.exe` anywhere in
   bundle/package output.
-- [ ] Rename project, assembly, root namespace, commands, tests, build module,
+- [x] Rename project, assembly, root namespace, commands, tests, build module,
   output paths, kill-before-publish target, and generated host settings in one
   coherent change.
-- [ ] Preserve `--debug` and `--debug-parent-pid` behavior from the active
+- [x] Preserve `--debug` and `--debug-parent-pid` behavior from the active
   Visual Studio debug plan.
-- [ ] Keep framework-specific CLI parsing behind an explicit `--framework`
+- [x] Keep framework-specific CLI parsing behind an explicit `--framework`
   value; default to NUnit only for the retained legacy NUnit call path.
-- [ ] Run:
+- [x] Run:
 
 ```powershell
 dotnet build source/DevTools.TestRunner/DevTools.TestRunner.csproj -c Debug
@@ -510,8 +510,9 @@ public sealed record TestingRuntimePayload(
 
 - [x] P0 dependency gate complete.
 - [x] Neutral contracts and boundary tests complete.
-- [ ] Generic Transport and Host complete.
-- [ ] Direct TestRunner rename complete.
+- [x] Generic Transport complete.
+- [x] Direct TestRunner rename complete.
+- [ ] Generic Host complete.
 - [ ] NUnit provider and MTP migration pass parity.
 - [ ] VSTest-only compatibility path passes.
 - [ ] Packaging and live host matrix pass.
@@ -520,6 +521,7 @@ public sealed record TestingRuntimePayload(
 
 - 2026-08-17 Task 1: Abstractions built net48/net8/net10. Abstractions tests passed 10.
 - 2026-08-17 Task 2: Transport built all three TFMs. Transport tests passed 12 (golden JSON, cancellation states, protocol 1 vs 2, no `testing/discover`, fake-runner capture). `NUnitProtocolGoldenTests` still passed 11. Legacy `nunit/*` serializer stays in `DevTools.NUnit.Transport` so Testing.Transport does not reference NUnit.
+- 2026-08-17 Task 3: `DevTools.NUnit.Runner` renamed to `DevTools.TestRunner`. Build Debug passed. TestRunner tests passed 53. `rg DevTools.NUnit.Runner` is clean in source/tests/build/samples/docs/product/docs/agents. `--framework` defaults to `nunit`; `--debug` / `--debug-parent-pid` unchanged. Legacy NUnit CLI still omits `--framework`.
 
 ## Decisions
 

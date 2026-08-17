@@ -19,7 +19,7 @@ if (args.Length == 0)
 {
     builder.Services.AddModule<CompileProjectModule>();
     builder.Services.AddModule<PublishDaemonModule>();
-    builder.Services.AddModule<PublishNUnitRunnerModule>();
+    builder.Services.AddModule<PublishTestRunnerModule>();
 }
 
 if (args.Contains("test"))

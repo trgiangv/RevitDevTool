@@ -93,7 +93,7 @@ Keep one owner: `RevitDevTool.NUnit`.
 
 ## Runner install
 
-`%APPDATA%/Autodesk/ApplicationPlugins/RevitDevTool.bundle/Contents/DevTools.NUnit.Runner.exe`
+`%APPDATA%/Autodesk/ApplicationPlugins/RevitDevTool.bundle/Contents/DevTools.TestRunner.exe`
 
 Override with MSBuild `DevToolsNUnitRunnerPath` only when the bundle is not
 in the default location. Missing file → `"RevitDevTool is not installed"`.

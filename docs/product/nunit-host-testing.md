@@ -33,7 +33,7 @@ VSTest (`DevTools.NUnit.TestAdapter`). Keep them on **separate** test projects.
 |---------|------|
 | `DevTools.NUnit.Core` | `nunit/*` wire contracts, timing, protocol version. Out-of-process Runner client (`Client/`, linked into MTP/VSTest, not in the host DLL) |
 | `DevTools.NUnit.Host` | Native NUnit runtime in the CAD host |
-| `DevTools.NUnit.Runner` | CLI: PE discover locally; find/launch host pipe only on **run** |
+| `DevTools.TestRunner` | CLI: PE discover locally; find/launch host pipe only on **run** |
 | `DevTools.NUnit.Mtp` | MTP framework (`PackageId=RevitDevTool.NUnit`); PE discover in-process; Runner only on **run** |
 | `DevTools.NUnit.TestAdapter` | VSTest adapter; same PE discover + Runner **run** contract |
 
@@ -108,18 +108,21 @@ CLI tokens and argument layout: `NUnitRunnerCli` in Core. MTP and Runner must no
 The Runner executable is parsed by ConsoleAppFramework; `--version` is the tool version.
 
 ```text
-DevTools.NUnit.Runner discover <assembly> --host Revit --host-version 2024
-DevTools.NUnit.Runner run <assembly> --host Revit --host-version 2026 [--name Arithmetic_runs_inside_host]
-DevTools.NUnit.Runner run <assembly> --host Revit --host-version 2026 --debug-parent-pid <testhostPid>
+DevTools.TestRunner discover <assembly> --host Revit --host-version 2024
+DevTools.TestRunner run <assembly> --host Revit --host-version 2026 [--name Arithmetic_runs_inside_host]
+DevTools.TestRunner run <assembly> --host Revit --host-version 2026 --debug-parent-pid <testhostPid>
+DevTools.TestRunner run --framework nunit <assembly> --host Revit --host-version 2026
 ```
 
 `--debug-parent-pid` is added automatically when Visual Studio Test Explorer **Debug**s an
 MTP or in-tree VSTest project. Do not pass it for ordinary `dotnet test` runs.
 `--debug` without a PID attaches using the active Visual Studio instance (manual CLI).
 `--host-version` is the Autodesk year; `Runner --version` is the tool version.
+`--framework` selects the host-test provider; omit it or pass `nunit` for the
+legacy NUnit call path.
 
 Runner ships under the ApplicationPlugins bundle `Contents` folder (publish
-`DevTools.NUnit.Runner`).
+`DevTools.TestRunner`).
 
 ## Relation to ricaun.RevitTest
 

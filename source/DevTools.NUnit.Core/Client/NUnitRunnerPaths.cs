@@ -23,7 +23,7 @@ public static class NUnitRunnerPaths
             "ApplicationPlugins",
             "RevitDevTool.bundle",
             "Contents",
-            "DevTools.NUnit.Runner.exe");
+            "DevTools.TestRunner.exe");
         if (IsRunnable(bundlePath))
             return bundlePath;
 

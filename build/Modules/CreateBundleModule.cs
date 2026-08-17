@@ -20,7 +20,7 @@ namespace Build.Modules;
 [DependsOn<ResolveVersioningModule>]
 [DependsOn<CompileProjectModule>]
 [DependsOn<PublishDaemonModule>]
-[DependsOn<PublishNUnitRunnerModule>]
+[DependsOn<PublishTestRunnerModule>]
 [UsedImplicitly]
 public sealed partial class CreateBundleModule(IOptions<BuildOptions> buildOptions) : Module<string>
 {
@@ -30,13 +30,13 @@ public sealed partial class CreateBundleModule(IOptions<BuildOptions> buildOptio
     private const string BinFolder = "bin";
     private const string PublishFolder = "publish";
     private const string DaemonExecutable = "DevTools.Daemon.exe";
-    private const string NUnitRunnerExecutable = "DevTools.NUnit.Runner.exe";
+    private const string TestRunnerExecutable = "DevTools.TestRunner.exe";
     
     protected override async Task<string?> ExecuteAsync(IModuleContext context, CancellationToken cancellationToken)
     {
         var versioningResult = await context.GetModule<ResolveVersioningModule>();
         var daemonResult = await context.GetModule<PublishDaemonModule>();
-        var nunitRunnerResult = await context.GetModule<PublishNUnitRunnerModule>();
+        var runnerResult = await context.GetModule<PublishTestRunnerModule>();
         var versioning = versioningResult.ValueOrDefault!;
 
         var revitTarget = new File(Projects.RevitDevTool.FullName);
@@ -55,7 +55,7 @@ public sealed partial class CreateBundleModule(IOptions<BuildOptions> buildOptio
         PackFiles(revitPublishDirs, contentFolder);
         PackFiles(acadPublishDirs, contentFolder);
         PackDaemon(daemonResult.ValueOrDefault!, contentFolder);
-        PackNUnitRunner(nunitRunnerResult.ValueOrDefault!, contentFolder);
+        PackTestRunner(runnerResult.ValueOrDefault!, contentFolder);
         CopyManifest(context, manifestFile, versioning);
 
         var outputFile = outputFolder.GetFile($"{bundleFolder.Name}.zip");
@@ -97,13 +97,13 @@ public sealed partial class CreateBundleModule(IOptions<BuildOptions> buildOptio
         daemonExe.CopyTo(contentFolder.GetFile(DaemonExecutable).Path);
     }
 
-    private static void PackNUnitRunner(string runnerPublishDir, Folder contentFolder)
+    private static void PackTestRunner(string runnerPublishDir, Folder contentFolder)
     {
-        var runnerExe = new File(Path.Combine(runnerPublishDir, NUnitRunnerExecutable));
+        var runnerExe = new File(Path.Combine(runnerPublishDir, TestRunnerExecutable));
         runnerExe.Exists.ShouldBeTrue(
-            $"Expected {NUnitRunnerExecutable} at '{runnerExe.Path}' after PublishNUnitRunnerModule.");
+            $"Expected {TestRunnerExecutable} at '{runnerExe.Path}' after PublishTestRunnerModule.");
 
-        runnerExe.CopyTo(contentFolder.GetFile(NUnitRunnerExecutable).Path);
+        runnerExe.CopyTo(contentFolder.GetFile(TestRunnerExecutable).Path);
     }
 
     private static void CopyManifest(IModuleContext context, File manifestFile, ResolveVersioningResult versioning)
