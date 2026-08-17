@@ -34,7 +34,8 @@ VSTest (`DevTools.NUnit.TestAdapter`). Keep them on **separate** test projects.
 | `DevTools.Testing.Abstractions` | Framework-neutral DTOs and provider contracts. Packaged **loose exactly once** beside the host add-in |
 | `DevTools.Testing.Transport` | `testing/*` JSON/IPC; merged into the host add-in |
 | `DevTools.Testing.Host` | Provider registry and `testing/*` dispatch; merged into the host add-in |
-| `DevTools.NUnit.Core` | `nunit/*` wire contracts, timing, protocol version. Out-of-process Runner client (`Client/`, linked into MTP/VSTest, not in the host DLL). Loose beside the add-in |
+| `DevTools.NUnit.Transport` | `nunit/*` wire contracts and legacy result compatibility; loose beside the host add-in |
+| `DevTools.NUnit.Provider` | Metadata discovery, filtering, mapping, and out-of-process MTP/VSTest provider runtime |
 | `DevTools.NUnit.Host` | Native NUnit runtime provider plus marshaled `testing/*` handler. NUnit runtime stays under `NUnitRuntime\` |
 | `DevTools.TestRunner` | CLI: PE discover locally; find/launch host pipe only on **run**. One executable: `DevTools.TestRunner.exe` |
 | `DevTools.NUnit.Mtp` | MTP framework (`PackageId=RevitDevTool.NUnit`); PE discover in-process; Runner only on **run** |
@@ -111,7 +112,7 @@ IDE selected-run uses FullName. Runner composes NUnit `TestFilter` XML for the h
 
 ## CLI
 
-CLI tokens and argument layout: `NUnitRunnerCli` in Core. MTP and Runner must not duplicate those flags.
+CLI tokens and argument layout: `NUnitRunnerCli` in `DevTools.NUnit.Runner`. MTP and Runner must not duplicate those flags.
 The Runner executable is parsed by ConsoleAppFramework; `--version` is the tool version.
 
 ```text
@@ -195,7 +196,7 @@ options; one intended adapter package aligned with the rest of RevitDevTool.
 |---------|----------------|
 | `RevitDevTool.NUnit` (`DevTools.NUnit.Mtp`) | Independent of installer tags. Version = csproj `<Version>`. Workflow: `PublishNUnit.yml` |
 | `DevTools.NUnit.TestAdapter` | **Not published** — in-tree VSTest samples only |
-| Core / Host / Runner | Not consumer NuGet APIs |
+| Transport / Provider / Host / Runner | Not consumer NuGet APIs |
 
 Bump `<Version>` in `source/DevTools.NUnit.Mtp/DevTools.NUnit.Mtp.csproj`, commit,
 then run **Actions → Publish NUnit**. The workflow reads that property, packs
@@ -234,6 +235,7 @@ so `dotnet test` uses MTP.
 ## Related
 
 - Decision: [`docs/decisions/0016-nunit-native-runtime-and-mtp-first-integration.md`](../decisions/0016-nunit-native-runtime-and-mtp-first-integration.md)
+- Ownership boundary: [`docs/decisions/0021-testing-kernel-and-provider-owned-framework-runtime.md`](../decisions/0021-testing-kernel-and-provider-owned-framework-runtime.md)
 - Output routing: [`docs/decisions/0017-nunit-host-test-output-routing.md`](../decisions/0017-nunit-host-test-output-routing.md)
 - Agent notes: [`docs/agents/nunit-host-testing.md`](../agents/nunit-host-testing.md)
 - Pytest sibling: [`pytest-bridge.md`](pytest-bridge.md)
