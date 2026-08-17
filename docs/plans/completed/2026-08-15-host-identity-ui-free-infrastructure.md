@@ -4,12 +4,11 @@ Date: 2026-08-15
 
 ## Status
 
-In progress — ADR [0018](../../decisions/0018-host-identity-and-out-of-process-infrastructure.md)
-is **Accepted**. A, J, B, C+D, E, D2, H, I (`1963c030`) are on `develop`.
-Hosting slim (`59a14a4b`) + Opus 5 graph follow-up are on `develop` (unpushed).
-**G** (host-boundaries) lands with this follow-up. **K** (`Utilities/Interop`)
-is **rejected** — launch P/Invoke stays in Hosting. Optional **F** remains.
-Revit 2025 live launch passed; Acad-family skipped. Live pane after H not yet run.
+Completed — ADR [0018](../../decisions/0018-host-identity-and-out-of-process-infrastructure.md)
+is **Accepted**. A–J, G, Hosting slim, graph follow-up, and optional **F**
+(`a93e5f3d`) are on `develop` (unpushed). **K** (`Utilities/Interop`) is
+**rejected** — launch P/Invoke stays in Hosting. Revit 2025 live launch
+passed; Acad-family skipped. Live pane after H not run.
 
 ## Outcome
 
@@ -139,7 +138,7 @@ NUnit.Host.
 - [x] Opus 5 graph follow-up — dead Win32/Configure, `HostApiAssemblySet`,
       `Use` at `OnStartup`, prefixes in Utilities, Composition folder,
       `HostAppParsing`, `AddAutocadFamilyLaunch` calls Core (`5ac4e8f3`)
-- [ ] PR F — Agents rename (optional)
+- [x] PR F — Agents rename (`a93e5f3d`; Revit 2025/2022 + Acad 2025 compile-only)
 - [x] PR G — host-boundaries.md (+ ARCHITECTURE line + 0018 amendment)
 - [x] PR K — **rejected** as `Utilities/Interop` (would create Hosting → Utilities)
 
@@ -260,8 +259,9 @@ E, H, D2 host add-ins: `-c Debug.Autodesk.2022`.
 | A–I, J | On `develop` through `1963c030`. Revit 2025 `launch_host` live pass. Acad-family live skipped. Live pane / `nunit/run` after H not run. |
 | Hosting slim `59a14a4b` | Spec rename; launch types folded; policy moved to add-ins. |
 | Opus 5 graph follow-up `5ac4e8f3` | Compile: Utilities/Hosting/Hosting.Revit/Hosting.Acad/Execution/Mcp.Server Debug; Revit + Acad `Debug.Autodesk.2025` compile-only. Tests: Utilities 16, Hosting 48, Hosting.Revit 11, Hosting.Acad 13, Logging 7. NUnit.Host 62 pass / 1 fail (`Run_reports_pass_and_fail_results` Trace — `known-test-gaps.md`). Mcp.Tests 194 pass / 3 known gaps (UI thread tracker, live host, python parser sample). |
+| F `a93e5f3d` | `DevTools.Agents.Revit` / `Acad` → `DevTools.Mcp.Revit` / `Mcp.Acad`. Compile-only: Revit `Debug.Autodesk.2025` + `2022`, Acad `Debug.Autodesk.2025`. Assemblies stay `UseRevit` / `UseAutoCad`. |
 
-Remaining on this plan: optional **F**. Move to `docs/plans/completed/` after F or when abandoning F.
+No remaining code on this plan. **K** rejected. Live pane / Acad-family `launch_host` remain manual proof, not blockers.
 
 ---
 
@@ -644,10 +644,10 @@ Live: load old settings file, switch Light/Dark/Auto.
 
 ### PR F — optional rename
 
-`DevTools.Agents.Revit` → `DevTools.Mcp.Revit`, `Agents.Acad` →
-`Mcp.Acad`. slnx, host ProjectReferences, hosting extension usings,
-`.agents/skills/build/SKILL.md` project names. Assemblies stay host-bound
-(`UseRevit`). Not an Accept condition.
+Landed `a93e5f3d`. `DevTools.Agents.Revit` → `DevTools.Mcp.Revit`,
+`Agents.Acad` → `Mcp.Acad`. slnx, host ProjectReferences, Composition
+usings, `.agents/skills/build/SKILL.md` project names. Assemblies stay
+host-bound (`UseRevit` / `UseAutoCad`). Not an Accept condition.
 
 ### PR G — docs
 

@@ -946,10 +946,9 @@ Landed:
 
 ## Follow-Up
 
-- After **Accepted**: execute A, B, C+D, E, D2, H, I, J as PRs; optional F;
-  then G. Durable task memory:
-  `docs/plans/active/2026-08-15-host-identity-ui-free-infrastructure.md`.
-  Do not implement from chat.
+- Sequence A–J, G, and optional F are on `develop` (`a93e5f3d` for F).
+  **K** rejected. Task memory:
+  `docs/plans/completed/2026-08-15-host-identity-ui-free-infrastructure.md`.
 - NativeAOT / `PublishTrimmed` is not a follow-up of this ADR.
 - [0007](0007-revit-core-and-visualization-boundaries.md): one sentence —
   in-host MCP tool projects (`DevTools.Mcp.Revit` after F) may reference
