@@ -3,7 +3,6 @@ namespace DevTools.Testing.Abstractions.Contracts;
 public static class TestingFrameworkIds
 {
     public const string NUnit = "nunit";
-    public const string Xunit = "xunit";
 }
 
 public sealed record TestingHostOptions(

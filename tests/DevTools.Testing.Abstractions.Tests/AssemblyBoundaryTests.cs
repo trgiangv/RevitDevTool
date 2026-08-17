@@ -63,7 +63,9 @@ public sealed class AssemblyBoundaryTests
             "Process.Start",
         ];
 
-        var sources = Directory.GetFiles(directory, "*.cs", SearchOption.AllDirectories);
+        var sources = Directory.GetFiles(directory, "*.cs", SearchOption.AllDirectories)
+            .Where(path => !IsBuildArtifact(path, directory))
+            .ToArray();
         Assert.NotEmpty(sources);
 
         var violations = new List<string>();
@@ -84,6 +86,13 @@ public sealed class AssemblyBoundaryTests
         => ForbiddenAssemblyPrefixes.Any(prefix =>
             assemblyName.StartsWith(prefix, StringComparison.OrdinalIgnoreCase)
             || assemblyName.Equals(prefix, StringComparison.OrdinalIgnoreCase));
+
+    static bool IsBuildArtifact(string path, string projectDirectory)
+    {
+        var relativePath = Path.GetRelativePath(projectDirectory, path);
+        var firstSegment = relativePath.Split(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar)[0];
+        return firstSegment is "bin" or "obj";
+    }
 
     static string FindRepositoryRoot()
     {

@@ -75,7 +75,7 @@ public sealed class ProcessTestRunnerClientTests
             new TestingRunRequest(
                 1,
                 Guid.NewGuid(),
-                TestingFrameworkIds.Xunit,
+                "future-provider",
                 new TestingAssemblyReference(@"C:\tests\Sample.dll", null, null),
                 new TestingSelection([]),
                 new Dictionary<string, string>()),

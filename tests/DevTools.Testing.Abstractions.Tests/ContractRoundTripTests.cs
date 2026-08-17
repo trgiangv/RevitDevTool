@@ -9,7 +9,7 @@ public sealed class ContractRoundTripTests
         {
             "  leading and trailing whitespace  ",
             "NUnit.Name(\"a,b\")::Method(1)",
-            "xunit.v3://method/DevTools.Xunit.Runtime.Fixtures.TheoryFixture.Inline(input: 42)/0",
+            "provider.v1://method/Future.Framework.Fixtures.TheoryFixture.Inline(input: 42)/0",
             @"C:\path with spaces\Test.cs:12",
             "id/with/slashes+plus&amp;punct!",
         };
@@ -57,7 +57,6 @@ public sealed class ContractRoundTripTests
     public void Framework_ids_are_stable_literals()
     {
         Assert.Equal("nunit", TestingFrameworkIds.NUnit);
-        Assert.Equal("xunit", TestingFrameworkIds.Xunit);
     }
 
     static TestingCaseResult CreateCase(string testId)

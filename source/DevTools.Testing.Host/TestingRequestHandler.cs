@@ -196,19 +196,7 @@ public sealed class TestingRequestHandler : IBridgeRequestHandler, IBridgeNotifi
         if (_cancellation.State == TestingCancellationState.None)
             _cancellation.Transition(TestingCancellationState.Requested);
 
-        var acknowledged = false;
-        foreach (var frameworkId in new[] { TestingFrameworkIds.NUnit, TestingFrameworkIds.Xunit })
-        {
-            try
-            {
-                if (_registry.GetRequired(frameworkId).Cancel(request!.RunId))
-                    acknowledged = true;
-            }
-            catch (KeyNotFoundException)
-            {
-                // Provider not registered.
-            }
-        }
+        var acknowledged = _registry.Cancel(request!.RunId);
 
         if (acknowledged)
             _cancellation.TryTransition(TestingCancellationState.Acknowledged);

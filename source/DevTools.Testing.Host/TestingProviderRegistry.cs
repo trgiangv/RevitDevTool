@@ -42,14 +42,23 @@ public sealed class TestingProviderRegistry
         throw new KeyNotFoundException($"No host-test provider is registered for '{id}'.");
     }
 
+    public bool Cancel(Guid runId)
+    {
+        var acknowledged = false;
+        foreach (var provider in _providers.Values)
+        {
+            if (provider.Cancel(runId))
+                acknowledged = true;
+        }
+
+        return acknowledged;
+    }
+
     private static string Normalize(string frameworkId)
     {
         var trimmed = frameworkId?.Trim() ?? string.Empty;
         if (string.Equals(trimmed, TestingFrameworkIds.NUnit, StringComparison.OrdinalIgnoreCase))
             return TestingFrameworkIds.NUnit;
-        if (string.Equals(trimmed, TestingFrameworkIds.Xunit, StringComparison.OrdinalIgnoreCase))
-            return TestingFrameworkIds.Xunit;
-
         return trimmed.ToLowerInvariant();
     }
 }

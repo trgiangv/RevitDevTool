@@ -335,9 +335,9 @@ public sealed class RunnerCommandLineTests
             debugParentPid: null,
             out _,
             out var error,
-            framework: TestingFrameworkIds.Xunit);
+            framework: "xunit");
 
         Assert.False(ok);
-        Assert.Equal($"Unsupported --framework '{TestingFrameworkIds.Xunit}'.", error);
+        Assert.Equal("Unsupported --framework 'xunit'.", error);
     }
 }

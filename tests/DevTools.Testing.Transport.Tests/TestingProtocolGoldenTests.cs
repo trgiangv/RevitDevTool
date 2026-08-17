@@ -73,11 +73,11 @@ public sealed class TestingProtocolGoldenTests
             state);
         var response = new TestingRunResponse(
             SampleRunId,
-            TestingFrameworkIds.Xunit,
+            "future-provider",
             "gen-1",
             [result],
             state,
-            "xunit/runtime_restart_required",
+            "future-provider/runtime_restart_required",
             "restart");
 
         var eventJson = JsonSerializer.Serialize(testingEvent, TestingJsonContext.Default.TestingEvent);
@@ -91,7 +91,7 @@ public sealed class TestingProtocolGoldenTests
         Assert.NotNull(responseRoundTrip);
         Assert.Equal(state, responseRoundTrip.CancellationState);
         Assert.Equal("gen-1", responseRoundTrip.GenerationId);
-        Assert.Equal("xunit/runtime_restart_required", responseRoundTrip.DiagnosticCode);
+        Assert.Equal("future-provider/runtime_restart_required", responseRoundTrip.DiagnosticCode);
         Assert.Contains("cancellation_state", eventJson, StringComparison.Ordinal);
     }
 

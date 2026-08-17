@@ -22,7 +22,6 @@ System.Text.Json, NUnit 4.6.1, Autodesk host composition.
 ## Global Constraints
 
 - Decision: [0020 Framework-Neutral MTP Host Testing](../../decisions/0020-framework-neutral-mtp-host-testing.md).
-- P0 xUnit 4 repository baseline must be complete before this plan starts.
 - Discovery never locates, launches, attaches to, or opens an Autodesk host.
 - Only execution may start `DevTools.TestRunner` and activate a host.
 - `DevTools.Testing.Abstractions` contains no MTP, NUnit, xUnit, Autodesk,
@@ -40,14 +39,13 @@ Date: 2026-08-17
 ## Priority And Dependencies
 
 - Priority: **P1**.
-- Depends on: [P0 xUnit 4 Repository MTP Baseline](2026-08-17-p0-xunit4-repository-mtp-baseline.md).
-- Unblocks: P2 xUnit 4 host provider.
+- Unblocks: future framework-specific host providers.
 - Supersedes after parity: remaining framework-neutral work in
   [2026-08-12 NUnit Native Runtime And MTP-First Integration](2026-08-12-nunit-native-runtime-mtp.md).
 
 ## Status
 
-Active — Tasks 1-8 plus TestRunner `testing/*` stdout cutover landed. NUnit parity unblocks P2.
+Active — Tasks 1-8 plus TestRunner `testing/*` stdout cutover landed. NUnit parity is retained.
 
 ## Harness Execution Rules
 
@@ -133,7 +131,6 @@ parallel DTOs:
 public static class TestingFrameworkIds
 {
     public const string NUnit = "nunit";
-    public const string Xunit = "xunit";
 }
 
 public sealed record TestingHostOptions(
@@ -488,7 +485,7 @@ public sealed record TestingRuntimePayload(
   framework ID, generation ID, and result.
 - [x] After parity, mark the remaining neutralization work in the 2026-08-12
   plan superseded and update the 2026-08-15 debug plan's Runner name.
-- [x] Stop for user review; do not commit or start P2 without authorization.
+- [x] Stop for user review; do not start another framework provider without authorization.
 
 ## Risks And Recovery
 
@@ -508,7 +505,6 @@ public sealed record TestingRuntimePayload(
 
 ## Progress
 
-- [x] P0 dependency gate complete.
 - [x] Neutral contracts and boundary tests complete.
 - [x] Generic Transport complete.
 - [x] Direct TestRunner rename complete.

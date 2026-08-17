@@ -56,8 +56,8 @@ framework extensions.
    `DevTools.Testing.Transport`. It does not discover framework attributes and
    does not interpret opaque framework IDs or payloads.
 
-4. **Register one thin MTP framework per test framework.** `DevTools.NUnit.Mtp`
-   and `DevTools.Xunit.Mtp` each register their own MTP `ITestFramework` and
+4. **Register one thin MTP framework per test framework.** Each
+   framework-specific MTP package registers its own MTP `ITestFramework` and
    supply framework-owned discovery, identity, filter, result, and capability
    mapping. There is no universal MTP framework that guesses which provider
    owns an assembly. A host-test project selects exactly one DevTools framework
@@ -108,8 +108,8 @@ framework extensions.
 
 12. **Keep host composition neutral.** `DevTools.Testing.Host` owns provider
     registration, dispatch, shared generation/session infrastructure, and
-    neutral request handling. `DevTools.NUnit.Host` and
-    `DevTools.Xunit.Host` register provider implementations. Shared
+    neutral request handling. Framework-specific host packages register
+    provider implementations. Shared
     `DevTools.*` projects contain no Autodesk API types; Revit and AutoCAD
     composition still own host-context dispatch.
 

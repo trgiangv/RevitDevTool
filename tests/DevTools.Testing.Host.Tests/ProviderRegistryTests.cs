@@ -33,7 +33,38 @@ public sealed class ProviderRegistryTests
     public void GetRequired_unknown_id_throws()
     {
         var registry = new TestingProviderRegistry([new FakeProvider(TestingFrameworkIds.NUnit)]);
-        Assert.Throws<KeyNotFoundException>(() => registry.GetRequired(TestingFrameworkIds.Xunit));
+        Assert.Throws<KeyNotFoundException>(() => registry.GetRequired("unregistered"));
+    }
+
+    [Fact]
+    public void Cancel_notifies_every_registered_provider_without_framework_hardcoding()
+    {
+        var runId = Guid.NewGuid();
+        var observed = new List<(string FrameworkId, Guid RunId)>();
+        var first = new FakeProvider(TestingFrameworkIds.NUnit)
+        {
+            OnCancel = id =>
+            {
+                observed.Add((TestingFrameworkIds.NUnit, id));
+                return false;
+            },
+        };
+        var second = new FakeProvider("future-provider")
+        {
+            OnCancel = id =>
+            {
+                observed.Add(("future-provider", id));
+                return true;
+            },
+        };
+        var registry = new TestingProviderRegistry([first, second]);
+
+        var acknowledged = registry.Cancel(runId);
+
+        Assert.True(acknowledged);
+        Assert.Equal(
+            [(TestingFrameworkIds.NUnit, runId), ("future-provider", runId)],
+            observed);
     }
 }
 
