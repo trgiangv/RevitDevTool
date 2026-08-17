@@ -12,7 +12,7 @@ namespace DevTools.NUnit.TestAdapter;
 public sealed class DevToolsNUnitExecutor : ITestExecutor
 {
     private ProcessRunnerClient? _client;
-    private readonly Lock _clientLock = new();
+    private readonly object _clientLock = new();
 
     public void RunTests(IEnumerable<TestCase>? tests, IRunContext? runContext, IFrameworkHandle? frameworkHandle)
     {

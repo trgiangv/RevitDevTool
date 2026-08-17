@@ -19,7 +19,7 @@ internal sealed class ProcessRunnerClient : IRunnerTransport, IDisposable
 
     private readonly string _runnerPath;
     private Process? _activeProcess;
-    private readonly Lock _processLock = new();
+    private readonly object _processLock = new();
 
     internal ProcessRunnerClient(string runnerPath)
     {
