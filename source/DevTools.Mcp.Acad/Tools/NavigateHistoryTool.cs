@@ -4,7 +4,7 @@ using DevTools.Mcp.Core.Utils;
 using ModelContextProtocol.Protocol;
 using ModelContextProtocol.Server;
 
-namespace DevTools.Agents.Acad.Tools;
+namespace DevTools.Mcp.Acad.Tools;
 
 /// <summary>
 /// Navigates AutoCAD undo/redo history.

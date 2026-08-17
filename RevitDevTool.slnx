@@ -216,8 +216,8 @@
         </Project>
     </Folder>
     <Folder Name="/Shared/MCP/">
-        <Project Path="source/DevTools.Agents.Acad/DevTools.Agents.Acad.csproj" />
-        <Project Path="source/DevTools.Agents.Revit/DevTools.Agents.Revit.csproj" />
+        <Project Path="source/DevTools.Mcp.Acad/DevTools.Mcp.Acad.csproj" />
+        <Project Path="source/DevTools.Mcp.Revit/DevTools.Mcp.Revit.csproj" />
         <Project Path="source/DevTools.Daemon/DevTools.Daemon.csproj">
             <BuildType Solution="Debug.Autodesk.2022|*" Project="Debug" />
             <BuildType Solution="Debug.Autodesk.2023|*" Project="Debug" />

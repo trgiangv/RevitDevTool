@@ -2,7 +2,7 @@ using System.Collections;
 using Autodesk.AutoCAD.Internal;
 using AcApp = Autodesk.AutoCAD.ApplicationServices.Core.Application;
 
-namespace DevTools.Agents.Acad.Tools;
+namespace DevTools.Mcp.Acad.Tools;
 
 /// <summary>
 /// AutoCAD history navigator using Internal.Utils APIs.

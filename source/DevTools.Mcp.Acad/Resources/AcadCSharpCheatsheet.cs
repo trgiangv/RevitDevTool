@@ -1,24 +1,25 @@
+using System.IO;
 using System.Reflection;
 using DevTools.Mcp.Catalog;
 using ModelContextProtocol.Protocol;
 
-namespace DevTools.Agents.Revit.Resources;
+namespace DevTools.Mcp.Acad.Resources;
 
 /// <summary>
-/// Provides a Revit Python cheat sheet as an MCP resource.
-/// AI clients can read this before writing Python code to reduce trial-and-error.
+/// Provides an AutoCAD C# cheat sheet as an MCP resource.
+/// AI clients can read this before writing C# code to reduce trial-and-error.
 /// </summary>
-public sealed class RevitPythonCheatsheet : IBuiltInMcpResource
+public sealed class AcadCSharpCheatsheet : IBuiltInMcpResource
 {
     private static readonly Lazy<string> Content = new(LoadEmbeddedContent);
 
-    public string UriTemplate => "revit://python-cheatsheet";
+    public string UriTemplate => "acad://csharp-cheatsheet";
 
     public Resource ProtocolResource { get; } = new()
     {
-        Uri = "revit://python-cheatsheet",
-        Name = "Revit Python Cheatsheet",
-        Description = "Revit Python.NET patterns, builtins, transactions, queries, and PEP 723 deps. Read before writing execute_python_code.",
+        Uri = "acad://csharp-cheatsheet",
+        Name = "AutoCAD C# Cheatsheet",
+        Description = "Common AutoCAD C# API patterns, transaction usage, entity creation, layer operations, and selection. Read before writing execute_csharp_code.",
         MimeType = "text/markdown"
     };
 
@@ -42,10 +43,10 @@ public sealed class RevitPythonCheatsheet : IBuiltInMcpResource
     {
         var assembly = Assembly.GetExecutingAssembly();
         var resourceName = assembly.GetManifestResourceNames()
-            .FirstOrDefault(n => n.EndsWith("revit-python-cheatsheet.md", StringComparison.OrdinalIgnoreCase));
+            .FirstOrDefault(n => n.EndsWith("acad-csharp-cheatsheet.md", StringComparison.OrdinalIgnoreCase));
 
         if (resourceName is null)
-            return "# Revit Python Cheatsheet\n\nEmbedded content not found.";
+            return "# AutoCAD API Cheat Sheet\n\nEmbedded content not found.";
 
         using var stream = assembly.GetManifestResourceStream(resourceName)!;
         using var reader = new StreamReader(stream);

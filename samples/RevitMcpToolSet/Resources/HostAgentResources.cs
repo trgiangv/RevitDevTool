@@ -7,7 +7,7 @@ using Nice3point.Revit.Toolkit;
 namespace RevitMcpToolSet.Resources;
 
 /// <summary>
-/// Host-agent resources migrated from <c>DevTools.Agents.Revit</c> (cheatsheets, live model context, warnings, version).
+/// Host-agent resources migrated from <c>DevTools.Mcp.Revit</c> (cheatsheets, live model context, warnings, version).
 /// </summary>
 [McpServerResourceType]
 [Description("Reference and live-model context resources for agent workflows.")]

@@ -30,6 +30,7 @@ Host API references belong in host projects:
 - Offline file parse: `source/DevTools.FileMetadata.Revit/` (OpenMcdf) and `FileMetadata.Acad` (ACadSharp). Parsers stay **HostApp-free**. Daemon wires `RevitFileMetadataReader.TryReadRevitVersion` into `AddRevitLaunch`; Runner passes `null`. Do not ProjectReference FileMetadata from `Hosting.Revit`.
 - Add-in composition: `source/RevitDevTool/Composition/`, `source/AcadDevTool/Composition/` (`RevitServiceRegistration` / `AcadServiceRegistration`). Not `DevTools.Hosting`.
 - In-process host-API names: `RevitHostApiAssemblies.Set` / `AcadHostApiAssemblies.Set` passed to `HostSharedAssemblies.Use` in `Application.OnStartup` next to `AssemblyLoader.Initialize()`. Not DI. Not launch.
+- In-host MCP tools (host-bound): `source/DevTools.Mcp.Revit/`, `source/DevTools.Mcp.Acad/` (`IBuiltInMcpTool` / `IBuiltInMcpResource`). Registered from add-in `Composition/`. The `Mcp.*` prefix is not a neutrality claim.
 - Visualization: `source/RevitDevTool/Visualization/` (DirectContext3D — entirely Revit-host, not in shared code)
 - Future hosts: add new host projects rather than extending shared code with platform-specific branches.
 

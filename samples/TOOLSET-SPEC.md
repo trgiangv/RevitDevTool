@@ -468,7 +468,7 @@ Agent should reference `revit://toolset/capabilities` to confirm scope before at
 
 ### Relationship to built-in resources
 
-Built-in resources (from `DevTools.Agents.Revit`) provide **human-readable markdown** context:
+Built-in resources (from `DevTools.Mcp.Revit`) provide **human-readable markdown** context:
 - `revit://api-cheatsheet` — C# API patterns for god tool
 - `revit://model/context` — markdown model snapshot
 - `revit://model/warnings` — active warnings

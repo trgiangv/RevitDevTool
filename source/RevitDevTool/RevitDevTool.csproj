@@ -50,7 +50,7 @@
         <ProjectReference Include="..\DevTools.Execution.Abstractions\DevTools.Execution.Abstractions.csproj" />
         <ProjectReference Include="..\..\libs\pythonnet-stub-generator\csharp\PythonNetStubGenerator\PythonNetStubGenerator.csproj" />
         <ProjectReference Include="..\RevitDevTool.Core\RevitDevTool.Core.csproj" />
-        <ProjectReference Include="..\DevTools.Agents.Revit\DevTools.Agents.Revit.csproj" />
+        <ProjectReference Include="..\DevTools.Mcp.Revit\DevTools.Mcp.Revit.csproj" />
         <ProjectReference Include="..\DevTools.NUnit.Host\DevTools.NUnit.Host.csproj" />
     </ItemGroup>
 

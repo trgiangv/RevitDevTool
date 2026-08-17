@@ -8,7 +8,7 @@ using ModelContextProtocol.Protocol;
 using ModelContextProtocol.Server;
 using AcApp = Autodesk.AutoCAD.ApplicationServices.Core.Application;
 
-namespace DevTools.Agents.Acad.Tools;
+namespace DevTools.Mcp.Acad.Tools;
 
 /// <summary>
 /// Captures the active AutoCAD viewport as PNG <see cref="ImageContentBlock"/> for vision models.

@@ -6,7 +6,7 @@ using ModelContextProtocol.Protocol;
 using ModelContextProtocol.Server;
 using RevitDevTool.Core;
 
-namespace DevTools.Agents.Revit.Tools;
+namespace DevTools.Mcp.Revit.Tools;
 
 /// <summary>
 /// Navigates Revit undo/redo history.

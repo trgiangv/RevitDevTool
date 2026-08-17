@@ -223,7 +223,7 @@ There is **no TTL cache** on this resource: counts must reflect live document st
 mutations. Latency targets are validated via `docs/agents/mcp-integration-test.md`
 (3× sequential read on Snowdon Towers; warm `durationMs` &lt; 500).
 
-Implementation: `source/DevTools.Agents.Revit/Resources/RevitModelContext.cs`.
+Implementation: `source/DevTools.Mcp.Revit/Resources/RevitModelContext.cs`.
 
 ### Daemon log files
 
@@ -245,5 +245,6 @@ Implementation: `source/DevTools.Agents.Revit/Resources/RevitModelContext.cs`.
 | Schema builder (discovery) | `source/DevTools.Mcp.Catalog/Discovery/McpSchemaBuilder.cs` |
 | Schema parse models (UI) | `source/DevTools.Mcp.Catalog/JsonSchemaModels.cs` |
 | Connected host catalog | `source/DevTools.Mcp.Client/ConnectedHostCatalog.cs` |
-| In-host registry | `source/DevTools.Mcp.Catalog/McpCatalogStore.cs` |
-| Built-in tools | `source/DevTools.Execution/External/Mcp/BuiltIn/` |
+| In-host catalog | `source/DevTools.Mcp.Catalog/McpCatalogStore.cs` |
+| Built-in host tools / resources | `source/DevTools.Mcp.Revit/`, `source/DevTools.Mcp.Acad/` |
+| Built-in execution tools | `source/DevTools.Execution/External/Mcp/BuiltIn/` |

@@ -1,5 +1,5 @@
 using CommunityToolkit.Mvvm.Messaging;
-using DevTools.Agents.Revit.Resources;
+using DevTools.Mcp.Revit.Resources;
 using DevTools.Execution;
 using DevTools.Execution.Interfaces;
 using DevTools.Execution.Providers;
@@ -142,8 +142,8 @@ internal static class RevitServiceRegistration
         services.AddSingleton<IBuiltInMcpResource, RevitModelContext>();
         services.AddSingleton<IBuiltInMcpResource, RevitModelWarnings>();
         services.AddSingleton<IBuiltInMcpResource, RevitVersionInfo>();
-        services.AddSingleton<IBuiltInMcpTool, DevTools.Agents.Revit.Tools.NavigateHistoryTool>();
-        services.AddSingleton<IBuiltInMcpTool, DevTools.Agents.Revit.Tools.ViewScreenshotTool>();
+        services.AddSingleton<IBuiltInMcpTool, DevTools.Mcp.Revit.Tools.NavigateHistoryTool>();
+        services.AddSingleton<IBuiltInMcpTool, DevTools.Mcp.Revit.Tools.ViewScreenshotTool>();
 
         return builder;
     }

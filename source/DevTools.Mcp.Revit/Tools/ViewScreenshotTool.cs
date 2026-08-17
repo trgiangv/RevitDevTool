@@ -7,7 +7,7 @@ using ModelContextProtocol.Protocol;
 using ModelContextProtocol.Server;
 using RevitDevTool.Core;
 
-namespace DevTools.Agents.Revit.Tools;
+namespace DevTools.Mcp.Revit.Tools;
 
 /// <summary>
 /// Captures a screenshot of the active Revit view as PNG <see cref="ImageContentBlock"/> for vision models.

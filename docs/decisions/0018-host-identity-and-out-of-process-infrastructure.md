@@ -4,7 +4,7 @@ Date: 2026-08-15
 
 ## Status
 
-Accepted. Execute A → B → C+D → E → D2 → H → I → J as PRs; optional F; then G.
+Accepted. A–J, G, and optional F are on `develop`. **K** (`Utilities/Interop`) is rejected.
 
 Does not change [0002](0002-host-agnostic-platform.md) or
 [0007](0007-revit-core-and-visualization-boundaries.md) except one clarifying
@@ -51,8 +51,8 @@ Symptoms:
   because the csproj has no direct ZLogger package.
 - `DevTools.Mcp.Server` references Logging **only** for `HostApp`. It already
   PackageReferences ZLogger directly (`McpLogFilters`).
-- `DevTools.Agents.Revit` / `Acad` are in-host MCP tools (`IBuiltInMcpTool`)
-  and cheatsheet resources, not an “agent runtime”. `Agents.Revit` sets
+- `DevTools.Mcp.Revit` / `Mcp.Acad` are in-host MCP tools (`IBuiltInMcpTool`)
+  and cheatsheet resources, not an “agent runtime”. `Mcp.Revit` sets
   `UseRevit` and references `RevitDevTool.Core`.
 - `FileLogProcessor` takes `IHostAppInfo` to name rolling files. Headless
   Logging **must** reference Hosting after the enum moves; it must not
@@ -135,9 +135,9 @@ Logging (ZLogger). The test forbids WPF/Scintilla/UI, not ZLogger.
 
 - `RevitDevTool`, `AcadDevTool`, `DevTools.Daemon`, `DevTools.Presentation`,
   `DevTools.UI`
-- In-host tool assemblies (`DevTools.Agents.*` today; `DevTools.Mcp.Revit` /
-  `Acad` after F). They are host adapters (`UseRevit` / Acad API). F is a
-  rename, not a neutrality claim.
+- In-host tool assemblies (`DevTools.Mcp.Revit` / `Mcp.Acad`). They are
+  host adapters (`UseRevit` / Acad API). The `Mcp.*` prefix is not a
+  neutrality claim.
 
 ### P4. Log contract vs log pane
 
@@ -268,7 +268,7 @@ Settings     DevTools.Settings         file configs; no DevTools.UI (after J)
 Helpers      DevTools.Utilities        no FileMetadata, no Autodesk product strings
 Compose      Daemon, Runner            register locators / file-aware decorator;
                                        no Revit* types under Daemon/
-In-host MCP  DevTools.Mcp.Revit/Acad   today’s Agents.* (rename only; still host-bound)
+In-host MCP  DevTools.Mcp.Revit/Acad   host-bound in-host tools (UseRevit / Acad API)
 ```
 
 **Do not** rename `FileMetadata.*` to `HostApp.*`. Parsing a `.rvt` without
@@ -786,23 +786,23 @@ Do not start **F** before **A** if both touch host csproj in the same week.
 - [x] Merged `StartupDialogResolverOptions` defaults (`unsigned add-in` +
       `unsigned executable file` + `questionable add-in`; blocked `cancel` /
       `no`); `HostLaunchCoordinator` `IsAcadFamily` dialog gate
-- [ ] Host-API names (`RevitAPI`, `acmgd`, …) on static `HostSharedAssemblies` (**D2**)
+- [x] Host-API names (`RevitAPI`, `acmgd`, …) on static `HostSharedAssemblies` (**D2**)
 - [x] `DevTools.Utilities/Hosting/` after the move
 - [x] Any `Revit*` launch type under `source/DevTools.Daemon/`
 - [x] `HostApp` / `IHostAppInfo` definitions in `DevTools.Logging`
 - [x] Mcp.Server → Logging; Runner → Logging (step A, after Hosting exists). **Keep** NUnit.Host → Logging.
-- [ ] `UseWPF`, `ZLogger.Scintilla`, `Scintilla5.NET` on `DevTools.Logging`
-- [ ] `IMonitorLogTarget` / `MonitorLogTarget` / Scintilla-typed `AddLoggingProvider` in Logging
-- [ ] WPF half of `TraceListenerHelper` in Logging
-- [ ] Telemetry → Settings, Logging, Utilities
-- [ ] Settings → `DevTools.UI`
-- [ ] `DevTools.Agents.Revit` / `Acad` project names (step F)
-- [ ] Folder picker in Utilities if Presentation owns UI
+- [x] `UseWPF`, `ZLogger.Scintilla`, `Scintilla5.NET` on `DevTools.Logging`
+- [x] `IMonitorLogTarget` / `MonitorLogTarget` / Scintilla-typed `AddLoggingProvider` in Logging
+- [x] WPF half of `TraceListenerHelper` in Logging
+- [x] Telemetry → Settings, Logging, Utilities
+- [x] Settings → `DevTools.UI`
+- [x] `DevTools.Agents.Revit` / `Acad` project names (step F)
+- [x] Folder picker in Utilities if Presentation owns UI
 
 **Keep:** FileMetadata parsers, `IFileReader` catalog, pipe name format,
 `IHostLaunchService` (no oldest-PID policy inside it), the three launch
-contracts + `AddXxxLaunch()` (no `IHostPlugin`), `IHostSharedAssemblyPolicy`
-+ `AddXxxInProcess()` after D2, `HostLaunchWait` / `HostReadyStatus` (one
+contracts + `AddXxxLaunch()` (no `IHostPlugin`), `HostApiAssemblySet`
++ `HostSharedAssemblies.Use` at add-in startup, `HostLaunchWait` / `HostReadyStatus` (one
 wait loop; caller probe), EnvDTE in Runner, dialog resolver Win32 engine
 (no self-timeout; lifetime = wait; **no default** product catalogs or class
 names — spec comes from `IHostStartupDialogSpec`),

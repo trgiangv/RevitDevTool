@@ -3,7 +3,7 @@ using DevTools.Mcp.Catalog;
 using ModelContextProtocol.Protocol;
 using RevitDevTool.Core;
 
-namespace DevTools.Agents.Revit.Resources;
+namespace DevTools.Mcp.Revit.Resources;
 
 /// <summary>
 /// Live warnings from the active Revit document.

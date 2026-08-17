@@ -1,5 +1,5 @@
 using CommunityToolkit.Mvvm.Messaging;
-using DevTools.Agents.Acad.Resources;
+using DevTools.Mcp.Acad.Resources;
 using DevTools.Execution;
 using DevTools.Execution.Interfaces;
 using DevTools.Hosting;
@@ -19,7 +19,7 @@ using AcadDevTool.HostAdapters;
 using AcadDevTool.Logging;
 using AcadDevTool.Logging.Enrichers;
 using AcadDevTool.Settings;
-using DevTools.Agents.Acad.Tools;
+using DevTools.Mcp.Acad.Tools;
 using AcadDevTool.View;
 using ZLogger.Scintilla.Public;
 // ReSharper disable ConvertToExtensionBlock

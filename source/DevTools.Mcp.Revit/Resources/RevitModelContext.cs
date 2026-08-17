@@ -3,7 +3,7 @@ using DevTools.Mcp.Catalog;
 using ModelContextProtocol.Protocol;
 using RevitDevTool.Core;
 
-namespace DevTools.Agents.Revit.Resources;
+namespace DevTools.Mcp.Revit.Resources;
 
 /// <summary>
 /// Live snapshot of the active Revit model: levels, categories, element counts, units, phases.

@@ -37,8 +37,8 @@ the project sets `UseRevit=true` or `UseAutoCad=true`. Those targets own
 | Project | Needs compile-only `-p:…=false`? |
 |---------|----------------------------------|
 | Shared `DevTools.*` (no `UseRevit` / `UseAutoCad`) | **No** — flags are no-ops |
-| `RevitDevTool`, `RevitDevTool.Core`, `DevTools.Agents.Revit` | **Yes** — otherwise may deploy + ILRepack |
-| `AcadDevTool`, `DevTools.Agents.Acad` | **Yes** — same for AutoCAD bundle |
+| `RevitDevTool`, `RevitDevTool.Core`, `DevTools.Mcp.Revit` | **Yes** — otherwise may deploy + ILRepack |
+| `AcadDevTool`, `DevTools.Mcp.Acad` | **Yes** — same for AutoCAD bundle |
 | Projects with their own `ILRepackable=true` (e.g. `DevTools.NUnit.TestAdapter`) | Only `-p:ILRepackable=false` if you want to skip repack |
 
 Do **not** paste deploy flags onto every shared library build.
@@ -55,7 +55,7 @@ change build, deploy, or packaging. Prefer omitting it in docs/commands.
 | You edited | Build command |
 |------------|---------------|
 | Shared `DevTools.*` / tests (multi-TFM) | `dotnet build <csproj> -c Debug` |
-| `RevitDevTool` / Revit agents (compile only) | `dotnet build source/RevitDevTool/RevitDevTool.csproj -c Debug.Autodesk.2025` + props above |
+| `RevitDevTool` / `DevTools.Mcp.Revit` (compile only) | `dotnet build source/RevitDevTool/RevitDevTool.csproj -c Debug.Autodesk.2025` + props above |
 | `AcadDevTool` (compile only) | `dotnet build source/AcadDevTool/AcadDevTool.csproj -c Debug.Autodesk.2025` + props above |
 | Unsure host year coverage | Also run `-c Debug.Autodesk.2022` and `.2027` (net48 + net10 spot-check) |
 | `build/` or `install/` packaging | `-c Release` on affected project |

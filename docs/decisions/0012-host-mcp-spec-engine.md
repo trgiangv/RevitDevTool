@@ -35,9 +35,9 @@ stable fix.
    `requestState` on `McpInvocationRequest`. Daemon SDK re-throws
    `InputRequiredException` to external clients. Host does not implement
    high-level `ElicitAsync` / `MrtrContext` suspension.
-6. **Built-in host tools** remain in `DevTools.Agents.Revit` and
-   `DevTools.Agents.Acad` (`IBuiltInMcpTool` / `IBuiltInMcpResource`), registered
-   per host in `*HostingExtensions`. Sample toolsets (`RevitMcpToolSet`, etc.) are
+6. **Built-in host tools** live in `DevTools.Mcp.Revit` and
+   `DevTools.Mcp.Acad` (`IBuiltInMcpTool` / `IBuiltInMcpResource`), registered
+   per host in `Composition/*ServiceRegistration`. Sample toolsets (`RevitMcpToolSet`, etc.) are
    dynamic catalog entries only — not replacements for host built-ins.
 7. **ILRepack** on host must not embed `ModelContextProtocol*` or its transitive
    MCP stack after migration completes.
