@@ -9,12 +9,6 @@ namespace DevTools.Utilities.AssemblyLoading;
 /// </summary>
 public static class HostSharedAssemblies
 {
-    private static readonly string[] FrameworkPrefixes =
-    [
-        "System.",
-        "Microsoft.",
-    ];
-
     private static readonly object InitLock = new();
     private static HostSharedAssemblyNames? _names;
 
@@ -40,12 +34,6 @@ public static class HostSharedAssemblies
         if (MatchesHostPackagePrefix(assemblyName))
             return true;
 
-        foreach (var prefix in FrameworkPrefixes)
-        {
-            if (assemblyName.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
-                return true;
-        }
-
         return false;
     }
 
@@ -70,8 +58,7 @@ public static class HostSharedAssemblies
     }
 
     /// <summary>
-    /// Returns whether the name is an explicit host API assembly, without
-    /// applying the broad System/Microsoft convenience prefixes used by command loading.
+    /// Returns whether the name is an explicitly declared host API assembly.
     /// </summary>
     public static bool IsExplicitHostAssembly(string assemblyName)
     {

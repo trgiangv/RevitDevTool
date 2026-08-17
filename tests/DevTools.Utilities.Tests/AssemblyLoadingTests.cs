@@ -17,16 +17,21 @@ public sealed class AssemblyLoadingTests
     }
 
     [Fact]
-    public void HostSharedAssemblies_treats_system_prefix_as_shared()
+    public void HostSharedAssemblies_shares_only_declared_host_assemblies()
     {
-        Assert.True(HostSharedAssemblies.IsShared("System.Text.Json"));
+        HostSharedAssemblies.Use(new HostSharedAssemblyNames(["RevitAPI"], ["Autodesk."]));
+        Assert.True(HostSharedAssemblies.IsShared("RevitAPI"));
+        Assert.True(HostSharedAssemblies.IsShared("Autodesk.Revit.DB"));
+        Assert.False(HostSharedAssemblies.IsShared("System.Text.Json"));
+        Assert.False(HostSharedAssemblies.IsShared("Microsoft.Extensions.Logging.Abstractions"));
         Assert.False(HostSharedAssemblies.IsShared("MyCustomPlugin"));
     }
 
     [Fact]
-    public void HostSharedAssemblies_package_prefix_excludes_microsoft_extensions()
+    public void HostSharedAssemblies_package_prefixes_do_not_share_microsoft_extensions()
     {
-        Assert.True(HostSharedAssemblies.IsShared("Microsoft.Extensions.Logging.Abstractions"));
+        HostSharedAssemblies.Use(new HostSharedAssemblyNames([], []));
+        Assert.False(HostSharedAssemblies.IsShared("Microsoft.Extensions.Logging.Abstractions"));
         Assert.False(HostSharedAssemblies.MatchesHostPackagePrefix("Microsoft.Extensions.Logging.Abstractions"));
         Assert.True(HostSharedAssemblies.MatchesHostPackagePrefix("MahApps.Metro"));
         Assert.True(HostSharedAssemblies.MatchesHostPackagePrefix("ControlzEx.Theming"));
@@ -48,7 +53,7 @@ public sealed class AssemblyLoadingTests
     }
 
     [Fact]
-    public void DirectoryAssemblyLoader_skips_shared_assemblies_not_in_appdomain()
+    public void DirectoryAssemblyLoader_does_not_load_an_absent_system_dependency()
     {
         var directory = Path.GetTempPath();
         var resolved = DirectoryAssemblyLoader.TryLoad(directory, new AssemblyName("System.Text.Json"));

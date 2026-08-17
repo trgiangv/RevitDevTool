@@ -6,8 +6,8 @@ namespace DevTools.NUnit.Host.Loading;
 /// <summary>
 /// Host/platform assemblies that should reuse the host-loaded copy.
 /// Host NuGet/API prefixes come from <see cref="HostSharedAssemblies.MatchesHostPackagePrefix"/>.
-/// <c>System.*</c> facades are shared; <c>Microsoft.*</c> is not.
-/// On net48, NuGet BCL polyfills stay generation-private.
+/// Versioned dependencies, including <c>System.*</c> and <c>Microsoft.*</c>
+/// NuGet assemblies, stay generation-private unless explicitly declared as host-owned.
 /// </summary>
 public static class NUnitSharedAssemblyPolicy
 {
@@ -15,8 +15,7 @@ public static class NUnitSharedAssemblyPolicy
         typeof(INUnitRuntimeSession).Assembly.GetName().Name!;
 
     /// <summary>
-    /// BCL names that are not <c>System.*</c> (no dot after System, or netstandard).
-    /// <c>System.*</c> facades are matched by prefix in <see cref="IsShared"/>.
+    /// Runtime assemblies with fixed platform ownership, rather than a namespace prefix.
     /// </summary>
     private static readonly HashSet<string> PlatformAssemblyNames = new(StringComparer.OrdinalIgnoreCase)
     {
@@ -25,25 +24,7 @@ public static class NUnitSharedAssemblyPolicy
         "System",
         "System.Core",
         "System.Private.CoreLib",
-        "Microsoft.Win32.Registry",
     };
-
-#if NETFRAMEWORK
-    /// <summary>
-    /// NuGet polyfills that must stay generation-private on net48 so Runtime binds
-    /// coherently. On modern TFMs the host/Default copy is preferred instead.
-    /// </summary>
-    private static readonly HashSet<string> NetfxPrivateFacades = new(StringComparer.OrdinalIgnoreCase)
-    {
-        "System.Reflection.Metadata",
-        "System.Collections.Immutable",
-        "System.Memory",
-        "System.Buffers",
-        "System.Runtime.CompilerServices.Unsafe",
-        "System.Numerics.Vectors",
-        "System.Text.Encoding.CodePages",
-    };
-#endif
 
     public static bool IsShared(string assemblySimpleName)
     {
@@ -61,15 +42,7 @@ public static class NUnitSharedAssemblyPolicy
             || HostSharedAssemblies.MatchesHostPackagePrefix(assemblySimpleName))
             return true;
 
-        if (!assemblySimpleName.StartsWith("System.", StringComparison.OrdinalIgnoreCase))
-            return false;
-
-#if NETFRAMEWORK
-        if (NetfxPrivateFacades.Contains(assemblySimpleName))
-            return false;
-#endif
-
-        return true;
+        return false;
     }
 
     public static bool ShouldExcludeFromGenerationCopy(string filePath)

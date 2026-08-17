@@ -102,7 +102,7 @@ public sealed class NUnitRuntimeSessionFactoryTests
     }
 
     [Fact]
-    public void ResolveAssembly_binds_system_console_from_default_context()
+    public void ResolveAssembly_leaves_system_console_to_normal_clr_binding()
     {
         var manifest = NUnitRuntimeTestEnvironment.BuildFixtureGeneration();
         var loadContext = new NUnitRuntimeLoadContext(manifest);
@@ -110,8 +110,7 @@ public sealed class NUnitRuntimeSessionFactoryTests
 
         var resolved = loadContext.ResolveAssemblyForTesting(requested);
 
-        Assert.NotNull(resolved);
-        Assert.Same(AssemblyLoadContext.Default, AssemblyLoadContext.GetLoadContext(resolved!));
+        Assert.Null(resolved);
     }
 
     [Fact]

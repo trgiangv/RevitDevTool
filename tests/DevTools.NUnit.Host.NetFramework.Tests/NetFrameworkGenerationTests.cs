@@ -20,14 +20,69 @@ public sealed class NetFrameworkGenerationTests
     public void SharedAssemblyPolicy_keeps_netfx_polyfills_generation_private()
     {
         HostSharedAssemblies.Use(new HostSharedAssemblyNames(["RevitAPI"], ["Autodesk."]));
-        Assert.That(NUnitSharedAssemblyPolicy.IsShared("System.Runtime"), Is.True);
-        Assert.That(NUnitSharedAssemblyPolicy.IsShared("System.Memory"), Is.False);
+        Assert.That(NUnitSharedAssemblyPolicy.IsShared("System"), Is.True);
+        Assert.That(NUnitSharedAssemblyPolicy.IsShared("System.Core"), Is.True);
+        Assert.That(NUnitSharedAssemblyPolicy.IsShared("System.Runtime"), Is.False);
+        Assert.That(NUnitSharedAssemblyPolicy.IsShared("System.Custom"), Is.False);
+        Assert.That(NUnitSharedAssemblyPolicy.IsShared("Microsoft.Custom"), Is.False);
+        Assert.That(NUnitSharedAssemblyPolicy.IsShared("Microsoft.Win32.Registry"), Is.False);
+        Assert.That(
+            new[]
+            {
+                "System.Buffers",
+                "System.Collections.Immutable",
+                "System.Diagnostics.DiagnosticSource",
+                "System.IO.Hashing",
+                "System.IO.Pipelines",
+                "System.Memory",
+                "System.Numerics.Vectors",
+                "System.Runtime.CompilerServices.Unsafe",
+                "System.Text.Encodings.Web",
+                "System.Text.Json",
+                "System.Threading.Channels",
+                "System.Threading.Tasks.Extensions",
+            }.All(name => !NUnitSharedAssemblyPolicy.IsShared(name)),
+            Is.True);
         Assert.That(NUnitSharedAssemblyPolicy.IsManagedAssemblyFile("HostSmokeTests.exe"), Is.True);
         Assert.That(NUnitSharedAssemblyPolicy.IsManagedAssemblyFile("nunit.framework.dll"), Is.True);
         Assert.That(NUnitSharedAssemblyPolicy.IsShared("System.Reflection.Metadata"), Is.False);
         Assert.That(NUnitSharedAssemblyPolicy.IsShared("Microsoft.Extensions.Logging.Abstractions"), Is.False);
         Assert.That(NUnitSharedAssemblyPolicy.IsShared("MahApps.Metro"), Is.True);
         Assert.That(NUnitSharedAssemblyPolicy.IsShared("Autodesk.Revit.DB"), Is.True);
+    }
+
+    [Test]
+    public void GenerationBuilder_keeps_versioned_system_and_microsoft_dependencies_private()
+    {
+        var workspace = Path.Combine(Path.GetTempPath(), "DevTools", "NUnit", Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(workspace);
+        try
+        {
+            var testAssembly = NetFrameworkGenerationTestEnvironment.CreateGenerationOneAssembly(
+                workspace,
+                "versioned-bcl-dependencies");
+            var outputDirectory = Path.GetDirectoryName(testAssembly)!;
+            var testDirectory = Path.GetDirectoryName(typeof(NetFrameworkGenerationTests).Assembly.Location)!;
+
+            foreach (var fileName in new[] { "System.Text.Json.dll", "Microsoft.Bcl.AsyncInterfaces.dll" })
+            {
+                File.Copy(
+                    Path.Combine(testDirectory, fileName),
+                    Path.Combine(outputDirectory, fileName),
+                    overwrite: true);
+            }
+
+            var generationsRoot = NetFrameworkGenerationTestEnvironment.CreateIsolatedGenerationsRoot();
+            var manifest = NetFrameworkGenerationTestEnvironment.CreateBuilder(generationsRoot).Build(testAssembly);
+
+            Assert.That(File.Exists(Path.Combine(manifest.ShadowDirectory, "System.Text.Json.dll")), Is.True);
+            Assert.That(File.Exists(Path.Combine(manifest.ShadowDirectory, "Microsoft.Bcl.AsyncInterfaces.dll")), Is.True);
+        }
+        finally
+        {
+            if (Directory.Exists(workspace))
+                Directory.Delete(workspace, recursive: true);
+        }
     }
 
     [Test]
@@ -153,6 +208,23 @@ public sealed class NetFrameworkGenerationTests
         Assert.That(dependencyOne.Location, Is.Not.EqualTo(dependencyTwo.Location).IgnoreCase);
 
         Assert.That(factory.RetainedGenerationCount, Is.EqualTo(2));
+    }
+
+    [Test]
+    public void Create_resolves_root_dependency_per_requesting_generation()
+    {
+        var generationOne = NetFrameworkGenerationTestEnvironment.BuildRootDependencyGenerationOne();
+        var generationTwo = NetFrameworkGenerationTestEnvironment.BuildRootDependencyGenerationTwo();
+
+        using var factory = new NetfxNUnitRuntimeSessionFactory();
+        using var sessionOne = factory.Create(generationOne);
+        using var sessionTwo = factory.Create(generationTwo);
+
+        var caseOne = RunDependencyProbe(sessionOne, generationOne);
+        var caseTwo = RunDependencyProbe(sessionTwo, generationTwo);
+
+        Assert.That(caseOne.Output, Does.Contain("dependency-behavior=behavior-one"));
+        Assert.That(caseTwo.Output, Does.Contain("dependency-behavior=behavior-two"));
     }
 
     [Test]
@@ -422,5 +494,12 @@ public sealed class NetFrameworkGenerationTests
 
         Assert.That(run.GenerationId, Is.EqualTo(manifest.GenerationId));
         return run.Cases.Single();
+    }
+
+    private sealed class NoOpEventSink : INUnitRuntimeEventSink
+    {
+        public void Publish(NUnitRuntimeEvent runtimeEvent)
+        {
+        }
     }
 }

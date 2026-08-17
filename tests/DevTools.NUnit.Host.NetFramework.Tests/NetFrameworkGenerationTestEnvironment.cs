@@ -136,6 +136,29 @@ public static class NetFrameworkGenerationTestEnvironment
         return CreateBuilder(generationsRoot).Build(testAssembly);
     }
 
+    public static NUnitGenerationManifest BuildRootDependencyGenerationOne()
+    {
+        using var workspace = new TempWorkspace();
+        var testAssembly = CreateRootDependencyWorkspace(workspace.Root, "root-dependency-generation-one");
+        var generationsRoot = CreateIsolatedGenerationsRoot();
+        return CreateBuilder(generationsRoot).Build(testAssembly);
+    }
+
+    public static NUnitGenerationManifest BuildRootDependencyGenerationTwo()
+    {
+        using var workspace = new TempWorkspace();
+        const string folderName = "root-dependency-generation-two";
+        var testAssembly = CreateRootDependencyWorkspace(workspace.Root, folderName);
+        PatchUtf16Constant(
+            Path.Combine(workspace.Root, folderName, "GenerationPrivateDependency.dll"),
+            BehaviorOneMarker,
+            BehaviorTwoMarker,
+            replaceAll: true);
+        PatchUtf16Constant(testAssembly, BehaviorOneMarker, BehaviorTwoMarker, replaceAll: true);
+        var generationsRoot = CreateIsolatedGenerationsRoot();
+        return CreateBuilder(generationsRoot).Build(testAssembly);
+    }
+
     public static Assembly LoadConflictingNUnitIntoAppDomain()
     {
         if (!File.Exists(ConflictingNUnitStubPath))
@@ -186,6 +209,13 @@ public static class NetFrameworkGenerationTestEnvironment
             File.Move(dependencyPath, Path.Combine(privateDirectory, "GenerationPrivateDependency.dll"));
         }
 
+        return Path.Combine(workspace, "DependencyConsumer.dll");
+    }
+
+    private static string CreateRootDependencyWorkspace(string parentDirectory, string folderName)
+    {
+        var workspace = Path.Combine(parentDirectory, folderName);
+        CopyDirectory(DependencyConsumerOutputDirectory, workspace);
         return Path.Combine(workspace, "DependencyConsumer.dll");
     }
 

@@ -257,7 +257,7 @@ public sealed class NUnitGenerationBuilderTests
     }
 
     [Fact]
-    public void Build_excludes_shared_runtime_framework_dependencies_from_generation_copy()
+    public void Build_keeps_runtime_framework_dependencies_generation_private()
     {
         using var workspace = new TempWorkspace();
         var testAssembly = NUnitGenerationTestEnvironment.CreateFixtureWorkspace(
@@ -293,14 +293,14 @@ public sealed class NUnitGenerationBuilderTests
 
         var manifest = builder.Build(testAssembly);
 
-        Assert.DoesNotContain(
+        Assert.Contains(
             manifest.ManagedAssemblies,
             path => path.EndsWith("System.Reflection.Metadata.dll", StringComparison.OrdinalIgnoreCase));
-        Assert.DoesNotContain(
+        Assert.Contains(
             manifest.ManagedAssemblies,
             path => path.EndsWith("System.Collections.Immutable.dll", StringComparison.OrdinalIgnoreCase));
-        Assert.False(File.Exists(Path.Combine(manifest.ShadowDirectory, "System.Reflection.Metadata.dll")));
-        Assert.False(File.Exists(Path.Combine(manifest.ShadowDirectory, "System.Collections.Immutable.dll")));
+        Assert.True(File.Exists(Path.Combine(manifest.ShadowDirectory, "System.Reflection.Metadata.dll")));
+        Assert.True(File.Exists(Path.Combine(manifest.ShadowDirectory, "System.Collections.Immutable.dll")));
     }
 
     [Fact]
@@ -558,16 +558,16 @@ public sealed class NUnitGenerationBuilderTests
     }
 
     [Fact]
-    public void SharedAssemblyPolicy_shares_host_packages_and_system_prefix_not_microsoft_extensions()
+    public void SharedAssemblyPolicy_shares_only_platform_and_declared_host_assemblies()
     {
         HostSharedAssemblies.Use(new HostSharedAssemblyNames(["RevitAPI"], ["Autodesk."]));
         Assert.True(NUnitSharedAssemblyPolicy.IsShared("System"));
         Assert.True(NUnitSharedAssemblyPolicy.IsShared("System.Private.CoreLib"));
-        Assert.True(NUnitSharedAssemblyPolicy.IsShared("System.Runtime"));
-        Assert.True(NUnitSharedAssemblyPolicy.IsShared("System.Custom"));
-        Assert.True(NUnitSharedAssemblyPolicy.IsShared("System.Reflection.Metadata"));
-        Assert.True(NUnitSharedAssemblyPolicy.IsShared("System.Collections.Immutable"));
-        Assert.True(NUnitSharedAssemblyPolicy.IsShared("Microsoft.Win32.Registry"));
+        Assert.False(NUnitSharedAssemblyPolicy.IsShared("System.Runtime"));
+        Assert.False(NUnitSharedAssemblyPolicy.IsShared("System.Custom"));
+        Assert.False(NUnitSharedAssemblyPolicy.IsShared("System.Reflection.Metadata"));
+        Assert.False(NUnitSharedAssemblyPolicy.IsShared("System.Collections.Immutable"));
+        Assert.False(NUnitSharedAssemblyPolicy.IsShared("Microsoft.Win32.Registry"));
         Assert.True(NUnitSharedAssemblyPolicy.IsShared("RevitAPI"));
         Assert.True(NUnitSharedAssemblyPolicy.IsShared("MahApps.Metro"));
         Assert.True(NUnitSharedAssemblyPolicy.IsShared("Autodesk.Revit.DB"));
