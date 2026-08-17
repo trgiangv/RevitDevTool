@@ -4,13 +4,9 @@ namespace DevTools.Hosting.Revit;
 
 public static partial class RevitVersionSelector
 {
-#if NET7_0_OR_GREATER
     [GeneratedRegex(@"20\d{2}")]
     private static partial Regex YearPattern();
     private static readonly Regex YearRegex = YearPattern();
-#else
-    private static readonly Regex YearRegex = new(@"20\d{2}", RegexOptions.Compiled);
-#endif
 
     /// <summary>
     /// File year is a minimum. Picks the oldest installed version that is still &gt;= the file year.

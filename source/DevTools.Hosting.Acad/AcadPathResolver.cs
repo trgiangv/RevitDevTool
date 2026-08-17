@@ -22,13 +22,9 @@ public sealed partial class AcadPathResolver : IHostPathResolver
             ["17"] = HostApp.Plant3D,
         };
 
-#if NET7_0_OR_GREATER
     [GeneratedRegex(@"ACAD-[0-9A-F]\d(?<productId>\d{2})", RegexOptions.IgnoreCase)]
     private static partial Regex ProductKeyPattern();
     private static readonly Regex ProductKeyRegex = ProductKeyPattern();
-#else
-    private static readonly Regex ProductKeyRegex = new(@"ACAD-[0-9A-F]\d(?<productId>\d{2})", RegexOptions.IgnoreCase | RegexOptions.Compiled);
-#endif
 
     public bool Supports(HostApp hostApp) => hostApp.IsAcadFamily();
 
