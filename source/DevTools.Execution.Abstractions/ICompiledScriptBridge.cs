@@ -15,6 +15,12 @@ public interface ICompiledScriptBridge
     IEnumerable<string> GetSessionReferences();
 
     /// <summary>
+    /// Returns the already-loaded host contract assemblies that compiled scripts must share
+    /// with the host rather than load privately.
+    /// </summary>
+    IEnumerable<Assembly> GetParentBindings();
+
+    /// <summary>
     /// Tries to find the command type in the given assembly. Returns null if not found or if the assembly can't be reflected.
     /// </summary>
     Type? TryFindCommandType(Assembly assembly);

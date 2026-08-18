@@ -1,10 +1,13 @@
-using AcadDevTool.Composition;
+using System.IO;
 using AcadDevTool.Controllers;
 using Autodesk.AutoCAD.Runtime;
 using Autodesk.Windows;
+using DevTools.AssemblyIsolation.Diagnostics;
 using DevTools.Utilities;
-using DevTools.Utilities.AssemblyLoading;
+using DevTools.AssemblyIsolation.Loading;
+using Microsoft.Extensions.Logging;
 using ricaun.AutoCAD.UI;
+using ZLogger;
 using Application = AcadDevTool.Application;
 [assembly: ExtensionApplication(typeof(Application))]
 
@@ -12,10 +15,16 @@ namespace AcadDevTool;
 
 public class Application : ExtensionApplication
 {
+    private PermanentDirectoryAssemblyResolver? _assemblyResolver;
+
     public override void OnStartup(RibbonControl ribbonControl)
     {
-        AssemblyLoader.Initialize();
-        HostSharedAssemblies.Use(AcadHostApiAssemblies.Names);
+        var addinContentsDirectory = Path.GetDirectoryName(typeof(Application).Assembly.Location)
+            ?? throw new InvalidOperationException("Could not determine the AutoCAD add-in contents directory.");
+        _assemblyResolver ??= PermanentDirectoryAssemblyResolver.Create(
+            addinContentsDirectory,
+            new PermanentAssemblyLoader(new AddinAssemblyIsolationDiagnosticSink()));
+        _assemblyResolver.Register();
         Host.Start();
         Host.GetService<PanelController>().Initialize();
         AddButtons(ribbonControl);
@@ -25,6 +34,17 @@ public class Application : ExtensionApplication
     {
         Host.GetService<PanelController>().Shutdown();
         Host.Stop();
+        _assemblyResolver?.Dispose();
+        _assemblyResolver = null;
+    }
+
+    private sealed class AddinAssemblyIsolationDiagnosticSink : IAssemblyIsolationDiagnosticSink
+    {
+        public void Publish(AssemblyIsolationDiagnostic diagnostic)
+        {
+            Host.GetService<ILogger<Application>>().ZLogWarning(
+                $"Assembly isolation diagnostic '{diagnostic.Code}': {diagnostic.Message}");
+        }
     }
 
     private static void AddButtons(RibbonControl ribbonControl)

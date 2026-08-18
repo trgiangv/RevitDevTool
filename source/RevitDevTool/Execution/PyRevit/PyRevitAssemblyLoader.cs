@@ -1,7 +1,7 @@
 using System.IO;
-using System.Reflection;
 using System.Reflection.Metadata;
 using System.Reflection.PortableExecutable;
+using DevTools.AssemblyIsolation.Loading;
 using Microsoft.Extensions.Logging;
 using RevitDevTool.Core;
 using ZLogger;
@@ -15,7 +15,7 @@ namespace RevitDevTool.Execution.PyRevit;
 internal static class PyRevitAssemblyLoader
 {
     private static readonly object LoadLock = new();
-    private static readonly HashSet<string> LoadedNames = new(StringComparer.OrdinalIgnoreCase);
+    private static readonly PermanentAssemblyLoader PermanentLoader = new();
     private static bool _initialized;
 
     internal static void EnsureLoaded(string scriptPath, ILogger? logger = null)
@@ -34,20 +34,9 @@ internal static class PyRevitAssemblyLoader
                 return;
             }
 
-            GetLoadedAssemblies();
             var resolved = Resolve(candidates);
             LoadAll(resolved, logger);
             _initialized = true;
-        }
-    }
-
-    private static void GetLoadedAssemblies()
-    {
-        foreach (var asm in AppDomain.CurrentDomain.GetAssemblies())
-        {
-            var name = asm.GetName().Name;
-            if (name is not null)
-                LoadedNames.Add(name);
         }
     }
 
@@ -121,15 +110,9 @@ internal static class PyRevitAssemblyLoader
     {
         foreach (var dllPath in dllPaths)
         {
-            var simpleName = Path.GetFileNameWithoutExtension(dllPath);
-            if (LoadedNames.Contains(simpleName))
-                continue;
-
             try
             {
-                var bytes = File.ReadAllBytes(dllPath);
-                Assembly.Load(bytes);
-                LoadedNames.Add(simpleName);
+                PermanentLoader.LoadPath(dllPath);
                 logger?.ZLogInformation($"[PyRevit] Loaded extension DLL: {Path.GetFileName(dllPath)}");
             }
             catch (Exception ex)

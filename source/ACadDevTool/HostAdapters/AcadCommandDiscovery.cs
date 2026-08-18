@@ -1,6 +1,7 @@
 using System.IO;
 using System.Reflection;
 using Autodesk.AutoCAD.Runtime;
+using DevTools.AssemblyIsolation.Metadata;
 using DevTools.Execution.Interfaces;
 using DevTools.Execution.Providers.Dotnet;
 using Microsoft.Extensions.Logging;
@@ -32,10 +33,8 @@ public sealed class AcadCommandDiscovery(ILogger<AcadCommandDiscovery> logger) :
         var commands = new List<CommandItem>();
         try
         {
-            var paths = CollectAssemblyPaths(assemblyPath);
-            var resolver = new PathAssemblyResolver(paths);
-            using var mlc = new MetadataLoadContext(resolver);
-            var assembly = mlc.LoadFromAssemblyPath(assemblyPath);
+            using var session = MetadataAssemblySession.Create(assemblyPath, CollectAssemblyPaths(assemblyPath));
+            var assembly = session.LoadEntryAssembly();
 
             foreach (var type in GetMetadataTypes(assembly))
             {

@@ -39,6 +39,7 @@
         <ProjectReference Include="..\DevTools.Hosting\DevTools.Hosting.csproj" />
         <ProjectReference Include="..\DevTools.Logging\DevTools.Logging.csproj" />
         <ProjectReference Include="..\DevTools.Utilities\DevTools.Utilities.csproj" />
+        <ProjectReference Include="..\DevTools.AssemblyIsolation\DevTools.AssemblyIsolation.csproj" />
         <ProjectReference Include="..\DevTools.Mcp.Catalog\DevTools.Mcp.Catalog.csproj" SetTargetFramework="TargetFramework=$(TargetFramework)" />
         <ProjectReference Include="..\DevTools.Mcp.Core\DevTools.Mcp.Core.csproj" SetTargetFramework="TargetFramework=$(TargetFramework)" />
         <ProjectReference Include="..\DevTools.Mcp.Adapter\DevTools.Mcp.Adapter.csproj" SetTargetFramework="TargetFramework=$(TargetFramework)" />

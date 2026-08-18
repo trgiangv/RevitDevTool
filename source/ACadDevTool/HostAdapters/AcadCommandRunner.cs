@@ -1,9 +1,13 @@
 using System.IO;
 using System.Reflection;
 using Autodesk.AutoCAD.Runtime;
+using DevTools.AssemblyIsolation;
+using DevTools.AssemblyIsolation.Diagnostics;
 using DevTools.Execution.Interfaces;
 using DevTools.Execution.Models;
 using DevTools.Execution.Providers.Dotnet;
+using Microsoft.Extensions.Logging;
+using ZLogger;
 
 namespace AcadDevTool.HostAdapters;
 
@@ -12,19 +16,23 @@ namespace AcadDevTool.HostAdapters;
 /// <see cref="CommandItem.FullClassName"/> (<c>TypeFullName.MethodName</c>), and invoking the
 /// method (instance or static).
 /// </summary>
-public sealed class AcadCommandRunner : ICommandRunner
+public sealed class AcadCommandRunner(ILogger<AcadCommandRunner> logger) : ICommandRunner
 {
     public ExecutionResult RunCommand(CommandItem commandItem)
     {
 #if NET
-        var alc = new CommandLoadContext(commandItem.AssemblyPath);
+        var session = AssemblyIsolationSession.Create(
+            CommandIsolationPlan.Create(
+                commandItem.AssemblyPath,
+                [typeof(CommandMethodAttribute).Assembly, typeof(Autodesk.AutoCAD.DatabaseServices.Database).Assembly],
+                new CommandIsolationDiagnosticSink(logger)));
         try
         {
-            return ExecuteInContext(alc, commandItem);
+            return ExecuteInContext(session, commandItem);
         }
         finally
         {
-            alc.Unload();
+            session.Dispose();
             GC.Collect();
             GC.WaitForPendingFinalizers();
         }
@@ -65,13 +73,11 @@ public sealed class AcadCommandRunner : ICommandRunner
         }
     }
 
-#if NET
     [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.NoInlining)]
-    private static ExecutionResult ExecuteInContext(CommandLoadContext alc, CommandItem commandItem)
+    private static ExecutionResult ExecuteInContext(AssemblyIsolationSession session, CommandItem commandItem)
     {
         var (typeName, methodName) = SplitFullClassName(commandItem.FullClassName);
-        using var stream = new FileStream(commandItem.AssemblyPath, FileMode.Open, FileAccess.Read);
-        var assembly = alc.LoadFromStream(stream);
+        var assembly = session.LoadEntryAssembly();
         var type = assembly.GetType(typeName);
         if (type == null)
             return ExecutionResult.Failed($"Type '{typeName}' not found in assembly.");
@@ -84,25 +90,23 @@ public sealed class AcadCommandRunner : ICommandRunner
         InvokeMethod(method, instance);
         return ExecutionResult.Succeeded();
     }
-#else
-    private static ExecutionResult ExecuteInAppDomain(CommandItem commandItem)
+#if NETFRAMEWORK
+    private ExecutionResult ExecuteInAppDomain(CommandItem commandItem)
     {
-        var (typeName, methodName) = SplitFullClassName(commandItem.FullClassName);
-        var assemblyBytes = File.ReadAllBytes(commandItem.AssemblyPath);
-        var assembly = Assembly.Load(assemblyBytes);
-        var type = assembly.GetType(typeName);
-        if (type == null)
-            return ExecutionResult.Failed($"Type '{typeName}' not found in assembly.");
-
-        var method = type.GetMethod(methodName, BindingFlags.Public | BindingFlags.Instance | BindingFlags.Static);
-        if (method == null)
-            return ExecutionResult.Failed($"Method '{methodName}' not found on type '{typeName}'.");
-
-        var instance = method.IsStatic ? null : Activator.CreateInstance(type);
-        InvokeMethod(method, instance);
-        return ExecutionResult.Succeeded();
+        using var session = AssemblyIsolationSession.Create(
+            CommandIsolationPlan.Create(
+                commandItem.AssemblyPath,
+                [typeof(CommandMethodAttribute).Assembly, typeof(Autodesk.AutoCAD.DatabaseServices.Database).Assembly],
+                new CommandIsolationDiagnosticSink(logger)));
+        return ExecuteInContext(session, commandItem);
     }
 #endif
+
+    private sealed class CommandIsolationDiagnosticSink(ILogger logger) : IAssemblyIsolationDiagnosticSink
+    {
+        public void Publish(AssemblyIsolationDiagnostic diagnostic) => logger.ZLogDebug(
+            $"[AcadCommandRunner] Assembly isolation diagnostic '{diagnostic.Code}': {diagnostic.Message}");
+    }
 
     private static (string TypeName, string MethodName) SplitFullClassName(string fullClassName)
     {

@@ -1,5 +1,6 @@
 using System.IO;
 using System.Reflection;
+using DevTools.AssemblyIsolation.Metadata;
 using DevTools.Execution.Interfaces;
 using DevTools.Execution.Providers.Dotnet;
 using Microsoft.Extensions.Logging;
@@ -22,25 +23,13 @@ public sealed class RevitCommandDiscovery(ILogger<RevitCommandDiscovery> logger)
         var commands = new List<CommandItem>();
         try
         {
-            var paths = CollectAssemblyPaths(assemblyPath);
-            var resolver = new PathAssemblyResolver(paths);
-            using var mlc = new MetadataLoadContext(resolver);
-
-            var assembly = mlc.LoadFromAssemblyPath(assemblyPath);
-            var revitApiAssembly = typeof(IExternalCommand).Assembly;
-            var revitApiInContext = mlc.LoadFromAssemblyPath(revitApiAssembly.Location);
-            var iExternalCommandType = revitApiInContext.GetType(CommandFullName);
-
-            if (iExternalCommandType == null)
-            {
-                logger.ZLogError($"Could not find {CommandFullName} in metadata context");
-                return commands;
-            }
+            using var session = MetadataAssemblySession.Create(assemblyPath, CollectAssemblyPaths(assemblyPath));
+            var assembly = session.LoadEntryAssembly();
 
             foreach (var type in GetMetadataTypes(assembly))
             {
                 if (type.IsAbstract || type.IsInterface) continue;
-                if (!ImplementsInterface(type, iExternalCommandType)) continue;
+                if (!ImplementsInterface(type, CommandFullName)) continue;
                 commands.Add(new CommandItem(assemblyPath, type.FullName!));
             }
         }
@@ -52,7 +41,7 @@ public sealed class RevitCommandDiscovery(ILogger<RevitCommandDiscovery> logger)
         return commands;
     }
 
-    private static List<string> CollectAssemblyPaths(string assemblyPath)
+    private static HashSet<string> CollectAssemblyPaths(string assemblyPath)
     {
         var paths = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
@@ -64,29 +53,7 @@ public sealed class RevitCommandDiscovery(ILogger<RevitCommandDiscovery> logger)
         AddDllsFromDirectory(paths, Path.GetDirectoryName(typeof(System.Windows.DependencyObject).Assembly.Location));
         AddDllsFromDirectory(paths, Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location));
 
-        return DeduplicateByAssemblyName(paths);
-    }
-
-    /// <summary>
-    /// PathAssemblyResolver throws if two paths resolve to the same assembly identity.
-    /// Keep only the first path encountered for each assembly full name.
-    /// </summary>
-    private static List<string> DeduplicateByAssemblyName(HashSet<string> paths)
-    {
-        var seen = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-        foreach (var path in paths)
-        {
-            try
-            {
-                var name = AssemblyName.GetAssemblyName(path).FullName;
-                seen.TryAdd(name, path);
-            }
-            catch
-            {
-                seen.TryAdd(path, path);
-            }
-        }
-        return seen.Values.ToList();
+        return paths;
     }
 
     private static void AddDllsFromDirectory(HashSet<string> paths, string? directory)
@@ -133,9 +100,9 @@ public sealed class RevitCommandDiscovery(ILogger<RevitCommandDiscovery> logger)
         }
     }
 
-    private static bool ImplementsInterface(Type type, Type interfaceType)
+    private static bool ImplementsInterface(Type type, string interfaceFullName)
     {
         return type.GetInterfaces().Any(i =>
-            i.FullName != null && i.FullName == interfaceType.FullName);
+            i.FullName != null && i.FullName == interfaceFullName);
     }
 }

@@ -381,9 +381,26 @@ public partial class CommandViewModel : ObservableObject, IBusyViewModel
 
     private async Task ProcessDroppedDllFileAsync(string filePath)
     {
-        if (Utilities.AssemblyLoader.IsManagedAssembly(filePath))
+        if (IsManagedAssembly(filePath))
             await LoadFromPathAsync(filePath);
         else
             _logger.ZLogWarning($"File {filePath} is not a valid managed assembly.");
+    }
+
+    private static bool IsManagedAssembly(string filePath)
+    {
+        try
+        {
+            _ = System.Reflection.AssemblyName.GetAssemblyName(filePath);
+            return true;
+        }
+        catch (BadImageFormatException)
+        {
+            return false;
+        }
+        catch (FileLoadException)
+        {
+            return false;
+        }
     }
 }

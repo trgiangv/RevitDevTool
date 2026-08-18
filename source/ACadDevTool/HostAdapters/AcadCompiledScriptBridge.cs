@@ -8,6 +8,21 @@ namespace AcadDevTool.HostAdapters;
 
 public sealed class AcadCompiledScriptBridge(IHostAppInfo hostAppInfo) : ICompiledScriptBridge
 {
+    public IEnumerable<Assembly> GetParentBindings()
+    {
+        var identities = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var assembly in new[]
+                 {
+                     typeof(CommandMethodAttribute).Assembly,
+                     typeof(Database).Assembly,
+                     typeof(Autodesk.AutoCAD.ApplicationServices.Core.Application).Assembly
+                 })
+        {
+            if (identities.Add(assembly.FullName ?? assembly.GetName().FullName ?? assembly.GetName().Name!))
+                yield return assembly;
+        }
+    }
+
     public IEnumerable<string> GetSessionReferences()
     {
         // acmgd (Runtime — CommandMethodAttribute, ExtensionApplication)

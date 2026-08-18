@@ -5,7 +5,7 @@ namespace DevTools.Execution.Interfaces;
 
 /// <summary>
 /// Executes a command item within the host's isolated context.
-/// Revit: creates ExternalCommandData, calls IExternalCommand.Execute via CommandLoadContext.
+/// Revit: creates ExternalCommandData and calls IExternalCommand.Execute in a collectible isolation session.
 /// AutoCAD: Activator.CreateInstance + MethodInfo.Invoke with document lock.
 /// </summary>
 public interface ICommandRunner

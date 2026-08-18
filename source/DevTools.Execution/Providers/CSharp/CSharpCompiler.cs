@@ -1,5 +1,7 @@
 using System.IO;
 using System.Reflection;
+using DevTools.AssemblyIsolation;
+using DevTools.AssemblyIsolation.Diagnostics;
 using DevTools.Execution.Models;
 using DevTools.Execution.Providers.FSharp;
 using Microsoft.CodeAnalysis;
@@ -80,9 +82,22 @@ public sealed class CSharpCompiler(ILogger<CSharpCompiler> logger, NugetManager 
         byte[] peBytes, IReadOnlyCollection<string> nugetDllPaths, ICompiledScriptBridge hostSupport)
     {
 #if NET
-        var context = new ScriptLoadContext(nugetDllPaths, logger);
-        var assembly = context.LoadCompiledScript(peBytes);
-        return CreateCommandResult(assembly, hostSupport, context);
+        var session = AssemblyIsolationSession.Create(
+            ScriptIsolationPlan.Create(
+                $"CsxScript_{Guid.NewGuid():N}",
+                nugetDllPaths,
+                hostSupport.GetParentBindings(),
+                new ScriptIsolationDiagnosticSink(logger)));
+        try
+        {
+            var assembly = session.LoadAssembly(peBytes);
+            return CreateCommandResult(assembly, hostSupport, session);
+        }
+        catch
+        {
+            session.Dispose();
+            throw;
+        }
 #else
         var assembly = Assembly.Load(peBytes);
         return CreateCommandResult(assembly, hostSupport, cleanup: null);
@@ -220,5 +235,11 @@ public sealed class CSharpCompiler(ILogger<CSharpCompiler> logger, NugetManager 
                 // ignored
             }
         }
+    }
+
+    private sealed class ScriptIsolationDiagnosticSink(ILogger logger) : IAssemblyIsolationDiagnosticSink
+    {
+        public void Publish(AssemblyIsolationDiagnostic diagnostic) => logger.ZLogDebug(
+            $"[CSharpCompiler] Assembly isolation diagnostic '{diagnostic.Code}': {diagnostic.Message}");
     }
 }

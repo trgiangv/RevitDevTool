@@ -13,10 +13,14 @@
     <ItemGroup>
         <ProjectReference Include="..\..\source\DevTools.Execution.Abstractions\DevTools.Execution.Abstractions.csproj" />
         <ProjectReference Include="..\..\source\DevTools.Execution\DevTools.Execution.csproj" />
+        <ProjectReference Include="..\..\source\DevTools.AssemblyIsolation\DevTools.AssemblyIsolation.csproj" />
         <ProjectReference Include="..\..\source\DevTools.NUnit.Host\DevTools.NUnit.Host.csproj" />
         <ProjectReference Include="..\..\source\DevTools.Testing.Host\DevTools.Testing.Host.csproj" />
         <ProjectReference Include="..\..\source\DevTools.Testing.Abstractions\DevTools.Testing.Abstractions.csproj" />
         <ProjectReference Include="..\..\source\DevTools.Testing.Transport\DevTools.Testing.Transport.csproj" />
+        <ProjectReference Include="..\DevTools.AssemblyIsolation.Tests\Fixtures\IsolationEntry\IsolationEntry.csproj" ReferenceOutputAssembly="false" />
+        <ProjectReference Include="..\DevTools.AssemblyIsolation.Tests\Fixtures\IsolationSibling\IsolationSibling.csproj" ReferenceOutputAssembly="false" />
+        <ProjectReference Include="..\DevTools.AssemblyIsolation.Tests\Fixtures\PrivateSystemNamedDependency\PrivateSystemNamedDependency.csproj" ReferenceOutputAssembly="false" />
     </ItemGroup>
 
     <ItemGroup>

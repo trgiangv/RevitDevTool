@@ -1,14 +1,17 @@
 using System.IO;
 using System.Reflection;
+using DevTools.AssemblyIsolation;
+using DevTools.AssemblyIsolation.Diagnostics;
 using DevTools.Execution.Interfaces;
 using DevTools.Execution.Models;
 using DevTools.Execution.Providers.Dotnet;
-using DevTools.Utilities.AssemblyLoading;
+using Microsoft.Extensions.Logging;
 using RevitDevTool.Core;
+using ZLogger;
 
 namespace RevitDevTool.HostAdapters;
 
-public sealed class RevitCommandRunner : ICommandRunner
+public sealed class RevitCommandRunner(ILogger<RevitCommandRunner> logger) : ICommandRunner
 {
     private static ExternalCommandData? _externalCommandData;
     private static ElementSet? _elementSet;
@@ -54,26 +57,30 @@ public sealed class RevitCommandRunner : ICommandRunner
     }
 
 #if NET
-    private static ExecutionResult RunInIsolatedContext(CommandItem item)
+    private ExecutionResult RunInIsolatedContext(CommandItem item)
     {
-        var alc = new CommandLoadContext(item.AssemblyPath);
+        var session = AssemblyIsolationSession.Create(
+            CommandIsolationPlan.Create(
+                item.AssemblyPath,
+                [typeof(IExternalCommand).Assembly, typeof(Autodesk.Revit.DB.Element).Assembly],
+                new CommandIsolationDiagnosticSink(logger)));
         try
         {
-            return LoadAndExecute(alc, item);
+            return LoadAndExecute(session, item);
         }
         finally
         {
-            alc.Unload();
             RevitContext.Application.PurgeReleasedAPIObjects();
+            session.Dispose();
             GC.Collect();
             GC.WaitForPendingFinalizers();
         }
     }
 
     [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.NoInlining)]
-    private static ExecutionResult LoadAndExecute(CommandLoadContext alc, CommandItem item)
+    private static ExecutionResult LoadAndExecute(AssemblyIsolationSession session, CommandItem item)
     {
-        var assembly = LoadAssemblyWithSymbols(alc, item.AssemblyPath);
+        var assembly = session.LoadEntryAssembly();
         var instance = assembly.CreateInstance(item.FullClassName)
             ?? throw new InvalidOperationException($"Could not create instance of '{item.FullClassName}'.");
 
@@ -96,9 +103,6 @@ public sealed class RevitCommandRunner : ICommandRunner
         }
     }
 
-    private static Assembly LoadAssemblyWithSymbols(CommandLoadContext alc, string assemblyPath) =>
-        ByteAssemblyLoader.LoadFromFileStream(alc, assemblyPath);
-
     private static Result InvokeViaDuckTyping(object instance, ref string message)
     {
         var method = instance.GetType().GetMethod("Execute");
@@ -109,37 +113,44 @@ public sealed class RevitCommandRunner : ICommandRunner
     }
 #endif
 
+    private sealed class CommandIsolationDiagnosticSink(ILogger logger) : IAssemblyIsolationDiagnosticSink
+    {
+        public void Publish(AssemblyIsolationDiagnostic diagnostic) => logger.ZLogDebug(
+            $"[RevitCommandRunner] Assembly isolation diagnostic '{diagnostic.Code}': {diagnostic.Message}");
+    }
+
 #if NETFRAMEWORK
-    private static ExecutionResult RunInAppDomain(CommandItem item)
+    private ExecutionResult RunInAppDomain(CommandItem item)
     {
         var targetDir = Path.GetDirectoryName(item.AssemblyPath)!;
         var loadedNativeHandles = new List<IntPtr>();
-        ResolveEventHandler? assemblyResolver = null;
+        var session = AssemblyIsolationSession.Create(
+            CommandIsolationPlan.Create(
+                item.AssemblyPath,
+                [typeof(IExternalCommand).Assembly, typeof(Autodesk.Revit.DB.Element).Assembly],
+                new CommandIsolationDiagnosticSink(logger)));
         try
         {
             LoadUnmanagedDependencies(targetDir, ref loadedNativeHandles);
-            assemblyResolver = (_, args) => ResolveAssembly(targetDir, args);
-            AppDomain.CurrentDomain.AssemblyResolve += assemblyResolver;
-
-            var command = LoadCommand(item);
-            return ExecuteCommand(command);
+            return LoadAndExecute(session, item);
         }
         finally
         {
             RevitContext.Application.PurgeReleasedAPIObjects();
-            if (assemblyResolver != null)
-                AppDomain.CurrentDomain.AssemblyResolve -= assemblyResolver;
+            session.Dispose();
             foreach (var hModule in loadedNativeHandles)
                 while (FreeLibrary(hModule)) { }
         }
     }
 
-    private static IExternalCommand LoadCommand(CommandItem item)
+    private static ExecutionResult LoadAndExecute(AssemblyIsolationSession session, CommandItem item)
     {
-        var assembly = ByteAssemblyLoader.LoadFromFile(item.AssemblyPath);
-        var instance = assembly.CreateInstance(item.FullClassName);
-        return instance as IExternalCommand
-            ?? throw new InvalidOperationException($"Failed to create IExternalCommand from '{item.FullClassName}'.");
+        var assembly = session.LoadEntryAssembly();
+        var instance = assembly.CreateInstance(item.FullClassName)
+            ?? throw new InvalidOperationException($"Could not create instance of '{item.FullClassName}'.");
+        return instance is IExternalCommand command
+            ? ExecuteCommand(command)
+            : throw new InvalidOperationException($"Failed to create IExternalCommand from '{item.FullClassName}'.");
     }
 
     [System.Runtime.InteropServices.DllImport("kernel32.dll", CharSet = System.Runtime.InteropServices.CharSet.Auto, SetLastError = true)]
@@ -152,18 +163,27 @@ public sealed class RevitCommandRunner : ICommandRunner
     {
         foreach (var file in Directory.GetFiles(directoryPath, "*.dll"))
         {
-            if (DevTools.Utilities.AssemblyLoader.IsManagedAssembly(file)) continue;
+            if (IsManagedAssembly(file)) continue;
             var hModule = LoadLibrary(file);
             if (hModule != IntPtr.Zero) loadedHandles.Add(hModule);
         }
     }
 
-    private static Assembly? ResolveAssembly(string targetDir, ResolveEventArgs args)
+    private static bool IsManagedAssembly(string filePath)
     {
-        if (args.Name is null)
-            return null;
-
-        return DirectoryAssemblyLoader.TryLoad(targetDir, new AssemblyName(args.Name));
+        try
+        {
+            _ = AssemblyName.GetAssemblyName(filePath);
+            return true;
+        }
+        catch (BadImageFormatException)
+        {
+            return false;
+        }
+        catch (FileLoadException)
+        {
+            return false;
+        }
     }
 #endif
 

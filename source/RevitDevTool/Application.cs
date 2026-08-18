@@ -1,11 +1,15 @@
+using System.IO;
+using DevTools.AssemblyIsolation.Diagnostics;
 using DevTools.Utilities;
-using DevTools.Utilities.AssemblyLoading;
+using DevTools.AssemblyIsolation.Loading;
+using Microsoft.Extensions.Logging;
 using Nice3point.Revit.Extensions.UI;
 using Autodesk.Revit.DB.Events;
 using RevitDevTool.CommandBrowser;
 using RevitDevTool.Commands;
 using RevitDevTool.Composition;
 using RevitDevTool.Controllers;
+using ZLogger;
 
 namespace RevitDevTool;
 
@@ -13,12 +17,17 @@ namespace RevitDevTool;
 public class Application : IExternalApplication
 {
     private UIControlledApplication? _application;
+    private PermanentDirectoryAssemblyResolver? _assemblyResolver;
 
     public Result OnStartup(UIControlledApplication application)
     {
         _application = application;
-        AssemblyLoader.Initialize();
-        HostSharedAssemblies.Use(RevitHostApiAssemblies.Names);
+        var addinContentsDirectory = Path.GetDirectoryName(typeof(Application).Assembly.Location)
+            ?? throw new InvalidOperationException("Could not determine the Revit add-in contents directory.");
+        _assemblyResolver ??= PermanentDirectoryAssemblyResolver.Create(
+            addinContentsDirectory,
+            new PermanentAssemblyLoader(new AddinAssemblyIsolationDiagnosticSink()));
+        _assemblyResolver.Register();
         Host.Start();
         AddButtons(application);
         application.ControlledApplication.ApplicationInitialized += OnApplicationInitialized;
@@ -30,6 +39,8 @@ public class Application : IExternalApplication
         Host.GetService<CommandBrowserController>().Shutdown();
         Host.GetService<PanelController>().Shutdown();
         Host.Stop();
+        _assemblyResolver?.Dispose();
+        _assemblyResolver = null;
         return Result.Succeeded;
     }
 
@@ -38,6 +49,15 @@ public class Application : IExternalApplication
         if (_application is null) return;
         Host.GetService<PanelController>().Initialize(_application);
         Host.GetService<CommandBrowserController>().Initialize(_application);
+    }
+
+    private sealed class AddinAssemblyIsolationDiagnosticSink : IAssemblyIsolationDiagnosticSink
+    {
+        public void Publish(AssemblyIsolationDiagnostic diagnostic)
+        {
+            Host.GetService<ILogger<Application>>().ZLogWarning(
+                $"Assembly isolation diagnostic '{diagnostic.Code}': {diagnostic.Message}");
+        }
     }
 
     private static void AddButtons(UIControlledApplication application)
