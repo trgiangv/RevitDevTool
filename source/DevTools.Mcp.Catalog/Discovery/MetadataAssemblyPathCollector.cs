@@ -19,7 +19,7 @@ internal static class MetadataAssemblyPathCollector
     }
 
     /// <summary>
-    /// ILRepacked hosts embed MCP types; expose host-loaded MCP assembly paths for <see cref="MetadataLoadContext"/>.
+    /// ILRepacked hosts embed MCP types; expose host-loaded MCP assembly paths for the metadata session.
     /// </summary>
     private static void AddHostMcpAssemblyPaths(HashSet<string> paths)
     {

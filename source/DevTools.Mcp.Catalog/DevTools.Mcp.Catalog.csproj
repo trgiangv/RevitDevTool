@@ -8,7 +8,6 @@
         <PackageReference Include="ModelContextProtocol" />
         <PackageReference Include="ModelContextProtocol.Extensions.Tasks" />
         <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" />
-        <PackageReference Include="System.Reflection.MetadataLoadContext" />
         <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" />
         <PackageReference Include="ZLogger" />
     </ItemGroup>
@@ -25,5 +24,6 @@
         <ProjectReference Include="..\DevTools.Mcp.Core\DevTools.Mcp.Core.csproj" SetTargetFramework="TargetFramework=$(TargetFramework)" />
         <ProjectReference Include="..\DevTools.Execution.Abstractions\DevTools.Execution.Abstractions.csproj" />
         <ProjectReference Include="..\DevTools.Settings\DevTools.Settings.csproj" />
+        <ProjectReference Include="..\DevTools.AssemblyIsolation\DevTools.AssemblyIsolation.csproj" />
     </ItemGroup>
 </Project>

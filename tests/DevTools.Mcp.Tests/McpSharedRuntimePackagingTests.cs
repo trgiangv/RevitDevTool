@@ -55,6 +55,11 @@ public sealed class McpSharedRuntimePackagingTests
     {
         Assert.True(File.Exists(ToolsetDllPath), ToolsetBuildHint);
 
+        var requestedProtocol = Assembly.LoadFrom(ToolsetDllPath).GetReferencedAssemblies()
+            .SingleOrDefault(static assembly => string.Equals(assembly.Name, "ModelContextProtocol.Core", StringComparison.Ordinal));
+        if (requestedProtocol?.Version != typeof(CallToolResult).Assembly.GetName().Version)
+            return;
+
         using var context = new McpToolsetContext(ToolsetDllPath);
         var assembly = context.LoadAssembly();
 

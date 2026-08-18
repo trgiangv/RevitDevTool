@@ -1,6 +1,7 @@
 using System.Reflection;
 using System.Text.Json;
 using System.Text.Json.Nodes;
+using DevTools.AssemblyIsolation.Metadata;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using ModelContextProtocol.Protocol;
@@ -29,9 +30,8 @@ public sealed class McpAssemblyParser(ILogger<McpAssemblyParser> logger)
         var tools = new List<McpRegisteredTool>();
         var resources = new List<McpRegisteredResource>();
         var resolutionPaths = MetadataAssemblyPathCollector.Collect(assemblyPath);
-        var resolver = new PathAssemblyResolver(resolutionPaths);
-        using var metadataLoadContext = new MetadataLoadContext(resolver);
-        var assembly = metadataLoadContext.LoadFromAssemblyPath(assemblyPath);
+        using var metadataSession = MetadataAssemblySession.Create(assemblyPath, resolutionPaths);
+        var assembly = metadataSession.LoadEntryAssembly();
 
         foreach (var type in MetadataAssemblyPathCollector.GetMetadataTypes(assembly).OrderBy(item => item.FullName, StringComparer.OrdinalIgnoreCase))
         {
