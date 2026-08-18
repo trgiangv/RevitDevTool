@@ -11,7 +11,7 @@ public static class NUnitFramework
     public const string Id = "nunit";
 }
 
-/// <summary>NUnit provider over the framework-neutral MTP runtime session manager.</summary>
+/// <summary>NUnit provider over the framework-neutral testing runtime session manager.</summary>
 public sealed class NUnitHostTestFrameworkProvider(TestingRuntimeSessionManager sessions) :
     IHostTestFrameworkProvider,
     IDisposable
@@ -33,7 +33,7 @@ public sealed class NUnitHostTestFrameworkProvider(TestingRuntimeSessionManager 
         {
             Assembly = request.Assembly with { Path = assemblyPath },
             Selection = new TestingSelection(
-                request.Selection.TestIds,
+                [],
                 NUnitSelectionFilter.ToNUnitFilter(request.Selection))
         };
         return sessions.Run(normalized, new EventSink(eventSink), cancellationToken);

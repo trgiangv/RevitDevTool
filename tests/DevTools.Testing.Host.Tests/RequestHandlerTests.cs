@@ -58,7 +58,7 @@ public sealed class RequestHandlerTests
         var testing = await Handle(handler, "2", "testing/discover", null);
 
         Assert.True(testing.IsError);
-        Assert.Equal(TestingErrorCodes.NoDiscovery, testing.ErrorDetail!.Code);
+        Assert.Equal(IpcErrorCodes.MethodNotFound, testing.ErrorDetail!.Code);
         Assert.DoesNotContain("testing/discover", handler.SupportedMethods);
     }
 

@@ -12,7 +12,8 @@ public sealed class CoreArchitectureTests
 
         Assert.DoesNotContain(files, text => text.Contains("NUnit", StringComparison.Ordinal)
             || text.Contains("nunit/", StringComparison.OrdinalIgnoreCase)
-            || text.Contains("nunit.framework", StringComparison.OrdinalIgnoreCase));
+            || text.Contains("nunit.framework", StringComparison.OrdinalIgnoreCase)
+            || text.Contains("IRunnerCommandModule", StringComparison.Ordinal));
     }
 
     private static string FindRepositoryRoot()

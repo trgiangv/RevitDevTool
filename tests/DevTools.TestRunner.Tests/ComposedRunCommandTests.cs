@@ -2,9 +2,7 @@ using System.IO.Pipes;
 using System.Text.Json;
 using DevTools.Hosting;
 using DevTools.Ipc;
-using DevTools.NUnit.Discovery;
-using DevTools.NUnit.Runner;
-using DevTools.TestRunner.Core.Composition;
+using DevTools.TestRunner;
 using DevTools.TestRunner.Core.Debugging;
 using DevTools.TestRunner.Core.Services;
 using DevTools.Testing.Abstractions.Contracts;
@@ -18,26 +16,19 @@ public sealed class ComposedRunCommandTests
     private static readonly SemaphoreSlim ConsoleGate = new(1, 1);
 
     [Fact]
-    public async Task Run_uses_registry_selected_nunit_module_and_provider_filter_without_host_contact()
+    public async Task Run_sends_testing_run_with_selection_and_attaches_debugger()
     {
         await using var pipe = new FakeHostPipe();
         var hosts = new FakeHostSession(pipe.PipeName);
         var debugger = new FakeDebugger();
-        var modules = new RunnerModuleRegistry();
-        modules.Register(new NUnitRunnerModule(), isDefault: true);
         var services = new ServiceCollection();
         services.AddSingleton<IHostSession>(hosts);
         services.AddSingleton<IHostExecutionCoordinator, HostExecutionCoordinator>();
         services.AddSingleton<IVisualStudioAttach>(debugger);
-        services.AddSingleton(modules);
-        modules.RegisterServices(services);
         await using var provider = services.BuildServiceProvider();
-        var arguments = new List<string>
-        {
-            "run", typeof(ComposedRunCommandTests).Assembly.Location,
-            "--host", "Revit", "--host-version", "2026", "--debug",
-            "--test", "Sample.Fixture.PlainTest",
-        };
+        var commands = new RunnerCommands(
+            provider.GetRequiredService<IHostExecutionCoordinator>(),
+            debugger);
 
         await ConsoleGate.WaitAsync(TestContext.Current.CancellationToken);
         var originalOut = Console.Out;
@@ -45,7 +36,14 @@ public sealed class ComposedRunCommandTests
         try
         {
             Console.SetOut(stdout);
-            var exitCode = await modules.RunAsync(arguments.ToArray(), provider);
+            var exitCode = await commands.Run(
+                typeof(ComposedRunCommandTests).Assembly.Location,
+                "Revit",
+                "2026",
+                test: ["Sample.Fixture.PlainTest"],
+                debug: true,
+                framework: "nunit",
+                cancellationToken: TestContext.Current.CancellationToken);
 
             Assert.Equal(0, exitCode);
         }
@@ -147,7 +145,12 @@ public sealed class ComposedRunCommandTests
                     JsonSerializer.SerializeToElement(
                         new TestingRunResponse(run.RunId, "nunit", "generation", [], TestingCancellationState.None, null, null),
                         TestingJsonContext.Default.TestingRunResponse)), cancellation.Token);
-                RunRequest.TrySetResult(new WireRequest(request.Method, run.Selection.ProviderPayload ?? ""));
+                RunRequest.TrySetResult(new WireRequest(
+                    request.Method,
+                    string.Join(",", run.Selection.TestIds.Concat(
+                        string.IsNullOrWhiteSpace(run.Selection.ProviderPayload)
+                            ? []
+                            : [run.Selection.ProviderPayload]))));
                 return;
             }
         }

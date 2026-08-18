@@ -35,6 +35,15 @@ public sealed class NUnitSelectionFilterTests
     }
 
     [Fact]
+    public void Names_are_emitted_as_nunit_name_nodes()
+    {
+        var filter = NUnitSelectionFilter.ToNUnitFilter(
+            new TestingSelection([], Names: ["Arithmetic_runs_inside_host"]));
+
+        Assert.Equal("<filter><name>Arithmetic_runs_inside_host</name></filter>", filter);
+    }
+
+    [Fact]
     public void Provider_payload_is_raw_nunit_xml()
     {
         const string xml = "<filter><cat>AcceptanceCategory</cat></filter>";

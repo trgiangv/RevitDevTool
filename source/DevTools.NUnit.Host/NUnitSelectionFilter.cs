@@ -6,7 +6,7 @@ namespace DevTools.NUnit.Host;
 internal static class NUnitSelectionFilter
 {
     internal const string MixedSelectionMessage =
-        "Specify TestIds or ProviderPayload, not both.";
+        "Specify TestIds/Names or ProviderPayload, not both.";
 
     internal const string InvalidPayloadMessage =
         "ProviderPayload must be empty or NUnit framework filter XML (starting with '<').";
@@ -17,11 +17,12 @@ internal static class NUnitSelectionFilter
             return null;
 
         var testIds = Clean(selection.TestIds);
+        var names = Clean(selection.Names);
         var payload = selection.ProviderPayload?.Trim();
-        var hasIds = testIds.Count > 0;
+        var hasStructured = testIds.Count > 0 || names.Count > 0;
         var hasPayload = !string.IsNullOrWhiteSpace(payload);
 
-        if (hasIds && hasPayload)
+        if (hasStructured && hasPayload)
             throw new ArgumentException(MixedSelectionMessage, nameof(selection));
 
         if (hasPayload)
@@ -32,10 +33,12 @@ internal static class NUnitSelectionFilter
             return payload;
         }
 
-        if (!hasIds)
+        if (!hasStructured)
             return null;
 
-        var nodes = testIds.Select(id => new XElement("test", id)).ToList();
+        var nodes = names.Select(name => new XElement("name", name))
+            .Concat(testIds.Select(id => new XElement("test", id)))
+            .ToList();
         var inner = nodes.Count == 1 ? nodes[0] : new XElement("or", nodes);
         return new XElement("filter", inner).ToString(SaveOptions.DisableFormatting);
     }

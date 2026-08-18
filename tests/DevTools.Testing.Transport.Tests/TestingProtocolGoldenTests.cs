@@ -98,10 +98,10 @@ public sealed class TestingProtocolGoldenTests
     [Fact]
     public void Protocol_mismatch_rejects_version_1()
     {
-        Assert.False(TestingProtocolBridge.IsCompatible(1));
-        Assert.True(TestingProtocolBridge.IsCompatible(TestingProtocol.CurrentVersion));
+        Assert.False(TestingProtocol.IsCompatible(1));
+        Assert.True(TestingProtocol.IsCompatible(TestingProtocol.CurrentVersion));
 
-        var error = TestingProtocolBridge.CreateIncompatibleResponse("9", 1);
+        var error = TestingProtocol.CreateIncompatibleResponse("9", 1);
         var json = Serialize(error);
         Assert.Contains("testing/protocol_incompatible", json, StringComparison.Ordinal);
         Assert.Contains("\"requested\":1", json, StringComparison.Ordinal);

@@ -1,0 +1,81 @@
+<Project Sdk="Microsoft.NET.Sdk">
+    <PropertyGroup>
+        <TargetFrameworks>net48;net8.0-windows;net10.0-windows</TargetFrameworks>
+        <!-- Independent package: do not inherit Autodesk flatten. Parallel TFMs
+             must not share obj/bin or VS races CSC (CS2012 / MSB3713). -->
+        <AppendTargetFrameworkToOutputPath>true</AppendTargetFrameworkToOutputPath>
+        <RootNamespace>DevTools.TestAdapter</RootNamespace>
+        <AssemblyName>DevTools.TestAdapter</AssemblyName>
+        <PackageId>RevitDevTool.TestAdapter</PackageId>
+        <!-- Bump this before running .github/workflows/PublishTesting.yml.
+             Independent of the RevitDevTool installer GitVersion. -->
+        <Version>0.1.0</Version>
+        <IsPackable>true</IsPackable>
+        <DevelopmentDependency>true</DevelopmentDependency>
+        <PackageLicenseExpression>MIT</PackageLicenseExpression>
+        <PackageProjectUrl>https://github.com/trgiangv/RevitDevTool</PackageProjectUrl>
+        <Description>Microsoft.Testing.Platform adapter that runs tests inside Revit/AutoCAD hosts. Requires RevitDevTool (https://github.com/trgiangv/RevitDevTool). Default in-host engine is NUnit; override TestingFramework in the test project.</Description>
+        <PackageTags>testing;revit;autocad;adapter</PackageTags>
+        <PackageReadmeFile>README.md</PackageReadmeFile>
+        <EnableDynamicLoading>false</EnableDynamicLoading>
+        <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
+        <!-- RevitDevTool.TestAdapter is the sole published package.  Its internal
+             DevTools runtime closure is packed below, not emitted as packages
+             that the release workflow does not publish. -->
+        <SuppressDependenciesWhenPacking>true</SuppressDependenciesWhenPacking>
+        <!-- The package intentionally has no dependency groups: its modern internal
+             closure is runtime-only under build/runtime; net48 is ILRepack-merged below. -->
+        <NoPackageAnalysis>true</NoPackageAnalysis>
+        <TargetsForTfmSpecificContentInPackage>$(TargetsForTfmSpecificContentInPackage);PackDevToolsTestAdapterRuntimeClosure</TargetsForTfmSpecificContentInPackage>
+        <IsTestProject>false</IsTestProject>
+        <ILRepackable Condition="'$(TargetFramework)' == 'net48'">true</ILRepackable>
+        <ILRepackInternalize Condition="'$(TargetFramework)' == 'net48'">true</ILRepackInternalize>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <None Include="build\RevitDevTool.TestAdapter.props" Pack="true" PackagePath="build\"/>
+        <None Include="build\RevitDevTool.TestAdapter.targets" Pack="true" PackagePath="build\"/>
+        <None Include="README.md" Pack="true" PackagePath="\"/>
+    </ItemGroup>
+
+    <Target Name="PackDevToolsTestAdapterRuntimeClosure"
+            Condition="'$(TargetFrameworkIdentifier)' == '.NETCoreApp'">
+        <PropertyGroup>
+            <_DevToolsTestAdapterRuntimeTfm>net$(TargetFrameworkVersion.Substring(1))-windows7.0</_DevToolsTestAdapterRuntimeTfm>
+        </PropertyGroup>
+        <ItemGroup>
+            <!-- net48 is merged by the established ILRepack target.  Modern
+                 runtime-only implementation assets must not become NuGet lib
+                 compile references. -->
+            <TfmSpecificPackageFile Include="$(TargetDir)*.dll" Exclude="$(TargetPath)">
+                <PackagePath>build/runtime/$(_DevToolsTestAdapterRuntimeTfm)</PackagePath>
+            </TfmSpecificPackageFile>
+        </ItemGroup>
+    </Target>
+
+    <ItemGroup>
+        <GlobalPackageReference Remove="Polyfill"/>
+        <!-- Compile against the platform; consumers supply it at runtime via Microsoft.Testing.Platform.MSBuild. -->
+        <PackageReference Include="Microsoft.Testing.Platform">
+            <PrivateAssets>all</PrivateAssets>
+            <ExcludeAssets>runtime</ExcludeAssets>
+        </PackageReference>
+        <!-- net48: merged into DevTools.TestAdapter.dll via props/ILRepack.targets. -->
+        <PackageReference Include="System.Text.Json" Condition="'$(TargetFramework)' == 'net48'">
+            <PrivateAssets>all</PrivateAssets>
+        </PackageReference>
+        <!-- net48 needs the metadata reader merged; modern runtimes provide it. -->
+        <PackageReference Include="System.Reflection.Metadata" Condition="'$(TargetFramework)' == 'net48'">
+            <PrivateAssets>all</PrivateAssets>
+        </PackageReference>
+        <PackageReference Include="System.Runtime.CompilerServices.Unsafe" Condition="'$(TargetFramework)' == 'net48'">
+            <PrivateAssets>all</PrivateAssets>
+        </PackageReference>
+        <InternalsVisibleTo Include="DevTools.TestAdapter.Tests"/>
+    </ItemGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\DevTools.Testing.Abstractions\DevTools.Testing.Abstractions.csproj"/>
+        <ProjectReference Include="..\DevTools.Testing.Transport\DevTools.Testing.Transport.csproj"/>
+    </ItemGroup>
+</Project>

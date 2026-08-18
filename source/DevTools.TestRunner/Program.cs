@@ -1,8 +1,7 @@
+using ConsoleAppFramework;
 using DevTools.Hosting;
 using DevTools.Hosting.Acad;
 using DevTools.Hosting.Revit;
-using DevTools.NUnit.Runner;
-using DevTools.TestRunner.Core.Composition;
 using DevTools.TestRunner.Core.Debugging;
 using DevTools.TestRunner.Core.Services;
 using Microsoft.Extensions.DependencyInjection;
@@ -20,12 +19,12 @@ internal static class Program
         services.AddSingleton<IHostSession, HostSession>();
         services.AddSingleton<IHostExecutionCoordinator, HostExecutionCoordinator>();
         services.AddSingleton<IVisualStudioAttach>(VisualStudioAttach.Instance);
-        var modules = new RunnerModuleRegistry();
-        modules.Register(new NUnitRunnerModule(), isDefault: true);
-        services.AddSingleton(modules);
-        modules.RegisterServices(services);
-        var serviceProvider = services.BuildServiceProvider();
+        await using var serviceProvider = services.BuildServiceProvider();
 
-        return await modules.RunAsync(args, serviceProvider).ConfigureAwait(false);
+        ConsoleApp.ServiceProvider = serviceProvider;
+        var app = ConsoleApp.Create();
+        app.Add<RunnerCommands>();
+        await app.RunAsync(args).ConfigureAwait(false);
+        return Environment.ExitCode;
     }
 }

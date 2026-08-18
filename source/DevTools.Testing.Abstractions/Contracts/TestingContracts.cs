@@ -1,13 +1,15 @@
 namespace DevTools.Testing.Abstractions.Contracts;
 
 public sealed record TestingHostOptions(
-    string Host,
+    string HostName,
     string HostVersion,
-    bool HostLaunch,
-    int HostTimeoutSeconds,
-    int HostLaunchTimeoutSeconds,
+    bool ForceLaunch,
+    int PerTestTimeoutSeconds,
+    int LaunchTimeoutSeconds,
     string? RunnerPath,
-    int? DebugParentPid = null);
+    int? DebugParentPid = null,
+    string? FrameworkId = null,
+    IReadOnlyList<string>? DiscoveryAttributes = null);
 
 public sealed record TestingAssemblyReference(
     string Path,
@@ -16,7 +18,13 @@ public sealed record TestingAssemblyReference(
 
 public sealed record TestingSelection(
     IReadOnlyList<string> TestIds,
-    string? ProviderPayload = null);
+    string? ProviderPayload = null,
+    IReadOnlyList<string>? Names = null);
+
+public sealed record TestingDiscoveredTest(
+    string TestId,
+    string DisplayName,
+    string? FullName = null);
 
 public sealed record TestingRunRequest
 {

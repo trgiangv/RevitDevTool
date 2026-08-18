@@ -8,16 +8,21 @@ public static class TestingRunnerCli
     public const string FrameworkOption = "--framework";
     public const string HostOption = "--host";
     public const string HostVersionOption = "--host-version";
-    public const string HostLaunchOption = "--host-launch";
-    public const string HostTimeoutOption = "--host-timeout";
-    public const string HostLaunchTimeoutOption = "--host-launch-timeout";
+    public const string ForceLaunchOption = "--force-launch";
+    public const string PerTestTimeoutOption = "--per-test-timeout";
+    public const string LaunchTimeoutOption = "--launch-timeout";
     public const string DebugParentPidOption = "--debug-parent-pid";
+    public const string TestOption = "--test";
+    public const string NameOption = "--name";
+    public const string FilterOption = "--filter";
 
     /// <summary>
-    /// Builds TestRunner CLI args. <c>HostTimeout</c> / <c>HostLaunchTimeout</c>
-    /// from the consumer csproj are forwarded as <c>--host-timeout</c> /
-    /// <c>--host-launch-timeout</c> for the in-host pipe. The adapter
-    /// <c>WaitForExit</c> budget is computed separately by
+    /// Builds TestRunner CLI args. <c>PerTestTimeout</c> / <c>LaunchTimeout</c>
+    /// from the consumer csproj are forwarded as <c>--per-test-timeout</c> /
+    /// <c>--launch-timeout</c> for the in-host pipe. <c>PerTestTimeout</c> is
+    /// per test; the adapter scales it by the run's test count before this
+    /// method sees <see cref="TestingHostOptions.PerTestTimeoutSeconds"/>.
+    /// The adapter <c>WaitForExit</c> budget is computed separately by
     /// <see cref="TestingHostTiming"/>.
     /// </summary>
     public static List<string> BuildRunArguments(
@@ -31,17 +36,17 @@ public static class TestingRunnerCli
             request.FrameworkId,
             request.Assembly.Path,
             HostOption,
-            hostOptions.Host,
+            hostOptions.HostName,
             HostVersionOption,
             hostOptions.HostVersion,
-            HostTimeoutOption,
-            hostOptions.HostTimeoutSeconds.ToString(),
-            HostLaunchTimeoutOption,
-            hostOptions.HostLaunchTimeoutSeconds.ToString(),
+            PerTestTimeoutOption,
+            hostOptions.PerTestTimeoutSeconds.ToString(),
+            LaunchTimeoutOption,
+            hostOptions.LaunchTimeoutSeconds.ToString(),
         };
 
-        if (hostOptions.HostLaunch)
-            args.Add(HostLaunchOption);
+        if (hostOptions.ForceLaunch)
+            args.Add(ForceLaunchOption);
 
         if (hostOptions.DebugParentPid is > 0)
         {
@@ -57,14 +62,25 @@ public static class TestingRunnerCli
             .ToList();
         if (testIds.Count > 0)
         {
-            args.Add("--test");
+            args.Add(TestOption);
             args.Add(System.Text.Json.JsonSerializer.Serialize(testIds));
+        }
+
+        var names = (selection?.Names ?? Array.Empty<string>())
+            .Where(name => !string.IsNullOrWhiteSpace(name))
+            .Select(name => name.Trim())
+            .Distinct(StringComparer.Ordinal)
+            .ToList();
+        if (names.Count > 0)
+        {
+            args.Add(NameOption);
+            args.Add(System.Text.Json.JsonSerializer.Serialize(names));
         }
 
         var payload = selection?.ProviderPayload;
         if (!string.IsNullOrWhiteSpace(payload))
         {
-            args.Add("--filter");
+            args.Add(FilterOption);
             args.Add(payload!.Trim());
         }
 

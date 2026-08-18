@@ -11,7 +11,6 @@ public static class TestingErrorCodes
     public const string InvalidRequest = "testing/invalid_request";
     public const string SessionPoisoned = "testing/session_poisoned";
     public const string ProviderFailed = "testing/provider_failed";
-    public const string NoDiscovery = "testing/no_discovery";
 }
 
 /// <summary>
@@ -53,29 +52,13 @@ public sealed class TestingRequestHandler : IBridgeRequestHandler, IBridgeNotifi
         JsonElement? @params,
         CancellationToken ct = default)
     {
-        if (string.Equals(method, "testing/discover", StringComparison.OrdinalIgnoreCase))
-        {
-            return Task.FromResult(BridgeMessage.Error(
-                requestId,
-                TestingErrorCodes.NoDiscovery,
-                "Testing.Host has no discovery endpoint."));
-        }
-
-        if (!TryMapMethod(method, out var testingMethod))
-        {
-            return Task.FromResult(BridgeMessage.Error(
-                requestId,
-                IpcErrorCodes.MethodNotFound,
-                $"Unknown method: {method}"));
-        }
-
-        if (string.Equals(testingMethod, TestingProtocol.Hello, StringComparison.Ordinal))
+        if (string.Equals(method, TestingProtocol.Hello, StringComparison.OrdinalIgnoreCase))
             return Task.FromResult(HandleHello(requestId, @params));
 
-        if (string.Equals(testingMethod, TestingProtocol.Run, StringComparison.Ordinal))
+        if (string.Equals(method, TestingProtocol.Run, StringComparison.OrdinalIgnoreCase))
             return Task.FromResult(HandleRun(requestId, @params, ct));
 
-        if (string.Equals(testingMethod, TestingProtocol.Cancel, StringComparison.Ordinal))
+        if (string.Equals(method, TestingProtocol.Cancel, StringComparison.OrdinalIgnoreCase))
             return Task.FromResult(HandleCancel(requestId, @params));
 
         return Task.FromResult(BridgeMessage.Error(
@@ -89,8 +72,8 @@ public sealed class TestingRequestHandler : IBridgeRequestHandler, IBridgeNotifi
         if (!TryReadHello(@params, out var request, out var error))
             return Invalid(requestId, error);
 
-        if (!TestingProtocolBridge.IsCompatible(request!.ProtocolVersion))
-            return TestingProtocolBridge.CreateIncompatibleResponse(requestId, request.ProtocolVersion);
+        if (!TestingProtocol.IsCompatible(request!.ProtocolVersion))
+            return TestingProtocol.CreateIncompatibleResponse(requestId, request.ProtocolVersion);
 
         if (string.IsNullOrWhiteSpace(request!.FrameworkId))
             return Invalid(requestId, "Framework ID is required.");
@@ -189,14 +172,6 @@ public sealed class TestingRequestHandler : IBridgeRequestHandler, IBridgeNotifi
             _cancellation.TryTransition(TestingCancellationState.Acknowledged);
 
         return BridgeMessage.Response(requestId, null);
-    }
-
-    private static bool TryMapMethod(string method, out string testingMethod)
-    {
-        testingMethod = method;
-        return string.Equals(method, TestingProtocol.Hello, StringComparison.OrdinalIgnoreCase)
-            || string.Equals(method, TestingProtocol.Run, StringComparison.OrdinalIgnoreCase)
-            || string.Equals(method, TestingProtocol.Cancel, StringComparison.OrdinalIgnoreCase);
     }
 
     private static bool TryReadHello(

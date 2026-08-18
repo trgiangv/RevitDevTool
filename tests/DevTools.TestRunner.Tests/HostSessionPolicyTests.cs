@@ -3,7 +3,7 @@ namespace DevTools.TestRunner.Tests;
 public sealed class HostSessionPolicyTests
 {
     [Fact]
-    public void HostLaunch_false_reuses_matching_host_then_falls_back_to_spawn()
+    public void ForceLaunch_false_reuses_matching_host_then_falls_back_to_spawn()
     {
         var repositoryRoot = FindRepositoryRoot();
         var source = File.ReadAllText(Path.Combine(
@@ -32,20 +32,19 @@ public sealed class HostSessionPolicyTests
     }
 
     [Fact]
-    public void DiscoverCommand_does_not_locate_or_launch_a_host()
+    public void TestRunner_run_does_not_discover_or_locate_a_host_itself()
     {
         var source = File.ReadAllText(Path.Combine(
             FindRepositoryRoot(),
             "source",
             "DevTools.TestRunner",
-            "NUnit",
-            "Commands",
-            "DiscoverCommand.cs"));
+            "RunnerCommands.cs"));
 
-        Assert.Contains("NUnitMetadataDiscoverer.Discover", source, StringComparison.Ordinal);
+        Assert.Contains("RunTestingAsync", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("MetadataTestDiscoverer", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("[Command(\"discover\")]", source, StringComparison.Ordinal);
         Assert.DoesNotContain("EnsurePipeAsync", source, StringComparison.Ordinal);
         Assert.DoesNotContain("HostLocator", source, StringComparison.Ordinal);
-        Assert.DoesNotContain("HostSession", source, StringComparison.Ordinal);
         Assert.DoesNotContain("launchService.Start", source, StringComparison.Ordinal);
     }
 
@@ -93,9 +92,7 @@ public sealed class HostSessionPolicyTests
             repositoryRoot,
             "source",
             "DevTools.TestRunner",
-            "NUnit",
-            "Commands",
-            "RunCommand.cs"));
+            "RunnerCommands.cs"));
 
         var ensure = source.IndexOf("EnsurePipeAsync", StringComparison.Ordinal);
         var attach = source.IndexOf("HostDebugAttachScope.TryBegin", StringComparison.Ordinal);
@@ -105,7 +102,6 @@ public sealed class HostSessionPolicyTests
         Assert.Contains("context.DebugParentPid", source, StringComparison.Ordinal);
         Assert.Contains("pipe.ProcessId", source, StringComparison.Ordinal);
         Assert.Contains("RunTestingAsync", providerSource, StringComparison.Ordinal);
-        Assert.Contains("ExecuteAsync(", providerSource, StringComparison.Ordinal);
         Assert.DoesNotContain("EnsurePipeAsync", providerSource, StringComparison.Ordinal);
     }
 

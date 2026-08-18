@@ -49,7 +49,7 @@ public sealed class RepositoryAssemblyLoadingArchitectureTests
     [Fact]
     public void Mtp_bootstrap_exception_is_limited_to_the_private_runtime_closure()
     {
-        const string relativePath = "source/DevTools.NUnit.Mtp/MtpRuntimeAssemblyResolver.cs";
+        const string relativePath = "source/DevTools.TestAdapter/RuntimeAssemblyResolver.cs";
         var content = File.ReadAllText(Path.Combine(RepositoryRoot, relativePath.Replace('/', Path.DirectorySeparatorChar)));
 
         Assert.Contains("Interlocked.Exchange(ref _registered, 1)", content, StringComparison.Ordinal);
@@ -98,7 +98,7 @@ public sealed class RepositoryAssemblyLoadingArchitectureTests
         relativePath.StartsWith("source/DevTools.AssemblyIsolation/", StringComparison.Ordinal);
 
     private static bool IsMtpBootstrapException(string relativePath, string content) =>
-        relativePath.Equals("source/DevTools.NUnit.Mtp/MtpRuntimeAssemblyResolver.cs", StringComparison.Ordinal)
+        relativePath.Equals("source/DevTools.TestAdapter/RuntimeAssemblyResolver.cs", StringComparison.Ordinal)
         && content.Contains("AppContext.BaseDirectory", StringComparison.Ordinal)
         && content.Contains("Interlocked.Exchange(ref _registered, 1)", StringComparison.Ordinal);
 

@@ -5,17 +5,17 @@ namespace DevTools.Testing.Transport;
 /// <summary>
 /// Adapter-side budgets around the TestRunner child process.
 /// Host-facing timeouts are MSBuild properties on the consumer test project
-/// (<c>HostTimeout</c>, <c>HostLaunchTimeout</c>) and arrive here as
+/// (<c>PerTestTimeout</c>, <c>LaunchTimeout</c>) and arrive here as
 /// <see cref="TestingHostOptions"/>. The constants below are local I/O slack
 /// and are not csproj options.
 /// </summary>
 public static class TestingHostTiming
 {
-    /// <summary>Default timeout for a host pipe request.</summary>
-    public const int DefaultHostRequestTimeoutSeconds = 60;
+    /// <summary>Default per-test execution budget, in seconds.</summary>
+    public const int DefaultPerTestTimeoutSeconds = 60;
 
     /// <summary>Default wait for a host pipe after launch.</summary>
-    public const int DefaultHostLaunchTimeoutSeconds = 180;
+    public const int DefaultLaunchTimeoutSeconds = 180;
 
     /// <summary>Named-pipe connect timeout before a request.</summary>
     public const int HostPipeConnectTimeoutSeconds = 30;
@@ -25,7 +25,7 @@ public static class TestingHostTiming
 
     /// <summary>
     /// Extra seconds on adapter <c>WaitForExit</c> after
-    /// <c>HostLaunchTimeout + HostTimeout</c>. The TestRunner may still be
+    /// <c>LaunchTimeout + PerTestTimeout × test count</c>. The TestRunner may still be
     /// flushing JSON after the in-host pipe request has already timed out.
     /// </summary>
     public const int RunnerProcessTimeoutSlackSeconds = 30;
@@ -42,11 +42,24 @@ public static class TestingHostTiming
 
     /// <summary>
     /// Adapter <c>WaitForExit</c> budget for the TestRunner process.
-    /// Always includes launch timeout: <c>HostLaunch=true</c> starts a host,
-    /// and <c>HostLaunch=false</c> still cold-starts when no matching pipe exists.
+    /// <paramref name="runTimeoutSeconds"/> is the scaled run wait
+    /// (<c>PerTestTimeout × test count</c>). Always includes launch timeout:
+    /// <c>ForceLaunch=true</c> starts a host, and <c>ForceLaunch=false</c> still
+    /// cold-starts when no matching pipe exists.
     /// </summary>
     public static int ComputeAdapterRunnerProcessTimeoutSeconds(
-        int hostLaunchTimeoutSeconds,
-        int hostTimeoutSeconds) =>
-        hostLaunchTimeoutSeconds + hostTimeoutSeconds + RunnerProcessTimeoutSlackSeconds;
+        int launchTimeoutSeconds,
+        int runTimeoutSeconds) =>
+        launchTimeoutSeconds + runTimeoutSeconds + RunnerProcessTimeoutSlackSeconds;
+
+    /// <summary>
+    /// Csproj/INI <c>PerTestTimeout</c> is per test, matching pytest
+    /// <c>per_test_timeout</c>. The pipe wait for one run is this times the
+    /// number of tests in that run.
+    /// </summary>
+    public static int ScalePerTestTimeoutSeconds(int perTestTimeoutSeconds, int testCount)
+    {
+        var cases = testCount < 1 ? 1 : testCount;
+        return checked(perTestTimeoutSeconds * cases);
+    }
 }

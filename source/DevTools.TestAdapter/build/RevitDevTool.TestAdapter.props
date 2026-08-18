@@ -1,0 +1,40 @@
+<Project>
+  <PropertyGroup>
+    <DevToolsTestAdapterPropsImported>true</DevToolsTestAdapterPropsImported>
+    <!-- NuGet .props import before SDK inference. Fill the canonical identifier
+         from the TFM so later conditions use TargetFrameworkIdentifier only. -->
+    <TargetFrameworkIdentifier Condition="'$(TargetFrameworkIdentifier)' == '' and '$(TargetFramework)' != ''">$([MSBuild]::GetTargetFrameworkIdentifier('$(TargetFramework)'))</TargetFrameworkIdentifier>
+    <IsTestingPlatformApplication Condition="'$(IsTestingPlatformApplication)' == ''">true</IsTestingPlatformApplication>
+    <EnableMicrosoftTestingPlatform Condition="'$(EnableMicrosoftTestingPlatform)' == ''">true</EnableMicrosoftTestingPlatform>
+    <TestingPlatformDotnetTestSupport Condition="'$(TestingPlatformDotnetTestSupport)' == ''">true</TestingPlatformDotnetTestSupport>
+    <GenerateTestingPlatformEntryPoint Condition="'$(GenerateTestingPlatformEntryPoint)' == ''">true</GenerateTestingPlatformEntryPoint>
+    <OutputType>Exe</OutputType>
+    <!-- OutputType is set after Sdk.props, so net48 exes skip binding redirects
+         unless this is explicit. STJ 9 needs Unsafe 6.0. -->
+    <AutoGenerateBindingRedirects Condition="'$(TargetFrameworkIdentifier)' == '.NETFramework'">true</AutoGenerateBindingRedirects>
+    <GenerateBindingRedirectsOutputType Condition="'$(TargetFrameworkIdentifier)' == '.NETFramework'">true</GenerateBindingRedirectsOutputType>
+    <AutoUnifyAssemblyReferences Condition="'$(TargetFrameworkIdentifier)' == '.NETFramework'">true</AutoUnifyAssemblyReferences>
+    <EnableDynamicLoading>false</EnableDynamicLoading>
+    <ForceLaunch Condition="'$(ForceLaunch)' == ''">false</ForceLaunch>
+    <PerTestTimeout Condition="'$(PerTestTimeout)' == ''">60</PerTestTimeout>
+    <LaunchTimeout Condition="'$(LaunchTimeout)' == ''">180</LaunchTimeout>
+    <!-- Default in-host engine. Override in the test csproj without changing the package. -->
+    <TestingFramework Condition="'$(TestingFramework)' == ''">nunit</TestingFramework>
+    <TestingDiscoveryAttributes Condition="'$(TestingDiscoveryAttributes)' == '' and '$(TestingFramework)' == 'nunit'">TestAttribute;TestCaseAttribute;TestCaseSourceAttribute;TheoryAttribute</TestingDiscoveryAttributes>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <TestingPlatformBuilderHook Include="51ad4b4c-87f1-4554-9aa4-e7a54bd732f5">
+      <DisplayName>RevitDevTool.TestAdapter</DisplayName>
+      <TypeFullName>DevTools.TestAdapter.TestingPlatformBuilderHook</TypeFullName>
+    </TestingPlatformBuilderHook>
+  </ItemGroup>
+
+  <!-- Direct reference wins MSBuild copy over older Unsafe 4.x (MSB3277). -->
+  <ItemGroup Condition="'$(TargetFrameworkIdentifier)' == '.NETFramework' and '$(ManagePackageVersionsCentrally)' == 'true'">
+    <PackageReference Include="System.Runtime.CompilerServices.Unsafe" VersionOverride="6.1.2"/>
+  </ItemGroup>
+  <ItemGroup Condition="'$(TargetFrameworkIdentifier)' == '.NETFramework' and '$(ManagePackageVersionsCentrally)' != 'true'">
+    <PackageReference Include="System.Runtime.CompilerServices.Unsafe" Version="6.1.2"/>
+  </ItemGroup>
+</Project>

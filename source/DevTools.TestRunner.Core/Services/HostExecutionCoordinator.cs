@@ -56,17 +56,17 @@ public sealed class HostExecutionCoordinator(IHostSession hosts) : IHostExecutio
         ArgumentNullException.ThrowIfNull(debugger);
         ArgumentNullException.ThrowIfNull(operation);
 
-        if (!Enum.TryParse(context.Host, ignoreCase: true, out HostApp hostApp))
-            return HostExecutionResult<T>.Failed(HostExecutionFailure.InvalidHost, $"Unsupported host '{context.Host}'.");
+        if (!Enum.TryParse(context.HostName, ignoreCase: true, out HostApp hostApp))
+            return HostExecutionResult<T>.Failed(HostExecutionFailure.InvalidHost, $"Unsupported host '{context.HostName}'.");
 
         HostPipeInstance pipe;
         try
         {
             pipe = await hosts.EnsurePipeAsync(
                     hostApp,
-                    context.Version,
-                    context.HostLaunch,
-                    TimeSpan.FromSeconds(context.HostLaunchTimeoutSeconds),
+                    context.HostVersion,
+                    context.ForceLaunch,
+                    TimeSpan.FromSeconds(context.LaunchTimeoutSeconds),
                     cancellationToken)
                 .ConfigureAwait(false);
         }
@@ -82,7 +82,7 @@ public sealed class HostExecutionCoordinator(IHostSession hosts) : IHostExecutio
             debugger,
             Console.Error);
         using var requestTimeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-        requestTimeout.CancelAfter(TimeSpan.FromSeconds(context.HostTimeoutSeconds));
+        requestTimeout.CancelAfter(TimeSpan.FromSeconds(context.PerTestTimeoutSeconds));
 
         try
         {
@@ -97,7 +97,7 @@ public sealed class HostExecutionCoordinator(IHostSession hosts) : IHostExecutio
         {
             return HostExecutionResult<T>.Failed(
                 HostExecutionFailure.TimedOut,
-                $"Host request timed out after {context.HostTimeoutSeconds}s.");
+                $"Host request timed out after {context.PerTestTimeoutSeconds}s.");
         }
         catch (Exception exception)
         {

@@ -1,0 +1,101 @@
+<Project>
+  <Import Project="$(MSBuildThisFileDirectory)RevitDevTool.TestAdapter.props"
+          Condition="'$(DevToolsTestAdapterPropsImported)' != 'true'"/>
+
+  <UsingTask TaskName="MergeDevToolsTestConfig"
+             TaskFactory="RoslynCodeTaskFactory"
+             AssemblyFile="$(MSBuildToolsPath)\Microsoft.Build.Tasks.Core.dll">
+    <ParameterGroup>
+      <UserConfigFile ParameterType="System.String"/>
+      <GeneratedConfigFile ParameterType="System.String" Required="true"/>
+      <OutputConfigFile ParameterType="System.String" Required="true"/>
+    </ParameterGroup>
+    <Task>
+      <Using Namespace="System.IO"/>
+      <Code Type="Fragment" Language="cs"><![CDATA[
+        var generated = File.ReadAllText(GeneratedConfigFile);
+        var outputDirectory = Path.GetDirectoryName(OutputConfigFile);
+        if (!string.IsNullOrEmpty(outputDirectory))
+            Directory.CreateDirectory(outputDirectory);
+
+        if (string.IsNullOrWhiteSpace(UserConfigFile) || !File.Exists(UserConfigFile))
+        {
+            File.WriteAllText(OutputConfigFile, generated);
+        }
+        else
+        {
+            var user = File.ReadAllText(UserConfigFile).Trim().TrimStart('\uFEFF');
+            if (user.IndexOf("\"devtools\"", StringComparison.OrdinalIgnoreCase) >= 0)
+            {
+                File.WriteAllText(OutputConfigFile, user);
+            }
+            else
+            {
+                var inner = generated.Trim().TrimStart('{').TrimEnd('}').Trim();
+                var body = user.Trim().TrimStart('{').TrimEnd('}').Trim().TrimEnd(',');
+                var merged = body.Length == 0
+                    ? generated
+                    : "{" + Environment.NewLine + body + "," + Environment.NewLine + inner + Environment.NewLine + "}";
+                File.WriteAllText(OutputConfigFile, merged);
+            }
+        }
+      ]]></Code>
+    </Task>
+  </UsingTask>
+
+  <Target Name="CopyDevToolsTestAdapterRuntimeClosure"
+          AfterTargets="Build"
+          Condition="'$(TargetFrameworkIdentifier)' == '.NETCoreApp'">
+    <PropertyGroup>
+      <!-- 7.0 is the package's baseline Windows asset, compatible with later
+           Windows target-platform versions such as 10.0. -->
+      <_DevToolsTestAdapterPackageRuntimeDir>$(MSBuildThisFileDirectory)runtime\net$(TargetFrameworkVersion.Substring(1))-windows7.0\</_DevToolsTestAdapterPackageRuntimeDir>
+    </PropertyGroup>
+    <ItemGroup>
+      <_DevToolsTestAdapterRuntimeClosureCopy Include="$(_DevToolsTestAdapterPackageRuntimeDir)*.dll" />
+    </ItemGroup>
+    <Copy SourceFiles="@(_DevToolsTestAdapterRuntimeClosureCopy)"
+          DestinationFolder="$(OutDir)"
+          SkipUnchangedFiles="true" />
+  </Target>
+
+  <!-- Feed MTP's official copy: testconfig.json → $(AssemblyName).testconfig.json.
+       Must run before _GenerateTestingPlatformConfigurationFileCore, not after. -->
+  <Target Name="GenerateDevToolsTestConfig"
+          BeforeTargets="_CalculateGenerateTestingPlatformConfigurationFile;_GenerateTestingPlatformConfigurationFileCore"
+          Condition="'$(IsTestingPlatformApplication)' == 'true'">
+    <Error
+        Condition="'$(HostName)' == ''"
+        Text="RevitDevTool.TestAdapter test projects must declare &lt;HostName&gt; (for example Revit) in the .csproj." />
+    <Error
+        Condition="'$(HostVersion)' == ''"
+        Text="RevitDevTool.TestAdapter test projects must declare &lt;HostVersion&gt; in the .csproj (for example &lt;HostVersion&gt;2024&lt;/HostVersion&gt; or &lt;HostVersion&gt;$(RevitVersion)&lt;/HostVersion&gt;)." />
+    <Error
+        Condition="'$(TestingDiscoveryAttributes)' == ''"
+        Text="RevitDevTool.TestAdapter test projects must declare &lt;TestingDiscoveryAttributes&gt; or use the default TestingFramework." />
+
+    <PropertyGroup>
+      <_DevToolsTestingRunnerPath Condition="'$(DevToolsTestingRunnerPath)' != ''">$(DevToolsTestingRunnerPath)</_DevToolsTestingRunnerPath>
+      <_DevToolsTestingRunnerPath Condition="'$(_DevToolsTestingRunnerPath)' == ''">$([System.Environment]::GetFolderPath(SpecialFolder.ApplicationData))\Autodesk\ApplicationPlugins\RevitDevTool.bundle\Contents\DevTools.TestRunner.exe</_DevToolsTestingRunnerPath>
+      <_DevToolsTestingRunnerPathJson>$(_DevToolsTestingRunnerPath.Replace('\', '\\'))</_DevToolsTestingRunnerPathJson>
+      <_TestingDiscoveryAttributesJson>"$(TestingDiscoveryAttributes.Replace(';', '","'))"</_TestingDiscoveryAttributesJson>
+      <_DevToolsUserTestConfigPath>$(MSBuildProjectDirectory)\testconfig.json</_DevToolsUserTestConfigPath>
+      <_DevToolsGeneratedTestConfigPath>$(IntermediateOutputPath)devtools.testconfig.json</_DevToolsGeneratedTestConfigPath>
+      <_DevToolsMergedTestConfigPath>$(IntermediateOutputPath)testconfig.json</_DevToolsMergedTestConfigPath>
+    </PropertyGroup>
+
+    <MakeDir Directories="$(IntermediateOutputPath)"/>
+    <WriteLinesToFile
+        File="$(_DevToolsGeneratedTestConfigPath)"
+        Lines="{&#xA;  &quot;devtools&quot;: {&#xA;    &quot;hostName&quot;: &quot;$(HostName)&quot;,&#xA;    &quot;hostVersion&quot;: &quot;$(HostVersion)&quot;,&#xA;    &quot;forceLaunch&quot;: $(ForceLaunch),&#xA;    &quot;perTestTimeoutSeconds&quot;: $(PerTestTimeout),&#xA;    &quot;launchTimeoutSeconds&quot;: $(LaunchTimeout),&#xA;    &quot;runnerPath&quot;: &quot;$(_DevToolsTestingRunnerPathJson)&quot;,&#xA;    &quot;frameworkId&quot;: &quot;$(TestingFramework)&quot;,&#xA;    &quot;discoveryAttributes&quot;: [$(_TestingDiscoveryAttributesJson)]&#xA;  }&#xA;}"
+        Overwrite="true"
+        Encoding="UTF-8"/>
+    <MergeDevToolsTestConfig
+        UserConfigFile="$(_DevToolsUserTestConfigPath)"
+        GeneratedConfigFile="$(_DevToolsGeneratedTestConfigPath)"
+        OutputConfigFile="$(_DevToolsMergedTestConfigPath)"/>
+    <PropertyGroup>
+      <_TestingPlatformConfigurationFileSourcePath>$(_DevToolsMergedTestConfigPath)</_TestingPlatformConfigurationFileSourcePath>
+    </PropertyGroup>
+  </Target>
+</Project>

@@ -109,8 +109,8 @@ public sealed class ProcessTestRunnerClient : ITestRunnerTransport
         var stdoutTask = process.StandardOutput.ReadToEndAsync();
         var stderrTask = process.StandardError.ReadToEndAsync();
         var timeoutMs = TestingHostTiming.ComputeAdapterRunnerProcessTimeoutSeconds(
-            hostOptions.HostLaunchTimeoutSeconds,
-            hostOptions.HostTimeoutSeconds) * 1000;
+            hostOptions.LaunchTimeoutSeconds,
+            hostOptions.PerTestTimeoutSeconds) * 1000;
 
         if (!process.WaitForExit(timeoutMs))
         {

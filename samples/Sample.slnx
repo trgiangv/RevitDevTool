@@ -16,7 +16,7 @@
     <Project Path="CSharpDemo/CSharpDemo.csproj">
         <Build Project="false" />
     </Project>
-    <Project Path="../source/DevTools.NUnit.Mtp/DevTools.NUnit.Mtp.csproj" />
+    <Project Path="../source/DevTools.TestAdapter/DevTools.TestAdapter.csproj" />
     <Project Path="AcadCSharpDemo/AcadCSharpDemo.csproj">
         <Build Project="false" />
     </Project>

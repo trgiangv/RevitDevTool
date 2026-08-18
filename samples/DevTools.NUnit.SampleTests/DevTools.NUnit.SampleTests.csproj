@@ -5,17 +5,17 @@
         <IsTestProject>true</IsTestProject>
         <HostName>Revit</HostName>
         <HostVersion>$(RevitVersion)</HostVersion>
-        <HostLaunch>false</HostLaunch>
-        <HostTimeout>60</HostTimeout>
-        <HostLaunchTimeout>360</HostLaunchTimeout>
+        <ForceLaunch>false</ForceLaunch>
+        <PerTestTimeout>60</PerTestTimeout>
+        <LaunchTimeout>360</LaunchTimeout>
     </PropertyGroup>
 
-    <Import Project="..\..\source\DevTools.NUnit.Mtp\build\RevitDevTool.NUnit.targets"/>
+    <Import Project="..\..\source\DevTools.TestAdapter\build\RevitDevTool.TestAdapter.targets"/>
 
     <ItemGroup>
         <PackageReference Include="Nice3point.Revit.Toolkit" VersionOverride="$(RevitVersion).*"/>
         <PackageReference Include="Microsoft.Testing.Platform.MSBuild"/>
         <PackageReference Include="NUnit"/>
-        <ProjectReference Include="..\..\source\DevTools.NUnit.Mtp\DevTools.NUnit.Mtp.csproj"/>
+        <ProjectReference Include="..\..\source\DevTools.TestAdapter\DevTools.TestAdapter.csproj"/>
     </ItemGroup>
 </Project>

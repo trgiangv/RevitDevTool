@@ -6,12 +6,20 @@ namespace DevTools.Testing.Transport.Tests;
 public sealed class TestingHostTimingTests
 {
     [Fact]
+    public void ScalePerTestTimeout_multiplies_per_test_budget_by_case_count()
+    {
+        Assert.Equal(60, TestingHostTiming.ScalePerTestTimeoutSeconds(60, 0));
+        Assert.Equal(60, TestingHostTiming.ScalePerTestTimeoutSeconds(60, 1));
+        Assert.Equal(180, TestingHostTiming.ScalePerTestTimeoutSeconds(60, 3));
+    }
+
+    [Fact]
     public void Adapter_runner_budget_uses_csproj_host_options_plus_local_slack()
     {
-        // Sample csproj HostLaunchTimeout=360, HostTimeout=60; slack is not an MSBuild property.
+        // Sample: LaunchTimeout=360, PerTestTimeout=60 × 1 test; slack is not an MSBuild property.
         var seconds = TestingHostTiming.ComputeAdapterRunnerProcessTimeoutSeconds(
-            hostLaunchTimeoutSeconds: 360,
-            hostTimeoutSeconds: 60);
+            launchTimeoutSeconds: 360,
+            runTimeoutSeconds: 60);
 
         Assert.Equal(360 + 60 + TestingHostTiming.RunnerProcessTimeoutSlackSeconds, seconds);
         Assert.Equal(450, seconds);
@@ -37,10 +45,10 @@ public sealed class TestingHostTimingTests
                 new Dictionary<string, string>()),
             new TestingHostOptions("Revit", "2025", false, 60, 360, null));
 
-        Assert.Contains("--host-timeout", args);
-        Assert.Equal("60", args[args.IndexOf("--host-timeout") + 1]);
-        Assert.Contains("--host-launch-timeout", args);
-        Assert.Equal("360", args[args.IndexOf("--host-launch-timeout") + 1]);
+        Assert.Contains("--per-test-timeout", args);
+        Assert.Equal("60", args[args.IndexOf("--per-test-timeout") + 1]);
+        Assert.Contains("--launch-timeout", args);
+        Assert.Equal("360", args[args.IndexOf("--launch-timeout") + 1]);
         Assert.DoesNotContain("450", args);
         Assert.DoesNotContain("30", args);
     }

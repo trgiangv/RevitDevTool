@@ -1,0 +1,245 @@
+namespace DevTools.TestAdapter.Tests;
+
+public sealed class AdapterArchitectureTests
+{
+    private static readonly string RepositoryRoot = Path.GetFullPath(
+        Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", ".."));
+
+    [Fact]
+    public void Mtp_DoesNotLocateOrLaunchAutodeskHosts()
+    {
+        var directory = Path.Combine(RepositoryRoot, "source", "DevTools.TestAdapter");
+        var forbidden = new[]
+        {
+            "HostLocator",
+            "IHostSession",
+            "Revit.exe",
+            "acad.exe",
+            "Microsoft.Win32.Registry",
+            "EnvDTE",
+            "Microsoft.VisualStudio.Interop",
+            "GetActiveObject",
+            "VisualStudio.DTE",
+        };
+
+        var offenders = Directory
+            .EnumerateFiles(directory, "*.cs", SearchOption.AllDirectories)
+            .Select(path => (path, content: File.ReadAllText(path)))
+            .SelectMany(file => forbidden
+                .Where(pattern => file.content.Contains(pattern, StringComparison.Ordinal))
+                .Select(pattern => $"{Path.GetRelativePath(RepositoryRoot, file.path)} -> {pattern}"))
+            .ToList();
+
+        Assert.Empty(offenders);
+    }
+
+    [Fact]
+    public void Mtp_discovery_does_not_invoke_host_runner()
+    {
+        var framework = File.ReadAllText(Path.Combine(
+            RepositoryRoot,
+            "source",
+            "DevTools.TestAdapter",
+            "HostTestFramework.cs"));
+
+        Assert.Contains("MetadataTestDiscoverer.Discover", framework, StringComparison.Ordinal);
+        Assert.DoesNotContain("session.Discover", framework, StringComparison.Ordinal);
+        Assert.DoesNotContain("_transport.Discover", framework, StringComparison.Ordinal);
+        Assert.DoesNotContain("IDebugSession", framework, StringComparison.Ordinal);
+        Assert.DoesNotContain("SystemDebugSession", framework, StringComparison.Ordinal);
+        Assert.Contains("Debugger.IsAttached", framework, StringComparison.Ordinal);
+        Assert.Contains("EnsureSession()", framework, StringComparison.Ordinal);
+        Assert.Contains("PublishRunAsync(EnsureSession()", framework, StringComparison.Ordinal);
+        Assert.Contains("ApplyDebugParent", framework, StringComparison.Ordinal);
+        Assert.Contains("ITestRunnerTransport", framework, StringComparison.Ordinal);
+        Assert.Contains("DefaultFrameworkId", File.ReadAllText(Path.Combine(
+            RepositoryRoot,
+            "source",
+            "DevTools.TestAdapter",
+            "HostOptionsLoader.cs")), StringComparison.Ordinal);
+
+        var session = File.ReadAllText(Path.Combine(
+            RepositoryRoot,
+            "source",
+            "DevTools.TestAdapter",
+            "HostTestSession.cs"));
+        Assert.DoesNotContain("Discover(", session, StringComparison.Ordinal);
+
+        var client = File.ReadAllText(Path.Combine(
+            RepositoryRoot,
+            "source",
+            "DevTools.Testing.Transport",
+            "ProcessTestRunnerClient.cs"));
+        Assert.DoesNotContain("NUnitRunnerCli.DiscoverCommand", client, StringComparison.Ordinal);
+        Assert.DoesNotContain("IReadOnlyList<TestingDiscoveredTest> Discover", client, StringComparison.Ordinal);
+        Assert.Contains("TestingRunnerCli.BuildRunArguments", client, StringComparison.Ordinal);
+
+        var transport = File.ReadAllText(Path.Combine(
+            RepositoryRoot,
+            "source",
+            "DevTools.Testing.Transport",
+            "ITestRunnerTransport.cs"));
+        Assert.DoesNotContain("Discover(", transport, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Mtp_uses_the_generic_runner_client()
+    {
+        var client = Path.Combine(
+            RepositoryRoot, "source", "DevTools.Testing.Transport", "ProcessTestRunnerClient.cs");
+        Assert.True(File.Exists(client));
+        Assert.False(File.Exists(Path.Combine(
+            RepositoryRoot, "source", "DevTools.TestAdapter", "ProcessRunnerClient.cs")));
+        Assert.False(File.Exists(Path.Combine(
+            RepositoryRoot, "source", "DevTools.TestAdapter", "NUnitProcessTransportAdapter.cs")));
+        Assert.False(Directory.Exists(Path.Combine(RepositoryRoot, "source", "DevTools.NUnit.Client")));
+
+        var mtp = File.ReadAllText(Path.Combine(
+            RepositoryRoot, "source", "DevTools.TestAdapter", "DevTools.TestAdapter.csproj"));
+        Assert.DoesNotContain("DevTools.Testing.Discovery", mtp, StringComparison.Ordinal);
+        Assert.DoesNotContain("DevTools.NUnit.Provider", mtp, StringComparison.Ordinal);
+        Assert.Contains("DevTools.Testing.Transport", mtp, StringComparison.Ordinal);
+        Assert.DoesNotContain("DevTools.Testing.Mtp", mtp, StringComparison.Ordinal);
+        Assert.DoesNotContain("NUnitProcessTransportAdapter.cs", mtp, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Local_discovery_lives_in_the_adapter_and_has_no_host_transport_or_nunit_vocab()
+    {
+        Assert.False(Directory.Exists(Path.Combine(RepositoryRoot, "source", "DevTools.Testing.Discovery")));
+
+        var discoverer = File.ReadAllText(Path.Combine(
+            RepositoryRoot,
+            "source",
+            "DevTools.TestAdapter",
+            "MetadataTestDiscoverer.cs"));
+
+        Assert.Contains("internal static class MetadataTestDiscoverer", discoverer, StringComparison.Ordinal);
+        Assert.DoesNotContain("HostRunOptions", discoverer, StringComparison.Ordinal);
+        Assert.DoesNotContain("Process.Start", discoverer, StringComparison.Ordinal);
+        Assert.DoesNotContain("DevTools.Testing.Transport", discoverer, StringComparison.Ordinal);
+        Assert.DoesNotContain("DevTools.Testing.Host", discoverer, StringComparison.Ordinal);
+        Assert.DoesNotContain("AssemblyIsolation", discoverer, StringComparison.Ordinal);
+        Assert.DoesNotContain("NUnit", discoverer, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Net48_consumer_props_enable_binding_redirects()
+    {
+        var props = File.ReadAllText(Path.Combine(
+            RepositoryRoot,
+            "source",
+            "DevTools.TestAdapter",
+            "build",
+            "RevitDevTool.TestAdapter.props"));
+
+        Assert.Contains("GenerateBindingRedirectsOutputType", props, StringComparison.Ordinal);
+        Assert.Contains("TargetFrameworkIdentifier", props, StringComparison.Ordinal);
+        Assert.DoesNotContain("StartsWith('net4')", props, StringComparison.Ordinal);
+        Assert.Contains("System.Runtime.CompilerServices.Unsafe", props, StringComparison.Ordinal);
+        Assert.DoesNotContain("ILRepack", props, StringComparison.Ordinal);
+        Assert.DoesNotContain("DevToolsNUnitRepack", props, StringComparison.Ordinal);
+        Assert.DoesNotContain("ILRepackable", props, StringComparison.Ordinal);
+        Assert.Contains("TestingFramework", props, StringComparison.Ordinal);
+        Assert.Contains("TestingDiscoveryAttributes", props, StringComparison.Ordinal);
+        Assert.Contains("<ForceLaunch", props, StringComparison.Ordinal);
+        Assert.Contains("<PerTestTimeout", props, StringComparison.Ordinal);
+        Assert.Contains("<LaunchTimeout", props, StringComparison.Ordinal);
+        Assert.DoesNotContain("<HostLaunch>", props, StringComparison.Ordinal);
+        Assert.DoesNotContain("<HostTimeout>", props, StringComparison.Ordinal);
+        Assert.DoesNotContain("<HostLaunchTimeout>", props, StringComparison.Ordinal);
+        Assert.DoesNotContain("<RequestTimeout", props, StringComparison.Ordinal);
+        Assert.Contains("DevTools.TestAdapter.TestingPlatformBuilderHook", props, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Adapter_writes_mtp_testconfig_devtools_section_and_skips_polyfill()
+    {
+        var mtpDir = Path.Combine(RepositoryRoot, "source", "DevTools.TestAdapter");
+        var targets = File.ReadAllText(Path.Combine(mtpDir, "build", "RevitDevTool.TestAdapter.targets"));
+        var csproj = File.ReadAllText(Path.Combine(mtpDir, "DevTools.TestAdapter.csproj"));
+        var loader = File.ReadAllText(Path.Combine(mtpDir, "HostOptionsLoader.cs"));
+
+        Assert.Contains("BeforeTargets=\"_CalculateGenerateTestingPlatformConfigurationFile", targets, StringComparison.Ordinal);
+        Assert.Contains("_TestingPlatformConfigurationFileSourcePath", targets, StringComparison.Ordinal);
+        Assert.Contains("$(IntermediateOutputPath)testconfig.json", targets, StringComparison.Ordinal);
+        Assert.DoesNotContain("$(OutputPath)$(TargetName).testconfig.json", targets, StringComparison.Ordinal);
+        Assert.Contains("IConfiguration", loader, StringComparison.Ordinal);
+        Assert.Contains($"ConfigFileName = \"{HostOptionsLoader.ConfigFileName}\"", loader, StringComparison.Ordinal);
+        Assert.Contains($"ConfigSectionName = \"{HostOptionsLoader.ConfigSectionName}\"", loader, StringComparison.Ordinal);
+        Assert.DoesNotContain("ReadKey(configuration, \"", loader, StringComparison.Ordinal);
+        Assert.DoesNotContain("JsonDocument", loader, StringComparison.Ordinal);
+        Assert.DoesNotContain("File.ReadAllText", loader, StringComparison.Ordinal);
+        Assert.DoesNotContain("TryReadFile", loader, StringComparison.Ordinal);
+        Assert.DoesNotContain("devtools.testing.host.json", targets, StringComparison.Ordinal);
+        Assert.DoesNotContain(".runsettings", targets, StringComparison.Ordinal);
+        Assert.DoesNotContain("NUnit.Microsoft.Testing.Platform", targets, StringComparison.Ordinal);
+        Assert.Contains("GlobalPackageReference Remove=\"Polyfill\"", csproj, StringComparison.Ordinal);
+        Assert.Contains($"&quot;{HostOptionsLoader.ConfigSectionName}&quot;", targets, StringComparison.Ordinal);
+        Assert.Contains($"&quot;{HostOptionsLoader.Keys.HostName}&quot;", targets, StringComparison.Ordinal);
+        Assert.Contains($"&quot;{HostOptionsLoader.Keys.HostVersion}&quot;", targets, StringComparison.Ordinal);
+        Assert.Contains($"&quot;{HostOptionsLoader.Keys.ForceLaunch}&quot;", targets, StringComparison.Ordinal);
+        Assert.Contains($"&quot;{HostOptionsLoader.Keys.PerTestTimeoutSeconds}&quot;", targets, StringComparison.Ordinal);
+        Assert.Contains($"&quot;{HostOptionsLoader.Keys.LaunchTimeoutSeconds}&quot;", targets, StringComparison.Ordinal);
+        Assert.DoesNotContain("hostTimeoutSeconds", targets, StringComparison.Ordinal);
+        Assert.DoesNotContain("hostLaunchTimeoutSeconds", targets, StringComparison.Ordinal);
+        Assert.DoesNotContain("requestTimeoutSeconds", targets, StringComparison.Ordinal);
+        Assert.DoesNotContain("&quot;hostLaunch&quot;", targets, StringComparison.Ordinal);
+        Assert.Contains($"&quot;{HostOptionsLoader.Keys.RunnerPath}&quot;", targets, StringComparison.Ordinal);
+        Assert.Contains($"&quot;{HostOptionsLoader.Keys.FrameworkId}&quot;", targets, StringComparison.Ordinal);
+        Assert.Contains($"&quot;{HostOptionsLoader.Keys.DiscoveryAttributes}&quot;", targets, StringComparison.Ordinal);
+        Assert.False(Directory.Exists(Path.Combine(RepositoryRoot, "source", "DevTools.Testing")));
+        Assert.False(Directory.Exists(Path.Combine(RepositoryRoot, "source", "DevTools.Testing.Discovery")));
+        Assert.False(Directory.Exists(Path.Combine(RepositoryRoot, "tests", "DevTools.Testing.Tests")));
+    }
+
+    [Fact]
+    public void Net48_mtp_ilrepacks_own_dll_not_consumer_exe()
+    {
+        var mtpDir = Path.Combine(RepositoryRoot, "source", "DevTools.TestAdapter");
+        var targets = File.ReadAllText(Path.Combine(mtpDir, "build", "RevitDevTool.TestAdapter.targets"));
+        var csproj = File.ReadAllText(Path.Combine(mtpDir, "DevTools.TestAdapter.csproj"));
+        var ilRepackTargets = File.ReadAllText(Path.Combine(RepositoryRoot, "props", "ILRepack.targets"));
+
+        Assert.DoesNotContain("ILRepack", targets, StringComparison.Ordinal);
+        Assert.DoesNotContain("ILRepack.Lib.MSBuild.Task", csproj, StringComparison.Ordinal);
+        Assert.DoesNotContain("<PackageReference Include=\"ILRepack\"", csproj, StringComparison.Ordinal);
+        Assert.Contains("<PackageReference Include=\"ILRepack\"", ilRepackTargets, StringComparison.Ordinal);
+        Assert.DoesNotContain("IsRepackable", ilRepackTargets, StringComparison.Ordinal);
+        Assert.Contains("ILRepackable", csproj, StringComparison.Ordinal);
+        Assert.Contains("ILRepackInternalize", csproj, StringComparison.Ordinal);
+        Assert.Contains("'$(TargetFramework)' == 'net48'", csproj, StringComparison.Ordinal);
+        Assert.DoesNotContain("StartsWith('net4')", csproj, StringComparison.Ordinal);
+        Assert.Contains("'$(TargetFrameworkIdentifier)' == '.NETCoreApp'", csproj, StringComparison.Ordinal);
+        Assert.True(File.Exists(Path.Combine(RepositoryRoot, "props", "ILRepack.targets")));
+        Assert.False(File.Exists(Path.Combine(mtpDir, "ILRepack.targets")));
+    }
+
+    [Fact]
+    public void Runner_owns_visual_studio_interop()
+    {
+        var debugging = Path.Combine(
+            RepositoryRoot,
+            "source",
+            "DevTools.TestRunner.Core",
+            "Debugging",
+            "VisualStudioAttach.cs");
+        var attach = File.ReadAllText(debugging);
+        Assert.Contains("EnvDTE", attach, StringComparison.Ordinal);
+        Assert.Contains("DebuggedProcesses", attach, StringComparison.Ordinal);
+
+        var runnerCsproj = File.ReadAllText(Path.Combine(
+            RepositoryRoot,
+            "source",
+            "DevTools.TestRunner.Core",
+            "DevTools.TestRunner.Core.csproj"));
+        Assert.Contains("Microsoft.VisualStudio.Interop", runnerCsproj, StringComparison.Ordinal);
+
+        var mtpCsproj = File.ReadAllText(Path.Combine(
+            RepositoryRoot,
+            "source",
+            "DevTools.TestAdapter",
+            "DevTools.TestAdapter.csproj"));
+        Assert.DoesNotContain("Microsoft.VisualStudio.Interop", mtpCsproj, StringComparison.Ordinal);
+    }
+}

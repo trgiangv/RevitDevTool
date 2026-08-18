@@ -44,7 +44,7 @@ public sealed class NUnitRuntimeArchitectureTests
     }
 
     [Theory]
-    [InlineData("source/DevTools.NUnit.Discovery")]
+    [InlineData("source/DevTools.TestAdapter")]
     [InlineData("source/DevTools.TestRunner")]
     public void ForbiddenManualNUnitExecutionPatternsStayOutOfBoundary(string relativeProjectPath)
     {

@@ -1,29 +1,26 @@
-using DevTools.TestRunner.Core.Composition;
-
 namespace DevTools.TestRunner.Core.Parsing;
 
-/// <summary>Framework-neutral command context validated before provider-specific mapping.</summary>
+/// <summary>Validated CLI context. Framework id is an opaque host-engine token from the adapter.</summary>
 public sealed record RunnerCommandContext(
     string Command,
     string AssemblyPath,
-    string Host,
-    string Version,
-    bool HostLaunch,
-    int HostTimeoutSeconds,
-    int HostLaunchTimeoutSeconds,
+    string HostName,
+    string HostVersion,
+    bool ForceLaunch,
+    int PerTestTimeoutSeconds,
+    int LaunchTimeoutSeconds,
     bool Debug,
     int? DebugParentPid,
     string FrameworkId)
 {
     public static bool TryCreate(
-        RunnerModuleRegistry modules,
         string command,
         string assemblyPath,
-        string host,
+        string hostName,
         string hostVersion,
-        bool hostLaunch,
-        int hostTimeoutSeconds,
-        int hostLaunchTimeoutSeconds,
+        bool forceLaunch,
+        int perTestTimeoutSeconds,
+        int launchTimeoutSeconds,
         bool debug,
         int? debugParentPid,
         string? framework,
@@ -37,7 +34,7 @@ public sealed record RunnerCommandContext(
             error = "Assembly path is required.";
             return false;
         }
-        if (string.IsNullOrWhiteSpace(host))
+        if (string.IsNullOrWhiteSpace(hostName))
         {
             error = "--host is required.";
             return false;
@@ -56,29 +53,32 @@ public sealed record RunnerCommandContext(
         string frameworkId;
         try
         {
-            frameworkId = !string.IsNullOrWhiteSpace(framework)
-                ? RunnerModuleRegistry.NormalizeFrameworkId(framework!)
-                : modules.GetDefaultFrameworkId();
+            frameworkId = NormalizeFrameworkId(framework ?? string.Empty);
         }
-        catch (ArgumentException exception)
+        catch (ArgumentException)
         {
-            error = exception.Message;
+            error = "--framework is required.";
             return false;
         }
-        if (!modules.TrySelect(["--framework", frameworkId], out _, out error))
-            return false;
 
         context = new RunnerCommandContext(
             command,
             Path.GetFullPath(assemblyPath),
-            host.Trim(),
+            hostName.Trim(),
             hostVersion.Trim(),
-            hostLaunch,
-            hostTimeoutSeconds,
-            hostLaunchTimeoutSeconds,
+            forceLaunch,
+            perTestTimeoutSeconds,
+            launchTimeoutSeconds,
             debug || debugParentPid is not null,
             debugParentPid,
             frameworkId);
         return true;
+    }
+
+    public static string NormalizeFrameworkId(string frameworkId)
+    {
+        if (string.IsNullOrWhiteSpace(frameworkId))
+            throw new ArgumentException("Framework ID is required.", nameof(frameworkId));
+        return frameworkId.Trim().ToLowerInvariant();
     }
 }

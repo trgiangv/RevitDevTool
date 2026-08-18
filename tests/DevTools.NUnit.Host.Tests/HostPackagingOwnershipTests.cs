@@ -106,7 +106,7 @@ public sealed class HostPackagingOwnershipTests
 
         var hostDll = Path.Combine(outputDir!, "RevitDevTool.dll");
         var abstractions = Path.Combine(outputDir, "DevTools.Testing.Abstractions.dll");
-        var nunitProvider = Path.Combine(outputDir, "DevTools.NUnit.Discovery.dll");
+        var nunitProvider = Path.Combine(outputDir, "DevTools.Testing.Discovery.dll");
         var nunitCore = Path.Combine(outputDir, "DevTools.NUnit.Core.dll");
         var runtime = Path.Combine(outputDir, "NUnitRuntime", "DevTools.NUnit.Runtime.dll");
         var framework = Path.Combine(outputDir, "NUnitRuntime", "nunit.framework.dll");
@@ -117,8 +117,10 @@ public sealed class HostPackagingOwnershipTests
         Assert.True(File.Exists(framework), framework);
         Assert.False(File.Exists(nunitCore), nunitCore);
         Assert.False(File.Exists(nunitProvider), nunitProvider);
+        Assert.False(File.Exists(Path.Combine(outputDir, "DevTools.NUnit.Discovery.dll")));
         Assert.False(File.Exists(Path.Combine(outputDir, "NUnitRuntime", "DevTools.NUnit.Core.dll")));
         Assert.False(File.Exists(Path.Combine(outputDir, "NUnitRuntime", "DevTools.NUnit.Discovery.dll")));
+        Assert.False(File.Exists(Path.Combine(outputDir, "NUnitRuntime", "DevTools.Testing.Discovery.dll")));
 
         var abstractionsCopies = Directory.GetFiles(
                 outputDir,
