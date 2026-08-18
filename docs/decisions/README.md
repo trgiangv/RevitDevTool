@@ -29,5 +29,6 @@ here.
 | [0018](0018-host-identity-and-out-of-process-infrastructure.md) | Host identity and out-of-process infrastructure | Accepted |
 | [0019](0019-ilrepack-and-polyfill-isolated-alc.md) | ILRepack and Polyfill on isolated load contexts | Accepted |
 | [0020](0020-framework-neutral-mtp-host-testing.md) | Framework-neutral MTP host testing | Proposed |
-| [0021](0021-xunit4-host-testing-provider.md) | xUnit 4 host testing provider | Proposed |
-| [0022](0022-repository-tests-use-xunit4-native-mtp.md) | Repository tests use xUnit 4 native MTP | Proposed |
+| [0021](0021-testing-kernel-and-provider-owned-framework-runtime.md) | Testing kernel and provider-owned framework runtime | Accepted |
+| [0022](0022-nunit-mtp-only-testing-stack.md) | NUnit MTP-only testing stack | Accepted |
+| [0023](0023-shared-assembly-isolation-kernel.md) | Shared assembly isolation kernel | Accepted |
