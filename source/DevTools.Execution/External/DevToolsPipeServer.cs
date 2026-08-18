@@ -127,7 +127,9 @@ public sealed class DevToolsPipeServer(
         var connectionId = Interlocked.Increment(ref _nextConnectionId);
         _connections[connectionId] = new ConnectionEntry(conn, requestCts);
         state.SetConnectedState(_connections.IsEmpty ? 0 : 1);
+#if DEBUG
         logger.ZLogInformation($"Client connected. Active clients: {_connections.Count}");
+#endif
 
         // Disconnect must cancel the connection token so host handlers (NUnit run, etc.)
         // stop instead of holding the Revit executor after Runner/adapter kill.
@@ -142,7 +144,9 @@ public sealed class DevToolsPipeServer(
             }
 
             state.SetConnectedState(_connections.IsEmpty ? 0 : 1);
+#if DEBUG
             logger.ZLogInformation($"Client disconnected. Active clients: {_connections.Count}");
+#endif
         };
         conn.StartReadLoop();
     }

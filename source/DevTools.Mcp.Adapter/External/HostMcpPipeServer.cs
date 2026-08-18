@@ -118,8 +118,9 @@ public sealed class HostMcpPipeServer(
             pipeSession = McpPipeSession.Start(pipe, mcpHandler, ct);
             _sessions[sessionId] = pipeSession;
             connectionTracker.SetMcpClientCount(_sessions.Count);
-
+#if DEBUG
             logger.ZLogInformation($"MCP client connected. Active sessions: {_sessions.Count}");
+#endif
             await pipeSession.Completion.ConfigureAwait(false);
         }
         catch (OperationCanceledException) when (ct.IsCancellationRequested) { }
@@ -139,7 +140,9 @@ public sealed class HostMcpPipeServer(
                 await pipe.DisposeAsync().ConfigureAwait(false);
             }
 
+#if DEBUG
             logger.ZLogInformation($"MCP client disconnected. Active sessions: {_sessions.Count}");
+#endif
             connectionTracker.SetMcpClientCount(_sessions.Count);
         }
     }
