@@ -61,7 +61,7 @@ Level is determined by `TraceEventType`, not message content. `TraceError` → `
 
 `ConsoleRedirector` redirects `Console.Out` and `Console.Error` to `Trace.Write()`, which then flows through `LoggerTraceListener`.
 
-During `nunit/run`, NUnit replaces `Console.Out`. Console then reaches the
+During `testing/run`, NUnit replaces `Console.Out`. Console then reaches the
 monitor only via Runtime write-through of `ITestResult.Output` (trailing
 newlines stripped). `Trace` / `Debug` still use this table unchanged.
 See [0017](../../decisions/0017-nunit-host-test-output-routing.md) and
