@@ -109,7 +109,7 @@ Examples: `DevTools_Revit_2025_12345`, `DevTools_AutoCad_2026_7890`
 - **`sys.__pytest_running__`:** set by `PytestRunner.py`; setup scripts skip I/O hijack during runs.
 - **Streaming vs batch:** CLI streams progress; IDE adapters (`vscode_pytest`, `TEST_RUN_PIPE`) get one batch.
 - **Suite leasing + mutex:** cross-process PID binding; one pytest process per suite path.
-- **`host_launch`:** force new host + wait for that PID's pipe; skip reuse.
+- **`force_launch`:** force new host + wait for that PID's pipe; skip reuse.
 - **No matching instance:** after discovery fails, plugin auto-launches when `host_version` is set.
 
 ## Running tests
@@ -122,7 +122,7 @@ uv run pytest -v
 uv run pytest tests/Revit/test_active_state.py::test_active_view_info -v
 uv run pytest --host-version=2025 -v
 uv run pytest --host autocad --host-version 2026 -v
-uv run pytest --host-launch --host-version=2025 -v
+uv run pytest --force-launch --host-version=2025 -v
 ```
 
 Plugin auto-enables `-rP` (stdout for passing tests).
@@ -136,13 +136,13 @@ testpaths = ["tests/Revit"]
 pythonpath = ["tests/Revit"]
 host_name = "revit"
 host_version = "2025"
-host_launch = false
-host_timeout = "60"
-host_launch_timeout = "180"
+force_launch = false
+per_test_timeout = "60"
+launch_timeout = "180"
 host_pipe = ""
 ```
 
-CLI: `--host`, `--host-version`, `--host-timeout`, `--host-pipe`, `--host-launch`, `--host-launch-timeout`.
+CLI: `--host`, `--host-version`, `--per-test-timeout`, `--host-pipe`, `--force-launch`, `--launch-timeout`.
 
 ## Fixtures pattern
 
@@ -174,7 +174,7 @@ Host API imports belong **inside test bodies** (or fixture bodies), not at modul
 - Host APIs need the main thread; execution is sequential via `IHostContextExecutor`.
 - Pytest pipe ≠ MCP pipe (`DevTools_*` vs `DevToolsMcp_*`).
 - PEP 723 deps in `conftest.py` are installed by `PytestDependencyService` before run.
-- `--host-launch` requires `--host-version`.
+- `--force-launch` requires `--host-version`.
 - `print()` captured via `--capture=sys` → `CaseResult.stdout`.
 
 ## Change rules
@@ -182,5 +182,5 @@ Host API imports belong **inside test bodies** (or fixture bodies), not at modul
 - Wire protocol: sync `models.py` ↔ `PytestContracts.cs` / `PytestBridgeMethods.cs`.
 - New CLI options: `pytest_addoption` + `parser.addini`.
 - `connection.py` stays stateless; only `plugin.py` holds session globals.
-- After connection/discovery changes: test `host_launch = true` and `false`.
+- After connection/discovery changes: test `force_launch = true` and `false`.
 - `HOST_REGISTRY` ↔ C# `HostApp` enum + `AcadPathResolver.ProductIdMap`.

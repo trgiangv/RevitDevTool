@@ -13,10 +13,10 @@ BRIDGE_NOTIFY_TEST_PROGRESS: Final = "notifications/tests/progress"
 
 OPT_HOST: Final = "host_name"
 OPT_VERSION: Final = "host_version"
-OPT_TIMEOUT: Final = "host_timeout"
+OPT_PER_TEST_TIMEOUT: Final = "per_test_timeout"
 OPT_PIPE: Final = "host_pipe"
-OPT_LAUNCH: Final = "host_launch"
-OPT_LAUNCH_TIMEOUT: Final = "host_launch_timeout"
+OPT_FORCE_LAUNCH: Final = "force_launch"
+OPT_LAUNCH_TIMEOUT: Final = "launch_timeout"
 
 DEFAULT_HOST: Final = "revit"
 DEFAULT_TEST_TIMEOUT_S: Final = 60.0

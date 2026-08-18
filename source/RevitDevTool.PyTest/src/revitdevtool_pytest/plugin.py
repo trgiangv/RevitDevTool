@@ -19,11 +19,11 @@ from .constants import (
     DEFAULT_TEST_TIMEOUT_S,
     EXIT_CODE_CONFIG_ERROR,
     HOST_REGISTRY,
+    OPT_FORCE_LAUNCH,
     OPT_HOST,
-    OPT_LAUNCH,
     OPT_LAUNCH_TIMEOUT,
     OPT_PIPE,
-    OPT_TIMEOUT,
+    OPT_PER_TEST_TIMEOUT,
     OPT_VERSION,
     OUTCOME_ERROR,
     OUTCOME_FAILED,
@@ -71,31 +71,39 @@ def pytest_addoption(parser: pytest.Parser) -> None:
     )
     grp.addoption(
         "--host-version", dest=OPT_VERSION, default=None,
-        help="Host version (e.g. 2025, 8.0). Required when --host-launch is set.",
+        help="Host version (e.g. 2025, 8.0). Required when --force-launch is set.",
     )
     grp.addoption(
-        "--host-timeout", dest=OPT_TIMEOUT, default=None, type=float,
-        help=f"Per-test execution timeout in seconds (default: {DEFAULT_TEST_TIMEOUT_S}).",
+        "--per-test-timeout", dest=OPT_PER_TEST_TIMEOUT, default=None, type=float,
+        help=(
+            f"Per-test execution budget in seconds (default: {DEFAULT_TEST_TIMEOUT_S}). "
+            "The tests/run pipe wait is this value times the number of collected tests."
+        ),
     )
     grp.addoption(
         "--host-pipe", dest=OPT_PIPE, default=None,
         help="Explicit pipe name (bypasses auto-discovery).",
     )
     grp.addoption(
-        "--host-launch", dest=OPT_LAUNCH, action="store_true", default=False,
+        "--force-launch", dest=OPT_FORCE_LAUNCH, action="store_true", default=False,
         help="Force-launch a new host instance (skip reusing existing). Requires --host-version.",
     )
     grp.addoption(
-        "--host-launch-timeout", dest=OPT_LAUNCH_TIMEOUT, default=None, type=float,
-        help=f"Seconds to wait for host to start (default: {DEFAULT_LAUNCH_TIMEOUT_S}).",
+        "--launch-timeout", dest=OPT_LAUNCH_TIMEOUT, default=None, type=float,
+        help=f"Seconds to wait for host pipe after launch (default: {DEFAULT_LAUNCH_TIMEOUT_S}).",
     )
 
     parser.addini(OPT_HOST, "Host application name", type="string", default=DEFAULT_HOST)
     parser.addini(OPT_VERSION, "Host version (e.g. 2025, 8.0)", type="string", default=None)
-    parser.addini(OPT_TIMEOUT, "Per-test timeout (seconds)", type="string", default=str(DEFAULT_TEST_TIMEOUT_S))
+    parser.addini(
+        OPT_PER_TEST_TIMEOUT,
+        "Per-test execution budget (seconds); tests/run wait is this times collected tests",
+        type="string",
+        default=str(DEFAULT_TEST_TIMEOUT_S),
+    )
     parser.addini(OPT_PIPE, "Explicit pipe name", type="string", default=None)
-    parser.addini(OPT_LAUNCH, "Force-launch a new host instance (skip reusing existing)", type="bool", default=False)
-    parser.addini(OPT_LAUNCH_TIMEOUT, "Launch timeout (seconds)", type="string", default=str(DEFAULT_LAUNCH_TIMEOUT_S))
+    parser.addini(OPT_FORCE_LAUNCH, "Force-launch a new host instance (skip reusing existing)", type="bool", default=False)
+    parser.addini(OPT_LAUNCH_TIMEOUT, "Wait for host pipe after launch (seconds)", type="string", default=str(DEFAULT_LAUNCH_TIMEOUT_S))
 
 
 # ---------------------------------------------------------------------------
@@ -179,7 +187,7 @@ def pytest_unconfigure(config: pytest.Config) -> None:  # noqa
 
 def _dispatch_remote_run(session: pytest.Session) -> None:
     assert _bridge is not None
-    per_test_timeout = _opt_float(session.config, OPT_TIMEOUT, OPT_TIMEOUT) or DEFAULT_TEST_TIMEOUT_S
+    per_test_timeout = _opt_float(session.config, OPT_PER_TEST_TIMEOUT, OPT_PER_TEST_TIMEOUT) or DEFAULT_TEST_TIMEOUT_S
 
     results_by_nodeid, streamed_nodeids, collection_failed, collection_error = run_remote_session(
         session, _bridge, per_test_timeout,
@@ -207,7 +215,7 @@ def _ensure_bridge(session: pytest.Session, host_name: str) -> bool:
             returncode=EXIT_CODE_CONFIG_ERROR,
         )
 
-    force_launch = _opt_bool(config, OPT_LAUNCH, OPT_LAUNCH)
+    force_launch = _opt_bool(config, OPT_FORCE_LAUNCH, OPT_FORCE_LAUNCH)
     if force_launch and _bridge is not None:
         _bridge.disconnect()
         _bridge = None

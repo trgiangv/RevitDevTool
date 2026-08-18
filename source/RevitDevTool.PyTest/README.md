@@ -73,9 +73,9 @@ uv add revitdevtool_pytest pytest
 [tool.pytest.ini_options]
 host_name = "revit"
 host_version = "2025"
-host_launch = false
-host_timeout = "60"
-host_launch_timeout = "180"
+force_launch = false
+per_test_timeout = "60"
+launch_timeout = "180"
 ```
 
 `tests/conftest.py`:
@@ -109,18 +109,18 @@ uv run pytest -v
 |---|---|---|
 | `host_name` | `"revit"` | Target host — use **Supported today** names only. |
 | `host_version` | — | Version string (`"2025"`, `"8.0"`, …). Required for launch. |
-| `host_launch` | `false` | Force a **new** host instance (ignore existing). |
-| `host_timeout` | `"60"` | Per-test timeout (seconds). |
-| `host_launch_timeout` | `"180"` | Startup wait when launching (seconds). |
+| `force_launch` | `false` | Force a **new** host instance (skip reuse). Requires `host_version`. |
+| `per_test_timeout` | `"60"` | Per-test budget (seconds). The `tests/run` pipe wait is this × collected tests. |
+| `launch_timeout` | `"180"` | Wait for host pipe after launch (seconds). |
 | `host_pipe` | — | Explicit pipe name (skip discovery). |
 
-CLI flags override INI: `--host`, `--host-version`, `--host-launch`, `--host-pipe`, etc.
+CLI flags override INI: `--host`, `--host-version`, `--force-launch`, `--per-test-timeout`, `--launch-timeout`, `--host-pipe`.
 
 ### Connection behavior
 
-1. **`host_launch = false` (default):** scan for `DevTools_*` pipes matching `host_name` / `host_version`, reuse a free instance (suite leasing), or reconnect to a leased PID.
+1. **`force_launch = false` (default):** scan for `DevTools_*` pipes matching `host_name` / `host_version`, reuse a free instance (suite leasing), or reconnect to a leased PID.
 2. **No matching instance:** auto-launch host when `host_version` is set (unless `--host-pipe` pins an existing pipe).
-3. **`host_launch = true`:** always spawn a new process and wait for its pipe.
+3. **`force_launch = true`:** always spawn a new process and wait for its pipe.
 
 ### Print output
 

@@ -2,6 +2,17 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.3.1] - 2026-08-18
+
+### Changed
+
+- **CLI/INI options renamed** to match RevitDevTool.TestAdapter:
+  `--host-launch` / `host_launch` → `--force-launch` / `force_launch`;
+  `--host-timeout` / `host_timeout` → `--per-test-timeout` / `per_test_timeout`;
+  `--host-launch-timeout` / `host_launch_timeout` → `--launch-timeout` / `launch_timeout`.
+  `--host` and `--host-version` stay. `per_test_timeout` is the per-test budget;
+  the `tests/run` pipe wait is that value times collected tests.
+
 ## [0.3.0] - 2026-07-07
 
 ### Changed
