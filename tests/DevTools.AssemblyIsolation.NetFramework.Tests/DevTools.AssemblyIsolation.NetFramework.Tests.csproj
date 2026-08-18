@@ -1,0 +1,25 @@
+<Project Sdk="Microsoft.NET.Sdk">
+    <PropertyGroup>
+        <TargetFramework>net48</TargetFramework>
+        <IsPackable>false</IsPackable>
+        <DefaultItemExcludes>$(DefaultItemExcludes);Fixtures\**\*</DefaultItemExcludes>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <Compile Remove="Fixtures\**\*.cs" />
+        <PackageReference Include="xunit.v3.mtp-v2" />
+        <GlobalPackageReference Remove="Polyfill" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\..\source\DevTools.AssemblyIsolation\DevTools.AssemblyIsolation.csproj" SetTargetFramework="TargetFramework=net48" />
+        <ProjectReference Include="..\..\source\DevTools.Mcp.Catalog\DevTools.Mcp.Catalog.csproj" SetTargetFramework="TargetFramework=net48" />
+        <ProjectReference Include="..\DevTools.AssemblyIsolation.Tests\Fixtures\IsolationEntry\IsolationEntry.csproj" ReferenceOutputAssembly="false" SetTargetFramework="TargetFramework=net48" />
+        <ProjectReference Include="..\DevTools.AssemblyIsolation.Tests\Fixtures\PrivateSystemNamedDependency\PrivateSystemNamedDependency.csproj" ReferenceOutputAssembly="false" SetTargetFramework="TargetFramework=net48" />
+        <ProjectReference Include="..\DevTools.AssemblyIsolation.Tests\Fixtures\PrivateAfterDisposeDependency\PrivateAfterDisposeDependency.csproj" ReferenceOutputAssembly="false" SetTargetFramework="TargetFramework=net48" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <Using Include="Xunit" />
+    </ItemGroup>
+</Project>

@@ -1,0 +1,8 @@
+<Project>
+    <Import Project="..\..\Directory.Build.targets" />
+
+    <ItemGroup>
+        <PackageReference Remove="JetBrains.Annotations" />
+        <Using Remove="JetBrains.Annotations" />
+    </ItemGroup>
+</Project>

@@ -1,0 +1,39 @@
+<Project Sdk="Microsoft.NET.Sdk">
+    <PropertyGroup>
+        <TargetFramework>net10.0-windows</TargetFramework>
+        <IsPackable>false</IsPackable>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <PackageReference Include="xunit.v3.mtp-v2" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\..\source\DevTools.AssemblyIsolation\DevTools.AssemblyIsolation.csproj" />
+        <ProjectReference Include="Fixtures\IsolationEntry\IsolationEntry.csproj" ReferenceOutputAssembly="false" />
+        <ProjectReference Include="Fixtures\IsolationSibling\IsolationSibling.csproj" ReferenceOutputAssembly="false" />
+        <ProjectReference Include="Fixtures\PrivateSystemNamedDependency\PrivateSystemNamedDependency.csproj" ReferenceOutputAssembly="false" />
+        <ProjectReference Include="Fixtures\PrivateAfterDisposeDependency\PrivateAfterDisposeDependency.csproj" ReferenceOutputAssembly="false" />
+        <ProjectReference Include="Fixtures\SameSimpleNameV1\SameSimpleNameV1.csproj" ReferenceOutputAssembly="false" />
+        <ProjectReference Include="Fixtures\SameSimpleNameV2\SameSimpleNameV2.csproj" ReferenceOutputAssembly="false" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <IsolationFixtureProject Include="Fixtures\SameSimpleNameV1\SameSimpleNameV1.csproj" />
+        <IsolationFixtureProject Include="Fixtures\SameSimpleNameV2\SameSimpleNameV2.csproj" />
+    </ItemGroup>
+
+    <Target Name="BuildSameSimpleNameFixtures" BeforeTargets="Build">
+        <MSBuild Projects="@(IsolationFixtureProject)"
+                 Targets="Build"
+                 Properties="Configuration=$(Configuration)" />
+    </Target>
+
+    <ItemGroup>
+        <Using Include="Xunit" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <Compile Remove="Fixtures\**\*.cs" />
+    </ItemGroup>
+</Project>
