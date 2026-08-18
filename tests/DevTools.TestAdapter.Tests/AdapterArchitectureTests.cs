@@ -160,7 +160,9 @@ public sealed class AdapterArchitectureTests
         var csproj = File.ReadAllText(Path.Combine(mtpDir, "DevTools.TestAdapter.csproj"));
         var loader = File.ReadAllText(Path.Combine(mtpDir, "HostOptionsLoader.cs"));
 
-        Assert.Contains("BeforeTargets=\"_CalculateGenerateTestingPlatformConfigurationFile", targets, StringComparison.Ordinal);
+        Assert.Contains("BeforeTargets=\"BeforeBuild;GenerateTestingPlatformConfigurationFile;_CalculateGenerateTestingPlatformConfigurationFile", targets, StringComparison.Ordinal);
+        Assert.Contains("UpToDateCheckBuilt", targets, StringComparison.Ordinal);
+        Assert.Contains("SkipUnchangedFiles=\"false\"", targets, StringComparison.Ordinal);
         Assert.Contains("_TestingPlatformConfigurationFileSourcePath", targets, StringComparison.Ordinal);
         Assert.Contains("$(IntermediateOutputPath)testconfig.json", targets, StringComparison.Ordinal);
         Assert.DoesNotContain("$(OutputPath)$(TargetName).testconfig.json", targets, StringComparison.Ordinal);

@@ -44,9 +44,11 @@ Reference `Microsoft.Testing.Platform.MSBuild`, not
 `HostName` / `HostVersion` are the runner contract. Do not invent other
 MSBuild flags for the runner.
 
-Build generates `testconfig.json` from the csproj properties. MTP MSBuild
-copies it to `[AssemblyName].testconfig.json`. The adapter reads the `devtools`
-section through `IConfiguration`. Author `testconfig.json` beside the `.csproj`
+Build generates `testconfig.json` from the csproj properties. A normal
+incremental `dotnet build` (not only Rebuild) refreshes
+`[AssemblyName].testconfig.json`. Microsoft.Testing.Platform.MSBuild also
+copies that file. The adapter reads the `devtools` section through
+`IConfiguration`. Author `testconfig.json` beside the `.csproj`
 to add `platformOptions` (the `devtools` section is merged from csproj unless
 you already wrote one). Do not use `.runsettings`. Do not edit the copied
 output file by hand.

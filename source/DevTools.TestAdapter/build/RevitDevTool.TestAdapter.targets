@@ -59,10 +59,20 @@
           SkipUnchangedFiles="true" />
   </Target>
 
-  <!-- Feed MTP's official copy: testconfig.json → $(AssemblyName).testconfig.json.
-       Must run before _GenerateTestingPlatformConfigurationFileCore, not after. -->
+  <!-- Host options live in csproj properties, not compile inputs. MTP's
+       _GenerateTestingPlatformConfigurationFileCore is incremental (Inputs/Outputs).
+       A BeforeTargets hook on that Core target does not run when Core is up-to-date,
+       so incremental Build after changing ForceLaunch / PerTestTimeout / HostVersion
+       kept a stale $(AssemblyName).testconfig.json until Rebuild. Generate on
+       BeforeBuild (always scheduled) and copy the merged file ourselves. -->
+  <ItemGroup Condition="'$(IsTestingPlatformApplication)' == 'true'">
+    <UpToDateCheckBuilt Include="$([System.IO.Path]::Combine($(MSBuildProjectDirectory), $(OutputPath), $(AssemblyName).testconfig.json))">
+      <Original>$(MSBuildProjectFullPath)</Original>
+    </UpToDateCheckBuilt>
+  </ItemGroup>
+
   <Target Name="GenerateDevToolsTestConfig"
-          BeforeTargets="_CalculateGenerateTestingPlatformConfigurationFile;_GenerateTestingPlatformConfigurationFileCore"
+          BeforeTargets="BeforeBuild;GenerateTestingPlatformConfigurationFile;_CalculateGenerateTestingPlatformConfigurationFile;_GenerateTestingPlatformConfigurationFileCore"
           Condition="'$(IsTestingPlatformApplication)' == 'true'">
     <Error
         Condition="'$(HostName)' == ''"
@@ -84,7 +94,7 @@
       <_DevToolsMergedTestConfigPath>$(IntermediateOutputPath)testconfig.json</_DevToolsMergedTestConfigPath>
     </PropertyGroup>
 
-    <MakeDir Directories="$(IntermediateOutputPath)"/>
+    <MakeDir Directories="$(IntermediateOutputPath);$(OutputPath)"/>
     <WriteLinesToFile
         File="$(_DevToolsGeneratedTestConfigPath)"
         Lines="{&#xA;  &quot;devtools&quot;: {&#xA;    &quot;hostName&quot;: &quot;$(HostName)&quot;,&#xA;    &quot;hostVersion&quot;: &quot;$(HostVersion)&quot;,&#xA;    &quot;forceLaunch&quot;: $(ForceLaunch),&#xA;    &quot;perTestTimeoutSeconds&quot;: $(PerTestTimeout),&#xA;    &quot;launchTimeoutSeconds&quot;: $(LaunchTimeout),&#xA;    &quot;runnerPath&quot;: &quot;$(_DevToolsTestingRunnerPathJson)&quot;,&#xA;    &quot;frameworkId&quot;: &quot;$(TestingFramework)&quot;,&#xA;    &quot;discoveryAttributes&quot;: [$(_TestingDiscoveryAttributesJson)]&#xA;  }&#xA;}"
@@ -96,6 +106,13 @@
         OutputConfigFile="$(_DevToolsMergedTestConfigPath)"/>
     <PropertyGroup>
       <_TestingPlatformConfigurationFileSourcePath>$(_DevToolsMergedTestConfigPath)</_TestingPlatformConfigurationFileSourcePath>
+      <_DevToolsOutputTestConfigPath>$([System.IO.Path]::Combine($(MSBuildProjectDirectory), $(OutputPath), $(AssemblyName).testconfig.json))</_DevToolsOutputTestConfigPath>
     </PropertyGroup>
+    <Copy SourceFiles="$(_DevToolsMergedTestConfigPath)"
+          DestinationFiles="$(_DevToolsOutputTestConfigPath)"
+          SkipUnchangedFiles="false"/>
+    <ItemGroup>
+      <FileWrites Include="$(_DevToolsGeneratedTestConfigPath);$(_DevToolsMergedTestConfigPath);$(_DevToolsOutputTestConfigPath)"/>
+    </ItemGroup>
   </Target>
 </Project>

@@ -22,8 +22,10 @@ on branch `testing/nunit-vstest`.
   csproj to change the in-host engine without changing the NuGet. Default
   engine is NUnit (`TestingFramework=nunit`).
 - Host options are generated as `testconfig.json` from the csproj properties.
-  Microsoft.Testing.Platform.MSBuild copies that file to
-  `[AssemblyName].testconfig.json`. The adapter reads the `devtools` section
+  An incremental build refreshes `[AssemblyName].testconfig.json`; Rebuild is
+  not required after changing `HostName`, `ForceLaunch`, `PerTestTimeout`, or
+  `LaunchTimeout`. Microsoft.Testing.Platform.MSBuild copies the same file.
+  The adapter reads the `devtools` section
   through MTP `IConfiguration` (same pattern as `mstest` / `xUnit`). Author
   `testconfig.json` beside the csproj to add `platformOptions`; do not use
   `.runsettings`.
