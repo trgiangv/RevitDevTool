@@ -39,6 +39,9 @@ decision into `docs/decisions/`; keep task-local choices in the plan.
 
 | Plan | Completed |
 |------|-----------|
+| [2026-08-18-nunit-boundary-cleanup.md](completed/2026-08-18-nunit-boundary-cleanup.md) | 2026-08-18 |
+| [2026-08-18-assembly-isolation-kernel.md](completed/2026-08-18-assembly-isolation-kernel.md) | 2026-08-18 |
+| [2026-08-18-nunit-mtp-only.md](completed/2026-08-18-nunit-mtp-only.md) | 2026-08-18 |
 | [2026-08-15-host-identity-ui-free-infrastructure.md](completed/2026-08-15-host-identity-ui-free-infrastructure.md) | 2026-08-17 |
 | [2026-08-06-pixi-skip-if-listed.md](completed/2026-08-06-pixi-skip-if-listed.md) | 2026-08-06 |
 | [2026-07-25-mcp-call-observability.md](completed/2026-07-25-mcp-call-observability.md) | 2026-07-25 |

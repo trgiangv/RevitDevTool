@@ -9,6 +9,7 @@ notes belong in `docs/agents/`.
 | Document | Covers |
 |----------|--------|
 | [overview.md](overview.md) | Platform identity, hosts, solution truth |
+| [assembly-isolation.md](assembly-isolation.md) | Runtime/metadata loading, identity, containment, and lifecycle contract |
 | [execution.md](execution.md) | Code/script execution behavior |
 | [mcp.md](mcp.md) | MCP entry points and host bridging |
 | [pytest-bridge.md](pytest-bridge.md) | Remote pytest via Named Pipe |

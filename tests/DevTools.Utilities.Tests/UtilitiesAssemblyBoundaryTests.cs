@@ -51,15 +51,23 @@ public sealed class UtilitiesAssemblyBoundaryTests
     }
 
     [Fact]
-    public void Utilities_non_assemblyloading_source_has_no_autodesk_api_keywords()
+    public void Utilities_has_no_assembly_loading_ownership()
     {
         var utilitiesDir = Path.Combine(RepositoryRoot.Find(), "source", "DevTools.Utilities");
-        var sources = Directory.GetFiles(utilitiesDir, "*.cs", SearchOption.AllDirectories)
-            .Where(static path => path.IndexOf($"{Path.DirectorySeparatorChar}AssemblyLoading{Path.DirectorySeparatorChar}", StringComparison.OrdinalIgnoreCase) < 0)
-            .ToArray();
+        var sources = Directory.GetFiles(utilitiesDir, "*.cs", SearchOption.AllDirectories);
         Assert.NotEmpty(sources);
 
-        string[] forbidden = ["RevitAPI", "acmgd"];
+        string[] forbidden =
+        [
+            "ByteAssemblyLoader",
+            "DirectoryAssemblyLoader",
+            "HostAssemblyResolver",
+            "HostSharedAssemblies",
+            "HostSharedAssemblyNames",
+            "HostPackagePrefixes",
+            "NUnitSharedAssemblyPolicy",
+            "NetfxNUnitSharedAssemblyResolver",
+        ];
 
         foreach (var path in sources)
         {
@@ -72,19 +80,13 @@ public sealed class UtilitiesAssemblyBoundaryTests
     }
 
     [Fact]
-    public void NUnit_Host_still_project_references_Utilities_AssemblyLoading()
+    public void Legacy_utility_loader_files_are_absent()
     {
         var root = RepositoryRoot.Find();
-        var hostCsproj = File.ReadAllText(Path.Combine(root, "source", "DevTools.NUnit.Host", "DevTools.NUnit.Host.csproj"));
-        Assert.Contains("DevTools.Utilities.csproj", hostCsproj, StringComparison.Ordinal);
-        Assert.Contains("DevTools.Logging.csproj", hostCsproj, StringComparison.Ordinal);
-
-        var hostSources = Directory.GetFiles(
-            Path.Combine(root, "source", "DevTools.NUnit.Host"),
-            "*.cs",
-            SearchOption.AllDirectories);
-        Assert.Contains(
-            hostSources,
-            static path => File.ReadAllText(path).Contains("DevTools.Utilities.AssemblyLoading", StringComparison.Ordinal));
+        var loaderDirectory = Path.Combine(root, "source", "DevTools.Utilities", "AssemblyLoading");
+        Assert.Empty(Directory.Exists(loaderDirectory)
+            ? Directory.GetFiles(loaderDirectory, "*.cs", SearchOption.AllDirectories)
+            : []);
+        Assert.False(File.Exists(Path.Combine(root, "source", "DevTools.Utilities", "AssemblyLoader.cs")));
     }
 }

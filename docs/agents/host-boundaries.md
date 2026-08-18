@@ -17,7 +17,7 @@ Keep these host-neutral — this is the default for all new functionality:
 - `source/DevTools.Settings/`
 - `source/DevTools.Telemetry/`
 - `source/DevTools.UI/`
-- `source/DevTools.Utilities/` — helpers + `AssemblyLoading` (`HostSharedAssemblies`, `HostSharedAssemblyNames`). Leaf: no Hosting, no Execution.Abstractions.
+- `source/DevTools.Utilities/` — helpers only. Leaf: no Hosting, no Execution.Abstractions, and no assembly-loading ownership.
 
 ## Host Layer
 
@@ -29,20 +29,41 @@ Host API references belong in host projects:
 - Launch specs (path / argv / dialog catalog): `source/DevTools.Hosting.Revit/`, `source/DevTools.Hosting.Acad/`. `net10.0-windows` only. Daemon and TestRunner call `AddRevitLaunch` / `AddAutocadFamilyLaunch`. Add-ins do **not**.
 - Offline file parse: `source/DevTools.FileMetadata.Revit/` (OpenMcdf) and `FileMetadata.Acad` (ACadSharp). `net10.0-windows` only. Parsers stay **HostApp-free**. Daemon wires `RevitFileMetadataReader.TryReadRevitVersion` into `AddRevitLaunch`; Runner passes `null`. Do not ProjectReference FileMetadata from `Hosting.Revit`.
 - Add-in composition: `source/RevitDevTool/Composition/`, `source/AcadDevTool/Composition/` (`RevitServiceRegistration` / `AcadServiceRegistration`). Not `DevTools.Hosting`.
-- In-process host-API names: `RevitHostApiAssemblies.Names` / `AcadHostApiAssemblies.Names` passed to `HostSharedAssemblies.Use` in `Application.OnStartup` next to `AssemblyLoader.Initialize()`. Not DI. Not launch.
+- In-process host APIs are concrete parent bindings supplied by each command isolation plan. Do not add ambient host-name lists or startup assembly-sharing policy.
 - In-host MCP tools (host-bound): `source/DevTools.Mcp.Revit/`, `source/DevTools.Mcp.Acad/` (`IBuiltInMcpTool` / `IBuiltInMcpResource`). Registered from add-in `Composition/`. The `Mcp.*` prefix is not a neutrality claim.
 - Visualization: `source/RevitDevTool/Visualization/` (DirectContext3D — entirely Revit-host, not in shared code)
 - Future hosts: add new host projects rather than extending shared code with platform-specific branches.
 
 ## Assembly load (three jobs)
 
-Do not add a fourth path. Directory scan (`Configure`) is deleted — names come only from `Use(names)`.
+Product behavior and invariants are authoritative in
+[`docs/product/assembly-isolation.md`](../product/assembly-isolation.md). This
+section only maps those rules to repository owners.
+
+`DevTools.AssemblyIsolation` owns the shared assembly-load kernel. Do not add a
+fourth path. Feature adapters compose its plans: `CommandIsolationPlan`,
+`ScriptIsolationPlan`, `McpToolsetIsolationPlan`, `NUnitIsolationPlan`, and the
+host command-discovery metadata sessions. Parent sharing is a concrete
+`BindToParent(assembly)` on that plan — not an ambient name list. PyRevit uses
+its application-lifetime `PermanentAssemblyLoader` for selected extension
+candidates.
 
 | Job | Entry |
 |-----|--------|
-| Add-in deploy folder, once | `Utilities/AssemblyLoader.Initialize()` |
-| Dynamic / command ALC | `Utilities/AssemblyLoading/*` + ambient `HostSharedAssemblies.Use(HostSharedAssemblyNames)` |
-| NUnit generation | `NUnit.Host` loaders (do not redesign here) |
+| Add-in deploy folder, once | `AssemblyIsolation/Loading/PermanentDirectoryAssemblyResolver` |
+| Dynamic / command ALC | `AssemblyIsolation` session composed by the command feature's isolation plan |
+| NUnit generation | `AssemblyIsolation` session composed by NUnit's generation plan; net48 stays in the host default AppDomain (`ScopedNetFramework`) |
+
+`DevTools.NUnit.Mtp/MtpRuntimeAssemblyResolver` is the sole bootstrap exception:
+it resolves the package's private closure from `AppContext.BaseDirectory` before
+the kernel can be loaded. It registers once, accepts only full simple assembly
+identities that match the candidate exactly, and must not acquire shared-prefix,
+host, or feature-execution policy.
+
+The shipped `PythonNetStubGenerator` uses the kernel's permanent loader and
+invocation-scoped directory resolvers for caller-selected DLL directories. It
+does not probe shared framework installations or apply `System.*`/`Microsoft.*`
+sharing rules; unresolved framework requests fall back to the CLR.
 
 Native dialog/stdio P/Invoke for **launch** stays inside `DevTools.Hosting` (`DialogNative`, `HostLaunchService.StdioInheritance`). Do not create `Hosting → Utilities` for Interop. WPF owner/title-bar stays `DevTools.UI/Win32Utils`.
 

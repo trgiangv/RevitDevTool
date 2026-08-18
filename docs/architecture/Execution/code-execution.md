@@ -67,7 +67,9 @@ flowchart LR
 
 - `CSharpExecutionStrategy` compiles `.csx` through `CSharpCompilationCache`.
 - `CSharpDirectiveParser` handles references and package directives.
-- Compiled script outputs are loaded through `ScriptLoadContext`.
+- Compiled script outputs use the feature-owned `ScriptIsolationPlan` with the
+  shared assembly-isolation session. Identity and lifecycle behavior follows
+  the [assembly-isolation product contract](../../product/assembly-isolation.md).
 - Compilation has a hard timeout.
 
 ### Assembly (Dotnet)

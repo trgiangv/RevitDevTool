@@ -101,9 +101,10 @@ or native source, but feature code does not override the load algorithm.
   reference release, `Unload()`, and weak-reference verification.
 - `ScopedNetFramework` owns scoped `AssemblyResolve` registration and cleanup,
   but does not claim that assemblies loaded into the default AppDomain unload.
-- Feature-owned child AppDomains remain available for true net48 isolation.
-  The kernel may own their generic lifecycle; MarshalByRef activation and
-  contracts remain with the feature.
+  NUnit net48 uses this lifetime in the host's default AppDomain: load the
+  generation shadow with `LoadFile` so same-identity copies stay distinct,
+  reuse already-loaded host APIs, and accept that Revit cannot unload those
+  DLLs. Do not create a child AppDomain for NUnit generations.
 - Metadata discovery uses a separate `MetadataAssemblySession`. It uses
   `MetadataLoadContext`, never executes the target assembly, and never creates
   a runtime isolation session.
@@ -160,6 +161,10 @@ Tradeoffs:
 5. Treat all exact identities already loaded in the parent as shared. Separate
    contexts may intentionally require independent static state even for the
    same version; parent binding must remain explicit.
+6. Create a child AppDomain for every NUnit net48 generation. Autodesk API
+   objects cannot cross that boundary safely, mixed-mode host APIs cannot be
+   unloaded, and the origin path already isolated same-identity copies with
+   shadow `LoadFile` in the default domain. See [0016](0016-nunit-native-runtime-and-mtp-first-integration.md).
 
 ## Validation
 
@@ -176,6 +181,20 @@ Tradeoffs:
   package/host payload boundaries; and
 - repository scans find no remaining runtime loader outside the kernel unless
   documented as a feature adapter.
+
+## Implemented Boundary
+
+The accepted decision is implemented across add-in startup and discovery,
+command/script execution, MCP toolsets, PyRevit and PythonNet metadata tooling,
+and NUnit modern/net48 runtimes. The supported observable contract is maintained
+in [the product document](../product/assembly-isolation.md); implementation
+scope and verification are recorded in the
+[completed plan](../plans/completed/2026-08-18-assembly-isolation-kernel.md).
+
+The MTP package bootstrap remains the only documented direct resolver outside
+the kernel because it must locate the private provider closure before the kernel
+itself can load. It is restricted to the application base directory and exact
+full identities.
 
 ## Related Decisions
 

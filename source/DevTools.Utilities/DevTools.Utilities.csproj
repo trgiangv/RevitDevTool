@@ -2,7 +2,6 @@
 
     <PropertyGroup>
         <TargetFrameworks>net48;net8.0-windows;net10.0-windows</TargetFrameworks>
-        <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     </PropertyGroup>
 
 </Project>

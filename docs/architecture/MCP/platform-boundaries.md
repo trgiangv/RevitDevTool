@@ -105,7 +105,13 @@ Resources (.NET toolset): dispatcher resource path with template URI from catalo
 
 ## Toolset load boundary
 
-Isolated .NET toolsets load via `McpToolsetContext` (collectible ALC + assembly resolve).
+Isolated .NET toolsets load via `McpToolsetContext`, whose feature-owned
+`McpToolsetIsolationPlan` uses the shared `DevTools.AssemblyIsolation` session.
+It binds only concrete MCP contract assemblies, resolves private dependencies from the
+toolset resolver and sibling directory on modern .NET (sibling directory only in the
+scoped net48 session), and emits structured resolution diagnostics to the MCP logger.
+Identity and lifecycle behavior follows the
+[assembly-isolation product contract](../../product/assembly-isolation.md).
 Invoke uses `ToolsetInvoker` → `AIFunction`; results cross the boundary through
 `ToolsetResultSerializer` (serialize in toolset domain, deserialize to `McpInvocationResponse`).
 
@@ -116,8 +122,8 @@ Invoke uses `ToolsetInvoker` → `AIFunction`; results cross the boundary throug
 | Low-level `InputRequiredException` | ✅ Forwarded on wire; retry via `InputResponses` / `RequestState` |
 | High-level `ElicitAsync` / `MrtrContext` suspend | ❌ Sync invoker — documented unsupported |
 
-Toolsets reference MCP with `ExcludeAssets=runtime`. Runtime binds to host/toolset load context
-per ADR 0012 packaging rules.
+Toolsets reference MCP with `ExcludeAssets=runtime`. Concrete MCP contracts bind to the host
+instances; private dependencies remain toolset-local, per ADR 0012 packaging rules.
 
 ### Tests
 
