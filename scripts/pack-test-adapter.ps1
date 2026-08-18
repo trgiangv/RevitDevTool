@@ -5,8 +5,8 @@
     Uses <Version> in source/DevTools.TestAdapter/DevTools.TestAdapter.csproj.
     Does not push. Does not run the RevitDevTool installer pack pipeline.
 .EXAMPLE
-    scripts/pack-testing.ps1
-    scripts/pack-testing.ps1 -OutputDirectory output/nuget
+    scripts/pack-test-adapter.ps1
+    scripts/pack-test-adapter.ps1 -OutputDirectory output/nuget
 #>
 param(
     [string]$OutputDirectory = 'output/nuget'

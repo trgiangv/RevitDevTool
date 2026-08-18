@@ -19,11 +19,15 @@ The adapter reads the `devtools` section through MTP `IConfiguration`. Do not us
   <IsTestProject>true</IsTestProject>
   <OutputType>Exe</OutputType>
   <RuntimeIdentifiers>win-x64</RuntimeIdentifiers>
+  <!-- required -->
   <HostName>Revit</HostName>
   <HostVersion>$(RevitVersion)</HostVersion>
+  <!-- default -->
   <ForceLaunch>false</ForceLaunch>
   <PerTestTimeout>60</PerTestTimeout>
-  <LaunchTimeout>360</LaunchTimeout>
+  <LaunchTimeout>180</LaunchTimeout>
+  <TestingFramework>nunit</TestingFramework>
+  <TestingDiscoveryAttributes>TestAttribute;TestCaseAttribute;TestCaseSourceAttribute;TheoryAttribute</TestingDiscoveryAttributes>
 </PropertyGroup>
 <ItemGroup>
   <PackageReference Include="RevitDevTool.TestAdapter" />

@@ -7,9 +7,9 @@
         <RootNamespace>DevTools.TestAdapter</RootNamespace>
         <AssemblyName>DevTools.TestAdapter</AssemblyName>
         <PackageId>RevitDevTool.TestAdapter</PackageId>
-        <!-- Bump this before running .github/workflows/PublishTesting.yml.
+        <!-- Bump this before running .github/workflows/PublishTestAdapter.yml.
              Independent of the RevitDevTool installer GitVersion. -->
-        <Version>0.1.0</Version>
+        <Version>0.0.1</Version>
         <IsPackable>true</IsPackable>
         <DevelopmentDependency>true</DevelopmentDependency>
         <PackageLicenseExpression>MIT</PackageLicenseExpression>
