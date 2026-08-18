@@ -54,7 +54,7 @@ candidates.
 | Dynamic / command ALC | `AssemblyIsolation` session composed by the command feature's isolation plan |
 | NUnit generation | `AssemblyIsolation` session composed by NUnit's generation plan; net48 stays in the host default AppDomain (`ScopedNetFramework`) |
 
-`DevTools.NUnit.Mtp/MtpRuntimeAssemblyResolver` is the sole bootstrap exception:
+`DevTools.TestAdapter/RuntimeAssemblyResolver` is the sole bootstrap exception:
 it resolves the package's private closure from `AppContext.BaseDirectory` before
 the kernel can be loaded. It registers once, accepts only full simple assembly
 identities that match the candidate exactly, and must not acquire shared-prefix,
@@ -75,7 +75,7 @@ Native dialog/stdio P/Invoke for **launch** stays inside `DevTools.Hosting` (`Di
 - Daemon external tools: infrastructure (`list_host_instances`, `launch_host`, `read_file_info`, `list_machines`) plus `search_dynamic` / `invoke_dynamic`.
 - Fixed prompts (`revit_code`, `acad_code`) are daemon-owned.
 - In-host built-in tools (shared runtime): `execute_csharp_code`, `open_document` via `IDocumentBridge`.
-- Startup dialog catalogs are **per host spec** (`RevitStartupDialogSpec` / `AcadStartupDialogSpec`), not a merged Autodesk bag. Generic Hosting polls EnumWindows + BM_CLICK with **no** product keywords and **no** self-timeout. MCP and NUnit share `HostLaunchWait.UntilAsync` (one wait loop, caller ready-probe). Timeout is the safety valve (`launch_host` 2 min, NUnit `HostLaunchTimeout`). See [0018](../decisions/0018-host-identity-and-out-of-process-infrastructure.md).
+- Startup dialog catalogs are **per host spec** (`RevitStartupDialogSpec` / `AcadStartupDialogSpec`), not a merged Autodesk bag. Generic Hosting polls EnumWindows + BM_CLICK with **no** product keywords and **no** self-timeout. MCP and NUnit share `HostLaunchWait.UntilAsync` (one wait loop, caller ready-probe). Timeout is the safety valve (`launch_host` 2 min, adapter `LaunchTimeout`). See [0018](../decisions/0018-host-identity-and-out-of-process-infrastructure.md).
 - Remaining gaps for AutoCAD: no shipped MCP toolset.
 
 ## Boundary Checklist

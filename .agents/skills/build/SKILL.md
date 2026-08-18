@@ -39,7 +39,7 @@ the project sets `UseRevit=true` or `UseAutoCad=true`. Those targets own
 | Shared `DevTools.*` (no `UseRevit` / `UseAutoCad`) | **No** — flags are no-ops |
 | `RevitDevTool`, `RevitDevTool.Core`, `DevTools.Mcp.Revit` | **Yes** — otherwise may deploy + ILRepack |
 | `AcadDevTool`, `DevTools.Mcp.Acad` | **Yes** — same for AutoCAD bundle |
-| Projects with their own `ILRepackable=true` (e.g. `DevTools.NUnit.TestAdapter`) | Only `-p:ILRepackable=false` if you want to skip repack |
+| Projects with their own `ILRepackable=true` (e.g. `DevTools.TestAdapter`) | Only `-p:ILRepackable=false` if you want to skip repack |
 
 Do **not** paste deploy flags onto every shared library build.
 

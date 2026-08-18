@@ -8,8 +8,9 @@ JSON-RPC bridge. Supports Revit, AutoCAD-family, and any host exposing a
 
 - Client plugin lives in sibling repo `RevitDevTool.PyTest`; always run with
   `uv run pytest` from that repo root.
-- Host options use `--host` / `--host-version` / `--host-pipe` / `--host-launch`
-  (not legacy `--revit-*` flags).
+- Host options use `--host` / `--host-version` / `--host-pipe` / `--force-launch`
+  / `--per-test-timeout` / `--launch-timeout` (same names as TestAdapter;
+  not `--host-launch` / `--host-timeout` / `--request-timeout`).
 - Wire models must stay mirrored between Python `models.py` and C#
   `PytestContracts.cs`.
 

@@ -134,11 +134,11 @@ public static class TestingFrameworkIds
 }
 
 public sealed record TestingHostOptions(
-    string Host,
+    string HostName,
     string HostVersion,
-    bool HostLaunch,
-    int HostTimeoutSeconds,
-    int HostLaunchTimeoutSeconds,
+    bool ForceLaunch,
+    int PerTestTimeoutSeconds,
+    int LaunchTimeoutSeconds,
     string? RunnerPath,
     int? DebugParentPid = null);
 
@@ -536,6 +536,13 @@ public sealed record TestingRuntimePayload(
 - 2026-08-17: Rename Runner directly with no executable alias.
 - 2026-08-17: Retain the legacy `nunit/*` envelope only as an adapter during
   migration.
+- 2026-08-18: Rename host options to `HostName`, `ForceLaunch`,
+  `PerTestTimeoutSeconds`, `LaunchTimeoutSeconds`. Csproj
+  `PerTestTimeout` / `LaunchTimeout` / `ForceLaunch` forward to TestRunner as
+  `--per-test-timeout` / `--launch-timeout` / `--force-launch`. `--host` stays.
+  `PerTestTimeout` is the per-test budget; the adapter scales it by test count
+  before CLI. Adapter `WaitForExit` adds local I/O slack (`TestingHostTiming`)
+  and must not mutate those CLI values.
 - 2026-08-17: csproj `HostTimeout` / `HostLaunchTimeout` are forwarded to
   TestRunner as pipe/launch budgets. Adapter `WaitForExit` adds local I/O slack
   (`TestingHostTiming`) and must not mutate those CLI values.

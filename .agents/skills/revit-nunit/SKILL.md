@@ -1,14 +1,14 @@
 ---
 name: revit-nunit
 description: >
-  Configure and run in-host NUnit tests with the RevitDevTool.NUnit NuGet
+  Configure and run in-host tests with the RevitDevTool.TestAdapter NuGet
   package (Microsoft Testing Platform). Use in any repo that references that
   package when writing or running NUnit tests inside Revit, AutoCAD, or
-  Civil 3D; setting HostName/HostVersion/HostLaunch; using `dotnet test --filter`;
+  Civil 3D; setting HostName/HostVersion/ForceLaunch; using `dotnet test --filter`;
   selecting [Explicit] tests; or diagnosing MTP exit code 8 / zero tests.
 ---
 
-# Host NUnit tests (RevitDevTool.NUnit)
+# Host NUnit tests (RevitDevTool.TestAdapter)
 
 Standalone consumer skill. Copy this folder into any repo (or
 `~/.agents/skills/revit-nunit/`).
@@ -19,16 +19,16 @@ dotnet test (MTP exe) → installed DevTools.TestRunner → host pipe → NUnit 
 
 The MTP exe never runs test bodies locally. Requires
 [RevitDevTool](https://github.com/trgiangv/RevitDevTool) installed and NuGet
-`RevitDevTool.NUnit`.
+`RevitDevTool.TestAdapter`.
 
-Detect: `PackageReference` `RevitDevTool.NUnit` + `global.json` in **that
+Detect: `PackageReference` `RevitDevTool.TestAdapter` + `global.json` in **that
 project folder** (not the repo root) with
 `"test": { "runner": "Microsoft.Testing.Platform" }`.
 
 ## Configure
 
-Pin **NUnit 4.6.1**. Do not add `NUnit.Microsoft.Testing.Platform`,
-`NUnit3TestAdapter`, or `ricaun.RevitTest.TestAdapter`.
+Pin **NUnit 4.6.1**. Do not add `NUnit3TestAdapter` or
+`ricaun.RevitTest.TestAdapter`.
 
 ```xml
 <PropertyGroup>
@@ -37,12 +37,12 @@ Pin **NUnit 4.6.1**. Do not add `NUnit.Microsoft.Testing.Platform`,
   <RuntimeIdentifiers>win-x64</RuntimeIdentifiers>
   <HostName>Revit</HostName>
   <HostVersion>2024</HostVersion>
-  <HostLaunch>false</HostLaunch>
-  <HostTimeout>60</HostTimeout>
-  <HostLaunchTimeout>360</HostLaunchTimeout>
+  <ForceLaunch>false</ForceLaunch>
+  <PerTestTimeout>60</PerTestTimeout>
+  <LaunchTimeout>360</LaunchTimeout>
 </PropertyGroup>
 <ItemGroup>
-  <PackageReference Include="RevitDevTool.NUnit" />
+  <PackageReference Include="RevitDevTool.TestAdapter" />
   <PackageReference Include="Microsoft.Testing.Platform.MSBuild" />
   <PackageReference Include="NUnit" Version="4.6.1" />
 </ItemGroup>
@@ -93,11 +93,11 @@ Bodies run on the Autodesk API context. Use the host context type for
 | `[Explicit]` never runs | Select it with `--filter MethodName` |
 | No exe / test project does not run | Set `OutputType=Exe` and `RuntimeIdentifiers=win-x64` in the csproj |
 | Ran from repo root / another project | `cd` to the test project folder that has `global.json` |
-| Timeout | Raise `HostTimeout` (60s is smoke-only) |
+| Timeout | Raise `PerTestTimeout` (per-test budget; 60s is smoke-only) |
 
 ## Package
 
-- NuGet: [RevitDevTool.NUnit](https://www.nuget.org/packages/RevitDevTool.NUnit)
+- NuGet: [RevitDevTool.TestAdapter](https://www.nuget.org/packages/RevitDevTool.TestAdapter)
 - Installer / Runner: [RevitDevTool](https://github.com/trgiangv/RevitDevTool)
 
 ## References

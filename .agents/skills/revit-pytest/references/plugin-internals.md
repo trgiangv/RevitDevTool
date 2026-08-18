@@ -108,7 +108,7 @@ Another pytest session holds the suite mutex. Kill the other process or wait.
 
 ### Tests timeout
 
-Increase timeout: `pytest --host-timeout=120`
+Increase timeout: `uv run pytest --per-test-timeout=120`
 
 ### PEP 723 packages not found
 

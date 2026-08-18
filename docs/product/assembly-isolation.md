@@ -35,11 +35,11 @@ Execution, MCP, NUnit, Revit, AutoCAD, WPF, or logging policy.
 
 Autodesk API references are compile-only and are not copied as runtime payloads.
 Host packages merge or ship one kernel identity according to their existing
-ILRepack policy. `RevitDevTool.NUnit` exposes only its MTP compile surface and
+ILRepack policy. `RevitDevTool.TestAdapter` exposes only its platform compile surface and
 keeps its modern implementation closure private.
 
-`DevTools.NUnit.Mtp/MtpRuntimeAssemblyResolver` is the sole direct-loader
-exception. The public MTP hook must bootstrap its private runtime closure before
+`DevTools.TestAdapter/RuntimeAssemblyResolver` is the sole direct-loader
+exception. The public platform hook must bootstrap its private runtime closure before
 the shared kernel can be loaded. The resolver registers once, probes only the
 application base directory, and accepts only an exact full identity.
 

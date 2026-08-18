@@ -105,5 +105,6 @@ Do not add extra listeners to "help" the pane.
 
 ## 7. Timeout
 
-`HostTimeout` covers the entire `nunit/run`, not one assertion. Raise it
-for large suites. NUnit `RunOnMainThread` cannot cancel an in-flight test.
+`PerTestTimeout` is the per-test budget. The `testing/run` pipe wait is this
+times the number of tests in that run (same as pytest `per_test_timeout`).
+Raise it for slow cases. NUnit `RunOnMainThread` cannot cancel an in-flight test.

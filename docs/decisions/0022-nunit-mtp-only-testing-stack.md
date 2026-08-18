@@ -48,11 +48,11 @@ wire contracts that are unnecessary for MTP execution.
 
 ```text
 NUnit test project
-  -> RevitDevTool.NUnit (MTP framework)
-  -> DevTools.Testing.Mtp / Testing.Transport
-  -> DevTools.TestRunner
+  -> RevitDevTool.TestAdapter (Microsoft.Testing.Platform adapter,
+     local PE metadata scan)
+  -> Testing.Transport
+       -> DevTools.TestRunner (testing/run CLI)
        -> DevTools.TestRunner.Core
-       -> NUnit.Discovery (local metadata) + NUnit CLI module in the TestRunner exe
   -> testing/* host bridge
   -> DevTools.Testing.Host
   -> DevTools.NUnit.Host policy + DevTools.NUnit.Runtime
@@ -68,7 +68,7 @@ participates in this graph.
 - The published MTP package has a smaller private closure and no VSTest or
   `netstandard2.0` compatibility payload.
 - Legacy VSTest consumers must use branch `testing/nunit-vstest` or migrate to
-  `RevitDevTool.NUnit` MTP projects.
+  `RevitDevTool.TestAdapter` projects.
 - `net48` remains supported for older Autodesk hosts; only the adapter-oriented
   `netstandard2.0` target is removed.
 - PolySharp and ILRepack policy remain outside this decision. Warning/noise

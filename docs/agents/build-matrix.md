@@ -104,7 +104,7 @@ driver adds the `ILRepack` PackageReference when that flag is true. Policy for
 `/union`, Polyfill, and net10 isolated ALC:
 [0019](../decisions/0019-ilrepack-and-polyfill-isolated-alc.md).
 MTP net48 opts in the same way (`ILRepackable` when `TargetFramework` is
-`net48`); consumers of `RevitDevTool.NUnit` do not.
+`net48`); consumers of `RevitDevTool.TestAdapter` do not.
 
 Scintilla5.NET 7 natives stay under `runtimes/win-x64/native/` (not output root).
 `DevTools.Logging` has a direct `Scintilla5.NET` PackageReference so

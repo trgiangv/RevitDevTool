@@ -27,7 +27,7 @@ dotnet test --project Host.Tests.csproj -c <Config> --list-tests
 ```
 
 Do **not** start `Revit.exe` / `acad.exe`. Runner locates, reuses, or
-launches. `HostLaunch=false` still starts a matching-version host on **run**
+launches. `ForceLaunch=false` still starts a matching-version host on **run**
 if none is open. Discovery (`--list-tests`, Test Explorer refresh) is local
 PE metadata.
 

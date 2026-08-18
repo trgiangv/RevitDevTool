@@ -1,6 +1,6 @@
 # Project setup
 
-Consumer csproj + `global.json` for `RevitDevTool.NUnit`. CLI commands stay
+Consumer csproj + `global.json` for `RevitDevTool.TestAdapter`. CLI commands stay
 in SKILL.md.
 
 ## Required csproj
@@ -12,12 +12,12 @@ in SKILL.md.
   <RuntimeIdentifiers>win-x64</RuntimeIdentifiers>
   <HostName>Revit</HostName>
   <HostVersion>2024</HostVersion>
-  <HostLaunch>false</HostLaunch>
-  <HostTimeout>60</HostTimeout>
-  <HostLaunchTimeout>360</HostLaunchTimeout>
+  <ForceLaunch>false</ForceLaunch>
+  <PerTestTimeout>60</PerTestTimeout>
+  <LaunchTimeout>360</LaunchTimeout>
 </PropertyGroup>
 <ItemGroup>
-  <PackageReference Include="RevitDevTool.NUnit" />
+  <PackageReference Include="RevitDevTool.TestAdapter" />
   <PackageReference Include="Microsoft.Testing.Platform.MSBuild" />
   <PackageReference Include="NUnit" Version="4.6.1" />
 </ItemGroup>
@@ -35,15 +35,21 @@ Reference `Microsoft.Testing.Platform.MSBuild`, not
 | `RuntimeIdentifiers` | Must be `win-x64`. Autodesk `PlatformTarget=x64` infers that RID; without this, restore/`dotnet test` cannot find the exe |
 | `HostName` | `Revit`, `AutoCad`, `Civil3D`, … |
 | `HostVersion` | Year string (`2024`, `2026`). May be `$(RevitVersion)` if the project already defines it |
-| `HostLaunch` | `false` = reuse a matching host, start if none. `true` = always start a new host |
-| `HostTimeout` | Whole `nunit/run` pipe timeout (seconds). Raise for large suites; 60 is smoke-only |
-| `HostLaunchTimeout` | Seconds to wait for a launched host |
+| `ForceLaunch` | `false` = reuse a matching host, start if none. `true` = always start a new host |
+| `PerTestTimeout` | Per-test budget (seconds). The `testing/run` pipe wait is this × tests in the run. 60 is smoke-only |
+| `LaunchTimeout` | Seconds to wait for a launched host pipe |
+| `TestingFramework` | Default `nunit`. Override in the test csproj to change the in-host engine without changing the package |
+| `TestingDiscoveryAttributes` | Attribute type names for local PE discovery. Default follows `TestingFramework=nunit` |
 
 `HostName` / `HostVersion` are the runner contract. Do not invent other
 MSBuild flags for the runner.
 
-Build writes `devtools.nunit.host.json` beside the test exe. Do not edit it
-by hand.
+Build generates `testconfig.json` from the csproj properties. MTP MSBuild
+copies it to `[AssemblyName].testconfig.json`. The adapter reads the `devtools`
+section through `IConfiguration`. Author `testconfig.json` beside the `.csproj`
+to add `platformOptions` (the `devtools` section is merged from csproj unless
+you already wrote one). Do not use `.runsettings`. Do not edit the copied
+output file by hand.
 
 ## global.json
 
@@ -82,18 +88,17 @@ up this `global.json`. Running from the repo root ignores it.
 
 ## Conflicting packages
 
-Package targets fail the build if the same project also references:
+Do not add a second test adapter to the same project:
 
-- `NUnit.Microsoft.Testing.Platform`
 - `NUnit3TestAdapter`
 - `ricaun.RevitTest.TestAdapter`
 - `Microsoft.Testing.Extensions.VSTestBridge`
 
-Keep one owner: `RevitDevTool.NUnit`.
+Keep one owner: `RevitDevTool.TestAdapter`.
 
 ## Runner install
 
 `%APPDATA%/Autodesk/ApplicationPlugins/RevitDevTool.bundle/Contents/DevTools.TestRunner.exe`
 
-Override with MSBuild `DevToolsNUnitRunnerPath` only when the bundle is not
+Override with MSBuild `DevToolsTestingRunnerPath` only when the bundle is not
 in the default location. Missing file → `"RevitDevTool is not installed"`.
