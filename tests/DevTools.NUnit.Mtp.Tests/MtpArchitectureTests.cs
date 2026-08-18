@@ -96,9 +96,28 @@ public sealed class MtpArchitectureTests
 
         var mtp = File.ReadAllText(Path.Combine(
             RepositoryRoot, "source", "DevTools.NUnit.Mtp", "DevTools.NUnit.Mtp.csproj"));
-        Assert.Contains("DevTools.NUnit.Provider", mtp, StringComparison.Ordinal);
+        Assert.Contains("DevTools.NUnit.Discovery", mtp, StringComparison.Ordinal);
+        Assert.DoesNotContain("DevTools.NUnit.Provider", mtp, StringComparison.Ordinal);
         Assert.Contains("DevTools.Testing.Transport", mtp, StringComparison.Ordinal);
         Assert.DoesNotContain("NUnitProcessTransportAdapter.cs", mtp, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void NUnit_discovery_project_has_no_host_transport_or_runtime_ownership()
+    {
+        var directory = Path.Combine(RepositoryRoot, "source", "DevTools.NUnit.Discovery");
+        var content = Directory.EnumerateFiles(directory, "*.*", SearchOption.AllDirectories)
+            .Where(path => path.EndsWith(".cs", StringComparison.OrdinalIgnoreCase)
+                || path.EndsWith(".csproj", StringComparison.OrdinalIgnoreCase))
+            .Select(File.ReadAllText)
+            .ToList();
+
+        Assert.NotEmpty(content);
+        Assert.DoesNotContain(content, text => text.Contains("HostRunOptions", StringComparison.Ordinal));
+        Assert.DoesNotContain(content, text => text.Contains("Process.Start", StringComparison.Ordinal));
+        Assert.DoesNotContain(content, text => text.Contains("DevTools.Testing.Transport", StringComparison.Ordinal));
+        Assert.DoesNotContain(content, text => text.Contains("DevTools.Testing.Host", StringComparison.Ordinal));
+        Assert.DoesNotContain(content, text => text.Contains("AssemblyIsolation", StringComparison.Ordinal));
     }
 
     [Fact]

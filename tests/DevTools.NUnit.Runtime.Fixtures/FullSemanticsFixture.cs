@@ -1,4 +1,5 @@
 using NUnit.Framework;
+using System.Threading;
 
 namespace DevTools.NUnit.Runtime.Fixtures;
 
@@ -147,6 +148,32 @@ public sealed class FullSemanticsFixture
         await Task.Delay(1).ConfigureAwait(false);
         Assert.Pass();
     }
+
+}
+
+[TestFixture]
+public sealed class CancellationForwardingFixture
+{
+    [Test, Order(1)]
+    public void BlockingTest_WaitsForCooperativeRelease()
+    {
+        using var entered = EventWaitHandle.OpenExisting(GetRequiredEventName("DEVTOOLS_NUNIT_CANCELLATION_ENTERED_EVENT"));
+        using var release = EventWaitHandle.OpenExisting(GetRequiredEventName("DEVTOOLS_NUNIT_CANCELLATION_RELEASE_EVENT"));
+        entered.Set();
+        release.WaitOne();
+    }
+
+    [Test, Order(2)]
+    public void RemainingTest_MustNotRunAfterCancellation()
+    {
+        using var entered = EventWaitHandle.OpenExisting(GetRequiredEventName("DEVTOOLS_NUNIT_CANCELLATION_REMAINING_EVENT"));
+        entered.Set();
+        Assert.Fail("The cancellation request did not stop the remaining work.");
+    }
+
+    private static string GetRequiredEventName(string variableName) =>
+        Environment.GetEnvironmentVariable(variableName)
+        ?? throw new InvalidOperationException($"The event '{variableName}' was not configured.");
 }
 
 [TestFixture]

@@ -31,7 +31,8 @@ on branch `testing/nunit-vstest`.
 | `DevTools.NUnit.Runtime` | NUnit execution inside an isolated generation |
 | `DevTools.NUnit.Host` | NUnit closure/version policy, Dynamo-safe framework sharing, isolated runtime activation, and host provider wiring |
 | `DevTools.NUnit.Mtp` | Published `RevitDevTool.NUnit` MTP framework |
-| `DevTools.TestRunner` | Out-of-process host orchestration using `testing/*` only |
+| `DevTools.TestRunner.Core` | Framework-neutral host locate/launch/reuse, debugger attach, and `testing/*` pipe client |
+| `DevTools.TestRunner` | Composition executable. Registers the NUnit CLI through `IRunnerCommandModule`; additional frameworks register the same way without changing Core |
 
 The cross-load-context identity is `DevTools.Testing.Abstractions`. Runtime
 payloads do not carry a provider-specific transport assembly. Supported runtime
@@ -40,10 +41,14 @@ target is removed.
 
 ## Sample and execution
 
-The maintained samples are:
+The maintained MTP samples are:
 
 - `samples/DevTools.NUnit.SampleTests` for Revit;
 - `samples/DevTools.NUnit.Civil3D.SampleTests` for Civil 3D.
+
+`samples/ricaun.NUnit.SampleTests` is a comparison sample: it links the same
+`HostSmokeTests` and runs them through `ricaun.RevitTest.TestAdapter`. It is
+not the product contract.
 
 Run the generated test executable or use the MTP-aware `dotnet test`/IDE surface
 provided by the installed SDK. Discovery remains host-free; host launch occurs

@@ -4,6 +4,9 @@ using DevTools.Testing.Host.Loading;
 
 namespace DevTools.NUnit.Host.Loading;
 
+public sealed record NUnitRuntimeSource(string AssemblyPath, string? SymbolPath, IReadOnlyList<string> DependencyPaths);
+public delegate NUnitRuntimeSource NUnitRuntimeSourcePathProvider();
+
 /// <summary>
 /// NUnit-owned description and validation of a runtime generation.  The common
 /// store copies, hashes, and publishes this description without knowing any
@@ -77,7 +80,7 @@ public sealed class NUnitGenerationPolicy : ITestingGenerationPolicy
         {
             var location = sourceOutputDirectory is null
                 ? frameworkPath
-                : NUnitGenerationPaths.NormalizeRelativePath(NUnitGenerationPaths.GetRelativePath(sourceOutputDirectory, frameworkPath));
+                : NUnitGenerationCopyPlanner.NormalizeRelativePath(Path.GetRelativePath(sourceOutputDirectory, frameworkPath));
             throw new NUnitGenerationBuildException(
                 $"Expected {FrameworkAssemblyFileName} file version {ExpectedNUnitFileVersion} (NUnit package {ExpectedNUnitPackageVersion}); found {fileVersion ?? "<missing>"} at {location}.");
         }
@@ -92,6 +95,10 @@ public sealed class NUnitGenerationPolicy : ITestingGenerationPolicy
                 $"{FrameworkAssemblyFileName} is not a valid managed assembly: {frameworkPath}", ex);
         }
     }
+
+    internal static string GetFrameworkAssemblyPath(TestingGenerationManifest manifest) =>
+        manifest.ManagedAssemblies.Single(path =>
+            string.Equals(Path.GetFileName(path), FrameworkAssemblyFileName, StringComparison.OrdinalIgnoreCase));
 
     private NUnitRuntimeSource ResolveRuntimeSource()
     {
@@ -135,10 +142,61 @@ public sealed class NUnitGenerationPolicy : ITestingGenerationPolicy
     {
         if (string.Equals(Path.GetExtension(path), ".pdb", StringComparison.OrdinalIgnoreCase))
             return TestingGenerationFileKind.Symbols;
-        if (NUnitSharedAssemblyPolicy.TryGetManagedAssemblyIdentity(path, out _))
+        if (IsSatelliteResourceAssembly(path))
+            return TestingGenerationFileKind.Other;
+        if (IsManagedAssembly(path))
             return TestingGenerationFileKind.Managed;
         return string.Equals(Path.GetExtension(path), ".dll", StringComparison.OrdinalIgnoreCase)
             ? TestingGenerationFileKind.Native
             : TestingGenerationFileKind.Other;
+    }
+
+    private static bool IsSatelliteResourceAssembly(string path)
+    {
+        var extension = Path.GetExtension(path);
+        if (!extension.Equals(".dll", StringComparison.OrdinalIgnoreCase)
+            && !extension.Equals(".exe", StringComparison.OrdinalIgnoreCase))
+        {
+            return false;
+        }
+
+        try
+        {
+            var identity = AssemblyName.GetAssemblyName(path);
+            return identity.Name?.EndsWith(".resources", StringComparison.OrdinalIgnoreCase) == true
+                   && !string.IsNullOrWhiteSpace(identity.CultureName);
+        }
+        catch (BadImageFormatException)
+        {
+            return false;
+        }
+        catch (FileLoadException)
+        {
+            return false;
+        }
+    }
+
+    private static bool IsManagedAssembly(string path)
+    {
+        var extension = Path.GetExtension(path);
+        if (!extension.Equals(".dll", StringComparison.OrdinalIgnoreCase)
+            && !extension.Equals(".exe", StringComparison.OrdinalIgnoreCase))
+        {
+            return false;
+        }
+
+        try
+        {
+            _ = AssemblyName.GetAssemblyName(path);
+            return true;
+        }
+        catch (BadImageFormatException)
+        {
+            return false;
+        }
+        catch (FileLoadException)
+        {
+            return false;
+        }
     }
 }

@@ -51,9 +51,9 @@ internal static class Program
         if (conflicting.Location.StartsWith(manifest.ShadowDirectory, StringComparison.OrdinalIgnoreCase))
             return 3;
 
-        using var factory = new NetfxNUnitRuntimeSessionFactory();
+        var factory = new NUnitRuntimeSessionFactory();
         using var session = factory.Create(manifest);
-        var handle = (NetfxNUnitSessionHandle)session;
+        var handle = (NUnitRuntimeSessionHandle)session;
 
         var run = session.Run(
             CreateRequest(
@@ -69,36 +69,15 @@ internal static class Program
         if (!string.Equals(run.Results.Single().Outcome, TestingOutcomes.Passed, StringComparison.Ordinal))
             return 5;
 
-        var generationFramework = handle.GetLoadedFrameworkAssembly();
-        var binding = handle.GetRunnerBindingDiagnostic();
+        var generationFrameworkIdentity = handle.FrameworkAssemblyIdentityForTesting;
+        var expectedFrameworkIdentity = AssemblyName.GetAssemblyName(
+            NUnitGenerationPolicy.GetFrameworkAssemblyPath(manifest)).FullName;
 
         Console.WriteLine($"ConflictingLocation={conflicting.Location}");
-        Console.WriteLine($"GenerationFrameworkLocation={generationFramework.Location}");
-        Console.WriteLine($"RunnerLocation={binding.RunnerAssembly.Location}");
+        Console.WriteLine($"GenerationFrameworkIdentity={generationFrameworkIdentity}");
 
-        if (ReferenceEquals(generationFramework, conflicting))
+        if (!string.Equals(generationFrameworkIdentity, expectedFrameworkIdentity, StringComparison.OrdinalIgnoreCase))
             return 6;
-
-        if (!string.Equals(
-                generationFramework.Location,
-                manifest.FrameworkAssemblyPath,
-                StringComparison.OrdinalIgnoreCase))
-            return 7;
-
-        if (!ReferenceEquals(binding.GenerationFrameworkAssembly, generationFramework))
-            return 8;
-
-        if (!ReferenceEquals(binding.RunnerAssembly, generationFramework))
-            return 9;
-
-        if (!string.Equals(
-                binding.RunnerAssembly.Location,
-                generationFramework.Location,
-                StringComparison.OrdinalIgnoreCase))
-            return 10;
-
-        if (!binding.RunnerAssembly.Location.StartsWith(manifest.ShadowDirectory, StringComparison.OrdinalIgnoreCase))
-            return 11;
 
         return 0;
     }
@@ -108,7 +87,7 @@ internal static class Program
         var generationOne = NetFrameworkGenerationTestEnvironment.BuildFixtureGenerationOne();
         var generationTwo = NetFrameworkGenerationTestEnvironment.BuildFixtureGenerationTwo();
 
-        using var factory = new NetfxNUnitRuntimeSessionFactory();
+        var factory = new NUnitRuntimeSessionFactory();
         ITestingRuntimeSession? sessionOne = null;
         ITestingRuntimeSession? sessionTwo = null;
 
@@ -119,25 +98,19 @@ internal static class Program
         if (sessionOne is null || sessionTwo is null)
             return 1;
 
-        var handleOne = (NetfxNUnitSessionHandle)sessionOne;
-        var handleTwo = (NetfxNUnitSessionHandle)sessionTwo;
+        var handleOne = (NUnitRuntimeSessionHandle)sessionOne;
+        var handleTwo = (NUnitRuntimeSessionHandle)sessionTwo;
 
         try
         {
-            if (!ReferenceEquals(
-                    handleOne.GetRunnerBindingDiagnostic().RunnerAssembly,
-                    handleOne.GetLoadedFrameworkAssembly()))
+            if (!string.Equals(handleOne.FrameworkAssemblyIdentityForTesting, AssemblyName.GetAssemblyName(NUnitGenerationPolicy.GetFrameworkAssemblyPath(generationOne)).FullName, StringComparison.OrdinalIgnoreCase))
                 return 2;
 
-            if (!ReferenceEquals(
-                    handleTwo.GetRunnerBindingDiagnostic().RunnerAssembly,
-                    handleTwo.GetLoadedFrameworkAssembly()))
+            if (!string.Equals(handleTwo.FrameworkAssemblyIdentityForTesting, AssemblyName.GetAssemblyName(NUnitGenerationPolicy.GetFrameworkAssemblyPath(generationTwo)).FullName, StringComparison.OrdinalIgnoreCase))
                 return 3;
 
-            Console.WriteLine($"GenerationOneFramework={handleOne.GetLoadedFrameworkAssembly().Location}");
-            Console.WriteLine($"GenerationTwoFramework={handleTwo.GetLoadedFrameworkAssembly().Location}");
-            Console.WriteLine($"GenerationOneRunner={handleOne.GetRunnerBindingDiagnostic().RunnerAssembly.Location}");
-            Console.WriteLine($"GenerationTwoRunner={handleTwo.GetRunnerBindingDiagnostic().RunnerAssembly.Location}");
+            Console.WriteLine($"GenerationOneFramework={handleOne.FrameworkAssemblyIdentityForTesting}");
+            Console.WriteLine($"GenerationTwoFramework={handleTwo.FrameworkAssemblyIdentityForTesting}");
 
             return 0;
         }

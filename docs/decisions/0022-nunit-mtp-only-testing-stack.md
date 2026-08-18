@@ -24,11 +24,12 @@ wire contracts that are unnecessary for MTP execution.
 
 1. Delete the NUnit VSTest adapter, its tests, build imports, samples, solution
    entries, packaging inputs, and documentation.
-2. Remove repository-wide VSTest runner dependencies:
+2. Remove VSTest runner dependencies from repository xUnit tests:
    `Microsoft.NET.Test.Sdk`, `Microsoft.TestPlatform.ObjectModel`,
-   `xunit.runner.visualstudio`, `NUnit3TestAdapter`, and
-   `ricaun.RevitTest.TestAdapter`. Repository xUnit v3 tests run as MTP
-   executables.
+   `xunit.runner.visualstudio`, and `NUnit3TestAdapter`. Repository xUnit v3
+   tests run as MTP executables. Keep `samples/ricaun.NUnit.SampleTests` as a
+   comparison sample that uses `ricaun.RevitTest.TestAdapter` (and
+   `Microsoft.NET.Test.Sdk` on modern TFMs) against the same `HostSmokeTests`.
 3. Preserve `NUnit` itself: it remains the provider framework executed inside
    the host. Preserve `Microsoft.Testing.Platform` and
    `Microsoft.Testing.Platform.MSBuild` where required.
@@ -51,7 +52,7 @@ NUnit test project
   -> DevTools.Testing.Mtp / Testing.Transport
   -> DevTools.TestRunner
        -> DevTools.TestRunner.Core
-       -> DevTools.NUnit.Runner / NUnit.Discovery
+       -> NUnit.Discovery (local metadata) + NUnit CLI module in the TestRunner exe
   -> testing/* host bridge
   -> DevTools.Testing.Host
   -> DevTools.NUnit.Host policy + DevTools.NUnit.Runtime
@@ -75,9 +76,9 @@ participates in this graph.
 
 ## Validation
 
-- repository architecture scans find no VSTest adapter project, legacy
-  `nunit/*` protocol, VSTest package, `netstandard2.0` target, or NUnit
-  Transport assembly;
+- repository architecture scans find no DevTools VSTest adapter project, legacy
+  `nunit/*` protocol, `netstandard2.0` testing target, or NUnit Transport
+  assembly. `samples/ricaun.NUnit.SampleTests` may keep ricaun's adapter;
 - all xUnit repository test projects build and execute with their MTP entry
   points and no VSTest runner packages;
 - NUnit MTP clean-consumer restore, discovery, and run bootstrap pass for

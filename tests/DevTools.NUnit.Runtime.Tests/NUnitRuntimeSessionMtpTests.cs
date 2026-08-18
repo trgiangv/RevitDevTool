@@ -18,7 +18,7 @@ public sealed class NUnitRuntimeSessionMtpTests
 
         Assert.Equal("nunit", response.FrameworkId);
         Assert.Equal(FixtureTestHarness.GenerationId, response.GenerationId);
-        Assert.Equal(31, response.Results.Count);
+        Assert.Equal(33, response.Results.Count);
         Assert.Contains(response.Results, result =>
             result.DisplayName == "PlainTest_Passes" && result.Outcome == TestingOutcomes.Passed);
         Assert.Contains(sink.Events, testingEvent =>

@@ -81,6 +81,10 @@
                                    Condition="Exists('$(_NUnitHostOutputDir)DevTools.Testing.Host.dll')" />
       <_ForbiddenLooseTestingStack Include="$(_NUnitHostOutputDir)DevTools.Testing.Transport.dll"
                                    Condition="Exists('$(_NUnitHostOutputDir)DevTools.Testing.Transport.dll')" />
+      <_ForbiddenAssemblyIsolationCopy Include="$(_NUnitHostOutputDir)DevTools.AssemblyIsolation.dll"
+                                      Condition="Exists('$(_NUnitHostOutputDir)DevTools.AssemblyIsolation.dll')" />
+      <_ForbiddenAssemblyIsolationCopy Include="$(_NUnitHostOutputDir)NUnitRuntime\DevTools.AssemblyIsolation.dll"
+                                      Condition="Exists('$(_NUnitHostOutputDir)NUnitRuntime\DevTools.AssemblyIsolation.dll')" />
     </ItemGroup>
     <Error Condition="'@(_ForbiddenLooseHostDependency)' != ''"
            Text="Host-owned dependencies must stay merged, never dual-copied: @(_ForbiddenLooseHostDependency)" />
@@ -98,5 +102,7 @@
            Text="NUnit framework assemblies must stay under NUnitRuntime\, not merged or copied at the add-in root: @(_ForbiddenMergedNUnit)" />
     <Error Condition="'@(_ForbiddenLooseTestingStack)' != ''"
            Text="Testing.Host and Testing.Transport must stay merged into the host add-in: @(_ForbiddenLooseTestingStack)" />
+    <Error Condition="'@(_ForbiddenAssemblyIsolationCopy)' != ''"
+           Text="DevTools.AssemblyIsolation must be merged into the host add-in, never copied beside or inside NUnitRuntime: @(_ForbiddenAssemblyIsolationCopy)" />
   </Target>
 </Project>

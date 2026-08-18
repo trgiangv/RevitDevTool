@@ -1,6 +1,7 @@
 using System.Reflection;
 using System.Text;
 using DevTools.NUnit.Host.Loading;
+using DevTools.Testing.Host.Loading;
 
 namespace DevTools.NUnit.Host.NetFramework.Tests;
 
@@ -28,7 +29,7 @@ public static class NetFrameworkGenerationTestEnvironment
         "bin",
         "Debug",
         "net48",
-        NUnitGenerationBuilder.RuntimeAssemblyFileName);
+        NUnitGenerationPolicy.RuntimeAssemblyFileName);
 
     public static string RuntimeSymbolPath { get; } = Path.Combine(
         RepositoryRoot,
@@ -37,7 +38,7 @@ public static class NetFrameworkGenerationTestEnvironment
         "bin",
         "Debug",
         "net48",
-        NUnitGenerationBuilder.RuntimeSymbolFileName);
+        NUnitGenerationPolicy.RuntimeSymbolFileName);
 
     public static string ConflictingNUnitStubPath { get; } = Path.Combine(
         RepositoryRoot,
@@ -48,7 +49,7 @@ public static class NetFrameworkGenerationTestEnvironment
         "bin",
         "Debug",
         "net48",
-        NUnitGenerationBuilder.FrameworkAssemblyFileName);
+        NUnitGenerationPolicy.FrameworkAssemblyFileName);
 
     public static string DependencyConsumerOutputDirectory { get; } = Path.Combine(
         RepositoryRoot,
@@ -73,13 +74,13 @@ public static class NetFrameworkGenerationTestEnvironment
         return root;
     }
 
-    public static NUnitGenerationBuilder CreateBuilder(string generationsRoot) =>
+    public static NetFrameworkGenerationHarness CreateBuilder(string generationsRoot) =>
         new(
-            () => new NUnitRuntimeSource(
+            new TestingGenerationStore(generationsRoot),
+            new NUnitGenerationPolicy(() => new NUnitRuntimeSource(
                 RuntimeAssemblyPath,
                 File.Exists(RuntimeSymbolPath) ? RuntimeSymbolPath : null,
-                RuntimeDependencyPaths()),
-            generationsRoot);
+                RuntimeDependencyPaths())));
 
     private static IReadOnlyList<string> RuntimeDependencyPaths() =>
         new[] { "System.Reflection.Metadata.dll", "System.Collections.Immutable.dll" }
@@ -97,7 +98,7 @@ public static class NetFrameworkGenerationTestEnvironment
         return assemblyPath;
     }
 
-    public static NUnitGenerationManifest BuildFixtureGenerationOne()
+    public static TestingGenerationManifest BuildFixtureGenerationOne()
     {
         using var workspace = new TempWorkspace();
         var testAssembly = CreateGenerationOneAssembly(workspace.Root, "generation-one");
@@ -105,7 +106,7 @@ public static class NetFrameworkGenerationTestEnvironment
         return CreateBuilder(generationsRoot).Build(testAssembly);
     }
 
-    public static NUnitGenerationManifest BuildFixtureGenerationTwo()
+    public static TestingGenerationManifest BuildFixtureGenerationTwo()
     {
         using var workspace = new TempWorkspace();
         var testAssembly = CreateGenerationTwoAssembly(workspace.Root, "generation-two");
@@ -113,7 +114,7 @@ public static class NetFrameworkGenerationTestEnvironment
         return CreateBuilder(generationsRoot).Build(testAssembly);
     }
 
-    public static NUnitGenerationManifest BuildDependencyGenerationOne()
+    public static TestingGenerationManifest BuildDependencyGenerationOne()
     {
         using var workspace = new TempWorkspace();
         var testAssembly = CreateDependencyWorkspace(workspace.Root, "dependency-generation-one");
@@ -121,7 +122,7 @@ public static class NetFrameworkGenerationTestEnvironment
         return CreateBuilder(generationsRoot).Build(testAssembly);
     }
 
-    public static NUnitGenerationManifest BuildDependencyGenerationTwo()
+    public static TestingGenerationManifest BuildDependencyGenerationTwo()
     {
         using var workspace = new TempWorkspace();
         const string folderName = "dependency-generation-two";
@@ -136,7 +137,7 @@ public static class NetFrameworkGenerationTestEnvironment
         return CreateBuilder(generationsRoot).Build(testAssembly);
     }
 
-    public static NUnitGenerationManifest BuildRootDependencyGenerationOne()
+    public static TestingGenerationManifest BuildRootDependencyGenerationOne()
     {
         using var workspace = new TempWorkspace();
         var testAssembly = CreateRootDependencyWorkspace(workspace.Root, "root-dependency-generation-one");
@@ -144,7 +145,7 @@ public static class NetFrameworkGenerationTestEnvironment
         return CreateBuilder(generationsRoot).Build(testAssembly);
     }
 
-    public static NUnitGenerationManifest BuildRootDependencyGenerationTwo()
+    public static TestingGenerationManifest BuildRootDependencyGenerationTwo()
     {
         using var workspace = new TempWorkspace();
         const string folderName = "root-dependency-generation-two";
@@ -176,7 +177,7 @@ public static class NetFrameworkGenerationTestEnvironment
             Guid.NewGuid().ToString("N"));
 
         Directory.CreateDirectory(isolatedCopyDirectory);
-        var isolatedCopyPath = Path.Combine(isolatedCopyDirectory, NUnitGenerationBuilder.FrameworkAssemblyFileName);
+        var isolatedCopyPath = Path.Combine(isolatedCopyDirectory, NUnitGenerationPolicy.FrameworkAssemblyFileName);
         File.Copy(ConflictingNUnitStubPath, isolatedCopyPath, overwrite: true);
 
         var loaded = Assembly.LoadFile(isolatedCopyPath);
@@ -341,4 +342,11 @@ public static class NetFrameworkGenerationTestEnvironment
             }
         }
     }
+}
+
+public sealed class NetFrameworkGenerationHarness(
+    TestingGenerationStore store,
+    NUnitGenerationPolicy policy)
+{
+    public TestingGenerationManifest Build(string testAssemblyPath) => store.Build(policy, testAssemblyPath);
 }

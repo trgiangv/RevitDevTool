@@ -1,4 +1,4 @@
-using DevTools.NUnit.Provider;
+using DevTools.NUnit.Discovery;
 using DevTools.NUnit.Mtp;
 using DevTools.Testing.Abstractions.Contracts;
 using DevTools.Testing.Transport;
@@ -63,7 +63,7 @@ public sealed class DevToolsNUnitSessionTests
             {
                 var nodes = DevToolsNUnitFramework.DiscoverNodes(
                     typeof(DevToolsNUnitSessionTests).Assembly.Location,
-                    RunnerTestFilter.Empty);
+                    NUnitDiscoveryFilter.Empty);
                 Assert.NotNull(nodes);
             }
         }
@@ -91,9 +91,9 @@ public sealed class DevToolsNUnitSessionTests
     [Fact]
     public void Name_filter_round_trips_through_generic_selection()
     {
-        var original = RunnerTestFilter.FromNames("Arithmetic_runs_inside_host");
-        var selection = NUnitTestingMapping.ToSelection(original);
-        var restored = NUnitTestingMapping.ToRunnerFilter(selection);
+        var original = NUnitDiscoveryFilter.FromNames("Arithmetic_runs_inside_host");
+        var selection = NUnitSelectionMapping.ToSelection(original);
+        var restored = NUnitSelectionMapping.ToDiscoveryFilter(selection);
 
         Assert.Empty(selection.TestIds);
         Assert.Contains("<name>Arithmetic_runs_inside_host</name>", selection.ProviderPayload, StringComparison.Ordinal);

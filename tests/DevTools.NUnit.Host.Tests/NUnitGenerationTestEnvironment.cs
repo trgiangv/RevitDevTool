@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using System.Text;
 using DevTools.NUnit.Host.Loading;
+using DevTools.Testing.Host.Loading;
 
 namespace DevTools.NUnit.Host.Tests;
 
@@ -121,13 +122,13 @@ internal static class NUnitGenerationTestEnvironment
         var runtimeDirectory = Path.Combine(parentDirectory, "runtime-source");
         Directory.CreateDirectory(runtimeDirectory);
 
-        var assemblyPath = Path.Combine(runtimeDirectory, NUnitGenerationBuilder.RuntimeAssemblyFileName);
-        var symbolPath = Path.Combine(runtimeDirectory, NUnitGenerationBuilder.RuntimeSymbolFileName);
+        var assemblyPath = Path.Combine(runtimeDirectory, NUnitGenerationPolicy.RuntimeAssemblyFileName);
+        var symbolPath = Path.Combine(runtimeDirectory, NUnitGenerationPolicy.RuntimeSymbolFileName);
 
-        File.Copy(typeof(NUnitGenerationBuilderTests).Assembly.Location, assemblyPath, overwrite: true);
+        File.Copy(typeof(NUnitGenerationPolicyTests).Assembly.Location, assemblyPath, overwrite: true);
 
         var sourceSymbolPath = Path.ChangeExtension(
-            typeof(NUnitGenerationBuilderTests).Assembly.Location,
+            typeof(NUnitGenerationPolicyTests).Assembly.Location,
             ".pdb");
 
         if (File.Exists(sourceSymbolPath))
@@ -139,14 +140,13 @@ internal static class NUnitGenerationTestEnvironment
             Array.Empty<string>());
     }
 
-    public static NUnitGenerationBuilder CreateBuilder(
+    public static NUnitGenerationHarness CreateBuilder(
         string generationsRoot,
         string runtimeParentDirectory)
     {
         var runtimeSource = CreateRuntimeStub(runtimeParentDirectory);
-        return new NUnitGenerationBuilder(
-            () => runtimeSource,
-            generationsRoot);
+        return new NUnitGenerationHarness(new TestingGenerationStore(generationsRoot),
+            new NUnitGenerationPolicy(() => runtimeSource));
     }
 
     public static void PatchGenerationMarker(string assemblyPath, string marker)
@@ -223,4 +223,11 @@ internal static class NUnitGenerationTestEnvironment
 
         throw new InvalidOperationException("Could not locate repository root.");
     }
+}
+
+internal sealed class NUnitGenerationHarness(
+    TestingGenerationStore store,
+    NUnitGenerationPolicy policy)
+{
+    public TestingGenerationManifest Build(string testAssemblyPath) => store.Build(policy, testAssemblyPath);
 }

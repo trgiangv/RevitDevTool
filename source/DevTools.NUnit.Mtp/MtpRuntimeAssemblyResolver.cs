@@ -16,11 +16,76 @@ internal static class MtpRuntimeAssemblyResolver
 
     private static Assembly? ResolvePrivateRuntimeAssembly(object? sender, ResolveEventArgs args)
     {
-        var name = new AssemblyName(args.Name).Name;
-        if (string.IsNullOrWhiteSpace(name))
+        if (!TryParseFullIdentity(args.Name, out var requested))
             return null;
 
-        var path = Path.Combine(AppContext.BaseDirectory, name + ".dll");
-        return File.Exists(path) ? Assembly.LoadFrom(path) : null;
+        var name = requested.Name!;
+        var baseDirectory = Path.GetFullPath(AppContext.BaseDirectory);
+        var path = Path.GetFullPath(Path.Combine(baseDirectory, name + ".dll"));
+        if (!IsUnderBaseDirectory(path, baseDirectory) || !File.Exists(path))
+            return null;
+
+        try
+        {
+            var candidate = AssemblyName.GetAssemblyName(path);
+            return HasSameFullIdentity(requested, candidate) ? Assembly.LoadFrom(path) : null;
+        }
+        catch (BadImageFormatException)
+        {
+            return null;
+        }
+        catch (IOException)
+        {
+            return null;
+        }
+        catch (UnauthorizedAccessException)
+        {
+            return null;
+        }
     }
+
+    private static bool TryParseFullIdentity(string? value, out AssemblyName requested)
+    {
+        requested = null!;
+        if (string.IsNullOrWhiteSpace(value))
+            return false;
+
+        try
+        {
+            requested = new AssemblyName(value);
+        }
+        catch (FileLoadException)
+        {
+            return false;
+        }
+        catch (ArgumentException)
+        {
+            return false;
+        }
+
+        return requested.Name is { Length: > 0 } name
+            && requested.Version is not null
+            && string.Equals(name, Path.GetFileName(name), StringComparison.Ordinal)
+            && name.IndexOfAny([Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar]) < 0
+            && name is not "." and not "..";
+    }
+
+    private static bool IsUnderBaseDirectory(string path, string baseDirectory)
+    {
+        var root = baseDirectory.EndsWith(Path.DirectorySeparatorChar.ToString(), StringComparison.Ordinal)
+            ? baseDirectory
+            : baseDirectory + Path.DirectorySeparatorChar;
+        return path.StartsWith(root, StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static bool HasSameFullIdentity(AssemblyName requested, AssemblyName candidate) =>
+        string.Equals(requested.Name, candidate.Name, StringComparison.OrdinalIgnoreCase)
+        && requested.Version == candidate.Version
+        && string.Equals(NormalizeCulture(requested), NormalizeCulture(candidate), StringComparison.OrdinalIgnoreCase)
+        && (requested.GetPublicKeyToken() ?? []).SequenceEqual(candidate.GetPublicKeyToken() ?? []);
+
+    private static string NormalizeCulture(AssemblyName identity) =>
+        string.Equals(identity.CultureName, "neutral", StringComparison.OrdinalIgnoreCase)
+            ? string.Empty
+            : identity.CultureName ?? string.Empty;
 }

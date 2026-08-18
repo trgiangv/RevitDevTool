@@ -29,6 +29,7 @@
         <ProjectReference Include="..\DevTools.NUnit.Runtime.Fixtures\DevTools.NUnit.Runtime.Fixtures.csproj" ReferenceOutputAssembly="false"/>
         <ProjectReference Include="Loading\Stubs\ConflictingNUnitFramework\ConflictingNUnitFramework.csproj" ReferenceOutputAssembly="false"/>
         <ProjectReference Include="Loading\Stubs\GenerationPrivateDependency\GenerationPrivateDependency.csproj" ReferenceOutputAssembly="false"/>
+        <ProjectReference Include="Loading\Stubs\PrivateMicrosoftExtensions\PrivateMicrosoftExtensions.csproj" ReferenceOutputAssembly="false"/>
     </ItemGroup>
 
     <ItemGroup>

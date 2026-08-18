@@ -3,30 +3,29 @@
     <PropertyGroup>
         <TargetFramework>net10.0-windows</TargetFramework>
         <IsPackable>false</IsPackable>
+        <!-- Match the runner exe so ProjectReference is allowed (NETSDK1151). -->
+        <SelfContained>true</SelfContained>
+        <RuntimeIdentifier>win-x64</RuntimeIdentifier>
     </PropertyGroup>
 
     <ItemGroup>
         <PackageReference Include="xunit.v3.mtp-v2"/>
+        <PackageReference Include="Microsoft.Extensions.DependencyInjection"/>
     </ItemGroup>
 
     <ItemGroup>
         <ProjectReference Include="..\..\source\DevTools.Ipc\DevTools.Ipc.csproj"/>
+        <ProjectReference Include="..\..\source\DevTools.Hosting\DevTools.Hosting.csproj"/>
         <ProjectReference Include="..\..\source\DevTools.Testing.Abstractions\DevTools.Testing.Abstractions.csproj"/>
         <ProjectReference Include="..\..\source\DevTools.Testing.Transport\DevTools.Testing.Transport.csproj"/>
-        <ProjectReference Include="..\..\source\DevTools.NUnit.Provider\DevTools.NUnit.Provider.csproj"/>
+        <ProjectReference Include="..\..\source\DevTools.NUnit.Discovery\DevTools.NUnit.Discovery.csproj"/>
         <ProjectReference Include="..\..\source\DevTools.TestRunner.Core\DevTools.TestRunner.Core.csproj"/>
-        <ProjectReference Include="..\..\source\DevTools.NUnit.Runner\DevTools.NUnit.Runner.csproj"/>
+        <ProjectReference Include="..\..\source\DevTools.TestRunner\DevTools.TestRunner.csproj"
+                          AdditionalProperties="SelfContained=false;PublishSingleFile=false"/>
     </ItemGroup>
 
-    <!-- NETSDK1151: a non-self-contained test project cannot ProjectReference the self-contained Runner exe
-         (AdditionalProperties / ReferenceOutputAssembly=false do not suppress the check). -->
-    <Target Name="EnsureRunnerBuilt" BeforeTargets="Build">
-        <MSBuild Projects="..\..\source\DevTools.TestRunner\DevTools.TestRunner.csproj"
-                 Targets="Build"
-                 Properties="Configuration=$(Configuration)"/>
-    </Target>
-
     <ItemGroup>
+        <!-- Stale coverage kept on disk; these files do not compile against the current CLI surface. -->
         <Compile Remove="DiscoverCommandTests.cs;HostDebugAttachScopeTests.cs;NUnitRunnerFilterTests.cs;RunnerCommandLineTests.cs;TestingPipeClientTests.cs" />
     </ItemGroup>
 

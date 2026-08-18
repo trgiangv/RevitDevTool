@@ -44,7 +44,7 @@ public sealed class NUnitRuntimeArchitectureTests
     }
 
     [Theory]
-    [InlineData("source/DevTools.NUnit.Provider")]
+    [InlineData("source/DevTools.NUnit.Discovery")]
     [InlineData("source/DevTools.TestRunner")]
     public void ForbiddenManualNUnitExecutionPatternsStayOutOfBoundary(string relativeProjectPath)
     {
@@ -115,7 +115,6 @@ public sealed class NUnitRuntimeArchitectureTests
     {
         // Collectible/no-context loaders must Activator.CreateInstance the Runtime session
         // type across the ALC boundary; that is not reflective NUnit lifecycle emulation.
-        return path.EndsWith("NUnitRuntimeSessionFactory.cs", StringComparison.OrdinalIgnoreCase)
-            || path.EndsWith("NetfxNUnitRuntimeSessionFactory.cs", StringComparison.OrdinalIgnoreCase);
+        return path.EndsWith("NUnitRuntimeSessionFactory.cs", StringComparison.OrdinalIgnoreCase);
     }
 }

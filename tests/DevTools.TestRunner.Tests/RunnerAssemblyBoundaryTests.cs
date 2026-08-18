@@ -38,7 +38,8 @@ public sealed class RunnerAssemblyBoundaryTests
         Assert.DoesNotContain("Microsoft-WindowsAPICodePack-Shell", csproj, StringComparison.Ordinal);
         Assert.DoesNotContain("DevTools.Utilities.csproj", csproj, StringComparison.Ordinal);
         Assert.Contains("DevTools.TestRunner.Core.csproj", csproj, StringComparison.Ordinal);
-        Assert.Contains("DevTools.NUnit.Runner.csproj", csproj, StringComparison.Ordinal);
+        Assert.DoesNotContain("DevTools.NUnit.Runner.csproj", csproj, StringComparison.Ordinal);
+        Assert.Contains("DevTools.NUnit.Discovery.csproj", csproj, StringComparison.Ordinal);
 
         var commands = File.ReadAllText(Path.Combine(
             root, "source", "DevTools.TestRunner", "Program.cs"));
@@ -66,7 +67,8 @@ public sealed class RunnerAssemblyBoundaryTests
         var csproj = File.ReadAllText(Path.Combine(root, "source", "DevTools.TestRunner", "DevTools.TestRunner.csproj"));
         Assert.Contains("DevTools.TestRunner.exe", csproj, StringComparison.Ordinal);
         Assert.Contains("<AssemblyName>DevTools.TestRunner</AssemblyName>", csproj, StringComparison.Ordinal);
-        Assert.Contains("DevTools.NUnit.Runner.csproj", csproj, StringComparison.Ordinal);
+        Assert.DoesNotContain("DevTools.NUnit.Runner.csproj", csproj, StringComparison.Ordinal);
+        Assert.True(File.Exists(Path.Combine(root, "source", "DevTools.TestRunner", "NUnit", "NUnitRunnerModule.cs")));
     }
 
     private static HashSet<string> ReadAssemblyReferences(string dllPath)

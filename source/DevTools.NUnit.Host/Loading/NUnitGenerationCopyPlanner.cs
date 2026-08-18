@@ -16,8 +16,8 @@ internal static class NUnitGenerationCopyPlanner
         string sourceOutputDirectory,
         NUnitRuntimeSource runtimeSource)
     {
-        var sourceAssemblyRelativePath = NUnitGenerationPaths.NormalizeRelativePath(
-            NUnitGenerationPaths.GetRelativePath(sourceOutputDirectory, sourceAssemblyPath));
+        var sourceAssemblyRelativePath = NormalizeRelativePath(
+            Path.GetRelativePath(sourceOutputDirectory, sourceAssemblyPath));
 
         var outputFiles = Directory.EnumerateFiles(sourceOutputDirectory, "*", SearchOption.AllDirectories)
             .Select(Path.GetFullPath)
@@ -56,7 +56,7 @@ internal static class NUnitGenerationCopyPlanner
         if (frameworkRelativePath is null)
         {
             throw new NUnitGenerationBuildException(
-                $"Exactly one {NUnitGenerationBuilder.FrameworkAssemblyFileName} is required in the test output directory.");
+                $"Exactly one {NUnitGenerationPolicy.FrameworkAssemblyFileName} is required in the test output directory.");
         }
 
         AppendRuntime(runtimeSource, copyEntries, contentRelativePaths, managedAssemblyRelativePaths);
@@ -78,18 +78,28 @@ internal static class NUnitGenerationCopyPlanner
         out string relativePath,
         out string? managedSimpleName)
     {
-        relativePath = NUnitGenerationPaths.NormalizeRelativePath(
-            NUnitGenerationPaths.GetRelativePath(sourceOutputDirectory, sourceFile));
+        relativePath = NormalizeRelativePath(
+            Path.GetRelativePath(sourceOutputDirectory, sourceFile));
         managedSimpleName = null;
 
-        if (NUnitGenerationPaths.IsVolatileGenerationOutput(relativePath))
+        if (IsVolatileGenerationOutput(relativePath))
             return false;
 
-        if (NUnitSharedAssemblyPolicy.ShouldExcludeFromGenerationCopy(sourceFile))
-            return false;
+        if (TryGetManagedAssemblyIdentity(sourceFile, out var simpleName))
+        {
+            // The runtime session binds this concrete contract identity from the
+            // parent (host) load context. Never copy it from an arbitrary
+            // generation file, including a renamed copy.
+            if (string.Equals(
+                    simpleName,
+                    typeof(DevTools.Testing.Abstractions.Runtime.ITestingRuntimeSession).Assembly.GetName().Name,
+                    StringComparison.OrdinalIgnoreCase))
+            {
+                return false;
+            }
 
-        if (NUnitSharedAssemblyPolicy.TryGetManagedAssemblyIdentity(sourceFile, out var simpleName))
             managedSimpleName = simpleName;
+        }
 
         return true;
     }
@@ -102,16 +112,16 @@ internal static class NUnitGenerationCopyPlanner
     {
         copyEntries.Add(new GenerationCopyEntry(
             runtimeSource.AssemblyPath,
-            NUnitGenerationBuilder.RuntimeAssemblyFileName));
-        contentRelativePaths.Add(NUnitGenerationBuilder.RuntimeAssemblyFileName);
-        managedAssemblyRelativePaths.Add(NUnitGenerationBuilder.RuntimeAssemblyFileName);
+            NUnitGenerationPolicy.RuntimeAssemblyFileName));
+        contentRelativePaths.Add(NUnitGenerationPolicy.RuntimeAssemblyFileName);
+        managedAssemblyRelativePaths.Add(NUnitGenerationPolicy.RuntimeAssemblyFileName);
 
         if (!string.IsNullOrWhiteSpace(runtimeSource.SymbolPath))
         {
             copyEntries.Add(new GenerationCopyEntry(
                 runtimeSource.SymbolPath!,
-                NUnitGenerationBuilder.RuntimeSymbolFileName));
-            contentRelativePaths.Add(NUnitGenerationBuilder.RuntimeSymbolFileName);
+                NUnitGenerationPolicy.RuntimeSymbolFileName));
+            contentRelativePaths.Add(NUnitGenerationPolicy.RuntimeSymbolFileName);
         }
 
         foreach (var dependencyPath in runtimeSource.DependencyPaths)
@@ -124,9 +134,6 @@ internal static class NUnitGenerationCopyPlanner
         List<string> contentRelativePaths,
         List<string> managedAssemblyRelativePaths)
     {
-        if (NUnitSharedAssemblyPolicy.ShouldExcludeFromGenerationCopy(dependencyPath))
-            return;
-
         var relativePath = Path.GetFileName(dependencyPath);
         if (IsRuntimeOwnedFileName(relativePath))
             return;
@@ -147,43 +154,67 @@ internal static class NUnitGenerationCopyPlanner
 
         copyEntries.Add(new GenerationCopyEntry(dependencyPath, relativePath));
         contentRelativePaths.Add(relativePath);
-        if (NUnitSharedAssemblyPolicy.TryGetManagedAssemblyIdentity(dependencyPath, out _))
+        if (TryGetManagedAssemblyIdentity(dependencyPath, out _))
             managedAssemblyRelativePaths.Add(relativePath);
     }
 
     private static bool IsRuntimeOwnedFileName(string relativePath) =>
-        string.Equals(relativePath, NUnitGenerationBuilder.RuntimeAssemblyFileName, StringComparison.OrdinalIgnoreCase)
-        || string.Equals(relativePath, NUnitGenerationBuilder.RuntimeSymbolFileName, StringComparison.OrdinalIgnoreCase)
-        || string.Equals(relativePath, NUnitGenerationBuilder.FrameworkAssemblyFileName, StringComparison.OrdinalIgnoreCase);
+        string.Equals(relativePath, NUnitGenerationPolicy.RuntimeAssemblyFileName, StringComparison.OrdinalIgnoreCase)
+        || string.Equals(relativePath, NUnitGenerationPolicy.RuntimeSymbolFileName, StringComparison.OrdinalIgnoreCase)
+        || string.Equals(relativePath, NUnitGenerationPolicy.FrameworkAssemblyFileName, StringComparison.OrdinalIgnoreCase);
 
     private static bool IsFrameworkSimpleName(string simpleName) =>
         string.Equals(
             simpleName,
-            Path.GetFileNameWithoutExtension(NUnitGenerationBuilder.FrameworkAssemblyFileName),
+            Path.GetFileNameWithoutExtension(NUnitGenerationPolicy.FrameworkAssemblyFileName),
             StringComparison.OrdinalIgnoreCase);
+
+    private static bool TryGetManagedAssemblyIdentity(string filePath, out string? simpleName)
+    {
+        simpleName = null;
+        if (!Path.GetExtension(filePath).Equals(".dll", StringComparison.OrdinalIgnoreCase)
+            && !Path.GetExtension(filePath).Equals(".exe", StringComparison.OrdinalIgnoreCase))
+        {
+            return false;
+        }
+
+        try
+        {
+            simpleName = System.Reflection.AssemblyName.GetAssemblyName(filePath).Name;
+            return !string.IsNullOrWhiteSpace(simpleName);
+        }
+        catch (BadImageFormatException)
+        {
+            return false;
+        }
+        catch (FileLoadException)
+        {
+            return false;
+        }
+    }
 
     private static void ValidateNUnitFramework(IReadOnlyList<string> outputFiles, string sourceOutputDirectory)
     {
         var frameworkMatches = outputFiles
             .Where(path => string.Equals(
                 Path.GetFileName(path),
-                NUnitGenerationBuilder.FrameworkAssemblyFileName,
+                NUnitGenerationPolicy.FrameworkAssemblyFileName,
                 StringComparison.OrdinalIgnoreCase))
             .ToList();
 
         if (frameworkMatches.Count == 0)
         {
             throw new NUnitGenerationBuildException(
-                $"Exactly one {NUnitGenerationBuilder.FrameworkAssemblyFileName} {NUnitGenerationBuilder.ExpectedNUnitPackageVersion} is required; none was found.");
+                $"Exactly one {NUnitGenerationPolicy.FrameworkAssemblyFileName} {NUnitGenerationPolicy.ExpectedNUnitPackageVersion} is required; none was found.");
         }
 
         if (frameworkMatches.Count > 1)
         {
             throw new NUnitGenerationBuildException(
-                $"Exactly one {NUnitGenerationBuilder.FrameworkAssemblyFileName} {NUnitGenerationBuilder.ExpectedNUnitPackageVersion} is required; found {frameworkMatches.Count}.");
+                $"Exactly one {NUnitGenerationPolicy.FrameworkAssemblyFileName} {NUnitGenerationPolicy.ExpectedNUnitPackageVersion} is required; found {frameworkMatches.Count}.");
         }
 
-        NUnitGenerationBuilder.ValidateNUnitFrameworkVersion(frameworkMatches[0], sourceOutputDirectory);
+        NUnitGenerationPolicy.ValidateNUnitFrameworkVersion(frameworkMatches[0], sourceOutputDirectory);
     }
 
     private static bool FilesHaveEqualContent(string firstPath, string secondPath)
@@ -209,5 +240,20 @@ internal static class NUnitGenerationCopyPlanner
         }
 
         return secondStream.ReadByte() == -1;
+    }
+
+    internal static string NormalizeRelativePath(string relativePath) => relativePath.Replace('/', '\\');
+
+    private static bool IsVolatileGenerationOutput(string relativePath)
+    {
+        var normalized = NormalizeRelativePath(relativePath);
+        var root = normalized.Split('\\')[0];
+        if (root.Equals("Log", StringComparison.OrdinalIgnoreCase)
+            || root.Equals("TestResults", StringComparison.OrdinalIgnoreCase))
+            return true;
+
+        var extension = Path.GetExtension(normalized);
+        return extension.Equals(".diag", StringComparison.OrdinalIgnoreCase)
+            || extension.Equals(".log", StringComparison.OrdinalIgnoreCase);
     }
 }

@@ -23,9 +23,10 @@ public sealed class AssemblyBoundaryTests
 
         Assert.DoesNotContain(references, value => value.Contains("NUnit", StringComparison.OrdinalIgnoreCase));
         Assert.DoesNotContain(references, value => value.Contains("xunit", StringComparison.OrdinalIgnoreCase));
-        Assert.DoesNotContain(references, value => value.Contains("Hosting", StringComparison.OrdinalIgnoreCase));
         Assert.Contains(references, value => value.Contains("DevTools.Testing.Abstractions", StringComparison.Ordinal));
         Assert.Contains(references, value => value.Contains("DevTools.Testing.Transport", StringComparison.Ordinal));
+        Assert.Contains(references, value => value.Contains("DevTools.Hosting", StringComparison.Ordinal));
+        Assert.Contains(references, value => value.Contains("DevTools.Execution.Abstractions", StringComparison.Ordinal));
     }
 
     [Fact]

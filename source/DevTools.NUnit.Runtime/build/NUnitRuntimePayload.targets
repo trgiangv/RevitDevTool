@@ -23,6 +23,10 @@
       <_NUnitRuntimePayloadExclude Include="$(_NUnitHostOutputDir)%(NUnitHostOwnedAssembly.Identity).pdb" />
       <_NUnitRuntimePayloadExclude Include="$(_NUnitHostOutputDir)%(TestingSharedAssembly.Identity).dll" />
       <_NUnitRuntimePayloadExclude Include="$(_NUnitHostOutputDir)%(TestingSharedAssembly.Identity).pdb" />
+      <!-- The host merges the kernel into its main add-in; omit it even if a
+           future runtime project reference would otherwise copy it locally. -->
+      <_NUnitRuntimePayloadExclude Include="$(_NUnitHostOutputDir)DevTools.AssemblyIsolation.dll" />
+      <_NUnitRuntimePayloadExclude Include="$(_NUnitHostOutputDir)DevTools.AssemblyIsolation.pdb" />
       <_NUnitRuntimePayload Include="@(_NUnitRuntimePayloadCandidate)"
                             Exclude="@(_NUnitRuntimePayloadExclude)" />
     </ItemGroup>

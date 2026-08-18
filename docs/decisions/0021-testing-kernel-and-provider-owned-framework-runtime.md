@@ -69,9 +69,10 @@ framework behavior and compatibility workarounds.
    `DevTools.TestRunner` remains the one executable and composition root.
    Framework-neutral command parsing, host locate/launch/reuse, debugger policy,
    and generic `testing/*` process transport live in `DevTools.TestRunner.Core`.
-   NUnit local discovery, filter parsing, legacy stdout, and legacy pipe client
-   live in `DevTools.NUnit.Runner`. The executable composes the installed NUnit
-   module; common Runner code does not reference `DevTools.NUnit.Core`.
+   NUnit CLI (`discover`/`run`, filter XML) lives in the executable as an
+   `IRunnerCommandModule`. `DevTools.TestRunner.Core` does not reference any
+   framework provider. Additional frameworks register another module; they do
+   not require a separate `*.Runner` project.
 
 6. **Decompose and remove `DevTools.NUnit.Core`.**
    Generic runner configuration, paths, timing, and process contracts move to
@@ -105,9 +106,7 @@ DevTools.Testing.Abstractions
 
 DevTools.TestRunner.Core
         ^
-        +-- DevTools.NUnit.Runner
-                ^
-                +-- DevTools.TestRunner (composition executable)
+        +-- DevTools.TestRunner (exe; NUnit CLI module + host-family launch)
 ```
 
 Forbidden dependency directions:

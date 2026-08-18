@@ -1,5 +1,5 @@
 using System.Text.Json;
-using DevTools.NUnit.Provider;
+using DevTools.Testing.Abstractions.Contracts;
 
 namespace DevTools.NUnit.Mtp;
 
@@ -15,7 +15,7 @@ internal static class HostOptionsLoader
         PropertyNameCaseInsensitive = true,
     };
 
-    internal static HostRunOptions Load(string? baseDirectory = null)
+    internal static TestingHostOptions Load(string? baseDirectory = null)
     {
         var directory = baseDirectory ?? AppContext.BaseDirectory;
         var path = Path.Combine(directory, OptionsFileName);
@@ -40,7 +40,7 @@ internal static class HostOptionsLoader
         };
     }
 
-    private static HostRunOptions ReadFile(string path)
+    private static TestingHostOptions ReadFile(string path)
     {
         var model = JsonSerializer.Deserialize<HostOptionsFile>(File.ReadAllText(path), JsonOptions);
         if (model is null
@@ -52,7 +52,7 @@ internal static class HostOptionsLoader
             throw new InvalidOperationException(MissingConfigMessage);
         }
 
-        return new HostRunOptions(
+        return new TestingHostOptions(
             model.Host!.Trim(),
             model.HostVersion!.Trim(),
             model.HostLaunch,

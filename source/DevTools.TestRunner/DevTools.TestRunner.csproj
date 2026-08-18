@@ -44,14 +44,25 @@
     <ItemGroup>
         <PackageReference Include="Microsoft.VisualStudio.Interop"/>
         <PackageReference Include="Microsoft.Extensions.DependencyInjection"/>
+        <PackageReference Include="ConsoleAppFramework">
+            <PrivateAssets>all</PrivateAssets>
+            <IncludeAssets>runtime; build; native; contentfiles; analyzers</IncludeAssets>
+        </PackageReference>
     </ItemGroup>
 
     <ItemGroup>
         <ProjectReference Include="..\DevTools.TestRunner.Core\DevTools.TestRunner.Core.csproj" SetTargetFramework="TargetFramework=net10.0-windows"/>
-        <ProjectReference Include="..\DevTools.NUnit.Runner\DevTools.NUnit.Runner.csproj" SetTargetFramework="TargetFramework=net10.0-windows"/>
+        <ProjectReference Include="..\DevTools.Testing.Abstractions\DevTools.Testing.Abstractions.csproj" SetTargetFramework="TargetFramework=net10.0-windows"/>
+        <ProjectReference Include="..\DevTools.Testing.Transport\DevTools.Testing.Transport.csproj" SetTargetFramework="TargetFramework=net10.0-windows"/>
+        <ProjectReference Include="..\DevTools.NUnit.Discovery\DevTools.NUnit.Discovery.csproj" SetTargetFramework="TargetFramework=net10.0-windows"/>
+        <ProjectReference Include="..\DevTools.Ipc\DevTools.Ipc.csproj" SetTargetFramework="TargetFramework=net10.0-windows"/>
         <ProjectReference Include="..\DevTools.Hosting\DevTools.Hosting.csproj" SetTargetFramework="TargetFramework=net10.0-windows"/>
         <ProjectReference Include="..\DevTools.Hosting.Revit\DevTools.Hosting.Revit.csproj" SetTargetFramework="TargetFramework=net10.0-windows"/>
         <ProjectReference Include="..\DevTools.Hosting.Acad\DevTools.Hosting.Acad.csproj" SetTargetFramework="TargetFramework=net10.0-windows"/>
+    </ItemGroup>
+
+    <ItemGroup>
+        <InternalsVisibleTo Include="DevTools.TestRunner.Tests"/>
     </ItemGroup>
 
 </Project>

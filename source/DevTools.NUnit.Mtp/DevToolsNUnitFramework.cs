@@ -3,10 +3,11 @@ using Microsoft.Testing.Platform.CommandLine;
 using Microsoft.Testing.Platform.Extensions.Messages;
 using Microsoft.Testing.Platform.Extensions.TestFramework;
 using Microsoft.Testing.Platform.Requests;
-using DevTools.NUnit.Provider;
+using DevTools.NUnit.Discovery;
 using DevTools.Testing.Abstractions.Contracts;
 using DevTools.Testing.Mtp;
 using DevTools.Testing.Transport;
+// ReSharper disable RedundantSuppressNullableWarningExpression
 
 namespace DevTools.NUnit.Mtp;
 
@@ -16,7 +17,7 @@ internal sealed class DevToolsNUnitFramework : ITestFramework, IDataProducer
     private readonly ICommandLineOptions? _commandLine;
     private DevToolsNUnitSession? _session;
     private ITestRunnerTransport? _ownedTransport;
-    private HostRunOptions? _options;
+    private TestingHostOptions? _options;
 
     internal DevToolsNUnitFramework(
         IServiceProvider serviceProvider,
@@ -80,7 +81,7 @@ internal sealed class DevToolsNUnitFramework : ITestFramework, IDataProducer
         return Task.FromResult(new CloseTestSessionResult { IsSuccess = true });
     }
 
-    internal static IReadOnlyList<TestNode> DiscoverNodes(string assemblyPath, RunnerTestFilter filter)
+    internal static IReadOnlyList<TestNode> DiscoverNodes(string assemblyPath, NUnitDiscoveryFilter filter)
     {
         var cases = NUnitMetadataDiscoverer.Filter(
             NUnitMetadataDiscoverer.Discover(assemblyPath),
@@ -118,8 +119,8 @@ internal sealed class DevToolsNUnitFramework : ITestFramework, IDataProducer
         {
             response = session.Run(
                 assemblyPath,
-                NUnitTestingMapping.ToHostOptions(options),
-                NUnitTestingMapping.ToSelection(filter));
+                options,
+                NUnitSelectionMapping.ToSelection(filter));
         }
         catch (Exception ex)
         {
@@ -143,22 +144,22 @@ internal sealed class DevToolsNUnitFramework : ITestFramework, IDataProducer
         }
     }
 
-    internal static RunnerTestFilter ToRunnerFilter(
+    internal static NUnitDiscoveryFilter ToRunnerFilter(
         ITestExecutionFilter? filter,
         string? nameFilter = null)
     {
         if (filter is TestNodeUidListFilter uidFilter)
         {
-            return RunnerTestFilter.FromFullNames(
+            return NUnitDiscoveryFilter.FromFullNames(
                 uidFilter.TestNodeUids.Select(uid => uid.Value).ToArray());
         }
 
         return string.IsNullOrWhiteSpace(nameFilter)
-            ? RunnerTestFilter.Empty
-            : RunnerTestFilter.FromNames(nameFilter!);
+            ? NUnitDiscoveryFilter.Empty
+            : NUnitDiscoveryFilter.FromNames(nameFilter!);
     }
 
-    private RunnerTestFilter ResolveRunnerFilter(ITestExecutionFilter? filter) =>
+    private NUnitDiscoveryFilter ResolveRunnerFilter(ITestExecutionFilter? filter) =>
         ToRunnerFilter(filter, ReadOption(DevToolsNUnitCommandLineProvider.FilterOptionName));
 
     private string? ReadOption(string name)
@@ -172,7 +173,7 @@ internal sealed class DevToolsNUnitFramework : ITestFramework, IDataProducer
             : null;
     }
 
-    private static HostRunOptions ApplyDebugParent(HostRunOptions options) =>
+    private static TestingHostOptions ApplyDebugParent(TestingHostOptions options) =>
         Debugger.IsAttached
             ? options with { DebugParentPid = Environment.ProcessId }
             : options;

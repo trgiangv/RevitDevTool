@@ -15,7 +15,7 @@ internal static class NUnitRuntimeUnloadTestHelper
         "bin",
         "Debug",
         "net10.0",
-        NUnitGenerationBuilder.FrameworkAssemblyFileName);
+        NUnitGenerationPolicy.FrameworkAssemblyFileName);
 
     public static string GenerationPrivateDependencyStubPath { get; } = Path.Combine(
         NUnitGenerationTestEnvironment.RepositoryRoot,
@@ -28,6 +28,18 @@ internal static class NUnitRuntimeUnloadTestHelper
         "Debug",
         "net10.0",
         "GenerationPrivateDependency.dll");
+
+    public static string PrivateMicrosoftExtensionsStubPath { get; } = Path.Combine(
+        NUnitGenerationTestEnvironment.RepositoryRoot,
+        "tests",
+        "DevTools.NUnit.Host.Tests",
+        "Loading",
+        "Stubs",
+        "PrivateMicrosoftExtensions",
+        "bin",
+        "Debug",
+        "net10.0",
+        "Microsoft.Extensions.Logging.Abstractions.dll");
 
     internal static Assembly LoadConflictingNUnitIntoDefaultContext()
     {
@@ -46,7 +58,7 @@ internal static class NUnitRuntimeUnloadTestHelper
             Guid.NewGuid().ToString("N"));
 
         Directory.CreateDirectory(isolatedCopyDirectory);
-        var isolatedCopyPath = Path.Combine(isolatedCopyDirectory, NUnitGenerationBuilder.FrameworkAssemblyFileName);
+        var isolatedCopyPath = Path.Combine(isolatedCopyDirectory, NUnitGenerationPolicy.FrameworkAssemblyFileName);
         File.Copy(ConflictingNUnitStubPath, isolatedCopyPath, overwrite: true);
 
         var loaded = Assembly.Load(File.ReadAllBytes(isolatedCopyPath));

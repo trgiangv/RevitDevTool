@@ -11,7 +11,7 @@ namespace DevTools.NUnit.Host;
 public static class NUnitHostingExtensions
 {
     /// <summary>
-    /// Registers the native NUnit runtime manager, generation builder, NUnit
+    /// Registers the native NUnit runtime manager, generation policy, NUnit
     /// provider, and neutral <c>testing/*</c> bridge handler. Call from Revit/AutoCAD
     /// hosting after <c>AddExecutionServices()</c>.
     /// </summary>
@@ -20,29 +20,15 @@ public static class NUnitHostingExtensions
     /// </remarks>
     public static IServiceCollection AddNUnitHostServices(this IServiceCollection services)
     {
-        services.TryAddSingleton<NUnitGenerationBuilder>(_ =>
-            new NUnitGenerationBuilder(ResolveHostRuntimeSourcePath));
-        services.TryAddSingleton<INUnitGenerationBuilder>(sp => sp.GetRequiredService<NUnitGenerationBuilder>());
-#if NETFRAMEWORK
-        services.TryAddSingleton<ITestingRuntimeSessionFactory, NetfxNUnitRuntimeSessionFactory>();
-#else
+        services.TryAddSingleton<NUnitGenerationPolicy>(_ =>
+            new NUnitGenerationPolicy(ResolveHostRuntimeSourcePath));
+        services.TryAddSingleton<ITestingGenerationPolicy>(sp => sp.GetRequiredService<NUnitGenerationPolicy>());
+        services.TryAddSingleton(_ => new TestingGenerationStore(
+            Path.Combine(Path.GetTempPath(), "DevTools", "NUnit", "Generations")));
         services.TryAddSingleton<ITestingRuntimeSessionFactory, NUnitRuntimeSessionFactory>();
-#endif
-        services.TryAddSingleton(sp => sp.GetRequiredService<NUnitGenerationBuilder>().Store);
-        services.TryAddSingleton(sp => sp.GetRequiredService<NUnitGenerationBuilder>().Policy);
         services.TryAddSingleton<TestingRuntimeSessionManager>();
         services.TryAddSingleton<IHostTestFrameworkProvider, NUnitHostTestFrameworkProvider>();
         services.TryAddSingleton<TestingProviderRegistry>();
-        return services;
-    }
-
-    /// <summary>
-    /// Registers the single MTP-focused <c>testing/*</c> protocol.
-    /// Call after <see cref="AddNUnitHostServices"/> so the NUnit provider exists.
-    /// </summary>
-    public static IServiceCollection AddGenericTestingHostServices(this IServiceCollection services)
-    {
-        services.AddSingleton<IBridgeRequestHandler, MarshaledTestingRequestHandler>();
         return services;
     }
 
@@ -52,7 +38,7 @@ public static class NUnitHostingExtensions
             ?? AppContext.BaseDirectory;
         var runtimeDirectory = Path.Combine(hostDirectory, "NUnitRuntime");
 
-        var assemblyPath = Path.Combine(runtimeDirectory, NUnitGenerationBuilder.RuntimeAssemblyFileName);
+        var assemblyPath = Path.Combine(runtimeDirectory, NUnitGenerationPolicy.RuntimeAssemblyFileName);
         if (!File.Exists(assemblyPath))
         {
             throw new InvalidOperationException(
@@ -60,7 +46,7 @@ public static class NUnitHostingExtensions
                 "Deploy DevTools.NUnit.Runtime.dll with the host add-in.");
         }
 
-        var symbolPath = Path.Combine(runtimeDirectory, NUnitGenerationBuilder.RuntimeSymbolFileName);
+        var symbolPath = Path.Combine(runtimeDirectory, NUnitGenerationPolicy.RuntimeSymbolFileName);
         var dependencies = Directory.Exists(runtimeDirectory)
             ? Directory.EnumerateFiles(runtimeDirectory, "*.dll", SearchOption.TopDirectoryOnly)
                 .Where(path => !string.Equals(path, assemblyPath, StringComparison.OrdinalIgnoreCase))

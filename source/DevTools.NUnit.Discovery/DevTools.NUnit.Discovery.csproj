@@ -1,0 +1,12 @@
+<Project Sdk="Microsoft.NET.Sdk">
+    <PropertyGroup>
+        <TargetFrameworks>net48;net8.0-windows;net10.0-windows</TargetFrameworks>
+        <RootNamespace>DevTools.NUnit.Discovery</RootNamespace>
+        <AssemblyName>DevTools.NUnit.Discovery</AssemblyName>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <PackageReference Include="System.Reflection.Metadata" Condition="'$(TargetFramework)' == 'net48'"/>
+        <ProjectReference Include="..\DevTools.Testing.Abstractions\DevTools.Testing.Abstractions.csproj"/>
+    </ItemGroup>
+</Project>

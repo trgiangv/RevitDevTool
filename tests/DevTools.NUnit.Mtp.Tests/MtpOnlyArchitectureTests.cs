@@ -78,7 +78,7 @@ public sealed class MtpOnlyArchitectureTests
             "source/DevTools.Ipc/DevTools.Ipc.csproj",
             "source/DevTools.Testing.Abstractions/DevTools.Testing.Abstractions.csproj",
             "source/DevTools.Testing.Transport/DevTools.Testing.Transport.csproj",
-            "source/DevTools.NUnit.Provider/DevTools.NUnit.Provider.csproj",
+            "source/DevTools.NUnit.Discovery/DevTools.NUnit.Discovery.csproj",
             "source/DevTools.NUnit.Mtp/DevTools.NUnit.Mtp.csproj",
         };
 

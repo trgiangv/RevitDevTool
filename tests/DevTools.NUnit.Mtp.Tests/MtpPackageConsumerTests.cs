@@ -72,9 +72,11 @@ public sealed class MtpPackageConsumerTests
                 #if NET48
                 var provider = mtp;
                 #else
-                var provider = Assembly.Load("DevTools.NUnit.Provider");
+                var providerIdentity = AssemblyName.GetAssemblyName(
+                    Path.Combine(AppContext.BaseDirectory, "DevTools.NUnit.Discovery.dll")).FullName!;
+                var provider = Assembly.Load(providerIdentity);
                 #endif
-                var discoverer = provider.GetType("DevTools.NUnit.Provider.NUnitMetadataDiscoverer", throwOnError: true)!;
+                var discoverer = provider.GetType("DevTools.NUnit.Discovery.NUnitMetadataDiscoverer", throwOnError: true)!;
                 _ = discoverer.GetMethod("Discover")!.Invoke(null, [Assembly.GetExecutingAssembly().Location]);
                 return mtp.GetType(typeof(TestingPlatformBuilderHook).FullName!) is null ? 1 : 0;
                 """);
@@ -97,7 +99,7 @@ public sealed class MtpPackageConsumerTests
                 </Project>
                 """);
             File.WriteAllText(Path.Combine(consumer, "ProviderLeak.cs"), """
-                using DevTools.NUnit.Provider;
+                using DevTools.NUnit.Discovery;
                 namespace Consumer;
                 public static class ProviderLeak
                 {
@@ -161,6 +163,8 @@ public sealed class MtpPackageConsumerTests
         }
 
         Assert.DoesNotContain(entries, entry => entry.EndsWith(".pdb", StringComparison.OrdinalIgnoreCase));
+        Assert.DoesNotContain(entries, entry => entry.EndsWith("/DevTools.AssemblyIsolation.dll", StringComparison.OrdinalIgnoreCase));
+        Assert.DoesNotContain("DevTools.AssemblyIsolation", nuspecText, StringComparison.Ordinal);
         Assert.DoesNotContain(entries, entry => entry.Contains("DevTools.NUnit.Core", StringComparison.OrdinalIgnoreCase));
         Assert.Equal(entries.Length, entries.Distinct(StringComparer.OrdinalIgnoreCase).Count());
     }
@@ -169,7 +173,7 @@ public sealed class MtpPackageConsumerTests
     [
         "DevTools.Ipc.dll",
         "DevTools.NUnit.Mtp.dll",
-        "DevTools.NUnit.Provider.dll",
+        "DevTools.NUnit.Discovery.dll",
         "DevTools.Testing.Abstractions.dll",
         "DevTools.Testing.Mtp.dll",
         "DevTools.Testing.Transport.dll",

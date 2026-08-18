@@ -1,5 +1,5 @@
-#if NET
 using System.Reflection;
+using DevTools.AssemblyIsolation;
 using DevTools.Testing.Abstractions.Runtime;
 using DevTools.Testing.Host.Loading;
 using DevTools.Testing.Host.Runtime;
@@ -12,33 +12,30 @@ public sealed class NUnitRuntimeSessionFactory : ITestingRuntimeSessionFactory
 
     public ITestingRuntimeSession Create(TestingGenerationManifest generation)
     {
-        ArgumentNullException.ThrowIfNull(generation);
+        if (generation is null) throw new ArgumentNullException(nameof(generation));
 
-        var nunitGeneration = NUnitGenerationManifestAdapter.ToNUnit(generation);
-        var loadContext = new NUnitRuntimeLoadContext(nunitGeneration);
+        var frameworkPath = NUnitGenerationPolicy.GetFrameworkAssemblyPath(generation);
+        var frameworkAssembly = NUnitFrameworkHostShare.GetOrLoadFromShadow(frameworkPath);
+        var isolationSession = AssemblyIsolationSession.Create(NUnitIsolationPlan.Create(generation, frameworkAssembly));
         try
         {
-            var runtimeAssembly = loadContext.LoadFromManifestPath(nunitGeneration.RuntimeAssemblyPath);
-            var testAssembly = loadContext.LoadFromManifestPath(nunitGeneration.ShadowAssemblyPath);
+            var runtimeAssembly = isolationSession.LoadEntryAssembly();
+            var testAssembly = isolationSession.LoadFromPath(generation.ShadowAssemblyPath);
             var sessionType = runtimeAssembly.GetType(RuntimeSessionTypeName, throwOnError: true)!;
 
             var inner = (ITestingRuntimeSession)Activator.CreateInstance(
                 sessionType,
                 BindingFlags.Instance | BindingFlags.Public,
                 binder: null,
-                args: [testAssembly, nunitGeneration.ShadowAssemblyPath, nunitGeneration.GenerationId, true],
+                args: [testAssembly, generation.ShadowAssemblyPath, generation.GenerationId, true],
                 culture: null)!;
 
-            return new NUnitRuntimeSessionHandle(inner, loadContext);
+            return new NUnitRuntimeSessionHandle(inner, isolationSession, generation.ShadowAssemblyPath);
         }
         catch
         {
-            loadContext.Unload();
+            isolationSession.Dispose();
             throw;
         }
     }
-
-    internal ITestingRuntimeSession Create(NUnitGenerationManifest generation) =>
-        Create(NUnitGenerationManifestAdapter.ToTesting(generation));
 }
-#endif

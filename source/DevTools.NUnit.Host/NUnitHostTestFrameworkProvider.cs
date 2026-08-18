@@ -1,6 +1,7 @@
 using DevTools.Testing.Abstractions.Contracts;
 using DevTools.Testing.Abstractions.Providers;
 using DevTools.Testing.Abstractions.Runtime;
+using DevTools.Testing.Host;
 using DevTools.Testing.Host.Runtime;
 
 namespace DevTools.NUnit.Host;
@@ -27,8 +28,7 @@ public sealed class NUnitHostTestFrameworkProvider(TestingRuntimeSessionManager 
         if (!string.Equals(request.FrameworkId, FrameworkId, StringComparison.OrdinalIgnoreCase))
             throw new ArgumentException($"NUnit provider cannot execute framework '{request.FrameworkId}'.", nameof(request));
 
-        var assemblyPath = NUnitAssemblyLoader.ResolveAssemblyPath(request.Assembly.Path);
-        NUnitAssemblyLoader.EnsureLoadable(assemblyPath);
+        var assemblyPath = TestingAssemblyPreflight.ResolveAndEnsureLoadable(request.Assembly.Path);
         var normalized = request with
         {
             Assembly = request.Assembly with { Path = assemblyPath },

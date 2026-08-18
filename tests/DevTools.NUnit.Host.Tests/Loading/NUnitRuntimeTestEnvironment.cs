@@ -1,4 +1,5 @@
 using DevTools.NUnit.Host.Loading;
+using DevTools.Testing.Host.Loading;
 
 namespace DevTools.NUnit.Host.Tests.Loading;
 
@@ -11,7 +12,7 @@ internal static class NUnitRuntimeTestEnvironment
         "bin",
         "Debug",
         "net10.0-windows",
-        NUnitGenerationBuilder.RuntimeAssemblyFileName);
+        NUnitGenerationPolicy.RuntimeAssemblyFileName);
 
     public static string RuntimeSymbolPath { get; } = Path.Combine(
         NUnitGenerationTestEnvironment.RepositoryRoot,
@@ -20,15 +21,15 @@ internal static class NUnitRuntimeTestEnvironment
         "bin",
         "Debug",
         "net10.0-windows",
-        NUnitGenerationBuilder.RuntimeSymbolFileName);
+        NUnitGenerationPolicy.RuntimeSymbolFileName);
 
-    public static NUnitGenerationBuilder CreateBuilder(string generationsRoot) =>
+    public static NUnitGenerationHarness CreateBuilder(string generationsRoot) =>
         new(
-            () => new NUnitRuntimeSource(
+            new TestingGenerationStore(generationsRoot),
+            new NUnitGenerationPolicy(() => new NUnitRuntimeSource(
                 RuntimeAssemblyPath,
                 File.Exists(RuntimeSymbolPath) ? RuntimeSymbolPath : null,
-                RuntimeDependencyPaths()),
-            generationsRoot);
+                RuntimeDependencyPaths())));
 
     private static IReadOnlyList<string> RuntimeDependencyPaths() =>
         new[] { "System.Reflection.Metadata.dll", "System.Collections.Immutable.dll" }
@@ -36,7 +37,7 @@ internal static class NUnitRuntimeTestEnvironment
             .Where(File.Exists)
             .ToList();
 
-    public static NUnitGenerationManifest BuildFixtureGeneration()
+    public static TestingGenerationManifest BuildFixtureGeneration()
     {
         using var workspace = new TempWorkspace();
         var testAssembly = NUnitGenerationTestEnvironment.CreateGenerationOneAssembly(
@@ -47,7 +48,7 @@ internal static class NUnitRuntimeTestEnvironment
         return builder.Build(testAssembly);
     }
 
-    public static NUnitGenerationManifest BuildGenerationWithDuplicateNativeAssets(string parentDirectory)
+    public static TestingGenerationManifest BuildGenerationWithDuplicateNativeAssets(string parentDirectory)
     {
         var testAssembly = NUnitGenerationTestEnvironment.CreateFixtureWorkspace(
             parentDirectory,
@@ -63,7 +64,7 @@ internal static class NUnitRuntimeTestEnvironment
         return CreateBuilder(generationsRoot).Build(testAssembly);
     }
 
-    public static NUnitGenerationManifest BuildGenerationWithUniqueNativeAsset(string parentDirectory)
+    public static TestingGenerationManifest BuildGenerationWithUniqueNativeAsset(string parentDirectory)
     {
         var testAssembly = NUnitGenerationTestEnvironment.CreateFixtureWorkspace(
             parentDirectory,

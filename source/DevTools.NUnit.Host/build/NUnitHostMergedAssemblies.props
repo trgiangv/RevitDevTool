@@ -12,6 +12,9 @@
     <NUnitHostOwnedAssembly Include="System.Text.Encodings.Web" />
     <NUnitHostOwnedAssembly Include="System.IO.Pipelines" />
     <NUnitHostOwnedAssembly Include="Microsoft.Bcl.AsyncInterfaces" />
+    <!-- The shared loader kernel is merged into the host add-in.  It must not
+         enter NUnitRuntime as a second default-context identity. -->
+    <NUnitHostOwnedAssembly Include="DevTools.AssemblyIsolation" />
     <TestingSharedAssembly Include="DevTools.Testing.Abstractions" />
   </ItemGroup>
 </Project>

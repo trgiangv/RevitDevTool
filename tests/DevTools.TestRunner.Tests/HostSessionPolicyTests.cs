@@ -37,7 +37,8 @@ public sealed class HostSessionPolicyTests
         var source = File.ReadAllText(Path.Combine(
             FindRepositoryRoot(),
             "source",
-            "DevTools.NUnit.Runner",
+            "DevTools.TestRunner",
+            "NUnit",
             "Commands",
             "DiscoverCommand.cs"));
 
@@ -91,7 +92,8 @@ public sealed class HostSessionPolicyTests
         var providerSource = File.ReadAllText(Path.Combine(
             repositoryRoot,
             "source",
-            "DevTools.NUnit.Runner",
+            "DevTools.TestRunner",
+            "NUnit",
             "Commands",
             "RunCommand.cs"));
 

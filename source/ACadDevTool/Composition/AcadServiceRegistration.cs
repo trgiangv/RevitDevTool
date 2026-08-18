@@ -7,6 +7,7 @@ using DevTools.Logging;
 using DevTools.Logging.Abstractions;
 using DevTools.Mcp.Catalog;
 using DevTools.NUnit.Host;
+using DevTools.Testing.Host;
 using DevTools.Presentation;
 using DevTools.Presentation.Interfaces;
 using DevTools.Settings;

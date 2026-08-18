@@ -1,0 +1,9 @@
+<Project Sdk="Microsoft.NET.Sdk">
+    <PropertyGroup>
+        <TargetFramework>net10.0</TargetFramework>
+        <AssemblyName>Microsoft.Extensions.Logging.Abstractions</AssemblyName>
+        <AssemblyVersion>1.2.3.0</AssemblyVersion>
+        <FileVersion>1.2.3.0</FileVersion>
+        <IsPackable>false</IsPackable>
+    </PropertyGroup>
+</Project>
