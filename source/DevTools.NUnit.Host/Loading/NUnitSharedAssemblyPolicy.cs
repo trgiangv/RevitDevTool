@@ -1,4 +1,3 @@
-using DevTools.NUnit.Transport.Runtime;
 using DevTools.Testing.Abstractions.Contracts;
 using DevTools.Utilities.AssemblyLoading;
 
@@ -12,9 +11,6 @@ namespace DevTools.NUnit.Host.Loading;
 /// </summary>
 public static class NUnitSharedAssemblyPolicy
 {
-    private static readonly string NUnitTransportAssemblyName =
-        typeof(INUnitRuntimeSession).Assembly.GetName().Name!;
-
     private static readonly string TestingContractAssemblyName =
         typeof(TestingRunRequest).Assembly.GetName().Name!;
 
@@ -36,10 +32,6 @@ public static class NUnitSharedAssemblyPolicy
             return false;
 
         if (string.Equals(
-                assemblySimpleName,
-                NUnitTransportAssemblyName,
-                StringComparison.OrdinalIgnoreCase)
-            || string.Equals(
                 assemblySimpleName,
                 TestingContractAssemblyName,
                 StringComparison.OrdinalIgnoreCase))

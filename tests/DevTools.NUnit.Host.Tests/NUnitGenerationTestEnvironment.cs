@@ -19,14 +19,14 @@ internal static class NUnitGenerationTestEnvironment
         "Debug",
         "net10.0-windows");
 
-    public static string CoreAssemblyPath { get; } = Path.Combine(
+    public static string SharedAssemblyPath { get; } = Path.Combine(
         RepositoryRoot,
         "source",
-        "DevTools.NUnit.Transport",
+        "DevTools.Testing.Abstractions",
         "bin",
         "Debug",
         "net10.0-windows",
-        "DevTools.NUnit.Transport.dll");
+        "DevTools.Testing.Abstractions.dll");
 
     public static string CreateIsolatedGenerationsRoot()
     {

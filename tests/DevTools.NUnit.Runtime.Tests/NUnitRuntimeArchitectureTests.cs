@@ -46,7 +46,6 @@ public sealed class NUnitRuntimeArchitectureTests
     [Theory]
     [InlineData("source/DevTools.NUnit.Provider")]
     [InlineData("source/DevTools.TestRunner")]
-    [InlineData("source/DevTools.NUnit.TestAdapter")]
     public void ForbiddenManualNUnitExecutionPatternsStayOutOfBoundary(string relativeProjectPath)
     {
         var projectDirectory = Path.Combine(RepositoryRoot, relativeProjectPath);

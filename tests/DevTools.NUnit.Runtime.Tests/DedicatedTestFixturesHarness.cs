@@ -15,8 +15,11 @@ internal static class DedicatedTestFixturesHarness
     public static NUnitRuntimeSession CreateSession() =>
         new(Assembly.LoadFrom(AssemblyPath), AssemblyPath, GenerationId);
 
-    public static void ResetBlockingState() =>
+    public static void ResetBlockingState()
+    {
         Interlocked.Exchange(ref Fixtures.BlockingRunState.Entered, 0);
+        Interlocked.Exchange(ref Fixtures.BlockingRunState.Release, 0);
+    }
 
     public static void ResetCancellationProbeState() =>
         Interlocked.Exchange(ref Fixtures.CancellationProbeState.BodyEntered, 0);

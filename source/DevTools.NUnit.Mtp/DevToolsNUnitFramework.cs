@@ -4,7 +4,6 @@ using Microsoft.Testing.Platform.Extensions.Messages;
 using Microsoft.Testing.Platform.Extensions.TestFramework;
 using Microsoft.Testing.Platform.Requests;
 using DevTools.NUnit.Provider;
-using DevTools.NUnit.Transport.Contracts;
 using DevTools.Testing.Abstractions.Contracts;
 using DevTools.Testing.Mtp;
 using DevTools.Testing.Transport;
@@ -210,9 +209,6 @@ internal sealed class DevToolsNUnitFramework : ITestFramework, IDataProducer
         };
     }
 
-    internal static TestNode ToResultNode(NUnitCaseResult result, string? assemblyPath = null) =>
-        ToResultNode(NUnitTestingMapping.ToTesting(result), assemblyPath, result.FullName, result.Id, result.Name);
-
     internal static TestNode ToResultNode(
         TestingCaseResult result,
         string? assemblyPath = null,
@@ -222,11 +218,11 @@ internal sealed class DevToolsNUnitFramework : ITestFramework, IDataProducer
     {
         var properties = new List<IProperty>();
         TestingNodeProperties.AddCommonResultProperties(properties, result);
-        AddMethodIdentifier(properties, fullName ?? result.TestId, methodName ?? result.DisplayName, assemblyPath);
+        AddMethodIdentifier(properties, fullName ?? result.FullName ?? result.TestId, methodName ?? result.DisplayName, assemblyPath);
 
         return new TestNode
         {
-            Uid = new TestNodeUid(StableUid(fullName, protocolId ?? result.TestId, methodName ?? result.DisplayName)),
+            Uid = new TestNodeUid(StableUid(fullName ?? result.FullName, protocolId ?? result.TestId, methodName ?? result.DisplayName)),
             DisplayName = result.DisplayName,
             Properties = new PropertyBag(properties),
         };

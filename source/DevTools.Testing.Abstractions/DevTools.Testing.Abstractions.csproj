@@ -1,6 +1,6 @@
 <Project Sdk="Microsoft.NET.Sdk">
     <PropertyGroup>
-        <TargetFrameworks>net48;netstandard2.0;net8.0-windows;net10.0-windows</TargetFrameworks>
+        <TargetFrameworks>net48;net8.0-windows;net10.0-windows</TargetFrameworks>
         <RootNamespace>DevTools.Testing.Abstractions</RootNamespace>
         <AssemblyName>DevTools.Testing.Abstractions</AssemblyName>
     </PropertyGroup>

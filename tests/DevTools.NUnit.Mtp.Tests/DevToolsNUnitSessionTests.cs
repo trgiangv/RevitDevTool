@@ -1,5 +1,4 @@
 using DevTools.NUnit.Provider;
-using DevTools.NUnit.Transport.Contracts;
 using DevTools.NUnit.Mtp;
 using DevTools.Testing.Abstractions.Contracts;
 using DevTools.Testing.Transport;
@@ -10,59 +9,6 @@ namespace DevTools.NUnit.Mtp.Tests;
 
 public sealed class DevToolsNUnitSessionTests
 {
-    [Fact]
-    public void Legacy_result_mapping_preserves_provider_and_mtp_capabilities()
-    {
-        var legacy = new NUnitCaseResult(
-            "case-id",
-            "Display",
-            "Skipped",
-            42.5,
-            "message",
-            "stack",
-            "output",
-            ParentTestId: "parent-id",
-            Traits: [new NUnitTrait("Category", "Integration")],
-            Source: new NUnitSourceLocation("Test.cs", 17),
-            SkipReason: "explicit skip reason",
-            Attachments:
-            [
-                new NUnitAttachment("file attachment", "text/plain", "C:\\logs\\result.txt", null),
-                new NUnitAttachment("inline attachment", "application/json", null, "eyJvayI6dHJ1ZX0="),
-            ],
-            FullName: "Fixture.Display");
-
-        var mapped = NUnitTestingMapping.ToTesting(legacy);
-        var node = DevToolsNUnitFramework.ToResultNode(legacy);
-
-        Assert.Equal(legacy.Id, mapped.TestId);
-        Assert.Equal(legacy.Name, mapped.DisplayName);
-        Assert.Equal(legacy.Message, mapped.Message);
-        Assert.Equal(legacy.SkipReason, mapped.SkipReason);
-        Assert.Equal(legacy.ParentTestId, mapped.ParentTestId);
-        Assert.Equal(legacy.FullName, mapped.FullName);
-        Assert.Equal(legacy.Source!.File, mapped.Source!.File);
-        Assert.Equal(legacy.Source.Line, mapped.Source.Line);
-        Assert.Equal(legacy.Traits!.Single().Value, mapped.Traits.Single().Value);
-        Assert.Collection(
-            mapped.Attachments,
-            attachment =>
-            {
-                Assert.Equal("C:\\logs\\result.txt", attachment.Path);
-                Assert.Equal("file attachment", attachment.Description);
-                Assert.Equal("text/plain", attachment.ContentType);
-                Assert.Null(attachment.Base64);
-            },
-            attachment =>
-            {
-                Assert.Null(attachment.Path);
-                Assert.Equal("inline attachment", attachment.Description);
-                Assert.Equal("application/json", attachment.ContentType);
-                Assert.Equal("eyJvayI6dHJ1ZX0=", attachment.Base64);
-            });
-        Assert.Equal(legacy.FullName, node.Uid.Value);
-    }
-
     [Fact]
     public void Metadata_filter_keeps_matching_names()
     {
@@ -283,7 +229,7 @@ public sealed class TestNodeMapperTests
     public void ToResultNode_maps_outcomes(string outcome, Type stateType)
     {
         var node = DevToolsNUnitFramework.ToResultNode(
-            new NUnitCaseResult("id", "Case", outcome, 12, "msg", null, null, SkipReason: "ignored"));
+            new TestingCaseResult("id", "Case", outcome, 12, "msg", null, null, null, [], [], SkipReason: "ignored"));
 
         Assert.Equal("Case", node.DisplayName);
         Assert.Equal("id", node.Uid.Value);
@@ -294,7 +240,7 @@ public sealed class TestNodeMapperTests
     public void ToResultNode_uses_fullname_as_stable_uid()
     {
         var node = DevToolsNUnitFramework.ToResultNode(
-            new NUnitCaseResult(
+            new TestingCaseResult(
                 "HostSmokeTests/Arithmetic#0",
                 "Arithmetic",
                 "Passed",
@@ -302,6 +248,9 @@ public sealed class TestNodeMapperTests
                 null,
                 null,
                 null,
+                null,
+                [],
+                [],
                 FullName: "HostSmokeTests.Arithmetic"));
 
         Assert.Equal("HostSmokeTests.Arithmetic", node.Uid.Value);
@@ -314,14 +263,17 @@ public sealed class TestNodeMapperTests
     public void ToResultNode_maps_standard_output()
     {
         var node = DevToolsNUnitFramework.ToResultNode(
-            new NUnitCaseResult(
+            new TestingCaseResult(
                 "id",
                 "Writes_output",
                 "Passed",
                 12,
                 null,
                 null,
-                "ERR devtools-nunit-sample-trace\ndevtools-nunit-sample-debug"));
+                "ERR devtools-nunit-sample-trace\ndevtools-nunit-sample-debug",
+                null,
+                [],
+                []));
 
         var stdout = node.Properties.Single<StandardOutputProperty>();
         Assert.Contains("devtools-nunit-sample-trace", stdout.StandardOutput, StringComparison.Ordinal);

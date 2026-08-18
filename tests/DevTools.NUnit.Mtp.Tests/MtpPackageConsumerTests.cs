@@ -170,7 +170,6 @@ public sealed class MtpPackageConsumerTests
         "DevTools.Ipc.dll",
         "DevTools.NUnit.Mtp.dll",
         "DevTools.NUnit.Provider.dll",
-        "DevTools.NUnit.Transport.dll",
         "DevTools.Testing.Abstractions.dll",
         "DevTools.Testing.Mtp.dll",
         "DevTools.Testing.Transport.dll",

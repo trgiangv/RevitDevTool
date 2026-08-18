@@ -1,13 +1,12 @@
 <Project Sdk="Microsoft.NET.Sdk">
     <PropertyGroup>
-        <TargetFrameworks>netstandard2.0;net8.0-windows;net10.0-windows</TargetFrameworks>
+        <TargetFrameworks>net48;net8.0-windows;net10.0-windows</TargetFrameworks>
         <RootNamespace>DevTools.NUnit.Provider</RootNamespace>
         <AssemblyName>DevTools.NUnit.Provider</AssemblyName>
     </PropertyGroup>
 
     <ItemGroup>
-        <PackageReference Include="System.Reflection.Metadata" Condition="'$(TargetFramework)' == 'netstandard2.0'"/>
-        <ProjectReference Include="..\DevTools.NUnit.Transport\DevTools.NUnit.Transport.csproj"/>
+        <PackageReference Include="System.Reflection.Metadata" Condition="'$(TargetFramework)' == 'net48'"/>
         <ProjectReference Include="..\DevTools.Testing.Abstractions\DevTools.Testing.Abstractions.csproj"/>
     </ItemGroup>
 </Project>

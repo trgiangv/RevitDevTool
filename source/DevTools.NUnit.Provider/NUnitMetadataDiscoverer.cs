@@ -1,13 +1,12 @@
 using System.Reflection;
 using System.Reflection.Metadata;
 using System.Reflection.PortableExecutable;
-using DevTools.NUnit.Transport.Contracts;
 
 namespace DevTools.NUnit.Provider;
 
 /// <summary>
 /// Discovers NUnit tests from PE metadata without loading the assembly or
-/// contacting a host process. Used by VSTest, MTP Test Explorer refresh, and
+/// contacting a host process. Used by MTP Test Explorer refresh and
 /// <c>Runner discover</c>.
 /// </summary>
 public static class NUnitMetadataDiscoverer

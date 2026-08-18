@@ -1,6 +1,6 @@
 using System.Collections.Concurrent;
-using DevTools.NUnit.Transport.Runtime;
 using DevTools.NUnit.Host.Loading;
+using DevTools.Testing.Abstractions.Runtime;
 using DevTools.Utilities.AssemblyLoading;
 
 namespace DevTools.NUnit.Host.Tests;
@@ -217,34 +217,6 @@ public sealed class NUnitGenerationBuilderTests
     }
 
     [Fact]
-    public void Build_does_not_copy_explicitly_shared_assemblies()
-    {
-        using var workspace = new TempWorkspace();
-        var testAssembly = NUnitGenerationTestEnvironment.CreateFixtureWorkspace(
-            workspace.Root,
-            "shared",
-            outputDirectory =>
-            {
-                File.Copy(
-                    NUnitGenerationTestEnvironment.CoreAssemblyPath,
-                    Path.Combine(outputDirectory, "DevTools.NUnit.Transport.dll"),
-                    overwrite: true);
-            });
-
-        var generationsRoot = NUnitGenerationTestEnvironment.CreateIsolatedGenerationsRoot();
-        var builder = NUnitGenerationTestEnvironment.CreateBuilder(generationsRoot, workspace.Root);
-        var manifest = builder.Build(testAssembly);
-
-        Assert.False(NUnitSharedAssemblyPolicy.IsShared("nunit.framework"));
-        Assert.True(NUnitSharedAssemblyPolicy.IsShared("DevTools.NUnit.Transport"));
-        Assert.False(File.Exists(Path.Combine(manifest.ShadowDirectory, "DevTools.NUnit.Transport.dll")));
-        Assert.DoesNotContain(
-            manifest.ManagedAssemblies,
-            path => path.EndsWith("DevTools.NUnit.Transport.dll", StringComparison.OrdinalIgnoreCase));
-        Assert.True(File.Exists(manifest.FrameworkAssemblyPath));
-    }
-
-    [Fact]
     public void Build_keeps_package_dependency_with_Microsoft_prefix_generation_private()
     {
         using var workspace = new TempWorkspace();
@@ -400,7 +372,7 @@ public sealed class NUnitGenerationBuilderTests
             outputDirectory =>
             {
                 File.Copy(
-                    NUnitGenerationTestEnvironment.CoreAssemblyPath,
+                    NUnitGenerationTestEnvironment.SharedAssemblyPath,
                     Path.Combine(outputDirectory, "PrivateDependency.dll"),
                     overwrite: true);
             });
@@ -468,33 +440,6 @@ public sealed class NUnitGenerationBuilderTests
         Assert.Contains(manifest.ShadowAssemblyPath, manifest.ManagedAssemblies);
         Assert.False(Directory.Exists(Path.Combine(manifest.ShadowDirectory, "Log")));
         Assert.False(Directory.Exists(Path.Combine(manifest.ShadowDirectory, "TestResults")));
-    }
-
-    [Fact]
-    public void Build_includes_private_assembly_even_when_renamed_to_shared_filename()
-    {
-        using var workspace = new TempWorkspace();
-        var privateAssembly = typeof(NUnitGenerationBuilderTests).Assembly.Location;
-        var testAssembly = NUnitGenerationTestEnvironment.CreateFixtureWorkspace(
-            workspace.Root,
-            "private-shared-name",
-            outputDirectory =>
-            {
-                File.Copy(
-                    privateAssembly,
-                    Path.Combine(outputDirectory, "DevTools.NUnit.Transport.dll"),
-                    overwrite: true);
-            });
-
-        var generationsRoot = NUnitGenerationTestEnvironment.CreateIsolatedGenerationsRoot();
-        var builder = NUnitGenerationTestEnvironment.CreateBuilder(generationsRoot, workspace.Root);
-        var manifest = builder.Build(testAssembly);
-
-        var shadowPath = Path.Combine(manifest.ShadowDirectory, "DevTools.NUnit.Transport.dll");
-        Assert.True(File.Exists(shadowPath));
-        Assert.Contains(shadowPath, manifest.ManagedAssemblies);
-        Assert.False(NUnitSharedAssemblyPolicy.IsShared(
-            System.Reflection.AssemblyName.GetAssemblyName(privateAssembly).Name!));
     }
 
     [Fact]
@@ -615,7 +560,7 @@ public sealed class NUnitGenerationBuilderTests
         Assert.True(NUnitSharedAssemblyPolicy.IsShared("RevitAPI"));
         Assert.True(NUnitSharedAssemblyPolicy.IsShared("MahApps.Metro"));
         Assert.True(NUnitSharedAssemblyPolicy.IsShared("Autodesk.Revit.DB"));
-        Assert.True(NUnitSharedAssemblyPolicy.IsShared(typeof(INUnitRuntimeSession).Assembly.GetName().Name!));
+        Assert.True(NUnitSharedAssemblyPolicy.IsShared(typeof(ITestingRuntimeSession).Assembly.GetName().Name!));
         Assert.False(NUnitSharedAssemblyPolicy.IsShared("Microsoft.Extensions.Logging.Abstractions"));
         Assert.False(NUnitSharedAssemblyPolicy.IsShared("ThirdParty.Custom"));
         Assert.False(NUnitSharedAssemblyPolicy.IsShared("JetBrains.Annotations"));

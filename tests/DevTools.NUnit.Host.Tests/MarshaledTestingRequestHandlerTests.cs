@@ -20,8 +20,6 @@ public sealed class MarshaledTestingRequestHandlerTests
         Assert.Contains(TestingProtocol.Run, handler.SupportedMethods, StringComparer.OrdinalIgnoreCase);
         Assert.Contains(TestingProtocol.Cancel, handler.SupportedMethods, StringComparer.OrdinalIgnoreCase);
         Assert.DoesNotContain("nunit/hello", handler.SupportedMethods, StringComparer.OrdinalIgnoreCase);
-        Assert.DoesNotContain("nunit/run", handler.SupportedMethods, StringComparer.OrdinalIgnoreCase);
-        Assert.DoesNotContain("nunit/cancel", handler.SupportedMethods, StringComparer.OrdinalIgnoreCase);
         Assert.DoesNotContain("testing/discover", handler.SupportedMethods, StringComparer.OrdinalIgnoreCase);
     }
 

@@ -1,5 +1,4 @@
-using DevTools.NUnit.Transport.Contracts;
-using DevTools.NUnit.Transport.Results;
+using DevTools.Testing.Abstractions.Contracts;
 using NUnit.Framework.Interfaces;
 using NUnit.Framework.Internal;
 
@@ -7,70 +6,23 @@ namespace DevTools.NUnit.Runtime;
 
 internal static class NUnitResultMapper
 {
-    public static IReadOnlyList<NUnitDiscoveredTest> MapDiscovery(
-        ITest root,
-        NUnitTestIdentityRegistry identityRegistry,
-        NUnitSourceLocationProvider? sourceLocationProvider)
-    {
-        var cases = new List<NUnitDiscoveredTest>();
-        CollectDiscoveredTests(root, identityRegistry, sourceLocationProvider, cases);
-        return cases;
-    }
-
-    public static NUnitRunSummary MapSummary(IReadOnlyList<NUnitCaseResult> cases)
-    {
-        var passed = 0;
-        var failed = 0;
-        var skipped = 0;
-        var inconclusive = 0;
-        var errors = 0;
-        var cancelled = 0;
-
-        foreach (var testCase in cases)
-        {
-            switch (testCase.Outcome)
-            {
-                case NUnitOutcomes.Passed:
-                    passed++;
-                    break;
-                case NUnitOutcomes.Failed:
-                    failed++;
-                    break;
-                case NUnitOutcomes.Skipped:
-                    skipped++;
-                    break;
-                case NUnitOutcomes.Inconclusive:
-                    inconclusive++;
-                    break;
-                case NUnitOutcomes.Error:
-                    errors++;
-                    break;
-                case NUnitOutcomes.Cancelled:
-                    cancelled++;
-                    break;
-            }
-        }
-
-        return new NUnitRunSummary(passed, failed, skipped, inconclusive, errors, cancelled);
-    }
-
-    public static IReadOnlyList<NUnitCaseResult> MapRunResults(
+    public static IReadOnlyList<TestingCaseResult> MapRunResults(
         ITestResult root,
         NUnitTestIdentityRegistry identityRegistry,
         NUnitSourceLocationProvider? sourceLocationProvider)
     {
-        var cases = new List<NUnitCaseResult>();
+        var cases = new List<TestingCaseResult>();
         CollectCaseResults(root, identityRegistry, sourceLocationProvider, cases);
         return cases;
     }
 
-    public static NUnitCaseResult MapCaseResult(
+    public static TestingCaseResult MapCaseResult(
         ITestResult result,
         NUnitTestIdentityRegistry identityRegistry,
         NUnitSourceLocationProvider? sourceLocationProvider)
     {
         var test = result.Test;
-        return new NUnitCaseResult(
+        return new TestingCaseResult(
             NUnitTestIdentityMapper.MapTestId(test, identityRegistry),
             test.Name,
             MapOutcome(result.ResultState),
@@ -78,69 +30,35 @@ internal static class NUnitResultMapper
             MapMessage(result),
             result.StackTrace,
             string.IsNullOrWhiteSpace(result.Output) ? null : result.Output,
-            NUnitTestIdentityMapper.MapParentTestId(test, identityRegistry),
-            MapTraits(test),
             MapSource(test, sourceLocationProvider),
-            MapSkipReason(test, result.ResultState),
+            MapTraits(test),
             MapAttachments(result),
-            test.FullName);
-    }
-
-    public static NUnitDiscoveredTest MapDiscoveredTest(
-        ITest test,
-        NUnitTestIdentityRegistry identityRegistry,
-        NUnitSourceLocationProvider? sourceLocationProvider)
-    {
-        return new NUnitDiscoveredTest(
-            NUnitTestIdentityMapper.MapTestId(test, identityRegistry),
-            test.Name,
-            test.FullName,
             NUnitTestIdentityMapper.MapParentTestId(test, identityRegistry),
-            MapTraits(test),
-            MapSource(test, sourceLocationProvider),
-            MapSkipReason(test, null));
+            test.FullName,
+            MapSkipReason(test, result.ResultState));
     }
 
-    internal static IReadOnlyList<NUnitAttachment>? MapAttachments(ITestResult result)
+    internal static IReadOnlyList<TestingAttachment> MapAttachments(ITestResult result)
     {
         if (result.TestAttachments.Count == 0)
-            return null;
+            return [];
 
-        var attachments = new List<NUnitAttachment>();
+        var attachments = new List<TestingAttachment>();
         foreach (TestAttachment attachment in result.TestAttachments)
         {
-            attachments.Add(new NUnitAttachment(
-                attachment.Description ?? Path.GetFileName(attachment.FilePath),
-                null,
+            attachments.Add(new TestingAttachment(
                 attachment.FilePath,
-                null));
+                attachment.Description ?? Path.GetFileName(attachment.FilePath)));
         }
 
         return attachments;
-    }
-
-    private static void CollectDiscoveredTests(
-        ITest test,
-        NUnitTestIdentityRegistry identityRegistry,
-        NUnitSourceLocationProvider? sourceLocationProvider,
-        List<NUnitDiscoveredTest> cases)
-    {
-        if (!test.IsSuite)
-        {
-            cases.Add(MapDiscoveredTest(test, identityRegistry, sourceLocationProvider));
-            return;
-        }
-
-        var children = test.Tests;
-        for (var index = 0; index < children.Count; index++)
-            CollectDiscoveredTests(children[index], identityRegistry, sourceLocationProvider, cases);
     }
 
     private static void CollectCaseResults(
         ITestResult result,
         NUnitTestIdentityRegistry identityRegistry,
         NUnitSourceLocationProvider? sourceLocationProvider,
-        List<NUnitCaseResult> cases)
+        List<TestingCaseResult> cases)
     {
         if (!result.Test.IsSuite)
         {
@@ -155,30 +73,30 @@ internal static class NUnitResultMapper
     internal static string MapOutcome(ResultState resultState)
     {
         if (resultState == ResultState.Success || resultState == ResultState.Warning)
-            return NUnitOutcomes.Passed;
+            return TestingOutcomes.Passed;
 
         if (resultState == ResultState.Inconclusive)
-            return NUnitOutcomes.Inconclusive;
+            return TestingOutcomes.Inconclusive;
 
         if (resultState == ResultState.Cancelled)
-            return NUnitOutcomes.Cancelled;
+            return TestingOutcomes.Cancelled;
 
         if (resultState == ResultState.Ignored || resultState == ResultState.Explicit || resultState == ResultState.Skipped)
-            return NUnitOutcomes.Skipped;
+            return TestingOutcomes.Skipped;
 
         if (resultState == ResultState.Error
             || resultState == ResultState.SetUpError
             || resultState == ResultState.TearDownError
             || resultState == ResultState.NotRunnable)
-            return NUnitOutcomes.Error;
+            return TestingOutcomes.Error;
 
         return resultState.Status switch
         {
-            TestStatus.Failed => NUnitOutcomes.Failed,
-            TestStatus.Skipped => NUnitOutcomes.Skipped,
-            TestStatus.Inconclusive => NUnitOutcomes.Inconclusive,
-            TestStatus.Passed or TestStatus.Warning => NUnitOutcomes.Passed,
-            _ => NUnitOutcomes.Failed
+            TestStatus.Failed => TestingOutcomes.Failed,
+            TestStatus.Skipped => TestingOutcomes.Skipped,
+            TestStatus.Inconclusive => TestingOutcomes.Inconclusive,
+            TestStatus.Passed or TestStatus.Warning => TestingOutcomes.Passed,
+            _ => TestingOutcomes.Failed
         };
 
     }
@@ -224,13 +142,13 @@ internal static class NUnitResultMapper
         };
     }
 
-    private static IReadOnlyList<NUnitTrait>? MapTraits(ITest test)
+    private static IReadOnlyList<TestingTrait> MapTraits(ITest test)
     {
-        var traits = new List<NUnitTrait>();
+        var traits = new List<TestingTrait>();
         AppendPropertyTraits(test.Properties, traits);
 
         if (traits.Count == 0)
-            return null;
+            return [];
 
         return traits;
     }
@@ -267,7 +185,7 @@ internal static class NUnitResultMapper
         };
     }
 
-    private static void AppendPropertyTraits(IPropertyBag properties, List<NUnitTrait> traits)
+    private static void AppendPropertyTraits(IPropertyBag properties, List<TestingTrait> traits)
     {
         foreach (var key in properties.Keys)
         {
@@ -282,7 +200,7 @@ internal static class NUnitResultMapper
                 if (value is null)
                     continue;
 
-                traits.Add(new NUnitTrait(
+                traits.Add(new TestingTrait(
                     NormalizeTraitName(key),
                     Convert.ToString(value, System.Globalization.CultureInfo.InvariantCulture) ?? string.Empty));
             }
@@ -292,7 +210,7 @@ internal static class NUnitResultMapper
     private static string NormalizeTraitName(string key) =>
         string.Equals(key, PropertyNames.Category, StringComparison.Ordinal) ? "Category" : key;
 
-    private static NUnitSourceLocation? MapSource(
+    internal static TestingSourceLocation? MapSource(
         ITest test,
         NUnitSourceLocationProvider? sourceLocationProvider)
     {
@@ -302,6 +220,6 @@ internal static class NUnitResultMapper
         if (!sourceLocationProvider.TryGetSourceLocation(test, out var filePath, out var lineNumber))
             return null;
 
-        return new NUnitSourceLocation(filePath!, lineNumber);
+        return new TestingSourceLocation(filePath!, lineNumber);
     }
 }

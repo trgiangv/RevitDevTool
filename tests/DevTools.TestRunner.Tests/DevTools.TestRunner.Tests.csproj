@@ -6,10 +6,7 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <PackageReference Include="coverlet.collector"/>
-        <PackageReference Include="Microsoft.NET.Test.Sdk"/>
-        <PackageReference Include="xunit.v3"/>
-        <PackageReference Include="xunit.runner.visualstudio"/>
+        <PackageReference Include="xunit.v3.mtp-v2"/>
     </ItemGroup>
 
     <ItemGroup>
@@ -17,7 +14,6 @@
         <ProjectReference Include="..\..\source\DevTools.Testing.Abstractions\DevTools.Testing.Abstractions.csproj"/>
         <ProjectReference Include="..\..\source\DevTools.Testing.Transport\DevTools.Testing.Transport.csproj"/>
         <ProjectReference Include="..\..\source\DevTools.NUnit.Provider\DevTools.NUnit.Provider.csproj"/>
-        <ProjectReference Include="..\..\source\DevTools.NUnit.Transport\DevTools.NUnit.Transport.csproj"/>
         <ProjectReference Include="..\..\source\DevTools.TestRunner.Core\DevTools.TestRunner.Core.csproj"/>
         <ProjectReference Include="..\..\source\DevTools.NUnit.Runner\DevTools.NUnit.Runner.csproj"/>
     </ItemGroup>
@@ -31,13 +27,12 @@
     </Target>
 
     <ItemGroup>
-        <Compile Remove="DiscoverCommandTests.cs;FakeNUnitHostPipeServer.cs;HostDebugAttachScopeTests.cs;NUnitPipeClientTests.cs;NUnitRunnerFilterTests.cs;RunnerCommandLineTests.cs;TestingPipeClientTests.cs" />
+        <Compile Remove="DiscoverCommandTests.cs;HostDebugAttachScopeTests.cs;NUnitRunnerFilterTests.cs;RunnerCommandLineTests.cs;TestingPipeClientTests.cs" />
     </ItemGroup>
 
     <ItemGroup>
         <Using Include="Xunit"/>
         <Using Include="DevTools.Ipc"/>
-        <Using Include="DevTools.NUnit.Transport"/>
         <Using Include="DevTools.NUnit.Runner"/>
     </ItemGroup>
 

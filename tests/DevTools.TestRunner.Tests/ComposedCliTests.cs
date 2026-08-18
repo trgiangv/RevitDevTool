@@ -8,7 +8,7 @@ public sealed class ComposedCliTests
     [Theory]
     [InlineData(false)]
     [InlineData(true)]
-    public async Task Discover_uses_composed_executable_for_legacy_and_generic_nunit_paths(bool generic)
+    public async Task Discover_uses_composed_executable_with_default_or_explicit_nunit_module(bool generic)
     {
         var arguments = new List<string>
         {

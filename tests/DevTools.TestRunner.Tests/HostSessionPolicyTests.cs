@@ -46,7 +46,6 @@ public sealed class HostSessionPolicyTests
         Assert.DoesNotContain("HostLocator", source, StringComparison.Ordinal);
         Assert.DoesNotContain("HostSession", source, StringComparison.Ordinal);
         Assert.DoesNotContain("launchService.Start", source, StringComparison.Ordinal);
-        Assert.DoesNotContain("NUnitPipeClient", source, StringComparison.Ordinal);
     }
 
     [Fact]

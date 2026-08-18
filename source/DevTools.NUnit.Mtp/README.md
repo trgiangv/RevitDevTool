@@ -2,7 +2,7 @@
 
 Runs NUnit tests inside a live Revit or AutoCAD-family host. Requires
 [RevitDevTool](https://github.com/trgiangv/RevitDevTool). Do not also
-reference `NUnit3TestAdapter` or `Microsoft.Testing.Platform`.
+reference another NUnit Microsoft Testing Platform framework package.
 
 ```xml
 <PropertyGroup>

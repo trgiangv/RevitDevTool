@@ -101,6 +101,16 @@ public static class TestingEventKinds
     public const string Cancellation = "cancellation";
 }
 
+public static class TestingOutcomes
+{
+    public const string Passed = "Passed";
+    public const string Failed = "Failed";
+    public const string Skipped = "Skipped";
+    public const string Inconclusive = "Inconclusive";
+    public const string Error = "Error";
+    public const string Cancelled = "Cancelled";
+}
+
 public sealed record TestingEvent(
     Guid RunId,
     string Kind,

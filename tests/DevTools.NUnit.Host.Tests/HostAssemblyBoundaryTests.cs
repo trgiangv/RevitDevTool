@@ -19,7 +19,7 @@ public sealed class HostAssemblyBoundaryTests
         Assert.Contains("DevTools.Logging.csproj", csproj, StringComparison.Ordinal);
         Assert.Contains("DevTools.Hosting.csproj", csproj, StringComparison.Ordinal);
 
-        var references = typeof(NUnitRequestHandler).Assembly
+        var references = typeof(NUnitHostTestFrameworkProvider).Assembly
             .GetReferencedAssemblies()
             .Select(static reference => reference.Name)
             .ToHashSet(StringComparer.OrdinalIgnoreCase);

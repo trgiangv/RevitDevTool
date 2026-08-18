@@ -83,7 +83,7 @@ public sealed class RequestHandlerTests
         var request = CreateRunRequest("provider.example");
         var response = await Handle(handler,
             "1",
-            "nunit/run",
+            "provider/run",
             JsonSerializer.SerializeToElement(request, TestingJsonContext.Default.TestingRunRequest));
 
         Assert.True(response.IsError);

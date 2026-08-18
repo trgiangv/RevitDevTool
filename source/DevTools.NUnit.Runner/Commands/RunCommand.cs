@@ -1,10 +1,7 @@
 using System.Text.Json;
 using DevTools.NUnit.Provider;
-using DevTools.NUnit.Transport.Contracts;
-using DevTools.NUnit.Transport.Results;
 using DevTools.NUnit.Runner.Parsing;
 using DevTools.NUnit.Runner.Services;
-using DevTools.NUnit.Transport;
 using DevTools.TestRunner.Core.Debugging;
 using DevTools.TestRunner.Core.Parsing;
 using DevTools.TestRunner.Core.Services;
@@ -39,9 +36,7 @@ public static class RunCommand
             return RunnerExitCode.CliError;
         }
 
-        return options.UseGenericProtocol
-            ? await RunGenericAsync(options, execution, debugger, cancellationToken).ConfigureAwait(false)
-            : await RunLegacyNUnitAsync(options, execution, debugger, cancellationToken).ConfigureAwait(false);
+        return await RunGenericAsync(options, execution, debugger, cancellationToken).ConfigureAwait(false);
     }
 
     private static async Task<int> RunGenericAsync(
@@ -77,49 +72,6 @@ public static class RunCommand
         return HasTestingFailure(result.Value!) ? RunnerExitCode.TestFailure : RunnerExitCode.Ok;
     }
 
-    private static async Task<int> RunLegacyNUnitAsync(
-        RunnerCommandLine options,
-        IHostExecutionCoordinator execution,
-        IVisualStudioAttach debugger,
-        CancellationToken cancellationToken)
-    {
-        var result = await execution.ExecuteAsync(
-                options.Context,
-                debugger,
-                async (pipe, requestCancellationToken) =>
-                {
-                    await using var client = await NUnitPipeClient.ConnectAsync(
-                            pipe.PipeName,
-                            TimeSpan.FromSeconds(TestingHostTiming.HostPipeConnectTimeoutSeconds),
-                            requestCancellationToken)
-                        .ConfigureAwait(false);
-                    await client.HelloAsync(requestCancellationToken).ConfigureAwait(false);
-
-                    var progress = new Progress<NUnitProgressEvent>(evt =>
-                    {
-                        Console.Error.WriteLine($"[progress] {evt.Case.Name} -> {evt.Case.Outcome}");
-                    });
-                    return await client.RunAsync(
-                        options.AssemblyPath,
-                        options.Filter,
-                        progress,
-                        requestCancellationToken).ConfigureAwait(false);
-                },
-                cancellationToken)
-            .ConfigureAwait(false);
-
-        if (!result.Succeeded)
-            return await WriteExecutionFailureAsync(result).ConfigureAwait(false);
-
-        Console.WriteLine(JsonSerializer.Serialize(result.Value, NUnitJsonContext.Default.NUnitRunResponse));
-        var response = result.Value!;
-        return response.Summary.Failed > 0
-            || response.Summary.Errors > 0
-            || response.Summary.Cancelled > 0
-            ? RunnerExitCode.TestFailure
-            : RunnerExitCode.Ok;
-    }
-
     private static async Task<int> WriteExecutionFailureAsync<T>(HostExecutionResult<T> result)
     {
         await Console.Error.WriteLineAsync(result.Error ?? "Host execution failed.").ConfigureAwait(false);
@@ -141,8 +93,8 @@ public static class RunCommand
             return true;
 
         return response.Results.Any(result =>
-            string.Equals(result.Outcome, NUnitOutcomes.Failed, StringComparison.Ordinal)
-            || string.Equals(result.Outcome, NUnitOutcomes.Error, StringComparison.Ordinal)
-            || string.Equals(result.Outcome, NUnitOutcomes.Cancelled, StringComparison.Ordinal));
+            string.Equals(result.Outcome, TestingOutcomes.Failed, StringComparison.Ordinal)
+            || string.Equals(result.Outcome, TestingOutcomes.Error, StringComparison.Ordinal)
+            || string.Equals(result.Outcome, TestingOutcomes.Cancelled, StringComparison.Ordinal));
     }
 }

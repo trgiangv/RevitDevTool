@@ -1,17 +1,15 @@
 using System.Text.Json;
 using System.Xml.Linq;
 using DevTools.NUnit.Provider;
-using DevTools.NUnit.Transport.Contracts;
 using DevTools.NUnit.Runner.Parsing;
 using DevTools.NUnit.Runner.Services;
 using DevTools.TestRunner.Core.Parsing;
-using DevTools.NUnit.Transport;
 
 namespace DevTools.NUnit.Runner.Commands;
 
 /// <summary>
 /// Local PE discovery. Must not locate, launch, or talk to an Autodesk host.
-/// In-host NUnit explore happens inside <c>nunit/run</c> (<c>EnsureLoaded</c>), not this command.
+/// In-host execution happens only through <c>testing/run</c>.
 /// </summary>
 public static class DiscoverCommand
 {
@@ -40,8 +38,8 @@ public static class DiscoverCommand
             fullNames);
 
         Console.WriteLine(JsonSerializer.Serialize(
-            new NUnitDiscoverResponse(cases),
-            NUnitJsonContext.Default.NUnitDiscoverResponse));
+            new NUnitDiscoveryResult(cases),
+            new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower }));
         return RunnerExitCode.Ok;
     }
 
@@ -77,3 +75,5 @@ public static class DiscoverCommand
         }
     }
 }
+
+public sealed record NUnitDiscoveryResult(IReadOnlyList<NUnitDiscoveredTest> Cases);

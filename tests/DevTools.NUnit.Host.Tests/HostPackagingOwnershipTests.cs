@@ -69,13 +69,11 @@ public sealed class HostPackagingOwnershipTests
         Assert.DoesNotContain("$(OutputPath)NUnitRuntime", packagingText, StringComparison.Ordinal);
         Assert.Contains("TestingSharedAssembly", packagingText, StringComparison.Ordinal);
         Assert.Contains("DevTools.Testing.Abstractions", packagingText, StringComparison.Ordinal);
-        Assert.Contains("DevTools.NUnit.Transport", packagingText, StringComparison.Ordinal);
         Assert.DoesNotContain("DevTools.NUnit.Core", packagingText, StringComparison.Ordinal);
         Assert.Contains("DevTools.NUnit.Runner.exe", packagingText, StringComparison.Ordinal);
 
         var mergedText = File.ReadAllText(mergedProps);
         Assert.Contains("TestingSharedAssembly Include=\"DevTools.Testing.Abstractions\"", mergedText, StringComparison.Ordinal);
-        Assert.Contains("NUnitHostOwnedAssembly Include=\"DevTools.NUnit.Transport\"", mergedText, StringComparison.Ordinal);
         Assert.DoesNotContain("DevTools.NUnit.Core", mergedText, StringComparison.Ordinal);
 
         var payloadText = File.ReadAllText(payloadTargets);
@@ -106,7 +104,6 @@ public sealed class HostPackagingOwnershipTests
 
         var hostDll = Path.Combine(outputDir!, "RevitDevTool.dll");
         var abstractions = Path.Combine(outputDir, "DevTools.Testing.Abstractions.dll");
-        var nunitTransport = Path.Combine(outputDir, "DevTools.NUnit.Transport.dll");
         var nunitProvider = Path.Combine(outputDir, "DevTools.NUnit.Provider.dll");
         var nunitCore = Path.Combine(outputDir, "DevTools.NUnit.Core.dll");
         var runtime = Path.Combine(outputDir, "NUnitRuntime", "DevTools.NUnit.Runtime.dll");
@@ -114,7 +111,6 @@ public sealed class HostPackagingOwnershipTests
 
         Assert.True(File.Exists(hostDll), hostDll);
         Assert.True(File.Exists(abstractions), abstractions);
-        Assert.True(File.Exists(nunitTransport), nunitTransport);
         Assert.True(File.Exists(runtime), runtime);
         Assert.True(File.Exists(framework), framework);
         Assert.False(File.Exists(nunitCore), nunitCore);

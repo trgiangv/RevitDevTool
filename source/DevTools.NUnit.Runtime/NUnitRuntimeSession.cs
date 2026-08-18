@@ -1,6 +1,4 @@
 using System.Reflection;
-using DevTools.NUnit.Transport.Contracts;
-using DevTools.NUnit.Transport.Runtime;
 using DevTools.Testing.Abstractions.Contracts;
 using DevTools.Testing.Abstractions.Runtime;
 using NUnit.Framework.Api;
@@ -8,7 +6,7 @@ using NUnit.Framework.Internal;
 
 namespace DevTools.NUnit.Runtime;
 
-public sealed class NUnitRuntimeSession : INUnitRuntimeSession, ITestingRuntimeSession
+public sealed class NUnitRuntimeSession : ITestingRuntimeSession
 {
     private readonly Assembly _testAssembly;
     private readonly string _assemblyPath;
@@ -44,25 +42,9 @@ public sealed class NUnitRuntimeSession : INUnitRuntimeSession, ITestingRuntimeS
 
     public string GenerationId { get; }
 
-    public NUnitDiscoverResponse Discover(NUnitDiscoverRequest request)
-    {
-        Guard.NotNull(request, nameof(request));
-
-        lock (_executionGate)
-        {
-            ThrowIfClosedForOperation();
-            ValidateAssemblyPath(request.AssemblyPath);
-            var identityRegistry = EnsureLoaded();
-            var filter = NUnitFilterFactory.Create(request.Filter);
-            var explored = _runner.ExploreTests(filter);
-            var cases = NUnitResultMapper.MapDiscovery(explored, identityRegistry, _sourceLocationProvider);
-            return new NUnitDiscoverResponse(cases, GenerationId);
-        }
-    }
-
-    public NUnitRunResponse Run(
-        NUnitRunRequest request,
-        INUnitRuntimeEventSink eventSink,
+    public TestingRunResponse Run(
+        TestingRunRequest request,
+        ITestingRuntimeEventSink eventSink,
         CancellationToken cancellationToken)
     {
         Guard.NotNull(request, nameof(request));
@@ -71,10 +53,10 @@ public sealed class NUnitRuntimeSession : INUnitRuntimeSession, ITestingRuntimeS
         lock (_executionGate)
         {
             ThrowIfClosedForOperation();
-            ValidateAssemblyPath(request.AssemblyPath);
+            ValidateAssemblyPath(request.Assembly.Path);
             var identityRegistry = EnsureLoaded();
 
-            var filter = NUnitFilterFactory.Create(request.Filter);
+            var filter = NUnitFilterFactory.Create(request.Selection.ProviderPayload);
             using var traceScope = new NUnitRunTraceScope();
             var listener = new NUnitEventListener(
                 request.RunId,
@@ -119,42 +101,28 @@ public sealed class NUnitRuntimeSession : INUnitRuntimeSession, ITestingRuntimeS
 
                 var result = _runner.Result;
                 var frameworkCases = result is null
-                    ? Array.Empty<NUnitCaseResult>()
+                    ? Array.Empty<TestingCaseResult>()
                     : NUnitResultMapper.MapRunResults(result, identityRegistry, _sourceLocationProvider);
 
                 var cases = listener.ApplyTraceOutput(
                     NUnitRunResultMerger.Merge(frameworkCases, listener.GetAbortedCaseResults()));
 
-                return new NUnitRunResponse(
+                return new TestingRunResponse(
                     request.RunId,
-                    NUnitResultMapper.MapSummary(cases),
+                    request.FrameworkId,
+                    GenerationId,
                     cases,
-                    GenerationId);
+                    cases.Any(testCase => testCase.Outcome == TestingOutcomes.Cancelled)
+                        ? TestingCancellationState.Completed
+                        : TestingCancellationState.None,
+                    null,
+                    null);
             }
             finally
             {
                 EndRun(request.RunId);
             }
         }
-    }
-
-    TestingRunResponse ITestingRuntimeSession.Run(
-        TestingRunRequest request,
-        ITestingRuntimeEventSink eventSink,
-        CancellationToken cancellationToken)
-    {
-        var response = Run(
-            new NUnitRunRequest(request.RunId, _assemblyPath, request.Selection.ProviderPayload),
-            new TestingEventSink(eventSink),
-            cancellationToken);
-        return new TestingRunResponse(
-            response.RunId,
-            request.FrameworkId,
-            response.GenerationId,
-            response.Cases.Select(ToTestingCase).ToList(),
-            response.Summary.Cancelled > 0 ? TestingCancellationState.Completed : TestingCancellationState.None,
-            response.RuntimeDiagnostic?.Code,
-            response.RuntimeDiagnostic?.Message);
     }
 
     public void Cancel(Guid runId)
@@ -302,40 +270,6 @@ public sealed class NUnitRuntimeSession : INUnitRuntimeSession, ITestingRuntimeS
         _identityRegistry = NUnitTestIdentityRegistry.Build(root);
         _loaded = true;
         return _identityRegistry;
-    }
-
-    private static TestingCaseResult ToTestingCase(NUnitCaseResult testCase) => new(
-        testCase.Id,
-        testCase.Name,
-        testCase.Outcome,
-        testCase.DurationMs,
-        testCase.Message,
-        testCase.StackTrace,
-        testCase.Output,
-        testCase.Source is null ? null : new TestingSourceLocation(testCase.Source.File, testCase.Source.Line),
-        testCase.Traits?.Select(trait => new TestingTrait(trait.Name, trait.Value)).ToList() ?? [],
-        testCase.Attachments?.Select(attachment => new TestingAttachment(
-            attachment.Path,
-            attachment.Name,
-            attachment.ContentType,
-            attachment.Base64)).ToList() ?? [],
-        testCase.ParentTestId,
-        testCase.FullName,
-        testCase.SkipReason);
-
-    private sealed class TestingEventSink(ITestingRuntimeEventSink sink) : INUnitRuntimeEventSink
-    {
-        public void Publish(NUnitRuntimeEvent runtimeEvent) => sink.Publish(new TestingRuntimeEvent(
-            runtimeEvent.RunId,
-            runtimeEvent.Kind,
-            runtimeEvent.Case is null ? null : ToTestingCase(runtimeEvent.Case),
-            runtimeEvent.Message,
-            runtimeEvent.Attachment is null ? null : new TestingAttachment(
-                runtimeEvent.Attachment.Path,
-                runtimeEvent.Attachment.Name,
-                runtimeEvent.Attachment.ContentType,
-                runtimeEvent.Attachment.Base64),
-            TestingCancellationState.None));
     }
 
     private enum RunLifecycleState

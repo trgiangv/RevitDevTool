@@ -1,4 +1,4 @@
-using DevTools.NUnit.Transport.Results;
+using DevTools.Testing.Abstractions.Contracts;
 using DevTools.NUnit.Runtime;
 using NUnit.Framework.Interfaces;
 
@@ -9,18 +9,18 @@ public sealed class NUnitResultMapperTests
     [Fact]
     public void MapOutcome_MapsWarningToPassed()
     {
-        Assert.Equal(NUnitOutcomes.Passed, NUnitResultMapper.MapOutcome(ResultState.Warning));
+        Assert.Equal(TestingOutcomes.Passed, NUnitResultMapper.MapOutcome(ResultState.Warning));
     }
 
     [Fact]
     public void MapOutcome_MapsCancelledLabelToCancelled()
     {
-        Assert.Equal(NUnitOutcomes.Cancelled, NUnitResultMapper.MapOutcome(ResultState.Cancelled));
+        Assert.Equal(TestingOutcomes.Cancelled, NUnitResultMapper.MapOutcome(ResultState.Cancelled));
     }
 
     [Fact]
     public void MapOutcome_MapsSetupErrorToError()
     {
-        Assert.Equal(NUnitOutcomes.Error, NUnitResultMapper.MapOutcome(ResultState.SetUpError));
+        Assert.Equal(TestingOutcomes.Error, NUnitResultMapper.MapOutcome(ResultState.SetUpError));
     }
 }

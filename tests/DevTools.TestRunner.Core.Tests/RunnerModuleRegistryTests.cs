@@ -44,7 +44,6 @@ public sealed class RunnerModuleRegistryTests
         Assert.Equal("Revit", context.Host);
         Assert.Equal("2026", context.Version);
         Assert.True(context.Debug);
-        Assert.True(context.UseGenericProtocol);
     }
 
     [Fact]

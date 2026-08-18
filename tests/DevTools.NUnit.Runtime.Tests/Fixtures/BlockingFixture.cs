@@ -6,6 +6,7 @@ namespace DevTools.NUnit.Runtime.Tests.Fixtures;
 public static class BlockingRunState
 {
     public static int Entered;
+    public static int Release;
 }
 
 [TestFixture]
@@ -15,6 +16,7 @@ public sealed class BlockingFixture
     public void Blocks_UntilRunStopped()
     {
         Interlocked.Exchange(ref BlockingRunState.Entered, 1);
-        Thread.Sleep(Timeout.Infinite);
+        while (Volatile.Read(ref BlockingRunState.Release) == 0)
+            Thread.Sleep(10);
     }
 }

@@ -17,7 +17,6 @@
             DevTools.Microsoft.Xaml.Behaviors.dll;
             FSharp.Core.dll;
             DevTools.UI.dll;
-            DevTools.NUnit.Transport.dll;
             DevTools.NUnit.Runtime.dll;
             DevTools.Testing.Abstractions.dll;
         </RepackBinariesExcludes>

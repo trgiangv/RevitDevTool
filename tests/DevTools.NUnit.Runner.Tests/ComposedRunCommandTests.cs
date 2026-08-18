@@ -3,11 +3,7 @@ using System.Text.Json;
 using DevTools.Hosting;
 using DevTools.Ipc;
 using DevTools.NUnit.Provider;
-using DevTools.NUnit.Transport.Compatibility;
-using DevTools.NUnit.Transport.Contracts;
-using DevTools.NUnit.Transport.Results;
 using DevTools.NUnit.Runner;
-using DevTools.NUnit.Transport;
 using DevTools.TestRunner.Core.Composition;
 using DevTools.TestRunner.Core.Debugging;
 using DevTools.TestRunner.Core.Services;
@@ -21,12 +17,10 @@ public sealed class ComposedRunCommandTests
 {
     private static readonly SemaphoreSlim ConsoleGate = new(1, 1);
 
-    [Theory]
-    [InlineData(false)]
-    [InlineData(true)]
-    public async Task Run_uses_registry_selected_nunit_module_and_provider_filter_without_host_contact(bool generic)
+    [Fact]
+    public async Task Run_uses_registry_selected_nunit_module_and_provider_filter_without_host_contact()
     {
-        await using var pipe = new FakeHostPipe(generic);
+        await using var pipe = new FakeHostPipe();
         var hosts = new FakeHostSession(pipe.PipeName);
         var debugger = new FakeDebugger();
         var modules = new RunnerModuleRegistry();
@@ -44,11 +38,6 @@ public sealed class ComposedRunCommandTests
             "--host", "Revit", "--host-version", "2026", "--debug",
             "--test", "Sample.Fixture.PlainTest",
         };
-        if (generic)
-        {
-            arguments.Add("--framework");
-            arguments.Add("nunit");
-        }
 
         await ConsoleGate.WaitAsync(TestContext.Current.CancellationToken);
         var originalOut = Console.Out;
@@ -67,12 +56,12 @@ public sealed class ComposedRunCommandTests
         }
 
         var request = await pipe.RunRequest.Task.WaitAsync(TestContext.Current.CancellationToken);
-        Assert.Equal(generic ? TestingProtocol.Run : NUnitProtocol.Run, request.Method);
+        Assert.Equal(TestingProtocol.Run, request.Method);
         Assert.Contains("Sample.Fixture.PlainTest", request.Filter, StringComparison.Ordinal);
         Assert.Equal(1, hosts.Calls);
         Assert.Equal((1234, (int?)null), debugger.Attached);
         Assert.Equal(1234, debugger.DetachedProcessId);
-        Assert.Contains(generic ? "framework_id" : "summary", stdout.ToString(), StringComparison.Ordinal);
+        Assert.Contains("framework_id", stdout.ToString(), StringComparison.Ordinal);
     }
 
     private sealed class FakeHostSession(string pipeName) : IHostSession
@@ -109,12 +98,10 @@ public sealed class ComposedRunCommandTests
     {
         private readonly NamedPipeServerStream pipe;
         private readonly CancellationTokenSource cancellation = new();
-        private readonly bool generic;
         private readonly Task serving;
 
-        public FakeHostPipe(bool generic)
+        public FakeHostPipe()
         {
-            this.generic = generic;
             PipeName = $"devtools-task5-{Guid.NewGuid():N}";
             pipe = new NamedPipeServerStream(PipeName, PipeDirection.InOut, 1, PipeTransmissionMode.Byte, PipeOptions.Asynchronous);
             serving = ServeAsync();
@@ -143,7 +130,7 @@ public sealed class ComposedRunCommandTests
             if (request.Type != BridgeMessage.TypeRequest || request.Id is null)
                 return;
 
-            if (generic && request.Method == TestingProtocol.Hello)
+            if (request.Method == TestingProtocol.Hello)
             {
                 await connection.WriteAsync(BridgeMessage.Response(
                     request.Id,
@@ -152,17 +139,7 @@ public sealed class ComposedRunCommandTests
                         TestingJsonContext.Default.TestingHelloResponse)), cancellation.Token);
                 return;
             }
-            if (!generic && request.Method == NUnitProtocol.Hello)
-            {
-                await connection.WriteAsync(BridgeMessage.Response(
-                    request.Id,
-                    JsonSerializer.SerializeToElement(
-                        new NUnitHelloResponse(NUnitProtocol.CurrentVersion, "Revit", "2026", 1234, false),
-                        NUnitJsonContext.Default.NUnitHelloResponse)), cancellation.Token);
-                return;
-            }
-
-            if (generic && request.Method == TestingProtocol.Run)
+            if (request.Method == TestingProtocol.Run)
             {
                 var run = request.Params!.Value.Deserialize(TestingJsonContext.Default.TestingRunRequest)!;
                 await connection.WriteAsync(BridgeMessage.Response(
@@ -172,16 +149,6 @@ public sealed class ComposedRunCommandTests
                         TestingJsonContext.Default.TestingRunResponse)), cancellation.Token);
                 RunRequest.TrySetResult(new WireRequest(request.Method, run.Selection.ProviderPayload ?? ""));
                 return;
-            }
-            if (!generic && request.Method == NUnitProtocol.Run)
-            {
-                var run = request.Params!.Value.Deserialize(NUnitJsonContext.Default.NUnitRunRequest)!;
-                await connection.WriteAsync(BridgeMessage.Response(
-                    request.Id,
-                    JsonSerializer.SerializeToElement(
-                        new NUnitRunResponse(run.RunId, new NUnitRunSummary(0, 0, 0, 0, 0, 0), [], "generation", null),
-                        NUnitJsonContext.Default.NUnitRunResponse)), cancellation.Token);
-                RunRequest.TrySetResult(new WireRequest(request.Method, run.Filter ?? ""));
             }
         }
 

@@ -45,7 +45,6 @@
     <Target Name="PackDevToolsNUnitRuntimeClosure"
             Condition="'$(TargetFramework)' != '' and !$(TargetFramework.StartsWith('net4'))">
         <PropertyGroup>
-            <_MetadataRuntimeTfm>net$(TargetFrameworkVersion.Substring(1))</_MetadataRuntimeTfm>
             <_DevToolsNUnitRuntimeTfm>net$(TargetFrameworkVersion.Substring(1))-windows7.0</_DevToolsNUnitRuntimeTfm>
         </PropertyGroup>
         <ItemGroup>
@@ -53,13 +52,6 @@
                  runtime-only implementation assets must not become NuGet lib
                  compile references. -->
             <TfmSpecificPackageFile Include="$(TargetDir)*.dll" Exclude="$(TargetPath)">
-                <PackagePath>build/runtime/$(_DevToolsNUnitRuntimeTfm)</PackagePath>
-            </TfmSpecificPackageFile>
-            <!-- Newer TFMs resolve this API to a reference-pack facade, while its
-                 implementation is not in the shared runtime.  Add the matching
-                 package implementation only when it was not copy-local already. -->
-            <TfmSpecificPackageFile Include="$(PkgSystem_Reflection_Metadata)\lib\$(_MetadataRuntimeTfm)\System.Reflection.Metadata.dll"
-                                    Condition="!Exists('$(TargetDir)System.Reflection.Metadata.dll')">
                 <PackagePath>build/runtime/$(_DevToolsNUnitRuntimeTfm)</PackagePath>
             </TfmSpecificPackageFile>
         </ItemGroup>
@@ -75,9 +67,8 @@
         <PackageReference Include="System.Text.Json" Condition="'$(TargetFramework)' == 'net48'">
             <PrivateAssets>all</PrivateAssets>
         </PackageReference>
-        <!-- Keep the metadata reader copy-local for the self-contained modern
-             package closure as well as the established net48 merge. -->
-        <PackageReference Include="System.Reflection.Metadata" GeneratePathProperty="true">
+        <!-- net48 needs the metadata reader merged; modern runtimes provide it. -->
+        <PackageReference Include="System.Reflection.Metadata" Condition="'$(TargetFramework)' == 'net48'">
             <PrivateAssets>all</PrivateAssets>
         </PackageReference>
         <PackageReference Include="System.Runtime.CompilerServices.Unsafe" Condition="'$(TargetFramework)' == 'net48'">
@@ -88,7 +79,6 @@
 
     <ItemGroup>
         <ProjectReference Include="..\DevTools.NUnit.Provider\DevTools.NUnit.Provider.csproj"/>
-        <ProjectReference Include="..\DevTools.NUnit.Transport\DevTools.NUnit.Transport.csproj"/>
         <ProjectReference Include="..\DevTools.Testing.Abstractions\DevTools.Testing.Abstractions.csproj"/>
         <ProjectReference Include="..\DevTools.Testing.Transport\DevTools.Testing.Transport.csproj"/>
         <ProjectReference Include="..\DevTools.Testing.Mtp\DevTools.Testing.Mtp.csproj"/>

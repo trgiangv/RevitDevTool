@@ -17,7 +17,6 @@
         <Build Project="false" />
     </Project>
     <Project Path="../source/DevTools.NUnit.Mtp/DevTools.NUnit.Mtp.csproj" />
-    <Project Path="../source/DevTools.NUnit.TestAdapter/DevTools.NUnit.TestAdapter.csproj" />
     <Project Path="AcadCSharpDemo/AcadCSharpDemo.csproj">
         <Build Project="false" />
     </Project>
@@ -34,12 +33,6 @@
         <Build Project="false" />
     </Project>
     <Project Path="DevTools.NUnit.Civil3D.SampleTests/DevTools.NUnit.Civil3D.SampleTests.csproj">
-        <Build Project="false" />
-    </Project>
-    <Project Path="DevTools.NUnit.VSTest.SampleTests/DevTools.NUnit.VSTest.SampleTests.csproj">
-        <Build Project="false" />
-    </Project>
-    <Project Path="DevTools.NUnit.VSTest.Civil3D.SampleTests/DevTools.NUnit.VSTest.Civil3D.SampleTests.csproj">
         <Build Project="false" />
     </Project>
     <Project Path="ricaun.NUnit.SampleTests/ricaun.NUnit.SampleTests.csproj" Id="e7330fee-0002-4c1f-ae22-ef158fc9fc16" />

@@ -4,6 +4,18 @@ namespace DevTools.NUnit.Host.Loading;
 
 internal static class NUnitGenerationManifestAdapter
 {
+    internal static TestingGenerationManifest ToTesting(NUnitGenerationManifest generation) => new(
+        generation.GenerationId,
+        NUnitGenerationPolicy.FrameworkId,
+        generation.SourceAssemblyPath,
+        generation.ShadowDirectory,
+        generation.ShadowAssemblyPath,
+        generation.RuntimeAssemblyPath,
+        generation.ManagedAssemblies,
+        generation.NativeAssets,
+        generation.SymbolPath is null ? [] : [generation.SymbolPath],
+        []);
+
     internal static NUnitGenerationManifest ToNUnit(TestingGenerationManifest generation)
     {
         var frameworkPath = generation.ManagedAssemblies.SingleOrDefault(path =>

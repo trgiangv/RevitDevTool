@@ -4,6 +4,7 @@
         <TargetFramework>net48</TargetFramework>
         <IsPackable>false</IsPackable>
         <DefaultItemExcludes>$(DefaultItemExcludes);Fixtures\**\*</DefaultItemExcludes>
+        <NoWarn>$(NoWarn);xUnit1031;xUnit1051</NoWarn>
     </PropertyGroup>
 
     <ItemGroup>
@@ -11,16 +12,14 @@
     </ItemGroup>
 
     <ItemGroup>
-        <PackageReference Include="Microsoft.NET.Test.Sdk"/>
         <PackageReference Include="NUnit"/>
-        <PackageReference Include="NUnit3TestAdapter"/>
+        <PackageReference Include="xunit.v3.mtp-v2"/>
         <GlobalPackageReference Remove="Polyfill"/>
     </ItemGroup>
 
     <ItemGroup>
         <ProjectReference Include="..\..\source\DevTools.NUnit.Host\DevTools.NUnit.Host.csproj" SetTargetFramework="TargetFramework=net48"/>
         <ProjectReference Include="..\..\source\DevTools.Testing.Abstractions\DevTools.Testing.Abstractions.csproj" SetTargetFramework="TargetFramework=net48"/>
-        <ProjectReference Include="..\..\source\DevTools.NUnit.Transport\DevTools.NUnit.Transport.csproj" SetTargetFramework="TargetFramework=net48"/>
         <ProjectReference Include="..\..\source\DevTools.NUnit.Runtime\DevTools.NUnit.Runtime.csproj" ReferenceOutputAssembly="false" SetTargetFramework="TargetFramework=net48"/>
         <ProjectReference Include="..\DevTools.NUnit.Runtime.Fixtures\DevTools.NUnit.Runtime.Fixtures.csproj" ReferenceOutputAssembly="false"/>
         <ProjectReference Include="Fixtures\ConflictingNUnitFramework\ConflictingNUnitFramework.csproj" ReferenceOutputAssembly="false"/>

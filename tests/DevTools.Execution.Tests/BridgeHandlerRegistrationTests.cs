@@ -4,7 +4,6 @@ using DevTools.Execution.External.Handlers;
 using DevTools.Execution.External.Testing;
 using DevTools.Ipc;
 using DevTools.Hosting;
-using DevTools.NUnit.Transport.Contracts;
 using DevTools.NUnit.Host;
 using DevTools.Testing.Abstractions.Contracts;
 using DevTools.Testing.Abstractions.Providers;
@@ -17,7 +16,7 @@ namespace DevTools.Execution.Tests;
 public sealed class BridgeHandlerRegistrationTests
 {
     [Fact]
-    public void AddExecutionServices_and_AddNUnitHostServices_register_distinct_bridge_methods()
+    public void AddExecutionServices_and_AddNUnitHostServices_register_only_neutral_testing_methods()
     {
         var services = new ServiceCollection();
         services.AddSingleton<IHostAppInfo, FakeHostAppInfo>();
@@ -35,7 +34,6 @@ public sealed class BridgeHandlerRegistrationTests
 
         Assert.Contains(typeof(InstanceRequestHandler), implementationTypes);
         Assert.Contains(typeof(PytestRequestHandler), implementationTypes);
-        Assert.Contains(typeof(NUnitRequestHandler), implementationTypes);
         Assert.Contains(typeof(MarshaledTestingRequestHandler), implementationTypes);
 
         Assert.Contains(
@@ -47,10 +45,6 @@ public sealed class BridgeHandlerRegistrationTests
             descriptor => descriptor.ServiceType == typeof(TestingProviderRegistry));
 
         var methods = new InstanceRequestHandler(new FakeHostAppInfo()).SupportedMethods
-            .Concat(new NUnitRequestHandler(
-                new NoOpHostContextExecutor(),
-                new NoOpNUnitHost(),
-                new FakeHostAppInfo()).SupportedMethods)
             .Concat([PytestBridgeMethods.TestsRun])
             .Concat(new TestingRequestHandler(
                 new TestingProviderRegistry([new NoOpTestingProvider()]),
@@ -59,10 +53,6 @@ public sealed class BridgeHandlerRegistrationTests
             .ToList();
 
         Assert.Contains(PytestBridgeMethods.TestsRun, methods, StringComparer.OrdinalIgnoreCase);
-        Assert.Contains(NUnitProtocol.Hello, methods, StringComparer.OrdinalIgnoreCase);
-        Assert.Contains(NUnitProtocol.Discover, methods, StringComparer.OrdinalIgnoreCase);
-        Assert.Contains(NUnitProtocol.Run, methods, StringComparer.OrdinalIgnoreCase);
-        Assert.Contains(NUnitProtocol.Cancel, methods, StringComparer.OrdinalIgnoreCase);
         Assert.Contains(TestingProtocol.Hello, methods, StringComparer.OrdinalIgnoreCase);
         Assert.Contains(TestingProtocol.Run, methods, StringComparer.OrdinalIgnoreCase);
         Assert.Contains(TestingProtocol.Cancel, methods, StringComparer.OrdinalIgnoreCase);
@@ -87,22 +77,6 @@ public sealed class BridgeHandlerRegistrationTests
         {
             action();
             return Task.CompletedTask;
-        }
-    }
-
-    private sealed class NoOpNUnitHost : INUnitHost
-    {
-        public NUnitDiscoverResponse Discover(NUnitDiscoverRequest request) =>
-            new(Array.Empty<NUnitDiscoveredTest>());
-
-        public NUnitRunResponse Run(
-            NUnitRunRequest request,
-            Action<NUnitProgressEvent> publish,
-            CancellationToken cancellationToken = default) =>
-            new(request.RunId, new NUnitRunSummary(0, 0, 0, 0, 0, 0), Array.Empty<NUnitCaseResult>());
-
-        public void Cancel(Guid runId)
-        {
         }
     }
 

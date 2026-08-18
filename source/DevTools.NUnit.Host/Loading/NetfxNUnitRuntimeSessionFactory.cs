@@ -1,7 +1,9 @@
 #if NETFRAMEWORK
 using System.Reflection;
-using DevTools.NUnit.Transport.Contracts;
-using DevTools.NUnit.Transport.Runtime;
+using DevTools.Testing.Abstractions.Contracts;
+using DevTools.Testing.Abstractions.Runtime;
+using DevTools.Testing.Host.Loading;
+using DevTools.Testing.Host.Runtime;
 
 namespace DevTools.NUnit.Host.Loading;
 
@@ -22,15 +24,15 @@ internal sealed class NetfxRunnerBindingDiagnostic
     internal Assembly GenerationFrameworkAssembly { get; }
 }
 
-internal sealed class NetfxNUnitSessionHandle : INUnitRuntimeSession
+internal sealed class NetfxNUnitSessionHandle : ITestingRuntimeSession
 {
     private const string RunnerFieldName = "_runner";
 
-    private INUnitRuntimeSession _inner;
+    private ITestingRuntimeSession _inner;
     private bool _disposed;
 
     internal NetfxNUnitSessionHandle(
-        INUnitRuntimeSession inner,
+        ITestingRuntimeSession inner,
         NUnitGenerationRegistry registry,
         NetfxNUnitGeneration generation)
     {
@@ -65,11 +67,9 @@ internal sealed class NetfxNUnitSessionHandle : INUnitRuntimeSession
             Generation.GetLoadedFrameworkAssembly());
     }
 
-    public NUnitDiscoverResponse Discover(NUnitDiscoverRequest request) => _inner.Discover(request);
-
-    public NUnitRunResponse Run(
-        NUnitRunRequest request,
-        INUnitRuntimeEventSink eventSink,
+    public TestingRunResponse Run(
+        TestingRunRequest request,
+        ITestingRuntimeEventSink eventSink,
         CancellationToken cancellationToken) =>
         _inner.Run(request, eventSink, cancellationToken);
 
@@ -95,7 +95,7 @@ internal sealed class NetfxNUnitSessionHandle : INUnitRuntimeSession
     internal NUnitRuntimeDiagnostic CreateRetainedDiagnostic() => Registry.CreateRetainedDiagnostic();
 }
 
-public sealed class NetfxNUnitRuntimeSessionFactory : INUnitRuntimeSessionFactory, IDisposable
+public sealed class NetfxNUnitRuntimeSessionFactory : ITestingRuntimeSessionFactory, IDisposable
 {
     private const string RuntimeSessionTypeName = "DevTools.NUnit.Runtime.NUnitRuntimeSession";
 
@@ -117,7 +117,7 @@ public sealed class NetfxNUnitRuntimeSessionFactory : INUnitRuntimeSessionFactor
     internal IReadOnlyList<GenerationAssemblyResolutionRecord> LazyResolutionRecords =>
         _registry.LazyResolutionRecords;
 
-    public INUnitRuntimeSession Create(NUnitGenerationManifest generation)
+    public ITestingRuntimeSession Create(TestingGenerationManifest generation)
     {
         if (generation is null)
             throw new ArgumentNullException(nameof(generation));
@@ -127,7 +127,7 @@ public sealed class NetfxNUnitRuntimeSessionFactory : INUnitRuntimeSessionFactor
             if (_disposed)
                 throw new ObjectDisposedException(nameof(NetfxNUnitRuntimeSessionFactory));
 
-            var loadedGeneration = _registry.GetOrCreate(generation);
+            var loadedGeneration = _registry.GetOrCreate(NUnitGenerationManifestAdapter.ToNUnit(generation));
             loadedGeneration.EnsureLoaded(_registry);
 
             var inner = CreateRuntimeSession(loadedGeneration, _registry);
@@ -135,7 +135,10 @@ public sealed class NetfxNUnitRuntimeSessionFactory : INUnitRuntimeSessionFactor
         }
     }
 
-    public NUnitRuntimeDiagnostic CreateRetainedDiagnostic() => _registry.CreateRetainedDiagnostic();
+    internal ITestingRuntimeSession Create(NUnitGenerationManifest generation) =>
+        Create(NUnitGenerationManifestAdapter.ToTesting(generation));
+
+    internal NUnitRuntimeDiagnostic CreateRetainedDiagnostic() => _registry.CreateRetainedDiagnostic();
 
     public void Dispose()
     {
@@ -152,7 +155,7 @@ public sealed class NetfxNUnitRuntimeSessionFactory : INUnitRuntimeSessionFactor
     private Assembly? OnAssemblyResolve(object? sender, ResolveEventArgs args) =>
         _registry.ResolveAssembly(sender, args);
 
-    private static INUnitRuntimeSession CreateRuntimeSession(
+    private static ITestingRuntimeSession CreateRuntimeSession(
         NetfxNUnitGeneration generation,
         NUnitGenerationRegistry registry)
     {
@@ -160,7 +163,7 @@ public sealed class NetfxNUnitRuntimeSessionFactory : INUnitRuntimeSessionFactor
         var testAssembly = generation.TestAssembly;
         var sessionType = runtimeAssembly.GetType(RuntimeSessionTypeName, throwOnError: true)!;
 
-        var hostCore = typeof(INUnitRuntimeSession).Assembly;
+        var hostCore = typeof(ITestingRuntimeSession).Assembly;
         var runtimeCore = sessionType.Assembly.GetReferencedAssemblies()
             .FirstOrDefault(reference =>
                 string.Equals(
@@ -172,13 +175,13 @@ public sealed class NetfxNUnitRuntimeSessionFactory : INUnitRuntimeSessionFactor
             && !string.Equals(runtimeCore.FullName, hostCore.FullName, StringComparison.OrdinalIgnoreCase))
         {
             throw new NUnitGenerationAssemblyResolutionException(
-                "Generation runtime must bind DevTools.NUnit.Transport to the host copy.");
+                "Generation runtime must bind DevTools.Testing.Abstractions to the host copy.");
         }
 
         registry.SetActiveLoadingGeneration(generation);
         try
         {
-            return (INUnitRuntimeSession)Activator.CreateInstance(
+            return (ITestingRuntimeSession)Activator.CreateInstance(
                 sessionType,
                 BindingFlags.Instance | BindingFlags.Public,
                 binder: null,

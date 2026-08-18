@@ -13,8 +13,7 @@ public sealed record RunnerCommandContext(
     int HostLaunchTimeoutSeconds,
     bool Debug,
     int? DebugParentPid,
-    string FrameworkId,
-    bool UseGenericProtocol)
+    string FrameworkId)
 {
     public static bool TryCreate(
         RunnerModuleRegistry modules,
@@ -54,11 +53,10 @@ public sealed record RunnerCommandContext(
             return false;
         }
 
-        var useGenericProtocol = !string.IsNullOrWhiteSpace(framework);
         string frameworkId;
         try
         {
-            frameworkId = useGenericProtocol
+            frameworkId = !string.IsNullOrWhiteSpace(framework)
                 ? RunnerModuleRegistry.NormalizeFrameworkId(framework!)
                 : modules.GetDefaultFrameworkId();
         }
@@ -80,8 +78,7 @@ public sealed record RunnerCommandContext(
             hostLaunchTimeoutSeconds,
             debug || debugParentPid is not null,
             debugParentPid,
-            frameworkId,
-            useGenericProtocol);
+            frameworkId);
         return true;
     }
 }

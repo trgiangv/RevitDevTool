@@ -1,10 +1,9 @@
 using System.Reflection;
 using System.Runtime.InteropServices;
-using DevTools.NUnit.Transport.Contracts;
-using DevTools.NUnit.Transport.Results;
-using DevTools.NUnit.Transport.Runtime;
 using DevTools.NUnit.Host.Loading;
 using DevTools.NUnit.Host.NetFramework.Tests;
+using DevTools.Testing.Abstractions.Contracts;
+using DevTools.Testing.Abstractions.Runtime;
 
 namespace DevTools.NUnit.Host.NetFramework.Tests.Probe;
 
@@ -57,7 +56,7 @@ internal static class Program
         var handle = (NetfxNUnitSessionHandle)session;
 
         var run = session.Run(
-            new NUnitRunRequest(
+            CreateRequest(
                 Guid.NewGuid(),
                 manifest.ShadowAssemblyPath,
                 "<filter><test>DevTools.NUnit.Runtime.Fixtures.FullSemanticsFixture.PlainTest_Passes</test></filter>"),
@@ -67,7 +66,7 @@ internal static class Program
         if (!string.Equals(run.GenerationId, manifest.GenerationId, StringComparison.Ordinal))
             return 4;
 
-        if (!string.Equals(run.Cases.Single().Outcome, NUnitOutcomes.Passed, StringComparison.Ordinal))
+        if (!string.Equals(run.Results.Single().Outcome, TestingOutcomes.Passed, StringComparison.Ordinal))
             return 5;
 
         var generationFramework = handle.GetLoadedFrameworkAssembly();
@@ -110,8 +109,8 @@ internal static class Program
         var generationTwo = NetFrameworkGenerationTestEnvironment.BuildFixtureGenerationTwo();
 
         using var factory = new NetfxNUnitRuntimeSessionFactory();
-        INUnitRuntimeSession? sessionOne = null;
-        INUnitRuntimeSession? sessionTwo = null;
+        ITestingRuntimeSession? sessionOne = null;
+        ITestingRuntimeSession? sessionTwo = null;
 
         var createOne = System.Threading.Tasks.Task.Factory.StartNew(() => sessionOne = factory.Create(generationOne));
         var createTwo = System.Threading.Tasks.Task.Factory.StartNew(() => sessionTwo = factory.Create(generationTwo));
@@ -164,9 +163,13 @@ internal static class Program
         return null;
     }
 
-    private sealed class NoOpEventSink : INUnitRuntimeEventSink
+    private static TestingRunRequest CreateRequest(Guid runId, string assemblyPath, string? filter) => new(
+        1, runId, "nunit", new TestingAssemblyReference(assemblyPath, "net48", null),
+        new TestingSelection([], filter), new Dictionary<string, string>());
+
+    private sealed class NoOpEventSink : ITestingRuntimeEventSink
     {
-        public void Publish(NUnitRuntimeEvent runtimeEvent)
+        public void Publish(TestingRuntimeEvent runtimeEvent)
         {
         }
     }

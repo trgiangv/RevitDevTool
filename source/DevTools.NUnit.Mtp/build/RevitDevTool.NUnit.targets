@@ -6,17 +6,8 @@
           BeforeTargets="PrepareForBuild;Build"
           Condition="'$(IsTestProject)' == 'true' or '$(IsTestingPlatformApplication)' == 'true'">
     <Error
-        Condition="@(PackageReference->AnyHaveMetadataValue('Identity', 'NUnit3TestAdapter'))"
-        Text="RevitDevTool.NUnit cannot share a test project with NUnit3TestAdapter. Remove the VSTest adapter reference." />
-    <Error
-        Condition="@(PackageReference->AnyHaveMetadataValue('Identity', 'ricaun.RevitTest.TestAdapter'))"
-        Text="RevitDevTool.NUnit cannot share a test project with ricaun.RevitTest.TestAdapter. Keep host-test projects on one framework." />
-    <Error
         Condition="@(PackageReference->AnyHaveMetadataValue('Identity', 'NUnit.Microsoft.Testing.Platform'))"
         Text="RevitDevTool.NUnit cannot share a test project with NUnit.Microsoft.Testing.Platform. DevTools owns host execution." />
-    <Error
-        Condition="@(PackageReference->AnyHaveMetadataValue('Identity', 'Microsoft.Testing.Extensions.VSTestBridge'))"
-        Text="RevitDevTool.NUnit cannot share a test project with Microsoft.Testing.Extensions.VSTestBridge." />
   </Target>
 
   <Target Name="CopyDevToolsNUnitRuntimeClosure"

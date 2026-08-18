@@ -1,5 +1,4 @@
 using DevTools.NUnit.Provider;
-using DevTools.NUnit.Transport.Contracts;
 using DevTools.Testing.Abstractions.Contracts;
 using DevTools.Testing.Mtp;
 using DevTools.Testing.Transport;

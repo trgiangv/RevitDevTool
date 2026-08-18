@@ -1,25 +1,23 @@
 using System.Diagnostics;
 using System.Reflection;
 using System.Runtime.InteropServices;
-using DevTools.NUnit.Transport.Contracts;
-using DevTools.NUnit.Transport.Results;
-using DevTools.NUnit.Transport.Runtime;
 using DevTools.NUnit.Host;
 using DevTools.NUnit.Host.Loading;
 using DevTools.Testing.Abstractions.Contracts;
 using DevTools.Testing.Abstractions.Providers;
+using DevTools.Testing.Abstractions.Runtime;
 using DevTools.Utilities.AssemblyLoading;
 using NUnit.Framework;
+using FactAttribute = Xunit.FactAttribute;
 
 namespace DevTools.NUnit.Host.NetFramework.Tests;
 
-[TestFixture]
 public sealed class NetFrameworkGenerationTests
 {
     private const string DependencyConsumerAssemblyName = "DependencyConsumer";
     private const string GenerationPrivateDependencyAssemblyName = "GenerationPrivateDependency";
 
-    [Test]
+    [Fact]
     public void SharedAssemblyPolicy_keeps_netfx_polyfills_generation_private()
     {
         HostSharedAssemblies.Use(new HostSharedAssemblyNames(["RevitAPI"], ["Autodesk."]));
@@ -54,7 +52,7 @@ public sealed class NetFrameworkGenerationTests
         Assert.That(NUnitSharedAssemblyPolicy.IsShared("Autodesk.Revit.DB"), Is.True);
     }
 
-    [Test]
+    [Fact]
     public void GenerationBuilder_keeps_versioned_system_and_microsoft_dependencies_private()
     {
         var workspace = Path.Combine(Path.GetTempPath(), "DevTools", "NUnit", Guid.NewGuid().ToString("N"));
@@ -88,7 +86,7 @@ public sealed class NetFrameworkGenerationTests
         }
     }
 
-    [Test]
+    [Fact]
     public void GenerationBuilder_excludes_loose_testing_abstractions_identity_from_netfx_generation()
     {
         var workspace = Path.Combine(Path.GetTempPath(), "DevTools", "NUnit", Guid.NewGuid().ToString("N"));
@@ -114,7 +112,7 @@ public sealed class NetFrameworkGenerationTests
         }
     }
 
-    [Test]
+    [Fact]
     public void Process_runs_on_clr_48()
     {
         Assert.That(Environment.Version.Major, Is.EqualTo(4));
@@ -130,7 +128,7 @@ public sealed class NetFrameworkGenerationTests
         TestContext.WriteLine($"Test host base directory: {AppContext.BaseDirectory}");
     }
 
-    [Test]
+    [Fact]
     public void Create_executes_with_conflicting_preloaded_nunit_identity()
     {
         var conflicting = NetFrameworkGenerationTestEnvironment.LoadConflictingNUnitIntoAppDomain();
@@ -152,7 +150,7 @@ public sealed class NetFrameworkGenerationTests
         Assert.That(probe.Output, Does.Not.Contain($"RunnerLocation={testHostNUnit.Location}"));
     }
 
-    [Test]
+    [Fact]
     public void Create_loads_two_generations_in_one_appdomain()
     {
         var generationOne = NetFrameworkGenerationTestEnvironment.BuildFixtureGenerationOne();
@@ -180,7 +178,7 @@ public sealed class NetFrameworkGenerationTests
         Assert.That(diagnostic.Message, Does.Contain("2"));
     }
 
-    [Test]
+    [Fact]
     public void Create_resolves_same_identity_dependency_per_requesting_generation()
     {
         var generationOne = NetFrameworkGenerationTestEnvironment.BuildDependencyGenerationOne();
@@ -199,11 +197,11 @@ public sealed class NetFrameworkGenerationTests
         Assert.That(factory.LazyResolutionRecords.Count, Is.EqualTo(0));
 
         var caseOne = RunDependencyProbe(sessionOne, generationOne);
-        Assert.That(caseOne.Outcome, Is.EqualTo(NUnitOutcomes.Passed));
+        Assert.That(caseOne.Outcome, Is.EqualTo(TestingOutcomes.Passed));
         Assert.That(caseOne.Output, Does.Contain("dependency-behavior=behavior-one"));
 
         var caseTwo = RunDependencyProbe(sessionTwo, generationTwo);
-        Assert.That(caseTwo.Outcome, Is.EqualTo(NUnitOutcomes.Passed));
+        Assert.That(caseTwo.Outcome, Is.EqualTo(TestingOutcomes.Passed));
         Assert.That(caseTwo.Output, Does.Contain("dependency-behavior=behavior-two"));
 
         Assert.That(handleOne.Generation.LazyResolutionCount, Is.GreaterThanOrEqualTo(1));
@@ -239,7 +237,7 @@ public sealed class NetFrameworkGenerationTests
         Assert.That(factory.RetainedGenerationCount, Is.EqualTo(2));
     }
 
-    [Test]
+    [Fact]
     public void Create_resolves_root_dependency_per_requesting_generation()
     {
         var generationOne = NetFrameworkGenerationTestEnvironment.BuildRootDependencyGenerationOne();
@@ -256,15 +254,15 @@ public sealed class NetFrameworkGenerationTests
         Assert.That(caseTwo.Output, Does.Contain("dependency-behavior=behavior-two"));
     }
 
-    [Test]
+    [Fact]
     public void Create_concurrent_generations_remain_isolated()
     {
         var generationOne = NetFrameworkGenerationTestEnvironment.BuildFixtureGenerationOne();
         var generationTwo = NetFrameworkGenerationTestEnvironment.BuildFixtureGenerationTwo();
 
         using var factory = new NetfxNUnitRuntimeSessionFactory();
-        INUnitRuntimeSession? sessionOne = null;
-        INUnitRuntimeSession? sessionTwo = null;
+        ITestingRuntimeSession? sessionOne = null;
+        ITestingRuntimeSession? sessionTwo = null;
 
         var createOne = Task.Factory.StartNew(() => sessionOne = factory.Create(generationOne));
         var createTwo = Task.Factory.StartNew(() => sessionTwo = factory.Create(generationTwo));
@@ -317,7 +315,7 @@ public sealed class NetFrameworkGenerationTests
         Assert.That(probe.Output, Does.Contain("GenerationTwoRunner="));
     }
 
-    [Test]
+    [Fact]
     public void Dispose_unregisters_handler_without_leaking_duplicate_subscriptions()
     {
         using (var factory = new NetfxNUnitRuntimeSessionFactory())
@@ -340,14 +338,14 @@ public sealed class NetFrameworkGenerationTests
             Throws.Nothing);
     }
 
-    [Test]
+    [Fact]
     public void Dispose_is_idempotent_and_serializes_against_create()
     {
         var manifest = NetFrameworkGenerationTestEnvironment.BuildFixtureGenerationOne();
         var factory = new NetfxNUnitRuntimeSessionFactory();
         var createStarted = new ManualResetEventSlim(false);
         Exception? createFailure = null;
-        INUnitRuntimeSession? session = null;
+        ITestingRuntimeSession? session = null;
 
         var createTask = Task.Factory.StartNew(() =>
         {
@@ -378,7 +376,7 @@ public sealed class NetFrameworkGenerationTests
         session!.Dispose();
     }
 
-    [Test]
+    [Fact]
     public void Dispose_retains_generations_after_session_disposal()
     {
         var manifest = NetFrameworkGenerationTestEnvironment.BuildFixtureGenerationOne();
@@ -398,7 +396,7 @@ public sealed class NetFrameworkGenerationTests
         }
     }
 
-    [Test]
+    [Fact]
     public void ResolveAssembly_binds_shared_core_from_host_appdomain()
     {
         var manifest = NetFrameworkGenerationTestEnvironment.BuildFixtureGenerationOne();
@@ -406,7 +404,7 @@ public sealed class NetFrameworkGenerationTests
         using var session = factory.Create(manifest);
         var handle = (NetfxNUnitSessionHandle)session;
         var runtimeAssembly = handle.GetLoadedRuntimeAssembly();
-        var hostCore = typeof(INUnitRuntimeSession).Assembly;
+        var hostCore = typeof(ITestingRuntimeSession).Assembly;
 
         var coreReference = runtimeAssembly
             .GetReferencedAssemblies()
@@ -420,7 +418,7 @@ public sealed class NetFrameworkGenerationTests
         Assert.That(resolved, Is.SameAs(hostCore));
     }
 
-    [Test]
+    [Fact]
     public void ResolveAssembly_binds_shared_testing_abstractions_from_host_appdomain()
     {
         var hostAbstractions = typeof(TestingRunRequest).Assembly;
@@ -480,64 +478,6 @@ public sealed class NetFrameworkGenerationTests
         return (process.ExitCode, output + error);
     }
 
-    [Test]
-    public void Provider_run_matches_host_run_for_focused_fixture_case()
-    {
-        var workspace = Path.Combine(Path.GetTempPath(), "DevTools", "NUnit", Guid.NewGuid().ToString("N"));
-        Directory.CreateDirectory(workspace);
-        var generationsRoot = NetFrameworkGenerationTestEnvironment.CreateIsolatedGenerationsRoot();
-        try
-        {
-            var testAssembly = NetFrameworkGenerationTestEnvironment.CreateGenerationOneAssembly(
-                workspace,
-                "provider-parity");
-            using var manager = new NUnitRuntimeManager(
-                NetFrameworkGenerationTestEnvironment.CreateBuilder(generationsRoot),
-                new NetfxNUnitRuntimeSessionFactory());
-            var host = new NUnitHost(manager);
-            var provider = new NUnitHostTestFrameworkProvider(host);
-            const string fullName = "DevTools.NUnit.Runtime.Fixtures.FullSemanticsFixture.PlainTest_Passes";
-            var hostRun = host.Run(
-                new NUnitRunRequest(
-                    Guid.NewGuid(),
-                    testAssembly,
-                    "<filter><test>" + fullName + "</test></filter>"),
-                _ => { },
-                CancellationToken.None);
-
-            var testingRun = provider.Run(
-                new TestingRunRequest(
-                    2,
-                    Guid.NewGuid(),
-                    NUnitFramework.Id,
-                    new TestingAssemblyReference(testAssembly, "net48", null),
-                    new TestingSelection(new[] { fullName }, null),
-                    new Dictionary<string, string>()),
-                new NoOpTestingSink(),
-                CancellationToken.None);
-
-            Assert.That(hostRun.Cases.Single().Outcome, Is.EqualTo(NUnitOutcomes.Passed));
-            Assert.That(testingRun.Results.Single().Outcome, Is.EqualTo(NUnitOutcomes.Passed));
-            Assert.That(testingRun.Results.Single().TestId, Is.EqualTo(hostRun.Cases.Single().Id));
-            Assert.That(testingRun.Results.Single().DisplayName, Is.EqualTo(hostRun.Cases.Single().Name));
-            Assert.That(testingRun.GenerationId, Is.EqualTo(hostRun.GenerationId));
-        }
-        finally
-        {
-            try
-            {
-                if (Directory.Exists(workspace))
-                    Directory.Delete(workspace, recursive: true);
-                if (Directory.Exists(generationsRoot))
-                    Directory.Delete(generationsRoot, recursive: true);
-            }
-            catch
-            {
-                // Best-effort cleanup.
-            }
-        }
-    }
-
     private static string ReadGenerationMarker(Assembly testAssembly)
     {
         const string markerTypeName = "DevTools.NUnit.Runtime.Fixtures.GenerationMarker";
@@ -560,10 +500,10 @@ public sealed class NetFrameworkGenerationTests
             ?? throw new InvalidOperationException("GenerationMarker.Value constant was not available.");
     }
 
-    private static void AssertGenerationMarkerCasePasses(INUnitRuntimeSession session, NUnitGenerationManifest manifest)
+    private static void AssertGenerationMarkerCasePasses(ITestingRuntimeSession session, NUnitGenerationManifest manifest)
     {
         var run = session.Run(
-            new NUnitRunRequest(
+            CreateTestingRequest(
                 Guid.NewGuid(),
                 manifest.ShadowAssemblyPath,
                 "<filter><test>DevTools.NUnit.Runtime.Fixtures.FullSemanticsFixture.PlainTest_Passes</test></filter>"),
@@ -571,17 +511,17 @@ public sealed class NetFrameworkGenerationTests
             CancellationToken.None);
 
         Assert.That(run.GenerationId, Is.EqualTo(manifest.GenerationId));
-        Assert.That(run.Cases.Single().Outcome, Is.EqualTo(NUnitOutcomes.Passed));
+        Assert.That(run.Results.Single().Outcome, Is.EqualTo(TestingOutcomes.Passed));
     }
 
     private static Assembly LoadDependencyFromRecord(GenerationAssemblyResolutionRecord record) =>
         AppDomain.CurrentDomain.GetAssemblies().Single(assembly =>
             string.Equals(assembly.Location, record.ResolvedAssemblyLocation, StringComparison.OrdinalIgnoreCase));
 
-    private static NUnitCaseResult RunDependencyProbe(INUnitRuntimeSession session, NUnitGenerationManifest manifest)
+    private static TestingCaseResult RunDependencyProbe(ITestingRuntimeSession session, NUnitGenerationManifest manifest)
     {
         var run = session.Run(
-            new NUnitRunRequest(
+            CreateTestingRequest(
                 Guid.NewGuid(),
                 manifest.ShadowAssemblyPath,
                 "<filter><test>DependencyConsumer.DependencyProbeFixture.DependencyBehavior_IsGenerationSpecific</test></filter>"),
@@ -589,15 +529,23 @@ public sealed class NetFrameworkGenerationTests
             CancellationToken.None);
 
         Assert.That(run.GenerationId, Is.EqualTo(manifest.GenerationId));
-        return run.Cases.Single();
+        return run.Results.Single();
     }
 
-    private sealed class NoOpEventSink : INUnitRuntimeEventSink
+    private sealed class NoOpEventSink : ITestingRuntimeEventSink
     {
-        public void Publish(NUnitRuntimeEvent runtimeEvent)
+        public void Publish(TestingRuntimeEvent runtimeEvent)
         {
         }
     }
+
+    private static TestingRunRequest CreateTestingRequest(Guid runId, string assemblyPath, string? filter) => new(
+        1,
+        runId,
+        NUnitFramework.Id,
+        new TestingAssemblyReference(assemblyPath, "net48", null),
+        new TestingSelection([], filter),
+        new Dictionary<string, string>());
 
     private sealed class NoOpTestingSink : ITestingEventSink
     {

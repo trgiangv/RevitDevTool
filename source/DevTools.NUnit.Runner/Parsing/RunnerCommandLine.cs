@@ -15,7 +15,6 @@ public sealed record RunnerCommandLine(RunnerCommandContext Context, string? Fil
     public bool Debug => Context.Debug;
     public int? DebugParentPid => Context.DebugParentPid;
     public string FrameworkId => Context.FrameworkId;
-    public bool UseGenericProtocol => Context.UseGenericProtocol;
 
     public static bool TryCreate(
         RunnerCommandContext context,

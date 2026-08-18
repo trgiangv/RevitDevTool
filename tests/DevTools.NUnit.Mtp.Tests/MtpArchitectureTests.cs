@@ -83,7 +83,7 @@ public sealed class MtpArchitectureTests
     }
 
     [Fact]
-    public void Mtp_and_vstest_share_the_generic_runner_client()
+    public void Mtp_uses_the_generic_runner_client()
     {
         var client = Path.Combine(
             RepositoryRoot, "source", "DevTools.Testing.Transport", "ProcessTestRunnerClient.cs");
@@ -96,14 +96,9 @@ public sealed class MtpArchitectureTests
 
         var mtp = File.ReadAllText(Path.Combine(
             RepositoryRoot, "source", "DevTools.NUnit.Mtp", "DevTools.NUnit.Mtp.csproj"));
-        var adapter = File.ReadAllText(Path.Combine(
-            RepositoryRoot, "source", "DevTools.NUnit.TestAdapter", "DevTools.NUnit.TestAdapter.csproj"));
         Assert.Contains("DevTools.NUnit.Provider", mtp, StringComparison.Ordinal);
-        Assert.Contains("DevTools.NUnit.Provider", adapter, StringComparison.Ordinal);
         Assert.Contains("DevTools.Testing.Transport", mtp, StringComparison.Ordinal);
-        Assert.Contains("DevTools.Testing.Transport", adapter, StringComparison.Ordinal);
         Assert.DoesNotContain("NUnitProcessTransportAdapter.cs", mtp, StringComparison.Ordinal);
-        Assert.DoesNotContain("NUnitProcessTransportAdapter.cs", adapter, StringComparison.Ordinal);
     }
 
     [Fact]

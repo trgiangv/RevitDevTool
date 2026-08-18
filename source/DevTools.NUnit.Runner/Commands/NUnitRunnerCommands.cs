@@ -26,7 +26,7 @@ public sealed class NUnitRunnerCommands(
     /// <param name="hostLaunch">Ignored on discover. Required by shared CLI parsing with run.</param>
     /// <param name="hostTimeout">Ignored on discover.</param>
     /// <param name="hostLaunchTimeout">Ignored on discover.</param>
-    /// <param name="framework">Host test framework id. Omit for the legacy NUnit path.</param>
+    /// <param name="framework">Host test framework id. Defaults to NUnit.</param>
     [Command("discover")]
     public Task<int> Discover(
         [Argument] string assembly,
@@ -70,7 +70,7 @@ public sealed class NUnitRunnerCommands(
     /// <param name="hostLaunchTimeout">Wait for host pipe after launch, in seconds.</param>
     /// <param name="debug">Attach Visual Studio to the host (GetActiveObject when --debug-parent-pid is omitted).</param>
     /// <param name="debugParentPid">MTP/testhost PID. Presence implies --debug and selects that Visual Studio instance.</param>
-    /// <param name="framework">Host test framework id. Omit for the legacy NUnit path.</param>
+    /// <param name="framework">Host test framework id. Defaults to NUnit.</param>
     [Command("run")]
     public Task<int> Run(
         [Argument] string assembly,

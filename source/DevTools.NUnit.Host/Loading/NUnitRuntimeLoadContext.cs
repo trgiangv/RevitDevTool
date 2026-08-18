@@ -2,8 +2,8 @@
 using System.Collections.Frozen;
 using System.Reflection;
 using System.Runtime.Loader;
-using DevTools.NUnit.Transport.Contracts;
-using DevTools.NUnit.Transport.Runtime;
+using DevTools.Testing.Abstractions.Contracts;
+using DevTools.Testing.Abstractions.Runtime;
 using DevTools.Utilities.AssemblyLoading;
 
 namespace DevTools.NUnit.Host.Loading;
@@ -218,15 +218,15 @@ internal sealed class NUnitRuntimeLoadContext : AssemblyLoadContext
     }
 }
 
-internal sealed class NUnitRuntimeSessionHandle : INUnitRuntimeSession
+internal sealed class NUnitRuntimeSessionHandle : ITestingRuntimeSession
 {
-    private INUnitRuntimeSession _inner;
+    private ITestingRuntimeSession _inner;
     private NUnitRuntimeLoadContext? _loadContext;
     private readonly WeakReference _loadContextWeakReference;
     private NUnitRuntimeDiagnostic? _unloadDiagnostic;
     private bool _disposed;
 
-    internal NUnitRuntimeSessionHandle(INUnitRuntimeSession inner, NUnitRuntimeLoadContext loadContext)
+    internal NUnitRuntimeSessionHandle(ITestingRuntimeSession inner, NUnitRuntimeLoadContext loadContext)
     {
         _inner = inner ?? throw new ArgumentNullException(nameof(inner));
         _loadContext = loadContext ?? throw new ArgumentNullException(nameof(loadContext));
@@ -257,11 +257,9 @@ internal sealed class NUnitRuntimeSessionHandle : INUnitRuntimeSession
     internal Assembly GetLoadedRuntimeAssembly() =>
         _inner.GetType().Assembly;
 
-    public NUnitDiscoverResponse Discover(NUnitDiscoverRequest request) => _inner.Discover(request);
-
-    public NUnitRunResponse Run(
-        NUnitRunRequest request,
-        INUnitRuntimeEventSink eventSink,
+    public TestingRunResponse Run(
+        TestingRunRequest request,
+        ITestingRuntimeEventSink eventSink,
         CancellationToken cancellationToken) =>
         _inner.Run(request, eventSink, cancellationToken);
 

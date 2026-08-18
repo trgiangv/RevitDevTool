@@ -14,7 +14,6 @@
         <ProjectReference Include="..\DevTools.Testing.Abstractions\DevTools.Testing.Abstractions.csproj" />
         <ProjectReference Include="..\DevTools.Testing.Transport\DevTools.Testing.Transport.csproj" />
         <ProjectReference Include="..\DevTools.NUnit.Provider\DevTools.NUnit.Provider.csproj" />
-        <ProjectReference Include="..\DevTools.NUnit.Transport\DevTools.NUnit.Transport.csproj" />
         <ProjectReference Include="..\DevTools.Ipc\DevTools.Ipc.csproj" />
     </ItemGroup>
     <ItemGroup>

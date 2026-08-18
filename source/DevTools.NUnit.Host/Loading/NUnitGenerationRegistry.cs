@@ -1,6 +1,5 @@
 #if NETFRAMEWORK
 using System.Reflection;
-using DevTools.NUnit.Transport.Contracts;
 
 namespace DevTools.NUnit.Host.Loading;
 

@@ -16,7 +16,7 @@ public sealed class HostExecutionCoordinatorTests
         var context = new RunnerCommandContext(
             "run", typeof(HostExecutionCoordinatorTests).Assembly.Location, "Revit", "2026",
             HostLaunch: false, HostTimeoutSeconds: 60, HostLaunchTimeoutSeconds: 180,
-            Debug: true, DebugParentPid: 99, FrameworkId: "example", UseGenericProtocol: true);
+            Debug: true, DebugParentPid: 99, FrameworkId: "example");
 
         var result = await coordinator.ExecuteAsync(
             context,

@@ -1,29 +1,32 @@
 #if NET
 using System.Reflection;
-using DevTools.NUnit.Transport.Runtime;
+using DevTools.Testing.Abstractions.Runtime;
+using DevTools.Testing.Host.Loading;
+using DevTools.Testing.Host.Runtime;
 
 namespace DevTools.NUnit.Host.Loading;
 
-public sealed class NUnitRuntimeSessionFactory : INUnitRuntimeSessionFactory
+public sealed class NUnitRuntimeSessionFactory : ITestingRuntimeSessionFactory
 {
     private const string RuntimeSessionTypeName = "DevTools.NUnit.Runtime.NUnitRuntimeSession";
 
-    public INUnitRuntimeSession Create(NUnitGenerationManifest generation)
+    public ITestingRuntimeSession Create(TestingGenerationManifest generation)
     {
         ArgumentNullException.ThrowIfNull(generation);
 
-        var loadContext = new NUnitRuntimeLoadContext(generation);
+        var nunitGeneration = NUnitGenerationManifestAdapter.ToNUnit(generation);
+        var loadContext = new NUnitRuntimeLoadContext(nunitGeneration);
         try
         {
-            var runtimeAssembly = loadContext.LoadFromManifestPath(generation.RuntimeAssemblyPath);
-            var testAssembly = loadContext.LoadFromManifestPath(generation.ShadowAssemblyPath);
+            var runtimeAssembly = loadContext.LoadFromManifestPath(nunitGeneration.RuntimeAssemblyPath);
+            var testAssembly = loadContext.LoadFromManifestPath(nunitGeneration.ShadowAssemblyPath);
             var sessionType = runtimeAssembly.GetType(RuntimeSessionTypeName, throwOnError: true)!;
 
-            var inner = (INUnitRuntimeSession)Activator.CreateInstance(
+            var inner = (ITestingRuntimeSession)Activator.CreateInstance(
                 sessionType,
                 BindingFlags.Instance | BindingFlags.Public,
                 binder: null,
-                args: [testAssembly, generation.ShadowAssemblyPath, generation.GenerationId, true],
+                args: [testAssembly, nunitGeneration.ShadowAssemblyPath, nunitGeneration.GenerationId, true],
                 culture: null)!;
 
             return new NUnitRuntimeSessionHandle(inner, loadContext);
@@ -34,5 +37,8 @@ public sealed class NUnitRuntimeSessionFactory : INUnitRuntimeSessionFactory
             throw;
         }
     }
+
+    internal ITestingRuntimeSession Create(NUnitGenerationManifest generation) =>
+        Create(NUnitGenerationManifestAdapter.ToTesting(generation));
 }
 #endif

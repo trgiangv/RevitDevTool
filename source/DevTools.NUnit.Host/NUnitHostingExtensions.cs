@@ -1,6 +1,8 @@
 using DevTools.NUnit.Host.Loading;
 using DevTools.Testing.Abstractions.Providers;
 using DevTools.Testing.Host;
+using DevTools.Testing.Host.Loading;
+using DevTools.Testing.Host.Runtime;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 
@@ -10,33 +12,32 @@ public static class NUnitHostingExtensions
 {
     /// <summary>
     /// Registers the native NUnit runtime manager, generation builder, NUnit
-    /// provider, and <c>nunit/*</c> bridge handler. Call from Revit/AutoCAD
+    /// provider, and neutral <c>testing/*</c> bridge handler. Call from Revit/AutoCAD
     /// hosting after <c>AddExecutionServices()</c>.
     /// </summary>
     /// <remarks>
-    /// <c>testing/*</c> is not registered here. Call
-    /// <see cref="AddGenericTestingHostServices"/> after this method so
-    /// <c>nunit/*</c> methods stay unique.
+    /// <c>testing/*</c> is registered separately by <see cref="AddGenericTestingHostServices"/>.
     /// </remarks>
     public static IServiceCollection AddNUnitHostServices(this IServiceCollection services)
     {
-        services.TryAddSingleton<INUnitGenerationBuilder>(_ =>
+        services.TryAddSingleton<NUnitGenerationBuilder>(_ =>
             new NUnitGenerationBuilder(ResolveHostRuntimeSourcePath));
+        services.TryAddSingleton<INUnitGenerationBuilder>(sp => sp.GetRequiredService<NUnitGenerationBuilder>());
 #if NETFRAMEWORK
-        services.TryAddSingleton<INUnitRuntimeSessionFactory, NetfxNUnitRuntimeSessionFactory>();
+        services.TryAddSingleton<ITestingRuntimeSessionFactory, NetfxNUnitRuntimeSessionFactory>();
 #else
-        services.TryAddSingleton<INUnitRuntimeSessionFactory, NUnitRuntimeSessionFactory>();
+        services.TryAddSingleton<ITestingRuntimeSessionFactory, NUnitRuntimeSessionFactory>();
 #endif
-        services.TryAddSingleton<NUnitRuntimeManager>();
-        services.TryAddSingleton<INUnitHost, NUnitHost>();
+        services.TryAddSingleton(sp => sp.GetRequiredService<NUnitGenerationBuilder>().Store);
+        services.TryAddSingleton(sp => sp.GetRequiredService<NUnitGenerationBuilder>().Policy);
+        services.TryAddSingleton<TestingRuntimeSessionManager>();
         services.TryAddSingleton<IHostTestFrameworkProvider, NUnitHostTestFrameworkProvider>();
         services.TryAddSingleton<TestingProviderRegistry>();
-        services.AddSingleton<IBridgeRequestHandler, NUnitRequestHandler>();
         return services;
     }
 
     /// <summary>
-    /// Registers <c>testing/*</c> once with legacy NUnit envelopes disabled.
+    /// Registers the single MTP-focused <c>testing/*</c> protocol.
     /// Call after <see cref="AddNUnitHostServices"/> so the NUnit provider exists.
     /// </summary>
     public static IServiceCollection AddGenericTestingHostServices(this IServiceCollection services)

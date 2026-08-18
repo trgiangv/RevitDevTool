@@ -1,5 +1,4 @@
 using System.Xml.Linq;
-using DevTools.NUnit.Transport.Contracts;
 using DevTools.Testing.Abstractions.Contracts;
 
 namespace DevTools.NUnit.Provider;
@@ -64,27 +63,4 @@ public static class NUnitTestingMapping
         return new RunnerTestFilter(names, tests);
     }
 
-    public static TestingCaseResult ToTesting(NUnitCaseResult result) =>
-        new(
-            result.Id,
-            result.Name,
-            result.Outcome,
-            result.DurationMs,
-            result.Message,
-            result.StackTrace,
-            result.Output,
-            result.Source is null ? null : new TestingSourceLocation(result.Source.File, result.Source.Line),
-            (result.Traits ?? Array.Empty<NUnitTrait>())
-                .Select(trait => new TestingTrait(trait.Name, trait.Value))
-                .ToList(),
-            (result.Attachments ?? Array.Empty<NUnitAttachment>())
-                .Select(attachment => new TestingAttachment(
-                    attachment.Path,
-                    attachment.Name,
-                    attachment.ContentType,
-                    attachment.Base64))
-                .ToList(),
-            result.ParentTestId,
-            result.FullName,
-            result.SkipReason);
 }

@@ -10,7 +10,7 @@ namespace DevTools.NUnit.Host;
 /// <summary>
 /// Host-thread wrapper around <see cref="TestingRequestHandler"/>.
 /// <c>testing/run</c> must not execute on the pipe thread.
-/// Legacy <c>nunit/*</c> stays on <see cref="NUnitRequestHandler"/>.
+/// This is the sole in-host testing protocol surface.
 /// </summary>
 public sealed class MarshaledTestingRequestHandler : IBridgeRequestHandler, IBridgeNotificationPublisher
 {
