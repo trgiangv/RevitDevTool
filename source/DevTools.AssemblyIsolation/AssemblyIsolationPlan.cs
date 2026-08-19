@@ -15,7 +15,8 @@ public sealed class AssemblyIsolationPlan
         IReadOnlyList<Assembly> parentAssemblies,
         IReadOnlyList<IManagedAssemblySource> managedSources,
         IReadOnlyList<INativeAssemblySource> nativeSources,
-        IAssemblyIsolationDiagnosticSink? diagnosticSink)
+        IAssemblyIsolationDiagnosticSink? diagnosticSink,
+        bool loadsFromDistinctFile)
     {
         EntryAssemblyPath = entryAssemblyPath;
         Lifecycle = lifecycle;
@@ -24,6 +25,7 @@ public sealed class AssemblyIsolationPlan
         ManagedSources = managedSources;
         NativeSources = nativeSources;
         DiagnosticSink = diagnosticSink;
+        LoadsFromDistinctFile = loadsFromDistinctFile;
     }
 
     public string EntryAssemblyPath { get; }
@@ -38,6 +40,12 @@ public sealed class AssemblyIsolationPlan
 
     public IAssemblyIsolationDiagnosticSink? DiagnosticSink { get; }
 
+    /// <summary>
+    /// When true, net48 uses path-backed load so the same assembly identity from
+    /// different files stays distinct. Default is memory load (no source lock).
+    /// </summary>
+    public bool LoadsFromDistinctFile { get; }
+
     public static AssemblyIsolationPlan Create(string entryAssemblyPath)
     {
         if (string.IsNullOrWhiteSpace(entryAssemblyPath))
@@ -49,69 +57,59 @@ public sealed class AssemblyIsolationPlan
             ReadOnly(Array.Empty<Assembly>()),
             ReadOnly(Array.Empty<IManagedAssemblySource>()),
             ReadOnly(Array.Empty<INativeAssemblySource>()),
-            null);
+            null,
+            false);
     }
 
     public AssemblyIsolationPlan WithLifecycle(AssemblyIsolationLifecycle lifecycle) =>
-        new(
-            EntryAssemblyPath,
-            lifecycle,
-            parentAssemblies,
-            ManagedSources,
-            NativeSources,
-            DiagnosticSink);
+        Clone(lifecycle: lifecycle);
+
+    public AssemblyIsolationPlan WithDistinctFileIdentity() =>
+        Clone(loadsFromDistinctFile: true);
 
     public AssemblyIsolationPlan BindToParent(Assembly assembly)
     {
         if (assembly is null) throw new ArgumentNullException(nameof(assembly));
 
-        return new AssemblyIsolationPlan(
-            EntryAssemblyPath,
-            Lifecycle,
-            ReadOnly(parentAssemblies.Append(assembly)),
-            ManagedSources,
-            NativeSources,
-            DiagnosticSink);
+        return Clone(parentAssemblies: ReadOnly(this.parentAssemblies.Append(assembly)));
     }
 
     public AssemblyIsolationPlan AddManagedSource(IManagedAssemblySource source)
     {
         if (source is null) throw new ArgumentNullException(nameof(source));
 
-        return new AssemblyIsolationPlan(
-            EntryAssemblyPath,
-            Lifecycle,
-            parentAssemblies,
-            ReadOnly(ManagedSources.Append(source)),
-            NativeSources,
-            DiagnosticSink);
+        return Clone(managedSources: ReadOnly(ManagedSources.Append(source)));
     }
 
     public AssemblyIsolationPlan AddNativeSource(INativeAssemblySource source)
     {
         if (source is null) throw new ArgumentNullException(nameof(source));
 
-        return new AssemblyIsolationPlan(
-            EntryAssemblyPath,
-            Lifecycle,
-            parentAssemblies,
-            ManagedSources,
-            ReadOnly(NativeSources.Append(source)),
-            DiagnosticSink);
+        return Clone(nativeSources: ReadOnly(NativeSources.Append(source)));
     }
 
     public AssemblyIsolationPlan WithDiagnosticSink(IAssemblyIsolationDiagnosticSink sink)
     {
         if (sink is null) throw new ArgumentNullException(nameof(sink));
 
-        return new AssemblyIsolationPlan(
-            EntryAssemblyPath,
-            Lifecycle,
-            parentAssemblies,
-            ManagedSources,
-            NativeSources,
-            sink);
+        return Clone(diagnosticSink: sink);
     }
+
+    AssemblyIsolationPlan Clone(
+        AssemblyIsolationLifecycle? lifecycle = null,
+        IReadOnlyList<Assembly>? parentAssemblies = null,
+        IReadOnlyList<IManagedAssemblySource>? managedSources = null,
+        IReadOnlyList<INativeAssemblySource>? nativeSources = null,
+        IAssemblyIsolationDiagnosticSink? diagnosticSink = null,
+        bool? loadsFromDistinctFile = null) =>
+        new(
+            EntryAssemblyPath,
+            lifecycle ?? Lifecycle,
+            parentAssemblies ?? this.parentAssemblies,
+            managedSources ?? ManagedSources,
+            nativeSources ?? NativeSources,
+            diagnosticSink ?? DiagnosticSink,
+            loadsFromDistinctFile ?? LoadsFromDistinctFile);
 
     static IReadOnlyList<T> ReadOnly<T>(IEnumerable<T> items) =>
         Array.AsReadOnly(items.ToArray());

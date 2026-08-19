@@ -31,6 +31,7 @@ public sealed class NUnitAssemblyIsolationTests
             typeof(TestingRunRequest).Assembly,
             ResolveParent(plan, typeof(TestingRunRequest).Assembly.GetName()));
         Assert.Equal(AssemblyIsolationLifecycle.Collectible, plan.Lifecycle);
+        Assert.False(plan.LoadsFromDistinctFile);
     }
 
     [Fact]

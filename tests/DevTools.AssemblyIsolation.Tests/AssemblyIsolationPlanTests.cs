@@ -17,12 +17,15 @@ public sealed class AssemblyIsolationPlanTests
 
         var composed = initial
             .WithLifecycle(AssemblyIsolationLifecycle.Collectible)
+            .WithDistinctFileIdentity()
             .BindToParent(typeof(AssemblyIsolationPlanTests).Assembly)
             .AddManagedSource(managedSource)
             .AddNativeSource(nativeSource)
             .WithDiagnosticSink(sink);
 
         Assert.NotSame(initial, composed);
+        Assert.False(initial.LoadsFromDistinctFile);
+        Assert.True(composed.LoadsFromDistinctFile);
         Assert.Equal(AssemblyIsolationLifecycle.Permanent, initial.Lifecycle);
         Assert.Empty(initial.ManagedSources);
         Assert.Empty(initial.NativeSources);

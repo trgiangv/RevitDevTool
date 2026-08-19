@@ -30,7 +30,7 @@ internal sealed class NetFrameworkAssemblyIsolationScope : IDisposable
             return parent;
 
         using (BeginLoad())
-            return Own(AssemblyStreamLoader.Load(plan.EntryAssemblyPath));
+            return Own(LoadManaged(plan.EntryAssemblyPath));
     }
 
     public Assembly LoadFromPath(string path)
@@ -40,7 +40,7 @@ internal sealed class NetFrameworkAssemblyIsolationScope : IDisposable
             throw new ArgumentException("An assembly path is required.", nameof(path));
 
         using (BeginLoad())
-            return Own(AssemblyStreamLoader.Load(path));
+            return Own(LoadManaged(path));
     }
 
     public Assembly LoadAssembly(byte[] assemblyBytes)
@@ -86,7 +86,7 @@ internal sealed class NetFrameworkAssemblyIsolationScope : IDisposable
             }
 
             Publish("managed-candidate-selected", requested, candidate, "Loading private candidate.");
-            return Own(AssemblyStreamLoader.Load(candidate.Path));
+            return Own(LoadManaged(candidate.Path));
         }
 
         Publish("managed-clr-fallback", requested, null, "No private source produced a candidate; delegating to the CLR binder.");
@@ -100,6 +100,11 @@ internal sealed class NetFrameworkAssemblyIsolationScope : IDisposable
 
         return requestingAssembly is not null && ownedAssemblies.Contains(requestingAssembly);
     }
+
+    Assembly LoadManaged(string path) =>
+        plan.LoadsFromDistinctFile
+            ? AssemblyStreamLoader.LoadFile(path)
+            : AssemblyStreamLoader.Load(path);
 
     LoadScope BeginLoad() => new(this);
 

@@ -39,6 +39,9 @@ internal static class NUnitIsolationPlan
                 AssemblyIsolationLifecycle.ScopedNetFramework
 #endif
             )
+#if NETFRAMEWORK
+            .WithDistinctFileIdentity()
+#endif
             .BindToParent(frameworkAssembly)
             .BindToParent(typeof(ITestingRuntimeSession).Assembly)
             .AddManagedSource(new ManifestAssemblySource(managedCandidates))

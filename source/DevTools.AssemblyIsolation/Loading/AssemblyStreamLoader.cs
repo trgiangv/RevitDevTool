@@ -5,23 +5,25 @@ using System.Runtime.Loader;
 
 namespace DevTools.AssemblyIsolation.Loading;
 
+/// <summary>
+/// Loads PE/PDB without locking the source file.
+/// Collectible contexts use <see cref="Load(AssemblyLoadContext, string)"/>.
+/// Default AppDomain uses <see cref="Load(string)"/> (<c>Assembly.Load(byte[])</c>).
+/// <see cref="LoadFile"/> is only for same-identity copies that must stay distinct.
+/// </summary>
 public static class AssemblyStreamLoader
 {
     public static Assembly Load(string path)
     {
-#if NETFRAMEWORK
-        // Same-identity generations must stay distinct in the default AppDomain.
-        // Load(byte[]) unifies by identity and would mix hot-reload copies.
-        // The path is a shadow/temp copy, not the developer's project output.
-        return Assembly.LoadFile(Path.GetFullPath(path));
-#else
         var assemblyBytes = File.ReadAllBytes(path);
         var symbolPath = Path.ChangeExtension(path, ".pdb");
         return File.Exists(symbolPath)
             ? Assembly.Load(assemblyBytes, File.ReadAllBytes(symbolPath))
             : Assembly.Load(assemblyBytes);
-#endif
     }
+
+    public static Assembly LoadFile(string path) =>
+        Assembly.LoadFile(Path.GetFullPath(path));
 
 #if NET
     public static Assembly Load(AssemblyLoadContext context, string path)
