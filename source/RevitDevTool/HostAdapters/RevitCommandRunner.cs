@@ -56,6 +56,12 @@ public sealed class RevitCommandRunner(ILogger<RevitCommandRunner> logger) : ICo
         }
     }
 
+    // Command assemblies may show modeless WPF windows that outlive Execute.
+    // Collectible unload (NET) or AssemblyResolve unhook (net48) on return
+    // tears down chrome / delayed loads while the HWND remains. Keep sessions
+    // for the host process lifetime.
+    static readonly List<AssemblyIsolationSession> LiveCommandSessions = [];
+
 #if NET
     private ExecutionResult RunInIsolatedContext(CommandItem item)
     {
@@ -64,6 +70,7 @@ public sealed class RevitCommandRunner(ILogger<RevitCommandRunner> logger) : ICo
                 item.AssemblyPath,
                 [typeof(IExternalCommand).Assembly, typeof(Autodesk.Revit.DB.Element).Assembly],
                 new CommandIsolationDiagnosticSink(logger)));
+        LiveCommandSessions.Add(session);
         try
         {
             return LoadAndExecute(session, item);
@@ -71,9 +78,6 @@ public sealed class RevitCommandRunner(ILogger<RevitCommandRunner> logger) : ICo
         finally
         {
             RevitContext.Application.PurgeReleasedAPIObjects();
-            session.Dispose();
-            GC.Collect();
-            GC.WaitForPendingFinalizers();
         }
     }
 
@@ -122,24 +126,20 @@ public sealed class RevitCommandRunner(ILogger<RevitCommandRunner> logger) : ICo
 #if NETFRAMEWORK
     private ExecutionResult RunInAppDomain(CommandItem item)
     {
-        var targetDir = Path.GetDirectoryName(item.AssemblyPath)!;
-        var loadedNativeHandles = new List<IntPtr>();
-        var session = AssemblyIsolationSession.Create(
-            CommandIsolationPlan.Create(
-                item.AssemblyPath,
-                [typeof(IExternalCommand).Assembly, typeof(Autodesk.Revit.DB.Element).Assembly],
-                new CommandIsolationDiagnosticSink(logger)));
+        var plan = CommandIsolationPlan.Create(
+            item.AssemblyPath,
+            [typeof(IExternalCommand).Assembly, typeof(Autodesk.Revit.DB.Element).Assembly],
+            new CommandIsolationDiagnosticSink(logger));
+        var session = AssemblyIsolationSession.Create(plan);
+        LiveCommandSessions.Add(session);
         try
         {
-            LoadUnmanagedDependencies(targetDir, ref loadedNativeHandles);
+            LoadUnmanagedDependencies(Path.GetDirectoryName(item.AssemblyPath)!);
             return LoadAndExecute(session, item);
         }
         finally
         {
             RevitContext.Application.PurgeReleasedAPIObjects();
-            session.Dispose();
-            foreach (var hModule in loadedNativeHandles)
-                while (FreeLibrary(hModule)) { }
         }
     }
 
@@ -156,16 +156,12 @@ public sealed class RevitCommandRunner(ILogger<RevitCommandRunner> logger) : ICo
     [System.Runtime.InteropServices.DllImport("kernel32.dll", CharSet = System.Runtime.InteropServices.CharSet.Auto, SetLastError = true)]
     private static extern IntPtr LoadLibrary(string lpFileName);
 
-    [System.Runtime.InteropServices.DllImport("kernel32.dll", SetLastError = true)]
-    private static extern bool FreeLibrary(IntPtr hModule);
-
-    private static void LoadUnmanagedDependencies(string directoryPath, ref List<IntPtr> loadedHandles)
+    private static void LoadUnmanagedDependencies(string directoryPath)
     {
         foreach (var file in Directory.GetFiles(directoryPath, "*.dll"))
         {
             if (IsManagedAssembly(file)) continue;
-            var hModule = LoadLibrary(file);
-            if (hModule != IntPtr.Zero) loadedHandles.Add(hModule);
+            _ = LoadLibrary(file);
         }
     }
 

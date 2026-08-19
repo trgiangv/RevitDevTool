@@ -18,6 +18,9 @@ namespace AcadDevTool.HostAdapters;
 /// </summary>
 public sealed class AcadCommandRunner(ILogger<AcadCommandRunner> logger) : ICommandRunner
 {
+    // Command assemblies may show modeless WPF windows that outlive Execute.
+    static readonly List<AssemblyIsolationSession> LiveCommandSessions = [];
+
     public ExecutionResult RunCommand(CommandItem commandItem)
     {
 #if NET
@@ -26,16 +29,8 @@ public sealed class AcadCommandRunner(ILogger<AcadCommandRunner> logger) : IComm
                 commandItem.AssemblyPath,
                 [typeof(CommandMethodAttribute).Assembly, typeof(Autodesk.AutoCAD.DatabaseServices.Database).Assembly],
                 new CommandIsolationDiagnosticSink(logger)));
-        try
-        {
-            return ExecuteInContext(session, commandItem);
-        }
-        finally
-        {
-            session.Dispose();
-            GC.Collect();
-            GC.WaitForPendingFinalizers();
-        }
+        LiveCommandSessions.Add(session);
+        return ExecuteInContext(session, commandItem);
 #else
         return ExecuteInAppDomain(commandItem);
 #endif
@@ -93,11 +88,12 @@ public sealed class AcadCommandRunner(ILogger<AcadCommandRunner> logger) : IComm
 #if NETFRAMEWORK
     private ExecutionResult ExecuteInAppDomain(CommandItem commandItem)
     {
-        using var session = AssemblyIsolationSession.Create(
+        var session = AssemblyIsolationSession.Create(
             CommandIsolationPlan.Create(
                 commandItem.AssemblyPath,
                 [typeof(CommandMethodAttribute).Assembly, typeof(Autodesk.AutoCAD.DatabaseServices.Database).Assembly],
                 new CommandIsolationDiagnosticSink(logger)));
+        LiveCommandSessions.Add(session);
         return ExecuteInContext(session, commandItem);
     }
 #endif

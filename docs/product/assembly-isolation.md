@@ -13,6 +13,15 @@ without allowing one feature's dependency policy to leak into another.
   the owning feature. Directory traversal and reparse-point escapes are rejected.
 - `System.*`, `Microsoft.*`, Autodesk APIs, and UI libraries are not shared by
   prefix. When a feature needs shared type identity it binds that exact assembly.
+  Command and C# script plans reuse official third-party WPF libraries
+  (`MahApps.Metro`, `ControlzEx`, `Microsoft.Xaml.Behaviors`) from the default
+  load context so extra copies do not pollute `pack://` resources or conflict
+  styles. That reuse is a known isolation gap—one process-wide identity, even
+  when a workload ships another version—accepted because these libraries are
+  mature and rarely change. DevTools forks
+  (`DevTools.MahApps.Metro`, `DevTools.ControlzEx`,
+  `DevTools.Microsoft.Xaml.Behaviors`) are separate identities and stay
+  private to the host add-in.
 - Unresolved framework dependencies fall back to the CLR after private sources
   have declined the request.
 - Metadata discovery never executes the inspected assembly.
@@ -22,8 +31,8 @@ without allowing one feature's dependency policy to leak into another.
 | Lifetime | Product behavior |
 |----------|------------------|
 | Permanent | Add-in-shipped assemblies are path-loaded once for the process lifetime so WPF resources and dependency locations remain stable. They are not hot-reloaded. |
-| Collectible | Commands, scripts, MCP toolsets, and modern NUnit generations release feature references before unloading their context. |
-| Scoped net48 | Resolver hooks are registered only for the owning scope. Default-AppDomain assemblies do not claim unload support. |
+| Collectible | Scripts, MCP toolsets, and modern NUnit generations release feature references before unloading. Command sessions stay alive after `Execute` returns so modeless host UI is not torn down. |
+| Scoped net48 | Resolver hooks are registered only for the owning scope. Commands, C#/F# scripts, and MCP toolsets memory-load PE/PDB (`Assembly.Load(byte[])`, same as pre-isolation `ByteAssemblyLoader`) so project output is not locked. Command sessions keep those hooks after `Execute` so modeless UI can still resolve delayed assemblies. Default-AppDomain assemblies do not claim unload support. |
 | NUnit net48 | Same default AppDomain as the host. Generation **shadow** copies are `LoadFile`'d so the same identity can exist per generation (hot reload) without locking the project output. Host CAD APIs already loaded by Revit/AutoCAD are reused in place. Those DLLs cannot be unloaded from the process. |
 
 Feature code continues to own compilation, discovery semantics, registries,
