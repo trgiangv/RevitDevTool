@@ -76,6 +76,39 @@ public sealed class CommandAssemblyIsolationTests
         Assert.Equal("two", InvokeEntry(secondSession));
     }
 
+    [Fact]
+    public void Command_plan_reuses_official_wpf_ui_packages_from_the_default_context()
+    {
+        using var graph = WpfSharingCommandGraph.Create();
+        var plan = CommandIsolationPlan.Create(graph.EntryPath, Array.Empty<Assembly>());
+
+        Assert.True(plan.ParentBindings.TryResolve(new AssemblyName("MahApps.Metro"), out var bound));
+        Assert.Equal("MahApps.Metro", bound.GetName().Name);
+        Assert.All(plan.ManagedSources, source => Assert.Null(source.Resolve(new AssemblyName("MahApps.Metro"))));
+
+        using var session = AssemblyIsolationSession.Create(plan);
+        var value = (string)session.LoadEntryAssembly().GetType("Fixture.Entry")!
+            .GetMethod("Value")!.Invoke(null, null)!;
+
+        Assert.Equal("official", value);
+        Assert.Same(AssemblyLoadContext.Default, AssemblyLoadContext.GetLoadContext(bound));
+        Assert.NotSame(AssemblyLoadContext.GetLoadContext(session.LoadEntryAssembly()), AssemblyLoadContext.GetLoadContext(bound));
+
+        var again = CommandIsolationPlan.Create(graph.EntryPath, Array.Empty<Assembly>());
+        Assert.True(again.ParentBindings.TryResolve(new AssemblyName("MahApps.Metro"), out var rebound));
+        Assert.Same(bound, rebound);
+    }
+
+    [Fact]
+    public void Command_plan_does_not_share_devtools_forked_wpf_ui_assemblies()
+    {
+        using var graph = WpfSharingCommandGraph.CreateFork();
+        var plan = CommandIsolationPlan.Create(graph.EntryPath, Array.Empty<Assembly>());
+
+        Assert.False(plan.ParentBindings.TryResolve(new AssemblyName("DevTools.MahApps.Metro"), out _));
+        Assert.Contains(plan.ManagedSources, source => source.Resolve(new AssemblyName("DevTools.MahApps.Metro")) is not null);
+    }
+
     [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.NoInlining)]
     private static AssemblyIsolationSession CreateAndLoad(string entryPath)
     {
@@ -109,7 +142,7 @@ internal sealed class DynamicCommandGraph : IDisposable
         return graph;
     }
 
-    static void Compile(string path, string assemblyName, string source, IEnumerable<string>? references = null)
+    internal static void Compile(string path, string assemblyName, string source, IEnumerable<string>? references = null)
     {
         var trusted = ((string)AppContext.GetData("TRUSTED_PLATFORM_ASSEMBLIES")!).Split(Path.PathSeparator)
             .Select(path => MetadataReference.CreateFromFile(path)).ToList();
@@ -186,5 +219,74 @@ internal sealed class CommandFixtureWorkload : IDisposable
         }
 
         throw new DirectoryNotFoundException("Could not locate the repository root.");
+    }
+}
+
+internal sealed class WpfSharingCommandGraph : IDisposable
+{
+    WpfSharingCommandGraph(string directory) => Directory = directory;
+
+    public string Directory { get; }
+    public string EntryPath => Path.Combine(Directory, "Entry.dll");
+
+    public static WpfSharingCommandGraph Create()
+    {
+        var graph = new WpfSharingCommandGraph(CreateDirectory());
+        var mahApps = Path.Combine(graph.Directory, "MahApps.Metro.dll");
+        DynamicCommandGraph.Compile(
+            mahApps,
+            "MahApps.Metro",
+            """
+            [assembly:System.Reflection.AssemblyVersion("1.0.0.0")]
+            namespace Fixture { public static class Marker { public static string Id => "official"; } }
+            """);
+        DynamicCommandGraph.Compile(
+            graph.EntryPath,
+            "Entry",
+            "namespace Fixture { public static class Entry { public static string Value() => Marker.Id; } }",
+            [mahApps]);
+        return graph;
+    }
+
+    public static WpfSharingCommandGraph CreateFork()
+    {
+        var graph = new WpfSharingCommandGraph(CreateDirectory());
+        var fork = Path.Combine(graph.Directory, "DevTools.MahApps.Metro.dll");
+        DynamicCommandGraph.Compile(
+            fork,
+            "DevTools.MahApps.Metro",
+            """
+            [assembly:System.Reflection.AssemblyVersion("1.0.0.0")]
+            namespace Fixture { public static class Marker { public static string Id => "fork"; } }
+            """);
+        DynamicCommandGraph.Compile(
+            graph.EntryPath,
+            "Entry",
+            "namespace Fixture { public static class Entry { public static string Value() => Marker.Id; } }",
+            [fork]);
+        return graph;
+    }
+
+    public void Dispose()
+    {
+        try
+        {
+            if (System.IO.Directory.Exists(Directory))
+                System.IO.Directory.Delete(Directory, recursive: true);
+        }
+        catch (IOException)
+        {
+            // Default-context LoadFrom keeps official WPF UI DLLs mapped until process exit.
+        }
+        catch (UnauthorizedAccessException)
+        {
+        }
+    }
+
+    static string CreateDirectory()
+    {
+        var directory = Path.Combine(Path.GetTempPath(), "DevTools.Execution.Tests", Guid.NewGuid().ToString("N"));
+        System.IO.Directory.CreateDirectory(directory);
+        return directory;
     }
 }

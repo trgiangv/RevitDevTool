@@ -32,7 +32,10 @@ public static class ScriptIsolationPlan
 
             try
             {
-                _ = AssemblyName.GetAssemblyName(normalizedPath);
+                var identity = AssemblyName.GetAssemblyName(normalizedPath);
+                if (WpfSharing.IsShared(identity.Name))
+                    continue;
+
                 manifest.Add(new AssemblyCandidate(normalizedPath, "selected NuGet assembly", directory));
             }
             catch (BadImageFormatException)
@@ -57,8 +60,16 @@ public static class ScriptIsolationPlan
 
         var entryPath = Path.Combine(Path.GetTempPath(), "DevTools.Execution", compiledEntryName + ".dll");
         var plan = AssemblyIsolationPlan.Create(entryPath)
-            .WithLifecycle(AssemblyIsolationLifecycle.Collectible)
-            .AddManagedSource(new ManifestAssemblySource(manifest));
+            .WithLifecycle(
+#if NET
+                AssemblyIsolationLifecycle.Collectible
+#else
+                AssemblyIsolationLifecycle.ScopedNetFramework
+#endif
+            )
+            .AddManagedSource(WpfSharing.SkipPrivateCopies(new ManifestAssemblySource(manifest)));
+
+        plan = WpfSharing.BindFromDefaultContext(plan, nugetPaths);
 
         foreach (var assembly in parentBindings)
             plan = plan.BindToParent(assembly);

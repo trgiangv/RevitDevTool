@@ -13,6 +13,7 @@
 
     <ItemGroup>
         <ProjectReference Include="..\..\source\DevTools.AssemblyIsolation\DevTools.AssemblyIsolation.csproj" SetTargetFramework="TargetFramework=net48" />
+        <ProjectReference Include="..\..\source\DevTools.Execution\DevTools.Execution.csproj" SetTargetFramework="TargetFramework=net48" />
         <ProjectReference Include="..\..\source\DevTools.Mcp.Catalog\DevTools.Mcp.Catalog.csproj" SetTargetFramework="TargetFramework=net48" />
         <ProjectReference Include="..\DevTools.AssemblyIsolation.Tests\Fixtures\IsolationEntry\IsolationEntry.csproj" ReferenceOutputAssembly="false" SetTargetFramework="TargetFramework=net48" />
         <ProjectReference Include="..\DevTools.AssemblyIsolation.Tests\Fixtures\PrivateSystemNamedDependency\PrivateSystemNamedDependency.csproj" ReferenceOutputAssembly="false" SetTargetFramework="TargetFramework=net48" />

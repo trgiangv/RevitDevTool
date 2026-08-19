@@ -29,10 +29,21 @@ public static class CommandIsolationPlan
 #else
                 AssemblyIsolationLifecycle.ScopedNetFramework
 #endif
-            )
-            .AddManagedSource(new DependencyResolverAssemblySource(normalizedEntryPath))
-            .AddManagedSource(new DirectoryAssemblySource(siblingDirectory, "command sibling directory"))
+            );
+
+#if NET
+        plan = plan
+            .AddManagedSource(WpfSharing.SkipPrivateCopies(new DependencyResolverAssemblySource(normalizedEntryPath)))
+            .AddManagedSource(WpfSharing.SkipPrivateCopies(new DirectoryAssemblySource(siblingDirectory, "command sibling directory")))
             .AddNativeSource(new DependencyResolverNativeAssemblySource(normalizedEntryPath));
+#else
+        plan = plan.AddManagedSource(WpfSharing.SkipPrivateCopies(
+            new DirectoryAssemblySource(siblingDirectory, "command sibling directory")));
+#endif
+
+        plan = WpfSharing.BindFromDefaultContext(
+            plan,
+            WpfSharing.SiblingCandidatePaths(siblingDirectory));
 
         foreach (var assembly in parentBindings)
             plan = plan.BindToParent(assembly);

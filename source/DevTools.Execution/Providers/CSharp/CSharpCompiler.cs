@@ -15,7 +15,8 @@ namespace DevTools.Execution.Providers.CSharp;
 /// Compiles a .csx script graph via Roslyn. Recursively resolves #load directives,
 /// merges all #r references (NuGet, file, host-rewrite) from the entire graph,
 /// collects AppDomain references, emits in-memory assembly, and finds IExternalCommand.
-/// On .NET Core+, loads into a collectible AssemblyLoadContext for proper unloading.
+/// Loads compiled output through ScriptIsolationPlan: collectible ALC on modern TFMs,
+/// scoped AssemblyResolve on net48. Host API assemblies are parent-bound, not isolated.
 /// </summary>
 public sealed class CSharpCompiler(ILogger<CSharpCompiler> logger, NugetManager nugetManager)
 {
@@ -78,10 +79,8 @@ public sealed class CSharpCompiler(ILogger<CSharpCompiler> logger, NugetManager 
     }
 
     private ScriptCompilationResult LoadAndCreateCommand(
-        // ReSharper disable once UnusedParameter.Local
         byte[] peBytes, IReadOnlyCollection<string> nugetDllPaths, ICompiledScriptBridge hostSupport)
     {
-#if NET
         var session = AssemblyIsolationSession.Create(
             ScriptIsolationPlan.Create(
                 $"CsxScript_{Guid.NewGuid():N}",
@@ -98,10 +97,6 @@ public sealed class CSharpCompiler(ILogger<CSharpCompiler> logger, NugetManager 
             session.Dispose();
             throw;
         }
-#else
-        var assembly = Assembly.Load(peBytes);
-        return CreateCommandResult(assembly, hostSupport, cleanup: null);
-#endif
     }
 
     private async Task<(HashSet<string> AllReferences, List<string> NugetDlls)> ResolveReferencesAsync(
