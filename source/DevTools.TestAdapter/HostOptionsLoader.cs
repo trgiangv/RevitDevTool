@@ -18,12 +18,8 @@ internal static class HostOptionsLoader
         internal const string LaunchTimeoutSeconds = "launchTimeoutSeconds";
         internal const string RunnerPath = "runnerPath";
         internal const string FrameworkId = "frameworkId";
-        internal const string DiscoveryAttributes = "discoveryAttributes";
 
         internal static string Configuration(string name) => ConfigSectionName + ":" + name;
-
-        internal static string DiscoveryAttribute(int index) =>
-            Configuration(DiscoveryAttributes) + ":" + index.ToString();
     }
 
     private const string MissingConfigMessage =
@@ -51,15 +47,6 @@ internal static class HostOptionsLoader
 
         _ = bool.TryParse(ReadKey(configuration, Keys.ForceLaunch), out var forceLaunch);
 
-        var attributes = new List<string>();
-        for (var index = 0; ; index++)
-        {
-            var value = ReadConfigurationValue(configuration, Keys.DiscoveryAttribute(index));
-            if (value is null)
-                break;
-            attributes.Add(value);
-        }
-
         var frameworkId = ReadKey(configuration, Keys.FrameworkId);
         var runnerPath = TestingRunnerPaths.ReadEnvironment(TestingRunnerPaths.RunnerPathEnvironmentVariable)
             ?? ReadKey(configuration, Keys.RunnerPath);
@@ -71,10 +58,7 @@ internal static class HostOptionsLoader
             perTestTimeout,
             launchTimeout,
             TestingRunnerPaths.ExpandPath(runnerPath),
-            FrameworkId: string.IsNullOrWhiteSpace(frameworkId) ? DefaultFrameworkId : frameworkId!.Trim(),
-            DiscoveryAttributes: attributes
-                .Distinct(StringComparer.Ordinal)
-                .ToArray());
+            FrameworkId: string.IsNullOrWhiteSpace(frameworkId) ? DefaultFrameworkId : frameworkId!.Trim());
     }
 
     private static string? ReadKey(IConfiguration configuration, string name) =>

@@ -2,7 +2,6 @@ using System.Reflection;
 using DevTools.Testing.Abstractions.Contracts;
 using DevTools.Testing.Abstractions.Runtime;
 using NUnit.Framework.Api;
-using NUnit.Framework.Internal;
 
 namespace DevTools.NUnit.Runtime;
 
@@ -15,7 +14,6 @@ public sealed class NUnitRuntimeSession : ITestingRuntimeSession
     private readonly object _runControl = new();
     private readonly NUnitTestAssemblyRunner _runner;
 
-    private NUnitTestIdentityRegistry? _identityRegistry;
     private Guid _activeRunId;
     private Guid _pendingCancelRunId;
     private RunLifecycleState _runLifecycleState = RunLifecycleState.Idle;
@@ -37,7 +35,7 @@ public sealed class NUnitRuntimeSession : ITestingRuntimeSession
         GenerationId = Guard.NotNullOrWhiteSpace(generationId, nameof(generationId));
         _runOnCallingThread = runOnCallingThread;
         _sourceLocationProvider = new NUnitSourceLocationProvider(_assemblyPath);
-        _runner = new NUnitTestAssemblyRunner(new DefaultTestAssemblyBuilder());
+        _runner = new NUnitTestAssemblyRunner(new NUnitTolerantAssemblyBuilder());
     }
 
     public string GenerationId { get; }
@@ -54,14 +52,13 @@ public sealed class NUnitRuntimeSession : ITestingRuntimeSession
         {
             ThrowIfClosedForOperation();
             ValidateAssemblyPath(request.Assembly.Path);
-            var identityRegistry = EnsureLoaded();
+            EnsureLoaded();
 
             var filter = NUnitFilterFactory.Create(request.Selection.ProviderPayload);
             using var traceScope = new NUnitRunTraceScope();
             var listener = new NUnitEventListener(
                 request.RunId,
                 eventSink,
-                identityRegistry,
                 _sourceLocationProvider,
                 traceScope);
 
@@ -102,7 +99,7 @@ public sealed class NUnitRuntimeSession : ITestingRuntimeSession
                 var result = _runner.Result;
                 var frameworkCases = result is null
                     ? Array.Empty<TestingCaseResult>()
-                    : NUnitResultMapper.MapRunResults(result, identityRegistry, _sourceLocationProvider);
+                    : NUnitResultMapper.MapRunResults(result, _sourceLocationProvider);
 
                 var cases = listener.ApplyTraceOutput(
                     NUnitRunResultMerger.Merge(frameworkCases, listener.GetAbortedCaseResults()));
@@ -259,17 +256,14 @@ public sealed class NUnitRuntimeSession : ITestingRuntimeSession
         }
     }
 
-    private NUnitTestIdentityRegistry EnsureLoaded()
+    private void EnsureLoaded()
     {
-        if (_loaded && _identityRegistry is not null)
-            return _identityRegistry;
+        if (_loaded)
+            return;
 
         var settings = NUnitRuntimeSettings.Create(Path.GetDirectoryName(_assemblyPath)!, _runOnCallingThread);
         _runner.Load(_testAssembly, settings);
-        var root = _runner.ExploreTests(TestFilter.Empty);
-        _identityRegistry = NUnitTestIdentityRegistry.Build(root);
         _loaded = true;
-        return _identityRegistry;
     }
 
     private enum RunLifecycleState

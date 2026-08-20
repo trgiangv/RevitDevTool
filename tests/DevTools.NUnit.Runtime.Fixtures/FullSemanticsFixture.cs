@@ -32,6 +32,8 @@ public sealed class FullSemanticsFixture
     [Test]
     public void PlainTest_Passes()
     {
+        Assert.That(TestContext.CurrentContext.WorkDirectory, Is.Not.Null.And.Not.Empty);
+        Assert.That(Directory.Exists(TestContext.CurrentContext.WorkDirectory), Is.True);
         Assert.That(GenerationMarker.Value, Is.EqualTo("generation-one"));
         Assert.Pass("plain-test");
     }

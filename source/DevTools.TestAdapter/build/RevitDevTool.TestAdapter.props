@@ -20,7 +20,6 @@
     <LaunchTimeout Condition="'$(LaunchTimeout)' == ''">180</LaunchTimeout>
     <!-- Default in-host engine. Override in the test csproj without changing the package. -->
     <TestingFramework Condition="'$(TestingFramework)' == ''">nunit</TestingFramework>
-    <TestingDiscoveryAttributes Condition="'$(TestingDiscoveryAttributes)' == '' and '$(TestingFramework)' == 'nunit'">TestAttribute;TestCaseAttribute;TestCaseSourceAttribute;TheoryAttribute</TestingDiscoveryAttributes>
   </PropertyGroup>
 
   <ItemGroup>

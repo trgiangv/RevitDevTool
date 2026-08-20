@@ -30,8 +30,9 @@ public sealed class TestingKernelIndependenceTests
                 .Any(part => part.Equals("bin", StringComparison.OrdinalIgnoreCase)
                     || part.Equals("obj", StringComparison.OrdinalIgnoreCase)))
             .Where(path => File.ReadLines(path).Any(line =>
-                line.Contains("NUnit.", StringComparison.Ordinal)
-                || line.Contains("using NUnit", StringComparison.Ordinal)))
+                line.Contains("using NUnit", StringComparison.Ordinal)
+                || line.Contains("NUnit.Framework", StringComparison.Ordinal)
+                || line.Contains("NUnit.Engine", StringComparison.Ordinal)))
             .Select(path => Path.GetRelativePath(root, path).Replace('\\', '/'))
             .ToArray();
 

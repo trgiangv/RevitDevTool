@@ -1,3 +1,4 @@
+using System.Runtime.CompilerServices;
 using DevTools.Testing.Abstractions.Contracts;
 using DevTools.Testing.Abstractions.Runtime;
 using NUnit.Framework.Interfaces;
@@ -8,20 +9,18 @@ internal sealed class NUnitEventListener : ITestListener
 {
     private readonly Guid _runId;
     private readonly ITestingRuntimeEventSink _eventSink;
-    private readonly NUnitTestIdentityRegistry _identityRegistry;
     private readonly NUnitSourceLocationProvider? _sourceLocationProvider;
     private readonly NUnitRunTraceScope _traceScope;
-    private readonly HashSet<string> _terminalCaseIds = new(StringComparer.Ordinal);
-    private readonly Dictionary<string, ITest> _startedCases = new(StringComparer.Ordinal);
-    private readonly Dictionary<string, string?> _traceByTestId = new(StringComparer.Ordinal);
+    private readonly HashSet<ITest> _terminalCases = new(ReferenceEqualityComparer.Instance);
+    private readonly HashSet<ITest> _startedCases = new(ReferenceEqualityComparer.Instance);
+    private readonly Dictionary<string, string?> _traceByFullName = new(StringComparer.Ordinal);
 
     public NUnitEventListener(Guid runId, ITestingRuntimeEventSink eventSink,
-        NUnitTestIdentityRegistry identityRegistry, NUnitSourceLocationProvider? sourceLocationProvider,
+        NUnitSourceLocationProvider? sourceLocationProvider,
         NUnitRunTraceScope traceScope)
     {
         _runId = runId;
         _eventSink = eventSink;
-        _identityRegistry = identityRegistry;
         _sourceLocationProvider = sourceLocationProvider;
         _traceScope = traceScope;
     }
@@ -29,19 +28,18 @@ internal sealed class NUnitEventListener : ITestListener
     public void TestStarted(ITest test)
     {
         if (!test.IsSuite)
-            _startedCases[_identityRegistry.GetTestId(test)] = test;
+            _startedCases.Add(test);
     }
 
     public void TestFinished(ITestResult result)
     {
         if (result.Test.IsSuite)
             return;
-        var testId = _identityRegistry.GetTestId(result.Test);
-        _startedCases.Remove(testId);
+        _startedCases.Remove(result.Test);
         var traceOutput = _traceScope.CompleteCase();
         if (!string.IsNullOrWhiteSpace(traceOutput))
-            _traceByTestId[result.Test.FullName] = traceOutput;
-        if (!_terminalCaseIds.Add(testId))
+            _traceByFullName[result.Test.FullName] = traceOutput;
+        if (!_terminalCases.Add(result.Test))
             return;
 
         if (!string.IsNullOrWhiteSpace(result.Output))
@@ -52,8 +50,8 @@ internal sealed class NUnitEventListener : ITestListener
         foreach (var attachment in NUnitResultMapper.MapAttachments(result))
             Publish(TestingEventKinds.Attachment, null, null, attachment);
 
-        var mapped = NUnitResultMapper.MapCaseResult(result, _identityRegistry, _sourceLocationProvider);
-        if (_traceByTestId.TryGetValue(result.Test.FullName, out var captured))
+        var mapped = NUnitResultMapper.MapCaseResult(result, _sourceLocationProvider);
+        if (_traceByFullName.TryGetValue(result.Test.FullName, out var captured))
             mapped = mapped with { Output = MergeOutput(mapped.Output, captured) };
         Publish(TestingEventKinds.Case, mapped, null, null);
     }
@@ -69,22 +67,22 @@ internal sealed class NUnitEventListener : ITestListener
     public IReadOnlyList<TestingCaseResult> GetAbortedCaseResults()
     {
         var cases = new List<TestingCaseResult>(_startedCases.Count);
-        foreach (var test in _startedCases.Values)
+        foreach (var test in _startedCases)
             cases.Add(new TestingCaseResult(
-                _identityRegistry.GetTestId(test), test.Name, TestingOutcomes.Cancelled, 0,
+                NUnitTestIdentity.Id(test), test.Name, TestingOutcomes.Cancelled, 0,
                 null, null, null, NUnitResultMapper.MapSource(test, _sourceLocationProvider), [], [],
-                _identityRegistry.GetParentTestId(test), test.FullName));
+                NUnitTestIdentity.ParentId(test), test.FullName));
         return cases;
     }
 
     internal IReadOnlyList<TestingCaseResult> ApplyTraceOutput(IReadOnlyList<TestingCaseResult> cases)
     {
-        if (_traceByTestId.Count == 0)
+        if (_traceByFullName.Count == 0)
             return cases;
         return cases.Select(testCase =>
         {
             var fullName = testCase.FullName;
-            return fullName is not null && _traceByTestId.TryGetValue(fullName, out var traceOutput)
+            return fullName is not null && _traceByFullName.TryGetValue(fullName, out var traceOutput)
                 ? testCase with { Output = MergeOutput(testCase.Output, traceOutput) }
                 : testCase;
         }).ToList();
@@ -103,5 +101,14 @@ internal sealed class NUnitEventListener : ITestListener
         if (hasNunit)
             return nunitOutput;
         return hasTrace ? traceOutput : null;
+    }
+
+    private sealed class ReferenceEqualityComparer : IEqualityComparer<ITest>
+    {
+        public static ReferenceEqualityComparer Instance { get; } = new();
+
+        public bool Equals(ITest? x, ITest? y) => ReferenceEquals(x, y);
+
+        public int GetHashCode(ITest obj) => RuntimeHelpers.GetHashCode(obj);
     }
 }

@@ -21,9 +21,14 @@ public sealed class NUnitRuntimeArchitectureTests
     [Fact]
     public void OnlyRuntimeProjectReferencesNUnitInProductionSource()
     {
+        var allowed = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+        {
+            "DevTools.NUnit.Runtime.csproj",
+            "DevTools.NUnit.MTP.csproj",
+        };
         var offenders = Directory
             .EnumerateFiles(Path.Combine(RepositoryRoot, "source"), "*.csproj", SearchOption.AllDirectories)
-            .Where(path => !path.Contains($"{Path.DirectorySeparatorChar}DevTools.NUnit.Runtime{Path.DirectorySeparatorChar}", StringComparison.Ordinal))
+            .Where(path => !allowed.Contains(Path.GetFileName(path)))
             .Where(path => File.ReadAllText(path).Contains("<PackageReference Include=\"NUnit\"", StringComparison.Ordinal))
             .Select(Path.GetFileName)
             .ToList();
@@ -81,6 +86,39 @@ public sealed class NUnitRuntimeArchitectureTests
             .EnumerateFiles(runtimeDirectory, "*.cs", SearchOption.AllDirectories)
             .Select(path => File.ReadAllText(path))
             .Where(content => content.Contains("NUnitTestSelectionParser", StringComparison.Ordinal))
+            .ToList();
+
+        Assert.Empty(offenders);
+    }
+
+    [Fact]
+    public void HostRuntimeUsesTolerantAssemblyBuilderInsteadOfDefaultGetTypes()
+    {
+        var sessionPath = Path.Combine(RepositoryRoot, "source", "DevTools.NUnit.Runtime", "NUnitRuntimeSession.cs");
+        var builderPath = Path.Combine(RepositoryRoot, "source", "DevTools.NUnit.Runtime", "NUnitTolerantAssemblyBuilder.cs");
+        Assert.True(File.Exists(builderPath));
+        var session = File.ReadAllText(sessionPath);
+        Assert.Contains("new NUnitTolerantAssemblyBuilder()", session, StringComparison.Ordinal);
+        Assert.DoesNotContain("new DefaultTestAssemblyBuilder()", session, StringComparison.Ordinal);
+        Assert.Contains("ReflectionTypeLoadException", File.ReadAllText(builderPath), StringComparison.Ordinal);
+        Assert.Contains("DefaultWorkDirectory", File.ReadAllText(builderPath), StringComparison.Ordinal);
+        Assert.Contains("ApplyBuilderOptions", File.ReadAllText(builderPath), StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Runtime_uses_nunit_full_name_as_test_id()
+    {
+        var runtimeDirectory = Path.Combine(RepositoryRoot, "source", "DevTools.NUnit.Runtime");
+        var identity = File.ReadAllText(Path.Combine(runtimeDirectory, "NUnitTestIdentity.cs"));
+        Assert.Contains("test.FullName", identity, StringComparison.Ordinal);
+        Assert.DoesNotContain("FormChildId", identity, StringComparison.Ordinal);
+
+        var offenders = Directory
+            .EnumerateFiles(runtimeDirectory, "*.cs", SearchOption.AllDirectories)
+            .Select(path => (path, content: File.ReadAllText(path)))
+            .Where(file => file.content.Contains("FormChildId", StringComparison.Ordinal)
+                           || file.content.Contains("NUnitTestIdentityRegistry", StringComparison.Ordinal))
+            .Select(file => Path.GetFileName(file.path))
             .ToList();
 
         Assert.Empty(offenders);

@@ -8,22 +8,20 @@ internal static class NUnitResultMapper
 {
     public static IReadOnlyList<TestingCaseResult> MapRunResults(
         ITestResult root,
-        NUnitTestIdentityRegistry identityRegistry,
         NUnitSourceLocationProvider? sourceLocationProvider)
     {
         var cases = new List<TestingCaseResult>();
-        CollectCaseResults(root, identityRegistry, sourceLocationProvider, cases);
+        CollectCaseResults(root, sourceLocationProvider, cases);
         return cases;
     }
 
     public static TestingCaseResult MapCaseResult(
         ITestResult result,
-        NUnitTestIdentityRegistry identityRegistry,
         NUnitSourceLocationProvider? sourceLocationProvider)
     {
         var test = result.Test;
         return new TestingCaseResult(
-            NUnitTestIdentityMapper.MapTestId(test, identityRegistry),
+            NUnitTestIdentity.Id(test),
             test.Name,
             MapOutcome(result.ResultState),
             result.Duration * 1000.0,
@@ -33,7 +31,7 @@ internal static class NUnitResultMapper
             MapSource(test, sourceLocationProvider),
             MapTraits(test),
             MapAttachments(result),
-            NUnitTestIdentityMapper.MapParentTestId(test, identityRegistry),
+            NUnitTestIdentity.ParentId(test),
             test.FullName,
             MapSkipReason(test, result.ResultState));
     }
@@ -56,18 +54,17 @@ internal static class NUnitResultMapper
 
     private static void CollectCaseResults(
         ITestResult result,
-        NUnitTestIdentityRegistry identityRegistry,
         NUnitSourceLocationProvider? sourceLocationProvider,
         List<TestingCaseResult> cases)
     {
         if (!result.Test.IsSuite)
         {
-            cases.Add(MapCaseResult(result, identityRegistry, sourceLocationProvider));
+            cases.Add(MapCaseResult(result, sourceLocationProvider));
             return;
         }
 
         foreach (var child in result.Children)
-            CollectCaseResults(child, identityRegistry, sourceLocationProvider, cases);
+            CollectCaseResults(child, sourceLocationProvider, cases);
     }
 
     internal static string MapOutcome(ResultState resultState)

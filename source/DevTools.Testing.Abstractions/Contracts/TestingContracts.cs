@@ -8,8 +8,7 @@ public sealed record TestingHostOptions(
     int LaunchTimeoutSeconds,
     string? RunnerPath,
     int? DebugParentPid = null,
-    string? FrameworkId = null,
-    IReadOnlyList<string>? DiscoveryAttributes = null);
+    string? FrameworkId = null);
 
 public sealed record TestingAssemblyReference(
     string Path,
@@ -24,7 +23,10 @@ public sealed record TestingSelection(
 public sealed record TestingDiscoveredTest(
     string TestId,
     string DisplayName,
-    string? FullName = null);
+    string? FullName = null,
+    string? ClassName = null,
+    string? MethodName = null,
+    TestingSourceLocation? Source = null);
 
 public sealed record TestingRunRequest
 {

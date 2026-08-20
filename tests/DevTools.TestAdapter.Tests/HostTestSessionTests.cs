@@ -9,6 +9,8 @@ namespace DevTools.TestAdapter.Tests;
 
 public sealed class HostTestSessionTests
 {
+    private static readonly object DiscoveryProviderLock = new();
+
     [Fact]
     public void ScaleForRun_multiplies_per_test_timeout()
     {
@@ -19,16 +21,363 @@ public sealed class HostTestSessionTests
     }
 
     [Fact]
-    public void Metadata_filter_keeps_matching_names()
+    public void SelectCases_throws_when_nunit_mtp_is_not_registered()
     {
-        var tests = new[]
+        lock (DiscoveryProviderLock)
         {
-            new TestingDiscoveredTest("1", "Alpha", "Fixture.Alpha"),
-            new TestingDiscoveredTest("2", "Beta", "Fixture.Beta"),
+            var previous = HostTestDiscovery.Provider;
+            HostTestDiscovery.Provider = null;
+            try
+            {
+                var ex = Assert.Throws<InvalidOperationException>(
+                    () => HostTestFramework.SelectCases(
+                        typeof(HostTestSessionTests).Assembly.Location,
+                        new TestingSelection([])));
+                Assert.Contains(TestingPlatformBuilderHook.NUnitMTPAssemblyFileName, ex.Message, StringComparison.Ordinal);
+            }
+            finally
+            {
+                HostTestDiscovery.Provider = previous;
+            }
+        }
+    }
+
+    [Fact]
+    public void ToHostSelection_forwards_opaque_ids_from_already_matched_cases()
+    {
+        var matched = new[]
+        {
+            new TestingDiscoveredTest(
+                "DevTools.NUnit.Runtime.Fixtures.FullSemanticsFixture.TestCase_Addition(1,1,2)",
+                "TestCase_Addition(1,1,2)",
+                "DevTools.NUnit.Runtime.Fixtures.FullSemanticsFixture.TestCase_Addition(1,1,2)"),
+        };
+        var selection = HostTestFramework.ToRunnerFilter(
+            new TestNodeUidListFilter([new TestNodeUid("TestCase_Addition")]));
+
+        var host = HostTestFramework.ToHostSelection(selection, matched);
+
+        Assert.False(string.IsNullOrWhiteSpace(host.ProviderPayload));
+        Assert.Contains(matched[0].TestId, host.ProviderPayload!, StringComparison.Ordinal);
+        Assert.DoesNotContain("re=\"1\"", host.ProviderPayload!, StringComparison.Ordinal);
+        Assert.Empty(host.TestIds);
+        Assert.Null(host.Names);
+    }
+
+    [Fact]
+    public void ToHostSelection_keeps_cli_name_filters()
+    {
+        var selection = new TestingSelection([], Names: ["Span_is_one_on_each_axis"]);
+        var stub = new TestingDiscoveredTest(
+            "DevTools.NUnit.SampleTests.BoundingBoxFixtureSourceTests.Span_is_one_on_each_axis",
+            "Span_is_one_on_each_axis",
+            "DevTools.NUnit.SampleTests.BoundingBoxFixtureSourceTests.Span_is_one_on_each_axis",
+            "DevTools.NUnit.SampleTests.BoundingBoxFixtureSourceTests",
+            "Span_is_one_on_each_axis");
+
+        var host = HostTestFramework.ToHostSelection(selection, [stub]);
+
+        Assert.Empty(host.TestIds);
+        Assert.Equal("Span_is_one_on_each_axis", Assert.Single(host.Names!));
+    }
+
+    [Fact]
+    public void ToHostSelection_uid_list_is_addtest_full_name()
+    {
+        var stubId = "DevTools.NUnit.SampleTests.BoundingBoxFixtureSourceTests.Span_is_one_on_each_axis";
+        var matched = new[]
+        {
+            new TestingDiscoveredTest(
+                stubId,
+                "Span_is_one_on_each_axis",
+                stubId,
+                "DevTools.NUnit.SampleTests.BoundingBoxFixtureSourceTests",
+                "Span_is_one_on_each_axis"),
+        };
+        var selection = HostTestFramework.ToRunnerFilter(
+            new TestNodeUidListFilter([new TestNodeUid(stubId)]));
+
+        var host = HostTestFramework.ToHostSelection(selection, matched);
+
+        Assert.Contains($"<test>{stubId}</test>", host.ProviderPayload, StringComparison.Ordinal);
+        Assert.Contains("re=\"1\"", host.ProviderPayload, StringComparison.Ordinal);
+        Assert.Contains("<method>Span_is_one_on_each_axis</method>", host.ProviderPayload, StringComparison.Ordinal);
+        Assert.Empty(host.TestIds);
+        Assert.Null(host.Names);
+    }
+
+    [Fact]
+    public void ToHostSelection_uid_with_no_select_hits_still_pushes_collapsed_xml()
+    {
+        var stubId = "DevTools.NUnit.Runtime.Fixtures.CollapsedSourceStubFixture.Stub_leaf";
+        var host = HostTestFramework.ToHostSelection(new TestingSelection([stubId]), []);
+
+        Assert.Contains($"<test>{stubId}</test>", host.ProviderPayload, StringComparison.Ordinal);
+        Assert.Contains("re=\"1\"", host.ProviderPayload, StringComparison.Ordinal);
+        Assert.Contains("<method>Stub_leaf</method>", host.ProviderPayload, StringComparison.Ordinal);
+        Assert.Empty(host.TestIds);
+        Assert.Null(host.Names);
+    }
+
+    [Fact]
+    public void ResultsForUnreportedIds_covers_requested_uid_when_host_returns_nothing()
+    {
+        var stubId = "DevTools.NUnit.Runtime.Fixtures.CollapsedSourceStubFixture.Stub_leaf";
+        var request = new TestingSelection([stubId]);
+        var discovered = new[]
+        {
+            new TestingDiscoveredTest(stubId, "Stub_leaf", stubId),
         };
 
-        var filtered = MetadataTestDiscoverer.Filter(tests, ["Beta"], []);
-        Assert.Equal("Fixture.Beta", Assert.Single(filtered).FullName);
+        var missing = Assert.Single(
+            HostTestFramework.ResultsForUnreportedIds(request, discovered, []));
+
+        Assert.Equal(stubId, missing.TestId);
+        Assert.Equal("Stub_leaf", missing.DisplayName);
+        Assert.Equal("Failed", missing.Outcome);
+        Assert.Equal(HostTestFramework.UnreportedFullNameMessage, missing.Message);
+    }
+
+    [Fact]
+    public void ResultsForUnreportedIds_skips_ids_the_host_already_reported()
+    {
+        var id = "DevTools.NUnit.Runtime.Fixtures.FullSemanticsFixture.PlainTest_Passes";
+        var host = new[]
+        {
+            new TestingCaseResult(id, "PlainTest_Passes", "Passed", 1, null, null, null, null, [], []),
+        };
+
+        Assert.Empty(HostTestFramework.ResultsForUnreportedIds(
+            new TestingSelection([id]),
+            [new TestingDiscoveredTest(id, "PlainTest_Passes", id)],
+            host));
+    }
+
+    [Fact]
+    public void ResultsForUnreportedIds_uses_uid_when_select_missed()
+    {
+        var stubId = "DevTools.NUnit.Runtime.Fixtures.CollapsedSourceStubFixture.Stub_leaf";
+        var missing = Assert.Single(
+            HostTestFramework.ResultsForUnreportedIds(new TestingSelection([stubId]), [], []));
+
+        Assert.Equal(stubId, missing.TestId);
+        Assert.Equal(stubId, missing.DisplayName);
+        Assert.Equal("Failed", missing.Outcome);
+    }
+
+    [Fact]
+    public void FoldHostResults_maps_expanded_fixture_leaves_onto_the_stub_uid()
+    {
+        var stubId = "DevTools.NUnit.Runtime.Fixtures.ParameterizedFixture.FixtureSource_ValueIsPreserved";
+        var request = new TestingSelection([stubId]);
+        var discovered = new[]
+        {
+            new TestingDiscoveredTest(stubId, "FixtureSource_ValueIsPreserved", stubId),
+        };
+        var host = new[]
+        {
+            new TestingCaseResult(
+                stubId.Replace("ParameterizedFixture.", "ParameterizedFixture(3).", StringComparison.Ordinal),
+                "FixtureSource_ValueIsPreserved",
+                "Passed",
+                4,
+                null,
+                null,
+                null,
+                null,
+                [],
+                [],
+                FullName: stubId.Replace("ParameterizedFixture.", "ParameterizedFixture(3).", StringComparison.Ordinal)),
+            new TestingCaseResult(
+                stubId.Replace("ParameterizedFixture.", "ParameterizedFixture(\"fixture-source\").", StringComparison.Ordinal),
+                "FixtureSource_ValueIsPreserved",
+                "Passed",
+                5,
+                null,
+                null,
+                null,
+                null,
+                [],
+                [],
+                FullName: stubId.Replace("ParameterizedFixture.", "ParameterizedFixture(\"fixture-source\").", StringComparison.Ordinal)),
+        };
+
+        var folded = Assert.Single(HostTestFramework.FoldHostResults(request, discovered, host));
+
+        Assert.Equal(stubId, folded.TestId);
+        Assert.Equal("Passed", folded.Outcome);
+        Assert.Equal(9, folded.DurationMilliseconds);
+    }
+
+    [Fact]
+    public void FoldHostResults_maps_setname_leaves_via_parent_suite_id()
+    {
+        var stubId = "DevTools.NUnit.SampleTests.BoundingBoxCaseSourceTests.Box_source_has_positive_span";
+        var host = new[]
+        {
+            new TestingCaseResult(
+                "DevTools.NUnit.SampleTests.BoundingBoxCaseSourceTests.Wide_box",
+                "Wide_box",
+                "Passed",
+                3,
+                null,
+                null,
+                null,
+                null,
+                [],
+                [],
+                ParentTestId: stubId,
+                FullName: "DevTools.NUnit.SampleTests.BoundingBoxCaseSourceTests.Wide_box"),
+        };
+
+        var folded = Assert.Single(
+            HostTestFramework.FoldHostResults(new TestingSelection([stubId]), [], host));
+
+        Assert.Equal(stubId, folded.TestId);
+        Assert.Equal("Passed", folded.Outcome);
+    }
+
+    [Fact]
+    public void FoldHostResults_publishes_testname_leaves_when_request_is_method_fqn()
+    {
+        const string methodId = "DevTools.NUnit.Runtime.Fixtures.TestNameCaseFixture.Original_named";
+        const string namedOne = "DevTools.NUnit.Runtime.Fixtures.TestNameCaseFixture.Named_one";
+        const string namedTwo = "DevTools.NUnit.Runtime.Fixtures.TestNameCaseFixture.Named_two";
+        var discovered = new[]
+        {
+            new TestingDiscoveredTest(namedOne, "Named_one", namedOne, MethodName: "Original_named"),
+            new TestingDiscoveredTest(namedTwo, "Named_two", namedTwo, MethodName: "Original_named"),
+        };
+        var host = new[]
+        {
+            new TestingCaseResult(
+                namedOne,
+                "Named_one",
+                "Passed",
+                2,
+                null,
+                null,
+                null,
+                null,
+                [],
+                [],
+                ParentTestId: methodId,
+                FullName: namedOne),
+            new TestingCaseResult(
+                namedTwo,
+                "Named_two",
+                "Passed",
+                3,
+                null,
+                null,
+                null,
+                null,
+                [],
+                [],
+                ParentTestId: methodId,
+                FullName: namedTwo),
+        };
+
+        var folded = HostTestFramework.FoldHostResults(new TestingSelection([methodId]), discovered, host);
+
+        Assert.Equal(3, folded.Count);
+        Assert.Equal(methodId, folded[0].TestId);
+        Assert.Equal("Passed", folded[0].Outcome);
+        Assert.Equal(5, folded[0].DurationMilliseconds);
+        Assert.Equal([namedOne, namedTwo], folded.Skip(1).Select(result => result.TestId).ToArray());
+    }
+
+    [Fact]
+    public void FoldHostResults_does_not_starve_leaf_when_group_and_leaf_are_requested()
+    {
+        const string methodId = "DevTools.NUnit.Runtime.Fixtures.TestNameCaseFixture.Original_named";
+        const string namedOne = "DevTools.NUnit.Runtime.Fixtures.TestNameCaseFixture.Named_one";
+        var host = new[]
+        {
+            new TestingCaseResult(
+                namedOne,
+                "Named_one",
+                "Passed",
+                2,
+                null,
+                null,
+                null,
+                null,
+                [],
+                [],
+                ParentTestId: methodId,
+                FullName: namedOne),
+        };
+
+        var folded = HostTestFramework.FoldHostResults(
+            new TestingSelection([methodId, namedOne]),
+            [new TestingDiscoveredTest(namedOne, "Named_one", namedOne)],
+            host);
+
+        Assert.Contains(folded, result => result.TestId == methodId);
+        Assert.Contains(folded, result => result.TestId == namedOne);
+    }
+
+    [Fact]
+    public void FoldHostResults_maps_nunit_fullname_onto_ide_testname_uid()
+    {
+        const string ideId =
+            "DevTools.NUnit.Runtime.Fixtures.TestNameCaseFixture.Original_named(\"Named_one\")";
+        const string nunitName = "DevTools.NUnit.Runtime.Fixtures.TestNameCaseFixture.Named_one";
+        var discovered = new TestingDiscoveredTest(
+            ideId,
+            "Named_one",
+            nunitName,
+            "DevTools.NUnit.Runtime.Fixtures.TestNameCaseFixture",
+            "Original_named");
+        var host = new[]
+        {
+            new TestingCaseResult(
+                nunitName,
+                "Named_one",
+                "Passed",
+                2,
+                null,
+                null,
+                null,
+                null,
+                [],
+                [],
+                FullName: nunitName),
+        };
+
+        var folded = Assert.Single(
+            HostTestFramework.FoldHostResults(new TestingSelection([ideId]), [discovered], host));
+
+        Assert.Equal(ideId, folded.TestId);
+        Assert.Equal("Named_one", folded.DisplayName);
+        Assert.Equal("Passed", folded.Outcome);
+    }
+
+    [Fact]
+    public void FoldHostResults_keeps_name_filter_leaves_unmapped()
+    {
+        var host = new[]
+        {
+            new TestingCaseResult(
+                "DevTools.NUnit.Runtime.Fixtures.ParameterizedFixture(3).FixtureSource_ValueIsPreserved",
+                "FixtureSource_ValueIsPreserved",
+                "Passed",
+                1,
+                null,
+                null,
+                null,
+                null,
+                [],
+                []),
+        };
+
+        var folded = HostTestFramework.FoldHostResults(
+            new TestingSelection([], Names: ["FixtureSource_ValueIsPreserved"]),
+            [],
+            host);
+
+        Assert.Equal(host[0].TestId, Assert.Single(folded).TestId);
     }
 
     [Fact]
@@ -70,11 +419,23 @@ public sealed class HostTestSessionTests
         {
             using (new FileStream(runnerPath, FileMode.Open, FileAccess.ReadWrite, FileShare.None))
             {
-                var nodes = HostTestFramework.DiscoverNodes(
-                    typeof(HostTestSessionTests).Assembly.Location,
-                    new TestingSelection([], null),
-                    ["FactAttribute"]);
-                Assert.NotNull(nodes);
+                lock (DiscoveryProviderLock)
+                {
+                    var previous = HostTestDiscovery.Provider;
+                    HostTestDiscovery.Provider = new StubHostTestDiscoverer();
+                    try
+                    {
+                        var nodes = HostTestFramework.DiscoverNodes(
+                            typeof(HostTestSessionTests).Assembly.Location,
+                            new TestingSelection([]));
+                        Assert.NotNull(nodes);
+                        Assert.NotEmpty(nodes);
+                    }
+                    finally
+                    {
+                        HostTestDiscovery.Provider = previous;
+                    }
+                }
             }
         }
         finally
@@ -188,8 +549,6 @@ public sealed class HostOptionsLoaderTests
             [HostOptionsLoader.Keys.Configuration(HostOptionsLoader.Keys.LaunchTimeoutSeconds)] = "240",
             [HostOptionsLoader.Keys.Configuration(HostOptionsLoader.Keys.RunnerPath)] = @"C:\Runner.exe",
             [HostOptionsLoader.Keys.Configuration(HostOptionsLoader.Keys.FrameworkId)] = HostOptionsLoader.DefaultFrameworkId,
-            [HostOptionsLoader.Keys.DiscoveryAttribute(0)] = "TestAttribute",
-            [HostOptionsLoader.Keys.DiscoveryAttribute(1)] = "TheoryAttribute",
         });
 
         var options = HostOptionsLoader.Load(configuration);
@@ -200,7 +559,6 @@ public sealed class HostOptionsLoaderTests
         Assert.Equal(90, options.PerTestTimeoutSeconds);
         Assert.Equal(240, options.LaunchTimeoutSeconds);
         Assert.Equal(HostOptionsLoader.DefaultFrameworkId, options.FrameworkId);
-        Assert.Equal(["TestAttribute", "TheoryAttribute"], options.DiscoveryAttributes);
         Assert.Equal(@"C:\Runner.exe", options.RunnerPath);
     }
 
@@ -226,10 +584,10 @@ public sealed class TestNodeMapperTests
     }
 
     [Fact]
-    public void ToDiscoveredNode_uses_fullname_as_stable_uid()
+    public void ToDiscoveredNode_uses_test_id_as_uid()
     {
         var node = HostTestFramework.ToDiscoveredNode(
-            new TestingDiscoveredTest("id-1", "Arithmetic", "HostSmokeTests.Arithmetic"));
+            new TestingDiscoveredTest("HostSmokeTests.Arithmetic", "Arithmetic", "HostSmokeTests.Arithmetic"));
 
         Assert.Equal("HostSmokeTests.Arithmetic", node.Uid.Value);
         Assert.Equal("Arithmetic", node.DisplayName);
@@ -237,6 +595,47 @@ public sealed class TestNodeMapperTests
         var identity = node.Properties.Single<TestMethodIdentifierProperty>();
         Assert.Equal("HostSmokeTests", identity.TypeName);
         Assert.Equal("Arithmetic", identity.MethodName);
+    }
+
+    [Fact]
+    public void ToDiscoveredNode_groups_fixture_source_by_parameterized_type()
+    {
+        var fullName =
+            "DevTools.NUnit.SampleTests.NamedFixtureSourceTests(\"alpha.rvt\").Fixture_argument_is_preserved";
+        var node = HostTestFramework.ToDiscoveredNode(
+            new TestingDiscoveredTest(
+                fullName,
+                "Fixture_argument_is_preserved",
+                fullName,
+                "DevTools.NUnit.SampleTests.NamedFixtureSourceTests(\"alpha.rvt\")",
+                "Fixture_argument_is_preserved",
+                new TestingSourceLocation(@"C:\src\FixtureShapeTests.cs", 55)));
+
+        Assert.Equal(fullName, node.Uid.Value);
+        var identity = node.Properties.Single<TestMethodIdentifierProperty>();
+        Assert.Equal("DevTools.NUnit.SampleTests", identity.Namespace);
+        Assert.Equal("NamedFixtureSourceTests(\"alpha.rvt\")", identity.TypeName);
+        Assert.Equal("Fixture_argument_is_preserved", identity.MethodName);
+        var location = node.Properties.Single<TestFileLocationProperty>();
+        Assert.Equal(@"C:\src\FixtureShapeTests.cs", location.FilePath);
+        Assert.Equal(55, location.LineSpan.Start.Line);
+    }
+
+    [Fact]
+    public void TrySplitIdentity_does_not_treat_fixture_arguments_as_the_method()
+    {
+        Assert.True(HostTestFramework.TrySplitIdentity(
+            "DevTools.NUnit.SampleTests.NamedFixtureSourceTests(\"alpha.rvt\").Fixture_argument_is_preserved",
+            "Fixture_argument_is_preserved",
+            className: null,
+            methodName: null,
+            out var ns,
+            out var typeName,
+            out var method));
+
+        Assert.Equal("DevTools.NUnit.SampleTests", ns);
+        Assert.Equal("NamedFixtureSourceTests(\"alpha.rvt\")", typeName);
+        Assert.Equal("Fixture_argument_is_preserved", method);
     }
 
     [Theory]
@@ -255,11 +654,11 @@ public sealed class TestNodeMapperTests
     }
 
     [Fact]
-    public void ToResultNode_uses_fullname_as_stable_uid()
+    public void ToResultNode_uses_test_id_as_uid()
     {
         var node = HostTestFramework.ToResultNode(
             new TestingCaseResult(
-                "HostSmokeTests/Arithmetic#0",
+                "HostSmokeTests.Arithmetic",
                 "Arithmetic",
                 "Passed",
                 12,
@@ -275,6 +674,63 @@ public sealed class TestNodeMapperTests
         var identity = node.Properties.Single<TestMethodIdentifierProperty>();
         Assert.Equal("HostSmokeTests", identity.TypeName);
         Assert.Equal("Arithmetic", identity.MethodName);
+    }
+
+    [Fact]
+    public void ToResultNode_keeps_csharp_method_identifier_for_testname_leaf()
+    {
+        const string uid = "DevTools.NUnit.Runtime.Fixtures.TestNameCaseFixture.Named_one";
+        var discovered = new TestingDiscoveredTest(
+            uid,
+            "Named_one",
+            uid,
+            "DevTools.NUnit.Runtime.Fixtures.TestNameCaseFixture",
+            "Original_named");
+
+        var discoveredId = HostTestFramework.ToDiscoveredNode(discovered)
+            .Properties.Single<TestMethodIdentifierProperty>();
+        var resultId = HostTestFramework.ToResultNode(
+                new TestingCaseResult(
+                    uid,
+                    "Named_one",
+                    "Passed",
+                    1,
+                    null,
+                    null,
+                    null,
+                    null,
+                    [],
+                    [],
+                    FullName: uid),
+                assemblyPath: null,
+                [discovered])
+            .Properties.Single<TestMethodIdentifierProperty>();
+
+        Assert.Equal("Original_named", discoveredId.MethodName);
+        Assert.Equal(discoveredId.Namespace, resultId.Namespace);
+        Assert.Equal(discoveredId.TypeName, resultId.TypeName);
+        Assert.Equal(discoveredId.MethodName, resultId.MethodName);
+    }
+
+    [Fact]
+    public void ToResultNode_without_discovery_treats_testname_as_the_method()
+    {
+        var identity = HostTestFramework.ToResultNode(
+                new TestingCaseResult(
+                    "DevTools.NUnit.Runtime.Fixtures.TestNameCaseFixture.Named_one",
+                    "Named_one",
+                    "Passed",
+                    1,
+                    null,
+                    null,
+                    null,
+                    null,
+                    [],
+                    [],
+                    FullName: "DevTools.NUnit.Runtime.Fixtures.TestNameCaseFixture.Named_one"))
+            .Properties.Single<TestMethodIdentifierProperty>();
+
+        Assert.Equal("Named_one", identity.MethodName);
     }
 
     [Fact]
@@ -315,6 +771,15 @@ public sealed class TestNodeMapperTests
         Assert.Empty(selection.TestIds);
         Assert.Null(selection.ProviderPayload);
     }
+}
+
+internal sealed class StubHostTestDiscoverer : IHostTestDiscoverer
+{
+    public IReadOnlyList<TestingDiscoveredTest> Discover(string assemblyPath) =>
+        [new TestingDiscoveredTest("Stub.Test", "Test", "Stub.Test")];
+
+    public IReadOnlyList<TestingDiscoveredTest> Select(string assemblyPath, TestingSelection selection) =>
+        Discover(assemblyPath);
 }
 
 internal sealed class FakeTestRunnerTransport : ITestRunnerTransport

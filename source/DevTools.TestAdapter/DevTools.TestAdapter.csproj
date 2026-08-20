@@ -9,7 +9,7 @@
         <PackageId>RevitDevTool.TestAdapter</PackageId>
         <!-- Bump this before running .github/workflows/PublishTestAdapter.yml.
              Independent of the RevitDevTool installer GitVersion. -->
-        <Version>0.0.1</Version>
+        <Version>0.0.2</Version>
         <IsPackable>true</IsPackable>
         <DevelopmentDependency>true</DevelopmentDependency>
         <PackageLicenseExpression>MIT</PackageLicenseExpression>
@@ -26,7 +26,7 @@
         <!-- The package intentionally has no dependency groups: its modern internal
              closure is runtime-only under build/runtime; net48 is ILRepack-merged below. -->
         <NoPackageAnalysis>true</NoPackageAnalysis>
-        <TargetsForTfmSpecificContentInPackage>$(TargetsForTfmSpecificContentInPackage);PackDevToolsTestAdapterRuntimeClosure</TargetsForTfmSpecificContentInPackage>
+        <TargetsForTfmSpecificContentInPackage>$(TargetsForTfmSpecificContentInPackage);PackDevToolsTestAdapterRuntimeClosure;PackDevToolsNUnitMtp</TargetsForTfmSpecificContentInPackage>
         <IsTestProject>false</IsTestProject>
         <ILRepackable Condition="'$(TargetFramework)' == 'net48'">true</ILRepackable>
         <ILRepackInternalize Condition="'$(TargetFramework)' == 'net48'">true</ILRepackInternalize>
@@ -53,6 +53,29 @@
         </ItemGroup>
     </Target>
 
+    <Target Name="BuildDevToolsNUnitMtpForPack">
+        <MSBuild Projects="$(MSBuildThisFileDirectory)..\DevTools.NUnit.MTP\DevTools.NUnit.MTP.csproj"
+                 Targets="Build"
+                 Properties="Configuration=$(Configuration);TargetFramework=$(TargetFramework)"/>
+    </Target>
+
+    <!-- Sibling plug-in: not ILRepacked, not a consumer ProjectReference.
+         Packed under build/runtime so testhost reuses the consumer NUnit copy. -->
+    <Target Name="PackDevToolsNUnitMtp" DependsOnTargets="BuildDevToolsNUnitMtpForPack">
+        <PropertyGroup>
+            <_DevToolsNUnitMtpDll>$(MSBuildThisFileDirectory)..\DevTools.NUnit.MTP\bin\$(Configuration)\$(TargetFramework)\DevTools.NUnit.MTP.dll</_DevToolsNUnitMtpDll>
+            <_DevToolsNUnitMtpPackageRuntime Condition="'$(TargetFrameworkIdentifier)' == '.NETCoreApp'">build/runtime/net$(TargetFrameworkVersion.Substring(1))-windows7.0</_DevToolsNUnitMtpPackageRuntime>
+            <_DevToolsNUnitMtpPackageRuntime Condition="'$(TargetFrameworkIdentifier)' != '.NETCoreApp'">build/runtime/net48</_DevToolsNUnitMtpPackageRuntime>
+        </PropertyGroup>
+        <Error Condition="!Exists('$(_DevToolsNUnitMtpDll)')"
+               Text="Pack requires DevTools.NUnit.MTP.dll at $(_DevToolsNUnitMtpDll)."/>
+        <ItemGroup>
+            <TfmSpecificPackageFile Include="$(_DevToolsNUnitMtpDll)">
+                <PackagePath>$(_DevToolsNUnitMtpPackageRuntime)</PackagePath>
+            </TfmSpecificPackageFile>
+        </ItemGroup>
+    </Target>
+
     <ItemGroup>
         <GlobalPackageReference Remove="Polyfill"/>
         <!-- Compile against the platform; consumers supply it at runtime via Microsoft.Testing.Platform.MSBuild. -->
@@ -64,14 +87,14 @@
         <PackageReference Include="System.Text.Json" Condition="'$(TargetFramework)' == 'net48'">
             <PrivateAssets>all</PrivateAssets>
         </PackageReference>
-        <!-- net48 needs the metadata reader merged; modern runtimes provide it. -->
-        <PackageReference Include="System.Reflection.Metadata" Condition="'$(TargetFramework)' == 'net48'">
-            <PrivateAssets>all</PrivateAssets>
-        </PackageReference>
         <PackageReference Include="System.Runtime.CompilerServices.Unsafe" Condition="'$(TargetFramework)' == 'net48'">
             <PrivateAssets>all</PrivateAssets>
         </PackageReference>
         <InternalsVisibleTo Include="DevTools.TestAdapter.Tests"/>
+    </ItemGroup>
+
+    <ItemGroup>
+        <Compile Include="..\DevTools.NUnit.Runtime\NUnitCollapsedSelection.cs" Link="NUnitCollapsedSelection.cs"/>
     </ItemGroup>
 
     <ItemGroup>

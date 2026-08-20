@@ -1,0 +1,22 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <TargetFramework>net10.0-windows</TargetFramework>
+        <IsPackable>false</IsPackable>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <PackageReference Include="xunit.v3.mtp-v2"/>
+        <GlobalPackageReference Remove="Polyfill"/>
+    </ItemGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\..\source\DevTools.NUnit.MTP\DevTools.NUnit.MTP.csproj" SetTargetFramework="TargetFramework=net10.0-windows"/>
+        <ProjectReference Include="..\DevTools.NUnit.Runtime.Fixtures\DevTools.NUnit.Runtime.Fixtures.csproj" SetTargetFramework="TargetFramework=net10.0-windows"/>
+    </ItemGroup>
+
+    <ItemGroup>
+        <Using Include="Xunit"/>
+    </ItemGroup>
+
+</Project>

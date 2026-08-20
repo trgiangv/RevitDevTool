@@ -1,0 +1,29 @@
+<Project Sdk="Microsoft.NET.Sdk">
+    <PropertyGroup>
+        <TargetFrameworks>net48;net8.0-windows;net10.0-windows</TargetFrameworks>
+        <AppendTargetFrameworkToOutputPath>true</AppendTargetFrameworkToOutputPath>
+        <RootNamespace>DevTools.NUnit.MTP</RootNamespace>
+        <AssemblyName>DevTools.NUnit.MTP</AssemblyName>
+        <IsPackable>false</IsPackable>
+        <IsTestProject>false</IsTestProject>
+        <!-- net48 TestAdapter ILRepacks Abstractions. Compiling against both
+             copies of TestingSelection is CS0433. -->
+        <DisableTransitiveProjectReferences Condition="'$(TargetFramework)' == 'net48'">true</DisableTransitiveProjectReferences>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <PackageReference Include="NUnit"/>
+        <PackageReference Include="System.Reflection.Metadata" Condition="'$(TargetFramework)' == 'net48'"/>
+        <InternalsVisibleTo Include="DevTools.NUnit.MTP.Tests"/>
+    </ItemGroup>
+
+    <ItemGroup>
+        <Compile Include="..\DevTools.NUnit.Runtime\NUnitSourceLocationProvider.cs" Link="NUnitSourceLocationProvider.cs"/>
+        <Compile Include="..\DevTools.NUnit.Runtime\NUnitTestNameParser.cs" Link="NUnitTestNameParser.cs"/>
+        <Compile Include="..\DevTools.NUnit.Runtime\NUnitCollapsedSelection.cs" Link="NUnitCollapsedSelection.cs"/>
+    </ItemGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\DevTools.TestAdapter\DevTools.TestAdapter.csproj"/>
+    </ItemGroup>
+</Project>

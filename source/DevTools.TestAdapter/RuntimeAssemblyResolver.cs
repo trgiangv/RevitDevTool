@@ -70,6 +70,19 @@ internal static class RuntimeAssemblyResolver
             && name is not "." and not "..";
     }
 
+    /// <summary>
+    /// <see cref="Assembly.LoadFrom(string)"/> keeps a Windows file lock.
+    /// Byte-load so testhost does not pin the sibling DLL during rebuild.
+    /// </summary>
+    internal static Assembly LoadUnlocked(string path)
+    {
+        var assemblyBytes = File.ReadAllBytes(path);
+        var symbolPath = Path.ChangeExtension(path, ".pdb");
+        return File.Exists(symbolPath)
+            ? Assembly.Load(assemblyBytes, File.ReadAllBytes(symbolPath))
+            : Assembly.Load(assemblyBytes);
+    }
+
     private static bool IsUnderBaseDirectory(string path, string baseDirectory)
     {
         var root = baseDirectory.EndsWith(Path.DirectorySeparatorChar.ToString(), StringComparison.Ordinal)

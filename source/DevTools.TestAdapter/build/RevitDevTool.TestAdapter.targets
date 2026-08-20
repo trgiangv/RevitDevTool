@@ -2,6 +2,15 @@
   <Import Project="$(MSBuildThisFileDirectory)RevitDevTool.TestAdapter.props"
           Condition="'$(DevToolsTestAdapterPropsImported)' != 'true'"/>
 
+  <!-- In-repo only: establish build order so MTP.dll exists before the test
+       exe copies it. NuGet consumers get the same DLL from build/runtime. -->
+  <ItemGroup Condition="'$(IsTestingPlatformApplication)' == 'true' And Exists('$(MSBuildThisFileDirectory)..\..\DevTools.NUnit.MTP\DevTools.NUnit.MTP.csproj')">
+    <ProjectReference Include="$(MSBuildThisFileDirectory)..\..\DevTools.NUnit.MTP\DevTools.NUnit.MTP.csproj">
+      <ReferenceOutputAssembly>false</ReferenceOutputAssembly>
+      <Private>false</Private>
+    </ProjectReference>
+  </ItemGroup>
+
   <UsingTask TaskName="MergeDevToolsTestConfig"
              TaskFactory="RoslynCodeTaskFactory"
              AssemblyFile="$(MSBuildToolsPath)\Microsoft.Build.Tasks.Core.dll">
@@ -59,6 +68,47 @@
           SkipUnchangedFiles="true" />
   </Target>
 
+  <!-- Consumer already references NUnit. This plug-in calls ExploreTests
+       against that copy; it is not a consumer ProjectReference. -->
+  <Target Name="CopyDevToolsNUnitMtp" AfterTargets="Build">
+    <PropertyGroup>
+      <_DevToolsNUnitMtpFileName>DevTools.NUnit.MTP.dll</_DevToolsNUnitMtpFileName>
+      <_DevToolsNUnitMtpFromPackage Condition="'$(TargetFrameworkIdentifier)' == '.NETCoreApp'">$(MSBuildThisFileDirectory)runtime\net$(TargetFrameworkVersion.Substring(1))-windows7.0\$(_DevToolsNUnitMtpFileName)</_DevToolsNUnitMtpFromPackage>
+      <_DevToolsNUnitMtpFromPackage Condition="'$(TargetFrameworkIdentifier)' == '.NETFramework'">$(MSBuildThisFileDirectory)runtime\net48\$(_DevToolsNUnitMtpFileName)</_DevToolsNUnitMtpFromPackage>
+      <_DevToolsNUnitMtpFromRepo>$([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)..\..\DevTools.NUnit.MTP\bin\$(Configuration)\$(TargetFramework)\$(_DevToolsNUnitMtpFileName)'))</_DevToolsNUnitMtpFromRepo>
+      <_DevToolsNUnitMtpSource Condition="Exists('$(_DevToolsNUnitMtpFromPackage)')">$(_DevToolsNUnitMtpFromPackage)</_DevToolsNUnitMtpSource>
+      <_DevToolsNUnitMtpSource Condition="'$(_DevToolsNUnitMtpSource)' == '' And Exists('$(_DevToolsNUnitMtpFromRepo)')">$(_DevToolsNUnitMtpFromRepo)</_DevToolsNUnitMtpSource>
+    </PropertyGroup>
+    <Copy Condition="'$(_DevToolsNUnitMtpSource)' != ''"
+          SourceFiles="$(_DevToolsNUnitMtpSource)"
+          DestinationFolder="$(OutDir)"
+          SkipUnchangedFiles="true" />
+  </Target>
+
+  <!-- Persist NuGet compile-only assemblies that testhost cannot resolve
+       from output (Revit_All_Main_Versions_API_x64 / AutoCAD.NET set
+       Copy Local false / ExcludeAssets=runtime). Do not copy those DLLs
+       next to the test exe. Consumers do not add extra csproj items. -->
+  <Target Name="WriteDevToolsDiscoveryRefs"
+          AfterTargets="Build"
+          Condition="'$(IsTestingPlatformApplication)' == 'true'">
+    <PropertyGroup>
+      <_DevToolsDiscoveryRefsFile>$(TargetDir)$(TargetName).discovery-refs.txt</_DevToolsDiscoveryRefsFile>
+    </PropertyGroup>
+    <ItemGroup>
+      <_DevToolsDiscoveryRef Include="@(ReferencePath)"
+          Condition="'%(ReferencePath.NuGetPackageId)' != '' And '%(ReferencePath.CopyLocal)' != 'true' And Exists('%(Identity)') And !Exists('$(TargetDir)%(Filename)%(Extension)') And !$([System.String]::Copy('%(Identity)').Contains('\Reference Assemblies\')) And !$([System.String]::Copy('%(Identity)').Contains('\dotnet\packs\'))" />
+    </ItemGroup>
+    <WriteLinesToFile
+        File="$(_DevToolsDiscoveryRefsFile)"
+        Lines="@(_DevToolsDiscoveryRef->'%(Identity)')"
+        Overwrite="true"
+        Encoding="UTF-8"/>
+    <ItemGroup>
+      <FileWrites Include="$(_DevToolsDiscoveryRefsFile)"/>
+    </ItemGroup>
+  </Target>
+
   <!-- Host options live in csproj properties, not compile inputs. MTP's
        _GenerateTestingPlatformConfigurationFileCore is incremental (Inputs/Outputs).
        A BeforeTargets hook on that Core target does not run when Core is up-to-date,
@@ -80,15 +130,10 @@
     <Error
         Condition="'$(HostVersion)' == ''"
         Text="RevitDevTool.TestAdapter test projects must declare &lt;HostVersion&gt; in the .csproj (for example &lt;HostVersion&gt;2024&lt;/HostVersion&gt; or &lt;HostVersion&gt;$(RevitVersion)&lt;/HostVersion&gt;)." />
-    <Error
-        Condition="'$(TestingDiscoveryAttributes)' == ''"
-        Text="RevitDevTool.TestAdapter test projects must declare &lt;TestingDiscoveryAttributes&gt; or use the default TestingFramework." />
-
     <PropertyGroup>
       <_DevToolsTestingRunnerPath Condition="'$(DevToolsTestingRunnerPath)' != ''">$(DevToolsTestingRunnerPath)</_DevToolsTestingRunnerPath>
       <_DevToolsTestingRunnerPath Condition="'$(_DevToolsTestingRunnerPath)' == ''">$([System.Environment]::GetFolderPath(SpecialFolder.ApplicationData))\Autodesk\ApplicationPlugins\RevitDevTool.bundle\Contents\DevTools.TestRunner.exe</_DevToolsTestingRunnerPath>
       <_DevToolsTestingRunnerPathJson>$(_DevToolsTestingRunnerPath.Replace('\', '\\'))</_DevToolsTestingRunnerPathJson>
-      <_TestingDiscoveryAttributesJson>"$(TestingDiscoveryAttributes.Replace(';', '","'))"</_TestingDiscoveryAttributesJson>
       <_DevToolsUserTestConfigPath>$(MSBuildProjectDirectory)\testconfig.json</_DevToolsUserTestConfigPath>
       <_DevToolsGeneratedTestConfigPath>$(IntermediateOutputPath)devtools.testconfig.json</_DevToolsGeneratedTestConfigPath>
       <_DevToolsMergedTestConfigPath>$(IntermediateOutputPath)testconfig.json</_DevToolsMergedTestConfigPath>
@@ -97,7 +142,7 @@
     <MakeDir Directories="$(IntermediateOutputPath);$(OutputPath)"/>
     <WriteLinesToFile
         File="$(_DevToolsGeneratedTestConfigPath)"
-        Lines="{&#xA;  &quot;devtools&quot;: {&#xA;    &quot;hostName&quot;: &quot;$(HostName)&quot;,&#xA;    &quot;hostVersion&quot;: &quot;$(HostVersion)&quot;,&#xA;    &quot;forceLaunch&quot;: $(ForceLaunch),&#xA;    &quot;perTestTimeoutSeconds&quot;: $(PerTestTimeout),&#xA;    &quot;launchTimeoutSeconds&quot;: $(LaunchTimeout),&#xA;    &quot;runnerPath&quot;: &quot;$(_DevToolsTestingRunnerPathJson)&quot;,&#xA;    &quot;frameworkId&quot;: &quot;$(TestingFramework)&quot;,&#xA;    &quot;discoveryAttributes&quot;: [$(_TestingDiscoveryAttributesJson)]&#xA;  }&#xA;}"
+        Lines="{&#xA;  &quot;devtools&quot;: {&#xA;    &quot;hostName&quot;: &quot;$(HostName)&quot;,&#xA;    &quot;hostVersion&quot;: &quot;$(HostVersion)&quot;,&#xA;    &quot;forceLaunch&quot;: $(ForceLaunch),&#xA;    &quot;perTestTimeoutSeconds&quot;: $(PerTestTimeout),&#xA;    &quot;launchTimeoutSeconds&quot;: $(LaunchTimeout),&#xA;    &quot;runnerPath&quot;: &quot;$(_DevToolsTestingRunnerPathJson)&quot;,&#xA;    &quot;frameworkId&quot;: &quot;$(TestingFramework)&quot;&#xA;  }&#xA;}"
         Overwrite="true"
         Encoding="UTF-8"/>
     <MergeDevToolsTestConfig

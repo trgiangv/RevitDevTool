@@ -22,6 +22,8 @@ public sealed class PackageConsumerTests
             // fresh Release build, then the consumer restores from an empty cache.
             Run("dotnet", $"pack \"{Path.Combine(root, "source", "DevTools.TestAdapter", "DevTools.TestAdapter.csproj")}\" -c Release -o \"{packages}\"");
             var nupkg = Directory.GetFiles(packages, "RevitDevTool.TestAdapter.*.nupkg", SearchOption.TopDirectoryOnly).Single();
+            var packageVersion = Path.GetFileNameWithoutExtension(nupkg)
+                ["RevitDevTool.TestAdapter.".Length..];
             AssertPackageClosure(nupkg);
 
             File.WriteAllText(Path.Combine(work, "NuGet.Config"), $"""
@@ -38,7 +40,7 @@ public sealed class PackageConsumerTests
                   </packageSourceMapping>
                 </configuration>
                 """);
-            File.WriteAllText(Path.Combine(consumer, "CleanConsumer.csproj"), """
+            File.WriteAllText(Path.Combine(consumer, "CleanConsumer.csproj"), $"""
                 <Project Sdk="Microsoft.NET.Sdk">
                   <PropertyGroup>
                     <TargetFrameworks>net48;net8.0-windows;net8.0-windows10.0.19041.0;net10.0-windows;net10.0-windows10.0.19041.0</TargetFrameworks>
@@ -54,28 +56,20 @@ public sealed class PackageConsumerTests
                   </PropertyGroup>
                   <ItemGroup>
                     <Compile Remove="ProviderLeak.cs" />
-                    <PackageReference Include="RevitDevTool.TestAdapter" Version="0.0.1" />
+                    <PackageReference Include="RevitDevTool.TestAdapter" Version="{packageVersion}" />
                     <PackageReference Include="Microsoft.Testing.Platform.MSBuild" Version="2.3.3" />
                     <PackageReference Include="NUnit" Version="4.6.1" />
                   </ItemGroup>
                 </Project>
                 """);
             File.WriteAllText(Path.Combine(consumer, "Program.cs"), """
-                using System.Reflection;
                 using System.Runtime.CompilerServices;
                 using DevTools.TestAdapter;
 
-                // A public MTP hook registers the runtime-only resolver. The
-                // discoverer is then intentionally loaded only by reflection.
                 RuntimeHelpers.RunClassConstructor(typeof(TestingPlatformBuilderHook).TypeHandle);
-                var mtp = Assembly.Load("DevTools.TestAdapter");
-                var discoverer = mtp.GetType("DevTools.TestAdapter.MetadataTestDiscoverer", throwOnError: true)!;
-                _ = discoverer.GetMethod("Discover")!.Invoke(
-                    null,
-                    [Assembly.GetExecutingAssembly().Location, new[] { "TestAttribute" }]);
-                return mtp.GetType(typeof(TestingPlatformBuilderHook).FullName!) is null ? 1 : 0;
+                return typeof(TestingPlatformBuilderHook) is null ? 1 : 0;
                 """);
-            File.WriteAllText(Path.Combine(consumer, "ProviderLeak.csproj"), """
+            File.WriteAllText(Path.Combine(consumer, "ProviderLeak.csproj"), $"""
                 <Project Sdk="Microsoft.NET.Sdk">
                   <PropertyGroup>
                     <TargetFramework>net10.0-windows</TargetFramework>
@@ -87,7 +81,7 @@ public sealed class PackageConsumerTests
                   </PropertyGroup>
                   <ItemGroup>
                     <Compile Include="ProviderLeak.cs" />
-                    <PackageReference Include="RevitDevTool.TestAdapter" Version="0.0.1" />
+                    <PackageReference Include="RevitDevTool.TestAdapter" Version="{packageVersion}" />
                     <PackageReference Include="Microsoft.Testing.Platform.MSBuild" Version="2.3.3" />
                     <PackageReference Include="NUnit" Version="4.6.1" />
                   </ItemGroup>
@@ -99,7 +93,7 @@ public sealed class PackageConsumerTests
                 namespace Consumer;
                 public static class ProviderLeak
                 {
-                    public static Type ProviderType => typeof(MetadataTestDiscoverer);
+                    public static Type ProviderType => typeof(HostTestFramework);
                 }
                 """);
 
@@ -117,6 +111,10 @@ public sealed class PackageConsumerTests
                 var output = Path.Combine(consumer, "bin", "Release", tfm);
                 if (!tfm.Equals("net48", StringComparison.Ordinal))
                     AssertRuntimeClosure(output);
+                Assert.True(
+                    File.Exists(Path.Combine(output, "DevTools.NUnit.MTP.dll")),
+                    $"Missing DevTools.NUnit.MTP.dll for {tfm}.{Environment.NewLine}"
+                    + string.Join(Environment.NewLine, Directory.GetFiles(output, "*.dll").Select(Path.GetFileName)));
 
                 Run(tfm.Equals("net48", StringComparison.Ordinal) ? Path.Combine(output, "CleanConsumer.exe") : "dotnet",
                     tfm.Equals("net48", StringComparison.Ordinal) ? string.Empty : "CleanConsumer.dll", output, globalPackages);
@@ -144,6 +142,8 @@ public sealed class PackageConsumerTests
             entries.Where(entry => entry.StartsWith("lib/", StringComparison.OrdinalIgnoreCase)),
             entry => Assert.EndsWith("/DevTools.TestAdapter.dll", entry, StringComparison.OrdinalIgnoreCase));
         Assert.Contains("lib/net48/DevTools.TestAdapter.dll", entries, StringComparer.OrdinalIgnoreCase);
+        Assert.Contains("build/runtime/net48/DevTools.NUnit.MTP.dll", entries, StringComparer.OrdinalIgnoreCase);
+        Assert.DoesNotContain("lib/net48/DevTools.NUnit.MTP.dll", entries, StringComparer.OrdinalIgnoreCase);
         foreach (var tfm in new[] { "net8.0-windows7.0", "net10.0-windows7.0" })
         {
             Assert.Contains($"lib/{tfm}/DevTools.TestAdapter.dll", entries, StringComparer.OrdinalIgnoreCase);
@@ -154,6 +154,8 @@ public sealed class PackageConsumerTests
             }
 
             Assert.DoesNotContain($"build/runtime/{tfm}/DevTools.TestAdapter.dll", entries, StringComparer.OrdinalIgnoreCase);
+            Assert.Contains($"build/runtime/{tfm}/DevTools.NUnit.MTP.dll", entries, StringComparer.OrdinalIgnoreCase);
+            Assert.DoesNotContain($"lib/{tfm}/DevTools.NUnit.MTP.dll", entries, StringComparer.OrdinalIgnoreCase);
             Assert.DoesNotContain($"lib/{tfm}/Microsoft.Bcl.AsyncInterfaces.dll", entries, StringComparer.OrdinalIgnoreCase);
             Assert.DoesNotContain($"build/runtime/{tfm}/Microsoft.Bcl.AsyncInterfaces.dll", entries, StringComparer.OrdinalIgnoreCase);
         }
