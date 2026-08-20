@@ -176,11 +176,6 @@ internal sealed class HostTestFramework : ITestFramework, IDataProducer
         }
     }
 
-    internal static int CountRunTests(
-        string assemblyPath,
-        TestingSelection selection) =>
-        SelectCases(assemblyPath, selection).Count;
-
     /// <summary>
     /// Csproj <c>PerTestTimeout</c> is per test. After this, <see cref="TestingHostOptions.PerTestTimeoutSeconds"/>
     /// is the scaled pipe wait (<c>PerTestTimeout × test count</c>) that TestRunner
@@ -261,14 +256,6 @@ internal sealed class HostTestFramework : ITestFramework, IDataProducer
         return id;
     }
 
-    internal static TestingSelection ToHostSelection(
-        string assemblyPath,
-        TestingSelection selection)
-    {
-        var cases = SelectCases(assemblyPath, selection);
-        return ToHostSelection(selection, cases);
-    }
-
     internal static IReadOnlyList<TestingDiscoveredTest> SelectCases(
         string assemblyPath,
         TestingSelection selection)
@@ -334,15 +321,17 @@ internal sealed class HostTestFramework : ITestFramework, IDataProducer
     /// UID runs publish onto the requested identity. Multiple in-host
     /// expansions (fixture source / SetName) fold into that one UID.
     /// Discovered TestName/SetName leaves also keep their own result
-    /// nodes so Test Explorer children update. Names-only CLI runs keep
-    /// per-leaf host identities.
+    /// nodes so Test Explorer children update. Unfiltered runs remap host
+    /// <c>FullName</c> onto those discovered UIDs. Names-only CLI runs keep
+    /// per-leaf host identities. Unmatched in-host expansions stay as extra
+    /// host identities so CLI still reports stub expansions.
     /// </summary>
     internal static IReadOnlyList<TestingCaseResult> FoldHostResults(
         TestingSelection request,
         IReadOnlyList<TestingDiscoveredTest> discovered,
         IReadOnlyList<TestingCaseResult> hostResults)
     {
-        if (request.TestIds is not { Count: > 0 })
+        if (request.TestIds is not { Count: > 0 } && request.Names is { Count: > 0 })
             return hostResults;
 
         var display = discovered
@@ -351,31 +340,41 @@ internal sealed class HostTestFramework : ITestFramework, IDataProducer
             .ToDictionary(group => group.Key, group => group.First().DisplayName, StringComparer.Ordinal);
 
         var folded = new List<TestingCaseResult>();
-        foreach (var id in request.TestIds
-            .Where(value => !string.IsNullOrWhiteSpace(value))
-            .Select(value => value.Trim())
-            .Distinct(StringComparer.Ordinal))
+        var usedHostIds = new HashSet<string>(StringComparer.Ordinal);
+        if (request.TestIds is { Count: > 0 })
         {
-            var nunitId = ToNunitFullName(id, discovered);
-            var matches = hostResults
-                .Where(result => NUnitCollapsedSelection.Matches(
-                        id,
-                        result.TestId,
-                        result.FullName,
-                        result.ParentTestId)
-                    || NUnitCollapsedSelection.Matches(
-                        nunitId,
-                        result.TestId,
-                        result.FullName,
-                        result.ParentTestId))
-                .ToList();
-            if (matches.Count == 0)
-                continue;
+            foreach (var id in request.TestIds
+                .Where(value => !string.IsNullOrWhiteSpace(value))
+                .Select(value => value.Trim())
+                .Distinct(StringComparer.Ordinal))
+            {
+                var nunitId = ToNunitFullName(id, discovered);
+                var matches = hostResults
+                    .Where(result => NUnitCollapsedSelection.Matches(
+                            id,
+                            result.TestId,
+                            result.FullName,
+                            result.ParentTestId)
+                        || NUnitCollapsedSelection.Matches(
+                            nunitId,
+                            result.TestId,
+                            result.FullName,
+                            result.ParentTestId))
+                    .ToList();
+                if (matches.Count == 0)
+                    continue;
 
-            folded.Add(
-                matches.Count == 1 && string.Equals(matches[0].TestId, id, StringComparison.Ordinal)
-                    ? matches[0]
-                    : Collapse(id, display.TryGetValue(id, out var name) ? name : id, matches));
+                foreach (var match in matches)
+                {
+                    if (!string.IsNullOrWhiteSpace(match.TestId))
+                        usedHostIds.Add(match.TestId);
+                }
+
+                folded.Add(
+                    matches.Count == 1 && string.Equals(matches[0].TestId, id, StringComparison.Ordinal)
+                        ? matches[0]
+                        : Collapse(id, display.TryGetValue(id, out var name) ? name : id, matches));
+            }
         }
 
         var published = new HashSet<string>(
@@ -398,11 +397,24 @@ internal sealed class HostTestFramework : ITestFramework, IDataProducer
             if (match is null)
                 continue;
 
+            if (!string.IsNullOrWhiteSpace(match.TestId))
+                usedHostIds.Add(match.TestId);
             folded.Add(
                 string.Equals(match.TestId, id, StringComparison.Ordinal)
                     ? match
                     : Collapse(id, test.DisplayName, [match]));
             published.Add(id);
+        }
+
+        if (request.TestIds is not { Count: > 0 })
+        {
+            foreach (var result in hostResults)
+            {
+                if (!string.IsNullOrWhiteSpace(result.TestId) && usedHostIds.Contains(result.TestId))
+                    continue;
+
+                folded.Add(result);
+            }
         }
 
         return folded;

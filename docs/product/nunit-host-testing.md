@@ -43,6 +43,8 @@ on branch `testing/nunit-vstest`.
   list. In-host NUnit load is also
   tolerant of a few unloadable types: `NUnitTolerantAssemblyBuilder` uses the
   types that did load instead of marking the whole assembly `NotRunnable`.
+  Testhost discovery uses the same builder so assembly-level attributes and
+  sort order match the host.
   That builder also sets NUnit `TestContext.WorkDirectory` (the generation
   shadow). Accessing `WorkDirectory` before this runs throws.
   On net48 there is no load context: if the host already loaded a product
@@ -66,9 +68,16 @@ on branch `testing/nunit-vstest`.
   load). That UID stays the TestNode identity. The host filter also matches
   in-host `Class("args").Method` and `TestName` / `SetName` children
   (`ITest.FullName`); results fold back onto the requested UID and onto
-  discovered leaf UIDs. IDs that already include `(args)` stay exact
+  discovered leaf UIDs. Unfiltered runs (no `--filter` / `--filter-uid`)
+  remap host `FullName` onto those discovered UIDs so `TestName` /
+  `SetName` TestNodes receive results. Names-only `--filter` keeps per-leaf
+  host identities. IDs that already include `(args)` stay exact
   `<test>`. Result TestNodes reuse the discovered `TestMethodIdentifier`
-  (C# method name). `--filter` / `Name=` stay `Names` → `<name>`.
+  (C# method name). `--filter` / `Name=` stay `Names` → `<name re="1">`
+  (NUnit name regex). `--filter-uid` is the json TestNode uid: ordinary
+  leaves are `ITest.FullName`; `TestName` / `SetName` leaves are
+  `Class.Method("DisplayName")`. PowerShell: quote uids that contain `"`
+  (`--filter-uid 'Ns.Class.Method("Unit_X")'`).
   A requested UID the host still does not report is published as Failed
   (same identity) instead of dropped. MTP `TestFrameworkCapabilities`
   stay empty (no VSTest-bridge extras).
@@ -112,6 +121,10 @@ Run the generated test executable or use the Microsoft.Testing.Platform
 host-free; host launch occurs only after an execution request. The adapter
 copies `DevTools.NUnit.MTP.dll` next to the test exe. Consumers reference
 NUnit; they do not add `DevTools.NUnit.MTP` as a ProjectReference.
+Packaged modern TFMs copy a private `build/runtime` folder: exact
+`net{version}-windows7.0` when it exists, otherwise the nearest lower
+shipped folder (`net9` → `net8.0-windows7.0`). A consumer TFM with no
+match fails the test project build instead of copying nothing.
 
 Use an Autodesk configuration (`Debug.Autodesk.2024`, `Release.Autodesk.2024`,
 …). Plain `Debug` / `Release` do not set `RevitVersion` / `TargetFramework`;

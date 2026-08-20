@@ -103,6 +103,17 @@ public sealed class NUnitRuntimeArchitectureTests
         Assert.Contains("ReflectionTypeLoadException", File.ReadAllText(builderPath), StringComparison.Ordinal);
         Assert.Contains("DefaultWorkDirectory", File.ReadAllText(builderPath), StringComparison.Ordinal);
         Assert.Contains("ApplyBuilderOptions", File.ReadAllText(builderPath), StringComparison.Ordinal);
+
+        var mtpDir = Path.Combine(RepositoryRoot, "source", "DevTools.NUnit.MTP");
+        Assert.False(File.Exists(Path.Combine(mtpDir, "NUnitLocalAssemblyBuilder.cs")));
+        Assert.Contains(
+            "NUnitTolerantAssemblyBuilder.cs",
+            File.ReadAllText(Path.Combine(mtpDir, "DevTools.NUnit.MTP.csproj")),
+            StringComparison.Ordinal);
+        Assert.Contains(
+            "new NUnitTolerantAssemblyBuilder()",
+            File.ReadAllText(Path.Combine(mtpDir, "NUnitHostTestDiscoverer.cs")),
+            StringComparison.Ordinal);
     }
 
     [Fact]

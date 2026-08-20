@@ -48,15 +48,20 @@ internal static class NUnitTestNameParser
             return displayName ?? fullName;
 
         SplitParts(fullName, out var parsedClass, out var rawMethod);
-        if (string.IsNullOrWhiteSpace(methodName)
-            || rawMethod == methodName
-            || rawMethod.StartsWith(methodName + "(", StringComparison.Ordinal))
+        if (string.IsNullOrWhiteSpace(methodName))
+            return fullName;
+        if (IsGeneratedMethodSegment(rawMethod, methodName!))
             return fullName;
 
         var type = string.IsNullOrWhiteSpace(className) ? parsedClass : className!;
         var label = string.IsNullOrWhiteSpace(displayName) ? rawMethod : displayName!;
         return type + "." + methodName + "(\"" + EscapeDisplay(label) + "\")";
     }
+
+    private static bool IsGeneratedMethodSegment(string rawMethod, string methodName) =>
+        rawMethod == methodName
+        || rawMethod.StartsWith(methodName + "(", StringComparison.Ordinal)
+        || rawMethod.StartsWith(methodName + "<", StringComparison.Ordinal);
 
     private static string EscapeDisplay(string value) =>
         value.Replace("\\", "\\\\").Replace("\"", "\\\"");

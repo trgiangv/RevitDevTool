@@ -37,6 +37,10 @@ internal static class NUnitDiscoveryRefs
         return map;
     }
 
+    /// <summary>
+    /// Framework targeting packs are omitted here as well as in the MSBuild
+    /// writer so an older package that still listed those paths stays safe.
+    /// </summary>
     internal static bool IsTargetingPack(string path) =>
         path.Contains(@"\Reference Assemblies\", StringComparison.OrdinalIgnoreCase)
         || path.Contains(@"\dotnet\packs\", StringComparison.OrdinalIgnoreCase);

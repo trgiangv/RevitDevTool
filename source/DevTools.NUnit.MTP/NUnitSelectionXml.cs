@@ -1,37 +1,29 @@
 using System.Xml.Linq;
-using DevTools.NUnit.Runtime;
 using DevTools.Testing.Abstractions.Contracts;
 
 namespace DevTools.NUnit.MTP;
 
 /// <summary>
-/// Local NUnit filter XML. <c>--filter</c> → <c>Names</c> → <c>&lt;name&gt;</c>.
-/// UID / <c>--filter-uid</c> → collapsed <c>&lt;test&gt;</c> so a Test Explorer
-/// method identity (<c>Class.Method</c>) still selects <c>TestName</c> /
-/// <c>SetName</c> leaves.
+/// Local NUnit name-filter XML. UID / <c>--filter-uid</c> XML is
+/// <see cref="DevTools.NUnit.Runtime.NUnitCollapsedSelection"/>.
 /// </summary>
 internal static class NUnitSelectionXml
 {
-    public static string? ToFilterXml(TestingSelection? selection)
+    public static string? ToFilterXml(IReadOnlyList<string>? names)
     {
-        if (selection is null)
+        var cleaned = Clean(names);
+        if (cleaned.Count == 0)
             return null;
 
-        var payload = selection.ProviderPayload?.Trim();
-        if (!string.IsNullOrWhiteSpace(payload))
-            return payload!.StartsWith("<", StringComparison.Ordinal) ? payload : null;
-
-        var testIds = Clean(selection.TestIds);
-        var names = Clean(selection.Names);
-        if (testIds.Count == 0 && names.Count == 0)
-            return null;
-
-        var nodes = names.Select(name => (XNode)new XElement("name", name))
-            .Concat(NUnitCollapsedSelection.ToTestIdNodes(testIds))
+        var nodes = cleaned
+            .Select(name => (XNode)new XElement("name", new XAttribute("re", "1"), name))
             .ToList();
         var inner = nodes.Count == 1 ? nodes[0] : new XElement("or", nodes);
         return new XElement("filter", inner).ToString(SaveOptions.DisableFormatting);
     }
+
+    public static string? ToFilterXml(TestingSelection? selection) =>
+        ToFilterXml(selection?.Names);
 
     private static List<string> Clean(IReadOnlyList<string>? values)
     {

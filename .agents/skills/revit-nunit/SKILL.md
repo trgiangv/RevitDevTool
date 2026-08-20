@@ -74,10 +74,12 @@ dotnet test --project Host.Tests.csproj -c <Config> -- --filter MethodName
 dotnet test --project Host.Tests.csproj -c <Config> --list-tests
 ```
 
-`--filter` is an adapter method-name option (NUnit `<name>` regex, so
+`--filter` is an adapter method-name option (NUnit `<name re="1">` regex, so
 `FamilyPolicy` matches those cases). Same command runs `[Explicit]`. Do
 not start `Revit.exe` / `acad.exe` yourself. `--filter-uid` needs the UID
-from `--list-tests json` (`ITest.FullName`).
+from `--list-tests json` (ordinary leaves: `ITest.FullName`; `TestName` /
+`SetName`: `Class.Method("DisplayName")`). PowerShell: quote uids that
+contain `"` (`--filter-uid 'Ns.Class.Method("Unit_X")'`).
 
 Filter / exit 8: [mtp-filter.md](references/mtp-filter.md).
 

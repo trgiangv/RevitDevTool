@@ -16,11 +16,8 @@ namespace DevTools.NUnit.MTP;
 /// </summary>
 internal sealed class NUnitHostTestDiscoverer : IHostTestDiscoverer
 {
-    public IReadOnlyList<TestingDiscoveredTest> Discover(string assemblyPath)
-    {
-        using var session = NUnitLocalExploration.Load(assemblyPath);
-        return session.Leaves.Select(test => ToDiscovered(test, session.Source)).ToList();
-    }
+    public IReadOnlyList<TestingDiscoveredTest> Discover(string assemblyPath) =>
+        Select(assemblyPath, new TestingSelection([]));
 
     public IReadOnlyList<TestingDiscoveredTest> Select(
         string assemblyPath,
@@ -45,7 +42,7 @@ internal sealed class NUnitHostTestDiscoverer : IHostTestDiscoverer
 
         if (names.Count > 0)
         {
-            var xml = NUnitSelectionXml.ToFilterXml(new TestingSelection([], Names: names));
+            var xml = NUnitSelectionXml.ToFilterXml(names);
             var filter = NUnitFilterXml.Create(xml);
             var nameHits = new HashSet<string>(
                 session.Leaves.Where(filter.Pass).Select(test => test.FullName),
@@ -104,14 +101,17 @@ internal static class NUnitFilterXml
 
 internal sealed class NUnitLocalExploration : IDisposable
 {
-    private readonly NUnitTestAssemblyRunner _runner;
+    private readonly NUnitTestAssemblyRunner? _runner;
+    private readonly NUnitDiscoveryAssemblyLoad? _load;
 
     private NUnitLocalExploration(
-        NUnitTestAssemblyRunner runner,
+        NUnitTestAssemblyRunner? runner,
         IReadOnlyList<ITest> leaves,
-        NUnitSourceLocationProvider? source)
+        NUnitSourceLocationProvider? source,
+        NUnitDiscoveryAssemblyLoad? load)
     {
         _runner = runner;
+        _load = load;
         Leaves = leaves;
         Source = source;
     }
@@ -124,35 +124,48 @@ internal sealed class NUnitLocalExploration : IDisposable
     {
         assemblyPath = Path.GetFullPath(assemblyPath);
         if (!File.Exists(assemblyPath))
-            return new NUnitLocalExploration(new NUnitTestAssemblyRunner(new NUnitLocalAssemblyBuilder()), [], null);
+            return new NUnitLocalExploration(null, [], null, null);
 
-        using var load = NUnitDiscoveryAssemblyLoad.Open(assemblyPath);
-        var runner = new NUnitTestAssemblyRunner(new NUnitLocalAssemblyBuilder());
-        var workDirectory = Path.GetDirectoryName(assemblyPath) ?? AppContext.BaseDirectory;
-        runner.Load(
-            load.Assembly,
-            new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase)
-            {
-                [FrameworkPackageSettings.WorkDirectory] = workDirectory,
-                [FrameworkPackageSettings.NumberOfTestWorkers] = 0,
-            });
-
-        var root = runner.ExploreTests(TestFilter.Empty);
-        if (root.RunState == RunState.NotRunnable)
+        var load = NUnitDiscoveryAssemblyLoad.Open(assemblyPath);
+        try
         {
-            var reason = root.Properties.Get(PropertyNames.SkipReason)?.ToString()
-                         ?? "NUnit could not explore the assembly.";
-            throw new HostTestDiscoveryFailedException(reason);
-        }
+            var runner = new NUnitTestAssemblyRunner(new NUnitTolerantAssemblyBuilder());
+            var workDirectory = Path.GetDirectoryName(assemblyPath) ?? AppContext.BaseDirectory;
+            runner.Load(
+                load.Assembly,
+                new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase)
+                {
+                    [FrameworkPackageSettings.WorkDirectory] = workDirectory,
+                    [FrameworkPackageSettings.NumberOfTestWorkers] = 0,
+                });
 
-        var leaves = new List<ITest>();
-        CollectLeaves(root, leaves);
-        return new NUnitLocalExploration(runner, leaves, new NUnitSourceLocationProvider(assemblyPath));
+            var root = runner.ExploreTests(TestFilter.Empty);
+            if (root.RunState == RunState.NotRunnable)
+            {
+                var reason = root.Properties.Get(PropertyNames.SkipReason)?.ToString()
+                             ?? "NUnit could not explore the assembly.";
+                throw new HostTestDiscoveryFailedException(reason);
+            }
+
+            var leaves = new List<ITest>();
+            CollectLeaves(root, leaves);
+            return new NUnitLocalExploration(
+                runner,
+                leaves,
+                new NUnitSourceLocationProvider(assemblyPath),
+                load);
+        }
+        catch
+        {
+            load.Dispose();
+            throw;
+        }
     }
 
     public void Dispose()
     {
         _ = _runner;
+        _load?.Dispose();
     }
 
     private static void CollectLeaves(ITest test, List<ITest> leaves)

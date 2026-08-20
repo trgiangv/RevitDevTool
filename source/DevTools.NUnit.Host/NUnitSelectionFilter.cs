@@ -36,7 +36,7 @@ internal static class NUnitSelectionFilter
         if (!hasStructured)
             return null;
 
-        var nodes = names.Select(name => new XElement("name", name))
+        var nodes = names.Select(name => new XElement("name", new XAttribute("re", "1"), name))
             .Concat(testIds.Select(id => new XElement("test", id)))
             .ToList();
         var inner = nodes.Count == 1 ? nodes[0] : new XElement("or", nodes);

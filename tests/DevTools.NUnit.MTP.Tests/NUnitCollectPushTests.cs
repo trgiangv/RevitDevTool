@@ -1,4 +1,5 @@
 using DevTools.NUnit.MTP;
+using DevTools.NUnit.Runtime;
 using DevTools.NUnit.Runtime.Fixtures;
 using DevTools.Testing.Abstractions.Contracts;
 
@@ -46,7 +47,7 @@ public sealed class NUnitCollectPushTests
     public void Push_xml_is_collapsed_addtest_full_name()
     {
         var stub = CollectStub();
-        var xml = NUnitSelectionXml.ToFilterXml(new TestingSelection([stub.TestId]));
+        var xml = NUnitCollapsedSelection.ToFilterXml([stub.TestId]);
 
         Assert.Contains($"<test>{stub.TestId}</test>", xml, StringComparison.Ordinal);
         Assert.Contains("re=\"1\"", xml, StringComparison.Ordinal);
@@ -58,7 +59,7 @@ public sealed class NUnitCollectPushTests
     {
         var stubId =
             "DevTools.NUnit.Runtime.Fixtures.ParameterizedFixture.FixtureSource_ValueIsPreserved";
-        var xml = NUnitSelectionXml.ToFilterXml(new TestingSelection([stubId]));
+        var xml = NUnitCollapsedSelection.ToFilterXml([stubId]);
         var filter = NUnitFilterXml.Create(xml);
 
         using var session = NUnitLocalExploration.Load(FixturePath);

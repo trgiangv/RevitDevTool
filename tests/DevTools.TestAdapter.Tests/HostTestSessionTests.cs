@@ -355,6 +355,74 @@ public sealed class HostTestSessionTests
     }
 
     [Fact]
+    public void FoldHostResults_unfiltered_run_remaps_testname_leaf_onto_ide_uid()
+    {
+        const string ideId =
+            "DevTools.NUnit.Runtime.Fixtures.TestNameCaseFixture.Original_named(\"Named_one\")";
+        const string nunitName = "DevTools.NUnit.Runtime.Fixtures.TestNameCaseFixture.Named_one";
+        var discovered = new TestingDiscoveredTest(
+            ideId,
+            "Named_one",
+            nunitName,
+            "DevTools.NUnit.Runtime.Fixtures.TestNameCaseFixture",
+            "Original_named");
+        var host = new[]
+        {
+            new TestingCaseResult(
+                nunitName,
+                "Named_one",
+                "Passed",
+                2,
+                null,
+                null,
+                null,
+                null,
+                [],
+                [],
+                FullName: nunitName),
+        };
+
+        var folded = Assert.Single(
+            HostTestFramework.FoldHostResults(new TestingSelection([]), [discovered], host));
+
+        Assert.Equal(ideId, folded.TestId);
+        Assert.Equal("Named_one", folded.DisplayName);
+        Assert.Equal("Passed", folded.Outcome);
+    }
+
+    [Fact]
+    public void FoldHostResults_unfiltered_run_keeps_unmatched_stub_expansions()
+    {
+        const string stubId =
+            "DevTools.NUnit.Runtime.Fixtures.ParameterizedFixture.FixtureSource_ValueIsPreserved";
+        var expanded =
+            "DevTools.NUnit.Runtime.Fixtures.ParameterizedFixture(3).FixtureSource_ValueIsPreserved";
+        var host = new[]
+        {
+            new TestingCaseResult(
+                expanded,
+                "FixtureSource_ValueIsPreserved",
+                "Passed",
+                4,
+                null,
+                null,
+                null,
+                null,
+                [],
+                [],
+                FullName: expanded),
+        };
+
+        var folded = Assert.Single(
+            HostTestFramework.FoldHostResults(
+                new TestingSelection([]),
+                [new TestingDiscoveredTest(stubId, "FixtureSource_ValueIsPreserved", stubId)],
+                host));
+
+        Assert.Equal(expanded, folded.TestId);
+    }
+
+    [Fact]
     public void FoldHostResults_keeps_name_filter_leaves_unmapped()
     {
         var host = new[]

@@ -67,4 +67,17 @@ public sealed class NUnitTestNameParserTests
                 "Original_named",
                 "Named_one"));
     }
+
+    [Fact]
+    public void ToIdeTestId_keeps_generic_method_full_name()
+    {
+        const string fullName = "DevTools.NUnit.SampleTests.GenericClosedTests.M<Int32>(1)";
+        Assert.Equal(
+            fullName,
+            NUnitTestNameParser.ToIdeTestId(
+                fullName,
+                "DevTools.NUnit.SampleTests.GenericClosedTests",
+                "M",
+                "M<Int32>(1)"));
+    }
 }

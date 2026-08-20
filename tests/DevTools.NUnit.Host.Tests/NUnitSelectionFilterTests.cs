@@ -40,7 +40,7 @@ public sealed class NUnitSelectionFilterTests
         var filter = NUnitSelectionFilter.ToNUnitFilter(
             new TestingSelection([], Names: ["Arithmetic_runs_inside_host"]));
 
-        Assert.Equal("<filter><name>Arithmetic_runs_inside_host</name></filter>", filter);
+        Assert.Equal("<filter><name re=\"1\">Arithmetic_runs_inside_host</name></filter>", filter);
     }
 
     [Fact]

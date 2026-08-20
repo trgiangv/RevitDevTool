@@ -73,12 +73,12 @@ internal static class NUnitCollapsedSelection
             new XElement(
                 "class",
                 new XAttribute("re", "1"),
-                "^" + Regex.Escape(className) + @"(\(.*\))?$"),
+                "^" + Regex.Escape(className) + @"(\([^)]*\))?$"),
             new XElement("method", methodName));
     }
 
     private static string ExpandedFullNamePattern(string className, string methodName) =>
-        "^" + Regex.Escape(className) + @"(\(.*\))?\." + Regex.Escape(methodName) + "$";
+        "^" + Regex.Escape(className) + @"(\([^)]*\))?\." + Regex.Escape(methodName) + "$";
 
     private static bool IsMatch(string? value, string pattern) =>
         !string.IsNullOrWhiteSpace(value) && Regex.IsMatch(value, pattern);

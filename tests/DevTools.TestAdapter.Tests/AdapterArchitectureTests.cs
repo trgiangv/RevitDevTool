@@ -212,6 +212,9 @@ public sealed class AdapterArchitectureTests
 
         Assert.Contains("WriteDevToolsDiscoveryRefs", targets, StringComparison.Ordinal);
         Assert.Contains("CopyDevToolsNUnitMtp", targets, StringComparison.Ordinal);
+        Assert.Contains("_ResolveDevToolsTestAdapterRuntimeDir", targets, StringComparison.Ordinal);
+        Assert.Contains("VersionGreaterThanOrEquals", targets, StringComparison.Ordinal);
+        Assert.Contains("has no runtime assets", targets, StringComparison.Ordinal);
         Assert.Contains("DevTools.NUnit.MTP.dll", targets, StringComparison.Ordinal);
         Assert.Contains("ReferenceOutputAssembly>false", targets, StringComparison.Ordinal);
         Assert.Contains("discovery-refs.txt", targets, StringComparison.Ordinal);

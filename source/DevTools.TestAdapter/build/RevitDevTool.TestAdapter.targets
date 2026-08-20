@@ -1,9 +1,34 @@
 <Project>
+  <!--
+    Consumer test-project build (imported from RevitDevTool.TestAdapter).
+
+    1. In-repo build order
+       - MTP.dll must exist before the test exe copies it.
+       - NuGet consumers skip this; they take the DLL from build/runtime.
+
+    2. Resolve the packaged runtime folder
+       - nupkg layout: build/runtime/net48 | net8.0-windows7.0 | net10.0-windows7.0.
+       - Pick exact TFM, else nearest lower. Error if the nupkg is present but nothing matches.
+       - In-repo has no build/runtime folder; later copy falls back to MTP project output.
+
+    3. Copy runtime next to the test exe
+       - net8/net10: copy build/runtime/*.dll (Abstractions, Transport, Ipc, MTP).
+       - net48: adapter is already ILRepacked; only MTP.dll is a sibling plug-in.
+       - MTP is not a consumer ProjectReference; testhost binds the consumer NUnit copy.
+
+    4. Discovery refs (no Autodesk DLL copy)
+       - Write $(TargetName).discovery-refs.txt from NuGet compile-only ReferencePath.
+       - Testhost loads those paths; do not copy Revit/AutoCAD APIs next to the exe.
+
+    5. Host options → testconfig.json
+       - Emit HostName / HostVersion / ForceLaunch / timeouts / runnerPath from csproj.
+       - Always regenerate on Build (MTP Core target is incremental and would keep a stale file).
+       - Merge optional testconfig.json beside the csproj if it has no "devtools" section.
+  -->
   <Import Project="$(MSBuildThisFileDirectory)RevitDevTool.TestAdapter.props"
           Condition="'$(DevToolsTestAdapterPropsImported)' != 'true'"/>
 
-  <!-- In-repo only: establish build order so MTP.dll exists before the test
-       exe copies it. NuGet consumers get the same DLL from build/runtime. -->
+  <!-- 1. In-repo build order -->
   <ItemGroup Condition="'$(IsTestingPlatformApplication)' == 'true' And Exists('$(MSBuildThisFileDirectory)..\..\DevTools.NUnit.MTP\DevTools.NUnit.MTP.csproj')">
     <ProjectReference Include="$(MSBuildThisFileDirectory)..\..\DevTools.NUnit.MTP\DevTools.NUnit.MTP.csproj">
       <ReferenceOutputAssembly>false</ReferenceOutputAssembly>
@@ -11,6 +36,7 @@
     </ProjectReference>
   </ItemGroup>
 
+  <!-- 5. helper: merge generated + optional user testconfig.json -->
   <UsingTask TaskName="MergeDevToolsTestConfig"
              TaskFactory="RoslynCodeTaskFactory"
              AssemblyFile="$(MSBuildToolsPath)\Microsoft.Build.Tasks.Core.dll">
@@ -52,43 +78,61 @@
     </Task>
   </UsingTask>
 
+  <!-- 2. Resolve the packaged runtime folder -->
+  <Target Name="_ResolveDevToolsTestAdapterRuntimeDir">
+    <PropertyGroup>
+      <_DevToolsRuntimeRoot>$(MSBuildThisFileDirectory)runtime\</_DevToolsRuntimeRoot>
+      <_DevToolsConsumerTfv Condition="'$(TargetFrameworkVersion)' != ''">$(TargetFrameworkVersion.Substring(1))</_DevToolsConsumerTfv>
+    </PropertyGroup>
+    <PropertyGroup Condition="'$(TargetFrameworkIdentifier)' == '.NETFramework'">
+      <_DevToolsTestAdapterPackageRuntimeDir>$(_DevToolsRuntimeRoot)net48\</_DevToolsTestAdapterPackageRuntimeDir>
+    </PropertyGroup>
+    <PropertyGroup Condition="'$(TargetFrameworkIdentifier)' == '.NETCoreApp' And '$(_DevToolsConsumerTfv)' != ''">
+      <_DevToolsTestAdapterPackageRuntimeDir Condition="Exists('$(_DevToolsRuntimeRoot)net$(_DevToolsConsumerTfv)-windows7.0\')">$(_DevToolsRuntimeRoot)net$(_DevToolsConsumerTfv)-windows7.0\</_DevToolsTestAdapterPackageRuntimeDir>
+      <_DevToolsTestAdapterPackageRuntimeDir Condition="'$(_DevToolsTestAdapterPackageRuntimeDir)' == '' And $([MSBuild]::VersionGreaterThanOrEquals('$(_DevToolsConsumerTfv)', '10.0')) And Exists('$(_DevToolsRuntimeRoot)net10.0-windows7.0\')">$(_DevToolsRuntimeRoot)net10.0-windows7.0\</_DevToolsTestAdapterPackageRuntimeDir>
+      <_DevToolsTestAdapterPackageRuntimeDir Condition="'$(_DevToolsTestAdapterPackageRuntimeDir)' == '' And $([MSBuild]::VersionGreaterThanOrEquals('$(_DevToolsConsumerTfv)', '8.0')) And Exists('$(_DevToolsRuntimeRoot)net8.0-windows7.0\')">$(_DevToolsRuntimeRoot)net8.0-windows7.0\</_DevToolsTestAdapterPackageRuntimeDir>
+    </PropertyGroup>
+    <Error
+        Condition="Exists('$(_DevToolsRuntimeRoot)') And ('$(_DevToolsTestAdapterPackageRuntimeDir)' == '' Or !Exists('$(_DevToolsTestAdapterPackageRuntimeDir)'))"
+        Text="RevitDevTool.TestAdapter has no runtime assets for $(TargetFramework). The package ships net48, net8.0-windows, and net10.0-windows under build/runtime. A matching or nearest-lower folder is required so DevTools.NUnit.MTP.dll and the adapter closure copy next to the test exe." />
+  </Target>
+
+  <!-- 3. Copy runtime next to the test exe (net8/net10 closure) -->
   <Target Name="CopyDevToolsTestAdapterRuntimeClosure"
           AfterTargets="Build"
+          DependsOnTargets="_ResolveDevToolsTestAdapterRuntimeDir"
           Condition="'$(TargetFrameworkIdentifier)' == '.NETCoreApp'">
-    <PropertyGroup>
-      <!-- 7.0 is the package's baseline Windows asset, compatible with later
-           Windows target-platform versions such as 10.0. -->
-      <_DevToolsTestAdapterPackageRuntimeDir>$(MSBuildThisFileDirectory)runtime\net$(TargetFrameworkVersion.Substring(1))-windows7.0\</_DevToolsTestAdapterPackageRuntimeDir>
-    </PropertyGroup>
     <ItemGroup>
-      <_DevToolsTestAdapterRuntimeClosureCopy Include="$(_DevToolsTestAdapterPackageRuntimeDir)*.dll" />
+      <_DevToolsTestAdapterRuntimeClosureCopy Include="$(_DevToolsTestAdapterPackageRuntimeDir)*.dll"
+          Condition="'$(_DevToolsTestAdapterPackageRuntimeDir)' != ''" />
     </ItemGroup>
     <Copy SourceFiles="@(_DevToolsTestAdapterRuntimeClosureCopy)"
           DestinationFolder="$(OutDir)"
           SkipUnchangedFiles="true" />
   </Target>
 
-  <!-- Consumer already references NUnit. This plug-in calls ExploreTests
-       against that copy; it is not a consumer ProjectReference. -->
-  <Target Name="CopyDevToolsNUnitMtp" AfterTargets="Build">
+  <!-- 3. Copy runtime next to the test exe (MTP sibling: net48 + in-repo fallback) -->
+  <Target Name="CopyDevToolsNUnitMtp"
+          AfterTargets="Build"
+          DependsOnTargets="_ResolveDevToolsTestAdapterRuntimeDir">
     <PropertyGroup>
       <_DevToolsNUnitMtpFileName>DevTools.NUnit.MTP.dll</_DevToolsNUnitMtpFileName>
-      <_DevToolsNUnitMtpFromPackage Condition="'$(TargetFrameworkIdentifier)' == '.NETCoreApp'">$(MSBuildThisFileDirectory)runtime\net$(TargetFrameworkVersion.Substring(1))-windows7.0\$(_DevToolsNUnitMtpFileName)</_DevToolsNUnitMtpFromPackage>
-      <_DevToolsNUnitMtpFromPackage Condition="'$(TargetFrameworkIdentifier)' == '.NETFramework'">$(MSBuildThisFileDirectory)runtime\net48\$(_DevToolsNUnitMtpFileName)</_DevToolsNUnitMtpFromPackage>
+      <_DevToolsNUnitMtpFromPackage Condition="'$(_DevToolsTestAdapterPackageRuntimeDir)' != ''">$(_DevToolsTestAdapterPackageRuntimeDir)$(_DevToolsNUnitMtpFileName)</_DevToolsNUnitMtpFromPackage>
       <_DevToolsNUnitMtpFromRepo>$([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)..\..\DevTools.NUnit.MTP\bin\$(Configuration)\$(TargetFramework)\$(_DevToolsNUnitMtpFileName)'))</_DevToolsNUnitMtpFromRepo>
-      <_DevToolsNUnitMtpSource Condition="Exists('$(_DevToolsNUnitMtpFromPackage)')">$(_DevToolsNUnitMtpFromPackage)</_DevToolsNUnitMtpSource>
+      <_DevToolsNUnitMtpSkipPackageCopy Condition="'$(TargetFrameworkIdentifier)' == '.NETCoreApp' And Exists('$(_DevToolsNUnitMtpFromPackage)')">true</_DevToolsNUnitMtpSkipPackageCopy>
+      <_DevToolsNUnitMtpSource Condition="'$(_DevToolsNUnitMtpSkipPackageCopy)' != 'true' And Exists('$(_DevToolsNUnitMtpFromPackage)')">$(_DevToolsNUnitMtpFromPackage)</_DevToolsNUnitMtpSource>
       <_DevToolsNUnitMtpSource Condition="'$(_DevToolsNUnitMtpSource)' == '' And Exists('$(_DevToolsNUnitMtpFromRepo)')">$(_DevToolsNUnitMtpFromRepo)</_DevToolsNUnitMtpSource>
     </PropertyGroup>
+    <Error
+        Condition="Exists('$(_DevToolsRuntimeRoot)') And '$(_DevToolsNUnitMtpSkipPackageCopy)' != 'true' And '$(_DevToolsNUnitMtpSource)' == ''"
+        Text="RevitDevTool.TestAdapter could not copy DevTools.NUnit.MTP.dll next to the test executable for $(TargetFramework)." />
     <Copy Condition="'$(_DevToolsNUnitMtpSource)' != ''"
           SourceFiles="$(_DevToolsNUnitMtpSource)"
           DestinationFolder="$(OutDir)"
           SkipUnchangedFiles="true" />
   </Target>
 
-  <!-- Persist NuGet compile-only assemblies that testhost cannot resolve
-       from output (Revit_All_Main_Versions_API_x64 / AutoCAD.NET set
-       Copy Local false / ExcludeAssets=runtime). Do not copy those DLLs
-       next to the test exe. Consumers do not add extra csproj items. -->
+  <!-- 4. Discovery refs (no Autodesk DLL copy) -->
   <Target Name="WriteDevToolsDiscoveryRefs"
           AfterTargets="Build"
           Condition="'$(IsTestingPlatformApplication)' == 'true'">
@@ -109,12 +153,7 @@
     </ItemGroup>
   </Target>
 
-  <!-- Host options live in csproj properties, not compile inputs. MTP's
-       _GenerateTestingPlatformConfigurationFileCore is incremental (Inputs/Outputs).
-       A BeforeTargets hook on that Core target does not run when Core is up-to-date,
-       so incremental Build after changing ForceLaunch / PerTestTimeout / HostVersion
-       kept a stale $(AssemblyName).testconfig.json until Rebuild. Generate on
-       BeforeBuild (always scheduled) and copy the merged file ourselves. -->
+  <!-- 5. Host options → testconfig.json -->
   <ItemGroup Condition="'$(IsTestingPlatformApplication)' == 'true'">
     <UpToDateCheckBuilt Include="$([System.IO.Path]::Combine($(MSBuildProjectDirectory), $(OutputPath), $(AssemblyName).testconfig.json))">
       <Original>$(MSBuildProjectFullPath)</Original>

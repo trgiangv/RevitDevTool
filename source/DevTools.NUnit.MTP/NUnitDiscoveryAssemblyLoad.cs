@@ -54,7 +54,7 @@ internal sealed class NUnitDiscoveryAssemblyLoad : IDisposable
         if (_resolve is not null)
             AppDomain.CurrentDomain.AssemblyResolve -= _resolve;
 #if NETCOREAPP
-        _ = _loadContext;
+        GC.KeepAlive(_loadContext);
 #endif
     }
 
@@ -131,6 +131,9 @@ internal sealed class NUnitDiscoveryAssemblyLoad : IDisposable
         public DiscoveryLoadContext(IReadOnlyDictionary<string, string> refs)
             : base(isCollectible: false)
         {
+            // Not collectible: Autodesk API packs are often mixed-mode and
+            // cannot load in a collectible context. The isolated context
+            // lives until NUnitLocalExploration disposes this load.
             _refs = refs;
         }
 

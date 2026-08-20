@@ -20,7 +20,7 @@ Host DLL changes: `scripts/build-host.ps1 -Year <year>`. Runner: `dotnet publish
 ## Pattern
 
 - Package contract: `HostName`, `HostVersion`, `ForceLaunch`, `PerTestTimeout`, `LaunchTimeout` + NUnit. MTP consumers add `RevitDevTool.TestAdapter`; the package copies `DevTools.NUnit.MTP.dll` beside the test exe and reuses the consumer NUnit reference. `UseRevit`/`UseAutoCad` are this repo's sample compile flags, not package settings.
-- `--filter` is the adapter method-name option (NUnit `<name>` regex). `--filter-uid` is the platform UID list (`ITest.FullName`). `--list-tests` text prints DisplayName; json uid is FullName. Do not paste a text list line as `--filter-uid`. TestRunner does not discover tests.
+- `--filter` is the adapter method-name option (NUnit `<name re="1">` regex). `--filter-uid` is the json TestNode uid (ordinary `ITest.FullName`; `TestName`/`SetName` is `Class.Method("DisplayName")`). `--list-tests` text prints DisplayName; json uid is that TestNode uid. Do not paste a text list line as `--filter-uid`. TestRunner does not discover tests.
 - MTP: `dotnet test` from the sample directory (scoped `global.json`).
 
 ## Traps

@@ -21,6 +21,7 @@
         <Compile Include="..\DevTools.NUnit.Runtime\NUnitSourceLocationProvider.cs" Link="NUnitSourceLocationProvider.cs"/>
         <Compile Include="..\DevTools.NUnit.Runtime\NUnitTestNameParser.cs" Link="NUnitTestNameParser.cs"/>
         <Compile Include="..\DevTools.NUnit.Runtime\NUnitCollapsedSelection.cs" Link="NUnitCollapsedSelection.cs"/>
+        <Compile Include="..\DevTools.NUnit.Runtime\NUnitTolerantAssemblyBuilder.cs" Link="NUnitTolerantAssemblyBuilder.cs"/>
     </ItemGroup>
 
     <ItemGroup>
