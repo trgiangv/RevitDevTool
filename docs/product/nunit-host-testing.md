@@ -89,7 +89,7 @@ on branch `testing/nunit-vstest`.
 
 | Module | Responsibility |
 |---|---|
-| `DevTools.Testing.Abstractions` | Neutral run/result/runtime contracts shared across host boundaries |
+| `DevTools.Testing.Abstractions` | Neutral run/result/runtime contracts, plus the testhost discovery plug-in (`IHostTestDiscoverer`). MTP compiles against this assembly, not `DevTools.TestAdapter` |
 | `DevTools.Testing.Transport` | `testing/*` JSON, pipe methods, and TestRunner process client |
 | `DevTools.Testing.Host` | In-host `testing/*` handler, generation store, and runtime-session lifecycle |
 | `DevTools.TestAdapter` | Published `RevitDevTool.TestAdapter`. MTP control plane (command line, host launch request, result mapping). Copies `DevTools.NUnit.MTP.dll` next to the test exe |
@@ -169,11 +169,23 @@ Test Explorer counts are not that leaf count:
 
 ## Packaging
 
-`RevitDevTool.TestAdapter` is packed from `source/DevTools.TestAdapter`. Modern
-targets keep implementation assemblies in a private runtime closure; net48 keeps
-the established single-assembly repack. Consumers see only the platform adapter
-compile surface. The release workflow publishes this one package.
+Two artifacts. The installer workflow does not publish the NuGet; the adapter
+workflow does not pack the host bundle.
 
-See [decision 0022](../decisions/0022-nunit-mtp-only-testing-stack.md) for the
-platform-only boundary and [decision 0021](../decisions/0021-testing-kernel-and-provider-owned-framework-runtime.md)
-for the neutral kernel extraction history.
+- **NuGet** `RevitDevTool.TestAdapter` — `scripts/pack-test-adapter.ps1` /
+  `PublishTestAdapter.yml`. Version is `<Version>` in
+  `source/DevTools.TestAdapter/DevTools.TestAdapter.csproj`. Modern targets keep
+  implementation assemblies in a private `build/runtime` closure. net48
+  ILRepacks the adapter except `DevTools.Testing.Abstractions.dll`, which stays
+  beside the test exe (with `DevTools.NUnit.MTP.dll`) so testhost discovery
+  shares one `IHostTestDiscoverer` / `HostTestDiscovery` identity. Consumers see
+  only the platform adapter compile surface.
+- **Installer / bundle** — `scripts/pack.ps1` / `PublishRelease.yml`. Ships
+  `DevTools.TestRunner.exe` and the in-host testing stack
+  (`Testing.Host`, `NUnit.Host`, `NUnit.Runtime`). Required for live runs;
+  the NuGet does not replace it.
+
+Pack graph and restore constraints:
+[architecture/Testing](../architecture/Testing/README.md). Platform-only
+boundary: [0022](../decisions/0022-nunit-mtp-only-testing-stack.md). Kernel
+split: [0021](../decisions/0021-testing-kernel-and-provider-owned-framework-runtime.md).

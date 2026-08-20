@@ -1,5 +1,5 @@
 using DevTools.NUnit.Runtime;
-using DevTools.TestAdapter;
+using DevTools.Testing.Abstractions;
 using DevTools.Testing.Abstractions.Contracts;
 using NUnit;
 using NUnit.Framework.Api;

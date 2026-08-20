@@ -1,14 +1,35 @@
 <Project Sdk="Microsoft.NET.Sdk">
+    <!--
+      Published RevitDevTool.TestAdapter (pack entry).
+      Architecture: docs/architecture/Testing/README.md
+
+      1. Multi-TFM output
+         - net48; net8.0-windows; net10.0-windows. Do not flatten obj/bin
+           (Autodesk configs share folders → CS2012 / MSB3713).
+
+      2. Package identity
+         - Sole published testing nupkg. Bump Version before PublishTestAdapter.yml.
+         - Independent of installer GitVersion. No NuGet dependency groups.
+
+      3. net48 ILRepack
+         - Merge adapter + Transport/Ipc/Json. Keep Testing.Abstractions.dll
+           loose so testhost shares HostTestDiscovery with MTP.
+
+      4. Modern runtime closure
+         - Pack TargetDir DLLs (except the adapter) under
+           build/runtime/net{N}-windows7.0. Not lib/ compile references.
+
+      5. MTP sibling
+         - Not a ProjectReference. pack-test-adapter.ps1 restores and builds
+           all MTP TFMs before pack. Inner Restore removes TargetFramework.
+         - Copy MTP.dll (and Abstractions on net48) to build/runtime.
+    -->
     <PropertyGroup>
         <TargetFrameworks>net48;net8.0-windows;net10.0-windows</TargetFrameworks>
-        <!-- Independent package: do not inherit Autodesk flatten. Parallel TFMs
-             must not share obj/bin or VS races CSC (CS2012 / MSB3713). -->
         <AppendTargetFrameworkToOutputPath>true</AppendTargetFrameworkToOutputPath>
         <RootNamespace>DevTools.TestAdapter</RootNamespace>
         <AssemblyName>DevTools.TestAdapter</AssemblyName>
         <PackageId>RevitDevTool.TestAdapter</PackageId>
-        <!-- Bump this before running .github/workflows/PublishTestAdapter.yml.
-             Independent of the RevitDevTool installer GitVersion. -->
         <Version>0.0.2</Version>
         <IsPackable>true</IsPackable>
         <DevelopmentDependency>true</DevelopmentDependency>
@@ -19,48 +40,53 @@
         <PackageReadmeFile>README.md</PackageReadmeFile>
         <EnableDynamicLoading>false</EnableDynamicLoading>
         <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
-        <!-- RevitDevTool.TestAdapter is the sole published package.  Its internal
-             DevTools runtime closure is packed below, not emitted as packages
-             that the release workflow does not publish. -->
         <SuppressDependenciesWhenPacking>true</SuppressDependenciesWhenPacking>
-        <!-- The package intentionally has no dependency groups: its modern internal
-             closure is runtime-only under build/runtime; net48 is ILRepack-merged below. -->
         <NoPackageAnalysis>true</NoPackageAnalysis>
         <TargetsForTfmSpecificContentInPackage>$(TargetsForTfmSpecificContentInPackage);PackDevToolsTestAdapterRuntimeClosure;PackDevToolsNUnitMtp</TargetsForTfmSpecificContentInPackage>
         <IsTestProject>false</IsTestProject>
         <ILRepackable Condition="'$(TargetFramework)' == 'net48'">true</ILRepackable>
         <ILRepackInternalize Condition="'$(TargetFramework)' == 'net48'">true</ILRepackInternalize>
+        <RepackBinariesKeep Condition="'$(TargetFramework)' == 'net48'">DevTools.Testing.Abstractions.dll</RepackBinariesKeep>
     </PropertyGroup>
 
+    <!-- 2. Package identity -->
     <ItemGroup>
         <None Include="build\RevitDevTool.TestAdapter.props" Pack="true" PackagePath="build\"/>
         <None Include="build\RevitDevTool.TestAdapter.targets" Pack="true" PackagePath="build\"/>
         <None Include="README.md" Pack="true" PackagePath="\"/>
     </ItemGroup>
 
+    <!-- 4. Modern runtime closure -->
     <Target Name="PackDevToolsTestAdapterRuntimeClosure"
             Condition="'$(TargetFrameworkIdentifier)' == '.NETCoreApp'">
         <PropertyGroup>
             <_DevToolsTestAdapterRuntimeTfm>net$(TargetFrameworkVersion.Substring(1))-windows7.0</_DevToolsTestAdapterRuntimeTfm>
         </PropertyGroup>
         <ItemGroup>
-            <!-- net48 is merged by the established ILRepack target.  Modern
-                 runtime-only implementation assets must not become NuGet lib
-                 compile references. -->
             <TfmSpecificPackageFile Include="$(TargetDir)*.dll" Exclude="$(TargetPath)">
                 <PackagePath>build/runtime/$(_DevToolsTestAdapterRuntimeTfm)</PackagePath>
             </TfmSpecificPackageFile>
         </ItemGroup>
     </Target>
 
+    <!-- 5. MTP sibling: restore/build if this TFM DLL is missing -->
     <Target Name="BuildDevToolsNUnitMtpForPack">
-        <MSBuild Projects="$(MSBuildThisFileDirectory)..\DevTools.NUnit.MTP\DevTools.NUnit.MTP.csproj"
+        <PropertyGroup>
+            <_DevToolsNUnitMtpProject>$(MSBuildThisFileDirectory)..\DevTools.NUnit.MTP\DevTools.NUnit.MTP.csproj</_DevToolsNUnitMtpProject>
+            <_DevToolsNUnitMtpDll>$(MSBuildThisFileDirectory)..\DevTools.NUnit.MTP\bin\$(Configuration)\$(TargetFramework)\DevTools.NUnit.MTP.dll</_DevToolsNUnitMtpDll>
+        </PropertyGroup>
+        <MSBuild Condition="!Exists('$(_DevToolsNUnitMtpDll)')"
+                 Projects="$(_DevToolsNUnitMtpProject)"
+                 Targets="Restore"
+                 Properties="Configuration=$(Configuration)"
+                 RemoveProperties="TargetFramework"/>
+        <MSBuild Condition="!Exists('$(_DevToolsNUnitMtpDll)')"
+                 Projects="$(_DevToolsNUnitMtpProject)"
                  Targets="Build"
                  Properties="Configuration=$(Configuration);TargetFramework=$(TargetFramework)"/>
     </Target>
 
-    <!-- Sibling plug-in: not ILRepacked, not a consumer ProjectReference.
-         Packed under build/runtime so testhost reuses the consumer NUnit copy. -->
+    <!-- 5. MTP sibling: pack into build/runtime -->
     <Target Name="PackDevToolsNUnitMtp" DependsOnTargets="BuildDevToolsNUnitMtpForPack">
         <PropertyGroup>
             <_DevToolsNUnitMtpDll>$(MSBuildThisFileDirectory)..\DevTools.NUnit.MTP\bin\$(Configuration)\$(TargetFramework)\DevTools.NUnit.MTP.dll</_DevToolsNUnitMtpDll>
@@ -69,21 +95,26 @@
         </PropertyGroup>
         <Error Condition="!Exists('$(_DevToolsNUnitMtpDll)')"
                Text="Pack requires DevTools.NUnit.MTP.dll at $(_DevToolsNUnitMtpDll)."/>
+        <Error Condition="'$(TargetFramework)' == 'net48' And !Exists('$(TargetDir)DevTools.Testing.Abstractions.dll')"
+               Text="Pack requires DevTools.Testing.Abstractions.dll beside the net48 adapter so testhost MTP shares HostTestDiscovery."/>
         <ItemGroup>
             <TfmSpecificPackageFile Include="$(_DevToolsNUnitMtpDll)">
+                <PackagePath>$(_DevToolsNUnitMtpPackageRuntime)</PackagePath>
+            </TfmSpecificPackageFile>
+            <TfmSpecificPackageFile Include="$(TargetDir)DevTools.Testing.Abstractions.dll"
+                                    Condition="'$(TargetFramework)' == 'net48'">
                 <PackagePath>$(_DevToolsNUnitMtpPackageRuntime)</PackagePath>
             </TfmSpecificPackageFile>
         </ItemGroup>
     </Target>
 
+    <!-- 3. net48 ILRepack inputs; compile against MTP, not a runtime copy -->
     <ItemGroup>
         <GlobalPackageReference Remove="Polyfill"/>
-        <!-- Compile against the platform; consumers supply it at runtime via Microsoft.Testing.Platform.MSBuild. -->
         <PackageReference Include="Microsoft.Testing.Platform">
             <PrivateAssets>all</PrivateAssets>
             <ExcludeAssets>runtime</ExcludeAssets>
         </PackageReference>
-        <!-- net48: merged into DevTools.TestAdapter.dll via props/ILRepack.targets. -->
         <PackageReference Include="System.Text.Json" Condition="'$(TargetFramework)' == 'net48'">
             <PrivateAssets>all</PrivateAssets>
         </PackageReference>

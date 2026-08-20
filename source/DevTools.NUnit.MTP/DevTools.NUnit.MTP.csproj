@@ -6,9 +6,6 @@
         <AssemblyName>DevTools.NUnit.MTP</AssemblyName>
         <IsPackable>false</IsPackable>
         <IsTestProject>false</IsTestProject>
-        <!-- net48 TestAdapter ILRepacks Abstractions. Compiling against both
-             copies of TestingSelection is CS0433. -->
-        <DisableTransitiveProjectReferences Condition="'$(TargetFramework)' == 'net48'">true</DisableTransitiveProjectReferences>
     </PropertyGroup>
 
     <ItemGroup>
@@ -25,6 +22,8 @@
     </ItemGroup>
 
     <ItemGroup>
-        <ProjectReference Include="..\DevTools.TestAdapter\DevTools.TestAdapter.csproj"/>
+        <ProjectReference Include="..\DevTools.Testing.Abstractions\DevTools.Testing.Abstractions.csproj">
+            <SetTargetFramework>TargetFramework=$(TargetFramework)</SetTargetFramework>
+        </ProjectReference>
     </ItemGroup>
 </Project>

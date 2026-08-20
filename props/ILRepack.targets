@@ -3,7 +3,9 @@
 
     <PropertyGroup>
         <!-- Defaults live here (0019). A csproj may set ILRepackable, ILRepackInternalize=true,
-             and RepackBinariesExcludes. Do not restate Union / ILLink / Parallel / Internalize=false. -->
+             RepackBinariesExcludes (omit from merge; Internalize also deletes them), and
+             RepackBinariesKeep (omit from merge and leave beside the output). Do not restate
+             Union / ILLink / Parallel / Internalize=false. -->
         <ILRepackable Condition="'$(ILRepackable)' == ''">false</ILRepackable>
         <ILRepackInternalize Condition="'$(ILRepackInternalize)' == ''">false</ILRepackInternalize>
         <ILRepackUnion Condition="'$(ILRepackUnion)' == ''">true</ILRepackUnion>
@@ -45,8 +47,12 @@
 
         <ItemGroup>
             <!-- Semicolon list of DLLs to leave beside the output (e.g. MahApps pack://). -->
-            <_ILRepackExcludeNames Include="$(RepackBinariesExcludes.Split(';'))"/>
+            <_ILRepackExcludeNames Include="$(RepackBinariesExcludes.Split(';'))"
+                                   Condition="'$(RepackBinariesExcludes)' != ''"/>
+            <_ILRepackKeepNames Include="$(RepackBinariesKeep.Split(';'))"
+                                Condition="'$(RepackBinariesKeep)' != ''"/>
             <_ILRepackExclude Include="$(TargetDir)%(_ILRepackExcludeNames.Identity)"/>
+            <_ILRepackExclude Include="$(TargetDir)%(_ILRepackKeepNames.Identity)"/>
             <_ILRepackInput Include="$(TargetPath)"/>
             <_ILRepackInput Include="$(TargetDir)*.dll"
                             Exclude="@(_ILRepackExclude);$(TargetPath)"/>
@@ -87,9 +93,10 @@
         </ItemGroup>
         <Delete Files="@(_ILRepackedFiles)"/>
 
-        <!-- Output is self-contained: drop leftover excludes and STJ satellite folders. -->
+        <!-- Output is self-contained: drop leftover excludes and STJ satellite folders.
+             Keep-list DLLs stay beside the primary assembly (shared type identity). -->
         <ItemGroup Condition="'$(ILRepackInternalize)' == 'true'">
-            <_ILRepackRemoveExcludes Include="@(_ILRepackExclude)"/>
+            <_ILRepackRemoveExcludes Include="$(TargetDir)%(_ILRepackExcludeNames.Identity)"/>
             <_ILRepackSatelliteDirs Include="$(TargetDir)cs;$(TargetDir)de;$(TargetDir)es;$(TargetDir)fr;$(TargetDir)it;$(TargetDir)ja;$(TargetDir)ko;$(TargetDir)pl;$(TargetDir)pt-BR;$(TargetDir)ru;$(TargetDir)tr;$(TargetDir)zh-Hans;$(TargetDir)zh-Hant"/>
         </ItemGroup>
         <Delete Files="@(_ILRepackRemoveExcludes)"

@@ -83,7 +83,8 @@ scripts/test-dotnet.ps1 -Project tests/DevTools.Mcp.Tests/DevTools.Mcp.Tests.csp
 |------|----------|
 | Reload Revit add-in | `scripts/kill-host.ps1`; `scripts/build-host.ps1 -Year 2025` |
 | Reload daemon (MCP stdio) | `dotnet publish source/DevTools.Daemon -c Release` (kills + deploys to bundle) |
-| Package all years | `scripts/pack.ps1` |
+| Installer / all years | `scripts/pack.ps1` |
+| TestAdapter NuGet | `scripts/pack-test-adapter.ps1` |
 
 ## When proof is enough
 

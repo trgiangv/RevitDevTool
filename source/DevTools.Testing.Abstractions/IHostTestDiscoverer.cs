@@ -1,11 +1,11 @@
 using DevTools.Testing.Abstractions.Contracts;
 
-namespace DevTools.TestAdapter;
+namespace DevTools.Testing.Abstractions;
 
 /// <summary>
-/// Framework-owned local discovery. The adapter control plane does not invent
+/// Testhost-owned local discovery. The adapter control plane does not invent
 /// test identities; a provider supplies opaque ids that the in-host engine
-/// understands. NUnit registers this from <c>DevTools.NUnit.MTP</c>.
+/// understands. The testhost plug-in registers an implementation at process start.
 /// </summary>
 public interface IHostTestDiscoverer
 {

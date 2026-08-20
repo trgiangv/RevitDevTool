@@ -18,6 +18,7 @@ Keep these host-neutral — this is the default for all new functionality:
 - `source/DevTools.Telemetry/`
 - `source/DevTools.UI/`
 - `source/DevTools.Utilities/` — helpers only. Leaf: no Hosting, no Execution.Abstractions, and no assembly-loading ownership.
+- `source/DevTools.Testing.*` / `DevTools.NUnit.*` / `DevTools.TestAdapter` / `DevTools.TestRunner*` — host-API-free testing stack. Testhost (adapter + MTP) vs in-host (`Testing.Host` + NUnit Host/Runtime) vs Runner exe are **separate release artifacts**; see [`docs/architecture/Testing/README.md`](../architecture/Testing/README.md). `Testing.*` must not reference `NUnit.*`.
 
 ## Host Layer
 

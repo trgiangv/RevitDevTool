@@ -1,3 +1,5 @@
+using DevTools.Testing.Abstractions;
+
 namespace DevTools.NUnit.MTP;
 
 /// <summary>
@@ -9,5 +11,5 @@ namespace DevTools.NUnit.MTP;
 public static class NUnitMTP
 {
     public static void Register() =>
-        DevTools.TestAdapter.HostTestDiscovery.Provider = new NUnitHostTestDiscoverer();
+        HostTestDiscovery.Provider = new NUnitHostTestDiscoverer();
 }

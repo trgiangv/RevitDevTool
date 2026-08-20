@@ -13,7 +13,8 @@
 
     3. Copy runtime next to the test exe
        - net8/net10: copy build/runtime/*.dll (Abstractions, Transport, Ipc, MTP).
-       - net48: adapter is already ILRepacked; only MTP.dll is a sibling plug-in.
+       - net48: adapter merge hides Transport/Ipc; Testing.Abstractions stays
+         loose (shared testhost discovery identity with MTP). Copy MTP.dll + Abstractions.dll.
        - MTP is not a consumer ProjectReference; testhost binds the consumer NUnit copy.
 
     4. Discovery refs (no Autodesk DLL copy)
@@ -122,12 +123,26 @@
       <_DevToolsNUnitMtpSkipPackageCopy Condition="'$(TargetFrameworkIdentifier)' == '.NETCoreApp' And Exists('$(_DevToolsNUnitMtpFromPackage)')">true</_DevToolsNUnitMtpSkipPackageCopy>
       <_DevToolsNUnitMtpSource Condition="'$(_DevToolsNUnitMtpSkipPackageCopy)' != 'true' And Exists('$(_DevToolsNUnitMtpFromPackage)')">$(_DevToolsNUnitMtpFromPackage)</_DevToolsNUnitMtpSource>
       <_DevToolsNUnitMtpSource Condition="'$(_DevToolsNUnitMtpSource)' == '' And Exists('$(_DevToolsNUnitMtpFromRepo)')">$(_DevToolsNUnitMtpFromRepo)</_DevToolsNUnitMtpSource>
+      <_DevToolsTestingAbstractionsFileName>DevTools.Testing.Abstractions.dll</_DevToolsTestingAbstractionsFileName>
+      <_DevToolsTestingAbstractionsFromPackage Condition="'$(_DevToolsTestAdapterPackageRuntimeDir)' != ''">$(_DevToolsTestAdapterPackageRuntimeDir)$(_DevToolsTestingAbstractionsFileName)</_DevToolsTestingAbstractionsFromPackage>
+      <_DevToolsTestingAbstractionsFromRepoTfm>$([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)..\..\DevTools.Testing.Abstractions\bin\$(Configuration)\$(TargetFramework)\$(_DevToolsTestingAbstractionsFileName)'))</_DevToolsTestingAbstractionsFromRepoTfm>
+      <_DevToolsTestingAbstractionsFromRepoFlat>$([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)..\..\DevTools.Testing.Abstractions\bin\$(Configuration)\$(_DevToolsTestingAbstractionsFileName)'))</_DevToolsTestingAbstractionsFromRepoFlat>
+      <_DevToolsTestingAbstractionsSource Condition="'$(TargetFrameworkIdentifier)' != '.NETCoreApp' And Exists('$(_DevToolsTestingAbstractionsFromPackage)')">$(_DevToolsTestingAbstractionsFromPackage)</_DevToolsTestingAbstractionsSource>
+      <_DevToolsTestingAbstractionsSource Condition="'$(_DevToolsTestingAbstractionsSource)' == '' And '$(TargetFrameworkIdentifier)' != '.NETCoreApp' And Exists('$(_DevToolsTestingAbstractionsFromRepoTfm)')">$(_DevToolsTestingAbstractionsFromRepoTfm)</_DevToolsTestingAbstractionsSource>
+      <_DevToolsTestingAbstractionsSource Condition="'$(_DevToolsTestingAbstractionsSource)' == '' And '$(TargetFrameworkIdentifier)' != '.NETCoreApp' And Exists('$(_DevToolsTestingAbstractionsFromRepoFlat)')">$(_DevToolsTestingAbstractionsFromRepoFlat)</_DevToolsTestingAbstractionsSource>
     </PropertyGroup>
     <Error
         Condition="Exists('$(_DevToolsRuntimeRoot)') And '$(_DevToolsNUnitMtpSkipPackageCopy)' != 'true' And '$(_DevToolsNUnitMtpSource)' == ''"
         Text="RevitDevTool.TestAdapter could not copy DevTools.NUnit.MTP.dll next to the test executable for $(TargetFramework)." />
+    <Error
+        Condition="Exists('$(_DevToolsRuntimeRoot)') And '$(TargetFrameworkIdentifier)' != '.NETCoreApp' And '$(_DevToolsTestingAbstractionsSource)' == ''"
+        Text="RevitDevTool.TestAdapter could not copy DevTools.Testing.Abstractions.dll next to the net48 test executable. Testhost MTP must share HostTestDiscovery with the adapter." />
     <Copy Condition="'$(_DevToolsNUnitMtpSource)' != ''"
           SourceFiles="$(_DevToolsNUnitMtpSource)"
+          DestinationFolder="$(OutDir)"
+          SkipUnchangedFiles="true" />
+    <Copy Condition="'$(_DevToolsTestingAbstractionsSource)' != ''"
+          SourceFiles="$(_DevToolsTestingAbstractionsSource)"
           DestinationFolder="$(OutDir)"
           SkipUnchangedFiles="true" />
   </Target>

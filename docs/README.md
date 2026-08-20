@@ -17,7 +17,7 @@ Start here when locating repository truth. Retrieve only what the task needs.
 
 | Path | Role |
 |------|------|
-| [architecture/](ARCHITECTURE.md) | Deep module design (Execution, MCP, PyTest, Logging, Visualization, …) |
+| [architecture/](ARCHITECTURE.md) | Deep module design (Execution, MCP, PyTest, Testing, Logging, Visualization, …) |
 | [agents/](agents/index.md) | Agent task router and operational digests |
 | [static/](static/) | Icon and installer assets (not behavioral truth) |
 

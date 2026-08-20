@@ -1,4 +1,5 @@
 using DevTools.TestAdapter;
+using DevTools.Testing.Abstractions;
 using DevTools.Testing.Abstractions.Contracts;
 using DevTools.Testing.Transport;
 using Microsoft.Testing.Platform.Configurations;

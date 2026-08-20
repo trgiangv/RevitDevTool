@@ -12,20 +12,22 @@ description: >
 
 ## Before editing
 
-1. Read `docs/WORKFLOW.md` for work shape, then the matching digest only: `docs/agents/execution-system.md`, `mcp-pytest-bridge.md`, `host-boundaries.md`, `build-matrix.md`, `docs/product/<domain>.md`, or `docs/architecture/<Module>/README.md`.
-2. Classify shared vs host-specific before moving code.
+1. Read `docs/WORKFLOW.md` for work shape, then the matching digest only: `docs/agents/execution-system.md`, `mcp-pytest-bridge.md`, `host-boundaries.md`, `build-matrix.md`, `docs/product/<domain>.md`, or `docs/architecture/<Module>/README.md`. Host testing structure/release: `docs/architecture/Testing/README.md`.
+2. Classify shared vs host-specific before moving code. Classify **which release artifact** the change ships in (installer vs TestAdapter nupkg) before editing pack targets.
 
 ## Rules
 
 - Shared `DevTools.*`: no Revit/AutoCAD API types; host adapters own threading, docs, rendering.
 - MCP/IPC: keep wire contracts in sync (`BridgeMessage`, `PytestContracts`, MCP pipe names).
 - Pytest bridge: treat discover and run as separate flows; do not “fix” stale path gaps with unrelated edits.
-- Packaging: `build/Modules/*` + `RevitDevTool.slnx` are source of truth; ILRepack + Polyfill policy is `docs/decisions/0019-ilrepack-and-polyfill-isolated-alc.md`.
+- Packaging is **two pipelines**. Installer/bundle (`scripts/pack.ps1`, `build/Modules/*`, `PublishRelease.yml`) does not publish NuGet. Adapter nupkg (`scripts/pack-test-adapter.ps1`, `PublishTestAdapter.yml`) does not go through `build/Modules/*`. ILRepack + Polyfill policy is `docs/decisions/0019-ilrepack-and-polyfill-isolated-alc.md`.
+- TestAdapter pack/release constraints: `docs/architecture/Testing/README.md`. Do not add a TestAdapter → MTP `ProjectReference`. Host/Runtime/Runner ship in the installer, not the nupkg.
 - net48: rely on Polyfill + hook/multi-TFM compile; do not speculative-polyfill.
 
 ## After editing
 
 - Compile touched projects via build skill; fix reported errors before done.
 - Deploy only with `scripts/kill-host.ps1` + `scripts/build-host.ps1`.
+- Adapter pack/publish: `scripts/pack-test-adapter.ps1` (not `scripts/pack.ps1`). Installer/bundle: `scripts/pack.ps1`.
 - Add a focused test when contracts/discovery/dispatch change; otherwise document host blockers.
-- Update the one matching doc layer (`docs/product/`, `docs/architecture/<Module>/`, `docs/agents/`, or `docs/decisions/`) — not multiple layers by default.
+- Update the one matching doc layer (`docs/product/`, `docs/architecture/<Module>/`, `docs/agents/`, or `docs/decisions/`) — not multiple layers by default. Testing pack/release structure lives in `docs/architecture/Testing/`.

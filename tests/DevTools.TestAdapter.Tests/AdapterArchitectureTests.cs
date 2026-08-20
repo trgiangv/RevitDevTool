@@ -171,6 +171,10 @@ public sealed class AdapterArchitectureTests
         Assert.DoesNotContain("DevTools.NUnit.MTP.csproj", sample, StringComparison.Ordinal);
         Assert.DoesNotContain("DevTools.NUnit.MTP.csproj", civil, StringComparison.Ordinal);
         Assert.Contains("PackageReference Include=\"NUnit\"", sample, StringComparison.Ordinal);
+
+        var mtpCsproj = File.ReadAllText(Path.Combine(mtpDir, "DevTools.NUnit.MTP.csproj"));
+        Assert.DoesNotContain("DevTools.TestAdapter.csproj", mtpCsproj, StringComparison.Ordinal);
+        Assert.Contains("DevTools.Testing.Abstractions.csproj", mtpCsproj, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -272,6 +276,8 @@ public sealed class AdapterArchitectureTests
         Assert.DoesNotContain("IsRepackable", ilRepackTargets, StringComparison.Ordinal);
         Assert.Contains("ILRepackable", csproj, StringComparison.Ordinal);
         Assert.Contains("ILRepackInternalize", csproj, StringComparison.Ordinal);
+        Assert.Contains("RepackBinariesKeep", csproj, StringComparison.Ordinal);
+        Assert.Contains("DevTools.Testing.Abstractions.dll", csproj, StringComparison.Ordinal);
         Assert.Contains("'$(TargetFramework)' == 'net48'", csproj, StringComparison.Ordinal);
         Assert.DoesNotContain("StartsWith('net4')", csproj, StringComparison.Ordinal);
         Assert.Contains("'$(TargetFrameworkIdentifier)' == '.NETCoreApp'", csproj, StringComparison.Ordinal);

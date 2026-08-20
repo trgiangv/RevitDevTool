@@ -28,7 +28,7 @@ stays `FileMetadata.*`; add-in DI lives in `RevitDevTool/Composition` /
 | PyTest bridge | [architecture/PyTest](architecture/PyTest/README.md) | [product/pytest-bridge.md](product/pytest-bridge.md) | [agents/mcp-pytest-bridge.md](agents/mcp-pytest-bridge.md) |
 | Logging | [architecture/Logging](architecture/Logging/README.md) | [product/logging.md](product/logging.md) | — |
 | Visualization | [architecture/Visualization](architecture/Visualization/README.md) | [product/visualization.md](product/visualization.md) | — |
-| NUnit host testing | — | [product/nunit-host-testing.md](product/nunit-host-testing.md) | [agents/nunit-host-testing.md](agents/nunit-host-testing.md) |
+| NUnit host testing | [architecture/Testing](architecture/Testing/README.md) | [product/nunit-host-testing.md](product/nunit-host-testing.md) | [agents/nunit-host-testing.md](agents/nunit-host-testing.md) |
 | PythonDemo | [architecture/PythonDemo](architecture/PythonDemo/README.md) | — | — |
 
 ## Cross-Cutting
@@ -43,7 +43,7 @@ stays `FileMetadata.*`; add-in DI lives in `RevitDevTool/Composition` /
 
 ## Source Layout
 
-- Shared: `source/DevTools.*` (Hosting, Hosting.Revit, Hosting.Acad, Execution, Execution.Abstractions, Ipc, Mcp.Core/Catalog/Adapter/Client/Server, FileMetadata.Core/Revit/Acad, Logging, Presentation, Settings, Telemetry, UI, Utilities, Daemon)
+- Shared: `source/DevTools.*` (Hosting, Hosting.Revit, Hosting.Acad, Execution, Execution.Abstractions, Ipc, Mcp.Core/Catalog/Adapter/Client/Server, FileMetadata.Core/Revit/Acad, Logging, Presentation, Settings, Telemetry, UI, Utilities, Daemon, Testing.Abstractions/Transport/Host, NUnit.MTP/Runtime/Host, TestAdapter, TestRunner.Core, TestRunner)
 - Revit host: `source/RevitDevTool/`; Revit-only helpers: `source/RevitDevTool.Core/`; in-host MCP tools: `source/DevTools.Mcp.Revit/`
 - AutoCAD host: `source/AcadDevTool/`; in-host MCP tools: `source/DevTools.Mcp.Acad/`
 - Samples: `samples/`; build: `build/`; scripts: `scripts/`

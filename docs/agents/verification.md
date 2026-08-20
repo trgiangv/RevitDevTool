@@ -36,7 +36,8 @@ Host API matrix (all years): `build-matrix.md`.
 | One test project | `scripts/test-dotnet.ps1 -Project <csproj>` |
 | MCP tests | `scripts/test-dotnet.ps1 -Project tests/DevTools.Mcp.Tests/DevTools.Mcp.Tests.csproj` |
 | Python parser (this repo) | `scripts/test-python.ps1` |
-| Package | `scripts/pack.ps1` |
+| Installer / bundle | `scripts/pack.ps1` |
+| TestAdapter NuGet | `scripts/pack-test-adapter.ps1` |
 | Daemon publish | `dotnet publish source/DevTools.Daemon -c Release` |
 
 Build sample toolsets before parser/spike tests — see `known-test-gaps.md`.

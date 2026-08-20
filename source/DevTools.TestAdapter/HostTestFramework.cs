@@ -4,6 +4,7 @@ using Microsoft.Testing.Platform.Configurations;
 using Microsoft.Testing.Platform.Extensions.Messages;
 using Microsoft.Testing.Platform.Extensions.TestFramework;
 using Microsoft.Testing.Platform.Requests;
+using DevTools.Testing.Abstractions;
 using DevTools.Testing.Abstractions.Contracts;
 using DevTools.Testing.Transport;
 using DevTools.NUnit.Runtime;

@@ -22,7 +22,8 @@ Valid modes are `Debug` and `Release`, so full names look like `Debug.Autodesk.2
 ## Commands
 
 - Focused host compile: `scripts/build-host.ps1 -Year 2025`.
-- Release package: `scripts/pack.ps1`.
+- Installer / bundle: `scripts/pack.ps1` (`build/Modules/*`, `PublishRelease.yml`).
+- TestAdapter NuGet: `scripts/pack-test-adapter.ps1` (`PublishTestAdapter.yml`). Not part of `build/Modules/*`. See `docs/architecture/Testing/README.md`.
 - Build pipeline with no args: `dotnet run --project build` compiles all release configurations + publishes DevTools.Daemon and DevTools.TestRunner.
 
 ## DevTools.Daemon

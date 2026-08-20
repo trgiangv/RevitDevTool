@@ -111,6 +111,11 @@ public sealed class PackageConsumerTests
                 var output = Path.Combine(consumer, "bin", "Release", tfm);
                 if (!tfm.Equals("net48", StringComparison.Ordinal))
                     AssertRuntimeClosure(output);
+                else
+                    Assert.True(
+                        File.Exists(Path.Combine(output, "DevTools.Testing.Abstractions.dll")),
+                        $"Missing DevTools.Testing.Abstractions.dll for net48.{Environment.NewLine}"
+                        + string.Join(Environment.NewLine, Directory.GetFiles(output, "*.dll").Select(Path.GetFileName)));
                 Assert.True(
                     File.Exists(Path.Combine(output, "DevTools.NUnit.MTP.dll")),
                     $"Missing DevTools.NUnit.MTP.dll for {tfm}.{Environment.NewLine}"
@@ -143,7 +148,9 @@ public sealed class PackageConsumerTests
             entry => Assert.EndsWith("/DevTools.TestAdapter.dll", entry, StringComparison.OrdinalIgnoreCase));
         Assert.Contains("lib/net48/DevTools.TestAdapter.dll", entries, StringComparer.OrdinalIgnoreCase);
         Assert.Contains("build/runtime/net48/DevTools.NUnit.MTP.dll", entries, StringComparer.OrdinalIgnoreCase);
+        Assert.Contains("build/runtime/net48/DevTools.Testing.Abstractions.dll", entries, StringComparer.OrdinalIgnoreCase);
         Assert.DoesNotContain("lib/net48/DevTools.NUnit.MTP.dll", entries, StringComparer.OrdinalIgnoreCase);
+        Assert.DoesNotContain("lib/net48/DevTools.Testing.Abstractions.dll", entries, StringComparer.OrdinalIgnoreCase);
         foreach (var tfm in new[] { "net8.0-windows7.0", "net10.0-windows7.0" })
         {
             Assert.Contains($"lib/{tfm}/DevTools.TestAdapter.dll", entries, StringComparer.OrdinalIgnoreCase);
