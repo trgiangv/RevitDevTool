@@ -1,9 +1,10 @@
 using System.Diagnostics;
-using System.Text;
 using Nice3point.Revit.Toolkit;
 using NUnit.Framework;
 
 namespace DevTools.NUnit.SampleTests;
+
+// Discover: host smoke. ricaun.NUnit.SampleTests links this file.
 
 [TestFixture]
 public sealed class HostSmokeTests
@@ -20,19 +21,8 @@ public sealed class HostSmokeTests
             Is.Not.Null,
             "RevitAPI is not loaded in this process. Host tests must execute inside Revit via DevTools.NUnit "
             + "(MTP or VSTest adapter), not a local NUnit runner.");
-
-        //TaskDialog.Show("HostSmokeTests", "This test is running inside Revit. Click OK to continue.");
-        var valuetest = new StringBuilder();
-        // 100 iterations of string concatenation
-        for (var i = 0; i < 100; i++)
-        {
-            valuetest.Append("devtools-nunit-trace-marker\n");
-        }
         Console.WriteLine(RevitApiContext.Application.VersionBuild);
         Console.WriteLine($"host-pid={Process.GetCurrentProcess().Id}");
-        Console.WriteLine(valuetest.ToString());
-        Trace.WriteLine("devtools-nunit-trace-marker");
-        Debug.WriteLine("devtools-nunit-debug-marker");
         Assert.That(2 + 2, Is.EqualTo(4));
     }
 
