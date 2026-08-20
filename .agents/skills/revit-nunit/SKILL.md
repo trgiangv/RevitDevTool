@@ -74,8 +74,10 @@ dotnet test --project Host.Tests.csproj -c <Config> -- --filter MethodName
 dotnet test --project Host.Tests.csproj -c <Config> --list-tests
 ```
 
-`--filter` is the **NUnit method name only**. Same command runs `[Explicit]`.
-Do not start `Revit.exe` / `acad.exe` yourself.
+`--filter` is an adapter method-name option (NUnit `<name>` regex, so
+`FamilyPolicy` matches those cases). Same command runs `[Explicit]`. Do
+not start `Revit.exe` / `acad.exe` yourself. `--filter-uid` needs the UID
+from `--list-tests json` (`ITest.FullName`).
 
 Filter / exit 8: [mtp-filter.md](references/mtp-filter.md).
 
@@ -89,7 +91,7 @@ Bodies run on the Autodesk API context. Use the host context type for
 
 | Mistake | Fix |
 |---------|-----|
-| `--filter "Name=…"` / `FullyQualifiedName~` | `--filter MethodName` |
+| `--filter "Name=…"` / `FullyQualifiedName~` | `--filter MethodName` or a substring |
 | `[Explicit]` never runs | Select it with `--filter MethodName` |
 | No exe / test project does not run | Set `OutputType=Exe` and `RuntimeIdentifiers=win-x64` in the csproj |
 | Ran from repo root / another project | `cd` to the test project folder that has `global.json` |

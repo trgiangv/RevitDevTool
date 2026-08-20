@@ -4,10 +4,11 @@ Microsoft.Testing.Platform adapter that runs tests inside a live Revit or
 AutoCAD-family host. Requires
 [RevitDevTool](https://github.com/trgiangv/RevitDevTool).
 
-The package does not depend on a test framework. Local discovery is PE metadata
-scanned for attribute type names you declare. The default in-host engine is
-NUnit; override `TestingFramework` and `TestingDiscoveryAttributes` in the test
-project to switch without changing this package.
+The package does not depend on a test framework. Local discovery is NUnit
+`ExploreTests` via `DevTools.NUnit.MTP.dll`, copied next to the test exe at
+build. The test project already references NUnit; that is the copy testhost
+uses. The default in-host engine is NUnit; override `TestingFramework` in the
+test project to switch without changing this package.
 
 Host options come from csproj properties. The package generates `testconfig.json`
 and Microsoft.Testing.Platform.MSBuild copies it to `[AssemblyName].testconfig.json`.
@@ -27,7 +28,6 @@ The adapter reads the `devtools` section through MTP `IConfiguration`. Do not us
   <PerTestTimeout>60</PerTestTimeout>
   <LaunchTimeout>180</LaunchTimeout>
   <TestingFramework>nunit</TestingFramework>
-  <TestingDiscoveryAttributes>TestAttribute;TestCaseAttribute;TestCaseSourceAttribute;TheoryAttribute</TestingDiscoveryAttributes>
 </PropertyGroup>
 <ItemGroup>
   <PackageReference Include="RevitDevTool.TestAdapter" />
@@ -52,5 +52,5 @@ cd path/to/Host.Tests
 dotnet test --project Host.Tests.csproj -c Debug --filter MethodName
 ```
 
-`--filter` is the test method name. Always run `dotnet test` from the
-folder that contains that `global.json`.
+`--filter` is a test method name or substring. Always run `dotnet test`
+from the folder that contains that `global.json`.

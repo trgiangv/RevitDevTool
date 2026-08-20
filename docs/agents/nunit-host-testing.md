@@ -8,30 +8,27 @@ Run: `.agents/skills/revit-nunit/SKILL.md`.
 ```powershell
 dotnet build source/DevTools.NUnit.Host/DevTools.NUnit.Host.csproj -c Debug
 scripts/test-dotnet.ps1 -Project tests/DevTools.TestAdapter.Tests/DevTools.TestAdapter.Tests.csproj
+scripts/test-dotnet.ps1 -Project tests/DevTools.NUnit.MTP.Tests/DevTools.NUnit.MTP.Tests.csproj
 scripts/test-dotnet.ps1 -Project tests/DevTools.TestRunner.Tests/DevTools.TestRunner.Tests.csproj
 # Live MTP (host running; scoped global.json):
 cd samples/DevTools.NUnit.SampleTests
 dotnet test --project DevTools.NUnit.SampleTests.csproj -c Debug.Autodesk.2026 --filter Arithmetic_runs_inside_host
-# Live VSTest (no MTP global.json):
-cd samples/DevTools.NUnit.VSTest.SampleTests
-dotnet test DevTools.NUnit.VSTest.SampleTests.csproj -c Debug.Autodesk.2026 --filter FullyQualifiedName~Arithmetic_runs_inside_host
 ```
 
 Host DLL changes: `scripts/build-host.ps1 -Year <year>`. Runner: `dotnet publish source/DevTools.TestRunner -c Release`.
 
 ## Pattern
 
-- Package contract: `HostName`, `HostVersion`, `ForceLaunch`, `PerTestTimeout`, `LaunchTimeout` + NUnit. MTP consumers add `RevitDevTool.TestAdapter`; VSTest consumers add `DevTools.NUnit.TestAdapter` + `Microsoft.NET.Test.Sdk`. `UseRevit`/`UseAutoCad` are this repo's sample compile flags, not package settings.
-- MTP `--filter` = NUnit method name. VSTest `--filter` = `FullyQualifiedName~…`. Runner owns NUnit XML (`--name` / `--test`).
-- MTP: `dotnet test` from the sample directory (scoped `global.json`). VSTest: run from that sample directory or repo root — never from an MTP sample folder.
-- Four samples: MTP×Revit, MTP×Civil3D, VSTest×Revit, VSTest×Civil3D. Do not mix adapters on one project.
+- Package contract: `HostName`, `HostVersion`, `ForceLaunch`, `PerTestTimeout`, `LaunchTimeout` + NUnit. MTP consumers add `RevitDevTool.TestAdapter`; the package copies `DevTools.NUnit.MTP.dll` beside the test exe and reuses the consumer NUnit reference. `UseRevit`/`UseAutoCad` are this repo's sample compile flags, not package settings.
+- `--filter` is the adapter method-name option (NUnit `<name>` regex). `--filter-uid` is the platform UID list (`ITest.FullName`). `--list-tests` text prints DisplayName; json uid is FullName. Do not paste a text list line as `--filter-uid`. TestRunner does not discover tests.
+- MTP: `dotnet test` from the sample directory (scoped `global.json`).
 
 ## Traps
 
 - Do not use `NUnit.Engine` in the host.
 - Do not add `NUnit3TestAdapter` to a host-test project.
 - Rider **MTP + net48**: two `HostSmokeTests` trees (native NUnit PSI + DevTools MTP). Only the MTP/DevTools node runs in-host. **MTP + net8**: one tree (native NUnit does not claim the MTP exe). Visual Studio does not double-discover. There is **no** csproj/attribute/ExecutorUri hook to suppress native NUnit; ricaun’s 1-suite explorer is VSTest + NUnit 3, not a discovery API we are missing. Current Rider Testing Platform UI: enable MTP. The old “Ignore projects discovered by other providers” checkbox may be absent — do not block on it. **VSTest** sample: enable adapters, keep project mask `*Tests*` (ProjectReference alone is not enough). Do not add `executor://DevTools.NUnit.V1/` to the adapter ignore list. Do not add `NUnit3TestAdapter`. Sample `Intentional_failure_for_demo` is an expected `Assert.Fail`. A suite-level `ArgumentException` “same key already added” after running all MTP cases is IDE result merge, not a host failure.
-- Test Explorer refresh / `dotnet test --list-tests` / `Runner discover` must not start a host. Discovery is local PE metadata. `ForceLaunch=false` still starts a matching-version host on **run** if none is open.
+- Test Explorer refresh / `dotnet test --list-tests` must not start a host. Discovery is local NUnit `ExploreTests`. `ForceLaunch=false` still starts a matching-version host on **run** if none is open.
 - Autodesk configs flatten host obj/bin. MTP overrides `AppendTargetFrameworkToOutputPath=true` so its three TFMs never share a folder (CS2012 / MSB3713). Do not collapse `TargetFrameworks` on packable projects.
 - net48 Test Explorer "could not be discovered": `CreateTestSession` failed to load `Unsafe` 6.0. Package props generate binding redirects and pin Unsafe 6.1.2. Adapter does not hit this because it ILRepacks.
 - MTP samples are `OutputType=Exe`. Generation snapshot must treat `.exe` as a managed test assembly and skip `Log/` / `TestResults/` / `*.diag`.

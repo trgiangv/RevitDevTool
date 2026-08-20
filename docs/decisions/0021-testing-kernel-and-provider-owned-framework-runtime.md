@@ -102,7 +102,7 @@ DevTools.Testing.Abstractions
         +-- DevTools.Testing.Mtp
         +-- DevTools.NUnit.Runtime
         +-- DevTools.NUnit.Host
-        +-- DevTools.NUnit.Mtp
+        +-- DevTools.NUnit.MTP
 
 DevTools.TestRunner.Core
         ^

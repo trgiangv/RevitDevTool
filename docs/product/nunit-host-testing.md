@@ -18,7 +18,7 @@ on branch `testing/nunit-vstest`.
   `PerTestTimeout` is the per-test budget after the host is ready;
   the `testing/run` pipe wait is this times the number of tests in that run.
   `LaunchTimeout` is the wait for the host pipe after process start.
-- Override `TestingFramework` and `TestingDiscoveryAttributes` in the test
+- Override `TestingFramework` in the test
   csproj to change the in-host engine without changing the NuGet. Default
   engine is NUnit (`TestingFramework=nunit`).
 - Host options are generated as `testconfig.json` from the csproj properties.
@@ -29,13 +29,52 @@ on branch `testing/nunit-vstest`.
   through MTP `IConfiguration` (same pattern as `mstest` / `xUnit`). Author
   `testconfig.json` beside the csproj to add `platformOptions`; do not use
   `.runsettings`.
-- IDE discovery reads PE metadata locally. It must not locate, launch, or contact
-  an Autodesk host.
+- IDE discovery is host-free. `DevTools.NUnit.MTP` uses NUnit
+  `ExploreTests` when the assembly can load in the MTP process. Autodesk API
+  packages (`Revit_All_Main_Versions_API_x64`, `AutoCAD.NET`, Nice3point
+  `ref/` packs) resolve from the NuGet cache with Copy Local false /
+  `ExcludeAssets=runtime`. After Build the adapter writes
+  `$(TargetName).discovery-refs.txt` with those already-resolved package
+  paths so testhost can load them — it does not copy the API DLLs next to
+  the test exe, and consumers do not add extra csproj items. Framework
+  targeting packs are omitted. When that file is present, discovery loads an isolated copy of the test
+  assembly and resolves those paths — no host process. If ExploreTests cannot
+  build a tree, discovery fails with that NUnit reason. There is no PE metadata
+  list. In-host NUnit load is also
+  tolerant of a few unloadable types: `NUnitTolerantAssemblyBuilder` uses the
+  types that did load instead of marking the whole assembly `NotRunnable`.
+  That builder also sets NUnit `TestContext.WorkDirectory` (the generation
+  shadow). Accessing `WorkDirectory` before this runs throws.
+  On net48 there is no load context: if the host already loaded a product
+  assembly with the same identity (name, version, public key token), in-host
+  tests bind to that copy, not the generation snapshot. Restart the host after
+  deploying a matching add-in, or run on net8+ where the generation uses an
+  `AssemblyLoadContext`.
 - Running a test starts or reuses the selected host and sends only the neutral
-  `testing/hello`, `testing/run`, and `testing/cancel` contracts.
+  `testing/hello`, `testing/run`, and `testing/cancel` contracts. Discovery UID,
+  wire `TestId` for host `<test>` is NUnit `ITest.FullName`. The TestNode uid
+  is the same string except for `[TestCase(TestName=)]` / `SetName` leaves,
+  which use `Class.Method("DisplayName")` so Visual Studio does not index
+  `Class.Unit_X` as a second method beside the `Named_basis_length_is_one`
+  group. Discovery TestNodes also carry NUnit class/method identity (fixture
+  constructor arguments stay on the type name, same split as NUnit3 MTP
+  `TestMethodIdentifierBuilder`) and PDB file/line so Test Explorer can
+  group and navigate without a host.
+  Filter: UID / `--filter-uid` / Test Explorer send the TestNode uid.
+  Testhost may emit a NotRunnable stub `Class.Method` when
+  `[TestFixtureSource]` / `[TestCaseSource]` cannot expand (Revit types at
+  load). That UID stays the TestNode identity. The host filter also matches
+  in-host `Class("args").Method` and `TestName` / `SetName` children
+  (`ITest.FullName`); results fold back onto the requested UID and onto
+  discovered leaf UIDs. IDs that already include `(args)` stay exact
+  `<test>`. Result TestNodes reuse the discovered `TestMethodIdentifier`
+  (C# method name). `--filter` / `Name=` stay `Names` → `<name>`.
+  A requested UID the host still does not report is published as Failed
+  (same identity) instead of dropped. MTP `TestFrameworkCapabilities`
+  stay empty (no VSTest-bridge extras).
 - NUnit does not own the protocol. IDE-facing types are platform `TestNode`;
-  host-facing types are `testing/*`. NUnit is the default execution engine:
-  in-host `nunit.framework`, and filter XML at the NUnit.Host boundary.
+  host-facing types are `testing/*`. NUnit owns discovery tree, identity,
+  filter XML, skip/explicit, and parameterized-case naming.
 
 ## Ownership
 
@@ -44,7 +83,8 @@ on branch `testing/nunit-vstest`.
 | `DevTools.Testing.Abstractions` | Neutral run/result/runtime contracts shared across host boundaries |
 | `DevTools.Testing.Transport` | `testing/*` JSON, pipe methods, and TestRunner process client |
 | `DevTools.Testing.Host` | In-host `testing/*` handler, generation store, and runtime-session lifecycle |
-| `DevTools.TestAdapter` | Published `RevitDevTool.TestAdapter`. Local PE metadata scan (attribute names from the test project) plus the Microsoft.Testing.Platform adapter |
+| `DevTools.TestAdapter` | Published `RevitDevTool.TestAdapter`. MTP control plane (command line, host launch request, result mapping). Copies `DevTools.NUnit.MTP.dll` next to the test exe |
+| `DevTools.NUnit.MTP` | Authoritative local discovery (`NUnitTestAssemblyRunner` + `ExploreTests`) and CLI → NUnit identity/filter mapping. Loaded beside the adapter; not ILRepacked into it |
 | `DevTools.NUnit.Runtime` | Default in-host engine: NUnit execution inside an isolated generation |
 | `DevTools.NUnit.Host` | NUnit closure/version policy, Dynamo-safe framework sharing, isolated runtime activation, and `TestingSelection` → NUnit filter XML |
 | `DevTools.TestRunner.Core` | Framework-neutral host locate/launch/reuse, debugger attach, and `testing/*` pipe client |
@@ -69,7 +109,50 @@ not the product contract.
 
 Run the generated test executable or use the Microsoft.Testing.Platform
 `dotnet test`/IDE surface provided by the installed SDK. Discovery remains
-host-free; host launch occurs only after an execution request.
+host-free; host launch occurs only after an execution request. The adapter
+copies `DevTools.NUnit.MTP.dll` next to the test exe. Consumers reference
+NUnit; they do not add `DevTools.NUnit.MTP` as a ProjectReference.
+
+Use an Autodesk configuration (`Debug.Autodesk.2024`, `Release.Autodesk.2024`,
+…). Plain `Debug` / `Release` do not set `RevitVersion` / `TargetFramework`;
+the sample does not build, and Test Explorer then shows a source/method tree
+that is not MTP `ExploreTests`.
+
+Canonical `samples/DevTools.NUnit.SampleTests` discovery is the test exe
+`--list-tests json` leaf count. Measured **70** for both
+`Debug.Autodesk.2024` and `Release.Autodesk.2024` (same UIDs):
+
+| Fixture | Leaves |
+|---|---|
+| `BoundingBoxXyzSampleTests` | 26 |
+| `ValueSourceTests` | 21 |
+| `TestCaseTests` | 8 |
+| `LifecycleTests` | 4 |
+| `HostSmokeTests` | 3 |
+| `NamedFixtureSourceTests("alpha.rvt"\|"beta.rvt")` | 2 |
+| stubs (`Box_source`, `Span_is_one`, `Wall_type_id`) | 3 |
+| `InheritedGeometryTests`, `Nested+Inner`, `GenericClosedTests<Int32>` | 1 each |
+| `GenericRevitTypeTests<XYZ\|BoundingBoxXYZ>` | **0** (not ExploreTests) |
+
+Test Explorer counts are not that leaf count:
+
+- `[TestCase(TestName = "Unit_X")]` is visible to Visual Studio Real-Time
+  Discovery (Roslyn). RTD adds three extra Not Run children under
+  `Named_basis_length_is_one` that never match MTP uids
+  (`Class.Method("Unit_X")`). `TestCaseTests` becomes 8 + 3 = 11. `.SetName`
+  cases do not get those extras because they are not in the attribute list.
+  NUnit documents the same gap ([nunit3-vs-adapter#1256](https://github.com/nunit/nunit3-vs-adapter/issues/1256),
+  [#489](https://github.com/nunit/nunit3-vs-adapter/issues/489)). Adapter
+  code cannot dedupe RTD nodes. Turn off **Tools → Options → Test →
+  Discover tests in real time from C# and Visual Basic .NET source files**,
+  then refresh. Deleting `.vs/**/TestStore` only helps leftover hashes, not
+  a live RTD pass.
+- `TypeName` `NamedFixtureSourceTests("alpha.rvt")` contains `.`; VS splits
+  FQN on dots and shows those two nodes outside the namespace folder
+  (project 77 = inner 75 + 2).
+- A ~32-node tree (methods, plus `GenericRevitTypeTests`, plus `TestName`
+  leaves as extra methods) is grouping/source discovery, not the 70-leaf
+  CLI list. Run from that tree does not send expanded FullName UIDs.
 
 ## Packaging
 

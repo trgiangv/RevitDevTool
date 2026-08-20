@@ -39,10 +39,13 @@ Reference `Microsoft.Testing.Platform.MSBuild`, not
 | `PerTestTimeout` | Per-test budget (seconds). The `testing/run` pipe wait is this × tests in the run. 60 is smoke-only |
 | `LaunchTimeout` | Seconds to wait for a launched host pipe |
 | `TestingFramework` | Default `nunit`. Override in the test csproj to change the in-host engine without changing the package |
-| `TestingDiscoveryAttributes` | Attribute type names for local PE discovery. Default follows `TestingFramework=nunit` |
 
 `HostName` / `HostVersion` are the runner contract. Do not invent other
-MSBuild flags for the runner.
+MSBuild flags for the runner. Host API packages stay compile-only
+(`ExcludeAssets=runtime` / Copy Local false, as
+`Revit_All_Main_Versions_API_x64` and `AutoCAD.NET` already ship). Do not
+copy `RevitAPI.dll` into the test output. Discovery reads the NuGet cache
+paths the adapter recorded at build; no extra csproj item is required.
 
 Build generates `testconfig.json` from the csproj properties. A normal
 incremental `dotnet build` (not only Rebuild) refreshes
