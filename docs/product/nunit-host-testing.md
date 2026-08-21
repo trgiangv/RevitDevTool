@@ -56,12 +56,15 @@ on branch `testing/nunit-vstest`.
   `testing/hello`, `testing/run`, and `testing/cancel` contracts. Discovery UID,
   wire `TestId` for host `<test>` is NUnit `ITest.FullName`. The TestNode uid
   is the same string except for `[TestCase(TestName=)]` / `SetName` leaves,
-  which use `Class.Method("DisplayName")` so Visual Studio does not index
+  which use `Class.Method("DisplayName")` so MTP IDEs do not index
   `Class.Unit_X` as a second method beside the `Named_basis_length_is_one`
-  group. Discovery TestNodes also carry NUnit class/method identity (fixture
-  constructor arguments stay on the type name, same split as NUnit3 MTP
-  `TestMethodIdentifierBuilder`) and PDB file/line so Test Explorer can
-  group and navigate without a host.
+  group. Discovery TestNodes carry class/method identity on
+  `TestMethodIdentifierProperty`: `TypeName` is CLR metadata (no NUnit
+  fixture constructor arguments). NUnit display types such as
+  `NamedFixtureSourceTests("beta.rvt")` stay on the TestNode uid /
+  `ITest.FullName` and DisplayName — putting them in `TypeName` makes any
+  MTP IDE (Visual Studio, Rider) tokenize `.` inside the argument as a
+  hierarchy break. PDB file/line still lets the IDE navigate without a host.
   Filter: UID / `--filter-uid` / Test Explorer send the TestNode uid.
   Testhost may emit a NotRunnable stub `Class.Method` when
   `[TestFixtureSource]` / `[TestCaseSource]` cannot expand (Revit types at
@@ -160,9 +163,6 @@ Test Explorer counts are not that leaf count:
   Discover tests in real time from C# and Visual Basic .NET source files**,
   then refresh. Deleting `.vs/**/TestStore` only helps leftover hashes, not
   a live RTD pass.
-- `TypeName` `NamedFixtureSourceTests("alpha.rvt")` contains `.`; VS splits
-  FQN on dots and shows those two nodes outside the namespace folder
-  (project 77 = inner 75 + 2).
 - A ~32-node tree (methods, plus `GenericRevitTypeTests`, plus `TestName`
   leaves as extra methods) is grouping/source discovery, not the 70-leaf
   CLI list. Run from that tree does not send expanded FullName UIDs.

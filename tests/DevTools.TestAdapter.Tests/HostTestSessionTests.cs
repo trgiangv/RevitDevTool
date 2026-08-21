@@ -681,9 +681,10 @@ public sealed class TestNodeMapperTests
                 new TestingSourceLocation(@"C:\src\FixtureShapeTests.cs", 55)));
 
         Assert.Equal(fullName, node.Uid.Value);
+        Assert.Equal("Fixture_argument_is_preserved(\"alpha.rvt\")", node.DisplayName);
         var identity = node.Properties.Single<TestMethodIdentifierProperty>();
         Assert.Equal("DevTools.NUnit.SampleTests", identity.Namespace);
-        Assert.Equal("NamedFixtureSourceTests(\"alpha.rvt\")", identity.TypeName);
+        Assert.Equal("NamedFixtureSourceTests", identity.TypeName);
         Assert.Equal("Fixture_argument_is_preserved", identity.MethodName);
         var location = node.Properties.Single<TestFileLocationProperty>();
         Assert.Equal(@"C:\src\FixtureShapeTests.cs", location.FilePath);

@@ -522,7 +522,7 @@ internal sealed class HostTestFramework : ITestFramework, IDataProducer
         return new TestNode
         {
             Uid = new TestNodeUid(OpaqueUid(test.TestId, test.FullName, test.DisplayName)),
-            DisplayName = test.DisplayName,
+            DisplayName = AppendFixtureArguments(test.DisplayName, test.ClassName),
             Properties = new PropertyBag(properties),
         };
     }
@@ -596,10 +596,14 @@ internal sealed class HostTestFramework : ITestFramework, IDataProducer
         if (!TrySplitIdentity(fullName, methodName, className, discoveredMethodName, out var ns, out var typeName, out var parsedMethod))
             return;
 
+        // MTP TypeName is CLR metadata, not NUnit's display type (ctor args).
+        // Putting "NamedFixtureSourceTests(\"beta.rvt\")" here makes any MTP
+        // IDE (VS, Rider) tokenize the '.' inside the argument as a hierarchy
+        // break. Args stay on uid / FullName / DisplayName.
         properties.Add(new TestMethodIdentifierProperty(
             ResolveAssemblyFullName(assemblyPath),
             ns,
-            typeName,
+            StripTrailingArguments(typeName),
             parsedMethod,
             methodArity: 0,
             [],
@@ -607,9 +611,10 @@ internal sealed class HostTestFramework : ITestFramework, IDataProducer
     }
 
     /// <summary>
-    /// Same grouping as NUnit3 MTP <c>TestMethodIdentifierBuilder</c>:
-    /// last <c>.</c> not inside parentheses so fixture args stay on the type
-    /// (<c>Tests(One).Test1</c> → type <c>Tests(One)</c>).
+    /// Last <c>.</c> not inside parentheses so NUnit fixture args are not
+    /// parsed as the method. The type segment still includes those args
+    /// (NUnit display). <see cref="AddMethodIdentifier"/> strips them before
+    /// publishing MTP <c>TypeName</c>.
     /// </summary>
     internal static bool TrySplitIdentity(
         string? fullName,
@@ -691,6 +696,24 @@ internal sealed class HostTestFramework : ITestFramework, IDataProducer
         }
 
         return last;
+    }
+
+    /// <summary>
+    /// NUnit fixture ctor args belong on DisplayName, not MTP TypeName.
+    /// </summary>
+    private static string AppendFixtureArguments(string displayName, string? className)
+    {
+        if (className is not { Length: > 0 })
+            return displayName;
+
+        var type = StripTrailingArguments(className);
+        if (type.Length == className.Length)
+            return displayName;
+
+        var args = className.Substring(type.Length);
+        return displayName.EndsWith(args, StringComparison.Ordinal)
+            ? displayName
+            : displayName + args;
     }
 
     private static string StripTrailingArguments(string value)

@@ -14,6 +14,12 @@
 
     <ItemGroup>
         <Compile Include="..\DevTools.NUnit.SampleTests\HostSmokeTests.cs" Link="HostSmokeTests.cs"/>
+        <Compile Include="..\DevTools.NUnit.SampleTests\BoundingBoxXyzSampleTests.cs" Link="BoundingBoxXyzSampleTests.cs"/>
+        <Compile Include="..\DevTools.NUnit.SampleTests\DiscoveryGapTests.cs" Link="DiscoveryGapTests.cs"/>
+        <Compile Include="..\DevTools.NUnit.SampleTests\FixtureShapeTests.cs" Link="FixtureShapeTests.cs"/>
+        <Compile Include="..\DevTools.NUnit.SampleTests\LifecycleTests.cs" Link="LifecycleTests.cs"/>
+        <Compile Include="..\DevTools.NUnit.SampleTests\TestCaseTests.cs" Link="TestCaseTests.cs"/>
+        <Compile Include="..\DevTools.NUnit.SampleTests\ValueSourceTests.cs" Link="ValueSourceTests.cs"/>
     </ItemGroup>
 
     <!--Config NUnit-->

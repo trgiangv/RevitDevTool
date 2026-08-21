@@ -12,9 +12,10 @@ internal static class NUnitTestNameParser
     }
 
     /// <summary>
-    /// Last-dot split matching NUnit3 MTP
-    /// <c>TestMethodIdentifierBuilder.ExtractClassFromFullName</c>:
-    /// fixture constructor arguments stay on the type name.
+    /// Last-dot split of NUnit <c>ITest.FullName</c>: fixture constructor
+    /// arguments stay on the display type (<c>Tests("beta.rvt")</c>). MTP
+    /// <c>TestMethodIdentifierProperty.TypeName</c> must not use this string;
+    /// strip args (see adapter) so IDEs do not tokenize <c>.</c> inside args.
     /// </summary>
     public static void SplitIde(string fullTestName, out string namespaceName, out string typeName, out string methodName)
     {
@@ -23,6 +24,11 @@ internal static class NUnitTestNameParser
         SplitNamespace(className, out namespaceName, out typeName);
     }
 
+    /// <summary>
+    /// CLR metadata type from an NUnit display type: strip ctor args, keep
+    /// namespace, normalize generic arity. Used for PDB lookup, not for
+    /// parsing <c>ITest.FullName</c>.
+    /// </summary>
     public static string ToMetadataTypeName(string displayTypeName)
     {
         SplitNamespace(StripArgumentLists(displayTypeName), out var namespaceName, out var typeName);
@@ -31,9 +37,9 @@ internal static class NUnitTestNameParser
     }
 
     /// <summary>
-    /// Test Explorer FQN must keep the C# method as the last identifier.
+    /// TestNode uid must keep the C# method as the last identifier.
     /// <c>TestName</c>/<c>SetName</c> replace NUnit <c>FullName</c> with
-    /// <c>Class.Unit_X</c>, which VS also indexes as a second method next to
+    /// <c>Class.Unit_X</c>, which MTP IDEs index as a second method next to
     /// <c>TestMethodIdentifier.MethodName</c>. Map those leaves to
     /// <c>Class.Method("DisplayName")</c>. Ordinary <c>Method(args)</c>
     /// FullNames stay unchanged.
