@@ -21,6 +21,10 @@ public static class TestingPlatformBuilderHook
     /// <summary>Public static entry that assigns <see cref="HostTestDiscovery.Provider"/>.</summary>
     public const string NUnitMTPRegisterMethodName = "Register";
 
+    public const string TUnitMTPAssemblyFileName = "DevTools.TUnit.MTP.dll";
+    public const string TUnitMTPEntryTypeName = "DevTools.TUnit.MTP.TUnitMTP";
+    public const string TUnitMTPRegisterMethodName = "Register";
+
     /// <summary>
     /// Set when sibling load or <c>Register</c> fails. Must not throw from
     /// the static constructor: that aborts testhost before MTP can publish
@@ -33,26 +37,35 @@ public static class TestingPlatformBuilderHook
     static TestingPlatformBuilderHook()
     {
         RuntimeAssemblyResolver.EnsureRegistered();
-        TryRegisterNUnitMTP();
+        if (!TryRegister(
+                TUnitMTPAssemblyFileName,
+                TUnitMTPEntryTypeName,
+                TUnitMTPRegisterMethodName))
+            TryRegisterNUnitMTP();
     }
 
     internal static void TryRegisterNUnitMTP()
     {
         RegistrationError = null;
-        var path = Path.Combine(AppContext.BaseDirectory, NUnitMTPAssemblyFileName);
+        _ = TryRegister(NUnitMTPAssemblyFileName, NUnitMTPEntryTypeName, NUnitMTPRegisterMethodName);
+    }
+
+    private static bool TryRegister(string assemblyFileName, string entryTypeName, string registerMethodName)
+    {
+        var path = Path.Combine(AppContext.BaseDirectory, assemblyFileName);
         if (!File.Exists(path))
-            return;
+            return false;
 
         try
         {
             var assembly = RuntimeAssemblyResolver.LoadUnlocked(path);
-            var type = assembly.GetType(NUnitMTPEntryTypeName, throwOnError: false);
-            type?.GetMethod(NUnitMTPRegisterMethodName, BindingFlags.Public | BindingFlags.Static)
+            var type = assembly.GetType(entryTypeName, throwOnError: false);
+            type?.GetMethod(registerMethodName, BindingFlags.Public | BindingFlags.Static)
                 ?.Invoke(null, null);
             if (HostTestDiscovery.Provider is null)
             {
                 RegistrationError =
-                    $"{NUnitMTPEntryTypeName}.{NUnitMTPRegisterMethodName} did not assign HostTestDiscovery.Provider.";
+                    $"{entryTypeName}.{registerMethodName} did not assign HostTestDiscovery.Provider.";
             }
         }
         catch (Exception ex)
@@ -60,6 +73,8 @@ public static class TestingPlatformBuilderHook
             var failure = ex is TargetInvocationException { InnerException: { } inner } ? inner : ex;
             RegistrationError = failure.ToString();
         }
+
+        return HostTestDiscovery.Provider is not null;
     }
 
     public static void AddExtensions(ITestApplicationBuilder testApplicationBuilder, string[] arguments)

@@ -29,6 +29,18 @@
     </TestingPlatformBuilderHook>
   </ItemGroup>
 
+  <Target Name="ValidateDevToolsTUnitTarget" BeforeTargets="PrepareForBuild"
+          Condition="'$(TestingFramework)' == 'tunit'">
+    <Error Condition="'$(HostName)' != 'Revit'"
+           Text="RevitDevTool TUnit integration supports only HostName=Revit." />
+    <Error Condition="'$(HostVersion)' != '2023' And '$(HostVersion)' != '2025'"
+           Text="RevitDevTool TUnit integration supports only Revit 2023/net48 and Revit 2025/net8." />
+    <Error Condition="'$(HostVersion)' == '2023' And '$(TargetFrameworkIdentifier)' != '.NETFramework'"
+           Text="Revit 2023 TUnit tests must target net48." />
+    <Error Condition="'$(HostVersion)' == '2025' And !$(TargetFramework.StartsWith('net8'))"
+           Text="Revit 2025 TUnit tests must target net8." />
+  </Target>
+
   <!-- Direct reference wins MSBuild copy over older Unsafe 4.x (MSB3277). -->
   <ItemGroup Condition="'$(TargetFrameworkIdentifier)' == '.NETFramework' and '$(ManagePackageVersionsCentrally)' == 'true'">
     <PackageReference Include="System.Runtime.CompilerServices.Unsafe" VersionOverride="6.1.2"/>

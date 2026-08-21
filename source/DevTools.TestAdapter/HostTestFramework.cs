@@ -263,8 +263,9 @@ internal sealed class HostTestFramework : ITestFramework, IDataProducer
             ? string.Empty
             : " " + detail;
         throw new InvalidOperationException(
-            $"Local discovery requires {TestingPlatformBuilderHook.NUnitMTPAssemblyFileName} next to the test executable. "
-            + "RevitDevTool.TestAdapter copies it at build. Reference NUnit in the test project; do not add DevTools.NUnit.MTP as a ProjectReference."
+            $"Local discovery requires {TestingPlatformBuilderHook.NUnitMTPAssemblyFileName} or "
+            + $"{TestingPlatformBuilderHook.TUnitMTPAssemblyFileName} next to the test executable. "
+            + "RevitDevTool.TestAdapter copies the selected sibling at build; do not add it as a ProjectReference."
             + suffix);
     }
 

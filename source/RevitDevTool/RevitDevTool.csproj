@@ -53,6 +53,9 @@
         <ProjectReference Include="..\RevitDevTool.Core\RevitDevTool.Core.csproj" />
         <ProjectReference Include="..\DevTools.Mcp.Revit\DevTools.Mcp.Revit.csproj" />
         <ProjectReference Include="..\DevTools.NUnit.Host\DevTools.NUnit.Host.csproj" />
+        <ProjectReference Include="..\DevTools.TUnit.Host\DevTools.TUnit.Host.csproj"
+                          SetTargetFramework="TargetFramework=$(TargetFramework)"
+                          Condition="'$(RevitVersion)' == '2023' OR '$(RevitVersion)' == '2025'" />
     </ItemGroup>
 
     <ItemGroup>
@@ -62,6 +65,7 @@
     </ItemGroup>
 
     <Import Project="..\DevTools.NUnit.Host\build\NUnitHostPackaging.targets" />
+    <Import Project="..\DevTools.TUnit.Runtime\build\TUnitHostPackaging.targets" />
 
     <!-- Start Revit -->
     <PropertyGroup>

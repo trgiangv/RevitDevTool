@@ -4,11 +4,11 @@ Microsoft.Testing.Platform adapter that runs tests inside a live Revit or
 AutoCAD-family host. Requires
 [RevitDevTool](https://github.com/trgiangv/RevitDevTool).
 
-The package does not depend on a test framework. Local discovery is NUnit
-`ExploreTests` via `DevTools.NUnit.MTP.dll`, copied next to the test exe at
-build. The test project already references NUnit; that is the copy testhost
-uses. The default in-host engine is NUnit; override `TestingFramework` in the
-test project to switch without changing this package.
+The package does not depend on a test framework. NUnit remains the default and
+uses local `ExploreTests` discovery via `DevTools.NUnit.MTP.dll`. Native TUnit
+is supported only for Revit 2023 (`net48`) and Revit 2025
+(`net8.0-windows`). `DevTools.TUnit.MTP.dll` reads TUnit's source-generated
+entries locally; execution still goes through TestRunner and `testing/run` IPC.
 
 Host options come from csproj properties. The package generates `testconfig.json`
 and Microsoft.Testing.Platform.MSBuild copies it to `[AssemblyName].testconfig.json`.
@@ -35,6 +35,23 @@ The adapter reads the `devtools` section through MTP `IConfiguration`. Do not us
   <PackageReference Include="NUnit" Version="4.6.1" />
 </ItemGroup>
 ```
+
+For TUnit 1.65.38, keep the same host properties and replace the framework
+items with:
+
+```xml
+<PropertyGroup>
+  <TestingFramework>tunit</TestingFramework>
+</PropertyGroup>
+<ItemGroup>
+  <PackageReference Include="RevitDevTool.TestAdapter" />
+  <PackageReference Include="Microsoft.Testing.Platform.MSBuild" />
+  <PackageReference Include="TUnit" Version="1.65.38" />
+</ItemGroup>
+```
+
+TUnit is rejected for every host/year combination except Revit 2023/net48 and
+Revit 2025/net8.
 
 AutoCAD-family projects set `<HostName>AutoCad</HostName>` or
 `Civil3D`, and `<HostVersion>$(AutoCadVersion)</HostVersion>` (or the

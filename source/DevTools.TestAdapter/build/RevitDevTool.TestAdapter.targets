@@ -34,14 +34,28 @@
   <Import Project="$(MSBuildThisFileDirectory)RevitDevTool.TestAdapter.props"
           Condition="'$(DevToolsTestAdapterPropsImported)' != 'true'"/>
 
+  <!-- TUnit's package registers its own outer MTP framework. RevitDevTool owns
+       the outer testhost so execution remains TestRunner -> testing/run IPC. -->
+  <ItemGroup Condition="'$(TestingFramework)' == 'tunit'">
+    <TestingPlatformBuilderHook Remove="6ADF853A-6945-4A06-9A4B-D99BC1DC1094" />
+  </ItemGroup>
+
   <PropertyGroup>
     <_DevToolsMtpConfiguration Condition="$(Configuration.Contains('Release'))">Release</_DevToolsMtpConfiguration>
     <_DevToolsMtpConfiguration Condition="'$(_DevToolsMtpConfiguration)' == ''">Debug</_DevToolsMtpConfiguration>
   </PropertyGroup>
 
   <!-- 1. In-repo build order -->
-  <ItemGroup Condition="'$(IsTestingPlatformApplication)' == 'true' And Exists('$(MSBuildThisFileDirectory)..\..\DevTools.NUnit.MTP\DevTools.NUnit.MTP.csproj')">
+  <ItemGroup Condition="'$(TestingFramework)' != 'tunit' And '$(IsTestingPlatformApplication)' == 'true' And Exists('$(MSBuildThisFileDirectory)..\..\DevTools.NUnit.MTP\DevTools.NUnit.MTP.csproj')">
     <ProjectReference Include="$(MSBuildThisFileDirectory)..\..\DevTools.NUnit.MTP\DevTools.NUnit.MTP.csproj">
+      <ReferenceOutputAssembly>false</ReferenceOutputAssembly>
+      <Private>false</Private>
+      <SetConfiguration>Configuration=$(_DevToolsMtpConfiguration)</SetConfiguration>
+      <SetTargetFramework>TargetFramework=$(TargetFramework)</SetTargetFramework>
+    </ProjectReference>
+  </ItemGroup>
+  <ItemGroup Condition="'$(TestingFramework)' == 'tunit' And '$(IsTestingPlatformApplication)' == 'true' And Exists('$(MSBuildThisFileDirectory)..\..\DevTools.TUnit.MTP\DevTools.TUnit.MTP.csproj')">
+    <ProjectReference Include="$(MSBuildThisFileDirectory)..\..\DevTools.TUnit.MTP\DevTools.TUnit.MTP.csproj">
       <ReferenceOutputAssembly>false</ReferenceOutputAssembly>
       <Private>false</Private>
       <SetConfiguration>Configuration=$(_DevToolsMtpConfiguration)</SetConfiguration>
@@ -117,7 +131,11 @@
           Condition="'$(TargetFrameworkIdentifier)' == '.NETCoreApp'">
     <ItemGroup>
       <_DevToolsTestAdapterRuntimeClosureCopy Include="$(_DevToolsTestAdapterPackageRuntimeDir)*.dll"
-          Condition="'$(_DevToolsTestAdapterPackageRuntimeDir)' != ''" />
+          Exclude="$(_DevToolsTestAdapterPackageRuntimeDir)DevTools.TUnit.MTP.dll"
+          Condition="'$(TestingFramework)' != 'tunit' And '$(_DevToolsTestAdapterPackageRuntimeDir)' != ''" />
+      <_DevToolsTestAdapterRuntimeClosureCopy Include="$(_DevToolsTestAdapterPackageRuntimeDir)*.dll"
+          Exclude="$(_DevToolsTestAdapterPackageRuntimeDir)DevTools.NUnit.MTP.dll"
+          Condition="'$(TestingFramework)' == 'tunit' And '$(_DevToolsTestAdapterPackageRuntimeDir)' != ''" />
     </ItemGroup>
     <Copy SourceFiles="@(_DevToolsTestAdapterRuntimeClosureCopy)"
           DestinationFolder="$(OutDir)"
@@ -147,15 +165,31 @@
       <_DevToolsTestingAbstractionsSource Condition="'$(_DevToolsTestingAbstractionsSource)' == '' And '$(TargetFrameworkIdentifier)' != '.NETCoreApp' And Exists('$(_DevToolsTestingAbstractionsFromRepoTfm)')">$(_DevToolsTestingAbstractionsFromRepoTfm)</_DevToolsTestingAbstractionsSource>
       <_DevToolsTestingAbstractionsSource Condition="'$(_DevToolsTestingAbstractionsSource)' == '' And '$(TargetFrameworkIdentifier)' != '.NETCoreApp' And Exists('$(_DevToolsTestingAbstractionsFromRepoFlat)')">$(_DevToolsTestingAbstractionsFromRepoFlat)</_DevToolsTestingAbstractionsSource>
       <_DevToolsNUnitMtpCsproj>$(MSBuildThisFileDirectory)..\..\DevTools.NUnit.MTP\DevTools.NUnit.MTP.csproj</_DevToolsNUnitMtpCsproj>
+      <_DevToolsTUnitMtpFileName>DevTools.TUnit.MTP.dll</_DevToolsTUnitMtpFileName>
+      <_DevToolsTUnitMtpFromPackage Condition="'$(_DevToolsTestAdapterPackageRuntimeDir)' != ''">$(_DevToolsTestAdapterPackageRuntimeDir)$(_DevToolsTUnitMtpFileName)</_DevToolsTUnitMtpFromPackage>
+      <_DevToolsTUnitMtpFromRepoFlavor>$([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)..\..\DevTools.TUnit.MTP\bin\$(_DevToolsMtpConfiguration)\$(TargetFramework)\$(_DevToolsTUnitMtpFileName)'))</_DevToolsTUnitMtpFromRepoFlavor>
+      <_DevToolsTUnitMtpFromRepoConfig>$([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)..\..\DevTools.TUnit.MTP\bin\$(Configuration)\$(TargetFramework)\$(_DevToolsTUnitMtpFileName)'))</_DevToolsTUnitMtpFromRepoConfig>
+      <_DevToolsTUnitMtpSkipPackageCopy Condition="'$(TargetFrameworkIdentifier)' == '.NETCoreApp' And Exists('$(_DevToolsTUnitMtpFromPackage)')">true</_DevToolsTUnitMtpSkipPackageCopy>
+      <_DevToolsTUnitMtpSource Condition="'$(_DevToolsTUnitMtpSkipPackageCopy)' != 'true' And Exists('$(_DevToolsTUnitMtpFromPackage)')">$(_DevToolsTUnitMtpFromPackage)</_DevToolsTUnitMtpSource>
+      <_DevToolsTUnitMtpSource Condition="'$(_DevToolsTUnitMtpSource)' == '' And Exists('$(_DevToolsTUnitMtpFromRepoFlavor)')">$(_DevToolsTUnitMtpFromRepoFlavor)</_DevToolsTUnitMtpSource>
+      <_DevToolsTUnitMtpSource Condition="'$(_DevToolsTUnitMtpSource)' == '' And Exists('$(_DevToolsTUnitMtpFromRepoConfig)')">$(_DevToolsTUnitMtpFromRepoConfig)</_DevToolsTUnitMtpSource>
+      <_DevToolsTUnitMtpCsproj>$(MSBuildThisFileDirectory)..\..\DevTools.TUnit.MTP\DevTools.TUnit.MTP.csproj</_DevToolsTUnitMtpCsproj>
     </PropertyGroup>
     <Error
-        Condition="(Exists('$(_DevToolsRuntimeRoot)') Or Exists('$(_DevToolsNUnitMtpCsproj)')) And '$(_DevToolsNUnitMtpSkipPackageCopy)' != 'true' And '$(_DevToolsNUnitMtpSource)' == ''"
+        Condition="'$(TestingFramework)' != 'tunit' And (Exists('$(_DevToolsRuntimeRoot)') Or Exists('$(_DevToolsNUnitMtpCsproj)')) And '$(_DevToolsNUnitMtpSkipPackageCopy)' != 'true' And '$(_DevToolsNUnitMtpSource)' == ''"
         Text="RevitDevTool.TestAdapter could not copy DevTools.NUnit.MTP.dll next to the test executable for $(TargetFramework). In-repo copy looks under bin\$(_DevToolsMtpConfiguration)\$(TargetFramework)\ (then bin\$(Configuration)\$(TargetFramework)\). Rebuild DevTools.NUnit.MTP for that TFM; do not rely on a stale Debug.Autodesk.YYYY folder." />
+    <Error
+        Condition="'$(TestingFramework)' == 'tunit' And (Exists('$(_DevToolsRuntimeRoot)') Or Exists('$(_DevToolsTUnitMtpCsproj)')) And '$(_DevToolsTUnitMtpSkipPackageCopy)' != 'true' And '$(_DevToolsTUnitMtpSource)' == ''"
+        Text="RevitDevTool.TestAdapter could not copy DevTools.TUnit.MTP.dll next to the TUnit test executable for $(TargetFramework)." />
     <Error
         Condition="(Exists('$(_DevToolsRuntimeRoot)') Or Exists('$(_DevToolsNUnitMtpCsproj)')) And '$(TargetFrameworkIdentifier)' != '.NETCoreApp' And '$(_DevToolsTestingAbstractionsSource)' == ''"
         Text="RevitDevTool.TestAdapter could not copy DevTools.Testing.Abstractions.dll next to the net48 test executable. Testhost MTP must share HostTestDiscovery with the adapter." />
-    <Copy Condition="'$(_DevToolsNUnitMtpSource)' != ''"
+    <Copy Condition="'$(TestingFramework)' != 'tunit' And '$(_DevToolsNUnitMtpSource)' != ''"
           SourceFiles="$(_DevToolsNUnitMtpSource)"
+          DestinationFolder="$(OutDir)"
+          SkipUnchangedFiles="false" />
+    <Copy Condition="'$(TestingFramework)' == 'tunit' And '$(_DevToolsTUnitMtpSource)' != ''"
+          SourceFiles="$(_DevToolsTUnitMtpSource)"
           DestinationFolder="$(OutDir)"
           SkipUnchangedFiles="false" />
     <Copy Condition="'$(_DevToolsTestingAbstractionsSource)' != ''"

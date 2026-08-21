@@ -2,6 +2,56 @@ namespace DevTools.TestAdapter.Tests;
 
 public sealed class AdapterArchitectureTests
 {
+    [Fact]
+    public void TUnit_uses_the_existing_adapter_and_TestRunner_transport()
+    {
+        var adapterDir = Path.Combine(RepositoryRoot, "source", "DevTools.TestAdapter");
+        var props = File.ReadAllText(Path.Combine(adapterDir, "build", "RevitDevTool.TestAdapter.props"));
+        var targets = File.ReadAllText(Path.Combine(adapterDir, "build", "RevitDevTool.TestAdapter.targets"));
+
+        Assert.Contains("'$(TestingFramework)' == 'tunit'", props, StringComparison.Ordinal);
+        Assert.Contains("DevTools.TestAdapter.TestingPlatformBuilderHook", props, StringComparison.Ordinal);
+        Assert.Contains("Revit 2023/net48 and Revit 2025/net8", props, StringComparison.Ordinal);
+        Assert.Contains("DevTools.TUnit.MTP.dll", targets, StringComparison.Ordinal);
+        Assert.Contains("TestingPlatformBuilderHook Remove=\"6ADF853A-6945-4A06-9A4B-D99BC1DC1094\"", targets, StringComparison.Ordinal);
+        Assert.False(File.Exists(Path.Combine(adapterDir, "TUnitTestingPlatformBuilderHook.cs")));
+        Assert.False(File.Exists(Path.Combine(adapterDir, "RevitTestHostLauncher.cs")));
+        Assert.False(File.Exists(Path.Combine(adapterDir, "build", "TUnitRevitExecutor.cs")));
+    }
+
+    [Fact]
+    public void TUnit_runtime_is_isolated_from_the_host_and_consumer_output()
+    {
+        var props = File.ReadAllText(Path.Combine(
+            RepositoryRoot, "source", "DevTools.TestAdapter", "build", "RevitDevTool.TestAdapter.props"));
+        var hostProject = File.ReadAllText(Path.Combine(
+            RepositoryRoot, "source", "RevitDevTool", "RevitDevTool.csproj"));
+        var packaging = File.ReadAllText(Path.Combine(
+            RepositoryRoot, "source", "DevTools.TUnit.Runtime", "build", "TUnitHostPackaging.targets"));
+
+        Assert.DoesNotContain("ILRepackable", props, StringComparison.Ordinal);
+        Assert.Contains("DevTools.TUnit.Host", hostProject, StringComparison.Ordinal);
+        Assert.Contains("TUnitRuntime\\", packaging, StringComparison.Ordinal);
+        Assert.Contains("TUnit.Core.dll must be deployed under TUnitRuntime", packaging, StringComparison.Ordinal);
+        Assert.Contains("must not be copied at the add-in root", packaging, StringComparison.Ordinal);
+        Assert.Contains("'$(RevitVersion)' == '2023' OR '$(RevitVersion)' == '2025'", packaging, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Revit_TUnit_execution_reuses_the_generic_testing_run_handler()
+    {
+        var root = Path.Combine(RepositoryRoot, "source", "RevitDevTool");
+        var composition = File.ReadAllText(Path.Combine(root, "Composition", "RevitServiceRegistration.cs"));
+        var handler = File.ReadAllText(Path.Combine(
+            RepositoryRoot, "source", "DevTools.Testing.Host", "MarshaledTestingRequestHandler.cs"));
+
+        Assert.Contains("AddTUnitHostServices", composition, StringComparison.Ordinal);
+        Assert.Contains("_hostContext.ExecuteAsync", handler, StringComparison.Ordinal);
+        Assert.DoesNotContain("RevitTestExecutionDispatcher", composition, StringComparison.Ordinal);
+        Assert.False(File.Exists(Path.Combine(root, "Testing", "RevitTestHostApplicationLauncher.cs")));
+        Assert.False(File.Exists(Path.Combine(root, "Testing", "RevitTestExecutionDispatcher.cs")));
+    }
+
     private static readonly string RepositoryRoot = Path.GetFullPath(
         Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", ".."));
 

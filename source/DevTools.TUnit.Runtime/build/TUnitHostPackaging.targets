@@ -1,0 +1,37 @@
+<Project>
+  <PropertyGroup>
+    <TUnitRuntimeProject Condition="'$(TUnitRuntimeProject)' == ''">$(MSBuildThisFileDirectory)..\DevTools.TUnit.Runtime.csproj</TUnitRuntimeProject>
+  </PropertyGroup>
+
+  <Target Name="CopyTUnitRuntimeBootstrap"
+          AfterTargets="Build"
+          BeforeTargets="RepackAddinFiles"
+          Condition="'$(RevitVersion)' == '2023' OR '$(RevitVersion)' == '2025'">
+    <PropertyGroup>
+      <_TUnitRuntimeDeployDir>$([System.IO.Path]::GetFullPath('$(TargetDir)TUnitRuntime\'))</_TUnitRuntimeDeployDir>
+    </PropertyGroup>
+    <MSBuild Projects="$(TUnitRuntimeProject)"
+             Targets="GetTUnitRuntimePayload"
+             Properties="Configuration=$(Configuration);TargetFramework=$(TargetFramework)">
+      <Output TaskParameter="TargetOutputs" ItemName="_TUnitRuntimePayload" />
+    </MSBuild>
+    <Error Condition="'@(_TUnitRuntimePayload)' == ''"
+           Text="TUnit runtime payload from '$(TUnitRuntimeProject)' was empty." />
+    <RemoveDir Directories="$(_TUnitRuntimeDeployDir)" Condition="Exists('$(_TUnitRuntimeDeployDir)')" />
+    <MakeDir Directories="$(_TUnitRuntimeDeployDir)" />
+    <Copy SourceFiles="@(_TUnitRuntimePayload)"
+          DestinationFolder="$(_TUnitRuntimeDeployDir)"
+          SkipUnchangedFiles="false" />
+  </Target>
+
+  <Target Name="AssertTUnitRuntimeLayout"
+          AfterTargets="RepackAddinFiles"
+          Condition="('$(RevitVersion)' == '2023' OR '$(RevitVersion)' == '2025') AND '$(TargetDir)' != ''">
+    <Error Condition="!Exists('$(TargetDir)TUnitRuntime\TUnit.Core.dll')"
+           Text="TUnit.Core.dll must be deployed under TUnitRuntime\." />
+    <Error Condition="!Exists('$(TargetDir)TUnitRuntime\Microsoft.Testing.Platform.dll')"
+           Text="Microsoft.Testing.Platform.dll must be deployed under TUnitRuntime\." />
+    <Error Condition="Exists('$(TargetDir)TUnit.Core.dll') OR Exists('$(TargetDir)Microsoft.Testing.Platform.dll')"
+           Text="TUnit and MTP assemblies must not be copied at the add-in root." />
+  </Target>
+</Project>

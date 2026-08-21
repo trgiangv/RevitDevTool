@@ -30,19 +30,19 @@
         <RootNamespace>DevTools.TestAdapter</RootNamespace>
         <AssemblyName>DevTools.TestAdapter</AssemblyName>
         <PackageId>RevitDevTool.TestAdapter</PackageId>
-        <Version>0.0.3</Version>
+        <Version>0.0.4</Version>
         <IsPackable>true</IsPackable>
         <DevelopmentDependency>true</DevelopmentDependency>
         <PackageLicenseExpression>MIT</PackageLicenseExpression>
         <PackageProjectUrl>https://github.com/trgiangv/RevitDevTool</PackageProjectUrl>
-        <Description>Microsoft.Testing.Platform adapter that runs tests inside Revit/AutoCAD hosts. Requires RevitDevTool (https://github.com/trgiangv/RevitDevTool). Default in-host engine is NUnit; override TestingFramework in the test project.</Description>
+        <Description>Microsoft.Testing.Platform adapter that runs NUnit tests inside Autodesk hosts and native TUnit tests inside Revit 2023/2025. Requires RevitDevTool (https://github.com/trgiangv/RevitDevTool).</Description>
         <PackageTags>testing;revit;autocad;adapter</PackageTags>
         <PackageReadmeFile>README.md</PackageReadmeFile>
         <EnableDynamicLoading>false</EnableDynamicLoading>
         <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
         <SuppressDependenciesWhenPacking>true</SuppressDependenciesWhenPacking>
         <NoPackageAnalysis>true</NoPackageAnalysis>
-        <TargetsForTfmSpecificContentInPackage>$(TargetsForTfmSpecificContentInPackage);PackDevToolsTestAdapterRuntimeClosure;PackDevToolsNUnitMtp</TargetsForTfmSpecificContentInPackage>
+        <TargetsForTfmSpecificContentInPackage>$(TargetsForTfmSpecificContentInPackage);PackDevToolsTestAdapterRuntimeClosure;PackDevToolsNUnitMtp;PackDevToolsTUnitMtp</TargetsForTfmSpecificContentInPackage>
         <IsTestProject>false</IsTestProject>
         <ILRepackable Condition="'$(TargetFramework)' == 'net48'">true</ILRepackable>
         <ILRepackInternalize Condition="'$(TargetFramework)' == 'net48'">true</ILRepackInternalize>
@@ -65,6 +65,37 @@
         <ItemGroup>
             <TfmSpecificPackageFile Include="$(TargetDir)*.dll" Exclude="$(TargetPath)">
                 <PackagePath>build/runtime/$(_DevToolsTestAdapterRuntimeTfm)</PackagePath>
+            </TfmSpecificPackageFile>
+        </ItemGroup>
+    </Target>
+
+    <Target Name="BuildDevToolsTUnitMtpForPack"
+            Condition="'$(TargetFramework)' == 'net48' Or '$(TargetFramework)' == 'net8.0-windows'">
+        <PropertyGroup>
+            <_DevToolsTUnitMtpProject>$(MSBuildThisFileDirectory)..\DevTools.TUnit.MTP\DevTools.TUnit.MTP.csproj</_DevToolsTUnitMtpProject>
+            <_DevToolsTUnitMtpDll>$(MSBuildThisFileDirectory)..\DevTools.TUnit.MTP\bin\$(Configuration)\$(TargetFramework)\DevTools.TUnit.MTP.dll</_DevToolsTUnitMtpDll>
+        </PropertyGroup>
+        <MSBuild Condition="!Exists('$(_DevToolsTUnitMtpDll)')"
+                 Projects="$(_DevToolsTUnitMtpProject)" Targets="Restore"
+                 Properties="Configuration=$(Configuration)" RemoveProperties="TargetFramework"/>
+        <MSBuild Condition="!Exists('$(_DevToolsTUnitMtpDll)')"
+                 Projects="$(_DevToolsTUnitMtpProject)" Targets="Build"
+                 Properties="Configuration=$(Configuration);TargetFramework=$(TargetFramework)"/>
+    </Target>
+
+    <Target Name="PackDevToolsTUnitMtp"
+            DependsOnTargets="BuildDevToolsTUnitMtpForPack"
+            Condition="'$(TargetFramework)' == 'net48' Or '$(TargetFramework)' == 'net8.0-windows'">
+        <PropertyGroup>
+            <_DevToolsTUnitMtpDll>$(MSBuildThisFileDirectory)..\DevTools.TUnit.MTP\bin\$(Configuration)\$(TargetFramework)\DevTools.TUnit.MTP.dll</_DevToolsTUnitMtpDll>
+            <_DevToolsTUnitMtpPackageRuntime Condition="'$(TargetFrameworkIdentifier)' == '.NETCoreApp'">build/runtime/net$(TargetFrameworkVersion.Substring(1))-windows7.0</_DevToolsTUnitMtpPackageRuntime>
+            <_DevToolsTUnitMtpPackageRuntime Condition="'$(TargetFrameworkIdentifier)' != '.NETCoreApp'">build/runtime/net48</_DevToolsTUnitMtpPackageRuntime>
+        </PropertyGroup>
+        <Error Condition="!Exists('$(_DevToolsTUnitMtpDll)')"
+               Text="Pack requires DevTools.TUnit.MTP.dll at $(_DevToolsTUnitMtpDll)."/>
+        <ItemGroup>
+            <TfmSpecificPackageFile Include="$(_DevToolsTUnitMtpDll)">
+                <PackagePath>$(_DevToolsTUnitMtpPackageRuntime)</PackagePath>
             </TfmSpecificPackageFile>
         </ItemGroup>
     </Target>

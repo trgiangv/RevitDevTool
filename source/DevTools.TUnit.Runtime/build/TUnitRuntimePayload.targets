@@ -1,0 +1,54 @@
+<Project>
+  <Target Name="PrepareTUnitRuntimePayload"
+          AfterTargets="Build"
+          Condition="'$(TargetPath)' != '' AND '$(TargetDir)' != ''">
+    <PropertyGroup>
+      <_TUnitRuntimeOutputDir>$([System.IO.Path]::GetFullPath('$(TargetDir)'))</_TUnitRuntimeOutputDir>
+      <_TUnitRuntimePayloadDir>$([System.IO.Path]::Combine('$(_TUnitRuntimeOutputDir)', 'TUnitRuntimePayload'))</_TUnitRuntimePayloadDir>
+    </PropertyGroup>
+    <ItemGroup>
+      <_TUnitRuntimePayload Include="$(_TUnitRuntimeOutputDir)*.dll" />
+      <_TUnitRuntimePayload Include="$(_TUnitRuntimeOutputDir)$(TargetName).pdb"
+                            Condition="Exists('$(_TUnitRuntimeOutputDir)$(TargetName).pdb')" />
+    </ItemGroup>
+
+    <Error Condition="!Exists('$(_TUnitRuntimeOutputDir)TUnit.Core.dll')"
+           Text="TUnit runtime payload requires TUnit.Core.dll under '$(_TUnitRuntimeOutputDir)'." />
+    <Error Condition="!Exists('$(_TUnitRuntimeOutputDir)Microsoft.Testing.Platform.dll')"
+           Text="TUnit runtime payload requires Microsoft.Testing.Platform.dll under '$(_TUnitRuntimeOutputDir)'." />
+
+    <RemoveDir Directories="$(_TUnitRuntimePayloadDir)" Condition="Exists('$(_TUnitRuntimePayloadDir)')" />
+    <MakeDir Directories="$(_TUnitRuntimePayloadDir)" />
+    <Copy SourceFiles="@(_TUnitRuntimePayload)"
+          DestinationFolder="$(_TUnitRuntimePayloadDir)"
+          SkipUnchangedFiles="false" />
+    <ItemGroup Condition="'$(TargetFrameworkIdentifier)' == '.NETFramework'">
+      <_TUnitStj9Compat Include="$(NuGetPackageRoot)microsoft.bcl.asyncinterfaces\9.0.0\lib\net462\Microsoft.Bcl.AsyncInterfaces.dll" PayloadName="Microsoft.Bcl.AsyncInterfaces.v9.dll" />
+      <_TUnitStj9Compat Include="$(NuGetPackageRoot)system.buffers\4.5.1\lib\net461\System.Buffers.dll" PayloadName="System.Buffers.v4_5_1.dll" />
+      <_TUnitStj9Compat Include="$(NuGetPackageRoot)system.io.pipelines\9.0.0\lib\net462\System.IO.Pipelines.dll" PayloadName="System.IO.Pipelines.v9.dll" />
+      <_TUnitStj9Compat Include="$(NuGetPackageRoot)system.memory\4.5.5\lib\net461\System.Memory.dll" PayloadName="System.Memory.v4_5_5.dll" />
+      <_TUnitStj9Compat Include="$(NuGetPackageRoot)system.runtime.compilerservices.unsafe\6.0.0\lib\net461\System.Runtime.CompilerServices.Unsafe.dll" PayloadName="System.Runtime.CompilerServices.Unsafe.v6.dll" />
+      <_TUnitStj9Compat Include="$(NuGetPackageRoot)system.text.encodings.web\9.0.0\lib\net462\System.Text.Encodings.Web.dll" PayloadName="System.Text.Encodings.Web.v9.dll" />
+      <_TUnitStj9Compat Include="$(NuGetPackageRoot)system.text.json\9.0.0\lib\net462\System.Text.Json.dll" PayloadName="System.Text.Json.v9.dll" />
+      <_TUnitStj9Compat Include="$(NuGetPackageRoot)system.threading.tasks.extensions\4.5.4\lib\net461\System.Threading.Tasks.Extensions.dll" PayloadName="System.Threading.Tasks.Extensions.v4_5_4.dll" />
+      <_TUnitStj9Compat Include="$(NuGetPackageRoot)system.valuetuple\4.5.0\lib\net47\System.ValueTuple.dll" PayloadName="System.ValueTuple.v4_5_0.dll" />
+    </ItemGroup>
+    <Copy SourceFiles="@(_TUnitStj9Compat)"
+          DestinationFiles="@(_TUnitStj9Compat->'$(_TUnitRuntimePayloadDir)\%(PayloadName)')"
+          SkipUnchangedFiles="false"
+          Condition="'@(_TUnitStj9Compat)' != ''" />
+  </Target>
+
+  <Target Name="GetTUnitRuntimePayload"
+          DependsOnTargets="Build"
+          Returns="@(TUnitRuntimePayloadFile)"
+          Condition="'$(TargetPath)' != '' AND '$(TargetDir)' != ''">
+    <PropertyGroup>
+      <_TUnitRuntimeOutputDir>$([System.IO.Path]::GetFullPath('$(TargetDir)'))</_TUnitRuntimeOutputDir>
+      <_TUnitRuntimePayloadDir>$([System.IO.Path]::Combine('$(_TUnitRuntimeOutputDir)', 'TUnitRuntimePayload'))</_TUnitRuntimePayloadDir>
+    </PropertyGroup>
+    <ItemGroup>
+      <TUnitRuntimePayloadFile Include="$(_TUnitRuntimePayloadDir)\*.*" />
+    </ItemGroup>
+  </Target>
+</Project>
