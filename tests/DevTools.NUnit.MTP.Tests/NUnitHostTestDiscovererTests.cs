@@ -128,6 +128,38 @@ public sealed class NUnitHostTestDiscovererTests
         Assert.True(plain.Source.Line > 0);
     }
 
+    [Fact]
+    public void Discover_attaches_pdb_source_for_a_generic_fixture()
+    {
+        var discoverer = new NUnitHostTestDiscoverer();
+        var generic = discoverer.Discover(FixturePath)
+            .First(test => test.MethodName == "GenericFixture_UsesRequestedType");
+
+        Assert.NotNull(generic.Source);
+        Assert.Contains("ParameterizedFixture.cs", generic.Source!.File, StringComparison.OrdinalIgnoreCase);
+        Assert.True(generic.Source.Line > 0);
+        Assert.Contains("GenericFixture<", generic.ClassName, StringComparison.Ordinal);
+        Assert.Equal("DevTools.NUnit.Runtime.Fixtures", generic.Namespace);
+        Assert.Equal("GenericFixture", generic.TypeName);
+        Assert.Equal("GenericFixture_UsesRequestedType", generic.DisplayName);
+    }
+
+    [Fact]
+    public void Discover_fixture_source_display_name_keeps_constructor_arguments()
+    {
+        var cases = new NUnitHostTestDiscoverer().Discover(FixturePath)
+            .Where(test => test.MethodName == "FixtureSource_ValueIsPreserved")
+            .ToList();
+
+        Assert.Equal(2, cases.Count);
+        Assert.All(cases, test =>
+        {
+            Assert.Equal("ParameterizedFixture", test.TypeName);
+            Assert.Equal("DevTools.NUnit.Runtime.Fixtures", test.Namespace);
+            Assert.Contains("(", test.DisplayName, StringComparison.Ordinal);
+        });
+    }
+
     static string FixturePath
     {
         get

@@ -26,7 +26,10 @@ public sealed record TestingDiscoveredTest(
     string? FullName = null,
     string? ClassName = null,
     string? MethodName = null,
-    TestingSourceLocation? Source = null);
+    TestingSourceLocation? Source = null,
+    string? Namespace = null,
+    string? TypeName = null,
+    int MethodArity = 0);
 
 public sealed record TestingRunRequest
 {

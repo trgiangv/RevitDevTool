@@ -39,12 +39,19 @@ internal sealed class NUnitSourceLocationProvider
         try
         {
             if (test.Method?.MethodInfo is { } methodInfo
-                && TryReadSequencePoint(methodInfo, out filePath, out lineNumber))
+                && TryReadSequencePoint(ResolveDefinition(methodInfo), out filePath, out lineNumber))
             {
                 _cache[test.FullName] = (filePath!, lineNumber);
                 return true;
             }
+        }
+        catch
+        {
+            // Constructed generic MethodInfo.MetadataToken can throw; use FullName.
+        }
 
+        try
+        {
             if (TryGetSourceLocation(test.FullName, out filePath, out lineNumber))
                 return true;
 
@@ -95,6 +102,37 @@ internal sealed class NUnitSourceLocationProvider
         }
     }
 
+    private static MethodInfo ResolveDefinition(MethodInfo methodInfo)
+    {
+        if (methodInfo.IsGenericMethod)
+            methodInfo = methodInfo.GetGenericMethodDefinition();
+
+        var declaring = methodInfo.DeclaringType;
+        if (declaring is not { IsGenericType: true } || declaring.IsGenericTypeDefinition)
+            return methodInfo;
+
+        try
+        {
+            const BindingFlags flags =
+                BindingFlags.Instance | BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic;
+            MethodInfo? match = null;
+            foreach (var candidate in declaring.GetGenericTypeDefinition().GetMethods(flags))
+            {
+                if (!string.Equals(candidate.Name, methodInfo.Name, StringComparison.Ordinal))
+                    continue;
+                if (match is not null)
+                    return methodInfo;
+                match = candidate;
+            }
+
+            return match ?? methodInfo;
+        }
+        catch (NotSupportedException)
+        {
+            return methodInfo;
+        }
+    }
+
     private bool TryReadSequencePoint(MethodInfo methodInfo, out string? filePath, out int lineNumber)
     {
         filePath = null;
@@ -104,8 +142,8 @@ internal sealed class NUnitSourceLocationProvider
         if (!File.Exists(_assemblyPath) || !File.Exists(pdbPath))
             return false;
 
-        using var peStream = File.OpenRead(_assemblyPath);
-        using var pdbStream = File.OpenRead(pdbPath);
+        using var peStream = OpenReadShared(_assemblyPath);
+        using var pdbStream = OpenReadShared(pdbPath);
         using var pdbProvider = MetadataReaderProvider.FromPortablePdbStream(pdbStream);
 
         var methodHandle = (MethodDefinitionHandle)MetadataTokens.Handle(methodInfo.MetadataToken);
@@ -135,8 +173,8 @@ internal sealed class NUnitSourceLocationProvider
         if (!File.Exists(_assemblyPath) || !File.Exists(pdbPath))
             return false;
 
-        using var peStream = File.OpenRead(_assemblyPath);
-        using var pdbStream = File.OpenRead(pdbPath);
+        using var peStream = OpenReadShared(_assemblyPath);
+        using var pdbStream = OpenReadShared(pdbPath);
         using var peReader = new PEReader(peStream);
         using var pdbProvider = MetadataReaderProvider.FromPortablePdbStream(pdbStream);
 
@@ -216,4 +254,7 @@ internal sealed class NUnitSourceLocationProvider
         var candidate = Path.GetFullPath(Path.Combine(_probeDirectory, path));
         return File.Exists(candidate) ? candidate : path;
     }
+
+    private static FileStream OpenReadShared(string path) =>
+        new(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete);
 }

@@ -7,7 +7,6 @@ using Microsoft.Testing.Platform.Requests;
 using DevTools.Testing.Abstractions;
 using DevTools.Testing.Abstractions.Contracts;
 using DevTools.Testing.Transport;
-using DevTools.NUnit.Runtime;
 // ReSharper disable RedundantSuppressNullableWarningExpression
 
 namespace DevTools.TestAdapter;
@@ -97,13 +96,29 @@ internal sealed class HostTestFramework : ITestFramework, IDataProducer
         DiscoverTestExecutionRequest request,
         ExecuteRequestContext context)
     {
-        _options ??= HostOptionsLoader.Load(RequireConfiguration());
-        var filter = ResolveRunnerFilter(request.Filter);
-        foreach (var node in DiscoverNodes(assemblyPath, filter))
+        // Host-free: do not read testconfig host options. A throw here is
+        // Test Explorer "discovery aborted: 0 Tests found".
+        try
+        {
+            var filter = ResolveRunnerFilter(request.Filter);
+            foreach (var node in DiscoverNodes(assemblyPath, filter))
+            {
+                await context.MessageBus.PublishAsync(
+                        this,
+                        new TestNodeUpdateMessage(request.Session.SessionUid, node))
+                    .ConfigureAwait(false);
+            }
+        }
+        catch (Exception ex)
         {
             await context.MessageBus.PublishAsync(
                     this,
-                    new TestNodeUpdateMessage(request.Session.SessionUid, node))
+                    new TestNodeUpdateMessage(
+                        request.Session.SessionUid,
+                        TestNodeProperties.CreateErrorNode(
+                            "devtools.testadapter.discover",
+                            "Test discovery failed",
+                            ex)))
                 .ConfigureAwait(false);
         }
     }
@@ -114,15 +129,16 @@ internal sealed class HostTestFramework : ITestFramework, IDataProducer
         RunTestExecutionRequest request,
         ExecuteRequestContext context)
     {
-        var options = ApplyDebugParent(
-            _options ?? throw new InvalidOperationException("Host run options were not loaded."));
+        _options ??= HostOptionsLoader.Load(RequireConfiguration());
+        var options = ApplyDebugParent(_options);
         var filter = ResolveRunnerFilter(request.Filter);
-        var cases = SelectCases(assemblyPath, filter);
-        var hostSelection = ToHostSelection(filter, cases);
+        var discoverer = RequireDiscoverer();
+        var cases = discoverer.Select(assemblyPath, filter);
+        var hostSelection = discoverer.ToHostSelection(filter, cases);
         var testCount = Math.Max(cases.Count, filter.TestIds?.Count ?? 0);
         if (testCount == 0 && IsConstrained(filter))
         {
-            foreach (var missing in ResultsForUnreportedIds(filter, cases, []))
+            foreach (var missing in discoverer.ResultsForUnreported(filter, cases, []))
             {
                 await context.MessageBus.PublishAsync(
                         this,
@@ -155,7 +171,7 @@ internal sealed class HostTestFramework : ITestFramework, IDataProducer
             return;
         }
 
-        var published = FoldHostResults(filter, cases, response.Results);
+        var published = discoverer.FoldResults(filter, cases, response.Results);
         foreach (var result in published)
         {
             await context.MessageBus.PublishAsync(
@@ -166,7 +182,7 @@ internal sealed class HostTestFramework : ITestFramework, IDataProducer
                 .ConfigureAwait(false);
         }
 
-        foreach (var missing in ResultsForUnreportedIds(filter, cases, published))
+        foreach (var missing in discoverer.ResultsForUnreported(filter, cases, published))
         {
             await context.MessageBus.PublishAsync(
                     this,
@@ -211,267 +227,13 @@ internal sealed class HostTestFramework : ITestFramework, IDataProducer
         return new TestingSelection([], Names: [nameFilter!.Trim()]);
     }
 
-    internal static bool IsConstrained(TestingSelection selection) =>
-        selection.TestIds is { Count: > 0 } || selection.Names is { Count: > 0 };
-
-    /// <summary>
-    /// UID list → host NUnit filter XML. Testhost stub / Test Explorer
-    /// identifier <c>Class.Method</c> also matches in-host
-    /// <c>Class("args").Method</c> and <c>TestName</c> / <c>SetName</c>
-    /// children even when local Select missed. CLI <c>--filter</c> /
-    /// <c>Name=</c> stays <c>Names</c> → <c>&lt;name&gt;</c>. IDs with
-    /// depth-0 <c>(</c> stay exact <c>&lt;test&gt;</c>.
-    /// </summary>
-    internal static TestingSelection ToHostSelection(
-        TestingSelection selection,
-        IReadOnlyList<TestingDiscoveredTest> discovered)
-    {
-        if (!IsConstrained(selection))
-            return selection;
-
-        if (selection.TestIds is not { Count: > 0 } && selection.Names is { Count: > 0 })
-            return selection;
-
-        var ids = (selection.TestIds ?? [])
-            .Select(id => ToNunitFullName(id, discovered))
-            .Concat(discovered.Select(test => test.FullName ?? test.TestId))
-            .Where(id => !string.IsNullOrWhiteSpace(id))
-            .Select(id => id.Trim())
-            .Distinct(StringComparer.Ordinal)
-            .ToList();
-        if (ids.Count == 0)
-            return selection;
-
-        return new TestingSelection([], NUnitCollapsedSelection.ToFilterXml(ids));
-    }
-
-    private static string ToNunitFullName(string id, IReadOnlyList<TestingDiscoveredTest> discovered)
-    {
-        foreach (var test in discovered)
-        {
-            if (string.Equals(test.TestId, id, StringComparison.Ordinal)
-                && !string.IsNullOrWhiteSpace(test.FullName))
-                return test.FullName!;
-        }
-
-        return id;
-    }
-
     internal static IReadOnlyList<TestingDiscoveredTest> SelectCases(
         string assemblyPath,
-        TestingSelection selection)
-    {
-        var provider = HostTestDiscovery.Provider
-            ?? throw new InvalidOperationException(
-                $"Local discovery requires {TestingPlatformBuilderHook.NUnitMTPAssemblyFileName} next to the test executable. "
-                + "RevitDevTool.TestAdapter copies it at build. Reference NUnit in the test project; do not add DevTools.NUnit.MTP as a ProjectReference.");
+        TestingSelection selection) =>
+        RequireDiscoverer().Select(assemblyPath, selection);
 
-        return provider.Select(assemblyPath, selection);
-    }
-
-    internal const string UnreportedFullNameMessage =
-        "Host NUnit did not report this FullName. UID is ITest.FullName from testhost ExploreTests; in-host source expansion uses a different FullName.";
-
-    /// <summary>
-    /// Identity-preserving: every requested UID gets a result node.
-    /// NUnit3 maps missing/NotRunnable to Failed. Do not drop UIDs (VS yellow bar).
-    /// </summary>
-    internal static IReadOnlyList<TestingCaseResult> ResultsForUnreportedIds(
-        TestingSelection request,
-        IReadOnlyList<TestingDiscoveredTest> discovered,
-        IReadOnlyList<TestingCaseResult> hostResults)
-    {
-        if (request.TestIds is not { Count: > 0 })
-            return [];
-
-        var reported = new HashSet<string>(
-            hostResults.Select(result => result.TestId),
-            StringComparer.Ordinal);
-        var display = discovered
-            .Where(test => !string.IsNullOrWhiteSpace(test.TestId))
-            .GroupBy(test => test.TestId, StringComparer.Ordinal)
-            .ToDictionary(group => group.Key, group => group.First().DisplayName, StringComparer.Ordinal);
-
-        var missing = new List<TestingCaseResult>();
-        foreach (var id in request.TestIds
-            .Where(value => !string.IsNullOrWhiteSpace(value))
-            .Select(value => value.Trim())
-            .Distinct(StringComparer.Ordinal))
-        {
-            if (reported.Contains(id))
-                continue;
-
-            var name = display.TryGetValue(id, out var displayName) ? displayName : id;
-            missing.Add(new TestingCaseResult(
-                id,
-                name,
-                TestingOutcomes.Failed,
-                0,
-                UnreportedFullNameMessage,
-                null,
-                null,
-                null,
-                [],
-                []));
-        }
-
-        return missing;
-    }
-
-    /// <summary>
-    /// UID runs publish onto the requested identity. Multiple in-host
-    /// expansions (fixture source / SetName) fold into that one UID.
-    /// Discovered TestName/SetName leaves also keep their own result
-    /// nodes so Test Explorer children update. Unfiltered runs remap host
-    /// <c>FullName</c> onto those discovered UIDs. Names-only CLI runs keep
-    /// per-leaf host identities. Unmatched in-host expansions stay as extra
-    /// host identities so CLI still reports stub expansions.
-    /// </summary>
-    internal static IReadOnlyList<TestingCaseResult> FoldHostResults(
-        TestingSelection request,
-        IReadOnlyList<TestingDiscoveredTest> discovered,
-        IReadOnlyList<TestingCaseResult> hostResults)
-    {
-        if (request.TestIds is not { Count: > 0 } && request.Names is { Count: > 0 })
-            return hostResults;
-
-        var display = discovered
-            .Where(test => !string.IsNullOrWhiteSpace(test.TestId))
-            .GroupBy(test => test.TestId, StringComparer.Ordinal)
-            .ToDictionary(group => group.Key, group => group.First().DisplayName, StringComparer.Ordinal);
-
-        var folded = new List<TestingCaseResult>();
-        var usedHostIds = new HashSet<string>(StringComparer.Ordinal);
-        if (request.TestIds is { Count: > 0 })
-        {
-            foreach (var id in request.TestIds
-                .Where(value => !string.IsNullOrWhiteSpace(value))
-                .Select(value => value.Trim())
-                .Distinct(StringComparer.Ordinal))
-            {
-                var nunitId = ToNunitFullName(id, discovered);
-                var matches = hostResults
-                    .Where(result => NUnitCollapsedSelection.Matches(
-                            id,
-                            result.TestId,
-                            result.FullName,
-                            result.ParentTestId)
-                        || NUnitCollapsedSelection.Matches(
-                            nunitId,
-                            result.TestId,
-                            result.FullName,
-                            result.ParentTestId))
-                    .ToList();
-                if (matches.Count == 0)
-                    continue;
-
-                foreach (var match in matches)
-                {
-                    if (!string.IsNullOrWhiteSpace(match.TestId))
-                        usedHostIds.Add(match.TestId);
-                }
-
-                folded.Add(
-                    matches.Count == 1 && string.Equals(matches[0].TestId, id, StringComparison.Ordinal)
-                        ? matches[0]
-                        : Collapse(id, display.TryGetValue(id, out var name) ? name : id, matches));
-            }
-        }
-
-        var published = new HashSet<string>(
-            folded.Select(result => result.TestId),
-            StringComparer.Ordinal);
-        foreach (var test in discovered)
-        {
-            if (string.IsNullOrWhiteSpace(test.TestId))
-                continue;
-
-            var id = test.TestId.Trim();
-            if (published.Contains(id))
-                continue;
-
-            var match = hostResults.FirstOrDefault(result =>
-                string.Equals(result.TestId, id, StringComparison.Ordinal)
-                || string.Equals(result.FullName, id, StringComparison.Ordinal)
-                || string.Equals(result.TestId, test.FullName, StringComparison.Ordinal)
-                || string.Equals(result.FullName, test.FullName, StringComparison.Ordinal));
-            if (match is null)
-                continue;
-
-            if (!string.IsNullOrWhiteSpace(match.TestId))
-                usedHostIds.Add(match.TestId);
-            folded.Add(
-                string.Equals(match.TestId, id, StringComparison.Ordinal)
-                    ? match
-                    : Collapse(id, test.DisplayName, [match]));
-            published.Add(id);
-        }
-
-        if (request.TestIds is not { Count: > 0 })
-        {
-            foreach (var result in hostResults)
-            {
-                if (!string.IsNullOrWhiteSpace(result.TestId) && usedHostIds.Contains(result.TestId))
-                    continue;
-
-                folded.Add(result);
-            }
-        }
-
-        return folded;
-    }
-
-    private static TestingCaseResult Collapse(
-        string testId,
-        string displayName,
-        IReadOnlyList<TestingCaseResult> matches)
-    {
-        var outcome = WorstOutcome(matches);
-        var duration = matches.Sum(result => result.DurationMilliseconds);
-        var messages = matches
-            .Select(result => result.Message)
-            .Where(message => !string.IsNullOrWhiteSpace(message))
-            .ToList();
-        var stacks = matches
-            .Select(result => result.StackTrace)
-            .Where(stack => !string.IsNullOrWhiteSpace(stack))
-            .ToList();
-        var outputs = matches
-            .Select(result => result.Output)
-            .Where(output => !string.IsNullOrWhiteSpace(output))
-            .ToList();
-
-        return new TestingCaseResult(
-            testId,
-            displayName,
-            outcome,
-            duration,
-            messages.Count == 0 ? null : string.Join(Environment.NewLine, messages),
-            stacks.Count == 0 ? null : string.Join(Environment.NewLine, stacks),
-            outputs.Count == 0 ? null : string.Join(Environment.NewLine, outputs),
-            matches.Select(result => result.Source).FirstOrDefault(source => source is not null),
-            matches.SelectMany(result => result.Traits).ToList(),
-            matches.SelectMany(result => result.Attachments).ToList(),
-            FullName: testId);
-    }
-
-    private static string WorstOutcome(IReadOnlyList<TestingCaseResult> matches)
-    {
-        foreach (var outcome in new[]
-        {
-            TestingOutcomes.Error,
-            TestingOutcomes.Failed,
-            TestingOutcomes.Cancelled,
-            TestingOutcomes.Inconclusive,
-            TestingOutcomes.Skipped,
-        })
-        {
-            if (matches.Any(result => string.Equals(result.Outcome, outcome, StringComparison.Ordinal)))
-                return outcome;
-        }
-
-        return TestingOutcomes.Passed;
-    }
+    private static bool IsConstrained(TestingSelection selection) =>
+        selection.TestIds is { Count: > 0 } || selection.Names is { Count: > 0 };
 
     private TestingSelection ResolveRunnerFilter(ITestExecutionFilter? filter) =>
         ToRunnerFilter(filter, ReadOption(HostCommandLineProvider.FilterOptionName));
@@ -490,6 +252,21 @@ internal sealed class HostTestFramework : ITestFramework, IDataProducer
     private IConfiguration RequireConfiguration() =>
         _configuration ?? throw new InvalidOperationException(
             "Microsoft.Testing.Platform IConfiguration is required to read the devtools section of testconfig.json.");
+
+    private static IHostTestDiscoverer RequireDiscoverer()
+    {
+        if (HostTestDiscovery.Provider is { } provider)
+            return provider;
+
+        var detail = TestingPlatformBuilderHook.RegistrationError;
+        var suffix = string.IsNullOrWhiteSpace(detail)
+            ? string.Empty
+            : " " + detail;
+        throw new InvalidOperationException(
+            $"Local discovery requires {TestingPlatformBuilderHook.NUnitMTPAssemblyFileName} next to the test executable. "
+            + "RevitDevTool.TestAdapter copies it at build. Reference NUnit in the test project; do not add DevTools.NUnit.MTP as a ProjectReference."
+            + suffix);
+    }
 
     private static TestingHostOptions ApplyDebugParent(TestingHostOptions options) =>
         Debugger.IsAttached
@@ -517,12 +294,12 @@ internal sealed class HostTestFramework : ITestFramework, IDataProducer
     internal static TestNode ToDiscoveredNode(TestingDiscoveredTest test, string? assemblyPath = null)
     {
         var properties = new List<IProperty> { DiscoveredTestNodeStateProperty.CachedInstance };
-        AddMethodIdentifier(properties, test.FullName, test.DisplayName, assemblyPath, test.ClassName, test.MethodName);
+        AddMethodIdentifier(properties, test, assemblyPath);
         TestNodeProperties.AddSource(properties, test.Source);
         return new TestNode
         {
             Uid = new TestNodeUid(OpaqueUid(test.TestId, test.FullName, test.DisplayName)),
-            DisplayName = AppendFixtureArguments(test.DisplayName, test.ClassName),
+            DisplayName = test.DisplayName,
             Properties = new PropertyBag(properties),
         };
     }
@@ -534,14 +311,7 @@ internal sealed class HostTestFramework : ITestFramework, IDataProducer
     {
         var properties = new List<IProperty>();
         TestNodeProperties.AddCommonResultProperties(properties, result);
-        TryGetDiscoveredIdentity(discovered, result, out var className, out var methodName);
-        AddMethodIdentifier(
-            properties,
-            result.FullName ?? result.TestId,
-            result.DisplayName,
-            assemblyPath,
-            className,
-            methodName);
+        AddMethodIdentifier(properties, FindDiscovered(discovered, result), assemblyPath);
 
         return new TestNode
         {
@@ -551,29 +321,20 @@ internal sealed class HostTestFramework : ITestFramework, IDataProducer
         };
     }
 
-    private static void TryGetDiscoveredIdentity(
+    private static TestingDiscoveredTest? FindDiscovered(
         IReadOnlyList<TestingDiscoveredTest>? discovered,
-        TestingCaseResult result,
-        out string? className,
-        out string? methodName)
+        TestingCaseResult result)
     {
-        className = null;
-        methodName = null;
         if (discovered is null || discovered.Count == 0)
-            return;
+            return null;
 
         foreach (var test in discovered)
         {
-            if (string.Equals(test.TestId, result.TestId, StringComparison.Ordinal)
-                || string.Equals(test.FullName, result.TestId, StringComparison.Ordinal)
-                || string.Equals(test.TestId, result.FullName, StringComparison.Ordinal)
-                || string.Equals(test.FullName, result.FullName, StringComparison.Ordinal))
-            {
-                className = test.ClassName;
-                methodName = test.MethodName;
-                return;
-            }
+            if (string.Equals(test.TestId, result.TestId, StringComparison.Ordinal))
+                return test;
         }
+
+        return null;
     }
 
     private static string OpaqueUid(string id, string? fullName, string name)
@@ -587,154 +348,22 @@ internal sealed class HostTestFramework : ITestFramework, IDataProducer
 
     private static void AddMethodIdentifier(
         List<IProperty> properties,
-        string? fullName,
-        string methodName,
-        string? assemblyPath,
-        string? className = null,
-        string? discoveredMethodName = null)
+        TestingDiscoveredTest? test,
+        string? assemblyPath)
     {
-        if (!TrySplitIdentity(fullName, methodName, className, discoveredMethodName, out var ns, out var typeName, out var parsedMethod))
+        if (test is null)
+            return;
+        if (string.IsNullOrWhiteSpace(test.TypeName) || string.IsNullOrWhiteSpace(test.MethodName))
             return;
 
-        // MTP TypeName is CLR metadata, not NUnit's display type (ctor args).
-        // Putting "NamedFixtureSourceTests(\"beta.rvt\")" here makes any MTP
-        // IDE (VS, Rider) tokenize the '.' inside the argument as a hierarchy
-        // break. Args stay on uid / FullName / DisplayName.
         properties.Add(new TestMethodIdentifierProperty(
             ResolveAssemblyFullName(assemblyPath),
-            ns,
-            StripTrailingArguments(typeName),
-            parsedMethod,
-            methodArity: 0,
+            test.Namespace ?? string.Empty,
+            test.TypeName!,
+            test.MethodName!,
+            test.MethodArity,
             [],
             "System.Void"));
-    }
-
-    /// <summary>
-    /// Last <c>.</c> not inside parentheses so NUnit fixture args are not
-    /// parsed as the method. The type segment still includes those args
-    /// (NUnit display). <see cref="AddMethodIdentifier"/> strips them before
-    /// publishing MTP <c>TypeName</c>.
-    /// </summary>
-    internal static bool TrySplitIdentity(
-        string? fullName,
-        string displayName,
-        string? className,
-        string? methodName,
-        out string ns,
-        out string typeName,
-        out string parsedMethod)
-    {
-        ns = string.Empty;
-        typeName = string.Empty;
-        parsedMethod = methodName ?? string.Empty;
-
-        if (!string.IsNullOrWhiteSpace(className))
-        {
-            SplitNamespaceAndType(className!, out ns, out typeName);
-            if (string.IsNullOrWhiteSpace(parsedMethod))
-                parsedMethod = StripTrailingArguments(displayName);
-            return !string.IsNullOrWhiteSpace(typeName) && !string.IsNullOrWhiteSpace(parsedMethod);
-        }
-
-        var identity = fullName;
-        if (string.IsNullOrWhiteSpace(identity))
-            identity = displayName;
-        if (string.IsNullOrWhiteSpace(identity))
-            return false;
-
-        var lastDot = LastDotAtDepthZero(identity!);
-        if (lastDot < 0)
-        {
-            parsedMethod = StripTrailingArguments(identity!);
-            typeName = parsedMethod;
-            return !string.IsNullOrWhiteSpace(parsedMethod);
-        }
-
-        SplitNamespaceAndType(identity!.Substring(0, lastDot), out ns, out typeName);
-        parsedMethod = StripTrailingArguments(identity.Substring(lastDot + 1));
-        if (string.IsNullOrWhiteSpace(typeName))
-            typeName = parsedMethod;
-        return !string.IsNullOrWhiteSpace(parsedMethod);
-    }
-
-    private static void SplitNamespaceAndType(string className, out string ns, out string typeName)
-    {
-        var lastDot = LastDotAtDepthZero(className);
-        if (lastDot < 0)
-        {
-            ns = string.Empty;
-            typeName = className;
-            return;
-        }
-
-        ns = className.Substring(0, lastDot);
-        typeName = className.Substring(lastDot + 1);
-    }
-
-    private static int LastDotAtDepthZero(string value)
-    {
-        var depth = 0;
-        var last = -1;
-        for (var index = 0; index < value.Length; index++)
-        {
-            switch (value[index])
-            {
-                case '(':
-                case '<':
-                    depth++;
-                    break;
-                case ')':
-                case '>':
-                    if (depth > 0)
-                        depth--;
-                    break;
-                case '.' when depth == 0:
-                    last = index;
-                    break;
-            }
-        }
-
-        return last;
-    }
-
-    /// <summary>
-    /// NUnit fixture ctor args belong on DisplayName, not MTP TypeName.
-    /// </summary>
-    private static string AppendFixtureArguments(string displayName, string? className)
-    {
-        if (className is not { Length: > 0 })
-            return displayName;
-
-        var type = StripTrailingArguments(className);
-        if (type.Length == className.Length)
-            return displayName;
-
-        var args = className.Substring(type.Length);
-        return displayName.EndsWith(args, StringComparison.Ordinal)
-            ? displayName
-            : displayName + args;
-    }
-
-    private static string StripTrailingArguments(string value)
-    {
-        var open = -1;
-        var depth = 0;
-        for (var index = 0; index < value.Length; index++)
-        {
-            if (value[index] == '(')
-            {
-                if (depth == 0)
-                    open = index;
-                depth++;
-            }
-            else if (value[index] == ')' && depth > 0)
-            {
-                depth--;
-            }
-        }
-
-        return open >= 0 && depth == 0 ? value.Substring(0, open) : value;
     }
 
     private static string ResolveAssemblyFullName(string? assemblyPath)

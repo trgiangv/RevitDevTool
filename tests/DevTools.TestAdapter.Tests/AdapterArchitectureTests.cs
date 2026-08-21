@@ -100,6 +100,7 @@ public sealed class AdapterArchitectureTests
         Assert.DoesNotContain("DevTools.Testing.Discovery", mtp, StringComparison.Ordinal);
         Assert.DoesNotContain("DevTools.NUnit.Provider", mtp, StringComparison.Ordinal);
         Assert.DoesNotContain("ProjectReference Include=\"..\\DevTools.NUnit.MTP", mtp, StringComparison.Ordinal);
+        Assert.DoesNotContain("NUnitCollapsedSelection.cs", mtp, StringComparison.Ordinal);
         Assert.Contains("PackDevToolsNUnitMtp", mtp, StringComparison.Ordinal);
         Assert.Contains("DevTools.Testing.Transport", mtp, StringComparison.Ordinal);
         Assert.DoesNotContain("DevTools.Testing.Mtp", mtp, StringComparison.Ordinal);
@@ -122,6 +123,14 @@ public sealed class AdapterArchitectureTests
             "DevTools.TestAdapter",
             "HostTestFramework.cs"));
         Assert.Contains("HostTestDiscovery.Provider", framework, StringComparison.Ordinal);
+        Assert.Contains("FoldResults", framework, StringComparison.Ordinal);
+        Assert.Contains("ToHostSelection", framework, StringComparison.Ordinal);
+        Assert.Contains("devtools.testadapter.discover", framework, StringComparison.Ordinal);
+        Assert.DoesNotContain("NUnitCollapsedSelection", framework, StringComparison.Ordinal);
+        Assert.DoesNotContain("using DevTools.NUnit.Runtime", framework, StringComparison.Ordinal);
+        Assert.DoesNotContain("ToMetadataTypeName", framework, StringComparison.Ordinal);
+        Assert.DoesNotContain("LastDotAtDepthZero", framework, StringComparison.Ordinal);
+        Assert.DoesNotContain("TrySplitIdentity", framework, StringComparison.Ordinal);
         Assert.DoesNotContain("MetadataTestDiscoverer", framework, StringComparison.Ordinal);
         Assert.DoesNotContain("PEReader", framework, StringComparison.Ordinal);
     }
@@ -140,6 +149,8 @@ public sealed class AdapterArchitectureTests
         Assert.Contains("NUnitTestAssemblyRunner", discoverer, StringComparison.Ordinal);
         Assert.Contains("ExploreTests", discoverer, StringComparison.Ordinal);
         Assert.Contains("test.FullName", discoverer, StringComparison.Ordinal);
+        Assert.Contains("ToSourceTypeSegment", discoverer, StringComparison.Ordinal);
+        Assert.Contains("ToHostSelection", File.ReadAllText(Path.Combine(mtpDir, "NUnitHostTestDiscoverer.RunMapping.cs")), StringComparison.Ordinal);
         Assert.DoesNotContain("HostLocator", discoverer, StringComparison.Ordinal);
         Assert.DoesNotContain("Process.Start", discoverer, StringComparison.Ordinal);
         Assert.Contains("NUnitMTPAssemblyFileName", hook, StringComparison.Ordinal);
@@ -150,6 +161,7 @@ public sealed class AdapterArchitectureTests
         Assert.Equal("Register", TestingPlatformBuilderHook.NUnitMTPRegisterMethodName);
         Assert.Contains(TestingPlatformBuilderHook.NUnitMTPAssemblyFileName, hook, StringComparison.Ordinal);
         Assert.Contains("TryRegisterNUnitMTP", hook, StringComparison.Ordinal);
+        Assert.Contains("RegistrationError", hook, StringComparison.Ordinal);
         Assert.DoesNotContain("Assembly.LoadFrom", hook, StringComparison.Ordinal);
         Assert.Contains("LoadUnlocked", hook, StringComparison.Ordinal);
         Assert.DoesNotContain("PackageReference Include=\"NUnit\"", File.ReadAllText(Path.Combine(

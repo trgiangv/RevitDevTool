@@ -37,6 +37,74 @@ internal static class NUnitTestNameParser
     }
 
     /// <summary>
+    /// ECMA-335 type name without namespace. PDB lookup uses this string.
+    /// Fixture ctor args and closed generic args stay off this value.
+    /// </summary>
+    public static string ToMetadataTypeSegment(string displayTypeName)
+    {
+        SplitNamespace(StripArgumentLists(displayTypeName), out _, out var typeName);
+        return NormalizeGenericSegment(typeName);
+    }
+
+    /// <summary>
+    /// C# source type name without namespace for MTP
+    /// <c>TestMethodIdentifierProperty.TypeName</c>. Visual Studio binds this
+    /// to the syntax tree: <c>GenericClosedTests`1</c> and
+    /// <c>GenericClosedTests&lt;Int32&gt;</c> both yield "No source available".
+    /// Closed generic args stay on uid / <c>ITest.FullName</c>.
+    /// </summary>
+    public static string ToSourceTypeSegment(string displayTypeName) =>
+        StripMetadataArity(ToMetadataTypeSegment(displayTypeName));
+
+    /// <summary>
+    /// NUnit keeps closed generic args on the fixture
+    /// (<c>GenericClosedTests&lt;Int32&gt;</c>) and constructor args on the
+    /// fixture (<c>NamedFixtureSourceTests("alpha.rvt")</c>). Method
+    /// <c>ITest.Name</c> is the C# method
+    /// (<c>Generic_int_fixture_is_discovered</c>). MTP TypeName cannot carry
+    /// constructor args, so two <c>TestFixtureSource</c> instances would share
+    /// one leaf label unless those <c>(...)</c> args are copied onto
+    /// DisplayName. Do not copy <c>&lt;T&gt;</c> — that is the fixture type,
+    /// not a generic method.
+    /// </summary>
+    public static string AppendDisplayArguments(string displayName, string? displayTypeName)
+    {
+        if (displayTypeName is not { Length: > 0 })
+            return displayName;
+
+        SplitNamespace(displayTypeName, out _, out var typeName);
+        var suffixStart = IndexOfConstructorArgs(typeName);
+        if (suffixStart < 0)
+            return displayName;
+
+        var args = typeName[suffixStart..];
+        return displayName.EndsWith(args, StringComparison.Ordinal)
+            ? displayName
+            : displayName + args;
+    }
+
+    private static int IndexOfConstructorArgs(string typeName)
+    {
+        var depth = 0;
+        for (var index = 0; index < typeName.Length; index++)
+        {
+            switch (typeName[index])
+            {
+                case '<':
+                    depth++;
+                    break;
+                case '>' when depth > 0:
+                    depth--;
+                    break;
+                case '(' when depth == 0:
+                    return index;
+            }
+        }
+
+        return -1;
+    }
+
+    /// <summary>
     /// TestNode uid must keep the C# method as the last identifier.
     /// <c>TestName</c>/<c>SetName</c> replace NUnit <c>FullName</c> with
     /// <c>Class.Unit_X</c>, which MTP IDEs index as a second method next to
@@ -154,6 +222,35 @@ internal static class NUnitTestNameParser
 
     private static string NormalizeGenericSegment(string segment)
     {
+        if (segment.IndexOf('+') < 0)
+            return NormalizeOneGeneric(segment);
+
+        var parts = new List<string>();
+        var depth = 0;
+        var start = 0;
+        for (var index = 0; index < segment.Length; index++)
+        {
+            switch (segment[index])
+            {
+                case '<' or '(':
+                    depth++;
+                    break;
+                case '>' or ')' when depth > 0:
+                    depth--;
+                    break;
+                case '+' when depth == 0:
+                    parts.Add(NormalizeOneGeneric(segment[start..index]));
+                    start = index + 1;
+                    break;
+            }
+        }
+
+        parts.Add(NormalizeOneGeneric(segment[start..]));
+        return string.Join("+", parts);
+    }
+
+    private static string NormalizeOneGeneric(string segment)
+    {
         var genericStart = segment.IndexOf('<');
         if (genericStart < 0)
             return segment;
@@ -180,5 +277,28 @@ internal static class NUnitTestNameParser
         }
 
         return typeArgumentCount == 0 ? baseName : baseName + "`" + typeArgumentCount;
+    }
+
+    private static string StripMetadataArity(string metadataType)
+    {
+        if (metadataType.IndexOf('`') < 0)
+            return metadataType;
+
+        var builder = new StringBuilder(metadataType.Length);
+        for (var index = 0; index < metadataType.Length; index++)
+        {
+            if (metadataType[index] == '`')
+            {
+                index++;
+                while (index < metadataType.Length && char.IsDigit(metadataType[index]))
+                    index++;
+                index--;
+                continue;
+            }
+
+            builder.Append(metadataType[index]);
+        }
+
+        return builder.ToString();
     }
 }

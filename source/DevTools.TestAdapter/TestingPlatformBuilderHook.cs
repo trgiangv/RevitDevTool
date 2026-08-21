@@ -21,6 +21,13 @@ public static class TestingPlatformBuilderHook
     /// <summary>Public static entry that assigns <see cref="HostTestDiscovery.Provider"/>.</summary>
     public const string NUnitMTPRegisterMethodName = "Register";
 
+    /// <summary>
+    /// Set when sibling load or <c>Register</c> fails. Must not throw from
+    /// the static constructor: that aborts testhost before MTP can publish
+    /// an error node (VS/C# Dev Kit: "Test discovery aborted: 0 Tests found").
+    /// </summary>
+    internal static string? RegistrationError { get; private set; }
+
     // The package keeps its provider implementation as a runtime-only asset.
     // Register before the platform host asks this public hook to create that provider.
     static TestingPlatformBuilderHook()
@@ -31,13 +38,28 @@ public static class TestingPlatformBuilderHook
 
     internal static void TryRegisterNUnitMTP()
     {
+        RegistrationError = null;
         var path = Path.Combine(AppContext.BaseDirectory, NUnitMTPAssemblyFileName);
         if (!File.Exists(path))
             return;
 
-        var assembly = RuntimeAssemblyResolver.LoadUnlocked(path);
-        var type = assembly.GetType(NUnitMTPEntryTypeName, throwOnError: false);
-        type?.GetMethod(NUnitMTPRegisterMethodName, BindingFlags.Public | BindingFlags.Static)?.Invoke(null, null);
+        try
+        {
+            var assembly = RuntimeAssemblyResolver.LoadUnlocked(path);
+            var type = assembly.GetType(NUnitMTPEntryTypeName, throwOnError: false);
+            type?.GetMethod(NUnitMTPRegisterMethodName, BindingFlags.Public | BindingFlags.Static)
+                ?.Invoke(null, null);
+            if (HostTestDiscovery.Provider is null)
+            {
+                RegistrationError =
+                    $"{NUnitMTPEntryTypeName}.{NUnitMTPRegisterMethodName} did not assign HostTestDiscovery.Provider.";
+            }
+        }
+        catch (Exception ex)
+        {
+            var failure = ex is TargetInvocationException { InnerException: { } inner } ? inner : ex;
+            RegistrationError = failure.ToString();
+        }
     }
 
     public static void AddExtensions(ITestApplicationBuilder testApplicationBuilder, string[] arguments)

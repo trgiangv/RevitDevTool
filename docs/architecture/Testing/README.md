@@ -7,7 +7,7 @@ local; execution goes through `DevTools.TestRunner` into the host
 Product contract: [`docs/product/nunit-host-testing.md`](../../product/nunit-host-testing.md).
 Agent digest: [`docs/agents/nunit-host-testing.md`](../../agents/nunit-host-testing.md).
 
-Last updated: 2026-08-20
+Last updated: 2026-08-21
 
 ---
 
@@ -89,6 +89,11 @@ project, `DevTools.TestRunner`. Runtime sources are Compile-linked into MTP.
   pack script before `dotnet pack`.
 - Keep `AppendTargetFrameworkToOutputPath=true` on packable multi-TFM testing
   projects.
+- In-repo `CopyDevToolsNUnitMtp` copies `DevTools.NUnit.MTP.dll` from
+  `bin\Debug|Release\$(TargetFramework)\`, matching `RevitDevTool.slnx`
+  (MTP/TestAdapter map Autodesk solution configs → project `Debug`/`Release`).
+  Do not prefer `bin\Debug.Autodesk.YYYY\`; those folders go stale when only
+  one year is rebuilt, and a missing year folder used to skip the copy silently.
 
 ---
 
@@ -105,3 +110,11 @@ flowchart LR
 ```
 
 Testhost never loads Autodesk APIs. Host execution stays in the add-in.
+
+The adapter publishes MTP `TestNode` / `TestMethodIdentifierProperty` from
+`TestingDiscoveredTest` fields. NUnit identity (display names, source-bindable
+`TypeName`, collapsed host filter XML, result fold) lives on
+`IHostTestDiscoverer` in `DevTools.NUnit.MTP`. The adapter must not parse
+NUnit `FullName`. ExploreTests is host-free: it must not read `testconfig.json`
+host options. Loading the sibling MTP DLL must not throw from the adapter hook
+static constructor.

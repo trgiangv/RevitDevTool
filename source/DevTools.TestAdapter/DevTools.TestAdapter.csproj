@@ -125,10 +125,6 @@
     </ItemGroup>
 
     <ItemGroup>
-        <Compile Include="..\DevTools.NUnit.Runtime\NUnitCollapsedSelection.cs" Link="NUnitCollapsedSelection.cs"/>
-    </ItemGroup>
-
-    <ItemGroup>
         <ProjectReference Include="..\DevTools.Testing.Abstractions\DevTools.Testing.Abstractions.csproj"/>
         <ProjectReference Include="..\DevTools.Testing.Transport\DevTools.Testing.Transport.csproj"/>
     </ItemGroup>

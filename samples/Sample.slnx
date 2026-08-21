@@ -29,11 +29,7 @@
     <Project Path="RevitMcpToolSet/RevitMcpToolSet.csproj">
         <Build Project="false" />
     </Project>
-    <Project Path="DevTools.NUnit.SampleTests/DevTools.NUnit.SampleTests.csproj">
-        <Build Project="false" />
-    </Project>
-    <Project Path="DevTools.NUnit.Civil3D.SampleTests/DevTools.NUnit.Civil3D.SampleTests.csproj">
-        <Build Project="false" />
-    </Project>
+    <Project Path="DevTools.NUnit.SampleTests/DevTools.NUnit.SampleTests.csproj" />
+    <Project Path="DevTools.NUnit.Civil3D.SampleTests/DevTools.NUnit.Civil3D.SampleTests.csproj" />
     <Project Path="ricaun.NUnit.SampleTests/ricaun.NUnit.SampleTests.csproj" Id="e7330fee-0002-4c1f-ae22-ef158fc9fc16" />
 </Solution>

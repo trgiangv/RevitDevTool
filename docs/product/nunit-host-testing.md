@@ -59,12 +59,16 @@ on branch `testing/nunit-vstest`.
   which use `Class.Method("DisplayName")` so MTP IDEs do not index
   `Class.Unit_X` as a second method beside the `Named_basis_length_is_one`
   group. Discovery TestNodes carry class/method identity on
-  `TestMethodIdentifierProperty`: `TypeName` is CLR metadata (no NUnit
-  fixture constructor arguments). NUnit display types such as
-  `NamedFixtureSourceTests("beta.rvt")` stay on the TestNode uid /
-  `ITest.FullName` and DisplayName — putting them in `TypeName` makes any
-  MTP IDE (Visual Studio, Rider) tokenize `.` inside the argument as a
-  hierarchy break. PDB file/line still lets the IDE navigate without a host.
+  `TestMethodIdentifierProperty`: `TypeName` is the C# source type without
+  namespace (no fixture constructor arguments, no closed generic args, no
+  ECMA-335 backtick arity). Visual Studio binds that string to the syntax
+  tree: both ``GenericClosedTests`1`` and `GenericClosedTests<Int32>` yield
+  "No source available". PDB lookup still uses metadata names internally
+  (`GenericClosedTests`1`, nested `+`). Closed generic args stay on the
+  TestNode uid / `ITest.FullName`. Putting display types in `TypeName` also
+  makes IDEs tokenize `.` inside constructor arguments as a hierarchy
+  break. `TestFileLocationProperty` (PDB file/line) is the line-accurate
+  fallback when the identifier bind is enough to open the file.
   Filter: UID / `--filter-uid` / Test Explorer send the TestNode uid.
   Testhost may emit a NotRunnable stub `Class.Method` when
   `[TestFixtureSource]` / `[TestCaseSource]` cannot expand (Revit types at
@@ -95,8 +99,8 @@ on branch `testing/nunit-vstest`.
 | `DevTools.Testing.Abstractions` | Neutral run/result/runtime contracts, plus the testhost discovery plug-in (`IHostTestDiscoverer`). MTP compiles against this assembly, not `DevTools.TestAdapter` |
 | `DevTools.Testing.Transport` | `testing/*` JSON, pipe methods, and TestRunner process client |
 | `DevTools.Testing.Host` | In-host `testing/*` handler, generation store, and runtime-session lifecycle |
-| `DevTools.TestAdapter` | Published `RevitDevTool.TestAdapter`. MTP control plane (command line, host launch request, result mapping). Copies `DevTools.NUnit.MTP.dll` next to the test exe |
-| `DevTools.NUnit.MTP` | Authoritative local discovery (`NUnitTestAssemblyRunner` + `ExploreTests`) and CLI → NUnit identity/filter mapping. Loaded beside the adapter; not ILRepacked into it |
+| `DevTools.TestAdapter` | Published `RevitDevTool.TestAdapter`. MTP control plane (command line, host launch request, TestNode publish). Copies `DevTools.NUnit.MTP.dll` next to the test exe. Does not parse NUnit names |
+| `DevTools.NUnit.MTP` | Authoritative local discovery (`NUnitTestAssemblyRunner` + `ExploreTests`), metadata `TypeName`, DisplayName suffix, host filter XML, and result fold. Loaded beside the adapter; not ILRepacked into it |
 | `DevTools.NUnit.Runtime` | Default in-host engine: NUnit execution inside an isolated generation |
 | `DevTools.NUnit.Host` | NUnit closure/version policy, Dynamo-safe framework sharing, isolated runtime activation, and `TestingSelection` → NUnit filter XML |
 | `DevTools.TestRunner.Core` | Framework-neutral host locate/launch/reuse, debugger attach, and `testing/*` pipe client |

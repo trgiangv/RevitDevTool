@@ -80,4 +80,68 @@ public sealed class NUnitTestNameParserTests
                 "M",
                 "M<Int32>(1)"));
     }
+
+    [Fact]
+    public void ToMetadataTypeName_uses_backtick_arity()
+    {
+        Assert.Equal(
+            "DevTools.NUnit.SampleTests.GenericClosedTests`1",
+            NUnitTestNameParser.ToMetadataTypeName(
+                "DevTools.NUnit.SampleTests.GenericClosedTests<Int32>"));
+        Assert.Equal(
+            "Outer`1+Inner",
+            NUnitTestNameParser.ToMetadataTypeName("Outer<Int32>+Inner"));
+        Assert.Equal(
+            "Dictionary`2",
+            NUnitTestNameParser.ToMetadataTypeName("Dictionary<String,Int32>"));
+    }
+
+    [Fact]
+    public void ToMetadataTypeSegment_strips_namespace_and_display_args()
+    {
+        Assert.Equal(
+            "GenericClosedTests`1",
+            NUnitTestNameParser.ToMetadataTypeSegment(
+                "DevTools.NUnit.SampleTests.GenericClosedTests<Int32>"));
+        Assert.Equal(
+            "NamedFixtureSourceTests",
+            NUnitTestNameParser.ToMetadataTypeSegment(
+                "NamedFixtureSourceTests(\"alpha.rvt\")"));
+    }
+
+    [Fact]
+    public void ToSourceTypeSegment_strips_backtick_arity_for_ide_bind()
+    {
+        Assert.Equal(
+            "GenericClosedTests",
+            NUnitTestNameParser.ToSourceTypeSegment(
+                "DevTools.NUnit.SampleTests.GenericClosedTests<Int32>"));
+        Assert.Equal(
+            "Outer+Inner",
+            NUnitTestNameParser.ToSourceTypeSegment("Outer<Int32>+Inner"));
+        Assert.Equal(
+            "NamedFixtureSourceTests",
+            NUnitTestNameParser.ToSourceTypeSegment(
+                "NamedFixtureSourceTests(\"alpha.rvt\")"));
+    }
+
+    [Fact]
+    public void AppendDisplayArguments_copies_fixture_constructor_args_not_generic_args()
+    {
+        Assert.Equal(
+            "Fixture_argument_is_preserved(\"alpha.rvt\")",
+            NUnitTestNameParser.AppendDisplayArguments(
+                "Fixture_argument_is_preserved",
+                "NamedFixtureSourceTests(\"alpha.rvt\")"));
+        Assert.Equal(
+            "Generic_int_fixture_is_discovered",
+            NUnitTestNameParser.AppendDisplayArguments(
+                "Generic_int_fixture_is_discovered",
+                "GenericClosedTests<Int32>"));
+        Assert.Equal(
+            "Method(\"x\")",
+            NUnitTestNameParser.AppendDisplayArguments(
+                "Method",
+                "GenericClosedTests<Int32>(\"x\")"));
+    }
 }

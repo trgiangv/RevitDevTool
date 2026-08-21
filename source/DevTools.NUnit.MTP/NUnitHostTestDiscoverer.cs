@@ -14,7 +14,7 @@ namespace DevTools.NUnit.MTP;
 /// renamed leaves). Host <c>&lt;test&gt;</c> still uses NUnit
 /// <see cref="ITest.FullName"/>. No host launch.
 /// </summary>
-internal sealed class NUnitHostTestDiscoverer : IHostTestDiscoverer
+internal sealed partial class NUnitHostTestDiscoverer : IHostTestDiscoverer
 {
     public IReadOnlyList<TestingDiscoveredTest> Discover(string assemblyPath) =>
         Select(assemblyPath, new TestingSelection([]));
@@ -85,11 +85,13 @@ internal sealed class NUnitHostTestDiscoverer : IHostTestDiscoverer
 
         return new TestingDiscoveredTest(
             testId,
-            test.Name,
+            NUnitTestNameParser.AppendDisplayArguments(test.Name, typeName),
             test.FullName,
             className,
             methodName,
-            location);
+            location,
+            namespaceName,
+            NUnitTestNameParser.ToSourceTypeSegment(typeName));
     }
 }
 

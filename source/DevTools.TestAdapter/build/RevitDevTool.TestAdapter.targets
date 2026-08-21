@@ -4,6 +4,11 @@
 
     1. In-repo build order
        - MTP.dll must exist before the test exe copies it.
+       - MTP/Abstractions are year-agnostic: build them as Debug or Release
+         plus the consumer TFM, not as Debug.Autodesk.YYYY. RevitDevTool.slnx
+         already maps those projects to Debug/Release. A per-year folder
+         (bin\Debug.Autodesk.2025\net8.0-windows\) goes stale while Debug.Autodesk.2024
+         is rebuilt, so Test Explorer discovery only "works" for the year last built.
        - NuGet consumers skip this; they take the DLL from build/runtime.
 
     2. Resolve the packaged runtime folder
@@ -29,11 +34,18 @@
   <Import Project="$(MSBuildThisFileDirectory)RevitDevTool.TestAdapter.props"
           Condition="'$(DevToolsTestAdapterPropsImported)' != 'true'"/>
 
+  <PropertyGroup>
+    <_DevToolsMtpConfiguration Condition="$(Configuration.Contains('Release'))">Release</_DevToolsMtpConfiguration>
+    <_DevToolsMtpConfiguration Condition="'$(_DevToolsMtpConfiguration)' == ''">Debug</_DevToolsMtpConfiguration>
+  </PropertyGroup>
+
   <!-- 1. In-repo build order -->
   <ItemGroup Condition="'$(IsTestingPlatformApplication)' == 'true' And Exists('$(MSBuildThisFileDirectory)..\..\DevTools.NUnit.MTP\DevTools.NUnit.MTP.csproj')">
     <ProjectReference Include="$(MSBuildThisFileDirectory)..\..\DevTools.NUnit.MTP\DevTools.NUnit.MTP.csproj">
       <ReferenceOutputAssembly>false</ReferenceOutputAssembly>
       <Private>false</Private>
+      <SetConfiguration>Configuration=$(_DevToolsMtpConfiguration)</SetConfiguration>
+      <SetTargetFramework>TargetFramework=$(TargetFramework)</SetTargetFramework>
     </ProjectReference>
   </ItemGroup>
 
@@ -119,32 +131,37 @@
     <PropertyGroup>
       <_DevToolsNUnitMtpFileName>DevTools.NUnit.MTP.dll</_DevToolsNUnitMtpFileName>
       <_DevToolsNUnitMtpFromPackage Condition="'$(_DevToolsTestAdapterPackageRuntimeDir)' != ''">$(_DevToolsTestAdapterPackageRuntimeDir)$(_DevToolsNUnitMtpFileName)</_DevToolsNUnitMtpFromPackage>
-      <_DevToolsNUnitMtpFromRepo>$([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)..\..\DevTools.NUnit.MTP\bin\$(Configuration)\$(TargetFramework)\$(_DevToolsNUnitMtpFileName)'))</_DevToolsNUnitMtpFromRepo>
+      <_DevToolsNUnitMtpFromRepoFlavor>$([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)..\..\DevTools.NUnit.MTP\bin\$(_DevToolsMtpConfiguration)\$(TargetFramework)\$(_DevToolsNUnitMtpFileName)'))</_DevToolsNUnitMtpFromRepoFlavor>
+      <_DevToolsNUnitMtpFromRepoConfig>$([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)..\..\DevTools.NUnit.MTP\bin\$(Configuration)\$(TargetFramework)\$(_DevToolsNUnitMtpFileName)'))</_DevToolsNUnitMtpFromRepoConfig>
       <_DevToolsNUnitMtpSkipPackageCopy Condition="'$(TargetFrameworkIdentifier)' == '.NETCoreApp' And Exists('$(_DevToolsNUnitMtpFromPackage)')">true</_DevToolsNUnitMtpSkipPackageCopy>
       <_DevToolsNUnitMtpSource Condition="'$(_DevToolsNUnitMtpSkipPackageCopy)' != 'true' And Exists('$(_DevToolsNUnitMtpFromPackage)')">$(_DevToolsNUnitMtpFromPackage)</_DevToolsNUnitMtpSource>
-      <_DevToolsNUnitMtpSource Condition="'$(_DevToolsNUnitMtpSource)' == '' And Exists('$(_DevToolsNUnitMtpFromRepo)')">$(_DevToolsNUnitMtpFromRepo)</_DevToolsNUnitMtpSource>
+      <_DevToolsNUnitMtpSource Condition="'$(_DevToolsNUnitMtpSource)' == '' And Exists('$(_DevToolsNUnitMtpFromRepoFlavor)')">$(_DevToolsNUnitMtpFromRepoFlavor)</_DevToolsNUnitMtpSource>
+      <_DevToolsNUnitMtpSource Condition="'$(_DevToolsNUnitMtpSource)' == '' And Exists('$(_DevToolsNUnitMtpFromRepoConfig)')">$(_DevToolsNUnitMtpFromRepoConfig)</_DevToolsNUnitMtpSource>
       <_DevToolsTestingAbstractionsFileName>DevTools.Testing.Abstractions.dll</_DevToolsTestingAbstractionsFileName>
       <_DevToolsTestingAbstractionsFromPackage Condition="'$(_DevToolsTestAdapterPackageRuntimeDir)' != ''">$(_DevToolsTestAdapterPackageRuntimeDir)$(_DevToolsTestingAbstractionsFileName)</_DevToolsTestingAbstractionsFromPackage>
+      <_DevToolsTestingAbstractionsFromRepoFlavor>$([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)..\..\DevTools.Testing.Abstractions\bin\$(_DevToolsMtpConfiguration)\$(TargetFramework)\$(_DevToolsTestingAbstractionsFileName)'))</_DevToolsTestingAbstractionsFromRepoFlavor>
       <_DevToolsTestingAbstractionsFromRepoTfm>$([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)..\..\DevTools.Testing.Abstractions\bin\$(Configuration)\$(TargetFramework)\$(_DevToolsTestingAbstractionsFileName)'))</_DevToolsTestingAbstractionsFromRepoTfm>
       <_DevToolsTestingAbstractionsFromRepoFlat>$([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)..\..\DevTools.Testing.Abstractions\bin\$(Configuration)\$(_DevToolsTestingAbstractionsFileName)'))</_DevToolsTestingAbstractionsFromRepoFlat>
       <_DevToolsTestingAbstractionsSource Condition="'$(TargetFrameworkIdentifier)' != '.NETCoreApp' And Exists('$(_DevToolsTestingAbstractionsFromPackage)')">$(_DevToolsTestingAbstractionsFromPackage)</_DevToolsTestingAbstractionsSource>
+      <_DevToolsTestingAbstractionsSource Condition="'$(_DevToolsTestingAbstractionsSource)' == '' And '$(TargetFrameworkIdentifier)' != '.NETCoreApp' And Exists('$(_DevToolsTestingAbstractionsFromRepoFlavor)')">$(_DevToolsTestingAbstractionsFromRepoFlavor)</_DevToolsTestingAbstractionsSource>
       <_DevToolsTestingAbstractionsSource Condition="'$(_DevToolsTestingAbstractionsSource)' == '' And '$(TargetFrameworkIdentifier)' != '.NETCoreApp' And Exists('$(_DevToolsTestingAbstractionsFromRepoTfm)')">$(_DevToolsTestingAbstractionsFromRepoTfm)</_DevToolsTestingAbstractionsSource>
       <_DevToolsTestingAbstractionsSource Condition="'$(_DevToolsTestingAbstractionsSource)' == '' And '$(TargetFrameworkIdentifier)' != '.NETCoreApp' And Exists('$(_DevToolsTestingAbstractionsFromRepoFlat)')">$(_DevToolsTestingAbstractionsFromRepoFlat)</_DevToolsTestingAbstractionsSource>
+      <_DevToolsNUnitMtpCsproj>$(MSBuildThisFileDirectory)..\..\DevTools.NUnit.MTP\DevTools.NUnit.MTP.csproj</_DevToolsNUnitMtpCsproj>
     </PropertyGroup>
     <Error
-        Condition="Exists('$(_DevToolsRuntimeRoot)') And '$(_DevToolsNUnitMtpSkipPackageCopy)' != 'true' And '$(_DevToolsNUnitMtpSource)' == ''"
-        Text="RevitDevTool.TestAdapter could not copy DevTools.NUnit.MTP.dll next to the test executable for $(TargetFramework)." />
+        Condition="(Exists('$(_DevToolsRuntimeRoot)') Or Exists('$(_DevToolsNUnitMtpCsproj)')) And '$(_DevToolsNUnitMtpSkipPackageCopy)' != 'true' And '$(_DevToolsNUnitMtpSource)' == ''"
+        Text="RevitDevTool.TestAdapter could not copy DevTools.NUnit.MTP.dll next to the test executable for $(TargetFramework). In-repo copy looks under bin\$(_DevToolsMtpConfiguration)\$(TargetFramework)\ (then bin\$(Configuration)\$(TargetFramework)\). Rebuild DevTools.NUnit.MTP for that TFM; do not rely on a stale Debug.Autodesk.YYYY folder." />
     <Error
-        Condition="Exists('$(_DevToolsRuntimeRoot)') And '$(TargetFrameworkIdentifier)' != '.NETCoreApp' And '$(_DevToolsTestingAbstractionsSource)' == ''"
+        Condition="(Exists('$(_DevToolsRuntimeRoot)') Or Exists('$(_DevToolsNUnitMtpCsproj)')) And '$(TargetFrameworkIdentifier)' != '.NETCoreApp' And '$(_DevToolsTestingAbstractionsSource)' == ''"
         Text="RevitDevTool.TestAdapter could not copy DevTools.Testing.Abstractions.dll next to the net48 test executable. Testhost MTP must share HostTestDiscovery with the adapter." />
     <Copy Condition="'$(_DevToolsNUnitMtpSource)' != ''"
           SourceFiles="$(_DevToolsNUnitMtpSource)"
           DestinationFolder="$(OutDir)"
-          SkipUnchangedFiles="true" />
+          SkipUnchangedFiles="false" />
     <Copy Condition="'$(_DevToolsTestingAbstractionsSource)' != ''"
           SourceFiles="$(_DevToolsTestingAbstractionsSource)"
           DestinationFolder="$(OutDir)"
-          SkipUnchangedFiles="true" />
+          SkipUnchangedFiles="false" />
   </Target>
 
   <!-- 4. Discovery refs (no Autodesk DLL copy) -->
