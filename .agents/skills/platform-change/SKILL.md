@@ -27,7 +27,9 @@ description: >
 ## After editing
 
 - Compile touched projects via build skill; fix reported errors before done.
-- Deploy only with `scripts/kill-host.ps1` + `scripts/build-host.ps1`.
+- Before deploy, stop only the exact host year being tested, for example
+  `scripts/kill-host.ps1 -HostApp Revit -Year 2025`, then run `scripts/build-host.ps1`.
+  Never stop all Revit versions.
 - Adapter pack/publish: `scripts/pack-test-adapter.ps1` (not `scripts/pack.ps1`). Installer/bundle: `scripts/pack.ps1`.
 - Add a focused test when contracts/discovery/dispatch change; otherwise document host blockers.
 - Update the one matching doc layer (`docs/product/`, `docs/architecture/<Module>/`, `docs/agents/`, or `docs/decisions/`) — not multiple layers by default. Testing pack/release structure lives in `docs/architecture/Testing/`.

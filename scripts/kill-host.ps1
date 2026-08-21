@@ -1,41 +1,57 @@
 <#
 .SYNOPSIS
-    Kill running host processes before deploy builds.
+    Stop one Autodesk host version before a deploy build.
 .DESCRIPTION
-    Stops Revit and/or AutoCAD processes that lock DLLs in the addin folder.
-    Run this before any build that deploys to the bundle/addin directory.
+    Stops only processes whose executable folder matches the requested product
+    and year. Other running Revit/AutoCAD versions are always left untouched.
 .PARAMETER HostApp
-    Which host to kill. Default: All (both Revit and AutoCAD).
+    Host product to stop.
+.PARAMETER Year
+    Exact Autodesk product year to stop.
 .EXAMPLE
-    scripts/kill-host.ps1
-    scripts/kill-host.ps1 -HostApp Revit
-    scripts/kill-host.ps1 -HostApp AutoCAD
+    scripts/kill-host.ps1 -HostApp Revit -Year 2025
+    scripts/kill-host.ps1 -HostApp AutoCAD -Year 2025
 #>
+[CmdletBinding(SupportsShouldProcess)]
 param(
-    [ValidateSet("All", "Revit", "AutoCAD")]
-    [string]$HostApp = "All"
+    [Parameter(Mandatory)]
+    [ValidateSet("Revit", "AutoCAD")]
+    [string]$HostApp,
+
+    [Parameter(Mandatory)]
+    [ValidateSet("2022", "2023", "2024", "2025", "2026", "2027")]
+    [string]$Year
 )
 
 $ErrorActionPreference = "Stop"
 
-$targets = @()
-if ($HostApp -eq "All" -or $HostApp -eq "Revit") {
-    $targets += "Revit"
-}
-if ($HostApp -eq "All" -or $HostApp -eq "AutoCAD") {
-    $targets += "acad"
-}
+$processName = if ($HostApp -eq "Revit") { "Revit" } else { "acad" }
+$productFolder = "$HostApp $Year"
+$matching = @()
+$untouched = @()
 
-foreach ($name in $targets) {
-    $procs = Get-Process -Name $name -ErrorAction SilentlyContinue
-    if ($procs) {
-        Write-Output "Stopping $name (PID: $($procs.Id -join ', '))..."
-        $procs | Stop-Process -Force
-        Start-Sleep -Seconds 2
-        Write-Output "$name stopped."
+foreach ($process in @(Get-Process -Name $processName -ErrorAction SilentlyContinue)) {
+    $folder = try { Split-Path -Leaf (Split-Path -Parent $process.Path) } catch { $null }
+    if ([string]::Equals($folder, $productFolder, [StringComparison]::OrdinalIgnoreCase)) {
+        $matching += $process
     } else {
-        Write-Output "$name not running."
+        $untouched += $process
     }
 }
 
-Write-Output "Done. Safe to build with deploy."
+if ($untouched.Count -gt 0) {
+    Write-Output "Leaving other $HostApp versions untouched (PID: $($untouched.Id -join ', '))."
+}
+
+if ($matching.Count -eq 0) {
+    Write-Output "$HostApp $Year is not running."
+    exit 0
+}
+
+foreach ($process in $matching) {
+    if ($PSCmdlet.ShouldProcess("$($process.Path) (PID $($process.Id))", "Stop $HostApp $Year")) {
+        Stop-Process -Id $process.Id -Force
+        $process.WaitForExit(10000) | Out-Null
+        Write-Output "Stopped $HostApp $Year (PID $($process.Id))."
+    }
+}

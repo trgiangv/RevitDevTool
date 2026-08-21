@@ -58,7 +58,9 @@ Active — Tasks 1-8 plus TestRunner `testing/*` stdout cutover landed. NUnit pa
 - Only one worker may own the live-host lane. Record host PID before deployment
   or test execution and account for it before starting another host.
 - Use compile-only host builds unless the live task explicitly requires deploy;
-  kill the selected host through `scripts/kill-host.ps1` before deploying.
+  stop only the selected host year through
+  `scripts/kill-host.ps1 -HostApp <Revit|AutoCAD> -Year <year>` before deploying.
+  Never stop other running host versions.
 - Stop on protocol, packaging, ALC, or live-host failures and record exact
   evidence. Do not turn a failed gate into a silent compatibility fallback.
 - Keep all work uncommitted until the user explicitly authorizes a commit.

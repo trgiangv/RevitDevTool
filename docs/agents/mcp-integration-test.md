@@ -8,13 +8,12 @@ Comprehensive end-to-end testing guide for AI agents operating through MCP again
 
 Before running any MCP test, verify each step in order:
 
-### 1. Kill Host Processes
+### 1. Stop Only The Target Host Year
 
 ```powershell
-# Kill all host processes that lock DLLs
-Get-Process -Name "Revit" -ErrorAction SilentlyContinue | Stop-Process -Force
-Get-Process -Name "acad" -ErrorAction SilentlyContinue | Stop-Process -Force
-Start-Sleep -Seconds 3
+# Pick the same product/year used in step 2. Other versions stay running.
+scripts/kill-host.ps1 -HostApp Revit -Year 2025
+# or: scripts/kill-host.ps1 -HostApp AutoCAD -Year 2026
 ```
 
 ### 2. Build Add-in (Latest Code)

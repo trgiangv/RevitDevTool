@@ -79,12 +79,15 @@ dotnet publish source/DevTools.TestRunner -c Release
 
 Running Revit or AutoCAD locks loaded DLLs. Any build that deploys to the addin folder will fail or produce stale results if the host is still running.
 
-**Required step before build+deploy** — use `scripts/kill-host.ps1`:
+If the target host is running, stop only that exact year:
 
 ```powershell
-scripts/kill-host.ps1                # Kill both Revit and AutoCAD
-scripts/kill-host.ps1 -HostApp Revit # Kill only Revit
+scripts/kill-host.ps1 -HostApp Revit -Year 2025
+scripts/kill-host.ps1 -HostApp AutoCAD -Year 2025
 ```
+
+The script intentionally has no "all versions" mode. Other Revit/AutoCAD
+years must remain running.
 
 This applies to:
 - `scripts/build-host.ps1` (MSBuild `DeployRevitAddin`/`DeployAutoCadBundle` target deploys after build)

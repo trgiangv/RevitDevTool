@@ -111,7 +111,7 @@ These are execution safeguards for agents, not additional product semantics:
   tests and compile `RevitDevTool` for the affected TFM, with 2022, 2025, and
   2027 as the net48/net8/net10 spot-check matrix.
 - Before a build that deploys a changed add-in, run
-  `scripts/kill-host.ps1 -HostApp Revit`, then
+  `scripts/kill-host.ps1 -HostApp Revit -Year <year>`, then
   `scripts/build-host.ps1 -Year <year>`. Compile-only builds with deploy flags
   disabled do not require host termination.
 - After changes to Runner or Core contracts consumed by Runner, publish the
@@ -670,7 +670,7 @@ dotnet build source/RevitDevTool/RevitDevTool.csproj -c Debug.Autodesk.2027 -p:D
 Required deploy and live smoke pattern for each installed host year:
 
 ```powershell
-scripts/kill-host.ps1 -HostApp Revit
+scripts/kill-host.ps1 -HostApp Revit -Year 2023
 scripts/build-host.ps1 -Year 2023
 dotnet publish source/DevTools.NUnit.Runner/DevTools.NUnit.Runner.csproj -c Release -r win-x64
 dotnet test samples/DevTools.NUnit.SampleTests/DevTools.NUnit.SampleTests.csproj -c Debug.Autodesk.2023 --filter "FullyQualifiedName~Arithmetic_runs_inside_host"

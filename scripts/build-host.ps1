@@ -3,14 +3,14 @@
     Build RevitDevTool.slnx for a single Autodesk host year.
 .DESCRIPTION
     Compiles the solution with configuration {Mode}.Autodesk.{Year}.
-    MSBuild targets may deploy to the addin folder — run scripts/kill-host.ps1 first
-    if Revit/AutoCAD is running (DLL file locks).
+    MSBuild targets may deploy to the addin folder. If the target host year is
+    running, stop only that year with scripts/kill-host.ps1.
 .PARAMETER Year
     Autodesk product year (2022-2024 = net48, 2025-2026 = net8.0, 2027 = net10.0).
 .PARAMETER Mode
     Debug or Release build mode.
 .EXAMPLE
-    scripts/kill-host.ps1
+    scripts/kill-host.ps1 -HostApp Revit -Year 2025
     scripts/build-host.ps1 -Year 2025
     scripts/build-host.ps1 -Year 2024 -Mode Release
 #>

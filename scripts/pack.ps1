@@ -4,9 +4,9 @@
 .DESCRIPTION
     Executes the build orchestrator with the 'pack' argument:
     Clean -> CreateBundle (all Release.Autodesk.* configs + DevTools.Daemon + DevTools.TestRunner) -> CreateInstaller.
-    Output goes to build/output/. Run scripts/kill-host.ps1 first if hosts are running.
+    Output goes to build/output/. Stop only each host year actually being tested/deployed.
 .EXAMPLE
-    scripts/kill-host.ps1
+    scripts/kill-host.ps1 -HostApp Revit -Year 2025
     scripts/pack.ps1
 #>
 param()

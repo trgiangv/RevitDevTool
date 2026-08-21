@@ -17,8 +17,8 @@ Run proof **before** claiming done. Pick the smallest command that matches what 
 |---------|--------------|---------|
 | CS errors after editing `DevTools.*` | Shared multi-TFM break | Compile the **project you touched** (table below) |
 | CS errors only on `net48` | Polyfill / API surface | Build same csproj with `-c Debug.Autodesk.2022` |
-| MSB3027 / file locked / copy failed | Revit or AutoCAD running | `scripts/kill-host.ps1` then retry |
-| Deploy silently didn't update DLL | Used `dotnet build` without deploy props | `scripts/kill-host.ps1`; `scripts/build-host.ps1 -Year 2025` |
+| MSB3027 / file locked / copy failed | Target host year is running | `scripts/kill-host.ps1 -HostApp Revit -Year 2025` (use the year being tested), then retry |
+| Deploy silently didn't update DLL | Used `dotnet build` without deploy props | Stop only the target year; then `scripts/build-host.ps1 -Year 2025` |
 | MCP tools = 0 in Cursor | Bad daemon `outputSchema` or stale bundle | Republish daemon; reload MCP — see `mcp-integration-test.md` |
 | Parser / MCP test fails on missing DLL | Sample toolset not built | `dotnet build samples/McpToolsetDemo -c Debug.Autodesk.2025` |
 | Parser test missing pixi env | `%APPDATA%\RevitDevTool\pixi-env` absent | `scripts/test-python.ps1` or `pixi install` at repo root |
@@ -81,7 +81,7 @@ scripts/test-dotnet.ps1 -Project tests/DevTools.Mcp.Tests/DevTools.Mcp.Tests.csp
 
 | Goal | Commands |
 |------|----------|
-| Reload Revit add-in | `scripts/kill-host.ps1`; `scripts/build-host.ps1 -Year 2025` |
+| Reload Revit add-in | `scripts/kill-host.ps1 -HostApp Revit -Year 2025`; `scripts/build-host.ps1 -Year 2025` |
 | Reload daemon (MCP stdio) | `dotnet publish source/DevTools.Daemon -c Release` (kills + deploys to bundle) |
 | Installer / all years | `scripts/pack.ps1` |
 | TestAdapter NuGet | `scripts/pack-test-adapter.ps1` |
@@ -93,6 +93,9 @@ scripts/test-dotnet.ps1 -Project tests/DevTools.Mcp.Tests/DevTools.Mcp.Tests.csp
 - **+ live MCP checklist** when daemon/host wire or tool surface changed (`docs/agents/mcp-integration-test.md`).
 
 If a test is listed in `known-test-gaps.md`, do not treat its failure as product regression without reading the gap. If live host unavailable, name the skipped checklist step.
+
+Never stop every Revit process. `kill-host.ps1` requires an exact host and year;
+leave other running versions untouched.
 
 ## Reference
 
