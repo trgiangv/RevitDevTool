@@ -10,14 +10,14 @@ internal sealed class NUnitEventListener : ITestListener
     private readonly Guid _runId;
     private readonly ITestingRuntimeEventSink _eventSink;
     private readonly NUnitSourceLocationProvider? _sourceLocationProvider;
-    private readonly NUnitRunTraceScope _traceScope;
+    private readonly TestingRunTraceScope _traceScope;
     private readonly HashSet<ITest> _terminalCases = new(ReferenceEqualityComparer.Instance);
     private readonly HashSet<ITest> _startedCases = new(ReferenceEqualityComparer.Instance);
     private readonly Dictionary<string, string?> _traceByFullName = new(StringComparer.Ordinal);
 
     public NUnitEventListener(Guid runId, ITestingRuntimeEventSink eventSink,
         NUnitSourceLocationProvider? sourceLocationProvider,
-        NUnitRunTraceScope traceScope)
+        TestingRunTraceScope traceScope)
     {
         _runId = runId;
         _eventSink = eventSink;
@@ -52,7 +52,7 @@ internal sealed class NUnitEventListener : ITestListener
 
         var mapped = NUnitResultMapper.MapCaseResult(result, _sourceLocationProvider);
         if (_traceByFullName.TryGetValue(result.Test.FullName, out var captured))
-            mapped = mapped with { Output = MergeOutput(mapped.Output, captured) };
+            mapped = mapped with { Output = TestingRunTraceScope.Merge(mapped.Output, captured) };
         Publish(TestingEventKinds.Case, mapped, null, null);
     }
 
@@ -83,7 +83,7 @@ internal sealed class NUnitEventListener : ITestListener
         {
             var fullName = testCase.FullName;
             return fullName is not null && _traceByFullName.TryGetValue(fullName, out var traceOutput)
-                ? testCase with { Output = MergeOutput(testCase.Output, traceOutput) }
+                ? testCase with { Output = TestingRunTraceScope.Merge(testCase.Output, traceOutput) }
                 : testCase;
         }).ToList();
     }
@@ -91,17 +91,6 @@ internal sealed class NUnitEventListener : ITestListener
     private void Publish(string kind, TestingCaseResult? testCase, string? message, TestingAttachment? attachment) =>
         _eventSink.Publish(new TestingRuntimeEvent(
             _runId, kind, testCase, message, attachment, TestingCancellationState.None));
-
-    private static string? MergeOutput(string? nunitOutput, string? traceOutput)
-    {
-        var hasNunit = !string.IsNullOrWhiteSpace(nunitOutput);
-        var hasTrace = !string.IsNullOrWhiteSpace(traceOutput);
-        if (hasNunit && hasTrace)
-            return nunitOutput!.TrimEnd() + Environment.NewLine + traceOutput!.TrimEnd();
-        if (hasNunit)
-            return nunitOutput;
-        return hasTrace ? traceOutput : null;
-    }
 
     private sealed class ReferenceEqualityComparer : IEqualityComparer<ITest>
     {

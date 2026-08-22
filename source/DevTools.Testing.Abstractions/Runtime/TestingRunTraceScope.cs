@@ -1,45 +1,56 @@
 using System.Diagnostics;
 using System.Text;
 
-namespace DevTools.NUnit.Runtime;
+namespace DevTools.Testing.Abstractions.Runtime;
 
 /// <summary>
 /// Silent per-case buffer of <see cref="Trace"/> / <see cref="Debug"/> for
-/// <c>CaseResult.Output</c> (Test Explorer). Console captured by NUnit is
+/// <c>CaseResult.Output</c> (Test Explorer). Framework-captured Console is
 /// forwarded to process <see cref="Trace"/> at case finish via
 /// <see cref="WriteThrough"/> so the host pane sees it without duplicating IDE stdout.
 /// </summary>
-internal sealed class NUnitRunTraceScope : IDisposable
+public sealed class TestingRunTraceScope : IDisposable
 {
     private readonly Listener _listener = new();
     private bool _disposed;
 
-    public NUnitRunTraceScope() => Trace.Listeners.Insert(0, _listener);
+    public TestingRunTraceScope() => Trace.Listeners.Insert(0, _listener);
 
     public string? CompleteCase() => _listener.Take();
 
     /// <summary>
-    /// Forwards NUnit-captured Console/<c>TestContext</c> text to process
-    /// <see cref="Trace"/> (host pane) without copying it into the IDE buffer.
+    /// Forwards framework-captured Console text to process <see cref="Trace"/>
+    /// (host pane) without copying it into the IDE buffer.
     /// </summary>
-    public void WriteThrough(string text)
+    public void WriteThrough(string? text)
     {
-        if (string.IsNullOrEmpty(text))
+        if (text is null || text.Length == 0)
             return;
 
-        text = text.TrimEnd('\r', '\n');
-        if (text.Length == 0)
+        var trimmed = text.TrimEnd('\r', '\n');
+        if (trimmed.Length == 0)
             return;
 
         _listener.SuspendCapture();
         try
         {
-            Trace.Write(text);
+            Trace.Write(trimmed);
         }
         finally
         {
             _listener.ResumeCapture();
         }
+    }
+
+    public static string? Merge(string? frameworkOutput, string? traceOutput)
+    {
+        var hasFramework = !string.IsNullOrWhiteSpace(frameworkOutput);
+        var hasTrace = !string.IsNullOrWhiteSpace(traceOutput);
+        if (hasFramework && hasTrace)
+            return frameworkOutput!.TrimEnd() + Environment.NewLine + traceOutput!.TrimEnd();
+        if (hasFramework)
+            return frameworkOutput;
+        return hasTrace ? traceOutput : null;
     }
 
     public void Dispose()

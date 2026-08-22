@@ -50,7 +50,7 @@ Largest test surface (`tests/DevTools.Mcp.Tests`, ~180 cases).
 ## NUnit host
 
 `tests/DevTools.NUnit.Host.Tests` (~62 cases). Parallelization is already off
-(`CollectionBehavior`) because `NUnitRunTraceScope` mutates process-wide
+(`CollectionBehavior`) because `TestingRunTraceScope` mutates process-wide
 `Trace.Listeners`.
 
 ### Partial / fragile
@@ -59,7 +59,7 @@ Largest test surface (`tests/DevTools.Mcp.Tests`, ~180 cases).
   is stable. `Trace` / `Debug` markers (`spike-trace-marker`, `spike-debug-marker`)
   pass when that test is filtered alone and fail in the full Debug suite with
   output `"spike-output-marker\r\n"` only. Same on `HEAD` and on Hosting identity
-  work. Capture lives in `NUnit.Runtime` (`NUnitRunTraceScope`), **not**
+  work. Capture lives in `Testing.Abstractions` (`TestingRunTraceScope`), **not**
   `DevTools.Logging`. Do not drop the Trace/Debug asserts (ADR 0017 contract)
   and do not treat a missing Logging IL ref as the cause.
 

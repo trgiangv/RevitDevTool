@@ -55,7 +55,7 @@ public sealed class NUnitRuntimeSession : ITestingRuntimeSession
             EnsureLoaded();
 
             var filter = NUnitFilterFactory.Create(request.Selection.ProviderPayload);
-            using var traceScope = new NUnitRunTraceScope();
+            using var traceScope = new TestingRunTraceScope();
             var listener = new NUnitEventListener(
                 request.RunId,
                 eventSink,

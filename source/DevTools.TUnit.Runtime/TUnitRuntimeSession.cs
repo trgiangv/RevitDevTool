@@ -1,5 +1,4 @@
 using System.Reflection;
-using System.Runtime.CompilerServices;
 using DevTools.Testing.Abstractions.Contracts;
 using DevTools.Testing.Abstractions.Runtime;
 
@@ -35,8 +34,6 @@ public sealed class TUnitRuntimeSession : ITestingRuntimeSession
             cancellationToken.ThrowIfCancellationRequested();
             ValidateAssembly(request.Assembly.Path);
 
-            RuntimeHelpers.RunModuleConstructor(_testAssembly.ManifestModule.ModuleHandle);
-
             CancellationTokenSource linked;
             lock (_runControl)
             {
@@ -48,9 +45,20 @@ public sealed class TUnitRuntimeSession : ITestingRuntimeSession
 
             try
             {
-                var results = TUnitEngineHost.Run(request.Selection, linked.Token);
+                var results = TUnitEngineHost.Run(_testAssembly, request.Selection, linked.Token);
                 foreach (var result in results)
                 {
+                    if (!string.IsNullOrWhiteSpace(result.Output))
+                    {
+                        eventSink.Publish(new TestingRuntimeEvent(
+                            request.RunId,
+                            TestingEventKinds.Output,
+                            null,
+                            result.Output,
+                            null,
+                            TestingCancellationState.None));
+                    }
+
                     eventSink.Publish(new TestingRuntimeEvent(
                         request.RunId,
                         TestingEventKinds.Case,

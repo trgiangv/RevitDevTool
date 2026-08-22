@@ -1,4 +1,5 @@
 using DevTools.Testing.Abstractions.Contracts;
+using DevTools.Testing.Abstractions.Runtime;
 using Microsoft.Testing.Platform.Extensions.Messages;
 
 namespace DevTools.TUnit.Runtime;
@@ -8,17 +9,36 @@ namespace DevTools.TUnit.Runtime;
 
 internal static class TUnitEngineResults
 {
-    public static IReadOnlyList<TestingCaseResult> Map(IEnumerable<TestNode> nodes)
+    public static IReadOnlyList<TestingCaseResult> Map(
+        IEnumerable<TestNode> nodes,
+        IReadOnlyDictionary<string, string?>? capturedByUid = null)
     {
         var results = new List<TestingCaseResult>();
         foreach (var node in nodes)
         {
             var mapped = Map(node);
-            if (mapped is not null)
-                results.Add(mapped);
+            if (mapped is null)
+                continue;
+
+            if (capturedByUid is not null
+                && capturedByUid.TryGetValue(node.Uid.Value, out var captured))
+            {
+                mapped = mapped with { Output = TestingRunTraceScope.Merge(mapped.Output, captured) };
+            }
+
+            results.Add(mapped);
         }
 
         return results;
+    }
+
+    internal static bool IsTerminal(TestNode node) => Map(node) is not null;
+
+    internal static string? FrameworkOutput(TestNode node)
+    {
+        var stdout = node.Properties.SingleOrDefault<StandardOutputProperty>()?.StandardOutput;
+        var stderr = node.Properties.SingleOrDefault<StandardErrorProperty>()?.StandardError;
+        return Combine(stdout, stderr);
     }
 
     private static TestingCaseResult? Map(TestNode node)
@@ -47,9 +67,7 @@ internal static class TUnitEngineResults
             ?? exception?.Message;
         var timing = properties.SingleOrDefault<TimingProperty>();
         var location = properties.SingleOrDefault<TestFileLocationProperty>();
-        var stdout = properties.SingleOrDefault<StandardOutputProperty>()?.StandardOutput;
-        var stderr = properties.SingleOrDefault<StandardErrorProperty>()?.StandardError;
-        var output = Combine(stdout, stderr);
+        var output = FrameworkOutput(node);
         return new TestingCaseResult(
             node.Uid.Value,
             node.DisplayName,

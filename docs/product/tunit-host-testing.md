@@ -114,6 +114,33 @@ root. Collectible load contexts apply on modern Revit TFMs. .NET Framework
 years use scoped isolation and exact manifest identity resolution,
 including side-by-side `System.Text.Json` identities.
 
+TUnit.Core `Sources.TestEntries` is a process-wide dictionary keyed by
+`Type`. A rebuild loads a new test assembly (net48 cannot unload the old
+one). The module constructor **adds** sources; Engine would then execute
+every historical copy of the same UID and concatenate their `Console`
+output. Before each discover/run, Runtime keeps only sources whose
+`ClassType.Assembly` is the current generation assembly.
+
+### Testhost MTP copy
+
+`CopyDevToolsMTPSibling` overwrites `DevTools.TUnit.MTP.dll` next to the
+test exe on every build (`SkipUnchangedFiles=false`) and prefers the
+in-repo MTP output over a leftover TestAdapter `build/runtime` nupkg copy.
+TUnit.MTP compile-links catalog files from `TUnit.Runtime`; a timestamp-skip
+copy is why a rebuild can still run yesterday’s discoverer. Changing
+in-host Engine/Runtime also requires rebuilding/deploying the host add-in
+(`TUnitRuntime\`). On net48, if the host already loaded a matching
+assembly identity, restart the host or use net8+ ALC.
+
+### Test output
+
+TUnit.Engine captures `Console` into MTP `StandardOutputProperty`. It does
+not capture `Trace` / `Debug`. `TestingRunTraceScope` buffers those per
+case, merges them into `CaseResult.Output` (Test Explorer), and
+write-throughs Console to process `Trace` (host pane). Same split as NUnit
+([0017](../decisions/0017-nunit-host-test-output-routing.md)). Do not add a
+TUnit `TraceListener` or dump `CaseResult.Output` through `ILogger`.
+
 TestRunner locates, reuses, or starts Revit and sends `testing/run` with
 the discovered UIDs. `MarshaledTestingRequestHandler` enters
 `IHostContextExecutor`. The in-host `tunit` provider loads the generation

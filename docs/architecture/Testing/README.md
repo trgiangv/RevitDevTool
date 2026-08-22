@@ -16,12 +16,12 @@ Last updated: 2026-08-22
 
 | Area | Path |
 |------|------|
-| Neutral contracts, `HostTestConfig`, MTP plugin load | `source/DevTools.Testing.Abstractions/` |
+| Neutral contracts, `HostTestConfig`, `TestingRunTraceScope` | `source/DevTools.Testing.Abstractions/` |
 | Shared discovery-refs / isolated testhost load | `source/DevTools.Testing.Abstractions/Loading/` |
 | `testing/*` JSON + Runner process client | `source/DevTools.Testing.Transport/` |
 | In-host `testing/*` handler + generation store | `source/DevTools.Testing.Host/` |
 | Runtime folder resolve + generation file classify | `source/DevTools.Testing.Host/Loading/` |
-| Published MTP adapter (`RevitDevTool.TestAdapter`) | `source/DevTools.TestAdapter/` |
+| Published MTP adapter, plugin load (`HostMTPRegistration`) | `source/DevTools.TestAdapter/` |
 | Local NUnit `ExploreTests` (testhost sibling DLL) | `source/DevTools.NUnit.MTP/` |
 | In-host NUnit engine | `source/DevTools.NUnit.Runtime/` |
 | NUnit closure / filter / generation policy | `source/DevTools.NUnit.Host/` |
@@ -95,11 +95,15 @@ project, `DevTools.TestRunner`. Runtime sources are Compile-linked into MTP.
   pack script before `dotnet pack`.
 - Keep `AppendTargetFrameworkToOutputPath=true` on packable multi-TFM testing
   projects.
-- In-repo `CopyDevToolsNUnitMtp` copies `DevTools.NUnit.MTP.dll` from
+- In-repo `CopyDevToolsMTPSibling` copies `$(DevToolsMTPAssembly)` from
   `bin\Debug|Release\$(TargetFramework)\`, matching `RevitDevTool.slnx`
   (MTP/TestAdapter map Autodesk solution configs → project `Debug`/`Release`).
   Do not prefer `bin\Debug.Autodesk.YYYY\`; those folders go stale when only
   one year is rebuilt, and a missing year folder used to skip the copy silently.
+  Closure copy (`SkipUnchangedFiles=true`) excludes `DevTools.*.MTP.dll`.
+  Sibling copy always overwrites the selected MTP (`SkipUnchangedFiles=false`)
+  and prefers the in-repo MTP bin over a leftover `build/runtime` nupkg copy
+  so testhost discovery cannot keep a timestamp-stale TUnit/NUnit discoverer.
 
 ---
 
@@ -120,14 +124,31 @@ Testhost never loads Autodesk APIs. Host execution stays in the add-in.
 ### Adapter bootstrap
 
 `TestingPlatformBuilderHook` only calls `AdapterBootstrap.Initialize`.
-`AdapterTestConfig.RequireFrameworkId()` reads `devtools.frameworkId` from
-`testconfig.json` or `[EntryAssembly].testconfig.json` (MTP naming). Missing
-id throws. `HostMTPRegistration` then loads exactly one sibling:
+`AdapterTestConfig.TryReadPluginConfig()` reads `devtools.frameworkId`,
+`devtools.mtpAssembly`, and `devtools.mtpEntry` from `testconfig.json` or
+`[EntryAssembly].testconfig.json`. Missing or partial keys set
+`HostMTPRegistration.LastError` and **must not throw** from the hook static
+constructor. Empty `frameworkId` on run publishes a
+`devtools.testadapter.run` error node (no `nunit` default).
 
-| `frameworkId` | DLL | Entry |
-|---------------|-----|--------|
-| `nunit` | `DevTools.NUnit.MTP.dll` | `DevTools.NUnit.MTP.NUnitMTP.Register` |
-| `tunit` | `DevTools.TUnit.MTP.dll` | `DevTools.TUnit.MTP.TUnitMTP.Register` |
+MSBuild writes those keys from:
+
+| Property | `testconfig` key | First-party default when empty |
+|----------|------------------|--------------------------------|
+| `TestingFramework` | `frameworkId` | `nunit` (props) |
+| `DevToolsMTPAssembly` | `mtpAssembly` | `nunit` → `DevTools.NUnit.MTP.dll`; `tunit` → `DevTools.TUnit.MTP.dll` |
+| `DevToolsMTPEntry` | `mtpEntry` | `nunit` → `DevTools.NUnit.MTP.NUnitMTP`; `tunit` → `DevTools.TUnit.MTP.TUnitMTP` |
+
+`HostMTPRegistration` (TestAdapter) loads the configured sibling file name
+beside the testhost. `mtpAssembly` must be a bare file name. There is no C#
+`switch` on `nunit` / `tunit` in Abstractions. Packaged copy of an unmapped
+`DevToolsMTPAssembly` is skipped unless the file exists in the package
+runtime dir. Sibling copy Errors only when the DLL is missing from both the
+first-party source and `$(OutDir)` (override with `DevToolsMTPCopy=false`).
+
+A user-authored `testconfig.json` with a `devtools` section must already
+contain `frameworkId`, `mtpAssembly`, and `mtpEntry` or the build errors.
+See [0024](../../decisions/0024-testing-core-open-closed-providers.md).
 
 `Register` assigns both `HostTestDiscovery.Provider` (`IHostTestDiscoverer`)
 and `HostTestDiscovery.RunMapper` (`IHostTestRunMapper`). There is no
@@ -144,19 +165,28 @@ in `DevTools.TUnit.Runtime` (`TUnitCatalog` / `TUnitExpansion` /
 The adapter must not parse NUnit `FullName` or TUnit Engine UIDs.
 
 NUnit ExploreTests is host-free and must not read `testconfig.json` **host**
-options (`hostName`, `forceLaunch`, …). `frameworkId` is adapter bootstrap
-only.
+options (`hostName`, `forceLaunch`, …). Plugin keys (`frameworkId`,
+`mtpAssembly`, `mtpEntry`) are adapter bootstrap only.
 
 ### Host generation
 
 Each provider owns a generation policy (`NUnitGenerationPolicy`,
-`TUnitGenerationPolicy`) with runtime folder/DLL names. Shared helpers:
-
-| Helper | Role |
-|--------|------|
-| `HostRuntimeSources.ResolveBesideHost` | `{hostDir}/{RuntimeFolderName}/{RuntimeAssemblyFileName}` |
-| `TestingGenerationFiles.Classify` / `ScanOutputDirectory` | managed / native / pdb / other |
+`TUnitGenerationPolicy`) with runtime folder/DLL names. Shared helpers on
+public `TestingGenerationFiles` (Host): `Classify`, `ScanOutputDirectory`,
+`IsSharedTestingContract`, `TryGetManagedAssemblyIdentity`,
+`IsManagedAssembly`, `TryGetFileVersion`, `ContentEquals`, `MergeFile`,
+`NormalizeRelativePath`, `GetRelativePath`, `IsVolatileGenerationOutput`.
+`TestingGenerationPaths` is internal. Providers register with
+`TryAddEnumerable<IHostTestFrameworkProvider>` and own their
+`TestingGenerationStore` / session factory. Do not register those kernel
+types as unkeyed singletons from a provider extension.
 
 Do not add a shared runtime-descriptor catalog. Policy constants stay on the
 provider type. NUnit/TUnit Host csproj remove the solution `Polyfill` global
 package so net48 does not collide with `DevTools.Testing.Host`.
+
+### Test output
+
+`TestingRunTraceScope` buffers `Trace` / `Debug` per case. NUnit and TUnit
+merge that buffer with framework Console into `CaseResult.Output` (IDE) and
+write Console through to process `Trace` (pane). See [0017](../../decisions/0017-nunit-host-test-output-routing.md).

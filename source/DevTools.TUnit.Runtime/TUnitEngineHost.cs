@@ -1,4 +1,6 @@
+using System.Runtime.CompilerServices;
 using DevTools.Testing.Abstractions.Contracts;
+using DevTools.Testing.Abstractions.Runtime;
 using Microsoft.Testing.Platform.Capabilities.TestFramework;
 using Microsoft.Testing.Platform.CommandLine;
 using Microsoft.Testing.Platform.Extensions;
@@ -24,10 +26,16 @@ internal static class TUnitEngineHost
     private const string OutputDeviceTypeName = "Microsoft.Testing.Platform.OutputDevice.NopPlatformOutputDevice";
 
     public static IReadOnlyList<TestingCaseResult> Run(
+        ReflectionAssembly testAssembly,
         TestingSelection selection,
         CancellationToken cancellationToken)
     {
+        if (testAssembly is null)
+            throw new ArgumentNullException(nameof(testAssembly));
+
         SourceRegistrar.IsEnabled = true;
+        RuntimeHelpers.RunModuleConstructor(testAssembly.ManifestModule.ModuleHandle);
+        TUnitSourceCatalog.Retain(testAssembly);
         var captured = SynchronizationContext.Current;
         SynchronizationContext.SetSynchronizationContext(null);
         try
@@ -67,7 +75,8 @@ internal static class TUnitEngineHost
             culture: null)!;
         var filter = CreateFilter(selection);
         var request = new RunTestExecutionRequest(session, filter);
-        var messageBus = new TUnitEngineMessageBus();
+        using var traceScope = new TestingRunTraceScope();
+        var messageBus = new TUnitEngineMessageBus(traceScope);
         var executeContext = new ExecuteRequestContext(
             request,
             messageBus,
@@ -96,7 +105,7 @@ internal static class TUnitEngineHost
             framework.CloseTestSessionAsync(closeContext).GetAwaiter().GetResult();
         }
 
-        return TUnitEngineResults.Map(messageBus.Nodes.Values);
+        return TUnitEngineResults.Map(messageBus.Nodes.Values, messageBus.CapturedByUid);
     }
 
     private static ITestExecutionFilter CreateFilter(TestingSelection selection)

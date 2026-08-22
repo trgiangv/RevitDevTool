@@ -165,7 +165,7 @@ internal static class TUnitCatalog
         SourceRegistrar.IsEnabled = true;
         if (alreadyLoaded is not null)
         {
-            RuntimeHelpers.RunModuleConstructor(alreadyLoaded.ManifestModule.ModuleHandle);
+            Bind(alreadyLoaded);
             return;
         }
 
@@ -179,7 +179,7 @@ internal static class TUnitCatalog
             && string.Equals(Path.GetFullPath(assembly.Location), assemblyPath, StringComparison.OrdinalIgnoreCase));
         if (loaded is not null)
         {
-            RuntimeHelpers.RunModuleConstructor(loaded.ManifestModule.ModuleHandle);
+            Bind(loaded);
             return;
         }
 
@@ -189,12 +189,18 @@ internal static class TUnitCatalog
             && string.Equals(Path.GetFullPath(entry.Location), assemblyPath, StringComparison.OrdinalIgnoreCase)
             && DiscoveryRefs.Read(assemblyPath).Count == 0)
         {
-            RuntimeHelpers.RunModuleConstructor(entry.ManifestModule.ModuleHandle);
+            Bind(entry);
             return;
         }
 
         using var load = DiscoveryAssemblyLoad.Open(assemblyPath);
-        RuntimeHelpers.RunModuleConstructor(load.Assembly.ManifestModule.ModuleHandle);
+        Bind(load.Assembly);
+    }
+
+    private static void Bind(ReflectionAssembly testAssembly)
+    {
+        RuntimeHelpers.RunModuleConstructor(testAssembly.ManifestModule.ModuleHandle);
+        TUnitSourceCatalog.Retain(testAssembly);
     }
 
     private static bool MatchesHints(ITestEntrySource source, TestEntryFilterData filter, TestingDiscoveryHints? hints)

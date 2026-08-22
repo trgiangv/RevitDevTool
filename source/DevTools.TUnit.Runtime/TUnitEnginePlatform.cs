@@ -1,4 +1,5 @@
 using System.Diagnostics.CodeAnalysis;
+using DevTools.Testing.Abstractions.Runtime;
 using Microsoft.Testing.Platform.CommandLine;
 using Microsoft.Testing.Platform.Configurations;
 using Microsoft.Testing.Platform.Extensions.Messages;
@@ -90,14 +91,31 @@ internal sealed class TUnitEngineOutputDevice : IOutputDevice
         Task.CompletedTask;
 }
 
-internal sealed class TUnitEngineMessageBus : IMessageBus
+internal sealed class TUnitEngineMessageBus(TestingRunTraceScope traceScope) : IMessageBus
 {
     public Dictionary<string, TestNode> Nodes { get; } = new(StringComparer.Ordinal);
 
+    public Dictionary<string, string?> CapturedByUid { get; } = new(StringComparer.Ordinal);
+
     public Task PublishAsync(IDataProducer dataProducer, IData data)
     {
-        if (data is TestNodeUpdateMessage update)
-            Nodes[update.TestNode.Uid.Value] = update.TestNode;
+        if (data is not TestNodeUpdateMessage update)
+            return Task.CompletedTask;
+
+        var node = update.TestNode;
+        var uid = node.Uid.Value;
+        Nodes[uid] = node;
+        if (!TUnitEngineResults.IsTerminal(node))
+            return Task.CompletedTask;
+
+        var captured = traceScope.CompleteCase();
+        CapturedByUid.TryGetValue(uid, out var previous);
+        CapturedByUid[uid] = TestingRunTraceScope.Merge(previous, captured);
+
+        var frameworkOutput = TUnitEngineResults.FrameworkOutput(node);
+        if (!string.IsNullOrWhiteSpace(frameworkOutput))
+            traceScope.WriteThrough(frameworkOutput);
+
         return Task.CompletedTask;
     }
 }

@@ -1,0 +1,27 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <TargetFramework>net10.0-windows</TargetFramework>
+        <IsPackable>false</IsPackable>
+        <EnableTUnitPolyfills>false</EnableTUnitPolyfills>
+        <IsTestingPlatformApplication>false</IsTestingPlatformApplication>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <PackageReference Include="xunit.v3.mtp-v2"/>
+        <PackageReference Include="TUnit.Core">
+            <ExcludeAssets>build;buildTransitive;analyzers</ExcludeAssets>
+            <PrivateAssets>all</PrivateAssets>
+        </PackageReference>
+        <GlobalPackageReference Remove="Polyfill"/>
+    </ItemGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\..\source\DevTools.TUnit.Runtime\DevTools.TUnit.Runtime.csproj" SetTargetFramework="TargetFramework=net10.0-windows"/>
+    </ItemGroup>
+
+    <ItemGroup>
+        <Using Include="Xunit"/>
+    </ItemGroup>
+
+</Project>

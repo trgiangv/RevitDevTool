@@ -117,6 +117,21 @@ public sealed class NUnitRuntimeArchitectureTests
     }
 
     [Fact]
+    public void Runtime_uses_shared_testing_run_trace_scope()
+    {
+        var runtimeDirectory = Path.Combine(RepositoryRoot, "source", "DevTools.NUnit.Runtime");
+        Assert.False(File.Exists(Path.Combine(runtimeDirectory, "NUnitRunTraceScope.cs")));
+
+        var listener = File.ReadAllText(Path.Combine(runtimeDirectory, "NUnitEventListener.cs"));
+        var session = File.ReadAllText(Path.Combine(runtimeDirectory, "NUnitRuntimeSession.cs"));
+        Assert.Contains("TestingRunTraceScope", listener, StringComparison.Ordinal);
+        Assert.Contains("TestingRunTraceScope.Merge", listener, StringComparison.Ordinal);
+        Assert.Contains("new TestingRunTraceScope()", session, StringComparison.Ordinal);
+        Assert.DoesNotContain("NUnitRunTraceScope", listener, StringComparison.Ordinal);
+        Assert.DoesNotContain("NUnitRunTraceScope", session, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void Runtime_uses_nunit_full_name_as_test_id()
     {
         var runtimeDirectory = Path.Combine(RepositoryRoot, "source", "DevTools.NUnit.Runtime");
