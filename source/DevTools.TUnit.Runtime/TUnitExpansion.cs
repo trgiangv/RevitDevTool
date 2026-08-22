@@ -1,114 +1,112 @@
 using System.Reflection;
-using DevTools.Testing.Abstractions.Contracts;
-using TUnit.Core;
 using TUnit.Core.Enums;
 using TUnit.Core.Helpers;
 
 namespace DevTools.TUnit.Runtime;
 
-internal readonly record struct TUnitCombination(
-    object?[] ClassArgs,
-    object?[] MethodArgs,
+/// <summary>
+/// 1-based class/method data indexes plus 0-based repeat, matching
+/// TUnit.Engine <c>TestIdentifierService.GenerateTestId</c>.
+/// Catalog display only reads <see cref="RepeatIndex"/>; the rest is UID.
+/// </summary>
+[UsedImplicitly(ImplicitUseTargetFlags.WithMembers)]
+internal readonly record struct TUnitCombinationIndices(
     int ClassSourceIndex,
     int ClassLoopIndex,
     int MethodSourceIndex,
     int MethodLoopIndex,
-    int RepeatIndex,
+    int RepeatIndex);
+
+internal readonly record struct TUnitCombination(
+    object?[] MethodArgs,
+    TUnitCombinationIndices Indices,
     string? DisplayName,
     bool Deferred,
-    string? ExpansionError,
-    (string Name, object? Value)[] Properties,
-    int PropertyLoopIndex = 0,
-    TestMetadata? Metadata = null);
+    (string Name, object? Value)[] Properties);
+
+internal readonly record struct TUnitExpansionResult(
+    TestMetadata? Metadata,
+    IReadOnlyList<TUnitCombination> Combinations);
 
 internal static class TUnitExpansion
 {
-    public static IReadOnlyList<TUnitCombination> Expand(
-        ITestEntrySource source,
-        int index,
-        string sessionId,
-        TestingDiscoveryOptions options)
+    public static TUnitExpansionResult Expand(ITestEntrySource source, int index, string sessionId)
     {
         var filter = source.GetFilterData(index);
         try
         {
             var metadata = source.Materialize(index, sessionId).Single();
-            return Expand(metadata, filter);
+            return new TUnitExpansionResult(metadata, Expand(metadata, filter, sessionId));
         }
-        catch (Exception ex)
+        catch (Exception)
         {
-            return
-            [
-                new TUnitCombination(
-                    [],
-                    [],
-                    1,
-                    1,
-                    1,
-                    1,
-                    0,
-                    filter.MethodName,
-                    Deferred: true,
-                    ExpansionError: ex.Message,
-                    Properties: []),
-            ];
+            return new TUnitExpansionResult(null, new[] { DeferredCombination(filter.MethodName) });
         }
     }
 
-    public static IReadOnlyList<TUnitCombination> Expand(TestMetadata metadata, TestEntryFilterData filter)
+    private static IReadOnlyList<TUnitCombination> Expand(
+        TestMetadata metadata,
+        TestEntryFilterData filter,
+        string sessionId)
     {
-        var builder = new TestBuilderContext { TestMetadata = metadata.MethodMetadata };
-        var accessor = new TestBuilderContextAccessor(builder);
-        var methodGen = CreateGenerator(metadata, accessor, DataGeneratorType.TestParameters, "expansion");
-        var classGen = CreateGenerator(metadata, accessor, DataGeneratorType.ClassParameters, "expansion");
+        var session = new ExpansionSession(metadata, sessionId);
+        return BuildCombinations(
+            Collect(metadata.ClassDataSources, session.ClassGenerator),
+            Collect(metadata.DataSources, session.MethodGenerator),
+            CollectProperties(metadata, session),
+            RepeatTimes(metadata, filter));
+    }
 
-        var classRows = Collect(metadata.ClassDataSources, classGen);
-        var methodRows = Collect(metadata.DataSources, methodGen);
-        var propertyRows = CollectProperties(metadata, "expansion");
-        var repeats = RepeatTimes(metadata, filter);
+    private static List<TUnitCombination> BuildCombinations(
+        IReadOnlyList<SourceRow> classRows,
+        IReadOnlyList<SourceRow> methodRows,
+        IReadOnlyList<(string Name, object? Value)[]> propertyRows,
+        int repeats)
+    {
         var combinations = new List<TUnitCombination>(
             classRows.Count * methodRows.Count * propertyRows.Count * repeats);
 
         foreach (var classRow in classRows)
+        foreach (var methodRow in methodRows)
+        foreach (var properties in propertyRows)
         {
-            foreach (var methodRow in methodRows)
-            {
-                for (var propertyIndex = 0; propertyIndex < propertyRows.Count; propertyIndex++)
-                {
-                    var properties = propertyRows[propertyIndex];
-                    for (var repeat = 0; repeat < repeats; repeat++)
-                    {
-                        combinations.Add(new TUnitCombination(
-                            classRow.Args,
-                            methodRow.Args,
-                            classRow.SourceIndex,
-                            classRow.LoopIndex,
-                            methodRow.SourceIndex,
-                            methodRow.LoopIndex,
-                            repeat,
-                            methodRow.DisplayName,
-                            Deferred: false,
-                            ExpansionError: null,
-                            Properties: properties,
-                            PropertyLoopIndex: propertyIndex,
-                            Metadata: metadata));
-                    }
-                }
-            }
+            for (var repeat = 0; repeat < repeats; repeat++)
+                combinations.Add(CreateCombination(classRow, methodRow, properties, repeat));
         }
 
         return combinations;
     }
 
-    static List<(string Name, object? Value)[]> CollectProperties(TestMetadata metadata, string session)
+    private static TUnitCombination CreateCombination(
+        SourceRow classRow,
+        SourceRow methodRow,
+        (string Name, object? Value)[] properties,
+        int repeat) =>
+        new(
+            methodRow.Args,
+            new TUnitCombinationIndices(
+                classRow.SourceIndex,
+                classRow.LoopIndex,
+                methodRow.SourceIndex,
+                methodRow.LoopIndex,
+                repeat),
+            methodRow.DisplayName,
+            Deferred: false,
+            properties);
+
+    private static TUnitCombination DeferredCombination(string methodName) =>
+        new([], DeferredIndices, methodName, Deferred: true, []);
+
+    private static readonly TUnitCombinationIndices DeferredIndices = new(1, 1, 1, 1, 0);
+
+    private static List<(string Name, object? Value)[]> CollectProperties(
+        TestMetadata metadata,
+        ExpansionSession session)
     {
         var sources = ResolvePropertyDataSources(metadata);
         if (sources.Length == 0)
-            return [[]];
+            return new List<(string Name, object? Value)[]> { Array.Empty<(string Name, object? Value)>() };
 
-        var builder = new TestBuilderContext { TestMetadata = metadata.MethodMetadata };
-        var accessor = new TestBuilderContextAccessor(builder);
-        var gen = CreateGenerator(metadata, accessor, DataGeneratorType.Property, session);
         var byName = new Dictionary<string, List<object?>>(StringComparer.Ordinal);
         foreach (var source in sources)
         {
@@ -118,38 +116,45 @@ internal static class TUnitExpansion
                 byName[source.PropertyName] = values;
             }
 
-            foreach (var row in CollectSource(source.DataSource, gen, 0))
+            foreach (var row in CollectSource(source.DataSource, session.PropertyGenerator, sourceIndex: 0))
                 values.Add(row.Args.Length > 0 ? row.Args[0] : null);
         }
 
-        IEnumerable<(string Name, object? Value)[]> seed = [[]];
-        foreach (var pair in byName)
-        {
-            var property = pair.Key;
-            var values = pair.Value.Count == 0 ? new List<object?> { null } : pair.Value;
-            seed = seed.SelectMany(prefix => values.Select(value =>
-            {
-                var next = new (string Name, object? Value)[prefix.Length + 1];
-                prefix.CopyTo(next, 0);
-                next[^1] = (property, value);
-                return next;
-            }));
-        }
-
-        return seed.ToList();
+        return CartesianPropertySets(byName);
     }
 
-    static List<SourceRow> Collect(
-        IDataSourceAttribute[] sources,
-        DataGeneratorMetadata generator)
+    private static List<(string Name, object? Value)[]> CartesianPropertySets(
+        Dictionary<string, List<object?>> byName)
+    {
+        var rows = new List<(string Name, object? Value)[]>
+        {
+            Array.Empty<(string Name, object? Value)>(),
+        };
+        foreach (var (name, values) in byName)
+        {
+            var propertyValues = values.Count == 0 ? new List<object?> { null } : values;
+            var next = new List<(string Name, object? Value)[]>(rows.Count * propertyValues.Count);
+            foreach (var row in rows)
+            {
+                foreach (var value in propertyValues)
+                {
+                    var extended = new (string Name, object? Value)[row.Length + 1];
+                    row.CopyTo(extended, 0);
+                    extended[^1] = (name, value);
+                    next.Add(extended);
+                }
+            }
+
+            rows = next;
+        }
+
+        return rows;
+    }
+
+    private static List<SourceRow> Collect(IDataSourceAttribute[] sources, DataGeneratorMetadata generator)
     {
         if (sources.Length == 0)
-        {
-            return
-            [
-                new SourceRow([], 1, 1, null),
-            ];
-        }
+            return [new SourceRow([], 1, 1, null)];
 
         var rows = new List<SourceRow>();
         for (var sourceIndex = 0; sourceIndex < sources.Length; sourceIndex++)
@@ -157,18 +162,15 @@ internal static class TUnitExpansion
             var engineSourceIndex = sourceIndex + 1;
             var collected = CollectSource(sources[sourceIndex], generator, engineSourceIndex);
             if (collected.Count == 0)
-            {
                 rows.Add(new SourceRow([], engineSourceIndex, 1, DisplayNameOf(sources[sourceIndex])));
-                continue;
-            }
-
-            rows.AddRange(collected);
+            else
+                rows.AddRange(collected);
         }
 
-        return rows.Count == 0 ? [new SourceRow([], 1, 1, null)] : rows;
+        return rows;
     }
 
-    static List<SourceRow> CollectSource(
+    private static List<SourceRow> CollectSource(
         IDataSourceAttribute source,
         DataGeneratorMetadata generator,
         int sourceIndex)
@@ -194,7 +196,7 @@ internal static class TUnitExpansion
         return rows;
     }
 
-    static object?[] Normalize(object?[] row)
+    private static object?[] Normalize(object?[] row)
     {
         if (row.Length != 1)
             return row;
@@ -203,12 +205,12 @@ internal static class TUnitExpansion
         return unwrapped.Length > 1 ? unwrapped : row;
     }
 
-    static string? DisplayNameOf(IDataSourceAttribute source) =>
+    private static string? DisplayNameOf(IDataSourceAttribute source) =>
         source is ArgumentsAttribute arguments && !string.IsNullOrWhiteSpace(arguments.DisplayName)
             ? arguments.DisplayName
             : null;
 
-    static int RepeatTimes(TestMetadata metadata, TestEntryFilterData filter)
+    private static int RepeatTimes(TestMetadata metadata, TestEntryFilterData filter)
     {
         var repeatCount = metadata.RepeatCount is > 0
             ? metadata.RepeatCount.Value
@@ -216,7 +218,7 @@ internal static class TUnitExpansion
         return repeatCount > 0 ? repeatCount + 1 : 1;
     }
 
-    static DataGeneratorMetadata CreateGenerator(
+    private static DataGeneratorMetadata CreateGenerator(
         TestMetadata metadata,
         TestBuilderContextAccessor accessor,
         DataGeneratorType type,
@@ -242,7 +244,7 @@ internal static class TUnitExpansion
         };
     }
 
-    static ParameterMetadata[] FilterCancellation(ParameterMetadata[] parameters)
+    private static ParameterMetadata[] FilterCancellation(ParameterMetadata[] parameters)
     {
         if (parameters.Length == 0)
             return parameters;
@@ -252,15 +254,14 @@ internal static class TUnitExpansion
             : parameters;
     }
 
-    static IMemberMetadata[] CastMembers(ParameterMetadata[] parameters) => [.. parameters];
+    private static IMemberMetadata[] CastMembers(ParameterMetadata[] parameters) => [.. parameters];
 
-    static PropertyDataSource[] ResolvePropertyDataSources(TestMetadata metadata)
+    private static PropertyDataSource[] ResolvePropertyDataSources(TestMetadata metadata)
     {
         if (metadata.PropertyDataSources.Length > 0)
             return metadata.PropertyDataSources;
 
-        // TUnit 1.65 TestEntryFactory omits injectableProperties, so generated metadata has
-        // empty PropertyDataSources. Reflect IDataSourceAttribute on writable properties.
+        // TUnit 1.65 TestEntryFactory omits injectableProperties; reflect writable properties instead.
         return metadata.TestClassType
             .GetProperties(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance)
             .Where(property => property.CanWrite)
@@ -275,5 +276,21 @@ internal static class TUnitExpansion
             .ToArray();
     }
 
-    readonly record struct SourceRow(object?[] Args, int SourceIndex, int LoopIndex, string? DisplayName);
+    private sealed class ExpansionSession
+    {
+        public ExpansionSession(TestMetadata metadata, string sessionId)
+        {
+            var builder = new TestBuilderContext { TestMetadata = metadata.MethodMetadata };
+            var accessor = new TestBuilderContextAccessor(builder);
+            MethodGenerator = CreateGenerator(metadata, accessor, DataGeneratorType.TestParameters, sessionId);
+            ClassGenerator = CreateGenerator(metadata, accessor, DataGeneratorType.ClassParameters, sessionId);
+            PropertyGenerator = CreateGenerator(metadata, accessor, DataGeneratorType.Property, sessionId);
+        }
+
+        public DataGeneratorMetadata MethodGenerator { get; }
+        public DataGeneratorMetadata ClassGenerator { get; }
+        public DataGeneratorMetadata PropertyGenerator { get; }
+    }
+
+    private readonly record struct SourceRow(object?[] Args, int SourceIndex, int LoopIndex, string? DisplayName);
 }

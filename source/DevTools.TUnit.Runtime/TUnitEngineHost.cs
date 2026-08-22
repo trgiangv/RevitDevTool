@@ -5,7 +5,6 @@ using Microsoft.Testing.Platform.Extensions;
 using Microsoft.Testing.Platform.Extensions.Messages;
 using Microsoft.Testing.Platform.Extensions.TestFramework;
 using Microsoft.Testing.Platform.Requests;
-using TUnit.Core;
 using ReflectionAssembly = System.Reflection.Assembly;
 using MtpTestSessionContext = Microsoft.Testing.Platform.TestHost.TestSessionContext;
 using SessionUid = Microsoft.Testing.Platform.TestHost.SessionUid;
@@ -17,12 +16,12 @@ namespace DevTools.TUnit.Runtime;
 
 internal static class TUnitEngineHost
 {
-    const string EngineAssemblyName = "TUnit.Engine";
-    const string ExtensionTypeName = "TUnit.Engine.Framework.TUnitExtension";
-    const string FrameworkTypeName = "TUnit.Engine.Framework.TUnitTestFramework";
-    const string ServiceProviderTypeName = "Microsoft.Testing.Platform.Services.ServiceProvider";
-    const string ClientInfoTypeName = "Microsoft.Testing.Platform.Services.ClientInfoService";
-    const string OutputDeviceTypeName = "Microsoft.Testing.Platform.OutputDevice.NopPlatformOutputDevice";
+    private const string EngineAssemblyName = "TUnit.Engine";
+    private const string ExtensionTypeName = "TUnit.Engine.Framework.TUnitExtension";
+    private const string FrameworkTypeName = "TUnit.Engine.Framework.TUnitTestFramework";
+    private const string ServiceProviderTypeName = "Microsoft.Testing.Platform.Services.ServiceProvider";
+    private const string ClientInfoTypeName = "Microsoft.Testing.Platform.Services.ClientInfoService";
+    private const string OutputDeviceTypeName = "Microsoft.Testing.Platform.OutputDevice.NopPlatformOutputDevice";
 
     public static IReadOnlyList<TestingCaseResult> Run(
         TestingSelection selection,
@@ -41,7 +40,7 @@ internal static class TUnitEngineHost
         }
     }
 
-    static IReadOnlyList<TestingCaseResult> RunEngine(
+    private static IReadOnlyList<TestingCaseResult> RunEngine(
         TestingSelection selection,
         CancellationToken cancellationToken)
     {
@@ -100,7 +99,7 @@ internal static class TUnitEngineHost
         return TUnitEngineResults.Map(messageBus.Nodes.Values);
     }
 
-    static ITestExecutionFilter CreateFilter(TestingSelection selection)
+    private static ITestExecutionFilter CreateFilter(TestingSelection selection)
     {
         var ids = (selection.TestIds ?? [])
             .Where(id => !string.IsNullOrWhiteSpace(id))
@@ -113,7 +112,7 @@ internal static class TUnitEngineHost
             : new TestNodeUidListFilter(ids);
     }
 
-    static object CreateServiceProvider(ReflectionAssembly platform, string workingDirectory, string resultDirectory)
+    private static object CreateServiceProvider(ReflectionAssembly platform, string workingDirectory, string resultDirectory)
     {
         var provider = Activator.CreateInstance(RequiredType(platform, ServiceProviderTypeName))!;
         var add = provider.GetType().GetMethod("AddService", [typeof(object), typeof(bool)])
@@ -127,7 +126,7 @@ internal static class TUnitEngineHost
         return provider;
     }
 
-    static Type RequiredType(ReflectionAssembly assembly, string typeName) =>
+    private static Type RequiredType(ReflectionAssembly assembly, string typeName) =>
         assembly.GetType(typeName, throwOnError: true)
         ?? throw new InvalidOperationException($"Type '{typeName}' was not found in '{assembly.GetName().Name}'.");
 }

@@ -1,7 +1,6 @@
 using System.Diagnostics.CodeAnalysis;
 using Microsoft.Testing.Platform.CommandLine;
 using Microsoft.Testing.Platform.Configurations;
-using Microsoft.Testing.Platform.Extensions;
 using Microsoft.Testing.Platform.Extensions.Messages;
 using Microsoft.Testing.Platform.Extensions.OutputDevice;
 using Microsoft.Testing.Platform.Logging;
@@ -13,18 +12,24 @@ namespace DevTools.TUnit.Runtime;
 
 #pragma warning disable TPEXP
 
+[UsedImplicitly(ImplicitUseTargetFlags.WithMembers)]
 internal sealed class TUnitEngineCommandLine : ICommandLineOptions
 {
+    /// <summary>TUnit.Engine <c>ICommandLineOptions</c> name; keep serial execution on the host thread.</summary>
+    public const string MaximumParallelTests = "maximum-parallel-tests";
+
+    public static readonly string[] SerialExecution = ["1"];
+
     public bool IsOptionSet(string optionName) =>
-        string.Equals(optionName, "maximum-parallel-tests", StringComparison.Ordinal);
+        string.Equals(optionName, MaximumParallelTests, StringComparison.Ordinal);
 
     public bool TryGetOptionArgumentList(
         string optionName,
         [NotNullWhen(true)] out string[]? arguments)
     {
-        if (string.Equals(optionName, "maximum-parallel-tests", StringComparison.Ordinal))
+        if (string.Equals(optionName, MaximumParallelTests, StringComparison.Ordinal))
         {
-            arguments = ["1"];
+            arguments = SerialExecution;
             return true;
         }
 
@@ -33,13 +38,18 @@ internal sealed class TUnitEngineCommandLine : ICommandLineOptions
     }
 }
 
+[UsedImplicitly(ImplicitUseTargetFlags.WithMembers)]
 internal sealed class TUnitEngineConfiguration(string workingDirectory, string resultDirectory) : IConfiguration
 {
+    public const string ResultDirectory = "platformOptions:resultDirectory";
+    public const string CurrentWorkingDirectory = "platformOptions:currentWorkingDirectory";
+    public const string TestHostWorkingDirectory = "platformOptions:testHostWorkingDirectory";
+
     public string? this[string key] => key switch
     {
-        "platformOptions:resultDirectory" => resultDirectory,
-        "platformOptions:currentWorkingDirectory" => workingDirectory,
-        "platformOptions:testHostWorkingDirectory" => workingDirectory,
+        ResultDirectory => resultDirectory,
+        CurrentWorkingDirectory => workingDirectory,
+        TestHostWorkingDirectory => workingDirectory,
         _ => null,
     };
 }

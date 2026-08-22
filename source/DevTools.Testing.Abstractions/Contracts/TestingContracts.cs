@@ -50,7 +50,7 @@ public sealed record TestingDiscoveredTest(
     TestingSourceLocation? Source = null,
     string? Namespace = null,
     string? TypeName = null,
-    int MethodArity = 0,
+    [property: UsedImplicitly] int MethodArity = 0,
     bool HasDataSource = false,
     IReadOnlyList<string>? Categories = null);
 

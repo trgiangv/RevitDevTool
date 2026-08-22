@@ -1,28 +1,34 @@
 using DevTools.Testing.Abstractions.Contracts;
-using TUnit.Core;
 
 namespace DevTools.TUnit.Runtime;
 
 internal static class TUnitTestIdentity
 {
+    /// <summary>TUnit.Engine deferred-placeholder UID token.</summary>
+    public const string DeferredSuffix = "_Deferred";
+
+    /// <summary>TUnit.Engine inherited-test UID token.</summary>
+    public const string InheritedPrefix = "_inherited";
+
     public static string From(TestMetadata metadata, TUnitCombination combination)
     {
         var method = metadata.MethodMetadata;
-        var id =
+        var id = combination.Indices;
+        var identity =
             $"{method.Class.Namespace}." +
             $"{TypeNameWithGenerics(metadata.TestClassType)}" +
             $"{FormatParameters(method.Class.Parameters)}." +
-            $"{combination.ClassSourceIndex}." +
-            $"{combination.ClassLoopIndex}." +
+            $"{id.ClassSourceIndex}." +
+            $"{id.ClassLoopIndex}." +
             $"{metadata.TestMethodName}" +
             $"{FormatMethodGenerics(metadata)}" +
             $"{FormatParameters(method.Parameters)}." +
-            $"{combination.MethodSourceIndex}." +
-            $"{combination.MethodLoopIndex}." +
-            $"{combination.RepeatIndex}";
+            $"{id.MethodSourceIndex}." +
+            $"{id.MethodLoopIndex}." +
+            $"{id.RepeatIndex}";
         return metadata.InheritanceDepth > 0
-            ? $"{id}_inherited{metadata.InheritanceDepth}"
-            : id;
+            ? $"{identity}{InheritedPrefix}{metadata.InheritanceDepth}"
+            : identity;
     }
 
     public static string Deferred(TestMetadata metadata)
@@ -33,11 +39,11 @@ internal static class TUnitTestIdentity
             $"{TypeNameWithGenerics(metadata.TestClassType)}" +
             $"{FormatParameters(method.Class.Parameters)}." +
             $"{metadata.TestMethodName}" +
-            $"{FormatParameters(method.Parameters)}_Deferred";
+            $"{FormatParameters(method.Parameters)}{DeferredSuffix}";
     }
 
     public static string Fallback(string? @namespace, string typeName, string methodName) =>
-        $"{@namespace}.{typeName}.{methodName}_Deferred";
+        $"{@namespace}.{typeName}.{methodName}{DeferredSuffix}";
 
     public static string TypeNameWithGenerics(Type type)
     {
@@ -64,7 +70,7 @@ internal static class TUnitTestIdentity
         return new TestingDiscoveryHints(classes, methods);
     }
 
-    static string AppendGenericName(Type type)
+    private static string AppendGenericName(Type type)
     {
         if (!type.IsGenericType)
             return type.Name;
@@ -77,7 +83,7 @@ internal static class TUnitTestIdentity
         return $"{prefix}<{string.Join(", ", args)}>";
     }
 
-    static string FormatMethodGenerics(TestMetadata metadata)
+    private static string FormatMethodGenerics(TestMetadata metadata)
     {
         var args = metadata.GenericMethodTypeArguments;
         if (args is not { Length: > 0 })
@@ -85,7 +91,7 @@ internal static class TUnitTestIdentity
         return $"<{string.Join(",", args.Select(argument => argument.FullName ?? argument.Name))}>";
     }
 
-    static string FormatParameters(ParameterMetadata[] parameters)
+    private static string FormatParameters(ParameterMetadata[] parameters)
     {
         if (parameters.Length == 0)
             return string.Empty;

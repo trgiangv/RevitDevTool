@@ -1,7 +1,7 @@
 using System.Runtime.CompilerServices;
 using DevTools.Testing.Abstractions;
 using DevTools.Testing.Abstractions.Contracts;
-using TUnit.Core;
+using DevTools.Testing.Abstractions.Loading;
 using ReflectionAssembly = System.Reflection.Assembly;
 
 namespace DevTools.TUnit.Runtime;
@@ -12,12 +12,10 @@ internal static class TUnitCatalog
         string assemblyPath,
         TestingSelection selection,
         TestingDiscoveryOptions options,
-        ReflectionAssembly? alreadyLoaded = null)
-    {
-        return Enumerate(assemblyPath, selection, options, "discovery", alreadyLoaded).ToList();
-    }
+        ReflectionAssembly? alreadyLoaded = null) =>
+        Enumerate(assemblyPath, selection, options, "discovery", alreadyLoaded);
 
-    static IEnumerable<TestingDiscoveredTest> Enumerate(
+    private static IReadOnlyList<TestingDiscoveredTest> Enumerate(
         string assemblyPath,
         TestingSelection selection,
         TestingDiscoveryOptions options,
@@ -28,46 +26,84 @@ internal static class TUnitCatalog
         var ids = Clean(selection.TestIds);
         var names = Clean(selection.Names);
         var hints = selection.Hints;
-        var yielded = false;
-
-        foreach (var source in Sources.TestEntries.Values)
-        {
-            for (var index = 0; index < source.Count; index++)
-            {
-                var filter = source.GetFilterData(index);
-                if (!MatchesHints(source, filter, hints))
-                    continue;
-
-                foreach (var combination in TUnitExpansion.Expand(source, index, sessionId, options))
-                {
-                    var discovered = Map(source, filter, combination, options);
-                    if (!MatchesSelection(discovered, filter, combination, ids, names))
-                        continue;
-                    yielded = true;
-                    yield return discovered;
-                }
-            }
-        }
-
-        if (!yielded
-            && ids.Count == 0
-            && names.Count == 0
-            && (hints is null || hints.IsEmpty)
-            && Sources.TestEntries.IsEmpty)
+        var tests = EnumerateMatches(options, sessionId, ids, names, hints).ToList();
+        if (tests.Count == 0 && ShouldReportEmptyRegistrar(ids, names, hints))
         {
             throw new HostTestDiscoveryFailedException(
                 "TUnit discovery found no SourceRegistrar entries. " +
                 "The test assembly module constructor did not register TestEntry sources.");
         }
+
+        return tests;
     }
 
-    static TestingDiscoveredTest Map(
+    private static IEnumerable<TestingDiscoveredTest> EnumerateMatches(
+        TestingDiscoveryOptions options,
+        string sessionId,
+        HashSet<string> ids,
+        HashSet<string> names,
+        TestingDiscoveryHints? hints)
+    {
+        foreach (var source in Sources.TestEntries.Values)
+        {
+            foreach (var discovered in EnumerateSource(source, options, sessionId, ids, names, hints))
+                yield return discovered;
+        }
+    }
+
+    private static IEnumerable<TestingDiscoveredTest> EnumerateSource(
+        ITestEntrySource source,
+        TestingDiscoveryOptions options,
+        string sessionId,
+        HashSet<string> ids,
+        HashSet<string> names,
+        TestingDiscoveryHints? hints)
+    {
+        for (var index = 0; index < source.Count; index++)
+        {
+            var filter = source.GetFilterData(index);
+            if (!MatchesHints(source, filter, hints))
+                continue;
+
+            foreach (var discovered in EnumerateCombinations(source, filter, index, options, sessionId, ids, names))
+                yield return discovered;
+        }
+    }
+
+    private static IEnumerable<TestingDiscoveredTest> EnumerateCombinations(
         ITestEntrySource source,
         TestEntryFilterData filter,
+        int index,
+        TestingDiscoveryOptions options,
+        string sessionId,
+        HashSet<string> ids,
+        HashSet<string> names)
+    {
+        var expansion = TUnitExpansion.Expand(source, index, sessionId);
+        foreach (var combination in expansion.Combinations)
+        {
+            var discovered = Map(source, filter, expansion.Metadata, combination, options);
+            if (MatchesSelection(discovered, filter, expansion.Metadata, ids, names))
+                yield return discovered;
+        }
+    }
+
+    private static bool ShouldReportEmptyRegistrar(
+        HashSet<string> ids,
+        HashSet<string> names,
+        TestingDiscoveryHints? hints) =>
+        ids.Count == 0
+        && names.Count == 0
+        && (hints is null || hints.IsEmpty)
+        && Sources.TestEntries.IsEmpty;
+
+    private static TestingDiscoveredTest Map(
+        ITestEntrySource source,
+        TestEntryFilterData filter,
+        TestMetadata? metadata,
         TUnitCombination combination,
         TestingDiscoveryOptions options)
     {
-        var metadata = combination.Metadata;
         var namespaceName = metadata?.MethodMetadata.Class.Namespace ?? source.ClassType.Namespace ?? string.Empty;
         var typeName = metadata is not null
             ? TUnitTestIdentity.TypeNameWithGenerics(metadata.TestClassType)
@@ -100,7 +136,7 @@ internal static class TUnitCatalog
             Categories: filter.Categories);
     }
 
-    static string FormatDisplay(string methodName, TUnitCombination combination)
+    private static string FormatDisplay(string methodName, TUnitCombination combination)
     {
         if (combination.Deferred)
             return methodName;
@@ -109,20 +145,22 @@ internal static class TUnitCatalog
             parts.Add(string.Join(", ", combination.MethodArgs.Select(FormatArg)));
         if (combination.Properties.Length > 0)
             parts.AddRange(combination.Properties.Select(property => $"{property.Name}={FormatArg(property.Value)}"));
-        var suffix = combination.RepeatIndex > 0 ? $" repeat {combination.RepeatIndex}" : string.Empty;
+        var suffix = combination.Indices.RepeatIndex > 0
+            ? $" repeat {combination.Indices.RepeatIndex}"
+            : string.Empty;
         return parts.Count == 0
             ? $"{methodName}{suffix}"
             : $"{methodName}({string.Join(", ", parts)}){suffix}";
     }
 
-    static string FormatArg(object? value) => value switch
+    private static string FormatArg(object? value) => value switch
     {
         null => "null",
         string text => $"\"{text}\"",
         _ => Convert.ToString(value, System.Globalization.CultureInfo.InvariantCulture) ?? "?",
     };
 
-    static void EnsureLoaded(string assemblyPath, ReflectionAssembly? alreadyLoaded)
+    private static void EnsureLoaded(string assemblyPath, ReflectionAssembly? alreadyLoaded)
     {
         SourceRegistrar.IsEnabled = true;
         if (alreadyLoaded is not null)
@@ -148,16 +186,18 @@ internal static class TUnitCatalog
         var entry = ReflectionAssembly.GetEntryAssembly();
         if (entry is not null
             && entry.Location.Length > 0
-            && string.Equals(Path.GetFullPath(entry.Location), assemblyPath, StringComparison.OrdinalIgnoreCase))
+            && string.Equals(Path.GetFullPath(entry.Location), assemblyPath, StringComparison.OrdinalIgnoreCase)
+            && DiscoveryRefs.Read(assemblyPath).Count == 0)
         {
             RuntimeHelpers.RunModuleConstructor(entry.ManifestModule.ModuleHandle);
             return;
         }
 
-        RuntimeHelpers.RunModuleConstructor(ReflectionAssembly.LoadFrom(assemblyPath).ManifestModule.ModuleHandle);
+        using var load = DiscoveryAssemblyLoad.Open(assemblyPath);
+        RuntimeHelpers.RunModuleConstructor(load.Assembly.ManifestModule.ModuleHandle);
     }
 
-    static bool MatchesHints(ITestEntrySource source, TestEntryFilterData filter, TestingDiscoveryHints? hints)
+    private static bool MatchesHints(ITestEntrySource source, TestEntryFilterData filter, TestingDiscoveryHints? hints)
     {
         if (hints is null || hints.IsEmpty)
             return true;
@@ -188,10 +228,10 @@ internal static class TUnitCatalog
         return true;
     }
 
-    static bool MatchesSelection(
+    private static bool MatchesSelection(
         TestingDiscoveredTest test,
         TestEntryFilterData filter,
-        TUnitCombination combination,
+        TestMetadata? metadata,
         HashSet<string> ids,
         HashSet<string> names)
     {
@@ -204,7 +244,7 @@ internal static class TUnitCatalog
             return true;
         }
 
-        if (combination.Metadata is not null && ids.Contains(TUnitTestIdentity.Deferred(combination.Metadata)))
+        if (metadata is not null && ids.Contains(TUnitTestIdentity.Deferred(metadata)))
             return true;
 
         return names.Any(name =>
@@ -215,12 +255,12 @@ internal static class TUnitCatalog
             || string.Equals(filter.MethodName, name, StringComparison.OrdinalIgnoreCase));
     }
 
-    static HashSet<string> Clean(IReadOnlyList<string>? values) =>
+    private static HashSet<string> Clean(IReadOnlyList<string>? values) =>
         values is null
             ? new HashSet<string>(StringComparer.Ordinal)
             : values.Where(value => !string.IsNullOrWhiteSpace(value))
                 .Select(value => value.Trim())
                 .ToHashSet(StringComparer.Ordinal);
 
-    static bool IsBlank(IReadOnlyList<string>? values) => values is null || values.Count == 0;
+    private static bool IsBlank(IReadOnlyList<string>? values) => values is null || values.Count == 0;
 }

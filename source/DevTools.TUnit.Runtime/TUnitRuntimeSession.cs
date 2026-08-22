@@ -9,7 +9,8 @@ public sealed class TUnitRuntimeSession : ITestingRuntimeSession
 {
     private readonly Assembly _testAssembly;
     private readonly string _assemblyPath;
-    private readonly object _gate = new();
+    private readonly object _executionGate = new();
+    private readonly object _runControl = new();
     private CancellationTokenSource? _runCts;
     private Guid _activeRunId;
     private bool _disposed;
@@ -28,17 +29,22 @@ public sealed class TUnitRuntimeSession : ITestingRuntimeSession
         ITestingRuntimeEventSink eventSink,
         CancellationToken cancellationToken)
     {
-        lock (_gate)
+        lock (_executionGate)
         {
-            if (_disposed)
-                throw new ObjectDisposedException(GetType().FullName);
+            ThrowIfDisposed();
             cancellationToken.ThrowIfCancellationRequested();
             ValidateAssembly(request.Assembly.Path);
 
             RuntimeHelpers.RunModuleConstructor(_testAssembly.ManifestModule.ModuleHandle);
-            using var linked = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-            _runCts = linked;
-            _activeRunId = request.RunId;
+
+            CancellationTokenSource linked;
+            lock (_runControl)
+            {
+                ThrowIfDisposed();
+                linked = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+                _runCts = linked;
+                _activeRunId = request.RunId;
+            }
 
             try
             {
@@ -66,16 +72,25 @@ public sealed class TUnitRuntimeSession : ITestingRuntimeSession
             }
             finally
             {
-                _runCts = null;
-                _activeRunId = Guid.Empty;
+                lock (_runControl)
+                {
+                    linked.Dispose();
+                    if (_runCts == linked)
+                        _runCts = null;
+                    if (_activeRunId == request.RunId)
+                        _activeRunId = Guid.Empty;
+                }
             }
         }
     }
 
     public void Cancel(Guid runId)
     {
-        lock (_gate)
+        lock (_runControl)
         {
+            if (_disposed)
+                return;
+
             if (_activeRunId == runId)
                 _runCts?.Cancel();
         }
@@ -83,13 +98,23 @@ public sealed class TUnitRuntimeSession : ITestingRuntimeSession
 
     public void Dispose()
     {
-        lock (_gate)
+        lock (_runControl)
         {
+            if (_disposed)
+                return;
+
+            _disposed = true;
             _runCts?.Cancel();
             _runCts?.Dispose();
             _runCts = null;
-            _disposed = true;
+            _activeRunId = Guid.Empty;
         }
+    }
+
+    private void ThrowIfDisposed()
+    {
+        if (_disposed)
+            throw new ObjectDisposedException(GetType().FullName);
     }
 
     private void ValidateAssembly(string requestAssemblyPath)

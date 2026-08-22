@@ -21,7 +21,7 @@ internal static class TUnitEngineResults
         return results;
     }
 
-    static TestingCaseResult? Map(TestNode node)
+    private static TestingCaseResult? Map(TestNode node)
     {
         var properties = node.Properties;
         var skipped = properties.SingleOrDefault<SkippedTestNodeStateProperty>();
@@ -67,7 +67,7 @@ internal static class TUnitEngineResults
             SkipReason: skipped?.Explanation);
     }
 
-    static string? Combine(string? stdout, string? stderr)
+    private static string? Combine(string? stdout, string? stderr)
     {
         if (string.IsNullOrWhiteSpace(stdout))
             return string.IsNullOrWhiteSpace(stderr) ? null : stderr;
