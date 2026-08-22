@@ -51,43 +51,25 @@ public static class HostUiHelper
     }
 
     /// <summary>
-    /// https://github.com/Nice3point/RevitToolkit
+    /// Block on host start without pumping the WPF dispatcher.
+    /// Clears <see cref="SynchronizationContext"/> <em>before</em> invoking
+    /// <paramref name="start"/> so awaits resume on the thread pool instead of
+    /// posting back to the blocked caller. The synchronous prefix of
+    /// <paramref name="start"/> still runs on the caller
     /// </summary>
-    public static void RunWithMessagePump(Task task)
+    public static void RunBlocking(Func<Task> start)
     {
-        if (task.IsCompleted)
+        if (start is null) throw new ArgumentNullException(nameof(start));
+
+        var captured = SynchronizationContext.Current;
+        SynchronizationContext.SetSynchronizationContext(null);
+        try
         {
-            task.GetAwaiter().GetResult();
-            return;
+            start().GetAwaiter().GetResult();
         }
-
-        // AutoCAD/Civil3D can enter IExtensionApplication while dispatcher processing is
-        // suspended. PushFrame then throws InvalidOperationException. Revit Host.Start
-        // still uses the message-pump path when the dispatcher is not suspended.
-        var dispatcher = Dispatcher.FromThread(Thread.CurrentThread);
-        if (dispatcher is not null && IsProcessingSuspended(dispatcher))
+        finally
         {
-            task.GetAwaiter().GetResult();
-            return;
+            SynchronizationContext.SetSynchronizationContext(captured);
         }
-
-        var frame = new DispatcherFrame();
-
-        // TaskScheduler.Default ensures continuation runs on ThreadPool, not UI thread.
-        // Prevents deadlock: if continuation ran on UI thread via SynchronizationContext,
-        // it would wait for PushFrame to finish, which waits for continuation - deadlock.
-        task.ContinueWith(_ => frame.Continue = false, TaskScheduler.Default);
-
-        Dispatcher.PushFrame(frame);
-
-        task.GetAwaiter().GetResult();
-    }
-
-    private static bool IsProcessingSuspended(Dispatcher dispatcher)
-    {
-        var field = typeof(Dispatcher).GetField(
-            "_disableProcessingCount",
-            BindingFlags.Instance | BindingFlags.NonPublic);
-        return field?.GetValue(dispatcher) is int count && count > 0;
     }
 }

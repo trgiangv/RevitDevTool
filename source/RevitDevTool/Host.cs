@@ -46,7 +46,7 @@ public static class Host
 
         _host = builder.Build();
         RegisterProcessTelemetryHandlers();
-        HostUiHelper.RunWithMessagePump(_host.StartAsync());
+        HostUiHelper.RunBlocking(() => _host.StartAsync());
     }
 
     public static void Stop()
