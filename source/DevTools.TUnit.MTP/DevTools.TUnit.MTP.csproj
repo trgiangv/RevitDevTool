@@ -1,16 +1,26 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <TargetFrameworks>net48;net8.0-windows</TargetFrameworks>
+    <TargetFrameworks>net48;net8.0-windows;net10.0-windows</TargetFrameworks>
     <AppendTargetFrameworkToOutputPath>true</AppendTargetFrameworkToOutputPath>
     <RootNamespace>DevTools.TUnit.MTP</RootNamespace>
     <AssemblyName>DevTools.TUnit.MTP</AssemblyName>
     <IsPackable>false</IsPackable>
     <IsTestProject>false</IsTestProject>
+    <EnableTUnitPolyfills>false</EnableTUnitPolyfills>
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="TUnit.Core">
+      <PrivateAssets>all</PrivateAssets>
+      <ExcludeAssets>runtime</ExcludeAssets>
+    </PackageReference>
     <ProjectReference Include="..\DevTools.Testing.Abstractions\DevTools.Testing.Abstractions.csproj">
       <SetTargetFramework>TargetFramework=$(TargetFramework)</SetTargetFramework>
     </ProjectReference>
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="..\DevTools.TUnit.Runtime\TUnitCatalog.cs" Link="TUnitCatalog.cs" />
+    <Compile Include="..\DevTools.TUnit.Runtime\TUnitExpansion.cs" Link="TUnitExpansion.cs" />
+    <Compile Include="..\DevTools.TUnit.Runtime\TUnitTestIdentity.cs" Link="TUnitTestIdentity.cs" />
   </ItemGroup>
 </Project>

@@ -9,6 +9,8 @@ namespace DevTools.Testing.Transport;
 [JsonSerializable(typeof(TestingHostOptions))]
 [JsonSerializable(typeof(TestingAssemblyReference))]
 [JsonSerializable(typeof(TestingSelection))]
+[JsonSerializable(typeof(TestingDiscoveryHints))]
+[JsonSerializable(typeof(TestingDiscoveryOptions))]
 [JsonSerializable(typeof(TestingRunRequest))]
 [JsonSerializable(typeof(TestingAttachment))]
 [JsonSerializable(typeof(TestingSourceLocation))]

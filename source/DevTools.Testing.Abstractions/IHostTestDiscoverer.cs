@@ -11,9 +11,18 @@ public interface IHostTestDiscoverer
 {
     IReadOnlyList<TestingDiscoveredTest> Discover(string assemblyPath);
 
+    IReadOnlyList<TestingDiscoveredTest> Discover(
+        string assemblyPath,
+        TestingDiscoveryOptions options);
+
     IReadOnlyList<TestingDiscoveredTest> Select(
         string assemblyPath,
         TestingSelection selection);
+
+    IReadOnlyList<TestingDiscoveredTest> Select(
+        string assemblyPath,
+        TestingSelection selection,
+        TestingDiscoveryOptions options);
 
     TestingSelection ToHostSelection(
         TestingSelection requested,

@@ -31,7 +31,7 @@
 
     <ItemGroup>
         <!--UI-->
-        <PackageReference Include="Microsoft.Web.WebView2" Condition="$(RevitVersion) &lt; 2024"/>
+        <PackageReference Include="Microsoft.Web.WebView2" Condition="$(RevitVersion) &lt; 2024" />
     </ItemGroup>
 
     <ItemGroup Condition="$(TargetFramework.StartsWith('net4'))">
@@ -48,14 +48,15 @@
         <ProjectReference Include="..\DevTools.Settings\DevTools.Settings.csproj" />
         <ProjectReference Include="..\DevTools.Execution\DevTools.Execution.csproj" />
         <ProjectReference Include="..\DevTools.Telemetry\DevTools.Telemetry.csproj" />
-        <ProjectReference Include="..\DevTools.Execution.Abstractions\DevTools.Execution.Abstractions.csproj" />
-        <ProjectReference Include="..\..\libs\pythonnet-stub-generator\csharp\PythonNetStubGenerator\PythonNetStubGenerator.csproj" />
+        <ProjectReference
+            Include="..\DevTools.Execution.Abstractions\DevTools.Execution.Abstractions.csproj" />
+        <ProjectReference
+            Include="..\..\libs\pythonnet-stub-generator\csharp\PythonNetStubGenerator\PythonNetStubGenerator.csproj" />
         <ProjectReference Include="..\RevitDevTool.Core\RevitDevTool.Core.csproj" />
         <ProjectReference Include="..\DevTools.Mcp.Revit\DevTools.Mcp.Revit.csproj" />
         <ProjectReference Include="..\DevTools.NUnit.Host\DevTools.NUnit.Host.csproj" />
         <ProjectReference Include="..\DevTools.TUnit.Host\DevTools.TUnit.Host.csproj"
-                          SetTargetFramework="TargetFramework=$(TargetFramework)"
-                          Condition="'$(RevitVersion)' == '2023' OR '$(RevitVersion)' == '2025'" />
+            SetTargetFramework="TargetFramework=$(TargetFramework)" />
     </ItemGroup>
 
     <ItemGroup>

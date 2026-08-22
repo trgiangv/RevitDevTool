@@ -133,7 +133,7 @@ internal sealed class HostTestFramework : ITestFramework, IDataProducer
         var options = ApplyDebugParent(_options);
         var filter = ResolveRunnerFilter(request.Filter);
         var discoverer = RequireDiscoverer();
-        var cases = discoverer.Select(assemblyPath, filter);
+        var cases = discoverer.Select(assemblyPath, filter, TestingDiscoveryOptions.Testhost);
         var hostSelection = discoverer.ToHostSelection(filter, cases);
         var testCount = Math.Max(cases.Count, filter.TestIds?.Count ?? 0);
         if (testCount == 0 && IsConstrained(filter))
@@ -230,7 +230,7 @@ internal sealed class HostTestFramework : ITestFramework, IDataProducer
     internal static IReadOnlyList<TestingDiscoveredTest> SelectCases(
         string assemblyPath,
         TestingSelection selection) =>
-        RequireDiscoverer().Select(assemblyPath, selection);
+        RequireDiscoverer().Select(assemblyPath, selection, TestingDiscoveryOptions.Testhost);
 
     private static bool IsConstrained(TestingSelection selection) =>
         selection.TestIds is { Count: > 0 } || selection.Names is { Count: > 0 };

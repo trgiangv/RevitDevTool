@@ -1,6 +1,6 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <TargetFrameworks>net48;net8.0-windows</TargetFrameworks>
+    <TargetFrameworks>net48;net8.0-windows;net10.0-windows</TargetFrameworks>
     <RootNamespace>DevTools.TUnit.Host</RootNamespace>
     <AssemblyName>DevTools.TUnit.Host</AssemblyName>
     <IsPackable>false</IsPackable>

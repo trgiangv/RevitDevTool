@@ -9,9 +9,7 @@ using DevTools.Logging.Abstractions;
 using DevTools.Mcp.Catalog;
 using DevTools.NUnit.Host;
 using DevTools.Testing.Host;
-#if REVIT2023 || REVIT2025
 using DevTools.TUnit.Host;
-#endif
 using DevTools.Presentation;
 using DevTools.Presentation.Interfaces;
 using DevTools.Settings;
@@ -137,9 +135,7 @@ internal static class RevitServiceRegistration
 
         services.AddExecutionServices(registerDefaultScriptProvider: false);
         services.AddNUnitHostServices();
-#if REVIT2023 || REVIT2025
         services.AddTUnitHostServices();
-#endif
         services.AddGenericTestingHostServices();
         services.AddSingleton<IScriptExecutionStrategyFactory, RevitScriptExecutionStrategyFactory>();
         services.AddSingleton<IExecutionProvider, ScriptExecutionProvider>();

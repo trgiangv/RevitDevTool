@@ -15,10 +15,31 @@ public sealed record TestingAssemblyReference(
     string? TargetFramework,
     string? ContentHash);
 
+public sealed record TestingDiscoveryHints(
+    IReadOnlyList<string>? ClassNames = null,
+    IReadOnlyList<string>? MethodNames = null,
+    IReadOnlyList<string>? Categories = null)
+{
+    public static TestingDiscoveryHints Empty { get; } = new();
+
+    public bool IsEmpty =>
+        IsBlank(ClassNames) && IsBlank(MethodNames) && IsBlank(Categories);
+
+    static bool IsBlank(IReadOnlyList<string>? values) => values is null || values.Count == 0;
+}
+
+public sealed record TestingDiscoveryOptions(bool ForExecution = false)
+{
+    public static TestingDiscoveryOptions Testhost { get; } = new(ForExecution: false);
+
+    public static TestingDiscoveryOptions HostRun { get; } = new(ForExecution: true);
+}
+
 public sealed record TestingSelection(
     IReadOnlyList<string> TestIds,
     string? ProviderPayload = null,
-    IReadOnlyList<string>? Names = null);
+    IReadOnlyList<string>? Names = null,
+    TestingDiscoveryHints? Hints = null);
 
 public sealed record TestingDiscoveredTest(
     string TestId,
@@ -29,7 +50,9 @@ public sealed record TestingDiscoveredTest(
     TestingSourceLocation? Source = null,
     string? Namespace = null,
     string? TypeName = null,
-    int MethodArity = 0);
+    int MethodArity = 0,
+    bool HasDataSource = false,
+    IReadOnlyList<string>? Categories = null);
 
 public sealed record TestingRunRequest
 {

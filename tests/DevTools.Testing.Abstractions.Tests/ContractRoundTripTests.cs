@@ -26,6 +26,28 @@ public sealed class ContractRoundTripTests
     }
 
     [Fact]
+    public void Discovery_hints_are_optional_and_empty_by_default()
+    {
+        var selection = new TestingSelection(["id-1"]);
+        Assert.Null(selection.Hints);
+        Assert.True(TestingDiscoveryHints.Empty.IsEmpty);
+        Assert.False(new TestingDiscoveryHints(ClassNames: ["Smoke"]).IsEmpty);
+
+        var discovered = new TestingDiscoveredTest(
+            "Ns.Class.1.1.Method.1.1.0",
+            "Method",
+            "Ns.Class.Method",
+            "Ns.Class",
+            "Method",
+            HasDataSource: false,
+            Categories: ["Host"]);
+        Assert.False(discovered.HasDataSource);
+        Assert.Equal("Host", Assert.Single(discovered.Categories!));
+        Assert.False(TestingDiscoveryOptions.Testhost.ForExecution);
+        Assert.True(TestingDiscoveryOptions.HostRun.ForExecution);
+    }
+
+    [Fact]
     public void Every_cancellation_state_round_trips_on_events_and_responses()
     {
         foreach (TestingCancellationState state in Enum.GetValues<TestingCancellationState>())

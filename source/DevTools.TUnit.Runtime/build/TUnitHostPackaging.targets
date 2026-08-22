@@ -6,7 +6,7 @@
   <Target Name="CopyTUnitRuntimeBootstrap"
           AfterTargets="Build"
           BeforeTargets="RepackAddinFiles"
-          Condition="'$(RevitVersion)' == '2023' OR '$(RevitVersion)' == '2025'">
+          Condition="'$(TargetPath)' != '' AND '$(TargetDir)' != ''">
     <PropertyGroup>
       <_TUnitRuntimeDeployDir>$([System.IO.Path]::GetFullPath('$(TargetDir)TUnitRuntime\'))</_TUnitRuntimeDeployDir>
     </PropertyGroup>
@@ -26,12 +26,14 @@
 
   <Target Name="AssertTUnitRuntimeLayout"
           AfterTargets="RepackAddinFiles"
-          Condition="('$(RevitVersion)' == '2023' OR '$(RevitVersion)' == '2025') AND '$(TargetDir)' != ''">
+          Condition="'$(TargetDir)' != ''">
     <Error Condition="!Exists('$(TargetDir)TUnitRuntime\TUnit.Core.dll')"
            Text="TUnit.Core.dll must be deployed under TUnitRuntime\." />
+    <Error Condition="!Exists('$(TargetDir)TUnitRuntime\TUnit.Engine.dll')"
+           Text="TUnit.Engine.dll must be deployed under TUnitRuntime\." />
     <Error Condition="!Exists('$(TargetDir)TUnitRuntime\Microsoft.Testing.Platform.dll')"
-           Text="Microsoft.Testing.Platform.dll must be deployed under TUnitRuntime\." />
-    <Error Condition="Exists('$(TargetDir)TUnit.Core.dll') OR Exists('$(TargetDir)Microsoft.Testing.Platform.dll')"
+           Text="Microsoft.Testing.Platform.dll must be deployed under TUnitRuntime\ when TUnit.Engine runs in-host." />
+    <Error Condition="Exists('$(TargetDir)TUnit.Core.dll') OR Exists('$(TargetDir)TUnit.Engine.dll') OR Exists('$(TargetDir)Microsoft.Testing.Platform.dll')"
            Text="TUnit and MTP assemblies must not be copied at the add-in root." />
   </Target>
 </Project>

@@ -14,6 +14,8 @@
 
     <Error Condition="!Exists('$(_TUnitRuntimeOutputDir)TUnit.Core.dll')"
            Text="TUnit runtime payload requires TUnit.Core.dll under '$(_TUnitRuntimeOutputDir)'." />
+    <Error Condition="!Exists('$(_TUnitRuntimeOutputDir)TUnit.Engine.dll')"
+           Text="TUnit runtime payload requires TUnit.Engine.dll under '$(_TUnitRuntimeOutputDir)'." />
     <Error Condition="!Exists('$(_TUnitRuntimeOutputDir)Microsoft.Testing.Platform.dll')"
            Text="TUnit runtime payload requires Microsoft.Testing.Platform.dll under '$(_TUnitRuntimeOutputDir)'." />
 

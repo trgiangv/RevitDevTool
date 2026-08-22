@@ -90,7 +90,14 @@ public sealed class TUnitGenerationPolicy(TUnitRuntimeSourceProvider runtimeSour
         if (IsSatelliteResourceAssembly(path))
             return TestingGenerationFileKind.Other;
         if (IsManaged(path))
+        {
+            var identity = AssemblyName.GetAssemblyName(path);
+            var fileName = Path.GetFileNameWithoutExtension(path);
+            if (!string.Equals(fileName, identity.Name, StringComparison.OrdinalIgnoreCase))
+                return TestingGenerationFileKind.Other;
+
             return TestingGenerationFileKind.Managed;
+        }
         return string.Equals(Path.GetExtension(path), ".dll", StringComparison.OrdinalIgnoreCase)
             ? TestingGenerationFileKind.Native
             : TestingGenerationFileKind.Other;

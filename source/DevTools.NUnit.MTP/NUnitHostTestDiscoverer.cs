@@ -19,6 +19,11 @@ internal sealed partial class NUnitHostTestDiscoverer : IHostTestDiscoverer
     public IReadOnlyList<TestingDiscoveredTest> Discover(string assemblyPath) =>
         Select(assemblyPath, new TestingSelection([]));
 
+    public IReadOnlyList<TestingDiscoveredTest> Discover(
+        string assemblyPath,
+        TestingDiscoveryOptions options) =>
+        Discover(assemblyPath);
+
     public IReadOnlyList<TestingDiscoveredTest> Select(
         string assemblyPath,
         TestingSelection selection)
@@ -56,6 +61,12 @@ internal sealed partial class NUnitHostTestDiscoverer : IHostTestDiscoverer
             .Select(group => group.First())
             .ToList();
     }
+
+    public IReadOnlyList<TestingDiscoveredTest> Select(
+        string assemblyPath,
+        TestingSelection selection,
+        TestingDiscoveryOptions options) =>
+        Select(assemblyPath, selection);
 
     private static List<string> CleanIds(IReadOnlyList<string>? values)
     {

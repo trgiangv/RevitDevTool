@@ -456,8 +456,19 @@ internal sealed class StubHostTestDiscoverer : IHostTestDiscoverer
     public IReadOnlyList<TestingDiscoveredTest> Discover(string assemblyPath) =>
         [new TestingDiscoveredTest("Stub.Test", "Test", "Stub.Test")];
 
+    public IReadOnlyList<TestingDiscoveredTest> Discover(
+        string assemblyPath,
+        TestingDiscoveryOptions options) =>
+        Discover(assemblyPath);
+
     public IReadOnlyList<TestingDiscoveredTest> Select(string assemblyPath, TestingSelection selection) =>
         Discover(assemblyPath);
+
+    public IReadOnlyList<TestingDiscoveredTest> Select(
+        string assemblyPath,
+        TestingSelection selection,
+        TestingDiscoveryOptions options) =>
+        Select(assemblyPath, selection);
 
     public TestingSelection ToHostSelection(
         TestingSelection requested,

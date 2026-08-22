@@ -1,18 +1,20 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <TargetFrameworks>net48;net8.0-windows</TargetFrameworks>
+    <TargetFrameworks>net48;net8.0-windows;net10.0-windows</TargetFrameworks>
     <RootNamespace>DevTools.TUnit.Runtime</RootNamespace>
     <AssemblyName>DevTools.TUnit.Runtime</AssemblyName>
     <IsPackable>false</IsPackable>
     <IsTestProject>false</IsTestProject>
+    <IsTestingPlatformApplication>false</IsTestingPlatformApplication>
     <OutputType>Library</OutputType>
-    <GenerateTestingPlatformEntryPoint>false</GenerateTestingPlatformEntryPoint>
     <EnableTUnitPolyfills>false</EnableTUnitPolyfills>
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Microsoft.Testing.Platform" PrivateAssets="all" />
-    <PackageReference Include="TUnit" PrivateAssets="all" />
+    <PackageReference Include="TUnit.Core" PrivateAssets="all" />
+    <PackageReference Include="TUnit.Engine">
+      <ExcludeAssets>build;buildTransitive;analyzers</ExcludeAssets>
+    </PackageReference>
   </ItemGroup>
 
   <ItemGroup>
