@@ -68,7 +68,7 @@ public sealed class PackageConsumerTests
 
                 File.WriteAllText(
                     Path.Combine(AppContext.BaseDirectory, "testconfig.json"),
-                    "{\"devtools\":{\"frameworkId\":\"nunit\"}}");
+                    "{\"devtools\":{\"frameworkId\":\"nunit\",\"mtpAssembly\":\"DevTools.NUnit.MTP.dll\",\"mtpEntry\":\"DevTools.NUnit.MTP.NUnitMTP\"}}");
                 RuntimeHelpers.RunClassConstructor(typeof(TestingPlatformBuilderHook).TypeHandle);
                 return typeof(TestingPlatformBuilderHook) is null ? 1 : 0;
                 """);
@@ -127,6 +127,87 @@ public sealed class PackageConsumerTests
                 Run(tfm.Equals("net48", StringComparison.Ordinal) ? Path.Combine(output, "CleanConsumer.exe") : "dotnet",
                     tfm.Equals("net48", StringComparison.Ordinal) ? string.Empty : "CleanConsumer.dll", output, globalPackages);
             }
+        }
+        finally
+        {
+            if (Directory.Exists(work))
+                Directory.Delete(work, recursive: true);
+        }
+    }
+
+    [Fact]
+    public void Framework_id_only_testconfig_does_not_throw_from_hook_static_ctor()
+    {
+        var root = FindRepositoryRoot();
+        var work = Path.Combine(Path.GetTempPath(), "RevitDevTool.TestAdapter.PartialConfig", Guid.NewGuid().ToString("N"));
+        var packages = Path.Combine(work, "packages");
+        var globalPackages = Path.Combine(work, "global-packages");
+        var consumer = Path.Combine(work, "consumer");
+        Directory.CreateDirectory(packages);
+        Directory.CreateDirectory(consumer);
+
+        try
+        {
+            Run("dotnet", $"pack \"{Path.Combine(root, "source", "DevTools.TestAdapter", "DevTools.TestAdapter.csproj")}\" -c Release -o \"{packages}\"");
+            var nupkg = Directory.GetFiles(packages, "RevitDevTool.TestAdapter.*.nupkg", SearchOption.TopDirectoryOnly).Single();
+            var packageVersion = Path.GetFileNameWithoutExtension(nupkg)
+                ["RevitDevTool.TestAdapter.".Length..];
+
+            File.WriteAllText(Path.Combine(work, "NuGet.Config"), $"""
+                <?xml version="1.0" encoding="utf-8"?>
+                <configuration>
+                  <packageSources>
+                    <clear />
+                    <add key="local" value="{packages.Replace("\\", "/")}" />
+                    <add key="nuget.org" value="https://api.nuget.org/v3/index.json" />
+                  </packageSources>
+                  <packageSourceMapping>
+                    <packageSource key="local"><package pattern="RevitDevTool.TestAdapter" /></packageSource>
+                    <packageSource key="nuget.org"><package pattern="*" /></packageSource>
+                  </packageSourceMapping>
+                </configuration>
+                """);
+            File.WriteAllText(Path.Combine(consumer, "PartialConfigConsumer.csproj"), $"""
+                <Project Sdk="Microsoft.NET.Sdk">
+                  <PropertyGroup>
+                    <TargetFramework>net10.0-windows</TargetFramework>
+                    <OutputType>Exe</OutputType>
+                    <LangVersion>latest</LangVersion>
+                    <ImplicitUsings>enable</ImplicitUsings>
+                    <IsTestingPlatformApplication>false</IsTestingPlatformApplication>
+                    <EnableMicrosoftTestingPlatform>false</EnableMicrosoftTestingPlatform>
+                    <GenerateTestingPlatformEntryPoint>false</GenerateTestingPlatformEntryPoint>
+                  </PropertyGroup>
+                  <ItemGroup>
+                    <PackageReference Include="RevitDevTool.TestAdapter" Version="{packageVersion}" />
+                    <PackageReference Include="Microsoft.Testing.Platform.MSBuild" Version="2.3.3" />
+                  </ItemGroup>
+                </Project>
+                """);
+            File.WriteAllText(Path.Combine(consumer, "Program.cs"), """
+                using System.Runtime.CompilerServices;
+                using DevTools.TestAdapter;
+
+                File.WriteAllText(
+                    Path.Combine(AppContext.BaseDirectory, "testconfig.json"),
+                    "{\"devtools\":{\"frameworkId\":\"nunit\"}}");
+                Exception? caught = null;
+                try
+                {
+                    RuntimeHelpers.RunClassConstructor(typeof(TestingPlatformBuilderHook).TypeHandle);
+                }
+                catch (Exception ex)
+                {
+                    caught = ex;
+                }
+
+                return caught is TypeInitializationException ? 1 : 0;
+                """);
+
+            Run("dotnet", "restore PartialConfigConsumer.csproj --configfile ../NuGet.Config", consumer, globalPackages);
+            Run("dotnet", "build PartialConfigConsumer.csproj -c Release --no-restore", consumer, globalPackages);
+            var output = Path.Combine(consumer, "bin", "Release", "net10.0-windows");
+            Run("dotnet", "PartialConfigConsumer.dll", output, globalPackages);
         }
         finally
         {

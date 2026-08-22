@@ -6,26 +6,77 @@ namespace DevTools.TestAdapter;
 
 internal static class AdapterTestConfig
 {
-    internal static string RequireFrameworkId()
+    internal sealed class PluginConfig
     {
-        if (TryReadFrameworkId(out var frameworkId))
-            return frameworkId!;
+        internal PluginConfig(string frameworkId, string mtpAssembly, string mtpEntry)
+        {
+            FrameworkId = frameworkId;
+            MTPAssembly = mtpAssembly;
+            MTPEntry = mtpEntry;
+        }
 
-        throw new InvalidOperationException(
-            "RevitDevTool.TestAdapter requires 'devtools.frameworkId' in testconfig.json "
-            + "(generated from <TestingFramework> in the test .csproj).");
+        internal string FrameworkId { get; }
+        internal string MTPAssembly { get; }
+        internal string MTPEntry { get; }
     }
 
-    internal static bool TryReadFrameworkId(out string? frameworkId)
+    internal static bool TryReadPluginConfig(out PluginConfig? config, out string? error)
+    {
+        config = null;
+        error = null;
+
+        foreach (var path in ResolveTestConfigPaths())
+        {
+            if (!TryReadPluginSection(path, out var section, out error))
+                continue;
+
+            if (section is null)
+                continue;
+
+            if (string.IsNullOrWhiteSpace(section.FrameworkId))
+            {
+                error = "RevitDevTool.TestAdapter requires 'devtools.frameworkId' in testconfig.json.";
+                return false;
+            }
+
+            if (string.IsNullOrWhiteSpace(section.MTPAssembly))
+            {
+                error = "RevitDevTool.TestAdapter requires 'devtools.mtpAssembly' in testconfig.json.";
+                return false;
+            }
+
+            if (string.IsNullOrWhiteSpace(section.MTPEntry))
+            {
+                error = "RevitDevTool.TestAdapter requires 'devtools.mtpEntry' in testconfig.json.";
+                return false;
+            }
+
+            config = new PluginConfig(
+                section.FrameworkId!.Trim(),
+                section.MTPAssembly!.Trim(),
+                section.MTPEntry!.Trim());
+            return true;
+        }
+
+        error = "RevitDevTool.TestAdapter requires a 'devtools' section with frameworkId, mtpAssembly, and mtpEntry in testconfig.json.";
+        return false;
+    }
+
+    internal static string? TryReadMTPAssembly()
     {
         foreach (var path in ResolveTestConfigPaths())
         {
-            if (TryReadFrameworkId(path, out frameworkId))
-                return true;
+            if (!TryReadPluginSection(path, out var section, out _))
+                continue;
+
+            if (section is null)
+                continue;
+
+            if (!string.IsNullOrWhiteSpace(section.MTPAssembly))
+                return section.MTPAssembly!.Trim();
         }
 
-        frameworkId = null;
-        return false;
+        return null;
     }
 
     private static IEnumerable<string> ResolveTestConfigPaths()
@@ -38,30 +89,49 @@ internal static class AdapterTestConfig
             yield return Path.Combine(baseDirectory, entryAssemblyName + ".testconfig.json");
     }
 
-    private static bool TryReadFrameworkId(string path, out string? frameworkId)
+    private static bool TryReadPluginSection(
+        string path,
+        out PluginSection? section,
+        out string? error)
     {
-        frameworkId = null;
+        section = null;
+        error = null;
         if (!File.Exists(path))
             return false;
 
         try
         {
             using var document = JsonDocument.Parse(File.ReadAllText(path));
-            if (!document.RootElement.TryGetProperty(HostTestConfig.SectionName, out var section))
-                return false;
-            if (!section.TryGetProperty(HostTestConfig.Keys.FrameworkId, out var valueElement))
+            if (!document.RootElement.TryGetProperty(HostTestConfig.SectionName, out var devtools))
                 return false;
 
-            var value = valueElement.GetString();
-            if (string.IsNullOrWhiteSpace(value))
-                return false;
-
-            frameworkId = value!.Trim();
+            section = new PluginSection(
+                ReadString(devtools, HostTestConfig.Keys.FrameworkId),
+                ReadString(devtools, HostTestConfig.Keys.MTPAssembly),
+                ReadString(devtools, HostTestConfig.Keys.MTPEntry));
             return true;
         }
-        catch (JsonException)
+        catch (JsonException ex)
         {
+            error = ex.Message;
             return false;
         }
+    }
+
+    private static string? ReadString(JsonElement parent, string name) =>
+        parent.TryGetProperty(name, out var value) ? value.GetString() : null;
+
+    private sealed class PluginSection
+    {
+        internal PluginSection(string? frameworkId, string? mtpAssembly, string? mtpEntry)
+        {
+            FrameworkId = frameworkId;
+            MTPAssembly = mtpAssembly;
+            MTPEntry = mtpEntry;
+        }
+
+        internal string? FrameworkId { get; }
+        internal string? MTPAssembly { get; }
+        internal string? MTPEntry { get; }
     }
 }

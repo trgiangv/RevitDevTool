@@ -2,7 +2,6 @@ using DevTools.TestAdapter;
 using DevTools.Testing.Abstractions;
 using DevTools.Testing.Abstractions.Config;
 using DevTools.Testing.Abstractions.Contracts;
-using DevTools.Testing.Abstractions.MTP;
 using DevTools.Testing.Transport;
 using Microsoft.Testing.Platform.Configurations;
 using Microsoft.Testing.Platform.Extensions.Messages;
@@ -24,7 +23,7 @@ public sealed class HostTestSessionTests
     }
 
     [Fact]
-    public void SelectCases_throws_when_nunit_mtp_is_not_registered()
+    public void SelectCases_throws_when_mtp_plugin_is_not_registered()
     {
         lock (DiscoveryProviderLock)
         {
@@ -38,7 +37,7 @@ public sealed class HostTestSessionTests
                     () => HostTestFramework.SelectCases(
                         typeof(HostTestSessionTests).Assembly.Location,
                         new TestingSelection([])));
-                Assert.Contains("DevTools.NUnit.MTP.dll", ex.Message, StringComparison.Ordinal);
+                Assert.Contains("mtpAssembly", ex.Message, StringComparison.Ordinal);
             }
             finally
             {
@@ -71,7 +70,7 @@ public sealed class HostTestSessionTests
 
         var response = session.Run(
             "C:\\tests\\a.dll",
-            new TestingHostOptions("Revit", "2026", false, 60, 180, @"C:\Runner.exe"),
+            new TestingHostOptions("Revit", "2026", false, 60, 180, @"C:\Runner.exe", FrameworkId: "nunit"),
             new TestingSelection([], null));
 
         Assert.Equal("nunit", transport.LastRequest!.FrameworkId);
@@ -123,11 +122,22 @@ public sealed class HostTestSessionTests
 
         session.Run(
             "C:\\tests\\a.dll",
-            new TestingHostOptions("Revit", "2026", false, 60, 180, @"C:\missing-devtools-testrunner.exe"),
+            new TestingHostOptions("Revit", "2026", false, 60, 180, @"C:\missing-devtools-testrunner.exe", FrameworkId: "nunit"),
             new TestingSelection(["HostSmokeTests.Arithmetic"], null));
 
-        Assert.Equal(HostTestConfig.DefaultFrameworkId, transport.LastRequest!.FrameworkId);
+        Assert.Equal("nunit", transport.LastRequest!.FrameworkId);
         Assert.Equal(["HostSmokeTests.Arithmetic"], transport.LastRequest.Selection.TestIds.ToArray());
+    }
+
+    [Fact]
+    public void Run_throws_when_framework_id_is_empty()
+    {
+        var session = new HostTestSession(new FakeTestRunnerTransport());
+        var ex = Assert.Throws<InvalidOperationException>(() => session.Run(
+            "C:\\tests\\a.dll",
+            new TestingHostOptions("Revit", "2026", false, 60, 180, @"C:\Runner.exe", FrameworkId: ""),
+            new TestingSelection([])));
+        Assert.Contains("frameworkId", ex.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -219,7 +229,7 @@ public sealed class HostOptionsLoaderTests
             [HostTestConfig.Keys.Configuration(HostTestConfig.Keys.PerTestTimeoutSeconds)] = "90",
             [HostTestConfig.Keys.Configuration(HostTestConfig.Keys.LaunchTimeoutSeconds)] = "240",
             [HostTestConfig.Keys.Configuration(HostTestConfig.Keys.RunnerPath)] = @"C:\Runner.exe",
-            [HostTestConfig.Keys.Configuration(HostTestConfig.Keys.FrameworkId)] = HostTestConfig.DefaultFrameworkId,
+            [HostTestConfig.Keys.Configuration(HostTestConfig.Keys.FrameworkId)] = "nunit",
         });
 
         var options = HostOptionsLoader.Load(configuration);
@@ -229,8 +239,24 @@ public sealed class HostOptionsLoaderTests
         Assert.True(options.ForceLaunch);
         Assert.Equal(90, options.PerTestTimeoutSeconds);
         Assert.Equal(240, options.LaunchTimeoutSeconds);
-        Assert.Equal(HostTestConfig.DefaultFrameworkId, options.FrameworkId);
+        Assert.Equal("nunit", options.FrameworkId);
         Assert.Equal(@"C:\Runner.exe", options.RunnerPath);
+    }
+
+    [Fact]
+    public void Load_throws_when_framework_id_is_empty()
+    {
+        IConfiguration configuration = new StubConfiguration(new Dictionary<string, string?>
+        {
+            [HostTestConfig.Keys.Configuration(HostTestConfig.Keys.HostName)] = "Revit",
+            [HostTestConfig.Keys.Configuration(HostTestConfig.Keys.HostVersion)] = "2026",
+            [HostTestConfig.Keys.Configuration(HostTestConfig.Keys.PerTestTimeoutSeconds)] = "60",
+            [HostTestConfig.Keys.Configuration(HostTestConfig.Keys.LaunchTimeoutSeconds)] = "180",
+            [HostTestConfig.Keys.Configuration(HostTestConfig.Keys.FrameworkId)] = "",
+        });
+
+        var ex = Assert.Throws<InvalidOperationException>(() => HostOptionsLoader.Load(configuration));
+        Assert.Contains("frameworkId", ex.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]

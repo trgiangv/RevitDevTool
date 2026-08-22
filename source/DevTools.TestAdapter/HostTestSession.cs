@@ -1,4 +1,3 @@
-using DevTools.Testing.Abstractions.Config;
 using DevTools.Testing.Abstractions.Contracts;
 using DevTools.Testing.Transport;
 
@@ -20,9 +19,10 @@ internal sealed class HostTestSession
         TestingSelection selection)
     {
         _runId = Guid.NewGuid();
-        var frameworkId = string.IsNullOrWhiteSpace(hostOptions.FrameworkId)
-            ? HostTestConfig.DefaultFrameworkId
-            : hostOptions.FrameworkId!.Trim();
+        if (string.IsNullOrWhiteSpace(hostOptions.FrameworkId))
+            throw new InvalidOperationException(
+                "RevitDevTool.TestAdapter requires 'devtools.frameworkId' in testconfig.json.");
+        var frameworkId = hostOptions.FrameworkId!.Trim();
         var request = new TestingRunRequest(
             TestingProtocol.CurrentVersion,
             _runId,

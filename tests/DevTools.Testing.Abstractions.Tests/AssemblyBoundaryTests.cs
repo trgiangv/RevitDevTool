@@ -74,9 +74,6 @@ public sealed class AssemblyBoundaryTests
         var violations = new List<string>();
         foreach (var path in sources)
         {
-            if (IsPlugInContractFile(path, directory))
-                continue;
-
             var text = File.ReadAllText(path);
             foreach (var token in forbidden)
             {
@@ -88,11 +85,18 @@ public sealed class AssemblyBoundaryTests
         Assert.True(violations.Count == 0, string.Join(Environment.NewLine, violations));
     }
 
-    static bool IsPlugInContractFile(string path, string projectDirectory)
+    [Fact]
+    public void Abstractions_source_does_not_name_first_party_mtp_dlls()
     {
-        var relative = Path.GetRelativePath(projectDirectory, path).Replace('\\', '/');
-        return relative.StartsWith("MTP/", StringComparison.OrdinalIgnoreCase)
-               || relative.Equals("Config/HostTestConfig.cs", StringComparison.Ordinal);
+        var directory = Path.Combine(FindRepositoryRoot(), "source", "DevTools.Testing.Abstractions");
+        var offenders = Directory.GetFiles(directory, "*.cs", SearchOption.AllDirectories)
+            .Where(path => !IsBuildArtifact(path, directory))
+            .Select(path => File.ReadAllText(path))
+            .Where(text => text.Contains("NUnit.MTP", StringComparison.Ordinal)
+                || text.Contains("TUnit.MTP", StringComparison.Ordinal))
+            .ToArray();
+
+        Assert.Empty(offenders);
     }
 
     static bool IsForbidden(string assemblyName)

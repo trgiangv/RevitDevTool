@@ -13,7 +13,6 @@ public sealed class TestingKernelIndependenceTests
             .Where(path => !path.Split(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar)
                 .Any(part => part.Equals("bin", StringComparison.OrdinalIgnoreCase)
                     || part.Equals("obj", StringComparison.OrdinalIgnoreCase)))
-            .Where(path => !IsPlugInContractPath(path))
             .Where(path => File.ReadLines(path).Any(line => line.Contains("NUnit", StringComparison.OrdinalIgnoreCase)))
             .Select(path => Path.GetRelativePath(root, path).Replace('\\', '/'))
             .ToArray();
@@ -50,13 +49,6 @@ public sealed class TestingKernelIndependenceTests
         Assert.True(Directory.Exists(Path.Combine(root, "source", "DevTools.TestAdapter")));
         Assert.False(Directory.Exists(Path.Combine(root, "source", "DevTools.Testing.Discovery")));
         Assert.False(Directory.Exists(Path.Combine(root, "source", "DevTools.TestRunner", "NUnit")));
-    }
-
-    private static bool IsPlugInContractPath(string path)
-    {
-        var normalized = path.Replace('\\', '/');
-        return normalized.Contains("/DevTools.Testing.Abstractions/MTP/", StringComparison.OrdinalIgnoreCase)
-               || normalized.EndsWith("/DevTools.Testing.Abstractions/Config/HostTestConfig.cs", StringComparison.Ordinal);
     }
 
     private static string FindRepositoryRoot()

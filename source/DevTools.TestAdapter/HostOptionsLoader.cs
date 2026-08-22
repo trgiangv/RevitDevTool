@@ -32,6 +32,9 @@ internal static class HostOptionsLoader
         bool.TryParse(ReadKey(configuration, HostTestConfig.Keys.ForceLaunch), out var forceLaunch);
 
         var frameworkId = ReadKey(configuration, HostTestConfig.Keys.FrameworkId);
+        if (string.IsNullOrWhiteSpace(frameworkId))
+            throw new InvalidOperationException(
+                "RevitDevTool.TestAdapter requires 'devtools.frameworkId' in testconfig.json.");
         var runnerPath = TestingRunnerPaths.ReadEnvironment(TestingRunnerPaths.RunnerPathEnvironmentVariable)
             ?? ReadKey(configuration, HostTestConfig.Keys.RunnerPath);
 
@@ -42,7 +45,7 @@ internal static class HostOptionsLoader
             perTestTimeout,
             launchTimeout,
             TestingRunnerPaths.ExpandPath(runnerPath),
-            FrameworkId: string.IsNullOrWhiteSpace(frameworkId) ? HostTestConfig.DefaultFrameworkId : frameworkId!.Trim());
+            FrameworkId: frameworkId!.Trim());
     }
 
     private static string? ReadKey(IConfiguration configuration, string name) =>

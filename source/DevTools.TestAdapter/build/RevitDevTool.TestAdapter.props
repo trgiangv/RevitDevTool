@@ -20,6 +20,10 @@
     <LaunchTimeout Condition="'$(LaunchTimeout)' == ''">180</LaunchTimeout>
     <!-- Default in-host engine. Override in the test csproj without changing the package. -->
     <TestingFramework Condition="'$(TestingFramework)' == ''">nunit</TestingFramework>
+    <DevToolsMTPAssembly Condition="'$(DevToolsMTPAssembly)' == '' and '$(TestingFramework)' == 'nunit'">DevTools.NUnit.MTP.dll</DevToolsMTPAssembly>
+    <DevToolsMTPAssembly Condition="'$(DevToolsMTPAssembly)' == '' and '$(TestingFramework)' == 'tunit'">DevTools.TUnit.MTP.dll</DevToolsMTPAssembly>
+    <DevToolsMTPEntry Condition="'$(DevToolsMTPEntry)' == '' and '$(TestingFramework)' == 'nunit'">DevTools.NUnit.MTP.NUnitMTP</DevToolsMTPEntry>
+    <DevToolsMTPEntry Condition="'$(DevToolsMTPEntry)' == '' and '$(TestingFramework)' == 'tunit'">DevTools.TUnit.MTP.TUnitMTP</DevToolsMTPEntry>
   </PropertyGroup>
 
   <ItemGroup>

@@ -6,7 +6,6 @@ using Microsoft.Testing.Platform.Extensions.TestFramework;
 using Microsoft.Testing.Platform.Requests;
 using DevTools.Testing.Abstractions;
 using DevTools.Testing.Abstractions.Contracts;
-using DevTools.Testing.Abstractions.MTP;
 using DevTools.Testing.Transport;
 // ReSharper disable RedundantSuppressNullableWarningExpression
 
@@ -62,7 +61,7 @@ internal sealed class HostTestFramework : ITestFramework, IDataProducer
                         .ConfigureAwait(false);
                     break;
                 case RunTestExecutionRequest run:
-                    await PublishRunAsync(EnsureSession(), assemblyPath, run, context).ConfigureAwait(false);
+                    await PublishRunAsync(assemblyPath, run, context).ConfigureAwait(false);
                     break;
                 default:
                     throw new NotSupportedException(
@@ -125,22 +124,67 @@ internal sealed class HostTestFramework : ITestFramework, IDataProducer
     }
 
     private async Task PublishRunAsync(
-        HostTestSession session,
         string assemblyPath,
         RunTestExecutionRequest request,
         ExecuteRequestContext context)
     {
-        _options ??= HostOptionsLoader.Load(RequireConfiguration());
-        var options = ApplyDebugParent(_options);
-        var filter = ResolveRunnerFilter(request.Filter);
-        var discoverer = RequireDiscoverer();
-        var cases = discoverer.Select(assemblyPath, filter, TestingDiscoveryOptions.Testhost);
-        var mapper = RequireRunMapper();
-        var hostSelection = mapper.ToHostSelection(filter, cases);
-        var testCount = Math.Max(cases.Count, filter.TestIds?.Count ?? 0);
-        if (testCount == 0 && IsConstrained(filter))
+        try
         {
-            foreach (var missing in mapper.ResultsForUnreported(filter, cases, []))
+            var session = EnsureSession();
+            var options = ApplyDebugParent(_options!);
+            var filter = ResolveRunnerFilter(request.Filter);
+            var discoverer = RequireDiscoverer();
+            var cases = discoverer.Select(assemblyPath, filter, TestingDiscoveryOptions.Testhost);
+            var mapper = RequireRunMapper();
+            var hostSelection = mapper.ToHostSelection(filter, cases);
+            var testCount = Math.Max(cases.Count, filter.TestIds?.Count ?? 0);
+            if (testCount == 0 && IsConstrained(filter))
+            {
+                foreach (var missing in mapper.ResultsForUnreported(filter, cases, []))
+                {
+                    await context.MessageBus.PublishAsync(
+                            this,
+                            new TestNodeUpdateMessage(
+                                request.Session.SessionUid,
+                                ToResultNode(missing, assemblyPath, cases)))
+                        .ConfigureAwait(false);
+                }
+
+                return;
+            }
+
+            var runOptions = ScaleForRun(options, testCount);
+            TestingRunResponse response;
+            try
+            {
+                response = session.Run(
+                    assemblyPath,
+                    runOptions,
+                    hostSelection);
+            }
+            catch (Exception ex)
+            {
+                await context.MessageBus.PublishAsync(
+                        this,
+                        new TestNodeUpdateMessage(
+                            request.Session.SessionUid,
+                            TestNodeProperties.CreateErrorNode("devtools.testadapter.runner", "DevTools.TestAdapter", ex)))
+                    .ConfigureAwait(false);
+                return;
+            }
+
+            var published = mapper.FoldResults(filter, cases, response.Results);
+            foreach (var result in published)
+            {
+                await context.MessageBus.PublishAsync(
+                        this,
+                        new TestNodeUpdateMessage(
+                            request.Session.SessionUid,
+                            ToResultNode(result, assemblyPath, cases)))
+                    .ConfigureAwait(false);
+            }
+
+            foreach (var missing in mapper.ResultsForUnreported(filter, cases, published))
             {
                 await context.MessageBus.PublishAsync(
                         this,
@@ -149,18 +193,6 @@ internal sealed class HostTestFramework : ITestFramework, IDataProducer
                             ToResultNode(missing, assemblyPath, cases)))
                     .ConfigureAwait(false);
             }
-
-            return;
-        }
-
-        var runOptions = ScaleForRun(options, testCount);
-        TestingRunResponse response;
-        try
-        {
-            response = session.Run(
-                assemblyPath,
-                runOptions,
-                hostSelection);
         }
         catch (Exception ex)
         {
@@ -168,29 +200,10 @@ internal sealed class HostTestFramework : ITestFramework, IDataProducer
                     this,
                     new TestNodeUpdateMessage(
                         request.Session.SessionUid,
-                        TestNodeProperties.CreateErrorNode("devtools.testadapter.runner", "DevTools.TestAdapter", ex)))
-                .ConfigureAwait(false);
-            return;
-        }
-
-        var published = mapper.FoldResults(filter, cases, response.Results);
-        foreach (var result in published)
-        {
-            await context.MessageBus.PublishAsync(
-                    this,
-                    new TestNodeUpdateMessage(
-                        request.Session.SessionUid,
-                        ToResultNode(result, assemblyPath, cases)))
-                .ConfigureAwait(false);
-        }
-
-        foreach (var missing in mapper.ResultsForUnreported(filter, cases, published))
-        {
-            await context.MessageBus.PublishAsync(
-                    this,
-                    new TestNodeUpdateMessage(
-                        request.Session.SessionUid,
-                        ToResultNode(missing, assemblyPath, cases)))
+                        TestNodeProperties.CreateErrorNode(
+                            "devtools.testadapter.run",
+                            "Test run failed",
+                            ex)))
                 .ConfigureAwait(false);
         }
     }
@@ -267,8 +280,9 @@ internal sealed class HostTestFramework : ITestFramework, IDataProducer
         var suffix = string.IsNullOrWhiteSpace(detail)
             ? string.Empty
             : " " + detail;
+        var assemblyName = AdapterTestConfig.TryReadMTPAssembly() ?? "mtpAssembly";
         throw new InvalidOperationException(
-            $"Local discovery requires {HostMTPRegistration.RequiredMtpAssembliesMessage} next to the test executable. "
+            $"Local discovery requires {assemblyName} next to the test executable. "
             + "RevitDevTool.TestAdapter copies the selected sibling at build; do not add it as a ProjectReference."
             + suffix);
     }

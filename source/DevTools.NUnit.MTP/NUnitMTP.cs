@@ -3,7 +3,8 @@ using DevTools.Testing.Abstractions;
 namespace DevTools.NUnit.MTP;
 
 /// <summary>
-/// Plug-in entry loaded by <see cref="DevTools.Testing.Abstractions.MTP.HostMTPRegistration"/>.
+/// Plug-in entry loaded via testconfig.json <c>mtpEntry</c>; assigns
+/// <see cref="HostTestDiscovery"/>.
 /// </summary>
 public static class NUnitMTP
 {

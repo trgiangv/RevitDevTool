@@ -8,7 +8,6 @@ public static class HostTestConfig
 {
     public const string FileName = "testconfig.json";
     public const string SectionName = "devtools";
-    public const string DefaultFrameworkId = "nunit";
 
     public static class Keys
     {
@@ -19,6 +18,8 @@ public static class HostTestConfig
         public const string LaunchTimeoutSeconds = "launchTimeoutSeconds";
         public const string RunnerPath = "runnerPath";
         public const string FrameworkId = "frameworkId";
+        public const string MTPAssembly = "mtpAssembly";
+        public const string MTPEntry = "mtpEntry";
 
         public static string Configuration(string name) => SectionName + ":" + name;
     }

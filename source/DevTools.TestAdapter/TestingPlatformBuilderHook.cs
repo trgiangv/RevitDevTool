@@ -6,7 +6,7 @@ namespace DevTools.TestAdapter;
 /// <summary>
 /// Microsoft.Testing.Platform entry hook. Framework-specific discovery is
 /// delegated to <see cref="AdapterBootstrap"/> and
-/// <see cref="DevTools.Testing.Abstractions.MTP.HostMTPRegistration"/>.
+/// <see cref="HostTestDiscovery"/>.
 /// </summary>
 [UsedImplicitly(ImplicitUseTargetFlags.WithMembers)]
 public static class TestingPlatformBuilderHook

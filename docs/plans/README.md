@@ -30,6 +30,7 @@ decision into `docs/decisions/`; keep task-local choices in the plan.
 
 | Plan | Status |
 |------|--------|
+| [2026-08-22-testing-core-open-closed.md](active/2026-08-22-testing-core-open-closed.md) | Active — Tasks 0–4 landed; Opus 5 gate Accept |
 | [2026-08-17-p0-xunit4-repository-mtp-baseline.md](active/2026-08-17-p0-xunit4-repository-mtp-baseline.md) | Active — CLI complete; IDE smoke open |
 | [2026-08-17-p1-framework-neutral-testing-core.md](active/2026-08-17-p1-framework-neutral-testing-core.md) | Active — Tasks 1-4 landed |
 | [2026-08-17-p2-xunit4-host-provider.md](active/2026-08-17-p2-xunit4-host-provider.md) | Blocked by P1 |
