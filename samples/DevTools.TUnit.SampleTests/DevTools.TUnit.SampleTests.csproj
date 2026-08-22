@@ -3,29 +3,19 @@
     <UseRevit>true</UseRevit>
     <IsTestProject>true</IsTestProject>
     <TestingFramework>tunit</TestingFramework>
-    <!-- This repo already supplies Polyfill as a global package reference. -->
     <EnableTUnitPolyfills>false</EnableTUnitPolyfills>
     <HostName>Revit</HostName>
     <HostVersion>$(RevitVersion)</HostVersion>
     <ForceLaunch>false</ForceLaunch>
+    <PerTestTimeout>60</PerTestTimeout>
     <LaunchTimeout>360</LaunchTimeout>
   </PropertyGroup>
 
-  <Target Name="ValidateTUnitRevitVersion" BeforeTargets="PrepareForBuild"
-          Condition="'$(RevitVersion)' != '2023' And '$(RevitVersion)' != '2025'">
-    <Error Text="The TUnit sample supports only Revit 2023/net48 and Revit 2025/net8." />
-  </Target>
-
-  <Import Project="..\..\source\DevTools.TestAdapter\build\RevitDevTool.TestAdapter.targets"
-          Condition="'$(UsePackedAdapter)' != 'true'" />
+  <Import Project="..\..\source\DevTools.TestAdapter\build\RevitDevTool.TestAdapter.targets" />
 
   <ItemGroup>
-    <PackageReference Include="Nice3point.Revit.Toolkit" VersionOverride="$(RevitVersion).*" />
     <PackageReference Include="Microsoft.Testing.Platform.MSBuild" />
     <PackageReference Include="TUnit" />
-    <ProjectReference Include="..\..\source\DevTools.TestAdapter\DevTools.TestAdapter.csproj"
-                      Condition="'$(UsePackedAdapter)' != 'true'" />
-    <PackageReference Include="RevitDevTool.TestAdapter" VersionOverride="0.0.4"
-                      Condition="'$(UsePackedAdapter)' == 'true'" />
+    <ProjectReference Include="..\..\source\DevTools.TestAdapter\DevTools.TestAdapter.csproj" />
   </ItemGroup>
 </Project>
