@@ -52,7 +52,8 @@ Do not edit the other slice’s files. Task 4 (docs) after both compile+test.
 | Testhost | 3 | `DevTools.Testing.Abstractions`, `DevTools.TestAdapter`, `NUnitMTP.cs` / `TUnitMTP.cs` crefs, Adapter + Abstractions tests |
 | Docs | 4 | `docs/architecture/Testing/README.md`, `docs/agents/nunit-host-testing.md` |
 
-Bump `DevTools.TestAdapter.csproj` `<Version>` in Task 3 (`0.0.4` today).
+Bump `DevTools.TestAdapter.csproj` `<Version>` only when publishing (`0.0.3`
+today; accidental bumps in the TUnit spike were reverted).
 Git revert does not un-publish a nupkg.
 
 ### Task 0 — Store validation and dead seams
