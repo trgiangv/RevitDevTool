@@ -1,4 +1,5 @@
 using System.Collections;
+using System.Diagnostics;
 using Autodesk.Revit.DB;
 using NUnit.Framework;
 
@@ -13,6 +14,8 @@ public sealed class BoundingBoxCaseSourceTests
     [TestCaseSource(typeof(BoxCaseSource))]
     public void Box_source_has_positive_span(BoundingBoxXYZ box)
     {
+        Console.WriteLine("Console: " + nameof(Box_source_has_positive_span));
+        Trace.WriteLine("Trace 2: " + nameof(Box_source_has_positive_span));
         Assert.That(box.Max.X - box.Min.X, Is.GreaterThan(0.0));
         Assert.That(box.Max.Y - box.Min.Y, Is.GreaterThan(0.0));
         Assert.That(box.Max.Z - box.Min.Z, Is.GreaterThan(0.0));

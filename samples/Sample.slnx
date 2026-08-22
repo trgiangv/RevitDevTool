@@ -13,24 +13,30 @@
         <BuildType Name="Release.Autodesk.2026" />
         <BuildType Name="Release.Autodesk.2027" />
     </Configurations>
-    <Project Path="CSharpDemo/CSharpDemo.csproj">
-        <Build Project="false" />
-    </Project>
-    <Project Path="../source/DevTools.TestAdapter/DevTools.TestAdapter.csproj" />
-    <Project Path="AcadCSharpDemo/AcadCSharpDemo.csproj">
-        <Build Project="false" />
-    </Project>
-    <Project Path="FSharpDemo/FSharpDemo.fsproj">
-        <Build Project="false" />
-    </Project>
-    <Project Path="McpToolsetDemo/McpToolsetDemo.csproj">
-        <Build Project="false" />
-    </Project>
-    <Project Path="RevitMcpToolSet/RevitMcpToolSet.csproj">
-        <Build Project="false" />
-    </Project>
-    <Project Path="DevTools.NUnit.SampleTests/DevTools.NUnit.SampleTests.csproj" />
-    <Project Path="DevTools.TUnit.SampleTests/DevTools.TUnit.SampleTests.csproj" />
-    <Project Path="DevTools.NUnit.Civil3D.SampleTests/DevTools.NUnit.Civil3D.SampleTests.csproj" />
-    <Project Path="ricaun.NUnit.SampleTests/ricaun.NUnit.SampleTests.csproj" />
+    <Folder Name="/Command/">
+        <Project Path="AcadCSharpDemo/AcadCSharpDemo.csproj">
+            <Build Project="false" />
+        </Project>
+        <Project Path="CSharpDemo/CSharpDemo.csproj">
+            <Build Project="false" />
+        </Project>
+        <Project Path="FSharpDemo/FSharpDemo.fsproj">
+            <Build Project="false" />
+        </Project>
+    </Folder>
+    <Folder Name="/MCP/">
+        <Project Path="McpToolsetDemo/McpToolsetDemo.csproj">
+            <Build Project="false" />
+        </Project>
+        <Project Path="RevitMcpToolSet/RevitMcpToolSet.csproj">
+            <Build Project="false" />
+        </Project>
+    </Folder>
+    <Folder Name="/Testing/">
+        <Project Path="../source/DevTools.TestAdapter/DevTools.TestAdapter.csproj" />
+        <Project Path="DevTools.NUnit.Civil3D.SampleTests/DevTools.NUnit.Civil3D.SampleTests.csproj" />
+        <Project Path="DevTools.NUnit.SampleTests/DevTools.NUnit.SampleTests.csproj" />
+        <Project Path="DevTools.TUnit.SampleTests/DevTools.TUnit.SampleTests.csproj" />
+        <Project Path="ricaun.NUnit.SampleTests/ricaun.NUnit.SampleTests.csproj" />
+    </Folder>
 </Solution>

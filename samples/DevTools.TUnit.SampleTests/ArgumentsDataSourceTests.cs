@@ -1,3 +1,4 @@
+using System.Diagnostics;
 namespace DevTools.TUnit.SampleTests;
 
 // Scope: inline [Arguments] rows with optional DisplayName.
@@ -10,6 +11,8 @@ public sealed class ArgumentsDataSourceTests
     [Arguments(0.0, 0.0, 1.0, DisplayName = "Unit_Z")]
     public async Task Named_basis_length_is_one(double x, double y, double z)
     {
+        Console.WriteLine("Console: " + nameof(Named_basis_length_is_one));
+        Trace.WriteLine("Trace 2: " + nameof(Named_basis_length_is_one));
         await Assert.That(new XYZ(x, y, z).GetLength()).IsEqualTo(1.0).Within(1e-9);
     }
 

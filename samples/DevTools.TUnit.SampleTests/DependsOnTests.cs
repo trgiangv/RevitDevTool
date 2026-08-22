@@ -30,6 +30,7 @@ public sealed class DependsOnTests
     [DependsOn(nameof(Chain_step_one))]
     public void Chain_step_two()
     {
+        Console.WriteLine($"ChainStep = {ChainStep}");
         ChainStep = 2;
     }
 
@@ -37,6 +38,7 @@ public sealed class DependsOnTests
     [DependsOn(nameof(Chain_step_two))]
     public async Task Chain_step_three_sees_prior_state()
     {
+        Console.WriteLine($"ChainStep = {ChainStep}");
         await Assert.That(ChainStep).IsEqualTo(2);
     }
 }
