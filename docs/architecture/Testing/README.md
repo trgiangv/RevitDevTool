@@ -22,10 +22,13 @@ Last updated: 2026-08-21
 | Local NUnit `ExploreTests` (testhost sibling DLL) | `source/DevTools.NUnit.MTP/` |
 | In-host NUnit engine | `source/DevTools.NUnit.Runtime/` |
 | NUnit closure / filter / generation policy | `source/DevTools.NUnit.Host/` |
+| Local TUnit catalog (`Sources.TestEntries`) | `source/DevTools.TUnit.MTP/` |
+| In-host TUnit.Engine library call | `source/DevTools.TUnit.Runtime/` |
+| TUnit generation / ALC provider | `source/DevTools.TUnit.Host/` |
 | Runner CLI + composition | `source/DevTools.TestRunner/`, `source/DevTools.TestRunner.Core/` |
 
-`DevTools.Testing.*` must not reference `DevTools.NUnit.*`. NUnit owns
-discovery, identity, filters, and in-host execution. See
+`DevTools.Testing.*` must not reference `DevTools.NUnit.*` or `DevTools.TUnit.*`.
+Each provider owns discovery, identity, filters, and in-host execution. See
 [0021](../../decisions/0021-testing-kernel-and-provider-owned-framework-runtime.md)
 and [0022](../../decisions/0022-nunit-mtp-only-testing-stack.md).
 
