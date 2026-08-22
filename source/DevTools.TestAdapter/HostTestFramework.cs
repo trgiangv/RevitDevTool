@@ -6,6 +6,7 @@ using Microsoft.Testing.Platform.Extensions.TestFramework;
 using Microsoft.Testing.Platform.Requests;
 using DevTools.Testing.Abstractions;
 using DevTools.Testing.Abstractions.Contracts;
+using DevTools.Testing.Abstractions.MTP;
 using DevTools.Testing.Transport;
 // ReSharper disable RedundantSuppressNullableWarningExpression
 
@@ -134,11 +135,12 @@ internal sealed class HostTestFramework : ITestFramework, IDataProducer
         var filter = ResolveRunnerFilter(request.Filter);
         var discoverer = RequireDiscoverer();
         var cases = discoverer.Select(assemblyPath, filter, TestingDiscoveryOptions.Testhost);
-        var hostSelection = discoverer.ToHostSelection(filter, cases);
+        var mapper = RequireRunMapper();
+        var hostSelection = mapper.ToHostSelection(filter, cases);
         var testCount = Math.Max(cases.Count, filter.TestIds?.Count ?? 0);
         if (testCount == 0 && IsConstrained(filter))
         {
-            foreach (var missing in discoverer.ResultsForUnreported(filter, cases, []))
+            foreach (var missing in mapper.ResultsForUnreported(filter, cases, []))
             {
                 await context.MessageBus.PublishAsync(
                         this,
@@ -171,7 +173,7 @@ internal sealed class HostTestFramework : ITestFramework, IDataProducer
             return;
         }
 
-        var published = discoverer.FoldResults(filter, cases, response.Results);
+        var published = mapper.FoldResults(filter, cases, response.Results);
         foreach (var result in published)
         {
             await context.MessageBus.PublishAsync(
@@ -182,7 +184,7 @@ internal sealed class HostTestFramework : ITestFramework, IDataProducer
                 .ConfigureAwait(false);
         }
 
-        foreach (var missing in discoverer.ResultsForUnreported(filter, cases, published))
+        foreach (var missing in mapper.ResultsForUnreported(filter, cases, published))
         {
             await context.MessageBus.PublishAsync(
                     this,
@@ -253,18 +255,20 @@ internal sealed class HostTestFramework : ITestFramework, IDataProducer
         _configuration ?? throw new InvalidOperationException(
             "Microsoft.Testing.Platform IConfiguration is required to read the devtools section of testconfig.json.");
 
+    private static IHostTestRunMapper RequireRunMapper() =>
+        HostTestDiscovery.RunMapper ?? HostTestRunMappers.PassThrough;
+
     private static IHostTestDiscoverer RequireDiscoverer()
     {
         if (HostTestDiscovery.Provider is { } provider)
             return provider;
 
-        var detail = TestingPlatformBuilderHook.RegistrationError;
+        var detail = HostMTPRegistration.LastError;
         var suffix = string.IsNullOrWhiteSpace(detail)
             ? string.Empty
             : " " + detail;
         throw new InvalidOperationException(
-            $"Local discovery requires {TestingPlatformBuilderHook.NUnitMTPAssemblyFileName} or "
-            + $"{TestingPlatformBuilderHook.TUnitMTPAssemblyFileName} next to the test executable. "
+            $"Local discovery requires {HostMTPRegistration.RequiredMtpAssembliesMessage} next to the test executable. "
             + "RevitDevTool.TestAdapter copies the selected sibling at build; do not add it as a ProjectReference."
             + suffix);
     }

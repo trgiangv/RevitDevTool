@@ -51,7 +51,7 @@ internal static class TestNodeProperties
                 continue;
 
             properties.Add(new FileArtifactProperty(
-                new FileInfo(attachment.Path),
+                new FileInfo(attachment.Path!),
                 displayName: attachment.Description ?? Path.GetFileName(attachment.Path),
                 description: attachment.Description));
         }
@@ -91,7 +91,7 @@ internal static class TestNodeProperties
         };
     }
 
-    static Exception CreateException(TestingCaseResult result)
+    private static Exception CreateException(TestingCaseResult result)
     {
         if (string.IsNullOrWhiteSpace(result.StackTrace))
             return new InvalidOperationException(result.Message ?? result.Outcome);

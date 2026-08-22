@@ -3,9 +3,8 @@ using DevTools.Testing.Abstractions.Contracts;
 namespace DevTools.Testing.Abstractions;
 
 /// <summary>
-/// Testhost-owned local discovery and identity. The adapter control plane
-/// publishes MTP TestNodes; it does not invent or parse framework names.
-/// The testhost plug-in registers an implementation at process start.
+/// Testhost-owned local discovery. The adapter publishes MTP TestNodes from
+/// these results; it does not invent framework-specific test identities.
 /// </summary>
 public interface IHostTestDiscoverer
 {
@@ -23,25 +22,13 @@ public interface IHostTestDiscoverer
         string assemblyPath,
         TestingSelection selection,
         TestingDiscoveryOptions options);
-
-    TestingSelection ToHostSelection(
-        TestingSelection requested,
-        IReadOnlyList<TestingDiscoveredTest> discovered);
-
-    IReadOnlyList<TestingCaseResult> FoldResults(
-        TestingSelection requested,
-        IReadOnlyList<TestingDiscoveredTest> discovered,
-        IReadOnlyList<TestingCaseResult> hostResults);
-
-    IReadOnlyList<TestingCaseResult> ResultsForUnreported(
-        TestingSelection requested,
-        IReadOnlyList<TestingDiscoveredTest> discovered,
-        IReadOnlyList<TestingCaseResult> hostResults);
 }
 
 public static class HostTestDiscovery
 {
     public static IHostTestDiscoverer? Provider { get; set; }
+
+    public static IHostTestRunMapper? RunMapper { get; set; }
 }
 
 public sealed class HostTestDiscoveryFailedException : Exception

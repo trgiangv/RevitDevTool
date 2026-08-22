@@ -3,21 +3,21 @@ using System.Reflection;
 using System.Runtime.Loader;
 #endif
 
-namespace DevTools.NUnit.MTP;
+namespace DevTools.Testing.Abstractions.Loading;
 
 /// <summary>
-/// Loads the test assembly for ExploreTests. When compile refs are listed
+/// Loads a test assembly for local discovery. When compile refs are listed
 /// beside the exe, do not reuse the testhost entry assembly (already loaded
 /// without those APIs). Resolve NuGet paths, then load an isolated copy.
 /// </summary>
-internal sealed class NUnitDiscoveryAssemblyLoad : IDisposable
+public sealed class DiscoveryAssemblyLoad : IDisposable
 {
     private readonly ResolveEventHandler? _resolve;
 #if NETCOREAPP
     private readonly AssemblyLoadContext? _loadContext;
 #endif
 
-    private NUnitDiscoveryAssemblyLoad(
+    private DiscoveryAssemblyLoad(
         Assembly assembly,
         ResolveEventHandler? resolve
 #if NETCOREAPP
@@ -34,12 +34,12 @@ internal sealed class NUnitDiscoveryAssemblyLoad : IDisposable
 
     public Assembly Assembly { get; }
 
-    public static NUnitDiscoveryAssemblyLoad Open(string assemblyPath)
+    public static DiscoveryAssemblyLoad Open(string assemblyPath)
     {
         assemblyPath = Path.GetFullPath(assemblyPath);
-        var refs = NUnitDiscoveryRefs.Read(assemblyPath);
+        var refs = DiscoveryRefs.Read(assemblyPath);
         return refs.Count == 0
-            ? new NUnitDiscoveryAssemblyLoad(
+            ? new DiscoveryAssemblyLoad(
                 LoadShared(assemblyPath),
                 resolve: null
 #if NETCOREAPP
@@ -58,19 +58,19 @@ internal sealed class NUnitDiscoveryAssemblyLoad : IDisposable
 #endif
     }
 
-    private static NUnitDiscoveryAssemblyLoad LoadIsolated(
+    private static DiscoveryAssemblyLoad LoadIsolated(
         string assemblyPath,
         IReadOnlyDictionary<string, string> refs)
     {
 #if NETCOREAPP
         var loadContext = new DiscoveryLoadContext(refs);
         var assembly = loadContext.LoadFromAssemblyPath(assemblyPath);
-        return new NUnitDiscoveryAssemblyLoad(assembly, resolve: null, loadContext);
+        return new DiscoveryAssemblyLoad(assembly, resolve: null, loadContext);
 #else
         ResolveEventHandler resolve = (_, args) => ResolveFromRefs(refs, args.Name);
         AppDomain.CurrentDomain.AssemblyResolve += resolve;
         var assembly = Assembly.LoadFile(assemblyPath);
-        return new NUnitDiscoveryAssemblyLoad(assembly, resolve);
+        return new DiscoveryAssemblyLoad(assembly, resolve);
 #endif
     }
 
@@ -131,9 +131,6 @@ internal sealed class NUnitDiscoveryAssemblyLoad : IDisposable
         public DiscoveryLoadContext(IReadOnlyDictionary<string, string> refs)
             : base(isCollectible: false)
         {
-            // Not collectible: Autodesk API packs are often mixed-mode and
-            // cannot load in a collectible context. The isolated context
-            // lives until NUnitLocalExploration disposes this load.
             _refs = refs;
         }
 
@@ -145,9 +142,6 @@ internal sealed class NUnitDiscoveryAssemblyLoad : IDisposable
                 return LoadFromAssemblyPath(refPath);
             }
 
-            // Share NUnit.Framework / testhost assemblies with the default
-            // context. Loading output copies here duplicates those types and
-            // ExploreTests sees no fixtures.
             return null;
         }
     }

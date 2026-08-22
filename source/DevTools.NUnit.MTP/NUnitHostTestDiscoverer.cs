@@ -1,6 +1,7 @@
 using DevTools.NUnit.Runtime;
 using DevTools.Testing.Abstractions;
 using DevTools.Testing.Abstractions.Contracts;
+using DevTools.Testing.Abstractions.Loading;
 using NUnit;
 using NUnit.Framework.Api;
 using NUnit.Framework.Interfaces;
@@ -14,7 +15,7 @@ namespace DevTools.NUnit.MTP;
 /// renamed leaves). Host <c>&lt;test&gt;</c> still uses NUnit
 /// <see cref="ITest.FullName"/>. No host launch.
 /// </summary>
-internal sealed partial class NUnitHostTestDiscoverer : IHostTestDiscoverer
+internal sealed partial class NUnitHostTestDiscoverer : IHostTestDiscoverer, IHostTestRunMapper
 {
     public IReadOnlyList<TestingDiscoveredTest> Discover(string assemblyPath) =>
         Select(assemblyPath, new TestingSelection([]));
@@ -115,13 +116,13 @@ internal static class NUnitFilterXml
 internal sealed class NUnitLocalExploration : IDisposable
 {
     private readonly NUnitTestAssemblyRunner? _runner;
-    private readonly NUnitDiscoveryAssemblyLoad? _load;
+    private readonly DiscoveryAssemblyLoad? _load;
 
     private NUnitLocalExploration(
         NUnitTestAssemblyRunner? runner,
         IReadOnlyList<ITest> leaves,
         NUnitSourceLocationProvider? source,
-        NUnitDiscoveryAssemblyLoad? load)
+        DiscoveryAssemblyLoad? load)
     {
         _runner = runner;
         _load = load;
@@ -139,7 +140,7 @@ internal sealed class NUnitLocalExploration : IDisposable
         if (!File.Exists(assemblyPath))
             return new NUnitLocalExploration(null, [], null, null);
 
-        var load = NUnitDiscoveryAssemblyLoad.Open(assemblyPath);
+        var load = DiscoveryAssemblyLoad.Open(assemblyPath);
         try
         {
             var runner = new NUnitTestAssemblyRunner(new NUnitTolerantAssemblyBuilder());

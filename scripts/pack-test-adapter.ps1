@@ -28,15 +28,22 @@ if ([string]::IsNullOrWhiteSpace($version)) {
 }
 
 $mtpCsproj = Join-RepoPath 'source/DevTools.NUnit.MTP/DevTools.NUnit.MTP.csproj'
+$tunitMtpCsproj = Join-RepoPath 'source/DevTools.TUnit.MTP/DevTools.TUnit.MTP.csproj'
 
-Write-Host "Restoring $csproj and $mtpCsproj"
+Write-Host "Restoring $csproj, $mtpCsproj, and $tunitMtpCsproj"
 dotnet restore $csproj
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 dotnet restore $mtpCsproj
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+dotnet restore $tunitMtpCsproj
+if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
 Write-Host "Building $mtpCsproj (all TargetFrameworks)"
 dotnet build $mtpCsproj -c Release --no-restore
+if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+Write-Host "Building $tunitMtpCsproj (all TargetFrameworks)"
+dotnet build $tunitMtpCsproj -c Release --no-restore
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
 Write-Host "Packing RevitDevTool.TestAdapter $version"

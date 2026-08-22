@@ -4,7 +4,7 @@ using DevTools.TUnit.Runtime;
 
 namespace DevTools.TUnit.MTP;
 
-internal sealed class TUnitHostTestDiscoverer : IHostTestDiscoverer
+internal sealed class TUnitHostTestDiscoverer : IHostTestDiscoverer, IHostTestRunMapper
 {
     public IReadOnlyList<TestingDiscoveredTest> Discover(string assemblyPath) =>
         Discover(assemblyPath, TestingDiscoveryOptions.Testhost);
@@ -38,12 +38,8 @@ internal sealed class TUnitHostTestDiscoverer : IHostTestDiscoverer
     public IReadOnlyList<TestingCaseResult> FoldResults(
         TestingSelection requested,
         IReadOnlyList<TestingDiscoveredTest> discovered,
-        IReadOnlyList<TestingCaseResult> hostResults)
-    {
-        _ = requested;
-        _ = discovered;
-        return hostResults;
-    }
+        IReadOnlyList<TestingCaseResult> hostResults) =>
+        hostResults;
 
     public IReadOnlyList<TestingCaseResult> ResultsForUnreported(
         TestingSelection requested,

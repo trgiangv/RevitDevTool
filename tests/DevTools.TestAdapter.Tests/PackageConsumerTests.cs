@@ -66,6 +66,9 @@ public sealed class PackageConsumerTests
                 using System.Runtime.CompilerServices;
                 using DevTools.TestAdapter;
 
+                File.WriteAllText(
+                    Path.Combine(AppContext.BaseDirectory, "testconfig.json"),
+                    "{\"devtools\":{\"frameworkId\":\"nunit\"}}");
                 RuntimeHelpers.RunClassConstructor(typeof(TestingPlatformBuilderHook).TypeHandle);
                 return typeof(TestingPlatformBuilderHook) is null ? 1 : 0;
                 """);

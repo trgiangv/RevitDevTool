@@ -74,6 +74,9 @@ public sealed class AssemblyBoundaryTests
         var violations = new List<string>();
         foreach (var path in sources)
         {
+            if (IsPlugInContractFile(path, directory))
+                continue;
+
             var text = File.ReadAllText(path);
             foreach (var token in forbidden)
             {
@@ -83,6 +86,13 @@ public sealed class AssemblyBoundaryTests
         }
 
         Assert.True(violations.Count == 0, string.Join(Environment.NewLine, violations));
+    }
+
+    static bool IsPlugInContractFile(string path, string projectDirectory)
+    {
+        var relative = Path.GetRelativePath(projectDirectory, path).Replace('\\', '/');
+        return relative.StartsWith("MTP/", StringComparison.OrdinalIgnoreCase)
+               || relative.Equals("Config/HostTestConfig.cs", StringComparison.Ordinal);
     }
 
     static bool IsForbidden(string assemblyName)

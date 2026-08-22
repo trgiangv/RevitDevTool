@@ -1,3 +1,4 @@
+using DevTools.Testing.Abstractions.Config;
 using DevTools.Testing.Abstractions.Contracts;
 using DevTools.Testing.Transport;
 
@@ -5,8 +6,8 @@ namespace DevTools.TestAdapter;
 
 internal sealed class HostTestSession
 {
-    readonly ITestRunnerTransport _transport;
-    Guid _runId;
+    private readonly ITestRunnerTransport _transport;
+    private Guid _runId;
 
     internal HostTestSession(ITestRunnerTransport transport)
     {
@@ -20,7 +21,7 @@ internal sealed class HostTestSession
     {
         _runId = Guid.NewGuid();
         var frameworkId = string.IsNullOrWhiteSpace(hostOptions.FrameworkId)
-            ? HostOptionsLoader.DefaultFrameworkId
+            ? HostTestConfig.DefaultFrameworkId
             : hostOptions.FrameworkId!.Trim();
         var request = new TestingRunRequest(
             TestingProtocol.CurrentVersion,
@@ -37,7 +38,7 @@ internal sealed class HostTestSession
 
     internal void Dispose() => _transport.Dispose();
 
-    static string RequireAssembly(string assemblyPath)
+    private static string RequireAssembly(string assemblyPath)
     {
         if (string.IsNullOrWhiteSpace(assemblyPath))
             throw new ArgumentException("Test assembly path is required.", nameof(assemblyPath));

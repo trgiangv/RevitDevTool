@@ -3,13 +3,14 @@ using DevTools.Testing.Abstractions;
 namespace DevTools.NUnit.MTP;
 
 /// <summary>
-/// Plug-in entry loaded by <c>TestingPlatformBuilderHook</c> via
-/// <c>NUnitMTPAssemblyFileName</c> / <c>NUnitMTPEntryTypeName</c> /
-/// <c>NUnitMTPRegisterMethodName</c>. Keep those constants in lockstep with
-/// this type and method name.
+/// Plug-in entry loaded by <see cref="DevTools.Testing.Abstractions.MTP.HostMTPRegistration"/>.
 /// </summary>
 public static class NUnitMTP
 {
-    public static void Register() =>
-        HostTestDiscovery.Provider = new NUnitHostTestDiscoverer();
+    public static void Register()
+    {
+        var discoverer = new NUnitHostTestDiscoverer();
+        HostTestDiscovery.Provider = discoverer;
+        HostTestDiscovery.RunMapper = discoverer;
+    }
 }

@@ -1,6 +1,8 @@
 using DevTools.TestAdapter;
 using DevTools.Testing.Abstractions;
+using DevTools.Testing.Abstractions.Config;
 using DevTools.Testing.Abstractions.Contracts;
+using DevTools.Testing.Abstractions.MTP;
 using DevTools.Testing.Transport;
 using Microsoft.Testing.Platform.Configurations;
 using Microsoft.Testing.Platform.Extensions.Messages;
@@ -27,18 +29,21 @@ public sealed class HostTestSessionTests
         lock (DiscoveryProviderLock)
         {
             var previous = HostTestDiscovery.Provider;
+            var previousMapper = HostTestDiscovery.RunMapper;
             HostTestDiscovery.Provider = null;
+            HostTestDiscovery.RunMapper = null;
             try
             {
                 var ex = Assert.Throws<InvalidOperationException>(
                     () => HostTestFramework.SelectCases(
                         typeof(HostTestSessionTests).Assembly.Location,
                         new TestingSelection([])));
-                Assert.Contains(TestingPlatformBuilderHook.NUnitMTPAssemblyFileName, ex.Message, StringComparison.Ordinal);
+                Assert.Contains("DevTools.NUnit.MTP.dll", ex.Message, StringComparison.Ordinal);
             }
             finally
             {
                 HostTestDiscovery.Provider = previous;
+                HostTestDiscovery.RunMapper = previousMapper;
             }
         }
     }
@@ -85,7 +90,9 @@ public sealed class HostTestSessionTests
                 lock (DiscoveryProviderLock)
                 {
                     var previous = HostTestDiscovery.Provider;
+                    var previousMapper = HostTestDiscovery.RunMapper;
                     HostTestDiscovery.Provider = new StubHostTestDiscoverer();
+                    HostTestDiscovery.RunMapper = null;
                     try
                     {
                         var nodes = HostTestFramework.DiscoverNodes(
@@ -97,6 +104,7 @@ public sealed class HostTestSessionTests
                     finally
                     {
                         HostTestDiscovery.Provider = previous;
+                        HostTestDiscovery.RunMapper = previousMapper;
                     }
                 }
             }
@@ -118,7 +126,7 @@ public sealed class HostTestSessionTests
             new TestingHostOptions("Revit", "2026", false, 60, 180, @"C:\missing-devtools-testrunner.exe"),
             new TestingSelection(["HostSmokeTests.Arithmetic"], null));
 
-        Assert.Equal(HostOptionsLoader.DefaultFrameworkId, transport.LastRequest!.FrameworkId);
+        Assert.Equal(HostTestConfig.DefaultFrameworkId, transport.LastRequest!.FrameworkId);
         Assert.Equal(["HostSmokeTests.Arithmetic"], transport.LastRequest.Selection.TestIds.ToArray());
     }
 
@@ -205,13 +213,13 @@ public sealed class HostOptionsLoaderTests
     {
         IConfiguration configuration = new StubConfiguration(new Dictionary<string, string?>
         {
-            [HostOptionsLoader.Keys.Configuration(HostOptionsLoader.Keys.HostName)] = "Civil3D",
-            [HostOptionsLoader.Keys.Configuration(HostOptionsLoader.Keys.HostVersion)] = "2026",
-            [HostOptionsLoader.Keys.Configuration(HostOptionsLoader.Keys.ForceLaunch)] = "true",
-            [HostOptionsLoader.Keys.Configuration(HostOptionsLoader.Keys.PerTestTimeoutSeconds)] = "90",
-            [HostOptionsLoader.Keys.Configuration(HostOptionsLoader.Keys.LaunchTimeoutSeconds)] = "240",
-            [HostOptionsLoader.Keys.Configuration(HostOptionsLoader.Keys.RunnerPath)] = @"C:\Runner.exe",
-            [HostOptionsLoader.Keys.Configuration(HostOptionsLoader.Keys.FrameworkId)] = HostOptionsLoader.DefaultFrameworkId,
+            [HostTestConfig.Keys.Configuration(HostTestConfig.Keys.HostName)] = "Civil3D",
+            [HostTestConfig.Keys.Configuration(HostTestConfig.Keys.HostVersion)] = "2026",
+            [HostTestConfig.Keys.Configuration(HostTestConfig.Keys.ForceLaunch)] = "true",
+            [HostTestConfig.Keys.Configuration(HostTestConfig.Keys.PerTestTimeoutSeconds)] = "90",
+            [HostTestConfig.Keys.Configuration(HostTestConfig.Keys.LaunchTimeoutSeconds)] = "240",
+            [HostTestConfig.Keys.Configuration(HostTestConfig.Keys.RunnerPath)] = @"C:\Runner.exe",
+            [HostTestConfig.Keys.Configuration(HostTestConfig.Keys.FrameworkId)] = HostTestConfig.DefaultFrameworkId,
         });
 
         var options = HostOptionsLoader.Load(configuration);
@@ -221,7 +229,7 @@ public sealed class HostOptionsLoaderTests
         Assert.True(options.ForceLaunch);
         Assert.Equal(90, options.PerTestTimeoutSeconds);
         Assert.Equal(240, options.LaunchTimeoutSeconds);
-        Assert.Equal(HostOptionsLoader.DefaultFrameworkId, options.FrameworkId);
+        Assert.Equal(HostTestConfig.DefaultFrameworkId, options.FrameworkId);
         Assert.Equal(@"C:\Runner.exe", options.RunnerPath);
     }
 
@@ -230,8 +238,8 @@ public sealed class HostOptionsLoaderTests
     {
         var ex = Assert.Throws<InvalidOperationException>(
             () => HostOptionsLoader.Load(new StubConfiguration(new Dictionary<string, string?>())));
-        Assert.Contains(HostOptionsLoader.ConfigFileName, ex.Message, StringComparison.Ordinal);
-        Assert.Contains(HostOptionsLoader.ConfigSectionName, ex.Message, StringComparison.Ordinal);
+        Assert.Contains(HostTestConfig.FileName, ex.Message, StringComparison.Ordinal);
+        Assert.Contains(HostTestConfig.SectionName, ex.Message, StringComparison.Ordinal);
     }
 }
 
@@ -469,23 +477,6 @@ internal sealed class StubHostTestDiscoverer : IHostTestDiscoverer
         TestingSelection selection,
         TestingDiscoveryOptions options) =>
         Select(assemblyPath, selection);
-
-    public TestingSelection ToHostSelection(
-        TestingSelection requested,
-        IReadOnlyList<TestingDiscoveredTest> discovered) =>
-        requested;
-
-    public IReadOnlyList<TestingCaseResult> FoldResults(
-        TestingSelection requested,
-        IReadOnlyList<TestingDiscoveredTest> discovered,
-        IReadOnlyList<TestingCaseResult> hostResults) =>
-        hostResults;
-
-    public IReadOnlyList<TestingCaseResult> ResultsForUnreported(
-        TestingSelection requested,
-        IReadOnlyList<TestingDiscoveredTest> discovered,
-        IReadOnlyList<TestingCaseResult> hostResults) =>
-        [];
 }
 
 internal sealed class FakeTestRunnerTransport : ITestRunnerTransport

@@ -21,7 +21,7 @@
 
       5. MTP sibling
          - Not a ProjectReference. pack-test-adapter.ps1 restores and builds
-           all MTP TFMs before pack. Inner Restore removes TargetFramework.
+           DevTools.NUnit.MTP and DevTools.TUnit.MTP for all TFMs before pack.
          - Copy MTP.dll (and Abstractions on net48) to build/runtime.
     -->
     <PropertyGroup>
@@ -69,8 +69,7 @@
         </ItemGroup>
     </Target>
 
-    <Target Name="BuildDevToolsTUnitMtpForPack"
-            Condition="'$(TargetFramework)' == 'net48' Or '$(TargetFramework)' == 'net8.0-windows'">
+    <Target Name="BuildDevToolsTUnitMtpForPack">
         <PropertyGroup>
             <_DevToolsTUnitMtpProject>$(MSBuildThisFileDirectory)..\DevTools.TUnit.MTP\DevTools.TUnit.MTP.csproj</_DevToolsTUnitMtpProject>
             <_DevToolsTUnitMtpDll>$(MSBuildThisFileDirectory)..\DevTools.TUnit.MTP\bin\$(Configuration)\$(TargetFramework)\DevTools.TUnit.MTP.dll</_DevToolsTUnitMtpDll>
@@ -84,8 +83,7 @@
     </Target>
 
     <Target Name="PackDevToolsTUnitMtp"
-            DependsOnTargets="BuildDevToolsTUnitMtpForPack"
-            Condition="'$(TargetFramework)' == 'net48' Or '$(TargetFramework)' == 'net8.0-windows'">
+            DependsOnTargets="BuildDevToolsTUnitMtpForPack">
         <PropertyGroup>
             <_DevToolsTUnitMtpDll>$(MSBuildThisFileDirectory)..\DevTools.TUnit.MTP\bin\$(Configuration)\$(TargetFramework)\DevTools.TUnit.MTP.dll</_DevToolsTUnitMtpDll>
             <_DevToolsTUnitMtpPackageRuntime Condition="'$(TargetFrameworkIdentifier)' == '.NETCoreApp'">build/runtime/net$(TargetFrameworkVersion.Substring(1))-windows7.0</_DevToolsTUnitMtpPackageRuntime>
