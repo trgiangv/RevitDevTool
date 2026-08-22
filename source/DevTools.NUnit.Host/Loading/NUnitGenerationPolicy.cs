@@ -1,11 +1,6 @@
-using System.Diagnostics;
-using System.Reflection;
 using DevTools.Testing.Host.Loading;
 
 namespace DevTools.NUnit.Host.Loading;
-
-public sealed record NUnitRuntimeSource(string AssemblyPath, string? SymbolPath, IReadOnlyList<string> DependencyPaths);
-public delegate NUnitRuntimeSource NUnitRuntimeSourcePathProvider();
 
 /// <summary>
 /// NUnit-owned description and validation of a runtime generation.  The common
@@ -14,20 +9,21 @@ public delegate NUnitRuntimeSource NUnitRuntimeSourcePathProvider();
 /// </summary>
 public sealed class NUnitGenerationPolicy : ITestingGenerationPolicy
 {
+    public const string FrameworkId = "nunit";
+    public const string FrameworkAssemblyFileName = "nunit.framework.dll";
+    public const string RuntimeFolderName = "NUnitRuntime";
     public const string RuntimeAssemblyFileName = "DevTools.NUnit.Runtime.dll";
     public const string RuntimeSymbolFileName = "DevTools.NUnit.Runtime.pdb";
-    public const string FrameworkAssemblyFileName = "nunit.framework.dll";
-    public const string FrameworkId = "nunit";
 
     internal const string ExpectedNUnitFileVersion = "4.6.1.0";
     internal const string ExpectedNUnitPackageVersion = "4.6.1";
 
-    private readonly NUnitRuntimeSourcePathProvider _runtimeSourcePathProvider;
+    private readonly Func<HostRuntimeSource> _runtimeSourceProvider;
 
-    public NUnitGenerationPolicy(NUnitRuntimeSourcePathProvider runtimeSourcePathProvider)
+    public NUnitGenerationPolicy(Func<HostRuntimeSource> runtimeSourceProvider)
     {
-        _runtimeSourcePathProvider = runtimeSourcePathProvider
-            ?? throw new ArgumentNullException(nameof(runtimeSourcePathProvider));
+        _runtimeSourceProvider = runtimeSourceProvider
+            ?? throw new ArgumentNullException(nameof(runtimeSourceProvider));
     }
 
     public TestingGenerationPlan CreatePlan(string testAssemblyPath)
@@ -35,14 +31,16 @@ public sealed class NUnitGenerationPolicy : ITestingGenerationPolicy
         var sourceAssemblyPath = ResolveTestAssembly(testAssemblyPath);
         var sourceDirectory = Path.GetDirectoryName(sourceAssemblyPath)
             ?? throw new NUnitGenerationBuildException($"Test assembly path has no directory: {sourceAssemblyPath}");
-        var runtime = ResolveRuntimeSource();
-        var copyPlan = NUnitGenerationCopyPlanner.Create(sourceAssemblyPath, sourceDirectory, runtime);
+        var runtime = HostRuntimeSources.Normalize(
+            _runtimeSourceProvider(),
+            static message => new NUnitGenerationBuildException(message));
+        var copyEntries = NUnitGenerationCopyPlanner.Create(sourceAssemblyPath, sourceDirectory, runtime);
 
-        var files = copyPlan.CopyEntries
+        var files = copyEntries
             .Select(entry => new TestingGenerationFile(
                 entry.SourcePath,
                 entry.RelativePath,
-                Classify(entry.SourcePath)))
+                TestingGenerationFiles.Classify(entry.SourcePath)))
             .ToList();
 
         return new TestingGenerationPlan(
@@ -73,60 +71,18 @@ public sealed class NUnitGenerationPolicy : ITestingGenerationPolicy
             throw new NUnitGenerationBuildException($"Published NUnit runtime assembly is missing: {manifest.RuntimeAssemblyPath}");
     }
 
-    internal static void ValidateNUnitFrameworkVersion(string frameworkPath, string? sourceOutputDirectory = null)
-    {
-        var fileVersion = FileVersionInfo.GetVersionInfo(frameworkPath).FileVersion;
-        if (!string.Equals(fileVersion, ExpectedNUnitFileVersion, StringComparison.Ordinal))
-        {
-            var location = sourceOutputDirectory is null
-                ? frameworkPath
-                : NUnitGenerationCopyPlanner.NormalizeRelativePath(Path.GetRelativePath(sourceOutputDirectory, frameworkPath));
-            throw new NUnitGenerationBuildException(
-                $"Expected {FrameworkAssemblyFileName} file version {ExpectedNUnitFileVersion} (NUnit package {ExpectedNUnitPackageVersion}); found {fileVersion ?? "<missing>"} at {location}.");
-        }
-
-        try
-        {
-            AssemblyName.GetAssemblyName(frameworkPath);
-        }
-        catch (Exception ex)
-        {
-            throw new NUnitGenerationBuildException(
-                $"{FrameworkAssemblyFileName} is not a valid managed assembly: {frameworkPath}", ex);
-        }
-    }
+    internal static void ValidateNUnitFrameworkVersion(string frameworkPath, string? sourceOutputDirectory = null) =>
+        TestingGenerationFiles.ValidateManagedFrameworkVersion(
+            frameworkPath,
+            FrameworkAssemblyFileName,
+            ExpectedNUnitFileVersion,
+            ExpectedNUnitPackageVersion,
+            sourceOutputDirectory,
+            static message => new NUnitGenerationBuildException(message));
 
     internal static string GetFrameworkAssemblyPath(TestingGenerationManifest manifest) =>
         manifest.ManagedAssemblies.Single(path =>
             string.Equals(Path.GetFileName(path), FrameworkAssemblyFileName, StringComparison.OrdinalIgnoreCase));
-
-    private NUnitRuntimeSource ResolveRuntimeSource()
-    {
-        var source = _runtimeSourcePathProvider();
-        if (string.IsNullOrWhiteSpace(source.AssemblyPath))
-            throw new NUnitGenerationBuildException("Runtime assembly path provider returned an empty path.");
-
-        var assemblyPath = Path.GetFullPath(source.AssemblyPath);
-        if (!File.Exists(assemblyPath))
-            throw new NUnitGenerationBuildException($"Runtime assembly not found: {assemblyPath}");
-
-        string? symbolPath = null;
-        if (!string.IsNullOrWhiteSpace(source.SymbolPath))
-        {
-            symbolPath = Path.GetFullPath(source.SymbolPath);
-            if (!File.Exists(symbolPath))
-                throw new NUnitGenerationBuildException($"Runtime symbol file not found: {symbolPath}");
-        }
-
-        var dependencies = source.DependencyPaths.Select(Path.GetFullPath).ToList();
-        foreach (var dependency in dependencies)
-        {
-            if (!File.Exists(dependency))
-                throw new NUnitGenerationBuildException($"Runtime dependency not found: {dependency}");
-        }
-
-        return new NUnitRuntimeSource(assemblyPath, symbolPath, dependencies);
-    }
 
     private static string ResolveTestAssembly(string testAssemblyPath)
     {
@@ -136,67 +92,5 @@ public sealed class NUnitGenerationPolicy : ITestingGenerationPolicy
         if (!File.Exists(sourceAssemblyPath))
             throw new NUnitGenerationBuildException($"Test assembly not found: {sourceAssemblyPath}");
         return sourceAssemblyPath;
-    }
-
-    private static TestingGenerationFileKind Classify(string path)
-    {
-        if (string.Equals(Path.GetExtension(path), ".pdb", StringComparison.OrdinalIgnoreCase))
-            return TestingGenerationFileKind.Symbols;
-        if (IsSatelliteResourceAssembly(path))
-            return TestingGenerationFileKind.Other;
-        if (IsManagedAssembly(path))
-            return TestingGenerationFileKind.Managed;
-        return string.Equals(Path.GetExtension(path), ".dll", StringComparison.OrdinalIgnoreCase)
-            ? TestingGenerationFileKind.Native
-            : TestingGenerationFileKind.Other;
-    }
-
-    private static bool IsSatelliteResourceAssembly(string path)
-    {
-        var extension = Path.GetExtension(path);
-        if (!extension.Equals(".dll", StringComparison.OrdinalIgnoreCase)
-            && !extension.Equals(".exe", StringComparison.OrdinalIgnoreCase))
-        {
-            return false;
-        }
-
-        try
-        {
-            var identity = AssemblyName.GetAssemblyName(path);
-            return identity.Name?.EndsWith(".resources", StringComparison.OrdinalIgnoreCase) == true
-                   && !string.IsNullOrWhiteSpace(identity.CultureName);
-        }
-        catch (BadImageFormatException)
-        {
-            return false;
-        }
-        catch (FileLoadException)
-        {
-            return false;
-        }
-    }
-
-    private static bool IsManagedAssembly(string path)
-    {
-        var extension = Path.GetExtension(path);
-        if (!extension.Equals(".dll", StringComparison.OrdinalIgnoreCase)
-            && !extension.Equals(".exe", StringComparison.OrdinalIgnoreCase))
-        {
-            return false;
-        }
-
-        try
-        {
-            _ = AssemblyName.GetAssemblyName(path);
-            return true;
-        }
-        catch (BadImageFormatException)
-        {
-            return false;
-        }
-        catch (FileLoadException)
-        {
-            return false;
-        }
     }
 }

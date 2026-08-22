@@ -21,41 +21,18 @@ public static class NUnitHostingExtensions
     public static IServiceCollection AddNUnitHostServices(this IServiceCollection services)
     {
         services.TryAddSingleton<NUnitGenerationPolicy>(_ =>
-            new NUnitGenerationPolicy(ResolveHostRuntimeSourcePath));
+            new NUnitGenerationPolicy(() =>
+                HostRuntimeSources.ResolveBesideHost(
+                    typeof(NUnitHostingExtensions).Assembly,
+                    NUnitGenerationPolicy.RuntimeFolderName,
+                    NUnitGenerationPolicy.RuntimeAssemblyFileName,
+                    NUnitGenerationPolicy.RuntimeSymbolFileName)));
         services.TryAddSingleton<ITestingGenerationPolicy>(sp => sp.GetRequiredService<NUnitGenerationPolicy>());
         services.TryAddSingleton(_ => new TestingGenerationStore(
             Path.Combine(Path.GetTempPath(), "DevTools", "NUnit", "Generations")));
         services.TryAddSingleton<ITestingRuntimeSessionFactory, NUnitRuntimeSessionFactory>();
         services.TryAddSingleton<TestingRuntimeSessionManager>();
         services.TryAddSingleton<IHostTestFrameworkProvider, NUnitHostTestFrameworkProvider>();
-        services.TryAddSingleton<TestingProviderRegistry>();
         return services;
-    }
-
-    private static NUnitRuntimeSource ResolveHostRuntimeSourcePath()
-    {
-        var hostDirectory = Path.GetDirectoryName(typeof(NUnitHostingExtensions).Assembly.Location)
-            ?? AppContext.BaseDirectory;
-        var runtimeDirectory = Path.Combine(hostDirectory, "NUnitRuntime");
-
-        var assemblyPath = Path.Combine(runtimeDirectory, NUnitGenerationPolicy.RuntimeAssemblyFileName);
-        if (!File.Exists(assemblyPath))
-        {
-            throw new InvalidOperationException(
-                $"NUnit runtime assembly not found beside the host at '{assemblyPath}'. " +
-                "Deploy DevTools.NUnit.Runtime.dll with the host add-in.");
-        }
-
-        var symbolPath = Path.Combine(runtimeDirectory, NUnitGenerationPolicy.RuntimeSymbolFileName);
-        var dependencies = Directory.Exists(runtimeDirectory)
-            ? Directory.EnumerateFiles(runtimeDirectory, "*.dll", SearchOption.TopDirectoryOnly)
-                .Where(path => !string.Equals(path, assemblyPath, StringComparison.OrdinalIgnoreCase))
-                .ToList()
-            : new List<string>();
-
-        return new NUnitRuntimeSource(
-            assemblyPath,
-            File.Exists(symbolPath) ? symbolPath : null,
-            dependencies);
     }
 }

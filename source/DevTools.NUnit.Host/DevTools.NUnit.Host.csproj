@@ -4,6 +4,7 @@
     </PropertyGroup>
 
     <ItemGroup>
+        <GlobalPackageReference Remove="Polyfill"/>
         <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions"/>
     </ItemGroup>
 

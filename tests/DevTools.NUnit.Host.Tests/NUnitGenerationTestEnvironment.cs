@@ -117,7 +117,7 @@ internal static class NUnitGenerationTestEnvironment
         return Path.Combine(outputDirectory, "DevTools.NUnit.Runtime.Fixtures.dll");
     }
 
-    public static NUnitRuntimeSource CreateRuntimeStub(string parentDirectory)
+    public static HostRuntimeSource CreateRuntimeStub(string parentDirectory)
     {
         var runtimeDirectory = Path.Combine(parentDirectory, "runtime-source");
         Directory.CreateDirectory(runtimeDirectory);
@@ -134,7 +134,7 @@ internal static class NUnitGenerationTestEnvironment
         if (File.Exists(sourceSymbolPath))
             File.Copy(sourceSymbolPath, symbolPath, overwrite: true);
 
-        return new NUnitRuntimeSource(
+        return new HostRuntimeSource(
             assemblyPath,
             File.Exists(symbolPath) ? symbolPath : null,
             Array.Empty<string>());

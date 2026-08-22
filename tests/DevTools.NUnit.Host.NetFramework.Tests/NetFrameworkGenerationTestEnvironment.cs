@@ -77,7 +77,7 @@ public static class NetFrameworkGenerationTestEnvironment
     public static NetFrameworkGenerationHarness CreateBuilder(string generationsRoot) =>
         new(
             new TestingGenerationStore(generationsRoot),
-            new NUnitGenerationPolicy(() => new NUnitRuntimeSource(
+            new NUnitGenerationPolicy(() => new HostRuntimeSource(
                 RuntimeAssemblyPath,
                 File.Exists(RuntimeSymbolPath) ? RuntimeSymbolPath : null,
                 RuntimeDependencyPaths())));
