@@ -40,47 +40,88 @@ NUnit remains the default framework.
 
 ## Runtime behavior
 
-- Testhost discovery is host-free: `DevTools.TUnit.MTP` reads
-  TUnit.Core `Sources.TestEntries` / `ITestEntrySource.GetFilterData`
-  (TUnit's default source-generated catalog) and publishes opaque TUnit UIDs
-  in Engine `TestIdentifierService` form. It does not start a nested MTP
-  `TestApplication`. Autodesk API compile refs resolve from
-  `$(TargetName).discovery-refs.txt` (compile-only NuGet paths) via
-  `TestingPlatformBuilderHook` static initialization — same pattern as
-  NUnit `ExploreTests`; API DLLs are not copied next to the exe.
-- Neutral `TestingSelection` may carry optional `Hints` (class/method/category)
-  so TUnit can pre-filter before materializing entries. NUnit ignores hints and
-  keeps ExploreTests + filter XML.
-- Testhost expands `IDataSourceAttribute` rows from TUnit.Core so the IDE tree
-  lists the same UIDs Engine will execute (`[Arguments]`, `[MethodDataSource]`,
-  `[MatrixDataSource]`, `[ClassDataSource]`, class constructor data, property
-  injection, `[Repeat]`). Data-source and loop indexes are 1-based to match
-  Engine `TestBuilder` (`++` before first use; empty sources use
-  `NoDataSource` as index 1). `[Repeat(n)]` expands `n + 1` times
-  (`for (i = 0; i < repeatCount + 1; i++)`). Rows that
-  cannot expand host-free stay as Engine `_Deferred` placeholders. The host
-  does not parse or rewrite those UIDs: `TestingSelection.TestIds` is passed
-  into `TestNodeUidListFilter` as opaque strings.
-- In-host execution is a library call to `TUnit.Engine` inside
-  `TUnitRuntimeSession.Run` (one Engine session per `testing/run`). Engine
-  owns `[Before]/[After]`, Retry, DependsOn, Skip/Explicit, and timeout.
-  `maximum-parallel-tests=1` so work stays on the Revit API thread. Nested
-  `TestApplication` / `AddTUnit()` is not used.
-- `samples/DevTools.TUnit.SampleTests` is split one scope per file: host smoke,
-  lifecycle, each data-source attribute, Engine capabilities (Repeat, DependsOn,
-  hooks, timeout, property injection, Retry), fixture shapes (inheritance, nested,
-  generic closed/Revit types, constructor arguments), Revit geometry, generic
-  helper methods, and document-bound deferred discovery gaps.
-- TestRunner locates, reuses, or starts Revit and sends `testing/run` with those
-  UIDs over the existing IPC pipe.
-- `MarshaledTestingRequestHandler` enters `IHostContextExecutor`. The in-host
-  `tunit` provider loads the generation isolation context and calls Engine.
-- `TUnitRuntime` ships `TUnit.Core`, `TUnit.Engine`, and
-  `Microsoft.Testing.Platform` under `TUnitRuntime\`, not at the add-in root.
-- Collectible load contexts apply on modern Revit TFMs. .NET Framework years
-  use scoped isolation and exact manifest identity resolution, including
-  side-by-side `System.Text.Json` identities.
-- In-host Engine execution clears `SynchronizationContext` so `await Task.Delay`
-  / `Task.Yield` on the API thread does not deadlock `GetResult()`.
+Testhost discovery is host-free. `DevTools.TUnit.MTP` compile-links
+`TUnitCatalog` / `TUnitExpansion` / `TUnitTestIdentity` from
+`DevTools.TUnit.Runtime` and reads TUnit.Core `Sources.TestEntries` /
+`ITestEntrySource.GetFilterData`. It does not start a nested MTP
+`TestApplication`. Autodesk API compile refs resolve from
+`$(TargetName).discovery-refs.txt` via `TestingPlatformBuilderHook` static
+initialization — same pattern as NUnit `ExploreTests`; API DLLs are not
+copied next to the exe.
 
-See `samples/DevTools.TUnit.SampleTests` for the supported project shape.
+Adapter load: `TestingFramework=tunit` writes `devtools.frameworkId` into
+`testconfig.json`. The testhost hook loads **only** `DevTools.TUnit.MTP.dll`.
+`maximum-parallel-tests` is **not** a `testconfig.json` / `HostTestConfig`
+key. Wiring: [`docs/architecture/Testing/README.md`](../architecture/Testing/README.md).
+
+### Discovery expansion
+
+`TUnitExpansion` materializes each `ITestEntrySource` row and builds the
+cartesian product **class data × method data × property injection ×
+repeat**. Nested loops are the Engine product; they are not a workaround.
+
+| Axis | Source | Index in UID |
+|------|--------|--------------|
+| Class data | `metadata.ClassDataSources` | 1-based `ClassSourceIndex` / `ClassLoopIndex` |
+| Method data | `metadata.DataSources` | 1-based `MethodSourceIndex` / `MethodLoopIndex` |
+| Repeat | `[Repeat(n)]` | 0-based `RepeatIndex`; Engine runs `n + 1` times |
+| Property injection | `PropertyDataSources` or reflection fallback | **not in UID** (Engine `TestIdentifierService` has no property dimension) |
+
+`TUnitCombinationIndices` carries the UID axes. Catalog display reads
+`RepeatIndex`, method args, and property name/value pairs. Members that
+look unused in `TUnitCatalog` are marked
+`[UsedImplicitly(ImplicitUseTargetFlags.WithMembers)]` — do not drop them.
+Empty data sources use Engine `NoDataSource` as index 1.
+
+Property injection still expands for **display names**. Multiple property
+combinations can share one UID; that matches Engine, not a host bug.
+TUnit 1.65 `TestEntryFactory` omits `PropertyDataSources`; expansion
+reflects writable properties with `IDataSourceAttribute` until a TUnit
+bump fills metadata.
+
+Rows that cannot `Materialize` host-free become one `Deferred` placeholder
+(`TUnitTestIdentity.DeferredSuffix` = `_Deferred`). Testhost
+(`TestingDiscoveryOptions.Testhost`, `ForExecution=false`) publishes that
+placeholder UID. Host-run (`ForExecution=true`) uses the expanded
+`TUnitTestIdentity.From` UID when metadata exists. The host does not parse
+those strings: `TestingSelection.TestIds` goes into `TestNodeUidListFilter`
+as opaque UIDs.
+
+`TestingDiscoveryHints` (class/method/category) pre-filter before
+materialize. NUnit ignores hints.
+
+### In-host Engine
+
+`TUnitRuntimeSession.Run` is one `TUnit.Engine` library call per
+`testing/run`. Engine owns `[Before]/[After]`, Retry, DependsOn,
+Skip/Explicit, and timeout. Nested `TestApplication` / `AddTUnit()` is not
+used.
+
+`TUnitEngineCommandLine` implements MTP `ICommandLineOptions` and answers
+`maximum-parallel-tests` with `["1"]` so work stays on the Revit API
+thread. `TUnitEngineConfiguration` answers
+`platformOptions:resultDirectory`, `currentWorkingDirectory`, and
+`testHostWorkingDirectory`. Those keys are Engine/MTP, not DevTools
+config.
+
+In-host Engine execution clears `SynchronizationContext` so
+`await Task.Delay` / `Task.Yield` on the API thread does not deadlock
+`GetResult()`.
+
+`TUnitRuntime` ships `TUnit.Core`, `TUnit.Engine`, and
+`Microsoft.Testing.Platform` under `TUnitRuntime\`, not at the add-in
+root. Collectible load contexts apply on modern Revit TFMs. .NET Framework
+years use scoped isolation and exact manifest identity resolution,
+including side-by-side `System.Text.Json` identities.
+
+TestRunner locates, reuses, or starts Revit and sends `testing/run` with
+the discovered UIDs. `MarshaledTestingRequestHandler` enters
+`IHostContextExecutor`. The in-host `tunit` provider loads the generation
+isolation context and calls Engine.
+
+`samples/DevTools.TUnit.SampleTests` is split one scope per file: host
+smoke, lifecycle, each data-source attribute, Engine capabilities (Repeat,
+DependsOn, hooks, timeout, property injection, Retry), fixture shapes
+(inheritance, nested, generic closed/Revit types, constructor arguments),
+Revit geometry, generic helper methods, and document-bound deferred
+discovery gaps.

@@ -29,6 +29,7 @@ stays `FileMetadata.*`; add-in DI lives in `RevitDevTool/Composition` /
 | Logging | [architecture/Logging](architecture/Logging/README.md) | [product/logging.md](product/logging.md) | — |
 | Visualization | [architecture/Visualization](architecture/Visualization/README.md) | [product/visualization.md](product/visualization.md) | — |
 | NUnit host testing | [architecture/Testing](architecture/Testing/README.md) | [product/nunit-host-testing.md](product/nunit-host-testing.md) | [agents/nunit-host-testing.md](agents/nunit-host-testing.md) |
+| TUnit host testing | [architecture/Testing](architecture/Testing/README.md) | [product/tunit-host-testing.md](product/tunit-host-testing.md) | [agents/nunit-host-testing.md](agents/nunit-host-testing.md) |
 | PythonDemo | [architecture/PythonDemo](architecture/PythonDemo/README.md) | — | — |
 
 ## Cross-Cutting
@@ -43,7 +44,7 @@ stays `FileMetadata.*`; add-in DI lives in `RevitDevTool/Composition` /
 
 ## Source Layout
 
-- Shared: `source/DevTools.*` (Hosting, Hosting.Revit, Hosting.Acad, Execution, Execution.Abstractions, Ipc, Mcp.Core/Catalog/Adapter/Client/Server, FileMetadata.Core/Revit/Acad, Logging, Presentation, Settings, Telemetry, UI, Utilities, Daemon, Testing.Abstractions/Transport/Host, NUnit.MTP/Runtime/Host, TestAdapter, TestRunner.Core, TestRunner)
+- Shared: `source/DevTools.*` (Hosting, Hosting.Revit, Hosting.Acad, Execution, Execution.Abstractions, Ipc, Mcp.Core/Catalog/Adapter/Client/Server, FileMetadata.Core/Revit/Acad, Logging, Presentation, Settings, Telemetry, UI, Utilities, Daemon, Testing.Abstractions/Transport/Host, NUnit.MTP/Runtime/Host, TUnit.MTP/Runtime/Host, TestAdapter, TestRunner.Core, TestRunner)
 - Revit host: `source/RevitDevTool/`; Revit-only helpers: `source/RevitDevTool.Core/`; in-host MCP tools: `source/DevTools.Mcp.Revit/`
 - AutoCAD host: `source/AcadDevTool/`; in-host MCP tools: `source/DevTools.Mcp.Acad/`
 - Samples: `samples/`; build: `build/`; scripts: `scripts/`
