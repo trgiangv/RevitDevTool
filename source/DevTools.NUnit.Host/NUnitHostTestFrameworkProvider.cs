@@ -1,7 +1,9 @@
+using DevTools.NUnit.Host.Loading;
 using DevTools.Testing.Abstractions.Contracts;
 using DevTools.Testing.Abstractions.Providers;
 using DevTools.Testing.Abstractions.Runtime;
 using DevTools.Testing.Host;
+using DevTools.Testing.Host.Loading;
 using DevTools.Testing.Host.Runtime;
 
 namespace DevTools.NUnit.Host;
@@ -12,10 +14,20 @@ public static class NUnitFramework
 }
 
 /// <summary>NUnit provider over the framework-neutral testing runtime session manager.</summary>
-public sealed class NUnitHostTestFrameworkProvider(TestingRuntimeSessionManager sessions) :
-    IHostTestFrameworkProvider,
-    IDisposable
+public sealed class NUnitHostTestFrameworkProvider : IHostTestFrameworkProvider, IDisposable
 {
+    private readonly TestingRuntimeSessionManager _sessions;
+
+    public NUnitHostTestFrameworkProvider(
+        NUnitGenerationPolicy policy,
+        NUnitRuntimeSessionFactory factory)
+    {
+        _sessions = new TestingRuntimeSessionManager(
+            new TestingGenerationStore(Path.Combine(Path.GetTempPath(), "DevTools", "NUnit", "Generations")),
+            policy,
+            factory);
+    }
+
     public string FrameworkId => NUnitFramework.Id;
 
     public TestingRunResponse Run(TestingRunRequest request, ITestingEventSink eventSink,
@@ -36,16 +48,16 @@ public sealed class NUnitHostTestFrameworkProvider(TestingRuntimeSessionManager 
                 [],
                 NUnitSelectionFilter.ToNUnitFilter(request.Selection))
         };
-        return sessions.Run(normalized, new EventSink(eventSink), cancellationToken);
+        return _sessions.Run(normalized, new EventSink(eventSink), cancellationToken);
     }
 
     public bool Cancel(Guid runId)
     {
-        sessions.Cancel(runId);
+        _sessions.Cancel(runId);
         return true;
     }
 
-    public void Dispose() => sessions.Dispose();
+    public void Dispose() => _sessions.Dispose();
 
     private sealed class EventSink(ITestingEventSink sink) : ITestingRuntimeEventSink
     {

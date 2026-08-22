@@ -17,7 +17,32 @@ public sealed record TestingGenerationPlan(
     string FrameworkId,
     string SourceAssemblyPath,
     IReadOnlyList<TestingGenerationFile> Files,
-    string RuntimeAssemblyRelativePath);
+    string RuntimeAssemblyRelativePath)
+{
+    public void ValidateShape()
+    {
+        if (string.IsNullOrWhiteSpace(FrameworkId))
+            throw new TestingGenerationBuildException("Generation framework ID is required.");
+        if (Files is null || Files.Count == 0)
+            throw new TestingGenerationBuildException("Generation plan must contain files.");
+
+        var relativePaths = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var file in Files)
+        {
+            if (string.IsNullOrWhiteSpace(file.RelativePath) || Path.IsPathRooted(file.RelativePath)
+                || file.RelativePath.Split('/', '\\').Any(segment => segment == ".."))
+            {
+                throw new TestingGenerationBuildException($"Generation file path must be a relative path: {file.RelativePath}");
+            }
+
+            if (!relativePaths.Add(TestingGenerationPaths.NormalizeRelativePath(file.RelativePath)))
+                throw new TestingGenerationBuildException($"Generation plan contains duplicate path: {file.RelativePath}");
+        }
+
+        if (!relativePaths.Contains(TestingGenerationPaths.NormalizeRelativePath(RuntimeAssemblyRelativePath)))
+            throw new TestingGenerationBuildException("Generation plan runtime assembly path is not included in its files.");
+    }
+}
 
 public interface ITestingGenerationPolicy
 {

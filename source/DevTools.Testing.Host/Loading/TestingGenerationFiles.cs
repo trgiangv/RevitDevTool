@@ -3,9 +3,9 @@ using DevTools.Testing.Abstractions.Runtime;
 
 namespace DevTools.Testing.Host.Loading;
 
-internal static class TestingGenerationFiles
+public static class TestingGenerationFiles
 {
-    internal static TestingGenerationFileKind Classify(string path)
+    public static TestingGenerationFileKind Classify(string path)
     {
         if (string.Equals(Path.GetExtension(path), ".pdb", StringComparison.OrdinalIgnoreCase))
             return TestingGenerationFileKind.Symbols;
@@ -18,7 +18,7 @@ internal static class TestingGenerationFiles
             : TestingGenerationFileKind.Other;
     }
 
-    internal static bool TryGetManagedAssemblyIdentity(string path, out string? simpleName)
+    public static bool TryGetManagedAssemblyIdentity(string path, out string? simpleName)
     {
         simpleName = null;
         var extension = Path.GetExtension(path);
@@ -43,10 +43,19 @@ internal static class TestingGenerationFiles
         }
     }
 
-    internal static bool IsManagedAssembly(string path) =>
+    public static bool IsManagedAssembly(string path) =>
         TryGetManagedAssemblyIdentity(path, out _);
 
-    internal static bool IsSharedTestingContract(string path)
+    public static string NormalizeRelativePath(string relativePath) =>
+        TestingGenerationPaths.NormalizeRelativePath(relativePath);
+
+    public static string GetRelativePath(string relativeTo, string path) =>
+        TestingGenerationPaths.GetRelativePath(relativeTo, path);
+
+    public static bool IsVolatileGenerationOutput(string relativePath) =>
+        TestingGenerationPaths.IsVolatileGenerationOutput(relativePath);
+
+    public static bool IsSharedTestingContract(string path)
     {
         if (!TryGetManagedAssemblyIdentity(path, out var simpleName))
             return false;
@@ -57,15 +66,14 @@ internal static class TestingGenerationFiles
             StringComparison.OrdinalIgnoreCase);
     }
 
-    internal static Dictionary<string, TestingGenerationFile> ScanOutputDirectory(string outputDirectory)
+    public static Dictionary<string, TestingGenerationFile> ScanOutputDirectory(string outputDirectory)
     {
         outputDirectory = Path.GetFullPath(outputDirectory);
         var files = new Dictionary<string, TestingGenerationFile>(StringComparer.OrdinalIgnoreCase);
         foreach (var path in Directory.EnumerateFiles(outputDirectory, "*", SearchOption.AllDirectories))
         {
-            var relativePath = TestingGenerationPaths.NormalizeRelativePath(
-                Path.GetRelativePath(outputDirectory, path));
-            if (TestingGenerationPaths.IsVolatileGenerationOutput(relativePath)
+            var relativePath = NormalizeRelativePath(GetRelativePath(outputDirectory, path));
+            if (IsVolatileGenerationOutput(relativePath)
                 || IsSharedTestingContract(path))
             {
                 continue;
@@ -77,30 +85,57 @@ internal static class TestingGenerationFiles
         return files;
     }
 
-    internal static void ValidateManagedFrameworkVersion(
-        string frameworkPath,
-        string frameworkAssemblyFileName,
-        string expectedFileVersion,
-        string expectedPackageVersion,
-        string? sourceOutputDirectory,
-        Func<string, Exception> throwInvalid)
+    public static bool TryGetFileVersion(string path, out string? fileVersion)
     {
-        var fileVersion = System.Diagnostics.FileVersionInfo.GetVersionInfo(frameworkPath).FileVersion;
-        if (!string.Equals(fileVersion, expectedFileVersion, StringComparison.Ordinal))
+        fileVersion = System.Diagnostics.FileVersionInfo.GetVersionInfo(path).FileVersion;
+        return fileVersion is not null;
+    }
+
+    public static bool ContentEquals(string firstPath, string secondPath)
+    {
+        var firstInfo = new FileInfo(firstPath);
+        var secondInfo = new FileInfo(secondPath);
+        if (!firstInfo.Exists || !secondInfo.Exists)
+            return false;
+        if (firstInfo.Length != secondInfo.Length)
+            return false;
+
+        using var first = new FileStream(firstPath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete);
+        using var second = new FileStream(secondPath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete);
+        var buffer = new byte[81920];
+        var other = new byte[81920];
+        while (true)
         {
-            var location = sourceOutputDirectory is null
-                ? frameworkPath
-                : TestingGenerationPaths.NormalizeRelativePath(
-                    Path.GetRelativePath(sourceOutputDirectory, frameworkPath));
-            throw throwInvalid(
-                $"Expected {frameworkAssemblyFileName} file version {expectedFileVersion} (package {expectedPackageVersion}); found {fileVersion ?? "<missing>"} at {location}.");
+            var firstRead = first.Read(buffer, 0, buffer.Length);
+            var secondRead = second.Read(other, 0, other.Length);
+            if (firstRead != secondRead)
+                return false;
+            if (firstRead == 0)
+                return true;
+            for (var i = 0; i < firstRead; i++)
+            {
+                if (buffer[i] != other[i])
+                    return false;
+            }
+        }
+    }
+
+    public static void MergeFile(
+        IDictionary<string, TestingGenerationFile> files,
+        string sourcePath,
+        string relativePath)
+    {
+        relativePath = NormalizeRelativePath(relativePath);
+        if (files.TryGetValue(relativePath, out var existing))
+        {
+            if (ContentEquals(existing.SourcePath, sourcePath))
+                return;
+
+            files[relativePath] = new TestingGenerationFile(sourcePath, relativePath, Classify(sourcePath));
+            return;
         }
 
-        if (!IsManagedAssembly(frameworkPath))
-        {
-            throw throwInvalid(
-                $"{frameworkAssemblyFileName} is not a valid managed assembly: {frameworkPath}");
-        }
+        files[relativePath] = new TestingGenerationFile(sourcePath, relativePath, Classify(sourcePath));
     }
 
     private static bool IsSatelliteResourceAssembly(string path)

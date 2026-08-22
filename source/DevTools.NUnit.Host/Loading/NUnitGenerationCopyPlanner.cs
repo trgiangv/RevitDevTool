@@ -2,7 +2,18 @@ using DevTools.Testing.Host.Loading;
 
 namespace DevTools.NUnit.Host.Loading;
 
-internal sealed record GenerationCopyEntry(string SourcePath, string RelativePath);
+internal sealed class GenerationCopyEntry
+{
+    public GenerationCopyEntry(string sourcePath, string relativePath)
+    {
+        SourcePath = sourcePath;
+        RelativePath = relativePath;
+    }
+
+    public string SourcePath { get; }
+
+    public string RelativePath { get; }
+}
 
 internal static class NUnitGenerationCopyPlanner
 {
@@ -54,11 +65,11 @@ internal static class NUnitGenerationCopyPlanner
         out string relativePath,
         out string? managedSimpleName)
     {
-        relativePath = TestingGenerationPaths.NormalizeRelativePath(
-            TestingGenerationPaths.GetRelativePath(sourceOutputDirectory, sourceFile));
+        relativePath = TestingGenerationFiles.NormalizeRelativePath(
+            TestingGenerationFiles.GetRelativePath(sourceOutputDirectory, sourceFile));
         managedSimpleName = null;
 
-        if (TestingGenerationPaths.IsVolatileGenerationOutput(relativePath))
+        if (TestingGenerationFiles.IsVolatileGenerationOutput(relativePath))
             return false;
 
         if (TestingGenerationFiles.TryGetManagedAssemblyIdentity(sourceFile, out var simpleName))
@@ -107,7 +118,7 @@ internal static class NUnitGenerationCopyPlanner
             // already copied a different build of the same simple name (common for
             // net48 polyfills), keep the Runtime copy so Reflection.Metadata and
             // nunit.framework bind coherently with DevTools.NUnit.Runtime.
-            if (!FilesHaveEqualContent(copyEntries[existingIndex].SourcePath, dependencyPath))
+            if (!TestingGenerationFiles.ContentEquals(copyEntries[existingIndex].SourcePath, dependencyPath))
                 copyEntries[existingIndex] = new GenerationCopyEntry(dependencyPath, relativePath);
 
             return;
@@ -149,30 +160,5 @@ internal static class NUnitGenerationCopyPlanner
         }
 
         NUnitGenerationPolicy.ValidateNUnitFrameworkVersion(frameworkMatches[0], sourceOutputDirectory);
-    }
-
-    private static bool FilesHaveEqualContent(string firstPath, string secondPath)
-    {
-        var first = new FileInfo(firstPath);
-        var second = new FileInfo(secondPath);
-        if (first.Length != second.Length)
-            return false;
-
-        using var firstStream = File.OpenRead(firstPath);
-        using var secondStream = File.OpenRead(secondPath);
-        var firstBuffer = new byte[81920];
-        var secondBuffer = new byte[81920];
-        int firstRead;
-        while ((firstRead = firstStream.Read(firstBuffer, 0, firstBuffer.Length)) > 0)
-        {
-            var secondRead = secondStream.Read(secondBuffer, 0, secondBuffer.Length);
-            if (secondRead != firstRead
-                || !firstBuffer.AsSpan(0, firstRead).SequenceEqual(secondBuffer.AsSpan(0, secondRead)))
-            {
-                return false;
-            }
-        }
-
-        return secondStream.ReadByte() == -1;
     }
 }

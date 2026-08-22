@@ -1,8 +1,6 @@
 using DevTools.NUnit.Host.Loading;
 using DevTools.Testing.Abstractions.Providers;
-using DevTools.Testing.Host;
 using DevTools.Testing.Host.Loading;
-using DevTools.Testing.Host.Runtime;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 
@@ -27,12 +25,9 @@ public static class NUnitHostingExtensions
                     NUnitGenerationPolicy.RuntimeFolderName,
                     NUnitGenerationPolicy.RuntimeAssemblyFileName,
                     NUnitGenerationPolicy.RuntimeSymbolFileName)));
-        services.TryAddSingleton<ITestingGenerationPolicy>(sp => sp.GetRequiredService<NUnitGenerationPolicy>());
-        services.TryAddSingleton(_ => new TestingGenerationStore(
-            Path.Combine(Path.GetTempPath(), "DevTools", "NUnit", "Generations")));
-        services.TryAddSingleton<ITestingRuntimeSessionFactory, NUnitRuntimeSessionFactory>();
-        services.TryAddSingleton<TestingRuntimeSessionManager>();
-        services.TryAddSingleton<IHostTestFrameworkProvider, NUnitHostTestFrameworkProvider>();
+        services.TryAddSingleton<NUnitRuntimeSessionFactory>();
+        services.TryAddEnumerable(
+            ServiceDescriptor.Singleton<IHostTestFrameworkProvider, NUnitHostTestFrameworkProvider>());
         return services;
     }
 }

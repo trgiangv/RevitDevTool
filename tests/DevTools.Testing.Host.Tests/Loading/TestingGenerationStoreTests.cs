@@ -355,7 +355,6 @@ public sealed class TestingGenerationStoreTests
             new("provider.example", assembly, files, files[0].RelativePath);
         public void Dispose()
         {
-            Store.Dispose();
             if (Directory.Exists(Root)) Directory.Delete(Root, true);
         }
     }

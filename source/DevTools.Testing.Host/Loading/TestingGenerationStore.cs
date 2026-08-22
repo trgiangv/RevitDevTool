@@ -3,16 +3,14 @@ using System.Security.Cryptography;
 
 namespace DevTools.Testing.Host.Loading;
 
-public sealed class TestingGenerationStore : IDisposable
+public sealed class TestingGenerationStore
 {
     private const int MaxSnapshotAttempts = 3;
     private static readonly ConcurrentDictionary<string, object> GenerationLocks = new(StringComparer.OrdinalIgnoreCase);
     private readonly string _generationsRootDirectory;
 
-    // Deterministic test/diagnostic seams; callers must not mutate source or staging content.
+    // Deterministic test/diagnostic seam; callers must not mutate source or staging content.
     public Action<string>? AfterFileCopied { get; set; }
-    public Action<string>? BeforeFileCopied { get; set; }
-    public Action? BeforePublish { get; set; }
 
     public TestingGenerationStore(string? generationsRootDirectory = null)
     {
@@ -25,7 +23,7 @@ public sealed class TestingGenerationStore : IDisposable
         if (policy is null)
             throw new ArgumentNullException(nameof(policy));
         var plan = policy.CreatePlan(testAssemblyPath) ?? throw new TestingGenerationBuildException("Generation policy returned no plan.");
-        ValidatePlan(plan, testAssemblyPath);
+        ValidateSources(plan, testAssemblyPath);
         string? lastFailure = null;
 
         for (var attempt = 0; attempt < MaxSnapshotAttempts; attempt++)
@@ -53,7 +51,6 @@ public sealed class TestingGenerationStore : IDisposable
             var metadata = plan.Files.Select(file => (File: file, Metadata: SourceMetadata.Capture(file.SourcePath))).ToList();
             foreach (var item in metadata)
             {
-                BeforeFileCopied?.Invoke(item.File.SourcePath);
                 TestingGenerationSnapshot.CopyFile(item.File.SourcePath, Path.Combine(staging, item.File.RelativePath));
                 AfterFileCopied?.Invoke(item.File.SourcePath);
             }
@@ -66,13 +63,6 @@ public sealed class TestingGenerationStore : IDisposable
 
             var contentPaths = plan.Files.Select(file => file.RelativePath).OrderBy(path => path, StringComparer.OrdinalIgnoreCase).ToList();
             var generationId = TestingGenerationSnapshot.ComputeGenerationId(staging, contentPaths);
-            if (!string.Equals(generationId, TestingGenerationSnapshot.ComputeGenerationId(staging, contentPaths), StringComparison.Ordinal))
-            {
-                failure = "snapshot changed before publication";
-                return false;
-            }
-
-            BeforePublish?.Invoke();
             if (!string.Equals(generationId, TestingGenerationSnapshot.ComputeGenerationId(staging, contentPaths), StringComparison.Ordinal))
             {
                 failure = "snapshot changed before publication";
@@ -105,12 +95,9 @@ public sealed class TestingGenerationStore : IDisposable
         }
     }
 
-    private static void ValidatePlan(TestingGenerationPlan plan, string testAssemblyPath)
+    private static void ValidateSources(TestingGenerationPlan plan, string testAssemblyPath)
     {
-        if (string.IsNullOrWhiteSpace(plan.FrameworkId))
-            throw new TestingGenerationBuildException("Generation framework ID is required.");
-        if (plan.Files is null || plan.Files.Count == 0)
-            throw new TestingGenerationBuildException("Generation plan must contain files.");
+        plan.ValidateShape();
 
         var sourceAssemblyPath = Path.GetFullPath(plan.SourceAssemblyPath);
         if (!File.Exists(sourceAssemblyPath))
@@ -118,22 +105,11 @@ public sealed class TestingGenerationStore : IDisposable
         if (!string.Equals(sourceAssemblyPath, Path.GetFullPath(testAssemblyPath), StringComparison.OrdinalIgnoreCase))
             throw new TestingGenerationBuildException("Generation plan source assembly does not match the requested test assembly.");
 
-        var relativePaths = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         foreach (var file in plan.Files)
         {
             if (string.IsNullOrWhiteSpace(file.SourcePath) || !File.Exists(file.SourcePath))
                 throw new TestingGenerationBuildException($"Generation file not found: {file.SourcePath}");
-            if (string.IsNullOrWhiteSpace(file.RelativePath) || Path.IsPathRooted(file.RelativePath)
-                || file.RelativePath.Split('/', '\\').Any(segment => segment == ".."))
-            {
-                throw new TestingGenerationBuildException($"Generation file path must be a relative path: {file.RelativePath}");
-            }
-            if (!relativePaths.Add(TestingGenerationPaths.NormalizeRelativePath(file.RelativePath)))
-                throw new TestingGenerationBuildException($"Generation plan contains duplicate path: {file.RelativePath}");
         }
-
-        if (!relativePaths.Contains(TestingGenerationPaths.NormalizeRelativePath(plan.RuntimeAssemblyRelativePath)))
-            throw new TestingGenerationBuildException("Generation plan runtime assembly path is not included in its files.");
     }
 
     private static TestingGenerationManifest CreateManifest(
@@ -157,10 +133,6 @@ public sealed class TestingGenerationStore : IDisposable
             plan.Files.Where(file => file.Kind == TestingGenerationFileKind.Native).Select(file => Resolve(file.RelativePath)).OrderBy(path => path, StringComparer.OrdinalIgnoreCase).ToList(),
             plan.Files.Where(file => file.Kind == TestingGenerationFileKind.Symbols).Select(file => Resolve(file.RelativePath)).OrderBy(path => path, StringComparer.OrdinalIgnoreCase).ToList(),
             plan.Files.Where(file => file.Kind == TestingGenerationFileKind.Other).Select(file => Resolve(file.RelativePath)).OrderBy(path => path, StringComparer.OrdinalIgnoreCase).ToList());
-    }
-
-    public void Dispose()
-    {
     }
 
     private sealed record SourceMetadata(long Length, DateTime LastWriteUtc, string ContentHash)

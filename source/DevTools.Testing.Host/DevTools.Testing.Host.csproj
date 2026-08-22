@@ -8,8 +8,6 @@
     <ItemGroup>
         <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions"/>
         <InternalsVisibleTo Include="DevTools.Testing.Host.Tests"/>
-        <InternalsVisibleTo Include="DevTools.NUnit.Host"/>
-        <InternalsVisibleTo Include="DevTools.TUnit.Host"/>
         <ProjectReference Include="..\DevTools.Testing.Abstractions\DevTools.Testing.Abstractions.csproj"/>
         <ProjectReference Include="..\DevTools.Testing.Transport\DevTools.Testing.Transport.csproj"/>
         <ProjectReference Include="..\DevTools.Ipc\DevTools.Ipc.csproj"/>

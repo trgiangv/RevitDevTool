@@ -73,14 +73,25 @@ public sealed class TUnitGenerationPolicy(Func<HostRuntimeSource> runtimeSourceP
         ValidateTUnitFrameworkVersion(frameworks[0], manifest.ShadowDirectory);
     }
 
-    internal static void ValidateTUnitFrameworkVersion(string frameworkPath, string? sourceOutputDirectory = null) =>
-        TestingGenerationFiles.ValidateManagedFrameworkVersion(
-            frameworkPath,
-            FrameworkAssemblyFileName,
-            ExpectedTUnitFileVersion,
-            ExpectedTUnitPackageVersion,
-            sourceOutputDirectory,
-            static message => new TestingGenerationBuildException(message));
+    internal static void ValidateTUnitFrameworkVersion(string frameworkPath, string? sourceOutputDirectory = null)
+    {
+        TestingGenerationFiles.TryGetFileVersion(frameworkPath, out var fileVersion);
+        if (!string.Equals(fileVersion, ExpectedTUnitFileVersion, StringComparison.Ordinal))
+        {
+            var location = sourceOutputDirectory is null
+                ? frameworkPath
+                : TestingGenerationFiles.NormalizeRelativePath(
+                    TestingGenerationFiles.GetRelativePath(sourceOutputDirectory, frameworkPath));
+            throw new TestingGenerationBuildException(
+                $"Expected {FrameworkAssemblyFileName} file version {ExpectedTUnitFileVersion} (package {ExpectedTUnitPackageVersion}); found {fileVersion ?? "<missing>"} at {location}.");
+        }
+
+        if (!TestingGenerationFiles.IsManagedAssembly(frameworkPath))
+        {
+            throw new TestingGenerationBuildException(
+                $"{FrameworkAssemblyFileName} is not a valid managed assembly: {frameworkPath}");
+        }
+    }
 
     private static void AddRuntimeFile(
         IDictionary<string, TestingGenerationFile> files,
@@ -93,9 +104,6 @@ public sealed class TUnitGenerationPolicy(Func<HostRuntimeSource> runtimeSourceP
         if (TestingGenerationFiles.IsSharedTestingContract(sourcePath))
             return;
 
-        files[relativePath] = new TestingGenerationFile(
-            sourcePath,
-            relativePath,
-            TestingGenerationFiles.Classify(sourcePath));
+        TestingGenerationFiles.MergeFile(files, sourcePath, relativePath);
     }
 }

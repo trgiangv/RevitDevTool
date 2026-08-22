@@ -71,14 +71,25 @@ public sealed class NUnitGenerationPolicy : ITestingGenerationPolicy
             throw new NUnitGenerationBuildException($"Published NUnit runtime assembly is missing: {manifest.RuntimeAssemblyPath}");
     }
 
-    internal static void ValidateNUnitFrameworkVersion(string frameworkPath, string? sourceOutputDirectory = null) =>
-        TestingGenerationFiles.ValidateManagedFrameworkVersion(
-            frameworkPath,
-            FrameworkAssemblyFileName,
-            ExpectedNUnitFileVersion,
-            ExpectedNUnitPackageVersion,
-            sourceOutputDirectory,
-            static message => new NUnitGenerationBuildException(message));
+    internal static void ValidateNUnitFrameworkVersion(string frameworkPath, string? sourceOutputDirectory = null)
+    {
+        TestingGenerationFiles.TryGetFileVersion(frameworkPath, out var fileVersion);
+        if (!string.Equals(fileVersion, ExpectedNUnitFileVersion, StringComparison.Ordinal))
+        {
+            var location = sourceOutputDirectory is null
+                ? frameworkPath
+                : TestingGenerationFiles.NormalizeRelativePath(
+                    TestingGenerationFiles.GetRelativePath(sourceOutputDirectory, frameworkPath));
+            throw new NUnitGenerationBuildException(
+                $"Expected {FrameworkAssemblyFileName} file version {ExpectedNUnitFileVersion} (package {ExpectedNUnitPackageVersion}); found {fileVersion ?? "<missing>"} at {location}.");
+        }
+
+        if (!TestingGenerationFiles.IsManagedAssembly(frameworkPath))
+        {
+            throw new NUnitGenerationBuildException(
+                $"{FrameworkAssemblyFileName} is not a valid managed assembly: {frameworkPath}");
+        }
+    }
 
     internal static string GetFrameworkAssemblyPath(TestingGenerationManifest manifest) =>
         manifest.ManagedAssemblies.Single(path =>
