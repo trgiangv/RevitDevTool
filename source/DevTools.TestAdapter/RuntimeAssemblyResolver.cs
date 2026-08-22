@@ -1,15 +1,24 @@
 using System.Reflection;
+using DevTools.Testing.Abstractions;
 
 namespace DevTools.TestAdapter;
 
 internal static class RuntimeAssemblyResolver
 {
     private static int _registered;
+    private static IReadOnlyDictionary<string, string> _discoveryRefs =
+        new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
 
-    internal static void EnsureRegistered()
+    internal static void EnsureRegistered() =>
+        EnsureRegistered(Assembly.GetEntryAssembly()?.Location);
+
+    internal static void EnsureRegistered(string? entryAssemblyPath)
     {
         if (Interlocked.Exchange(ref _registered, 1) != 0)
             return;
+
+        if (!string.IsNullOrWhiteSpace(entryAssemblyPath))
+            _discoveryRefs = DiscoveryRefs.Read(entryAssemblyPath!);
 
         AppDomain.CurrentDomain.AssemblyResolve += ResolvePrivateRuntimeAssembly;
     }
@@ -20,17 +29,33 @@ internal static class RuntimeAssemblyResolver
             return null;
 
         var name = requested.Name!;
+        if (_discoveryRefs.TryGetValue(name, out var discoveryPath))
+        {
+            var fromDiscovery = TryLoadFromPath(requested, discoveryPath);
+            if (fromDiscovery is not null)
+                return fromDiscovery;
+        }
+
         var baseDirectory = Path.GetFullPath(AppContext.BaseDirectory);
         var path = Path.GetFullPath(Path.Combine(baseDirectory, name + ".dll"));
         if (!IsUnderBaseDirectory(path, baseDirectory) || !File.Exists(path))
             return null;
 
+        return TryLoadFromPath(requested, path);
+    }
+
+    private static Assembly? TryLoadFromPath(AssemblyName requested, string path)
+    {
         try
         {
             var candidate = AssemblyName.GetAssemblyName(path);
             return HasSameFullIdentity(requested, candidate) ? Assembly.LoadFrom(path) : null;
         }
         catch (BadImageFormatException)
+        {
+            return null;
+        }
+        catch (FileLoadException)
         {
             return null;
         }
@@ -101,4 +126,5 @@ internal static class RuntimeAssemblyResolver
         string.Equals(identity.CultureName, "neutral", StringComparison.OrdinalIgnoreCase)
             ? string.Empty
             : identity.CultureName ?? string.Empty;
+
 }

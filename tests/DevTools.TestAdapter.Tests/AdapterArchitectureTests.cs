@@ -11,7 +11,8 @@ public sealed class AdapterArchitectureTests
 
         Assert.Contains("'$(TestingFramework)' == 'tunit'", props, StringComparison.Ordinal);
         Assert.Contains("DevTools.TestAdapter.TestingPlatformBuilderHook", props, StringComparison.Ordinal);
-        Assert.Contains("Revit 2023/net48 and Revit 2025/net8", props, StringComparison.Ordinal);
+        Assert.DoesNotContain("supports only Revit 2023", props, StringComparison.Ordinal);
+        Assert.DoesNotContain("'$(HostVersion)' != '2023'", props, StringComparison.Ordinal);
         Assert.Contains("DevTools.TUnit.MTP.dll", targets, StringComparison.Ordinal);
         Assert.Contains("TestingPlatformBuilderHook Remove=\"6ADF853A-6945-4A06-9A4B-D99BC1DC1094\"", targets, StringComparison.Ordinal);
         Assert.False(File.Exists(Path.Combine(adapterDir, "TUnitTestingPlatformBuilderHook.cs")));
@@ -31,10 +32,14 @@ public sealed class AdapterArchitectureTests
 
         Assert.DoesNotContain("ILRepackable", props, StringComparison.Ordinal);
         Assert.Contains("DevTools.TUnit.Host", hostProject, StringComparison.Ordinal);
+        Assert.DoesNotContain("'$(RevitVersion)' == '2023' OR '$(RevitVersion)' == '2025'", hostProject, StringComparison.Ordinal);
         Assert.Contains("TUnitRuntime\\", packaging, StringComparison.Ordinal);
         Assert.Contains("TUnit.Core.dll must be deployed under TUnitRuntime", packaging, StringComparison.Ordinal);
+        Assert.Contains("TUnit.Engine.dll must be deployed under TUnitRuntime", packaging, StringComparison.Ordinal);
+        Assert.Contains("Microsoft.Testing.Platform.dll must be deployed under TUnitRuntime", packaging, StringComparison.Ordinal);
+        Assert.DoesNotContain("must not ship Microsoft.Testing.Platform", packaging, StringComparison.Ordinal);
         Assert.Contains("must not be copied at the add-in root", packaging, StringComparison.Ordinal);
-        Assert.Contains("'$(RevitVersion)' == '2023' OR '$(RevitVersion)' == '2025'", packaging, StringComparison.Ordinal);
+        Assert.DoesNotContain("'$(RevitVersion)' == '2023' OR '$(RevitVersion)' == '2025'", packaging, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -46,10 +51,55 @@ public sealed class AdapterArchitectureTests
             RepositoryRoot, "source", "DevTools.Testing.Host", "MarshaledTestingRequestHandler.cs"));
 
         Assert.Contains("AddTUnitHostServices", composition, StringComparison.Ordinal);
+        Assert.DoesNotContain("REVIT2023 || REVIT2025", composition, StringComparison.Ordinal);
         Assert.Contains("_hostContext.ExecuteAsync", handler, StringComparison.Ordinal);
         Assert.DoesNotContain("RevitTestExecutionDispatcher", composition, StringComparison.Ordinal);
         Assert.False(File.Exists(Path.Combine(root, "Testing", "RevitTestHostApplicationLauncher.cs")));
         Assert.False(File.Exists(Path.Combine(root, "Testing", "RevitTestExecutionDispatcher.cs")));
+    }
+
+    [Fact]
+    public void TUnit_in_host_uses_engine_instead_of_nested_mtp()
+    {
+        var runtimeDir = Path.Combine(RepositoryRoot, "source", "DevTools.TUnit.Runtime");
+        var session = File.ReadAllText(Path.Combine(runtimeDir, "TUnitRuntimeSession.cs"));
+        var host = File.ReadAllText(Path.Combine(runtimeDir, "TUnitEngineHost.cs"));
+        var catalog = File.ReadAllText(Path.Combine(runtimeDir, "TUnitCatalog.cs"));
+        var identity = File.ReadAllText(Path.Combine(runtimeDir, "TUnitTestIdentity.cs"));
+        var project = File.ReadAllText(Path.Combine(runtimeDir, "DevTools.TUnit.Runtime.csproj"));
+        var discoverer = File.ReadAllText(Path.Combine(
+            RepositoryRoot, "source", "DevTools.TUnit.MTP", "TUnitHostTestDiscoverer.cs"));
+
+        Assert.DoesNotContain("TestApplication", session, StringComparison.Ordinal);
+        Assert.DoesNotContain("AddTUnit()", session, StringComparison.Ordinal);
+        Assert.DoesNotContain("AddTUnit()", host, StringComparison.Ordinal);
+        Assert.DoesNotContain("TestApplication", host, StringComparison.Ordinal);
+        Assert.Contains("TUnitEngineHost.Run", session, StringComparison.Ordinal);
+        Assert.Contains("ExecuteRequestAsync", host, StringComparison.Ordinal);
+        Assert.Contains("TestNodeUidListFilter", host, StringComparison.Ordinal);
+        Assert.Contains("SourceRegistrar.IsEnabled", host, StringComparison.Ordinal);
+        Assert.Contains("SynchronizationContext.SetSynchronizationContext(null)", host, StringComparison.Ordinal);
+        Assert.Contains("TUnit.Engine", project, StringComparison.Ordinal);
+        Assert.Contains("TUnit.Core", project, StringComparison.Ordinal);
+        Assert.DoesNotContain("<PackageReference Include=\"Microsoft.Testing.Platform\"", project, StringComparison.Ordinal);
+        Assert.Contains("Sources.TestEntries", catalog, StringComparison.Ordinal);
+        Assert.Contains("GetFilterData", catalog, StringComparison.Ordinal);
+        Assert.Contains("TUnitExpansion.Expand", catalog, StringComparison.Ordinal);
+        Assert.Contains("TUnitCatalog.Discover", discoverer, StringComparison.Ordinal);
+        Assert.Contains("TestingDiscoveryOptions", discoverer, StringComparison.Ordinal);
+        Assert.Contains("InheritanceDepth", identity, StringComparison.Ordinal);
+        Assert.Contains("_Deferred", identity, StringComparison.Ordinal);
+        Assert.DoesNotContain("TUnitAot", catalog, StringComparison.Ordinal);
+        Assert.DoesNotContain("TUnitAot", session, StringComparison.Ordinal);
+        Assert.False(File.Exists(Path.Combine(runtimeDir, "TUnitExecutor.cs")));
+        Assert.False(File.Exists(Path.Combine(runtimeDir, "TUnitHooks.cs")));
+
+        var expansion = File.ReadAllText(Path.Combine(runtimeDir, "TUnitExpansion.cs"));
+        Assert.Contains("GetDataRowsAsync", expansion, StringComparison.Ordinal);
+        Assert.Contains("RepeatTimes", expansion, StringComparison.Ordinal);
+        Assert.Contains("ResolvePropertyDataSources", expansion, StringComparison.Ordinal);
+        Assert.Contains("new SourceRow([], 1, 1, null)", expansion, StringComparison.Ordinal);
+        Assert.DoesNotContain("TUnitAot", expansion, StringComparison.Ordinal);
     }
 
     private static readonly string RepositoryRoot = Path.GetFullPath(
@@ -253,6 +303,7 @@ public sealed class AdapterArchitectureTests
         Assert.Contains("TargetFrameworkIdentifier", props, StringComparison.Ordinal);
         Assert.DoesNotContain("StartsWith('net4')", props, StringComparison.Ordinal);
         Assert.Contains("System.Runtime.CompilerServices.Unsafe", props, StringComparison.Ordinal);
+        Assert.Contains("Microsoft.Bcl.AsyncInterfaces", props, StringComparison.Ordinal);
         Assert.DoesNotContain("ILRepack", props, StringComparison.Ordinal);
         Assert.DoesNotContain("DevToolsNUnitRepack", props, StringComparison.Ordinal);
         Assert.DoesNotContain("ILRepackable", props, StringComparison.Ordinal);

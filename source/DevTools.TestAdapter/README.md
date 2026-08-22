@@ -6,9 +6,10 @@ AutoCAD-family host. Requires
 
 The package does not depend on a test framework. NUnit remains the default and
 uses local `ExploreTests` discovery via `DevTools.NUnit.MTP.dll`. Native TUnit
-is supported only for Revit 2023 (`net48`) and Revit 2025
-(`net8.0-windows`). `DevTools.TUnit.MTP.dll` reads TUnit's source-generated
-entries locally; execution still goes through TestRunner and `testing/run` IPC.
+is Revit-only (`HostName=Revit`) and follows the same year → TFM mapping as
+the host add-in. `DevTools.TUnit.MTP.dll` reads TUnit.Core
+`Sources.TestEntries` locally; in-host execution uses the same catalog through
+TestRunner and `testing/run` IPC, not a nested MTP testhost.
 
 Host options come from csproj properties. The package generates `testconfig.json`
 and Microsoft.Testing.Platform.MSBuild copies it to `[AssemblyName].testconfig.json`.
@@ -50,8 +51,8 @@ items with:
 </ItemGroup>
 ```
 
-TUnit is rejected for every host/year combination except Revit 2023/net48 and
-Revit 2025/net8.
+TUnit requires `HostName=Revit`. It is not gated to specific Revit years;
+use the same `HostVersion` / TFM as any other Revit test project.
 
 AutoCAD-family projects set `<HostName>AutoCad</HostName>` or
 `Civil3D`, and `<HostVersion>$(AutoCadVersion)</HostVersion>` (or the

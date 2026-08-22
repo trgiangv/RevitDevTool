@@ -32,12 +32,10 @@ on branch `testing/nunit-vstest`.
 - IDE discovery is host-free. `DevTools.NUnit.MTP` uses NUnit
   `ExploreTests` when the assembly can load in the MTP process. Autodesk API
   packages (`Revit_All_Main_Versions_API_x64`, `AutoCAD.NET`, Nice3point
-  `ref/` packs) resolve from the NuGet cache with Copy Local false /
-  `ExcludeAssets=runtime`. After Build the adapter writes
-  `$(TargetName).discovery-refs.txt` with those already-resolved package
-  paths so testhost can load them — it does not copy the API DLLs next to
-  the test exe, and consumers do not add extra csproj items. Framework
-  targeting packs are omitted. When that file is present, discovery loads an isolated copy of the test
+  `ref/` packs) are compile-only (Copy Local false). After Build the adapter
+  writes `$(TargetName).discovery-refs.txt` from compile-only NuGet
+  `ReferencePath` (Copy Local false). Testhost loads those paths via
+  `AssemblyResolve`; API DLLs are not copied next to the test exe. When that file is present, discovery loads an isolated copy of the test
   assembly and resolves those paths — no host process. If ExploreTests cannot
   build a tree, discovery fails with that NUnit reason. There is no PE metadata
   list. In-host NUnit load is also
