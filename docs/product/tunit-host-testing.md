@@ -118,8 +118,16 @@ TUnit.Core `Sources.TestEntries` is a process-wide dictionary keyed by
 `Type`. A rebuild loads a new test assembly (net48 cannot unload the old
 one). The module constructor **adds** sources; Engine would then execute
 every historical copy of the same UID and concatenate their `Console`
-output. Before each discover/run, Runtime keeps only sources whose
-`ClassType.Assembly` is the current generation assembly.
+output. Before each discover/run, Runtime parks other assemblies' sources
+and keeps only the current generation live. Reverting an edit reuses the
+previous generation hash and the already-loaded assembly — the module
+constructor does not run again — so parked sources are restored. Discarding
+them made testhost report `TUnit did not report a result for the selected
+test` with no stack. Parked maps live on parent-bound Abstractions
+(`TestingProcessHold`), not Runtime statics: net48 `LoadFile`s a distinct
+Runtime copy from each generation shadow folder while TUnit.Core stays
+identity-bound, and the session manager retires the previous generation
+before a revert recreates it.
 
 ### Testhost MTP copy
 
