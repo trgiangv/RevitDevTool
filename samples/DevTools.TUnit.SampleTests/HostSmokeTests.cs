@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using Nice3point.Revit.Toolkit;
 
 namespace DevTools.TUnit.SampleTests;
 
@@ -20,7 +21,7 @@ public sealed class HostSmokeTests
             StringComparison.OrdinalIgnoreCase)).IsTrue();
 
         Console.WriteLine($"host-pid={Process.GetCurrentProcess().Id}");
-        _ = typeof(ElementId).Assembly.GetName();
+        Console.WriteLine(RevitApiContext.Application.VersionBuild);
         var sum = 2 + 2;
         await Assert.That(sum).IsEqualTo(4);
     }
