@@ -23,6 +23,27 @@ public sealed class ManagedAssemblySourceTests
     }
 
     [Fact]
+    public void Manifest_resolves_distinct_versions_of_the_same_simple_name()
+    {
+        using var directory = new TemporaryDirectory();
+        var olderPath = Path.Combine(directory.Path, "System.Text.Json.v9.dll");
+        var newerPath = Path.Combine(directory.Path, "System.Text.Json.dll");
+        File.WriteAllText(olderPath, "placeholder");
+        File.WriteAllText(newerPath, "placeholder");
+
+        var olderIdentity = new AssemblyName("System.Text.Json, Version=9.0.0.0, Culture=neutral, PublicKeyToken=cc7b13ffcd2ddd51");
+        var newerIdentity = new AssemblyName("System.Text.Json, Version=10.0.0.0, Culture=neutral, PublicKeyToken=cc7b13ffcd2ddd51");
+        var source = new ManifestAssemblySource(
+        [
+            (olderIdentity, new AssemblyCandidate(olderPath, "older", directory.Path)),
+            (newerIdentity, new AssemblyCandidate(newerPath, "newer", directory.Path)),
+        ]);
+
+        Assert.Equal(Path.GetFullPath(olderPath), source.Resolve(olderIdentity)!.Path);
+        Assert.Equal(Path.GetFullPath(newerPath), source.Resolve(newerIdentity)!.Path);
+    }
+
+    [Fact]
     public void Duplicate_compatible_manifest_candidates_use_the_first_declared_candidate()
     {
         using var directory = new TemporaryDirectory();

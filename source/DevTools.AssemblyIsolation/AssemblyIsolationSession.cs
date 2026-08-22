@@ -1,10 +1,9 @@
 using System.Reflection;
-using System.Runtime.CompilerServices;
 using DevTools.AssemblyIsolation.Diagnostics;
-using DevTools.AssemblyIsolation.Loading;
 using DevTools.AssemblyIsolation.Runtime;
 #if NET
-using System.Runtime.Loader;
+using System.Runtime.CompilerServices;
+using DevTools.AssemblyIsolation.Loading;
 #endif
 
 namespace DevTools.AssemblyIsolation;
@@ -12,14 +11,14 @@ namespace DevTools.AssemblyIsolation;
 public sealed class AssemblyIsolationSession : IDisposable
 {
 #if NET
-    readonly bool isCollectible;
-    CollectibleAssemblyIsolationContext? collectibleContext;
-    WeakReference? collectibleContextReference;
+    private readonly bool isCollectible;
+    private CollectibleAssemblyIsolationContext? collectibleContext;
+    private readonly WeakReference? collectibleContextReference;
 #endif
-    NetFrameworkAssemblyIsolationScope? netFrameworkScope;
-    bool disposed;
+    private NetFrameworkAssemblyIsolationScope? netFrameworkScope;
+    private bool disposed;
 
-    AssemblyIsolationSession(AssemblyIsolationPlan plan)
+    private AssemblyIsolationSession(AssemblyIsolationPlan plan)
     {
         if (plan is null) throw new ArgumentNullException(nameof(plan));
 
@@ -112,7 +111,7 @@ public sealed class AssemblyIsolationSession : IDisposable
 
 #if NET
     [MethodImpl(MethodImplOptions.NoInlining)]
-    static AssemblyUnloadResult AwaitUnload(WeakReference contextReference)
+    private static AssemblyUnloadResult AwaitUnload(WeakReference contextReference)
     {
         for (var attempt = 0; attempt < 10 && contextReference.IsAlive; attempt++)
         {
@@ -144,7 +143,7 @@ public sealed class AssemblyIsolationSession : IDisposable
 #endif
     }
 
-    void ThrowIfDisposed()
+    private void ThrowIfDisposed()
     {
         if (disposed)
             throw new ObjectDisposedException(nameof(AssemblyIsolationSession));

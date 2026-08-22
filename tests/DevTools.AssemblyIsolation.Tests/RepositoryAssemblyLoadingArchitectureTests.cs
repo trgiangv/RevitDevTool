@@ -98,9 +98,12 @@ public sealed class RepositoryAssemblyLoadingArchitectureTests
         relativePath.StartsWith("source/DevTools.AssemblyIsolation/", StringComparison.Ordinal);
 
     private static bool IsMtpBootstrapException(string relativePath, string content) =>
-        relativePath.Equals("source/DevTools.TestAdapter/RuntimeAssemblyResolver.cs", StringComparison.Ordinal)
-        && content.Contains("AppContext.BaseDirectory", StringComparison.Ordinal)
-        && content.Contains("Interlocked.Exchange(ref _registered, 1)", StringComparison.Ordinal);
+        (relativePath.Equals("source/DevTools.TestAdapter/RuntimeAssemblyResolver.cs", StringComparison.Ordinal)
+         && content.Contains("AppContext.BaseDirectory", StringComparison.Ordinal)
+         && content.Contains("Interlocked.Exchange(ref _registered, 1)", StringComparison.Ordinal))
+        || (relativePath.Equals("source/DevTools.Testing.Abstractions/Loading/DiscoveryAssemblyLoad.cs", StringComparison.Ordinal)
+            && content.Contains("DiscoveryRefs.Read", StringComparison.Ordinal)
+            && content.Contains("DiscoveryLoadContext", StringComparison.Ordinal));
 
     private static bool IsPlanAdapter(string relativePath, string content) =>
         (relativePath.Equals("source/DevTools.Execution/Providers/CSharp/CSharpCompiler.cs", StringComparison.Ordinal)

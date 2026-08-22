@@ -31,11 +31,8 @@ public sealed class ManifestAssemblySource : IManagedAssemblySource
                 grouped.Add(simpleName, group);
             }
 
-            if (group.Any(existing => !HasSameFullIdentity(existing.Identity, identity)))
-            {
-                throw new InvalidOperationException(
-                    $"Manifest contains incompatible identities for '{simpleName}'.");
-            }
+            if (group.Any(existing => HasSameFullIdentity(existing.Identity, identity)))
+                continue;
 
             group.Add(new Entry(identity, candidate));
         }

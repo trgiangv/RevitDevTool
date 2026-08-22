@@ -7,7 +7,7 @@ namespace DevTools.AssemblyIsolation;
 
 public sealed class AssemblyIsolationPlan
 {
-    readonly IReadOnlyList<Assembly> parentAssemblies;
+    private readonly IReadOnlyList<Assembly> parentAssemblies;
 
     AssemblyIsolationPlan(
         string entryAssemblyPath,
@@ -95,7 +95,7 @@ public sealed class AssemblyIsolationPlan
         return Clone(diagnosticSink: sink);
     }
 
-    AssemblyIsolationPlan Clone(
+    private AssemblyIsolationPlan Clone(
         AssemblyIsolationLifecycle? lifecycle = null,
         IReadOnlyList<Assembly>? parentAssemblies = null,
         IReadOnlyList<IManagedAssemblySource>? managedSources = null,
@@ -111,6 +111,6 @@ public sealed class AssemblyIsolationPlan
             diagnosticSink ?? DiagnosticSink,
             loadsFromDistinctFile ?? LoadsFromDistinctFile);
 
-    static IReadOnlyList<T> ReadOnly<T>(IEnumerable<T> items) =>
+    private static IReadOnlyList<T> ReadOnly<T>(IEnumerable<T> items) =>
         Array.AsReadOnly(items.ToArray());
 }
