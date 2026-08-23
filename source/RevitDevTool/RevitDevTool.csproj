@@ -31,7 +31,7 @@
 
     <ItemGroup>
         <!--UI-->
-        <PackageReference Include="Microsoft.Web.WebView2" Condition="$(RevitVersion) &lt; 2024" />
+        <PackageReference Include="Microsoft.Web.WebView2" />
     </ItemGroup>
 
     <ItemGroup Condition="$(TargetFramework.StartsWith('net4'))">

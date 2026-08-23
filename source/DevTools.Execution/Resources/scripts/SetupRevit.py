@@ -21,10 +21,6 @@ if not _is_ironpython():
     clr.AddReference("RevitDevTool")
     import System
 
-    if int(__revit__.Application.VersionNumber) >= 2024:  # Revit 2024+ (WebView2 support)  # pyright: ignore[reportUndefinedVariable]
-        clr.AddReference("Microsoft.Web.WebView2.Wpf")
-        clr.AddReference("Microsoft.Web.WebView2.Core")
-
     if System.Environment.Version.Major >= 8:  # Revit 2025+ (.NET 8)
         clr.AddReference("System.Console")
         clr.AddReference("System.Diagnostics.TraceSource")

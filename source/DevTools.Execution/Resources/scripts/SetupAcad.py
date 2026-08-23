@@ -21,9 +21,6 @@ if not _is_ironpython():
     import System
     from Autodesk.AutoCAD.ApplicationServices.Core import Application
 
-    if Application.Version >= System.Version(24, 3, 0, 0):  # AutoCAD 2023+ (24.3.0) (WebView2 support)
-        clr.AddReference("Microsoft.Web.WebView2.Wpf")
-        clr.AddReference("Microsoft.Web.WebView2.Core")
 
     if System.Environment.Version.Major >= 8:  # AutoCAD 2025+ (.NET 8)
         clr.AddReference("System.Console")

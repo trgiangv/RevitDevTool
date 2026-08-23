@@ -24,7 +24,7 @@
 
     <ItemGroup>
         <!--UI-->
-        <PackageReference Include="Microsoft.Web.WebView2" Condition="$(AutoCadVersion) &lt; 2023"/>
+        <PackageReference Include="Microsoft.Web.WebView2" />
         <PackageReference Include="ricaun.AutoCAD.UI"/>
     </ItemGroup>
 
