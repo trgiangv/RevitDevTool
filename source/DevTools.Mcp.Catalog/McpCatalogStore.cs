@@ -28,6 +28,7 @@ public sealed class McpCatalogStore(IMcpCatalogLoader catalogLoader, ISettingsSe
 
     public async Task ReloadAsync()
     {
+        bool changed;
         await _gate.WaitAsync().ConfigureAwait(false);
         try
         {
@@ -41,14 +42,15 @@ public sealed class McpCatalogStore(IMcpCatalogLoader catalogLoader, ISettingsSe
                 return catalog;
             }).ConfigureAwait(false);
 
-            ApplyCatalog(loaded);
+            changed = TryApplyCatalog(loaded);
         }
         finally
         {
             _gate.Release();
         }
 
-        CatalogChanged?.Invoke(this, EventArgs.Empty);
+        if (changed)
+            CatalogChanged?.Invoke(this, EventArgs.Empty);
     }
 
     public async Task AddPathAsync(string path)
@@ -61,6 +63,7 @@ public sealed class McpCatalogStore(IMcpCatalogLoader catalogLoader, ISettingsSe
         if (inputKind == ExecutionMode.Unsupported)
             return;
 
+        var changed = false;
         await _gate.WaitAsync().ConfigureAwait(false);
         try
         {
@@ -73,7 +76,7 @@ public sealed class McpCatalogStore(IMcpCatalogLoader catalogLoader, ISettingsSe
                 McpPathValidator.AddDistinct(pythonCandidates, normalizedPath);
 
             var loaded = await Task.Run(() => catalogLoader.LoadCatalog(dotnetCandidates, pythonCandidates)).ConfigureAwait(false);
-            ApplyCatalog(loaded);
+            changed = TryApplyCatalog(loaded);
 
             PersistAcceptedPath(inputKind, normalizedPath, loaded);
             McpPathValidator.PruneInvalidConfiguredPaths(settingsService.McpRegistryConfig, loaded);
@@ -83,7 +86,8 @@ public sealed class McpCatalogStore(IMcpCatalogLoader catalogLoader, ISettingsSe
             _gate.Release();
         }
 
-        CatalogChanged?.Invoke(this, EventArgs.Empty);
+        if (changed)
+            CatalogChanged?.Invoke(this, EventArgs.Empty);
     }
 
     public bool TryGetTool(string? toolId, string? toolName, out McpRegisteredTool? tool)
@@ -143,7 +147,7 @@ public sealed class McpCatalogStore(IMcpCatalogLoader catalogLoader, ISettingsSe
                 settingsService.McpRegistryConfig.DotnetPaths,
                 settingsService.McpRegistryConfig.PythonToolsetPaths);
 
-            ApplyCatalog(catalog);
+            TryApplyCatalog(catalog);
             McpPathValidator.PruneInvalidConfiguredPaths(settingsService.McpRegistryConfig, catalog);
             return RegisteredTools;
         }
@@ -161,6 +165,35 @@ public sealed class McpCatalogStore(IMcpCatalogLoader catalogLoader, ISettingsSe
         return RegisteredTools.Count == _byToolId.Count
                && ResourceCatalog.Count == _byResourceId.Count
                && IndexesMatchCatalog();
+    }
+
+    private bool TryApplyCatalog(McpRegistryCatalog catalog)
+    {
+        if (CatalogIdsMatch(catalog))
+            return false;
+
+        ApplyCatalog(catalog);
+        return true;
+    }
+
+    private bool CatalogIdsMatch(McpRegistryCatalog catalog)
+    {
+        if (RegisteredTools.Count != catalog.Tools.Count || ResourceCatalog.Count != catalog.Resources.Count)
+            return false;
+
+        foreach (var tool in catalog.Tools)
+        {
+            if (!_byToolId.ContainsKey(tool.Id))
+                return false;
+        }
+
+        foreach (var resource in catalog.Resources)
+        {
+            if (!_byResourceId.ContainsKey(resource.Id))
+                return false;
+        }
+
+        return true;
     }
 
     private void ApplyCatalog(McpRegistryCatalog catalog)

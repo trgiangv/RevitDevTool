@@ -6,6 +6,8 @@ namespace DevTools.Mcp.Catalog;
 public sealed class McpCatalogLoader(IEnumerable<IMcpRegistryProvider> providers, ILogger<McpCatalogLoader> logger) : IMcpCatalogLoader
 {
     private readonly IReadOnlyList<IMcpRegistryProvider> _providers = providers.ToList();
+    private readonly HashSet<string> _knownToolIds = new(StringComparer.OrdinalIgnoreCase);
+    private readonly HashSet<string> _knownResourceIds = new(StringComparer.OrdinalIgnoreCase);
 
     public McpRegistryCatalog LoadCatalog(
         IReadOnlyCollection<string> dotnetPaths,
@@ -21,8 +23,13 @@ public sealed class McpCatalogLoader(IEnumerable<IMcpRegistryProvider> providers
             try
             {
                 var catalog = provider.LoadCatalog();
-                logger.ZLogDebug(
-                    $"Provider '{provider.Name}' returned {catalog.Tools.Count} tool(s), {catalog.Resources.Count} resource(s).");
+                var addedTools = CountUnknown(catalog.Tools, tool => tool.Id, _knownToolIds);
+                var addedResources = CountUnknown(catalog.Resources, resource => resource.Id, _knownResourceIds);
+                if (addedTools > 0 || addedResources > 0)
+                {
+                    logger.ZLogDebug(
+                        $"Provider '{provider.Name}' added {addedTools} tool(s), {addedResources} resource(s).");
+                }
 
                 Collect(provider.Name, catalog.Tools, toolMap, tool => tool.Id, tool => tool.Descriptor.Name, "tool");
                 Collect(provider.Name, catalog.Resources, resourceMap, resource => resource.Id,
@@ -47,8 +54,16 @@ public sealed class McpCatalogLoader(IEnumerable<IMcpRegistryProvider> providers
                 .ToList(),
         };
 
-        logger.ZLogDebug(
-            $"Tool store loaded {loaded.Tools.Count} tool(s), {loaded.Resources.Count} resource(s).");
+        var newToolCount = CountUnknown(loaded.Tools, tool => tool.Id, _knownToolIds);
+        var newResourceCount = CountUnknown(loaded.Resources, resource => resource.Id, _knownResourceIds);
+        if (newToolCount > 0 || newResourceCount > 0)
+        {
+            logger.ZLogDebug(
+                $"Tool store added {newToolCount} tool(s), {newResourceCount} resource(s) (total {loaded.Tools.Count} tools, {loaded.Resources.Count} resources).");
+        }
+
+        ReplaceKnownIds(_knownToolIds, loaded.Tools.Select(tool => tool.Id));
+        ReplaceKnownIds(_knownResourceIds, loaded.Resources.Select(resource => resource.Id));
         return loaded;
     }
 
@@ -91,6 +106,29 @@ public sealed class McpCatalogLoader(IEnumerable<IMcpRegistryProvider> providers
 
             if (byId.TryAdd(id, item)) continue;
             logger.ZLogWarning($"Duplicate {kind} id '{id}' ignored.");
+        }
+    }
+
+    private static int CountUnknown<T>(IReadOnlyList<T> items, Func<T, string> idSelector, HashSet<string> known)
+    {
+        var added = 0;
+        foreach (var item in items)
+        {
+            var id = idSelector(item);
+            if (!string.IsNullOrWhiteSpace(id) && !known.Contains(id))
+                added++;
+        }
+
+        return added;
+    }
+
+    private static void ReplaceKnownIds(HashSet<string> known, IEnumerable<string> ids)
+    {
+        known.Clear();
+        foreach (var id in ids)
+        {
+            if (!string.IsNullOrWhiteSpace(id))
+                known.Add(id);
         }
     }
 }

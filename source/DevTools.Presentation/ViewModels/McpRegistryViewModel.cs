@@ -97,7 +97,7 @@ public sealed partial class McpRegistryViewModel : ObservableObject, IBusyViewMo
     {
         await this.WhileBusy("Loading MCP tools...", async () =>
         {
-            await _catalogStore.ReloadAsync().ConfigureAwait(true);
+            await Task.Run(() => _catalogStore.EnsureLoaded()).ConfigureAwait(true);
             RebuildToolList();
         });
     }

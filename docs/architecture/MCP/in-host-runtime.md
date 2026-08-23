@@ -48,13 +48,14 @@ sequenceDiagram
     participant Settings as ISettingsService
     participant HostServer as HostMcpPipeServer
 
-    UI->>Store: AddPathAsync / ReloadAsync
+    UI->>Store: EnsureLoaded (init) / AddPathAsync / ReloadAsync
     Store->>Settings: Read configured paths
     Store->>Loader: LoadCatalog(dotnetPaths, pythonPaths)
     Loader->>Dotnet: Parse assemblies
     Loader->>Python: Parse toolset directories
     Loader-->>Store: McpRegistryCatalog
     Store->>Settings: Persist accepted paths
+    Note over Store,HostServer: CatalogChanged only when tool/resource IDs change
     Store-->>HostServer: CatalogChanged
     HostServer->>HostServer: Invalidate cached primitive lists
     HostServer-->>HostServer: tools/list_changed notifications
