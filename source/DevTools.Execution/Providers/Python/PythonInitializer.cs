@@ -37,6 +37,14 @@ public sealed class PythonInitializer(
             }
 
             if (PythonEngine.IsInitialized) return;
+
+            if (IsHostPythonRuntimeLoaded())
+            {
+                logger.ZLogWarning(
+                    $"Host embedded Python is already loaded in this process (e.g. Plant 3D). Skipping DevTools Python initialization to avoid a dual-runtime crash. Python scripts are unavailable in this session.");
+                return;
+            }
+
             PrependPythonHomeToPath(Provider.PythonHome);
 
             Runtime.PythonDLL = Provider.GetPythonDllPath();
@@ -121,7 +129,7 @@ public sealed class PythonInitializer(
     private void SetupGlobalScope()
     {
         GlobalScope ??= Py.CreateScope("__main__");
-        
+
         Action<object> logFunction = obj =>
         {
             if (obj is string str)
@@ -135,5 +143,20 @@ public sealed class PythonInitializer(
         builtins.__log_func__ = logFunction.ToPython();
 
         GlobalScope.Exec(PythonEmbedded.SetupScript);
+    }
+
+    /// <summary>
+    /// Plant 3D and similar hosts load <c>python3xx.dll</c> before add-ins run.
+    /// Initializing Pixi/pythonnet in the same process causes an uncatchable CLR crash.
+    /// </summary>
+    private static bool IsHostPythonRuntimeLoaded()
+    {
+        foreach (ProcessModule module in Process.GetCurrentProcess().Modules)
+        {
+            if (module.ModuleName.StartsWith("python", StringComparison.OrdinalIgnoreCase))
+                return true;
+        }
+
+        return false;
     }
 }
