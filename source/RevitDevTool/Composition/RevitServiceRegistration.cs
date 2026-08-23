@@ -55,6 +55,9 @@ internal static class RevitServiceRegistration
         builder.AddLoggingProvider();
         builder.AddMonitorLogging(configureMonitor);
         builder.Logging.AddFilter("ModelContextProtocol", LogLevel.Warning);
+#if RELEASE
+        builder.Logging.SuppressHostingFrameworkLogs();
+#endif
 
         var services = builder.Services;
         services.AddSingleton<LoggingService>();

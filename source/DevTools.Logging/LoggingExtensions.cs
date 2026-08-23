@@ -30,4 +30,14 @@ public static class LoggingExtensions
 
         return builder;
     }
+
+    /// <summary>
+    /// Suppresses generic-host startup/lifetime chatter (Hosting starting, Application started, …).
+    /// </summary>
+    public static ILoggingBuilder SuppressHostingFrameworkLogs(this ILoggingBuilder logging)
+    {
+        logging.AddFilter("Microsoft.Extensions.Hosting", LogLevel.None);
+        logging.AddFilter("Microsoft.Hosting.Lifetime", LogLevel.None);
+        return logging;
+    }
 }

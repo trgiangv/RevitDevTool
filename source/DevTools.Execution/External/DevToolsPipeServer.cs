@@ -62,7 +62,9 @@ public sealed class DevToolsPipeServer(
         _cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
         _acceptLoopTask = AcceptLoopAsync(_cts.Token);
 
+#if DEBUG
         logger.ZLogInformation($"Listening on pipe '{_pipeName}'.");
+#endif
         return Task.CompletedTask;
     }
 

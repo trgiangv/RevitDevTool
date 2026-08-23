@@ -30,6 +30,10 @@ internal static class McpServerFileLogging
             RollingInterval.Hour);
 
         logging.AddFilter("ModelContextProtocol", LogLevel.Warning);
+#if !DEBUG
+        logging.AddFilter("Microsoft.Extensions.Hosting", LogLevel.None);
+        logging.AddFilter("Microsoft.Hosting.Lifetime", LogLevel.None);
+#endif
     }
 
     private static void CleanupOldLogs(string folder)

@@ -29,7 +29,9 @@ public sealed class PythonInitializer(
             if (IsInitialized) return;
 
             Provider ??= await DetectProviderAsync().ConfigureAwait(false);
+#if DEBUG
             logger.ZLogInformation($"Using backend: {Provider.Backend}");
+#endif
 
             if (!Provider.IsEnvironmentReady())
             {
@@ -98,7 +100,9 @@ public sealed class PythonInitializer(
         try
         {
             await PythonInstaller.SetupPixiAsync(logger).ConfigureAwait(false);
+#if DEBUG
             logger.ZLogInformation($"Pixi is available.");
+#endif
             return pixiProvider;
         }
         catch (Exception ex)
@@ -123,7 +127,9 @@ public sealed class PythonInitializer(
 
         var newPath = string.Join(";", toAdd) + ";" + current;
         Environment.SetEnvironmentVariable("PATH", newPath);
+#if DEBUG
         logger.ZLogInformation($"Prepended to PATH: {string.Join("; ", toAdd)}");
+#endif
     }
 
     private void SetupGlobalScope()

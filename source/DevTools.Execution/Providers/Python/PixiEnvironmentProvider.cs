@@ -31,7 +31,9 @@ public sealed class PixiEnvironmentProvider(ILogger<PixiEnvironmentProvider> log
 
         if (!IsEnvironmentReady())
         {
+#if DEBUG
             logger.ZLogDebug($"Running pixi install to bootstrap Python environment...");
+#endif
             var exit = await RunPixiAsync(
                     ["install"],
                     line => logger.ZLogInformation($"{line}"),
@@ -44,7 +46,9 @@ public sealed class PixiEnvironmentProvider(ILogger<PixiEnvironmentProvider> log
         if (!IsEnvironmentReady())
             throw new InvalidOperationException("Python environment is not ready after pixi install.");
 
+#if DEBUG
         logger.ZLogDebug($"Pixi Python environment ready.");
+#endif
     }
 
     private async Task EnsureRequirePackagesAsync()
@@ -56,7 +60,9 @@ public sealed class PixiEnvironmentProvider(ILogger<PixiEnvironmentProvider> log
 
         if (missing.Count == 0)
         {
+#if DEBUG
             logger.ZLogDebug($"Require packages already installed — skipping pixi add.");
+#endif
             return;
         }
 

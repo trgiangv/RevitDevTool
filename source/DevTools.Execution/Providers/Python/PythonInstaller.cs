@@ -35,7 +35,9 @@ public static class PythonInstaller
 
         if (IsPixiInstalled())
         {
+#if DEBUG
             logger?.ZLogInformation($"Pixi v{PixiVersion} already installed.");
+#endif
         }
         else
         {
@@ -62,7 +64,9 @@ public static class PythonInstaller
                 $"pixi --version failed with exit code {result.ExitCode}.");
         }
 
+#if DEBUG
         logger?.ZLogDebug($"Pixi runtime verified (exit {result.ExitCode}).");
+#endif
     }
 
     private static bool IsMarkedVersion(string version)

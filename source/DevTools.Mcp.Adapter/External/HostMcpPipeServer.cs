@@ -30,6 +30,7 @@ public sealed class HostMcpPipeServer(
     private Task? _acceptLoopTask;
     private readonly ConcurrentDictionary<int, McpPipeSession> _sessions = new();
     private int _nextSessionId;
+    private int _lastToolCount;
     private string? _pipeName;
     private bool _disposed;
 
@@ -46,6 +47,7 @@ public sealed class HostMcpPipeServer(
             try
             {
                 catalogStore.EnsureLoaded();
+                Interlocked.Exchange(ref _lastToolCount, catalogStore.ToolDescriptors.Count);
             }
             catch (Exception ex)
             {
@@ -58,7 +60,9 @@ public sealed class HostMcpPipeServer(
         _cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
         _acceptLoopTask = AcceptLoopAsync(_cts.Token);
 
+#if DEBUG
         logger.ZLogInformation($"MCP listening on pipe '{_pipeName}' (host MCP handler).");
+#endif
         return Task.CompletedTask;
     }
 
@@ -154,8 +158,16 @@ public sealed class HostMcpPipeServer(
             primitiveDispatcher.ClearCaches();
             toolsetContextManager.Clear();
             _ = BroadcastCatalogListChangedNotificationsAsync();
-            logger.ZLogInformation(
-                $"MCP host catalog reloaded ({catalogStore.ToolDescriptors.Count} tools, {catalogStore.ResourceDescriptors.Count} resources).");
+
+            var tools = catalogStore.ToolDescriptors.Count;
+            var resources = catalogStore.ResourceDescriptors.Count;
+            var previous = Interlocked.Exchange(ref _lastToolCount, tools);
+            var added = tools - previous;
+            if (added > 0)
+            {
+                logger.ZLogInformation(
+                    $"MCP host catalog added {added} tool(s) ({tools} tools, {resources} resources).");
+            }
         }
         catch (Exception ex)
         {
