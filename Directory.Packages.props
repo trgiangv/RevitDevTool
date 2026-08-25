@@ -73,11 +73,11 @@
         <PackageVersion Include="ACadSharp" Version="3.6.51" />
         <PackageVersion Include="ricaun.AutoCAD.UI" Version="0.5.0" />
         <!--Tests-->
-        <PackageVersion Include="xunit.v3.mtp-v2" Version="3.2.2" />
+        <PackageVersion Include="xunit.v3" Version="4.0.0" />
         <PackageVersion Include="NUnit" Version="4.6.1" />
-        <PackageVersion Include="TUnit" Version="1.65.38" />
-        <PackageVersion Include="TUnit.Core" Version="1.65.38" />
-        <PackageVersion Include="TUnit.Engine" Version="1.65.38" />
+        <PackageVersion Include="TUnit" Version="1.65.63" />
+        <PackageVersion Include="TUnit.Core" Version="1.65.63" />
+        <PackageVersion Include="TUnit.Engine" Version="1.65.63" />
         <PackageVersion Include="Microsoft.Testing.Platform" Version="2.3.3" />
         <PackageVersion Include="Microsoft.Testing.Platform.MSBuild" Version="2.3.3" />
         <!-- Comparison sample only: samples/ricaun.NUnit.SampleTests -->

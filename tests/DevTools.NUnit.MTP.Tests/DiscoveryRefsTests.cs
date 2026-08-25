@@ -1,11 +1,13 @@
+using DevTools.Testing.Abstractions;
+
 namespace DevTools.NUnit.MTP.Tests;
 
-public sealed class NUnitDiscoveryRefsTests
+public sealed class DiscoveryRefsTests
 {
     [Fact]
     public void FilePathFor_uses_assembly_name_suffix()
     {
-        var path = NUnitDiscoveryRefs.FilePathFor(@"C:\tests\Host.Tests.dll");
+        var path = DiscoveryRefs.FilePathFor(@"C:\tests\Host.Tests.dll");
         Assert.Equal(@"C:\tests\Host.Tests.discovery-refs.txt", path);
     }
 
@@ -21,10 +23,10 @@ public sealed class NUnitDiscoveryRefsTests
             Directory.CreateDirectory(Path.GetDirectoryName(apiPath)!);
             File.WriteAllBytes(apiPath, [1]);
             File.WriteAllText(
-                NUnitDiscoveryRefs.FilePathFor(assemblyPath),
+                DiscoveryRefs.FilePathFor(assemblyPath),
                 apiPath + Environment.NewLine + Path.Combine(directory, "missing.dll") + Environment.NewLine);
 
-            var map = NUnitDiscoveryRefs.Read(assemblyPath);
+            var map = DiscoveryRefs.Read(assemblyPath);
 
             Assert.Equal(apiPath, Assert.Single(map, pair => pair.Key == "RevitAPI").Value);
         }
@@ -46,9 +48,9 @@ public sealed class NUnitDiscoveryRefsTests
             Directory.CreateDirectory(packDir);
             var packPath = Path.Combine(packDir, "System.Runtime.dll");
             File.WriteAllBytes(packPath, [1]);
-            File.WriteAllText(NUnitDiscoveryRefs.FilePathFor(assemblyPath), packPath);
+            File.WriteAllText(DiscoveryRefs.FilePathFor(assemblyPath), packPath);
 
-            Assert.Empty(NUnitDiscoveryRefs.Read(assemblyPath));
+            Assert.Empty(DiscoveryRefs.Read(assemblyPath));
         }
         finally
         {
@@ -59,6 +61,6 @@ public sealed class NUnitDiscoveryRefsTests
     [Fact]
     public void Read_missing_file_is_empty()
     {
-        Assert.Empty(NUnitDiscoveryRefs.Read(Path.Combine(Path.GetTempPath(), "no-such-tests.dll")));
+        Assert.Empty(DiscoveryRefs.Read(Path.Combine(Path.GetTempPath(), "no-such-tests.dll")));
     }
 }

@@ -89,9 +89,14 @@ public sealed class PipEnvironmentTests : IAsyncLifetime, IDisposable
     public async Task Parser_DetectsDependencies_FromPep723Script()
     {
         var scriptPath = Path.Combine(FixturesPath, "pep723_sample.py");
-        var pixiToml = await File.ReadAllTextAsync(Path.Combine(FixturesPath, "pixi_sample.toml"), TestContext.Current.CancellationToken);
+        // Production feeds pixi/pip list JSON via PyEnvironmentProvider.GetListJsonAsync.
+        var listJson = """
+            [
+              {"name": "packaging", "version": "26.0", "kind": "conda"}
+            ]
+            """;
 
-        var result = await RunParserAsync(scriptPath, pixiToml);
+        var result = await RunParserAsync(scriptPath, listJson);
 
         Assert.Equal(0, result.ExitCode);
 

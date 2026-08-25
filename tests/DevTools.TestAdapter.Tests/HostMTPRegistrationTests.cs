@@ -3,6 +3,7 @@ using DevTools.Testing.Abstractions;
 
 namespace DevTools.TestAdapter.Tests;
 
+[Collection(nameof(AdapterHostTestDiscoveryCollection))]
 public sealed class HostMTPRegistrationTests
 {
     [Theory]

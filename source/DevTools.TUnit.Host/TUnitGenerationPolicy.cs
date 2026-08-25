@@ -8,8 +8,8 @@ public sealed class TUnitGenerationPolicy(Func<HostRuntimeSource> runtimeSourceP
     private const string FrameworkAssemblyFileName = "TUnit.Core.dll";
     public const string RuntimeFolderName = "TUnitRuntime";
     public const string RuntimeAssemblyFileName = "DevTools.TUnit.Runtime.dll";
-    internal const string ExpectedTUnitFileVersion = "1.65.38.0";
-    internal const string ExpectedTUnitPackageVersion = "1.65.38";
+    internal const string ExpectedTUnitFileVersion = "1.65.63.0";
+    internal const string ExpectedTUnitPackageVersion = "1.65.63";
 
     public TestingGenerationPlan CreatePlan(string testAssemblyPath)
     {

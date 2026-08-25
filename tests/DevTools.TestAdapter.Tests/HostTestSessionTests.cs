@@ -9,6 +9,7 @@ using Microsoft.Testing.Platform.Requests;
 
 namespace DevTools.TestAdapter.Tests;
 
+[Collection(nameof(AdapterHostTestDiscoveryCollection))]
 public sealed class HostTestSessionTests
 {
     private static readonly object DiscoveryProviderLock = new();
