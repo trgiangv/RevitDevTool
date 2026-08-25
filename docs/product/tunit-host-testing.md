@@ -2,26 +2,26 @@
 
 RevitDevTool runs TUnit tests through the same TestRunner and neutral
 `testing/run` IPC path used by NUnit. TUnit is a framework-specific provider;
-it does not launch or activate Revit.
+it does not launch or activate hosts.
 
-Last updated: 2026-08-22
+Last updated: 2026-08-25
 
 ## Supported matrix
 
-TUnit uses the same Revit year → TFM mapping as the host add-in
-(`docs/agents/build-matrix.md`). Year values used in live proof (2023/net48,
-2025/net8) are verification evidence, not an allow-list.
+TUnit uses the same host year → TFM mapping as the host add-in
+(`docs/agents/build-matrix.md`). Year values used in live proof are
+verification evidence, not an allow-list.
 
-| Revit TFM | TUnit |
-|---|---|
-| `net48` | 1.65.38 |
-| `net8.0-windows` | 1.65.38 |
-| `net10.0-windows` | 1.65.38 |
+| Host | TFM | TUnit |
+|------|-----|-------|
+| Revit | `net48` / `net8.0-windows` / `net10.0-windows` | 1.65.63 |
+| AutoCAD / Civil 3D | `net48` / `net8.0-windows` / `net10.0-windows` | 1.65.63 |
 
-AutoCAD and Civil 3D stay on NUnit (`HostName` must be `Revit` for TUnit).
-NUnit remains the default framework.
+NUnit remains the default framework. Use `TestingFramework=tunit` to opt in.
 
 ## Test project
+
+Revit:
 
 ```xml
 <PropertyGroup>
@@ -33,10 +33,30 @@ NUnit remains the default framework.
 </PropertyGroup>
 <ItemGroup>
   <PackageReference Include="Microsoft.Testing.Platform.MSBuild" />
-  <PackageReference Include="TUnit" Version="1.65.38" />
+  <PackageReference Include="TUnit" Version="1.65.63" />
   <PackageReference Include="RevitDevTool.TestAdapter" />
 </ItemGroup>
 ```
+
+Civil 3D (same pattern as NUnit Civil 3D samples):
+
+```xml
+<PropertyGroup>
+  <UseAutoCad>true</UseAutoCad>
+  <IsTestProject>true</IsTestProject>
+  <TestingFramework>tunit</TestingFramework>
+  <HostName>Civil3D</HostName>
+  <HostVersion>$(AutoCadVersion)</HostVersion>
+</PropertyGroup>
+<ItemGroup>
+  <PackageReference Include="Microsoft.Testing.Platform.MSBuild" />
+  <PackageReference Include="TUnit" Version="1.65.63" />
+  <PackageReference Include="RevitDevTool.TestAdapter" />
+</ItemGroup>
+```
+
+For plain AutoCAD, set `<HostName>AutoCad</HostName>` with the same
+`UseAutoCad` / `HostVersion` properties.
 
 ## Runtime behavior
 
@@ -98,7 +118,7 @@ Skip/Explicit, and timeout. Nested `TestApplication` / `AddTUnit()` is not
 used.
 
 `TUnitEngineCommandLine` implements MTP `ICommandLineOptions` and answers
-`maximum-parallel-tests` with `["1"]` so work stays on the Revit API
+`maximum-parallel-tests` with `["1"]` so work stays on the host API
 thread. `TUnitEngineConfiguration` answers
 `platformOptions:resultDirectory`, `currentWorkingDirectory`, and
 `testHostWorkingDirectory`. Those keys are Engine/MTP, not DevTools
@@ -110,7 +130,7 @@ In-host Engine execution clears `SynchronizationContext` so
 
 `TUnitRuntime` ships `TUnit.Core`, `TUnit.Engine`, and
 `Microsoft.Testing.Platform` under `TUnitRuntime\`, not at the add-in
-root. Collectible load contexts apply on modern Revit TFMs. .NET Framework
+root. Collectible load contexts apply on modern host TFMs. .NET Framework
 years use scoped isolation and exact manifest identity resolution,
 including side-by-side `System.Text.Json` identities.
 
@@ -149,14 +169,13 @@ write-throughs Console to process `Trace` (host pane). Same split as NUnit
 ([0017](../decisions/0017-nunit-host-test-output-routing.md)). Do not add a
 TUnit `TraceListener` or dump `CaseResult.Output` through `ILogger`.
 
-TestRunner locates, reuses, or starts Revit and sends `testing/run` with
-the discovered UIDs. `MarshaledTestingRequestHandler` enters
-`IHostContextExecutor`. The in-host `tunit` provider loads the generation
-isolation context and calls Engine.
+TestRunner locates, reuses, or starts the selected host and sends
+`testing/run` with the discovered UIDs. `MarshaledTestingRequestHandler`
+enters `IHostContextExecutor`. The in-host `tunit` provider loads the
+generation isolation context and calls Engine.
 
-`samples/DevTools.TUnit.SampleTests` is split one scope per file: host
-smoke, lifecycle, each data-source attribute, Engine capabilities (Repeat,
-DependsOn, hooks, timeout, property injection, Retry), fixture shapes
-(inheritance, nested, generic closed/Revit types, constructor arguments),
-Revit geometry, generic helper methods, and document-bound deferred
-discovery gaps.
+Samples:
+
+- `samples/DevTools.TUnit.SampleTests` — Revit coverage (data sources,
+  lifecycle, geometry, deferred discovery gaps).
+- `samples/DevTools.TUnit.Civil3D.SampleTests` — Civil 3D host smoke.

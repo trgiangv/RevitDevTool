@@ -9,8 +9,8 @@ Build/deploy traps: `.agents/skills/build/SKILL.md`.
 |------|------|----------|
 | Compile / deploy / verify | `build` skill, `verification.md`, `build-matrix.md`, `known-test-gaps.md` | `source/`, `scripts/`, `tests/` |
 | MCP integration testing | `mcp-integration-test.md` | Host + daemon |
-| NUnit host testing (experimental) | `revit-nunit` skill, `nunit-host-testing.md`, `docs/product/nunit-host-testing.md`, `docs/architecture/Testing/` | `DevTools.Testing.*`, `DevTools.NUnit.*`, `DevTools.TestAdapter`, `DevTools.TestRunner*` |
-| TUnit host testing (experimental, Revit) | `revit-nunit` skill, `docs/product/tunit-host-testing.md`, `docs/architecture/Testing/` | `DevTools.TUnit.*`, `DevTools.Testing.*`, `DevTools.TestAdapter` |
+| NUnit host testing | `revit-nunit` skill, `nunit-host-testing.md`, `docs/product/nunit-host-testing.md`, `docs/architecture/Testing/` | `DevTools.Testing.*`, `DevTools.NUnit.*`, `DevTools.TestAdapter`, `DevTools.TestRunner*` |
+| TUnit host testing | `docs/product/tunit-host-testing.md`, `docs/architecture/Testing/` | `DevTools.TUnit.*`, `DevTools.Testing.*`, `DevTools.TestAdapter` |
 | MCP agent efficiency | `docs/plans/completed/2026-07-26-mcp-agent-efficiency.md` | `DevTools.Mcp.*`, daemon |
 | Execution / MCP / host pipe / logging | Matching `docs/agents/*.md` + `docs/architecture/<Module>/` + `docs/product/` | `DevTools.*`, hosts |
 | Revit API + live execute | `revit-developer` skill, `architecture/MCP/workflows.md` | MCP + rvtdocs-mcp |

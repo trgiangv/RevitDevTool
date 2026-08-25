@@ -46,6 +46,8 @@
         <ProjectReference Include="..\DevTools.Execution.Abstractions\DevTools.Execution.Abstractions.csproj" />
         <ProjectReference Include="..\DevTools.Mcp.Acad\DevTools.Mcp.Acad.csproj" />
         <ProjectReference Include="..\DevTools.NUnit.Host\DevTools.NUnit.Host.csproj" />
+        <ProjectReference Include="..\DevTools.TUnit.Host\DevTools.TUnit.Host.csproj"
+            SetTargetFramework="TargetFramework=$(TargetFramework)" />
     </ItemGroup>
 
     <ItemGroup>
@@ -56,6 +58,7 @@
     </ItemGroup>
 
     <Import Project="..\DevTools.NUnit.Host\build\NUnitHostPackaging.targets" />
+    <Import Project="..\DevTools.TUnit.Runtime\build\TUnitHostPackaging.targets" />
 
     <!-- Start AutoCad -->
     <PropertyGroup>

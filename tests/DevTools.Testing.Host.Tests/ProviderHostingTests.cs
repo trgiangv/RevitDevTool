@@ -29,18 +29,18 @@ public sealed class ProviderHostingTests
     }
 
     [Fact]
-    public void Acad_style_registration_registers_only_nunit_provider()
+    public void Acad_style_registration_resolves_both_providers()
     {
         var services = new ServiceCollection();
         services.AddNUnitHostServices();
+        services.AddTUnitHostServices();
         services.AddGenericTestingHostServices();
 
-        var providers = services
-            .Where(descriptor => descriptor.ServiceType == typeof(IHostTestFrameworkProvider))
-            .ToList();
+        using var provider = services.BuildServiceProvider();
+        var registry = provider.GetRequiredService<TestingProviderRegistry>();
 
-        Assert.Single(providers);
-        Assert.Equal(typeof(NUnitHostTestFrameworkProvider), providers[0].ImplementationType);
+        Assert.Equal("nunit", registry.GetRequired("nunit").FrameworkId);
+        Assert.Equal("tunit", registry.GetRequired("tunit").FrameworkId);
     }
 
     [Fact]

@@ -35,7 +35,7 @@
         <DevelopmentDependency>true</DevelopmentDependency>
         <PackageLicenseExpression>MIT</PackageLicenseExpression>
         <PackageProjectUrl>https://github.com/trgiangv/RevitDevTool</PackageProjectUrl>
-        <Description>Microsoft.Testing.Platform adapter that runs NUnit tests inside Autodesk hosts and native TUnit tests inside Revit. Requires RevitDevTool (https://github.com/trgiangv/RevitDevTool).</Description>
+        <Description>Microsoft.Testing.Platform adapter that runs NUnit and TUnit tests inside Autodesk hosts. Requires RevitDevTool (https://github.com/trgiangv/RevitDevTool).</Description>
         <PackageTags>testing;revit;autocad;adapter</PackageTags>
         <PackageReadmeFile>README.md</PackageReadmeFile>
         <EnableDynamicLoading>false</EnableDynamicLoading>

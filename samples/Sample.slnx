@@ -36,6 +36,7 @@
         <Project Path="../source/DevTools.TestAdapter/DevTools.TestAdapter.csproj" />
         <Project Path="DevTools.NUnit.Civil3D.SampleTests/DevTools.NUnit.Civil3D.SampleTests.csproj" />
         <Project Path="DevTools.NUnit.SampleTests/DevTools.NUnit.SampleTests.csproj" />
+        <Project Path="DevTools.TUnit.Civil3D.SampleTests/DevTools.TUnit.Civil3D.SampleTests.csproj" />
         <Project Path="DevTools.TUnit.SampleTests/DevTools.TUnit.SampleTests.csproj" />
         <Project Path="ricaun.NUnit.SampleTests/ricaun.NUnit.SampleTests.csproj" />
     </Folder>

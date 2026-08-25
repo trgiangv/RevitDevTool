@@ -33,12 +33,6 @@
     </TestingPlatformBuilderHook>
   </ItemGroup>
 
-  <Target Name="ValidateDevToolsTUnitTarget" BeforeTargets="PrepareForBuild"
-          Condition="'$(TestingFramework)' == 'tunit'">
-    <Error Condition="'$(HostName)' != 'Revit'"
-           Text="RevitDevTool TUnit integration supports only HostName=Revit." />
-  </Target>
-
   <!-- Direct reference wins MSBuild copy over older Unsafe 4.x (MSB3277). -->
   <ItemGroup Condition="'$(TargetFrameworkIdentifier)' == '.NETFramework' and '$(ManagePackageVersionsCentrally)' == 'true'">
     <PackageReference Include="System.Runtime.CompilerServices.Unsafe" VersionOverride="6.1.2"/>

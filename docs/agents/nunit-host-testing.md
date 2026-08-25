@@ -1,6 +1,7 @@
 # NUnit Host Testing (Agent Digest)
 
-Experimental. Product: `docs/product/nunit-host-testing.md`.
+Supported product path via NuGet `RevitDevTool.TestAdapter` (MTP-only on
+`develop`). Product: `docs/product/nunit-host-testing.md`.
 Structure / release split: `docs/architecture/Testing/README.md`.
 Run: `.agents/skills/revit-nunit/SKILL.md`.
 

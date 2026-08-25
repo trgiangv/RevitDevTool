@@ -45,6 +45,18 @@ public sealed class AdapterArchitectureTests
     }
 
     [Fact]
+    public void Revit_and_Acad_compositions_register_tunit_host_services()
+    {
+        var revitComposition = File.ReadAllText(Path.Combine(
+            RepositoryRoot, "source", "RevitDevTool", "Composition", "RevitServiceRegistration.cs"));
+        var acadComposition = File.ReadAllText(Path.Combine(
+            RepositoryRoot, "source", "AcadDevTool", "Composition", "AcadServiceRegistration.cs"));
+
+        Assert.Contains("AddTUnitHostServices", revitComposition, StringComparison.Ordinal);
+        Assert.Contains("AddTUnitHostServices", acadComposition, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void Revit_TUnit_execution_reuses_the_generic_testing_run_handler()
     {
         var root = Path.Combine(RepositoryRoot, "source", "RevitDevTool");

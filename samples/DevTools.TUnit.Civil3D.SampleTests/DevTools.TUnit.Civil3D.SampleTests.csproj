@@ -1,0 +1,22 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <UseAutoCad>true</UseAutoCad>
+        <IsTestProject>true</IsTestProject>
+        <TestingFramework>tunit</TestingFramework>
+        <EnableTUnitPolyfills>false</EnableTUnitPolyfills>
+        <HostName>Civil3D</HostName>
+        <HostVersion>$(AutoCadVersion)</HostVersion>
+        <ForceLaunch>false</ForceLaunch>
+        <PerTestTimeout>60</PerTestTimeout>
+        <LaunchTimeout>360</LaunchTimeout>
+    </PropertyGroup>
+
+    <Import Project="..\..\source\DevTools.TestAdapter\build\RevitDevTool.TestAdapter.targets"/>
+
+    <ItemGroup>
+        <PackageReference Include="Microsoft.Testing.Platform.MSBuild"/>
+        <PackageReference Include="TUnit"/>
+        <ProjectReference Include="..\..\source\DevTools.TestAdapter\DevTools.TestAdapter.csproj"/>
+    </ItemGroup>
+</Project>

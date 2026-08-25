@@ -7,6 +7,7 @@ using DevTools.Logging;
 using DevTools.Logging.Abstractions;
 using DevTools.Mcp.Catalog;
 using DevTools.NUnit.Host;
+using DevTools.TUnit.Host;
 using DevTools.Testing.Host;
 using DevTools.Presentation;
 using DevTools.Presentation.Interfaces;
@@ -94,6 +95,7 @@ internal static class AcadServiceRegistration
 
         services.AddExecutionServices();
         services.AddNUnitHostServices();
+        services.AddTUnitHostServices();
         services.AddGenericTestingHostServices();
 
         services.AddSingleton<IBuiltInMcpResource, AcadCSharpCheatsheet>();

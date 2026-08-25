@@ -2,13 +2,14 @@
 
 In-host tests use Microsoft.Testing.Platform. Testhost discovery is local;
 execution goes through `DevTools.TestRunner` into the host `testing/*`
-handler. NUnit is the default provider; TUnit is Revit-only.
+handler. NUnit is the default provider; TUnit is supported on Revit and
+AutoCAD-family hosts.
 
 Product: [`nunit-host-testing.md`](../../product/nunit-host-testing.md),
 [`tunit-host-testing.md`](../../product/tunit-host-testing.md).
 Agent digest: [`nunit-host-testing.md`](../../agents/nunit-host-testing.md).
 
-Last updated: 2026-08-22
+Last updated: 2026-08-25
 
 ---
 
