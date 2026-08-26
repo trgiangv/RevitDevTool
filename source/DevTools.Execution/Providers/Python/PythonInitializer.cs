@@ -4,7 +4,9 @@ using DevTools.Execution.Interfaces;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Python.Runtime;
+using System.Runtime.InteropServices;
 using ZLogger;
+
 namespace DevTools.Execution.Providers.Python;
 
 public sealed class PythonInitializer(
@@ -159,10 +161,25 @@ public sealed class PythonInitializer(
     {
         foreach (ProcessModule module in Process.GetCurrentProcess().Modules)
         {
-            if (module.ModuleName.StartsWith("python", StringComparison.OrdinalIgnoreCase))
+            var handle = GetModuleHandle(module.ModuleName);
+
+            if (handle == IntPtr.Zero)
+                continue;
+
+            var pyIsInitialized = GetProcAddress(handle, "Py_IsInitialized");
+
+            if (pyIsInitialized != IntPtr.Zero)
                 return true;
         }
 
         return false;
     }
+
+    [DllImport("kernel32.dll", CharSet = CharSet.Unicode)]
+    private static extern IntPtr GetModuleHandle(string lpModuleName);
+
+    [DllImport("kernel32.dll", CharSet = CharSet.Ansi)]
+    private static extern IntPtr GetProcAddress(
+        IntPtr hModule,
+        string lpProcName);
 }
