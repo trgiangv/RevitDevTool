@@ -4,10 +4,10 @@ namespace DevTools.AssemblyIsolation.Metadata;
 
 public sealed class MetadataAssemblySession : IDisposable
 {
-    readonly string entryAssemblyPath;
-    MetadataLoadContext? context;
+    private readonly string entryAssemblyPath;
+    private MetadataLoadContext? context;
 
-    MetadataAssemblySession(string entryAssemblyPath, IReadOnlyList<string> resolutionPaths)
+    private MetadataAssemblySession(string entryAssemblyPath, IReadOnlyList<string> resolutionPaths)
     {
         this.entryAssemblyPath = entryAssemblyPath;
         context = new MetadataLoadContext(new PathAssemblyResolver(resolutionPaths));
@@ -37,7 +37,7 @@ public sealed class MetadataAssemblySession : IDisposable
         context = null;
     }
 
-    static IReadOnlyList<string> CollectResolutionPaths(string entryPath, IEnumerable<string> resolutionPaths)
+    private static IReadOnlyList<string> CollectResolutionPaths(string entryPath, IEnumerable<string> resolutionPaths)
     {
         var pathsByIdentity = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
         foreach (var path in new[] { entryPath }.Concat(resolutionPaths))
@@ -59,14 +59,8 @@ public sealed class MetadataAssemblySession : IDisposable
 
             var identity = assemblyName.FullName
                 ?? throw new InvalidOperationException($"Metadata assembly '{normalizedPath}' has no full identity.");
-            if (pathsByIdentity.TryGetValue(identity, out var existingPath))
-            {
-                if (!string.Equals(existingPath, normalizedPath, StringComparison.OrdinalIgnoreCase))
-                    throw new InvalidOperationException(
-                        $"Duplicate metadata assembly identity '{identity}' at '{existingPath}' and '{normalizedPath}'.");
-
+            if (pathsByIdentity.ContainsKey(identity))
                 continue;
-            }
 
             pathsByIdentity.Add(identity, normalizedPath);
         }

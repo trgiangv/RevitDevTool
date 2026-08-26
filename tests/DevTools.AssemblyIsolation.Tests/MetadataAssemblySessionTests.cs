@@ -27,18 +27,16 @@ public sealed class MetadataAssemblySessionTests
     }
 
     [Fact]
-    public void Metadata_session_rejects_duplicate_full_identities_deterministically()
+    public void Metadata_session_keeps_the_first_path_when_the_same_identity_appears_twice()
     {
         using var directory = new TemporaryDirectory();
         var first = CopyFixture("IsolationSibling", "first.dll", directory.Path);
         var second = CopyFixture("IsolationSibling", "second.dll", directory.Path);
 
-        var error = Assert.Throws<InvalidOperationException>(
-            () => MetadataAssemblySession.Create(first, [second, ..RuntimeAssemblyPaths()]));
+        using var session = MetadataAssemblySession.Create(first, [second, ..RuntimeAssemblyPaths()]);
+        var assembly = session.LoadEntryAssembly();
 
-        Assert.Contains("Duplicate metadata assembly identity", error.Message, StringComparison.Ordinal);
-        Assert.Contains(first, error.Message, StringComparison.Ordinal);
-        Assert.Contains(second, error.Message, StringComparison.Ordinal);
+        Assert.Equal("IsolationSibling", assembly.GetName().Name);
     }
 
     static IEnumerable<string> RuntimeAssemblyPaths() =>
