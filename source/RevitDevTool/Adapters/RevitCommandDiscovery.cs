@@ -5,8 +5,7 @@ using DevTools.Execution.Interfaces;
 using DevTools.Execution.Providers.Dotnet;
 using Microsoft.Extensions.Logging;
 using ZLogger;
-
-namespace RevitDevTool.HostAdapters;
+namespace RevitDevTool.Adapters;
 
 public sealed class RevitCommandDiscovery(ILogger<RevitCommandDiscovery> logger) : ICommandDiscovery
 {

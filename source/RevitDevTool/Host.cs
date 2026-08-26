@@ -16,8 +16,8 @@ namespace RevitDevTool;
 /// </summary>
 public static class Host
 {
-    private static IHost? _host;
-    private static bool _processTelemetryHandlersRegistered;
+    private static IHost? host;
+    private static bool processTelemetryHandlersRegistered;
 
     public static void Start()
     {
@@ -44,46 +44,46 @@ public static class Host
                .AddApplicationServices()
                .AddExecutionServices();
 
-        _host = builder.Build();
+        host = builder.Build();
         RegisterProcessTelemetryHandlers();
-        HostUiHelper.RunBlocking(() => _host.StartAsync());
+        HostUiHelper.RunBlocking(() => host.StartAsync());
     }
 
     public static void Stop()
     {
-        if (_host is null)
+        if (host is null)
         {
             return;
         }
 
-        if (_host.Services.GetService<ITelemetry>() is { } telemetry)
+        if (host.Services.GetService<ITelemetry>() is { } telemetry)
         {
             telemetry.Flush();
         }
 
-        _host.StopAsync().GetAwaiter().GetResult();
-        _host.Dispose();
-        _host = null;
+        host.StopAsync().GetAwaiter().GetResult();
+        host.Dispose();
+        host = null;
     }
 
     public static T GetService<T>() where T : class
     {
-        return _host!.Services.GetRequiredService<T>();
+        return host!.Services.GetRequiredService<T>();
     }
 
     public static object? GetService(Type serviceType)
     {
-        return _host!.Services.GetService(serviceType);
+        return host!.Services.GetService(serviceType);
     }
 
     private static void RegisterProcessTelemetryHandlers()
     {
-        if (_processTelemetryHandlersRegistered)
+        if (processTelemetryHandlersRegistered)
         {
             return;
         }
 
-        _processTelemetryHandlersRegistered = true;
+        processTelemetryHandlersRegistered = true;
 
         AppDomain.CurrentDomain.UnhandledException += (_, args) =>
         {
@@ -94,7 +94,7 @@ public static class Host
                     return;
                 }
 
-                if (_host?.Services.GetService<ITelemetry>() is not { } telemetry)
+                if (host?.Services.GetService<ITelemetry>() is not { } telemetry)
                 {
                     return;
                 }

@@ -1,7 +1,6 @@
-using DevTools.Execution.Interfaces;
 using AcadApp = Autodesk.AutoCAD.ApplicationServices.Core.Application;
 
-namespace AcadDevTool.HostAdapters;
+namespace AcadDevTool.Adapters;
 
 /// <summary>
 /// AutoCAD thread dispatch: uses Document.LockDocument() to acquire API access

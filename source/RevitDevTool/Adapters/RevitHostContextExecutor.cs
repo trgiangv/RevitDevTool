@@ -1,8 +1,7 @@
 using Microsoft.Extensions.Logging;
 using RevitDevTool.Core;
 using RevitDevTool.Core.Execution;
-
-namespace RevitDevTool.HostAdapters;
+namespace RevitDevTool.Adapters;
 
 public sealed class RevitHostContextExecutor(
     IExecutionGuard executionGuard,

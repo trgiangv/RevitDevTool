@@ -17,7 +17,7 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using AcadDevTool.Bridges;
 using AcadDevTool.Controllers;
-using AcadDevTool.HostAdapters;
+using AcadDevTool.Adapters;
 using AcadDevTool.Logging;
 using AcadDevTool.Logging.Enrichers;
 using AcadDevTool.Settings;

@@ -4,7 +4,7 @@ using Autodesk.AutoCAD.Runtime;
 using DevTools.Hosting;
 using AcadApp = Autodesk.AutoCAD.ApplicationServices.Core.Application;
 
-namespace AcadDevTool.HostAdapters;
+namespace AcadDevTool.Adapters;
 
 public sealed class AcadHostAppInfo : IHostAppInfo
 {

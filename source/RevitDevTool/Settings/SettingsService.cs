@@ -3,7 +3,6 @@ using DevTools.Settings.Configs;
 using RevitDevTool.Logging.Enums;
 using RevitDevTool.Settings.Config;
 using System.IO;
-using DevTools.Utilities;
 using DevTools.Presentation;
 using Microsoft.Extensions.Logging;
 using ZLogger;

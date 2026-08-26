@@ -1,13 +1,11 @@
 using System.IO;
 using DevTools.AssemblyIsolation.Diagnostics;
-using DevTools.Utilities;
 using DevTools.AssemblyIsolation.Loading;
 using Microsoft.Extensions.Logging;
 using Nice3point.Revit.Extensions.UI;
 using Autodesk.Revit.DB.Events;
 using RevitDevTool.CommandBrowser;
 using RevitDevTool.Commands;
-using RevitDevTool.Composition;
 using RevitDevTool.Controllers;
 using ZLogger;
 

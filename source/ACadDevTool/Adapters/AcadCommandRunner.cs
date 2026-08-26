@@ -1,4 +1,3 @@
-using System.IO;
 using System.Reflection;
 using Autodesk.AutoCAD.Runtime;
 using DevTools.AssemblyIsolation;
@@ -8,8 +7,7 @@ using DevTools.Execution.Models;
 using DevTools.Execution.Providers.Dotnet;
 using Microsoft.Extensions.Logging;
 using ZLogger;
-
-namespace AcadDevTool.HostAdapters;
+namespace AcadDevTool.Adapters;
 
 /// <summary>
 /// Runs [CommandMethod] commands by loading the assembly, resolving the type and method from

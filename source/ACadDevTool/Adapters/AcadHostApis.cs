@@ -1,8 +1,7 @@
 using System.Reflection;
 using Autodesk.AutoCAD.DatabaseServices;
 using Autodesk.AutoCAD.Runtime;
-
-namespace AcadDevTool.HostAdapters;
+namespace AcadDevTool.Adapters;
 
 internal static class AcadHostApis
 {

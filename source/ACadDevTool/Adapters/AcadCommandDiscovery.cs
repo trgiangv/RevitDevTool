@@ -8,7 +8,7 @@ using Microsoft.Extensions.Logging;
 using ZLogger;
 // ReSharper disable RedundantSuppressNullableWarningExpression
 
-namespace AcadDevTool.HostAdapters;
+namespace AcadDevTool.Adapters;
 
 /// <summary>
 /// Discovers [CommandMethod] commands from .NET assemblies for AutoCAD.

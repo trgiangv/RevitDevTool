@@ -1,8 +1,7 @@
 using DevTools.Execution.Interfaces;
 using Python.Runtime;
 using RevitDevTool.Core;
-
-namespace RevitDevTool.HostAdapters;
+namespace RevitDevTool.Adapters;
 
 public sealed class RevitPythonBridge : IPythonBridge
 {

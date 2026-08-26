@@ -1,7 +1,6 @@
 using DevTools.Hosting;
 using RevitDevTool.Core;
-
-namespace RevitDevTool.HostAdapters;
+namespace RevitDevTool.Adapters;
 
 public sealed class RevitHostAppInfo : IHostAppInfo
 {

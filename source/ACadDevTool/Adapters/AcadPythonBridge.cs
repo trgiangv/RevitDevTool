@@ -1,7 +1,6 @@
 using DevTools.Execution.Interfaces;
 using Python.Runtime;
-
-namespace AcadDevTool.HostAdapters;
+namespace AcadDevTool.Adapters;
 
 public sealed class AcadPythonBridge : IPythonBridge
 {

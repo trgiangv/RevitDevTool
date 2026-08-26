@@ -1,7 +1,7 @@
 using DevTools.Execution.Interfaces;
 using Microsoft.Scripting.Hosting;
 using RevitDevTool.Core;
-namespace RevitDevTool.HostAdapters;
+namespace RevitDevTool.Adapters;
 
 /// <summary>
 /// Injects Revit into IronPython builtins and loads Revit API assemblies into the script engine.

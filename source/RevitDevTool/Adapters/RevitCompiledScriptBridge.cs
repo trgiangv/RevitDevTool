@@ -1,8 +1,6 @@
 using System.Reflection;
-using DevTools.Execution.Interfaces;
 using DevTools.Hosting;
-
-namespace RevitDevTool.HostAdapters;
+namespace RevitDevTool.Adapters;
 
 public sealed class RevitCompiledScriptBridge(IHostAppInfo hostAppInfo) : ICompiledScriptBridge
 {

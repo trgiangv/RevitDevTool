@@ -1,8 +1,7 @@
 using Autodesk.AutoCAD.ApplicationServices;
 using DevTools.Execution.Interfaces;
 using Microsoft.Scripting.Hosting;
-
-namespace AcadDevTool.HostAdapters;
+namespace AcadDevTool.Adapters;
 
 /// <summary>
 /// Minimal AutoCAD assembly exposure for IronPython; further refs stay in script (clr) / embedded setup.

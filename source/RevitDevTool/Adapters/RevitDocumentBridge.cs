@@ -1,22 +1,16 @@
-using Autodesk.AutoCAD.ApplicationServices;
-using DevTools.Execution.Interfaces;
-using AcadApp = Autodesk.AutoCAD.ApplicationServices.Core.Application;
+using RevitDevTool.Core;
+using RevitDevTool.Utils;
+namespace RevitDevTool.Adapters;
 
-namespace AcadDevTool.HostAdapters;
-
-public sealed class AcadDocumentBridge(IHostContextExecutor executor) : IDocumentBridge
+public sealed class RevitDocumentBridge(IHostContextExecutor executor) : IDocumentBridge
 {
     public Task<DocumentOperationResult> OpenDocumentAsync(string filePath, CancellationToken ct) =>
         executor.ExecuteAsync(() =>
         {
             try
             {
-                var doc = DocumentCollectionExtension.Open(AcadApp.DocumentManager, filePath, false);
-                if (doc is null)
-                    return new DocumentOperationResult(false, $"Failed to open '{filePath}'.");
-
-                AcadApp.DocumentManager.MdiActiveDocument = doc;
-                return new DocumentOperationResult(true, $"Opened '{doc.Name}'.", doc.Name);
+                var uiDoc = RevitContext.UiApplication.OpenAndActivateDocument(filePath);
+                return new DocumentOperationResult(true, $"Opened '{uiDoc.Document.Title}'.", uiDoc.Document.Title);
             }
             catch (Exception ex)
             {
@@ -29,16 +23,13 @@ public sealed class AcadDocumentBridge(IHostContextExecutor executor) : IDocumen
         {
             try
             {
-                var doc = AcadApp.DocumentManager.MdiActiveDocument;
-                if (doc is null)
+                var uiApp = RevitContext.UiApplication;
+                if (!uiApp.HasActiveUiDocument())
                     return new DocumentOperationResult(false, "No active document to close.");
 
-                var name = doc.Name;
-                if (save)
-                    doc.Database.Save();
-
-                doc.Database.Dispose();
-                return new DocumentOperationResult(true, $"Closed '{name}'.", name);
+                var title = RevitContext.ActiveDocument?.Title ?? "Unknown";
+                uiApp.CloseActiveUiDocument(save);
+                return new DocumentOperationResult(true, $"Closed '{title}'.", title);
             }
             catch (Exception ex)
             {
@@ -51,16 +42,16 @@ public sealed class AcadDocumentBridge(IHostContextExecutor executor) : IDocumen
         {
             try
             {
-                var doc = AcadApp.DocumentManager.MdiActiveDocument;
+                var doc = RevitContext.ActiveDocument;
                 if (doc is null)
                     return new DocumentOperationResult(false, "No active document to save.");
 
                 if (string.IsNullOrWhiteSpace(savePath))
-                    doc.Database.Save();
+                    doc.Save();
                 else
-                    doc.Database.SaveAs(savePath!, Autodesk.AutoCAD.DatabaseServices.DwgVersion.Current);
+                    doc.SaveAs(savePath!);
 
-                return new DocumentOperationResult(true, $"Saved '{doc.Name}'.", doc.Name);
+                return new DocumentOperationResult(true, $"Saved '{doc.Title}'.", doc.Title);
             }
             catch (Exception ex)
             {

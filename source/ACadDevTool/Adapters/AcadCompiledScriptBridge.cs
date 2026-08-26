@@ -1,10 +1,8 @@
 using System.Reflection;
 using Autodesk.AutoCAD.DatabaseServices;
 using Autodesk.AutoCAD.Runtime;
-using DevTools.Execution.Interfaces;
 using DevTools.Hosting;
-
-namespace AcadDevTool.HostAdapters;
+namespace AcadDevTool.Adapters;
 
 public sealed class AcadCompiledScriptBridge(IHostAppInfo hostAppInfo) : ICompiledScriptBridge
 {
