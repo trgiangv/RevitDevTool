@@ -8,10 +8,6 @@ internal readonly record struct CeilingPlanarFace(PlanarFace Face, Transform ToH
 
     public UV ToUv(XYZ linkPoint)
     {
-        var projected = Face.Project(linkPoint);
-        if (projected != null)
-            return projected.UVPoint;
-
         var vector = linkPoint - Face.Origin;
         return new UV(vector.DotProduct(Face.XVector), vector.DotProduct(Face.YVector));
     }

@@ -24,7 +24,7 @@ public class CeilingVisualization : ExternalCommand
 
         var element = picks
             .Select(pick => ceilingDoc.GetElement(pick.LinkedElementId)).FirstOrDefault();
-        Trace.Write(element!.GetSolids(linkInstance.GetTotalTransform()));
+        // Trace.Write(element!.GetSolids(linkInstance.GetTotalTransform()));
         if (element is not Ceiling ceiling)
             return;
 

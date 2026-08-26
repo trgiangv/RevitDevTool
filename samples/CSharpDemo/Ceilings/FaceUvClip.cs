@@ -100,19 +100,93 @@ internal sealed class FaceUvClip
 
     private static NtsGeometry? BuildPolygon(List<List<UV>> loops)
     {
-        var rings = loops
-            .Select(TryClosedRing)
-            .OfType<LinearRing>()
-            .Select(ring => (ring, area: Math.Abs(Factory.CreatePolygon(ring).Area)))
-            .OrderByDescending(item => item.area)
-            .ToList();
+        var rings = ReadRings(loops);
         if (rings.Count == 0)
             return null;
 
-        var shell = AsCcw(rings[0].ring);
-        var holes = rings.Skip(1).Select(item => AsCw(item.ring)).ToArray();
-        NtsGeometry polygon = Factory.CreatePolygon(shell, holes);
-        return polygon.IsValid ? polygon : polygon.Buffer(0);
+        var clip = UnionShells(ClassifyShells(rings));
+        return clip is null || clip.IsEmpty ? null : clip;
+    }
+
+    private static List<(LinearRing Ring, Polygon Poly)> ReadRings(List<List<UV>> loops) =>
+        loops
+            .Select(TryClosedRing)
+            .OfType<LinearRing>()
+            .Select(AsCcw)
+            .Select(ring => (Ring: ring, Poly: Factory.CreatePolygon(ring)))
+            .Where(item => Math.Abs(item.Poly.Area) > LengthToleranceFeet)
+            .OrderByDescending(item => item.Poly.Area)
+            .ToList();
+
+    private static List<Shell> ClassifyShells(List<(LinearRing Ring, Polygon Poly)> rings)
+    {
+        var shells = new List<Shell>();
+        foreach (var (ring, poly) in rings)
+        {
+            var parent = SmallestContainer(shells, poly);
+            if (parent is null)
+                shells.Add(new Shell(ring, poly));
+            else
+                parent.Holes.Add(AsCw(ring));
+        }
+
+        return shells;
+    }
+
+    private static Shell? SmallestContainer(List<Shell> shells, Polygon ring)
+    {
+        Shell? parent = null;
+        foreach (var shell in shells)
+        {
+            if (!ContainsRing(shell.Poly, ring))
+                continue;
+            if (parent is not null && shell.Poly.Area >= parent.Poly.Area)
+                continue;
+
+            parent = shell;
+        }
+
+        return parent;
+    }
+
+    private static NtsGeometry? UnionShells(List<Shell> shells)
+    {
+        NtsGeometry? clip = null;
+        foreach (var shell in shells)
+        {
+            var piece = ToPiece(shell);
+            if (piece.IsEmpty)
+                continue;
+
+            clip = clip is null ? piece : clip.Union(piece);
+        }
+
+        return clip;
+    }
+
+    private static NtsGeometry ToPiece(Shell shell)
+    {
+        NtsGeometry piece = Factory.CreatePolygon(shell.Ring, [.. shell.Holes]);
+        return piece.IsValid ? piece : piece.Buffer(0);
+    }
+
+    private static bool ContainsRing(Polygon shell, Polygon ring)
+    {
+        try
+        {
+            return shell.Covers(ring) || shell.Contains(ring.InteriorPoint);
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
+    private sealed class Shell(LinearRing ring, Polygon poly)
+    {
+        public LinearRing Ring { get; } = ring;
+        public Polygon Poly { get; } = poly;
+        public List<LinearRing> Holes { get; } = [];
     }
 
     private static LinearRing? TryClosedRing(List<UV> points)
