@@ -68,7 +68,7 @@ public sealed class RevitCommandRunner(ILogger<RevitCommandRunner> logger) : ICo
         var session = AssemblyIsolationSession.Create(
             CommandIsolationPlan.Create(
                 item.AssemblyPath,
-                [typeof(IExternalCommand).Assembly, typeof(Autodesk.Revit.DB.Element).Assembly],
+                RevitHostApiBindings.GetParentAssemblies(),
                 new CommandIsolationDiagnosticSink(logger)));
         LiveCommandSessions.Add(session);
         try

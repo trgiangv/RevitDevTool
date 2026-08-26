@@ -18,15 +18,26 @@ public sealed class ParentAssemblyBindingTests
     }
 
     [Fact]
-    public void Parent_binding_rejects_same_name_with_different_version()
+    public void Parent_binding_rejects_same_name_with_different_version_when_strict()
     {
         var loaded = typeof(ParentAssemblyBindingTests).Assembly;
         var requested = new AssemblyName(loaded.FullName!) { Version = new Version(99, 0, 0, 0) };
-        var bindings = ParentAssemblyBindings.Create([loaded]);
+        var bindings = ParentAssemblyBindings.Create([new ParentAssemblyBinding(loaded)]);
 
         var error = Assert.Throws<AssemblyIdentityMismatchException>(
             () => bindings.TryResolve(requested, out _));
         Assert.Contains(loaded.GetName().Name!, error.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Parent_binding_accepts_requested_version_drift_when_host_share_is_explicit()
+    {
+        var loaded = typeof(ParentAssemblyBindingTests).Assembly;
+        var requested = new AssemblyName(loaded.FullName!) { Version = new Version(99, 0, 0, 0) };
+        var bindings = ParentAssemblyBindings.Create([new ParentAssemblyBinding(loaded, ignoreRequestedVersion: true)]);
+
+        Assert.True(bindings.TryResolve(requested, out var actual));
+        Assert.Same(loaded, actual);
     }
 
     [Fact]

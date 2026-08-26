@@ -72,7 +72,13 @@ public static class ScriptIsolationPlan
         plan = WpfSharing.BindFromDefaultContext(plan, nugetPaths);
 
         foreach (var assembly in parentBindings)
+        {
+#if NET
+            plan = plan.BindToParent(assembly, ignoreRequestedVersion: true);
+#else
             plan = plan.BindToParent(assembly);
+#endif
+        }
 
         return diagnosticSink is null ? plan : plan.WithDiagnosticSink(diagnosticSink);
     }

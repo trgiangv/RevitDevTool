@@ -9,6 +9,11 @@ without allowing one feature's dependency policy to leak into another.
 - Parent sharing is explicit and uses a concrete `Assembly` instance.
 - Compatibility uses full identity: name, version, culture, and public-key
   token. A matching simple name is not sufficient.
+- On modern TFMs, explicit host parent bindings may set
+  `ignoreRequestedVersion: true` so compile references to Autodesk API NuGet
+  packages (for example `Nice3point.Revit.Api.RevitAPIUI`) resolve to the
+  host-loaded assembly even when the reference assembly version differs. Private
+  managed candidates still require full identity.
 - Private managed and native dependencies resolve lazily from roots declared by
   the owning feature. Directory traversal and reparse-point escapes are rejected.
 - `System.*`, `Microsoft.*`, Autodesk APIs, and UI libraries are not shared by

@@ -38,6 +38,16 @@ public sealed class AssemblyIdentityMatcherTests
     }
 
     [Fact]
+    public void Is_compatible_for_parent_share_ignores_requested_version()
+    {
+        var requested = new AssemblyName("RevitAPIUI, Version=2025.0.0.0, Culture=neutral, PublicKeyToken=null");
+        var parent = new AssemblyName("RevitAPIUI, Version=2025.0.2.0, Culture=neutral, PublicKeyToken=null");
+
+        Assert.False(AssemblyIdentityMatcher.IsCompatible(requested, parent));
+        Assert.True(AssemblyIdentityMatcher.IsCompatibleForParentShare(requested, parent));
+    }
+
+    [Fact]
     public void Is_compatible_ignores_candidate_version_when_request_does_not_specify_one()
     {
         var requested = new AssemblyName("Contoso.Component");

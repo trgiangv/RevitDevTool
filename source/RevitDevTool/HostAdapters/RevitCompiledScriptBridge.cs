@@ -6,13 +6,7 @@ namespace RevitDevTool.HostAdapters;
 
 public sealed class RevitCompiledScriptBridge(IHostAppInfo hostAppInfo) : ICompiledScriptBridge
 {
-    public IEnumerable<Assembly> GetParentBindings()
-    {
-        yield return typeof(IExternalCommand).Assembly;
-        var databaseAssembly = typeof(Autodesk.Revit.DB.Element).Assembly;
-        if (databaseAssembly != typeof(IExternalCommand).Assembly)
-            yield return databaseAssembly;
-    }
+    public IEnumerable<Assembly> GetParentBindings() => RevitHostApiBindings.GetParentAssemblies();
 
     public IEnumerable<string> GetSessionReferences()
     {

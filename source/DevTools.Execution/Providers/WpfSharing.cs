@@ -88,7 +88,13 @@ static class WpfSharing
             if (loaded is null && pathsByName.TryGetValue(simpleName, out var path))
                 loaded = LoadIntoDefaultContext(path);
             if (loaded is not null)
+            {
+#if NET
+                plan = plan.BindToParent(loaded, ignoreRequestedVersion: true);
+#else
                 plan = plan.BindToParent(loaded);
+#endif
+            }
         }
 
         return plan;

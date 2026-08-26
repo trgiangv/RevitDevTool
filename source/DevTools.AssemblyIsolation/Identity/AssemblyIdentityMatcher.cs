@@ -12,12 +12,39 @@ public static class AssemblyIdentityMatcher
         if (!string.Equals(requested.Name, candidate.Name, StringComparison.OrdinalIgnoreCase))
             return false;
 
-        if (requested.Version is not null && requested.Version != candidate.Version)
+        if (!VersionsCompatible(requested, candidate))
             return false;
 
         if (!string.Equals(NormalizeCulture(requested), NormalizeCulture(candidate), StringComparison.OrdinalIgnoreCase))
             return false;
 
+        return TokensCompatible(requested, candidate);
+    }
+
+    /// <summary>
+    /// Parent bindings from the host process: compile references carry NuGet or
+    /// reference-assembly versions that do not match the host-loaded Autodesk API.
+    /// Share by simple name, culture, and token only.
+    /// </summary>
+    public static bool IsCompatibleForParentShare(AssemblyName requested, AssemblyName parent)
+    {
+        if (requested is null) throw new ArgumentNullException(nameof(requested));
+        if (parent is null) throw new ArgumentNullException(nameof(parent));
+
+        if (!string.Equals(requested.Name, parent.Name, StringComparison.OrdinalIgnoreCase))
+            return false;
+
+        if (!string.Equals(NormalizeCulture(requested), NormalizeCulture(parent), StringComparison.OrdinalIgnoreCase))
+            return false;
+
+        return TokensCompatible(requested, parent);
+    }
+
+    static bool VersionsCompatible(AssemblyName requested, AssemblyName candidate)
+        => requested.Version is null || requested.Version == candidate.Version;
+
+    static bool TokensCompatible(AssemblyName requested, AssemblyName candidate)
+    {
         var requestedToken = requested.GetPublicKeyToken();
         return requestedToken is null
                || requestedToken.Length == 0

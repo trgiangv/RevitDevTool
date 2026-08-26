@@ -7,12 +7,12 @@ namespace DevTools.AssemblyIsolation;
 
 public sealed class AssemblyIsolationPlan
 {
-    private readonly IReadOnlyList<Assembly> parentAssemblies;
+    private readonly IReadOnlyList<ParentAssemblyBinding> parentBindings;
 
     AssemblyIsolationPlan(
         string entryAssemblyPath,
         AssemblyIsolationLifecycle lifecycle,
-        IReadOnlyList<Assembly> parentAssemblies,
+        IReadOnlyList<ParentAssemblyBinding> parentBindings,
         IReadOnlyList<IManagedAssemblySource> managedSources,
         IReadOnlyList<INativeAssemblySource> nativeSources,
         IAssemblyIsolationDiagnosticSink? diagnosticSink,
@@ -20,8 +20,8 @@ public sealed class AssemblyIsolationPlan
     {
         EntryAssemblyPath = entryAssemblyPath;
         Lifecycle = lifecycle;
-        this.parentAssemblies = parentAssemblies;
-        ParentBindings = ParentAssemblyBindings.Create(parentAssemblies);
+        this.parentBindings = parentBindings;
+        ParentBindings = ParentAssemblyBindings.Create(parentBindings);
         ManagedSources = managedSources;
         NativeSources = nativeSources;
         DiagnosticSink = diagnosticSink;
@@ -54,7 +54,7 @@ public sealed class AssemblyIsolationPlan
         return new AssemblyIsolationPlan(
             Path.GetFullPath(entryAssemblyPath),
             AssemblyIsolationLifecycle.Permanent,
-            ReadOnly(Array.Empty<Assembly>()),
+            ReadOnly(Array.Empty<ParentAssemblyBinding>()),
             ReadOnly(Array.Empty<IManagedAssemblySource>()),
             ReadOnly(Array.Empty<INativeAssemblySource>()),
             null,
@@ -67,11 +67,12 @@ public sealed class AssemblyIsolationPlan
     public AssemblyIsolationPlan WithDistinctFileIdentity() =>
         Clone(loadsFromDistinctFile: true);
 
-    public AssemblyIsolationPlan BindToParent(Assembly assembly)
+    public AssemblyIsolationPlan BindToParent(Assembly assembly, bool ignoreRequestedVersion = false)
     {
         if (assembly is null) throw new ArgumentNullException(nameof(assembly));
 
-        return Clone(parentAssemblies: ReadOnly(this.parentAssemblies.Append(assembly)));
+        return Clone(parentBindings: ReadOnly(this.parentBindings.Append(
+            new ParentAssemblyBinding(assembly, ignoreRequestedVersion))));
     }
 
     public AssemblyIsolationPlan AddManagedSource(IManagedAssemblySource source)
@@ -97,7 +98,7 @@ public sealed class AssemblyIsolationPlan
 
     private AssemblyIsolationPlan Clone(
         AssemblyIsolationLifecycle? lifecycle = null,
-        IReadOnlyList<Assembly>? parentAssemblies = null,
+        IReadOnlyList<ParentAssemblyBinding>? parentBindings = null,
         IReadOnlyList<IManagedAssemblySource>? managedSources = null,
         IReadOnlyList<INativeAssemblySource>? nativeSources = null,
         IAssemblyIsolationDiagnosticSink? diagnosticSink = null,
@@ -105,7 +106,7 @@ public sealed class AssemblyIsolationPlan
         new(
             EntryAssemblyPath,
             lifecycle ?? Lifecycle,
-            parentAssemblies ?? this.parentAssemblies,
+            parentBindings ?? this.parentBindings,
             managedSources ?? ManagedSources,
             nativeSources ?? NativeSources,
             diagnosticSink ?? DiagnosticSink,

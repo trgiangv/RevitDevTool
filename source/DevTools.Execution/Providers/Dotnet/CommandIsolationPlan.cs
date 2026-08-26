@@ -46,7 +46,13 @@ public static class CommandIsolationPlan
             WpfSharing.SiblingCandidatePaths(siblingDirectory));
 
         foreach (var assembly in parentBindings)
+        {
+#if NET
+            plan = plan.BindToParent(assembly, ignoreRequestedVersion: true);
+#else
             plan = plan.BindToParent(assembly);
+#endif
+        }
 
         return diagnosticSink is null ? plan : plan.WithDiagnosticSink(diagnosticSink);
     }

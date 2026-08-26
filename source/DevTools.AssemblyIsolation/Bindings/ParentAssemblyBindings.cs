@@ -12,26 +12,24 @@ public sealed class ParentAssemblyBindings
         this.bindings = bindings;
     }
 
+    public static ParentAssemblyBindings Create(IEnumerable<ParentAssemblyBinding> bindings)
+    {
+        if (bindings is null) throw new ArgumentNullException(nameof(bindings));
+
+        var map = new Dictionary<string, ParentAssemblyBinding>(StringComparer.OrdinalIgnoreCase);
+        foreach (var binding in bindings)
+        {
+            AddBinding(map, binding);
+        }
+
+        return new ParentAssemblyBindings(map);
+    }
+
     public static ParentAssemblyBindings Create(IEnumerable<Assembly> assemblies)
     {
         if (assemblies is null) throw new ArgumentNullException(nameof(assemblies));
 
-        var bindings = new Dictionary<string, ParentAssemblyBinding>(StringComparer.OrdinalIgnoreCase);
-        foreach (var assembly in assemblies)
-        {
-            var binding = new ParentAssemblyBinding(assembly);
-            if (bindings.TryGetValue(binding.SimpleName, out var existing))
-            {
-                if (!HasSameFullIdentity(existing.Identity, binding.Identity))
-                    throw new AssemblyIdentityMismatchException(binding.Identity, existing.Identity);
-
-                continue;
-            }
-
-            bindings.Add(binding.SimpleName, binding);
-        }
-
-        return new ParentAssemblyBindings(bindings);
+        return Create(assemblies.Select(assembly => new ParentAssemblyBinding(assembly)));
     }
 
     public bool TryResolve(AssemblyName requested, out Assembly assembly)
@@ -44,14 +42,40 @@ public sealed class ParentAssemblyBindings
             return false;
         }
 
-        if (!AssemblyIdentityMatcher.IsCompatible(requested, binding.Identity))
+        var compatible = binding.IgnoreRequestedVersion
+            ? AssemblyIdentityMatcher.IsCompatibleForParentShare(requested, binding.Identity)
+            : AssemblyIdentityMatcher.IsCompatible(requested, binding.Identity);
+        if (!compatible)
             throw new AssemblyIdentityMismatchException(requested, binding.Identity);
 
         assembly = binding.Assembly;
         return true;
     }
 
-    static bool HasSameFullIdentity(AssemblyName first, AssemblyName second)
-        => AssemblyIdentityMatcher.IsCompatible(first, second)
-           && AssemblyIdentityMatcher.IsCompatible(second, first);
+    static void AddBinding(
+        Dictionary<string, ParentAssemblyBinding> bindings,
+        ParentAssemblyBinding binding)
+    {
+        if (bindings.TryGetValue(binding.SimpleName, out var existing))
+        {
+            if (!HasSameFullIdentity(existing, binding))
+                throw new AssemblyIdentityMismatchException(binding.Identity, existing.Identity);
+
+            return;
+        }
+
+        bindings.Add(binding.SimpleName, binding);
+    }
+
+    static bool HasSameFullIdentity(ParentAssemblyBinding first, ParentAssemblyBinding second)
+    {
+        if (first.IgnoreRequestedVersion && second.IgnoreRequestedVersion)
+        {
+            return AssemblyIdentityMatcher.IsCompatibleForParentShare(first.Identity, second.Identity)
+                   && AssemblyIdentityMatcher.IsCompatibleForParentShare(second.Identity, first.Identity);
+        }
+
+        return AssemblyIdentityMatcher.IsCompatible(first.Identity, second.Identity)
+               && AssemblyIdentityMatcher.IsCompatible(second.Identity, first.Identity);
+    }
 }
