@@ -19,7 +19,7 @@ public sealed class CommandIsolationPlanNetFrameworkTests
 
         var dependencyName = (string)method.Invoke(null, null)!;
 
-        Assert.Equal(AssemblyIsolationLifecycle.ScopedNetFramework, plan.Lifecycle);
+        Assert.Equal(AssemblyIsolationKind.Isolated, plan.Kind);
         Assert.False(plan.LoadsFromDistinctFile);
         Assert.Single(plan.ManagedSources);
         Assert.Empty(plan.NativeSources);

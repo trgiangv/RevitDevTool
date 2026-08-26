@@ -13,7 +13,7 @@ public sealed class ManagedAssemblySourceTests
         var identity = typeof(ManagedAssemblySourceTests).Assembly.GetName();
         var source = new ManifestAssemblySource(
         [
-            (identity, new AssemblyCandidate(path, "manifest", directory.Path)),
+            (identity, new AssemblyCandidate(path, directory.Path)),
         ]);
 
         var differentVersion = new AssemblyName(identity.FullName!) { Version = new Version(99, 0, 0, 0) };
@@ -35,8 +35,8 @@ public sealed class ManagedAssemblySourceTests
         var newerIdentity = new AssemblyName("System.Text.Json, Version=10.0.0.0, Culture=neutral, PublicKeyToken=cc7b13ffcd2ddd51");
         var source = new ManifestAssemblySource(
         [
-            (olderIdentity, new AssemblyCandidate(olderPath, "older", directory.Path)),
-            (newerIdentity, new AssemblyCandidate(newerPath, "newer", directory.Path)),
+            (olderIdentity, new AssemblyCandidate(olderPath, directory.Path)),
+            (newerIdentity, new AssemblyCandidate(newerPath, directory.Path)),
         ]);
 
         Assert.Equal(Path.GetFullPath(olderPath), source.Resolve(olderIdentity)!.Path);
@@ -52,15 +52,14 @@ public sealed class ManagedAssemblySourceTests
         var identity = typeof(ManagedAssemblySourceTests).Assembly.GetName();
         var source = new ManifestAssemblySource(
         [
-            (identity, new AssemblyCandidate(firstPath, "first", directory.Path)),
-            (identity, new AssemblyCandidate(secondPath, "second", directory.Path)),
+            (identity, new AssemblyCandidate(firstPath, directory.Path)),
+            (identity, new AssemblyCandidate(secondPath, directory.Path)),
         ]);
 
         var candidate = source.Resolve(identity);
 
         Assert.NotNull(candidate);
         Assert.Equal(Path.GetFullPath(firstPath), candidate.Path);
-        Assert.Equal("first", candidate.SourceName);
     }
 
     [Fact]
@@ -68,7 +67,7 @@ public sealed class ManagedAssemblySourceTests
     {
         using var directory = new TemporaryDirectory();
         var identity = new AssemblyName("System.Text.Json, Version=99.0.0.0");
-        var candidate = new AssemblyCandidate(Path.Combine(directory.Path, "System.Text.Json.dll"), "manifest", directory.Path);
+        var candidate = new AssemblyCandidate(Path.Combine(directory.Path, "System.Text.Json.dll"), directory.Path);
         var source = new ManifestAssemblySource([(identity, candidate)]);
 
         Assert.Same(candidate, source.Resolve(identity));
@@ -79,7 +78,7 @@ public sealed class ManagedAssemblySourceTests
     {
         using var directory = new TemporaryDirectory();
         var identity = new AssemblyName("Microsoft.Extensions.Configuration, Version=99.0.0.0");
-        var candidate = new AssemblyCandidate(Path.Combine(directory.Path, "Microsoft.Extensions.Configuration.dll"), "manifest", directory.Path);
+        var candidate = new AssemblyCandidate(Path.Combine(directory.Path, "Microsoft.Extensions.Configuration.dll"), directory.Path);
         var source = new ManifestAssemblySource([(identity, candidate)]);
 
         Assert.Same(candidate, source.Resolve(identity));
@@ -93,7 +92,7 @@ public sealed class ManagedAssemblySourceTests
         CopyAssembly(directory.Path, typeof(AssemblyIdentityMatcherTests).Assembly, "sibling.dll");
         var before = AppDomain.CurrentDomain.GetAssemblies().Length;
 
-        _ = new DirectoryAssemblySource(directory.Path, "directory");
+        _ = new DirectoryAssemblySource(directory.Path);
 
         Assert.Equal(before, AppDomain.CurrentDomain.GetAssemblies().Length);
         Assert.True(File.Exists(assemblyPath));
@@ -106,7 +105,7 @@ public sealed class ManagedAssemblySourceTests
         using var outside = new TemporaryDirectory();
         var identity = typeof(ManagedAssemblySourceTests).Assembly.GetName();
         CopyAssembly(outside.Path, typeof(ManagedAssemblySourceTests).Assembly, $"{identity.Name}.dll");
-        var source = new DirectoryAssemblySource(root.Path, "directory");
+        var source = new DirectoryAssemblySource(root.Path);
 
         var traversal = new AssemblyName(identity.FullName!) { Name = Path.Combine("..", Path.GetFileName(outside.Path), identity.Name!) };
 
@@ -121,7 +120,6 @@ public sealed class ManagedAssemblySourceTests
 
         Assert.Throws<ArgumentException>(() => new AssemblyCandidate(
             Path.Combine(outside.Path, "Outside.Root.Component.dll"),
-            "manifest",
             root.Path));
     }
 
@@ -131,14 +129,12 @@ public sealed class ManagedAssemblySourceTests
         using var directory = new TemporaryDirectory();
         var candidate = new AssemblyCandidate(
             Path.Combine(directory.Path, ".", "Component.dll"),
-            "manifest",
             Path.Combine(directory.Path, "."));
 
-        var (path, sourceName, allowedRoot) = candidate;
+        var (path, root) = candidate;
 
         Assert.Equal(Path.Combine(directory.Path, "Component.dll"), path);
-        Assert.Equal("manifest", sourceName);
-        Assert.Equal(directory.Path, allowedRoot);
+        Assert.Equal(directory.Path, root);
     }
 
     [Fact]
@@ -147,7 +143,7 @@ public sealed class ManagedAssemblySourceTests
         using var directory = new TemporaryDirectory();
         var identity = new AssemblyName("Malformed.Component");
         File.WriteAllText(Path.Combine(directory.Path, "Malformed.Component.dll"), "not a managed assembly");
-        var source = new DirectoryAssemblySource(directory.Path, "directory");
+        var source = new DirectoryAssemblySource(directory.Path);
 
         Assert.Null(source.Resolve(identity));
     }
@@ -161,7 +157,7 @@ public sealed class ManagedAssemblySourceTests
 
         _ = new ManifestAssemblySource(
         [
-            (typeof(ManagedAssemblySourceTests).Assembly.GetName(), new AssemblyCandidate(path, "manifest", directory.Path)),
+            (typeof(ManagedAssemblySourceTests).Assembly.GetName(), new AssemblyCandidate(path, directory.Path)),
         ]);
 
         Assert.Equal(before, AppDomain.CurrentDomain.GetAssemblies().Length);

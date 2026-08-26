@@ -6,41 +6,37 @@ namespace DevTools.AssemblyIsolation.Sources;
 
 public sealed record AssemblyCandidate
 {
-    public AssemblyCandidate(string path, string sourceName, string allowedRoot)
+    const string Extension = ".dll";
+
+    public AssemblyCandidate(string path, string root)
     {
         if (string.IsNullOrWhiteSpace(path))
             throw new ArgumentException("A candidate path is required.", nameof(path));
-        if (string.IsNullOrWhiteSpace(sourceName))
-            throw new ArgumentException("A source name is required.", nameof(sourceName));
-        if (string.IsNullOrWhiteSpace(allowedRoot))
-            throw new ArgumentException("An allowed root is required.", nameof(allowedRoot));
+        if (string.IsNullOrWhiteSpace(root))
+            throw new ArgumentException("A root is required.", nameof(root));
 
         Path = System.IO.Path.GetFullPath(path);
-        SourceName = sourceName;
-        AllowedRoot = System.IO.Path.GetFullPath(allowedRoot);
+        Root = System.IO.Path.GetFullPath(root);
 
-        if (!IsUnderAllowedRoot(Path, AllowedRoot))
-            throw new ArgumentException("The candidate path must be contained by its allowed root.", nameof(path));
+        if (!IsUnderRoot(Path, Root))
+            throw new ArgumentException("The candidate path must be contained by its root.", nameof(path));
     }
 
     public string Path { get; }
 
-    public string SourceName { get; }
+    public string Root { get; }
 
-    public string AllowedRoot { get; }
-
-    public void Deconstruct(out string path, out string sourceName, out string allowedRoot)
+    public void Deconstruct(out string path, out string root)
     {
         path = Path;
-        sourceName = SourceName;
-        allowedRoot = AllowedRoot;
+        root = Root;
     }
 
-    internal static AssemblyCandidate? TryCreate(string path, string sourceName, string allowedRoot)
+    internal static AssemblyCandidate? TryCreate(string path, string root)
     {
         try
         {
-            return new AssemblyCandidate(path, sourceName, allowedRoot);
+            return new AssemblyCandidate(path, root);
         }
         catch (ArgumentException)
         {
@@ -48,10 +44,36 @@ public sealed record AssemblyCandidate
         }
     }
 
-    internal static bool IsUnderAllowedRoot(string path, string allowedRoot)
+    internal static string Combine(string directory, string simpleName) =>
+        System.IO.Path.Combine(directory, simpleName + Extension);
+
+    internal static string WithExtension(string fileName) =>
+        fileName.EndsWith(Extension, StringComparison.OrdinalIgnoreCase)
+            ? fileName
+            : fileName + Extension;
+
+    internal static string SearchPattern => "*" + Extension;
+
+    internal static IEnumerable<string> LookupKeys(string pathOrName)
+    {
+        var fileName = System.IO.Path.GetFileName(pathOrName);
+        if (string.IsNullOrWhiteSpace(fileName))
+            yield break;
+
+        yield return fileName;
+
+        if (!fileName.EndsWith(Extension, StringComparison.OrdinalIgnoreCase))
+            yield return fileName + Extension;
+
+        var withoutExtension = System.IO.Path.GetFileNameWithoutExtension(fileName);
+        if (!string.IsNullOrWhiteSpace(withoutExtension))
+            yield return withoutExtension;
+    }
+
+    internal static bool IsUnderRoot(string path, string root)
     {
         var normalizedPath = System.IO.Path.GetFullPath(path);
-        var normalizedRoot = System.IO.Path.GetFullPath(allowedRoot);
+        var normalizedRoot = System.IO.Path.GetFullPath(root);
         var prefix = normalizedRoot.EndsWith(System.IO.Path.DirectorySeparatorChar.ToString(), StringComparison.Ordinal)
             ? normalizedRoot
             : normalizedRoot + System.IO.Path.DirectorySeparatorChar;
@@ -59,13 +81,13 @@ public sealed record AssemblyCandidate
         return normalizedPath.StartsWith(prefix, StringComparison.OrdinalIgnoreCase);
     }
 
-    internal static bool IsExistingPathUnderAllowedRoot(string path, string allowedRoot)
+    internal static bool IsExistingPathUnderRoot(string path, string root)
     {
-        if (!File.Exists(path) || !Directory.Exists(allowedRoot))
+        if (!File.Exists(path) || !Directory.Exists(root))
             return false;
 
         return TryGetFinalPath(path, out var finalPath)
-               && TryGetFinalPath(allowedRoot, out var finalRoot)
+               && TryGetFinalPath(root, out var finalRoot)
                && IsUnderCanonicalRoot(finalPath, finalRoot);
     }
 

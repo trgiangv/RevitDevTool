@@ -15,16 +15,14 @@ namespace AcadDevTool;
 
 public class Application : ExtensionApplication
 {
-    private PermanentDirectoryAssemblyResolver? _assemblyResolver;
+    private AssemblyLoader? _assemblyLoader;
 
     public override void OnStartup(RibbonControl ribbonControl)
     {
         var addinContentsDirectory = Path.GetDirectoryName(typeof(Application).Assembly.Location)
             ?? throw new InvalidOperationException("Could not determine the AutoCAD add-in contents directory.");
-        _assemblyResolver ??= PermanentDirectoryAssemblyResolver.Create(
-            addinContentsDirectory,
-            new PermanentAssemblyLoader(new AddinAssemblyIsolationDiagnosticSink()));
-        _assemblyResolver.Register();
+        _assemblyLoader ??= new AssemblyLoader(new AddinAssemblyIsolationDiagnosticSink());
+        _assemblyLoader.Register(addinContentsDirectory);
         Host.Start();
         Host.GetService<PanelController>().Initialize();
         AddButtons(ribbonControl);
@@ -34,8 +32,8 @@ public class Application : ExtensionApplication
     {
         Host.GetService<PanelController>().Shutdown();
         Host.Stop();
-        _assemblyResolver?.Dispose();
-        _assemblyResolver = null;
+        _assemblyLoader?.Dispose();
+        _assemblyLoader = null;
     }
 
     private sealed class AddinAssemblyIsolationDiagnosticSink : IAssemblyIsolationDiagnosticSink

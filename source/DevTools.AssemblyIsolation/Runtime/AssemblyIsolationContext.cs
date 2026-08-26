@@ -8,11 +8,11 @@ using DevTools.AssemblyIsolation.Sources;
 
 namespace DevTools.AssemblyIsolation.Runtime;
 
-internal sealed class CollectibleAssemblyIsolationContext : AssemblyLoadContext
+internal sealed class AssemblyIsolationContext : AssemblyLoadContext
 {
     readonly AssemblyIsolationPlan plan;
 
-    public CollectibleAssemblyIsolationContext(AssemblyIsolationPlan plan)
+    public AssemblyIsolationContext(AssemblyIsolationPlan plan)
         : base($"DevTools.AssemblyIsolation:{Path.GetFileNameWithoutExtension(plan.EntryAssemblyPath)}", isCollectible: true)
     {
         this.plan = plan ?? throw new ArgumentNullException(nameof(plan));
@@ -21,7 +21,7 @@ internal sealed class CollectibleAssemblyIsolationContext : AssemblyLoadContext
     public Assembly LoadEntryAssembly()
     {
         var requested = AssemblyName.GetAssemblyName(plan.EntryAssemblyPath);
-        if (plan.ParentBindings.TryResolve(requested, out var parent))
+        if (plan.TryShare(requested, out var parent))
             return parent;
 
         return AssemblyStreamLoader.Load(this, plan.EntryAssemblyPath);
@@ -34,13 +34,13 @@ internal sealed class CollectibleAssemblyIsolationContext : AssemblyLoadContext
         return LoadFromStream(assemblyStream);
     }
 
-    internal nint ResolveNativeForTesting(string unmanagedDllName) => LoadUnmanagedDll(unmanagedDllName);
+    internal nint ResolveNativeForTesting(string name) => LoadUnmanagedDll(name);
 
     internal Assembly? ResolveManagedForTesting(AssemblyName assemblyName) => Load(assemblyName);
 
     protected override Assembly? Load(AssemblyName assemblyName)
     {
-        if (plan.ParentBindings.TryResolve(assemblyName, out var parent))
+        if (plan.TryShare(assemblyName, out var parent))
             return parent;
 
         foreach (var source in plan.ManagedSources)
@@ -59,7 +59,6 @@ internal sealed class CollectibleAssemblyIsolationContext : AssemblyLoadContext
             return AssemblyStreamLoader.Load(this, candidate.Path);
         }
 
-        Publish("managed-clr-fallback", assemblyName, null, "No private source produced a candidate; delegating to the CLR binder.");
         return null;
     }
 
@@ -92,9 +91,9 @@ internal sealed class CollectibleAssemblyIsolationContext : AssemblyLoadContext
             return false;
         }
 
-        if (!AssemblyCandidate.IsExistingPathUnderAllowedRoot(candidate.Path, candidate.AllowedRoot))
+        if (!AssemblyCandidate.IsExistingPathUnderRoot(candidate.Path, candidate.Root))
         {
-            rejection = "Candidate is outside its allowed root.";
+            rejection = "Candidate is outside its root.";
             return false;
         }
 
@@ -109,17 +108,17 @@ internal sealed class CollectibleAssemblyIsolationContext : AssemblyLoadContext
         return true;
     }
 
-    static bool TryValidateNativeCandidate(string unmanagedDllName, AssemblyCandidate candidate, out string? rejection)
+    static bool TryValidateNativeCandidate(string name, AssemblyCandidate candidate, out string? rejection)
     {
         if (!File.Exists(candidate.Path))
         {
-            rejection = $"Native candidate for '{unmanagedDllName}' does not exist.";
+            rejection = $"Native candidate for '{name}' does not exist.";
             return false;
         }
 
-        if (!AssemblyCandidate.IsExistingPathUnderAllowedRoot(candidate.Path, candidate.AllowedRoot))
+        if (!AssemblyCandidate.IsExistingPathUnderRoot(candidate.Path, candidate.Root))
         {
-            rejection = $"Native candidate for '{unmanagedDllName}' is outside its allowed root.";
+            rejection = $"Native candidate for '{name}' is outside its root.";
             return false;
         }
 
@@ -129,9 +128,9 @@ internal sealed class CollectibleAssemblyIsolationContext : AssemblyLoadContext
 
     void Publish(string code, AssemblyName? requested, AssemblyCandidate? candidate, string reason)
     {
-        var source = candidate is null ? "" : $", source '{candidate.SourceName}', candidate '{candidate.Path}'";
+        var detail = candidate is null ? "" : $", candidate '{candidate.Path}'";
         var identity = requested?.FullName ?? "native library";
-        plan.DiagnosticSink?.Publish(new AssemblyIsolationDiagnostic(code, $"Requested '{identity}'{source}: {reason}", requested));
+        plan.DiagnosticSink?.Publish(new AssemblyIsolationDiagnostic(code, $"Requested '{identity}'{detail}: {reason}", requested));
     }
 }
 #endif

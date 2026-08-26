@@ -6,7 +6,7 @@ namespace RevitDevTool.HostAdapters;
 
 public sealed class RevitCompiledScriptBridge(IHostAppInfo hostAppInfo) : ICompiledScriptBridge
 {
-    public IEnumerable<Assembly> GetParentBindings() => RevitHostApiBindings.GetParentAssemblies();
+    public IEnumerable<Assembly> GetParentBindings() => RevitHostApis.All();
 
     public IEnumerable<string> GetSessionReferences()
     {

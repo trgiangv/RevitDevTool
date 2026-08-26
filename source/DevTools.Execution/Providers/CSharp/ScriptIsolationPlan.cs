@@ -14,72 +14,65 @@ public static class ScriptIsolationPlan
     public static AssemblyIsolationPlan Create(
         string compiledEntryName,
         IEnumerable<string> nugetPaths,
-        IEnumerable<Assembly> parentBindings,
+        IEnumerable<Assembly> hostAssemblies,
         IAssemblyIsolationDiagnosticSink? diagnosticSink = null)
     {
         if (string.IsNullOrWhiteSpace(compiledEntryName))
             throw new ArgumentException("A compiled script entry name is required.", nameof(compiledEntryName));
         if (nugetPaths is null) throw new ArgumentNullException(nameof(nugetPaths));
-        if (parentBindings is null) throw new ArgumentNullException(nameof(parentBindings));
+        if (hostAssemblies is null) throw new ArgumentNullException(nameof(hostAssemblies));
 
         var manifest = new List<AssemblyCandidate>();
         foreach (var path in nugetPaths.Where(File.Exists).Distinct(StringComparer.OrdinalIgnoreCase))
-        {
-            var normalizedPath = Path.GetFullPath(path);
-            var directory = Path.GetDirectoryName(normalizedPath);
-            if (directory is null)
-                continue;
-
-            try
-            {
-                var identity = AssemblyName.GetAssemblyName(normalizedPath);
-                if (WpfSharing.IsShared(identity.Name))
-                    continue;
-
-                manifest.Add(new AssemblyCandidate(normalizedPath, "selected NuGet assembly", directory));
-            }
-            catch (BadImageFormatException)
-            {
-                diagnosticSink?.Publish(new AssemblyIsolationDiagnostic(
-                    "script-manifest-entry-skipped",
-                    $"Selected NuGet path '{normalizedPath}' is not a managed assembly."));
-            }
-            catch (IOException)
-            {
-                diagnosticSink?.Publish(new AssemblyIsolationDiagnostic(
-                    "script-manifest-entry-skipped",
-                    $"Selected NuGet path '{normalizedPath}' could not be read."));
-            }
-            catch (UnauthorizedAccessException)
-            {
-                diagnosticSink?.Publish(new AssemblyIsolationDiagnostic(
-                    "script-manifest-entry-skipped",
-                    $"Selected NuGet path '{normalizedPath}' could not be accessed."));
-            }
-        }
+            TryAddManifestEntry(path, manifest, diagnosticSink);
 
         var entryPath = Path.Combine(Path.GetTempPath(), "DevTools.Execution", compiledEntryName + ".dll");
         var plan = AssemblyIsolationPlan.Create(entryPath)
-            .WithLifecycle(
-#if NET
-                AssemblyIsolationLifecycle.Collectible
-#else
-                AssemblyIsolationLifecycle.ScopedNetFramework
-#endif
-            )
-            .AddManagedSource(WpfSharing.SkipPrivateCopies(new ManifestAssemblySource(manifest)));
+            .WithKind(AssemblyIsolationKind.Isolated)
+            .AddManagedSource(new ManifestAssemblySource(manifest));
 
-        plan = WpfSharing.BindFromDefaultContext(plan, nugetPaths);
+        plan = SharedSidecars.Share(plan, nugetPaths);
 
-        foreach (var assembly in parentBindings)
-        {
-#if NET
-            plan = plan.BindToParent(assembly, ignoreRequestedVersion: true);
-#else
-            plan = plan.BindToParent(assembly);
-#endif
-        }
+        foreach (var assembly in hostAssemblies)
+            plan = plan.Share(assembly);
 
         return diagnosticSink is null ? plan : plan.WithDiagnosticSink(diagnosticSink);
     }
+
+    static void TryAddManifestEntry(
+        string path,
+        List<AssemblyCandidate> manifest,
+        IAssemblyIsolationDiagnosticSink? diagnosticSink)
+    {
+        var normalizedPath = Path.GetFullPath(path);
+        var directory = Path.GetDirectoryName(normalizedPath);
+        if (directory is null)
+            return;
+
+        try
+        {
+            var identity = AssemblyName.GetAssemblyName(normalizedPath);
+            if (SharedSidecars.Contains(identity.Name))
+                return;
+
+            manifest.Add(new AssemblyCandidate(normalizedPath, directory));
+        }
+        catch (BadImageFormatException)
+        {
+            Skip(diagnosticSink, normalizedPath, "is not a managed assembly.");
+        }
+        catch (IOException)
+        {
+            Skip(diagnosticSink, normalizedPath, "could not be read.");
+        }
+        catch (UnauthorizedAccessException)
+        {
+            Skip(diagnosticSink, normalizedPath, "could not be accessed.");
+        }
+    }
+
+    static void Skip(IAssemblyIsolationDiagnosticSink? diagnosticSink, string path, string reason) =>
+        diagnosticSink?.Publish(new AssemblyIsolationDiagnostic(
+            "script-manifest-entry-skipped",
+            $"Selected NuGet path '{path}' {reason}"));
 }

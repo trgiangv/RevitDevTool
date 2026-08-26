@@ -15,7 +15,7 @@ public sealed class NativeResolutionTests
         var diagnostics = new RecordingDiagnosticSink();
         using var session = AssemblyIsolationSession.Create(
             AssemblyIsolationPlan.Create(typeof(NativeResolutionTests).Assembly.Location)
-                .WithLifecycle(AssemblyIsolationLifecycle.Collectible)
+                .WithKind(AssemblyIsolationKind.Collectible)
                 .AddNativeSource(new FixedNativeSource(candidate))
                 .WithDiagnosticSink(diagnostics));
 
@@ -25,17 +25,15 @@ public sealed class NativeResolutionTests
         var diagnostic = Assert.Single(diagnostics.Diagnostics);
         Assert.Equal("native-candidate-rejected", diagnostic.Code);
         Assert.Contains("out-of-root-native", diagnostic.Message, StringComparison.Ordinal);
-        Assert.Contains("fixed native source", diagnostic.Message, StringComparison.Ordinal);
         Assert.Contains(candidate.Path, diagnostic.Message, StringComparison.Ordinal);
-        Assert.Contains("outside its allowed root", diagnostic.Message, StringComparison.Ordinal);
+        Assert.Contains("outside its root", diagnostic.Message, StringComparison.Ordinal);
     }
 
     static AssemblyCandidate CreateEscapingCandidate(string path, string allowedRoot)
     {
         var candidate = (AssemblyCandidate)RuntimeHelpers.GetUninitializedObject(typeof(AssemblyCandidate));
         SetAutoProperty(candidate, "Path", path);
-        SetAutoProperty(candidate, "SourceName", "fixed native source");
-        SetAutoProperty(candidate, "AllowedRoot", allowedRoot);
+        SetAutoProperty(candidate, "Root", allowedRoot);
         return candidate;
     }
 
@@ -52,7 +50,7 @@ public sealed class NativeResolutionTests
 
         public FixedNativeSource(AssemblyCandidate candidate) => this.candidate = candidate;
 
-        public AssemblyCandidate? Resolve(string unmanagedDllName) => candidate;
+        public AssemblyCandidate? Resolve(string name) => candidate;
     }
 
     sealed class RecordingDiagnosticSink : IAssemblyIsolationDiagnosticSink

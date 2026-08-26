@@ -27,7 +27,7 @@ public sealed class AcadCommandRunner(ILogger<AcadCommandRunner> logger) : IComm
         var session = AssemblyIsolationSession.Create(
             CommandIsolationPlan.Create(
                 commandItem.AssemblyPath,
-                [typeof(CommandMethodAttribute).Assembly, typeof(Autodesk.AutoCAD.DatabaseServices.Database).Assembly],
+                AcadHostApis.All(),
                 new CommandIsolationDiagnosticSink(logger)));
         LiveCommandSessions.Add(session);
         return ExecuteInContext(session, commandItem);
@@ -91,7 +91,7 @@ public sealed class AcadCommandRunner(ILogger<AcadCommandRunner> logger) : IComm
         var session = AssemblyIsolationSession.Create(
             CommandIsolationPlan.Create(
                 commandItem.AssemblyPath,
-                [typeof(CommandMethodAttribute).Assembly, typeof(Autodesk.AutoCAD.DatabaseServices.Database).Assembly],
+                AcadHostApis.All(),
                 new CommandIsolationDiagnosticSink(logger)));
         LiveCommandSessions.Add(session);
         return ExecuteInContext(session, commandItem);

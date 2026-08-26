@@ -30,7 +30,7 @@ public sealed class NUnitAssemblyIsolationTests
         Assert.Same(
             typeof(TestingRunRequest).Assembly,
             ResolveParent(plan, typeof(TestingRunRequest).Assembly.GetName()));
-        Assert.Equal(AssemblyIsolationLifecycle.Collectible, plan.Lifecycle);
+        Assert.Equal(AssemblyIsolationKind.Isolated, plan.Kind);
         Assert.False(plan.LoadsFromDistinctFile);
     }
 
@@ -54,7 +54,7 @@ public sealed class NUnitAssemblyIsolationTests
 
         var privateName = AssemblyName.GetAssemblyName(NUnitRuntimeUnloadTestHelper.PrivateMicrosoftExtensionsStubPath);
         Assert.NotEqual(typeof(NullLogger).Assembly.GetName().Version, privateName.Version);
-        Assert.False(plan.ParentBindings.TryResolve(privateName, out _));
+        Assert.False(plan.TryShare(privateName, out _));
         Assert.Contains(plan.ManagedSources, source => source.Resolve(privateName) is not null);
     }
 
@@ -169,7 +169,7 @@ public sealed class NUnitAssemblyIsolationTests
 
     private static Assembly ResolveParent(AssemblyIsolationPlan plan, AssemblyName identity)
     {
-        Assert.True(plan.ParentBindings.TryResolve(identity, out var resolved));
+        Assert.True(plan.TryShare(identity, out var resolved));
         return resolved;
     }
 

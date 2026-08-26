@@ -5,7 +5,7 @@ namespace DevTools.AssemblyIsolation.Sources;
 
 public sealed class ManifestAssemblySource : IManagedAssemblySource
 {
-    readonly IReadOnlyDictionary<string, IReadOnlyList<Entry>> entriesBySimpleName;
+    private readonly IReadOnlyDictionary<string, IReadOnlyList<Entry>> entriesBySimpleName;
 
     public ManifestAssemblySource(IEnumerable<AssemblyCandidate> candidates)
         : this((candidates ?? throw new ArgumentNullException(nameof(candidates))).Select(candidate =>
@@ -53,11 +53,11 @@ public sealed class ManifestAssemblySource : IManagedAssemblySource
         return entries.FirstOrDefault(entry => AssemblyIdentityMatcher.IsCompatible(requested, entry.Identity))?.Candidate;
     }
 
-    static bool HasSameFullIdentity(AssemblyName first, AssemblyName second) =>
+    private static bool HasSameFullIdentity(AssemblyName first, AssemblyName second) =>
         AssemblyIdentityMatcher.IsCompatible(first, second)
         && AssemblyIdentityMatcher.IsCompatible(second, first);
 
-    sealed class Entry
+    private sealed class Entry
     {
         public Entry(AssemblyName identity, AssemblyCandidate candidate)
         {

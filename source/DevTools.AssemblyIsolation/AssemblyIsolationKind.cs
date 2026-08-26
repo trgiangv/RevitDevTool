@@ -1,8 +1,8 @@
 namespace DevTools.AssemblyIsolation;
 
-public enum AssemblyIsolationLifecycle
+public enum AssemblyIsolationKind
 {
     Permanent,
+    Isolated,
     Collectible,
-    ScopedNetFramework,
 }

@@ -1,6 +1,7 @@
 using System.Reflection;
 using System.Reflection.Emit;
 using DevTools.AssemblyIsolation.Diagnostics;
+using DevTools.AssemblyIsolation.Identity;
 using DevTools.AssemblyIsolation.Sources;
 
 namespace DevTools.AssemblyIsolation.Tests;
@@ -16,9 +17,9 @@ public sealed class AssemblyIsolationPlanTests
         var sink = new StubDiagnosticSink();
 
         var composed = initial
-            .WithLifecycle(AssemblyIsolationLifecycle.Collectible)
+            .WithKind(AssemblyIsolationKind.Isolated)
             .WithDistinctFileIdentity()
-            .BindToParent(typeof(AssemblyIsolationPlanTests).Assembly)
+            .Pin(typeof(AssemblyIsolationPlanTests).Assembly)
             .AddManagedSource(managedSource)
             .AddNativeSource(nativeSource)
             .WithDiagnosticSink(sink);
@@ -26,22 +27,22 @@ public sealed class AssemblyIsolationPlanTests
         Assert.NotSame(initial, composed);
         Assert.False(initial.LoadsFromDistinctFile);
         Assert.True(composed.LoadsFromDistinctFile);
-        Assert.Equal(AssemblyIsolationLifecycle.Permanent, initial.Lifecycle);
+        Assert.Equal(AssemblyIsolationKind.Permanent, initial.Kind);
         Assert.Empty(initial.ManagedSources);
         Assert.Empty(initial.NativeSources);
         Assert.Null(initial.DiagnosticSink);
-        Assert.False(initial.ParentBindings.TryResolve(typeof(AssemblyIsolationPlanTests).Assembly.GetName(), out _));
+        Assert.False(initial.TryShare(typeof(AssemblyIsolationPlanTests).Assembly.GetName(), out _));
 
-        Assert.Equal(AssemblyIsolationLifecycle.Collectible, composed.Lifecycle);
+        Assert.Equal(AssemblyIsolationKind.Isolated, composed.Kind);
         Assert.Single(composed.ManagedSources);
         Assert.Single(composed.NativeSources);
         Assert.Same(sink, composed.DiagnosticSink);
-        Assert.True(composed.ParentBindings.TryResolve(typeof(AssemblyIsolationPlanTests).Assembly.GetName(), out var parent));
+        Assert.True(composed.TryShare(typeof(AssemblyIsolationPlanTests).Assembly.GetName(), out var parent));
         Assert.Same(typeof(AssemblyIsolationPlanTests).Assembly, parent);
     }
 
     [Fact]
-    public void Plan_construction_rejects_incompatible_duplicate_parent_bindings()
+    public void Plan_construction_rejects_incompatible_duplicate_shares()
     {
         var first = AssemblyBuilder.DefineDynamicAssembly(
             new AssemblyName("Duplicate.Plan.Binding") { Version = new Version(1, 0, 0, 0) },
@@ -50,10 +51,46 @@ public sealed class AssemblyIsolationPlanTests
             new AssemblyName("Duplicate.Plan.Binding") { Version = new Version(2, 0, 0, 0) },
             AssemblyBuilderAccess.Run);
 
-        var plan = AssemblyIsolationPlan.Create("entry.dll").BindToParent(first);
+        var plan = AssemblyIsolationPlan.Create("entry.dll").Share(first);
 
-        Assert.Throws<DevTools.AssemblyIsolation.Identity.AssemblyIdentityMismatchException>(
-            () => plan.BindToParent(second));
+        Assert.Throws<AssemblyIdentityMismatchException>(() => plan.Share(second));
+    }
+
+    [Fact]
+    public void Pin_rejects_requested_version_drift()
+    {
+        var loaded = typeof(AssemblyIsolationPlanTests).Assembly;
+        var requested = new AssemblyName(loaded.FullName!) { Version = new Version(99, 0, 0, 0) };
+        var plan = AssemblyIsolationPlan.Create("entry.dll").Pin(loaded);
+
+        var error = Assert.Throws<AssemblyIdentityMismatchException>(
+            () => plan.TryShare(requested, out _));
+        Assert.Contains(loaded.GetName().Name!, error.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Share_accepts_requested_version_drift_and_emits_a_diagnostic()
+    {
+        var loaded = typeof(AssemblyIsolationPlanTests).Assembly;
+        var requested = new AssemblyName(loaded.FullName!) { Version = new Version(99, 0, 0, 0) };
+        var sink = new StubDiagnosticSink();
+        var plan = AssemblyIsolationPlan.Create("entry.dll")
+            .Share(loaded)
+            .WithDiagnosticSink(sink);
+
+        Assert.True(plan.TryShare(requested, out var actual));
+        Assert.Same(loaded, actual);
+        Assert.Contains(sink.Diagnostics, diagnostic => diagnostic.Code == "share-version-drift");
+    }
+
+    [Fact]
+    public void Share_collapses_the_same_instance()
+    {
+        var loaded = typeof(AssemblyIsolationPlanTests).Assembly;
+        var plan = AssemblyIsolationPlan.Create("entry.dll").Share(loaded).Share(loaded);
+
+        Assert.True(plan.TryShare(loaded.GetName(), out var actual));
+        Assert.Same(loaded, actual);
     }
 
     sealed class StubManagedSource : IManagedAssemblySource
@@ -63,11 +100,13 @@ public sealed class AssemblyIsolationPlanTests
 
     sealed class StubNativeSource : INativeAssemblySource
     {
-        public AssemblyCandidate? Resolve(string unmanagedDllName) => null;
+        public AssemblyCandidate? Resolve(string name) => null;
     }
 
     sealed class StubDiagnosticSink : IAssemblyIsolationDiagnosticSink
     {
-        public void Publish(AssemblyIsolationDiagnostic diagnostic) { }
+        public List<AssemblyIsolationDiagnostic> Diagnostics { get; } = [];
+
+        public void Publish(AssemblyIsolationDiagnostic diagnostic) => Diagnostics.Add(diagnostic);
     }
 }

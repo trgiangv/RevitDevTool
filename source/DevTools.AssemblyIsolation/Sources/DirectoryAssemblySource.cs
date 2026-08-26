@@ -5,19 +5,17 @@ namespace DevTools.AssemblyIsolation.Sources;
 
 public sealed class DirectoryAssemblySource : IManagedAssemblySource
 {
-    readonly string directory;
-    readonly string sourceName;
+    readonly string root;
 
-    public DirectoryAssemblySource(string directory, string sourceName = "directory")
+    public DirectoryAssemblySource(string directory)
     {
         if (string.IsNullOrWhiteSpace(directory))
             throw new ArgumentException("A directory is required.", nameof(directory));
-        if (string.IsNullOrWhiteSpace(sourceName))
-            throw new ArgumentException("A source name is required.", nameof(sourceName));
 
-        this.directory = Path.GetFullPath(directory);
-        this.sourceName = sourceName;
+        root = Path.GetFullPath(directory);
     }
+
+    public string Root => root;
 
     public AssemblyCandidate? Resolve(AssemblyName requested)
     {
@@ -27,8 +25,7 @@ public sealed class DirectoryAssemblySource : IManagedAssemblySource
         if (string.IsNullOrWhiteSpace(simpleName) || !IsSimpleFileName(simpleName))
             return null;
 
-        var path = Path.Combine(directory, simpleName + ".dll");
-        var candidate = AssemblyCandidate.TryCreate(path, sourceName, directory);
+        var candidate = AssemblyCandidate.TryCreate(AssemblyCandidate.Combine(root, simpleName), root);
         if (candidate is null || !File.Exists(candidate.Path))
             return null;
 

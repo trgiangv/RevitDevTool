@@ -21,23 +21,17 @@ public static class McpToolsetIsolationPlan
             ?? throw new ArgumentException("The toolset entry path must have a directory.", nameof(entryPath));
 
         var plan = AssemblyIsolationPlan.Create(normalizedEntryPath)
-            .WithLifecycle(
-#if NET
-                AssemblyIsolationLifecycle.Collectible
-#else
-                AssemblyIsolationLifecycle.ScopedNetFramework
-#endif
-            )
-            .AddManagedSource(new DirectoryAssemblySource(siblingDirectory, "MCP sibling directory"));
+            .WithKind(AssemblyIsolationKind.Isolated)
+            .AddManagedSource(new DirectoryAssemblySource(siblingDirectory));
 
 #if NET
         plan = plan
-            .AddManagedSource(new DependencyResolverAssemblySource(normalizedEntryPath, "MCP dependency resolver"))
-            .AddNativeSource(new DependencyResolverNativeAssemblySource(normalizedEntryPath, "MCP dependency resolver"));
+            .AddManagedSource(new ResolverAssemblySource(normalizedEntryPath))
+            .AddNativeSource(new ResolverNativeAssemblySource(normalizedEntryPath));
 #endif
 
         foreach (var contractAssembly in ContractAssemblies)
-            plan = plan.BindToParent(contractAssembly);
+            plan = plan.Pin(contractAssembly);
 
         return diagnosticSink is null ? plan : plan.WithDiagnosticSink(diagnosticSink);
     }

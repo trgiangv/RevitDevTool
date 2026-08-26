@@ -74,8 +74,7 @@ public sealed class RepositoryAssemblyLoadingArchitectureTests
         const string relativePath = "libs/pythonnet-stub-generator/csharp/PythonNetStubGenerator/StubBuilder.cs";
         var content = File.ReadAllText(Path.Combine(RepositoryRoot, relativePath.Replace('/', Path.DirectorySeparatorChar)));
 
-        Assert.Contains("PermanentAssemblyLoader", content, StringComparison.Ordinal);
-        Assert.Contains("PermanentDirectoryAssemblyResolver", content, StringComparison.Ordinal);
+        Assert.Contains("AssemblyLoader", content, StringComparison.Ordinal);
         Assert.DoesNotContain("Assembly.LoadFrom", content, StringComparison.Ordinal);
         Assert.DoesNotContain("AssemblyResolve +=", content, StringComparison.Ordinal);
         Assert.DoesNotContain("Microsoft.WindowsDesktop.App", content, StringComparison.Ordinal);
@@ -106,11 +105,8 @@ public sealed class RepositoryAssemblyLoadingArchitectureTests
             && content.Contains("DiscoveryLoadContext", StringComparison.Ordinal));
 
     private static bool IsPlanAdapter(string relativePath, string content) =>
-        (relativePath.Equals("source/DevTools.Execution/Providers/CSharp/CSharpCompiler.cs", StringComparison.Ordinal)
-         && content.Contains("ScriptIsolationPlan.Create", StringComparison.Ordinal))
-        || (relativePath.Equals("source/DevTools.Execution/Providers/WpfSharing.cs", StringComparison.Ordinal)
-            && content.Contains("MahApps.Metro", StringComparison.Ordinal)
-            && content.Contains("BindToParent", StringComparison.Ordinal));
+        relativePath.Equals("source/DevTools.Execution/Providers/CSharp/CSharpCompiler.cs", StringComparison.Ordinal)
+        && content.Contains("ScriptIsolationPlan.Create", StringComparison.Ordinal);
 
     private static IEnumerable<string> EnumerateRepositoryInputs()
     {

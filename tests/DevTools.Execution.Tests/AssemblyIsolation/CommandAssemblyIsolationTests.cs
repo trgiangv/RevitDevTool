@@ -82,9 +82,8 @@ public sealed class CommandAssemblyIsolationTests
         using var graph = WpfSharingCommandGraph.Create();
         var plan = CommandIsolationPlan.Create(graph.EntryPath, Array.Empty<Assembly>());
 
-        Assert.True(plan.ParentBindings.TryResolve(new AssemblyName("MahApps.Metro"), out var bound));
+        Assert.True(plan.TryShare(new AssemblyName("MahApps.Metro"), out var bound));
         Assert.Equal("MahApps.Metro", bound.GetName().Name);
-        Assert.All(plan.ManagedSources, source => Assert.Null(source.Resolve(new AssemblyName("MahApps.Metro"))));
 
         using var session = AssemblyIsolationSession.Create(plan);
         var value = (string)session.LoadEntryAssembly().GetType("Fixture.Entry")!
@@ -95,7 +94,7 @@ public sealed class CommandAssemblyIsolationTests
         Assert.NotSame(AssemblyLoadContext.GetLoadContext(session.LoadEntryAssembly()), AssemblyLoadContext.GetLoadContext(bound));
 
         var again = CommandIsolationPlan.Create(graph.EntryPath, Array.Empty<Assembly>());
-        Assert.True(again.ParentBindings.TryResolve(new AssemblyName("MahApps.Metro"), out var rebound));
+        Assert.True(again.TryShare(new AssemblyName("MahApps.Metro"), out var rebound));
         Assert.Same(bound, rebound);
     }
 
@@ -105,7 +104,7 @@ public sealed class CommandAssemblyIsolationTests
         using var graph = WpfSharingCommandGraph.CreateFork();
         var plan = CommandIsolationPlan.Create(graph.EntryPath, Array.Empty<Assembly>());
 
-        Assert.False(plan.ParentBindings.TryResolve(new AssemblyName("DevTools.MahApps.Metro"), out _));
+        Assert.False(plan.TryShare(new AssemblyName("DevTools.MahApps.Metro"), out _));
         Assert.Contains(plan.ManagedSources, source => source.Resolve(new AssemblyName("DevTools.MahApps.Metro")) is not null);
     }
 

@@ -1,3 +1,4 @@
+#if NETFRAMEWORK
 using System.Reflection;
 using System.Runtime.CompilerServices;
 using DevTools.AssemblyIsolation.Diagnostics;
@@ -7,7 +8,7 @@ using DevTools.AssemblyIsolation.Sources;
 
 namespace DevTools.AssemblyIsolation.Runtime;
 
-internal sealed class NetFrameworkAssemblyIsolationScope : IDisposable
+internal sealed class NetfxAssemblyIsolationContext : IDisposable
 {
     readonly AssemblyIsolationPlan plan;
     readonly ResolveEventHandler resolver;
@@ -15,7 +16,7 @@ internal sealed class NetFrameworkAssemblyIsolationScope : IDisposable
     int activeLoads;
     bool disposed;
 
-    public NetFrameworkAssemblyIsolationScope(AssemblyIsolationPlan plan)
+    public NetfxAssemblyIsolationContext(AssemblyIsolationPlan plan)
     {
         this.plan = plan ?? throw new ArgumentNullException(nameof(plan));
         resolver = Resolve;
@@ -26,7 +27,7 @@ internal sealed class NetFrameworkAssemblyIsolationScope : IDisposable
     {
         ThrowIfDisposed();
         var requested = AssemblyName.GetAssemblyName(plan.EntryAssemblyPath);
-        if (plan.ParentBindings.TryResolve(requested, out var parent))
+        if (plan.TryShare(requested, out var parent))
             return parent;
 
         using (BeginLoad())
@@ -66,12 +67,12 @@ internal sealed class NetFrameworkAssemblyIsolationScope : IDisposable
         if (disposed)
             return null;
 
-        var requested = new AssemblyName(args.Name);
-        if (plan.ParentBindings.TryResolve(requested, out var parent))
-            return parent;
-
         if (!ShouldServe(args.RequestingAssembly))
             return null;
+
+        var requested = new AssemblyName(args.Name);
+        if (plan.TryShare(requested, out var parent))
+            return parent;
 
         foreach (var source in plan.ManagedSources)
         {
@@ -89,7 +90,6 @@ internal sealed class NetFrameworkAssemblyIsolationScope : IDisposable
             return Own(LoadManaged(candidate.Path));
         }
 
-        Publish("managed-clr-fallback", requested, null, "No private source produced a candidate; delegating to the CLR binder.");
         return null;
     }
 
@@ -106,7 +106,7 @@ internal sealed class NetFrameworkAssemblyIsolationScope : IDisposable
             ? AssemblyStreamLoader.LoadFile(path)
             : AssemblyStreamLoader.Load(path);
 
-    LoadScope BeginLoad() => new(this);
+    LoadGuard BeginLoad() => new(this);
 
     Assembly Own(Assembly assembly)
     {
@@ -122,9 +122,9 @@ internal sealed class NetFrameworkAssemblyIsolationScope : IDisposable
             return false;
         }
 
-        if (!AssemblyCandidate.IsExistingPathUnderAllowedRoot(candidate.Path, candidate.AllowedRoot))
+        if (!AssemblyCandidate.IsExistingPathUnderRoot(candidate.Path, candidate.Root))
         {
-            rejection = "Candidate is outside its allowed root.";
+            rejection = "Candidate is outside its root.";
             return false;
         }
 
@@ -141,22 +141,22 @@ internal sealed class NetFrameworkAssemblyIsolationScope : IDisposable
 
     void Publish(string code, AssemblyName? requested, AssemblyCandidate? candidate, string reason)
     {
-        var source = candidate is null ? "" : $", source '{candidate.SourceName}', candidate '{candidate.Path}'";
+        var detail = candidate is null ? "" : $", candidate '{candidate.Path}'";
         var identity = requested?.FullName ?? "native library";
-        plan.DiagnosticSink?.Publish(new AssemblyIsolationDiagnostic(code, $"Requested '{identity}'{source}: {reason}", requested));
+        plan.DiagnosticSink?.Publish(new AssemblyIsolationDiagnostic(code, $"Requested '{identity}'{detail}: {reason}", requested));
     }
 
     void ThrowIfDisposed()
     {
         if (disposed)
-            throw new ObjectDisposedException(nameof(NetFrameworkAssemblyIsolationScope));
+            throw new ObjectDisposedException(nameof(NetfxAssemblyIsolationContext));
     }
 
-    sealed class LoadScope : IDisposable
+    sealed class LoadGuard : IDisposable
     {
-        readonly NetFrameworkAssemblyIsolationScope owner;
+        readonly NetfxAssemblyIsolationContext owner;
 
-        public LoadScope(NetFrameworkAssemblyIsolationScope owner)
+        public LoadGuard(NetfxAssemblyIsolationContext owner)
         {
             this.owner = owner;
             Interlocked.Increment(ref owner.activeLoads);
@@ -174,3 +174,5 @@ internal sealed class NetFrameworkAssemblyIsolationScope : IDisposable
         public int GetHashCode(Assembly obj) => RuntimeHelpers.GetHashCode(obj);
     }
 }
+#endif
+

@@ -12,7 +12,7 @@ public sealed class ManifestNativeAssemblySource : INativeAssemblySource
         foreach (var candidate in candidates)
         {
             if (candidate is null) throw new ArgumentNullException(nameof(candidates));
-            foreach (var key in BuildLookupKeys(candidate.Path))
+            foreach (var key in AssemblyCandidate.LookupKeys(candidate.Path))
             {
                 if (indexed.TryGetValue(key, out var existing)
                     && !string.Equals(existing.Path, candidate.Path, StringComparison.OrdinalIgnoreCase))
@@ -27,33 +27,17 @@ public sealed class ManifestNativeAssemblySource : INativeAssemblySource
         candidatesByName = indexed;
     }
 
-    public AssemblyCandidate? Resolve(string unmanagedDllName)
+    public AssemblyCandidate? Resolve(string name)
     {
-        if (string.IsNullOrWhiteSpace(unmanagedDllName))
+        if (string.IsNullOrWhiteSpace(name))
             return null;
 
-        foreach (var key in BuildLookupKeys(unmanagedDllName))
+        foreach (var key in AssemblyCandidate.LookupKeys(name))
         {
             if (candidatesByName.TryGetValue(key, out var candidate))
                 return candidate;
         }
 
         return null;
-    }
-
-    internal static IEnumerable<string> BuildLookupKeys(string pathOrName)
-    {
-        var fileName = Path.GetFileName(pathOrName);
-        if (string.IsNullOrWhiteSpace(fileName))
-            yield break;
-
-        yield return fileName;
-
-        if (!fileName.EndsWith(".dll", StringComparison.OrdinalIgnoreCase))
-            yield return fileName + ".dll";
-
-        var withoutExtension = Path.GetFileNameWithoutExtension(fileName);
-        if (!string.IsNullOrWhiteSpace(withoutExtension))
-            yield return withoutExtension;
     }
 }

@@ -2,13 +2,13 @@ using DevTools.AssemblyIsolation.Loading;
 
 namespace DevTools.AssemblyIsolation.NetFramework.Tests;
 
-public sealed class PermanentAssemblyLoaderNetFrameworkTests
+public sealed class AssemblyLoaderNetFrameworkTests
 {
     [Fact]
-    public void Load_path_preserves_the_physical_location_for_permanent_dependencies()
+    public void Load_path_preserves_the_physical_location()
     {
-        using var workload = PermanentFixtureWorkload.Create();
-        var loader = new PermanentAssemblyLoader();
+        using var workload = LoaderFixtureWorkload.Create();
+        var loader = new AssemblyLoader();
 
         var assembly = loader.LoadPath(workload.EntryPath);
 
@@ -16,19 +16,19 @@ public sealed class PermanentAssemblyLoaderNetFrameworkTests
     }
 }
 
-sealed class PermanentFixtureWorkload : IDisposable
+sealed class LoaderFixtureWorkload : IDisposable
 {
-    PermanentFixtureWorkload(string directory) => Directory = directory;
+    LoaderFixtureWorkload(string directory) => Directory = directory;
 
     public string Directory { get; }
 
     public string EntryPath => Path.Combine(Directory, "IsolationEntry.dll");
 
-    public static PermanentFixtureWorkload Create()
+    public static LoaderFixtureWorkload Create()
     {
         var directory = Path.Combine(
             Path.GetTempPath(),
-            "DevTools.AssemblyIsolation.NetFramework.PermanentLoadTests",
+            "DevTools.AssemblyIsolation.NetFramework.LoadTests",
             Guid.NewGuid().ToString("N"));
         System.IO.Directory.CreateDirectory(directory);
         var source = Path.Combine(
@@ -36,7 +36,7 @@ sealed class PermanentFixtureWorkload : IDisposable
             "tests", "DevTools.AssemblyIsolation.Tests", "Fixtures", "IsolationEntry",
             "bin", "Debug", "net48", "IsolationEntry.dll");
         File.Copy(source, Path.Combine(directory, "IsolationEntry.dll"));
-        return new PermanentFixtureWorkload(directory);
+        return new LoaderFixtureWorkload(directory);
     }
 
     public void Dispose()
@@ -47,11 +47,11 @@ sealed class PermanentFixtureWorkload : IDisposable
         }
         catch (IOException)
         {
-            // Permanent path-loaded assemblies remain locked for the process lifetime.
+            // Path-loaded assemblies remain locked for the process lifetime.
         }
         catch (UnauthorizedAccessException)
         {
-            // Permanent path-loaded assemblies remain locked for the process lifetime.
+            // Path-loaded assemblies remain locked for the process lifetime.
         }
     }
 

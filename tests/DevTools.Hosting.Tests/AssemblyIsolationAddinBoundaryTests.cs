@@ -26,12 +26,11 @@ public sealed class AssemblyIsolationAddinBoundaryTests
         Assert.Contains("MetadataAssemblySession.Create", discoverySource, StringComparison.Ordinal);
         Assert.DoesNotContain("MetadataLoadContext", discoverySource, StringComparison.Ordinal);
         Assert.DoesNotContain("PathAssemblyResolver", discoverySource, StringComparison.Ordinal);
-        Assert.Contains("PermanentDirectoryAssemblyResolver", applicationSource, StringComparison.Ordinal);
-        Assert.Contains("PermanentAssemblyLoader(new", applicationSource, StringComparison.Ordinal);
-        Assert.Contains("_assemblyResolver ??=", applicationSource, StringComparison.Ordinal);
-        Assert.Contains("_assemblyResolver.Register()", applicationSource, StringComparison.Ordinal);
-        Assert.Contains("_assemblyResolver?.Dispose()", applicationSource, StringComparison.Ordinal);
-        Assert.Contains("_assemblyResolver = null", applicationSource, StringComparison.Ordinal);
+        Assert.Contains("new AssemblyLoader(new", applicationSource, StringComparison.Ordinal);
+        Assert.Contains("_assemblyLoader ??=", applicationSource, StringComparison.Ordinal);
+        Assert.Contains("_assemblyLoader.Register(", applicationSource, StringComparison.Ordinal);
+        Assert.Contains("_assemblyLoader?.Dispose()", applicationSource, StringComparison.Ordinal);
+        Assert.Contains("_assemblyLoader = null", applicationSource, StringComparison.Ordinal);
         Assert.Contains("DevTools.AssemblyIsolation", projectFile, StringComparison.Ordinal);
     }
 }

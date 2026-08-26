@@ -16,7 +16,7 @@ public sealed class ScopedNetFrameworkSessionTests
         using var workload = FixtureWorkload.Create();
         var session = AssemblyIsolationSession.Create(
             AssemblyIsolationPlan.Create(workload.EntryPath)
-                .WithLifecycle(AssemblyIsolationLifecycle.ScopedNetFramework)
+                .WithKind(AssemblyIsolationKind.Isolated)
                 .AddManagedSource(new DirectoryAssemblySource(workload.Directory)));
         var entry = session.LoadEntryAssembly();
         var entryType = entry.GetType("IsolationEntry.Entry", throwOnError: true)!;
@@ -35,22 +35,40 @@ public sealed class ScopedNetFrameworkSessionTests
     }
 
     [Fact]
+    public void Isolated_session_does_not_claim_to_unload_default_app_domain_assemblies()
+    {
+        var entry = typeof(ScopedNetFrameworkSessionTests).Assembly;
+        using var session = AssemblyIsolationSession.Create(
+            AssemblyIsolationPlan.Create(entry.Location)
+                .WithKind(AssemblyIsolationKind.Isolated)
+                .Pin(entry));
+
+        Assert.Same(entry, session.LoadEntryAssembly());
+
+        var result = session.VerifyUnload();
+
+        Assert.False(result.IsCollectible);
+        Assert.False(result.IsUnloaded);
+        Assert.NotNull(result.Detail);
+    }
+
+    [Fact]
     public void Scoped_session_rejects_a_managed_candidate_that_escapes_through_a_child_link()
     {
         using var fixture = FixtureWorkload.Create();
         using var reparsePoint = ReparsePointWorkload.Create();
-        var candidate = new AssemblyCandidate(reparsePoint.LinkedCandidatePath, "linked net48 source", reparsePoint.AllowedRoot);
+        var candidate = new AssemblyCandidate(reparsePoint.LinkedCandidatePath, reparsePoint.AllowedRoot);
         var diagnostics = new RecordingDiagnosticSink();
         using var session = AssemblyIsolationSession.Create(
             AssemblyIsolationPlan.Create(fixture.EntryPath)
-                .WithLifecycle(AssemblyIsolationLifecycle.ScopedNetFramework)
+                .WithKind(AssemblyIsolationKind.Isolated)
                 .AddManagedSource(new FixedManagedSource(candidate))
                 .WithDiagnosticSink(diagnostics));
         var entry = session.LoadEntryAssembly();
         var loadDependency = entry.GetType("IsolationEntry.Entry", throwOnError: true)!
             .GetMethod("GetAfterDisposeDependencyName", BindingFlags.Public | BindingFlags.Static)!;
 
-        Assert.True(ReparsePointWorkload.IsLexicallyUnderRoot(candidate.Path, candidate.AllowedRoot));
+        Assert.True(ReparsePointWorkload.IsLexicallyUnderRoot(candidate.Path, candidate.Root));
         Assert.True(File.Exists(candidate.Path), candidate.Path);
 
         var failure = Assert.Throws<TargetInvocationException>(() => loadDependency.Invoke(null, null));
@@ -60,9 +78,8 @@ public sealed class ScopedNetFrameworkSessionTests
             diagnostics.Diagnostics,
             item => item.Code == "managed-candidate-rejected"
                     && string.Equals(item.RequestedAssembly?.Name, "System.Private.AfterDisposeFixture", StringComparison.OrdinalIgnoreCase));
-        Assert.Contains("linked net48 source", diagnostic.Message, StringComparison.Ordinal);
         Assert.Contains(candidate.Path, diagnostic.Message, StringComparison.Ordinal);
-        Assert.Contains("outside its allowed root", diagnostic.Message, StringComparison.Ordinal);
+        Assert.Contains("outside its root", diagnostic.Message, StringComparison.Ordinal);
     }
 
     sealed class FixedManagedSource : IManagedAssemblySource

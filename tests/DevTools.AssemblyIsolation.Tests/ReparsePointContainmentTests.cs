@@ -10,15 +10,15 @@ public sealed class ReparsePointContainmentTests
     public void Managed_candidate_through_a_child_link_is_rejected_even_though_its_lexical_path_is_under_the_root()
     {
         using var workload = ReparsePointWorkload.Create();
-        var candidate = new AssemblyCandidate(workload.LinkedCandidatePath, "linked managed source", workload.AllowedRoot);
+        var candidate = new AssemblyCandidate(workload.LinkedCandidatePath, workload.AllowedRoot);
         var diagnostics = new RecordingDiagnosticSink();
         using var session = AssemblyIsolationSession.Create(
             AssemblyIsolationPlan.Create(typeof(ReparsePointContainmentTests).Assembly.Location)
-                .WithLifecycle(AssemblyIsolationLifecycle.Collectible)
+                .WithKind(AssemblyIsolationKind.Collectible)
                 .AddManagedSource(new FixedManagedSource(candidate))
                 .WithDiagnosticSink(diagnostics));
 
-        Assert.True(IsLexicallyUnderRoot(candidate.Path, candidate.AllowedRoot));
+        Assert.True(IsLexicallyUnderRoot(candidate.Path, candidate.Root));
 
         var resolved = session.ResolveManagedForTesting(typeof(ReparsePointContainmentTests).Assembly.GetName());
 
@@ -30,15 +30,15 @@ public sealed class ReparsePointContainmentTests
     public void Native_candidate_through_a_child_link_is_rejected_even_though_its_lexical_path_is_under_the_root()
     {
         using var workload = ReparsePointWorkload.Create();
-        var candidate = new AssemblyCandidate(workload.LinkedCandidatePath, "linked native source", workload.AllowedRoot);
+        var candidate = new AssemblyCandidate(workload.LinkedCandidatePath, workload.AllowedRoot);
         var diagnostics = new RecordingDiagnosticSink();
         using var session = AssemblyIsolationSession.Create(
             AssemblyIsolationPlan.Create(typeof(ReparsePointContainmentTests).Assembly.Location)
-                .WithLifecycle(AssemblyIsolationLifecycle.Collectible)
+                .WithKind(AssemblyIsolationKind.Collectible)
                 .AddNativeSource(new FixedNativeSource(candidate))
                 .WithDiagnosticSink(diagnostics));
 
-        Assert.True(IsLexicallyUnderRoot(candidate.Path, candidate.AllowedRoot));
+        Assert.True(IsLexicallyUnderRoot(candidate.Path, candidate.Root));
 
         Assert.Equal(nint.Zero, session.ResolveNativeForTesting("linked-native"));
         AssertRejected(diagnostics, "native-candidate-rejected", candidate);
@@ -47,9 +47,8 @@ public sealed class ReparsePointContainmentTests
     static void AssertRejected(RecordingDiagnosticSink diagnostics, string code, AssemblyCandidate candidate)
     {
         var diagnostic = Assert.Single(diagnostics.Diagnostics, diagnostic => diagnostic.Code == code);
-        Assert.Contains(candidate.SourceName, diagnostic.Message, StringComparison.Ordinal);
         Assert.Contains(candidate.Path, diagnostic.Message, StringComparison.Ordinal);
-        Assert.Contains("outside its allowed root", diagnostic.Message, StringComparison.Ordinal);
+        Assert.Contains("outside its root", diagnostic.Message, StringComparison.Ordinal);
     }
 
     static bool IsLexicallyUnderRoot(string path, string root)
@@ -76,7 +75,7 @@ public sealed class ReparsePointContainmentTests
 
         public FixedNativeSource(AssemblyCandidate candidate) => this.candidate = candidate;
 
-        public AssemblyCandidate? Resolve(string unmanagedDllName) => candidate;
+        public AssemblyCandidate? Resolve(string name) => candidate;
     }
 
     sealed class RecordingDiagnosticSink : IAssemblyIsolationDiagnosticSink

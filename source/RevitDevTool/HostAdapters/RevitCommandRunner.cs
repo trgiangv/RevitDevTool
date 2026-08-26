@@ -2,6 +2,7 @@ using System.IO;
 using System.Reflection;
 using DevTools.AssemblyIsolation;
 using DevTools.AssemblyIsolation.Diagnostics;
+using DevTools.AssemblyIsolation.Loading;
 using DevTools.Execution.Interfaces;
 using DevTools.Execution.Models;
 using DevTools.Execution.Providers.Dotnet;
@@ -68,7 +69,7 @@ public sealed class RevitCommandRunner(ILogger<RevitCommandRunner> logger) : ICo
         var session = AssemblyIsolationSession.Create(
             CommandIsolationPlan.Create(
                 item.AssemblyPath,
-                RevitHostApiBindings.GetParentAssemblies(),
+                RevitHostApis.All(),
                 new CommandIsolationDiagnosticSink(logger)));
         LiveCommandSessions.Add(session);
         try
@@ -128,13 +129,13 @@ public sealed class RevitCommandRunner(ILogger<RevitCommandRunner> logger) : ICo
     {
         var plan = CommandIsolationPlan.Create(
             item.AssemblyPath,
-            [typeof(IExternalCommand).Assembly, typeof(Autodesk.Revit.DB.Element).Assembly],
+            RevitHostApis.All(),
             new CommandIsolationDiagnosticSink(logger));
         var session = AssemblyIsolationSession.Create(plan);
         LiveCommandSessions.Add(session);
         try
         {
-            LoadUnmanagedDependencies(Path.GetDirectoryName(item.AssemblyPath)!);
+            NativeLibraryPreloader.LoadUnmanagedFromDirectory(Path.GetDirectoryName(item.AssemblyPath)!);
             return LoadAndExecute(session, item);
         }
         finally
@@ -151,35 +152,6 @@ public sealed class RevitCommandRunner(ILogger<RevitCommandRunner> logger) : ICo
         return instance is IExternalCommand command
             ? ExecuteCommand(command)
             : throw new InvalidOperationException($"Failed to create IExternalCommand from '{item.FullClassName}'.");
-    }
-
-    [System.Runtime.InteropServices.DllImport("kernel32.dll", CharSet = System.Runtime.InteropServices.CharSet.Auto, SetLastError = true)]
-    private static extern IntPtr LoadLibrary(string lpFileName);
-
-    private static void LoadUnmanagedDependencies(string directoryPath)
-    {
-        foreach (var file in Directory.GetFiles(directoryPath, "*.dll"))
-        {
-            if (IsManagedAssembly(file)) continue;
-            _ = LoadLibrary(file);
-        }
-    }
-
-    private static bool IsManagedAssembly(string filePath)
-    {
-        try
-        {
-            _ = AssemblyName.GetAssemblyName(filePath);
-            return true;
-        }
-        catch (BadImageFormatException)
-        {
-            return false;
-        }
-        catch (FileLoadException)
-        {
-            return false;
-        }
     }
 #endif
 

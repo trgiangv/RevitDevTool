@@ -44,16 +44,17 @@ section only maps those rules to repository owners.
 `DevTools.AssemblyIsolation` owns the shared assembly-load kernel. Do not add a
 fourth path. Feature adapters compose its plans: `CommandIsolationPlan`,
 `ScriptIsolationPlan`, `McpToolsetIsolationPlan`, `NUnitIsolationPlan`, and the
-host command-discovery metadata sessions. Parent sharing is a concrete
-`BindToParent(assembly)` on that plan — not an ambient name list. PyRevit uses
-its application-lifetime `PermanentAssemblyLoader` for selected extension
+host command-discovery metadata sessions. `Share(assembly)` reuses a loaded
+copy (version may differ). `Pin(assembly)` requires full identity. Neither is
+an ambient name list. PyRevit uses
+its application-lifetime `AssemblyLoader` for selected extension
 candidates.
 
 | Job | Entry |
 |-----|--------|
-| Add-in deploy folder, once | `AssemblyIsolation/Loading/PermanentDirectoryAssemblyResolver` |
+| Add-in deploy folder, once | `AssemblyIsolation/Loading/AssemblyLoader` (`LoadPath` + `Register`) |
 | Dynamic / command ALC | `AssemblyIsolation` session composed by the command feature's isolation plan |
-| NUnit generation | `AssemblyIsolation` session composed by NUnit's generation plan; net48 stays in the host default AppDomain (`ScopedNetFramework`) |
+| NUnit generation | `AssemblyIsolation` session composed by NUnit's generation plan; net48 stays in the host default AppDomain (`Isolated`) |
 
 `DevTools.TestAdapter/RuntimeAssemblyResolver` is the sole bootstrap exception:
 it resolves the package's private closure from `AppContext.BaseDirectory` before
@@ -61,8 +62,8 @@ the kernel can be loaded. It registers once, accepts only full simple assembly
 identities that match the candidate exactly, and must not acquire shared-prefix,
 host, or feature-execution policy.
 
-The shipped `PythonNetStubGenerator` uses the kernel's permanent loader and
-invocation-scoped directory resolvers for caller-selected DLL directories. It
+The shipped `PythonNetStubGenerator` uses the kernel's `AssemblyLoader` for
+caller-selected DLL directories. It
 does not probe shared framework installations or apply `System.*`/`Microsoft.*`
 sharing rules; unresolved framework requests fall back to the CLR.
 

@@ -15,8 +15,8 @@ public sealed class CollectibleSessionTests
         var entry = typeof(CollectibleSessionTests).Assembly;
         using var session = AssemblyIsolationSession.Create(
             AssemblyIsolationPlan.Create(entry.Location)
-                .WithLifecycle(AssemblyIsolationLifecycle.Collectible)
-                .BindToParent(entry));
+                .WithKind(AssemblyIsolationKind.Collectible)
+                .Pin(entry));
 
         Assert.Same(entry, session.LoadEntryAssembly());
     }
@@ -29,8 +29,8 @@ public sealed class CollectibleSessionTests
             new AssemblyName(entry.GetName().Name!) { Version = new Version(99, 0, 0, 0) },
             AssemblyBuilderAccess.Run);
         var plan = AssemblyIsolationPlan.Create(entry.Location)
-            .WithLifecycle(AssemblyIsolationLifecycle.Collectible)
-            .BindToParent(incompatibleParent)
+            .WithKind(AssemblyIsolationKind.Collectible)
+            .Pin(incompatibleParent)
             .AddManagedSource(new DirectoryAssemblySource(Path.GetDirectoryName(entry.Location)!));
 
         using var session = AssemblyIsolationSession.Create(plan);
@@ -44,7 +44,7 @@ public sealed class CollectibleSessionTests
         using var workload = FixtureWorkload.Create();
         using var session = AssemblyIsolationSession.Create(
             AssemblyIsolationPlan.Create(workload.EntryPath)
-                .WithLifecycle(AssemblyIsolationLifecycle.Collectible)
+                .WithKind(AssemblyIsolationKind.Collectible)
                 .AddManagedSource(new DirectoryAssemblySource(workload.Directory)));
 
         var entry = session.LoadEntryAssembly();
@@ -67,7 +67,7 @@ public sealed class CollectibleSessionTests
         using var workload = FixtureWorkload.Create(includeSibling: true);
         using var session = AssemblyIsolationSession.Create(
             AssemblyIsolationPlan.Create(workload.EntryPath)
-                .WithLifecycle(AssemblyIsolationLifecycle.Collectible)
+                .WithKind(AssemblyIsolationKind.Collectible)
                 .AddManagedSource(new DirectoryAssemblySource(workload.Directory)));
 
         _ = session.LoadEntryAssembly();
@@ -91,7 +91,7 @@ public sealed class CollectibleSessionTests
     {
         var session = AssemblyIsolationSession.Create(
             AssemblyIsolationPlan.Create(entryPath)
-                .WithLifecycle(AssemblyIsolationLifecycle.Collectible)
+                .WithKind(AssemblyIsolationKind.Collectible)
                 .AddManagedSource(new DirectoryAssemblySource(directory)));
         _ = session.LoadEntryAssembly();
         return session;

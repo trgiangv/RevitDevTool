@@ -17,17 +17,15 @@ namespace RevitDevTool;
 public class Application : IExternalApplication
 {
     private UIControlledApplication? _application;
-    private PermanentDirectoryAssemblyResolver? _assemblyResolver;
+    private AssemblyLoader? _assemblyLoader;
 
     public Result OnStartup(UIControlledApplication application)
     {
         _application = application;
         var addinContentsDirectory = Path.GetDirectoryName(typeof(Application).Assembly.Location)
             ?? throw new InvalidOperationException("Could not determine the Revit add-in contents directory.");
-        _assemblyResolver ??= PermanentDirectoryAssemblyResolver.Create(
-            addinContentsDirectory,
-            new PermanentAssemblyLoader(new AddinAssemblyIsolationDiagnosticSink()));
-        _assemblyResolver.Register();
+        _assemblyLoader ??= new AssemblyLoader(new AddinAssemblyIsolationDiagnosticSink());
+        _assemblyLoader.Register(addinContentsDirectory);
         Host.Start();
         AddButtons(application);
         application.ControlledApplication.ApplicationInitialized += OnApplicationInitialized;
@@ -39,8 +37,8 @@ public class Application : IExternalApplication
         Host.GetService<CommandBrowserController>().Shutdown();
         Host.GetService<PanelController>().Shutdown();
         Host.Stop();
-        _assemblyResolver?.Dispose();
-        _assemblyResolver = null;
+        _assemblyLoader?.Dispose();
+        _assemblyLoader = null;
         return Result.Succeeded;
     }
 

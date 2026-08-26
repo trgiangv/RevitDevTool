@@ -6,44 +6,48 @@ without allowing one feature's dependency policy to leak into another.
 
 ## Contract
 
-- Parent sharing is explicit and uses a concrete `Assembly` instance.
-- Compatibility uses full identity: name, version, culture, and public-key
-  token. A matching simple name is not sufficient.
-- On modern TFMs, explicit host parent bindings may set
-  `ignoreRequestedVersion: true` so compile references to Autodesk API NuGet
-  packages (for example `Nice3point.Revit.Api.RevitAPIUI`) resolve to the
-  host-loaded assembly even when the reference assembly version differs. Private
-  managed candidates still require full identity.
-- Private managed and native dependencies resolve lazily from roots declared by
-  the owning feature. Directory traversal and reparse-point escapes are rejected.
+- Sharing is explicit and uses a concrete `Assembly` instance.
+- `Share(assembly)` reuses a loaded copy. Version may differ; name, culture, and
+  public-key token must match. Host Autodesk APIs and official WPF sidecars
+  (`MahApps.Metro`, `ControlzEx`, `Microsoft.Xaml.Behaviors`) use Share so
+  Nice3point compile refs resolve to the host-loaded assembly. Version drift
+  emits `share-version-drift`.
+- `Pin(assembly)` reuses a loaded copy only when the full identity matches.
+  Feature contracts (`nunit.framework`, MCP protocol types,
+  `ITestingRuntimeSession`) stay pinned.
+- Private managed candidates still require full identity. Directory traversal
+  and reparse-point escapes are rejected, including add-in directory resolution.
 - `System.*`, `Microsoft.*`, Autodesk APIs, and UI libraries are not shared by
-  prefix. When a feature needs shared type identity it binds that exact assembly.
-  Command and C# script plans reuse official third-party WPF libraries
-  (`MahApps.Metro`, `ControlzEx`, `Microsoft.Xaml.Behaviors`) from the default
-  load context so extra copies do not pollute `pack://` resources or conflict
-  styles. That reuse is a known isolation gap—one process-wide identity, even
-  when a workload ships another version—accepted because these libraries are
-  mature and rarely change. DevTools forks
-  (`DevTools.MahApps.Metro`, `DevTools.ControlzEx`,
-  `DevTools.Microsoft.Xaml.Behaviors`) are separate identities and stay
-  private to the host add-in.
+  prefix. DevTools forks (`DevTools.MahApps.Metro`, `DevTools.ControlzEx`,
+  `DevTools.Microsoft.Xaml.Behaviors`) are separate identities and stay private
+  to the host add-in. Official WPF Share is a known isolation gap—one
+  process-wide identity, even when a workload ships another version—accepted
+  because these libraries are mature and rarely change.
 - Unresolved framework dependencies fall back to the CLR after private sources
   have declined the request.
-- Metadata discovery never executes the inspected assembly.
+- Metadata discovery never executes the inspected assembly. When the host
+  install and a command folder both ship the same identity (Revit 2025
+  `Microsoft.Xaml.Behaviors` plus a copied NuGet), metadata keeps the first
+  path and continues; it does not fail parse.
+- Feature plans set `Isolated`. The kernel maps that to a collectible ALC on
+  modern TFMs and a scoped `AssemblyResolve` hook on net48. `Collectible` remains
+  explicit when a test must name the ALC (and throws on net48).
 
-## Lifetimes
+## Kinds
 
-| Lifetime | Product behavior |
+| Kind | Product behavior |
 |----------|------------------|
-| Permanent | Add-in-shipped assemblies are path-loaded once for the process lifetime so WPF resources and dependency locations remain stable. They are not hot-reloaded. |
-| Collectible | Scripts, MCP toolsets, and modern NUnit generations release feature references before unloading. Command sessions stay alive after `Execute` returns so modeless host UI is not torn down. |
-| Scoped net48 | Resolver hooks are registered only for the owning scope. Commands, C#/F# scripts, and MCP toolsets memory-load PE/PDB (`Assembly.Load(byte[])`, same as pre-isolation `ByteAssemblyLoader`) so project output is not locked. Command sessions keep those hooks after `Execute` so modeless UI can still resolve delayed assemblies. Default-AppDomain assemblies do not claim unload support. |
+| Permanent | Add-in-shipped assemblies are path-loaded once for the process lifetime so WPF resources and dependency locations remain stable. They are not hot-reloaded. Implemented by `AssemblyLoader`, not `AssemblyIsolationSession`. |
+| Isolated | Feature default. Kernel maps to collectible (modern TFM) or scoped net48. Scripts, MCP toolsets, commands, and NUnit/TUnit generations use this. Command sessions stay alive after `Execute` so modeless host UI is not torn down. |
+| Collectible | Explicit collectible ALC. Same unload rules as Isolated on modern TFMs. Throws on net48. |
 | NUnit net48 | Same default AppDomain as the host. Generation **shadow** copies are `LoadFile`'d so the same identity can exist per generation (hot reload) without locking the project output. Host CAD APIs already loaded by Revit/AutoCAD are reused in place. Those DLLs cannot be unloaded from the process. |
 
 Feature code continues to own compilation, discovery semantics, registries,
 generation snapshots, invocation, result mapping, and logging. It composes an
 isolation plan and translates structured diagnostics; the kernel contains no
-Execution, MCP, NUnit, Revit, AutoCAD, WPF, or logging policy.
+Execution, MCP, NUnit, Revit, AutoCAD, or logging policy. Official UI sidecar
+Share (`MahApps.Metro`, `ControlzEx`, `Microsoft.Xaml.Behaviors`) is identity
+policy on the plan, not a UI framework dependency.
 
 ## Packaging boundary
 

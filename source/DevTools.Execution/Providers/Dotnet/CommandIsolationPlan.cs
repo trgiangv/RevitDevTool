@@ -13,46 +13,31 @@ public static class CommandIsolationPlan
 {
     public static AssemblyIsolationPlan Create(
         string entryPath,
-        IEnumerable<Assembly> parentBindings,
+        IEnumerable<Assembly> hostAssemblies,
         IAssemblyIsolationDiagnosticSink? diagnosticSink = null)
     {
-        if (parentBindings is null) throw new ArgumentNullException(nameof(parentBindings));
+        if (hostAssemblies is null) throw new ArgumentNullException(nameof(hostAssemblies));
 
         var normalizedEntryPath = Path.GetFullPath(entryPath);
         var siblingDirectory = Path.GetDirectoryName(normalizedEntryPath)
             ?? throw new ArgumentException("The command entry path must have a directory.", nameof(entryPath));
 
         var plan = AssemblyIsolationPlan.Create(normalizedEntryPath)
-            .WithLifecycle(
-#if NET
-                AssemblyIsolationLifecycle.Collectible
-#else
-                AssemblyIsolationLifecycle.ScopedNetFramework
-#endif
-            );
+            .WithKind(AssemblyIsolationKind.Isolated);
 
 #if NET
         plan = plan
-            .AddManagedSource(WpfSharing.SkipPrivateCopies(new DependencyResolverAssemblySource(normalizedEntryPath)))
-            .AddManagedSource(WpfSharing.SkipPrivateCopies(new DirectoryAssemblySource(siblingDirectory, "command sibling directory")))
-            .AddNativeSource(new DependencyResolverNativeAssemblySource(normalizedEntryPath));
+            .AddManagedSource(new ResolverAssemblySource(normalizedEntryPath))
+            .AddManagedSource(new DirectoryAssemblySource(siblingDirectory))
+            .AddNativeSource(new ResolverNativeAssemblySource(normalizedEntryPath));
 #else
-        plan = plan.AddManagedSource(WpfSharing.SkipPrivateCopies(
-            new DirectoryAssemblySource(siblingDirectory, "command sibling directory")));
+        plan = plan.AddManagedSource(new DirectoryAssemblySource(siblingDirectory));
 #endif
 
-        plan = WpfSharing.BindFromDefaultContext(
-            plan,
-            WpfSharing.SiblingCandidatePaths(siblingDirectory));
+        plan = SharedSidecars.ShareFromDirectory(plan, siblingDirectory);
 
-        foreach (var assembly in parentBindings)
-        {
-#if NET
-            plan = plan.BindToParent(assembly, ignoreRequestedVersion: true);
-#else
-            plan = plan.BindToParent(assembly);
-#endif
-        }
+        foreach (var assembly in hostAssemblies)
+            plan = plan.Share(assembly);
 
         return diagnosticSink is null ? plan : plan.WithDiagnosticSink(diagnosticSink);
     }

@@ -16,23 +16,17 @@ public sealed class TUnitRuntimeSessionFactory : ITestingRuntimeSessionFactory
     {
         var root = Path.GetFullPath(generation.ShadowDirectory);
         var plan = AssemblyIsolationPlan.Create(generation.RuntimeAssemblyPath)
-            .WithLifecycle(
-#if NET
-                AssemblyIsolationLifecycle.Collectible
-#else
-                AssemblyIsolationLifecycle.ScopedNetFramework
-#endif
-            )
+            .WithKind(AssemblyIsolationKind.Isolated)
 #if NETFRAMEWORK
             .WithDistinctFileIdentity()
 #endif
-            .BindToParent(typeof(ITestingRuntimeSession).Assembly)
+            .Pin(typeof(ITestingRuntimeSession).Assembly)
             .AddManagedSource(new ManifestAssemblySource(
                 generation.ManagedAssemblies.Select(path =>
-                    new AssemblyCandidate(path, "TUnit generation managed manifest", root))))
+                    new AssemblyCandidate(path, root))))
             .AddNativeSource(new ManifestNativeAssemblySource(
                 generation.NativeAssets.Select(path =>
-                    new AssemblyCandidate(path, "TUnit generation native manifest", root))));
+                    new AssemblyCandidate(path, root))));
 
         var isolation = AssemblyIsolationSession.Create(plan);
         try

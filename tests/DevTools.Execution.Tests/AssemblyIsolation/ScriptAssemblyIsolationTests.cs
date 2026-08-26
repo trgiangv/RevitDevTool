@@ -19,8 +19,8 @@ public sealed class ScriptAssemblyIsolationTests
             [selectedPackageAssembly.Location],
             [parent]);
 
-        Assert.Equal(AssemblyIsolationLifecycle.Collectible, plan.Lifecycle);
-        Assert.True(plan.ParentBindings.TryResolve(parent.GetName(), out var actualParent));
+        Assert.Equal(AssemblyIsolationKind.Isolated, plan.Kind);
+        Assert.True(plan.TryShare(parent.GetName(), out var actualParent));
         Assert.Same(parent, actualParent);
 
         var selected = selectedPackageAssembly.GetName();

@@ -27,23 +27,17 @@ internal static class NUnitIsolationPlan
         }
 
         var managedCandidates = manifest.ManagedAssemblies
-            .Select(path => new AssemblyCandidate(path, "NUnit generation managed manifest", shadowDirectory));
+            .Select(path => new AssemblyCandidate(path, shadowDirectory));
         var nativeCandidates = manifest.NativeAssets
-            .Select(path => new AssemblyCandidate(path, "NUnit generation native manifest", shadowDirectory));
+            .Select(path => new AssemblyCandidate(path, shadowDirectory));
 
         return AssemblyIsolationPlan.Create(manifest.RuntimeAssemblyPath)
-            .WithLifecycle(
-#if NET
-                AssemblyIsolationLifecycle.Collectible
-#else
-                AssemblyIsolationLifecycle.ScopedNetFramework
-#endif
-            )
+            .WithKind(AssemblyIsolationKind.Isolated)
 #if NETFRAMEWORK
             .WithDistinctFileIdentity()
 #endif
-            .BindToParent(frameworkAssembly)
-            .BindToParent(typeof(ITestingRuntimeSession).Assembly)
+            .Pin(frameworkAssembly)
+            .Pin(typeof(ITestingRuntimeSession).Assembly)
             .AddManagedSource(new ManifestAssemblySource(managedCandidates))
             .AddNativeSource(new ManifestNativeAssemblySource(nativeCandidates));
     }

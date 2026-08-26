@@ -15,7 +15,7 @@ public sealed class AssemblyIdentityMismatchException : InvalidOperationExceptio
 
     public AssemblyName Candidate { get; }
 
-    static string CreateMessage(AssemblyName requested, AssemblyName candidate)
+    private static string CreateMessage(AssemblyName requested, AssemblyName candidate)
     {
         if (requested is null) throw new ArgumentNullException(nameof(requested));
         if (candidate is null) throw new ArgumentNullException(nameof(candidate));

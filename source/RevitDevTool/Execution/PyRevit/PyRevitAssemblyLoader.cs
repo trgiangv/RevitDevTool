@@ -15,7 +15,7 @@ namespace RevitDevTool.Execution.PyRevit;
 internal static class PyRevitAssemblyLoader
 {
     private static readonly object LoadLock = new();
-    private static readonly PermanentAssemblyLoader PermanentLoader = new();
+    private static readonly AssemblyLoader Loader = new();
     private static bool _initialized;
 
     internal static void EnsureLoaded(string scriptPath, ILogger? logger = null)
@@ -112,7 +112,7 @@ internal static class PyRevitAssemblyLoader
         {
             try
             {
-                PermanentLoader.LoadPath(dllPath);
+                Loader.LoadPath(dllPath);
                 logger?.ZLogInformation($"[PyRevit] Loaded extension DLL: {Path.GetFileName(dllPath)}");
             }
             catch (Exception ex)

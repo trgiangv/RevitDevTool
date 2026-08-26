@@ -5,7 +5,6 @@ using DevTools.AssemblyIsolation;
 using DevTools.Mcp.Catalog.Discovery;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
-using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using ModelContextProtocol.Protocol;
 using ModelContextProtocol.Server;
@@ -21,11 +20,11 @@ public sealed class McpToolsetIsolationTests
 
         var plan = McpToolsetIsolationPlan.Create(workload.EntryPath);
 
-        Assert.True(plan.ParentBindings.TryResolve(typeof(McpServer).Assembly.GetName(), out var server));
-        Assert.True(plan.ParentBindings.TryResolve(typeof(CallToolResult).Assembly.GetName(), out var protocol));
+        Assert.True(plan.TryShare(typeof(McpServer).Assembly.GetName(), out var server));
+        Assert.True(plan.TryShare(typeof(CallToolResult).Assembly.GetName(), out var protocol));
         Assert.Same(typeof(McpServer).Assembly, server);
         Assert.Same(typeof(CallToolResult).Assembly, protocol);
-        Assert.Equal(AssemblyIsolationLifecycle.Collectible, plan.Lifecycle);
+        Assert.Equal(AssemblyIsolationKind.Isolated, plan.Kind);
         Assert.Equal(2, plan.ManagedSources.Count);
     }
 
@@ -53,18 +52,16 @@ public sealed class McpToolsetIsolationTests
     }
 
     [Fact]
-    public void Toolset_context_forwards_kernel_resolution_diagnostics_to_the_mcp_logger()
+    public void Toolset_missing_private_dependency_fails_when_the_member_is_invoked()
     {
         using var workload = McpToolsetWorkload.Create("diagnostics", "private");
         File.Delete(Path.Combine(workload.Directory, "Microsoft.Extensions.IsolationFixture.dll"));
-        var logger = new RecordingLogger();
 
-        using var context = new McpToolsetContext(workload.EntryPath, logger);
+        using var context = new McpToolsetContext(workload.EntryPath, NullLogger.Instance);
         var assembly = context.LoadAssembly();
 
         var failure = Assert.Throws<TargetInvocationException>(() => InvokeValue(assembly));
         Assert.IsType<FileNotFoundException>(failure.InnerException);
-        Assert.Contains(logger.Messages, message => message.Contains("[managed-clr-fallback]", StringComparison.Ordinal));
     }
 
     [Fact]
@@ -106,21 +103,6 @@ public sealed class McpToolsetIsolationTests
         .GetType("Fixture.Entry", throwOnError: true)!
         .GetMethod("Value", BindingFlags.Public | BindingFlags.Static)!
         .Invoke(null, null)!;
-
-    private sealed class RecordingLogger : ILogger
-    {
-        public List<string> Messages { get; } = [];
-
-        public IDisposable? BeginScope<TState>(TState state) where TState : notnull => null;
-
-        public bool IsEnabled(LogLevel logLevel) => true;
-
-        public void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception? exception,
-            Func<TState, Exception?, string> formatter)
-        {
-            Messages.Add(formatter(state, exception));
-        }
-    }
 }
 
 internal sealed class McpToolsetWorkload : IDisposable
