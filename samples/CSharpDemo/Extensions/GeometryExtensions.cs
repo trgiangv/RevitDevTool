@@ -3,7 +3,7 @@
 [PublicAPI]
 public static class GeometryExtensions
 {
-    public static List<Solid> GetSolids(this Element element)
+    public static List<Solid> GetSolids(this Element element, Transform? transform = null)
     {
         var opts = new Options
         {
@@ -12,7 +12,9 @@ public static class GeometryExtensions
         };
 
         var solids = new List<Solid>();
-        var geometry = element.get_Geometry(opts);
+        var geometry = transform is null 
+            ? element.get_Geometry(opts)
+            : element.get_Geometry(opts).GetTransformed(transform);
         if (geometry == null) return solids;
 
         foreach (var geoObj in geometry)
