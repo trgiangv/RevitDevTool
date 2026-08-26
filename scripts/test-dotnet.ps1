@@ -1,47 +1,40 @@
 <#
 .SYNOPSIS
-    Run .NET test projects.
+    Run one or more .NET test projects.
 .DESCRIPTION
-    Runs xUnit v3 test projects through their Microsoft Testing Platform
-    executable entry points. Without -Project, runs the core focused projects
-    sequentially.
-    With -Project: runs only the specified test project.
+    Runs xUnit v3 projects through Microsoft Testing Platform.
+    Pass the csproj(s) you need; there is no default suite.
+    Extra arguments after the named parameters go to the test host.
     Stops on first failure.
 .PARAMETER Project
-    Relative path to a test .csproj from repo root
-    (e.g. tests/RevitDevTool.Execution.Tests/RevitDevTool.Execution.Tests.csproj).
+    Relative path to a test .csproj from repo root. Repeat or comma-separate
+    to run several.
 .PARAMETER Configuration
-    Build configuration for tests (default: Debug).
+    Build configuration (default: Debug).
 .EXAMPLE
-    scripts/test-dotnet.ps1
-    scripts/test-dotnet.ps1 -Project tests/RevitDevTool.Execution.Tests/RevitDevTool.Execution.Tests.csproj
+    scripts/test-dotnet.ps1 -Project tests/DevTools.Execution.Tests/DevTools.Execution.Tests.csproj
+    scripts/test-dotnet.ps1 -Project tests/DevTools.AssemblyIsolation.Tests/DevTools.AssemblyIsolation.Tests.csproj -- --filter Directory_source
 #>
 param(
-    [string]$Project = "",
-    [string]$Configuration = "Debug"
+    [Parameter(Mandatory)]
+    [string[]]$Project,
+    [string]$Configuration = "Debug",
+    [Parameter(ValueFromRemainingArguments)]
+    [string[]]$Arguments
 )
 
 $ErrorActionPreference = "Stop"
 . (Join-Path $PSScriptRoot '_lib.ps1')
 Assert-RepoRoot
 
-if ($Project) {
-    $target = Join-RepoPath $Project
+$mtp = @('--progress', 'off') + @($Arguments)
+
+foreach ($relative in $Project) {
+    $target = Join-RepoPath $relative
     if (-not (Test-Path -LiteralPath $target)) {
         throw "Test project not found: $target"
     }
-    dotnet run --project $target -c $Configuration -- --no-progress
-    exit $LASTEXITCODE
-}
 
-$projects = @(
-    'tests/DevTools.Execution.Tests/DevTools.Execution.Tests.csproj',
-    'tests/DevTools.Testing.Host.Tests/DevTools.Testing.Host.Tests.csproj',
-    'tests/DevTools.Telemetry.Tests/DevTools.Telemetry.Tests.csproj'
-)
-
-foreach ($relative in $projects) {
-    $target = Join-RepoPath $relative
-    dotnet run --project $target -c $Configuration -- --no-progress
+    dotnet run --project $target -c $Configuration -- @mtp
     if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 }

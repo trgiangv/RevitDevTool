@@ -63,9 +63,8 @@ Largest test surface (`tests/DevTools.Mcp.Tests`, ~180 cases).
   `DevTools.Logging`. Do not drop the Trace/Debug asserts (ADR 0017 contract)
   and do not treat a missing Logging IL ref as the cause.
 
-`scripts/test-dotnet.ps1` does not forward `--filter`. Extra tokens bind to
-`-Configuration` (e.g. `-filter` → `bin\-filter\`), which compiles Spike
-fixtures without `TRACE`/`DEBUG` and looks like the same failure.
+`scripts/test-dotnet.ps1` requires `-Project`. Extra tokens after the named
+parameters are forwarded to the test host (for example `-- --filter ClassName`).
 
 ---
 
@@ -117,7 +116,7 @@ Thin unit layer (`tests/DevTools.Execution.Tests`, ~23 cases).
 | Goal | Command |
 |------|---------|
 | MCP tests | `scripts/test-dotnet.ps1 -Project tests/DevTools.Mcp.Tests/DevTools.Mcp.Tests.csproj` |
-| All .NET tests | `scripts/test-dotnet.ps1` |
+| .NET tests | `scripts/test-dotnet.ps1 -Project <csproj>` |
 | Python parser | `scripts/test-python.ps1` |
 | Live MCP | `docs/agents/mcp-integration-test.md` |
 

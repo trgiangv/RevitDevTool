@@ -32,8 +32,7 @@ Host API matrix (all years): `build-matrix.md`.
 |-----------|---------|
 | File lock / deploy failed | `scripts/kill-host.ps1 -HostApp Revit -Year <year>` |
 | Build + deploy one year | Stop only that year; `scripts/build-host.ps1 -Year 2025` |
-| .NET tests (all) | `scripts/test-dotnet.ps1` |
-| One test project | `scripts/test-dotnet.ps1 -Project <csproj>` |
+| .NET tests | `scripts/test-dotnet.ps1 -Project <csproj>` |
 | MCP tests | `scripts/test-dotnet.ps1 -Project tests/DevTools.Mcp.Tests/DevTools.Mcp.Tests.csproj` |
 | Python parser (this repo) | `scripts/test-python.ps1` |
 | Installer / bundle | `scripts/pack.ps1` |
