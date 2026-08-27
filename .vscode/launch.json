@@ -2,13 +2,29 @@
   "version": "0.2.0",
   "configurations": [
     {
-      "name": "Attach Revit Python",
+      "name": "Attach Host: Python",
       "type": "debugpy",
       "request": "attach",
       "connect": {
         "host": "localhost",
         "port": 5678
       }
+    },
+    {
+      "name": "Attach Host: NetFramework",
+      "type": "clr",
+      "request": "attach",
+      "processId": "${command:pickProcess}",
+      "justMyCode": true,
+      "requireExactSource": false
+    },
+    {
+      "name": "Attach Host: NetCore",
+      "type": "coreclr",
+      "request": "attach",
+      "processId": "${command:pickProcess}",
+      "justMyCode": true,
+      "requireExactSource": false
     }
   ]
 }

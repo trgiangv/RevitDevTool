@@ -17,14 +17,11 @@ Date: 2026-08-12
 ## Status
 
 Accepted — **P0 isolation gate closed** (live `generation.unloaded` waived in
-ADR 0016 §4). P1 is the thin MTP consumer package `DevTools.NUnit` (project
-`DevTools.NUnit.Mtp`) that replaces VSTest. Do not build a `Runner serve`
-daemon unless Test Explorer session reuse requires it.
-
-**Superseded 2026-08-17:** remaining framework-neutral extraction, Runner
-rename to `DevTools.TestRunner`, and generic `testing/*` host protocol live in
-[2026-08-17 P1](2026-08-17-p1-framework-neutral-testing-core.md). Do not resume
-those items here. VSTest removal (Task 11) remains a separate decision.
+ADR 0016 §4). Remaining framework-neutral extraction lives in
+[2026-08-17 P1](2026-08-17-p1-framework-neutral-testing-core.md). VSTest
+removal is [0022](../../decisions/0022-nunit-mtp-only-testing-stack.md). Do
+not execute remaining Rider / C# Dev Kit attach or VSTest-adapter gates, and
+do not run `scripts/test-dotnet.ps1` (removed).
 
 ## Outcome
 

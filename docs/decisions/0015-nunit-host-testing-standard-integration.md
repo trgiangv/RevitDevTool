@@ -10,7 +10,8 @@ Partially superseded (2026-08-12) by
 
 The pipe, host-context execution, host-neutral project boundaries, and single
 public consumer-package direction remain valid. The reflective NUnit execution
-strategy, VSTest-first priority, and deferred-debugging policy are historical.
+strategy, VSTest-first priority, Rider-as-VSTest-proxy gate, and
+deferred-debugging policy are historical.
 
 ## Context
 

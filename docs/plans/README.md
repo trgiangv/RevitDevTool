@@ -40,6 +40,9 @@ decision into `docs/decisions/`; keep task-local choices in the plan.
 
 | Plan | Completed |
 |------|-----------|
+| [2026-08-15-nunit-visual-studio-debug.md](completed/2026-08-15-nunit-visual-studio-debug.md) | 2026-08-27 |
+| [2026-08-12-nunit-native-runtime-mtp.md](completed/2026-08-12-nunit-native-runtime-mtp.md) | 2026-08-27 (superseded leftover gates withdrawn) |
+| [2026-08-10-nunit-host-testing.md](completed/2026-08-10-nunit-host-testing.md) | 2026-08-12 (superseded; archived 2026-08-27) |
 | [2026-08-18-nunit-boundary-cleanup.md](completed/2026-08-18-nunit-boundary-cleanup.md) | 2026-08-18 |
 | [2026-08-18-assembly-isolation-kernel.md](completed/2026-08-18-assembly-isolation-kernel.md) | 2026-08-18 |
 | [2026-08-18-nunit-mtp-only.md](completed/2026-08-18-nunit-mtp-only.md) | 2026-08-18 |

@@ -1,6 +1,6 @@
 # NUnit Native Runtime — Live P0 Verification
 
-Evidence for plan Task 8 (`docs/plans/active/2026-08-12-nunit-native-runtime-mtp.md`).
+Evidence for plan Task 8 (`docs/plans/completed/2026-08-12-nunit-native-runtime-mtp.md`).
 Raw artifacts: `%LOCALAPPDATA%\RevitDevTool\task8-evidence\`.
 
 ## Environment (2026-08-12, continuation)

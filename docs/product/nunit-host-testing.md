@@ -18,6 +18,9 @@ on branch `testing/nunit-vstest`.
   `PerTestTimeout` is the per-test budget after the host is ready;
   the `testing/run` pipe wait is this times the number of tests in that run.
   `LaunchTimeout` is the wait for the host pipe after process start.
+  Cancel or launch timeout kills only a host this run spawned (not a reused
+  instance). Visual Studio Stop Debugging during that wait cancels when the
+  testhost PID (`--debug-parent-pid`) exits, then kills the in-flight host.
 - Override `TestingFramework` in the test
   csproj to change the in-host engine without changing the NuGet. Default
   engine is NUnit (`TestingFramework=nunit`).
@@ -118,11 +121,19 @@ The maintained samples are:
 
 Those samples still use NUnit attributes because NUnit is the default engine.
 `samples/ricaun.NUnit.SampleTests` is a comparison sample: it links the same
-`HostSmokeTests` and runs them through `ricaun.RevitTest.TestAdapter`. It is
-not the product contract.
+`HostSmokeTests` and runs them through `ricaun.RevitTest.TestAdapter` (VSTest).
+It is not the product contract. Do not use it as the verify path, and do not
+try to make it MTP.
+
+Visual Studio Test Explorer **Debug** attaches the testhost; Runner then
+EnvDTE-attaches that Visual Studio instance to the Autodesk host
+([0025](../decisions/0025-runner-owned-visual-studio-host-attach.md)).
+Rider and C# Dev Kit attach the host PID and **Run** (attach does not block
+test execute). VS Code/forks and PyCharm attach Python via `debugpy` port
+5678 (`.vscode/launch.json`, `.run/Attach.run.xml`).
 
 Run the generated test executable or use the Microsoft.Testing.Platform
-`dotnet test`/IDE surface provided by the installed SDK. Discovery remains
+`dotnet test`/IDE surface provided by the sample-folder `global.json`. Discovery remains
 host-free; host launch occurs only after an execution request. The adapter
 copies `DevTools.NUnit.MTP.dll` next to the test exe. Consumers reference
 NUnit; they do not add `DevTools.NUnit.MTP` as a ProjectReference.

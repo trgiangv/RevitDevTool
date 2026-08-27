@@ -33,3 +33,4 @@ here.
 | [0022](0022-nunit-mtp-only-testing-stack.md) | NUnit MTP-only testing stack | Accepted |
 | [0023](0023-shared-assembly-isolation-kernel.md) | Shared assembly isolation kernel | Accepted |
 | [0024](0024-testing-core-open-closed-providers.md) | Testing core open-closed for providers | Accepted |
+| [0025](0025-runner-owned-visual-studio-host-attach.md) | Runner-owned Visual Studio host attach | Accepted |

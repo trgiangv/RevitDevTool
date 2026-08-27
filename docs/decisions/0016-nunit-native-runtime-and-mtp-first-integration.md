@@ -8,10 +8,13 @@ Accepted. Supersedes the NUnit execution strategy, VSTest-first priority, and
 debugging deferral in
 [`0015-nunit-host-testing-standard-integration.md`](0015-nunit-host-testing-standard-integration.md).
 
-Implementation notes (2026-08-14): `NUnitReflectionRunner` is gone. The
-unpublished VSTest adapter remains in-tree (product samples); Decision 8
-(MTP-only, remove VSTest) is not executed. Test stdout vs host pane:
-[`0017`](0017-nunit-host-test-output-routing.md).
+Implementation notes (2026-08-14 / 2026-08-27): `NUnitReflectionRunner` is
+gone. The DevTools VSTest adapter is removed on `develop`
+([0022](0022-nunit-mtp-only-testing-stack.md));
+`samples/ricaun.NUnit.SampleTests` is a third-party VSTest comparison only.
+Test stdout vs host pane: [`0017`](0017-nunit-host-test-output-routing.md).
+Visual Studio host Debug: [`0025`](0025-runner-owned-visual-studio-host-attach.md)
+keeps EnvDTE in `DevTools.TestRunner.Core/Debugging/`.
 
 ## Context
 
@@ -47,20 +50,14 @@ The supported-tooling floor is based on current vendor evidence, not on a
 claim that VSTest has disappeared everywhere:
 
 - Microsoft documents MTP as a lightweight VSTest alternative for CLI, CI,
-  Visual Studio Test Explorer, and VS Code Test Explorer, with support for
-  .NET Framework 4.6.2 and later:
+  and Visual Studio Test Explorer, with support for .NET Framework 4.6.2 and
+  later:
   <https://learn.microsoft.com/dotnet/core/testing/microsoft-testing-platform-intro>.
 - Visual Studio Test Explorer supports the direct MTP protocol from 17.12;
   older Visual Studio versions fall back to the VSTest protocol:
   <https://learn.microsoft.com/dotnet/core/testing/microsoft-testing-platform-vs-vstest>.
 - MTP v2 no longer supports its former VSTest-based `dotnet test` target:
   <https://learn.microsoft.com/dotnet/core/testing/microsoft-testing-platform-migration-from-v1-to-v2>.
-- Rider 2026.1 documents discovery of custom test frameworks implemented with
-  Microsoft.Testing.Platform:
-  <https://www.jetbrains.com/help/rider/Reference__Options__Tools__Unit_Testing__Testing_Platform.html>.
-- C# Dev Kit documents that .NET Framework projects and debugging are not
-  supported, so its host-test scope is modern SDK-style targets only:
-  <https://code.visualstudio.com/docs/csharp/cs-dev-kit-faq>.
 
 This evidence supports an explicit MTP-only product floor. It does not prove
 that every IDE version or every third-party test consumer no longer needs
@@ -162,16 +159,18 @@ matrix.
 
 11. **Visual Studio host-process debugging is Runner-owned EnvDTE attach.**
     MTP 2.3 has no public API for `client/attachDebugger`. Until it does,
-    Test Explorer **Debug** is implemented as: MTP/VSTest pass `--debug-parent-pid`
+    Test Explorer **Debug** is implemented as: MTP passes `--debug-parent-pid`
     when the northbound process already has a debugger attached (that flag implies
     debug); Runner locates or launches the Autodesk host, then attaches the
     Visual Studio instance that is debugging that parent PID to the host PID
-    **before** `nunit/run`, and detaches after. `Microsoft.VisualStudio.Interop`
-    and EnvDTE live only in `DevTools.NUnit.Runner/Debugging/`. MTP and the
-    host pipe protocol do not reference Interop, do not define a generic
-    debugger abstraction, and do not add a `debug-ready` handshake. Attach
-    failure warns and the run continues. Revisit this placement if MTP exposes
-    a public attach-debugger API.
+    **before** `testing/run`, and detaches after
+    ([0025](0025-runner-owned-visual-studio-host-attach.md)).
+    `Microsoft.VisualStudio.Interop` and EnvDTE live only in
+    `DevTools.TestRunner.Core/Debugging/`. MTP and the host pipe protocol do
+    not reference Interop, do not define a generic debugger *wire* protocol,
+    and do not add a `debug-ready` handshake. Attach failure warns and the run
+    continues. Runner does not attach other IDEs. Revisit this placement if
+    MTP exposes a public attach-debugger API.
 
 12. **Debug-visible generations remain file-backed.** Runtime generations use
     coherent shadow directories and file-backed module/PDB paths even when no
@@ -196,11 +195,11 @@ matrix.
    when the host is not installed, and two-generation rebuild behavior.
 3. **P1 — MTP-only integration:** one MTP surface backed by Runner and the
    native framework driver; remove the experimental VSTest adapter.
-4. **P1 — IDE run matrix:** Visual Studio first, Rider through its MTP/custom
-   framework route rather than its native NUnit provider, then C# Dev Kit for
-   SDK-style modern test projects.
-5. **P2 — Visual Studio Debug:** Runner `--debug` attach-before-run. Rider /
-   C# Dev Kit attach remain separate; do not invent a generic debugger protocol.
+4. **P1 — IDE run matrix:** Visual Studio Test Explorer for MTP samples.
+5. **P2 — Visual Studio Debug:** Runner `--debug` attach-before-run (EnvDTE
+   per [0025](0025-runner-owned-visual-studio-host-attach.md)). Python
+   `debugpy` remains a separate listen-on-port path; do not invent a generic
+   debugger *wire* protocol.
 6. **P2 — Optional ergonomics:** source-navigation metadata and source
    generation only after measured need.
 
@@ -223,9 +222,10 @@ attach convenience cannot precede correct NUnit execution.
    AppDomain boundary safely. A future restricted proxy model would require a
    separate decision.
 5. **Retain VSTest as a compatibility bridge.** Rejected because the package is
-   unpublished, modern Visual Studio/Rider/C# Dev Kit have MTP routes, and a
-   second adapter duplicates mapping, packaging, filtering, cancellation, and
-   provider-ownership risks.
+   unpublished, Visual Studio 17.12+ has an MTP route, and a second adapter
+   duplicates mapping, packaging, filtering, cancellation, and
+   provider-ownership risks. Third-party VSTest remains only as
+   `samples/ricaun.NUnit.SampleTests`.
 6. **Create a generic debugger attach protocol.** Rejected because attach
    ownership and completion semantics belong to the IDE debugger. A generic
    layer would either expose the least-common denominator or recreate
@@ -243,7 +243,7 @@ Positive:
 - MTP and CLI reach one Runner/host protocol and result model without a VSTest
   compatibility layer.
 - All Autodesk host locate/launch/reuse remains in Runner. MTP never treats
-  Runner, Revit, or AutoCAD as its child. Visual Studio attach is also
+  Runner, Revit, or AutoCAD as its child. Visual Studio EnvDTE attach is also
   Runner-owned (`--debug`), not an MTP/Interop package dependency.
 
 Tradeoffs:
@@ -254,20 +254,15 @@ Tradeoffs:
   and other framework semantics remain NUnit-owned.
 - Visual Studio older than 17.12 and other VSTest-only consumers are outside
   the supported tooling floor.
-- Rider and C# Dev Kit support are release gates backed by live evidence, not
-  inferred from an adapter compiling or appearing in the test tree.
 - Visual Studio host Debug uses EnvDTE until MTP exposes `client/attachDebugger`.
-  Attach failure does not fail the test run. Rider / C# Dev Kit are unsupported
-  for automatic host attach.
+  Attach failure does not fail the test run. Other IDEs attach the host
+  themselves ([0025](0025-runner-owned-visual-studio-host-attach.md)).
 - File-backed shadow generations consume temporary disk space until a safe
   cleanup policy can remove generations no longer used by any process.
 
 ## Follow-Up
 
-- Review and execute
-  [`2026-08-12-nunit-native-runtime-mtp.md`](../plans/active/2026-08-12-nunit-native-runtime-mtp.md)
-  after its gates and sequencing are accepted.
-- Amend the NUnit product document only when native-runtime behavior is
-  implemented and observable; do not document planned behavior as shipped.
-- Move the existing active NUnit plan to completed/superseded history when the
-  replacement plan is accepted.
+Native runtime, MTP-only stack, and Visual Studio host Debug are shipped
+([0022](0022-nunit-mtp-only-testing-stack.md),
+[0025](0025-runner-owned-visual-studio-host-attach.md)). Historical plan:
+[`2026-08-12-nunit-native-runtime-mtp.md`](../plans/completed/2026-08-12-nunit-native-runtime-mtp.md).
