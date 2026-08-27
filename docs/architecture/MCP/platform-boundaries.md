@@ -274,10 +274,10 @@ Register **one** overlapping toolset at a time (Python vs C# `revit_*` name coll
 
 ```powershell
 # ALC mapper + invoke harness (no live host)
-dotnet test tests/DevTools.Mcp.Tests --filter "FullyQualifiedName~ToolsetResultSerializer|ToolsetInvoker|InvokeDynamicSdkHarness"
+dotnet run --project tests/DevTools.Mcp.Tests/DevTools.Mcp.Tests.csproj -- --filter "ToolsetResultSerializer|ToolsetInvoker|InvokeDynamicSdkHarness"
 
 # Parser / structured output
-dotnet test tests/DevTools.Mcp.Tests --filter "FullyQualifiedName~RevitMcpToolSetParser|StructuredOutput"
+dotnet run --project tests/DevTools.Mcp.Tests/DevTools.Mcp.Tests.csproj -- --filter "RevitMcpToolSetParser|StructuredOutput"
 
 # Live integration checklist
 # docs/agents/mcp-integration-test.md — Scenarios 9 (templates), 10 (delete warning)

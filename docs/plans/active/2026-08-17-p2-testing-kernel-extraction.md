@@ -31,7 +31,8 @@ command module.
 
 C# 14, .NET Framework 4.8, .NET 8/10 Windows, Microsoft Testing Platform 2.3.3,
 NUnit 4.6.1, Named Pipes, collectible `AssemblyLoadContext`, net48 coherent
-generation loading, xUnit test projects through VSTest-only repository tests.
+generation loading, xUnit v3 repository tests as MTP executables
+(`dotnet run --project tests/…`).
 
 ## Global Constraints
 
@@ -49,7 +50,7 @@ generation loading, xUnit test projects through VSTest-only repository tests.
 - Do not change `Polyfill`, add PolySharp, or change ILRepack flags/policy.
 - Do not add xUnit/TUnit provider implementation.
 - Do not commit. Leave all implementation and documentation changes pending.
-- Use `scripts/test-dotnet.ps1 -Project ...` for focused tests and the build
+- Use `dotnet run --project tests/<project>/<project>.csproj` for focused tests and the build
   skill for touched multi-target projects.
 
 ---

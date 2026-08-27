@@ -63,8 +63,12 @@ Largest test surface (`tests/DevTools.Mcp.Tests`, ~180 cases).
   `DevTools.Logging`. Do not drop the Trace/Debug asserts (ADR 0017 contract)
   and do not treat a missing Logging IL ref as the cause.
 
-`scripts/test-dotnet.ps1` requires `-Project`. Extra tokens after the named
-parameters are forwarded to the test host (for example `-- --filter ClassName`).
+xUnit v3 tests are MTP executables (`tests/Directory.Build.props`). Run
+`dotnet run --project tests/<project>/<project>.csproj` (optional
+`-- --filter ClassName`). Root `dotnet test` is VSTest-mode and fails on
+.NET 10 SDK. Product samples use `dotnet test` from their folder (scoped
+MTP `global.json`). `samples/ricaun.NUnit.SampleTests` is the only VSTest
+project — comparison only. Do not force `--progress off`.
 
 ---
 
@@ -115,8 +119,8 @@ Thin unit layer (`tests/DevTools.Execution.Tests`, ~23 cases).
 
 | Goal | Command |
 |------|---------|
-| MCP tests | `scripts/test-dotnet.ps1 -Project tests/DevTools.Mcp.Tests/DevTools.Mcp.Tests.csproj` |
-| .NET tests | `scripts/test-dotnet.ps1 -Project <csproj>` |
+| MCP tests | `dotnet run --project tests/DevTools.Mcp.Tests/DevTools.Mcp.Tests.csproj` |
+| .NET tests | `dotnet run --project tests/<project>/<project>.csproj` |
 | Python parser | `scripts/test-python.ps1` |
 | Live MCP | `docs/agents/mcp-integration-test.md` |
 

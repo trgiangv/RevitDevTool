@@ -34,7 +34,7 @@ Read the **minimum** layer for the task. Do not duplicate docs into chat.
 ## Verify before done
 
 1. After `.cs` / `.csproj` / `.xaml` edits → run compile from **build skill** (touched csproj minimum).
-2. Contract or dispatch change → add/run focused test (`scripts/test-dotnet.ps1 -Project …`).
+2. Contract or dispatch change → add/run focused test (`dotnet run --project tests/…/*.csproj`).
 3. Daemon or host MCP surface → compile + `mcp-integration-test.md` checklist when host available.
 4. Report **evidence** (command + pass/fail). If blocked, state exact missing env (host PID, pixi, file lock).
 

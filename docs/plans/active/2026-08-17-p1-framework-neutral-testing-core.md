@@ -29,7 +29,8 @@ System.Text.Json, NUnit 4.6.1, Autodesk host composition.
 - Preserve full NUnit 4.6.1 semantics and the existing private runtime closure.
 - Rename directly to `DevTools.TestRunner.exe`; do not ship a
   `DevTools.NUnit.Runner.exe` alias.
-- Keep the NUnit VSTest-only surface until a separate removal decision.
+- VSTest adapter is gone ([0022](../../decisions/0022-nunit-mtp-only-testing-stack.md)); ricaun sample is comparison only.
+- Focused tests: `dotnet run --project tests/<project>/<project>.csproj` (not `dotnet test`, not `scripts/test-dotnet.ps1`).
 - Do not commit unless the user explicitly requests a commit.
 
 ---
@@ -41,7 +42,7 @@ Date: 2026-08-17
 - Priority: **P1**.
 - Unblocks: future framework-specific host providers.
 - Supersedes after parity: remaining framework-neutral work in
-  [2026-08-12 NUnit Native Runtime And MTP-First Integration](2026-08-12-nunit-native-runtime-mtp.md).
+  [2026-08-12 NUnit Native Runtime And MTP-First Integration](../completed/2026-08-12-nunit-native-runtime-mtp.md).
 
 ## Status
 

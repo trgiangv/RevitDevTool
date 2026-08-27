@@ -67,8 +67,11 @@ participates in this graph.
 - IDE discovery has one test-platform integration path.
 - The published MTP package has a smaller private closure and no VSTest or
   `netstandard2.0` compatibility payload.
-- Legacy VSTest consumers must use branch `testing/nunit-vstest` or migrate to
-  `RevitDevTool.TestAdapter` projects.
+- `samples/ricaun.NUnit.SampleTests` is the only remaining VSTest surface
+  (third-party `ricaun.RevitTest.TestAdapter`). It is a comparison sample,
+  not the product path. Repository `tests/` and `samples/DevTools.*.SampleTests`
+  are MTP. Do not invoke in-repo tests with VSTest filters
+  (`FullyQualifiedName~`) or root `dotnet test`.
 - `net48` remains supported for older Autodesk hosts; only the adapter-oriented
   `netstandard2.0` target is removed.
 - PolySharp and ILRepack policy remain outside this decision. Warning/noise

@@ -71,11 +71,25 @@ dotnet build source/DevTools.Mcp.Server/DevTools.Mcp.Server.csproj -c Debug
 dotnet build source/RevitDevTool/RevitDevTool.csproj -c Debug.Autodesk.2025 -p:DeployRevitAddin=false -p:DeployAutoCadBundle=false -p:ILRepackable=false
 ```
 
-Focused MCP tests (no full solution):
+Focused tests (no full solution). This repo is MTP except
+`samples/ricaun.NUnit.SampleTests` (third-party VSTest comparison). Root
+`global.json` has **no** `"test": { "runner": "Microsoft.Testing.Platform" }`
+so that ricaun `dotnet test` stays VSTest. Do not treat in-repo tests as
+VSTest (`FullyQualifiedName~`, `dotnet test` from repo root,
+`scripts/test-dotnet.ps1` — removed).
+
+| Surface | Command |
+|---------|---------|
+| In-repo `tests/*.Tests.csproj` | `dotnet run --project tests/<proj>/<proj>.csproj` then optional `-- --filter ClassName` |
+| Product samples (`samples/DevTools.*.SampleTests`) | `cd` that folder (MTP `global.json`) then `dotnet test --project …` |
+| `samples/ricaun.NUnit.SampleTests` | Comparison only. Not the product verify path. |
 
 ```powershell
-scripts/test-dotnet.ps1 -Project tests/DevTools.Mcp.Tests/DevTools.Mcp.Tests.csproj
+dotnet run --project tests/DevTools.Mcp.Tests/DevTools.Mcp.Tests.csproj
+dotnet run --project tests/DevTools.Mcp.Tests/DevTools.Mcp.Tests.csproj -- --filter ClassName
 ```
+
+Do not force `--progress off`.
 
 ## Deploy & live host
 
@@ -89,7 +103,7 @@ scripts/test-dotnet.ps1 -Project tests/DevTools.Mcp.Tests/DevTools.Mcp.Tests.csp
 ## When proof is enough
 
 - **Compile green** on touched projects → safe for shared/platform PRs.
-- **+ focused test** when contracts/dispatch/parser changed (`scripts/test-dotnet.ps1 -Project …`).
+- **+ focused test** when contracts/dispatch/parser changed (`dotnet run --project tests/…/*.csproj`).
 - **+ live MCP checklist** when daemon/host wire or tool surface changed (`docs/agents/mcp-integration-test.md`).
 
 If a test is listed in `known-test-gaps.md`, do not treat its failure as product regression without reading the gap. If live host unavailable, name the skipped checklist step.

@@ -35,7 +35,7 @@ warnings, version, screenshots). See [`docs/architecture/MCP/tools.md`](../archi
 
 ## Change checklist
 
-- MCP parser: `scripts/test-dotnet.ps1 -Project tests/DevTools.Mcp.Tests/...` + build `samples/McpToolsetDemo` if needed.
+- MCP parser: `dotnet run --project tests/DevTools.Mcp.Tests/DevTools.Mcp.Tests.csproj` + build `samples/McpToolsetDemo` if needed.
 - Host wire / broker: `DevTools.Mcp.Tests` (catalog, stream, named-pipe, framing).
 - Pytest bridge: sync `PytestContracts.cs` ↔ `models.py` when wire shape changes; run in-repo tests if present.
 - Never mix MCP NDJSON with `BridgeMessage` on the same pipe.

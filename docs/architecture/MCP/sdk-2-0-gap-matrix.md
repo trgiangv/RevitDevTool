@@ -127,7 +127,7 @@ Detail + test matrix: [`2026-08-02-mrtr-implementation.md`](../../plans/active/2
 **Verification:**
 
 ```powershell
-dotnet test tests/DevTools.Mcp.Tests --filter "FullyQualifiedName~InvokeDynamicSdkHarness|StructuredOutput|ToolsetResultSerializer|RevitMcpToolSetParser|ContractTests"
+dotnet run --project tests/DevTools.Mcp.Tests/DevTools.Mcp.Tests.csproj -- --filter "InvokeDynamicSdkHarness|StructuredOutput|ToolsetResultSerializer|RevitMcpToolSetParser|ContractTests"
 ```
 
 ---
