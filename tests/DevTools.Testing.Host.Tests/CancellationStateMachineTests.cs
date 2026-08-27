@@ -34,4 +34,15 @@ public sealed class CancellationStateMachineTests
         Assert.False(machine.TryTransition(TestingCancellationState.Acknowledged));
         Assert.False(machine.TryTransition(TestingCancellationState.Completed));
     }
+
+    [Fact]
+    public void Reset_returns_to_none()
+    {
+        var machine = new TestingCancellationStateMachine();
+        machine.Transition(TestingCancellationState.Requested);
+        machine.Transition(TestingCancellationState.Poisoned);
+        machine.Reset();
+        Assert.Equal(TestingCancellationState.None, machine.State);
+        Assert.True(machine.TryTransition(TestingCancellationState.Requested));
+    }
 }

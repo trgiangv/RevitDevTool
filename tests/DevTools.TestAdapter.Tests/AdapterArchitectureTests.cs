@@ -73,6 +73,7 @@ public sealed class AdapterArchitectureTests
         Assert.DoesNotContain("TestingProviderRegistry", nunitHosting, StringComparison.Ordinal);
         Assert.DoesNotContain("REVIT2023 || REVIT2025", composition, StringComparison.Ordinal);
         Assert.Contains("_hostContext.ExecuteAsync", handler, StringComparison.Ordinal);
+        Assert.DoesNotContain("GetResult(), ct)", handler, StringComparison.Ordinal);
         Assert.DoesNotContain("RevitTestExecutionDispatcher", composition, StringComparison.Ordinal);
         Assert.False(File.Exists(Path.Combine(root, "Testing", "RevitTestHostApplicationLauncher.cs")));
         Assert.False(File.Exists(Path.Combine(root, "Testing", "RevitTestExecutionDispatcher.cs")));

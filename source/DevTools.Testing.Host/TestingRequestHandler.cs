@@ -53,7 +53,12 @@ public sealed class TestingRequestHandler : IBridgeRequestHandler, IBridgeNotifi
         CancellationToken ct = default)
     {
         if (string.Equals(method, TestingProtocol.Hello, StringComparison.OrdinalIgnoreCase))
+        {
+            if (TestingCancellationStateMachine.IsTerminal(_cancellation.State))
+                _cancellation.Reset();
+
             return Task.FromResult(HandleHello(requestId, @params));
+        }
 
         if (string.Equals(method, TestingProtocol.Run, StringComparison.OrdinalIgnoreCase))
             return Task.FromResult(HandleRun(requestId, @params, ct));
@@ -140,6 +145,13 @@ public sealed class TestingRequestHandler : IBridgeRequestHandler, IBridgeNotifi
             return BridgeMessage.Response(
                 requestId,
                 JsonSerializer.SerializeToElement(response, TestingJsonContext.Default.TestingRunResponse));
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            return BridgeMessage.Error(
+                requestId,
+                IpcErrorCodes.InternalError,
+                "Request cancelled because the client disconnected.");
         }
         catch (Exception ex)
         {

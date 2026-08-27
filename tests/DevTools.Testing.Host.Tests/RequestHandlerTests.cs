@@ -122,6 +122,73 @@ public sealed class RequestHandlerTests
     }
 
     [Fact]
+    public async Task Hello_resets_a_poisoned_session_for_the_next_run()
+    {
+        var handler = CreateHandler(out var provider);
+        provider.RunException = new InvalidOperationException("provider crashed");
+
+        await Handle(
+            handler,
+            "1",
+            TestingProtocol.Run,
+            JsonSerializer.SerializeToElement(
+                CreateRunRequest("provider.example"),
+                TestingJsonContext.Default.TestingRunRequest));
+        Assert.Equal(TestingCancellationState.Poisoned, handler.CancellationState);
+
+        provider.RunException = null;
+        var hello = await Handle(
+            handler,
+            "2",
+            TestingProtocol.Hello,
+            JsonSerializer.SerializeToElement(
+                new TestingHelloRequest(TestingProtocol.CurrentVersion, "provider.example"),
+                TestingJsonContext.Default.TestingHelloRequest));
+        Assert.False(hello.IsError);
+        Assert.Equal(TestingCancellationState.None, handler.CancellationState);
+
+        var run = await Handle(
+            handler,
+            "3",
+            TestingProtocol.Run,
+            JsonSerializer.SerializeToElement(
+                CreateRunRequest("provider.example"),
+                TestingJsonContext.Default.TestingRunRequest));
+        Assert.False(run.IsError);
+    }
+
+    [Fact]
+    public async Task Run_client_disconnect_does_not_poison_the_session()
+    {
+        var handler = CreateHandler(out var provider);
+        provider.RunException = new OperationCanceledException();
+        using var cts = new CancellationTokenSource();
+        cts.Cancel();
+
+        var cancelled = await handler.HandleAsync(
+            "1",
+            TestingProtocol.Run,
+            JsonSerializer.SerializeToElement(
+                CreateRunRequest("provider.example"),
+                TestingJsonContext.Default.TestingRunRequest),
+            cts.Token);
+
+        Assert.True(cancelled.IsError);
+        Assert.Equal(IpcErrorCodes.InternalError, cancelled.ErrorDetail!.Code);
+        Assert.NotEqual(TestingCancellationState.Poisoned, handler.CancellationState);
+
+        provider.RunException = null;
+        var run = await Handle(
+            handler,
+            "2",
+            TestingProtocol.Run,
+            JsonSerializer.SerializeToElement(
+                CreateRunRequest("provider.example"),
+                TestingJsonContext.Default.TestingRunRequest));
+        Assert.False(run.IsError);
+    }
+
+    [Fact]
     public async Task Cancel_acknowledges_through_provider()
     {
         var handler = CreateHandler(out var provider);

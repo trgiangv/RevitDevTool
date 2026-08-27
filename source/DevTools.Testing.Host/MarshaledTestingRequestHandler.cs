@@ -41,8 +41,11 @@ public sealed class MarshaledTestingRequestHandler : IBridgeRequestHandler, IBri
         CancellationToken ct)
     {
         ExecutionGuardContext.Mode = ExecutionGuardMode.Suppress;
+        // Do not pass the pipe-disconnect token into ExecuteAsync. Cancelling the
+        // dispatcher Task while the test is frozen at a breakpoint leaves idle
+        // work running with a disposed CTS and parks later testing/run forever.
         return await _hostContext.ExecuteAsync(
-                () => _inner.HandleAsync(requestId, method, @params, ct).GetAwaiter().GetResult(), ct)
+                () => _inner.HandleAsync(requestId, method, @params, ct).GetAwaiter().GetResult())
             .ConfigureAwait(false);
     }
 }

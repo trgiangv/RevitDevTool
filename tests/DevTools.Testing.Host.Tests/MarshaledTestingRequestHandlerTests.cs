@@ -43,6 +43,7 @@ public sealed class MarshaledTestingRequestHandlerTests
 
         Assert.False(runResponse.IsError);
         Assert.Equal(1, executor.ExecutionCount);
+        Assert.False(executor.LastToken.CanBeCanceled);
         Assert.Equal(runId, provider.LastRunId);
     }
 
@@ -53,8 +54,11 @@ public sealed class MarshaledTestingRequestHandlerTests
         public Task<T> ExecuteAsync<T>(Func<T> handler, CancellationToken token = default)
         {
             ExecutionCount++;
+            LastToken = token;
             return Task.FromResult(handler());
         }
+
+        public CancellationToken LastToken { get; private set; }
 
         public Task ExecuteAsync(Action action, CancellationToken token = default)
         {

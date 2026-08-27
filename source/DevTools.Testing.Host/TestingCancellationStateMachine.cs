@@ -24,6 +24,8 @@ public sealed class TestingCancellationStateMachine
             $"Invalid cancellation transition {State} -> {next}.");
     }
 
+    public void Reset() => State = TestingCancellationState.None;
+
     public static bool IsTerminal(TestingCancellationState state) =>
         state is TestingCancellationState.Completed or TestingCancellationState.Poisoned;
 

@@ -45,6 +45,17 @@ public sealed class DevToolsPipeServer(
     {
         public BridgePipeConnection Connection { get; } = connection;
         public CancellationTokenSource RequestCts { get; } = requestCts;
+        public int InFlight;
+        public int Removed;
+        private int _ctsDisposed;
+
+        public void DisposeRequestCts()
+        {
+            if (Interlocked.Exchange(ref _ctsDisposed, 1) != 0)
+                return;
+
+            RequestCts.Dispose();
+        }
     }
 
     public Task StartAsync(CancellationToken cancellationToken)
@@ -127,37 +138,41 @@ public sealed class DevToolsPipeServer(
         var conn = new BridgePipeConnection(pipe);
         var requestCts = CancellationTokenSource.CreateLinkedTokenSource(_cts!.Token);
         var connectionId = Interlocked.Increment(ref _nextConnectionId);
-        _connections[connectionId] = new ConnectionEntry(conn, requestCts);
+        var entry = new ConnectionEntry(conn, requestCts);
+        _connections[connectionId] = entry;
         state.SetConnectedState(_connections.IsEmpty ? 0 : 1);
 #if DEBUG
         logger.ZLogInformation($"Client connected. Active clients: {_connections.Count}");
 #endif
 
-        // Disconnect must cancel the connection token so host handlers (NUnit run, etc.)
-        // stop instead of holding the Revit executor after Runner/adapter kill.
-        conn.MessageReceived += msg => OnMessageReceived(conn, requestCts.Token, msg);
-        conn.Disconnected += () =>
-        {
-            try { requestCts.Cancel(); } catch { /* best effort */ }
-            if (_connections.TryRemove(connectionId, out var entry))
-            {
-                entry.Connection.Dispose();
-                entry.RequestCts.Dispose();
-            }
-
-            state.SetConnectedState(_connections.IsEmpty ? 0 : 1);
-#if DEBUG
-            logger.ZLogInformation($"Client disconnected. Active clients: {_connections.Count}");
-#endif
-        };
+        // Disconnect cancels in-flight work but must not dispose the CTS while
+        // testing/run is still on the host thread (breakpoint / idle marshal).
+        conn.MessageReceived += msg => OnMessageReceived(entry, msg);
+        conn.Disconnected += () => OnDisconnected(connectionId);
         conn.StartReadLoop();
     }
 
-    private async void OnMessageReceived(
-        BridgePipeConnection connection,
-        CancellationToken requestCt,
-        BridgeMessage msg)
+    private void OnDisconnected(int connectionId)
     {
+        if (!_connections.TryRemove(connectionId, out var entry))
+            return;
+
+        Interlocked.Exchange(ref entry.Removed, 1);
+        try { entry.RequestCts.Cancel(); } catch { /* best effort */ }
+        entry.Connection.Dispose();
+        if (Volatile.Read(ref entry.InFlight) == 0)
+            entry.DisposeRequestCts();
+
+        state.SetConnectedState(_connections.IsEmpty ? 0 : 1);
+#if DEBUG
+        logger.ZLogInformation($"Client disconnected. Active clients: {_connections.Count}");
+#endif
+    }
+
+    private async void OnMessageReceived(ConnectionEntry entry, BridgeMessage msg)
+    {
+        Interlocked.Increment(ref entry.InFlight);
+        var requestCt = entry.RequestCts.Token;
         try
         {
             if (msg is not { Type: BridgeMessage.TypeRequest, Id: not null, Method: not null })
@@ -183,7 +198,7 @@ public sealed class DevToolsPipeServer(
             try
             {
                 if (!requestCt.IsCancellationRequested)
-                    await connection.WriteAsync(response, requestCt).ConfigureAwait(false);
+                    await entry.Connection.WriteAsync(response, requestCt).ConfigureAwait(false);
             }
             catch (Exception ex)
             {
@@ -193,6 +208,12 @@ public sealed class DevToolsPipeServer(
         catch (Exception ex)
         {
             logger.ZLogError($"Unhandled error in message handler: {ex}");
+        }
+        finally
+        {
+            if (Interlocked.Decrement(ref entry.InFlight) == 0
+                && Volatile.Read(ref entry.Removed) != 0)
+                entry.DisposeRequestCts();
         }
     }
 

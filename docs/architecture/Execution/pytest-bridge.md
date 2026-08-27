@@ -54,6 +54,7 @@ sequenceDiagram
 - **`sys.__pytest_running__`**: Flag set by PytestRunner to prevent setup scripts from hijacking stdout/stderr.
 - **Execution Guard**: Mode set to `Suppress` for the entire test session — tests run without dialog/failure interruption.
 - **Progress notifications**: CLI gets real-time `tests/progress` notifications; IDE adapters get batch results.
+- **Host-thread marshal**: `ExecuteAsync` does not take the pipe-disconnect token. Cancelling the dispatcher Task while idle work is frozen (breakpoint) parks later `tests/run` / `testing/run`.
 
 ---
 
