@@ -147,6 +147,7 @@ public sealed class AdapterArchitectureTests
         {
             "HostLocator",
             "IHostSession",
+            "ITestSession",
             "Revit.exe",
             "acad.exe",
             "Microsoft.Win32.Registry",

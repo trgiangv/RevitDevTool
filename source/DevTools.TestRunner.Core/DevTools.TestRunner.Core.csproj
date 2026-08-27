@@ -9,6 +9,9 @@
         <PackageReference Include="Microsoft.VisualStudio.Interop" />
     </ItemGroup>
     <ItemGroup>
+        <InternalsVisibleTo Include="DevTools.TestRunner.Core.Tests" />
+    </ItemGroup>
+    <ItemGroup>
         <Using Include="DevTools.Ipc" />
     </ItemGroup>
     <ItemGroup>

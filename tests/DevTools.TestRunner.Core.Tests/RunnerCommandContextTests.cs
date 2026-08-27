@@ -1,4 +1,3 @@
-using DevTools.Testing.Transport;
 using DevTools.TestRunner.Core.Parsing;
 
 namespace DevTools.TestRunner.Core.Tests;
@@ -9,7 +8,6 @@ public sealed class RunnerCommandContextTests
     public void TryCreate_normalizes_host_debug_and_framework()
     {
         var created = RunnerCommandContext.TryCreate(
-            TestingRunnerCli.RunCommand,
             @"C:\tests\Sample.dll",
             " Revit ",
             " 2026 ",
@@ -35,7 +33,6 @@ public sealed class RunnerCommandContextTests
     public void TryCreate_requires_framework_id()
     {
         var created = RunnerCommandContext.TryCreate(
-            TestingRunnerCli.RunCommand,
             @"C:\tests\Sample.dll",
             "Revit",
             "2026",
@@ -56,7 +53,6 @@ public sealed class RunnerCommandContextTests
     public void TryCreate_forwards_an_unknown_framework_id()
     {
         var created = RunnerCommandContext.TryCreate(
-            TestingRunnerCli.RunCommand,
             @"C:\tests\Sample.dll",
             "Revit",
             "2026",

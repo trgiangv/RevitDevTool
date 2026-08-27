@@ -6,7 +6,7 @@ using DevTools.Testing.Transport;
 
 namespace DevTools.TestRunner.Core.Services;
 
-public sealed class TestingPipeClient : IAsyncDisposable
+public sealed class TestPipeClient : IAsyncDisposable
 {
     private const int MaxPendingDiscardedResponses = 32;
     private static readonly TimeSpan CancelSendTimeout = TimeSpan.FromSeconds(2);
@@ -17,7 +17,7 @@ public sealed class TestingPipeClient : IAsyncDisposable
     private readonly ConcurrentDictionary<string, byte> _discardedResponseIds = new(StringComparer.Ordinal);
     private volatile bool _disconnected;
 
-    private TestingPipeClient(Stream? pipe, BridgePipeConnection connection)
+    private TestPipeClient(Stream? pipe, BridgePipeConnection connection)
     {
         _pipe = pipe;
         _connection = connection;
@@ -25,7 +25,7 @@ public sealed class TestingPipeClient : IAsyncDisposable
         _connection.Disconnected += OnDisconnected;
     }
 
-    public static async Task<TestingPipeClient> ConnectAsync(string pipeName, TimeSpan timeout, CancellationToken ct = default)
+    public static async Task<TestPipeClient> ConnectAsync(string pipeName, TimeSpan timeout, CancellationToken ct = default)
     {
         var pipe = new NamedPipeClientStream(".", pipeName, PipeDirection.InOut, PipeOptions.Asynchronous);
         using var connectCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
@@ -33,15 +33,15 @@ public sealed class TestingPipeClient : IAsyncDisposable
         await pipe.ConnectAsync(connectCts.Token).ConfigureAwait(false);
 
         var connection = new BridgePipeConnection(pipe);
-        var client = new TestingPipeClient(pipe, connection);
+        var client = new TestPipeClient(pipe, connection);
         connection.StartReadLoop();
         return client;
     }
 
-    internal static TestingPipeClient ConnectForTesting(Stream stream)
+    internal static TestPipeClient ConnectForTesting(Stream stream)
     {
         var connection = new BridgePipeConnection(stream);
-        var client = new TestingPipeClient(pipe: null, connection);
+        var client = new TestPipeClient(pipe: null, connection);
         connection.StartReadLoop();
         return client;
     }
@@ -162,6 +162,12 @@ public sealed class TestingPipeClient : IAsyncDisposable
     private void MarkResponseDiscarded(string requestId)
     {
         _discardedResponseIds.TryAdd(requestId, 0);
+        DropDiscardedResponsesFromInbox();
+        TrimDiscardedResponseIds();
+    }
+
+    private void DropDiscardedResponsesFromInbox()
+    {
         if (_inbox.IsEmpty)
             return;
 
@@ -174,7 +180,10 @@ public sealed class TestingPipeClient : IAsyncDisposable
             if (!TryConsumeDiscardedResponse(message))
                 _inbox.Enqueue(message);
         }
+    }
 
+    private void TrimDiscardedResponseIds()
+    {
         while (_discardedResponseIds.Count > MaxPendingDiscardedResponses)
         {
             foreach (var id in _discardedResponseIds.Keys)

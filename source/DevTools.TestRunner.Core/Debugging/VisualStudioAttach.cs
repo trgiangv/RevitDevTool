@@ -4,17 +4,17 @@ using EnvDTE;
 
 namespace DevTools.TestRunner.Core.Debugging;
 
-public sealed class VisualStudioAttach : IVisualStudioAttach
+public sealed class VisualStudioAttach : IDebuggerAttach
 {
     public static VisualStudioAttach Instance { get; } = new();
 
     internal static TimeSpan AttachTimeout { get; } = TimeSpan.FromSeconds(15);
 
-    public bool TryAttach(int hostProcessId, int? parentProcessId, TextWriter warnings)
+    public bool TryAttach(AttachTarget target, TextWriter warnings)
     {
         try
         {
-            var dte = FindDte(parentProcessId);
+            var dte = FindDte(target.ParentProcessId);
             if (dte is null)
             {
                 warnings.WriteLine(
@@ -22,25 +22,25 @@ public sealed class VisualStudioAttach : IVisualStudioAttach
                 return false;
             }
 
-            var process = FindLocalProcess(dte, hostProcessId);
+            var process = FindLocalProcess(dte, target.HostProcessId);
             if (process is null)
             {
                 warnings.WriteLine(
-                    $"Visual Studio does not list host process {hostProcessId}; skipping debugger attach.");
+                    $"Visual Studio does not list host process {target.HostProcessId}; skipping debugger attach.");
                 return false;
             }
 
             process.Attach();
-            if (WaitUntilDebugging(dte, hostProcessId, AttachTimeout))
+            if (WaitUntilDebugging(dte, target.HostProcessId, AttachTimeout))
                 return true;
 
             warnings.WriteLine(
-                $"Visual Studio did not confirm attach to host PID {hostProcessId} within {AttachTimeout.TotalSeconds:0}s.");
+                $"Visual Studio did not confirm attach to host PID {target.HostProcessId} within {AttachTimeout.TotalSeconds:0}s.");
             return false;
         }
         catch (Exception ex)
         {
-            warnings.WriteLine($"Failed to attach Visual Studio to host PID {hostProcessId}: {ex.Message}");
+            warnings.WriteLine($"Failed to attach Visual Studio to host PID {target.HostProcessId}: {ex.Message}");
             return false;
         }
     }
@@ -90,6 +90,9 @@ public sealed class VisualStudioAttach : IVisualStudioAttach
             try
             {
                 CreateBindCtx(0, out ctx);
+                if (ctx is null)
+                    continue;
+
                 monikers[0].GetDisplayName(ctx, null, out var name);
                 if (string.IsNullOrWhiteSpace(name)
                     || name.IndexOf("VisualStudio.DTE", StringComparison.OrdinalIgnoreCase) < 0)

@@ -7,11 +7,12 @@ namespace DevTools.TestRunner.Core.Services;
 /// <c>false</c> reuses a matching-version instance when one is already running
 /// (oldest PID / first listed pipe), otherwise starts a new host.
 /// <c>true</c> always starts a new host for this Runner invocation and waits
-/// for that process pipe. Does not kill an existing session.
-/// Wait/dialog lifetime is <see cref="HostLaunchWait"/> (pytest style).
+/// for that process pipe. Does not kill a reused session. Cancel or launch
+/// timeout kills only the process this invocation spawned.
+/// Wait/dialog lifetime is <see cref="HostLaunchWaiter"/> (pytest style).
 /// Oldest-PID reuse stays Runner policy, not Hosting.
 /// </summary>
-public interface IHostSession
+public interface ITestSession
 {
     Task<HostPipeInstance> EnsurePipeAsync(
         HostApp hostApp,
@@ -21,7 +22,7 @@ public interface IHostSession
         CancellationToken cancellationToken = default);
 }
 
-public sealed class HostSession(IHostLaunchService launchService) : IHostSession
+public sealed class TestSession(IHostLaunchService launchService) : ITestSession
 {
     public async Task<HostPipeInstance> EnsurePipeAsync(
         HostApp hostApp,
@@ -38,27 +39,29 @@ public sealed class HostSession(IHostLaunchService launchService) : IHostSession
                 return existing;
         }
 
+        cancellationToken.ThrowIfCancellationRequested();
         var started = launchService.Start(
             new HostLaunchRequest(hostApp, version, FilePath: null, Options: null),
             cancellationToken);
 
         try
         {
-            var status = await HostLaunchWait.UntilAsync(
+            var status = await HostLaunchWaiter.UntilAsync(
                     started.Process,
                     () => HostLocator.Discover(hostName, version)
                         .Any(instance => instance.ProcessId == started.Process.Id),
                     launchTimeout,
                     cancellationToken)
                 .ConfigureAwait(false);
+            HostLaunchWaiter.TerminateIfIncomplete(started.Process, status);
 
             return status switch
             {
-                HostReadyStatus.Ready => HostLocator.Discover(hostName, version)
+                HostStatus.Ready => HostLocator.Discover(hostName, version)
                     .First(instance => instance.ProcessId == started.Process.Id),
-                HostReadyStatus.Exited => throw new InvalidOperationException(
+                HostStatus.Exited => throw new InvalidOperationException(
                     $"{hostApp} exited before the DevTools control pipe became available (PID={started.Process.Id})."),
-                HostReadyStatus.Cancelled => throw new OperationCanceledException(cancellationToken),
+                HostStatus.Cancelled => throw new OperationCanceledException(cancellationToken),
                 _ => throw new TimeoutException(
                     $"{hostApp} {version} launched (PID={started.Process.Id}) but no control pipe appeared within {launchTimeout.TotalSeconds:0}s.")
             };

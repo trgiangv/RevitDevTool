@@ -1,24 +1,23 @@
 namespace DevTools.TestRunner.Core.Debugging;
 
-public sealed class HostDebugAttachScope : IDisposable
+public sealed class DebugAttachScope : IDisposable
 {
-    private readonly IVisualStudioAttach _attach;
+    private readonly IDebuggerAttach _attach;
     private readonly int _hostProcessId;
     private readonly TextWriter _warnings;
     private bool _disposed;
 
-    private HostDebugAttachScope(IVisualStudioAttach attach, int hostProcessId, TextWriter warnings)
+    private DebugAttachScope(IDebuggerAttach attach, int hostProcessId, TextWriter warnings)
     {
         _attach = attach;
         _hostProcessId = hostProcessId;
         _warnings = warnings;
     }
 
-    public static HostDebugAttachScope? TryBegin(
+    public static DebugAttachScope? TryBegin(
         bool enabled,
-        int hostProcessId,
-        int? parentProcessId,
-        IVisualStudioAttach attach,
+        AttachTarget target,
+        IDebuggerAttach attach,
         TextWriter warnings)
     {
         if (!enabled)
@@ -27,8 +26,8 @@ public sealed class HostDebugAttachScope : IDisposable
         ArgumentNullException.ThrowIfNull(attach);
         ArgumentNullException.ThrowIfNull(warnings);
 
-        attach.TryAttach(hostProcessId, parentProcessId, warnings);
-        return new HostDebugAttachScope(attach, hostProcessId, warnings);
+        attach.TryAttach(target, warnings);
+        return new DebugAttachScope(attach, target.HostProcessId, warnings);
     }
 
     public void Dispose()

@@ -9,8 +9,8 @@ using DevTools.TestRunner.Core.Services;
 namespace DevTools.TestRunner;
 
 public sealed class RunnerCommands(
-    IHostExecutionCoordinator execution,
-    IVisualStudioAttach debugger)
+    IExecutionCoordinator execution,
+    IDebuggerAttach debugger)
 {
     /// <summary>
     /// Run tests inside the Autodesk host through <c>testing/run</c>.
@@ -25,8 +25,8 @@ public sealed class RunnerCommands(
     /// <param name="forceLaunch">Always launch a new host (skip reuse).</param>
     /// <param name="perTestTimeout">Per-test budget in seconds. When launched from the adapter this is already scaled by the run's test count.</param>
     /// <param name="launchTimeout">Wait for host pipe after launch, in seconds.</param>
-    /// <param name="debug">Attach Visual Studio to the host (GetActiveObject when --debug-parent-pid is omitted).</param>
-    /// <param name="debugParentPid">MTP/testhost PID. Presence implies --debug and selects that Visual Studio instance.</param>
+    /// <param name="debug">Attach the parent IDE to the Autodesk host (Visual Studio any-instance when --debug-parent-pid is omitted).</param>
+    /// <param name="debugParentPid">MTP/testhost PID. Presence implies --debug and selects the Visual Studio instance debugging that process.</param>
     /// <param name="framework">In-host engine id from the test project <c>devtools</c> section.</param>
     [Command("run")]
     public async Task<int> Run(
@@ -45,7 +45,6 @@ public sealed class RunnerCommands(
         CancellationToken cancellationToken = default)
     {
         if (!RunnerCommandContext.TryCreate(
-                TestingRunnerCli.RunCommand,
                 assembly,
                 host,
                 hostVersion,
@@ -74,18 +73,29 @@ public sealed class RunnerCommands(
             Console.Error.WriteLine($"[progress] {result.DisplayName} -> {result.Outcome}");
         });
 
-        var result = await execution.RunTestingAsync(
+        var result = await execution.ExecuteAsync(
                 options.Context,
-                new TestingRunRequest(
-                    TestingProtocol.CurrentVersion,
-                    Guid.NewGuid(),
-                    options.FrameworkId,
-                    new TestingAssemblyReference(options.AssemblyPath, null, null),
-                    options.Selection,
-                    new Dictionary<string, string>()),
-                progress,
-                TimeSpan.FromSeconds(TestingHostTiming.HostPipeConnectTimeoutSeconds),
                 debugger,
+                async (pipe, requestCancellationToken) =>
+                {
+                    await using var client = await TestPipeClient.ConnectAsync(
+                            pipe.PipeName,
+                            TimeSpan.FromSeconds(TestingHostTiming.HostPipeConnectTimeoutSeconds),
+                            requestCancellationToken)
+                        .ConfigureAwait(false);
+                    await client.HelloAsync(options.FrameworkId, requestCancellationToken).ConfigureAwait(false);
+                    return await client.RunAsync(
+                            new TestingRunRequest(
+                                TestingProtocol.CurrentVersion,
+                                Guid.NewGuid(),
+                                options.FrameworkId,
+                                new TestingAssemblyReference(options.AssemblyPath, null, null),
+                                options.Selection,
+                                new Dictionary<string, string>()),
+                            progress,
+                            requestCancellationToken)
+                        .ConfigureAwait(false);
+                },
                 cancellationToken)
             .ConfigureAwait(false);
 
@@ -94,8 +104,8 @@ public sealed class RunnerCommands(
             await Console.Error.WriteLineAsync(result.Error ?? "Host execution failed.").ConfigureAwait(false);
             return result.Failure switch
             {
-                HostExecutionFailure.InvalidHost => RunnerExitCode.CliError,
-                HostExecutionFailure.TimedOut => RunnerExitCode.RequestTimeout,
+                ExecutionFailure.InvalidHost => RunnerExitCode.CliError,
+                ExecutionFailure.TimedOut => RunnerExitCode.RequestTimeout,
                 _ => RunnerExitCode.NoHost,
             };
         }

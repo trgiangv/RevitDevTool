@@ -43,11 +43,11 @@ public sealed class HostLaunchCompositionBoundaryTests
     }
 
     [Fact]
-    public void LaunchHostTool_uses_HostLaunchWait_and_culture_language()
+    public void LaunchHostTool_uses_HostLaunchWaiter_and_culture_language()
     {
         var source = File.ReadAllText(Path.Combine(
             FindRepositoryRoot(), "source", "DevTools.Mcp.Server", "Tools", "LaunchHostTool.cs"));
-        Assert.Contains("HostLaunchWait.UntilAsync", source, StringComparison.Ordinal);
+        Assert.Contains("HostLaunchWaiter.UntilAsync", source, StringComparison.Ordinal);
         Assert.Contains("en-US", source, StringComparison.Ordinal);
         Assert.DoesNotContain("Revit ENU", source, StringComparison.Ordinal);
         Assert.DoesNotContain("default 'ENU'", source, StringComparison.Ordinal);

@@ -16,9 +16,9 @@ internal static class Program
         services.AddHostLaunchCore();
         services.AddRevitLaunch(readDocumentYear: null);
         services.AddAutocadFamilyLaunch();
-        services.AddSingleton<IHostSession, HostSession>();
-        services.AddSingleton<IHostExecutionCoordinator, HostExecutionCoordinator>();
-        services.AddSingleton<IVisualStudioAttach>(VisualStudioAttach.Instance);
+        services.AddSingleton<ITestSession, TestSession>();
+        services.AddSingleton<IExecutionCoordinator, ExecutionCoordinator>();
+        services.AddSingleton<IDebuggerAttach>(VisualStudioAttach.Instance);
         await using var serviceProvider = services.BuildServiceProvider();
 
         ConsoleApp.ServiceProvider = serviceProvider;

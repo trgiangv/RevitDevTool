@@ -252,7 +252,7 @@ between resolver and `AcadHostAppInfo` is optional later, not Accept-blocking.
 Identity     DevTools.Hosting          HostApp, IHostAppInfo, FromExtension, IsAcadFamily,
                                        IHostLaunchService, IHostPathResolver,
                                        generic CreateProcess + stdio + dialog resolver,
-                                       HostLaunchWait / HostReadyStatus (one wait loop)
+                                       HostLaunchWaiter / HostReadyStatus (one wait loop)
 Revit launch DevTools.Hosting.Revit    RevitPathResolver, FindCompatibleVersion,
                                        RevitFileAwareHostLaunchService
                                        (no FileMetadata ProjectReference)
@@ -330,7 +330,7 @@ third is a **probe** the caller injects:
 ```text
 Start          IHostLaunchService.Start → HostProcessStart (exe, args, PID)
 Dialogs        StartupDialogResolverHandle — no self-timeout; lives for the wait
-Ready wait     HostLaunchWait.UntilAsync(started, timeout, tryGetReady)
+Ready wait     HostLaunchWaiter.UntilAsync(started, timeout, tryGetReady)
                  → HostReadyWaitResult<T> { Ready | Exited | TimedOut | Cancelled }
 ```
 
@@ -353,7 +353,7 @@ host adds a probe, not a wait type.
 Per-host path / args / dialog is **§4.2 C+D**. Shared-assembly is **§4.2 D2**.
 Ready signal stays a caller probe, not a Hosting type.
 
-Interim: `HostLaunchWait` / `HostReadyStatus` / `HostLaunchTiming` live in
+Interim: `HostLaunchWaiter` / `HostReadyStatus` / `HostLaunchTiming` live in
 `DevTools.Utilities/Hosting` and move with the rest of launch in **C+D**.
 
 ### 4.2 Host capability contracts — DI only, Speckle connector shape
@@ -757,7 +757,7 @@ per the build skill. Do not mix Agents rename with the Hosting move.
 |------|--------|--------|----------------|
 | **A** | Create `DevTools.Hosting` with `HostApp`, `IHostAppInfo`, `FromExtension`, `IsAcadFamily`. Retarget usings. Delete `IsAcadFamily` / `FromExtension` copies on `AcadPathResolver` and `Mcp.Server.Utils` **in this PR** (keep `ProductIdMap`; `FromPipeName` / `ParseHostApp` may stay as thin wrappers). Mcp.Server and **Runner** drop Logging; take Hosting. **NUnit.Host keeps Logging** and adds Hosting for `IHostAppInfo`. Logging references Hosting for `FileLogProcessor`. | `dotnet build` Hosting + Logging + FileMetadata.Core + Runner + NUnit.Host | Duplicate `IsAcadFamily` / `FromExtension`; Runner → Logging; NUnit.Host `using DevTools.Logging` for identity |
 | **B** | Delete `FileHostApplication`. `FileInfoResult.HostApplication` is `HostApp`. Update MCP contract tests. | `DevTools.Mcp.Tests` FileInfo fixtures | `FileHostApplication` |
-| **C+D** | One PR. Stop `Utilities → FileMetadata.Revit`. Generic launch + **three** contracts (`IHostPathResolver`, `IHostArgumentBuilder`, `IHostStartupDialogSpec`) + `AddHostLaunchCore()` → `DevTools.Hosting`. `AddRevitLaunch` / `AddAutocadFamilyLaunch` register implementations. `HostLaunchService` takes `IEnumerable<T>` + `Supports(HostApp)` — no `switch`, no `?? []` for args. Opaque `Options` bag on `HostLaunchRequest` (no `LanguageCode`). Daemon calls Core + both `Add*Launch` (OLE func into `AddRevitLaunch`). Runner uses `ConsoleApp.ServiceProvider` the same way (no OLE, MEDI allowed, no `new HostLaunchService()`). Add-ins **do not** reference launch extensions. Do **not** split `HostSharedAssemblies`. | HostSessionPolicyTests; HostLaunchWaitTests; Hosting.Revit.Tests compatible-year + language (culture `en-US` → argv `ENU`; MCP DTO echoes `en-US`; reject unmapped culture / reject `ENU` on MCP); Hosting.Acad.Tests golden argv (Civil3D = `/ld` + `/p <<C3D_Metric>>` + `/product C3D` + `/language en-US`; Plant3D = `/product PLNT3D` + `/language en-US`; **no** `/nologo` / `/nosplash`); HostLaunchService source has no `switch (HostApp`; at-most-one Supports on the shared `Add*` helper both roots call; dialog Revit catalog is only `unsigned add-in` + blocked `do not load`/`load once`; Acad family only `unsigned executable file` + same blocked pair; generic Hosting has no product dialog strings; Mcp.Server has no FileMetadata.Revit; Runner has no OpenMcdf; Hosting.Revit/Acad **net48 TFM** via `-c Debug`; Daemon `launch_host` with a 2025 `.rvt` still picks installed 2026 if that is the oldest `>= 2025`; **live CLI** (this machine): Civil3D 2026 pipe `DevTools_Civil3D_2026_*`, Plant3D 2027 pipe `DevTools_Plant3D_2027_*`, Revit 2022–2027 `/language ENU` | OpenMcdf on Runner; `Utilities/Hosting/`; `HostLaunchService.Resolve` switch; `new HostLaunchService()` in Runner; `LanguageCode` on generic launch types; Revit launch policy in Daemon; `/nologo`-only Acad argv; private `WaitOutcome` / wait loops |
+| **C+D** | One PR. Stop `Utilities → FileMetadata.Revit`. Generic launch + **three** contracts (`IHostPathResolver`, `IHostArgumentBuilder`, `IHostStartupDialogSpec`) + `AddHostLaunchCore()` → `DevTools.Hosting`. `AddRevitLaunch` / `AddAutocadFamilyLaunch` register implementations. `HostLaunchService` takes `IEnumerable<T>` + `Supports(HostApp)` — no `switch`, no `?? []` for args. Opaque `Options` bag on `HostLaunchRequest` (no `LanguageCode`). Daemon calls Core + both `Add*Launch` (OLE func into `AddRevitLaunch`). Runner uses `ConsoleApp.ServiceProvider` the same way (no OLE, MEDI allowed, no `new HostLaunchService()`). Add-ins **do not** reference launch extensions. Do **not** split `HostSharedAssemblies`. | HostSessionPolicyTests; HostLaunchWaiterTests; Hosting.Revit.Tests compatible-year + language (culture `en-US` → argv `ENU`; MCP DTO echoes `en-US`; reject unmapped culture / reject `ENU` on MCP); Hosting.Acad.Tests golden argv (Civil3D = `/ld` + `/p <<C3D_Metric>>` + `/product C3D` + `/language en-US`; Plant3D = `/product PLNT3D` + `/language en-US`; **no** `/nologo` / `/nosplash`); HostLaunchService source has no `switch (HostApp`; at-most-one Supports on the shared `Add*` helper both roots call; dialog Revit catalog is only `unsigned add-in` + blocked `do not load`/`load once`; Acad family only `unsigned executable file` + same blocked pair; generic Hosting has no product dialog strings; Mcp.Server has no FileMetadata.Revit; Runner has no OpenMcdf; Hosting.Revit/Acad **net48 TFM** via `-c Debug`; Daemon `launch_host` with a 2025 `.rvt` still picks installed 2026 if that is the oldest `>= 2025`; **live CLI** (this machine): Civil3D 2026 pipe `DevTools_Civil3D_2026_*`, Plant3D 2027 pipe `DevTools_Plant3D_2027_*`, Revit 2022–2027 `/language ENU` | OpenMcdf on Runner; `Utilities/Hosting/`; `HostLaunchService.Resolve` switch; `new HostLaunchService()` in Runner; `LanguageCode` on generic launch types; Revit launch policy in Daemon; `/nologo`-only Acad argv; private `WaitOutcome` / wait loops |
 | **E** | Move `SelectFolder` + Shell to Presentation. Move `HostUiHelper` and WPF `Window` extensions to UI. Drop Utilities → Logging and Shell. Confirm Utilities has no Autodesk strings, no `UseWPF`, no FileMetadata. **Must land before H.** | Utilities + NUnit.Host compile on **net48** without PresentationFramework in NUnit.Host’s *direct* graph after this PR (full UI-free gate still waits for H). Folder pickers still work in Presentation | Shell on Runner/Utilities; WPF types in Utilities |
 | **D2** | After E. `IHostSharedAssemblyPolicy` in `Hosting.<Host>`; `AddRevitInProcess` / `AddAutocadInProcess`. Ambient `HostSharedAssemblies.Use(policy)` at add-in startup — static ALC hooks keep calling `IsShared`. MahApps/ControlzEx/CommunityToolkit: **one** owner in Execution. `Autodesk.` duplicated on both host policies on purpose. Do not redesign NUnit.Host loaders. Do not treat `Configure(directory)` as a fallback until it has a caller. | Add-in DI registers the singleton (no `Supports()`); `IsShared("RevitAPI")` / `acmgd` still true; generic Hosting has no MahApps strings; Execution owns UI-package prefixes | Host-API names (`RevitAPI`, `acmgd`, …) on static `HostSharedAssemblies`; add-ins hand-registering policy types |
 | **H** | Split `TraceListenerHelper`. Move Scintilla monitor types and `AddLoggingProvider`’s monitor parameter to Presentation. Drop `UseWPF` / Scintilla packages from Logging; keep `Scintilla5.NET` copy on Presentation or net48 hosts. NUnit.Host still references Logging and still receives ZLogger via the host’s headless `AddLoggingProvider` (no pane required). | Logging compiles **without** `UseWPF` on **net48**; pane still works on a net48 host (R22–R24 or net48 Acad); NUnit.Host compiles with Logging and without Presentation | Scintilla / `FrameworkElement` / `PresentationTraceSources` in Logging |
@@ -802,7 +802,7 @@ Do not start **F** before **A** if both touch host csproj in the same week.
 **Keep:** FileMetadata parsers, `IFileReader` catalog, pipe name format,
 `IHostLaunchService` (no oldest-PID policy inside it), the three launch
 contracts + `AddXxxLaunch()` (no `IHostPlugin`), `HostSharedAssemblyNames`
-+ `HostSharedAssemblies.Use` at add-in startup, `HostLaunchWait` / `HostReadyStatus` (one
++ `HostSharedAssemblies.Use` at add-in startup, `HostLaunchWaiter` / `HostReadyStatus` (one
 wait loop; caller probe), EnvDTE in Runner, dialog resolver Win32 engine
 (no self-timeout; lifetime = wait; **no default** product catalogs or class
 names — spec comes from `IHostStartupDialogSpec`),
@@ -849,7 +849,7 @@ names — spec comes from `IHostStartupDialogSpec`),
 15. **Private `WaitOutcome` / wait loop in `LaunchHostTool` (and a second
     copy in Runner `HostSession`)** — looks local, duplicates clocks, and
     dies when a third host or pytest-style timeout is added. Rejected.
-    One `HostLaunchWait.UntilAsync` + caller probe. Dialog resolver has no
+    One `HostLaunchWaiter.UntilAsync` + caller probe. Dialog resolver has no
     self-timeout (pytest); pipe/session wait remains the safety valve.
 16. **Keyed DI `AddKeyedSingleton<IHostPathResolver>(HostApp.Revit, …)`** —
     eight keys for one Acad-family resolver. `Supports(HostApp)` +

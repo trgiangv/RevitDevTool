@@ -19,15 +19,15 @@ public sealed class ComposedRunCommandTests
     public async Task Run_sends_testing_run_with_selection_and_attaches_debugger()
     {
         await using var pipe = new FakeHostPipe();
-        var hosts = new FakeHostSession(pipe.PipeName);
+        var hosts = new FakeTestSession(pipe.PipeName);
         var debugger = new FakeDebugger();
         var services = new ServiceCollection();
-        services.AddSingleton<IHostSession>(hosts);
-        services.AddSingleton<IHostExecutionCoordinator, HostExecutionCoordinator>();
-        services.AddSingleton<IVisualStudioAttach>(debugger);
+        services.AddSingleton<ITestSession>(hosts);
+        services.AddSingleton<IExecutionCoordinator, ExecutionCoordinator>();
+        services.AddSingleton<IDebuggerAttach>(debugger);
         await using var provider = services.BuildServiceProvider();
         var commands = new RunnerCommands(
-            provider.GetRequiredService<IHostExecutionCoordinator>(),
+            provider.GetRequiredService<IExecutionCoordinator>(),
             debugger);
 
         await ConsoleGate.WaitAsync(TestContext.Current.CancellationToken);
@@ -62,7 +62,7 @@ public sealed class ComposedRunCommandTests
         Assert.Contains("framework_id", stdout.ToString(), StringComparison.Ordinal);
     }
 
-    private sealed class FakeHostSession(string pipeName) : IHostSession
+    private sealed class FakeTestSession(string pipeName) : ITestSession
     {
         public int Calls { get; private set; }
 
@@ -76,14 +76,14 @@ public sealed class ComposedRunCommandTests
         }
     }
 
-    private sealed class FakeDebugger : IVisualStudioAttach
+    private sealed class FakeDebugger : IDebuggerAttach
     {
         public (int HostPid, int? ParentPid)? Attached { get; private set; }
         public int? DetachedProcessId { get; private set; }
 
-        public bool TryAttach(int hostProcessId, int? parentProcessId, TextWriter warnings)
+        public bool TryAttach(AttachTarget target, TextWriter warnings)
         {
-            Attached = (hostProcessId, parentProcessId);
+            Attached = (target.HostProcessId, target.ParentProcessId);
             return true;
         }
 

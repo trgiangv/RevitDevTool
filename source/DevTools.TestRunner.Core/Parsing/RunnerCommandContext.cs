@@ -2,7 +2,6 @@ namespace DevTools.TestRunner.Core.Parsing;
 
 /// <summary>Validated CLI context. Framework id is an opaque host-engine token from the adapter.</summary>
 public sealed record RunnerCommandContext(
-    string Command,
     string AssemblyPath,
     string HostName,
     string HostVersion,
@@ -14,7 +13,6 @@ public sealed record RunnerCommandContext(
     string FrameworkId)
 {
     public static bool TryCreate(
-        string command,
         string assemblyPath,
         string hostName,
         string hostVersion,
@@ -62,7 +60,6 @@ public sealed record RunnerCommandContext(
         }
 
         context = new RunnerCommandContext(
-            command,
             Path.GetFullPath(assemblyPath),
             hostName.Trim(),
             hostVersion.Trim(),

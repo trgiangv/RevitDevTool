@@ -83,7 +83,7 @@ public sealed class LaunchHostTool(IHostBroker hostBroker, IHostLaunchService la
 
         try
         {
-            var status = await HostLaunchWait.UntilAsync(
+            var status = await HostLaunchWaiter.UntilAsync(
                     started.Process,
                     () => hostBroker.GetByProcessId(started.Process.Id) is not null,
                     BridgeTimeout,
@@ -94,12 +94,12 @@ public sealed class LaunchHostTool(IHostBroker hostBroker, IHostLaunchService la
                 ? null
                 : await started.DialogResolver.TryGetResultAsync(TimeSpan.FromSeconds(5)).ConfigureAwait(false);
 
-            if (status is not HostReadyStatus.Ready)
+            if (status is not HostStatus.Ready)
             {
                 var reason = status switch
                 {
-                    HostReadyStatus.Exited => $"{parsedHost} launched (PID={started.Process.Id}) but exited before the bridge connected.",
-                    HostReadyStatus.Cancelled => $"{parsedHost} launch was cancelled (PID={started.Process.Id}).",
+                    HostStatus.Exited => $"{parsedHost} launched (PID={started.Process.Id}) but exited before the bridge connected.",
+                    HostStatus.Cancelled => $"{parsedHost} launch was cancelled (PID={started.Process.Id}).",
                     _ => $"{parsedHost} launched (PID={started.Process.Id}) but bridge did not connect within timeout."
                 };
                 return ToolHelpers.ErrorResult(reason);

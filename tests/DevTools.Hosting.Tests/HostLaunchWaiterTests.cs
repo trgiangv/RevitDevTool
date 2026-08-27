@@ -3,18 +3,18 @@ using DevTools.Hosting;
 
 namespace DevTools.Hosting.Tests;
 
-public sealed class HostLaunchWaitTests
+public sealed class HostLaunchWaiterTests
 {
     [Fact]
     public async Task UntilAsync_returns_Ready_when_probe_succeeds()
     {
-        var status = await HostLaunchWait.UntilAsync(
+        var status = await HostLaunchWaiter.UntilAsync(
             Process.GetCurrentProcess(),
             static () => true,
             TimeSpan.FromSeconds(2),
             TestContext.Current.CancellationToken);
 
-        Assert.Equal(HostReadyStatus.Ready, status);
+        Assert.Equal(HostStatus.Ready, status);
     }
 
     [Fact]
@@ -29,26 +29,26 @@ public sealed class HostLaunchWaitTests
         })!;
         Assert.True(process.WaitForExit(5000));
 
-        var status = await HostLaunchWait.UntilAsync(
+        var status = await HostLaunchWaiter.UntilAsync(
             process,
             static () => false,
             TimeSpan.FromSeconds(2),
             TestContext.Current.CancellationToken);
 
-        Assert.Equal(HostReadyStatus.Exited, status);
+        Assert.Equal(HostStatus.Exited, status);
     }
 
     [Fact]
     public async Task UntilAsync_returns_TimedOut_when_probe_never_succeeds()
     {
-        var status = await HostLaunchWait.UntilAsync(
+        var status = await HostLaunchWaiter.UntilAsync(
             Process.GetCurrentProcess(),
             static () => false,
             TimeSpan.FromMilliseconds(40),
             TestContext.Current.CancellationToken,
             pollInterval: TimeSpan.FromMilliseconds(10));
 
-        Assert.Equal(HostReadyStatus.TimedOut, status);
+        Assert.Equal(HostStatus.TimedOut, status);
     }
 
     [Fact]
@@ -57,12 +57,37 @@ public sealed class HostLaunchWaitTests
         using var cts = CancellationTokenSource.CreateLinkedTokenSource(TestContext.Current.CancellationToken);
         await cts.CancelAsync();
 
-        var status = await HostLaunchWait.UntilAsync(
+        var status = await HostLaunchWaiter.UntilAsync(
             Process.GetCurrentProcess(),
             static () => false,
             TimeSpan.FromSeconds(5),
             cts.Token);
 
-        Assert.Equal(HostReadyStatus.Cancelled, status);
+        Assert.Equal(HostStatus.Cancelled, status);
     }
+
+    [Fact]
+    public void TerminateIfIncomplete_kills_on_cancelled()
+    {
+        using var process = StartLongLived();
+        HostLaunchWaiter.TerminateIfIncomplete(process, HostStatus.Cancelled);
+        Assert.True(process.WaitForExit(5000));
+    }
+
+    [Fact]
+    public void TerminateIfIncomplete_leaves_current_process_on_ready()
+    {
+        var process = Process.GetCurrentProcess();
+        HostLaunchWaiter.TerminateIfIncomplete(process, HostStatus.Ready);
+        Assert.False(process.HasExited);
+    }
+
+    private static Process StartLongLived() =>
+        Process.Start(new ProcessStartInfo
+        {
+            FileName = "cmd.exe",
+            Arguments = "/c ping -t 127.0.0.1",
+            UseShellExecute = false,
+            CreateNoWindow = true,
+        })!;
 }

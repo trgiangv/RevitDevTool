@@ -9,7 +9,7 @@ Product: [`nunit-host-testing.md`](../../product/nunit-host-testing.md),
 [`tunit-host-testing.md`](../../product/tunit-host-testing.md).
 Agent digest: [`nunit-host-testing.md`](../../agents/nunit-host-testing.md).
 
-Last updated: 2026-08-25
+Last updated: 2026-08-27
 
 ---
 
@@ -30,6 +30,8 @@ Last updated: 2026-08-25
 | In-host TUnit.Engine library call | `source/DevTools.TUnit.Runtime/` |
 | TUnit generation / ALC provider | `source/DevTools.TUnit.Host/` |
 | Runner CLI + composition | `source/DevTools.TestRunner/`, `source/DevTools.TestRunner.Core/` |
+| Runner IDE attach (Visual Studio EnvDTE only) | `source/DevTools.TestRunner.Core/Debugging/` |
+| Spawned-host cancel (MTP testhost exit during launch wait) | `DebugHostLifetime`, `HostLaunchWaiter.TerminateIfIncomplete` |
 
 `DevTools.Testing.*` must not reference `DevTools.NUnit.*` or `DevTools.TUnit.*`.
 Each provider owns discovery, identity, filters, and in-host execution. See

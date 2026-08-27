@@ -11,9 +11,9 @@ public sealed class RunnerCommandsTests
     [Fact]
     public async Task Missing_assembly_does_not_use_host_session()
     {
-        var hosts = new ThrowingHostSession();
+        var hosts = new ThrowingTestSession();
         var commands = new RunnerCommands(
-            new HostExecutionCoordinator(hosts),
+            new ExecutionCoordinator(hosts),
             new ThrowingDebugger());
 
         var exitCode = await commands.Run(
@@ -30,7 +30,7 @@ public sealed class RunnerCommandsTests
         Assert.Equal(0, hosts.Calls);
     }
 
-    private sealed class ThrowingHostSession : IHostSession
+    private sealed class ThrowingTestSession : ITestSession
     {
         public int Calls { get; private set; }
 
@@ -41,9 +41,9 @@ public sealed class RunnerCommandsTests
         }
     }
 
-    private sealed class ThrowingDebugger : IVisualStudioAttach
+    private sealed class ThrowingDebugger : IDebuggerAttach
     {
-        public bool TryAttach(int hostProcessId, int? parentProcessId, TextWriter warnings) =>
+        public bool TryAttach(AttachTarget target, TextWriter warnings) =>
             throw new InvalidOperationException("A missing assembly must not attach a debugger.");
 
         public void TryDetach(int hostProcessId, TextWriter warnings) =>

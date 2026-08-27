@@ -11,7 +11,7 @@ public sealed class HostSessionPolicyTests
             "source",
             "DevTools.TestRunner.Core",
             "Services",
-            "HostSession.cs"));
+            "TestSession.cs"));
 
         Assert.Contains("reuses a matching-version instance when one is already running", source, StringComparison.Ordinal);
         Assert.Contains("otherwise starts a new host", source, StringComparison.Ordinal);
@@ -26,7 +26,9 @@ public sealed class HostSessionPolicyTests
         Assert.DoesNotContain("throw new InvalidOperationException", reuseBlock, StringComparison.Ordinal);
         Assert.DoesNotContain("launchService.Start", reuseBlock, StringComparison.Ordinal);
         Assert.Contains("FilePath: null", source, StringComparison.Ordinal);
-        Assert.Contains("HostLaunchWait.UntilAsync", source, StringComparison.Ordinal);
+        Assert.Contains("HostLaunchWaiter.UntilAsync", source, StringComparison.Ordinal);
+        Assert.Contains("HostLaunchWaiter.TerminateIfIncomplete", source, StringComparison.Ordinal);
+        Assert.Contains("Does not kill a reused session", source, StringComparison.Ordinal);
         Assert.DoesNotContain("languageCode: \"ENU\"", source, StringComparison.Ordinal);
         Assert.DoesNotContain("new HostLaunchService()", source, StringComparison.Ordinal);
     }
@@ -40,7 +42,8 @@ public sealed class HostSessionPolicyTests
             "DevTools.TestRunner",
             "RunnerCommands.cs"));
 
-        Assert.Contains("RunTestingAsync", source, StringComparison.Ordinal);
+        Assert.Contains("ExecuteAsync", source, StringComparison.Ordinal);
+        Assert.Contains("TestPipeClient.ConnectAsync", source, StringComparison.Ordinal);
         Assert.DoesNotContain("MetadataTestDiscoverer", source, StringComparison.Ordinal);
         Assert.DoesNotContain("[Command(\"discover\")]", source, StringComparison.Ordinal);
         Assert.DoesNotContain("EnsurePipeAsync", source, StringComparison.Ordinal);
@@ -87,7 +90,7 @@ public sealed class HostSessionPolicyTests
             "source",
             "DevTools.TestRunner.Core",
             "Services",
-            "HostExecutionCoordinator.cs"));
+            "ExecutionCoordinator.cs"));
         var providerSource = File.ReadAllText(Path.Combine(
             repositoryRoot,
             "source",
@@ -95,13 +98,16 @@ public sealed class HostSessionPolicyTests
             "RunnerCommands.cs"));
 
         var ensure = source.IndexOf("EnsurePipeAsync", StringComparison.Ordinal);
-        var attach = source.IndexOf("HostDebugAttachScope.TryBegin", StringComparison.Ordinal);
+        var attach = source.IndexOf("DebugAttachScope.TryBegin", StringComparison.Ordinal);
         var run = source.IndexOf("await operation", StringComparison.Ordinal);
         Assert.True(ensure >= 0 && attach > ensure && run > attach);
-        Assert.Contains("context.Debug", source, StringComparison.Ordinal);
+        Assert.Contains("DebugHostLifetime.Link", source, StringComparison.Ordinal);
         Assert.Contains("context.DebugParentPid", source, StringComparison.Ordinal);
-        Assert.Contains("pipe.ProcessId", source, StringComparison.Ordinal);
-        Assert.Contains("RunTestingAsync", providerSource, StringComparison.Ordinal);
+        var attachBlock = source[attach..run];
+        Assert.Contains("new AttachTarget", attachBlock, StringComparison.Ordinal);
+        Assert.Contains("context.AssemblyPath", attachBlock, StringComparison.Ordinal);
+        Assert.DoesNotContain("context.HostVersion", attachBlock, StringComparison.Ordinal);
+        Assert.Contains("ExecuteAsync", providerSource, StringComparison.Ordinal);
         Assert.DoesNotContain("EnsurePipeAsync", providerSource, StringComparison.Ordinal);
     }
 
