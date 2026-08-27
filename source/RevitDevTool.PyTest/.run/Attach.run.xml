@@ -1,0 +1,8 @@
+<component name="ProjectRunConfigurationManager">
+  <configuration default="false" name="Attach Host: Python" type="PythonDapAttachConfiguration">
+    <option name="localRoot" value="$PROJECT_DIR$" />
+    <option name="remoteAddress" value="localhost:5678" />
+    <option name="remoteRoot" value="$PROJECT_DIR$" />
+    <method v="2" />
+  </configuration>
+</component>

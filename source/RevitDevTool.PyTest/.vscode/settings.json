@@ -21,5 +21,5 @@
     ],
     "basedpyright.importStrategy": "useBundled",
     "basedpyright.analysis.typeCheckingMode": "off",
-    "python.testing.pytestEnabled": true,
+    "python.testing.pytestEnabled": true
 }
