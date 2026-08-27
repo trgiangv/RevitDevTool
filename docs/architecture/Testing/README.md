@@ -5,11 +5,11 @@ execution goes through `DevTools.TestRunner` into the host `testing/*`
 handler. NUnit is the default provider; TUnit is supported on Revit and
 AutoCAD-family hosts.
 
-Product: [`nunit-host-testing.md`](../../product/nunit-host-testing.md),
+Product: [`host-testing.md`](../../product/host-testing.md),
 [`tunit-host-testing.md`](../../product/tunit-host-testing.md).
-Agent digest: [`nunit-host-testing.md`](../../agents/nunit-host-testing.md).
+Agent digest: [`host-testing.md`](../../agents/host-testing.md).
 
-Last updated: 2026-08-27
+Last updated: 2026-08-28
 
 ---
 
@@ -123,6 +123,14 @@ flowchart LR
 ```
 
 Testhost never loads Autodesk APIs. Host execution stays in the add-in.
+
+`testing/run` is marshaled onto the host idle thread. `ExecuteAsync` must not
+take the pipe-disconnect token (same as pytest `tests/run`). Cancelling that
+dispatcher Task while a test is frozen at a breakpoint leaves idle work
+running and parks later `testing/run` because `ExternalEvent` is still
+pending. Disconnect still cancels the request CTS, but the pipe server does
+not dispose it until in-flight `OnMessageReceived` finishes. `testing/hello`
+resets a Completed/Poisoned session so a new client is not stuck.
 
 ### Adapter bootstrap
 

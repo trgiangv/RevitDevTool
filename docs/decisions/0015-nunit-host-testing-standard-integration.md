@@ -35,7 +35,7 @@ DevTools does not depend on those packages and owns transport, DI, stamp-keyed
 per-file shadow, and multi-host wiring.
 
 Product overview, coexistence notes, NuGet status, and gaps:
-`docs/product/nunit-host-testing.md`.
+`docs/product/host-testing.md`.
 
 ## Decision
 

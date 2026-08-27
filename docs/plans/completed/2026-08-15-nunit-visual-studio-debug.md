@@ -16,7 +16,7 @@ Cancel during host boot kills only a host this run spawned.
 
 ## Context
 
-- Product: `docs/product/nunit-host-testing.md`
+- Product: `docs/product/host-testing.md`
 - Decision: 0016 decision 11, amended by 0025
 - MTP has no public `client/attachDebugger` API (testfx#5490)
 

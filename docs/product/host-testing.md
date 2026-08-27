@@ -1,10 +1,11 @@
-# Host testing
+# MTP host testing
 
 RevitDevTool runs tests inside Revit, AutoCAD, and Civil 3D through
 Microsoft.Testing.Platform. `RevitDevTool.TestAdapter` is the only public test
-integration package. The VSTest adapter and NUnit-specific bridge protocol are
-not part of the supported product on `develop`; their final baseline is retained
-on branch `testing/nunit-vstest`.
+integration package. NUnit is the default engine; TUnit is an opt-in provider
+([tunit-host-testing.md](tunit-host-testing.md)). The VSTest adapter and
+NUnit-specific bridge protocol are not part of the supported product on
+`develop`; their final baseline is retained on branch `testing/nunit-vstest`.
 
 ## User contract
 
@@ -21,6 +22,9 @@ on branch `testing/nunit-vstest`.
   Cancel or launch timeout kills only a host this run spawned (not a reused
   instance). Visual Studio Stop Debugging during that wait cancels when the
   testhost PID (`--debug-parent-pid`) exits, then kills the in-flight host.
+  Cancel while a breakpoint is hit in the reused host does not free the idle
+  thread until you Continue (or detach). The next `testing/hello` starts a
+  new session; it does not inherit a poisoned cancel from the dropped client.
 - Override `TestingFramework` in the test
   csproj to change the in-host engine without changing the NuGet. Default
   engine is NUnit (`TestingFramework=nunit`).

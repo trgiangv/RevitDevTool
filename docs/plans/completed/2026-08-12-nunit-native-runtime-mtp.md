@@ -40,7 +40,7 @@ the native NUnit/MTP release.
 - Historical decision:
   [`0015-nunit-host-testing-standard-integration.md`](../../decisions/0015-nunit-host-testing-standard-integration.md)
 - Current product behavior:
-  [`nunit-host-testing.md`](../../product/nunit-host-testing.md)
+  [`host-testing.md`](../../product/host-testing.md)
 - Native host path: `NUnitRuntimeManager` + TFM session factory (`NUnitReflectionRunner` deleted).
 - Public consumer package (P1): `DevTools.NUnit` from `source/DevTools.NUnit.Mtp/`.
 - Current probe loader:

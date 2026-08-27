@@ -65,7 +65,7 @@ During `testing/run`, NUnit and TUnit replace `Console.Out`. Console then reache
 monitor only via Runtime write-through of framework stdout (trailing
 newlines stripped). `Trace` / `Debug` still use this table unchanged.
 See [0017](../../decisions/0017-nunit-host-test-output-routing.md),
-[product/nunit-host-testing.md](../../product/nunit-host-testing.md), and
+[product/host-testing.md](../../product/host-testing.md), and
 [product/tunit-host-testing.md](../../product/tunit-host-testing.md).
 
 ---

@@ -28,8 +28,7 @@ stays `FileMetadata.*`; add-in DI lives in `RevitDevTool/Composition` /
 | PyTest bridge | [architecture/PyTest](architecture/PyTest/README.md) | [product/pytest-bridge.md](product/pytest-bridge.md) | [agents/mcp-pytest-bridge.md](agents/mcp-pytest-bridge.md) |
 | Logging | [architecture/Logging](architecture/Logging/README.md) | [product/logging.md](product/logging.md) | — |
 | Visualization | [architecture/Visualization](architecture/Visualization/README.md) | [product/visualization.md](product/visualization.md) | — |
-| NUnit host testing | [architecture/Testing](architecture/Testing/README.md) | [product/nunit-host-testing.md](product/nunit-host-testing.md) | [agents/nunit-host-testing.md](agents/nunit-host-testing.md) |
-| TUnit host testing | [architecture/Testing](architecture/Testing/README.md) | [product/tunit-host-testing.md](product/tunit-host-testing.md) | [agents/nunit-host-testing.md](agents/nunit-host-testing.md) |
+| MTP host testing | [architecture/Testing](architecture/Testing/README.md) | [product/host-testing.md](product/host-testing.md), [tunit-host-testing.md](product/tunit-host-testing.md) | [agents/host-testing.md](agents/host-testing.md) |
 | PythonDemo | [architecture/PythonDemo](architecture/PythonDemo/README.md) | — | — |
 
 ## Cross-Cutting

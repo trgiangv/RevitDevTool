@@ -27,9 +27,9 @@ discovery **and** run error node.
 - Decision: [0024](../../decisions/0024-testing-core-open-closed-providers.md)
   (closes unimplemented 0021 §1; reviewed twice 2026-08-22)
 - Structure: [docs/architecture/Testing/README.md](../../architecture/Testing/README.md)
-- Product: [nunit-host-testing.md](../../product/nunit-host-testing.md),
+- Product: [host-testing.md](../../product/host-testing.md),
   [tunit-host-testing.md](../../product/tunit-host-testing.md)
-- Agent trap page: [agents/nunit-host-testing.md](../../agents/nunit-host-testing.md)
+- Agent trap page: [agents/host-testing.md](../../agents/host-testing.md)
 
 ## Scope
 
@@ -50,7 +50,7 @@ Do not edit the other slice’s files. Task 4 (docs) after both compile+test.
 |-------|-------|---------------------|
 | Host/provider | 0, 1, 2 | `DevTools.Testing.Host`, `DevTools.NUnit.Host`, `DevTools.TUnit.Host`, `RevitServiceRegistration.cs`, `AcadServiceRegistration.cs`, matching Host/NUnit.Host tests |
 | Testhost | 3 | `DevTools.Testing.Abstractions`, `DevTools.TestAdapter`, `NUnitMTP.cs` / `TUnitMTP.cs` crefs, Adapter + Abstractions tests |
-| Docs | 4 | `docs/architecture/Testing/README.md`, `docs/agents/nunit-host-testing.md` |
+| Docs | 4 | `docs/architecture/Testing/README.md`, `docs/agents/host-testing.md` |
 
 Bump `DevTools.TestAdapter.csproj` `<Version>` only when publishing (`0.0.3`
 today; accidental bumps in the TUnit spike were reverted).
@@ -266,7 +266,7 @@ Move `EnsureSession()` and `RequireDiscoverer()` **inside**
   switch / DLL table at current lines 127–130; generation files public
   member list from 0024 §3; enumerable DI; fail-closed static ctor; run
   error node
-- `docs/agents/nunit-host-testing.md`: missing `mtpAssembly`; user
+- `docs/agents/host-testing.md`: missing `mtpAssembly`; user
   `devtools` without plugin keys is a build Error
 - Product pages only if documenting the two override properties.
 

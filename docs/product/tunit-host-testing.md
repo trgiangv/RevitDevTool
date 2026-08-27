@@ -2,7 +2,8 @@
 
 RevitDevTool runs TUnit tests through the same TestRunner and neutral
 `testing/run` IPC path used by NUnit. TUnit is a framework-specific provider;
-it does not launch or activate hosts.
+it does not launch or activate hosts. Shared MTP contract (launch, reuse,
+cancel, adapter): [host-testing.md](host-testing.md).
 
 Last updated: 2026-08-25
 

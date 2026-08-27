@@ -75,6 +75,6 @@ Tradeoffs:
 
 ## Follow-Up
 
-- Observable contract: [`docs/product/nunit-host-testing.md`](../product/nunit-host-testing.md),
+- Observable contract: [`docs/product/host-testing.md`](../product/host-testing.md),
   [`docs/product/tunit-host-testing.md`](../product/tunit-host-testing.md)
 - ConsoleRedirector exception: [`docs/architecture/Logging/output.md`](../architecture/Logging/output.md)
