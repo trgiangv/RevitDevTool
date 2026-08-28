@@ -105,8 +105,9 @@ project, `DevTools.TestRunner`. Runtime sources are Compile-linked into MTP.
   one year is rebuilt, and a missing year folder used to skip the copy silently.
   Closure copy (`SkipUnchangedFiles=true`) excludes `DevTools.*.MTP.dll`.
   Sibling copy always overwrites the selected MTP (`SkipUnchangedFiles=false`)
-  and prefers the in-repo MTP bin over a leftover `build/runtime` nupkg copy
-  so testhost discovery cannot keep a timestamp-stale TUnit/NUnit discoverer.
+  and prefers the in-repo `bin\Debug|Release\$(TFM)\` over a leftover
+  `build/runtime` nupkg copy. Net48 Testing.Abstractions uses the same order.
+  Do not fall back to `bin\$(Configuration)\` or a flattened Autodesk folder.
 
 ---
 
@@ -195,6 +196,13 @@ types as unkeyed singletons from a provider extension.
 Do not add a shared runtime-descriptor catalog. Policy constants stay on the
 provider type. NUnit/TUnit Host csproj remove the solution `Polyfill` global
 package so net48 does not collide with `DevTools.Testing.Host`.
+
+Each provider uses two targets files: `*RuntimePayload.targets` (Runtime owns
+a payload folder) then `*HostPackaging.targets` (add-in copies that folder to
+`NUnitRuntime\` / `TUnitRuntime\`). NUnit payload excludes host-owned
+JSON/Ipc/Isolation/Abstractions. TUnit copies its full private closure.
+net48 pins STJ 9 copy-local in `DevTools.TUnit.Runtime`; the host keeps
+STJ 10 (MCP / ILRepack).
 
 ### Test output
 

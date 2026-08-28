@@ -1,0 +1,49 @@
+<Project>
+  <!--
+    Copy Runtime-owned NUnitRuntimePayload\ into $(TargetDir)NUnitRuntime\.
+    Never use bare $(OutputPath) — empty OutputPath creates source/NUnitRuntime\.
+  -->
+  <PropertyGroup>
+    <NUnitRuntimeProject Condition="'$(NUnitRuntimeProject)' == ''">$(MSBuildThisFileDirectory)..\DevTools.NUnit.Runtime.csproj</NUnitRuntimeProject>
+  </PropertyGroup>
+
+  <Target Name="CopyNUnitRuntimeBootstrap"
+          AfterTargets="Build"
+          BeforeTargets="RepackAddinFiles"
+          Condition="'$(TargetPath)' != '' AND '$(TargetDir)' != ''">
+    <PropertyGroup>
+      <_NUnitRuntimeDeployDir>$([System.IO.Path]::GetFullPath('$(TargetDir)NUnitRuntime\'))</_NUnitRuntimeDeployDir>
+    </PropertyGroup>
+    <MSBuild Projects="$(NUnitRuntimeProject)"
+             Targets="GetNUnitRuntimePayload"
+             Properties="Configuration=$(Configuration);TargetFramework=$(TargetFramework)">
+      <Output TaskParameter="TargetOutputs" ItemName="_NUnitRuntimePayload" />
+    </MSBuild>
+    <Error Condition="'@(_NUnitRuntimePayload)' == ''"
+           Text="NUnit runtime payload from '$(NUnitRuntimeProject)' was empty (TargetFramework=$(TargetFramework))." />
+    <RemoveDir Directories="$(_NUnitRuntimeDeployDir)" Condition="Exists('$(_NUnitRuntimeDeployDir)')" />
+    <MakeDir Directories="$(_NUnitRuntimeDeployDir)" />
+    <Copy SourceFiles="@(_NUnitRuntimePayload)"
+          DestinationFolder="$(_NUnitRuntimeDeployDir)"
+          SkipUnchangedFiles="false" />
+  </Target>
+
+  <Target Name="AssertNUnitRuntimeLayout"
+          AfterTargets="RepackAddinFiles"
+          Condition="'$(ILRepackable)' == 'true' AND '$(TargetDir)' != ''">
+    <Error Condition="!Exists('$(TargetDir)NUnitRuntime\DevTools.NUnit.Runtime.dll')"
+           Text="DevTools.NUnit.Runtime.dll must be deployed under NUnitRuntime\." />
+    <Error Condition="!Exists('$(TargetDir)NUnitRuntime\nunit.framework.dll')"
+           Text="nunit.framework.dll must be deployed under NUnitRuntime\." />
+    <Error Condition="!Exists('$(TargetDir)DevTools.Testing.Abstractions.dll')"
+           Text="DevTools.Testing.Abstractions.dll must stay loose beside the add-in." />
+    <Error Condition="Exists('$(TargetDir)NUnitRuntime\DevTools.Testing.Abstractions.dll')"
+           Text="DevTools.Testing.Abstractions.dll must not ship inside NUnitRuntime\." />
+    <Error Condition="Exists('$(TargetDir)DevTools.NUnit.Runtime.dll') OR Exists('$(TargetDir)nunit.framework.dll') OR Exists('$(TargetDir)DevTools.NUnit.Runner.exe')"
+           Text="NUnit Runtime, nunit.framework, and DevTools.NUnit.Runner.exe must not be copied at the add-in root." />
+    <Error Condition="Exists('$(TargetDir)DevTools.Ipc.dll') OR Exists('$(TargetDir)System.Text.Json.dll') OR Exists('$(TargetDir)System.Text.Encodings.Web.dll') OR Exists('$(TargetDir)System.IO.Pipelines.dll') OR Exists('$(TargetDir)Microsoft.Bcl.AsyncInterfaces.dll') OR Exists('$(TargetDir)DevTools.AssemblyIsolation.dll') OR Exists('$(TargetDir)DevTools.Testing.Host.dll') OR Exists('$(TargetDir)DevTools.Testing.Transport.dll')"
+           Text="Host JSON/IPC/Isolation/Testing.Host/Transport must stay merged into the add-in." />
+    <Error Condition="Exists('$(TargetDir)NUnitRuntime\DevTools.Ipc.dll') OR Exists('$(TargetDir)NUnitRuntime\System.Text.Json.dll') OR Exists('$(TargetDir)NUnitRuntime\System.Text.Encodings.Web.dll') OR Exists('$(TargetDir)NUnitRuntime\System.IO.Pipelines.dll') OR Exists('$(TargetDir)NUnitRuntime\Microsoft.Bcl.AsyncInterfaces.dll') OR Exists('$(TargetDir)NUnitRuntime\DevTools.AssemblyIsolation.dll')"
+           Text="Host-owned assemblies must not ship inside NUnitRuntime\." />
+  </Target>
+</Project>

@@ -1,38 +1,32 @@
 <Project>
-  <Import Project="$(MSBuildThisFileDirectory)..\..\DevTools.NUnit.Host\build\NUnitHostMergedAssemblies.props" />
-
   <!--
-    Runtime owns its deployable private closure under $(TargetDir)NUnitRuntimePayload\.
-    Hosts copy that folder as-is into NUnitRuntime\ — no per-host exclude lists.
+    Runtime owns NUnitRuntimePayload\ (private nunit.framework + this assembly).
+    Hosts copy that folder as-is into NUnitRuntime\.
 
-    Require TargetDir: GetFullPath('NUnitRuntimePayload\') with empty TargetDir
-    resolves to the project directory and creates a stray source folder.
+    Exclude host-owned identities: ILRepack JSON/IPC/Isolation, one loose
+    Testing.Abstractions beside the add-in. Empty TargetDir would resolve
+    NUnitRuntimePayload\ under the project directory — require TargetDir.
   -->
   <Target Name="PrepareNUnitRuntimePayload"
           AfterTargets="Build"
           Condition="'$(TargetPath)' != '' AND '$(TargetDir)' != ''">
     <PropertyGroup>
-      <_NUnitHostOutputDir>$([System.IO.Path]::GetFullPath('$(TargetDir)'))</_NUnitHostOutputDir>
-      <_NUnitRuntimePayloadDir>$([System.IO.Path]::Combine('$(_NUnitHostOutputDir)', 'NUnitRuntimePayload'))</_NUnitRuntimePayloadDir>
+      <_NUnitRuntimeOutputDir>$([System.IO.Path]::GetFullPath('$(TargetDir)'))</_NUnitRuntimeOutputDir>
+      <_NUnitRuntimePayloadDir>$([System.IO.Path]::Combine('$(_NUnitRuntimeOutputDir)', 'NUnitRuntimePayload'))</_NUnitRuntimePayloadDir>
     </PropertyGroup>
     <ItemGroup>
-      <_NUnitRuntimePayloadCandidate Include="$(_NUnitHostOutputDir)*.dll" />
-      <_NUnitRuntimePayloadCandidate Include="$(_NUnitHostOutputDir)$(TargetName).pdb"
-                                     Condition="Exists('$(_NUnitHostOutputDir)$(TargetName).pdb')" />
-      <_NUnitRuntimePayloadExclude Include="$(_NUnitHostOutputDir)%(NUnitHostOwnedAssembly.Identity).dll" />
-      <_NUnitRuntimePayloadExclude Include="$(_NUnitHostOutputDir)%(NUnitHostOwnedAssembly.Identity).pdb" />
-      <_NUnitRuntimePayloadExclude Include="$(_NUnitHostOutputDir)%(TestingSharedAssembly.Identity).dll" />
-      <_NUnitRuntimePayloadExclude Include="$(_NUnitHostOutputDir)%(TestingSharedAssembly.Identity).pdb" />
-      <!-- The host merges the kernel into its main add-in; omit it even if a
-           future runtime project reference would otherwise copy it locally. -->
-      <_NUnitRuntimePayloadExclude Include="$(_NUnitHostOutputDir)DevTools.AssemblyIsolation.dll" />
-      <_NUnitRuntimePayloadExclude Include="$(_NUnitHostOutputDir)DevTools.AssemblyIsolation.pdb" />
-      <_NUnitRuntimePayload Include="@(_NUnitRuntimePayloadCandidate)"
-                            Exclude="@(_NUnitRuntimePayloadExclude)" />
+      <!-- Host ILRepack / one loose Abstractions — never into NUnitRuntimePayload. -->
+      <_NUnitPayloadOmit Include="DevTools.Ipc.dll;System.Text.Json.dll;System.Text.Encodings.Web.dll;System.IO.Pipelines.dll;Microsoft.Bcl.AsyncInterfaces.dll;DevTools.AssemblyIsolation.dll;DevTools.Testing.Abstractions.dll" />
+      <_NUnitRuntimePayload Include="$(_NUnitRuntimeOutputDir)*.dll"
+                            Exclude="@(_NUnitPayloadOmit->'$(_NUnitRuntimeOutputDir)%(Identity)')" />
+      <_NUnitRuntimePayload Include="$(_NUnitRuntimeOutputDir)$(TargetName).pdb"
+                            Condition="Exists('$(_NUnitRuntimeOutputDir)$(TargetName).pdb')" />
     </ItemGroup>
 
-    <Error Condition="'@(_NUnitRuntimePayload)' == ''"
-           Text="NUnit runtime payload candidates were empty under '$(_NUnitHostOutputDir)'." />
+    <Error Condition="!Exists('$(_NUnitRuntimeOutputDir)DevTools.NUnit.Runtime.dll')"
+           Text="NUnit runtime payload requires DevTools.NUnit.Runtime.dll under '$(_NUnitRuntimeOutputDir)'." />
+    <Error Condition="!Exists('$(_NUnitRuntimeOutputDir)nunit.framework.dll')"
+           Text="NUnit runtime payload requires nunit.framework.dll under '$(_NUnitRuntimeOutputDir)'." />
 
     <RemoveDir Directories="$(_NUnitRuntimePayloadDir)" Condition="Exists('$(_NUnitRuntimePayloadDir)')" />
     <MakeDir Directories="$(_NUnitRuntimePayloadDir)" />
@@ -46,8 +40,8 @@
           Returns="@(NUnitRuntimePayloadFile)"
           Condition="'$(TargetPath)' != '' AND '$(TargetDir)' != ''">
     <PropertyGroup>
-      <_NUnitHostOutputDir>$([System.IO.Path]::GetFullPath('$(TargetDir)'))</_NUnitHostOutputDir>
-      <_NUnitRuntimePayloadDir>$([System.IO.Path]::Combine('$(_NUnitHostOutputDir)', 'NUnitRuntimePayload'))</_NUnitRuntimePayloadDir>
+      <_NUnitRuntimeOutputDir>$([System.IO.Path]::GetFullPath('$(TargetDir)'))</_NUnitRuntimeOutputDir>
+      <_NUnitRuntimePayloadDir>$([System.IO.Path]::Combine('$(_NUnitRuntimeOutputDir)', 'NUnitRuntimePayload'))</_NUnitRuntimePayloadDir>
     </PropertyGroup>
     <Error Condition="!Exists('$(_NUnitRuntimePayloadDir)\DevTools.NUnit.Runtime.dll')"
            Text="NUnit runtime payload was not prepared at '$(_NUnitRuntimePayloadDir)'." />

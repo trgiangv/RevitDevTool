@@ -26,18 +26,10 @@
     <InternalsVisibleTo Include="DevTools.TUnit.Runtime.Tests" />
   </ItemGroup>
 
-  <!-- TUnit's netstandard assemblies reference STJ 9 while current MTP tooling
-       uses STJ 10. Keep both exact closures for manifest-based host loading. -->
+  <!-- net48 TUnit.Core/Engine n2.0 bind STJ 9. -->
   <ItemGroup Condition="'$(TargetFrameworkIdentifier)' == '.NETFramework'">
-    <PackageDownload Include="Microsoft.Bcl.AsyncInterfaces" Version="[9.0.0]" />
-    <PackageDownload Include="System.Buffers" Version="[4.5.1]" />
-    <PackageDownload Include="System.IO.Pipelines" Version="[9.0.0]" />
-    <PackageDownload Include="System.Memory" Version="[4.5.5]" />
-    <PackageDownload Include="System.Runtime.CompilerServices.Unsafe" Version="[6.0.0]" />
-    <PackageDownload Include="System.Text.Encodings.Web" Version="[9.0.0]" />
-    <PackageDownload Include="System.Text.Json" Version="[9.0.0]" />
-    <PackageDownload Include="System.Threading.Tasks.Extensions" Version="[4.5.4]" />
-    <PackageDownload Include="System.ValueTuple" Version="[4.5.0]" />
+    <PackageReference Include="System.Text.Json" VersionOverride="9.0.0" />
+    <PackageReference Include="Microsoft.Bcl.AsyncInterfaces" VersionOverride="9.0.0" />
   </ItemGroup>
 
   <Import Project="build\TUnitRuntimePayload.targets" />

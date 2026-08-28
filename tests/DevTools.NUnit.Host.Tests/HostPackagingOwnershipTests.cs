@@ -53,37 +53,30 @@ public sealed class HostPackagingOwnershipTests
     public void Shared_packaging_targets_own_copy_and_assert_flow()
     {
         var root = FindRepoRoot();
-        var packagingTargets = Path.Combine(root, "source", "DevTools.NUnit.Host", "build", "NUnitHostPackaging.targets");
-        var mergedProps = Path.Combine(root, "source", "DevTools.NUnit.Host", "build", "NUnitHostMergedAssemblies.props");
+        var packagingTargets = Path.Combine(root, "source", "DevTools.NUnit.Runtime", "build", "NUnitHostPackaging.targets");
         var payloadTargets = Path.Combine(root, "source", "DevTools.NUnit.Runtime", "build", "NUnitRuntimePayload.targets");
 
         Assert.True(File.Exists(packagingTargets));
-        Assert.True(File.Exists(mergedProps));
         Assert.True(File.Exists(payloadTargets));
+        Assert.False(File.Exists(Path.Combine(root, "source", "DevTools.NUnit.Runtime", "build", "NUnitHostMergedAssemblies.props")));
 
         var packagingText = File.ReadAllText(packagingTargets);
         Assert.Contains("CopyNUnitRuntimeBootstrap", packagingText, StringComparison.Ordinal);
-        Assert.Contains("AssertNUnitHostDependencyOwnership", packagingText, StringComparison.Ordinal);
+        Assert.Contains("AssertNUnitRuntimeLayout", packagingText, StringComparison.Ordinal);
         Assert.Contains("GetNUnitRuntimePayload", packagingText, StringComparison.Ordinal);
         Assert.Contains("$(TargetDir)NUnitRuntime", packagingText, StringComparison.Ordinal);
         Assert.DoesNotContain("$(OutputPath)NUnitRuntime", packagingText, StringComparison.Ordinal);
-        Assert.Contains("TestingSharedAssembly", packagingText, StringComparison.Ordinal);
         Assert.Contains("DevTools.Testing.Abstractions", packagingText, StringComparison.Ordinal);
         Assert.DoesNotContain("DevTools.NUnit.Core", packagingText, StringComparison.Ordinal);
         Assert.Contains("DevTools.NUnit.Runner.exe", packagingText, StringComparison.Ordinal);
 
-        var mergedText = File.ReadAllText(mergedProps);
-        Assert.Contains("TestingSharedAssembly Include=\"DevTools.Testing.Abstractions\"", mergedText, StringComparison.Ordinal);
-        Assert.Contains("NUnitHostOwnedAssembly Include=\"DevTools.AssemblyIsolation\"", mergedText, StringComparison.Ordinal);
-        Assert.DoesNotContain("DevTools.NUnit.Core", mergedText, StringComparison.Ordinal);
-
         var payloadText = File.ReadAllText(payloadTargets);
         Assert.Contains("PrepareNUnitRuntimePayload", payloadText, StringComparison.Ordinal);
-        Assert.Contains("NUnitHostOwnedAssembly", payloadText, StringComparison.Ordinal);
-        Assert.Contains("DevTools.AssemblyIsolation", payloadText, StringComparison.Ordinal);
-        Assert.Contains("TestingSharedAssembly", payloadText, StringComparison.Ordinal);
+        Assert.Contains("DevTools.AssemblyIsolation.dll", payloadText, StringComparison.Ordinal);
+        Assert.Contains("DevTools.Testing.Abstractions.dll", payloadText, StringComparison.Ordinal);
         Assert.Contains("'$(TargetDir)' != ''", payloadText, StringComparison.Ordinal);
         Assert.DoesNotContain("GetFullPath('$(TargetDir)NUnitRuntimePayload", payloadText, StringComparison.Ordinal);
+        Assert.DoesNotContain("DevTools.NUnit.Core", payloadText, StringComparison.Ordinal);
     }
 
     [Theory]

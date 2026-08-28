@@ -65,7 +65,7 @@
         <Using Include="DevTools.Execution.Abstractions" />
     </ItemGroup>
 
-    <Import Project="..\DevTools.NUnit.Host\build\NUnitHostPackaging.targets" />
+    <Import Project="..\DevTools.NUnit.Runtime\build\NUnitHostPackaging.targets" />
     <Import Project="..\DevTools.TUnit.Runtime\build\TUnitHostPackaging.targets" />
 
     <!-- Start Revit -->

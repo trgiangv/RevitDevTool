@@ -132,8 +132,7 @@ In-host Engine execution clears `SynchronizationContext` so
 `TUnitRuntime` ships `TUnit.Core`, `TUnit.Engine`, and
 `Microsoft.Testing.Platform` under `TUnitRuntime\`, not at the add-in
 root. Collectible load contexts apply on modern host TFMs. .NET Framework
-years use scoped isolation and exact manifest identity resolution,
-including side-by-side `System.Text.Json` identities.
+years use scoped isolation and exact manifest identity resolution.
 
 TUnit.Core `Sources.TestEntries` is a process-wide dictionary keyed by
 `Type`. A rebuild loads a new test assembly (net48 cannot unload the old
