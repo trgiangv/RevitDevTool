@@ -53,7 +53,7 @@ public sealed class AssemblyIsolationPlanTests
 
         var plan = AssemblyIsolationPlan.Create("entry.dll").Share(first);
 
-        Assert.Throws<AssemblyIdentityMismatchException>(() => plan.Share(second));
+        Assert.Throws<AssemblyMismatchException>(() => plan.Share(second));
     }
 
     [Fact]
@@ -63,7 +63,7 @@ public sealed class AssemblyIsolationPlanTests
         var requested = new AssemblyName(loaded.FullName!) { Version = new Version(99, 0, 0, 0) };
         var plan = AssemblyIsolationPlan.Create("entry.dll").Pin(loaded);
 
-        var error = Assert.Throws<AssemblyIdentityMismatchException>(
+        var error = Assert.Throws<AssemblyMismatchException>(
             () => plan.TryShare(requested, out _));
         Assert.Contains(loaded.GetName().Name!, error.Message, StringComparison.Ordinal);
     }

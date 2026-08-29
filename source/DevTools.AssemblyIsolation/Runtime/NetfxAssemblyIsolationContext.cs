@@ -10,11 +10,11 @@ namespace DevTools.AssemblyIsolation.Runtime;
 
 internal sealed class NetfxAssemblyIsolationContext : IDisposable
 {
-    readonly AssemblyIsolationPlan plan;
-    readonly ResolveEventHandler resolver;
-    readonly HashSet<Assembly> ownedAssemblies = new(ReferenceEqualityComparer.Instance);
-    int activeLoads;
-    bool disposed;
+    private readonly AssemblyIsolationPlan plan;
+    private readonly ResolveEventHandler resolver;
+    private readonly HashSet<Assembly> ownedAssemblies = new(ReferenceEqualityComparer.Instance);
+    private int activeLoads;
+    private bool disposed;
 
     public NetfxAssemblyIsolationContext(AssemblyIsolationPlan plan)
     {
@@ -62,7 +62,7 @@ internal sealed class NetfxAssemblyIsolationContext : IDisposable
         disposed = true;
     }
 
-    Assembly? Resolve(object? sender, ResolveEventArgs args)
+    private Assembly? Resolve(object? sender, ResolveEventArgs args)
     {
         if (disposed)
             return null;
@@ -93,7 +93,7 @@ internal sealed class NetfxAssemblyIsolationContext : IDisposable
         return null;
     }
 
-    bool ShouldServe(Assembly? requestingAssembly)
+    private bool ShouldServe(Assembly? requestingAssembly)
     {
         if (Volatile.Read(ref activeLoads) > 0)
             return true;
@@ -101,20 +101,20 @@ internal sealed class NetfxAssemblyIsolationContext : IDisposable
         return requestingAssembly is not null && ownedAssemblies.Contains(requestingAssembly);
     }
 
-    Assembly LoadManaged(string path) =>
+    private Assembly LoadManaged(string path) =>
         plan.LoadsFromDistinctFile
             ? AssemblyStreamLoader.LoadFile(path)
             : AssemblyStreamLoader.Load(path);
 
-    LoadGuard BeginLoad() => new(this);
+    private LoadGuard BeginLoad() => new(this);
 
-    Assembly Own(Assembly assembly)
+    private Assembly Own(Assembly assembly)
     {
         ownedAssemblies.Add(assembly);
         return assembly;
     }
 
-    static bool TryValidateCandidate(AssemblyName requested, AssemblyCandidate candidate, out string? rejection)
+    private static bool TryValidateCandidate(AssemblyName requested, AssemblyCandidate candidate, out string? rejection)
     {
         if (!File.Exists(candidate.Path))
         {
@@ -129,7 +129,8 @@ internal sealed class NetfxAssemblyIsolationContext : IDisposable
         }
 
         var candidateIdentity = AssemblyName.GetAssemblyName(candidate.Path);
-        if (!AssemblyIdentityMatcher.IsCompatible(requested, candidateIdentity))
+        if (!AssemblyIdentityMatcher.IsCompatible(requested, candidateIdentity)
+            && !NetfxBclBind.AllowsNewer(requested, candidateIdentity))
         {
             rejection = $"Candidate identity '{candidateIdentity.FullName}' is incompatible.";
             return false;
@@ -139,22 +140,22 @@ internal sealed class NetfxAssemblyIsolationContext : IDisposable
         return true;
     }
 
-    void Publish(string code, AssemblyName? requested, AssemblyCandidate? candidate, string reason)
+    private void Publish(string code, AssemblyName? requested, AssemblyCandidate? candidate, string reason)
     {
         var detail = candidate is null ? "" : $", candidate '{candidate.Path}'";
         var identity = requested?.FullName ?? "native library";
         plan.DiagnosticSink?.Publish(new AssemblyIsolationDiagnostic(code, $"Requested '{identity}'{detail}: {reason}", requested));
     }
 
-    void ThrowIfDisposed()
+    private void ThrowIfDisposed()
     {
         if (disposed)
             throw new ObjectDisposedException(nameof(NetfxAssemblyIsolationContext));
     }
 
-    sealed class LoadGuard : IDisposable
+    private sealed class LoadGuard : IDisposable
     {
-        readonly NetfxAssemblyIsolationContext owner;
+        private readonly NetfxAssemblyIsolationContext owner;
 
         public LoadGuard(NetfxAssemblyIsolationContext owner)
         {
@@ -165,7 +166,7 @@ internal sealed class NetfxAssemblyIsolationContext : IDisposable
         public void Dispose() => Interlocked.Decrement(ref owner.activeLoads);
     }
 
-    sealed class ReferenceEqualityComparer : IEqualityComparer<Assembly>
+    private sealed class ReferenceEqualityComparer : IEqualityComparer<Assembly>
     {
         public static ReferenceEqualityComparer Instance { get; } = new();
 

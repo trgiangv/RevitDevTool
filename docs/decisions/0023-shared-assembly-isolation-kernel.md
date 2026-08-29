@@ -6,6 +6,14 @@ Date: 2026-08-18
 
 Accepted
 
+**Amendment 2026-08-29.** Public matcher stays `AssemblyIdentityMatcher.IsCompatible`
+(full identity; optional `allowVersionDrift` for Share). net48 isolated resolve
+additionally allows a **newer** candidate for `System.Text.Json`,
+`Microsoft.Bcl.AsyncInterfaces`, `System.IO.Pipelines`, and
+`System.Text.Encodings.Web` (`NetfxBclBind`) so TUnit.Engine’s STJ 9 request
+binds the CPM 10 payload. CoreCLR paths stay exact. Do not unify on net8/net10
+and do not change the public matcher API.
+
 ## Context
 
 RevitDevTool currently implements assembly loading independently for the add-in

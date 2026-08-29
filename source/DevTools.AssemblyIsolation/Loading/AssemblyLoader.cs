@@ -14,22 +14,18 @@ namespace DevTools.AssemblyIsolation.Loading;
 /// <see cref="Register"/> probes one directory when the default context asks
 /// for a missing sibling (managed or native).
 /// </summary>
-public sealed class AssemblyLoader : IDisposable
+public sealed class AssemblyLoader(IAssemblyIsolationDiagnosticSink? diagnostics = null) : IDisposable
 {
     private readonly object gate = new();
     private readonly Dictionary<string, LoadedPath> assembliesByPath = new(StringComparer.OrdinalIgnoreCase);
     private readonly Dictionary<string, SelectedAssembly> assembliesByIdentity = new(StringComparer.OrdinalIgnoreCase);
-    private readonly IAssemblyIsolationDiagnosticSink? diagnostics;
     private DirectoryAssemblySource? managedSource;
     private bool registered;
     private bool disposed;
+
 #if NET
-    private readonly AssemblyLoadContext loadContext = new("DevTools.AssemblyLoader", isCollectible: false);
-
-    internal AssemblyLoadContext LoadContext => loadContext;
+    private AssemblyLoadContext LoadContext { get; } = new("DevTools.AssemblyLoader", isCollectible: false);
 #endif
-
-    public AssemblyLoader(IAssemblyIsolationDiagnosticSink? diagnostics = null) => this.diagnostics = diagnostics;
 
     public Assembly LoadPath(string assemblyPath)
     {
@@ -67,7 +63,7 @@ public sealed class AssemblyLoader : IDisposable
 #if NETFRAMEWORK
             var assembly = Assembly.LoadFrom(normalizedPath);
 #else
-            var assembly = loadContext.LoadFromAssemblyPath(normalizedPath);
+            var assembly = LoadContext.LoadFromAssemblyPath(normalizedPath);
 #endif
             assembliesByPath.Add(normalizedPath, new LoadedPath(identity, fingerprint, assembly));
             assembliesByIdentity.Add(identity, new SelectedAssembly(normalizedPath, assembly));
@@ -89,8 +85,8 @@ public sealed class AssemblyLoader : IDisposable
 #else
         AssemblyLoadContext.Default.Resolving += ResolveManaged;
         AssemblyLoadContext.Default.ResolvingUnmanagedDll += ResolveUnmanaged;
-        loadContext.Resolving += ResolveManaged;
-        loadContext.ResolvingUnmanagedDll += ResolveUnmanaged;
+        LoadContext.Resolving += ResolveManaged;
+        LoadContext.ResolvingUnmanagedDll += ResolveUnmanaged;
 #endif
         registered = true;
     }
@@ -107,8 +103,8 @@ public sealed class AssemblyLoader : IDisposable
 #else
             AssemblyLoadContext.Default.Resolving -= ResolveManaged;
             AssemblyLoadContext.Default.ResolvingUnmanagedDll -= ResolveUnmanaged;
-            loadContext.Resolving -= ResolveManaged;
-            loadContext.ResolvingUnmanagedDll -= ResolveUnmanaged;
+            LoadContext.Resolving -= ResolveManaged;
+            LoadContext.ResolvingUnmanagedDll -= ResolveUnmanaged;
 #endif
             registered = false;
         }

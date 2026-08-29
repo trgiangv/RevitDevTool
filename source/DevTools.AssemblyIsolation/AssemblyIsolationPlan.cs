@@ -108,7 +108,7 @@ public sealed class AssemblyIsolationPlan
         }
 
         if (!AssemblyIdentityMatcher.IsCompatible(requested, shared.Identity, shared.AllowVersionDrift))
-            throw new AssemblyIdentityMismatchException(requested, shared.Identity);
+            throw new AssemblyMismatchException(requested, shared.Identity);
 
         if (shared.AllowVersionDrift
             && requested.Version is not null
@@ -170,7 +170,7 @@ public sealed class AssemblyIsolationPlan
                 && item.AllowVersionDrift == next.AllowVersionDrift)
                 return existing;
 
-            throw new AssemblyIdentityMismatchException(next.Identity, item.Identity);
+            throw new AssemblyMismatchException(next.Identity, item.Identity);
         }
 
         return existing.Append(next);

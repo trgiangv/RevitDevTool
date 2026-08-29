@@ -15,8 +15,12 @@ without allowing one feature's dependency policy to leak into another.
 - `Pin(assembly)` reuses a loaded copy only when the full identity matches.
   Feature contracts (`nunit.framework`, MCP protocol types,
   `ITestingRuntimeSession`) stay pinned.
-- Private managed candidates still require full identity. Directory traversal
-  and reparse-point escapes are rejected, including add-in directory resolution.
+- Private managed candidates still require full identity, except net48
+  isolated resolve may bind a **newer** copy of `System.Text.Json`,
+  `Microsoft.Bcl.AsyncInterfaces`, `System.IO.Pipelines`, or
+  `System.Text.Encodings.Web` (`NetfxBclBind`). CoreCLR stays exact.
+  Directory traversal and reparse-point escapes are rejected, including add-in
+  directory resolution.
 - `System.*`, `Microsoft.*`, Autodesk APIs, and UI libraries are not shared by
   prefix. DevTools forks (`DevTools.MahApps.Metro`, `DevTools.ControlzEx`,
   `DevTools.Microsoft.Xaml.Behaviors`) are separate identities and stay private
@@ -53,8 +57,9 @@ policy on the plan, not a UI framework dependency.
 
 Autodesk API references are compile-only and are not copied as runtime payloads.
 Host packages merge or ship one kernel identity according to their existing
-ILRepack policy. `RevitDevTool.TestAdapter` exposes only its platform compile surface and
-keeps its modern implementation closure private.
+ILRepack policy. `RevitDevTool.TestAdapter` ILRepacks Ipc and Transport into
+the adapter on every TFM and keeps `DevTools.Testing.Abstractions.dll` loose
+so testhost MTP shares `HostTestDiscovery`.
 
 `DevTools.TestAdapter/RuntimeAssemblyResolver` is the sole direct-loader
 exception. The public platform hook must bootstrap its private runtime closure before

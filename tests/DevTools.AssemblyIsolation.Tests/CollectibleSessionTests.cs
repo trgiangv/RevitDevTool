@@ -35,7 +35,7 @@ public sealed class CollectibleSessionTests
 
         using var session = AssemblyIsolationSession.Create(plan);
 
-        Assert.Throws<AssemblyIdentityMismatchException>(session.LoadEntryAssembly);
+        Assert.Throws<AssemblyMismatchException>(session.LoadEntryAssembly);
     }
 
     [Fact]

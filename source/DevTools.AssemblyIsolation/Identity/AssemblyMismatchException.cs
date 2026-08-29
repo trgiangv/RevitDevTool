@@ -2,9 +2,9 @@ using System.Reflection;
 
 namespace DevTools.AssemblyIsolation.Identity;
 
-public sealed class AssemblyIdentityMismatchException : InvalidOperationException
+public sealed class AssemblyMismatchException : InvalidOperationException
 {
-    public AssemblyIdentityMismatchException(AssemblyName requested, AssemblyName candidate)
+    public AssemblyMismatchException(AssemblyName requested, AssemblyName candidate)
         : base(CreateMessage(requested, candidate))
     {
         Requested = requested;

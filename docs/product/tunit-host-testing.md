@@ -5,7 +5,7 @@ RevitDevTool runs TUnit tests through the same TestRunner and neutral
 it does not launch or activate hosts. Shared MTP contract (launch, reuse,
 cancel, adapter): [host-testing.md](host-testing.md).
 
-Last updated: 2026-08-25
+Last updated: 2026-08-29
 
 ## Supported matrix
 
@@ -132,7 +132,8 @@ In-host Engine execution clears `SynchronizationContext` so
 `TUnitRuntime` ships `TUnit.Core`, `TUnit.Engine`, and
 `Microsoft.Testing.Platform` under `TUnitRuntime\`, not at the add-in
 root. Collectible load contexts apply on modern host TFMs. .NET Framework
-years use scoped isolation and exact manifest identity resolution.
+years use scoped isolation. Manifest identity stays exact except net48
+`NetfxBclBind` (newer STJ / Bcl.AsyncInterfaces / Pipelines / Encodings.Web).
 
 TUnit.Core `Sources.TestEntries` is a process-wide dictionary keyed by
 `Type`. A rebuild loads a new test assembly (net48 cannot unload the old
@@ -151,9 +152,8 @@ before a revert recreates it.
 
 ### Testhost MTP copy
 
-`CopyDevToolsMTPSibling` overwrites `DevTools.TUnit.MTP.dll` next to the
-test exe on every build (`SkipUnchangedFiles=false`) and prefers the
-in-repo MTP output over a leftover TestAdapter `build/runtime` nupkg copy.
+`CopyMTPSibling` overwrites `DevTools.TUnit.MTP.dll` next to the
+test exe on every build (`SkipUnchangedFiles=false`) from `build/runtime`.
 TUnit.MTP compile-links catalog files from `TUnit.Runtime`; a timestamp-skip
 copy is why a rebuild can still run yesterday’s discoverer. Changing
 in-host Engine/Runtime also requires rebuilding/deploying the host add-in
@@ -170,7 +170,7 @@ write-throughs Console to process `Trace` (host pane). Same split as NUnit
 TUnit `TraceListener` or dump `CaseResult.Output` through `ILogger`.
 
 TestRunner locates, reuses, or starts the selected host and sends
-`testing/run` with the discovered UIDs. `MarshaledTestingRequestHandler`
+`testing/run` with the discovered UIDs. `MarshaledTestRequestHandler`
 enters `IHostContextExecutor`. The in-host `tunit` provider loads the
 generation isolation context and calls Engine.
 

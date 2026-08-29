@@ -9,14 +9,14 @@ public sealed class AssemblyIdentityMatcherTests
     public void Assembly_identity_mismatch_exception_rejects_a_null_requested_identity()
     {
         Assert.Throws<ArgumentNullException>(() =>
-            new AssemblyIdentityMismatchException(null!, new AssemblyName("Contoso.Component")));
+            new AssemblyMismatchException(null!, new AssemblyName("Contoso.Component")));
     }
 
     [Fact]
     public void Assembly_identity_mismatch_exception_rejects_a_null_candidate_identity()
     {
         Assert.Throws<ArgumentNullException>(() =>
-            new AssemblyIdentityMismatchException(new AssemblyName("Contoso.Component"), null!));
+            new AssemblyMismatchException(new AssemblyName("Contoso.Component"), null!));
     }
 
     [Fact]
