@@ -8,7 +8,6 @@
     <ItemGroup>
         <PackageReference Include="Microsoft.Testing.Platform"/>
         <PackageReference Include="xunit.v3"/>
-        <GlobalPackageReference Remove="Polyfill"/>
     </ItemGroup>
 
     <ItemGroup>

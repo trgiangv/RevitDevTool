@@ -9,7 +9,7 @@ Product: [`host-testing.md`](../../product/host-testing.md),
 [`tunit-host-testing.md`](../../product/tunit-host-testing.md).
 Agent digest: [`host-testing.md`](../../agents/host-testing.md).
 
-Last updated: 2026-08-28
+Last updated: 2026-08-29
 
 ---
 
@@ -20,9 +20,9 @@ Last updated: 2026-08-28
 | Neutral contracts, `HostTestConfig`, `TestingRunTraceScope` | `source/DevTools.Testing.Abstractions/` |
 | Shared discovery-refs / isolated testhost load | `source/DevTools.Testing.Abstractions/Loading/` |
 | `testing/*` JSON + Runner process client | `source/DevTools.Testing.Transport/` |
-| In-host `testing/*` handler + generation store | `source/DevTools.Testing.Host/` |
+| In-host `testing/*` handler + generation store | `source/DevTools.Testing.Host/` (`MarshaledTestRequestHandler` → `DotnetTestRequestHandler`) |
 | Runtime folder resolve + generation file classify | `source/DevTools.Testing.Host/Loading/` |
-| Published MTP adapter, plugin load (`HostMTPRegistration`) | `source/DevTools.TestAdapter/` |
+| Published MTP adapter, plugin load (`HostMtpRegistration`) | `source/DevTools.TestAdapter/` |
 | Local NUnit `ExploreTests` (testhost sibling DLL) | `source/DevTools.NUnit.MTP/` |
 | In-host NUnit engine | `source/DevTools.NUnit.Runtime/` |
 | NUnit closure / filter / generation policy | `source/DevTools.NUnit.Host/` |
@@ -62,10 +62,9 @@ Consumer copy/layout lives in `build/RevitDevTool.TestAdapter.targets`.
 
 ### Nupkg layout
 
-- `lib/{tfm}/DevTools.TestAdapter.dll` — MTP compile surface.
-- `build/runtime/net48/` — `DevTools.NUnit.MTP.dll`, `DevTools.TUnit.MTP.dll`, `DevTools.Testing.Abstractions.dll`.
-- `build/runtime/net8.0-windows7.0/` and `net10.0-windows7.0/` — Abstractions, Transport, Ipc, NUnit.MTP, TUnit.MTP (and net8 JSON closure).
-- net48 ILRepacks the adapter except Abstractions (shared `HostTestDiscovery` with MTP).
+- `lib/{tfm}/DevTools.TestAdapter.dll` — MTP compile surface (Ipc + Transport merged in; net48 also merges STJ BCL).
+- `build/runtime/{tfm}/` — `DevTools.NUnit.MTP.dll`, `DevTools.TUnit.MTP.dll`, `DevTools.Testing.Abstractions.dll` (shared `HostTestDiscovery`). Same three files on net48, net8, and net10.
+- Testhost 3rd-party BCL comes from the consumer `Microsoft.Testing.Platform.MSBuild` graph plus net48 binding redirects, not from this nupkg.
 
 ### Pipeline (`scripts/pack-test-adapter.ps1`)
 
@@ -98,16 +97,11 @@ project, `DevTools.TestRunner`. Runtime sources are Compile-linked into MTP.
   pack script before `dotnet pack`.
 - Keep `AppendTargetFrameworkToOutputPath=true` on packable multi-TFM testing
   projects.
-- In-repo `CopyDevToolsMTPSibling` copies `$(DevToolsMTPAssembly)` from
-  `bin\Debug|Release\$(TargetFramework)\`, matching `RevitDevTool.slnx`
-  (MTP/TestAdapter map Autodesk solution configs → project `Debug`/`Release`).
-  Do not prefer `bin\Debug.Autodesk.YYYY\`; those folders go stale when only
-  one year is rebuilt, and a missing year folder used to skip the copy silently.
-  Closure copy (`SkipUnchangedFiles=true`) excludes `DevTools.*.MTP.dll`.
-  Sibling copy always overwrites the selected MTP (`SkipUnchangedFiles=false`)
-  and prefers the in-repo `bin\Debug|Release\$(TFM)\` over a leftover
-  `build/runtime` nupkg copy. Net48 Testing.Abstractions uses the same order.
-  Do not fall back to `bin\$(Configuration)\` or a flattened Autodesk folder.
+- `CopyMTPSibling` copies MTP and Abstractions only from `build/runtime`
+  (the nupkg layout). In-repo `_StagePackageRuntime` fills that folder with
+  sibling MTP output (`bin\Debug|Release\$(TargetFramework)\`) and Abstractions.
+  Ipc/Transport are ILRepacked into the adapter on every TFM. Sibling copy
+  always overwrites the selected MTP (`SkipUnchangedFiles=false`).
 
 ---
 
@@ -139,7 +133,7 @@ resets a Completed/Poisoned session so a new client is not stuck.
 `AdapterTestConfig.TryReadPluginConfig()` reads `devtools.frameworkId`,
 `devtools.mtpAssembly`, and `devtools.mtpEntry` from `testconfig.json` or
 `[EntryAssembly].testconfig.json`. Missing or partial keys set
-`HostMTPRegistration.LastError` and **must not throw** from the hook static
+`HostMtpRegistration.LastError` and **must not throw** from the hook static
 constructor. Empty `frameworkId` on run publishes a
 `devtools.testadapter.run` error node (no `nunit` default).
 
@@ -148,18 +142,18 @@ MSBuild writes those keys from:
 | Property | `testconfig` key | First-party default when empty |
 |----------|------------------|--------------------------------|
 | `TestingFramework` | `frameworkId` | `nunit` (props) |
-| `DevToolsMTPAssembly` | `mtpAssembly` | `nunit` → `DevTools.NUnit.MTP.dll`; `tunit` → `DevTools.TUnit.MTP.dll` |
-| `DevToolsMTPEntry` | `mtpEntry` | `nunit` → `DevTools.NUnit.MTP.NUnitMTP`; `tunit` → `DevTools.TUnit.MTP.TUnitMTP` |
+| `MTPAssembly` | `mtpAssembly` | `nunit` → `DevTools.NUnit.MTP.dll`; `tunit` → `DevTools.TUnit.MTP.dll` |
+| `MTPEntry` | `mtpEntry` | `nunit` → `DevTools.NUnit.MTP.NUnitMTP`; `tunit` → `DevTools.TUnit.MTP.TUnitMTP` |
 
-`HostMTPRegistration` (TestAdapter) loads the configured sibling file name
+`HostMtpRegistration` (TestAdapter) loads the configured sibling file name
 beside the testhost. `mtpAssembly` must be a bare file name. There is no C#
 `switch` on `nunit` / `tunit` in Abstractions. Packaged copy of an unmapped
-`DevToolsMTPAssembly` is skipped unless the file exists in the package
-runtime dir. Sibling copy Errors only when the DLL is missing from both the
-first-party source and `$(OutDir)` (override with `DevToolsMTPCopy=false`).
+`MTPAssembly` is skipped unless the file exists in the package
+runtime dir. Sibling copy Errors when the DLL is missing from `build/runtime`
+and `$(OutDir)` (override with `MTPCopy=false`).
 
 A user-authored `testconfig.json` with a `devtools` section must already
-contain `frameworkId`, `mtpAssembly`, and `mtpEntry` or the build errors.
+contain `frameworkId`, `mtpAssembly`, and `mtpEntry` or the merge errors.
 See [0024](../../decisions/0024-testing-core-open-closed-providers.md).
 
 `Register` assigns both `HostTestDiscovery.Provider` (`IHostTestDiscoverer`)
@@ -200,9 +194,9 @@ package so net48 does not collide with `DevTools.Testing.Host`.
 Each provider uses two targets files: `*RuntimePayload.targets` (Runtime owns
 a payload folder) then `*HostPackaging.targets` (add-in copies that folder to
 `NUnitRuntime\` / `TUnitRuntime\`). NUnit payload excludes host-owned
-JSON/Ipc/Isolation/Abstractions. TUnit copies its full private closure.
-net48 pins STJ 9 copy-local in `DevTools.TUnit.Runtime`; the host keeps
-STJ 10 (MCP / ILRepack).
+JSON/Ipc/Isolation/Abstractions. TUnit copies its full private closure
+(CPM STJ). On net48, isolated resolve binds TUnit.Engine's STJ 9 request
+onto that newer payload copy (`NetfxBclBind`). Host still ILRepacks STJ 10.
 
 ### Test output
 

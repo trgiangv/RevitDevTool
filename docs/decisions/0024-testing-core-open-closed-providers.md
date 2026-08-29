@@ -8,10 +8,18 @@ Accepted. Refines [0021](0021-testing-kernel-and-provider-owned-framework-runtim
 after an independent review of the implemented kernel versus NUnit and TUnit
 providers. Does not replace 0021’s testhost / in-host split.
 
+**Amendment 2026-08-29.** Public MSBuild names dropped the `DevTools` prefix:
+`MTPAssembly`, `MTPEntry`, `MTPCopy`, `TestingRunnerPath`. Copy is one target
+(`CopyMTPSibling`) from `build/runtime`; Ipc/Transport are ILRepacked into the
+adapter. Testhost plugin type is `HostMtpRegistration`. In-host `testing/*`
+is `MarshaledTestRequestHandler` → `DotnetTestRequestHandler`. Merge task is
+`MergeTestConfig`. JSON keys are unchanged (`mtpAssembly`, `mtpEntry`).
+
 Reviewed twice on 2026-08-22 (SOLID / fail-closed / YAGNI). Second pass closed
 prior B1–B6 in this text and added the MSBuild property names, copy targets,
-`mtpAssembly` path rule (JSON camelCase; C#/MSBuild use `MTP`, never `Mtp`), run-path error node, user-`devtools` restriction, and
-the per-file merge helper (no `RuntimeMergeConflict` enum).
+`mtpAssembly` path rule (JSON camelCase `mtp*`; MSBuild `MTPAssembly` /
+`MTPEntry`; type `HostMtpRegistration`), run-path error node, user-`devtools`
+restriction, and the per-file merge helper (no `RuntimeMergeConflict` enum).
 
 ## Context
 
@@ -52,8 +60,9 @@ entry type names, a `switch` on `nunit` / `tunit`, or a required-assemblies
 message that names first-party DLLs.
 
 Teshost bootstrap reads opaque strings from `testconfig.json` (written from
-the test csproj). **Naming:** C# and MSBuild identifiers use `MTP` (never
-`Mtp`). JSON keys stay camelCase to match `frameworkId`:
+the test csproj). **Naming:** JSON keys stay camelCase to match `frameworkId`.
+MSBuild properties use `MTP` (`MTPAssembly`, `MTPEntry`). The testhost type is
+`HostMtpRegistration`.
 
 - `devtools.frameworkId` (required on **discovery and run**; no C# default)
 - `devtools.mtpAssembly` (bare file name beside the testhost, required)
@@ -62,7 +71,7 @@ the test csproj). **Naming:** C# and MSBuild identifiers use `MTP` (never
 C# keys: `HostTestConfig.Keys.MTPAssembly` / `MTPEntry` (string values
 `"mtpAssembly"` / `"mtpEntry"`).
 
-`HostMTPRegistration` **moves** to `DevTools.TestAdapter` (the process that
+`HostMtpRegistration` **moves** to `DevTools.TestAdapter` (the process that
 loads sibling DLLs). Abstractions keeps only `HostTestDiscovery.Provider` /
 `RunMapper`. `LastError` stays a process-global static on that moved type:
 one testhost process loads one plugin; the move does not invent a better
@@ -79,18 +88,18 @@ the first-party map”):
 | Property | Meaning |
 |----------|---------|
 | `TestingFramework` | Opaque id written as `devtools.frameworkId`. Props default `nunit`. |
-| `DevToolsMTPAssembly` | Bare file name written as `devtools.mtpAssembly`. |
-| `DevToolsMTPEntry` | Type name written as `devtools.mtpEntry`. |
+| `MTPAssembly` | Bare file name written as `devtools.mtpAssembly`. |
+| `MTPEntry` | Type name written as `devtools.mtpEntry`. |
 
 First-party map in `.props`, applied only when the assembly/entry properties
 are still empty:
 
-| `TestingFramework` | `DevToolsMTPAssembly` | `DevToolsMTPEntry` |
-|--------------------|-----------------------|--------------------|
+| `TestingFramework` | `MTPAssembly` | `MTPEntry` |
+|--------------------|---------------|------------|
 | `nunit` | `DevTools.NUnit.MTP.dll` | `DevTools.NUnit.MTP.NUnitMTP` |
 | `tunit` | `DevTools.TUnit.MTP.dll` | `DevTools.TUnit.MTP.TUnitMTP` |
 
-Build `<Error>` when `DevToolsMTPAssembly` or `DevToolsMTPEntry` is empty
+Build `<Error>` when `MTPAssembly` or `MTPEntry` is empty
 after that map (unknown `TestingFramework` with no overrides).
 
 Honest Open/Closed:
@@ -100,8 +109,8 @@ Honest Open/Closed:
 - **Teshost plugin load** is open given the three keys plus a DLL already
   beside the testhost. Packaged copy of a first-party MTP is gated on
   `Exists(...)`. The sibling `<Error>` stands down when
-  `$(OutDir)$(DevToolsMTPAssembly)` is already present, or when
-  `DevToolsMTPCopy=false`.
+  `$(OutDir)$(MTPAssembly)` is already present, or when
+  `MTPCopy=false`.
 - **In-repo** providers still edit packaged `.props`/`.targets` (map row,
   in-repo `ProjectReference` Exists block, MTP output fallback) and the host
   composition roots (`RevitServiceRegistration`, `AcadServiceRegistration`).
@@ -134,26 +143,16 @@ call `Path.Combine` / `LoadUnlocked`. Missing file also sets `LastError`.
 
 #### MSBuild copy
 
-There is no `_DevToolsMTPFileName` today. Introduce it as an alias of
-`$(DevToolsMTPAssembly)`.
-
-Two targets copy MTP-adjacent files:
-
-1. `CopyDevToolsTestAdapterRuntimeClosure` — netcoreapp only. Copy
-   `*.dll` from the package runtime dir **excluding** `DevTools.*.MTP.dll`,
-   then copy **exactly** `$(DevToolsMTPAssembly)` **if that file exists** in
-   the package dir (no MSB3030 for an unmapped name).
-2. `CopyDevToolsMTPSibling` — net48 sibling + in-repo MTP fallback. Copy
-   **exactly** `$(DevToolsMTPAssembly)` (plus net48
-   `DevTools.Testing.Abstractions.dll`) when a first-party source exists.
-   Do not Error when the file is already in `$(OutDir)` or
-   `DevToolsMTPCopy=false`.
-
-Do not use `!= tunit` to mean NUnit.
+`CopyMTPSibling` copies `$(MTPAssembly)` and
+`DevTools.Testing.Abstractions.dll` from `build/runtime` (nupkg layout; in-repo
+`_StagePackageRuntime` stages that folder). Ipc/Transport are ILRepacked into
+the adapter on every TFM — do not copy a first-party closure glob. Do not Error
+when the MTP DLL is already in `$(OutDir)` or `MTPCopy=false`. Do not use
+`!= tunit` to mean NUnit.
 
 #### User-authored `testconfig.json`
 
-`MergeDevToolsTestConfig` is a `RoslynCodeTaskFactory` fragment with no JSON
+`MergeTestConfig` is a `RoslynCodeTaskFactory` fragment with no JSON
 parser. Nested object merge is not an allowed algorithm.
 
 Rule:
@@ -248,7 +247,7 @@ same change. The same YAGNI bar forbids a one-value merge-policy enum.
 - `HostTestDiscovery` static assignment (net48 identity).
 - Coherent generation retry, content-hash publish, `GenerationLocks` on the
   store.
-- `MarshaledTestingRequestHandler` vs `TestingRequestHandler`.
+- `MarshaledTestRequestHandler` vs `DotnetTestRequestHandler`.
 - `TestingDiscoveryHints` (optional; TUnit consumes, NUnit ignores).
 - `TestingProviderPayload` on the wire (reserved from 0021). Removing it is a
   published IPC break; unused store setters are not on the wire, so they
@@ -310,7 +309,7 @@ Tradeoffs:
   `AssemblyBoundaryTests.IsPlugInContractFile` exemptions for `MTP/` and
   `Config/HostTestConfig.cs`.
 - Proof of Open/Closed: stub `TestingFramework=fake` with
-  `DevToolsMTPAssembly` / `DevToolsMTPEntry` loads a testhost plugin
+  `MTPAssembly` / `MTPEntry` loads a testhost plugin
   (`HostMTPRegistrationTests`); MSBuild copy succeeds when that DLL is
   already in `OutDir` (`FakeMTPCopyTests`). Missing keys → discovery
   **and** run error nodes, no static-ctor throw.

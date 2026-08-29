@@ -9,19 +9,19 @@ internal static class AdapterBootstrap
             RuntimeAssemblyResolver.EnsureRegistered();
             if (!AdapterTestConfig.TryReadPluginConfig(out var config, out var error))
             {
-                HostMTPRegistration.LastError = error;
+                HostMtpRegistration.LastError = error;
                 return;
             }
 
-            HostMTPRegistration.Register(
-                config!.MTPAssembly,
-                config.MTPEntry,
+            HostMtpRegistration.Register(
+                config!.MtpAssembly,
+                config.MtpEntry,
                 AppContext.BaseDirectory,
                 RuntimeAssemblyResolver.LoadUnlocked);
         }
         catch (Exception ex)
         {
-            HostMTPRegistration.LastError = ex.ToString();
+            HostMtpRegistration.LastError = ex.ToString();
         }
     }
 }

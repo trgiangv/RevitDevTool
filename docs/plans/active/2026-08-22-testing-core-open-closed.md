@@ -4,14 +4,14 @@ Date: 2026-08-22
 
 ## Status
 
-Active — Tasks 0–4 landed; Opus 5 gate **Accept** (B1, S1–S8 closed)
+Active — Tasks 0–4 landed; Opus 5 gate **Accept** (B1, S1–S8 closed).
 
-**Naming (required):** C# and MSBuild identifiers use `MTP`, never `Mtp`
-(`DevToolsMTPAssembly`, `Keys.MTPAssembly`, `CopyDevToolsMTPSibling`,
-`_DevToolsMTPFileName`). JSON keys stay camelCase: `mtpAssembly`, `mtpEntry`.
-Existing leak names (`RequiredMtpAssembliesMessage`, `CopyDevToolsNUnitMtp`,
-folder `Abstractions/Mtp/`) are deleted or renamed in Task 3; do not introduce
-new `Mtp` tokens.
+**Current names (2026-08-29):** MSBuild `MTPAssembly` / `MTPEntry` / `MTPCopy` /
+`TestingRunnerPath`; copy `CopyMTPSibling`; type `HostMtpRegistration`; merge
+`MergeTestConfig`. JSON keys stay camelCase: `mtpAssembly`, `mtpEntry`. Truth:
+[0024](../../decisions/0024-testing-core-open-closed-providers.md) amendment and
+[`docs/architecture/Testing/README.md`](../../architecture/Testing/README.md).
+Do not reintroduce `DevToolsMTP*` properties.
 
 ## Outcome
 

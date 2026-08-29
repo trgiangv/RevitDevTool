@@ -51,5 +51,8 @@ superpowers/
 cert.txt
 *.cer
 
+# Local TestAdapter runtime
+source/DevTools.TestAdapter/build/runtime/
+
 # Local dev overrides
 appsettings.Development.json

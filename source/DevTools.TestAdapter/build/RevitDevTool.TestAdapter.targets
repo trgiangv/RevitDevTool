@@ -2,39 +2,29 @@
   <!--
     Consumer test-project build (imported from RevitDevTool.TestAdapter).
 
-    1. In-repo build order
-       - MTP.dll must exist before the test exe copies it.
-       - MTP/Abstractions are year-agnostic: build them as Debug or Release
-         plus the consumer TFM, not as Debug.Autodesk.YYYY. RevitDevTool.slnx
-         already maps those projects to Debug/Release. A per-year folder
-         (bin\Debug.Autodesk.2025\net8.0-windows\) goes stale while Debug.Autodesk.2024
-         is rebuilt, so Test Explorer discovery only "works" for the year last built.
-       - NuGet consumers skip this; they take the DLL from build/runtime.
+    1. Resolve build/runtime
+       - nupkg and in-repo TestAdapter Build stage the same layout:
+         net48 | net8.0-windows7.0 | net10.0-windows7.0.
+       - Pick exact TFM, else nearest lower. Error if the folder is present but nothing matches.
 
-    2. Resolve the packaged runtime folder
-       - nupkg layout: build/runtime/net48 | net8.0-windows7.0 | net10.0-windows7.0.
-       - Pick exact TFM, else nearest lower. Error if the nupkg is present but nothing matches.
-       - In-repo has no build/runtime folder; later copy falls back to MTP project output.
-
-    3. Copy runtime next to the test exe
-       - net8/net10: copy build/runtime/*.dll except DevTools.*.MTP.dll (Abstractions, Transport, Ipc).
-         MTP is copied only by CopyDevToolsMTPSibling with SkipUnchangedFiles=false so testhost
-         discovery cannot keep a timestamp-stale sibling after a rebuild.
-       - net48: adapter merge hides Transport/Ipc; Testing.Abstractions stays
-         loose (shared testhost discovery identity with MTP). Copy MTP.dll + Abstractions.dll.
+    2. Copy from that folder only
+       - Copy $(MTPAssembly) and Testing.Abstractions.dll (shared HostTestDiscovery).
+         Ipc/Transport are merged into the adapter. CopyMTPSibling uses
+         SkipUnchangedFiles=false on $(MTPAssembly) so testhost discovery cannot
+         keep a timestamp-stale sibling after a rebuild.
        - MTP is not a consumer ProjectReference; testhost binds the consumer NUnit copy.
 
-    4. Discovery refs (no Autodesk DLL copy)
+    3. Discovery refs (no Autodesk DLL copy)
        - Write $(TargetName).discovery-refs.txt from NuGet compile-only ReferencePath.
        - Testhost loads those paths; do not copy Revit/AutoCAD APIs next to the exe.
 
-    5. Host options → testconfig.json
+    4. Options → testconfig.json
        - Emit HostName / HostVersion / ForceLaunch / timeouts / runnerPath from csproj.
        - Always regenerate on Build (MTP Core target is incremental and would keep a stale file).
        - Merge optional testconfig.json beside the csproj if it has no "devtools" section.
   -->
   <Import Project="$(MSBuildThisFileDirectory)RevitDevTool.TestAdapter.props"
-          Condition="'$(DevToolsTestAdapterPropsImported)' != 'true'"/>
+          Condition="'$(TestAdapterPropsImported)' != 'true'"/>
 
   <!-- TUnit's package registers its own outer MTP framework. RevitDevTool owns
        the outer testhost so execution remains TestRunner -> testing/run IPC. -->
@@ -42,17 +32,16 @@
     <TestingPlatformBuilderHook Remove="6ADF853A-6945-4A06-9A4B-D99BC1DC1094" />
   </ItemGroup>
 
-  <PropertyGroup>
-    <_DevToolsMTPConfiguration Condition="$(Configuration.Contains('Release'))">Release</_DevToolsMTPConfiguration>
-    <_DevToolsMTPConfiguration Condition="'$(_DevToolsMTPConfiguration)' == ''">Debug</_DevToolsMTPConfiguration>
+  <!-- In-repo only: build MTP as Debug/Release (not Debug.Autodesk.YYYY). NuGet skips. -->
+  <PropertyGroup Condition="Exists('$(MSBuildThisFileDirectory)..\DevTools.TestAdapter.csproj')">
+    <_MTPConfiguration Condition="$(Configuration.Contains('Release'))">Release</_MTPConfiguration>
+    <_MTPConfiguration Condition="'$(_MTPConfiguration)' == ''">Debug</_MTPConfiguration>
   </PropertyGroup>
-
-  <!-- 1. In-repo build order -->
   <ItemGroup Condition="'$(TestingFramework)' == 'nunit' And '$(IsTestingPlatformApplication)' == 'true' And Exists('$(MSBuildThisFileDirectory)..\..\DevTools.NUnit.MTP\DevTools.NUnit.MTP.csproj')">
     <ProjectReference Include="$(MSBuildThisFileDirectory)..\..\DevTools.NUnit.MTP\DevTools.NUnit.MTP.csproj">
       <ReferenceOutputAssembly>false</ReferenceOutputAssembly>
       <Private>false</Private>
-      <SetConfiguration>Configuration=$(_DevToolsMTPConfiguration)</SetConfiguration>
+      <SetConfiguration>Configuration=$(_MTPConfiguration)</SetConfiguration>
       <SetTargetFramework>TargetFramework=$(TargetFramework)</SetTargetFramework>
     </ProjectReference>
   </ItemGroup>
@@ -60,13 +49,13 @@
     <ProjectReference Include="$(MSBuildThisFileDirectory)..\..\DevTools.TUnit.MTP\DevTools.TUnit.MTP.csproj">
       <ReferenceOutputAssembly>false</ReferenceOutputAssembly>
       <Private>false</Private>
-      <SetConfiguration>Configuration=$(_DevToolsMTPConfiguration)</SetConfiguration>
+      <SetConfiguration>Configuration=$(_MTPConfiguration)</SetConfiguration>
       <SetTargetFramework>TargetFramework=$(TargetFramework)</SetTargetFramework>
     </ProjectReference>
   </ItemGroup>
 
-  <!-- 5. helper: merge generated + optional user testconfig.json -->
-  <UsingTask TaskName="MergeDevToolsTestConfig"
+  <!-- merge generated + optional testconfig.json -->
+  <UsingTask TaskName="MergeTestConfig"
              TaskFactory="RoslynCodeTaskFactory"
              AssemblyFile="$(MSBuildToolsPath)\Microsoft.Build.Tasks.Core.dll">
     <ParameterGroup>
@@ -75,6 +64,7 @@
       <OutputConfigFile ParameterType="System.String" Required="true"/>
     </ParameterGroup>
     <Task>
+      <Using Namespace="System"/>
       <Using Namespace="System.IO"/>
       <Code Type="Fragment" Language="cs"><![CDATA[
         var generated = File.ReadAllText(GeneratedConfigFile);
@@ -91,6 +81,14 @@
             var user = File.ReadAllText(UserConfigFile).Trim().TrimStart('\uFEFF');
             if (user.IndexOf("\"devtools\"", StringComparison.OrdinalIgnoreCase) >= 0)
             {
+                if (user.IndexOf("\"frameworkId\"", StringComparison.OrdinalIgnoreCase) < 0
+                    || user.IndexOf("\"mtpAssembly\"", StringComparison.OrdinalIgnoreCase) < 0
+                    || user.IndexOf("\"mtpEntry\"", StringComparison.OrdinalIgnoreCase) < 0)
+                {
+                    Log.LogError("testconfig.json contains a devtools section but is missing frameworkId, mtpAssembly, or mtpEntry. Delete the devtools section or add all three plugin keys.");
+                    return false;
+                }
+
                 File.WriteAllText(OutputConfigFile, user);
             }
             else
@@ -107,105 +105,102 @@
     </Task>
   </UsingTask>
 
-  <!-- 2. Resolve the packaged runtime folder -->
-  <Target Name="_ResolveDevToolsTestAdapterRuntimeDir">
+  <!-- 1. Resolve build/runtime -->
+  <Target Name="_ResolveRuntimeDir">
     <PropertyGroup>
-      <_DevToolsRuntimeRoot>$(MSBuildThisFileDirectory)runtime\</_DevToolsRuntimeRoot>
-      <_DevToolsConsumerTfv Condition="'$(TargetFrameworkVersion)' != ''">$(TargetFrameworkVersion.Substring(1))</_DevToolsConsumerTfv>
+      <_RuntimeRoot>$(MSBuildThisFileDirectory)runtime\</_RuntimeRoot>
+      <_ConsumerTfv Condition="'$(TargetFrameworkVersion)' != ''">$(TargetFrameworkVersion.Substring(1))</_ConsumerTfv>
     </PropertyGroup>
     <PropertyGroup Condition="'$(TargetFrameworkIdentifier)' == '.NETFramework'">
-      <_DevToolsTestAdapterPackageRuntimeDir>$(_DevToolsRuntimeRoot)net48\</_DevToolsTestAdapterPackageRuntimeDir>
+      <_PackageRuntimeDir>$(_RuntimeRoot)net48\</_PackageRuntimeDir>
     </PropertyGroup>
-    <PropertyGroup Condition="'$(TargetFrameworkIdentifier)' == '.NETCoreApp' And '$(_DevToolsConsumerTfv)' != ''">
-      <_DevToolsTestAdapterPackageRuntimeDir Condition="Exists('$(_DevToolsRuntimeRoot)net$(_DevToolsConsumerTfv)-windows7.0\')">$(_DevToolsRuntimeRoot)net$(_DevToolsConsumerTfv)-windows7.0\</_DevToolsTestAdapterPackageRuntimeDir>
-      <_DevToolsTestAdapterPackageRuntimeDir Condition="'$(_DevToolsTestAdapterPackageRuntimeDir)' == '' And $([MSBuild]::VersionGreaterThanOrEquals('$(_DevToolsConsumerTfv)', '10.0')) And Exists('$(_DevToolsRuntimeRoot)net10.0-windows7.0\')">$(_DevToolsRuntimeRoot)net10.0-windows7.0\</_DevToolsTestAdapterPackageRuntimeDir>
-      <_DevToolsTestAdapterPackageRuntimeDir Condition="'$(_DevToolsTestAdapterPackageRuntimeDir)' == '' And $([MSBuild]::VersionGreaterThanOrEquals('$(_DevToolsConsumerTfv)', '8.0')) And Exists('$(_DevToolsRuntimeRoot)net8.0-windows7.0\')">$(_DevToolsRuntimeRoot)net8.0-windows7.0\</_DevToolsTestAdapterPackageRuntimeDir>
+    <PropertyGroup Condition="'$(TargetFrameworkIdentifier)' == '.NETCoreApp' And '$(_ConsumerTfv)' != ''">
+      <_PackageRuntimeDir Condition="Exists('$(_RuntimeRoot)net$(_ConsumerTfv)-windows7.0\')">$(_RuntimeRoot)net$(_ConsumerTfv)-windows7.0\</_PackageRuntimeDir>
+      <_PackageRuntimeDir Condition="'$(_PackageRuntimeDir)' == '' And $([MSBuild]::VersionGreaterThanOrEquals('$(_ConsumerTfv)', '10.0')) And Exists('$(_RuntimeRoot)net10.0-windows7.0\')">$(_RuntimeRoot)net10.0-windows7.0\</_PackageRuntimeDir>
+      <_PackageRuntimeDir Condition="'$(_PackageRuntimeDir)' == '' And $([MSBuild]::VersionGreaterThanOrEquals('$(_ConsumerTfv)', '8.0')) And Exists('$(_RuntimeRoot)net8.0-windows7.0\')">$(_RuntimeRoot)net8.0-windows7.0\</_PackageRuntimeDir>
+      <_PackageRuntimeDir Condition="'$(_PackageRuntimeDir)' == '' And $([MSBuild]::VersionGreaterThanOrEquals('$(_ConsumerTfv)', '10.0'))">$(_RuntimeRoot)net10.0-windows7.0\</_PackageRuntimeDir>
+      <_PackageRuntimeDir Condition="'$(_PackageRuntimeDir)' == '' And $([MSBuild]::VersionGreaterThanOrEquals('$(_ConsumerTfv)', '8.0'))">$(_RuntimeRoot)net8.0-windows7.0\</_PackageRuntimeDir>
     </PropertyGroup>
     <Error
-        Condition="Exists('$(_DevToolsRuntimeRoot)') And ('$(_DevToolsTestAdapterPackageRuntimeDir)' == '' Or !Exists('$(_DevToolsTestAdapterPackageRuntimeDir)'))"
+        Condition="Exists('$(_RuntimeRoot)') And ('$(_PackageRuntimeDir)' == '' Or !Exists('$(_PackageRuntimeDir)')) And !Exists('$(MSBuildThisFileDirectory)..\DevTools.TestAdapter.csproj')"
         Text="RevitDevTool.TestAdapter has no runtime assets for $(TargetFramework). The package ships net48, net8.0-windows, and net10.0-windows under build/runtime. A matching or nearest-lower folder is required so DevTools.NUnit.MTP.dll and the adapter closure copy next to the test exe." />
   </Target>
 
-  <!-- 3. Copy runtime next to the test exe (net8/net10 closure) -->
-  <Target Name="CopyDevToolsTestAdapterRuntimeClosure"
-          AfterTargets="Build"
-          DependsOnTargets="_ResolveDevToolsTestAdapterRuntimeDir"
-          Condition="'$(TargetFrameworkIdentifier)' == '.NETCoreApp'">
+  <!-- In-repo: write the same build/runtime layout the nupkg ships, then Copy* reads only that folder. -->
+  <Target Name="_StagePackageRuntime"
+          BeforeTargets="CopyMTPSibling"
+          DependsOnTargets="_ResolveRuntimeDir"
+          Condition="Exists('$(MSBuildThisFileDirectory)..\DevTools.TestAdapter.csproj') And '$(_PackageRuntimeDir)' != ''">
+    <PropertyGroup>
+      <_NUnitMtpDll>$(MSBuildThisFileDirectory)..\..\DevTools.NUnit.MTP\bin\$(_MTPConfiguration)\$(TargetFramework)\DevTools.NUnit.MTP.dll</_NUnitMtpDll>
+      <_TUnitMtpDll>$(MSBuildThisFileDirectory)..\..\DevTools.TUnit.MTP\bin\$(_MTPConfiguration)\$(TargetFramework)\DevTools.TUnit.MTP.dll</_TUnitMtpDll>
+      <_AbstractionsDll>$(MSBuildThisFileDirectory)..\..\DevTools.Testing.Abstractions\bin\$(_MTPConfiguration)\$(TargetFramework)\DevTools.Testing.Abstractions.dll</_AbstractionsDll>
+    </PropertyGroup>
     <ItemGroup>
-      <_DevToolsTestAdapterRuntimeClosureCopy Include="$(_DevToolsTestAdapterPackageRuntimeDir)*.dll"
-          Exclude="$(_DevToolsTestAdapterPackageRuntimeDir)DevTools.*.MTP.dll"
-          Condition="'$(_DevToolsTestAdapterPackageRuntimeDir)' != ''" />
+      <_StageRuntime Include="$(_NUnitMtpDll)" Condition="Exists('$(_NUnitMtpDll)')" />
+      <_StageRuntime Include="$(_TUnitMtpDll)" Condition="Exists('$(_TUnitMtpDll)')" />
+      <_StageRuntime Include="$(_AbstractionsDll)" Condition="Exists('$(_AbstractionsDll)')" />
     </ItemGroup>
-    <Copy SourceFiles="@(_DevToolsTestAdapterRuntimeClosureCopy)"
+    <MakeDir Directories="$(_PackageRuntimeDir)" />
+    <Copy Condition="'@(_StageRuntime)' != ''"
+          SourceFiles="@(_StageRuntime)"
+          DestinationFolder="$(_PackageRuntimeDir)"
+          SkipUnchangedFiles="true" />
+  </Target>
+
+  <!-- 2. Copy $(MTPAssembly) + Abstractions from build/runtime -->
+  <Target Name="CopyMTPSibling"
+          AfterTargets="Build"
+          DependsOnTargets="_ResolveRuntimeDir">
+    <ItemGroup Condition="'$(_PackageRuntimeDir)' != ''">
+      <_AbstractionsRuntime Include="$(_PackageRuntimeDir)DevTools.Testing.Abstractions.dll"
+          Condition="Exists('$(_PackageRuntimeDir)DevTools.Testing.Abstractions.dll')" />
+    </ItemGroup>
+    <Error
+        Condition="'$(MTPCopy)' != 'false' And !Exists('$(OutDir)$(MTPAssembly)') And Exists('$(_RuntimeRoot)') And ('$(_PackageRuntimeDir)' == '' Or !Exists('$(_PackageRuntimeDir)$(MTPAssembly)'))"
+        Text="RevitDevTool.TestAdapter could not copy $(MTPAssembly) next to the test executable for $(TargetFramework). Place the DLL in $(OutDir), set MTPCopy=false if you copy it yourself, or use a first-party TestingFramework map." />
+    <Error
+        Condition="'$(_PackageRuntimeDir)' != '' And Exists('$(_PackageRuntimeDir)$(MTPAssembly)') And !Exists('$(_PackageRuntimeDir)DevTools.Testing.Abstractions.dll')"
+        Text="RevitDevTool.TestAdapter could not copy DevTools.Testing.Abstractions.dll next to the test executable. Testhost MTP must share HostTestDiscovery with the adapter." />
+    <Copy Condition="'$(_PackageRuntimeDir)' != '' And Exists('$(_PackageRuntimeDir)$(MTPAssembly)')"
+          SourceFiles="$(_PackageRuntimeDir)$(MTPAssembly)"
+          DestinationFolder="$(OutDir)"
+          SkipUnchangedFiles="false" />
+    <Copy Condition="'@(_AbstractionsRuntime)' != ''"
+          SourceFiles="@(_AbstractionsRuntime)"
           DestinationFolder="$(OutDir)"
           SkipUnchangedFiles="true" />
   </Target>
 
-  <!-- 3. Copy runtime next to the test exe (MTP sibling: net48 + in-repo fallback) -->
-  <Target Name="CopyDevToolsMTPSibling"
-          AfterTargets="Build"
-          DependsOnTargets="_ResolveDevToolsTestAdapterRuntimeDir">
-    <PropertyGroup>
-      <_DevToolsMTPFileName>$(DevToolsMTPAssembly)</_DevToolsMTPFileName>
-      <_DevToolsMTPFromPackage Condition="'$(_DevToolsTestAdapterPackageRuntimeDir)' != ''">$(_DevToolsTestAdapterPackageRuntimeDir)$(_DevToolsMTPFileName)</_DevToolsMTPFromPackage>
-      <_DevToolsNUnitMTPCsproj>$(MSBuildThisFileDirectory)..\..\DevTools.NUnit.MTP\DevTools.NUnit.MTP.csproj</_DevToolsNUnitMTPCsproj>
-      <_DevToolsTUnitMTPCsproj>$(MSBuildThisFileDirectory)..\..\DevTools.TUnit.MTP\DevTools.TUnit.MTP.csproj</_DevToolsTUnitMTPCsproj>
-      <_DevToolsMTPRepoDir Condition="'$(_DevToolsMTPFileName)' == 'DevTools.NUnit.MTP.dll'">$(MSBuildThisFileDirectory)..\..\DevTools.NUnit.MTP</_DevToolsMTPRepoDir>
-      <_DevToolsMTPRepoDir Condition="'$(_DevToolsMTPFileName)' == 'DevTools.TUnit.MTP.dll'">$(MSBuildThisFileDirectory)..\..\DevTools.TUnit.MTP</_DevToolsMTPRepoDir>
-      <_DevToolsMTPFromRepo Condition="'$(_DevToolsMTPRepoDir)' != ''">$([System.IO.Path]::GetFullPath('$(_DevToolsMTPRepoDir)\bin\$(_DevToolsMTPConfiguration)\$(TargetFramework)\$(_DevToolsMTPFileName)'))</_DevToolsMTPFromRepo>
-      <_DevToolsMTPSource Condition="Exists('$(_DevToolsMTPFromRepo)')">$(_DevToolsMTPFromRepo)</_DevToolsMTPSource>
-      <_DevToolsMTPSource Condition="'$(_DevToolsMTPSource)' == '' And Exists('$(_DevToolsMTPFromPackage)')">$(_DevToolsMTPFromPackage)</_DevToolsMTPSource>
-      <_DevToolsTestingAbstractionsFileName>DevTools.Testing.Abstractions.dll</_DevToolsTestingAbstractionsFileName>
-      <_DevToolsTestingAbstractionsFromPackage Condition="'$(_DevToolsTestAdapterPackageRuntimeDir)' != ''">$(_DevToolsTestAdapterPackageRuntimeDir)$(_DevToolsTestingAbstractionsFileName)</_DevToolsTestingAbstractionsFromPackage>
-      <_DevToolsTestingAbstractionsFromRepo>$([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)..\..\DevTools.Testing.Abstractions\bin\$(_DevToolsMTPConfiguration)\$(TargetFramework)\$(_DevToolsTestingAbstractionsFileName)'))</_DevToolsTestingAbstractionsFromRepo>
-      <_DevToolsTestingAbstractionsSource Condition="'$(TargetFrameworkIdentifier)' != '.NETCoreApp' And Exists('$(_DevToolsTestingAbstractionsFromRepo)')">$(_DevToolsTestingAbstractionsFromRepo)</_DevToolsTestingAbstractionsSource>
-      <_DevToolsTestingAbstractionsSource Condition="'$(_DevToolsTestingAbstractionsSource)' == '' And '$(TargetFrameworkIdentifier)' != '.NETCoreApp' And Exists('$(_DevToolsTestingAbstractionsFromPackage)')">$(_DevToolsTestingAbstractionsFromPackage)</_DevToolsTestingAbstractionsSource>
-    </PropertyGroup>
-    <Error
-        Condition="'$(DevToolsMTPCopy)' != 'false' And !Exists('$(OutDir)$(_DevToolsMTPFileName)') And (Exists('$(_DevToolsRuntimeRoot)') Or Exists('$(_DevToolsNUnitMTPCsproj)') Or Exists('$(_DevToolsTUnitMTPCsproj)')) And '$(_DevToolsMTPSource)' == ''"
-        Text="RevitDevTool.TestAdapter could not copy $(DevToolsMTPAssembly) next to the test executable for $(TargetFramework). Place the DLL in $(OutDir), set DevToolsMTPCopy=false if you copy it yourself, or use a first-party TestingFramework map. In-repo copy looks under bin\$(_DevToolsMTPConfiguration)\$(TargetFramework)\." />
-    <Error
-        Condition="(Exists('$(_DevToolsRuntimeRoot)') Or Exists('$(_DevToolsNUnitMTPCsproj)')) And '$(TargetFrameworkIdentifier)' != '.NETCoreApp' And '$(_DevToolsTestingAbstractionsSource)' == ''"
-        Text="RevitDevTool.TestAdapter could not copy DevTools.Testing.Abstractions.dll next to the net48 test executable. Testhost MTP must share HostTestDiscovery with the adapter." />
-    <Copy Condition="'$(_DevToolsMTPSource)' != ''"
-          SourceFiles="$(_DevToolsMTPSource)"
-          DestinationFolder="$(OutDir)"
-          SkipUnchangedFiles="false" />
-    <Copy Condition="'$(_DevToolsTestingAbstractionsSource)' != ''"
-          SourceFiles="$(_DevToolsTestingAbstractionsSource)"
-          DestinationFolder="$(OutDir)"
-          SkipUnchangedFiles="false" />
-  </Target>
-
-  <!-- 4. Discovery refs (no Autodesk DLL copy) -->
-  <Target Name="WriteDevToolsDiscoveryRefs"
+  <!-- 3. Discovery refs (no Autodesk DLL copy) -->
+  <Target Name="WriteDiscoveryRefs"
           AfterTargets="Build"
           Condition="'$(IsTestingPlatformApplication)' == 'true'">
     <PropertyGroup>
-      <_DevToolsDiscoveryRefsFile>$(TargetDir)$(TargetName).discovery-refs.txt</_DevToolsDiscoveryRefsFile>
+      <_DiscoveryRefsFile>$(TargetDir)$(TargetName).discovery-refs.txt</_DiscoveryRefsFile>
     </PropertyGroup>
     <ItemGroup>
-      <_DevToolsDiscoveryRef Include="@(ReferencePath)"
+      <_DiscoveryRef Include="@(ReferencePath)"
           Condition="'%(ReferencePath.NuGetPackageId)' != '' And '%(ReferencePath.CopyLocal)' != 'true' And Exists('%(Identity)') And !Exists('$(TargetDir)%(Filename)%(Extension)') And !$([System.String]::Copy('%(Identity)').Contains('\Reference Assemblies\')) And !$([System.String]::Copy('%(Identity)').Contains('\dotnet\packs\'))" />
     </ItemGroup>
     <WriteLinesToFile
-        File="$(_DevToolsDiscoveryRefsFile)"
-        Lines="@(_DevToolsDiscoveryRef->'%(Identity)')"
+        File="$(_DiscoveryRefsFile)"
+        Lines="@(_DiscoveryRef->'%(Identity)')"
         Overwrite="true"
         Encoding="UTF-8"/>
     <ItemGroup>
-      <FileWrites Include="$(_DevToolsDiscoveryRefsFile)"/>
+      <FileWrites Include="$(_DiscoveryRefsFile)"/>
     </ItemGroup>
   </Target>
 
-  <!-- 5. Host options → testconfig.json -->
+  <!-- 4. Options → testconfig.json -->
   <ItemGroup Condition="'$(IsTestingPlatformApplication)' == 'true'">
     <UpToDateCheckBuilt Include="$([System.IO.Path]::Combine($(MSBuildProjectDirectory), $(OutputPath), $(AssemblyName).testconfig.json))">
       <Original>$(MSBuildProjectFullPath)</Original>
     </UpToDateCheckBuilt>
   </ItemGroup>
 
-  <Target Name="GenerateDevToolsTestConfig"
+  <Target Name="GenerateTestConfig"
           BeforeTargets="BeforeBuild;GenerateTestingPlatformConfigurationFile;_CalculateGenerateTestingPlatformConfigurationFile;_GenerateTestingPlatformConfigurationFileCore"
           Condition="'$(IsTestingPlatformApplication)' == 'true'">
     <Error
@@ -215,44 +210,37 @@
         Condition="'$(HostVersion)' == ''"
         Text="RevitDevTool.TestAdapter test projects must declare &lt;HostVersion&gt; in the .csproj (for example &lt;HostVersion&gt;2024&lt;/HostVersion&gt; or &lt;HostVersion&gt;$(RevitVersion)&lt;/HostVersion&gt;)." />
     <Error
-        Condition="'$(DevToolsMTPAssembly)' == ''"
-        Text="RevitDevTool.TestAdapter requires DevToolsMTPAssembly. Set TestingFramework to a supported value or declare &lt;DevToolsMTPAssembly&gt; in the test .csproj." />
+        Condition="'$(MTPAssembly)' == ''"
+        Text="RevitDevTool.TestAdapter requires MTPAssembly. Set TestingFramework to a supported value or declare &lt;MTPAssembly&gt; in the test .csproj." />
     <Error
-        Condition="'$(DevToolsMTPEntry)' == ''"
-        Text="RevitDevTool.TestAdapter requires DevToolsMTPEntry. Set TestingFramework to a supported value or declare &lt;DevToolsMTPEntry&gt; in the test .csproj." />
+        Condition="'$(MTPEntry)' == ''"
+        Text="RevitDevTool.TestAdapter requires MTPEntry. Set TestingFramework to a supported value or declare &lt;MTPEntry&gt; in the test .csproj." />
     <PropertyGroup>
-      <_DevToolsTestingRunnerPath Condition="'$(DevToolsTestingRunnerPath)' != ''">$(DevToolsTestingRunnerPath)</_DevToolsTestingRunnerPath>
-      <_DevToolsTestingRunnerPath Condition="'$(_DevToolsTestingRunnerPath)' == ''">$([System.Environment]::GetFolderPath(SpecialFolder.ApplicationData))\Autodesk\ApplicationPlugins\RevitDevTool.bundle\Contents\DevTools.TestRunner.exe</_DevToolsTestingRunnerPath>
-      <_DevToolsTestingRunnerPathJson>$(_DevToolsTestingRunnerPath.Replace('\', '\\'))</_DevToolsTestingRunnerPathJson>
-      <_DevToolsUserTestConfigPath>$(MSBuildProjectDirectory)\testconfig.json</_DevToolsUserTestConfigPath>
-      <_DevToolsGeneratedTestConfigPath>$(IntermediateOutputPath)devtools.testconfig.json</_DevToolsGeneratedTestConfigPath>
-      <_DevToolsMergedTestConfigPath>$(IntermediateOutputPath)testconfig.json</_DevToolsMergedTestConfigPath>
-      <_DevToolsUserTestConfigText Condition="Exists('$(_DevToolsUserTestConfigPath)')">$([System.IO.File]::ReadAllText('$(_DevToolsUserTestConfigPath)'))</_DevToolsUserTestConfigText>
-      <_DevToolsUserTestConfigNormalized Condition="'$(_DevToolsUserTestConfigText)' != ''">$(_DevToolsUserTestConfigText.ToLowerInvariant())</_DevToolsUserTestConfigNormalized>
+      <_RunnerPath Condition="'$(TestingRunnerPath)' != ''">$(TestingRunnerPath)</_RunnerPath>
+      <_RunnerPath Condition="'$(_RunnerPath)' == ''">$([System.Environment]::GetFolderPath(SpecialFolder.ApplicationData))\Autodesk\ApplicationPlugins\RevitDevTool.bundle\Contents\DevTools.TestRunner.exe</_RunnerPath>
+      <_RunnerPathJson>$(_RunnerPath.Replace('\', '\\'))</_RunnerPathJson>
+      <_GeneratedTestConfigPath>$(IntermediateOutputPath)devtools.testconfig.json</_GeneratedTestConfigPath>
+      <_MergedTestConfigPath>$(IntermediateOutputPath)testconfig.json</_MergedTestConfigPath>
     </PropertyGroup>
-    <Error
-        Condition="'$(_DevToolsUserTestConfigNormalized)' != '' And $(_DevToolsUserTestConfigNormalized.Contains('&quot;devtools&quot;')) And (!$(_DevToolsUserTestConfigNormalized.Contains('&quot;frameworkid&quot;')) Or !$(_DevToolsUserTestConfigNormalized.Contains('&quot;mtpassembly&quot;')) Or !$(_DevToolsUserTestConfigNormalized.Contains('&quot;mtpentry&quot;')))"
-        Text="User testconfig.json contains a devtools section but is missing frameworkId, mtpAssembly, or mtpEntry. Delete the devtools section or add all three plugin keys." />
-
     <MakeDir Directories="$(IntermediateOutputPath);$(OutputPath)"/>
     <WriteLinesToFile
-        File="$(_DevToolsGeneratedTestConfigPath)"
-        Lines="{&#xA;  &quot;devtools&quot;: {&#xA;    &quot;hostName&quot;: &quot;$(HostName)&quot;,&#xA;    &quot;hostVersion&quot;: &quot;$(HostVersion)&quot;,&#xA;    &quot;forceLaunch&quot;: $(ForceLaunch),&#xA;    &quot;perTestTimeoutSeconds&quot;: $(PerTestTimeout),&#xA;    &quot;launchTimeoutSeconds&quot;: $(LaunchTimeout),&#xA;    &quot;runnerPath&quot;: &quot;$(_DevToolsTestingRunnerPathJson)&quot;,&#xA;    &quot;frameworkId&quot;: &quot;$(TestingFramework)&quot;,&#xA;    &quot;mtpAssembly&quot;: &quot;$(DevToolsMTPAssembly)&quot;,&#xA;    &quot;mtpEntry&quot;: &quot;$(DevToolsMTPEntry)&quot;&#xA;  }&#xA;}"
+        File="$(_GeneratedTestConfigPath)"
+        Lines="{&#xA;  &quot;devtools&quot;: {&#xA;    &quot;hostName&quot;: &quot;$(HostName)&quot;,&#xA;    &quot;hostVersion&quot;: &quot;$(HostVersion)&quot;,&#xA;    &quot;forceLaunch&quot;: $(ForceLaunch),&#xA;    &quot;perTestTimeoutSeconds&quot;: $(PerTestTimeout),&#xA;    &quot;launchTimeoutSeconds&quot;: $(LaunchTimeout),&#xA;    &quot;runnerPath&quot;: &quot;$(_RunnerPathJson)&quot;,&#xA;    &quot;frameworkId&quot;: &quot;$(TestingFramework)&quot;,&#xA;    &quot;mtpAssembly&quot;: &quot;$(MTPAssembly)&quot;,&#xA;    &quot;mtpEntry&quot;: &quot;$(MTPEntry)&quot;&#xA;  }&#xA;}"
         Overwrite="true"
         Encoding="UTF-8"/>
-    <MergeDevToolsTestConfig
-        UserConfigFile="$(_DevToolsUserTestConfigPath)"
-        GeneratedConfigFile="$(_DevToolsGeneratedTestConfigPath)"
-        OutputConfigFile="$(_DevToolsMergedTestConfigPath)"/>
+    <MergeTestConfig
+        UserConfigFile="$(MSBuildProjectDirectory)\testconfig.json"
+        GeneratedConfigFile="$(_GeneratedTestConfigPath)"
+        OutputConfigFile="$(_MergedTestConfigPath)"/>
     <PropertyGroup>
-      <_TestingPlatformConfigurationFileSourcePath>$(_DevToolsMergedTestConfigPath)</_TestingPlatformConfigurationFileSourcePath>
-      <_DevToolsOutputTestConfigPath>$([System.IO.Path]::Combine($(MSBuildProjectDirectory), $(OutputPath), $(AssemblyName).testconfig.json))</_DevToolsOutputTestConfigPath>
+      <_TestingPlatformConfigurationFileSourcePath>$(_MergedTestConfigPath)</_TestingPlatformConfigurationFileSourcePath>
+      <_OutputTestConfigPath>$([System.IO.Path]::Combine($(MSBuildProjectDirectory), $(OutputPath), $(AssemblyName).testconfig.json))</_OutputTestConfigPath>
     </PropertyGroup>
-    <Copy SourceFiles="$(_DevToolsMergedTestConfigPath)"
-          DestinationFiles="$(_DevToolsOutputTestConfigPath)"
+    <Copy SourceFiles="$(_MergedTestConfigPath)"
+          DestinationFiles="$(_OutputTestConfigPath)"
           SkipUnchangedFiles="false"/>
     <ItemGroup>
-      <FileWrites Include="$(_DevToolsGeneratedTestConfigPath);$(_DevToolsMergedTestConfigPath);$(_DevToolsOutputTestConfigPath)"/>
+      <FileWrites Include="$(_GeneratedTestConfigPath);$(_MergedTestConfigPath);$(_OutputTestConfigPath)"/>
     </ItemGroup>
   </Target>
 </Project>

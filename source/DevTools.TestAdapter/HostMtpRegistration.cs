@@ -7,7 +7,7 @@ namespace DevTools.TestAdapter;
 /// Loads the configured MTP sibling and invokes its <c>Register</c> entry.
 /// Must not throw: a failing static constructor aborts testhost discovery.
 /// </summary>
-public static class HostMTPRegistration
+public static class HostMtpRegistration
 {
     public static string? LastError { get; internal set; }
 

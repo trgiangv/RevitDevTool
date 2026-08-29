@@ -16,23 +16,22 @@ internal static class TestNodeProperties
             new LinePositionSpan(new LinePosition(line, 1), new LinePosition(line, 1))));
     }
 
-    public static void AddTraits(List<IProperty> properties, IReadOnlyList<TestingTrait>? traits)
+    private static void AddTraits(List<IProperty> properties, IReadOnlyList<TestingTrait>? traits)
     {
         if (traits is null)
             return;
 
-        foreach (var trait in traits)
-            properties.Add(new TestMetadataProperty(trait.Name, trait.Value));
+        properties.AddRange(traits.Select(trait => new TestMetadataProperty(trait.Name, trait.Value)).Cast<IProperty>());
     }
 
-    public static void AddTiming(List<IProperty> properties, double durationMilliseconds)
+    private static void AddTiming(List<IProperty> properties, double durationMilliseconds)
     {
         var duration = TimeSpan.FromMilliseconds(Math.Max(durationMilliseconds, 0));
         var end = DateTimeOffset.UtcNow;
         properties.Add(new TimingProperty(new TimingInfo(end - duration, end, duration)));
     }
 
-    public static void AddOutput(List<IProperty> properties, string? output)
+    private static void AddOutput(List<IProperty> properties, string? output)
     {
         if (string.IsNullOrWhiteSpace(output))
             return;
@@ -40,7 +39,7 @@ internal static class TestNodeProperties
         properties.Add(new StandardOutputProperty(output!));
     }
 
-    public static void AddAttachments(List<IProperty> properties, IReadOnlyList<TestingAttachment>? attachments)
+    private static void AddAttachments(List<IProperty> properties, IReadOnlyList<TestingAttachment>? attachments)
     {
         if (attachments is null)
             return;
@@ -57,7 +56,7 @@ internal static class TestNodeProperties
         }
     }
 
-    public static IProperty ToStateProperty(TestingCaseResult result) =>
+    private static IProperty ToStateProperty(TestingCaseResult result) =>
         result.Outcome switch
         {
             "Passed" => PassedTestNodeStateProperty.CachedInstance,

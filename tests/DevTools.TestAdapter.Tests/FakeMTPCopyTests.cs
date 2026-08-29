@@ -18,8 +18,8 @@ public sealed class FakeMTPCopyTests
             <Project>
               <PropertyGroup>
                 <TestingFramework>fake</TestingFramework>
-                <DevToolsMTPAssembly>Fake.MTP.dll</DevToolsMTPAssembly>
-                <DevToolsMTPEntry>Fake.Plugin</DevToolsMTPEntry>
+                <MTPAssembly>Fake.MTP.dll</MTPAssembly>
+                <MTPEntry>Fake.Plugin</MTPEntry>
                 <OutDir>{outDir}\</OutDir>
                 <TargetFramework>net8.0-windows</TargetFramework>
                 <TargetFrameworkIdentifier>.NETCoreApp</TargetFrameworkIdentifier>
@@ -32,7 +32,7 @@ public sealed class FakeMTPCopyTests
 
         try
         {
-            var start = new ProcessStartInfo("dotnet", "msbuild FakeCopy.proj -t:CopyDevToolsMTPSibling -nologo")
+            var start = new ProcessStartInfo("dotnet", "msbuild FakeCopy.proj -t:CopyMTPSibling -nologo")
             {
                 WorkingDirectory = work,
                 RedirectStandardOutput = true,

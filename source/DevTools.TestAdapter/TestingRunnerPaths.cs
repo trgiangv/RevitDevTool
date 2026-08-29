@@ -9,7 +9,7 @@ public static class TestingRunnerPaths
     public const string HostVersionEnvironmentVariable = "DEVTOOLS_TESTING_HOST_VERSION";
     public const string RunnerPathEnvironmentVariable = "DEVTOOLS_TESTING_RUNNER_PATH";
 
-    public const string MissingInstallMessage =
+    private const string MissingInstallMessage =
         "RevitDevTool is not installed. Install it from https://github.com/trgiangv/RevitDevTool";
 
     public static string ResolveRunnerPath(string? configuredPath)
@@ -24,18 +24,12 @@ public static class TestingRunnerPaths
             "RevitDevTool.bundle",
             "Contents",
             "DevTools.TestRunner.exe");
-        if (IsRunnable(bundlePath))
-            return bundlePath;
-
-        throw new InvalidOperationException(MissingInstallMessage);
+        return IsRunnable(bundlePath) ? bundlePath : throw new InvalidOperationException(MissingInstallMessage);
     }
 
     public static string? ExpandPath(string? value)
     {
-        if (string.IsNullOrWhiteSpace(value))
-            return null;
-
-        return Environment.ExpandEnvironmentVariables(value!.Trim());
+        return string.IsNullOrWhiteSpace(value) ? null : Environment.ExpandEnvironmentVariables(value!.Trim());
     }
 
     public static string? ReadEnvironment(string variable)

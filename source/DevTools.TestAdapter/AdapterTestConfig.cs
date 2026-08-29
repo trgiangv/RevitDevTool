@@ -6,18 +6,19 @@ namespace DevTools.TestAdapter;
 
 internal static class AdapterTestConfig
 {
+    [UsedImplicitly(ImplicitUseTargetFlags.WithMembers)]
     internal sealed class PluginConfig
     {
         internal PluginConfig(string frameworkId, string mtpAssembly, string mtpEntry)
         {
             FrameworkId = frameworkId;
-            MTPAssembly = mtpAssembly;
-            MTPEntry = mtpEntry;
+            MtpAssembly = mtpAssembly;
+            MtpEntry = mtpEntry;
         }
 
         internal string FrameworkId { get; }
-        internal string MTPAssembly { get; }
-        internal string MTPEntry { get; }
+        internal string MtpAssembly { get; }
+        internal string MtpEntry { get; }
     }
 
     internal static bool TryReadPluginConfig(out PluginConfig? config, out string? error)
@@ -32,37 +33,47 @@ internal static class AdapterTestConfig
 
             if (section is null)
                 continue;
-
-            if (string.IsNullOrWhiteSpace(section.FrameworkId))
-            {
-                error = "RevitDevTool.TestAdapter requires 'devtools.frameworkId' in testconfig.json.";
-                return false;
-            }
-
-            if (string.IsNullOrWhiteSpace(section.MTPAssembly))
-            {
-                error = "RevitDevTool.TestAdapter requires 'devtools.mtpAssembly' in testconfig.json.";
-                return false;
-            }
-
-            if (string.IsNullOrWhiteSpace(section.MTPEntry))
-            {
-                error = "RevitDevTool.TestAdapter requires 'devtools.mtpEntry' in testconfig.json.";
-                return false;
-            }
-
-            config = new PluginConfig(
-                section.FrameworkId!.Trim(),
-                section.MTPAssembly!.Trim(),
-                section.MTPEntry!.Trim());
-            return true;
+            return TryBuildPluginConfig(section, out config, out error);
         }
 
         error = "RevitDevTool.TestAdapter requires a 'devtools' section with frameworkId, mtpAssembly, and mtpEntry in testconfig.json.";
         return false;
     }
 
-    internal static string? TryReadMTPAssembly()
+    private static bool TryBuildPluginConfig(
+        PluginSection section,
+        out PluginConfig? config,
+        out string? error)
+    {
+        config = null;
+        error = null;
+
+        if (string.IsNullOrWhiteSpace(section.FrameworkId))
+        {
+            error = "RevitDevTool.TestAdapter requires 'devtools.frameworkId' in testconfig.json.";
+            return false;
+        }
+
+        if (string.IsNullOrWhiteSpace(section.MtpAssembly))
+        {
+            error = "RevitDevTool.TestAdapter requires 'devtools.mtpAssembly' in testconfig.json.";
+            return false;
+        }
+
+        if (string.IsNullOrWhiteSpace(section.MtpEntry))
+        {
+            error = "RevitDevTool.TestAdapter requires 'devtools.mtpEntry' in testconfig.json.";
+            return false;
+        }
+
+        config = new PluginConfig(
+            section.FrameworkId!.Trim(),
+            section.MtpAssembly!.Trim(),
+            section.MtpEntry!.Trim());
+        return true;
+    }
+
+    internal static string? TryReadMtpAssembly()
     {
         foreach (var path in ResolveTestConfigPaths())
         {
@@ -72,8 +83,8 @@ internal static class AdapterTestConfig
             if (section is null)
                 continue;
 
-            if (!string.IsNullOrWhiteSpace(section.MTPAssembly))
-                return section.MTPAssembly!.Trim();
+            if (!string.IsNullOrWhiteSpace(section.MtpAssembly))
+                return section.MtpAssembly!.Trim();
         }
 
         return null;
@@ -126,12 +137,12 @@ internal static class AdapterTestConfig
         internal PluginSection(string? frameworkId, string? mtpAssembly, string? mtpEntry)
         {
             FrameworkId = frameworkId;
-            MTPAssembly = mtpAssembly;
-            MTPEntry = mtpEntry;
+            MtpAssembly = mtpAssembly;
+            MtpEntry = mtpEntry;
         }
 
         internal string? FrameworkId { get; }
-        internal string? MTPAssembly { get; }
-        internal string? MTPEntry { get; }
+        internal string? MtpAssembly { get; }
+        internal string? MtpEntry { get; }
     }
 }

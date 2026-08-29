@@ -83,7 +83,7 @@ internal sealed class HostTestFramework : ITestFramework, IDataProducer
         return Task.FromResult(new CloseTestSessionResult { IsSuccess = true });
     }
 
-    internal static IReadOnlyList<TestNode> DiscoverNodes(
+    internal static List<TestNode> DiscoverNodes(
         string assemblyPath,
         TestingSelection selection)
     {
@@ -137,7 +137,7 @@ internal sealed class HostTestFramework : ITestFramework, IDataProducer
             var cases = discoverer.Select(assemblyPath, filter, TestingDiscoveryOptions.Testhost);
             var mapper = RequireRunMapper();
             var hostSelection = mapper.ToHostSelection(filter, cases);
-            var testCount = Math.Max(cases.Count, filter.TestIds?.Count ?? 0);
+            var testCount = Math.Max(cases.Count, filter.TestIds.Count);
             if (testCount == 0 && IsConstrained(filter))
             {
                 foreach (var missing in mapper.ResultsForUnreported(filter, cases, []))
@@ -276,11 +276,11 @@ internal sealed class HostTestFramework : ITestFramework, IDataProducer
         if (HostTestDiscovery.Provider is { } provider)
             return provider;
 
-        var detail = HostMTPRegistration.LastError;
+        var detail = HostMtpRegistration.LastError;
         var suffix = string.IsNullOrWhiteSpace(detail)
             ? string.Empty
             : " " + detail;
-        var assemblyName = AdapterTestConfig.TryReadMTPAssembly() ?? "mtpAssembly";
+        var assemblyName = AdapterTestConfig.TryReadMtpAssembly() ?? "mtpAssembly";
         throw new InvalidOperationException(
             $"Local discovery requires {assemblyName} next to the test executable. "
             + "RevitDevTool.TestAdapter copies the selected sibling at build; do not add it as a ProjectReference."
@@ -347,13 +347,7 @@ internal sealed class HostTestFramework : ITestFramework, IDataProducer
         if (discovered is null || discovered.Count == 0)
             return null;
 
-        foreach (var test in discovered)
-        {
-            if (string.Equals(test.TestId, result.TestId, StringComparison.Ordinal))
-                return test;
-        }
-
-        return null;
+        return discovered.FirstOrDefault(test => string.Equals(test.TestId, result.TestId, StringComparison.Ordinal));
     }
 
     private static string OpaqueUid(string id, string? fullName, string name)
@@ -400,7 +394,7 @@ internal sealed class HostTestFramework : ITestFramework, IDataProducer
         }
 
         if (!string.IsNullOrWhiteSpace(assemblyPath))
-            return Path.GetFileNameWithoutExtension(assemblyPath) ?? string.Empty;
+            return Path.GetFileNameWithoutExtension(assemblyPath);
 
         return System.Reflection.Assembly.GetEntryAssembly()?.GetName().FullName ?? string.Empty;
     }

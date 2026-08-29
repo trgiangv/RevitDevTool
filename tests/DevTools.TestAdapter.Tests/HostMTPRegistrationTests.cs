@@ -18,15 +18,15 @@ public sealed class HostMTPRegistrationTests
             try
             {
                 using var directory = new TemporaryDirectory();
-                var registered = HostMTPRegistration.Register(
+                var registered = HostMtpRegistration.Register(
                     assemblyFileName,
                     "DevTools.NUnit.MTP.NUnitMTP",
                     directory.Path,
                     _ => throw new InvalidOperationException("should not load"));
 
                 Assert.False(registered);
-                Assert.NotNull(HostMTPRegistration.LastError);
-                Assert.Contains("required", HostMTPRegistration.LastError!, StringComparison.OrdinalIgnoreCase);
+                Assert.NotNull(HostMtpRegistration.LastError);
+                Assert.Contains("required", HostMtpRegistration.LastError!, StringComparison.OrdinalIgnoreCase);
                 Assert.Null(HostTestDiscovery.Provider);
             }
             finally
@@ -49,15 +49,15 @@ public sealed class HostMTPRegistrationTests
             try
             {
                 using var directory = new TemporaryDirectory();
-                var registered = HostMTPRegistration.Register(
+                var registered = HostMtpRegistration.Register(
                     assemblyFileName,
                     "DevTools.NUnit.MTP.NUnitMTP",
                     directory.Path,
                     _ => throw new InvalidOperationException("should not load"));
 
                 Assert.False(registered);
-                Assert.NotNull(HostMTPRegistration.LastError);
-                Assert.Contains("bare file name", HostMTPRegistration.LastError!, StringComparison.OrdinalIgnoreCase);
+                Assert.NotNull(HostMtpRegistration.LastError);
+                Assert.Contains("bare file name", HostMtpRegistration.LastError!, StringComparison.OrdinalIgnoreCase);
                 Assert.Null(HostTestDiscovery.Provider);
             }
             finally
@@ -79,15 +79,15 @@ public sealed class HostMTPRegistrationTests
             try
             {
                 using var directory = new TemporaryDirectory();
-                var registered = HostMTPRegistration.Register(
+                var registered = HostMtpRegistration.Register(
                     "DevTools.NUnit.MTP.dll",
                     "DevTools.NUnit.MTP.NUnitMTP",
                     directory.Path,
                     _ => throw new InvalidOperationException("should not load"));
 
                 Assert.False(registered);
-                Assert.NotNull(HostMTPRegistration.LastError);
-                Assert.Contains("DevTools.NUnit.MTP.dll", HostMTPRegistration.LastError!, StringComparison.Ordinal);
+                Assert.NotNull(HostMtpRegistration.LastError);
+                Assert.Contains("DevTools.NUnit.MTP.dll", HostMtpRegistration.LastError!, StringComparison.Ordinal);
                 Assert.Null(HostTestDiscovery.Provider);
             }
             finally
@@ -113,13 +113,13 @@ public sealed class HostMTPRegistrationTests
                 var pluginPath = Path.Combine(directory.Path, StubMTPPlugin.AssemblyFileName);
                 File.Copy(StubMTPPlugin.AssemblyPath, pluginPath);
 
-                var registered = HostMTPRegistration.Register(
+                var registered = HostMtpRegistration.Register(
                     StubMTPPlugin.AssemblyFileName,
                     StubMTPPlugin.EntryTypeFullName,
                     directory.Path,
                     path => System.Reflection.Assembly.LoadFrom(path));
 
-                Assert.True(registered, HostMTPRegistration.LastError);
+                Assert.True(registered, HostMtpRegistration.LastError);
                 Assert.NotNull(HostTestDiscovery.Provider);
             }
             finally

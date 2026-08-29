@@ -5,8 +5,11 @@
         <AssemblyName>DevTools.Testing.Transport</AssemblyName>
     </PropertyGroup>
 
-    <ItemGroup>
+    <ItemGroup Condition="'$(TargetFramework)' == 'net48'">
         <PackageReference Include="System.Text.Json"/>
+    </ItemGroup>
+
+    <ItemGroup>
         <ProjectReference Include="..\DevTools.Ipc\DevTools.Ipc.csproj"/>
         <ProjectReference Include="..\DevTools.Testing.Abstractions\DevTools.Testing.Abstractions.csproj"/>
     </ItemGroup>

@@ -88,7 +88,9 @@ a year quirk — rejected. Do not exclude `ModelContextProtocol*` by filename.
    overrides.** Driver defaults: `ILRepackable=false`, `ILRepackUnion=true`,
    `ILRepackInternalize=false`, `ILRepackILLink=false`, `ILRepackParallel=true`.
    A csproj may set `ILRepackable=true`, `ILRepackInternalize=true` (nupkg /
-   adapter: hide merged types and drop leftover excludes + STJ satellites), and
+   adapter: hide merged types and drop leftover excludes + STJ satellites),
+   `RepackBinariesKeep` (TestAdapter: `DevTools.Testing.Abstractions.dll` on
+   every TFM so testhost MTP shares `HostTestDiscovery`), and
    `RepackBinariesExcludes`. Do not restate Union, ILLink, Parallel, or
    `Internalize=false`. Rationale stays in this file.
 
@@ -111,6 +113,13 @@ a year quirk — rejected. Do not exclude `ModelContextProtocol*` by filename.
 6. **`RepackBinariesExcludes` for `ModelContextProtocol*`.** A second packing
    mode for one package family. If MCP must not be in the host image, it must
    not be copy-local. Rejected.
+7. **`PolyfillLib` instead of source `Polyfill` on net48.** A compiled DLL
+   would stop embedding `Polyfills.Polyfill` per assembly, but the net48
+   package graph pulls `Microsoft.Bcl.Memory`, `System.Memory`,
+   `System.Runtime.CompilerServices.Unsafe`, `System.Net.Http`,
+   `System.ValueTuple`, and related BCL packages as copy-local merge inputs.
+   That reopens ILRepack `/union` identity and isolated-ALC bind cost the
+   source package avoids. Rejected — net48 stays on source `Polyfill`.
 
 ## Consequences
 

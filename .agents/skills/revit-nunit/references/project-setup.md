@@ -105,5 +105,5 @@ Keep one owner: `RevitDevTool.TestAdapter`.
 
 `%APPDATA%/Autodesk/ApplicationPlugins/RevitDevTool.bundle/Contents/DevTools.TestRunner.exe`
 
-Override with MSBuild `DevToolsTestingRunnerPath` only when the bundle is not
+Override with MSBuild `TestingRunnerPath` only when the bundle is not
 in the default location. Missing file → `"RevitDevTool is not installed"`.

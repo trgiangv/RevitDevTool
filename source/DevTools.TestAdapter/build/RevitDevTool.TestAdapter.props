@@ -1,6 +1,6 @@
 <Project>
   <PropertyGroup>
-    <DevToolsTestAdapterPropsImported>true</DevToolsTestAdapterPropsImported>
+    <TestAdapterPropsImported>true</TestAdapterPropsImported>
     <!-- NuGet .props import before SDK inference. Fill the canonical identifier
          from the TFM so later conditions use TargetFrameworkIdentifier only. -->
     <TargetFrameworkIdentifier Condition="'$(TargetFrameworkIdentifier)' == '' and '$(TargetFramework)' != ''">$([MSBuild]::GetTargetFrameworkIdentifier('$(TargetFramework)'))</TargetFrameworkIdentifier>
@@ -10,7 +10,8 @@
     <GenerateTestingPlatformEntryPoint Condition="'$(GenerateTestingPlatformEntryPoint)' == ''">true</GenerateTestingPlatformEntryPoint>
     <OutputType>Exe</OutputType>
     <!-- OutputType is set after Sdk.props, so net48 exes skip binding redirects
-         unless this is explicit. STJ 9 needs Unsafe 6.0. -->
+         unless this is explicit. 3rd-party testhost BCL comes from the consumer
+         Microsoft.Testing.Platform.MSBuild graph, not from this package. -->
     <AutoGenerateBindingRedirects Condition="'$(TargetFrameworkIdentifier)' == '.NETFramework'">true</AutoGenerateBindingRedirects>
     <GenerateBindingRedirectsOutputType Condition="'$(TargetFrameworkIdentifier)' == '.NETFramework'">true</GenerateBindingRedirectsOutputType>
     <AutoUnifyAssemblyReferences Condition="'$(TargetFrameworkIdentifier)' == '.NETFramework'">true</AutoUnifyAssemblyReferences>
@@ -20,10 +21,10 @@
     <LaunchTimeout Condition="'$(LaunchTimeout)' == ''">180</LaunchTimeout>
     <!-- Default in-host engine. Override in the test csproj without changing the package. -->
     <TestingFramework Condition="'$(TestingFramework)' == ''">nunit</TestingFramework>
-    <DevToolsMTPAssembly Condition="'$(DevToolsMTPAssembly)' == '' and '$(TestingFramework)' == 'nunit'">DevTools.NUnit.MTP.dll</DevToolsMTPAssembly>
-    <DevToolsMTPAssembly Condition="'$(DevToolsMTPAssembly)' == '' and '$(TestingFramework)' == 'tunit'">DevTools.TUnit.MTP.dll</DevToolsMTPAssembly>
-    <DevToolsMTPEntry Condition="'$(DevToolsMTPEntry)' == '' and '$(TestingFramework)' == 'nunit'">DevTools.NUnit.MTP.NUnitMTP</DevToolsMTPEntry>
-    <DevToolsMTPEntry Condition="'$(DevToolsMTPEntry)' == '' and '$(TestingFramework)' == 'tunit'">DevTools.TUnit.MTP.TUnitMTP</DevToolsMTPEntry>
+    <MTPAssembly Condition="'$(MTPAssembly)' == '' and '$(TestingFramework)' == 'nunit'">DevTools.NUnit.MTP.dll</MTPAssembly>
+    <MTPAssembly Condition="'$(MTPAssembly)' == '' and '$(TestingFramework)' == 'tunit'">DevTools.TUnit.MTP.dll</MTPAssembly>
+    <MTPEntry Condition="'$(MTPEntry)' == '' and '$(TestingFramework)' == 'nunit'">DevTools.NUnit.MTP.NUnitMTP</MTPEntry>
+    <MTPEntry Condition="'$(MTPEntry)' == '' and '$(TestingFramework)' == 'tunit'">DevTools.TUnit.MTP.TUnitMTP</MTPEntry>
   </PropertyGroup>
 
   <ItemGroup>
@@ -31,20 +32,5 @@
       <DisplayName>RevitDevTool.TestAdapter</DisplayName>
       <TypeFullName>DevTools.TestAdapter.TestingPlatformBuilderHook</TypeFullName>
     </TestingPlatformBuilderHook>
-  </ItemGroup>
-
-  <!-- Direct reference wins MSBuild copy over older Unsafe 4.x (MSB3277). -->
-  <ItemGroup Condition="'$(TargetFrameworkIdentifier)' == '.NETFramework' and '$(ManagePackageVersionsCentrally)' == 'true'">
-    <PackageReference Include="System.Runtime.CompilerServices.Unsafe" VersionOverride="6.1.2"/>
-  </ItemGroup>
-  <ItemGroup Condition="'$(TargetFrameworkIdentifier)' == '.NETFramework' and '$(ManagePackageVersionsCentrally)' != 'true'">
-    <PackageReference Include="System.Runtime.CompilerServices.Unsafe" Version="6.1.2"/>
-  </ItemGroup>
-  <!-- TUnit source-generated [Arguments] cctors reference Microsoft.Bcl.AsyncInterfaces 9. -->
-  <ItemGroup Condition="'$(TestingFramework)' == 'tunit' and '$(TargetFrameworkIdentifier)' == '.NETFramework' and '$(ManagePackageVersionsCentrally)' == 'true'">
-    <PackageReference Include="Microsoft.Bcl.AsyncInterfaces"/>
-  </ItemGroup>
-  <ItemGroup Condition="'$(TestingFramework)' == 'tunit' and '$(TargetFrameworkIdentifier)' == '.NETFramework' and '$(ManagePackageVersionsCentrally)' != 'true'">
-    <PackageReference Include="Microsoft.Bcl.AsyncInterfaces" Version="10.0.11"/>
   </ItemGroup>
 </Project>

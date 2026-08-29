@@ -11,18 +11,23 @@
          - Sole published testing nupkg. Bump Version before PublishTestAdapter.yml.
          - Independent of installer GitVersion. No NuGet dependency groups.
 
-      3. net48 ILRepack
-         - Merge adapter + Transport/Ipc/Json. Keep Testing.Abstractions.dll
-           loose so testhost shares HostTestDiscovery with MTP.
+      3. ILRepack (every TFM)
+         - Merge TargetDir copy-local (Transport, Ipc; net48 also STJ BCL) into
+           TestAdapter.dll. Keep Testing.Abstractions.dll so testhost MTP shares
+           HostTestDiscovery. Do not add extra PackageReference for STJ/Unsafe/Bcl
+           — net48 gets those from Transport/Ipc; net8/net10 use in-box STJ.
+           Testhost 3rd-party BCL comes from the consumer
+           Microsoft.Testing.Platform.MSBuild graph plus binding redirects,
+           not from this nupkg.
 
-      4. Modern runtime closure
-         - Pack TargetDir DLLs (except the adapter) under
-           build/runtime/net{N}-windows7.0. Not lib/ compile references.
+      4. Runtime folder (same layout every TFM)
+         - MTP siblings + Abstractions under build/runtime/{tfm}. Ipc/Transport
+           are merged, not packed loose.
 
       5. MTP sibling
          - Not a ProjectReference. pack-test-adapter.ps1 restores and builds
            DevTools.NUnit.MTP and DevTools.TUnit.MTP for all TFMs before pack.
-         - Copy MTP.dll (and Abstractions on net48) to build/runtime.
+         - Copy MTP.dll and Abstractions to build/runtime.
     -->
     <PropertyGroup>
         <TargetFrameworks>net48;net8.0-windows;net10.0-windows</TargetFrameworks>
@@ -42,11 +47,12 @@
         <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
         <SuppressDependenciesWhenPacking>true</SuppressDependenciesWhenPacking>
         <NoPackageAnalysis>true</NoPackageAnalysis>
-        <TargetsForTfmSpecificContentInPackage>$(TargetsForTfmSpecificContentInPackage);PackDevToolsTestAdapterRuntimeClosure;PackDevToolsNUnitMTP;PackDevToolsTUnitMTP</TargetsForTfmSpecificContentInPackage>
+        <TargetsForTfmSpecificContentInPackage>$(TargetsForTfmSpecificContentInPackage);PackNUnitMTP;PackTUnitMTP</TargetsForTfmSpecificContentInPackage>
         <IsTestProject>false</IsTestProject>
-        <ILRepackable Condition="'$(TargetFramework)' == 'net48'">true</ILRepackable>
-        <ILRepackInternalize Condition="'$(TargetFramework)' == 'net48'">true</ILRepackInternalize>
-        <RepackBinariesKeep Condition="'$(TargetFramework)' == 'net48'">DevTools.Testing.Abstractions.dll</RepackBinariesKeep>
+        <ProduceReferenceAssembly>false</ProduceReferenceAssembly>
+        <ILRepackable Condition="'$(TargetFramework)' != ''">true</ILRepackable>
+        <ILRepackInternalize Condition="'$(TargetFramework)' != ''">true</ILRepackInternalize>
+        <RepackBinariesKeep Condition="'$(TargetFramework)' != ''">DevTools.Testing.Abstractions.dll</RepackBinariesKeep>
     </PropertyGroup>
 
     <!-- 2. Package identity -->
@@ -56,105 +62,87 @@
         <None Include="README.md" Pack="true" PackagePath="\"/>
     </ItemGroup>
 
-    <!-- 4. Modern runtime closure -->
-    <Target Name="PackDevToolsTestAdapterRuntimeClosure"
-            Condition="'$(TargetFrameworkIdentifier)' == '.NETCoreApp'">
+    <Target Name="BuildTUnitMTPForPack">
         <PropertyGroup>
-            <_DevToolsTestAdapterRuntimeTfm>net$(TargetFrameworkVersion.Substring(1))-windows7.0</_DevToolsTestAdapterRuntimeTfm>
+            <_TUnitMTPProject>$(MSBuildThisFileDirectory)..\DevTools.TUnit.MTP\DevTools.TUnit.MTP.csproj</_TUnitMTPProject>
+            <_TUnitMTPDll>$(MSBuildThisFileDirectory)..\DevTools.TUnit.MTP\bin\$(Configuration)\$(TargetFramework)\DevTools.TUnit.MTP.dll</_TUnitMTPDll>
         </PropertyGroup>
-        <ItemGroup>
-            <TfmSpecificPackageFile Include="$(TargetDir)*.dll" Exclude="$(TargetPath)">
-                <PackagePath>build/runtime/$(_DevToolsTestAdapterRuntimeTfm)</PackagePath>
-            </TfmSpecificPackageFile>
-        </ItemGroup>
-    </Target>
-
-    <Target Name="BuildDevToolsTUnitMTPForPack">
-        <PropertyGroup>
-            <_DevToolsTUnitMTPProject>$(MSBuildThisFileDirectory)..\DevTools.TUnit.MTP\DevTools.TUnit.MTP.csproj</_DevToolsTUnitMTPProject>
-            <_DevToolsTUnitMTPDll>$(MSBuildThisFileDirectory)..\DevTools.TUnit.MTP\bin\$(Configuration)\$(TargetFramework)\DevTools.TUnit.MTP.dll</_DevToolsTUnitMTPDll>
-        </PropertyGroup>
-        <MSBuild Condition="!Exists('$(_DevToolsTUnitMTPDll)')"
-                 Projects="$(_DevToolsTUnitMTPProject)" Targets="Restore"
+        <MSBuild Condition="!Exists('$(_TUnitMTPDll)')"
+                 Projects="$(_TUnitMTPProject)" Targets="Restore"
                  Properties="Configuration=$(Configuration)" RemoveProperties="TargetFramework"/>
-        <MSBuild Condition="!Exists('$(_DevToolsTUnitMTPDll)')"
-                 Projects="$(_DevToolsTUnitMTPProject)" Targets="Build"
+        <MSBuild Condition="!Exists('$(_TUnitMTPDll)')"
+                 Projects="$(_TUnitMTPProject)" Targets="Build"
                  Properties="Configuration=$(Configuration);TargetFramework=$(TargetFramework)"/>
     </Target>
 
-    <Target Name="PackDevToolsTUnitMTP"
-            DependsOnTargets="BuildDevToolsTUnitMTPForPack">
+    <Target Name="PackTUnitMTP"
+            DependsOnTargets="BuildTUnitMTPForPack">
         <PropertyGroup>
-            <_DevToolsTUnitMTPDll>$(MSBuildThisFileDirectory)..\DevTools.TUnit.MTP\bin\$(Configuration)\$(TargetFramework)\DevTools.TUnit.MTP.dll</_DevToolsTUnitMTPDll>
-            <_DevToolsTUnitMTPPackageRuntime Condition="'$(TargetFrameworkIdentifier)' == '.NETCoreApp'">build/runtime/net$(TargetFrameworkVersion.Substring(1))-windows7.0</_DevToolsTUnitMTPPackageRuntime>
-            <_DevToolsTUnitMTPPackageRuntime Condition="'$(TargetFrameworkIdentifier)' != '.NETCoreApp'">build/runtime/net48</_DevToolsTUnitMTPPackageRuntime>
+            <_TUnitMTPDll>$(MSBuildThisFileDirectory)..\DevTools.TUnit.MTP\bin\$(Configuration)\$(TargetFramework)\DevTools.TUnit.MTP.dll</_TUnitMTPDll>
+            <_TUnitMTPPackageRuntime Condition="'$(TargetFrameworkIdentifier)' == '.NETCoreApp'">build/runtime/net$(TargetFrameworkVersion.Substring(1))-windows7.0</_TUnitMTPPackageRuntime>
+            <_TUnitMTPPackageRuntime Condition="'$(TargetFrameworkIdentifier)' != '.NETCoreApp'">build/runtime/net48</_TUnitMTPPackageRuntime>
         </PropertyGroup>
-        <Error Condition="!Exists('$(_DevToolsTUnitMTPDll)')"
-               Text="Pack requires DevTools.TUnit.MTP.dll at $(_DevToolsTUnitMTPDll)."/>
+        <Error Condition="!Exists('$(_TUnitMTPDll)')"
+               Text="Pack requires DevTools.TUnit.MTP.dll at $(_TUnitMTPDll)."/>
         <ItemGroup>
-            <TfmSpecificPackageFile Include="$(_DevToolsTUnitMTPDll)">
-                <PackagePath>$(_DevToolsTUnitMTPPackageRuntime)</PackagePath>
+            <TfmSpecificPackageFile Include="$(_TUnitMTPDll)">
+                <PackagePath>$(_TUnitMTPPackageRuntime)</PackagePath>
             </TfmSpecificPackageFile>
         </ItemGroup>
     </Target>
 
     <!-- 5. MTP sibling: restore/build if this TFM DLL is missing -->
-    <Target Name="BuildDevToolsNUnitMTPForPack">
+    <Target Name="BuildNUnitMTPForPack">
         <PropertyGroup>
-            <_DevToolsNUnitMTPProject>$(MSBuildThisFileDirectory)..\DevTools.NUnit.MTP\DevTools.NUnit.MTP.csproj</_DevToolsNUnitMTPProject>
-            <_DevToolsNUnitMTPDll>$(MSBuildThisFileDirectory)..\DevTools.NUnit.MTP\bin\$(Configuration)\$(TargetFramework)\DevTools.NUnit.MTP.dll</_DevToolsNUnitMTPDll>
+            <_NUnitMTPProject>$(MSBuildThisFileDirectory)..\DevTools.NUnit.MTP\DevTools.NUnit.MTP.csproj</_NUnitMTPProject>
+            <_NUnitMTPDll>$(MSBuildThisFileDirectory)..\DevTools.NUnit.MTP\bin\$(Configuration)\$(TargetFramework)\DevTools.NUnit.MTP.dll</_NUnitMTPDll>
         </PropertyGroup>
-        <MSBuild Condition="!Exists('$(_DevToolsNUnitMTPDll)')"
-                 Projects="$(_DevToolsNUnitMTPProject)"
+        <MSBuild Condition="!Exists('$(_NUnitMTPDll)')"
+                 Projects="$(_NUnitMTPProject)"
                  Targets="Restore"
                  Properties="Configuration=$(Configuration)"
                  RemoveProperties="TargetFramework"/>
-        <MSBuild Condition="!Exists('$(_DevToolsNUnitMTPDll)')"
-                 Projects="$(_DevToolsNUnitMTPProject)"
+        <MSBuild Condition="!Exists('$(_NUnitMTPDll)')"
+                 Projects="$(_NUnitMTPProject)"
                  Targets="Build"
                  Properties="Configuration=$(Configuration);TargetFramework=$(TargetFramework)"/>
     </Target>
 
-    <!-- 5. MTP sibling: pack into build/runtime -->
-    <Target Name="PackDevToolsNUnitMTP" DependsOnTargets="BuildDevToolsNUnitMTPForPack">
+    <!-- 5. MTP sibling + kept Abstractions into build/runtime -->
+    <Target Name="PackNUnitMTP" DependsOnTargets="BuildNUnitMTPForPack">
         <PropertyGroup>
-            <_DevToolsNUnitMTPDll>$(MSBuildThisFileDirectory)..\DevTools.NUnit.MTP\bin\$(Configuration)\$(TargetFramework)\DevTools.NUnit.MTP.dll</_DevToolsNUnitMTPDll>
-            <_DevToolsNUnitMTPPackageRuntime Condition="'$(TargetFrameworkIdentifier)' == '.NETCoreApp'">build/runtime/net$(TargetFrameworkVersion.Substring(1))-windows7.0</_DevToolsNUnitMTPPackageRuntime>
-            <_DevToolsNUnitMTPPackageRuntime Condition="'$(TargetFrameworkIdentifier)' != '.NETCoreApp'">build/runtime/net48</_DevToolsNUnitMTPPackageRuntime>
+            <_NUnitMTPDll>$(MSBuildThisFileDirectory)..\DevTools.NUnit.MTP\bin\$(Configuration)\$(TargetFramework)\DevTools.NUnit.MTP.dll</_NUnitMTPDll>
+            <_NUnitMTPPackageRuntime Condition="'$(TargetFrameworkIdentifier)' == '.NETCoreApp'">build/runtime/net$(TargetFrameworkVersion.Substring(1))-windows7.0</_NUnitMTPPackageRuntime>
+            <_NUnitMTPPackageRuntime Condition="'$(TargetFrameworkIdentifier)' != '.NETCoreApp'">build/runtime/net48</_NUnitMTPPackageRuntime>
         </PropertyGroup>
-        <Error Condition="!Exists('$(_DevToolsNUnitMTPDll)')"
-               Text="Pack requires DevTools.NUnit.MTP.dll at $(_DevToolsNUnitMTPDll)."/>
-        <Error Condition="'$(TargetFramework)' == 'net48' And !Exists('$(TargetDir)DevTools.Testing.Abstractions.dll')"
-               Text="Pack requires DevTools.Testing.Abstractions.dll beside the net48 adapter so testhost MTP shares HostTestDiscovery."/>
+        <Error Condition="!Exists('$(_NUnitMTPDll)')"
+               Text="Pack requires DevTools.NUnit.MTP.dll at $(_NUnitMTPDll)."/>
+        <Error Condition="!Exists('$(TargetDir)DevTools.Testing.Abstractions.dll')"
+               Text="Pack requires DevTools.Testing.Abstractions.dll beside the adapter so testhost MTP shares HostTestDiscovery."/>
         <ItemGroup>
-            <TfmSpecificPackageFile Include="$(_DevToolsNUnitMTPDll)">
-                <PackagePath>$(_DevToolsNUnitMTPPackageRuntime)</PackagePath>
+            <TfmSpecificPackageFile Include="$(_NUnitMTPDll)">
+                <PackagePath>$(_NUnitMTPPackageRuntime)</PackagePath>
             </TfmSpecificPackageFile>
-            <TfmSpecificPackageFile Include="$(TargetDir)DevTools.Testing.Abstractions.dll"
-                                    Condition="'$(TargetFramework)' == 'net48'">
-                <PackagePath>$(_DevToolsNUnitMTPPackageRuntime)</PackagePath>
+            <TfmSpecificPackageFile Include="$(TargetDir)DevTools.Testing.Abstractions.dll">
+                <PackagePath>$(_NUnitMTPPackageRuntime)</PackagePath>
             </TfmSpecificPackageFile>
         </ItemGroup>
     </Target>
 
-    <!-- 3. net48 ILRepack inputs; compile against MTP, not a runtime copy -->
+    <!-- Compile: MTP (testhost hook). STJ/BCL copy-local comes from Transport/Ipc on net48. -->
     <ItemGroup>
         <GlobalPackageReference Remove="Polyfill"/>
         <PackageReference Include="Microsoft.Testing.Platform">
             <PrivateAssets>all</PrivateAssets>
             <ExcludeAssets>runtime</ExcludeAssets>
         </PackageReference>
-        <PackageReference Include="System.Text.Json" Condition="'$(TargetFramework)' == 'net48'">
-            <PrivateAssets>all</PrivateAssets>
-        </PackageReference>
-        <PackageReference Include="System.Runtime.CompilerServices.Unsafe" Condition="'$(TargetFramework)' == 'net48'">
-            <PrivateAssets>all</PrivateAssets>
-        </PackageReference>
         <InternalsVisibleTo Include="DevTools.TestAdapter.Tests"/>
     </ItemGroup>
 
     <ItemGroup>
         <ProjectReference Include="..\DevTools.Testing.Abstractions\DevTools.Testing.Abstractions.csproj"/>
-        <ProjectReference Include="..\DevTools.Testing.Transport\DevTools.Testing.Transport.csproj"/>
+        <ProjectReference Include="..\DevTools.Testing.Transport\DevTools.Testing.Transport.csproj">
+            <PrivateAssets>all</PrivateAssets>
+        </ProjectReference>
     </ItemGroup>
 </Project>

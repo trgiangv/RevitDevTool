@@ -14,8 +14,8 @@ public sealed class AdapterBootstrapTests
         {
             var exception = Record.Exception(AdapterBootstrap.Initialize);
             Assert.Null(exception);
-            Assert.NotNull(HostMTPRegistration.LastError);
-            Assert.Contains("mtpAssembly", HostMTPRegistration.LastError!, StringComparison.OrdinalIgnoreCase);
+            Assert.NotNull(HostMtpRegistration.LastError);
+            Assert.Contains("mtpAssembly", HostMtpRegistration.LastError!, StringComparison.OrdinalIgnoreCase);
         }
         finally
         {

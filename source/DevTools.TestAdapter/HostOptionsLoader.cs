@@ -1,6 +1,7 @@
 using DevTools.Testing.Abstractions.Config;
 using DevTools.Testing.Abstractions.Contracts;
 using Microsoft.Testing.Platform.Configurations;
+// ReSharper disable RedundantSuppressNullableWarningExpression
 
 namespace DevTools.TestAdapter;
 
@@ -54,8 +55,6 @@ internal static class HostOptionsLoader
     private static string? ReadConfigurationValue(IConfiguration configuration, string key)
     {
         var value = configuration[key];
-        if (string.IsNullOrWhiteSpace(value))
-            return null;
-        return value!.Trim();
+        return string.IsNullOrWhiteSpace(value) ? null : value!.Trim();
     }
 }

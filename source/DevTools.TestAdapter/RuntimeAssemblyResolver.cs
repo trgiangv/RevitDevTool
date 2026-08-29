@@ -1,24 +1,25 @@
 using System.Reflection;
 using DevTools.Testing.Abstractions;
+// ReSharper disable RedundantSuppressNullableWarningExpression
 
 namespace DevTools.TestAdapter;
 
 internal static class RuntimeAssemblyResolver
 {
-    private static int _registered;
-    private static IReadOnlyDictionary<string, string> _discoveryRefs =
+    private static int registered;
+    private static IReadOnlyDictionary<string, string> discoveryRefs =
         new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
 
     internal static void EnsureRegistered() =>
         EnsureRegistered(Assembly.GetEntryAssembly()?.Location);
 
-    internal static void EnsureRegistered(string? entryAssemblyPath)
+    private static void EnsureRegistered(string? entryAssemblyPath)
     {
-        if (Interlocked.Exchange(ref _registered, 1) != 0)
+        if (Interlocked.Exchange(ref registered, 1) != 0)
             return;
 
         if (!string.IsNullOrWhiteSpace(entryAssemblyPath))
-            _discoveryRefs = DiscoveryRefs.Read(entryAssemblyPath!);
+            discoveryRefs = DiscoveryRefs.Read(entryAssemblyPath!);
 
         AppDomain.CurrentDomain.AssemblyResolve += ResolvePrivateRuntimeAssembly;
     }
@@ -29,7 +30,7 @@ internal static class RuntimeAssemblyResolver
             return null;
 
         var name = requested.Name!;
-        if (_discoveryRefs.TryGetValue(name, out var discoveryPath))
+        if (discoveryRefs.TryGetValue(name, out var discoveryPath))
         {
             var fromDiscovery = TryLoadFromPath(requested, discoveryPath);
             if (fromDiscovery is not null)
@@ -88,11 +89,10 @@ internal static class RuntimeAssemblyResolver
             return false;
         }
 
-        return requested.Name is { Length: > 0 } name
-            && requested.Version is not null
-            && string.Equals(name, Path.GetFileName(name), StringComparison.Ordinal)
-            && name.IndexOfAny([Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar]) < 0
-            && name is not "." and not "..";
+        return requested is { Name: { Length: > 0 } name, Version: not null }
+               && string.Equals(name, Path.GetFileName(name), StringComparison.Ordinal)
+               && name.IndexOfAny([Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar]) < 0
+               && name is not "." and not "..";
     }
 
     /// <summary>

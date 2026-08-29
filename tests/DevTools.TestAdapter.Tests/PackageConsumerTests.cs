@@ -112,13 +112,7 @@ public sealed class PackageConsumerTests
             {
                 Run("dotnet", $"build CleanConsumer.csproj -c Release --no-restore -f {tfm}", consumer, globalPackages);
                 var output = Path.Combine(consumer, "bin", "Release", tfm);
-                if (!tfm.Equals("net48", StringComparison.Ordinal))
-                    AssertRuntimeClosure(output);
-                else
-                    Assert.True(
-                        File.Exists(Path.Combine(output, "DevTools.Testing.Abstractions.dll")),
-                        $"Missing DevTools.Testing.Abstractions.dll for net48.{Environment.NewLine}"
-                        + string.Join(Environment.NewLine, Directory.GetFiles(output, "*.dll").Select(Path.GetFileName)));
+                AssertKeptRuntime(output);
                 Assert.True(
                     File.Exists(Path.Combine(output, "DevTools.NUnit.MTP.dll")),
                     $"Missing DevTools.NUnit.MTP.dll for {tfm}.{Environment.NewLine}"
@@ -224,31 +218,34 @@ public sealed class PackageConsumerTests
         using var reader = new StreamReader(nuspec.Open());
         var nuspecText = reader.ReadToEnd();
 
-        foreach (var internalName in InternalRuntimeAssemblies.Append("DevTools.NUnit.Core"))
+        foreach (var internalName in MergedRuntimeAssemblies.Append("DevTools.Testing.Abstractions.dll").Append("DevTools.NUnit.Core"))
             Assert.DoesNotContain(internalName, nuspecText, StringComparison.Ordinal);
 
         Assert.All(
             entries.Where(entry => entry.StartsWith("lib/", StringComparison.OrdinalIgnoreCase)),
             entry => Assert.EndsWith("/DevTools.TestAdapter.dll", entry, StringComparison.OrdinalIgnoreCase));
         Assert.Contains("lib/net48/DevTools.TestAdapter.dll", entries, StringComparer.OrdinalIgnoreCase);
-        Assert.Contains("build/runtime/net48/DevTools.NUnit.MTP.dll", entries, StringComparer.OrdinalIgnoreCase);
-        Assert.Contains("build/runtime/net48/DevTools.Testing.Abstractions.dll", entries, StringComparer.OrdinalIgnoreCase);
         Assert.DoesNotContain("lib/net48/DevTools.NUnit.MTP.dll", entries, StringComparer.OrdinalIgnoreCase);
         Assert.DoesNotContain("lib/net48/DevTools.Testing.Abstractions.dll", entries, StringComparer.OrdinalIgnoreCase);
-        foreach (var tfm in new[] { "net8.0-windows7.0", "net10.0-windows7.0" })
+        foreach (var tfm in new[] { "net48", "net8.0-windows7.0", "net10.0-windows7.0" })
         {
-            Assert.Contains($"lib/{tfm}/DevTools.TestAdapter.dll", entries, StringComparer.OrdinalIgnoreCase);
-            foreach (var assembly in InternalRuntimeAssemblies.Where(name => name != "DevTools.TestAdapter.dll"))
-            {
-                Assert.DoesNotContain($"lib/{tfm}/{assembly}", entries, StringComparer.OrdinalIgnoreCase);
-                Assert.Contains($"build/runtime/{tfm}/{assembly}", entries, StringComparer.OrdinalIgnoreCase);
-            }
+            if (tfm != "net48")
+                Assert.Contains($"lib/{tfm}/DevTools.TestAdapter.dll", entries, StringComparer.OrdinalIgnoreCase);
 
-            Assert.DoesNotContain($"build/runtime/{tfm}/DevTools.TestAdapter.dll", entries, StringComparer.OrdinalIgnoreCase);
             Assert.Contains($"build/runtime/{tfm}/DevTools.NUnit.MTP.dll", entries, StringComparer.OrdinalIgnoreCase);
+            Assert.Contains($"build/runtime/{tfm}/DevTools.TUnit.MTP.dll", entries, StringComparer.OrdinalIgnoreCase);
+            Assert.Contains($"build/runtime/{tfm}/DevTools.Testing.Abstractions.dll", entries, StringComparer.OrdinalIgnoreCase);
+            Assert.DoesNotContain($"build/runtime/{tfm}/DevTools.TestAdapter.dll", entries, StringComparer.OrdinalIgnoreCase);
+            Assert.DoesNotContain($"build/runtime/{tfm}/DevTools.Ipc.dll", entries, StringComparer.OrdinalIgnoreCase);
+            Assert.DoesNotContain($"build/runtime/{tfm}/DevTools.Testing.Transport.dll", entries, StringComparer.OrdinalIgnoreCase);
             Assert.DoesNotContain($"lib/{tfm}/DevTools.NUnit.MTP.dll", entries, StringComparer.OrdinalIgnoreCase);
             Assert.DoesNotContain($"lib/{tfm}/Microsoft.Bcl.AsyncInterfaces.dll", entries, StringComparer.OrdinalIgnoreCase);
             Assert.DoesNotContain($"build/runtime/{tfm}/Microsoft.Bcl.AsyncInterfaces.dll", entries, StringComparer.OrdinalIgnoreCase);
+            Assert.DoesNotContain($"build/runtime/{tfm}/System.Text.Json.dll", entries, StringComparer.OrdinalIgnoreCase);
+            Assert.DoesNotContain($"build/runtime/{tfm}/System.Text.Encodings.Web.dll", entries, StringComparer.OrdinalIgnoreCase);
+            Assert.DoesNotContain($"build/runtime/{tfm}/System.IO.Pipelines.dll", entries, StringComparer.OrdinalIgnoreCase);
+            Assert.DoesNotContain($"build/runtime/{tfm}/System.Runtime.CompilerServices.Unsafe.dll", entries, StringComparer.OrdinalIgnoreCase);
+            Assert.DoesNotContain($"build/runtime/{tfm}/System.Threading.Tasks.Extensions.dll", entries, StringComparer.OrdinalIgnoreCase);
         }
 
         Assert.DoesNotContain(entries, entry => entry.EndsWith(".pdb", StringComparison.OrdinalIgnoreCase));
@@ -259,28 +256,32 @@ public sealed class PackageConsumerTests
         Assert.Equal(entries.Length, entries.Distinct(StringComparer.OrdinalIgnoreCase).Count());
     }
 
-    private static readonly string[] InternalRuntimeAssemblies =
+    private static readonly string[] MergedRuntimeAssemblies =
     [
         "DevTools.Ipc.dll",
-        "DevTools.TestAdapter.dll",
-        "DevTools.Testing.Abstractions.dll",
         "DevTools.Testing.Transport.dll",
     ];
 
-    private static void AssertRuntimeClosure(string outputDirectory)
+    private static void AssertKeptRuntime(string outputDirectory)
     {
-        foreach (var assembly in InternalRuntimeAssemblies)
+        var names = Directory.GetFiles(outputDirectory, "*.dll").Select(Path.GetFileName).ToArray();
+        Assert.True(
+            File.Exists(Path.Combine(outputDirectory, "DevTools.Testing.Abstractions.dll")),
+            $"Missing DevTools.Testing.Abstractions.dll.{Environment.NewLine}{string.Join(Environment.NewLine, names)}");
+        Assert.True(
+            File.Exists(Path.Combine(outputDirectory, "DevTools.TestAdapter.dll")),
+            $"Missing DevTools.TestAdapter.dll.{Environment.NewLine}{string.Join(Environment.NewLine, names)}");
+        foreach (var merged in MergedRuntimeAssemblies)
         {
-            Assert.True(
-                File.Exists(Path.Combine(outputDirectory, assembly)),
-                $"Missing consumer runtime asset: {assembly}{Environment.NewLine}"
-                + string.Join(Environment.NewLine, Directory.GetFiles(outputDirectory, "*.dll").Select(Path.GetFileName)));
+            Assert.False(
+                File.Exists(Path.Combine(outputDirectory, merged)),
+                $"Merged assembly should not be copied loose: {merged}");
         }
     }
 
     private static void AssertNoInternalPackageRestore(string globalPackages)
     {
-        foreach (var internalAssembly in InternalRuntimeAssemblies.Where(name => name != "DevTools.TestAdapter.dll"))
+        foreach (var internalAssembly in MergedRuntimeAssemblies.Append("DevTools.Testing.Abstractions.dll"))
         {
             var packageDirectory = Path.Combine(globalPackages, Path.GetFileNameWithoutExtension(internalAssembly).ToLowerInvariant());
             Assert.False(Directory.Exists(packageDirectory), $"Internal package unexpectedly restored: {packageDirectory}");
