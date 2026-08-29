@@ -44,8 +44,8 @@ public sealed class HostBackgroundController(
         var logFolder = fileConfig.LogFolder;
         if (string.IsNullOrEmpty(logFolder) || !Directory.Exists(logFolder)) return;
 
-        var logFiles = Directory.EnumerateFiles(logFolder, "*.log");
-        var jsonFiles = Directory.EnumerateFiles(logFolder, "*.json");
+        var logFiles = Directory.EnumerateFiles(logFolder, "log_*.log");
+        var jsonFiles = Directory.EnumerateFiles(logFolder, "log_*.json");
 
         foreach (var file in logFiles.Concat(jsonFiles))
         {
