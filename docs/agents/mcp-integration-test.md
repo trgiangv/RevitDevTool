@@ -550,6 +550,7 @@ Recommended sequence for a full integration pass:
 ## Notes for Agents
 
 - **Always kill host before build** — running host locks DLLs, build will fail
+- **`list_host_instances` empty after a host rebuild** — add-in may have thrown during startup. Read newest `%APPDATA%\RevitDevTool\{Year}\Logs\crash_*` before assuming MCP/Daemon. Session logs are `log_*` (see `docs/agents/verification.md`)
 - **Daemon publish kills the running instance** — client must reload MCP after
 - **McpRegistryConfig changes require host restart** — not hot-reloadable
 - **Civil 3D uses `acad.exe`** — same process name as AutoCAD, differentiated by pipe name

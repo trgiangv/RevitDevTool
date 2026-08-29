@@ -20,6 +20,7 @@ Run proof **before** claiming done. Pick the smallest command that matches what 
 | MSB3027 / file locked / copy failed | Target host year is running | `scripts/kill-host.ps1 -HostApp Revit -Year 2025` (use the year being tested), then retry |
 | Deploy silently didn't update DLL | Used `dotnet build` without deploy props | Stop only the target year; then `scripts/build-host.ps1 -Year 2025` |
 | MCP tools = 0 in Cursor | Bad daemon `outputSchema` or stale bundle | Republish daemon; reload MCP — see `mcp-integration-test.md` |
+| Host year starts but add-in missing / no pipe | Startup threw before FileLogProcessor | `%APPDATA%\RevitDevTool\{Year}\Logs\crash_*` then `docs/agents/verification.md` |
 | Parser / MCP test fails on missing DLL | Sample toolset not built | `dotnet build samples/McpToolsetDemo -c Debug.Autodesk.2025` |
 | Parser test missing pixi env | `%APPDATA%\RevitDevTool\pixi-env` absent | `scripts/test-python.ps1` or `pixi install` at repo root |
 | Unit test fails with UI/thread hint | `ConnectionState` needs main thread | See `known-test-gaps.md` — known `McpPipeConnectionTrackerTests` gap |

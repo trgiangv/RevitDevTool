@@ -2,7 +2,7 @@
 
 Logging uses `ILogger<T>` via Microsoft.Extensions.Logging (MEL) with ZLogger as the provider. All business code injects `ILogger<T>` through DI; a legacy `LoggerTraceListener` bridge remains for third-party/WPF trace sources only.
 
-Last updated: 2026-08-16
+Last updated: 2026-08-29
 
 ---
 
@@ -11,6 +11,7 @@ Last updated: 2026-08-16
 | Area                                      | Path                                              |
 | ----------------------------------------- | ------------------------------------------------- |
 | Shared logging library                    | `source/DevTools.Logging/`                      |
+| Startup crash timeline                    | `source/DevTools.Logging/Diagnostics/StartupTrace.cs` |
 | Monitor pane (Scintilla / WPF trace)      | `source/DevTools.Presentation/Logging/`         |
 | Shared presentation contracts             | `source/DevTools.Presentation/Interfaces/`      |
 | Revit logging lifecycle                   | `source/RevitDevTool/Logging/LoggingService.cs` |
@@ -83,6 +84,7 @@ flowchart TB
 - `NotifyListener`
 - `LogLevelDetector` (keyword-based level for bridged Trace messages)
 - File/HTTP targets and sink options
+- `StartupTrace` (pre-DI RAM buffer; writes `crash_{app}_{ver}_{pid}.log` on startup failure or unhandled exception while trace is active — not a ZLogger provider)
 
 `DevTools.Presentation` owns the monitor pane (`IMonitorLogTarget`, `MonitorLogTarget`, `AddMonitorLogging`) and WPF `PresentationTraceSources` attach/detach.
 
@@ -143,7 +145,8 @@ AutoCAD has its own context provider/enricher path and does not share Revit geom
 | Target  | Implementation       | Notes                                             |
 | ------- | -------------------- | ------------------------------------------------- |
 | Monitor | `MonitorLogTarget` (Presentation) | UI monitor through Scintilla/ZLogger integration. |
-| File    | `FileLogProcessor` | Plain text or JSON based on settings.             |
+| File    | `FileLogProcessor` | Rolling `log_{app}_{ver}_{pid}_{timestamp}_{seq}` when file logging is enabled. |
+| Startup | `StartupTrace`     | Pre-DI. Buffer in RAM; create `crash_{app}_{ver}_{pid}.log` only if `Fail` runs (catch or unhandled while trace is active). Milestone lines use `+seconds` elapsed, not ZLogger `[HH:mm:ss LVL]`. AutoClean ignores `crash_*`. |
 | HTTP    | `HttpLogProcessor` | Remote sink path.                                 |
 | Notify  | `NotifyListener`   | UI update notifications (bridge path only).       |
 

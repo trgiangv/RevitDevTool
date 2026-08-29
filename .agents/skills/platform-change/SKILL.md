@@ -18,6 +18,7 @@ description: >
 ## Rules
 
 - Shared `DevTools.*`: no Revit/AutoCAD API types; host adapters own threading, docs, rendering.
+- Logging: `StartupTrace` is pre-DI crash dump (`crash_{app}_{ver}_{pid}.log`); `FileLogProcessor` is rolling `log_*`. Do not mix prefixes. AutoClean must not delete `crash_*`.
 - MCP/IPC: keep wire contracts in sync (`BridgeMessage`, `PytestContracts`, MCP pipe names).
 - Pytest bridge: treat discover and run as separate flows; do not “fix” stale path gaps with unrelated edits.
 - Packaging is **two pipelines**. Installer/bundle (`scripts/pack.ps1`, `build/Modules/*`, `PublishRelease.yml`) does not publish NuGet. Adapter nupkg (`scripts/pack-test-adapter.ps1`, `PublishTestAdapter.yml`) does not go through `build/Modules/*`. ILRepack + Polyfill policy is `docs/decisions/0019-ilrepack-and-polyfill-isolated-alc.md`.
