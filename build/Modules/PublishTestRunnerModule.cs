@@ -9,7 +9,7 @@ using Sourcy.DotNet;
 namespace Build.Modules;
 
 /// <summary>
-///     Publish DevTools.TestRunner as a self-contained single-file executable.
+///     Publish DevTools.TestRunner as a framework-dependent single-file exe (requires .NET 10 runtime).
 ///     The csproj DeployDevToolsTestRunner target copies it beside DevTools.Daemon.exe.
 /// </summary>
 [DependsOn<ResolveVersioningModule>]

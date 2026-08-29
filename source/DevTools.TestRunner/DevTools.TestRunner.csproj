@@ -1,9 +1,8 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
     <!--
-          Build (dev):   dotnet build
-          Publish:       dotnet publish -c Release -r win-x64
-          Deploy:        copies to RevitDevTool.bundle/Contents beside DevTools.Daemon.exe
+          Build:   dotnet build
+          Publish: dotnet publish -c Release  → single-file exe (requires .NET 10 runtime)
     -->
 
     <PropertyGroup>
@@ -12,11 +11,8 @@
         <RuntimeIdentifier>win-x64</RuntimeIdentifier>
         <AssemblyName>DevTools.TestRunner</AssemblyName>
         <RootNamespace>DevTools.TestRunner</RootNamespace>
-        <SelfContained>true</SelfContained>
+        <SelfContained>false</SelfContained>
         <PublishSingleFile>true</PublishSingleFile>
-        <PublishReadyToRun>true</PublishReadyToRun>
-        <EnableCompressionInSingleFile>true</EnableCompressionInSingleFile>
-        <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
         <GenerateDocumentationFile>true</GenerateDocumentationFile>
         <NoWarn>$(NoWarn);1591;1573</NoWarn>
     </PropertyGroup>

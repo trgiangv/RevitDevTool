@@ -9,7 +9,7 @@ using Sourcy.DotNet;
 namespace Build.Modules;
 
 /// <summary>
-///     Publish DevTools.Daemon as a self-contained single-file executable.
+///     Publish DevTools.Daemon as a framework-dependent single-file exe (requires .NET 10 runtime).
 ///     The csproj DeployDevToolsDaemon target handles kill + copy to bundle Contents.
 /// </summary>
 [DependsOn<ResolveVersioningModule>]

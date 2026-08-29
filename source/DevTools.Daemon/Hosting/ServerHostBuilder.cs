@@ -7,10 +7,8 @@ using DevTools.Daemon.Tray;
 using DevTools.Hosting;
 using DevTools.Hosting.Acad;
 using DevTools.Hosting.Revit;
-using DevTools.Mcp.Catalog;
 using DevTools.Mcp.Client;
 using DevTools.Mcp.Server.Contracts;
-using DevTools.Mcp.Server.Hosting;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -27,6 +25,7 @@ public static class ServerHostBuilder
         McpServerFileLogging.Configure(builder.Logging, clearProviders: false);
 
         builder.Services.AddSingleton(singleInstance);
+        builder.Services.AddSingleton<ControlPipeHandler>();
         builder.Services.AddHostedService<ControlPipeHostedService>();
         builder.Services.AddSingleton<GatewayHostedService>();
         builder.Services.AddHostedService(sp => sp.GetRequiredService<GatewayHostedService>());
@@ -80,7 +79,6 @@ public static class ServerHostBuilder
             .AddAcadFileMetadataReader();
         builder.Services
             .AddMcp()
-            .AddMcpCatalog()
             .AddMcpHostClient();
         builder.Services.AddSingleton<IAuthService, AuthService>();
         builder.Services.AddSingleton<IMachineLister, MachineLister>();
@@ -88,7 +86,6 @@ public static class ServerHostBuilder
         builder.Services.AddRevitLaunch(RevitFileMetadataReader.TryReadRevitVersion);
         builder.Services.AddAutocadFamilyLaunch();
         builder.Services.AddSingleton<McpEngine>();
-        builder.Services.AddSingleton<ControlPipeHandler>();
         builder.Services.AddHostedService<DiscoveryHostedService>();
 
         return builder;
