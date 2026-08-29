@@ -8,14 +8,14 @@ using DevTools.Testing.Transport;
 
 namespace DevTools.Testing.Host.Tests;
 
-public sealed class MarshaledTestingRequestHandlerTests
+public sealed class MarshaledTestRequestHandlerTests
 {
     [Fact]
     public async Task Run_is_marshaled_but_hello_is_not()
     {
         var executor = new TrackingExecutor();
         var provider = new RecordingProvider();
-        var handler = new MarshaledTestingRequestHandler(
+        var handler = new MarshaledTestRequestHandler(
             new TestingProviderRegistry([provider]),
             new StubHostInfo(),
             executor);

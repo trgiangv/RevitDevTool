@@ -7,10 +7,10 @@ namespace DevTools.Ipc;
 public static class DaemonConstants
 {
     /// <summary>
-    /// Pytest/control pipe prefix (length-prefixed <c>BridgeMessage</c>).
-    /// Format: <c>{PytestPipePrefix}_{Host}_{Version}_{PID}</c>
+    /// Test/control pipe prefix (length-prefixed <c>BridgeMessage</c>).
+    /// Format: <c>{TestPipePrefix}_{Host}_{Version}_{PID}</c>
     /// </summary>
-    public const string PytestPipePrefix = "DevTools";
+    public const string TestPipePrefix = "DevTools";
 
     /// <summary>
     /// SDK MCP pipe prefix (newline-delimited JSON-RPC).

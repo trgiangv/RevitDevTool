@@ -3,6 +3,7 @@ using DevTools.Ipc;
 using DevTools.Testing.Abstractions.Contracts;
 using DevTools.Testing.Abstractions.Providers;
 using DevTools.Testing.Transport;
+// ReSharper disable RedundantSuppressNullableWarningExpression
 
 namespace DevTools.Testing.Host;
 
@@ -16,33 +17,22 @@ public static class TestingErrorCodes
 /// <summary>
 /// Host-side handler for the framework-neutral <c>testing/*</c> protocol.
 /// </summary>
-public sealed class TestingRequestHandler : IBridgeRequestHandler, IBridgeNotificationPublisher
+public sealed class DotnetTestRequestHandler(TestingProviderRegistry registry, string host, string hostVersion) : IBridgeRequestHandler, IBridgeNotificationPublisher
 {
-    private readonly TestingProviderRegistry _registry;
-    private readonly string _host;
-    private readonly string _hostVersion;
+    private readonly TestingProviderRegistry _registry = registry ?? throw new ArgumentNullException(nameof(registry));
+    private readonly string _host = host ?? throw new ArgumentNullException(nameof(host));
+    private readonly string _hostVersion = hostVersion ?? throw new ArgumentNullException(nameof(hostVersion));
     private readonly TestingCancellationStateMachine _cancellation = new();
     private int _isBusy;
 
-    public TestingRequestHandler(
-        TestingProviderRegistry registry,
-        string host,
-        string hostVersion)
-    {
-        _registry = registry ?? throw new ArgumentNullException(nameof(registry));
-        _host = host ?? throw new ArgumentNullException(nameof(host));
-        _hostVersion = hostVersion ?? throw new ArgumentNullException(nameof(hostVersion));
-        SupportedMethods =
-        [
-            TestingProtocol.Hello,
-            TestingProtocol.Run,
-            TestingProtocol.Cancel,
-        ];
-    }
-
     public Action<string, JsonElement?>? NotificationSender { get; set; }
 
-    public IReadOnlyCollection<string> SupportedMethods { get; }
+    public IReadOnlyCollection<string> SupportedMethods { get; } =
+    [
+        TestingProtocol.Hello,
+        TestingProtocol.Run,
+        TestingProtocol.Cancel,
+    ];
 
     public TestingCancellationState CancellationState => _cancellation.State;
 
@@ -111,36 +101,72 @@ public sealed class TestingRequestHandler : IBridgeRequestHandler, IBridgeNotifi
         JsonElement? @params,
         CancellationToken cancellationToken)
     {
-        if (_cancellation.State == TestingCancellationState.Poisoned)
-        {
-            return BridgeMessage.Error(
-                requestId,
-                TestingErrorCodes.SessionPoisoned,
-                "The testing session is poisoned.");
-        }
+        if (TryGetPoisonedRunError(requestId, out var poisoned))
+            return poisoned;
 
         if (!TryReadRun(@params, out var request, out var error))
             return Invalid(requestId, error);
 
-        IHostTestFrameworkProvider provider;
-        try
-        {
-            provider = _registry.GetRequired(request!.FrameworkId);
-        }
-        catch (KeyNotFoundException ex)
-        {
-            return Invalid(requestId, ex.Message);
-        }
+        if (!TryGetProvider(request!, requestId, out var provider, out var invalid))
+            return invalid!;
 
         Interlocked.Exchange(ref _isBusy, 1);
         try
         {
+            return RunProvider(request!, provider, requestId, cancellationToken);
+        }
+        finally
+        {
+            Interlocked.Exchange(ref _isBusy, 0);
+        }
+    }
+
+    private bool TryGetPoisonedRunError(string requestId, out BridgeMessage response)
+    {
+        if (_cancellation.State != TestingCancellationState.Poisoned)
+        {
+            response = null!;
+            return false;
+        }
+
+        response = BridgeMessage.Error(
+            requestId,
+            TestingErrorCodes.SessionPoisoned,
+            "The testing session is poisoned.");
+        return true;
+    }
+
+    private bool TryGetProvider(
+        TestingRunRequest request,
+        string requestId,
+        out IHostTestFrameworkProvider provider,
+        out BridgeMessage? invalid)
+    {
+        try
+        {
+            provider = _registry.GetRequired(request.FrameworkId);
+            invalid = null;
+            return true;
+        }
+        catch (KeyNotFoundException ex)
+        {
+            provider = null!;
+            invalid = Invalid(requestId, ex.Message);
+            return false;
+        }
+    }
+
+    private BridgeMessage RunProvider(
+        TestingRunRequest request,
+        IHostTestFrameworkProvider provider,
+        string requestId,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
             var sink = new HandlerEventSink(this);
             var response = provider.Run(request, sink, cancellationToken);
-            if (response.CancellationState == TestingCancellationState.Poisoned)
-                _cancellation.TryTransition(TestingCancellationState.Poisoned);
-            else if (_cancellation.State == TestingCancellationState.Acknowledged)
-                _cancellation.TryTransition(TestingCancellationState.Completed);
+            ApplyCancellationState(response.CancellationState);
 
             return BridgeMessage.Response(
                 requestId,
@@ -155,19 +181,29 @@ public sealed class TestingRequestHandler : IBridgeRequestHandler, IBridgeNotifi
         }
         catch (Exception ex)
         {
-            if (_cancellation.State is TestingCancellationState.None)
-                _cancellation.TryTransition(TestingCancellationState.Requested);
-            if (_cancellation.State is TestingCancellationState.Requested)
-                _cancellation.TryTransition(TestingCancellationState.Poisoned);
-            else
-                _cancellation.TryTransition(TestingCancellationState.Poisoned);
-
+            PoisonSessionAfterProviderFailure();
             return BridgeMessage.Error(requestId, TestingErrorCodes.ProviderFailed, ex.Message);
         }
-        finally
+    }
+
+    private void ApplyCancellationState(TestingCancellationState runState)
+    {
+        if (runState == TestingCancellationState.Poisoned)
         {
-            Interlocked.Exchange(ref _isBusy, 0);
+            _cancellation.TryTransition(TestingCancellationState.Poisoned);
+            return;
         }
+
+        if (_cancellation.State == TestingCancellationState.Acknowledged)
+            _cancellation.TryTransition(TestingCancellationState.Completed);
+    }
+
+    private void PoisonSessionAfterProviderFailure()
+    {
+        if (_cancellation.State == TestingCancellationState.None)
+            _cancellation.TryTransition(TestingCancellationState.Requested);
+
+        _cancellation.TryTransition(TestingCancellationState.Poisoned);
     }
 
     private BridgeMessage HandleCancel(string requestId, JsonElement? @params)
@@ -282,7 +318,7 @@ public sealed class TestingRequestHandler : IBridgeRequestHandler, IBridgeNotifi
     private static BridgeMessage Invalid(string requestId, string error) =>
         BridgeMessage.Error(requestId, TestingErrorCodes.InvalidRequest, error);
 
-    private sealed class HandlerEventSink(TestingRequestHandler owner) : ITestingEventSink
+    private sealed class HandlerEventSink(DotnetTestRequestHandler owner) : ITestingEventSink
     {
         public void Publish(TestingEvent testingEvent)
         {

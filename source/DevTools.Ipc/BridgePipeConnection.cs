@@ -12,8 +12,6 @@ public sealed class BridgePipeConnection(Stream stream) : IDisposable
 {
     private const int MaxMessageSize = 16 * 1024 * 1024;
 
-    public static readonly JsonSerializerOptions JsonOptions = IpcJsonContext.Default.Options;
-
     private readonly Stream _stream = stream ?? throw new ArgumentNullException(nameof(stream));
     private readonly SemaphoreSlim _writeLock = new(1, 1);
     private readonly CancellationTokenSource _cts = new();

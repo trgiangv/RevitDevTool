@@ -9,7 +9,7 @@ public static class TestingHostingExtensions
     public static IServiceCollection AddGenericTestingHostServices(this IServiceCollection services)
     {
         services.TryAddSingleton<TestingProviderRegistry>();
-        services.AddSingleton<IBridgeRequestHandler, MarshaledTestingRequestHandler>();
+        services.AddSingleton<IBridgeRequestHandler, MarshaledTestRequestHandler>();
         return services;
     }
 }

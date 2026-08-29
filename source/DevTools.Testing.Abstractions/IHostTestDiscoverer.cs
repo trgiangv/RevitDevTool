@@ -31,10 +31,4 @@ public static class HostTestDiscovery
     public static IHostTestRunMapper? RunMapper { get; set; }
 }
 
-public sealed class HostTestDiscoveryFailedException : Exception
-{
-    public HostTestDiscoveryFailedException(string message)
-        : base(message)
-    {
-    }
-}
+public sealed class HostTestDiscoveryFailedException(string message) : Exception(message);

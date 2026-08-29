@@ -15,7 +15,6 @@
         <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions"/>
         <PackageReference Include="Moq" />
         <PackageReference Include="Bogus" />
-        <PackageReference Remove="Polyfill" />
     </ItemGroup>
 
     <ItemGroup>

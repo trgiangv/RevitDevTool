@@ -61,7 +61,7 @@ public sealed class DevToolsPipeServer(
     public Task StartAsync(CancellationToken cancellationToken)
     {
         if (_cts is not null) return Task.CompletedTask;
-        _pipeName = HostPipeName.FormatPytest(hostInfo.Host.ToString(), hostInfo.VersionNumber, Environment.ProcessId);
+        _pipeName = HostPipeName.FormatTest(hostInfo.Host.ToString(), hostInfo.VersionNumber, Environment.ProcessId);
         state.SetEndpoint(_pipeName);
         state.SetConnectedState(0);
         state.SetQueueDepth(0);

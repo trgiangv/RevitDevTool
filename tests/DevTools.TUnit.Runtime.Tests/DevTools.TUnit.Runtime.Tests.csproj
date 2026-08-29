@@ -13,7 +13,6 @@
             <ExcludeAssets>build;buildTransitive;analyzers</ExcludeAssets>
             <PrivateAssets>all</PrivateAssets>
         </PackageReference>
-        <GlobalPackageReference Remove="Polyfill"/>
     </ItemGroup>
 
     <ItemGroup>

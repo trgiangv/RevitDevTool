@@ -10,7 +10,7 @@ internal sealed record RunnerCommandLine(
     public string AssemblyPath => Context.AssemblyPath;
     public string FrameworkId => Context.FrameworkId;
 
-    internal const string MixedFilterMessage = "Specify --name/--test or --filter, not both.";
+    private const string MixedFilterMessage = "Specify --name/--test or --filter, not both.";
 
     public static bool TryCreate(
         RunnerCommandContext context,
@@ -42,7 +42,7 @@ internal sealed record RunnerCommandLine(
         return true;
     }
 
-    private static IReadOnlyList<string> Clean(IEnumerable<string>? values) =>
+    private static List<string> Clean(IEnumerable<string>? values) =>
         (values ?? [])
             .Where(value => !string.IsNullOrWhiteSpace(value))
             .Select(value => value.Trim())

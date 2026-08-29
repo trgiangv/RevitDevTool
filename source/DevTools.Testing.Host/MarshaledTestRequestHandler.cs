@@ -7,19 +7,19 @@ using DevTools.Testing.Transport;
 namespace DevTools.Testing.Host;
 
 /// <summary>Runs <c>testing/run</c> on the host context while leaving control messages on the pipe thread.</summary>
-public sealed class MarshaledTestingRequestHandler : IBridgeRequestHandler, IBridgeNotificationPublisher
+public sealed class MarshaledTestRequestHandler : IBridgeRequestHandler, IBridgeNotificationPublisher
 {
-    private readonly TestingRequestHandler _inner;
+    private readonly DotnetTestRequestHandler _inner;
     private readonly IHostContextExecutor _hostContext;
 
-    public MarshaledTestingRequestHandler(
+    public MarshaledTestRequestHandler(
         TestingProviderRegistry registry,
         IHostAppInfo hostInfo,
         IHostContextExecutor hostContext)
     {
         if (registry is null) throw new ArgumentNullException(nameof(registry));
         if (hostInfo is null) throw new ArgumentNullException(nameof(hostInfo));
-        _inner = new TestingRequestHandler(registry, hostInfo.Host.ToString(), hostInfo.VersionNumber);
+        _inner = new DotnetTestRequestHandler(registry, hostInfo.Host.ToString(), hostInfo.VersionNumber);
         _hostContext = hostContext ?? throw new ArgumentNullException(nameof(hostContext));
     }
 

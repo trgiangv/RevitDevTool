@@ -33,6 +33,13 @@
         </Project>
     </Folder>
     <Folder Name="/Testing/">
+        <Project Path="DevTools.NUnit.Civil3D.SampleTests/DevTools.NUnit.Civil3D.SampleTests.csproj" />
+        <Project Path="DevTools.NUnit.SampleTests/DevTools.NUnit.SampleTests.csproj" />
+        <Project Path="DevTools.TUnit.Civil3D.SampleTests/DevTools.TUnit.Civil3D.SampleTests.csproj" />
+        <Project Path="DevTools.TUnit.SampleTests/DevTools.TUnit.SampleTests.csproj" />
+        <Project Path="ricaun.NUnit.SampleTests/ricaun.NUnit.SampleTests.csproj" />
+    </Folder>
+    <Folder Name="/Testing/Adapter/">
         <Project Path="../source/DevTools.TestAdapter/DevTools.TestAdapter.csproj">
             <BuildType Solution="Debug.Autodesk.2022|*" Project="Debug" />
             <BuildType Solution="Debug.Autodesk.2023|*" Project="Debug" />
@@ -47,10 +54,47 @@
             <BuildType Solution="Release.Autodesk.2026|*" Project="Release" />
             <BuildType Solution="Release.Autodesk.2027|*" Project="Release" />
         </Project>
-        <Project Path="DevTools.NUnit.Civil3D.SampleTests/DevTools.NUnit.Civil3D.SampleTests.csproj" />
-        <Project Path="DevTools.NUnit.SampleTests/DevTools.NUnit.SampleTests.csproj" />
-        <Project Path="DevTools.TUnit.Civil3D.SampleTests/DevTools.TUnit.Civil3D.SampleTests.csproj" />
-        <Project Path="DevTools.TUnit.SampleTests/DevTools.TUnit.SampleTests.csproj" />
-        <Project Path="ricaun.NUnit.SampleTests/ricaun.NUnit.SampleTests.csproj" />
+        <Project Path="../source/DevTools.Testing.Abstractions/DevTools.Testing.Abstractions.csproj">
+            <BuildType Solution="Debug.Autodesk.2022|*" Project="Debug" />
+            <BuildType Solution="Debug.Autodesk.2023|*" Project="Debug" />
+            <BuildType Solution="Debug.Autodesk.2024|*" Project="Debug" />
+            <BuildType Solution="Debug.Autodesk.2025|*" Project="Debug" />
+            <BuildType Solution="Debug.Autodesk.2026|*" Project="Debug" />
+            <BuildType Solution="Debug.Autodesk.2027|*" Project="Debug" />
+            <BuildType Solution="Release.Autodesk.2022|*" Project="Release" />
+            <BuildType Solution="Release.Autodesk.2023|*" Project="Release" />
+            <BuildType Solution="Release.Autodesk.2024|*" Project="Release" />
+            <BuildType Solution="Release.Autodesk.2025|*" Project="Release" />
+            <BuildType Solution="Release.Autodesk.2026|*" Project="Release" />
+            <BuildType Solution="Release.Autodesk.2027|*" Project="Release" />
+        </Project>
+        <Project Path="../source/DevTools.Testing.Transport/DevTools.Testing.Transport.csproj">
+            <BuildType Solution="Debug.Autodesk.2022|*" Project="Debug" />
+            <BuildType Solution="Debug.Autodesk.2023|*" Project="Debug" />
+            <BuildType Solution="Debug.Autodesk.2024|*" Project="Debug" />
+            <BuildType Solution="Debug.Autodesk.2025|*" Project="Debug" />
+            <BuildType Solution="Debug.Autodesk.2026|*" Project="Debug" />
+            <BuildType Solution="Debug.Autodesk.2027|*" Project="Debug" />
+            <BuildType Solution="Release.Autodesk.2022|*" Project="Release" />
+            <BuildType Solution="Release.Autodesk.2023|*" Project="Release" />
+            <BuildType Solution="Release.Autodesk.2024|*" Project="Release" />
+            <BuildType Solution="Release.Autodesk.2025|*" Project="Release" />
+            <BuildType Solution="Release.Autodesk.2026|*" Project="Release" />
+            <BuildType Solution="Release.Autodesk.2027|*" Project="Release" />
+        </Project>
+        <Project Path="../source/DevTools.Ipc/DevTools.Ipc.csproj">
+            <BuildType Solution="Debug.Autodesk.2022|*" Project="Debug" />
+            <BuildType Solution="Debug.Autodesk.2023|*" Project="Debug" />
+            <BuildType Solution="Debug.Autodesk.2024|*" Project="Debug" />
+            <BuildType Solution="Debug.Autodesk.2025|*" Project="Debug" />
+            <BuildType Solution="Debug.Autodesk.2026|*" Project="Debug" />
+            <BuildType Solution="Debug.Autodesk.2027|*" Project="Debug" />
+            <BuildType Solution="Release.Autodesk.2022|*" Project="Release" />
+            <BuildType Solution="Release.Autodesk.2023|*" Project="Release" />
+            <BuildType Solution="Release.Autodesk.2024|*" Project="Release" />
+            <BuildType Solution="Release.Autodesk.2025|*" Project="Release" />
+            <BuildType Solution="Release.Autodesk.2026|*" Project="Release" />
+            <BuildType Solution="Release.Autodesk.2027|*" Project="Release" />
+        </Project>
     </Folder>
 </Solution>

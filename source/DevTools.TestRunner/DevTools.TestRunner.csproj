@@ -17,7 +17,6 @@
         <PublishReadyToRun>true</PublishReadyToRun>
         <EnableCompressionInSingleFile>true</EnableCompressionInSingleFile>
         <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
-        <PolyUseEmbeddedAttribute>true</PolyUseEmbeddedAttribute>
         <GenerateDocumentationFile>true</GenerateDocumentationFile>
         <NoWarn>$(NoWarn);1591;1573</NoWarn>
     </PropertyGroup>

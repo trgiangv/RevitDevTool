@@ -34,7 +34,7 @@ public sealed class BridgeHandlerRegistrationTests
 
         Assert.Contains(typeof(InstanceRequestHandler), implementationTypes);
         Assert.Contains(typeof(PytestRequestHandler), implementationTypes);
-        Assert.Contains(typeof(MarshaledTestingRequestHandler), implementationTypes);
+        Assert.Contains(typeof(MarshaledTestRequestHandler), implementationTypes);
 
         Assert.Contains(
             services,
@@ -46,7 +46,7 @@ public sealed class BridgeHandlerRegistrationTests
 
         var methods = new InstanceRequestHandler(new FakeHostAppInfo()).SupportedMethods
             .Concat([PytestBridgeMethods.TestsRun])
-            .Concat(new TestingRequestHandler(
+            .Concat(new DotnetTestRequestHandler(
                 new TestingProviderRegistry([new NoOpTestingProvider()]),
                 "Revit",
                 "2025").SupportedMethods)
