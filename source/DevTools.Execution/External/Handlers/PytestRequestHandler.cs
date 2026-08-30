@@ -1,6 +1,11 @@
 using System.Text.Json;
 namespace DevTools.Execution.External.Handlers;
 
+/// <summary>
+/// CPython pytest over <c>tests/run</c>. PEP 723 prepare runs here via
+/// <see cref="PytestDependencyService"/>; IronPython uses
+/// <see cref="IpyTestRequestHandler"/> and never installs those packages.
+/// </summary>
 public sealed class PytestRequestHandler(
     IHostContextExecutor hostContext,
     PytestDependencyService dependencyService,

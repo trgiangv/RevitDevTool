@@ -57,14 +57,7 @@ public sealed class PytestExecutionService(PythonExecutor executor)
 
     public PytestRunResponse Run(PytestRunRequest request, Action<string>? progressCallback = null)
     {
-        var runnerRequest = new PytestRunnerRequest(
-            request.WorkspaceRoot,
-            request.TestRoot,
-            request.NodeIds,
-            request.PytestArgs,
-            false);
-
-        return Execute<PytestRunResponse>(runnerRequest, request.TestRoot, progressCallback);
+        return Execute<PytestRunResponse>(request, request.TestRoot, progressCallback);
     }
 
     public static PytestRunResponse Error(string phase, string message, string? details = null)
@@ -77,7 +70,7 @@ public sealed class PytestExecutionService(PythonExecutor executor)
             string.Empty);
     }
 
-    private T Execute<T>(PytestRunnerRequest request, string anchorPath, Action<string>? progressCallback = null)
+    private T Execute<T>(PytestRunRequest request, string anchorPath, Action<string>? progressCallback = null)
     {
         var rootFolder = ResolveRootFolder(request);
         var anchorFile = ResolveAnchorFile(anchorPath, rootFolder);
@@ -100,7 +93,7 @@ public sealed class PytestExecutionService(PythonExecutor executor)
             });
     }
 
-    private static string ResolveRootFolder(PytestRunnerRequest request)
+    private static string ResolveRootFolder(PytestRunRequest request)
     {
         return Directory.Exists(request.TestRoot)
             ? request.TestRoot

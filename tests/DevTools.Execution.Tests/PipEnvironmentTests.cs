@@ -5,8 +5,10 @@ using CliWrap;
 namespace DevTools.Execution.Tests;
 
 /// <summary>
-/// Integration tests for the Pip-based Python environment provider workflow.
-/// Tests run against a real embedded Python installation in an isolated temp directory.
+/// Opt-in integration tests for the Pip fallback provider.
+/// Default host Python is <c>%AppData%/RevitDevTool/pixi-env</c>
+/// (<see cref="DevTools.Execution.Providers.Python.PixiEnvironmentProvider"/>).
+/// Set <c>RUN_PIP_ENV_TESTS=1</c> to download an isolated embeddable CPython.
 /// </summary>
 public sealed class PipEnvironmentTests : IAsyncLifetime, IDisposable
 {
@@ -22,6 +24,12 @@ public sealed class PipEnvironmentTests : IAsyncLifetime, IDisposable
 
     public async ValueTask InitializeAsync()
     {
+        if (!string.Equals(Environment.GetEnvironmentVariable("RUN_PIP_ENV_TESTS"), "1", StringComparison.Ordinal))
+        {
+            Assert.Skip(
+                "Pip embed download is opt-in. Host Python is %AppData%/RevitDevTool/pixi-env. Set RUN_PIP_ENV_TESTS=1 to run this suite.");
+        }
+
         Directory.CreateDirectory(PythonHome);
 
         if (!File.Exists(PythonExe))

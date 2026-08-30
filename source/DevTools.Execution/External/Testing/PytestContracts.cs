@@ -35,20 +35,21 @@ public sealed record PytestCaseResult(
     [property: JsonPropertyName("duration_ms")] double DurationMs,
     [property: JsonPropertyName("stdout")] string Stdout,
     [property: JsonPropertyName("stderr")] string Stderr,
-    [property: JsonPropertyName(IpcPropertyNames.Message)] string Message,
+    [property: JsonPropertyName("message")] string Message,
     [property: JsonPropertyName("traceback")] string Traceback);
 
 [UsedImplicitly]
 public sealed record PytestCollectionError(
     [property: JsonPropertyName("nodeid")] string NodeId,
     [property: JsonPropertyName("path")] string Path,
-    [property: JsonPropertyName(IpcPropertyNames.Message)] string Message,
+    [property: JsonPropertyName("message")] string Message,
     [property: JsonPropertyName("traceback")] string Traceback);
 
 [UsedImplicitly]
-internal sealed record PytestRunnerRequest(
+internal sealed record IpyDriverFileRequest(
+    [property: JsonPropertyName("test_path")] string TestPath,
     [property: JsonPropertyName("workspace_root")] string WorkspaceRoot,
-    [property: JsonPropertyName("test_root")] string TestRoot,
-    [property: JsonPropertyName("nodeids")] IReadOnlyList<string> NodeIds,
-    [property: JsonPropertyName("pytest_args")] IReadOnlyList<string> PytestArgs,
-    [property: JsonPropertyName("discover_only")] bool DiscoverOnly);
+    [property: JsonPropertyName("nodeid_prefix")] string NodeidPrefix,
+    [property: JsonPropertyName("selected")] IReadOnlyList<string> Selected,
+    [property: JsonPropertyName("result_path")] string ResultPath,
+    [property: JsonPropertyName("maxfail")] int Maxfail);

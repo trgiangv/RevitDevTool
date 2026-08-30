@@ -1,7 +1,9 @@
+using System.IO;
 using System.Text;
 using DevTools.Execution.Interfaces;
 using DevTools.Execution.Models;
 using IronPython.Compiler;
+using IronPython.Hosting;
 using IronPython.Runtime;
 using IronPython.Runtime.Exceptions;
 using Microsoft.Scripting;
@@ -38,6 +40,13 @@ internal static class IronPythonRunner
         var engine = Ipy.CreateEngine();
         bridge.ConfigureEngine(engine);
         IronPythonInitializer.AddStdLib(engine);
+
+        if (IsIpyTestDriverScript(scriptPath))
+        {
+            dynamic sys = engine.GetSysModule();
+            sys.__pytest_running__ = true;
+        }
+
         IronPythonInitializer.Setup(engine);
 
         var paths = engine.GetSearchPaths();
@@ -47,6 +56,9 @@ internal static class IronPythonRunner
         engine.SetSearchPaths(paths);
         return engine;
     }
+
+    internal static bool IsIpyTestDriverScript(string scriptPath) =>
+        string.Equals(Path.GetFileName(scriptPath), "IpyTestDriver.py", StringComparison.OrdinalIgnoreCase);
 
     private static ExecutionResult CompileAndExecute(ScriptEngine engine, string scriptPath)
     {

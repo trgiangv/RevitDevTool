@@ -2,11 +2,13 @@ using System.Text.Json;
 
 namespace DevTools.Execution.External.Handlers;
 
+/// <summary>
+/// IronPython unittest over <c>ipytests/run</c>. No PEP 723 / pixi prepare —
+/// that path is CPython <see cref="PytestRequestHandler"/> only.
+/// </summary>
 public sealed class IpyTestRequestHandler(
-    IpyTestExecutionService executionService) : IBridgeRequestHandler, IBridgeNotificationPublisher
+    IpyTestExecutionService executionService) : IBridgeRequestHandler
 {
-    public Action<string, JsonElement?>? NotificationSender { get; set; }
-
     public IReadOnlyCollection<string> SupportedMethods { get; } = [PytestBridgeMethods.IpyTestsRun];
 
     public Task<BridgeMessage> HandleAsync(

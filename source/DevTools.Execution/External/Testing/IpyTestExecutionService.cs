@@ -9,6 +9,8 @@ public sealed class IpyTestExecutionService(IScriptExecutionStrategyFactory stra
 {
     private const string RequestEnvVar = "IPYTEST_REQUEST";
 
+    public sealed record DriverIoPaths(string RequestPath, string ResultPath);
+
     private static readonly JsonSerializerOptions JsonOptions = new()
     {
         PropertyNameCaseInsensitive = true,
@@ -30,9 +32,15 @@ public sealed class IpyTestExecutionService(IScriptExecutionStrategyFactory stra
         var collectionErrors = new List<PytestCollectionError>();
         var engine = "";
 
+        var maxfail = ParseMaxfail(request.PytestArgs);
         foreach (var (testPath, nodeIds) in groups)
         {
             cancellationToken.ThrowIfCancellationRequested();
+            var failSoFar = results.Count(r => r.Outcome is "failed" or "error") + collectionErrors.Count;
+            var remaining = maxfail == 0 ? 0 : maxfail - failSoFar;
+            if (maxfail > 0 && remaining <= 0)
+                break;
+
             if (!File.Exists(testPath))
             {
                 collectionErrors.Add(new PytestCollectionError(
@@ -42,8 +50,8 @@ public sealed class IpyTestExecutionService(IScriptExecutionStrategyFactory stra
                     string.Empty));
                 continue;
             }
-
-            var fileResult = await RunFileAsync(testPath, nodeIds, request.WorkspaceRoot, cancellationToken)
+            var fileResult = await RunFileAsync(
+                    testPath, nodeIds, request.WorkspaceRoot, remaining, cancellationToken)
                 .ConfigureAwait(false);
             if (!string.IsNullOrEmpty(fileResult.Engine))
                 engine = fileResult.Engine;
@@ -51,17 +59,49 @@ public sealed class IpyTestExecutionService(IScriptExecutionStrategyFactory stra
             collectionErrors.AddRange(fileResult.CollectionErrors);
         }
 
-        var failed = results.Count(r => r.Outcome is "failed" or "error") + collectionErrors.Count;
-        var passed = results.Count(r => r.Outcome == "passed");
-        var skipped = results.Count(r => r.Outcome == "skipped");
-        var summary = new PytestSummary(passed, failed, skipped, collectionErrors.Count, 0, 0);
+        var summary = BuildSummary(results, collectionErrors);
         return new PytestRunResponse(
-            failed == 0 && collectionErrors.Count == 0 ? 0 : 1,
+            summary.Failed == 0 && summary.Errors == 0 ? 0 : 1,
             summary,
             results,
             collectionErrors,
             request.WorkspaceRoot,
             engine);
+    }
+
+    /// <summary>
+    /// Same counters as CPython <c>PytestRunner</c>: collection errors live in
+    /// <see cref="PytestSummary.Errors"/>, not double-counted into Failed.
+    /// IronPython has no xfail.
+    /// </summary>
+    internal static PytestSummary BuildSummary(
+        IReadOnlyList<PytestCaseResult> results,
+        IReadOnlyList<PytestCollectionError> collectionErrors)
+    {
+        var passed = results.Count(r => r.Outcome == "passed");
+        var failed = results.Count(r => r.Outcome == "failed");
+        var skipped = results.Count(r => r.Outcome == "skipped");
+        var errors = results.Count(r => r.Outcome == "error") + collectionErrors.Count;
+        return new PytestSummary(passed, failed, skipped, errors, 0, 0);
+    }
+
+    internal static int ParseMaxfail(IReadOnlyList<string>? pytestArgs)
+    {
+        if (pytestArgs is null)
+            return 0;
+
+        foreach (var arg in pytestArgs)
+        {
+            const string prefix = "--maxfail=";
+            if (arg.StartsWith(prefix, StringComparison.Ordinal)
+                && int.TryParse(arg.AsSpan(prefix.Length), out var n)
+                && n > 0)
+            {
+                return n;
+            }
+        }
+
+        return 0;
     }
 
     public static Dictionary<string, List<string>> GroupNodeIds(
@@ -85,40 +125,57 @@ public sealed class IpyTestExecutionService(IScriptExecutionStrategyFactory stra
         return groups;
     }
 
+    public static DriverIoPaths CreateDriverIoPaths(string driverDir)
+    {
+        var id = Guid.NewGuid().ToString("N");
+        return new DriverIoPaths(
+            Path.Combine(driverDir, $"request_{id}.json"),
+            Path.Combine(driverDir, $"result_{id}.json"));
+    }
+
     private async Task<DriverPayload> RunFileAsync(
         string testPath,
         IReadOnlyList<string> nodeIds,
         string workspaceRoot,
+        int maxfail,
         CancellationToken cancellationToken)
     {
         var driverPath = PythonEmbedded.IpyTestDriverScriptPath;
         var driverDir = Path.GetDirectoryName(driverPath)
                         ?? throw new InvalidOperationException("IpyTestDriver path has no directory.");
-        var requestPath = Path.Combine(driverDir, "request.json");
-        var resultPath = Path.Combine(driverDir, "result.json");
+        var ioPaths = CreateDriverIoPaths(driverDir);
         var prefix = IpyTestPath.ToNodeidPrefix(testPath, workspaceRoot);
 
-        var requestBody = JsonSerializer.Serialize(new
-        {
-            test_path = testPath,
-            workspace_root = workspaceRoot,
-            nodeid_prefix = prefix,
-            selected = nodeIds,
-            result_path = resultPath,
-        });
-        File.WriteAllText(requestPath, requestBody);
+        var requestBody = JsonSerializer.Serialize(new IpyDriverFileRequest(
+            testPath, workspaceRoot, prefix, nodeIds, ioPaths.ResultPath, maxfail));
+        File.WriteAllText(ioPaths.RequestPath, requestBody);
 
         var previous = Environment.GetEnvironmentVariable(RequestEnvVar);
-        Environment.SetEnvironmentVariable(RequestEnvVar, requestPath);
+        Environment.SetEnvironmentVariable(RequestEnvVar, ioPaths.RequestPath);
         try
         {
             var strategy = strategyFactory.Create(ExecutionMode.IronPython, driverPath, workspaceRoot);
             var exec = await strategy.ExecuteAsync(cancellationToken: cancellationToken).ConfigureAwait(false);
-            return ReadPayload(resultPath, testPath, prefix, exec);
+            return ReadPayload(ioPaths.ResultPath, testPath, prefix, exec);
         }
         finally
         {
             Environment.SetEnvironmentVariable(RequestEnvVar, previous);
+            TryDelete(ioPaths.RequestPath);
+            TryDelete(ioPaths.ResultPath);
+        }
+    }
+
+    private static void TryDelete(string path)
+    {
+        try
+        {
+            if (File.Exists(path))
+                File.Delete(path);
+        }
+        catch
+        {
+            // best effort
         }
     }
 

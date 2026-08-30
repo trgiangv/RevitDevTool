@@ -19,6 +19,8 @@ if not _is_ironpython():
     clr.AddReference("UIFramework")
     clr.AddReference("UIFrameworkServices")
     clr.AddReference("RevitDevTool")
+    clr.AddReference("System.Runtime")
+
     import System
 
     if System.Environment.Version.Major >= 8:  # Revit 2025+ (.NET 8)
@@ -88,6 +90,9 @@ if not getattr(sys, '__pytest_running__', False):
             merged = merged.strip()
             if merged:
                 log_func(merged)
+
+        def isatty(self):
+            return False
 
     sys.stdout = StdOutRedirector(builtins)
     sys.stderr = StdOutRedirector(builtins)

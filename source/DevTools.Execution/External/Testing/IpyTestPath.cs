@@ -7,9 +7,11 @@ namespace DevTools.Execution.External.Testing;
 /// </summary>
 public static class IpyTestPath
 {
+    public const string NodeidSeparator = "::";
+
     public static string FileFromNodeid(string nodeid)
     {
-        var index = nodeid.IndexOf("::", StringComparison.Ordinal);
+        var index = nodeid.IndexOf(NodeidSeparator, StringComparison.Ordinal);
         return index < 0 ? nodeid : nodeid[..index];
     }
 

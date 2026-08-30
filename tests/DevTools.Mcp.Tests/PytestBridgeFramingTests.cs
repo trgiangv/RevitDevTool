@@ -8,7 +8,7 @@ public class PytestBridgeFramingTests
     public async Task BridgePipeConnection_RoundTripsLengthPrefixedFrames()
     {
         var body = JsonSerializer.SerializeToUtf8Bytes(
-            BridgeMessage.Request("1", "tests/run", JsonSerializer.SerializeToElement(new { discover_only = true })),
+            BridgeMessage.Request("1", "tests/run", JsonSerializer.SerializeToElement(new { workspace_root = "C:\\ws", test_root = "C:\\ws\\tests" })),
             IpcJsonContext.Default.BridgeMessage);
         var frame = new byte[4 + body.Length];
         BitConverter.GetBytes(body.Length).CopyTo(frame, 0);

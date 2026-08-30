@@ -2,6 +2,12 @@ using System.IO;
 using DevTools.Execution.Providers.Python;
 namespace DevTools.Execution.External.Testing;
 
+/// <summary>
+/// CPython <c>tests/run</c> only. Resolves PEP 723 metadata from test files and
+/// <c>conftest.py</c> into the host pixi-env (Python.NET). IronPython
+/// <c>ipytests/run</c> never uses this service — IPy 2.7/3.4 cannot import
+/// those wheels.
+/// </summary>
 public sealed class PytestDependencyService(PythonInitializer pythonInitializer)
 {
     public async Task PrepareRunAsync(PytestRunRequest request, CancellationToken cancellationToken = default)
@@ -93,7 +99,7 @@ public sealed class PytestDependencyService(PythonInitializer pythonInitializer)
         if (string.IsNullOrWhiteSpace(nodeId))
             return null;
 
-        var filePart = nodeId.Split(["::"], 2, StringSplitOptions.None)[0]
+        var filePart = nodeId.Split([IpyTestPath.NodeidSeparator], 2, StringSplitOptions.None)[0]
             .Replace('/', Path.DirectorySeparatorChar)
             .Replace('\\', Path.DirectorySeparatorChar);
 

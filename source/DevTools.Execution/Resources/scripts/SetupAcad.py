@@ -18,8 +18,9 @@ if not _is_ironpython():
     clr.AddReference("accoremgd")
     clr.AddReference("AdWindows")
     clr.AddReference("AcadDevTool")
+    clr.AddReference("System.Runtime")
+
     import System
-    from Autodesk.AutoCAD.ApplicationServices.Core import Application
 
 
     if System.Environment.Version.Major >= 8:  # AutoCAD 2025+ (.NET 8)
@@ -90,6 +91,9 @@ if not getattr(sys, '__pytest_running__', False):
             merged = merged.strip()
             if merged:
                 log_func(merged)
+
+        def isatty(self):
+            return False
 
 
     sys.stdout = StdOutRedirector(builtins)

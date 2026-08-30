@@ -48,7 +48,7 @@ _EMPTY_SUMMARY: dict[str, int] = {
 
 
 class _CollectError:
-    __slots__ = ("nodeid", "path", "message", "traceback")
+    __slots__ = ("message", "nodeid", "path", "traceback")
 
     def __init__(self, nodeid: str, path: str, message: str, traceback: str) -> None:
         self.nodeid = nodeid
@@ -57,18 +57,19 @@ class _CollectError:
         self.traceback = traceback
 
     def to_dict(self) -> dict[str, Any]:
-        return {
-            "nodeid": self.nodeid,
-            "path": self.path,
-            "message": self.message,
-            "traceback": self.traceback,
-        }
+        return {name: getattr(self, name) for name in self.__slots__}
 
 
 class _CaseResult:
     __slots__ = (
-        "nodeid", "outcome", "phase", "duration_ms",
-        "stdout", "stderr", "message", "traceback",
+        "duration_ms",
+        "message",
+        "nodeid",
+        "outcome",
+        "phase",
+        "stderr",
+        "stdout",
+        "traceback",
     )
 
     def __init__(
@@ -92,16 +93,7 @@ class _CaseResult:
         self.traceback = traceback
 
     def to_dict(self) -> dict[str, Any]:
-        return {
-            "nodeid": self.nodeid,
-            "outcome": self.outcome,
-            "phase": self.phase,
-            "duration_ms": self.duration_ms,
-            "stdout": self.stdout,
-            "stderr": self.stderr,
-            "message": self.message,
-            "traceback": self.traceback,
-        }
+        return {name: getattr(self, name) for name in self.__slots__}
 
 
 # ---------------------------------------------------------------------------
@@ -165,22 +157,17 @@ def _echo_to_log_viewer(result: _CaseResult) -> None:
             log_func(f"[{result.nodeid}] {result.phase} FAILED:\n{result.traceback}")
         return
 
-    try:
-        log_func(f"[{result.nodeid}] {result.outcome.upper()} ({result.duration_ms:.0f}ms)")
-
-        if result.stdout:
-            log_func(result.stdout)
-        if result.stderr:
-            log_func(result.stderr)
-        if result.traceback and result.outcome in _FAILURE_OUTCOMES:
-            log_func(result.traceback)
-    except Exception:  # noqa: BLE001
-        pass
+    log_func(f"[{result.nodeid}] {result.outcome.upper()} ({result.duration_ms:.0f}ms)")
+    if result.stdout:
+        log_func(result.stdout)
+    if result.stderr:
+        log_func(result.stderr)
+    if result.traceback and result.outcome in _FAILURE_OUTCOMES:
+        log_func(result.traceback)
 
 
 class _BridgePlugin:
     def __init__(self, progress_callback: Any | None = None) -> None:
-        self.nodeids: list[str] = []
         self.results: list[_CaseResult] = []
         self.collection_errors: list[_CollectError] = []
         self.summary: dict[str, int] = {
@@ -188,12 +175,6 @@ class _BridgePlugin:
             _OUTCOME_ERRORS: 0, _OUTCOME_XFAILED: 0, _OUTCOME_XPASSED: 0,
         }
         self._progress = progress_callback
-
-    def pytest_collection_modifyitems(
-        self, session: pytest.Session, config: pytest.Config, items: list[pytest.Item],
-    ) -> None:
-        _ = session, config
-        self.nodeids = [item.nodeid for item in items]
 
     def pytest_collectreport(self, report: pytest.CollectReport) -> None:
         if not report.failed:
@@ -208,10 +189,15 @@ class _BridgePlugin:
         )
 
     def pytest_runtest_logreport(self, report: pytest.TestReport) -> None:
+        if report.when != _PHASE_CALL and not (report.failed or report.skipped):
+            return
+
         if report.when == _PHASE_CALL:
             self.summary[_summary_key(report)] += 1
         elif report.failed and report.when in {_PHASE_SETUP, _PHASE_TEARDOWN}:
             self.summary[_OUTCOME_ERRORS] += 1
+        elif report.skipped and report.when in {_PHASE_SETUP, _PHASE_TEARDOWN}:
+            self.summary[_OUTCOME_SKIPPED] += 1
 
         result = _build_case_result(report)
         self.results.append(result)
@@ -223,7 +209,7 @@ class _BridgePlugin:
             return
         try:
             self._progress(json.dumps(result.to_dict(), ensure_ascii=False))
-        except Exception:  # noqa: BLE001
+        except Exception:  # noqa: BLE001, S110
             pass
 
 
@@ -238,7 +224,7 @@ def _load_request() -> dict[str, Any]:
         raise RuntimeError("Pytest request payload is required.")
     request = json.loads(payload)
     if not isinstance(request, dict):
-        raise RuntimeError("Pytest request payload must be a JSON object.")
+        raise TypeError("Pytest request payload must be a JSON object.")
     return request
 
 
@@ -261,8 +247,6 @@ def _build_args(request: dict[str, Any]) -> list[str]:
         str(nid) for nid in request.get("nodeids", [])
         if isinstance(nid, str) and nid
     )
-    if request.get("discover_only"):
-        args.append("--collect-only")
     if not request.get("nodeids"):
         args.append(test_root)
     return args
@@ -273,10 +257,10 @@ def _build_args(request: dict[str, Any]) -> list[str]:
 # ---------------------------------------------------------------------------
 
 
-def _prepare_paths(request: dict[str, Any]) -> tuple[str, str]:
+def _prepare_paths(request: dict[str, Any]) -> tuple[str, str, list[str]]:
     """Configure sys.path for the test run.
 
-    Returns ``(test_root, saved_cwd)`` so the caller can restore cwd later.
+    Returns ``(test_root, saved_cwd, inserted_paths)`` so the caller can restore.
     """
     workspace_root = (
         request.get("workspace_root") or request.get("test_root") or os.getcwd()
@@ -287,30 +271,38 @@ def _prepare_paths(request: dict[str, Any]) -> tuple[str, str]:
 
     saved_cwd = os.getcwd()
     os.chdir(workspace_root)
+    inserted: list[str] = []
     if workspace_root not in sys.path:
         sys.path.insert(0, workspace_root)
+        inserted.append(workspace_root)
     if test_root not in sys.path:
         sys.path.insert(0, test_root)
-    return test_root, saved_cwd
+        inserted.append(test_root)
+    return test_root, saved_cwd, inserted
+
+
+def _restore_paths(inserted: list[str]) -> None:
+    for path in reversed(inserted):
+        try:
+            sys.path.remove(path)
+        except ValueError:
+            pass
 
 
 def _enable_pytest_streams() -> tuple[Any, Any, Any]:
-    """Set pytest-mode flag and replace Trace-backed streams with standard I/O.
+    """Route ``print()`` through ``sys.stdout`` so pytest ``--capture=sys`` is per-test.
 
-    SetupRevit.py redirects builtins.print and sys.stdout/stderr to Trace.
-    Setting sys.__pytest_running__ prevents re-hijacking during the run.
-    Returns (saved_stdout, saved_stderr, saved_print) for restoration.
+    Setup scripts replace ``builtins.print`` with Trace. Leave stdout/stderr as
+    ``StdOutRedirector`` (already has ``isatty``). Restore both in ``finally`` in
+    case pytest.main leaves capture installed. Do not use a session StringIO.
     """
     import builtins
-    import io
-
-    sys.__pytest_running__ = True  # type: ignore[attr-defined]
 
     saved_stdout = sys.stdout
     saved_stderr = sys.stderr
     saved_print = builtins.print
 
-    def _real_print(*args: Any, sep: str = " ", end: str = "\n", file: Any = None, flush: bool = False) -> None:  # noqa: ANN401
+    def _real_print(*args: Any, sep: str = " ", end: str = "\n", file: Any = None, flush: bool = False) -> None:
         target = file if file is not None else sys.stdout
         text = sep.join(str(a) for a in args) + end
         target.write(text)
@@ -318,24 +310,13 @@ def _enable_pytest_streams() -> tuple[Any, Any, Any]:
             target.flush()
 
     builtins.print = _real_print  # type: ignore[assignment]
-
-    sys.stdout = io.StringIO()
-    sys.stderr = io.StringIO()
-
-    for stream in (sys.stdout, sys.stderr):
-        if not hasattr(stream, "isatty"):
-            stream.isatty = lambda: False  # type: ignore[attr-defined]
-        if not hasattr(stream, "fileno"):
-            stream.fileno = lambda: -1  # type: ignore[attr-defined]
-
     return saved_stdout, saved_stderr, saved_print
 
 
 def _disable_pytest_streams(saved_stdout: Any, saved_stderr: Any, saved_print: Any) -> None:
-    """Restore Trace-backed streams and clear pytest-mode flag."""
+    """Restore Trace-backed streams."""
     import builtins
 
-    sys.__pytest_running__ = False  # type: ignore[attr-defined]
     sys.stdout = saved_stdout
     sys.stderr = saved_stderr
     builtins.print = saved_print
@@ -346,19 +327,7 @@ def _disable_pytest_streams(saved_stdout: Any, saved_stderr: Any, saved_print: A
 # ---------------------------------------------------------------------------
 
 
-def _success_response(
-    exit_code: int,
-    plugin: _BridgePlugin,
-    test_root: str,
-    *,
-    discover_only: bool = False,
-) -> str:
-    if discover_only:
-        return json.dumps({
-            "rootdir": test_root,
-            "nodeids": plugin.nodeids,
-            "collection_errors": [e.to_dict() for e in plugin.collection_errors],
-        })
+def _success_response(exit_code: int, plugin: _BridgePlugin, test_root: str) -> str:
     return json.dumps({
         "exit_code": int(exit_code),
         "summary": plugin.summary,
@@ -368,24 +337,14 @@ def _success_response(
     })
 
 
-def _error_response(test_root: str, ex: Exception, *, discover_only: bool = False) -> str:
-    error_entry = {
-        "nodeid": "",
-        "path": test_root,
-        "message": str(ex),
-        "traceback": traceback.format_exc(),
-    }
-    if discover_only:
-        return json.dumps({
-            "rootdir": test_root,
-            "nodeids": [],
-            "collection_errors": [error_entry],
-        })
+def _error_response(test_root: str, ex: Exception) -> str:
     return json.dumps({
         "exit_code": 1,
         "summary": _EMPTY_SUMMARY,
         "results": [],
-        "collection_errors": [error_entry],
+        "collection_errors": [
+            _CollectError("", test_root, str(ex), traceback.format_exc()).to_dict()
+        ],
         "rootdir": test_root,
     })
 
@@ -399,34 +358,29 @@ def _run() -> str:
     request: dict[str, Any] = {}
     test_root = ""
     saved_cwd = os.getcwd()
+    inserted_paths: list[str] = []
     saved_streams: tuple[Any, Any, Any] | None = None
     try:
         request = _load_request()
-        test_root, saved_cwd = _prepare_paths(request)
+        test_root, saved_cwd, inserted_paths = _prepare_paths(request)
         saved_streams = _enable_pytest_streams()
 
         import pytest
 
-        discover_only = bool(request.get("discover_only"))
         progress_callback = globals().get(_PROGRESS_CALLBACK)
         plugin = _BridgePlugin(progress_callback)
         args = _build_args(request)
-
-        try:
-            exit_code = pytest.main(args, plugins=[plugin])
-        except Exception as ex:  # noqa: BLE001
-            return _error_response(test_root, ex, discover_only=discover_only)
-
-        return _success_response(exit_code, plugin, test_root, discover_only=discover_only)
+        exit_code = pytest.main(args, plugins=[plugin])
+        return _success_response(exit_code, plugin, test_root)
     except Exception as ex:  # noqa: BLE001
         return _error_response(
             test_root or request.get("test_root", ""),
             ex,
-            discover_only=bool(request.get("discover_only")),
         )
     finally:
         if saved_streams is not None:
             _disable_pytest_streams(*saved_streams)
+        _restore_paths(inserted_paths)
         os.chdir(saved_cwd)
 
 
