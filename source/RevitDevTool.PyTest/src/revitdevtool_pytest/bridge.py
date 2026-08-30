@@ -10,9 +10,11 @@ import json
 import logging
 import struct
 import time
-from typing import Any, Callable
+from collections.abc import Callable
+from typing import Any
 
 from .constants import (
+    BRIDGE_METHOD_IPY_TESTS_RUN,
     BRIDGE_METHOD_TESTS_RUN,
     BRIDGE_MSG_TYPE_NOTIFICATION,
     DEFAULT_CONNECT_TIMEOUT_MS,
@@ -122,6 +124,27 @@ class HostBridge:
         )
         response: BridgeResponse = self._request(
             BridgeRequest(method=BRIDGE_METHOD_TESTS_RUN, params=request.to_params()),
+            timeout_s,
+            on_notification=on_notification,
+        )
+        return _parse_run_response(response)
+
+    def run_ipy_tests(
+        self,
+        workspace_root: str,
+        test_root: str,
+        nodeids: list[str],
+        *,
+        timeout_s: float = DEFAULT_TEST_TIMEOUT_S,
+        on_notification: NotificationCallback | None = None,
+    ) -> RunResponse:
+        request = RunRequest(
+            workspace_root=workspace_root,
+            test_root=test_root,
+            nodeids=nodeids,
+        )
+        response: BridgeResponse = self._request(
+            BridgeRequest(method=BRIDGE_METHOD_IPY_TESTS_RUN, params=request.to_params()),
             timeout_s,
             on_notification=on_notification,
         )

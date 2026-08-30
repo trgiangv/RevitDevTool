@@ -8,6 +8,7 @@ Thin hook orchestrator. Delegates to:
 
 from __future__ import annotations
 
+import os
 from typing import TYPE_CHECKING
 
 import pytest
@@ -22,14 +23,15 @@ from .constants import (
     OPT_FORCE_LAUNCH,
     OPT_HOST,
     OPT_LAUNCH_TIMEOUT,
-    OPT_PIPE,
     OPT_PER_TEST_TIMEOUT,
+    OPT_PIPE,
     OPT_VERSION,
     OUTCOME_ERROR,
     OUTCOME_FAILED,
     PHASE_CALL,
     PLUGIN_NAME,
 )
+from .ipy_collect import IpyTestFile, IpyTestItem, is_ipy_test_path
 from .models import CaseResult
 from .reporting import emit_item_reports, run_remote_session, skip_all
 from .suite_leasing import SuiteLeaseStore
@@ -126,9 +128,19 @@ def pytest_configure(config: pytest.Config) -> None:
     config.stash[_remote_collection_error_key] = None
 
 
+@pytest.hookimpl(wrapper=True)
+def pytest_collect_file(file_path, parent):
+    collected = yield
+    if not is_ipy_test_path(file_path):
+        return collected
+    return [IpyTestFile.from_parent(parent, path=file_path)]
+
+
 @pytest.hookimpl(tryfirst=True)
 def pytest_runtestloop(session: pytest.Session) -> bool:
     if session.config.stash.get(_collect_only_key, False):
+        return False
+    if os.environ.get("REVITDEVTOOL_PYTEST_DISABLE") == "1":
         return False
 
     host_name = _resolve_host_name(session.config)
@@ -189,9 +201,32 @@ def _dispatch_remote_run(session: pytest.Session) -> None:
     assert _bridge is not None
     per_test_timeout = _opt_float(session.config, OPT_PER_TEST_TIMEOUT, OPT_PER_TEST_TIMEOUT) or DEFAULT_TEST_TIMEOUT_S
 
-    results_by_nodeid, streamed_nodeids, collection_failed, collection_error = run_remote_session(
-        session, _bridge, per_test_timeout,
-    )
+    ipy_items = [item for item in session.items if isinstance(item, IpyTestItem)]
+    py_items = [item for item in session.items if not isinstance(item, IpyTestItem)]
+
+    results_by_nodeid: dict[str, list[CaseResult]] = {}
+    streamed_nodeids: set[str] = set()
+    collection_failed = False
+    collection_error: str | None = None
+
+    if py_items:
+        py_results, py_streamed, py_failed, py_error = run_remote_session(
+            session, _bridge, per_test_timeout, items=py_items,
+        )
+        results_by_nodeid.update(py_results)
+        streamed_nodeids.update(py_streamed)
+        collection_failed = collection_failed or py_failed
+        collection_error = collection_error or py_error
+
+    if ipy_items:
+        ipy_results, ipy_streamed, ipy_failed, ipy_error = run_remote_session(
+            session, _bridge, per_test_timeout, items=ipy_items, ipy=True,
+        )
+        results_by_nodeid.update(ipy_results)
+        streamed_nodeids.update(ipy_streamed)
+        collection_failed = collection_failed or ipy_failed
+        collection_error = collection_error or ipy_error
+
     session.stash[_remote_results_key] = results_by_nodeid
     session.stash[_streamed_nodeids_key] = streamed_nodeids
     session.stash[_remote_collection_failed_key] = collection_failed

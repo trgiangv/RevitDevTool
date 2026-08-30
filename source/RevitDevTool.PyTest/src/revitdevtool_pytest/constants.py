@@ -8,6 +8,7 @@ from typing import Final
 PLUGIN_NAME: Final = "RevitDevTool.PyTest"
 
 BRIDGE_METHOD_TESTS_RUN: Final = "tests/run"
+BRIDGE_METHOD_IPY_TESTS_RUN: Final = "ipytests/run"
 BRIDGE_MSG_TYPE_NOTIFICATION: Final = "notification"
 BRIDGE_NOTIFY_TEST_PROGRESS: Final = "notifications/tests/progress"
 

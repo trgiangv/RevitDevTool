@@ -11,7 +11,7 @@ pytest client plugin for [RevitDevTool](https://github.com/trgiangv/RevitDevTool
 ## Architecture
 
 ```
-Local pytest (collect) → Named Pipe (DevTools_*) → Host PytestRunner.py → Results → Local pytest (report)
+Local pytest (collect) → Named Pipe (DevTools_*) → Host PytestRunner.py **or** IronPython unittest driver → Results → Local pytest (report)
 ```
 
 Do **not** connect to `DevToolsMcp_*` — that pipe is for the MCP SDK (`HostMcpPipeServer`). Pytest uses `DevTools_{Host}_{Version}_{PID}` on `DevToolsPipeServer`.
@@ -21,8 +21,9 @@ Do **not** connect to `DevToolsMcp_*` — that pipe is for the MCP SDK (`HostMcp
 | Module | Role |
 |--------|------|
 | `plugin.py` | Hook orchestrator — lifecycle, options, bridge setup |
+| `ipy_collect.py` | Pytest collect convention `test_*_ipy.py` → `ipytests/run` (no CPython import) |
 | `connection.py` | Discover, connect, lease, launch, retry |
-| `bridge.py` | Named Pipe framing, `tests/run` RPC |
+| `bridge.py` | Named Pipe framing, `tests/run` / `ipytests/run` RPC |
 | `discovery.py` | Pipe scan, host registry, process launch |
 | `reporting.py` | Remote `CaseResult` → pytest `TestReport` |
 | `suite_leasing.py` | File-based suite → host PID allocation |
@@ -37,11 +38,14 @@ Do **not** connect to `DevToolsMcp_*` — that pipe is for the MCP SDK (`HostMcp
 |----------|------|
 | `DevTools.Execution/External/DevToolsPipeServer.cs` | Pytest/control pipe server |
 | `DevTools.Execution/External/Handlers/PytestRequestHandler.cs` | Routes `tests/run` |
-| `DevTools.Execution/External/Testing/` | `PytestExecutionService`, `PytestContracts`, `PytestDependencyService` |
+| `DevTools.Execution/External/Handlers/IpyTestRequestHandler.cs` | Routes `ipytests/run` |
+| `DevTools.Execution/External/Testing/` | `PytestExecutionService`, `IpyTestExecutionService`, `PytestContracts` |
 | `DevTools.Execution/Resources/scripts/PytestRunner.py` | In-host `pytest.main()` runner |
-| `SetupRevit.py` / `SetupAcad.py` | API refs, I/O setup |
+| `DevTools.Execution/Resources/scripts/IpyTestDriver.py` | In-host IronPython test driver (2.7 / 3.4) |
 
-Wire method: `tests/run`. Progress notifications: `notifications/tests/progress`.
+Wire methods: `tests/run` (CPython pytest), `ipytests/run` (IronPython unittest, pyRevit-first). Progress notifications: `notifications/tests/progress`.
+
+**IPy collect convention is `test_*_ipy.py`** (pytest `test_` + `_ipy` marker). That name is only how the plugin routes onto `ipytests/run`; the host runs unittest on the requested paths and does not require it. Dialect: 2.7 / 3.4, `unittest.TestCase`, no pytest fixtures / PEP 723. `*_ipy_script.py` is execution-tree script, not a test file. Library modules use normal names (`ipylib/geom.py`).
 
 ## This repo layout
 
@@ -49,10 +53,15 @@ Integration tests for the plugin — not shipped in the wheel.
 
 ```
 tests/
+  plugin/                # local plugin unit tests (no host); sets REVITDEVTOOL_PYTEST_DISABLE
   Revit/                 # default testpaths in pyproject.toml
     conftest.py          # PEP 723 deps, revit_doc, rollback fixtures
     schedule/            # shared schedule helpers (import as schedule.*)
-    test_*.py
+    test_*.py            # CPython pytest → tests/run
+    test_*_ipy.py        # mixed-tree IronPython unittest → ipytests/run
+  Revit_Ipy/             # IPy libs + more test_*_ipy.py (folder is not identity)
+    ipylib/              # 2.7/3.4 helpers imported by tests
+    test_*_ipy.py
   Civil3d/
     conftest.py          # acad_app, acad_doc, transaction fixtures
     test_*.py
@@ -123,6 +132,7 @@ uv run pytest tests/Revit/test_active_state.py::test_active_view_info -v
 uv run pytest --host-version=2025 -v
 uv run pytest --host autocad --host-version 2026 -v
 uv run pytest --force-launch --host-version=2025 -v
+uv run pytest tests/Revit_Ipy -v --host-version=2025
 ```
 
 Plugin auto-enables `-rP` (stdout for passing tests).
@@ -176,6 +186,7 @@ Host API imports belong **inside test bodies** (or fixture bodies), not at modul
 - PEP 723 deps in `conftest.py` are installed by `PytestDependencyService` before run.
 - `--force-launch` requires `--host-version`.
 - `print()` captured via `--capture=sys` → `CaseResult.stdout`.
+- IronPython tests: no pytest fixtures; host APIs inside methods; `test_*_ipy.py` is pytest routing only, not a host filename contract.
 
 ## Change rules
 

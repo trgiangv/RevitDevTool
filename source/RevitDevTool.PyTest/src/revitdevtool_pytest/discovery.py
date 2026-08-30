@@ -11,6 +11,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from .constants import (
+    _ACAD_EXE,
     ACAD_REGISTRY_ROOT,
     DEFAULT_LAUNCH_TIMEOUT_S,
     DEFAULT_POLL_INTERVAL_S,
@@ -18,7 +19,6 @@ from .constants import (
     PIPE_DIR,
     PIPE_PATTERN,
     HostConfig,
-    _ACAD_EXE,
     get_host_config,
 )
 

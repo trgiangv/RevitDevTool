@@ -43,6 +43,9 @@ def run_remote_session(
     session: pytest.Session,
     bridge: HostBridge,
     timeout_per_test: float,
+    *,
+    items: list[pytest.Item] | None = None,
+    ipy: bool = False,
 ) -> tuple[dict[str, list[CaseResult]], set[str], bool, str | None]:
     """Run tests remotely, streaming progress as it arrives.
 
@@ -50,15 +53,18 @@ def run_remote_session(
     When an IDE adapter is active, streaming is disabled to avoid
     duplicate reports in the test tree.
     """
+    selected = items if items is not None else list(session.items)
     workspace_root = str(session.config.rootdir)
-    total_timeout = timeout_per_test * max(len(session.items), 1)
-    nodeids = [item.nodeid for item in session.items]
+    total_timeout = timeout_per_test * max(len(selected), 1)
+    nodeids = [item.nodeid for item in selected]
     streamed: set[str] = set()
 
-    on_notification = _build_streaming_callback(session, streamed)
-    response = _request_remote_run(bridge, workspace_root, nodeids, total_timeout, on_notification)
+    on_notification = _build_streaming_callback(selected, streamed)
+    response = _request_remote_run(
+        bridge, workspace_root, nodeids, total_timeout, on_notification, ipy=ipy,
+    )
     if response is None:
-        fail_all(session, f"{PLUGIN_NAME}: Remote execution failed.")
+        fail_all(session, f"{PLUGIN_NAME}: Remote execution failed.", items=selected)
         return {}, streamed, False, None
 
     collection_error_message = _report_collection_errors(session, response)
@@ -73,7 +79,7 @@ def run_remote_session(
 
 
 def _build_streaming_callback(
-    session: pytest.Session,
+    items: list[pytest.Item],
     streamed: set[str],
 ) -> Any:
     """Build the notification callback for real-time streaming.
@@ -83,10 +89,10 @@ def _build_streaming_callback(
     batch results and duplicate ``logreport`` events would cause
     double-counted results in the test tree.
     """
-    if _is_ide_adapter_active(session):
+    if items and _is_ide_adapter_active(items[0].session):
         return None
 
-    items_by_nodeid = {item.nodeid: item for item in session.items}
+    items_by_nodeid = {item.nodeid: item for item in items}
 
     def on_notification(method: str, params: Any) -> None:
         if method != BRIDGE_NOTIFY_TEST_PROGRESS or params is None:
@@ -108,8 +114,18 @@ def _request_remote_run(
     nodeids: list[str],
     timeout_s: float,
     on_notification: Any,
+    *,
+    ipy: bool = False,
 ) -> RunResponse | None:
     try:
+        if ipy:
+            return bridge.run_ipy_tests(
+                workspace_root=workspace_root,
+                test_root=workspace_root,
+                nodeids=nodeids,
+                timeout_s=timeout_s,
+                on_notification=on_notification,
+            )
         return bridge.run_tests(
             workspace_root=workspace_root,
             test_root=workspace_root,
@@ -291,8 +307,13 @@ def skip_all(session: pytest.Session, reason: str) -> None:
         ihook.pytest_runtest_logfinish(nodeid=item.nodeid, location=item.location)
 
 
-def fail_all(session: pytest.Session, message: str) -> None:
-    for item in session.items:
+def fail_all(
+    session: pytest.Session,
+    message: str,
+    *,
+    items: list[pytest.Item] | None = None,
+) -> None:
+    for item in items if items is not None else session.items:
         ihook = item.ihook
         ihook.pytest_runtest_logstart(nodeid=item.nodeid, location=item.location)
         ihook.pytest_runtest_logreport(report=make_error_report(item, message))
