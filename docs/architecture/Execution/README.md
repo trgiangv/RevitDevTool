@@ -109,5 +109,5 @@ Current tests are useful but shallow. When changing execution behavior:
 - `docs/agents/execution-system.md` (agent digest — quick reference)
 - `docs/agents/host-boundaries.md`
 - `docs/architecture/MCP/README.md`
-- `docs/architecture/PyTest/README.md`
+- `docs/architecture/Execution/pytest-bridge.md`
 - `docs/architecture/Logging/README.md`

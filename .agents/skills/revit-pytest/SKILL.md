@@ -2,26 +2,20 @@
 name: revit-pytest
 description: >
   Create and run CAD/BIM API tests using pytest via RevitDevTool Named Pipe bridge.
-  Use when writing new pytest test files for Revit/AutoCAD/Civil3D API, adding test
-  fixtures for host documents/elements, running tests against a live host instance,
-  setting up conftest.py with PEP 723 dependencies, setting host_name/host_version/
-  force_launch/per_test_timeout/launch_timeout, or asking "how do I test Revit API
-  with python/pytest".
+  Use when writing pytest for Revit/AutoCAD/Civil3D, fixtures, conftest PEP 723,
+  host_name/host_version/force_launch, or "how do I test Revit API with python/pytest".
 ---
 
 # Host API Testing with pytest
 
-## How It Works
-
+```mermaid
+flowchart LR
+    Collect[Local collect] --> Pipe["DevTools_*"]
+    Pipe --> Host[Host run]
+    Host --> Report[Local report]
 ```
-Local pytest (collect) → Named Pipe → Host (PytestRunner.py) → Results → Local pytest (report)
-```
 
-Tests are collected locally, executed inside a live host via JSON-RPC over Named Pipes.
-
-## Run (always uv)
-
-From the **RevitDevTool.PyTest** repo root — never search system Python, never bare `pytest`:
+From **RevitDevTool.PyTest** — `uv run pytest` only. Pipe is `DevTools_{Host}_{Version}_{PID}`, not `DevToolsMcp_*`.
 
 ```powershell
 cd c:\Users\truon\source\repos\RevitDevTool.PyTest
@@ -29,10 +23,10 @@ uv run pytest -v
 uv run pytest tests/Revit/<file>.py::test_name -v
 uv run pytest --host-version=2025 -v
 uv run pytest --host autocad --host-version=2026 -v
-uv run pytest --force-launch --host-version=2025 -v
+uv run pytest tests/Revit_Ipy -v --host-version=2025
 ```
 
-## Configure pyproject.toml
+## Config
 
 ```toml
 [tool.pytest.ini_options]
@@ -43,78 +37,41 @@ per_test_timeout = "60"
 launch_timeout = "180"
 ```
 
-| Option | Default | Description |
-|--------|---------|-------------|
-| `host_name` | `"revit"` | `revit`, `autocad`, `civil3d`, etc. |
-| `host_version` | — | Required when `force_launch = true` |
-| `force_launch` | `false` | Force a **new** host instance (skip reuse) |
-| `per_test_timeout` | `"60"` | Per-test budget (seconds). `tests/run` wait = this × collected tests |
-| `launch_timeout` | `"180"` | Wait for host pipe after launch (seconds) |
-| `host_pipe` | — | Explicit pipe (bypass discovery) |
+`force_launch` needs `host_version`. Pipe wait: CPython `per_test × N + launch_timeout`; IPy `per_test × N`.
 
-## conftest.py
+## CPython (`test_*.py` → `tests/run`)
 
-```python
-# /// script
-# dependencies = [
-#   "numpy>=2.0",
-# ]
-# ///
-"""PEP 723 deps are auto-installed by RevitDevTool."""
-
-import pytest
-
-@pytest.fixture(scope="session")
-def revit_uiapp():
-    return __revit__  # noqa: F821
-
-@pytest.fixture(scope="session")
-def revit_doc(revit_uiapp):
-    return revit_uiapp.ActiveUIDocument.Document
-
-@pytest.fixture
-def revit_auto_rollback():
-    from RevitDevTool.Core import RevitTransactionService
-    RevitTransactionService.StartChanges()
-    try:
-        yield RevitTransactionService
-    finally:
-        RevitTransactionService.RevertChanges()
-```
-
-## Tests
-
-**Host/.NET imports MUST be inside function bodies.**
+Host imports **inside** the test or fixture. `__revit__` via fixtures. PEP 723 `# /// script` on `conftest.py` is installed by the host before run.
 
 ```python
 def test_active_view(revit_doc):
     view = revit_doc.ActiveView
     assert view is not None
-
-def test_wall_count(revit_doc):
-    from Autodesk.Revit.DB import FilteredElementCollector, BuiltInCategory
-    walls = list(
-        FilteredElementCollector(revit_doc)
-        .OfCategory(BuiltInCategory.OST_Walls)
-        .WhereElementIsNotElementType()
-    )
-    assert len(walls) > 0
 ```
 
-## Behaviors
+## IronPython (`test_*_ipy.py` → `ipytests/run`)
 
-- Pipe shape: `DevTools_{Host}_{Version}_{PID}`
-- Tests run on the host main thread sequentially; `__revit__` via fixtures
-- `print()` is captured; plugin uses `--capture=sys`
+`unittest.TestCase`. No pytest fixtures, no PEP 723, no f-strings, never assign to `print`. Host APIs inside methods. Filename is pytest routing only.
 
-## Common Mistakes
+```python
+import unittest
+
+class ActiveViewTests(unittest.TestCase):
+    def test_has_view(self):
+        doc = __revit__.ActiveUIDocument.Document
+        self.assertIsNotNone(doc.ActiveView)
+```
+
+## Mistakes
 
 | Mistake | Fix |
 |---------|-----|
-| Import host API at module level | Move inside the test function |
-| Use `__revit__` without fixture | Use `revit_uiapp` |
+| Host API at module top | Inside the test / method |
+| `__revit__` in CPython with no fixture | `revit_uiapp` / `revit_doc` |
 | System Python / bare `pytest` | `uv run pytest` from PyTest repo |
 | `force_launch` without version | Set `host_version` |
+| Connect `DevToolsMcp_*` | Pytest pipe is `DevTools_*` |
+| PEP 723 / fixtures on `test_*_ipy.py` | CPython only |
 
 ## References
 

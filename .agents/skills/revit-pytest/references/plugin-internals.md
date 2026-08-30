@@ -1,116 +1,94 @@
 # Plugin Internals
 
-## Architecture Overview
+Collect locally, execute on the host, report locally. Pipe is `DevTools_{Host}_{Version}_{PID}` — not `DevToolsMcp_*`.
 
-```
-pytest (local)                      Host (remote)
-  ├─ plugin.py (hooks)              ├─ RevitDevTool add-in
-  ├─ connection.py (lifecycle)      │   ├─ Named Pipe server
-  ├─ bridge.py (Named Pipe RPC)  ──►│   ├─ PytestDependencyService
-  ├─ discovery.py (find host)      │   ├─ pythonnet execution
-  ├─ reporting.py (result mapping)  │   └─ BridgePipeConnection
-  ├─ suite_lock.py (Windows Mutex)  │
-  ├─ suite_leasing.py (instance)    │
-  └─ dialog_resolver.py (UI auto)   │
-```
+## Session
 
-## Named Pipe Protocol
-
-Wire format: `[4-byte LE body length][UTF-8 JSON body]`
-
-Matches `DevTools.Ipc.BridgePipeConnection` on C# side.
-
-Pipe name pattern: `DevTools_{Host}_{Version}_{PID}` (e.g. `DevTools_Revit_2025_12345`, `DevTools_AutoCad_2026_7890`, `DevTools_Rhino_8.0_9999`)
-
-## Connection Flow
-
-1. `plugin.pytest_runtestloop` calls `_ensure_bridge(session, host_name)`
-2. `connection.ensure_bridge()` resolves bridge via:
-   - Reuse existing connected bridge
-   - Explicit pipe (`--host-pipe`)
-   - Auto-discovery: scan `//./pipe` for `DevTools_{Host}_{Version}_{PID}` patterns
-   - Lease store: reconnect to previously-leased instance
-   - Auto-launch: start host + dialog resolver + wait for pipe
-3. Suite mutex prevents parallel pytest processes on same suite
-
-## Bridge RPC Methods
-
-| Method | Request | Response |
-|--------|---------|----------|
-| `tests/discover` | `DiscoverRequest(workspace_root, test_root, pytest_args)` | `DiscoverResponse(rootdir, nodeids, collection_errors)` |
-| `tests/run` | `RunRequest(workspace_root, test_root, nodeids, pytest_args)` | `RunResponse(exit_code, summary, results, collection_errors)` |
-
-## Output Capture Flow
-
-```
-test_foo.py              Host (PytestRunner.py)           Named Pipe             Local pytest
-  print("x")  ────►  _BridgePlugin.pytest_runtest_     ────►  progress        ────►  reporting.py
-  assert ...          logreport() captures each phase          notification           _emit_streaming_report()
-                      → _CaseResult(stdout, stderr,            per CaseResult         → pytest_runtest_logreport
-                         traceback, message, outcome)                                 → terminal output
-                      → _echo_to_log_viewer()
-                         (Host Log Viewer)
-                      → _emit_progress() → JSON
+```mermaid
+flowchart LR
+    Collect[Local collect] --> Connect[ensure_bridge]
+    Connect --> Split{items}
+    Split -->|test_*.py| CPython["tests/run\nPytestRunner.py"]
+    Split -->|test_*_ipy.py| IPy["ipytests/run\nIpyTestDriver.py"]
+    CPython --> Report[Local logreport]
+    IPy --> Report
 ```
 
-**PytestRunner.py** (`_BridgePlugin`) hooks into:
-- `pytest_runtest_logreport` — captures each phase result (setup/call/teardown)
-- `pytest_collectreport` — captures collection errors
-- `pytest_collection_modifyitems` — collects discovered nodeids
+`test_*_ipy.py` is pytest routing only. Host unittest does not care about that name.
 
-Each `_CaseResult.to_dict()` → JSON → `__progress_callback__` → C# `PytestRequestHandler.CreateProgressCallback()` → `SendNotification("notifications/tests/progress", json)` → pipe → local `reporting.py._emit_streaming_report()`.
+| Local | Host |
+|-------|------|
+| `plugin.py` hooks | `DevToolsPipeServer` |
+| `connection.py` + `discovery.py` | `PytestRequestHandler` / `IpyTestRequestHandler` |
+| `bridge.py` RPC | `PytestRunner.py` (CPython) / `IpyTestDriver.py` (IPy) |
+| `reporting.py` | PEP 723 only on `tests/run` |
+| `suite_lock.py` + `suite_leasing.py` | same PID per host+version+workspace |
 
-**Streaming vs Batch:**
-- CLI mode: `on_notification` callback emits live `pytest_runtest_logreport` per test
-- IDE adapter (detected via `vscode_pytest` plugin or `TEST_RUN_PIPE` env): streaming disabled, all results emitted in batch after `RunResponse` returns
+## Connect
 
-## CaseResult Fields
+First match wins. `--force-launch` skips reuse / explicit pipe / discover and always launches.
 
-| Field | Content |
-|-------|---------|
-| `nodeid` | `tests/test_foo.py::test_bar` |
-| `outcome` | `passed`, `failed`, `skipped`, `error`, `xfailed`, `xpassed` |
-| `phase` | `setup`, `call`, `teardown` |
-| `duration_ms` | Execution time in milliseconds |
-| `stdout` | Captured `print()` output from the test |
-| `stderr` | Captured stderr |
-| `message` | First line of error or xfail reason |
-| `traceback` | Full traceback text on failure |
+```mermaid
+flowchart TD
+    Start[ensure_bridge] --> Reuse{bridge already connected?}
+    Reuse -->|yes| Done[use it]
+    Reuse -->|no| Pipe{--host-pipe?}
+    Pipe -->|yes| Explicit[connect that name]
+    Pipe -->|no| Lease{lease PID still alive?}
+    Lease -->|yes| Reconnect[reconnect leased pipe]
+    Lease -->|no| Free{free DevTools_* instance?}
+    Free -->|yes| Assign[connect + lease]
+    Free -->|no| Launch[start host, wait for that PID pipe]
+    Explicit --> Done
+    Reconnect --> Done
+    Assign --> Done
+    Launch --> Done
+```
 
-## Suite Leasing
+`SuiteMutex` is the same key as the lease (one pytest process at a time). CPython and IronPython trees in one workspace reuse the PID; one invocation still cannot mix two `conftest.py` trees.
 
-Prevents multiple pytest sessions from fighting over the same host instance:
+## Capture
 
-- `SuiteMutex` — Windows named Mutex per suite key
-- `SuiteLeaseStore` — JSON file mapping suite → host PID/pipe
-- Lease survives across test reruns, cleared on PID death
+Per-test stdout only. No session StringIO. `make_report` always attaches `Captured stdout` / `Captured stderr`.
 
-## Dialog Resolver
+```mermaid
+flowchart LR
+    subgraph CPython
+        P1["print()"] --> Cap["--capture=sys"]
+        Cap --> CR1[CaseResult.stdout]
+    end
+    subgraph IronPython
+        P2["print"] --> Tee[per-test tee]
+        Tee --> CR2[CaseResult.stdout]
+    end
+    CR1 --> Wire[pipe CaseResult]
+    CR2 --> Wire
+    Wire --> Report["make_report sections"]
+```
 
-During auto-launch, hosts may show security dialogs for unsigned add-ins.
-`StartupDialogResolver` runs a background thread that:
-- Monitors host process windows
-- Clicks safe actions: "Always Load", "Load Once"
-- Avoids destructive: "Do Not Load", "Cancel", "No"
+CLI streams `notifications/tests/progress` into live `logreport`. IDE (`vscode_pytest` or `TEST_RUN_PIPE`) waits for the batch `RunResponse`. IPy is always batch.
+
+## Wire
+
+Frame: `[4-byte LE length][UTF-8 JSON]`. Same request shape for both run methods.
+
+| Method | Host | Notes |
+|--------|------|-------|
+| `tests/run` | `PytestRunner.py` `pytest.main` | PEP 723 prepare first |
+| `ipytests/run` | `IpyTestDriver.py` unittest | no pixi; response may set `engine` |
+
+`CaseResult`: `nodeid`, `outcome` (`passed`/`failed`/`skipped`/`error`/`xfailed`/`xpassed`), `phase`, `duration_ms`, `stdout`, `stderr`, `message`, `traceback`.
+
+## Dialogs
+
+On launch, `StartupDialogResolver` clicks "Always Load" / "Load Once". It does not click "Do Not Load", "Cancel", or "No".
 
 ## Troubleshooting
 
-### "Could not connect to host"
+**Could not connect** — host running with add-in; `ls //./pipe/` matches `DevTools_Revit_…`; `--host-pipe=DevTools_Revit_2025_<pid>`; `--host-version` matches the instance.
 
-1. Verify host is running with RevitDevTool installed
-2. Check pipe exists: `ls //./pipe/ | findstr Revit` (or `AutoCad`, etc.)
-3. Try explicit pipe: `pytest --host-pipe=Revit_2025_<pid>`
-4. Check `--host-version` matches running instance
+**Suite already running** — another pytest holds the mutex. Kill it or wait.
 
-### "Suite is already running in another pytest process"
+**Timeout** — `uv run pytest --per-test-timeout=120`
 
-Another pytest session holds the suite mutex. Kill the other process or wait.
-
-### Tests timeout
-
-Increase timeout: `uv run pytest --per-test-timeout=120`
-
-### PEP 723 packages not found
-
-Ensure `conftest.py` has the `# /// script` block with correct dependency syntax.
-RevitDevTool reads this at session start and installs packages before executing tests.
+**PEP 723 packages missing** — `# /// script` on CPython `conftest.py` / `test_*.py`, not on `test_*_ipy.py`.

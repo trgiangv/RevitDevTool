@@ -1,21 +1,10 @@
-# PyTest Bridge Product Contract
+# PyTest Bridge
 
-Local pytest collects tests; the host process executes them over a Named Pipe
-JSON-RPC bridge. Supports Revit, AutoCAD-family, and any host exposing a
-`DevToolsPipeServer` pipe.
+Local pytest collects. The host executes over `DevTools_{Host}_{Version}_{PID}` (`BridgeMessage`). Not the MCP pipe `DevToolsMcp_*`.
 
-## Behavior
+- Client: sibling `RevitDevTool.PyTest`. Always `uv run pytest` from that repo.
+- CPython `test_*.py` → `tests/run`. IronPython `test_*_ipy.py` → `ipytests/run` (unittest, no PEP 723).
+- Options: `--host` / `--host-version` / `--host-pipe` / `--force-launch` / `--per-test-timeout` / `--launch-timeout`.
+- Wire: Python `models.py` ↔ C# `PytestContracts.cs`.
 
-- Client plugin lives in sibling repo `RevitDevTool.PyTest`; always run with
-  `uv run pytest` from that repo root.
-- Host options use `--host` / `--host-version` / `--host-pipe` / `--force-launch`
-  / `--per-test-timeout` / `--launch-timeout` (same names as TestAdapter;
-  not `--host-launch` / `--host-timeout` / `--request-timeout`).
-- Wire models must stay mirrored between Python `models.py` and C#
-  `PytestContracts.cs`.
-
-## Related
-
-- Architecture: [`docs/architecture/PyTest/README.md`](../architecture/PyTest/README.md)
-- Client AGENTS: sibling `RevitDevTool.PyTest/AGENTS.md`
-- Agent digest: [`docs/agents/mcp-pytest-bridge.md`](../agents/mcp-pytest-bridge.md)
+Architecture: [Execution/pytest-bridge.md](../architecture/Execution/pytest-bridge.md). Write tests: `.agents/skills/revit-pytest/SKILL.md`.

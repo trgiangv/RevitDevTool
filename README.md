@@ -178,7 +178,7 @@ print(f"Found {walls.GetElementCount()} walls")
 - **Auto-launch** — spawns host process if needed
 - **IDE integration** — VS Code, Cursor, PyCharm test runners
 - **Separate repo**: [`RevitDevTool.PyTest`](https://github.com/trgiangv/RevitDevTool.PyTest) | PyPI: [`revitdevtool_pytest`](https://pypi.org/project/revitdevtool_pytest/)
-- **Architecture docs**: [PyTest Bridge](docs/architecture/PyTest/README.md)
+- **Architecture docs**: [Pytest Bridge](docs/architecture/Execution/pytest-bridge.md)
 
 ### Logging System
 

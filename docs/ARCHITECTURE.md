@@ -25,7 +25,7 @@ stays `FileMetadata.*`; add-in DI lives in `RevitDevTool/Composition` /
 |--------|--------------|------------------|--------------|
 | Execution | [architecture/Execution](architecture/Execution/README.md) | [product/execution.md](product/execution.md) | [agents/execution-system.md](agents/execution-system.md) |
 | MCP | [architecture/MCP](architecture/MCP/README.md) | [product/mcp.md](product/mcp.md) | [agents/mcp-pytest-bridge.md](agents/mcp-pytest-bridge.md) |
-| PyTest bridge | [architecture/PyTest](architecture/PyTest/README.md) | [product/pytest-bridge.md](product/pytest-bridge.md) | [agents/mcp-pytest-bridge.md](agents/mcp-pytest-bridge.md) |
+| PyTest bridge | [architecture/Execution/pytest-bridge.md](architecture/Execution/pytest-bridge.md) | [product/pytest-bridge.md](product/pytest-bridge.md) | [agents/mcp-pytest-bridge.md](agents/mcp-pytest-bridge.md) |
 | Logging | [architecture/Logging](architecture/Logging/README.md) | [product/logging.md](product/logging.md) | — |
 | Visualization | [architecture/Visualization](architecture/Visualization/README.md) | [product/visualization.md](product/visualization.md) | — |
 | MTP host testing | [architecture/Testing](architecture/Testing/README.md) | [product/host-testing.md](product/host-testing.md), [tunit-host-testing.md](product/tunit-host-testing.md) | [agents/host-testing.md](agents/host-testing.md) |
