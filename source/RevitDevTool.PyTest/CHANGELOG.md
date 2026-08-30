@@ -2,6 +2,15 @@
 
 All notable changes to this project will be documented in this file.
 
+## [Unreleased]
+
+### Fixed
+
+- IronPython and CPython tests share one host lease (host + version + workspace),
+  so sequential `tests/Revit` and `tests/Revit_Ipy` runs reuse the same Revit PID.
+- `--maxfail` is counted once: pytest Session locally, `--maxfail=N` sent to
+  the host as-is (no remaining-quota double count).
+
 ## [0.3.1] - 2026-08-18
 
 ### Changed

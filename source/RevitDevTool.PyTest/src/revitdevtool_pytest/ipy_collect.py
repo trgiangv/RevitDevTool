@@ -13,8 +13,7 @@ from pathlib import Path
 
 import pytest
 
-IPY_TEST_PREFIX = "test_"
-IPY_TEST_SUFFIX = "_ipy.py"
+from .constants import IPY_TEST_PREFIX, IPY_TEST_SUFFIX, NODEID_SEP, SUITE_ITEM_NAME
 
 _CLASS = re.compile(r"^class\s+([A-Za-z_]\w*)\s*\(([^)]*)\)")
 _DEF = re.compile(r"^([ \t]*)def\s+(test[A-Za-z0-9_]*)\s*\(")
@@ -63,7 +62,7 @@ class IpyTestFile(pytest.File):
                 f"{self.path} must define unittest.TestCase (IronPython unittest flow)."
             )
         if not tests:
-            yield IpyTestItem.from_parent(self, name="(suite)")
+            yield IpyTestItem.from_parent(self, name=SUITE_ITEM_NAME)
             return
         by_class: OrderedDict[str, list[str]] = OrderedDict()
         for class_name, method in tests:
@@ -88,5 +87,5 @@ class IpyTestItem(pytest.Item):
 
     def reportinfo(self):
         parent = self.parent.name if self.parent is not None else ""
-        label = f"{parent}::{self.name}" if parent else self.name
+        label = f"{parent}{NODEID_SEP}{self.name}" if parent else self.name
         return self.path, None, label

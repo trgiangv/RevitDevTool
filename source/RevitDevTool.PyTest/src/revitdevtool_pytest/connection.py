@@ -59,7 +59,6 @@ def ensure_bridge(
     version: str | None,
     explicit_pipe: str | None,
     suite_key: str,
-    suite_path: str,
     force_launch: bool = False,
 ) -> ConnectionResult:
     """Main entry point: return a connected bridge or an error.
@@ -76,7 +75,6 @@ def ensure_bridge(
     return _connect_discovered_or_launched(
         host_name=host_name,
         suite_key=suite_key,
-        suite_path=suite_path,
         lease_store=lease_store,
         version=version,
         launch_timeout_s=launch_timeout_s,
@@ -88,7 +86,6 @@ def _connect_discovered_or_launched(
     *,
     host_name: str,
     suite_key: str,
-    suite_path: str,
     lease_store: SuiteLeaseStore | None,
     version: str | None,
     launch_timeout_s: float,
@@ -98,13 +95,13 @@ def _connect_discovered_or_launched(
 
     if not force_launch:
         if lease_store is not None:
-            bridge, _ = _try_reconnect_leased(host_name, lease_store, suite_key, suite_path, instances)
+            bridge = _try_reconnect_leased(host_name, lease_store, suite_key, instances)
             if bridge is not None:
                 return ConnectionResult(bridge=bridge)
             instances = instances_for_version(host_name, version)
 
         free = lease_store.find_free(suite_key, instances) if lease_store else instances
-        bridge, error = _connect_and_lease(free, suite_key, suite_path, lease_store, "Assigned free instance")
+        bridge, error = _connect_and_lease(free, suite_key, lease_store, "Assigned free instance")
         if bridge is not None:
             return ConnectionResult(bridge=bridge)
         if error is not None:
@@ -113,7 +110,7 @@ def _connect_discovered_or_launched(
     launch_version = _resolve_launch_version(host_name, version, instances)
     result = auto_launch(host_name, launch_version, launch_timeout_s)
     bridge, error = _connect_and_lease(
-        [result.launched_instance], suite_key, suite_path, lease_store, "Spawned and leased",
+        [result.launched_instance], suite_key, lease_store, "Spawned and leased",
     )
     return ConnectionResult(bridge=bridge, dialog_resolver=result.dialog_resolver, error=error)
 
@@ -214,40 +211,38 @@ def _try_reconnect_leased(
     host_name: str,
     store: SuiteLeaseStore,
     suite_key: str,
-    suite_path: str,
     instances: list[HostInstance],
-) -> tuple[HostBridge | None, bool]:
+) -> HostBridge | None:
     """Try reconnecting to a previously-leased host instance."""
     lease = store.get_suite_lease(suite_key)
     if lease is None:
-        return None, False
+        return None
 
     if not is_process_alive(lease.process_id, host_name):
         store.clear_suite(suite_key)
-        return None, False
+        return None
 
     leased_instance = find_instance_by_pid(instances, lease.process_id)
     if leased_instance is None:
         store.clear_suite(suite_key)
-        return None, False
+        return None
 
     bridge, _, _ = _connect_first_available([leased_instance])
     if bridge is not None:
-        store.assign(suite_key, suite_path, leased_instance)
+        store.assign(suite_key, leased_instance)
         log.info(
             "Reusing lease suite=%s pid=%d pipe=%s",
             suite_key, leased_instance.process_id, leased_instance.pipe_name,
         )
-        return bridge, True
+        return bridge
 
     store.clear_suite(suite_key)
-    return None, False
+    return None
 
 
 def _connect_and_lease(
     instances: list[HostInstance],
     suite_key: str,
-    suite_path: str,
     store: SuiteLeaseStore | None,
     label: str,
 ) -> tuple[HostBridge | None, ConnectionError | None]:
@@ -255,7 +250,7 @@ def _connect_and_lease(
     if bridge is None or selected is None:
         return None, connect_error
     if store:
-        store.assign(suite_key, suite_path, selected)
+        store.assign(suite_key, selected)
     log.info(
         "%s suite=%s pid=%d pipe=%s",
         label, suite_key, selected.process_id, selected.pipe_name,

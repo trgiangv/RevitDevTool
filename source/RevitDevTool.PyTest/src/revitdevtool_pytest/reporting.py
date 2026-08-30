@@ -16,6 +16,7 @@ import pytest
 from .bridge import HostBridge
 from .constants import (
     BRIDGE_NOTIFY_TEST_PROGRESS,
+    NODEID_SEP,
     OUTCOME_ERROR,
     OUTCOME_FAILED,
     OUTCOME_PASSED,
@@ -24,7 +25,9 @@ from .constants import (
     OUTCOME_XPASSED,
     PHASE_CALL,
     PLUGIN_NAME,
+    SUITE_ITEM_NAME,
 )
+from .ipy_collect import IpyTestItem
 from .models import CaseResult, RunResponse
 
 log = logging.getLogger(PLUGIN_NAME)
@@ -32,6 +35,59 @@ log = logging.getLogger(PLUGIN_NAME)
 PytestOutcome = Literal["passed", "failed", "skipped"]
 
 _VALID_REPORT_OUTCOMES = frozenset({OUTCOME_PASSED, OUTCOME_FAILED, OUTCOME_SKIPPED})
+
+
+def host_pytest_args(config: pytest.Config) -> list[str]:
+    """Forward local ``-x`` / ``--maxfail`` to the host (CPython and IronPython)."""
+    maxfail = int(getattr(config.option, "maxfail", 0) or 0)
+    if maxfail:
+        return [f"--maxfail={maxfail}"]
+    return []
+
+
+def pipe_wait_timeout_s(
+    timeout_per_test: float,
+    item_count: int,
+    *,
+    ipy: bool,
+    prepare_timeout_s: float = 0.0,
+) -> float:
+    """Named-pipe wait for one remote run.
+
+    CPython ``tests/run`` includes host PEP 723 prepare, so *prepare_timeout_s*
+    is added. IronPython ``ipytests/run`` never installs deps — run budget only.
+    """
+    run_budget = timeout_per_test * max(item_count, 1)
+    if ipy:
+        return run_budget
+    return run_budget + prepare_timeout_s
+
+
+def fan_suite_results(
+    items: list[pytest.Item],
+    results_by_nodeid: dict[str, list[CaseResult]],
+) -> dict[str, list[CaseResult]]:
+    """Attach host child nodeid results onto local suite collect items."""
+    remapped = dict(results_by_nodeid)
+    for item in items:
+        if not isinstance(item, IpyTestItem) or item.name != SUITE_ITEM_NAME:
+            continue
+        prefix = item.nodeid.removesuffix(SUITE_ITEM_NAME)
+        if not prefix.endswith(NODEID_SEP):
+            continue
+        fanned: list[CaseResult] = list(remapped.get(item.nodeid, []))
+        keys_to_remove: list[str] = []
+        for nodeid, results in remapped.items():
+            if nodeid == item.nodeid:
+                continue
+            if nodeid.startswith(prefix):
+                fanned.extend(results)
+                keys_to_remove.append(nodeid)
+        for key in keys_to_remove:
+            del remapped[key]
+        if fanned:
+            remapped[item.nodeid] = fanned
+    return remapped
 
 
 # ---------------------------------------------------------------------------
@@ -46,26 +102,42 @@ def run_remote_session(
     *,
     items: list[pytest.Item] | None = None,
     ipy: bool = False,
+    prepare_timeout_s: float = 0.0,
+    pytest_args: list[str] | None = None,
 ) -> tuple[dict[str, list[CaseResult]], set[str], bool, str | None]:
     """Run tests remotely, streaming progress as it arrives.
 
     Returns ``(results_by_nodeid, streamed_nodeids, collection_failed, error_msg)``.
     When an IDE adapter is active, streaming is disabled to avoid
     duplicate reports in the test tree.
+
+    *prepare_timeout_s* is added to the pipe wait for CPython ``tests/run``
+    (PEP 723 / pixi). Pass ``0`` for IronPython — ``ipytests/run`` does not
+    install packages.
     """
     selected = items if items is not None else list(session.items)
     workspace_root = str(session.config.rootdir)
-    total_timeout = timeout_per_test * max(len(selected), 1)
+    total_timeout = pipe_wait_timeout_s(
+        timeout_per_test, len(selected), ipy=ipy, prepare_timeout_s=prepare_timeout_s,
+    )
     nodeids = [item.nodeid for item in selected]
     streamed: set[str] = set()
 
-    on_notification = _build_streaming_callback(selected, streamed)
+    on_notification = None if ipy else _build_streaming_callback(selected, streamed)
     response = _request_remote_run(
-        bridge, workspace_root, nodeids, total_timeout, on_notification, ipy=ipy,
+        bridge,
+        workspace_root,
+        nodeids,
+        total_timeout,
+        on_notification,
+        ipy=ipy,
+        pytest_args=pytest_args or [],
     )
     if response is None:
-        fail_all(session, f"{PLUGIN_NAME}: Remote execution failed.", items=selected)
-        return {}, streamed, False, None
+        return {}, streamed, True, f"{PLUGIN_NAME}: Remote execution failed."
+
+    if ipy and response.engine:
+        log.info("IronPython test engine: %s", response.engine)
 
     collection_error_message = _report_collection_errors(session, response)
     if _is_global_collection_failure(response):
@@ -116,6 +188,7 @@ def _request_remote_run(
     on_notification: Any,
     *,
     ipy: bool = False,
+    pytest_args: list[str] | None = None,
 ) -> RunResponse | None:
     try:
         if ipy:
@@ -123,6 +196,7 @@ def _request_remote_run(
                 workspace_root=workspace_root,
                 test_root=workspace_root,
                 nodeids=nodeids,
+                pytest_args=pytest_args or [],
                 timeout_s=timeout_s,
                 on_notification=on_notification,
             )
@@ -130,6 +204,7 @@ def _request_remote_run(
             workspace_root=workspace_root,
             test_root=workspace_root,
             nodeids=nodeids,
+            pytest_args=pytest_args or [],
             timeout_s=timeout_s,
             on_notification=on_notification,
         )
@@ -185,9 +260,12 @@ def _emit_streaming_report(
         ihook.pytest_runtest_logreport(report=report)
         streamed.add(result.nodeid)
 
-        if result.phase in {"call", "teardown"}:
+        if result.phase in {PHASE_CALL, "teardown"} or result.outcome in {
+            OUTCOME_FAILED,
+            OUTCOME_ERROR,
+        }:
             ihook.pytest_runtest_logfinish(nodeid=item.nodeid, location=item.location)
-    except Exception:  # noqa: BLE001
+    except Exception:  # noqa
         log.debug("Failed to emit streaming report", exc_info=True)
 
 
@@ -304,19 +382,6 @@ def skip_all(session: pytest.Session, reason: str) -> None:
             when=PHASE_CALL,  # type: ignore[arg-type]
         )
         ihook.pytest_runtest_logreport(report=report)
-        ihook.pytest_runtest_logfinish(nodeid=item.nodeid, location=item.location)
-
-
-def fail_all(
-    session: pytest.Session,
-    message: str,
-    *,
-    items: list[pytest.Item] | None = None,
-) -> None:
-    for item in items if items is not None else session.items:
-        ihook = item.ihook
-        ihook.pytest_runtest_logstart(nodeid=item.nodeid, location=item.location)
-        ihook.pytest_runtest_logreport(report=make_error_report(item, message))
         ihook.pytest_runtest_logfinish(nodeid=item.nodeid, location=item.location)
 
 

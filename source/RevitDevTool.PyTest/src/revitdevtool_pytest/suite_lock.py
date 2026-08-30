@@ -1,8 +1,7 @@
-"""Suite-level mutex and context resolution.
+"""Suite mutex and host lease identity.
 
-Provides a Windows named Mutex to prevent two pytest processes from
-running the same test suite concurrently, plus helpers to resolve
-which ``conftest.py`` defines a suite.
+One pytest process at a time per host+version+workspace. IronPython and
+CPython tests in the same repo share that lease so they reuse one host PID.
 """
 
 from __future__ import annotations
@@ -53,8 +52,17 @@ class SuiteMutex:
         self._handle = None
 
 
-def resolve_suite_context(session: pytest.Session) -> tuple[str, str]:
-    """Return ``(suite_key, suite_path)`` for the current session's items."""
+def resolve_suite_context(
+    session: pytest.Session,
+    host_name: str,
+    version: str | None,
+) -> tuple[str, str]:
+    """Return ``(suite_key, suite_path)`` for lease + mutex.
+
+    ``suite_key`` is host + version + workspace, not nearest ``conftest.py``,
+    so ``tests/Revit`` and ``tests/Revit_Ipy`` reuse one Revit instance.
+    A single pytest process still cannot mix two conftest trees (fixtures).
+    """
     root_path = Path(str(session.config.rootpath)).resolve()
     conftest_paths = {
         nearest_conftest(Path(str(item.path)).resolve(), root_path)
@@ -67,9 +75,8 @@ def resolve_suite_context(session: pytest.Session) -> tuple[str, str]:
             returncode=EXIT_CODE_CONFIG_ERROR,
         )
 
-    suite_path = conftest_paths.pop() if conftest_paths else root_path
-    suite_path_text = str(suite_path)
-    return suite_key_for_path(suite_path_text), suite_path_text
+    suite_path = str(root_path)
+    return host_lease_key(host_name, version, suite_path), suite_path
 
 
 def nearest_conftest(file_path: Path, root_path: Path) -> Path:
@@ -84,7 +91,8 @@ def nearest_conftest(file_path: Path, root_path: Path) -> Path:
         current = current.parent
 
 
-def suite_key_for_path(path: str) -> str:
-    normalized = str(Path(path).resolve()).lower()
-    digest = hashlib.sha1(normalized.encode("utf-8")).hexdigest()
-    return digest[:16]
+def host_lease_key(host_name: str, version: str | None, workspace_root: str) -> str:
+    version_part = (version or "").strip() or "*"
+    root = str(Path(workspace_root).resolve()).lower()
+    material = f"{host_name.strip().lower()}|{version_part}|{root}"
+    return hashlib.sha1(material.encode("utf-8")).hexdigest()[:16]

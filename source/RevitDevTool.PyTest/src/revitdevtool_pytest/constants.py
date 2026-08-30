@@ -46,6 +46,12 @@ PHASE_SETUP: Final = "setup"
 PHASE_CALL: Final = "call"
 PHASE_TEARDOWN: Final = "teardown"
 
+NODEID_SEP: Final = "::"
+SUITE_ITEM_NAME: Final = "(suite)"
+
+IPY_TEST_PREFIX: Final = "test_"
+IPY_TEST_SUFFIX: Final = "_ipy.py"
+
 
 @dataclass(frozen=True, slots=True)
 class HostConfig:

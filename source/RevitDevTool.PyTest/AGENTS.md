@@ -10,11 +10,16 @@ pytest client plugin for [RevitDevTool](https://github.com/trgiangv/RevitDevTool
 
 ## Architecture
 
-```
-Local pytest (collect) → Named Pipe (DevTools_*) → Host PytestRunner.py **or** IronPython unittest driver → Results → Local pytest (report)
+```mermaid
+flowchart LR
+    Collect[Local collect] --> Pipe["DevTools_*"]
+    Pipe --> CPython[PytestRunner.py]
+    Pipe --> IPy[IpyTestDriver.py]
+    CPython --> Report[Local report]
+    IPy --> Report
 ```
 
-Do **not** connect to `DevToolsMcp_*` — that pipe is for the MCP SDK (`HostMcpPipeServer`). Pytest uses `DevTools_{Host}_{Version}_{PID}` on `DevToolsPipeServer`.
+Do **not** connect to `DevToolsMcp_*` (MCP SDK). Pytest uses `DevTools_{Host}_{Version}_{PID}` on `DevToolsPipeServer`.
 
 ### Client modules (`src/revitdevtool_pytest/`)
 
@@ -45,7 +50,7 @@ Do **not** connect to `DevToolsMcp_*` — that pipe is for the MCP SDK (`HostMcp
 
 Wire methods: `tests/run` (CPython pytest), `ipytests/run` (IronPython unittest, pyRevit-first). Progress notifications: `notifications/tests/progress`.
 
-**IPy collect convention is `test_*_ipy.py`** (pytest `test_` + `_ipy` marker). That name is only how the plugin routes onto `ipytests/run`; the host runs unittest on the requested paths and does not require it. Dialect: 2.7 / 3.4, `unittest.TestCase`, no pytest fixtures / PEP 723. `*_ipy_script.py` is execution-tree script, not a test file. Library modules use normal names (`ipylib/geom.py`).
+**IPy collect convention is `test_*_ipy.py`** (pytest `test_` + `_ipy` marker). That name is only how the plugin routes onto `ipytests/run`; the host runs unittest on the requested paths and does not require it. Dialect: 2.7 / 3.4, `unittest.TestCase`, no pytest fixtures / PEP 723 (CPython `tests/run` still installs `# /// script` via pixi). `*_ipy_script.py` is execution-tree script, not a test file. Library modules use normal names (`ipylib/geom.py`).
 
 ## This repo layout
 
@@ -55,7 +60,7 @@ Integration tests for the plugin — not shipped in the wheel.
 tests/
   plugin/                # local plugin unit tests (no host); sets REVITDEVTOOL_PYTEST_DISABLE
   Revit/                 # default testpaths in pyproject.toml
-    conftest.py          # PEP 723 deps, revit_doc, rollback fixtures
+    conftest.py          # PEP 723 deps (CPython tests/run only), revit_doc, rollback fixtures
     schedule/            # shared schedule helpers (import as schedule.*)
     test_*.py            # CPython pytest → tests/run
     test_*_ipy.py        # mixed-tree IronPython unittest → ipytests/run
@@ -117,7 +122,7 @@ Examples: `DevTools_Revit_2025_12345`, `DevTools_AutoCad_2026_7890`
 - **`--capture=sys`:** required in embedded Python.NET (no fd-level `dup2`).
 - **`sys.__pytest_running__`:** set by `PytestRunner.py`; setup scripts skip I/O hijack during runs.
 - **Streaming vs batch:** CLI streams progress; IDE adapters (`vscode_pytest`, `TEST_RUN_PIPE`) get one batch.
-- **Suite leasing + mutex:** cross-process PID binding; one pytest process per suite path.
+- **Suite leasing + mutex:** one pytest process per host+version+workspace; CPython and IronPython tests in that workspace reuse the same host PID. One invocation still cannot mix two `conftest.py` trees — run `tests/Revit` then `tests/Revit_Ipy` separately (same Revit). Mixed `test_*.py` + `test_*_ipy.py` under one conftest is fine (`tests/run` then `ipytests/run` on the same pipe).
 - **`force_launch`:** force new host + wait for that PID's pipe; skip reuse.
 - **No matching instance:** after discovery fails, plugin auto-launches when `host_version` is set.
 
@@ -183,10 +188,10 @@ Host API imports belong **inside test bodies** (or fixture bodies), not at modul
 - `__revit__` only exists at runtime — use fixtures.
 - Host APIs need the main thread; execution is sequential via `IHostContextExecutor`.
 - Pytest pipe ≠ MCP pipe (`DevTools_*` vs `DevToolsMcp_*`).
-- PEP 723 deps in `conftest.py` are installed by `PytestDependencyService` before run.
+- PEP 723 deps in CPython `conftest.py` / `test_*.py` are installed by `PytestDependencyService` before `tests/run`. **IronPython `test_*_ipy.py` does not use PEP 723** — `ipytests/run` never calls that service; IPy 2.7/3.4 cannot import CPython wheels.
 - `--force-launch` requires `--host-version`.
 - `print()` captured via `--capture=sys` → `CaseResult.stdout`.
-- IronPython tests: no pytest fixtures; host APIs inside methods; `test_*_ipy.py` is pytest routing only, not a host filename contract.
+- IronPython tests: no pytest fixtures; **no PEP 723**; host APIs inside methods; `test_*_ipy.py` is pytest routing only, not a host filename contract.
 
 ## Change rules
 

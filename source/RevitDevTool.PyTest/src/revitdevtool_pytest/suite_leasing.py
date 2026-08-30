@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import json
 import os
-import random
+import tempfile
 import time
 from dataclasses import dataclass
 from pathlib import Path
@@ -14,7 +14,7 @@ from .discovery import HostInstance
 
 _STATE_DIR = Path.home() / ".revitdevtool_pytest"
 _STATE_FILE = _STATE_DIR / "suite-leases.json"
-_STATE_VERSION = 1
+_STATE_VERSION = 3
 _SAVE_RETRY_DELAYS_S = (0.02, 0.05, 0.1, 0.2)
 
 
@@ -23,31 +23,22 @@ class SuiteLease:
     """Persistent lease binding a suite key to one host instance."""
 
     suite_key: str
-    suite_path: str
     pipe_name: str
     process_id: int
-    assigned_at: float
-    last_seen_at: float
 
     def to_dict(self) -> dict[str, Any]:
         return {
             "suite_key": self.suite_key,
-            "suite_path": self.suite_path,
             "pipe_name": self.pipe_name,
             "process_id": self.process_id,
-            "assigned_at": self.assigned_at,
-            "last_seen_at": self.last_seen_at,
         }
 
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> SuiteLease:
         return cls(
             suite_key=str(data.get("suite_key", "")),
-            suite_path=str(data.get("suite_path", "")),
             pipe_name=str(data.get("pipe_name", "")),
             process_id=int(data.get("process_id", 0)),
-            assigned_at=float(data.get("assigned_at", 0.0)),
-            last_seen_at=float(data.get("last_seen_at", 0.0)),
         )
 
 
@@ -74,19 +65,12 @@ class SuiteLeaseStore:
     def assign(
         self,
         suite_key: str,
-        suite_path: str,
         instance: HostInstance,
     ) -> None:
-        now = time.time()
-        existing = self._leases.get(suite_key)
-        assigned_at = existing.assigned_at if existing is not None else now
         self._leases[suite_key] = SuiteLease(
             suite_key=suite_key,
-            suite_path=suite_path,
             pipe_name=instance.pipe_name,
             process_id=instance.process_id,
-            assigned_at=assigned_at,
-            last_seen_at=now,
         )
         self._save_leases()
 
@@ -132,20 +116,38 @@ class SuiteLeaseStore:
             "suite_leases": {key: lease.to_dict() for key, lease in self._leases.items()},
         }
         content = json.dumps(payload, ensure_ascii=False, indent=2)
-        base_tmp = self._state_file.with_suffix(".tmp")
-
+        encoded = content.encode("utf-8")
         delays: tuple[float | None, ...] = (*_SAVE_RETRY_DELAYS_S, None)
-        for attempt, delay in enumerate(delays, start=1):
-            tmp_file = base_tmp.with_name(f"{base_tmp.stem}.{os.getpid()}.{random.randint(1000, 9999)}{base_tmp.suffix}")
+        for delay in delays:
             try:
-                tmp_file.write_text(content, encoding="utf-8")
-                os.replace(tmp_file, self._state_file)
+                _atomic_write(self._state_file, encoded)
                 return
             except PermissionError:
-                try:
-                    tmp_file.unlink(missing_ok=True)
-                except Exception: # noqa
-                    pass
                 if delay is None:
                     raise
                 time.sleep(delay)
+
+
+def _atomic_write(path: Path, encoded: bytes) -> None:
+    fd, tmp_name = tempfile.mkstemp(
+        prefix=f"{path.stem}.",
+        suffix=".tmp",
+        dir=str(path.parent),
+    )
+    tmp_file = Path(tmp_name)
+    try:
+        os.write(fd, encoded)
+        os.close(fd)
+        fd = -1
+        os.replace(tmp_file, path)
+    except BaseException:
+        if fd >= 0:
+            try:
+                os.close(fd)
+            except OSError:
+                pass
+        try:
+            tmp_file.unlink(missing_ok=True)
+        except Exception:  # noqa
+            pass
+        raise

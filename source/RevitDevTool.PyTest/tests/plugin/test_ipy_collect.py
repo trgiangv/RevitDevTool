@@ -53,6 +53,25 @@ def test_scan_ipy_tests_without_testcase(tmp_path: Path):
     assert tests == []
 
 
+def test_scan_ipy_tests_testcase_without_test_methods(tmp_path: Path):
+    target = tmp_path / "test_suite_only_ipy.py"
+    target.write_text(
+        "\n".join(
+            [
+                "import unittest",
+                "",
+                "class GeneratedTests(unittest.TestCase):",
+                "    def helper(self):",
+                "        pass",
+            ]
+        ),
+        encoding="utf-8",
+    )
+    has_case, tests = scan_ipy_tests(target)
+    assert has_case
+    assert tests == []
+
+
 _IPY_SAMPLE = """# coding: utf-8
 import unittest
 
@@ -81,3 +100,23 @@ def test_vscode_style_nodeid_selects_one_item(pytester: pytest.Pytester):
     assert "ERROR: not found" not in result.stdout.str()
     collected = [line for line in result.stdout.str().splitlines() if "::" in line and "test_math_ipy" in line]
     assert len(collected) == 1
+
+
+def test_collect_suite_item_when_testcase_has_no_test_methods(pytester: pytest.Pytester):
+    pytester.makeini("[pytest]\n")
+    target = pytester.path / "test_suite_only_ipy.py"
+    target.write_text(
+        "\n".join(
+            [
+                "import unittest",
+                "",
+                "class GeneratedTests(unittest.TestCase):",
+                "    def helper(self):",
+                "        pass",
+            ]
+        ),
+        encoding="utf-8",
+    )
+    result = pytester.runpytest(str(target), "--collect-only", "-q", "-p", "revitdevtool")
+    result.stdout.fnmatch_lines(["*test_suite_only_ipy.py::(suite)*"])
+    assert result.ret == 0

@@ -130,7 +130,7 @@ Captured `print()` from in-host tests is shown for passing tests (same as `-rP`)
 
 - Put **host API imports inside functions** — collection runs on your machine, execution in the host.
 - Use fixtures for `__revit__`, documents, and rollback helpers.
-- Declare suite dependencies with **PEP 723** in `conftest.py`; RevitDevTool installs them before run:
+- Declare suite dependencies with **PEP 723** in CPython `conftest.py` (or `test_*.py`); RevitDevTool installs them before `tests/run`. IronPython `test_*_ipy.py` **does not** use PEP 723 — `ipytests/run` never installs packages.
 
 ```python
 # /// script

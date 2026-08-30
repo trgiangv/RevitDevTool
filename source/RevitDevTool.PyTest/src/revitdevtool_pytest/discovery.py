@@ -68,21 +68,6 @@ def find_host_pipes(host_name: str | None = None) -> list[HostInstance]:
     return instances
 
 
-def select_instance(
-    instances: list[HostInstance],
-    version: str | None = None,
-) -> HostInstance | None:
-    """Find a running instance matching *version*, or the latest if unspecified."""
-    if not instances:
-        return None
-    if version is not None:
-        matches = [i for i in instances if i.version == version]
-        if not matches:
-            return None
-        return max(matches, key=lambda i: i.process_id)
-    return max(instances, key=lambda i: (i.version, i.process_id))
-
-
 def find_host_executable(host_name: str, version: str) -> str | None:
     """Locate the host executable via registry, falling back to filesystem.
 
@@ -127,8 +112,13 @@ def wait_for_host_pipe(
         instances = find_host_pipes(host_name)
         if process_id is not None:
             match = next((i for i in instances if i.process_id == process_id), None)
+        elif not instances:
+            match = None
+        elif version is not None:
+            matches = [i for i in instances if i.version == version]
+            match = max(matches, key=lambda i: i.process_id) if matches else None
         else:
-            match = select_instance(instances, version)
+            match = max(instances, key=lambda i: (i.version, i.process_id))
         if match is not None:
             return match
         time.sleep(poll_interval_s)

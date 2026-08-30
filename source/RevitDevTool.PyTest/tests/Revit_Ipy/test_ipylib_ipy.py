@@ -10,6 +10,9 @@ class TestGeom(unittest.TestCase):
     def test_mm_to_feet(self):
         self.assertAlmostEqual(mm_to_feet(MM_PER_FOOT), 1.0, places=6)
 
+    def test_print_reaches_result(self):
+        print("ipy-stdout-probe")
+
     def test_midpoint(self):
         self.assertEqual(midpoint(0, 10), 5.0)
 

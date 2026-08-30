@@ -135,6 +135,7 @@ class HostBridge:
         test_root: str,
         nodeids: list[str],
         *,
+        pytest_args: list[str] | None = None,
         timeout_s: float = DEFAULT_TEST_TIMEOUT_S,
         on_notification: NotificationCallback | None = None,
     ) -> RunResponse:
@@ -142,6 +143,7 @@ class HostBridge:
             workspace_root=workspace_root,
             test_root=test_root,
             nodeids=nodeids,
+            pytest_args=pytest_args or [],
         )
         response: BridgeResponse = self._request(
             BridgeRequest(method=BRIDGE_METHOD_IPY_TESTS_RUN, params=request.to_params()),

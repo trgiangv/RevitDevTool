@@ -123,9 +123,11 @@ class RunResponse:
     results: tuple[CaseResult, ...] = ()
     collection_errors: tuple[CollectionError, ...] = ()
     rootdir: str = ""
+    engine: str | None = None
 
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> RunResponse:
+        engine = data.get("engine")
         return cls(
             exit_code=data.get("exit_code", 1),
             summary=RunSummary.from_dict(data.get("summary", {})),
@@ -134,4 +136,5 @@ class RunResponse:
                 CollectionError.from_dict(e) for e in data.get("collection_errors", [])
             ),
             rootdir=data.get("rootdir", ""),
+            engine=str(engine) if engine is not None else None,
         )

@@ -26,14 +26,17 @@ from .constants import (
     OPT_PER_TEST_TIMEOUT,
     OPT_PIPE,
     OPT_VERSION,
-    OUTCOME_ERROR,
-    OUTCOME_FAILED,
-    PHASE_CALL,
     PLUGIN_NAME,
 )
 from .ipy_collect import IpyTestFile, IpyTestItem, is_ipy_test_path
 from .models import CaseResult
-from .reporting import emit_item_reports, run_remote_session, skip_all
+from .reporting import (
+    emit_item_reports,
+    fan_suite_results,
+    host_pytest_args,
+    run_remote_session,
+    skip_all,
+)
 from .suite_leasing import SuiteLeaseStore
 from .suite_lock import SuiteMutex, resolve_suite_context
 
@@ -51,7 +54,6 @@ _lease_store: SuiteLeaseStore | None = None
 _suite_mutex = SuiteMutex()
 
 # Stash keys for cross-hook communication
-_collect_only_key = pytest.StashKey[bool]()
 _remote_results_key = pytest.StashKey[dict[str, list[CaseResult]]]()
 _streamed_nodeids_key = pytest.StashKey[set[str]]()
 _remote_collection_failed_key = pytest.StashKey[bool]()
@@ -120,12 +122,8 @@ def pytest_configure(config: pytest.Config) -> None:
     if "P" not in reportchars:
         config.option.reportchars = reportchars + "P"
 
-    global _lease_store  # noqa: PLW0603
+    global _lease_store  # noqa
     _lease_store = SuiteLeaseStore()
-
-    config.stash[_collect_only_key] = _is_collect_only(config)
-    config.stash[_remote_collection_failed_key] = False
-    config.stash[_remote_collection_error_key] = None
 
 
 @pytest.hookimpl(wrapper=True)
@@ -137,11 +135,12 @@ def pytest_collect_file(file_path, parent):
 
 
 @pytest.hookimpl(tryfirst=True)
-def pytest_runtestloop(session: pytest.Session) -> bool:
-    if session.config.stash.get(_collect_only_key, False):
-        return False
+def pytest_runtestloop(session: pytest.Session) -> bool | None:
+    # firstresult=True: any non-None return suppresses pytest's default loop.
+    if getattr(session.config.option, "collectonly", False):
+        return True
     if os.environ.get("REVITDEVTOOL_PYTEST_DISABLE") == "1":
-        return False
+        return None
 
     host_name = _resolve_host_name(session.config)
     if not _ensure_bridge(session, host_name):
@@ -158,26 +157,16 @@ def pytest_runtest_protocol(item: pytest.Item, nextitem: pytest.Item | None) -> 
         return False
 
     streamed = item.session.stash.get(_streamed_nodeids_key, set())
-    results = results_by_nodeid.get(item.nodeid, [])
-
     if item.nodeid in streamed:
-        _count_failures(item, results)
-    else:
-        reports = emit_item_reports(
-            item, results,
-            collection_failed=item.session.stash.get(_remote_collection_failed_key, False),
-            collection_error_message=item.session.stash.get(_remote_collection_error_key, None),
-        )
-        for report in reports:
-            if report.when == PHASE_CALL and report.failed:
-                item.session.testsfailed += 1
+        return True
+
+    results = results_by_nodeid.get(item.nodeid, [])
+    emit_item_reports(
+        item, results,
+        collection_failed=item.session.stash.get(_remote_collection_failed_key, False),
+        collection_error_message=item.session.stash.get(_remote_collection_error_key, None),
+    )
     return True
-
-
-def _count_failures(item: pytest.Item, results: list[CaseResult]) -> None:
-    for r in results:
-        if r.phase == PHASE_CALL and r.outcome in {OUTCOME_FAILED, OUTCOME_ERROR}:
-            item.session.testsfailed += 1
 
 
 def pytest_unconfigure(config: pytest.Config) -> None:  # noqa
@@ -210,18 +199,26 @@ def _dispatch_remote_run(session: pytest.Session) -> None:
     collection_error: str | None = None
 
     if py_items:
+        prepare_timeout_s = (
+            _opt_float(session.config, OPT_LAUNCH_TIMEOUT, OPT_LAUNCH_TIMEOUT)
+            or DEFAULT_LAUNCH_TIMEOUT_S
+        )
         py_results, py_streamed, py_failed, py_error = run_remote_session(
             session, _bridge, per_test_timeout, items=py_items,
+            prepare_timeout_s=prepare_timeout_s,
+            pytest_args=host_pytest_args(session.config),
         )
         results_by_nodeid.update(py_results)
         streamed_nodeids.update(py_streamed)
         collection_failed = collection_failed or py_failed
         collection_error = collection_error or py_error
 
-    if ipy_items:
+    if ipy_items and not collection_failed and not session.shouldfail and not session.shouldstop:
         ipy_results, ipy_streamed, ipy_failed, ipy_error = run_remote_session(
             session, _bridge, per_test_timeout, items=ipy_items, ipy=True,
+            pytest_args=host_pytest_args(session.config),
         )
+        ipy_results = fan_suite_results(ipy_items, ipy_results)
         results_by_nodeid.update(ipy_results)
         streamed_nodeids.update(ipy_streamed)
         collection_failed = collection_failed or ipy_failed
@@ -233,15 +230,19 @@ def _dispatch_remote_run(session: pytest.Session) -> None:
     session.stash[_remote_collection_error_key] = collection_error
 
     for index, item in enumerate(session.items):
+        if session.shouldstop or session.shouldfail:
+            break
         nextitem = session.items[index + 1] if index + 1 < len(session.items) else None
         session.config.hook.pytest_runtest_protocol(item=item, nextitem=nextitem)
 
 
 def _ensure_bridge(session: pytest.Session, host_name: str) -> bool:
-    global _bridge, _dialog_resolver  # noqa: PLW0603
+    global _bridge, _dialog_resolver
 
     config = session.config
-    suite_key, suite_path = resolve_suite_context(session)
+    suite_key, _ = resolve_suite_context(
+        session, host_name, _opt(config, OPT_VERSION, OPT_VERSION),
+    )
 
     explicit_pipe = _opt(config, OPT_PIPE, OPT_PIPE)
     if not explicit_pipe and not _suite_mutex.acquire(suite_key):
@@ -263,7 +264,6 @@ def _ensure_bridge(session: pytest.Session, host_name: str) -> bool:
         version=_opt(config, OPT_VERSION, OPT_VERSION),
         explicit_pipe=explicit_pipe,
         suite_key=suite_key,
-        suite_path=suite_path,
         force_launch=force_launch,
     )
     if result.dialog_resolver is not None:
@@ -306,8 +306,3 @@ def _opt_bool(config: pytest.Config, cli: str, ini: str) -> bool:
         return True
     ini_val = config.getini(ini)
     return bool(ini_val)
-
-
-def _is_collect_only(config: pytest.Config) -> bool:
-    option = getattr(config, "option", None)
-    return bool(getattr(option, "collectonly", False))
