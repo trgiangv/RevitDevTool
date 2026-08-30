@@ -59,6 +59,7 @@ The server does not execute pytest as a separate process. It runs `PytestRunner.
 |--------|---------|---------|
 | `tests/discover` | `PytestRequestHandler.HandleDiscoverAsync` | Collect pytest node IDs under a test root. |
 | `tests/run` | `PytestRequestHandler.HandleRunAsync` | Run requested node IDs and stream progress notifications. |
+| `ipytests/run` | `IpyTestRequestHandler.HandleRunAsync` | Run unittest on requested paths (IronPython, pyRevit-first). |
 
 Frame format is shared with MCP routes: `[4-byte little-endian length][UTF-8 JSON BridgeMessage]`.
 
