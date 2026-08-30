@@ -2,32 +2,23 @@
 
 All notable changes to this project will be documented in this file.
 
-## [Unreleased]
+## [0.4.0] - 2026-08-31
 
-### Fixed
+### Added
 
-- IronPython and CPython tests share one host lease (host + version + workspace),
-  so sequential `tests/Revit` and `tests/Revit_Ipy` runs reuse the same Revit PID.
-- `--maxfail` is counted once: pytest Session locally, `--maxfail=N` sent to
-  the host as-is (no remaining-quota double count).
-
-## [0.3.1] - 2026-08-18
+- IronPython tests: files named `test_*_ipy.py` run on the host via `ipytests/run`
+  (`unittest`). CPython `test_*.py` still uses `tests/run`.
+- CPython and IronPython suites in the same workspace reuse one host instance.
 
 ### Changed
 
-- **CLI/INI options renamed** to match RevitDevTool.TestAdapter:
-  `--host-launch` / `host_launch` → `--force-launch` / `force_launch`;
-  `--host-timeout` / `host_timeout` → `--per-test-timeout` / `per_test_timeout`;
-  `--host-launch-timeout` / `host_launch_timeout` → `--launch-timeout` / `launch_timeout`.
-  `--host` and `--host-version` stay. `per_test_timeout` is the per-test budget;
-  the `tests/run` pipe wait is that value times collected tests.
-
-## [0.3.0] - 2026-07-07
-
-### Changed
-
-- Update pipe name with prefix **DevTools_**
-
+- Pipe name is `DevTools_{Host}_{Version}_{PID}` (was `{Host}_{Version}_{PID}`).
+  Pytest does not use the MCP pipe `DevToolsMcp_*`.
+- CLI/INI names match RevitDevTool.TestAdapter (breaking vs 0.3.0):
+  `--host-launch` → `--force-launch`, `--host-timeout` → `--per-test-timeout`,
+  `--host-launch-timeout` → `--launch-timeout`. `--host` / `--host-version` unchanged.
+- PEP 723 `# /// script` is installed only for CPython `tests/run`. IronPython
+  tests cannot use CPython wheels.
 
 ## [0.3.0] - 2026-05-31
 
