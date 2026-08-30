@@ -76,9 +76,12 @@ internal static class IronPythonRunner
             command.Execute(scope);
             return ExecutionResult.Succeeded("IronPython script completed successfully.");
         }
-        catch (SystemExitException)
+        catch (SystemExitException ex)
         {
-            return ExecutionResult.Succeeded("IronPython script exited.");
+            var code = ex.GetExitCode(out _);
+            return code == 0
+                ? ExecutionResult.Succeeded("IronPython script exited.")
+                : ExecutionResult.Failed($"IronPython script exited with code {code}.");
         }
         catch (Exception exception)
         {

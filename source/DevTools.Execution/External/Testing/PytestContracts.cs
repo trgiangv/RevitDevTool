@@ -15,7 +15,8 @@ public sealed record PytestRunResponse(
     [property: JsonPropertyName("summary")] PytestSummary Summary,
     [property: JsonPropertyName("results")] IReadOnlyList<PytestCaseResult> Results,
     [property: JsonPropertyName("collection_errors")] IReadOnlyList<PytestCollectionError> CollectionErrors,
-    [property: JsonPropertyName("rootdir")] string Rootdir);
+    [property: JsonPropertyName("rootdir")] string Rootdir,
+    [property: JsonPropertyName("engine")] string Engine = "");
 
 [UsedImplicitly]
 public sealed record PytestSummary(

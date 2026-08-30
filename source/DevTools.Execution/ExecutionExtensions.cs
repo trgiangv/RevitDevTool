@@ -72,7 +72,9 @@ public static class ExecutionExtensions
         services.AddSingleton<IBridgeRequestHandler, InstanceRequestHandler>();
         services.AddSingleton<PytestDependencyService>();
         services.AddSingleton<PytestExecutionService>();
+        services.AddSingleton<IpyTestExecutionService>();
         services.AddSingleton<IBridgeRequestHandler, PytestRequestHandler>();
+        services.AddSingleton<IBridgeRequestHandler, IpyTestRequestHandler>();
 
         services.AddMcp();
         services.AddMcpCatalog();
