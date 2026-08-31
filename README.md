@@ -20,7 +20,7 @@ RevitDevTool is a **development platform for .NET-based CAD/BIM applications**. 
 
 **For developers and researchers who need:**
 
-- **Modern Python** — CPython 3.13 with full ecosystem (pandas, numpy, scikit-learn, AI/ML)
+- **Modern Python** — CPython 3.14 with full ecosystem (pandas, numpy, scikit-learn, AI/ML)
 - **VSCode Debugging** — Set breakpoints, step through code, inspect Revit/AutoCAD API objects
 - **Zero-friction dependencies** — Declare packages inline (PEP 723), auto-install with [Pixi](https://pixi.sh/)
 - **AI-powered workflows** — [Model Context Protocol (MCP)](https://github.com/trgiangv/RevitDevTool/wiki/MCP-Overview) integration for AI assistants
@@ -35,10 +35,10 @@ RevitDevTool is a **development platform for .NET-based CAD/BIM applications**. 
 
 | Host | Versions | Python | .NET | MCP | PyTest | Visualization |
 |------|----------|--------|------|-----|--------|---------------|
-| **Revit** | 2022–2027 | CPython 3.13 | C# / F# / Assembly | Full | Full | DirectContext3D |
-| **AutoCAD** | 2022–2027 | CPython 3.13 | C# / Assembly | Full | Full | — |
-| **Civil 3D** | 2022–2027 | CPython 3.13 | C# / Assembly | Full | Full | — |
-| **Plant 3D** | 2022–2027 | CPython 3.13 | C# / Assembly | Full | Full | — |
+| **Revit** | 2022–2027 | CPython 3.14 | C# / F# / Assembly | Full | Full | DirectContext3D |
+| **AutoCAD** | 2022–2027 | CPython 3.14 | C# / Assembly | Full | Full | — |
+| **Civil 3D** | 2022–2027 | CPython 3.14 | C# / Assembly | Full | Full | — |
+| **Plant 3D** | 2022–2027 | CPython 3.14 | C# / Assembly | Full | Full | — |
 
 AutoCAD-family hosts (Civil 3D, Plant 3D, AutoCAD Architecture, MEP, Electrical, Mechanical, Map 3D) share the same add-in and feature set.
 
@@ -147,7 +147,7 @@ print(f"Found {walls.GetElementCount()} walls")
 
 ### Python Execution
 
-- **CPython 3.13** with full ecosystem access
+- **CPython 3.14** with full ecosystem access
 - **PEP 723 inline dependencies** — no separate requirements.txt
 - **Pixi resolver** — automatic package installation with conda-forge + PyPI
 - **VSCode debugger** — full IDE debugging with breakpoints
@@ -205,7 +205,7 @@ print(f"Found {walls.GetElementCount()} walls")
 |--------|-------------|---------|
 | **Target User** | Developers & researchers | End users |
 | **Hosts** | Revit + AutoCAD family | Revit only |
-| **Python** | CPython 3.13 | IronPython 2.7 (default) |
+| **Python** | CPython 3.14 | IronPython 2.7 (default) |
 | **Packages** | Full ecosystem (pandas, numpy, AI/ML) | Limited (Revit API only) |
 | **Dependencies** | Automatic (PEP 723 + Pixi) | Manual pip install |
 | **Debugging** | VSCode (full IDE) | pdb (command-line) |
@@ -221,7 +221,7 @@ print(f"Found {walls.GetElementCount()} walls")
 |------|--------|-----------|----------|----------|----------|
 | **pyRevit** | IronPython 2.7 | — | — | — | End-user automation |
 | **Dynamo** | CPython 3.9 | — | — | — | Visual programming |
-| **RevitDevTool** | CPython 3.13 | Pixi | VSCode | Full | Development & research |
+| **RevitDevTool** | CPython 3.14 | Pixi | VSCode | Full | Development & research |
 
 **[Complete Ecosystem Analysis](https://github.com/trgiangv/RevitDevTool/wiki/Execution-PythonEcosystems)**
 

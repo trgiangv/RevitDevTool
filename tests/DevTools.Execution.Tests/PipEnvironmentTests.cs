@@ -12,9 +12,9 @@ namespace DevTools.Execution.Tests;
 /// </summary>
 public sealed class PipEnvironmentTests : IAsyncLifetime, IDisposable
 {
-    private const string PythonVersion = "3.13.12";
+    private const string PythonVersion = "3.14.7";
     private const string PythonDownloadUrl = $"https://www.python.org/ftp/python/{PythonVersion}/python-{PythonVersion}-embed-amd64.zip";
-    private const string PythonPthFile = "python313._pth";
+    private const string PythonPthFile = "python314._pth";
 
     private readonly string _testRoot = Path.Combine(Path.GetTempPath(), $"RevitDevTool-PipTest-{Guid.NewGuid():N}");
     private string PythonHome => Path.Combine(_testRoot, "envs", "default");
