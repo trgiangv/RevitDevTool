@@ -1,13 +1,13 @@
-using DevTools.Mcp.Core;
+using DevTools.Mcp.Core.Sessions;
 
 namespace DevTools.Mcp.Server.Contracts;
 
 /// <summary>Wire <c>kind</c> strings for <c>search_dynamic</c> items and filter parameter.</summary>
 public static class SearchDynamicWireKinds
 {
-    public const string Tool = "tool";
-    public const string Resource = "resource";
-    public const string ResourceTemplate = "resource_template";
+    private const string Tool = "tool";
+    private const string Resource = "resource";
+    private const string ResourceTemplate = "resource_template";
 
     public static bool TryParse(string[]? kinds, out IReadOnlyCollection<HostCatalogKind>? result, out string? error)
     {
@@ -19,7 +19,7 @@ public static class SearchDynamicWireKinds
         var parsed = new List<HostCatalogKind>();
         foreach (var kind in kinds)
         {
-            var value = kind?.Trim().ToLowerInvariant() switch
+            var value = kind.Trim().ToLowerInvariant() switch
             {
                 Tool => HostCatalogKind.Tool,
                 Resource => HostCatalogKind.Resource,

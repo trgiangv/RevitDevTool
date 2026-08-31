@@ -16,7 +16,7 @@ public sealed class McpAssemblyParserTests
         var template = catalog.Resources.Single(item => item.TemplateDescriptor?.Name == "demo_view").TemplateDescriptor!;
 
         Assert.Equal("Get Demo Status", tool.Title);
-        Assert.True(tool.Annotations?.ReadOnly);
+        Assert.True(tool.Annotations?.ReadOnlyHint);
         Assert.Equal("sample://demo/status", resource.Uri);
         Assert.Equal("sample://demo/views/{viewId}", template.UriTemplate);
     }

@@ -11,7 +11,7 @@ using DevTools.Daemon.Auth;
 using DevTools.Daemon.Dashboard.Models;
 using DevTools.Daemon.Hosting;
 using DevTools.Mcp.Client;
-using DevTools.Mcp.Core;
+using DevTools.Mcp.Core.Sessions;
 using DevTools.UI.Theme;
 using Microsoft.Win32;
 

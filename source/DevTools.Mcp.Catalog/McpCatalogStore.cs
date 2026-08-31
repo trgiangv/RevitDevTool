@@ -1,11 +1,15 @@
 using System.Text;
 using System.Text.RegularExpressions;
+using DevTools.Execution.Abstractions;
+using DevTools.Mcp.Core.Catalog;
+using DevTools.Mcp.Core.Models;
 using DevTools.Settings;
+using ModelContextProtocol.Protocol;
 // ReSharper disable RedundantSuppressNullableWarningExpression
 
 namespace DevTools.Mcp.Catalog;
 
-public sealed class McpCatalogStore(IMcpCatalogLoader catalogLoader, ISettingsService settingsService) : IHostPrimitiveRegistry
+public sealed class McpCatalogStore(IMcpCatalogLoader catalogLoader, ISettingsService settingsService)
 {
     private readonly SemaphoreSlim _gate = new(1, 1);
     private readonly Dictionary<string, McpRegisteredTool> _byToolId = new(StringComparer.OrdinalIgnoreCase);
@@ -17,13 +21,13 @@ public sealed class McpCatalogStore(IMcpCatalogLoader catalogLoader, ISettingsSe
     public IReadOnlyList<McpRegisteredTool> RegisteredTools { get; private set; } = [];
     public IReadOnlyList<McpRegisteredResource> ResourceCatalog { get; private set; } = [];
 
-    public IReadOnlyList<McpToolDescriptor> ToolDescriptors =>
+    public List<Tool> GetToolDescriptors() =>
         RegisteredTools.Select(tool => tool.Descriptor).ToList();
 
-    public IReadOnlyList<McpResourceDescriptor> ResourceDescriptors =>
+    public List<Resource> GetResourceDescriptors() =>
         ResourceCatalog.Where(r => r.Descriptor is not null).Select(r => r.Descriptor!).ToList();
 
-    public IReadOnlyList<McpResourceTemplateDescriptor> ResourceTemplateDescriptors =>
+    public List<ResourceTemplate> GetResourceTemplateDescriptors() =>
         ResourceCatalog.Where(r => r.TemplateDescriptor is not null).Select(r => r.TemplateDescriptor!).ToList();
 
     public async Task ReloadAsync()
@@ -63,7 +67,7 @@ public sealed class McpCatalogStore(IMcpCatalogLoader catalogLoader, ISettingsSe
         if (inputKind == ExecutionMode.Unsupported)
             return;
 
-        var changed = false;
+        bool changed;
         await _gate.WaitAsync().ConfigureAwait(false);
         try
         {

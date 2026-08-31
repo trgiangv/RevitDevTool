@@ -2,6 +2,9 @@ using System.Reflection;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using DevTools.AssemblyIsolation.Metadata;
+using DevTools.Execution.Abstractions;
+using DevTools.Mcp.Core.Models;
+using DevTools.Mcp.Core.Protocol;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using ModelContextProtocol.Protocol;
@@ -9,7 +12,6 @@ using ModelContextProtocol.Server;
 using ZLogger;
 using SdkAttr = DevTools.Mcp.Core.Protocol.McpSpecKeys.SdkAttributes;
 using SchemaKeys = DevTools.Mcp.Core.Protocol.McpSpecKeys.JsonSchema;
-using IconKeys = DevTools.Mcp.Core.Protocol.McpSpecKeys.Icon;
 // ReSharper disable RedundantSuppressNullableWarningExpression
 namespace DevTools.Mcp.Catalog.Discovery;
 
@@ -81,24 +83,23 @@ public sealed class McpAssemblyParser(ILogger<McpAssemblyParser> logger)
                 : $"MCP tool from {type.FullName}";
             var binding = BuildBinding(assemblyPath, type, method);
             var id = McpPrimitiveBinding.CreatePrimitiveId(name, binding.SourceAddress);
-            var descriptor = new McpToolDescriptor
+            var descriptor = new Tool
             {
                 Name = name,
                 Title = title ?? name,
                 Description = description,
-                InputSchema = BuildInputSchema(method),
+                InputSchema = DescriptorFactory.CoerceInputSchema(BuildInputSchema(method)),
                 OutputSchema = ExtractNamedValueArg<bool>(toolAttribute, SdkAttr.UseStructuredContent) is true
                     ? JsonSerializer.SerializeToElement(new { type = SchemaKeys.Types.Object })
                     : null,
-                Annotations = DescriptorFactory.ToolHints(
+                Annotations = DescriptorFactory.BuildToolAnnotations(
                     title,
                     readOnly: ExtractNamedValueArg<bool>(toolAttribute, SdkAttr.ReadOnly),
                     destructive: ExtractNamedValueArg<bool>(toolAttribute, SdkAttr.Destructive),
                     idempotent: ExtractNamedValueArg<bool>(toolAttribute, SdkAttr.Idempotent),
-                    openWorld: ExtractNamedValueArg<bool>(toolAttribute, SdkAttr.OpenWorld),
-                    iconSource: ExtractNamedArg<string>(toolAttribute, SdkAttr.IconSource)),
+                    openWorld: ExtractNamedValueArg<bool>(toolAttribute, SdkAttr.OpenWorld)),
                 Meta = BuildMeta(method),
-                Icons = SerializeIcons(ExtractNamedArg<string>(toolAttribute, SdkAttr.IconSource)),
+                Icons = DescriptorFactory.ParseIcons(ExtractNamedArg<string>(toolAttribute, SdkAttr.IconSource)),
             };
 
             return new McpRegisteredTool
@@ -144,7 +145,7 @@ public sealed class McpAssemblyParser(ILogger<McpAssemblyParser> logger)
                     UriTemplate = uriTemplate,
                     Description = description,
                     MimeType = mimeType,
-                    Icons = ParseIcons(ExtractNamedArg<string>(resourceAttribute, SdkAttr.IconSource)),
+                    Icons = DescriptorFactory.ParseIcons(ExtractNamedArg<string>(resourceAttribute, SdkAttr.IconSource)),
                     Meta = BuildMeta(method),
                 };
             }
@@ -157,7 +158,7 @@ public sealed class McpAssemblyParser(ILogger<McpAssemblyParser> logger)
                     Uri = uriTemplate,
                     Description = description,
                     MimeType = mimeType,
-                    Icons = ParseIcons(ExtractNamedArg<string>(resourceAttribute, SdkAttr.IconSource)),
+                    Icons = DescriptorFactory.ParseIcons(ExtractNamedArg<string>(resourceAttribute, SdkAttr.IconSource)),
                     Meta = BuildMeta(method),
                 };
             }
@@ -165,12 +166,8 @@ public sealed class McpAssemblyParser(ILogger<McpAssemblyParser> logger)
             return new McpRegisteredResource
             {
                 Id = id,
-                Descriptor = protocolResource is not null
-                    ? DescriptorFactory.FromResource(protocolResource)
-                    : null,
-                TemplateDescriptor = protocolTemplate is not null
-                    ? DescriptorFactory.FromTemplate(protocolTemplate)
-                    : null,
+                Descriptor = protocolResource,
+                TemplateDescriptor = protocolTemplate,
                 Binding = binding,
             };
         }
@@ -251,24 +248,6 @@ public sealed class McpAssemblyParser(ILogger<McpAssemblyParser> logger)
             schema[SchemaKeys.Required] = required;
 
         return JsonSerializer.SerializeToElement(schema);
-    }
-
-    private static JsonArray? SerializeIcons(string? iconSource)
-    {
-        if (string.IsNullOrWhiteSpace(iconSource))
-            return null;
-
-        return
-        [
-            new JsonObject { [IconKeys.Src] = iconSource!.Trim() }
-        ];
-    }
-
-    private static List<Icon>? ParseIcons(string? iconSource)
-    {
-        if (string.IsNullOrWhiteSpace(iconSource))
-            return null;
-        return [new Icon { Source = iconSource!.Trim() }];
     }
 
     private string BuildFallbackUriTemplate(string name, MethodInfo method)

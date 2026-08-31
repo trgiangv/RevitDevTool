@@ -1,3 +1,4 @@
+using DevTools.Mcp.Core.Models;
 using ModelContextProtocol.Server;
 
 namespace DevTools.Mcp.Catalog.Discovery;
@@ -22,7 +23,7 @@ public static class McpCatalogCreateOptions
             Description = fixedResource?.Description ?? template?.Description,
             MimeType = fixedResource?.MimeType ?? template?.MimeType,
             Meta = fixedResource?.Meta ?? template?.Meta,
-            Icons = DescriptorFactory.ToSdkIcons(fixedResource?.Icons ?? template?.Icons),
+            Icons = fixedResource?.Icons ?? template?.Icons,
         };
     }
 

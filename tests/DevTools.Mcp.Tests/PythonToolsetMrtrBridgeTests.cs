@@ -17,12 +17,13 @@ public sealed class PythonToolsetMrtrBridgeTests
     [Fact]
     public void PayloadNormalizer_ArgumentsOnly_RemainsLegacyShape()
     {
-        var json = PythonInvocationPayload.ToJson(new McpInvocationRequest
+        var json = PythonInvocationPayload.ToJson(new CallToolRequestParams
         {
-            Arguments = JsonSerializer.SerializeToElement(new Dictionary<string, JsonElement>
+            Name = "stub",
+            Arguments = new Dictionary<string, JsonElement>
             {
-                ["category"] = JsonSerializer.SerializeToElement("Walls"),
-            }, JsonOptions),
+                ["category"] = JsonSerializer.SerializeToElement("Walls", JsonOptions),
+            },
         });
 
         using var document = JsonDocument.Parse(json);
@@ -42,25 +43,24 @@ public sealed class PythonToolsetMrtrBridgeTests
     [Fact]
     public void PayloadNormalizer_NoArguments_ReturnsEmptyObject()
     {
-        Assert.Equal("{}", PythonInvocationPayload.ToJson(new McpInvocationRequest()));
+        Assert.Equal("{}", PythonInvocationPayload.ToJson(new CallToolRequestParams { Name = "stub" }));
     }
 
     [Fact]
     public void PayloadNormalizer_IncludesInputResponsesAndRequestState()
     {
-        var json = PythonInvocationPayload.ToJson(new McpInvocationRequest
+        var json = PythonInvocationPayload.ToJson(new CallToolRequestParams
         {
-            Arguments = JsonSerializer.SerializeToElement(new Dictionary<string, JsonElement>
+            Name = "stub",
+            Arguments = new Dictionary<string, JsonElement>
             {
-                ["dryRun"] = JsonSerializer.SerializeToElement(true),
-            }, JsonOptions),
-            InputResponses = new Dictionary<string, JsonElement>
-            {
-                ["confirm"] = JsonSerializer.SerializeToElement(
-                    InputResponse.FromElicitResult(new ElicitResult { Action = "accept" }),
-                    McpJsonUtilities.DefaultOptions),
+                ["dryRun"] = JsonSerializer.SerializeToElement(true, JsonOptions),
             },
-            RequestState = JsonSerializer.SerializeToElement("round-1"),
+            InputResponses = new Dictionary<string, InputResponse>
+            {
+                ["confirm"] = InputResponse.FromElicitResult(new ElicitResult { Action = "accept" }),
+            },
+            RequestState = "round-1",
         });
 
         using var document = JsonDocument.Parse(json);
@@ -75,9 +75,10 @@ public sealed class PythonToolsetMrtrBridgeTests
     [Fact]
     public void PayloadNormalizer_RequestStateOnly_UsesStructuredShape()
     {
-        var json = PythonInvocationPayload.ToJson(new McpInvocationRequest
+        var json = PythonInvocationPayload.ToJson(new CallToolRequestParams
         {
-            RequestState = JsonSerializer.SerializeToElement("poll-only"),
+            Name = "stub",
+            RequestState = "poll-only",
         });
 
         using var document = JsonDocument.Parse(json);
@@ -90,13 +91,12 @@ public sealed class PythonToolsetMrtrBridgeTests
     [Fact]
     public void PayloadNormalizer_InputResponsesWithoutArguments_IncludesResponsesOnly()
     {
-        var json = PythonInvocationPayload.ToJson(new McpInvocationRequest
+        var json = PythonInvocationPayload.ToJson(new CallToolRequestParams
         {
-            InputResponses = new Dictionary<string, JsonElement>
+            Name = "stub",
+            InputResponses = new Dictionary<string, InputResponse>
             {
-                ["confirm"] = JsonSerializer.SerializeToElement(
-                    InputResponse.FromElicitResult(new ElicitResult { Action = "decline" }),
-                    McpJsonUtilities.DefaultOptions),
+                ["confirm"] = InputResponse.FromElicitResult(new ElicitResult { Action = "decline" }),
             },
         });
 
@@ -163,12 +163,12 @@ public sealed class PythonToolsetMrtrBridgeTests
     }
 
     [Fact]
-    public void ParseCallToolResult_MissingInputResponses_DoesNotTreatAsInputRequired()
+    public void ParseCallToolResult_StructuredContentOnly_IsCallToolResult()
     {
-        // Object without resultType and without content is invalid CallToolResult
         const string json = """{"structuredContent":{"ok":true}}""";
 
-        var ex = Assert.Throws<InvalidOperationException>(() => PythonResultParser.ParseCallToolResult(json));
-        Assert.Contains("CallToolResult", ex.Message, StringComparison.Ordinal);
+        var actual = PythonResultParser.ParseCallToolResult(json);
+        Assert.True(actual.StructuredContent.HasValue);
+        Assert.Equal(JsonValueKind.True, actual.StructuredContent.Value.GetProperty("ok").ValueKind);
     }
 }

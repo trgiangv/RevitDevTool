@@ -35,7 +35,7 @@ public sealed class ReadFileInfoTool(IFileReaderCatalog catalog)
     }
 
     [Description("Read metadata from a CAD/BIM file on disk.")]
-    public CallToolResult Read(
+    private CallToolResult Read(
         [Description("Full path to the file (.rvt, .rfa, .rft, .rte, .dwg).")] string filePath,
         [Description("Response detail: summary (default) or full.")] string detail = "summary")
     {

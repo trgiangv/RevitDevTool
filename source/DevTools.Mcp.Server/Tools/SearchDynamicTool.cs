@@ -1,5 +1,6 @@
 using System.ComponentModel;
-using DevTools.Mcp.Core;
+using System.Text.Json;
+using DevTools.Mcp.Core.Sessions;
 using DevTools.Mcp.Server.Contracts;
 using ModelContextProtocol.Protocol;
 using ModelContextProtocol.Server;
@@ -28,7 +29,7 @@ public sealed class SearchDynamicTool(IHostBroker broker)
         });
 
     [Description("Search local catalog capabilities.")]
-    public CallToolResult Search(
+    private CallToolResult Search(
         string? query = null,
         int? hostInstanceId = null,
         string[]? kinds = null,

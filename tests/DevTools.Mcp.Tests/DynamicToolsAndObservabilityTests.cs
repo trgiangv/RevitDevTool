@@ -18,7 +18,7 @@ public sealed class DynamicToolsAndObservabilityTests
         Assert.NotEqual("revit_find_elements", item.CapabilityId);
         Assert.True(DynamicCapabilityId.TryDecode(item.CapabilityId, out var locator));
         Assert.Equal(101, locator!.HostInstanceId);
-        Assert.Equal(0, harness.Session.CallCount);
+        Assert.Equal(0, harness.Session.PassthroughCount);
         Assert.Equal(0, harness.Session.ReadCount);
     }
 

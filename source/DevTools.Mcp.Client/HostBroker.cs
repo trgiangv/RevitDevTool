@@ -1,6 +1,6 @@
 using System.Collections.Concurrent;
 using System.Diagnostics;
-using DevTools.Mcp.Core;
+using DevTools.Mcp.Core.Sessions;
 using Microsoft.Extensions.Logging;
 using ZLogger;
 
@@ -16,7 +16,6 @@ public sealed class HostBroker(
     private readonly DeviceMetadata _device = DeviceMetadata.Collect();
 
     public IConnectedHostCatalog Catalog { get; } = new ConnectedHostCatalog();
-    public string MachineId => _device.MachineId;
     public event Action? Changed;
 
     public IHostSession? GetByProcessId(int processId) =>
@@ -77,7 +76,7 @@ public sealed class HostBroker(
         try
         {
             logger.ZLogInformation($"Connecting MCP client to {pipeName}...");
-            var session = await HostSession.ConnectAsync(pipeName, MachineId, loggerFactory, logger, ct).ConfigureAwait(false);
+            var session = await HostSession.ConnectAsync(pipeName, _device.MachineId, loggerFactory, logger, ct).ConfigureAwait(false);
 
             session.Disconnected += () => _ = DisconnectAsync(pipeName);
             session.CatalogChanged += () => _ = RefreshCatalogAsync(session, CancellationToken.None);

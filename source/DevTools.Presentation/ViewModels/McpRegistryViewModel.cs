@@ -3,11 +3,15 @@ using System.Collections.Specialized;
 using System.ComponentModel;
 using System.IO;
 using System.Text;
+using System.Text.Json;
 using System.Windows.Threading;
 using DevTools.Execution.External.Connections;
+using DevTools.Mcp.Core.Models;
 using DevTools.Presentation.Models;
 using DevTools.UI.Behaviors;
 using DevTools.UI.Theme;
+using Microsoft.Extensions.Logging;
+using ZLogger;
 // ReSharper disable UnusedParameterInPartialMethod
 // ReSharper disable RedundantSuppressNullableWarningExpression
 
@@ -17,6 +21,7 @@ public sealed partial class McpRegistryViewModel : ObservableObject, IBusyViewMo
 {
     private readonly McpCatalogStore _catalogStore;
     private readonly ConnectionState _bridgeState;
+    private readonly ILogger<McpRegistryViewModel> _logger;
     private readonly DispatcherTimer _searchDebounceTimer;
     private readonly DispatcherTimer _elapsedTimer;
     private readonly Dictionary<string, int> _callCounts = new(StringComparer.OrdinalIgnoreCase);
@@ -62,10 +67,14 @@ public sealed partial class McpRegistryViewModel : ObservableObject, IBusyViewMo
     public bool ShowStatusPanel => IsBusy || IsExecuting;
     public string StatusPanelText => IsBusy ? BusyMessage : ExecutionStatusText;
 
-    public McpRegistryViewModel(McpCatalogStore catalogStore, ConnectionState bridgeState)
+    public McpRegistryViewModel(
+        McpCatalogStore catalogStore,
+        ConnectionState bridgeState,
+        ILogger<McpRegistryViewModel> logger)
     {
         _catalogStore = catalogStore;
         _bridgeState = bridgeState;
+        _logger = logger;
 
         _searchDebounceTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(500) };
         _searchDebounceTimer.Tick += (_, _) =>
@@ -95,11 +104,18 @@ public sealed partial class McpRegistryViewModel : ObservableObject, IBusyViewMo
 
     public async Task InitializeAsync()
     {
-        await this.WhileBusy("Loading MCP tools...", async () =>
+        try
         {
-            await Task.Run(() => _catalogStore.EnsureLoaded()).ConfigureAwait(true);
-            RebuildToolList();
-        });
+            await this.WhileBusy("Loading MCP tools...", async () =>
+            {
+                await Task.Run(() => _catalogStore.EnsureLoaded()).ConfigureAwait(true);
+                RebuildToolList();
+            });
+        }
+        catch (Exception ex)
+        {
+            _logger.ZLogError($"Failed to initialize MCP registry view model: {ex.Message}");
+        }
     }
 
     [RelayCommand]
@@ -160,19 +176,26 @@ public sealed partial class McpRegistryViewModel : ObservableObject, IBusyViewMo
         Tools.Clear();
         foreach (var tool in _catalogStore.RegisteredTools)
         {
-            var protocolTool = tool.Descriptor;
-            var binding = tool.Binding;
-            _callCounts.TryGetValue(tool.Id, out var count);
-            Tools.Add(new McpToolItem
+            try
             {
-                ToolId = tool.Id,
-                Name = protocolTool.Name,
-                SourceAddress = binding.SourceAddress,
-                GroupName = binding.GroupName,
-                ToolTipText = BuildToolTipText(tool),
-                SourceKind = binding.SourceKind,
-                CallCount = count,
-            });
+                var protocolTool = tool.Descriptor;
+                var binding = tool.Binding;
+                _callCounts.TryGetValue(tool.Id, out var count);
+                Tools.Add(new McpToolItem
+                {
+                    ToolId = tool.Id,
+                    Name = protocolTool.Name,
+                    SourceAddress = binding.SourceAddress,
+                    GroupName = binding.GroupName,
+                    ToolTipText = BuildToolTipText(tool),
+                    SourceKind = binding.SourceKind,
+                    CallCount = count,
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.ZLogWarning($"Skipping MCP tool '{tool.Id}' while rebuilding registry list: {ex.Message}");
+            }
         }
 
         TotalToolCount = Tools.Count;
@@ -337,8 +360,8 @@ public sealed partial class McpRegistryViewModel : ObservableObject, IBusyViewMo
         builder.AppendLine();
         builder.AppendLine(string.IsNullOrWhiteSpace(protocolTool.Description) ? "No description." : protocolTool.Description!.Trim());
 
-        var arguments = protocolTool.InputSchema is { } inputSchema
-            ? BuildArgumentSummary(inputSchema.GetRawText())
+        var arguments = protocolTool.InputSchema.ValueKind == JsonValueKind.Object
+            ? BuildArgumentSummary(protocolTool.InputSchema.GetRawText())
             : string.Empty;
         if (string.IsNullOrWhiteSpace(arguments)) 
             return builder.ToString().TrimEnd();

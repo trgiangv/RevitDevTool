@@ -22,6 +22,13 @@
         <Using Include="DevTools.Execution.Abstractions"/>
         <Using Include="DevTools.Ipc"/>
         <Using Include="DevTools.Mcp.Core"/>
+        <Using Include="DevTools.Mcp.Core.Catalog"/>
+        <Using Include="DevTools.Mcp.Core.Invocation"/>
+        <Using Include="DevTools.Mcp.Core.Models"/>
+        <Using Include="DevTools.Mcp.Core.Protocol"/>
+        <Using Include="DevTools.Mcp.Core.Protocol.Invocation"/>
+        <Using Include="DevTools.Mcp.Core.Results"/>
+        <Using Include="DevTools.Mcp.Core.Sessions"/>
         <Using Include="DevTools.Mcp.Catalog"/>
         <Using Include="DevTools.Mcp.Catalog.Discovery"/>
         <Using Include="DevTools.Mcp.Core.Utils"/>

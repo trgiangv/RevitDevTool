@@ -19,25 +19,25 @@ public sealed class ParserIntegrationTests
 
         Assert.Equal("Get Demo Status", tool.Annotations!.Title);
         Assert.Equal("Get Demo Status", tool.Title);
-        Assert.True(tool.Annotations.ReadOnly);
-        Assert.True(tool.Annotations.Idempotent);
-        Assert.False(tool.Annotations.OpenWorld);
-        Assert.Null(tool.Annotations.Destructive);
+        Assert.True(tool.Annotations.ReadOnlyHint);
+        Assert.True(tool.Annotations.IdempotentHint);
+        Assert.False(tool.Annotations.OpenWorldHint);
+        Assert.Null(tool.Annotations.DestructiveHint);
         Assert.Equal("get_demo_status", protocolTool.Name);
         Assert.Equal("Get Demo Status", protocolTool.Title);
-        Assert.True(protocolTool.Annotations!.ReadOnly);
-        Assert.True(protocolTool.Annotations.Idempotent);
-        Assert.False(protocolTool.Annotations.OpenWorld);
-        Assert.Equal(JsonValueKind.Object, protocolTool.InputSchema!.Value.ValueKind);
+        Assert.True(protocolTool.Annotations!.ReadOnlyHint);
+        Assert.True(protocolTool.Annotations.IdempotentHint);
+        Assert.False(protocolTool.Annotations.OpenWorldHint);
+        Assert.Equal(JsonValueKind.Object, protocolTool.InputSchema.ValueKind);
 
         Assert.Equal("1.0", advanced.Meta?["version"]?.GetValue<string>());
         Assert.True(advanced.Meta?["isBeta"]?.GetValue<bool>() ?? false);
-        AssertJsonObjectHasProperty(advanced.InputSchema!.Value.GetRawText(), "properties", "topic");
-        AssertJsonMissingNestedProperty(advanced.InputSchema!.Value.GetRawText(), "properties", "cancellationToken");
-        AssertJsonMissingNestedProperty(advanced.InputSchema!.Value.GetRawText(), "properties", "serviceProvider");
-        AssertJsonMissingNestedProperty(advanced.InputSchema!.Value.GetRawText(), "properties", "server");
-        AssertJsonMissingNestedProperty(advanced.InputSchema!.Value.GetRawText(), "properties", "progress");
-        AssertJsonMissingNestedProperty(advanced.InputSchema!.Value.GetRawText(), "properties", "dependency");
+        AssertJsonObjectHasProperty(advanced.InputSchema.GetRawText(), "properties", "topic");
+        AssertJsonMissingNestedProperty(advanced.InputSchema.GetRawText(), "properties", "cancellationToken");
+        AssertJsonMissingNestedProperty(advanced.InputSchema.GetRawText(), "properties", "serviceProvider");
+        AssertJsonMissingNestedProperty(advanced.InputSchema.GetRawText(), "properties", "server");
+        AssertJsonMissingNestedProperty(advanced.InputSchema.GetRawText(), "properties", "progress");
+        AssertJsonMissingNestedProperty(advanced.InputSchema.GetRawText(), "properties", "dependency");
     }
 
     [Fact]
@@ -56,17 +56,17 @@ public sealed class ParserIntegrationTests
         Assert.NotNull(tool.Annotations);
         Assert.Equal("Get Parser Sample Status", tool.Annotations!.Title);
         Assert.Equal("Get Parser Sample Status", tool.Title);
-        Assert.True(tool.Annotations.ReadOnly);
-        Assert.True(tool.Annotations.Idempotent);
-        Assert.False(tool.Annotations.OpenWorld);
-        Assert.Null(tool.Annotations.Destructive);
+        Assert.True(tool.Annotations.ReadOnlyHint);
+        Assert.True(tool.Annotations.IdempotentHint);
+        Assert.False(tool.Annotations.OpenWorldHint);
+        Assert.Null(tool.Annotations.DestructiveHint);
         Assert.NotNull(tool.OutputSchema);
         AssertJsonObjectHasProperty(tool.OutputSchema!.Value.GetRawText(), "properties", "status");
-        Assert.Equal("https://example.com/icons/tool.png", tool.Icons![0]![McpSpecKeys.Icon.Src]!.GetValue<string>());
-        Assert.Equal("fastmcp", tool.Meta?["feature"]?.GetValue<string>());
+        Assert.Equal("https://example.com/icons/tool.png", tool.Icons![0].Source);
+        Assert.Equal("mcpserver", tool.Meta?["feature"]?.GetValue<string>());
         Assert.Equal("get_parser_sample_status", tool.Name);
         Assert.Equal("Get Parser Sample Status", tool.Title);
-        Assert.True(tool.Annotations.ReadOnly);
+        Assert.True(tool.Annotations!.ReadOnlyHint);
         Assert.Equal(JsonValueKind.Object, tool.OutputSchema!.Value.ValueKind);
     }
 
@@ -80,28 +80,28 @@ public sealed class ParserIntegrationTests
         var templateResource = catalog.Resources.Single(item => item.TemplateDescriptor?.Name == "parser_lowlevel_template").TemplateDescriptor!;
 
         Assert.Equal("Parser Low-Level Tool", tool.Title);
-        Assert.True(tool.Annotations!.ReadOnly);
-        Assert.True(tool.Annotations.Idempotent);
+        Assert.True(tool.Annotations!.ReadOnlyHint);
+        Assert.True(tool.Annotations.IdempotentHint);
         AssertJsonObjectHasProperty(tool.OutputSchema!.Value.GetRawText(), "properties", "status");
-        Assert.Equal("https://example.com/icons/lowlevel-tool.png", tool.Icons![0]![McpSpecKeys.Icon.Src]!.GetValue<string>());
+        Assert.Equal("https://example.com/icons/lowlevel-tool.png", tool.Icons![0].Source);
         Assert.Equal("lowlevel", tool.Meta?["feature"]?.GetValue<string>());
 
         Assert.Equal("sample://lowlevel/status", directResource.Uri);
         Assert.Equal("text/plain", directResource.MimeType);
         Assert.Equal(128, directResource.Size);
-        Assert.Equal("https://example.com/icons/lowlevel-resource.png", directResource.Icons![0]![McpSpecKeys.Icon.Src]!.GetValue<string>());
+        Assert.Equal("https://example.com/icons/lowlevel-resource.png", directResource.Icons![0].Source);
         Assert.Equal("resource", directResource.Meta?["kind"]?.GetValue<string>());
         Assert.Equal(0.8, directResource.Annotations?.Priority ?? 0, 3);
 
         Assert.Equal("sample://lowlevel/items/{item_id}", templateResource.UriTemplate);
         Assert.Equal("application/json", templateResource.MimeType);
-        Assert.Equal("https://example.com/icons/lowlevel-template.png", templateResource.Icons![0]![McpSpecKeys.Icon.Src]!.GetValue<string>());
+        Assert.Equal("https://example.com/icons/lowlevel-template.png", templateResource.Icons![0].Source);
         Assert.Equal("template", templateResource.Meta?["kind"]?.GetValue<string>());
         Assert.Equal(0.5, templateResource.Annotations?.Priority ?? 0, 3);
     }
 
     [Fact]
-    public void PythonParser_ExtractsFastMcpResources()
+    public void PythonParser_ExtractsMcpServerResources()
     {
         var resources = PythonParser.ParseDirectoryCatalog(GetPythonToolsetDirectory(), GetPythonExecutablePath(), GetToolParserScriptPath()).Resources;
         var directReg = resources.Single(item => item.Descriptor?.Name == "parser_status_resource");
@@ -111,13 +111,13 @@ public sealed class ParserIntegrationTests
 
         Assert.Equal("sample://parser/status", direct.Uri);
         Assert.Equal("application/json", direct.MimeType);
-        Assert.Equal("https://example.com/icons/resource-status.png", direct.Icons![0]![McpSpecKeys.Icon.Src]!.GetValue<string>());
+        Assert.Equal("https://example.com/icons/resource-status.png", direct.Icons![0].Source);
         Assert.Equal("status", direct.Meta?["kind"]?.GetValue<string>());
         Assert.Equal(0.9, direct.Annotations?.Priority ?? 0, 3);
 
         Assert.Equal("sample://parser/views/{view_id}", templated.UriTemplate);
         Assert.Equal("application/json", templated.MimeType);
-        Assert.Equal("https://example.com/icons/resource-view.png", templated.Icons![0]![McpSpecKeys.Icon.Src]!.GetValue<string>());
+        Assert.Equal("https://example.com/icons/resource-view.png", templated.Icons![0].Source);
         Assert.Equal("view", templated.Meta?["kind"]?.GetValue<string>());
         Assert.Equal(0.6, templated.Annotations?.Priority ?? 0, 3);
     }
@@ -134,7 +134,7 @@ public sealed class ParserIntegrationTests
         var derived = derivedRegistration.TemplateDescriptor!;
 
         Assert.Equal("sample://demo/status", direct.Uri);
-        Assert.Equal("https://example.com/icons/resource-status.png", direct.Icons![0]![McpSpecKeys.Icon.Src]!.GetValue<string>());
+        Assert.Equal("https://example.com/icons/resource-status.png", direct.Icons![0].Source);
         Assert.Equal("status", direct.Meta?["resourceKind"]?.GetValue<string>());
         Assert.NotNull(directRegistration.Descriptor);
         Assert.Null(directRegistration.TemplateDescriptor);
@@ -142,7 +142,7 @@ public sealed class ParserIntegrationTests
 
         Assert.Equal("sample://demo/views/{viewId}", templated.UriTemplate);
         Assert.Equal("application/json", templated.MimeType);
-        Assert.Equal("https://example.com/icons/resource-view.png", templated.Icons![0]![McpSpecKeys.Icon.Src]!.GetValue<string>());
+        Assert.Equal("https://example.com/icons/resource-view.png", templated.Icons![0].Source);
         Assert.Equal("view", templated.Meta?["resourceKind"]?.GetValue<string>());
         Assert.Null(templatedRegistration.Descriptor);
         Assert.NotNull(templatedRegistration.TemplateDescriptor);
@@ -159,10 +159,10 @@ public sealed class ParserIntegrationTests
         var tool = catalog.Tools.Single(t => t.Descriptor.Name == "get_nested_meta").Descriptor;
 
         Assert.NotNull(tool.Annotations);
-        Assert.True(tool.Annotations!.Destructive);
-        Assert.True(tool.Annotations.OpenWorld);
-        Assert.Null(tool.Annotations.ReadOnly);
-        Assert.Null(tool.Annotations.Idempotent);
+        Assert.True(tool.Annotations!.DestructiveHint);
+        Assert.True(tool.Annotations.OpenWorldHint);
+        Assert.Null(tool.Annotations.ReadOnlyHint);
+        Assert.Null(tool.Annotations.IdempotentHint);
     }
 
     [Fact]
@@ -170,7 +170,7 @@ public sealed class ParserIntegrationTests
     {
         var catalog = Parser.ParseCatalogFromAssembly(GetSampleAssemblyPath());
         var tool = catalog.Tools.Single(t => t.Descriptor.Name == "get_advanced_demo_status").Descriptor;
-        var schemaJson = tool.InputSchema!.Value.GetRawText();
+        var schemaJson = tool.InputSchema.GetRawText();
 
         AssertJsonObjectHasProperty(schemaJson, "properties", "topic");
         AssertJsonMissingNestedProperty(schemaJson, "properties", "cancellationToken");
@@ -185,7 +185,7 @@ public sealed class ParserIntegrationTests
     {
         var catalog = Parser.ParseCatalogFromAssembly(GetSampleAssemblyPath());
         var tool = catalog.Tools.Single(t => t.Descriptor.Name == "get_nullable_count").Descriptor;
-        using var doc = JsonDocument.Parse(tool.InputSchema!.Value.GetRawText());
+        using var doc = JsonDocument.Parse(tool.InputSchema.GetRawText());
         var countProp = doc.RootElement.GetProperty("properties").GetProperty("count");
 
         Assert.Equal("integer", countProp.GetProperty("type").GetString());
@@ -196,7 +196,7 @@ public sealed class ParserIntegrationTests
     {
         var catalog = Parser.ParseCatalogFromAssembly(GetSampleAssemblyPath());
         var tool = catalog.Tools.Single(t => t.Descriptor.Name == "ping_infrastructure").Descriptor;
-        using var doc = JsonDocument.Parse(tool.InputSchema!.Value.GetRawText());
+        using var doc = JsonDocument.Parse(tool.InputSchema.GetRawText());
 
         Assert.Equal("object", doc.RootElement.GetProperty("type").GetString());
         Assert.False(doc.RootElement.TryGetProperty("required", out _));
@@ -240,7 +240,7 @@ public sealed class ParserIntegrationTests
 
         Assert.NotNull(tool.Icons);
         Assert.Single(tool.Icons);
-        Assert.Equal("https://dohoasaigon.com/wp-content/uploads/2025/03/revit-2024.png", tool.Icons[0]![McpSpecKeys.Icon.Src]!.GetValue<string>());
+        Assert.Equal("https://dohoasaigon.com/wp-content/uploads/2025/03/revit-2024.png", tool.Icons![0].Source);
     }
 
     [Fact]

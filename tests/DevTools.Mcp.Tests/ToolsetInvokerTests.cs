@@ -73,7 +73,7 @@ public sealed class ToolsetInvokerTests
         dispatcher
             .Setup(d => d.DispatchToolAsync(
                 It.IsAny<McpRegisteredTool>(),
-                It.IsAny<McpInvocationRequest>(),
+                It.IsAny<CallToolRequestParams>(),
                 It.IsAny<IHostContextExecutor>(),
                 It.IsAny<CancellationToken>()))
             .ReturnsAsync(McpResult<McpInvocationResponse>.Success(

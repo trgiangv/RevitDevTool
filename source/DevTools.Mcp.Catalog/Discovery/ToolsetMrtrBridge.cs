@@ -1,6 +1,7 @@
 using System.Reflection;
 using System.Text.Json;
-using System.Text.Json.Nodes;
+using DevTools.Mcp.Core;
+using DevTools.Mcp.Core.Invocation;
 using ModelContextProtocol;
 using ModelContextProtocol.Protocol;
 
@@ -26,18 +27,17 @@ public static class ToolsetMrtrBridge
     public static McpInvocationResponse ToInputRequiredResponse(InputRequiredException exception) =>
         ToInputRequiredResponse(exception.Result);
 
-    private static McpInvocationResponse ToInputRequiredResponse(InputRequiredResult result)
-    {
-        var payload = JsonSerializer.SerializeToNode(result, JsonOptions) as JsonObject
-                      ?? throw new InvalidOperationException("Failed to serialize InputRequiredResult.");
-        return new McpInvocationResponse
-        {
-            Meta = new JsonObject { [McpTaskExecutionMeta.Invocation.InputRequired] = payload }
-        };
-    }
+    private static McpInvocationResponse ToInputRequiredResponse(InputRequiredResult result) =>
+        new() { InputRequired = result };
 
     public static bool TryGetInputRequiredResult(McpInvocationResponse response, out InputRequiredResult? result)
     {
+        if (response.InputRequired is not null)
+        {
+            result = response.InputRequired;
+            return true;
+        }
+
         result = null;
         if (response.Meta?.TryGetPropertyValue(McpTaskExecutionMeta.Invocation.InputRequired, out var node) != true || node is null)
             return false;

@@ -2,6 +2,8 @@ using ModelContextProtocol.Extensions.Tasks;
 using ModelContextProtocol.Protocol;
 using ModelContextProtocol.Server;
 using System.Text.Json.Nodes;
+using DevTools.Mcp.Core.Invocation;
+// ReSharper disable RedundantSuppressNullableWarningExpression
 
 namespace DevTools.Mcp.Core;
 
@@ -17,7 +19,7 @@ namespace DevTools.Mcp.Core;
 /// </para>
 /// <para>
 /// <see cref="MetaKey"/> is the only host convention: it links tool metadata to
-/// <see cref="ParseMode"/>. Mode strings use <c>nameof(McpTaskExecutionMode)</c> members so they
+/// <see cref="ParseMode(JsonObject?, McpTaskExecutionMode)"/>. Mode strings use <c>nameof(McpTaskExecutionMode)</c> members so they
 /// stay aligned with the SDK enum without manual literals.
 /// </para>
 /// <para>
@@ -49,6 +51,7 @@ public static class McpTaskExecutionMeta
     /// <summary>
     /// <c>[McpMeta]</c> values derived from SDK <see cref="McpTaskExecutionMode"/> member names.
     /// </summary>
+    [UsedImplicitly(ImplicitUseTargetFlags.WithMembers)]
     public static class Mode
     {
         public const string Synchronous = nameof(McpTaskExecutionMode.Synchronous);

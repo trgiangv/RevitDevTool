@@ -1,7 +1,8 @@
 using System.Text;
 using System.Text.Json;
 using System.Runtime.CompilerServices;
-using DevTools.Mcp.Core;
+using DevTools.Mcp.Core.Sessions;
+// ReSharper disable RedundantSuppressNullableWarningExpression
 
 namespace DevTools.Mcp.Server.Contracts;
 

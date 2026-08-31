@@ -15,7 +15,7 @@ public sealed class McpProtocolTests
         Assert.NotNull(parameters.Meta);
         Assert.Equal(
             McpSpecKeys.ProtocolVersions.Current,
-            parameters.Meta![McpSpecKeys.Meta.ProtocolVersion]!.GetValue<string>());
+            parameters.Meta![MetaKeys.ProtocolVersion]!.GetValue<string>());
     }
 
     [Fact]
@@ -24,11 +24,11 @@ public sealed class McpProtocolTests
         var parameters = new CallToolRequestParams { Name = "ping" };
         parameters.Meta = new System.Text.Json.Nodes.JsonObject
         {
-            [McpSpecKeys.Meta.ProtocolVersion] = "custom-version",
+            [MetaKeys.ProtocolVersion] = "custom-version",
         };
 
         McpProtocol.EnsureCurrentProtocolMeta(parameters);
 
-        Assert.Equal("custom-version", parameters.Meta[McpSpecKeys.Meta.ProtocolVersion]!.GetValue<string>());
+        Assert.Equal("custom-version", parameters.Meta[MetaKeys.ProtocolVersion]!.GetValue<string>());
     }
 }

@@ -1,4 +1,3 @@
-using DevTools.Mcp.Catalog;
 using Microsoft.Extensions.Logging;
 using ZLogger;
 using DevTools.Presentation.ViewModels;
@@ -24,7 +23,17 @@ public partial class McpRegistryView
 
         Dispatcher.BeginInvoke(
             System.Windows.Threading.DispatcherPriority.Loaded,
-            viewModel.InitializeAsync);
+            async () =>
+            {
+                try
+                {
+                    await viewModel.InitializeAsync();
+                }
+                catch (Exception ex)
+                {
+                    _logger.ZLogError($"Failed to initialize MCP registry view: {ex.Message}");
+                }
+            });
     }
 
     private void RegistryList_DragEnter(object sender, DragEventArgs e) => UpdateDropMaskState(e);

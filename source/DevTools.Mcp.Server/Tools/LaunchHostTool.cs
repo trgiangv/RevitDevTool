@@ -1,8 +1,7 @@
 using System.ComponentModel;
 using System.Runtime.Versioning;
 using DevTools.Hosting;
-using DevTools.Mcp.Client;
-using DevTools.Mcp.Core;
+using DevTools.Mcp.Core.Sessions;
 using DevTools.Mcp.Core.Utils;
 using DevTools.Mcp.Server.Contracts;
 using DevTools.Mcp.Server.Utils;

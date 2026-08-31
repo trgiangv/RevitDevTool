@@ -24,6 +24,6 @@ public sealed class ListMachinesTool(IMachineLister machineLister)
     }
 
     [Description("List all connected machines for this user.")]
-    public Task<CallToolResult> ListAsync(CancellationToken cancellationToken = default) =>
+    private Task<CallToolResult> ListAsync(CancellationToken cancellationToken = default) =>
         machineLister.ListAsync(cancellationToken);
 }

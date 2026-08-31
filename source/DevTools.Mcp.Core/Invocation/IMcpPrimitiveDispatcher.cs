@@ -1,18 +1,19 @@
 using DevTools.Execution.Abstractions;
-using DevTools.Mcp.Core.Protocol;
-
-namespace DevTools.Mcp.Core;
+using DevTools.Mcp.Core.Models;
+using DevTools.Mcp.Core.Results;
+using ModelContextProtocol.Protocol;
+namespace DevTools.Mcp.Core.Invocation;
 
 /// <summary>Dispatches registered MCP primitives to the execution backend.</summary>
 public interface IMcpPrimitiveDispatcher
 {
     Task<McpResult<McpInvocationResponse>> DispatchToolAsync(
         McpRegisteredTool tool,
-        McpInvocationRequest request,
+        CallToolRequestParams request,
         IHostContextExecutor hostContext,
         CancellationToken ct = default);
 
-    McpReadResourceResponse ReadResource(
+    ReadResourceResult ReadResource(
         McpRegisteredResource resource,
         string uri,
         CancellationToken ct = default);

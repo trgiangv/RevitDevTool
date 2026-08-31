@@ -1,5 +1,6 @@
 using System.Text.Json.Nodes;
 using DevTools.Mcp.Core.Protocol;
+using ModelContextProtocol.Protocol;
 
 namespace DevTools.Mcp.Tests.Host;
 
@@ -12,7 +13,7 @@ public sealed class McpProtocolTests
         {
             [McpSpecKeys.Meta.Key] = new JsonObject
             {
-                [McpSpecKeys.Meta.ProtocolVersion] = McpSpecKeys.ProtocolVersions.Current,
+                [MetaKeys.ProtocolVersion] = McpSpecKeys.ProtocolVersions.Current,
             },
         };
 

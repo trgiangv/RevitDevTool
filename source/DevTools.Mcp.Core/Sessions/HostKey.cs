@@ -1,4 +1,4 @@
-namespace DevTools.Mcp.Core;
+namespace DevTools.Mcp.Core.Sessions;
 
 public readonly record struct HostKey(string MachineId, int ProcessId)
 {

@@ -3,7 +3,9 @@ using System.IO.Pipes;
 using System.Security.AccessControl;
 using System.Security.Principal;
 using DevTools.Mcp.Adapter.Host;
+using DevTools.Mcp.Core.Invocation;
 using DevTools.Mcp.Core.Protocol;
+using DevTools.Mcp.Core.Sessions;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using ModelContextProtocol.Protocol;
@@ -12,7 +14,7 @@ namespace DevTools.Mcp.Adapter.External;
 
 /// <summary>
 /// Host-side MCP server over <c>DevToolsMcp_{Host}_{Version}_{PID}</c> using the host MCP handler.
-/// The <see cref="DevToolsPipeServer"/> remains for pytest/control IPC.
+/// The DevToolsPipeServer remains for pytest/control IPC.
 /// </summary>
 [UsedImplicitly]
 public sealed class HostMcpPipeServer(
@@ -47,7 +49,7 @@ public sealed class HostMcpPipeServer(
             try
             {
                 catalogStore.EnsureLoaded();
-                Interlocked.Exchange(ref _lastToolCount, catalogStore.ToolDescriptors.Count);
+                Interlocked.Exchange(ref _lastToolCount, catalogStore.GetToolDescriptors().Count);
             }
             catch (Exception ex)
             {
@@ -159,8 +161,8 @@ public sealed class HostMcpPipeServer(
             toolsetContextManager.Clear();
             _ = BroadcastCatalogListChangedNotificationsAsync();
 
-            var tools = catalogStore.ToolDescriptors.Count;
-            var resources = catalogStore.ResourceDescriptors.Count;
+            var tools = catalogStore.GetToolDescriptors().Count;
+            var resources = catalogStore.GetResourceDescriptors().Count;
             var previous = Interlocked.Exchange(ref _lastToolCount, tools);
             var added = tools - previous;
             if (added > 0)

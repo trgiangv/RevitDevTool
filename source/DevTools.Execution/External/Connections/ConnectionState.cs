@@ -1,5 +1,8 @@
 using System.Collections.ObjectModel;
 using System.Diagnostics;
+using DevTools.Mcp.Core.Invocation;
+using DevTools.Mcp.Core.Results;
+using DevTools.Mcp.Core.Sessions;
 using DevTools.UI;
 using Microsoft.Extensions.Logging;
 using ZLogger;

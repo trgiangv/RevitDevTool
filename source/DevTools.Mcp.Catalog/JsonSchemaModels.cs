@@ -1,5 +1,6 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using DevTools.Mcp.Core.Protocol;
 // ReSharper disable RedundantSuppressNullableWarningExpression
 
 namespace DevTools.Mcp.Catalog;

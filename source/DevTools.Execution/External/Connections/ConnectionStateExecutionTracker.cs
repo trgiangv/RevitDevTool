@@ -1,3 +1,5 @@
+using DevTools.Mcp.Core.Invocation;
+using DevTools.Mcp.Core.Results;
 namespace DevTools.Execution.External.Connections;
 
 /// <summary>

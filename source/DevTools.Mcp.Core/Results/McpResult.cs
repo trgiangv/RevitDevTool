@@ -1,6 +1,4 @@
-using System.Text.Json.Serialization;
-
-namespace DevTools.Mcp.Core;
+namespace DevTools.Mcp.Core.Results;
 
 public sealed record McpResult<T>
 {
@@ -18,26 +16,20 @@ public sealed record McpResult<T>
     public static McpResult<T> Failure(McpError error) => new(default, error);
 }
 
+[UsedImplicitly(ImplicitUseTargetFlags.WithMembers)]
 public sealed record McpError(
     string Code,
     string Message,
     IReadOnlyList<ValidationProblem> ValidationProblems,
     string? CorrelationId = null);
 
+[UsedImplicitly(ImplicitUseTargetFlags.WithMembers)]
 public sealed record ValidationProblem(string Property, string Message);
 
+[UsedImplicitly(ImplicitUseTargetFlags.WithMembers)]
 public static class McpErrorCode
 {
     public const string ValidationFailed = "validation.failed";
-    public const string CapabilityNotFound = "capability.not_found";
-    public const string CapabilityAmbiguous = "capability.ambiguous";
     public const string ExecutionCancelled = "execution.cancelled";
     public const string ExecutionFailed = "execution.failed";
-    public const string TransportDisconnected = "transport.disconnected";
-}
-
-public sealed class McpExecutionException(string mcpErrorCode, string message, Exception? innerException = null)
-    : Exception(message, innerException)
-{
-    public string McpErrorCode { get; } = mcpErrorCode;
 }

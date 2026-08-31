@@ -1,12 +1,19 @@
+using System.Text.Json;
 using System.Text.Json.Nodes;
+using DevTools.Mcp.Core.Invocation;
 using DevTools.Mcp.Core.Protocol;
+using DevTools.Mcp.Core.Protocol.Invocation;
+using DevTools.Mcp.Core.Results;
+using ModelContextProtocol;
+using ModelContextProtocol.Protocol;
 using Microsoft.Extensions.Logging;
-using CoreMcpErrorCode = DevTools.Mcp.Core.McpErrorCode;
+using CoreMcpErrorCode = DevTools.Mcp.Core.Results.McpErrorCode;
+using RpcErrorCode = ModelContextProtocol.McpErrorCode;
 using CapabilitiesKeys = DevTools.Mcp.Core.Protocol.McpSpecKeys.Capabilities;
 using ImplementationKeys = DevTools.Mcp.Core.Protocol.McpSpecKeys.Implementation;
-using McpMethods = DevTools.Mcp.Core.Protocol.McpSpecKeys.Methods;
 using ResourcesKeys = DevTools.Mcp.Core.Protocol.McpSpecKeys.Resources;
 using ToolsKeys = DevTools.Mcp.Core.Protocol.McpSpecKeys.Tools;
+// ReSharper disable RedundantSuppressNullableWarningExpression
 
 namespace DevTools.Mcp.Adapter.Host;
 
@@ -42,7 +49,7 @@ public sealed class McpHandler : IMcpHandler
     public async ValueTask<JsonObject?> HandleAsync(JsonObject request, CancellationToken cancellationToken = default)
     {
         if (!McpJsonRpc.TryGetMethod(request, out var method) || string.IsNullOrWhiteSpace(method))
-            return McpJsonRpc.CreateError(McpJsonRpc.GetId(request), McpJsonRpc.InvalidParams, "Missing JSON-RPC method.");
+            return McpJsonRpc.CreateError(McpJsonRpc.GetId(request), RpcErrorCode.InvalidParams, "Missing JSON-RPC method.");
 
         var isNotification = !McpJsonRpc.HasId(request);
         var id = McpJsonRpc.GetId(request);
@@ -52,16 +59,16 @@ public sealed class McpHandler : IMcpHandler
         {
             JsonObject? response = method switch
             {
-                McpMethods.Initialize or McpMethods.Initialized => RejectLegacyHandshake(id, method),
-                McpMethods.ServerDiscover => HandleServerDiscover(id),
-                McpMethods.Ping => HandlePing(id, parameters),
-                McpMethods.ToolsList => HandleToolsList(id, parameters),
-                McpMethods.ToolsCall => await HandleToolsCallAsync(id, parameters, cancellationToken).ConfigureAwait(false),
-                McpMethods.ResourcesList => HandleResourcesList(id, parameters),
-                McpMethods.ResourcesTemplatesList => HandleResourceTemplatesList(id, parameters),
-                McpMethods.ResourcesRead => await HandleResourcesReadAsync(id, parameters, cancellationToken).ConfigureAwait(false),
+                RequestMethods.Initialize or NotificationMethods.InitializedNotification => RejectLegacyHandshake(id, method),
+                RequestMethods.ServerDiscover => HandleServerDiscover(id),
+                RequestMethods.Ping => HandlePing(id, parameters),
+                RequestMethods.ToolsList => HandleToolsList(id, parameters),
+                RequestMethods.ToolsCall => await HandleToolsCallAsync(id, parameters, cancellationToken).ConfigureAwait(false),
+                RequestMethods.ResourcesList => HandleResourcesList(id, parameters),
+                RequestMethods.ResourcesTemplatesList => HandleResourceTemplatesList(id, parameters),
+                RequestMethods.ResourcesRead => await HandleResourcesReadAsync(id, parameters, cancellationToken).ConfigureAwait(false),
                 _ when isNotification => null,
-                _ => McpJsonRpc.CreateError(id, McpJsonRpc.MethodNotFound, $"Method not found: '{method}'."),
+                _ => McpJsonRpc.CreateError(id, RpcErrorCode.MethodNotFound, $"Method not found: '{method}'."),
             };
 
             return response;
@@ -73,15 +80,15 @@ public sealed class McpHandler : IMcpHandler
         catch (Exception ex)
         {
             _logger.LogError(ex, "MCP handler failed for method '{Method}'", method);
-            return McpJsonRpc.CreateError(id, McpJsonRpc.InternalError, ex.Message);
+            return McpJsonRpc.CreateError(id, RpcErrorCode.InternalError, ex.Message);
         }
     }
 
     private static JsonObject RejectLegacyHandshake(JsonNode? id, string method) =>
         McpJsonRpc.CreateError(
             id,
-            McpJsonRpc.MethodNotFound,
-            $"Method '{method}' is not available on protocol {McpSpecKeys.ProtocolVersions.Current}. Use '{McpMethods.ServerDiscover}' and per-request metadata.");
+            RpcErrorCode.MethodNotFound,
+            $"Method '{method}' is not available on protocol {McpSpecKeys.ProtocolVersions.Current}. Use '{RequestMethods.ServerDiscover}' and per-request metadata.");
 
     private JsonObject HandleServerDiscover(JsonNode? id) =>
         McpJsonRpc.CreateSuccess(id, CreateDiscoverResult());
@@ -123,7 +130,8 @@ public sealed class McpHandler : IMcpHandler
             return error;
 
         _catalogStore.EnsureLoaded();
-        return McpJsonRpc.CreateSuccess(id, CatalogListEncoder.Tools(_catalogStore.ToolDescriptors));
+        var result = new ListToolsResult { Tools = _catalogStore.GetToolDescriptors() };
+        return McpJsonRpc.CreateSuccess(id, SerializeResult(result));
     }
 
     private async Task<JsonObject> HandleToolsCallAsync(JsonNode? id, JsonObject? parameters, CancellationToken cancellationToken)
@@ -133,13 +141,14 @@ public sealed class McpHandler : IMcpHandler
 
         var toolName = parameters?[ToolsKeys.Name]?.GetValue<string>();
         if (string.IsNullOrWhiteSpace(toolName))
-            return McpJsonRpc.CreateError(id, McpJsonRpc.InvalidParams, "Tool name is required.");
+            return McpJsonRpc.CreateError(id, RpcErrorCode.InvalidParams, "Tool name is required.");
 
         _catalogStore.EnsureLoaded();
         if (!_catalogStore.TryGetTool(null, toolName, out var registered) || registered is null)
-            return McpJsonRpc.CreateError(id, McpJsonRpc.InvalidParams, $"Unknown tool: '{toolName}'.");
+            return McpJsonRpc.CreateError(id, RpcErrorCode.InvalidParams, $"Unknown tool: '{toolName}'.");
 
         var invocationRequest = InvocationRequestReader.FromWire(parameters);
+        invocationRequest.Name = toolName!;
 
         var invocation = new McpInvocation { ExecutionState = ExecutionState.Queued };
         using var scope = _executionTracker.BeginExecution(toolName!);
@@ -202,7 +211,8 @@ public sealed class McpHandler : IMcpHandler
             return error;
 
         _catalogStore.EnsureLoaded();
-        return McpJsonRpc.CreateSuccess(id, CatalogListEncoder.Resources(_catalogStore.ResourceDescriptors));
+        var result = new ListResourcesResult { Resources = _catalogStore.GetResourceDescriptors() };
+        return McpJsonRpc.CreateSuccess(id, SerializeResult(result));
     }
 
     private JsonObject HandleResourceTemplatesList(JsonNode? id, JsonObject? parameters)
@@ -211,7 +221,8 @@ public sealed class McpHandler : IMcpHandler
             return error;
 
         _catalogStore.EnsureLoaded();
-        return McpJsonRpc.CreateSuccess(id, CatalogListEncoder.ResourceTemplates(_catalogStore.ResourceTemplateDescriptors));
+        var result = new ListResourceTemplatesResult { ResourceTemplates = _catalogStore.GetResourceTemplateDescriptors() };
+        return McpJsonRpc.CreateSuccess(id, SerializeResult(result));
     }
 
     private async Task<JsonObject> HandleResourcesReadAsync(JsonNode? id, JsonObject? parameters, CancellationToken cancellationToken)
@@ -221,11 +232,11 @@ public sealed class McpHandler : IMcpHandler
 
         var uri = parameters?[ResourcesKeys.Uri]?.GetValue<string>();
         if (string.IsNullOrWhiteSpace(uri))
-            return McpJsonRpc.CreateError(id, McpJsonRpc.InvalidParams, "Resource URI is required.");
+            return McpJsonRpc.CreateError(id, RpcErrorCode.InvalidParams, "Resource URI is required.");
 
         _catalogStore.EnsureLoaded();
         if (!_catalogStore.TryResolveResourceByUri(uri!, out var registered) || registered is null)
-            return McpJsonRpc.CreateError(id, McpJsonRpc.InvalidParams, $"Unknown resource: '{uri}'.");
+            return McpJsonRpc.CreateError(id, RpcErrorCode.InvalidParams, $"Unknown resource: '{uri}'.");
 
         ExecutionGuardContext.Mode = ExecutionGuardMode.Suppress;
         try
@@ -233,12 +244,12 @@ public sealed class McpHandler : IMcpHandler
             var result = await _hostContext
                 .ExecuteAsync(() => _dispatcher.ReadResource(registered, uri!, cancellationToken), cancellationToken)
                 .ConfigureAwait(false);
-            return McpJsonRpc.CreateSuccess(id, ReadResourceEncoder.ToNode(result));
+            return McpJsonRpc.CreateSuccess(id, SerializeResult(result));
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "resources/read failed for '{Uri}'", uri);
-            return McpJsonRpc.CreateError(id, McpJsonRpc.InternalError, ex.Message);
+            return McpJsonRpc.CreateError(id, RpcErrorCode.InternalError, ex.Message);
         }
     }
 
@@ -252,13 +263,13 @@ public sealed class McpHandler : IMcpHandler
         {
             return McpJsonRpc.CreateError(
                 id,
-                McpJsonRpc.InvalidParams,
-                $"Request params must include _meta/{McpSpecKeys.Meta.ProtocolVersion}.");
+                RpcErrorCode.InvalidParams,
+                $"Request params must include _meta/{MetaKeys.ProtocolVersion}.");
         }
 
         return McpJsonRpc.CreateError(
             id,
-            McpJsonRpc.UnsupportedProtocolVersion,
+            RpcErrorCode.UnsupportedProtocolVersion,
             $"Unsupported protocol version '{version}'.",
             new JsonObject
             {
@@ -266,4 +277,7 @@ public sealed class McpHandler : IMcpHandler
                 ["supported"] = new JsonArray(McpSpecKeys.ProtocolVersions.Current),
             });
     }
+
+    private static JsonNode SerializeResult<T>(T result) =>
+        JsonSerializer.SerializeToNode(result, McpJsonUtilities.DefaultOptions)!;
 }

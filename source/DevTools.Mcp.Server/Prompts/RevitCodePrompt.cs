@@ -7,7 +7,7 @@ namespace DevTools.Mcp.Server.Prompts;
 /// <summary>Daemon-owned fixed prompt for Revit IExternalCommand generation.</summary>
 public static class RevitCodePrompt
 {
-    public const string Name = "revit_code";
+    private const string Name = "revit_code";
 
     public static McpServerPrompt Create() =>
         McpServerPrompt.Create(Get, new McpServerPromptCreateOptions

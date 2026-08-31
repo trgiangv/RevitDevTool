@@ -192,7 +192,6 @@ internal static class McpToolInvoke
 internal sealed class McpSdkHostBroker(McpSdkHostSession session) : IHostBroker
 {
     public IConnectedHostCatalog Catalog { get; } = new ConnectedHostCatalog();
-    public string MachineId => "test-machine";
     public HostKey? RequestedHostKey { get; private set; }
     public event Action? Changed { add { } remove { } }
 
@@ -218,16 +217,9 @@ internal sealed class McpSdkHostSession(int pid, McpSdkCatalogOptions options) :
 
   public HostKey Key { get; } = new("test-machine", pid);
   public bool IsConnected => true;
-  public int CallCount { get; private set; }
   public int PassthroughCount { get; private set; }
   public int ReadCount { get; private set; }
   public int TemplateReadCount { get; private set; }
-
-  public Task<CallToolResult> CallToolAsync(string toolName, IDictionary<string, JsonElement>? arguments = null, CancellationToken ct = default)
-  {
-    CallCount++;
-    return Task.FromResult(BuildToolResult(toolName));
-  }
 
   public Task<HostToolCallOutcome> CallToolPassthroughAsync(CallToolRequestParams parameters, CancellationToken ct = default)
   {

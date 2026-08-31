@@ -8,6 +8,7 @@ using DevTools.Mcp.Core.Utils;
 using DevTools.Settings;
 using DevTools.Settings.Configs;
 using Microsoft.Extensions.Logging.Abstractions;
+using ModelContextProtocol.Protocol;
 using Moq;
 
 namespace DevTools.Mcp.Tests.Harness;
@@ -63,7 +64,7 @@ internal static class McpHostTestHarness
         dispatcher
             .Setup(d => d.DispatchToolAsync(
                 It.IsAny<McpRegisteredTool>(),
-                It.IsAny<McpInvocationRequest>(),
+                It.IsAny<CallToolRequestParams>(),
                 It.IsAny<IHostContextExecutor>(),
                 It.IsAny<CancellationToken>()))
             .ReturnsAsync(McpResult<McpInvocationResponse>.Success(new McpInvocationResponse
@@ -85,7 +86,7 @@ internal static class McpHostTestHarness
     public static McpRegisteredTool CreateRegisteredTool(string name, string? description = null) => new()
     {
         Id = name,
-        Descriptor = new McpToolDescriptor
+        Descriptor = new Tool
         {
             Name = name,
             Description = description ?? $"{name} description",
@@ -99,7 +100,7 @@ internal static class McpHostTestHarness
         parameters ??= new JsonObject();
         parameters[McpSpecKeys.Meta.Key] = new JsonObject
         {
-            [McpSpecKeys.Meta.ProtocolVersion] = McpSpecKeys.ProtocolVersions.Current,
+            [MetaKeys.ProtocolVersion] = McpSpecKeys.ProtocolVersions.Current,
         };
         return parameters;
     }
@@ -108,7 +109,7 @@ internal static class McpHostTestHarness
     {
         ["jsonrpc"] = "2.0",
         ["id"] = id,
-        ["method"] = McpSpecKeys.Methods.ServerDiscover,
+        ["method"] = RequestMethods.ServerDiscover,
         ["params"] = new JsonObject(),
     };
 

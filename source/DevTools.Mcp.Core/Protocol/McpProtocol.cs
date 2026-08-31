@@ -1,4 +1,5 @@
 using System.Text.Json.Nodes;
+using ModelContextProtocol.Protocol;
 
 namespace DevTools.Mcp.Core.Protocol;
 
@@ -10,7 +11,7 @@ public static class McpProtocol
         if (parameters?[McpSpecKeys.Meta.Key] is not JsonObject meta)
             return null;
 
-        return meta[McpSpecKeys.Meta.ProtocolVersion]?.GetValue<string>();
+        return meta[MetaKeys.ProtocolVersion]?.GetValue<string>();
     }
 
     public static bool IsCurrent(string? protocolVersion) =>
@@ -19,10 +20,9 @@ public static class McpProtocol
     /// <summary>
     /// Ensures per-request <c>_meta/io.modelcontextprotocol/protocolVersion</c> is set for host wire calls.
     /// </summary>
-    public static void EnsureCurrentProtocolMeta(ModelContextProtocol.Protocol.RequestParams parameters)
+    public static void EnsureCurrentProtocolMeta(RequestParams parameters)
     {
         parameters.Meta ??= new JsonObject();
-        if (parameters.Meta[McpSpecKeys.Meta.ProtocolVersion] is null)
-            parameters.Meta[McpSpecKeys.Meta.ProtocolVersion] = McpSpecKeys.ProtocolVersions.Current;
+        parameters.Meta[MetaKeys.ProtocolVersion] ??= McpSpecKeys.ProtocolVersions.Current;
     }
 }

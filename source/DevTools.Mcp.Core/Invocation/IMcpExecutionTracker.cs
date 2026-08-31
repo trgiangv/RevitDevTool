@@ -1,4 +1,5 @@
-namespace DevTools.Mcp.Core;
+using DevTools.Mcp.Core.Results;
+namespace DevTools.Mcp.Core.Invocation;
 
 public interface IMcpExecutionTracker
 {

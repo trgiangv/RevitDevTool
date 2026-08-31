@@ -7,7 +7,7 @@ namespace DevTools.Mcp.Server.Prompts;
 /// <summary>Daemon-owned fixed prompt for AutoCAD .NET command generation.</summary>
 public static class AcadCodePrompt
 {
-    public const string Name = "acad_code";
+    private const string Name = "acad_code";
 
     public static McpServerPrompt Create() =>
         McpServerPrompt.Create(Get, new McpServerPromptCreateOptions

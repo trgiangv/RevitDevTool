@@ -1,4 +1,5 @@
 using System.Text.Json;
+using System.Text.Json.Nodes;
 using DevTools.Mcp.Core.Protocol;
 using ModelContextProtocol;
 using ModelContextProtocol.Protocol;
@@ -8,26 +9,26 @@ namespace DevTools.Mcp.Tests;
 public sealed class CatalogListEncoderTests
 {
     [Fact]
-    public void Tools_WritesToolDescriptors()
+    public void ListToolsResult_SerializesToolDescriptors()
     {
-        var tools = new[]
+        var tools = new List<Tool>
         {
-            new McpToolDescriptor
+            new()
             {
                 Name = "ping",
                 Title = "Ping",
                 Description = "Health check",
                 InputSchema = JsonSerializer.SerializeToElement(new { type = "object" }),
-                Annotations = new McpToolAnnotations
+                Annotations = new ToolAnnotations
                 {
-                    ReadOnly = true,
-                    Idempotent = true,
+                    ReadOnlyHint = true,
+                    IdempotentHint = true,
                     Title = "Ping",
                 },
             },
         };
 
-        var json = CatalogListEncoder.Tools(tools).AsObject();
+        var json = JsonSerializer.SerializeToNode(new ListToolsResult { Tools = tools }, McpJsonUtilities.DefaultOptions)!.AsObject();
         var item = json["tools"]!.AsArray()[0]!.AsObject();
 
         Assert.Equal("ping", item["name"]!.GetValue<string>());
@@ -38,22 +39,22 @@ public sealed class CatalogListEncoderTests
     }
 
     [Fact]
-    public void Resources_WritesResourceDescriptors()
+    public void ListResourcesResult_SerializesResourceDescriptors()
     {
-        var resources = new[]
+        var resources = new List<Resource>
         {
-            new McpResourceDescriptor
+            new()
             {
                 Uri = "sample://demo/status",
                 Name = "demo_status",
                 Title = "Demo Status",
                 MimeType = "application/json",
                 Size = 128,
-                Annotations = new McpResourceAnnotations { Priority = 0.9 },
+                Annotations = new Annotations { Priority = 0.9f },
             },
         };
 
-        var json = CatalogListEncoder.Resources(resources).AsObject();
+        var json = JsonSerializer.SerializeToNode(new ListResourcesResult { Resources = resources }, McpJsonUtilities.DefaultOptions)!.AsObject();
         var item = json["resources"]!.AsArray()[0]!.AsObject();
 
         Assert.Equal("sample://demo/status", item["uri"]!.GetValue<string>());
@@ -77,13 +78,14 @@ public sealed class CatalogListEncoderTests
                 Title = "Get Status",
             },
         };
-        var descriptor = DescriptorFactory.FromTool(sdk);
 
         var sdkJson = JsonSerializer.Serialize(sdk, McpJsonUtilities.DefaultOptions);
-        var json = CatalogListEncoder.Tool(descriptor).ToJsonString();
+        var listJson = JsonSerializer.Serialize(new ListToolsResult { Tools = [sdk] }, McpJsonUtilities.DefaultOptions);
+        using var listDoc = JsonDocument.Parse(listJson);
+        var coreJson = listDoc.RootElement.GetProperty("tools")[0].GetRawText();
 
         using var sdkDoc = JsonDocument.Parse(sdkJson);
-        using var coreDoc = JsonDocument.Parse(json);
+        using var coreDoc = JsonDocument.Parse(coreJson);
         Assert.Equal(
             sdkDoc.RootElement.GetProperty("name").GetString(),
             coreDoc.RootElement.GetProperty("name").GetString());
@@ -104,13 +106,14 @@ public sealed class CatalogListEncoderTests
             Size = 64,
             Annotations = new Annotations { Priority = 0.5f },
         };
-        var descriptor = DescriptorFactory.FromResource(sdk);
 
         var sdkJson = JsonSerializer.Serialize(sdk, McpJsonUtilities.DefaultOptions);
-        var json = CatalogListEncoder.Resource(descriptor).ToJsonString();
+        var listJson = JsonSerializer.Serialize(new ListResourcesResult { Resources = [sdk] }, McpJsonUtilities.DefaultOptions);
+        using var listDoc = JsonDocument.Parse(listJson);
+        var coreJson = listDoc.RootElement.GetProperty("resources")[0].GetRawText();
 
         using var sdkDoc = JsonDocument.Parse(sdkJson);
-        using var coreDoc = JsonDocument.Parse(json);
+        using var coreDoc = JsonDocument.Parse(coreJson);
         Assert.Equal(
             sdkDoc.RootElement.GetProperty("uri").GetString(),
             coreDoc.RootElement.GetProperty("uri").GetString());
@@ -118,5 +121,30 @@ public sealed class CatalogListEncoderTests
             sdkDoc.RootElement.GetProperty("annotations").GetProperty("priority").GetDouble(),
             coreDoc.RootElement.GetProperty("annotations").GetProperty("priority").GetDouble(),
             3);
+    }
+
+    [Fact]
+    public void CoerceInputSchema_InvalidSchema_FallsBackToDefaultObject()
+    {
+        var invalid = JsonSerializer.SerializeToElement(new { type = "string" });
+        var coerced = DescriptorFactory.CoerceInputSchema(invalid);
+
+        Assert.Equal(JsonValueKind.Object, coerced.ValueKind);
+        Assert.Equal("object", coerced.GetProperty("type").GetString());
+    }
+
+    [Fact]
+    public void NormalizeTool_InvalidInputSchema_DoesNotThrow()
+    {
+        var tool = new Tool
+        {
+            Name = "safe_tool",
+            InputSchema = DescriptorFactory.CoerceInputSchema(JsonSerializer.SerializeToElement(new { type = "array" })),
+        };
+
+        var normalized = DescriptorFactory.NormalizeTool(tool);
+
+        Assert.Equal("safe_tool", normalized.Name);
+        Assert.Equal("object", normalized.InputSchema.GetProperty("type").GetString());
     }
 }

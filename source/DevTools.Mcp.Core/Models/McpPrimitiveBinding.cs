@@ -1,6 +1,6 @@
 using DevTools.Execution.Abstractions;
-
-namespace DevTools.Mcp.Core;
+// ReSharper disable RedundantSuppressNullableWarningExpression
+namespace DevTools.Mcp.Core.Models;
 
 public sealed record McpPrimitiveBinding
 {

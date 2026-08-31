@@ -1,4 +1,7 @@
+using DevTools.Mcp.Core.Protocol;
+
 namespace DevTools.Mcp.Catalog.Discovery;
+
 using JsonTypes = McpSpecKeys.JsonSchema.Types;
 
 /// <summary>

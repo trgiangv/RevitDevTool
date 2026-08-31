@@ -1,14 +1,13 @@
-using DevTools.Mcp.Core.Protocol;
-
-namespace DevTools.Mcp.Core;
+using ModelContextProtocol.Protocol;
+namespace DevTools.Mcp.Core.Models;
 
 public sealed record McpRegisteredResource
 {
     public required string Id { get; init; }
 
-    public McpResourceDescriptor? Descriptor { get; init; }
+    public Resource? Descriptor { get; init; }
 
-    public McpResourceTemplateDescriptor? TemplateDescriptor { get; init; }
+    public ResourceTemplate? TemplateDescriptor { get; init; }
 
     public required McpPrimitiveBinding Binding { get; init; }
 

@@ -1,6 +1,10 @@
 using System.Text.Json;
+using System.Text.Json.Nodes;
 using CliWrap;
 using CliWrap.Buffered;
+using DevTools.Execution.Abstractions;
+using DevTools.Mcp.Core.Models;
+using DevTools.Mcp.Core.Protocol;
 using Microsoft.Extensions.Logging;
 using ModelContextProtocol;
 using ModelContextProtocol.Protocol;
@@ -137,7 +141,7 @@ public sealed class PythonToolsetParser(ILogger<PythonToolsetParser> logger)
             e => e.Binding,
             (_, protocol, binding) =>
             {
-                var protocolTool = DeserializeSdkType<Tool>(protocol);
+                var protocolTool = TryDeserializeTool(protocol);
                 if (protocolTool is null) return null;
 
                 protocolTool.Title ??= protocolTool.Annotations?.Title;
@@ -146,7 +150,7 @@ public sealed class PythonToolsetParser(ILogger<PythonToolsetParser> logger)
                 return new McpRegisteredTool
                 {
                     Id = id,
-                    Descriptor = DescriptorFactory.FromTool(protocolTool),
+                    Descriptor = protocolTool,
                     Binding = binding,
                 };
             });
@@ -173,15 +177,49 @@ public sealed class PythonToolsetParser(ILogger<PythonToolsetParser> logger)
                 return new McpRegisteredResource
                 {
                     Id = id,
-                    Descriptor = protocolResource is not null
-                        ? DescriptorFactory.FromResource(protocolResource)
-                        : null,
-                    TemplateDescriptor = protocolTemplate is not null
-                        ? DescriptorFactory.FromTemplate(protocolTemplate)
-                        : null,
+                    Descriptor = protocolResource,
+                    TemplateDescriptor = protocolTemplate,
                     Binding = binding,
                 };
             });
+    }
+
+    private Tool? TryDeserializeTool(JsonElement protocol)
+    {
+        Tool? tool;
+        try
+        {
+            tool = DeserializeSdkType<Tool>(protocol);
+        }
+        catch (JsonException ex)
+        {
+            logger.ZLogWarning($"Skipping tool with invalid protocol JSON: {ex.Message}");
+            return null;
+        }
+        catch (ArgumentException)
+        {
+            tool = DeserializeToolWithDefaultInputSchema(protocol);
+        }
+
+        if (tool is null || string.IsNullOrWhiteSpace(tool.Name))
+            return null;
+
+        return DescriptorFactory.NormalizeTool(tool);
+    }
+
+    private Tool? DeserializeToolWithDefaultInputSchema(JsonElement protocol)
+    {
+        try
+        {
+            var node = JsonNode.Parse(protocol.GetRawText())!.AsObject();
+            node["inputSchema"] = JsonNode.Parse("""{"type":"object"}""");
+            return JsonSerializer.Deserialize<Tool>(node.ToJsonString(), sdkJsonOptions);
+        }
+        catch (Exception ex)
+        {
+            logger.ZLogWarning($"Skipping tool after input schema coercion failed: {ex.Message}");
+            return null;
+        }
     }
 
     private McpPrimitiveBinding BuildBinding(string toolsetDirectory, PythonBindingInfo info)

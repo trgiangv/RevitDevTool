@@ -2,9 +2,9 @@ using System.Text.Json;
 using System.Windows;
 using DevTools.Daemon.Auth;
 using DevTools.Daemon.Contracts;
+using DevTools.Mcp.Core.Sessions;
 using DevTools.Mcp.Server.Utils;
 using DevTools.Daemon.Tray;
-using DevTools.Mcp.Core;
 using H.NotifyIcon;
 
 namespace DevTools.Daemon.Hosting;

@@ -1,5 +1,6 @@
 using System.Collections.Concurrent;
-using DevTools.Mcp.Core;
+using DevTools.Mcp.Core.Sessions;
+// ReSharper disable RedundantSuppressNullableWarningExpression
 
 namespace DevTools.Mcp.Client;
 

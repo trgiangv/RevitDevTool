@@ -1,4 +1,4 @@
-using DevTools.Mcp.Core;
+using DevTools.Mcp.Core.Sessions;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace DevTools.Mcp.Client;

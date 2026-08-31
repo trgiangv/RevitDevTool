@@ -1,74 +1,21 @@
 using System.Text.Json;
 using System.Text.Json.Nodes;
-using ToolsKeys = DevTools.Mcp.Core.Protocol.McpSpecKeys.Tools;
+using ModelContextProtocol;
+using ModelContextProtocol.Protocol;
 
-namespace DevTools.Mcp.Core.Protocol;
+namespace DevTools.Mcp.Core.Protocol.Invocation;
 
-/// <summary>Reads <c>tools/call</c> wire params into <see cref="McpInvocationRequest"/>.</summary>
+/// <summary>Reads <c>tools/call</c> wire params into SDK <see cref="CallToolRequestParams"/>.</summary>
 public static class InvocationRequestReader
 {
-    private static readonly JsonSerializerOptions JsonOptions = new()
+    private static readonly JsonSerializerOptions JsonOptions = McpJsonUtilities.DefaultOptions;
+
+    public static CallToolRequestParams FromWire(JsonObject? parameters)
     {
-        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-    };
+        if (parameters is null || parameters.Count == 0)
+            return new CallToolRequestParams { Name = string.Empty };
 
-    public static McpInvocationRequest FromWire(JsonObject? parameters) =>
-        new()
-        {
-            Arguments = ReadArguments(parameters),
-            InputResponses = ReadInputResponses(parameters),
-            RequestState = ReadRequestState(parameters),
-            ProgressToken = ReadProgressToken(parameters),
-            Meta = ReadMeta(parameters),
-        };
-
-    private static JsonElement? ReadArguments(JsonObject? parameters)
-    {
-        if (parameters?[ToolsKeys.Arguments] is not { } argumentsNode)
-            return null;
-
-        return JsonSerializer.SerializeToElement(argumentsNode, JsonOptions);
+        return JsonSerializer.Deserialize<CallToolRequestParams>(parameters.ToJsonString(), JsonOptions)
+            ?? new CallToolRequestParams { Name = string.Empty };
     }
-
-    private static IReadOnlyDictionary<string, JsonElement>? ReadInputResponses(JsonObject? parameters)
-    {
-        if (parameters?[ToolsKeys.InputResponses] is not JsonObject inputResponsesObject)
-            return null;
-
-        var responses = new Dictionary<string, JsonElement>(StringComparer.Ordinal);
-        foreach (var property in inputResponsesObject)
-        {
-            responses[property.Key] = property.Value is null
-                ? default
-                : JsonSerializer.SerializeToElement(property.Value, JsonOptions);
-        }
-
-        return responses;
-    }
-
-    private static JsonElement? ReadRequestState(JsonObject? parameters)
-    {
-        if (parameters?[ToolsKeys.RequestState] is not { } requestStateNode)
-            return null;
-
-        return JsonSerializer.SerializeToElement(requestStateNode, JsonOptions);
-    }
-
-    private static long? ReadProgressToken(JsonObject? parameters)
-    {
-        if (parameters?[ToolsKeys.ProgressToken] is JsonValue progressValue &&
-            progressValue.TryGetValue(out long parsedProgress))
-        {
-            return parsedProgress;
-        }
-
-        return null;
-    }
-
-    private static JsonObject? ReadMeta(JsonObject? parameters) =>
-        parameters?[ToolsKeys.Meta] switch
-        {
-            JsonObject metaObject => metaObject.DeepClone().AsObject(),
-            _ => null,
-        };
 }

@@ -1,6 +1,6 @@
 using System.ComponentModel;
 using DevTools.Mcp.Client;
-using DevTools.Mcp.Core;
+using DevTools.Mcp.Core.Sessions;
 using DevTools.Mcp.Server.Contracts;
 using DevTools.Mcp.Server.Utils;
 using ModelContextProtocol.Protocol;

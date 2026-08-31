@@ -1,10 +1,10 @@
 using System.Text.Json;
 using System.Text.Json.Nodes;
+using DevTools.Mcp.Core.Invocation;
 using ContentKeys = DevTools.Mcp.Core.Protocol.McpSpecKeys.Content;
 using BlockTypes = DevTools.Mcp.Core.Protocol.McpSpecKeys.ContentBlockTypes;
 using ResourcesKeys = DevTools.Mcp.Core.Protocol.McpSpecKeys.Resources;
 using ToolResultKeys = DevTools.Mcp.Core.Protocol.McpSpecKeys.ToolResult;
-using ToolsKeys = DevTools.Mcp.Core.Protocol.McpSpecKeys.Tools;
 
 namespace DevTools.Mcp.Core.Protocol;
 
@@ -35,7 +35,7 @@ public static class InvocationResponseEncoder
             result[ToolResultKeys.StructuredContent] = JsonNode.Parse(structured.GetRawText());
 
         if (safe.Meta is not null)
-            result[ToolsKeys.Meta] = safe.Meta.DeepClone();
+            result[McpSpecKeys.Meta.Key] = safe.Meta.DeepClone();
 
         return result;
     }
@@ -127,7 +127,7 @@ public static class InvocationResponseEncoder
             [ResourcesKeys.MimeType] = resource.MimeType,
         };
         if (resource.ResourceMeta is not null)
-            obj[ToolsKeys.Meta] = resource.ResourceMeta.DeepClone();
+            obj[McpSpecKeys.Meta.Key] = resource.ResourceMeta.DeepClone();
         return obj;
     }
 
@@ -140,7 +140,7 @@ public static class InvocationResponseEncoder
             [ResourcesKeys.MimeType] = resource.MimeType,
         };
         if (resource.ResourceMeta is not null)
-            obj[ToolsKeys.Meta] = resource.ResourceMeta.DeepClone();
+            obj[McpSpecKeys.Meta.Key] = resource.ResourceMeta.DeepClone();
         return obj;
     }
 
@@ -150,6 +150,6 @@ public static class InvocationResponseEncoder
             block["annotations"] = JsonSerializer.SerializeToNode(content.Annotations);
 
         if (content.Meta is not null)
-            block[ToolsKeys.Meta] = content.Meta.DeepClone();
+            block[McpSpecKeys.Meta.Key] = content.Meta.DeepClone();
     }
 }

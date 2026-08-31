@@ -2,6 +2,8 @@ using System.Collections;
 using System.Reflection;
 using System.Text.Json;
 using System.Text.Json.Nodes;
+using DevTools.Mcp.Core.Invocation;
+using DevTools.Mcp.Core.Protocol;
 using ModelContextProtocol;
 using ModelContextProtocol.Protocol;
 using ToolResultKeys = DevTools.Mcp.Core.Protocol.McpSpecKeys.ToolResult;

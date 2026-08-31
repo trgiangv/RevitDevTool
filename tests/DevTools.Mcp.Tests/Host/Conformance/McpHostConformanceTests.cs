@@ -1,5 +1,8 @@
 using System.Text.Json;
 using DevTools.Mcp.Core.Protocol;
+using DevTools.Mcp.Core.Protocol.Invocation;
+using ModelContextProtocol;
+using ModelContextProtocol.Protocol;
 
 namespace DevTools.Mcp.Tests.Host.Conformance;
 
@@ -9,15 +12,20 @@ public sealed class McpHostConformanceTests
     [Fact]
     public void ToolsList_MatchesGoldenEnvelope()
     {
-        var json = CatalogListEncoder.Tools(
-        [
-            new McpToolDescriptor
+        var json = JsonSerializer.SerializeToNode(
+            new ListToolsResult
             {
-                Name = "ping",
-                Title = "Ping",
-                InputSchema = JsonSerializer.SerializeToElement(new { type = "object", properties = new { } }),
+                Tools =
+                [
+                    new Tool
+                    {
+                        Name = "ping",
+                        Title = "Ping",
+                        InputSchema = JsonSerializer.SerializeToElement(new { type = "object", properties = new { } }),
+                    },
+                ],
             },
-        ]);
+            McpJsonUtilities.DefaultOptions)!;
 
         Assert.Equal(
             """
@@ -29,21 +37,26 @@ public sealed class McpHostConformanceTests
     [Fact]
     public void ResourcesList_MatchesGoldenEnvelope()
     {
-        var json = CatalogListEncoder.Resources(
-        [
-            new McpResourceDescriptor
+        var json = JsonSerializer.SerializeToNode(
+            new ListResourcesResult
             {
-                Uri = "sample://status",
-                Name = "status",
-                MimeType = "text/plain",
+                Resources =
+                [
+                    new Resource
+                    {
+                        Uri = "sample://status",
+                        Name = "status",
+                        MimeType = "text/plain",
+                    },
+                ],
             },
-        ]);
+            McpJsonUtilities.DefaultOptions)!;
 
-        Assert.Equal(
-            """
-            {"resources":[{"uri":"sample://status","name":"status","mimeType":"text/plain"}]}
-            """.Trim(),
-            json.ToJsonString());
+        using var doc = JsonDocument.Parse(json.ToJsonString());
+        var item = doc.RootElement.GetProperty("resources")[0];
+        Assert.Equal("sample://status", item.GetProperty("uri").GetString());
+        Assert.Equal("status", item.GetProperty("name").GetString());
+        Assert.Equal("text/plain", item.GetProperty("mimeType").GetString());
     }
 
     [Fact]
@@ -62,13 +75,20 @@ public sealed class McpHostConformanceTests
     [Fact]
     public void ResourceRead_MatchesGoldenTextContent()
     {
-        var json = ReadResourceEncoder.ToNode(new McpReadResourceResponse
-        {
-            Contents =
-            [
-                new McpReadResourceTextContent("sample://status", "ok", "text/plain"),
-            ],
-        });
+        var json = JsonSerializer.SerializeToNode(
+            new ReadResourceResult
+            {
+                Contents =
+                [
+                    new TextResourceContents
+                    {
+                        Uri = "sample://status",
+                        MimeType = "text/plain",
+                        Text = "ok",
+                    },
+                ],
+            },
+            McpJsonUtilities.DefaultOptions)!;
 
         Assert.Equal(
             """{"contents":[{"uri":"sample://status","mimeType":"text/plain","text":"ok"}]}""",
@@ -78,20 +98,25 @@ public sealed class McpHostConformanceTests
     [Fact]
     public void ResourceTemplatesList_MatchesGoldenEnvelope()
     {
-        var json = CatalogListEncoder.ResourceTemplates(
-        [
-            new McpResourceTemplateDescriptor
+        var json = JsonSerializer.SerializeToNode(
+            new ListResourceTemplatesResult
             {
-                Name = "view",
-                UriTemplate = "sample://views/{viewId}",
-                MimeType = "application/json",
+                ResourceTemplates =
+                [
+                    new ResourceTemplate
+                    {
+                        Name = "view",
+                        UriTemplate = "sample://views/{viewId}",
+                        MimeType = "application/json",
+                    },
+                ],
             },
-        ]);
+            McpJsonUtilities.DefaultOptions)!;
 
-        Assert.Equal(
-            """
-            {"resourceTemplates":[{"uriTemplate":"sample://views/{viewId}","name":"view","mimeType":"application/json"}]}
-            """.Trim(),
-            json.ToJsonString());
+        using var doc = JsonDocument.Parse(json.ToJsonString());
+        var item = doc.RootElement.GetProperty("resourceTemplates")[0];
+        Assert.Equal("sample://views/{viewId}", item.GetProperty("uriTemplate").GetString());
+        Assert.Equal("view", item.GetProperty("name").GetString());
+        Assert.Equal("application/json", item.GetProperty("mimeType").GetString());
     }
 }

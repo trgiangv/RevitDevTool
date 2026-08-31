@@ -1,5 +1,7 @@
 using System.Text.Json;
 using DevTools.Mcp.Catalog.Discovery;
+using DevTools.Mcp.Core;
+using ModelContextProtocol;
 using ModelContextProtocol.Protocol;
 
 namespace DevTools.Mcp.Tests;
@@ -57,12 +59,31 @@ public sealed class AlcInputRequiredBridgeTests
     }
 
     [Fact]
-    public void ToInputRequiredResponse_RoundTripsThroughMeta()
+    public void ToInputRequiredResponse_SetsInputRequiredField()
     {
-        var original = new InputRequiredException(requestState: "meta-round1");
+        var original = new InputRequiredException(requestState: "field-round1");
         var response = ToolsetMrtrBridge.ToInputRequiredResponse(original);
+        Assert.Equal("field-round1", response.InputRequired?.RequestState);
         Assert.True(ToolsetMrtrBridge.TryGetInputRequiredResult(response, out var restored));
-        Assert.Equal("meta-round1", restored!.RequestState);
+        Assert.Equal("field-round1", restored!.RequestState);
+        Assert.Null(response.Meta);
+    }
+
+    [Fact]
+    public void TryGetInputRequiredResult_FallsBackToLegacyMeta()
+    {
+        var inputRequired = new InputRequiredResult { RequestState = "legacy-meta" };
+        var payload = JsonSerializer.SerializeToNode(inputRequired, McpJsonUtilities.DefaultOptions);
+        var response = new McpInvocationResponse
+        {
+            Meta = new System.Text.Json.Nodes.JsonObject
+            {
+                [McpTaskExecutionMeta.Invocation.InputRequired] = payload,
+            },
+        };
+
+        Assert.True(ToolsetMrtrBridge.TryGetInputRequiredResult(response, out var restored));
+        Assert.Equal("legacy-meta", restored!.RequestState);
     }
 }
 

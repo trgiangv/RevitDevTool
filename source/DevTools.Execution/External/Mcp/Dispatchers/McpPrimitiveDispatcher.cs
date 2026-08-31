@@ -1,14 +1,14 @@
 using System.Collections.Concurrent;
 using System.IO;
 using System.Reflection;
-using System.Text.Json;
 using DevTools.Execution.Providers.Python;
 using DevTools.Mcp.Adapter.Execution;
 using DevTools.Mcp.Catalog.Bridging;
+using DevTools.Mcp.Core.Invocation;
+using DevTools.Mcp.Core.Models;
 using Microsoft.Extensions.DependencyInjection;
-using DevTools.Mcp.Core.Protocol;
+using DevTools.Mcp.Core.Results;
 using DevTools.Telemetry;
-using ModelContextProtocol;
 using ModelContextProtocol.Protocol;
 using ModelContextProtocol.Server;
 using Python.Runtime;
@@ -28,8 +28,6 @@ public sealed class McpPrimitiveDispatcher(
     IEnumerable<IBuiltInMcpResource> builtInResources,
     ITelemetry telemetry) : IMcpPrimitiveDispatcher
 {
-    private static readonly JsonSerializerOptions JsonOptions = McpJsonUtilities.DefaultOptions;
-
     private readonly ConcurrentDictionary<string, (MethodInfo Method, object? Target)> _cachedToolInvocations =
         new(StringComparer.OrdinalIgnoreCase);
     private readonly ConcurrentDictionary<string, McpServerResource> _cachedResources = new(StringComparer.OrdinalIgnoreCase);
@@ -40,7 +38,7 @@ public sealed class McpPrimitiveDispatcher(
 
     public async Task<McpResult<McpInvocationResponse>> DispatchToolAsync(
         McpRegisteredTool tool,
-        McpInvocationRequest request,
+        CallToolRequestParams request,
         IHostContextExecutor hostContext,
         CancellationToken ct = default)
     {
@@ -60,7 +58,7 @@ public sealed class McpPrimitiveDispatcher(
                     .ConfigureAwait(false),
                 ExecutionMode.CSharp => await InvokeCSharpToolAsync(tool.Descriptor.Name, request, ct)
                     .ConfigureAwait(false),
-                _ => McpResult<McpInvocationResponse>.Failure(new McpError(DevTools.Mcp.Core.McpErrorCode.ExecutionFailed,
+                _ => McpResult<McpInvocationResponse>.Failure(new McpError(McpErrorCode.ExecutionFailed,
                     $"Unknown or unsupported MCP tool execution: '{tool.Binding.SourceKind}'.", []))
             };
         }
@@ -83,19 +81,19 @@ public sealed class McpPrimitiveDispatcher(
                     new Dictionary<string, string> { [TelemetryKeys.Tag.Provider] = tool.Binding.SourceKind.ToString() });
             }
 
-            return McpResult<McpInvocationResponse>.Failure(new McpError(DevTools.Mcp.Core.McpErrorCode.ExecutionFailed, ex.Message, []));
+            return McpResult<McpInvocationResponse>.Failure(new McpError(McpErrorCode.ExecutionFailed, ex.Message, []));
         }
     }
 
     private McpResult<McpInvocationResponse> InvokeDotnetTool(
         McpRegisteredTool tool,
-        McpInvocationRequest request,
+        CallToolRequestParams request,
         CancellationToken ct)
     {
         var sdkRequest = SdkInvocationRequest.ToToolContext(tool.Descriptor.Name, request);
         var invocation = GetOrCreateToolInvocation(tool);
         if (invocation is null)
-            return McpResult<McpInvocationResponse>.Failure(new McpError(DevTools.Mcp.Core.McpErrorCode.ExecutionFailed,
+            return McpResult<McpInvocationResponse>.Failure(new McpError(McpErrorCode.ExecutionFailed,
                 $"No .NET tool method mapped for '{tool.Descriptor.Name}'.", []));
 
         try
@@ -160,12 +158,12 @@ public sealed class McpPrimitiveDispatcher(
 
     private async Task<McpResult<McpInvocationResponse>> InvokeCSharpToolAsync(
         string toolName,
-        McpInvocationRequest request,
+        CallToolRequestParams request,
         CancellationToken ct)
     {
         if (!_builtInToolIndex.TryGetValue(toolName, out var tool))
             return McpResult<McpInvocationResponse>.Failure(new McpError(
-                DevTools.Mcp.Core.McpErrorCode.ExecutionFailed, $"No C# tool registered for '{toolName}'.", []));
+                McpErrorCode.ExecutionFailed, $"No C# tool registered for '{toolName}'.", []));
 
         var sdkRequest = SdkInvocationRequest.ToToolContext(toolName, request);
         var result = await tool.ServerTool.InvokeAsync(sdkRequest, ct).ConfigureAwait(false);
@@ -176,38 +174,18 @@ public sealed class McpPrimitiveDispatcher(
 
     #region Resources
 
-    public McpReadResourceResponse ReadResource(
+    public ReadResourceResult ReadResource(
         McpRegisteredResource resource,
         string uri,
         CancellationToken ct = default)
     {
-        var result = resource.Binding.SourceKind switch
+        return resource.Binding.SourceKind switch
         {
             ExecutionMode.Dotnet => InvokeDotnetResource(resource, uri, ct),
             ExecutionMode.Python => InvokePythonResource(resource, uri),
             ExecutionMode.CSharp => InvokeCSharpResource(resource, uri),
             _ => throw new InvalidOperationException($"Unsupported resource execution source '{resource.Binding.SourceKind}'.")
         };
-        return MapReadResourceResult(result);
-    }
-
-    private static McpReadResourceResponse MapReadResourceResult(ReadResourceResult result)
-    {
-        var contents = new List<McpReadResourceContent>(result.Contents.Count);
-        foreach (var item in result.Contents)
-        {
-            switch (item)
-            {
-                case TextResourceContents text:
-                    contents.Add(new McpReadResourceTextContent(text.Uri, text.Text, text.MimeType));
-                    break;
-                case BlobResourceContents blob:
-                    contents.Add(new McpReadResourceBlobContent(blob.Uri, blob.DecodedData.ToArray(), blob.MimeType));
-                    break;
-            }
-        }
-
-        return new McpReadResourceResponse { Contents = contents };
     }
 
     private ReadResourceResult InvokeCSharpResource(McpRegisteredResource resource, string uri)
@@ -257,7 +235,7 @@ public sealed class McpPrimitiveDispatcher(
                 scope.Exec(PythonEmbedded.ToolInvokeScript);
                 return scope.Get(PythonInstances.ResultJson).As<string>();
             });
-        return JsonSerializer.Deserialize<ReadResourceResult>(resultJson, JsonOptions) ?? new ReadResourceResult();
+        return PythonResultParser.ParseReadResourceResult(resultJson);
     }
 
     #endregion

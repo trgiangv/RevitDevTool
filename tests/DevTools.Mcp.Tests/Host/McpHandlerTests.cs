@@ -47,8 +47,8 @@ public sealed class McpHandlerTests
 
         Assert.NotNull(response);
         var error = response!["error"]!.AsObject();
-        Assert.Equal(McpSpecKeys.JsonRpc.MethodNotFound, error["code"]!.GetValue<int>());
-        Assert.Contains(McpSpecKeys.Methods.ServerDiscover, error["message"]!.GetValue<string>(), StringComparison.Ordinal);
+        Assert.Equal((int)ModelContextProtocol.McpErrorCode.MethodNotFound, error["code"]!.GetValue<int>());
+        Assert.Contains(RequestMethods.ServerDiscover, error["message"]!.GetValue<string>(), StringComparison.Ordinal);
     }
 
     [Fact]
@@ -65,7 +65,7 @@ public sealed class McpHandlerTests
 
         Assert.NotNull(response);
         var error = response!["error"]!.AsObject();
-        Assert.Equal(McpSpecKeys.JsonRpc.InvalidParams, error["code"]!.GetValue<int>());
+        Assert.Equal((int)ModelContextProtocol.McpErrorCode.InvalidParams, error["code"]!.GetValue<int>());
     }
 
     [Fact]
@@ -81,14 +81,14 @@ public sealed class McpHandlerTests
             {
                 [McpSpecKeys.Meta.Key] = new JsonObject
                 {
-                    [McpSpecKeys.Meta.ProtocolVersion] = "2025-11-25",
+                    [MetaKeys.ProtocolVersion] = "2025-11-25",
                 },
             },
         }, TestContext.Current.CancellationToken);
 
         Assert.NotNull(response);
         var error = response!["error"]!.AsObject();
-        Assert.Equal(McpSpecKeys.JsonRpc.UnsupportedProtocolVersion, error["code"]!.GetValue<int>());
+        Assert.Equal((int)ModelContextProtocol.McpErrorCode.UnsupportedProtocolVersion, error["code"]!.GetValue<int>());
         Assert.Equal("2025-11-25", error["data"]!["requested"]!.GetValue<string>());
     }
 
@@ -130,7 +130,7 @@ public sealed class McpHandlerTests
 
         dispatcher.Verify(d => d.DispatchToolAsync(
             It.Is<McpRegisteredTool>(tool => tool.Descriptor.Name == "ping"),
-            It.IsAny<McpInvocationRequest>(),
+            It.IsAny<CallToolRequestParams>(),
             It.IsAny<IHostContextExecutor>(),
             It.IsAny<CancellationToken>()), Times.Once);
     }
@@ -146,7 +146,7 @@ public sealed class McpHandlerTests
 
         Assert.NotNull(response);
         var error = response!["error"]!.AsObject();
-        Assert.Equal(McpSpecKeys.JsonRpc.InvalidParams, error["code"]!.GetValue<int>());
+        Assert.Equal((int)ModelContextProtocol.McpErrorCode.InvalidParams, error["code"]!.GetValue<int>());
         Assert.Contains("missing_tool", error["message"]!.GetValue<string>(), StringComparison.Ordinal);
     }
 
@@ -161,6 +161,6 @@ public sealed class McpHandlerTests
 
         Assert.NotNull(response);
         var error = response!["error"]!.AsObject();
-        Assert.Equal(McpSpecKeys.JsonRpc.MethodNotFound, error["code"]!.GetValue<int>());
+        Assert.Equal((int)ModelContextProtocol.McpErrorCode.MethodNotFound, error["code"]!.GetValue<int>());
     }
 }

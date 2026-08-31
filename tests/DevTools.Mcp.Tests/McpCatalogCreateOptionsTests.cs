@@ -1,4 +1,6 @@
-using DevTools.Mcp.Core.Protocol;
+using DevTools.Mcp.Core.Models;
+using DevTools.Mcp.Catalog.Discovery;
+using ModelContextProtocol.Protocol;
 
 namespace DevTools.Mcp.Tests;
 
@@ -10,7 +12,7 @@ public sealed class McpCatalogCreateOptionsTests
         var resource = new McpRegisteredResource
         {
             Id = "revit_element",
-            TemplateDescriptor = new McpResourceTemplateDescriptor
+            TemplateDescriptor = new ResourceTemplate
             {
                 Name = "revit_element",
                 UriTemplate = "revit://element/{elementId}",
@@ -36,7 +38,7 @@ public sealed class McpCatalogCreateOptionsTests
         var tool = new McpRegisteredTool
         {
             Id = "revit_find_elements",
-            Descriptor = new McpToolDescriptor
+            Descriptor = new Tool
             {
                 Name = "revit_find_elements",
                 Title = "Find Elements",

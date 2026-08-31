@@ -1,11 +1,10 @@
 using System.Text.Json;
 using System.Text.Json.Nodes;
-using System.Text.Json.Serialization;
 using ModelContextProtocol.Protocol;
-
-namespace DevTools.Mcp.Core;
+namespace DevTools.Mcp.Core.Invocation;
 
 /// <summary>Lossless application representation of an SDK content block.</summary>
+[UsedImplicitly(ImplicitUseTargetFlags.WithMembers)]
 public abstract record McpContent
 {
     public Annotations? Annotations { get; init; }
@@ -35,10 +34,12 @@ public sealed record McpResourceLinkContent(
     string? MimeType = null,
     long? Size = null) : McpContent;
 
+[UsedImplicitly(ImplicitUseTargetFlags.WithMembers)]
 public sealed record McpInvocationResponse
 {
     public IReadOnlyList<McpContent> Content { get; init; } = [];
     public bool? IsError { get; init; }
     public JsonElement? StructuredContent { get; init; }
     public JsonObject? Meta { get; init; }
+    public InputRequiredResult? InputRequired { get; init; }
 }

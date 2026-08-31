@@ -1,26 +1,13 @@
 namespace DevTools.Mcp.Core.Protocol;
 
 /// <summary>
-/// Canonical MCP specification wire keys and protocol constants.
-/// Single source of truth for JSON property names (camelCase) per MCP spec.
+/// DevTools-owned JSON keys that the MCP C# SDK does not export as public constants.
+/// Method names, <c>_meta</c> keys, and JSON-RPC error codes come from
+/// <c>RequestMethods</c>, <c>NotificationMethods</c>, <c>MetaKeys</c>, and <c>McpErrorCode</c>.
 /// </summary>
 public static class McpSpecKeys
 {
-    /// <summary>JSON-RPC method names for MCP host handler dispatch.</summary>
-    public static class Methods
-    {
-        public const string Initialize = "initialize";
-        public const string Initialized = "notifications/initialized";
-        public const string Ping = "ping";
-        public const string ToolsList = "tools/list";
-        public const string ToolsCall = "tools/call";
-        public const string ResourcesList = "resources/list";
-        public const string ResourcesTemplatesList = "resources/templates/list";
-        public const string ResourcesRead = "resources/read";
-        public const string ServerDiscover = "server/discover";
-    }
-
-    /// <summary>JSON-RPC 2.0 envelope (<see href="https://www.jsonrpc.org/specification"/>).</summary>
+    /// <summary>JSON-RPC 2.0 envelope property names.</summary>
     public static class JsonRpc
     {
         public const string Version = "2.0";
@@ -32,22 +19,15 @@ public static class McpSpecKeys
         public const string Error = "error";
         public const string Code = "code";
         public const string Message = "message";
-
-        public const int InvalidRequest = -32600;
-        public const int MethodNotFound = -32601;
-        public const int InvalidParams = -32602;
-        public const int InternalError = -32603;
-        public const int UnsupportedProtocolVersion = -32022;
     }
 
-    /// <summary>Per-request <c>_meta</c> keys (MCP 2026-07-28, SEP-2575).</summary>
+    /// <summary>JSON-RPC <c>_meta</c> object key (SDK exports namespaced keys, not this wrapper).</summary>
     public static class Meta
     {
         public const string Key = "_meta";
-        public const string ProtocolVersion = "io.modelcontextprotocol/protocolVersion";
     }
 
-    /// <summary><c>server/discover</c> result fields (SEP-2575).</summary>
+    /// <summary><c>server/discover</c> result fields (SEP-2575). SDK <c>DiscoverResult</c> is internal-shaped; host builds JsonNode by hand.</summary>
     public static class Discover
     {
         public const string SupportedVersions = "supportedVersions";
@@ -58,18 +38,18 @@ public static class McpSpecKeys
         public const string PrivateCacheScope = "private";
     }
 
-    /// <summary>Host wire protocol version (MCP C# SDK 2.0 default).</summary>
+    /// <summary>
+    /// Host wire protocol version. SDK <c>McpProtocolVersions</c> is internal.
+    /// </summary>
     public static class ProtocolVersions
     {
         public const string Current = "2026-07-28";
     }
 
-    /// <summary><c>initialize</c> request/result fields.</summary>
+    /// <summary><c>initialize</c> / discover payload fields not covered by SDK constants.</summary>
     public static class Initialize
     {
-        public const string ProtocolVersion = "protocolVersion";
         public const string Capabilities = "capabilities";
-        public const string ClientInfo = "clientInfo";
         public const string ServerInfo = "serverInfo";
     }
 
@@ -89,24 +69,16 @@ public static class McpSpecKeys
         public const string Version = "version";
     }
 
-    /// <summary><c>tools/list</c>, <c>tools/call</c>, and tool descriptors.</summary>
+    /// <summary><c>tools/call</c> params used when building Python / JsonNode payloads.</summary>
     public static class Tools
     {
-        public const string List = "tools";
         public const string Name = "name";
-        public const string Title = "title";
-        public const string Description = "description";
-        public const string InputSchema = "inputSchema";
-        public const string OutputSchema = "outputSchema";
-        public const string Annotations = "annotations";
         public const string Arguments = "arguments";
         public const string InputResponses = "inputResponses";
         public const string RequestState = "requestState";
-        public const string Meta = "_meta";
-        public const string ProgressToken = "progressToken";
     }
 
-    /// <summary><c>tools/call</c> result shape.</summary>
+    /// <summary><c>tools/call</c> result shape, including ALC PascalCase <c>Content</c>.</summary>
     public static class ToolResult
     {
         public const string Content = "content";
@@ -132,30 +104,17 @@ public static class McpSpecKeys
         public const string ResourceLink = "resource_link";
     }
 
-    /// <summary>Icon descriptor fields on tools, resources, prompts, and resource templates.</summary>
-    public static class Icon
-    {
-        public const string List = "icons";
-        public const string Src = "src";
-        public const string MimeType = "mimeType";
-        public const string Sizes = "sizes";
-    }
-
     /// <summary>MRTR <c>resultType</c> discriminator on incomplete tool results (MCP 2026+).</summary>
     public static class ResultType
     {
         public const string Key = "resultType";
         public const string InputRequired = "input_required";
-        public const string Complete = "complete";
     }
 
-    /// <summary><c>resources/list</c>, <c>resources/read</c>, and resource descriptors.</summary>
+    /// <summary>Resource descriptor fields used when encoding content blocks by hand.</summary>
     public static class Resources
     {
-        public const string List = "resources";
-        public const string ResourceTemplates = "resourceTemplates";
         public const string Uri = "uri";
-        public const string UriTemplate = "uriTemplate";
         public const string MimeType = "mimeType";
         public const string Size = "size";
     }

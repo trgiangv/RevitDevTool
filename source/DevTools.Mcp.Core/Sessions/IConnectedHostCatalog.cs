@@ -1,4 +1,4 @@
-namespace DevTools.Mcp.Core;
+namespace DevTools.Mcp.Core.Sessions;
 
 /// <summary>Read/write index of capabilities advertised by connected host sessions.</summary>
 public interface IConnectedHostCatalog

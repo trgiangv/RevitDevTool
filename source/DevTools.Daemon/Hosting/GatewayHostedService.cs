@@ -1,7 +1,5 @@
 using DevTools.Daemon.Auth;
-using DevTools.Mcp.Server.Hosting;
 using DevTools.Mcp.Client;
-using DevTools.Mcp.Server.Hosting;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;

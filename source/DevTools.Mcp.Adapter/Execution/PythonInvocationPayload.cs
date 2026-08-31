@@ -1,10 +1,10 @@
 using System.Text.Json;
 using DevTools.Mcp.Core.Protocol;
-using ToolsKeys = DevTools.Mcp.Core.Protocol.McpSpecKeys.Tools;
+using ModelContextProtocol.Protocol;
 
 namespace DevTools.Mcp.Adapter.Execution;
 
-/// <summary>Serializes <see cref="McpInvocationRequest"/> for the embedded Python bridge.</summary>
+/// <summary>Serializes <see cref="CallToolRequestParams"/> for the embedded Python bridge.</summary>
 public static class PythonInvocationPayload
 {
     private static readonly JsonSerializerOptions JsonOptions = new()
@@ -12,7 +12,7 @@ public static class PythonInvocationPayload
         PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
     };
 
-    public static string ToJson(McpInvocationRequest? request)
+    public static string ToJson(CallToolRequestParams? request)
     {
         if (request is null)
             return "{}";
@@ -23,39 +23,29 @@ public static class PythonInvocationPayload
         return JsonSerializer.Serialize(BuildMrtrPayload(request), JsonOptions);
     }
 
-    private static bool HasMrtrFields(McpInvocationRequest request) =>
+    private static bool HasMrtrFields(CallToolRequestParams request) =>
         request.InputResponses is { Count: > 0 } ||
-        request.RequestState is { ValueKind: not JsonValueKind.Null and not JsonValueKind.Undefined };
+        !string.IsNullOrEmpty(request.RequestState);
 
-    private static string ToLegacyArgumentsJson(McpInvocationRequest request)
+    private static string ToLegacyArgumentsJson(CallToolRequestParams request)
     {
-        if (request.Arguments is not { } arguments ||
-            arguments.ValueKind is JsonValueKind.Null or JsonValueKind.Undefined)
-        {
+        if (request.Arguments is not { Count: > 0 })
             return "{}";
-        }
 
-        return arguments.ValueKind == JsonValueKind.Object
-            ? arguments.GetRawText()
-            : JsonSerializer.Serialize(arguments, JsonOptions);
+        return JsonSerializer.Serialize(request.Arguments, JsonOptions);
     }
 
-    private static Dictionary<string, object?> BuildMrtrPayload(McpInvocationRequest request)
+    private static Dictionary<string, object?> BuildMrtrPayload(CallToolRequestParams request)
     {
         var payload = new Dictionary<string, object?>();
-        if (request.Arguments is { } args &&
-            args.ValueKind is not JsonValueKind.Null and not JsonValueKind.Undefined)
-        {
-            payload[ToolsKeys.Arguments] = args.ValueKind == JsonValueKind.Object
-                ? JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(args.GetRawText(), JsonOptions)
-                : args;
-        }
+        if (request.Arguments is { Count: > 0 } arguments)
+            payload[McpSpecKeys.Tools.Arguments] = arguments;
 
         if (request.InputResponses is { Count: > 0 } inputResponses)
-            payload[ToolsKeys.InputResponses] = inputResponses;
+            payload[McpSpecKeys.Tools.InputResponses] = inputResponses;
 
-        if (request.RequestState is { ValueKind: not JsonValueKind.Null and not JsonValueKind.Undefined } requestState)
-            payload[ToolsKeys.RequestState] = requestState;
+        if (!string.IsNullOrEmpty(request.RequestState))
+            payload[McpSpecKeys.Tools.RequestState] = request.RequestState;
 
         return payload;
     }

@@ -1,8 +1,9 @@
 using System.Text.Json;
-using DevTools.Mcp.Core;
+using DevTools.Mcp.Core.Sessions;
 
 namespace DevTools.Mcp.Server.Contracts;
 
+[UsedImplicitly(ImplicitUseTargetFlags.WithMembers)]
 public sealed record ValidationProblem(string Name, string Message);
 
 public static class InvokeCapabilityValidator
@@ -56,14 +57,6 @@ public static class InvokeCapabilityValidator
             problems.Add(new ValidationProblem(capabilityIdPath, "capabilityId is malformed."));
         else if (locator?.Kind == HostCatalogKind.Tool)
             problems.Add(new ValidationProblem(capabilityIdPath, "reads supports resources and resource templates only."));
-
-        ValidateArguments(read.Arguments, $"reads[{index}].arguments", problems);
-    }
-
-    private static void ValidateArguments(Dictionary<string, JsonElement>? value, string name, List<ValidationProblem> problems)
-    {
-        _ = value;
-        _ = name;
     }
 
     private static void ValidateArguments(JsonElement? value, string name, List<ValidationProblem> problems)

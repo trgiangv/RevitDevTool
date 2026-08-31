@@ -1,4 +1,4 @@
-namespace DevTools.Mcp.Core;
+namespace DevTools.Mcp.Core.Models;
 
 public sealed record McpRegistryCatalog
 {

@@ -151,8 +151,7 @@ public class ContractTests
         services.AddMcpCatalog();
         using var provider = services.BuildServiceProvider();
 
-        var store = provider.GetRequiredService<McpCatalogStore>();
-        Assert.Same(store, provider.GetRequiredService<IHostPrimitiveRegistry>());
+        Assert.NotNull(provider.GetRequiredService<McpCatalogStore>());
         Assert.NotNull(provider.GetRequiredService<IMcpCatalogLoader>());
         Assert.Contains(provider.GetServices<IMcpRegistryProvider>(), registry => registry is DotnetMcpRegistryProvider);
         Assert.Contains(provider.GetServices<IMcpRegistryProvider>(), registry => registry is BuiltInMcpRegistryProvider);

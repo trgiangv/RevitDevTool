@@ -1,6 +1,5 @@
 using DevTools.Execution.Abstractions;
-
-namespace DevTools.Mcp.Core;
+namespace DevTools.Mcp.Core.Invocation;
 
 public sealed record McpInvocation
 {

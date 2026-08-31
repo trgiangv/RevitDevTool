@@ -1,23 +1,17 @@
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using JsonRpcKeys = DevTools.Mcp.Core.Protocol.McpSpecKeys.JsonRpc;
+using ModelContextProtocol;
 
 namespace DevTools.Mcp.Adapter.Host;
 
 /// <summary>JSON-RPC 2.0 envelope helpers for the host MCP handler.</summary>
 internal static class McpJsonRpc
 {
-    public const string Version = JsonRpcKeys.Version;
-    public const int InvalidRequest = JsonRpcKeys.InvalidRequest;
-    public const int MethodNotFound = JsonRpcKeys.MethodNotFound;
-    public const int InvalidParams = JsonRpcKeys.InvalidParams;
-    public const int InternalError = JsonRpcKeys.InternalError;
-    public const int UnsupportedProtocolVersion = JsonRpcKeys.UnsupportedProtocolVersion;
-
     public static JsonObject CreateSuccess(JsonNode? id, JsonNode result) =>
         new()
         {
-            [JsonRpcKeys.Envelope] = Version,
+            [JsonRpcKeys.Envelope] = JsonRpcKeys.Version,
             [JsonRpcKeys.Id] = id?.DeepClone(),
             [JsonRpcKeys.Result] = result.DeepClone(),
         };
@@ -26,7 +20,7 @@ internal static class McpJsonRpc
     {
         var notification = new JsonObject
         {
-            [JsonRpcKeys.Envelope] = Version,
+            [JsonRpcKeys.Envelope] = JsonRpcKeys.Version,
             [JsonRpcKeys.Method] = method,
         };
 
@@ -36,23 +30,23 @@ internal static class McpJsonRpc
         return notification;
     }
 
-    public static JsonObject CreateError(JsonNode? id, int code, string message) =>
+    public static JsonObject CreateError(JsonNode? id, McpErrorCode code, string message) =>
         CreateError(id, code, message, data: null);
 
-    public static JsonObject CreateError(JsonNode? id, int code, string message, JsonObject? data) =>
+    public static JsonObject CreateError(JsonNode? id, McpErrorCode code, string message, JsonObject? data) =>
         new()
         {
-            [JsonRpcKeys.Envelope] = Version,
+            [JsonRpcKeys.Envelope] = JsonRpcKeys.Version,
             [JsonRpcKeys.Id] = id?.DeepClone(),
             [JsonRpcKeys.Error] = data is null
                 ? new JsonObject
                 {
-                    [JsonRpcKeys.Code] = code,
+                    [JsonRpcKeys.Code] = (int)code,
                     [JsonRpcKeys.Message] = message,
                 }
                 : new JsonObject
                 {
-                    [JsonRpcKeys.Code] = code,
+                    [JsonRpcKeys.Code] = (int)code,
                     [JsonRpcKeys.Message] = message,
                     ["data"] = data.DeepClone(),
                 },

@@ -1,11 +1,8 @@
 using System.Text.Json;
 
-// ReSharper disable ClassNeverInstantiated.Global
-// ReSharper disable UnusedAutoPropertyAccessor.Global
-// ReSharper disable AutoPropertyCanBeMadeGetOnly.Global
-
 namespace DevTools.Mcp.Catalog.Discovery;
 
+[UsedImplicitly(ImplicitUseTargetFlags.WithMembers)]
 public sealed record PythonBindingInfo
 {
     public string ContainerType { get; init; } = string.Empty;
@@ -13,12 +10,14 @@ public sealed record PythonBindingInfo
     public string SourcePath { get; init; } = string.Empty;
 }
 
+[UsedImplicitly(ImplicitUseTargetFlags.WithMembers)]
 public sealed record PythonParsedToolEntry
 {
     public JsonElement Protocol { get; init; }
     public PythonBindingInfo Binding { get; init; } = new();
 }
 
+[UsedImplicitly(ImplicitUseTargetFlags.WithMembers)]
 public sealed record PythonParsedResourceEntry
 {
     public JsonElement Protocol { get; init; }
@@ -26,6 +25,7 @@ public sealed record PythonParsedResourceEntry
     public PythonBindingInfo Binding { get; init; } = new();
 }
 
+[UsedImplicitly(ImplicitUseTargetFlags.WithMembers)]
 public sealed record PythonParsedCatalog
 {
     public IReadOnlyList<PythonParsedToolEntry> Tools { get; init; } = [];

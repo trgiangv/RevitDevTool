@@ -4,6 +4,7 @@ using System.Text.Json.Nodes;
 using DevTools.Ipc;
 using DevTools.Mcp.Core;
 using DevTools.Mcp.Core.Protocol;
+using DevTools.Mcp.Core.Sessions;
 using Microsoft.Extensions.Logging;
 using ModelContextProtocol;
 using ModelContextProtocol.Client;
@@ -91,12 +92,6 @@ internal sealed class HostSession : IHostSession
         logger.ZLogDebug($"MCP session ready for {pipeName}");
         return session;
     }
-
-    public Task<CallToolResult> CallToolAsync(
-        string toolName,
-        IDictionary<string, JsonElement>? arguments = null,
-        CancellationToken ct = default) =>
-        Client.CallToolAsync(new CallToolRequestParams { Name = toolName, Arguments = arguments }, cancellationToken: ct).AsTask();
 
     public async Task<HostToolCallOutcome> CallToolPassthroughAsync(CallToolRequestParams parameters, CancellationToken ct = default)
     {

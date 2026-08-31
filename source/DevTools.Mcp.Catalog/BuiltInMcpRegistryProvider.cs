@@ -1,3 +1,7 @@
+using DevTools.Execution.Abstractions;
+using DevTools.Mcp.Core.Catalog;
+using DevTools.Mcp.Core.Models;
+
 namespace DevTools.Mcp.Catalog;
 
 /// <summary>Registers built-in MCP tools and resources into the host catalog. Prompts are daemon-owned.</summary>
@@ -30,7 +34,7 @@ public sealed class BuiltInMcpRegistryProvider(
             tools.Add(new McpRegisteredTool
             {
                 Id = id,
-                Descriptor = DescriptorFactory.FromTool(protocolTool),
+                Descriptor = protocolTool,
                 Binding = binding
             });
         }
@@ -50,7 +54,7 @@ public sealed class BuiltInMcpRegistryProvider(
             resources.Add(new McpRegisteredResource
             {
                 Id = id,
-                Descriptor = DescriptorFactory.FromResource(builtIn.ProtocolResource),
+                Descriptor = builtIn.ProtocolResource,
                 Binding = binding
             });
         }

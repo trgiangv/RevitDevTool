@@ -1,3 +1,6 @@
+using DevTools.Mcp.Catalog.Discovery;
+using DevTools.Mcp.Core;
+using DevTools.Mcp.Core.Catalog;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Logging;
@@ -35,7 +38,6 @@ public static class McpCatalogExtensions
         services.TryAddSingleton<McpCatalogLoader>();
         services.TryAddSingleton<IMcpCatalogLoader>(sp => sp.GetRequiredService<McpCatalogLoader>());
         services.TryAddSingleton<McpCatalogStore>();
-        services.TryAddSingleton<IHostPrimitiveRegistry>(sp => sp.GetRequiredService<McpCatalogStore>());
         return services;
     }
 }

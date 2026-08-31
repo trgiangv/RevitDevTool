@@ -1,5 +1,6 @@
 using System.Text.Json;
 using System.Text.Json.Nodes;
+using DevTools.Mcp.Core.Invocation;
 using DevTools.Mcp.Core.Protocol;
 using ModelContextProtocol;
 using ModelContextProtocol.Protocol;
@@ -27,7 +28,7 @@ public static class SdkInvocationMapper
         Meta = Clone(response.Meta)
     };
 
-    public static CallToolResult RoundTripSdk(CallToolResult result)
+    private static CallToolResult RoundTripSdk(CallToolResult result)
     {
         var element = JsonSerializer.SerializeToElement(EnsureWireSafeSdk(result), JsonOptions);
         var roundTripped = element.Deserialize<CallToolResult>(JsonOptions) ?? result;
@@ -37,7 +38,7 @@ public static class SdkInvocationMapper
     public static McpInvocationResponse RoundTripCore(McpInvocationResponse response) =>
         ToCore(RoundTripSdk(ToSdk(response)));
 
-    public static CallToolResult EnsureWireSafeSdk(CallToolResult result)
+    private static CallToolResult EnsureWireSafeSdk(CallToolResult result)
     {
         if (result.Content.Count == 0)
         {

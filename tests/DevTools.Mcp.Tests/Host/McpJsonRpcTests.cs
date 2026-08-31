@@ -46,12 +46,12 @@ public sealed class McpJsonRpcTests
     [Fact]
     public void ErrorEnvelope_RoundTrips_WithCodeAndMessage()
     {
-        var response = McpJsonRpc.CreateError("req-1", McpJsonRpc.MethodNotFound, "Method not found: foo");
+        var response = McpJsonRpc.CreateError("req-1", ModelContextProtocol.McpErrorCode.MethodNotFound, "Method not found: foo");
         var serialized = McpJsonRpc.Serialize(response);
         var roundTrip = McpJsonRpc.ParseRequest(serialized);
 
         Assert.Equal("req-1", roundTrip["id"]!.GetValue<string>());
-        Assert.Equal(McpJsonRpc.MethodNotFound, roundTrip["error"]!["code"]!.GetValue<int>());
+        Assert.Equal((int)ModelContextProtocol.McpErrorCode.MethodNotFound, roundTrip["error"]!["code"]!.GetValue<int>());
         Assert.Equal("Method not found: foo", roundTrip["error"]!["message"]!.GetValue<string>());
         Assert.Null(roundTrip["result"]);
     }

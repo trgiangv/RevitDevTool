@@ -3,6 +3,7 @@ using ModelContextProtocol.Protocol;
 namespace DevTools.Mcp.Core;
 
 /// <summary>Result of a single-round-trip host <c>tools/call</c> (no client-side MRTR auto-retry).</summary>
+[UsedImplicitly(ImplicitUseTargetFlags.WithMembers)]
 public sealed class HostToolCallOutcome
 {
     public CallToolResult? ToolResult { get; init; }

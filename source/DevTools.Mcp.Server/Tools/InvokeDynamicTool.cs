@@ -1,7 +1,7 @@
 using System.ComponentModel;
 using System.Text;
 using System.Text.Json;
-using DevTools.Mcp.Core;
+using DevTools.Mcp.Core.Sessions;
 using DevTools.Mcp.Server.Contracts;
 using ModelContextProtocol;
 using ModelContextProtocol.Protocol;
@@ -23,7 +23,7 @@ public sealed class InvokeDynamicTool(IHostBroker broker)
         });
 
     [Description("Invoke one capability ID, or batch read resource capability IDs.")]
-    public async Task<CallToolResult> Invoke(
+    private async Task<CallToolResult> Invoke(
         RequestContext<CallToolRequestParams> context,
         string? capabilityId = null,
         Dictionary<string, JsonElement>? arguments = null,
@@ -102,7 +102,7 @@ public sealed class InvokeDynamicTool(IHostBroker broker)
             if (itemBytes > InvokeDynamicLimits.HardResultBudgetBytes || itemBytes > budget)
             {
                 results.Add(new ResourceReadResult(index, false, null,
-                    new DynamicInvocationError("result_too_large", "The complete item exceeds the daemon result budget.", false)));
+                    new DynamicInvocationError("result_too_large", "The complete item exceeds the daemon result budget.")));
                 continue;
             }
             if (used + itemBytes > budget)
@@ -119,50 +119,15 @@ public sealed class InvokeDynamicTool(IHostBroker broker)
         JsonElement? arguments,
         CancellationToken ct)
     {
-        if (!DynamicCapabilityId.TryDecode(capabilityId, out var locator) || locator is null)
-            return InvokeSingleOutcome.FromResponse(Error("validation_error", "capabilityId is malformed."));
+        var precheck = PrepareInvocation(capabilityId);
+        if (precheck.ErrorResponse is not null)
+            return InvokeSingleOutcome.FromResponse(precheck.ErrorResponse);
 
-        var entry = broker.Catalog.List().FirstOrDefault(item => item.Key.MachineId.Equals(locator.MachineId, StringComparison.OrdinalIgnoreCase) && item.Key.ProcessId == locator.HostInstanceId);
-        var session = broker.GetByHostKey(new HostKey(locator.MachineId, locator.HostInstanceId));
-        if (entry is null || session is null || !session.IsConnected)
-            return InvokeSingleOutcome.FromResponse(Stale("host_disconnected", "The host session is no longer connected."));
-
-        var resolution = broker.Catalog.Resolve(locator.Kind, locator.Target, locator.MachineId, locator.HostInstanceId);
-        if (resolution.State != HostCatalogResolutionState.Found || resolution.Hit is null)
-            return InvokeSingleOutcome.FromResponse(Stale("capability_removed", "The capability is no longer advertised by this host."));
-        var currentFingerprint = DynamicCapabilityId.FingerprintFor(resolution.Hit);
-        if (!string.Equals(locator.CatalogVersion, DynamicCapabilityId.CatalogVersionFor(entry), StringComparison.Ordinal))
-            return InvokeSingleOutcome.FromResponse(Stale(string.Equals(locator.Fingerprint, currentFingerprint, StringComparison.Ordinal) ? "host_catalog_changed" : "capability_changed", "The host catalog changed; search again before invoking."));
-        if (!string.Equals(locator.Fingerprint, currentFingerprint, StringComparison.Ordinal))
-            return InvokeSingleOutcome.FromResponse(Stale("capability_changed", "The capability changed; search again before invoking."));
-
-        var mrtrState = InvokeDynamicMrtrState.TryParse(context?.Params?.RequestState);
+        var mrtrState = InvokeDynamicMrtrState.TryParse(context?.Params.RequestState);
         var invocationArguments = ToArguments(mrtrState?.Arguments) ?? ToArguments(arguments);
         try
         {
-            if (locator.Kind is HostCatalogKind.Tool)
-            {
-                var hostParams = new CallToolRequestParams
-                {
-                    Name = locator.Target,
-                    Arguments = invocationArguments,
-                    InputResponses = context?.Params?.InputResponses,
-                    RequestState = mrtrState?.HostRequestState,
-                };
-                var outcome = await session.CallToolPassthroughAsync(hostParams, ct).ConfigureAwait(false);
-                if (outcome.IsInputRequired)
-                    return InvokeSingleOutcome.FromInputRequired(outcome.InputRequired!);
-
-                return InvokeSingleOutcome.FromResponse(new InvokeCapabilityResponse(true, true, outcome.ToolResult));
-            }
-
-            object result = locator.Kind switch
-            {
-                HostCatalogKind.Resource => await session.ReadResourceAsync(locator.Target, ct).ConfigureAwait(false),
-                HostCatalogKind.ResourceTemplate => await session.ReadResourceAsync(locator.Target, invocationArguments ?? new Dictionary<string, JsonElement>(), ct).ConfigureAwait(false),
-                _ => throw new ArgumentOutOfRangeException()
-            };
-            return InvokeSingleOutcome.FromResponse(new InvokeCapabilityResponse(true, true, result));
+            return await InvokeResolvedAsync(precheck, context, mrtrState, invocationArguments, ct).ConfigureAwait(false);
         }
         catch (OperationCanceledException) when (!ct.IsCancellationRequested)
         {
@@ -174,10 +139,95 @@ public sealed class InvokeDynamicTool(IHostBroker broker)
         }
     }
 
+    private (DynamicCapabilityId Decoded, IHostSession Session, InvokeCapabilityResponse? ErrorResponse) PrepareInvocation(string capabilityId)
+    {
+        if (!DynamicCapabilityId.TryDecode(capabilityId, out var locator) || locator is null)
+            return (null!, null!, Error("validation_error", "capabilityId is malformed."));
+
+        var entry = broker.Catalog.List().FirstOrDefault(item => item.Key.MachineId.Equals(locator.MachineId, StringComparison.OrdinalIgnoreCase) && item.Key.ProcessId == locator.HostInstanceId);
+        var session = broker.GetByHostKey(new HostKey(locator.MachineId, locator.HostInstanceId));
+        if (entry is null || session is null || !session.IsConnected)
+            return (locator, null!, Stale("host_disconnected", "The host session is no longer connected."));
+
+        var staleResponse = ValidateCatalog(locator, entry);
+        return staleResponse is null
+            ? (locator, session, null)
+            : (locator, session, staleResponse);
+    }
+
+    private InvokeCapabilityResponse? ValidateCatalog(DynamicCapabilityId locator, HostCatalogEntry entry)
+    {
+        var resolution = broker.Catalog.Resolve(locator.Kind, locator.Target, locator.MachineId, locator.HostInstanceId);
+        if (resolution.State != HostCatalogResolutionState.Found || resolution.Hit is null)
+            return Stale("capability_removed", "The capability is no longer advertised by this host.");
+
+        var currentFingerprint = DynamicCapabilityId.FingerprintFor(resolution.Hit);
+        if (!string.Equals(locator.CatalogVersion, DynamicCapabilityId.CatalogVersionFor(entry), StringComparison.Ordinal))
+        {
+            var reason = string.Equals(locator.Fingerprint, currentFingerprint, StringComparison.Ordinal)
+                ? "host_catalog_changed"
+                : "capability_changed";
+            return Stale(reason, "The host catalog changed; search again before invoking.");
+        }
+
+        return string.Equals(locator.Fingerprint, currentFingerprint, StringComparison.Ordinal)
+            ? null
+            : Stale("capability_changed", "The capability changed; search again before invoking.");
+    }
+
+    private static async Task<InvokeSingleOutcome> InvokeResolvedAsync(
+        (DynamicCapabilityId Decoded, IHostSession Session, InvokeCapabilityResponse? ErrorResponse) precheck,
+        RequestContext<CallToolRequestParams>? context,
+        InvokeDynamicMrtrState? mrtrState,
+        Dictionary<string, JsonElement>? invocationArguments,
+        CancellationToken ct)
+    {
+        if (precheck.Decoded.Kind is HostCatalogKind.Tool)
+            return await InvokeToolAsync(precheck.Session, precheck.Decoded.Target, context, mrtrState, invocationArguments, ct).ConfigureAwait(false);
+
+        var result = await ReadCatalogItemAsync(precheck.Session, precheck.Decoded, invocationArguments, ct).ConfigureAwait(false);
+        return InvokeSingleOutcome.FromResponse(new InvokeCapabilityResponse(true, true, result));
+    }
+
+    private static async Task<InvokeSingleOutcome> InvokeToolAsync(
+        IHostSession session,
+        string toolName,
+        RequestContext<CallToolRequestParams>? context,
+        InvokeDynamicMrtrState? mrtrState,
+        Dictionary<string, JsonElement>? invocationArguments,
+        CancellationToken ct)
+    {
+        var hostParams = new CallToolRequestParams
+        {
+            Name = toolName,
+            Arguments = invocationArguments,
+            InputResponses = context?.Params.InputResponses,
+            RequestState = mrtrState?.HostRequestState,
+        };
+        var outcome = await session.CallToolPassthroughAsync(hostParams, ct).ConfigureAwait(false);
+        if (outcome.IsInputRequired)
+            return InvokeSingleOutcome.FromInputRequired(outcome.InputRequired!);
+
+        return InvokeSingleOutcome.FromResponse(new InvokeCapabilityResponse(true, true, outcome.ToolResult));
+    }
+
+    private static async Task<object> ReadCatalogItemAsync(
+        IHostSession session,
+        DynamicCapabilityId locator,
+        Dictionary<string, JsonElement>? invocationArguments,
+        CancellationToken ct)
+    {
+        var result = locator.Kind switch
+        {
+            HostCatalogKind.Resource => session.ReadResourceAsync(locator.Target, ct),
+            HostCatalogKind.ResourceTemplate => session.ReadResourceAsync(locator.Target, invocationArguments ?? new Dictionary<string, JsonElement>(), ct),
+            _ => throw new ArgumentOutOfRangeException()
+        };
+        return await result.ConfigureAwait(false);
+    }
+
     private static Dictionary<string, JsonElement>? ToArguments(JsonElement? arguments) => arguments is { ValueKind: JsonValueKind.Object } value
         ? value.EnumerateObject().ToDictionary(property => property.Name, property => property.Value) : null;
-
-    private static Dictionary<string, JsonElement>? ToArguments(Dictionary<string, JsonElement>? arguments) => arguments;
 
     private static JsonElement? ToElement(Dictionary<string, JsonElement>? arguments) =>
         arguments is null ? null : JsonSerializer.SerializeToElement(arguments, McpJsonUtilities.DefaultOptions);

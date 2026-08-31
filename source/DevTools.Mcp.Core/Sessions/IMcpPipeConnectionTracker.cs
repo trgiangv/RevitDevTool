@@ -1,4 +1,4 @@
-namespace DevTools.Mcp.Core;
+namespace DevTools.Mcp.Core.Sessions;
 
 /// <summary>
 /// Tracks in-host SDK MCP pipe availability and active daemon client sessions for UI binding.

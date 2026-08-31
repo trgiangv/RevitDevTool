@@ -13,14 +13,6 @@
     </ItemGroup>
 
     <ItemGroup>
-        <Using Include="DevTools.Execution.Abstractions" />
-        <Using Include="DevTools.Ipc" />
-        <Using Include="DevTools.Mcp.Core" />
-        <Using Include="DevTools.Mcp.Core.Protocol" />
-        <Using Include="DevTools.Mcp.Catalog.Discovery" />
-    </ItemGroup>
-
-    <ItemGroup>
         <ProjectReference Include="..\DevTools.Mcp.Core\DevTools.Mcp.Core.csproj" SetTargetFramework="TargetFramework=$(TargetFramework)" />
         <ProjectReference Include="..\DevTools.Execution.Abstractions\DevTools.Execution.Abstractions.csproj" />
         <ProjectReference Include="..\DevTools.Settings\DevTools.Settings.csproj" />
