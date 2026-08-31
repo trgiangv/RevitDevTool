@@ -25,6 +25,7 @@
         </RepackBinariesExcludes>
         <RepackBinariesExcludes Condition="$(TargetFramework.StartsWith('net10'))">
             $(RepackBinariesExcludes)
+            <!-- Polyfill duplicate: net10 isolated ALC rejects two Polyfills.Polyfill copies. -->
             Nice3point.Revit.Extensions.dll;
         </RepackBinariesExcludes>
     </PropertyGroup>
