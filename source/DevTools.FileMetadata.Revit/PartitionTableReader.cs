@@ -8,7 +8,7 @@ namespace DevTools.FileMetadata.Revit;
 /// Extracts structured metadata from <c>Global/PartitionTable</c>:
 /// view names with types, loaded families, and view templates.
 /// </summary>
-internal static partial class PartitionTableReader
+internal static class PartitionTableReader
 {
     public static PartitionSummary? Read(byte[] decompressedPartitionTable)
     {
@@ -47,16 +47,7 @@ internal static partial class PartitionTableReader
         var result = new List<string>();
         for (var i = 0; i < data.Length - 8; i += 2)
         {
-            var len = 0;
-            for (var j = i; j < data.Length - 1; j += 2)
-            {
-                var lo = data[j];
-                var hi = data[j + 1];
-                if (hi == 0 && lo is >= 0x20 and < 0x7F)
-                    len++;
-                else
-                    break;
-            }
+            var len = CountAsciiUtf16CodeUnits(data, i);
 
             if (len < 5) continue;
 
@@ -66,6 +57,21 @@ internal static partial class PartitionTableReader
 
         return result;
     }
+
+    private static int CountAsciiUtf16CodeUnits(byte[] data, int start)
+    {
+        var len = 0;
+        for (var j = start; j < data.Length - 1; j += 2)
+        {
+            if (!IsAsciiUtf16CodeUnit(data[j], data[j + 1])) break;
+            len++;
+        }
+
+        return len;
+    }
+
+    private static bool IsAsciiUtf16CodeUnit(byte lo, byte hi) =>
+        hi == 0 && lo is >= 0x20 and < 0x7F;
 
     private static PartitionSummary Classify(List<string> strings)
     {

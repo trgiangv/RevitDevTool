@@ -3,6 +3,7 @@ using DevTools.FileMetadata.Core;
 
 namespace DevTools.FileMetadata.Acad;
 
+[UsedImplicitly(ImplicitUseTargetFlags.WithMembers)]
 public sealed class DwgFileInfoResult : FileInfoResult
 {
     [JsonPropertyName("acadVersion")]
@@ -36,6 +37,7 @@ public sealed class DwgFileInfoResult : FileInfoResult
     public IReadOnlyList<DwgLayerInfo>? Layers { get; init; }
 }
 
+[UsedImplicitly(ImplicitUseTargetFlags.WithMembers)]
 public sealed class DwgFileInfoSummaryResult : FileInfoResult
 {
     [JsonPropertyName("acadVersion")]
@@ -54,6 +56,7 @@ public sealed class DwgFileInfoSummaryResult : FileInfoResult
     public int BlockCount { get; init; }
 }
 
+[UsedImplicitly(ImplicitUseTargetFlags.WithMembers)]
 public sealed class DwgLayerInfo
 {
     [JsonPropertyName("name")]

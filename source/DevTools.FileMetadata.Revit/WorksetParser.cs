@@ -9,7 +9,7 @@ internal static class WorksetParser
             : ParseUserWorksets(decompressedPartitionTable);
     }
 
-    private static IReadOnlyList<WorksetInfo> ParseUserWorksets(byte[] dec)
+    private static List<WorksetInfo> ParseUserWorksets(byte[] dec)
     {
         var result = new List<WorksetInfo>();
         var seen = new HashSet<string>(StringComparer.Ordinal);
