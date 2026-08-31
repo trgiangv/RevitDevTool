@@ -15,3 +15,9 @@ def test_runtestloop_collect_only_is_noop(monkeypatch):
     session = MagicMock()
     session.config.option.collectonly = True
     assert plugin.pytest_runtestloop(session) is True
+
+
+def test_runtest_protocol_without_stash_defers_to_pytest():
+    item = MagicMock()
+    item.session.stash.get.return_value = None
+    assert plugin.pytest_runtest_protocol(item, None) is None

@@ -3,7 +3,7 @@
 
 import unittest
 
-from ..ipylib.geom import midpoint
+from ipylib.geom import midpoint
 
 
 class TestNestedImport(unittest.TestCase):
