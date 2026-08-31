@@ -140,6 +140,7 @@
     </ItemGroup>
 
     <ItemGroup>
+        <Compile Include="..\DevTools.Utilities\AppUtils.cs" Link="AppUtils.cs"/>
         <ProjectReference Include="..\DevTools.Testing.Abstractions\DevTools.Testing.Abstractions.csproj"/>
         <ProjectReference Include="..\DevTools.Testing.Transport\DevTools.Testing.Transport.csproj">
             <PrivateAssets>all</PrivateAssets>

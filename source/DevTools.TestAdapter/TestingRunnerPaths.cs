@@ -1,3 +1,5 @@
+using DevTools.Utilities;
+// ReSharper disable RedundantSuppressNullableWarningExpression
 namespace DevTools.TestAdapter;
 
 /// <summary>
@@ -17,13 +19,7 @@ public static class TestingRunnerPaths
         if (IsRunnable(configuredPath))
             return Path.GetFullPath(configuredPath!);
 
-        var bundlePath = Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
-            "Autodesk",
-            "ApplicationPlugins",
-            "RevitDevTool.bundle",
-            "Contents",
-            "DevTools.TestRunner.exe");
+        var bundlePath = AppUtils.GetTestRunnerExePath();
         return IsRunnable(bundlePath) ? bundlePath : throw new InvalidOperationException(MissingInstallMessage);
     }
 
