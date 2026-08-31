@@ -58,14 +58,7 @@ public sealed class PixiEnvironmentSmokeTests
             }
 
             var pythonHome = provider.PythonHome;
-            var libraryBin = Path.Combine(pythonHome, "Library", "bin");
-            var currentPath = Environment.GetEnvironmentVariable("PATH") ?? string.Empty;
-            var toAdd = new[] { pythonHome, libraryBin }
-                .Where(Directory.Exists)
-                .Where(d => currentPath.IndexOf(d, StringComparison.OrdinalIgnoreCase) < 0)
-                .ToList();
-            if (toAdd.Count > 0)
-                Environment.SetEnvironmentVariable("PATH", string.Join(";", toAdd) + ";" + currentPath);
+            PythonNativeEnvironment.PrepareProcess(pythonHome);
 
             Runtime.PythonDLL = provider.GetPythonDllPath();
             PythonEngine.PythonHome = pythonHome;

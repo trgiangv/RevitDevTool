@@ -1,4 +1,5 @@
 using System.Text.Json;
+using DevTools.Execution.Providers.Python;
 using Microsoft.Extensions.Logging.Abstractions;
 using Python.Runtime;
 namespace DevTools.Mcp.Tests;
@@ -44,9 +45,9 @@ public sealed class PythonInProcessParserTests : IDisposable
 
         Assert.NotNull(tool);
         Assert.Equal("Get Parser Sample Status", tool.Descriptor.Annotations!.Title);
-        Assert.True(tool.Descriptor.Annotations.ReadOnly);
-        Assert.True(tool.Descriptor.Annotations.Idempotent);
-        Assert.False(tool.Descriptor.Annotations.OpenWorld);
+        Assert.True(tool.Descriptor.Annotations.ReadOnlyHint);
+        Assert.True(tool.Descriptor.Annotations.IdempotentHint);
+        Assert.False(tool.Descriptor.Annotations.OpenWorldHint);
     }
 
     [Fact]
@@ -144,20 +145,15 @@ public sealed class PythonInProcessParserTests : IDisposable
             Assert.True(Directory.Exists(PythonHome), $"Pixi Python env not found at '{PythonHome}'.");
             Assert.True(File.Exists(PythonDll), $"Python DLL not found at '{PythonDll}'.");
 
-            var libraryBin = Path.Combine(PythonHome, "Library", "bin");
-            var currentPath = Environment.GetEnvironmentVariable("PATH") ?? string.Empty;
-            var toAdd = new[] { PythonHome, libraryBin }
-                .Where(Directory.Exists)
-                .Where(d => currentPath.IndexOf(d, StringComparison.OrdinalIgnoreCase) < 0)
-                .ToList();
-            if (toAdd.Count > 0)
-                Environment.SetEnvironmentVariable("PATH", string.Join(";", toAdd) + ";" + currentPath);
+            PythonNativeEnvironment.PrepareProcess(PythonHome);
 
             Runtime.PythonDLL = PythonDll;
             PythonEngine.PythonHome = PythonHome;
             PythonEngine.ProgramName = "RevitDevToolTests";
             PythonEngine.Initialize();
             PythonEngine.BeginAllowThreads();
+            using (Py.GIL())
+                PythonNativeEnvironment.AddPythonDllDirectories(PythonHome);
 
             _initialized = true;
         }

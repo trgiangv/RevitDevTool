@@ -1,5 +1,4 @@
 using System.Diagnostics;
-using System.IO;
 using DevTools.Execution.Interfaces;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -49,7 +48,7 @@ public sealed class PythonInitializer(
                 return;
             }
 
-            PrependPythonHomeToPath(Provider.PythonHome);
+            PythonNativeEnvironment.PrepareProcess(Provider.PythonHome, logger);
 
             Runtime.PythonDLL = Provider.GetPythonDllPath();
             PythonEngine.PythonHome = Provider.PythonHome;
@@ -59,6 +58,7 @@ public sealed class PythonInitializer(
 
             using (Py.GIL())
             {
+                PythonNativeEnvironment.AddPythonDllDirectories(Provider.PythonHome);
                 SetupGlobalScope();
                 PythonDebugger.StartListening(logger);
             }
@@ -112,26 +112,6 @@ public sealed class PythonInitializer(
             logger.ZLogWarning($"Pixi unavailable ({ex.GetType().Name}: {ex.Message}). Falling back to pip.");
             return pipProvider;
         }
-    }
-
-    private void PrependPythonHomeToPath(string pythonHome)
-    {
-        var libraryBin = Path.Combine(pythonHome, "Library", "bin");
-
-        var current = Environment.GetEnvironmentVariable("PATH") ?? string.Empty;
-
-        var toAdd = new[] { pythonHome, libraryBin }
-            .Where(Directory.Exists)
-            .Where(d => current.IndexOf(d, StringComparison.OrdinalIgnoreCase) < 0)
-            .ToList();
-
-        if (toAdd.Count == 0) return;
-
-        var newPath = string.Join(";", toAdd) + ";" + current;
-        Environment.SetEnvironmentVariable("PATH", newPath);
-#if DEBUG
-        logger.ZLogInformation($"Prepended to PATH: {string.Join("; ", toAdd)}");
-#endif
     }
 
     private void SetupGlobalScope()

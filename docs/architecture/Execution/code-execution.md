@@ -44,7 +44,7 @@ flowchart LR
 
 ### Python
 
-- `PythonInitializer` chooses Pixi first, then pip-backed pyRevit CPython if Pixi cannot run.
+- `PythonInitializer` chooses Pixi first, then pip-backed pyRevit CPython if Pixi cannot run. Before `PythonEngine.Initialize`, `PythonNativeEnvironment` prepends env native dirs to PATH, calls `AddDllDirectory`, and preloads `libcrypto`/`libssl` by absolute path so host-adjacent empty OpenSSL stubs (Revit 2024 `Empty Resource DLL` next to `Revit.exe`) do not satisfy `_ssl.pyd`.
 - `PythonEmbedded` extracts `Parser.py`, `ToolParser.py`, `PytestRunner.py`, setup scripts, and `pixi.toml`.
 - `PythonDepsManager` parses PEP 723 dependencies through `Parser.py`. Installed-state JSON may include conda git-describe versions; Parser treats those as unconstrained instead of failing the resolve.
 - Pixi uses conda-forge first and PyPI fallback.
