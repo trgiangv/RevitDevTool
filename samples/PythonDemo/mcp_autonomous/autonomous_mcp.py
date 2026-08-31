@@ -1,10 +1,10 @@
+from typing import Annotated
+
+from Autodesk.Revit import UI
 from mcp.server.mcpserver import MCPServer
 from mcp.types import CallToolResult, TextContent, ToolAnnotations
-from typing import Annotated
 from pydantic import Field
-
 from RevitDevTool.Core import RevitContext
-from Autodesk.Revit import UI
 
 mcp = MCPServer("Autonomous Revit Toolset")
 

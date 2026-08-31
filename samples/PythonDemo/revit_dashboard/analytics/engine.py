@@ -4,8 +4,6 @@ Every function is public and referenced by ``constants`` — zero hardcoded
 column names, sentinel strings, or filter keys.
 """
 
-from __future__ import annotations
-
 from datetime import datetime, timezone
 from typing import TYPE_CHECKING
 

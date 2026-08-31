@@ -7,8 +7,6 @@ IMPORTANT: Use RevitTask.RunAsync instead of Dispatcher.Invoke
 to ensure proper Revit API context.
 """
 
-from __future__ import annotations
-
 from collections.abc import Callable
 from typing import Any
 

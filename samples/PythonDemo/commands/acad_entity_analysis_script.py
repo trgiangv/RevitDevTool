@@ -16,8 +16,6 @@ Reads LINE / CIRCLE / ARC / LWPOLYLINE from Model Space, then:
   - 2D envelope + union area (Shapely)
 """
 
-from __future__ import annotations
-
 from typing import Any
 
 import numpy as np

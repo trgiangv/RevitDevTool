@@ -8,8 +8,6 @@ The ``emit`` helper injects JSON safely using ``JSON.parse`` on the JS side
 — no fragile double-escaping.
 """
 
-from __future__ import annotations
-
 import json
 from collections.abc import Callable
 from typing import TYPE_CHECKING, Any

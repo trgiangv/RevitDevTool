@@ -7,8 +7,6 @@ How to read output across runs:
 3) `cache_state` should start from zeroed cache counters on each new execution.
 """
 
-from __future__ import annotations
-
 import os
 import sys
 from pathlib import Path

@@ -21,8 +21,6 @@ Workflow:
      via TessellatedShapeBuilder so it is immediately visible.
 """
 
-from __future__ import annotations
-
 import fcl
 import numpy as np
 import trimesh

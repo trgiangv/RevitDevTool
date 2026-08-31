@@ -1,7 +1,5 @@
 """Export filtered dashboard data to Excel."""
 
-from __future__ import annotations
-
 from datetime import datetime
 
 from openpyxl import Workbook

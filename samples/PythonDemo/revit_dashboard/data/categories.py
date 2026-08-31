@@ -5,8 +5,6 @@ hardcoded category name strings.  Groups can be combined or filtered by the
 caller (e.g. the frontend requests only STRUCTURAL + MEP).
 """
 
-from __future__ import annotations
-
 from enum import Enum, auto
 
 import Autodesk.Revit.DB as DB

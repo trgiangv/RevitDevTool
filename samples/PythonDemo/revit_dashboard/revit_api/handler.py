@@ -12,8 +12,6 @@ IMPORTANT:
   don't modify the model, but still require a Transaction in the Revit API.
 """
 
-from __future__ import annotations
-
 from collections.abc import Callable
 from typing import TYPE_CHECKING, Any
 

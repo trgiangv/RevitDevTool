@@ -12,8 +12,6 @@ Usage:
     view = HOST_APP.active_view
 """
 
-from __future__ import annotations
-
 from Autodesk.Revit import DB, UI, ApplicationServices
 
 

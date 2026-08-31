@@ -9,8 +9,6 @@ Modes:
 - DEV_MODE=False: Use built dist files (production)
 """
 
-from __future__ import annotations
-
 import json
 import os
 import shutil

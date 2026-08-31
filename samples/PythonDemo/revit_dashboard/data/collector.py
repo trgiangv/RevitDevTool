@@ -1,7 +1,5 @@
 """Revit model element collection with smart category filtering."""
 
-from __future__ import annotations
-
 from typing import TYPE_CHECKING
 
 import Autodesk.Revit.DB as DB

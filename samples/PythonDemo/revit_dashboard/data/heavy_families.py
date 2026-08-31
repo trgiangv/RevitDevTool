@@ -1,7 +1,5 @@
 """Identify the heaviest families in the Revit model by instance/type count."""
 
-from __future__ import annotations
-
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:

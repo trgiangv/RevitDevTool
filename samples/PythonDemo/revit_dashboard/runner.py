@@ -6,8 +6,6 @@ into the WebView2 host via a handler factory.
 IMPORTANT: Always use HOST_APP.doc to access document, never cache it.
 """
 
-from __future__ import annotations
-
 from collections.abc import Callable
 from typing import TYPE_CHECKING
 

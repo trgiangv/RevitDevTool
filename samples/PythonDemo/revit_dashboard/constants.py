@@ -3,8 +3,6 @@
 Every module references these constants — zero hardcoded strings in business logic.
 """
 
-from __future__ import annotations
-
 from dataclasses import dataclass
 
 import polars as pl

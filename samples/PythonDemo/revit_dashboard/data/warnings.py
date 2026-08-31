@@ -1,7 +1,5 @@
 """Collect and classify Revit document warnings by severity."""
 
-from __future__ import annotations
-
 from typing import TYPE_CHECKING
 
 import Autodesk.Revit.DB as DB

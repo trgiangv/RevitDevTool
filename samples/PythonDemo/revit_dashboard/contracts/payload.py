@@ -1,7 +1,5 @@
 """Typed payload contracts for the dashboard backend/frontend bridge."""
 
-from __future__ import annotations
-
 from typing import NotRequired, TypedDict
 
 
