@@ -16,13 +16,15 @@ import sys
 import traceback
 import types
 import uuid
+from collections.abc import Generator
 from pathlib import Path
-from typing import Any, Generator, TypeAlias, cast
+from typing import Any, TypeAlias, cast
 
 from mcp.server.context import ServerRequestContext
 from mcp.server.lowlevel import Server as LowLevelServer
 from mcp.server.mcpserver import MCPServer
 from mcp.types import Resource, ResourceTemplate, Tool
+from mcp.types.version import LATEST_HANDSHAKE_VERSION
 
 PrimitiveServer: TypeAlias = MCPServer | LowLevelServer[Any]
 
@@ -105,7 +107,7 @@ def _make_lowlevel_context(method: str) -> ServerRequestContext[Any]:
     return ServerRequestContext(
         session=cast(Any, None),
         lifespan_context={},
-        protocol_version="2025-11-25",
+        protocol_version=LATEST_HANDSHAKE_VERSION,
         method=method,
     )
 
@@ -231,7 +233,7 @@ def parse_directory(toolset_path: str) -> str:
 
 
 if _SCOPE_TOOLSET_DIRECTORY in dir():
-    __parser_result__ = parse_directory(globals()[_SCOPE_TOOLSET_DIRECTORY])  # noqa: F821
+    __parser_result__ = parse_directory(globals()[_SCOPE_TOOLSET_DIRECTORY])
 elif __name__ == "__main__":
     if len(sys.argv) != 2:
         print(f"Usage: {sys.argv[0]} <toolset_path>", file=sys.stderr)

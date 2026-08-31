@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 from typing import Any
 
 import pytest
@@ -9,11 +7,11 @@ def _find_by_name(entries: list[dict[str, Any]], name: str) -> dict[str, Any]:
     return next(e for e in entries if e["protocol"]["name"] == name)
 
 
-def test_fastmcp_tool_protocol_shape(parsed_catalog: dict[str, list[dict[str, Any]]]) -> None:
+def test_mcpserver_tool_protocol_shape(parsed_catalog: dict[str, list[dict[str, Any]]]) -> None:
     entry = _find_by_name(parsed_catalog["tools"], "get_parser_sample_status")
     protocol = entry["protocol"]
 
-    assert "title" not in protocol, "FastMCP tools set title in annotations, not at top level"
+    assert "title" not in protocol, "MCPServer tools set title in annotations, not at top level"
     assert protocol["annotations"]["title"] == "Get Parser Sample Status"
     assert protocol["annotations"]["readOnlyHint"] is True
     assert protocol["annotations"]["idempotentHint"] is True
@@ -25,11 +23,11 @@ def test_fastmcp_tool_protocol_shape(parsed_catalog: dict[str, list[dict[str, An
     assert protocol["outputSchema"]["properties"]["status"]["type"] == "string"
 
     assert protocol["icons"][0]["src"] == "https://example.com/icons/tool.png"
-    assert protocol["_meta"]["feature"] == "fastmcp"
-    assert protocol["_meta"]["version"] == 1
+    assert protocol["_meta"]["feature"] == "mcpserver"
+    assert protocol["_meta"]["version"] == 2
 
 
-def test_fastmcp_tool_binding(parsed_catalog: dict[str, list[dict[str, Any]]]) -> None:
+def test_mcpserver_tool_binding(parsed_catalog: dict[str, list[dict[str, Any]]]) -> None:
     entry = _find_by_name(parsed_catalog["tools"], "get_parser_sample_status")
     binding = entry["binding"]
 

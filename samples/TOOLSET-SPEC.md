@@ -17,7 +17,7 @@ Last updated: 2026-08-02
 5. **Safe by default**: Read-only tools never mutate. Write tools default to explicit scope (IDs or criteria, never whole model). Export tools validate paths via `PathGuard`.
 6. **Partial-success reporting**: Write tools return `success_count` + `failures[]` with per-element error details.
 7. **Collaboration-aware**: Tools respect worksets, selection state, and borrowed elements.
-8. **Packaging:** .NET toolsets ILRepack like other add-ins (`ILRepackable`) but MCP is compile-only (`ExcludeAssets=runtime`). Host Catalog reflects and invokes; collectible ALC binds `ModelContextProtocol*` from the host load context. Do not ship MCP siblings. Do not gate ILRepack on Autodesk year. Merge policy: `docs/decisions/0019-ilrepack-and-polyfill-isolated-alc.md`. Host wire types: `docs/decisions/0012-host-mcp-spec-engine.md`. Keep returning `CallToolResult` / low-level `InputRequiredException` as usual.
+8. **Packaging:** .NET toolsets ILRepack like other add-ins (`ILRepackable`) but MCP is compile-only (`ExcludeAssets=runtime`). Host Catalog reflects and invokes; collectible ALC binds `ModelContextProtocol*` from the host load context. Do not ship MCP siblings. Merge: [0019](../docs/decisions/0019-ilrepack-and-polyfill-isolated-alc.md). Host wire: [0027](../docs/decisions/0027-mcp-sdk-host-wire-adoption.md). Keep returning `CallToolResult` / low-level `InputRequiredException` as usual.
 
 ---
 
@@ -27,7 +27,6 @@ Last updated: 2026-08-02
 |------|-----|
 | `ILRepackable=true` like other add-ins | One merge pipeline ([0019](../docs/decisions/0019-ilrepack-and-polyfill-isolated-alc.md)) |
 | MCP `ExcludeAssets=runtime` | Compile attributes only — host reflects; ALC shares host MCP |
-| Do not year-gate `ILRepackable` | Isolated ALC uses Polyfill net4-only + sidecar, not skip-pack |
 
 Do **not** invent a private MCP package version — pin centrally in `Directory.Packages.props`.
 
@@ -582,7 +581,7 @@ revit_list_schedule_fields("Doors") → revit_create_schedule(config) → revit_
 - Prompts: `[McpServerPromptType]` + `[McpServerPrompt]` attributes (SDK native)
 
 ### Python (`mcp_toolset`)
-- FastMCP `@mcp.tool(annotations=ToolAnnotations(...))` decorator
+- MCPServer `@mcp.tool(annotations=ToolAnnotations(...))` decorator
 - `RevitContext` from host builtins
 - `run_transaction(doc, "MCP: {tool_name}", operation)` helper
 - Pydantic DTOs for structured input/output

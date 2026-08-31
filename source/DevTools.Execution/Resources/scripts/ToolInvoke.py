@@ -1,19 +1,20 @@
-import anyio
+import base64
 import importlib.util
 import json
 import sys
 import uuid
+from collections.abc import Mapping
 from types import ModuleType
-from typing import Any, Mapping, TypeAlias, cast
+from typing import Any, TypeAlias, cast
 
-from pydantic import BaseModel
+import anyio
 from mcp import types
 from mcp.server.context import ServerRequestContext
 from mcp.server.lowlevel import Server as LowLevelServer
 from mcp.server.mcpserver import MCPServer
+from mcp.types.version import LATEST_HANDSHAKE_VERSION, LATEST_MODERN_VERSION
+from pydantic import BaseModel
 
-JsonScalar: TypeAlias = str | int | float | bool | None
-JsonValue: TypeAlias = JsonScalar | dict[str, "JsonValue"] | list["JsonValue"]
 PrimitiveServer: TypeAlias = MCPServer | LowLevelServer[Any]
 InvokeScope: TypeAlias = Mapping[str, object]
 
@@ -32,18 +33,64 @@ _LOWLEVEL_METHOD_CALL_TOOL = "tools/call"
 _LOWLEVEL_METHOD_READ_RESOURCE = "resources/read"
 
 
-def __normalize(value: object) -> JsonValue:
-    if value is None or isinstance(value, (str, int, float, bool)):
-        return value
-    if isinstance(value, bytes):
-        return value.decode("utf-8", errors="replace")
-    if isinstance(value, BaseModel):
-        return __normalize(value.model_dump(by_alias=True, exclude_none=True))
-    if isinstance(value, dict):
-        return {str(key): __normalize(item) for key, item in value.items()}
-    if isinstance(value, (list, tuple, set)):
-        return [__normalize(item) for item in value]
-    return str(value)
+def __dump_mcp_result(result: object) -> dict[str, object]:
+    if isinstance(result, BaseModel):
+        dumped = result.model_dump(by_alias=True, exclude_none=True)
+        if isinstance(dumped, dict):
+            return dumped
+        raise RuntimeError(f"Unexpected MCP result dump type: {type(dumped)!r}")
+    raise RuntimeError(f"Unexpected MCP result type: {type(result)!r}")
+
+
+def __resolve_lowlevel_server(server: PrimitiveServer) -> LowLevelServer[Any]:
+    if isinstance(server, MCPServer):
+        return server._lowlevel_server
+    if isinstance(server, LowLevelServer):
+        return server
+    raise RuntimeError(f"Unsupported MCP server type: {type(server)!r}")
+
+
+def __fallback_read_resource_helper(server: MCPServer, uri: str) -> dict[str, object]:
+    """Same wire as MCPServer._handle_read_resource when that handler is missing."""
+    results = anyio.run(server.read_resource, uri)
+    if isinstance(results, BaseModel):
+        return __dump_mcp_result(results)
+
+    contents: list[types.TextResourceContents | types.BlobResourceContents] = []
+    for item in results:
+        content = item.content
+        if isinstance(content, bytes):
+            contents.append(
+                types.BlobResourceContents(
+                    uri=uri,
+                    blob=base64.b64encode(content).decode(),
+                    mime_type=item.mime_type or "application/octet-stream",
+                )
+            )
+        else:
+            contents.append(
+                types.TextResourceContents(
+                    uri=uri,
+                    text=content,
+                    mime_type=item.mime_type or "text/plain",
+                )
+            )
+    return __dump_mcp_result(types.ReadResourceResult(contents=contents))
+
+
+def __invoke_read_resource(server: PrimitiveServer, uri: str) -> dict[str, object]:
+    lowlevel = __resolve_lowlevel_server(server)
+    entry = lowlevel.get_request_handler(_LOWLEVEL_METHOD_READ_RESOURCE)
+    if entry is not None:
+        params = types.ReadResourceRequestParams(uri=uri)
+        ctx = __make_lowlevel_context(_LOWLEVEL_METHOD_READ_RESOURCE)
+        result = anyio.run(entry.handler, ctx, params)
+        return __dump_mcp_result(result)
+
+    if isinstance(server, MCPServer):
+        return __fallback_read_resource_helper(server, uri)
+
+    raise RuntimeError("Low-level MCP server does not register a resources/read handler.")
 
 
 def __read_scope_string(scope: InvokeScope, key: str, default: str = "") -> str:
@@ -54,7 +101,7 @@ def __read_scope_string(scope: InvokeScope, key: str, default: str = "") -> str:
 def __parse_payload(payload_json: str) -> dict[str, object]:
     payload = json.loads(payload_json) if payload_json else {}
     if not isinstance(payload, dict):
-        raise RuntimeError("Tool payload must be a JSON object.")
+        raise TypeError("Tool payload must be a JSON object.")
 
     return payload
 
@@ -86,7 +133,10 @@ def __load_module(module_path: str) -> ModuleType:
     return module
 
 
-def __make_lowlevel_context(method: str, protocol_version: str = "2025-11-25") -> ServerRequestContext[Any]:
+def __make_lowlevel_context(
+    method: str,
+    protocol_version: str = LATEST_HANDSHAKE_VERSION,
+) -> ServerRequestContext[Any]:
     return ServerRequestContext(
         session=cast(Any, None),
         lifespan_context={},
@@ -122,7 +172,7 @@ def __invoke_mcpserver(server: MCPServer, params: types.CallToolRequestParams, h
         entry = server._lowlevel_server.get_request_handler(_LOWLEVEL_METHOD_CALL_TOOL)
         if entry is None:
             raise RuntimeError("MCPServer does not register a tools/call handler.")
-        ctx = __make_lowlevel_context(_LOWLEVEL_METHOD_CALL_TOOL, "2026-07-28")
+        ctx = __make_lowlevel_context(_LOWLEVEL_METHOD_CALL_TOOL, LATEST_MODERN_VERSION)
         return anyio.run(entry.handler, ctx, params)
 
     return anyio.run(server.call_tool, params.name, params.arguments or {})
@@ -137,7 +187,7 @@ def __invoke_lowlevel(
     if entry is None:
         raise RuntimeError("Low-level MCP server does not register a tools/call handler.")
 
-    protocol_version = "2026-07-28" if has_mrtr else "2025-11-25"
+    protocol_version = LATEST_MODERN_VERSION if has_mrtr else LATEST_HANDSHAKE_VERSION
     ctx = __make_lowlevel_context(_LOWLEVEL_METHOD_CALL_TOOL, protocol_version)
     return anyio.run(entry.handler, ctx, params)
 
@@ -153,28 +203,8 @@ def __invoke_server(server: PrimitiveServer, tool_name: str, payload: dict[str, 
     raise RuntimeError(f"Unsupported MCP server type: {type(server)!r}")
 
 
-def __invoke_mcpserver_resource(server: MCPServer, uri: str) -> object:
-    contents = anyio.run(server.read_resource, uri)
-    return {"contents": __normalize(list(contents))}
-
-
-def __invoke_lowlevel_resource(server: LowLevelServer[Any], uri: str) -> object:
-    entry = server.get_request_handler(_LOWLEVEL_METHOD_READ_RESOURCE)
-    if entry is None:
-        raise RuntimeError("Low-level MCP server does not register a resources/read handler.")
-
-    params = types.ReadResourceRequestParams(uri=uri)
-    ctx = __make_lowlevel_context(_LOWLEVEL_METHOD_READ_RESOURCE)
-    return anyio.run(entry.handler, ctx, params)
-
-
-def __invoke_resource_server(server: PrimitiveServer, uri: str) -> object:
-    if isinstance(server, MCPServer):
-        return __invoke_mcpserver_resource(server, uri)
-    if isinstance(server, LowLevelServer):
-        return __invoke_lowlevel_resource(server, uri)
-
-    raise RuntimeError(f"Unsupported MCP server type: {type(server)!r}")
+def __invoke_resource_server(server: PrimitiveServer, uri: str) -> dict[str, object]:
+    return __invoke_read_resource(server, uri)
 
 
 def __invoke_tool(
@@ -192,7 +222,7 @@ def __invoke_tool(
         raise RuntimeError(f"No supported MCP server found in '{source_file}'.")
 
     call_result = __invoke_server(server, tool_name, payload)
-    return json.dumps(__normalize(call_result))
+    return json.dumps(__dump_mcp_result(call_result))
 
 
 def __invoke_resource(
@@ -208,7 +238,7 @@ def __invoke_resource(
         raise RuntimeError(f"No supported MCP server found in '{source_file}'.")
 
     resource_result = __invoke_resource_server(server, resource_uri)
-    return json.dumps(__normalize(resource_result))
+    return json.dumps(resource_result)
 
 
 def __invoke_from_scope(scope: InvokeScope) -> str:
