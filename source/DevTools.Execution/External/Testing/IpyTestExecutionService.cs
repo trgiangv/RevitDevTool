@@ -7,7 +7,8 @@ namespace DevTools.Execution.External.Testing;
 
 public sealed class IpyTestExecutionService(IScriptExecutionStrategyFactory strategyFactory)
 {
-    private const string RequestEnvVar = "IPYTEST_REQUEST";
+    private static string RequestFileName(int processId) => $"request_{processId}.json";
+    private static string ResultFileName(int processId) => $"result_{processId}.json";
 
     public sealed record DriverIoPaths(string RequestPath, string ResultPath);
 
@@ -28,30 +29,43 @@ public sealed class IpyTestExecutionService(IScriptExecutionStrategyFactory stra
         if (groups.Count == 0)
             return Error("prepare", "No IronPython test files in nodeids.");
 
+        var state = await RunAllGroupsAsync(
+                groups,
+                request.WorkspaceRoot,
+                ParseMaxfail(request.PytestArgs),
+                cancellationToken)
+            .ConfigureAwait(false);
+        return ToRunResponse(request.WorkspaceRoot, state);
+    }
+
+    private async Task<RunState> RunAllGroupsAsync(
+        Dictionary<string, List<string>> groups,
+        string workspaceRoot,
+        int maxfail,
+        CancellationToken cancellationToken)
+    {
         var results = new List<PytestCaseResult>();
         var collectionErrors = new List<PytestCollectionError>();
         var engine = "";
 
-        var maxfail = ParseMaxfail(request.PytestArgs);
         foreach (var (testPath, nodeIds) in groups)
         {
             cancellationToken.ThrowIfCancellationRequested();
-            var failSoFar = results.Count(r => r.Outcome is "failed" or "error") + collectionErrors.Count;
-            var remaining = maxfail == 0 ? 0 : maxfail - failSoFar;
-            if (maxfail > 0 && remaining <= 0)
+            if (IsMaxfailReached(maxfail, results, collectionErrors))
                 break;
 
             if (!File.Exists(testPath))
             {
-                collectionErrors.Add(new PytestCollectionError(
-                    nodeIds[0],
-                    testPath,
-                    $"IronPython test file not found: {testPath}",
-                    string.Empty));
+                collectionErrors.Add(MissingFileError(nodeIds[0], testPath));
                 continue;
             }
+
             var fileResult = await RunFileAsync(
-                    testPath, nodeIds, request.WorkspaceRoot, remaining, cancellationToken)
+                    testPath,
+                    nodeIds,
+                    workspaceRoot,
+                    RemainingMaxfail(maxfail, results, collectionErrors),
+                    cancellationToken)
                 .ConfigureAwait(false);
             if (!string.IsNullOrEmpty(fileResult.Engine))
                 engine = fileResult.Engine;
@@ -59,15 +73,46 @@ public sealed class IpyTestExecutionService(IScriptExecutionStrategyFactory stra
             collectionErrors.AddRange(fileResult.CollectionErrors);
         }
 
-        var summary = BuildSummary(results, collectionErrors);
-        return new PytestRunResponse(
-            summary.Failed == 0 && summary.Errors == 0 ? 0 : 1,
-            summary,
-            results,
-            collectionErrors,
-            request.WorkspaceRoot,
-            engine);
+        return new RunState(results, collectionErrors, engine);
     }
+
+    private static bool IsMaxfailReached(
+        int maxfail,
+        IReadOnlyList<PytestCaseResult> results,
+        IReadOnlyList<PytestCollectionError> collectionErrors) =>
+        maxfail > 0 && RemainingMaxfail(maxfail, results, collectionErrors) <= 0;
+
+    private static int RemainingMaxfail(
+        int maxfail,
+        IReadOnlyList<PytestCaseResult> results,
+        IReadOnlyList<PytestCollectionError> collectionErrors)
+    {
+        if (maxfail == 0)
+            return 0;
+
+        var failSoFar = results.Count(r => r.Outcome is "failed" or "error") + collectionErrors.Count;
+        return maxfail - failSoFar;
+    }
+
+    private static PytestCollectionError MissingFileError(string nodeId, string testPath) =>
+        new(nodeId, testPath, $"IronPython test file not found: {testPath}", string.Empty);
+
+    private static PytestRunResponse ToRunResponse(string workspaceRoot, RunState state)
+    {
+        var summary = BuildSummary(state.Results, state.CollectionErrors);
+        return new PytestRunResponse(
+            summary is { Failed: 0, Errors: 0 } ? 0 : 1,
+            summary,
+            state.Results,
+            state.CollectionErrors,
+            workspaceRoot,
+            state.Engine);
+    }
+
+    private sealed record RunState(
+        List<PytestCaseResult> Results,
+        List<PytestCollectionError> CollectionErrors,
+        string Engine);
 
     /// <summary>
     /// Same counters as CPython <c>PytestRunner</c>: collection errors live in
@@ -125,12 +170,11 @@ public sealed class IpyTestExecutionService(IScriptExecutionStrategyFactory stra
         return groups;
     }
 
-    public static DriverIoPaths CreateDriverIoPaths(string driverDir)
+    public static DriverIoPaths CreateDriverIoPaths(string driverDir, int processId)
     {
-        var id = Guid.NewGuid().ToString("N");
         return new DriverIoPaths(
-            Path.Combine(driverDir, $"request_{id}.json"),
-            Path.Combine(driverDir, $"result_{id}.json"));
+            Path.Combine(driverDir, RequestFileName(processId)),
+            Path.Combine(driverDir, ResultFileName(processId)));
     }
 
     private async Task<DriverPayload> RunFileAsync(
@@ -143,15 +187,13 @@ public sealed class IpyTestExecutionService(IScriptExecutionStrategyFactory stra
         var driverPath = PythonEmbedded.IpyTestDriverScriptPath;
         var driverDir = Path.GetDirectoryName(driverPath)
                         ?? throw new InvalidOperationException("IpyTestDriver path has no directory.");
-        var ioPaths = CreateDriverIoPaths(driverDir);
+        var ioPaths = CreateDriverIoPaths(driverDir, Environment.ProcessId);
         var prefix = IpyTestPath.ToNodeidPrefix(testPath, workspaceRoot);
 
         var requestBody = JsonSerializer.Serialize(new IpyDriverFileRequest(
             testPath, workspaceRoot, prefix, nodeIds, ioPaths.ResultPath, maxfail));
         File.WriteAllText(ioPaths.RequestPath, requestBody);
 
-        var previous = Environment.GetEnvironmentVariable(RequestEnvVar);
-        Environment.SetEnvironmentVariable(RequestEnvVar, ioPaths.RequestPath);
         try
         {
             var strategy = strategyFactory.Create(ExecutionMode.IronPython, driverPath, workspaceRoot);
@@ -160,7 +202,6 @@ public sealed class IpyTestExecutionService(IScriptExecutionStrategyFactory stra
         }
         finally
         {
-            Environment.SetEnvironmentVariable(RequestEnvVar, previous);
             TryDelete(ioPaths.RequestPath);
             TryDelete(ioPaths.ResultPath);
         }

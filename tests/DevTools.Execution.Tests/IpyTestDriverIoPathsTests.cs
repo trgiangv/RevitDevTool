@@ -5,21 +5,19 @@ namespace DevTools.Execution.Tests;
 public sealed class IpyTestDriverIoPathsTests
 {
     [Fact]
-    public void CreateDriverIoPaths_ProducesDistinctFilesPerCall()
+    public void CreateDriverIoPaths_ScopesFilesToHostProcessId()
     {
         var driverDir = Path.Combine(Path.GetTempPath(), "ipy-driver-io-" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(driverDir);
         try
         {
-            var first = IpyTestExecutionService.CreateDriverIoPaths(driverDir);
-            var second = IpyTestExecutionService.CreateDriverIoPaths(driverDir);
+            var first = IpyTestExecutionService.CreateDriverIoPaths(driverDir, 111);
+            var second = IpyTestExecutionService.CreateDriverIoPaths(driverDir, 222);
 
-            Assert.NotEqual(first.RequestPath, second.RequestPath);
-            Assert.NotEqual(first.ResultPath, second.ResultPath);
-            Assert.StartsWith(driverDir, first.RequestPath, StringComparison.Ordinal);
-            Assert.StartsWith(driverDir, second.ResultPath, StringComparison.Ordinal);
-            Assert.Contains("request_", first.RequestPath, StringComparison.Ordinal);
-            Assert.Contains("result_", first.ResultPath, StringComparison.Ordinal);
+            Assert.Equal(Path.Combine(driverDir, "request_111.json"), first.RequestPath);
+            Assert.Equal(Path.Combine(driverDir, "result_111.json"), first.ResultPath);
+            Assert.Equal(Path.Combine(driverDir, "request_222.json"), second.RequestPath);
+            Assert.Equal(Path.Combine(driverDir, "result_222.json"), second.ResultPath);
         }
         finally
         {
