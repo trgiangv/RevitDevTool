@@ -6,10 +6,10 @@ Date: 2026-08-16
 
 Accepted
 
-[0012](0012-host-mcp-spec-engine.md) still owns the host **wire** (spec DTOs, no
-SDK types on the pipe). This decision owns the **merge**: one ILRepack pipeline
-for every opt-in project. MCP is not a second packing mode. Host product year
-is not a variable; the load context and TFM are.
+[0027](0027-mcp-sdk-host-wire-adoption.md) owns the host **wire** (SDK DTOs
+allowed; no `McpServer` session on the pipe). This decision owns the **merge**:
+one ILRepack pipeline for every opt-in project. MCP is not a second packing
+mode. The load context and TFM are the variables.
 
 ## Context
 
@@ -45,8 +45,7 @@ MCP follows that same input rule, split by who loads the assembly. .NET
 toolsets compile against MCP (`ExcludeAssets=runtime`) and do not ship it:
 Catalog reflects into a collectible ALC that binds `ModelContextProtocol*` from
 the host load context. Host-loaded projects copy-local MCP so ILRepack embeds
-it (no siblings). Turning ILRepack off for Revit 2027 to share MCP identity was
-a year quirk — rejected. Do not exclude `ModelContextProtocol*` by filename.
+it (no siblings). Do not exclude `ModelContextProtocol*` by filename.
 
 ## Decision
 
@@ -82,8 +81,7 @@ a year quirk — rejected. Do not exclude `ModelContextProtocol*` by filename.
 7. **MCP uses that rule, not a special ILRepack mode.** Copy-local MCP on the
    host merges into the host DLL (no siblings). Toolsets use
    `ExcludeAssets=runtime` — Catalog reflects, they do not ship MCP. Do not
-   exclude `ModelContextProtocol*` by name. Do not gate `ILRepackable` on
-   Autodesk year.
+   exclude `ModelContextProtocol*` by name.
 8. **Defaults live in `props/ILRepack.targets`; a csproj only opts in or
    overrides.** Driver defaults: `ILRepackable=false`, `ILRepackUnion=true`,
    `ILRepackInternalize=false`, `ILRepackILLink=false`, `ILRepackParallel=true`.
@@ -103,17 +101,14 @@ a year quirk — rejected. Do not exclude `ModelContextProtocol*` by filename.
 2. **`/allowdup` instead of `/union`.** ricaun’s Revit sample uses this for
    duplicate types. Untested here; `/union` is what currently packs
    `Microsoft.Extensions.*`.
-3. **Disable ILRepack on net10.** Avoids the smashed image but ships a large
-   sibling-DLL graph and reopens identity conflicts ILRepack exists to close.
+3. **Disable ILRepack on net10.** Avoids the smashed image but ships a
+   sibling-DLL graph and reopens identity conflicts. Rejected.
 4. **Keep Polyfill on all TFMs.** Maximizes net48 convenience and guarantees
    multiple `Polyfills.Polyfill` copies in a net10 merge.
-5. **Disable ILRepack on 2027 / net10 for MCP identity.** Lets toolsets share
-   host-loaded SDK types by shipping siblings instead of merging. Leaves a year
-   split. Rejected — toolsets stay compile-only; host embeds MCP for ALC bind.
-6. **`RepackBinariesExcludes` for `ModelContextProtocol*`.** A second packing
+5. **`RepackBinariesExcludes` for `ModelContextProtocol*`.** A second packing
    mode for one package family. If MCP must not be in the host image, it must
    not be copy-local. Rejected.
-7. **`PolyfillLib` instead of source `Polyfill` on net48.** A compiled DLL
+6. **`PolyfillLib` instead of source `Polyfill` on net48.** A compiled DLL
    would stop embedding `Polyfills.Polyfill` per assembly, but the net48
    package graph pulls `Microsoft.Bcl.Memory`, `System.Memory`,
    `System.Runtime.CompilerServices.Unsafe`, `System.Net.Http`,
@@ -139,8 +134,8 @@ Tradeoffs:
 - `/union` + a future second Polyfill copy will fail the same way; exclude or
   stop embedding, do not add comments.
 - Catalog still uses SDK types to reflect-invoke toolsets, so the host pack
-  embeds MCP. [0012](0012-host-mcp-spec-engine.md) owns the pipe DTOs, not this
-  merge. Do not add an MCP filename exclude.
+  embeds MCP. [0027](0027-mcp-sdk-host-wire-adoption.md) owns the pipe DTOs, not
+  this merge. Do not add an MCP filename exclude.
 
 ## Follow-Up
 
@@ -154,4 +149,4 @@ Tradeoffs:
 
 - Driver: [`props/ILRepack.targets`](../../props/ILRepack.targets)
 - Build digest: [`docs/agents/build-matrix.md`](../agents/build-matrix.md)
-- Host wire (no SDK types): [0012](0012-host-mcp-spec-engine.md)
+- Host wire (SDK types, no SDK session): [0027](0027-mcp-sdk-host-wire-adoption.md)

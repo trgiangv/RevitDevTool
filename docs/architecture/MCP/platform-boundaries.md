@@ -1,21 +1,23 @@
 # MCP platform boundaries (host wire, pass-through, MRTR)
 
-Authoritative map of **where** MCP SDK behavior is applied, **where** the host uses
-spec wire DTOs, and **what remains** for Gateway E2E (G3) and host legacy
-backcompat (G4).
+Authoritative map of **where** MCP SDK behavior is applied and **where** the host uses
+spec wire DTOs. Product scope is [0029](../../decisions/0029-mcp-use-case-limits-not-full-protocol.md)
+(host↔daemon schema + errors; MRTR elicitation is not a delivery track).
 
-Last updated: 2026-08-03
+Last updated: 2026-08-31
 
-> **ADR 0012:** Host in-process runtime uses spec wire DTOs (`DevTools.Mcp.Core.Protocol`)
-> via `McpHandler`. Daemon, client broker, and third-party toolsets keep the official MCP SDK.
-> See [`docs/decisions/0012-host-mcp-spec-engine.md`](../../decisions/0012-host-mcp-spec-engine.md).
+> **ADR 0027:** Host named pipe does **not** run MCP SDK session/server (`McpServer`,
+> `McpSession`, `initialize` handshake). Host implements spec-first JSON-RPC
+> (`server/discover` + per-request `_meta`) via `McpHandler`. SDK DTOs and constants
+> **are** allowed on host and may be ILRepacked into the add-in.
+> See [`docs/decisions/0027-mcp-sdk-host-wire-adoption.md`](../../decisions/0027-mcp-sdk-host-wire-adoption.md).
 
 ## Audience
 
 - Reviewers validating that new code stays in the correct layer (`Core` vs `Catalog` vs `Server`).
 
 Product behavior contracts: [`docs/product/mcp.md`](../../product/mcp.md).
-MRTR session plan: [`docs/plans/active/2026-08-02-mrtr-implementation.md`](../../plans/active/2026-08-02-mrtr-implementation.md).
+MRTR session plan (closed): [`docs/plans/completed/2026-08-02-mrtr-implementation.md`](../../plans/completed/2026-08-02-mrtr-implementation.md).
 
 ---
 
@@ -63,28 +65,34 @@ invoke_dynamic (daemon)
 **Pass-through rules:**
 
 1. Discovery from `ConnectedHostCatalog` schema only — no runtime inference on daemon.
-2. `invoke_dynamic` forwards `arguments`, `inputResponses`, `requestState`, `progressToken` on `CallToolRequestParams`.
+2. `invoke_dynamic` forwards `arguments`, `inputResponses`, and `requestState` on `CallToolRequestParams` (not `progressToken` — see [0028](../../decisions/0028-host-alc-progress-notifications.md) / G5).
 3. Success results pass `Content`, `StructuredContent`, `Meta`, `IsError` without re-wrapping business payloads.
 4. Isolated .NET toolsets: **Catalog** serializes toolset `CallToolResult` in the toolset domain and deserializes to host wire DTOs.
 
 ### Invocation request boundaries
 
-`McpInvocationRequest` (`Core/Protocol/Invocation/`) is the shared DTO:
+SDK `CallToolRequestParams` is the shared DTO (Phase 2 / [0027](../../decisions/0027-mcp-sdk-host-wire-adoption.md)). `InvocationRequestReader.FromWire` deserializes with `McpJsonUtilities.DefaultOptions`. `progressToken` is read from `_meta` only.
 
 | Layer | Type | Role |
 |-------|------|------|
-| `DevTools.Mcp.Core` | `InvocationRequestReader.FromWire` | JSON-RPC `tools/call` params → DTO |
-| `DevTools.Mcp.Catalog` | `SdkInvocationRequest.ToToolContext` | DTO → SDK `RequestContext` for .NET toolsets |
-| `DevTools.Mcp.Adapter` | `PythonInvocationPayload.ToJson` | DTO → JSON for embedded Python bridge |
+| `DevTools.Mcp.Core` | `InvocationRequestReader.FromWire` | JSON-RPC `tools/call` params → `CallToolRequestParams` |
+| `DevTools.Mcp.Catalog` | `SdkInvocationRequest.ToToolContext` | `CallToolRequestParams` → SDK `RequestContext` for .NET toolsets |
+| `DevTools.Mcp.Adapter` | `PythonInvocationPayload.ToJson` | `CallToolRequestParams` → JSON for embedded Python bridge |
 
-Wire encoders: `CatalogListEncoder`, `InvocationResponseEncoder`, `ReadResourceEncoder`.
+Wire: list/read results are SDK `ListToolsResult` / `ListResourcesResult` /
+`ListResourceTemplatesResult` / `ReadResourceResult` via
+`McpJsonUtilities.DefaultOptions`. Tool-call results go through
+`InvocationResponseEncoder.PrepareForWire` then `HostToolResultJson`.
+In-process MRTR uses `McpInvocationResponse.InputRequired`; the named-pipe
+bytes are still SDK `InputRequiredResult` (`McpJsonUtilities.DefaultOptions`).
 
 ### Catalog ports
 
 | Port | Implementation | Role |
 |------|----------------|------|
 | `IConnectedHostCatalog` | `ConnectedHostCatalog` (Client) | Daemon: capabilities from connected host sessions |
-| `IHostPrimitiveRegistry` | `McpCatalogStore` (Catalog) | Host: primitives loaded in-process |
+
+Host in-process catalog is `McpCatalogStore` (Catalog). Adapter and UI inject the store directly (`CatalogChanged`, `ReloadAsync`, SDK descriptors). There is no separate read-only registry port.
 
 ---
 
@@ -135,7 +143,7 @@ instances; private dependencies remain toolset-local, per ADR 0012 packaging rul
 
 ## MRTR (Multi-Round Tool Results) — wire vs product
 
-### Protocol stack (SDK 2.0.0, `2026-07-28+`)
+### Protocol stack (SDK 2.2.0, `2026-07-28+`)
 
 | Mechanism | SDK surface |
 |-----------|-------------|
@@ -156,7 +164,7 @@ instances; private dependencies remain toolset-local, per ADR 0012 packaging rul
 ### Gaps (MRTR session scope)
 
 Refined 2026-08-02 — full matrix in
-[`2026-08-02-mrtr-implementation.md`](../../plans/active/2026-08-02-mrtr-implementation.md).
+[`2026-08-02-mrtr-implementation.md`](../../plans/completed/2026-08-02-mrtr-implementation.md).
 
 | Gap | Impact | Likely fix layer |
 |-----|--------|------------------|
@@ -164,11 +172,12 @@ Refined 2026-08-02 — full matrix in
 | **G1-b** ALC automated throw→retry with `InputResponses` | ✅ Done — T-ALC-10..15 harness | — |
 | **G1-c** High-level `ElicitAsync` / `MrtrContext` suspend | Incompatible with sync ALC `InvokeSync` | **Documented unsupported** — low-level `InputRequiredException` only (see below) |
 | **G1-Py** Full python-sdk `Resolve(Elicit[T])` inside embedded toolsets | Manual `InputRequiredResult` return + MRTR payload retry works; Resolve DI not embedded | Out of scope — bridge done (`PythonInvocationPayload` / parser) |
-| **G2** Product delete confirm | **B recorded** — warning + `dryRun`; MRTR elicitation deferred pending G3/G4 | — |
-| **G3** Gateway / cloud elicitation | Unproven through `McpGateway` | Checklist T-GW-* |
-| **G4** Stateful host backcompat when daemon lacks MRTR | Possible hang/legacy elicitation to daemon | Spike T-HOST-03/04 before G2=A |
+| **G2** Product delete confirm | **B locked** — warning + `dryRun`; elicitation is not the product path | [0029](../../decisions/0029-mcp-use-case-limits-not-full-protocol.md) |
+| **G3** Gateway / cloud elicitation | ⏸ Not product | [0029](../../decisions/0029-mcp-use-case-limits-not-full-protocol.md) |
+| **G4** Stateful host backcompat when daemon lacks MRTR | ⏸ Not product | [0029](../../decisions/0029-mcp-use-case-limits-not-full-protocol.md) |
+| **G5** Host / ALC progress notifications | Unsupported on `invoke_dynamic` / ALC / Python / host built-ins | [0028](../../decisions/0028-host-alc-progress-notifications.md) + [0029](../../decisions/0029-mcp-use-case-limits-not-full-protocol.md) |
 
-### Double-hop MRTR flow (wire implemented; Gateway E2E open)
+### Double-hop MRTR flow (plumbing only — not a product loop)
 
 ```text
 1. Client: invoke_dynamic(capabilityId, arguments={...})
@@ -212,12 +221,12 @@ the demo DLL in `McpRegistryConfig.json` — do not use for product delete confi
 
 ---
 
-## MCP SDK 2.0 adaptation matrix
+## MCP SDK 2.2 adaptation matrix
 
-See **[SDK 2.0 gap matrix](sdk-2-0-gap-matrix.md)** for the living ✅/⚠️/⏸ table vs
-`ModelContextProtocol` 2.0.0. Summary below.
+See **[SDK gap matrix](sdk-gap-matrix.md)** for the living ✅/⚠️/⏸ table vs
+`ModelContextProtocol` 2.2.0. Summary below.
 
-**Packages:** `ModelContextProtocol` + `ModelContextProtocol.Extensions.Tasks` **2.0.0**
+**Packages:** `ModelContextProtocol` + `ModelContextProtocol.Extensions.Tasks` **2.2.0**
 (`Directory.Packages.props`).
 
 | SDK / spec feature | Status | Notes |
@@ -229,7 +238,7 @@ See **[SDK 2.0 gap matrix](sdk-2-0-gap-matrix.md)** for the living ✅/⚠️/�
 | MCP Tasks Optional | ✅ | Export + execute tools |
 | `ResourceLinkBlock` pass-through | ✅ | No auto-fetch |
 | Image / audio `ContentBlock` | ✅ | `view_screenshot`, harness |
-| Progress notifications | ✅ | `CallToolRequestServiceProvider` |
+| Progress notifications | ⚠️ Daemon fixed tools ✅; host pipe / `invoke_dynamic` / ALC / Python / built-ins ❌ | See [0028](../../decisions/0028-host-alc-progress-notifications.md) — G5 |
 | `resources/subscribe` | ⏸ | Intentional |
 | `completions` | ⏸ | Intentional |
 | `ToolUse` / `ToolResult` blocks | ⏸ | Intentional |

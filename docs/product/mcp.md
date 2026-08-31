@@ -38,19 +38,15 @@ In-host MCP runtime is shared across registered hosts.
     Stale errors are retryable only while `executionStarted=false`; clients retry
     once by `research_then_reinvoke` (search again, then invoke the new ID). No
     separate resolve tool exists.
-- **MRTR pass-through** (protocol `2026-07-28`): when a host tool returns
-  `input_required`, daemon `invoke_dynamic` surfaces the incomplete result to the
-  external client (`InputRequiredException` with wrapped `requestState` preserving
-  `capabilityId`, original `arguments`, and host `requestState`). Clients retry
-  `invoke_dynamic` with `inputResponses` and echoed `requestState`.   Wire, ALC low-level MRTR retry (G1), and mock tests are in place; **Gateway E2E (G3)**
-  and **host legacy backcompat spike (G4)** remain open (see
-  [`platform-boundaries.md`](../architecture/MCP/platform-boundaries.md),
-  [`2026-08-02-mrtr-implementation.md`](../plans/active/2026-08-02-mrtr-implementation.md)).
-  Isolated .NET toolsets support **low-level** MRTR only (`InputRequiredException` +
-  `InputResponses`/`RequestState` on retry); csharp-sdk high-level `ElicitAsync` /
-  `MrtrContext` suspension is **not** supported on the sync ALC invoker.
-  **Product today:** `revit_delete_elements` uses structured **warning** + `dryRun` preview
-  (aligned with Python) — not MRTR elicitation for bulk delete.
+- **MRTR is not a product workflow** ([0029](../decisions/0029-mcp-use-case-limits-not-full-protocol.md)).
+  The working loop is search → invoke → read result or execute error tags
+  (`[COMPILATION ERROR]`, `[RUNTIME ERROR]`, `[ROLLBACK]`), then retry. Destructive
+  tools use structured **warning** + `dryRun` (e.g. `revit_delete_elements`), not
+  elicitation. The host hop may still serialize `InputRequiredResult` if a tool
+  throws `InputRequiredException` (plumbing); do not build agent features on
+  Gateway/Cursor elicitation, `ElicitAsync`, or Python `Resolve(Elicit)`.
+  Isolated .NET toolsets: low-level throw/retry only; high-level `MrtrContext`
+  suspend is unsupported on the sync ALC invoker.
 - `read_file_info` defaults to `detail=summary` for on-disk file peek; pass
   `detail=full` for complete transmission/link metadata. Success responses include
   SDK `StructuredContent` plus compact JSON in `Content` (prefer `StructuredContent`
@@ -83,7 +79,8 @@ In-host MCP runtime is shared across registered hosts.
 ## Related
 
 - Architecture: [`docs/architecture/MCP/README.md`](../architecture/MCP/README.md)
-- SDK 2.0 gaps: [`docs/architecture/MCP/sdk-2-0-gap-matrix.md`](../architecture/MCP/sdk-2-0-gap-matrix.md)
-- Boundaries (ALC / MRTR wire): [`docs/architecture/MCP/platform-boundaries.md`](../architecture/MCP/platform-boundaries.md)
+- SDK gaps: [`docs/architecture/MCP/sdk-gap-matrix.md`](../architecture/MCP/sdk-gap-matrix.md)
+- Use-case limits: [`docs/decisions/0029-mcp-use-case-limits-not-full-protocol.md`](../decisions/0029-mcp-use-case-limits-not-full-protocol.md)
+- Boundaries (host wire): [`docs/architecture/MCP/platform-boundaries.md`](../architecture/MCP/platform-boundaries.md)
 - Workflows: [`docs/architecture/MCP/workflows.md`](../architecture/MCP/workflows.md)
 - Agent digest: [`docs/agents/mcp-pytest-bridge.md`](../agents/mcp-pytest-bridge.md)

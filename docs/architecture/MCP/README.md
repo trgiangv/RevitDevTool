@@ -4,7 +4,7 @@ Model Context Protocol integration lets external AI clients (Claude Desktop, Cur
 
 The stack is host-agnostic. The Daemon discovers `DevToolsMcp_{Host}_{Version}_{PID}` pipes via `HostBroker`, hydrates a per-machine/PID `ConnectedHostCatalog`, and exposes only infrastructure tools plus `search_dynamic` / `invoke_dynamic`.
 
-Last updated: 2026-08-03
+Last updated: 2026-08-31
 
 ## Vocabulary
 
@@ -13,7 +13,7 @@ Last updated: 2026-08-03
 | **Daemon MCP Server** | `DevTools.Daemon` process; AI client talks here (stdio / gateway) | host server |
 | **Host MCP Server** | Spec wire handler inside Revit/AutoCAD; pipe `DevToolsMcp_*` | daemon |
 | **HostBroker** | Daemon-side **MCP client** + owner of `ConnectedHostCatalog` | MCP server |
-| **ConnectedHostCatalog** | In-memory index of host tools/resources by machine+PID (daemon) | `IHostPrimitiveRegistry` |
+| **ConnectedHostCatalog** | In-memory index of host tools/resources by machine+PID (daemon) | `McpCatalogStore` |
 | **McpCatalogStore** | In-host primitive registry feeding the Host MCP Server | `ConnectedHostCatalog` |
 | **App container** | Real `IServiceCollection` / `IHost` for Daemon or host add-in | temp `ServiceProvider` in options builders |
 | **Shared server features** | Tasks + call-log filters on daemon `McpServerOptions` | host wire logging |
@@ -91,8 +91,8 @@ Composition: `DevTools.Mcp.Server` (daemon fixed surface), `DevTools.Mcp.Client`
 
 | Document | Contents |
 |----------|----------|
-| [SDK 2.0 gap matrix](sdk-2-0-gap-matrix.md) | Living ✅/⚠️/⏸ map vs `ModelContextProtocol` 2.0.0 |
-| [Platform boundaries](platform-boundaries.md) | ALC isolated toolset invoke/map, MRTR wire vs gaps, layer map |
+| [SDK gap matrix](sdk-gap-matrix.md) | Living ✅/⚠️/⏸ map vs `ModelContextProtocol` 2.2.0 |
+| [Platform boundaries](platform-boundaries.md) | Host wire, ALC, error hop; MRTR is plumbing ([0029](../../decisions/0029-mcp-use-case-limits-not-full-protocol.md)) |
 | [Daemon](daemon.md) | Architecture, lifecycle, auth, control pipe API |
 | [Transport](transport.md) | Stdio mode, Gateway WebSocket, dual pipe protocols |
 | [Tools](tools.md) | Fixed daemon surface, ConnectedHostCatalog, in-host primitives |

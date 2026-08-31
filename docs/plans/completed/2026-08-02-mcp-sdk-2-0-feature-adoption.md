@@ -4,7 +4,7 @@ Date: 2026-08-02
 
 ## Status
 
-Completed (2026-08-02). Living gap table: [`docs/architecture/MCP/sdk-2-0-gap-matrix.md`](../../architecture/MCP/sdk-2-0-gap-matrix.md).
+Completed (2026-08-02). Living gap table: [`docs/architecture/MCP/sdk-gap-matrix.md`](../../architecture/MCP/sdk-gap-matrix.md) (renamed from `sdk-2-0-gap-matrix.md`).
 
 ## Outcome
 
@@ -26,7 +26,7 @@ Success is measured by contract tests + integration checklist, not by new extern
 - Architecture: `docs/architecture/MCP/tools.md`, `docs/architecture/MCP/README.md`
 - SDK reference: sibling `csharp-sdk` repo (`CallToolResult`, `ContentBlock`, `WithTasks`, `UseStructuredContent`).
 - Prior work: `invoke_dynamic` single-invoke pass-through for host `CallToolResult` / `ReadResourceResult` (image vision fix).
-- Related active plan: `2026-07-26-mcp-agent-efficiency.md` (Phase 1 largely shipped; Tasks deferred there).
+- Related plan: [`2026-07-26-mcp-agent-efficiency.md`](2026-07-26-mcp-agent-efficiency.md) (Phase 1 largely shipped; Tasks deferred there).
 
 ### SDK 2.0 surface vs DevTools today
 

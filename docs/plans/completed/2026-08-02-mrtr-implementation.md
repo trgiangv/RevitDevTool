@@ -1,16 +1,19 @@
 # Plan: MRTR implementation
 
 Date: 2026-08-02  
-Updated: 2026-08-02 (G1 closed; G2=B recorded; G3/G4 open)
+Closed: 2026-08-31
 
 ## Status
 
-Active — **G1 wire + ALC MRTR closed**. Product delete confirm locked to **warning-first (G2=B)**.
-**G3** (Gateway E2E) and **G4** (host legacy backcompat) remain open.
+**Completed (closed, not fully delivered).** G1 wire + ALC low-level MRTR landed.
+Product delete confirm locked to **warning-first (G2=B)**. **G3** (Gateway
+elicitation) and **G4** (host `IsMrtrSupported` / stateful resolve) are **not
+product** — MRTR stays hop plumbing. Policy:
+[0029](../../decisions/0029-mcp-use-case-limits-not-full-protocol.md).
 ## Prerequisite reading
 
 1. [`docs/architecture/MCP/platform-boundaries.md`](../../architecture/MCP/platform-boundaries.md) — ALC + MRTR wire.
-2. [`docs/architecture/MCP/sdk-2-0-gap-matrix.md`](../../architecture/MCP/sdk-2-0-gap-matrix.md) — MRTR row.
+2. [`docs/architecture/MCP/sdk-gap-matrix.md`](../../architecture/MCP/sdk-gap-matrix.md) — MRTR row.
 3. csharp-sdk:
    - `AIFunctionMcpServerTool.CreateAIFunctionFactoryOptions` (`IsAugmentedWith`)
    - `RequestServiceProvider<T>.IsAugmentedWith`
@@ -43,7 +46,7 @@ without `__mcp*` hacks or Core tool-specific MRTR metadata.
 - MRTR on `execute_csharp_code` / `execute_python_code` (Tasks Optional preferred).
 - ALC support for **high-level** csharp-sdk implicit MRTR (`ElicitAsync` / `MrtrContext`
   handler suspension across round-trips). Document as unsupported on sync ALC invoker.
-- Full python-sdk `Resolve` / FastMCP MRTR inside the Python toolset bridge (optional
+- Full python-sdk `Resolve(Elicit[T])` inside the Python toolset bridge (optional
   follow-up; see G1-Py).
 - `resources/subscribe`, completions, ToolUse blocks.
 
@@ -80,7 +83,7 @@ without `__mcp*` hacks or Core tool-specific MRTR metadata.
 | `InputRequiredException` propagate through host wire + dispatcher | Done |
 | Mock tests `InvokeDynamicSdkHarnessTests` MRTR cases | Done — daemon hop only |
 | ALC `CallToolResult` text/structured mapping | Done — do not regress |
-| `CallToolRequestServiceProvider` | Done — **invoke-time** mirror of SDK provider |
+| `ToolsetInvocationServices` | Done — **invoke-time** mirror of SDK provider |
 | `DotnetToolsetAiFunctionFactory` `IsAugmentedWith` | Done — create-time bind mirrors SDK |
 | ALC MRTR round-trip automated test | Done — T-ALC-10..15 |
 | Python bridge MRTR fields / `InputRequiredResult` | Done — wire bridge + unit tests; `Resolve(Elicit)` deferred |
@@ -103,7 +106,7 @@ Prefer a local `IsAugmentedWith` duplicate (same four types) rather than
 
 **Acceptance:** Tool method with
 `RequestContext<CallToolRequestParams>` + `McpServer` parameters binds from
-`CallToolRequestServiceProvider` at invoke; those params are excluded from input schema.
+`ToolsetInvocationServices` at invoke; those params are excluded from input schema.
 
 #### G1-b — Retry visibility (not “apply responses into Arguments”)
 
@@ -132,7 +135,7 @@ negative test: documenting that calling `ElicitAsync` from an ALC tool is unsupp
 `InputRequiredException`, `ToolInvoke.py` MRTR `tools/call` routing, unit tests
 `PythonToolsetMrtrBridgeTests` (T-PY-01/02).
 
-**Still deferred:** full python-sdk `Resolve(Elicit[T])` / FastMCP DI inside the
+**Still deferred:** full python-sdk `Resolve(Elicit[T])` inside the
 embedded bridge (T-PY-03); live Python.NET E2E.
 
 ### G2 — Product: destructive confirm
@@ -197,7 +200,7 @@ host/checklist, **D** = deferred.
 | T-ALC-01 | Method params `RequestContext<CallToolRequestParams>`, `McpServer` are **excluded** from `AIFunction.JsonSchema` | M | Factory create on stub method | Matches `AIFunctionMcpServerTool` schema exclusion |
 | T-ALC-02 | Invoke binds `RequestContext` identity equal to call request | M | `DotnetToolsetToolInvoker.InvokeSync` + stub reading context | Same as SDK `RequestServiceProvider` |
 | T-ALC-03 | Invoke binds `McpServer` from `request.Server` | M | stub reading `server.IsMrtrSupported` | Same as SDK |
-| T-ALC-04 | `IProgress<ProgressNotificationValue>` binds (token / nop) | M | optional | Parity with `CallToolRequestServiceProvider` |
+| T-ALC-04 | `IProgress<ProgressNotificationValue>` binds (token / nop) | M | optional | Parity with `ToolsetInvocationServices` |
 | T-ALC-05 | Ordinary args still bind from `Params.Arguments` | M | stub with `string name` | No regression |
 
 **Files (new):** `DotnetToolsetAiFunctionFactoryTests.cs` and/or
@@ -242,7 +245,7 @@ static string TestMrtrConfirm(McpServer server, RequestContext<CallToolRequestPa
 | T-ALC-20 | ALC tool calling `ElicitAsync` is unsupported | D/doc | G1-c — do not implement suspend |
 | T-PY-01 | Python payload includes `inputResponses`/`requestState` | M | Done — `PythonToolsetMrtrBridgeTests` |
 | T-PY-02 | Python `InputRequiredResult` → host `InputRequiredException` | M | Done — same |
-| T-PY-03 | python-sdk `Resolve(Elicit[T])` inside toolset | D | Out of scope — would need FastMCP/host redesign |
+| T-PY-03 | python-sdk `Resolve(Elicit[T])` inside toolset | D | Out of scope — would need host/bridge redesign |
 
 ### Layer E — Host / double-hop / legacy (G4)
 
@@ -339,6 +342,6 @@ demo scenario after G1/G2.
 ## Related
 
 - Parent (completed): [`../completed/2026-08-02-mcp-advanced-features-adoption.md`](../completed/2026-08-02-mcp-advanced-features-adoption.md)
-- Architecture: [`platform-boundaries.md`](../../architecture/MCP/platform-boundaries.md), [`sdk-2-0-gap-matrix.md`](../../architecture/MCP/sdk-2-0-gap-matrix.md)
+- Architecture: [`platform-boundaries.md`](../../architecture/MCP/platform-boundaries.md), [`sdk-gap-matrix.md`](../../architecture/MCP/sdk-gap-matrix.md)
 - csharp-sdk refs: `AIFunctionMcpServerTool`, `McpServerImpl` MRTR, `InputRequiredException`
 - python-sdk refs: `resolve.py`, `_input_required.py`, `call_tool(..., allow_input_required=True)`

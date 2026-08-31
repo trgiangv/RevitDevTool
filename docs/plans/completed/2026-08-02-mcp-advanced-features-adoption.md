@@ -4,8 +4,8 @@ Date: 2026-08-02
 
 ## Status
 
-Completed (2026-08-02). MRTR product: [`../active/2026-08-02-mrtr-implementation.md`](../active/2026-08-02-mrtr-implementation.md).
-Gap matrix: [`sdk-2-0-gap-matrix.md`](../../architecture/MCP/sdk-2-0-gap-matrix.md).
+Completed (2026-08-02). MRTR session (closed 2026-08-31): [`2026-08-02-mrtr-implementation.md`](2026-08-02-mrtr-implementation.md).
+Gap matrix: [`sdk-gap-matrix.md`](../../architecture/MCP/sdk-gap-matrix.md).
 
 ## Outcome
 
@@ -50,7 +50,7 @@ locators. Agents should:
 | Resource templates | Read parameterized snapshots without new tools; batch `reads[]` | Catalog + `invoke_dynamic` ✅; samples mostly fixed URI | Add 2 templates + batch demo |
 | `UseStructuredContent` on toolsets | Drop duplicate JSON in `Content`; stable parsing | 3 Revit tools only | Top 6 query/write tools C# + Python |
 | `ResourceLinkBlock` chaining | Point to template/fixed URI without re-search | Pass-through ✅ | Sample links to new templates |
-| MRTR / `InputRequiredException` | One logical confirm for bulk delete; no custom warning JSON dance | Wire pass-through ✅; product warning-first; ALC retry gap | See [`../active/2026-08-02-mrtr-implementation.md`](../active/2026-08-02-mrtr-implementation.md) |
+| MRTR / `InputRequiredException` | One logical confirm for bulk delete; no custom warning JSON dance | Wire pass-through ✅; product warning-first; ALC retry gap | See [`2026-08-02-mrtr-implementation.md`](2026-08-02-mrtr-implementation.md) |
 | MCP Tasks Optional | Long export/code without blocking sync pipe | `McpTaskExecutionMeta` ✅ | Live E2E + export tools sample |
 | Compact batch reads | One round-trip for cheatsheet + context + selection | `reads[]` ✅ | Integration scenario + prompt hints |
 
@@ -361,7 +361,7 @@ Integration: `docs/agents/mcp-integration-test.md` scenarios 1, 5, 9 (resource t
 
 - [x] Phase 1: Resource templates — C# + Python samples, TOOLSET-SPEC, integration Scenario 9, harness/contract tests
 - [x] Phase 2: Structured output — C#/Python toolsets, `DotnetMcpAssemblyParser` OutputSchema, mapper tests
-- [~] Phase 3: MRTR wire only — see [`../active/2026-08-02-mrtr-implementation.md`](../active/2026-08-02-mrtr-implementation.md) for product + ALC retry
+- [~] Phase 3: MRTR wire only — see [`2026-08-02-mrtr-implementation.md`](2026-08-02-mrtr-implementation.md) for product + ALC retry
 - [x] Phase 4: Tasks Optional parity verified (C# + Python export tools)
 - [x] Phase 5: Prompts, token benchmarks, `search_dynamic` template argsHint, architecture docs
 - [x] **P1 ALC boundary** (platform, 2026-08-02): `DotnetToolsetToolInvoker` + `DotnetToolsetReturnMapper` + `CallToolRequestServiceProvider` — bypass SDK `McpServerTool.InvokeAsync` type switch for isolated toolsets; live verified `revit_find_elements`, `revit_read_parameters`, `revit_get_status`
@@ -371,7 +371,7 @@ Integration: `docs/agents/mcp-integration-test.md` scenarios 1, 5, 9 (resource t
 | Item | Notes |
 |------|-------|
 | `ContractTests` outputSchema | Catalog `tools/list` assertion for structured tools |
-| Phase 3 MRTR | [`../active/2026-08-02-mrtr-implementation.md`](../active/2026-08-02-mrtr-implementation.md) — out of scope for this plan |
+| Phase 3 MRTR | [`2026-08-02-mrtr-implementation.md`](2026-08-02-mrtr-implementation.md) — out of scope for this plan |
 | `RevitMcpToolSet` in `McpRegistryConfig` per Revit year | Operator config (`%AppData%\RevitDevTool\{Year}\Settings\`) |
 
 ### Architecture placement (2026-08-02)
@@ -400,5 +400,5 @@ Move to `docs/plans/completed/` after optional ContractTests or accept deferral.
 ## Related plans
 
 - SDK 2.0 base adoption: completed in this refactor session (see gap matrix)
-- MRTR product: [`../active/2026-08-02-mrtr-implementation.md`](../active/2026-08-02-mrtr-implementation.md) (active)
+- MRTR product: [`2026-08-02-mrtr-implementation.md`](2026-08-02-mrtr-implementation.md) (closed 2026-08-31)
 - Completed prior: `docs/plans/completed/` — platform split, python MCP migration

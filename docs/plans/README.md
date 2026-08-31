@@ -31,15 +31,16 @@ decision into `docs/decisions/`; keep task-local choices in the plan.
 | Plan | Status |
 |------|--------|
 | [2026-08-22-testing-core-open-closed.md](active/2026-08-22-testing-core-open-closed.md) | Active — Tasks 0–4 landed; Opus 5 gate Accept |
-| [2026-08-17-p0-xunit4-repository-mtp-baseline.md](active/2026-08-17-p0-xunit4-repository-mtp-baseline.md) | Active — CLI complete; IDE smoke open |
+| [2026-08-21-tunit-revit-testhost.md](active/2026-08-21-tunit-revit-testhost.md) | Spike — not production-ready |
 | [2026-08-17-p1-framework-neutral-testing-core.md](active/2026-08-17-p1-framework-neutral-testing-core.md) | Active — Tasks 1-4 landed |
-| [2026-08-17-p2-xunit4-host-provider.md](active/2026-08-17-p2-xunit4-host-provider.md) | Blocked by P1 |
-| [2026-08-02-mrtr-implementation.md](active/2026-08-02-mrtr-implementation.md) | Active — G1 closed; G3/G4 open |
+| [2026-08-17-p2-testing-kernel-extraction.md](active/2026-08-17-p2-testing-kernel-extraction.md) | Active |
 
 ## Recently Completed
 
 | Plan | Completed |
 |------|-----------|
+| [2026-08-31-mcp-sdk-2-2-host-wire.md](completed/2026-08-31-mcp-sdk-2-2-host-wire.md) | 2026-08-31 |
+| [2026-08-02-mrtr-implementation.md](completed/2026-08-02-mrtr-implementation.md) | 2026-08-31 (G1 done; G3/G4 not product — [0029](../decisions/0029-mcp-use-case-limits-not-full-protocol.md)) |
 | [2026-08-15-nunit-visual-studio-debug.md](completed/2026-08-15-nunit-visual-studio-debug.md) | 2026-08-27 |
 | [2026-08-12-nunit-native-runtime-mtp.md](completed/2026-08-12-nunit-native-runtime-mtp.md) | 2026-08-27 (superseded leftover gates withdrawn) |
 | [2026-08-10-nunit-host-testing.md](completed/2026-08-10-nunit-host-testing.md) | 2026-08-12 (superseded; archived 2026-08-27) |

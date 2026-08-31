@@ -105,7 +105,7 @@ Do not cargo-cult those `-p` flags onto every `dotnet build`. See `.agents/skill
 ILRepack lives in `props/ILRepack.targets` (imported for every project). Opt in
 with `ILRepackable=true` and list loose DLLs in `RepackBinariesExcludes`. The
 driver adds the `ILRepack` PackageReference when that flag is true. Policy for
-`/union`, Polyfill, and net10 isolated ALC:
+`/union`, Polyfill, and isolated ALC:
 [0019](../decisions/0019-ilrepack-and-polyfill-isolated-alc.md).
 `DevTools.TestAdapter` opts in the same way (`ILRepackable` on every TFM,
 `RepackBinariesKeep` for `DevTools.Testing.Abstractions.dll`); consumers of

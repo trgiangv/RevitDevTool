@@ -42,7 +42,7 @@ Towers (same baseline session 2026-07-27).
 
 - Product: `docs/product/mcp.md`
 - Architecture: `docs/architecture/MCP/tools.md`, `workflows.md`, `README.md`
-- Prior efficiency plan: `docs/plans/active/2026-07-26-mcp-agent-efficiency.md`
+- Prior efficiency plan: [`docs/plans/completed/2026-07-26-mcp-agent-efficiency.md`](2026-07-26-mcp-agent-efficiency.md)
   (Phase 1–2 largely done; this plan continues discovery/round-trip work)
 - Integration evidence: 2026-07-27 live pass — core execute/undo/resources OK;
   Python `revit_find_elements` broken; substring search miss on natural language;
