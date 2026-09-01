@@ -28,11 +28,11 @@ def test_editor_available(acad_editor):
 
 def test_current_space(acad_db, acad_transaction):
     """Report current space (Model or Paper)."""
-    from Autodesk.AutoCAD.DatabaseServices import BlockTableRecord
+    from Autodesk.AutoCAD.DatabaseServices import BlockTableRecord, OpenMode
 
     current_space_id = acad_db.CurrentSpaceId
     current_space = acad_transaction.GetObject(
-        current_space_id, Autodesk.AutoCAD.DatabaseServices.OpenMode.ForRead
+        current_space_id, OpenMode.ForRead
     )
     if isinstance(current_space, BlockTableRecord):
         print(f"Current space: {current_space.Name}")
