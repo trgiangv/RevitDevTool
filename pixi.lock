@@ -39,7 +39,6 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/noarch/mdurl-0.1.2-pyhd8ed1ab_1.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/narwhals-2.25.0-pyhcf101f3_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/networkx-3.6.1-pyhcf101f3_0.conda
-      - conda: https://conda.anaconda.org/conda-forge/noarch/olefile-0.47-pyhd8ed1ab_1.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/opentelemetry-api-1.44.0-pyhd8ed1ab_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/packaging-26.3-pyhc364b38_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/pixi-pycharm-0.0.12-win_hba80fca_0.conda
@@ -116,7 +115,6 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/win-64/zstd-1.5.7-h534d264_7.conda
       - pypi: https://files.pythonhosted.org/packages/3f/f6/3b204f373a8ac7e97b11978956861dfee610dfc19e953282caa0e7b499db/manifold3d-3.5.2-cp314-cp314-win_amd64.whl
       - pypi: https://files.pythonhosted.org/packages/73/4e/26e0a584d06c5b3f345df491d2546479606c89217627ee163f1aa55e899f/cython-3.3.0-cp314-cp314-win_amd64.whl
-      - pypi: https://files.pythonhosted.org/packages/b2/b7/545d2c10c1fc15e48653c91efde329a790f2eecfbbf2bd16003b5db2bab0/dotenv-0.9.9-py2.py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/f1/da/ff22c4298479d80e8a5966015b54df3539266373196b309a5717d746b86a/python_fcl-0.7.0.11-cp314-cp314-win_amd64.whl
 packages:
 - conda: https://conda.anaconda.org/conda-forge/noarch/_python_abi3_support-1.0-hd8ed1ab_3.conda
@@ -523,18 +521,6 @@ packages:
   run_exports: {}
   size: 1587439
   timestamp: 1765215107045
-- conda: https://conda.anaconda.org/conda-forge/noarch/olefile-0.47-pyhd8ed1ab_1.conda
-  sha256: 8b88dc1fc495cf9b4d72cd10e7e50f981e3d5cbb654b6f4ea306274c197b95a9
-  md5: 8f60e66ea748ad9ffd0a8e9d353d3a7d
-  depends:
-  - python >=3.9
-  license: BSD-2-Clause
-  license_family: BSD
-  purls:
-  - pkg:pypi/olefile?source=hash-mapping
-  run_exports: {}
-  size: 38520
-  timestamp: 1734769919582
 - conda: https://conda.anaconda.org/conda-forge/noarch/opentelemetry-api-1.44.0-pyhd8ed1ab_0.conda
   sha256: 3185d1dfa8250d1e7c37cc23a09dc2b8a362f6407ca8919a66406e1fef570e45
   md5: cdeabb4c6c80399310749b3697f636ad
@@ -1714,12 +1700,6 @@ packages:
   version: 3.3.0
   sha256: 51999fb834365721b6c7f689cf6e2ec7c8667aae783df9eb5e589c290a414d9c
   requires_python: '>=3.9'
-- pypi: https://files.pythonhosted.org/packages/b2/b7/545d2c10c1fc15e48653c91efde329a790f2eecfbbf2bd16003b5db2bab0/dotenv-0.9.9-py2.py3-none-any.whl
-  name: dotenv
-  version: 0.9.9
-  sha256: 29cf74a087b31dafdb5a446b6d7e11cbce8ed2741540e2339c69fbef92c94ce9
-  requires_dist:
-  - python-dotenv
 - pypi: https://files.pythonhosted.org/packages/f1/da/ff22c4298479d80e8a5966015b54df3539266373196b309a5717d746b86a/python_fcl-0.7.0.11-cp314-cp314-win_amd64.whl
   name: python-fcl
   version: 0.7.0.11
