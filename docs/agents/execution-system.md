@@ -1,6 +1,6 @@
 # Execution System Digest
 
-Deep source: `docs/architecture/Execution/README.md` and sub-pages (`code-execution.md`, `execution-guard.md`, `pytest-bridge.md`, `mcp-dispatch.md`).
+Deep source: `docs/architecture/Execution/README.md` and sub-pages (`code-execution.md`, `python-runtime.md`, `execution-guard.md`, `pytest-bridge.md`, `mcp-dispatch.md`).
 
 ## Core Shape
 
@@ -85,14 +85,14 @@ Only **unresolvable failure rollbacks** are surfaced to AI callers via `Executio
 
 ## Script Modes
 
-- Python: PEP 723 dependencies through `Parser.py`, Pixi preferred, pip/pyRevit fallback. Startup runs `pixi --version` after install check; non-zero exit → pip backend.
+- Python: [python-runtime.md](../architecture/Execution/python-runtime.md). Host probe picks uv XOR pixi; pip only if that manager fails. Trap: `InitializeEngine(hostDll)` before any `await`; do not `Py_Finalize` when `HostOwnsInterpreter`.
 - IronPython: Python files ending `_ipy_script.py`.
 - F#: `.fsx`, NuGet resolution under `%APPDATA%\RevitDevTool\nuget`, 30 second compile timeout.
 - C#: `.csx`, Roslyn compilation cache, 30 second compile timeout.
 
 ## Change Checklist
 
-- Confirm whether the change is provider, strategy, orchestrator, node model, file watcher, package service, or host adapter.
+- If changing CPython init, host attach, or providers: update `docs/architecture/Execution/python-runtime.md`, not long source comments.
 - Keep host-thread rules in host adapters.
 - If changing execution guard: verify both `Suppress` and `Passthrough` paths work; test reference counting with nested calls.
 - Run the narrowest host build and related unit tests from `verification.md`.

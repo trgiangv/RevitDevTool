@@ -93,13 +93,13 @@ Host pipe (`DevTools_*`) is separate from MCP pipe (`DevToolsMcp_*`).
 
 ## Execution
 
-Thin unit layer (`tests/DevTools.Execution.Tests`, ~23 cases).
+Unit layer in `tests/DevTools.Execution.Tests` (python runtime / host-attach, pytest bridge, package stores, isolation). Opt-in: `RUN_PIXI_SMOKE=1`, `RUN_PIP_ENV_TESTS=1`.
 
 ### Well covered
 
-- **Python environment** — pip fixtures; Pixi helper unit tests (`PartitionByAvailability`,
-  `ExtractPackageName`); Parser installed-state via list JSON; opt-in smoke
-  (`RUN_PIXI_SMOKE=1` → setup + Python.NET import)
+- **Python environment** — host DLL / version select, uv attach + sidecar stdlib,
+  pixi partition, `IPythonPackageStore` DI, pip-list JSON parse; Parser installed-state
+  via list JSON; opt-in smoke (`RUN_PIXI_SMOKE=1`, `RUN_PIP_ENV_TESTS=1`)
 - **Execution guard** — `ExecutionGuardContext` ambient mode / rollback summary
 
 ### Gaps (low automated coverage)

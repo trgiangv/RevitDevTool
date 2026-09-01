@@ -33,6 +33,9 @@ This is a small ensure/install improvement. Warm host open still depends on
 
 - Claiming CLI version bumps as a latency win.
 - Pixi shell-hook / fake `CONDA_PREFIX` activation in the host process.
+- Host-owned CPython attach (CAD already initialized `python3xx.dll`) — that
+  path is uv PyPI sidecar only; search-first conda/Pixi does not apply there
+  ([0030](0030-host-owned-cpython-and-package-managers.md)).
 
 ## Consequences
 

@@ -19,7 +19,7 @@ Paths: `DevTools.Ipc`, `DevTools.Mcp.*`, `DevTools.Daemon`, `DevTools.Execution/
 
 ## PyTest (host side, this repo)
 
-- `tests/run` → `PytestRunner.py` (PEP 723 / pixi first).
+- `tests/run` → `PytestRunner.py` (PEP 723 via the active provider — uv sidecar when the host owns CPython).
 - `ipytests/run` → `IpyTestDriver.py` (unittest, no pixi).
 - Contracts: `PytestContracts.cs` ↔ sibling `RevitDevTool.PyTest` `models.py`.
 - Write/run tests: `.agents/skills/revit-pytest/SKILL.md`.

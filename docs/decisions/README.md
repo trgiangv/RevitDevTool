@@ -38,3 +38,4 @@ here.
 | [0027](0027-mcp-sdk-host-wire-adoption.md) | MCP SDK adoption boundary on host wire | Accepted |
 | [0028](0028-host-alc-progress-notifications.md) | Host and ALC toolset progress notifications unsupported | Accepted |
 | [0029](0029-mcp-use-case-limits-not-full-protocol.md) | MCP use-case limits — host↔daemon schema, not full protocol / MRTR UX | Accepted |
+| [0030](0030-host-owned-cpython-and-package-managers.md) | Host-owned CPython — uv sidecar vs Pixi-owned interpreter | Accepted |

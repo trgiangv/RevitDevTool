@@ -41,6 +41,7 @@ flowchart LR
 - Lease + mutex: `host + version + workspace`. One pytest process. Mixed `test_*.py` + `test_*_ipy.py` under one conftest is fine.
 - `--maxfail=N` forwarded verbatim. Local stop is pytest Session. IPy: driver `shouldStop` in-file, C# loop across files.
 - Pipe wait: CPython `per_test × N + launch_timeout`; IPy `per_test × N`.
+- CPython `tests/run` uses the same `PythonInitializer` as scripts (host-attach + uv sidecar; PEP 723 via `PytestDependencyService` on the active provider).
 - `ExecuteAsync` does not take the pipe-disconnect token (breakpoint can park later runs).
 
 ## Wire

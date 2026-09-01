@@ -23,7 +23,7 @@ Last updated: 2026-05-29
 ```mermaid
 flowchart TB
     Commands["commands/*_script.py"]
-    Runtime["DevTools.Execution Python runtime\nPixi first, pip fallback"]
+    Runtime["DevTools.Execution Python runtime\nhost-attach uv / owned pixi / pip"]
     Dashboard["revit_dashboard/\ncollector, analytics, export, WebView bridge"]
     UI["revit_dashboard_ui/\nReact + TypeScript + Vite"]
     MCP["mcp_toolset/\nPython MCP tools"]

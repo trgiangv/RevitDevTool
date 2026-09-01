@@ -4,7 +4,7 @@ The execution system is the shared runtime in `source/DevTools.Execution/`. It d
 
 The platform is not Revit-only. Revit and AutoCAD currently provide host adapters; future .NET-capable hosts should plug in through the same abstractions.
 
-Last updated: 2026-07-11
+Last updated: 2026-09-02
 
 ---
 
@@ -15,13 +15,14 @@ Last updated: 2026-07-11
 | Shared registrations | `source/DevTools.Execution/ExecutionExtensions.cs` |
 | Orchestrator | `source/DevTools.Execution/Services/ExecutionOrchestrator.cs` |
 | Providers | `source/DevTools.Execution/Providers/` |
+| CPython runtime | `source/DevTools.Execution/Providers/Python/` |
 | External pipe server | `source/DevTools.Execution/External/DevToolsPipeServer.cs` |
 | MCP runtime | `source/DevTools.Execution/External/Mcp/` |
 | Pytest bridge | `source/DevTools.Execution/External/Testing/` |
 | Embedded scripts | `source/DevTools.Execution/Resources/scripts/` |
 | Execution guard | `source/RevitDevTool.Core/Execution/` |
-| Revit adapters | `source/RevitDevTool/HostAdapters/`, `source/RevitDevTool/Hosting/` |
-| AutoCAD adapters | `source/AcadDevTool/HostAdapters/`, `source/AcadDevTool/Hosting/` |
+| Revit adapters | `source/RevitDevTool/Adapters/` |
+| AutoCAD adapters | `source/AcadDevTool/Adapters/` |
 
 ---
 
@@ -88,6 +89,7 @@ Revit wiring lives in `RevitHostingExtensions`. AutoCAD wiring lives in `AcadHos
 | Topic | File |
 |-------|------|
 | Script runtimes, orchestrator flow, package service | [code-execution.md](code-execution.md) |
+| CPython init, host attach, providers | [python-runtime.md](python-runtime.md) |
 | Dialog & failure suppression (ExecutionGuard) | [execution-guard.md](execution-guard.md) |
 | Pytest in-host bridge | [pytest-bridge.md](pytest-bridge.md) |
 | MCP primitive dispatch & pipe server | [mcp-dispatch.md](mcp-dispatch.md) |

@@ -9,8 +9,10 @@ scripts inside the active host context through the shared execution engine.
   bridges); shared logic stays in `DevTools.Execution*`.
 - Host main-thread access is required where the host API demands it; work is
   serialized through the host executor queue.
-- PEP 723 script dependencies are resolved before Python execution when the
-  dependency service is active.
+- PEP 723 script dependencies are resolved before Python execution when a
+  provider is ready. Host-embedded interpreters install into the uv sidecar
+  and `site.addsitedir` that prefix onto the live interp
+  ([python-runtime.md](../architecture/Execution/python-runtime.md)).
 - MCP and pytest bridges reuse the same execution/dispatch path rather than
   inventing parallel runners.
 

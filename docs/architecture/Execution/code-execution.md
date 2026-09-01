@@ -44,11 +44,12 @@ flowchart LR
 
 ### Python
 
-- `PythonInitializer` chooses Pixi first, then pip-backed pyRevit CPython if Pixi cannot run. Before `PythonEngine.Initialize`, `PythonNativeEnvironment` prepends env native dirs to PATH, calls `AddDllDirectory`, and preloads `libcrypto`/`libssl` by absolute path so host-adjacent empty OpenSSL stubs (Revit 2024 `Empty Resource DLL` next to `Revit.exe`) do not satisfy `_ssl.pyd`.
-- `PythonEmbedded` extracts `Parser.py`, `ToolParser.py`, `PytestRunner.py`, setup scripts, and `pixi.toml`.
-- `PythonDepsManager` parses PEP 723 dependencies through `Parser.py`. Installed-state JSON may include conda git-describe versions; Parser treats those as unconstrained instead of failing the resolve.
-- Pixi uses conda-forge first and PyPI fallback.
-- Pip fallback depends on `pyrevit.exe attached` to locate `bin/cengines/CPY*/python.exe`.
+Init, backends, host-attach, and native constraints: [python-runtime.md](python-runtime.md).
+
+- Host owns CPython → attach pythonnet, then **uv**. Pixi is not tried.
+- No host interpreter → **Pixi**. uv is not tried.
+- Pip only if that chosen manager’s setup/`VerifyRunnableAsync` fails.
+- Overlay, `python3.dll` forwarder, and init order: [python-runtime.md](python-runtime.md).
 
 ### IronPython
 
@@ -81,10 +82,17 @@ flowchart LR
 
 ## Package Service
 
-`PackageService` gives the UI a unified package surface:
+`PackageService` is the UI facade. It branches on **marketplace** only:
 
-- **Pixi** (primary package manager): supports both conda-forge and PyPI channels in a single environment
-- **pip fallback**: when Pixi is not whitelisted in a corporate environment, falls back to CPython engine bundled with pyRevit (if installed)
-- FSharp/NuGet packages
+| Marketplace | Store |
+|-------------|--------|
+| NuGet | `NugetPackageStore` |
+| CondaForge / PyPI | `IPythonPackageStore` for the **current** `PythonBackend` |
 
-Package operations: list, remove, remove all, update latest, and repair.
+Python backends are equal implementations of `IPythonPackageStore` (`PixiPackageStore`, `UvPackageStore`, `PipPackageStore`). `PackageService` picks the store whose `Backend` matches `PythonInitializer.Provider`. No `switch` on backend inside `PackageService`.
+
+- **uv**: host-owned-interpreter sidecar (PyPI, version-matched).
+- **Pixi**: owns in-process CPython when the host has no interpreter (conda-forge + PyPI).
+- **pip**: last chain step — pyRevit `cengines` when the chosen Pixi or uv manager cannot run.
+
+Operations: list, remove, remove all, update latest, and repair.
