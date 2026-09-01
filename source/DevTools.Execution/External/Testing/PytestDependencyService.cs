@@ -4,7 +4,7 @@ namespace DevTools.Execution.External.Testing;
 
 /// <summary>
 /// CPython <c>tests/run</c> only. Resolves PEP 723 metadata from test files and
-/// <c>conftest.py</c> into the host pixi-env (Python.NET). IronPython
+/// <c>conftest.py</c> into the active provider (pixi home or uv sidecar). IronPython
 /// <c>ipytests/run</c> never uses this service — IPy 2.7/3.4 cannot import
 /// those wheels.
 /// </summary>
@@ -22,7 +22,10 @@ public sealed class PytestDependencyService(PythonInitializer pythonInitializer)
     {
         await pythonInitializer.InitializeAsync().ConfigureAwait(false);
 
-        if (!pythonInitializer.IsInitialized || pythonInitializer.Provider is null)
+        if (!pythonInitializer.IsInitialized)
+            throw new InvalidOperationException("Python runtime is not initialized.");
+
+        if (pythonInitializer.Provider is null)
             throw new InvalidOperationException("Python runtime is not initialized.");
     }
 
