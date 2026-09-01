@@ -1,12 +1,5 @@
 namespace DevTools.Execution.Models;
 
-public enum Marketplace
-{
-    NuGet,
-    CondaForge,
-    PyPi
-}
-
 public sealed record Package(
     Marketplace Marketplace,
     string PackageId,

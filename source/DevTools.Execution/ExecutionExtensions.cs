@@ -5,6 +5,7 @@ using DevTools.Execution.External.Mcp.BuiltIn;
 using DevTools.Execution.External.Mcp.Dispatchers;
 using DevTools.Execution.External.Mcp.Registry;
 using DevTools.Execution.Interfaces;
+using DevTools.Execution.Models;
 using DevTools.Execution.Providers;
 using DevTools.Execution.Providers.CSharp;
 using DevTools.Execution.Providers.Dotnet;
@@ -39,13 +40,17 @@ public static class ExecutionExtensions
         services.TryAddSingleton<ITelemetry, NoOpTelemetry>();
 
         services.AddKeyedSingleton<PyEnvironmentProvider, PixiEnvironmentProvider>(PythonBackend.Pixi);
+        services.AddKeyedSingleton<PyEnvironmentProvider, UvEnvironmentProvider>(PythonBackend.Uv);
         services.AddKeyedSingleton<PyEnvironmentProvider, PipEnvironmentProvider>(PythonBackend.Pip);
         services.AddSingleton<PythonInitializer>();
         services.AddSingleton<PythonExecutor>();
 
         services.AddSingleton<NugetManager>();
+        services.AddSingleton<NugetPackageStore>();
         services.AddSingleton<PackageVersionChecker>();
-        services.AddSingleton<PixiPackageHelper>();
+        services.AddSingleton<IPythonPackageStore, PixiPackageStore>();
+        services.AddSingleton<IPythonPackageStore, UvPackageStore>();
+        services.AddSingleton<IPythonPackageStore, PipPackageStore>();
         services.AddSingleton<FSharpDependencyResolver>();
         services.AddSingleton<FSharpExecutor>();
         services.AddSingleton<CSharpCompiler>();

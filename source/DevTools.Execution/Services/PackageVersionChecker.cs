@@ -8,9 +8,6 @@ namespace DevTools.Execution.Services;
 
 public sealed class PackageVersionChecker(NugetManager nugetManager, ILogger<PackageVersionChecker> logger)
 {
-    private readonly NugetManager _nugetManager = nugetManager;
-    private readonly ILogger<PackageVersionChecker> _logger = logger;
-
     public async Task<IReadOnlyList<Package>> AttachLatestVersionsAsync(
         IReadOnlyList<Package> packages,
         CancellationToken cancellationToken)
@@ -64,11 +61,11 @@ public sealed class PackageVersionChecker(NugetManager nugetManager, ILogger<Pac
     {
         try
         {
-            return await _nugetManager.FetchLatestVersionAsync(packageId, cancellationToken).ConfigureAwait(false);
+            return await nugetManager.FetchLatestVersionAsync(packageId, cancellationToken).ConfigureAwait(false);
         }
         catch (Exception ex)
         {
-            _logger.ZLogWarning($"[Package] NuGet lookup failed for '{packageId}': {ex.Message}");
+            logger.ZLogWarning($"[Package] NuGet lookup failed for '{packageId}': {ex.Message}");
             return null;
         }
     }
@@ -88,7 +85,7 @@ public sealed class PackageVersionChecker(NugetManager nugetManager, ILogger<Pac
         }
         catch (Exception ex)
         {
-            _logger.ZLogWarning($"[Package] PyPI lookup failed for '{packageId}': {ex.Message}");
+            logger.ZLogWarning($"[Package] PyPI lookup failed for '{packageId}': {ex.Message}");
             return null;
         }
     }
@@ -107,7 +104,7 @@ public sealed class PackageVersionChecker(NugetManager nugetManager, ILogger<Pac
         }
         catch (Exception ex)
         {
-            _logger.ZLogWarning($"[Package] Conda lookup failed for '{packageId}': {ex.Message}");
+            logger.ZLogWarning($"[Package] Conda lookup failed for '{packageId}': {ex.Message}");
             return null;
         }
     }
