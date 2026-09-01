@@ -12,7 +12,7 @@ Client plugin: sibling `RevitDevTool.PyTest`. How to write tests: `.agents/skill
 | `External/Handlers/IpyTestRequestHandler.cs` | `ipytests/run` |
 | `External/Testing/PytestExecutionService.cs` | in-host `PytestRunner.py` |
 | `External/Testing/IpyTestExecutionService.cs` | in-host `IpyTestDriver.py` (pyRevit, else embedded 3.4) |
-| `External/Testing/PytestDependencyService.cs` | PEP 723 / pixi — **CPython `tests/run` only** |
+| `External/Testing/PytestDependencyService.cs` | PEP 723 via active provider — **CPython `tests/run` only** |
 | `External/Testing/PytestContracts.cs` | wire models |
 | `Resources/scripts/PytestRunner.py` | `pytest.main(--capture=sys)` |
 | `Resources/scripts/IpyTestDriver.py` | unittest, dialect 2.7 ∩ 3.4 |
@@ -33,6 +33,7 @@ flowchart LR
 
 ## Rules
 
+- `PytestRunner.py` must start with `from __future__ import annotations`. `import pytest` is inside `_run()` so a missing package becomes a JSON error; annotations must not evaluate `pytest` at exec (Python 3.13 `NameError: name 'pytest' is not defined`).
 - Guard `Suppress` for the whole run.
 - PEP 723 on CPython `conftest.py` / `test_*.py` only — never on `test_*_ipy.py`.
 - Capture: CPython `--capture=sys` + restore `print` onto `sys.stdout`; IPy per-test tee. No session StringIO.
