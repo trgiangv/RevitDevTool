@@ -1,6 +1,5 @@
 using System.Text.RegularExpressions;
 using Autodesk.AutoCAD.DatabaseServices;
-using Autodesk.AutoCAD.Runtime;
 using DevTools.Hosting;
 using AcadApp = Autodesk.AutoCAD.ApplicationServices.Core.Application;
 
@@ -53,14 +52,8 @@ public static partial class AcadProductDetector
         return ProductMap.GetValueOrDefault(productId, HostApp.AutoCad);
     }
     
-    /// <summary>
-    /// "Software\Autodesk\AutoCAD\R25.1\ACAD-9100:409" -> "2026"
-    /// </summary>
     public static string GetVersionNumber()
     {
-        var regPath = HostApplicationServices.Current?.UserRegistryProductRootKey;
-        if (regPath is null) return "Unknown";
-        using var key = Registry.LocalMachine.OpenSubKey(regPath);
-        return key?.GetValue("UPIRELEASE") as string ?? "Unknown";
+       return HostApplicationServices.Current?.releaseMarketVersion ?? "Unknown";
     }
 }

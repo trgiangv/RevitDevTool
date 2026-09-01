@@ -51,6 +51,10 @@
     </ItemGroup>
 
     <ItemGroup>
+        <InternalsVisibleTo Include="AcadDevTool.Tests" />
+    </ItemGroup>
+
+    <ItemGroup>
         <Using Include="CommunityToolkit.Mvvm.ComponentModel" />
         <Using Include="CommunityToolkit.Mvvm.Input" />
         <Using Include="DevTools.Execution.Abstractions" />

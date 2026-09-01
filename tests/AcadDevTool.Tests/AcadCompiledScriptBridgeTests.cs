@@ -1,4 +1,4 @@
-using AcadDevTool.HostAdapters;
+using AcadDevTool.Adapters;
 using Autodesk.AutoCAD.Runtime;
 using DevTools.Hosting;
 using Microsoft.Extensions.Logging.Abstractions;
