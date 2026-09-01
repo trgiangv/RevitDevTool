@@ -1,9 +1,9 @@
 # /// script
 # dependencies = [
-#     "polars==1.38.1",
-#     "numpy==2.4.2",
-#     "shapely==2.1.2",
-#     "openpyxl==3.1.5",
+#     "polars",
+#     "numpy",
+#     "shapely",
+#     "openpyxl",
 # ]
 # ///
 
