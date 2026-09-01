@@ -26,8 +26,8 @@ public sealed class PixiEnvironmentSmokeTests
         PythonEmbedded.Configure(HostApp.Revit);
         var provider = new PixiEnvironmentProvider(NullLogger<PixiEnvironmentProvider>.Instance);
 
-        await PythonInstaller.SetupPixiAsync(NullLogger.Instance);
-        Assert.True(PythonInstaller.IsPixiInstalled(), "pixi.exe missing under AppData/bin");
+        await PixiInstaller.SetupPixiAsync(NullLogger.Instance);
+        Assert.True(PixiInstaller.IsPixiInstalled(), "pixi.exe missing under AppData/bin");
 
         if (!provider.IsEnvironmentReady())
             await provider.SetupEnvironmentAsync();

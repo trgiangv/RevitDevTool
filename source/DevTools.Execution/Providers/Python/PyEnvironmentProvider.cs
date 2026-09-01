@@ -1,26 +1,16 @@
 using System.IO;
 using System.Text.Json;
+using CliWrap;
+using DevTools.Execution.Models;
+using Microsoft.Extensions.Logging;
+using ZLogger;
 
 namespace DevTools.Execution.Providers.Python;
 
-public enum PythonBackend
-{
-    Pixi,
-    Pip
-}
-
-/// <summary>
-/// Abstract base for Python environment providers.
-/// Owns process-scoped <see cref="PythonHome"/>, DLL lookup, and require-package specs.
-/// Each backend implements <see cref="ResolvePythonHomeAsync"/>; base assigns it once.
-/// </summary>
+/// <summary>Process-scoped Python home, DLL lookup, and require-package specs.</summary>
 public abstract class PyEnvironmentProvider
 {
-    /// <summary>
-    /// Packages that must always be present, with pinned version constraints.
-    /// Keys are package names (used for display/matching),
-    /// values are pixi/pip specs (name + constraint).
-    /// </summary>
+    /// <summary>Pinned require specs (name → PEP 508 constraint).</summary>
     public static IReadOnlyDictionary<string, string> RequirePackages { get; } =
         new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
         {
@@ -36,18 +26,95 @@ public abstract class PyEnvironmentProvider
 
     public string PythonHome => _pythonHome ?? string.Empty;
 
-    public string PythonExe => _pythonHome is not null
+    public virtual string PythonExe => _pythonHome is not null
         ? Path.Combine(_pythonHome, "python.exe")
         : string.Empty;
 
-    /// <summary>Read-only: home is set and <c>python.exe</c> exists.</summary>
-    public bool IsEnvironmentReady()
-        => _pythonHome is not null && File.Exists(PythonExe);
+    public string SitePackagesDir => string.IsNullOrEmpty(PythonHome)
+        ? string.Empty
+        : Path.Combine(PythonHome, "Lib", "site-packages");
 
-    /// <summary>Backend-specific home (Pixi AppData path / Pip pyRevit cengines).</summary>
+    /// <summary>Sidecar CPython <c>Lib</c> (uv <c>pyvenv.cfg</c> home, else prefix <c>Lib</c>).</summary>
+    public string StdlibLibDir
+    {
+        get
+        {
+            if (string.IsNullOrEmpty(PythonHome))
+                return string.Empty;
+
+            var cfg = Path.Combine(PythonHome, "pyvenv.cfg");
+            if (TryReadPyvenvHome(cfg, out var home))
+            {
+                var lib = Path.Combine(home, "Lib");
+                if (Directory.Exists(lib))
+                    return lib;
+            }
+
+            var prefixLib = Path.Combine(PythonHome, "Lib");
+            return Directory.Exists(prefixLib) ? prefixLib : string.Empty;
+        }
+    }
+
+    internal static bool TryReadPyvenvHome(string cfgPath, out string home)
+    {
+        home = string.Empty;
+        if (!File.Exists(cfgPath))
+            return false;
+
+        foreach (var raw in File.ReadLines(cfgPath))
+        {
+            var line = raw.Trim();
+            if (line.Length < 6 || !line.StartsWith("home", StringComparison.OrdinalIgnoreCase))
+                continue;
+
+            var eq = line.IndexOf('=');
+            if (eq < 0)
+                continue;
+
+            var value = line[(eq + 1)..].Trim().Trim('"');
+            if (value.Length == 0)
+                continue;
+
+            home = value;
+            return true;
+        }
+
+        return false;
+    }
+
+    public virtual bool IsEnvironmentReady() => File.Exists(PythonExe);
+
+    /// <summary>Host already owns CPython. uv/pip snapshot version from this DLL and attach as sidecar.</summary>
+    internal virtual void AttachHostInterpreter(string hostDll) { }
+
+    /// <summary>Manager CLI (pixi.exe / uv.exe). Pip has none.</summary>
+    protected virtual string? ManagerExePath => null;
+
+    protected async Task VerifyRunnableAsync(ILogger? logger = null)
+    {
+        var exePath = ManagerExePath
+            ?? throw new InvalidOperationException($"{Backend} has no manager executable to verify.");
+
+        var name = Path.GetFileName(exePath);
+        var result = await Cli.Wrap(exePath)
+            .WithArguments("--version")
+            .WithValidation(CommandResultValidation.None)
+            .ExecuteAsync()
+            .ConfigureAwait(false);
+
+        if (result.ExitCode != 0)
+        {
+            throw new InvalidOperationException(
+                $"{name} --version failed with exit code {result.ExitCode}.");
+        }
+
+#if DEBUG
+        logger?.ZLogDebug($"{name} runtime verified (exit {result.ExitCode}).");
+#endif
+    }
+
     protected abstract Task<string> ResolvePythonHomeAsync();
 
-    /// <summary>Assign <see cref="PythonHome"/> once per process via <see cref="ResolvePythonHomeAsync"/>.</summary>
     protected async Task EnsurePythonHomeAsync()
     {
         if (_pythonHome is not null) return;
@@ -59,19 +126,17 @@ public abstract class PyEnvironmentProvider
         _pythonHome = home;
     }
 
-    public string GetPythonDllPath()
+    public virtual string GetPythonDllPath()
     {
         if (!Directory.Exists(PythonHome))
             throw new DirectoryNotFoundException($"Python env not found at: {PythonHome}");
 
         var dll = Directory.GetFiles(PythonHome, "python3*.dll")
-            .FirstOrDefault(f => !Path.GetFileName(f)
-                .Equals("python3.dll", StringComparison.OrdinalIgnoreCase));
+            .FirstOrDefault(f => !PythonNativeEnvironment.IsStableAbiForwarder(f));
 
         return dll ?? throw new FileNotFoundException("Python DLL not found in env.", PythonHome);
     }
 
-    /// <summary>PEP 508 / requirement spec → distribution name (strip version/extras).</summary>
     public static string ExtractPackageName(string spec)
     {
         if (string.IsNullOrWhiteSpace(spec))
@@ -92,10 +157,6 @@ public abstract class PyEnvironmentProvider
 
     public abstract Task SetupEnvironmentAsync();
 
-    /// <summary>
-    /// Installed-package JSON for PEP 723 Parser stdin and skip-if-listed
-    /// (<c>pixi list --json</c> or <c>pip list --format=json</c>).
-    /// </summary>
     public abstract Task<string> GetListJsonAsync(CancellationToken cancellationToken = default);
 
     public abstract Task InstallPackagesAsync(
@@ -103,7 +164,6 @@ public abstract class PyEnvironmentProvider
         IProgress<string> progress,
         CancellationToken cancellationToken);
 
-    /// <summary>Package names from <see cref="GetListJsonAsync"/> (empty on failure).</summary>
     protected async Task<HashSet<string>> GetInstalledNamesAsync(CancellationToken cancellationToken = default)
     {
         var names = new HashSet<string>(StringComparer.OrdinalIgnoreCase);

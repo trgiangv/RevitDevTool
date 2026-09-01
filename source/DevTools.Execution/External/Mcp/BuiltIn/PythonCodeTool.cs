@@ -62,7 +62,7 @@ public sealed class PythonCodeTool : IBuiltInMcpTool
         await _initializer.InitializeAsync().ConfigureAwait(false);
 
         if (!_initializer.IsInitialized)
-            return ToolHelpers.ErrorResult("Python runtime not initialized. Ensure pixi environment is set up.");
+            return ToolHelpers.ErrorResult("Python runtime not initialized.");
 
         if (!await ResolveDepsAsync(code, cancellationToken).ConfigureAwait(false))
         {

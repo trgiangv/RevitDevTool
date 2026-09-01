@@ -210,9 +210,6 @@ public static class PythonEmbedded
             $"Tried primary name and '{assembly.GetName().Name}.{ExecutionScriptsPrefix}.*' fallback.");
     }
 
-    /// <summary>
-    /// Resolves manifest names across DevTools.Execution.dll and ILRepack-merged host layouts.
-    /// </summary>
     private static IEnumerable<string> EnumerateManifestResourceCandidates(Assembly assembly, string resourcePath)
     {
         yield return resourcePath;

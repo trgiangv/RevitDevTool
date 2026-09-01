@@ -3,6 +3,7 @@ using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using CliWrap;
+using DevTools.Execution.Models;
 using Python.Runtime;
 
 namespace DevTools.Execution.Providers.Python;
@@ -16,12 +17,6 @@ public static class PythonDepsManager
         public static readonly ParseResult Empty = new(string.Empty, []);
     }
 
-    /// <summary>
-    /// Resolves PEP 723 dependencies from a script file path or inline code string.
-    /// If <paramref name="scriptPathOrCode"/> is an existing file, uses it directly.
-    /// Otherwise treats it as inline code: skips if no PEP 723 marker present,
-    /// writes a temp file for the parser when needed, and cleans up after.
-    /// </summary>
     public static async Task<List<string>> ResolveDependenciesAsync(
         PyEnvironmentProvider provider,
         string scriptPathOrCode,
@@ -60,9 +55,6 @@ public static class PythonDepsManager
         }
     }
 
-    /// <summary>
-    /// Installs <paramref name="dependencies"/> into the Python env via the given provider.
-    /// </summary>
     public static async Task InstallDependenciesAsync(
         PyEnvironmentProvider provider,
         IEnumerable<string> dependencies,
@@ -114,24 +106,123 @@ public static class PythonDepsManager
         return JsonSerializer.Deserialize<ParseResult>(json) ?? ParseResult.Empty;
     }
 
-    /// <summary>
-    /// Invalidate Python import caches and add site-packages to sys.path so newly
-    /// installed packages are importable in the current process.
-    /// </summary>
     public static void RefreshImportCache(PythonInitializer initializer)
     {
         if (!initializer.IsInitialized) return;
 
         using (Py.GIL())
+            InjectSitePackages(initializer);
+    }
+
+    internal static string InjectSitePackages(PythonInitializer initializer)
+    {
+        var sitePackages = initializer.Provider?.SitePackagesDir ?? string.Empty;
+        using var scope = Py.CreateScope();
+
+        if (initializer.HostOwnsInterpreter)
         {
-            using var scope = Py.CreateScope();
+            if (!TryResolveSidecarStdlib(initializer.Provider, out var stdlibLib, out var stdlibDlls)
+                || stdlibDlls.Length == 0)
+            {
+                throw new InvalidOperationException(
+                    "Host attach requires sidecar Lib and DLLs next to pyvenv.cfg home.");
+            }
+
+            // Plant 3D: python313.zip next to python313.dll. Append sidecar DLLs+Lib
+            // (host zip stays first). encodings is already imported from the zip —
+            // encodings.idna is resolved via encodings.__path__, not sys.path.
+            scope.Set("site_packages", new PyString(sitePackages));
+            scope.Set("stdlib_lib", new PyString(stdlibLib));
+            scope.Set("stdlib_dlls", new PyString(stdlibDlls));
             scope.Exec("""
-                import importlib, os, sys
+                import codecs, encodings, importlib, os, site, sys
+
+                if stdlib_dlls not in sys.path:
+                    sys.path.append(stdlib_dlls)
+                if stdlib_lib not in sys.path:
+                    sys.path.append(stdlib_lib)
+                if site_packages not in sys.path:
+                    site.addsitedir(site_packages)
+
+                enc_dir = os.path.join(stdlib_lib, "encodings")
+                if enc_dir not in encodings.__path__:
+                    encodings.__path__.append(enc_dir)
+                encodings._cache.clear()
                 importlib.invalidate_caches()
-                site_packages = os.path.join(sys.prefix, "Lib", "site-packages")
-                if os.path.isdir(site_packages) and site_packages not in sys.path:
-                    sys.path.insert(0, site_packages)
+
+                import select, stringprep, unicodedata
+                codecs.lookup("idna")
+                __overlay_probe__ = "unicodedata=%s; stringprep=%s; select=%s; idna=%s" % (
+                    unicodedata.__file__,
+                    stringprep.__file__,
+                    select.__file__,
+                    codecs.lookup("idna").name,
+                )
                 """);
+            return scope.Get("__overlay_probe__").As<string>() ?? string.Empty;
         }
+
+        if (sitePackages.Length == 0 || !Directory.Exists(sitePackages))
+        {
+            scope.Exec("import importlib; importlib.invalidate_caches()");
+            return string.Empty;
+        }
+
+        scope.Set("site_packages", new PyString(sitePackages));
+        scope.Exec("""
+            import importlib, sys
+            if site_packages not in sys.path:
+                sys.path.insert(0, site_packages)
+            importlib.invalidate_caches()
+            """);
+        return string.Empty;
+    }
+
+    /// <summary>Matching-version sidecar <c>Lib</c> + <c>DLLs</c> (pyvenv home, else uv-python scan).</summary>
+    internal static bool TryResolveSidecarStdlib(PyEnvironmentProvider? provider, out string stdlibLib, out string stdlibDlls)
+        => TryResolveSidecarStdlib(
+            provider?.StdlibLibDir ?? string.Empty,
+            provider?.Backend == PythonBackend.Uv ? UvEnvironmentProvider.UvPythonInstallDir : null,
+            out stdlibLib,
+            out stdlibDlls);
+
+    internal static bool TryResolveSidecarStdlib(
+        string stdlibLibDir,
+        string? uvPythonInstallDir,
+        out string stdlibLib,
+        out string stdlibDlls)
+    {
+        if (TryStdlibFromLibDir(stdlibLibDir, out stdlibLib, out stdlibDlls))
+            return true;
+
+        if (string.IsNullOrEmpty(uvPythonInstallDir) || !Directory.Exists(uvPythonInstallDir))
+            return false;
+
+        foreach (var dir in Directory.EnumerateDirectories(uvPythonInstallDir, "cpython-*"))
+        {
+            if (TryStdlibFromLibDir(Path.Combine(dir, "Lib"), out stdlibLib, out stdlibDlls))
+                return true;
+        }
+
+        return false;
+    }
+
+    private static bool TryStdlibFromLibDir(string lib, out string stdlibLib, out string stdlibDlls)
+    {
+        stdlibLib = string.Empty;
+        stdlibDlls = string.Empty;
+        if (string.IsNullOrEmpty(lib) || !Directory.Exists(lib))
+            return false;
+
+        stdlibLib = lib;
+        var prefix = Path.GetDirectoryName(lib);
+        if (!string.IsNullOrEmpty(prefix))
+        {
+            var dlls = Path.Combine(prefix, "DLLs");
+            if (Directory.Exists(dlls))
+                stdlibDlls = dlls;
+        }
+
+        return true;
     }
 }

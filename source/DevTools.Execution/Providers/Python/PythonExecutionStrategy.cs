@@ -8,10 +8,6 @@ using ZLogger;
 
 namespace DevTools.Execution.Providers.Python;
 
-/// <summary>
-/// Execution strategy for Python scripts.
-/// Handles dependency resolution and execution orchestration directly.
-/// </summary>
 public sealed class PythonExecutionStrategy(
     string scriptPath,
     string rootPath,
@@ -86,8 +82,8 @@ public sealed class PythonExecutionStrategy(
         CancellationToken cancellationToken = default,
         ILogger? logger = null)
     {
-        var provider = pythonInitializer.Provider
-            ?? throw new InvalidOperationException("Python environment provider not initialized.");
+        if (pythonInitializer.Provider is not { } provider)
+            return true;
 
         List<string> dependencies;
         try

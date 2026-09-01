@@ -1,6 +1,7 @@
 using System.IO;
 using System.Text;
 using CliWrap;
+using DevTools.Execution.Models;
 using DevTools.Execution.Services;
 using Microsoft.Extensions.Logging;
 using ZLogger;
@@ -8,16 +9,19 @@ using ZLogger;
 
 namespace DevTools.Execution.Providers.Python;
 
-/// <summary>
-/// Pip-based Python environment provider for restricted enterprise environments
-/// where pixi.exe cannot execute due to security policies.
-/// Discovers the CPython distribution shipped with pyRevit (cengines directory),
-/// bootstraps pip, and uses <c>python.exe -m pip</c> for package management.
-/// Policy: skip if listed; otherwise pip install (single channel — no search-first).
-/// </summary>
+/// <summary>pyRevit cengines CPython + pip when uv.exe or pixi.exe cannot run.</summary>
 public sealed class PipEnvironmentProvider(ILogger<PipEnvironmentProvider> logger) : PyEnvironmentProvider
 {
     public override PythonBackend Backend => PythonBackend.Pip;
+
+    private bool _hostAttached;
+    private string? _hostVersion;
+
+    internal override void AttachHostInterpreter(string hostDll)
+    {
+        _hostAttached = true;
+        _hostVersion = PythonNativeEnvironment.ResolveHostVersion(hostDll);
+    }
 
     protected override Task<string> ResolvePythonHomeAsync()
         => DiscoverPyRevitAsync();
@@ -38,10 +42,6 @@ public sealed class PipEnvironmentProvider(ILogger<PipEnvironmentProvider> logge
         PythonEmbedded.EnsureExtracted();
     }
 
-    /// <summary>
-    /// Queries attached pyRevit clones and picks the first CPython engine
-    /// under <c>bin\cengines</c> that contains python.exe.
-    /// </summary>
     private async Task<string> DiscoverPyRevitAsync()
     {
         var clonePaths = await GetAttachedClonePathsAsync().ConfigureAwait(false);
@@ -50,20 +50,59 @@ public sealed class PipEnvironmentProvider(ILogger<PipEnvironmentProvider> logge
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .ToList();
 
-        foreach (var cenginesDir in candidateDirectories.Where(Directory.Exists))
+        var engines = candidateDirectories
+            .Where(Directory.Exists)
+            .SelectMany(dir => Directory.EnumerateDirectories(dir, "CPY*"))
+            .ToList();
+
+        var selected = SelectCengineDir(engines, _hostAttached ? _hostVersion : null);
+        if (selected is not null)
         {
-            var engineDir = Directory.EnumerateDirectories(cenginesDir, "CPY*")
-                .FirstOrDefault(d => File.Exists(Path.Combine(d, "python.exe")));
+            logger.ZLogInformation($"[Pip] Discovered pyRevit CPython at: {selected}");
+            return selected;
+        }
 
-            if (engineDir is null)
-                continue;
-
-            logger.ZLogInformation($"[Pip] Discovered pyRevit CPython at: {engineDir}");
-            return engineDir;
+        if (_hostAttached)
+        {
+            throw new DirectoryNotFoundException(
+                _hostVersion is null
+                    ? "Host CPython version unknown; pyRevit cengine cannot be used as a sidecar."
+                    : $"pyRevit cengine version must equal host CPython {_hostVersion} (in-process ABI). Found: {DescribeEngines(engines)}");
         }
 
         throw new DirectoryNotFoundException(
             $"cengines directory not found. Searched: {string.Join(", ", candidateDirectories.Distinct(StringComparer.OrdinalIgnoreCase))}");
+    }
+
+    internal static string? SelectCengineDir(IEnumerable<string> engineDirs, string? requiredVersion)
+    {
+        var ready = engineDirs
+            .Where(dir => File.Exists(Path.Combine(dir, "python.exe")))
+            .ToList();
+        if (ready.Count == 0)
+            return null;
+
+        if (string.IsNullOrEmpty(requiredVersion))
+            return ready[0];
+
+        foreach (var dir in ready)
+        {
+            var dll = Directory.EnumerateFiles(dir, "python3*.dll")
+                .FirstOrDefault(f => !PythonNativeEnvironment.IsStableAbiForwarder(f));
+            if (dll is null)
+                continue;
+            if (PythonNativeEnvironment.TryGetCPythonVersion(dll, out var version)
+                && version.Equals(requiredVersion, StringComparison.OrdinalIgnoreCase))
+                return dir;
+        }
+
+        return null;
+    }
+
+    private static string DescribeEngines(IEnumerable<string> engines)
+    {
+        var names = engines.Select(Path.GetFileName).Where(n => n is { Length: > 0 }).ToList();
+        return names.Count == 0 ? "(none)" : string.Join(", ", names);
     }
 
     private static async Task<List<string>> GetAttachedClonePathsAsync()
