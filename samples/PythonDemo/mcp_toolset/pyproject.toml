@@ -1,0 +1,34 @@
+[tool.ruff]
+line-length = 88
+target-version = "py313"
+
+[tool.ruff.lint]
+select = [
+    "E",
+    "F",
+    "I",
+    "UP",
+    "ANN",
+    "C901",
+    "PLR0912",
+    "RUF059",
+    "DTZ005",
+    "S112",
+]
+ignore = [
+    "UP032",
+    "UP009",
+    "UP035",
+    "UP040",
+    "BLE001",
+    "S110",
+    "ANN401",
+    "ANN204",
+    "E501",
+]
+
+[tool.ruff.lint.mccabe]
+max-complexity = 10
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = ["ANN"]

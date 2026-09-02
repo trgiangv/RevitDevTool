@@ -1,7 +1,6 @@
 """Pydantic models for declarative ElementFilter specifications."""
-from __future__ import annotations
 
-from typing import Annotated, Literal, Union
+from typing import Annotated, Literal
 
 from pydantic import BaseModel, Field
 
@@ -10,7 +9,9 @@ class CategoryFilter(BaseModel):
     """Filter elements by one or more Revit category display names."""
 
     type: Literal["category"] = "category"
-    names: list[str] = Field(description="Category display names, e.g. ['Walls', 'Doors', 'Windows']")
+    names: list[str] = Field(
+        description="Category display names, e.g. ['Walls', 'Doors', 'Windows']"
+    )
     inverted: bool = Field(
         default=False,
         description="If True, *exclude* elements in these categories instead of including them",
@@ -21,7 +22,9 @@ class ParameterStringFilter(BaseModel):
     """Filter elements by a string parameter value."""
 
     type: Literal["parameter_string"] = "parameter_string"
-    parameter_name: str = Field(description="Parameter name as it appears in Revit Properties")
+    parameter_name: str = Field(
+        description="Parameter name as it appears in Revit Properties"
+    )
     operator: Literal[
         "equals",
         "not_equals",
@@ -39,7 +42,9 @@ class ParameterNumericFilter(BaseModel):
     """Filter elements by a numeric (double/integer) parameter value."""
 
     type: Literal["parameter_numeric"] = "parameter_numeric"
-    parameter_name: str = Field(description="Parameter name as it appears in Revit Properties")
+    parameter_name: str = Field(
+        description="Parameter name as it appears in Revit Properties"
+    )
     operator: Literal[
         "equals",
         "not_equals",
@@ -136,7 +141,9 @@ class ExclusionFilter(BaseModel):
     """Exclude specific elements by their ElementId."""
 
     type: Literal["exclusion"] = "exclusion"
-    element_ids: list[int] = Field(description="List of ElementId integer values to exclude")
+    element_ids: list[int] = Field(
+        description="List of ElementId integer values to exclude"
+    )
 
 
 class WorksetFilter(BaseModel):
@@ -147,20 +154,18 @@ class WorksetFilter(BaseModel):
 
 
 FilterItem = Annotated[
-    Union[
-        CategoryFilter,
-        ParameterStringFilter,
-        ParameterNumericFilter,
-        ParameterHasValueFilter,
-        LevelFilter,
-        ClassFilter,
-        BoundingBoxFilter,
-        ViewFilter,
-        ElementTypeFilter,
-        PhaseFilter,
-        ExclusionFilter,
-        WorksetFilter,
-    ],
+    CategoryFilter
+    | ParameterStringFilter
+    | ParameterNumericFilter
+    | ParameterHasValueFilter
+    | LevelFilter
+    | ClassFilter
+    | BoundingBoxFilter
+    | ViewFilter
+    | ElementTypeFilter
+    | PhaseFilter
+    | ExclusionFilter
+    | WorksetFilter,
     Field(discriminator="type"),
 ]
 
@@ -171,7 +176,9 @@ class FilterSpec(BaseModel):
     Combine multiple filters with AND or OR logic.
     """
 
-    filters: list[FilterItem] = Field(description="List of filter specifications to apply")
+    filters: list[FilterItem] = Field(
+        description="List of filter specifications to apply"
+    )
     logic: Literal["and", "or"] = Field(
         default="and",
         description="How to combine filters: 'and' = all must match, 'or' = any must match",

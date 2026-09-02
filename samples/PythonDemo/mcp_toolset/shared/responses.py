@@ -7,6 +7,6 @@ class ToolError(Exception):
     MCPServer catches exceptions and returns them as error content to the MCP client.
     """
 
-    def __init__(self, message: str, *, code: str = "tool.error"):
+    def __init__(self, message: str, *, code: str = "tool.error") -> None:
         super().__init__(message)
         self.code = code

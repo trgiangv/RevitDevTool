@@ -1,5 +1,4 @@
 """MEP engineering DTOs."""
-from __future__ import annotations
 
 from pydantic import BaseModel, Field
 

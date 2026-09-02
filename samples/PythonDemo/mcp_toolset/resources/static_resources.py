@@ -1,7 +1,8 @@
 """Static embedded markdown resources."""
-from __future__ import annotations
 
 import os
+
+from shared.mcp_registry import McpRegistry
 
 _CONTENT_DIR = os.path.join(os.path.dirname(__file__), "content")
 
@@ -12,7 +13,9 @@ def _load(filename: str) -> str:
         return f.read()
 
 
-def register_static_resources(mcp) -> None:
+def register_static_resources(mcp: McpRegistry) -> None:
+    """Register static markdown MCP resources."""
+
     @mcp.resource("revit://toolset/capabilities")
     async def get_capabilities() -> str:
         """Full tool catalog with usage guide."""

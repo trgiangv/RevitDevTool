@@ -1,6 +1,6 @@
 """Internal helpers for color analysis and graphic overrides."""
 
-from __future__ import annotations
+from typing import Callable
 
 from Autodesk.Revit import DB
 
@@ -14,14 +14,16 @@ class ColorsService:
         if len(value) != 6:
             return DB.Color(255, 0, 0)
         try:
-            return DB.Color(int(value[0:2], 16), int(value[2:4], 16), int(value[4:6], 16))
+            return DB.Color(
+                int(value[0:2], 16), int(value[2:4], 16), int(value[4:6], 16)
+            )
         except Exception:
             return DB.Color(255, 0, 0)
 
     @staticmethod
     def _color_to_hex(color: DB.Color) -> str:
         try:
-            return "#{:02X}{:02X}{:02X}".format(int(color.Red), int(color.Green), int(color.Blue))
+            return f"#{int(color.Red):02X}{int(color.Green):02X}{int(color.Blue):02X}"
         except Exception:
             return "#FF0000"
 
@@ -45,7 +47,11 @@ class ColorsService:
             cycle = index // len(base_colors)
             if cycle > 0:
                 factor = max(0.45, 1.0 - (cycle * 0.15))
-                red, green, blue = int(red * factor), int(green * factor), int(blue * factor)
+                red, green, blue = (
+                    int(red * factor),
+                    int(green * factor),
+                    int(blue * factor),
+                )
             colors.append(DB.Color(red, green, blue))
         return colors
 
@@ -63,9 +69,14 @@ class ColorsService:
         return colors
 
     @staticmethod
-    def _solid_fill_pattern_id(doc: DB.Document) -> DB.ElementId | None:
+    def solid_fill_pattern_id(doc: DB.Document) -> DB.ElementId | None:
         try:
-            for pattern in DB.FilteredElementCollector(doc).OfClass(DB.FillPatternElement):
+            patterns = (
+                DB.FilteredElementCollector(doc)
+                .OfClass(DB.FillPatternElement)
+                .ToElements()
+            )
+            for pattern in patterns:
                 fill_pattern = pattern.GetFillPattern()
                 if fill_pattern is not None and fill_pattern.IsSolidFill:
                     return pattern.Id
@@ -74,7 +85,9 @@ class ColorsService:
         return None
 
     @staticmethod
-    def _value_from_parameter(parameter: DB.Parameter | None, document: DB.Document) -> str:
+    def _value_from_parameter(
+        parameter: DB.Parameter | None, document: DB.Document
+    ) -> str:
         if parameter is None or not parameter.HasValue:
             return "None"
         return param_value_as_string(parameter, document, default="None")
@@ -87,7 +100,7 @@ class ColorsService:
             return None
 
     @staticmethod
-    def _parameter_display_value(element: DB.Element, parameter_name: str) -> str:
+    def parameter_display_value(element: DB.Element, parameter_name: str) -> str:
         parameter = element.LookupParameter(parameter_name)
         value = ColorsService._value_from_parameter(parameter, element.Document)
         if value != "None":
@@ -101,19 +114,24 @@ class ColorsService:
             element.Document,
         )
 
-    def _select_colors(
-        self, unique_values: list[str], use_gradient: bool, custom_colors: list[str] | None,
+    def select_colors(
+        self,
+        unique_values: list[str],
+        use_gradient: bool,
+        custom_colors: list[str] | None,
     ) -> list[DB.Color]:
-        if custom_colors:
-            colors = [self._hex_to_color(value) for value in custom_colors]
+        if custom_colors is not None:
+            colors = _hex_colors_from_list(custom_colors, self._hex_to_color)
             if len(colors) < len(unique_values):
-                colors.extend(self._generate_distinct_colors(len(unique_values) - len(colors)))
+                colors.extend(
+                    self._generate_distinct_colors(len(unique_values) - len(colors))
+                )
             return colors
         if use_gradient:
             return self._generate_gradient_colors(len(unique_values))
         return self._generate_distinct_colors(len(unique_values))
 
-    def _apply_color_overrides(
+    def apply_color_overrides(
         self,
         active_view: DB.View,
         grouped_elements: dict[str, list],
@@ -136,11 +154,24 @@ class ColorsService:
                 override.SetCutForegroundPatternId(solid_fill_id)
 
             group = grouped_elements[value]
-            assignments[value] = {"color": self._color_to_hex(color), "element_count": len(group)}
+            assignments[value] = {
+                "color": self._color_to_hex(color),
+                "element_count": len(group),
+            }
             for element in group:
                 try:
                     active_view.SetElementOverrides(element.Id, override)
                     colored_count += 1
                 except Exception:
-                    continue
+                    pass
         return assignments, colored_count
+
+
+def _hex_colors_from_list(
+    values: list[str],
+    converter: Callable[[str], DB.Color],
+) -> list[DB.Color]:
+    colors: list[DB.Color] = []
+    for value in values:
+        colors.append(converter(value))
+    return colors

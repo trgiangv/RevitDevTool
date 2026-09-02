@@ -1,7 +1,8 @@
-from pydantic import BaseModel
 from mcp.server.mcpserver import MCPServer
-from mcp.types import Annotations, Icon, ToolAnnotations
+from mcp.types import Annotations, Icon
+from pydantic import BaseModel
 
+from shared.tool_annotations import read_only_tool
 
 mcp = MCPServer("Parser Annotation Sample")
 
@@ -11,13 +12,18 @@ class ParserStatusOutput(BaseModel):
 
 
 @mcp.tool(
-    annotations=ToolAnnotations(
-        title="Get Parser Sample Status",
-        readOnlyHint=True,
-        idempotentHint=True,
-        openWorldHint=False,
+    annotations=read_only_tool(
+        "Get Parser Sample Status",
+        idempotent=True,
+        open_world=False,
     ),
-    icons=[Icon(src="https://example.com/icons/tool.png", mimeType="image/png", sizes=["16x16"])],
+    icons=[
+        Icon(
+            src="https://example.com/icons/tool.png",
+            mime_type="image/png",
+            sizes=["16x16"],
+        )
+    ],
     meta={"feature": "mcpserver", "version": 2},
     structured_output=True,
 )
@@ -29,7 +35,13 @@ async def get_parser_sample_status() -> ParserStatusOutput:
     name="summarize_parser_sample",
     title="Summarize Parser Sample",
     description="Build a simple parser validation prompt.",
-    icons=[Icon(src="https://example.com/icons/prompt.png", mimeType="image/png", sizes=["24x24"])],
+    icons=[
+        Icon(
+            src="https://example.com/icons/prompt.png",
+            mime_type="image/png",
+            sizes=["24x24"],
+        )
+    ],
 )
 async def summarize_parser_sample(topic: str, audience: str = "general") -> str:
     return f"Summarize parser status for {topic} and audience {audience}."
@@ -41,7 +53,13 @@ async def summarize_parser_sample(topic: str, audience: str = "general") -> str:
     title="Parser Status Resource",
     description="Static parser validation resource.",
     mime_type="application/json",
-    icons=[Icon(src="https://example.com/icons/resource-status.png", mimeType="image/png", sizes=["32x32"])],
+    icons=[
+        Icon(
+            src="https://example.com/icons/resource-status.png",
+            mime_type="image/png",
+            sizes=["32x32"],
+        )
+    ],
     annotations=Annotations(priority=0.9),
     meta={"kind": "status"},
 )
@@ -55,7 +73,13 @@ def parser_status_resource() -> str:
     title="Parser View Resource",
     description="Template parser validation resource.",
     mime_type="application/json",
-    icons=[Icon(src="https://example.com/icons/resource-view.png", mimeType="image/png", sizes=["48x48"])],
+    icons=[
+        Icon(
+            src="https://example.com/icons/resource-view.png",
+            mime_type="image/png",
+            sizes=["48x48"],
+        )
+    ],
     annotations=Annotations(priority=0.6),
     meta={"kind": "view"},
 )

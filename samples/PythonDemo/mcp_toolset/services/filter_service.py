@@ -1,9 +1,10 @@
 """Service for building Revit ElementFilters from declarative specifications."""
-from __future__ import annotations
 
-from System.Collections.Generic import List
-from Autodesk.Revit import DB
+from typing import Callable, Iterable, cast
+
+from Autodesk.Revit import DB, UI
 from RevitDevTool.Core import RevitContext
+from System.Collections.Generic import List
 
 from dto.filters import (
     BoundingBoxFilter,
@@ -23,11 +24,9 @@ from dto.filters import (
 )
 from shared.element_helpers import (
     find_category_by_name,
-    normalize_string,
     require_doc,
 )
 from shared.responses import ToolError
-
 
 _CLASS_MAP: dict[str, type] = {
     "wall": DB.Wall,
@@ -85,35 +84,74 @@ class FilterService:
         view_spec = self._find_view_spec(request) if request else None
         type_spec = self._find_type_spec(request) if request else None
 
+        collector = self._create_scope_collector(
+            doc,
+            selected_only=selected_only,
+            view_spec=view_spec,
+        )
+        collector = self._apply_request_filter(
+            doc, collector, request, view_spec=view_spec
+        )
+        return self._apply_instance_type_scope(
+            collector,
+            type_spec=type_spec,
+            include_types=include_types,
+            include_instances=include_instances,
+        )
+
+    def _create_scope_collector(
+        self,
+        doc: DB.Document,
+        *,
+        selected_only: bool,
+        view_spec: ViewFilter | None,
+    ) -> DB.FilteredElementCollector:
         if selected_only:
-            ui_doc = RevitContext.ActiveUiDocument
+            ui_doc: UI.UIDocument = RevitContext.ActiveUiDocument # noqa
             if ui_doc is None:
                 raise ToolError("No active UI document for selection")
             selected_ids = ui_doc.Selection.GetElementIds()
             if selected_ids is None or selected_ids.Count == 0:
                 raise ToolError("No elements selected")
-            collector = DB.FilteredElementCollector(doc, selected_ids)
-        elif view_spec is not None:
+            return DB.FilteredElementCollector(doc, selected_ids)
+        if view_spec is not None:
             view = self._resolve_view(doc, view_spec)
-            collector = DB.FilteredElementCollector(doc, view.Id)
-        else:
-            collector = DB.FilteredElementCollector(doc)
+            return DB.FilteredElementCollector(doc, view.Id)
+        return DB.FilteredElementCollector(doc)
 
-        if request is not None:
-            element_filter = self._build_composite(doc, request, exclude_view=True, exclude_element_type=True)
-            if element_filter is not None:
-                collector = collector.WherePasses(element_filter)
+    def _apply_request_filter(
+        self,
+        doc: DB.Document,
+        collector: DB.FilteredElementCollector,
+        request: FilterSpec | None,
+        *,
+        view_spec: ViewFilter | None,
+    ) -> DB.FilteredElementCollector:
+        if request is None:
+            return collector
+        element_filter = self._build_composite(
+            doc, request, exclude_view=view_spec is not None, exclude_element_type=True
+        )
+        if element_filter is None:
+            return collector
+        return collector.WherePasses(element_filter)
 
+    @staticmethod
+    def _apply_instance_type_scope(
+        collector: DB.FilteredElementCollector,
+        *,
+        type_spec: ElementTypeFilter | None,
+        include_types: bool,
+        include_instances: bool,
+    ) -> DB.FilteredElementCollector:
         if type_spec is not None:
             if type_spec.is_type:
-                collector = collector.WhereElementIsElementType()
-            else:
-                collector = collector.WhereElementIsNotElementType()
-        elif not include_types and include_instances:
-            collector = collector.WhereElementIsNotElementType()
-        elif include_types and not include_instances:
-            collector = collector.WhereElementIsElementType()
-
+                return collector.WhereElementIsElementType()
+            return collector.WhereElementIsNotElementType()
+        if not include_types and include_instances:
+            return collector.WhereElementIsNotElementType()
+        if include_types and not include_instances:
+            return collector.WhereElementIsElementType()
         return collector
 
     def collect_elements(
@@ -143,8 +181,8 @@ class FilterService:
         joiner = " AND " if request.logic == "and" else " OR "
         return joiner.join(parts) if parts else "No filters applied"
 
+    @staticmethod
     def _build_composite(
-        self,
         doc: DB.Document,
         request: FilterSpec,
         *,
@@ -157,7 +195,7 @@ class FilterService:
                 continue
             if exclude_element_type and isinstance(spec, ElementTypeFilter):
                 continue
-            built = self._build_single(doc, spec)
+            built = _build_filter_item(doc, spec)
             if built is not None:
                 sub_filters.append(built)
 
@@ -169,158 +207,6 @@ class FilterService:
         if request.logic == "or":
             return DB.LogicalOrFilter(List[DB.ElementFilter](sub_filters))
         return DB.LogicalAndFilter(List[DB.ElementFilter](sub_filters))
-
-    def _build_single(self, doc: DB.Document, spec: FilterItem) -> DB.ElementFilter | None:
-        if isinstance(spec, CategoryFilter):
-            return self._build_category(doc, spec)
-        if isinstance(spec, ParameterStringFilter):
-            return self._build_param_string(doc, spec)
-        if isinstance(spec, ParameterNumericFilter):
-            return self._build_param_numeric(doc, spec)
-        if isinstance(spec, ParameterHasValueFilter):
-            return self._build_param_has_value(doc, spec)
-        if isinstance(spec, LevelFilter):
-            return self._build_level(doc, spec)
-        if isinstance(spec, ClassFilter):
-            return self._build_class(spec)
-        if isinstance(spec, BoundingBoxFilter):
-            return self._build_bounding_box(spec)
-        if isinstance(spec, PhaseFilter):
-            return self._build_phase(doc, spec)
-        if isinstance(spec, ExclusionFilter):
-            return self._build_exclusion(spec)
-        if isinstance(spec, WorksetFilter):
-            return self._build_workset(doc, spec)
-        # ViewFilter and ElementTypeFilter are handled at the collector level
-        return None
-
-    # ------------------------------------------------------------------
-    # Individual filter builders
-    # ------------------------------------------------------------------
-
-    @staticmethod
-    def _build_category(doc: DB.Document, spec: CategoryFilter) -> DB.ElementFilter | None:
-        cat_ids = List[DB.ElementId]()
-        for name in spec.names:
-            cat = find_category_by_name(doc, name)
-            if cat is not None:
-                cat_ids.Add(cat.Id)
-        if cat_ids.Count == 0:
-            return None
-        return DB.ElementMulticategoryFilter(cat_ids, spec.inverted)
-
-    @staticmethod
-    def _build_param_string(doc: DB.Document, spec: ParameterStringFilter) -> DB.ElementParameterFilter | None:
-        param_id = _find_parameter_id(doc, spec.parameter_name)
-        if param_id is None:
-            return None
-        factory_method = _STRING_RULE_BUILDERS.get(spec.operator)
-        if factory_method is None:
-            return None
-        rule = getattr(DB.ParameterFilterRuleFactory, factory_method)(param_id, spec.value, False)
-        return DB.ElementParameterFilter(rule)
-
-    @staticmethod
-    def _build_param_numeric(doc: DB.Document, spec: ParameterNumericFilter) -> DB.ElementParameterFilter | None:
-        param_id = _find_parameter_id(doc, spec.parameter_name)
-        if param_id is None:
-            return None
-        factory_method = _NUMERIC_RULE_BUILDERS.get(spec.operator)
-        if factory_method is None:
-            return None
-        builder = getattr(DB.ParameterFilterRuleFactory, factory_method)
-        if spec.operator in ("equals", "not_equals"):
-            rule = builder(param_id, spec.value, spec.epsilon)
-        else:
-            rule = builder(param_id, spec.value)
-        return DB.ElementParameterFilter(rule)
-
-    @staticmethod
-    def _build_param_has_value(doc: DB.Document, spec: ParameterHasValueFilter) -> DB.ElementParameterFilter | None:
-        param_id = _find_parameter_id(doc, spec.parameter_name)
-        if param_id is None:
-            return None
-        if spec.has_value:
-            rule = DB.ParameterFilterRuleFactory.CreateHasValueParameterRule(param_id)
-        else:
-            rule = DB.ParameterFilterRuleFactory.CreateHasNoValueParameterRule(param_id)
-        return DB.ElementParameterFilter(rule)
-
-    @staticmethod
-    def _build_level(doc: DB.Document, spec: LevelFilter) -> DB.ElementLevelFilter | None:
-        target = normalize_string(spec.level_name)
-        levels = (
-            DB.FilteredElementCollector(doc)
-            .OfCategory(DB.BuiltInCategory.OST_Levels)
-            .WhereElementIsNotElementType()
-            .ToElements()
-        )
-        for level in levels:
-            if normalize_string(level.Name) == target:
-                return DB.ElementLevelFilter(level.Id)
-        return None
-
-    @staticmethod
-    def _build_class(spec: ClassFilter) -> DB.ElementFilter | None:
-        types: list[type] = []
-        for name in spec.class_names:
-            cls = _CLASS_MAP.get(name.lower())
-            if cls is not None:
-                types.append(cls)
-        if not types:
-            return None
-        if len(types) == 1:
-            return DB.ElementClassFilter(types[0])
-        return DB.ElementMulticlassFilter(List[type](types))
-
-    @staticmethod
-    def _build_bounding_box(spec: BoundingBoxFilter) -> DB.ElementFilter:
-        outline = DB.Outline(
-            DB.XYZ(spec.min_point[0], spec.min_point[1], spec.min_point[2]),
-            DB.XYZ(spec.max_point[0], spec.max_point[1], spec.max_point[2]),
-        )
-        if spec.mode == "intersecting":
-            return DB.BoundingBoxIntersectsFilter(outline)
-        return DB.BoundingBoxIsInsideFilter(outline)
-
-    @staticmethod
-    def _build_phase(doc: DB.Document, spec: PhaseFilter) -> DB.ElementFilter | None:
-        target = normalize_string(spec.phase_name)
-        phase_id = None
-        try:
-            for phase in doc.Phases:
-                if normalize_string(phase.Name).lower() == target.lower():
-                    phase_id = phase.Id
-                    break
-        except Exception:
-            return None
-        if phase_id is None:
-            return None
-        sub_filters = List[DB.ElementFilter]([
-            DB.ElementPhaseStatusFilter(phase_id, DB.ElementOnPhaseStatus.New),
-            DB.ElementPhaseStatusFilter(phase_id, DB.ElementOnPhaseStatus.Existing),
-            DB.ElementPhaseStatusFilter(phase_id, DB.ElementOnPhaseStatus.Demolished),
-        ])
-        return DB.LogicalOrFilter(sub_filters)
-
-    @staticmethod
-    def _build_exclusion(spec: ExclusionFilter) -> DB.ExclusionFilter:
-        ids = List[DB.ElementId]()
-        for eid in spec.element_ids:
-            ids.Add(DB.ElementId(eid))
-        return DB.ExclusionFilter(ids)
-
-    @staticmethod
-    def _build_workset(doc: DB.Document, spec: WorksetFilter) -> DB.ElementWorksetFilter | None:
-        try:
-            workset_table = doc.GetWorksetTable()
-            for workset_id in workset_table.GetWorksetIds():
-                workset = workset_table.GetWorkset(workset_id)
-                if normalize_string(workset.Name) == normalize_string(spec.workset_name):
-                    return DB.ElementWorksetFilter(workset_id)
-        except Exception:
-            pass
-        return None
 
     # ------------------------------------------------------------------
     # Helpers for view/type specs (handled at collector level, not filter level)
@@ -347,14 +233,14 @@ class FilterService:
             if view is None:
                 raise ToolError("No active view found")
             return view
-        target = normalize_string(spec.view_name)
+        target = (spec.view_name or "")
         for v in DB.FilteredElementCollector(doc).OfClass(DB.View).ToElements():
             try:
-                if normalize_string(v.Name) == target:
+                if (v.Name or "") == target:
                     return v
             except Exception:
-                continue
-        raise ToolError("View '{}' not found".format(spec.view_name))
+                pass
+        raise ToolError(f"View '{spec.view_name}' not found")
 
     # ------------------------------------------------------------------
     # Description helpers
@@ -362,10 +248,190 @@ class FilterService:
 
     @staticmethod
     def _describe_single(spec: FilterItem) -> str:
-        describer = _FILTER_DESCRIBERS.get(type(spec))
-        if describer is not None:
-            return describer(spec)
-        return str(spec)
+        return describe_filter_item(spec)
+
+
+def _build_category(doc: DB.Document, spec: CategoryFilter) -> DB.ElementFilter | None:
+    cat_ids = List[DB.ElementId]()
+    for name in spec.names:
+        cat = find_category_by_name(doc, name)
+        if cat is not None:
+            cat_ids.Add(cat.Id)
+    if cat_ids.Count == 0:
+        return None
+    return DB.ElementMulticategoryFilter(cat_ids, spec.inverted)
+
+
+def _build_param_string(
+    doc: DB.Document, spec: ParameterStringFilter
+) -> DB.ElementParameterFilter | None:
+    param_id = _find_parameter_id(doc, spec.parameter_name)
+    if param_id is None:
+        return None
+    if spec.operator not in _STRING_RULE_BUILDERS:
+        return None
+    method_name = _STRING_RULE_BUILDERS[spec.operator]
+    builder = cast(
+        Callable[[DB.ElementId, str, bool], object],
+        getattr(DB.ParameterFilterRuleFactory, method_name),
+    )
+    rule = builder(param_id, spec.value, False)
+    return DB.ElementParameterFilter(rule)
+
+
+def _build_param_numeric(
+    doc: DB.Document, spec: ParameterNumericFilter
+) -> DB.ElementParameterFilter | None:
+    param_id = _find_parameter_id(doc, spec.parameter_name)
+    if param_id is None:
+        return None
+    if spec.operator not in _NUMERIC_RULE_BUILDERS:
+        return None
+    method_name = _NUMERIC_RULE_BUILDERS[spec.operator]
+    builder = cast(
+        Callable[..., object],
+        getattr(DB.ParameterFilterRuleFactory, method_name),
+    )
+    if spec.operator in ("equals", "not_equals"):
+        rule = builder(param_id, spec.value, spec.epsilon)
+    else:
+        rule = builder(param_id, spec.value)
+    return DB.ElementParameterFilter(rule)
+
+
+def _build_param_has_value(
+    doc: DB.Document, spec: ParameterHasValueFilter
+) -> DB.ElementParameterFilter | None:
+    param_id = _find_parameter_id(doc, spec.parameter_name)
+    if param_id is None:
+        return None
+    if spec.has_value:
+        rule = DB.ParameterFilterRuleFactory.CreateHasValueParameterRule(param_id)
+    else:
+        rule = DB.ParameterFilterRuleFactory.CreateHasNoValueParameterRule(param_id)
+    return DB.ElementParameterFilter(rule)
+
+
+def _build_level(doc: DB.Document, spec: LevelFilter) -> DB.ElementLevelFilter | None:
+    target = (spec.level_name or "")
+    levels = (
+        DB.FilteredElementCollector(doc)
+        .OfCategory(DB.BuiltInCategory.OST_Levels)
+        .WhereElementIsNotElementType()
+        .ToElements()
+    )
+    for level in levels:
+        if (level.Name or "") == target:
+            return DB.ElementLevelFilter(level.Id)
+    return None
+
+
+def _build_class(spec: ClassFilter) -> DB.ElementFilter | None:
+    types: list[type] = []
+    for name in spec.class_names:
+        cls = _CLASS_MAP.get(name.lower())
+        if cls is not None:
+            types.append(cls)
+    if not types:
+        return None
+    if len(types) == 1:
+        return DB.ElementClassFilter(types[0])
+    return DB.ElementMulticlassFilter(List[type](types))
+
+
+def _build_bounding_box(spec: BoundingBoxFilter) -> DB.ElementFilter:
+    outline = DB.Outline(
+        DB.XYZ(spec.min_point[0], spec.min_point[1], spec.min_point[2]),
+        DB.XYZ(spec.max_point[0], spec.max_point[1], spec.max_point[2]),
+    )
+    if spec.mode == "intersecting":
+        return DB.BoundingBoxIntersectsFilter(outline)
+    return DB.BoundingBoxIsInsideFilter(outline)
+
+
+def _find_phase_id(doc: DB.Document, phase_name: str) -> DB.ElementId | None:
+    target = (phase_name or "")
+    try:
+        for phase in doc.Phases:
+            if (phase.Name or "").lower() == target.lower():
+                return phase.Id
+    except Exception:
+        return None
+    return None
+
+
+def _build_phase(doc: DB.Document, spec: PhaseFilter) -> DB.ElementFilter | None:
+    phase_id = _find_phase_id(doc, spec.phase_name)
+    if phase_id is None:
+        return None
+    sub_filters = List[DB.ElementFilter](
+        [
+            DB.ElementPhaseStatusFilter(phase_id, DB.ElementOnPhaseStatus.New),
+            DB.ElementPhaseStatusFilter(phase_id, DB.ElementOnPhaseStatus.Existing),
+            DB.ElementPhaseStatusFilter(phase_id, DB.ElementOnPhaseStatus.Demolished),
+        ]
+    )
+    return DB.LogicalOrFilter(sub_filters)
+
+
+def _build_exclusion(spec: ExclusionFilter) -> DB.ExclusionFilter:
+    ids = List[DB.ElementId]()
+    for eid in spec.element_ids:
+        ids.Add(DB.ElementId(eid))
+    return DB.ExclusionFilter(ids)
+
+
+def _build_workset(
+    doc: DB.Document, spec: WorksetFilter
+) -> DB.ElementWorksetFilter | None:
+    target = (spec.workset_name or "").lower()
+    if not target:
+        return None
+    try:
+        for workset in DB.FilteredWorksetCollector(doc).ToWorksets():
+            if (workset.Name or "").lower() == target:
+                return DB.ElementWorksetFilter(workset.Id)
+    except Exception:
+        pass
+    return None
+
+
+def _build_filter_item(doc: DB.Document, spec: FilterItem) -> DB.ElementFilter | None:
+    if isinstance(
+        spec,
+        (
+            ParameterStringFilter,
+            ParameterNumericFilter,
+            ParameterHasValueFilter,
+        ),
+    ):
+        return _build_parameter_filter(doc, spec)
+    if isinstance(spec, CategoryFilter):
+        return _build_category(doc, spec)
+    if isinstance(spec, LevelFilter):
+        return _build_level(doc, spec)
+    if isinstance(spec, ClassFilter):
+        return _build_class(spec)
+    if isinstance(spec, BoundingBoxFilter):
+        return _build_bounding_box(spec)
+    if isinstance(spec, PhaseFilter):
+        return _build_phase(doc, spec)
+    if isinstance(spec, ExclusionFilter):
+        return _build_exclusion(spec)
+    if isinstance(spec, WorksetFilter):
+        return _build_workset(doc, spec)
+    return None
+
+
+def _build_parameter_filter(
+    doc: DB.Document,
+    spec: ParameterStringFilter | ParameterNumericFilter | ParameterHasValueFilter,
+) -> DB.ElementFilter | None:
+    if isinstance(spec, ParameterStringFilter):
+        return _build_param_string(doc, spec)
+    if isinstance(spec, ParameterNumericFilter):
+        return _build_param_numeric(doc, spec)
+    return _build_param_has_value(doc, spec)
 
 
 # ------------------------------------------------------------------
@@ -379,20 +445,20 @@ def _desc_category(s: CategoryFilter) -> str:
 
 
 def _desc_param_str(s: ParameterStringFilter) -> str:
-    return "Parameter '{}' {} '{}'".format(s.parameter_name, s.operator, s.value)
+    return f"Parameter '{s.parameter_name}' {s.operator} '{s.value}'"
 
 
 def _desc_param_num(s: ParameterNumericFilter) -> str:
-    return "Parameter '{}' {} {}".format(s.parameter_name, s.operator, s.value)
+    return f"Parameter '{s.parameter_name}' {s.operator} {s.value}"
 
 
 def _desc_param_has(s: ParameterHasValueFilter) -> str:
     verb = "has value" if s.has_value else "has no value"
-    return "Parameter '{}' {}".format(s.parameter_name, verb)
+    return f"Parameter '{s.parameter_name}' {verb}"
 
 
 def _desc_level(s: LevelFilter) -> str:
-    return "Level = '{}'".format(s.level_name)
+    return f"Level = '{s.level_name}'"
 
 
 def _desc_class(s: ClassFilter) -> str:
@@ -400,7 +466,7 @@ def _desc_class(s: ClassFilter) -> str:
 
 
 def _desc_bbox(s: BoundingBoxFilter) -> str:
-    return "BoundingBox {} ({} -> {})".format(s.mode, s.min_point, s.max_point)
+    return f"BoundingBox {s.mode} ({s.min_point} -> {s.max_point})"
 
 
 def _desc_view(s: ViewFilter) -> str:
@@ -412,18 +478,18 @@ def _desc_etype(s: ElementTypeFilter) -> str:
 
 
 def _desc_phase(s: PhaseFilter) -> str:
-    return "Phase = '{}'".format(s.phase_name)
+    return f"Phase = '{s.phase_name}'"
 
 
 def _desc_exclusion(s: ExclusionFilter) -> str:
-    return "Excluding {} element(s)".format(len(s.element_ids))
+    return f"Excluding {len(s.element_ids)} element(s)"
 
 
 def _desc_workset(s: WorksetFilter) -> str:
-    return "Workset = '{}'".format(s.workset_name)
+    return f"Workset = '{s.workset_name}'"
 
 
-_FILTER_DESCRIBERS: dict[type, object] = {
+_FILTER_DESCRIBERS: dict[type[FilterItem], Callable[[FilterItem], str]] = {
     CategoryFilter: _desc_category,
     ParameterStringFilter: _desc_param_str,
     ParameterNumericFilter: _desc_param_num,
@@ -439,6 +505,13 @@ _FILTER_DESCRIBERS: dict[type, object] = {
 }
 
 
+def describe_filter_item(spec: FilterItem) -> str:
+    filter_type = type(spec)
+    if filter_type not in _FILTER_DESCRIBERS:
+        return str(spec)
+    return _FILTER_DESCRIBERS[filter_type](spec)
+
+
 # ------------------------------------------------------------------
 # Parameter ID resolution
 # ------------------------------------------------------------------
@@ -446,7 +519,7 @@ _FILTER_DESCRIBERS: dict[type, object] = {
 
 def _find_parameter_id(doc: DB.Document, parameter_name: str) -> DB.ElementId | None:
     """Find the ElementId of a parameter definition by name."""
-    target = normalize_string(parameter_name)
+    target = (parameter_name or "")
     result = _scan_sample_element_params(doc, target)
     if result is not None:
         return result
@@ -462,7 +535,11 @@ def _scan_sample_element_params(doc: DB.Document, target: str) -> DB.ElementId |
         return result
     try:
         type_id = sample.GetTypeId()
-        type_elem = doc.GetElement(type_id) if type_id and type_id != DB.ElementId.InvalidElementId else None
+        type_elem = (
+            doc.GetElement(type_id)
+            if type_id and type_id != DB.ElementId.InvalidElementId
+            else None
+        )
     except Exception:
         type_elem = None
     if type_elem is not None:
@@ -470,23 +547,26 @@ def _scan_sample_element_params(doc: DB.Document, target: str) -> DB.ElementId |
     return None
 
 
-def _scan_params_map(params_map: object, target: str) -> DB.ElementId | None:
+def _scan_params_map(params_map: Iterable[object], target: str) -> DB.ElementId | None:
     for param in params_map:
         try:
-            if normalize_string(param.Definition.Name) == target:
+            if (param.Definition.Name or "") == target:
                 return param.Definition.Id
         except Exception:
-            continue
+            pass
     return None
 
 
 def _scan_shared_parameters(doc: DB.Document, target: str) -> DB.ElementId | None:
-    for sp in DB.FilteredElementCollector(doc).OfClass(DB.SharedParameterElement):
+    shared_params = (
+        DB.FilteredElementCollector(doc).OfClass(DB.SharedParameterElement).ToElements()
+    )
+    for sp in shared_params:
         try:
-            if normalize_string(sp.Name) == target:
+            if (sp.Name or "") == target:
                 return sp.Id
         except Exception:
-            continue
+            pass
     return None
 
 
@@ -500,4 +580,3 @@ def _find_sample_element(doc: DB.Document) -> DB.Element | None:
         )
     except Exception:
         return None
-

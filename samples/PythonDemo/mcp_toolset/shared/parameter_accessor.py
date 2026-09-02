@@ -1,9 +1,8 @@
 """Parameter read/write helpers aligned with C# ParameterAccessor."""
-from __future__ import annotations
 
 from Autodesk.Revit import DB
 
-from shared.element_helpers import element_id_value, normalize_string, param_value_as_string
+from shared.element_helpers import param_value_as_string
 
 
 def get_parameter_value(param: DB.Parameter, doc: DB.Document) -> str:
@@ -12,12 +11,14 @@ def get_parameter_value(param: DB.Parameter, doc: DB.Document) -> str:
     return param_value_as_string(param, doc)
 
 
-def set_parameter_value(element: DB.Element, param_name: str, value: str) -> tuple[bool, str]:
+def set_parameter_value(
+    element: DB.Element, param_name: str, value: str
+) -> tuple[bool, str]:
     param = element.LookupParameter(param_name)
     if param is None:
-        return False, "Parameter '{}' not found".format(param_name)
+        return False, f"Parameter '{param_name}' not found"
     if param.IsReadOnly:
-        return False, "Parameter '{}' is read-only".format(param_name)
+        return False, f"Parameter '{param_name}' is read-only"
     try:
         storage = param.StorageType
         if storage == DB.StorageType.String:
@@ -29,7 +30,7 @@ def set_parameter_value(element: DB.Element, param_name: str, value: str) -> tup
         elif storage == DB.StorageType.ElementId:
             param.Set(DB.ElementId(int(value)))
         else:
-            return False, "Unsupported storage type for '{}'".format(param_name)
+            return False, f"Unsupported storage type for '{param_name}'"
         return True, ""
     except Exception as exc:
         return False, str(exc)
@@ -52,7 +53,7 @@ def parameter_entry(param: DB.Parameter, doc: DB.Document) -> dict:
     except Exception:
         pass
     return {
-        "name": normalize_string(param.Definition.Name),
+        "name": (param.Definition.Name or ""),
         "value": get_parameter_value(param, doc),
         "storage": str(param.StorageType),
         "writable": not param.IsReadOnly,

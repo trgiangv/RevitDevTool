@@ -1,5 +1,4 @@
 """Query and model intelligence DTOs."""
-from __future__ import annotations
 
 from pydantic import BaseModel, Field
 

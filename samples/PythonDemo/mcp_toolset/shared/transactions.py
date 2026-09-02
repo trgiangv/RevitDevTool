@@ -1,15 +1,15 @@
 """Transaction helpers for Revit API operations."""
-from __future__ import annotations
 
-from typing import Callable, TypeVar
+from collections.abc import Callable
+from typing import TypeAlias
 
 from Autodesk.Revit import DB
 
-T = TypeVar("T")
+VoidOperation: TypeAlias = Callable[[], None]
 
 
-def run_transaction(doc: DB.Document, name: str, operation: Callable[[], T]) -> T:
-    with DB.Transaction(doc, name) as tx:
+def run_transaction[T](doc: DB.Document, name: str, operation: Callable[[], T]) -> T:
+    with DB.Transaction(doc, name) as tx: # noqa
         tx.Start()
         try:
             result = operation()

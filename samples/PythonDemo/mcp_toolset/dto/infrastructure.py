@@ -1,5 +1,4 @@
 """Infrastructure and document management DTOs."""
-from __future__ import annotations
 
 from pydantic import BaseModel, Field
 
@@ -12,9 +11,17 @@ class StatusResult(BaseModel):
     central_path: str | None = Field(default=None, alias="centralPath")
     active_workset: str | None = Field(default=None, alias="activeWorkset")
     selection_count: int | None = Field(default=None, alias="selectionCount")
+    warning_count: int | None = Field(default=None, alias="warningCount")
     version: str | None = None
 
     model_config = {"populate_by_name": True}
+
+    def summary_text(self) -> str:
+        if not self.healthy and not self.document_title:
+            return "No active document"
+        if self.healthy:
+            return "Model healthy, {} warnings".format(self.warning_count or 0)
+        return "Model unhealthy"
 
 
 class SaveDocumentResult(BaseModel):

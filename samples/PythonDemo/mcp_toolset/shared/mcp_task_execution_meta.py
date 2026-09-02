@@ -24,6 +24,5 @@ class McpTaskExecutionMeta:
         Optional = "Optional"
         Required = "Required"
 
-
-McpTaskExecutionMeta.OptionalMeta = {McpTaskExecutionMeta.MetaKey: McpTaskExecutionMeta.Mode.Optional}
-McpTaskExecutionMeta.RequiredMeta = {McpTaskExecutionMeta.MetaKey: McpTaskExecutionMeta.Mode.Required}
+    OptionalMeta = {MetaKey: Mode.Optional}
+    RequiredMeta = {MetaKey: Mode.Required}

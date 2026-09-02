@@ -1,10 +1,11 @@
 """Live model JSON resources."""
-from __future__ import annotations
 
 from services.model_resource_service import ModelResourceService
+from shared.mcp_registry import McpRegistry
 
 
-def register_model_resources(mcp) -> None:
+def register_model_resources(mcp: McpRegistry) -> None:
+    """Register live model JSON MCP resources."""
     service = ModelResourceService()
 
     @mcp.resource("revit://model/types")

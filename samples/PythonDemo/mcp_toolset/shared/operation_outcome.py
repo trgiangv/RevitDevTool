@@ -1,5 +1,4 @@
 """Partial-success aggregation for write tools."""
-from __future__ import annotations
 
 from dto.common import ToolErrorEntry
 
@@ -12,7 +11,9 @@ class OperationOutcome:
     def record_success(self) -> None:
         self._success_count += 1
 
-    def record(self, success: bool, message: str, element_id: int | None = None) -> None:
+    def record(
+        self, success: bool, message: str, element_id: int | None = None
+    ) -> None:
         if success:
             self._success_count += 1
         else:

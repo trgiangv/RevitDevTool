@@ -1,10 +1,8 @@
 """Multimodal MCP content tool registrations."""
-from __future__ import annotations
 
 import base64
 from typing import Annotated
 
-from mcp.server.mcpserver import MCPServer
 from mcp.types import (
     CallToolResult,
     EmbeddedResource,
@@ -12,43 +10,47 @@ from mcp.types import (
     ResourceLink,
     TextContent,
     TextResourceContents,
-    ToolAnnotations,
 )
 from pydantic import Field
 
 from services.content_service import ContentService
+from shared.mcp_registry import McpRegistry
+from shared.tool_annotations import read_only_tool
 
 
-def register_content_tools(mcp: MCPServer) -> None:
+def register_content_tools(mcp: McpRegistry) -> None:
+    """Register view capture, schedule preview, and model digest tools."""
     service = ContentService()
 
-    @mcp.tool(annotations=ToolAnnotations(title="Capture View (inline image)", readOnlyHint=True))
+    @mcp.tool(annotations=read_only_tool("Capture View (inline image)"))
     async def revit_capture_view(
         resolution: Annotated[int, Field(description="Image DPI (default 150)")] = 150,
     ) -> CallToolResult:
         """Capture active view as inline PNG for vision verification."""
-        data, view_name, view_id, image_path = service.capture_view(resolution)
-        encoded = base64.b64encode(data).decode("ascii")
+        capture = service.capture_view(resolution)
+        encoded = base64.b64encode(capture.data).decode("ascii")
         return CallToolResult(
             content=[ImageContent(type="image", data=encoded, mime_type="image/png")],
         )
 
-    @mcp.tool(annotations=ToolAnnotations(title="Preview Schedule (embedded CSV)", readOnlyHint=True))
+    @mcp.tool(annotations=read_only_tool("Preview Schedule (embedded CSV)"))
     async def revit_preview_schedule(
         schedule_id: Annotated[int, Field(description="Schedule element id")],
-        max_rows: Annotated[int, Field(description="Max embedded rows (default 30)")] = 30,
+        max_rows: Annotated[
+            int, Field(description="Max embedded rows (default 30)")
+        ] = 30,
     ) -> CallToolResult:
         """Return schedule preview as embedded CSV without writing files."""
-        name, csv_text, embedded_rows, total_rows, column_count = service.preview_schedule(
-            schedule_id, max_rows
-        )
+        preview = service.preview_schedule(schedule_id, max_rows)
         uri = "revit://schedule/{}/preview".format(schedule_id)
         return CallToolResult(
             content=[
                 TextContent(
                     type="text",
                     text="Schedule '{}' preview: {} of {} rows embedded as CSV.".format(
-                        name, embedded_rows, total_rows
+                        preview.schedule_name,
+                        preview.embedded_rows,
+                        preview.total_rows,
                     ),
                 ),
                 EmbeddedResource(
@@ -56,21 +58,15 @@ def register_content_tools(mcp: MCPServer) -> None:
                     resource=TextResourceContents(
                         uri=uri,
                         mime_type="text/csv",
-                        text=csv_text,
+                        text=preview.csv_text,
                     ),
                 ),
             ],
-            structured_content={
-                "scheduleId": schedule_id,
-                "scheduleName": name,
-                "embeddedRows": embedded_rows,
-                "totalRows": total_rows,
-                "columns": column_count,
-            },
+            structured_content=preview.model_dump(by_alias=True),
         )
 
     @mcp.tool(
-        annotations=ToolAnnotations(title="Model Digest (resource link)", readOnlyHint=True),
+        annotations=read_only_tool("Model Digest (resource link)"),
         structured_output=True,
     )
     async def revit_model_digest() -> CallToolResult:
@@ -84,10 +80,10 @@ def register_content_tools(mcp: MCPServer) -> None:
                         "Project '{title}': {views} views, {levels} levels, {warnings} warnings. "
                         "Use the linked resource for full view/sheet metadata."
                     ).format(
-                        title=digest["projectTitle"],
-                        views=digest["viewCount"],
-                        levels=digest["levelCount"],
-                        warnings=digest["warningCount"],
+                        title=digest.project_title,
+                        views=digest.view_count,
+                        levels=digest.level_count,
+                        warnings=digest.warning_count,
                     ),
                 ),
                 ResourceLink(
@@ -99,5 +95,5 @@ def register_content_tools(mcp: MCPServer) -> None:
                     mime_type="application/json",
                 ),
             ],
-            structured_content=digest,
+            structured_content=digest.model_dump(by_alias=True),
         )

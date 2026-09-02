@@ -1,10 +1,9 @@
 """Documentation tools: views, sheets, schedules."""
-from __future__ import annotations
 
 import math
-from datetime import datetime
+from datetime import UTC, datetime
 
-from Autodesk.Revit import DB
+from Autodesk.Revit import DB, UI
 from RevitDevTool.Core import RevitContext
 
 from dto.documentation import (
@@ -20,7 +19,10 @@ from dto.documentation import (
     ScheduleFieldInfo,
     ViewItem,
 )
-from shared.element_helpers import element_id_value, find_category_by_name, normalize_string, require_doc
+from shared.element_helpers import (
+    require_category,
+    require_doc,
+)
 from shared.responses import ToolError
 from shared.transactions import run_transaction
 
@@ -41,33 +43,47 @@ class DocumentationService:
         doc = require_doc()
         normalized = view_type.strip().lower().replace("-", "_")
 
-        def _operation():
+        def _operation() -> DB.View:
             if normalized == "floor_plan":
-                return self._create_floor_plan(doc, level_name, view_name, template_name)
+                return self._create_floor_plan(
+                    doc, level_name, view_name, template_name
+                )
             if normalized == "section":
-                return self._create_section(doc, min_point, max_point, direction_angle, depth, view_name)
+                return self._create_section(
+                    doc, min_point, max_point, direction_angle, depth, view_name
+                )
             if normalized in ("3d", "three_d"):
                 return self._create_3d(doc, view_name, template_name, is_bounding_box)
-            raise ToolError("Unsupported view type '{}'. Use floor_plan, section, or 3d".format(view_type))
+            raise ToolError(
+                "Unsupported view type '{}'. Use floor_plan, section, or 3d".format(
+                    view_type
+                )
+            )
 
         view = run_transaction(doc, "MCP: revit_create_view", _operation)
-        return CreateViewResult(viewId=element_id_value(view.Id), viewName=normalize_string(view.Name))
+        return CreateViewResult(
+            viewId=int(view.Id.Value), viewName=(view.Name or "")
+        )
 
     def create_sheet(self, title_block_id: int | None = None) -> CreateSheetResult:
         doc = require_doc()
-        tb_id = DB.ElementId(title_block_id) if title_block_id else self._default_title_block(doc)
+        tb_id = (
+            DB.ElementId(title_block_id)
+            if title_block_id
+            else self._default_title_block(doc)
+        )
 
-        def _operation():
+        def _operation() -> DB.ViewSheet:
             return DB.ViewSheet.Create(doc, tb_id)
 
         sheet = run_transaction(doc, "MCP: revit_create_sheet", _operation)
         return CreateSheetResult(
-            sheetId=element_id_value(sheet.Id),
-            sheetNumber=normalize_string(sheet.SheetNumber),
+            sheetId=int(sheet.Id.Value),
+            sheetNumber=(sheet.SheetNumber or ""),
         )
 
+    @staticmethod
     def place_on_sheet(
-        self,
         sheet_id: int,
         view_or_schedule_id: int,
         position: list[float] | None = None,
@@ -79,34 +95,41 @@ class DocumentationService:
         element = doc.GetElement(DB.ElementId(view_or_schedule_id))
         if element is None:
             raise ToolError("Element {} not found".format(view_or_schedule_id))
-        placement = DB.XYZ(position[0], position[1], 0.0) if position and len(position) >= 2 else DB.XYZ.Zero
+        placement = (
+            DB.XYZ(position[0], position[1], 0.0)
+            if position and len(position) >= 2
+            else DB.XYZ.Zero
+        )
 
-        def _operation():
+        def _operation() -> DB.Element:
             if isinstance(element, DB.ViewSchedule):
-                instance = DB.ScheduleSheetInstance.Create(doc, sheet.Id, element.Id, placement)
+                instance = DB.ScheduleSheetInstance.Create(
+                    doc, sheet.Id, element.Id, placement # noqa
+                )
                 return instance
             if isinstance(element, DB.View):
                 if element.IsTemplate:
                     raise ToolError("Cannot place a template view on a sheet")
-                return DB.Viewport.Create(doc, sheet.Id, element.Id, placement)
-            raise ToolError("Element {} is not a view or schedule".format(view_or_schedule_id))
+                return DB.Viewport.Create(doc, sheet.Id, element.Id, placement) # noqa
+            raise ToolError(
+                "Element {} is not a view or schedule".format(view_or_schedule_id)
+            )
 
         viewport = run_transaction(doc, "MCP: revit_place_on_sheet", _operation)
-        ui_doc = RevitContext.ActiveUiDocument
+        ui_doc : UI.UIDocument = RevitContext.ActiveUiDocument # noqa
         if ui_doc is not None:
             ui_doc.RequestViewChange(sheet)
-        return PlaceOnSheetResult(viewportId=element_id_value(viewport.Id))
+        return PlaceOnSheetResult(viewportId=int(viewport.Id.Value))
 
     def create_schedule(self, config: ScheduleConfig) -> CreateScheduleResult:
         doc = require_doc()
-        category = find_category_by_name(doc, config.category_name)
-        if category is None:
-            raise ToolError("Category '{}' not found".format(config.category_name))
+        category = require_category(doc, config.category_name)
 
-        def _operation():
+        def _operation() -> DB.ViewSchedule:
             schedule = DB.ViewSchedule.CreateSchedule(doc, category.Id)
             schedule.Name = config.schedule_name or "{} Schedule {}".format(
-                config.category_name, datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+                config.category_name,
+                datetime.now(tz=UTC).strftime("%Y-%m-%d_%H-%M-%S"),
             )
             schedulable = list(schedule.Definition.GetSchedulableFields())
             for field_name in config.fields:
@@ -118,25 +141,33 @@ class DocumentationService:
                 field = self._find_schedule_field(schedule, sort_rule.field)
                 if field is None:
                     raise ToolError("Sort field '{}' not found".format(sort_rule.field))
-                direction = DB.ScheduleSortOrder.Ascending if sort_rule.ascending else DB.ScheduleSortOrder.Descending
-                schedule.Definition.AddSortGroupField(DB.ScheduleSortGroupField(field.FieldId, direction))
+                direction = (
+                    DB.ScheduleSortOrder.Ascending
+                    if sort_rule.ascending
+                    else DB.ScheduleSortOrder.Descending
+                )
+                schedule.Definition.AddSortGroupField(
+                    DB.ScheduleSortGroupField(field.FieldId, direction)
+                )
             return schedule
 
         schedule = run_transaction(doc, "MCP: revit_create_schedule", _operation)
         return CreateScheduleResult(
-            scheduleId=element_id_value(schedule.Id),
-            scheduleName=normalize_string(schedule.Name),
+            scheduleId=int(schedule.Id.Value),
+            scheduleName=(schedule.Name or ""),
         )
 
-    def apply_view_template(self, view_id: int, template_name: str | None = None) -> ApplyViewTemplateResult:
+    def apply_view_template(
+        self, view_id: int, template_name: str | None = None
+    ) -> ApplyViewTemplateResult:
         doc = require_doc()
-        view = doc.GetElement(DB.ElementId(view_id))
+        view : DB.View = doc.GetElement(DB.ElementId(view_id)) # noqa
         if not isinstance(view, DB.View):
             raise ToolError("View {} not found".format(view_id))
         if view.IsTemplate:
             raise ToolError("Cannot apply a template to a template view")
 
-        def _operation():
+        def _operation() -> bool:
             if not template_name:
                 view.ViewTemplateId = DB.ElementId.InvalidElementId
                 return False
@@ -156,47 +187,20 @@ class DocumentationService:
     ) -> ListViewsResult:
         doc = require_doc()
         on_sheet = self._views_on_sheets_map(doc)
-        views = []
-        for view in DB.FilteredElementCollector(doc).OfClass(DB.View).ToElements():
-            if view.IsTemplate and not include_templates:
-                continue
-            if isinstance(view, DB.ViewSheet) and not include_sheets:
-                continue
-            if view.ViewType in (DB.ViewType.Internal, DB.ViewType.ProjectBrowser):
-                continue
-            template_name = None
-            if view.ViewTemplateId and view.ViewTemplateId != DB.ElementId.InvalidElementId:
-                tmpl = doc.GetElement(view.ViewTemplateId)
-                if tmpl:
-                    template_name = normalize_string(tmpl.Name)
-            vid = element_id_value(view.Id)
-            sheet_ids = on_sheet.get(vid, [])
-            level_name = None
-            if view.GenLevel:
-                level_name = normalize_string(view.GenLevel.Name)
-            views.append(
-                ViewItem(
-                    id=vid,
-                    name=normalize_string(view.Name),
-                    viewType=str(view.ViewType),
-                    isSheet=isinstance(view, DB.ViewSheet),
-                    sheetNumber=view.SheetNumber if isinstance(view, DB.ViewSheet) else None,
-                    level=level_name,
-                    template=template_name,
-                    onSheet=len(sheet_ids) > 0,
-                    sheetIds=sheet_ids,
-                )
-            )
+        views = [
+            _view_item(doc, view, on_sheet)
+            for view in DB.FilteredElementCollector(doc).OfClass(DB.View).ToElements()
+            if not _skip_view(view, include_sheets, include_templates)
+        ]
         views.sort(key=lambda item: item.name.lower())
         return ListViewsResult(views=views)
 
-    def list_schedule_fields(self, category_name: str) -> ListScheduleFieldsResult:
+    @staticmethod
+    def list_schedule_fields(category_name: str) -> ListScheduleFieldsResult:
         doc = require_doc()
-        category = find_category_by_name(doc, category_name)
-        if category is None:
-            raise ToolError("Category '{}' not found".format(category_name))
+        category = require_category(doc, category_name)
 
-        def _operation():
+        def _operation() -> list[ScheduleFieldInfo]:
             schedule = DB.ViewSchedule.CreateSchedule(doc, category.Id)
             fields = []
             for sf in schedule.Definition.GetSchedulableFields():
@@ -206,19 +210,22 @@ class DocumentationService:
             fields.sort(key=lambda item: item.name.lower())
             return fields
 
-        fields = run_transaction(doc, "Temporary Schedule for Field Discovery", _operation)
+        fields = run_transaction(
+            doc, "Temporary Schedule for Field Discovery", _operation
+        )
         return ListScheduleFieldsResult(fields=fields)
 
-    def activate_view(self, view_id: int) -> ActivateViewResult:
+    @staticmethod
+    def activate_view(view_id: int) -> ActivateViewResult:
         doc = require_doc()
         view = doc.GetElement(DB.ElementId(view_id))
         if not isinstance(view, DB.View):
             raise ToolError("View {} not found".format(view_id))
-        ui_doc = RevitContext.ActiveUiDocument
+        ui_doc : UI.UIDocument = RevitContext.ActiveUiDocument # noqa
         if ui_doc is None:
             raise ToolError("No active UI document")
         ui_doc.RequestViewChange(view)
-        return ActivateViewResult(activated=True, viewName=normalize_string(view.Name))
+        return ActivateViewResult(activated=True, viewName=(view.Name or ""))
 
     def _create_floor_plan(
         self,
@@ -231,7 +238,7 @@ class DocumentationService:
             raise ToolError("levelName is required for floor_plan")
         level = None
         for lvl in DB.FilteredElementCollector(doc).OfClass(DB.Level).ToElements():
-            if normalize_string(lvl.Name) == normalize_string(level_name):
+            if (lvl.Name or "") == (level_name or ""):
                 level = lvl
                 break
         if level is None:
@@ -257,12 +264,28 @@ class DocumentationService:
     ) -> DB.View:
         if not min_point or not max_point or len(min_point) < 3 or len(max_point) < 3:
             raise ToolError("Section requires min and max bounding box points")
-        min_pt = DB.XYZ(min_point[0], min_point[1], min_point[2])
-        max_pt = DB.XYZ(max_point[0], max_point[1], max_point[2])
+        min_x, min_y, min_z = min_point[0], min_point[1], min_point[2]
+        max_x, max_y, max_z = max_point[0], max_point[1], max_point[2]
+        angle_rad = (direction_angle or 0.0) * math.pi / 180.0
+        center = DB.XYZ((min_x + max_x) / 2, (min_y + max_y) / 2, (min_z + max_z) / 2)
+        view_dir = DB.XYZ(-math.sin(angle_rad), math.cos(angle_rad), 0).Normalize()
+        right_dir = DB.XYZ(math.cos(angle_rad), math.sin(angle_rad), 0).Normalize()
+        up_dir = DB.XYZ.BasisZ
+
+        transform : DB.Transform = DB.Transform.Identity # noqa
+        transform.Origin = center
+        transform.BasisX = right_dir
+        transform.BasisY = up_dir
+        transform.BasisZ = view_dir
+
+        width = math.sqrt((max_x - min_x) ** 2 + (max_y - min_y) ** 2)
+        height = max_z - min_z
+        section_depth = depth if depth is not None else width
+
         bbox = DB.BoundingBoxXYZ()
-        bbox.Min = min_pt
-        bbox.Max = max_pt
-        angle = (direction_angle or 0.0) * math.pi / 180.0
+        bbox.Transform = transform
+        bbox.Min = DB.XYZ(-width / 2, -height / 2, 0)
+        bbox.Max = DB.XYZ(width / 2, height / 2, section_depth)
         vft = self._section_type(doc)
         view = DB.ViewSection.CreateSection(doc, vft.Id, bbox)
         if view_name:
@@ -277,8 +300,8 @@ class DocumentationService:
         is_bounding_box: bool | None,
     ) -> DB.View:
         vft = self._3d_type(doc)
-        if is_bounding_box:
-            view = DB.View3D.CreateIsometric(doc, vft.Id)
+        if is_bounding_box is False:
+            view = DB.View3D.CreatePerspective(doc, vft.Id)
         else:
             view = DB.View3D.CreateIsometric(doc, vft.Id)
         if view_name:
@@ -291,21 +314,27 @@ class DocumentationService:
 
     @staticmethod
     def _floor_plan_type(doc: DB.Document) -> DB.ViewFamilyType:
-        for vft in DB.FilteredElementCollector(doc).OfClass(DB.ViewFamilyType).ToElements():
+        for vft in (
+            DB.FilteredElementCollector(doc).OfClass(DB.ViewFamilyType).ToElements()
+        ):
             if vft.ViewFamily == DB.ViewFamily.FloorPlan:
                 return vft
         raise ToolError("No floor plan view family type found")
 
     @staticmethod
     def _section_type(doc: DB.Document) -> DB.ViewFamilyType:
-        for vft in DB.FilteredElementCollector(doc).OfClass(DB.ViewFamilyType).ToElements():
+        for vft in (
+            DB.FilteredElementCollector(doc).OfClass(DB.ViewFamilyType).ToElements()
+        ):
             if vft.ViewFamily == DB.ViewFamily.Section:
                 return vft
         raise ToolError("No section view family type found")
 
     @staticmethod
     def _3d_type(doc: DB.Document) -> DB.ViewFamilyType:
-        for vft in DB.FilteredElementCollector(doc).OfClass(DB.ViewFamilyType).ToElements():
+        for vft in (
+            DB.FilteredElementCollector(doc).OfClass(DB.ViewFamilyType).ToElements()
+        ):
             if vft.ViewFamily == DB.ViewFamily.ThreeDimensional:
                 return vft
         raise ToolError("No 3D view family type found")
@@ -323,15 +352,23 @@ class DocumentationService:
         return symbol.Id
 
     @staticmethod
-    def _find_view_template(doc: DB.Document, name: str, view_type: DB.ViewType) -> DB.View | None:
-        target = normalize_string(name)
+    def _find_view_template(
+        doc: DB.Document, name: str, view_type: DB.ViewType
+    ) -> DB.View | None:
+        target = (name or "")
         for view in DB.FilteredElementCollector(doc).OfClass(DB.View).ToElements():
-            if view.IsTemplate and normalize_string(view.Name) == target:
+            if (
+                view.IsTemplate
+                and view.ViewType == view_type
+                and (view.Name or "") == target
+            ):
                 return view
         return None
 
     @staticmethod
-    def _find_schedule_field(schedule: DB.ViewSchedule, field_name: str) -> DB.ScheduleField | None:
+    def _find_schedule_field(
+        schedule: DB.ViewSchedule, field_name: str
+    ) -> DB.ScheduleField | None:
         definition = schedule.Definition
         for i in range(definition.GetFieldCount()):
             field = definition.GetField(i)
@@ -343,11 +380,55 @@ class DocumentationService:
     def _views_on_sheets_map(doc: DB.Document) -> dict[int, list[int]]:
         mapping: dict[int, list[int]] = {}
         for vp in DB.FilteredElementCollector(doc).OfClass(DB.Viewport).ToElements():
-            vid = element_id_value(vp.ViewId)
-            sid = element_id_value(vp.OwnerViewId)
+            vid = int(vp.ViewId.Value)
+            sid = int(vp.OwnerViewId.Value)
             mapping.setdefault(vid, []).append(sid)
-        for inst in DB.FilteredElementCollector(doc).OfClass(DB.ScheduleSheetInstance).ToElements():
-            vid = element_id_value(inst.ScheduleId)
-            sid = element_id_value(inst.OwnerViewId)
+        for inst in (
+            DB.FilteredElementCollector(doc)
+            .OfClass(DB.ScheduleSheetInstance)
+            .ToElements()
+        ):
+            vid = int(inst.ScheduleId.Value)
+            sid = int(inst.OwnerViewId.Value)
             mapping.setdefault(vid, []).append(sid)
         return mapping
+
+
+def _skip_view(
+    view: DB.View,
+    include_sheets: bool,
+    include_templates: bool,
+) -> bool:
+    if view.IsTemplate and not include_templates:
+        return True
+    if isinstance(view, DB.ViewSheet) and not include_sheets:
+        return True
+    return view.ViewType in (DB.ViewType.Internal, DB.ViewType.ProjectBrowser)
+
+
+def _view_template_name(doc: DB.Document, view: DB.View) -> str | None:
+    if not view.ViewTemplateId or view.ViewTemplateId == DB.ElementId.InvalidElementId:
+        return None
+    tmpl = doc.GetElement(view.ViewTemplateId)
+    return (tmpl.Name or "") if tmpl else None
+
+
+def _view_item(
+    doc: DB.Document,
+    view: DB.View,
+    on_sheet: dict[int, list[int]],
+) -> ViewItem:
+    vid = int(view.Id.Value)
+    sheet_ids = on_sheet.get(vid, [])
+    is_sheet = isinstance(view, DB.ViewSheet)
+    return ViewItem(
+        id=vid,
+        name=(view.Name or ""),
+        viewType=str(view.ViewType),
+        isSheet=is_sheet,
+        sheetNumber=view.SheetNumber if is_sheet else None, # noqa
+        level=(view.GenLevel.Name or "") if view.GenLevel else None,
+        template=_view_template_name(doc, view),
+        onSheet=len(sheet_ids) > 0,
+        sheetIds=sheet_ids,
+    )

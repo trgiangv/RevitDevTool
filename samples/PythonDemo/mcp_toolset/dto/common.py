@@ -1,5 +1,6 @@
 """Shared DTOs for toolset responses."""
-from __future__ import annotations
+
+from typing import Self
 
 from pydantic import BaseModel, Field
 
@@ -14,7 +15,9 @@ class ToolErrorEntry(BaseModel):
     model_config = {"populate_by_name": True}
 
     @classmethod
-    def from_message(cls, message: str, element_id: int | None = None) -> ToolErrorEntry:
+    def from_message(
+        cls, message: str, element_id: int | None = None
+    ) -> Self:
         code = "not_found"
         recoverable = True
         suggested = None
@@ -42,5 +45,7 @@ class ToolErrorEntry(BaseModel):
         )
 
     @classmethod
-    def from_exception(cls, exc: Exception, element_id: int | None = None) -> ToolErrorEntry:
+    def from_exception(
+        cls, exc: Exception, element_id: int | None = None
+    ) -> Self:
         return cls.from_message(str(exc), element_id)
