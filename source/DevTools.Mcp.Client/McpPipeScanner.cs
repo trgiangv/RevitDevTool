@@ -1,4 +1,6 @@
+using System.Diagnostics;
 using System.Text.RegularExpressions;
+using DevTools.Ipc;
 using Microsoft.Extensions.Logging;
 using ZLogger;
 
@@ -18,7 +20,7 @@ internal sealed class McpPipeScanner(ILogger<McpPipeScanner> logger) : IMcpPipeS
             foreach (var path in Directory.GetFiles(@"\\.\pipe\"))
             {
                 var name = Path.GetFileName(path);
-                if (McpPipePattern.IsMatch(name))
+                if (IsLiveMcpPipe(name))
                     pipes.Add(name);
             }
         }
@@ -28,5 +30,31 @@ internal sealed class McpPipeScanner(ILogger<McpPipeScanner> logger) : IMcpPipeS
         }
 
         return pipes;
+    }
+
+    internal static bool IsLiveMcpPipe(string pipeName)
+    {
+        if (!McpPipePattern.IsMatch(pipeName))
+            return false;
+        if (!HostPipeName.TryParse(pipeName, out _, out _, out var pid))
+            return false;
+        return IsProcessAlive(pid);
+    }
+
+    private static bool IsProcessAlive(int pid)
+    {
+        try
+        {
+            using var process = Process.GetProcessById(pid);
+            return !process.HasExited;
+        }
+        catch (ArgumentException)
+        {
+            return false;
+        }
+        catch (InvalidOperationException)
+        {
+            return false;
+        }
     }
 }

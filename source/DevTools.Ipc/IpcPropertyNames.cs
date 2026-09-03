@@ -28,4 +28,5 @@ public static class IpcPropertyNames
     public const string Uri = "uri";
     public const string Version = "version";
     public const string VersionNumber = "versionNumber";
+    public const string IsRunning = "isRunning";
 }

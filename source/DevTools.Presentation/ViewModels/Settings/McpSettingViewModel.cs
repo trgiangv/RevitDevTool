@@ -129,7 +129,7 @@ public sealed partial class McpSettingViewModel : ObservableObject, IDisposable
         try
         {
             using var doc = JsonDocument.Parse(response!);
-            return doc.RootElement.TryGetProperty(IpcConstants.JsonProperties.IsRunning, out var running)
+            return doc.RootElement.TryGetProperty(IpcPropertyNames.IsRunning, out var running)
                    && running.GetBoolean();
         }
         catch (JsonException)

@@ -4,6 +4,10 @@
     </PropertyGroup>
 
     <ItemGroup>
+        <InternalsVisibleTo Include="DevTools.Mcp.Tests" />
+    </ItemGroup>
+
+    <ItemGroup>
         <PackageReference Include="ModelContextProtocol" />
         <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" />
         <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" />

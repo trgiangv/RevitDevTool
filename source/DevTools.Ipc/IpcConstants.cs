@@ -21,12 +21,7 @@ public static class IpcConstants
         public const string Tunnel = "/tunnel";
         public const string Machines = "/machines";
     }
-
-    public static class JsonProperties
-    {
-        public const string IsRunning = "isRunning";
-    }
-
+    
     public static class Errors
     {
         public const string UnknownMethod = "unknown_method";

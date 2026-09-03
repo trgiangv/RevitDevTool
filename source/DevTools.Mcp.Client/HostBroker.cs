@@ -14,6 +14,7 @@ public sealed class HostBroker(
 {
     private readonly ConcurrentDictionary<string, HostSession> _sessions = new(StringComparer.OrdinalIgnoreCase);
     private readonly DeviceMetadata _device = DeviceMetadata.Collect();
+    private readonly HashSet<string> _publishedPipes = new(StringComparer.OrdinalIgnoreCase);
 
     public IConnectedHostCatalog Catalog { get; } = new ConnectedHostCatalog();
     public event Action? Changed;
@@ -66,12 +67,20 @@ public sealed class HostBroker(
 
         foreach (var pipeName in currentPipes.Where(pipe => !knownPipes.Contains(pipe)).ToList())
         {
-            knownPipes.Add(pipeName);
-            await TryConnectAsync(pipeName, ct).ConfigureAwait(false);
+            if (await TryConnectAsync(pipeName, ct).ConfigureAwait(false))
+                knownPipes.Add(pipeName);
+        }
+
+        if (!_publishedPipes.SetEquals(currentPipes))
+        {
+            _publishedPipes.Clear();
+            foreach (var pipe in currentPipes)
+                _publishedPipes.Add(pipe);
+            Changed?.Invoke();
         }
     }
 
-    private async Task TryConnectAsync(string pipeName, CancellationToken ct)
+    private async Task<bool> TryConnectAsync(string pipeName, CancellationToken ct)
     {
         try
         {
@@ -86,10 +95,12 @@ public sealed class HostBroker(
 
             logger.ZLogInformation($"Connected MCP to {pipeName} (PID={session.Info.ProcessId}, Host={session.Info.HostApp})");
             Changed?.Invoke();
+            return true;
         }
         catch (Exception ex)
         {
             logger.ZLogWarning(ex, $"Failed to connect MCP to {pipeName}");
+            return false;
         }
     }
 

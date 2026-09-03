@@ -32,7 +32,7 @@ flowchart TB
 ```
 
 The Daemon owns external MCP protocol routing and host selection. `HostBroker`
-scans for `DevToolsMcp_{Host}_{Version}_{PID}`, connects with `StreamClientTransport`,
+scans for `DevToolsMcp_{Host}_{Version}_{PID}` whose PID is still a live process, connects with `StreamClientTransport`,
 and hydrates `ConnectedHostCatalog`. The host process owns execution, registry loading, and
 host-safe invocation. Pytest/control remains on the `DevTools_*` pipe.
 
