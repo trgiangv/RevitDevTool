@@ -20,6 +20,7 @@
         <PackageVersion Include="System.Reflection.MetadataLoadContext" Version="$(MsVersion)" />
         <PackageVersion Include="System.Security.Cryptography.ProtectedData" Version="$(MsVersion)" />
         <PackageVersion Include="System.Text.Json" Version="$(MsVersion)" />
+        <PackageVersion Include="Microsoft.Bcl.AsyncInterfaces" Version="$(MsVersion)" />
         <!--Python-->
         <PackageVersion Include="pythonnet" Version="3.1.0" />
         <PackageVersion Include="IronPython" Version="3.4.2" />
@@ -27,12 +28,12 @@
         <PackageVersion Include="ModelContextProtocol" Version="2.2.0" />
         <PackageVersion Include="ModelContextProtocol.Extensions.Tasks" Version="2.2.0" />
         <!--FSharp-->
-        <PackageVersion Include="FSharp.Core" Version="10.1.204" />
-        <PackageVersion Include="FSharp.Compiler.Service" Version="43.12.204" />
+        <PackageVersion Include="FSharp.Core" Version="10.1.400" />
+        <PackageVersion Include="FSharp.Compiler.Service" Version="43.12.400" />
         <!--CSharp-->
-        <PackageVersion Include="Microsoft.CodeAnalysis.CSharp" Version="5.6.0" />
+        <PackageVersion Include="Microsoft.CodeAnalysis.CSharp" Version="5.9.0" />
         <!--Telemetry-->
-        <PackageVersion Include="Sentry" Version="6.6.0" />
+        <PackageVersion Include="Sentry" Version="6.9.0" />
         <!--Logging-->
         <PackageVersion Include="ZLogger" Version="2.5.10" />
         <PackageVersion Include="ZLogger.Scintilla" Version="0.0.9" />
@@ -45,19 +46,18 @@
         <PackageVersion Include="System.Drawing.Common" Version="8.0.25" />
         <PackageVersion Include="System.Net.Http" Version="4.3.4" />
         <PackageVersion Include="System.Runtime.CompilerServices.Unsafe" Version="6.1.2" />
-        <PackageVersion Include="Microsoft.Bcl.AsyncInterfaces" Version="$(MsVersion)" />
         <!--Auth-->
         <PackageVersion Include="Duende.IdentityModel.OidcClient" Version="7.1.0" />
         <!--Console-->
-        <PackageVersion Include="CliWrap" Version="3.10.4" />
+        <PackageVersion Include="CliWrap" Version="3.10.5" />
         <PackageVersion Include="ConsoleAppFramework" Version="5.7.13" />
         <!--UI-->
         <PackageVersion Include="CommunityToolkit.Mvvm" Version="8.4.2" />
-        <PackageVersion Include="H.NotifyIcon.Wpf" Version="2.4.1" />
-        <PackageVersion Include="Microsoft.Web.WebView2" Version="1.0.4078.44" />
-        <!--Build
-        Tools-->
-        <PackageVersion Include="ILRepack" Version="2.0.46" />
+        <PackageVersion Include="Aprillz.MewUI.Windows" Version="0.20.2" />
+        <PackageVersion Include="H.NotifyIcon" Version="2.4.1" />
+        <PackageVersion Include="Microsoft.Web.WebView2" Version="1.0.4191.47" />
+        <!--BuildTools-->
+        <PackageVersion Include="ILRepack" Version="2.0.48" />
         <PackageVersion Include="Sourcy.DotNet" Version="1.1.1" />
         <PackageVersion Include="Shouldly" Version="4.3.0" />
         <PackageVersion Include="ModularPipelines" Version="3.2.8" />
@@ -66,11 +66,10 @@
         <PackageVersion Include="ModularPipelines.GitHub" Version="3.2.8" />
         <PackageVersion Include="Microsoft.VisualStudio.SolutionPersistence" Version="1.0.52" />
         <PackageVersion Include="Microsoft.VisualStudio.Interop" Version="17.14.40260" />
-        <!--File
-        IO-->
+        <!--FileIO-->
         <PackageVersion Include="OpenMcdf" Version="3.2.0" />
         <!--AutoCad-->
-        <PackageVersion Include="ACadSharp" Version="3.6.51" />
+        <PackageVersion Include="ACadSharp" Version="3.7.1" />
         <PackageVersion Include="ricaun.AutoCAD.UI" Version="0.5.0" />
         <!--Tests-->
         <PackageVersion Include="xunit.v3" Version="4.0.0" />
@@ -80,9 +79,6 @@
         <PackageVersion Include="TUnit.Engine" Version="1.65.63" />
         <PackageVersion Include="Microsoft.Testing.Platform" Version="2.3.3" />
         <PackageVersion Include="Microsoft.Testing.Platform.MSBuild" Version="2.3.3" />
-        <!-- Comparison sample only: samples/ricaun.NUnit.SampleTests -->
-        <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="18.8.1" />
-        <PackageVersion Include="ricaun.RevitTest.TestAdapter" Version="1.11.1" />
         <PackageVersion Include="Moq" Version="4.20.72" />
         <PackageVersion Include="Bogus" Version="35.6.5" />
     </ItemGroup>
