@@ -8,7 +8,7 @@ public static class HostLocator
     /// </summary>
     public static IReadOnlyList<HostPipeInstance> Discover(string host, string version)
     {
-        var expectedPrefix = $"{DaemonConstants.TestPipePrefix}_{host}_{version}_";
+        var expectedPrefix = $"{IpcConstants.TestPipePrefix}_{host}_{version}_";
         var instances = new List<HostPipeInstance>();
 
         foreach (var pipePath in Directory.GetFiles(@"\\.\pipe\"))

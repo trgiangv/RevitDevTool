@@ -12,11 +12,11 @@ public static class HostPipeName
 
     /// <summary>Build a pytest/control pipe name.</summary>
     public static string FormatTest(string host, string version, int processId)
-        => Format(DaemonConstants.TestPipePrefix, host, version, processId);
+        => Format(IpcConstants.TestPipePrefix, host, version, processId);
 
     /// <summary>Build an SDK MCP pipe name.</summary>
     public static string FormatMcp(string host, string version, int processId)
-        => Format(DaemonConstants.McpPipePrefix, host, version, processId);
+        => Format(IpcConstants.McpPipePrefix, host, version, processId);
 
     /// <summary>Derive the MCP pipe name from a pytest or MCP pipe name, or return null if invalid.</summary>
     public static string? ToMcpPipeName(string pytestOrMcpPipeName)
@@ -48,11 +48,11 @@ public static class HostPipeName
 
     /// <summary>True when the name is an SDK MCP pipe.</summary>
     public static bool IsMcpPipe(string pipeName)
-        => pipeName.StartsWith(DaemonConstants.McpPipePrefix + Separator, StringComparison.OrdinalIgnoreCase);
+        => pipeName.StartsWith(IpcConstants.McpPipePrefix + Separator, StringComparison.OrdinalIgnoreCase);
 
     /// <summary>True when the name is a test/control pipe.</summary>
     public static bool IsTestPipe(string pipeName)
-        => pipeName.StartsWith(DaemonConstants.TestPipePrefix + Separator, StringComparison.OrdinalIgnoreCase)
+        => pipeName.StartsWith(IpcConstants.TestPipePrefix + Separator, StringComparison.OrdinalIgnoreCase)
            && !IsMcpPipe(pipeName);
 
     /// <summary>
@@ -67,12 +67,12 @@ public static class HostPipeName
 
     private static bool IsCorrectPipe(string pipeName)
     {
-        if (pipeName.StartsWith(DaemonConstants.McpPipePrefix + Separator, StringComparison.OrdinalIgnoreCase))
+        if (pipeName.StartsWith(IpcConstants.McpPipePrefix + Separator, StringComparison.OrdinalIgnoreCase))
         {
             return true;
         }
 
-        if (pipeName.StartsWith(DaemonConstants.TestPipePrefix + Separator, StringComparison.OrdinalIgnoreCase))
+        if (pipeName.StartsWith(IpcConstants.TestPipePrefix + Separator, StringComparison.OrdinalIgnoreCase))
         {
             return true;
         }

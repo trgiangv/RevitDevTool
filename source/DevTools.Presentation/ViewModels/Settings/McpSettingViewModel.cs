@@ -65,7 +65,7 @@ public sealed partial class McpSettingViewModel : ObservableObject, IDisposable
         {
             var ct = _signInCts.Token;
             await DaemonClient.EnsureRunningAsync(ct).ConfigureAwait(true);
-            await DaemonClient.QueryAsync(DaemonConstants.Methods.SignIn, ct).ConfigureAwait(true);
+            await DaemonClient.QueryAsync(IpcConstants.Methods.SignIn, ct).ConfigureAwait(true);
             await RefreshDaemonStatusAsync().ConfigureAwait(true);
         }
         finally
@@ -83,7 +83,7 @@ public sealed partial class McpSettingViewModel : ObservableObject, IDisposable
     private static async Task OpenDaemonDashboardAsync()
     {
         await DaemonClient.EnsureRunningAsync().ConfigureAwait(true);
-        await DaemonClient.QueryAsync(DaemonConstants.Methods.OpenDashboard).ConfigureAwait(true);
+        await DaemonClient.QueryAsync(IpcConstants.Methods.OpenDashboard).ConfigureAwait(true);
     }
 
     [RelayCommand]
@@ -110,7 +110,7 @@ public sealed partial class McpSettingViewModel : ObservableObject, IDisposable
 
     private async Task RefreshDaemonStatusAsync()
     {
-        var response = await DaemonClient.QueryAsync(DaemonConstants.Methods.Status).ConfigureAwait(false);
+        var response = await DaemonClient.QueryAsync(IpcConstants.Methods.Status).ConfigureAwait(false);
         var status = IsDaemonRunning(response) ? StatusRunning : StatusNotRunning;
 
         if (!_dispatcher.CheckAccess())
@@ -129,7 +129,7 @@ public sealed partial class McpSettingViewModel : ObservableObject, IDisposable
         try
         {
             using var doc = JsonDocument.Parse(response!);
-            return doc.RootElement.TryGetProperty(DaemonConstants.JsonProperties.IsRunning, out var running)
+            return doc.RootElement.TryGetProperty(IpcConstants.JsonProperties.IsRunning, out var running)
                    && running.GetBoolean();
         }
         catch (JsonException)
