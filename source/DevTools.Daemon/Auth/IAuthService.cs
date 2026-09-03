@@ -13,12 +13,12 @@ public interface IAuthService
     Task SignOutAsync();
     Task<bool> RefreshAsync();
 
-    event EventHandler<AuthStateChangedArgs>? StateChanged;
+    event EventHandler<AuthStateArgs>? StateChanged;
 }
 
-public sealed record AuthResult(bool Success, string? Error = null);
-
-public sealed class AuthStateChangedArgs(bool isAuthenticated) : EventArgs
+public sealed class AuthStateArgs(bool isAuthenticated) : EventArgs
 {
     public bool IsAuthenticated { get; } = isAuthenticated;
 }
+
+public sealed record AuthResult(bool Success, string? Error = null);

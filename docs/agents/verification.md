@@ -60,10 +60,10 @@ under test — do not guess paths.
 |---------|----------------|-------------|
 | Host startup crash (add-in failed to load) | `%APPDATA%\RevitDevTool\{Year}\Logs\` | Highest `LastWriteTime` matching `crash_*` |
 | Host session (Revit / AutoCAD) | `%APPDATA%\RevitDevTool\{Year}\Logs\` | Highest `LastWriteTime` matching `log_*` (`.log` or `.json`) |
-| Daemon | `%APPDATA%\RevitDevTool\mcp-server\` | Highest `LastWriteTime` matching `log_*.log` |
+| Daemon | `%APPDATA%\RevitDevTool\logs\` | Highest `LastWriteTime` matching `log_*.log` |
 
 `{Year}` is the host product year (e.g. `2025`). Host folder may differ if the user
-changed **Settings → Logging**; Daemon always uses `mcp-server\`. Match **PID** in the
+changed **Settings → Logging**; Daemon always uses `logs\` (`Logging:File`). Match **PID** in the
 filename when several sessions are open. AutoClean deletes `log_*` only — `crash_*`
 stays until you delete it.
 
@@ -77,7 +77,7 @@ Get-ChildItem "$env:APPDATA\RevitDevTool\2025\Logs\log_*" |
     Sort-Object LastWriteTime -Descending | Select-Object -First 1
 
 # Daemon
-Get-ChildItem "$env:APPDATA\RevitDevTool\mcp-server\log_*.log" |
+Get-ChildItem "$env:APPDATA\RevitDevTool\logs\log_*.log" |
     Sort-Object LastWriteTime -Descending | Select-Object -First 1
 
 # Both trees — list 50 newest under %APPDATA%\RevitDevTool

@@ -225,9 +225,9 @@ mutations. Latency targets are validated via `docs/agents/mcp-integration-test.m
 
 Implementation: `source/DevTools.Mcp.Revit/Resources/RevitModelContext.cs`.
 
-### Daemon log files
+### File logs
 
-`%APPDATA%\RevitDevTool\mcp-server\log_{pid}_{yyyyMMddHH}_{seq}.log` — hourly ZLogger rolling, 30-day cleanup at startup. Tray and stdio share the folder; PID separates processes.
+See [daemon.md](daemon.md) (`Logging:File` → `%APPDATA%/RevitDevTool/logs/`).
 
 ---
 
@@ -236,7 +236,7 @@ Implementation: `source/DevTools.Mcp.Revit/Resources/RevitModelContext.cs`.
 | Area | Path |
 |------|------|
 | Daemon infra + dynamic tools | `source/DevTools.Mcp.Server/Tools/`, `Hosting/McpEngine.cs` |
-| Daemon file logging | `source/DevTools.Daemon/Hosting/McpServerFileLogging.cs` |
+| Daemon file logging | `source/DevTools.Daemon/Composition/FileLogging.cs` |
 | Fixed prompts | `source/DevTools.Mcp.Server/Prompts/` |
 | Call-log payload helpers | `source/DevTools.Mcp.Server/Hosting/McpLogPayload.cs` |
 | Shared MCP hosting (Tasks, filters) | `source/DevTools.Mcp.Server/Hosting/McpServerConfigurator.cs` |

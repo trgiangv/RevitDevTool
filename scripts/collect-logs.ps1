@@ -5,7 +5,7 @@
     Without -Destination: lists the 50 most recent .log/.txt files with timestamps and sizes.
     With -Destination: copies those 50 files to the specified directory.
     Includes host session logs (log_*) and startup crash dumps (crash_*) under {Year}\Logs\,
-    plus mcp-server/log_{pid}_{yyyyMMddHH}_{seq}.log (Daemon hourly rolling).
+    plus logs/log_{pid}_{yyyyMMddHH}_{seq}.log (Daemon hourly rolling).
 .PARAMETER Destination
     Target directory for copying logs. Created if it does not exist.
 .EXAMPLE

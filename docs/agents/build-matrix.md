@@ -28,7 +28,7 @@ Valid modes are `Debug` and `Release`, so full names look like `Debug.Autodesk.2
 
 ## DevTools.Daemon
 
-`DevTools.Daemon` is a standalone WPF tray application (`DevTools.Daemon.exe`) that runs outside host processes. It bridges AI clients (Claude Desktop, Cursor) with host applications via named pipes, handles authentication, and manages multi-machine gateway connectivity.
+`DevTools.Daemon` is a standalone MewUI tray application (`DevTools.Daemon.exe`) that runs outside host processes. It bridges AI clients (Claude Desktop, Cursor) with host applications via named pipes, handles authentication, and manages multi-machine gateway connectivity.
 
 ### Publish & Deploy
 
@@ -45,7 +45,7 @@ dotnet publish source/DevTools.Daemon -c Release
 
 - Target: `net10.0-windows` / `win-x64`
 - Self-contained single-file (~52MB)
-- WPF tray app with embedded `appsettings.json` (CI/CD injects secrets)
+- MewUI tray app with embedded `appsettings.json` (CI/CD injects secrets)
 - Properties: `PublishSingleFile=true`, `SelfContained=true`
 
 ### Pipeline Integration

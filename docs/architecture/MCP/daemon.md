@@ -1,35 +1,42 @@
 # DevTools.Daemon
 
-Standalone WPF tray application that composes the external MCP server, hosts authentication, and manages multi-machine gateway connectivity.
+Standalone MewUI tray application that composes the external MCP server, hosts authentication, and manages multi-machine gateway connectivity. The tray icon uses `H.NotifyIcon` (core, not the WPF package). The right-click menu is a MewUI `ContextMenu` native popup (auto-size); an invisible 1×1 host owned by the tray `MessageWindow` is only the placement target.
 
 ## Capabilities
 
-1. **Auto-starts** with Windows (Registry Run key, set by installer)
-2. **Single-instance tray** enforced by global Mutex (`DevToolsDaemon_v1`); duplicate tray launches exit silently
+1. **Auto-starts** with Windows (HKCU Run value `DevToolsDaemon`, set by installer)
+2. **Single-instance tray** enforced by mutex `DevToolsDaemon_v1`; duplicate tray launches exit silently
 3. **Owns authentication** — OIDC/PKCE flow via system browser, tokens stored with DPAPI
 4. **Hosts the MCP engine** — Stdio mode (separate process) for local AI clients, Gateway mode (tray process) for remote
 5. **Multi-machine aware** — registers with Gateway including device metadata and host_apps
 6. **Exposes a control pipe** (`DevToolsDaemon_Control`) for host add-in communication (tray only)
-7. **Dashboard UI** — MahApps-themed window showing auth state, hosts, gateway status, settings
+7. **Main window** — MewUI window (C# markup, Direct2D) showing auth state, hosts, gateway status, settings. Close hides; Quit from the tray exits.
 
 ## Startup Modes
 
 | Args | Behavior |
 |------|----------|
 | `--stdio` | Direct MCP server on stdin/stdout. Self-contained process, no mutex, exits on disconnect. |
-| _(none)_ | Tray host. Acquires mutex; if already held, exits silently. Runs gateway + control pipe + UI. |
+| _(none)_ | Desktop process. Acquires mutex; if already held, exits silently. Runs gateway + control pipe + UI. |
 
-Stdio and tray processes are fully independent — no IPC between them. Both discover host pipes via their own `DiscoveryHostedService`.
+Stdio and desktop processes are fully independent — no IPC between them. Both discover host pipes via their own `DiscoveryHostedService`.
 
 ## Source Map
 
 | Area | Path |
 |------|------|
-| Hosting (builders, services, single-instance) | `source/DevTools.Daemon/Hosting/` |
+| Composition (tray vs `--stdio` hosts, discovery, file logging) | `source/DevTools.Daemon/Composition/` |
+| Auth (Duende `OidcClient` + DPAPI store + loopback browser) | `source/DevTools.Daemon/Auth/` |
+| Gateway WebSocket tunnel | `source/DevTools.Daemon/Gateway/` |
+| Control pipe (`control/*`) | `source/DevTools.Daemon/Control/` |
+| Desktop (mutex, Run key, settings, `AppState`) | `source/DevTools.Daemon/Desktop/` |
+| MCP tool adapters (`list_machines`) | `source/DevTools.Daemon/Tools/` |
+| Main window + views + tray | `source/DevTools.Daemon/Views/` |
+| Icon / theme / UI dispatch | `source/DevTools.Daemon/Helpers/` |
+| App entry point | `source/DevTools.Daemon/Program.cs` |
 | External MCP surface | `source/DevTools.Mcp.Server/` |
-| Auth (OIDC/PKCE) | `source/DevTools.Daemon/Auth/` |
-| Dashboard (window + views) | `source/DevTools.Daemon/Dashboard/` |
-| App entry point | `source/DevTools.Daemon/App.xaml.cs` |
+
+Duende `OidcClient` owns PKCE, ID-token validation, and refresh. Local code is DPAPI `TokenStore`, `LoopbackBrowser`, and token revoke (`LogoutAsync` is a browser end-session, not revoke).
 
 ## Configuration
 
@@ -37,9 +44,13 @@ Production config is embedded in the single-file EXE (`appsettings.json` as Embe
 
 | Layer | File | Purpose |
 |-------|------|---------|
-| Production | `appsettings.json` (embedded) | Placeholder values, injected by CI/CD |
-| Development | `appsettings.Development.json` (git-ignored) | Local overrides for dev builds |
+| Production | `appsettings.json` (embedded) | Auth, Gateway, `Logging:File` |
+| Development | `appsettings.Development.json` (git-ignored) | Local overrides |
+| User prefs | `%APPDATA%/RevitDevTool/settings.json` | `User` section — `IOptionsMonitor<UserSettings>` load, `UserSettingsStore` write |
+| File logs | `%APPDATA%/RevitDevTool/logs/` | Hourly ZLogger rolling (`Logging:File`); tray and stdio share the folder, PID separates processes |
 | CI/CD | GitHub Secrets | `AUTH_ISSUER`, `AUTH_CLIENT_ID`, `GATEWAY_URL` |
+
+Auth/Gateway bind via `Configure<T>(GetSection)`. User prefs are a separate JSON file with a `User` section so they overlay configuration without colliding with Auth/Gateway. `IConfiguration` is read-only; `UserSettingsStore.Update` writes the file and reloads the configuration root.
 
 ## Control Pipe API
 
@@ -48,12 +59,12 @@ Protocol: one JSON request line → one JSON response line per connection.
 
 | Method | Response |
 |--------|----------|
-| `daemon/status` | `{isRunning, version}` |
-| `daemon/auth_state` | `{isAuthenticated, userId, email, displayName, avatarUrl}` |
-| `daemon/trigger_signin` | `{success, error}` |
-| `daemon/trigger_signout` | `{success}` |
-| `daemon/connected_hosts` | `[{hostApp, version, pid, pipeName}, ...]` |
-| `daemon/open_dashboard` | `{success}` |
+| `control/status` | `{isRunning, version}` |
+| `control/auth_state` | `{isAuthenticated, userId, email, displayName, avatarUrl}` |
+| `control/sign_in` | `{success, error}` |
+| `control/sign_out` | `{success}` |
+| `control/connected_hosts` | `[{hostApp, version, pid, pipeName}, ...]` |
+| `control/open_dashboard` | `{success}` |
 
 ## Built-in Tools
 

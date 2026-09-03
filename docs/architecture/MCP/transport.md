@@ -47,7 +47,7 @@ Do not multiplex SDK frames onto the pytest pipe (or the reverse).
 When an AI client spawns `DevTools.Daemon.exe --stdio`, a **new process** runs a self-contained MCP server on stdin/stdout. It boots its own `McpEngine`, `HostBroker`, and `DiscoveryHostedService` independently.
 
 Key properties:
-- Custom process entrypoint handles `--stdio` before WPF tray startup.
+- Custom process entrypoint handles `--stdio` before MewUI tray startup.
 - Bypasses the `SingleInstance` mutex.
 - Discovers `DevToolsMcp_*` pipes independently.
 - Auth tokens are read from the shared DPAPI file.

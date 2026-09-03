@@ -1,6 +1,6 @@
 using System.IO.Pipelines;
 using System.Text.Json;
-using DevTools.Daemon.Hosting;
+using DevTools.Daemon.Composition;
 using DevTools.Mcp.Server.Hosting;
 using DevTools.FileMetadata.Core;
 using DevTools.Mcp.Core;

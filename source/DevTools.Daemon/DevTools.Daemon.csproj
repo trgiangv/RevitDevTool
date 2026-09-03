@@ -3,26 +3,25 @@
     <!--
           Build (dev):   dotnet build
           Publish:       dotnet publish -c Release  → single-file exe (requires .NET 10 runtime)
-  
+
           Usage:
-              DevTools.Daemon.exe            tray app (single-instance, gateway, control pipe, UI)
-              DevTools.Daemon.exe - -stdio   direct MCP server on stdin/stdout (independent process)
+              DevTools.Daemon.exe            desktop app (single-instance, gateway, control pipe, UI)
+              DevTools.Daemon.exe - -stdio    MCP server on stdin/stdout (independent process)
     -->
 
     <PropertyGroup>
         <OutputType>WinExe</OutputType>
         <TargetFramework>net10.0-windows</TargetFramework>
         <RuntimeIdentifier>win-x64</RuntimeIdentifier>
-        <UseWPF>true</UseWPF>
         <Nullable>enable</Nullable>
         <ImplicitUsings>enable</ImplicitUsings>
-        <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
         <RootNamespace>DevTools.Daemon</RootNamespace>
         <AssemblyName>DevTools.Daemon</AssemblyName>
         <StartupObject>DevTools.Daemon.Program</StartupObject>
         <ApplicationIcon>..\DevTools.UI\Resources\icons\DevTools-32-Dark.ico</ApplicationIcon>
         <SelfContained>false</SelfContained>
         <PublishSingleFile>true</PublishSingleFile>
+        <MewUIBackend>Direct2D</MewUIBackend>
     </PropertyGroup>
 
     <PropertyGroup>
@@ -41,21 +40,21 @@
         <Copy SourceFiles="appsettings.development.json" DestinationFolder="$(BundleContentsFolder)" Condition="Exists('appsettings.development.json')" OverwriteReadOnlyFiles="true"/>
     </Target>
     <ItemGroup>
-        <PackageReference Include="H.NotifyIcon.Wpf"/>
-        <PackageReference Include="CommunityToolkit.Mvvm"/>
+        <PackageReference Include="H.NotifyIcon"/>
+        <PackageReference Include="Aprillz.MewUI.Windows"/>
+        <PackageReference Include="System.Security.Cryptography.ProtectedData"/>
         <PackageReference Include="ModelContextProtocol"/>
         <PackageReference Include="ModelContextProtocol.Extensions.Tasks"/>
         <PackageReference Include="Duende.IdentityModel.OidcClient"/>
         <PackageReference Include="ZLogger"/>
         <PackageReference Include="Microsoft.Extensions.Hosting"/>
-        <PackageReference Include="OpenMcdf"/>
-        <PackageReference Include="ACadSharp"/>
     </ItemGroup>
     <ItemGroup>
         <EmbeddedResource Include="appsettings.json" LogicalName="appsettings.json"/>
+        <EmbeddedResource Include="..\DevTools.UI\Resources\icons\DevTools-32-Dark.ico" LogicalName="DevTools.Daemon.Icons.Dark.ico"/>
+        <EmbeddedResource Include="..\DevTools.UI\Resources\icons\DevTools-32-Light.ico" LogicalName="DevTools.Daemon.Icons.Light.ico"/>
     </ItemGroup>
     <ItemGroup>
-        <ProjectReference Include="..\DevTools.UI\DevTools.UI.csproj"/>
         <ProjectReference Include="..\DevTools.Settings\DevTools.Settings.csproj"/>
         <ProjectReference Include="..\DevTools.Utilities\DevTools.Utilities.csproj"/>
         <ProjectReference Include="..\DevTools.Ipc\DevTools.Ipc.csproj"/>
@@ -69,15 +68,5 @@
         <ProjectReference Include="..\DevTools.Hosting\DevTools.Hosting.csproj"/>
         <ProjectReference Include="..\DevTools.Hosting.Revit\DevTools.Hosting.Revit.csproj"/>
         <ProjectReference Include="..\DevTools.Hosting.Acad\DevTools.Hosting.Acad.csproj"/>
-        <ProjectReference Include="..\DevTools.Logging\DevTools.Logging.csproj"/>
-    </ItemGroup>
-    <ItemGroup>
-        <Using Include="DevTools.Ipc" />
-        <Using Include="DevTools.Mcp.Core" />
-        <Using Include="DevTools.Mcp.Core.Utils" />
-        <Using Include="DevTools.Mcp.Catalog" />
-        <Using Include="DevTools.Mcp.Server" />
-        <Using Include="DevTools.Mcp.Server.Hosting" />
-        <Using Include="DevTools.Mcp.Server.Prompts" />
     </ItemGroup>
 </Project>

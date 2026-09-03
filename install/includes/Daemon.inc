@@ -16,7 +16,7 @@ end;
 procedure RegisterDaemonAutoStart;
 begin
   if not RegWriteStringValue(HKCU, DAEMON_RUN_KEY, DAEMON_RUN_VALUE,
-    '"' + DaemonExePath + '" --background') then
+    '"' + DaemonExePath + '"') then
     Log('Daemon: WARNING — could not write Run key');
 end;
 
@@ -36,7 +36,7 @@ begin
     Exit;
   end;
 
-  if not Exec(DaemonExePath, '--background', '', SW_HIDE, ewNoWait, ResultCode) then
+  if not Exec(DaemonExePath, '', '', SW_HIDE, ewNoWait, ResultCode) then
     Log('Daemon: failed to launch (error ' + IntToStr(ResultCode) + ')')
   else
     Log('Daemon: launched successfully');
