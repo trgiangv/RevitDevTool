@@ -7,9 +7,8 @@
 
     <ItemGroup>
         <PackageReference Include="Nice3point.Revit.Toolkit" VersionOverride="$(RevitVersion).*"/>
-        <PackageReference Include="Microsoft.NET.Test.Sdk" Condition="!$(TargetFramework.StartsWith('net4'))"/>
         <PackageReference Include="NUnit" VersionOverride="3.13.3"/>
-        <PackageReference Include="ricaun.RevitTest.TestAdapter"/>
+        <PackageReference Include="ricaun.RevitTest.TestAdapter" VersionOverride="1.11.1"/>
     </ItemGroup>
 
     <ItemGroup>
