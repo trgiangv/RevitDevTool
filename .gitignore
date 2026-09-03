@@ -45,6 +45,7 @@ superpowers/
 .cursor/hooks-state/
 .artifacts/
 .tmp/
+.junie/
 
 # Code signing
 *.pfx
