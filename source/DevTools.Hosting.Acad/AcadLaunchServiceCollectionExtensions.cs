@@ -4,7 +4,7 @@ namespace DevTools.Hosting.Acad;
 
 public static class AcadLaunchServiceCollectionExtensions
 {
-    public static IServiceCollection AddAutocadFamilyLaunch(this IServiceCollection services)
+    public static IServiceCollection AddAcadLaunch(this IServiceCollection services)
     {
         services.AddHostLaunchCore();
         services.AddSingleton<IHostPathResolver, AcadPathResolver>();

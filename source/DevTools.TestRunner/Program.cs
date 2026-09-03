@@ -15,7 +15,7 @@ internal static class Program
         var services = new ServiceCollection();
         services.AddHostLaunchCore();
         services.AddRevitLaunch(readDocumentYear: null);
-        services.AddAutocadFamilyLaunch();
+        services.AddAcadLaunch();
         services.AddSingleton<ITestSession, TestSession>();
         services.AddSingleton<IExecutionCoordinator, ExecutionCoordinator>();
         services.AddSingleton<IDebuggerAttach>(VisualStudioAttach.Instance);

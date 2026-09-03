@@ -39,7 +39,7 @@ public sealed class HostLaunchSupportTests
         var services = new ServiceCollection();
         services.AddHostLaunchCore();
         services.AddRevitLaunch(readDocumentYear: null);
-        services.AddAutocadFamilyLaunch();
+        services.AddAcadLaunch();
         using var provider = services.BuildServiceProvider();
 
         foreach (var host in Enum.GetValues<HostApp>())
@@ -54,7 +54,7 @@ public sealed class HostLaunchSupportTests
     public void AddAutocadFamilyLaunch_registers_core_engine()
     {
         var services = new ServiceCollection();
-        services.AddAutocadFamilyLaunch();
+        services.AddAcadLaunch();
         using var provider = services.BuildServiceProvider();
         Assert.NotNull(provider.GetService<IHostLaunchService>());
         Assert.NotNull(provider.GetService<HostLaunchService>());
