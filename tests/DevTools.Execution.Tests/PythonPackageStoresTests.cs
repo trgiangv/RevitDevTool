@@ -46,6 +46,15 @@ public sealed class PythonPackageStoresTests
         Assert.Empty(PyPiPackageList.Parse("""[{"version":"1.0"}]"""));
     }
 
+    [Fact]
+    public void PyPiPackageList_AllowsMissingVersion()
+    {
+        var package = Assert.Single(PyPiPackageList.Parse("""[{"name":"leftpad"}]"""));
+        Assert.Equal("leftpad", package.PackageId);
+        Assert.Null(package.Version);
+        Assert.False(package.IsProtected);
+    }
+
     private sealed class FakeHostAppInfo : IHostAppInfo
     {
         public HostApp Host => HostApp.Revit;

@@ -3,12 +3,14 @@ using DevTools.Hosting;
 
 namespace DevTools.Execution.Tests;
 
+[Collection(nameof(PythonRuntimeCollection))]
 public class PytestRunnerScriptTests
 {
     [Fact]
     public void EmbeddedRunner_DefersPytestAnnotations()
     {
         PythonEmbedded.Configure(HostApp.Revit);
+        PythonEmbedded.EnsureExtracted();
         var script = PythonEmbedded.PytestRunnerScript;
         Assert.False(string.IsNullOrWhiteSpace(script));
 

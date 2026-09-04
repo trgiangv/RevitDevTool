@@ -1,3 +1,4 @@
+using System.Net.Sockets;
 using System.Text;
 using System.Text.Json;
 using CliWrap;
@@ -5,18 +6,17 @@ using CliWrap;
 namespace DevTools.Execution.Tests;
 
 /// <summary>
-/// Opt-in integration tests for the Pip fallback provider.
-/// Default host Python is <c>%AppData%/RevitDevTool/pixi-env</c>
-/// (<see cref="DevTools.Execution.Providers.Python.PixiEnvironmentProvider"/>).
-/// Set <c>RUN_PIP_ENV_TESTS=1</c> to download an isolated embeddable CPython.
+/// Pip fallback provider: downloads isolated embeddable CPython (no Revit/AutoCAD).
+/// Default product Python remains <c>%AppData%/RevitDevTool/pixi-env</c>.
 /// </summary>
+[Collection(nameof(PythonRuntimeCollection))]
 public sealed class PipEnvironmentTests : IAsyncLifetime, IDisposable
 {
     private const string PythonVersion = "3.14.7";
     private const string PythonDownloadUrl = $"https://www.python.org/ftp/python/{PythonVersion}/python-{PythonVersion}-embed-amd64.zip";
     private const string PythonPthFile = "python314._pth";
 
-    private readonly string _testRoot = Path.Combine(Path.GetTempPath(), $"RevitDevTool-PipTest-{Guid.NewGuid():N}");
+    private readonly string _testRoot = Path.Combine(Path.GetTempPath(), "RevitDevTool-PipTest-Shared");
     private string PythonHome => Path.Combine(_testRoot, "envs", "default");
     private string PythonExe => Path.Combine(PythonHome, "python.exe");
     private string ParserScriptPath => Path.Combine(FindRepositoryRoot(), "source", "DevTools.Execution", "Resources", "scripts", "Parser.py");
@@ -24,21 +24,33 @@ public sealed class PipEnvironmentTests : IAsyncLifetime, IDisposable
 
     public async ValueTask InitializeAsync()
     {
-        if (!string.Equals(Environment.GetEnvironmentVariable("RUN_PIP_ENV_TESTS"), "1", StringComparison.Ordinal))
-        {
-            Assert.Skip(
-                "Pip embed download is opt-in. Host Python is %AppData%/RevitDevTool/pixi-env. Set RUN_PIP_ENV_TESTS=1 to run this suite.");
-        }
-
         Directory.CreateDirectory(PythonHome);
 
-        if (!File.Exists(PythonExe))
+        if (File.Exists(PythonExe))
+            return;
+
+        try
         {
             await DownloadAndExtractPythonAsync();
             RemovePthFile();
             await BootstrapPipAsync();
             await InstallPackagingAsync();
         }
+        catch (Exception ex) when (ex is HttpRequestException or IOException or SocketException)
+        {
+            _skipReason = $"Embedded Python download failed: {ex.Message}";
+        }
+    }
+
+    private static string? _skipReason;
+
+    private void EnsurePythonReady()
+    {
+        if (_skipReason is not null)
+            Assert.Skip(_skipReason);
+
+        if (!File.Exists(PythonExe))
+            Assert.Skip("python.exe was not provisioned for pip environment tests.");
     }
 
     public void Dispose()
@@ -65,6 +77,7 @@ public sealed class PipEnvironmentTests : IAsyncLifetime, IDisposable
     [Fact]
     public void Setup_PythonExeExists()
     {
+        EnsurePythonReady();
         Assert.True(File.Exists(PythonExe), $"python.exe not found at {PythonExe}");
     }
 

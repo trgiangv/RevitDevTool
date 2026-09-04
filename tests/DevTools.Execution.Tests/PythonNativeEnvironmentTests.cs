@@ -220,6 +220,33 @@ public sealed class PythonNativeEnvironmentTests
         }
     }
 
+    [Fact]
+    public void PrepareProcess_WithLibraryBin_DoesNotThrow()
+    {
+        var home = CreateFakeHome(withDlls: true, withLibraryBin: true);
+        try
+        {
+            File.WriteAllBytes(Path.Combine(home, "Library", "bin", "libcrypto-3-x64.dll"), [1]);
+            PythonNativeEnvironment.PrepareProcess(home);
+        }
+        finally
+        {
+            Directory.Delete(home, recursive: true);
+        }
+    }
+
+    [Collection(nameof(PythonRuntimeCollection))]
+    public sealed class InitializedPythonNativeTests
+    {
+        [Fact]
+        public async Task AddPythonDllDirectories_WhenInitialized_DoesNotThrow()
+        {
+            var initializer = await ExecutionTestHelpers.EnsurePixiPythonInitializedAsync();
+            var home = initializer.Provider!.PythonHome;
+            PythonNativeEnvironment.AddPythonDllDirectories(home);
+        }
+    }
+
     private static string CreateFakeHome(bool withDlls, bool withLibraryBin)
     {
         var home = Path.Combine(Path.GetTempPath(), "rdt-py-native-" + Guid.NewGuid().ToString("N"));

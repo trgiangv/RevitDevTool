@@ -1,3 +1,5 @@
+using System.Text;
+using CliWrap;
 using DevTools.Execution.Providers.Python;
 using DevTools.Hosting;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -5,10 +7,14 @@ using Python.Runtime;
 
 namespace DevTools.Execution.Tests;
 
+[CollectionDefinition(nameof(PythonRuntimeCollection), DisableParallelization = true)]
+public sealed class PythonRuntimeCollection;
+
 /// <summary>
-/// Opt-in smoke: .NET provider → CliWrap pixi → Python.NET (AppData env).
-/// Skipped in default CI; host SetupRevit/SetupAcad not run (need host assemblies).
+/// Pixi AppData env + Python.NET (no Revit/AutoCAD process).
+/// Downloads pixi via <see cref="PixiInstaller.SetupPixiAsync"/> when missing.
 /// </summary>
+[Collection(nameof(PythonRuntimeCollection))]
 public sealed class PixiEnvironmentSmokeTests
 {
     private static readonly Lock InitLock = new();
@@ -17,12 +23,6 @@ public sealed class PixiEnvironmentSmokeTests
     [Fact]
     public async Task SetupEnvironment_ThenPythonNetCanImportSys()
     {
-        // $env:RUN_PIXI_SMOKE=1; dotnet test ... --filter PixiEnvironmentSmokeTests
-        if (!string.Equals(Environment.GetEnvironmentVariable("RUN_PIXI_SMOKE"), "1", StringComparison.Ordinal))
-        {
-            Assert.Skip("Set RUN_PIXI_SMOKE=1 to run AppData Pixi + Python.NET smoke.");
-        }
-
         PythonEmbedded.Configure(HostApp.Revit);
         var provider = new PixiEnvironmentProvider(NullLogger<PixiEnvironmentProvider>.Instance);
 
@@ -45,6 +45,37 @@ public sealed class PixiEnvironmentSmokeTests
             using var scope = Py.CreateScope();
             scope.Exec("import sys; assert sys.version_info >= (3, 11)");
         }
+    }
+
+    [Fact]
+    public async Task PixiCli_VersionAndHelp_PrintToStdout()
+    {
+        try
+        {
+            await PixiInstaller.SetupPixiAsync(NullLogger.Instance);
+        }
+        catch (Exception ex)
+        {
+            Assert.Skip($"Pixi download failed after retry: {ex.Message}");
+        }
+
+        var versionStdout = new StringBuilder();
+        var version = await Cli.Wrap(PixiInstaller.PixiExePath)
+            .WithArguments(["--version"])
+            .WithStandardOutputPipe(PipeTarget.ToStringBuilder(versionStdout))
+            .WithValidation(CommandResultValidation.None)
+            .ExecuteAsync(TestContext.Current.CancellationToken);
+        Assert.Equal(0, version.ExitCode);
+        Assert.Contains("pixi", versionStdout.ToString(), StringComparison.OrdinalIgnoreCase);
+
+        var helpStdout = new StringBuilder();
+        var help = await Cli.Wrap(PixiInstaller.PixiExePath)
+            .WithArguments(["--help"])
+            .WithStandardOutputPipe(PipeTarget.ToStringBuilder(helpStdout))
+            .WithValidation(CommandResultValidation.None)
+            .ExecuteAsync(TestContext.Current.CancellationToken);
+        Assert.Equal(0, help.ExitCode);
+        Assert.Contains("Usage", helpStdout.ToString(), StringComparison.OrdinalIgnoreCase);
     }
 
     private static void InitializePythonNet(PyEnvironmentProvider provider)

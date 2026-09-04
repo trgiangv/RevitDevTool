@@ -7,10 +7,14 @@
 
     <ItemGroup>
         <PackageReference Include="xunit.v3"/>
+        <PackageReference Include="Microsoft.Extensions.DependencyInjection"/>
+        <PackageReference Include="Moq"/>
     </ItemGroup>
 
     <ItemGroup>
         <ProjectReference Include="..\..\source\DevTools.FileMetadata.Core\DevTools.FileMetadata.Core.csproj" SetTargetFramework="TargetFramework=net10.0-windows"/>
+        <ProjectReference Include="..\..\source\DevTools.FileMetadata.Revit\DevTools.FileMetadata.Revit.csproj" SetTargetFramework="TargetFramework=net10.0-windows"/>
+        <ProjectReference Include="..\..\source\DevTools.FileMetadata.Acad\DevTools.FileMetadata.Acad.csproj" SetTargetFramework="TargetFramework=net10.0-windows"/>
         <ProjectReference Include="..\..\source\DevTools.Hosting\DevTools.Hosting.csproj" SetTargetFramework="TargetFramework=net10.0-windows"/>
     </ItemGroup>
 
