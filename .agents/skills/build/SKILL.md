@@ -17,14 +17,14 @@ Run proof **before** claiming done. Pick the smallest command that matches what 
 |---------|--------------|---------|
 | CS errors after editing `DevTools.*` | Shared multi-TFM break | Compile the **project you touched** (table below) |
 | CS errors only on `net48` | Polyfill / API surface | Build same csproj with `-c Debug.Autodesk.2022` |
-| MSB3027 / file locked / copy failed | Target host year is running | `scripts/kill-host.ps1 -HostApp Revit -Year 2025` (use the year being tested), then retry |
+| MSB3027 / file locked / copy failed | Target host year is running, **or** another MTP testhost on the same `tests/*/bin` (Coverlet) | Host: `scripts/kill-host.ps1 -HostApp Revit -Year 2025`. Testhost: **do not** spawn a second Coverlet; see `test-matrix.md` Current gaps |
 | Deploy silently didn't update DLL | Used `dotnet build` without deploy props | Stop only the target year; then `scripts/build-host.ps1 -Year 2025` |
 | MCP tools = 0 in Cursor | Bad daemon `outputSchema` or stale bundle | Republish daemon; reload MCP — see `mcp-integration-test.md` |
 | Host year starts but add-in missing / no pipe | Startup threw before FileLogProcessor | `%APPDATA%\RevitDevTool\{Year}\Logs\crash_*` then `docs/agents/verification.md` |
 | Parser / MCP test fails on missing DLL | Sample toolset not built | `dotnet build samples/McpToolsetDemo -c Debug.Autodesk.2025` |
 | Parser test missing pixi env | `%APPDATA%\RevitDevTool\pixi-env` absent | `scripts/test-python.ps1` or `pixi install` at repo root |
-| Unit test fails with UI/thread hint | `ConnectionState` needs main thread | See `known-test-gaps.md` — known `McpPipeConnectionTrackerTests` gap |
-| Test looks for `RevitDevTool.sln` only | Stale local checkout | Root discovery accepts `.slnx` — see `known-test-gaps.md` |
+| Unit test fails with UI/thread hint | Dispatcher/UI assumed in host code | Headless path should run inline (`HostUiHelper.RunOnMainThread`); see `test-matrix.md` |
+| Test looks for `RevitDevTool.sln` only | Stale local checkout | Root discovery accepts `.slnx` |
 
 ## Compile-only (default after code edits)
 
@@ -81,13 +81,13 @@ VSTest (`FullyQualifiedName~`, `dotnet test` from repo root,
 
 | Surface | Command |
 |---------|---------|
-| In-repo `tests/*.Tests.csproj` | `dotnet run --project tests/<proj>/<proj>.csproj` then optional `-- --filter ClassName` |
+| In-repo `tests/*.Tests.csproj` | `dotnet run --project tests/<proj>/<proj>.csproj` then optional `-- --filter ClassName`. Line coverage: `-- --coverlet` (`coverlet.MTP`, see `test-matrix.md`) |
 | Product samples (`samples/DevTools.*.SampleTests`) | `cd` that folder (MTP `global.json`) then `dotnet test --project …` |
 | `samples/ricaun.NUnit.SampleTests` | Comparison only. Not the product verify path. |
 
 ```powershell
-dotnet run --project tests/DevTools.Mcp.Tests/DevTools.Mcp.Tests.csproj
-dotnet run --project tests/DevTools.Mcp.Tests/DevTools.Mcp.Tests.csproj -- --filter ClassName
+dotnet run --project tests/DevTools.Mcp.Core.Tests/DevTools.Mcp.Core.Tests.csproj
+dotnet run --project tests/DevTools.Mcp.Catalog.Tests/DevTools.Mcp.Catalog.Tests.csproj -- --filter ClassName
 ```
 
 Do not force `--progress off`.
@@ -107,7 +107,7 @@ Do not force `--progress off`.
 - **+ focused test** when contracts/dispatch/parser changed (`dotnet run --project tests/…/*.csproj`).
 - **+ live MCP checklist** when daemon/host wire or tool surface changed (`docs/agents/mcp-integration-test.md`).
 
-If a test is listed in `known-test-gaps.md`, do not treat its failure as product regression without reading the gap. If live host unavailable, name the skipped checklist step.
+If a surface is live/opt-in/Skip in `test-matrix.md`, do not treat a headless Skip as product regression. If live host unavailable, name the skipped checklist step.
 
 Never stop every Revit process. `kill-host.ps1` requires an exact host and year;
 leave other running versions untouched.

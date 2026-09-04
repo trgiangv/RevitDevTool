@@ -38,7 +38,7 @@ stays `FileMetadata.*`; add-in DI lives in `RevitDevTool/Composition` /
 | Host boundaries | [agents/host-boundaries.md](agents/host-boundaries.md) |
 | Build / TFM matrix | [agents/build-matrix.md](agents/build-matrix.md) |
 | Verification | [agents/verification.md](agents/verification.md) |
-| Known test gaps | [agents/known-test-gaps.md](agents/known-test-gaps.md) |
+| Test matrix | [agents/test-matrix.md](agents/test-matrix.md) |
 | Lasting decisions | [decisions/](decisions/README.md) |
 
 ## Source Layout

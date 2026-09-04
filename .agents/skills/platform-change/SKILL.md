@@ -12,7 +12,7 @@ description: >
 
 ## Before editing
 
-1. Read `docs/WORKFLOW.md` for work shape, then the matching digest only: `docs/agents/execution-system.md`, `mcp-pytest-bridge.md`, `host-boundaries.md`, `build-matrix.md`, `docs/product/<domain>.md`, or `docs/architecture/<Module>/README.md`. Host testing structure/release: `docs/architecture/Testing/README.md`.
+1. Read `docs/WORKFLOW.md` for work shape, then the matching digest only: `docs/agents/execution-system.md`, `mcp-pytest-bridge.md`, `host-boundaries.md`, `build-matrix.md`, **`test-matrix.md` (Current gaps — do not add tests that fight pythonnet / dispatcher / Coverlet testhost lock)**, `docs/product/<domain>.md`, or `docs/architecture/<Module>/README.md`. Host testing structure/release: `docs/architecture/Testing/README.md`.
 2. Classify shared vs host-specific before moving code. Classify **which release artifact** the change ships in (installer vs TestAdapter nupkg) before editing pack targets.
 
 ## Rules

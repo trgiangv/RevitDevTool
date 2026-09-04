@@ -11,6 +11,7 @@ Entry point for agents working in this repo. Behavior truth lives in code and
 | What should the product do? | `docs/product/<domain>.md` |
 | How is it wired? | `docs/ARCHITECTURE.md` → `docs/architecture/<Module>/` |
 | Which digest for this task? | `docs/agents/index.md` |
+| How to prove work | `.agents/skills/build/SKILL.md` + `docs/agents/test-matrix.md` (gaps + Skip) |
 | Multi-session / risky work | `docs/WORKFLOW.md` → `docs/plans/active/` |
 | Lasting policy | `docs/decisions/` |
 
@@ -22,7 +23,7 @@ Read the **minimum** layer for the task. Do not duplicate docs into chat.
 |---------|----------|
 | Don't know where code belongs | `docs/agents/host-boundaries.md` — shared `DevTools.*` vs `RevitDevTool` / `AcadDevTool` |
 | Build fails / unsure what to run | `.agents/skills/build/SKILL.md` |
-| Test path looks wrong | `docs/agents/known-test-gaps.md` |
+| Test path looks wrong / Skip / Coverlet % | `docs/agents/test-matrix.md` — **Current gaps** + untestable limits **before** adding tests or “raising coverage” |
 | MCP live behavior | `docs/agents/mcp-integration-test.md` |
 | Need logs to diagnose host/Daemon | `docs/agents/verification.md` → Diagnostic logs (`crash_*` if add-in failed to load) |
 | Host pytest/control pipe (in-repo) | `docs/agents/mcp-pytest-bridge.md` |

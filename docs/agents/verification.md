@@ -1,7 +1,7 @@
 # Verification
 
 Commands and traps. Symptom-first table: `.agents/skills/build/SKILL.md`.
-Known test failures: `known-test-gaps.md`. Do not invent MSBuild flags.
+Test coverage by area: `test-matrix.md` (**Current gaps** first). Do not invent MSBuild flags.
 
 ## After code edits
 
@@ -33,13 +33,13 @@ Host API matrix (all years): `build-matrix.md`.
 | File lock / deploy failed | `scripts/kill-host.ps1 -HostApp Revit -Year <year>` |
 | Build + deploy one year | Stop only that year; `scripts/build-host.ps1 -Year 2025` |
 | .NET tests | `dotnet run --project tests/<project>/<project>.csproj` |
-| MCP tests | `dotnet run --project tests/DevTools.Mcp.Tests/DevTools.Mcp.Tests.csproj` |
+| MCP tests | `dotnet run --project tests/DevTools.Mcp.<Module>.Tests/DevTools.Mcp.<Module>.Tests.csproj` (Core, Catalog, Adapter, Client, Server) |
 | Python parser (this repo) | `scripts/test-python.ps1` |
 | Installer / bundle | `scripts/pack.ps1` |
 | TestAdapter NuGet | `scripts/pack-test-adapter.ps1` |
 | Daemon publish | `dotnet publish source/DevTools.Daemon -c Release` |
 
-Build sample toolsets before parser/spike tests — see `known-test-gaps.md`.
+Build sample toolsets before parser/spike tests — see `test-matrix.md`.
 
 ## Proof bar
 

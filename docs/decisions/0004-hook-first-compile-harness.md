@@ -27,4 +27,4 @@ compile on agent stop.
 ## Consequences (still valid)
 
 - Deploy stays manual via scripts.
-- In-repo tests via `dotnet run --project tests/<project>/<project>.csproj` and `scripts/test-python.ps1`; see `known-test-gaps.md`.
+- In-repo tests via `dotnet run --project tests/<project>/<project>.csproj` and `scripts/test-python.ps1`; see `test-matrix.md`.

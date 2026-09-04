@@ -14,6 +14,17 @@ Production publish is framework-dependent single-file. AOT spike:
 [plan completed](../completed/2026-09-03-stj-facade-0028.md). Remaining
 `object?` on invoke/batch DTOs is 0031 follow-up, not an active plan.
 
+## Test gaps (closed)
+
+Headless-automatable gaps closed:
+[2026-09-04-known-test-gaps](../completed/2026-09-04-known-test-gaps.md).
+Remaining live-host / year-matrix / pixi-opt-in stay in `test-matrix.md`.
+
+## MCP tests (active)
+
+Split god project `DevTools.Mcp.Tests` into module-scoped projects:
+[2026-09-04-mcp-test-project-split](2026-09-04-mcp-test-project-split.md).
+
 ## MCP (closed)
 
 - Product: [0027](../../decisions/0027-mcp-product-surface.md). Host pipe:

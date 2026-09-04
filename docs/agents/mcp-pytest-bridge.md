@@ -26,6 +26,6 @@ Paths: `DevTools.Ipc`, `DevTools.Mcp.*`, `DevTools.Daemon`, `DevTools.Execution/
 
 ## Change checklist
 
-- MCP: `dotnet run --project tests/DevTools.Mcp.Tests/DevTools.Mcp.Tests.csproj`; build `samples/McpToolsetDemo` if parser samples changed.
-- Pytest wire: sync contracts ↔ `models.py`; focused Execution tests.
-- Gaps: `known-test-gaps.md`.
+- MCP: `dotnet run --project tests/DevTools.Mcp.Server.Tests/DevTools.Mcp.Server.Tests.csproj`; parsers: `tests/DevTools.Mcp.Catalog.Tests` (build `samples/McpToolsetDemo` first, or tests Skip).
+- Pytest wire: sync contracts ↔ `models.py`; focused Execution tests (`PytestRunRequestParseTests`, `DevToolsPipeServerTests`, handlers).
+- Remaining live/opt-in and Coverlet/testhost limits: `test-matrix.md` **Current gaps**. In-host `PytestRunner.py` is not headless CI.
