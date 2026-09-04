@@ -79,3 +79,5 @@ DevTools.Daemon.exe
 # Stdio mode — spawned by AI clients (Cursor, Claude Desktop)
 DevTools.Daemon.exe --stdio
 ```
+
+Policy: [0032](../../decisions/0032-daemon-mewui-and-aot.md) — MewUI desktop (shipped); production publish is framework-dependent JIT; Native AOT is the target, not current.

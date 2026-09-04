@@ -44,9 +44,9 @@ dotnet publish source/DevTools.Daemon -c Release
 ### Build Characteristics
 
 - Target: `net10.0-windows` / `win-x64`
-- Self-contained single-file (~52MB)
+- Framework-dependent single-file (requires .NET 10 runtime)
 - MewUI tray app with embedded `appsettings.json` (CI/CD injects secrets)
-- Properties: `PublishSingleFile=true`, `SelfContained=true`
+- Properties: `PublishSingleFile=true`, `SelfContained=false`
 
 ### Pipeline Integration
 
