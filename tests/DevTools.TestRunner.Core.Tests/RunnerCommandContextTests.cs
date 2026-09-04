@@ -74,4 +74,92 @@ public sealed class RunnerCommandContextTests
     {
         Assert.Throws<ArgumentException>(() => RunnerCommandContext.NormalizeFrameworkId(" "));
     }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData("   ")]
+    public void TryCreate_requires_assembly_path(string assemblyPath)
+    {
+        var created = RunnerCommandContext.TryCreate(
+            assemblyPath,
+            "Revit",
+            "2026",
+            false,
+            60,
+            180,
+            false,
+            null,
+            "nunit",
+            out _,
+            out var error);
+
+        Assert.False(created);
+        Assert.Equal("Assembly path is required.", error);
+    }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData("   ")]
+    public void TryCreate_requires_host_name(string hostName)
+    {
+        var created = RunnerCommandContext.TryCreate(
+            @"C:\tests\Sample.dll",
+            hostName,
+            "2026",
+            false,
+            60,
+            180,
+            false,
+            null,
+            "nunit",
+            out _,
+            out var error);
+
+        Assert.False(created);
+        Assert.Equal("--host is required.", error);
+    }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData("   ")]
+    public void TryCreate_requires_host_version(string hostVersion)
+    {
+        var created = RunnerCommandContext.TryCreate(
+            @"C:\tests\Sample.dll",
+            "Revit",
+            hostVersion,
+            false,
+            60,
+            180,
+            false,
+            null,
+            "nunit",
+            out _,
+            out var error);
+
+        Assert.False(created);
+        Assert.Equal("--host-version is required.", error);
+    }
+
+    [Theory]
+    [InlineData(0)]
+    [InlineData(-1)]
+    public void TryCreate_rejects_non_positive_debug_parent_pid(int debugParentPid)
+    {
+        var created = RunnerCommandContext.TryCreate(
+            @"C:\tests\Sample.dll",
+            "Revit",
+            "2026",
+            false,
+            60,
+            180,
+            false,
+            debugParentPid,
+            "nunit",
+            out _,
+            out var error);
+
+        Assert.False(created);
+        Assert.Equal("--debug-parent-pid requires a positive process id.", error);
+    }
 }

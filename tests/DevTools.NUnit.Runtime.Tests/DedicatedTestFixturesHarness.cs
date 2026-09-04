@@ -50,4 +50,10 @@ internal static class DedicatedTestFixturesHarness
 
     public const string DuplicateNameFilter =
         "<filter><test>DevTools.NUnit.Runtime.Tests.Fixtures.DuplicateNameFixture</test></filter>";
+
+    public const string OutputCaptureTestFullName =
+        "DevTools.NUnit.Runtime.Tests.Fixtures.OutputCaptureFixture.Writes_console_trace_and_debug_markers";
+
+    public const string OutputCaptureFilter =
+        "<filter><test>DevTools.NUnit.Runtime.Tests.Fixtures.OutputCaptureFixture.Writes_console_trace_and_debug_markers</test></filter>";
 }

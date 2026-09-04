@@ -25,4 +25,32 @@ public sealed class TestingProcessHoldTests
         Assert.Same(stored, again);
         Assert.Equal([1], again);
     }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData("   ")]
+    public void GetOrAdd_rejects_blank_keys(string key)
+    {
+        var exception = Assert.Throws<ArgumentException>(() =>
+            TestingProcessHold.GetOrAdd(key, static () => new object()));
+
+        Assert.Equal("key", exception.ParamName);
+    }
+
+    [Fact]
+    public void GetOrAdd_rejects_null_factory()
+    {
+        Assert.Throws<ArgumentNullException>(() =>
+            TestingProcessHold.GetOrAdd<object>("hold-null-factory-" + Guid.NewGuid().ToString("N"), null!));
+    }
+
+    [Fact]
+    public void GetOrAdd_rejects_null_factory_result()
+    {
+        var key = "hold-null-result-" + Guid.NewGuid().ToString("N");
+        var exception = Assert.Throws<InvalidOperationException>(() =>
+            TestingProcessHold.GetOrAdd<object>(key, static () => null!));
+
+        Assert.Contains(key, exception.Message, StringComparison.Ordinal);
+    }
 }

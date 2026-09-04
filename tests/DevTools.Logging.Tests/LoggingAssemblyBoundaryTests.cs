@@ -71,7 +71,7 @@ public sealed class LoggingAssemblyBoundaryTests
     }
 
     [Fact]
-    public void NUnit_Host_still_project_references_Logging_not_ZLogger_package()
+    public void NUnit_Host_does_not_reference_Logging_or_scintilla()
     {
         var csproj = File.ReadAllText(Path.Combine(
             RepositoryRoot.Find(),
@@ -79,9 +79,9 @@ public sealed class LoggingAssemblyBoundaryTests
             "DevTools.NUnit.Host",
             "DevTools.NUnit.Host.csproj"));
 
-        Assert.Contains("DevTools.Logging.csproj", csproj, StringComparison.Ordinal);
-        Assert.DoesNotContain("ZLogger", csproj, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("DevTools.Logging.csproj", csproj, StringComparison.Ordinal);
         Assert.DoesNotContain("ZLogger.Scintilla", csproj, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("Scintilla5", csproj, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]

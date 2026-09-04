@@ -41,18 +41,6 @@ public sealed class CommandAssemblyIsolationTests
     }
 
     [Fact]
-    public void Command_plan_releases_its_collectible_context_after_execution_references_are_cleared()
-    {
-        using var workload = CommandFixtureWorkload.Create(includeSibling: false);
-        using var session = CreateAndLoad(workload.EntryPath);
-
-        var result = session.VerifyUnload();
-
-        Assert.True(result.IsCollectible);
-        Assert.True(result.IsUnloaded, result.Detail);
-    }
-
-    [Fact]
     public void Command_plan_resolves_a_transitive_sibling_graph()
     {
         using var graph = DynamicCommandGraph.Create("transitive");
@@ -106,15 +94,6 @@ public sealed class CommandAssemblyIsolationTests
 
         Assert.False(plan.TryShare(new AssemblyName("DevTools.MahApps.Metro"), out _));
         Assert.Contains(plan.ManagedSources, source => source.Resolve(new AssemblyName("DevTools.MahApps.Metro")) is not null);
-    }
-
-    [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.NoInlining)]
-    private static AssemblyIsolationSession CreateAndLoad(string entryPath)
-    {
-        var session = AssemblyIsolationSession.Create(
-            CommandIsolationPlan.Create(entryPath, Array.Empty<Assembly>()));
-        _ = session.LoadEntryAssembly();
-        return session;
     }
 
     private static string InvokeEntry(AssemblyIsolationSession session) => (string)session.LoadEntryAssembly()

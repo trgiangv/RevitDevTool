@@ -6,21 +6,23 @@ namespace DevTools.NUnit.Runtime.Tests;
 
 public sealed class NUnitResultMapperTests
 {
-    [Fact]
-    public void MapOutcome_MapsWarningToPassed()
+    [Theory]
+    [InlineData(nameof(ResultState.Success), TestingOutcomes.Passed)]
+    [InlineData(nameof(ResultState.Warning), TestingOutcomes.Passed)]
+    [InlineData(nameof(ResultState.Inconclusive), TestingOutcomes.Inconclusive)]
+    [InlineData(nameof(ResultState.Cancelled), TestingOutcomes.Cancelled)]
+    [InlineData(nameof(ResultState.Ignored), TestingOutcomes.Skipped)]
+    [InlineData(nameof(ResultState.Explicit), TestingOutcomes.Skipped)]
+    [InlineData(nameof(ResultState.Skipped), TestingOutcomes.Skipped)]
+    [InlineData(nameof(ResultState.Error), TestingOutcomes.Error)]
+    [InlineData(nameof(ResultState.SetUpError), TestingOutcomes.Error)]
+    [InlineData(nameof(ResultState.TearDownError), TestingOutcomes.Error)]
+    [InlineData(nameof(ResultState.NotRunnable), TestingOutcomes.Error)]
+    public void MapOutcome_maps_known_result_states(string stateName, string expected)
     {
-        Assert.Equal(TestingOutcomes.Passed, NUnitResultMapper.MapOutcome(ResultState.Warning));
-    }
-
-    [Fact]
-    public void MapOutcome_MapsCancelledLabelToCancelled()
-    {
-        Assert.Equal(TestingOutcomes.Cancelled, NUnitResultMapper.MapOutcome(ResultState.Cancelled));
-    }
-
-    [Fact]
-    public void MapOutcome_MapsSetupErrorToError()
-    {
-        Assert.Equal(TestingOutcomes.Error, NUnitResultMapper.MapOutcome(ResultState.SetUpError));
+        var state = typeof(ResultState)
+            .GetField(stateName, System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static)!
+            .GetValue(null)!;
+        Assert.Equal(expected, NUnitResultMapper.MapOutcome((ResultState)state));
     }
 }

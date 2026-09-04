@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using System.Text;
+// ReSharper disable RedundantSuppressNullableWarningExpression
 
 namespace DevTools.Testing.Abstractions.Runtime;
 
@@ -12,11 +13,20 @@ namespace DevTools.Testing.Abstractions.Runtime;
 public sealed class TestingRunTraceScope : IDisposable
 {
     private readonly Listener _listener = new();
+    private readonly TraceListener[] _snapshot;
     private bool _disposed;
 
-    public TestingRunTraceScope() => Trace.Listeners.Insert(0, _listener);
+    public TestingRunTraceScope()
+    {
+        _snapshot = SnapshotListeners();
+        EnsureRegistered();
+    }
 
-    public string? CompleteCase() => _listener.Take();
+    public string? CompleteCase()
+    {
+        EnsureRegistered();
+        return _listener.Take();
+    }
 
     /// <summary>
     /// Forwards framework-captured Console text to process <see cref="Trace"/>
@@ -24,13 +34,14 @@ public sealed class TestingRunTraceScope : IDisposable
     /// </summary>
     public void WriteThrough(string? text)
     {
-        if (text is null || text.Length == 0)
+        if (string.IsNullOrEmpty(text))
             return;
 
-        var trimmed = text.TrimEnd('\r', '\n');
+        var trimmed = text!.TrimEnd('\r', '\n');
         if (trimmed.Length == 0)
             return;
 
+        EnsureRegistered();
         _listener.SuspendCapture();
         try
         {
@@ -59,8 +70,48 @@ public sealed class TestingRunTraceScope : IDisposable
             return;
 
         _disposed = true;
-        Trace.Listeners.Remove(_listener);
+        RestoreListeners();
         _listener.Dispose();
+    }
+
+    private void EnsureRegistered()
+    {
+        if (Trace.Listeners.Contains(_listener))
+        {
+            var index = Trace.Listeners.IndexOf(_listener);
+            if (index > 0)
+            {
+                Trace.Listeners.RemoveAt(index);
+                Trace.Listeners.Insert(0, _listener);
+            }
+
+            return;
+        }
+
+        Trace.Listeners.Insert(0, _listener);
+    }
+
+    private static TraceListener[] SnapshotListeners()
+    {
+        var listeners = new TraceListener[Trace.Listeners.Count];
+        Trace.Listeners.CopyTo(listeners, 0);
+        return listeners;
+    }
+
+    private void RestoreListeners()
+    {
+        Trace.Listeners.Remove(_listener);
+
+        var desired = new List<TraceListener>(_snapshot.Length);
+        foreach (var listener in _snapshot)
+        {
+            if (listener != _listener && !desired.Contains(listener))
+                desired.Add(listener);
+        }
+
+        Trace.Listeners.Clear();
+        foreach (var listener in desired)
+            Trace.Listeners.Add(listener);
     }
 
     private sealed class Listener : TraceListener
@@ -100,24 +151,14 @@ public sealed class TestingRunTraceScope : IDisposable
             }
         }
 
-        public override void Write(string? message, string? category)
-        {
-            if (string.IsNullOrWhiteSpace(category))
-                Write(message);
-            else
-                Write($"[{category}] {message}");
-        }
+        public override void Write(string? message, string? category) =>
+            Write(string.IsNullOrWhiteSpace(category) ? message : $"[{category}] {message}");
 
         public override void WriteLine(string? message) =>
             Write(string.IsNullOrEmpty(message) ? Environment.NewLine : message + Environment.NewLine);
 
-        public override void WriteLine(string? message, string? category)
-        {
-            if (string.IsNullOrWhiteSpace(category))
-                WriteLine(message);
-            else
-                WriteLine($"[{category}] {message}");
-        }
+        public override void WriteLine(string? message, string? category) =>
+            WriteLine(string.IsNullOrWhiteSpace(category) ? message : $"[{category}] {message}");
 
         public string? Take()
         {

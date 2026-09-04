@@ -34,8 +34,9 @@ public static class HostUiHelper
     /// </summary>
     public static void RunOnMainThread(Action action)
     {
-        if (HostDispatcher is null) return;
-        if (HostDispatcher.CheckAccess())
+        if (action is null) throw new ArgumentNullException(nameof(action));
+
+        if (HostDispatcher is null || HostDispatcher.CheckAccess())
             action();
         else
             HostDispatcher.BeginInvoke(action);

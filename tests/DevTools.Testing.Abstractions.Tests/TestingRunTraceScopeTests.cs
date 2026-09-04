@@ -21,6 +21,49 @@ public sealed class TestingRunTraceScopeTests
     }
 
     [Fact]
+    public void CompleteCase_captures_trace_and_debug_when_extra_listeners_exist()
+    {
+        var front = new RecordingTraceListener();
+        Trace.Listeners.Insert(0, front);
+        try
+        {
+            using var scope = new TestingRunTraceScope();
+            Trace.WriteLine("trace-marker");
+            Debug.WriteLine("debug-marker");
+            var captured = scope.CompleteCase();
+
+            Assert.Contains("trace-marker", captured, StringComparison.Ordinal);
+            Assert.Contains("debug-marker", captured, StringComparison.Ordinal);
+        }
+        finally
+        {
+            Trace.Listeners.Remove(front);
+        }
+    }
+
+    [Fact]
+    public void Dispose_restores_trace_listeners_from_before_scope()
+    {
+        var front = new RecordingTraceListener();
+        var beforeCount = Trace.Listeners.Count;
+        Trace.Listeners.Insert(0, front);
+        try
+        {
+            using (var scope = new TestingRunTraceScope())
+            {
+                Assert.True(Trace.Listeners.Contains(front));
+            }
+
+            Assert.True(Trace.Listeners.Contains(front));
+            Assert.Equal(beforeCount + 1, Trace.Listeners.Count);
+        }
+        finally
+        {
+            Trace.Listeners.Remove(front);
+        }
+    }
+
+    [Fact]
     public void WriteThrough_reaches_trace_without_refilling_the_ide_buffer()
     {
         using var scope = new TestingRunTraceScope();
