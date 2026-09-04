@@ -4,13 +4,9 @@ Date: 2026-08-30
 
 ## Status
 
-Proposed
-
-Amended after review: a **single** `_ipy` flow. Engine selection matches
-script execution — pyRevit first, embedded IronPython 3.4.2 otherwise.
-The pipeline (collect, wire, in-engine runner, test source) must run on
-**IronPython 2.7 and 3.4.2**. Does not change runtime behavior until
-accepted and implemented.
+Accepted (shipped). Engine selection matches script execution — pyRevit first,
+embedded IronPython 3.4.2 otherwise. The pipeline (collect, wire, in-engine
+runner, test source) runs on **IronPython 2.7 and 3.4.2**.
 
 ## Context
 

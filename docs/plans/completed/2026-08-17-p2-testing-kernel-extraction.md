@@ -9,7 +9,7 @@ Date: 2026-08-17
 
 ## Status
 
-Active
+Completed 2026-08-17 — items 1–6 landed. PolySharp remains a separate spike, not this plan.
 
 ## Outcome
 
@@ -323,8 +323,8 @@ public interface ITestingRuntimeSessionFactory
 - [x] Task 5: TestRunner core/provider split.
 - [x] Task 6: remove DevTools.NUnit.Core and source links.
 - [x] Whole-change review and verification.
-- [ ] User review of items 1-6.
-- [ ] Separate PolySharp spike plan after approval.
+- [x] User review of items 1-6 (closed by 0024 / open-closed plan).
+- [ ] Separate PolySharp spike — **out of this plan**.
 
 ## Decisions
 

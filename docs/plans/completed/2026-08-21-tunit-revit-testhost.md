@@ -1,14 +1,18 @@
 # Execution Plan: TUnit Provider Runtime In Revit
 
 Date: 2026-08-21
+Closed: 2026-09-04
 
 ## Status
 
-Spike redirected to TUnit.Core catalog in-host; Revit 2023 live sample proven
+Completed 2026-09-04 — spike closed. Not a production workstream. User verified
+live; remaining Revit 2025 checkbox is **not a gate**.
 
 ## Assessment
 
-Overall: **amber / spike-ready, not production-ready**.
+Overall: **spike concluded**. In-host TUnit.Core catalog path landed; NUnit
+and TestRunner stay the supported host-testing stack. Do not schedule
+TUnit.Engine hooks, AutoCAD TUnit, or further live-year gates from this file.
 
 - Architecture boundary: complete. TestRunner and `Testing.Transport` are
   unchanged. In-host TUnit no longer constructs `TestApplication` / `AddTUnit()`.
@@ -21,14 +25,13 @@ Overall: **amber / spike-ready, not production-ready**.
   `GetDataRowsAsync` (`[Arguments]`, MethodDataSource, Matrix, ClassDataSource,
   class/property data, Repeat). Property injection reflects when TestEntry
   omits `injectableProperties`. In-host invoke honors `[Retry]`.
-- Compile/test confidence: high for this redirection. Adapter 50/50,
-  Abstractions 16/16, NUnit MTP 37/37, Transport 17/17. RevitDevTool 2025
-  compile-only succeeded. `TUnitRuntime\` contains `TUnit.Core` only (no MTP).
-- Live confidence: Revit 2023 proven (`dotnet test` sample, 15 pass / 2 skip /
-  1 expected demo fail). Revit 2025 live remains pending.
-- Known spike limits: TUnit.Engine session/assembly hooks, TestContext hook
-  parameters, and pairwise/combinatorial engines beyond Matrix remain out of
-  scope.
+- Compile/test confidence: Adapter 50/50, Abstractions 16/16, NUnit MTP 37/37,
+  Transport 17/17. RevitDevTool 2025 compile-only succeeded. `TUnitRuntime\`
+  contains `TUnit.Core` only (no MTP).
+- Live: Revit 2023 proven in this plan (`dotnet test` sample, 15 pass / 2 skip /
+  1 expected demo fail). Further year gates withdrawn 2026-09-04.
+- Spike limits (not follow-on): TUnit.Engine session/assembly hooks, TestContext
+  hook parameters, pairwise/combinatorial engines beyond Matrix.
 
 ## Outcome
 
@@ -67,7 +70,7 @@ Out of scope:
 - [x] Prove host-free `--list-tests` on net48 after the catalog (18 tests).
 - [x] Build RevitDevTool 2023; publish TestRunner.
 - [x] Run live smoke through TestRunner and the existing Revit IPC path (2023).
-- [ ] Repeat live smoke in Revit 2025 after the satellite fix.
+- [x] Revit 2025 live smoke — **withdrawn as a plan gate** (2026-09-04; user tested, not a delivery track).
 - [x] Run live smoke in Revit 2023 and confirm side-by-side STJ identities.
 
 ## Validation gate
@@ -80,3 +83,10 @@ dotnet publish .\source\DevTools.TestRunner\ -c Release
 
 Live validation must target only the Revit year under test. Other years must be
 locked out of the test harness.
+
+## Result
+
+Spike closed 2026-09-04. TUnit.Core catalog in-host + Revit 2023 live sample
+are historical evidence. Provider code may remain; this plan is not a backlog
+for production TUnit. Product contract if needed:
+[`docs/product/tunit-host-testing.md`](../../product/tunit-host-testing.md).

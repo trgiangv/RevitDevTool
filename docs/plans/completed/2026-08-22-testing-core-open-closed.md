@@ -4,7 +4,7 @@ Date: 2026-08-22
 
 ## Status
 
-Active — Tasks 0–4 landed; Opus 5 gate **Accept** (B1, S1–S8 closed).
+Completed 2026-08-22 — Tasks 0–4 landed; Opus 5 gate **Accept** (B1, S1–S8 closed).
 
 **Current names (2026-08-29):** MSBuild `MTPAssembly` / `MTPEntry` / `MTPCopy` /
 `TestingRunnerPath`; copy `CopyMTPSibling`; type `HostMtpRegistration`; merge

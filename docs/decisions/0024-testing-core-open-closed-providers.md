@@ -300,7 +300,7 @@ Tradeoffs:
 
 ## Follow-Up
 
-- Implementation: `docs/plans/active/2026-08-22-testing-core-open-closed.md`.
+- Implementation: `docs/plans/completed/2026-08-22-testing-core-open-closed.md`.
 - After land: `docs/architecture/Testing/README.md` source-map row, bootstrap
   table, generation section; agent trap for missing `mtpAssembly` / user
   `devtools` Error.

@@ -42,11 +42,11 @@ Date: 2026-08-17
 - Priority: **P1**.
 - Unblocks: future framework-specific host providers.
 - Supersedes after parity: remaining framework-neutral work in
-  [2026-08-12 NUnit Native Runtime And MTP-First Integration](../completed/2026-08-12-nunit-native-runtime-mtp.md).
+  [2026-08-12 NUnit Native Runtime And MTP-First Integration](2026-08-12-nunit-native-runtime-mtp.md).
 
 ## Status
 
-Active — Tasks 1-8 plus TestRunner `testing/*` stdout cutover landed. NUnit parity is retained.
+Completed 2026-08-17 — Tasks 1–8 plus TestRunner `testing/*` stdout cutover landed. Kernel follow-on is [p2](2026-08-17-p2-testing-kernel-extraction.md) then [0024](../../decisions/0024-testing-core-open-closed-providers.md).
 
 ## Harness Execution Rules
 
@@ -572,7 +572,7 @@ public sealed record TestingRuntimePayload(
 
 ## Result
 
-Complete when all NUnit behavior runs through framework-neutral control
-infrastructure with one `DevTools.TestRunner.exe`, while discovery remains
-host-free and both MTP and retained VSTest NUnit surfaces pass. Record remaining
-IDE/debug limitations before moving the plan to `docs/plans/completed/`.
+Landed. One `DevTools.TestRunner.exe`, generic `testing/*` host protocol, NUnit
+provider over that protocol. Discovery stays host-free. MTP and retained VSTest
+NUnit surfaces call the same Runner (`--framework nunit`). Remaining kernel
+neutrality continued in p2 then 0024; this plan does not own that follow-on.
