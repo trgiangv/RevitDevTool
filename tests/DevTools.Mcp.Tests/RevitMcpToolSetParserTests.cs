@@ -78,6 +78,26 @@ public sealed class RevitMcpToolSetParserTests
         }
     }
 
+    [Fact]
+    public void DotnetParser_ParsesNet48AndNet8Toolsets_WhenBothBuildsArePresent()
+    {
+        var root = FindRepositoryRoot();
+        var candidates = new[]
+        {
+            Path.Combine(root, "samples", "RevitMcpToolSet", "bin", "Debug.Autodesk.2024", "RevitMcpToolSet.dll"),
+            Path.Combine(root, "samples", "RevitMcpToolSet", "bin", "Debug.Autodesk.2025", "RevitMcpToolSet.dll"),
+        };
+
+        foreach (var assemblyPath in candidates)
+        {
+            Assert.True(File.Exists(assemblyPath), $"Expected built toolset: {assemblyPath}");
+            var catalog = Parser.ParseCatalogFromAssembly(assemblyPath);
+            Assert.NotEmpty(catalog.Tools);
+            Assert.NotEmpty(catalog.Resources);
+            Assert.Contains(catalog.Tools, item => item.Descriptor.Name == "revit_find_elements");
+        }
+    }
+
     private static string? FindRevitMcpToolSetAssembly()
     {
         var root = FindRepositoryRoot();

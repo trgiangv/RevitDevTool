@@ -2,7 +2,6 @@ using System.ComponentModel;
 using Autodesk.Revit.DB.Mechanical;
 using Autodesk.Revit.DB.Plumbing;
 using ModelContextProtocol;
-using ModelContextProtocol.Protocol;
 using ModelContextProtocol.Server;
 using Nice3point.Revit.Toolkit;
 using RevitMcpToolSet.Data;
@@ -79,7 +78,7 @@ public static class ModelQueryTools
 
     [McpServerTool(Name = "revit_find_elements", Title = "Find Elements", ReadOnly = true, UseStructuredContent = true)]
     [Description("Structured element search using composable FilterSpec filters.")]
-    public static CallToolResult FindElements(
+    public static object FindElements(
         [Description("Composable filter specification")] FilterSpec? filters = null,
         [Description("Limit results to the current Revit selection")] bool selectedOnly = false,
         [Description("Include element types in results")] bool includeTypes = false,
@@ -111,14 +110,12 @@ public static class ModelQueryTools
 
         var elements = page.Select(e => ProjectElementFields(doc, e, requestedFields)).ToList();
         var structured = new { count, truncated, elements };
-        return StructuredToolResults.Create(
-            structured,
-            $"Found {elements.Count} elements (total {count}, truncated={truncated}, offset={offset})");
+        return structured;
     }
 
     [McpServerTool(Name = "revit_read_parameters", Title = "Read Element Parameters", ReadOnly = true, UseStructuredContent = true)]
     [Description("Returns parameters for one or more elements. Omit paramNames to return all parameters.")]
-    public static CallToolResult ReadParameters(
+    public static object ReadParameters(
         [Description("Element IDs to read")] long[] elementIds,
         [Description("Optional parameter names to include (null = all)")] string[]? paramNames = null)
     {
@@ -159,9 +156,7 @@ public static class ModelQueryTools
             elements.Add(new { id = element.Id.ToValue(), @params = parameters });
         }
 
-        return StructuredToolResults.Create(
-            new { elements },
-            $"Parameters for {elementIds.Length} elements");
+        return new { elements };
     }
 
     [McpServerTool(Name = "revit_list_types", Title = "List Types", ReadOnly = true)]

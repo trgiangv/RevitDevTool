@@ -17,7 +17,7 @@ Last updated: 2026-08-02
 5. **Safe by default**: Read-only tools never mutate. Write tools default to explicit scope (IDs or criteria, never whole model). Export tools validate paths via `PathGuard`.
 6. **Partial-success reporting**: Write tools return `success_count` + `failures[]` with per-element error details.
 7. **Collaboration-aware**: Tools respect worksets, selection state, and borrowed elements.
-8. **Packaging:** .NET toolsets ILRepack like other add-ins (`ILRepackable`) but MCP is compile-only (`ExcludeAssets=runtime`). Host Catalog reflects and invokes; collectible ALC binds `ModelContextProtocol*` from the host load context. Do not ship MCP siblings. Merge: [0019](../docs/decisions/0019-ilrepack-and-polyfill-isolated-alc.md). Host wire: [0027](../docs/decisions/0027-mcp-sdk-host-wire-adoption.md). Keep returning `CallToolResult` / low-level `InputRequiredException` as usual.
+8. **Packaging:** .NET toolsets ILRepack like other add-ins (`ILRepackable`) but MCP is compile-only (`ExcludeAssets=runtime`). Host Catalog reflects and invokes; collectible ALC binds `ModelContextProtocol*` from the host load context. Do not ship MCP siblings. Merge: [0019](../docs/decisions/0019-ilrepack-and-polyfill-isolated-alc.md). Product surface: [0027](../docs/decisions/0027-mcp-product-surface.md). Keep returning `CallToolResult` / low-level `InputRequiredException` as usual.
 
 ---
 

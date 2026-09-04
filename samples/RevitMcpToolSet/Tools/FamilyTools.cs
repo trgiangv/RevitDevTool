@@ -1,7 +1,6 @@
 using System.ComponentModel;
 using Autodesk.Revit.DB.Structure;
 using ModelContextProtocol;
-using ModelContextProtocol.Protocol;
 using ModelContextProtocol.Server;
 using Nice3point.Revit.Toolkit;
 using RevitMcpToolSet.Data;
@@ -16,7 +15,7 @@ public static class FamilyTools
 {
     [McpServerTool(Name = "revit_place_family", Title = "Place Family", ReadOnly = false, UseStructuredContent = true)]
     [Description("Creates one or more family instances at specified locations.")]
-    public static CallToolResult PlaceFamily(
+    public static object PlaceFamily(
         [Description("Family name")] string familyName,
         [Description("Type name (optional — uses first matching type if omitted)")] string? typeName,
         [Description("Placement locations")] Placement[] placements,
@@ -82,15 +81,11 @@ public static class FamilyTools
         }
 
         tx.Commit();
-        return StructuredToolResults.Create(
-            new
-            {
-                created,
-                failures = failures.Count > 0 ? failures : null,
-            },
-            failures.Count > 0
-                ? $"Placed {created.Count}, {failures.Count} failure(s)"
-                : $"Placed {created.Count} instance(s)");
+        return new
+        {
+            created,
+            failures = failures.Count > 0 ? failures : null,
+        };
     }
 
     private static FamilySymbol? FindFamilySymbol(Document doc, string familyName, string? typeName)

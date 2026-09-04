@@ -163,7 +163,7 @@ public static class ScheduleTools
         if (string.IsNullOrWhiteSpace(operatorName))
             throw new McpException("Filter operator is required.");
 
-        return operatorName.Trim().ToLowerInvariant().Replace(" ", "_") switch
+        return operatorName!.Trim().ToLowerInvariant().Replace(" ", "_") switch
         {
             "equal" or "equals" => ScheduleFilterType.Equal,
             "not_equal" or "not_equals" or "notequal" => ScheduleFilterType.NotEqual,

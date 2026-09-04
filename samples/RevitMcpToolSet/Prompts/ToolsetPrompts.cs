@@ -408,7 +408,7 @@ public static class ToolsetPrompts
     private static string ResolveDomain(string task, string? domain)
     {
         if (!string.IsNullOrWhiteSpace(domain))
-            return domain.Trim().ToLowerInvariant();
+            return domain!.Trim().ToLowerInvariant();
 
         var t = task.ToLowerInvariant();
         if (t.Contains("duct") || t.Contains("pipe") || t.Contains("mep") || t.Contains("conduit") || t.Contains("hvac"))

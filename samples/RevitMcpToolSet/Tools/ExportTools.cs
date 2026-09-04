@@ -1,7 +1,6 @@
 using System.ComponentModel;
 using System.Text;
 using ModelContextProtocol;
-using ModelContextProtocol.Protocol;
 using ModelContextProtocol.Server;
 using Nice3point.Revit.Toolkit;
 using RevitMcpToolSet.Mcp;
@@ -19,7 +18,7 @@ public static class ExportTools
     [McpServerTool(Name = "revit_export_pdf", Title = "Export to PDF", ReadOnly = true, UseStructuredContent = true)]
     [McpMeta(McpTaskExecutionMeta.MetaKey, McpTaskExecutionMeta.Mode.Optional)]
     [Description("Exports one or more views to PDF files. Returns exported file paths and page count.")]
-    public static CallToolResult ExportPdf(
+    public static object ExportPdf(
         [Description("View element IDs to export (null = active view)")] long[]? viewIds = null,
         [Description("Output directory path (null = temp directory)")] string? directory = null,
         [Description("When true, combine all views into a single PDF file")] bool? combineIntoSingle = null)
@@ -28,7 +27,7 @@ public static class ExportTools
 
         var outputDir = string.IsNullOrWhiteSpace(directory)
             ? Path.GetTempPath()
-            : PathGuard.SanitizeDirectoryPath(directory);
+            : PathGuard.SanitizeDirectoryPath(directory!);
         PathGuard.CreateDirectory(outputDir);
 
         var resolvedViewIds = ResolveViewIds(doc, viewIds);
@@ -63,19 +62,17 @@ public static class ExportTools
         if (filePaths.Count == 0)
             throw new McpException("PDF export completed but no output files were found.");
 
-        return StructuredToolResults.Create(
-            new
-            {
-                filePaths = filePaths.ToArray(),
-                pageCount = resolvedViewIds.Count,
-            },
-            $"Exported {filePaths.Count} PDF file(s)");
+        return new
+        {
+            filePaths = filePaths.ToArray(),
+            pageCount = resolvedViewIds.Count,
+        };
     }
 
     [McpServerTool(Name = "revit_export_image", Title = "Export to Image", ReadOnly = true, UseStructuredContent = true)]
     [McpMeta(McpTaskExecutionMeta.MetaKey, McpTaskExecutionMeta.Mode.Optional)]
     [Description("Exports one or more views to image files (png, jpg, or bmp).")]
-    public static CallToolResult ExportImage(
+    public static object ExportImage(
         [Description("View element IDs to export (null = active view)")] long[]? viewIds = null,
         [Description("Image format: png, jpg, or bmp")] string format = "png",
         [Description("Output directory path (null = temp directory)")] string? directory = null,
@@ -85,7 +82,7 @@ public static class ExportTools
 
         var outputDir = string.IsNullOrWhiteSpace(directory)
             ? Path.GetTempPath()
-            : PathGuard.SanitizeDirectoryPath(directory);
+            : PathGuard.SanitizeDirectoryPath(directory!);
         PathGuard.CreateDirectory(outputDir);
 
         var resolvedViewIds = ResolveViewIds(doc, viewIds);
@@ -112,9 +109,7 @@ public static class ExportTools
         if (filePaths.Count == 0)
             throw new McpException("Image export completed but no output files were found.");
 
-        return StructuredToolResults.Create(
-            new { filePaths = filePaths.ToArray() },
-            $"Exported {filePaths.Count} image file(s)");
+        return new { filePaths = filePaths.ToArray() };
     }
 
     [McpServerTool(Name = "revit_export_to_excel", Title = "Export Elements to Spreadsheet", ReadOnly = true)]
@@ -253,7 +248,7 @@ public static class ExportTools
         if (string.IsNullOrWhiteSpace(outputPath))
             return PathGuard.GenerateUniqueFilePath(Path.GetTempPath(), baseName, "csv");
 
-        var filePath = PathGuard.SanitizeFilePath(outputPath);
+        var filePath = PathGuard.SanitizeFilePath(outputPath!);
         if (filePath.EndsWith(".xlsx", StringComparison.OrdinalIgnoreCase))
             filePath = Path.ChangeExtension(filePath, ".csv");
 
@@ -269,7 +264,7 @@ public static class ExportTools
         if (string.IsNullOrWhiteSpace(outputPath))
             return PathGuard.GenerateUniqueFilePath(Path.GetTempPath(), scheduleName, "csv");
 
-        var filePath = PathGuard.SanitizeFilePath(outputPath);
+        var filePath = PathGuard.SanitizeFilePath(outputPath!);
         if (format == "xlsx" || filePath.EndsWith(".xlsx", StringComparison.OrdinalIgnoreCase))
             filePath = Path.ChangeExtension(filePath, ".csv");
 
@@ -353,11 +348,11 @@ public static class ExportTools
         foreach (Parameter param in element.Parameters)
         {
             var name = param.Definition?.Name;
-            if (string.IsNullOrWhiteSpace(name) || !seen.Add(name))
+            if (string.IsNullOrWhiteSpace(name) || !seen.Add(name!))
                 continue;
 
-            columnSet.Add(name);
-            row[name] = param.HasValue ? ParameterAccessor.GetParameterValue(param) : "";
+            columnSet.Add(name!);
+            row[name!] = param.HasValue ? ParameterAccessor.GetParameterValue(param) : "";
         }
     }
 

@@ -128,7 +128,7 @@ public static class ViewSheetTools
             return new { applied = false };
         }
 
-        var template = FindViewTemplate(doc, templateName, view.ViewType)
+        var template = FindViewTemplate(doc, templateName!, view.ViewType)
             ?? throw new McpException($"View template '{templateName}' not found.");
 
         try
@@ -225,7 +225,7 @@ public static class ViewSheetTools
 
         if (!string.IsNullOrWhiteSpace(templateName))
         {
-            var template = FindViewTemplate(doc, templateName, ViewType.FloorPlan)
+            var template = FindViewTemplate(doc, templateName!, ViewType.FloorPlan)
                 ?? throw new McpException($"View template '{templateName}' not found or is not a FloorPlan template.");
             viewPlan.ViewTemplateId = template.Id;
         }
@@ -312,7 +312,7 @@ public static class ViewSheetTools
 
         if (!string.IsNullOrWhiteSpace(templateName))
         {
-            var template = FindViewTemplate(doc, templateName, ViewType.ThreeD)
+            var template = FindViewTemplate(doc, templateName!, ViewType.ThreeD)
                 ?? throw new McpException($"View template '{templateName}' not found or is not a 3D template.");
             view3d.ViewTemplateId = template.Id;
         }

@@ -151,7 +151,7 @@ internal static class FilterSpecBuilder
         if (string.IsNullOrWhiteSpace(item.ParameterName) || item.Value is null)
             return null;
 
-        var paramId = FindParameterId(doc, item.ParameterName);
+        var paramId = FindParameterId(doc, item.ParameterName!);
         if (paramId is null)
             return null;
 
@@ -175,14 +175,14 @@ internal static class FilterSpecBuilder
         if (string.IsNullOrWhiteSpace(item.ParameterName) || item.Value is null)
             return null;
 
-        var paramId = FindParameterId(doc, item.ParameterName);
+        var paramId = FindParameterId(doc, item.ParameterName!);
         if (paramId is null)
             return null;
 
         if (!TryToDouble(item.Value, out var numericValue))
             return null;
 
-        var storageType = FindParameterStorageType(doc, item.ParameterName);
+        var storageType = FindParameterStorageType(doc, item.ParameterName!);
         var rule = (item.Operator ?? NumericOperators.Equal).ToLowerInvariant() switch
         {
             NumericOperators.Equal when storageType == StorageType.Integer =>
@@ -211,10 +211,10 @@ internal static class FilterSpecBuilder
 
     private static ElementFilter? BuildParameterHasValueFilter(Document doc, FilterItem item)
     {
-        if (string.IsNullOrWhiteSpace(item.ParameterName) || item.HasValue is not bool hasValue)
+        if (string.IsNullOrWhiteSpace(item.ParameterName) || item.HasValue is not { } hasValue)
             return null;
 
-        var paramId = FindParameterId(doc, item.ParameterName);
+        var paramId = FindParameterId(doc, item.ParameterName!);
         if (paramId is null)
             return null;
 

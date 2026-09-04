@@ -1,9 +1,7 @@
 using System.ComponentModel;
 using ModelContextProtocol;
-using ModelContextProtocol.Protocol;
 using ModelContextProtocol.Server;
 using Nice3point.Revit.Toolkit;
-using RevitMcpToolSet.Utilities;
 
 namespace RevitMcpToolSet.Tools;
 
@@ -13,13 +11,13 @@ public static class ProjectTools
 {
     [McpServerTool(Name = "revit_get_status", Title = "Get Revit Status", ReadOnly = true, UseStructuredContent = true)]
     [Description("Returns host health, active document info, worksharing state, and selection count.")]
-    public static CallToolResult GetStatus()
+    public static object GetStatus()
     {
         try
         {
             var doc = RevitContext.ActiveDocument;
             if (doc is null)
-                return StructuredToolResults.Create(new { healthy = false }, "No active document");
+                return new { healthy = false, error = "No active document" };
 
             var uiDoc = RevitContext.ActiveUiDocument;
             var app = RevitContext.UiApplication?.Application;
@@ -55,7 +53,7 @@ public static class ProjectTools
             var selectionCount = uiDoc?.Selection.GetElementIds().Count ?? 0;
             var filePath = string.IsNullOrWhiteSpace(doc.PathName) ? null : doc.PathName;
 
-            var structured = new
+            return new
             {
                 healthy = true,
                 documentTitle = doc.Title,
@@ -66,14 +64,10 @@ public static class ProjectTools
                 selectionCount,
                 version = app?.VersionNumber,
             };
-
-            return StructuredToolResults.Create(
-                structured,
-                $"Model healthy, {selectionCount} selected");
         }
         catch
         {
-            return StructuredToolResults.Create(new { healthy = false }, "Revit status unavailable");
+            return new { healthy = false, error = "Revit status unavailable" };
         }
     }
 }
