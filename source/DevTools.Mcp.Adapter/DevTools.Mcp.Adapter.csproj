@@ -33,12 +33,9 @@
         <Using Include="DevTools.Hosting" />
         <Using Include="DevTools.Mcp.Catalog" />
         <Using Include="DevTools.Mcp.Catalog.Discovery" />
+        <Using Include="DevTools.Mcp.Catalog.Isolation" />
         <Using Include="DevTools.Mcp.Core" />
         <Using Include="DevTools.Mcp.Core.Utils" />
         <Using Include="JetBrains.Annotations" />
-    </ItemGroup>
-
-    <ItemGroup>
-      <Folder Include="DependencyInjection\" />
     </ItemGroup>
 </Project>

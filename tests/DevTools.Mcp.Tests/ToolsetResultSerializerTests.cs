@@ -61,7 +61,7 @@ public sealed class ToolsetResultSerializerTests
     }
 
     [Fact]
-    public void RoundTrip_PreservesText()
+    public void ToSdk_SerializeDeserialize_PreservesText()
     {
         var original = new McpInvocationResponse
         {
@@ -69,21 +69,29 @@ public sealed class ToolsetResultSerializerTests
             StructuredContent = JsonSerializer.SerializeToElement(new { healthy = true }),
         };
 
-        var roundTripped = SdkInvocationMapper.RoundTripCore(original);
-        Assert.Equal(McpToolInvoke.Text(original), McpToolInvoke.Text(roundTripped));
+        var sdk = SdkInvocationMapper.ToSdk(original);
+        var roundTripped = JsonSerializer.Deserialize<CallToolResult>(
+            JsonSerializer.Serialize(sdk, ToolHelpers.ProtocolOptions),
+            ToolHelpers.ProtocolOptions)!;
+
+        Assert.Equal(McpToolInvoke.Text(original), ((TextContentBlock)sdk.Content[0]).Text);
+        Assert.Equal(((TextContentBlock)sdk.Content[0]).Text, ((TextContentBlock)roundTripped.Content[0]).Text);
     }
 
     [Fact]
-    public void EnsureWireSafe_ReplacesNullText_FromStructuredContent()
+    public void ToInvocationResponse_UnsupportedHostBlock_Throws()
     {
-        var broken = new McpInvocationResponse
+        var block = new ToolUseContentBlock
         {
-            Content = [new McpTextContent(string.Empty)],
-            StructuredContent = JsonSerializer.SerializeToElement(new { healthy = true, document = "Project1" }),
+            Name = "demo",
+            Id = "call-1",
+            Input = JsonSerializer.SerializeToElement(new { }),
         };
 
-        var fixedResult = ToolsetResultSerializer.EnsureWireSafe(broken);
-        Assert.False(string.IsNullOrEmpty(McpToolInvoke.Text(fixedResult)));
-        Assert.Contains("healthy", McpToolInvoke.Text(fixedResult), StringComparison.Ordinal);
+        var ex = Assert.Throws<NotSupportedException>(
+            () => ToolsetResultSerializer.ToInvocationResponse(block, outputSchema: null));
+
+        Assert.Contains("Unsupported host content block", ex.Message, StringComparison.Ordinal);
+        Assert.Contains(nameof(ToolUseContentBlock), ex.Message, StringComparison.Ordinal);
     }
 }

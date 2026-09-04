@@ -31,6 +31,7 @@
         <Using Include="DevTools.Ipc" />
         <Using Include="DevTools.Mcp.Catalog" />
         <Using Include="DevTools.Mcp.Catalog.Discovery" />
+        <Using Include="DevTools.Mcp.Catalog.Isolation" />
         <Using Include="DevTools.Mcp.Core" />
         <Using Include="JetBrains.Annotations" />
         <Using Include="System" />

@@ -125,12 +125,15 @@ public static class McpSpecKeys
         public const string Type = "type";
         public const string Properties = "properties";
         public const string Required = "required";
+        public const string Items = "items";
+        public const string AdditionalProperties = "additionalProperties";
         public const string Description = "description";
         public const string Title = "title";
 
         public static class Types
         {
             public const string Boolean = "boolean";
+            public const string Array = "array";
             public const string Integer = "integer";
             public const string Number = "number";
             public const string Object = "object";

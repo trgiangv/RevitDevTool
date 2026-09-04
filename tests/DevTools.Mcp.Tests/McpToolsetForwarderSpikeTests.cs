@@ -68,7 +68,6 @@ public sealed class McpToolsetForwarderSpikeTests
         var raw = DotnetToolsetTestHarness.InvokeRaw(method, request);
 
         Assert.NotNull(raw);
-        Assert.False(ToolsetResultSerializer.IsForeignCallToolResultType(raw.GetType()));
         Assert.Same(typeof(CallToolResult), raw.GetType());
 
         var mapped = ToolsetResultSerializer.ToInvocationResponse(raw, null);

@@ -1,4 +1,5 @@
 using System.Text.Json;
+using DevTools.Mcp.Adapter.Host;
 using DevTools.Mcp.Core.Protocol;
 using DevTools.Mcp.Core.Protocol.Invocation;
 using ModelContextProtocol;
@@ -62,7 +63,7 @@ public sealed class McpHostConformanceTests
     [Fact]
     public void ToolCallResult_MatchesGoldenTextContent()
     {
-        var json = InvocationResponseEncoder.ToNode(new McpInvocationResponse
+        var json = HostToolResultJson.ToNode(new McpInvocationResponse
         {
             Content = [new McpTextContent("ok")],
         });

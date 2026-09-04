@@ -1,6 +1,7 @@
 using System.Reflection;
 using System.Text.Json;
 using DevTools.Mcp.Core.Protocol;
+using DevTools.Mcp.Core.Utils;
 using ModelContextProtocol;
 using ModelContextProtocol.Client;
 using ModelContextProtocol.Protocol;
@@ -38,7 +39,7 @@ internal static class McpClientPassthrough
             Method = RequestMethods.ToolsCall,
             Params = JsonSerializer.SerializeToNode(
                 parameters,
-                McpJsonUtilities.DefaultOptions.GetTypeInfo(typeof(CallToolRequestParams))),
+                ToolHelpers.ProtocolOptions.GetTypeInfo(typeof(CallToolRequestParams))),
         };
 
         var task = (Task<JsonRpcResponse>)SendRequestMethod.Invoke(handler, [request, cancellationToken])!;

@@ -5,17 +5,20 @@ using CliWrap.Buffered;
 using DevTools.Execution.Abstractions;
 using DevTools.Mcp.Core.Models;
 using DevTools.Mcp.Core.Protocol;
+using DevTools.Mcp.Core.Utils;
 using Microsoft.Extensions.Logging;
-using ModelContextProtocol;
 using ModelContextProtocol.Protocol;
 using ZLogger;
 
 namespace DevTools.Mcp.Catalog.Discovery;
 
+/// <summary>
+/// Parses Python toolset catalogs emitted by the in-host driver script.
+/// Catalog wire JSON is open (Python-defined); only MCP SDK protocol DTOs use <see cref="ToolHelpers.ProtocolOptions"/>.
+/// </summary>
 public sealed class PythonToolsetParser(ILogger<PythonToolsetParser> logger)
 {
     private readonly JsonSerializerOptions catalogJsonOptions = new(JsonSerializerDefaults.Web);
-    private readonly JsonSerializerOptions sdkJsonOptions = McpJsonUtilities.DefaultOptions;
 
     public McpRegistryCatalog ParseDirectoryCatalog(
         string toolsetDirectory,
@@ -23,7 +26,7 @@ public sealed class PythonToolsetParser(ILogger<PythonToolsetParser> logger)
         string parserScriptPath)
     {
         if (string.IsNullOrWhiteSpace(pythonExecutablePath))
-            throw new ArgumentException(@"Python executable path is required.", nameof(pythonExecutablePath));
+            throw new ArgumentException("Python executable path is required.", nameof(pythonExecutablePath));
 
         var parserOutput = RunParserProcess(toolsetDirectory, pythonExecutablePath, parserScriptPath);
         return BuildCatalogFromOutput(parserOutput, toolsetDirectory);
@@ -112,7 +115,7 @@ public sealed class PythonToolsetParser(ILogger<PythonToolsetParser> logger)
 
     private T? DeserializeSdkType<T>(JsonElement element)
     {
-        return JsonSerializer.Deserialize<T>(element.GetRawText(), sdkJsonOptions);
+        return JsonSerializer.Deserialize<T>(element.GetRawText(), ToolHelpers.ProtocolOptions);
     }
 
     private IReadOnlyList<T> NormalizeEntries<TEntry, T>(
@@ -213,7 +216,7 @@ public sealed class PythonToolsetParser(ILogger<PythonToolsetParser> logger)
         {
             var node = JsonNode.Parse(protocol.GetRawText())!.AsObject();
             node["inputSchema"] = JsonNode.Parse("""{"type":"object"}""");
-            return JsonSerializer.Deserialize<Tool>(node.ToJsonString(), sdkJsonOptions);
+            return JsonSerializer.Deserialize<Tool>(node.ToJsonString(), ToolHelpers.ProtocolOptions);
         }
         catch (Exception ex)
         {

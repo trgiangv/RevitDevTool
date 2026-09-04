@@ -5,7 +5,7 @@ using System.IO;
 using System.Text;
 using System.Text.Json;
 using System.Windows.Threading;
-using DevTools.Execution.External.Connections;
+using DevTools.Execution.External.Mcp.Connections;
 using DevTools.Mcp.Core.Models;
 using DevTools.Presentation.Models;
 using DevTools.UI.Behaviors;
@@ -17,10 +17,11 @@ using ZLogger;
 
 namespace DevTools.Presentation.ViewModels;
 
+[UsedImplicitly]
 public sealed partial class McpRegistryViewModel : ObservableObject, IBusyViewModel, IDisposable
 {
     private readonly McpCatalogStore _catalogStore;
-    private readonly ConnectionState _bridgeState;
+    private readonly McpConnectState _bridgeState;
     private readonly ILogger<McpRegistryViewModel> _logger;
     private readonly DispatcherTimer _searchDebounceTimer;
     private readonly DispatcherTimer _elapsedTimer;
@@ -69,7 +70,7 @@ public sealed partial class McpRegistryViewModel : ObservableObject, IBusyViewMo
 
     public McpRegistryViewModel(
         McpCatalogStore catalogStore,
-        ConnectionState bridgeState,
+        McpConnectState bridgeState,
         ILogger<McpRegistryViewModel> logger)
     {
         _catalogStore = catalogStore;
@@ -256,18 +257,18 @@ public sealed partial class McpRegistryViewModel : ObservableObject, IBusyViewMo
 
         switch (e.PropertyName)
         {
-            case nameof(ConnectionState.McpEndpoint):
-            case nameof(ConnectionState.McpClientCount):
+            case nameof(McpConnectState.McpEndpoint):
+            case nameof(McpConnectState.McpClientCount):
                 RefreshMcpConnectionDisplay();
                 break;
-            case nameof(ConnectionState.TotalToolCalls):
+            case nameof(McpConnectState.TotalToolCalls):
                 TotalCalled = _bridgeState.TotalToolCalls;
                 break;
-            case nameof(ConnectionState.IsExecuting):
+            case nameof(McpConnectState.IsExecuting):
                 RefreshExecutionState();
                 break;
-            case nameof(ConnectionState.CurrentToolName):
-            case nameof(ConnectionState.CurrentStatusMessage):
+            case nameof(McpConnectState.CurrentToolName):
+            case nameof(McpConnectState.CurrentStatusMessage):
                 UpdateElapsedDisplay();
                 break;
         }

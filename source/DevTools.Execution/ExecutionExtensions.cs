@@ -1,7 +1,8 @@
 using DevTools.Execution.External;
-using DevTools.Execution.External.Connections;
 using DevTools.Execution.External.Handlers;
 using DevTools.Execution.External.Mcp.BuiltIn;
+using DevTools.Execution.External.Mcp.Backends;
+using DevTools.Execution.External.Mcp.Connections;
 using DevTools.Execution.External.Mcp.Dispatchers;
 using DevTools.Execution.External.Mcp.Registry;
 using DevTools.Execution.Interfaces;
@@ -74,9 +75,9 @@ public static class ExecutionExtensions
             services.AddKeyedSingleton<IExecutionProvider, ScriptExecutionProvider>(ContainerMode.Script);
         }
 
-        services.AddSingleton<ConnectionState>();
-        services.AddSingleton<IMcpPipeConnectionTracker>(sp => sp.GetRequiredService<ConnectionState>());
-        services.AddSingleton<IMcpExecutionTracker, ConnectionStateExecutionTracker>();
+        services.AddSingleton<McpConnectState>();
+        services.AddSingleton<IMcpConnectTracker>(sp => sp.GetRequiredService<McpConnectState>());
+        services.AddSingleton<IMcpExecutionTracker, McpExecutionTracker>();
         services.AddSingleton<IBridgeRequestHandler, InstanceRequestHandler>();
         services.AddSingleton<PytestDependencyService>();
         services.AddSingleton<PytestExecutionService>();
@@ -94,12 +95,13 @@ public static class ExecutionExtensions
             new OpenDocumentTool(sp.GetService<IDocumentBridge>() ?? NullDocumentBridge.Instance));
         services.AddSingleton<McpToolsetContextManager>();
         services.AddSingleton<DotnetMethodResolver>();
+        services.AddSingleton<IMcpPrimitiveBackend, DotnetMcpToolBackend>();
+        services.AddSingleton<IMcpPrimitiveBackend, PythonMcpToolBackend>();
+        services.AddSingleton<IMcpPrimitiveBackend, BuiltInMcpToolBackend>();
         services.AddSingleton<McpPrimitiveDispatcher>();
         services.AddSingleton<IMcpPrimitiveDispatcher>(sp => sp.GetRequiredService<McpPrimitiveDispatcher>());
         services.AddSingleton<DevToolsPipeServer>();
         services.AddHostedService(sp => sp.GetRequiredService<DevToolsPipeServer>());
-        services.AddMcpHostAdapter();
-
         return services;
     }
 }

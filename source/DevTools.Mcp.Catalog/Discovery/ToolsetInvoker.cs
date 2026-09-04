@@ -39,7 +39,7 @@ public static class ToolsetInvoker
         }
         catch (TargetInvocationException ex) when (ex.InnerException is not null)
         {
-            if (ToolsetMrtrBridge.IsForeignInputRequired(ex.InnerException))
+            if (ToolsetMrtrBridge.IsIsolatedInputRequired(ex.InnerException))
                 throw ToolsetMrtrBridge.ToHostException(ex.InnerException);
             throw ex.InnerException;
         }

@@ -5,7 +5,7 @@ using DevTools.AssemblyIsolation.Sources;
 using ModelContextProtocol.Protocol;
 using ModelContextProtocol.Server;
 
-namespace DevTools.Mcp.Catalog.Discovery;
+namespace DevTools.Mcp.Catalog.Isolation;
 
 /// <summary>
 /// Defines MCP's contract bindings and private dependency sources for an external toolset.

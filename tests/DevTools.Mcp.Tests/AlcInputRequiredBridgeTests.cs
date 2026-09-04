@@ -1,6 +1,5 @@
 using System.Text.Json;
 using DevTools.Mcp.Catalog.Discovery;
-using DevTools.Mcp.Core;
 using ModelContextProtocol;
 using ModelContextProtocol.Protocol;
 
@@ -9,11 +8,11 @@ namespace DevTools.Mcp.Tests;
 public sealed class AlcInputRequiredBridgeTests
 {
     [Fact]
-    public void IsForeignInputRequired_DetectsNameMismatch()
+    public void IsIsolatedInputRequired_DetectsIdentityMismatch()
     {
         var foreign = new ForeignMrtr.InputRequiredException("state-1");
-        Assert.True(ToolsetMrtrBridge.IsForeignInputRequired(foreign));
-        Assert.False(ToolsetMrtrBridge.IsForeignInputRequired(
+        Assert.True(ToolsetMrtrBridge.IsIsolatedInputRequired(foreign));
+        Assert.False(ToolsetMrtrBridge.IsIsolatedInputRequired(
             new InputRequiredException(requestState: "host")));
     }
 
@@ -69,22 +68,6 @@ public sealed class AlcInputRequiredBridgeTests
         Assert.Null(response.Meta);
     }
 
-    [Fact]
-    public void TryGetInputRequiredResult_FallsBackToLegacyMeta()
-    {
-        var inputRequired = new InputRequiredResult { RequestState = "legacy-meta" };
-        var payload = JsonSerializer.SerializeToNode(inputRequired, McpJsonUtilities.DefaultOptions);
-        var response = new McpInvocationResponse
-        {
-            Meta = new System.Text.Json.Nodes.JsonObject
-            {
-                [McpTaskExecutionMeta.Invocation.InputRequired] = payload,
-            },
-        };
-
-        Assert.True(ToolsetMrtrBridge.TryGetInputRequiredResult(response, out var restored));
-        Assert.Equal("legacy-meta", restored!.RequestState);
-    }
 }
 
 file static class ForeignMrtr

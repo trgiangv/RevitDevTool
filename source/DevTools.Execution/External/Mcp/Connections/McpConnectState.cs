@@ -6,10 +6,10 @@ using DevTools.Mcp.Core.Sessions;
 using DevTools.UI;
 using Microsoft.Extensions.Logging;
 using ZLogger;
-namespace DevTools.Execution.External.Connections;
+namespace DevTools.Execution.External.Mcp.Connections;
 
-public sealed partial class ConnectionState(ILogger<ConnectionState> logger)
-    : ObservableObject, IMcpPipeConnectionTracker
+public sealed partial class McpConnectState(ILogger<McpConnectState> logger)
+    : ObservableObject, IMcpConnectTracker
 {
     [ObservableProperty]
     public partial bool IsConnected { get; set; }
@@ -152,13 +152,13 @@ public sealed partial class ConnectionState(ILogger<ConnectionState> logger)
 
 public sealed class ExecutionScope : IDisposable
 {
-    private readonly ConnectionState _state;
+    private readonly McpConnectState _state;
     private readonly string _toolName;
     private readonly ILogger? _logger;
     private readonly Stopwatch _stopwatch;
     private bool _completed;
 
-    internal ExecutionScope(ConnectionState state, string toolName, ILogger? logger = null)
+    internal ExecutionScope(McpConnectState state, string toolName, ILogger? logger = null)
     {
         _state = state;
         _toolName = toolName;

@@ -3,6 +3,7 @@ using System.Text.Json;
 using DevTools.Mcp.Adapter.Host;
 using DevTools.Mcp.Catalog.Discovery;
 using DevTools.Mcp.Core.Protocol;
+using DevTools.Mcp.Core.Utils;
 using ModelContextProtocol;
 using ModelContextProtocol.Protocol;
 
@@ -38,7 +39,7 @@ public sealed class HostToolResultJsonTests
         };
 
         var expected = Encoding.UTF8.GetBytes(
-            JsonSerializer.Serialize(inputRequired, McpJsonUtilities.DefaultOptions));
+            JsonSerializer.Serialize(inputRequired, ToolHelpers.ProtocolOptions));
 
         var response = ToolsetMrtrBridge.ToInputRequiredResponse(
             new InputRequiredException(

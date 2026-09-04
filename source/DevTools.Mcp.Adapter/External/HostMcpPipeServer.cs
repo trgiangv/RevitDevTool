@@ -20,7 +20,7 @@ namespace DevTools.Mcp.Adapter.External;
 public sealed class HostMcpPipeServer(
     McpCatalogStore catalogStore,
     IMcpPrimitiveDispatcher primitiveDispatcher,
-    IMcpPipeConnectionTracker connectionTracker,
+    IMcpConnectTracker connectTracker,
     McpToolsetContextManager toolsetContextManager,
     IHostAppInfo hostInfo,
     IMcpHandler mcpHandler,
@@ -42,7 +42,7 @@ public sealed class HostMcpPipeServer(
             return Task.CompletedTask;
 
         _pipeName = HostPipeName.FormatMcp(hostInfo.Host.ToString(), hostInfo.VersionNumber, Environment.ProcessId);
-        connectionTracker.SetMcpEndpoint(_pipeName);
+        connectTracker.SetMcpEndpoint(_pipeName);
 
         Task.Run(() =>
         {
@@ -76,7 +76,7 @@ public sealed class HostMcpPipeServer(
         foreach (var session in _sessions.Values)
             await session.DisposeAsync().ConfigureAwait(false);
         _sessions.Clear();
-        connectionTracker.ClearMcpState();
+        connectTracker.ClearMcpState();
 
         if (_acceptLoopTask is not null)
         {
@@ -123,7 +123,7 @@ public sealed class HostMcpPipeServer(
         {
             pipeSession = McpPipeSession.Start(pipe, mcpHandler, ct);
             _sessions[sessionId] = pipeSession;
-            connectionTracker.SetMcpClientCount(_sessions.Count);
+            connectTracker.SetMcpClientCount(_sessions.Count);
 #if DEBUG
             logger.ZLogInformation($"MCP client connected. Active sessions: {_sessions.Count}");
 #endif
@@ -149,7 +149,7 @@ public sealed class HostMcpPipeServer(
 #if DEBUG
             logger.ZLogInformation($"MCP client disconnected. Active sessions: {_sessions.Count}");
 #endif
-            connectionTracker.SetMcpClientCount(_sessions.Count);
+            connectTracker.SetMcpClientCount(_sessions.Count);
         }
     }
 

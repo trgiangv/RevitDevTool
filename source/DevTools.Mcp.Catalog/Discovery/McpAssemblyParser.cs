@@ -2,6 +2,7 @@ using System.Reflection;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using DevTools.AssemblyIsolation.Metadata;
+using DevTools.Mcp.Catalog.Isolation;
 using DevTools.Execution.Abstractions;
 using DevTools.Mcp.Core.Models;
 using DevTools.Mcp.Core.Protocol;
@@ -15,8 +16,13 @@ using SchemaKeys = DevTools.Mcp.Core.Protocol.McpSpecKeys.JsonSchema;
 // ReSharper disable RedundantSuppressNullableWarningExpression
 namespace DevTools.Mcp.Catalog.Discovery;
 
+/// <summary>
+/// Reflects MCP SDK attributes from ALC-loaded toolset assemblies into catalog entries.
+/// JSON schema fragments use runtime <see cref="JsonSerializer"/> — no closed source-gen context.
+/// </summary>
 public sealed class McpAssemblyParser(ILogger<McpAssemblyParser> logger)
 {
+    private IReadOnlyList<string> _metadataDependencyPaths = [];
     private readonly string _mcpToolTypeAttributeName = typeof(McpServerToolTypeAttribute).FullName!;
     private readonly string _mcpToolAttributeName = typeof(McpServerToolAttribute).FullName!;
     private readonly string _mcpResourceTypeAttributeName = typeof(McpServerResourceTypeAttribute).FullName!;
@@ -31,7 +37,7 @@ public sealed class McpAssemblyParser(ILogger<McpAssemblyParser> logger)
     {
         var tools = new List<McpRegisteredTool>();
         var resources = new List<McpRegisteredResource>();
-        var resolutionPaths = MetadataAssemblyPathCollector.Collect(assemblyPath);
+        var resolutionPaths = MetadataAssemblyPathCollector.Collect(assemblyPath, _metadataDependencyPaths);
         using var metadataSession = MetadataAssemblySession.Create(assemblyPath, resolutionPaths);
         var assembly = metadataSession.LoadEntryAssembly();
 
@@ -50,6 +56,9 @@ public sealed class McpAssemblyParser(ILogger<McpAssemblyParser> logger)
             Resources = resources,
         };
     }
+
+    public void ConfigureMetadataDependencies(IReadOnlyList<string> paths) =>
+        _metadataDependencyPaths = paths;
 
     private IEnumerable<McpRegisteredTool> ParseTools(Type type, string assemblyPath)
     {
@@ -90,7 +99,7 @@ public sealed class McpAssemblyParser(ILogger<McpAssemblyParser> logger)
                 Description = description,
                 InputSchema = DescriptorFactory.CoerceInputSchema(BuildInputSchema(method)),
                 OutputSchema = ExtractNamedValueArg<bool>(toolAttribute, SdkAttr.UseStructuredContent) is true
-                    ? JsonSerializer.SerializeToElement(new { type = SchemaKeys.Types.Object })
+                    ? JsonSerializer.SerializeToElement(McpSchemaBuilder.BuildSchema(method.ReturnType))
                     : null,
                 Annotations = DescriptorFactory.BuildToolAnnotations(
                     title,
@@ -229,7 +238,7 @@ public sealed class McpAssemblyParser(ILogger<McpAssemblyParser> logger)
 
         foreach (var p in parameters)
         {
-            var prop = new JsonObject { [SchemaKeys.Type] = McpSchemaBuilder.FromClrType(p.ParameterType) };
+            var prop = McpSchemaBuilder.BuildSchema(p.ParameterType);
             var desc = ReadDescription(p.CustomAttributes);
             if (!string.IsNullOrWhiteSpace(desc))
                 prop[SchemaKeys.Description] = desc;
@@ -314,7 +323,7 @@ public sealed class McpAssemblyParser(ILogger<McpAssemblyParser> logger)
         return null;
     }
 
-    private T? ExtractNamedArg<T>(CustomAttributeData? attr, string memberName) where T : class
+    private static T? ExtractNamedArg<T>(CustomAttributeData? attr, string memberName) where T : class
     {
         var namedAgrs = attr?.NamedArguments;
         if (namedAgrs == null) return null;
@@ -327,7 +336,7 @@ public sealed class McpAssemblyParser(ILogger<McpAssemblyParser> logger)
         return null;
     }
 
-    private T? ExtractNamedValueArg<T>(CustomAttributeData? attr, string memberName) where T : struct
+    private static T? ExtractNamedValueArg<T>(CustomAttributeData? attr, string memberName) where T : struct
     {
         var namedAgrs = attr?.NamedArguments;
         if (namedAgrs == null) return null;

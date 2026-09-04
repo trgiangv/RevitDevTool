@@ -28,6 +28,15 @@ public class PlatformSplitScaffoldTests
             string.Equals(reference.Name, "DevTools.Execution", StringComparison.Ordinal));
     }
 
+    [Fact]
+    public void Execution_DoesNotReferenceHostMcpAdapter()
+    {
+        var executionReferences = Assembly.Load("DevTools.Execution").GetReferencedAssemblies();
+
+        Assert.DoesNotContain(executionReferences, reference =>
+            string.Equals(reference.Name, "DevTools.Mcp.Adapter", StringComparison.Ordinal));
+    }
+
     private static readonly string[] LockedDestinationAssemblies =
     [
         "DevTools.Mcp.Core",

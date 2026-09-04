@@ -5,6 +5,7 @@ using DevTools.Ipc;
 using DevTools.Mcp.Core;
 using DevTools.Mcp.Core.Protocol;
 using DevTools.Mcp.Core.Sessions;
+using DevTools.Mcp.Core.Utils;
 using Microsoft.Extensions.Logging;
 using ModelContextProtocol;
 using ModelContextProtocol.Client;
@@ -100,12 +101,12 @@ internal sealed class HostSession : IHostSession
             resultObj.TryGetPropertyValue(McpSpecKeys.ResultType.Key, out var resultTypeNode) &&
             resultTypeNode?.GetValue<string>() is McpSpecKeys.ResultType.InputRequired)
         {
-            var inputRequired = (InputRequiredResult?)response.Result.Deserialize(McpJsonUtilities.DefaultOptions.GetTypeInfo(typeof(InputRequiredResult)))
+            var inputRequired = (InputRequiredResult?)response.Result.Deserialize(ToolHelpers.ProtocolOptions.GetTypeInfo(typeof(InputRequiredResult)))
                 ?? throw new JsonException("Failed to deserialize host InputRequiredResult.");
             return HostToolCallOutcome.FromInputRequired(inputRequired);
         }
 
-        var toolResult = (CallToolResult?)response.Result.Deserialize(McpJsonUtilities.DefaultOptions.GetTypeInfo(typeof(CallToolResult)))
+        var toolResult = (CallToolResult?)response.Result.Deserialize(ToolHelpers.ProtocolOptions.GetTypeInfo(typeof(CallToolResult)))
             ?? throw new JsonException("Failed to deserialize host CallToolResult.");
         return HostToolCallOutcome.FromToolResult(toolResult);
     }

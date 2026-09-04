@@ -1,5 +1,3 @@
-using DevTools.Mcp.Core.Protocol;
-
 namespace DevTools.Mcp.Adapter.Host;
 
 /// <summary>Configuration for <see cref="McpHandler"/>.</summary>

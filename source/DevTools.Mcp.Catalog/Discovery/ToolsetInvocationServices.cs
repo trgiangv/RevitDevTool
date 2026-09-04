@@ -1,4 +1,5 @@
 using System.Security.Claims;
+using DevTools.Mcp.Catalog.Isolation;
 using Microsoft.Extensions.DependencyInjection;
 using ModelContextProtocol;
 using ModelContextProtocol.Protocol;
@@ -9,8 +10,7 @@ namespace DevTools.Mcp.Catalog.Discovery;
 /// <summary>
 /// Host-side service provider for toolset reflection invoke (RequestContext, McpServer, progress, user).
 /// </summary>
-internal sealed class ToolsetInvocationServices : IServiceProvider, IKeyedServiceProvider,
-    IServiceProviderIsService, IServiceProviderIsKeyedService
+internal sealed class ToolsetInvocationServices : IKeyedServiceProvider, IServiceProviderIsKeyedService
 {
     private readonly RequestContext<CallToolRequestParams> _request;
     private readonly IServiceProvider? _innerServices;
@@ -21,15 +21,22 @@ internal sealed class ToolsetInvocationServices : IServiceProvider, IKeyedServic
         _innerServices = request.Services;
     }
 
-    public object? GetService(Type serviceType) =>
-        serviceType == typeof(RequestContext<CallToolRequestParams>) ? _request :
-        serviceType == typeof(McpServer) ? _request.Server :
-        serviceType == typeof(IProgress<ProgressNotificationValue>) ?
-            (_request.Params?.ProgressToken is { } progressToken
-                ? new ToolsetProgressReporter(_request.Server, progressToken)
-                : ToolsetNopProgress.Instance) :
-        serviceType == typeof(ClaimsPrincipal) ? _request.User :
-        _innerServices?.GetService(serviceType);
+    public object? GetService(Type serviceType)
+    {
+        if (serviceType == typeof(RequestContext<CallToolRequestParams>))
+            return _request;
+        if (serviceType == typeof(McpServer))
+            return _request.Server;
+        if (serviceType == typeof(IProgress<ProgressNotificationValue>))
+        {
+            if (_request.Params.ProgressToken is { } progressToken)
+                return new ToolsetProgressReporter(_request.Server, progressToken);
+            return ToolsetNopProgress.Instance;
+        }
+        if (serviceType == typeof(ClaimsPrincipal))
+            return _request.User;
+        return _innerServices?.GetService(serviceType);
+    }
 
     public bool IsService(Type serviceType) =>
         IsAugmentedWith(serviceType) ||
@@ -49,10 +56,13 @@ internal sealed class ToolsetInvocationServices : IServiceProvider, IKeyedServic
             $"No service of type '{serviceType}' with key '{serviceKey}' is registered.");
 
     internal static bool IsAugmentedWith(Type serviceType) =>
+        IsHostContract(serviceType);
+
+    private static bool IsHostContract(Type serviceType) =>
         serviceType == typeof(RequestContext<CallToolRequestParams>) ||
         serviceType == typeof(McpServer) ||
         serviceType == typeof(IProgress<ProgressNotificationValue>) ||
-        serviceType == typeof(ClaimsPrincipal);
+        serviceType == typeof(System.Security.Claims.ClaimsPrincipal);
 }
 
 internal sealed class ToolsetProgressReporter : IProgress<ProgressNotificationValue>

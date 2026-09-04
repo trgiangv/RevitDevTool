@@ -7,6 +7,7 @@ using DevTools.Hosting;
 using DevTools.Logging;
 using DevTools.Logging.Abstractions;
 using DevTools.Mcp.Catalog;
+using DevTools.Mcp.Adapter;
 using DevTools.NUnit.Host;
 using DevTools.Testing.Host;
 using DevTools.TUnit.Host;
@@ -137,6 +138,7 @@ internal static class RevitServiceRegistration
         services.AddSingleton<IIronPythonBridge, RevitIronPythonBridge>();
 
         services.AddExecutionServices(registerDefaultScriptProvider: false);
+        services.AddMcpHostAdapter();
         services.AddNUnitHostServices();
         services.AddTUnitHostServices();
         services.AddGenericTestingHostServices();

@@ -80,5 +80,5 @@ internal static class McpJsonRpc
         ?? throw new JsonException("Expected a JSON-RPC request object.");
 
     public static string Serialize(JsonObject message) =>
-        message.ToJsonString(new JsonSerializerOptions { WriteIndented = false });
+        message.ToJsonString(ToolHelpers.ProtocolOptions);
 }

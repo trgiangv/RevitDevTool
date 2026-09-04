@@ -1,7 +1,7 @@
 using System.Reflection;
 using System.Text.Json;
+using DevTools.Mcp.Core.Utils;
 using Microsoft.Extensions.DependencyInjection;
-using ModelContextProtocol;
 using ModelContextProtocol.Protocol;
 using ModelContextProtocol.Server;
 
@@ -10,8 +10,6 @@ namespace DevTools.Mcp.Catalog.Discovery;
 /// <summary>Binds toolset method parameters from MCP call context without SDK <see cref="Microsoft.Extensions.AI.AIFunction"/>.</summary>
 internal static class ToolsetArgumentBinder
 {
-    private static readonly JsonSerializerOptions JsonOptions = McpJsonUtilities.DefaultOptions;
-
     public static object?[] Bind(
         MethodInfo method,
         RequestContext<CallToolRequestParams> request,
@@ -77,6 +75,6 @@ internal static class ToolsetArgumentBinder
         if (element.ValueKind is JsonValueKind.Null)
             return parameterType.IsValueType ? Activator.CreateInstance(parameterType) : null;
 
-        return element.Deserialize(parameterType, JsonOptions);
+        return element.Deserialize(parameterType, ToolHelpers.ProtocolOptions);
     }
 }

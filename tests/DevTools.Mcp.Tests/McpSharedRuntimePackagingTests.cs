@@ -1,13 +1,12 @@
-using System.Reflection;
 using DevTools.Mcp.Catalog.Discovery;
 using DevTools.Mcp.Tests.Harness;
-using ModelContextProtocol.Protocol;
 
 namespace DevTools.Mcp.Tests;
 
 /// <summary>
-/// Toolset MCP exclude + host ILRepack embed: toolsets strip siblings; collectible ALC shares ModelContextProtocol* with default context.
-/// Asserts built Autodesk 2025/2027 host outputs: no MCP siblings, ILRepacked host DLL.
+/// Layout-only packaging checks: toolsets strip MCP siblings; host ILRepack embeds MCP (no siblings, large DLL).
+/// CallToolResult identity on repacked host is covered by <see cref="Isolation.McpMergedHostIdentityTests"/>
+/// (skips in xunit when ModelContextProtocol.Core is a separate assembly — false-green guard).
 /// </summary>
 public sealed class McpSharedRuntimePackagingTests
 {
@@ -51,48 +50,6 @@ public sealed class McpSharedRuntimePackagingTests
 
         Assert.Contains(catalog.Tools, t => t.Descriptor.Name == "test_forwarder_calltoolresult");
         Assert.Contains(catalog.Tools, t => t.Descriptor.Name == "get_demo_status");
-    }
-
-    [Fact]
-    public void LoadedToolset_ResolvesCallToolResult_FromHostMcp()
-    {
-        var pairs = DiscoverHostOutputDirs()
-            .Select(dir => (HostDir: dir, Toolset: MatchingToolsetDll(dir)))
-            .Where(pair => pair.Toolset is not null)
-            .ToList();
-        Assert.True(pairs.Count > 0, $"{HostBuildHint} {ToolsetBuildHint}");
-
-        var matched = false;
-        foreach (var (_, toolsetDllPath) in pairs)
-        {
-            using var context = new McpToolsetContext(toolsetDllPath!);
-            var assembly = context.LoadAssembly();
-            var requestedProtocol = assembly.GetReferencedAssemblies()
-                .SingleOrDefault(static a => string.Equals(a.Name, "ModelContextProtocol.Core", StringComparison.Ordinal));
-            if (requestedProtocol?.Version != typeof(CallToolResult).Assembly.GetName().Version)
-                continue;
-
-            var spikeType = assembly.GetType("McpToolsetDemo.McpForwarderSpikeTool", throwOnError: true)!;
-            var method = spikeType.GetMethod("TestForwarderCallToolResult", BindingFlags.Public | BindingFlags.Static)!;
-            var request = DotnetToolsetTestHarness.CreateRequest();
-
-            object? raw;
-            try
-            {
-                raw = DotnetToolsetTestHarness.InvokeRaw(method, request);
-            }
-            catch (MissingMethodException)
-            {
-                continue;
-            }
-
-            Assert.NotNull(raw);
-            Assert.Same(typeof(CallToolResult), raw.GetType());
-            Assert.False(ToolsetResultSerializer.IsForeignCallToolResultType(raw.GetType()));
-            matched = true;
-        }
-
-        Assert.True(matched, "No host/toolset year pair shared CallToolResult identity. Build the same Autodesk year for both.");
     }
 
     private static void AssertHostEmbeddedMcp(string hostOutputDir)
@@ -140,13 +97,6 @@ public sealed class McpSharedRuntimePackagingTests
             if (File.Exists(dll))
                 yield return dll;
         }
-    }
-
-    private static string? MatchingToolsetDll(string hostOutputDir)
-    {
-        var yearSuffix = Path.GetFileName(hostOutputDir);
-        var dll = Path.Combine(FindRepositoryRoot(), "samples", "McpToolsetDemo", "bin", yearSuffix, "McpToolsetDemo.dll");
-        return File.Exists(dll) ? dll : null;
     }
 
     private static string FindRepositoryRoot()

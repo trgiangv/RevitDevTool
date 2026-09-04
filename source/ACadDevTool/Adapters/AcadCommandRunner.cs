@@ -16,9 +16,6 @@ namespace AcadDevTool.Adapters;
 /// </summary>
 public sealed class AcadCommandRunner(ILogger<AcadCommandRunner> logger) : ICommandRunner
 {
-    // Command assemblies may show modeless WPF windows that outlive Execute.
-    static readonly List<AssemblyIsolationSession> LiveCommandSessions = [];
-
     public ExecutionResult RunCommand(CommandItem commandItem)
     {
 #if NET
@@ -27,7 +24,6 @@ public sealed class AcadCommandRunner(ILogger<AcadCommandRunner> logger) : IComm
                 commandItem.AssemblyPath,
                 AcadHostApis.All(),
                 new CommandIsolationDiagnosticSink(logger)));
-        LiveCommandSessions.Add(session);
         return ExecuteInContext(session, commandItem);
 #else
         return ExecuteInAppDomain(commandItem);
@@ -91,7 +87,6 @@ public sealed class AcadCommandRunner(ILogger<AcadCommandRunner> logger) : IComm
                 commandItem.AssemblyPath,
                 AcadHostApis.All(),
                 new CommandIsolationDiagnosticSink(logger)));
-        LiveCommandSessions.Add(session);
         return ExecuteInContext(session, commandItem);
     }
 #endif

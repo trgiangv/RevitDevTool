@@ -1,4 +1,4 @@
-using DevTools.Execution.External.Connections;
+using DevTools.Execution.External.Mcp.Connections;
 using Microsoft.Extensions.Logging.Abstractions;
 
 namespace DevTools.Mcp.Tests;
@@ -8,7 +8,7 @@ public class McpPipeConnectionTrackerTests
     [Fact]
     public void ConnectionState_TracksMcpEndpointAndClientCount()
     {
-        var state = new ConnectionState(NullLogger<ConnectionState>.Instance);
+        var state = new McpConnectState(NullLogger<McpConnectState>.Instance);
 
         state.SetMcpEndpoint("DevToolsMcp_Revit_2025_12345");
         Assert.True(state.McpIsListening);

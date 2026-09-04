@@ -5,8 +5,7 @@ using System.Security.AccessControl;
 using System.Security.Principal;
 using System.Text.Json;
 using DevTools.Hosting;
-using DevTools.Execution.External.Connections;
-using DevTools.Mcp.Adapter.External;
+using DevTools.Execution.External.Mcp.Connections;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using ZLogger;
@@ -16,11 +15,11 @@ namespace DevTools.Execution.External;
 
 /// <summary>
 /// Host-side pytest/control pipe server over <c>DevTools_{Host}_{Version}_{PID}</c>
-/// (length-prefixed <see cref="BridgeMessage"/>). MCP uses <see cref="HostMcpPipeServer"/>.
+/// (length-prefixed <see cref="BridgeMessage"/>). MCP uses a separate host pipe server.
 /// </summary>
 [UsedImplicitly]
 public sealed class DevToolsPipeServer(
-    ConnectionState state,
+    McpConnectState state,
     IHostAppInfo hostInfo,
     IEnumerable<IBridgeRequestHandler> handlers,
     ILogger<DevToolsPipeServer> logger) : IHostedService, IDisposable

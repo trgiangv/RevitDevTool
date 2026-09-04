@@ -20,6 +20,8 @@ public sealed class McpCatalogLoader(IEnumerable<IMcpRegistryProvider> providers
 
         var toolMap = new Dictionary<string, McpRegisteredTool>(StringComparer.OrdinalIgnoreCase);
         var resourceMap = new Dictionary<string, McpRegisteredResource>(StringComparer.OrdinalIgnoreCase);
+        var toolNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var resourceNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
         foreach (var provider in _providers.OrderBy(p => p.Name, StringComparer.OrdinalIgnoreCase))
         {
@@ -34,9 +36,9 @@ public sealed class McpCatalogLoader(IEnumerable<IMcpRegistryProvider> providers
                         $"Provider '{provider.Name}' added {addedTools} tool(s), {addedResources} resource(s).");
                 }
 
-                Collect(provider.Name, catalog.Tools, toolMap, tool => tool.Id, tool => tool.Descriptor.Name, "tool");
-                Collect(provider.Name, catalog.Resources, resourceMap, resource => resource.Id,
-                    resource => resource.DisplayName, "resource");
+                Collect(provider.Name, catalog.Tools, toolMap, toolNames, tool => tool.Id, tool => tool.Descriptor.Name, "tool");
+                Collect(provider.Name, catalog.Resources, resourceMap, resourceNames,
+                    resource => resource.Id, resource => resource.DisplayName, "resource");
             }
             catch (Exception ex)
             {
@@ -85,6 +87,7 @@ public sealed class McpCatalogLoader(IEnumerable<IMcpRegistryProvider> providers
         {
             if (pathsByMode.TryGetValue(provider.SourceKind, out var paths))
                 provider.ConfigurePaths(paths);
+
         }
     }
 
@@ -92,6 +95,7 @@ public sealed class McpCatalogLoader(IEnumerable<IMcpRegistryProvider> providers
         string providerName,
         IReadOnlyList<T> items,
         Dictionary<string, T> byId,
+        HashSet<string> names,
         Func<T, string> idSelector,
         Func<T, string> nameSelector,
         string kind)
@@ -107,8 +111,16 @@ public sealed class McpCatalogLoader(IEnumerable<IMcpRegistryProvider> providers
                 continue;
             }
 
-            if (byId.TryAdd(id, item)) continue;
-            logger.ZLogWarning($"Duplicate {kind} id '{id}' ignored.");
+            if (!byId.TryAdd(id, item))
+            {
+                logger.ZLogWarning($"Duplicate {kind} id '{id}' ignored.");
+                continue;
+            }
+
+            if (names.Add(name)) continue;
+
+            byId.Remove(id);
+            logger.ZLogWarning($"Duplicate {kind} name '{name}' ignored.");
         }
     }
 

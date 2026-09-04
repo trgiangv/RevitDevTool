@@ -51,7 +51,7 @@ public sealed class OpenDocumentTool : IBuiltInMcpTool
 
         return result.Success
             ? ToolHelpers.Result(payload)
-            : ToolHelpers.ErrorResult(ToolHelpers.Serialize(payload));
+            : ToolHelpers.ErrorResult(payload);
     }
 
     [UsedImplicitly(ImplicitUseTargetFlags.WithMembers)]

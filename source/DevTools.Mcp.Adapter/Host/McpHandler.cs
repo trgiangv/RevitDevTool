@@ -4,7 +4,6 @@ using DevTools.Mcp.Core.Invocation;
 using DevTools.Mcp.Core.Protocol;
 using DevTools.Mcp.Core.Protocol.Invocation;
 using DevTools.Mcp.Core.Results;
-using ModelContextProtocol;
 using ModelContextProtocol.Protocol;
 using Microsoft.Extensions.Logging;
 using CoreMcpErrorCode = DevTools.Mcp.Core.Results.McpErrorCode;
@@ -279,5 +278,5 @@ public sealed class McpHandler : IMcpHandler
     }
 
     private static JsonNode SerializeResult<T>(T result) =>
-        JsonSerializer.SerializeToNode(result, McpJsonUtilities.DefaultOptions)!;
+        JsonSerializer.SerializeToNode(result, ToolHelpers.ProtocolOptions)!;
 }

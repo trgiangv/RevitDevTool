@@ -3,6 +3,7 @@ using System.Text.Json;
 using System.Text.Json.Nodes;
 using DevTools.Mcp.Core.Protocol;
 using Microsoft.Extensions.Logging;
+using RpcErrorCode = ModelContextProtocol.McpErrorCode;
 
 namespace DevTools.Mcp.Adapter.Host;
 
@@ -84,7 +85,7 @@ public sealed class McpPipeSession : IAsyncDisposable
         return await DispatchRequestAsync(request, cancellationToken).ConfigureAwait(false);
     }
 
-    private async Task<string?> TryReadLineAsync(StreamReader reader, CancellationToken cancellationToken)
+    private static async Task<string?> TryReadLineAsync(StreamReader reader, CancellationToken cancellationToken)
     {
         try
         {
@@ -126,6 +127,23 @@ public sealed class McpPipeSession : IAsyncDisposable
         catch (Exception ex)
         {
             _logger?.LogWarning(ex, "MCP handler error");
+
+            if (!McpJsonRpc.HasId(request)) return true;
+
+            try
+            {
+                await SendAsync(
+                    McpJsonRpc.CreateError(
+                        McpJsonRpc.GetId(request),
+                        RpcErrorCode.InternalError,
+                        ex.Message),
+                    cancellationToken).ConfigureAwait(false);
+            }
+            catch (Exception sendEx)
+            {
+                _logger?.LogWarning(sendEx, "MCP: failed to send handler error response");
+            }
+
             return true;
         }
     }
@@ -135,7 +153,7 @@ public sealed class McpPipeSession : IAsyncDisposable
         await _sendLock.WaitAsync(cancellationToken).ConfigureAwait(false);
         try
         {
-            var json = JsonSerializer.SerializeToUtf8Bytes(response);
+            var json = JsonSerializer.SerializeToUtf8Bytes(response, ToolHelpers.ProtocolOptions);
             await _stream.WriteAsync(json, cancellationToken).ConfigureAwait(false);
             await _stream.WriteAsync(Newline, cancellationToken).ConfigureAwait(false);
             await _stream.FlushAsync(cancellationToken).ConfigureAwait(false);
@@ -161,6 +179,6 @@ public sealed class McpPipeSession : IAsyncDisposable
         }
 
         _sendLock.Dispose();
-        _stream.Dispose();
+        await _stream.DisposeAsync();
     }
 }

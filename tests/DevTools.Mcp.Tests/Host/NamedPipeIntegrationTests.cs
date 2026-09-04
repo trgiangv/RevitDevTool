@@ -1,6 +1,8 @@
 using System.IO.Pipes;
 using System.Security.AccessControl;
 using System.Security.Principal;
+using System.Text;
+using System.Text.Json.Nodes;
 using DevTools.Mcp.Adapter.Host;
 using DevTools.Mcp.Tests.Harness;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -84,6 +86,44 @@ public sealed class NamedPipeIntegrationTests
         await cts.CancelAsync();
     }
 
+    [Fact]
+    public async Task NamedPipe_HandlerException_ReturnsJsonRpcInternalError()
+    {
+        var pipeName = HostPipeName.FormatMcp("TestHost", Guid.NewGuid().ToString("N")[..8], Environment.ProcessId);
+        using var cts = CancellationTokenSource.CreateLinkedTokenSource(TestContext.Current.CancellationToken);
+        cts.CancelAfter(TimeSpan.FromSeconds(20));
+
+        await using var serverPipe = CreateServerPipe(pipeName);
+        var acceptTask = serverPipe.WaitForConnectionAsync(cts.Token);
+
+        await using var clientPipe = new NamedPipeClientStream(".", pipeName, PipeDirection.InOut, PipeOptions.Asynchronous);
+        await clientPipe.ConnectAsync(cts.Token);
+        await acceptTask;
+
+        await using var session = McpPipeSession.Start(serverPipe, new ThrowingMcpHandler(), cts.Token);
+
+        var request = """{"jsonrpc":"2.0","id":7,"method":"tools/list"}""" + "\n";
+        var bytes = Encoding.UTF8.GetBytes(request);
+        await clientPipe.WriteAsync(bytes, cts.Token);
+        await clientPipe.FlushAsync(cts.Token);
+
+        using var reader = new StreamReader(
+            clientPipe,
+            Encoding.UTF8,
+            detectEncodingFromByteOrderMarks: false,
+            bufferSize: 1024,
+            leaveOpen: true);
+        var line = await reader.ReadLineAsync(cts.Token);
+        Assert.NotNull(line);
+
+        var json = JsonNode.Parse(line)!.AsObject();
+        Assert.Equal(7, json["id"]!.GetValue<int>());
+        Assert.Equal((int)ModelContextProtocol.McpErrorCode.InternalError, json["error"]!["code"]!.GetValue<int>());
+        Assert.Contains("boom", json["error"]!["message"]!.GetValue<string>(), StringComparison.Ordinal);
+
+        await cts.CancelAsync();
+    }
+
     private static NamedPipeServerStream CreateServerPipe(string pipeName)
     {
         var security = new PipeSecurity();
@@ -104,4 +144,10 @@ public sealed class NamedPipeIntegrationTests
             0,
             security);
     }
+}
+
+file sealed class ThrowingMcpHandler : IMcpHandler
+{
+    public ValueTask<JsonObject?> HandleAsync(JsonObject request, CancellationToken cancellationToken = default) =>
+        throw new InvalidOperationException("boom");
 }

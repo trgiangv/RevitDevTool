@@ -1,13 +1,7 @@
 using System.Reflection;
-
 using System.Security.Claims;
-
 using System.Text.Json;
-
 using System.Text.Json.Nodes;
-
-using DevTools.Mcp.Adapter.Bridging;
-using DevTools.Mcp.Adapter;
 using DevTools.Mcp.Catalog.Discovery;
 
 using Microsoft.Extensions.DependencyInjection;
@@ -174,7 +168,7 @@ internal static class DotnetToolsetTestHarness
 
             CancellationToken.None);
 
-        return SdkInvocationMapper.RoundTripCore(response);
+        return response;
 
     }
 

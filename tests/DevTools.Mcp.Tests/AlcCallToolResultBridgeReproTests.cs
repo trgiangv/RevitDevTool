@@ -34,9 +34,7 @@ public sealed class AlcCallToolResultBridgeReproTests
             IsError = false,
         };
 
-        Assert.True(ToolsetResultSerializer.IsForeignCallToolResultType(foreign.GetType()));
-
-        var bridged = ToolsetResultSerializer.BridgeForeignCallToolResult(foreign);
+        var bridged = ToolsetResultSerializer.ToInvocationResponse(foreign, null);
         Assert.Equal("Model healthy, 0 selected", McpToolInvoke.Text(bridged));
         Assert.True(bridged.StructuredContent!.Value.GetProperty("healthy").GetBoolean());
         Assert.False(bridged.IsError);
@@ -51,8 +49,8 @@ public sealed class AlcCallToolResultBridgeReproTests
             StructuredContent = JsonSerializer.SerializeToElement(new { healthy = true }),
         };
 
-        var bridged = ToolsetResultSerializer.BridgeForeignCallToolResult(foreign);
-        var sdk = SdkInvocationMapper.ToSdk(ToolsetResultSerializer.EnsureWireSafe(bridged));
+        var bridged = ToolsetResultSerializer.ToInvocationResponse(foreign, null);
+        var sdk = SdkInvocationMapper.ToSdk(InvocationResponseEncoder.PrepareForWire(bridged));
         var wire = JsonSerializer.Serialize(sdk, McpJsonUtilities.DefaultOptions);
 
         Assert.Contains("\"text\":\"ok\"", wire, StringComparison.Ordinal);
@@ -81,8 +79,6 @@ public sealed class AlcCallToolResultBridgeReproTests
     public void ToInvocationResponse_BareForeignTextBlock_DoesNotStripText()
     {
         var foreign = new ForeignMcp.TextContentBlock { Text = "bare text block" };
-        Assert.True(ToolsetResultSerializer.IsForeignContentBlockType(foreign.GetType()));
-
         var result = ToolsetResultSerializer.ToInvocationResponse(foreign, null);
         var sdk = SdkInvocationMapper.ToSdk(result);
         var wire = JsonSerializer.Serialize(sdk, McpJsonUtilities.DefaultOptions);
@@ -101,13 +97,13 @@ public sealed class AlcCallToolResultBridgeReproTests
             [
                 new ForeignMcp.ImageContentBlock
                 {
-                    DecodedData = png,
+                    Data = png,
                     MimeType = "image/png",
                 },
             ],
         };
 
-        var bridged = ToolsetResultSerializer.BridgeForeignCallToolResult(foreign);
+        var bridged = ToolsetResultSerializer.ToInvocationResponse(foreign, null);
         var image = Assert.IsType<McpImageContent>(Assert.Single(bridged.Content));
         Assert.Equal("image/png", image.MimeType);
         Assert.True(image.Data.AsSpan().SequenceEqual(png));
@@ -132,6 +128,20 @@ public sealed class AlcCallToolResultBridgeReproTests
         Assert.Contains("Found 3 elements", McpToolInvoke.Text(result));
         Assert.Equal(240, result.StructuredContent!.Value.GetProperty("count").GetInt32());
     }
+
+    [Fact]
+    public void BridgeForeignCallToolResult_UnsupportedBlock_Throws()
+    {
+        var foreign = new ForeignMcp.CallToolResult
+        {
+            Content = [new ForeignMcp.MysteryContentBlock()],
+        };
+
+        var ex = Assert.Throws<InvalidOperationException>(
+            () => ToolsetResultSerializer.ToInvocationResponse(foreign, null));
+
+        Assert.Contains("SDK contract", ex.Message, StringComparison.Ordinal);
+    }
 }
 
 file static class ForeignMcp
@@ -152,7 +162,12 @@ file static class ForeignMcp
     public sealed class ImageContentBlock
     {
         public string Type => "image";
-        public byte[]? DecodedData { get; set; }
+        public byte[]? Data { get; set; }
         public string? MimeType { get; set; }
+    }
+
+    public sealed class MysteryContentBlock
+    {
+        public string Type => "mystery";
     }
 }

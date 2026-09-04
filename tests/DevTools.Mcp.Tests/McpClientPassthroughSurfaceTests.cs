@@ -10,7 +10,7 @@ namespace DevTools.Mcp.Tests;
 public sealed class McpClientPassthroughSurfaceTests
 {
     private const string FailurePrefix =
-        "MCP SDK 2.2.0 passthrough surface changed (see ADR 0027 / docs/decisions/0027-mcp-sdk-host-wire-adoption.md): ";
+        "MCP SDK 2.2.0 passthrough surface changed (see ADR 0027 / docs/decisions/0027-mcp-product-surface.md): ";
 
     [Fact]
     public void McpClientImpl_Exposes_SessionHandler_And_SendRequestAsync()

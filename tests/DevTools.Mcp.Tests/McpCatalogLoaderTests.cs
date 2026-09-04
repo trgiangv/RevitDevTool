@@ -44,6 +44,19 @@ public sealed class McpCatalogLoaderTests
         Assert.Empty(logger.Messages);
     }
 
+    [Fact]
+    public void LoadCatalog_DropsDuplicateProtocolNamesInsteadOfChoosingFirstAtInvoke()
+    {
+        var first = new StubProvider("first", ExecutionMode.Dotnet, Tool("same_name"));
+        var second = new StubProvider("second", ExecutionMode.Python, Tool("same_name"));
+        var loader = new McpCatalogLoader([first, second], new CapturingLogger<McpCatalogLoader>());
+
+        var catalog = loader.LoadCatalog([], []);
+
+        Assert.Single(catalog.Tools);
+        Assert.Equal(ExecutionMode.Dotnet, catalog.Tools[0].Binding.SourceKind);
+    }
+
     private static McpRegistryCatalog CreateCatalog(params McpRegisteredTool[] tools) => new()
     {
         Tools = tools,

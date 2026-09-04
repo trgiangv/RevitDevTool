@@ -3,10 +3,10 @@ using ModelContextProtocol.Protocol;
 
 namespace DevTools.Mcp.Catalog.Discovery;
 
-/// <summary>Disconnected transport for SDK <see cref="RequestContext{TParams}"/> shims at the toolset boundary.</summary>
-internal sealed class SdkNoopTransport : TransportBase
+/// <summary>Non-network transport used while executing a catalog-resolved tool.</summary>
+internal sealed class ToolExecutionTransport : TransportBase
 {
-    internal SdkNoopTransport() : base("SdkNoop", NullLoggerFactory.Instance)
+    internal ToolExecutionTransport() : base("ToolExecution", NullLoggerFactory.Instance)
     {
     }
 

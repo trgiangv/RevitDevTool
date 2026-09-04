@@ -1,8 +1,7 @@
-using System.Reflection;
 using System.Text.Json;
 using DevTools.Mcp.Core;
 using DevTools.Mcp.Core.Invocation;
-using ModelContextProtocol;
+using DevTools.Mcp.Core.Utils;
 using ModelContextProtocol.Protocol;
 
 namespace DevTools.Mcp.Catalog.Discovery;
@@ -13,16 +12,10 @@ namespace DevTools.Mcp.Catalog.Discovery;
 /// </summary>
 public static class ToolsetMrtrBridge
 {
-    private static readonly JsonSerializerOptions CamelCaseOptions = new()
-    {
-        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-    };
-
-    private static readonly JsonSerializerOptions JsonOptions = McpJsonUtilities.DefaultOptions;
-
-    public static bool IsForeignInputRequired(Exception exception) =>
+    public static bool IsIsolatedInputRequired(Exception exception) =>
         exception is not InputRequiredException &&
-        string.Equals(exception.GetType().Name, nameof(InputRequiredException), StringComparison.Ordinal);
+        string.Equals(exception.GetType().Name, nameof(InputRequiredException), StringComparison.Ordinal) &&
+        exception.GetType().GetProperty("Result") is not null;
 
     public static McpInvocationResponse ToInputRequiredResponse(InputRequiredException exception) =>
         ToInputRequiredResponse(exception.Result);
@@ -42,7 +35,7 @@ public static class ToolsetMrtrBridge
         if (response.Meta?.TryGetPropertyValue(McpTaskExecutionMeta.Invocation.InputRequired, out var node) != true || node is null)
             return false;
 
-        result = node.Deserialize<InputRequiredResult>(JsonOptions);
+        result = node.Deserialize<InputRequiredResult>(ToolHelpers.ProtocolOptions);
         return result is not null;
     }
 
@@ -51,9 +44,7 @@ public static class ToolsetMrtrBridge
         if (foreign is InputRequiredException host)
             return host;
 
-        var foreignResult = foreign.GetType()
-            .GetProperty("Result", BindingFlags.Instance | BindingFlags.Public)
-            ?.GetValue(foreign);
+        var foreignResult = foreign.GetType().GetProperty("Result")?.GetValue(foreign);
         if (foreignResult is null)
         {
             return new InputRequiredException(
@@ -61,8 +52,13 @@ public static class ToolsetMrtrBridge
                 requestState: foreign.Message);
         }
 
-        var requestState = ReadProperty(foreignResult, "RequestState") as string;
-        var mappedRequests = MapInputRequests(ReadProperty(foreignResult, "InputRequests"));
+        var foreignJson = SerializeRuntime(foreignResult);
+        var hostResult = foreignJson.Deserialize<InputRequiredResult>(ToolHelpers.ProtocolOptions);
+        if (hostResult is not null)
+            return new InputRequiredException(hostResult);
+
+        var requestState = foreignResult.GetType().GetProperty("RequestState")?.GetValue(foreignResult) as string;
+        var mappedRequests = MapInputRequests(foreignResult.GetType().GetProperty("InputRequests")?.GetValue(foreignResult));
 
         if (mappedRequests is null && requestState is null)
             return new InputRequiredException(requestState: foreign.Message);
@@ -103,79 +99,12 @@ public static class ToolsetMrtrBridge
         if (foreign is InputRequest host)
             return host;
 
-        var json = JsonSerializer.Serialize(BagObject(foreign), CamelCaseOptions);
-        return JsonSerializer.Deserialize<InputRequest>(json, JsonOptions);
+        var json = JsonSerializer.Serialize(foreign, foreign.GetType(), ToolHelpers.RuntimeJsonOptions);
+        return JsonSerializer.Deserialize<InputRequest>(json, ToolHelpers.ProtocolOptions);
     }
 
-    private static Dictionary<string, object?> BagObject(object value)
-    {
-        var nested = new Dictionary<string, object?>(StringComparer.Ordinal);
-        foreach (var prop in value.GetType().GetProperties(BindingFlags.Instance | BindingFlags.Public))
-        {
-            if (!IsReadableProperty(prop))
-                continue;
-
-            var child = prop.GetValue(value);
-            if (child is null)
-                continue;
-
-            nested[ToCamel(prop.Name)] = ToBagValue(child);
-        }
-
-        return nested;
-    }
-
-    private static object? ToBagValue(object value)
-    {
-        if (IsDirectBagValue(value))
-            return value;
-        if (value.GetType().IsEnum)
-            return value.ToString();
-        if (value is System.Collections.IDictionary dict)
-            return BagDictionary(dict);
-        if (value is System.Collections.IEnumerable enumerable and not string)
-            return BagEnumerable(enumerable);
-        return BagObject(value);
-    }
-
-    private static Dictionary<string, object?> BagDictionary(System.Collections.IDictionary dict)
-    {
-        var map = new Dictionary<string, object?>(StringComparer.Ordinal);
-        foreach (System.Collections.DictionaryEntry entry in dict)
-        {
-            if (entry.Key?.ToString() is not { } key || entry.Value is null)
-                continue;
-
-            map[key] = IsDirectBagValue(entry.Value) ? entry.Value : BagObject(entry.Value);
-        }
-
-        return map;
-    }
-
-    private static List<object?> BagEnumerable(System.Collections.IEnumerable enumerable)
-    {
-        var list = new List<object?>();
-        foreach (var item in enumerable)
-        {
-            if (item is null)
-                continue;
-
-            list.Add(IsDirectBagValue(item) ? item : BagObject(item));
-        }
-
-        return list;
-    }
-
-    private static bool IsReadableProperty(PropertyInfo prop) =>
-        prop.CanRead && prop.GetIndexParameters().Length == 0;
-
-    private static bool IsDirectBagValue(object value) =>
-        value is string or bool or int or long or double or float or decimal or JsonElement;
-
-    private static string ToCamel(string name) =>
-        string.IsNullOrEmpty(name) ? name : char.ToLowerInvariant(name[0]) + name[1..];
-
-    private static object? ReadProperty(object target, string name) =>
-        target.GetType().GetProperty(name, BindingFlags.Instance | BindingFlags.Public | BindingFlags.IgnoreCase)
-            ?.GetValue(target);
+    private static JsonElement SerializeRuntime(object value) =>
+        // Runtime metadata is required only for the foreign exception payload;
+        // protocol deserialization still uses the host SDK contract.
+        JsonSerializer.SerializeToElement(value, value.GetType(), ToolHelpers.RuntimeJsonOptions);
 }

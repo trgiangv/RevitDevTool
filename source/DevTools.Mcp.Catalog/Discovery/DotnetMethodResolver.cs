@@ -1,4 +1,5 @@
 using System.Reflection;
+using DevTools.Mcp.Catalog.Isolation;
 using DevTools.Mcp.Core.Models;
 using Microsoft.Extensions.Logging;
 using ModelContextProtocol.Server;

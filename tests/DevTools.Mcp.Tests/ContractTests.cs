@@ -6,7 +6,7 @@ using DevTools.FileMetadata.Revit;
 using DevTools.Hosting;
 using DevTools.Mcp.Catalog;
 using DevTools.Mcp.Adapter.Bridging;
-using DevTools.Mcp.Adapter.Execution;
+using DevTools.Execution.External.Mcp.Backends;
 using Microsoft.Extensions.DependencyInjection;
 using ModelContextProtocol.Protocol;
 
@@ -178,47 +178,47 @@ public class ContractTests
     }
 
     [Fact]
-    public void SdkInvocationMapper_RoundTripsEverySupportedSdkContentShape()
+    public void SdkInvocationMapper_ToSdk_PreservesEverySupportedContentShape()
     {
         var annotations = new Annotations { Priority = 0.5f };
         var blob = BlobResourceContents.FromBytes(new byte[] { 6, 7 }, "test://blob", "application/octet-stream");
         blob.Meta = new JsonObject { ["resource"] = "blob" };
-        var result = new CallToolResult
+        var response = new McpInvocationResponse
         {
             IsError = true,
             StructuredContent = JsonDocument.Parse("{\"answer\":42}").RootElement.Clone(),
             Meta = new JsonObject { ["response"] = "meta" },
             Content =
             [
-                new TextContentBlock { Text = "text", Annotations = annotations, Meta = new JsonObject { ["text"] = 1 } },
-                ImageContentBlock.FromBytes(new byte[] { 1, 2, 3 }, "image/png"),
-                AudioContentBlock.FromBytes(new byte[] { 4, 5 }, "audio/wav"),
-                new EmbeddedResourceBlock { Resource = new TextResourceContents { Uri = "test://text", MimeType = "text/plain", Text = "resource", Meta = new JsonObject { ["resource"] = "text" } } },
-                new EmbeddedResourceBlock { Resource = blob },
-                new ResourceLinkBlock { Uri = "test://link", Name = "link", Title = "Link title", Description = "A linked resource", MimeType = "text/plain", Size = 42, Meta = new JsonObject { ["link"] = 1 } }
+                new McpTextContent("text") { Annotations = annotations, Meta = new JsonObject { ["text"] = 1 } },
+                new McpImageContent(new byte[] { 1, 2, 3 }, "image/png"),
+                new McpAudioContent(new byte[] { 4, 5 }, "audio/wav"),
+                new McpEmbeddedTextResourceContent("test://text", "resource", "text/plain") { ResourceMeta = new JsonObject { ["resource"] = "text" } },
+                new McpEmbeddedBlobResourceContent("test://blob", new byte[] { 6, 7 }, "application/octet-stream") { ResourceMeta = new JsonObject { ["resource"] = "blob" } },
+                new McpResourceLinkContent("test://link", "link", "Link title", "A linked resource", "text/plain", 42) { Meta = new JsonObject { ["link"] = 1 } }
             ]
         };
 
-        var roundTripped = SdkInvocationMapper.ToSdk(SdkInvocationMapper.ToCore(result));
+        var sdk = SdkInvocationMapper.ToSdk(response);
 
-        Assert.True(roundTripped.IsError);
-        Assert.Equal("meta", roundTripped.Meta!["response"]!.GetValue<string>());
-        Assert.Equal("{\"answer\":42}", roundTripped.StructuredContent!.Value.GetRawText());
-        Assert.Equal(6, roundTripped.Content.Count);
-        Assert.Equal(0.5f, roundTripped.Content[0].Annotations!.Priority);
-        Assert.Equal("text", ((TextContentBlock)roundTripped.Content[0]).Text);
-        Assert.Equal([1, 2, 3], ((ImageContentBlock)roundTripped.Content[1]).DecodedData.ToArray());
-        Assert.Equal([4, 5], ((AudioContentBlock)roundTripped.Content[2]).DecodedData.ToArray());
-        var textResource = Assert.IsType<TextResourceContents>(((EmbeddedResourceBlock)roundTripped.Content[3]).Resource);
+        Assert.True(sdk.IsError);
+        Assert.Equal("meta", sdk.Meta!["response"]!.GetValue<string>());
+        Assert.Equal("{\"answer\":42}", sdk.StructuredContent!.Value.GetRawText());
+        Assert.Equal(6, sdk.Content.Count);
+        Assert.Equal(0.5f, sdk.Content[0].Annotations!.Priority);
+        Assert.Equal("text", ((TextContentBlock)sdk.Content[0]).Text);
+        Assert.Equal([1, 2, 3], ((ImageContentBlock)sdk.Content[1]).DecodedData.ToArray());
+        Assert.Equal([4, 5], ((AudioContentBlock)sdk.Content[2]).DecodedData.ToArray());
+        var textResource = Assert.IsType<TextResourceContents>(((EmbeddedResourceBlock)sdk.Content[3]).Resource);
         Assert.Equal("test://text", textResource.Uri);
         Assert.Equal("resource", textResource.Text);
         Assert.Equal("text", textResource.Meta!["resource"]!.GetValue<string>());
-        var blobResource = Assert.IsType<BlobResourceContents>(((EmbeddedResourceBlock)roundTripped.Content[4]).Resource);
+        var blobResource = Assert.IsType<BlobResourceContents>(((EmbeddedResourceBlock)sdk.Content[4]).Resource);
         Assert.Equal("test://blob", blobResource.Uri);
         Assert.Equal("application/octet-stream", blobResource.MimeType);
         Assert.Equal([6, 7], blobResource.DecodedData.ToArray());
         Assert.Equal("blob", blobResource.Meta!["resource"]!.GetValue<string>());
-        var resourceLink = Assert.IsType<ResourceLinkBlock>(roundTripped.Content[5]);
+        var resourceLink = Assert.IsType<ResourceLinkBlock>(sdk.Content[5]);
         Assert.Equal("test://link", resourceLink.Uri);
         Assert.Equal("link", resourceLink.Name);
         Assert.Equal("Link title", resourceLink.Title);
@@ -246,7 +246,7 @@ public class ContractTests
             ]
         };
 
-        var actual = PythonResultParser.ParseCallToolResult(JsonSerializer.Serialize(expected, ModelContextProtocol.McpJsonUtilities.DefaultOptions));
+        var actual = PythonMcpToolBackend.ReadToolResult(JsonSerializer.Serialize(expected, ModelContextProtocol.McpJsonUtilities.DefaultOptions));
 
         Assert.True(actual.IsError);
         Assert.Equal("meta", actual.Meta!["response"]!.GetValue<string>());
@@ -258,15 +258,6 @@ public class ContractTests
         Assert.Equal("application/octet-stream", blob.MimeType);
         Assert.Equal(new byte[] { 8, 9 }, blob.DecodedData.ToArray());
         Assert.Equal("meta", blob.Meta!["resource"]!.GetValue<string>());
-    }
-
-    [Theory]
-    [InlineData("tool_use")]
-    [InlineData("tool_result")]
-    public void SdkInvocationMapper_RejectsUnsupportedSdkContent(string type)
-    {
-        var block = JsonSerializer.Deserialize<ContentBlock>($"{{\"type\":\"{type}\",\"uri\":\"test://resource\",\"name\":\"resource\",\"id\":\"id\",\"input\":{{}},\"toolUseId\":\"id\",\"content\":[]}}")!;
-        Assert.Throws<NotSupportedException>(() => SdkInvocationMapper.ToCore(new CallToolResult { Content = [block] }));
     }
 
     [Fact]

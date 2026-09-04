@@ -1,5 +1,5 @@
 using System.Text.Json;
-using DevTools.Mcp.Adapter.Execution;
+using DevTools.Execution.External.Mcp.Backends;
 using ModelContextProtocol;
 using ModelContextProtocol.Protocol;
 
@@ -26,7 +26,7 @@ public sealed class PythonResourceResultParserTests
         };
         var json = JsonSerializer.Serialize(expected, McpJsonUtilities.DefaultOptions);
 
-        var actual = PythonResultParser.ParseReadResourceResult(json);
+        var actual = PythonMcpToolBackend.ReadResourceResult(json);
         var text = Assert.IsType<TextResourceContents>(Assert.Single(actual.Contents));
 
         Assert.Equal("ok", text.Text);
@@ -40,7 +40,7 @@ public sealed class PythonResourceResultParserTests
         const string json = """{"contents":[{"content":"hello","mime_type":"text/plain"}]}""";
 
         var ex = Assert.Throws<InvalidOperationException>(
-            () => PythonResultParser.ParseReadResourceResult(json));
+            () => PythonMcpToolBackend.ReadResourceResult(json));
         Assert.Contains("resource", ex.Message, StringComparison.OrdinalIgnoreCase);
     }
 
@@ -50,7 +50,7 @@ public sealed class PythonResourceResultParserTests
         const string json = """{"contents":["hello"]}""";
 
         Assert.Throws<InvalidOperationException>(
-            () => PythonResultParser.ParseReadResourceResult(json));
+            () => PythonMcpToolBackend.ReadResourceResult(json));
     }
 
     [Fact]
@@ -67,7 +67,7 @@ public sealed class PythonResourceResultParserTests
         var json = JsonSerializer.Serialize(inputRequired, McpJsonUtilities.DefaultOptions);
 
         var ex = Assert.Throws<InputRequiredException>(() =>
-            PythonResultParser.ParseReadResourceResult(json));
+            PythonMcpToolBackend.ReadResourceResult(json));
 
         Assert.NotNull(ex.Result.InputRequests);
         Assert.Contains("confirm", ex.Result.InputRequests!.Keys);
