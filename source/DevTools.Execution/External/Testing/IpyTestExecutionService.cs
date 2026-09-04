@@ -192,7 +192,7 @@ public sealed class IpyTestExecutionService(IScriptExecutionStrategyFactory stra
 
         var requestBody = JsonSerializer.Serialize(new IpyDriverFileRequest(
             testPath, workspaceRoot, prefix, nodeIds, ioPaths.ResultPath, maxfail));
-        File.WriteAllText(ioPaths.RequestPath, requestBody);
+        await File.WriteAllTextAsync(ioPaths.RequestPath, requestBody, cancellationToken);
 
         try
         {
