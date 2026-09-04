@@ -4,7 +4,7 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <InternalsVisibleTo Include="DevTools.Mcp.Tests" />
+        <InternalsVisibleTo Include="DevTools.Mcp.Client.Tests" />
     </ItemGroup>
 
     <ItemGroup>

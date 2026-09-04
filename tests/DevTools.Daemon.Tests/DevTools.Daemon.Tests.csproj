@@ -1,0 +1,31 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <TargetFramework>net10.0-windows</TargetFramework>
+        <IsPackable>false</IsPackable>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <PackageReference Include="xunit.v3"/>
+        <PackageReference Include="Moq"/>
+        <PackageReference Include="ModelContextProtocol"/>
+        <PackageReference Include="Microsoft.Extensions.DependencyInjection"/>
+        <PackageReference Include="Microsoft.Extensions.Hosting"/>
+        <PackageReference Include="Microsoft.Extensions.Logging.Abstractions"/>
+    </ItemGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\..\source\DevTools.Daemon\DevTools.Daemon.csproj" AdditionalProperties="SelfContained=false;PublishSingleFile=false"/>
+        <ProjectReference Include="..\..\source\DevTools.Mcp.Core\DevTools.Mcp.Core.csproj"/>
+        <ProjectReference Include="..\..\source\DevTools.Mcp.Client\DevTools.Mcp.Client.csproj"/>
+        <ProjectReference Include="..\..\source\DevTools.Mcp.Server\DevTools.Mcp.Server.csproj"/>
+        <ProjectReference Include="..\..\source\DevTools.FileMetadata.Core\DevTools.FileMetadata.Core.csproj"/>
+        <ProjectReference Include="..\..\source\DevTools.Hosting\DevTools.Hosting.csproj"/>
+        <ProjectReference Include="..\..\source\DevTools.Settings\DevTools.Settings.csproj"/>
+    </ItemGroup>
+
+    <ItemGroup>
+        <Using Include="Xunit"/>
+    </ItemGroup>
+
+</Project>

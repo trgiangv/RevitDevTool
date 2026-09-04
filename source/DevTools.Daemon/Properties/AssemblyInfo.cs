@@ -1,3 +1,3 @@
 using System.Runtime.CompilerServices;
 
-[assembly: InternalsVisibleTo("DevTools.Mcp.Tests")]
+[assembly: InternalsVisibleTo("DevTools.Daemon.Tests")]

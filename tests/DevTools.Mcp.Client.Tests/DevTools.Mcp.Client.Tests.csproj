@@ -1,0 +1,32 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <TargetFramework>net10.0-windows</TargetFramework>
+        <IsPackable>false</IsPackable>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <PackageReference Include="xunit.v3"/>
+        <PackageReference Include="ModelContextProtocol"/>
+        <PackageReference Include="Microsoft.Extensions.DependencyInjection"/>
+        <PackageReference Include="Microsoft.Extensions.Logging.Abstractions"/>
+    </ItemGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\..\source\DevTools.Mcp.Core\DevTools.Mcp.Core.csproj"/>
+        <ProjectReference Include="..\..\source\DevTools.Mcp.Catalog\DevTools.Mcp.Catalog.csproj"/>
+        <ProjectReference Include="..\..\source\DevTools.Mcp.Client\DevTools.Mcp.Client.csproj"/>
+        <ProjectReference Include="..\..\source\DevTools.Mcp.Server\DevTools.Mcp.Server.csproj"/>
+        <ProjectReference Include="..\..\source\DevTools.Ipc\DevTools.Ipc.csproj"/>
+    </ItemGroup>
+
+    <ItemGroup>
+        <Using Include="Xunit"/>
+        <Using Include="DevTools.Ipc"/>
+        <Using Include="DevTools.Mcp.Core"/>
+        <Using Include="DevTools.Mcp.Core.Catalog"/>
+        <Using Include="DevTools.Mcp.Catalog"/>
+        <Using Include="DevTools.Mcp.Server.Hosting"/>
+    </ItemGroup>
+
+</Project>

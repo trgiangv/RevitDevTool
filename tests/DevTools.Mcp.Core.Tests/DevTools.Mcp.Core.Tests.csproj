@@ -1,0 +1,31 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <TargetFramework>net10.0-windows</TargetFramework>
+        <IsPackable>false</IsPackable>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <PackageReference Include="xunit.v3"/>
+        <PackageReference Include="ModelContextProtocol"/>
+    </ItemGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\..\source\DevTools.Mcp.Core\DevTools.Mcp.Core.csproj"/>
+        <ProjectReference Include="..\..\source\DevTools.FileMetadata.Core\DevTools.FileMetadata.Core.csproj"/>
+        <ProjectReference Include="..\..\source\DevTools.FileMetadata.Revit\DevTools.FileMetadata.Revit.csproj"/>
+        <ProjectReference Include="..\..\source\DevTools.FileMetadata.Acad\DevTools.FileMetadata.Acad.csproj"/>
+        <ProjectReference Include="..\..\source\DevTools.Hosting\DevTools.Hosting.csproj"/>
+    </ItemGroup>
+
+    <ItemGroup>
+        <Using Include="Xunit"/>
+        <Using Include="DevTools.Mcp.Core"/>
+        <Using Include="DevTools.Mcp.Core.Models"/>
+        <Using Include="DevTools.Mcp.Core.Protocol"/>
+        <Using Include="DevTools.Mcp.Core.Protocol.Invocation"/>
+        <Using Include="DevTools.Mcp.Core.Results"/>
+        <Using Include="DevTools.Mcp.Core.Utils"/>
+    </ItemGroup>
+
+</Project>

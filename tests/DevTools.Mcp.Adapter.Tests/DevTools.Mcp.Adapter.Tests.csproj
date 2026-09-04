@@ -1,0 +1,41 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <TargetFramework>net10.0-windows</TargetFramework>
+        <IsPackable>false</IsPackable>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <PackageReference Include="xunit.v3"/>
+        <PackageReference Include="ModelContextProtocol"/>
+        <PackageReference Include="ModelContextProtocol.Extensions.Tasks"/>
+        <PackageReference Include="Microsoft.Extensions.DependencyInjection"/>
+        <PackageReference Include="Moq"/>
+    </ItemGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\..\source\DevTools.Mcp.Core\DevTools.Mcp.Core.csproj"/>
+        <ProjectReference Include="..\..\source\DevTools.Mcp.Catalog\DevTools.Mcp.Catalog.csproj"/>
+        <ProjectReference Include="..\..\source\DevTools.Mcp.Adapter\DevTools.Mcp.Adapter.csproj"/>
+        <ProjectReference Include="..\..\source\DevTools.Ipc\DevTools.Ipc.csproj"/>
+        <ProjectReference Include="..\..\source\DevTools.Execution\DevTools.Execution.csproj"/>
+        <ProjectReference Include="..\..\source\DevTools.Mcp.Server\DevTools.Mcp.Server.csproj"/>
+    </ItemGroup>
+
+    <ItemGroup>
+        <Using Include="Xunit"/>
+        <Using Include="DevTools.Ipc"/>
+        <Using Include="DevTools.Mcp.Core"/>
+        <Using Include="DevTools.Mcp.Core.Catalog"/>
+        <Using Include="DevTools.Mcp.Core.Invocation"/>
+        <Using Include="DevTools.Mcp.Core.Models"/>
+        <Using Include="DevTools.Mcp.Core.Protocol"/>
+        <Using Include="DevTools.Mcp.Core.Protocol.Invocation"/>
+        <Using Include="DevTools.Mcp.Core.Results"/>
+        <Using Include="DevTools.Mcp.Catalog"/>
+        <Using Include="DevTools.Mcp.Catalog.Discovery"/>
+        <Using Include="DevTools.Mcp.Core.Utils"/>
+        <Using Include="DevTools.Execution.Abstractions"/>
+    </ItemGroup>
+
+</Project>

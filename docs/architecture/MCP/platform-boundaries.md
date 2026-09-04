@@ -151,8 +151,8 @@ chosen ([S5 strategy gate](../../plans/completed/2026-09-03-mcp-layer-identity-s
 
 ### Tests
 
-- `tests/DevTools.Mcp.Tests/ToolsetResultSerializerTests.cs`
-- `tests/DevTools.Mcp.Tests/ToolsetInvokerTests.cs`
+- `tests/DevTools.Mcp.Catalog.Tests/ToolsetResultSerializerTests.cs`
+- `tests/DevTools.Mcp.Catalog.Tests/ToolsetInvokerTests.cs`
 - Live checklist: `docs/agents/mcp-integration-test.md`
 
 ---
@@ -296,11 +296,13 @@ Register **one** overlapping toolset at a time (Python vs C# `revit_*` name coll
 ## Verification commands
 
 ```powershell
-# ALC mapper + invoke harness (no live host)
-dotnet run --project tests/DevTools.Mcp.Tests/DevTools.Mcp.Tests.csproj -- --filter "ToolsetResultSerializer|ToolsetInvoker|InvokeDynamicSdkHarness"
+# ALC mapper (Catalog) + invoke harness (Server) — no live host
+dotnet run --project tests/DevTools.Mcp.Catalog.Tests/DevTools.Mcp.Catalog.Tests.csproj -- --filter "ToolsetResultSerializer|ToolsetInvoker"
+dotnet run --project tests/DevTools.Mcp.Server.Tests/DevTools.Mcp.Server.Tests.csproj -- --filter "InvokeDynamicSdkHarness"
 
 # Parser / structured output
-dotnet run --project tests/DevTools.Mcp.Tests/DevTools.Mcp.Tests.csproj -- --filter "RevitMcpToolSetParser|StructuredOutput"
+dotnet run --project tests/DevTools.Mcp.Catalog.Tests/DevTools.Mcp.Catalog.Tests.csproj -- --filter "RevitMcpToolSetParser"
+dotnet run --project tests/DevTools.Mcp.Server.Tests/DevTools.Mcp.Server.Tests.csproj -- --filter "StructuredOutput"
 
 # Live integration checklist
 # docs/agents/mcp-integration-test.md — Scenarios 9 (templates), 10 (delete warning)
@@ -320,4 +322,4 @@ dotnet run --project tests/DevTools.Mcp.Tests/DevTools.Mcp.Tests.csproj -- --fil
 | ALC invoke + map | `source/DevTools.Mcp.Catalog/Discovery/ToolsetInvoker.cs`, `ToolsetResultSerializer.cs` |
 | Toolset load | `source/DevTools.Mcp.Catalog/Isolation/McpToolsetContext.cs`, `McpToolsetIsolationPlan.cs` |
 | Host adapter | `source/DevTools.Mcp.Adapter/Host/McpHandler.cs` |
-| Mock MRTR harness | `tests/DevTools.Mcp.Tests/Harness/McpSdkTestHarness.cs` |
+| Mock MRTR harness | `tests/DevTools.Mcp.Server.Tests/Harness/McpSdkTestHarness.cs` |

@@ -122,7 +122,12 @@ Policy: [0031](../../decisions/0031-daemon-json-source-gen.md) — source-gen JS
 
 ## Verification
 
-- `tests/DevTools.Mcp.Tests` covers ConnectedHostCatalog, host spec conformance, named-pipe pairing, server options, and pytest bridge framing.
+- `tests/DevTools.Mcp.Core.Tests` — protocol models and JSON encoders.
+- `tests/DevTools.Mcp.Catalog.Tests` — ConnectedHostCatalog, parsers, toolset isolation.
+- `tests/DevTools.Mcp.Adapter.Tests` — host spec conformance and named-pipe handler.
+- `tests/DevTools.Mcp.Client.Tests` / `Server.Tests` — pipe scanner, SDK stream, search/invoke harness.
+- `tests/DevTools.Daemon.Tests` — stdio composition.
+- `tests/DevTools.Execution.Tests` — pytest bridge framing and pipe-name identity.
 - Live-host smoke remains required for full host dispatch confidence.
 
 ## Related

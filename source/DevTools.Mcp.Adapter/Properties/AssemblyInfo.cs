@@ -1,4 +1,4 @@
 using System.Runtime.CompilerServices;
 
 [assembly: InternalsVisibleTo("DevTools.Execution")]
-[assembly: InternalsVisibleTo("DevTools.Mcp.Tests")]
+[assembly: InternalsVisibleTo("DevTools.Mcp.Adapter.Tests")]
