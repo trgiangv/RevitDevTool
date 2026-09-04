@@ -1,0 +1,14 @@
+{
+  "platformOptions": {
+    "Coverlet": {
+      "include": "[DevTools.*]*",
+      "exclude": "[*.Tests]*,[*.Fixtures]*,[coverlet.*]*,[DevTools.MahApps.Metro]*,[DevTools.ControlzEx]*,[DevTools.Microsoft.Xaml.Behaviors]*",
+      "excludeByAttribute": "GeneratedCode,ExcludeFromCodeCoverage,ExcludeFromCodeCoverageAttribute,CompilerGeneratedAttribute",
+      "excludeByFile": "**/obj/**,**/bin/**,**/libs/**",
+      "format": "json,cobertura",
+      "includeTestAssembly": false,
+      "skipAutoProps": true,
+      "excludeAssembliesWithoutSources": "MissingAll"
+    }
+  }
+}

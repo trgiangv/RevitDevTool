@@ -52,6 +52,12 @@ superpowers/
 cert.txt
 *.cer
 
+# Coverlet / MTP results
+**/TestResults/
+coverage*.json
+coverage*.xml
+*.cobertura.xml
+
 # Local TestAdapter runtime
 source/DevTools.TestAdapter/build/runtime/
 
