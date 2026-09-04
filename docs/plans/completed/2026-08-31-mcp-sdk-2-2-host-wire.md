@@ -8,9 +8,8 @@ Completed 2026-08-31
 
 ## Outcome
 
-Living MCP docs match the **2.2.0** binary and [0027](../../decisions/0027-mcp-sdk-host-wire-adoption.md) /
-[0028](../../decisions/0028-host-alc-progress-notifications.md) /
-[0029](../../decisions/0029-mcp-use-case-limits-not-full-protocol.md). Host `McpSpecKeys`
+Living MCP docs match the **2.2.0** binary and [0027](../../decisions/0027-mcp-product-surface.md)
+(host-wire / product-limit ADRs later collapsed into 0027). Host `McpSpecKeys`
 aliases SDK constants. Host `tools/call` params deserialize as SDK
 `CallToolRequestParams`. Catalog list DTOs serialize as SDK `Tool` /
 `Resource` without changing Cursor `tools/list`. Host pipe still does
@@ -19,8 +18,7 @@ aliases SDK constants. Host `tools/call` params deserialize as SDK
 
 ## Context
 
-- Policy: [0027](../../decisions/0027-mcp-sdk-host-wire-adoption.md),
-  [0028](../../decisions/0028-host-alc-progress-notifications.md)
+- Policy: [0027](../../decisions/0027-mcp-product-surface.md)
 - Partially superseded: [0012](../../decisions/0012-host-mcp-spec-engine.md)
 - Map (Phase 0 edits): [`docs/architecture/MCP/`](../../architecture/MCP/)
 - Package pin: `Directory.Packages.props` → `ModelContextProtocol` **2.2.0**
@@ -45,7 +43,7 @@ Out of scope:
 - Replacing `McpInvocationResponse` with `CallToolResult`
 - `McpServerTool.Create` in MetadataLoadContext catalog parser
 - Enabling daemon `UseStructuredContent` without Cursor live proof
-- Forwarding `invoke_dynamic` `Meta`/`progressToken` without a host progress emitter (G5 / 0028)
+- Forwarding `invoke_dynamic` `Meta`/`progressToken` without a host progress emitter (G5 / 0027)
 - Host MCP Tasks on the pipe, `resources/subscribe`, `completions`
 - Editing `docs/plans/completed/*`
 - Upstream SDK PR (file an issue later; do not block)
@@ -61,12 +59,12 @@ Files (architecture layer + broken-link fixes only):
 
 | File | Change |
 |------|--------|
-| `docs/architecture/MCP/sdk-2-0-gap-matrix.md` | `git mv` → `sdk-gap-matrix.md`; title/packages **2.2.0**; Progress row ❌/⏸ for host/ALC per 0028; keep ✅ only for daemon-fixed SDK tools; rename `CallToolRequestServiceProvider` → `ToolsetInvocationServices`; add G5 stub pointing at 0028 |
+| `docs/architecture/MCP/sdk-2-0-gap-matrix.md` | `git mv` → `sdk-gap-matrix.md`; title/packages **2.2.0**; Progress row ❌/⏸ for host/ALC per 0027; keep ✅ only for daemon-fixed SDK tools; rename `CallToolRequestServiceProvider` → `ToolsetInvocationServices`; add G5 stub pointing at 0027 |
 | `docs/architecture/MCP/README.md` | Link + “2.0.0” → 2.2.0 |
 | `docs/architecture/MCP/platform-boundaries.md` | Date; ADR blurb cites 0027 (SDK types allowed; no SDK *session*); withdraw pass-through rule 2 `progressToken` claim; Progress table row; `CallToolRequestServiceProvider` name |
 | `docs/product/mcp.md` | Fix gap-matrix link only |
-| `docs/plans/active/2026-08-02-mrtr-implementation.md` | Fix gap-matrix path + provider name (then still active; **moved to completed** 2026-08-31 under [0029](../../decisions/0029-mcp-use-case-limits-not-full-protocol.md)) |
-| `docs/decisions/0027-mcp-sdk-host-wire-adoption.md` | Update remaining `sdk-2-0-gap-matrix.md` link after rename |
+| `docs/plans/active/2026-08-02-mrtr-implementation.md` | Fix gap-matrix path + provider name (then still active; **moved to completed** 2026-08-31 under [0027](../../decisions/0027-mcp-product-surface.md)) |
+| `docs/decisions/0027-mcp-product-surface.md` | Update remaining `sdk-2-0-gap-matrix.md` link after rename |
 
 Do **not** copy 0027 tables into architecture docs. Link the ADR.
 

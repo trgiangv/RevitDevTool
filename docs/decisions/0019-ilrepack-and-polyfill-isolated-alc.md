@@ -6,7 +6,7 @@ Date: 2026-08-16
 
 Accepted
 
-[0027](0027-mcp-sdk-host-wire-adoption.md) owns the host **wire** (SDK DTOs
+[0027](0027-mcp-product-surface.md) owns the host **wire** (SDK DTOs
 allowed; no `McpServer` session on the pipe). This decision owns the **merge**:
 one ILRepack pipeline for every opt-in project. MCP is not a second packing
 mode. The load context and TFM are the variables.
@@ -42,10 +42,14 @@ plus `KeepScintillaWinX64Native` in `props/Common.props`). They are not
 copy-local at output root, so they are not ILRepack inputs.
 
 MCP follows that same input rule, split by who loads the assembly. .NET
-toolsets compile against MCP (`ExcludeAssets=runtime`) and do not ship it:
-Catalog reflects into a collectible ALC that binds `ModelContextProtocol*` from
-the host load context. Host-loaded projects copy-local MCP so ILRepack embeds
-it (no siblings). Do not exclude `ModelContextProtocol*` by filename.
+toolsets compile against MCP (`ExcludeAssets=runtime`) and do not ship it.
+Catalog loads them in a collectible ALC whose isolation plan `Pin`s MCP
+contract assemblies from the host default context. Host ILRepack embeds
+copy-local MCP into the add-in DLL, removing standalone `ModelContextProtocol*`
+assembly identities from the output directory. Kernel `Pin` keys shares by
+**simple name** only; automatic bind from the host load context for repacked
+MCP is **not implemented** today. Do not exclude `ModelContextProtocol*` by
+filename.
 
 ## Decision
 
@@ -73,15 +77,24 @@ it (no siblings). Do not exclude `ModelContextProtocol*` by filename.
    JetBrains.Annotations is compile-only (`PrivateAssets=all`,
    `ExcludeAssets=runtime` in `props/Common.props`). .NET toolsets keep MCP
    compile-only the same way. Host-loaded projects still copy-local MCP so
-   ILRepack embeds it and the toolset ALC can bind `ModelContextProtocol*` from
-   the host load context. None of these are ILRepack filename excludes.
+   ILRepack embeds it (no siblings). That merge removes standalone
+   `ModelContextProtocol*` identities; toolset ALC name-based bind from the
+   host load context is not implemented in the isolation kernel. None of these
+   are ILRepack filename excludes.
    `RepackBinariesExcludes` is only for assemblies that must remain loadable
    beside the output (MahApps `pack://`, NUnit payload, Nice3point Polyfill
    sidecar).
 7. **MCP uses that rule, not a special ILRepack mode.** Copy-local MCP on the
-   host merges into the host DLL (no siblings). Toolsets use
-   `ExcludeAssets=runtime` — Catalog reflects, they do not ship MCP. Do not
-   exclude `ModelContextProtocol*` by name.
+   host merges into the host DLL (no siblings). That ILRepack step removes
+   standalone `ModelContextProtocol*` assembly identities from the output
+   directory. Toolsets use `ExcludeAssets=runtime` — they do not ship MCP.
+   `McpToolsetIsolationPlan` `Pin`s host-loaded MCP contract assemblies
+   (kernel share table keyed by simple name). Automatic toolset ALC bind from
+   the host load context for repacked MCP is **not implemented** in the
+   isolation kernel; toolsets on that path cannot resolve MCP by name without a
+   separate strategy (S1 / S2 — open;
+   [`2026-09-03-mcp-layer-identity-s5`](../plans/completed/2026-09-03-mcp-layer-identity-s5.md)).
+   Do not exclude `ModelContextProtocol*` by name from ILRepack.
 8. **Defaults live in `props/ILRepack.targets`; a csproj only opts in or
    overrides.** Driver defaults: `ILRepackable=false`, `ILRepackUnion=true`,
    `ILRepackInternalize=false`, `ILRepackILLink=false`, `ILRepackParallel=true`.
@@ -125,7 +138,8 @@ Positive:
 - net48 still gets Polyfill; modern TFMs use the BCL.
 - Native runtimes and compile-only packages stay out of the merge without
   filename excludes.
-- MCP toolsets stay compile-only; the host image carries MCP for ALC bind.
+- MCP toolsets stay compile-only; the host image carries one in-process MCP
+  copy but removes standalone assembly identities needed for name-based ALC bind.
 
 Tradeoffs:
 
@@ -134,19 +148,24 @@ Tradeoffs:
 - `/union` + a future second Polyfill copy will fail the same way; exclude or
   stop embedding, do not add comments.
 - Catalog still uses SDK types to reflect-invoke toolsets, so the host pack
-  embeds MCP. [0027](0027-mcp-sdk-host-wire-adoption.md) owns the pipe DTOs, not
+  embeds MCP. [0027](0027-mcp-product-surface.md) owns the pipe DTOs, not
   this merge. Do not add an MCP filename exclude.
+- Toolsets with `ExcludeAssets=runtime` on a repacked host need a foreign JSON
+  bridge or a packaging strategy (S1 / S2 — open;
+  [`2026-09-03-mcp-layer-identity-s5`](../plans/completed/2026-09-03-mcp-layer-identity-s5.md)).
 
 ## Follow-Up
 
 - Drop the Nice3point sidecar when that package no longer embeds
   `Polyfills.Polyfill` on net10.
 - Revisit `/allowdup` only with pack + isolated-ALC load evidence.
-- Toolsets keep MCP `ExcludeAssets=runtime`. Host copy-local MCP stays the ALC
-  bind source. Do not paper over with `RepackBinariesExcludes`.
+- Choose S1 or S2 at the
+  [`2026-09-03-mcp-layer-identity-s5`](../plans/completed/2026-09-03-mcp-layer-identity-s5.md)
+  strategy gate before changing toolset packaging or expecting name-based MCP
+  bind on a repacked host. Do not paper over with `RepackBinariesExcludes`.
 
 ## References
 
 - Driver: [`props/ILRepack.targets`](../../props/ILRepack.targets)
 - Build digest: [`docs/agents/build-matrix.md`](../agents/build-matrix.md)
-- Host wire (SDK types, no SDK session): [0027](0027-mcp-sdk-host-wire-adoption.md)
+- Host wire (SDK types, no SDK session): [0027](0027-mcp-product-surface.md)

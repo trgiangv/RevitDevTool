@@ -9,7 +9,7 @@ Closed: 2026-08-31
 Product delete confirm locked to **warning-first (G2=B)**. **G3** (Gateway
 elicitation) and **G4** (host `IsMrtrSupported` / stateful resolve) are **not
 product** — MRTR stays hop plumbing. Policy:
-[0029](../../decisions/0029-mcp-use-case-limits-not-full-protocol.md).
+[0027](../../decisions/0027-mcp-product-surface.md).
 ## Prerequisite reading
 
 1. [`docs/architecture/MCP/platform-boundaries.md`](../../architecture/MCP/platform-boundaries.md) — ALC + MRTR wire.

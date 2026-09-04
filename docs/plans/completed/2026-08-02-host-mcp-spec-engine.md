@@ -4,7 +4,10 @@ Date: 2026-08-02
 
 ## Status
 
-Active
+Completed 2026-08-02 (phases 0–3). Phase 4 golden tests landed in
+[2026-08-31 host-wire](2026-08-31-mcp-sdk-2-2-host-wire.md).
+[0027](../../decisions/0027-mcp-product-surface.md) later withdrew “strip SDK from
+host”; pipe still has no `McpServer` session ([0012](../../decisions/0012-host-mcp-spec-engine.md)).
 
 ## Outcome
 
@@ -16,7 +19,7 @@ without assembly-resolve workarounds.
 
 ## Context
 
-- Decision: [`docs/decisions/0012-host-mcp-spec-engine.md`](../decisions/0012-host-mcp-spec-engine.md)
+- Decision: [`docs/decisions/0012-host-mcp-spec-engine.md`](../decisions/0012-host-mcp-spec-engine.md) (later partially superseded by [0027](../decisions/0027-mcp-product-surface.md))
 - Current boundaries: [`docs/architecture/MCP/platform-boundaries.md`](../architecture/MCP/platform-boundaries.md)
 - Stop-gap work: collectible toolset ALC (`McpToolsetContext`) shares `ModelContextProtocol*`
   with host default context; host wire moves to spec DTOs separately.
@@ -86,7 +89,7 @@ Out of scope:
 - [x] Phase 1: `McpHandler` + `McpPipeSession` dual-run (flag `DEVTOOLS_MCP_SPEC_WIRE=1`, removed)
 - [x] Phase 2: `ToolsetInvoker` + delete bridge stack
 - [x] Phase 3: Remove host SDK pipe server (`HostMcpServerFactory`, `CatalogMcpServerTool`); wire-only pipe; dispatcher returns `McpInvocationResponse`; MRTR via `McpInvocationResponse.Meta`; rename `Wire/` → `Host/`
-- [ ] Phase 4: Conformance golden tests
+- [x] Phase 4: Conformance golden tests (see 2026-08-31 host-wire)
 
 ## Decisions
 
@@ -104,4 +107,8 @@ Out of scope:
 
 ## Result
 
-(pending)
+Host pipe is `McpHandler` (no SDK `McpServer` session). Spec-shaped invoke
+round-trips through `McpInvocationResponse`. 0027 later allowed SDK **types**
+on the host and ILRepack of MCP; do not resume “remove MCP packages from host”
+from this file. Remaining SDK-free contract work is follow-on after
+[S5](2026-09-03-mcp-layer-identity-s5.md).

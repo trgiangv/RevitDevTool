@@ -4,7 +4,7 @@ Date: 2026-08-02
 
 ## Status
 
-Accepted — **partially superseded** by [0027](0027-mcp-sdk-host-wire-adoption.md).
+Accepted — **partially superseded** by [0027](0027-mcp-product-surface.md).
 
 Rules **3** (host removes the MCP SDK entirely) and **7** (ILRepack
 must not embed `ModelContextProtocol*`) are withdrawn. The host named
@@ -30,28 +30,28 @@ stable fix.
    `DevTools.Mcp.Server`, `DevTools.Mcp.Client`).
 2. **Third-party toolsets** keep the official MCP SDK (`[McpServerTool]`,
    `CallToolResult`, MRTR exceptions).
-3. **Withdrawn ([0027](0027-mcp-sdk-host-wire-adoption.md)).** Host may
+3. **Withdrawn ([0027](0027-mcp-product-surface.md)).** Host may
    reference and ILRepack SDK types. The named pipe still must not run
    `McpServer` / `McpSession`.
 4. **Toolset invoke boundary** is JSON-only: host reflects and invokes toolset
    methods; results serialize in the toolset assembly domain and deserialize into
    `McpInvocationResponse`. Host never pattern-matches SDK `ContentBlock` types.
-5. **MRTR** on the host wire: pass through `arguments`, `inputResponses`, and
-   `requestState` on SDK `CallToolRequestParams` ([0027](0027-mcp-sdk-host-wire-adoption.md)
-   Phase 2; former `McpInvocationRequest` deleted). Daemon SDK re-throws
+5. **MRTR** on the host hop: pass through `arguments`, `inputResponses`, and
+   `requestState` on SDK `CallToolRequestParams`. Daemon SDK re-throws
    `InputRequiredException` to external clients. Host does not implement
-   high-level `ElicitAsync` / `MrtrContext` suspension.
+   high-level `ElicitAsync` / `MrtrContext` suspension. Product loop:
+   [0027](0027-mcp-product-surface.md).
 6. **Built-in host tools** live in `DevTools.Mcp.Revit` and
    `DevTools.Mcp.Acad` (`IBuiltInMcpTool` / `IBuiltInMcpResource`), registered
    per host in `Composition/*ServiceRegistration`. Sample toolsets (`RevitMcpToolSet`, etc.) are
    dynamic catalog entries only — not replacements for host built-ins.
-7. **Withdrawn ([0027](0027-mcp-sdk-host-wire-adoption.md) +
+7. **Withdrawn ([0027](0027-mcp-product-surface.md) +
    [0019](0019-ilrepack-and-polyfill-isolated-alc.md)).** Host may ILRepack
    MCP. Do not exclude `ModelContextProtocol*` by filename.
 
 > **0027:** Items 3 and 7 are withdrawn. Host pipe still must not run
 > `McpServer` / `McpSession`. SDK types may live on the host and may be
-> ILRepacked. See [0027](0027-mcp-sdk-host-wire-adoption.md).
+> ILRepacked. See [0027](0027-mcp-product-surface.md).
 
 ## Consequences
 
