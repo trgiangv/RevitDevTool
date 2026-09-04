@@ -6,6 +6,21 @@ work must inherit. Task-local choices stay in `docs/plans/active/`.
 Use `docs/templates/decision.md` for new entries. Index every accepted decision
 here.
 
+## How agents should read this index
+
+- **Accepted** = inherit this policy. **Superseded** = stub; follow the pointer,
+  do not reconstruct the old rule. **Proposed** = not shipped; do not treat as
+  current behavior.
+- Living maps live in `docs/architecture/` and `docs/product/`. Decisions hold
+  the *choice*, not the module inventory.
+- MCP product: **[0027](0027-mcp-product-surface.md)** (Daemon envelope, not
+  full protocol). Host pipe / SDK-on-host rules: **[0012](0012-host-mcp-spec-engine.md)**
+  (partially superseded by 0027 — SDK types and ILRepack allowed; no `McpServer`
+  session on the host pipe).
+- [0030](0030-host-owned-cpython-and-package-managers.md) is **Python runtime**.
+  [0031](0031-daemon-json-source-gen.md) is STJ source-gen **in support of 0032**.
+  [0032](0032-daemon-mewui-and-aot.md) is Daemon MewUI + AOT target.
+
 ## Index
 
 | ID | Title | Status |
@@ -21,7 +36,7 @@ here.
 | [0009](0009-multi-host-pytest-client.md) | Multi-host pytest client | Accepted |
 | [0010](0010-daemon-sole-mcp-host.md) | Daemon is sole MCP host | Accepted |
 | [0011](0011-hybrid-repository-harness-layout.md) | Hybrid repository-harness docs layout | Accepted |
-| [0012](0012-host-mcp-spec-engine.md) | Host MCP spec engine (no SDK session on host) | Partially superseded by 0027 |
+| [0012](0012-host-mcp-spec-engine.md) | Host MCP spec engine (no SDK session on host pipe) | Partially superseded by 0027 |
 | [0014](0014-pep723-skip-if-listed-search-first.md) | Skip-if-listed + search-first (Pixi/Pip) | Accepted |
 | [0015](0015-nunit-host-testing-standard-integration.md) | NUnit host testing through standard .NET test integrations | Partially superseded by 0016 |
 | [0016](0016-nunit-native-runtime-and-mtp-first-integration.md) | Native NUnit runtime with MTP-first integration | Accepted |
@@ -34,8 +49,8 @@ here.
 | [0023](0023-shared-assembly-isolation-kernel.md) | Shared assembly isolation kernel | Accepted |
 | [0024](0024-testing-core-open-closed-providers.md) | Testing core open-closed for providers | Accepted |
 | [0025](0025-runner-owned-visual-studio-host-attach.md) | Runner-owned Visual Studio host attach | Accepted |
-| [0026](0026-ironpython-unittest-script-execution.md) | One IronPython unittest flow, dialect 2.7 and 3.4 | Proposed |
-| [0027](0027-mcp-sdk-host-wire-adoption.md) | MCP SDK adoption boundary on host wire | Accepted |
-| [0028](0028-host-alc-progress-notifications.md) | Host and ALC toolset progress notifications unsupported | Accepted |
-| [0029](0029-mcp-use-case-limits-not-full-protocol.md) | MCP use-case limits — host↔daemon schema, not full protocol / MRTR UX | Accepted |
-| [0030](0030-host-owned-cpython-and-package-managers.md) | Host-owned CPython — uv sidecar vs Pixi-owned interpreter | Accepted |
+| [0026](0026-ironpython-unittest-script-execution.md) | One IronPython unittest flow, dialect 2.7 and 3.4 | Accepted |
+| [0027](0027-mcp-product-surface.md) | MCP product surface — Daemon envelope, not full protocol | Accepted |
+| [0030](0030-host-owned-cpython-and-package-managers.md) | Host-owned CPython — uv sidecar vs Pixi-owned interpreter | Accepted — Python runtime |
+| [0031](0031-daemon-json-source-gen.md) | Daemon JSON source-gen (supports 0032 AOT) | Accepted — support for 0032 |
+| [0032](0032-daemon-mewui-and-aot.md) | Daemon desktop is MewUI; Native AOT is the target | Accepted — UI shipped; AOT not production |

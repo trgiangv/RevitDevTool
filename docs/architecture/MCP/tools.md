@@ -198,12 +198,14 @@ support resource links can resolve URIs themselves; unsupported clients skip the
 
 ### Structured output (SDK 2.0)
 
-Daemon envelope tools (`search_dynamic`, `list_host_instances`, `read_file_info`) emit
-`StructuredContent` manually via `DynamicToolCallResults` and **do not** set
+Fixed server tools (`search_dynamic`, `list_host_instances`, `read_file_info`) emit
+`StructuredContent` manually via `DynamicToolResults` and **do not** set
 `UseStructuredContent` on `tools/list` yet — auto `outputSchema` from `JsonElement`
 members breaks strict clients (Cursor drops the entire tool list). Host toolsets may
-use `UseStructuredContent` where schemas are stable. `invoke_dynamic` pass-through
-preserves host `StructuredContent` on success paths.
+use `UseStructuredContent` where schemas are stable. Structured host tools should
+return a domain DTO and let the SDK create `CallToolResult`; direct result construction
+is reserved for custom content blocks (images, links, or elicitation). `invoke_dynamic`
+pass-through preserves host `StructuredContent` on success paths.
 
 ### JSON policy
 

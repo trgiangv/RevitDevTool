@@ -1,19 +1,21 @@
 # MCP C# SDK gap matrix
 
 Living comparison between **ModelContextProtocol 2.2.0** (`2026-07-28` protocol family) and
-the DevTools stack as of 2026-08-31.
+the DevTools stack as of 2026-09-04.
 
 **Packages:** `Directory.Packages.props` → `ModelContextProtocol` + `ModelContextProtocol.Extensions.Tasks` **2.2.0**.
 
-**Host wire policy:** [0027](../../decisions/0027-mcp-sdk-host-wire-adoption.md) — SDK DTOs/constants
+**Host wire policy:** [0027](../../decisions/0027-mcp-product-surface.md) — SDK DTOs/constants
 allowed on host; host named pipe does **not** run `McpServer` / `McpSession`.
 
-**Product limits:** [0029](../../decisions/0029-mcp-use-case-limits-not-full-protocol.md) —
+**Product limits:** [0027](../../decisions/0027-mcp-product-surface.md) —
 stabilize host↔daemon schema and errors; MRTR is not a product workflow.
+Progress on host/ALC is unsupported. JSON facades: [0031](../../decisions/0031-daemon-json-source-gen.md).
 
 **Not MRTR product:** wire-level MRTR plumbing lives in
-[`platform-boundaries.md`](platform-boundaries.md). The old G3/G4 schedule is frozen
-in [`2026-08-02-mrtr-implementation.md`](../../plans/completed/2026-08-02-mrtr-implementation.md).
+[`platform-boundaries.md`](platform-boundaries.md). Historical G3/G4/G5 labels
+are frozen in [`2026-08-02-mrtr-implementation.md`](../../plans/completed/2026-08-02-mrtr-implementation.md)
+— not a delivery backlog ([0027](../../decisions/0027-mcp-product-surface.md)).
 
 ---
 
@@ -38,7 +40,7 @@ in [`2026-08-02-mrtr-implementation.md`](../../plans/completed/2026-08-02-mrtr-i
 | `resources/subscribe` | ⏸ | `Subscribe=false` on host — noisy on live BIM |
 | `prompts/list` / `prompts/get` | ✅ Daemon-only | Host prompts not registered |
 | `completions` | ⏸ | Low ROI for opaque `capabilityId` flow |
-| Progress notifications | ⚠️ Daemon fixed tools ✅; host pipe / `invoke_dynamic` / ALC / Python / built-ins ❌ | Daemon SDK `McpServer` can emit `notifications/progress`. Host path does not: `InvokeDynamicTool` omits `Meta` (including `progressToken`); ALC `ToolsetInvocationServices` reports to `SdkNoopTransport`, which swallows `IProgress`. See [0028](../../decisions/0028-host-alc-progress-notifications.md) — gap **G5**. |
+| Progress notifications | ⚠️ Daemon fixed tools ✅; host pipe / `invoke_dynamic` / ALC / Python / built-ins ❌ | Daemon SDK `McpServer` can emit `notifications/progress`. Host path does not: `InvokeDynamicTool` omits `Meta` (including `progressToken`); ALC `ToolsetProgressReporter` calls `McpServer.NotifyProgressAsync` on a `RequestFactory` server whose `ToolExecutionTransport` swallows outbound messages. [0027](../../decisions/0027-mcp-product-surface.md) non-goal. |
 | MCP Tasks extension | ✅ | `WithTasks`; `Optional` on export + execute tools; client `_meta` opt-in |
 
 ---
@@ -84,11 +86,11 @@ See [`platform-boundaries.md`](platform-boundaries.md).
 | ALC create-time `IsAugmentedWith` bind | ✅ | Local mirror of SDK four augmented types |
 | ALC low-level throw/retry via `Params` | ✅ | T-ALC-10..15 unit/harness |
 | ALC high-level `ElicitAsync` / `MrtrContext` | ❌ | Sync `InvokeSync`; documented unsupported — [`platform-boundaries.md`](platform-boundaries.md) G1-c |
-| Python toolset MRTR (payload + `InputRequiredResult`) | ✅ | Normalizer + parser + unit tests; live Python.NET elicitation E2E ⏸ ([0029](../../decisions/0029-mcp-use-case-limits-not-full-protocol.md)) |
+| Python toolset MRTR (payload + `InputRequiredResult`) | ✅ | Normalizer + parser + unit tests; live Python.NET elicitation E2E ⏸ ([0027](../../decisions/0027-mcp-product-surface.md)) |
 | Python `Resolve(Elicit[T])` in toolset | ❌ | Embedded bridge — not python-sdk Resolve graph |
-| Product destructive confirm | ✅ (G2=B) | Warning + `dryRun`; elicitation is **not** the product path ([0029](../../decisions/0029-mcp-use-case-limits-not-full-protocol.md)) |
-| Host legacy / `IsMrtrSupported` | ⏸ | **G4** — not scheduled ([0029](../../decisions/0029-mcp-use-case-limits-not-full-protocol.md)) |
-| Gateway E2E elicitation | ⏸ | **G3** — not scheduled ([0029](../../decisions/0029-mcp-use-case-limits-not-full-protocol.md)) |
+| Product destructive confirm | ✅ | Warning + `dryRun`; elicitation is **not** the product path ([0027](../../decisions/0027-mcp-product-surface.md)) |
+| Host legacy / `IsMrtrSupported` | ⏸ | Not scheduled ([0027](../../decisions/0027-mcp-product-surface.md)) |
+| Gateway E2E elicitation | ⏸ | Not scheduled ([0027](../../decisions/0027-mcp-product-surface.md)) |
 
 Detail + test matrix: [`2026-08-02-mrtr-implementation.md`](../../plans/completed/2026-08-02-mrtr-implementation.md).
 
@@ -123,14 +125,14 @@ Detail + test matrix: [`2026-08-02-mrtr-implementation.md`](../../plans/complete
 
 | Gap | Priority | Tracking |
 |-----|----------|----------|
-| `ContractTests` — `outputSchema` on catalog `tools/list` for structured toolsets | Low | Optional; daemon envelope tools stay without inferred `outputSchema` ([0027](../../decisions/0027-mcp-sdk-host-wire-adoption.md)) |
+| `ContractTests` — `outputSchema` on catalog `tools/list` for structured toolsets | Low | Optional; daemon envelope tools stay without inferred `outputSchema` ([0027](../../decisions/0027-mcp-product-surface.md)) |
 | Embedded resource block — dedicated contract beyond harness | Low | Covered in harness |
-| Live Gateway MRTR | ⏸ | [0029](../../decisions/0029-mcp-use-case-limits-not-full-protocol.md) — not product |
+| Live Gateway MRTR | ⏸ | [0027](../../decisions/0027-mcp-product-surface.md) — not product |
 | ALC `IsAugmentedWith` + MRTR round-trip tests | Done | T-ALC-* green |
-| Host stateful backcompat vs daemon passthrough | ⏸ | [0029](../../decisions/0029-mcp-use-case-limits-not-full-protocol.md) — not product |
-| Python toolset live MRTR E2E (Python.NET) | ⏸ | [0029](../../decisions/0029-mcp-use-case-limits-not-full-protocol.md) |
+| Host stateful backcompat vs daemon passthrough | ⏸ | [0027](../../decisions/0027-mcp-product-surface.md) — not product |
+| Python toolset live MRTR E2E (Python.NET) | ⏸ | [0027](../../decisions/0027-mcp-product-surface.md) |
 | Python `Resolve(Elicit[T])` in toolset | Low | Explicit non-goal |
-| **G5** Host / ALC progress notifications | ⏸ | [0028](../../decisions/0028-host-alc-progress-notifications.md) + [0029](../../decisions/0029-mcp-use-case-limits-not-full-protocol.md) |
+| Host / ALC progress notifications | ⏸ | [0027](../../decisions/0027-mcp-product-surface.md) |
 
 **Verification:**
 
@@ -149,8 +151,8 @@ These are **product choices**, not incomplete adoption:
 - `ToolUse` / `ToolResult` content blocks on tools
 - Native audio product tools
 - MRTR elicitation for bulk delete (warning-first policy)
-- Host / ALC progress notifications (G5)
-- Gateway / host-legacy MRTR elicitation (G3 / G4) — [0029](../../decisions/0029-mcp-use-case-limits-not-full-protocol.md)
+- Host / ALC progress notifications
+- Gateway / host-legacy MRTR elicitation — [0027](../../decisions/0027-mcp-product-surface.md)
 
 ---
 
@@ -161,8 +163,8 @@ These are **product choices**, not incomplete adoption:
 | [`platform-boundaries.md`](platform-boundaries.md) | ALC + layer map + MRTR wire detail |
 | [`tools.md`](tools.md) | Daemon/host tool inventory |
 | [`product/mcp.md`](../../product/mcp.md) | External behavior contract |
-| [0027 MCP SDK host wire](../../decisions/0027-mcp-sdk-host-wire-adoption.md) | SDK on host; no SDK session on pipe |
-| [0028 Host/ALC progress](../../decisions/0028-host-alc-progress-notifications.md) | Progress G5 policy |
-| [0029 Use-case limits](../../decisions/0029-mcp-use-case-limits-not-full-protocol.md) | Schema + errors over full protocol / MRTR UX |
+| [0027 MCP product surface](../../decisions/0027-mcp-product-surface.md) | Daemon envelope; not full protocol |
+| [0012 Host MCP spec engine](../../decisions/0012-host-mcp-spec-engine.md) | Host pipe; partially superseded by 0027 |
+| [0031 Daemon JSON source-gen](../../decisions/0031-daemon-json-source-gen.md) | Source-gen JSON for 0032 AOT |
 | [`2026-08-02-mcp-advanced-features-adoption.md`](../../plans/completed/2026-08-02-mcp-advanced-features-adoption.md) | Feature adoption session |
-| [`2026-08-02-mrtr-implementation.md`](../../plans/completed/2026-08-02-mrtr-implementation.md) | MRTR G1 done; G2=B; G3/G4 closed ([0029](../../decisions/0029-mcp-use-case-limits-not-full-protocol.md)) |
+| [`2026-08-02-mrtr-implementation.md`](../../plans/completed/2026-08-02-mrtr-implementation.md) | Historical G1 done; elicitation/progress closed by 0027 |

@@ -80,20 +80,25 @@ Each process has one **app container** (Daemon `ServerHostBuilder` or host `AddE
 
 Composition: `DevTools.Mcp.Server` (daemon fixed surface), `DevTools.Mcp.Client` (broker), `DevTools.Mcp.Adapter` (host wire handler), `DevTools.Mcp.Catalog` (in-host registry).
 
-## JSON policy
+## JSON serialization
 
-| Role | Serializer |
-|------|------------|
-| Protocol wire, discovery, dispatcher args, monitor logs, tool result text | `McpJsonUtilities.DefaultOptions` via `ToolHelpers` |
-| `search_dynamic` log summary | `CallToolResult.StructuredContent` at tool; `McpLogPayload` logs StructuredContent when present |
+Policy: [0031](../../decisions/0031-daemon-json-source-gen.md) — source-gen JSON in support of Daemon AOT ([0032](../../decisions/0032-daemon-mewui-and-aot.md)).
+
+| Layer | Serializer |
+|-------|------------|
+| MCP SDK protocol types | Tier 1 `ToolHelpers.ProtocolOptions` (`McpJsonUtilities.DefaultOptions`) |
+| Daemon tool DTOs (`search_dynamic`, `invoke_dynamic`, …) | Tier 2 `McpToolJson.Options` (chained `McpServerJsonContext`) |
+| Control pipe, settings.json, pytest framing, MTP `testing/*`, log redaction | Dedicated context per wire — see 0031 |
+| ALC toolsets, Python catalogs, `FileInfoResult`, `FileConfig` | Outside facades (polymorphic / foreign identity) |
 
 ## Documentation
 
 | Document | Contents |
 |----------|----------|
 | [SDK gap matrix](sdk-gap-matrix.md) | Living ✅/⚠️/⏸ map vs `ModelContextProtocol` 2.2.0 |
-| [Platform boundaries](platform-boundaries.md) | Host wire, ALC, error hop; MRTR is plumbing ([0029](../../decisions/0029-mcp-use-case-limits-not-full-protocol.md)) |
-| [Daemon](daemon.md) | Architecture, lifecycle, auth, control pipe API |
+| [JSON (0031)](../../decisions/0031-daemon-json-source-gen.md) | Source-gen JSON; supports [0032](../../decisions/0032-daemon-mewui-and-aot.md) AOT |
+| [Platform boundaries](platform-boundaries.md) | Host wire, ALC, error hop; MRTR is plumbing ([0027](../../decisions/0027-mcp-product-surface.md)) |
+| [Daemon](daemon.md) | Architecture, lifecycle, auth, control pipe API — UI/AOT: [0032](../../decisions/0032-daemon-mewui-and-aot.md) |
 | [Transport](transport.md) | Stdio mode, Gateway WebSocket, dual pipe protocols |
 | [Tools](tools.md) | Fixed daemon surface, ConnectedHostCatalog, in-host primitives |
 | [In-Host Runtime](in-host-runtime.md) | Host spec handler, registry flow, dispatch |

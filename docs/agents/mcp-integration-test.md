@@ -544,6 +544,7 @@ Recommended sequence for a full integration pass:
 8. **Scenario 7** — Multi-host routing
 9. **Scenario 8** — External package install
 10. **Scenario 9** — Resource templates (requires toolset config + restart)
+11. **Repacked-host toolset identity** — register `McpToolsetDemo`, invoke `test_forwarder_calltoolresult`; `CallToolResult` must bridge without foreign-type errors (unit tests skip in xunit when `ModelContextProtocol.Core` is a sibling DLL — ADR 0019)
 
 ---
 

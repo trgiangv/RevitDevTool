@@ -38,7 +38,7 @@ In-host MCP runtime is shared across registered hosts.
     Stale errors are retryable only while `executionStarted=false`; clients retry
     once by `research_then_reinvoke` (search again, then invoke the new ID). No
     separate resolve tool exists.
-- **MRTR is not a product workflow** ([0029](../decisions/0029-mcp-use-case-limits-not-full-protocol.md)).
+- **MRTR is not a product workflow** ([0027](../decisions/0027-mcp-product-surface.md)).
   The working loop is search → invoke → read result or execute error tags
   (`[COMPILATION ERROR]`, `[RUNTIME ERROR]`, `[ROLLBACK]`), then retry. Destructive
   tools use structured **warning** + `dryRun` (e.g. `revit_delete_elements`), not
@@ -80,7 +80,8 @@ In-host MCP runtime is shared across registered hosts.
 
 - Architecture: [`docs/architecture/MCP/README.md`](../architecture/MCP/README.md)
 - SDK gaps: [`docs/architecture/MCP/sdk-gap-matrix.md`](../architecture/MCP/sdk-gap-matrix.md)
-- Use-case limits: [`docs/decisions/0029-mcp-use-case-limits-not-full-protocol.md`](../decisions/0029-mcp-use-case-limits-not-full-protocol.md)
+- Product surface: [`docs/decisions/0027-mcp-product-surface.md`](../decisions/0027-mcp-product-surface.md)
+- Host pipe (partially superseded): [`docs/decisions/0012-host-mcp-spec-engine.md`](../decisions/0012-host-mcp-spec-engine.md)
 - Boundaries (host wire): [`docs/architecture/MCP/platform-boundaries.md`](../architecture/MCP/platform-boundaries.md)
 - Workflows: [`docs/architecture/MCP/workflows.md`](../architecture/MCP/workflows.md)
 - Agent digest: [`docs/agents/mcp-pytest-bridge.md`](../agents/mcp-pytest-bridge.md)
