@@ -1,7 +1,7 @@
 using System.Text.Json;
+using DevTools.Mcp.Core.Utils;
 using ModelContextProtocol;
 using ModelContextProtocol.Protocol;
-// ReSharper disable RedundantSuppressNullableWarningExpression
 
 namespace DevTools.Mcp.Server.Hosting;
 
@@ -10,79 +10,74 @@ namespace DevTools.Mcp.Server.Hosting;
 /// </summary>
 internal static class McpLogPayload
 {
+
     public static string SerializeArgs(IEnumerable<KeyValuePair<string, JsonElement>>? arguments)
     {
         if (arguments is null)
             return "{}";
 
-        var map = arguments as Dictionary<string, JsonElement>
-                  ?? new Dictionary<string, JsonElement>(
-                      arguments as IDictionary<string, JsonElement>
-                      ?? arguments.ToDictionary(kv => kv.Key, kv => kv.Value));
-
-        return map.Count == 0 ? "{}" : Serialize(map);
+        var dict = arguments as IReadOnlyDictionary<string, JsonElement>
+            ?? arguments.ToDictionary(static pair => pair.Key, static pair => pair.Value);
+        return dict.Count == 0
+            ? "{}"
+            : JsonSerializer.Serialize(dict, McpLogJsonContext.Default.DictionaryStringJsonElement);
     }
 
     public static string SerializeCallToolResult(CallToolResult result)
     {
-        if (result.StructuredContent is { } summary && !HasBinaryCallToolContent(result))
-            return summary.GetRawText();
+        if (result.StructuredContent is { } structured && !HasBinaryCallToolContent(result))
+            return structured.GetRawText();
 
-        if (!HasBinaryCallToolContent(result))
-            return Serialize(result);
-
-        var content = new List<object>(result.Content.Count);
-        foreach (var block in result.Content)
-        {
-            content.Add(block switch
-            {
-                ImageContentBlock image => new { type = image.Type, mimeType = image.MimeType, length = image.DecodedData.Length },
-                AudioContentBlock audio => new { type = audio.Type, mimeType = audio.MimeType, length = audio.DecodedData.Length },
-                TextContentBlock text when TryParseReadResourceResult(text.Text, out var resource) => new { type = text.Type, readResource = Deserialize<JsonElement>(SerializeReadResourceResult(resource))! },
-                TextContentBlock text => new { type = text.Type, text = text.Text },
-                _ => new { type = block.Type }
-            });
-        }
-
-        return Serialize(new { isError = result.IsError, structuredContent = result.StructuredContent, content });
+        var payload = new LogCallToolResult(
+            result.IsError,
+            result.Content.Select(RedactContentBlock).ToArray(),
+            result.StructuredContent);
+        return JsonSerializer.Serialize(payload, McpLogJsonContext.Default.LogCallToolResult);
     }
 
     public static string SerializeReadResourceResult(ReadResourceResult result)
     {
-        if (!HasBinaryResourceContent(result))
-            return Serialize(result);
-
-        var contents = new List<object>(result.Contents.Count);
-        contents.AddRange(result.Contents.Select(item => (object)(item switch
-        {
-            BlobResourceContents blob => new { type = "blob", mimeType = blob.MimeType, uri = blob.Uri, length = blob.DecodedData.Length },
-            TextResourceContents text => new { type = "text", mimeType = text.MimeType, uri = text.Uri, text = text.Text },
-            _ => new { type = item.GetType().Name }
-        })));
-
-        return Serialize(new { contents });
+        var payload = new LogReadResourceResult(result.Contents.Select(RedactResourceContent).ToArray());
+        return JsonSerializer.Serialize(payload, McpLogJsonContext.Default.LogReadResourceResult);
     }
 
-    private static bool HasBinaryCallToolContent(CallToolResult result) =>
-        result.Content.Any(block => block is ImageContentBlock or AudioContentBlock) || HasTextWrappedBinaryResource(result);
-
-    private static bool HasTextWrappedBinaryResource(CallToolResult result) =>
-        result.Content.OfType<TextContentBlock>().Any(block =>
-            TryParseReadResourceResult(block.Text, out var resource) && HasBinaryResourceContent(resource));
-
-    private static bool TryParseReadResourceResult(string? text, out ReadResourceResult resource)
+    private static LogResourceContent RedactResourceContent(ResourceContents item) => item switch
     {
-        resource = new ReadResourceResult();
+        BlobResourceContents blob => new LogResourceContent("blob", blob.MimeType, blob.Uri, blob.DecodedData.Length),
+        TextResourceContents text => new LogResourceContent("text", text.MimeType, text.Uri, Text: text.Text),
+        _ => new LogResourceContent(item.GetType().Name)
+    };
+
+    private static LogContentBlock RedactContentBlock(ContentBlock block) => block switch
+    {
+        ImageContentBlock image => new LogContentBlock(image.Type, image.MimeType, image.DecodedData.Length),
+        AudioContentBlock audio => new LogContentBlock(audio.Type, audio.MimeType, audio.DecodedData.Length),
+        TextContentBlock text when TryParseResourceContents(text.Text, out var resource) && HasBinaryContents(resource) =>
+            new LogContentBlock(text.Type, ReadResource: resource),
+        TextContentBlock text => new LogContentBlock(text.Type, Text: text.Text),
+        _ => new LogContentBlock(block.Type)
+    };
+
+    private static bool HasBinaryCallToolContent(CallToolResult result) =>
+        result.Content.Any(block => block is ImageContentBlock or AudioContentBlock)
+        || result.Content.OfType<TextContentBlock>().Any(block =>
+            TryParseResourceContents(block.Text, out var resource) && HasBinaryContents(resource));
+
+    private static bool HasBinaryContents(LogReadResourceResult resource) =>
+        resource.Contents.Any(node => node.Type == "blob");
+
+    private static bool TryParseResourceContents(string? text, out LogReadResourceResult resource)
+    {
+        resource = new LogReadResourceResult([]);
         if (string.IsNullOrWhiteSpace(text))
             return false;
 
         try
         {
-            var parsed = Deserialize<ReadResourceResult>(text!);
-            if (parsed is null || parsed.Contents.Count == 0)
+            var parsed = JsonSerializer.Deserialize(text, ToolHelpers.ProtocolOptions.GetTypeInfo(typeof(ReadResourceResult))!);
+            if (parsed is not ReadResourceResult readResult || readResult.Contents.Count == 0)
                 return false;
-
-            resource = parsed;
+            resource = new LogReadResourceResult(readResult.Contents.Select(RedactResourceContent).ToArray());
             return true;
         }
         catch (JsonException)
@@ -90,13 +85,4 @@ internal static class McpLogPayload
             return false;
         }
     }
-
-    private static bool HasBinaryResourceContent(ReadResourceResult result) =>
-        result.Contents.OfType<BlobResourceContents>().Any();
-
-    private static string Serialize<T>(T value) =>
-        JsonSerializer.Serialize(value, McpJsonUtilities.DefaultOptions);
-
-    private static T? Deserialize<T>(string json) =>
-        JsonSerializer.Deserialize<T>(json, McpJsonUtilities.DefaultOptions);
 }

@@ -23,19 +23,19 @@ public sealed class ControlPipeHandler(IAuthService authService, IHostBroker hos
             return method switch
             {
                 IpcConstants.Methods.Status => JsonSerializer.Serialize(new StatusResponse(
-                    true, typeof(ControlPipeHandler).Assembly.GetName().Version?.ToString() ?? DefaultVersion)),
+                    true, typeof(ControlPipeHandler).Assembly.GetName().Version?.ToString() ?? DefaultVersion), ControlJsonContext.Default.StatusResponse),
                 IpcConstants.Methods.AuthState => JsonSerializer.Serialize(new AuthStateResponse(
-                    authService.IsAuthenticated, authService.UserId, authService.Email, authService.DisplayName, authService.AvatarUrl)),
+                    authService.IsAuthenticated, authService.UserId, authService.Email, authService.DisplayName, authService.AvatarUrl), ControlJsonContext.Default.AuthStateResponse),
                 IpcConstants.Methods.SignIn => await HandleSignInAsync(ct).ConfigureAwait(false),
                 IpcConstants.Methods.SignOut => await HandleSignOutAsync().ConfigureAwait(false),
                 IpcConstants.Methods.ConnectedHosts => HandleConnectedHosts(),
                 IpcConstants.Methods.OpenDashboard => HandleOpenMainWindow(),
-                _ => JsonSerializer.Serialize(new ErrorResponse(IpcConstants.Errors.UnknownMethod))
+                _ => JsonSerializer.Serialize(new ErrorResponse(IpcConstants.Errors.UnknownMethod), ControlJsonContext.Default.ErrorResponse)
             };
         }
         catch (JsonException)
         {
-            return JsonSerializer.Serialize(new ErrorResponse(IpcConstants.Errors.InvalidRequest));
+            return JsonSerializer.Serialize(new ErrorResponse(IpcConstants.Errors.InvalidRequest), ControlJsonContext.Default.ErrorResponse);
         }
     }
 
@@ -50,24 +50,24 @@ public sealed class ControlPipeHandler(IAuthService authService, IHostBroker hos
                 e.PipeName))
             .ToArray();
 
-        return JsonSerializer.Serialize(hosts);
+        return JsonSerializer.Serialize(hosts, ControlJsonContext.Default.HostInfoEntryArray);
     }
 
     private async Task<string> HandleSignInAsync(CancellationToken ct)
     {
         var result = await authService.SignInAsync(ct).ConfigureAwait(false);
-        return JsonSerializer.Serialize(new OperationResponse(result.Success, result.Error));
+        return JsonSerializer.Serialize(new OperationResponse(result.Success, result.Error), ControlJsonContext.Default.OperationResponse);
     }
 
     private async Task<string> HandleSignOutAsync()
     {
         await authService.SignOutAsync().ConfigureAwait(false);
-        return JsonSerializer.Serialize(new OperationResponse(true));
+        return JsonSerializer.Serialize(new OperationResponse(true), ControlJsonContext.Default.OperationResponse);
     }
 
     private string HandleOpenMainWindow()
     {
         trayMenu.ShowMainWindow();
-        return JsonSerializer.Serialize(new OperationResponse(true));
+        return JsonSerializer.Serialize(new OperationResponse(true), ControlJsonContext.Default.OperationResponse);
     }
 }

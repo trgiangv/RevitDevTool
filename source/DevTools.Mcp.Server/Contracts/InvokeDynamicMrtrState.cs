@@ -1,5 +1,4 @@
 using System.Text.Json;
-using ModelContextProtocol;
 
 namespace DevTools.Mcp.Server.Contracts;
 
@@ -14,7 +13,7 @@ internal sealed record InvokeDynamicMrtrState(string CapabilityId, JsonElement? 
 
         try
         {
-            return JsonSerializer.Deserialize<InvokeDynamicMrtrState>(json, McpJsonUtilities.DefaultOptions);
+            return JsonSerializer.Deserialize(json, McpServerJsonContext.Default.InvokeDynamicMrtrState);
         }
         catch (JsonException)
         {
@@ -22,5 +21,5 @@ internal sealed record InvokeDynamicMrtrState(string CapabilityId, JsonElement? 
         }
     }
 
-    public string Serialize() => JsonSerializer.Serialize(this, McpJsonUtilities.DefaultOptions);
+    public string Serialize() => JsonSerializer.Serialize(this, McpServerJsonContext.Default.InvokeDynamicMrtrState);
 }

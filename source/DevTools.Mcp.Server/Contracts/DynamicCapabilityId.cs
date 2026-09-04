@@ -21,7 +21,7 @@ public sealed record DynamicCapabilityId(
     /// <summary>Version is local to the catalog entry object and changes on replacement.</summary>
     public static string CatalogVersionFor(HostCatalogEntry entry) => CatalogVersions.GetValue(entry, _ => new CatalogVersionHolder()).Value;
 
-    public string Encode() => Prefix + Base64Url.Encode(JsonSerializer.SerializeToUtf8Bytes(this));
+    public string Encode() => Prefix + Base64Url.Encode(JsonSerializer.SerializeToUtf8Bytes(this, McpServerJsonContext.Default.DynamicCapabilityId));
 
     public static bool TryDecode(string? value, out DynamicCapabilityId? capabilityId)
     {
@@ -31,7 +31,7 @@ public sealed record DynamicCapabilityId(
 
         try
         {
-            capabilityId = JsonSerializer.Deserialize<DynamicCapabilityId>(Base64Url.Decode(value![Prefix.Length..]));
+            capabilityId = JsonSerializer.Deserialize(Base64Url.Decode(value![Prefix.Length..]), McpServerJsonContext.Default.DynamicCapabilityId);
             if (capabilityId is null)
                 return false;
             return !string.IsNullOrWhiteSpace(capabilityId.MachineId) && capabilityId.HostInstanceId > 0 &&

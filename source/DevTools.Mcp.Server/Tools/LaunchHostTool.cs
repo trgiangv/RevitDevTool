@@ -114,7 +114,7 @@ public sealed class LaunchHostTool(IHostBroker hostBroker, IHostLaunchService la
                 true,
                 dialogResult);
 
-            return ToolHelpers.Result(payload);
+            return DynamicToolResults.Result(payload, McpServerJsonContext.Default.LaunchHostResult);
         }
         finally
         {

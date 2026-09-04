@@ -5,6 +5,8 @@ namespace DevTools.Settings;
 
 /// <summary>
 /// Stores configurations as JSON files in the settings directory.
+/// Uses reflection (<c>JsonSerializer</c> without source-gen) because each host
+/// persists its own config types from RevitDevTool / AcadDevTool assemblies.
 /// </summary>
 [UsedImplicitly]
 public sealed class FileConfig(IOptions<PathOptions> pathOptions) : IFileConfig<PathOptions>

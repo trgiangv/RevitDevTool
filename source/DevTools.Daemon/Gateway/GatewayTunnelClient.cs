@@ -1,6 +1,7 @@
 using System.Net.WebSockets;
 using System.Text;
 using System.Text.Json;
+using DevTools.Daemon.Control;
 using DevTools.Mcp.Client;
 using Microsoft.Extensions.Logging;
 using ModelContextProtocol.Server;
@@ -137,7 +138,7 @@ internal sealed class GatewayTunnelClient(
             metadata.MachineName,
             hostApps.ToList());
 
-        var json = JsonSerializer.Serialize(register);
+        var json = JsonSerializer.Serialize(register, ControlJsonContext.Default.GatewayRegisterMessage);
         var bytes = Encoding.UTF8.GetBytes(json);
         await ws.SendAsync(bytes, WebSocketMessageType.Text, true, ct).ConfigureAwait(false);
     }
@@ -150,7 +151,7 @@ internal sealed class GatewayTunnelClient(
 
             var hostApps = pipeScanner.Discover();
             var heartbeat = new GatewayHeartbeatMessage(HeartbeatMessageType, hostApps.ToList());
-            var json = JsonSerializer.Serialize(heartbeat);
+            var json = JsonSerializer.Serialize(heartbeat, ControlJsonContext.Default.GatewayHeartbeatMessage);
             var bytes = Encoding.UTF8.GetBytes(json);
 
             try

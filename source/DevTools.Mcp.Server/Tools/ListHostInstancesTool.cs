@@ -9,9 +9,9 @@ using ModelContextProtocol.Server;
 namespace DevTools.Mcp.Server.Tools;
 
 /// <remarks>
-/// Structured output via <see cref="DynamicToolCallResults"/> — same SDK 2.0 workaround as
+/// Structured output via <see cref="DynamicToolResults"/> — same SDK 2.0 workaround as
 /// <see cref="SearchDynamicTool"/> (nullable enum wire shape broke strict <c>tools/list</c> validation).
-/// TODO(sdk-2.0-clients): adopt <c>UseStructuredContent</c> + explicit <c>OutputSchema</c> once clients accept it.
+/// See 0027 / 0031 — UseStructuredContent deferred.
 /// </remarks>
 public sealed class ListHostInstancesTool(IHostBroker hostBroker, IMcpPipeScanner pipeScanner)
 {
@@ -29,7 +29,7 @@ public sealed class ListHostInstancesTool(IHostBroker hostBroker, IMcpPipeScanne
                 ReadOnly = true,
                 Destructive = false,
                 OpenWorld = false,
-                // Intentionally no UseStructuredContent — see DynamicToolCallResults.
+                // Intentionally no UseStructuredContent — see DynamicToolResults.
             });
     }
 
@@ -53,6 +53,6 @@ public sealed class ListHostInstancesTool(IHostBroker hostBroker, IMcpPipeScanne
             connected.Count,
             discoveredPipes.Count);
 
-        return DynamicToolCallResults.Result(result, structured: result);
+        return DynamicToolResults.Result(result, McpServerJsonContext.Default.ListInstancesResult, structured: true);
     }
 }

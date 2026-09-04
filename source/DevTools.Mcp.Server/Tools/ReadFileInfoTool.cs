@@ -1,4 +1,5 @@
 using System.ComponentModel;
+using System.Text.Json;
 using DevTools.FileMetadata.Core;
 using DevTools.Mcp.Core.Utils;
 using DevTools.Mcp.Server.Contracts;
@@ -8,9 +9,9 @@ using ModelContextProtocol.Server;
 namespace DevTools.Mcp.Server.Tools;
 
 /// <remarks>
-/// Structured output via <see cref="DynamicToolCallResults"/> — same SDK 2.0 workaround as
+/// Structured output via <see cref="DynamicToolResults"/> — same SDK 2.0 workaround as
 /// <see cref="SearchDynamicTool"/> (open metadata shape breaks auto <c>outputSchema</c>).
-/// TODO(sdk-2.0-clients): adopt <c>UseStructuredContent</c> + explicit <c>OutputSchema</c> once clients accept it.
+/// See 0027 / 0031 — UseStructuredContent deferred.
 /// </remarks>
 public sealed class ReadFileInfoTool(IFileReaderCatalog catalog)
 {
@@ -30,7 +31,7 @@ public sealed class ReadFileInfoTool(IFileReaderCatalog catalog)
                 ReadOnly = true,
                 Destructive = false,
                 OpenWorld = false,
-                // Intentionally no UseStructuredContent — see DynamicToolCallResults.
+                // Intentionally no UseStructuredContent — see DynamicToolResults.
             });
     }
 
@@ -49,7 +50,7 @@ public sealed class ReadFileInfoTool(IFileReaderCatalog catalog)
         {
             var reader = catalog.GetReader(filePath);
             var result = reader.Read(new FileInfoRequest(filePath, ParseDetail(detail)));
-            return DynamicToolCallResults.Result(result, structured: result);
+            return SerializeFileInfo(result);
         }
         catch (FileReadException ex) when (ex.Error == FileError.UnsupportedFormat)
         {
@@ -60,6 +61,11 @@ public sealed class ReadFileInfoTool(IFileReaderCatalog catalog)
             return ToolHelpers.ErrorResult($"Failed to read file: {ex.Message}");
         }
     }
+
+    private static CallToolResult SerializeFileInfo(FileInfoResult result) =>
+        DynamicToolResults.Json(
+            JsonSerializer.Serialize(result, result.GetType(), McpToolJson.Options),
+            JsonSerializer.SerializeToElement(result, result.GetType(), McpToolJson.Options));
 
     private static FileInfoDetail ParseDetail(string detail) =>
         string.Equals(detail, "full", StringComparison.OrdinalIgnoreCase)

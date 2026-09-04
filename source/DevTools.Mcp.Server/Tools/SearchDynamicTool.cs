@@ -11,8 +11,8 @@ namespace DevTools.Mcp.Server.Tools;
 /// <remarks>
 /// Primary tool that triggered the SDK 2.0 structured-output workaround: return type embeds
 /// <see cref="SearchCapabilityItem.InputSchema"/> (<see cref="JsonElement"/>), which breaks auto
-/// <c>outputSchema</c> on <c>tools/list</c>. See <see cref="DynamicToolCallResults"/> for details.
-/// TODO(sdk-2.0-clients): adopt <c>UseStructuredContent</c> + explicit <c>OutputSchema</c> once clients accept it.
+/// <c>outputSchema</c> on <c>tools/list</c>. See <see cref="DynamicToolResults"/> for details.
+/// See 0027 / 0031 — UseStructuredContent deferred.
 /// </remarks>
 public sealed class SearchDynamicTool(IHostBroker broker)
 {
@@ -25,7 +25,7 @@ public sealed class SearchDynamicTool(IHostBroker broker)
             ReadOnly = true,
             Destructive = false,
             OpenWorld = false,
-            // Intentionally no UseStructuredContent — see DynamicToolCallResults.
+            // Intentionally no UseStructuredContent — see DynamicToolResults.
         });
 
     [Description("Search local catalog capabilities.")]
@@ -37,15 +37,15 @@ public sealed class SearchDynamicTool(IHostBroker broker)
         string? detail = null)
     {
         if (limit is < 1 or > SearchDynamicLimits.MaximumLimit)
-            return DynamicToolCallResults.Error(
+            return DynamicToolResults.Error(
                 "validation_error",
                 $"limit must be between 1 and {SearchDynamicLimits.MaximumLimit}.");
         if (!SearchDynamicDetailModes.TryParse(detail, out var includeSchema))
-            return DynamicToolCallResults.Error(
+            return DynamicToolResults.Error(
                 "validation_error",
                 $"detail must be {SearchDynamicDetailModes.Summary} or {SearchDynamicDetailModes.Schema}.");
         if (!SearchDynamicWireKinds.TryParse(kinds, out var parsedKinds, out var kindError))
-            return DynamicToolCallResults.Error("validation_error", kindError!);
+            return DynamicToolResults.Error("validation_error", kindError!);
 
         var requestedLimit = limit ?? SearchDynamicLimits.DefaultLimit;
         var matches = broker.Catalog.Search(
@@ -56,7 +56,7 @@ public sealed class SearchDynamicTool(IHostBroker broker)
         var hasMore = matches.Count > requestedLimit;
         var items = matches.Take(requestedLimit).Select(hit => ToItem(hit, includeSchema)).ToArray();
         var response = new SearchCapabilitiesResponse(items.Length, hasMore, items);
-        return DynamicToolCallResults.Result(response, structured: response);
+        return DynamicToolResults.Result(response, McpServerJsonContext.Default.SearchCapabilitiesResponse, structured: true);
     }
 
     private SearchCapabilityItem ToItem(HostCatalogHit hit, bool includeSchema)

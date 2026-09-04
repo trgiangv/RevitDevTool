@@ -1,5 +1,4 @@
 using System.Text.Json;
-using System.Text.Json.Serialization;
 using DevTools.Settings.Configs;
 using DevTools.Utilities;
 using Microsoft.Extensions.Configuration;
@@ -22,13 +21,6 @@ public sealed class UserSettings
 
 public sealed class UserSettingsStore(IOptionsMonitor<UserSettings> monitor, IConfiguration configuration)
 {
-    private static readonly JsonSerializerOptions JsonOptions = new()
-    {
-        WriteIndented = true,
-        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-        Converters = { new JsonStringEnumConverter(JsonNamingPolicy.CamelCase) }
-    };
-
     public UserSettings Current => monitor.CurrentValue;
 
     public void Update(Action<UserSettings> apply)
@@ -46,7 +38,7 @@ public sealed class UserSettingsStore(IOptionsMonitor<UserSettings> monitor, ICo
                 UserSettings.FilePath,
                 JsonSerializer.Serialize(
                     new Dictionary<string, UserSettings> { [UserSettings.SectionName] = next },
-                    JsonOptions));
+                    UserSettingsJsonContext.Default.DictionaryStringUserSettings));
             (configuration as IConfigurationRoot)?.Reload();
         }
         catch

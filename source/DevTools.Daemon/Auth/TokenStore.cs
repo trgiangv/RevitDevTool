@@ -1,6 +1,7 @@
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
+using DevTools.Daemon.Control;
 using Microsoft.Extensions.Logging;
 using ZLogger;
 
@@ -17,7 +18,7 @@ internal sealed class TokenStore(string path, ILogger logger)
 
             var encrypted = File.ReadAllBytes(path);
             var plainBytes = ProtectedData.Unprotect(encrypted, null, DataProtectionScope.CurrentUser);
-            return JsonSerializer.Deserialize<TokenData>(Encoding.UTF8.GetString(plainBytes));
+            return JsonSerializer.Deserialize(Encoding.UTF8.GetString(plainBytes), ControlJsonContext.Default.TokenData);
         }
         catch (Exception ex)
         {
@@ -30,7 +31,7 @@ internal sealed class TokenStore(string path, ILogger logger)
     {
         try
         {
-            var json = JsonSerializer.Serialize(data);
+            var json = JsonSerializer.Serialize(data, ControlJsonContext.Default.TokenData);
             var encrypted = ProtectedData.Protect(Encoding.UTF8.GetBytes(json), null, DataProtectionScope.CurrentUser);
             File.WriteAllBytes(path, encrypted);
         }

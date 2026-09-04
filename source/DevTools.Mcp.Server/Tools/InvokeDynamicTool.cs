@@ -2,6 +2,7 @@ using System.ComponentModel;
 using System.Text;
 using System.Text.Json;
 using DevTools.Mcp.Core.Sessions;
+using DevTools.Mcp.Core.Utils;
 using DevTools.Mcp.Server.Contracts;
 using ModelContextProtocol;
 using ModelContextProtocol.Protocol;
@@ -19,7 +20,8 @@ public sealed class InvokeDynamicTool(IHostBroker broker)
             Name = "invoke_dynamic",
             Description = "Invoke a capabilityId from search_dynamic, or batch read resource capabilityIds. Re-search once before retrying a stale locator.",
             Destructive = true,
-            OpenWorld = true
+            OpenWorld = true,
+            SerializerOptions = McpToolJson.Options
         });
 
     [Description("Invoke one capability ID, or batch read resource capability IDs.")]
@@ -32,12 +34,12 @@ public sealed class InvokeDynamicTool(IHostBroker broker)
     {
         var request = new InvokeCapabilityRequest(
             capabilityId,
-            arguments is null ? null : JsonSerializer.SerializeToElement(arguments, McpJsonUtilities.DefaultOptions),
+            arguments is null ? null : JsonSerializer.SerializeToElement(arguments, McpServerJsonContext.Default.DictionaryStringJsonElement),
             reads);
 
         var problems = InvokeCapabilityValidator.Validate(request);
         if (problems.Count > 0)
-            return DynamicToolCallResults.Error(
+            return DynamicToolResults.Error(
                 "validation_error",
                 string.Join(" ", problems.Select(problem => $"{problem.Name}: {problem.Message}")));
 
@@ -67,7 +69,7 @@ public sealed class InvokeDynamicTool(IHostBroker broker)
     private static CallToolResult ToCallToolResult(InvokeCapabilityResponse response)
     {
         if (!response.Ok)
-            return DynamicToolCallResults.Result(response);
+            return DynamicToolResults.Result(response, McpServerJsonContext.Default.InvokeCapabilityResponse);
 
         return ToHostCallToolResult(response.Result);
     }
@@ -86,7 +88,7 @@ public sealed class InvokeDynamicTool(IHostBroker broker)
                     .ToList()
             };
 
-        return DynamicToolCallResults.Result(new InvokeCapabilityResponse(true, true, result));
+        return DynamicToolResults.Result(new InvokeCapabilityResponse(true, true, result), McpServerJsonContext.Default.InvokeCapabilityResponse);
     }
 
     private async Task<CallToolResult> InvokeReadsAsync(IReadOnlyList<ResourceReadRequest> reads, CancellationToken ct)
@@ -98,11 +100,11 @@ public sealed class InvokeDynamicTool(IHostBroker broker)
         {
             var item = await InvokeSingleAsync(null, read.CapabilityId!, ToElement(read.Arguments), ct).ConfigureAwait(false);
             var resourceResult = new ResourceReadResult(index, item.Response!.Ok, item.Response.Result, item.Response.Error);
-            var itemBytes = Utf8Size(JsonSerializer.Serialize(resourceResult, McpJsonUtilities.DefaultOptions));
+            var itemBytes = PackedUtf8Size(resourceResult);
             if (itemBytes > InvokeDynamicLimits.HardResultBudgetBytes || itemBytes > budget)
             {
                 results.Add(new ResourceReadResult(index, false, null,
-                    new DynamicInvocationError("result_too_large", "The complete item exceeds the daemon result budget.")));
+                    new DynamicInvocationError("result_too_large", "The complete item exceeds the result budget.")));
                 continue;
             }
             if (used + itemBytes > budget)
@@ -110,7 +112,7 @@ public sealed class InvokeDynamicTool(IHostBroker broker)
             results.Add(resourceResult);
             used += itemBytes;
         }
-        return DynamicToolCallResults.Result(new InvokeCapabilityResponse(true, true, Results: results));
+        return DynamicToolResults.Result(new InvokeCapabilityResponse(true, true, Results: results), McpServerJsonContext.Default.InvokeCapabilityResponse);
     }
 
     private async Task<InvokeSingleOutcome> InvokeSingleAsync(
@@ -221,7 +223,7 @@ public sealed class InvokeDynamicTool(IHostBroker broker)
         {
             HostCatalogKind.Resource => session.ReadResourceAsync(locator.Target, ct),
             HostCatalogKind.ResourceTemplate => session.ReadResourceAsync(locator.Target, invocationArguments ?? new Dictionary<string, JsonElement>(), ct),
-            _ => throw new ArgumentOutOfRangeException()
+            _ => throw new ArgumentOutOfRangeException("MCP feature is not supported: " + locator.Kind)
         };
         return await result.ConfigureAwait(false);
     }
@@ -230,9 +232,28 @@ public sealed class InvokeDynamicTool(IHostBroker broker)
         ? value.EnumerateObject().ToDictionary(property => property.Name, property => property.Value) : null;
 
     private static JsonElement? ToElement(Dictionary<string, JsonElement>? arguments) =>
-        arguments is null ? null : JsonSerializer.SerializeToElement(arguments, McpJsonUtilities.DefaultOptions);
+        arguments is null ? null : JsonSerializer.SerializeToElement(arguments, McpServerJsonContext.Default.DictionaryStringJsonElement);
 
     private static InvokeCapabilityResponse Stale(string reason, string message) => new(false, false, Error: new DynamicInvocationError("stale_capability", message, true, reason, "research_then_reinvoke"));
     private static InvokeCapabilityResponse Error(string type, string message) => new(false, false, Error: new DynamicInvocationError(type, message));
+    private const int JsonOverhead = 48;
+    private const int UnknownPayloadBytes = 256;
+
     private static int Utf8Size(string text) => Encoding.UTF8.GetByteCount(text);
+
+    private static int PackedUtf8Size(ResourceReadResult result)
+    {
+        var errorBytes = result.Error is null
+            ? 0
+            : JsonSerializer.SerializeToUtf8Bytes(result.Error, McpServerJsonContext.Default.DynamicInvocationError).Length;
+        var payloadBytes = result.Result switch
+        {
+            ReadResourceResult resource => JsonSerializer.SerializeToUtf8Bytes(resource, ToolHelpers.ProtocolOptions).Length,
+            JsonElement element => Utf8Size(element.GetRawText()),
+            string text => Utf8Size(text),
+            null => 0,
+            _ => UnknownPayloadBytes
+        };
+        return errorBytes + payloadBytes + JsonOverhead;
+    }
 }
