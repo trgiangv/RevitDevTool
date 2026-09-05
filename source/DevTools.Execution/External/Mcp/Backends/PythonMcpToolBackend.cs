@@ -5,7 +5,6 @@ using DevTools.Mcp.Core.Invocation;
 using DevTools.Mcp.Core.Models;
 using DevTools.Mcp.Core.Protocol;
 using DevTools.Mcp.Core.Results;
-using ModelContextProtocol;
 using ModelContextProtocol.Protocol;
 using Python.Runtime;
 

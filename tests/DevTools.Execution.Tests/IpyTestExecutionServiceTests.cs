@@ -4,7 +4,6 @@ using DevTools.Execution.Abstractions;
 using DevTools.Execution.External.Testing;
 using DevTools.Execution.Interfaces;
 using DevTools.Execution.Models;
-using DevTools.Execution.Providers;
 using DevTools.Execution.Providers.Python;
 using DevTools.Hosting;
 using Moq;

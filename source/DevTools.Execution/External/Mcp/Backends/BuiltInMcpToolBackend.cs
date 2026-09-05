@@ -1,6 +1,4 @@
-using DevTools.Mcp.Catalog;
 using DevTools.Mcp.Catalog.Bridging;
-using DevTools.Mcp.Catalog.Discovery;
 using DevTools.Mcp.Core.Invocation;
 using DevTools.Mcp.Core.Models;
 using DevTools.Mcp.Core.Results;

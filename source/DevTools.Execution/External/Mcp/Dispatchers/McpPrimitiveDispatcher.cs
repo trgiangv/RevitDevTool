@@ -1,9 +1,7 @@
-using DevTools.Mcp.Catalog.Discovery;
 using DevTools.Mcp.Core.Invocation;
 using DevTools.Mcp.Core.Models;
 using DevTools.Mcp.Core.Results;
 using DevTools.Telemetry;
-using ModelContextProtocol;
 using ModelContextProtocol.Protocol;
 using CoreMcpErrorCode = DevTools.Mcp.Core.Results.McpErrorCode;
 

@@ -1,6 +1,4 @@
-using DevTools.Execution.Interfaces;
-
-namespace DevTools.Execution.Providers;
+namespace DevTools.Execution.Interfaces;
 
 public interface IScriptExecutionStrategyFactory
 {
