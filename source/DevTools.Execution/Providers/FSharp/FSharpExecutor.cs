@@ -119,6 +119,8 @@ public sealed class FSharpExecutor(ILogger<FSharpExecutor> logger)
             "--nologo",
             "--define:TRACE",
             "--define:DEBUG",
+            "--debug+",
+            "--optimize-",
 #if NETFRAMEWORK
             "--multiemit-",
 #else

@@ -31,6 +31,9 @@ public sealed class CSharpDirectiveParserTests
             Assert.Contains(
                 graph.Packages,
                 package => package is { PackageId: "Newtonsoft.Json", Version: "13.0.3" });
+            Assert.Contains("// #r \"nuget: Newtonsoft.Json, 13.0.3\"", graph.SourceFiles[1].CleanSource, StringComparison.Ordinal);
+            Assert.Contains("// #load \"dep.csx\"", graph.SourceFiles[1].CleanSource, StringComparison.Ordinal);
+            Assert.Contains("Console.WriteLine(\"entry\");", graph.SourceFiles[1].CleanSource, StringComparison.Ordinal);
         }
         finally
         {

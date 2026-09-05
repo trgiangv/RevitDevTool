@@ -118,6 +118,51 @@ public sealed class FSharpDependencyResolverExtendedTests
     }
 
     [Fact]
+    public async Task ResolveAsync_RewrittenGraph_EmitsLineDirectiveToOriginalScript()
+    {
+        var directory = ExecutionTestHelpers.CreateTempDirectory("fsharp-line-directive");
+        var dependencyPath = Path.Combine(directory, "helper.dll");
+        await File.WriteAllBytesAsync(dependencyPath, [0x4D, 0x5A], TestContext.Current.CancellationToken);
+
+        var scriptPath = Path.Combine(directory, "entry_script.fsx");
+        await File.WriteAllTextAsync(
+            scriptPath,
+            $"#r @\"{dependencyPath.Replace('\\', '/')}\"\nlet x = 1",
+            TestContext.Current.CancellationToken);
+
+        var graph = await FSharpScriptGraph.BuildLoadGraphAsync(scriptPath, TestContext.Current.CancellationToken);
+        var resolver = new FSharpDependencyResolver(
+            NullLogger<FSharpDependencyResolver>.Instance,
+            new NugetManager(NullLogger<NugetManager>.Instance));
+
+        try
+        {
+            var resolution = await resolver.ResolveAsync(
+                scriptPath,
+                graph,
+                ExecutionTestHelpers.CreateScriptBridge(),
+                ct: TestContext.Current.CancellationToken);
+
+            Assert.False(
+                string.Equals(
+                    Path.GetFullPath(scriptPath),
+                    Path.GetFullPath(resolution.ScriptPath),
+                    StringComparison.OrdinalIgnoreCase));
+
+            var rewritten = await File.ReadAllLinesAsync(resolution.ScriptPath, TestContext.Current.CancellationToken);
+            Assert.StartsWith("#line 1 \"", rewritten[0], StringComparison.Ordinal);
+            Assert.Contains(scriptPath.Replace('\\', '/'), rewritten[0], StringComparison.OrdinalIgnoreCase);
+            Assert.Contains("let x = 1", rewritten);
+
+            resolution.Cleanup?.Dispose();
+        }
+        finally
+        {
+            Directory.Delete(directory, recursive: true);
+        }
+    }
+
+    [Fact]
     public async Task ResolveAsync_RewritesHostYear_ViaBridge()
     {
         var directory = ExecutionTestHelpers.CreateTempDirectory("fsharp-host-rewrite");

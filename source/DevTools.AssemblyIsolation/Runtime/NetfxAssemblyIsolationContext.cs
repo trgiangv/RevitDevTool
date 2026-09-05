@@ -44,13 +44,17 @@ internal sealed class NetfxAssemblyIsolationContext : IDisposable
             return Own(LoadManaged(path));
     }
 
-    public Assembly LoadAssembly(byte[] assemblyBytes)
+    public Assembly LoadAssembly(byte[] assemblyBytes, byte[]? symbolBytes = null)
     {
         ThrowIfDisposed();
         if (assemblyBytes is null) throw new ArgumentNullException(nameof(assemblyBytes));
 
         using (BeginLoad())
-            return Own(Assembly.Load(assemblyBytes));
+        {
+            return Own(symbolBytes is { Length: > 0 }
+                ? Assembly.Load(assemblyBytes, symbolBytes)
+                : Assembly.Load(assemblyBytes));
+        }
     }
 
     public void Dispose()

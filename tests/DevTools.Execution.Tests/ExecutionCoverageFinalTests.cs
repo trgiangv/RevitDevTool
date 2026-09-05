@@ -98,7 +98,8 @@ public sealed class ExecutionCoverageFinalTests
         {
             var graph = CSharpDirectiveParser.ResolveGraph(entryPath);
             Assert.Single(graph.SourceFiles);
-            Assert.DoesNotContain("missing.csx", graph.SourceFiles[0].CleanSource, StringComparison.Ordinal);
+            Assert.Contains("//", graph.SourceFiles[0].CleanSource, StringComparison.Ordinal);
+            Assert.Contains("missing.csx", graph.SourceFiles[0].CleanSource, StringComparison.Ordinal);
         }
         finally
         {

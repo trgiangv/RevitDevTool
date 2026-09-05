@@ -194,6 +194,8 @@ internal static partial class CSharpDirectiveParser
         {
             if (!stripped.Contains(i))
                 result.Add(lines[i]);
+            else
+                result.Add("// " + lines[i]);
         }
         return string.Join("\n", result);
     }

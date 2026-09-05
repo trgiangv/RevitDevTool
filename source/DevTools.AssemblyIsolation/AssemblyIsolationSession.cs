@@ -59,14 +59,14 @@ public sealed class AssemblyIsolationSession : IDisposable
 #endif
     }
 
-    public Assembly LoadAssembly(byte[] assemblyBytes)
+    public Assembly LoadAssembly(byte[] assemblyBytes, byte[]? symbolBytes = null)
     {
         ThrowIfDisposed();
         if (assemblyBytes is null) throw new ArgumentNullException(nameof(assemblyBytes));
 #if NET
-        return context!.LoadAssembly(assemblyBytes);
+        return context!.LoadAssembly(assemblyBytes, symbolBytes);
 #else
-        return netfxContext!.LoadAssembly(assemblyBytes);
+        return netfxContext!.LoadAssembly(assemblyBytes, symbolBytes);
 #endif
     }
 

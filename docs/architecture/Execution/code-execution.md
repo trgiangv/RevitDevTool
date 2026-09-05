@@ -62,12 +62,14 @@ Init, backends, host-attach, and native constraints: [python-runtime.md](python-
 - `FSharpExecutionStrategy` compiles `.fsx` through `FSharpCompilationCache`.
 - `FSharpDependencyResolver` handles `#r "nuget: ..."` directives.
 - `NugetManager` restores packages under `%APPDATA%\RevitDevTool\nuget`.
+- When nuget or file `#r` must be rewritten, the graph is copied under `%TEMP%\DevTools\fsx_cache` (commented `#r`, remapped `#load`, `--reference:`). Each temp file starts with `#line 1 "<original>"` so FSI `--debug+` sequence points map back to the source the user edits. Eval of an unchanged graph still uses the original path.
 - Compilation has a hard timeout.
 
 ### CSharp
 
 - `CSharpExecutionStrategy` compiles `.csx` through `CSharpCompilationCache`.
-- `CSharpDirectiveParser` handles references and package directives.
+- `CSharpDirectiveParser` handles references and package directives. `#r` / `#load` are commented in place (line numbers stay aligned with the file on disk).
+- Emit is Debug + portable PDB, loaded with the collectible/net48 isolation session so an attached host debugger can bind the original `.csx`. `#r nuget` still resolves through `NugetManager`; it is not left as compiler syntax.
 - Compiled script outputs use the feature-owned `ScriptIsolationPlan` with the
   shared assembly-isolation session. Identity and lifecycle behavior follows
   the [assembly-isolation product contract](../../product/assembly-isolation.md).

@@ -1,11 +1,14 @@
 using System.IO;
 using System.Reflection;
+using System.Text;
 using DevTools.AssemblyIsolation;
 using DevTools.AssemblyIsolation.Diagnostics;
 using DevTools.Execution.Models;
 using DevTools.Execution.Providers.FSharp;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
+using Microsoft.CodeAnalysis.Emit;
+using Microsoft.CodeAnalysis.Text;
 using Microsoft.Extensions.Logging;
 using ZLogger;
 
@@ -60,12 +63,12 @@ public sealed class CSharpCompiler(ILogger<CSharpCompiler> logger, NugetManager 
             var (allReferences, nugetDllPaths) = await ResolveReferencesAsync(graph, progress, ct).ConfigureAwait(false);
 
             ReportCompileProgress(progress, scriptName, graph.SourceFiles.Count);
-            var peBytes = Compile(graph.SourceFiles, allReferences, out var diagnostics);
+            var peBytes = Compile(graph.SourceFiles, allReferences, out var pdbBytes, out var diagnostics);
 
             if (peBytes == null)
                 return ScriptCompilationResult.Failed(diagnostics);
 
-            return LoadAndCreateCommand(peBytes, nugetDllPaths, hostSupport);
+            return LoadAndCreateCommand(peBytes, pdbBytes, nugetDllPaths, hostSupport);
         }
         finally
         {
@@ -78,7 +81,7 @@ public sealed class CSharpCompiler(ILogger<CSharpCompiler> logger, NugetManager 
     }
 
     private ScriptCompilationResult LoadAndCreateCommand(
-        byte[] peBytes, IReadOnlyList<string> nugetDllPaths, ICompiledScriptBridge hostSupport)
+        byte[] peBytes, byte[]? pdbBytes, IReadOnlyList<string> nugetDllPaths, ICompiledScriptBridge hostSupport)
     {
         var session = AssemblyIsolationSession.Create(
             ScriptIsolationPlan.Create(
@@ -88,7 +91,7 @@ public sealed class CSharpCompiler(ILogger<CSharpCompiler> logger, NugetManager 
                 new ScriptIsolationDiagnosticSink(logger)));
         try
         {
-            var assembly = session.LoadAssembly(peBytes);
+            var assembly = session.LoadAssembly(peBytes, pdbBytes);
             return CreateCommandResult(assembly, hostSupport, session);
         }
         catch
@@ -151,9 +154,14 @@ public sealed class CSharpCompiler(ILogger<CSharpCompiler> logger, NugetManager 
             : $"Compiling {scriptName}...");
     }
 
-    private byte[]? Compile(IReadOnlyList<SourceFileEntry> sourceFiles, HashSet<string> referencePaths, out List<string> diagnostics)
+    private byte[]? Compile(
+        IReadOnlyList<SourceFileEntry> sourceFiles,
+        HashSet<string> referencePaths,
+        out byte[]? pdbBytes,
+        out List<string> diagnostics)
     {
         diagnostics = [];
+        pdbBytes = null;
 
         var parseOptions = CSharpParseOptions.Default
             .WithLanguageVersion(MaxLanguageVersion)
@@ -161,7 +169,11 @@ public sealed class CSharpCompiler(ILogger<CSharpCompiler> logger, NugetManager 
             .WithPreprocessorSymbols("TRACE", "DEBUG");
 
         var syntaxTrees = sourceFiles
-            .Select(f => CSharpSyntaxTree.ParseText(f.CleanSource, parseOptions, f.Path))
+            .Select(f =>
+            {
+                var text = SourceText.From(f.CleanSource, Encoding.UTF8);
+                return CSharpSyntaxTree.ParseText(text, parseOptions, f.Path);
+            })
             .ToList();
 
         var metadataRefs = LoadMetadataReferences(referencePaths);
@@ -173,10 +185,19 @@ public sealed class CSharpCompiler(ILogger<CSharpCompiler> logger, NugetManager 
             options: new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary)
                 .WithOverflowChecks(true)
                 .WithPlatform(Platform.X64)
-                .WithOptimizationLevel(OptimizationLevel.Release));
+                .WithOptimizationLevel(OptimizationLevel.Debug));
+
+        var embeddedTexts = syntaxTrees
+            .Select(tree => EmbeddedText.FromSource(tree.FilePath, tree.GetText()))
+            .ToList();
 
         using var peStream = new MemoryStream();
-        var emitResult = compilation.Emit(peStream);
+        using var pdbStream = new MemoryStream();
+        var emitResult = compilation.Emit(
+            peStream,
+            pdbStream,
+            options: new EmitOptions(debugInformationFormat: DebugInformationFormat.PortablePdb),
+            embeddedTexts: embeddedTexts);
 
         diagnostics.AddRange(emitResult.Diagnostics
             .Where(d => d.Severity is DiagnosticSeverity.Error or DiagnosticSeverity.Warning)
@@ -185,6 +206,7 @@ public sealed class CSharpCompiler(ILogger<CSharpCompiler> logger, NugetManager 
         if (!emitResult.Success)
             return null;
 
+        pdbBytes = pdbStream.ToArray();
         return peStream.ToArray();
     }
 

@@ -8,30 +8,27 @@ using DevTools.AssemblyIsolation.Sources;
 
 namespace DevTools.AssemblyIsolation.Runtime;
 
-internal sealed class AssemblyIsolationContext : AssemblyLoadContext
+internal sealed class AssemblyIsolationContext(AssemblyIsolationPlan plan) : 
+    AssemblyLoadContext($"DevTools.AssemblyIsolation:{Path.GetFileNameWithoutExtension(plan.EntryAssemblyPath)}", isCollectible: true)
 {
-    private readonly AssemblyIsolationPlan plan;
-
-    public AssemblyIsolationContext(AssemblyIsolationPlan plan)
-        : base($"DevTools.AssemblyIsolation:{Path.GetFileNameWithoutExtension(plan.EntryAssemblyPath)}", isCollectible: true)
-    {
-        this.plan = plan ?? throw new ArgumentNullException(nameof(plan));
-    }
+    private readonly AssemblyIsolationPlan plan = plan ?? throw new ArgumentNullException(nameof(plan));
 
     public Assembly LoadEntryAssembly()
     {
         var requested = AssemblyName.GetAssemblyName(plan.EntryAssemblyPath);
-        if (plan.TryShare(requested, out var parent))
-            return parent;
-
-        return AssemblyStreamLoader.Load(this, plan.EntryAssemblyPath);
+        return plan.TryShare(requested, out var parent) 
+            ? parent 
+            : AssemblyStreamLoader.Load(this, plan.EntryAssemblyPath);
     }
 
-    public Assembly LoadAssembly(byte[] assemblyBytes)
+    public Assembly LoadAssembly(byte[] assemblyBytes, byte[]? symbolBytes = null)
     {
         if (assemblyBytes is null) throw new ArgumentNullException(nameof(assemblyBytes));
         using var assemblyStream = new MemoryStream(assemblyBytes, writable: false);
-        return LoadFromStream(assemblyStream);
+        if (symbolBytes is not { Length: > 0 }) 
+            return LoadFromStream(assemblyStream);
+        using var symbolStream = new MemoryStream(symbolBytes, writable: false);
+        return LoadFromStream(assemblyStream, symbolStream);
     }
 
     internal nint ResolveNativeForTesting(string name) => LoadUnmanagedDll(name);

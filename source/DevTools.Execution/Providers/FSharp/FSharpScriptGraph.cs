@@ -91,7 +91,10 @@ internal static partial class FSharpScriptGraph
         foreach (var node in nodes.Values)
         {
             ct.ThrowIfCancellationRequested();
-            var rewritten = new List<string>(node.Lines.Length);
+            var rewritten = new List<string>(node.Lines.Length + 1)
+            {
+                ToLineDirective(node.Path)
+            };
             for (var i = 0; i < node.Lines.Length; i++)
                 rewritten.Add(TransformLine(node, i, pathMap, resolvedReferenceLines));
 
@@ -162,6 +165,12 @@ internal static partial class FSharpScriptGraph
         }
 
         return map;
+    }
+
+    private static string ToLineDirective(string originalPath)
+    {
+        var escaped = Path.GetFullPath(originalPath).Replace('\\', '/');
+        return $"#line 1 \"{escaped}\"";
     }
 
     private static string ComputeShortHash(string input)

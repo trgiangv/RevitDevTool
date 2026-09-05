@@ -1,3 +1,4 @@
+using System.Reflection;
 using DevTools.Execution.Providers.CSharp;
 using DevTools.Execution.Providers.FSharp;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -72,5 +73,38 @@ public sealed class CSharpCompilerTests
 
         Assert.False(result.Success);
         Assert.Contains("No host command type found", result.FormatDiagnostics());
+    }
+
+    [Fact]
+    public async Task CompileAsync_FromFilePath_EmitsDebuggableSymbols()
+    {
+        var directory = ExecutionTestHelpers.CreateTempDirectory("csharp-debug-symbols");
+        var scriptPath = Path.Combine(directory, "sample_script.csx");
+        await File.WriteAllTextAsync(
+            scriptPath,
+            """
+            public sealed class ScriptCommand { public int Value => 42; }
+            """,
+            TestContext.Current.CancellationToken);
+
+        try
+        {
+            var compiler = new CSharpCompiler(
+                NullLogger<CSharpCompiler>.Instance,
+                new NugetManager(NullLogger<NugetManager>.Instance));
+
+            var result = await compiler.CompileAsync(scriptPath, ExecutionTestHelpers.CreateScriptBridge(), ct: TestContext.Current.CancellationToken);
+
+            Assert.True(result.Success, result.FormatDiagnostics());
+            var assembly = result.Command!.GetType().Assembly;
+            var debuggable = assembly.GetCustomAttribute<System.Diagnostics.DebuggableAttribute>();
+            Assert.NotNull(debuggable);
+            Assert.True(debuggable!.IsJITOptimizerDisabled);
+            result.Cleanup?.Dispose();
+        }
+        finally
+        {
+            Directory.Delete(directory, recursive: true);
+        }
     }
 }
