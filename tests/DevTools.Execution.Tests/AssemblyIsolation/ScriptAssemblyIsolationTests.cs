@@ -1,6 +1,7 @@
 using System.Reflection;
 using DevTools.AssemblyIsolation;
 using DevTools.Execution.Abstractions;
+using DevTools.Execution.Providers;
 using DevTools.Execution.Providers.CSharp;
 using DevTools.Execution.Providers.FSharp;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -69,13 +70,23 @@ public sealed class ScriptAssemblyIsolationTests
         result.Cleanup!.Dispose();
     }
 
+    [Fact]
+    public void Session_references_are_the_on_disk_parent_binding_locations()
+    {
+        var bridge = new ContractBridge();
+        var expected = Path.GetFullPath(typeof(ScriptContract).Assembly.Location);
+
+        Assert.Contains(
+            expected,
+            bridge.GetSessionReferences().Select(Path.GetFullPath),
+            StringComparer.OrdinalIgnoreCase);
+    }
+
     private sealed class ContractBridge : ICompiledScriptBridge
     {
-        public IEnumerable<string> GetSessionReferences() => [typeof(ScriptContract).Assembly.Location];
         public IEnumerable<Assembly> GetParentBindings() => [typeof(ScriptContract).Assembly];
         public Type? TryFindCommandType(Assembly assembly) => assembly.GetType("ScriptCommand");
-        public string? GetHostReferencePattern() => null;
-        public string GetHostReferenceReplacement() => string.Empty;
+        public string RewriteHostReference(string reference) => reference;
     }
 }
 

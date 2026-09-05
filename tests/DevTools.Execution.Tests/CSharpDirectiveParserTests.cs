@@ -23,14 +23,14 @@ public sealed class CSharpDirectiveParserTests
 
         try
         {
-            var graph = CSharpDirectiveParser.ResolveGraph(entryPath, hostPattern: null, hostReplacement: null);
+            var graph = CSharpDirectiveParser.ResolveGraph(entryPath);
 
             Assert.Equal(2, graph.SourceFiles.Count);
             Assert.Equal(dependencyPath, graph.SourceFiles[0].Path, ignoreCase: true);
             Assert.Equal(entryPath, graph.SourceFiles[1].Path, ignoreCase: true);
             Assert.Contains(
                 graph.Packages,
-                package => package.PackageId == "Newtonsoft.Json" && package.Version == "13.0.3");
+                package => package is { PackageId: "Newtonsoft.Json", Version: "13.0.3" });
         }
         finally
         {

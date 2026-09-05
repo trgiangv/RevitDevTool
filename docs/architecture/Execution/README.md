@@ -4,7 +4,7 @@ The execution system is the shared runtime in `source/DevTools.Execution/`. It d
 
 The platform is not Revit-only. Revit and AutoCAD currently provide host adapters; future .NET-capable hosts should plug in through the same abstractions.
 
-Last updated: 2026-09-02
+Last updated: 2026-09-05
 
 ---
 
@@ -74,7 +74,7 @@ Shared execution depends on interfaces:
 | `IHostContextExecutor` | Marshal work to the host-safe context/API thread. |
 | `ICommandDiscovery` | Parse host commands from an assembly. |
 | `ICommandRunner` | Invoke discovered or compiled commands. |
-| `ICompiledScriptBridge` | Provide references and host-specific compile context. |
+| `ICompiledScriptBridge` | Parent-bind host APIs, find the compiled command type, rewrite host-year `#r` paths. FSI compile refs are derived from parent `Location`s in Execution, not a fourth contract member. |
 | `IPythonBridge` | Configure CPython builtins/scope for the host. |
 | `IIronPythonBridge` | Configure IronPython runtime and search paths for the host. |
 | `IDebuggerBridge` | Open debugger/runtime hooks from shared UI. |

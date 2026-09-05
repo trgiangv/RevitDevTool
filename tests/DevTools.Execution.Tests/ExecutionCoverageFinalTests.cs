@@ -47,8 +47,9 @@ public sealed class ExecutionCoverageFinalTests
         {
             var graph = CSharpDirectiveParser.ResolveGraph(
                 entryPath,
-                hostPattern: @"RevitAPI_(\d{4})\.dll",
-                hostReplacement: "RevitAPI_2025.dll");
+                path => path.Contains("RevitAPI_2024.dll", StringComparison.OrdinalIgnoreCase)
+                    ? rewrittenPath
+                    : path);
 
             Assert.Single(graph.AssemblyReferences);
             Assert.Equal(Path.GetFullPath(rewrittenPath), Path.GetFullPath(graph.AssemblyReferences[0]), ignoreCase: true);
@@ -73,7 +74,7 @@ public sealed class ExecutionCoverageFinalTests
 
         try
         {
-            var graph = CSharpDirectiveParser.ResolveGraph(entryPath, hostPattern: null, hostReplacement: null);
+            var graph = CSharpDirectiveParser.ResolveGraph(entryPath);
 
             Assert.Single(graph.Packages);
             Assert.Equal("Humanizer", graph.Packages[0].PackageId);
@@ -95,7 +96,7 @@ public sealed class ExecutionCoverageFinalTests
 
         try
         {
-            var graph = CSharpDirectiveParser.ResolveGraph(entryPath, hostPattern: null, hostReplacement: null);
+            var graph = CSharpDirectiveParser.ResolveGraph(entryPath);
             Assert.Single(graph.SourceFiles);
             Assert.DoesNotContain("missing.csx", graph.SourceFiles[0].CleanSource, StringComparison.Ordinal);
         }
@@ -117,7 +118,7 @@ public sealed class ExecutionCoverageFinalTests
 
         try
         {
-            var graph = CSharpDirectiveParser.ResolveGraph(entryPath, hostPattern: null, hostReplacement: null);
+            var graph = CSharpDirectiveParser.ResolveGraph(entryPath);
             Assert.Contains(
                 graph.AssemblyReferences,
                 path => Path.GetFullPath(path).Equals(Path.GetFullPath(dllPath), StringComparison.OrdinalIgnoreCase));
@@ -227,7 +228,7 @@ public sealed class ExecutionCoverageFinalTests
 
         try
         {
-            var graph = CSharpDirectiveParser.ResolveGraph(entryPath, hostPattern: null, hostReplacement: null);
+            var graph = CSharpDirectiveParser.ResolveGraph(entryPath);
             Assert.Equal(2, graph.SourceFiles.Count);
         }
         finally
@@ -305,7 +306,7 @@ public sealed class ExecutionCoverageFinalTests
     public void CSharpDirectiveParser_MissingEntryFile_ReturnsEmptyGraph()
     {
         var missing = Path.Combine(Path.GetTempPath(), $"missing-entry-{Guid.NewGuid():N}.csx");
-        var graph = CSharpDirectiveParser.ResolveGraph(missing, hostPattern: null, hostReplacement: null);
+        var graph = CSharpDirectiveParser.ResolveGraph(missing);
         Assert.Empty(graph.SourceFiles);
     }
 

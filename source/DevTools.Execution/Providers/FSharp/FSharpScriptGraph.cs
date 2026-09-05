@@ -8,26 +8,26 @@ namespace DevTools.Execution.Providers.FSharp;
 internal static partial class FSharpScriptGraph
 {
     private const string NugetDirectivePattern = """^\s*#r\s+"nuget:\s*(?<id>[A-Za-z0-9._\-]+)(?:\s*,\s*(?<ver>[^"]+))?"\s*$""";
-    private const string DefaultHostReferencePattern = """^\s*#r\s+@?"(?<ref>[^"]*(?:Revit|AutoCAD)\s+\d{4}[^"]*)"\s*$""";
+    private const string FileReferenceDirectivePattern = """^\s*#r\s+@?"(?<ref>[^"]+)"\s*$""";
     private const string LoadDirectivePattern = """
                                                 ^\s*#load\s+@?"(?<path>[^"]+)"
                                                 """;
     private const string VersionPrefixPattern = @"^[><=~^*\s]+";
 #if NETFRAMEWORK
     private static readonly Regex NugetDirectiveRx = new(NugetDirectivePattern, RegexOptions.IgnoreCase | RegexOptions.Compiled);
-    private static readonly Regex HostReferenceDirectiveRx = new(DefaultHostReferencePattern, RegexOptions.IgnoreCase | RegexOptions.Compiled);
+    private static readonly Regex FileReferenceDirectiveRx = new(FileReferenceDirectivePattern, RegexOptions.IgnoreCase | RegexOptions.Compiled);
     private static readonly Regex LoadDirectiveRx = new(LoadDirectivePattern, RegexOptions.IgnoreCase | RegexOptions.Compiled);
     private static readonly Regex VersionPrefixRx = new(VersionPrefixPattern, RegexOptions.Compiled);
     private static Regex NugetDirectiveRegex() => NugetDirectiveRx;
-    private static Regex HostReferenceDirectiveRegex() => HostReferenceDirectiveRx;
+    private static Regex FileReferenceDirectiveRegex() => FileReferenceDirectiveRx;
     private static Regex LoadDirectiveRegex() => LoadDirectiveRx;
     private static Regex VersionPrefixRegex() => VersionPrefixRx;
 #else
     [GeneratedRegex(NugetDirectivePattern, RegexOptions.IgnoreCase)]
     private static partial Regex NugetDirectiveRegex();
 
-    [GeneratedRegex(DefaultHostReferencePattern, RegexOptions.IgnoreCase)]
-    private static partial Regex HostReferenceDirectiveRegex();
+    [GeneratedRegex(FileReferenceDirectivePattern, RegexOptions.IgnoreCase)]
+    private static partial Regex FileReferenceDirectiveRegex();
 
     [GeneratedRegex(LoadDirectivePattern, RegexOptions.IgnoreCase)]
     private static partial Regex LoadDirectiveRegex();
@@ -140,7 +140,7 @@ internal static partial class FSharpScriptGraph
             if (NugetDirectiveRegex().IsMatch(line))
                 continue;
 
-            var match = HostReferenceDirectiveRegex().Match(line);
+            var match = FileReferenceDirectiveRegex().Match(line);
             if (!match.Success) continue;
 
             target.Add(new ReferenceDirective(filePath, i + 1, match.Groups["ref"].Value.Trim()));

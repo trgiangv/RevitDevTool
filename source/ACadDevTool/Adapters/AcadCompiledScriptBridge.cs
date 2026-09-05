@@ -1,5 +1,5 @@
 using System.Reflection;
-using Autodesk.AutoCAD.DatabaseServices;
+using System.Text.RegularExpressions;
 using Autodesk.AutoCAD.Runtime;
 using DevTools.AssemblyIsolation;
 using DevTools.Hosting;
@@ -8,19 +8,9 @@ namespace AcadDevTool.Adapters;
 
 public sealed class AcadCompiledScriptBridge(IHostAppInfo hostAppInfo, HostAssemblies hostAssemblies) : ICompiledScriptBridge
 {
+    private static readonly Regex HostYearRx = new(@"AutoCAD\s+\d{4}", RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
     public IEnumerable<Assembly> GetParentBindings() => hostAssemblies.All();
-
-    public IEnumerable<string> GetSessionReferences()
-    {
-        // acmgd (Runtime — CommandMethodAttribute, ExtensionApplication)
-        yield return typeof(CommandMethodAttribute).Assembly.Location;
-
-        // acdbmgd (DatabaseServices — Database, DBObject, Transaction)
-        yield return typeof(Database).Assembly.Location;
-
-        // accoremgd (ApplicationServices.Core — Application, DocumentManager)
-        yield return typeof(Autodesk.AutoCAD.ApplicationServices.Core.Application).Assembly.Location;
-    }
 
     public Type? TryFindCommandType(Assembly assembly)
     {
@@ -39,7 +29,6 @@ public sealed class AcadCompiledScriptBridge(IHostAppInfo hostAppInfo, HostAssem
         return null;
     }
 
-    public string GetHostReferencePattern() => @"AutoCAD\s+\d{4}";
-
-    public string GetHostReferenceReplacement() => $"AutoCAD {hostAppInfo.VersionNumber}";
+    public string RewriteHostReference(string reference) =>
+        HostYearRx.Replace(reference, $"AutoCAD {hostAppInfo.VersionNumber}");
 }

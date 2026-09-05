@@ -100,10 +100,7 @@ public sealed class CSharpCompilationCache(
     {
         ct.ThrowIfCancellationRequested();
 
-        var graph = CSharpDirectiveParser.ResolveGraph(
-            entryPath,
-            bridge.GetHostReferencePattern(),
-            bridge.GetHostReferenceReplacement());
+        var graph = CSharpDirectiveParser.ResolveGraph(entryPath);
 
         using var hasher = IncrementalHash.CreateHash(HashAlgorithmName.SHA256);
         foreach (var file in graph.SourceFiles.OrderBy(f => f.Path, StringComparer.OrdinalIgnoreCase))

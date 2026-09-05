@@ -1,4 +1,5 @@
 using System.Reflection;
+using System.Text.RegularExpressions;
 using DevTools.AssemblyIsolation;
 using DevTools.Hosting;
 
@@ -6,15 +7,9 @@ namespace RevitDevTool.Adapters;
 
 public sealed class RevitCompiledScriptBridge(IHostAppInfo hostAppInfo, HostAssemblies hostAssemblies) : ICompiledScriptBridge
 {
-    public IEnumerable<Assembly> GetParentBindings() => hostAssemblies.All();
+    private static readonly Regex HostYearRx = new(@"Revit\s+\d{4}", RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
-    public IEnumerable<string> GetSessionReferences()
-    {
-        yield return typeof(IExternalCommand).Assembly.Location;
-        var uiAssembly = typeof(UIApplication).Assembly;
-        if (uiAssembly.Location != typeof(IExternalCommand).Assembly.Location)
-            yield return uiAssembly.Location;
-    }
+    public IEnumerable<Assembly> GetParentBindings() => hostAssemblies.All();
 
     public Type? TryFindCommandType(Assembly assembly)
     {
@@ -33,7 +28,6 @@ public sealed class RevitCompiledScriptBridge(IHostAppInfo hostAppInfo, HostAsse
         return null;
     }
 
-    public string GetHostReferencePattern() => @"Revit\s+\d{4}";
-
-    public string GetHostReferenceReplacement() => $"Revit {hostAppInfo.VersionNumber}";
+    public string RewriteHostReference(string reference) =>
+        HostYearRx.Replace(reference, $"Revit {hostAppInfo.VersionNumber}");
 }

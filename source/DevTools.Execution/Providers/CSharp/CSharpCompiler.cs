@@ -55,8 +55,7 @@ public sealed class CSharpCompiler(ILogger<CSharpCompiler> logger, NugetManager 
             var scriptName = Path.GetFileName(actualPath);
             progress?.Report($"Resolving script graph for {scriptName}...");
 
-            var graph = CSharpDirectiveParser.ResolveGraph(
-                actualPath, hostSupport.GetHostReferencePattern(), hostSupport.GetHostReferenceReplacement());
+            var graph = CSharpDirectiveParser.ResolveGraph(actualPath, hostSupport.RewriteHostReference);
 
             var (allReferences, nugetDllPaths) = await ResolveReferencesAsync(graph, progress, ct).ConfigureAwait(false);
 

@@ -1,5 +1,4 @@
 using System.IO;
-using System.Text.RegularExpressions;
 using Microsoft.Extensions.Logging;
 using ZLogger;
 namespace DevTools.Execution.Providers.FSharp;
@@ -15,10 +14,8 @@ public sealed class FSharpDependencyResolver(ILogger<FSharpDependencyResolver> l
     {
         var entryScript = Path.GetFullPath(entryScriptPath);
         var entryScriptName = Path.GetFileName(entryScript);
-        var hostPattern = bridgeSupport.GetHostReferencePattern();
-        var hostReplacement = bridgeSupport.GetHostReferenceReplacement();
         var references = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-        var resolvedReferenceLines = ResolveFileReferences(graph.FileReferences, hostPattern, hostReplacement, references);
+        var resolvedReferenceLines = ResolveFileReferences(graph.FileReferences, bridgeSupport, references);
         var requiresRewrite = graph.Packages.Count > 0 || resolvedReferenceLines.Count > 0;
 
         if (graph.Packages.Count > 0)
@@ -51,26 +48,24 @@ public sealed class FSharpDependencyResolver(ILogger<FSharpDependencyResolver> l
 
     private IReadOnlyDictionary<string, IReadOnlyDictionary<int, string>> ResolveFileReferences(
         IReadOnlyList<ReferenceDirective> directives,
-        string? hostPattern,
-        string hostReplacement,
+        ICompiledScriptBridge bridgeSupport,
         HashSet<string> references)
     {
         var resolvedLines = new Dictionary<string, Dictionary<int, string>>(StringComparer.OrdinalIgnoreCase);
         if (directives.Count == 0)
             return new Dictionary<string, IReadOnlyDictionary<int, string>>(StringComparer.OrdinalIgnoreCase);
 
-        var hostRegex = hostPattern is not null
-            ? new Regex(hostPattern, RegexOptions.IgnoreCase | RegexOptions.Compiled)
-            : null;
-
         foreach (var directive in directives)
         {
-            var rewritten = CorrectHostReference(directive.Reference, hostRegex, hostReplacement);
+            var rewritten = bridgeSupport.RewriteHostReference(directive.Reference);
+            if (string.IsNullOrWhiteSpace(rewritten))
+                rewritten = directive.Reference;
+
             var resolved = ResolveAbsolutePath(directive.FilePath, rewritten);
 
             if (!File.Exists(resolved))
             {
-                logger.ZLogWarning(
+                logger.ZLogDebug(
                     $"Could not resolve F# reference '{rewritten}' in {directive.FilePath} (line {directive.LineNumber}). Keeping original #r directive for FSI.");
                 continue;
             }
@@ -89,13 +84,6 @@ public sealed class FSharpDependencyResolver(ILogger<FSharpDependencyResolver> l
         return resolvedLines.ToDictionary(
             item => item.Key, IReadOnlyDictionary<int, string> (item) => item.Value,
             StringComparer.OrdinalIgnoreCase);
-    }
-
-    private static string CorrectHostReference(string referenceValue, Regex? hostRegex, string replacement)
-    {
-        return hostRegex is null
-            ? referenceValue
-            : hostRegex.Replace(referenceValue, replacement);
     }
 
     private static string ResolveAbsolutePath(string scriptFilePath, string referenceValue)

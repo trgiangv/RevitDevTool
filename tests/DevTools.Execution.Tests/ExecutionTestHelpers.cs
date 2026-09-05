@@ -172,16 +172,12 @@ internal static class ExecutionTestHelpers
 
     private sealed class InlineCompiledScriptBridge(string commandTypeName) : ICompiledScriptBridge
     {
-        public IEnumerable<string> GetSessionReferences() => [];
-
         public IEnumerable<Assembly> GetParentBindings() => [];
 
         public Type? TryFindCommandType(Assembly assembly) =>
             assembly.GetTypes().FirstOrDefault(t => t.Name == commandTypeName);
 
-        public string? GetHostReferencePattern() => null;
-
-        public string GetHostReferenceReplacement() => string.Empty;
+        public string RewriteHostReference(string reference) => reference;
     }
 
     private sealed class FakeHostAppInfo : IHostAppInfo

@@ -40,18 +40,15 @@ internal static partial class CSharpDirectiveParser
     /// Returns a flattened result containing all source files (topologically ordered,
     /// dependencies before dependents) and merged references from the entire graph.
     /// </summary>
-    public static ScriptGraph ResolveGraph(string entryPath, string? hostPattern, string? hostReplacement)
+    public static ScriptGraph ResolveGraph(string entryPath, Func<string, string>? rewriteHostReference = null)
     {
         var visited = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         var sourceFiles = new List<SourceFileEntry>();
         var allPackages = new List<PackageReference>();
         var allAssemblyRefs = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var rewrite = rewriteHostReference ?? (reference => reference);
 
-        var hostRegex = hostPattern is not null
-            ? new Regex(hostPattern, RegexOptions.IgnoreCase | RegexOptions.Compiled)
-            : null;
-
-        ResolveRecursive(entryPath, visited, sourceFiles, allPackages, allAssemblyRefs, hostRegex, hostReplacement);
+        ResolveRecursive(entryPath, visited, sourceFiles, allPackages, allAssemblyRefs, rewrite);
 
         return new ScriptGraph(sourceFiles, allPackages, allAssemblyRefs.ToList());
     }
@@ -62,8 +59,7 @@ internal static partial class CSharpDirectiveParser
         List<SourceFileEntry> sourceFiles,
         List<PackageReference> allPackages,
         HashSet<string> allAssemblyRefs,
-        Regex? hostRegex,
-        string? hostReplacement)
+        Func<string, string> rewriteHostReference)
     {
         var canonicalPath = Path.GetFullPath(filePath);
         if (!visited.Add(canonicalPath))
@@ -73,10 +69,10 @@ internal static partial class CSharpDirectiveParser
             return;
 
         var source = File.ReadAllText(canonicalPath);
-        var parsed = ParseSingleFile(source, canonicalPath, hostRegex, hostReplacement);
+        var parsed = ParseSingleFile(source, canonicalPath, rewriteHostReference);
 
         foreach (var loadedPath in parsed.LoadedFiles)
-            ResolveRecursive(loadedPath, visited, sourceFiles, allPackages, allAssemblyRefs, hostRegex, hostReplacement);
+            ResolveRecursive(loadedPath, visited, sourceFiles, allPackages, allAssemblyRefs, rewriteHostReference);
 
         sourceFiles.Add(new SourceFileEntry(canonicalPath, parsed.CleanSource));
 
@@ -86,7 +82,7 @@ internal static partial class CSharpDirectiveParser
             allAssemblyRefs.Add(asmRef);
     }
 
-    private static ParsedFile ParseSingleFile(string source, string filePath, Regex? hostRegex, string? hostReplacement)
+    private static ParsedFile ParseSingleFile(string source, string filePath, Func<string, string> rewriteHostReference)
     {
         var packages = new List<PackageReference>();
         var assemblyReferences = new List<string>();
@@ -105,7 +101,7 @@ internal static partial class CSharpDirectiveParser
                 continue;
             }
 
-            if (TryParseReferenceDirective(lines[i], hostRegex, hostReplacement, packages, assemblyReferences))
+            if (TryParseReferenceDirective(lines[i], rewriteHostReference, packages, assemblyReferences))
                 strippedLines.Add(i);
         }
 
@@ -128,7 +124,7 @@ internal static partial class CSharpDirectiveParser
     }
 
     private static bool TryParseReferenceDirective(
-        string line, Regex? hostRegex, string? hostReplacement,
+        string line, Func<string, string> rewriteHostReference,
         List<PackageReference> packages, List<string> assemblyReferences)
     {
         var match = ReferenceDirectiveRegex().Match(line);
@@ -146,7 +142,8 @@ internal static partial class CSharpDirectiveParser
         if (IsIgnoredRuntimeReference(reference))
             return true;
 
-        var resolvedPath = RewriteHostVersion(reference, hostRegex, hostReplacement);
+        var rewritten = rewriteHostReference(reference);
+        var resolvedPath = string.IsNullOrWhiteSpace(rewritten) ? reference : rewritten;
         if (File.Exists(resolvedPath))
             assemblyReferences.Add(resolvedPath);
         return true;
@@ -184,14 +181,6 @@ internal static partial class CSharpDirectiveParser
                 return true;
         }
         return false;
-    }
-
-    private static string RewriteHostVersion(string reference, Regex? hostRegex, string? replacement)
-    {
-        if (hostRegex is null || replacement is null)
-            return reference;
-
-        return hostRegex.Replace(reference, replacement);
     }
 
     private static string BuildCleanSource(string[] lines, List<int> strippedLines)

@@ -41,8 +41,7 @@ public sealed class CSharpCodeToolTests
     public async Task Execute_InvalidCode_ReturnsCompilationErrorWithoutRunningHost()
     {
         var bridge = new Mock<ICompiledScriptBridge>();
-        bridge.Setup(b => b.GetHostReferencePattern()).Returns((string?)null);
-        bridge.Setup(b => b.GetHostReferenceReplacement()).Returns(string.Empty);
+        bridge.Setup(b => b.RewriteHostReference(It.IsAny<string>())).Returns((string reference) => reference);
 
         var hostContext = new Mock<IHostContextExecutor>();
         var commandRunner = new Mock<ICommandRunner>();
