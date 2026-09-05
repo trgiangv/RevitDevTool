@@ -13,7 +13,7 @@ using RevitDevTool.Core;
 using ZLogger;
 namespace RevitDevTool.Adapters;
 
-public sealed class RevitCommandRunner(ILogger<RevitCommandRunner> logger) : ICommandRunner
+public sealed class RevitCommandRunner(ILogger<RevitCommandRunner> logger, HostAssemblies hostAssemblies) : ICommandRunner
 {
     private static ExternalCommandData? externalCommandData;
     private static ElementSet? elementSet;
@@ -64,7 +64,7 @@ public sealed class RevitCommandRunner(ILogger<RevitCommandRunner> logger) : ICo
         var session = AssemblyIsolationSession.Create(
             CommandIsolationPlan.Create(
                 item.AssemblyPath,
-                RevitHostApis.All(),
+                hostAssemblies.All(),
                 new CommandIsolationDiagnosticSink(logger)));
         try
         {
@@ -114,7 +114,7 @@ public sealed class RevitCommandRunner(ILogger<RevitCommandRunner> logger) : ICo
     {
         var plan = CommandIsolationPlan.Create(
             item.AssemblyPath,
-            RevitHostApis.All(),
+            hostAssemblies.All(),
             new CommandIsolationDiagnosticSink(logger));
         var session = AssemblyIsolationSession.Create(plan);
         try

@@ -79,7 +79,7 @@ public sealed class CSharpCompiler(ILogger<CSharpCompiler> logger, NugetManager 
     }
 
     private ScriptCompilationResult LoadAndCreateCommand(
-        byte[] peBytes, IReadOnlyCollection<string> nugetDllPaths, ICompiledScriptBridge hostSupport)
+        byte[] peBytes, IReadOnlyList<string> nugetDllPaths, ICompiledScriptBridge hostSupport)
     {
         var session = AssemblyIsolationSession.Create(
             ScriptIsolationPlan.Create(
@@ -99,7 +99,7 @@ public sealed class CSharpCompiler(ILogger<CSharpCompiler> logger, NugetManager 
         }
     }
 
-    private async Task<(HashSet<string> AllReferences, List<string> NugetDlls)> ResolveReferencesAsync(
+    private async Task<(HashSet<string> AllReferences, IReadOnlyList<string> NugetDlls)> ResolveReferencesAsync(
         ScriptGraph graph, IProgress<string>? progress, CancellationToken ct)
     {
         var references = new HashSet<string>(graph.AssemblyReferences, StringComparer.OrdinalIgnoreCase);

@@ -1,5 +1,6 @@
 using CommunityToolkit.Mvvm.Messaging;
 using DevTools.Mcp.Revit.Resources;
+using DevTools.AssemblyIsolation;
 using DevTools.Execution;
 using DevTools.Execution.Interfaces;
 using DevTools.Execution.Providers;
@@ -131,6 +132,7 @@ internal static class RevitServiceRegistration
         services.AddSingleton<IExecutionGuard, ExecutionGuard>();
         services.AddSingleton<IHostContextExecutor, RevitHostContextExecutor>();
         services.AddSingleton<IDocumentBridge, RevitDocumentBridge>();
+        services.AddSingleton<HostAssemblies, RevitHostAssemblies>();
         services.AddSingleton<ICommandRunner, RevitCommandRunner>();
         services.AddSingleton<ICommandDiscovery, RevitCommandDiscovery>();
         services.AddSingleton<ICompiledScriptBridge, RevitCompiledScriptBridge>();

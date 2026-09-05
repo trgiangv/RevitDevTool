@@ -10,7 +10,7 @@ public sealed class AcadCompiledScriptBridgeTests
     [Fact]
     public void Parent_bindings_include_the_core_api_used_by_compiled_scripts_without_duplicate_identities()
     {
-        var bridge = new AcadCompiledScriptBridge(new StubHostAppInfo());
+        var bridge = new AcadCompiledScriptBridge(new StubHostAppInfo(), new AcadHostApis());
         var parentBindings = bridge.GetParentBindings().ToArray();
         var coreApiAssembly = typeof(Autodesk.AutoCAD.ApplicationServices.Core.Application).Assembly;
 
@@ -25,7 +25,7 @@ public sealed class AcadCompiledScriptBridgeTests
     public void Compiled_command_runner_returns_success_after_invoking_a_static_command()
     {
         SuccessfulCommand.Calls = 0;
-        var result = new AcadCommandRunner(NullLogger<AcadCommandRunner>.Instance)
+        var result = new AcadCommandRunner(NullLogger<AcadCommandRunner>.Instance, new AcadHostApis())
             .RunCompiledCommand(new SuccessfulCommand());
 
         Assert.True(result.Success);
@@ -36,7 +36,7 @@ public sealed class AcadCompiledScriptBridgeTests
     public void Compiled_command_runner_preserves_the_command_failure()
     {
         var error = Assert.Throws<InvalidOperationException>(() =>
-            new AcadCommandRunner(NullLogger<AcadCommandRunner>.Instance)
+            new AcadCommandRunner(NullLogger<AcadCommandRunner>.Instance, new AcadHostApis())
                 .RunCompiledCommand(new FailingCommand()));
 
         Assert.Equal("command failure", error.Message);

@@ -2,7 +2,7 @@ namespace DevTools.AssemblyIsolation.Sources;
 
 public sealed class ManifestNativeAssemblySource : INativeAssemblySource
 {
-    readonly IReadOnlyDictionary<string, AssemblyCandidate> candidatesByName;
+    private readonly Dictionary<string, AssemblyCandidate> candidatesByName;
 
     public ManifestNativeAssemblySource(IEnumerable<AssemblyCandidate> candidates)
     {
@@ -10,21 +10,31 @@ public sealed class ManifestNativeAssemblySource : INativeAssemblySource
 
         var indexed = new Dictionary<string, AssemblyCandidate>(StringComparer.OrdinalIgnoreCase);
         foreach (var candidate in candidates)
-        {
-            if (candidate is null) throw new ArgumentNullException(nameof(candidates));
-            foreach (var key in AssemblyCandidate.LookupKeys(candidate.Path))
-            {
-                if (indexed.TryGetValue(key, out var existing)
-                    && !string.Equals(existing.Path, candidate.Path, StringComparison.OrdinalIgnoreCase))
-                {
-                    throw new InvalidOperationException($"Manifest contains ambiguous native asset '{key}'.");
-                }
-
-                indexed[key] = candidate;
-            }
-        }
+            AddCandidate(indexed, candidate);
 
         candidatesByName = indexed;
+    }
+
+    private static void AddCandidate(Dictionary<string, AssemblyCandidate> indexed, AssemblyCandidate candidate)
+    {
+        if (candidate is null) throw new ArgumentNullException(nameof(candidate));
+
+        foreach (var key in AssemblyCandidate.LookupKeys(candidate.Path))
+        {
+            if (HasConflictingCandidate(indexed, key, candidate))
+                throw new InvalidOperationException($"Manifest contains ambiguous native asset '{key}'.");
+
+            indexed[key] = candidate;
+        }
+    }
+
+    private static bool HasConflictingCandidate(
+        Dictionary<string, AssemblyCandidate> indexed,
+        string key,
+        AssemblyCandidate candidate)
+    {
+        return indexed.TryGetValue(key, out var existing)
+            && !string.Equals(existing.Path, candidate.Path, StringComparison.OrdinalIgnoreCase);
     }
 
     public AssemblyCandidate? Resolve(string name)

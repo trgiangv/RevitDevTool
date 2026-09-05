@@ -5,8 +5,8 @@ namespace DevTools.AssemblyIsolation.Sources;
 
 public sealed class ResolverNativeAssemblySource : INativeAssemblySource
 {
-    readonly AssemblyDependencyResolver resolver;
-    readonly string root;
+    private readonly AssemblyDependencyResolver resolver;
+    private readonly string root;
 
     public ResolverNativeAssemblySource(string entryAssemblyPath)
     {

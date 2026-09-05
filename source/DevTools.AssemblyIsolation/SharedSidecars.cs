@@ -14,11 +14,12 @@ namespace DevTools.AssemblyIsolation;
 /// </summary>
 public static class SharedSidecars
 {
-    static readonly string[] Names =
+    private static readonly string[] Names =
     [
         "MahApps.Metro",
         "ControlzEx",
         "Microsoft.Xaml.Behaviors",
+        "FSharp.Core",
     ];
 
     public static bool Contains(string? simpleName) =>
@@ -41,7 +42,7 @@ public static class SharedSidecars
         var pathsByName = IndexExisting(candidatePaths);
         foreach (var simpleName in Names)
         {
-            var loaded = FindInDefaultContext(simpleName) ?? LoadIfPresent(pathsByName, simpleName);
+            var loaded = AssemblyHelper.Find(simpleName) ?? LoadIfPresent(pathsByName, simpleName);
             if (loaded is not null)
                 plan = plan.Share(loaded);
         }
@@ -49,7 +50,7 @@ public static class SharedSidecars
         return plan;
     }
 
-    static Dictionary<string, string> IndexExisting(IEnumerable<string> candidatePaths)
+    private static Dictionary<string, string> IndexExisting(IEnumerable<string> candidatePaths)
     {
         var pathsByName = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
         foreach (var path in candidatePaths)
@@ -63,7 +64,7 @@ public static class SharedSidecars
         return pathsByName;
     }
 
-    static bool TryReadSharedName(string path, out string name)
+    private static bool TryReadSharedName(string path, out string name)
     {
         name = null!;
         if (string.IsNullOrWhiteSpace(path) || !File.Exists(path))
@@ -90,29 +91,10 @@ public static class SharedSidecars
         return true;
     }
 
-    static Assembly? LoadIfPresent(Dictionary<string, string> pathsByName, string simpleName) =>
+    private static Assembly? LoadIfPresent(Dictionary<string, string> pathsByName, string simpleName) =>
         pathsByName.TryGetValue(simpleName, out var path) ? LoadIntoDefaultContext(path) : null;
 
-    static Assembly? FindInDefaultContext(string simpleName)
-    {
-        foreach (var assembly in AppDomain.CurrentDomain.GetAssemblies())
-        {
-            if (assembly.IsDynamic)
-                continue;
-            if (!string.Equals(assembly.GetName().Name, simpleName, StringComparison.OrdinalIgnoreCase))
-                continue;
-#if NET
-            if (AssemblyLoadContext.GetLoadContext(assembly) is { } context
-                && !ReferenceEquals(context, AssemblyLoadContext.Default))
-                continue;
-#endif
-            return assembly;
-        }
-
-        return null;
-    }
-
-    static Assembly LoadIntoDefaultContext(string path)
+    private static Assembly LoadIntoDefaultContext(string path)
     {
 #if NET
         try
@@ -121,7 +103,7 @@ public static class SharedSidecars
         }
         catch (FileLoadException ex)
         {
-            return FindInDefaultContext(Path.GetFileNameWithoutExtension(path))
+            return AssemblyHelper.Find(Path.GetFileNameWithoutExtension(path))
                 ?? throw new FileLoadException(ex.Message, path, ex);
         }
 #else

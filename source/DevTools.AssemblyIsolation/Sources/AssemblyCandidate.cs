@@ -6,7 +6,7 @@ namespace DevTools.AssemblyIsolation.Sources;
 
 public sealed record AssemblyCandidate
 {
-    const string Extension = ".dll";
+    private const string Extension = ".dll";
 
     public AssemblyCandidate(string path, string root)
     {
@@ -70,7 +70,7 @@ public sealed record AssemblyCandidate
             yield return withoutExtension;
     }
 
-    internal static bool IsUnderRoot(string path, string root)
+    private static bool IsUnderRoot(string path, string root)
     {
         var normalizedPath = System.IO.Path.GetFullPath(path);
         var normalizedRoot = System.IO.Path.GetFullPath(root);
@@ -91,14 +91,14 @@ public sealed record AssemblyCandidate
                && IsUnderCanonicalRoot(finalPath, finalRoot);
     }
 
-    static bool IsUnderCanonicalRoot(string path, string root)
+    private static bool IsUnderCanonicalRoot(string path, string root)
     {
         var normalizedRoot = root.TrimEnd(System.IO.Path.DirectorySeparatorChar, System.IO.Path.AltDirectorySeparatorChar);
         var prefix = normalizedRoot + System.IO.Path.DirectorySeparatorChar;
         return path.StartsWith(prefix, StringComparison.OrdinalIgnoreCase);
     }
 
-    static bool TryGetFinalPath(string path, out string finalPath)
+    private static bool TryGetFinalPath(string path, out string finalPath)
     {
         using var handle = CreateFile(
             path,
@@ -134,15 +134,15 @@ public sealed record AssemblyCandidate
         }
     }
 
-    const uint FileReadAttributes = 0x80;
-    const uint FileShareRead = 0x1;
-    const uint FileShareWrite = 0x2;
-    const uint FileShareDelete = 0x4;
-    const uint OpenExisting = 3;
-    const uint FileFlagBackupSemantics = 0x02000000;
+    private const uint FileReadAttributes = 0x80;
+    private const uint FileShareRead = 0x1;
+    private const uint FileShareWrite = 0x2;
+    private const uint FileShareDelete = 0x4;
+    private const uint OpenExisting = 3;
+    private const uint FileFlagBackupSemantics = 0x02000000;
 
     [DllImport("kernel32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
-    static extern SafeFileHandle CreateFile(
+    private static extern SafeFileHandle CreateFile(
         string fileName,
         uint desiredAccess,
         uint shareMode,
@@ -152,7 +152,7 @@ public sealed record AssemblyCandidate
         IntPtr templateFile);
 
     [DllImport("kernel32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
-    static extern uint GetFinalPathNameByHandle(
+    private static extern uint GetFinalPathNameByHandle(
         SafeFileHandle file,
         StringBuilder path,
         uint pathLength,

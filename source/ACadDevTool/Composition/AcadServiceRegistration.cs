@@ -1,5 +1,6 @@
 using CommunityToolkit.Mvvm.Messaging;
 using DevTools.Mcp.Acad.Resources;
+using DevTools.AssemblyIsolation;
 using DevTools.Execution;
 using DevTools.Execution.Interfaces;
 using DevTools.Hosting;
@@ -88,6 +89,7 @@ internal static class AcadServiceRegistration
         services.AddSingleton<IDebuggerBridge, AcadDebuggerBridge>();
         services.AddSingleton<IHostContextExecutor, AcadHostContextExecutor>();
         services.AddSingleton<IDocumentBridge, AcadDocumentBridge>();
+        services.AddSingleton<HostAssemblies, AcadHostAssemblies>();
         services.AddSingleton<ICommandRunner, AcadCommandRunner>();
         services.AddSingleton<ICommandDiscovery, AcadCommandDiscovery>();
         services.AddSingleton<ICompiledScriptBridge, AcadCompiledScriptBridge>();

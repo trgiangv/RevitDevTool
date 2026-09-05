@@ -1,12 +1,14 @@
 using System.Reflection;
 using Autodesk.AutoCAD.DatabaseServices;
 using Autodesk.AutoCAD.Runtime;
+using DevTools.AssemblyIsolation;
 using DevTools.Hosting;
+
 namespace AcadDevTool.Adapters;
 
-public sealed class AcadCompiledScriptBridge(IHostAppInfo hostAppInfo) : ICompiledScriptBridge
+public sealed class AcadCompiledScriptBridge(IHostAppInfo hostAppInfo, HostAssemblies hostAssemblies) : ICompiledScriptBridge
 {
-    public IEnumerable<Assembly> GetParentBindings() => AcadHostApis.All();
+    public IEnumerable<Assembly> GetParentBindings() => hostAssemblies.All();
 
     public IEnumerable<string> GetSessionReferences()
     {

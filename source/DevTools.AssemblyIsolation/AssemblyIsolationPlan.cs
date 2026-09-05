@@ -67,7 +67,7 @@ public sealed class AssemblyIsolationPlan
         Clone(loadsFromDistinctFile: true);
 
     /// <summary>
-    /// Reuse this loaded assembly. Version may differ; name, culture, and token must match.
+    /// Reuse this loaded assembly. Version is forgiven; name, culture, and token must match.
     /// </summary>
     public AssemblyIsolationPlan Share(Assembly assembly) => AddShare(assembly, allowVersionDrift: true);
 
@@ -110,16 +110,6 @@ public sealed class AssemblyIsolationPlan
         if (!AssemblyIdentityMatcher.IsCompatible(requested, shared.Identity, shared.AllowVersionDrift))
             throw new AssemblyMismatchException(requested, shared.Identity);
 
-        if (shared.AllowVersionDrift
-            && requested.Version is not null
-            && requested.Version != shared.Identity.Version)
-        {
-            DiagnosticSink?.Publish(new AssemblyIsolationDiagnostic(
-                "share-version-drift",
-                $"Requested '{requested.FullName}' shares loaded '{shared.Identity.FullName}'.",
-                requested));
-        }
-
         assembly = shared.Assembly;
         return true;
     }
@@ -128,14 +118,14 @@ public sealed class AssemblyIsolationPlan
     {
         if (assembly is null) throw new ArgumentNullException(nameof(assembly));
 
-        return Clone(sharedAssemblies: ReadOnly(AppendShare(
+        return Clone(shareAssemblies: ReadOnly(AppendShare(
             sharedAssemblies,
             new SharedAssembly(assembly, allowVersionDrift))));
     }
 
     private AssemblyIsolationPlan Clone(
         AssemblyIsolationKind? kind = null,
-        IReadOnlyList<SharedAssembly>? sharedAssemblies = null,
+        IReadOnlyList<SharedAssembly>? shareAssemblies = null,
         IReadOnlyList<IManagedAssemblySource>? managedSources = null,
         IReadOnlyList<INativeAssemblySource>? nativeSources = null,
         IAssemblyIsolationDiagnosticSink? diagnosticSink = null,
@@ -143,7 +133,7 @@ public sealed class AssemblyIsolationPlan
         new(
             EntryAssemblyPath,
             kind ?? Kind,
-            sharedAssemblies ?? this.sharedAssemblies,
+            shareAssemblies ?? sharedAssemblies,
             managedSources ?? ManagedSources,
             nativeSources ?? NativeSources,
             diagnosticSink ?? DiagnosticSink,

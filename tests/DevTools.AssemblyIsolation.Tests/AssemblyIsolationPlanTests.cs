@@ -69,7 +69,7 @@ public sealed class AssemblyIsolationPlanTests
     }
 
     [Fact]
-    public void Share_accepts_requested_version_drift_and_emits_a_diagnostic()
+    public void Share_accepts_requested_version_drift_without_publishing()
     {
         var loaded = typeof(AssemblyIsolationPlanTests).Assembly;
         var requested = new AssemblyName(loaded.FullName!) { Version = new Version(99, 0, 0, 0) };
@@ -80,7 +80,7 @@ public sealed class AssemblyIsolationPlanTests
 
         Assert.True(plan.TryShare(requested, out var actual));
         Assert.Same(loaded, actual);
-        Assert.Contains(sink.Diagnostics, diagnostic => diagnostic.Code == "share-version-drift");
+        Assert.Empty(sink.Diagnostics);
     }
 
     [Fact]

@@ -10,7 +10,7 @@ namespace DevTools.AssemblyIsolation.Runtime;
 
 internal sealed class AssemblyIsolationContext : AssemblyLoadContext
 {
-    readonly AssemblyIsolationPlan plan;
+    private readonly AssemblyIsolationPlan plan;
 
     public AssemblyIsolationContext(AssemblyIsolationPlan plan)
         : base($"DevTools.AssemblyIsolation:{Path.GetFileNameWithoutExtension(plan.EntryAssemblyPath)}", isCollectible: true)
@@ -83,7 +83,7 @@ internal sealed class AssemblyIsolationContext : AssemblyLoadContext
         return nint.Zero;
     }
 
-    static bool TryValidateCandidate(AssemblyName requested, AssemblyCandidate candidate, out string? rejection)
+    private static bool TryValidateCandidate(AssemblyName requested, AssemblyCandidate candidate, out string? rejection)
     {
         if (!File.Exists(candidate.Path))
         {
@@ -108,7 +108,7 @@ internal sealed class AssemblyIsolationContext : AssemblyLoadContext
         return true;
     }
 
-    static bool TryValidateNativeCandidate(string name, AssemblyCandidate candidate, out string? rejection)
+    private static bool TryValidateNativeCandidate(string name, AssemblyCandidate candidate, out string? rejection)
     {
         if (!File.Exists(candidate.Path))
         {
@@ -126,7 +126,7 @@ internal sealed class AssemblyIsolationContext : AssemblyLoadContext
         return true;
     }
 
-    void Publish(string code, AssemblyName? requested, AssemblyCandidate? candidate, string reason)
+    private void Publish(string code, AssemblyName? requested, AssemblyCandidate? candidate, string reason)
     {
         var detail = candidate is null ? "" : $", candidate '{candidate.Path}'";
         var identity = requested?.FullName ?? "native library";

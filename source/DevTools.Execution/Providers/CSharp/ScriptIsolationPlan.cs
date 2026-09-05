@@ -13,12 +13,12 @@ public static class ScriptIsolationPlan
 {
     public static AssemblyIsolationPlan Create(
         string compiledEntryName,
-        IEnumerable<string> nugetPaths,
+        IReadOnlyList<string> nugetPaths,
         IEnumerable<Assembly> hostAssemblies,
         IAssemblyIsolationDiagnosticSink? diagnosticSink = null)
     {
         if (string.IsNullOrWhiteSpace(compiledEntryName))
-            throw new ArgumentException("A compiled script entry name is required.", nameof(compiledEntryName));
+            throw new ArgumentException(@"A compiled script entry name is required.", nameof(compiledEntryName));
         if (nugetPaths is null) throw new ArgumentNullException(nameof(nugetPaths));
         if (hostAssemblies is null) throw new ArgumentNullException(nameof(hostAssemblies));
 
@@ -39,7 +39,7 @@ public static class ScriptIsolationPlan
         return diagnosticSink is null ? plan : plan.WithDiagnosticSink(diagnosticSink);
     }
 
-    static void TryAddManifestEntry(
+    private static void TryAddManifestEntry(
         string path,
         List<AssemblyCandidate> manifest,
         IAssemblyIsolationDiagnosticSink? diagnosticSink)
@@ -71,7 +71,7 @@ public static class ScriptIsolationPlan
         }
     }
 
-    static void Skip(IAssemblyIsolationDiagnosticSink? diagnosticSink, string path, string reason) =>
+    private static void Skip(IAssemblyIsolationDiagnosticSink? diagnosticSink, string path, string reason) =>
         diagnosticSink?.Publish(new AssemblyIsolationDiagnostic(
             "script-manifest-entry-skipped",
             $"Selected NuGet path '{path}' {reason}"));

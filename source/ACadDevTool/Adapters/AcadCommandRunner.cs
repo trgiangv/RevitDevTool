@@ -14,7 +14,7 @@ namespace AcadDevTool.Adapters;
 /// <see cref="CommandItem.FullClassName"/> (<c>TypeFullName.MethodName</c>), and invoking the
 /// method (instance or static).
 /// </summary>
-public sealed class AcadCommandRunner(ILogger<AcadCommandRunner> logger) : ICommandRunner
+public sealed class AcadCommandRunner(ILogger<AcadCommandRunner> logger, HostAssemblies hostAssemblies) : ICommandRunner
 {
     public ExecutionResult RunCommand(CommandItem commandItem)
     {
@@ -22,7 +22,7 @@ public sealed class AcadCommandRunner(ILogger<AcadCommandRunner> logger) : IComm
         var session = AssemblyIsolationSession.Create(
             CommandIsolationPlan.Create(
                 commandItem.AssemblyPath,
-                AcadHostApis.All(),
+                hostAssemblies.All(),
                 new CommandIsolationDiagnosticSink(logger)));
         return ExecuteInContext(session, commandItem);
 #else
@@ -85,7 +85,7 @@ public sealed class AcadCommandRunner(ILogger<AcadCommandRunner> logger) : IComm
         var session = AssemblyIsolationSession.Create(
             CommandIsolationPlan.Create(
                 commandItem.AssemblyPath,
-                AcadHostApis.All(),
+                hostAssemblies.All(),
                 new CommandIsolationDiagnosticSink(logger)));
         return ExecuteInContext(session, commandItem);
     }

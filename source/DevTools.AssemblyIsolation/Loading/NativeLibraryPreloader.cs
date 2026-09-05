@@ -1,3 +1,4 @@
+#if NETFRAMEWORK
 using System.Reflection;
 using System.Runtime.InteropServices;
 using DevTools.AssemblyIsolation.Sources;
@@ -27,7 +28,7 @@ public static class NativeLibraryPreloader
             if (IsManaged(path))
                 continue;
 
-            LoadNative(path);
+            LoadLibrary(path);
         }
     }
 
@@ -48,17 +49,7 @@ public static class NativeLibraryPreloader
         }
     }
 
-    private static void LoadNative(string path)
-    {
-#if NET
-        NativeLibrary.Load(path);
-#else
-        LoadLibrary(path);
-#endif
-    }
-
-#if NETFRAMEWORK
     [DllImport("kernel32.dll", CharSet = CharSet.Auto, SetLastError = true)]
     private static extern IntPtr LoadLibrary(string lpFileName);
-#endif
 }
+#endif

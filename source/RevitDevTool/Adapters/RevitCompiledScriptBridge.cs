@@ -1,10 +1,12 @@
 using System.Reflection;
+using DevTools.AssemblyIsolation;
 using DevTools.Hosting;
+
 namespace RevitDevTool.Adapters;
 
-public sealed class RevitCompiledScriptBridge(IHostAppInfo hostAppInfo) : ICompiledScriptBridge
+public sealed class RevitCompiledScriptBridge(IHostAppInfo hostAppInfo, HostAssemblies hostAssemblies) : ICompiledScriptBridge
 {
-    public IEnumerable<Assembly> GetParentBindings() => RevitHostApis.All();
+    public IEnumerable<Assembly> GetParentBindings() => hostAssemblies.All();
 
     public IEnumerable<string> GetSessionReferences()
     {

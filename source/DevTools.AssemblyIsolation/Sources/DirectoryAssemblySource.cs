@@ -5,7 +5,7 @@ namespace DevTools.AssemblyIsolation.Sources;
 
 public sealed class DirectoryAssemblySource : IManagedAssemblySource
 {
-    readonly string root;
+    private readonly string root;
 
     public DirectoryAssemblySource(string directory)
     {
@@ -50,7 +50,7 @@ public sealed class DirectoryAssemblySource : IManagedAssemblySource
         return AssemblyIdentityMatcher.IsCompatible(requested, identity) ? candidate : null;
     }
 
-    static bool IsSimpleFileName(string name) =>
+    private static bool IsSimpleFileName(string name) =>
         string.Equals(name, Path.GetFileName(name), StringComparison.Ordinal)
         && name.IndexOfAny([Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar]) < 0;
 }

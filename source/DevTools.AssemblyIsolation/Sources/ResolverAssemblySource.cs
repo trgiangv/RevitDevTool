@@ -6,8 +6,8 @@ namespace DevTools.AssemblyIsolation.Sources;
 
 public sealed class ResolverAssemblySource : IManagedAssemblySource
 {
-    readonly AssemblyDependencyResolver resolver;
-    readonly string root;
+    private readonly AssemblyDependencyResolver resolver;
+    private readonly string root;
 
     public ResolverAssemblySource(string entryAssemblyPath)
     {

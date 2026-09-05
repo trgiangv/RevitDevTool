@@ -7,11 +7,13 @@ without allowing one feature's dependency policy to leak into another.
 ## Contract
 
 - Sharing is explicit and uses a concrete `Assembly` instance.
-- `Share(assembly)` reuses a loaded copy. Version may differ; name, culture, and
-  public-key token must match. Host Autodesk APIs and official WPF sidecars
-  (`MahApps.Metro`, `ControlzEx`, `Microsoft.Xaml.Behaviors`) use Share so
-  Nice3point compile refs resolve to the host-loaded assembly. Version drift
-  emits `share-version-drift`.
+- `Share(assembly)` reuses that exact loaded instance. Name, culture, and
+  public-key token must match. Version is forgiven for that assembly only and
+  is silent. Host Autodesk APIs use compile-time `typeof` anchors, and may
+  also Share identities already in the default context
+  (`AssemblyHelper.Find` / `FindMany` — never loads from disk). Host adapters
+  subclass `HostAssemblies` and only supply `LoadedByType` / `LoadedByName`. Nothing is
+  shared by prefix.
 - `Pin(assembly)` reuses a loaded copy only when the full identity matches.
   Feature contracts (`nunit.framework`, MCP protocol types,
   `ITestingRuntimeSession`) stay pinned.
@@ -24,9 +26,8 @@ without allowing one feature's dependency policy to leak into another.
 - `System.*`, `Microsoft.*`, Autodesk APIs, and UI libraries are not shared by
   prefix. DevTools forks (`DevTools.MahApps.Metro`, `DevTools.ControlzEx`,
   `DevTools.Microsoft.Xaml.Behaviors`) are separate identities and stay private
-  to the host add-in. Official WPF Share is a known isolation gap—one
-  process-wide identity, even when a workload ships another version—accepted
-  because these libraries are mature and rarely change.
+  to the host add-in. WPF resource/theme assemblies must not load twice in one
+  process — a second copy breaks styling.
 - Unresolved framework dependencies fall back to the CLR after private sources
   have declined the request.
 - Metadata discovery never executes the inspected assembly. When the host
@@ -49,9 +50,9 @@ without allowing one feature's dependency policy to leak into another.
 Feature code continues to own compilation, discovery semantics, registries,
 generation snapshots, invocation, result mapping, and logging. It composes an
 isolation plan and translates structured diagnostics; the kernel contains no
-Execution, MCP, NUnit, Revit, AutoCAD, or logging policy. Official UI sidecar
-Share (`MahApps.Metro`, `ControlzEx`, `Microsoft.Xaml.Behaviors`) is identity
-policy on the plan, not a UI framework dependency.
+Execution, MCP, NUnit, Revit, AutoCAD, or logging policy. WPF Share is identity
+policy on the plan (one copy so styling stays intact), not a UI framework
+dependency.
 
 ## Packaging boundary
 
