@@ -20,7 +20,7 @@ internal sealed class NetfxAssemblyIsolationContext : IDisposable
     {
         this.plan = plan ?? throw new ArgumentNullException(nameof(plan));
         resolver = Resolve;
-        AppDomain.CurrentDomain.AssemblyResolve += resolver;
+        AppDomainResolver.InsertFirst(AppDomain.CurrentDomain, resolver);
     }
 
     public Assembly LoadEntryAssembly()
@@ -58,7 +58,7 @@ internal sealed class NetfxAssemblyIsolationContext : IDisposable
         if (disposed)
             return;
 
-        AppDomain.CurrentDomain.AssemblyResolve -= resolver;
+        AppDomainResolver.Remove(AppDomain.CurrentDomain, resolver);
         disposed = true;
     }
 

@@ -1,6 +1,7 @@
 using System.Reflection;
 using System.Runtime.InteropServices;
 using DevTools.AssemblyIsolation.Diagnostics;
+using DevTools.AssemblyIsolation.Runtime;
 using DevTools.AssemblyIsolation.Sources;
 
 namespace DevTools.AssemblyIsolation.NetFramework.Tests;
@@ -32,6 +33,99 @@ public sealed class ScopedNetFrameworkSessionTests
 
         var failure = Assert.Throws<TargetInvocationException>(() => loadAfterDisposeDependency.Invoke(null, null));
         Assert.IsType<FileNotFoundException>(failure.InnerException);
+    }
+
+    [Fact]
+    public void InsertFirst_runs_before_an_already_registered_resolver()
+    {
+        var order = new List<string>();
+        ResolveEventHandler earlier = (_, _) =>
+        {
+            order.Add("costura");
+            return null;
+        };
+        ResolveEventHandler later = (_, _) =>
+        {
+            order.Add("pin");
+            return null;
+        };
+
+        AppDomain.CurrentDomain.AssemblyResolve += earlier;
+        try
+        {
+            AppDomainResolver.InsertFirst(AppDomain.CurrentDomain, later);
+            try
+            {
+                try
+                {
+                    Assembly.Load("DevTools.Missing.ResolveProbe_" + Guid.NewGuid().ToString("N"));
+                }
+                catch (FileNotFoundException)
+                {
+                }
+
+                Assert.True(order.Count >= 2, string.Join(",", order));
+                Assert.Equal("pin", order[0]);
+                Assert.Equal("costura", order[1]);
+            }
+            finally
+            {
+                AppDomainResolver.Remove(AppDomain.CurrentDomain, later);
+            }
+        }
+        finally
+        {
+            AppDomain.CurrentDomain.AssemblyResolve -= earlier;
+        }
+    }
+
+    [Fact]
+    public void Scoped_session_pin_wins_against_an_earlier_simple_name_resolver()
+    {
+        using var workload = FixtureWorkload.Create();
+        var decoyDirectory = Path.Combine(
+            Path.GetTempPath(),
+            "DevTools.AssemblyIsolation.NetFramework.Tests",
+            "costura",
+            Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(decoyDirectory);
+        var decoyPath = Path.Combine(decoyDirectory, "System.Private.IsolationFixture.dll");
+        File.Copy(Path.Combine(workload.Directory, "System.Private.IsolationFixture.dll"), decoyPath);
+        var decoy = Assembly.LoadFile(decoyPath);
+
+        ResolveEventHandler costura = (_, args) =>
+        {
+            var requested = new AssemblyName(args.Name);
+            return string.Equals(requested.Name, "System.Private.IsolationFixture", StringComparison.OrdinalIgnoreCase)
+                ? decoy
+                : null;
+        };
+
+        AppDomain.CurrentDomain.AssemblyResolve += costura;
+        try
+        {
+            using var session = AssemblyIsolationSession.Create(
+                AssemblyIsolationPlan.Create(workload.EntryPath)
+                    .WithKind(AssemblyIsolationKind.Isolated)
+                    .WithDistinctFileIdentity()
+                    .AddManagedSource(new DirectoryAssemblySource(workload.Directory)));
+            var entry = session.LoadEntryAssembly();
+            _ = entry.GetType("IsolationEntry.Entry", throwOnError: true)!
+                .GetMethod("GetPrivateDependencyName", BindingFlags.Public | BindingFlags.Static)!
+                .Invoke(null, null);
+
+            var shadowPath = Path.GetFullPath(Path.Combine(workload.Directory, "System.Private.IsolationFixture.dll"));
+            Assert.Contains(
+                AppDomain.CurrentDomain.GetAssemblies(),
+                assembly => !assembly.IsDynamic
+                    && !string.IsNullOrEmpty(assembly.Location)
+                    && string.Equals(assembly.GetName().Name, "System.Private.IsolationFixture", StringComparison.OrdinalIgnoreCase)
+                    && string.Equals(Path.GetFullPath(assembly.Location), shadowPath, StringComparison.OrdinalIgnoreCase));
+        }
+        finally
+        {
+            AppDomain.CurrentDomain.AssemblyResolve -= costura;
+        }
     }
 
     [Fact]

@@ -109,6 +109,15 @@ public sealed class NetFrameworkGenerationTests
     }
 
     [Fact]
+    public void Create_executes_when_an_earlier_simple_name_resolver_returns_conflicting_nunit()
+    {
+        var probe = RunGenerationProbe("costura-binding");
+        Assert.That(probe.ExitCode, Is.EqualTo(0), probe.Output);
+        Assert.That(probe.Output, Does.Contain("GenerationFrameworkIdentity="));
+        Assert.That(probe.Output, Does.Contain("Version=4.6.0.0"));
+    }
+
+    [Fact]
     public void Create_executes_two_generations_in_the_default_appdomain()
     {
         var generationOne = NetFrameworkGenerationTestEnvironment.BuildFixtureGenerationOne();

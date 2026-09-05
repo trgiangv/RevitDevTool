@@ -35,8 +35,11 @@ without allowing one feature's dependency policy to leak into another.
   `Microsoft.Xaml.Behaviors` plus a copied NuGet), metadata keeps the first
   path and continues; it does not fail parse.
 - Feature plans set `Isolated`. The kernel maps that to a collectible ALC on
-  modern TFMs and a scoped `AssemblyResolve` hook on net48. `Collectible` remains
-  explicit when a test must name the ALC (and throws on net48).
+  modern TFMs and a scoped `AssemblyResolve` hook on net48. That hook is
+  **prepended**: net48 returns the first non-null handler, so `Pin`/`Share`
+  still run before earlier simple-name resolvers (Costura). Returning null
+  leaves later handlers free to serve their own assemblies. `Collectible`
+  remains explicit when a test must name the ALC (and throws on net48).
 
 ## Kinds
 

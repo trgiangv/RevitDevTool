@@ -26,6 +26,7 @@ internal static class Program
             return args[0] switch
             {
                 "conflicting-binding" => RunConflictingBinding(),
+                "costura-binding" => RunCosturaBinding(),
                 "concurrent-binding" => RunConcurrentBinding(),
                 _ => 11,
             };
@@ -80,6 +81,60 @@ internal static class Program
             return 6;
 
         return 0;
+    }
+
+    private static int RunCosturaBinding()
+    {
+        var conflicting = NetFrameworkGenerationTestEnvironment.LoadConflictingNUnitIntoAppDomain();
+        if (!string.Equals(conflicting.GetName().Name, "nunit.framework", StringComparison.OrdinalIgnoreCase))
+            return 1;
+
+        ResolveEventHandler costura = (_, args) =>
+        {
+            var requested = new AssemblyName(args.Name);
+            return string.Equals(requested.Name, "nunit.framework", StringComparison.OrdinalIgnoreCase)
+                ? conflicting
+                : null;
+        };
+
+        AppDomain.CurrentDomain.AssemblyResolve += costura;
+        try
+        {
+            var manifest = NetFrameworkGenerationTestEnvironment.BuildFixtureGenerationOne();
+            var factory = new NUnitRuntimeSessionFactory();
+            using var session = factory.Create(manifest);
+            var handle = (NUnitRuntimeSessionHandle)session;
+
+            var run = session.Run(
+                CreateRequest(
+                    Guid.NewGuid(),
+                    manifest.ShadowAssemblyPath,
+                    "<filter><test>DevTools.NUnit.Runtime.Fixtures.FullSemanticsFixture.PlainTest_Passes</test></filter>"),
+                new NoOpEventSink(),
+                CancellationToken.None);
+
+            if (!string.Equals(run.GenerationId, manifest.GenerationId, StringComparison.Ordinal))
+                return 4;
+
+            if (!string.Equals(run.Results.Single().Outcome, TestingOutcomes.Passed, StringComparison.Ordinal))
+                return 5;
+
+            var generationFrameworkIdentity = handle.FrameworkAssemblyIdentityForTesting;
+            var expectedFrameworkIdentity = AssemblyName.GetAssemblyName(
+                NUnitGenerationPolicy.GetFrameworkAssemblyPath(manifest)).FullName;
+
+            Console.WriteLine($"CosturaLocation={conflicting.Location}");
+            Console.WriteLine($"GenerationFrameworkIdentity={generationFrameworkIdentity}");
+
+            if (!string.Equals(generationFrameworkIdentity, expectedFrameworkIdentity, StringComparison.OrdinalIgnoreCase))
+                return 6;
+
+            return 0;
+        }
+        finally
+        {
+            AppDomain.CurrentDomain.AssemblyResolve -= costura;
+        }
     }
 
     private static int RunConcurrentBinding()
