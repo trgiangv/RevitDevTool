@@ -17,8 +17,8 @@ public sealed class AssemblyMismatchException : InvalidOperationException
 
     private static string CreateMessage(AssemblyName requested, AssemblyName candidate)
     {
-        if (requested is null) throw new ArgumentNullException(nameof(requested));
-        if (candidate is null) throw new ArgumentNullException(nameof(candidate));
+        ArgumentNullException.ThrowIfNull(requested);
+        ArgumentNullException.ThrowIfNull(candidate);
 
         return $"Assembly identity mismatch. Requested '{requested.FullName}', but parent binding is '{candidate.FullName}'.";
     }

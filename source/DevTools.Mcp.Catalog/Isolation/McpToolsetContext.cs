@@ -19,7 +19,7 @@ public sealed class McpToolsetContext(string toolsetDllPath, ILogger? logger = n
 
     public Assembly LoadAssembly()
     {
-        if (_disposed) throw new ObjectDisposedException(nameof(McpToolsetContext));
+        ObjectDisposedException.ThrowIf(_disposed, this);
 
         if (_loadedAssembly is not null)
             return _loadedAssembly;

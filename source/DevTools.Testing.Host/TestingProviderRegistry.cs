@@ -8,8 +8,7 @@ public sealed class TestingProviderRegistry
 
     public TestingProviderRegistry(IEnumerable<IHostTestFrameworkProvider> providers)
     {
-        if (providers is null)
-            throw new ArgumentNullException(nameof(providers));
+        ArgumentNullException.ThrowIfNull(providers);
 
         _providers = new Dictionary<string, IHostTestFrameworkProvider>(StringComparer.OrdinalIgnoreCase);
         foreach (var provider in providers)
@@ -35,10 +34,7 @@ public sealed class TestingProviderRegistry
     public IHostTestFrameworkProvider GetRequired(string frameworkId)
     {
         var id = Normalize(frameworkId);
-        if (_providers.TryGetValue(id, out var provider))
-            return provider;
-
-        throw new KeyNotFoundException($"No host-test provider is registered for '{id}'.");
+        return _providers.TryGetValue(id, out var provider) ? provider : throw new KeyNotFoundException($"No host-test provider is registered for '{id}'.");
     }
 
     public bool Cancel(Guid runId)
@@ -53,7 +49,7 @@ public sealed class TestingProviderRegistry
         return acknowledged;
     }
 
-    private static string Normalize(string frameworkId)
+    private static string Normalize(string? frameworkId)
     {
         var trimmed = frameworkId?.Trim() ?? string.Empty;
         return trimmed.ToLowerInvariant();

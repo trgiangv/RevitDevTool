@@ -5,6 +5,7 @@ using DevTools.AssemblyIsolation.Loading;
 using Microsoft.Extensions.Logging;
 using RevitDevTool.Core;
 using ZLogger;
+// ReSharper disable RedundantSuppressNullableWarningExpression
 
 namespace RevitDevTool.Execution.PyRevit;
 
@@ -14,7 +15,7 @@ namespace RevitDevTool.Execution.PyRevit;
 /// </summary>
 internal static class PyRevitAssemblyLoader
 {
-    private static readonly object LoadLock = new();
+    private static readonly Lock LoadLock = new();
     private static readonly AssemblyLoader Loader = new();
     private static bool _initialized;
 

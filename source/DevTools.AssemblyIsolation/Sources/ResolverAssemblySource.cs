@@ -22,7 +22,7 @@ public sealed class ResolverAssemblySource : IManagedAssemblySource
 
     public AssemblyCandidate? Resolve(AssemblyName requested)
     {
-        if (requested is null) throw new ArgumentNullException(nameof(requested));
+        ArgumentNullException.ThrowIfNull(requested);
 
         var path = resolver.ResolveAssemblyToPath(requested);
         return path is null ? null : AssemblyCandidate.TryCreate(path, root);

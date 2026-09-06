@@ -19,8 +19,8 @@ public static class ScriptIsolationPlan
     {
         if (string.IsNullOrWhiteSpace(compiledEntryName))
             throw new ArgumentException(@"A compiled script entry name is required.", nameof(compiledEntryName));
-        if (nugetPaths is null) throw new ArgumentNullException(nameof(nugetPaths));
-        if (hostAssemblies is null) throw new ArgumentNullException(nameof(hostAssemblies));
+        ArgumentNullException.ThrowIfNull(nugetPaths);
+        ArgumentNullException.ThrowIfNull(hostAssemblies);
 
         var manifest = new List<AssemblyCandidate>();
         foreach (var path in nugetPaths.Where(File.Exists).Distinct(StringComparer.OrdinalIgnoreCase))

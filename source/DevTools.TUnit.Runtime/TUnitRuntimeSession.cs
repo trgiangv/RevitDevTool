@@ -8,17 +8,20 @@ public sealed class TUnitRuntimeSession : ITestingRuntimeSession
 {
     private readonly Assembly _testAssembly;
     private readonly string _assemblyPath;
-    private readonly object _executionGate = new();
-    private readonly object _runControl = new();
+    private readonly Lock _executionGate = new();
+    private readonly Lock _runControl = new();
     private CancellationTokenSource? _runCts;
     private Guid _activeRunId;
     private bool _disposed;
 
     public TUnitRuntimeSession(Assembly testAssembly, string assemblyPath, string generationId)
     {
-        _testAssembly = testAssembly ?? throw new ArgumentException("Value is required.", nameof(testAssembly));
-        _assemblyPath = Path.GetFullPath(Required(assemblyPath, nameof(assemblyPath)));
-        GenerationId = Required(generationId, nameof(generationId));
+        ArgumentNullException.ThrowIfNull(testAssembly);
+        ArgumentException.ThrowIfNullOrWhiteSpace(assemblyPath);
+        ArgumentException.ThrowIfNullOrWhiteSpace(generationId);
+        _testAssembly = testAssembly;
+        _assemblyPath = Path.GetFullPath(assemblyPath);
+        GenerationId = generationId;
     }
 
     public string GenerationId { get; }
@@ -30,14 +33,14 @@ public sealed class TUnitRuntimeSession : ITestingRuntimeSession
     {
         lock (_executionGate)
         {
-            ThrowIfDisposed();
+            ObjectDisposedException.ThrowIf(_disposed, this);
             cancellationToken.ThrowIfCancellationRequested();
             ValidateAssembly(request.Assembly.Path);
 
             CancellationTokenSource linked;
             lock (_runControl)
             {
-                ThrowIfDisposed();
+                ObjectDisposedException.ThrowIf(_disposed, this);
                 linked = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
                 _runCts = linked;
                 _activeRunId = request.RunId;
@@ -119,14 +122,9 @@ public sealed class TUnitRuntimeSession : ITestingRuntimeSession
         }
     }
 
-    private void ThrowIfDisposed()
-    {
-        if (_disposed)
-            throw new ObjectDisposedException(GetType().FullName);
-    }
-
     private void ValidateAssembly(string requestAssemblyPath)
     {
+        ArgumentException.ThrowIfNullOrWhiteSpace(requestAssemblyPath);
         var normalized = Path.GetFullPath(requestAssemblyPath);
         if (!string.Equals(normalized, _assemblyPath, StringComparison.OrdinalIgnoreCase))
         {
@@ -135,9 +133,4 @@ public sealed class TUnitRuntimeSession : ITestingRuntimeSession
                 nameof(requestAssemblyPath));
         }
     }
-
-    private static string Required(string value, string parameterName) =>
-        string.IsNullOrWhiteSpace(value)
-            ? throw new ArgumentException("Value is required.", parameterName)
-            : value;
 }

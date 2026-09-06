@@ -9,10 +9,6 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <GlobalPackageReference Remove="Polyfill"/>
-    </ItemGroup>
-
-    <ItemGroup>
         <ProjectReference Include="..\..\..\..\source\DevTools.NUnit.Host\DevTools.NUnit.Host.csproj" SetTargetFramework="TargetFramework=net48"/>
         <ProjectReference Include="..\..\..\..\source\DevTools.Testing.Abstractions\DevTools.Testing.Abstractions.csproj" SetTargetFramework="TargetFramework=net48"/>
         <ProjectReference Include="..\..\..\..\source\DevTools.Testing.Host\DevTools.Testing.Host.csproj" SetTargetFramework="TargetFramework=net48"/>

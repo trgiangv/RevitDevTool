@@ -8,7 +8,7 @@ namespace RevitDevTool.Core.Execution;
 /// </summary>
 internal sealed class DialogSuppressionScope : IDisposable
 {
-    private static readonly object SyncRoot = new();
+    private static readonly Lock SyncRoot = new();
     private static int _refCount;
     private static EventHandler<DialogBoxShowingEventArgs>? _handler;
 
@@ -54,11 +54,9 @@ internal sealed class DialogSuppressionScope : IDisposable
         lock (SyncRoot)
         {
             _refCount--;
-            if (_refCount == 0 && _handler is not null)
-            {
-                RevitContext.UiApplication.DialogBoxShowing -= _handler;
-                _handler = null;
-            }
+            if (_refCount != 0 || _handler is null) return;
+            RevitContext.UiApplication.DialogBoxShowing -= _handler;
+            _handler = null;
         }
     }
 }

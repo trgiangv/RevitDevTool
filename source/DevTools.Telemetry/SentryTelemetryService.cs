@@ -13,7 +13,7 @@ public sealed class SentryTelemetryService : ITelemetry
     private const int MaxBreakdownEntries = 50;
 
     private readonly IDisposable _sdkHandle;
-    private readonly object _usageLock = new();
+    private readonly Lock _usageLock = new();
     private readonly string _hostName;
     private bool _disposed;
 
@@ -31,15 +31,8 @@ public sealed class SentryTelemetryService : ITelemetry
 
     public SentryTelemetryService(string dsn, IHostAppInfo hostApp)
     {
-        if (hostApp is null)
-        {
-            throw new ArgumentNullException(nameof(hostApp));
-        }
-
-        if (string.IsNullOrWhiteSpace(dsn))
-        {
-            throw new ArgumentException(@"DSN is required.", nameof(dsn));
-        }
+        ArgumentNullException.ThrowIfNull(hostApp);
+        ArgumentException.ThrowIfNullOrWhiteSpace(dsn);
 
         dsn = dsn.Trim();
         var version = typeof(SentryTelemetryService).Assembly.GetName().Version?.ToString() ?? "0.0.0";

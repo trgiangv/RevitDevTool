@@ -98,7 +98,7 @@ public sealed class PythonInitializer(
         }
         catch (Exception ex)
         {
-            logger.ZLogWarning($"{primary.Backend} unavailable ({ex.GetType().Name}: {ex.Message}). Falling back to pip.");
+            logger.ZLogWarning($"{primary.Backend} unavailable ({ex.GetType().Name}: {ex.Message}). Falling back to pip");
             await pipProvider.SetupEnvironmentAsync().ConfigureAwait(false);
             return pipProvider;
         }

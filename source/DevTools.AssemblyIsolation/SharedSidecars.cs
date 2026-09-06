@@ -36,8 +36,8 @@ public static class SharedSidecars
 
     public static AssemblyIsolationPlan Share(AssemblyIsolationPlan plan, IEnumerable<string> candidatePaths)
     {
-        if (plan is null) throw new ArgumentNullException(nameof(plan));
-        if (candidatePaths is null) throw new ArgumentNullException(nameof(candidatePaths));
+        ArgumentNullException.ThrowIfNull(plan);
+        ArgumentNullException.ThrowIfNull(candidatePaths);
 
         var pathsByName = IndexExisting(candidatePaths);
         foreach (var simpleName in Names)

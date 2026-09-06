@@ -118,7 +118,11 @@ then drops `win-x86` / `win-arm64` on every TFM after `CopyFilesToOutputDirector
 
 ## Compatibility Rule
 
-Any shared `DevTools.*` change can affect all target frameworks. Polyfill covers most modern C# on net48. After edits, compile via `.agents/skills/build/SKILL.md` (multi-TFM `Debug`, or Autodesk 2022/2025/2027 for host API projects). Avoid newer BCL APIs only when compile fails and no Polyfill/helper exists.
+Any shared `DevTools.*` change can affect all target frameworks. Polyfill covers
+missing BCL APIs on every TFM (`ThrowIfNull` via `PolyArgumentExceptions`). After
+edits, compile via `.agents/skills/build/SKILL.md` (multi-TFM `Debug`, or Autodesk
+2022/2025/2027 for host API projects). Avoid newer BCL APIs only when compile
+fails and no Polyfill/helper exists.
 
 ## Agent compile verify
 

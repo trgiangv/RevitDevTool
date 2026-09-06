@@ -10,8 +10,8 @@ public sealed class NUnitRuntimeSession : ITestingRuntimeSession
     private readonly Assembly _testAssembly;
     private readonly string _assemblyPath;
     private readonly NUnitSourceLocationProvider _sourceLocationProvider;
-    private readonly object _executionGate = new();
-    private readonly object _runControl = new();
+    private readonly Lock _executionGate = new();
+    private readonly Lock _runControl = new();
     private readonly NUnitTestAssemblyRunner _runner;
 
     private Guid _activeRunId;
@@ -30,9 +30,12 @@ public sealed class NUnitRuntimeSession : ITestingRuntimeSession
         string generationId,
         bool runOnCallingThread = false)
     {
-        _testAssembly = Guard.NotNull(testAssembly, nameof(testAssembly));
-        _assemblyPath = Path.GetFullPath(Guard.NotNullOrWhiteSpace(assemblyPath, nameof(assemblyPath)));
-        GenerationId = Guard.NotNullOrWhiteSpace(generationId, nameof(generationId));
+        ArgumentNullException.ThrowIfNull(testAssembly);
+        ArgumentException.ThrowIfNullOrWhiteSpace(assemblyPath);
+        ArgumentException.ThrowIfNullOrWhiteSpace(generationId);
+        _testAssembly = testAssembly;
+        _assemblyPath = Path.GetFullPath(assemblyPath);
+        GenerationId = generationId;
         _runOnCallingThread = runOnCallingThread;
         _sourceLocationProvider = new NUnitSourceLocationProvider(_assemblyPath);
         _runner = new NUnitTestAssemblyRunner(new NUnitTolerantAssemblyBuilder());
@@ -45,8 +48,8 @@ public sealed class NUnitRuntimeSession : ITestingRuntimeSession
         ITestingRuntimeEventSink eventSink,
         CancellationToken cancellationToken)
     {
-        Guard.NotNull(request, nameof(request));
-        Guard.NotNull(eventSink, nameof(eventSink));
+        ArgumentNullException.ThrowIfNull(request);
+        ArgumentNullException.ThrowIfNull(eventSink);
 
         lock (_executionGate)
         {
@@ -124,13 +127,11 @@ public sealed class NUnitRuntimeSession : ITestingRuntimeSession
 
     public void Cancel(Guid runId)
     {
-        if (_disposed || _disposing)
-            throw new ObjectDisposedException(GetType().FullName);
+        ObjectDisposedException.ThrowIf(_disposed || _disposing, this);
 
         lock (_runControl)
         {
-            if (_disposed || _disposing)
-                throw new ObjectDisposedException(GetType().FullName);
+            ObjectDisposedException.ThrowIf(_disposed || _disposing, this);
 
             if (_activeRunId != Guid.Empty && _activeRunId != runId)
                 return;
@@ -213,11 +214,8 @@ public sealed class NUnitRuntimeSession : ITestingRuntimeSession
         _stopPending = false;
     }
 
-    private void ThrowIfClosedForOperation()
-    {
-        if (_disposed || _disposing)
-            throw new ObjectDisposedException(GetType().FullName);
-    }
+    private void ThrowIfClosedForOperation() =>
+        ObjectDisposedException.ThrowIf(_disposed || _disposing, this);
 
     private void ApplyPendingStopLocked()
     {
@@ -247,7 +245,8 @@ public sealed class NUnitRuntimeSession : ITestingRuntimeSession
 
     private void ValidateAssemblyPath(string requestAssemblyPath)
     {
-        var normalized = Path.GetFullPath(Guard.NotNullOrWhiteSpace(requestAssemblyPath, nameof(requestAssemblyPath)));
+        ArgumentException.ThrowIfNullOrWhiteSpace(requestAssemblyPath);
+        var normalized = Path.GetFullPath(requestAssemblyPath);
         if (!string.Equals(normalized, _assemblyPath, StringComparison.OrdinalIgnoreCase))
         {
             throw new ArgumentException(

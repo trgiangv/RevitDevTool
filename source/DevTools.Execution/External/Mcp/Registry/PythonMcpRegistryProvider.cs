@@ -30,7 +30,7 @@ public sealed class PythonMcpRegistryProvider(
 
         if (!pythonInitializer.IsInitialized)
         {
-            logger.ZLogWarning($"Python environment is not ready. Skipping Python MCP registry discovery.");
+            logger.ZLogWarning($"Python environment is not ready. Skipping Python MCP registry discovery");
             return McpRegistryCatalog.Empty;
         }
 

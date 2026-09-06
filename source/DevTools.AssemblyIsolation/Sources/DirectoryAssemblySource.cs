@@ -5,27 +5,25 @@ namespace DevTools.AssemblyIsolation.Sources;
 
 public sealed class DirectoryAssemblySource : IManagedAssemblySource
 {
-    private readonly string root;
-
     public DirectoryAssemblySource(string directory)
     {
         if (string.IsNullOrWhiteSpace(directory))
             throw new ArgumentException("A directory is required.", nameof(directory));
 
-        root = Path.GetFullPath(directory);
+        Root = Path.GetFullPath(directory);
     }
 
-    public string Root => root;
+    public string Root { get; }
 
     public AssemblyCandidate? Resolve(AssemblyName requested)
     {
-        if (requested is null) throw new ArgumentNullException(nameof(requested));
+        ArgumentNullException.ThrowIfNull(requested);
 
         var simpleName = requested.Name;
         if (string.IsNullOrWhiteSpace(simpleName) || !IsSimpleFileName(simpleName))
             return null;
 
-        var candidate = AssemblyCandidate.TryCreate(AssemblyCandidate.Combine(root, simpleName), root);
+        var candidate = AssemblyCandidate.TryCreate(AssemblyCandidate.Combine(Root, simpleName), Root);
         if (candidate is null || !File.Exists(candidate.Path))
             return null;
 

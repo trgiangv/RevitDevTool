@@ -92,7 +92,7 @@ internal static class WorksetParser
             var idWithGuid = BitConverter.ToInt32(data, offset + 16);
 
             if (LooksLikeGuid(guidCandidate))
-                return (idWithGuid, Convert.ToHexString(guidCandidate).ToLowerInvariant());
+                return (idWithGuid, Convert.ToHexStringLower(guidCandidate));
         }
 
         if (offset + 4 <= data.Length)

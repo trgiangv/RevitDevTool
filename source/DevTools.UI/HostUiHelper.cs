@@ -1,4 +1,3 @@
-using System.Reflection;
 using System.Windows.Interop;
 using System.Windows.Media;
 using System.Windows.Threading;
@@ -34,7 +33,7 @@ public static class HostUiHelper
     /// </summary>
     public static void RunOnMainThread(Action action)
     {
-        if (action is null) throw new ArgumentNullException(nameof(action));
+        ArgumentNullException.ThrowIfNull(action);
 
         if (HostDispatcher is null || HostDispatcher.CheckAccess())
             action();
@@ -60,7 +59,7 @@ public static class HostUiHelper
     /// </summary>
     public static void RunBlocking(Func<Task> start)
     {
-        if (start is null) throw new ArgumentNullException(nameof(start));
+        ArgumentNullException.ThrowIfNull(start);
 
         var captured = SynchronizationContext.Current;
         SynchronizationContext.SetSynchronizationContext(null);

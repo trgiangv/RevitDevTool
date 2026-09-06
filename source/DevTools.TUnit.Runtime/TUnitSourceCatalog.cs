@@ -31,8 +31,7 @@ internal static class TUnitSourceCatalog
 
     public static void Retain(Assembly testAssembly)
     {
-        if (testAssembly is null)
-            throw new ArgumentNullException(nameof(testAssembly));
+        ArgumentNullException.ThrowIfNull(testAssembly);
 
         lock (TestingProcessHold.Gate)
         {
@@ -114,7 +113,7 @@ internal static class TUnitSourceCatalog
         var keep = new List<LazyHookEntry<T>>();
         while (live.TryTake(out var entry))
         {
-            Assembly? owner = null;
+            Assembly? owner;
             try
             {
                 var hook = entry.Materialize();
@@ -125,7 +124,7 @@ internal static class TUnitSourceCatalog
                 continue;
             }
 
-            if (owner is null || ReferenceEquals(owner, current))
+            if (ReferenceEquals(owner, current))
                 keep.Add(entry);
             else
                 Stash(parked, owner).Add(entry);
@@ -157,11 +156,9 @@ internal static class TUnitSourceCatalog
 
     private static List<T> Stash<T>(Dictionary<Assembly, List<T>> parked, Assembly assembly)
     {
-        if (!parked.TryGetValue(assembly, out var stash))
-        {
-            stash = [];
-            parked[assembly] = stash;
-        }
+        if (parked.TryGetValue(assembly, out var stash)) return stash;
+        stash = [];
+        parked[assembly] = stash;
 
         return stash;
     }

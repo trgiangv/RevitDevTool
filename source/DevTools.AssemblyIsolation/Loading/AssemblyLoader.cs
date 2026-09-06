@@ -16,7 +16,7 @@ namespace DevTools.AssemblyIsolation.Loading;
 /// </summary>
 public sealed class AssemblyLoader(IAssemblyIsolationDiagnosticSink? diagnostics = null) : IDisposable
 {
-    private readonly object gate = new();
+    private readonly Lock gate = new();
     private readonly Dictionary<string, LoadedPath> assembliesByPath = new(StringComparer.OrdinalIgnoreCase);
     private readonly Dictionary<string, SelectedAssembly> assembliesByIdentity = new(StringComparer.OrdinalIgnoreCase);
     private DirectoryAssemblySource? managedSource;
@@ -168,11 +168,7 @@ public sealed class AssemblyLoader(IAssemblyIsolationDiagnosticSink? diagnostics
         return Convert.ToBase64String(sha256.ComputeHash(stream));
     }
 
-    private void ThrowIfDisposed()
-    {
-        if (disposed)
-            throw new ObjectDisposedException(nameof(AssemblyLoader));
-    }
+    private void ThrowIfDisposed() => ObjectDisposedException.ThrowIf(disposed, this);
 
     private sealed record LoadedPath(string Identity, string Fingerprint, Assembly Assembly);
 

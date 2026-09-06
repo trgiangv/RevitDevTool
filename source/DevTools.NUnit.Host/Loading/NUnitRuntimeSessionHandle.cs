@@ -12,7 +12,6 @@ internal sealed class NUnitRuntimeSessionHandle : ITestingRuntimeSession, ITesti
     private ITestingRuntimeSession? _inner;
     private readonly AssemblyIsolationSession _isolationSession;
     private readonly string _shadowAssemblyPath;
-    private readonly string _generationId;
     private AssemblyUnloadResult? _unloadResult;
     private bool _disposed;
 
@@ -24,10 +23,10 @@ internal sealed class NUnitRuntimeSessionHandle : ITestingRuntimeSession, ITesti
         _inner = inner ?? throw new ArgumentNullException(nameof(inner));
         _isolationSession = isolationSession ?? throw new ArgumentNullException(nameof(isolationSession));
         _shadowAssemblyPath = Path.GetFullPath(shadowAssemblyPath);
-        _generationId = inner.GenerationId;
+        GenerationId = inner.GenerationId;
     }
 
-    public string GenerationId => _generationId;
+    public string GenerationId { get; }
 
     internal Assembly GetLoadedTestAssembly()
     {
@@ -52,7 +51,7 @@ internal sealed class NUnitRuntimeSessionHandle : ITestingRuntimeSession, ITesti
         ITestingRuntimeEventSink eventSink,
         CancellationToken cancellationToken)
     {
-        if (request is null) throw new ArgumentNullException(nameof(request));
+        ArgumentNullException.ThrowIfNull(request);
 
         var requestPath = Path.GetFullPath(request.Assembly.Path);
         if (!string.Equals(requestPath, _shadowAssemblyPath, StringComparison.OrdinalIgnoreCase))

@@ -15,7 +15,7 @@ public sealed class FileWatcherService : IFileWatcherService
     private const string DirectoryWatcherSuffix = "|__dir__";
 
     private readonly ConcurrentDictionary<string, FileSystemWatcher> _watchers = new(StringComparer.OrdinalIgnoreCase);
-    private readonly ConcurrentDictionary<string, System.Threading.Timer> _debounceTimers = new(StringComparer.OrdinalIgnoreCase);
+    private readonly ConcurrentDictionary<string, Timer> _debounceTimers = new(StringComparer.OrdinalIgnoreCase);
     private readonly ConcurrentDictionary<string, PendingChange> _pendingChanges = new(StringComparer.OrdinalIgnoreCase);
     private readonly TimeSpan _debounceDelay = TimeSpan.FromMilliseconds(500);
     private bool _disposed;
@@ -24,7 +24,7 @@ public sealed class FileWatcherService : IFileWatcherService
 
     public void Watch(string path, IEnumerable<string> patterns)
     {
-        if (_disposed) throw new ObjectDisposedException(nameof(FileWatcherService));
+        ObjectDisposedException.ThrowIf(_disposed, this);
         if (string.IsNullOrWhiteSpace(path)) return;
 
         var rootPath = Path.TrimEndingDirectorySeparator(path);
@@ -255,7 +255,7 @@ public sealed class FileWatcherService : IFileWatcherService
             existingTimer.Dispose();
         }
 
-        var timer = new System.Threading.Timer(_ =>
+        var timer = new Timer(_ =>
         {
             if (_pendingChanges.TryRemove(key, out var finalChange))
             {

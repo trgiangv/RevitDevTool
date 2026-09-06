@@ -8,7 +8,6 @@
     <ItemGroup>
         <Compile Remove="Fixtures\**\*.cs" />
         <PackageReference Include="xunit.v3" />
-        <GlobalPackageReference Remove="Polyfill" />
     </ItemGroup>
 
     <ItemGroup>

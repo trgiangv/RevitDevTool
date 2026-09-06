@@ -19,6 +19,7 @@ internal sealed class HostTestSession
         TestingSelection selection)
     {
         _runId = Guid.NewGuid();
+        ArgumentException.ThrowIfNullOrWhiteSpace(assemblyPath);
         if (string.IsNullOrWhiteSpace(hostOptions.FrameworkId))
             throw new InvalidOperationException(
                 "RevitDevTool.TestAdapter requires 'devtools.frameworkId' in testconfig.json.");
@@ -27,7 +28,7 @@ internal sealed class HostTestSession
             TestingProtocol.CurrentVersion,
             _runId,
             frameworkId,
-            new TestingAssemblyReference(RequireAssembly(assemblyPath), null, null),
+            new TestingAssemblyReference(Path.GetFullPath(assemblyPath), null, null),
             selection,
             new Dictionary<string, string>());
 
@@ -37,12 +38,4 @@ internal sealed class HostTestSession
     internal void Cancel() => _transport.Cancel(_runId);
 
     internal void Dispose() => _transport.Dispose();
-
-    private static string RequireAssembly(string assemblyPath)
-    {
-        if (string.IsNullOrWhiteSpace(assemblyPath))
-            throw new ArgumentException("Test assembly path is required.", nameof(assemblyPath));
-
-        return Path.GetFullPath(assemblyPath);
-    }
 }

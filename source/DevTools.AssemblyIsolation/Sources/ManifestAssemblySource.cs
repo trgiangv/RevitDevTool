@@ -15,7 +15,7 @@ public sealed class ManifestAssemblySource : IManagedAssemblySource
 
     public ManifestAssemblySource(IEnumerable<(AssemblyName Identity, AssemblyCandidate Candidate)> entries)
     {
-        if (entries is null) throw new ArgumentNullException(nameof(entries));
+        ArgumentNullException.ThrowIfNull(entries);
 
         entriesBySimpleName = BuildEntries(entries).ToDictionary(
             static pair => pair.Key,
@@ -25,7 +25,7 @@ public sealed class ManifestAssemblySource : IManagedAssemblySource
 
     public AssemblyCandidate? Resolve(AssemblyName requested)
     {
-        if (requested is null) throw new ArgumentNullException(nameof(requested));
+        ArgumentNullException.ThrowIfNull(requested);
 
         return requested.Name is null || !entriesBySimpleName.TryGetValue(requested.Name, out var entries)
             ? null
@@ -86,8 +86,8 @@ public sealed class ManifestAssemblySource : IManagedAssemblySource
         AssemblyName? identity,
         AssemblyCandidate? candidate)
     {
-        if (identity is null) throw new ArgumentNullException(nameof(identity));
-        if (candidate is null) throw new ArgumentNullException(nameof(candidate));
+        ArgumentNullException.ThrowIfNull(identity);
+        ArgumentNullException.ThrowIfNull(candidate);
 
         var simpleName = identity.Name
             ?? throw new ArgumentException("A manifest assembly identity must have a simple name.", nameof(identity));

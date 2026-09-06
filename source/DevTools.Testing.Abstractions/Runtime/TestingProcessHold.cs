@@ -13,10 +13,8 @@ public static class TestingProcessHold
 
     public static T GetOrAdd<T>(string key, Func<T> create) where T : class
     {
-        if (string.IsNullOrWhiteSpace(key))
-            throw new ArgumentException("Value is required.", nameof(key));
-        if (create is null)
-            throw new ArgumentNullException(nameof(create));
+        ArgumentException.ThrowIfNullOrWhiteSpace(key);
+        ArgumentNullException.ThrowIfNull(create);
 
         lock (Gate)
         {

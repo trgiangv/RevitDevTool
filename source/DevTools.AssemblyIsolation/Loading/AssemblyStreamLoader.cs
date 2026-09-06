@@ -28,7 +28,7 @@ public static class AssemblyStreamLoader
 #if NET
     public static Assembly Load(AssemblyLoadContext context, string path)
     {
-        if (context is null) throw new ArgumentNullException(nameof(context));
+        ArgumentNullException.ThrowIfNull(context);
         var assemblyBytes = File.ReadAllBytes(path);
         var symbolPath = Path.ChangeExtension(path, ".pdb");
         using var assemblyStream = new MemoryStream(assemblyBytes, writable: false);

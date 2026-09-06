@@ -13,8 +13,7 @@ internal static class HostOptionsLoader
 
     internal static TestingHostOptions Load(IConfiguration configuration)
     {
-        if (configuration is null)
-            throw new ArgumentNullException(nameof(configuration));
+        ArgumentNullException.ThrowIfNull(configuration);
 
         var hostName = TestingRunnerPaths.ReadEnvironment(TestingRunnerPaths.HostEnvironmentVariable)
             ?? ReadKey(configuration, HostTestConfig.Keys.HostName);

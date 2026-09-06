@@ -19,8 +19,8 @@ internal static class NetfxBclBind
 
     internal static bool AllowsNewer(AssemblyName requested, AssemblyName candidate)
     {
-        if (requested is null) throw new ArgumentNullException(nameof(requested));
-        if (candidate is null) throw new ArgumentNullException(nameof(candidate));
+        ArgumentNullException.ThrowIfNull(requested);
+        ArgumentNullException.ThrowIfNull(candidate);
 
         if (requested.Name is null || !Names.Contains(requested.Name))
             return false;

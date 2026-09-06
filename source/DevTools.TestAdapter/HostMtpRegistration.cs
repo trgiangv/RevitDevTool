@@ -41,8 +41,7 @@ public static class HostMtpRegistration
             return false;
         }
 
-        if (assemblyLoader is null)
-            throw new ArgumentNullException(nameof(assemblyLoader));
+        ArgumentNullException.ThrowIfNull(assemblyLoader);
 
         LastError = null;
         var path = Path.Combine(baseDirectory, assemblyFileName);

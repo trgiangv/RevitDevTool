@@ -10,12 +10,9 @@ public static class HostRuntimeSources
         string runtimeAssemblyFileName,
         string? runtimeSymbolFileName = null)
     {
-        if (hostAssembly is null)
-            throw new ArgumentNullException(nameof(hostAssembly));
-        if (string.IsNullOrWhiteSpace(runtimeFolderName))
-            throw new ArgumentException("Value is required.", nameof(runtimeFolderName));
-        if (string.IsNullOrWhiteSpace(runtimeAssemblyFileName))
-            throw new ArgumentException("Value is required.", nameof(runtimeAssemblyFileName));
+        ArgumentNullException.ThrowIfNull(hostAssembly);
+        ArgumentException.ThrowIfNullOrWhiteSpace(runtimeFolderName);
+        ArgumentException.ThrowIfNullOrWhiteSpace(runtimeAssemblyFileName);
 
         var hostDirectory = Path.GetDirectoryName(hostAssembly.Location) ?? AppContext.BaseDirectory;
         var runtimeDirectory = Path.Combine(hostDirectory, runtimeFolderName);
@@ -50,10 +47,8 @@ public static class HostRuntimeSources
         HostRuntimeSource source,
         Func<string, Exception> throwMissing)
     {
-        if (source is null)
-            throw new ArgumentNullException(nameof(source));
-        if (throwMissing is null)
-            throw new ArgumentNullException(nameof(throwMissing));
+        ArgumentNullException.ThrowIfNull(source);
+        ArgumentNullException.ThrowIfNull(throwMissing);
 
         if (string.IsNullOrWhiteSpace(source.AssemblyPath))
             throw throwMissing("Runtime assembly path provider returned an empty path.");

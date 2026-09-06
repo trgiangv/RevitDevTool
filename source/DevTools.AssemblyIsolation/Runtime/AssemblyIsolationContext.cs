@@ -23,7 +23,7 @@ internal sealed class AssemblyIsolationContext(AssemblyIsolationPlan plan) :
 
     public Assembly LoadAssembly(byte[] assemblyBytes, byte[]? symbolBytes = null)
     {
-        if (assemblyBytes is null) throw new ArgumentNullException(nameof(assemblyBytes));
+        ArgumentNullException.ThrowIfNull(assemblyBytes);
         using var assemblyStream = new MemoryStream(assemblyBytes, writable: false);
         if (symbolBytes is not { Length: > 0 }) 
             return LoadFromStream(assemblyStream);

@@ -1,5 +1,6 @@
 using DevTools.Testing.Abstractions.Contracts;
 using Microsoft.Testing.Platform.Extensions.Messages;
+// ReSharper disable RedundantSuppressNullableWarningExpression
 
 namespace DevTools.TestAdapter;
 
@@ -21,7 +22,7 @@ internal static class TestNodeProperties
         if (traits is null)
             return;
 
-        properties.AddRange(traits.Select(trait => new TestMetadataProperty(trait.Name, trait.Value)).Cast<IProperty>());
+        properties.AddRange(traits.Select(trait => new TestMetadataProperty(trait.Name, trait.Value)));
     }
 
     private static void AddTiming(List<IProperty> properties, double durationMilliseconds)
@@ -77,10 +78,8 @@ internal static class TestNodeProperties
 
     public static TestNode CreateErrorNode(string uid, string displayName, Exception exception)
     {
-        if (string.IsNullOrWhiteSpace(uid))
-            throw new ArgumentException("Error node uid is required.", nameof(uid));
-        if (exception is null)
-            throw new ArgumentNullException(nameof(exception));
+        ArgumentException.ThrowIfNullOrWhiteSpace(uid);
+        ArgumentNullException.ThrowIfNull(exception);
 
         return new TestNode
         {

@@ -116,7 +116,7 @@ public sealed class TestingRunTraceScope : IDisposable
 
     private sealed class Listener : TraceListener
     {
-        private readonly object _sync = new();
+        private readonly Lock _sync = new();
         private readonly StringBuilder _buffer = new();
         private int _suspendCount;
 

@@ -17,8 +17,7 @@ public sealed class MetadataAssemblySession : IDisposable
     {
         if (string.IsNullOrWhiteSpace(entryPath))
             throw new ArgumentException("An entry assembly path is required.", nameof(entryPath));
-        if (resolutionPaths is null)
-            throw new ArgumentNullException(nameof(resolutionPaths));
+        ArgumentNullException.ThrowIfNull(resolutionPaths);
 
         var entryAssemblyPath = Path.GetFullPath(entryPath);
         var paths = CollectResolutionPaths(entryAssemblyPath, resolutionPaths);
@@ -27,8 +26,8 @@ public sealed class MetadataAssemblySession : IDisposable
 
     public Assembly LoadEntryAssembly()
     {
-        var metadataContext = context ?? throw new ObjectDisposedException(nameof(MetadataAssemblySession));
-        return metadataContext.LoadFromAssemblyPath(entryAssemblyPath);
+        ObjectDisposedException.ThrowIf(context is null, this);
+        return context!.LoadFromAssemblyPath(entryAssemblyPath);
     }
 
     public void Dispose()

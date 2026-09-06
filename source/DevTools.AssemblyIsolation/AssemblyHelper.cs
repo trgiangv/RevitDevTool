@@ -36,7 +36,7 @@ public static class AssemblyHelper
 
     public static IEnumerable<Assembly> FindMany(IEnumerable<string> simpleNames)
     {
-        if (simpleNames is null) throw new ArgumentNullException(nameof(simpleNames));
+        ArgumentNullException.ThrowIfNull(simpleNames);
 
         var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         foreach (var name in simpleNames)

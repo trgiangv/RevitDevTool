@@ -11,13 +11,13 @@ namespace DevTools.AssemblyIsolation.Runtime;
 /// </summary>
 internal static class AppDomainResolver
 {
-    private static readonly object Gate = new();
+    private static readonly Lock Gate = new();
     private const BindingFlags FieldFlags = BindingFlags.Instance | BindingFlags.NonPublic;
 
     public static void InsertFirst(AppDomain domain, ResolveEventHandler handler)
     {
-        if (domain is null) throw new ArgumentNullException(nameof(domain));
-        if (handler is null) throw new ArgumentNullException(nameof(handler));
+        ArgumentNullException.ThrowIfNull(domain);
+        ArgumentNullException.ThrowIfNull(handler);
 
         lock (Gate)
         {
@@ -37,8 +37,8 @@ internal static class AppDomainResolver
 
     public static void Remove(AppDomain domain, ResolveEventHandler handler)
     {
-        if (domain is null) throw new ArgumentNullException(nameof(domain));
-        if (handler is null) throw new ArgumentNullException(nameof(handler));
+        ArgumentNullException.ThrowIfNull(domain);
+        ArgumentNullException.ThrowIfNull(handler);
 
         lock (Gate)
             domain.AssemblyResolve -= handler;

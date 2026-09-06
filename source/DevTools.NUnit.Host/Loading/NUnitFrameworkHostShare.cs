@@ -17,7 +17,7 @@ internal static class NUnitFrameworkHostShare
 {
     private const string FrameworkSimpleName = "nunit.framework";
 
-    private static readonly object Gate = new();
+    private static readonly Lock Gate = new();
     private static Assembly? _shared;
 
     internal static bool IsFrameworkSimpleName(string? simpleName) =>
@@ -25,8 +25,7 @@ internal static class NUnitFrameworkHostShare
 
     internal static Assembly GetOrLoadFromShadow(string shadowFrameworkPath)
     {
-        if (string.IsNullOrWhiteSpace(shadowFrameworkPath))
-            throw new ArgumentException("A shadow framework path is required.", nameof(shadowFrameworkPath));
+        ArgumentException.ThrowIfNullOrWhiteSpace(shadowFrameworkPath);
 
         var fullPath = Path.GetFullPath(shadowFrameworkPath);
         if (!File.Exists(fullPath))

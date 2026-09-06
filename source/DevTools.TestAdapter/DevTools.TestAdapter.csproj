@@ -131,7 +131,6 @@
 
     <!-- Compile: MTP (testhost hook). STJ/BCL copy-local comes from Transport/Ipc on net48. -->
     <ItemGroup>
-        <GlobalPackageReference Remove="Polyfill"/>
         <PackageReference Include="Microsoft.Testing.Platform">
             <PrivateAssets>all</PrivateAssets>
             <ExcludeAssets>runtime</ExcludeAssets>

@@ -16,8 +16,7 @@ public static class McpCatalogExtensions
         /// <summary>Registers shared MCP SDK features on the application container.</summary>
         public IServiceCollection AddMcp()
         {
-            if (services is null)
-                throw new ArgumentNullException(nameof(services));
+            ArgumentNullException.ThrowIfNull(services);
 
             var taskStore = new InMemoryMcpTaskStore();
             services.AddSingleton<IMcpTaskStore>(taskStore);

@@ -20,7 +20,7 @@ public sealed class AssemblyIsolationSession : IDisposable
 
     private AssemblyIsolationSession(AssemblyIsolationPlan plan)
     {
-        if (plan is null) throw new ArgumentNullException(nameof(plan));
+        ArgumentNullException.ThrowIfNull(plan);
 
         switch (plan.Kind)
         {
@@ -62,7 +62,7 @@ public sealed class AssemblyIsolationSession : IDisposable
     public Assembly LoadAssembly(byte[] assemblyBytes, byte[]? symbolBytes = null)
     {
         ThrowIfDisposed();
-        if (assemblyBytes is null) throw new ArgumentNullException(nameof(assemblyBytes));
+        ArgumentNullException.ThrowIfNull(assemblyBytes);
 #if NET
         return context!.LoadAssembly(assemblyBytes, symbolBytes);
 #else
@@ -73,8 +73,7 @@ public sealed class AssemblyIsolationSession : IDisposable
     public Assembly LoadFromPath(string path)
     {
         ThrowIfDisposed();
-        if (string.IsNullOrWhiteSpace(path))
-            throw new ArgumentException("An assembly path is required.", nameof(path));
+        ArgumentException.ThrowIfNullOrWhiteSpace(path);
 #if NET
         return AssemblyStreamLoader.Load(context!, path);
 #else
@@ -141,9 +140,5 @@ public sealed class AssemblyIsolationSession : IDisposable
 #endif
     }
 
-    private void ThrowIfDisposed()
-    {
-        if (disposed)
-            throw new ObjectDisposedException(nameof(AssemblyIsolationSession));
-    }
+    private void ThrowIfDisposed() => ObjectDisposedException.ThrowIf(disposed, this);
 }

@@ -16,11 +16,11 @@ public static class CommandIsolationPlan
         IEnumerable<Assembly> hostAssemblies,
         IAssemblyIsolationDiagnosticSink? diagnosticSink = null)
     {
-        if (hostAssemblies is null) throw new ArgumentNullException(nameof(hostAssemblies));
+        ArgumentNullException.ThrowIfNull(hostAssemblies);
 
         var normalizedEntryPath = Path.GetFullPath(entryPath);
         var siblingDirectory = Path.GetDirectoryName(normalizedEntryPath)
-            ?? throw new ArgumentException("The command entry path must have a directory.", nameof(entryPath));
+            ?? throw new ArgumentException(@"The command entry path must have a directory.", nameof(entryPath));
 
         var plan = AssemblyIsolationPlan.Create(normalizedEntryPath)
             .WithKind(AssemblyIsolationKind.Isolated);
@@ -33,12 +33,8 @@ public static class CommandIsolationPlan
 #else
         plan = plan.AddManagedSource(new DirectoryAssemblySource(siblingDirectory));
 #endif
-
         plan = SharedSidecars.ShareFromDirectory(plan, siblingDirectory);
-
-        foreach (var assembly in hostAssemblies)
-            plan = plan.Share(assembly);
-
+        plan = hostAssemblies.Aggregate(plan, (current, assembly) => current.Share(assembly));
         return diagnosticSink is null ? plan : plan.WithDiagnosticSink(diagnosticSink);
     }
 }

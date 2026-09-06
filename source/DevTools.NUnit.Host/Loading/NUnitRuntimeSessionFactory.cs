@@ -12,7 +12,7 @@ public sealed class NUnitRuntimeSessionFactory : ITestingRuntimeSessionFactory
 
     public ITestingRuntimeSession Create(TestingGenerationManifest generation)
     {
-        if (generation is null) throw new ArgumentNullException(nameof(generation));
+        ArgumentNullException.ThrowIfNull(generation);
 
         var frameworkPath = NUnitGenerationPolicy.GetFrameworkAssemblyPath(generation);
         var frameworkAssembly = NUnitFrameworkHostShare.GetOrLoadFromShadow(frameworkPath);

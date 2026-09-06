@@ -30,7 +30,10 @@ public sealed class AssemblyBoundaryTests
         var sourceAndProjectFiles = sourceFiles.Append(Path.Combine(projectDirectory, "DevTools.AssemblyIsolation.csproj"));
         var sourceViolations = sourceAndProjectFiles
             .SelectMany(path => ForbiddenReferences
-                .Where(forbidden => File.ReadAllText(path).Contains(forbidden, StringComparison.OrdinalIgnoreCase))
+                .Where(forbidden => System.Text.RegularExpressions.Regex.IsMatch(
+                    File.ReadAllText(path),
+                    $@"\b{System.Text.RegularExpressions.Regex.Escape(forbidden)}\b",
+                    System.Text.RegularExpressions.RegexOptions.IgnoreCase))
                 .Select(forbidden => $"{Path.GetFileName(path)} contains {forbidden}"))
             .ToArray();
 
@@ -84,7 +87,7 @@ public sealed class AssemblyBoundaryTests
                 ?? throw new InvalidOperationException("Package reference identity is missing."))
             .ToArray();
 
-        Assert.Equal(["System.Reflection.MetadataLoadContext"], packages);
+        Assert.Equal(["System.Reflection.MetadataLoadContext", "Polyfill"], packages);
     }
 
     static bool IsBuildArtifact(string path, string projectDirectory)

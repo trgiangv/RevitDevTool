@@ -25,7 +25,7 @@ public sealed record TestingDiscoveryHints(
     public bool IsEmpty =>
         IsBlank(ClassNames) && IsBlank(MethodNames) && IsBlank(Categories);
 
-    static bool IsBlank(IReadOnlyList<string>? values) => values is null || values.Count == 0;
+    private static bool IsBlank(IReadOnlyList<string>? values) => values is null || values.Count == 0;
 }
 
 public sealed record TestingDiscoveryOptions(bool ForExecution = false)
@@ -56,8 +56,6 @@ public sealed record TestingDiscoveredTest(
 
 public sealed record TestingRunRequest
 {
-    private string _frameworkId = string.Empty;
-
     public TestingRunRequest(
         int ProtocolVersion,
         Guid RunId,
@@ -78,20 +76,16 @@ public sealed record TestingRunRequest
     public Guid RunId { get; init; }
     public string FrameworkId
     {
-        get => _frameworkId;
-        init => _frameworkId = ValidateFrameworkId(value);
-    }
+        get;
+        init
+        {
+            ArgumentException.ThrowIfNullOrWhiteSpace(value, nameof(FrameworkId));
+            field = value;
+        }
+    } = string.Empty;
     public TestingAssemblyReference Assembly { get; init; }
     public TestingSelection Selection { get; init; }
     public IReadOnlyDictionary<string, string> FrameworkOptions { get; init; }
-
-    private static string ValidateFrameworkId(string frameworkId)
-    {
-        if (string.IsNullOrWhiteSpace(frameworkId))
-            throw new ArgumentException("Framework ID is required.", nameof(FrameworkId));
-
-        return frameworkId;
-    }
 }
 
 public sealed record TestingAttachment(

@@ -10,7 +10,7 @@ namespace RevitDevTool.Core.Dispatchers;
 /// </summary>
 internal sealed class RevitDispatcher : IExternalEventHandler, IRevitDispatcher, IDisposable
 {
-    private readonly object _gate = new();
+    private readonly Lock _gate = new();
     private readonly Queue<IRevitRequest> _queue = new();
     private readonly ExternalEvent? _event;
     private bool _raisePending;
@@ -50,7 +50,7 @@ internal sealed class RevitDispatcher : IExternalEventHandler, IRevitDispatcher,
 
     public void Post(Action<UIApplication> action)
     {
-        if (action is null) throw new ArgumentNullException(nameof(action));
+        ArgumentNullException.ThrowIfNull(action);
 
         var request = new Request(action);
 
@@ -65,7 +65,7 @@ internal sealed class RevitDispatcher : IExternalEventHandler, IRevitDispatcher,
 
     public void Post(Action action)
     {
-        if (action is null) throw new ArgumentNullException(nameof(action));
+        ArgumentNullException.ThrowIfNull(action);
 
         var request = new Request(_ => action());
 
@@ -80,7 +80,7 @@ internal sealed class RevitDispatcher : IExternalEventHandler, IRevitDispatcher,
 
     public Task InvokeAsync(Action<UIApplication> action, CancellationToken token = default)
     {
-        if (action is null) throw new ArgumentNullException(nameof(action));
+        ArgumentNullException.ThrowIfNull(action);
 
         if (AllowDirectInvocation())
         {
@@ -103,7 +103,7 @@ internal sealed class RevitDispatcher : IExternalEventHandler, IRevitDispatcher,
 
     public Task InvokeAsync(Action action, CancellationToken token = default)
     {
-        if (action is null) throw new ArgumentNullException(nameof(action));
+        ArgumentNullException.ThrowIfNull(action);
 
         if (AllowDirectInvocation())
         {
@@ -126,7 +126,7 @@ internal sealed class RevitDispatcher : IExternalEventHandler, IRevitDispatcher,
 
     public Task<T> InvokeAsync<T>(Func<UIApplication, T> handler, CancellationToken token = default)
     {
-        if (handler is null) throw new ArgumentNullException(nameof(handler));
+        ArgumentNullException.ThrowIfNull(handler);
 
         if (AllowDirectInvocation())
         {
@@ -148,7 +148,7 @@ internal sealed class RevitDispatcher : IExternalEventHandler, IRevitDispatcher,
 
     public Task<T> InvokeAsync<T>(Func<T> handler, CancellationToken token = default)
     {
-        if (handler is null) throw new ArgumentNullException(nameof(handler));
+        ArgumentNullException.ThrowIfNull(handler);
 
         if (AllowDirectInvocation())
         {

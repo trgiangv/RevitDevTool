@@ -15,8 +15,7 @@ public static class TestingPlatformBuilderHook
 
     public static void AddExtensions(ITestApplicationBuilder testApplicationBuilder, string[] arguments)
     {
-        if (testApplicationBuilder is null)
-            throw new ArgumentNullException(nameof(testApplicationBuilder));
+        ArgumentNullException.ThrowIfNull(testApplicationBuilder);
         testApplicationBuilder.CommandLine.AddProvider(() => new HostCommandLineProvider());
         testApplicationBuilder.RegisterTestFramework(
             _ => new TestFrameworkCapabilities(),

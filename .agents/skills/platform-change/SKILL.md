@@ -24,6 +24,8 @@ description: >
 - Packaging is **two pipelines**. Installer/bundle (`scripts/pack.ps1`, `build/Modules/*`, `PublishRelease.yml`) does not publish NuGet. Adapter nupkg (`scripts/pack-test-adapter.ps1`, `PublishTestAdapter.yml`) does not go through `build/Modules/*`. ILRepack + Polyfill policy is `docs/decisions/0019-ilrepack-and-polyfill-isolated-alc.md`.
 - TestAdapter pack/release constraints: `docs/architecture/Testing/README.md`. Do not add a TestAdapter → MTP `ProjectReference`. Host/Runtime/Runner ship in the installer, not the nupkg.
 - net48: rely on Polyfill + hook/multi-TFM compile; do not speculative-polyfill.
+  `PolyArgumentExceptions` is on globally — prefer `ArgumentNullException.ThrowIfNull`
+  over `if is null throw`.
 
 ## After editing
 

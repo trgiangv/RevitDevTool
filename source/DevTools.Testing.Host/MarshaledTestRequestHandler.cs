@@ -17,8 +17,8 @@ public sealed class MarshaledTestRequestHandler : IBridgeRequestHandler, IBridge
         IHostAppInfo hostInfo,
         IHostContextExecutor hostContext)
     {
-        if (registry is null) throw new ArgumentNullException(nameof(registry));
-        if (hostInfo is null) throw new ArgumentNullException(nameof(hostInfo));
+        ArgumentNullException.ThrowIfNull(registry);
+        ArgumentNullException.ThrowIfNull(hostInfo);
         _inner = new DotnetTestRequestHandler(registry, hostInfo.Host.ToString(), hostInfo.VersionNumber);
         _hostContext = hostContext ?? throw new ArgumentNullException(nameof(hostContext));
     }

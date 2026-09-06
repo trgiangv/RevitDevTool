@@ -14,29 +14,20 @@ public static class NUnitFramework
 }
 
 /// <summary>NUnit provider over the framework-neutral testing runtime session manager.</summary>
-public sealed class NUnitHostTestFrameworkProvider : IHostTestFrameworkProvider, IDisposable
+public sealed class NUnitHostTestFrameworkProvider(NUnitGenerationPolicy policy, NUnitRuntimeSessionFactory factory) : IHostTestFrameworkProvider, IDisposable
 {
-    private readonly TestingRuntimeSessionManager _sessions;
-
-    public NUnitHostTestFrameworkProvider(
-        NUnitGenerationPolicy policy,
-        NUnitRuntimeSessionFactory factory)
-    {
-        _sessions = new TestingRuntimeSessionManager(
-            new TestingGenerationStore(Path.Combine(Path.GetTempPath(), "DevTools", "NUnit", "Generations")),
-            policy,
-            factory);
-    }
+    private readonly TestingRuntimeSessionManager _sessions = new(
+        new TestingGenerationStore(Path.Combine(Path.GetTempPath(), "DevTools", "NUnit", "Generations")),
+        policy,
+        factory);
 
     public string FrameworkId => NUnitFramework.Id;
 
     public TestingRunResponse Run(TestingRunRequest request, ITestingEventSink eventSink,
         CancellationToken cancellationToken)
     {
-        if (request is null)
-            throw new ArgumentNullException(nameof(request));
-        if (eventSink is null)
-            throw new ArgumentNullException(nameof(eventSink));
+        ArgumentNullException.ThrowIfNull(request);
+        ArgumentNullException.ThrowIfNull(eventSink);
         if (!string.Equals(request.FrameworkId, FrameworkId, StringComparison.OrdinalIgnoreCase))
             throw new ArgumentException($"NUnit provider cannot execute framework '{request.FrameworkId}'.", nameof(request));
 

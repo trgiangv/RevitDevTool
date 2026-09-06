@@ -14,8 +14,8 @@ internal static class NUnitIsolationPlan
 {
     internal static AssemblyIsolationPlan Create(TestingGenerationManifest manifest, Assembly frameworkAssembly)
     {
-        if (manifest is null) throw new ArgumentNullException(nameof(manifest));
-        if (frameworkAssembly is null) throw new ArgumentNullException(nameof(frameworkAssembly));
+        ArgumentNullException.ThrowIfNull(manifest);
+        ArgumentNullException.ThrowIfNull(frameworkAssembly);
 
         var shadowDirectory = Path.GetFullPath(manifest.ShadowDirectory);
         var frameworkPath = NUnitGenerationPolicy.GetFrameworkAssemblyPath(manifest);

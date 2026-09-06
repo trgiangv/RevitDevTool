@@ -7,16 +7,14 @@ namespace DevTools.Testing.Transport;
 
 public sealed class ProcessTestRunnerClient : ITestRunnerTransport
 {
-    readonly string _runnerPath;
-    readonly object _processLock = new();
-    Process? _activeProcess;
-    Guid? _activeRunId;
+    private readonly string _runnerPath;
+    private readonly Lock _processLock = new();
+    private Process? _activeProcess;
+    private Guid? _activeRunId;
 
     public ProcessTestRunnerClient(string runnerPath)
     {
-        if (string.IsNullOrWhiteSpace(runnerPath))
-            throw new ArgumentException("Runner path is required.", nameof(runnerPath));
-
+        ArgumentException.ThrowIfNullOrWhiteSpace(runnerPath);
         _runnerPath = runnerPath;
     }
 
@@ -25,12 +23,9 @@ public sealed class ProcessTestRunnerClient : ITestRunnerTransport
         TestingHostOptions hostOptions,
         Action<TestingCaseResult> onResult)
     {
-        if (request is null)
-            throw new ArgumentNullException(nameof(request));
-        if (hostOptions is null)
-            throw new ArgumentNullException(nameof(hostOptions));
-        if (onResult is null)
-            throw new ArgumentNullException(nameof(onResult));
+        ArgumentNullException.ThrowIfNull(request);
+        ArgumentNullException.ThrowIfNull(hostOptions);
+        ArgumentNullException.ThrowIfNull(onResult);
 
         if (!TestingProtocol.IsCompatible(request.ProtocolVersion))
         {
@@ -81,7 +76,7 @@ public sealed class ProcessTestRunnerClient : ITestRunnerTransport
 
     public void Dispose() => Cancel(_activeRunId ?? Guid.Empty);
 
-    string RunProcess(TestingHostOptions hostOptions, IReadOnlyList<string> arguments, Guid runId)
+    private string RunProcess(TestingHostOptions hostOptions, IReadOnlyList<string> arguments, Guid runId)
     {
         var startInfo = new ProcessStartInfo
         {
@@ -97,7 +92,8 @@ public sealed class ProcessTestRunnerClient : ITestRunnerTransport
         foreach (var argument in arguments)
             AddArgument(startInfo, argument);
 
-        using var process = new Process { StartInfo = startInfo };
+        using var process = new Process();
+        process.StartInfo = startInfo;
         lock (_processLock)
         {
             _activeProcess = process;
@@ -152,19 +148,17 @@ public sealed class ProcessTestRunnerClient : ITestRunnerTransport
         return stdout.Trim();
     }
 
-    void ClearActive(Process process)
+    private void ClearActive(Process process)
     {
         lock (_processLock)
         {
-            if (ReferenceEquals(_activeProcess, process))
-            {
-                _activeProcess = null;
-                _activeRunId = null;
-            }
+            if (!ReferenceEquals(_activeProcess, process)) return;
+            _activeProcess = null;
+            _activeRunId = null;
         }
     }
 
-    static void AddArgument(ProcessStartInfo startInfo, string argument)
+    private static void AddArgument(ProcessStartInfo startInfo, string argument)
     {
 #if NETFRAMEWORK || NETSTANDARD
         if (startInfo.Arguments.Length > 0)
@@ -176,7 +170,7 @@ public sealed class ProcessTestRunnerClient : ITestRunnerTransport
     }
 
 #if NETFRAMEWORK || NETSTANDARD
-    static string QuoteArgument(string value)
+    private static string QuoteArgument(string value)
     {
         if (value.Length > 0 && value.IndexOfAny([' ', '\t', '"']) < 0)
             return value;

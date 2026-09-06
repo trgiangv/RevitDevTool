@@ -26,13 +26,13 @@ public sealed class NullTestingRuntimeEventSink : ITestingRuntimeEventSink
     public void Publish(TestingRuntimeEvent testingEvent) { }
 }
 
-public sealed class TestingRuntimeSessionManager : IDisposable
+public sealed class TestingRuntimeSessionManager(TestingGenerationStore generations, ITestingGenerationPolicy policy, ITestingRuntimeSessionFactory factory) : IDisposable
 {
-    private readonly TestingGenerationStore _generations;
-    private readonly ITestingGenerationPolicy _policy;
-    private readonly ITestingRuntimeSessionFactory _factory;
+    private readonly TestingGenerationStore _generations = generations ?? throw new ArgumentNullException(nameof(generations));
+    private readonly ITestingGenerationPolicy _policy = policy ?? throw new ArgumentNullException(nameof(policy));
+    private readonly ITestingRuntimeSessionFactory _factory = factory ?? throw new ArgumentNullException(nameof(factory));
     private readonly SemaphoreSlim _operationLock = new(1, 1);
-    private readonly object _stateLock = new();
+    private readonly Lock _stateLock = new();
     private readonly Dictionary<string, ManagedSession> _sessions = new(StringComparer.Ordinal);
     private readonly Dictionary<Guid, ManagedSession> _activeRuns = new();
     private readonly List<TestingGenerationRetirementDiagnostic> _retainedDiagnostics = [];
@@ -40,16 +40,6 @@ public sealed class TestingRuntimeSessionManager : IDisposable
     private bool _disposed;
 
     internal Action? AfterDisposedCheckBeforeRegistration { get; set; }
-
-    public TestingRuntimeSessionManager(
-        TestingGenerationStore generations,
-        ITestingGenerationPolicy policy,
-        ITestingRuntimeSessionFactory factory)
-    {
-        _generations = generations ?? throw new ArgumentNullException(nameof(generations));
-        _policy = policy ?? throw new ArgumentNullException(nameof(policy));
-        _factory = factory ?? throw new ArgumentNullException(nameof(factory));
-    }
 
     public string? CurrentGenerationId { get; private set; }
     public bool IsOperationActive => _operationLock.CurrentCount == 0;
@@ -61,10 +51,8 @@ public sealed class TestingRuntimeSessionManager : IDisposable
 
     public TestingRunResponse Run(TestingRunRequest request, ITestingRuntimeEventSink eventSink, CancellationToken cancellationToken = default)
     {
-        if (request is null)
-            throw new ArgumentNullException(nameof(request));
-        if (eventSink is null)
-            throw new ArgumentNullException(nameof(eventSink));
+        ArgumentNullException.ThrowIfNull(request);
+        ArgumentNullException.ThrowIfNull(eventSink);
         _operationLock.Wait(cancellationToken);
         try
         {
@@ -100,8 +88,7 @@ public sealed class TestingRuntimeSessionManager : IDisposable
         var manifest = _generations.Build(_policy, assemblyPath);
         lock (_stateLock)
         {
-            if (_disposed)
-                throw new ObjectDisposedException(nameof(TestingRuntimeSessionManager));
+            ObjectDisposedException.ThrowIf(_disposed, this);
 
             ManagedSession session;
             if (_sessions.TryGetValue(manifest.GenerationId, out var existing))

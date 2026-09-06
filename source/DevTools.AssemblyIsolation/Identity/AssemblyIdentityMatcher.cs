@@ -9,8 +9,8 @@ public static class AssemblyIdentityMatcher
         AssemblyName candidate,
         bool allowVersionDrift = false)
     {
-        if (requested is null) throw new ArgumentNullException(nameof(requested));
-        if (candidate is null) throw new ArgumentNullException(nameof(candidate));
+        ArgumentNullException.ThrowIfNull(requested);
+        ArgumentNullException.ThrowIfNull(candidate);
 
         if (!string.Equals(requested.Name, candidate.Name, StringComparison.OrdinalIgnoreCase))
             return false;

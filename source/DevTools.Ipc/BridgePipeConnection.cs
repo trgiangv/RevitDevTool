@@ -24,7 +24,7 @@ public sealed class BridgePipeConnection(Stream stream) : IDisposable
 
     public async Task WriteAsync(BridgeMessage message, CancellationToken ct = default)
     {
-        if (_disposed) throw new ObjectDisposedException(nameof(BridgePipeConnection));
+        ObjectDisposedException.ThrowIf(_disposed, this);
         var body = JsonSerializer.SerializeToUtf8Bytes(message, IpcJsonContext.Default.BridgeMessage);
         var header = BitConverter.GetBytes(body.Length);
 

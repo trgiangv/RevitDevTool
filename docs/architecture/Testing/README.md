@@ -188,8 +188,10 @@ public `TestingGenerationFiles` (Host): `Classify`, `ScanOutputDirectory`,
 types as unkeyed singletons from a provider extension.
 
 Do not add a shared runtime-descriptor catalog. Policy constants stay on the
-provider type. NUnit/TUnit Host csproj remove the solution `Polyfill` global
-package so net48 does not collide with `DevTools.Testing.Host`.
+provider type. NUnit/TUnit Host consume the solution `Polyfill` global package
+on every TFM (`PolyUseEmbeddedAttribute` in `Directory.Build.props` so net48
+does not CS0121 against `DevTools.Testing.Host`). TUnit's own polyfills stay off
+(`EnableTUnitPolyfills=false`).
 
 Each provider uses two targets files: `*RuntimePayload.targets` (Runtime owns
 a payload folder) then `*HostPackaging.targets` (add-in copies that folder to

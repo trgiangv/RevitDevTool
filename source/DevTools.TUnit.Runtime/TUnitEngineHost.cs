@@ -30,8 +30,7 @@ internal static class TUnitEngineHost
         TestingSelection selection,
         CancellationToken cancellationToken)
     {
-        if (testAssembly is null)
-            throw new ArgumentNullException(nameof(testAssembly));
+        ArgumentNullException.ThrowIfNull(testAssembly);
 
         SourceRegistrar.IsEnabled = true;
         RuntimeHelpers.RunModuleConstructor(testAssembly.ManifestModule.ModuleHandle);
@@ -110,7 +109,7 @@ internal static class TUnitEngineHost
 
     private static ITestExecutionFilter CreateFilter(TestingSelection selection)
     {
-        var ids = (selection.TestIds ?? [])
+        var ids = (selection.TestIds)
             .Where(id => !string.IsNullOrWhiteSpace(id))
             .Select(id => id.Trim())
             .Distinct(StringComparer.Ordinal)

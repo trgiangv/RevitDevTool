@@ -6,7 +6,7 @@ public sealed class ManifestNativeAssemblySource : INativeAssemblySource
 
     public ManifestNativeAssemblySource(IEnumerable<AssemblyCandidate> candidates)
     {
-        if (candidates is null) throw new ArgumentNullException(nameof(candidates));
+        ArgumentNullException.ThrowIfNull(candidates);
 
         var indexed = new Dictionary<string, AssemblyCandidate>(StringComparer.OrdinalIgnoreCase);
         foreach (var candidate in candidates)
@@ -17,7 +17,7 @@ public sealed class ManifestNativeAssemblySource : INativeAssemblySource
 
     private static void AddCandidate(Dictionary<string, AssemblyCandidate> indexed, AssemblyCandidate candidate)
     {
-        if (candidate is null) throw new ArgumentNullException(nameof(candidate));
+        ArgumentNullException.ThrowIfNull(candidate);
 
         foreach (var key in AssemblyCandidate.LookupKeys(candidate.Path))
         {

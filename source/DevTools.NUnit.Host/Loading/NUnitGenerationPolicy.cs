@@ -7,7 +7,7 @@ namespace DevTools.NUnit.Host.Loading;
 /// store copies, hashes, and publishes this description without knowing any
 /// NUnit file, version, or dependency rule.
 /// </summary>
-public sealed class NUnitGenerationPolicy : ITestingGenerationPolicy
+public sealed class NUnitGenerationPolicy(Func<HostRuntimeSource> runtimeSourceProvider) : ITestingGenerationPolicy
 {
     public const string FrameworkId = "nunit";
     public const string FrameworkAssemblyFileName = "nunit.framework.dll";
@@ -18,13 +18,7 @@ public sealed class NUnitGenerationPolicy : ITestingGenerationPolicy
     internal const string ExpectedNUnitFileVersion = "4.6.1.0";
     internal const string ExpectedNUnitPackageVersion = "4.6.1";
 
-    private readonly Func<HostRuntimeSource> _runtimeSourceProvider;
-
-    public NUnitGenerationPolicy(Func<HostRuntimeSource> runtimeSourceProvider)
-    {
-        _runtimeSourceProvider = runtimeSourceProvider
-            ?? throw new ArgumentNullException(nameof(runtimeSourceProvider));
-    }
+    private readonly Func<HostRuntimeSource> _runtimeSourceProvider = runtimeSourceProvider ?? throw new ArgumentNullException(nameof(runtimeSourceProvider));
 
     public TestingGenerationPlan CreatePlan(string testAssemblyPath)
     {
@@ -52,8 +46,7 @@ public sealed class NUnitGenerationPolicy : ITestingGenerationPolicy
 
     public void ValidatePublished(TestingGenerationManifest manifest)
     {
-        if (manifest is null)
-            throw new ArgumentNullException(nameof(manifest));
+        ArgumentNullException.ThrowIfNull(manifest);
         if (!string.Equals(manifest.FrameworkId, FrameworkId, StringComparison.OrdinalIgnoreCase))
             throw new NUnitGenerationBuildException($"Expected NUnit generation framework ID '{FrameworkId}'.");
 
@@ -97,8 +90,7 @@ public sealed class NUnitGenerationPolicy : ITestingGenerationPolicy
 
     private static string ResolveTestAssembly(string testAssemblyPath)
     {
-        if (string.IsNullOrWhiteSpace(testAssemblyPath))
-            throw new ArgumentException("Test assembly path is required.", nameof(testAssemblyPath));
+        ArgumentException.ThrowIfNullOrWhiteSpace(testAssemblyPath);
         var sourceAssemblyPath = Path.GetFullPath(testAssemblyPath);
         if (!File.Exists(sourceAssemblyPath))
             throw new NUnitGenerationBuildException($"Test assembly not found: {sourceAssemblyPath}");

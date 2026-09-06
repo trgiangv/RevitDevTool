@@ -25,7 +25,7 @@ internal sealed class NetfxAssemblyIsolationContext : IDisposable
 
     public Assembly LoadEntryAssembly()
     {
-        ThrowIfDisposed();
+        ObjectDisposedException.ThrowIf(disposed, this);
         var requested = AssemblyName.GetAssemblyName(plan.EntryAssemblyPath);
         if (plan.TryShare(requested, out var parent))
             return parent;
@@ -36,7 +36,7 @@ internal sealed class NetfxAssemblyIsolationContext : IDisposable
 
     public Assembly LoadFromPath(string path)
     {
-        ThrowIfDisposed();
+        ObjectDisposedException.ThrowIf(disposed, this);
         if (string.IsNullOrWhiteSpace(path))
             throw new ArgumentException("An assembly path is required.", nameof(path));
 
@@ -46,8 +46,8 @@ internal sealed class NetfxAssemblyIsolationContext : IDisposable
 
     public Assembly LoadAssembly(byte[] assemblyBytes, byte[]? symbolBytes = null)
     {
-        ThrowIfDisposed();
-        if (assemblyBytes is null) throw new ArgumentNullException(nameof(assemblyBytes));
+        ObjectDisposedException.ThrowIf(disposed, this);
+        ArgumentNullException.ThrowIfNull(assemblyBytes);
 
         using (BeginLoad())
         {
@@ -149,12 +149,6 @@ internal sealed class NetfxAssemblyIsolationContext : IDisposable
         var detail = candidate is null ? "" : $", candidate '{candidate.Path}'";
         var identity = requested?.FullName ?? "native library";
         plan.DiagnosticSink?.Publish(new AssemblyIsolationDiagnostic(code, $"Requested '{identity}'{detail}: {reason}", requested));
-    }
-
-    private void ThrowIfDisposed()
-    {
-        if (disposed)
-            throw new ObjectDisposedException(nameof(NetfxAssemblyIsolationContext));
     }
 
     private sealed class LoadGuard : IDisposable

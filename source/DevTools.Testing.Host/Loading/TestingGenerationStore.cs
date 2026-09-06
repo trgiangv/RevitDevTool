@@ -3,25 +3,19 @@ using System.Security.Cryptography;
 
 namespace DevTools.Testing.Host.Loading;
 
-public sealed class TestingGenerationStore
+public sealed class TestingGenerationStore(string? generationsRootDirectory = null)
 {
     private const int MaxSnapshotAttempts = 3;
-    private static readonly ConcurrentDictionary<string, object> GenerationLocks = new(StringComparer.OrdinalIgnoreCase);
-    private readonly string _generationsRootDirectory;
+    private static readonly ConcurrentDictionary<string, Lock> GenerationLocks = new(StringComparer.OrdinalIgnoreCase);
+    private readonly string _generationsRootDirectory = generationsRootDirectory
+                                                        ?? Path.Combine(Path.GetTempPath(), "DevTools", "Testing", "Generations");
 
     // Deterministic test/diagnostic seam; callers must not mutate source or staging content.
     public Action<string>? AfterFileCopied { get; set; }
 
-    public TestingGenerationStore(string? generationsRootDirectory = null)
-    {
-        _generationsRootDirectory = generationsRootDirectory
-            ?? Path.Combine(Path.GetTempPath(), "DevTools", "Testing", "Generations");
-    }
-
     public TestingGenerationManifest Build(ITestingGenerationPolicy policy, string testAssemblyPath)
     {
-        if (policy is null)
-            throw new ArgumentNullException(nameof(policy));
+        ArgumentNullException.ThrowIfNull(policy);
         var plan = policy.CreatePlan(testAssemblyPath) ?? throw new TestingGenerationBuildException("Generation policy returned no plan.");
         ValidateSources(plan, testAssemblyPath);
         string? lastFailure = null;
@@ -70,7 +64,7 @@ public sealed class TestingGenerationStore
             }
 
             var shadowDirectory = Path.Combine(_generationsRootDirectory, generationId);
-            var generationLock = GenerationLocks.GetOrAdd(generationId, static _ => new object());
+            var generationLock = GenerationLocks.GetOrAdd(generationId, static _ => new Lock());
             lock (generationLock)
             {
                 if (Directory.Exists(shadowDirectory))
@@ -117,10 +111,9 @@ public sealed class TestingGenerationStore
         string generationId,
         string shadowDirectory)
     {
-        string Resolve(string relative) => Path.Combine(shadowDirectory, TestingGenerationPaths.NormalizeRelativePath(relative));
         var sourceFile = plan.Files.SingleOrDefault(file => string.Equals(
-            Path.GetFullPath(file.SourcePath), Path.GetFullPath(plan.SourceAssemblyPath), StringComparison.OrdinalIgnoreCase))
-            ?? throw new TestingGenerationBuildException("Generation plan does not include its source assembly.");
+                             Path.GetFullPath(file.SourcePath), Path.GetFullPath(plan.SourceAssemblyPath), StringComparison.OrdinalIgnoreCase))
+                         ?? throw new TestingGenerationBuildException("Generation plan does not include its source assembly.");
 
         return new TestingGenerationManifest(
             generationId,
@@ -133,6 +126,8 @@ public sealed class TestingGenerationStore
             plan.Files.Where(file => file.Kind == TestingGenerationFileKind.Native).Select(file => Resolve(file.RelativePath)).OrderBy(path => path, StringComparer.OrdinalIgnoreCase).ToList(),
             plan.Files.Where(file => file.Kind == TestingGenerationFileKind.Symbols).Select(file => Resolve(file.RelativePath)).OrderBy(path => path, StringComparer.OrdinalIgnoreCase).ToList(),
             plan.Files.Where(file => file.Kind == TestingGenerationFileKind.Other).Select(file => Resolve(file.RelativePath)).OrderBy(path => path, StringComparer.OrdinalIgnoreCase).ToList());
+
+        string Resolve(string relative) => Path.Combine(shadowDirectory, TestingGenerationPaths.NormalizeRelativePath(relative));
     }
 
     private sealed record SourceMetadata(long Length, DateTime LastWriteUtc, string ContentHash)

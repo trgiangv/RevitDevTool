@@ -13,10 +13,9 @@ public sealed class InstanceRequestHandler(IHostAppInfo hostInfo) : IBridgeReque
         JsonElement? @params,
         CancellationToken ct = default)
     {
-        if (!string.Equals(method, IpcBridgeMethods.InstanceInfo, StringComparison.OrdinalIgnoreCase))
-            return Task.FromResult(BridgeMessage.Error(requestId, IpcErrorCodes.MethodNotFound, $"Unknown method: {method}"));
-
-        return Task.FromResult(HandleInstanceInfo(requestId));
+        return Task.FromResult(!string.Equals(method, IpcBridgeMethods.InstanceInfo, StringComparison.OrdinalIgnoreCase) 
+            ? BridgeMessage.Error(requestId, IpcErrorCodes.MethodNotFound, $"Unknown method: {method}") 
+            : HandleInstanceInfo(requestId));
     }
 
     private BridgeMessage HandleInstanceInfo(string id)

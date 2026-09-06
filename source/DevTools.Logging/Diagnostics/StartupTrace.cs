@@ -21,7 +21,7 @@ public sealed class StartupTrace : IDisposable
     private readonly DateTimeOffset _startedUtc;
     private readonly Stopwatch _watch;
     private readonly List<string> _lines = [];
-    private readonly object _gate = new();
+    private readonly Lock _gate = new();
     private readonly UnhandledExceptionEventHandler _unhandled;
     private bool _failed;
     private bool _disposed;

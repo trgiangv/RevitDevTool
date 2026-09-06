@@ -78,28 +78,28 @@ public sealed class AssemblyIsolationPlan
 
     public AssemblyIsolationPlan AddManagedSource(IManagedAssemblySource source)
     {
-        if (source is null) throw new ArgumentNullException(nameof(source));
+        ArgumentNullException.ThrowIfNull(source);
 
         return Clone(managedSources: ReadOnly(ManagedSources.Append(source)));
     }
 
     public AssemblyIsolationPlan AddNativeSource(INativeAssemblySource source)
     {
-        if (source is null) throw new ArgumentNullException(nameof(source));
+        ArgumentNullException.ThrowIfNull(source);
 
         return Clone(nativeSources: ReadOnly(NativeSources.Append(source)));
     }
 
     public AssemblyIsolationPlan WithDiagnosticSink(IAssemblyIsolationDiagnosticSink sink)
     {
-        if (sink is null) throw new ArgumentNullException(nameof(sink));
+        ArgumentNullException.ThrowIfNull(sink);
 
         return Clone(diagnosticSink: sink);
     }
 
     public bool TryShare(AssemblyName requested, out Assembly assembly)
     {
-        if (requested is null) throw new ArgumentNullException(nameof(requested));
+        ArgumentNullException.ThrowIfNull(requested);
 
         if (requested.Name is null || !shares.TryGetValue(requested.Name, out var shared))
         {
@@ -116,7 +116,7 @@ public sealed class AssemblyIsolationPlan
 
     private AssemblyIsolationPlan AddShare(Assembly assembly, bool allowVersionDrift)
     {
-        if (assembly is null) throw new ArgumentNullException(nameof(assembly));
+        ArgumentNullException.ThrowIfNull(assembly);
 
         return Clone(shareAssemblies: ReadOnly(AppendShare(
             sharedAssemblies,

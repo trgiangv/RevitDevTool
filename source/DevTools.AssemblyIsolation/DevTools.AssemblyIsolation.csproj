@@ -6,7 +6,6 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <GlobalPackageReference Remove="Polyfill" />
         <PackageReference Include="System.Reflection.MetadataLoadContext" />
     </ItemGroup>
 </Project>

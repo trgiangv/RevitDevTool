@@ -18,8 +18,9 @@ Host add-ins merge copy-local managed DLLs into one assembly
 `/union` because `Microsoft.Extensions.*` packages contribute duplicate types
 (for example `LoggingBuilderExtensions`). Without `/union` the pack fails.
 
-`/union` of **two** assemblies that both embed `Polyfills.Polyfill` produces an
-image CoreCLR rejects at `AssemblyLoadContext.LoadFromAssemblyPath`:
+`/union` of **divergent** `Polyfills.Polyfill` copies (different package
+version or feature flags) produces an image CoreCLR rejects at
+`AssemblyLoadContext.LoadFromAssemblyPath`:
 
 ```text
 System.BadImageFormatException: Invalid token
@@ -28,10 +29,9 @@ System.BadImageFormatException: Invalid token
 That rejection is a **.NET 10 isolated ALC** importer check. The default load
 context and .NET Framework are more permissive of the same smashed metadata.
 Autodesk host year is only how this repo maps to `net10.0-windows`; it is not
-the defect.
-
-Polyfill is a compile-time source package. On TFMs that already have the APIs it
-must not become a runtime merge input.
+the defect. Polyfill is a compile-time source package: every consuming assembly
+embeds `Polyfills.Polyfill`. Identical copies from the same package may merge;
+a foreign copy stays a sidecar.
 
 `ricaun.ILRepack` is a wrapper around the same `ILRepack.exe` (2.0.46). It does
 not change `/union` semantics and is not a substitute for this policy.
@@ -56,9 +56,20 @@ filename.
 1. **Keep the in-repo driver.** `props/ILRepack.targets` + `ILRepackable` remain
    the merge mechanism. The driver adds the `ILRepack` PackageReference when
    that flag is true. Do not switch hosts to `ricaun.ILRepack`.
-2. **Polyfill is net4-only.** `GlobalPackageReference` Polyfill is conditioned
-   on `$(TargetFramework.StartsWith('net4'))` (repo `Directory.Packages.props`
-   and in-repo stub-gen). net8 / net10 must not embed `Polyfills.Polyfill`.
+2. **Polyfill applies to every TFM.** `GlobalPackageReference` Polyfill is
+   unconditioned (repo `Directory.Packages.props`). The pythonnet stub-gen
+   submodule keeps its own package graph and is outside this policy.
+   `Directory.Build.props` sets `PolyUseEmbeddedAttribute` and
+   `PolyArgumentExceptions` before `Polyfill.targets` evaluates (not
+   `props/Common.props` — that import is too late). That enables
+   `ArgumentNullException.ThrowIfNull` on net48 without `InternalsVisibleTo`
+   CS0121/CS0436. Do not `GlobalPackageReference Remove="Polyfill"` on product or
+   test csproj. Do not set `PolyPublic` (conflicts with EmbeddedAttribute; public
+   copies CS0121/CS0433/CS0436 across ProjectReferences). Polyfill `Lock` is
+   `internal` on net48/net8: **private** mutex fields may be `Lock`;
+   **public/protected** mutex fields stay `object`. Do not replace an existing
+   `??` with `ThrowIfNull`. TUnit's own polyfills stay off
+   (`EnableTUnitPolyfills=false`) — that is a different package.
 3. **`/union` is a driver default (`ILRepackUnion=true`).** Do not copy it onto
    a csproj. Do not replace it with `/allowdup` without a proven pack **and**
    isolated-ALC load of the host DLL.
@@ -66,12 +77,14 @@ filename.
    `ILRepackILLink=false` (`/illink` concatenates unused XML; this repo does not
    ILLink the packed add-in) and `ILRepackParallel=true` (speed only). Do not
    flip these per `net10` or restate them on a csproj. Isolated ALC is handled
-   by Polyfill net4-only and the Nice3point sidecar. Do not turn `ILRepackable`
-   off to dodge isolated ALC.
-5. **At most one `Polyfills.Polyfill` in the merge.** Any remaining assembly
-   that still embeds it stays beside the add-in (`RepackBinariesExcludes`).
-   Today that is `Nice3point.Revit.Extensions.dll` on the Revit host when the
-   TFM is net10.
+   by one Polyfill package version across our inputs plus the Nice3point
+   sidecar. Do not turn `ILRepackable` off to dodge isolated ALC.
+5. **Our Polyfill copies may merge; a foreign copy may not.** Every in-repo
+   assembly embeds the same Polyfill 11.x sources. net8 / net10 force the same
+   `Feature*` constants, so `/union` sees one type shape (host `AllowUnsafeBlocks`
+   is a superset of library copies). A **different** Polyfill (Nice3point
+   Extensions on net10) stays beside the add-in (`RepackBinariesExcludes`).
+   Do not merge a second package version of `Polyfills.Polyfill`.
 6. **ILRepack only sees copy-local managed DLLs.** What must not merge must not
    land in `TargetDir`. Scintilla/Lexilla live under `runtimes/win-x64/native/`.
    JetBrains.Annotations is compile-only (`PrivateAssets=all`,
@@ -116,8 +129,10 @@ filename.
    `Microsoft.Extensions.*`.
 3. **Disable ILRepack on net10.** Avoids the smashed image but ships a
    sibling-DLL graph and reopens identity conflicts. Rejected.
-4. **Keep Polyfill on all TFMs.** Maximizes net48 convenience and guarantees
-   multiple `Polyfills.Polyfill` copies in a net10 merge.
+4. **Keep Polyfill net4-only.** Avoids net10 copies but blocks
+   `ThrowIfNull` / `Lock` and other downlevel APIs on net8 in shared code.
+   Rejected — all TFMs consume the same source package; merge safety is
+   EmbeddedAttribute + one package version + the Nice3point sidecar.
 5. **`RepackBinariesExcludes` for `ModelContextProtocol*`.** A second packing
    mode for one package family. If MCP must not be in the host image, it must
    not be copy-local. Rejected.
@@ -133,9 +148,10 @@ filename.
 
 Positive:
 
-- Isolated ALC (CoreCLR 10) can load a `/union` host image if only one Polyfill
-  copy is merged.
-- net48 still gets Polyfill; modern TFMs use the BCL.
+- Isolated ALC (CoreCLR 10) can load a `/union` host image when merged
+  `Polyfills.Polyfill` copies share one package version and feature flags.
+- Every TFM can call `ArgumentNullException.ThrowIfNull` and other polyfilled
+  APIs; net8 / net10 still compile against the BCL where the API already exists.
 - Native runtimes and compile-only packages stay out of the merge without
   filename excludes.
 - MCP toolsets stay compile-only; the host image carries one in-process MCP
@@ -144,9 +160,10 @@ Positive:
 Tradeoffs:
 
 - Nice3point Extensions remains a sidecar on net10 Revit until that package
-  stops embedding Polyfill.
-- `/union` + a future second Polyfill copy will fail the same way; exclude or
-  stop embedding, do not add comments.
+  ships the same Polyfill version (or none).
+- `/union` + a **foreign** Polyfill copy will fail the same way; exclude or
+  stop embedding, do not add comments. Do not `Remove` our GlobalPackageReference
+  to dodge that — that reintroduces CS0436 / missing ThrowIf* on net48.
 - Catalog still uses SDK types to reflect-invoke toolsets, so the host pack
   embeds MCP. [0027](0027-mcp-product-surface.md) owns the pipe DTOs, not
   this merge. Do not add an MCP filename exclude.

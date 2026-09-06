@@ -438,7 +438,13 @@ public sealed class AdapterArchitectureTests
         Assert.DoesNotContain(".runsettings", targets, StringComparison.Ordinal);
         Assert.DoesNotContain("NUnit.Microsoft.Testing.Platform", targets, StringComparison.Ordinal);
         Assert.Contains("Microsoft.Testing.Platform", csproj, StringComparison.Ordinal);
-        Assert.Contains("GlobalPackageReference Remove=\"Polyfill\"", csproj, StringComparison.Ordinal);
+        Assert.DoesNotContain("GlobalPackageReference Remove=\"Polyfill\"", csproj, StringComparison.Ordinal);
+        var commonProps = File.ReadAllText(Path.Combine(RepositoryRoot, "Directory.Build.props"));
+        Assert.Contains("<PolyUseEmbeddedAttribute>true</PolyUseEmbeddedAttribute>", commonProps, StringComparison.Ordinal);
+        Assert.Contains("<PolyArgumentExceptions>true</PolyArgumentExceptions>", commonProps, StringComparison.Ordinal);
+        var packagesProps = File.ReadAllText(Path.Combine(RepositoryRoot, "Directory.Packages.props"));
+        Assert.Contains("<GlobalPackageReference Include=\"Polyfill\"", packagesProps, StringComparison.Ordinal);
+        Assert.DoesNotContain("Condition=\"$(TargetFramework.StartsWith('net4'))\"", packagesProps, StringComparison.Ordinal);
         Assert.DoesNotContain("PackageReference Include=\"System.Text.Json\"", csproj, StringComparison.Ordinal);
         Assert.DoesNotContain("PackageReference Include=\"System.Runtime.CompilerServices.Unsafe\"", csproj, StringComparison.Ordinal);
         Assert.DoesNotContain("PackageReference Include=\"Microsoft.Bcl.AsyncInterfaces\"", csproj, StringComparison.Ordinal);
