@@ -28,8 +28,8 @@
         <PackageVersion Include="ModelContextProtocol" Version="2.2.0" />
         <PackageVersion Include="ModelContextProtocol.Extensions.Tasks" Version="2.2.0" />
         <!--FSharp-->
-        <PackageVersion Include="FSharp.Core" Version="10.1.400" />
-        <PackageVersion Include="FSharp.Compiler.Service" Version="43.12.400" />
+        <PackageVersion Include="FSharp.Core" Version="11.0.101-preview7.26381.103" />
+        <PackageVersion Include="FSharp.Compiler.Service" Version="43.13.101-preview7.26381.103" />
         <!--CSharp-->
         <PackageVersion Include="Microsoft.CodeAnalysis.CSharp" Version="5.9.0" />
         <!--Telemetry-->

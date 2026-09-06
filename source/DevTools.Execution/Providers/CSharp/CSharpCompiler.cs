@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.IO;
 using System.Reflection;
 using System.Text;
@@ -5,6 +6,7 @@ using DevTools.AssemblyIsolation;
 using DevTools.AssemblyIsolation.Diagnostics;
 using DevTools.Execution.Models;
 using DevTools.Execution.Providers.FSharp;
+using DevTools.Hosting;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.Emit;
@@ -17,11 +19,15 @@ namespace DevTools.Execution.Providers.CSharp;
 /// <summary>
 /// Compiles a .csx script graph via Roslyn. Recursively resolves #load directives,
 /// merges all #r references (NuGet, file, host-rewrite) from the entire graph,
-/// collects AppDomain references, emits in-memory assembly, and finds IExternalCommand.
+/// collects AppDomain references (skipping duplicate simple names), emits in-memory
+/// assembly, and finds IExternalCommand.
 /// Loads compiled output through ScriptIsolationPlan: collectible ALC on modern TFMs,
 /// scoped AssemblyResolve on net48. Host API assemblies are parent-bound, not isolated.
 /// </summary>
-public sealed class CSharpCompiler(ILogger<CSharpCompiler> logger, NugetManager nugetManager)
+public sealed class CSharpCompiler(
+    ILogger<CSharpCompiler> logger,
+    NugetManager nugetManager,
+    IHostAppInfo? hostApp = null)
 {
     private static readonly LanguageVersion MaxLanguageVersion =
         Enum.GetValues<LanguageVersion>()
@@ -101,31 +107,52 @@ public sealed class CSharpCompiler(ILogger<CSharpCompiler> logger, NugetManager 
         }
     }
 
-    private async Task<(HashSet<string> AllReferences, IReadOnlyList<string> NugetDlls)> ResolveReferencesAsync(
+    private async Task<(List<string> AllReferences, IReadOnlyList<string> NugetDlls)> ResolveReferencesAsync(
         ScriptGraph graph, IProgress<string>? progress, CancellationToken ct)
     {
-        var references = new HashSet<string>(graph.AssemblyReferences, StringComparer.OrdinalIgnoreCase);
-        var nugetDlls = new List<string>();
+        var paths = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var references = new List<string>();
+        foreach (var path in graph.AssemblyReferences)
+            AddUniquePath(paths, references, path);
 
-        if (graph.Packages.Count > 0)
+        var nugetDlls = await AddNugetReferencesAsync(graph, paths, references, progress, ct).ConfigureAwait(false);
+        CollectAppDomainReferences(path => AddUniquePath(paths, references, path));
+        return (references, nugetDlls);
+    }
+
+    private async Task<List<string>> AddNugetReferencesAsync(
+        ScriptGraph graph,
+        HashSet<string> paths,
+        List<string> references,
+        IProgress<string>? progress,
+        CancellationToken ct)
+    {
+        var nugetDlls = new List<string>();
+        if (graph.Packages.Count == 0)
+            return nugetDlls;
+
+        progress?.Report($"Resolving {graph.Packages.Count} NuGet package(s)...");
+        var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var pkg in graph.Packages)
         {
-            progress?.Report($"Resolving {graph.Packages.Count} NuGet package(s)...");
-            var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-            foreach (var pkg in graph.Packages)
+            if (!seen.Add(pkg.PackageId))
+                continue;
+
+            var dlls = await nugetManager.ResolvePackageDllsAsync(pkg.PackageId, pkg.Version, ct).ConfigureAwait(false);
+            foreach (var dll in dlls)
             {
-                if (!seen.Add(pkg.PackageId))
-                    continue;
-                var dlls = await nugetManager.ResolvePackageDllsAsync(pkg.PackageId, pkg.Version, ct).ConfigureAwait(false);
-                foreach (var dll in dlls)
-                {
-                    references.Add(dll);
-                    nugetDlls.Add(dll);
-                }
+                AddUniquePath(paths, references, dll);
+                nugetDlls.Add(dll);
             }
         }
 
-        CollectAppDomainReferences(references);
-        return (references, nugetDlls);
+        return nugetDlls;
+    }
+
+    private static void AddUniquePath(HashSet<string> paths, List<string> references, string path)
+    {
+        if (paths.Add(path))
+            references.Add(path);
     }
 
     private static ScriptCompilationResult CreateCommandResult(Assembly assembly, ICompiledScriptBridge hostSupport, IDisposable? cleanup)
@@ -156,7 +183,7 @@ public sealed class CSharpCompiler(ILogger<CSharpCompiler> logger, NugetManager 
 
     private byte[]? Compile(
         IReadOnlyList<SourceFileEntry> sourceFiles,
-        HashSet<string> referencePaths,
+        List<string> referencePaths,
         out byte[]? pdbBytes,
         out List<string> diagnostics)
     {
@@ -166,7 +193,7 @@ public sealed class CSharpCompiler(ILogger<CSharpCompiler> logger, NugetManager 
         var parseOptions = CSharpParseOptions.Default
             .WithLanguageVersion(MaxLanguageVersion)
             .WithKind(SourceCodeKind.Regular)
-            .WithPreprocessorSymbols("TRACE", "DEBUG");
+            .WithPreprocessorSymbols(CompileScriptSymbols.For(hostApp));
 
         var syntaxTrees = sourceFiles
             .Select(f =>
@@ -210,30 +237,62 @@ public sealed class CSharpCompiler(ILogger<CSharpCompiler> logger, NugetManager 
         return peStream.ToArray();
     }
 
-    private List<MetadataReference> LoadMetadataReferences(HashSet<string> referencePaths)
+    private List<MetadataReference> LoadMetadataReferences(List<string> referencePaths)
     {
         var refs = new List<MetadataReference>();
+        var seenNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         foreach (var refPath in referencePaths)
-        {
-            if (!File.Exists(refPath))
-            {
-                logger.ZLogDebug($"[CSharpCompiler] Skipping missing reference: {refPath}");
-                continue;
-            }
-
-            try
-            {
-                refs.Add(MetadataReference.CreateFromFile(refPath));
-            }
-            catch (Exception ex)
-            {
-                logger.ZLogDebug($"[CSharpCompiler] Failed to load reference '{refPath}': {ex.Message}");
-            }
-        }
+            TryAddMetadataReference(refs, seenNames, refPath);
         return refs;
     }
 
-    private static void CollectAppDomainReferences(HashSet<string> references)
+    private void TryAddMetadataReference(
+        List<MetadataReference> refs, HashSet<string> seenNames, string refPath)
+    {
+        if (!File.Exists(refPath))
+        {
+            LogDebug($"Skipping missing reference: {refPath}");
+            return;
+        }
+
+        if (!TryReadSimpleName(refPath, out var simpleName) || simpleName is null)
+            return;
+
+        if (!seenNames.Add(simpleName))
+        {
+            LogDebug($"Skipping duplicate simple name '{simpleName}': {refPath}");
+            return;
+        }
+
+        try
+        {
+            refs.Add(MetadataReference.CreateFromFile(refPath));
+        }
+        catch (Exception ex)
+        {
+            LogDebug($"Failed to load reference '{refPath}': {ex.Message}");
+        }
+    }
+
+    private bool TryReadSimpleName(string refPath, out string? simpleName)
+    {
+        try
+        {
+            simpleName = AssemblyName.GetAssemblyName(refPath).Name;
+            return true;
+        }
+        catch (Exception ex)
+        {
+            LogDebug($"Skipping unreadable reference '{refPath}': {ex.Message}");
+            simpleName = null;
+            return false;
+        }
+    }
+
+    [Conditional("DEBUG")]
+    private void LogDebug(string message) => logger.ZLogDebug($"{message}");
+
+    private static void CollectAppDomainReferences(Action<string> add)
     {
         foreach (var assembly in AppDomain.CurrentDomain.GetAssemblies())
         {
@@ -244,7 +303,7 @@ public sealed class CSharpCompiler(ILogger<CSharpCompiler> logger, NugetManager 
             {
                 var location = assembly.Location;
                 if (!string.IsNullOrEmpty(location) && File.Exists(location))
-                    references.Add(location);
+                    add(location);
             }
             catch
             {

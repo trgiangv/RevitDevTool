@@ -1,6 +1,9 @@
 using System.Reflection;
+using System.Runtime.Loader;
 using DevTools.Execution.Providers.CSharp;
 using DevTools.Execution.Providers.FSharp;
+using DevTools.Execution.Tests.AssemblyIsolation;
+using DevTools.Hosting;
 using Microsoft.Extensions.Logging.Abstractions;
 
 namespace DevTools.Execution.Tests;
@@ -105,6 +108,93 @@ public sealed class CSharpCompilerTests
         finally
         {
             Directory.Delete(directory, recursive: true);
+        }
+    }
+
+    [Fact]
+    public async Task CompileAsync_AppliesHostVersionPreprocessorSymbols()
+    {
+        const string code = """
+            public sealed class ScriptCommand
+            {
+            #if REVIT2025_OR_GREATER
+                public int Value => 25;
+            #else
+                public int Value => 0;
+            #endif
+            #if REVIT2026_OR_GREATER
+                public int Future => 1;
+            #endif
+            }
+            """;
+
+        var compiler = new CSharpCompiler(
+            NullLogger<CSharpCompiler>.Instance,
+            new NugetManager(NullLogger<NugetManager>.Instance),
+            ExecutionTestHelpers.CreateHostAppInfo(HostApp.Revit, "2025"));
+
+        var result = await compiler.CompileAsync(code, ExecutionTestHelpers.CreateScriptBridge(), ct: TestContext.Current.CancellationToken);
+
+        Assert.True(result.Success, result.FormatDiagnostics());
+        var command = result.Command!;
+        Assert.Equal(25, command.GetType().GetProperty("Value")!.GetValue(command));
+        Assert.Null(command.GetType().GetProperty("Future"));
+        result.Cleanup?.Dispose();
+    }
+
+    [Fact]
+    public async Task CompileAsync_SkipsDuplicateSimpleNameLoadedInAppDomain()
+    {
+        var workload = CommandFixtureWorkload.Create(includeSibling: false);
+        var directory = ExecutionTestHelpers.CreateTempDirectory("csharp-dup-simple-name");
+        var alcOne = new AssemblyLoadContext("csx-dup-1", isCollectible: true);
+        var alcTwo = new AssemblyLoadContext("csx-dup-2", isCollectible: true);
+        try
+        {
+            var copyOne = Path.Combine(directory, "one", "IsolationEntry.dll");
+            var copyTwo = Path.Combine(directory, "two", "IsolationEntry.dll");
+            Directory.CreateDirectory(Path.GetDirectoryName(copyOne)!);
+            Directory.CreateDirectory(Path.GetDirectoryName(copyTwo)!);
+            File.Copy(workload.EntryPath, copyOne);
+            File.Copy(workload.EntryPath, copyTwo);
+            alcOne.LoadFromAssemblyPath(copyOne);
+            alcTwo.LoadFromAssemblyPath(copyTwo);
+
+            var compiler = new CSharpCompiler(
+                NullLogger<CSharpCompiler>.Instance,
+                new NugetManager(NullLogger<NugetManager>.Instance));
+
+            var result = await compiler.CompileAsync(
+                "public sealed class ScriptCommand { public int Value => 1; }",
+                ExecutionTestHelpers.CreateScriptBridge(),
+                ct: TestContext.Current.CancellationToken);
+
+            Assert.True(result.Success, result.FormatDiagnostics());
+            Assert.DoesNotContain("CS1704", result.FormatDiagnostics(), StringComparison.Ordinal);
+            result.Cleanup?.Dispose();
+        }
+        finally
+        {
+            alcOne.Unload();
+            alcTwo.Unload();
+            TryDispose(workload);
+            try { Directory.Delete(directory, recursive: true); }
+            catch (IOException) { }
+            catch (UnauthorizedAccessException) { }
+        }
+    }
+
+    private static void TryDispose(IDisposable disposable)
+    {
+        try
+        {
+            disposable.Dispose();
+        }
+        catch (IOException)
+        {
+        }
+        catch (UnauthorizedAccessException)
+        {
         }
     }
 }

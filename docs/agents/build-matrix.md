@@ -19,6 +19,14 @@
 
 Valid modes are `Debug` and `Release`, so full names look like `Debug.Autodesk.2025`.
 
+Host `#if` symbols are generated in `props/Revit.targets` and `props/AutoCad.targets`
+from `SupportedRevitVersion` / `SupportedAutoCadVersion` (2022–2032 listed;
+future years are no-ops until `Directory.Build.props` sets that year).
+Building year *Y* defines `REVIT` / `AUTOCAD`, `REVIT{Y}` / `AUTOCAD{Y}`, and
+`{HOST}{year}_OR_GREATER` for each listed year from the minimal (default 2022)
+through *Y*. Override `RevitVersionMinimal` / `AutoCadVersionMinimal`, or set
+`DisableImplicitRevitDefines` / `DisableImplicitAutoCadDefines` to skip.
+
 ## Commands
 
 - Focused host compile: `scripts/build-host.ps1 -Year 2025`.

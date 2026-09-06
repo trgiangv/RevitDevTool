@@ -42,6 +42,9 @@ internal static class ExecutionTestHelpers
         return new InlineCompiledScriptBridge(commandTypeName);
     }
 
+    public static IHostAppInfo CreateHostAppInfo(HostApp host = HostApp.Revit, string versionNumber = "2025") =>
+        new FakeHostAppInfo(host, versionNumber);
+
     public static ServiceProvider BuildExecutionServiceProvider(
         IHostContextExecutor? hostContext = null,
         ICompiledScriptBridge? scriptBridge = null,
@@ -51,7 +54,7 @@ internal static class ExecutionTestHelpers
         IPythonBridge? pythonBridge = null)
     {
         var services = new ServiceCollection();
-        services.AddSingleton<IHostAppInfo>(new FakeHostAppInfo());
+        services.AddSingleton<IHostAppInfo>(CreateHostAppInfo());
         services.AddSingleton(hostContext ?? InlineHostContext());
         services.AddSingleton(scriptBridge ?? CreateScriptBridge());
         services.AddSingleton(commandDiscovery ?? Mock.Of<ICommandDiscovery>());
@@ -180,10 +183,10 @@ internal static class ExecutionTestHelpers
         public string RewriteHostReference(string reference) => reference;
     }
 
-    private sealed class FakeHostAppInfo : IHostAppInfo
+    private sealed class FakeHostAppInfo(HostApp host, string versionNumber) : IHostAppInfo
     {
-        public HostApp Host => HostApp.Revit;
-        public string VersionNumber => "2025";
+        public HostApp Host => host;
+        public string VersionNumber => versionNumber;
         public string? VersionBuild => null;
         public int ProcessId => Environment.ProcessId;
     }

@@ -93,41 +93,40 @@
     <!-- ============================================== -->
     <!-- 3. Define Constants                            -->
     <!-- ============================================== -->
+    <!--
+        Builds AUTOCAD, AUTOCAD{year}, and AUTOCAD{year}_OR_GREATER from
+        SupportedAutoCadVersion (years <= AutoCadVersion and >= AutoCadVersionMinimal).
+        Override AutoCadVersionMinimal or append SupportedAutoCadVersion in a csproj
+        to change the ladder; set DisableImplicitAutoCadDefines=true to skip.
+    -->
+
+    <PropertyGroup>
+        <AutoCadVersionMinimal Condition="'$(AutoCadVersionMinimal)' == ''">2022</AutoCadVersionMinimal>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <SupportedAutoCadVersion Include="2022;2023;2024;2025;2026;2027;2028;2029;2030;2031;2032"/>
+    </ItemGroup>
 
     <Target Name="GenerateAutoCadCompatibleDefineConstants"
-            BeforeTargets="CoreCompile"
+            AfterTargets="AddImplicitDefineConstants"
             Condition="'$(AutoCadVersion)' != '' AND '$(DisableImplicitAutoCadDefines)' != 'true'">
 
+        <ItemGroup>
+            <_SupportedAutoCadVersions Include="@(SupportedAutoCadVersion->'%(Identity)'->TrimStart('AUTOCAD'))"/>
+            <_CompatibleAutoCadVersions Include="@(_SupportedAutoCadVersions)"
+                                        Condition="%(Identity) != '' and $([MSBuild]::VersionLessThanOrEquals(%(Identity), $(AutoCadVersion))) and $([MSBuild]::VersionGreaterThanOrEquals(%(Identity), $(AutoCadVersionMinimal)))"/>
+
+            <_AutoCadDefineConstant Include="@(_CompatibleAutoCadVersions->'AUTOCAD%(Identity)_OR_GREATER'->Replace('.', '_'))"/>
+            <_AutoCadDefineConstant Include="AUTOCAD$(AutoCadVersion.Replace('.', '_'))"/>
+            <_AutoCadDefineConstant Include="AUTOCAD"/>
+        </ItemGroup>
+
+        <Message Text="[$(TargetFramework)] AutoCadDefineConstant: @(_AutoCadDefineConstant -> '%(Identity)', ';')"
+                 Importance="Low"/>
+
         <PropertyGroup>
-            <DefineConstants>$(DefineConstants);AUTOCAD$(AutoCadVersion)</DefineConstants>
-        </PropertyGroup>
-
-        <!-- AutoCAD version ladder -->
-        <PropertyGroup Condition="$(AutoCadVersion) &gt;= 2022">
-            <DefineConstants>$(DefineConstants);AUTOCAD2022_OR_GREATER</DefineConstants>
-        </PropertyGroup>
-        <PropertyGroup Condition="$(AutoCadVersion) &gt;= 2023">
-            <DefineConstants>$(DefineConstants);AUTOCAD2023_OR_GREATER</DefineConstants>
-        </PropertyGroup>
-        <PropertyGroup Condition="$(AutoCadVersion) &gt;= 2024">
-            <DefineConstants>$(DefineConstants);AUTOCAD2024_OR_GREATER</DefineConstants>
-        </PropertyGroup>
-        <PropertyGroup Condition="$(AutoCadVersion) &gt;= 2025">
-            <DefineConstants>$(DefineConstants);AUTOCAD2025_OR_GREATER</DefineConstants>
-        </PropertyGroup>
-        <PropertyGroup Condition="$(AutoCadVersion) &gt;= 2026">
-            <DefineConstants>$(DefineConstants);AUTOCAD2026_OR_GREATER</DefineConstants>
-        </PropertyGroup>
-        <PropertyGroup Condition="$(AutoCadVersion) &gt;= 2027">
-            <DefineConstants>$(DefineConstants);AUTOCAD2027_OR_GREATER</DefineConstants>
-        </PropertyGroup>
-
-        <!-- Product-family defines (set UseXxx in csproj to opt-in) -->
-        <PropertyGroup Condition="'$(UseCivil3d)' == 'true'">
-            <DefineConstants>$(DefineConstants);CIVIL3D;CIVIL3D$(Civil3dVersion)</DefineConstants>
-        </PropertyGroup>
-        <PropertyGroup Condition="'$(UsePlant3d)' == 'true'">
-            <DefineConstants>$(DefineConstants);PLANT3D;PLANT3D$(AutoCadVersion)</DefineConstants>
+            <DefineConstants>$(DefineConstants);@(_AutoCadDefineConstant -> '%(Identity)', ';')</DefineConstants>
         </PropertyGroup>
     </Target>
 

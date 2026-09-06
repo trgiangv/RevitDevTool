@@ -2,18 +2,20 @@ using System.Diagnostics;
 using System.IO;
 using System.Reflection;
 using System.Text;
+using DevTools.Hosting;
 using FSharp.Compiler.Diagnostics;
 using FSharp.Compiler.Interactive;
 using Microsoft.Extensions.Logging;
 using Microsoft.FSharp.Core;
 using ZLogger;
+
 namespace DevTools.Execution.Providers.FSharp;
 
 /// <summary>
 /// Creates an FsiEvaluationSession and evaluates an F# script.
 /// Uses <see cref="ICompiledScriptBridge"/> for host-specific type discovery and session references.
 /// </summary>
-public sealed class FSharpExecutor(ILogger<FSharpExecutor> logger)
+public sealed class FSharpExecutor(ILogger<FSharpExecutor> logger, IHostAppInfo? hostApp = null)
 {
     internal FSharpCompilationOutput CreateSessionAndEvaluate(
         string resolvedScriptPath,
@@ -33,7 +35,7 @@ public sealed class FSharpExecutor(ILogger<FSharpExecutor> logger)
             var allRefs = new HashSet<string>(sessionReferences, StringComparer.OrdinalIgnoreCase);
             allRefs.UnionWith(references.Where(r => !string.IsNullOrWhiteSpace(r)));
 
-            var argv = BuildSessionArgs(allRefs);
+            var argv = BuildSessionArgs(allRefs, hostApp);
             var fsiConfig = Shell.FsiEvaluationSession.GetDefaultConfiguration();
 
             var prevDir = Environment.CurrentDirectory;
@@ -110,24 +112,20 @@ public sealed class FSharpExecutor(ILogger<FSharpExecutor> logger)
     private static void DisposeSession(Shell.FsiEvaluationSession session) =>
         ((IDisposable)session).Dispose();
 
-    private static string[] BuildSessionArgs(IEnumerable<string> allReferences)
+    private static string[] BuildSessionArgs(IEnumerable<string> allReferences, IHostAppInfo? hostApp)
     {
         var args = new List<string>
         {
             "fsi.exe",
             "--noninteractive",
             "--nologo",
-            "--define:TRACE",
-            "--define:DEBUG",
             "--debug+",
             "--optimize-",
-#if NETFRAMEWORK
-            "--multiemit-",
-#else
+            "--langversion:preview",
             "--multiemit+",
-#endif
         };
 
+        args.AddRange(CompileScriptSymbols.For(hostApp).Select(symbol => $"--define:{symbol}"));
         args.AddRange(allReferences.Select(reference => $"--reference:{reference}"));
         return args.ToArray();
     }

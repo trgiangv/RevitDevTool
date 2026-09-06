@@ -1,4 +1,5 @@
 using System.Collections.Concurrent;
+using System.Diagnostics;
 using System.IO;
 using System.Runtime.CompilerServices;
 using System.Security.Cryptography;
@@ -34,7 +35,7 @@ public sealed class CSharpCompilationCache(
         if (_cache.TryGetValue(canonicalPath, out var cached) && cached.ContentHash == currentHash)
         {
             progress?.Report($"Using cached {scriptName}.");
-            logger.ZLogDebug($"[CSharpCache] Hit for '{scriptName}' (hash: {currentHash[..16]})");
+            LogDebug($"Hit for '{scriptName}' (hash: {currentHash[..16]})");
             return ScriptCompilationResult.Succeeded(cached.CreateCommand());
         }
 
@@ -45,36 +46,36 @@ public sealed class CSharpCompilationCache(
             if (_cache.TryGetValue(canonicalPath, out cached) && cached.ContentHash == currentHash)
             {
                 progress?.Report($"Using cached {scriptName}.");
-                logger.ZLogDebug($"[CSharpCache] Hit (after lock) for '{scriptName}'");
+                LogDebug($"Hit (after lock) for '{scriptName}'");
                 return ScriptCompilationResult.Succeeded(cached.CreateCommand());
             }
 
             if (cached != null)
             {
-                logger.ZLogDebug($"[CSharpCache] Miss (hash changed) for '{scriptName}'");
+                LogDebug($" Miss (hash changed) for '{scriptName}'");
                 _cache.TryRemove(canonicalPath, out _);
                 InvalidateEntry(cached);
             }
             else
             {
-                logger.ZLogDebug($"[CSharpCache] Miss (first compile) for '{scriptName}'");
+                LogDebug($"Miss (first compile) for '{scriptName}'");
             }
 
             var result = await compiler.CompileAsync(canonicalPath, bridge, progress, ct).ConfigureAwait(false);
 
-            if (result is { Success: true, Command: not null })
+            if (result is not { Success: true, Command: not null })
+                return result;
+
+            var commandType = result.Command.GetType();
+            _cache[canonicalPath] = new CachedScript(
+                currentHash,
+                () => Activator.CreateInstance(commandType)
+                      ?? throw new InvalidOperationException($"Failed to create instance of {commandType.FullName}."),
+                result.Cleanup)
             {
-                var commandType = result.Command.GetType();
-                _cache[canonicalPath] = new CachedScript(
-                    currentHash,
-                    () => Activator.CreateInstance(commandType)
-                          ?? throw new InvalidOperationException($"Failed to create instance of {commandType.FullName}."),
-                    result.Cleanup)
-                {
-                    Logger = logger
-                };
-                logger.ZLogDebug($"[CSharpCache] Cached '{scriptName}' (hash: {currentHash[..16]})");
-            }
+                Logger = logger
+            };
+            LogDebug($"Cached '{scriptName}' (hash: {currentHash[..16]})");
 
             return result;
         }
@@ -83,6 +84,9 @@ public sealed class CSharpCompilationCache(
             gate.Release();
         }
     }
+
+    [Conditional("DEBUG")]
+    private void LogDebug(string message) => logger.ZLogDebug($"{message}");
 
     [MethodImpl(MethodImplOptions.NoInlining)]
     private static void InvalidateEntry(CachedScript entry)
@@ -96,7 +100,7 @@ public sealed class CSharpCompilationCache(
 #endif
     }
 
-    private string ComputeGraphHash(string entryPath, CancellationToken ct)
+    private static string ComputeGraphHash(string entryPath, CancellationToken ct)
     {
         ct.ThrowIfCancellationRequested();
 

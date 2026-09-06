@@ -1,4 +1,5 @@
 using System.Collections.Concurrent;
+using System.Diagnostics;
 using System.IO;
 using System.Runtime.CompilerServices;
 using DevTools.Execution.Models;
@@ -35,7 +36,7 @@ public sealed class FSharpCompilationCache(
         if (_cache.TryGetValue(canonicalPath, out var cached) && cached.ContentHash == currentHash)
         {
             progress?.Report($"Using cached {scriptName}.");
-            logger.ZLogDebug($"[FSharpCache] Hit for '{scriptName}' (hash: {currentHash[..16]})");
+            LogDebug($"Hit for '{scriptName}' (hash: {currentHash[..16]})");
             return ScriptCompilationResult.Succeeded(cached.CreateCommand());
         }
 
@@ -46,19 +47,19 @@ public sealed class FSharpCompilationCache(
             if (_cache.TryGetValue(canonicalPath, out cached) && cached.ContentHash == currentHash)
             {
                 progress?.Report($"Using cached {scriptName}.");
-                logger.ZLogDebug($"[FSharpCache] Hit (after lock) for '{scriptName}'");
+                LogDebug($"Hit (after lock) for '{scriptName}'");
                 return ScriptCompilationResult.Succeeded(cached.CreateCommand());
             }
 
             if (cached != null)
             {
-                logger.ZLogDebug($"[FSharpCache] Miss (hash changed) for '{scriptName}'");
+                LogDebug($"Miss (hash changed) for '{scriptName}'");
                 _cache.TryRemove(canonicalPath, out _);
                 InvalidateEntry(cached);
             }
             else
             {
-                logger.ZLogDebug($"[FSharpCache] Miss (first compile) for '{scriptName}'");
+                LogDebug($"Miss (first compile) for '{scriptName}'");
             }
 
             var resolution = await dependencyResolver.ResolveAsync(canonicalPath, graph, bridge, progress, ct).ConfigureAwait(false);
@@ -84,7 +85,7 @@ public sealed class FSharpCompilationCache(
             };
             _cache[canonicalPath] = entry;
 
-            logger.ZLogDebug($"[FSharpCache] Cached '{scriptName}' (hash: {currentHash[..16]})");
+            LogDebug($"Cached '{scriptName}' (hash: {currentHash[..16]})");
             return ScriptCompilationResult.Succeeded(output.Command);
         }
         finally
@@ -92,6 +93,9 @@ public sealed class FSharpCompilationCache(
             gate.Release();
         }
     }
+
+    [Conditional("DEBUG")]
+    private void LogDebug(string message) => logger.ZLogDebug($"{message}");
 
     [MethodImpl(MethodImplOptions.NoInlining)]
     private static void InvalidateEntry(CachedScript entry)

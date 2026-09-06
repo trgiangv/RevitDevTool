@@ -1,6 +1,7 @@
 using DevTools.Execution.Interfaces;
 using DevTools.Execution.Models;
 using DevTools.Execution.Providers.FSharp;
+using DevTools.Hosting;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 
@@ -46,6 +47,46 @@ public sealed class FSharpExecutionTests
         try
         {
             var output = executor.CreateSessionAndEvaluate(scriptPath, [], bridge);
+            (output.Session as IDisposable)?.Dispose();
+        }
+        finally
+        {
+            Directory.Delete(directory, recursive: true);
+        }
+    }
+
+    [Fact]
+    public async Task FSharpExecutor_AppliesHostVersionPreprocessorSymbols()
+    {
+        var directory = ExecutionTestHelpers.CreateTempDirectory("fsharp-defines");
+        var scriptPath = Path.Combine(directory, "defines_script.fsx");
+        await File.WriteAllTextAsync(
+            scriptPath,
+            """
+            #if REVIT2026_OR_GREATER
+            let __should_not_compile_on_2025 : int = "nope"
+            #endif
+
+            type ScriptCommand() =
+                member _.Value =
+            #if REVIT2025_OR_GREATER
+                    25
+            #else
+                    0
+            #endif
+            """,
+            TestContext.Current.CancellationToken);
+
+        var executor = new FSharpExecutor(
+            NullLogger<FSharpExecutor>.Instance,
+            ExecutionTestHelpers.CreateHostAppInfo(HostApp.Revit, "2025"));
+        var bridge = ExecutionTestHelpers.CreateScriptBridge();
+
+        try
+        {
+            var output = executor.CreateSessionAndEvaluate(scriptPath, [], bridge);
+            Assert.NotNull(output.Command);
+            Assert.Equal(25, output.Command!.GetType().GetProperty("Value")!.GetValue(output.Command));
             (output.Session as IDisposable)?.Dispose();
         }
         finally
