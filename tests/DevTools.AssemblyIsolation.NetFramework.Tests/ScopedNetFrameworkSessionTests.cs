@@ -147,6 +147,21 @@ public sealed class ScopedNetFrameworkSessionTests
     }
 
     [Fact]
+    public void Distinct_file_load_reuses_the_same_path()
+    {
+        using var workload = FixtureWorkload.Create();
+        using var session = AssemblyIsolationSession.Create(
+            AssemblyIsolationPlan.Create(workload.EntryPath)
+                .WithKind(AssemblyIsolationKind.Isolated)
+                .WithDistinctFileIdentity());
+
+        var first = session.LoadFromPath(workload.EntryPath);
+        var second = session.LoadFromPath(workload.EntryPath);
+
+        Assert.Same(first, second);
+    }
+
+    [Fact]
     public void Scoped_session_rejects_a_managed_candidate_that_escapes_through_a_child_link()
     {
         using var fixture = FixtureWorkload.Create();

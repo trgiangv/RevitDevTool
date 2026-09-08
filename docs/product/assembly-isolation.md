@@ -17,10 +17,20 @@ without allowing one feature's dependency policy to leak into another.
 - `Pin(assembly)` reuses a loaded copy only when the full identity matches.
   Feature contracts (`nunit.framework`, MCP protocol types,
   `ITestingRuntimeSession`) stay pinned.
-- Private managed candidates still require full identity, except net48
-  isolated resolve may bind a **newer** copy of `System.Text.Json`,
-  `Microsoft.Bcl.AsyncInterfaces`, `System.IO.Pipelines`, or
-  `System.Text.Encodings.Web` (`NetfxBclBind`). CoreCLR stays exact.
+- Private managed candidates still require full identity. On net48 a
+  `ManifestAssemblySource` is a **redirect closure** (the testhost
+  `app.config` role, scoped to one Isolated session): a request may bind a
+  **newer** file already in that manifest, or a copy this session already
+  loaded (`NetfxClosureBind` — name, culture, token; never a downgrade).
+  Nested `AssemblyResolve` while `LoadFile` is still running is served by this
+  session (`activeLoads`) so a payload Bcl 10 does not bind Carbon Insights'
+  Tasks.Extensions. The session never selects a DefaultDomain assembly it did
+  not load (Speckle, Carbon Insights, pyRevit). Directory sources (commands,
+  MCP toolsets) and CoreCLR stay exact. Workload assemblies still `LoadFile`
+  under `WithDistinctFileIdentity` so two generation shadows of the same Engine
+  identity stay distinct. Compile-ref vs nupkg assembly version (for example
+  Tasks.Extensions 4.2.1.0 vs 4.2.4.0) is this closure rule, not a TUnit
+  name list.
   Directory traversal and reparse-point escapes are rejected, including add-in
   directory resolution.
 - `System.*`, `Microsoft.*`, Autodesk APIs, and UI libraries are not shared by

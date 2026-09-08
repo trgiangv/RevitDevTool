@@ -164,11 +164,15 @@ internal sealed class HostTestFramework : ITestFramework, IDataProducer
             }
             catch (Exception ex)
             {
-                await context.MessageBus.PublishAsync(
-                        this,
-                        new TestNodeUpdateMessage(
-                            request.Session.SessionUid,
-                            TestNodeProperties.CreateErrorNode("devtools.testadapter.runner", "DevTools.TestAdapter", ex)))
+                await PublishUnreportedAsync(
+                        context,
+                        request,
+                        mapper,
+                        filter,
+                        cases,
+                        assemblyPath,
+                        [],
+                        ex.ToString())
                     .ConfigureAwait(false);
                 return;
             }
@@ -184,15 +188,19 @@ internal sealed class HostTestFramework : ITestFramework, IDataProducer
                     .ConfigureAwait(false);
             }
 
-            foreach (var missing in mapper.ResultsForUnreported(filter, cases, published))
-            {
-                await context.MessageBus.PublishAsync(
-                        this,
-                        new TestNodeUpdateMessage(
-                            request.Session.SessionUid,
-                            ToResultNode(missing, assemblyPath, cases)))
-                    .ConfigureAwait(false);
-            }
+            var overlay = response.Results.Count == 0
+                ? FirstNonBlank(response.DiagnosticMessage, response.DiagnosticCode)
+                : null;
+            await PublishUnreportedAsync(
+                    context,
+                    request,
+                    mapper,
+                    filter,
+                    cases,
+                    assemblyPath,
+                    published,
+                    overlay)
+                .ConfigureAwait(false);
         }
         catch (Exception ex)
         {
@@ -246,6 +254,41 @@ internal sealed class HostTestFramework : ITestFramework, IDataProducer
         string assemblyPath,
         TestingSelection selection) =>
         RequireDiscoverer().Select(assemblyPath, selection, TestingDiscoveryOptions.Testhost);
+
+    private async Task PublishUnreportedAsync(
+        ExecuteRequestContext context,
+        RunTestExecutionRequest request,
+        IHostTestRunMapper mapper,
+        TestingSelection filter,
+        IReadOnlyList<TestingDiscoveredTest> cases,
+        string assemblyPath,
+        IReadOnlyList<TestingCaseResult> hostResults,
+        string? overlayMessage)
+    {
+        foreach (var missing in mapper.ResultsForUnreported(filter, cases, hostResults))
+        {
+            var result = string.IsNullOrWhiteSpace(overlayMessage)
+                ? missing
+                : missing with { Message = overlayMessage };
+            await context.MessageBus.PublishAsync(
+                    this,
+                    new TestNodeUpdateMessage(
+                        request.Session.SessionUid,
+                        ToResultNode(result, assemblyPath, cases)))
+                .ConfigureAwait(false);
+        }
+    }
+
+    private static string FirstNonBlank(params string?[] values)
+    {
+        foreach (var value in values)
+        {
+            if (!string.IsNullOrWhiteSpace(value))
+                return value!;
+        }
+
+        return string.Empty;
+    }
 
     private static bool IsConstrained(TestingSelection selection) =>
         selection.TestIds is { Count: > 0 } || selection.Names is { Count: > 0 };

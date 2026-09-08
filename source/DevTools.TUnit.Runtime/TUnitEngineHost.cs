@@ -1,6 +1,7 @@
 using System.Runtime.CompilerServices;
 using DevTools.Testing.Abstractions.Contracts;
 using DevTools.Testing.Abstractions.Runtime;
+using TargetInvocationException = System.Reflection.TargetInvocationException;
 using Microsoft.Testing.Platform.Capabilities.TestFramework;
 using Microsoft.Testing.Platform.CommandLine;
 using Microsoft.Testing.Platform.Extensions;
@@ -59,11 +60,21 @@ internal static class TUnitEngineHost
         var services = CreateServiceProvider(platform, workingDirectory, resultDirectory);
         var engine = ReflectionAssembly.Load(EngineAssemblyName);
         var extension = (IExtension)Activator.CreateInstance(RequiredType(engine, ExtensionTypeName))!;
-        var framework = (ITestFramework)Activator.CreateInstance(
-            RequiredType(engine, FrameworkTypeName),
-            extension,
-            services,
-            new TestFrameworkCapabilities())!;
+        ITestFramework framework;
+        try
+        {
+            framework = (ITestFramework)Activator.CreateInstance(
+                RequiredType(engine, FrameworkTypeName),
+                extension,
+                services,
+                new TestFrameworkCapabilities())!;
+        }
+        catch (TargetInvocationException ex) when (ex.InnerException is TypeLoadException)
+        {
+            throw new InvalidOperationException(
+                $"{ex}{Environment.NewLine}Loaded facades:{Environment.NewLine}{DescribeLoadedFacades()}",
+                ex);
+        }
 
         var sessionUid = new SessionUid(Guid.NewGuid().ToString("N"));
         var session = (MtpTestSessionContext)Activator.CreateInstance(
@@ -137,4 +148,18 @@ internal static class TUnitEngineHost
     private static Type RequiredType(ReflectionAssembly assembly, string typeName) =>
         assembly.GetType(typeName, throwOnError: true)
         ?? throw new InvalidOperationException($"Type '{typeName}' was not found in '{assembly.GetName().Name}'.");
+
+    private static string DescribeLoadedFacades()
+    {
+        string[] names =
+        [
+            "System.Threading.Tasks.Extensions",
+            "Microsoft.Bcl.AsyncInterfaces",
+        ];
+        var lines = AppDomain.CurrentDomain.GetAssemblies()
+            .Where(assembly => !assembly.IsDynamic
+                && names.Contains(assembly.GetName().Name, StringComparer.OrdinalIgnoreCase))
+            .Select(assembly => $"  {assembly.FullName} Location={assembly.Location}");
+        return string.Join(Environment.NewLine, lines);
+    }
 }

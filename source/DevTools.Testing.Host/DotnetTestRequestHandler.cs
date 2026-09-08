@@ -182,7 +182,7 @@ public sealed class DotnetTestRequestHandler(TestingProviderRegistry registry, s
         catch (Exception ex)
         {
             PoisonSessionAfterProviderFailure();
-            return BridgeMessage.Error(requestId, TestingErrorCodes.ProviderFailed, ex.Message);
+            return BridgeMessage.Error(requestId, TestingErrorCodes.ProviderFailed, ex.ToString());
         }
     }
 

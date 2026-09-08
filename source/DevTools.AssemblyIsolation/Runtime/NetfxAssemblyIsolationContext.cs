@@ -13,6 +13,7 @@ internal sealed class NetfxAssemblyIsolationContext : IDisposable
     private readonly AssemblyIsolationPlan plan;
     private readonly ResolveEventHandler resolver;
     private readonly HashSet<Assembly> ownedAssemblies = new(ReferenceEqualityComparer.Instance);
+    private readonly Dictionary<string, Assembly> loadedByPath = new(StringComparer.OrdinalIgnoreCase);
     private int activeLoads;
     private bool disposed;
 
@@ -30,8 +31,7 @@ internal sealed class NetfxAssemblyIsolationContext : IDisposable
         if (plan.TryShare(requested, out var parent))
             return parent;
 
-        using (BeginLoad())
-            return Own(LoadManaged(plan.EntryAssemblyPath));
+        return Own(LoadManaged(plan.EntryAssemblyPath));
     }
 
     public Assembly LoadFromPath(string path)
@@ -40,8 +40,7 @@ internal sealed class NetfxAssemblyIsolationContext : IDisposable
         if (string.IsNullOrWhiteSpace(path))
             throw new ArgumentException("An assembly path is required.", nameof(path));
 
-        using (BeginLoad())
-            return Own(LoadManaged(path));
+        return Own(LoadManaged(path));
     }
 
     public Assembly LoadAssembly(byte[] assemblyBytes, byte[]? symbolBytes = null)
@@ -71,12 +70,15 @@ internal sealed class NetfxAssemblyIsolationContext : IDisposable
         if (disposed)
             return null;
 
-        if (!ShouldServe(args.RequestingAssembly))
-            return null;
-
         var requested = new AssemblyName(args.Name);
         if (plan.TryShare(requested, out var parent))
             return parent;
+
+        if (!ShouldServe(args.RequestingAssembly))
+            return null;
+
+        if (NetfxClosureBind.TryFindLoaded(requested, SessionLoaded(), out var loaded))
+            return Own(loaded);
 
         foreach (var source in plan.ManagedSources)
         {
@@ -105,10 +107,30 @@ internal sealed class NetfxAssemblyIsolationContext : IDisposable
         return requestingAssembly is not null && ownedAssemblies.Contains(requestingAssembly);
     }
 
-    private Assembly LoadManaged(string path) =>
-        plan.LoadsFromDistinctFile
-            ? AssemblyStreamLoader.LoadFile(path)
-            : AssemblyStreamLoader.Load(path);
+    private Assembly LoadManaged(string path)
+    {
+        var fullPath = Path.GetFullPath(path);
+        if (loadedByPath.TryGetValue(fullPath, out var loaded))
+            return loaded;
+
+        // LoadFile of A fires AssemblyResolve for A's refs before A is Own()'d.
+        // activeLoads keeps ShouldServe true so those refs bind this session's
+        // closure, not another add-in's copy already in DefaultDomain.
+        using (BeginLoad())
+        {
+            if (loadedByPath.TryGetValue(fullPath, out loaded))
+                return loaded;
+
+            var assembly = plan.LoadsFromDistinctFile
+                ? AssemblyStreamLoader.LoadFile(fullPath)
+                : AssemblyStreamLoader.Load(fullPath);
+            loadedByPath[fullPath] = assembly;
+            return assembly;
+        }
+    }
+
+    private IEnumerable<Assembly> SessionLoaded() =>
+        ownedAssemblies.Concat(loadedByPath.Values);
 
     private LoadGuard BeginLoad() => new(this);
 
@@ -134,7 +156,7 @@ internal sealed class NetfxAssemblyIsolationContext : IDisposable
 
         var candidateIdentity = AssemblyName.GetAssemblyName(candidate.Path);
         if (!AssemblyIdentityMatcher.IsCompatible(requested, candidateIdentity)
-            && !NetfxBclBind.AllowsNewer(requested, candidateIdentity))
+            && !NetfxClosureBind.AllowsNewer(requested, candidateIdentity))
         {
             rejection = $"Candidate identity '{candidateIdentity.FullName}' is incompatible.";
             return false;

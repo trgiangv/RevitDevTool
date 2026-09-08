@@ -47,12 +47,16 @@ public sealed class ManifestAssemblySource : IManagedAssemblySource
     }
 
 #if NETFRAMEWORK
+    /// <summary>
+    /// net48: this source is a NuGet-style redirect closure. Bind a newer
+    /// file already listed here; do not scan DefaultDomain.
+    /// </summary>
     private static Entry? ResolveAllowed(AssemblyName requested, IReadOnlyList<Entry> entries)
     {
         Entry? newest = null;
         foreach (var entry in entries)
         {
-            if (!NetfxBclBind.AllowsNewer(requested, entry.Identity))
+            if (!NetfxClosureBind.AllowsNewer(requested, entry.Identity))
                 continue;
 
             if (IsNewerThanCurrent(entry, newest))
