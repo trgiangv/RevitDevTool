@@ -1,17 +1,13 @@
 # RevitDevTool.TestAdapter
 
-Microsoft.Testing.Platform adapter that runs tests inside a live Revit or
-AutoCAD-family host. Requires
-[RevitDevTool](https://github.com/trgiangv/RevitDevTool).
+Microsoft Testing Platform adapter that runs tests inside a CAD/BIM host.
+Requires [RevitDevTool](https://github.com/trgiangv/RevitDevTool).
 
-The package does not depend on a test framework. NUnit remains the default and
-uses local `ExploreTests` discovery via `DevTools.NUnit.MTP.dll`. TUnit uses
-`DevTools.TUnit.MTP.dll` with the same host properties as NUnit (`HostName`,
-`HostVersion`, timeouts). `DevTools.TUnit.MTP.dll` reads TUnit.Core
-`Sources.TestEntries` locally; in-host execution uses the same catalog through
-TestRunner and `testing/run` IPC, not a nested MTP testhost.
-
-## Pinned versions (repo baseline)
+Currently supports **NUnit** and **TUnit** only. Pin the framework in the
+test project — the adapter does not pull either. It depends on
+`Microsoft.Testing.Platform.MSBuild` 2.4.0; do not add or override it.
+TUnit `1.66.27` and Microsoft.Testing.Platform `2.4.0` are a pair — pin
+both.
 
 | Package | Version |
 |---------|---------|
@@ -19,78 +15,52 @@ TestRunner and `testing/run` IPC, not a nested MTP testhost.
 | `TUnit` | 1.66.27 |
 | `Microsoft.Testing.Platform.MSBuild` | 2.4.0 |
 
-Pin NUnit or TUnit in the test project. Adapter props add
-`Microsoft.Testing.Platform.MSBuild` 2.4.0; do not add or override it.
-The adapter does not pull NUnit or TUnit. TUnit 1.66.27 and MTP 2.4.0
-are a pair: generation rejects a different `TUnit.Core` (`1.66.27.0`) or
-`Microsoft.Testing.Platform` (`2.4.0.0`) assembly version.
+NUnit and TUnit both work with every host below. Set `HostName` and
+`HostVersion` to the version you run. Include a compile-only host API package
+(discovery needs it). Do not copy host API DLLs next to the test output.
 
-Host options come from csproj properties. The package generates `testconfig.json`
-and Microsoft.Testing.Platform.MSBuild copies it to `[AssemblyName].testconfig.json`.
-The adapter reads the `devtools` section through MTP `IConfiguration`. Do not use
-`.runsettings`.
+`HostName`: `Revit`, `AutoCad`, `Civil3D`, `Plant3D`, `AcadArch`, `AcadMech`,
+`AcadElec`, `AcadMep`, `AcadMap3D`.
+
+Default engine is NUnit. Set `TestingFramework` to `tunit` to use TUnit.
+Do not use `.runsettings`.
 
 ### NUnit (default)
 
 ```xml
 <PropertyGroup>
-  <IsTestProject>true</IsTestProject>
-  <OutputType>Exe</OutputType>
-  <RuntimeIdentifiers>win-x64</RuntimeIdentifiers>
-  <!-- required -->
   <HostName>Revit</HostName>
-  <HostVersion>$(RevitVersion)</HostVersion>
-  <!-- default -->
+  <HostVersion>2025</HostVersion>
   <ForceLaunch>false</ForceLaunch>
   <PerTestTimeout>60</PerTestTimeout>
   <LaunchTimeout>180</LaunchTimeout>
-  <TestingFramework>nunit</TestingFramework>
 </PropertyGroup>
 <ItemGroup>
-  <PackageReference Include="RevitDevTool.TestAdapter" Version="0.0.5" />
+  <PackageReference Include="RevitDevTool.TestAdapter" Version="0.0.6" />
   <PackageReference Include="NUnit" Version="4.6.1" />
+  <PackageReference Include="Revit_All_Main_Versions_API_x64" Version="2025.0.*"
+    IncludeAssets="build; compile" PrivateAssets="All" />
 </ItemGroup>
 ```
 
 ### TUnit
 
-Set `<TestingFramework>tunit</TestingFramework>` and reference `TUnit` 1.66.27.
-Host properties are the same as NUnit.
-
-Revit:
-
 ```xml
 <PropertyGroup>
-  <UseRevit>true</UseRevit>
-  <IsTestProject>true</IsTestProject>
-  <TestingFramework>tunit</TestingFramework>
   <HostName>Revit</HostName>
-  <HostVersion>$(RevitVersion)</HostVersion>
+  <HostVersion>2025</HostVersion>
+  <ForceLaunch>false</ForceLaunch>
+  <PerTestTimeout>60</PerTestTimeout>
+  <LaunchTimeout>180</LaunchTimeout>
+  <TestingFramework>tunit</TestingFramework>  <!-- default is nunit so need to set TUnit explicitly -->
 </PropertyGroup>
 <ItemGroup>
-  <PackageReference Include="RevitDevTool.TestAdapter" Version="0.0.5" />
+  <PackageReference Include="RevitDevTool.TestAdapter" Version="0.0.6" />
   <PackageReference Include="TUnit" Version="1.66.27" />
+  <PackageReference Include="Revit_All_Main_Versions_API_x64" Version="2025.0.*"
+    IncludeAssets="build; compile" PrivateAssets="All" />
 </ItemGroup>
 ```
-
-Civil 3D (same pattern as NUnit Civil 3D samples):
-
-```xml
-<PropertyGroup>
-  <UseAutoCad>true</UseAutoCad>
-  <IsTestProject>true</IsTestProject>
-  <TestingFramework>tunit</TestingFramework>
-  <HostName>Civil3D</HostName>
-  <HostVersion>$(AutoCadVersion)</HostVersion>
-</PropertyGroup>
-<ItemGroup>
-  <PackageReference Include="RevitDevTool.TestAdapter" Version="0.0.5" />
-  <PackageReference Include="TUnit" Version="1.66.27" />
-</ItemGroup>
-```
-
-Plain AutoCAD: `<HostName>AutoCad</HostName>` with the same `UseAutoCad` /
-`HostVersion` properties.
 
 Keep a `global.json` next to the test project:
 
@@ -108,7 +78,3 @@ dotnet test --project Host.Tests.csproj -c Debug --filter MethodName
 
 `--filter` is a test method name or substring. Always run `dotnet test`
 from the folder that contains that `global.json`.
-
-Samples: `samples/DevTools.NUnit.SampleTests`,
-`samples/DevTools.NUnit.Civil3D.SampleTests`, `samples/DevTools.TUnit.SampleTests`,
-`samples/DevTools.TUnit.Civil3D.SampleTests`.

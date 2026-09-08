@@ -40,6 +40,50 @@ public sealed class PackageConsumerTests
                   </packageSourceMapping>
                 </configuration>
                 """);
+
+            var testhost = Path.Combine(work, "nunit-testhost");
+            Directory.CreateDirectory(testhost);
+            File.WriteAllText(Path.Combine(testhost, "NUnitTesthost.csproj"), $"""
+                <Project Sdk="Microsoft.NET.Sdk">
+                  <PropertyGroup>
+                    <TargetFrameworks>net48;net8.0-windows</TargetFrameworks>
+                    <OutputType>Exe</OutputType>
+                    <LangVersion>latest</LangVersion>
+                    <ImplicitUsings>enable</ImplicitUsings>
+                    <IsTestProject>true</IsTestProject>
+                    <HostName>Revit</HostName>
+                    <HostVersion>2025</HostVersion>
+                  </PropertyGroup>
+                  <ItemGroup>
+                    <PackageReference Include="RevitDevTool.TestAdapter" Version="{packageVersion}" />
+                    <PackageReference Include="NUnit" Version="4.6.1" />
+                  </ItemGroup>
+                </Project>
+                """);
+            File.WriteAllText(Path.Combine(testhost, "SmokeTests.cs"), """
+                using NUnit.Framework;
+
+                public class SmokeTests
+                {
+                    [Test]
+                    public void Ok() { }
+                }
+                """);
+            File.WriteAllText(Path.Combine(testhost, "global.json"), """
+                {
+                  "sdk": { "rollForward": "latestMinor" },
+                  "test": { "runner": "Microsoft.Testing.Platform" }
+                }
+                """);
+            Run("dotnet", "restore NUnitTesthost.csproj --configfile ../NuGet.Config", testhost, globalPackages);
+            Run("dotnet", "build NUnitTesthost.csproj -c Release --no-restore", testhost, globalPackages);
+            foreach (var tfm in new[] { "net48", "net8.0-windows" })
+            {
+                Assert.True(
+                    File.Exists(Path.Combine(testhost, "bin", "Release", tfm, "NUnitTesthost.exe")),
+                    $"NUnit-only consumer should get a testhost Main from Microsoft.Testing.Platform.MSBuild ({tfm}).");
+            }
+
             File.WriteAllText(Path.Combine(consumer, "CleanConsumer.csproj"), $"""
                 <Project Sdk="Microsoft.NET.Sdk">
                   <PropertyGroup>
@@ -122,8 +166,7 @@ public sealed class PackageConsumerTests
         }
         finally
         {
-            if (Directory.Exists(work))
-                Directory.Delete(work, recursive: true);
+            TryDeleteDirectory(work);
         }
     }
 
@@ -202,8 +245,7 @@ public sealed class PackageConsumerTests
         }
         finally
         {
-            if (Directory.Exists(work))
-                Directory.Delete(work, recursive: true);
+            TryDeleteDirectory(work);
         }
     }
 
@@ -217,6 +259,17 @@ public sealed class PackageConsumerTests
 
         foreach (var internalName in MergedRuntimeAssemblies.Append("DevTools.Testing.Abstractions.dll").Append("DevTools.NUnit.Core"))
             Assert.DoesNotContain(internalName, nuspecText, StringComparison.Ordinal);
+
+        Assert.Contains("id=\"Microsoft.Testing.Platform.MSBuild\"", nuspecText, StringComparison.Ordinal);
+        Assert.DoesNotContain("id=\"Microsoft.Testing.Platform\"", nuspecText, StringComparison.Ordinal);
+        Assert.DoesNotContain("id=\"DevTools.Testing.Abstractions\"", nuspecText, StringComparison.Ordinal);
+        Assert.DoesNotContain("id=\"DevTools.Testing.Transport\"", nuspecText, StringComparison.Ordinal);
+        foreach (var dependency in nuspecText.Split('\n').Where(line =>
+                     line.Contains("id=\"Microsoft.Testing.Platform.MSBuild\"", StringComparison.Ordinal)))
+        {
+            Assert.DoesNotContain("Build,Analyzers", dependency, StringComparison.Ordinal);
+            Assert.Contains("2.4.0", dependency, StringComparison.Ordinal);
+        }
 
         Assert.All(
             entries.Where(entry => entry.StartsWith("lib/", StringComparison.OrdinalIgnoreCase)),
@@ -296,6 +349,25 @@ public sealed class PackageConsumerTests
         }
 
         throw new InvalidOperationException("Could not locate RevitDevTool.slnx.");
+    }
+
+    private static void TryDeleteDirectory(string path)
+    {
+        if (!Directory.Exists(path))
+            return;
+
+        try
+        {
+            Directory.Delete(path, recursive: true);
+        }
+        catch (IOException)
+        {
+            // Microsoft.Testing.Platform.MSBuild.dll stays locked in the isolated
+            // NUGET_PACKAGES cache after testhost generation.
+        }
+        catch (UnauthorizedAccessException)
+        {
+        }
     }
 
     private static void Run(string fileName, string arguments, string? workingDirectory = null, string? globalPackages = null)

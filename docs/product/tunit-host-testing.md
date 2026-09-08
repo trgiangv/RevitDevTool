@@ -29,40 +29,25 @@ release.
 
 ## Test project
 
-Revit:
+Same `HostName` / `HostVersion` / host API as NUnit. Opt in with
+`TestingFramework=tunit` and the TUnit package:
 
 ```xml
 <PropertyGroup>
-  <UseRevit>true</UseRevit>
-  <IsTestProject>true</IsTestProject>
   <TestingFramework>tunit</TestingFramework>
   <HostName>Revit</HostName>
-  <HostVersion>$(RevitVersion)</HostVersion>
+  <HostVersion>2025</HostVersion>
 </PropertyGroup>
 <ItemGroup>
+  <PackageReference Include="RevitDevTool.TestAdapter" Version="0.0.6" />
   <PackageReference Include="TUnit" Version="1.66.27" />
-  <PackageReference Include="RevitDevTool.TestAdapter" Version="0.0.5" />
+  <PackageReference Include="Revit_All_Main_Versions_API_x64" Version="2025.0.*"
+    IncludeAssets="build; compile" PrivateAssets="All" />
 </ItemGroup>
 ```
 
-Civil 3D (same pattern as NUnit Civil 3D samples):
-
-```xml
-<PropertyGroup>
-  <UseAutoCad>true</UseAutoCad>
-  <IsTestProject>true</IsTestProject>
-  <TestingFramework>tunit</TestingFramework>
-  <HostName>Civil3D</HostName>
-  <HostVersion>$(AutoCadVersion)</HostVersion>
-</PropertyGroup>
-<ItemGroup>
-  <PackageReference Include="TUnit" Version="1.66.27" />
-  <PackageReference Include="RevitDevTool.TestAdapter" Version="0.0.5" />
-</ItemGroup>
-```
-
-For plain AutoCAD, set `<HostName>AutoCad</HostName>` with the same
-`UseAutoCad` / `HostVersion` properties.
+Swap `HostName` for any supported host. Keep a compile-only host API
+package so testhost discovery can resolve Autodesk types.
 
 ## Runtime behavior
 

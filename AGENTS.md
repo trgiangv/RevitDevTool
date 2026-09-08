@@ -28,7 +28,7 @@ Read the **minimum** layer for the task. Do not duplicate docs into chat.
 | Need logs to diagnose host/Daemon | `docs/agents/verification.md` → Diagnostic logs (`crash_*` if add-in failed to load) |
 | Host pytest/control pipe (in-repo) | `docs/agents/mcp-pytest-bridge.md` |
 | Revit API + execute in host | `.agents/skills/revit-developer/SKILL.md` |
-| MTP host tests | `.agents/skills/revit-nunit/SKILL.md` → `docs/agents/host-testing.md` |
+| MTP host tests | `.agents/skills/revit-test/SKILL.md` → `docs/agents/host-testing.md` |
 | pytest host tests | `.agents/skills/revit-pytest/SKILL.md` |
 | Platform / IPC / packaging edit | `.agents/skills/platform-change/SKILL.md` |
 

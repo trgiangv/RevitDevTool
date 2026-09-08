@@ -3,6 +3,7 @@
     <PropertyGroup>
         <TargetFramework>net10.0-windows</TargetFramework>
         <IsPackable>false</IsPackable>
+        <IsTestingPlatformApplication>false</IsTestingPlatformApplication>
     </PropertyGroup>
 
     <ItemGroup>
@@ -11,7 +12,10 @@
     </ItemGroup>
 
     <ItemGroup>
-        <ProjectReference Include="..\..\source\DevTools.TestAdapter\DevTools.TestAdapter.csproj"/>
+        <ProjectReference Include="..\..\source\DevTools.TestAdapter\DevTools.TestAdapter.csproj">
+            <PrivateAssets>all</PrivateAssets>
+        </ProjectReference>
+        <ProjectReference Include="..\..\source\DevTools.Testing.Abstractions\DevTools.Testing.Abstractions.csproj"/>
     </ItemGroup>
 
     <ItemGroup>

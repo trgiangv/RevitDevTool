@@ -3,7 +3,7 @@
 Supported product path via NuGet `RevitDevTool.TestAdapter` (MTP-only on
 `develop`). Product: `docs/product/host-testing.md`. TUnit provider:
 `docs/product/tunit-host-testing.md`. Structure / release split:
-`docs/architecture/Testing/README.md`. Run: `.agents/skills/revit-nunit/SKILL.md`.
+`docs/architecture/Testing/README.md`. Run: `.agents/skills/revit-test/SKILL.md`.
 
 ## Verify
 

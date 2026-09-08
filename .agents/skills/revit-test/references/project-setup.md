@@ -7,11 +7,8 @@ in SKILL.md.
 
 ```xml
 <PropertyGroup>
-  <IsTestProject>true</IsTestProject>
-  <OutputType>Exe</OutputType>
-  <RuntimeIdentifiers>win-x64</RuntimeIdentifiers>
   <HostName>Revit</HostName>
-  <HostVersion>2024</HostVersion>
+  <HostVersion>2025</HostVersion>
   <ForceLaunch>false</ForceLaunch>
   <PerTestTimeout>60</PerTestTimeout>
   <LaunchTimeout>360</LaunchTimeout>
@@ -19,32 +16,30 @@ in SKILL.md.
 <ItemGroup>
   <PackageReference Include="RevitDevTool.TestAdapter" />
   <PackageReference Include="NUnit" Version="4.6.1" />
+  <PackageReference Include="Revit_All_Main_Versions_API_x64" Version="2025.0.*"
+    IncludeAssets="build; compile" PrivateAssets="All" />
 </ItemGroup>
 ```
 
 Pin **NUnit 4.6.1** (`nunit.framework` file version `4.6.1.0`). The host
 generation snapshot rejects a missing or mismatched framework DLL.
 
-The adapter's MSBuild props add `Microsoft.Testing.Platform.MSBuild` 2.4.0. Do not add
+The adapter package depends on `Microsoft.Testing.Platform.MSBuild` 2.4.0. Do not add
 `Microsoft.Testing.Platform` as a compile package. Do not override MTP.MSBuild.
 
 | Property | Role |
 |----------|------|
-| `OutputType` | Must be `Exe`. MTP is a test application. Revit/CAD `Directory.Build` often resets `Library` — set this in the test csproj so it wins. Package props also set `Exe`; consumer SDK still overrides unless the csproj repeats it |
-| `RuntimeIdentifiers` | Must be `win-x64`. Autodesk `PlatformTarget=x64` infers that RID; without this, restore/`dotnet test` cannot find the exe |
-| `HostName` | `Revit`, `AutoCad`, `Civil3D`, … |
-| `HostVersion` | Year string (`2024`, `2026`). May be `$(RevitVersion)` if the project already defines it |
+| `HostName` | `Revit`, `AutoCad`, `Civil3D`, `Plant3D`, `AcadArch`, `AcadMech`, `AcadElec`, `AcadMep`, `AcadMap3D` |
+| `HostVersion` | Year, e.g. `2025` |
 | `ForceLaunch` | `false` = reuse a matching host, start if none. `true` = always start a new host |
 | `PerTestTimeout` | Per-test budget (seconds). The `testing/run` pipe wait is this × tests in the run. 60 is smoke-only |
 | `LaunchTimeout` | Seconds to wait for a launched host pipe |
 | `TestingFramework` | Default `nunit`. Override in the test csproj to change the in-host engine without changing the package |
 
-`HostName` / `HostVersion` are the runner contract. Do not invent other
-MSBuild flags for the runner. Host API packages stay compile-only
-(`ExcludeAssets=runtime` / Copy Local false, as
-`Revit_All_Main_Versions_API_x64` and `AutoCAD.NET` already ship). Do not
-copy `RevitAPI.dll` into the test output. Discovery reads the NuGet cache
-paths the adapter recorded at build; no extra csproj item is required.
+`HostName` / `HostVersion` are the runner contract. Include a compile-only
+host API package (`Revit_All_Main_Versions_API_x64` for Revit) matching that
+year so testhost discovery can resolve Autodesk types. Do not copy host API
+DLLs into the test output.
 
 Build generates `testconfig.json` from the csproj properties. A normal
 incremental `dotnet build` (not only Rebuild) refreshes

@@ -64,7 +64,7 @@ Consumer copy/layout lives in `build/RevitDevTool.TestAdapter.targets`.
 
 - `lib/{tfm}/DevTools.TestAdapter.dll` — MTP compile surface (Ipc + Transport merged in; net48 also merges STJ BCL).
 - `build/runtime/{tfm}/` — `DevTools.NUnit.MTP.dll`, `DevTools.TUnit.MTP.dll`, `DevTools.Testing.Abstractions.dll` (shared `HostTestDiscovery`). Same three files on net48, net8, and net10.
-- Testhost 3rd-party BCL comes from `Microsoft.Testing.Platform.MSBuild` 2.4.0 plus net48 binding redirects, not from this nupkg. The adapter csproj references it with `PrivateAssets=all` (must not flow into `DevTools.TestAdapter.Tests`). `RevitDevTool.TestAdapter.props` injects the same package into host-test projects. The nupkg has no dependency groups (`SuppressDependenciesWhenPacking`).
+- Testhost 3rd-party BCL comes from `Microsoft.Testing.Platform.MSBuild` 2.4.0 plus net48 binding redirects, not from this nupkg. The adapter csproj references it with `PrivateAssets=none` (NuGet's default `PrivateAssets` would drop build assets from the nuspec) and `ExcludeAssets=runtime` so pack writes a nuspec dependency that restores testhost generation for NUnit consumers. `DevTools.TestAdapter.Tests` uses `ProjectReference` `PrivateAssets=all` plus a direct Abstractions reference so that graph does not flow into xunit. Other PackageReference / ProjectReference stay `PrivateAssets=all`. Testhost BCL is not packed as files.
 
 ### Pipeline (`scripts/pack-test-adapter.ps1`)
 

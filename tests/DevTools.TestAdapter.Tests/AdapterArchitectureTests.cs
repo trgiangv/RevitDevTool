@@ -13,8 +13,7 @@ public sealed class AdapterArchitectureTests
 
         Assert.Contains("'$(TestingFramework)' == 'tunit'", props, StringComparison.Ordinal);
         Assert.Contains("DevTools.TestAdapter.TestingPlatformBuilderHook", props, StringComparison.Ordinal);
-        Assert.Contains("PackageReference Include=\"Microsoft.Testing.Platform.MSBuild\"", props, StringComparison.Ordinal);
-        Assert.Contains("Version=\"2.4.0\"", props, StringComparison.Ordinal);
+        Assert.DoesNotContain("PackageReference Include=\"Microsoft.Testing.Platform.MSBuild\"", props, StringComparison.Ordinal);
         Assert.DoesNotContain("MtpMsBuildPackageVersion", props, StringComparison.Ordinal);
         Assert.DoesNotContain("supports only Revit 2023", props, StringComparison.Ordinal);
         Assert.DoesNotContain("'$(HostVersion)' != '2023'", props, StringComparison.Ordinal);
@@ -354,15 +353,12 @@ public sealed class AdapterArchitectureTests
     [Fact]
     public void Net48_consumer_props_enable_binding_redirects()
     {
-        var props = File.ReadAllText(Path.Combine(
-            RepositoryRoot,
-            "source",
-            "DevTools.TestAdapter",
-            "build",
-            "RevitDevTool.TestAdapter.props"));
+        var adapterDir = Path.Combine(RepositoryRoot, "source", "DevTools.TestAdapter", "build");
+        var props = File.ReadAllText(Path.Combine(adapterDir, "RevitDevTool.TestAdapter.props"));
+        var targets = File.ReadAllText(Path.Combine(adapterDir, "RevitDevTool.TestAdapter.targets"));
 
-        Assert.Contains("GenerateBindingRedirectsOutputType", props, StringComparison.Ordinal);
-        Assert.Contains("TargetFrameworkIdentifier", props, StringComparison.Ordinal);
+        Assert.Contains("GenerateBindingRedirectsOutputType", targets, StringComparison.Ordinal);
+        Assert.Contains("TargetFrameworkIdentifier", targets, StringComparison.Ordinal);
         Assert.DoesNotContain("StartsWith('net4')", props, StringComparison.Ordinal);
         Assert.DoesNotContain("PackageReference Include=\"System.Runtime.CompilerServices.Unsafe\"", props, StringComparison.Ordinal);
         Assert.DoesNotContain("PackageReference Include=\"Microsoft.Bcl.AsyncInterfaces\"", props, StringComparison.Ordinal);
@@ -396,6 +392,17 @@ public sealed class AdapterArchitectureTests
         Assert.Contains("<IsTestProject>false</IsTestProject>", csproj, StringComparison.Ordinal);
         Assert.Contains("<IsTestingPlatformApplication>false</IsTestingPlatformApplication>", csproj, StringComparison.Ordinal);
         Assert.Contains("PackageReference Include=\"Microsoft.Testing.Platform.MSBuild\"", csproj, StringComparison.Ordinal);
+        Assert.DoesNotContain("<SuppressDependenciesWhenPacking>true</SuppressDependenciesWhenPacking>", csproj, StringComparison.Ordinal);
+        var mtpMsBuildItemStart = csproj.IndexOf(
+            "PackageReference Include=\"Microsoft.Testing.Platform.MSBuild\"",
+            StringComparison.Ordinal);
+        Assert.True(mtpMsBuildItemStart >= 0, "Expected Microsoft.Testing.Platform.MSBuild PackageReference.");
+        var mtpMsBuildItemEnd = csproj.IndexOf("</PackageReference>", mtpMsBuildItemStart, StringComparison.Ordinal);
+        Assert.True(mtpMsBuildItemEnd > mtpMsBuildItemStart, "Expected Microsoft.Testing.Platform.MSBuild PackageReference to close.");
+        var mtpMsBuildItem = csproj[mtpMsBuildItemStart..mtpMsBuildItemEnd];
+        Assert.DoesNotContain("<PrivateAssets>all</PrivateAssets>", mtpMsBuildItem, StringComparison.Ordinal);
+        Assert.Contains("<PrivateAssets>none</PrivateAssets>", mtpMsBuildItem, StringComparison.Ordinal);
+        Assert.Contains("<ExcludeAssets>runtime</ExcludeAssets>", mtpMsBuildItem, StringComparison.Ordinal);
         Assert.Contains("<PrivateAssets>all</PrivateAssets>", csproj, StringComparison.Ordinal);
         Assert.Contains("DisableTestingPlatformServerCapability", csproj, StringComparison.Ordinal);
         Assert.DoesNotContain("testhost-bcl", csproj, StringComparison.Ordinal);

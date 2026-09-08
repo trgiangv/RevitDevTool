@@ -1,20 +1,20 @@
 ---
-name: revit-nunit
+name: revit-test
 description: >
   Configure and run in-host tests with the RevitDevTool.TestAdapter NuGet
   package (Microsoft Testing Platform). Use in any repo that references that
-  package when writing or running NUnit tests inside Revit, AutoCAD, or
-  Civil 3D; setting HostName/HostVersion/ForceLaunch; using `dotnet test --filter`;
+  package when writing or running NUnit or TUnit tests inside Revit, AutoCAD,
+  or Civil 3D; setting HostName/HostVersion/ForceLaunch; using `dotnet test --filter`;
   selecting [Explicit] tests; or diagnosing MTP exit code 8 / zero tests.
 ---
 
-# Host NUnit tests (RevitDevTool.TestAdapter)
+# Host tests (RevitDevTool.TestAdapter)
 
 Standalone consumer skill. Copy this folder into any repo (or
-`~/.agents/skills/revit-nunit/`).
+`~/.agents/skills/revit-test/`).
 
 ```
-dotnet test (MTP exe) → installed DevTools.TestRunner → host pipe → NUnit 4.6.1
+dotnet test (MTP exe) → installed DevTools.TestRunner → host pipe → NUnit or TUnit
 ```
 
 The MTP exe never runs test bodies locally. Requires
@@ -27,23 +27,23 @@ project folder** (not the repo root) with
 
 ## Configure
 
-Pin **NUnit 4.6.1**. Do not add `NUnit3TestAdapter` or
-`ricaun.RevitTest.TestAdapter`.
+Default engine is NUnit (`4.6.1`). Do not add `NUnit3TestAdapter` or
+`ricaun.RevitTest.TestAdapter`. TUnit: set `TestingFramework` to `tunit` and
+pin `TUnit` `1.66.27`.
 
 ```xml
 <PropertyGroup>
-  <IsTestProject>true</IsTestProject>
-  <OutputType>Exe</OutputType>
-  <RuntimeIdentifiers>win-x64</RuntimeIdentifiers>
   <HostName>Revit</HostName>
-  <HostVersion>2024</HostVersion>
+  <HostVersion>2025</HostVersion>
   <ForceLaunch>false</ForceLaunch>
   <PerTestTimeout>60</PerTestTimeout>
   <LaunchTimeout>360</LaunchTimeout>
 </PropertyGroup>
 <ItemGroup>
-  <PackageReference Include="RevitDevTool.TestAdapter" Version="0.0.5"/>
+  <PackageReference Include="RevitDevTool.TestAdapter" Version="0.0.6"/>
   <PackageReference Include="NUnit" Version="4.6.1" />
+  <PackageReference Include="Revit_All_Main_Versions_API_x64" Version="2025.0.*"
+    IncludeAssets="build; compile" PrivateAssets="All" />
 </ItemGroup>
 ```
 
@@ -58,7 +58,7 @@ project in the tree onto MTP.
 }
 ```
 
-Property meanings, RID/`OutputType`, and conflicting packages:
+Property meanings and conflicting packages:
 [project-setup.md](references/project-setup.md).
 
 ## Run
@@ -94,7 +94,6 @@ Bodies run on the Autodesk API context. Use the host context type for
 |---------|-----|
 | `--filter "Name=…"` / `FullyQualifiedName~` | `--filter MethodName` or a substring |
 | `[Explicit]` never runs | Select it with `--filter MethodName` |
-| No exe / test project does not run | Set `OutputType=Exe` and `RuntimeIdentifiers=win-x64` in the csproj |
 | Ran from repo root / another project | `cd` to the test project folder that has `global.json` |
 | Timeout | Raise `PerTestTimeout` (per-test budget; 60s is smoke-only) |
 

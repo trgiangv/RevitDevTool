@@ -24,14 +24,4 @@
       <TypeFullName>DevTools.TestAdapter.TestingPlatformBuilderHook</TypeFullName>
     </TestingPlatformBuilderHook>
   </ItemGroup>
-
-  <ItemGroup>
-    <PackageReference Include="Microsoft.Testing.Platform.MSBuild"
-                      PrivateAssets="none"
-                      Condition="'$(ManagePackageVersionsCentrally)' == 'true'" />
-    <PackageReference Include="Microsoft.Testing.Platform.MSBuild"
-                      Version="2.4.0"
-                      PrivateAssets="none"
-                      Condition="'$(ManagePackageVersionsCentrally)' != 'true'" />
-  </ItemGroup>
 </Project>

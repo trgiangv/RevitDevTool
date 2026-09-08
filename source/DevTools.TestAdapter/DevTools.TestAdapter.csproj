@@ -9,17 +9,23 @@
 
       2. Package identity
          - Sole published testing nupkg. Bump Version before PublishTestAdapter.yml.
-         - Independent of installer GitVersion. No NuGet dependency groups.
-           Microsoft.Testing.Platform.MSBuild is referenced here with
-           PrivateAssets=all so it cannot flow into DevTools.TestAdapter.Tests.
-           Consumer host-test projects get it from RevitDevTool.TestAdapter.props.
+         - Independent of installer GitVersion. The nupkg depends on
+           Microsoft.Testing.Platform.MSBuild 2.4.0 so NUnit consumers get a
+           testhost without declaring it. That PackageReference uses
+           PrivateAssets=none (NuGet defaults to contentfiles;analyzers;build,
+           which would omit MSBuild assets from the nuspec). ExcludeAssets=runtime
+           so it is not ILRepacked. TestAdapter.Tests blocks the
+           flow with ProjectReference PrivateAssets=all and a direct
+           Testing.Abstractions ProjectReference (xunit cannot take MTP.MSBuild).
+           Other graph refs stay
+           PrivateAssets=all so they do not appear in the nuspec.
 
       3. ILRepack (every TFM)
          - Merge TargetDir copy-local (Transport, Ipc; net48 also STJ BCL) into
            TestAdapter.dll. Keep Testing.Abstractions.dll so testhost MTP shares
            HostTestDiscovery. Do not add extra PackageReference for STJ/Unsafe/Bcl
            — net48 gets those from Transport/Ipc; net8/net10 use in-box STJ.
-           Testhost 3rd-party BCL comes from the injected
+           Testhost 3rd-party BCL comes from the packed
            Microsoft.Testing.Platform.MSBuild graph plus binding redirects,
            not from this nupkg.
 
@@ -38,18 +44,17 @@
         <RootNamespace>DevTools.TestAdapter</RootNamespace>
         <AssemblyName>DevTools.TestAdapter</AssemblyName>
         <PackageId>RevitDevTool.TestAdapter</PackageId>
-        <Version>0.0.5</Version>
+        <Version>0.0.6</Version>
         <IsPackable>true</IsPackable>
         <DevelopmentDependency>true</DevelopmentDependency>
         <PackageLicenseExpression>MIT</PackageLicenseExpression>
         <PackageProjectUrl>https://github.com/trgiangv/RevitDevTool</PackageProjectUrl>
-        <Description>Microsoft.Testing.Platform adapter that runs NUnit and TUnit tests inside Autodesk hosts. Requires RevitDevTool (https://github.com/trgiangv/RevitDevTool).</Description>
+        <Description>Microsoft Testing Platform adapter that allows running NUnit or TUnit tests inside Autodesk hosts. Requires RevitDevTool (https://github.com/trgiangv/RevitDevTool).</Description>
         <PackageTags>testing;revit;autocad;adapter</PackageTags>
         <PackageReadmeFile>README.md</PackageReadmeFile>
         <PackageIcon>DevTools-32-Light.png</PackageIcon>
         <EnableDynamicLoading>false</EnableDynamicLoading>
         <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
-        <SuppressDependenciesWhenPacking>true</SuppressDependenciesWhenPacking>
         <NoPackageAnalysis>true</NoPackageAnalysis>
         <TargetsForTfmSpecificContentInPackage>$(TargetsForTfmSpecificContentInPackage);PackNUnitMTP;PackTUnitMTP</TargetsForTfmSpecificContentInPackage>
         <IsTestProject>false</IsTestProject>
@@ -143,7 +148,7 @@
             <ExcludeAssets>runtime</ExcludeAssets>
         </PackageReference>
         <PackageReference Include="Microsoft.Testing.Platform.MSBuild">
-            <PrivateAssets>all</PrivateAssets>
+            <PrivateAssets>none</PrivateAssets>
             <ExcludeAssets>runtime</ExcludeAssets>
         </PackageReference>
         <InternalsVisibleTo Include="DevTools.TestAdapter.Tests"/>
@@ -151,7 +156,9 @@
 
     <ItemGroup>
         <Compile Include="..\DevTools.Utilities\AppUtils.cs" Link="AppUtils.cs"/>
-        <ProjectReference Include="..\DevTools.Testing.Abstractions\DevTools.Testing.Abstractions.csproj"/>
+        <ProjectReference Include="..\DevTools.Testing.Abstractions\DevTools.Testing.Abstractions.csproj">
+            <PrivateAssets>all</PrivateAssets>
+        </ProjectReference>
         <ProjectReference Include="..\DevTools.Testing.Transport\DevTools.Testing.Transport.csproj">
             <PrivateAssets>all</PrivateAssets>
         </ProjectReference>

@@ -9,11 +9,11 @@ NUnit-specific bridge protocol are not part of the supported product on
 
 ## User contract
 
-- Test projects reference `RevitDevTool.TestAdapter`. Adapter props add
+- Test projects reference `RevitDevTool.TestAdapter`. The package depends on
   `Microsoft.Testing.Platform.MSBuild` 2.4.0. The test framework package (default
   NUnit 4.6.1) is a local project choice, not a package dependency.
-- Test projects are executable Microsoft.Testing.Platform applications
-  (`OutputType=Exe`) and declare `HostName`, `HostVersion`, and optional
+- Test projects are Microsoft.Testing.Platform applications (package props
+  set `OutputType=Exe`) and declare `HostName`, `HostVersion`, and optional
   `ForceLaunch`, `PerTestTimeout`, and `LaunchTimeout`.
   `ForceLaunch=true` always starts a new host (skip reuse).
   `PerTestTimeout` is the per-test budget after the host is ready;
@@ -37,9 +37,9 @@ NUnit-specific bridge protocol are not part of the supported product on
   `testconfig.json` beside the csproj to add `platformOptions`; do not use
   `.runsettings`.
 - IDE discovery is host-free. `DevTools.NUnit.MTP` uses NUnit
-  `ExploreTests` when the assembly can load in the MTP process. Autodesk API
-  packages (`Revit_All_Main_Versions_API_x64`, `AutoCAD.NET`, Nice3point
-  `ref/` packs) are compile-only (Copy Local false). After Build the adapter
+  `ExploreTests` when the assembly can load in the MTP process. Host API
+  packages (`Revit_All_Main_Versions_API_x64` for Revit) are compile-only
+  (Copy Local false). After Build the adapter
   writes `$(TargetName).discovery-refs.txt` from compile-only NuGet
   `ReferencePath` (Copy Local false). Testhost loads those paths via
   `AssemblyResolve`; API DLLs are not copied next to the test exe. When that file is present, discovery loads an isolated copy of the test
