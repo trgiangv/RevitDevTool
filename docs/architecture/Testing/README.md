@@ -9,7 +9,7 @@ Product: [`host-testing.md`](../../product/host-testing.md),
 [`tunit-host-testing.md`](../../product/tunit-host-testing.md).
 Agent digest: [`host-testing.md`](../../agents/host-testing.md).
 
-Last updated: 2026-08-29
+Last updated: 2026-09-08
 
 ---
 
@@ -64,7 +64,7 @@ Consumer copy/layout lives in `build/RevitDevTool.TestAdapter.targets`.
 
 - `lib/{tfm}/DevTools.TestAdapter.dll` — MTP compile surface (Ipc + Transport merged in; net48 also merges STJ BCL).
 - `build/runtime/{tfm}/` — `DevTools.NUnit.MTP.dll`, `DevTools.TUnit.MTP.dll`, `DevTools.Testing.Abstractions.dll` (shared `HostTestDiscovery`). Same three files on net48, net8, and net10.
-- Testhost 3rd-party BCL comes from the consumer `Microsoft.Testing.Platform.MSBuild` graph plus net48 binding redirects, not from this nupkg.
+- Testhost 3rd-party BCL comes from `Microsoft.Testing.Platform.MSBuild` 2.4.0 plus net48 binding redirects, not from this nupkg. The adapter csproj references it with `PrivateAssets=all` (must not flow into `DevTools.TestAdapter.Tests`). `RevitDevTool.TestAdapter.props` injects the same package into host-test projects. The nupkg has no dependency groups (`SuppressDependenciesWhenPacking`).
 
 ### Pipeline (`scripts/pack-test-adapter.ps1`)
 
@@ -198,7 +198,7 @@ a payload folder) then `*HostPackaging.targets` (add-in copies that folder to
 `NUnitRuntime\` / `TUnitRuntime\`). NUnit payload excludes host-owned
 JSON/Ipc/Isolation/Abstractions. TUnit copies its full private closure
 (CPM STJ). On net48, isolated resolve binds TUnit.Engine's STJ 9 request
-onto that newer payload copy (`NetfxBclBind`). Host still ILRepacks STJ 10.
+onto that newer payload copy (`NetfxClosureBind`). Host still ILRepacks STJ 10.
 
 ### Test output
 

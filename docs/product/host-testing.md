@@ -9,8 +9,8 @@ NUnit-specific bridge protocol are not part of the supported product on
 
 ## User contract
 
-- Test projects reference `RevitDevTool.TestAdapter` and
-  `Microsoft.Testing.Platform.MSBuild`. The test framework package (default
+- Test projects reference `RevitDevTool.TestAdapter`. Adapter props add
+  `Microsoft.Testing.Platform.MSBuild` 2.4.0. The test framework package (default
   NUnit 4.6.1) is a local project choice, not a package dependency.
 - Test projects are executable Microsoft.Testing.Platform applications
   (`OutputType=Exe`) and declare `HostName`, `HostVersion`, and optional

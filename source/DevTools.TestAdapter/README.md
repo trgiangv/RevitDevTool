@@ -16,11 +16,14 @@ TestRunner and `testing/run` IPC, not a nested MTP testhost.
 | Package | Version |
 |---------|---------|
 | `NUnit` | 4.6.1 |
-| `TUnit` | 1.65.63 |
-| `Microsoft.Testing.Platform.MSBuild` | 2.3.3 |
+| `TUnit` | 1.66.27 |
+| `Microsoft.Testing.Platform.MSBuild` | 2.4.0 |
 
-Pin these in consumer test projects. The adapter does not pull framework
-packages transitively.
+Pin NUnit or TUnit in the test project. Adapter props add
+`Microsoft.Testing.Platform.MSBuild` 2.4.0; do not add or override it.
+The adapter does not pull NUnit or TUnit. TUnit 1.66.27 and MTP 2.4.0
+are a pair: generation rejects a different `TUnit.Core` (`1.66.27.0`) or
+`Microsoft.Testing.Platform` (`2.4.0.0`) assembly version.
 
 Host options come from csproj properties. The package generates `testconfig.json`
 and Microsoft.Testing.Platform.MSBuild copies it to `[AssemblyName].testconfig.json`.
@@ -44,15 +47,14 @@ The adapter reads the `devtools` section through MTP `IConfiguration`. Do not us
   <TestingFramework>nunit</TestingFramework>
 </PropertyGroup>
 <ItemGroup>
-  <PackageReference Include="RevitDevTool.TestAdapter" />
-  <PackageReference Include="Microsoft.Testing.Platform.MSBuild" Version="2.3.3" />
+  <PackageReference Include="RevitDevTool.TestAdapter" Version="0.0.5" />
   <PackageReference Include="NUnit" Version="4.6.1" />
 </ItemGroup>
 ```
 
 ### TUnit
 
-Set `<TestingFramework>tunit</TestingFramework>` and reference `TUnit` 1.65.63.
+Set `<TestingFramework>tunit</TestingFramework>` and reference `TUnit` 1.66.27.
 Host properties are the same as NUnit.
 
 Revit:
@@ -66,9 +68,8 @@ Revit:
   <HostVersion>$(RevitVersion)</HostVersion>
 </PropertyGroup>
 <ItemGroup>
-  <PackageReference Include="RevitDevTool.TestAdapter" />
-  <PackageReference Include="Microsoft.Testing.Platform.MSBuild" Version="2.3.3" />
-  <PackageReference Include="TUnit" Version="1.65.63" />
+  <PackageReference Include="RevitDevTool.TestAdapter" Version="0.0.5" />
+  <PackageReference Include="TUnit" Version="1.66.27" />
 </ItemGroup>
 ```
 
@@ -83,9 +84,8 @@ Civil 3D (same pattern as NUnit Civil 3D samples):
   <HostVersion>$(AutoCadVersion)</HostVersion>
 </PropertyGroup>
 <ItemGroup>
-  <PackageReference Include="RevitDevTool.TestAdapter" />
-  <PackageReference Include="Microsoft.Testing.Platform.MSBuild" Version="2.3.3" />
-  <PackageReference Include="TUnit" Version="1.65.63" />
+  <PackageReference Include="RevitDevTool.TestAdapter" Version="0.0.5" />
+  <PackageReference Include="TUnit" Version="1.66.27" />
 </ItemGroup>
 ```
 

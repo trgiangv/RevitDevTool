@@ -10,13 +10,16 @@
       2. Package identity
          - Sole published testing nupkg. Bump Version before PublishTestAdapter.yml.
          - Independent of installer GitVersion. No NuGet dependency groups.
+           Microsoft.Testing.Platform.MSBuild is referenced here with
+           PrivateAssets=all so it cannot flow into DevTools.TestAdapter.Tests.
+           Consumer host-test projects get it from RevitDevTool.TestAdapter.props.
 
       3. ILRepack (every TFM)
          - Merge TargetDir copy-local (Transport, Ipc; net48 also STJ BCL) into
            TestAdapter.dll. Keep Testing.Abstractions.dll so testhost MTP shares
            HostTestDiscovery. Do not add extra PackageReference for STJ/Unsafe/Bcl
            — net48 gets those from Transport/Ipc; net8/net10 use in-box STJ.
-           Testhost 3rd-party BCL comes from the consumer
+           Testhost 3rd-party BCL comes from the injected
            Microsoft.Testing.Platform.MSBuild graph plus binding redirects,
            not from this nupkg.
 
@@ -43,12 +46,15 @@
         <Description>Microsoft.Testing.Platform adapter that runs NUnit and TUnit tests inside Autodesk hosts. Requires RevitDevTool (https://github.com/trgiangv/RevitDevTool).</Description>
         <PackageTags>testing;revit;autocad;adapter</PackageTags>
         <PackageReadmeFile>README.md</PackageReadmeFile>
+        <PackageIcon>DevTools-32-Light.png</PackageIcon>
         <EnableDynamicLoading>false</EnableDynamicLoading>
         <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
         <SuppressDependenciesWhenPacking>true</SuppressDependenciesWhenPacking>
         <NoPackageAnalysis>true</NoPackageAnalysis>
         <TargetsForTfmSpecificContentInPackage>$(TargetsForTfmSpecificContentInPackage);PackNUnitMTP;PackTUnitMTP</TargetsForTfmSpecificContentInPackage>
         <IsTestProject>false</IsTestProject>
+        <IsTestingPlatformApplication>false</IsTestingPlatformApplication>
+        <DisableTestingPlatformServerCapability>true</DisableTestingPlatformServerCapability>
         <ProduceReferenceAssembly>false</ProduceReferenceAssembly>
         <ILRepackable Condition="'$(TargetFramework)' != ''">true</ILRepackable>
         <ILRepackInternalize Condition="'$(TargetFramework)' != ''">true</ILRepackInternalize>
@@ -60,6 +66,7 @@
         <None Include="build\RevitDevTool.TestAdapter.props" Pack="true" PackagePath="build\"/>
         <None Include="build\RevitDevTool.TestAdapter.targets" Pack="true" PackagePath="build\"/>
         <None Include="README.md" Pack="true" PackagePath="\"/>
+        <None Include="..\DevTools.UI\Resources\icons\DevTools-32-Light.png" Pack="true" PackagePath="\"/>
     </ItemGroup>
 
     <Target Name="BuildTUnitMTPForPack">
@@ -132,6 +139,10 @@
     <!-- Compile: MTP (testhost hook). STJ/BCL copy-local comes from Transport/Ipc on net48. -->
     <ItemGroup>
         <PackageReference Include="Microsoft.Testing.Platform">
+            <PrivateAssets>all</PrivateAssets>
+            <ExcludeAssets>runtime</ExcludeAssets>
+        </PackageReference>
+        <PackageReference Include="Microsoft.Testing.Platform.MSBuild">
             <PrivateAssets>all</PrivateAssets>
             <ExcludeAssets>runtime</ExcludeAssets>
         </PackageReference>

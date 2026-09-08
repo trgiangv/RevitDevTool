@@ -5,7 +5,7 @@ RevitDevTool runs TUnit tests through the same TestRunner and neutral
 it does not launch or activate hosts. Shared MTP contract (launch, reuse,
 cancel, adapter): [host-testing.md](host-testing.md).
 
-Last updated: 2026-08-29
+Last updated: 2026-09-08
 
 ## Supported matrix
 
@@ -15,10 +15,17 @@ verification evidence, not an allow-list.
 
 | Host | TFM | TUnit |
 |------|-----|-------|
-| Revit | `net48` / `net8.0-windows` / `net10.0-windows` | 1.65.63 |
-| AutoCAD / Civil 3D | `net48` / `net8.0-windows` / `net10.0-windows` | 1.65.63 |
+| Revit | `net48` / `net8.0-windows` / `net10.0-windows` | 1.66.27 |
+| AutoCAD / Civil 3D | `net48` / `net8.0-windows` / `net10.0-windows` | 1.66.27 |
 
 NUnit remains the default framework. Use `TestingFramework=tunit` to opt in.
+
+TUnit **1.66.27** and `Microsoft.Testing.Platform` **2.4.0** are a pair at
+restore. Generation pins assembly versions only: `TUnit.Core` `1.66.27.0`
+and `Microsoft.Testing.Platform` `2.4.0.0`. Testhost output and the in-host
+`TUnitRuntime\` copy must match those identities. Generation fails closed on a
+different DLL instead of mixing copies. Bump TUnit and MTP together in a
+release.
 
 ## Test project
 
@@ -33,9 +40,8 @@ Revit:
   <HostVersion>$(RevitVersion)</HostVersion>
 </PropertyGroup>
 <ItemGroup>
-  <PackageReference Include="Microsoft.Testing.Platform.MSBuild" />
-  <PackageReference Include="TUnit" Version="1.65.63" />
-  <PackageReference Include="RevitDevTool.TestAdapter" />
+  <PackageReference Include="TUnit" Version="1.66.27" />
+  <PackageReference Include="RevitDevTool.TestAdapter" Version="0.0.5" />
 </ItemGroup>
 ```
 
@@ -50,9 +56,8 @@ Civil 3D (same pattern as NUnit Civil 3D samples):
   <HostVersion>$(AutoCadVersion)</HostVersion>
 </PropertyGroup>
 <ItemGroup>
-  <PackageReference Include="Microsoft.Testing.Platform.MSBuild" />
-  <PackageReference Include="TUnit" Version="1.65.63" />
-  <PackageReference Include="RevitDevTool.TestAdapter" />
+  <PackageReference Include="TUnit" Version="1.66.27" />
+  <PackageReference Include="RevitDevTool.TestAdapter" Version="0.0.5" />
 </ItemGroup>
 ```
 
@@ -133,7 +138,8 @@ In-host Engine execution clears `SynchronizationContext` so
 `Microsoft.Testing.Platform` under `TUnitRuntime\`, not at the add-in
 root. Collectible load contexts apply on modern host TFMs. .NET Framework
 years use scoped isolation. Manifest identity stays exact except net48
-`NetfxBclBind` (newer STJ / Bcl.AsyncInterfaces / Pipelines / Encodings.Web).
+`NetfxClosureBind` (newer candidate in the generation manifest or already
+loaded by that session — not a TUnit facade name list).
 
 TUnit.Core `Sources.TestEntries` is a process-wide dictionary keyed by
 `Type`. A rebuild loads a new test assembly (net48 cannot unload the old

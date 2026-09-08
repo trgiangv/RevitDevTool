@@ -13,6 +13,9 @@ public sealed class AdapterArchitectureTests
 
         Assert.Contains("'$(TestingFramework)' == 'tunit'", props, StringComparison.Ordinal);
         Assert.Contains("DevTools.TestAdapter.TestingPlatformBuilderHook", props, StringComparison.Ordinal);
+        Assert.Contains("PackageReference Include=\"Microsoft.Testing.Platform.MSBuild\"", props, StringComparison.Ordinal);
+        Assert.Contains("Version=\"2.4.0\"", props, StringComparison.Ordinal);
+        Assert.DoesNotContain("MtpMsBuildPackageVersion", props, StringComparison.Ordinal);
         Assert.DoesNotContain("supports only Revit 2023", props, StringComparison.Ordinal);
         Assert.DoesNotContain("'$(HostVersion)' != '2023'", props, StringComparison.Ordinal);
         Assert.Contains("DevTools.TUnit.MTP.dll", targets, StringComparison.Ordinal);
@@ -20,6 +23,9 @@ public sealed class AdapterArchitectureTests
         Assert.False(File.Exists(Path.Combine(adapterDir, "TUnitTestingPlatformBuilderHook.cs")));
         Assert.False(File.Exists(Path.Combine(adapterDir, "RevitTestHostLauncher.cs")));
         Assert.False(File.Exists(Path.Combine(adapterDir, "build", "TUnitRevitExecutor.cs")));
+        var tunitSample = File.ReadAllText(Path.Combine(
+            RepositoryRoot, "samples", "DevTools.TUnit.SampleTests", "DevTools.TUnit.SampleTests.csproj"));
+        Assert.DoesNotContain("Microsoft.Testing.Platform.MSBuild", tunitSample, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -337,6 +343,8 @@ public sealed class AdapterArchitectureTests
         Assert.DoesNotContain("DevTools.NUnit.MTP.csproj", sample, StringComparison.Ordinal);
         Assert.DoesNotContain("DevTools.NUnit.MTP.csproj", civil, StringComparison.Ordinal);
         Assert.Contains("PackageReference Include=\"NUnit\"", sample, StringComparison.Ordinal);
+        Assert.DoesNotContain("Microsoft.Testing.Platform.MSBuild", sample, StringComparison.Ordinal);
+        Assert.DoesNotContain("Microsoft.Testing.Platform.MSBuild", civil, StringComparison.Ordinal);
 
         var mtpCsproj = File.ReadAllText(Path.Combine(mtpDir, "DevTools.NUnit.MTP.csproj"));
         Assert.DoesNotContain("DevTools.TestAdapter.csproj", mtpCsproj, StringComparison.Ordinal);
@@ -385,6 +393,11 @@ public sealed class AdapterArchitectureTests
         Assert.Contains("WriteDiscoveryRefs", targets, StringComparison.Ordinal);
         Assert.Contains("CopyMTPSibling", targets, StringComparison.Ordinal);
         Assert.Contains("_StagePackageRuntime", targets, StringComparison.Ordinal);
+        Assert.Contains("<IsTestProject>false</IsTestProject>", csproj, StringComparison.Ordinal);
+        Assert.Contains("<IsTestingPlatformApplication>false</IsTestingPlatformApplication>", csproj, StringComparison.Ordinal);
+        Assert.Contains("PackageReference Include=\"Microsoft.Testing.Platform.MSBuild\"", csproj, StringComparison.Ordinal);
+        Assert.Contains("<PrivateAssets>all</PrivateAssets>", csproj, StringComparison.Ordinal);
+        Assert.Contains("DisableTestingPlatformServerCapability", csproj, StringComparison.Ordinal);
         Assert.DoesNotContain("testhost-bcl", csproj, StringComparison.Ordinal);
         Assert.DoesNotContain("PackNet48Bcl", csproj, StringComparison.Ordinal);
         Assert.Contains("MTPAssembly", targets, StringComparison.Ordinal);

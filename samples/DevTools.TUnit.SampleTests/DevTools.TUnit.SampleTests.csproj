@@ -15,7 +15,6 @@
 
   <ItemGroup>
     <PackageReference Include="Nice3point.Revit.Toolkit"  VersionOverride="$(RevitVersion).*"/>
-    <PackageReference Include="Microsoft.Testing.Platform.MSBuild" />
     <PackageReference Include="TUnit" />
     <ProjectReference Include="..\..\source\DevTools.TestAdapter\DevTools.TestAdapter.csproj" />
   </ItemGroup>

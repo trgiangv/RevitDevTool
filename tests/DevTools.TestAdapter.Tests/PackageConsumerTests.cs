@@ -57,7 +57,6 @@ public sealed class PackageConsumerTests
                   <ItemGroup>
                     <Compile Remove="ProviderLeak.cs" />
                     <PackageReference Include="RevitDevTool.TestAdapter" Version="{packageVersion}" />
-                    <PackageReference Include="Microsoft.Testing.Platform.MSBuild" Version="2.3.3" />
                     <PackageReference Include="NUnit" Version="4.6.1" />
                   </ItemGroup>
                 </Project>
@@ -85,7 +84,6 @@ public sealed class PackageConsumerTests
                   <ItemGroup>
                     <Compile Include="ProviderLeak.cs" />
                     <PackageReference Include="RevitDevTool.TestAdapter" Version="{packageVersion}" />
-                    <PackageReference Include="Microsoft.Testing.Platform.MSBuild" Version="2.3.3" />
                     <PackageReference Include="NUnit" Version="4.6.1" />
                   </ItemGroup>
                 </Project>
@@ -174,7 +172,6 @@ public sealed class PackageConsumerTests
                   </PropertyGroup>
                   <ItemGroup>
                     <PackageReference Include="RevitDevTool.TestAdapter" Version="{packageVersion}" />
-                    <PackageReference Include="Microsoft.Testing.Platform.MSBuild" Version="2.3.3" />
                   </ItemGroup>
                 </Project>
                 """);

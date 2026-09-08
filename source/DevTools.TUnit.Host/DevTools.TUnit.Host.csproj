@@ -18,4 +18,8 @@
                       ReferenceOutputAssembly="false"
                       SetTargetFramework="TargetFramework=$(TargetFramework)" />
   </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="DevTools.TUnit.Host.Tests" />
+  </ItemGroup>
 </Project>

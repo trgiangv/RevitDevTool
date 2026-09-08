@@ -188,9 +188,7 @@ internal sealed class HostTestFramework : ITestFramework, IDataProducer
                     .ConfigureAwait(false);
             }
 
-            var overlay = response.Results.Count == 0
-                ? FirstNonBlank(response.DiagnosticMessage, response.DiagnosticCode)
-                : null;
+            var overlay = response.DiagnosticMessage ?? response.DiagnosticCode;
             await PublishUnreportedAsync(
                     context,
                     request,
@@ -277,17 +275,6 @@ internal sealed class HostTestFramework : ITestFramework, IDataProducer
                         ToResultNode(result, assemblyPath, cases)))
                 .ConfigureAwait(false);
         }
-    }
-
-    private static string FirstNonBlank(params string?[] values)
-    {
-        foreach (var value in values)
-        {
-            if (!string.IsNullOrWhiteSpace(value))
-                return value!;
-        }
-
-        return string.Empty;
     }
 
     private static bool IsConstrained(TestingSelection selection) =>

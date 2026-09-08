@@ -13,7 +13,6 @@
     <Import Project="..\..\source\DevTools.TestAdapter\build\RevitDevTool.TestAdapter.targets"/>
 
     <ItemGroup>
-        <PackageReference Include="Microsoft.Testing.Platform.MSBuild"/>
         <PackageReference Include="NUnit"/>
         <ProjectReference Include="..\..\source\DevTools.TestAdapter\DevTools.TestAdapter.csproj"/>
     </ItemGroup>

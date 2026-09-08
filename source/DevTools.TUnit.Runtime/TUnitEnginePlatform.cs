@@ -8,6 +8,7 @@ using Microsoft.Testing.Platform.Logging;
 using Microsoft.Testing.Platform.Messages;
 using Microsoft.Testing.Platform.OutputDevice;
 using Microsoft.Testing.Platform.Requests;
+using Microsoft.Testing.Platform.Services;
 
 namespace DevTools.TUnit.Runtime;
 
@@ -53,6 +54,18 @@ internal sealed class TUnitEngineConfiguration(string workingDirectory, string r
         TestHostWorkingDirectory => workingDirectory,
         _ => null,
     };
+}
+
+internal sealed class TUnitEngineClientInfo : IClientInfo
+{
+    public string Id => "devtools-revit-host";
+    public string Version => "1.0";
+    public IClientCapabilities Capabilities { get; } = new TUnitEngineClientCapabilities();
+}
+
+internal sealed class TUnitEngineClientCapabilities : IClientCapabilities
+{
+    public bool IsStateful => false;
 }
 
 internal sealed class TUnitEngineLoggerFactory : ILoggerFactory

@@ -74,11 +74,11 @@
         <PackageVersion Include="xunit.v3" Version="4.0.0" />
         <PackageVersion Include="coverlet.MTP" Version="10.0.1" />
         <PackageVersion Include="NUnit" Version="4.6.1" />
-        <PackageVersion Include="TUnit" Version="1.65.63" />
-        <PackageVersion Include="TUnit.Core" Version="1.65.63" />
-        <PackageVersion Include="TUnit.Engine" Version="1.65.63" />
-        <PackageVersion Include="Microsoft.Testing.Platform" Version="2.3.3" />
-        <PackageVersion Include="Microsoft.Testing.Platform.MSBuild" Version="2.3.3" />
+        <PackageVersion Include="TUnit" Version="1.66.27" />
+        <PackageVersion Include="TUnit.Core" Version="1.66.27" />
+        <PackageVersion Include="TUnit.Engine" Version="1.66.27" />
+        <PackageVersion Include="Microsoft.Testing.Platform" Version="2.4.0" />
+        <PackageVersion Include="Microsoft.Testing.Platform.MSBuild" Version="2.4.0" />
         <PackageVersion Include="Moq" Version="4.20.72" />
         <PackageVersion Include="Bogus" Version="35.6.5" />
     </ItemGroup>

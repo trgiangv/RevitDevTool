@@ -42,8 +42,7 @@ Pin **NUnit 4.6.1**. Do not add `NUnit3TestAdapter` or
   <LaunchTimeout>360</LaunchTimeout>
 </PropertyGroup>
 <ItemGroup>
-  <PackageReference Include="RevitDevTool.TestAdapter" />
-  <PackageReference Include="Microsoft.Testing.Platform.MSBuild" />
+  <PackageReference Include="RevitDevTool.TestAdapter" Version="0.0.5"/>
   <PackageReference Include="NUnit" Version="4.6.1" />
 </ItemGroup>
 ```

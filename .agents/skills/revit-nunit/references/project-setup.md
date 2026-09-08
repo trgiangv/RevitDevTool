@@ -18,7 +18,6 @@ in SKILL.md.
 </PropertyGroup>
 <ItemGroup>
   <PackageReference Include="RevitDevTool.TestAdapter" />
-  <PackageReference Include="Microsoft.Testing.Platform.MSBuild" />
   <PackageReference Include="NUnit" Version="4.6.1" />
 </ItemGroup>
 ```
@@ -26,8 +25,8 @@ in SKILL.md.
 Pin **NUnit 4.6.1** (`nunit.framework` file version `4.6.1.0`). The host
 generation snapshot rejects a missing or mismatched framework DLL.
 
-Reference `Microsoft.Testing.Platform.MSBuild`, not
-`Microsoft.Testing.Platform` as a compile package.
+The adapter's MSBuild props add `Microsoft.Testing.Platform.MSBuild` 2.4.0. Do not add
+`Microsoft.Testing.Platform` as a compile package. Do not override MTP.MSBuild.
 
 | Property | Role |
 |----------|------|
