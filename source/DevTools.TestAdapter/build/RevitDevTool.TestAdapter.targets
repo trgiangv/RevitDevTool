@@ -26,6 +26,15 @@
   <Import Project="$(MSBuildThisFileDirectory)RevitDevTool.TestAdapter.props"
           Condition="'$(TestAdapterPropsImported)' != 'true'"/>
 
+  <Target Name="DevToolsNetFxBindingRedirects"
+          BeforeTargets="PrepareForBuild;GenerateBindingRedirects">
+    <PropertyGroup Condition="'$(TargetFrameworkIdentifier)' == '.NETFramework'">
+      <AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
+      <GenerateBindingRedirectsOutputType>true</GenerateBindingRedirectsOutputType>
+      <AutoUnifyAssemblyReferences>true</AutoUnifyAssemblyReferences>
+    </PropertyGroup>
+  </Target>
+
   <!-- TUnit's package registers its own outer MTP framework. RevitDevTool owns
        the outer testhost so execution remains TestRunner -> testing/run IPC. -->
   <ItemGroup Condition="'$(TestingFramework)' == 'tunit'">

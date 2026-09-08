@@ -1,20 +1,11 @@
 <Project>
   <PropertyGroup>
     <TestAdapterPropsImported>true</TestAdapterPropsImported>
-    <!-- NuGet .props import before SDK inference. Fill the canonical identifier
-         from the TFM so later conditions use TargetFrameworkIdentifier only. -->
-    <TargetFrameworkIdentifier Condition="'$(TargetFrameworkIdentifier)' == '' and '$(TargetFramework)' != ''">$([MSBuild]::GetTargetFrameworkIdentifier('$(TargetFramework)'))</TargetFrameworkIdentifier>
     <IsTestingPlatformApplication Condition="'$(IsTestingPlatformApplication)' == ''">true</IsTestingPlatformApplication>
     <EnableMicrosoftTestingPlatform Condition="'$(EnableMicrosoftTestingPlatform)' == ''">true</EnableMicrosoftTestingPlatform>
     <TestingPlatformDotnetTestSupport Condition="'$(TestingPlatformDotnetTestSupport)' == ''">true</TestingPlatformDotnetTestSupport>
     <GenerateTestingPlatformEntryPoint Condition="'$(GenerateTestingPlatformEntryPoint)' == ''">true</GenerateTestingPlatformEntryPoint>
     <OutputType>Exe</OutputType>
-    <!-- OutputType is set after Sdk.props, so net48 exes skip binding redirects
-         unless this is explicit. 3rd-party testhost BCL comes from the consumer
-         Microsoft.Testing.Platform.MSBuild graph, not from this package. -->
-    <AutoGenerateBindingRedirects Condition="'$(TargetFrameworkIdentifier)' == '.NETFramework'">true</AutoGenerateBindingRedirects>
-    <GenerateBindingRedirectsOutputType Condition="'$(TargetFrameworkIdentifier)' == '.NETFramework'">true</GenerateBindingRedirectsOutputType>
-    <AutoUnifyAssemblyReferences Condition="'$(TargetFrameworkIdentifier)' == '.NETFramework'">true</AutoUnifyAssemblyReferences>
     <EnableDynamicLoading>false</EnableDynamicLoading>
     <ForceLaunch Condition="'$(ForceLaunch)' == ''">false</ForceLaunch>
     <PerTestTimeout Condition="'$(PerTestTimeout)' == ''">60</PerTestTimeout>
