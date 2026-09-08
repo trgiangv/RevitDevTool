@@ -38,7 +38,7 @@
         <RootNamespace>DevTools.TestAdapter</RootNamespace>
         <AssemblyName>DevTools.TestAdapter</AssemblyName>
         <PackageId>RevitDevTool.TestAdapter</PackageId>
-        <Version>0.0.4</Version>
+        <Version>0.0.5</Version>
         <IsPackable>true</IsPackable>
         <DevelopmentDependency>true</DevelopmentDependency>
         <PackageLicenseExpression>MIT</PackageLicenseExpression>
