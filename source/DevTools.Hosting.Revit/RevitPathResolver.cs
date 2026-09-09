@@ -40,7 +40,7 @@ public sealed class RevitPathResolver : IHostPathResolver
 
         return Directory.GetDirectories(autodeskDir, "Revit *")
             .Select(dir => Path.GetFileName(dir).Replace("Revit ", ""))
-            .Where(v => int.TryParse(v, out var year) && year >= 2022)
+            .Where(v => int.TryParse(v, out var year) && year >= HostVersions.AutodeskMinimal)
             .OrderByDescending(v => v, StringComparer.OrdinalIgnoreCase)
             .ToArray();
     }

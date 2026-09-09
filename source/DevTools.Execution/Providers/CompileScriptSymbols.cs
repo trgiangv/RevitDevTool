@@ -10,7 +10,7 @@ namespace DevTools.Execution.Providers;
 /// </summary>
 public static class CompileScriptSymbols
 {
-    public const int VersionMinimal = 2022;
+    public const int VersionMinimal = HostVersions.AutodeskMinimal;
 
     private static readonly string[] BaseSymbols = ["TRACE", "DEBUG"];
 

@@ -18,7 +18,7 @@ public sealed class AcadArgumentBuilderTests
         Assert.Equal(
         [
             "/ld", dir.DbxPath,
-            "/p", "<<C3D_Metric>>",
+            "/p", AcadArgumentBuilder.CivilMetricProfile,
             "/product", "C3D",
             "/language", "en-US"
         ], args);

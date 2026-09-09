@@ -3,28 +3,16 @@ using Microsoft.Win32;
 
 namespace DevTools.Hosting.Acad;
 
-/// <summary>Discovers AutoCAD-family installations via registry and filesystem.</summary>
+/// <summary>
+/// Discovers AutoCAD-family installs via <c>InstalledProducts</c>
+/// (install dir + product code). Verticals share <see cref="AcadProductCatalog.ExeFileName"/>.
+/// </summary>
 public sealed partial class AcadPathResolver : IHostPathResolver
 {
-    private const string AutoCadRegistryRoot = @"SOFTWARE\Autodesk\AutoCAD";
+    public static IReadOnlyDictionary<string, HostApp> ProductIdMap => AcadProductCatalog.ProductIdMap;
 
-    /// <summary>Mirrors host-side AcadProductDetector.ProductMap: product ID digits -> HostApp.</summary>
-    public static IReadOnlyDictionary<string, HostApp> ProductIdMap { get; } =
-        new Dictionary<string, HostApp>(StringComparer.OrdinalIgnoreCase)
-        {
-            ["00"] = HostApp.Civil3D,
-            ["01"] = HostApp.AutoCad,
-            ["02"] = HostApp.AcadMap3D,
-            ["04"] = HostApp.AcadArch,
-            ["05"] = HostApp.AcadMech,
-            ["06"] = HostApp.AcadMep,
-            ["07"] = HostApp.AcadElec,
-            ["17"] = HostApp.Plant3D,
-        };
-
-    [GeneratedRegex(@"ACAD-[0-9A-F]\d(?<productId>\d{2})", RegexOptions.IgnoreCase)]
-    private static partial Regex ProductKeyPattern();
-    private static readonly Regex ProductKeyRegex = ProductKeyPattern();
+    [GeneratedRegex(@"AutoCAD.*?(?<year>\d{4})$", RegexOptions.IgnoreCase)]
+    private static partial Regex InstallFolderYear();
 
     public bool Supports(HostApp hostApp) => hostApp.IsAcadFamily();
 
@@ -60,7 +48,7 @@ public sealed partial class AcadPathResolver : IHostPathResolver
 
     private static IEnumerable<AcadInstallation> EnumerateFromRegistry()
     {
-        using var root = Registry.LocalMachine.OpenSubKey(AutoCadRegistryRoot);
+        using var root = Registry.LocalMachine.OpenSubKey(AcadProductCatalog.RegistryRoot);
         if (root is null)
             yield break;
 
@@ -70,74 +58,51 @@ public sealed partial class AcadPathResolver : IHostPathResolver
             if (releaseKey is null)
                 continue;
 
-            foreach (var entry in EnumerateProducts(releaseKey))
+            foreach (var entry in EnumerateRelease(releaseKey))
                 yield return entry;
         }
     }
 
-    private static IEnumerable<AcadInstallation> EnumerateProducts(RegistryKey releaseKey)
+    private static IEnumerable<AcadInstallation> EnumerateRelease(RegistryKey releaseKey)
     {
-        foreach (var productKeyName in releaseKey.GetSubKeyNames())
-        {
-            using var productKey = releaseKey.OpenSubKey(productKeyName);
-            if (productKey is null)
-                continue;
+        using var products = releaseKey.OpenSubKey(AcadProductCatalog.InstalledProductsKeyName);
+        if (products is null || !TryParseInstallDir(ReadInstallDir(products), out var exePath, out var year))
+            yield break;
 
-            var installation = TryParseInstallation(productKey, productKeyName);
-            if (installation is not null)
-                yield return installation;
+        foreach (var productCode in products.GetSubKeyNames())
+        {
+            if (AcadProductCatalog.TryGetHost(productCode, out var hostApp))
+                yield return new AcadInstallation(year, hostApp, exePath);
         }
     }
 
-    private static AcadInstallation? TryParseInstallation(RegistryKey productKey, string productKeyName)
+    private static string? ReadInstallDir(RegistryKey products) =>
+        products.GetValue(null) as string ?? products.GetValue(string.Empty) as string;
+
+    internal static bool TryParseInstallDir(string? installDir, out string exePath, out string year)
     {
-        var versionYear = productKey.GetValue("UPIRELEASE") as string;
-        if (string.IsNullOrWhiteSpace(versionYear))
-            return null;
-        if (!int.TryParse(versionYear, out var year) || year < 2022)
-            return null;
+        exePath = string.Empty;
+        year = string.Empty;
+        if (string.IsNullOrWhiteSpace(installDir))
+            return false;
 
-        var acadExe = ResolveAcadExe(productKey);
-        if (acadExe is null)
-            return null;
+        var dir = installDir.TrimEnd('\\', '/');
+        var exe = Path.Combine(dir, AcadProductCatalog.ExeFileName);
+        if (!File.Exists(exe))
+            return false;
 
-        var hostApp = DetectProduct(productKeyName);
-        return new AcadInstallation(versionYear!, hostApp, acadExe);
-    }
-
-    private static HostApp DetectProduct(string productKeyName)
-    {
-        var match = ProductKeyRegex.Match(productKeyName);
+        var folder = Path.GetFileName(dir);
+        var match = InstallFolderYear().Match(folder);
         if (!match.Success)
-            return HostApp.AutoCad;
-        var productId = match.Groups["productId"].Value;
-        return ProductIdMap.TryGetValue(productId, out var hostApp) ? hostApp : HostApp.AutoCad;
-    }
+            return false;
 
-    private static string? ResolveAcadExe(RegistryKey productKey)
-    {
-        return TryFindAcadExe(productKey.GetValue("GlobUPILocation") as string, trimTrailingSlash: true)
-               ?? TryFindAcadExe(productKey.GetValue("AcadLocation") as string, trimTrailingSlash: false);
-    }
+        var yearText = match.Groups["year"].Value;
+        if (!int.TryParse(yearText, out var n) || n < HostVersions.AutodeskMinimal)
+            return false;
 
-    private static string? TryFindAcadExe(string? location, bool trimTrailingSlash)
-    {
-        if (string.IsNullOrWhiteSpace(location))
-            return null;
-
-        if (trimTrailingSlash)
-        {
-            var dir = Path.GetDirectoryName(location!.TrimEnd('\\', '/'));
-            if (dir is not null)
-            {
-                var exe = Path.Combine(dir, "acad.exe");
-                if (File.Exists(exe))
-                    return exe;
-            }
-        }
-
-        var directExe = Path.Combine(location, "acad.exe");
-        return File.Exists(directExe) ? directExe : null;
+        exePath = exe;
+        year = yearText;
+        return true;
     }
 
     private static string? FindFromFileSystem(string version)
@@ -151,7 +116,7 @@ public sealed partial class AcadPathResolver : IHostPathResolver
         foreach (var pattern in patterns)
         {
             var match = Directory.GetDirectories(autodeskDir, pattern)
-                .Select(dir => Path.Combine(dir, "acad.exe"))
+                .Select(dir => Path.Combine(dir, AcadProductCatalog.ExeFileName))
                 .FirstOrDefault(File.Exists);
             if (match is not null)
                 return match;
