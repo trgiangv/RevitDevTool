@@ -1,7 +1,5 @@
 using System.IO;
 using System.Text.Json;
-using CliWrap;
-using CliWrap.Buffered;
 using DevTools.Execution.Interfaces;
 using DevTools.Execution.Models;
 using DevTools.Execution.Providers.Python;
@@ -19,11 +17,9 @@ internal sealed class PixiPackageStore(ILogger<PixiPackageStore> logger) : IPyth
         if (!PixiInstaller.IsPixiInstalled() || !Directory.Exists(PixiEnvironmentProvider.PixiProjectDir))
             return [];
 
-        var result = await Cli.Wrap(PixiInstaller.PixiExePath)
-            .WithArguments(PixiEnvironmentProvider.PixiArgs.ListExplicitJson())
-            .WithWorkingDirectory(PixiEnvironmentProvider.PixiProjectDir)
-            .WithValidation(CommandResultValidation.None)
-            .ExecuteBufferedAsync(cancellationToken)
+        var result = await PixiEnvironmentProvider.RunPixiBufferedAsync(
+                PixiEnvironmentProvider.PixiArgs.ListExplicitJson(),
+                cancellationToken)
             .ConfigureAwait(false);
 
         if (result.ExitCode != 0 || string.IsNullOrWhiteSpace(result.StandardOutput))
@@ -62,11 +58,10 @@ internal sealed class PixiPackageStore(ILogger<PixiPackageStore> logger) : IPyth
         if (string.IsNullOrWhiteSpace(packageId) || !IsAvailable())
             return;
 
-        await Cli.Wrap(PixiInstaller.PixiExePath)
-            .WithArguments(PixiEnvironmentProvider.PixiArgs.Add([BuildSpec(packageId, declaredVersion)], pypi))
-            .WithWorkingDirectory(PixiEnvironmentProvider.PixiProjectDir)
-            .WithValidation(CommandResultValidation.None)
-            .ExecuteAsync(cancellationToken).ConfigureAwait(false);
+        await PixiEnvironmentProvider.RunPixiAsync(
+                PixiEnvironmentProvider.PixiArgs.Add([BuildSpec(packageId, declaredVersion)], pypi),
+                cancellationToken: cancellationToken)
+            .ConfigureAwait(false);
     }
 
     private async Task UpdateCoreAsync(Package package, bool pypi, CancellationToken cancellationToken)
@@ -76,11 +71,10 @@ internal sealed class PixiPackageStore(ILogger<PixiPackageStore> logger) : IPyth
 
         if (package.IsProtected)
         {
-            await Cli.Wrap(PixiInstaller.PixiExePath)
-                .WithArguments(PixiEnvironmentProvider.PixiArgs.Update(package.PackageId))
-                .WithWorkingDirectory(PixiEnvironmentProvider.PixiProjectDir)
-                .WithValidation(CommandResultValidation.None)
-                .ExecuteAsync(cancellationToken).ConfigureAwait(false);
+            await PixiEnvironmentProvider.RunPixiAsync(
+                    PixiEnvironmentProvider.PixiArgs.Update(package.PackageId),
+                    cancellationToken: cancellationToken)
+                .ConfigureAwait(false);
             return;
         }
 
@@ -92,11 +86,10 @@ internal sealed class PixiPackageStore(ILogger<PixiPackageStore> logger) : IPyth
         if (string.IsNullOrWhiteSpace(packageId) || !IsAvailable())
             return;
 
-        await Cli.Wrap(PixiInstaller.PixiExePath)
-            .WithArguments(PixiEnvironmentProvider.PixiArgs.Remove(packageId, pypi))
-            .WithWorkingDirectory(PixiEnvironmentProvider.PixiProjectDir)
-            .WithValidation(CommandResultValidation.None)
-            .ExecuteAsync(cancellationToken).ConfigureAwait(false);
+        await PixiEnvironmentProvider.RunPixiAsync(
+                PixiEnvironmentProvider.PixiArgs.Remove(packageId, pypi),
+                cancellationToken: cancellationToken)
+            .ConfigureAwait(false);
     }
 
     private static bool IsPypi(Package package) => package.Marketplace == Marketplace.PyPi;

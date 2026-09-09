@@ -1,6 +1,7 @@
 using System.IO;
 using System.Text.Json;
 using CliWrap;
+using CliWrap.Buffered;
 using DevTools.Execution.Models;
 using Microsoft.Extensions.Logging;
 using ZLogger;
@@ -99,7 +100,7 @@ public abstract class PyEnvironmentProvider
         var result = await Cli.Wrap(exePath)
             .WithArguments("--version")
             .WithValidation(CommandResultValidation.None)
-            .ExecuteAsync()
+            .ExecuteBufferedAsync()
             .ConfigureAwait(false);
 
         if (result.ExitCode != 0)
@@ -193,5 +194,15 @@ public abstract class PyEnvironmentProvider
         }
 
         return names;
+    }
+
+    protected static void ReplayLines(string text, Action<string>? onLine)
+    {
+        if (onLine is null || string.IsNullOrEmpty(text))
+            return;
+
+        using var reader = new StringReader(text);
+        while (reader.ReadLine() is { } line)
+            onLine(line);
     }
 }

@@ -1,4 +1,3 @@
-using System.Text;
 using DevTools.Execution.Interfaces;
 using DevTools.Execution.Models;
 using DevTools.Execution.Providers.Python;
@@ -15,18 +14,7 @@ internal sealed class UvPackageStore(PythonInitializer initializer) : IPythonPac
         if (provider is null || !UvInstaller.IsUvInstalled())
             return [];
 
-        var stdout = new StringBuilder();
-        var exit = await UvEnvironmentProvider.RunUvAsync(
-                UvEnvironmentProvider.UvArgs.PipListJson(provider.PythonExe),
-                line => stdout.AppendLine(line),
-                onStderr: null,
-                cancellationToken)
-            .ConfigureAwait(false);
-
-        if (exit != 0)
-            return [];
-
-        var json = stdout.ToString().Trim();
+        var json = await provider.GetListJsonAsync(cancellationToken).ConfigureAwait(false);
         return string.IsNullOrEmpty(json) ? [] : PyPiPackageList.Parse(json);
     }
 

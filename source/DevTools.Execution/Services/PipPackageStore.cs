@@ -1,4 +1,3 @@
-using System.Text;
 using CliWrap;
 using DevTools.Execution.Interfaces;
 using DevTools.Execution.Models;
@@ -16,18 +15,7 @@ internal sealed class PipPackageStore(PythonInitializer initializer) : IPythonPa
         if (provider is null)
             return [];
 
-        var stdout = new StringBuilder();
-        var result = await Cli.Wrap(provider.PythonExe)
-            .WithArguments(["-m", "pip", "list", "--format=json"])
-            .WithWorkingDirectory(provider.PythonHome)
-            .WithStandardOutputPipe(PipeTarget.ToStringBuilder(stdout))
-            .WithValidation(CommandResultValidation.None)
-            .ExecuteAsync(cancellationToken).ConfigureAwait(false);
-
-        if (result.ExitCode != 0)
-            return [];
-
-        var json = stdout.ToString().Trim();
+        var json = await provider.GetListJsonAsync(cancellationToken).ConfigureAwait(false);
         if (string.IsNullOrEmpty(json))
             return [];
 

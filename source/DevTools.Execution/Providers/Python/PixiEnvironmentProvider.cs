@@ -1,6 +1,6 @@
 using System.IO;
-using System.Text;
 using CliWrap;
+using CliWrap.Buffered;
 using DevTools.Execution.Models;
 using DevTools.Utilities;
 using Microsoft.Extensions.Logging;
@@ -118,15 +118,8 @@ public sealed class PixiEnvironmentProvider(ILogger<PixiEnvironmentProvider> log
         if (!PixiInstaller.IsPixiInstalled() || !Directory.Exists(PixiProjectDir))
             return string.Empty;
 
-        var stdout = new StringBuilder();
-        var exit = await RunPixiAsync(
-                PixiArgs.ListJson(),
-                line => stdout.AppendLine(line),
-                onStderr: null,
-                cancellationToken)
-            .ConfigureAwait(false);
-
-        return exit == 0 ? stdout.ToString().Trim() : string.Empty;
+        var result = await RunPixiBufferedAsync(PixiArgs.ListJson(), cancellationToken).ConfigureAwait(false);
+        return result.ExitCode == 0 ? result.StandardOutput.Trim() : string.Empty;
     }
 
     /// <summary>Split specs by conda availability (testable without pixi.exe).</summary>
@@ -235,23 +228,27 @@ public sealed class PixiEnvironmentProvider(ILogger<PixiEnvironmentProvider> log
             throw new InvalidOperationException(failMessage);
     }
 
+    internal static async Task<BufferedCommandResult> RunPixiBufferedAsync(
+        IReadOnlyList<string> args,
+        CancellationToken cancellationToken = default)
+    {
+        return await Cli.Wrap(PixiInstaller.PixiExePath)
+            .WithArguments(args)
+            .WithWorkingDirectory(PixiProjectDir)
+            .WithValidation(CommandResultValidation.None)
+            .ExecuteBufferedAsync(cancellationToken)
+            .ConfigureAwait(false);
+    }
+
     internal static async Task<int> RunPixiAsync(
         IReadOnlyList<string> args,
         Action<string>? onStdout = null,
         Action<string>? onStderr = null,
         CancellationToken cancellationToken = default)
     {
-        var cmd = Cli.Wrap(PixiInstaller.PixiExePath)
-            .WithArguments(args)
-            .WithWorkingDirectory(PixiProjectDir)
-            .WithValidation(CommandResultValidation.None);
-
-        if (onStdout is not null)
-            cmd = cmd.WithStandardOutputPipe(PipeTarget.ToDelegate(onStdout));
-        if (onStderr is not null)
-            cmd = cmd.WithStandardErrorPipe(PipeTarget.ToDelegate(onStderr));
-
-        var result = await cmd.ExecuteAsync(cancellationToken).ConfigureAwait(false);
+        var result = await RunPixiBufferedAsync(args, cancellationToken).ConfigureAwait(false);
+        ReplayLines(result.StandardOutput, onStdout);
+        ReplayLines(result.StandardError, onStderr);
         return result.ExitCode;
     }
 

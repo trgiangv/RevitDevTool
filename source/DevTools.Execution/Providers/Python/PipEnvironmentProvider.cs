@@ -1,6 +1,7 @@
 using System.IO;
 using System.Text;
 using CliWrap;
+using CliWrap.Buffered;
 using DevTools.Execution.Models;
 using DevTools.Execution.Services;
 using Microsoft.Extensions.Logging;
@@ -213,16 +214,14 @@ public sealed class PipEnvironmentProvider(ILogger<PipEnvironmentProvider> logge
         if (!IsEnvironmentReady())
             return string.Empty;
 
-        var stdout = new StringBuilder();
         var result = await Cli.Wrap(PythonExe)
             .WithArguments(["-m", "pip", "list", "--format=json"])
             .WithWorkingDirectory(PythonHome)
-            .WithStandardOutputPipe(PipeTarget.ToStringBuilder(stdout))
             .WithValidation(CommandResultValidation.None)
-            .ExecuteAsync(cancellationToken)
+            .ExecuteBufferedAsync(cancellationToken)
             .ConfigureAwait(false);
 
-        return result.ExitCode == 0 ? stdout.ToString().Trim() : string.Empty;
+        return result.ExitCode == 0 ? result.StandardOutput.Trim() : string.Empty;
     }
 
     private void RemovePthFile(string targetDir)

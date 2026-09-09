@@ -1,7 +1,7 @@
 using System.IO;
-using System.Text;
 using System.Text.RegularExpressions;
 using CliWrap;
+using CliWrap.Buffered;
 using DevTools.Execution.Models;
 using DevTools.Utilities;
 using Microsoft.Extensions.Logging;
@@ -221,15 +221,9 @@ public sealed class UvEnvironmentProvider(ILogger<UvEnvironmentProvider> logger,
         if (!UvInstaller.IsUvInstalled() || !IsEnvironmentReady())
             return string.Empty;
 
-        var stdout = new StringBuilder();
-        var exit = await RunUvAsync(
-                UvArgs.PipListJson(PythonExe),
-                line => stdout.AppendLine(line),
-                onStderr: null,
-                cancellationToken)
+        var result = await RunUvBufferedAsync(UvArgs.PipListJson(PythonExe), cancellationToken)
             .ConfigureAwait(false);
-
-        return exit == 0 ? stdout.ToString().Trim() : string.Empty;
+        return result.ExitCode == 0 ? result.StandardOutput.Trim() : string.Empty;
     }
 
     private async Task<(List<string> Succeeded, List<string> Failed)> TryInstallBatchAsync(
@@ -283,13 +277,27 @@ public sealed class UvEnvironmentProvider(ILogger<UvEnvironmentProvider> logger,
             throw new InvalidOperationException(failMessage);
     }
 
+    internal static async Task<BufferedCommandResult> RunUvBufferedAsync(
+        IReadOnlyList<string> args,
+        CancellationToken cancellationToken = default)
+    {
+        return await UvCommand(args).ExecuteBufferedAsync(cancellationToken).ConfigureAwait(false);
+    }
+
     internal static async Task<int> RunUvAsync(
         IReadOnlyList<string> args,
         Action<string>? onStdout = null,
         Action<string>? onStderr = null,
         CancellationToken cancellationToken = default)
     {
-        var cmd = Cli.Wrap(UvInstaller.UvExePath)
+        var result = await RunUvBufferedAsync(args, cancellationToken).ConfigureAwait(false);
+        ReplayLines(result.StandardOutput, onStdout);
+        ReplayLines(result.StandardError, onStderr);
+        return result.ExitCode;
+    }
+
+    private static Command UvCommand(IReadOnlyList<string> args)
+        => Cli.Wrap(UvInstaller.UvExePath)
             .WithArguments(args)
             .WithWorkingDirectory(EnsureUvEnvRoot())
             .WithEnvironmentVariables(env =>
@@ -298,15 +306,6 @@ public sealed class UvEnvironmentProvider(ILogger<UvEnvironmentProvider> logger,
                 env.Set("UV_CACHE_DIR", UvCacheDir);
             })
             .WithValidation(CommandResultValidation.None);
-
-        if (onStdout is not null)
-            cmd = cmd.WithStandardOutputPipe(PipeTarget.ToDelegate(onStdout));
-        if (onStderr is not null)
-            cmd = cmd.WithStandardErrorPipe(PipeTarget.ToDelegate(onStderr));
-
-        var result = await cmd.ExecuteAsync(cancellationToken).ConfigureAwait(false);
-        return result.ExitCode;
-    }
 
     private static string EnsureUvEnvRoot()
     {
