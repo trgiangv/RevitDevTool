@@ -1,0 +1,56 @@
+:root {
+  --ifm-color-primary: #087f8c;
+  --ifm-color-primary-dark: #06727e;
+  --ifm-color-primary-darker: #066b77;
+  --ifm-color-primary-light: #0a8c9a;
+  --ifm-color-primary-lighter: #0b93a1;
+  --ifm-code-font-size: 95%;
+}
+
+.hero__subtitle { max-width: 48rem; }
+
+/* Brand marks for the language/tool entries in the docs sidebar. */
+.sidebar-icon > .menu__link::before,
+.sidebar-icon > .menu__list-item-collapsible > .menu__link::before {
+  content: '';
+  width: 1rem;
+  height: 1rem;
+  flex: 0 0 1rem;
+  margin-right: 0.5rem;
+  background: var(--sidebar-icon) center / contain no-repeat;
+}
+
+.sidebar-icon--python { --sidebar-icon: url('../../static/icons/python.svg'); }
+.sidebar-icon--ironpython { --sidebar-icon: url('../../static/icons/ironpython.svg'); }
+.sidebar-icon--csharp { --sidebar-icon: url('../../static/icons/csharp.png'); }
+.sidebar-icon--fsharp { --sidebar-icon: url('../../static/icons/fsharp.svg'); }
+.sidebar-icon--dotnet { --sidebar-icon: url('../../static/icons/dotnet.svg'); }
+.sidebar-icon--debugger { --sidebar-icon: url('../../static/icons/vscode.svg'); }
+.sidebar-icon--nunit { --sidebar-icon: url('../../static/icons/nunit.png'); }
+.sidebar-icon--tunit { --sidebar-icon: url('../../static/icons/tunit.svg'); }
+.sidebar-icon--pytest { --sidebar-icon: url('../../static/icons/pytest.svg'); }
+.sidebar-icon--mcp { --sidebar-icon: url('../../static/icons/mcp-light.png'); }
+.sidebar-icon--unittest { --sidebar-icon: url('../../static/icons/unittest.svg'); }
+.sidebar-icon--revit { --sidebar-icon: url('../../static/icons/revit-icon.svg'); }
+.sidebar-icon--autocad { --sidebar-icon: url('../../static/icons/autocad-icon.svg'); }
+
+.sidebar-icon--microsoft > .menu__link::before,
+.sidebar-icon--microsoft > .menu__list-item-collapsible > .menu__link::before {
+  display: none;
+}
+
+.sidebar-custom-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.sidebar-custom-label svg {
+  flex: 0 0 auto;
+}
+
+.sidebar-group-label {
+  color: inherit;
+}
+
+[data-theme='dark'] .sidebar-icon--mcp { --sidebar-icon: url('../../static/icons/mcp-dark.png'); }

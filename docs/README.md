@@ -1,5 +1,34 @@
 # Documentation Map
 
+This folder contains both the repository's engineering documentation and the
+public Docusaurus documentation site.
+
+## Public documentation site
+
+The Docusaurus project lives in this folder, following the same single-repository
+layout used by TUnit:
+
+| Path | Role |
+|------|------|
+| [docs/](docs/) | Public, user-facing Markdown consumed by Docusaurus |
+| [docusaurus.config.ts](docusaurus.config.ts) | Site configuration |
+| [sidebars.ts](sidebars.ts) | Public navigation |
+| [src/](src/) | Site theme and custom UI |
+| [static/](static/) | Site assets |
+
+From this directory:
+
+```bash
+bun install
+bun run start
+bun run build
+```
+
+`bun run build` writes the generated site to `docs/build/`. Do not edit that
+generated directory. The public Markdown is intentionally separate from the
+engineering source-of-truth below; link to product and architecture documents
+when deeper detail is needed.
+
 Start here when locating repository truth. Retrieve only what the task needs.
 
 ## Harness Core
@@ -31,7 +60,7 @@ Start here when locating repository truth. Retrieve only what the task needs.
 | Understand a module deeply | [ARCHITECTURE.md](ARCHITECTURE.md) |
 | Resume complex work | [plans/active/](plans/active/) |
 | Inherit a lasting choice | [decisions/](decisions/README.md) |
-| End-user guides | [RevitDevTool.Wiki](https://github.com/trgiangv/RevitDevTool/wiki) |
+| End-user guides | [Docusaurus site](https://trgiangv.github.io/RevitDevTool/) |
 
 ## Update Rule
 

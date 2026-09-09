@@ -1,7 +1,7 @@
 # RevitDevTool
 
 <p style="vertical-align: center;">
-Developer platform for .NET-based CAD/BIM applications — code execution, AI integration, testing, visualization, and logging.
+Bring standard development ecosystems into live Autodesk CAD/BIM hosts — without replacing them.
 </p>
 
 <div style="vertical-align: center;">
@@ -23,7 +23,7 @@ RevitDevTool is a **development platform for .NET-based CAD/BIM applications**. 
 - **Modern Python** — CPython 3.14 with full ecosystem (pandas, numpy, scikit-learn, AI/ML)
 - **VSCode Debugging** — Set breakpoints, step through code, inspect Revit/AutoCAD API objects
 - **Zero-friction dependencies** — Declare packages inline (PEP 723), auto-install with [Pixi](https://pixi.sh/)
-- **AI-powered workflows** — [Model Context Protocol (MCP)](https://github.com/trgiangv/RevitDevTool/wiki/MCP-Overview) integration for AI assistants
+- **AI-powered workflows** — [Model Context Protocol (MCP)](docs/docs/mcp/overview.md) integration for AI assistants
 - **Remote testing** — [pytest bridge](https://github.com/trgiangv/RevitDevTool.PyTest) runs tests inside live Revit/AutoCAD/Civil3D
 - **Multiple script runtimes** — CPython, IronPython (pyRevit), C# `.csx`, F# `.fsx`
 - **3D Visualization** — Render geometry directly in Revit view (Revit host)
@@ -50,17 +50,13 @@ AutoCAD-family hosts (Civil 3D, Plant 3D, AutoCAD Architecture, MEP, Electrical,
 
 Set breakpoints, inspect variables, step through Revit API calls in real-time.
 
-![Python Debugger](https://github.com/trgiangv/RevitDevTool/wiki/images/RevitDevTool_PythonDebugger.gif)
-
-**[Python Debugging Guide](https://github.com/trgiangv/RevitDevTool/wiki/Execution-PythonDebugging)**
+**[Python Debugging Guide](docs/docs/workflows/python-dependencies.md)**
 
 ---
 
 ### Automatic Dependency Management
 
 Declare packages inline. Pixi auto-installs. No manual pip, no venv setup.
-
-![Python Dependency Resolve](https://github.com/trgiangv/RevitDevTool/wiki/images/RevitDevTool_PythonDependencyResolve.gif)
 
 ```python
 # /// script
@@ -77,7 +73,7 @@ df = pd.DataFrame(data)
 print(df.groupby("Level").agg({"Area": ["sum", "mean"]}))
 ```
 
-**[Python Execution Guide](https://github.com/trgiangv/RevitDevTool/wiki/Execution-Python)**
+**[Python Execution Guide](docs/docs/execution/python/Execution-Python.md)**
 
 ---
 
@@ -85,11 +81,7 @@ print(df.groupby("Level").agg({"Area": ["sum", "mean"]}))
 
 Monitor output with color coding, JSON formatting, and Python stack traces.
 
-![Monitor Logging](https://github.com/trgiangv/RevitDevTool/wiki/images/RevitDevTool_MonitorLogging.gif)
-
-![Stack Trace](https://github.com/trgiangv/RevitDevTool/wiki/images/RevitDevTool_StackTrace.gif)
-
-**[Logging Guide](https://github.com/trgiangv/RevitDevTool/wiki/Logging-Overview)**
+**[Logging Guide](docs/product/logging.md)**
 
 ---
 
@@ -97,15 +89,13 @@ Monitor output with color coding, JSON formatting, and Python stack traces.
 
 Render curves, faces, solids directly in Revit view without creating model elements.
 
-![Geometry Visualization](https://github.com/trgiangv/RevitDevTool/wiki/images/RevitDevTool_TraceGeometry.gif)
-
 ```python
 ref = uidoc.Selection.PickObject(ObjectType.Edge)
 edge = elem.GetGeometryObjectFromReference(ref)
 print(edge)  # Renders in 3D view
 ```
 
-**[Visualization Guide](https://github.com/trgiangv/RevitDevTool/wiki/Visualization-Overview)**
+**[Visualization Guide](docs/product/visualization.md)**
 
 ---
 
@@ -139,7 +129,7 @@ print(f"Found {walls.GetElementCount()} walls")
 3. Click Execute
 4. See output in Trace panel
 
-**[Complete Getting Started Guide](https://github.com/trgiangv/RevitDevTool/wiki/Home#getting-started)**
+**[Complete Getting Started Guide](docs/docs/intro.md)** · **[Documentation site](https://trgiangv.github.io/RevitDevTool/)**
 
 ---
 
@@ -213,7 +203,7 @@ print(f"Found {walls.GetElementCount()} walls")
 | **Testing** | pytest bridge | — |
 | **Best For** | Development, research, data science | Ribbon automation for teams |
 
-**[Detailed Comparison](https://github.com/trgiangv/RevitDevTool/wiki/Execution-VsPyRevit)**
+**[Detailed Comparison](docs/docs/hosts/revit.md)**
 
 ### Python Ecosystem Options
 
@@ -223,7 +213,7 @@ print(f"Found {walls.GetElementCount()} walls")
 | **Dynamo** | CPython 3.9 | — | — | — | Visual programming |
 | **RevitDevTool** | CPython 3.14 | Pixi | VSCode | Full | Development & research |
 
-**[Complete Ecosystem Analysis](https://github.com/trgiangv/RevitDevTool/wiki/Execution-PythonEcosystems)**
+**[Complete Ecosystem Analysis](docs/docs/workflows/python-dependencies.md)**
 
 ---
 
@@ -242,7 +232,7 @@ print(f"Found {walls.GetElementCount()} walls")
 3. Launch Revit or AutoCAD
 4. Find RevitDevTool in the ribbon
 
-**[Installation Guide](https://github.com/trgiangv/RevitDevTool/wiki/Getting-Started-Install)**
+**[Installation Guide](docs/docs/getting-started/installation.md)**
 
 ---
 
@@ -282,7 +272,7 @@ print(f"Found {walls.GetElementCount()} walls")
 </tr>
 </table>
 
-**[All Examples](https://github.com/trgiangv/RevitDevTool/wiki/Examples-Overview)**
+**[All Examples](samples)**
 
 ---
 
@@ -307,7 +297,7 @@ dotnet build RevitDevTool.slnx -c "Debug.Autodesk.2025"
 
 **Available configurations:** `Debug.Autodesk.2022` through `Debug.Autodesk.2027`, `Release.Autodesk.2022` through `Release.Autodesk.2027`.
 
-**[Build Guide](https://github.com/trgiangv/RevitDevTool/wiki/Build-From-Source)**
+**[Build Guide](docs/agents/build-matrix.md)**
 
 ---
 
@@ -318,7 +308,7 @@ Contributions welcome!
 1. **Read architecture docs** — [docs/](docs) for the module you're modifying
 2. **Follow design patterns** — Provider, Strategy, Composite patterns
 3. **Keep host boundaries** — shared platform in `DevTools.*`, host-specific in `RevitDevTool` / `AcadDevTool`
-4. **Update docs** — architecture docs + Wiki if user-facing
+4. **Update docs** — the appropriate repository docs layer and `docs/docs/` when user-facing
 
 **[GitHub Discussions](https://github.com/trgiangv/RevitDevTool/discussions)** for ideas |
 **[GitHub Issues](https://github.com/trgiangv/RevitDevTool/issues)** for bugs
@@ -348,7 +338,7 @@ MIT License — see [LICENSE](LICENSE) for details.
 
 ## 💬 Get Help
 
-- 📖 **Documentation** — [GitHub Wiki](https://github.com/trgiangv/RevitDevTool/wiki)
+- 📖 **Documentation** — [Docusaurus documentation site](https://trgiangv.github.io/RevitDevTool/)
 - 🐛 **Bug Reports** — [GitHub Issues](https://github.com/trgiangv/RevitDevTool/issues)
 - 💡 **Feature Requests** — [GitHub Discussions](https://github.com/trgiangv/RevitDevTool/discussions)
 - ❓ **Questions** — [GitHub Discussions](https://github.com/trgiangv/RevitDevTool/discussions)
