@@ -21,9 +21,10 @@ The MTP exe never runs test bodies locally. Requires
 [RevitDevTool](https://github.com/trgiangv/RevitDevTool) installed and NuGet
 `RevitDevTool.TestAdapter`.
 
-Detect: `PackageReference` `RevitDevTool.TestAdapter` + `global.json` in **that
-project folder** (not the repo root) with
-`"test": { "runner": "Microsoft.Testing.Platform" }`.
+Detect: `PackageReference` `RevitDevTool.TestAdapter` + a `global.json` with
+`"test": { "runner": "Microsoft.Testing.Platform" }` — **repo root** when the
+tree is MTP (or has one VSTest folder that overrides to `"runner": "VSTest"`),
+otherwise next to the MTP test project.
 
 ## Configure
 
@@ -35,6 +36,7 @@ pin `TUnit` `1.66.27`.
 <PropertyGroup>
   <HostName>Revit</HostName>
   <HostVersion>2025</HostVersion>
+  <RuntimeIdentifier>win-x64</RuntimeIdentifier>
   <ForceLaunch>false</ForceLaunch>
   <PerTestTimeout>60</PerTestTimeout>
   <LaunchTimeout>360</LaunchTimeout>
@@ -47,9 +49,10 @@ pin `TUnit` `1.66.27`.
 </ItemGroup>
 ```
 
-Create `global.json` **in the test project folder** (same directory as the
-`.csproj`). Do **not** put it at the repo root — that forces every test
-project in the tree onto MTP.
+`dotnet test` needs `"test": { "runner": "Microsoft.Testing.Platform" }` in
+`global.json`. All-MTP repo, or one VSTest leftover with a nested `"runner":
+"VSTest"`: put MTP on the **root**. Many VSTest/`dotnet test` projects still in
+the tree: scope MTP next to the MTP test project.
 
 ```json
 {
@@ -58,17 +61,26 @@ project in the tree onto MTP.
 }
 ```
 
+`net48` (host 2024 and older) needs
+`<RuntimeIdentifier>win-x64</RuntimeIdentifier>` (Exe + restore, `NETSDK1047`).
+Keep the RID on a multi-year csproj that still builds 2022–2024.
+If the repo has a central `GlobalPackageReference` to `Polyfill`, remove it on
+the test project (`<GlobalPackageReference Remove="Polyfill" />`). NUnit does
+not need it; net48 TUnit gets `[ModuleInitializer]` from the package.
+`NetFxModuleInitializer=false` opts out when that skip misses your type
+(see [project-setup.md](references/project-setup.md)).
+
 Property meanings and conflicting packages:
 [project-setup.md](references/project-setup.md).
 
 ## Run
 
-Always `cd` to the **test project folder** (where `global.json` and the
-`.csproj` live) before `dotnet test`. Do not run from the repo root.
+Run `dotnet test` from a directory covered by the intended `global.json`
+(repo root for MTP). `cd` into a `"runner": "VSTest"` folder before testing
+that project.
 
 ```powershell
-cd path/to/Host.Tests
-dotnet test --project Host.Tests.csproj -c <Config> --filter MethodName
+dotnet test --project path/to/Host.Tests/Host.Tests.csproj -c <Config> --filter MethodName
 dotnet test --project Host.Tests.csproj -c <Config> -- --filter MethodName
 dotnet test --project Host.Tests.csproj -c <Config> --list-tests
 ```
@@ -94,7 +106,7 @@ Bodies run on the Autodesk API context. Use the host context type for
 |---------|-----|
 | `--filter "Name=…"` / `FullyQualifiedName~` | `--filter MethodName` or a substring |
 | `[Explicit]` never runs | Select it with `--filter MethodName` |
-| Ran from repo root / another project | `cd` to the test project folder that has `global.json` |
+| Ran `dotnet test` on a VSTest project from an MTP `global.json` cwd | `cd` into the folder whose `global.json` has `"runner": "VSTest"` |
 | Timeout | Raise `PerTestTimeout` (per-test budget; 60s is smoke-only) |
 
 ## Package

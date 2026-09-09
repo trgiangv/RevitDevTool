@@ -1,49 +1,113 @@
 # MTP Host Testing (Agent Digest)
 
-Supported product path via NuGet `RevitDevTool.TestAdapter` (MTP-only on
-`develop`). Product: `docs/product/host-testing.md`. TUnit provider:
-`docs/product/tunit-host-testing.md`. Structure / release split:
-`docs/architecture/Testing/README.md`. Run: `.agents/skills/revit-test/SKILL.md`.
+`RevitDevTool.TestAdapter` (NuGet) is the only supported test integration. NUnit is
+the default engine, TUnit is opt-in. Product: `docs/product/host-testing.md` ·
+`docs/product/tunit-host-testing.md`. Structure: `docs/architecture/Testing/README.md`.
+Run/author tests: `.agents/skills/revit-test/SKILL.md`.
+
+## Main flow
+
+```text
+test csproj (HostName, HostVersion, NUnit|TUnit)
+  -> package targets: copy DevTools.{NUnit|TUnit}.MTP.dll + Abstractions beside the exe,
+     write discovery-refs.txt and [AssemblyName].testconfig.json
+  -> discovery: local ExploreTests / TUnit catalog in the testhost, no host process
+  -> run: TestRunner.exe locates or launches the host, then testing/hello|run|cancel
+```
+
+Adapter reads `devtools.frameworkId`, `mtpAssembly`, `mtpEntry` from `testconfig.json`
+(`HostMtpRegistration`). Missing keys set `LastError` and surface as an error node —
+they must never throw from the hook static constructor. Override with `<MTPAssembly>` /
+`<MTPEntry>`. A hand-written `testconfig.json` `devtools` section without all three
+keys is a build Error.
 
 ## Verify
 
 ```powershell
+# 1. compile + in-repo tests
 dotnet build source/DevTools.NUnit.Host/DevTools.NUnit.Host.csproj -c Debug
 dotnet run --project tests/DevTools.TestAdapter.Tests/DevTools.TestAdapter.Tests.csproj
 dotnet run --project tests/DevTools.NUnit.MTP.Tests/DevTools.NUnit.MTP.Tests.csproj
 dotnet run --project tests/DevTools.TestRunner.Tests/DevTools.TestRunner.Tests.csproj
-# Live MTP (host running; scoped global.json):
-cd samples/DevTools.NUnit.SampleTests
-dotnet test --project DevTools.NUnit.SampleTests.csproj -c Debug.Autodesk.2026 --filter Arithmetic_runs_inside_host
-# TUnit sample (same host pipe):
-cd samples/DevTools.TUnit.SampleTests
-dotnet test --project DevTools.TUnit.SampleTests.csproj -c Debug.Autodesk.2026 --filter Arithmetic_runs_inside_host
+
+# 2. package surface (build + host-free discovery), net48 / net8 / net10
+scripts/pack-test-adapter.ps1 -RefreshLocalCache
+scripts/test-adapter-matrix.ps1
+
+# 3. live (host running; root global.json is MTP)
+dotnet test --project samples/DevTools.NUnit.SampleTests/DevTools.NUnit.SampleTests.csproj -c Debug.Autodesk.2026 --filter Arithmetic_runs_inside_host
 ```
 
-Host DLL changes: `scripts/build-host.ps1 -Year <year>`. Runner: `dotnet publish source/DevTools.TestRunner -c Release`. Adapter nupkg: `scripts/pack-test-adapter.ps1` (not `scripts/pack.ps1`).
+Host DLL changes: `scripts/build-host.ps1 -Year <year>`. Runner:
+`dotnet publish source/DevTools.TestRunner -c Release`. Adapter nupkg:
+`scripts/pack-test-adapter.ps1` (not `scripts/pack.ps1`).
 
-## Pattern
+## Rules
 
-- Pattern: `HostName`, `HostVersion`, `ForceLaunch`, `PerTestTimeout`, `LaunchTimeout` + NUnit (default) or TUnit (`TestingFramework=tunit`). MTP consumers add `RevitDevTool.TestAdapter`; the package copies `DevTools.NUnit.MTP.dll` or `DevTools.TUnit.MTP.dll` beside the test exe. `UseRevit`/`UseAutoCad` are this repo's sample compile flags, not package settings.
-- `--filter` is the adapter method-name option (NUnit `<name re="1">` regex). `--filter-uid` is the json TestNode uid (ordinary `ITest.FullName`; `TestName`/`SetName` is `Class.Method("DisplayName")`). `--list-tests` text prints DisplayName; json uid is that TestNode uid. Do not paste a text list line as `--filter-uid`. TestRunner does not discover tests.
-- MTP samples: `dotnet test` from the sample directory (scoped `global.json`). In-repo `tests/`: `dotnet run --project tests/<proj>/<proj>.csproj` (root `global.json` is not MTP `dotnet test`). Never VSTest `--filter FullyQualifiedName~`.
+- Consumer properties: `HostName`, `HostVersion`, `ForceLaunch`, `PerTestTimeout`,
+  `LaunchTimeout`, `TestingFramework` (`nunit` default, `tunit` opt-in). `UseRevit` /
+  `UseAutoCad` are this repo's sample compile flags, not package settings.
+- `net48` consumers add `<RuntimeIdentifier>win-x64</RuntimeIdentifier>` (`NETSDK1047`,
+  restore does not read a RID from `build/*.props`). That is the only consumer-side
+  setting the package cannot supply.
+- `net48` + TUnit needs no `Polyfill`. The package defaults `EnableTUnitPolyfills=false`
+  and compiles `build/netfx/ModuleInitializerAttribute.cs` into the project, skipping it
+  when a `Polyfill` reference or another `ModuleInitializerAttribute.cs` is already
+  there. Opt out with `NetFxModuleInitializer=false` only when that skip misses the
+  existing type (see `docs/product/tunit-host-testing.md`).
+- The packaged `build/*.props|targets` must not read `$(Configuration)`, repo paths, or
+  `ProjectReference`. Dev-loop MSBuild goes in
+  `source/DevTools.TestAdapter/build/RevitDevTool.TestAdapter.Local.targets` (not packed).
+- In-repo samples use `ProjectReference`, where the adapter's private
+  `Microsoft.Testing.Platform` does not flow: the NUnit samples declare that
+  `PackageReference` themselves (`CS0234` on the generated entry point otherwise).
+- `--filter` is the method-name option (NUnit `<name re="1">` regex). `--filter-uid` is
+  the TestNode uid (`ITest.FullName`; `TestName`/`SetName` is `Class.Method("DisplayName")`).
+  `--list-tests` text prints DisplayName — never paste a text line as `--filter-uid`.
+  TestRunner does not discover tests.
+- MTP samples: `dotnet test --project samples/DevTools.*.SampleTests/…` from
+  the repo root (root `global.json` is MTP). `samples/ricaun.NUnit.SampleTests`
+  overrides to VSTest — `cd` into that folder. In-repo `tests/`:
+  `dotnet run --project tests/<proj>/<proj>.csproj` still works; `dotnet test
+  --project tests/<proj>/<proj>.csproj` from root is now MTP too. Never VSTest
+  `--filter FullyQualifiedName~` on MTP projects.
+- Use an Autodesk configuration (`Debug.Autodesk.2025`, …). Plain `Debug` does not set
+  `RevitVersion` / `TargetFramework`, so the sample does not build and Test Explorer
+  falls back to a source tree that is not MTP discovery.
+- Autodesk configs flatten host obj/bin; MTP keeps `AppendTargetFrameworkToOutputPath=true`
+  so its three TFMs never share a folder (CS2012 / MSB3713). Do not collapse
+  `TargetFrameworks` on packable projects.
 
 ## Traps
 
-- Do not use `NUnit.Engine` in the host.
-- Do not add `NUnit3TestAdapter` to a host-test project.
-- `samples/ricaun.NUnit.SampleTests` is third-party VSTest (`ricaun.RevitTest.TestAdapter`) against the same `HostSmokeTests`. Not the product path. Do not treat its explorer tree as a DevTools discovery bug, and do not add `NUnit3TestAdapter` or `executor://DevTools.NUnit.V1/` ignore-list workarounds. Sample `Intentional_failure_for_demo` is an expected `Assert.Fail`.
-- Test Explorer refresh / `dotnet test --list-tests` must not start a host. Discovery is local NUnit `ExploreTests` and must not read `testconfig.json` host options. `ForceLaunch=false` still starts a matching-version host on **run** if none is open. The adapter reads `devtools.frameworkId`, `mtpAssembly`, and `mtpEntry` (`HostMtpRegistration` in TestAdapter). Missing keys set `LastError` and surface as a discovery/run error node — they must not `TypeInitializationException`. Override with `<MTPAssembly>` / `<MTPEntry>`. A user-authored `testconfig.json` `devtools` section without those three keys is a **build Error**. TUnit: `docs/product/tunit-host-testing.md`.
-- Test Explorer launching `DevTools.TestAdapter.dll` (`hostpolicy.dll` / missing `runtimeconfig.json`): VS treated the adapter library as an MTP testhost. `Microsoft.Testing.Platform` defaults `IsTestingPlatformApplication=true` and adds `ProjectCapability TestingPlatformServer` even when `IsTestProject=false`. The adapter must set `IsTestingPlatformApplication=false`. Discover `DevTools.TUnit.SampleTests.exe` / `DevTools.NUnit.SampleTests.exe`, not `source/DevTools.TestAdapter/bin/...`. `ricaun.RevitTest.TestAdapter` scanning `Abstractions` / `Ipc` / `Transport` net48 DLLs is the VSTest sample in `Sample.slnx`, not the MTP product path.
-- Test Explorer **"Test discovery aborted: 0 Tests found"**: testhost died during hook static init or Discover. Usual cause is a stale `DevTools.NUnit.MTP.dll` next to the test exe after `IHostTestDiscoverer` changed (`TypeLoadException: Method 'ToHostSelection' … does not have an implementation`). In-repo copy is `bin\Debug|Release\$(TargetFramework)\`, not `bin\Debug.Autodesk.YYYY\`. Building only `Debug.Autodesk.2024` used to leave 2022/2023/2025 testhosts with a missing or old sibling DLL. Rebuild the test project (MTP builds as Debug/Release + TFM via `SetConfiguration`). `dotnet test --list-tests` from the test project folder (scoped `global.json`) lists leaves when the sibling DLL matches. Hook register failures no longer `TypeInitializationException`; they surface as a discovery error node. Visual Studio `Sample.slnx` must **build** the MTP sample test projects (not `Build Project=false`); solution config must be an Autodesk year, not plain `Debug`.
-- Autodesk configs flatten host obj/bin. MTP overrides `AppendTargetFrameworkToOutputPath=true` so its three TFMs never share a folder (CS2012 / MSB3713). Do not collapse `TargetFrameworks` on packable projects.
-- Adapter pack constraints (MTP sibling, restore/TFM): `docs/architecture/Testing/README.md`.
-- net48 Test Explorer "could not be discovered": `CreateTestSession` failed to load `Unsafe` 6.0. Testhost BCL comes from the adapter's `Microsoft.Testing.Platform.MSBuild` graph plus `AutoGenerateBindingRedirects`; the adapter ILRepacks its own copy and does not ship loose 3rd-party DLLs.
-- MTP samples are `OutputType=Exe`. Generation snapshot must treat `.exe` as a managed test assembly and skip `Log/` / `TestResults/` / `*.diag`.
-- Live `testing/run` is marshaled through `IHostContextExecutor` with NUnit `RunOnMainThread`. WPF `Dispatcher.Invoke` is not a Revit API context. Runtime unit tests keep the worker dispatcher so cancel still works.
-- Stream-load leaves `Assembly.Location` empty. Tests that locate assets must use NUnit `TestContext.WorkDirectory` (the generation shadow, which copies output including Content).
-- Do not add a Host `TraceListener` or `ILogger` dump of `CaseResult.Output` to “help” the pane. Trace/Debug already fan out; Console is write-through at case finish ([0017](../decisions/0017-nunit-host-test-output-routing.md)).
-- `TestingRunTraceScope` (Abstractions) is IDE stdout capture only. net48 has no ALC; ALC also does not isolate `Trace.Listeners`. TUnit uses the same helper around `TUnit.Engine`.
-- TUnit in-host `MissingMethodException` on `ClientInfoService`: MTP 2.4.0 requires `IClientInfo` + `IClientCapabilities`. Runtime registers `TUnitEngineClientInfo` (not the 2-arg internal ctor). Redeploy the host (Runtime ships in the installer, not the TestAdapter nupkg).
-- Test Explorer **"Test discovery aborted: 0 Tests found"** after changing TUnit/NUnit catalog: testhost sibling `DevTools.*.MTP.dll` was timestamp-stale. Sibling copy must run with `SkipUnchangedFiles=false` and must not take a leftover nupkg `build/runtime` copy over the in-repo MTP bin. Rebuild the test project (not only the host year).
-- Visual Studio **Debug** in Test Explorer attaches to the MTP testhost, then Runner `--debug-parent-pid` EnvDTE-attaches that VS instance to the Autodesk host ([0025](../decisions/0025-runner-owned-visual-studio-host-attach.md)). Stop Debugging while the host is still booting cancels that wait and kills only the process this run spawned — not a reused host. Cancel at a host breakpoint: Continue (or detach) before the next run; the idle thread is still in that test. Rider / C# Dev Kit: attach host PID then **Run**. VS Code/forks + PyCharm Python: `debugpy` `:5678` (`.vscode/launch.json`, `.run/Attach.run.xml`). Do not put `Microsoft.VisualStudio.Interop` on `RevitDevTool.NUnit`. Runner host year is `--host-version`, not `--version`.
+- Discovery must stay host-free: Test Explorer refresh and `--list-tests` must not start a
+  host, and must not read `testconfig.json` host options. `ForceLaunch=false` still starts
+  a matching-version host on **run** when none is open.
+- "Test discovery aborted: 0 Tests found" = the testhost died in static init or Discover.
+  Usual cause is a timestamp-stale `DevTools.*.MTP.dll` beside the test exe
+  (`TypeLoadException` on an `IHostTestDiscoverer` member). Rebuild the **test project**,
+  not only the host year; the sibling copy runs with `SkipUnchangedFiles=false`.
+- Do not use `NUnit.Engine` in the host, and never add `NUnit3TestAdapter` to a host-test
+  project. `samples/ricaun.NUnit.SampleTests` is the third-party VSTest comparison sample
+  over the same `HostSmokeTests`; its explorer tree is not a DevTools discovery bug.
+  `Intentional_failure_for_demo` is an expected `Assert.Fail`.
+- net48 "could not be discovered" = testhost failed to bind `Unsafe` 6.0. That BCL comes
+  from the adapter's `Microsoft.Testing.Platform.MSBuild` graph plus
+  `AutoGenerateBindingRedirects`; the nupkg ships no loose 3rd-party DLLs.
+- net48 has no load context: if the host already loaded an assembly with the same identity,
+  in-host tests bind that copy, not the generation snapshot. Restart the host after
+  deploying, or use net8+.
+- Stream-loaded assemblies have an empty `Assembly.Location`. Tests that locate assets use
+  NUnit `TestContext.WorkDirectory` (the generation shadow).
+- Live `testing/run` is marshaled through `IHostContextExecutor` (NUnit `RunOnMainThread`).
+  WPF `Dispatcher.Invoke` is not a Revit API context.
+- Do not add a Host `TraceListener` or `ILogger` dump of `CaseResult.Output`; Trace/Debug
+  already fan out and Console is write-through at case finish
+  ([0017](../decisions/0017-nunit-host-test-output-routing.md)).
+- TUnit in-host `MissingMethodException` on `ClientInfoService`: MTP 2.4.0 needs
+  `IClientInfo` + `IClientCapabilities`; the Runtime registers `TUnitEngineClientInfo` and
+  ships in the installer, so redeploy the host (not the nupkg).
+- Visual Studio **Debug** attaches the testhost, then the Runner EnvDTE-attaches that VS
+  instance to the host ([0025](../decisions/0025-runner-owned-visual-studio-host-attach.md)).
+  Stop Debugging during launch kills only a host this run spawned. Rider / C# Dev Kit:
+  attach the host PID, then **Run**. Runner host year is `--host-version`.

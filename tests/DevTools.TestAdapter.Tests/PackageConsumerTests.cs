@@ -170,6 +170,155 @@ public sealed class PackageConsumerTests
         }
     }
 
+    /// <summary>
+    /// Building a testhost is not proof it runs: 0.0.6 shipped a consumer that could not
+    /// load Microsoft.Testing.Platform (nuspec dropped runtime assets) or
+    /// DevTools.Testing.Abstractions (resolver read discovery refs before hooking), and a
+    /// TUnit project that got the NUnit plugin because the map lived in the .props.
+    /// </summary>
+    [Fact]
+    public void Packed_package_discovers_tests_for_both_nunit_and_tunit_consumers()
+    {
+        var root = FindRepositoryRoot();
+        var work = Path.Combine(Path.GetTempPath(), "RevitDevTool.TestAdapter.Discovery", Guid.NewGuid().ToString("N"));
+        var packages = Path.Combine(work, "packages");
+        var globalPackages = Path.Combine(work, "global-packages");
+        Directory.CreateDirectory(packages);
+
+        try
+        {
+            Run("dotnet", $"pack \"{Path.Combine(root, "source", "DevTools.TestAdapter", "DevTools.TestAdapter.csproj")}\" -c Release -o \"{packages}\"");
+            var nupkg = Directory.GetFiles(packages, "RevitDevTool.TestAdapter.*.nupkg", SearchOption.TopDirectoryOnly).Single();
+            var packageVersion = Path.GetFileNameWithoutExtension(nupkg)["RevitDevTool.TestAdapter.".Length..];
+
+            File.WriteAllText(Path.Combine(work, "NuGet.Config"), $"""
+                <?xml version="1.0" encoding="utf-8"?>
+                <configuration>
+                  <packageSources>
+                    <clear />
+                    <add key="local" value="{packages.Replace("\\", "/")}" />
+                    <add key="nuget.org" value="https://api.nuget.org/v3/index.json" />
+                  </packageSources>
+                  <packageSourceMapping>
+                    <packageSource key="local"><package pattern="RevitDevTool.TestAdapter" /></packageSource>
+                    <packageSource key="nuget.org"><package pattern="*" /></packageSource>
+                  </packageSourceMapping>
+                </configuration>
+                """);
+
+            // Every shipped runtime folder: net48, net8, net10 — both engines.
+            foreach (var tfm in new[] { "net48", "net8.0-windows", "net10.0-windows" })
+            {
+                var suffix = tfm.Replace('.', '_');
+
+                AssertDiscovers(
+                    work,
+                    globalPackages,
+                    $"NUnitDiscovery{suffix}",
+                    packageVersion,
+                    tfm,
+                    engine: null,
+                    framework: """<PackageReference Include="NUnit" Version="4.6.1" />""",
+                    test: """
+                        using NUnit.Framework;
+
+                        public class DiscoveredTests
+                        {
+                            [Test]
+                            public void Runs_in_host() { }
+                        }
+                        """,
+                    expectedMtpAssembly: "DevTools.NUnit.MTP.dll");
+
+                // net48 + TUnit needs [ModuleInitializer], which the package supplies: no
+                // Polyfill here proves the consumer declares nothing beyond TUnit itself.
+                AssertDiscovers(
+                    work,
+                    globalPackages,
+                    $"TUnitDiscovery{suffix}",
+                    packageVersion,
+                    tfm,
+                    engine: "tunit",
+                    framework: """<PackageReference Include="TUnit" Version="1.66.27" />""",
+                    test: """
+                        public class DiscoveredTests
+                        {
+                            [TUnit.Core.Test]
+                            public void Runs_in_host() { }
+                        }
+                        """,
+                    expectedMtpAssembly: "DevTools.TUnit.MTP.dll");
+            }
+        }
+        finally
+        {
+            TryDeleteDirectory(work);
+        }
+    }
+
+    private static void AssertDiscovers(
+        string work,
+        string globalPackages,
+        string name,
+        string packageVersion,
+        string tfm,
+        string? engine,
+        string framework,
+        string test,
+        string expectedMtpAssembly)
+    {
+        var netFx = tfm.StartsWith("net4", StringComparison.Ordinal);
+        var consumer = Path.Combine(work, name);
+        Directory.CreateDirectory(consumer);
+        File.WriteAllText(Path.Combine(consumer, $"{name}.csproj"), $"""
+            <Project Sdk="Microsoft.NET.Sdk">
+              <PropertyGroup>
+                <TargetFramework>{tfm}</TargetFramework>
+                <LangVersion>latest</LangVersion>
+                <ImplicitUsings>enable</ImplicitUsings>
+                <HostName>Revit</HostName>
+                <HostVersion>2025</HostVersion>
+                {(netFx ? "<RuntimeIdentifier>win-x64</RuntimeIdentifier>" : "")}
+                {(engine is null ? "" : $"<TestingFramework>{engine}</TestingFramework>")}
+              </PropertyGroup>
+              <ItemGroup>
+                <PackageReference Include="RevitDevTool.TestAdapter" Version="{packageVersion}" />
+                {framework}
+              </ItemGroup>
+            </Project>
+            """);
+        File.WriteAllText(Path.Combine(consumer, "DiscoveredTests.cs"), test);
+        File.WriteAllText(Path.Combine(consumer, "global.json"), """
+            {
+              "sdk": { "rollForward": "latestMinor" },
+              "test": { "runner": "Microsoft.Testing.Platform" }
+            }
+            """);
+
+        Run("dotnet", $"restore {name}.csproj --configfile ../NuGet.Config", consumer, globalPackages);
+        Run("dotnet", $"build {name}.csproj -c Release --no-restore", consumer, globalPackages);
+
+        // net48 adds the RID to the output path; take the folder that has the testhost.
+        var output = Directory
+            .GetFiles(Path.Combine(consumer, "bin", "Release"), $"{name}.exe", SearchOption.AllDirectories)
+            .Select(Path.GetDirectoryName)
+            .Single()!;
+        Assert.True(
+            File.Exists(Path.Combine(output, expectedMtpAssembly)),
+            $"{name} should copy {expectedMtpAssembly} ({tfm}).");
+        Assert.Contains(
+            $"\"mtpAssembly\": \"{expectedMtpAssembly}\"",
+            File.ReadAllText(Path.Combine(output, $"{name}.testconfig.json")),
+            StringComparison.Ordinal);
+
+        // Discovery is local, so it must succeed without a CAD host.
+        var discovery = netFx
+            ? RunProcess(Path.Combine(output, $"{name}.exe"), "--list-tests", output, globalPackages)
+            : RunProcess("dotnet", $"{name}.dll --list-tests", output, globalPackages);
+        Assert.True(discovery.ExitCode == 0, $"{name} discovery failed ({tfm}):{Environment.NewLine}{discovery.Text}");
+        Assert.Contains("Runs_in_host", discovery.Text, StringComparison.Ordinal);
+    }
+
     [Fact]
     public void Framework_id_only_testconfig_does_not_throw_from_hook_static_ctor()
     {
@@ -270,6 +419,13 @@ public sealed class PackageConsumerTests
             Assert.DoesNotContain("Build,Analyzers", dependency, StringComparison.Ordinal);
             Assert.Contains("2.4.0", dependency, StringComparison.Ordinal);
         }
+
+        Assert.Contains("build/RevitDevTool.TestAdapter.props", entries, StringComparer.OrdinalIgnoreCase);
+        Assert.Contains("build/RevitDevTool.TestAdapter.targets", entries, StringComparer.OrdinalIgnoreCase);
+        Assert.Contains("build/netfx/ModuleInitializerAttribute.cs", entries, StringComparer.OrdinalIgnoreCase);
+        // The dev-loop targets stay in the checkout: a consumer build must not see repo paths
+        // or this repo's Autodesk configuration names.
+        Assert.DoesNotContain("build/RevitDevTool.TestAdapter.Local.targets", entries, StringComparer.OrdinalIgnoreCase);
 
         Assert.All(
             entries.Where(entry => entry.StartsWith("lib/", StringComparison.OrdinalIgnoreCase)),

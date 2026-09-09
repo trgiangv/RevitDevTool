@@ -11,12 +11,14 @@ public sealed class AdapterArchitectureTests
         var props = File.ReadAllText(Path.Combine(adapterDir, "build", "RevitDevTool.TestAdapter.props"));
         var targets = File.ReadAllText(Path.Combine(adapterDir, "build", "RevitDevTool.TestAdapter.targets"));
 
-        Assert.Contains("'$(TestingFramework)' == 'tunit'", props, StringComparison.Ordinal);
+        Assert.Contains("'$(TestingFramework)' == 'tunit'", targets, StringComparison.Ordinal);
         Assert.Contains("DevTools.TestAdapter.TestingPlatformBuilderHook", props, StringComparison.Ordinal);
         Assert.DoesNotContain("PackageReference Include=\"Microsoft.Testing.Platform.MSBuild\"", props, StringComparison.Ordinal);
         Assert.DoesNotContain("MtpMsBuildPackageVersion", props, StringComparison.Ordinal);
         Assert.DoesNotContain("supports only Revit 2023", props, StringComparison.Ordinal);
         Assert.DoesNotContain("'$(HostVersion)' != '2023'", props, StringComparison.Ordinal);
+        Assert.DoesNotContain("<MTPAssembly", props, StringComparison.Ordinal);
+        Assert.DoesNotContain("<MTPEntry", props, StringComparison.Ordinal);
         Assert.Contains("DevTools.TUnit.MTP.dll", targets, StringComparison.Ordinal);
         Assert.Contains("TestingPlatformBuilderHook Remove=\"6ADF853A-6945-4A06-9A4B-D99BC1DC1094\"", targets, StringComparison.Ordinal);
         Assert.False(File.Exists(Path.Combine(adapterDir, "TUnitTestingPlatformBuilderHook.cs")));
@@ -146,6 +148,30 @@ public sealed class AdapterArchitectureTests
 
     private static readonly string RepositoryRoot = Path.GetFullPath(
         Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", ".."));
+
+    [Fact]
+    public void Root_global_json_selects_mtp_and_ricaun_overrides_to_vstest()
+    {
+        var root = File.ReadAllText(Path.Combine(RepositoryRoot, "global.json"));
+        Assert.Contains("\"runner\": \"Microsoft.Testing.Platform\"", root, StringComparison.Ordinal);
+
+        var ricaun = File.ReadAllText(Path.Combine(
+            RepositoryRoot, "samples", "ricaun.NUnit.SampleTests", "global.json"));
+        Assert.Contains("\"runner\": \"VSTest\"", ricaun, StringComparison.Ordinal);
+
+        foreach (var sample in new[]
+                 {
+                     "DevTools.NUnit.SampleTests",
+                     "DevTools.TUnit.SampleTests",
+                     "DevTools.NUnit.Civil3D.SampleTests",
+                     "DevTools.TUnit.Civil3D.SampleTests",
+                 })
+        {
+            Assert.False(
+                File.Exists(Path.Combine(RepositoryRoot, "samples", sample, "global.json")),
+                $"{sample} inherits the root MTP runner; do not keep a scoped global.json.");
+        }
+    }
 
     [Fact]
     public void Mtp_DoesNotLocateOrLaunchAutodeskHosts()
@@ -378,6 +404,86 @@ public sealed class AdapterArchitectureTests
     }
 
     [Fact]
+    public void Packed_build_files_do_not_depend_on_the_consumer_configuration()
+    {
+        var adapterDir = Path.Combine(RepositoryRoot, "source", "DevTools.TestAdapter");
+        var buildDir = Path.Combine(adapterDir, "build");
+        var packedTargets = File.ReadAllText(Path.Combine(buildDir, "RevitDevTool.TestAdapter.targets"));
+        var packed = new[]
+        {
+            File.ReadAllText(Path.Combine(buildDir, "RevitDevTool.TestAdapter.props")),
+            packedTargets,
+        };
+
+        Assert.True(
+            File.Exists(Path.Combine(buildDir, "RevitDevTool.TestAdapter.Local.targets")),
+            "Local dev-loop MSBuild logic belongs in RevitDevTool.TestAdapter.Local.targets, which is not packed.");
+        Assert.DoesNotContain(
+            "Local.targets\" Pack=\"true\"",
+            File.ReadAllText(Path.Combine(adapterDir, "DevTools.TestAdapter.csproj")),
+            StringComparison.Ordinal);
+
+        foreach (var file in packed)
+        {
+            // Configuration names, repo layout and RID are consumer decisions.
+            Assert.DoesNotContain("$(Configuration", file, StringComparison.Ordinal);
+            Assert.DoesNotContain("RuntimeIdentifier", file, StringComparison.Ordinal);
+            Assert.DoesNotContain("$(RevitVersion)", file, StringComparison.Ordinal);
+            Assert.DoesNotContain("$(AutoCadVersion)", file, StringComparison.Ordinal);
+            Assert.DoesNotContain("UseRevit", file, StringComparison.Ordinal);
+            Assert.DoesNotContain("<ProjectReference", file, StringComparison.Ordinal);
+            Assert.DoesNotContain("DevTools.TestAdapter.csproj", file, StringComparison.Ordinal);
+            Assert.DoesNotContain(@"..\..\", file, StringComparison.Ordinal);
+        }
+
+        Assert.Contains("DevToolsTestAdapterLocal", packedTargets, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Adapter_supplies_the_netfx_module_initializer_tunit_needs()
+    {
+        var adapterDir = Path.Combine(RepositoryRoot, "source", "DevTools.TestAdapter");
+        var buildDir = Path.Combine(adapterDir, "build");
+        var props = File.ReadAllText(Path.Combine(buildDir, "RevitDevTool.TestAdapter.props"));
+        var targets = File.ReadAllText(Path.Combine(buildDir, "RevitDevTool.TestAdapter.targets"));
+        var csproj = File.ReadAllText(Path.Combine(adapterDir, "DevTools.TestAdapter.csproj"));
+        var shimPath = Path.Combine(buildDir, "netfx", "ModuleInitializerAttribute.cs");
+
+        // TUnit injects Polyfill from its own .targets, which restore never reads, so the
+        // consumer is left with either a missing attribute or a duplicate PackageReference.
+        Assert.Contains(
+            "<EnableTUnitPolyfills Condition=\"'$(EnableTUnitPolyfills)' == ''\">false</EnableTUnitPolyfills>",
+            props,
+            StringComparison.Ordinal);
+        Assert.True(File.Exists(shimPath), "The package must ship build/netfx/ModuleInitializerAttribute.cs.");
+
+        var shim = File.ReadAllText(shimPath);
+        Assert.Contains("namespace System.Runtime.CompilerServices", shim, StringComparison.Ordinal);
+        Assert.Contains("class ModuleInitializerAttribute", shim, StringComparison.Ordinal);
+        Assert.Contains("#if NETFRAMEWORK", shim, StringComparison.Ordinal);
+
+        // Only net4x TUnit, and never when the project already declares the type.
+        Assert.Contains("Name=\"NetFxModuleInitializer\"", targets, StringComparison.Ordinal);
+        Assert.Contains(
+            "'$(TestingFramework)' == 'tunit' And $(TargetFramework.StartsWith('net4'))",
+            targets,
+            StringComparison.Ordinal);
+        Assert.Contains("'$(NetFxModuleInitializer)' != 'false'", targets, StringComparison.Ordinal);
+        Assert.Contains(
+            "Include=\"@(GlobalPackageReference)\" Condition=\"'%(Identity)' == 'Polyfill'\"",
+            targets,
+            StringComparison.Ordinal);
+        Assert.Contains("'@(_DevToolsPolyfill)' == ''", targets, StringComparison.Ordinal);
+
+        // The shim is consumer source, never compiled into the adapter itself.
+        Assert.Contains("<Compile Remove=\"build\\**\\*.cs\"/>", csproj, StringComparison.Ordinal);
+        Assert.Contains(
+            "<None Include=\"build\\netfx\\ModuleInitializerAttribute.cs\" Pack=\"true\" PackagePath=\"build\\netfx\\\"/>",
+            csproj,
+            StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void Adapter_writes_mtp_testconfig_devtools_section_and_skips_polyfill()
     {
         var mtpDir = Path.Combine(RepositoryRoot, "source", "DevTools.TestAdapter");
@@ -386,9 +492,11 @@ public sealed class AdapterArchitectureTests
         var csproj = File.ReadAllText(Path.Combine(mtpDir, "DevTools.TestAdapter.csproj"));
         var loader = File.ReadAllText(Path.Combine(mtpDir, "HostOptionsLoader.cs"));
 
+        var localTargets = File.ReadAllText(Path.Combine(mtpDir, "build", "RevitDevTool.TestAdapter.Local.targets"));
+
         Assert.Contains("WriteDiscoveryRefs", targets, StringComparison.Ordinal);
         Assert.Contains("CopyMTPSibling", targets, StringComparison.Ordinal);
-        Assert.Contains("_StagePackageRuntime", targets, StringComparison.Ordinal);
+        Assert.Contains("_StagePackageRuntime", localTargets, StringComparison.Ordinal);
         Assert.Contains("<IsTestProject>false</IsTestProject>", csproj, StringComparison.Ordinal);
         Assert.Contains("<IsTestingPlatformApplication>false</IsTestingPlatformApplication>", csproj, StringComparison.Ordinal);
         Assert.Contains("PackageReference Include=\"Microsoft.Testing.Platform.MSBuild\"", csproj, StringComparison.Ordinal);
@@ -402,7 +510,10 @@ public sealed class AdapterArchitectureTests
         var mtpMsBuildItem = csproj[mtpMsBuildItemStart..mtpMsBuildItemEnd];
         Assert.DoesNotContain("<PrivateAssets>all</PrivateAssets>", mtpMsBuildItem, StringComparison.Ordinal);
         Assert.Contains("<PrivateAssets>none</PrivateAssets>", mtpMsBuildItem, StringComparison.Ordinal);
-        Assert.Contains("<ExcludeAssets>runtime</ExcludeAssets>", mtpMsBuildItem, StringComparison.Ordinal);
+        // Runtime assets must flow: an NUnit-only consumer has no other Microsoft.Testing.Platform.
+        Assert.DoesNotContain("<ExcludeAssets>", mtpMsBuildItem, StringComparison.Ordinal);
+        Assert.Contains("<RepackBinariesExcludes", csproj, StringComparison.Ordinal);
+        Assert.Contains("Microsoft.Testing.Platform.dll", csproj, StringComparison.Ordinal);
         Assert.Contains("<PrivateAssets>all</PrivateAssets>", csproj, StringComparison.Ordinal);
         Assert.Contains("DisableTestingPlatformServerCapability", csproj, StringComparison.Ordinal);
         Assert.DoesNotContain("testhost-bcl", csproj, StringComparison.Ordinal);
@@ -435,7 +546,7 @@ public sealed class AdapterArchitectureTests
         Assert.DoesNotContain("PackRuntimeClosure", csproj, StringComparison.Ordinal);
         Assert.DoesNotContain("StageNet48Abstractions", csproj, StringComparison.Ordinal);
         Assert.DoesNotContain("$(TargetDir)*.dll", csproj, StringComparison.Ordinal);
-        Assert.Contains("ReferenceOutputAssembly>false", targets, StringComparison.Ordinal);
+        Assert.Contains("ReferenceOutputAssembly>false", localTargets, StringComparison.Ordinal);
         Assert.Contains("discovery-refs.txt", targets, StringComparison.Ordinal);
         Assert.Contains("%(ReferencePath.NuGetPackageId)", targets, StringComparison.Ordinal);
         Assert.Contains("%(ReferencePath.CopyLocal)", targets, StringComparison.Ordinal);
@@ -486,8 +597,6 @@ public sealed class AdapterArchitectureTests
         Assert.Contains($"&quot;{HostTestConfig.Keys.FrameworkId}&quot;", targets, StringComparison.Ordinal);
         Assert.Contains($"&quot;{HostTestConfig.Keys.MTPAssembly}&quot;", targets, StringComparison.Ordinal);
         Assert.Contains($"&quot;{HostTestConfig.Keys.MTPEntry}&quot;", targets, StringComparison.Ordinal);
-        Assert.Contains("MTPAssembly", props, StringComparison.Ordinal);
-        Assert.Contains("MTPEntry", props, StringComparison.Ordinal);
         Assert.DoesNotContain("DevToolsMTPAssembly", props, StringComparison.Ordinal);
         Assert.DoesNotContain("DevToolsMTPEntry", props, StringComparison.Ordinal);
         Assert.DoesNotContain("DevToolsMTPCopy", props, StringComparison.Ordinal);

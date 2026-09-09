@@ -5,17 +5,20 @@
     <EnableMicrosoftTestingPlatform Condition="'$(EnableMicrosoftTestingPlatform)' == ''">true</EnableMicrosoftTestingPlatform>
     <TestingPlatformDotnetTestSupport Condition="'$(TestingPlatformDotnetTestSupport)' == ''">true</TestingPlatformDotnetTestSupport>
     <GenerateTestingPlatformEntryPoint Condition="'$(GenerateTestingPlatformEntryPoint)' == ''">true</GenerateTestingPlatformEntryPoint>
+    <!-- A test project is an MTP testhost, so these two are package decisions, not opinions. -->
     <OutputType>Exe</OutputType>
     <EnableDynamicLoading>false</EnableDynamicLoading>
     <ForceLaunch Condition="'$(ForceLaunch)' == ''">false</ForceLaunch>
     <PerTestTimeout Condition="'$(PerTestTimeout)' == ''">60</PerTestTimeout>
     <LaunchTimeout Condition="'$(LaunchTimeout)' == ''">180</LaunchTimeout>
-    <!-- Default in-host engine. Override in the test csproj without changing the package. -->
+    <!-- Default in-host engine. The TestingFramework -> MTPAssembly / MTPEntry map is in the .targets. -->
     <TestingFramework Condition="'$(TestingFramework)' == ''">nunit</TestingFramework>
-    <MTPAssembly Condition="'$(MTPAssembly)' == '' and '$(TestingFramework)' == 'nunit'">DevTools.NUnit.MTP.dll</MTPAssembly>
-    <MTPAssembly Condition="'$(MTPAssembly)' == '' and '$(TestingFramework)' == 'tunit'">DevTools.TUnit.MTP.dll</MTPAssembly>
-    <MTPEntry Condition="'$(MTPEntry)' == '' and '$(TestingFramework)' == 'nunit'">DevTools.NUnit.MTP.NUnitMTP</MTPEntry>
-    <MTPEntry Condition="'$(MTPEntry)' == '' and '$(TestingFramework)' == 'tunit'">DevTools.TUnit.MTP.TUnitMTP</MTPEntry>
+    <!--
+      TUnit adds a Polyfill PackageReference from its own .targets, which restore never
+      reads, so on net4x it only produces a duplicate against a Polyfill the project
+      already has. The adapter supplies the one type TUnit needs instead (see .targets).
+    -->
+    <EnableTUnitPolyfills Condition="'$(EnableTUnitPolyfills)' == ''">false</EnableTUnitPolyfills>
   </PropertyGroup>
 
   <ItemGroup>

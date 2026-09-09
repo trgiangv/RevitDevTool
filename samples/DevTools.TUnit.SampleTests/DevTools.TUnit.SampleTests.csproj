@@ -3,7 +3,6 @@
     <UseRevit>true</UseRevit>
     <IsTestProject>true</IsTestProject>
     <TestingFramework>tunit</TestingFramework>
-    <EnableTUnitPolyfills>false</EnableTUnitPolyfills>
     <HostName>Revit</HostName>
     <HostVersion>$(RevitVersion)</HostVersion>
     <ForceLaunch>false</ForceLaunch>

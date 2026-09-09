@@ -184,10 +184,11 @@ Split by source module. Optional fixtures (`McpToolsetDemo`, `RevitMcpToolSet`, 
 
 xUnit v3 tests are MTP executables (`tests/Directory.Build.props`). Run
 `dotnet run --project tests/<project>/<project>.csproj` (optional
-`-- --filter ClassName`). Root `dotnet test` is VSTest-mode and fails on
-.NET 10 SDK. Product samples use `dotnet test` from their folder (scoped
-MTP `global.json`). `samples/ricaun.NUnit.SampleTests` is the only VSTest
-project — comparison only. Do not force `--progress off`.
+`-- --filter ClassName`) or `dotnet test --project` from the repo root (root
+`global.json` is MTP). Product samples use the same root runner.
+`samples/ricaun.NUnit.SampleTests` is the only VSTest project — its folder
+`global.json` sets `"runner": "VSTest"`; `cd` there. Comparison only. Do not
+force `--progress off`.
 
 ---
 

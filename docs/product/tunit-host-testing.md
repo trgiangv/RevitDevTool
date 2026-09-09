@@ -5,7 +5,7 @@ RevitDevTool runs TUnit tests through the same TestRunner and neutral
 it does not launch or activate hosts. Shared MTP contract (launch, reuse,
 cancel, adapter): [host-testing.md](host-testing.md).
 
-Last updated: 2026-09-08
+Last updated: 2026-09-09
 
 ## Supported matrix
 
@@ -48,6 +48,33 @@ Same `HostName` / `HostVersion` / host API as NUnit. Opt in with
 
 Swap `HostName` for any supported host. Keep a compile-only host API
 package so testhost discovery can resolve Autodesk types.
+
+On `net48` add one consumer-side setting,
+`<RuntimeIdentifier>win-x64</RuntimeIdentifier>` — the test project is an `Exe` and
+restore does not read a RID from a package (`NETSDK1047`).
+
+`[ModuleInitializer]` is handled by the package. TUnit's generated infrastructure
+applies that attribute, which .NET Framework does not declare, and TUnit's own
+`Polyfill` injection lives in its MSBuild targets, which restore never reads — so it
+either resolves to nothing (`CS0234`) or duplicates the project's own `Polyfill`
+(`NU1504`). The adapter defaults `EnableTUnitPolyfills=false` and the
+`NetFxModuleInitializer` target compiles `build/netfx/ModuleInitializerAttribute.cs`
+into net4x TUnit projects. Leave the property unset. It already skips when a
+`PackageReference` / `GlobalPackageReference` named `Polyfill` or a compile item
+named `ModuleInitializerAttribute.cs` is in the project.
+
+Set `<NetFxModuleInitializer>false</NetFxModuleInitializer>` only when that skip
+does not see your existing declaration:
+
+| Situation | Action |
+|----------|--------|
+| net48 TUnit, no Polyfill | Nothing. The package injects the attribute. |
+| `Polyfill` package already referenced | Nothing. The target skips. |
+| Own `ModuleInitializerAttribute.cs` in `Compile` | Nothing. The target skips. |
+| Attribute in a differently named file, PolySharp, or a polyfill package not named `Polyfill` | `NetFxModuleInitializer=false` (otherwise `CS0436`) |
+| You restore `Polyfill` yourself and set `EnableTUnitPolyfills=true` | Also `NetFxModuleInitializer=false` so both do not define the type |
+
+NUnit and `net8.0-windows` / `net10.0-windows` ignore the property.
 
 ## Runtime behavior
 
@@ -126,20 +153,15 @@ years use scoped isolation. Manifest identity stays exact except net48
 `NetfxClosureBind` (newer candidate in the generation manifest or already
 loaded by that session — not a TUnit facade name list).
 
-TUnit.Core `Sources.TestEntries` is a process-wide dictionary keyed by
-`Type`. A rebuild loads a new test assembly (net48 cannot unload the old
-one). The module constructor **adds** sources; Engine would then execute
-every historical copy of the same UID and concatenate their `Console`
-output. Before each discover/run, Runtime parks other assemblies' sources
-and keeps only the current generation live. Reverting an edit reuses the
-previous generation hash and the already-loaded assembly — the module
-constructor does not run again — so parked sources are restored. Discarding
-them made testhost report `TUnit did not report a result for the selected
-test` with no stack. Parked maps live on parent-bound Abstractions
-(`TestingProcessHold`), not Runtime statics: net48 `LoadFile`s a distinct
-Runtime copy from each generation shadow folder while TUnit.Core stays
-identity-bound, and the session manager retires the previous generation
-before a revert recreates it.
+TUnit.Core `Sources.TestEntries` is a process-wide dictionary keyed by `Type`, and
+its module constructor **adds** sources. A rebuild loads a new test assembly
+(net48 cannot unload the old one), so Engine would otherwise run every historical
+copy of the same UID. Before each discover/run, Runtime parks the other assemblies'
+sources and keeps only the current generation live; parked maps are restored,
+because reverting an edit reuses the previous generation and does not re-run the
+module constructor. Parked maps live on parent-bound Abstractions
+(`TestingProcessHold`), not Runtime statics — net48 `LoadFile`s a distinct Runtime
+copy per generation shadow folder while TUnit.Core stays identity-bound.
 
 ### Testhost MTP copy
 

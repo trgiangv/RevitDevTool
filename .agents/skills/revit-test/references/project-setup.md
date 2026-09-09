@@ -9,6 +9,7 @@ in SKILL.md.
 <PropertyGroup>
   <HostName>Revit</HostName>
   <HostVersion>2025</HostVersion>
+  <RuntimeIdentifier>win-x64</RuntimeIdentifier>
   <ForceLaunch>false</ForceLaunch>
   <PerTestTimeout>60</PerTestTimeout>
   <LaunchTimeout>360</LaunchTimeout>
@@ -35,6 +36,8 @@ The adapter package depends on `Microsoft.Testing.Platform.MSBuild` 2.4.0. Do no
 | `PerTestTimeout` | Per-test budget (seconds). The `testing/run` pipe wait is this × tests in the run. 60 is smoke-only |
 | `LaunchTimeout` | Seconds to wait for a launched host pipe |
 | `TestingFramework` | Default `nunit`. Override in the test csproj to change the in-host engine without changing the package |
+| `RuntimeIdentifier` | `win-x64` on net48 (host 2024 and older). Restore does not take a RID from the package (`NETSDK1047`). Keep it if the same csproj also builds 2022–2024 |
+| `NetFxModuleInitializer` | net48 TUnit only. Default on: inject `[ModuleInitializer]`. Leave unset when the project already has `Polyfill` or `ModuleInitializerAttribute.cs`. Set `false` when the attribute lives in a differently named file, PolySharp, or a polyfill package not named `Polyfill` (`CS0436` otherwise) |
 
 `HostName` / `HostVersion` are the runner contract. Include a compile-only
 host API package (`Revit_All_Main_Versions_API_x64` for Revit) matching that
@@ -52,17 +55,32 @@ output file by hand.
 
 ## global.json
 
-Create it **in the test project folder** (beside the `.csproj`). Do **not**
-put it at the repo or solution root.
+`dotnet test` defaults to VSTest. Add the MTP runner to `global.json`.
+Nearest `global.json` replaces the whole file (not a merge) and is chosen
+from the **current directory**, not from `--project`.
+
+**All-MTP repo** — every `dotnet test` project uses MTP. Put the runner on the
+**root** `global.json`. `dotnet test` from the repo root is correct.
 
 ```text
 repo/
-  global.json                 ← do not put MTP runner here
-  tests/
-    Host.Tests/
-      Host.Tests.csproj
-      global.json             ← here
+  global.json                 ← sdk + test.runner MTP
+  csharp/Host.Tests/
+    Host.Tests.csproj
 ```
+
+**One VSTest leftover** — same as all-MTP at root, plus a nested override.
+Include `sdk` in the nested file. `cd` into that folder before `dotnet test`.
+
+```text
+repo/
+  global.json                 ← sdk + test.runner MTP
+  samples/ricaun.NUnit.SampleTests/
+    global.json               ← sdk + "runner": "VSTest"
+```
+
+**Many VSTest projects** — do **not** put MTP on the root; scope it next to
+each MTP test project.
 
 ```json
 {
@@ -76,14 +94,9 @@ repo/
 }
 ```
 
-A root `global.json` with `"runner": "Microsoft.Testing.Platform"` applies
-to every `dotnet test` under that tree and breaks non-MTP projects.
-
 Use a .NET 10 SDK. Match `-c` to the consumer configurations (`Debug.R24`,
-`Release`, …).
-
-Always `cd` to that project folder before `dotnet test` so the SDK picks
-up this `global.json`. Running from the repo root ignores it.
+`Release`, …). Run `dotnet test` from a directory covered by the intended
+runner.
 
 ## Conflicting packages
 
@@ -94,6 +107,15 @@ Do not add a second test adapter to the same project:
 - `Microsoft.Testing.Extensions.VSTestBridge`
 
 Keep one owner: `RevitDevTool.TestAdapter`.
+
+If `Directory.Packages.props` (or `Directory.Build.props`) has
+`<GlobalPackageReference Include="Polyfill" />`, remove it on the host-test
+project. The testhost is a single-runtime Exe; NUnit does not need Polyfill,
+and net48 TUnit gets `[ModuleInitializer]` from the package.
+
+```xml
+<GlobalPackageReference Remove="Polyfill" />
+```
 
 ## Runner install
 

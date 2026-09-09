@@ -4,7 +4,6 @@
         <UseAutoCad>true</UseAutoCad>
         <IsTestProject>true</IsTestProject>
         <TestingFramework>tunit</TestingFramework>
-        <EnableTUnitPolyfills>false</EnableTUnitPolyfills>
         <HostName>Civil3D</HostName>
         <HostVersion>$(AutoCadVersion)</HostVersion>
         <ForceLaunch>false</ForceLaunch>

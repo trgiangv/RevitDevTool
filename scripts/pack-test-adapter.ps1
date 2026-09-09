@@ -6,12 +6,18 @@
     Restores and builds DevTools.NUnit.MTP for all TFMs, then packs the adapter.
     Does not push. Does not run the RevitDevTool installer pack pipeline.
     Pack graph: docs/architecture/Testing/README.md.
+.PARAMETER RefreshLocalCache
+    Delete the extracted copy of this version from the global packages folder.
+    Re-packing the same version otherwise leaves consumers restoring the stale
+    extraction from a previous pack.
 .EXAMPLE
     scripts/pack-test-adapter.ps1
     scripts/pack-test-adapter.ps1 -OutputDirectory output/nuget
+    scripts/pack-test-adapter.ps1 -RefreshLocalCache
 #>
 param(
-    [string]$OutputDirectory = 'output/nuget'
+    [string]$OutputDirectory = 'output/nuget',
+    [switch]$RefreshLocalCache
 )
 
 $ErrorActionPreference = "Stop"
@@ -57,4 +63,13 @@ if (-not $nupkg) {
 }
 
 Write-Host "Packed $($nupkg.FullName)"
+
+if ($RefreshLocalCache) {
+    $cached = Join-Path $env:USERPROFILE ".nuget\packages\revitdevtool.testadapter\$version"
+    if (Test-Path -LiteralPath $cached) {
+        Remove-Item -LiteralPath $cached -Recurse -Force
+        Write-Host "Removed stale extraction $cached"
+    }
+}
+
 exit 0

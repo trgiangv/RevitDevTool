@@ -1,0 +1,53 @@
+<Project>
+  <!--
+    Local dev loop only. NOT packed: RevitDevTool.TestAdapter.targets imports this file
+    when it exists, which is true only for a checkout. Everything that knows about repo
+    layout or this repo's Autodesk configuration names belongs here, so the packaged
+    targets stay independent of the consumer build configuration.
+
+    Provides:
+      - DevToolsTestAdapterLocal: relaxes the packaged "no runtime assets" Error.
+      - MTP build order for the local sample test projects.
+      - build/runtime staging so Copy* reads the same layout the nupkg ships.
+  -->
+  <PropertyGroup>
+    <DevToolsTestAdapterLocal>true</DevToolsTestAdapterLocal>
+    <!-- MTP is packable multi-TFM, so it builds as Debug/Release, not Debug.Autodesk.YYYY. -->
+    <_MTPConfiguration Condition="$(Configuration.Contains('Release'))">Release</_MTPConfiguration>
+    <_MTPConfiguration Condition="'$(_MTPConfiguration)' == ''">Debug</_MTPConfiguration>
+    <_MTPRoot>$(MSBuildThisFileDirectory)..\..\</_MTPRoot>
+  </PropertyGroup>
+
+  <ItemGroup Condition="'$(TestingFramework)' == 'nunit' And '$(IsTestingPlatformApplication)' == 'true' And Exists('$(_MTPRoot)DevTools.NUnit.MTP\DevTools.NUnit.MTP.csproj')">
+    <ProjectReference Include="$(_MTPRoot)DevTools.NUnit.MTP\DevTools.NUnit.MTP.csproj">
+      <ReferenceOutputAssembly>false</ReferenceOutputAssembly>
+      <Private>false</Private>
+      <SetConfiguration>Configuration=$(_MTPConfiguration)</SetConfiguration>
+      <SetTargetFramework>TargetFramework=$(TargetFramework)</SetTargetFramework>
+    </ProjectReference>
+  </ItemGroup>
+  <ItemGroup Condition="'$(TestingFramework)' == 'tunit' And '$(IsTestingPlatformApplication)' == 'true' And Exists('$(_MTPRoot)DevTools.TUnit.MTP\DevTools.TUnit.MTP.csproj')">
+    <ProjectReference Include="$(_MTPRoot)DevTools.TUnit.MTP\DevTools.TUnit.MTP.csproj">
+      <ReferenceOutputAssembly>false</ReferenceOutputAssembly>
+      <Private>false</Private>
+      <SetConfiguration>Configuration=$(_MTPConfiguration)</SetConfiguration>
+      <SetTargetFramework>TargetFramework=$(TargetFramework)</SetTargetFramework>
+    </ProjectReference>
+  </ItemGroup>
+
+  <Target Name="_StagePackageRuntime"
+          BeforeTargets="CopyMTPSibling"
+          DependsOnTargets="_ResolveRuntimeDir"
+          Condition="'$(_PackageRuntimeDir)' != ''">
+    <ItemGroup>
+      <_StageRuntime Include="$(_MTPRoot)DevTools.NUnit.MTP\bin\$(_MTPConfiguration)\$(TargetFramework)\DevTools.NUnit.MTP.dll" />
+      <_StageRuntime Include="$(_MTPRoot)DevTools.TUnit.MTP\bin\$(_MTPConfiguration)\$(TargetFramework)\DevTools.TUnit.MTP.dll" />
+      <_StageRuntime Include="$(_MTPRoot)DevTools.Testing.Abstractions\bin\$(_MTPConfiguration)\$(TargetFramework)\DevTools.Testing.Abstractions.dll" />
+    </ItemGroup>
+    <MakeDir Directories="$(_PackageRuntimeDir)" />
+    <Copy SourceFiles="@(_StageRuntime)"
+          DestinationFolder="$(_PackageRuntimeDir)"
+          Condition="Exists('%(Identity)')"
+          SkipUnchangedFiles="true" />
+  </Target>
+</Project>

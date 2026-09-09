@@ -36,7 +36,8 @@ Host API matrix (all years): `build-matrix.md`.
 | MCP tests | `dotnet run --project tests/DevTools.Mcp.<Module>.Tests/DevTools.Mcp.<Module>.Tests.csproj` (Core, Catalog, Adapter, Client, Server) |
 | Python parser (this repo) | `scripts/test-python.ps1` |
 | Installer / bundle | `scripts/pack.ps1` |
-| TestAdapter NuGet | `scripts/pack-test-adapter.ps1` |
+| TestAdapter NuGet | `scripts/pack-test-adapter.ps1 [-RefreshLocalCache]` |
+| TestAdapter consumer surface (net48 / net8 / net10 build + host-free discovery) | `scripts/test-adapter-matrix.ps1` |
 | Daemon publish | `dotnet publish source/DevTools.Daemon -c Release` |
 
 Build sample toolsets before parser/spike tests — see `test-matrix.md`.

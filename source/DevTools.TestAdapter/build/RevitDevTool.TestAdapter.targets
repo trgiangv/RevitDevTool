@@ -1,31 +1,31 @@
 <Project>
   <!--
-    Consumer test-project build (imported from RevitDevTool.TestAdapter).
+    Consumer test-project build. Order:
 
-    1. Resolve build/runtime
-       - nupkg and in-repo TestAdapter Build stage the same layout:
-         net48 | net8.0-windows7.0 | net10.0-windows7.0.
-       - Pick exact TFM, else nearest lower. Error if the folder is present but nothing matches.
+      0. TestingFramework -> MTPAssembly / MTPEntry  (must stay in this file: NuGet
+         imports the .props before the consumer sets TestingFramework)
+      1. _ResolveRuntimeDir   pick build/runtime/<tfm>: exact, else nearest lower
+      2. CopyMTPSibling       copy MTPAssembly + Testing.Abstractions.dll next to the exe
+      3. WriteDiscoveryRefs   write compile-only reference paths for host-free discovery
+      4. GenerateTestConfig   csproj options -> [AssemblyName].testconfig.json
 
-    2. Copy from that folder only
-       - Copy $(MTPAssembly) and Testing.Abstractions.dll (shared HostTestDiscovery).
-         Ipc/Transport are merged into the adapter. CopyMTPSibling uses
-         SkipUnchangedFiles=false on $(MTPAssembly) so testhost discovery cannot
-         keep a timestamp-stale sibling after a rebuild.
-       - MTP is not a consumer ProjectReference; testhost binds the consumer NUnit copy.
-
-    3. Discovery refs (no Autodesk DLL copy)
-       - Write $(TargetName).discovery-refs.txt from NuGet compile-only ReferencePath.
-       - Testhost loads those paths; do not copy Revit/AutoCAD APIs next to the exe.
-
-    4. Options → testconfig.json
-       - Emit HostName / HostVersion / ForceLaunch / timeouts / runnerPath from csproj.
-       - Always regenerate on Build (MTP Core target is incremental and would keep a stale file).
-       - Merge optional testconfig.json beside the csproj if it has no "devtools" section.
+    Nothing here reads the consumer configuration or repo paths; the local dev loop
+    lives in RevitDevTool.TestAdapter.Local.targets, which the nupkg does not ship.
   -->
   <Import Project="$(MSBuildThisFileDirectory)RevitDevTool.TestAdapter.props"
           Condition="'$(TestAdapterPropsImported)' != 'true'"/>
+  <Import Project="$(MSBuildThisFileDirectory)RevitDevTool.TestAdapter.Local.targets"
+          Condition="Exists('$(MSBuildThisFileDirectory)RevitDevTool.TestAdapter.Local.targets')"/>
 
+  <!-- 0. TestingFramework -> testhost plugin -->
+  <PropertyGroup>
+    <MTPAssembly Condition="'$(MTPAssembly)' == '' and '$(TestingFramework)' == 'nunit'">DevTools.NUnit.MTP.dll</MTPAssembly>
+    <MTPAssembly Condition="'$(MTPAssembly)' == '' and '$(TestingFramework)' == 'tunit'">DevTools.TUnit.MTP.dll</MTPAssembly>
+    <MTPEntry Condition="'$(MTPEntry)' == '' and '$(TestingFramework)' == 'nunit'">DevTools.NUnit.MTP.NUnitMTP</MTPEntry>
+    <MTPEntry Condition="'$(MTPEntry)' == '' and '$(TestingFramework)' == 'tunit'">DevTools.TUnit.MTP.TUnitMTP</MTPEntry>
+  </PropertyGroup>
+
+  <!-- net48 testhost binds MTP's BCL closure through binding redirects. -->
   <Target Name="DevToolsNetFxBindingRedirects"
           BeforeTargets="PrepareForBuild;GenerateBindingRedirects">
     <PropertyGroup Condition="'$(TargetFrameworkIdentifier)' == '.NETFramework'">
@@ -41,27 +41,20 @@
     <TestingPlatformBuilderHook Remove="6ADF853A-6945-4A06-9A4B-D99BC1DC1094" />
   </ItemGroup>
 
-  <!-- In-repo only: build MTP as Debug/Release (not Debug.Autodesk.YYYY). NuGet skips. -->
-  <PropertyGroup Condition="Exists('$(MSBuildThisFileDirectory)..\DevTools.TestAdapter.csproj')">
-    <_MTPConfiguration Condition="$(Configuration.Contains('Release'))">Release</_MTPConfiguration>
-    <_MTPConfiguration Condition="'$(_MTPConfiguration)' == ''">Debug</_MTPConfiguration>
-  </PropertyGroup>
-  <ItemGroup Condition="'$(TestingFramework)' == 'nunit' And '$(IsTestingPlatformApplication)' == 'true' And Exists('$(MSBuildThisFileDirectory)..\..\DevTools.NUnit.MTP\DevTools.NUnit.MTP.csproj')">
-    <ProjectReference Include="$(MSBuildThisFileDirectory)..\..\DevTools.NUnit.MTP\DevTools.NUnit.MTP.csproj">
-      <ReferenceOutputAssembly>false</ReferenceOutputAssembly>
-      <Private>false</Private>
-      <SetConfiguration>Configuration=$(_MTPConfiguration)</SetConfiguration>
-      <SetTargetFramework>TargetFramework=$(TargetFramework)</SetTargetFramework>
-    </ProjectReference>
-  </ItemGroup>
-  <ItemGroup Condition="'$(TestingFramework)' == 'tunit' And '$(IsTestingPlatformApplication)' == 'true' And Exists('$(MSBuildThisFileDirectory)..\..\DevTools.TUnit.MTP\DevTools.TUnit.MTP.csproj')">
-    <ProjectReference Include="$(MSBuildThisFileDirectory)..\..\DevTools.TUnit.MTP\DevTools.TUnit.MTP.csproj">
-      <ReferenceOutputAssembly>false</ReferenceOutputAssembly>
-      <Private>false</Private>
-      <SetConfiguration>Configuration=$(_MTPConfiguration)</SetConfiguration>
-      <SetTargetFramework>TargetFramework=$(TargetFramework)</SetTargetFramework>
-    </ProjectReference>
-  </ItemGroup>
+  <!-- net4x + TUnit: the generated infrastructure applies [ModuleInitializer], which
+       .NET Framework does not declare. Skipped when Polyfill or another declaration
+       already provides the type. Opt out: NetFxModuleInitializer=false. -->
+  <Target Name="NetFxModuleInitializer"
+          BeforeTargets="CoreCompile"
+          Condition="'$(TestingFramework)' == 'tunit' And $(TargetFramework.StartsWith('net4')) And '$(NetFxModuleInitializer)' != 'false'">
+    <ItemGroup>
+      <_DevToolsPolyfill Include="@(PackageReference)" Condition="'%(Identity)' == 'Polyfill'" />
+      <_DevToolsPolyfill Include="@(GlobalPackageReference)" Condition="'%(Identity)' == 'Polyfill'" />
+      <_DevToolsPolyfill Include="@(Compile)" Condition="'%(Filename)%(Extension)' == 'ModuleInitializerAttribute.cs'" />
+      <Compile Include="$(MSBuildThisFileDirectory)netfx\ModuleInitializerAttribute.cs"
+               Condition="'@(_DevToolsPolyfill)' == ''" />
+    </ItemGroup>
+  </Target>
 
   <!-- merge generated + optional testconfig.json -->
   <UsingTask TaskName="MergeTestConfig"
@@ -114,7 +107,7 @@
     </Task>
   </UsingTask>
 
-  <!-- 1. Resolve build/runtime -->
+  <!-- 1. Resolve build/runtime: exact consumer TFM, else nearest lower shipped folder. -->
   <Target Name="_ResolveRuntimeDir">
     <PropertyGroup>
       <_RuntimeRoot>$(MSBuildThisFileDirectory)runtime\</_RuntimeRoot>
@@ -131,33 +124,15 @@
       <_PackageRuntimeDir Condition="'$(_PackageRuntimeDir)' == '' And $([MSBuild]::VersionGreaterThanOrEquals('$(_ConsumerTfv)', '8.0'))">$(_RuntimeRoot)net8.0-windows7.0\</_PackageRuntimeDir>
     </PropertyGroup>
     <Error
-        Condition="Exists('$(_RuntimeRoot)') And ('$(_PackageRuntimeDir)' == '' Or !Exists('$(_PackageRuntimeDir)')) And !Exists('$(MSBuildThisFileDirectory)..\DevTools.TestAdapter.csproj')"
+        Condition="Exists('$(_RuntimeRoot)') And ('$(_PackageRuntimeDir)' == '' Or !Exists('$(_PackageRuntimeDir)')) And '$(DevToolsTestAdapterLocal)' != 'true'"
         Text="RevitDevTool.TestAdapter has no runtime assets for $(TargetFramework). The package ships net48, net8.0-windows, and net10.0-windows under build/runtime. A matching or nearest-lower folder is required so DevTools.NUnit.MTP.dll and the adapter closure copy next to the test exe." />
   </Target>
 
-  <!-- In-repo: write the same build/runtime layout the nupkg ships, then Copy* reads only that folder. -->
-  <Target Name="_StagePackageRuntime"
-          BeforeTargets="CopyMTPSibling"
-          DependsOnTargets="_ResolveRuntimeDir"
-          Condition="Exists('$(MSBuildThisFileDirectory)..\DevTools.TestAdapter.csproj') And '$(_PackageRuntimeDir)' != ''">
-    <PropertyGroup>
-      <_NUnitMtpDll>$(MSBuildThisFileDirectory)..\..\DevTools.NUnit.MTP\bin\$(_MTPConfiguration)\$(TargetFramework)\DevTools.NUnit.MTP.dll</_NUnitMtpDll>
-      <_TUnitMtpDll>$(MSBuildThisFileDirectory)..\..\DevTools.TUnit.MTP\bin\$(_MTPConfiguration)\$(TargetFramework)\DevTools.TUnit.MTP.dll</_TUnitMtpDll>
-      <_AbstractionsDll>$(MSBuildThisFileDirectory)..\..\DevTools.Testing.Abstractions\bin\$(_MTPConfiguration)\$(TargetFramework)\DevTools.Testing.Abstractions.dll</_AbstractionsDll>
-    </PropertyGroup>
-    <ItemGroup>
-      <_StageRuntime Include="$(_NUnitMtpDll)" Condition="Exists('$(_NUnitMtpDll)')" />
-      <_StageRuntime Include="$(_TUnitMtpDll)" Condition="Exists('$(_TUnitMtpDll)')" />
-      <_StageRuntime Include="$(_AbstractionsDll)" Condition="Exists('$(_AbstractionsDll)')" />
-    </ItemGroup>
-    <MakeDir Directories="$(_PackageRuntimeDir)" />
-    <Copy Condition="'@(_StageRuntime)' != ''"
-          SourceFiles="@(_StageRuntime)"
-          DestinationFolder="$(_PackageRuntimeDir)"
-          SkipUnchangedFiles="true" />
-  </Target>
-
-  <!-- 2. Copy $(MTPAssembly) + Abstractions from build/runtime -->
+  <!--
+    2. Copy $(MTPAssembly) + Abstractions next to the test exe.
+       MTP is not a consumer ProjectReference; testhost binds the consumer's NUnit/TUnit copy.
+       SkipUnchangedFiles=false on $(MTPAssembly): a timestamp-stale sibling breaks discovery.
+  -->
   <Target Name="CopyMTPSibling"
           AfterTargets="Build"
           DependsOnTargets="_ResolveRuntimeDir">
@@ -181,7 +156,7 @@
           SkipUnchangedFiles="true" />
   </Target>
 
-  <!-- 3. Discovery refs (no Autodesk DLL copy) -->
+  <!-- 3. Discovery refs: testhost resolves these paths, no Autodesk DLL copy. -->
   <Target Name="WriteDiscoveryRefs"
           AfterTargets="Build"
           Condition="'$(IsTestingPlatformApplication)' == 'true'">
@@ -202,7 +177,7 @@
     </ItemGroup>
   </Target>
 
-  <!-- 4. Options → testconfig.json -->
+  <!-- 4. Options -> testconfig.json. Always regenerated: the MTP Core target is incremental. -->
   <ItemGroup Condition="'$(IsTestingPlatformApplication)' == 'true'">
     <UpToDateCheckBuilt Include="$([System.IO.Path]::Combine($(MSBuildProjectDirectory), $(OutputPath), $(AssemblyName).testconfig.json))">
       <Original>$(MSBuildProjectFullPath)</Original>
@@ -217,7 +192,7 @@
         Text="RevitDevTool.TestAdapter test projects must declare &lt;HostName&gt; (for example Revit) in the .csproj." />
     <Error
         Condition="'$(HostVersion)' == ''"
-        Text="RevitDevTool.TestAdapter test projects must declare &lt;HostVersion&gt; in the .csproj (for example &lt;HostVersion&gt;2024&lt;/HostVersion&gt; or &lt;HostVersion&gt;$(RevitVersion)&lt;/HostVersion&gt;)." />
+        Text="RevitDevTool.TestAdapter test projects must declare &lt;HostVersion&gt; (for example 2025) in the .csproj." />
     <Error
         Condition="'$(MTPAssembly)' == ''"
         Text="RevitDevTool.TestAdapter requires MTPAssembly. Set TestingFramework to a supported value or declare &lt;MTPAssembly&gt; in the test .csproj." />

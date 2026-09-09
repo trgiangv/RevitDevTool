@@ -1,4 +1,5 @@
 using System.Reflection;
+using System.Runtime.CompilerServices;
 using DevTools.Testing.Abstractions;
 // ReSharper disable RedundantSuppressNullableWarningExpression
 
@@ -18,11 +19,19 @@ internal static class RuntimeAssemblyResolver
         if (Interlocked.Exchange(ref registered, 1) != 0)
             return;
 
-        if (!string.IsNullOrWhiteSpace(entryAssemblyPath))
-            discoveryRefs = DiscoveryRefs.Read(entryAssemblyPath!);
-
+        // Hook first. DiscoveryRefs lives in DevTools.Testing.Abstractions, a package
+        // sibling that is absent from the consumer deps.json, so on .NET it can only
+        // load through this handler. Reading refs before hooking would fail the JIT of
+        // this method and leave the process without any resolver.
         AppDomain.CurrentDomain.AssemblyResolve += ResolvePrivateRuntimeAssembly;
+
+        if (!string.IsNullOrWhiteSpace(entryAssemblyPath))
+            ReadDiscoveryRefs(entryAssemblyPath!);
     }
+
+    [MethodImpl(MethodImplOptions.NoInlining)]
+    private static void ReadDiscoveryRefs(string entryAssemblyPath) =>
+        discoveryRefs = DiscoveryRefs.Read(entryAssemblyPath);
 
     private static Assembly? ResolvePrivateRuntimeAssembly(object? sender, ResolveEventArgs args)
     {

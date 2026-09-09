@@ -9,7 +9,7 @@ Product: [`host-testing.md`](../../product/host-testing.md),
 [`tunit-host-testing.md`](../../product/tunit-host-testing.md).
 Agent digest: [`host-testing.md`](../../agents/host-testing.md).
 
-Last updated: 2026-09-08
+Last updated: 2026-09-09
 
 ---
 
@@ -64,20 +64,78 @@ Consumer copy/layout lives in `build/RevitDevTool.TestAdapter.targets`.
 
 - `lib/{tfm}/DevTools.TestAdapter.dll` — MTP compile surface (Ipc + Transport merged in; net48 also merges STJ BCL).
 - `build/runtime/{tfm}/` — `DevTools.NUnit.MTP.dll`, `DevTools.TUnit.MTP.dll`, `DevTools.Testing.Abstractions.dll` (shared `HostTestDiscovery`). Same three files on net48, net8, and net10.
-- Testhost 3rd-party BCL comes from `Microsoft.Testing.Platform.MSBuild` 2.4.0 plus net48 binding redirects, not from this nupkg. The adapter csproj references it with `PrivateAssets=none` (NuGet's default `PrivateAssets` would drop build assets from the nuspec) and `ExcludeAssets=runtime` so pack writes a nuspec dependency that restores testhost generation for NUnit consumers. `DevTools.TestAdapter.Tests` uses `ProjectReference` `PrivateAssets=all` plus a direct Abstractions reference so that graph does not flow into xunit. Other PackageReference / ProjectReference stay `PrivateAssets=all`. Testhost BCL is not packed as files.
+- Testhost 3rd-party BCL comes from `Microsoft.Testing.Platform.MSBuild` 2.4.0 plus net48 binding redirects, not from this nupkg. The adapter csproj references it with `PrivateAssets=none` (NuGet's default `PrivateAssets` would drop build assets from the nuspec) and with **all** assets (`include="All"` in the nuspec) so pack writes a dependency that restores both testhost generation and `Microsoft.Testing.Platform.dll` — an NUnit-only consumer has no other source of the MTP runtime. `RepackBinariesExcludes` keeps those testhost DLLs out of the merged adapter. `DevTools.TestAdapter.Tests` uses `ProjectReference` `PrivateAssets=all` plus a direct Abstractions reference so that graph does not flow into xunit. Other PackageReference / ProjectReference stay `PrivateAssets=all`. Testhost BCL is not packed as files.
 
-### Pipeline (`scripts/pack-test-adapter.ps1`)
+### Pack order (`scripts/pack-test-adapter.ps1`)
 
 ```text
-restore TestAdapter (Abstractions, Transport, Ipc)
-restore NUnit.MTP and TUnit.MTP for all TFMs (do not pass TargetFramework)
-build NUnit.MTP and TUnit.MTP -c Release (net48 + net8 + net10)
-pack TestAdapter --no-restore
-  copies existing MTP.dll per TFM
+1. restore TestAdapter (Abstractions, Transport, Ipc)
+2. restore NUnit.MTP + TUnit.MTP for all TFMs (never pass TargetFramework)
+3. build NUnit.MTP + TUnit.MTP -c Release (net48 + net8 + net10)
+4. pack TestAdapter --no-restore
+     lib/{tfm}            ILRepacked adapter
+     build/runtime/{tfm}  MTP siblings + Abstractions (existing DLLs, per TFM)
+     build/*.props|targets consumer build files
 ```
 
 Not in this graph: `Testing.Host`, `NUnit.Host`, `NUnit.Runtime` as a built
 project, `DevTools.TestRunner`. Runtime sources are Compile-linked into MTP.
+
+### Consumer build order (`build/RevitDevTool.TestAdapter.targets`)
+
+```text
+0. TestingFramework -> MTPAssembly / MTPEntry   property map (see table below)
+1. _ResolveRuntimeDir                           pick build/runtime/{tfm}
+2. CopyMTPSibling      AfterTargets=Build       MTPAssembly + Abstractions -> $(OutDir)
+3. WriteDiscoveryRefs  AfterTargets=Build       $(TargetName).discovery-refs.txt
+4. GenerateTestConfig  BeforeTargets=BeforeBuild  -> $(AssemblyName).testconfig.json
+```
+
+### Package independence
+
+The two packed files must stay free of consumer build settings: no
+`$(Configuration)` sniffing, no repo-relative paths, no `RuntimeIdentifier`, no
+`ProjectReference`. `Packed_build_files_do_not_depend_on_the_consumer_configuration`
+(TestAdapter.Tests) enforces that, and `AssertPackageClosure` asserts the nupkg
+ships only `build/RevitDevTool.TestAdapter.props|targets` plus the net4x source
+shim `build/netfx/ModuleInitializerAttribute.cs`.
+
+`build/RevitDevTool.TestAdapter.Local.targets` holds everything that does know
+this repo — `DevToolsTestAdapterLocal` (relaxes the missing-runtime Error), the
+`_MTPConfiguration` mapping from `Debug.Autodesk.YYYY` to `Debug`/`Release`, MTP
+build-order `ProjectReference`s, and `_StagePackageRuntime`. It is not packed;
+the packaged targets import it only when the file exists next to them.
+
+One setting stays with the consumer because the package cannot set it:
+
+- `net48`: `<RuntimeIdentifier>win-x64</RuntimeIdentifier>`. The test project is
+  an `Exe`, and NuGet restore does not read a RID from `build/*.props`, so
+  restore writes the RID-less target while the build asks for a RID one
+  (`NETSDK1047`).
+
+TUnit on `net48` needs `[ModuleInitializer]`, which .NET Framework does not
+declare. TUnit injects `Polyfill` from its own targets, and restore never reads
+package targets, so that reference resolves to nothing (`CS0234`) or duplicates a
+`Polyfill` the project already has (`NU1504`). The package therefore defaults
+`EnableTUnitPolyfills=false` in `build/*.props` and the
+`NetFxModuleInitializer` target compiles
+`build/netfx/ModuleInitializerAttribute.cs` into net4x TUnit projects. It backs
+off when a `PackageReference`/`GlobalPackageReference` named `Polyfill` or another
+`ModuleInitializerAttribute.cs` is already in the compilation; set
+`NetFxModuleInitializer=false` to opt out entirely. Consumer cases:
+[tunit-host-testing.md](../../product/tunit-host-testing.md).
+
+In-repo samples use the `ProjectReference` path, where the adapter's private
+`Microsoft.Testing.Platform` reference does not flow; the NUnit samples add that
+`PackageReference` themselves. NuGet consumers get it from the
+`RevitDevTool.TestAdapter` → `Microsoft.Testing.Platform.MSBuild` dependency.
+
+Consumer shapes proven by the two verify paths — `scripts/test-adapter-matrix.ps1`
+(in-repo samples, net48 / net8 / net10) and `PackageConsumerTests` (packed nupkg,
+same three runtimes, NUnit and TUnit): central package management,
+`TreatWarningsAsErrors`, a repo-wide `EnableDynamicLoading=true` (the package
+forces `false` for the testhost), `AppendTargetFrameworkToOutputPath=false` under
+`Debug|Release.Autodesk.YYYY`, and `-windows10.0.19041.0` platform variants.
 
 ### Constraints
 
@@ -98,10 +156,11 @@ project, `DevTools.TestRunner`. Runtime sources are Compile-linked into MTP.
 - Keep `AppendTargetFrameworkToOutputPath=true` on packable multi-TFM testing
   projects.
 - `CopyMTPSibling` copies MTP and Abstractions only from `build/runtime`
-  (the nupkg layout). In-repo `_StagePackageRuntime` fills that folder with
-  sibling MTP output (`bin\Debug|Release\$(TargetFramework)\`) and Abstractions.
-  Ipc/Transport are ILRepacked into the adapter on every TFM. Sibling copy
-  always overwrites the selected MTP (`SkipUnchangedFiles=false`).
+  (the nupkg layout). In-repo `_StagePackageRuntime` fills that folder from
+  sibling MTP output (`bin\Debug|Release\$(TargetFramework)\`). Ipc/Transport are
+  ILRepacked into the adapter on every TFM. Sibling copy always overwrites the
+  selected MTP (`SkipUnchangedFiles=false`): a timestamp-stale sibling shows up
+  as "0 Tests found".
 
 ---
 
@@ -142,8 +201,20 @@ MSBuild writes those keys from:
 | Property | `testconfig` key | First-party default when empty |
 |----------|------------------|--------------------------------|
 | `TestingFramework` | `frameworkId` | `nunit` (props) |
-| `MTPAssembly` | `mtpAssembly` | `nunit` → `DevTools.NUnit.MTP.dll`; `tunit` → `DevTools.TUnit.MTP.dll` |
-| `MTPEntry` | `mtpEntry` | `nunit` → `DevTools.NUnit.MTP.NUnitMTP`; `tunit` → `DevTools.TUnit.MTP.TUnitMTP` |
+| `MTPAssembly` | `mtpAssembly` | `nunit` → `DevTools.NUnit.MTP.dll`; `tunit` → `DevTools.TUnit.MTP.dll` (targets) |
+| `MTPEntry` | `mtpEntry` | `nunit` → `DevTools.NUnit.MTP.NUnitMTP`; `tunit` → `DevTools.TUnit.MTP.TUnitMTP` (targets) |
+
+The `TestingFramework` → `MTPAssembly` / `MTPEntry` map must stay in the
+**targets**. NuGet imports `build/*.props` from `Microsoft.Common.props`, before
+the consumer `PropertyGroup`, so mapping in the props pinned every packaged
+consumer to NUnit even with `<TestingFramework>tunit</TestingFramework>`.
+
+`RuntimeAssemblyResolver.EnsureRegistered` attaches `AssemblyResolve` **before**
+reading discovery refs. `build/runtime` siblings are copied next to the testhost
+but are absent from the consumer `deps.json`, so on .NET they load only through
+that handler — and `DiscoveryRefs` itself lives in Abstractions. Touching
+Abstractions first fails the JIT of the registering method and leaves the process
+with no resolver (`FileNotFoundException: DevTools.Testing.Abstractions`).
 
 `HostMtpRegistration` (TestAdapter) loads the configured sibling file name
 beside the testhost. `mtpAssembly` must be a bare file name. There is no C#
@@ -186,6 +257,16 @@ public `TestingGenerationFiles` (Host): `Classify`, `ScanOutputDirectory`,
 `TryAddEnumerable<IHostTestFrameworkProvider>` and own their
 `TestingGenerationStore` / session factory. Do not register those kernel
 types as unkeyed singletons from a provider extension.
+
+### AutoCAD-family launch
+
+Family hosts share `acad.exe`. The vertical is selected by argv
+(`AcadArgumentBuilder` `/product` + Civil `/ld` `/p`), not a different
+executable. Discovery reads `HKLM\SOFTWARE\Autodesk\AutoCAD\*\InstalledProducts`:
+default value is the install dir, subkeys are product codes (`C3D`, `PLNT3D`,
+`ACAD`, …). Year comes from the folder name (`AutoCAD 2026`), floored at
+`HostVersions.AutodeskMinimal`. `HostName` must be that vertical so the runner waits for
+`DevTools_{Plant3D|Civil3D}_*`.
 
 Do not add a shared runtime-descriptor catalog. Policy constants stay on the
 provider type. NUnit/TUnit Host consume the solution `Polyfill` global package

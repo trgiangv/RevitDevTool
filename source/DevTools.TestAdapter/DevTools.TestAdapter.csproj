@@ -3,40 +3,26 @@
       Published RevitDevTool.TestAdapter (pack entry).
       Architecture: docs/architecture/Testing/README.md
 
-      1. Multi-TFM output
-         - net48; net8.0-windows; net10.0-windows. Do not flatten obj/bin
-           (Autodesk configs share folders → CS2012 / MSB3713).
+      Pack order, per TFM (net48; net8.0-windows; net10.0-windows):
+        1. BuildNUnitMTPForPack / BuildTUnitMTPForPack — build the testhost siblings.
+        2. ILRepack — merge copy-local (Transport, Ipc, net48 STJ BCL) into
+           TestAdapter.dll; keep Testing.Abstractions.dll so testhost MTP shares
+           HostTestDiscovery.
+        3. PackNUnitMTP / PackTUnitMTP — MTP siblings + Abstractions to build/runtime/{tfm}.
+        4. build/*.props|targets (+ build/netfx source shim) — the consumer build order
+           lives in those files.
 
-      2. Package identity
-         - Sole published testing nupkg. Bump Version before PublishTestAdapter.yml.
-         - Independent of installer GitVersion. The nupkg depends on
-           Microsoft.Testing.Platform.MSBuild 2.4.0 so NUnit consumers get a
-           testhost without declaring it. That PackageReference uses
-           PrivateAssets=none (NuGet defaults to contentfiles;analyzers;build,
-           which would omit MSBuild assets from the nuspec). ExcludeAssets=runtime
-           so it is not ILRepacked. TestAdapter.Tests blocks the
-           flow with ProjectReference PrivateAssets=all and a direct
-           Testing.Abstractions ProjectReference (xunit cannot take MTP.MSBuild).
-           Other graph refs stay
-           PrivateAssets=all so they do not appear in the nuspec.
-
-      3. ILRepack (every TFM)
-         - Merge TargetDir copy-local (Transport, Ipc; net48 also STJ BCL) into
-           TestAdapter.dll. Keep Testing.Abstractions.dll so testhost MTP shares
-           HostTestDiscovery. Do not add extra PackageReference for STJ/Unsafe/Bcl
-           — net48 gets those from Transport/Ipc; net8/net10 use in-box STJ.
-           Testhost 3rd-party BCL comes from the packed
-           Microsoft.Testing.Platform.MSBuild graph plus binding redirects,
-           not from this nupkg.
-
-      4. Runtime folder (same layout every TFM)
-         - MTP siblings + Abstractions under build/runtime/{tfm}. Ipc/Transport
-           are merged, not packed loose.
-
-      5. MTP sibling
-         - Not a ProjectReference. pack-test-adapter.ps1 restores and builds
-           DevTools.NUnit.MTP and DevTools.TUnit.MTP for all TFMs before pack.
-         - Copy MTP.dll and Abstractions to build/runtime.
+      Constraints:
+        - Do not flatten obj/bin: the three TFMs would collide (CS2012 / MSB3713).
+        - Microsoft.Testing.Platform.MSBuild 2.4.0 is a real dependency with all
+          assets (PrivateAssets=none): an NUnit-only consumer has no other source of
+          the testhost or Microsoft.Testing.Platform.dll. RepackBinariesExcludes keeps
+          those DLLs out of the merged adapter. Every other graph reference stays
+          PrivateAssets=all so it never reaches the nuspec.
+        - Do not add PackageReference for STJ/Unsafe/Bcl: net48 takes them from
+          Transport/Ipc, net8/net10 use the in-box copies, and the testhost gets its
+          BCL from the MTP.MSBuild graph plus net48 binding redirects.
+        - Bump Version before PublishTestAdapter.yml; it is independent of installer GitVersion.
     -->
     <PropertyGroup>
         <TargetFrameworks>net48;net8.0-windows;net10.0-windows</TargetFrameworks>
@@ -64,12 +50,16 @@
         <ILRepackable Condition="'$(TargetFramework)' != ''">true</ILRepackable>
         <ILRepackInternalize Condition="'$(TargetFramework)' != ''">true</ILRepackInternalize>
         <RepackBinariesKeep Condition="'$(TargetFramework)' != ''">DevTools.Testing.Abstractions.dll</RepackBinariesKeep>
+        <!-- Testhost assets, not adapter code: the nuspec flows them to the consumer. -->
+        <RepackBinariesExcludes Condition="'$(TargetFramework)' != ''">Microsoft.Testing.Platform.dll;Microsoft.Testing.Extensions.MSBuild.dll</RepackBinariesExcludes>
     </PropertyGroup>
 
-    <!-- 2. Package identity -->
+    <!-- 4. Consumer build files + package content. build\ is consumer source, never adapter code. -->
     <ItemGroup>
+        <Compile Remove="build\**\*.cs"/>
         <None Include="build\RevitDevTool.TestAdapter.props" Pack="true" PackagePath="build\"/>
         <None Include="build\RevitDevTool.TestAdapter.targets" Pack="true" PackagePath="build\"/>
+        <None Include="build\netfx\ModuleInitializerAttribute.cs" Pack="true" PackagePath="build\netfx\"/>
         <None Include="README.md" Pack="true" PackagePath="\"/>
         <None Include="..\DevTools.UI\Resources\icons\DevTools-32-Light.png" Pack="true" PackagePath="\"/>
     </ItemGroup>
@@ -103,7 +93,7 @@
         </ItemGroup>
     </Target>
 
-    <!-- 5. MTP sibling: restore/build if this TFM DLL is missing -->
+    <!-- 1. testhost sibling: restore/build if this TFM DLL is missing -->
     <Target Name="BuildNUnitMTPForPack">
         <PropertyGroup>
             <_NUnitMTPProject>$(MSBuildThisFileDirectory)..\DevTools.NUnit.MTP\DevTools.NUnit.MTP.csproj</_NUnitMTPProject>
@@ -120,7 +110,7 @@
                  Properties="Configuration=$(Configuration);TargetFramework=$(TargetFramework)"/>
     </Target>
 
-    <!-- 5. MTP sibling + kept Abstractions into build/runtime -->
+    <!-- 3. testhost sibling + kept Abstractions into build/runtime/{tfm} -->
     <Target Name="PackNUnitMTP" DependsOnTargets="BuildNUnitMTPForPack">
         <PropertyGroup>
             <_NUnitMTPDll>$(MSBuildThisFileDirectory)..\DevTools.NUnit.MTP\bin\$(Configuration)\$(TargetFramework)\DevTools.NUnit.MTP.dll</_NUnitMTPDll>
@@ -149,7 +139,6 @@
         </PackageReference>
         <PackageReference Include="Microsoft.Testing.Platform.MSBuild">
             <PrivateAssets>none</PrivateAssets>
-            <ExcludeAssets>runtime</ExcludeAssets>
         </PackageReference>
         <InternalsVisibleTo Include="DevTools.TestAdapter.Tests"/>
     </ItemGroup>

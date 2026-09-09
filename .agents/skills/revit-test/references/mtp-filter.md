@@ -24,13 +24,13 @@ dotnet test --project Host.Tests.csproj -c <Config> -- --filter-uid 'Ns.Class.Me
 
 ## Commands
 
-Always `cd` to the **test project folder** (`.csproj` + `global.json`).
-Do not run `dotnet test` from the repo root.
+Run `dotnet test` from a directory covered by the intended `global.json`
+(repo root for MTP in this repo; `cd` into a `"runner": "VSTest"` folder
+before testing that project).
 
 ```powershell
-cd path/to/Host.Tests
-dotnet test --project Host.Tests.csproj -c <Config> --filter MethodName
-dotnet test --project Host.Tests.csproj -c <Config> --filter FamilyPolicy
+dotnet test --project path/to/Host.Tests/Host.Tests.csproj -c <Config> --filter MethodName
+dotnet test --project path/to/Host.Tests/Host.Tests.csproj -c <Config> --filter FamilyPolicy
 ```
 
 If the SDK binds `--filter` itself:
