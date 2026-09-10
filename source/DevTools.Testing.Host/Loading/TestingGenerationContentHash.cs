@@ -31,7 +31,11 @@ internal static class TestingGenerationContentHash
         AppendUInt32LittleEndian(hash, checked((uint)pathBytes.Length));
         hash.AppendData(pathBytes);
 
-        using var stream = File.OpenRead(absolutePath);
+        using var stream = new FileStream(
+            absolutePath,
+            FileMode.Open,
+            FileAccess.Read,
+            FileShare.ReadWrite | FileShare.Delete);
         AppendInt64LittleEndian(hash, stream.Length);
 
         var buffer = new byte[81920];

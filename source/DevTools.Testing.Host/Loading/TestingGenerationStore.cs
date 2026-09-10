@@ -67,14 +67,22 @@ public sealed class TestingGenerationStore(string? generationsRootDirectory = nu
             var generationLock = GenerationLocks.GetOrAdd(generationId, static _ => new Lock());
             lock (generationLock)
             {
-                if (Directory.Exists(shadowDirectory))
+                try
                 {
-                    TestingGenerationSnapshot.EnsurePublishedIsValid(shadowDirectory, generationId);
+                    if (Directory.Exists(shadowDirectory))
+                    {
+                        TestingGenerationSnapshot.EnsurePublishedIsValid(shadowDirectory, generationId);
+                    }
+                    else
+                    {
+                        TestingGenerationSnapshot.Publish(staging, shadowDirectory, generationId);
+                        TestingGenerationSnapshot.EnsurePublishedIsValid(shadowDirectory, generationId);
+                    }
                 }
-                else
+                catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
                 {
-                    TestingGenerationSnapshot.Publish(staging, shadowDirectory, generationId);
-                    TestingGenerationSnapshot.EnsurePublishedIsValid(shadowDirectory, generationId);
+                    failure = ex.Message;
+                    return false;
                 }
             }
 

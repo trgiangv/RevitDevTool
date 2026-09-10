@@ -129,6 +129,22 @@ public sealed class TestingGenerationStoreTests
     }
 
     [Fact]
+    public void CopyDirectory_publishes_nested_files_when_move_is_unavailable()
+    {
+        using var workspace = new GenerationWorkspace();
+        var staging = Path.Combine(workspace.GenerationsRoot, ".staging.copy");
+        var shadow = Path.Combine(workspace.GenerationsRoot, "copied");
+        Directory.CreateDirectory(Path.Combine(staging, "nested"));
+        File.WriteAllText(Path.Combine(staging, "nested", "payload.txt"), "ok");
+        File.WriteAllText(Path.Combine(staging, TestingGenerationPaths.GenerationCompleteMarkerFileName), string.Empty);
+
+        TestingGenerationSnapshot.CopyDirectory(staging, shadow);
+
+        Assert.Equal("ok", File.ReadAllText(Path.Combine(shadow, "nested", "payload.txt")));
+        Assert.True(File.Exists(Path.Combine(shadow, TestingGenerationPaths.GenerationCompleteMarkerFileName)));
+    }
+
+    [Fact]
     public void Build_indexes_each_declared_file_kind_without_filename_policy()
     {
         using var workspace = new GenerationWorkspace();
@@ -185,6 +201,22 @@ public sealed class TestingGenerationStoreTests
         await run.WaitAsync(TimeSpan.FromSeconds(5), TestContext.Current.CancellationToken);
 
         Assert.True(factory.Sessions.Single().Cancelled);
+    }
+
+    [Fact]
+    public async Task Cancel_returns_false_when_the_session_is_already_disposed()
+    {
+        using var workspace = new GenerationWorkspace();
+        var assembly = workspace.CopyManaged("sample.dll");
+        var policy = new FixedPolicy(workspace.Plan(assembly, [new TestingGenerationFile(assembly, "sample.dll", TestingGenerationFileKind.Managed)]));
+        var factory = new RecordingSessionFactory(blockRuns: true, throwOnCancel: true);
+        using var manager = new TestingRuntimeSessionManager(workspace.Store, policy, factory);
+        var request = Request(assembly);
+
+        var run = Task.Run(() => manager.Run(request, NullTestingRuntimeEventSink.Instance), TestContext.Current.CancellationToken);
+        Assert.True(factory.RunStarted.Wait(TimeSpan.FromSeconds(5), TestContext.Current.CancellationToken));
+        Assert.False(manager.Cancel(request.RunId));
+        await run.WaitAsync(TimeSpan.FromSeconds(5), TestContext.Current.CancellationToken);
     }
 
     [Fact]
@@ -264,8 +296,8 @@ public sealed class TestingGenerationStoreTests
     }
 
     private static TestingRunRequest Request(string path) => new(
-        1, Guid.NewGuid(), "provider.example", new TestingAssemblyReference(path, null, null),
-        new TestingSelection([]), new Dictionary<string, string>());
+        1, Guid.NewGuid(), "provider.example", new TestingAssemblyReference(path),
+        TestingSelection.All);
 
     private sealed class FixedPolicy(TestingGenerationPlan plan) : ITestingGenerationPolicy
     {
@@ -286,7 +318,7 @@ public sealed class TestingGenerationStoreTests
         public void ValidatePublished(TestingGenerationManifest manifest) { }
     }
 
-    private sealed class RecordingSessionFactory(bool blockRuns = false, bool blockUntilReleasedAfterCancel = false, bool retainOnDispose = false) : ITestingRuntimeSessionFactory
+    private sealed class RecordingSessionFactory(bool blockRuns = false, bool blockUntilReleasedAfterCancel = false, bool retainOnDispose = false, bool throwOnCancel = false) : ITestingRuntimeSessionFactory
     {
         public List<RecordingSession> Sessions { get; } = [];
         public ManualResetEventSlim RunStarted { get; } = new();
@@ -295,13 +327,13 @@ public sealed class TestingGenerationStoreTests
 
         public ITestingRuntimeSession Create(TestingGenerationManifest generation)
         {
-            var session = new RecordingSession(generation.GenerationId, blockRuns, blockUntilReleasedAfterCancel, retainOnDispose, RunStarted, CancelObserved, AllowRunToFinish);
+            var session = new RecordingSession(generation.GenerationId, blockRuns, blockUntilReleasedAfterCancel, retainOnDispose, throwOnCancel, RunStarted, CancelObserved, AllowRunToFinish);
             Sessions.Add(session);
             return session;
         }
     }
 
-    private sealed class RecordingSession(string generationId, bool blockRuns, bool blockUntilReleasedAfterCancel, bool retainOnDispose, ManualResetEventSlim runStarted, ManualResetEventSlim cancelObserved, ManualResetEventSlim allowRunToFinish) : ITestingRuntimeSession, ITestingRuntimeSessionRetirementDiagnostics
+    private sealed class RecordingSession(string generationId, bool blockRuns, bool blockUntilReleasedAfterCancel, bool retainOnDispose, bool throwOnCancel, ManualResetEventSlim runStarted, ManualResetEventSlim cancelObserved, ManualResetEventSlim allowRunToFinish) : ITestingRuntimeSession, ITestingRuntimeSessionRetirementDiagnostics
     {
         private readonly ManualResetEventSlim _cancelled = new();
         public string GenerationId { get; } = generationId;
@@ -319,7 +351,14 @@ public sealed class TestingGenerationStoreTests
             }
             return new TestingRunResponse(request.RunId, request.FrameworkId, GenerationId, [], TestingCancellationState.None, null, null);
         }
-        public void Cancel(Guid runId) { Cancelled = true; cancelObserved.Set(); _cancelled.Set(); }
+        public void Cancel(Guid runId)
+        {
+            Cancelled = true;
+            cancelObserved.Set();
+            _cancelled.Set();
+            if (throwOnCancel)
+                throw new ObjectDisposedException(nameof(RecordingSession));
+        }
         public void Dispose() => Disposed = true;
         public TestingGenerationRetirementDiagnostic? GetRetirementDiagnostic() => retainOnDispose
             ? new TestingGenerationRetirementDiagnostic(GenerationId, "generation.retained", "retained by provider") : null;

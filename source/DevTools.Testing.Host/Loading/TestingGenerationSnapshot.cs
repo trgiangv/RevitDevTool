@@ -61,13 +61,56 @@ internal static class TestingGenerationSnapshot
         if (Directory.Exists(shadowDirectory))
             return;
 
-        try
+        for (var attempt = 0; attempt < 4; attempt++)
         {
-            Directory.Move(stagingDirectory, shadowDirectory);
+            try
+            {
+                Directory.Move(stagingDirectory, shadowDirectory);
+                return;
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+            {
+                if (Directory.Exists(shadowDirectory))
+                    return;
+
+                if (attempt < 3)
+                {
+                    Thread.Sleep(25 * (attempt + 1));
+                    continue;
+                }
+
+                try
+                {
+                    CopyDirectory(stagingDirectory, shadowDirectory);
+                    return;
+                }
+                catch
+                {
+                    if (Directory.Exists(shadowDirectory))
+                    {
+                        try
+                        {
+                            Directory.Delete(shadowDirectory, recursive: true);
+                        }
+                        catch
+                        {
+                            // Best effort; the next Build attempt must not treat a partial tree as published.
+                        }
+                    }
+
+                    throw;
+                }
+            }
         }
-        catch (IOException) when (Directory.Exists(shadowDirectory))
+    }
+
+    internal static void CopyDirectory(string sourceDirectory, string destinationDirectory)
+    {
+        Directory.CreateDirectory(destinationDirectory);
+        foreach (var file in Directory.EnumerateFiles(sourceDirectory, "*", SearchOption.AllDirectories))
         {
-            // Another process published the same generation first.
+            var relative = TestingGenerationPaths.GetRelativePath(sourceDirectory, file);
+            CopyFile(file, Path.Combine(destinationDirectory, relative));
         }
     }
 
