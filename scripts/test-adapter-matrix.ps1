@@ -3,10 +3,12 @@
     Build + host-free discovery proof for the TestAdapter consumer surface.
 
 .DESCRIPTION
-    Runs every sample test project through one Autodesk configuration per runtime
-    the package ships: 2024 -> net48, 2025 -> net8, 2027 -> net10. Each project is
-    built, then the produced testhost is asked for --list-tests, which must succeed
-    without a running host.
+    Packs RevitDevTool.TestAdapter into the local NuGet feed (same surface an
+    end user restores), then runs every sample test project through one Autodesk
+    configuration per runtime the package ships: 2024 -> net48, 2025 -> net8,
+    2027 -> net10. Each project is restored from that nupkg, built, and the
+    produced testhost is asked for --list-tests, which must succeed without a
+    running host.
 
 .EXAMPLE
     scripts/test-adapter-matrix.ps1
@@ -26,6 +28,11 @@ param(
 
 $ErrorActionPreference = 'Stop'
 $root = Split-Path -Parent $PSScriptRoot
+
+Write-Host 'Packing RevitDevTool.TestAdapter into output/nuget (end-user PackageReference surface)...'
+& (Join-Path $PSScriptRoot 'pack-test-adapter.ps1')
+if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
 $rows = @()
 $failures = 0
 
@@ -38,28 +45,35 @@ foreach ($year in $Years) {
         $status = 'ok'
         $tests = ''
 
-        $build = & dotnet build $project -c $configuration -v q 2>&1
+        $build = & dotnet restore $project -p:Configuration=$configuration --force 2>&1
         if ($LASTEXITCODE -ne 0) {
-            $status = 'build failed'
+            $status = 'restore failed'
             $build | Select-Object -Last 15 | ForEach-Object { Write-Host $_ }
         }
         else {
-            $binDir = Join-Path (Split-Path -Parent $project) "bin\$configuration"
-            $exe = Get-ChildItem -LiteralPath $binDir -Recurse -Filter "$name.exe" -ErrorAction SilentlyContinue |
-                Select-Object -First 1
-
-            if (-not $exe) {
-                $status = 'no testhost'
+            $build = & dotnet build $project -c $configuration --no-restore -v q 2>&1
+            if ($LASTEXITCODE -ne 0) {
+                $status = 'build failed'
+                $build | Select-Object -Last 15 | ForEach-Object { Write-Host $_ }
             }
             else {
-                $listed = & $exe.FullName --list-tests 2>&1
-                if ($LASTEXITCODE -ne 0) {
-                    $status = 'discovery failed'
-                    $listed | Select-Object -Last 20 | ForEach-Object { Write-Host $_ }
+                $binDir = Join-Path (Split-Path -Parent $project) "bin\$configuration"
+                $exe = Get-ChildItem -LiteralPath $binDir -Recurse -Filter "$name.exe" -ErrorAction SilentlyContinue |
+                    Select-Object -First 1
+
+                if (-not $exe) {
+                    $status = 'no testhost'
                 }
                 else {
-                    $match = [regex]::Match(($listed -join "`n"), '(\d+)\s+test')
-                    $tests = if ($match.Success) { $match.Groups[1].Value } else { '?' }
+                    $listed = & $exe.FullName --list-tests 2>&1
+                    if ($LASTEXITCODE -ne 0) {
+                        $status = 'discovery failed'
+                        $listed | Select-Object -Last 20 | ForEach-Object { Write-Host $_ }
+                    }
+                    else {
+                        $match = [regex]::Match(($listed -join "`n"), '(\d+)\s+test')
+                        $tests = if ($match.Success) { $match.Groups[1].Value } else { '?' }
+                    }
                 }
             }
         }

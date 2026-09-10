@@ -89,11 +89,12 @@ leave other running versions untouched.
 | Artifact | Command |
 |----------|---------|
 | Installer / all years | `scripts/pack.ps1` |
-| TestAdapter NuGet | `scripts/pack-test-adapter.ps1 [-RefreshLocalCache]` |
+| TestAdapter NuGet | `scripts/pack-test-adapter.ps1` |
 
-`-RefreshLocalCache` deletes `%USERPROFILE%\.nuget\packages\revitdevtool.testadapter\<version>`
+Pack writes `output/nuget` (repo `NuGet.config` maps `RevitDevTool.TestAdapter`
+there) and deletes `%USERPROFILE%\.nuget\packages\revitdevtool.testadapter\<version>`
 so a consumer restore cannot pick up the previous extraction of the same version.
-Consumer-side proof for that package (build + `--list-tests` on net48 / net8 /
+Consumer-side proof (restore from that nupkg + `--list-tests` on net48 / net8 /
 net10) is in `docs/agents/host-testing.md`.
 
 ## When proof is enough

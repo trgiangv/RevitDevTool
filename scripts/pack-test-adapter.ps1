@@ -4,20 +4,23 @@
 .DESCRIPTION
     Uses <Version> in source/DevTools.TestAdapter/DevTools.TestAdapter.csproj.
     Restores and builds DevTools.NUnit.MTP for all TFMs, then packs the adapter.
+    Writes to output/nuget (repo NuGet.config maps RevitDevTool.TestAdapter there)
+    and deletes the extracted copy of this version from the global packages
+    folder so samples restore the nupkg just packed. Same-version re-pack is
+    otherwise invisible to consumers.
     Does not push. Does not run the RevitDevTool installer pack pipeline.
     Pack graph: docs/architecture/Testing/README.md.
-.PARAMETER RefreshLocalCache
-    Delete the extracted copy of this version from the global packages folder.
-    Re-packing the same version otherwise leaves consumers restoring the stale
-    extraction from a previous pack.
+.PARAMETER SkipLocalCacheRefresh
+    Keep the extracted global-packages copy. Default is to delete it so the
+    next restore matches this pack.
 .EXAMPLE
     scripts/pack-test-adapter.ps1
     scripts/pack-test-adapter.ps1 -OutputDirectory output/nuget
-    scripts/pack-test-adapter.ps1 -RefreshLocalCache
+    scripts/pack-test-adapter.ps1 -SkipLocalCacheRefresh
 #>
 param(
     [string]$OutputDirectory = 'output/nuget',
-    [switch]$RefreshLocalCache
+    [switch]$SkipLocalCacheRefresh
 )
 
 $ErrorActionPreference = "Stop"
@@ -33,19 +36,19 @@ if ([string]::IsNullOrWhiteSpace($version)) {
     throw "Could not read Version from $csproj"
 }
 
-$mtpCsproj = Join-RepoPath 'source/DevTools.NUnit.MTP/DevTools.NUnit.MTP.csproj'
+$nunitMtpCsproj = Join-RepoPath 'source/DevTools.NUnit.MTP/DevTools.NUnit.MTP.csproj'
 $tunitMtpCsproj = Join-RepoPath 'source/DevTools.TUnit.MTP/DevTools.TUnit.MTP.csproj'
 
-Write-Host "Restoring $csproj, $mtpCsproj, and $tunitMtpCsproj"
+Write-Host "Restoring $csproj, $nunitMtpCsproj, and $tunitMtpCsproj"
 dotnet restore $csproj
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-dotnet restore $mtpCsproj
+dotnet restore $nunitMtpCsproj
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 dotnet restore $tunitMtpCsproj
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
-Write-Host "Building $mtpCsproj (all TargetFrameworks)"
-dotnet build $mtpCsproj -c Release --no-restore
+Write-Host "Building $nunitMtpCsproj (all TargetFrameworks)"
+dotnet build $nunitMtpCsproj -c Release --no-restore
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
 Write-Host "Building $tunitMtpCsproj (all TargetFrameworks)"
@@ -64,11 +67,16 @@ if (-not $nupkg) {
 
 Write-Host "Packed $($nupkg.FullName)"
 
-if ($RefreshLocalCache) {
-    $cached = Join-Path $env:USERPROFILE ".nuget\packages\revitdevtool.testadapter\$version"
-    if (Test-Path -LiteralPath $cached) {
-        Remove-Item -LiteralPath $cached -Recurse -Force
-        Write-Host "Removed stale extraction $cached"
+if (-not $SkipLocalCacheRefresh) {
+    $roots = @()
+    if ($env:NUGET_PACKAGES) { $roots += $env:NUGET_PACKAGES }
+    $roots += (Join-Path $env:USERPROFILE '.nuget\packages')
+    foreach ($root in ($roots | Select-Object -Unique)) {
+        $cached = Join-Path $root "revitdevtool.testadapter\$version"
+        if (Test-Path -LiteralPath $cached) {
+            Remove-Item -LiteralPath $cached -Recurse -Force
+            Write-Host "Removed stale extraction $cached"
+        }
     }
 }
 

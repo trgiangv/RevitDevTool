@@ -8,17 +8,12 @@
         <ForceLaunch>false</ForceLaunch>
         <PerTestTimeout>60</PerTestTimeout>
         <LaunchTimeout>360</LaunchTimeout>
+        <RuntimeIdentifier>win-x64</RuntimeIdentifier>
     </PropertyGroup>
-
-    <Import Project="..\..\source\DevTools.TestAdapter\build\RevitDevTool.TestAdapter.targets"/>
 
     <ItemGroup>
         <PackageReference Include="Nice3point.Revit.Toolkit" VersionOverride="$(RevitVersion).*"/>
         <PackageReference Include="NUnit"/>
-        <!-- ProjectReference path only: the adapter keeps its MTP reference private, so the
-             generated entry point has no Microsoft.Testing.Platform. NuGet consumers get it
-             from the RevitDevTool.TestAdapter -> MTP.MSBuild dependency. -->
-        <PackageReference Include="Microsoft.Testing.Platform"/>
-        <ProjectReference Include="..\..\source\DevTools.TestAdapter\DevTools.TestAdapter.csproj"/>
+        <PackageReference Include="RevitDevTool.TestAdapter"/>
     </ItemGroup>
 </Project>
