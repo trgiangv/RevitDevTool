@@ -21,6 +21,18 @@ discovery of compile-only Autodesk refs stays in `DiscoveryAssemblyLoad`.
 See [`docs/architecture/Testing/README.md`](../architecture/Testing/README.md)
 (Adapter bootstrap).
 
+**Amendment 2026-09-10 (in-host assembly).** First-party NUnit and TUnit
+in-host providers live in `DevTools.Testing.Host` (`NUnit/`, `TUnit/`
+folders). Namespaces `DevTools.NUnit.Host` / `DevTools.TUnit.Host` stay so
+tests and types do not churn. The `DevTools.NUnit.Host` and
+`DevTools.TUnit.Host` *projects* are deleted. `DevTools.Testing.Abstractions`
+remains engine-blind (no `nunit`/`tunit` switch, no MTP sibling names).
+Testhost siblings (`DevTools.NUnit.MTP` / `DevTools.TUnit.MTP`) and Runtime
+payloads stay separate assemblies loaded by type name. Composition is
+`AddTestingHostServices()`. `TestingDiscoveryHints` is gone. A third engine
+is still a new Runtime + MTP (+ optional folder under Testing.Host), not a
+kernel catalog.
+
 **Amendment 2026-08-29.** Public MSBuild names dropped the `DevTools` prefix:
 `TestingRunnerPath`. Ipc/Transport are ILRepacked into the adapter. In-host
 `testing/*` is `MarshaledTestRequestHandler` → `DotnetTestRequestHandler`.
