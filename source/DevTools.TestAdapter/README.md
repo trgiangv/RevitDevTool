@@ -31,10 +31,6 @@ Do not use `.runsettings`.
 <PropertyGroup>
   <HostName>Revit</HostName>
   <HostVersion>2025</HostVersion>
-  <!-- Required on net48 (host 2024 and older). Set it whenever this csproj
-       also builds Autodesk 2022–2024 configs, or restore and build disagree
-       (NETSDK1047). Harmless on net8 / net10. -->
-  <RuntimeIdentifier>win-x64</RuntimeIdentifier>
   <ForceLaunch>false</ForceLaunch>
   <PerTestTimeout>60</PerTestTimeout>
   <LaunchTimeout>180</LaunchTimeout>
@@ -53,7 +49,6 @@ Do not use `.runsettings`.
 <PropertyGroup>
   <HostName>Revit</HostName>
   <HostVersion>2025</HostVersion>
-  <RuntimeIdentifier>win-x64</RuntimeIdentifier>
   <ForceLaunch>false</ForceLaunch>
   <PerTestTimeout>60</PerTestTimeout>
   <LaunchTimeout>180</LaunchTimeout>
@@ -69,16 +64,11 @@ Do not use `.runsettings`.
 
 ### Targeting net48 (Revit / AutoCAD 2024 and older)
 
-The adapter builds the test project as an executable, and NuGet restore does not
-read a RID from a package. A `net48` target must declare it itself — otherwise
-restore and build disagree (`NETSDK1047`):
-
-```xml
-<RuntimeIdentifier>win-x64</RuntimeIdentifier>
-```
-
-If one csproj also has Autodesk 2022–2024 configurations (the Samples repo
-pattern), keep the RID on the project even when the active year is net8/net10.
+Do not add `<RuntimeIdentifier>` on net8 / net10. The package flattens
+testhost output (`AppendRuntimeIdentifierToOutputPath=false`). Restore
+cannot read a RID from this package (`NETSDK1047` if the props set one).
+On net8 / net10 a project-level RID also nests testhost output under
+`win-x64`, which Test Explorer can bind instead of the current build.
 
 ### Central `Polyfill`
 

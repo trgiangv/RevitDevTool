@@ -8,12 +8,19 @@
         <ForceLaunch>false</ForceLaunch>
         <PerTestTimeout>60</PerTestTimeout>
         <LaunchTimeout>360</LaunchTimeout>
-        <RuntimeIdentifier>win-x64</RuntimeIdentifier>
+        <!-- net48 only. Restore must see this RID because PlatformTarget=x64
+             makes the SDK assign win-x64 at build. The adapter package cannot
+             set it (NETSDK1047). Leave unset on net8/net10. -->
+        <RuntimeIdentifier Condition="$(TargetFramework.StartsWith('net4'))">win-x64</RuntimeIdentifier>
     </PropertyGroup>
 
     <ItemGroup>
         <PackageReference Include="Nice3point.Revit.Toolkit" VersionOverride="$(RevitVersion).*"/>
         <PackageReference Include="NUnit"/>
         <PackageReference Include="RevitDevTool.TestAdapter"/>
+    </ItemGroup>
+
+    <ItemGroup>
+        <None Include="Testdata\**" CopyToOutputDirectory="Never"/>
     </ItemGroup>
 </Project>

@@ -19,12 +19,7 @@ public sealed class PackageConsumerTests
 
         try
         {
-            // Do not let a prior test build prove a stale package: pack performs a
-            // fresh Release build, then the consumer restores from an empty cache.
-            Run("dotnet", $"pack \"{Path.Combine(root, "source", "DevTools.TestAdapter", "DevTools.TestAdapter.csproj")}\" -c Release -o \"{packages}\"");
-            var nupkg = Directory.GetFiles(packages, "RevitDevTool.TestAdapter.*.nupkg", SearchOption.TopDirectoryOnly).Single();
-            var packageVersion = Path.GetFileNameWithoutExtension(nupkg)
-                ["RevitDevTool.TestAdapter.".Length..];
+            var (nupkg, packageVersion) = PackAdapter(root, packages);
             AssertPackageClosure(nupkg);
 
             WriteIsolatedNuGetConfig(work, packages);
@@ -126,7 +121,7 @@ public sealed class PackageConsumerTests
                 namespace Consumer;
                 public static class ProviderLeak
                 {
-                    public static Type ProviderType => typeof(HostTestFramework);
+                    public static Type ProviderType => typeof(TestFramework);
                 }
                 """);
 
@@ -174,12 +169,11 @@ public sealed class PackageConsumerTests
 
         try
         {
-            Run("dotnet", $"pack \"{Path.Combine(root, "source", "DevTools.TestAdapter", "DevTools.TestAdapter.csproj")}\" -c Release -o \"{packages}\"");
-            var nupkg = Directory.GetFiles(packages, "RevitDevTool.TestAdapter.*.nupkg", SearchOption.TopDirectoryOnly).Single();
-            var packageVersion = Path.GetFileNameWithoutExtension(nupkg)["RevitDevTool.TestAdapter.".Length..];
+            var (_, packageVersion) = PackAdapter(root, packages);
 
             WriteIsolatedNuGetConfig(work, packages);
-            RemoveCachedAdapterPackage(packageVersion);
+            var globalPackages = Path.Combine(work, "global-packages");
+            Directory.CreateDirectory(globalPackages);
 
             // Every shipped runtime folder: net48, net8, net10 — both engines.
             foreach (var tfm in new[] { "net48", "net8.0-windows", "net10.0-windows" })
@@ -188,6 +182,7 @@ public sealed class PackageConsumerTests
 
                 AssertDiscovers(
                     work,
+                    globalPackages,
                     $"NUnitDiscovery{suffix}",
                     packageVersion,
                     tfm,
@@ -208,6 +203,7 @@ public sealed class PackageConsumerTests
                 // Polyfill here proves the consumer declares nothing beyond TUnit itself.
                 AssertDiscovers(
                     work,
+                    globalPackages,
                     $"TUnitDiscovery{suffix}",
                     packageVersion,
                     tfm,
@@ -231,6 +227,7 @@ public sealed class PackageConsumerTests
 
     private static void AssertDiscovers(
         string work,
+        string globalPackages,
         string name,
         string packageVersion,
         string tfm,
@@ -267,14 +264,14 @@ public sealed class PackageConsumerTests
             }
             """);
 
-        Run("dotnet", $"restore {name}.csproj --configfile ../NuGet.Config", consumer);
-        Run("dotnet", $"build {name}.csproj -c Release --no-restore", consumer);
+        Run("dotnet", $"restore {name}.csproj --configfile ../NuGet.Config", consumer, globalPackages);
+        Run("dotnet", $"build {name}.csproj -c Release --no-restore", consumer, globalPackages);
 
-        // net48 adds the RID to the output path; take the folder that has the testhost.
         var output = Directory
             .GetFiles(Path.Combine(consumer, "bin", "Release"), $"{name}.exe", SearchOption.AllDirectories)
             .Select(Path.GetDirectoryName)
             .Single()!;
+        Assert.DoesNotContain("win-x64", output, StringComparison.OrdinalIgnoreCase);
         Assert.True(
             File.Exists(Path.Combine(output, expectedMtpAssembly)),
             $"{name} should copy {expectedMtpAssembly} ({tfm}).");
@@ -289,8 +286,8 @@ public sealed class PackageConsumerTests
 
         // Discovery is local, so it must succeed without a CAD host.
         var discovery = netFx
-            ? RunProcess(Path.Combine(output, $"{name}.exe"), "--list-tests", output, globalPackages: null)
-            : RunProcess("dotnet", $"{name}.dll --list-tests", output, globalPackages: null);
+            ? RunProcess(Path.Combine(output, $"{name}.exe"), "--list-tests", output, globalPackages)
+            : RunProcess("dotnet", $"{name}.dll --list-tests", output, globalPackages);
         Assert.True(discovery.ExitCode == 0, $"{name} discovery failed ({tfm}):{Environment.NewLine}{discovery.Text}");
         Assert.Contains("Runs_in_host", discovery.Text, StringComparison.Ordinal);
     }
@@ -308,10 +305,7 @@ public sealed class PackageConsumerTests
 
         try
         {
-            Run("dotnet", $"pack \"{Path.Combine(root, "source", "DevTools.TestAdapter", "DevTools.TestAdapter.csproj")}\" -c Release -o \"{packages}\"");
-            var nupkg = Directory.GetFiles(packages, "RevitDevTool.TestAdapter.*.nupkg", SearchOption.TopDirectoryOnly).Single();
-            var packageVersion = Path.GetFileNameWithoutExtension(nupkg)
-                ["RevitDevTool.TestAdapter.".Length..];
+            var (_, packageVersion) = PackAdapter(root, packages);
 
             WriteIsolatedNuGetConfig(work, packages);
             File.WriteAllText(Path.Combine(consumer, "PartialConfigConsumer.csproj"), $"""
@@ -359,6 +353,17 @@ public sealed class PackageConsumerTests
         {
             TryDeleteDirectory(work);
         }
+    }
+
+    private static (string Nupkg, string Version) PackAdapter(string root, string packages)
+    {
+        // Pack copies MTP from bin/Release; build siblings first so the nupkg
+        // is not a stale Debug leftover. Same order as scripts/pack-test-adapter.ps1.
+        Run("dotnet", $"build \"{Path.Combine(root, "source", "DevTools.NUnit.MTP", "DevTools.NUnit.MTP.csproj")}\" -c Release");
+        Run("dotnet", $"build \"{Path.Combine(root, "source", "DevTools.TUnit.MTP", "DevTools.TUnit.MTP.csproj")}\" -c Release");
+        Run("dotnet", $"pack \"{Path.Combine(root, "source", "DevTools.TestAdapter", "DevTools.TestAdapter.csproj")}\" -c Release -o \"{packages}\"");
+        var nupkg = Directory.GetFiles(packages, "RevitDevTool.TestAdapter.*.nupkg", SearchOption.TopDirectoryOnly).Single();
+        return (nupkg, Path.GetFileNameWithoutExtension(nupkg)["RevitDevTool.TestAdapter.".Length..]);
     }
 
     private static void AssertPackageClosure(string nupkg)
@@ -507,18 +512,6 @@ public sealed class PackageConsumerTests
               </packageSourceMapping>
             </configuration>
             """);
-    }
-
-    private static void RemoveCachedAdapterPackage(string packageVersion)
-    {
-        var cached = Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
-            ".nuget",
-            "packages",
-            "revitdevtool.testadapter",
-            packageVersion);
-        if (Directory.Exists(cached))
-            Directory.Delete(cached, recursive: true);
     }
 
     private static void Run(string fileName, string arguments, string? workingDirectory = null, string? globalPackages = null)

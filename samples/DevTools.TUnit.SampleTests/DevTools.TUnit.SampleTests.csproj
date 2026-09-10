@@ -8,7 +8,7 @@
     <ForceLaunch>false</ForceLaunch>
     <PerTestTimeout>60</PerTestTimeout>
     <LaunchTimeout>360</LaunchTimeout>
-    <RuntimeIdentifier>win-x64</RuntimeIdentifier>
+    <RuntimeIdentifier Condition="$(TargetFramework.StartsWith('net4'))">win-x64</RuntimeIdentifier>
   </PropertyGroup>
 
   <ItemGroup>

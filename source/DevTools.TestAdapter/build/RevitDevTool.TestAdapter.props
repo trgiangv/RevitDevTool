@@ -8,6 +8,13 @@
     <!-- A test project is an MTP testhost, so these two are package decisions, not opinions. -->
     <OutputType>Exe</OutputType>
     <EnableDynamicLoading>false</EnableDynamicLoading>
+    <!-- Do not set RuntimeIdentifier: NuGet restore does not read it from this
+         file (NETSDK1047). A project-level RID also appends win-x64 to OutputPath,
+         so Test Explorer can bind a stale testhost next to the real one.
+         Flatten RID output if a consumer still sets one. Do not set
+         PlatformTarget here: the .NET SDK then assigns RuntimeIdentifier=win-x64
+         on net48 at build, which disagrees with a RID-less restore. -->
+    <AppendRuntimeIdentifierToOutputPath Condition="'$(AppendRuntimeIdentifierToOutputPath)' == ''">false</AppendRuntimeIdentifierToOutputPath>
     <ForceLaunch Condition="'$(ForceLaunch)' == ''">false</ForceLaunch>
     <PerTestTimeout Condition="'$(PerTestTimeout)' == ''">60</PerTestTimeout>
     <LaunchTimeout Condition="'$(LaunchTimeout)' == ''">180</LaunchTimeout>
