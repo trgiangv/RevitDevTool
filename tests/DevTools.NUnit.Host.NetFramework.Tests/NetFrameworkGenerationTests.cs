@@ -405,7 +405,7 @@ public sealed class NetFrameworkGenerationTests
 
     private sealed class NoOpEventSink : ITestingRuntimeEventSink
     {
-        public void Publish(TestingRuntimeEvent runtimeEvent)
+        public void Publish(TestingEvent runtimeEvent)
         {
         }
     }
@@ -414,7 +414,8 @@ public sealed class NetFrameworkGenerationTests
         1,
         runId,
         NUnitFramework.Id,
-        new TestingAssemblyReference(assemblyPath, "net48", null),
-        new TestingSelection([], filter),
-        new Dictionary<string, string>());
+        new TestingAssemblyReference(assemblyPath),
+        string.IsNullOrWhiteSpace(filter)
+            ? TestingSelection.All
+            : TestingSelection.FromFrameworkFilter(TestingSelection.XmlFilterFormat, filter));
 }

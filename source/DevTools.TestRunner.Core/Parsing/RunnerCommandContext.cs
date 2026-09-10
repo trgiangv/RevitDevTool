@@ -10,8 +10,12 @@ public sealed record RunnerCommandContext(
     int LaunchTimeoutSeconds,
     bool Debug,
     int? DebugParentPid,
-    string FrameworkId)
+    string FrameworkId,
+    int RequestTimeoutSeconds = 0)
 {
+    public int EffectiveRequestTimeoutSeconds =>
+        RequestTimeoutSeconds > 0 ? RequestTimeoutSeconds : PerTestTimeoutSeconds;
+
     public static bool TryCreate(
         string assemblyPath,
         string hostName,
@@ -22,6 +26,33 @@ public sealed record RunnerCommandContext(
         bool debug,
         int? debugParentPid,
         string? framework,
+        out RunnerCommandContext? context,
+        out string? error) =>
+        TryCreate(
+            assemblyPath,
+            hostName,
+            hostVersion,
+            forceLaunch,
+            perTestTimeoutSeconds,
+            launchTimeoutSeconds,
+            debug,
+            debugParentPid,
+            framework,
+            requestTimeoutSeconds: 0,
+            out context,
+            out error);
+
+    public static bool TryCreate(
+        string assemblyPath,
+        string hostName,
+        string hostVersion,
+        bool forceLaunch,
+        int perTestTimeoutSeconds,
+        int launchTimeoutSeconds,
+        bool debug,
+        int? debugParentPid,
+        string? framework,
+        int requestTimeoutSeconds,
         out RunnerCommandContext? context,
         out string? error)
     {
@@ -68,7 +99,8 @@ public sealed record RunnerCommandContext(
             launchTimeoutSeconds,
             debug || debugParentPid is not null,
             debugParentPid,
-            frameworkId);
+            frameworkId,
+            requestTimeoutSeconds);
         return true;
     }
 

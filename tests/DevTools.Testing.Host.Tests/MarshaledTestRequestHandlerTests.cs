@@ -34,9 +34,8 @@ public sealed class MarshaledTestRequestHandlerTests
                 TestingProtocol.CurrentVersion,
                 runId,
                 provider.FrameworkId,
-                new TestingAssemblyReference(@"C:\tests\Sample.dll", "net10.0-windows", "hash"),
-                new TestingSelection(["opaque-id"]),
-                new Dictionary<string, string>()),
+                new TestingAssemblyReference(@"C:\tests\Sample.dll"),
+                TestingSelection.FromTestIds(["opaque-id"])),
             TestingJsonContext.Default.TestingRunRequest);
         var runResponse = await handler.HandleAsync(
             "run", TestingProtocol.Run, run, TestContext.Current.CancellationToken);

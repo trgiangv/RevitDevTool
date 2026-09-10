@@ -4,35 +4,26 @@ using DevTools.TUnit.Runtime;
 
 namespace DevTools.TUnit.MTP;
 
-internal sealed class TUnitHostTestDiscoverer : IHostTestDiscoverer, IHostTestRunMapper
+public sealed class TUnitHostTestDiscoverer : IHostTestDiscoverer, IHostTestRunMapper
 {
-    public IReadOnlyList<TestingDiscoveredTest> Discover(string assemblyPath) =>
-        Discover(assemblyPath, TestingDiscoveryOptions.Testhost);
-
-    public IReadOnlyList<TestingDiscoveredTest> Discover(string assemblyPath, TestingDiscoveryOptions options) =>
-        Select(assemblyPath, new TestingSelection([]), options);
-
-    public IReadOnlyList<TestingDiscoveredTest> Select(string assemblyPath, TestingSelection selection) =>
-        Select(assemblyPath, selection, TestingDiscoveryOptions.Testhost);
-
-    public IReadOnlyList<TestingDiscoveredTest> Select(
-        string assemblyPath,
-        TestingSelection selection,
-        TestingDiscoveryOptions options) =>
-        TUnitCatalog.Discover(assemblyPath, selection, options);
+    public IReadOnlyList<TestingDiscoveredTest> Discover(string assemblyPath, TestingSelection selection) =>
+        TUnitCatalog.Discover(assemblyPath, selection);
 
     public TestingSelection ToHostSelection(
         TestingSelection requested,
         IReadOnlyList<TestingDiscoveredTest> discovered)
     {
-        if (requested.TestIds.Count == 0 && (requested.Names?.Count ?? 0) == 0)
-            return new TestingSelection([], Hints: requested.Hints);
+        if (requested.Kind == TestingSelectionKind.All)
+            return TestingSelection.All;
 
-        return new TestingSelection(
-            discovered.Select(test => test.TestId).Distinct(StringComparer.Ordinal).ToList(),
-            Hints: requested.Hints is { IsEmpty: false }
-                ? requested.Hints
-                : TUnitTestIdentity.ToHints(discovered));
+        if (requested.Kind == TestingSelectionKind.FrameworkFilter)
+            return requested;
+
+        if (requested.Kind == TestingSelectionKind.TestIds && requested.TestIds.Count == 0)
+            return TestingSelection.FromTestIds([]);
+
+        var ids = discovered.Select(test => test.TestId).Distinct(StringComparer.Ordinal).ToList();
+        return TestingSelection.FromTestIds(ids);
     }
 
     public IReadOnlyList<TestingCaseResult> FoldResults(

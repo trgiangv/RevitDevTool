@@ -1,12 +1,13 @@
+using DevTools.Testing.Abstractions;
 using DevTools.Testing.Abstractions.Contracts;
 
-namespace DevTools.Testing.Abstractions;
+namespace DevTools.Testing.Abstractions.Tests;
 
-public static class HostTestRunMappers
+internal static class PassThroughRunMapper
 {
-    public static IHostTestRunMapper PassThrough { get; } = new PassThroughMapper();
+    public static IHostTestRunMapper Instance { get; } = new Mapper();
 
-    private sealed class PassThroughMapper : IHostTestRunMapper
+    private sealed class Mapper : IHostTestRunMapper
     {
         public TestingSelection ToHostSelection(
             TestingSelection requested,

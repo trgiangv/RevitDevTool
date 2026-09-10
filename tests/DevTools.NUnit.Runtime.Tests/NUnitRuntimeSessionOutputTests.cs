@@ -70,21 +70,24 @@ public sealed class NUnitRuntimeSessionOutputTests
         1,
         Guid.NewGuid(),
         "nunit",
-        new TestingAssemblyReference(DedicatedTestFixturesHarness.AssemblyPath, "net10.0-windows", null),
-        new TestingSelection([], filter),
-        new Dictionary<string, string>());
+        new TestingAssemblyReference(DedicatedTestFixturesHarness.AssemblyPath),
+        SelectionFromFilter(filter));
 
     private static TestingRunRequest CreateFullSemanticsRequest(string? filter) => new(
         1,
         Guid.NewGuid(),
         "nunit",
-        new TestingAssemblyReference(FixtureTestHarness.FixtureAssemblyPath, "net10.0-windows", null),
-        new TestingSelection([], filter),
-        new Dictionary<string, string>());
+        new TestingAssemblyReference(FixtureTestHarness.FixtureAssemblyPath),
+        SelectionFromFilter(filter));
+
+    private static TestingSelection SelectionFromFilter(string? filter) =>
+        string.IsNullOrWhiteSpace(filter)
+            ? TestingSelection.All
+            : TestingSelection.FromFrameworkFilter(TestingSelection.XmlFilterFormat, filter);
 
     private sealed class RecordingSink : ITestingRuntimeEventSink
     {
-        public void Publish(TestingRuntimeEvent testingEvent) { }
+        public void Publish(TestingEvent testingEvent) { }
     }
 
     private sealed class RecordingTraceListener : TraceListener

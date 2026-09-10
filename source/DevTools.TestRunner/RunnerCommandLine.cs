@@ -32,12 +32,21 @@ internal sealed record RunnerCommandLine(
             return false;
         }
 
-        var selection = payload is not null
-            ? new TestingSelection([], payload)
-            : new TestingSelection(
-                cleanedTests,
-                ProviderPayload: null,
-                Names: cleanedNames.Count == 0 ? null : cleanedNames);
+        TestingSelection selection;
+        if (payload is not null)
+            selection = TestingSelection.FromFrameworkFilter(TestingSelection.XmlFilterFormat, payload);
+        else if (cleanedTests.Count > 0 && cleanedNames.Count > 0)
+        {
+            error = MixedFilterMessage;
+            return false;
+        }
+        else if (cleanedTests.Count > 0)
+            selection = TestingSelection.FromTestIds(cleanedTests);
+        else if (cleanedNames.Count > 0)
+            selection = TestingSelection.FromNames(cleanedNames);
+        else
+            selection = TestingSelection.All;
+
         options = new RunnerCommandLine(context, selection);
         return true;
     }

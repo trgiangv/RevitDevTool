@@ -4,7 +4,9 @@
         <TargetFramework>net10.0-windows</TargetFramework>
         <IsPackable>false</IsPackable>
         <!-- Match the runner exe so ProjectReference is allowed (NETSDK1151). -->
-        <SelfContained>true</SelfContained>
+        <!-- Match DevTools.TestRunner (framework-dependent, win-x64). SelfContained=true
+             against that reference is NETSDK1150. -->
+        <SelfContained>false</SelfContained>
         <RuntimeIdentifier>win-x64</RuntimeIdentifier>
     </PropertyGroup>
 
@@ -20,7 +22,7 @@
         <ProjectReference Include="..\..\source\DevTools.Testing.Transport\DevTools.Testing.Transport.csproj"/>
         <ProjectReference Include="..\..\source\DevTools.TestRunner.Core\DevTools.TestRunner.Core.csproj"/>
         <ProjectReference Include="..\..\source\DevTools.TestRunner\DevTools.TestRunner.csproj"
-                          AdditionalProperties="SelfContained=false;PublishSingleFile=false"/>
+                          AdditionalProperties="PublishSingleFile=false"/>
     </ItemGroup>
 
     <ItemGroup>

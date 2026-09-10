@@ -79,6 +79,37 @@ public sealed class DiscoveryRefsTests
     }
 
     [Fact]
+    public void Read_skips_nuget_cached_targeting_packs()
+    {
+        var directory = Directory.CreateTempSubdirectory("abstractions-discovery-refs-").FullName;
+        try
+        {
+            var assemblyPath = Path.Combine(directory, "Host.Tests.dll");
+            File.WriteAllBytes(assemblyPath, [0]);
+            var packDir = Path.Combine(
+                directory, "packages", "microsoft.netcore.app.ref", "8.0.31", "ref", "net8.0");
+            Directory.CreateDirectory(packDir);
+            var packPath = Path.Combine(packDir, "System.Runtime.dll");
+            File.WriteAllBytes(packPath, [1]);
+            var apiDir = Path.Combine(directory, "revit");
+            Directory.CreateDirectory(apiDir);
+            var apiPath = Path.Combine(apiDir, "RevitAPI.dll");
+            File.WriteAllBytes(apiPath, [2]);
+            File.WriteAllText(
+                DiscoveryRefs.FilePathFor(assemblyPath),
+                packPath + Environment.NewLine + apiPath);
+
+            var map = DiscoveryRefs.Read(assemblyPath);
+            Assert.Equal(apiPath, Assert.Single(map, pair => pair.Key == "RevitAPI").Value);
+            Assert.False(map.ContainsKey("System.Runtime"));
+        }
+        finally
+        {
+            Directory.Delete(directory, recursive: true);
+        }
+    }
+
+    [Fact]
     public void Read_missing_file_is_empty()
     {
         Assert.Empty(DiscoveryRefs.Read(Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N") + ".dll")));

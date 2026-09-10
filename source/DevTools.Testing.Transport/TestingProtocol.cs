@@ -1,5 +1,6 @@
 using System.Text.Json;
 using DevTools.Ipc;
+using DevTools.Testing.Abstractions.Contracts;
 
 namespace DevTools.Testing.Transport;
 
@@ -43,3 +44,34 @@ public sealed record TestingHelloResponse(
     bool IsBusy);
 
 public sealed record TestingCancelRequest(Guid RunId);
+
+public sealed record TestingCancelResponse(bool Acknowledged);
+
+/// <summary>
+/// One NDJSON line on <c>machine-run</c> stdout. Human <c>run</c> still
+/// writes a single <see cref="TestingRunResponse"/> document.
+/// </summary>
+public sealed record TestingRunnerStreamMessage(
+    TestingEvent? Event = null,
+    TestingRunResponse? Response = null);
+
+public static class TestingCancelSignal
+{
+    public static string Name(Guid runId) => $@"Local\DevTools.TestRunner.Cancel.{runId:N}";
+
+    public static EventWaitHandle Create(Guid runId) =>
+        new(false, EventResetMode.ManualReset, Name(runId));
+
+    public static bool TrySignal(Guid runId)
+    {
+        try
+        {
+            using var handle = EventWaitHandle.OpenExisting(Name(runId));
+            return handle.Set();
+        }
+        catch (WaitHandleCannotBeOpenedException)
+        {
+            return false;
+        }
+    }
+}

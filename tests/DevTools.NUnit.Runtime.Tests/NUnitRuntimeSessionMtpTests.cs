@@ -125,9 +125,10 @@ public sealed class NUnitRuntimeSessionMtpTests
             1,
             Guid.NewGuid(),
             "nunit",
-            new TestingAssemblyReference(DedicatedTestFixturesHarness.AssemblyPath, "net10.0-windows", null),
-            new TestingSelection([], DedicatedTestFixturesHarness.DuplicateNameFilter),
-            new Dictionary<string, string>());
+            new TestingAssemblyReference(DedicatedTestFixturesHarness.AssemblyPath),
+            TestingSelection.FromFrameworkFilter(
+                TestingSelection.XmlFilterFormat,
+                DedicatedTestFixturesHarness.DuplicateNameFilter));
         var response = session.Run(request, new RecordingSink(), TestContext.Current.CancellationToken);
 
         Assert.Equal(2, response.Results.Count);
@@ -163,9 +164,10 @@ public sealed class NUnitRuntimeSessionMtpTests
             1,
             runId,
             "nunit",
-            new TestingAssemblyReference(DedicatedTestFixturesHarness.AssemblyPath, "net10.0-windows", null),
-            new TestingSelection([], DedicatedTestFixturesHarness.BlockingFilter),
-            new Dictionary<string, string>());
+            new TestingAssemblyReference(DedicatedTestFixturesHarness.AssemblyPath),
+            TestingSelection.FromFrameworkFilter(
+                TestingSelection.XmlFilterFormat,
+                DedicatedTestFixturesHarness.BlockingFilter));
         var runTask = Task.Run(() => session.Run(request, new RecordingSink(), CancellationToken.None));
 
         Assert.True(SpinWait.SpinUntil(
@@ -183,13 +185,17 @@ public sealed class NUnitRuntimeSessionMtpTests
         1,
         Guid.NewGuid(),
         "nunit",
-        new TestingAssemblyReference(FixtureTestHarness.FixtureAssemblyPath, "net10.0-windows", null),
-        new TestingSelection([], filter),
-        new Dictionary<string, string>());
+        new TestingAssemblyReference(FixtureTestHarness.FixtureAssemblyPath),
+        SelectionFromFilter(filter));
+
+    private static TestingSelection SelectionFromFilter(string? filter) =>
+        string.IsNullOrWhiteSpace(filter)
+            ? TestingSelection.All
+            : TestingSelection.FromFrameworkFilter(TestingSelection.XmlFilterFormat, filter);
 
     private sealed class RecordingSink : ITestingRuntimeEventSink
     {
-        internal List<TestingRuntimeEvent> Events { get; } = [];
-        public void Publish(TestingRuntimeEvent testingEvent) => Events.Add(testingEvent);
+        internal List<TestingEvent> Events { get; } = [];
+        public void Publish(TestingEvent testingEvent) => Events.Add(testingEvent);
     }
 }

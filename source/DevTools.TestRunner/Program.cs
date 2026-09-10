@@ -19,6 +19,7 @@ internal static class Program
         services.AddSingleton<ITestSession, TestSession>();
         services.AddSingleton<IExecutionCoordinator, ExecutionCoordinator>();
         services.AddSingleton<IDebuggerAttach>(VisualStudioAttach.Instance);
+        services.AddSingleton<IMachineRunInput, ConsoleMachineRunInput>();
         await using var serviceProvider = services.BuildServiceProvider();
 
         ConsoleApp.ServiceProvider = serviceProvider;

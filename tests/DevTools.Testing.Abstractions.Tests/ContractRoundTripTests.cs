@@ -1,5 +1,4 @@
 using DevTools.Testing.Abstractions.Contracts;
-using DevTools.Testing.Abstractions.Runtime;
 
 namespace DevTools.Testing.Abstractions.Tests;
 
@@ -22,29 +21,18 @@ public sealed class ContractRoundTripTests
         var result = CreateCase(testId);
         Assert.Equal(testId, result.TestId);
         Assert.DoesNotContain("::", NormalizeAway(testId, result.TestId));
-        Assert.Equal(testId, new TestingSelection([testId]).TestIds[0]);
+        Assert.Equal(testId, TestingSelection.FromTestIds([testId]).TestIds[0]);
     }
 
     [Fact]
-    public void Discovery_hints_are_optional_and_empty_by_default()
+    public void Empty_test_ids_is_constrained_run_nothing_not_all()
     {
-        var selection = new TestingSelection(["id-1"]);
-        Assert.Null(selection.Hints);
-        Assert.True(TestingDiscoveryHints.Empty.IsEmpty);
-        Assert.False(new TestingDiscoveryHints(ClassNames: ["Smoke"]).IsEmpty);
-
-        var discovered = new TestingDiscoveredTest(
-            "Ns.Class.1.1.Method.1.1.0",
-            "Method",
-            "Ns.Class.Method",
-            "Ns.Class",
-            "Method",
-            HasDataSource: false,
-            Categories: ["Host"]);
-        Assert.False(discovered.HasDataSource);
-        Assert.Equal("Host", Assert.Single(discovered.Categories!));
-        Assert.False(TestingDiscoveryOptions.Testhost.ForExecution);
-        Assert.True(TestingDiscoveryOptions.HostRun.ForExecution);
+        var empty = TestingSelection.FromTestIds([]);
+        Assert.Equal(TestingSelectionKind.TestIds, empty.Kind);
+        Assert.True(empty.IsConstrained);
+        Assert.Empty(empty.TestIds);
+        Assert.NotEqual(TestingSelection.All, empty);
+        Assert.False(TestingSelection.All.IsConstrained);
     }
 
     [Fact]
@@ -77,14 +65,12 @@ public sealed class ContractRoundTripTests
     }
 
     [Fact]
-    public void Case_result_round_trips_hierarchy_provider_payload_and_complete_attachment()
+    public void Case_result_round_trips_hierarchy_and_skip_reason()
     {
         var attachment = new TestingAttachment(
-            Description: "trace",
-            ContentType: "text/plain",
             Path: @"C:\\temp\\trace.txt",
-            Base64: "dHJhY2U=");
-        var payload = new TestingProviderPayload("provider.example/result", 3, "opaque-data");
+            Description: "trace",
+            ContentType: "text/plain");
         var result = new TestingCaseResult(
             "case-1",
             "Display case",
@@ -98,26 +84,23 @@ public sealed class ContractRoundTripTests
             Attachments: [attachment],
             ParentTestId: "suite-1",
             FullName: "Provider.Fixture.DisplayCase",
-            SkipReason: "requires capability",
-            ProviderPayload: payload);
+            SkipReason: "requires capability");
 
         Assert.Equal("suite-1", result.ParentTestId);
         Assert.Equal("Provider.Fixture.DisplayCase", result.FullName);
         Assert.Equal("requires capability", result.SkipReason);
-        Assert.Same(payload, result.ProviderPayload);
         var roundTripAttachment = Assert.Single(result.Attachments);
         Assert.Equal("trace", roundTripAttachment.Description);
         Assert.Equal("text/plain", roundTripAttachment.ContentType);
         Assert.Equal(@"C:\\temp\\trace.txt", roundTripAttachment.Path);
-        Assert.Equal("dHJhY2U=", roundTripAttachment.Base64);
     }
 
     [Fact]
-    public void Runtime_event_preserves_case_attachment_and_cancellation_state()
+    public void Event_preserves_case_attachment_and_cancellation_state()
     {
         var runId = Guid.NewGuid();
-        var attachment = new TestingAttachment("trace.txt", "trace", "text/plain", "dHJhY2U=");
-        var testingEvent = new TestingRuntimeEvent(
+        var attachment = new TestingAttachment("trace.txt", "trace", "text/plain");
+        var testingEvent = new TestingEvent(
             runId,
             TestingEventKinds.Attachment,
             CreateCase("case-2"),
@@ -140,9 +123,8 @@ public sealed class ContractRoundTripTests
             ProtocolVersion: 1,
             RunId: Guid.NewGuid(),
             FrameworkId: frameworkId,
-            Assembly: new TestingAssemblyReference("tests.dll", "net10.0", null),
-            Selection: new TestingSelection([], null),
-            FrameworkOptions: new Dictionary<string, string>()));
+            Assembly: new TestingAssemblyReference("tests.dll"),
+            Selection: TestingSelection.All));
 
         Assert.Equal("FrameworkId", exception.ParamName);
     }
@@ -156,9 +138,8 @@ public sealed class ContractRoundTripTests
             ProtocolVersion: 1,
             RunId: Guid.NewGuid(),
             FrameworkId: "provider.example",
-            Assembly: new TestingAssemblyReference("tests.dll", "net10.0", null),
-            Selection: new TestingSelection([], null),
-            FrameworkOptions: new Dictionary<string, string>());
+            Assembly: new TestingAssemblyReference("tests.dll"),
+            Selection: TestingSelection.All);
 
         var exception = Assert.Throws<ArgumentException>(() =>
             request with { FrameworkId = frameworkId });

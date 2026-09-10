@@ -10,7 +10,7 @@ public sealed class NUnitHostTestDiscovererTests
     public void Discover_emits_parameterized_leaves_with_nunit_full_names()
     {
         var discoverer = new NUnitHostTestDiscoverer();
-        var cases = discoverer.Discover(FixturePath);
+        var cases = discoverer.Discover(FixturePath, TestingSelection.All);
 
         var additions = cases
             .Where(test => test.DisplayName.StartsWith("TestCase_Addition", StringComparison.Ordinal))
@@ -29,12 +29,12 @@ public sealed class NUnitHostTestDiscovererTests
     }
 
     [Fact]
-    public void Select_name_uses_nunit_name_regex_not_method_identity()
+    public void Discover_name_uses_nunit_name_regex_not_method_identity()
     {
         var discoverer = new NUnitHostTestDiscoverer();
-        var selected = discoverer.Select(
+        var selected = discoverer.Discover(
             FixturePath,
-            new TestingSelection([], Names: ["TestCase_Addition"]));
+            TestingSelection.FromNames(["TestCase_Addition"]));
 
         Assert.Equal(3, selected.Count);
         Assert.All(selected, test =>
@@ -42,15 +42,15 @@ public sealed class NUnitHostTestDiscovererTests
     }
 
     [Fact]
-    public void Select_test_id_matches_nunit_full_name()
+    public void Discover_test_id_matches_nunit_full_name()
     {
         var discoverer = new NUnitHostTestDiscoverer();
-        var all = discoverer.Discover(FixturePath);
+        var all = discoverer.Discover(FixturePath, TestingSelection.All);
         var one = all.First(test => test.DisplayName.StartsWith("TestCase_Addition", StringComparison.Ordinal));
 
-        var selected = discoverer.Select(
+        var selected = discoverer.Discover(
             FixturePath,
-            new TestingSelection([one.TestId]));
+            TestingSelection.FromTestIds([one.TestId]));
 
         Assert.Equal(one.TestId, Assert.Single(selected).TestId);
     }
@@ -58,7 +58,7 @@ public sealed class NUnitHostTestDiscovererTests
     [Fact]
     public void Discover_testname_uid_keeps_csharp_method_in_the_fqn()
     {
-        var named = new NUnitHostTestDiscoverer().Discover(FixturePath)
+        var named = new NUnitHostTestDiscoverer().Discover(FixturePath, TestingSelection.All)
             .Single(test => test.DisplayName == "Named_one");
 
         Assert.Equal("Original_named", named.MethodName);
@@ -71,12 +71,12 @@ public sealed class NUnitHostTestDiscovererTests
     }
 
     [Fact]
-    public void Select_display_name_is_not_a_test_id()
+    public void Discover_display_name_is_not_a_test_id()
     {
         var discoverer = new NUnitHostTestDiscoverer();
-        var selected = discoverer.Select(
+        var selected = discoverer.Discover(
             FixturePath,
-            new TestingSelection(["PlainTest_Passes"]));
+            TestingSelection.FromTestIds(["PlainTest_Passes"]));
 
         Assert.Empty(selected);
     }
@@ -85,7 +85,7 @@ public sealed class NUnitHostTestDiscovererTests
     public void Discover_groups_fixture_source_instances_under_parameterized_type_names()
     {
         var discoverer = new NUnitHostTestDiscoverer();
-        var cases = discoverer.Discover(FixturePath)
+        var cases = discoverer.Discover(FixturePath, TestingSelection.All)
             .Where(test => test.MethodName == "FixtureSource_ValueIsPreserved")
             .ToList();
 
@@ -104,7 +104,7 @@ public sealed class NUnitHostTestDiscovererTests
     public void Discover_fixture_source_uids_include_constructor_arguments()
     {
         var discoverer = new NUnitHostTestDiscoverer();
-        var cases = discoverer.Discover(FixturePath)
+        var cases = discoverer.Discover(FixturePath, TestingSelection.All)
             .Where(test => test.MethodName == "FixtureSource_ValueIsPreserved")
             .ToList();
 
@@ -120,7 +120,7 @@ public sealed class NUnitHostTestDiscovererTests
     public void Discover_attaches_pdb_source_for_a_plain_test()
     {
         var discoverer = new NUnitHostTestDiscoverer();
-        var plain = discoverer.Discover(FixturePath)
+        var plain = discoverer.Discover(FixturePath, TestingSelection.All)
             .Single(test => test.DisplayName == "PlainTest_Passes");
 
         Assert.NotNull(plain.Source);
@@ -132,7 +132,7 @@ public sealed class NUnitHostTestDiscovererTests
     public void Discover_attaches_pdb_source_for_a_generic_fixture()
     {
         var discoverer = new NUnitHostTestDiscoverer();
-        var generic = discoverer.Discover(FixturePath)
+        var generic = discoverer.Discover(FixturePath, TestingSelection.All)
             .First(test => test.MethodName == "GenericFixture_UsesRequestedType");
 
         Assert.NotNull(generic.Source);
@@ -147,7 +147,7 @@ public sealed class NUnitHostTestDiscovererTests
     [Fact]
     public void Discover_fixture_source_display_name_keeps_constructor_arguments()
     {
-        var cases = new NUnitHostTestDiscoverer().Discover(FixturePath)
+        var cases = new NUnitHostTestDiscoverer().Discover(FixturePath, TestingSelection.All)
             .Where(test => test.MethodName == "FixtureSource_ValueIsPreserved")
             .ToList();
 

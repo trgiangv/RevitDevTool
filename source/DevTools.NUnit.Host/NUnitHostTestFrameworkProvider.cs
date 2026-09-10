@@ -32,32 +32,27 @@ public sealed class NUnitHostTestFrameworkProvider(NUnitGenerationPolicy policy,
             throw new ArgumentException($"NUnit provider cannot execute framework '{request.FrameworkId}'.", nameof(request));
 
         var assemblyPath = TestingAssemblyPreflight.ResolveAndEnsureLoadable(request.Assembly.Path);
-        var normalized = request with
-        {
-            Assembly = request.Assembly with { Path = assemblyPath },
-            Selection = new TestingSelection(
-                [],
-                NUnitSelectionFilter.ToNUnitFilter(request.Selection))
-        };
-        return _sessions.Run(normalized, new EventSink(eventSink), cancellationToken);
+        var assembly = request.Assembly with { Path = assemblyPath };
+        var selection = request.Selection.Kind == TestingSelectionKind.All
+            ? TestingSelection.All
+            : request.Selection.Kind == TestingSelectionKind.FrameworkFilter
+                ? request.Selection
+                : TestingSelection.FromFrameworkFilter(
+                    TestingSelection.XmlFilterFormat,
+                    NUnitSelectionFilter.ToNUnitFilter(request.Selection)
+                    ?? throw new InvalidOperationException("NUnit selection mapping produced no filter."));
+        return _sessions.Run(
+            request with { Assembly = assembly, Selection = selection },
+            new EventSink(eventSink),
+            cancellationToken);
     }
 
-    public bool Cancel(Guid runId)
-    {
-        _sessions.Cancel(runId);
-        return true;
-    }
+    public bool Cancel(Guid runId) => _sessions.Cancel(runId);
 
     public void Dispose() => _sessions.Dispose();
 
     private sealed class EventSink(ITestingEventSink sink) : ITestingRuntimeEventSink
     {
-        public void Publish(TestingRuntimeEvent testingEvent) => sink.Publish(new TestingEvent(
-            testingEvent.RunId,
-            testingEvent.Kind,
-            testingEvent.Case,
-            testingEvent.Message,
-            testingEvent.Attachment,
-            testingEvent.CancellationState));
+        public void Publish(TestingEvent testingEvent) => sink.Publish(testingEvent);
     }
 }

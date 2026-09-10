@@ -14,8 +14,13 @@
     <ItemGroup>
         <ProjectReference Include="..\..\source\DevTools.TestAdapter\DevTools.TestAdapter.csproj">
             <PrivateAssets>all</PrivateAssets>
+            <AdditionalProperties>ILRepackable=false</AdditionalProperties>
         </ProjectReference>
         <ProjectReference Include="..\..\source\DevTools.Testing.Abstractions\DevTools.Testing.Abstractions.csproj"/>
+        <ProjectReference Include="..\..\source\DevTools.Testing.Transport\DevTools.Testing.Transport.csproj"/>
+        <ProjectReference Include="..\..\source\DevTools.NUnit.MTP\DevTools.NUnit.MTP.csproj" SetTargetFramework="TargetFramework=net10.0-windows">
+            <PrivateAssets>all</PrivateAssets>
+        </ProjectReference>
     </ItemGroup>
 
     <ItemGroup>

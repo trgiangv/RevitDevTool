@@ -56,11 +56,9 @@ candidates.
 | Dynamic / command ALC | `AssemblyIsolation` session composed by the command feature's isolation plan |
 | NUnit generation | `AssemblyIsolation` session composed by NUnit's generation plan; net48 stays in the host default AppDomain (`Isolated`) |
 
-`DevTools.TestAdapter/RuntimeAssemblyResolver` is the sole bootstrap exception:
-it resolves the package's private closure from `AppContext.BaseDirectory` before
-the kernel can be loaded. It registers once, accepts only full simple assembly
-identities that match the candidate exactly, and must not acquire shared-prefix,
-host, or feature-execution policy.
+Compile-only Autodesk refs used by testhost discovery are resolved through
+`DiscoveryAssemblyLoad` (`discovery-refs.txt`). The selected MTP sibling is a
+normal testhost assembly reference, not a private bootstrap loader.
 
 The shipped `PythonNetStubGenerator` uses the kernel's `AssemblyLoader` for
 caller-selected DLL directories. It

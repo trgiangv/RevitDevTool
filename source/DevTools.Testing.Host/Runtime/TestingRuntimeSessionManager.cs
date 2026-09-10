@@ -23,7 +23,7 @@ public sealed class NullTestingRuntimeEventSink : ITestingRuntimeEventSink
 {
     public static NullTestingRuntimeEventSink Instance { get; } = new();
     private NullTestingRuntimeEventSink() { }
-    public void Publish(TestingRuntimeEvent testingEvent) { }
+    public void Publish(TestingEvent testingEvent) { }
 }
 
 public sealed class TestingRuntimeSessionManager(TestingGenerationStore generations, ITestingGenerationPolicy policy, ITestingRuntimeSessionFactory factory) : IDisposable
@@ -76,11 +76,22 @@ public sealed class TestingRuntimeSessionManager(TestingGenerationStore generati
         }
     }
 
-    public void Cancel(Guid runId)
+    public bool Cancel(Guid runId)
     {
         ManagedSession? session;
         lock (_stateLock) _activeRuns.TryGetValue(runId, out session);
-        session?.Session.Cancel(runId);
+        if (session is null)
+            return false;
+
+        try
+        {
+            session.Session.Cancel(runId);
+            return true;
+        }
+        catch (ObjectDisposedException)
+        {
+            return false;
+        }
     }
 
     private ManagedSession AcquireAndRegister(string assemblyPath, Guid runId)

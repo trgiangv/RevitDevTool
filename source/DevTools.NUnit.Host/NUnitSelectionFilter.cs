@@ -5,36 +5,35 @@ namespace DevTools.NUnit.Host;
 
 internal static class NUnitSelectionFilter
 {
-    internal const string MixedSelectionMessage =
-        "Specify TestIds/Names or ProviderPayload, not both.";
-
     internal const string InvalidPayloadMessage =
-        "ProviderPayload must be empty or NUnit framework filter XML (starting with '<').";
+        "FrameworkFilter Data must be NUnit filter XML (starting with '<').";
+
+    internal const string FilterFormat = TestingSelection.XmlFilterFormat;
 
     public static string? ToNUnitFilter(TestingSelection? selection)
     {
-        if (selection is null)
+        if (selection is null || selection.Kind == TestingSelectionKind.All)
             return null;
 
-        var testIds = Clean(selection.TestIds);
-        var names = Clean(selection.Names);
-        var payload = selection.ProviderPayload?.Trim();
-        var hasStructured = testIds.Count > 0 || names.Count > 0;
-        var hasPayload = !string.IsNullOrWhiteSpace(payload);
-
-        if (hasStructured && hasPayload)
-            throw new ArgumentException(MixedSelectionMessage, nameof(selection));
-
-        if (hasPayload)
+        if (selection.Kind == TestingSelectionKind.FrameworkFilter)
         {
-            if (!payload!.StartsWith("<", StringComparison.Ordinal))
-                throw new ArgumentException(InvalidPayloadMessage, nameof(selection));
+            if (!string.Equals(selection.FilterFormat, FilterFormat, StringComparison.Ordinal))
+            {
+                throw new ArgumentException(
+                    $"FrameworkFilter format must be '{FilterFormat}'.",
+                    nameof(selection));
+            }
 
+            var payload = selection.FilterData?.Trim();
+            if (string.IsNullOrWhiteSpace(payload) || !payload!.StartsWith("<", StringComparison.Ordinal))
+                throw new ArgumentException(InvalidPayloadMessage, nameof(selection));
             return payload;
         }
 
-        if (!hasStructured)
-            return null;
+        var testIds = selection.Kind == TestingSelectionKind.TestIds ? Clean(selection.TestIds) : [];
+        var names = selection.Kind == TestingSelectionKind.Names ? Clean(selection.Names) : [];
+        if (testIds.Count == 0 && names.Count == 0)
+            return new XElement("filter", new XElement("not", new XElement("test", "*"))).ToString(SaveOptions.DisableFormatting);
 
         var nodes = names.Select(name => new XElement("name", new XAttribute("re", "1"), name))
             .Concat(testIds.Select(id => new XElement("test", id)))
@@ -46,7 +45,7 @@ internal static class NUnitSelectionFilter
     private static List<string> Clean(IReadOnlyList<string>? values)
     {
         if (values is null || values.Count == 0)
-            return new List<string>();
+            return [];
 
         return values
             .Where(value => !string.IsNullOrWhiteSpace(value))

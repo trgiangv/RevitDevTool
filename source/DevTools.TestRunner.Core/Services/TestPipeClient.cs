@@ -69,7 +69,7 @@ public sealed class TestPipeClient : IAsyncDisposable
 
     public Task<TestingRunResponse> RunAsync(
         TestingRunRequest request,
-        IProgress<TestingCaseResult>? progress,
+        IProgress<TestingEvent>? progress,
         CancellationToken ct = default) =>
         SendRunAsync(request, progress, ct);
 
@@ -78,7 +78,7 @@ public sealed class TestPipeClient : IAsyncDisposable
 
     private async Task<TestingRunResponse> SendRunAsync(
         TestingRunRequest request,
-        IProgress<TestingCaseResult>? progress,
+        IProgress<TestingEvent>? progress,
         CancellationToken ct)
     {
         var requestId = CreateRequestId("run");
@@ -115,7 +115,7 @@ public sealed class TestPipeClient : IAsyncDisposable
         string id,
         string method,
         JsonElement parameters,
-        IProgress<TestingCaseResult>? progress,
+        IProgress<TestingEvent>? progress,
         Guid? activeRunId,
         CancellationToken ct)
     {
@@ -125,7 +125,7 @@ public sealed class TestPipeClient : IAsyncDisposable
 
     private async Task<BridgeMessage> WaitForResponseAsync(
         string requestId,
-        IProgress<TestingCaseResult>? progress,
+        IProgress<TestingEvent>? progress,
         Guid? activeRunId,
         CancellationToken ct)
     {
@@ -197,7 +197,7 @@ public sealed class TestPipeClient : IAsyncDisposable
     private static bool TryConsumeInboxMessage(
         BridgeMessage message,
         string requestId,
-        IProgress<TestingCaseResult>? progress,
+        IProgress<TestingEvent>? progress,
         Guid? activeRunId,
         out BridgeMessage? response)
     {
@@ -216,7 +216,7 @@ public sealed class TestPipeClient : IAsyncDisposable
 
     private static bool TryReportNotification(
         BridgeMessage message,
-        IProgress<TestingCaseResult>? progress,
+        IProgress<TestingEvent>? progress,
         Guid? activeRunId)
     {
         if (message.Type != BridgeMessage.TypeNotification || message.Params is null)
@@ -226,13 +226,13 @@ public sealed class TestPipeClient : IAsyncDisposable
             return false;
 
         var testingEvent = message.Params.Value.Deserialize(TestingJsonContext.Default.TestingEvent);
-        if (testingEvent?.Case is null)
+        if (testingEvent is null)
             return true;
 
         if (activeRunId is null || testingEvent.RunId != activeRunId)
             return true;
 
-        progress?.Report(testingEvent.Case);
+        progress?.Report(testingEvent);
         return true;
     }
 

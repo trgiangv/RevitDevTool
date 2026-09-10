@@ -57,7 +57,14 @@ public sealed class NUnitRuntimeSession : ITestingRuntimeSession
             ValidateAssemblyPath(request.Assembly.Path);
             EnsureLoaded();
 
-            var filter = NUnitFilterFactory.Create(request.Selection.ProviderPayload);
+            var filter = request.Selection.Kind switch
+            {
+                TestingSelectionKind.All => NUnitFilterFactory.Create(null),
+                TestingSelectionKind.FrameworkFilter => NUnitFilterFactory.Create(request.Selection.FilterData),
+                _ => throw new ArgumentException(
+                    "NUnit runtime expects All or nunit/filter-xml. Map TestIds/Names in the host provider.",
+                    nameof(request)),
+            };
             using var traceScope = new TestingRunTraceScope();
             var listener = new NUnitEventListener(
                 request.RunId,

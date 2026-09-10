@@ -8,38 +8,101 @@ public sealed record TestingHostOptions(
     int LaunchTimeoutSeconds,
     string? RunnerPath,
     int? DebugParentPid = null,
-    string? FrameworkId = null);
-
-public sealed record TestingAssemblyReference(
-    string Path,
-    string? TargetFramework,
-    string? ContentHash);
-
-public sealed record TestingDiscoveryHints(
-    IReadOnlyList<string>? ClassNames = null,
-    IReadOnlyList<string>? MethodNames = null,
-    IReadOnlyList<string>? Categories = null)
+    string? FrameworkId = null,
+    int RequestTimeoutSeconds = 0)
 {
-    public static TestingDiscoveryHints Empty { get; } = new();
-
-    public bool IsEmpty =>
-        IsBlank(ClassNames) && IsBlank(MethodNames) && IsBlank(Categories);
-
-    private static bool IsBlank(IReadOnlyList<string>? values) => values is null || values.Count == 0;
+    public int EffectiveRequestTimeoutSeconds =>
+        RequestTimeoutSeconds > 0 ? RequestTimeoutSeconds : PerTestTimeoutSeconds;
 }
 
-public sealed record TestingDiscoveryOptions(bool ForExecution = false)
-{
-    public static TestingDiscoveryOptions Testhost { get; } = new(ForExecution: false);
+public sealed record TestingAssemblyReference(string Path);
 
-    public static TestingDiscoveryOptions HostRun { get; } = new(ForExecution: true);
+public enum TestingSelectionKind
+{
+    All,
+    TestIds,
+    FrameworkFilter,
+    Names,
 }
 
-public sealed record TestingSelection(
-    IReadOnlyList<string> TestIds,
-    string? ProviderPayload = null,
-    IReadOnlyList<string>? Names = null,
-    TestingDiscoveryHints? Hints = null);
+/// <summary>
+/// Closed selection. <see cref="All"/> is unconstrained.
+/// <see cref="TestIds"/> with an empty list means "run nothing", not "run all".
+/// <see cref="Names"/> is testhost/CLI convenience; mappers convert it before
+/// <c>testing/run</c> when they need a stable host filter.
+/// </summary>
+public sealed record TestingSelection
+{
+    public TestingSelectionKind Kind { get; init; }
+    public IReadOnlyList<string> TestIds { get; init; }
+    public string? FilterFormat { get; init; }
+    public string? FilterData { get; init; }
+    public IReadOnlyList<string> Names { get; init; }
+
+    public TestingSelection(
+        TestingSelectionKind kind,
+        IReadOnlyList<string>? testIds = null,
+        string? filterFormat = null,
+        string? filterData = null,
+        IReadOnlyList<string>? names = null)
+    {
+        Kind = kind;
+        TestIds = testIds ?? [];
+        FilterFormat = filterFormat;
+        FilterData = filterData;
+        Names = names ?? [];
+        Validate();
+    }
+
+    public bool IsConstrained => Kind != TestingSelectionKind.All;
+
+    public static TestingSelection All { get; } = new(TestingSelectionKind.All);
+
+    public static TestingSelection FromTestIds(IReadOnlyList<string>? ids) =>
+        new(TestingSelectionKind.TestIds, testIds: ids);
+
+    public static TestingSelection FromFrameworkFilter(string format, string data) =>
+        new(TestingSelectionKind.FrameworkFilter, filterFormat: format, filterData: data);
+
+    public static TestingSelection FromNames(IReadOnlyList<string> names) =>
+        new(TestingSelectionKind.Names, names: names);
+
+    /// <summary>Opaque XML filter payload consumed by the in-host engine.</summary>
+    public const string XmlFilterFormat = "filter-xml";
+
+    private void Validate()
+    {
+        switch (Kind)
+        {
+            case TestingSelectionKind.All:
+                if (TestIds.Count > 0 || Names.Count > 0
+                    || !string.IsNullOrWhiteSpace(FilterFormat) || !string.IsNullOrWhiteSpace(FilterData))
+                {
+                    throw new ArgumentException("All selection cannot carry ids, names, or a framework filter.");
+                }
+
+                break;
+            case TestingSelectionKind.TestIds:
+                if (Names.Count > 0 || !string.IsNullOrWhiteSpace(FilterFormat) || !string.IsNullOrWhiteSpace(FilterData))
+                    throw new ArgumentException("TestIds selection cannot carry names or a framework filter.");
+                break;
+            case TestingSelectionKind.FrameworkFilter:
+                if (string.IsNullOrWhiteSpace(FilterFormat) || string.IsNullOrWhiteSpace(FilterData))
+                    throw new ArgumentException("FrameworkFilter requires Format and Data.");
+                if (TestIds.Count > 0 || Names.Count > 0)
+                    throw new ArgumentException("FrameworkFilter cannot carry TestIds or Names.");
+                break;
+            case TestingSelectionKind.Names:
+                if (Names.Count == 0)
+                    throw new ArgumentException("Names selection requires at least one name.");
+                if (TestIds.Count > 0 || !string.IsNullOrWhiteSpace(FilterFormat) || !string.IsNullOrWhiteSpace(FilterData))
+                    throw new ArgumentException("Names selection cannot carry TestIds or a framework filter.");
+                break;
+            default:
+                throw new ArgumentOutOfRangeException(nameof(Kind), Kind, "Unknown selection kind.");
+        }
+    }
+}
 
 public sealed record TestingDiscoveredTest(
     string TestId,
@@ -51,7 +114,6 @@ public sealed record TestingDiscoveredTest(
     string? Namespace = null,
     string? TypeName = null,
     [property: UsedImplicitly] int MethodArity = 0,
-    bool HasDataSource = false,
     IReadOnlyList<string>? Categories = null);
 
 public sealed record TestingRunRequest
@@ -61,15 +123,13 @@ public sealed record TestingRunRequest
         Guid RunId,
         string FrameworkId,
         TestingAssemblyReference Assembly,
-        TestingSelection Selection,
-        IReadOnlyDictionary<string, string> FrameworkOptions)
+        TestingSelection Selection)
     {
         this.ProtocolVersion = ProtocolVersion;
         this.RunId = RunId;
         this.FrameworkId = FrameworkId;
         this.Assembly = Assembly;
         this.Selection = Selection;
-        this.FrameworkOptions = FrameworkOptions;
     }
 
     public int ProtocolVersion { get; init; }
@@ -85,17 +145,24 @@ public sealed record TestingRunRequest
     } = string.Empty;
     public TestingAssemblyReference Assembly { get; init; }
     public TestingSelection Selection { get; init; }
-    public IReadOnlyDictionary<string, string> FrameworkOptions { get; init; }
 }
 
+/// <summary>
+/// Adapter → TestRunner machine invocation. Nested <see cref="Run"/> is the
+/// same <see cref="TestingRunRequest"/> the host receives on <c>testing/run</c>.
+/// </summary>
+public sealed record TestingRunInvocation(
+    int ProtocolVersion,
+    TestingHostOptions Host,
+    TestingRunRequest Run);
+
 public sealed record TestingAttachment(
-    string? Path,
+    string Path,
     string? Description,
-    string? ContentType = null,
-    string? Base64 = null);
+    string? ContentType = null);
+
 public sealed record TestingSourceLocation(string File, int Line);
 public sealed record TestingTrait(string Name, string Value);
-public sealed record TestingProviderPayload(string Format, int Version, string Data);
 
 public sealed record TestingCaseResult(
     string TestId,
@@ -110,8 +177,7 @@ public sealed record TestingCaseResult(
     IReadOnlyList<TestingAttachment> Attachments,
     string? ParentTestId = null,
     string? FullName = null,
-    string? SkipReason = null,
-    TestingProviderPayload? ProviderPayload = null);
+    string? SkipReason = null);
 
 public enum TestingCancellationState
 {

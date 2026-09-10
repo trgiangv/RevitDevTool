@@ -26,7 +26,7 @@ public sealed class TestingProtocolGoldenTests
     }
 
     [Fact]
-    public void Run_request_round_trips_assembly_identity_and_opaque_ids()
+    public void Run_request_round_trips_opaque_ids_and_selection_kind()
     {
         var request = CreateRunRequest(
             TestingProtocol.CurrentVersion,
@@ -36,12 +36,35 @@ public sealed class TestingProtocolGoldenTests
 
         Assert.NotNull(roundTrip);
         Assert.Equal(request.Assembly.Path, roundTrip.Assembly.Path);
-        Assert.Equal(request.Assembly.TargetFramework, roundTrip.Assembly.TargetFramework);
-        Assert.Equal(request.Assembly.ContentHash, roundTrip.Assembly.ContentHash);
+        Assert.Equal(TestingSelectionKind.TestIds, roundTrip.Selection.Kind);
         Assert.Equal(request.Selection.TestIds[0], roundTrip.Selection.TestIds[0]);
         Assert.Equal(request.Selection.TestIds[1], roundTrip.Selection.TestIds[1]);
         Assert.Contains("\"protocol_version\":2", json, StringComparison.Ordinal);
         Assert.Contains("\"framework_id\":\"provider.example\"", json, StringComparison.Ordinal);
+        Assert.DoesNotContain("testing/discover", json, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Invocation_round_trips_run_id_and_envelope_version()
+    {
+        var request = CreateRunRequest(
+            TestingProtocol.CurrentVersion,
+            ["  spaced id  ", "xunit.v3://method/Theory(input: 1)/0"]);
+        var invocation = new TestingRunInvocation(
+            TestingProtocol.CurrentVersion,
+            new TestingHostOptions("Revit", "2025", true, 60, 180, @"C:\Runner.exe", DebugParentPid: 4242),
+            request);
+        var json = JsonSerializer.Serialize(invocation, TestingJsonContext.Default.TestingRunInvocation);
+        var roundTrip = JsonSerializer.Deserialize(json, TestingJsonContext.Default.TestingRunInvocation);
+
+        Assert.NotNull(roundTrip);
+        Assert.Equal(TestingProtocol.CurrentVersion, roundTrip.ProtocolVersion);
+        Assert.Equal(request.RunId, roundTrip.Run.RunId);
+        Assert.Equal(request.Selection.TestIds[0], roundTrip.Run.Selection.TestIds[0]);
+        Assert.Equal("Revit", roundTrip.Host.HostName);
+        Assert.Equal(60, roundTrip.Host.PerTestTimeoutSeconds);
+        Assert.Equal(4242, roundTrip.Host.DebugParentPid);
+        Assert.Contains("\"run_id\":\"aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee\"", json, StringComparison.Ordinal);
         Assert.DoesNotContain("testing/discover", json, StringComparison.Ordinal);
     }
 
@@ -132,9 +155,8 @@ public sealed class TestingProtocolGoldenTests
             protocolVersion,
             SampleRunId,
             "provider.example",
-            new TestingAssemblyReference(@"C:\tests\Sample.dll", "net10.0-windows", "abc123"),
-            new TestingSelection(testIds, ProviderPayload: "opaque-bytes"),
-            new Dictionary<string, string> { ["preEnumerateTheories"] = "false" });
+            new TestingAssemblyReference(@"C:\tests\Sample.dll"),
+            TestingSelection.FromTestIds(testIds));
 
     static string Serialize(BridgeMessage message) =>
         JsonSerializer.Serialize(message, IpcJsonContext.Default.BridgeMessage);

@@ -107,7 +107,10 @@ public sealed class DotnetTestRequestHandler(TestingProviderRegistry registry, s
         if (!TryReadRun(@params, out var request, out var error))
             return Invalid(requestId, error);
 
-        if (!TryGetProvider(request!, requestId, out var provider, out var invalid))
+        if (!TestingProtocol.IsCompatible(request!.ProtocolVersion))
+            return TestingProtocol.CreateIncompatibleResponse(requestId, request.ProtocolVersion);
+
+        if (!TryGetProvider(request, requestId, out var provider, out var invalid))
             return invalid!;
 
         Interlocked.Exchange(ref _isBusy, 1);
@@ -179,6 +182,10 @@ public sealed class DotnetTestRequestHandler(TestingProviderRegistry registry, s
                 IpcErrorCodes.InternalError,
                 "Request cancelled because the client disconnected.");
         }
+        catch (ArgumentException ex)
+        {
+            return Invalid(requestId, ex.Message);
+        }
         catch (Exception ex)
         {
             PoisonSessionAfterProviderFailure();
@@ -211,15 +218,20 @@ public sealed class DotnetTestRequestHandler(TestingProviderRegistry registry, s
         if (!TryReadCancel(@params, out var request, out var error))
             return Invalid(requestId, error);
 
-        if (_cancellation.State == TestingCancellationState.None)
-            _cancellation.Transition(TestingCancellationState.Requested);
-
         var acknowledged = _registry.Cancel(request!.RunId);
-
         if (acknowledged)
-            _cancellation.TryTransition(TestingCancellationState.Acknowledged);
+        {
+            if (_cancellation.State == TestingCancellationState.None)
+                _cancellation.Transition(TestingCancellationState.Requested);
 
-        return BridgeMessage.Response(requestId, null);
+            _cancellation.TryTransition(TestingCancellationState.Acknowledged);
+        }
+
+        return BridgeMessage.Response(
+            requestId,
+            JsonSerializer.SerializeToElement(
+                new TestingCancelResponse(acknowledged),
+                TestingJsonContext.Default.TestingCancelResponse));
     }
 
     private static bool TryReadHello(

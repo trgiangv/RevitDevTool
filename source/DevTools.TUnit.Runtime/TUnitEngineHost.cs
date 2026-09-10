@@ -30,6 +30,9 @@ internal static class TUnitEngineHost
         CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(testAssembly);
+        if (selection.Kind == TestingSelectionKind.TestIds
+            && selection.TestIds.All(string.IsNullOrWhiteSpace))
+            return [];
 
         SourceRegistrar.IsEnabled = true;
         RuntimeHelpers.RunModuleConstructor(testAssembly.ManifestModule.ModuleHandle);
@@ -108,15 +111,23 @@ internal static class TUnitEngineHost
 
     private static ITestExecutionFilter CreateFilter(TestingSelection selection)
     {
-        var ids = (selection.TestIds)
+        if (selection.Kind == TestingSelectionKind.All)
+            return new NopFilter();
+
+        if (selection.Kind != TestingSelectionKind.TestIds)
+        {
+            throw new ArgumentException(
+                "TUnit runtime expects All or TestIds. Map Names/FrameworkFilter before testing/run.",
+                nameof(selection));
+        }
+
+        var ids = selection.TestIds
             .Where(id => !string.IsNullOrWhiteSpace(id))
             .Select(id => id.Trim())
             .Distinct(StringComparer.Ordinal)
             .Select(id => new TestNodeUid(id))
             .ToArray();
-        return ids.Length == 0
-            ? new NopFilter()
-            : new TestNodeUidListFilter(ids);
+        return new TestNodeUidListFilter(ids);
     }
 
     private static object CreateServiceProvider(ReflectionAssembly platform, string workingDirectory, string resultDirectory)

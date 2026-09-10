@@ -8,12 +8,23 @@ Accepted. Refines [0021](0021-testing-kernel-and-provider-owned-framework-runtim
 after an independent review of the implemented kernel versus NUnit and TUnit
 providers. Does not replace 0021’s testhost / in-host split.
 
+**Amendment 2026-09-10.** Testhost siblings are no longer runtime plugins.
+MSBuild selects one packed DLL as a `<Reference Private="true"
+ExternallyResolved="true">` (copy-local; net48 RAR does not walk sibling
+AssemblyRefs). A small hook source file is compiled into the testhost so the
+sibling does not reference Microsoft.Testing.Platform; MTP generated code
+calls that hook, which constructs `NUnitHostTestDiscoverer` /
+`TUnitHostTestDiscoverer` and assigns `HostTestDiscovery`.
+`mtpAssembly` / `mtpEntry` / `HostMtpRegistration` / `CopyMTPSibling` are
+removed. `frameworkId` remains the `testing/run` discriminator. Isolated
+discovery of compile-only Autodesk refs stays in `DiscoveryAssemblyLoad`.
+See [`docs/architecture/Testing/README.md`](../architecture/Testing/README.md)
+(Adapter bootstrap).
+
 **Amendment 2026-08-29.** Public MSBuild names dropped the `DevTools` prefix:
-`MTPAssembly`, `MTPEntry`, `MTPCopy`, `TestingRunnerPath`. Copy is one target
-(`CopyMTPSibling`) from `build/runtime`; Ipc/Transport are ILRepacked into the
-adapter. Testhost plugin type is `HostMtpRegistration`. In-host `testing/*`
-is `MarshaledTestRequestHandler` → `DotnetTestRequestHandler`. Merge task is
-`MergeTestConfig`. JSON keys are unchanged (`mtpAssembly`, `mtpEntry`).
+`TestingRunnerPath`. Ipc/Transport are ILRepacked into the adapter. In-host
+`testing/*` is `MarshaledTestRequestHandler` → `DotnetTestRequestHandler`.
+Merge task is `MergeTestConfig`. JSON `frameworkId` is unchanged.
 
 Reviewed twice on 2026-08-22 (SOLID / fail-closed / YAGNI). Second pass closed
 prior B1–B6 in this text and added the MSBuild property names, copy targets,

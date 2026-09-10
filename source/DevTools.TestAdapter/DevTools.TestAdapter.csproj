@@ -10,7 +10,8 @@
            HostTestDiscovery.
         3. PackNUnitMTP / PackTUnitMTP — MTP siblings + Abstractions to build/runtime/{tfm}.
         4. build/*.props|targets (+ build/netfx source shim) — the consumer build order
-           lives in those files.
+           lives in those files. The selected sibling is a normal Reference, not a
+           runtime plugin.
 
       Constraints:
         - Do not flatten obj/bin: the three TFMs would collide (CS2012 / MSB3713).
@@ -60,6 +61,8 @@
         <None Include="build\RevitDevTool.TestAdapter.props" Pack="true" PackagePath="build\"/>
         <None Include="build\RevitDevTool.TestAdapter.targets" Pack="true" PackagePath="build\"/>
         <None Include="build\netfx\ModuleInitializerAttribute.cs" Pack="true" PackagePath="build\netfx\"/>
+        <None Include="build\hooks\NUnitMtpBuilderHook.cs" Pack="true" PackagePath="build\hooks\"/>
+        <None Include="build\hooks\TUnitMtpBuilderHook.cs" Pack="true" PackagePath="build\hooks\"/>
         <None Include="README.md" Pack="true" PackagePath="\"/>
         <None Include="..\DevTools.UI\Resources\icons\DevTools-32-Light.png" Pack="true" PackagePath="\"/>
     </ItemGroup>

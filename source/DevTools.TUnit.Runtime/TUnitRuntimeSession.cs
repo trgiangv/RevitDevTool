@@ -12,6 +12,7 @@ public sealed class TUnitRuntimeSession : ITestingRuntimeSession
     private readonly Lock _runControl = new();
     private CancellationTokenSource? _runCts;
     private Guid _activeRunId;
+    private Guid _pendingCancelRunId;
     private bool _disposed;
 
     public TUnitRuntimeSession(Assembly testAssembly, string assemblyPath, string generationId)
@@ -44,16 +45,46 @@ public sealed class TUnitRuntimeSession : ITestingRuntimeSession
                 linked = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
                 _runCts = linked;
                 _activeRunId = request.RunId;
+                if (_pendingCancelRunId == request.RunId)
+                {
+                    _pendingCancelRunId = Guid.Empty;
+                    linked.Cancel();
+                }
             }
 
             try
             {
-                var results = TUnitEngineHost.Run(_testAssembly, request.Selection, linked.Token);
+                if (linked.IsCancellationRequested)
+                {
+                    return new TestingRunResponse(
+                        request.RunId,
+                        request.FrameworkId,
+                        GenerationId,
+                        [],
+                        TestingCancellationState.Completed,
+                        null,
+                        null);
+                }
+
+                if (request.Selection.Kind == TestingSelectionKind.FrameworkFilter)
+                {
+                    return new TestingRunResponse(
+                        request.RunId,
+                        request.FrameworkId,
+                        GenerationId,
+                        [],
+                        TestingCancellationState.None,
+                        "testing/invalid_request",
+                        "TUnit does not accept framework-filter XML. Use --test or --name.");
+                }
+
+                var selection = MapToEngineSelection(request.Selection);
+                var results = TUnitEngineHost.Run(_testAssembly, selection, linked.Token);
                 foreach (var result in results)
                 {
                     if (!string.IsNullOrWhiteSpace(result.Output))
                     {
-                        eventSink.Publish(new TestingRuntimeEvent(
+                        eventSink.Publish(new TestingEvent(
                             request.RunId,
                             TestingEventKinds.Output,
                             null,
@@ -62,7 +93,7 @@ public sealed class TUnitRuntimeSession : ITestingRuntimeSession
                             TestingCancellationState.None));
                     }
 
-                    eventSink.Publish(new TestingRuntimeEvent(
+                    eventSink.Publish(new TestingEvent(
                         request.RunId,
                         TestingEventKinds.Case,
                         result,
@@ -90,6 +121,9 @@ public sealed class TUnitRuntimeSession : ITestingRuntimeSession
                         _runCts = null;
                     if (_activeRunId == request.RunId)
                         _activeRunId = Guid.Empty;
+
+                    if (_pendingCancelRunId == request.RunId)
+                        _pendingCancelRunId = Guid.Empty;
                 }
             }
         }
@@ -102,8 +136,16 @@ public sealed class TUnitRuntimeSession : ITestingRuntimeSession
             if (_disposed)
                 return;
 
-            if (_activeRunId == runId)
-                _runCts?.Cancel();
+            if (_activeRunId != Guid.Empty && _activeRunId != runId)
+                return;
+
+            if (_activeRunId == Guid.Empty)
+            {
+                _pendingCancelRunId = runId;
+                return;
+            }
+
+            _runCts?.Cancel();
         }
     }
 
@@ -119,8 +161,25 @@ public sealed class TUnitRuntimeSession : ITestingRuntimeSession
             _runCts?.Dispose();
             _runCts = null;
             _activeRunId = Guid.Empty;
+            _pendingCancelRunId = Guid.Empty;
         }
     }
+
+    internal static TestingSelection MapToEngineSelection(
+        TestingSelection selection,
+        string assemblyPath,
+        Assembly alreadyLoaded)
+    {
+        if (selection.Kind != TestingSelectionKind.Names)
+            return selection;
+
+        var discovered = TUnitCatalog.Discover(assemblyPath, selection, alreadyLoaded);
+        return TestingSelection.FromTestIds(
+            discovered.Select(test => test.TestId).Distinct(StringComparer.Ordinal).ToList());
+    }
+
+    private TestingSelection MapToEngineSelection(TestingSelection selection) =>
+        MapToEngineSelection(selection, _assemblyPath, _testAssembly);
 
     private void ValidateAssembly(string requestAssemblyPath)
     {

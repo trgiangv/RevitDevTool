@@ -19,7 +19,7 @@ public sealed class RepositoryAssemblyLoadingArchitectureTests
     };
 
     [Fact]
-    public void Direct_assembly_loading_stays_in_the_kernel_or_an_explicit_bootstrap_or_plan_adapter()
+    public void Direct_assembly_loading_stays_in_the_kernel_or_an_explicit_discovery_or_plan_adapter()
     {
         var violations = new List<string>();
 
@@ -33,7 +33,7 @@ public sealed class RepositoryAssemblyLoadingArchitectureTests
                 if (!Regex.IsMatch(content, pattern, RegexOptions.CultureInvariant))
                     continue;
 
-                if (IsKernel(relativePath) || IsMtpBootstrapException(relativePath, content) || IsPlanAdapter(relativePath, content))
+                if (IsKernel(relativePath) || IsDiscoveryLoadException(relativePath, content) || IsPlanAdapter(relativePath, content))
                     continue;
 
                 violations.Add($"{relativePath} matches {pattern}");
@@ -42,21 +42,18 @@ public sealed class RepositoryAssemblyLoadingArchitectureTests
 
         Assert.True(
             violations.Count == 0,
-            "Direct assembly loading must use DevTools.AssemblyIsolation unless the explicit MTP bootstrap exception applies:"
+            "Direct assembly loading must use DevTools.AssemblyIsolation unless the explicit discovery-load exception applies:"
             + Environment.NewLine + string.Join(Environment.NewLine, violations));
     }
 
     [Fact]
-    public void Mtp_bootstrap_exception_is_limited_to_the_private_runtime_closure()
+    public void Testhost_discovery_load_is_limited_to_compile_only_host_api_refs()
     {
-        const string relativePath = "source/DevTools.TestAdapter/RuntimeAssemblyResolver.cs";
+        const string relativePath = "source/DevTools.Testing.Abstractions/Loading/DiscoveryAssemblyLoad.cs";
         var content = File.ReadAllText(Path.Combine(RepositoryRoot, relativePath.Replace('/', Path.DirectorySeparatorChar)));
 
-        Assert.Contains("Interlocked.Exchange(ref _registered, 1)", content, StringComparison.Ordinal);
-        Assert.Contains("AppDomain.CurrentDomain.AssemblyResolve += ResolvePrivateRuntimeAssembly", content, StringComparison.Ordinal);
-        Assert.Contains("Path.GetFullPath(AppContext.BaseDirectory)", content, StringComparison.Ordinal);
-        Assert.Contains("Path.Combine(baseDirectory, name + \".dll\")", content, StringComparison.Ordinal);
-        Assert.Contains("Assembly.LoadFrom(path)", content, StringComparison.Ordinal);
+        Assert.Contains("DiscoveryRefs.Read", content, StringComparison.Ordinal);
+        Assert.Contains("DiscoveryLoadContext", content, StringComparison.Ordinal);
         Assert.DoesNotContain("DevTools.AssemblyIsolation", content, StringComparison.Ordinal);
         Assert.DoesNotContain("HostShared", content, StringComparison.Ordinal);
         Assert.DoesNotContain("SharedAssembly", content, StringComparison.Ordinal);
@@ -64,8 +61,8 @@ public sealed class RepositoryAssemblyLoadingArchitectureTests
         Assert.DoesNotContain("Revit", content, StringComparison.Ordinal);
         Assert.DoesNotContain("Acad", content, StringComparison.Ordinal);
         Assert.DoesNotContain("Execution", content, StringComparison.Ordinal);
-        Assert.Contains("AssemblyName.GetAssemblyName(path)", content, StringComparison.Ordinal);
-        Assert.Contains("HasSameFullIdentity(requested, candidate)", content, StringComparison.Ordinal);
+        Assert.False(File.Exists(Path.Combine(
+            RepositoryRoot, "source", "DevTools.TestAdapter", "RuntimeAssemblyResolver.cs")));
     }
 
     [Fact]
@@ -96,13 +93,10 @@ public sealed class RepositoryAssemblyLoadingArchitectureTests
     private static bool IsKernel(string relativePath) =>
         relativePath.StartsWith("source/DevTools.AssemblyIsolation/", StringComparison.Ordinal);
 
-    private static bool IsMtpBootstrapException(string relativePath, string content) =>
-        (relativePath.Equals("source/DevTools.TestAdapter/RuntimeAssemblyResolver.cs", StringComparison.Ordinal)
-         && content.Contains("AppContext.BaseDirectory", StringComparison.Ordinal)
-         && content.Contains("Interlocked.Exchange(ref _registered, 1)", StringComparison.Ordinal))
-        || (relativePath.Equals("source/DevTools.Testing.Abstractions/Loading/DiscoveryAssemblyLoad.cs", StringComparison.Ordinal)
-            && content.Contains("DiscoveryRefs.Read", StringComparison.Ordinal)
-            && content.Contains("DiscoveryLoadContext", StringComparison.Ordinal));
+    private static bool IsDiscoveryLoadException(string relativePath, string content) =>
+        relativePath.Equals("source/DevTools.Testing.Abstractions/Loading/DiscoveryAssemblyLoad.cs", StringComparison.Ordinal)
+        && content.Contains("DiscoveryRefs.Read", StringComparison.Ordinal)
+        && content.Contains("DiscoveryLoadContext", StringComparison.Ordinal);
 
     private static bool IsPlanAdapter(string relativePath, string content) =>
         relativePath.Equals("source/DevTools.Execution/Providers/CSharp/CSharpCompiler.cs", StringComparison.Ordinal)

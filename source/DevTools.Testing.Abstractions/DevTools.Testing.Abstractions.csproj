@@ -4,4 +4,8 @@
         <RootNamespace>DevTools.Testing.Abstractions</RootNamespace>
         <AssemblyName>DevTools.Testing.Abstractions</AssemblyName>
     </PropertyGroup>
+    <ItemGroup>
+        <InternalsVisibleTo Include="DevTools.Testing.Abstractions.Tests"/>
+        <InternalsVisibleTo Include="DevTools.TestAdapter.Tests"/>
+    </ItemGroup>
 </Project>

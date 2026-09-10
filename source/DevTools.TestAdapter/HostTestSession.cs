@@ -16,7 +16,8 @@ internal sealed class HostTestSession
     internal TestingRunResponse Run(
         string assemblyPath,
         TestingHostOptions hostOptions,
-        TestingSelection selection)
+        TestingSelection selection,
+        Action<TestingEvent>? onEvent = null)
     {
         _runId = Guid.NewGuid();
         ArgumentException.ThrowIfNullOrWhiteSpace(assemblyPath);
@@ -28,11 +29,11 @@ internal sealed class HostTestSession
             TestingProtocol.CurrentVersion,
             _runId,
             frameworkId,
-            new TestingAssemblyReference(Path.GetFullPath(assemblyPath), null, null),
-            selection,
-            new Dictionary<string, string>());
+            new TestingAssemblyReference(Path.GetFullPath(assemblyPath)),
+            selection);
 
-        return _transport.Run(request, hostOptions, _ => { });
+        var wireHost = hostOptions with { FrameworkId = null, RunnerPath = null };
+        return _transport.Run(request, wireHost, onEvent ?? (_ => { }));
     }
 
     internal void Cancel() => _transport.Cancel(_runId);

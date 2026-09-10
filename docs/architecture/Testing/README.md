@@ -9,7 +9,7 @@ Product: [`host-testing.md`](../../product/host-testing.md),
 [`tunit-host-testing.md`](../../product/tunit-host-testing.md).
 Agent digest: [`host-testing.md`](../../agents/host-testing.md).
 
-Last updated: 2026-09-09
+Last updated: 2026-09-10
 
 ---
 
@@ -22,8 +22,8 @@ Last updated: 2026-09-09
 | `testing/*` JSON + Runner process client | `source/DevTools.Testing.Transport/` |
 | In-host `testing/*` handler + generation store | `source/DevTools.Testing.Host/` (`MarshaledTestRequestHandler` → `DotnetTestRequestHandler`) |
 | Runtime folder resolve + generation file classify | `source/DevTools.Testing.Host/Loading/` |
-| Published MTP adapter, plugin load (`HostMtpRegistration`) | `source/DevTools.TestAdapter/` |
-| Local NUnit `ExploreTests` (testhost sibling DLL) | `source/DevTools.NUnit.MTP/` |
+| Published MTP adapter, sibling builder hooks | `source/DevTools.TestAdapter/` |
+| Local NUnit `ExploreTests` + `NUnitHostTestRunMapper` | `source/DevTools.NUnit.MTP/` |
 | In-host NUnit engine | `source/DevTools.NUnit.Runtime/` |
 | NUnit closure / filter / generation policy | `source/DevTools.NUnit.Host/` |
 | Local TUnit catalog (`Sources.TestEntries`) | `source/DevTools.TUnit.MTP/` |
@@ -84,9 +84,9 @@ project, `DevTools.TestRunner`. Runtime sources are Compile-linked into MTP.
 ### Consumer build order (`build/RevitDevTool.TestAdapter.targets`)
 
 ```text
-0. TestingFramework -> MTPAssembly / MTPEntry   property map (see table below)
+0. TestingFramework -> sibling name / hook type   (must stay in targets)
 1. _ResolveRuntimeDir                           pick build/runtime/{tfm}
-2. CopyMTPSibling      AfterTargets=Build       MTPAssembly + Abstractions -> $(OutDir)
+2. Reference Private=true ExternallyResolved=true   selected MTP + Abstractions
 3. WriteDiscoveryRefs  AfterTargets=Build       $(TargetName).discovery-refs.txt
 4. GenerateTestConfig  BeforeTargets=BeforeBuild  -> $(AssemblyName).testconfig.json
 ```
@@ -97,14 +97,15 @@ The two packed files must stay free of consumer build settings: no
 `$(Configuration)` sniffing, no repo-relative paths, no `RuntimeIdentifier`, no
 `ProjectReference`. `Packed_build_files_do_not_depend_on_the_consumer_configuration`
 (TestAdapter.Tests) enforces that, and `AssertPackageClosure` asserts the nupkg
-ships only `build/RevitDevTool.TestAdapter.props|targets` plus the net4x source
-shim `build/netfx/ModuleInitializerAttribute.cs`.
+ships `build/RevitDevTool.TestAdapter.props|targets`, the net4x source shim
+`build/netfx/ModuleInitializerAttribute.cs`, and `build/hooks/*MtpBuilderHook.cs`.
 
-`build/RevitDevTool.TestAdapter.Local.targets` holds everything that does know
-this repo — `DevToolsTestAdapterLocal` (relaxes the missing-runtime Error), the
-`_MTPConfiguration` mapping from `Debug.Autodesk.YYYY` to `Debug`/`Release`, MTP
-build-order `ProjectReference`s, and `_StagePackageRuntime`. It is not packed;
-the packaged targets import it only when the file exists next to them.
+In-repo samples are NuGet consumers, not a second MSBuild path. They
+`PackageReference` `RevitDevTool.TestAdapter`. Repo `NuGet.config` maps that id
+to `output/nuget`. `scripts/pack-test-adapter.ps1` writes the nupkg there and
+deletes the extracted global-packages copy of the same version so restore
+cannot keep a stale 0.0.6. There is no `Local.targets` / sibling-`bin` HintPath
+loop: discovery and run must go through the packed `build/runtime` layout.
 
 One setting stays with the consumer because the package cannot set it:
 
@@ -125,15 +126,14 @@ off when a `PackageReference`/`GlobalPackageReference` named `Polyfill` or anoth
 `NetFxModuleInitializer=false` to opt out entirely. Consumer cases:
 [tunit-host-testing.md](../../product/tunit-host-testing.md).
 
-In-repo samples use the `ProjectReference` path, where the adapter's private
-`Microsoft.Testing.Platform` reference does not flow; the NUnit samples add that
-`PackageReference` themselves. NuGet consumers get it from the
-`RevitDevTool.TestAdapter` → `Microsoft.Testing.Platform.MSBuild` dependency.
-
-Consumer shapes proven by the two verify paths — `scripts/test-adapter-matrix.ps1`
-(in-repo samples, net48 / net8 / net10) and `PackageConsumerTests` (packed nupkg,
-same three runtimes, NUnit and TUnit): central package management,
-`TreatWarningsAsErrors`, a repo-wide `EnableDynamicLoading=true` (the package
+In-repo samples `PackageReference` the local nupkg. NUnit/TUnit samples do not
+add `Microsoft.Testing.Platform` themselves; they get testhost generation from
+`RevitDevTool.TestAdapter` → `Microsoft.Testing.Platform.MSBuild`. Pack then
+restore: `scripts/pack-test-adapter.ps1` then `dotnet restore` / `dotnet test`
+on `samples/DevTools.*.SampleTests`. `scripts/test-adapter-matrix.ps1` packs
+first, then restore+build+`--list-tests` on net48 / net8 / net10.
+`PackageConsumerTests` still packs into an isolated feed. Both paths cover
+central package management, a repo-wide `EnableDynamicLoading=true` (the package
 forces `false` for the testhost), `AppendTargetFrameworkToOutputPath=false` under
 `Debug|Release.Autodesk.YYYY`, and `-windows10.0.19041.0` platform variants.
 
@@ -148,6 +148,9 @@ forces `false` for the testhost), `AppendTargetFrameworkToOutputPath=false` unde
   CS0433 on net48.
 - Restore TestAdapter alone does not write `NUnit.MTP/obj/project.assets.json`
   (`NETSDK1004`).
+- Repo `NuGet.config` maps `RevitDevTool.TestAdapter` to `output/nuget` and `*`
+  to nuget.org so CPM restore is not NU1507 on machines that also have a
+  second feed, and samples cannot silently pick nuget.org for this id.
 - Pack runs per TestAdapter TFM in parallel. An inner MTP Restore inherits
   `TargetFramework` and rewrites `project.assets.json` for one TFM
   (`NETSDK1005`, typically missing `net48`). Inner Restore must
@@ -155,12 +158,14 @@ forces `false` for the testhost), `AppendTargetFrameworkToOutputPath=false` unde
   pack script before `dotnet pack`.
 - Keep `AppendTargetFrameworkToOutputPath=true` on packable multi-TFM testing
   projects.
-- `CopyMTPSibling` copies MTP and Abstractions only from `build/runtime`
-  (the nupkg layout). In-repo `_StagePackageRuntime` fills that folder from
-  sibling MTP output (`bin\Debug|Release\$(TargetFramework)\`). Ipc/Transport are
-  ILRepacked into the adapter on every TFM. Sibling copy always overwrites the
-  selected MTP (`SkipUnchangedFiles=false`): a timestamp-stale sibling shows up
-  as "0 Tests found".
+- The selected sibling is a normal `<Reference Private="true" ExternallyResolved="true">` from
+  nupkg `build/runtime`. That puts
+  it in the testhost copy-local graph and `deps.json`. Do not byte-load or
+  `AssemblyResolve` the sibling. Isolated discovery of compile-only Autodesk
+  refs stays in `DiscoveryAssemblyLoad`. `discovery-refs.txt` must not list
+  framework targeting packs — including NuGet-cached `*.app.ref` /
+  `*.sdk.net.ref` (not only `dotnet\packs`). Loading those metadata-only
+  assemblies into the discovery ALC makes NUnit report zero fixtures.
 
 ---
 
@@ -172,9 +177,50 @@ flowchart LR
   Runner["DevTools.TestRunner.exe\nbundle Contents"]
   Host["Host add-in\nTesting.Host + NUnit or TUnit Host/Runtime"]
 
-  Testhost -->|"launch / testing/* client"| Runner
+  Testhost -->|"machine-run JSON stdin"| Runner
   Runner -->|"named pipe testing/*"| Host
 ```
+
+The adapter launches `DevTools.TestRunner machine-run` and writes one
+`TestingRunInvocation` JSON document to stdin (`ProtocolVersion` + host
+options + `TestingRunRequest`). Nested `RunId` is the same id the host
+receives on `testing/run`. Human `DevTools.TestRunner run …` maps CLI flags
+into that same type; it is not a second wire contract.
+
+`TestingSelection` is a closed union: `All`, `TestIds`, `FrameworkFilter`,
+`Names`. Empty `TestIds` means run nothing, not run the assembly.
+Human CLI `--name` / `--filter` is mapped by the in-host provider before
+the engine: NUnit turns Names into filter XML; TUnit turns Names into
+`TestIds` and rejects `FrameworkFilter` with `testing/invalid_request`
+(does not throw, so the session is not poisoned). TUnit cancel that
+arrives before `_activeRunId` is assigned is kept as `_pendingCancelRunId`,
+same as NUnit.
+
+`RequestTimeoutSeconds` is the scaled pipe wait (`PerTestTimeout × count`);
+`PerTestTimeoutSeconds` stays per test. Machine-run stdout is NDJSON
+(`TestingRunnerStreamMessage` event lines, then the `TestingRunResponse`).
+Human `run` still writes one response JSON on stdout and progress on stderr.
+
+Cancel is cooperative first (`Local\DevTools.TestRunner.Cancel.{runId:N}`),
+then process kill if the child is still running. The adapter registers
+`context.CancellationToken` onto `HostTestSession.Cancel` for the duration of
+`session.Run`. `ProcessTestRunnerClient` publishes `_activeProcess` only after
+`Start()`, and `Cancel` must not throw if the process was never started or is
+already disposed. Host `testing/cancel` returns
+`TestingCancelResponse.Acknowledged`; unknown `RunId` is `false` and does
+not acknowledge. `TestingRuntimeSessionManager.Cancel` returns `false` when
+the session throws `ObjectDisposedException`. After `testing/hello`,
+TestRunner fails the invocation if host/year/framework mismatch or `IsBusy`.
+
+A provider `ArgumentException` (including a rejected NUnit `FrameworkFilter`
+format) is `testing/invalid_request` and does not poison the session. Other
+provider exceptions still poison. An unconstrained run failure (All /
+FrameworkFilter / Names, so `ResultsForUnreported` is empty) publishes a
+`devtools.testadapter.run` error node instead of a silent empty explorer.
+
+Streamed `testing/progress` events reach the adapter. Folded host results
+remain authoritative for Test Explorer; live Case updates publish only when
+the `TestId` is in the testhost-discovered set.
 
 Testhost never loads Autodesk APIs. Host execution stays in the add-in.
 
@@ -188,49 +234,52 @@ resets a Completed/Poisoned session so a new client is not stuck.
 
 ### Adapter bootstrap
 
-`TestingPlatformBuilderHook` only calls `AdapterBootstrap.Initialize`.
-`AdapterTestConfig.TryReadPluginConfig()` reads `devtools.frameworkId`,
-`devtools.mtpAssembly`, and `devtools.mtpEntry` from `testconfig.json` or
-`[EntryAssembly].testconfig.json`. Missing or partial keys set
-`HostMtpRegistration.LastError` and **must not throw** from the hook static
-constructor. Empty `frameworkId` on run publishes a
-`devtools.testadapter.run` error node (no `nunit` default).
+MSBuild selects exactly one packed sibling and adds it as a compile/copy-local
+reference. A small hook source file is compiled into the testhost so the sibling
+DLL does not reference Microsoft.Testing.Platform. The generated entry point
+then calls both builder hooks:
 
-MSBuild writes those keys from:
+```text
+DevTools.TestAdapter.TestingPlatformBuilderHook.AddExtensions   // HostTestFramework
+DevTools.NUnit.MTP.NUnitMtpBuilderHook.AddExtensions               // compiled into testhost
+        └── HostTestDiscovery.Register(NUnitHostTestDiscoverer, NUnitHostTestRunMapper)
+```
 
-| Property | `testconfig` key | First-party default when empty |
-|----------|------------------|--------------------------------|
-| `TestingFramework` | `frameworkId` | `nunit` (props) |
-| `MTPAssembly` | `mtpAssembly` | `nunit` → `DevTools.NUnit.MTP.dll`; `tunit` → `DevTools.TUnit.MTP.dll` (targets) |
-| `MTPEntry` | `mtpEntry` | `nunit` → `DevTools.NUnit.MTP.NUnitMTP`; `tunit` → `DevTools.TUnit.MTP.TUnitMTP` (targets) |
+| Property / item | Role |
+|-----------------|------|
+| `TestingFramework` | Opaque id written as `devtools.frameworkId`. Props default `nunit`. Map in **targets** (`nunit` → `DevTools.NUnit.MTP` / `NUnitMtpBuilderHook`; `tunit` → `DevTools.TUnit.MTP` / `TUnitMtpBuilderHook`). |
+| `<Reference Private="true" ExternallyResolved="true">` | Selected sibling + `DevTools.Testing.Abstractions`. Copy-local without net48 RAR walking sibling AssemblyRefs. Not a NuGet `PackageReference`, so NUnit/TUnit do not enter the consumer graph. |
+| `TestingPlatformBuilderHook` (`b7e4c1a9-…`) | Compile-time call into the selected sibling. GUID is a stable MSBuild identity. |
+| Adapter hook (`51ad4b4c-…`) | Registers `HostTestFramework`. Stays framework-neutral. |
 
-The `TestingFramework` → `MTPAssembly` / `MTPEntry` map must stay in the
-**targets**. NuGet imports `build/*.props` from `Microsoft.Common.props`, before
-the consumer `PropertyGroup`, so mapping in the props pinned every packaged
-consumer to NUnit even with `<TestingFramework>tunit</TestingFramework>`.
+The `TestingFramework` → sibling map must stay in the **targets**. NuGet
+imports `build/*.props` from `Microsoft.Common.props`, before the consumer
+`PropertyGroup`, so mapping in the props pinned every packaged consumer to
+NUnit even with `<TestingFramework>tunit</TestingFramework>`.
 
-`RuntimeAssemblyResolver.EnsureRegistered` attaches `AssemblyResolve` **before**
-reading discovery refs. `build/runtime` siblings are copied next to the testhost
-but are absent from the consumer `deps.json`, so on .NET they load only through
-that handler — and `DiscoveryRefs` itself lives in Abstractions. Touching
-Abstractions first fails the JIT of the registering method and leaves the process
-with no resolver (`FileNotFoundException: DevTools.Testing.Abstractions`).
-
-`HostMtpRegistration` (TestAdapter) loads the configured sibling file name
-beside the testhost. `mtpAssembly` must be a bare file name. There is no C#
-`switch` on `nunit` / `tunit` in Abstractions. Packaged copy of an unmapped
-`MTPAssembly` is skipped unless the file exists in the package
-runtime dir. Sibling copy Errors when the DLL is missing from `build/runtime`
-and `$(OutDir)` (override with `MTPCopy=false`).
+There is no C# `switch` on `nunit` / `tunit` in Abstractions. Unknown
+`TestingFramework` is a build `<Error>`. Empty `frameworkId` on run publishes
+a `devtools.testadapter.run` error node (no `nunit` default).
 
 A user-authored `testconfig.json` with a `devtools` section must already
-contain `frameworkId`, `mtpAssembly`, and `mtpEntry` or the merge errors.
-See [0024](../../decisions/0024-testing-core-open-closed-providers.md).
+contain `frameworkId` or the merge errors. `mtpAssembly` / `mtpEntry` are not
+part of the contract. See [0024](../../decisions/0024-testing-core-open-closed-providers.md).
 
-`Register` assigns both `HostTestDiscovery.Provider` (`IHostTestDiscoverer`)
-and `HostTestDiscovery.RunMapper` (`IHostTestRunMapper`). There is no
-framework catalog type and no “try TUnit then NUnit” probe. Load/register
-failures must not throw from the hook static constructor.
+The sibling builder hook registers testhost discovery and run-mapping.
+NUnit uses two types (`NUnitHostTestDiscoverer`, `NUnitHostTestRunMapper`);
+TUnit’s catalog is small enough that one type implements both interfaces.
+Missing registration fails; the adapter does not fall back to pass-through
+mapping. `HostTestDiscovery.Clear()` is internal (test assemblies only).
+There is no framework catalog type and no “try TUnit then NUnit”
+probe.
+
+`tests/DevTools.TestAdapter.Tests` forces `ILRepackable=false` on the adapter
+`ProjectReference`. Packed adapter merges Transport into `TestAdapter.dll`;
+the test project also references Transport directly. Dual-loading
+`ITestRunnerTransport` is CS0433. In-repo tests therefore compile the adapter
+unmerged. Do not add a TestAdapter → MTP sibling `ProjectReference` on the
+adapter csproj; the test project may reference `DevTools.NUnit.MTP` for
+reflection-only architecture asserts.
 
 The adapter publishes MTP `TestNode` / `TestMethodIdentifierProperty` from
 `TestingDiscoveredTest` fields (`MethodArity` is the generic-method arity for
@@ -242,14 +291,18 @@ in `DevTools.TUnit.Runtime` (`TUnitCatalog` / `TUnitExpansion` /
 The adapter must not parse NUnit `FullName` or TUnit Engine UIDs.
 
 NUnit ExploreTests is host-free and must not read `testconfig.json` **host**
-options (`hostName`, `forceLaunch`, …). Plugin keys (`frameworkId`,
-`mtpAssembly`, `mtpEntry`) are adapter bootstrap only.
+options (`hostName`, `forceLaunch`, …). `frameworkId` is the wire-protocol
+discriminator for `testing/run`.
 
 ### Host generation
 
 Each provider owns a generation policy (`NUnitGenerationPolicy`,
-`TUnitGenerationPolicy`) with runtime folder/DLL names. Shared helpers on
-public `TestingGenerationFiles` (Host): `Classify`, `ScanOutputDirectory`,
+`TUnitGenerationPolicy`) with runtime folder/DLL names. Publish prefers
+`Directory.Move` of the staging folder; on net48 that rename often fails with
+`Access to the path is denied` while the tree is still scanned. The store
+retries, then copies files into the shadow directory. Do not treat an
+`IOException` from publish as a poisoned provider failure on the first try.
+Shared helpers on public `TestingGenerationFiles` (Host): `Classify`, `ScanOutputDirectory`,
 `IsSharedTestingContract`, `TryGetManagedAssemblyIdentity`,
 `IsManagedAssembly`, `TryGetFileVersion`, `ContentEquals`, `MergeFile`,
 `NormalizeRelativePath`, `GetRelativePath`, `IsVolatileGenerationOutput`.

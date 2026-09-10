@@ -61,7 +61,7 @@ internal static class TestNodeProperties
         result.Outcome switch
         {
             "Passed" => PassedTestNodeStateProperty.CachedInstance,
-            "Skipped" => new SkippedTestNodeStateProperty(result.Message),
+            "Skipped" => new SkippedTestNodeStateProperty(result.SkipReason ?? result.Message),
             "Failed" => new FailedTestNodeStateProperty(CreateException(result)),
             _ => new ErrorTestNodeStateProperty(CreateException(result)),
         };

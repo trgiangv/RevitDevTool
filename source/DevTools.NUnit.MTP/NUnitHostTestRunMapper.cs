@@ -1,9 +1,15 @@
 using DevTools.NUnit.Runtime;
+using DevTools.Testing.Abstractions;
 using DevTools.Testing.Abstractions.Contracts;
 
 namespace DevTools.NUnit.MTP;
 
-internal sealed partial class NUnitHostTestDiscoverer
+/// <summary>
+/// Maps testhost NUnit identities onto in-host filter XML and folds host
+/// results back onto IDE test-node ids. Discovery stays on
+/// <see cref="NUnitHostTestDiscoverer"/>.
+/// </summary>
+public sealed class NUnitHostTestRunMapper : IHostTestRunMapper
 {
     internal const string UnreportedFullNameMessage =
         "Host NUnit did not report this FullName. UID is ITest.FullName from testhost ExploreTests; in-host source expansion uses a different FullName.";
@@ -12,11 +18,15 @@ internal sealed partial class NUnitHostTestDiscoverer
         TestingSelection requested,
         IReadOnlyList<TestingDiscoveredTest> discovered)
     {
-        if (!IsConstrained(requested))
+        if (requested.Kind == TestingSelectionKind.All)
+            return TestingSelection.All;
+
+        if (requested.Kind == TestingSelectionKind.Names
+            || requested.Kind == TestingSelectionKind.FrameworkFilter)
             return requested;
 
-        if (IsNamesOnly(requested))
-            return requested;
+        if (requested.Kind == TestingSelectionKind.TestIds && requested.TestIds.Count == 0)
+            return TestingSelection.FromTestIds([]);
 
         var ids = (requested.TestIds ?? [])
             .Select(id => ToHostFullName(id, discovered))
@@ -26,9 +36,15 @@ internal sealed partial class NUnitHostTestDiscoverer
             .Distinct(StringComparer.Ordinal)
             .ToList();
         if (ids.Count == 0)
-            return requested;
+            return TestingSelection.FromTestIds([]);
 
-        return new TestingSelection([], NUnitCollapsedSelection.ToFilterXml(ids));
+        var xml = NUnitCollapsedSelection.ToFilterXml(ids);
+        if (string.IsNullOrWhiteSpace(xml))
+            return TestingSelection.FromTestIds([]);
+
+        return TestingSelection.FromFrameworkFilter(
+            TestingSelection.XmlFilterFormat,
+            xml!);
     }
 
     public IReadOnlyList<TestingCaseResult> FoldResults(
@@ -36,7 +52,7 @@ internal sealed partial class NUnitHostTestDiscoverer
         IReadOnlyList<TestingDiscoveredTest> discovered,
         IReadOnlyList<TestingCaseResult> hostResults)
     {
-        if (IsNamesOnly(requested))
+        if (requested.Kind == TestingSelectionKind.Names)
             return hostResults;
 
         var display = DisplayNames(discovered);
@@ -44,13 +60,44 @@ internal sealed partial class NUnitHostTestDiscoverer
         var usedHostIds = new HashSet<string>(StringComparer.Ordinal);
         FoldRequestedIds(requested.TestIds, discovered, hostResults, display, folded, usedHostIds);
         FoldDiscoveredLeaves(discovered, hostResults, folded, usedHostIds);
-        if (!HasIds(requested.TestIds))
+        if (requested.Kind != TestingSelectionKind.TestIds)
             AppendUnusedHostResults(hostResults, folded, usedHostIds);
         return folded;
     }
 
-    private static bool IsNamesOnly(TestingSelection requested) =>
-        !HasIds(requested.TestIds) && HasIds(requested.Names);
+    public IReadOnlyList<TestingCaseResult> ResultsForUnreported(
+        TestingSelection requested,
+        IReadOnlyList<TestingDiscoveredTest> discovered,
+        IReadOnlyList<TestingCaseResult> hostResults)
+    {
+        if (requested.Kind != TestingSelectionKind.TestIds)
+            return [];
+
+        var reported = new HashSet<string>(
+            hostResults.Select(result => result.TestId),
+            StringComparer.Ordinal);
+        var display = DisplayNames(discovered);
+        var missing = new List<TestingCaseResult>();
+        foreach (var id in DistinctIds(requested.TestIds))
+        {
+            if (reported.Contains(id))
+                continue;
+
+            missing.Add(new TestingCaseResult(
+                id,
+                display.TryGetValue(id, out var displayName) ? displayName : id,
+                TestingOutcomes.Failed,
+                0,
+                UnreportedFullNameMessage,
+                null,
+                null,
+                null,
+                [],
+                []));
+        }
+
+        return missing;
+    }
 
     private static bool HasIds(IReadOnlyList<string>? ids) => ids is { Count: > 0 };
 
@@ -209,43 +256,6 @@ internal sealed partial class NUnitHostTestDiscoverer
 
     private static bool IsUsed(TestingCaseResult result, HashSet<string> usedHostIds) =>
         !string.IsNullOrWhiteSpace(result.TestId) && usedHostIds.Contains(result.TestId);
-
-    public IReadOnlyList<TestingCaseResult> ResultsForUnreported(
-        TestingSelection requested,
-        IReadOnlyList<TestingDiscoveredTest> discovered,
-        IReadOnlyList<TestingCaseResult> hostResults)
-    {
-        if (!HasIds(requested.TestIds))
-            return [];
-
-        var reported = new HashSet<string>(
-            hostResults.Select(result => result.TestId),
-            StringComparer.Ordinal);
-        var display = DisplayNames(discovered);
-        var missing = new List<TestingCaseResult>();
-        foreach (var id in DistinctIds(requested.TestIds))
-        {
-            if (reported.Contains(id))
-                continue;
-
-            missing.Add(new TestingCaseResult(
-                id,
-                display.TryGetValue(id, out var displayName) ? displayName : id,
-                TestingOutcomes.Failed,
-                0,
-                UnreportedFullNameMessage,
-                null,
-                null,
-                null,
-                [],
-                []));
-        }
-
-        return missing;
-    }
-
-    private static bool IsConstrained(TestingSelection selection) =>
-        HasIds(selection.TestIds) || HasIds(selection.Names);
 
     private static string ToHostFullName(string id, IReadOnlyList<TestingDiscoveredTest> discovered)
     {

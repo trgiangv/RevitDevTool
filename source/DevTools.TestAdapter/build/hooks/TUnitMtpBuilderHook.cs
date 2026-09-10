@@ -1,0 +1,24 @@
+using DevTools.Testing.Abstractions;
+using Microsoft.Testing.Platform.Builder;
+
+namespace DevTools.TUnit.MTP;
+
+/// <summary>
+/// Microsoft.Testing.Platform builder hook, compiled into the consumer testhost.
+/// The generated entry point requires
+/// <c>AddExtensions(ITestApplicationBuilder, string[])</c>. The arguments
+/// array is unused: this hook only assigns <see cref="HostTestDiscovery"/>.
+/// Source lives in the adapter package, not DevTools.TUnit.MTP.dll, so the
+/// sibling does not reference Microsoft.Testing.Platform.
+/// </summary>
+public static class TUnitMtpBuilderHook
+{
+    public static void AddExtensions(ITestApplicationBuilder testApplicationBuilder, string[] arguments)
+    {
+        if (testApplicationBuilder is null)
+            throw new ArgumentNullException(nameof(testApplicationBuilder));
+        _ = arguments;
+        var discoverer = new TUnitHostTestDiscoverer();
+        HostTestDiscovery.Register(discoverer, discoverer);
+    }
+}

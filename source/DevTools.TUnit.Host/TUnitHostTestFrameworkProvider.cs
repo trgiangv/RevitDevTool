@@ -38,22 +38,12 @@ public sealed class TUnitHostTestFrameworkProvider : IHostTestFrameworkProvider,
             cancellationToken);
     }
 
-    public bool Cancel(Guid runId)
-    {
-        _sessions.Cancel(runId);
-        return true;
-    }
+    public bool Cancel(Guid runId) => _sessions.Cancel(runId);
 
     public void Dispose() => _sessions.Dispose();
 
     private sealed class EventSink(ITestingEventSink sink) : ITestingRuntimeEventSink
     {
-        public void Publish(TestingRuntimeEvent testingEvent) => sink.Publish(new TestingEvent(
-            testingEvent.RunId,
-            testingEvent.Kind,
-            testingEvent.Case,
-            testingEvent.Message,
-            testingEvent.Attachment,
-            testingEvent.CancellationState));
+        public void Publish(TestingEvent testingEvent) => sink.Publish(testingEvent);
     }
 }

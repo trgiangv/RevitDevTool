@@ -15,26 +15,21 @@ namespace DevTools.NUnit.MTP;
 /// renamed leaves). Host <c>&lt;test&gt;</c> still uses NUnit
 /// <see cref="ITest.FullName"/>. No host launch.
 /// </summary>
-internal sealed partial class NUnitHostTestDiscoverer : IHostTestDiscoverer, IHostTestRunMapper
+public sealed class NUnitHostTestDiscoverer : IHostTestDiscoverer
 {
-    public IReadOnlyList<TestingDiscoveredTest> Discover(string assemblyPath) =>
-        Select(assemblyPath, new TestingSelection([]));
-
-    public IReadOnlyList<TestingDiscoveredTest> Discover(
-        string assemblyPath,
-        TestingDiscoveryOptions options) =>
-        Discover(assemblyPath);
-
-    public IReadOnlyList<TestingDiscoveredTest> Select(
-        string assemblyPath,
-        TestingSelection selection)
+    public IReadOnlyList<TestingDiscoveredTest> Discover(string assemblyPath, TestingSelection selection)
     {
         using var session = NUnitLocalExploration.Load(assemblyPath);
         var all = session.Leaves.Select(test => ToDiscovered(test, session.Source)).ToList();
-        var testIds = CleanIds(selection.TestIds);
-        var names = CleanIds(selection.Names);
-        if (testIds.Count == 0 && names.Count == 0)
+        if (selection.Kind == TestingSelectionKind.All)
             return all;
+
+        var testIds = selection.Kind == TestingSelectionKind.TestIds ? CleanIds(selection.TestIds) : [];
+        var names = selection.Kind == TestingSelectionKind.Names ? CleanIds(selection.Names) : [];
+        if (selection.Kind == TestingSelectionKind.TestIds && testIds.Count == 0)
+            return [];
+        if (testIds.Count == 0 && names.Count == 0)
+            return [];
 
         var selected = new List<TestingDiscoveredTest>();
         if (testIds.Count > 0)
@@ -62,12 +57,6 @@ internal sealed partial class NUnitHostTestDiscoverer : IHostTestDiscoverer, IHo
             .Select(group => group.First())
             .ToList();
     }
-
-    public IReadOnlyList<TestingDiscoveredTest> Select(
-        string assemblyPath,
-        TestingSelection selection,
-        TestingDiscoveryOptions options) =>
-        Select(assemblyPath, selection);
 
     private static List<string> CleanIds(IReadOnlyList<string>? values)
     {

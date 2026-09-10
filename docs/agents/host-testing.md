@@ -9,38 +9,42 @@ Run/author tests: `.agents/skills/revit-test/SKILL.md`.
 
 ```text
 test csproj (HostName, HostVersion, NUnit|TUnit)
-  -> package targets: copy DevTools.{NUnit|TUnit}.MTP.dll + Abstractions beside the exe,
-     write discovery-refs.txt and [AssemblyName].testconfig.json
+  -> package targets: Reference the selected DevTools.{NUnit|TUnit}.MTP.dll
+     + Abstractions, write discovery-refs.txt and [AssemblyName].testconfig.json
+  -> generated MTP entry point calls adapter hook + selected sibling hook
   -> discovery: local ExploreTests / TUnit catalog in the testhost, no host process
   -> run: TestRunner.exe locates or launches the host, then testing/hello|run|cancel
 ```
 
-Adapter reads `devtools.frameworkId`, `mtpAssembly`, `mtpEntry` from `testconfig.json`
-(`HostMtpRegistration`). Missing keys set `LastError` and surface as an error node —
-they must never throw from the hook static constructor. Override with `<MTPAssembly>` /
-`<MTPEntry>`. A hand-written `testconfig.json` `devtools` section without all three
-keys is a build Error.
+Adapter writes `devtools.frameworkId` to `testconfig.json`. Missing
+`frameworkId` on a hand-written `devtools` section is a build Error. Sibling
+selection is MSBuild (`TestingFramework` → one `Reference` + builder hook),
+not runtime plugin keys.
 
 ## Verify
 
 ```powershell
-# 1. compile + in-repo tests
+# 1. compile + in-repo tests (adapter unit tests still ProjectReference)
 dotnet build source/DevTools.NUnit.Host/DevTools.NUnit.Host.csproj -c Debug
 dotnet run --project tests/DevTools.TestAdapter.Tests/DevTools.TestAdapter.Tests.csproj
 dotnet run --project tests/DevTools.NUnit.MTP.Tests/DevTools.NUnit.MTP.Tests.csproj
 dotnet run --project tests/DevTools.TestRunner.Tests/DevTools.TestRunner.Tests.csproj
 
-# 2. package surface (build + host-free discovery), net48 / net8 / net10
-scripts/pack-test-adapter.ps1 -RefreshLocalCache
+# 2. pack to output/nuget + drop stale global-packages extraction (default)
+scripts/pack-test-adapter.ps1
+
+# 3. package surface (restore from that nupkg + host-free discovery), net48 / net8 / net10
 scripts/test-adapter-matrix.ps1
 
-# 3. live (host running; root global.json is MTP)
+# 4. live (host running; root global.json is MTP)
 dotnet test --project samples/DevTools.NUnit.SampleTests/DevTools.NUnit.SampleTests.csproj -c Debug.Autodesk.2026 --filter Arithmetic_runs_inside_host
 ```
 
 Host DLL changes: `scripts/build-host.ps1 -Year <year>`. Runner:
 `dotnet publish source/DevTools.TestRunner -c Release`. Adapter nupkg:
-`scripts/pack-test-adapter.ps1` (not `scripts/pack.ps1`).
+`scripts/pack-test-adapter.ps1` (not `scripts/pack.ps1`). The pack script
+deletes `%USERPROFILE%\.nuget\packages\revitdevtool.testadapter\<version>`
+so the next sample restore cannot keep a previous extraction of 0.0.6.
 
 ## Rules
 
@@ -56,11 +60,9 @@ Host DLL changes: `scripts/build-host.ps1 -Year <year>`. Runner:
   there. Opt out with `NetFxModuleInitializer=false` only when that skip misses the
   existing type (see `docs/product/tunit-host-testing.md`).
 - The packaged `build/*.props|targets` must not read `$(Configuration)`, repo paths, or
-  `ProjectReference`. Dev-loop MSBuild goes in
-  `source/DevTools.TestAdapter/build/RevitDevTool.TestAdapter.Local.targets` (not packed).
-- In-repo samples use `ProjectReference`, where the adapter's private
-  `Microsoft.Testing.Platform` does not flow: the NUnit samples declare that
-  `PackageReference` themselves (`CS0234` on the generated entry point otherwise).
+  `ProjectReference`. In-repo samples restore `RevitDevTool.TestAdapter` from
+  `output/nuget` (same nupkg an end user gets). There is no checkout-only
+  `Local.targets` path.
 - `--filter` is the method-name option (NUnit `<name re="1">` regex). `--filter-uid` is
   the TestNode uid (`ITest.FullName`; `TestName`/`SetName` is `Class.Method("DisplayName")`).
   `--list-tests` text prints DisplayName — never paste a text line as `--filter-uid`.

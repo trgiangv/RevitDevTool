@@ -89,7 +89,7 @@ internal sealed class NUnitEventListener : ITestListener
     }
 
     private void Publish(string kind, TestingCaseResult? testCase, string? message, TestingAttachment? attachment) =>
-        _eventSink.Publish(new TestingRuntimeEvent(
+        _eventSink.Publish(new TestingEvent(
             _runId, kind, testCase, message, attachment, TestingCancellationState.None));
 
     private sealed class ReferenceEqualityComparer : IEqualityComparer<ITest>

@@ -4,9 +4,8 @@ namespace DevTools.Testing.Abstractions;
 
 /// <summary>
 /// Maps MTP discovery identities to in-host selection and folds host results
-/// back onto IDE test-node ids. Framework-specific mappers register via
-/// <see cref="HostTestDiscovery.RunMapper"/>; otherwise
-/// <see cref="HostTestRunMappers.PassThrough"/> is used.
+/// back onto IDE test-node ids. Registered atomically with the discoverer
+/// through <see cref="HostTestDiscovery.Register"/>.
 /// </summary>
 public interface IHostTestRunMapper
 {

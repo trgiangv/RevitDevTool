@@ -2,29 +2,24 @@ using System.Diagnostics;
 
 namespace DevTools.TestAdapter.Tests;
 
-public sealed class FakeMTPCopyTests
+public sealed class TestingFrameworkMapTests
 {
     [Fact]
-    public void Copy_target_succeeds_for_unmapped_framework_when_dll_is_already_in_outdir()
+    public void Unknown_TestingFramework_fails_the_testhost_build()
     {
         var root = FindRepositoryRoot();
-        var work = Path.Combine(Path.GetTempPath(), "DevTools.FakeMTPCopy", Guid.NewGuid().ToString("N"));
-        var outDir = Path.Combine(work, "out");
-        Directory.CreateDirectory(outDir);
-        File.WriteAllBytes(Path.Combine(outDir, "Fake.MTP.dll"), [0x4D, 0x5A]);
+        var work = Path.Combine(Path.GetTempPath(), "DevTools.UnknownFramework", Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(work);
 
         var targets = Path.Combine(root, "source", "DevTools.TestAdapter", "build", "RevitDevTool.TestAdapter.targets");
-        File.WriteAllText(Path.Combine(work, "FakeCopy.proj"), $"""
+        File.WriteAllText(Path.Combine(work, "Unknown.proj"), $"""
             <Project>
               <PropertyGroup>
                 <TestingFramework>fake</TestingFramework>
-                <MTPAssembly>Fake.MTP.dll</MTPAssembly>
-                <MTPEntry>Fake.Plugin</MTPEntry>
-                <OutDir>{outDir}\</OutDir>
+                <IsTestingPlatformApplication>true</IsTestingPlatformApplication>
                 <TargetFramework>net8.0-windows</TargetFramework>
                 <TargetFrameworkIdentifier>.NETCoreApp</TargetFrameworkIdentifier>
                 <TargetFrameworkVersion>v8.0</TargetFrameworkVersion>
-                <IsTestingPlatformApplication>false</IsTestingPlatformApplication>
               </PropertyGroup>
               <Import Project="{targets.Replace('\\', '/')}"/>
             </Project>
@@ -32,7 +27,7 @@ public sealed class FakeMTPCopyTests
 
         try
         {
-            var start = new ProcessStartInfo("dotnet", "msbuild FakeCopy.proj -t:CopyMTPSibling -nologo")
+            var start = new ProcessStartInfo("dotnet", "msbuild Unknown.proj -t:_ResolveRuntimeDir -nologo")
             {
                 WorkingDirectory = work,
                 RedirectStandardOutput = true,
@@ -43,7 +38,8 @@ public sealed class FakeMTPCopyTests
             var stdout = process.StandardOutput.ReadToEnd();
             var stderr = process.StandardError.ReadToEnd();
             process.WaitForExit();
-            Assert.True(process.ExitCode == 0, stdout + stderr);
+            Assert.True(process.ExitCode != 0, stdout + stderr);
+            Assert.Contains("nunit or tunit", stdout + stderr, StringComparison.OrdinalIgnoreCase);
         }
         finally
         {
@@ -76,7 +72,7 @@ public sealed class FakeMTPCopyTests
         {
             var start = new ProcessStartInfo(
                 "dotnet",
-                "msbuild TUnitMap.proj -nologo -v:q -getProperty:MTPAssembly -getProperty:MTPEntry")
+                "msbuild TUnitMap.proj -nologo -v:q -getProperty:_MtpSiblingName -getProperty:_MtpHookType")
             {
                 WorkingDirectory = work,
                 RedirectStandardOutput = true,
@@ -88,8 +84,8 @@ public sealed class FakeMTPCopyTests
             var stderr = process.StandardError.ReadToEnd();
             process.WaitForExit();
             Assert.True(process.ExitCode == 0, stdout + stderr);
-            Assert.Contains("DevTools.TUnit.MTP.dll", stdout, StringComparison.Ordinal);
-            Assert.Contains("DevTools.TUnit.MTP.TUnitMTP", stdout, StringComparison.Ordinal);
+            Assert.Contains("DevTools.TUnit.MTP", stdout, StringComparison.Ordinal);
+            Assert.Contains("DevTools.TUnit.MTP.TUnitMtpBuilderHook", stdout, StringComparison.Ordinal);
             Assert.DoesNotContain("DevTools.NUnit.MTP", stdout, StringComparison.Ordinal);
         }
         finally

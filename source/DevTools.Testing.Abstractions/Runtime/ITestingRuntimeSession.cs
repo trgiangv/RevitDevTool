@@ -4,16 +4,8 @@ namespace DevTools.Testing.Abstractions.Runtime;
 
 public interface ITestingRuntimeEventSink
 {
-    void Publish(TestingRuntimeEvent testingEvent);
+    void Publish(TestingEvent testingEvent);
 }
-
-public sealed record TestingRuntimeEvent(
-    Guid RunId,
-    string Kind,
-    TestingCaseResult? Case,
-    string? Message,
-    TestingAttachment? Attachment,
-    TestingCancellationState CancellationState);
 
 public interface ITestingRuntimeSession : IDisposable
 {

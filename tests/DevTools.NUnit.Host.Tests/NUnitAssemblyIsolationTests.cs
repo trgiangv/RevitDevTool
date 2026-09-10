@@ -128,11 +128,10 @@ public sealed class NUnitAssemblyIsolationTests
                 1,
                 runId,
                 "nunit",
-                new TestingAssemblyReference(manifest.ShadowAssemblyPath, "net10.0-windows", null),
-                new TestingSelection(
-                    [],
-                    "<filter><test>DevTools.NUnit.Runtime.Fixtures.FullSemanticsFixture.PlainTest_Passes</test></filter>"),
-                new Dictionary<string, string>()),
+                new TestingAssemblyReference(manifest.ShadowAssemblyPath),
+                TestingSelection.FromFrameworkFilter(
+                    TestingSelection.XmlFilterFormat,
+                    "<filter><test>DevTools.NUnit.Runtime.Fixtures.FullSemanticsFixture.PlainTest_Passes</test></filter>")),
             sink,
             TestContext.Current.CancellationToken);
 
@@ -201,8 +200,8 @@ public sealed class NUnitAssemblyIsolationTests
 
     private sealed class RecordingSink : ITestingRuntimeEventSink
     {
-        internal List<TestingRuntimeEvent> Events { get; } = [];
+        internal List<TestingEvent> Events { get; } = [];
 
-        public void Publish(TestingRuntimeEvent testingEvent) => Events.Add(testingEvent);
+        public void Publish(TestingEvent testingEvent) => Events.Add(testingEvent);
     }
 }

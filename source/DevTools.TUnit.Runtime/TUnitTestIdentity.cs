@@ -53,23 +53,6 @@ internal static class TUnitTestIdentity
         return string.Join("+", parts);
     }
 
-    public static TestingDiscoveryHints ToHints(IReadOnlyList<TestingDiscoveredTest> discovered)
-    {
-        var classes = discovered
-            .Select(test => test.TypeName)
-            .Where(name => !string.IsNullOrWhiteSpace(name))
-            .Select(name => name!)
-            .Distinct(StringComparer.Ordinal)
-            .ToList();
-        var methods = discovered
-            .Select(test => test.MethodName)
-            .Where(name => !string.IsNullOrWhiteSpace(name))
-            .Select(name => name!)
-            .Distinct(StringComparer.Ordinal)
-            .ToList();
-        return new TestingDiscoveryHints(classes, methods);
-    }
-
     private static string AppendGenericName(Type type)
     {
         if (!type.IsGenericType)

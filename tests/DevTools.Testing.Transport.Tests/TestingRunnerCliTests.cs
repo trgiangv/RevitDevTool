@@ -1,3 +1,4 @@
+using System.Text.Json;
 using DevTools.Testing.Abstractions.Contracts;
 using DevTools.Testing.Transport;
 
@@ -10,64 +11,69 @@ public sealed class TestingRunnerCliTests
             TestingProtocol.CurrentVersion,
             Guid.Empty,
             "provider.example",
-            new TestingAssemblyReference(@"C:\tests\Sample.dll", null, null),
-            selection,
-            new Dictionary<string, string>());
+            new TestingAssemblyReference(@"C:\tests\Sample.dll"),
+            selection);
 
     [Fact]
-    public void BuildRunArguments_adds_force_launch_and_debug_parent_pid()
+    public void SerializeInvocation_strips_adapter_owned_host_fields()
     {
-        var args = TestingRunnerCli.BuildRunArguments(
-            CreateRequest(new TestingSelection([])),
-            new TestingHostOptions("Revit", "2025", true, 60, 180, null, DebugParentPid: 4242));
+        var json = TestingRunnerCli.SerializeInvocation(
+            CreateRequest(TestingSelection.All),
+            new TestingHostOptions(
+                "Revit",
+                "2025",
+                true,
+                60,
+                180,
+                RunnerPath: @"C:\Runner.exe",
+                DebugParentPid: 4242,
+                FrameworkId: "nunit"));
+        var invocation = JsonSerializer.Deserialize(json, TestingJsonContext.Default.TestingRunInvocation);
 
-        Assert.Contains(TestingRunnerCli.ForceLaunchOption, args);
-        Assert.Contains(TestingRunnerCli.DebugParentPidOption, args);
-        Assert.Equal("4242", args[args.IndexOf(TestingRunnerCli.DebugParentPidOption) + 1]);
+        Assert.NotNull(invocation);
+        Assert.Equal(TestingProtocol.CurrentVersion, invocation.ProtocolVersion);
+        Assert.True(invocation.Host.ForceLaunch);
+        Assert.Equal(4242, invocation.Host.DebugParentPid);
+        Assert.Null(invocation.Host.FrameworkId);
+        Assert.Null(invocation.Host.RunnerPath);
+        Assert.DoesNotContain("machine-run", json, StringComparison.Ordinal);
+        Assert.DoesNotContain("--framework", json, StringComparison.Ordinal);
     }
 
     [Fact]
-    public void BuildRunArguments_omits_debug_parent_pid_when_not_positive()
+    public void SerializeInvocation_preserves_run_id_and_selection_kind()
     {
-        var args = TestingRunnerCli.BuildRunArguments(
-            CreateRequest(new TestingSelection([])),
-            new TestingHostOptions("Revit", "2025", false, 60, 180, null, DebugParentPid: 0));
+        var runId = Guid.Parse("aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee");
+        var json = TestingRunnerCli.SerializeInvocation(
+            new TestingRunRequest(
+                TestingProtocol.CurrentVersion,
+                runId,
+                "provider.example",
+                new TestingAssemblyReference(@"C:\tests\Sample.dll"),
+                TestingSelection.FromTestIds(["opaque-id"])),
+            new TestingHostOptions("Revit", "2025", false, 60, 180, null, RequestTimeoutSeconds: 180));
+        var invocation = JsonSerializer.Deserialize(json, TestingJsonContext.Default.TestingRunInvocation);
 
-        Assert.DoesNotContain(TestingRunnerCli.DebugParentPidOption, args);
+        Assert.NotNull(invocation);
+        Assert.Equal(runId, invocation.Run.RunId);
+        Assert.Equal(TestingSelectionKind.TestIds, invocation.Run.Selection.Kind);
+        Assert.Equal(["opaque-id"], invocation.Run.Selection.TestIds);
+        Assert.Equal(60, invocation.Host.PerTestTimeoutSeconds);
+        Assert.Equal(180, invocation.Host.RequestTimeoutSeconds);
+        Assert.Equal(180, invocation.Host.EffectiveRequestTimeoutSeconds);
     }
 
     [Fact]
-    public void BuildRunArguments_trims_dedupes_and_serializes_names()
+    public void SerializeInvocation_empty_test_ids_is_not_all()
     {
-        var args = TestingRunnerCli.BuildRunArguments(
-            CreateRequest(new TestingSelection([], Names: ["  Alpha  ", "alpha", "Beta"])),
+        var json = TestingRunnerCli.SerializeInvocation(
+            CreateRequest(TestingSelection.FromTestIds([])),
             new TestingHostOptions("Revit", "2025", false, 60, 180, null));
+        var invocation = JsonSerializer.Deserialize(json, TestingJsonContext.Default.TestingRunInvocation);
 
-        Assert.Contains(TestingRunnerCli.NameOption, args);
-        Assert.Equal("""["Alpha","alpha","Beta"]""", args[args.IndexOf(TestingRunnerCli.NameOption) + 1]);
-    }
-
-    [Fact]
-    public void BuildRunArguments_skips_blank_test_ids_and_names()
-    {
-        var args = TestingRunnerCli.BuildRunArguments(
-            CreateRequest(new TestingSelection(["  kept  ", " ", ""], Names: [" ", "kept-name"])),
-            new TestingHostOptions("Revit", "2025", false, 60, 180, null));
-
-        Assert.Contains(TestingRunnerCli.TestOption, args);
-        Assert.Equal("""["kept"]""", args[args.IndexOf(TestingRunnerCli.TestOption) + 1]);
-        Assert.Contains(TestingRunnerCli.NameOption, args);
-        Assert.Equal("""["kept-name"]""", args[args.IndexOf(TestingRunnerCli.NameOption) + 1]);
-    }
-
-    [Fact]
-    public void BuildRunArguments_trims_provider_payload_filter()
-    {
-        var args = TestingRunnerCli.BuildRunArguments(
-            CreateRequest(new TestingSelection([], ProviderPayload: "  <filter/>  ")),
-            new TestingHostOptions("Revit", "2025", false, 60, 180, null));
-
-        Assert.Contains(TestingRunnerCli.FilterOption, args);
-        Assert.Equal("<filter/>", args[args.IndexOf(TestingRunnerCli.FilterOption) + 1]);
+        Assert.NotNull(invocation);
+        Assert.Equal(TestingSelectionKind.TestIds, invocation.Run.Selection.Kind);
+        Assert.Empty(invocation.Run.Selection.TestIds);
+        Assert.True(invocation.Run.Selection.IsConstrained);
     }
 }

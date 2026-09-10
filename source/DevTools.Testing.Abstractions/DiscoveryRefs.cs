@@ -38,8 +38,20 @@ public static class DiscoveryRefs
     /// <summary>
     /// Framework targeting packs are omitted here as well as in the MSBuild
     /// writer so an older package that still listed those paths stays safe.
+    /// SDK restore may extract them under the NuGet cache
+    /// (<c>microsoft.netcore.app.ref</c>) instead of <c>dotnet\packs</c>.
+    /// Isolated discovery must not load those metadata-only assemblies.
     /// </summary>
-    public static bool IsTargetingPack(string path) =>
-        path.Contains(@"\Reference Assemblies\", StringComparison.OrdinalIgnoreCase)
-        || path.Contains(@"\dotnet\packs\", StringComparison.OrdinalIgnoreCase);
+    public static bool IsTargetingPack(string path)
+    {
+        if (string.IsNullOrEmpty(path))
+            return false;
+
+        var normalized = path.Replace('/', '\\');
+        return normalized.Contains(@"\Reference Assemblies\", StringComparison.OrdinalIgnoreCase)
+               || normalized.Contains(@"\dotnet\packs\", StringComparison.OrdinalIgnoreCase)
+               || normalized.Contains(@".app.ref\", StringComparison.OrdinalIgnoreCase)
+               || normalized.Contains(@".sdk.net.ref\", StringComparison.OrdinalIgnoreCase)
+               || normalized.Contains(@".library.ref\", StringComparison.OrdinalIgnoreCase);
+    }
 }

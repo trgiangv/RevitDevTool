@@ -14,12 +14,13 @@ public sealed class AssemblyBoundaryTests
         "Autodesk",
         "System.Text.Json",
         "DevTools.Ipc",
-        "System.Diagnostics.Process",
     ];
 
     [Fact]
     public void Abstractions_assembly_has_no_platform_or_framework_dependencies()
     {
+        // net10 Trace/TraceListener facades list System.Diagnostics.Process.
+        // Product code must still not name that type (source test below).
         var names = typeof(TestingRunRequest).Assembly
             .GetReferencedAssemblies()
             .Select(static assembly => assembly.Name ?? string.Empty)

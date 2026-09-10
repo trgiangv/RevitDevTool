@@ -25,20 +25,20 @@ public sealed class NUnitCollectPushTests
     }
 
     [Fact]
-    public void Select_by_collected_uid_returns_the_same_leaf()
+    public void Discover_by_collected_uid_returns_the_same_leaf()
     {
         var stub = CollectStub();
         var discoverer = new NUnitHostTestDiscoverer();
-        var selected = discoverer.Select(FixturePath, new TestingSelection([stub.TestId]));
+        var selected = discoverer.Discover(FixturePath, TestingSelection.FromTestIds([stub.TestId]));
 
         Assert.Equal(stub.TestId, Assert.Single(selected).TestId);
     }
 
     [Fact]
-    public void Display_name_is_not_a_uid_so_select_misses()
+    public void Display_name_is_not_a_uid_so_discover_misses()
     {
         var discoverer = new NUnitHostTestDiscoverer();
-        var selected = discoverer.Select(FixturePath, new TestingSelection(["Stub_leaf"]));
+        var selected = discoverer.Discover(FixturePath, TestingSelection.FromTestIds(["Stub_leaf"]));
 
         Assert.Empty(selected);
     }
@@ -75,11 +75,11 @@ public sealed class NUnitCollectPushTests
     }
 
     [Fact]
-    public void Select_by_method_fqn_finds_testname_leaves()
+    public void Discover_by_method_fqn_finds_testname_leaves()
     {
         const string methodId = "DevTools.NUnit.Runtime.Fixtures.TestNameCaseFixture.Original_named";
         var discoverer = new NUnitHostTestDiscoverer();
-        var selected = discoverer.Select(FixturePath, new TestingSelection([methodId]));
+        var selected = discoverer.Discover(FixturePath, TestingSelection.FromTestIds([methodId]));
 
         Assert.Equal(2, selected.Count);
         Assert.Equal(
@@ -103,7 +103,7 @@ public sealed class NUnitCollectPushTests
     static TestingDiscoveredTest CollectStub()
     {
         var discoverer = new NUnitHostTestDiscoverer();
-        return discoverer.Discover(FixturePath)
+        return discoverer.Discover(FixturePath, TestingSelection.All)
             .Single(test => test.MethodName == "Stub_leaf"
                 && test.TestId.Contains("CollapsedSourceStubFixture", StringComparison.Ordinal));
     }

@@ -1,3 +1,4 @@
+using System.Text.Json;
 using DevTools.TestAdapter;
 using DevTools.Testing.Abstractions;
 using DevTools.Testing.Abstractions.Config;
@@ -19,31 +20,30 @@ public sealed class HostTestSessionTests
     {
         var options = new TestingHostOptions("Revit", "2026", false, 60, 180, @"C:\Runner.exe");
         var scaled = HostTestFramework.ScaleForRun(options, testCount: 3);
-        Assert.Equal(180, scaled.PerTestTimeoutSeconds);
+        Assert.Equal(60, scaled.PerTestTimeoutSeconds);
+        Assert.Equal(180, scaled.RequestTimeoutSeconds);
         Assert.Equal(60, options.PerTestTimeoutSeconds);
     }
 
     [Fact]
-    public void SelectCases_throws_when_mtp_plugin_is_not_registered()
+    public void SelectCases_throws_when_provider_is_not_registered()
     {
         lock (DiscoveryProviderLock)
         {
             var previous = HostTestDiscovery.Provider;
             var previousMapper = HostTestDiscovery.RunMapper;
-            HostTestDiscovery.Provider = null;
-            HostTestDiscovery.RunMapper = null;
+            HostTestDiscovery.Clear();
             try
             {
                 var ex = Assert.Throws<InvalidOperationException>(
                     () => HostTestFramework.SelectCases(
                         typeof(HostTestSessionTests).Assembly.Location,
-                        new TestingSelection([])));
-                Assert.Contains("mtpAssembly", ex.Message, StringComparison.Ordinal);
+                        TestingSelection.All));
+                Assert.Contains("HostTestDiscovery.Register", ex.Message, StringComparison.Ordinal);
             }
             finally
             {
-                HostTestDiscovery.Provider = previous;
-                HostTestDiscovery.RunMapper = previousMapper;
+                RestoreDiscovery(previous, previousMapper);
             }
         }
     }
@@ -72,7 +72,7 @@ public sealed class HostTestSessionTests
         var response = session.Run(
             "C:\\tests\\a.dll",
             new TestingHostOptions("Revit", "2026", false, 60, 180, @"C:\Runner.exe", FrameworkId: "nunit"),
-            new TestingSelection([], null));
+            TestingSelection.All);
 
         Assert.Equal("nunit", transport.LastRequest!.FrameworkId);
         Assert.Equal(["Passed", "Failed", "Skipped", "Error"], response.Results.Select(result => result.Outcome).ToArray());
@@ -91,20 +91,18 @@ public sealed class HostTestSessionTests
                 {
                     var previous = HostTestDiscovery.Provider;
                     var previousMapper = HostTestDiscovery.RunMapper;
-                    HostTestDiscovery.Provider = new StubHostTestDiscoverer();
-                    HostTestDiscovery.RunMapper = null;
+                    HostTestDiscovery.Register(new StubHostTestDiscoverer(), PassThroughRunMapper.Instance);
                     try
                     {
                         var nodes = HostTestFramework.DiscoverNodes(
                             typeof(HostTestSessionTests).Assembly.Location,
-                            new TestingSelection([]));
+                            TestingSelection.All);
                         Assert.NotNull(nodes);
                         Assert.NotEmpty(nodes);
                     }
                     finally
                     {
-                        HostTestDiscovery.Provider = previous;
-                        HostTestDiscovery.RunMapper = previousMapper;
+                        RestoreDiscovery(previous, previousMapper);
                     }
                 }
             }
@@ -124,7 +122,7 @@ public sealed class HostTestSessionTests
         session.Run(
             "C:\\tests\\a.dll",
             new TestingHostOptions("Revit", "2026", false, 60, 180, @"C:\missing-devtools-testrunner.exe", FrameworkId: "nunit"),
-            new TestingSelection(["HostSmokeTests.Arithmetic"], null));
+            TestingSelection.FromTestIds(["HostSmokeTests.Arithmetic"]));
 
         Assert.Equal("nunit", transport.LastRequest!.FrameworkId);
         Assert.Equal(["HostSmokeTests.Arithmetic"], transport.LastRequest.Selection.TestIds.ToArray());
@@ -137,7 +135,7 @@ public sealed class HostTestSessionTests
         var ex = Assert.Throws<InvalidOperationException>(() => session.Run(
             "C:\\tests\\a.dll",
             new TestingHostOptions("Revit", "2026", false, 60, 180, @"C:\Runner.exe", FrameworkId: ""),
-            new TestingSelection([])));
+            TestingSelection.All));
         Assert.Contains("frameworkId", ex.Message, StringComparison.OrdinalIgnoreCase);
     }
 
@@ -146,74 +144,88 @@ public sealed class HostTestSessionTests
     {
         var selection = HostTestFramework.ToRunnerFilter(null, nameFilter: "Arithmetic_runs_inside_host");
 
-        Assert.Empty(selection.TestIds);
-        Assert.Equal(["Arithmetic_runs_inside_host"], selection.Names!.ToArray());
-        Assert.Null(selection.ProviderPayload);
+        Assert.Equal(TestingSelectionKind.Names, selection.Kind);
+        Assert.Equal(["Arithmetic_runs_inside_host"], selection.Names.ToArray());
+    }
+
+    private static void RestoreDiscovery(IHostTestDiscoverer? provider, IHostTestRunMapper? mapper)
+    {
+        if (provider is not null && mapper is not null)
+            HostTestDiscovery.Register(provider, mapper);
+        else
+            HostTestDiscovery.Clear();
     }
 }
 
 public sealed class ProcessTestRunnerCliTests
 {
     [Fact]
-    public void BuildRunArguments_sends_framework_and_test_tokens()
+    public void SerializeInvocation_sends_framework_and_test_ids()
     {
-        var args = TestingRunnerCli.BuildRunArguments(
+        var json = TestingRunnerCli.SerializeInvocation(
             new TestingRunRequest(
                 TestingProtocol.CurrentVersion,
                 Guid.NewGuid(),
                 "nunit",
-                new TestingAssemblyReference(@"C:\tests\HostTests.dll", null, null),
-                new TestingSelection(["HostSmokeTests.Arithmetic"]),
-                new Dictionary<string, string>()),
+                new TestingAssemblyReference(@"C:\tests\HostTests.dll"),
+                TestingSelection.FromTestIds(["HostSmokeTests.Arithmetic"])),
             new TestingHostOptions("Revit", "2026", true, 60, 180, @"C:\Runner.exe"));
 
-        Assert.Equal("run", args[0]);
-        Assert.Contains("--framework", args);
-        Assert.Contains("nunit", args);
-        Assert.Contains(@"C:\tests\HostTests.dll", args);
-        Assert.Contains("--host", args);
-        Assert.Contains("Revit", args);
-        Assert.Contains("--force-launch", args);
-        Assert.Contains("--test", args);
-        Assert.Contains("""["HostSmokeTests.Arithmetic"]""", args);
-        Assert.DoesNotContain("--name", args);
-        Assert.DoesNotContain("discover", args);
+        Assert.Contains("\"framework_id\":\"nunit\"", json, StringComparison.Ordinal);
+        Assert.Contains(@"C:\\tests\\HostTests.dll", json, StringComparison.Ordinal);
+        Assert.Contains("\"force_launch\":true", json, StringComparison.Ordinal);
+        Assert.Contains("HostSmokeTests.Arithmetic", json, StringComparison.Ordinal);
+        Assert.DoesNotContain("discover", json, StringComparison.Ordinal);
+        Assert.Null(JsonSerializer.Deserialize(json, TestingJsonContext.Default.TestingRunInvocation)!.Host.RunnerPath);
     }
 
     [Fact]
-    public void BuildRunArguments_run_adds_debug_flags_when_parent_pid_is_set()
+    public void SerializeInvocation_includes_debug_parent_pid()
     {
-        var args = TestingRunnerCli.BuildRunArguments(
+        var json = TestingRunnerCli.SerializeInvocation(
             new TestingRunRequest(
                 TestingProtocol.CurrentVersion,
                 Guid.NewGuid(),
                 "nunit",
-                new TestingAssemblyReference(@"C:\tests\HostTests.dll", null, null),
-                new TestingSelection([]),
-                new Dictionary<string, string>()),
+                new TestingAssemblyReference(@"C:\tests\HostTests.dll"),
+                TestingSelection.All),
             new TestingHostOptions("Revit", "2026", false, 60, 180, @"C:\Runner.exe", DebugParentPid: 4242));
 
-        Assert.DoesNotContain("--debug", args);
-        Assert.Contains("--debug-parent-pid", args);
-        Assert.Contains("4242", args);
+        Assert.Contains("\"debug_parent_pid\":4242", json, StringComparison.Ordinal);
     }
 
     [Fact]
-    public void BuildRunArguments_omits_debug_flags_when_parent_pid_is_absent()
+    public void SerializeInvocation_omits_debug_parent_pid_when_absent()
     {
-        var args = TestingRunnerCli.BuildRunArguments(
+        var json = TestingRunnerCli.SerializeInvocation(
             new TestingRunRequest(
                 TestingProtocol.CurrentVersion,
                 Guid.NewGuid(),
                 "nunit",
-                new TestingAssemblyReference(@"C:\tests\HostTests.dll", null, null),
-                new TestingSelection([]),
-                new Dictionary<string, string>()),
+                new TestingAssemblyReference(@"C:\tests\HostTests.dll"),
+                TestingSelection.All),
             new TestingHostOptions("Revit", "2026", false, 60, 180, @"C:\Runner.exe"));
 
-        Assert.DoesNotContain("--debug", args);
-        Assert.DoesNotContain("--debug-parent-pid", args);
-        Assert.DoesNotContain("4242", args);
+        Assert.DoesNotContain("debug_parent_pid", json, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void SerializeInvocation_preserves_run_id_for_machine_transport()
+    {
+        var runId = Guid.Parse("aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee");
+        var json = TestingRunnerCli.SerializeInvocation(
+            new TestingRunRequest(
+                TestingProtocol.CurrentVersion,
+                runId,
+                "nunit",
+                new TestingAssemblyReference(@"C:\tests\HostTests.dll"),
+                TestingSelection.FromTestIds(["HostSmokeTests.Arithmetic"])),
+            new TestingHostOptions("Revit", "2026", true, 60, 180, @"C:\Runner.exe"));
+
+        Assert.Contains("\"run_id\":\"aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee\"", json, StringComparison.Ordinal);
+        Assert.Contains("\"framework_id\":\"nunit\"", json, StringComparison.Ordinal);
+        Assert.Contains("HostSmokeTests.Arithmetic", json, StringComparison.Ordinal);
+        Assert.Equal(TestingRunnerCli.MachineRunCommand, "machine-run");
     }
 }
 
@@ -473,37 +485,48 @@ public sealed class TestNodeMapperTests
         var filter = new TestNodeUidListFilter([new TestNodeUid("HostSmokeTests.Arithmetic")]);
         var selection = HostTestFramework.ToRunnerFilter(filter, "Intentional_failure_for_demo");
         Assert.Equal(["HostSmokeTests.Arithmetic"], selection.TestIds.ToArray());
-        Assert.Null(selection.ProviderPayload);
+        Assert.Equal(TestingSelectionKind.TestIds, selection.Kind);
     }
 
     [Fact]
     public void ToRunnerFilter_uses_method_name_when_no_uid_list()
     {
         var selection = HostTestFramework.ToRunnerFilter(null, nameFilter: "Arithmetic_runs_inside_host");
-        Assert.Equal(["Arithmetic_runs_inside_host"], selection.Names!.ToArray());
+        Assert.Equal(["Arithmetic_runs_inside_host"], selection.Names.ToArray());
         Assert.Empty(selection.TestIds);
-        Assert.Null(selection.ProviderPayload);
+        Assert.Equal(TestingSelectionKind.Names, selection.Kind);
     }
 }
 
 internal sealed class StubHostTestDiscoverer : IHostTestDiscoverer
 {
-    public IReadOnlyList<TestingDiscoveredTest> Discover(string assemblyPath) =>
+    public IReadOnlyList<TestingDiscoveredTest> Discover(string assemblyPath, TestingSelection selection) =>
         [new TestingDiscoveredTest("Stub.Test", "Test", "Stub.Test")];
+}
 
-    public IReadOnlyList<TestingDiscoveredTest> Discover(
-        string assemblyPath,
-        TestingDiscoveryOptions options) =>
-        Discover(assemblyPath);
+internal static class PassThroughRunMapper
+{
+    public static IHostTestRunMapper Instance { get; } = new Mapper();
 
-    public IReadOnlyList<TestingDiscoveredTest> Select(string assemblyPath, TestingSelection selection) =>
-        Discover(assemblyPath);
+    private sealed class Mapper : IHostTestRunMapper
+    {
+        public TestingSelection ToHostSelection(
+            TestingSelection requested,
+            IReadOnlyList<TestingDiscoveredTest> discovered) =>
+            requested;
 
-    public IReadOnlyList<TestingDiscoveredTest> Select(
-        string assemblyPath,
-        TestingSelection selection,
-        TestingDiscoveryOptions options) =>
-        Select(assemblyPath, selection);
+        public IReadOnlyList<TestingCaseResult> FoldResults(
+            TestingSelection requested,
+            IReadOnlyList<TestingDiscoveredTest> discovered,
+            IReadOnlyList<TestingCaseResult> hostResults) =>
+            hostResults;
+
+        public IReadOnlyList<TestingCaseResult> ResultsForUnreported(
+            TestingSelection requested,
+            IReadOnlyList<TestingDiscoveredTest> discovered,
+            IReadOnlyList<TestingCaseResult> hostResults) =>
+            [];
+    }
 }
 
 internal sealed class FakeTestRunnerTransport : ITestRunnerTransport
@@ -516,13 +539,25 @@ internal sealed class FakeTestRunnerTransport : ITestRunnerTransport
 
     internal TestingRunResponse? Response { get; set; }
 
+    internal TestingEvent[]? StreamedEvents { get; set; }
+
+    internal Exception? RunException { get; set; }
+
+    internal ManualResetEventSlim? RunEntered { get; set; }
+
+    internal ManualResetEventSlim? BlockRun { get; set; }
+
     public TestingRunResponse Run(
         TestingRunRequest request,
         TestingHostOptions hostOptions,
-        Action<TestingCaseResult> onResult)
+        Action<TestingEvent> onEvent)
     {
         LastRequest = request;
         LastHostOptions = hostOptions;
+        RunEntered?.Set();
+        BlockRun?.Wait();
+        if (RunException is not null)
+            throw RunException;
         var response = Response ?? new TestingRunResponse(
             request.RunId,
             request.FrameworkId,
@@ -531,8 +566,19 @@ internal sealed class FakeTestRunnerTransport : ITestRunnerTransport
             TestingCancellationState.None,
             null,
             null);
-        foreach (var result in response.Results)
-            onResult(result);
+        var events = StreamedEvents
+            ?? response.Results
+                .Select(result => new TestingEvent(
+                    request.RunId,
+                    TestingEventKinds.Case,
+                    result,
+                    null,
+                    null,
+                    TestingCancellationState.None))
+                .ToArray();
+        foreach (var testingEvent in events)
+            onEvent(testingEvent);
+
         return response;
     }
 

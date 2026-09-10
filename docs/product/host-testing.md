@@ -109,11 +109,11 @@ NUnit-specific bridge protocol are not part of the supported product on
 
 | Module | Responsibility |
 |---|---|
-| `DevTools.Testing.Abstractions` | Neutral run/result/runtime contracts, plus the testhost discovery plug-in (`IHostTestDiscoverer`). MTP compiles against this assembly, not `DevTools.TestAdapter` |
+| `DevTools.Testing.Abstractions` | Neutral run/result/runtime contracts, plus testhost discovery (`IHostTestDiscoverer`). MTP compiles against this assembly, not `DevTools.TestAdapter` |
 | `DevTools.Testing.Transport` | `testing/*` JSON, pipe methods, and TestRunner process client |
 | `DevTools.Testing.Host` | In-host `testing/*` handler, generation store, and runtime-session lifecycle |
-| `DevTools.TestAdapter` | Published `RevitDevTool.TestAdapter`. MTP control plane (command line, host launch request, TestNode publish). Copies `DevTools.NUnit.MTP.dll` next to the test exe. Does not parse NUnit names |
-| `DevTools.NUnit.MTP` | Authoritative local discovery (`NUnitTestAssemblyRunner` + `ExploreTests`), metadata `TypeName`, DisplayName suffix, host filter XML, and result fold. Loaded beside the adapter; not ILRepacked into it |
+| `DevTools.TestAdapter` | Published `RevitDevTool.TestAdapter`. MTP control plane (command line, host launch request, TestNode publish). References the selected `DevTools.{NUnit\|TUnit}.MTP.dll` as a testhost assembly. Does not parse NUnit names |
+| `DevTools.NUnit.MTP` | Authoritative local discovery (`NUnitTestAssemblyRunner` + `ExploreTests`), metadata `TypeName`, DisplayName suffix, host filter XML, and result fold. Build-selected testhost sibling; not ILRepacked into the adapter |
 | `DevTools.NUnit.Runtime` | Default in-host engine: NUnit execution inside an isolated generation |
 | `DevTools.NUnit.Host` | NUnit closure/version policy, Dynamo-safe framework sharing, isolated runtime activation, and `TestingSelection` → NUnit filter XML |
 | `DevTools.TestRunner.Core` | Framework-neutral host locate/launch/reuse, debugger attach, and `testing/*` pipe client |

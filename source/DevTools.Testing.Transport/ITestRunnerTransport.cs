@@ -7,7 +7,7 @@ public interface ITestRunnerTransport : IDisposable
     TestingRunResponse Run(
         TestingRunRequest request,
         TestingHostOptions hostOptions,
-        Action<TestingCaseResult> onResult);
+        Action<TestingEvent> onEvent);
 
     void Cancel(Guid runId);
 }

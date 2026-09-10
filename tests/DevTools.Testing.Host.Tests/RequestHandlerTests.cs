@@ -92,6 +92,35 @@ public sealed class RequestHandlerTests
     }
 
     [Fact]
+    public async Task ArgumentException_is_invalid_request_and_does_not_poison()
+    {
+        var handler = CreateHandler(out var provider);
+        provider.RunException = new ArgumentException("bad filter");
+
+        var failed = await Handle(
+            handler,
+            "1",
+            TestingProtocol.Run,
+            JsonSerializer.SerializeToElement(
+                CreateRunRequest("provider.example"),
+                TestingJsonContext.Default.TestingRunRequest));
+
+        Assert.True(failed.IsError);
+        Assert.Equal(TestingErrorCodes.InvalidRequest, failed.ErrorDetail!.Code);
+        Assert.NotEqual(TestingCancellationState.Poisoned, handler.CancellationState);
+
+        provider.RunException = null;
+        var run = await Handle(
+            handler,
+            "2",
+            TestingProtocol.Run,
+            JsonSerializer.SerializeToElement(
+                CreateRunRequest("provider.example"),
+                TestingJsonContext.Default.TestingRunRequest));
+        Assert.False(run.IsError);
+    }
+
+    [Fact]
     public async Task Provider_exception_poisons_session()
     {
         var handler = CreateHandler(out var provider);
@@ -239,9 +268,8 @@ public sealed class RequestHandlerTests
             TestingProtocol.CurrentVersion,
             Guid.Parse("aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee"),
             frameworkId,
-            new TestingAssemblyReference(@"C:\tests\Sample.dll", "net10.0-windows", "hash"),
-            new TestingSelection(["id-1"]),
-            new Dictionary<string, string>());
+            new TestingAssemblyReference(@"C:\tests\Sample.dll"),
+            TestingSelection.FromTestIds(["id-1"]));
 
     static Task<BridgeMessage> Handle(
         DotnetTestRequestHandler handler,

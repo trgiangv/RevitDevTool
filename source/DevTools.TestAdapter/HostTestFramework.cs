@@ -133,14 +133,13 @@ internal sealed class HostTestFramework : ITestFramework, IDataProducer
             var session = EnsureSession();
             var options = ApplyDebugParent(_options!);
             var filter = ResolveRunnerFilter(request.Filter);
-            var discoverer = RequireDiscoverer();
-            var cases = discoverer.Select(assemblyPath, filter, TestingDiscoveryOptions.Testhost);
-            var mapper = RequireRunMapper();
-            var hostSelection = mapper.ToHostSelection(filter, cases);
-            var testCount = Math.Max(cases.Count, filter.TestIds.Count);
-            if (testCount == 0 && IsConstrained(filter))
+            var bridge = RequireBridge();
+            var cases = bridge.Discoverer.Discover(assemblyPath, filter);
+            var hostSelection = bridge.RunMapper.ToHostSelection(filter, cases);
+            var testCount = Math.Max(cases.Count, filter.Kind == TestingSelectionKind.TestIds ? filter.TestIds.Count : 0);
+            if (testCount == 0 && filter.IsConstrained)
             {
-                foreach (var missing in mapper.ResultsForUnreported(filter, cases, []))
+                foreach (var missing in bridge.RunMapper.ResultsForUnreported(filter, cases, []))
                 {
                     await context.MessageBus.PublishAsync(
                             this,
@@ -154,30 +153,60 @@ internal sealed class HostTestFramework : ITestFramework, IDataProducer
             }
 
             var runOptions = ScaleForRun(options, testCount);
+            if (context.CancellationToken.IsCancellationRequested)
+            {
+                await PublishRunErrorAsync(context, request, new OperationCanceledException())
+                    .ConfigureAwait(false);
+                return;
+            }
+
             TestingRunResponse response;
             try
             {
-                response = session.Run(
-                    assemblyPath,
-                    runOptions,
-                    hostSelection);
+                var discoveredIds = cases.Select(test => test.TestId).ToHashSet(StringComparer.Ordinal);
+                using (context.CancellationToken.Register(session.Cancel))
+                {
+                    response = session.Run(
+                        assemblyPath,
+                        runOptions,
+                        hostSelection,
+                        testingEvent =>
+                        {
+                            if (testingEvent.Case is not { } streamed)
+                                return;
+                            if (!discoveredIds.Contains(streamed.TestId))
+                                return;
+                            context.MessageBus.PublishAsync(
+                                    this,
+                                    new TestNodeUpdateMessage(
+                                        request.Session.SessionUid,
+                                        ToResultNode(streamed, assemblyPath, cases)))
+                                .GetAwaiter()
+                                .GetResult();
+                        });
+                }
             }
             catch (Exception ex)
             {
-                await PublishUnreportedAsync(
+                var unreported = await PublishUnreportedAsync(
                         context,
                         request,
-                        mapper,
+                        bridge.RunMapper,
                         filter,
                         cases,
                         assemblyPath,
                         [],
                         ex.ToString())
                     .ConfigureAwait(false);
+                if (unreported == 0)
+                {
+                    await PublishRunErrorAsync(context, request, ex).ConfigureAwait(false);
+                }
+
                 return;
             }
 
-            var published = mapper.FoldResults(filter, cases, response.Results);
+            var published = bridge.RunMapper.FoldResults(filter, cases, response.Results);
             foreach (var result in published)
             {
                 await context.MessageBus.PublishAsync(
@@ -189,16 +218,30 @@ internal sealed class HostTestFramework : ITestFramework, IDataProducer
             }
 
             var overlay = response.DiagnosticMessage ?? response.DiagnosticCode;
-            await PublishUnreportedAsync(
+            if (response.CancellationState is TestingCancellationState.Completed
+                or TestingCancellationState.Poisoned)
+            {
+                overlay ??= $"Run ended with cancellation state {response.CancellationState}.";
+            }
+
+            var unreportedCount = await PublishUnreportedAsync(
                     context,
                     request,
-                    mapper,
+                    bridge.RunMapper,
                     filter,
                     cases,
                     assemblyPath,
                     published,
                     overlay)
                 .ConfigureAwait(false);
+            if (unreportedCount == 0 && published.Count == 0 && !string.IsNullOrWhiteSpace(overlay))
+            {
+                await PublishRunErrorAsync(
+                        context,
+                        request,
+                        new InvalidOperationException(overlay))
+                    .ConfigureAwait(false);
+            }
         }
         catch (Exception ex)
         {
@@ -215,14 +258,14 @@ internal sealed class HostTestFramework : ITestFramework, IDataProducer
     }
 
     /// <summary>
-    /// Csproj <c>PerTestTimeout</c> is per test. After this, <see cref="TestingHostOptions.PerTestTimeoutSeconds"/>
-    /// is the scaled pipe wait (<c>PerTestTimeout × test count</c>) that TestRunner
-    /// receives as <c>--per-test-timeout</c>.
+    /// Csproj <c>PerTestTimeout</c> is per test. <see cref="TestingHostOptions.RequestTimeoutSeconds"/>
+    /// is the pipe wait for this run (<c>PerTestTimeout × test count</c>) and is
+    /// sent separately so the per-test field does not change meaning.
     /// </summary>
     internal static TestingHostOptions ScaleForRun(TestingHostOptions options, int testCount) =>
         options with
         {
-            PerTestTimeoutSeconds = TestingHostTiming.ScalePerTestTimeoutSeconds(
+            RequestTimeoutSeconds = TestingHostTiming.ScalePerTestTimeoutSeconds(
                 options.PerTestTimeoutSeconds,
                 testCount),
         };
@@ -239,21 +282,21 @@ internal sealed class HostTestFramework : ITestFramework, IDataProducer
                 .Select(value => value.Trim())
                 .Distinct(StringComparer.Ordinal)
                 .ToList();
-            return new TestingSelection(uids);
+            return TestingSelection.FromTestIds(uids);
         }
 
         if (string.IsNullOrWhiteSpace(nameFilter))
-            return new TestingSelection([]);
+            return TestingSelection.All;
 
-        return new TestingSelection([], Names: [nameFilter!.Trim()]);
+        return TestingSelection.FromNames([nameFilter!.Trim()]);
     }
 
     internal static IReadOnlyList<TestingDiscoveredTest> SelectCases(
         string assemblyPath,
         TestingSelection selection) =>
-        RequireDiscoverer().Select(assemblyPath, selection, TestingDiscoveryOptions.Testhost);
+        RequireDiscoverer().Discover(assemblyPath, selection);
 
-    private async Task PublishUnreportedAsync(
+    private async Task<int> PublishUnreportedAsync(
         ExecuteRequestContext context,
         RunTestExecutionRequest request,
         IHostTestRunMapper mapper,
@@ -263,6 +306,7 @@ internal sealed class HostTestFramework : ITestFramework, IDataProducer
         IReadOnlyList<TestingCaseResult> hostResults,
         string? overlayMessage)
     {
+        var published = 0;
         foreach (var missing in mapper.ResultsForUnreported(filter, cases, hostResults))
         {
             var result = string.IsNullOrWhiteSpace(overlayMessage)
@@ -274,11 +318,27 @@ internal sealed class HostTestFramework : ITestFramework, IDataProducer
                         request.Session.SessionUid,
                         ToResultNode(result, assemblyPath, cases)))
                 .ConfigureAwait(false);
+            published++;
         }
+
+        return published;
     }
 
-    private static bool IsConstrained(TestingSelection selection) =>
-        selection.TestIds is { Count: > 0 } || selection.Names is { Count: > 0 };
+    private async Task PublishRunErrorAsync(
+        ExecuteRequestContext context,
+        RunTestExecutionRequest request,
+        Exception exception)
+    {
+        await context.MessageBus.PublishAsync(
+                this,
+                new TestNodeUpdateMessage(
+                    request.Session.SessionUid,
+                    TestNodeProperties.CreateErrorNode(
+                        "devtools.testadapter.run",
+                        "Test run failed",
+                        exception)))
+            .ConfigureAwait(false);
+    }
 
     private TestingSelection ResolveRunnerFilter(ITestExecutionFilter? filter) =>
         ToRunnerFilter(filter, ReadOption(HostCommandLineProvider.FilterOptionName));
@@ -298,24 +358,13 @@ internal sealed class HostTestFramework : ITestFramework, IDataProducer
         _configuration ?? throw new InvalidOperationException(
             "Microsoft.Testing.Platform IConfiguration is required to read the devtools section of testconfig.json.");
 
-    private static IHostTestRunMapper RequireRunMapper() =>
-        HostTestDiscovery.RunMapper ?? HostTestRunMappers.PassThrough;
+    private static HostTestFrameworkBridge RequireBridge() =>
+        HostTestDiscovery.Current
+        ?? throw new InvalidOperationException(
+            "Local discovery requires HostTestDiscovery.Register from the selected MTP provider hook. "
+            + "Set TestingFramework to nunit or tunit so RevitDevTool.TestAdapter references the matching sibling.");
 
-    private static IHostTestDiscoverer RequireDiscoverer()
-    {
-        if (HostTestDiscovery.Provider is { } provider)
-            return provider;
-
-        var detail = HostMtpRegistration.LastError;
-        var suffix = string.IsNullOrWhiteSpace(detail)
-            ? string.Empty
-            : " " + detail;
-        var assemblyName = AdapterTestConfig.TryReadMtpAssembly() ?? "mtpAssembly";
-        throw new InvalidOperationException(
-            $"Local discovery requires {assemblyName} next to the test executable. "
-            + "RevitDevTool.TestAdapter copies the selected sibling at build; do not add it as a ProjectReference."
-            + suffix);
-    }
+    private static IHostTestDiscoverer RequireDiscoverer() => RequireBridge().Discoverer;
 
     private static TestingHostOptions ApplyDebugParent(TestingHostOptions options) =>
         Debugger.IsAttached

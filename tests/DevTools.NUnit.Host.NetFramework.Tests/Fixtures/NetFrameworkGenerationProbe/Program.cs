@@ -192,12 +192,17 @@ internal static class Program
     }
 
     private static TestingRunRequest CreateRequest(Guid runId, string assemblyPath, string? filter) => new(
-        1, runId, "nunit", new TestingAssemblyReference(assemblyPath, "net48", null),
-        new TestingSelection([], filter), new Dictionary<string, string>());
+        1,
+        runId,
+        "nunit",
+        new TestingAssemblyReference(assemblyPath),
+        string.IsNullOrWhiteSpace(filter)
+            ? TestingSelection.All
+            : TestingSelection.FromFrameworkFilter(TestingSelection.XmlFilterFormat, filter));
 
     private sealed class NoOpEventSink : ITestingRuntimeEventSink
     {
-        public void Publish(TestingRuntimeEvent runtimeEvent)
+        public void Publish(TestingEvent runtimeEvent)
         {
         }
     }

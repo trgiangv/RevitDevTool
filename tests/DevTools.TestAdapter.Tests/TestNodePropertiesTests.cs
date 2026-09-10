@@ -27,6 +27,29 @@ public sealed class TestNodePropertiesTests
     }
 
     [Fact]
+    public void Skipped_state_prefers_skip_reason_over_message()
+    {
+        var properties = new List<IProperty>();
+        TestNodeProperties.AddCommonResultProperties(
+            properties,
+            new TestingCaseResult(
+                "case-1",
+                "Display",
+                TestingOutcomes.Skipped,
+                0,
+                Message: "message",
+                StackTrace: null,
+                Output: null,
+                Source: null,
+                Traits: [],
+                Attachments: [],
+                SkipReason: "requires capability"));
+
+        var skipped = Assert.Single(properties.OfType<SkippedTestNodeStateProperty>());
+        Assert.Equal("requires capability", skipped.Explanation);
+    }
+
+    [Fact]
     public void AddCommonResultProperties_adds_source_traits_output_and_attachments()
     {
         var properties = new List<IProperty>();

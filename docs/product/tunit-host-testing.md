@@ -163,14 +163,12 @@ module constructor. Parked maps live on parent-bound Abstractions
 (`TestingProcessHold`), not Runtime statics — net48 `LoadFile`s a distinct Runtime
 copy per generation shadow folder while TUnit.Core stays identity-bound.
 
-### Testhost MTP copy
+### Testhost MTP sibling
 
-`CopyMTPSibling` overwrites `DevTools.TUnit.MTP.dll` next to the
-test exe on every build (`SkipUnchangedFiles=false`) from `build/runtime`.
-TUnit.MTP compile-links catalog files from `TUnit.Runtime`; a timestamp-skip
-copy is why a rebuild can still run yesterday’s discoverer. Changing
-in-host Engine/Runtime also requires rebuilding/deploying the host add-in
-(`TUnitRuntime\`). On net48, if the host already loaded a matching
+MSBuild adds `DevTools.TUnit.MTP.dll` as a copy-local testhost reference from
+`build/runtime`. TUnit.MTP compile-links catalog files from `TUnit.Runtime`.
+Changing in-host Engine/Runtime also requires rebuilding/deploying the host
+add-in (`TUnitRuntime\`). On net48, if the host already loaded a matching
 assembly identity, restart the host or use net8+ ALC.
 
 ### Test output

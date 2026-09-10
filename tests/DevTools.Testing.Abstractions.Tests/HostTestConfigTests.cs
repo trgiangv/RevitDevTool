@@ -19,8 +19,6 @@ public sealed class HostTestConfigTests
     [InlineData("launchTimeoutSeconds", "devtools:launchTimeoutSeconds")]
     [InlineData("runnerPath", "devtools:runnerPath")]
     [InlineData("frameworkId", "devtools:frameworkId")]
-    [InlineData("mtpAssembly", "devtools:mtpAssembly")]
-    [InlineData("mtpEntry", "devtools:mtpEntry")]
     public void Configuration_keys_prefix_devtools_section(string key, string expected)
     {
         Assert.Equal(expected, HostTestConfig.Keys.Configuration(key));
