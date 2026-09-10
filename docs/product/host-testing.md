@@ -32,10 +32,12 @@ NUnit-specific bridge protocol are not part of the supported product on
   still share the tree. Nearest `global.json` replaces the whole file (include
   `sdk` in the nested file). `dotnet test` from a folder uses that cwd's file,
   not the `--project` path.
-- On `net48` the consumer must add `<RuntimeIdentifier>win-x64</RuntimeIdentifier>`
-  (the test project is an `Exe` and restore does not read a RID from
-  `build/*.props`). A `net48` TUnit project needs nothing else — the package
-  supplies the `[ModuleInitializer]` attribute TUnit generates against.
+- Do not set `<RuntimeIdentifier>` on the test project. The package uses
+  `OutputType=Exe`. A RID on net8 / net10 (Revit 2025+) nests testhost
+  output under `win-x64`, which Test Explorer can bind instead of the
+  current build. The package sets `AppendRuntimeIdentifierToOutputPath=false`
+  so a leftover RID stays flattened. `net48` TUnit needs nothing else — the
+  package supplies the `[ModuleInitializer]` attribute TUnit generates against.
   Details: [tunit-host-testing.md](tunit-host-testing.md).
 - Packaged modern TFMs copy private `build/runtime`: exact
   `net{version}-windows7.0` when present, else nearest lower shipped folder
@@ -52,7 +54,7 @@ NUnit-specific bridge protocol are not part of the supported product on
   that file, discovery loads an isolated copy of the test assembly and resolves
   those paths — no host. If `ExploreTests` cannot build a tree, discovery fails
   with that NUnit reason; no PE metadata list.
-- `NUnitTolerantAssemblyBuilder` uses types that did load instead of marking the
+- `NUnitAssemblyBuilder` uses types that did load instead of marking the
   whole assembly `NotRunnable` (testhost uses the same builder → assembly-level
   attributes and sort order match the host). Sets `TestContext.WorkDirectory`
   (generation shadow); early `WorkDirectory` access throws. net48 has no load
@@ -109,13 +111,12 @@ NUnit-specific bridge protocol are not part of the supported product on
 
 | Module | Responsibility |
 |---|---|
-| `DevTools.Testing.Abstractions` | Neutral run/result/runtime contracts, plus testhost discovery (`IHostTestDiscoverer`). MTP compiles against this assembly, not `DevTools.TestAdapter` |
+| `DevTools.Testing.Abstractions` | Neutral run/result/runtime contracts, plus testhost discovery (`ITestDiscoverer`). MTP compiles against this assembly, not `DevTools.TestAdapter` |
 | `DevTools.Testing.Transport` | `testing/*` JSON, pipe methods, and TestRunner process client |
-| `DevTools.Testing.Host` | In-host `testing/*` handler, generation store, and runtime-session lifecycle |
+| `DevTools.Testing.Host` | In-host `testing/*` handler, generation store, runtime-session lifecycle, and first-party NUnit/TUnit providers (closure/version policy, Dynamo-safe NUnit framework sharing, isolated runtime activation, `TestingSelection` → NUnit filter XML) |
 | `DevTools.TestAdapter` | Published `RevitDevTool.TestAdapter`. MTP control plane (command line, host launch request, TestNode publish). References the selected `DevTools.{NUnit\|TUnit}.MTP.dll` as a testhost assembly. Does not parse NUnit names |
 | `DevTools.NUnit.MTP` | Authoritative local discovery (`NUnitTestAssemblyRunner` + `ExploreTests`), metadata `TypeName`, DisplayName suffix, host filter XML, and result fold. Build-selected testhost sibling; not ILRepacked into the adapter |
 | `DevTools.NUnit.Runtime` | Default in-host engine: NUnit execution inside an isolated generation |
-| `DevTools.NUnit.Host` | NUnit closure/version policy, Dynamo-safe framework sharing, isolated runtime activation, and `TestingSelection` → NUnit filter XML |
 | `DevTools.TestRunner.Core` | Framework-neutral host locate/launch/reuse, debugger attach, and `testing/*` pipe client |
 | `DevTools.TestRunner` | Southbound executable: locate/launch the host and send `testing/run`. Framework id is a CLI option from the adapter `devtools` section |
 
@@ -184,11 +185,12 @@ not pack the host bundle.
   implementation assemblies in a private `build/runtime` closure. net48
   ILRepacks the adapter except `DevTools.Testing.Abstractions.dll`, which stays
   beside the test exe (with `DevTools.NUnit.MTP.dll`) so testhost discovery
-  shares one `IHostTestDiscoverer` / `HostTestDiscovery` identity. Consumers see
+  shares one `ITestDiscoverer` / `TestingDiscovery` identity. Consumers see
   only the platform adapter compile surface.
 - **Installer / bundle** — `scripts/pack.ps1` / `PublishRelease.yml`. Ships
   `DevTools.TestRunner.exe` and the in-host testing stack
-  (`Testing.Host`, `NUnit.Host`, `NUnit.Runtime`). Required for live runs;
+  (`Testing.Host` with NUnit/TUnit providers, `NUnit.Runtime` / `TUnit.Runtime`).
+  Required for live runs;
   the NuGet does not replace it.
 
 Pack graph and restore constraints:

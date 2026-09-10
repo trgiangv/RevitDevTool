@@ -5,7 +5,7 @@ RevitDevTool runs TUnit tests through the same TestRunner and neutral
 it does not launch or activate hosts. Shared MTP contract (launch, reuse,
 cancel, adapter): [host-testing.md](host-testing.md).
 
-Last updated: 2026-09-09
+Last updated: 2026-09-11
 
 ## Supported matrix
 
@@ -49,9 +49,8 @@ Same `HostName` / `HostVersion` / host API as NUnit. Opt in with
 Swap `HostName` for any supported host. Keep a compile-only host API
 package so testhost discovery can resolve Autodesk types.
 
-On `net48` add one consumer-side setting,
-`<RuntimeIdentifier>win-x64</RuntimeIdentifier>` — the test project is an `Exe` and
-restore does not read a RID from a package (`NETSDK1047`).
+Do not set `<RuntimeIdentifier>` — the package will not nest testhost output
+under `win-x64`.
 
 `[ModuleInitializer]` is handled by the package. TUnit's generated infrastructure
 applies that attribute, which .NET Framework does not declare, and TUnit's own
@@ -89,7 +88,7 @@ copied next to the exe.
 
 Adapter load: `TestingFramework=tunit` writes `devtools.frameworkId` into
 `testconfig.json`. The testhost hook loads **only** `DevTools.TUnit.MTP.dll`.
-`maximum-parallel-tests` is **not** a `testconfig.json` / `HostTestConfig`
+`maximum-parallel-tests` is **not** a `testconfig.json` / `TestConfig`
 key. Wiring: [`docs/architecture/Testing/README.md`](../architecture/Testing/README.md).
 
 ### Discovery expansion
@@ -106,7 +105,8 @@ repeat**. Nested loops are the Engine product; they are not a workaround.
 | Property injection | `PropertyDataSources` or reflection fallback | **not in UID** (Engine `TestIdentifierService` has no property dimension) |
 
 `TUnitCombinationIndices` carries the UID axes. Catalog display reads
-`RepeatIndex`, method args, and property name/value pairs. Members that
+`RepeatIndex`, method args, class or method `[Arguments].DisplayName`
+(method wins when both set), and property name/value pairs. Members that
 look unused in `TUnitCatalog` are marked
 `[UsedImplicitly(ImplicitUseTargetFlags.WithMembers)]` — do not drop them.
 Empty data sources use Engine `NoDataSource` as index 1.
@@ -121,12 +121,11 @@ Rows that cannot `Materialize` host-free become one `Deferred` placeholder
 (`TUnitTestIdentity.DeferredSuffix` = `_Deferred`). Testhost
 (`TestingDiscoveryOptions.Testhost`, `ForExecution=false`) publishes that
 placeholder UID. Host-run (`ForExecution=true`) uses the expanded
-`TUnitTestIdentity.From` UID when metadata exists. The host does not parse
-those strings: `TestingSelection.TestIds` goes into `TestNodeUidListFilter`
-as opaque UIDs.
-
-`TestingDiscoveryHints` (class/method/category) pre-filter before
-materialize. NUnit ignores hints.
+`TUnitTestIdentity.From` UID when metadata exists. Engine
+`TestFilterService` exact-matches that leaf id. Testhost publishes the
+same `TestMethodIdentifierProperty` TUnit.Engine does (ECMA-335 parameter
+types, return type, method arity) so CodeLens / method click round-trips
+those Engine UIDs. The adapter does not parse Engine UID strings.
 
 ### In-host Engine
 

@@ -73,7 +73,7 @@ Autodesk API references are compile-only and are not copied as runtime payloads.
 Host packages merge or ship one kernel identity according to their existing
 ILRepack policy. `RevitDevTool.TestAdapter` ILRepacks Ipc and Transport into
 the adapter on every TFM and keeps `DevTools.Testing.Abstractions.dll` loose
-so testhost MTP shares `HostTestDiscovery`. The selected NUnit/TUnit sibling is
+so testhost MTP shares `TestingDiscovery`. The selected NUnit/TUnit sibling is
 a normal copy-local testhost reference. Isolated discovery of compile-only
 Autodesk APIs uses `DiscoveryAssemblyLoad`, not a testhost `AssemblyResolve`
 bootstrap.
