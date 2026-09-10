@@ -4,7 +4,9 @@ Date: 2026-09-10
 
 ## Status
 
-Active
+Completed 2026-09-10 — contracts closed; follow-up Host merge is
+`DevTools.Testing.Host` (NUnit/TUnit providers). `machine-run` rename
+deferred.
 
 ## Outcome
 

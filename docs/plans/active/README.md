@@ -44,6 +44,7 @@ Split god project `DevTools.Mcp.Tests` into module-scoped projects:
 | P1 testing core | [0020](../../decisions/0020-framework-neutral-mtp-host-testing.md) | [completed](../completed/2026-08-17-p1-framework-neutral-testing-core.md) | Landed |
 | Kernel extract | [0021](../../decisions/0021-testing-kernel-and-provider-owned-framework-runtime.md) | [completed](../completed/2026-08-17-p2-testing-kernel-extraction.md) | Landed — PolySharp not in plan |
 | Open-closed providers | [0024](../../decisions/0024-testing-core-open-closed-providers.md) | [completed](../completed/2026-08-22-testing-core-open-closed.md) | Landed |
+| Contract narrow | — | [completed](../completed/2026-09-10-testing-contracts-narrow.md) | Landed 2026-09-10 — `machine-run` rename deferred |
 | TUnit spike | — | [completed](../completed/2026-08-21-tunit-revit-testhost.md) | Closed 2026-09-04 — not a production track |
 
 NUnit MTP-only ([0022](../../decisions/0022-nunit-mtp-only-testing-stack.md)) is
